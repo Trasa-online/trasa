@@ -240,7 +240,7 @@ const MyCollections = () => {
     queryFn: async () => {
       const { data: cols } = await (supabase as any)
         .from("discovery_collections")
-        .select("id, title, city, description, is_public, moderation_status")
+        .select("id, title, city, description, is_public, moderation_status, moderation_note")
         .eq("user_id", user!.id)
         .eq("kind", "ranking")
         .order("updated_at", { ascending: false });
@@ -307,9 +307,14 @@ const MyCollections = () => {
                 </span>
               )}
               {col.moderation_status === "rejected" && (
-                <span className="inline-flex items-center gap-1 mt-1 text-[10px] font-bold text-destructive bg-destructive/10 rounded-full px-2 py-0.5">
-                  odrzucone
-                </span>
+                <div className="mt-1">
+                  <span className="inline-flex items-center gap-1 text-[10px] font-bold text-destructive bg-destructive/10 rounded-full px-2 py-0.5">
+                    odrzucone
+                  </span>
+                  {col.moderation_note && (
+                    <p className="text-[11px] text-muted-foreground mt-1 leading-snug whitespace-pre-wrap">Powód: {col.moderation_note}</p>
+                  )}
+                </div>
               )}
             </div>
             <Pencil className="h-4 w-4 text-muted-foreground/50 shrink-0" />

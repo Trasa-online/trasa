@@ -1050,35 +1050,49 @@ const GroupSession = () => {
                       Każda runda to 10 miejsc - wybierzcie kategorię albo wolną eksplorację (losowe miejsca).
                     </p>
                   </div>
-                  {/* Wolna eksploracja - 10 losowych miejsc z calego miasta (obok wyboru kategorii) */}
-                  <button
-                    onClick={() => setPendingCategory(p => p === FREE_CATEGORY ? null : FREE_CATEGORY)}
-                    className={`w-full px-4 py-3 rounded-2xl text-sm font-semibold border transition-colors flex items-center justify-center gap-2 ${
-                      pendingCategory === FREE_CATEGORY
-                        ? "bg-primary text-white border-orange-600"
-                        : "bg-card text-foreground border-border/60"
-                    }`}
-                  >
-                    <span>🎲</span>
-                    <span>Wszystko - 10 losowych miejsc</span>
-                  </button>
+                  {/* Wolna eksploracja - 10 losowych miejsc. Zablokowana jesli juz uzyta
+                      (ponowny wybor uzytej kategorii zakleszcza sesje: wszyscy juz "zrobili"). */}
+                  {(() => {
+                    const freeUsed = sessionCategories.includes(FREE_CATEGORY);
+                    return (
+                      <button
+                        onClick={() => !freeUsed && setPendingCategory(p => p === FREE_CATEGORY ? null : FREE_CATEGORY)}
+                        disabled={freeUsed}
+                        className={`w-full px-4 py-3 rounded-2xl text-sm font-semibold border transition-colors flex items-center justify-center gap-2 ${
+                          freeUsed
+                            ? "bg-card text-muted-foreground/40 border-border/30 cursor-not-allowed"
+                            : pendingCategory === FREE_CATEGORY
+                              ? "bg-primary text-white border-orange-600"
+                              : "bg-card text-foreground border-border/60"
+                        }`}
+                      >
+                        <span>🎲</span>
+                        <span>{freeUsed ? "Wszystko - już zrobione" : "Wszystko - 10 losowych miejsc"}</span>
+                      </button>
+                    );
+                  })()}
                   <div className="flex flex-wrap gap-2">
                     {AVAILABLE_CATEGORIES.map((cat) => {
                       const count = categoryCounts[cat.id] ?? 0;
                       const isEmpty = count === 0;
+                      // Kategoria juz rozegrana w tej sesji -> zablokuj (ponowny wybor zakleszcza
+                      // sesje: currentCategory bylby "zrobiony" przez wszystkich).
+                      const used = sessionCategories.includes(cat.id);
+                      const disabled = isEmpty || used;
                       return (
                         <button
                           key={cat.id}
-                          onClick={() => !isEmpty && setPendingCategory(p => p === cat.id ? null : cat.id)}
-                          disabled={isEmpty}
+                          onClick={() => !disabled && setPendingCategory(p => p === cat.id ? null : cat.id)}
+                          disabled={disabled}
                           className={`px-3 py-2 rounded-full text-sm font-medium border transition-colors flex items-center gap-1.5 ${
-                            isEmpty
+                            disabled
                               ? "bg-card text-muted-foreground/40 border-border/30 cursor-not-allowed"
                               : pendingCategory === cat.id
                                 ? "bg-primary text-white border-orange-600"
                                 : "bg-card text-foreground border-border/60"
                           }`}
                         >
+                          {used && <Check className="h-3.5 w-3.5" />}
                           <span>{cat.emoji}</span>
                           <span>{cat.label}</span>
                         </button>

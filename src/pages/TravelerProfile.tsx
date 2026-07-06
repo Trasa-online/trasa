@@ -265,7 +265,7 @@ const TravelerProfile = () => {
   const completionPct = Math.round((completionFields.filter(Boolean).length / completionFields.length) * 100);
 
   return (
-    <div className="min-h-screen bg-background pb-24">
+    <div className="min-h-screen bg-background pb-[calc(7rem+env(safe-area-inset-bottom,0px))]">
 
       {/* Header - wyśrodkowany @handle + ustawienia (spójny z profilem innego usera).
           AppLayout (hideTopBar) juz dodaje pt-safe (env(top)+0.75rem) do <main>, wiec

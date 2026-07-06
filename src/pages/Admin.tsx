@@ -170,6 +170,9 @@ const Admin = () => {
   }>>([]);
   const [fetchingRankings, setFetchingRankings] = useState(false);
   const [moderatingId, setModeratingId] = useState<string | null>(null);
+  // Odrzucanie zestawienia z notka (powod) - inline pod karta.
+  const [rejectNoteId, setRejectNoteId] = useState<string | null>(null);
+  const [rejectNote, setRejectNote] = useState("");
   // Podzakladki w "Zestawienia": moderacja kolekcji vs leady spoza bazy.
   const [rankingsSub, setRankingsSub] = useState<"moderacja" | "leady">("moderacja");
   // Podglad zestawienia (klik w karte) -> lista miejsc do moderacji.
@@ -717,13 +720,18 @@ const Admin = () => {
     toast.success(hidden ? "Zestawienie ukryte" : "Zestawienie przywrócone");
   };
 
-  // Akceptacja / odrzucenie zestawienia czekajacego na moderacje (anon UGC).
-  const setRankingModeration = async (id: string, status: "approved" | "rejected") => {
+  // Akceptacja / odrzucenie zestawienia. Przy odrzuceniu opcjonalna notka (powod)
+  // widoczna dla autora w jego zestawieniach.
+  const setRankingModeration = async (id: string, status: "approved" | "rejected", note?: string) => {
     setModeratingId(id);
-    const { error } = await (supabase as any).from("discovery_collections").update({ moderation_status: status }).eq("id", id);
+    const patch: any = { moderation_status: status };
+    if (status === "rejected") patch.moderation_note = note?.trim() || null;
+    const { error } = await (supabase as any).from("discovery_collections").update(patch).eq("id", id);
     setModeratingId(null);
     if (error) { toast.error(`Błąd: ${error.message}`); return; }
     setRankings(prev => prev.map(r => r.id === id ? { ...r, moderation_status: status } : r));
+    setRejectNoteId(null);
+    setRejectNote("");
     toast.success(status === "approved" ? "Zaakceptowano" : "Odrzucono");
   };
 
@@ -1341,16 +1349,40 @@ const Admin = () => {
                         ) : null}
                       </div>
                       {pending ? (
-                        <div className="mt-2.5 flex gap-2">
-                          <button onClick={() => setRankingModeration(r.id, "approved")} disabled={moderatingId === r.id}
-                            className="flex-1 py-1.5 rounded-xl bg-primary text-white text-xs font-bold flex items-center justify-center gap-1.5 disabled:opacity-50">
-                            {moderatingId === r.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <><Check className="h-3.5 w-3.5" /> Zaakceptuj</>}
-                          </button>
-                          <button onClick={() => setRankingModeration(r.id, "rejected")} disabled={moderatingId === r.id}
-                            className="flex-1 py-1.5 rounded-xl border border-destructive/40 text-destructive text-xs font-semibold flex items-center justify-center gap-1.5 disabled:opacity-50">
-                            <X className="h-3.5 w-3.5" /> Odrzuć
-                          </button>
-                        </div>
+                        rejectNoteId === r.id ? (
+                          <div className="mt-2.5 space-y-2">
+                            <textarea
+                              value={rejectNote}
+                              onChange={(e) => setRejectNote(e.target.value)}
+                              maxLength={300}
+                              rows={2}
+                              autoFocus
+                              placeholder="Powód odrzucenia (widoczny dla autora, opcjonalnie)…"
+                              className="w-full rounded-xl border border-border bg-background px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-destructive/40 placeholder:text-muted-foreground/50 resize-none"
+                            />
+                            <div className="flex gap-2">
+                              <button onClick={() => { setRejectNoteId(null); setRejectNote(""); }}
+                                className="flex-1 py-1.5 rounded-xl border border-border/60 text-muted-foreground text-xs font-semibold">
+                                Anuluj
+                              </button>
+                              <button onClick={() => setRankingModeration(r.id, "rejected", rejectNote)} disabled={moderatingId === r.id}
+                                className="flex-1 py-1.5 rounded-xl bg-destructive text-white text-xs font-bold flex items-center justify-center gap-1.5 disabled:opacity-50">
+                                {moderatingId === r.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <><X className="h-3.5 w-3.5" /> Potwierdź odrzucenie</>}
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="mt-2.5 flex gap-2">
+                            <button onClick={() => setRankingModeration(r.id, "approved")} disabled={moderatingId === r.id}
+                              className="flex-1 py-1.5 rounded-xl bg-primary text-white text-xs font-bold flex items-center justify-center gap-1.5 disabled:opacity-50">
+                              {moderatingId === r.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <><Check className="h-3.5 w-3.5" /> Zaakceptuj</>}
+                            </button>
+                            <button onClick={() => { setRejectNoteId(r.id); setRejectNote(""); }} disabled={moderatingId === r.id}
+                              className="flex-1 py-1.5 rounded-xl border border-destructive/40 text-destructive text-xs font-semibold flex items-center justify-center gap-1.5 disabled:opacity-50">
+                              <X className="h-3.5 w-3.5" /> Odrzuć
+                            </button>
+                          </div>
+                        )
                       ) : rejected ? (
                         <button onClick={() => setRankingModeration(r.id, "approved")} disabled={moderatingId === r.id}
                           className="mt-2.5 w-full py-1.5 rounded-xl border border-orange-600 text-orange-600 text-xs font-semibold flex items-center justify-center gap-1.5 disabled:opacity-50">

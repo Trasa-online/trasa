@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { MapPin, X, Globe, Sparkles, Star, Pencil, Trash2, ChevronRight, ArrowRight, Heart, Check, Eye } from "lucide-react";
+import { MapPin, X, Globe, Sparkles, Star, Pencil, Trash2, ChevronRight, ArrowRight, Heart, Eye } from "lucide-react";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import RouteMap from "@/components/RouteMap";
 import { type MockPlace } from "@/components/plan-wizard/PlaceSwiper";
@@ -233,29 +233,17 @@ export function CollectionDetail({ col, onClose }: { col: DiscoveryCollection; o
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      {/* Header - bialy. Badge motywu (kolor) + autor + miasto. Ikony akcji po prawej. */}
+      {/* Header - bialy, waski. Rzad 1: autor + miasto | ikony akcji. Rzad 2: badge + statystyki. */}
       <div className="shrink-0 px-4 pt-4 pb-3 border-b border-border/10">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex-1 min-w-0">
-            {theme && (
-              <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-bold ${theme.badge}`}>{theme.emoji} {theme.label}</span>
-            )}
-            <div className="flex items-center gap-2 mt-2 flex-wrap">
-              <AuthorChip name={col.author_name} avatar={col.author_avatar} />
-              {isLocal && <span className="text-[9px] font-bold text-orange-700 bg-orange-100 rounded-full px-1.5 py-0.5">lokals poleca!</span>}
-              {col.city && (
-                <><span className="text-muted-foreground/40 text-xs">·</span><span className="text-xs text-muted-foreground font-medium">{col.city}</span></>
-              )}
-            </div>
-            {((col.views_count ?? 0) > 0 || (col.saves_count ?? 0) > 0 || (col.plan_adds_count ?? 0) > 0) && (
-              <div className="flex items-center gap-3 mt-2 text-[11px] text-muted-foreground">
-                {(col.views_count ?? 0) > 0 && <span className="flex items-center gap-1"><Eye className="h-3 w-3" />{col.views_count}</span>}
-                {(col.saves_count ?? 0) > 0 && <span className="flex items-center gap-1"><Heart className="h-3 w-3" />{col.saves_count}</span>}
-                {(col.plan_adds_count ?? 0) > 0 && <span className="flex items-center gap-1"><ArrowRight className="h-3 w-3" />{col.plan_adds_count}</span>}
-              </div>
+        {/* Rzad 1: autor/username + miasto po lewej, ikony po prawej - ta sama wysokosc */}
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <AuthorChip name={col.author_name} avatar={col.author_avatar} />
+            {isLocal && <span className="text-[9px] font-bold text-orange-700 bg-orange-100 rounded-full px-1.5 py-0.5 shrink-0">lokals poleca!</span>}
+            {col.city && (
+              <span className="flex items-center gap-1 min-w-0 text-xs text-muted-foreground font-medium"><span className="text-muted-foreground/40">·</span><span className="truncate">{col.city}</span></span>
             )}
           </div>
-          {/* Ikony akcji: edytuj / usun (owner) + zamknij - w szarym kole, na tej samej wysokosci */}
           <div className="flex items-center gap-2 shrink-0">
             {isOwner && (
               <button onClick={() => navigate(`/zestawienie/${col.id}/edytuj`)} aria-label="Edytuj" className="h-8 w-8 flex items-center justify-center rounded-full bg-muted text-foreground active:scale-90 transition-transform">
@@ -270,6 +258,17 @@ export function CollectionDetail({ col, onClose }: { col: DiscoveryCollection; o
             <SheetClose className="h-8 w-8 flex items-center justify-center rounded-full bg-muted text-muted-foreground active:scale-90 transition-transform">
               <X className="h-4 w-4" />
             </SheetClose>
+          </div>
+        </div>
+        {/* Rzad 2: badge motywu + statystyki (wyswietlenia/polubienia/dodania) */}
+        <div className="flex items-center gap-2.5 mt-2.5 flex-wrap">
+          {theme && (
+            <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-bold ${theme.badge}`}>{theme.emoji} {theme.label}</span>
+          )}
+          <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+            {(col.views_count ?? 0) > 0 && <span className="flex items-center gap-1"><Eye className="h-3 w-3" />{col.views_count}</span>}
+            {(col.saves_count ?? 0) > 0 && <span className="flex items-center gap-1"><Heart className="h-3 w-3" />{col.saves_count}</span>}
+            {(col.plan_adds_count ?? 0) > 0 && <span className="flex items-center gap-1"><ArrowRight className="h-3 w-3" />{col.plan_adds_count}</span>}
           </div>
         </div>
       </div>
@@ -294,12 +293,25 @@ export function CollectionDetail({ col, onClose }: { col: DiscoveryCollection; o
                   <div className="relative rounded-2xl overflow-hidden aspect-[16/10]">
                     <PlacePhoto item={item} placeholderIdx={idx} className="w-full h-full" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
-                    {item.rating != null && (
-                      <div className="absolute top-2.5 right-2.5 flex items-center gap-0.5 px-2 py-1 rounded-full bg-white/90 backdrop-blur-sm shadow-sm">
-                        <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                        <span className="text-[11px] font-bold text-foreground">{item.rating}</span>
-                      </div>
-                    )}
+                    {/* Ocena + lajk (ikona) obok. role=button, bo Tag bywa <button> (bez zagniezdzenia). */}
+                    <div className="absolute top-2.5 right-2.5 flex items-center gap-1.5">
+                      {col.city && (
+                        <span
+                          role="button"
+                          aria-label={alreadyLiked ? "Już polubione" : "Dodaj do polubionych"}
+                          onClick={(e) => { e.stopPropagation(); e.preventDefault(); if (!alreadyLiked) likePlace(item); }}
+                          className="h-7 w-7 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-sm active:scale-90 transition-transform"
+                        >
+                          <Heart className={`h-4 w-4 ${alreadyLiked ? "fill-rose-500 text-rose-500" : "text-foreground"}`} />
+                        </span>
+                      )}
+                      {item.rating != null && (
+                        <span className="flex items-center gap-0.5 px-2 py-1 rounded-full bg-white/90 backdrop-blur-sm shadow-sm">
+                          <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                          <span className="text-[11px] font-bold text-foreground">{item.rating}</span>
+                        </span>
+                      )}
+                    </div>
                     {tappable ? (
                       <div className="absolute top-2.5 left-2.5 h-7 pl-2.5 pr-1.5 rounded-full bg-white/90 backdrop-blur-sm flex items-center gap-0.5 shadow-sm">
                         <span className="text-[10px] font-bold text-foreground">Zobacz</span>
@@ -318,30 +330,15 @@ export function CollectionDetail({ col, onClose }: { col: DiscoveryCollection; o
                   </div>
                 </Tag>
                 {item.short_desc && <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed px-0.5">{item.short_desc}</p>}
-                {col.city && (
-                  alreadyLiked ? (
-                    <span className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600">
-                      <Check className="h-3.5 w-3.5" /> Już polubione
-                    </span>
-                  ) : (
-                    <button
-                      onClick={() => likePlace(item)}
-                      className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-secondary text-secondary-foreground px-3 py-1.5 text-[11px] font-bold active:scale-[0.97] transition-transform"
-                    >
-                      <Heart className="h-3.5 w-3.5" /> Dodaj do polubionych
-                    </button>
-                  )
-                )}
               </div>
             );
           })}
         </div>
 
-        {/* Mapa na samym dole (statyczny podglad trasy miejsc) */}
+        {/* Mapa na samym dole - interaktywna (zoom/pan). Bez overlaya blokujacego gesty. */}
         {mapPins.length > 0 && (
-          <div className="relative h-44 mt-5 rounded-2xl overflow-hidden border border-border/40">
+          <div className="relative h-52 mt-5 rounded-2xl overflow-hidden border border-border/40">
             <RouteMap pins={mapPins as any} className="w-full h-full" />
-            <div className="absolute inset-0" />
           </div>
         )}
       </div>
