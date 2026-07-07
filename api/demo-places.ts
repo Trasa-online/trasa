@@ -45,12 +45,24 @@ export default async function handler(req: Request): Promise<Response> {
     return new Response("Missing city or category", { status: 400 });
   }
 
+  // Anti cost-abuse (endpoint publiczny, bez JWT): dopuszczamy TYLKO znane miasta demo
+  // i znane kategorie. Bez tego atakujacy dowolnym city/category generuje nieograniczone
+  // Google Text Search (~$32/1000). Z allowlista koszt jest ograniczony do (miasta x kategorie).
+  const ALLOWED_CITIES = new Set([
+    "warszawa", "kraków", "krakow", "łódź", "lodz", "wrocław", "wroclaw", "poznań", "poznan",
+    "gdańsk", "gdansk", "sopot", "gdynia", "trójmiasto", "trojmiasto", "szczecin", "lublin",
+    "katowice", "bydgoszcz", "białystok", "bialystok", "toruń", "torun", "rzeszów", "rzeszow", "olsztyn",
+  ]);
+  if (!ALLOWED_CITIES.has(city.trim().toLowerCase()) || !(category in CATEGORY_QUERIES)) {
+    return new Response("Invalid city or category", { status: 400 });
+  }
+
   const apiKey = process.env.GOOGLE_MAPS_API_KEY;
   if (!apiKey) {
     return new Response("API key not configured", { status: 500 });
   }
 
-  const query = `${CATEGORY_QUERIES[category] ?? category} ${city}`;
+  const query = `${CATEGORY_QUERIES[category]} ${city}`;
   const url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(query)}&language=pl&key=${apiKey}`;
 
   const res = await fetch(url);

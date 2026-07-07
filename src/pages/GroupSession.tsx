@@ -121,12 +121,11 @@ const GroupSession = () => {
   const { data: session, isLoading: sessionLoading } = useQuery({
     queryKey: ["group-session", joinCode],
     queryFn: async () => {
-      const { data } = await (supabase as any)
-        .from("group_sessions")
-        .select("*")
-        .eq("join_code", joinCode)
-        .maybeSingle();
-      return data as { id: string; city: string; created_by: string; join_code: string; trip_date: string | null; num_days: number | null; status: string | null; categories: string[]; current_category_index: number } | null;
+      // Odczyt po kodzie idzie przez SECURITY DEFINER RPC (RLS tabeli ograniczony
+      // do czlonkow/tworcy; kod = autoryzacja do dolaczenia). Zwraca 0/1 wiersz.
+      const { data } = await (supabase as any).rpc("get_group_session_by_code", { p_code: joinCode });
+      const row = Array.isArray(data) ? data[0] : data;
+      return (row ?? null) as { id: string; city: string; created_by: string; join_code: string; trip_date: string | null; num_days: number | null; status: string | null; categories: string[]; current_category_index: number } | null;
     },
     enabled: !!joinCode,
     refetchInterval: 5000,

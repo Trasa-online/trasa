@@ -19,6 +19,13 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Guard: tylko service_role (cron). verify_jwt=false -> sprawdzamy sami, inaczej
+  // ktokolwiek moglby odpalic broadcast push do userow.
+  const _auth = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "");
+  if (_auth !== Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")) {
+    return new Response(JSON.stringify({ error: "unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  }
+
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;

@@ -106,6 +106,10 @@ function emailBody(args: {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
+  // Guard: tylko service_role (cron). verify_jwt=false -> sprawdzamy sami.
+  const _auth = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "");
+  if (_auth !== Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")) return jsonResponse({ error: "unauthorized" }, 401);
+
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const resendKey = Deno.env.get("RESEND_API_KEY");
