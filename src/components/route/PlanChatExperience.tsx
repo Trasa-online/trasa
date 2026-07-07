@@ -1670,7 +1670,7 @@ window.addEventListener('message',function(e){
                           </div>
                         );
                       })()}
-                      <div className="flex-shrink-0 px-4 pb-4 pt-1 border-t border-border/40 flex gap-2">
+                      <div className="flex-shrink-0 px-4 pb-5 pt-1 border-t border-border/40 flex gap-2">
                         {!readOnly ? (
                           <button
                             onClick={handleBackToSwiper}

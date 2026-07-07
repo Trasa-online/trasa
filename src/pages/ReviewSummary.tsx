@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Camera, X, Globe, Lock, Pencil, Check, Image as ImageIcon, Map as MapIcon, ChevronUp, ChevronDown, ChevronRight, ChevronLeft, Trash2, Plus, Share2, List, GalleryHorizontalEnd, Info, MoreVertical } from "lucide-react";
 import { useShare } from "@/hooks/useShare";
+import { Switch } from "@/components/ui/switch";
 import AddPinSheet from "@/components/route/AddPinSheet";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import type { MockPlace } from "@/components/plan-wizard/PlaceSwiper";
@@ -352,7 +353,6 @@ const ReviewSummary = () => {
   };
 
   // Widocznosc trasy: profil (publicznie z profilem) | anon (publicznie anonimowo) | private.
-  const visibility: "profile" | "anon" | "private" = !isPublic ? "private" : shareAnonymous ? "anon" : "profile";
   const setVisibility = async (mode: "profile" | "anon" | "private") => {
     const pub = mode !== "private";
     const anon = mode === "anon";
@@ -963,30 +963,42 @@ const ReviewSummary = () => {
     </div>
   );
 
-  // ── Udostępnianie wpisu: profil | anonimowo | prywatnie + podpis + osoby. ──
-  const VIS_OPTIONS: { id: "profile" | "anon" | "private"; label: string; hint: string }[] = [
-    { id: "profile", label: "Z profilem", hint: "Widoczne w Eksploruj z Twoim profilem" },
-    { id: "anon",    label: "Anonimowo", hint: "Widoczne w Eksploruj, ale bez Twojego profilu" },
-    { id: "private", label: "Prywatnie", hint: "Tylko dla Ciebie" },
-  ];
+  // ── Udostępnianie wpisu: prosty toggle (udostepnij/prywatnie) + anonim + podpis + osoby. ──
   const renderSharing = () => (
     <div className="px-5">
       <div className="mt-6 pt-5 border-t border-border/30">
-        <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2">Kto to zobaczy</p>
-        <div className="flex gap-1.5 rounded-2xl bg-muted p-1">
-          {VIS_OPTIONS.map((o) => (
-            <button key={o.id} onClick={() => setVisibility(o.id)}
-              className={`flex-1 py-2 rounded-xl text-xs font-bold transition-colors ${visibility === o.id ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"}`}>
-              {o.label}
-            </button>
-          ))}
+        <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-3">Podziel się trasą</p>
+        {/* Glowny toggle: udostepnij trase, zeby pomoc innym w planowaniu. */}
+        <div className="flex items-start gap-3 rounded-2xl bg-muted p-3.5">
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-bold">Pomóż innym w&nbsp;planowaniu</p>
+            <p className="text-[11px] text-muted-foreground mt-1 leading-relaxed">Trasa trafi do&nbsp;Eksploruj z&nbsp;Twoimi notkami i&nbsp;planem, żeby inni mogli zaplanować podobną podróż.</p>
+          </div>
+          <Switch
+            checked={isPublic}
+            onCheckedChange={(v) => setVisibility(v ? (shareAnonymous ? "anon" : "profile") : "private")}
+            className="mt-0.5 shrink-0"
+          />
         </div>
-        <p className="text-[11px] text-muted-foreground mt-1.5 flex items-center gap-1.5">
-          {visibility === "private" ? <Lock className="h-3 w-3 shrink-0" /> : <Globe className="h-3 w-3 shrink-0 text-orange-600" />}
-          {VIS_OPTIONS.find((o) => o.id === visibility)?.hint}
+        {/* Gwarancja prywatnosci: galeria zdjec nigdy nie jest udostepniana. */}
+        <p className="text-[11px] text-muted-foreground mt-2.5 flex items-start gap-1.5">
+          <Lock className="h-3 w-3 shrink-0 mt-0.5 text-emerald-600" />
+          <span>Twoja galeria zdjęć zostaje prywatna i&nbsp;bezpieczna. W&nbsp;Eksploruj pokazujemy tylko plan trasy z&nbsp;Twoimi notkami.</span>
         </p>
       </div>
       {isPublic && (<>
+        {/* Anonimowo - opcjonalny pod-toggle gdy trasa jest udostepniona. */}
+        <div className="mt-3 flex items-start gap-3 rounded-2xl bg-muted p-3.5">
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-bold">Udostępnij anonimowo</p>
+            <p className="text-[11px] text-muted-foreground mt-1">Bez Twojego profilu - trasa pojawi się w&nbsp;Eksploruj jako „Anonim".</p>
+          </div>
+          <Switch
+            checked={shareAnonymous}
+            onCheckedChange={(v) => setVisibility(v ? "anon" : "profile")}
+            className="mt-0.5 shrink-0"
+          />
+        </div>
         {/* Podpis autora (#11) */}
         <div className="mt-4">
           <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-1.5 block">Podpis <span className="normal-case font-medium text-muted-foreground/50">(opcjonalnie)</span></label>

@@ -159,32 +159,36 @@ const CreateRoute = () => {
       {/* Header */}
       <div className="flex-shrink-0 border-b border-border/40">
         <div className="flex items-center gap-3 px-4 pt-safe-4 pb-3">
-          <button
-            onClick={() => {
-              // Back NIEDESTRUKCYJNY: trasa nie przepada - polubienia wracaja do swipera (step 4)
-              // + draft na home ("Dokoncz trase"). fromRoute wylacza popup polubionych (juz je ma).
-              // Dokladny wygenerowany plan zachowuje osobno "Cofnij do dopasowan" (trasa_continue_route).
-              if (wizardState?.backTo) {
-                navigate(wizardState.backTo);
-              } else if (currentCity && wizardState?.date) {
-                navigate("/plan", {
-                  state: {
-                    step: 4,
-                    city: currentCity,
-                    date: wizardState?.date,
-                    likedPlaceNames: wizardLikedPlaces,
-                    skippedPlaceNames: wizardSkippedPlaces,
-                    fromRoute: true,
-                  },
-                });
-              } else {
-                navigate("/");
-              }
-            }}
-            className="p-1"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </button>
+          {/* Strzalka cofania tylko w trybie istniejacej trasy (readOnly) - tam jest
+              glowny back. W normalnym generowaniu cofa dolny "Cofnij do dopasowan". */}
+          {wizardState?.existingRouteId && (
+            <button
+              onClick={() => {
+                // Back NIEDESTRUKCYJNY: trasa nie przepada - polubienia wracaja do swipera (step 4)
+                // + draft na home ("Dokoncz trase"). fromRoute wylacza popup polubionych (juz je ma).
+                // Dokladny wygenerowany plan zachowuje osobno "Cofnij do dopasowan" (trasa_continue_route).
+                if (wizardState?.backTo) {
+                  navigate(wizardState.backTo);
+                } else if (currentCity && wizardState?.date) {
+                  navigate("/plan", {
+                    state: {
+                      step: 4,
+                      city: currentCity,
+                      date: wizardState?.date,
+                      likedPlaceNames: wizardLikedPlaces,
+                      skippedPlaceNames: wizardSkippedPlaces,
+                      fromRoute: true,
+                    },
+                  });
+                } else {
+                  navigate("/");
+                }
+              }}
+              className="p-1"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </button>
+          )}
           <div className="flex-1 min-w-0">
             <h1 className="text-base font-semibold truncate">
               {currentCity || t("planning_title")}
