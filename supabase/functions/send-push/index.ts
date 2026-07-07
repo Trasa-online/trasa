@@ -320,17 +320,13 @@ async function getApnsJwt(): Promise<string> {
   return token;
 }
 
-async function sendApnsPush(
+async function sendApnsToHost(
+  host: string,
   deviceToken: string,
-  payload: { title: string; body: string; url?: string }
+  payload: { title: string; body: string; url?: string },
+  jwt: string,
+  bundleId: string
 ): Promise<Response> {
-  const jwt = await getApnsJwt();
-  const bundleId = Deno.env.get("APNS_BUNDLE_ID") ?? "travel.trasa.app";
-  const useProduction = Deno.env.get("APNS_USE_PRODUCTION") === "true";
-  const host = useProduction
-    ? "api.push.apple.com"
-    : "api.sandbox.push.apple.com";
-
   const apnsBody = JSON.stringify({
     aps: {
       alert: { title: payload.title, body: payload.body },
@@ -350,6 +346,48 @@ async function sendApnsPush(
     },
     body: apnsBody,
   });
+}
+
+// Dev buildy (Xcode) rejestruja token w APNs SANDBOX, a TestFlight/App Store w
+// PRODUCTION. Server-side nie wiemy z ktorego srodowiska jest dany token, wiec
+// probujemy production, a przy 400 BadDeviceToken robimy fallback na sandbox.
+// APNs auth key (.p8) dziala dla obu srodowisk - ten sam JWT.
+//   "sent"   = dostarczone (200 w ktorymkolwiek srodowisku)
+//   "delete" = token martwy (410 Unregistered, lub BadDeviceToken w OBU env)
+//   "fail"   = blad przejsciowy/config (403/429/5xx) - NIE kasuj tokenu
+async function deliverApns(
+  deviceToken: string,
+  payload: { title: string; body: string; url?: string }
+): Promise<"sent" | "delete" | "fail"> {
+  const jwt = await getApnsJwt();
+  const bundleId = Deno.env.get("APNS_BUNDLE_ID") ?? "travel.trasa.app";
+
+  // Domyslnie production-first (wiekszosc userow to App Store/TestFlight).
+  // APNS_USE_PRODUCTION=false odwraca kolejnosc (szybciej dla czysto dev setupu).
+  const order = Deno.env.get("APNS_USE_PRODUCTION") === "false"
+    ? ["api.sandbox.push.apple.com", "api.push.apple.com"]
+    : ["api.push.apple.com", "api.sandbox.push.apple.com"];
+
+  let sawBadToken = false;
+  for (const host of order) {
+    const resp = await sendApnsToHost(host, deviceToken, payload, jwt, bundleId);
+    if (resp.status === 200) return "sent";
+
+    const text = await resp.text().catch(() => "");
+    let reason = "";
+    try { reason = JSON.parse(text)?.reason ?? ""; } catch { /* non-JSON body */ }
+    console.log(`[apns] ${host} -> ${resp.status} ${reason || text.slice(0, 120)}`);
+
+    // 410 = token byl zarejestrowany w tym env ale apka odinstalowana -> kasuj
+    if (resp.status === 410 || reason === "Unregistered") return "delete";
+    // Zly token dla TEGO srodowiska -> sprobuj drugiego zanim uznamy za martwy
+    if (resp.status === 400 && reason === "BadDeviceToken") { sawBadToken = true; continue; }
+    // 403 (zly JWT/topic), 429, 5xx = przejsciowe/config -> nie kasuj, nie probuj dalej
+    return "fail";
+  }
+
+  // BadDeviceToken w obu srodowiskach = token naprawde nieaktualny
+  return sawBadToken ? "delete" : "fail";
 }
 
 // ── Main handler ──
@@ -423,48 +461,55 @@ Deno.serve(async (req) => {
 
     for (const sub of subscriptions) {
       try {
-        let resp: Response;
         const platform = (sub as any).platform;
         const apnsToken = (sub as any).apns_token;
         const hasApnsData = apnsToken && typeof apnsToken === "string";
         const hasWebPushData = sub.endpoint && sub.p256dh && sub.auth;
 
-        // Native iOS: APNs token (priorytet jesli platform=ios)
+        // Native iOS: APNs (production -> fallback sandbox, patrz deliverApns)
         if (platform === "ios" && hasApnsData) {
-          resp = await sendApnsPush(apnsToken, {
+          const result = await deliverApns(apnsToken, {
             title,
             body: body || "",
             url: url || "/",
           });
+          if (result === "sent") {
+            sent++;
+          } else if (result === "delete") {
+            await supabase.from("push_subscriptions").delete().eq("id", sub.id);
+            failed++;
+          } else {
+            failed++; // przejsciowe/config - zostaw token, sprobujemy nastepnym razem
+          }
+          continue;
         }
+
         // Web/PWA: VAPID Web Push - tylko gdy mamy WSZYSTKIE 3 pola
-        else if (hasWebPushData) {
-          resp = await sendWebPush(
+        if (hasWebPushData) {
+          const resp = await sendWebPush(
             { endpoint: sub.endpoint!, p256dh: sub.p256dh!, auth: sub.auth! },
             payloadStr,
             vapidPublicKey,
             vapidPrivateKey,
             vapidSubject
           );
-        } else {
-          // Sub jest stale/nieprawidlowe - cleanup, nie spamuj logow.
-          console.warn(`[send-push] sub ${sub.id} stale (platform=${platform}, hasApns=${hasApnsData}, hasWeb=${hasWebPushData}) - deleting`);
-          await supabase.from("push_subscriptions").delete().eq("id", sub.id);
-          failed++;
+          if (resp.ok || resp.status === 201 || resp.status === 200) {
+            sent++;
+          } else if (resp.status === 410 || resp.status === 404 || resp.status === 400) {
+            await supabase.from("push_subscriptions").delete().eq("id", sub.id);
+            failed++;
+          } else {
+            const errText = await resp.text().catch(() => "");
+            console.error(`Push error for ${sub.id}: ${resp.status} ${errText.slice(0, 200)}`);
+            failed++;
+          }
           continue;
         }
 
-        if (resp.ok || resp.status === 201 || resp.status === 200) {
-          sent++;
-        } else if (resp.status === 410 || resp.status === 404 || resp.status === 400) {
-          // 410 Gone (web/apns) lub 400 BadDeviceToken (apns) = subskrypcja nieaktualna
-          await supabase.from("push_subscriptions").delete().eq("id", sub.id);
-          failed++;
-        } else {
-          const errText = await resp.text().catch(() => "");
-          console.error(`Push error for ${sub.id}: ${resp.status} ${errText.slice(0, 200)}`);
-          failed++;
-        }
+        // Sub jest stale/nieprawidlowe - cleanup, nie spamuj logow.
+        console.warn(`[send-push] sub ${sub.id} stale (platform=${platform}, hasApns=${hasApnsData}, hasWeb=${hasWebPushData}) - deleting`);
+        await supabase.from("push_subscriptions").delete().eq("id", sub.id);
+        failed++;
       } catch (err) {
         console.error(`Push error for ${sub.id}:`, err);
         failed++;
