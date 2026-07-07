@@ -312,10 +312,7 @@ function CategoriesSection({ data }: SectionProps) {
   return (
     <div className="flex flex-wrap gap-1.5">
       {mainLabel && (
-        <span
-          className="px-3 py-1 rounded-full text-xs font-semibold"
-          style={{ background: "#f4a259", color: "#fff" }}
-        >
+        <span className="px-3 py-1 rounded-full text-xs font-semibold bg-orange-50 border border-orange-100 text-orange-700">
           {mainLabel}
         </span>
       )}
