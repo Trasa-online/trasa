@@ -1101,7 +1101,7 @@ export default function DiscoveryFeed() {
           {newest.length > 0 && (
             <div>
               <p className="text-sm font-black uppercase tracking-wide mb-3 px-1">Najnowsze trasy</p>
-              <div className="flex gap-3 overflow-x-auto scrollbar-none snap-x snap-mandatory pb-1 -mx-1 px-1">
+              <div className="flex gap-3 overflow-x-auto scrollbar-none snap-x snap-mandatory pb-1 -ml-1 pl-1 -mr-4">
                 {newest.map((r) => (
                   <RouteCardH key={r.id} route={r} onClick={() => navigate(`/route/${r.id}`)} />
                 ))}

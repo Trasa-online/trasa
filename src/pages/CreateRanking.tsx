@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { ORIGIN_COUNTRIES } from "@/lib/locations";
 import { expandCity } from "@/lib/cities";
 import { getHistoryByCity } from "@/lib/exploreLikes";
-import { forwardGeocode, reverseGeocode } from "@/lib/googleMaps";
+import { forwardGeocode, reverseGeocode, forwardGeocodeWithTypes } from "@/lib/googleMaps";
 import { getPhotoUrl } from "@/lib/placePhotos";
 import { COLLECTION_THEMES, getTheme, isRouteCollection } from "@/lib/collectionThemes";
 import { MAIN_CATEGORIES, getDbCategoriesFor } from "@/lib/categories";
@@ -124,6 +124,10 @@ const CreateRanking = () => {
   const [search, setSearch] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
+  // Dodatkowe miejsca spoza bazy (Google text search) - dopelnienie wynikow z DB.
+  const [googleResults, setGoogleResults] = useState<any[]>([]);
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [addingGoogleName, setAddingGoogleName] = useState<string | null>(null);
   const [addingCustom, setAddingCustom] = useState(false);
   const [suggestions, setSuggestions] = useState<any[]>([]);
   // Wizytowka miejsca (tap w pozycje na liscie). detailSkip = custom (bez fetch Google).
@@ -222,6 +226,18 @@ const CreateRanking = () => {
     setSuggestions((prev) => prev.filter((s) => s.id !== r.id));
   };
 
+  // Dodaj miejsce spoza bazy (wynik Google text search). Dociagamy okladke/rating/place_id
+  // przez proxy dopiero przy dodaniu (nie dla kazdego wyniku - min. kosztow Google).
+  const addGooglePlace = async (g: any) => {
+    if (addingGoogleName) return;
+    setAddingGoogleName(g.name);
+    const res = await fetchGooglePlace({ name: g.name, address: g.full_address, lat: g.latitude, lng: g.longitude, city });
+    setAddingGoogleName(null);
+    if (!res || !res.place_name) { toast.error("Nie udało się dodać miejsca"); return; }
+    addItem(res);
+    setGoogleResults((prev) => prev.filter((x) => x.name !== g.name));
+  };
+
   // Miejsce spoza bazy: najpierw POKAZ wizytowke do zatwierdzenia (Google proxy),
   // dopiero po "Dodaj" trafia na liste. User widzi co dodaje.
   const previewCustomByName = async (name: string) => {
@@ -240,16 +256,40 @@ const CreateRanking = () => {
     setSearchResults([]);
   };
 
-  // Wyszukiwarka miejsc w bazie (debounce). Puste query -> brak wynikow (pokazujemy propozycje).
+  // Wyszukiwarka miejsc (debounce). Najpierw pokazujemy WSZYSTKIE dopasowania z bazy,
+  // a nastepnie dopelniamy ~3 nowymi miejscami spoza bazy (Google text search).
+  // Puste query -> brak wynikow (pokazujemy propozycje).
   useEffect(() => {
     const q = search.trim();
-    if (q.length < 2) { setSearchResults([]); setSearchLoading(false); return; }
+    if (q.length < 2) { setSearchResults([]); setSearchLoading(false); setGoogleResults([]); setGoogleLoading(false); return; }
     setSearchLoading(true);
+    setGoogleLoading(true);
+    setGoogleResults([]);
     const t = setTimeout(async () => {
       const { data } = await (supabase as any).from("places")
         .select("id, place_name, category, address, latitude, longitude, rating, photo_url")
-        .in("city", expandCity(city)).ilike("place_name", `%${q}%`).eq("is_active", true).limit(15);
-      setSearchResults(data ?? []); setSearchLoading(false);
+        .in("city", expandCity(city)).ilike("place_name", `%${q}%`).eq("is_active", true).limit(50);
+      const dbRows = data ?? [];
+      setSearchResults(dbRows); setSearchLoading(false);
+      // Dopelnienie: miejsca spoza bazy z Google (max 3), z pominieciem duplikatow nazw z DB.
+      try {
+        const g = await forwardGeocodeWithTypes(`${q} ${city}`);
+        const dbNames = new Set(dbRows.map((r: any) => (r.place_name ?? "").toLowerCase().trim()));
+        const seen = new Set<string>();
+        const extra = g
+          .filter((x) => {
+            const name = (x.name ?? "").toLowerCase().trim();
+            if (!name || dbNames.has(name) || seen.has(name)) return false;
+            // Odrzuc czyste wyniki geograficzne (miasta, dzielnice, drogi) - chcemy lokale.
+            const geoOnly = ["locality", "sublocality", "administrative_area_level_1", "administrative_area_level_2", "country", "route", "postal_code", "political"];
+            if ((x.types ?? []).length > 0 && (x.types ?? []).every((t) => geoOnly.includes(t))) return false;
+            seen.add(name);
+            return true;
+          })
+          .slice(0, 3);
+        setGoogleResults(extra);
+      } catch { setGoogleResults([]); }
+      setGoogleLoading(false);
     }, 300);
     return () => clearTimeout(t);
   }, [search, city]);
@@ -426,7 +466,27 @@ const CreateRanking = () => {
                     <Plus className="h-4 w-4 text-orange-600 shrink-0" />
                   </button>
                 ))}
-                {!searchLoading && (
+                {/* Nowe miejsca spoza bazy (Google) - dopelnienie wynikow z DB. */}
+                {googleLoading && !searchLoading && (
+                  <div className="flex items-center gap-2 px-3 py-2.5 text-[11px] text-muted-foreground">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" /> Szukam więcej miejsc…
+                  </div>
+                )}
+                {googleResults.filter((g) => !addedNames.has((g.name ?? "").toLowerCase())).map((g) => (
+                  <button key={g.name + g.latitude} onClick={() => addGooglePlace(g)} disabled={!!addingGoogleName}
+                    className="w-full flex items-center gap-3 p-2.5 active:bg-background/50 text-left disabled:opacity-50">
+                    <div className="h-11 w-11 rounded-xl bg-background flex items-center justify-center shrink-0"><MapPin className="h-4 w-4 text-muted-foreground" /></div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <p className="text-sm font-semibold truncate">{g.name}</p>
+                        <span className="text-[9px] font-bold text-orange-700 bg-orange-100 rounded-full px-1.5 py-0.5 shrink-0">nowe</span>
+                      </div>
+                      {g.full_address && <p className="text-[11px] text-muted-foreground truncate">{g.full_address}</p>}
+                    </div>
+                    {addingGoogleName === g.name ? <Loader2 className="h-4 w-4 animate-spin text-orange-600 shrink-0" /> : <Plus className="h-4 w-4 text-orange-600 shrink-0" />}
+                  </button>
+                ))}
+                {!searchLoading && !googleLoading && (
                   <button onClick={() => previewCustomByName(search)} disabled={addingCustom}
                     className="w-full flex items-center gap-2 p-3 text-left active:bg-background/50 disabled:opacity-50">
                     {addingCustom ? <Loader2 className="h-4 w-4 animate-spin text-orange-600 shrink-0" /> : <Search className="h-4 w-4 text-orange-600 shrink-0" />}
