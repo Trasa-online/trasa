@@ -68,7 +68,7 @@ function Eyebrow({ children }: { children: React.ReactNode }) {
 
 // ─── Phone mockup (czysty realistyczny iPhone: cienki rowny bezel + status bar + wyspa) ─
 
-function Phone({ width = 260, ar = "430 / 872", float = false, rotate = 0, children }: { width?: number; ar?: string; float?: boolean; rotate?: number; children: React.ReactNode }) {
+function Phone({ width = 260, ar = "430 / 872", float = false, rotate = 0, bare = false, children }: { width?: number; ar?: string; float?: boolean; rotate?: number; bare?: boolean; children: React.ReactNode }) {
   const b = Math.round(width * 0.032);
   const dark = "#0E0E0E";
   return (
@@ -76,7 +76,8 @@ function Phone({ width = 260, ar = "430 / 872", float = false, rotate = 0, child
       <div aria-hidden className="absolute -inset-6 -z-10 rounded-[3rem] opacity-70" style={{ background: "radial-gradient(60% 50% at 50% 60%, rgba(249,102,43,0.20), transparent 75%)", filter: "blur(24px)" }} />
       <div className="relative bg-[#0E0E0E]" style={{ padding: b, borderRadius: Math.round(width * 0.155), boxShadow: "0 40px 90px -30px rgba(120,50,10,0.35), 0 12px 30px -12px rgba(120,50,10,0.18)" }}>
         <div className="relative flex flex-col overflow-hidden bg-[#F4F4F5]" style={{ aspectRatio: ar, borderRadius: Math.round(width * 0.125) }}>
-          {/* status bar */}
+          {/* status bar (pomijany w trybie bare - screen apki ma juz wlasny safe-area) */}
+          {!bare && (
           <div className="relative z-10 flex shrink-0 items-center justify-between" style={{ paddingLeft: width * 0.07, paddingRight: width * 0.055, paddingTop: width * 0.032, paddingBottom: width * 0.014 }}>
             <span className="font-semibold" style={{ color: dark, fontSize: width * 0.04, lineHeight: 1 }}>9:41</span>
             <div className="flex items-center" style={{ gap: width * 0.012 }}>
@@ -90,6 +91,7 @@ function Phone({ width = 260, ar = "430 / 872", float = false, rotate = 0, child
               </div>
             </div>
           </div>
+          )}
           {/* app content */}
           <div className="relative flex-1">{children}</div>
           {/* dynamic island */}
@@ -103,14 +105,16 @@ function Phone({ width = 260, ar = "430 / 872", float = false, rotate = 0, child
 // ─── Store badges (island) ────────────────────────────────────────────────────
 
 function StoreBadges({ center = false }: { center?: boolean }) {
-  const box = "group flex items-center justify-center h-[54px] w-[182px] rounded-2xl transition-transform duration-500 hover:-translate-y-0.5 active:scale-[0.98]";
+  // Google Play ma szary border + wewnetrzny transparent padding, wiec renderuje sie
+  // wizualnie mniejszy przy tej samej wysokosci - dajemy mu wieksza h zeby zrownac pigulki.
+  const link = "group inline-flex transition-transform duration-500 hover:-translate-y-0.5 active:scale-[0.98]";
   return (
-    <div className={`flex flex-col sm:flex-row gap-3.5 items-center ${center ? "sm:justify-center" : "sm:justify-start"}`} style={{ transitionTimingFunction: EASE }}>
-      <a href={APP_STORE_URL} onClick={(e) => { if (APP_STORE_URL === "#") e.preventDefault(); posthog.capture("landing_store_click", { store: "app_store", v: 2 }); }} className={box} aria-label="Pobierz z App Store">
-        <img src="/Pobierz-z-App-Store.png" alt="Pobierz z App Store" className="max-h-full max-w-full object-contain drop-shadow-sm" draggable={false} />
+    <div className={`flex flex-col sm:flex-row gap-3 items-center ${center ? "sm:justify-center" : "sm:justify-start"}`} style={{ transitionTimingFunction: EASE }}>
+      <a href={APP_STORE_URL} onClick={(e) => { if (APP_STORE_URL === "#") e.preventDefault(); posthog.capture("landing_store_click", { store: "app_store", v: 2 }); }} className={link} aria-label="Pobierz z App Store">
+        <img src="/Pobierz-z-App-Store.png" alt="Pobierz z App Store" className="h-[46px] w-auto object-contain drop-shadow-sm" draggable={false} />
       </a>
-      <a href={PLAY_STORE_URL} onClick={(e) => { if (PLAY_STORE_URL === "#") e.preventDefault(); posthog.capture("landing_store_click", { store: "play_store", v: 2 }); }} className={box} aria-label="Pobierz z Google Play">
-        <img src="/google-play-badge.png" alt="Pobierz z Google Play" className="max-h-full max-w-full object-contain drop-shadow-sm" draggable={false} />
+      <a href={PLAY_STORE_URL} onClick={(e) => { if (PLAY_STORE_URL === "#") e.preventDefault(); posthog.capture("landing_store_click", { store: "play_store", v: 2 }); }} className={link} aria-label="Pobierz z Google Play">
+        <img src="/google-play-badge.png" alt="Pobierz z Google Play" className="h-[58px] w-auto object-contain drop-shadow-sm" draggable={false} />
       </a>
     </div>
   );
@@ -185,7 +189,7 @@ function HowItWorks() {
         </Reveal>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-16 items-center">
           <Reveal className="flex justify-center md:order-1">
-            <Phone width={278} float>
+            <Phone width={266} float bare ar="393 / 852">
               {STEPS.map((s, i) => (
                 <img
                   key={s.img}
@@ -372,7 +376,7 @@ const LandingV2 = () => {
             {/* Ze znajomymi */}
             <Reveal delay={100} className="md:col-span-2">
               <div className="group h-full rounded-[2rem] bg-white/50 p-1.5 ring-1 ring-black/5 backdrop-blur-sm transition-transform duration-500 hover:-translate-y-1" style={{ transitionTimingFunction: EASE, boxShadow: "0 24px 50px -30px rgba(120,50,10,0.2)" }}>
-                <div className="h-full rounded-[calc(2rem-0.375rem)] bg-white p-8 flex items-center gap-6">
+                <div className="h-full rounded-[calc(2rem-0.375rem)] bg-white p-8 flex flex-col items-start gap-5">
                   <div className="shrink-0"><CircleStack srcs={["Marta", "Kuba", "Piotr", "Ola"].map(n => `/landing/avatars/${n}.png`)} extra="+3" /></div>
                   <div>
                     <h3 className="font-display font-extrabold text-xl text-foreground">Ze znajomymi</h3>
@@ -384,7 +388,7 @@ const LandingV2 = () => {
             {/* Spontaniczne */}
             <Reveal delay={180} className="md:col-span-2">
               <div className="group h-full rounded-[2rem] bg-white/50 p-1.5 ring-1 ring-black/5 backdrop-blur-sm transition-transform duration-500 hover:-translate-y-1" style={{ transitionTimingFunction: EASE, boxShadow: "0 24px 50px -30px rgba(120,50,10,0.2)" }}>
-                <div className="h-full rounded-[calc(2rem-0.375rem)] bg-white p-8 flex items-center gap-6">
+                <div className="h-full rounded-[calc(2rem-0.375rem)] bg-white p-8 flex flex-col items-start gap-5">
                   <div className="shrink-0"><CircleStack srcs={["park", "restaurant", "bar"].map(n => `/landing/places/${n}.jpg`)} /></div>
                   <div>
                     <h3 className="font-display font-extrabold text-xl text-foreground">Spontaniczne wypady</h3>
