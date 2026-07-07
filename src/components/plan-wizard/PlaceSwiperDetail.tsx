@@ -12,7 +12,7 @@ import { useState, useEffect } from "react";
 import { MapPin, Navigation } from "lucide-react";
 import { useDistanceReference } from "@/lib/distanceReference";
 import { haversineKm, formatDistance } from "@/lib/distance";
-import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { Drawer as VaulDrawer } from "vaul";
 import { supabase } from "@/integrations/supabase/client";
 import { getPhotoUrl, isCachedPhotoUrl, ensurePhotoCached } from "@/lib/placePhotos";
 import { type MockPlace } from "./PlaceSwiper";
@@ -207,18 +207,24 @@ const PlaceSwiperDetail = ({
   const businessData = fromMockPlace(place, detail, businessPosts);
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        side="bottom"
-        className="rounded-t-3xl p-0 overflow-hidden flex flex-col [&>button]:hidden bg-[#FEFEFE]"
-        style={{ height: "min(96dvh, calc(100dvh - env(safe-area-inset-top, 0px) - 0.5rem))" }}
-      >
-        {/* Scrollable wrapper - motion.div drag-to-dismiss wyrzucone bo blokowal native scroll
-            na iOS WebView. Sheet ma close button (Hero X) + tap-outside-to-close + Esc. */}
-        <div
-          className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden"
-          style={{ WebkitOverflowScrolling: "touch" }}
+    <VaulDrawer.Root open={open} onOpenChange={onOpenChange} shouldScaleBackground={false}>
+      <VaulDrawer.Portal>
+        <VaulDrawer.Overlay className="fixed inset-0 z-50 bg-black/60" />
+        <VaulDrawer.Content
+          aria-describedby={undefined}
+          className="fixed inset-x-0 bottom-0 z-50 flex flex-col rounded-t-3xl bg-[#FEFEFE] overflow-hidden outline-none focus:outline-none"
+          style={{ height: "min(96dvh, calc(100dvh - env(safe-area-inset-top, 0px) - 0.5rem))" }}
         >
+          <VaulDrawer.Title className="sr-only">{place.place_name}</VaulDrawer.Title>
+          {/* Uchwyt drag-to-dismiss - nad hero, pol-przezroczysty (hero ma wlasny X). */}
+          <div className="absolute top-2 left-1/2 -translate-x-1/2 z-30 h-1.5 w-10 rounded-full bg-white/70 pointer-events-none" />
+          {/* Scroll wrapper - vaul inicjuje drag-to-dismiss tylko gdy scroll jest na gorze,
+              wiec native scroll do recenzji/galerii dziala normalnie (bez buga z iOS WebView).
+              Wyjscie: drag w dol, tap w tlo (overlay), Esc, albo Hero X. */}
+          <div
+            className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden"
+            style={{ WebkitOverflowScrolling: "touch" }}
+          >
           <PremiumBusinessCard
             data={businessData}
             mode="detail"
@@ -250,8 +256,9 @@ const PlaceSwiperDetail = ({
             </div>
           </div>
         )}
-      </SheetContent>
-    </Sheet>
+        </VaulDrawer.Content>
+      </VaulDrawer.Portal>
+    </VaulDrawer.Root>
   );
 };
 

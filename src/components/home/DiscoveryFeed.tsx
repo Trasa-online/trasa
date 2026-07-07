@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { MapPin, X, Globe, Sparkles, Star, Pencil, Trash2, ChevronRight, ArrowRight, Heart, Eye } from "lucide-react";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
+import FullCalendarPicker from "@/components/plan-wizard/FullCalendarPicker";
 import RouteMap from "@/components/RouteMap";
 import { type MockPlace } from "@/components/plan-wizard/PlaceSwiper";
 import { Sheet, SheetContent, SheetClose } from "@/components/ui/sheet";
@@ -132,7 +133,7 @@ function PlacePhoto({
 
 // ── Detail sheet ───────────────────────────────────────────────────────────────
 
-export function CollectionDetail({ col, onClose }: { col: DiscoveryCollection; onClose: () => void }) {
+export function CollectionDetail({ col, onClose, onAdopt }: { col: DiscoveryCollection; onClose: () => void; onAdopt?: (city: string | null, names: string[]) => void }) {
   const navigate = useNavigate();
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -222,11 +223,13 @@ export function CollectionDetail({ col, onClose }: { col: DiscoveryCollection; o
     .map((i) => ({ latitude: i.latitude!, longitude: i.longitude!, place_name: i.place_name }));
 
   // "Uzyj tej trasy" - przejmij miejsca zestawienia do nowej trasy (swiper -> Dopasowania).
+  // Najpierw pyta o date (przez onAdopt -> drawer w feedzie), potem laduje w PlanWizard.
   const adoptRoute = () => {
     const names = col.items.map((i) => i.place_name).filter(Boolean);
     // Statystyka: dodanie zestawienia do wlasnego planu.
     (supabase as any).rpc("increment_collection_plan_adds", { p_collection_id: col.id })
       .then(({ error }: any) => { if (error) console.warn("[DiscoveryFeed] increment_collection_plan_adds:", error.message); });
+    if (onAdopt) { onAdopt(col.city, names); return; }
     onClose();
     navigate("/plan", { state: { step: 4, city: col.city, date: new Date().toISOString(), likedPlaceNames: names } });
   };
@@ -798,7 +801,34 @@ const SHOW_ZESTAWIENIA = true;
 export default function DiscoveryFeed() {
   const [activeCol, setActiveCol] = useState<DiscoveryCollection | null>(null);
   const [activeCreator, setActiveCreator] = useState<PolecaneCreatorPlan | null>(null);
+  // Drawer "Kiedy planujesz te trase?" - klik w trase/zestawienie z eksploracji pyta
+  // o date, a potem laduje od razu w PlanWizard (swiper) z miejscami w Dopasowaniach.
+  const [planPrompt, setPlanPrompt] = useState<{ city: string | null; names?: string[]; routeId?: string } | null>(null);
   const navigate = useNavigate();
+
+  // Po wyborze daty: dociagnij nazwy miejsc (trasa -> piny), przejdz do PlanWizard step 4.
+  const startPlanning = async (date: Date | null, numDays: number) => {
+    const p = planPrompt;
+    if (!p) return;
+    setPlanPrompt(null);
+    let names = p.names;
+    if (!names && p.routeId) {
+      const { data } = await (supabase as any).from("pins")
+        .select("place_name").eq("route_id", p.routeId).order("pin_order");
+      names = (data ?? []).map((x: any) => x.place_name).filter(Boolean);
+    }
+    navigate("/plan", {
+      state: {
+        // Bez miasta nie mamy z czego zaladowac swipera -> zacznij od wyboru miasta.
+        step: p.city ? 4 : 1,
+        city: p.city ?? undefined,
+        date: (date ?? new Date()).toISOString(),
+        numDays: numDays || 1,
+        likedPlaceNames: names ?? [],
+        fromRoute: true,
+      },
+    });
+  };
 
   // Najnowsze udostepnione trasy (poziomy scroll).
   const { data: newest = [], isLoading: newestLoading } = useQuery({
@@ -1103,7 +1133,7 @@ export default function DiscoveryFeed() {
               <p className="text-sm font-black uppercase tracking-wide mb-3 px-1">Najnowsze trasy</p>
               <div className="flex gap-3 overflow-x-auto scrollbar-none snap-x snap-mandatory pb-1 -ml-1 pl-1 -mr-4">
                 {newest.map((r) => (
-                  <RouteCardH key={r.id} route={r} onClick={() => navigate(`/route/${r.id}`)} />
+                  <RouteCardH key={r.id} route={r} onClick={() => setPlanPrompt({ routeId: r.id, city: r.city })} />
                 ))}
                 <div className="shrink-0 w-0.5" />
               </div>
@@ -1123,7 +1153,7 @@ export default function DiscoveryFeed() {
               </div>
               <div className="space-y-5">
                 {warszawa.map((r) => (
-                  <RouteCardV key={r.id} route={r} onClick={() => navigate(`/route/${r.id}`)} />
+                  <RouteCardV key={r.id} route={r} onClick={() => setPlanPrompt({ routeId: r.id, city: r.city })} />
                 ))}
               </div>
             </div>
@@ -1145,7 +1175,13 @@ export default function DiscoveryFeed() {
           className="rounded-t-2xl p-0 [&>button:last-child]:hidden"
           style={{ maxHeight: "92vh", height: "92vh" }}
         >
-          {activeCol && <CollectionDetail col={activeCol} onClose={() => setActiveCol(null)} />}
+          {activeCol && (
+            <CollectionDetail
+              col={activeCol}
+              onClose={() => setActiveCol(null)}
+              onAdopt={(city, names) => { setActiveCol(null); setPlanPrompt({ city, names }); }}
+            />
+          )}
         </SheetContent>
       </Sheet>
 
@@ -1158,6 +1194,33 @@ export default function DiscoveryFeed() {
           {activeCreator && <CreatorPlanDetail plan={activeCreator} />}
         </SheetContent>
       </Sheet>
+
+      {/* Drawer "Kiedy planujesz te trase?" - po kliknieciu w trase/zestawienie. */}
+      {planPrompt && (
+        <div
+          className="fixed inset-0 z-[70] flex items-end justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200"
+          onClick={() => setPlanPrompt(null)}
+        >
+          <div
+            className="w-full max-w-md bg-card rounded-t-3xl flex flex-col max-h-[88dvh] shadow-2xl animate-in slide-in-from-bottom-4 duration-300"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-5 pt-5 pb-1 text-center shrink-0">
+              <p className="text-lg font-black leading-tight">Kiedy planujesz tę&nbsp;trasę?</p>
+              <p className="text-xs text-muted-foreground mt-1">Wybierz datę, a&nbsp;przeniesiemy Cię prosto do&nbsp;planowania z&nbsp;tymi miejscami.</p>
+            </div>
+            <div className="flex-1 min-h-0 overflow-y-auto">
+              <FullCalendarPicker onConfirm={(d, n) => startPlanning(d, n)} />
+            </div>
+            <button
+              onClick={() => startPlanning(null, 1)}
+              className="mx-5 mt-1 mb-[max(16px,env(safe-area-inset-bottom))] py-2.5 text-sm font-medium text-muted-foreground active:text-foreground transition-colors shrink-0"
+            >
+              Pomiń, zaplanuj bez&nbsp;daty
+            </button>
+          </div>
+        </div>
+      )}
     </>
   );
 }
