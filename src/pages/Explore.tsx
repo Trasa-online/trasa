@@ -6,6 +6,8 @@ import { MapPin, Heart, Trash2, ArrowRight, Plus, ArrowLeft, Pencil, ListChecks,
 import { parseISO, isValid, format, isToday, isYesterday } from "date-fns";
 import { pl } from "date-fns/locale";
 import DiscoveryFeed from "@/components/home/DiscoveryFeed";
+import OnboardingOverlay from "@/components/home/OnboardingOverlay";
+import HomeHeaderActions from "@/components/home/HomeHeaderActions";
 import { getHistoryByCity, removeLikeFromCity, clearCity, type ExploreCityGroup } from "@/lib/exploreLikes";
 import { getSubcategoryLabel, MAIN_CATEGORIES } from "@/lib/categories";
 import { useAuth } from "@/hooks/useAuth";
@@ -339,6 +341,7 @@ const Explore = () => {
 
   return (
     <PullToRefresh onRefresh={handleRefresh} className="flex-1 flex flex-col pt-2 pb-[calc(5rem+env(safe-area-inset-bottom,0px))]">
+      {!myCollections && <OnboardingOverlay />}
       <div className="relative px-4 pb-3 mb-3 flex items-start justify-between gap-3 after:content-[''] after:absolute after:bottom-0 after:left-4 after:right-4 after:h-px after:bg-border/40">
         {myCollections ? (
           <div className="flex items-center gap-2.5 pt-2">
@@ -360,12 +363,15 @@ const Explore = () => {
             <p className="text-xs text-muted-foreground mt-1">Polecane miejsca, trasy i&nbsp;zestawienia.</p>
           </div>
         )}
-        <button
-          onClick={() => { trackCollectionCreate("explore_header"); navigate("/zestawienie/nowe"); }}
-          className="shrink-0 mt-2 flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-primary text-white text-xs font-bold active:scale-[0.97] transition-transform shadow-sm shadow-orange-500/20"
-        >
-          <Plus className="h-3.5 w-3.5" /> Zestawienie
-        </button>
+        <div className="flex items-center gap-1.5 shrink-0 mt-2">
+          {!myCollections && <HomeHeaderActions />}
+          <button
+            onClick={() => { trackCollectionCreate("explore_header"); navigate("/zestawienie/nowe"); }}
+            className="shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-primary text-white text-xs font-bold active:scale-[0.97] transition-transform shadow-sm shadow-orange-500/20"
+          >
+            <Plus className="h-3.5 w-3.5" /> Zestawienie
+          </button>
+        </div>
       </div>
 
       <div className="flex-1 px-4">

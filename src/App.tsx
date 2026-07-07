@@ -193,9 +193,9 @@ function GlobalAuthCallback() {
         toast.success("Witamy w Trasie 🧡");
         // Web OAuth wraca na origin/ i tracimy kontekst route. Jesli przed logowaniem
         // zapisalismy docelowa sciezke (np. /sesja/KOD - dolaczanie do sesji grupowej),
-        // wracamy do niej zamiast na /home (= waitlista na web).
-        // Priorytet: ?next= z URL (odporny na in-app browser) > sessionStorage > /home.
-        let dest = "/home";
+        // wracamy do niej zamiast na /eksploruj (= waitlista na web).
+        // Priorytet: ?next= z URL (odporny na in-app browser) > sessionStorage > /eksploruj.
+        let dest = "/eksploruj";
         try {
           const stored = sessionStorage.getItem("trasa_post_login_redirect");
           if (stored) { dest = stored; sessionStorage.removeItem("trasa_post_login_redirect"); }
@@ -397,7 +397,7 @@ function RootPage() {
       </div>
     );
   }
-  return <Navigate to="/home" replace />;
+  return <Navigate to="/eksploruj" replace />;
 }
 
 function RouteTracker() {

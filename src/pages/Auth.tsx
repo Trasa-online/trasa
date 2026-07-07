@@ -106,7 +106,7 @@ const Auth = () => {
         } catch {}
       }
       const returnTo = searchParams.get("return");
-      navigate(returnTo || "/home");
+      navigate(returnTo || "/eksploruj");
     })();
     return () => { cancelled = true; };
   }, [user, navigate, isDraftMode, searchParams]);
@@ -208,7 +208,7 @@ const Auth = () => {
       }
 
       const returnTo = searchParams.get("return");
-      navigate(returnTo || "/home");
+      navigate(returnTo || "/eksploruj");
     } catch (error: any) {
       posthog.captureException(error);
       toast.error(error.message || t("errors.login"));

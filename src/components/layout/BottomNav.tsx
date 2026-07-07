@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { NavLink } from "@/components/NavLink";
-import { BookOpen, Compass, Home, Plus, X, MapPin, Users, Link2, User, Heart, Sparkles, ArrowLeft } from "lucide-react";
+import { BookOpen, Compass, Map, Plus, X, MapPin, Users, Link2, User, Heart, Sparkles, ArrowLeft } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -283,23 +283,8 @@ const BottomNav = () => {
         <div className="pointer-events-auto bg-white rounded-[26px] border border-black/[0.04] shadow-[0_8px_28px_-6px_rgba(0,0,0,0.18)]">
           <div className={`grid ${isNative ? "grid-cols-5" : "grid-cols-3"} h-16`}>
 
-          {/* Główna */}
-          <NavLink
-            to="/home"
-            end
-            className="flex flex-col items-center justify-center gap-1 text-muted-foreground transition-colors"
-            activeClassName="text-orange-600"
-          >
-            {({ isActive }) => (
-              <>
-                <Home className="h-6 w-6 stroke-2" />
-                <span className={`h-0.5 w-5 rounded-full transition-colors ${isActive ? "bg-orange-600" : "bg-transparent"}`} />
-              </>
-            )}
-          </NavLink>
-
-          {/* Eksploruj - tylko w native iOS/Android. Web/PWA ukrywa (feature jeszcze
-              nie gotowy dla web, ale w native ma uzytkownikow). */}
+          {/* Eksploruj - landing (skrajnie z lewej). Tylko w native iOS/Android.
+              Web/PWA ukrywa (na web B2C jest za waitlista). */}
           {isNative && (
             <NavLink
               to="/eksploruj"
@@ -315,6 +300,21 @@ const BottomNav = () => {
               )}
             </NavLink>
           )}
+
+          {/* Twoje trasy */}
+          <NavLink
+            to="/home"
+            end
+            className="flex flex-col items-center justify-center gap-1 text-muted-foreground transition-colors"
+            activeClassName="text-orange-600"
+          >
+            {({ isActive }) => (
+              <>
+                <Map className="h-6 w-6 stroke-2" />
+                <span className={`h-0.5 w-5 rounded-full transition-colors ${isActive ? "bg-orange-600" : "bg-transparent"}`} />
+              </>
+            )}
+          </NavLink>
 
           {/* Center FAB */}
           <button
