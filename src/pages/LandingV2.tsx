@@ -185,7 +185,7 @@ function HowItWorks() {
       <div className="mx-auto max-w-6xl">
         <Reveal className="text-center mb-16 flex flex-col items-center gap-4">
           <Eyebrow>Jak to działa</Eyebrow>
-          <h2 className="font-display font-extrabold text-foreground text-[clamp(2rem,5vw,3.25rem)] tracking-[-0.02em] leading-tight max-w-[16ch]">Od pomysłu do trasy w&nbsp;trzech krokach</h2>
+          <h2 className="font-display font-extrabold text-foreground text-[clamp(2rem,5vw,3.25rem)] tracking-[-0.02em] leading-tight max-w-[16ch]">Od pomysłu do planu dnia w&nbsp;trzech krokach</h2>
         </Reveal>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-16 items-center">
           <Reveal className="flex justify-center md:order-1">
