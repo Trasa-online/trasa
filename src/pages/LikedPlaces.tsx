@@ -24,8 +24,8 @@ const LikedPlaces = () => {
           <ArrowLeft className="h-5 w-5" />
         </button>
         <div>
-          <h1 className="text-xl font-black tracking-tight">Polubione</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">Miejsca które polubiłeś podczas przeglądania.</p>
+          <h1 className="text-xl font-black tracking-tight">Zapisane</h1>
+          <p className="text-xs text-muted-foreground mt-0.5">Miejsca które zapisałeś podczas przeglądania.</p>
         </div>
       </div>
 

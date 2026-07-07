@@ -99,9 +99,9 @@ export const LikedTab = () => {
           <Heart className="h-7 w-7 text-orange-600" />
         </div>
         <div className="space-y-2">
-          <p className="text-lg font-bold tracking-tight">Brak polubionych miejsc</p>
+          <p className="text-lg font-bold tracking-tight">Brak zapisanych miejsc</p>
           <p className="text-sm text-muted-foreground leading-relaxed max-w-[280px] mx-auto">
-            Wracaj na główną i&nbsp;przeglądaj miejsca. Te&nbsp;które polubisz pojawią się tutaj.
+            Wracaj na główną i&nbsp;przeglądaj miejsca. Te&nbsp;które zapiszesz pojawią się tutaj.
           </p>
         </div>
         <button
@@ -145,14 +145,14 @@ export const LikedTab = () => {
                   {group.city}
                 </p>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  {group.places.length} {group.places.length === 1 ? "polubione miejsce" : group.places.length < 5 ? "polubione miejsca" : "polubionych miejsc"}
+                  {group.places.length} {group.places.length === 1 ? "zapisane miejsce" : group.places.length < 5 ? "zapisane miejsca" : "zapisanych miejsc"}
                 </p>
               </div>
               <ChevronDown className={`h-5 w-5 text-muted-foreground/60 shrink-0 transition-transform ${expanded ? "rotate-180" : ""}`} />
             </button>
             <button
               onClick={() => {
-                if (!confirm(`Usunąć wszystkie polubione z ${group.city}?`)) return;
+                if (!confirm(`Usunąć wszystkie zapisane z ${group.city}?`)) return;
                 const placeNames = group.places.map(p => p.place_name);
                 clearCity(group.city);
                 if (user?.id) void removeReactionsFromDb(user.id, group.city, placeNames);

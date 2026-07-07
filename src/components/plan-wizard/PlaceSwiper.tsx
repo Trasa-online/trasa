@@ -748,14 +748,14 @@ const EmptyState = ({
         <div className="space-y-1.5">
           <p className="text-2xl font-black text-foreground leading-tight">{reviewedTitle}</p>
           <p className="text-sm text-muted-foreground leading-relaxed max-w-[300px]">
-            Przejdź do zakładki dopasowań i&nbsp;stwórz swój plan.
+            Przejdź do zakładki zapisanych i&nbsp;stwórz swój plan.
           </p>
         </div>
         <button
           onClick={() => (onGoToMatches ? onGoToMatches() : onProceed())}
           className="px-8 py-3.5 rounded-full bg-primary text-white font-bold text-sm flex items-center gap-2 active:scale-[0.97] transition-transform shadow-lg shadow-primary/25"
         >
-          {onGoToMatches ? "Przechodzę do dopasowań" : `Ułóż plan z ${likedPlaces.length} miejsc`}
+          {onGoToMatches ? "Przejdź do zapisanych" : `Ułóż plan z ${likedPlaces.length} miejsc`}
           <ArrowRight className="h-4 w-4" />
         </button>
       </div>

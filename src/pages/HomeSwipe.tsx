@@ -106,8 +106,8 @@ const HomeSwipe = () => {
             <button
               onClick={() => navigate("/polubione")}
               className="h-9 w-9 flex items-center justify-center rounded-full bg-muted text-foreground active:scale-90 transition-transform"
-              aria-label="Polubione miejsca"
-              title="Polubione"
+              aria-label="Zapisane miejsca"
+              title="Zapisane"
             >
               <Heart className="h-[18px] w-[18px]" />
             </button>

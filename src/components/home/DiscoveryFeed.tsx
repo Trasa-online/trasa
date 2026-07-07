@@ -182,7 +182,7 @@ export function CollectionDetail({ col, onClose }: { col: DiscoveryCollection; o
       photo_url: item.photo_url ?? null,
     });
     setLikedNames((prev) => new Set(prev).add(item.place_name.toLowerCase()));
-    toast.success("Dodano do polubionych");
+    toast.success("Zapisano");
     if (user?.id && item.place_id) {
       (supabase as any).from("user_place_reactions").upsert({
         user_id: user.id, place_id: item.place_id, place_name: item.place_name, city: col.city,
@@ -302,7 +302,7 @@ export function CollectionDetail({ col, onClose }: { col: DiscoveryCollection; o
                       {col.city && (
                         <span
                           role="button"
-                          aria-label={alreadyLiked ? "Już polubione" : "Dodaj do polubionych"}
+                          aria-label={alreadyLiked ? "Już zapisane" : "Zapisz miejsce"}
                           onClick={(e) => { e.stopPropagation(); e.preventDefault(); if (!alreadyLiked) likePlace(item); }}
                           className="h-7 w-7 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-sm active:scale-90 transition-transform"
                         >

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { ArrowLeft, X, Plus, Filter, Check, Star, MapPin, ArrowRight, Heart } from "lucide-react";
+import { ArrowLeft, X, Plus, Filter, Check, Star, MapPin, ArrowRight } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import { supabase } from "@/integrations/supabase/client";
@@ -81,16 +81,15 @@ const PlanWizard = () => {
   // z eksploracji DLA WYBRANEGO MIASTA. Wczesniej reuse szedl tylko z BottomNav po zgadnietym
   // mescie (getActiveHomeCity), wiec po "Przegladaj miejsca" w innym miescie polubione nie
   // wskakiwaly do Dopasowan. Merge po realnie wybranym miescie naprawia to (pokazuja sie od razu).
-  // Polubione z dzisiejszej eksploracji DLA WYBRANEGO MIASTA wlaczamy do "Dopasowan"
-  // dopiero po POTWIERDZENIU w popupie przy swiperze (krok 4). Wczesniej merge byl
-  // automatyczny, a popup wyskakiwal przedwczesnie z menu "+" (przed wyborem miasta/daty).
+  // Zapisane miejsca z dzisiejszej eksploracji DLA WYBRANEGO MIASTA wlaczamy do widoku
+  // "Zapisane" AUTOMATYCZNIE (bez popupu). User odznacza tam czego nie chce - zamiast
+  // wczesniejszego modala "wykorzystac polubione?".
   const todayLikesForCity = useMemo(() => (city ? getTodayLikes(city) : []), [city]);
-  const [reuseDecision, setReuseDecision] = useState<"pending" | "accepted" | "declined">("pending");
   const allLikedNames: string[] = useMemo(() => {
     const fromState = returnState?.likedPlaceNames ?? [];
-    const fromExplore = reuseDecision === "accepted" ? todayLikesForCity.map((l) => l.place_name) : [];
+    const fromExplore = todayLikesForCity.map((l) => l.place_name);
     return Array.from(new Set([...fromState, ...fromExplore]));
-  }, [returnState?.likedPlaceNames, reuseDecision, todayLikesForCity]);
+  }, [returnState?.likedPlaceNames, todayLikesForCity]);
   const allSkippedNames: string[] = returnState?.skippedPlaceNames ?? [];
 
   const [showAddPlace, setShowAddPlace] = useState(false);
@@ -268,38 +267,8 @@ const PlanWizard = () => {
 
   return (
     <div className="flex flex-col h-[100dvh] bg-background max-w-lg mx-auto">
-      {/* Popup "wykorzystać polubione z dziś" - DOPIERO przy swiperze (krok 4), po wyborze
-          miasta i daty, bazujac na polubieniach w wybranym miescie. Wczesniej wyskakiwal
-          przedwczesnie z menu "+". */}
-      {step === 4 && !exploreMode && !returnState?.fromRoute && reuseDecision === "pending" && todayLikesForCity.length > 0 && (
-        <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/40 backdrop-blur-sm p-4 pb-[calc(env(safe-area-inset-bottom,0px)+1.5rem)]">
-          <div className="w-full max-w-sm rounded-3xl bg-card p-5 shadow-2xl">
-            <div className="flex items-start gap-3">
-              <div className="h-10 w-10 rounded-full bg-orange-50 border border-orange-100 flex items-center justify-center shrink-0">
-                <Heart className="h-5 w-5 text-orange-600" />
-              </div>
-              <div className="min-w-0">
-                <p className="font-black text-base">Wykorzystać polubione z&nbsp;dziś?</p>
-                <p className="text-sm text-muted-foreground mt-0.5 leading-snug">
-                  Masz <strong>{todayLikesForCity.length}</strong> {todayLikesForCity.length === 1 ? "polubione miejsce" : todayLikesForCity.length < 5 ? "polubione miejsca" : "polubionych miejsc"} z&nbsp;{city}. Dodam je do&nbsp;Dopasowań.
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={() => setReuseDecision("accepted")}
-              className="mt-4 w-full py-3 rounded-full bg-primary text-white font-bold text-sm active:scale-[0.97] transition-transform"
-            >
-              Tak, wykorzystaj polubione →
-            </button>
-            <button
-              onClick={() => setReuseDecision("declined")}
-              className="mt-2 w-full py-3 rounded-full border border-border/60 bg-card text-foreground font-bold text-sm active:scale-[0.97] transition-transform"
-            >
-              Nie, zacznij na nowo
-            </button>
-          </div>
-        </div>
-      )}
+      {/* Modal "wykorzystać polubione?" usunięty - zapisane z dziś wpadają automatycznie
+          do zakładki "Zapisane", gdzie user odznacza czego nie chce. */}
 
       {/* Header */}
       <div className="flex items-center gap-2 px-4 pt-safe-4 pb-3 border-b border-border/20 shrink-0">
@@ -439,7 +408,7 @@ const PlanWizard = () => {
                     step4Tab === "matches" ? "text-orange-600 border-b-2 border-orange-600" : "text-muted-foreground"
                   )}
                 >
-                  Dopasowania
+                  Zapisane
                   {likedSnapshot.length > 0 && (
                     <span className="h-[18px] min-w-[18px] px-1 rounded-full bg-primary text-white text-[10px] font-bold flex items-center justify-center">
                       {likedSnapshot.length}
@@ -481,9 +450,9 @@ const PlanWizard = () => {
                   {likedSnapshot.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-16 gap-4 text-center">
                       <p className="text-4xl">🤔</p>
-                      <p className="font-bold">Brak polubionych miejsc</p>
+                      <p className="font-bold">Brak zapisanych miejsc</p>
                       <p className="text-sm text-muted-foreground leading-relaxed max-w-[280px]">
-                        Wróć do Eksploruj i wybierz miejsca, które chcesz mieć w&nbsp;trasie.
+                        Wróć do Eksploruj i zapisz miejsca, które chcesz mieć w&nbsp;trasie.
                       </p>
                       <button
                         onClick={() => setStep4Tab("swipe")}
