@@ -165,7 +165,7 @@ Deno.serve(async (req) => {
           url = `/review-summary?route=${route.id}`;
         } else if (kind === "today") {
           title = `Dziś trasa po ${cityName}`;
-          body = "Twój plan jest gotowy - powodzenia";
+          body = "Twój plan jest gotowy! Baw się dobrze 🧡";
           url = `/day/${route.id}`;
         }
       }

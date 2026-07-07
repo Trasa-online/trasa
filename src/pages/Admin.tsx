@@ -59,6 +59,7 @@ type CustomLead = {
 
 const Admin = () => {
   const { user, loading } = useAuth();
+  const [testingPush, setTestingPush] = useState(false);
   const navigate = useNavigate();
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const [tab, setTab] = useState<"waitlist" | "other" | "businesses" | "bugs" | "rankings">("businesses");
@@ -848,6 +849,26 @@ const Admin = () => {
           <ArrowLeft className="h-5 w-5" />
         </button>
         <h1 className="text-lg font-semibold flex-1">Panel admina</h1>
+        {/* Test dostawy push do siebie (diagnostyka - w oderwaniu od triggerow) */}
+        <button
+          onClick={async () => {
+            if (!user) return;
+            setTestingPush(true);
+            const { data, error } = await supabase.functions.invoke("send-push", {
+              body: { user_id: user.id, title: "Test 🔔", body: "Jeśli to widzisz, push działa!", url: "/" },
+            });
+            setTestingPush(false);
+            if (error) { toast.error(`Błąd: ${error.message}`); return; }
+            const sent = (data as any)?.sent ?? 0;
+            toast[sent > 0 ? "success" : "error"](
+              sent > 0 ? `Wysłano do ${sent} urządz. - sprawdź powiadomienie` : "0 urządzeń - brak zapisanej subskrypcji (token nie zapisany?)"
+            );
+          }}
+          disabled={testingPush}
+          className="text-xs font-bold text-orange-600 border border-orange-200 rounded-full px-3 py-1.5 active:scale-95 disabled:opacity-50"
+        >
+          {testingPush ? "…" : "Test push"}
+        </button>
       </div>
 
       {/* Tabs */}
