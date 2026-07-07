@@ -801,22 +801,17 @@ const SHOW_ZESTAWIENIA = true;
 export default function DiscoveryFeed() {
   const [activeCol, setActiveCol] = useState<DiscoveryCollection | null>(null);
   const [activeCreator, setActiveCreator] = useState<PolecaneCreatorPlan | null>(null);
-  // Drawer "Kiedy planujesz te trase?" - klik w trase/zestawienie z eksploracji pyta
-  // o date, a potem laduje od razu w PlanWizard (swiper) z miejscami w Dopasowaniach.
-  const [planPrompt, setPlanPrompt] = useState<{ city: string | null; names?: string[]; routeId?: string } | null>(null);
+  // Drawer "Kiedy planujesz te trase?" - klik "Uzyj tej trasy" w zestawieniu (podglad)
+  // pyta o date, a potem laduje w PlanWizard (swiper) z miejscami w Dopasowaniach.
+  // (Karty tras z tabeli routes maja wlasny podglad SharedRoute i swoj przycisk.)
+  const [planPrompt, setPlanPrompt] = useState<{ city: string | null; names: string[] } | null>(null);
   const navigate = useNavigate();
 
-  // Po wyborze daty: dociagnij nazwy miejsc (trasa -> piny), przejdz do PlanWizard step 4.
-  const startPlanning = async (date: Date | null, numDays: number) => {
+  // Po wyborze daty: przejdz do PlanWizard step 4 z miejscami zestawienia jako Dopasowania.
+  const startPlanning = (date: Date | null, numDays: number) => {
     const p = planPrompt;
     if (!p) return;
     setPlanPrompt(null);
-    let names = p.names;
-    if (!names && p.routeId) {
-      const { data } = await (supabase as any).from("pins")
-        .select("place_name").eq("route_id", p.routeId).order("pin_order");
-      names = (data ?? []).map((x: any) => x.place_name).filter(Boolean);
-    }
     navigate("/plan", {
       state: {
         // Bez miasta nie mamy z czego zaladowac swipera -> zacznij od wyboru miasta.
@@ -824,7 +819,7 @@ export default function DiscoveryFeed() {
         city: p.city ?? undefined,
         date: (date ?? new Date()).toISOString(),
         numDays: numDays || 1,
-        likedPlaceNames: names ?? [],
+        likedPlaceNames: p.names,
         fromRoute: true,
       },
     });
@@ -1133,7 +1128,7 @@ export default function DiscoveryFeed() {
               <p className="text-sm font-black uppercase tracking-wide mb-3 px-1">Najnowsze trasy</p>
               <div className="flex gap-3 overflow-x-auto scrollbar-none snap-x snap-mandatory pb-1 -ml-1 pl-1 -mr-4">
                 {newest.map((r) => (
-                  <RouteCardH key={r.id} route={r} onClick={() => setPlanPrompt({ routeId: r.id, city: r.city })} />
+                  <RouteCardH key={r.id} route={r} onClick={() => navigate(`/route/${r.id}`)} />
                 ))}
                 <div className="shrink-0 w-0.5" />
               </div>
@@ -1153,7 +1148,7 @@ export default function DiscoveryFeed() {
               </div>
               <div className="space-y-5">
                 {warszawa.map((r) => (
-                  <RouteCardV key={r.id} route={r} onClick={() => setPlanPrompt({ routeId: r.id, city: r.city })} />
+                  <RouteCardV key={r.id} route={r} onClick={() => navigate(`/route/${r.id}`)} />
                 ))}
               </div>
             </div>
