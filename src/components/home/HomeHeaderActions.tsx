@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Bell, Heart, Shield, Search } from "lucide-react";
+import { Bell, Bookmark, Shield, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import NotificationsDrawer from "@/components/layout/NotificationsDrawer";
@@ -10,8 +10,21 @@ import { isHardcodedAdmin } from "@/lib/admins";
 
 // Wspolny cluster ikon akcji w naglowku (dzwonek powiadomien + licznik, szukanie
 // znajomych, zapisane miejsca, panel admina). Uzywany na landingu (Eksploruj)
-// oraz na ekranie "Twoje trasy" (HomeSwipe).
-const HomeHeaderActions = () => {
+// oraz na ekranie "Twoje trasy" (HomeSwipe). Propsy pozwalaja ukryc pojedyncze
+// ikony per ekran (landing pokazuje tylko wyszukiwarke).
+interface HomeHeaderActionsProps {
+  showNotifications?: boolean;
+  showSearch?: boolean;
+  showSaved?: boolean;
+  showAdmin?: boolean;
+}
+
+const HomeHeaderActions = ({
+  showNotifications = true,
+  showSearch = true,
+  showSaved = true,
+  showAdmin = true,
+}: HomeHeaderActionsProps = {}) => {
   const { user, isAnonymous } = useAuth();
   const navigate = useNavigate();
   const isAdmin = isHardcodedAdmin(user?.email);
@@ -62,20 +75,22 @@ const HomeHeaderActions = () => {
             Zaloguj się
           </button>
         ) : (
-          <button
-            onClick={() => setNotifOpen(true)}
-            className="relative h-9 w-9 flex items-center justify-center rounded-full bg-muted text-foreground active:scale-90 transition-transform"
-            aria-label="Powiadomienia"
-          >
-            <Bell className="h-[18px] w-[18px]" />
-            {unreadCount > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 h-3.5 min-w-3.5 rounded-full bg-primary text-white text-[8px] font-bold flex items-center justify-center px-1 leading-none ring-2 ring-background">
-                {unreadCount > 9 ? "9+" : unreadCount}
-              </span>
-            )}
-          </button>
+          showNotifications && (
+            <button
+              onClick={() => setNotifOpen(true)}
+              className="relative h-9 w-9 flex items-center justify-center rounded-full bg-muted text-foreground active:scale-90 transition-transform"
+              aria-label="Powiadomienia"
+            >
+              <Bell className="h-[18px] w-[18px]" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 h-3.5 min-w-3.5 rounded-full bg-primary text-white text-[8px] font-bold flex items-center justify-center px-1 leading-none ring-2 ring-background">
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </span>
+              )}
+            </button>
+          )
         )}
-        {!isGuest && (
+        {!isGuest && showSearch && (
           <button
             onClick={() => navigate("/search")}
             className="h-9 w-9 flex items-center justify-center rounded-full bg-muted text-foreground active:scale-90 transition-transform"
@@ -85,17 +100,17 @@ const HomeHeaderActions = () => {
             <Search className="h-[18px] w-[18px]" />
           </button>
         )}
-        {!isGuest && (
+        {!isGuest && showSaved && (
           <button
             onClick={() => navigate("/polubione")}
             className="h-9 w-9 flex items-center justify-center rounded-full bg-muted text-foreground active:scale-90 transition-transform"
             aria-label="Zapisane miejsca"
             title="Zapisane"
           >
-            <Heart className="h-[18px] w-[18px]" />
+            <Bookmark className="h-[18px] w-[18px]" />
           </button>
         )}
-        {isAdmin && (
+        {showAdmin && isAdmin && (
           <button
             onClick={() => navigate("/admin")}
             className="h-9 w-9 flex items-center justify-center rounded-full bg-blue-50 text-blue-600 active:scale-90 transition-transform"
