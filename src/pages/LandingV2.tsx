@@ -105,16 +105,16 @@ function Phone({ width = 260, ar = "430 / 872", float = false, rotate = 0, bare 
 // ─── Store badges (island) ────────────────────────────────────────────────────
 
 function StoreBadges({ center = false }: { center?: boolean }) {
-  // Google Play ma szary border + wewnetrzny transparent padding, wiec renderuje sie
-  // wizualnie mniejszy przy tej samej wysokosci - dajemy mu wieksza h zeby zrownac pigulki.
+  // Oba badge'y wypelniaja plotno pixel-perfect (Google Play przyciety z transparent
+  // paddingu -> google-play-badge-trim.png), wiec ta sama wysokosc = ta sama wielkosc.
   const link = "group inline-flex transition-transform duration-500 hover:-translate-y-0.5 active:scale-[0.98]";
   return (
     <div className={`flex flex-col sm:flex-row gap-3 items-center ${center ? "sm:justify-center" : "sm:justify-start"}`} style={{ transitionTimingFunction: EASE }}>
       <a href={APP_STORE_URL} onClick={(e) => { if (APP_STORE_URL === "#") e.preventDefault(); posthog.capture("landing_store_click", { store: "app_store", v: 2 }); }} className={link} aria-label="Pobierz z App Store">
-        <img src="/Pobierz-z-App-Store.png" alt="Pobierz z App Store" className="h-[46px] w-auto object-contain drop-shadow-sm" draggable={false} />
+        <img src="/Pobierz-z-App-Store.png" alt="Pobierz z App Store" className="h-[50px] w-auto object-contain drop-shadow-sm" draggable={false} />
       </a>
       <a href={PLAY_STORE_URL} onClick={(e) => { if (PLAY_STORE_URL === "#") e.preventDefault(); posthog.capture("landing_store_click", { store: "play_store", v: 2 }); }} className={link} aria-label="Pobierz z Google Play">
-        <img src="/google-play-badge.png" alt="Pobierz z Google Play" className="h-[58px] w-auto object-contain drop-shadow-sm" draggable={false} />
+        <img src="/google-play-badge-trim.png" alt="Pobierz z Google Play" className="h-[50px] w-auto object-contain drop-shadow-sm" draggable={false} />
       </a>
     </div>
   );
