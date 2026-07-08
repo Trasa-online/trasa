@@ -4,7 +4,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Camera, X, Globe, Lock, Pencil, Check, Image as ImageIcon, Map as MapIcon, ChevronUp, ChevronDown, ChevronRight, ChevronLeft, Trash2, Plus, Share2, List, GalleryHorizontalEnd, Info, MoreVertical } from "lucide-react";
+import { ArrowLeft, Camera, X, Globe, Lock, Pencil, Check, Image as ImageIcon, Map as MapIcon, ChevronUp, ChevronDown, ChevronRight, ChevronLeft, Trash2, Plus, Share, List, GalleryHorizontalEnd, Info, MoreVertical } from "lucide-react";
 import { useShare } from "@/hooks/useShare";
 import { Switch } from "@/components/ui/switch";
 import AddPinSheet from "@/components/route/AddPinSheet";
@@ -982,6 +982,42 @@ const ReviewSummary = () => {
     </div>
   );
 
+  // ── Drawer udostepniania (skrot z ikony): trasa juz jest udostepniona (klik w ikone
+  // publikuje), wiec pokazujemy TYLKO: anonimowo + gwarancja prywatnosci galerii + podpis. ──
+  const renderShareDrawer = () => (
+    <div className="px-5 pt-1">
+      <div className="flex items-start gap-3 rounded-2xl bg-muted p-3.5">
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-bold">Udostępnij anonimowo</p>
+          <p className="text-[11px] text-muted-foreground mt-1">Bez Twojego profilu - trasa pojawi się w&nbsp;Eksploruj jako „Anonim".</p>
+        </div>
+        <Switch
+          checked={shareAnonymous}
+          onCheckedChange={(v) => setVisibility(v ? "anon" : "profile")}
+          className="mt-0.5 shrink-0"
+        />
+      </div>
+      {/* Gwarancja prywatnosci: galeria zdjec nigdy nie jest udostepniana. */}
+      <p className="text-[11px] text-muted-foreground mt-2.5 flex items-start gap-1.5">
+        <Lock className="h-3 w-3 shrink-0 mt-0.5 text-emerald-600" />
+        <span>Twoja galeria zdjęć zostaje prywatna i&nbsp;bezpieczna. W&nbsp;Eksploruj pokazujemy tylko plan trasy z&nbsp;Twoimi notkami.</span>
+      </p>
+      {/* Podpis autora */}
+      <div className="mt-4">
+        <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-1.5 block">Podpis <span className="normal-case font-medium text-muted-foreground/50">(opcjonalnie)</span></label>
+        <textarea
+          value={shareCaption}
+          onChange={(e) => setShareCaption(e.target.value)}
+          onBlur={() => void saveShareMeta(shareCaption)}
+          maxLength={200}
+          rows={2}
+          placeholder="Napisz coś o tej podróży…"
+          className="w-full rounded-2xl border border-border bg-card px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-orange-500/60 placeholder:text-muted-foreground/50 resize-none"
+        />
+      </div>
+    </div>
+  );
+
   // ── Nagłówek steppera: 3 kroki, klikalne (powrót/przejście), pasek postępu. ──
   const renderStepper = () => {
     const steps = [{ n: 1, label: "Trasa" }, { n: 2, label: "Notki" }, { n: 3, label: "Zdjęcia" }] as const;
@@ -1079,7 +1115,7 @@ const ReviewSummary = () => {
             )}
             {isOwner && isPublic && (
               <button onClick={shareLink} aria-label="Udostępnij trasę" className="h-10 w-10 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center active:scale-95 transition-transform">
-                <Share2 className="h-5 w-5 text-white" />
+                <Share className="h-5 w-5 text-white" />
               </button>
             )}
           </div>
@@ -1207,9 +1243,9 @@ const ReviewSummary = () => {
                     <ImageIcon className="h-4 w-4" /> Zdjęcia
                   </button>
                 </div>
-                <button onClick={() => setShareSheetOpen(true)} aria-label="Udostępnianie"
+                <button onClick={() => { if (!isPublic) { setVisibility(shareAnonymous ? "anon" : "profile"); notify.success("Trasa widoczna w Eksploruj"); } setShareSheetOpen(true); }} aria-label="Udostępnij trasę"
                   className="h-9 w-9 rounded-full bg-muted flex items-center justify-center shrink-0 active:scale-95 transition-transform">
-                  <Share2 className="h-4 w-4 text-foreground" />
+                  <Share className="h-4 w-4 text-foreground" />
                 </button>
                 <button onClick={() => { setEditingStepper(true); setStep(1); }} aria-label="Edytuj wpis"
                   className="h-9 w-9 rounded-full bg-muted flex items-center justify-center shrink-0 active:scale-95 transition-transform">
@@ -1336,12 +1372,12 @@ const ReviewSummary = () => {
               <button onClick={() => setShareSheetOpen(false)} aria-label="Zamknij" className="h-9 w-9 rounded-full bg-muted flex items-center justify-center active:bg-muted/70"><X className="h-4 w-4" /></button>
             </div>
             <div className="flex-1 overflow-y-auto pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))]">
-              {renderSharing()}
+              {renderShareDrawer()}
               {isPublic && (
                 <div className="px-5 mt-5">
                   <button onClick={shareLink}
                     className="w-full py-3 rounded-full bg-secondary text-secondary-foreground font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform">
-                    <Share2 className="h-4 w-4" /> Udostępnij link do trasy
+                    <Share className="h-4 w-4" /> Udostępnij link do trasy
                   </button>
                 </div>
               )}
