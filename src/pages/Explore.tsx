@@ -371,7 +371,7 @@ const Explore = () => {
             onClick={() => { trackCollectionCreate("explore_header"); navigate("/zestawienie/nowe"); }}
             className="shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-primary text-white text-xs font-bold active:scale-[0.97] transition-transform shadow-sm shadow-orange-500/20"
           >
-            <Plus className="h-3.5 w-3.5" /> Zestawienie
+            <Plus className="h-3.5 w-3.5" /> Dodaj
           </button>
         </div>
       </div>

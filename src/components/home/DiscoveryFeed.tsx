@@ -4,7 +4,10 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { MapPin, X, Globe, Sparkles, Star, Pencil, Trash2, ChevronRight, ArrowRight, Heart, Eye, List, GalleryHorizontalEnd } from "lucide-react";
+import { MapPin, X, Globe, Sparkles, Star, Pencil, Trash2, ChevronRight, ArrowRight, Heart, Eye, List, GalleryHorizontalEnd, Search, SlidersHorizontal } from "lucide-react";
+import { useDebounce } from "@/hooks/useDebounce";
+import { expandCity } from "@/lib/cities";
+import { MAIN_CATEGORIES, getDbCategoriesFor } from "@/lib/categories";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import FullCalendarPicker from "@/components/plan-wizard/FullCalendarPicker";
 import RouteMap from "@/components/RouteMap";
@@ -880,6 +883,34 @@ function RouteCardV({ route, onClick }: { route: PolecaneRoute; onClick: () => v
 // ── Main export ────────────────────────────────────────────────────────────────
 
 // Sekcja "Zestawienia miejsc" w Eksploruj - AKTYWNA (launch feature).
+// Aktywne miasta (z CityPicker) - filtr miasta na eksploracji.
+const ACTIVE_CITIES = ["Warszawa", "Gdańsk", "Sopot", "Gdynia", "Trójmiasto"];
+// Escape znakow specjalnych ilike (%,_,\) - bezpieczne wyszukiwanie.
+const escapeLike = (v: string) => v.replace(/[%_\\]/g, "\\$&");
+
+// Hydratacja kolekcji: dociagnij items + home_city autora (badge "lokals poleca!").
+// Wspoldzielone przez explore-rankings i wyszukiwarke.
+async function hydrateCollections(cols: any[]): Promise<DiscoveryCollection[]> {
+  if (!cols?.length) return [];
+  const ids = cols.map((c: any) => c.id);
+  const { data: items } = await (supabase as any)
+    .from("discovery_items")
+    .select("id, collection_id, order_index, place_name, short_desc, photo_url, latitude, longitude, place_id, category, address, rating")
+    .in("collection_id", ids)
+    .order("order_index", { ascending: true });
+  const userIds = [...new Set(cols.map((c: any) => c.user_id).filter(Boolean))];
+  const homeMap = new Map<string, string | null>();
+  if (userIds.length) {
+    const { data: profs } = await (supabase as any).from("profiles").select("id, home_city").in("id", userIds);
+    for (const p of profs ?? []) homeMap.set(p.id, p.home_city ?? null);
+  }
+  return cols.map((col: any): DiscoveryCollection => ({
+    ...col,
+    author_home_city: homeMap.get(col.user_id) ?? null,
+    items: (items ?? []).filter((i: any) => i.collection_id === col.id),
+  }));
+}
+
 const SHOW_ZESTAWIENIA = true;
 
 export default function DiscoveryFeed() {
@@ -890,6 +921,18 @@ export default function DiscoveryFeed() {
   // (Karty tras z tabeli routes maja wlasny podglad SharedRoute i swoj przycisk.)
   const [planPrompt, setPlanPrompt] = useState<{ city: string | null; names: string[] } | null>(null);
   const navigate = useNavigate();
+
+  // Wyszukiwarka + filtry (miasto / motyw zestawienia / kategoria miejsc w trasach).
+  const [searchInput, setSearchInput] = useState("");
+  const debouncedQuery = useDebounce(searchInput.trim(), 300);
+  const [cityFilter, setCityFilter] = useState<string | null>(null);
+  const [themeFilter, setThemeFilter] = useState<string | null>(null);
+  const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const q = debouncedQuery.length >= 2 ? debouncedQuery : "";
+  const isSearchActive = !!q || !!cityFilter || !!themeFilter || !!categoryFilter;
+  const activeFilterCount = [cityFilter, themeFilter, categoryFilter].filter(Boolean).length;
+  const clearFilters = () => { setCityFilter(null); setThemeFilter(null); setCategoryFilter(null); };
 
   // Po wyborze daty: przejdz do PlanWizard step 4 z miejscami zestawienia jako Dopasowania.
   const startPlanning = (date: Date | null, numDays: number) => {
@@ -1112,29 +1155,77 @@ export default function DiscoveryFeed() {
         .order("updated_at", { ascending: false })
         .limit(20);
       if (error || !cols?.length) return [] as DiscoveryCollection[];
-
-      const ids = cols.map((c: any) => c.id);
-      const { data: items } = await (supabase as any)
-        .from("discovery_items")
-        .select("id, collection_id, order_index, place_name, short_desc, photo_url, latitude, longitude, place_id, category, address, rating")
-        .in("collection_id", ids)
-        .order("order_index", { ascending: true });
-
-      // home_city autorow -> badge "lokals poleca!"
-      const userIds = [...new Set(cols.map((c: any) => c.user_id).filter(Boolean))];
-      const homeMap = new Map<string, string | null>();
-      if (userIds.length) {
-        const { data: profs } = await (supabase as any).from("profiles").select("id, home_city").in("id", userIds);
-        for (const p of profs ?? []) homeMap.set(p.id, p.home_city ?? null);
-      }
-
-      return cols.map((col: any): DiscoveryCollection => ({
-        ...col,
-        author_home_city: homeMap.get(col.user_id) ?? null,
-        items: (items ?? []).filter((i: any) => i.collection_id === col.id),
-      }));
+      return hydrateCollections(cols);
     },
     staleTime: 5 * 60 * 1000,
+  });
+
+  // Wyszukiwarka: trasy (tytul / autor) + zestawienia (tytul / autor), z filtrami.
+  const { data: results, isLoading: searchLoading } = useQuery({
+    queryKey: ["explore-search", q, cityFilter, themeFilter, categoryFilter],
+    enabled: isSearchActive,
+    staleTime: 30_000,
+    queryFn: async () => {
+      const cities = cityFilter ? expandCity(cityFilter) : null;
+      const like = `%${escapeLike(q)}%`;
+      const routeCols = "id, title, city, ai_highlight, ai_summary, user_id, created_at, views, share_anonymous";
+
+      // Kategoria miejsc -> zbior route_id z pinow tej kategorii (routes nie ma kolumny category).
+      let allow: Set<string> | null = null;
+      if (categoryFilter) {
+        const { data: pinRows } = await (supabase as any)
+          .from("pins").select("route_id")
+          .in("category", getDbCategoriesFor(categoryFilter))
+          .not("route_id", "is", null);
+        allow = new Set((pinRows ?? []).map((p: any) => p.route_id));
+        if (allow.size === 0) allow = new Set(["__none__"]);
+      }
+
+      const applyRoute = (b: any) => {
+        let x = b.eq("is_shared", true).not("title", "is", null);
+        if (cities) x = x.in("city", cities);
+        return x;
+      };
+
+      const routeMap = new Map<string, any>();
+      if (q) {
+        const { data: byTitle } = await applyRoute((supabase as any).from("routes").select(routeCols).ilike("title", like))
+          .order("views", { ascending: false, nullsFirst: false }).limit(30);
+        for (const r of byTitle ?? []) if (!routeMap.has(r.id)) routeMap.set(r.id, r);
+        // Trasy autorow, ktorych nick/imie pasuje.
+        const { data: profs } = await (supabase as any).from("profiles").select("id")
+          .or(`username.ilike.${like},first_name.ilike.${like}`).limit(50);
+        const uids = (profs ?? []).map((p: any) => p.id);
+        if (uids.length) {
+          const { data: byAuthor } = await applyRoute((supabase as any).from("routes").select(routeCols).in("user_id", uids))
+            .order("views", { ascending: false, nullsFirst: false }).limit(30);
+          for (const r of byAuthor ?? []) if (!routeMap.has(r.id)) routeMap.set(r.id, r);
+        }
+      } else if (cities || categoryFilter) {
+        // Same filtry (bez slowa) - i tak pokazujemy pasujace trasy.
+        const { data: all } = await applyRoute((supabase as any).from("routes").select(routeCols))
+          .order("views", { ascending: false, nullsFirst: false }).limit(40);
+        for (const r of all ?? []) if (!routeMap.has(r.id)) routeMap.set(r.id, r);
+      }
+      let routeRows = [...routeMap.values()];
+      if (allow) routeRows = routeRows.filter((r) => allow!.has(r.id));
+      const routes = await enrichRouteRows(routeRows);
+
+      // Zestawienia - pomijamy gdy filtr kategorii miejsc (to pojecie tras).
+      let collections: DiscoveryCollection[] = [];
+      if (!categoryFilter) {
+        let colQ = (supabase as any).from("discovery_collections")
+          .select("id, title, city, description, category, author_name, author_avatar, user_id, views_count, saves_count, plan_adds_count")
+          .eq("is_public", true).eq("kind", "ranking").eq("hidden_by_admin", false).eq("moderation_status", "approved");
+        if (q) colQ = colQ.or(`title.ilike.${like},author_name.ilike.${like}`);
+        if (themeFilter) colQ = colQ.eq("category", themeFilter);
+        if (cities) colQ = colQ.in("city", cities);
+        const { data: cols } = await colQ.order("updated_at", { ascending: false }).limit(20);
+        collections = await hydrateCollections(cols ?? []);
+      }
+
+      return { routes, collections };
+    },
   });
 
   const { data: fallbackCollections = [] } = useQuery({
@@ -1187,7 +1278,58 @@ export default function DiscoveryFeed() {
 
   return (
     <>
-      {isLoading ? (
+      {/* Pasek wyszukiwania + przycisk filtrow */}
+      <div className="flex items-center gap-2 mb-4">
+        <div className="flex-1 flex items-center gap-2 px-3.5 py-2.5 rounded-full bg-secondary min-w-0">
+          <Search className="h-4 w-4 text-muted-foreground shrink-0" />
+          <input
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            placeholder="Szukaj tras, autorów, zestawień…"
+            className="flex-1 min-w-0 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+          />
+          {searchInput && (
+            <button onClick={() => setSearchInput("")} aria-label="Wyczyść" className="shrink-0"><X className="h-4 w-4 text-muted-foreground" /></button>
+          )}
+        </div>
+        <button onClick={() => setFiltersOpen(true)} aria-label="Filtry"
+          className="relative h-10 w-10 flex items-center justify-center rounded-full bg-secondary shrink-0 active:scale-90 transition-transform">
+          <SlidersHorizontal className="h-4 w-4" />
+          {activeFilterCount > 0 && (
+            <span className="absolute -top-1 -right-1 h-4 min-w-4 px-1 rounded-full bg-primary text-white text-[10px] font-bold flex items-center justify-center">{activeFilterCount}</span>
+          )}
+        </button>
+      </div>
+
+      {isSearchActive ? (
+        searchLoading ? (
+          <div className="space-y-5">
+            {Array.from({ length: 3 }).map((_, i) => <RouteCardVSkeleton key={i} />)}
+          </div>
+        ) : (results && (results.routes.length > 0 || results.collections.length > 0)) ? (
+          <div className="space-y-7">
+            {results.collections.length > 0 && (
+              <UserPolecajkiRow collections={results.collections} onOpen={setActiveCol} />
+            )}
+            {results.routes.length > 0 && (
+              <div>
+                <p className="text-sm font-black uppercase tracking-wide mb-3 px-1">Trasy{cityFilter ? ` w ${cityFilter}` : ""}</p>
+                <div className="space-y-5">
+                  {results.routes.map((r) => (
+                    <RouteCardV key={r.id} route={r} onClick={() => navigate(`/route/${r.id}`)} />
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="py-16 text-center px-8">
+            <div className="text-5xl mb-3">🔍</div>
+            <p className="text-base font-bold">Brak wyników</p>
+            <p className="text-sm text-muted-foreground mt-1">Spróbuj innego słowa lub zmień filtry.</p>
+          </div>
+        )
+      ) : isLoading ? (
         <div className="space-y-7">
           {/* Najnowsze trasy - poziomy scroll */}
           <div>
@@ -1300,6 +1442,53 @@ export default function DiscoveryFeed() {
           </div>
         </div>
       )}
+
+      {/* Sheet filtrow: miasto / motyw zestawienia / kategoria miejsc */}
+      <Sheet open={filtersOpen} onOpenChange={setFiltersOpen}>
+        <SheetContent side="bottom" className="rounded-t-2xl [&>button:last-child]:hidden" style={{ maxHeight: "80vh" }}>
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-lg font-black">Filtry</p>
+            <button onClick={() => setFiltersOpen(false)} aria-label="Zamknij" className="h-9 w-9 rounded-full bg-muted flex items-center justify-center active:bg-muted/70"><X className="h-4 w-4" /></button>
+          </div>
+          <div className="space-y-5 overflow-y-auto pb-2">
+            {/* Miasto */}
+            <div>
+              <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2">Miasto</p>
+              <div className="flex gap-2 overflow-x-auto scrollbar-none pb-1">
+                <button onClick={() => setCityFilter(null)} className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-bold transition-colors ${cityFilter === null ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground"}`}>Wszystkie</button>
+                {ACTIVE_CITIES.map((c) => (
+                  <button key={c} onClick={() => setCityFilter((p) => (p === c ? null : c))} className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-colors ${cityFilter === c ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground"}`}>{c}</button>
+                ))}
+              </div>
+            </div>
+            {/* Motyw zestawienia */}
+            <div>
+              <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2">Motyw zestawienia</p>
+              <div className="flex flex-wrap gap-2">
+                <button onClick={() => setThemeFilter(null)} className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-bold transition-colors ${themeFilter === null ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground"}`}>Wszystkie</button>
+                {COLLECTION_THEMES.map((t) => (
+                  <button key={t.id} onClick={() => setThemeFilter((p) => (p === t.id ? null : t.id))} className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-colors ${themeFilter === t.id ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground"}`}>{t.emoji} {t.label}</button>
+                ))}
+              </div>
+            </div>
+            {/* Kategoria miejsca (w trasach) */}
+            <div>
+              <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2">Kategoria miejsca</p>
+              <div className="flex flex-wrap gap-2">
+                <button onClick={() => setCategoryFilter(null)} className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-bold transition-colors ${categoryFilter === null ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground"}`}>Wszystkie</button>
+                {MAIN_CATEGORIES.flatMap((c) => c.subcategories).map((s) => (
+                  <button key={s.id} onClick={() => setCategoryFilter((p) => (p === s.id ? null : s.id))} className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-colors ${categoryFilter === s.id ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground"}`}>{s.emoji} {s.label}</button>
+                ))}
+              </div>
+            </div>
+            <p className="text-[11px] text-muted-foreground">Motyw filtruje zestawienia, kategoria filtruje trasy.</p>
+          </div>
+          <div className="flex gap-2 pt-3 pb-[max(8px,env(safe-area-inset-bottom))]">
+            <button onClick={clearFilters} className="flex-1 py-3 rounded-full bg-secondary text-secondary-foreground font-bold text-sm active:scale-[0.98] transition-transform">Wyczyść filtry</button>
+            <button onClick={() => setFiltersOpen(false)} className="flex-1 py-3 rounded-full bg-primary text-white font-bold text-sm active:scale-[0.98] transition-transform">Pokaż wyniki</button>
+          </div>
+        </SheetContent>
+      </Sheet>
     </>
   );
 }
