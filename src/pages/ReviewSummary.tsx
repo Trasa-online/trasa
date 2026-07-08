@@ -102,9 +102,6 @@ const ReviewSummary = () => {
 
   // Udostepnianie historycznej trasy: podpis + oznaczeni czlonkowie (#11).
   const [shareCaption, setShareCaption] = useState("");
-  const [taggedMembers, setTaggedMembers] = useState<string[]>([]);
-  const [memberInput, setMemberInput] = useState("");
-  const [memberResults, setMemberResults] = useState<Array<{ username: string; first_name: string | null; avatar_url: string | null }>>([]);
 
   const { data: route, isLoading: routeLoading } = useQuery({
     queryKey: ["review-summary-route", routeId],
@@ -280,10 +277,9 @@ const ReviewSummary = () => {
     (async () => {
       try {
         const { data, error } = await (supabase as any)
-          .from("routes").select("share_caption, tagged_members, share_anonymous").eq("id", routeId).maybeSingle();
+          .from("routes").select("share_caption, share_anonymous").eq("id", routeId).maybeSingle();
         if (error) return;
         if (data?.share_caption) setShareCaption(data.share_caption);
-        if (Array.isArray(data?.tagged_members)) setTaggedMembers(data.tagged_members);
         if (typeof data?.share_anonymous === "boolean") setShareAnonymous(data.share_anonymous);
       } catch (e) {
         console.warn("[ReviewSummary] share-meta load skipped:", e);
@@ -291,43 +287,13 @@ const ReviewSummary = () => {
     })();
   }, [routeId]);
 
-  const saveShareMeta = async (caption: string, members: string[]) => {
+  const saveShareMeta = async (caption: string) => {
     if (!routeId) return;
     try {
-      await (supabase as any).from("routes").update({ share_caption: caption.trim() || null, tagged_members: members }).eq("id", routeId);
+      await (supabase as any).from("routes").update({ share_caption: caption.trim() || null }).eq("id", routeId);
     } catch (e) {
       console.warn("[ReviewSummary] saveShareMeta failed:", e);
     }
-  };
-
-  // Oznaczanie tylko realnych userow po username (wybor z listy). Szukamy w profiles.
-  useEffect(() => {
-    const q = memberInput.trim().replace(/^@/, "");
-    if (q.length < 2) { setMemberResults([]); return; }
-    const t = setTimeout(async () => {
-      const { data } = await (supabase as any).from("profiles")
-        .select("username, first_name, avatar_url")
-        .ilike("username", `%${q}%`)
-        .not("username", "is", null)
-        .limit(8);
-      setMemberResults((data ?? []).filter((p: any) => p.username && !taggedMembers.some((m) => m.toLowerCase() === p.username.toLowerCase())));
-    }, 250);
-    return () => clearTimeout(t);
-  }, [memberInput, taggedMembers]);
-
-  const addMember = (username: string) => {
-    const v = username.trim().replace(/^@/, "");
-    if (!v || taggedMembers.some((m) => m.toLowerCase() === v.toLowerCase())) { setMemberInput(""); setMemberResults([]); return; }
-    const next = [...taggedMembers, v];
-    setTaggedMembers(next);
-    setMemberInput("");
-    setMemberResults([]);
-    void saveShareMeta(shareCaption, next);
-  };
-  const removeMember = (name: string) => {
-    const next = taggedMembers.filter((m) => m !== name);
-    setTaggedMembers(next);
-    void saveShareMeta(shareCaption, next);
   };
 
   useEffect(() => {
@@ -1005,52 +971,12 @@ const ReviewSummary = () => {
           <textarea
             value={shareCaption}
             onChange={(e) => setShareCaption(e.target.value)}
-            onBlur={() => void saveShareMeta(shareCaption, taggedMembers)}
+            onBlur={() => void saveShareMeta(shareCaption)}
             maxLength={200}
             rows={2}
             placeholder="Napisz coś o tej podróży…"
             className="w-full rounded-2xl border border-border bg-card px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-orange-500/60 placeholder:text-muted-foreground/50 resize-none"
           />
-        </div>
-
-        {/* Oznaczeni czlonkowie - TYLKO realni userzy po username (wybor z listy) (#11) */}
-        <div className="mt-4">
-          <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-1.5 block">Z kim byłeś/aś <span className="normal-case font-medium text-muted-foreground/50">(opcjonalnie)</span></label>
-          {taggedMembers.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 mb-2">
-              {taggedMembers.map((m) => (
-                <span key={m} className="inline-flex items-center gap-1 rounded-full bg-secondary text-secondary-foreground px-2.5 py-1 text-xs font-semibold">
-                  @{m}
-                  <button onClick={() => removeMember(m)} aria-label={`Usuń ${m}`} className="active:scale-90"><X className="h-3 w-3" /></button>
-                </span>
-              ))}
-            </div>
-          )}
-          <div className="relative">
-            <input
-              value={memberInput}
-              onChange={(e) => setMemberInput(e.target.value)}
-              maxLength={40}
-              placeholder="Szukaj po @username…"
-              className="w-full rounded-2xl border border-border bg-card px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-orange-500/60 placeholder:text-muted-foreground/50"
-            />
-            {memberInput.trim().length >= 2 && (
-              <div className="mt-1.5 rounded-2xl border border-border/60 bg-card overflow-hidden divide-y divide-border/30">
-                {memberResults.length === 0 ? (
-                  <p className="px-3 py-2.5 text-xs text-muted-foreground">Brak użytkownika „{memberInput.trim().replace(/^@/, "")}"</p>
-                ) : memberResults.map((p) => (
-                  <button key={p.username} onClick={() => addMember(p.username)}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 text-left active:bg-muted/50">
-                    <img src={avatarSrc(p.avatar_url)} alt="" className="h-7 w-7 rounded-full object-cover bg-orange-100 shrink-0" />
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold truncate">@{p.username}</p>
-                      {p.first_name && <p className="text-[11px] text-muted-foreground truncate">{p.first_name}</p>}
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
         </div>
       </>)}
     </div>
