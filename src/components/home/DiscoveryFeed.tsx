@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { MapPin, X, Globe, Sparkles, Star, Pencil, Trash2, ChevronRight, ArrowRight, Heart, Eye } from "lucide-react";
+import { MapPin, X, Globe, Sparkles, Star, Pencil, Trash2, ChevronRight, ArrowRight, Heart, Eye, List, GalleryHorizontalEnd } from "lucide-react";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import FullCalendarPicker from "@/components/plan-wizard/FullCalendarPicker";
 import RouteMap from "@/components/RouteMap";
@@ -65,6 +65,14 @@ const CAT_LABEL: Record<string, string> = {
   bar: "Bar", club: "Klub", monument: "Zabytek", gallery: "Galeria",
   market: "Targ", viewpoint: "Punkt widokowy", shopping: "Zakupy", experience: "Atrakcja",
   walk: "Spacer", other: "Miejsce",
+};
+
+// Emoji kategorii (klucze jak CAT_LABEL) - chip kategorii na kartach jak w widoku trasy.
+const CAT_EMOJI: Record<string, string> = {
+  restaurant: "🍽️", cafe: "☕", museum: "🏛️", park: "🌳",
+  bar: "🍺", club: "🎵", monument: "🏰", gallery: "🖼️",
+  market: "🛒", viewpoint: "🌅", shopping: "🛍️", experience: "🎭",
+  walk: "🚶", other: "📍",
 };
 
 type PolecaneCreatorPlan = {
@@ -139,6 +147,8 @@ export function CollectionDetail({ col, onClose, onAdopt }: { col: DiscoveryColl
   const queryClient = useQueryClient();
   const [detailPlace, setDetailPlace] = useState<MockPlace | null>(null);
   const [deleting, setDeleting] = useState(false);
+  // Widok miejsc: lista (domyslnie, jak w widoku trasy) lub karty (poziomy swiper).
+  const [placeView, setPlaceView] = useState<"list" | "cards">("list");
   const isOwner = !!user && user.id === col.user_id;
   const isLocal = !!col.author_home_city && !!col.city && col.author_home_city.trim().toLowerCase() === col.city.trim().toLowerCase();
   const theme = getTheme(col.category);
@@ -218,9 +228,11 @@ export function CollectionDetail({ col, onClose, onAdopt }: { col: DiscoveryColl
 
   // Piny do mapy-podgladu (RouteMap = Google, dziala natywnie; leaflet w iframe srcDoc
   // sie nie ladowal w WebView - stad bialy placeholder).
+  // pin_order = indeks w kolejnosci listy (numerowanie PRZED filtrem coords), zeby numery
+  // na mapie odpowiadaly numerom na liscie/kartach.
   const mapPins = col.items
-    .filter((i) => i.latitude && i.longitude)
-    .map((i) => ({ latitude: i.latitude!, longitude: i.longitude!, place_name: i.place_name }));
+    .map((i, idx) => ({ latitude: i.latitude, longitude: i.longitude, place_name: i.place_name, pin_order: idx }))
+    .filter((i) => i.latitude && i.longitude);
 
   // "Uzyj tej trasy" - przejmij miejsca zestawienia do nowej trasy (swiper -> Dopasowania).
   // Najpierw pyta o date (przez onAdopt -> drawer w feedzie), potem laduje w PlanWizard.
@@ -234,6 +246,115 @@ export function CollectionDetail({ col, onClose, onAdopt }: { col: DiscoveryColl
     navigate("/plan", { state: { step: 4, city: col.city, date: new Date().toISOString(), likedPlaceNames: names } });
   };
   const planOwn = () => { onClose(); navigate("/plan", { state: { step: 2, city: col.city } }); };
+
+  // ── Widok kart (poziomy swiper) - jak renderSwiper w widoku trasy (SharedRoute). ──
+  const renderPlaceCards = () => (
+    <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory scrollbar-none -mx-4 px-4 pb-2">
+      {col.items.map((item, idx) => {
+        const tappable = !!item.place_id;
+        const cat = item.category ?? "other";
+        const alreadyLiked = likedNames.has(item.place_name.toLowerCase());
+        return (
+          <div key={item.id} className="snap-center shrink-0 w-[80vw] max-w-[320px] rounded-2xl bg-secondary border border-border/40 overflow-hidden shadow-sm flex flex-col">
+            <div
+              {...(tappable ? { onClick: () => openPlace(item), role: "button" } : {})}
+              className={`relative w-full aspect-[4/3] bg-muted ${tappable ? "active:opacity-90 transition-opacity cursor-pointer" : ""}`}
+            >
+              <PlacePhoto item={item} placeholderIdx={idx} className="w-full h-full" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-transparent pointer-events-none" />
+              <div className="absolute top-3 left-3 h-8 w-8 rounded-full bg-black/55 backdrop-blur text-white text-sm font-bold flex items-center justify-center">{idx + 1}</div>
+              <div className="absolute top-3 right-3 flex items-center gap-1.5">
+                {col.city && (
+                  <span role="button" aria-label={alreadyLiked ? "Już zapisane" : "Zapisz miejsce"}
+                    onClick={(e) => { e.stopPropagation(); e.preventDefault(); if (!alreadyLiked) likePlace(item); }}
+                    className="h-7 w-7 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-sm active:scale-90 transition-transform">
+                    <Heart className={`h-4 w-4 ${alreadyLiked ? "fill-rose-500 text-rose-500" : "text-foreground"}`} />
+                  </span>
+                )}
+                {item.rating != null && (
+                  <span className="flex items-center gap-0.5 px-2 py-1 rounded-full bg-white/90 backdrop-blur-sm shadow-sm">
+                    <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                    <span className="text-[11px] font-bold text-foreground">{item.rating}</span>
+                  </span>
+                )}
+              </div>
+              {!tappable && (
+                <div className="absolute bottom-3 left-3 flex items-center gap-1 px-2 py-1 rounded-full bg-foreground/55 backdrop-blur-sm">
+                  <Globe className="h-3 w-3 text-white/90 shrink-0" />
+                  <span className="text-[9px] font-semibold text-white leading-tight">jeszcze nie&nbsp;ma w&nbsp;Trasie</span>
+                </div>
+              )}
+            </div>
+            <div className="px-4 pt-4 pb-4 flex-1">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted text-xs font-semibold text-foreground mb-2">
+                <span>{CAT_EMOJI[cat] ?? "📍"}</span>{CAT_LABEL[cat] ?? "Miejsce"}
+              </span>
+              <p className="text-base font-black leading-tight">{item.place_name}</p>
+              {item.address && <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-1">{item.address}</p>}
+              {item.short_desc && <p className="text-sm text-muted-foreground leading-relaxed mt-2 line-clamp-3">{item.short_desc}</p>}
+              {tappable && (
+                <div className="mt-3 inline-flex items-center gap-0.5 text-xs font-bold text-primary">
+                  Zobacz <ChevronRight className="h-3.5 w-3.5" />
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+
+  // ── Widok listy - zwarte ponumerowane wiersze (jak renderListReadonly w dzienniku). ──
+  const renderPlaceList = () => (
+    <div className="space-y-2">
+      {col.items.map((item, idx) => {
+        const tappable = !!item.place_id;
+        const cat = item.category ?? "other";
+        const alreadyLiked = likedNames.has(item.place_name.toLowerCase());
+        return (
+          <div key={item.id} className="bg-secondary border border-border/40 shadow-sm rounded-2xl p-2.5">
+            <div className="flex items-center gap-3">
+              <div className="h-7 w-7 shrink-0 rounded-full bg-foreground text-background text-xs font-bold flex items-center justify-center">{idx + 1}</div>
+              <button
+                {...(tappable ? { onClick: () => openPlace(item) } : {})}
+                className={`flex items-center gap-3 min-w-0 flex-1 text-left ${tappable ? "active:opacity-70 transition-opacity" : ""}`}
+              >
+                <PlacePhoto item={item} placeholderIdx={idx} className="h-14 w-14 rounded-xl shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-bold leading-tight truncate">{item.place_name}</p>
+                  <span className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white text-[11px] font-semibold text-foreground">
+                    <span>{CAT_EMOJI[cat] ?? "📍"}</span>{CAT_LABEL[cat] ?? "Miejsce"}
+                  </span>
+                  {!tappable && (
+                    <span className="mt-1 flex items-center gap-1 text-[9px] font-semibold text-muted-foreground">
+                      <Globe className="h-3 w-3 shrink-0" />jeszcze nie&nbsp;ma w&nbsp;Trasie
+                    </span>
+                  )}
+                </div>
+                {tappable && <ChevronRight className="h-4 w-4 text-muted-foreground/40 shrink-0" />}
+              </button>
+              <div className="flex items-center gap-1.5 shrink-0">
+                {item.rating != null && (
+                  <span className="flex items-center gap-0.5">
+                    <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
+                    <span className="text-[11px] font-bold text-foreground">{item.rating}</span>
+                  </span>
+                )}
+                {col.city && (
+                  <span role="button" aria-label={alreadyLiked ? "Już zapisane" : "Zapisz miejsce"}
+                    onClick={(e) => { e.stopPropagation(); e.preventDefault(); if (!alreadyLiked) likePlace(item); }}
+                    className="h-7 w-7 rounded-full bg-muted flex items-center justify-center active:scale-90 transition-transform">
+                    <Heart className={`h-4 w-4 ${alreadyLiked ? "fill-rose-500 text-rose-500" : "text-foreground"}`} />
+                  </span>
+                )}
+              </div>
+            </div>
+            {item.short_desc && <p className="text-[11px] text-muted-foreground leading-relaxed line-clamp-2 mt-2 px-0.5">{item.short_desc}</p>}
+          </div>
+        );
+      })}
+    </div>
+  );
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
@@ -285,67 +406,30 @@ export function CollectionDetail({ col, onClose, onAdopt }: { col: DiscoveryColl
           <p className="text-sm text-muted-foreground leading-relaxed pb-4">{col.description}</p>
         )}
 
-        {/* Kafelki miejsc (bez szyny/pinow po lewej) */}
-        <div className="space-y-4">
-          {col.items.map((item, idx) => {
-            const tappable = !!item.place_id;
-            const Tag: any = tappable ? "button" : "div";
-            const alreadyLiked = likedNames.has(item.place_name.toLowerCase());
-            return (
-              <div key={item.id} className="min-w-0">
-                <Tag
-                  {...(tappable ? { onClick: () => openPlace(item) } : {})}
-                  className={`w-full min-w-0 text-left block ${tappable ? "active:scale-[0.99] transition-transform" : ""}`}
-                >
-                  <div className="relative rounded-2xl overflow-hidden aspect-[16/10]">
-                    <PlacePhoto item={item} placeholderIdx={idx} className="w-full h-full" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
-                    {/* Ocena + lajk (ikona) obok. role=button, bo Tag bywa <button> (bez zagniezdzenia). */}
-                    <div className="absolute top-2.5 right-2.5 flex items-center gap-1.5">
-                      {col.city && (
-                        <span
-                          role="button"
-                          aria-label={alreadyLiked ? "Już zapisane" : "Zapisz miejsce"}
-                          onClick={(e) => { e.stopPropagation(); e.preventDefault(); if (!alreadyLiked) likePlace(item); }}
-                          className="h-7 w-7 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-sm active:scale-90 transition-transform"
-                        >
-                          <Heart className={`h-4 w-4 ${alreadyLiked ? "fill-rose-500 text-rose-500" : "text-foreground"}`} />
-                        </span>
-                      )}
-                      {item.rating != null && (
-                        <span className="flex items-center gap-0.5 px-2 py-1 rounded-full bg-white/90 backdrop-blur-sm shadow-sm">
-                          <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                          <span className="text-[11px] font-bold text-foreground">{item.rating}</span>
-                        </span>
-                      )}
-                    </div>
-                    {tappable ? (
-                      <div className="absolute top-2.5 left-2.5 h-7 pl-2.5 pr-1.5 rounded-full bg-white/90 backdrop-blur-sm flex items-center gap-0.5 shadow-sm">
-                        <span className="text-[10px] font-bold text-foreground">Zobacz</span>
-                        <ChevronRight className="h-3.5 w-3.5 text-foreground" />
-                      </div>
-                    ) : (
-                      <div className="absolute top-2.5 left-2.5 flex items-center gap-1 px-2 py-1 rounded-full bg-foreground/55 backdrop-blur-sm">
-                        <Globe className="h-3 w-3 text-white/90 shrink-0" />
-                        <span className="text-[9px] font-semibold text-white leading-tight">jeszcze nie&nbsp;ma w&nbsp;Trasie</span>
-                      </div>
-                    )}
-                    <div className="absolute bottom-0 left-0 right-0 p-3">
-                      <p className="text-white font-display font-extrabold text-lg leading-tight drop-shadow-sm">{item.place_name}</p>
-                      {item.address && <p className="text-white/80 text-[11px] mt-0.5 line-clamp-1">{item.address}</p>}
-                    </div>
-                  </div>
-                </Tag>
-                {item.short_desc && <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed px-0.5">{item.short_desc}</p>}
+        {/* Miejsca - naglowek + przelacznik lista/karty (ikony jak w widoku trasy) */}
+        {col.items.length > 0 && (
+          <div className="mb-1">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{isRoute ? "Plan trasy" : "Miejsca"}</p>
+              <div className="flex rounded-full bg-muted p-0.5">
+                <button onClick={() => setPlaceView("list")} aria-label="Widok listy"
+                  className={`px-2.5 py-1.5 rounded-full transition-colors ${placeView === "list" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
+                  <List className="h-4 w-4" />
+                </button>
+                <button onClick={() => setPlaceView("cards")} aria-label="Widok kart"
+                  className={`px-2.5 py-1.5 rounded-full transition-colors ${placeView === "cards" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
+                  <GalleryHorizontalEnd className="h-4 w-4" />
+                </button>
               </div>
-            );
-          })}
-        </div>
+            </div>
+            {placeView === "cards" ? renderPlaceCards() : renderPlaceList()}
+          </div>
+        )}
 
         {/* Mapa na samym dole - interaktywna (zoom/pan). Bez overlaya blokujacego gesty. */}
         {mapPins.length > 0 && (
           <div className="relative h-52 mt-5 rounded-2xl overflow-hidden border border-border/40">
-            <RouteMap pins={mapPins as any} className="w-full h-full" />
+            <RouteMap pins={mapPins as any} className="w-full h-full" showRoute={isRoute} />
           </div>
         )}
       </div>

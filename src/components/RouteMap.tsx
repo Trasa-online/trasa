@@ -32,6 +32,9 @@ interface RouteMapProps {
   // (kropka bez numeru) + punkt startowy usera bez napisu "START" - numeracja nie ma
   // sensu dla jednego pinu.
   singlePlace?: boolean;
+  // Rysowanie linii laczacej punkty (dashed polyline per dzien). Domyslnie true.
+  // showRoute={false} -> tylko ponumerowane markery bez laczacej linii (np. "Lista" miejsc).
+  showRoute?: boolean;
 }
 
 // Draws dashed polylines per day using Google Maps Polyline overlay
@@ -93,7 +96,7 @@ function DayPolylines({ validPins }: { validPins: Pin[] }) {
   return null;
 }
 
-const MapContent = ({ validPins, onPinClick, startingLocation, singlePlace = false }: { validPins: Pin[]; onPinClick?: (pin: Pin) => void; startingLocation?: { name: string; latitude: number; longitude: number }; singlePlace?: boolean }) => {
+const MapContent = ({ validPins, onPinClick, startingLocation, singlePlace = false, showRoute = true }: { validPins: Pin[]; onPinClick?: (pin: Pin) => void; startingLocation?: { name: string; latitude: number; longitude: number }; singlePlace?: boolean; showRoute?: boolean }) => {
   const map = useMap();
   const [selectedPin, setSelectedPin] = useState<number | null>(null);
   const [startSelected, setStartSelected] = useState(false);
@@ -143,7 +146,7 @@ const MapContent = ({ validPins, onPinClick, startingLocation, singlePlace = fal
 
   return (
     <>
-      <DayPolylines validPins={validPins} />
+      {showRoute && <DayPolylines validPins={validPins} />}
 
       {/* Starting location marker - zielony pin "S" jako odroznienie od ponumerowanych pins. */}
       {startingLocation && (
@@ -248,6 +251,7 @@ const RouteMap = memo(function RouteMap({
   onPinClick,
   startingLocation,
   singlePlace = false,
+  showRoute = true,
 }: RouteMapProps) {
   const validPins = useMemo(() =>
     pins.filter(pin => pin.latitude && pin.longitude),
@@ -295,7 +299,7 @@ const RouteMap = memo(function RouteMap({
             zoomControl
             mapId="roadmap"
           >
-            <MapContent validPins={validPins} onPinClick={onPinClick} startingLocation={startingLocation} singlePlace={singlePlace} />
+            <MapContent validPins={validPins} onPinClick={onPinClick} startingLocation={startingLocation} singlePlace={singlePlace} showRoute={showRoute} />
           </GoogleMap>
         </APIProvider>
       </div>
@@ -347,6 +351,7 @@ const RouteMap = memo(function RouteMap({
   return prevKey === nextKey &&
          prevStart === nextStart &&
          prevProps.className === nextProps.className &&
+         prevProps.showRoute === nextProps.showRoute &&
          prevProps.showExpandButton === nextProps.showExpandButton;
 });
 
