@@ -282,7 +282,9 @@ export default function SharedRoute() {
     rating: 0,
     photo_url: resolveStored(pin.photo_url || pin.image_url || (Array.isArray(pin.images) ? pin.images[0] : null)) ?? "",
     vibe_tags: metaFor(pin).tags,
-    description: pin.description || metaFor(pin).description || "",
+    // Zrodlo prawdy = opis miejsca z bazy (places.description, jak w swiperze).
+    // pin.description (generowany AI per-trasa) tylko jako fallback dla custom pinow.
+    description: metaFor(pin).description || pin.description || "",
   } satisfies MockPlace);
 
   // Read-only ocena + notka autora pod miejscem.

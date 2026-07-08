@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import { resolveStored } from "@/components/PlacePhoto";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import type { MockPlace } from "@/components/plan-wizard/PlaceSwiper";
+import { expandCity } from "@/lib/cities";
 import { format, parseISO, isValid } from "date-fns";
 import { pl } from "date-fns/locale";
 
@@ -115,7 +116,22 @@ const ActiveTrip = ({ routeId: propRouteId, embedded = false }: { routeId?: stri
       }
       console.log("[ActiveTrip] pins loaded:", pins?.length ?? 0);
 
-      return { route, pins: (pins ?? []) as Pin[] };
+      // Opisy miejsc z bazy = zrodlo prawdy (places.description, jak w swiperze).
+      // Mapa nazwa->opis; pin.description (AI per-trasa) tylko jako fallback.
+      const names = (pins ?? []).map((p: any) => p.place_name).filter(Boolean);
+      const descMap: Record<string, string> = {};
+      if (names.length && route.city) {
+        const { data: placeRows } = await (supabase as any)
+          .from("places")
+          .select("place_name, description")
+          .in("city", expandCity(route.city))
+          .in("place_name", names);
+        for (const r of (placeRows ?? [])) {
+          if (r.description) descMap[r.place_name.toLowerCase()] = r.description;
+        }
+      }
+
+      return { route, pins: (pins ?? []) as Pin[], descMap };
     },
     enabled: !!routeId,
     retry: false,
@@ -123,6 +139,7 @@ const ActiveTrip = ({ routeId: propRouteId, embedded = false }: { routeId?: stri
 
   const route = routeData?.route;
   const pins = routeData?.pins ?? [];
+  const descMap = routeData?.descMap ?? {};
   const pinsWithCoords = pins.filter((p) => p.latitude && p.longitude);
   const firstUnvisitedIdx = pins.findIndex((p) => !p.visited_at);
 
@@ -180,7 +197,7 @@ const ActiveTrip = ({ routeId: propRouteId, embedded = false }: { routeId?: stri
     rating: 0,
     photo_url: resolveStored(pin.photo_url) ?? "",
     vibe_tags: [],
-    description: pin.description || "",
+    description: descMap[(pin.place_name ?? "").toLowerCase()] || pin.description || "",
   } satisfies MockPlace);
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {

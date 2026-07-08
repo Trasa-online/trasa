@@ -15,7 +15,7 @@ import PlaceSwiper, { type MockPlace } from "@/components/plan-wizard/PlaceSwipe
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { MAIN_CATEGORIES, getSubcategoryLabel } from "@/lib/categories";
-import { setStartReference, markAskedForCity, tryResolveOnSite, getReference, useDistanceReference } from "@/lib/distanceReference";
+import { setStartReference, markAskedForCity, tryResolveOnSite, useDistanceReference } from "@/lib/distanceReference";
 import { getTodayLikes } from "@/lib/exploreLikes";
 import { saveDraft, removeDraft } from "@/lib/draftRoutes";
 import LocationPrimer from "@/components/LocationPrimer";
@@ -129,25 +129,18 @@ const PlanWizard = () => {
   // User domyslnie ma wszystko zaznaczone, moze odznaczyc miejsca ktorych nie chce w trasie.
   const [deselectedMatches, setDeselectedMatches] = useState<Set<string>>(new Set());
 
-  // Step 3 (solo): auto-detect on-site przez GPS. on-site -> "od Ciebie" + pomijamy mape,
-  // idziemy do swipera. offsite (GPS daleko) -> mapa punktu startu. no-gps -> jawne pytanie.
+  // Step 3 (solo): ZAWSZE pokazujemy mape wyboru punktu startu - nawet gdy user jest
+  // w swoim miescie (on-site). Wczesniej on-site pomijalo mape i szlo prosto do swipera;
+  // teraz user zawsze wskazuje skad startuje (mapa pre-fill'uje GPS gdy dostepny).
+  // tryResolveOnSite wolamy tylko dla efektu ubocznego (cache GPS -> pre-fill pinezki).
   useEffect(() => {
     if (step !== 3 || !city) return;
     setStep3Mode("resolving");
     let cancelled = false;
     (async () => {
-      const res = await tryResolveOnSite(city);
+      await tryResolveOnSite(city);
       if (cancelled) return;
-      if (res === "onsite") {
-        const ref = getReference();
-        if (ref) setStartingLocation({ name: "Twoja lokalizacja", latitude: ref.coords.lat, longitude: ref.coords.lng });
-        markAskedForCity(city);
-        setStep(4);
-      } else if (res === "offsite") {
-        setStep3Mode("map");
-      } else {
-        setStep3Mode("sheet");
-      }
+      setStep3Mode("map");
     })();
     return () => { cancelled = true; };
   }, [step, city]);
