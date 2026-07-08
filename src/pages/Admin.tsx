@@ -1051,6 +1051,20 @@ const Admin = () => {
           </div>
         )}
 
+        {/* ── Waitlista: licznik zapisow B2C (source NULL) i B2B (source=business_landing) ── */}
+        {tab === "other" && (
+          <div className="grid grid-cols-2 gap-2 mb-4">
+            <div className="rounded-2xl bg-card border border-border/40 p-3">
+              <p className="text-[11px] text-muted-foreground uppercase tracking-wide mb-1">Waitlista B2C</p>
+              <p className="text-2xl font-black text-foreground leading-none">{waitlist.filter(w => !w.source).length}</p>
+            </div>
+            <div className="rounded-2xl bg-card border border-border/40 p-3">
+              <p className="text-[11px] text-muted-foreground uppercase tracking-wide mb-1">Waitlista B2B</p>
+              <p className="text-2xl font-black text-foreground leading-none">{waitlist.filter(w => w.source === "business_landing").length}</p>
+            </div>
+          </div>
+        )}
+
         {/* ── Cities (w zakladce Inne) ── */}
         {tab === "other" && otherTab === "cities" && (
           fetchingCities ? (
