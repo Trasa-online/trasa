@@ -925,14 +925,18 @@ export default function DiscoveryFeed() {
   // Wyszukiwarka + filtry (miasto / motyw zestawienia / kategoria miejsc w trasach).
   const [searchInput, setSearchInput] = useState("");
   const debouncedQuery = useDebounce(searchInput.trim(), 300);
-  const [cityFilter, setCityFilter] = useState<string | null>(null);
-  const [themeFilter, setThemeFilter] = useState<string | null>(null);
-  const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
+  // Filtry wielokrotnego wyboru (mozna zaznaczyc kilka miast / motywow / kategorii).
+  const [cityFilter, setCityFilter] = useState<string[]>([]);
+  const [themeFilter, setThemeFilter] = useState<string[]>([]);
+  const [categoryFilter, setCategoryFilter] = useState<string[]>([]);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const q = debouncedQuery.length >= 2 ? debouncedQuery : "";
-  const isSearchActive = !!q || !!cityFilter || !!themeFilter || !!categoryFilter;
-  const activeFilterCount = [cityFilter, themeFilter, categoryFilter].filter(Boolean).length;
-  const clearFilters = () => { setCityFilter(null); setThemeFilter(null); setCategoryFilter(null); };
+  const isSearchActive = !!q || cityFilter.length > 0 || themeFilter.length > 0 || categoryFilter.length > 0;
+  const activeFilterCount = cityFilter.length + themeFilter.length + categoryFilter.length;
+  const clearFilters = () => { setCityFilter([]); setThemeFilter([]); setCategoryFilter([]); };
+  // Toggle wartosci w tablicy filtra (dodaj/usun).
+  const toggleFilter = (set: (updater: (prev: string[]) => string[]) => void, v: string) =>
+    set((prev) => (prev.includes(v) ? prev.filter((x) => x !== v) : [...prev, v]));
 
   // Po wyborze daty: przejdz do PlanWizard step 4 z miejscami zestawienia jako Dopasowania.
   const startPlanning = (date: Date | null, numDays: number) => {
@@ -1166,16 +1170,18 @@ export default function DiscoveryFeed() {
     enabled: isSearchActive,
     staleTime: 30_000,
     queryFn: async () => {
-      const cities = cityFilter ? expandCity(cityFilter) : null;
+      // Wiele miast -> suma expandCity dla kazdego wybranego (dedupe).
+      const cities = cityFilter.length ? [...new Set(cityFilter.flatMap(expandCity))] : null;
       const like = `%${escapeLike(q)}%`;
       const routeCols = "id, title, city, ai_highlight, ai_summary, user_id, created_at, views, share_anonymous";
 
-      // Kategoria miejsc -> zbior route_id z pinow tej kategorii (routes nie ma kolumny category).
+      // Kategorie miejsc -> zbior route_id z pinow tych kategorii (routes nie ma kolumny category).
       let allow: Set<string> | null = null;
-      if (categoryFilter) {
+      if (categoryFilter.length) {
+        const dbCats = [...new Set(categoryFilter.flatMap(getDbCategoriesFor))];
         const { data: pinRows } = await (supabase as any)
           .from("pins").select("route_id")
-          .in("category", getDbCategoriesFor(categoryFilter))
+          .in("category", dbCats)
           .not("route_id", "is", null);
         allow = new Set((pinRows ?? []).map((p: any) => p.route_id));
         if (allow.size === 0) allow = new Set(["__none__"]);
@@ -1201,7 +1207,7 @@ export default function DiscoveryFeed() {
             .order("views", { ascending: false, nullsFirst: false }).limit(30);
           for (const r of byAuthor ?? []) if (!routeMap.has(r.id)) routeMap.set(r.id, r);
         }
-      } else if (cities || categoryFilter) {
+      } else if (cities || categoryFilter.length) {
         // Same filtry (bez slowa) - i tak pokazujemy pasujace trasy.
         const { data: all } = await applyRoute((supabase as any).from("routes").select(routeCols))
           .order("views", { ascending: false, nullsFirst: false }).limit(40);
@@ -1211,14 +1217,14 @@ export default function DiscoveryFeed() {
       if (allow) routeRows = routeRows.filter((r) => allow!.has(r.id));
       const routes = await enrichRouteRows(routeRows);
 
-      // Zestawienia - pomijamy gdy filtr kategorii miejsc (to pojecie tras).
+      // Zestawienia - pomijamy gdy aktywny filtr kategorii miejsc (to pojecie tras).
       let collections: DiscoveryCollection[] = [];
-      if (!categoryFilter) {
+      if (!categoryFilter.length) {
         let colQ = (supabase as any).from("discovery_collections")
           .select("id, title, city, description, category, author_name, author_avatar, user_id, views_count, saves_count, plan_adds_count")
           .eq("is_public", true).eq("kind", "ranking").eq("hidden_by_admin", false).eq("moderation_status", "approved");
         if (q) colQ = colQ.or(`title.ilike.${like},author_name.ilike.${like}`);
-        if (themeFilter) colQ = colQ.eq("category", themeFilter);
+        if (themeFilter.length) colQ = colQ.in("category", themeFilter);
         if (cities) colQ = colQ.in("city", cities);
         const { data: cols } = await colQ.order("updated_at", { ascending: false }).limit(20);
         collections = await hydrateCollections(cols ?? []);
@@ -1313,7 +1319,7 @@ export default function DiscoveryFeed() {
             )}
             {results.routes.length > 0 && (
               <div>
-                <p className="text-sm font-black uppercase tracking-wide mb-3 px-1">Trasy{cityFilter ? ` w ${cityFilter}` : ""}</p>
+                <p className="text-sm font-black uppercase tracking-wide mb-3 px-1">Trasy{cityFilter.length === 1 ? ` w ${cityFilter[0]}` : ""}</p>
                 <div className="space-y-5">
                   {results.routes.map((r) => (
                     <RouteCardV key={r.id} route={r} onClick={() => navigate(`/route/${r.id}`)} />
@@ -1455,9 +1461,9 @@ export default function DiscoveryFeed() {
             <div>
               <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2">Miasto</p>
               <div className="flex gap-2 overflow-x-auto scrollbar-none pb-1">
-                <button onClick={() => setCityFilter(null)} className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-bold transition-colors ${cityFilter === null ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground"}`}>Wszystkie</button>
+                <button onClick={() => setCityFilter([])} className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-bold transition-colors ${cityFilter.length === 0 ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground"}`}>Wszystkie</button>
                 {ACTIVE_CITIES.map((c) => (
-                  <button key={c} onClick={() => setCityFilter((p) => (p === c ? null : c))} className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-colors ${cityFilter === c ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground"}`}>{c}</button>
+                  <button key={c} onClick={() => toggleFilter(setCityFilter, c)} className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-colors ${cityFilter.includes(c) ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground"}`}>{c}</button>
                 ))}
               </div>
             </div>
@@ -1465,9 +1471,9 @@ export default function DiscoveryFeed() {
             <div>
               <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2">Motyw zestawienia</p>
               <div className="flex flex-wrap gap-2">
-                <button onClick={() => setThemeFilter(null)} className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-bold transition-colors ${themeFilter === null ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground"}`}>Wszystkie</button>
+                <button onClick={() => setThemeFilter([])} className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-bold transition-colors ${themeFilter.length === 0 ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground"}`}>Wszystkie</button>
                 {COLLECTION_THEMES.map((t) => (
-                  <button key={t.id} onClick={() => setThemeFilter((p) => (p === t.id ? null : t.id))} className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-colors ${themeFilter === t.id ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground"}`}>{t.emoji} {t.label}</button>
+                  <button key={t.id} onClick={() => toggleFilter(setThemeFilter, t.id)} className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-colors ${themeFilter.includes(t.id) ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground"}`}>{t.emoji} {t.label}</button>
                 ))}
               </div>
             </div>
@@ -1475,9 +1481,9 @@ export default function DiscoveryFeed() {
             <div>
               <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2">Kategoria miejsca</p>
               <div className="flex flex-wrap gap-2">
-                <button onClick={() => setCategoryFilter(null)} className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-bold transition-colors ${categoryFilter === null ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground"}`}>Wszystkie</button>
+                <button onClick={() => setCategoryFilter([])} className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-bold transition-colors ${categoryFilter.length === 0 ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground"}`}>Wszystkie</button>
                 {MAIN_CATEGORIES.flatMap((c) => c.subcategories).map((s) => (
-                  <button key={s.id} onClick={() => setCategoryFilter((p) => (p === s.id ? null : s.id))} className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-colors ${categoryFilter === s.id ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground"}`}>{s.emoji} {s.label}</button>
+                  <button key={s.id} onClick={() => toggleFilter(setCategoryFilter, s.id)} className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-colors ${categoryFilter.includes(s.id) ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground"}`}>{s.emoji} {s.label}</button>
                 ))}
               </div>
             </div>
