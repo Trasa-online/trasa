@@ -1291,6 +1291,8 @@ export default function DiscoveryFeed() {
           <input
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
+            onFocus={() => window.dispatchEvent(new CustomEvent("trasa:hide-bottomnav", { detail: true }))}
+            onBlur={() => window.dispatchEvent(new CustomEvent("trasa:hide-bottomnav", { detail: false }))}
             placeholder="Szukaj tras, autorów, zestawień…"
             className="flex-1 min-w-0 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
           />
@@ -1451,16 +1453,16 @@ export default function DiscoveryFeed() {
 
       {/* Sheet filtrow: miasto / motyw zestawienia / kategoria miejsc */}
       <Sheet open={filtersOpen} onOpenChange={setFiltersOpen}>
-        <SheetContent side="bottom" className="rounded-t-2xl [&>button:last-child]:hidden" style={{ maxHeight: "80vh" }}>
-          <div className="flex items-center justify-between mb-4">
+        <SheetContent side="bottom" className="rounded-t-2xl p-0 [&>button:last-child]:hidden" style={{ maxHeight: "80vh" }}>
+          <div className="flex items-center justify-between px-5 pt-5 mb-4">
             <p className="text-lg font-black">Filtry</p>
             <button onClick={() => setFiltersOpen(false)} aria-label="Zamknij" className="h-9 w-9 rounded-full bg-muted flex items-center justify-center active:bg-muted/70"><X className="h-4 w-4" /></button>
           </div>
-          <div className="space-y-5 overflow-y-auto pb-2">
+          <div className="space-y-5 overflow-y-auto px-5 pb-2">
             {/* Miasto */}
             <div>
               <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2">Miasto</p>
-              <div className="flex gap-2 overflow-x-auto scrollbar-none pb-1">
+              <div className="flex gap-2 overflow-x-auto scrollbar-none pb-1 -mx-5 px-5">
                 <button onClick={() => setCityFilter([])} className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-bold transition-colors ${cityFilter.length === 0 ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground"}`}>Wszystkie</button>
                 {ACTIVE_CITIES.map((c) => (
                   <button key={c} onClick={() => toggleFilter(setCityFilter, c)} className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-colors ${cityFilter.includes(c) ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground"}`}>{c}</button>
@@ -1489,7 +1491,7 @@ export default function DiscoveryFeed() {
             </div>
             <p className="text-[11px] text-muted-foreground">Motyw filtruje zestawienia, kategoria filtruje trasy.</p>
           </div>
-          <div className="flex gap-2 pt-3 pb-[max(8px,env(safe-area-inset-bottom))]">
+          <div className="flex gap-2 px-5 pt-3 pb-[max(16px,env(safe-area-inset-bottom))]">
             <button onClick={clearFilters} className="flex-1 py-3 rounded-full bg-secondary text-secondary-foreground font-bold text-sm active:scale-[0.98] transition-transform">Wyczyść filtry</button>
             <button onClick={() => setFiltersOpen(false)} className="flex-1 py-3 rounded-full bg-primary text-white font-bold text-sm active:scale-[0.98] transition-transform">Pokaż wyniki</button>
           </div>

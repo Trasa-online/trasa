@@ -42,6 +42,17 @@ const BottomNav = () => {
     return () => window.removeEventListener("trasa:open-plan-menu", open);
   }, []);
 
+  // Ukrywanie nawigacji (np. gdy fokus na wyszukiwarce eksploracji + klawiatura).
+  // Inne ekrany dispatchuja "trasa:hide-bottomnav" z detail=true/false.
+  const [navHidden, setNavHidden] = useState(false);
+  useEffect(() => {
+    const handler = (e: Event) => setNavHidden(!!(e as CustomEvent).detail);
+    window.addEventListener("trasa:hide-bottomnav", handler);
+    return () => window.removeEventListener("trasa:hide-bottomnav", handler);
+  }, []);
+  // Zawsze pokaz nav przy zmianie ekranu (bezpiecznik).
+  useEffect(() => { setNavHidden(false); }, [location.pathname]);
+
   // Badge kropka na ikonie Dziennik gdy uzytkownik ma niewidziane trasy
   // (routes.new_for_users zawiera user.id). Refetch przy navigation - gdy user
   // wraca na Home, kropka znika lub pojawia sie wedlug stanu DB. Query tylko w native
@@ -276,6 +287,7 @@ const BottomNav = () => {
       {/* Floating nav: biala karta odklejona od krawedzi + lekki cien (natywny feel).
           Outer = transparentny kontener (pointer-events-none) z marginesem + safe-area;
           inner = bialy pill z cieniem (pointer-events-auto). */}
+      {!navHidden && (
       <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-lg z-50 px-4 pb-[calc(env(safe-area-inset-bottom,0px)+10px)] pointer-events-none">
         {/* Web: 3 kolumny (Glowna, Plus, Profil - Eksploruj i Dziennik ukryte).
             Native: 5 kolumn (wszystko). */}
@@ -371,6 +383,7 @@ const BottomNav = () => {
           </div>
         </div>
       </nav>
+      )}
     </>
   );
 };
