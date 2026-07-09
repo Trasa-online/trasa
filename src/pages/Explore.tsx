@@ -365,7 +365,7 @@ const Explore = () => {
         )}
         <div className="flex items-center gap-1.5 shrink-0 mt-2">
           {!myCollections && (
-            <HomeHeaderActions showNotifications={false} showSaved={false} showAdmin={false} />
+            <HomeHeaderActions showNotifications={false} showSearch={false} showSaved={false} showAdmin={false} />
           )}
           <button
             onClick={() => { trackCollectionCreate("explore_header"); navigate("/zestawienie/nowe"); }}
