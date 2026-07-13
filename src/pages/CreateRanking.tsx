@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Search, Plus, X, Loader2, Star, MapPin, ChevronRight, ChevronDown, ChevronUp, List, GalleryHorizontalEnd, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,7 +9,7 @@ import { expandCity } from "@/lib/cities";
 import { getHistoryByCity } from "@/lib/exploreLikes";
 import { forwardGeocode, reverseGeocode, forwardGeocodeWithTypes } from "@/lib/googleMaps";
 import { getPhotoUrl } from "@/lib/placePhotos";
-import { COLLECTION_THEMES, getTheme, isRouteCollection } from "@/lib/collectionThemes";
+import { COLLECTION_THEMES, getTheme, isRouteCollection, type CollectionKind } from "@/lib/collectionThemes";
 import { MAIN_CATEGORIES, getDbCategoriesFor } from "@/lib/categories";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import { type MockPlace } from "@/components/plan-wizard/PlaceSwiper";
@@ -107,6 +107,10 @@ const CreateRanking = () => {
   const { user } = useAuth();
 
   const [category, setCategory] = useState<string | null>(null);
+  // Forma zestawienia (wybor 1. kroku): "list" = Lista, "route" = Plan. Na tej podstawie
+  // filtrujemy motywy w kolejnym widoku. Po wyborze motywu forma i tak wynika z motywu
+  // (motyw ma przypisany kind), wiec `form` to tylko stan UI kroku wyboru.
+  const [form, setForm] = useState<CollectionKind | null>(null);
   // Tytul = etykieta motywu (usuniete pole tytulu). `legacyTitle` tylko dla starych
   // zestawien bez motywu (edycja) - zeby edycja nie kasowala istniejacego tytulu.
   const [legacyTitle, setLegacyTitle] = useState("");
@@ -121,6 +125,7 @@ const CreateRanking = () => {
   const [asAnon, setAsAnon] = useState(false);
 
   // Wyszukiwarka + propozycje miejsc (bez zargonu "baza/spoza bazy").
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const [search, setSearch] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
@@ -139,9 +144,12 @@ const CreateRanking = () => {
   const [customPreview, setCustomPreview] = useState<Omit<RankingItem, "key" | "short_desc"> | null>(null);
   const [author, setAuthor] = useState<{ name: string; avatar: string | null }>({ name: "Użytkownik", avatar: null });
 
-  // Krok 1 = wybor motywu (tylko nowe zestawienie, bez wybranego motywu). Edycja i
-  // zestawienia z juz wybranym motywem od razu w formularzu.
-  const showThemePicker = !editId && !category;
+  // Ekrany wstepne (tylko nowe zestawienie, bez wybranego motywu):
+  //  1. wybor FORMY (Lista / Plan)  -> showFormPicker
+  //  2. wybor MOTYWU (filtrowany forma) -> showThemePicker
+  // Edycja i zestawienia z juz wybranym motywem od razu wchodza w formularz.
+  const showFormPicker = !editId && !category && !form;
+  const showThemePicker = !editId && !category && !!form;
 
   // ── Author + edit/liked prefill ───────────────────────────────────────────
   useEffect(() => {
@@ -367,8 +375,12 @@ const CreateRanking = () => {
     }
   };
 
-  // ── Krok 1: wybor motywu zestawienia (tylko z zamknietej listy) ──────────────
-  if (showThemePicker) {
+  // ── Krok 0: wybor FORMY zestawienia (Lista / Plan) ───────────────────────────
+  if (showFormPicker) {
+    const FORMS: { id: CollectionKind; emoji: string; label: string; hint: string; gradient: string }[] = [
+      { id: "list",  emoji: "📍", label: "Lista", hint: "Zbiór polecanych miejsc bez ustalonej kolejności. Np. najlepsze kawiarnie w&nbsp;mieście.", gradient: "from-orange-50 to-amber-100" },
+      { id: "route", emoji: "🗺️", label: "Plan",  hint: "Uporządkowany plan z kolejnością miejsc i&nbsp;mapą. Np. pomysł na&nbsp;cały dzień.",       gradient: "from-amber-50 to-orange-100" },
+    ];
     return (
       <div className="flex flex-col h-[100dvh] bg-background max-w-lg mx-auto">
         <div className="flex items-center gap-2 px-4 pt-safe-4 pb-3 border-b border-border/20 shrink-0">
@@ -378,10 +390,52 @@ const CreateRanking = () => {
           <span className="font-bold text-base">Nowe zestawienie</span>
         </div>
         <div className="flex-1 overflow-y-auto px-4 py-5">
+          <h1 className="text-2xl font-display font-extrabold tracking-tight leading-tight">Co tworzysz?</h1>
+          <p className="text-sm text-muted-foreground mt-1.5">Wybierz formę zestawienia. Od tego zależą dostępne motywy w&nbsp;kolejnym kroku.</p>
+          <div className="flex flex-col gap-3 mt-5">
+            {FORMS.map((f) => (
+              <button
+                key={f.id}
+                onClick={() => setForm(f.id)}
+                className={`relative flex items-center gap-4 rounded-3xl bg-gradient-to-br ${f.gradient} p-4 text-left overflow-hidden active:scale-[0.98] transition-transform shadow-sm`}
+              >
+                <div className="absolute -top-6 -right-6 h-20 w-20 rounded-full bg-white/30 blur-xl" />
+                <div className="h-14 w-14 rounded-2xl bg-white/70 backdrop-blur-sm flex items-center justify-center text-3xl shadow-sm shrink-0">{f.emoji}</div>
+                <div className="relative min-w-0">
+                  <span className="font-black text-lg leading-tight block text-foreground">{f.label}</span>
+                  <span className="text-[13px] text-foreground/60 leading-snug block mt-0.5" dangerouslySetInnerHTML={{ __html: f.hint }} />
+                </div>
+                <ChevronRight className="h-5 w-5 text-foreground/40 shrink-0 ml-auto" />
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Krok 1: wybor MOTYWU zestawienia (motywy filtrowane wg wybranej formy) ────
+  if (showThemePicker) {
+    const themes = COLLECTION_THEMES.filter((t) => t.kind === form);
+    const formLabel = form === "route" ? "🗺️ Plan" : "📍 Lista";
+    return (
+      <div className="flex flex-col h-[100dvh] bg-background max-w-lg mx-auto">
+        <div className="flex items-center gap-2 px-4 pt-safe-4 pb-3 border-b border-border/20 shrink-0">
+          <button onClick={() => setForm(null)} aria-label="Wstecz" className="h-9 w-9 flex items-center justify-center -ml-1 shrink-0 text-foreground">
+            <ArrowLeft className="h-5 w-5" />
+          </button>
+          <span className="flex-1 font-bold text-base">Nowe zestawienie</span>
+          {/* Wybrana forma jako chip - tap = powrot do wyboru formy */}
+          <button onClick={() => setForm(null)} className="inline-flex items-center gap-1 rounded-full bg-secondary text-secondary-foreground px-3 py-1.5 text-xs font-bold shrink-0 active:scale-95 transition-transform">
+            <span>{formLabel}</span>
+            <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+          </button>
+        </div>
+        <div className="flex-1 overflow-y-auto px-4 py-5">
           <h1 className="text-2xl font-display font-extrabold tracking-tight leading-tight">Jaki to motyw?</h1>
-          <p className="text-sm text-muted-foreground mt-1.5">Wybierz temat swojej kolekcji miejsc. To pomaga innym ją&nbsp;znaleźć.</p>
+          <p className="text-sm text-muted-foreground mt-1.5">Wybierz temat {form === "route" ? "swojego planu" : "swojej listy"}. To pomaga innym go&nbsp;znaleźć.</p>
           <div className="grid grid-cols-2 gap-3 mt-5">
-            {COLLECTION_THEMES.map((t) => (
+            {themes.map((t) => (
               <button
                 key={t.id}
                 onClick={() => setCategory(t.id)}
@@ -389,10 +443,6 @@ const CreateRanking = () => {
               >
                 {/* Delikatny błysk w rogu dla głębi */}
                 <div className="absolute -top-6 -right-6 h-16 w-16 rounded-full bg-white/30 blur-xl" />
-                {/* Typ zestawienia: trasa (plan dnia) vs lista miejsc */}
-                <span className="absolute top-2.5 right-2.5 inline-flex items-center rounded-full bg-white/70 backdrop-blur-sm px-2 py-0.5 text-[9px] font-bold text-foreground/70">
-                  {t.kind === "route" ? "🗺️ Trasa" : "📍 Lista"}
-                </span>
                 <div className="h-12 w-12 rounded-2xl bg-white/70 backdrop-blur-sm flex items-center justify-center text-2xl shadow-sm shrink-0">{t.emoji}</div>
                 <div className="relative">
                   <span className="font-black text-sm leading-tight block text-foreground">{t.label}</span>
@@ -447,15 +497,15 @@ const CreateRanking = () => {
           <div className="sticky top-0 z-20 bg-background px-4 pt-3 pb-2">
             <div className="relative">
               <Search className="h-4 w-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2 z-10" />
-              <input value={search} onChange={(e) => setSearch(e.target.value)}
+              <input ref={searchInputRef} value={search} onChange={(e) => setSearch(e.target.value)}
                 placeholder={`Szukaj miejsca w ${city}…`}
                 className="w-full rounded-2xl bg-secondary text-secondary-foreground border-0 pl-9 pr-3 py-3 text-base outline-none focus:ring-2 focus:ring-orange-500/40 placeholder:text-muted-foreground/50" />
             </div>
           </div>
 
-          {/* Wyniki / propozycje - tuz pod wyszukiwarka */}
-          <div className="px-4">
-            {search.trim().length >= 2 ? (
+          {/* Wyniki wyszukiwarki - tuz pod wyszukiwarka (tylko podczas szukania) */}
+          {search.trim().length >= 2 && (
+            <div className="px-4">
               <div className="rounded-2xl bg-secondary overflow-hidden divide-y divide-background/60">
                 {searchLoading && <div className="flex justify-center py-4"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>}
                 {searchResults.filter((r) => !addedNames.has(r.place_name.toLowerCase())).map((r) => (
@@ -494,64 +544,38 @@ const CreateRanking = () => {
                   </button>
                 )}
               </div>
-            ) : (
-              suggestions.filter((s) => !addedNames.has(s.place_name.toLowerCase())).length > 0 && (
-                <div>
-                  <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide mb-2">Propozycje w {city}</p>
-                  <div className="flex gap-2.5 overflow-x-auto scrollbar-none snap-x snap-mandatory -mr-4 pr-4 pb-1">
-                    {suggestions.filter((s) => !addedNames.has(s.place_name.toLowerCase())).map((s) => (
-                      <button key={s.id} onClick={() => addDbPlace(s)}
-                        className="shrink-0 w-[40%] snap-start rounded-2xl bg-secondary overflow-hidden text-left active:scale-[0.97] transition-transform">
-                        <div className="relative aspect-[4/3] bg-background">
-                          {s.photo_url ? <img src={s.photo_url} alt="" className="absolute inset-0 w-full h-full object-cover" loading="lazy" /> : <div className="absolute inset-0 flex items-center justify-center text-muted-foreground"><MapPin className="h-5 w-5" /></div>}
-                          <div className="absolute top-1.5 right-1.5 h-6 w-6 rounded-full bg-primary text-white flex items-center justify-center shadow-sm"><Plus className="h-3.5 w-3.5" /></div>
-                          {s.rating != null && (
-                            <div className="absolute bottom-1.5 left-1.5 flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-white/90 backdrop-blur-sm">
-                              <Star className="h-2.5 w-2.5 fill-yellow-400 text-yellow-400" /><span className="text-[9px] font-bold">{s.rating}</span>
-                            </div>
-                          )}
-                        </div>
-                        <p className="text-xs font-bold leading-tight truncate px-2 py-2">{s.place_name}</p>
-                      </button>
-                    ))}
-                    <div className="shrink-0 w-1" />
-                  </div>
-                </div>
-              )
-            )}
-          </div>
+            </div>
+          )}
 
-          {/* Wybrane miejsca (bez notek - notki na kroku 2) */}
-          <div className="px-4 pt-5 pb-4">
-            <div className="flex items-center justify-between mb-2">
+          {/* Wybrane miejsca - DUZE karty (styl jak dziennik/home) + szkielet "Dodaj miejsce".
+              Bez notek - notki na kroku 2. */}
+          <div className="px-4 pt-4 pb-4">
+            <div className="flex items-center justify-between mb-2.5">
               <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Wybrane miejsca ({items.length})</p>
               {items.length > 0 && (
                 <div className="flex rounded-full bg-secondary p-0.5">
                   <button type="button" onClick={() => setPlaceView("list")} aria-label="Widok listy" className={`px-2.5 py-1 rounded-full transition-colors ${placeView === "list" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground"}`}>
                     <List className="h-4 w-4" />
                   </button>
-                  <button type="button" onClick={() => setPlaceView("detail")} aria-label="Widok szczegółowy" className={`px-2.5 py-1 rounded-full transition-colors ${placeView === "detail" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground"}`}>
+                  <button type="button" onClick={() => setPlaceView("detail")} aria-label="Widok kart" className={`px-2.5 py-1 rounded-full transition-colors ${placeView === "detail" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground"}`}>
                     <GalleryHorizontalEnd className="h-4 w-4" />
                   </button>
                 </div>
               )}
             </div>
-            {items.length === 0 && (
-              <p className="text-sm text-muted-foreground py-4 text-center">Dodaj min. 2&nbsp;miejsca z&nbsp;wyszukiwarki lub propozycji.</p>
-            )}
-            <div className="space-y-2.5">
+            <div className="space-y-3">
               {items.map((it, idx) => {
                 const cat = categoryBadge(it.category);
-                // Kontrolki kolejnosci (tylko trasa/plan): strzalki gora/dol.
+                // Kontrolki kolejnosci (tylko Plan): strzalki gora/dol.
                 const reorder = isRoute && (
                   <div className="flex flex-col shrink-0">
                     <button onClick={() => move(idx, -1)} disabled={idx === 0} aria-label="W górę" className="h-6 w-6 flex items-center justify-center rounded-md text-muted-foreground disabled:opacity-25 active:bg-background"><ChevronUp className="h-4 w-4" /></button>
                     <button onClick={() => move(idx, 1)} disabled={idx === items.length - 1} aria-label="W dół" className="h-6 w-6 flex items-center justify-center rounded-md text-muted-foreground disabled:opacity-25 active:bg-background"><ChevronDown className="h-4 w-4" /></button>
                   </div>
                 );
-                // Numer kroku (tylko trasa - kolejnosc zwiedzania, nie ranking).
-                const stepNo = isRoute && <span className="h-6 w-6 rounded-full bg-orange-600 text-white text-[11px] font-bold flex items-center justify-center shrink-0">{idx + 1}</span>;
+                // ── Widok kompaktowy (lista) ──
                 if (placeView === "list") {
+                  const stepNo = isRoute && <span className="h-6 w-6 rounded-full bg-orange-600 text-white text-[11px] font-bold flex items-center justify-center shrink-0">{idx + 1}</span>;
                   return (
                     <div key={it.key} className="rounded-2xl bg-secondary p-2.5 flex items-center gap-2">
                       {stepNo}
@@ -572,29 +596,80 @@ const CreateRanking = () => {
                     </div>
                   );
                 }
+                // ── Widok kart: duza karta 4:3 (jak w dzienniku) ──
                 return (
-                  <div key={it.key} className="rounded-2xl bg-secondary p-3 flex items-start gap-2.5">
-                    {stepNo}
-                    <button onClick={() => openDetail(it)} className="flex items-start gap-3 flex-1 min-w-0 text-left active:opacity-80 transition-opacity">
-                      {it.photo_url
-                        ? <img src={it.photo_url} alt="" className="h-14 w-14 rounded-xl object-cover shrink-0" />
-                        : <div className="h-14 w-14 rounded-xl bg-background flex items-center justify-center text-muted-foreground shrink-0"><MapPin className="h-5 w-5" /></div>}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5">
-                          <p className="text-sm font-bold truncate">{it.place_name}</p>
-                          {it.rating != null && <span className="text-[11px] text-muted-foreground flex items-center gap-0.5 shrink-0"><Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />{it.rating}</span>}
-                        </div>
-                        {cat && <span className="inline-flex items-center gap-1 mt-1 rounded-full bg-background px-2 py-0.5 text-[11px] font-semibold">{cat.emoji} {cat.label}</span>}
-                        {it.address && <p className="text-[11px] text-muted-foreground truncate mt-1">{it.address}</p>}
+                  <div key={it.key} className="relative rounded-2xl bg-secondary border border-border/40 overflow-hidden shadow-sm">
+                    <button onClick={() => openDetail(it)} className="w-full text-left active:opacity-90 transition-opacity">
+                      <div className="relative w-full aspect-[4/3] bg-muted">
+                        {it.photo_url
+                          ? <img src={it.photo_url} alt="" className="absolute inset-0 w-full h-full object-cover" loading="lazy" />
+                          : <div className="absolute inset-0 flex items-center justify-center text-muted-foreground"><MapPin className="h-8 w-8" /></div>}
+                        {/* Numer kroku (tylko Plan - kolejnosc zwiedzania) */}
+                        {isRoute && <span className="absolute top-3 left-3 h-8 w-8 rounded-full bg-black/55 backdrop-blur text-white text-sm font-bold flex items-center justify-center shadow-sm">{idx + 1}</span>}
+                        {it.rating != null && (
+                          <div className="absolute bottom-3 left-3 flex items-center gap-0.5 px-2 py-0.5 rounded-full bg-white/90 backdrop-blur-sm shadow-sm">
+                            <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" /><span className="text-[11px] font-bold">{it.rating}</span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="px-4 pt-3 pb-3.5">
+                        {cat && <span className="inline-flex items-center gap-1 rounded-full bg-background px-2.5 py-0.5 text-[11px] font-semibold mb-1.5">{cat.emoji} {cat.label}</span>}
+                        <p className="text-base font-black leading-tight">{it.place_name}</p>
+                        {it.address && <p className="text-[12px] text-muted-foreground leading-snug mt-1 truncate">{it.address}</p>}
                       </div>
                     </button>
-                    {reorder}
-                    <button onClick={() => removeItem(it.key)} aria-label="Usuń miejsce" className="h-7 w-7 flex items-center justify-center rounded-full text-destructive active:bg-destructive/10 shrink-0"><X className="h-4 w-4" /></button>
+                    {/* Akcje: reorder (Plan) + usun - overlay w prawym gornym rogu nad zdjeciem */}
+                    <div className="absolute top-2.5 right-2.5 flex items-center gap-1.5">
+                      {isRoute && (
+                        <div className="flex flex-col rounded-full bg-white/90 backdrop-blur-sm shadow-sm overflow-hidden">
+                          <button onClick={() => move(idx, -1)} disabled={idx === 0} aria-label="W górę" className="h-6 w-7 flex items-center justify-center text-foreground/70 disabled:opacity-25 active:bg-black/5"><ChevronUp className="h-4 w-4" /></button>
+                          <button onClick={() => move(idx, 1)} disabled={idx === items.length - 1} aria-label="W dół" className="h-6 w-7 flex items-center justify-center text-foreground/70 disabled:opacity-25 active:bg-black/5"><ChevronDown className="h-4 w-4" /></button>
+                        </div>
+                      )}
+                      <button onClick={() => removeItem(it.key)} aria-label="Usuń miejsce" className="h-8 w-8 flex items-center justify-center rounded-full bg-white/90 backdrop-blur-sm shadow-sm text-destructive active:scale-95 transition-transform"><X className="h-4 w-4" /></button>
+                    </div>
                   </div>
                 );
               })}
+
+              {/* Szkielet "Dodaj miejsce" - klik = fokus na wyszukiwarce. Zawsze widoczny:
+                  jako pusty stan (gdy 0 miejsc) i jako sposob dodania kolejnych. */}
+              <button
+                type="button"
+                onClick={() => searchInputRef.current?.focus()}
+                className={`w-full rounded-2xl border-2 border-dashed border-border/70 bg-secondary/40 flex flex-col items-center justify-center gap-2 text-muted-foreground active:scale-[0.99] transition-transform ${placeView === "list" ? "py-5" : "py-9"}`}
+              >
+                <span className="h-11 w-11 rounded-full bg-secondary flex items-center justify-center"><Plus className="h-5 w-5 text-orange-600" /></span>
+                <span className="text-sm font-bold text-foreground">Dodaj miejsce</span>
+                <span className="text-[12px]">Wyszukaj lub wybierz z&nbsp;propozycji poniżej</span>
+              </button>
             </div>
           </div>
+
+          {/* Propozycje w {miasto} - POD wybranymi miejscami (szybki podglad). Ukryte podczas szukania. */}
+          {search.trim().length < 2 && suggestions.filter((s) => !addedNames.has(s.place_name.toLowerCase())).length > 0 && (
+            <div className="px-4 pb-4">
+              <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide mb-2">Propozycje w {city}</p>
+              <div className="flex gap-2.5 overflow-x-auto scrollbar-none snap-x snap-mandatory -mr-4 pr-4 pb-1">
+                {suggestions.filter((s) => !addedNames.has(s.place_name.toLowerCase())).map((s) => (
+                  <button key={s.id} onClick={() => addDbPlace(s)}
+                    className="shrink-0 w-[40%] snap-start rounded-2xl bg-secondary overflow-hidden text-left active:scale-[0.97] transition-transform">
+                    <div className="relative aspect-[4/3] bg-background">
+                      {s.photo_url ? <img src={s.photo_url} alt="" className="absolute inset-0 w-full h-full object-cover" loading="lazy" /> : <div className="absolute inset-0 flex items-center justify-center text-muted-foreground"><MapPin className="h-5 w-5" /></div>}
+                      <div className="absolute top-1.5 right-1.5 h-6 w-6 rounded-full bg-primary text-white flex items-center justify-center shadow-sm"><Plus className="h-3.5 w-3.5" /></div>
+                      {s.rating != null && (
+                        <div className="absolute bottom-1.5 left-1.5 flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-white/90 backdrop-blur-sm">
+                          <Star className="h-2.5 w-2.5 fill-yellow-400 text-yellow-400" /><span className="text-[9px] font-bold">{s.rating}</span>
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-xs font-bold leading-tight truncate px-2 py-2">{s.place_name}</p>
+                  </button>
+                ))}
+                <div className="shrink-0 w-1" />
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -632,7 +707,7 @@ const CreateRanking = () => {
           {/* Mapa z miejscami */}
           {mapPins.length > 0 && (
             <div>
-              <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2 block">{isRouteCollection(category) ? "Trasa na mapie" : "Miejsca na mapie"}</label>
+              <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2 block">{isRouteCollection(category) ? "Plan na mapie" : "Miejsca na mapie"}</label>
               <div className="relative h-52 rounded-2xl overflow-hidden border border-border/40">
                 <RouteMap pins={mapPins as any} className="w-full h-full" />
               </div>

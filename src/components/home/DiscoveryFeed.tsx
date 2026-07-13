@@ -394,7 +394,7 @@ export function CollectionDetail({ col, onClose, onAdopt }: { col: DiscoveryColl
             <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-bold ${theme.badge}`}>{theme.emoji} {theme.label}</span>
           )}
           <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold text-muted-foreground">
-            {isRoute ? "🗺️ Trasa" : "📍 Lista"}
+            {isRoute ? "🗺️ Plan" : "📍 Lista"}
           </span>
           <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
             {(col.views_count ?? 0) > 0 && <span className="flex items-center gap-1"><Eye className="h-3 w-3" />{col.views_count}</span>}
