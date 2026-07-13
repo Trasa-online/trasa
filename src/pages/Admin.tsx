@@ -8,6 +8,7 @@ import { Copy, Check, Loader2, ArrowLeft, Trash2, Eye, EyeOff, Star, MapPin, Sto
 import { format } from "date-fns";
 import { forwardGeocode } from "@/lib/googleMaps";
 import { isHardcodedAdmin } from "@/lib/admins";
+import { sendClientPush } from "@/lib/clientPush";
 
 interface WaitlistEntry {
   id: string;
@@ -734,6 +735,18 @@ const Admin = () => {
     setRejectNoteId(null);
     setRejectNote("");
     toast.success(status === "approved" ? "Zaakceptowano" : "Odrzucono");
+
+    // Powiadomienie push do autora (in-app notyfikacja tworzy trigger DB przy zmianie statusu).
+    // Best-effort: blad pusha nie wplywa na wynik moderacji.
+    const col = rankings.find(r => r.id === id);
+    if (col?.user_id) {
+      const colTitle = col.title || "Twoje zestawienie";
+      sendClientPush(
+        status === "approved"
+          ? { userId: col.user_id, title: "Zestawienie zaakceptowane 🎉", body: `„${colTitle}" jest już widoczne dla innych`, url: "/eksploruj" }
+          : { userId: col.user_id, title: "Zestawienie odrzucone", body: note?.trim() ? `Powód: ${note.trim()}` : `„${colTitle}" nie przeszło moderacji`, url: "/moj-profil" }
+      );
+    }
   };
 
   // === Custom miejsca spoza bazy -> leady (promocja na claimowalna wizytowke) ===

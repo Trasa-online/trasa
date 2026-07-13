@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { X, Bell, UserPlus, UserCheck, MapPin, Route, Users, Bookmark } from "lucide-react";
+import { X, Bell, UserPlus, UserCheck, MapPin, Route, Users, Bookmark, CheckCircle2, XCircle } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { pl } from "date-fns/locale";
 import { avatarSrc } from "@/lib/avatar";
@@ -31,6 +31,8 @@ const TYPE_CONFIG: Record<string, { icon: React.ElementType; color: string; labe
   group_match:    { icon: Users,         color: "text-orange-600 bg-orange-100",  label: (u, meta) => `${u} też polubił(a) ${meta?.place_name ?? "to samo miejsce"}! 🎉` },
   group_invite:       { icon: Users,  color: "text-violet-500 bg-violet-100",  label: (u, meta) => `${u} zaprasza Cię do wspólnego wybierania miejsc w ${meta?.city ?? "sesji grupowej"}` },
   group_route_ready:  { icon: Route, color: "text-orange-600 bg-orange-100",  label: (u, meta) => `${u} stworzył(a) trasę${meta?.city ? ` w ${meta.city}` : ""} - sprawdź!` },
+  collection_approved: { icon: CheckCircle2, color: "text-emerald-500 bg-emerald-100", label: (_u, meta) => `Twoje zestawienie „${meta?.title ?? "kolekcja"}" zostało zaakceptowane 🎉` },
+  collection_rejected: { icon: XCircle,      color: "text-destructive bg-destructive/10", label: (_u, meta) => meta?.moderation_note ? `Zestawienie „${meta?.title ?? "kolekcja"}" odrzucone. Powód: ${meta.moderation_note}` : `Twoje zestawienie „${meta?.title ?? "kolekcja"}" zostało odrzucone` },
 };
 
 interface Props {
@@ -249,6 +251,14 @@ export default function NotificationsDrawer({ open, onClose, userId }: Props) {
                           className="mt-2 px-3 py-1.5 rounded-full bg-primary text-white text-xs font-semibold active:scale-95 transition-transform"
                         >
                           {n.type === "friend_request" ? "Zobacz zaproszenie →" : "Zobacz znajomych →"}
+                        </button>
+                      )}
+                      {(n.type === "collection_approved" || n.type === "collection_rejected") && (
+                        <button
+                          onClick={() => { onClose(); navigate("/eksploruj", { state: { myCollections: true } }); }}
+                          className="mt-2 px-3 py-1.5 rounded-full bg-primary text-white text-xs font-semibold active:scale-95 transition-transform"
+                        >
+                          {n.type === "collection_rejected" ? "Zobacz szczegóły →" : "Zobacz zestawienia →"}
                         </button>
                       )}
                     </div>
