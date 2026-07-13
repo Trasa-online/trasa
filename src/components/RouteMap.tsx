@@ -213,7 +213,7 @@ const MapContent = ({ validPins, onPinClick, startingLocation, singlePlace = fal
               boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
               cursor: 'pointer',
             }}>
-              {singlePlace ? '' : label}
+              {singlePlace || !showRoute ? '' : label}
             </div>
           </AdvancedMarker>
         );

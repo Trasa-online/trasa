@@ -14,6 +14,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import posthog from "posthog-js";
 
 // Tworzenie zestawien odblokowane. Klik rejestrujemy w PostHog (funnel intent -> publikacja).
@@ -235,6 +236,27 @@ export const LikedTab = () => {
 const MyCollections = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
+  // Potwierdzenie usuniecia zestawienia (nieodwracalne -> walidacja "czy na pewno?").
+  const [confirmDelete, setConfirmDelete] = useState<{ id: string; title: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDelete = async () => {
+    if (!confirmDelete || !user) return;
+    setDeleting(true);
+    try {
+      await (supabase as any).from("discovery_items").delete().eq("collection_id", confirmDelete.id);
+      const { error } = await (supabase as any).from("discovery_collections").delete().eq("id", confirmDelete.id).eq("user_id", user.id);
+      if (error) throw new Error(error.message);
+      toast.success("Zestawienie usunięte");
+      setConfirmDelete(null);
+      queryClient.invalidateQueries({ queryKey: ["my-collections", user.id] });
+    } catch (e: any) {
+      toast.error(`Nie udało się usunąć: ${e?.message ?? "błąd"}`);
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const { data: collections = [], isLoading } = useQuery({
     queryKey: ["my-collections", user?.id],
@@ -285,43 +307,103 @@ const MyCollections = () => {
         </div>
       ) : (
         collections.map((col: any) => (
-          <button
+          <div
             key={col.id}
-            onClick={() => navigate(`/zestawienie/${col.id}/edytuj`)}
-            className="w-full flex items-center gap-3 rounded-3xl bg-card border border-border/50 p-3 text-left active:scale-[0.99] transition-transform"
+            className="w-full flex items-center gap-3 rounded-3xl bg-card border border-border/50 p-3"
           >
-            {col.cover ? (
-              <img src={col.cover} alt={col.title} className="h-16 w-16 rounded-2xl object-cover shrink-0" loading="lazy" />
-            ) : (
-              <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-amber-100 to-orange-200 flex items-center justify-center shrink-0">
-                <ListChecks className="h-6 w-6 text-orange-600" />
-              </div>
-            )}
-            <div className="flex-1 min-w-0">
-              <p className="font-bold text-sm leading-tight truncate">{col.title || "Bez tytułu"}</p>
-              <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                {[col.city, `${col.count} ${col.count === 1 ? "miejsce" : col.count < 5 ? "miejsca" : "miejsc"}`].filter(Boolean).join(" · ")}
-                {col.is_public === false ? " · prywatne" : ""}
-              </p>
-              {col.moderation_status === "pending" && (
-                <span className="inline-flex items-center gap-1 mt-1 text-[10px] font-bold text-amber-700 bg-amber-100 rounded-full px-2 py-0.5">
-                  ⏳ czeka na akceptację
-                </span>
-              )}
-              {col.moderation_status === "rejected" && (
-                <div className="mt-1">
-                  <span className="inline-flex items-center gap-1 text-[10px] font-bold text-destructive bg-destructive/10 rounded-full px-2 py-0.5">
-                    odrzucone
-                  </span>
-                  {col.moderation_note && (
-                    <p className="text-[11px] text-muted-foreground mt-1 leading-snug whitespace-pre-wrap">Powód: {col.moderation_note}</p>
-                  )}
+            <button
+              onClick={() => navigate(`/zestawienie/${col.id}/edytuj`)}
+              className="flex items-center gap-3 flex-1 min-w-0 text-left active:opacity-80 transition-opacity"
+            >
+              {col.cover ? (
+                <img src={col.cover} alt={col.title} className="h-16 w-16 rounded-2xl object-cover shrink-0" loading="lazy" />
+              ) : (
+                <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-amber-100 to-orange-200 flex items-center justify-center shrink-0">
+                  <ListChecks className="h-6 w-6 text-orange-600" />
                 </div>
               )}
+              <div className="flex-1 min-w-0">
+                <p className="font-bold text-sm leading-tight truncate">{col.title || "Bez tytułu"}</p>
+                <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                  {[col.city, `${col.count} ${col.count === 1 ? "miejsce" : col.count < 5 ? "miejsca" : "miejsc"}`].filter(Boolean).join(" · ")}
+                  {col.is_public === false ? " · prywatne" : ""}
+                </p>
+                {col.moderation_status === "pending" && (
+                  <span className="inline-flex items-center gap-1 mt-1 text-[10px] font-bold text-amber-700 bg-amber-100 rounded-full px-2 py-0.5">
+                    ⏳ czeka na akceptację
+                  </span>
+                )}
+                {col.moderation_status === "rejected" && (
+                  <div className="mt-1">
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-destructive bg-destructive/10 rounded-full px-2 py-0.5">
+                      odrzucone
+                    </span>
+                    {col.moderation_note && (
+                      <p className="text-[11px] text-muted-foreground mt-1 leading-snug whitespace-pre-wrap">Powód: {col.moderation_note}</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            </button>
+            <div className="flex items-center gap-0.5 shrink-0">
+              <button
+                onClick={() => navigate(`/zestawienie/${col.id}/edytuj`)}
+                aria-label="Edytuj zestawienie"
+                className="h-9 w-9 flex items-center justify-center rounded-full text-muted-foreground/60 active:bg-muted transition-colors"
+              >
+                <Pencil className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => setConfirmDelete({ id: col.id, title: col.title || "Bez tytułu" })}
+                aria-label="Usuń zestawienie"
+                className="h-9 w-9 flex items-center justify-center rounded-full text-destructive active:bg-destructive/10 transition-colors"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
             </div>
-            <Pencil className="h-4 w-4 text-muted-foreground/50 shrink-0" />
-          </button>
+          </div>
         ))
+      )}
+
+      {/* Potwierdzenie usuniecia (nieodwracalne) */}
+      {confirmDelete && (
+        <div
+          className="fixed inset-0 z-[70] flex items-end justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200"
+          onClick={() => !deleting && setConfirmDelete(null)}
+        >
+          <div
+            className="w-full max-w-sm bg-card rounded-t-3xl px-6 pt-6 pb-[max(24px,env(safe-area-inset-bottom))] flex flex-col gap-4 shadow-2xl animate-in slide-in-from-bottom-4 duration-300"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start gap-3">
+              <div className="h-11 w-11 rounded-full bg-destructive/10 flex items-center justify-center shrink-0">
+                <Trash2 className="h-5 w-5 text-destructive" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-base font-black leading-snug">Usunąć zestawienie?</p>
+                <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
+                  „{confirmDelete.title}" zniknie na&nbsp;zawsze. Tej akcji nie&nbsp;można cofnąć.
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setConfirmDelete(null)}
+                disabled={deleting}
+                className="flex-1 py-3 rounded-full border border-border text-sm font-semibold text-foreground active:scale-[0.97] transition-transform disabled:opacity-50"
+              >
+                Anuluj
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                className="flex-1 py-3 rounded-full bg-destructive text-white text-sm font-bold active:scale-[0.97] transition-transform disabled:opacity-50"
+              >
+                {deleting ? "Usuwam…" : "Usuń"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

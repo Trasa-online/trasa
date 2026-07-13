@@ -126,6 +126,7 @@ const CreateRanking = () => {
 
   // Wyszukiwarka + propozycje miejsc (bez zargonu "baza/spoza bazy").
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const [searchFocused, setSearchFocused] = useState(false);
   const [search, setSearch] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
@@ -283,6 +284,9 @@ const CreateRanking = () => {
       try {
         const g = await forwardGeocodeWithTypes(`${q} ${city}`);
         const dbNames = new Set(dbRows.map((r: any) => (r.place_name ?? "").toLowerCase().trim()));
+        // Szukamy TYLKO w wybranym miescie - odrzucamy wyniki spoza (Google potrafi zwrocic
+        // np. lokal o podobnej nazwie w innym miescie). Dopasowanie po nazwie miasta w adresie.
+        const cityAliases = expandCity(city).map((c) => c.toLowerCase());
         const seen = new Set<string>();
         const extra = g
           .filter((x) => {
@@ -291,6 +295,9 @@ const CreateRanking = () => {
             // Odrzuc czyste wyniki geograficzne (miasta, dzielnice, drogi) - chcemy lokale.
             const geoOnly = ["locality", "sublocality", "administrative_area_level_1", "administrative_area_level_2", "country", "route", "postal_code", "political"];
             if ((x.types ?? []).length > 0 && (x.types ?? []).every((t) => geoOnly.includes(t))) return false;
+            // Tylko lokale w wybranym miescie (adres zawiera nazwe miasta/dzielnicy).
+            const addr = (x.full_address ?? "").toLowerCase();
+            if (!cityAliases.some((c) => addr.includes(c))) return false;
             seen.add(name);
             return true;
           })
@@ -377,9 +384,9 @@ const CreateRanking = () => {
 
   // ── Krok 0: wybor FORMY zestawienia (Lista / Plan) ───────────────────────────
   if (showFormPicker) {
-    const FORMS: { id: CollectionKind; emoji: string; label: string; hint: string; gradient: string }[] = [
-      { id: "list",  emoji: "📍", label: "Lista", hint: "Zbiór polecanych miejsc bez ustalonej kolejności. Np. najlepsze kawiarnie w&nbsp;mieście.", gradient: "from-orange-50 to-amber-100" },
-      { id: "route", emoji: "🗺️", label: "Plan",  hint: "Uporządkowany plan z kolejnością miejsc i&nbsp;mapą. Np. pomysł na&nbsp;cały dzień.",       gradient: "from-amber-50 to-orange-100" },
+    const FORMS: { id: CollectionKind; emoji: string; label: string; hint: string }[] = [
+      { id: "list",  emoji: "📍", label: "Lista", hint: "Zbiór polecanych miejsc bez ustalonej kolejności. Np. najlepsze kawiarnie w&nbsp;mieście." },
+      { id: "route", emoji: "🗺️", label: "Plan",  hint: "Uporządkowany plan z kolejnością miejsc i&nbsp;mapą. Np. pomysł na&nbsp;cały dzień." },
     ];
     return (
       <div className="flex flex-col h-[100dvh] bg-background max-w-lg mx-auto">
@@ -397,15 +404,14 @@ const CreateRanking = () => {
               <button
                 key={f.id}
                 onClick={() => setForm(f.id)}
-                className={`relative flex items-center gap-4 rounded-3xl bg-gradient-to-br ${f.gradient} p-4 text-left overflow-hidden active:scale-[0.98] transition-transform shadow-sm`}
+                className="relative flex items-center gap-4 rounded-3xl bg-card border border-border/60 p-4 text-left active:scale-[0.98] transition-transform shadow-sm"
               >
-                <div className="absolute -top-6 -right-6 h-20 w-20 rounded-full bg-white/30 blur-xl" />
-                <div className="h-14 w-14 rounded-2xl bg-white/70 backdrop-blur-sm flex items-center justify-center text-3xl shadow-sm shrink-0">{f.emoji}</div>
-                <div className="relative min-w-0">
+                <div className="h-14 w-14 rounded-2xl bg-secondary flex items-center justify-center text-3xl shrink-0">{f.emoji}</div>
+                <div className="min-w-0">
                   <span className="font-black text-lg leading-tight block text-foreground">{f.label}</span>
-                  <span className="text-[13px] text-foreground/60 leading-snug block mt-0.5" dangerouslySetInnerHTML={{ __html: f.hint }} />
+                  <span className="text-[13px] text-muted-foreground leading-snug block mt-0.5" dangerouslySetInnerHTML={{ __html: f.hint }} />
                 </div>
-                <ChevronRight className="h-5 w-5 text-foreground/40 shrink-0 ml-auto" />
+                <ChevronRight className="h-5 w-5 text-muted-foreground/50 shrink-0 ml-auto" />
               </button>
             ))}
           </div>
@@ -498,6 +504,8 @@ const CreateRanking = () => {
             <div className="relative">
               <Search className="h-4 w-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2 z-10" />
               <input ref={searchInputRef} value={search} onChange={(e) => setSearch(e.target.value)}
+                onFocus={() => setSearchFocused(true)}
+                onBlur={() => setSearchFocused(false)}
                 placeholder={`Szukaj miejsca w ${city}…`}
                 className="w-full rounded-2xl bg-secondary text-secondary-foreground border-0 pl-9 pr-3 py-3 text-base outline-none focus:ring-2 focus:ring-orange-500/40 placeholder:text-muted-foreground/50" />
             </div>
@@ -536,6 +544,15 @@ const CreateRanking = () => {
                     {addingGoogleName === g.name ? <Loader2 className="h-4 w-4 animate-spin text-orange-600 shrink-0" /> : <Plus className="h-4 w-4 text-orange-600 shrink-0" />}
                   </button>
                 ))}
+                {/* Stan pusty - brak dopasowan w miescie (najczesciej literowka). */}
+                {!searchLoading && !googleLoading
+                  && searchResults.filter((r) => !addedNames.has(r.place_name.toLowerCase())).length === 0
+                  && googleResults.filter((g) => !addedNames.has((g.name ?? "").toLowerCase())).length === 0 && (
+                  <div className="px-3 py-4 text-center">
+                    <p className="text-sm font-semibold">Nie znaleziono miejsca w&nbsp;{city}</p>
+                    <p className="text-[12px] text-muted-foreground mt-1">Sprawdź pisownię lub spróbuj innej nazwy.</p>
+                  </div>
+                )}
                 {!searchLoading && !googleLoading && (
                   <button onClick={() => previewCustomByName(search)} disabled={addingCustom}
                     className="w-full flex items-center gap-2 p-3 text-left active:bg-background/50 disabled:opacity-50">
@@ -563,7 +580,7 @@ const CreateRanking = () => {
                 </div>
               )}
             </div>
-            <div className="space-y-3">
+            <div className={placeView === "detail" ? "flex gap-3 overflow-x-auto scrollbar-none snap-x snap-mandatory -mr-4 pr-4 pb-1" : "space-y-2.5"}>
               {items.map((it, idx) => {
                 const cat = categoryBadge(it.category);
                 // Kontrolki kolejnosci (tylko Plan): strzalki gora/dol.
@@ -598,7 +615,7 @@ const CreateRanking = () => {
                 }
                 // ── Widok kart: duza karta 4:3 (jak w dzienniku) ──
                 return (
-                  <div key={it.key} className="relative rounded-2xl bg-secondary border border-border/40 overflow-hidden shadow-sm">
+                  <div key={it.key} className="relative shrink-0 w-[80%] snap-start rounded-2xl bg-secondary border border-border/40 overflow-hidden shadow-sm">
                     <button onClick={() => openDetail(it)} className="w-full text-left active:opacity-90 transition-opacity">
                       <div className="relative w-full aspect-[4/3] bg-muted">
                         {it.photo_url
@@ -633,15 +650,16 @@ const CreateRanking = () => {
               })}
 
               {/* Szkielet "Dodaj miejsce" - klik = fokus na wyszukiwarce. Zawsze widoczny:
-                  jako pusty stan (gdy 0 miejsc) i jako sposob dodania kolejnych. */}
+                  jako pusty stan (gdy 0 miejsc) i jako sposob dodania kolejnych. W trybie kart
+                  = kafel w karuzeli (obok miejsc), w trybie listy = pelna szerokosc pod spodem. */}
               <button
                 type="button"
                 onClick={() => searchInputRef.current?.focus()}
-                className={`w-full rounded-2xl border-2 border-dashed border-border/70 bg-secondary/40 flex flex-col items-center justify-center gap-2 text-muted-foreground active:scale-[0.99] transition-transform ${placeView === "list" ? "py-5" : "py-9"}`}
+                className={`rounded-2xl border-2 border-dashed border-border/70 bg-secondary/40 flex flex-col items-center justify-center gap-2 text-muted-foreground active:scale-[0.99] transition-transform ${placeView === "list" ? "w-full py-5" : "shrink-0 w-[80%] snap-start self-stretch min-h-[240px] px-4"}`}
               >
                 <span className="h-11 w-11 rounded-full bg-secondary flex items-center justify-center"><Plus className="h-5 w-5 text-orange-600" /></span>
                 <span className="text-sm font-bold text-foreground">Dodaj miejsce</span>
-                <span className="text-[12px]">Wyszukaj lub wybierz z&nbsp;propozycji poniżej</span>
+                <span className="text-[12px] text-center">Wyszukaj lub wybierz z&nbsp;propozycji poniżej</span>
               </button>
             </div>
           </div>
@@ -709,7 +727,7 @@ const CreateRanking = () => {
             <div>
               <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2 block">{isRouteCollection(category) ? "Plan na mapie" : "Miejsca na mapie"}</label>
               <div className="relative h-52 rounded-2xl overflow-hidden border border-border/40">
-                <RouteMap pins={mapPins as any} className="w-full h-full" />
+                <RouteMap pins={mapPins as any} className="w-full h-full" showRoute={isRoute} />
               </div>
             </div>
           )}
@@ -727,20 +745,23 @@ const CreateRanking = () => {
         </div>
       )}
 
-      {/* CTA - Dalej (krok 1) / Opublikuj (krok 2) */}
-      <div className="shrink-0 px-4 pt-3 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] border-t border-border/20">
-        {step === 1 ? (
-          <button onClick={() => setStep(2)} disabled={!canGoNext}
-            className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-sm shadow-md shadow-orange-500/20 active:scale-[0.98] transition-transform disabled:opacity-50 flex items-center justify-center gap-2">
-            Dalej: notki i mapa <ChevronRight className="h-4 w-4" />
-          </button>
-        ) : (
-          <button onClick={publish} disabled={!canPublish}
-            className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-sm shadow-md shadow-orange-500/20 active:scale-[0.98] transition-transform disabled:opacity-50">
-            {publishing ? <Loader2 className="h-5 w-5 animate-spin mx-auto" /> : (editId ? "Zapisz zmiany" : "Opublikuj zestawienie")}
-          </button>
-        )}
-      </div>
+      {/* CTA - Dalej (krok 1) / Opublikuj (krok 2). Ukryte gdy fokus na wyszukiwarce
+          (krok 1) - zeby nie zaslaniac wynikow nad klawiatura. */}
+      {!(step === 1 && searchFocused) && (
+        <div className="shrink-0 px-4 pt-3 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] border-t border-border/20">
+          {step === 1 ? (
+            <button onClick={() => setStep(2)} disabled={!canGoNext}
+              className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-sm shadow-md shadow-orange-500/20 active:scale-[0.98] transition-transform disabled:opacity-50 flex items-center justify-center gap-2">
+              Dalej: notki i mapa <ChevronRight className="h-4 w-4" />
+            </button>
+          ) : (
+            <button onClick={publish} disabled={!canPublish}
+              className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-sm shadow-md shadow-orange-500/20 active:scale-[0.98] transition-transform disabled:opacity-50">
+              {publishing ? <Loader2 className="h-5 w-5 animate-spin mx-auto" /> : (editId ? "Zapisz zmiany" : "Opublikuj zestawienie")}
+            </button>
+          )}
+        </div>
+      )}
 
       {detailPlace && (
         <PlaceSwiperDetail open={!!detailPlace} onOpenChange={(o) => { if (!o) setDetailPlace(null); }} place={detailPlace} city={city} skipGoogleFetch={detailSkip} />
