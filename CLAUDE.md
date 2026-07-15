@@ -42,19 +42,21 @@ W Tailwind odpowiedniki klas:
 
 ### Identyfikacja B2B (panel biznesowy) - niebieski branding
 
-**Cały kontekst dla firm = niebieska identyfikacja, NIE pomarańczowa.** Dotyczy wszystkich ekranów widocznych dla biznesowych użytkowników: panel logowania (`/auth?business=true`), draft upgrade (`/auth?draft=...`), Auth biznesowy, banery powiadomień w `BusinessDashboard`, itp.
+**Cały kontekst dla firm = niebieska identyfikacja, NIE pomarańczowa.** Dotyczy wszystkich ekranów widocznych dla biznesowych użytkowników: panel logowania (`/auth?business=true`), Auth biznesowy, ustawianie hasła (`/set-password-biznes`), onboarding, banery powiadomień w `BusinessDashboard`, itp. Niebieski to **kolor akcentu** (guziki, toggle, badge, linki, focus) - nie tło.
 
-**Paleta B2B:**
-- Tło ekranu: `bg-blue-950` (granatowe)
-- Orb (logo): `radial-gradient(circle at 35% 35%, #60a5fa, #2563eb 60%, #1d4ed8)`
-- Badge "Panel Biznesowy": `bg-blue-500/20 border-blue-400/30 text-blue-300`
-- Inputs: `bg-blue-900/50 border-blue-700/60 text-white placeholder:text-blue-400/50 focus:ring-blue-500`
-- Labels: `text-blue-200`
-- Tekst muted: `text-blue-300/70`
-- Primary button: `bg-blue-600 hover:bg-blue-700 text-white`
-- Linki / akcje secondary: `text-blue-400` lub `text-blue-300/70`
+**Layout ekranów auth B2B (2026-07-16, aktualny):** jasny, w stylu SaaS (referencja: aaply). Tło jasnoszare z kropkowanym wzorem, logo Trasy (pomarańczowe, w białym kółku) w lewym-górnym rogu + wordmark „trasa biznes", biała karta wycentrowana z formularzem, toggle „Zaloguj się / Zarejestruj lokal". Guzik szybkiego przełączenia w prawym-górnym rogu. **NIE** wracaj do ciemnego granatu (`bg-blue-950`) - to spójne z regułą „żadnych ciemnych teł na stronach publicznych". Reference: `Auth.tsx` (early-return `if (businessMode)`) i `SetPassword.tsx` (branch `isBusiness`).
 
-**Pomarańczowy (gradient `#F4A259 → #F9662B`) jest zarezerwowany WYŁĄCZNIE dla B2C** (użytkownicy końcowi: solo + grupowo). Nigdy nie mieszaj brandingu - jeśli ekran jest częścią flow zakładania/zarządzania wizytówką firmy, używaj niebieskiej palety. Reference: `Auth.tsx` (sekcje `businessMode` i `isDraftMode`).
+**Paleta B2B (jasny layout):**
+- Tło ekranu: `bg-[#F4F4F5]` + kropki `radial-gradient(rgba(15,23,42,0.06) 1px, transparent 1px)` / `background-size: 22px 22px`
+- Karta: `bg-white rounded-3xl shadow-xl shadow-slate-900/[0.06] border border-slate-100`
+- Logo: `TrasaLogo` (pomarańczowe w białym kółku - patrz reguła Logo)
+- Badge "Panel Biznesowy": `bg-blue-50 border-blue-100 text-blue-600`
+- Inputs: `bg-white border-slate-200 text-slate-900 placeholder:text-slate-400 focus-visible:ring-blue-500`
+- Labels: `text-slate-700`; tekst muted: `text-slate-500` / `text-slate-400`
+- Toggle aktywny + Primary button: `bg-blue-600 hover:bg-blue-700 text-white`
+- Linki / akcje secondary: `text-blue-600`
+
+**Pomarańczowy (gradient `#F4A259 → #F9662B`) jest zarezerwowany WYŁĄCZNIE dla B2C** (użytkownicy końcowi: solo + grupowo). Wyjątek: samo **logo Trasy** zawsze pomarańczowe (w białym kółku), nawet w kontekście B2B. Poza logo nie mieszaj brandingu - akcent biznesowy = niebieski.
 
 ### Claim / tagline
 

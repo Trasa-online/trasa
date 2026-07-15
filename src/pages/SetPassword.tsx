@@ -235,26 +235,31 @@ const SetPassword = ({ forceBusiness }: { forceBusiness?: boolean } = {}) => {
   // ── Business flow ──────────────────────────────────────────────────────────
   if (isBusiness) {
     return (
-      <div className="min-h-screen flex flex-col bg-slate-50">
-        {/* Top bar */}
-        <div className="h-1.5 bg-gradient-to-r from-blue-500 to-blue-700 w-full" />
+      <div
+        className="min-h-screen flex flex-col bg-[#F4F4F5]"
+        style={{ backgroundImage: "radial-gradient(rgba(15,23,42,0.06) 1px, transparent 1px)", backgroundSize: "22px 22px" }}
+      >
+        {/* Top bar: logo lewy-gora */}
+        <div className="flex items-center px-5 sm:px-8 h-16 shrink-0">
+          <div className="flex items-center gap-2">
+            <TrasaLogo size={34} />
+            <span className="text-sm font-black text-slate-800">trasa<span className="text-blue-600"> biznes</span></span>
+          </div>
+        </div>
 
-        <div className="flex-1 flex flex-col items-center justify-center px-6 py-12">
-          <div className="w-full max-w-sm">
-            {/* Logo */}
-            <div className="flex items-center gap-3 mb-8">
-              <TrasaLogo size={48} />
-              <div>
-                <p className="text-xs font-semibold text-blue-600 uppercase tracking-widest">trasa</p>
-                <p className="text-lg font-black text-slate-800 leading-tight">Panel Biznesowy</p>
-              </div>
-            </div>
-
+        {/* Centered card */}
+        <div className="flex-1 flex items-center justify-center px-5 pb-10">
+          <div className="w-full max-w-md bg-white rounded-3xl shadow-xl shadow-slate-900/[0.06] border border-slate-100 p-7 sm:p-9">
             {/* Heading */}
-            <h1 className="text-2xl font-black text-slate-800 mb-1">Ustaw hasło</h1>
-            <p className="text-sm text-slate-500 mb-8 leading-relaxed">
-              To ostatni krok. Po ustawieniu hasła uzyskasz dostęp do panelu biznesowego.
-            </p>
+            <div className="text-center mb-6">
+              <span className="inline-block mb-3 px-3 py-1 rounded-full bg-blue-50 border border-blue-100 text-blue-600 text-[11px] font-bold tracking-wide uppercase">
+                Panel Biznesowy
+              </span>
+              <h1 className="text-2xl font-black text-slate-900 leading-tight">Ustaw hasło</h1>
+              <p className="text-sm text-slate-500 mt-1.5 leading-relaxed">
+                To ostatni krok. Po ustawieniu hasła uzyskasz dostęp do panelu biznesowego.
+              </p>
+            </div>
 
             {/* Form */}
             <form onSubmit={handleSubmit} className="space-y-4">

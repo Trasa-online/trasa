@@ -456,6 +456,140 @@ const Auth = () => {
     );
   }
 
+  // ── B2B auth: jasny layout (logo lewy-gora, biala karta na srodku, toggle login/rejestracja).
+  //    B2B branding = niebieski AKCENT (guziki/toggle), tlo jasne. Osobny early-return -
+  //    B2C (ponizej) zostaje bez zmian. ──
+  if (businessMode) {
+    const goBack = () => {
+      setBizDone(false);
+      if (window.history.length > 1) navigate(-1);
+      else navigate("/dla-firm");
+    };
+    const inputCls = "bg-white border-slate-200 text-slate-900 placeholder:text-slate-400 focus-visible:ring-blue-500";
+    return (
+      <div
+        className="min-h-screen flex flex-col bg-[#F4F4F5]"
+        style={{ backgroundImage: "radial-gradient(rgba(15,23,42,0.06) 1px, transparent 1px)", backgroundSize: "22px 22px" }}
+      >
+        {/* Top bar */}
+        <div className="flex items-center justify-between px-5 sm:px-8 h-16 shrink-0">
+          <button onClick={goBack} className="flex items-center gap-2 active:opacity-70" aria-label="Wróć">
+            <TrasaLogo size={34} />
+            <span className="text-sm font-black text-slate-800">trasa<span className="text-blue-600"> biznes</span></span>
+          </button>
+          <button
+            onClick={() => { setBizDone(false); setBizMode(bizMode === "login" ? "register" : "login"); }}
+            className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm active:scale-95 transition-transform"
+          >
+            {bizMode === "login" ? "Zarejestruj lokal" : "Zaloguj się"} <span aria-hidden>→</span>
+          </button>
+        </div>
+
+        {/* Centered card */}
+        <div className="flex-1 flex items-center justify-center px-5 pb-10">
+          <div className="w-full max-w-md bg-white rounded-3xl shadow-xl shadow-slate-900/[0.06] border border-slate-100 p-7 sm:p-9">
+            <div className="text-center mb-6">
+              <span className="inline-block mb-3 px-3 py-1 rounded-full bg-blue-50 border border-blue-100 text-blue-600 text-[11px] font-bold tracking-wide uppercase">
+                Panel Biznesowy
+              </span>
+              <h1 className="text-2xl font-black text-slate-900 leading-tight">
+                {bizMode === "login" ? "Zaloguj się do panelu" : "Zarejestruj swój lokal"}
+              </h1>
+              <p className="text-sm text-slate-500 mt-1.5 leading-relaxed">
+                {bizMode === "login"
+                  ? "Wejdź na konto powiązane z Twoim lokalem."
+                  : "Załóż konto i zarządzaj wizytówką lokalu na Trasie."}
+              </p>
+            </div>
+
+            {/* Toggle */}
+            <div className="flex rounded-2xl bg-slate-100 p-1 mb-6">
+              <button
+                onClick={() => setBizMode("login")}
+                className={`flex-1 py-2 text-sm font-semibold rounded-2xl transition-all ${bizMode === "login" ? "bg-blue-600 text-white shadow-sm" : "text-slate-500 hover:text-slate-800"}`}
+              >
+                Zaloguj się
+              </button>
+              <button
+                onClick={() => { setBizDone(false); setBizMode("register"); }}
+                className={`flex-1 py-2 text-sm font-semibold rounded-2xl transition-all ${bizMode === "register" ? "bg-blue-600 text-white shadow-sm" : "text-slate-500 hover:text-slate-800"}`}
+              >
+                Zarejestruj lokal
+              </button>
+            </div>
+
+            {bizMode === "login" ? (
+              <form onSubmit={handleLogin} className="space-y-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="biz-email" className="text-slate-700">{t("fields.email")}</Label>
+                  <Input id="biz-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder={t("fields.email_placeholder")} className={inputCls} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="biz-password" className="text-slate-700">{t("fields.password")}</Label>
+                  <Input id="biz-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required placeholder={t("fields.password_placeholder")} className={inputCls} />
+                </div>
+                <button type="button" onClick={handleForgotPassword} disabled={resetLoading} className="text-xs text-blue-600 font-medium hover:underline disabled:opacity-60">
+                  {resetLoading ? "Wysyłam..." : "Nie pamiętasz hasła?"}
+                </button>
+                <Button type="submit" className="w-full rounded-2xl py-6 bg-blue-600 hover:bg-blue-700 text-white font-bold text-base border-0" disabled={loading}>
+                  {loading ? t("logging_in") : "Zaloguj się do panelu"}
+                </Button>
+              </form>
+            ) : bizDone ? (
+              <div className="text-center py-6 space-y-3">
+                <p className="text-4xl">📬</p>
+                <p className="text-slate-900 font-bold text-lg">Sprawdź skrzynkę mailową</p>
+                <p className="text-slate-500 text-sm leading-relaxed">
+                  {`Wysłaliśmy link aktywacyjny na `}<strong className="text-slate-700">{email}</strong>{`. Kliknij go, ustaw hasło i wejdź do panelu swojego lokalu.`}
+                </p>
+                <p className="text-slate-400 text-xs leading-relaxed">
+                  {`Nie widzisz maila? Sprawdź folder spam. Link jest ważny przez 24 godziny.`}
+                </p>
+                <button onClick={() => { setBizDone(false); setBizMode("login"); }} className="text-sm text-blue-600 font-medium underline pt-2">
+                  Wróć do logowania
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleBizRegister} className="space-y-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="biz-place" className="text-slate-700">Nazwa lokalu</Label>
+                  <Input id="biz-place" type="text" value={bizPlace} onChange={(e) => setBizPlace(e.target.value)} required placeholder="np. Kawiarnia Stara Kamienica, Kraków" className={inputCls} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="biz-reg-email" className="text-slate-700">{t("fields.email")}</Label>
+                  <Input id="biz-reg-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder={t("fields.email_placeholder")} className={inputCls} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="biz-phone" className="text-slate-700">Telefon kontaktowy <span className="text-slate-400 font-normal">(opcjonalnie)</span></Label>
+                  <Input id="biz-phone" type="tel" value={bizPhone} onChange={(e) => setBizPhone(e.target.value)} placeholder="+48 600 000 000" className={inputCls} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="biz-message" className="text-slate-700">Wiadomość <span className="text-slate-400 font-normal">(opcjonalnie)</span></Label>
+                  <textarea id="biz-message" value={bizMessage} onChange={(e) => setBizMessage(e.target.value)} placeholder="Coś jeszcze, co chcesz nam powiedzieć..." rows={2}
+                    className="w-full rounded-2xl px-3 py-2 text-sm bg-white border border-slate-200 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none" />
+                </div>
+                <Button type="submit" className="w-full rounded-2xl py-6 bg-blue-600 hover:bg-blue-700 text-white font-bold text-base border-0" disabled={loading}>
+                  {loading ? "Zakładam konto..." : "Załóż konto biznesowe"}
+                </Button>
+                <p className="text-xs text-slate-400 text-center leading-relaxed">
+                  {`Wyślemy link aktywacyjny na Twój email. Konto założysz od razu, bez czekania na akceptację.`}
+                </p>
+              </form>
+            )}
+
+            <p className="text-center text-xs text-slate-400 mt-6">
+              {bizMode === "login" ? (
+                <>Nie masz jeszcze konta?{" "}<button onClick={() => setBizMode("register")} className="text-blue-600 font-semibold hover:underline">Zarejestruj lokal</button></>
+              ) : (
+                <>Masz już konto?{" "}<button onClick={() => { setBizDone(false); setBizMode("login"); }} className="text-blue-600 font-semibold hover:underline">Zaloguj się</button></>
+              )}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={`min-h-screen flex flex-col ${businessMode ? "bg-blue-950" : "bg-background"}`}>
       {/* Hero - B2C: logo+tagline u gory, guziki na dole (mt-auto). B2B: wycentrowane. */}
