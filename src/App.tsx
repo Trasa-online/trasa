@@ -617,6 +617,7 @@ const ClaimPlace       = lazy(() => import("./pages/ClaimPlace"));
 const BusinessDashboard = lazy(() => import("./pages/BusinessDashboard"));
 const BusinessOnePager  = lazy(() => import("./pages/BusinessOnePager"));
 const BusinessStart     = lazy(() => import("./pages/BusinessStart"));
+const BusinessOnboarding = lazy(() => import("./pages/BusinessOnboarding"));
 const BusinessLanding   = lazy(() => import("./pages/BusinessLanding"));
 
 const queryClient = new QueryClient({
@@ -703,6 +704,7 @@ const App = () => (
           <Route path="/profil/:username" element={<PublicProfile />} />
           <Route path="/quick-plan-review" element={<QuickPlanReview />} />
           <Route path="/biznes/start" element={<BusinessStart />} />
+          <Route path="/biznes/onboarding/:id" element={<BusinessOnboarding />} />
           <Route path="/biznes/:placeId" element={<BusinessDashboard />} />
           <Route path="/dla-firm" element={<ForBusinessPage />} />
           <Route path="/dla-firm/landing" element={<BusinessLanding />} />

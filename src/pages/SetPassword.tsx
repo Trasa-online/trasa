@@ -185,7 +185,10 @@ const SetPassword = ({ forceBusiness }: { forceBusiness?: boolean } = {}) => {
         // boot-uje od razu na celu. Eliminuje posrednie re-rendery globalnych handlerow
         // (RootPage -> Navigate '/home' itp.), ktore migaly widokiem B2C podczas przejscia.
         // Brak ?token_hash w search vs poprzedni URL => realny reload (nie tylko hash).
-        const dest = bp?.id ? `/#/biznes/${bp.place_id ?? bp.id}` : "/#/auth?business=true";
+        // Po pierwszym ustawieniu hasla -> ekran wyboru onboardingu (BusinessOnboarding),
+        // ktory potem wpuszcza do panelu /biznes/:id.
+        const panelId = bp.place_id ?? bp.id;
+        const dest = bp?.id ? `/#/biznes/onboarding/${panelId}` : "/#/auth?business=true";
         window.location.replace(dest);
         return;
       }
