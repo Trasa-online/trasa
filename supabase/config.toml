@@ -1,5 +1,9 @@
 project_id = "chxphfcpehxshvijqtlf"
 
+# Self-service rejestracja lokalu: wywolywana przez niezalogowanego goscia, wiec bez JWT.
+[functions.register-business]
+verify_jwt = false
+
 [functions.admin-analytics]
 verify_jwt = true
 

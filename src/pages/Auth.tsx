@@ -114,20 +114,24 @@ const Auth = () => {
   const handleBizRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!bizPlace.trim()) { toast.error("Podaj nazwę lokalu"); return; }
+    if (!email.trim()) { toast.error("Podaj adres email"); return; }
     setLoading(true);
     try {
-      // Just submit the inquiry - no auth account yet.
-      // Admin will invite the owner via Supabase after reviewing the claim.
-      const { error: claimError } = await (supabase as any).from("business_claims").insert({
-        contact_email: email,
-        contact_phone: bizPhone.trim() || null,
-        place_name_text: bizPlace.trim(),
-        message: bizMessage.trim() || null,
-        status: "pending",
+      // Self-service: zaklada konto + wizytowke i wysyla mail aktywacyjny z linkiem
+      // "ustaw haslo". Bez akceptacji admina. Logika po stronie edge function
+      // register-business (service-role: generateLink invite + business_profiles + Resend).
+      const { data, error: regError } = await supabase.functions.invoke("register-business", {
+        body: {
+          email: email.trim(),
+          place_name: bizPlace.trim(),
+          phone: bizPhone.trim() || undefined,
+          message: bizMessage.trim() || undefined,
+        },
       });
-      if (claimError) throw claimError;
+      if (regError) throw regError;
+      if ((data as any)?.error) throw new Error((data as any).error);
 
-      posthog.capture("business_claim_submitted", { place_name: bizPlace.trim() });
+      posthog.capture("business_registration_started", { place_name: bizPlace.trim() });
       setBizDone(true);
     } catch (err: any) {
       posthog.captureException(err);
@@ -549,11 +553,13 @@ const Auth = () => {
                 </form>
               ) : bizDone ? (
                 <div className="text-center py-8 space-y-3">
-                  <p className="text-4xl">🎉</p>
-                  <p className="text-white font-bold text-lg">Zgłoszenie wysłane!</p>
+                  <p className="text-4xl">📬</p>
+                  <p className="text-white font-bold text-lg">Sprawdź skrzynkę mailową</p>
                   <p className="text-blue-300 text-sm leading-relaxed">
-                    Sprawdzimy Twoje zgłoszenie i skontaktujemy się na <strong>{email}</strong>.
-                    Zazwyczaj odpowiadamy w ciągu 24 godzin.
+                    {`Wysłaliśmy link aktywacyjny na `}<strong>{email}</strong>{`. Kliknij go, ustaw hasło i wejdź do panelu swojego lokalu.`}
+                  </p>
+                  <p className="text-blue-400/60 text-xs leading-relaxed">
+                    {`Nie widzisz maila? Sprawdź folder spam. Link jest ważny przez 24 godziny.`}
                   </p>
                   <button
                     onClick={() => { setBizDone(false); setBizMode("login"); }}
@@ -611,10 +617,10 @@ const Auth = () => {
                     />
                   </div>
                   <Button type="submit" className="w-full rounded-2xl py-6 bg-blue-600 hover:bg-blue-700 text-white font-bold text-base border-0" disabled={loading}>
-                    {loading ? "Wysyłam..." : "Wyślij zgłoszenie"}
+                    {loading ? "Zakładam konto..." : "Załóż konto biznesowe"}
                   </Button>
                   <p className="text-xs text-blue-400/60 text-center leading-relaxed">
-                    Po weryfikacji otrzymasz dostęp do panelu zarządzania swoim lokalem.
+                    {`Wyślemy link aktywacyjny na Twój email. Konto założysz od razu, bez czekania na akceptację.`}
                   </p>
                 </form>
               )}
