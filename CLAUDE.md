@@ -90,14 +90,15 @@ Oficjalny tagline aplikacji: **"speed dating z miastem"** (wszystkie litery mał
 - **NIE** dodawaj napisu "trasa" obok orby bez wyraźnej prośby
 - CSS orby: `radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)`
 
-### ⛔ Pomarańczowy znak Trasy (`Icon_Trasa.png`) ZAWSZE w białym kółku
+### ⛔ Znak Trasy ZAWSZE w kółku (pomarańczowe koło + biały znak, jak ikona natywna)
 
-Płaski pomarańczowy znak Trasy (plik `/Icon_Trasa.png`, stylizowane „T") **nigdy nie może być „zawieszony w powietrzu" sam** na tle strony - zawsze umieszczaj go w **białym kółku (`#FAFAFA`)** z subtelnym cieniem/ringiem. Dotyczy to całej aplikacji **i** stron marketingowych (landingi, nawigacje, footery, ekrany auth, splash, avatary oficjalnych tras).
+Znak Trasy (plik `/Icon_Trasa.png`, stylizowane „T") **nigdy nie może być „zawieszony w powietrzu" sam** na tle strony - zawsze umieszczaj go w **kółku w wariancie „reverse": pomarańczowe koło (gradient `#F4A259 → #F9662B`) z BIAŁYM znakiem w środku** (tak jak ikona aplikacji natywnej). Dotyczy to całej aplikacji **i** stron marketingowych (landingi, nawigacje, footery, ekrany auth, splash, avatary oficjalnych tras).
 
-- **Używaj komponentu `TrasaLogo`** ([src/components/TrasaLogo.tsx](src/components/TrasaLogo.tsx)) zamiast wstawiać `<img src="/Icon_Trasa.png">` bezpośrednio. Prop `size` = średnica kółka w px (logo renderuje się wewnątrz na ~58%).
-- Kółko działa zarówno na jasnych (`#FEFEFE`/`slate-50`), jak i ciemnych tłach (np. granatowy/czarny nav) - wygląda jak app-icon.
+- **Używaj komponentu `TrasaLogo`** ([src/components/TrasaLogo.tsx](src/components/TrasaLogo.tsx)) zamiast wstawiać `<img src="/Icon_Trasa.png">` bezpośrednio. Prop `size` = średnica kółka w px (znak renderuje się wewnątrz na ~56%, biały przez filtr `brightness(0) invert(1)`).
+- Kółko działa zarówno na jasnych (`#FEFEFE`/`slate-50`), jak i ciemnych tłach - wygląda jak app-icon.
+- **Historia:** wcześniej było odwrotnie (białe koło `#FAFAFA` + pomarańczowy znak). 2026-07-16 zmienione na reverse (pomarańczowe koło + biały znak) dla spójności z ikoną natywną.
 - Wyjątek: **orba** (kula z gradientem) to osobny element - jej NIE pakuj w kółko (jest samodzielna).
-- **B2B branding + logo:** znak Trasy pozostaje **pomarańczowy** nawet w niebieskim kontekście biznesowym (nagłówki Panelu Biznesowego, SetPassword, onboarding). To świadomy wyjątek od reguły „B2B = tylko niebiesko" - logo marki zawsze w swoim kolorze, w białym kółku.
+- **B2B branding + logo:** kółko z logo (pomarańczowe) pojawia się nawet w niebieskim kontekście biznesowym (nagłówki auth, SetPassword, onboarding). To świadomy wyjątek od reguły „B2B = tylko niebiesko" - logo marki zawsze w swoim kolorze.
 
 ---
 
