@@ -1,7 +1,13 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { Loader2, Check, X, Clock, MapPin, Phone, Mail } from "lucide-react";
-import { useModerationQueue, useModerate, type QueueItem } from "./useModeration";
+import { useModerationQueue, useModerate, completeness, type QueueItem, type Completeness } from "./useModeration";
+
+const COMPLETENESS_META: Record<Completeness, { label: string; cls: string }> = {
+  not_started: { label: "Brak akcji", cls: "bg-red-100 text-red-700" },
+  in_progress: { label: "W trakcie", cls: "bg-amber-100 text-amber-700" },
+  ready: { label: "Gotowa", cls: "bg-emerald-100 text-emerald-700" },
+};
 
 export function ModerationQueue() {
   const { data, isLoading, isError } = useModerationQueue();
@@ -43,6 +49,7 @@ function QueueCard({ item }: { item: QueueItem }) {
   const [reason, setReason] = useState("");
 
   const sla = waitingLabel(item.review_requested_at ?? item.created_at);
+  const comp = COMPLETENESS_META[completeness(item)];
   const img = item.cover_image_url || item.logo_url;
 
   const approve = () => {
@@ -72,9 +79,12 @@ function QueueCard({ item }: { item: QueueItem }) {
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2">
             <p className="font-bold text-slate-900 truncate">{item.business_name || <span className="text-slate-400">Bez nazwy</span>}</p>
-            <span className={`shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold ${sla.over ? "bg-red-100 text-red-700" : "bg-emerald-100 text-emerald-700"}`}>
-              <Clock className="h-3 w-3" />{sla.text}
-            </span>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${comp.cls}`}>{comp.label}</span>
+              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold ${sla.over ? "bg-slate-800 text-white" : "bg-slate-100 text-slate-600"}`}>
+                <Clock className="h-3 w-3" />{sla.text}
+              </span>
+            </div>
           </div>
           <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1 text-xs text-slate-500">
             {item.main_category && <span>{item.main_category}</span>}
