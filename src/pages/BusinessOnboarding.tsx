@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { ImagePlus, ShieldCheck, BarChart3, ArrowRight, Sparkles, DoorOpen } from "lucide-react";
+import { ImagePlus, ShieldCheck, BarChart3, ArrowRight, Compass, DoorOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TrasaLogo } from "@/components/TrasaLogo";
 
@@ -104,7 +104,7 @@ export default function BusinessOnboarding() {
                   className="flex flex-col items-start gap-4 p-4 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-left shadow-lg shadow-blue-600/25 active:scale-[0.98] transition-all"
                 >
                   <div className="h-11 w-11 rounded-xl bg-white/15 flex items-center justify-center shrink-0">
-                    <Sparkles className="h-5 w-5" />
+                    <Compass className="h-5 w-5" />
                   </div>
                   <div className="min-w-0">
                     <p className="font-bold text-base leading-tight">Przeprowadź mnie</p>
