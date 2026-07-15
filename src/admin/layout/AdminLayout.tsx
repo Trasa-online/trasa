@@ -3,10 +3,11 @@ import { NavLink } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { TrasaLogo } from "@/components/TrasaLogo";
 import { useAdmin } from "../RequireAdmin";
-import { ShieldCheck, Users, BarChart3, Bug, Settings } from "lucide-react";
+import { ShieldCheck, Users, BarChart3, Bug, Settings, ListChecks } from "lucide-react";
 
 const NAV = [
   { to: "/moderacja", label: "Moderacja", icon: ShieldCheck, ready: true },
+  { to: "/zestawienia", label: "Zestawienia", icon: ListChecks, ready: true },
   { to: "/users", label: "Użytkownicy", icon: Users, ready: true },
   { to: "/analityka", label: "Analityka", icon: BarChart3, ready: true },
   { to: "/ops", label: "Zgłoszenia", icon: Bug, ready: true },
