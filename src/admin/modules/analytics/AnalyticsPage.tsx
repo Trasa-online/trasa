@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Loader2, Clock, Store, CheckCircle2, XCircle, Users, Building2, UserRound, Mail, Route as RouteIcon } from "lucide-react";
+import { Loader2, Clock, Store, CheckCircle2, XCircle, Users, Building2, UserRound, Route as RouteIcon } from "lucide-react";
 import { useOpsMetrics, useProductKpis } from "./useAnalytics";
 
 const RANGES = [7, 30, 90];
@@ -33,7 +33,6 @@ export function AnalyticsPage() {
         {ops.isLoading ? <Spin /> : ops.data && (
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
             <Funnel steps={[
-              { label: "Waitlist", value: ops.data.funnel.waitlist },
               { label: "Wizytówki założone", value: ops.data.funnel.profiles },
               { label: "Zaakceptowane", value: ops.data.funnel.approved },
               { label: "Aktywne (na żywo)", value: ops.data.funnel.active },
@@ -76,7 +75,6 @@ export function AnalyticsPage() {
             <Stat icon={Users} label="WAU" value={kpis.data?.kpis?.wau ?? 0} />
             <Stat icon={Users} label="MAU" value={kpis.data?.kpis?.mau ?? 0} />
             <Stat icon={RouteIcon} label={`Trasy (${range}d)`} value={kpis.data?.kpis?.routes?.value ?? 0} delta={kpis.data?.kpis?.routes?.deltaPct} />
-            <Stat icon={Mail} label={`Waitlist (${range}d)`} value={kpis.data?.kpis?.waitlist?.value ?? 0} />
           </div>
         )}
       </Section>

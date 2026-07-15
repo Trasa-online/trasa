@@ -10,7 +10,7 @@ async function count(table: string, apply?: (q: any) => any): Promise<number> {
 
 export interface OpsMetrics {
   moderation: { pending: number; approved: number; rejected: number; medianMs: number | null };
-  funnel: { waitlist: number; profiles: number; approved: number; active: number };
+  funnel: { profiles: number; approved: number; active: number };
   accounts: { total: number; business: number; consumer: number };
 }
 
@@ -20,13 +20,12 @@ export function useOpsMetrics() {
     queryKey: ["ops-metrics"],
     refetchInterval: 60_000,
     queryFn: async () => {
-      const [pending, approved, rejected, profilesBiz, activeBiz, waitlist, accountsTotal] = await Promise.all([
+      const [pending, approved, rejected, profilesBiz, activeBiz, accountsTotal] = await Promise.all([
         count("business_profiles", (q) => q.eq("moderation_status", "pending").eq("is_draft", false)),
         count("business_profiles", (q) => q.eq("moderation_status", "approved")),
         count("business_profiles", (q) => q.eq("moderation_status", "rejected")),
         count("business_profiles", (q) => q.eq("is_draft", false)),
         count("business_profiles", (q) => q.eq("is_active", true)),
-        count("waitlist"),
         count("profiles"),
       ]);
 
@@ -50,7 +49,7 @@ export function useOpsMetrics() {
 
       return {
         moderation: { pending, approved, rejected, medianMs },
-        funnel: { waitlist, profiles: profilesBiz, approved, active: activeBiz },
+        funnel: { profiles: profilesBiz, approved, active: activeBiz },
         accounts: { total: accountsTotal, business, consumer: Math.max(0, accountsTotal - business) },
       };
     },
