@@ -79,7 +79,9 @@ function AdminLogin() {
     setLoading(true);
     const { error } = await supabase.auth.signInWithOtp({
       email: email.trim(),
-      options: { emailRedirectTo: window.location.origin, shouldCreateUser: false },
+      // origin + "/" -> pewny match z allowlista Supabase w formacie ".../**".
+      // Bez wpisu admina na allowliscie Supabase odbija na Site URL (glowna apka/waitlista).
+      options: { emailRedirectTo: window.location.origin + "/", shouldCreateUser: false },
     });
     setLoading(false);
     if (error) toast.error(error.message || "Nie udało się wysłać linku");
