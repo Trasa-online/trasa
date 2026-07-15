@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Building2, Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 import posthog from "posthog-js";
 
@@ -242,9 +242,7 @@ const SetPassword = ({ forceBusiness }: { forceBusiness?: boolean } = {}) => {
           <div className="w-full max-w-sm">
             {/* Logo */}
             <div className="flex items-center gap-3 mb-8">
-              <div className="h-12 w-12 rounded-2xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-600/30">
-                <Building2 className="h-6 w-6 text-white" />
-              </div>
+              <img src="/Icon_Trasa.png" alt="Trasa" className="h-12 w-12 object-contain shrink-0" />
               <div>
                 <p className="text-xs font-semibold text-blue-600 uppercase tracking-widest">trasa</p>
                 <p className="text-lg font-black text-slate-800 leading-tight">Panel Biznesowy</p>

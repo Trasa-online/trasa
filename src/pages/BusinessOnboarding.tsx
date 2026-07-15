@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Building2, ImagePlus, ShieldCheck, BarChart3, ArrowRight, Sparkles, DoorOpen } from "lucide-react";
+import { ImagePlus, ShieldCheck, BarChart3, ArrowRight, Sparkles, DoorOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // Widok pokazywany PO pierwszym ustawieniu hasla konta biznesowego (z SetPassword forceBusiness).
@@ -83,9 +83,7 @@ export default function BusinessOnboarding() {
         <div className="w-full max-w-sm">
           {/* Logo */}
           <div className="flex items-center gap-3 mb-8">
-            <div className="h-12 w-12 rounded-2xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-600/30">
-              <Building2 className="h-6 w-6 text-white" />
-            </div>
+            <img src="/Icon_Trasa.png" alt="Trasa" className="h-12 w-12 object-contain shrink-0" />
             <div>
               <p className="text-xs font-semibold text-blue-600 uppercase tracking-widest">trasa</p>
               <p className="text-lg font-black text-slate-800 leading-tight">Panel Biznesowy</p>
@@ -94,35 +92,35 @@ export default function BusinessOnboarding() {
 
           {phase === "choice" ? (
             <>
-              <h1 className="text-2xl font-black text-slate-800 mb-1">Konto aktywne 🎉</h1>
+              <h1 className="text-2xl font-black text-slate-800 mb-1">{`Witamy na Trasie!`}</h1>
               <p className="text-sm text-slate-500 mb-8 leading-relaxed">
                 {`Witaj w panelu swojego lokalu. Chcesz, żebyśmy przeprowadzili Cię przez pierwsze kroki, czy wolisz zacząć samodzielnie?`}
               </p>
 
-              <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
                 <button
                   onClick={() => { setStep(0); setPhase("guide"); }}
-                  className="w-full flex items-center gap-4 p-4 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-left shadow-lg shadow-blue-600/25 active:scale-[0.98] transition-all"
+                  className="flex flex-col items-start gap-4 p-4 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-left shadow-lg shadow-blue-600/25 active:scale-[0.98] transition-all"
                 >
                   <div className="h-11 w-11 rounded-xl bg-white/15 flex items-center justify-center shrink-0">
                     <Sparkles className="h-5 w-5" />
                   </div>
                   <div className="min-w-0">
                     <p className="font-bold text-base leading-tight">Przeprowadź mnie</p>
-                    <p className="text-sm text-blue-100/90 leading-snug">{`Krótki przewodnik po panelu`}</p>
+                    <p className="text-sm text-blue-100/90 leading-snug mt-0.5">{`Krótki przewodnik po panelu`}</p>
                   </div>
                 </button>
 
                 <button
                   onClick={enterPanel}
-                  className="w-full flex items-center gap-4 p-4 rounded-2xl bg-white hover:bg-slate-50 text-slate-800 text-left border border-slate-200 active:scale-[0.98] transition-all"
+                  className="flex flex-col items-start gap-4 p-4 rounded-2xl bg-white hover:bg-slate-50 text-slate-800 text-left border border-slate-200 active:scale-[0.98] transition-all"
                 >
                   <div className="h-11 w-11 rounded-xl bg-slate-100 flex items-center justify-center shrink-0">
                     <DoorOpen className="h-5 w-5 text-slate-500" />
                   </div>
                   <div className="min-w-0">
                     <p className="font-bold text-base leading-tight">{`Wejdę samodzielnie`}</p>
-                    <p className="text-sm text-slate-500 leading-snug">{`Przejdź od razu do panelu`}</p>
+                    <p className="text-sm text-slate-500 leading-snug mt-0.5">{`Przejdź od razu do panelu`}</p>
                   </div>
                 </button>
               </div>
