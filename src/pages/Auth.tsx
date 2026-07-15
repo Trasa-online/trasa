@@ -496,7 +496,13 @@ const Auth = () => {
           {businessMode ? (
             <>
               <button
-                onClick={() => { setBusinessMode(false); setBizMode("login"); setBizDone(false); }}
+                onClick={() => {
+                  // Wyjdz z auth biznesowego do miejsca skad firma przyszla (landing dla firm),
+                  // NIE przelaczaj na auth B2C (setBusinessMode(false) pokazywalo ekran konsumencki).
+                  setBizDone(false);
+                  if (window.history.length > 1) navigate(-1);
+                  else navigate("/dla-firm");
+                }}
                 className="flex items-center gap-1 text-sm text-blue-400 mb-6 active:opacity-60"
               >
                 ← Wróć
