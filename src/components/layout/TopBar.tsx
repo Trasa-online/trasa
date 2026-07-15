@@ -107,26 +107,8 @@ const TopBar = (_props: { onOrbClick?: () => void }) => {
           </Avatar>
         </button>
 
-        {/* Right: Admin gear (admins only) + Bell */}
+        {/* Right: Bell */}
         <div className="flex items-center gap-1">
-          {isAdmin && (
-            <button
-              onClick={() => navigate("/admin/analytics")}
-              className="h-9 w-9 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
-              aria-label="Analityka"
-            >
-              <BarChart3 className="h-5 w-5" />
-            </button>
-          )}
-          {isAdmin && (
-            <button
-              onClick={() => navigate("/admin")}
-              className="h-9 w-9 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
-              aria-label="Panel admina"
-            >
-              <Settings className="h-5 w-5" />
-            </button>
-          )}
           <button
             onClick={() => setNotifOpen(true)}
             className="relative h-9 w-9 flex items-center justify-center text-muted-foreground"

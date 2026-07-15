@@ -110,16 +110,6 @@ const HomeHeaderActions = ({
             <Bookmark className="h-[18px] w-[18px]" />
           </button>
         )}
-        {showAdmin && isAdmin && (
-          <button
-            onClick={() => navigate("/admin")}
-            className="h-9 w-9 flex items-center justify-center rounded-full bg-blue-50 text-blue-600 active:scale-90 transition-transform"
-            aria-label="Panel admina"
-            title="Panel admina"
-          >
-            <Shield className="h-[18px] w-[18px]" />
-          </button>
-        )}
       </div>
 
       {/* Notifications drawer */}
