@@ -84,7 +84,14 @@ BEGIN
 END;
 $$;
 
--- 2) FK pins_backup.user_id: SET NULL (na NOT NULL) -> CASCADE.
+-- 2) Usun osierocone backupy (user_id wskazuje na juz nieistniejacego usera).
+--    To pozostalosc po wczesniejszych nieudanych kasowaniach kont. Musza zniknac
+--    zanim dodamy FK z walidacja, inaczej ADD CONSTRAINT odrzuci istniejace wiersze.
+DELETE FROM public.pins_backup pb
+WHERE pb.user_id IS NOT NULL
+  AND NOT EXISTS (SELECT 1 FROM auth.users u WHERE u.id = pb.user_id);
+
+-- 3) FK pins_backup.user_id: SET NULL (na NOT NULL) -> CASCADE.
 --    Constraint zostal nadany automatycznie (poza migracjami), wiec znajdz go po kolumnie.
 DO $$
 DECLARE
