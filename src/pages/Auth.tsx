@@ -11,6 +11,7 @@ import { isHardcodedAdmin } from "@/lib/admins";
 import { isNative } from "@/lib/platform";
 import { Browser } from "@capacitor/browser";
 import { useAuth } from "@/hooks/useAuth";
+import { TrasaLogo } from "@/components/TrasaLogo";
 
 type Mode = "login" | "register";
 type BizMode = "login" | "register";
@@ -469,7 +470,7 @@ const Auth = () => {
             style={{ background: "radial-gradient(circle at 35% 35%, #60a5fa, #2563eb 60%, #1d4ed8)" }}
           />
         ) : (
-          <img src="/Icon_Trasa.png" alt="Trasa" className="w-20 h-20 mb-4 object-contain" draggable={false} />
+          <TrasaLogo size={80} className="mb-4" />
         )}
         {businessMode && <h1 className="text-4xl font-black tracking-tight mb-1.5 text-white">TRASA</h1>}
         {businessMode ? (

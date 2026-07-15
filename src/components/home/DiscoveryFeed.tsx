@@ -17,6 +17,7 @@ import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { resolveStored } from "@/components/PlacePhoto";
 import { COLLECTION_THEMES, getTheme, collectionKind } from "@/lib/collectionThemes";
 import { addLike, getHistoryByCity } from "@/lib/exploreLikes";
+import { TrasaLogo } from "@/components/TrasaLogo";
 import { toast } from "sonner";
 
 type DiscoveryItem = {
@@ -111,7 +112,7 @@ function AuthorChip({ name, avatar }: { name: string; avatar: string | null }) {
   return (
     <div className="flex items-center gap-1.5">
       {isTrasa ? (
-        <img src="/Icon_Trasa.png" alt="trasa" className="h-5 w-5 object-contain shrink-0" />
+        <TrasaLogo size={20} />
       ) : (
         <img src={avatarSrc(avatar)} alt={name} className="h-5 w-5 rounded-full object-cover bg-orange-100" />
       )}

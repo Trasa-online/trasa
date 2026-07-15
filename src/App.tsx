@@ -9,6 +9,7 @@ import { AuthDrawerProvider } from "@/hooks/useAuthDrawer";
 import { useNativePush } from "@/hooks/useNativePush";
 import { useNetworkReconnect } from "@/hooks/useNetworkReconnect";
 import AuthDrawer from "@/components/auth/AuthDrawer";
+import { TrasaLogo } from "@/components/TrasaLogo";
 import { supabase } from "@/integrations/supabase/client";
 import { isNative } from "@/lib/platform";
 import { App as CapApp } from "@capacitor/app";
@@ -431,12 +432,7 @@ function SplashScreen({ done }: { done: boolean }) {
       className="fixed inset-0 z-[9999] bg-background flex items-center justify-center"
       style={{ transition: "opacity 0.4s", opacity: done ? 0 : 1 }}
     >
-      <img
-        src="/Icon_Trasa.png"
-        alt="trasa"
-        className="w-28 h-auto select-none"
-        draggable={false}
-      />
+      <TrasaLogo size={132} />
     </div>
   );
 }

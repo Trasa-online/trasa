@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { ImagePlus, ShieldCheck, BarChart3, ArrowRight, Sparkles, DoorOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { TrasaLogo } from "@/components/TrasaLogo";
 
 // Widok pokazywany PO pierwszym ustawieniu hasla konta biznesowego (z SetPassword forceBusiness).
 // Lokal wybiera: krotki przewodnik po panelu ("z onboardingiem") albo wejscie od razu ("bez").
@@ -83,7 +84,7 @@ export default function BusinessOnboarding() {
         <div className="w-full max-w-sm">
           {/* Logo */}
           <div className="flex items-center gap-3 mb-8">
-            <img src="/Icon_Trasa.png" alt="Trasa" className="h-12 w-12 object-contain shrink-0" />
+            <TrasaLogo size={48} />
             <div>
               <p className="text-xs font-semibold text-blue-600 uppercase tracking-widest">trasa</p>
               <p className="text-lg font-black text-slate-800 leading-tight">Panel Biznesowy</p>

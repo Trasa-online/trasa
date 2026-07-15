@@ -23,6 +23,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 
 import { SHARE_BASE_URL } from "@/lib/shareUrl";
 import { useShare } from "@/hooks/useShare";
 import BusinessHoursEditor, { type OpeningHours } from "@/components/business/BusinessHoursEditor";
+import { TrasaLogo } from "@/components/TrasaLogo";
 
 interface BusinessPost {
   id: string;
@@ -1538,7 +1539,7 @@ const BusinessDashboard = () => {
         {/* Logo + collapse toggle */}
         <div className="mb-6">
           <div className={`flex items-center gap-2 px-2 mb-2 ${!sidebarOpen && 'justify-center'}`}>
-            <img src="/Icon_Trasa.png" alt="trasa" className="h-6 w-6 shrink-0 object-contain" draggable={false} />
+            <TrasaLogo size={28} />
             {sidebarOpen && <span className="font-black text-sm">trasa.biznes</span>}
           </div>
           <button
@@ -1617,7 +1618,7 @@ const BusinessDashboard = () => {
         {/* ── Top bar ── */}
         <div className="sticky top-0 z-10 bg-white border-b border-slate-100 px-4 md:px-6 h-14 flex items-center gap-3 shrink-0">
           {/* Mobile: logo */}
-          <img src="/Icon_Trasa.png" alt="trasa" className="md:hidden h-6 w-6 shrink-0 object-contain" draggable={false} />
+          <TrasaLogo size={28} className="md:hidden" />
           <div className="flex-1 flex items-center gap-2 min-w-0">
             <div className="relative flex items-center min-w-0 w-full max-w-[260px] group">
               <input

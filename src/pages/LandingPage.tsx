@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Check, Menu, X, User, Compass } from "lucide-react";
 import TrialModal from "@/components/trial/TrialModal";
+import { TrasaLogo } from "@/components/TrasaLogo";
 import posthog from "posthog-js";
 
 // Store product URLs — uzupelnic po publikacji w sklepach
@@ -30,8 +31,9 @@ function useFadeIn() {
 
 // ─── Logo (znak Trasy) ────────────────────────────────────────────────────────
 
-function Logo({ className = "h-7 w-auto" }: { className?: string }) {
-  return <img src="/Icon_Trasa.png" alt="Trasa" className={className} draggable={false} />;
+function Logo({ size = 40, className }: { size?: number; className?: string }) {
+  // Znak Trasy zawsze w bialym kolku (globalna zasada brandowa) - patrz TrasaLogo.
+  return <TrasaLogo size={size} className={className} />;
 }
 
 // ─── Avatar / place stacks (jak trasy grupowe w appce) ────────────────────────
@@ -243,7 +245,7 @@ const LandingPage = () => {
           {/* Left: logo + section links */}
           <div className="flex items-center gap-4 shrink-0">
             <button onClick={() => { window.scrollTo({ top: 0, behavior: "smooth" }); setMenuOpen(false); }} className="flex items-center" aria-label="Trasa">
-              <Logo className="h-6 w-auto shrink-0" />
+              <Logo size={34} />
             </button>
             <button onClick={() => document.getElementById("how-it-works")?.scrollIntoView({ behavior: "smooth" })} className="hidden sm:block text-sm text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap">
               Jak to działa
@@ -512,7 +514,7 @@ const LandingPage = () => {
         />
         <FadeIn className="max-w-xl mx-auto relative">
           <div className="flex justify-center mb-6">
-            <Logo className="h-14 w-auto drop-shadow-[0_8px_24px_rgba(234,88,12,0.25)]" />
+            <Logo size={76} className="drop-shadow-[0_8px_24px_rgba(234,88,12,0.25)]" />
           </div>
           <h2
             className="font-display text-3xl sm:text-4xl font-extrabold text-foreground mb-4"
@@ -529,7 +531,7 @@ const LandingPage = () => {
       <footer className="bg-white border-t border-border/60 py-10 px-5">
         <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <Logo className="h-5 w-auto shrink-0" />
+            <Logo size={30} />
             <span className="font-black text-foreground">trasa.travel</span>
           </div>
           <p className="text-xs text-muted-foreground text-center">© {new Date().getFullYear()} Trasa · Stworzone z&nbsp;❤ w&nbsp;Polsce</p>

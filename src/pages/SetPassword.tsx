@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Eye, EyeOff } from "lucide-react";
+import { TrasaLogo } from "@/components/TrasaLogo";
 import { cn } from "@/lib/utils";
 import posthog from "posthog-js";
 
@@ -242,7 +243,7 @@ const SetPassword = ({ forceBusiness }: { forceBusiness?: boolean } = {}) => {
           <div className="w-full max-w-sm">
             {/* Logo */}
             <div className="flex items-center gap-3 mb-8">
-              <img src="/Icon_Trasa.png" alt="Trasa" className="h-12 w-12 object-contain shrink-0" />
+              <TrasaLogo size={48} />
               <div>
                 <p className="text-xs font-semibold text-blue-600 uppercase tracking-widest">trasa</p>
                 <p className="text-lg font-black text-slate-800 leading-tight">Panel Biznesowy</p>

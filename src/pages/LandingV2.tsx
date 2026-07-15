@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Menu, X, User, Compass, ArrowUpRight, MapPin, Sparkles } from "lucide-react";
 import posthog from "posthog-js";
+import { TrasaLogo } from "@/components/TrasaLogo";
 
 const APP_STORE_URL = "#";
 const PLAY_STORE_URL = "#";
@@ -260,7 +261,7 @@ const LandingV2 = () => {
       <nav className="fixed top-5 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-3xl">
         <div className="flex items-center gap-3 rounded-full bg-[#0E0E0E]/95 backdrop-blur-xl px-4 h-14 ring-1 ring-white/10 shadow-[0_14px_44px_-12px_rgba(0,0,0,0.5)]">
           <button onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} className="flex items-center pl-1" aria-label="Trasa">
-            <img src="/Icon_Trasa.png" alt="Trasa" className="h-6 w-auto" draggable={false} />
+            <TrasaLogo size={34} />
           </button>
           <div className="hidden sm:flex items-center gap-1 ml-1">
             {links.map(l => (
@@ -446,7 +447,7 @@ const LandingV2 = () => {
       <footer className="relative px-5 pt-14 pb-12 border-t border-black/[0.06]">
         <div className="mx-auto max-w-6xl flex flex-col sm:flex-row items-center justify-between gap-5">
           <div className="flex items-center gap-2">
-            <img src="/Icon_Trasa.png" alt="Trasa" className="h-5 w-auto" draggable={false} />
+            <TrasaLogo size={30} />
             <span className="font-display font-extrabold text-foreground">trasa.travel</span>
           </div>
           <p className="text-xs text-muted-foreground">© {new Date().getFullYear()} Trasa · Stworzone z&nbsp;❤ w&nbsp;Polsce</p>
