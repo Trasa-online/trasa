@@ -25,11 +25,11 @@ function HelloAdmin() {
       <header className="flex items-center justify-between px-6 h-16 border-b border-slate-200 bg-white/70 backdrop-blur">
         <div className="flex items-center gap-2">
           <TrasaLogo size={32} />
-          <span className="text-sm font-black text-slate-800">trasa<span className="text-blue-600"> ops</span></span>
+          <span className="text-sm font-black text-slate-800">trasa<span className="text-orange-600"> ops</span></span>
         </div>
         <div className="flex items-center gap-3">
           <span className="text-xs text-slate-500">{email}</span>
-          <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold ${isSuper ? "bg-blue-100 text-blue-700" : "bg-slate-100 text-slate-600"}`}>
+          <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold ${isSuper ? "bg-orange-100 text-orange-700" : "bg-slate-100 text-slate-600"}`}>
             {isSuper ? "super-admin" : "operator"}
           </span>
           <button onClick={() => supabase.auth.signOut()} className="text-xs text-slate-500 hover:text-slate-800 font-medium">
@@ -64,7 +64,7 @@ function ModuleRow({ title, desc, tag }: { title: string; desc: string; tag?: st
         <p className="text-sm font-bold text-slate-800">{title}</p>
         <p className="text-xs text-slate-500">{desc}</p>
       </div>
-      {tag && <span className="px-2 py-0.5 rounded-full bg-blue-600 text-white text-[10px] font-bold">{tag}</span>}
+      {tag && <span className="px-2 py-0.5 rounded-full bg-orange-600 text-white text-[10px] font-bold">{tag}</span>}
     </div>
   );
 }
