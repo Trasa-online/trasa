@@ -7,7 +7,7 @@ import { ShieldCheck, Users, BarChart3, Bug } from "lucide-react";
 
 const NAV = [
   { to: "/moderacja", label: "Moderacja", icon: ShieldCheck, ready: true },
-  { to: "/users", label: "Użytkownicy", icon: Users, ready: false },
+  { to: "/users", label: "Użytkownicy", icon: Users, ready: true },
   { to: "/analityka", label: "Analityka", icon: BarChart3, ready: true },
   { to: "/ops", label: "Zgłoszenia", icon: Bug, ready: false },
 ];

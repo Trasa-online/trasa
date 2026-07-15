@@ -3,6 +3,7 @@ import { RequireAdmin } from "./RequireAdmin";
 import { AdminLayout } from "./layout/AdminLayout";
 import { ModerationQueue } from "./modules/moderation/ModerationQueue";
 import { AnalyticsPage } from "./modules/analytics/AnalyticsPage";
+import { UsersPage } from "./modules/users/UsersPage";
 
 // Panel operacyjny. Modul moderacji dziala; pozostale (users/analityka/ops)
 // dochodza w kolejnych fazach - na razie placeholdery.
@@ -13,7 +14,7 @@ export default function AdminApp() {
         <Routes>
           <Route path="/" element={<Navigate to="/moderacja" replace />} />
           <Route path="/moderacja" element={<ModerationQueue />} />
-          <Route path="/users" element={<Placeholder title="Użytkownicy + waitlist" />} />
+          <Route path="/users" element={<UsersPage />} />
           <Route path="/analityka" element={<AnalyticsPage />} />
           <Route path="/ops" element={<Placeholder title="Zgłoszenia + miasta" />} />
           <Route path="*" element={<Navigate to="/moderacja" replace />} />
