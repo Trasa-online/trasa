@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Eye, EyeOff } from "lucide-react";
 import { TrasaLogo } from "@/components/TrasaLogo";
+import { businessPanelPath } from "@/lib/businessRedirect";
 import { cn } from "@/lib/utils";
 import posthog from "posthog-js";
 
@@ -186,10 +187,9 @@ const SetPassword = ({ forceBusiness }: { forceBusiness?: boolean } = {}) => {
         // boot-uje od razu na celu. Eliminuje posrednie re-rendery globalnych handlerow
         // (RootPage -> Navigate '/home' itp.), ktore migaly widokiem B2C podczas przejscia.
         // Brak ?token_hash w search vs poprzedni URL => realny reload (nie tylko hash).
-        // Po pierwszym ustawieniu hasla -> ekran wyboru onboardingu (BusinessOnboarding),
-        // ktory potem wpuszcza do panelu /biznes/:id.
-        const panelId = bp.place_id ?? bp.id;
-        const dest = bp?.id ? `/#/biznes/onboarding/${panelId}` : "/#/auth?business=true";
+        // Destynacja przez wspolny gate: onboarding dopoki onboarding_completed !== true
+        // (pierwsza aktywacja), inaczej prosto do panelu (np. reset hasla po onboardingu).
+        const dest = bp?.id ? `/#${await businessPanelPath(user.id, bp)}` : "/#/auth?business=true";
         window.location.replace(dest);
         return;
       }
@@ -252,9 +252,6 @@ const SetPassword = ({ forceBusiness }: { forceBusiness?: boolean } = {}) => {
           <div className="w-full max-w-md bg-white rounded-3xl shadow-xl shadow-slate-900/[0.06] border border-slate-100 p-7 sm:p-9">
             {/* Heading */}
             <div className="text-center mb-6">
-              <span className="inline-block mb-3 px-3 py-1 rounded-full bg-blue-50 border border-blue-100 text-blue-600 text-[11px] font-bold tracking-wide uppercase">
-                Panel Biznesowy
-              </span>
               <h1 className="text-2xl font-black text-slate-900 leading-tight">Ustaw hasło</h1>
               <p className="text-sm text-slate-500 mt-1.5 leading-relaxed">
                 To ostatni krok. Po ustawieniu hasła uzyskasz dostęp do panelu biznesowego.

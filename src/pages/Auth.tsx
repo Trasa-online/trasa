@@ -12,6 +12,7 @@ import { isNative } from "@/lib/platform";
 import { Browser } from "@capacitor/browser";
 import { useAuth } from "@/hooks/useAuth";
 import { TrasaLogo } from "@/components/TrasaLogo";
+import { businessPanelPath } from "@/lib/businessRedirect";
 
 type Mode = "login" | "register";
 type BizMode = "login" | "register";
@@ -74,13 +75,13 @@ const Auth = () => {
           .maybeSingle();
         if (cancelled) return;
         if (bp?.id && !bp.is_draft) {
-          navigate(`/biznes/${bp.place_id ?? bp.id}`);
+          navigate(await businessPanelPath(user.id, bp));
           return;
         }
         // Kontekst biznesowy (zakladka Panel Biznesowy): NIGDY nie odbijaj na B2C /home.
         // Draft owner -> panel draft; brak wizytowki -> zostan na logowaniu z komunikatem.
         if (businessMode) {
-          if (bp?.id) { navigate(`/biznes/${bp.place_id ?? bp.id}`); return; }
+          if (bp?.id) { navigate(await businessPanelPath(user.id, bp)); return; }
           toast.error("To konto nie jest jeszcze powiązane z wizytówką biznesową.");
           return;
         }
@@ -471,17 +472,11 @@ const Auth = () => {
         className="min-h-screen flex flex-col bg-[#F4F4F5]"
         style={{ backgroundImage: "radial-gradient(rgba(15,23,42,0.06) 1px, transparent 1px)", backgroundSize: "22px 22px" }}
       >
-        {/* Top bar */}
-        <div className="flex items-center justify-between px-5 sm:px-8 h-16 shrink-0">
+        {/* Top bar: samo logo (lewy-gora) */}
+        <div className="flex items-center px-5 sm:px-8 h-16 shrink-0">
           <button onClick={goBack} className="flex items-center gap-2 active:opacity-70" aria-label="Wróć">
             <TrasaLogo size={34} />
             <span className="text-sm font-black text-slate-800">trasa<span className="text-blue-600"> biznes</span></span>
-          </button>
-          <button
-            onClick={() => { setBizDone(false); setBizMode(bizMode === "login" ? "register" : "login"); }}
-            className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm active:scale-95 transition-transform"
-          >
-            {bizMode === "login" ? "Zarejestruj lokal" : "Zaloguj się"} <span aria-hidden>→</span>
           </button>
         </div>
 
@@ -489,9 +484,6 @@ const Auth = () => {
         <div className="flex-1 flex items-center justify-center px-5 pb-10">
           <div className="w-full max-w-md bg-white rounded-3xl shadow-xl shadow-slate-900/[0.06] border border-slate-100 p-7 sm:p-9">
             <div className="text-center mb-6">
-              <span className="inline-block mb-3 px-3 py-1 rounded-full bg-blue-50 border border-blue-100 text-blue-600 text-[11px] font-bold tracking-wide uppercase">
-                Panel Biznesowy
-              </span>
               <h1 className="text-2xl font-black text-slate-900 leading-tight">
                 {bizMode === "login" ? "Zaloguj się do panelu" : "Zarejestruj swój lokal"}
               </h1>

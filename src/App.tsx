@@ -10,6 +10,7 @@ import { useNativePush } from "@/hooks/useNativePush";
 import { useNetworkReconnect } from "@/hooks/useNetworkReconnect";
 import AuthDrawer from "@/components/auth/AuthDrawer";
 import { TrasaLogo } from "@/components/TrasaLogo";
+import { businessPanelPath } from "@/lib/businessRedirect";
 import { supabase } from "@/integrations/supabase/client";
 import { isNative } from "@/lib/platform";
 import { App as CapApp } from "@capacitor/app";
@@ -497,7 +498,7 @@ function SplashController() {
         // Draft profile (z /biznes/start, jeszcze nie upgraded) NIE wymusza redirectu -
         // user moze przyjsc na strone konsumencka mimo niedokonczonego draftu.
         if (bp?.is_draft) return;
-        if (bp?.id) navigate(`/biznes/${bp.place_id ?? bp.id}`, { replace: true });
+        if (bp?.id) navigate(await businessPanelPath(user.id, bp), { replace: true });
       } finally {
         setBootDone(true);
       }
@@ -563,7 +564,7 @@ function BusinessGuard() {
       // Draft profile NIE wymusza redirectu - jezeli user nie dokonczyl flow
       // upgrade z /biznes/start, to nie blokujemy mu apki konsumenckiej.
       if (bp?.is_draft) return;
-      if (bp?.id) navigate(`/biznes/${bp.place_id ?? bp.id}`, { replace: true });
+      if (bp?.id) navigate(await businessPanelPath(user.id, bp), { replace: true });
     })();
   }, [user, location.pathname]);
 
