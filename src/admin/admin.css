@@ -1,0 +1,10 @@
+/* Panel ops - styl scoped do bundla admina (nie dotyka glownej apki).
+   iOS Safari auto-przybliza ekran przy focusie na input o font-size < 16px.
+   Wymuszamy >=16px na polach formularzy na mobile, zeby nie bylo zoomu. */
+@media (max-width: 767px) {
+  input,
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}

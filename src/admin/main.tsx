@@ -6,6 +6,7 @@ import { Toaster } from "sonner";
 import { AuthProvider } from "@/hooks/useAuth";
 import AdminApp from "./AdminApp";
 import "@/index.css";
+import "./admin.css";
 
 // Panel operacyjny (admin.trasa.travel) - osobny web-only entry.
 // BrowserRouter (nie HashRouter): admin jest tylko web na czystej domenie z
