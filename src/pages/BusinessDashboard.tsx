@@ -1692,9 +1692,9 @@ const BusinessDashboard = () => {
               <div className="bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl p-4 text-white shadow-lg shadow-blue-600/20">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1">
-                    <p className="font-black text-base leading-tight">Witaj w Panelu Biznesowym trasy! 🎁</p>
+                    <p className="font-black text-base leading-tight">Witaj w Panelu Biznesowym trasy!</p>
                     <p className="text-sm text-blue-100 mt-1.5 leading-relaxed">
-                      Twoje konto jest aktywne i masz dostęp do pełnego pakietu <strong className="text-white">Premium</strong> - gratis przez pierwsze 3 miesiące. Wypełnij wizytówkę i poczekaj na weryfikację.
+                      Dziękujemy, że lokal{businessName?.trim() ? <> <strong className="text-white">{businessName.trim()}</strong></> : null} dołączył do&nbsp;Trasy - od&nbsp;teraz budujemy razem coś wielkiego. Wypełnij wizytówkę i&nbsp;poczekaj na&nbsp;weryfikację. Masz sugestię albo widzisz błąd? Napisz do&nbsp;nas przez <strong className="text-white">&bdquo;Zgłoś problem&rdquo;</strong>.
                     </p>
                   </div>
                   <button onClick={() => { setShowWelcomeBanner(false); localStorage.setItem(`welcome_seen_${profile!.id}`, "1"); }} className="mt-0.5 text-blue-200 active:opacity-60 flex-shrink-0">
@@ -1979,6 +1979,17 @@ const BusinessDashboard = () => {
                   <p className="text-sm font-bold text-foreground">Personalizacja wizytowki</p>
                   <p className="text-xs text-muted-foreground mt-0.5">Kolory widoczne na wizytowce w aplikacji</p>
                 </div>
+                {/* Live preview strip NAD pickerem - zeby guzik "Dodaj" byl widoczny podczas
+                    zmiany koloru (sticky bar "Zapisz zmiany" zaslanial go, gdy byl na dole karty).
+                    Badge kategorii i promocji ZAWSZE pomaranczowe (jednolite w aplikacji). */}
+                <div className="rounded-2xl border border-slate-100 bg-slate-50 p-3">
+                  <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">Podgląd</p>
+                  <div className="flex items-center gap-3">
+                    <span className="px-3 py-1 rounded-full text-xs font-bold shrink-0 text-white" style={{ background: "#f4a259" }}>Jedzenie &amp; Napoje</span>
+                    <span className="px-3 py-1 rounded-full text-xs font-bold shrink-0 text-white" style={{ background: "linear-gradient(to right,#F4A259,#F9662B)" }}>Promocja</span>
+                    <button className="flex-1 py-2 rounded-full text-xs font-bold" style={{ background: colorButton, color: getContrastColor(colorButton) }}>Dodaj</button>
+                  </div>
+                </div>
                 <div className="space-y-3">
                   {/* Personalizacja ograniczona do koloru guzika akcji - kategorie/tlo sa jednolite
                       w calej aplikacji (badge kategorii i overlay nie sa juz personalizowane). */}
@@ -1990,12 +2001,6 @@ const BusinessDashboard = () => {
                     <input type="color" value={colorButton} onChange={e => { setColorButton(e.target.value); setIsDirty(true); }}
                       className="h-9 w-14 rounded-lg cursor-pointer border border-slate-200 p-0.5" />
                   </div>
-                </div>
-                {/* Live preview strip. Badge kategorii i promocji ZAWSZE pomaranczowe (jednolite). */}
-                <div className="flex items-center gap-3 pt-1">
-                  <span className="px-3 py-1 rounded-full text-xs font-bold shrink-0 text-white" style={{ background: "#f4a259" }}>Jedzenie &amp; Napoje</span>
-                  <span className="px-3 py-1 rounded-full text-xs font-bold shrink-0 text-white" style={{ background: "linear-gradient(to right,#F4A259,#F9662B)" }}>Promocja</span>
-                  <button className="flex-1 py-2 rounded-full text-xs font-bold" style={{ background: colorButton, color: getContrastColor(colorButton) }}>Dodaj</button>
                 </div>
               </div>
 
