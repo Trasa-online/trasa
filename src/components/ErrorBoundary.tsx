@@ -18,6 +18,20 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: { componentStack: string }) {
+    // Backstop dla stale-chunk po nowym deployu (lazy importy spoza App.tsx):
+    // "Failed to fetch dynamically imported module" -> przeladuj raz po swiezy manifest.
+    // Ten sam guard czasowy co w App.tsx (klucz chunk_reload_at) -> brak petli reloadow.
+    const msg = String(error?.message || error);
+    const isChunkError = /dynamically imported module|Importing a module script failed|Failed to fetch|error loading dynamically imported/i.test(msg);
+    if (isChunkError) {
+      const KEY = "chunk_reload_at";
+      const last = Number(sessionStorage.getItem(KEY) || 0);
+      if (Date.now() - last > 10000) {
+        sessionStorage.setItem(KEY, String(Date.now()));
+        window.location.reload();
+        return;
+      }
+    }
     console.error("[ErrorBoundary] caught render error:", error);
     console.error("[ErrorBoundary] component stack:", info.componentStack);
     this.setState({ componentStack: info.componentStack });

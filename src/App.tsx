@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, lazy, Suspense } from "react";
+import { useEffect, useRef, useState, lazy as reactLazy, Suspense } from "react";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -572,6 +572,29 @@ function BusinessGuard() {
 import CookieBanner from "./components/CookieBanner";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { isHardcodedAdmin } from "@/lib/admins";
+
+// Auto-recovery po nowym deployu: stary index.js odwoluje sie do chunkow o hashach,
+// ktore nowy deploy usunal z serwera -> lazy import rzuca "Failed to fetch dynamically
+// imported module" (404). Przy pierwszym takim bledzie przeladowujemy strone, zeby
+// pobrac swiezy manifest. Guard czasowy zapobiega petli reloadow gdy chunk realnie
+// nie istnieje (offline / prawdziwy brak) - wtedy blad leci do ErrorBoundary.
+function lazy(factory: Parameters<typeof reactLazy>[0]) {
+  return reactLazy(() =>
+    (factory() as Promise<{ default: React.ComponentType<any> }>).catch((err: any) => {
+      const msg = String(err?.message || err);
+      const isChunkError = /dynamically imported module|Importing a module script failed|Failed to fetch|error loading dynamically imported/i.test(msg);
+      const KEY = "chunk_reload_at";
+      const last = Number(sessionStorage.getItem(KEY) || 0);
+      if (isChunkError && Date.now() - last > 10000) {
+        sessionStorage.setItem(KEY, String(Date.now()));
+        window.location.reload();
+        return new Promise<never>(() => {}); // nie resolvuje - strona sie przeladowuje
+      }
+      throw err;
+    })
+  );
+}
+
 // Lazy-loaded public pages - one chunk each, fetched on demand
 const WaitlistPage = lazy(() => import("./pages/WaitlistPage"));
 const LandingPage = lazy(() => import("./pages/LandingPage"));
