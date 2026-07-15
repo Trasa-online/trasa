@@ -9,7 +9,7 @@ const NAV = [
   { to: "/moderacja", label: "Moderacja", icon: ShieldCheck, ready: true },
   { to: "/users", label: "Użytkownicy", icon: Users, ready: true },
   { to: "/analityka", label: "Analityka", icon: BarChart3, ready: true },
-  { to: "/ops", label: "Zgłoszenia", icon: Bug, ready: false },
+  { to: "/ops", label: "Zgłoszenia", icon: Bug, ready: true },
 ];
 
 export function AdminLayout({ children }: { children: ReactNode }) {
