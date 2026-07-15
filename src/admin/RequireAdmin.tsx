@@ -68,8 +68,25 @@ function AdminLogin() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [usePassword, setUsePassword] = useState(false);
 
-  const submit = async (e: React.FormEvent) => {
+  // Magic-link: zespol loguje sie linkiem z maila (bez hasel). shouldCreateUser=false
+  // -> tylko istniejace konta. Redirect wraca na ten sam origin (admin.trasa.travel).
+  const sendMagicLink = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim()) return;
+    setLoading(true);
+    const { error } = await supabase.auth.signInWithOtp({
+      email: email.trim(),
+      options: { emailRedirectTo: window.location.origin, shouldCreateUser: false },
+    });
+    setLoading(false);
+    if (error) toast.error(error.message || "Nie udało się wysłać linku");
+    else setSent(true);
+  };
+
+  const loginPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
@@ -86,28 +103,57 @@ function AdminLogin() {
         </div>
       </div>
       <div className="flex-1 flex items-center justify-center px-5 pb-10">
-        <form onSubmit={submit} className="w-full max-w-sm bg-white rounded-3xl shadow-xl shadow-slate-900/[0.06] border border-slate-100 p-8 space-y-4">
-          <div className="text-center mb-2">
-            <h1 className="text-2xl font-black text-slate-900">Panel operacyjny</h1>
-            <p className="text-sm text-slate-500 mt-1">Zaloguj się kontem zespołu.</p>
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium text-slate-700">Email</label>
-            <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="ty@trasa.travel" />
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium text-slate-700">Hasło</label>
-            <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="••••••••" />
-          </div>
-          <button type="submit" disabled={loading}
-            className="w-full py-3 rounded-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-lg shadow-blue-600/25 active:scale-[0.98] transition-all disabled:opacity-60">
-            {loading ? "Logowanie…" : "Zaloguj się"}
-          </button>
-        </form>
+        <div className="w-full max-w-sm bg-white rounded-3xl shadow-xl shadow-slate-900/[0.06] border border-slate-100 p-8">
+          {sent ? (
+            <div className="text-center space-y-3 py-4">
+              <p className="text-4xl">📬</p>
+              <h1 className="text-xl font-black text-slate-900">Sprawdź skrzynkę</h1>
+              <p className="text-sm text-slate-500 leading-relaxed">
+                Wysłaliśmy link do logowania na <strong className="text-slate-700">{email}</strong>. Kliknij go, żeby wejść do panelu.
+              </p>
+              <button onClick={() => setSent(false)} className="text-sm text-blue-600 font-medium underline pt-2">
+                Użyj innego adresu
+              </button>
+            </div>
+          ) : (
+            <>
+              <div className="text-center mb-6">
+                <h1 className="text-2xl font-black text-slate-900">Panel operacyjny</h1>
+                <p className="text-sm text-slate-500 mt-1">Zaloguj się kontem zespołu.</p>
+              </div>
+
+              <form onSubmit={usePassword ? loginPassword : sendMagicLink} className="space-y-4">
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-slate-700">Email</label>
+                  <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="ty@trasa.travel" />
+                </div>
+
+                {usePassword && (
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium text-slate-700">Hasło</label>
+                    <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)}
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="••••••••" />
+                  </div>
+                )}
+
+                <button type="submit" disabled={loading}
+                  className="w-full py-3 rounded-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-lg shadow-blue-600/25 active:scale-[0.98] transition-all disabled:opacity-60">
+                  {loading ? (usePassword ? "Logowanie…" : "Wysyłam…") : (usePassword ? "Zaloguj się" : "Wyślij link do logowania")}
+                </button>
+              </form>
+
+              <button
+                onClick={() => setUsePassword((v) => !v)}
+                className="w-full mt-4 text-xs text-slate-400 hover:text-slate-600 font-medium"
+              >
+                {usePassword ? "← Wróć do logowania linkiem" : "Wolisz zalogować się hasłem?"}
+              </button>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
