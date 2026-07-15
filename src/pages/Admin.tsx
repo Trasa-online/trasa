@@ -68,6 +68,9 @@ const Admin = () => {
   const [otherTab, setOtherTab] = useState<"cities" | "bugs">("cities");
   const [bizTab, setBizTab] = useState<"claims" | "all" | "support">("claims");
   const [userTab, setUserTab] = useState<"pending" | "created" | "all">("pending");
+  // Filtr w "Wszystkie konta": firmy (owner_user_id w business_profiles) vs zwykli userzy.
+  const [accountFilter, setAccountFilter] = useState<"all" | "business" | "consumer">("all");
+  const [businessOwnerIds, setBusinessOwnerIds] = useState<Set<string>>(new Set());
 
   // Waitlist state
   const [waitlist, setWaitlist] = useState<WaitlistEntry[]>([]);
@@ -312,6 +315,14 @@ const Admin = () => {
     const { data, error } = await (supabase as any).rpc("admin_list_users");
     if (error) console.error("[Admin] admin_list_users rpc error:", error);
     setAllUsers(data ?? []);
+
+    // Zbior wlascicieli wizytowek -> pozwala odroznic konta firmowe od B2C.
+    const { data: owners } = await (supabase as any)
+      .from("business_profiles")
+      .select("owner_user_id")
+      .not("owner_user_id", "is", null);
+    setBusinessOwnerIds(new Set((owners ?? []).map((o: any) => o.owner_user_id)));
+
     setFetchingAllUsers(false);
   };
 
@@ -1009,34 +1020,74 @@ const Admin = () => {
               {userTab === "all" ? (
                 fetchingAllUsers
                   ? <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
-                  : allUsers.length === 0
-                    ? <p className="text-sm text-muted-foreground text-center py-12">Brak kont.</p>
-                    : <div className="space-y-2">
-                        {allUsers.map(u => (
-                          <div key={u.id} className="border border-border rounded-xl p-3 bg-card flex items-center gap-3">
-                            {u.avatar_url
-                              ? <img src={u.avatar_url} alt="" className="h-10 w-10 rounded-full object-cover shrink-0" />
-                              : <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center text-sm font-bold text-muted-foreground shrink-0">
-                                  {(u.first_name || u.username || "?").charAt(0).toUpperCase()}
-                                </div>
-                            }
-                            <div className="flex-1 min-w-0">
-                              <p className="font-semibold text-sm truncate">
-                                {u.first_name || "—"}
-                                <span className="text-muted-foreground font-normal ml-1">@{u.username}</span>
-                                {u.is_anonymous && (
-                                  <span className="ml-2 px-2 py-0.5 rounded-full bg-muted text-muted-foreground text-[10px] font-semibold align-middle">
-                                    Anonimowy
-                                  </span>
-                                )}
-                              </p>
-                              <p className="text-xs text-muted-foreground mt-0.5">
-                                {u.created_at ? format(new Date(u.created_at), "dd.MM.yyyy HH:mm") : "—"}
-                              </p>
-                            </div>
+                  : (() => {
+                      const businessCount = allUsers.filter(u => businessOwnerIds.has(u.id)).length;
+                      const consumerCount = allUsers.length - businessCount;
+                      const displayedUsers = allUsers.filter(u =>
+                        accountFilter === "business" ? businessOwnerIds.has(u.id)
+                        : accountFilter === "consumer" ? !businessOwnerIds.has(u.id)
+                        : true
+                      );
+                      return (
+                        <>
+                          {/* Filtr: Firmy / Uzytkownicy (B2B vs B2C) */}
+                          <div className="flex gap-1.5 rounded-2xl bg-muted p-1 mb-4">
+                            {([
+                              { id: "all",      label: "Wszyscy",     count: allUsers.length },
+                              { id: "business", label: "Firmy",       count: businessCount },
+                              { id: "consumer", label: "Użytkownicy", count: consumerCount },
+                            ] as const).map(f => (
+                              <button
+                                key={f.id}
+                                onClick={() => setAccountFilter(f.id)}
+                                className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold transition-colors ${accountFilter === f.id ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+                              >
+                                {f.label}
+                                <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${accountFilter === f.id ? "bg-muted" : "bg-background/60"}`}>{f.count}</span>
+                              </button>
+                            ))}
                           </div>
-                        ))}
-                      </div>
+
+                          {displayedUsers.length === 0
+                            ? <p className="text-sm text-muted-foreground text-center py-12">Brak kont w tej kategorii.</p>
+                            : <div className="space-y-2">
+                                {displayedUsers.map(u => {
+                                  const isBusiness = businessOwnerIds.has(u.id);
+                                  return (
+                                    <div key={u.id} className="border border-border rounded-xl p-3 bg-card flex items-center gap-3">
+                                      {u.avatar_url
+                                        ? <img src={u.avatar_url} alt="" className="h-10 w-10 rounded-full object-cover shrink-0" />
+                                        : <div className={`h-10 w-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${isBusiness ? "bg-blue-100 text-blue-600" : "bg-muted text-muted-foreground"}`}>
+                                            {(u.first_name || u.username || "?").charAt(0).toUpperCase()}
+                                          </div>
+                                      }
+                                      <div className="flex-1 min-w-0">
+                                        <p className="font-semibold text-sm truncate">
+                                          {u.first_name || "—"}
+                                          <span className="text-muted-foreground font-normal ml-1">@{u.username}</span>
+                                          {isBusiness && (
+                                            <span className="ml-2 px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-[10px] font-semibold align-middle">
+                                              Firma
+                                            </span>
+                                          )}
+                                          {u.is_anonymous && (
+                                            <span className="ml-2 px-2 py-0.5 rounded-full bg-muted text-muted-foreground text-[10px] font-semibold align-middle">
+                                              Anonimowy
+                                            </span>
+                                          )}
+                                        </p>
+                                        <p className="text-xs text-muted-foreground mt-0.5">
+                                          {u.created_at ? format(new Date(u.created_at), "dd.MM.yyyy HH:mm") : "—"}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                          }
+                        </>
+                      );
+                    })()
               ) : (
                 fetchingList
                   ? <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
