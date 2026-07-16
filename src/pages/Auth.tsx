@@ -148,8 +148,13 @@ const Auth = () => {
     // Osobny resetLoading zeby button 'Zaloguj' nie pokazywal 'Logowanie...'.
     setResetLoading(true);
     try {
+      // Biznes: reset musi wracac na /set-password-biznes (SetPassword forceBusiness ->
+      // ustawia haslo -> panel biznesowy). B2C: /set-password (-> /home). Bez tego biznes
+      // ladowal na konsumenckim set-password i konczyl na /home zamiast w panelu.
       const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-        redirectTo: "https://trasa.travel/#/set-password",
+        redirectTo: businessMode
+          ? "https://trasa.travel/#/set-password-biznes"
+          : "https://trasa.travel/#/set-password",
       });
       if (error) throw error;
       toast.success("Link do resetowania hasła wysłany na " + email);
