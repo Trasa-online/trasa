@@ -334,7 +334,7 @@ function BusinessCardPreview({ logoUrl, coverImageUrl, coverVideoUrl, businessNa
   const overlay = colorCardBg ?? "#000000";
   const btn     = colorButton ?? "#D45113";
   return (
-    <div className="sticky top-20">
+    <div>
       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Podgląd wizytówki</p>
       <div className="relative rounded-3xl overflow-hidden shadow-xl bg-slate-900" style={{ aspectRatio: '9/16' }}>
         {coverVideoUrl
@@ -1206,6 +1206,7 @@ const BusinessDashboard = () => {
       user_id: user?.id ?? null,
       description: `[Panel biznesowy - ${profile?.business_name ?? ""}]\n\n${supportMessage.trim()}`,
       status: "new",
+      source: "business",
     });
     setSupportSubmitting(false);
     if (error) {
@@ -1849,7 +1850,7 @@ const BusinessDashboard = () => {
               </div> {/* end flex-1 min-w-0 */}
 
               {/* Desktop sticky card preview */}
-              <div className="hidden lg:block w-72 shrink-0">
+              <div className="hidden lg:block w-72 shrink-0 lg:sticky lg:top-20 lg:self-start">
                 <BusinessCardPreview
                   logoUrl={logoUrl} coverImageUrl={coverImageUrl} coverVideoUrl={coverVideoUrl}
                   businessName={businessName} mainCategory={mainCategory} subcategories={bizSubcategories} tags={tags} eventTitle={eventTitle}
@@ -2102,7 +2103,7 @@ const BusinessDashboard = () => {
               </div> {/* end flex-1 min-w-0 */}
 
               {/* Desktop sticky card preview */}
-              <div className="hidden lg:block w-72 shrink-0">
+              <div className="hidden lg:block w-72 shrink-0 lg:sticky lg:top-20 lg:self-start">
                 <BusinessCardPreview
                   logoUrl={logoUrl} coverImageUrl={coverImageUrl} coverVideoUrl={coverVideoUrl}
                   businessName={businessName} mainCategory={mainCategory} subcategories={bizSubcategories} tags={tags} eventTitle={eventTitle}
@@ -2166,7 +2167,7 @@ const BusinessDashboard = () => {
                     <input ref={menuInputRef} type="file" accept="image/*,application/pdf" multiple className="hidden" onChange={handleMenuUpload} />
                   </div>
                 </div>
-                <div className="hidden lg:block w-72 shrink-0">
+                <div className="hidden lg:block w-72 shrink-0 lg:sticky lg:top-20 lg:self-start">
                   <BusinessCardPreview
                     logoUrl={logoUrl} coverImageUrl={coverImageUrl} coverVideoUrl={coverVideoUrl}
                     businessName={businessName} mainCategory={mainCategory} subcategories={bizSubcategories} tags={tags} eventTitle={eventTitle}
@@ -2263,7 +2264,7 @@ const BusinessDashboard = () => {
                   </div>
                 </div>
                 {/* Preview panel - right (desktop) / bottom (mobile/tablet) */}
-                <div className="hidden lg:block w-72 shrink-0">
+                <div className="hidden lg:block w-72 shrink-0 lg:sticky lg:top-20 lg:self-start">
                   <BusinessCardPreview
                     logoUrl={logoUrl}
                     coverImageUrl={coverImageUrl}

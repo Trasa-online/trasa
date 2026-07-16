@@ -7,6 +7,7 @@ export interface BugReport {
   description: string;
   screenshot_url: string | null;
   status: string | null;
+  source: string | null; // 'user' | 'business'
   created_at: string;
   reporter?: { username: string | null; first_name: string | null } | null;
 }

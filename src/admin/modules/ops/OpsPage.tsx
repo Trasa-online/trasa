@@ -9,7 +9,7 @@ export function OpsPage() {
     <div className="max-w-3xl">
       <div className="mb-6">
         <h1 className="text-2xl font-black text-slate-900">Zgłoszenia i miasta</h1>
-        <p className="text-sm text-slate-500 mt-1">Bugi zgłoszone przez użytkowników i zapotrzebowanie na nowe miasta.</p>
+        <p className="text-sm text-slate-500 mt-1">Zgłoszenia od użytkowników i biznesów oraz zapotrzebowanie na nowe miasta.</p>
       </div>
       <BugsSection />
       <CitiesSection />
@@ -19,28 +19,42 @@ export function OpsPage() {
 
 function BugsSection() {
   const { data, isLoading, isError } = useBugReports();
+  const [source, setSource] = useState<"user" | "business">("user");
   const [tab, setTab] = useState<"open" | "resolved">("open");
 
-  const { open, resolved } = useMemo(() => {
+  // Zgloszenia biznesowe maja source='business' (fallback: prefix "[Panel biznesowy" dla
+  // rekordow sprzed migracji, gdyby backfill nie objal wszystkiego).
+  const isBusiness = (b: BugReport) => b.source === "business" || (b.source == null && b.description?.startsWith("[Panel biznesowy"));
+
+  const bySource = useMemo(() => {
     const all = data ?? [];
-    return {
-      open: all.filter((b) => b.status !== "resolved"),
-      resolved: all.filter((b) => b.status === "resolved"),
-    };
+    const business = all.filter(isBusiness);
+    const user = all.filter((b) => !isBusiness(b));
+    return { user, business };
   }, [data]);
+
+  const list = bySource[source];
+  const open = list.filter((b) => b.status !== "resolved");
+  const resolved = list.filter((b) => b.status === "resolved");
   const shown = tab === "open" ? open : resolved;
 
   return (
     <section className="mb-8">
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wide">Bug reports</h2>
+      <div className="flex items-center justify-between mb-3 gap-3 flex-wrap">
+        <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wide">Zgłoszenia</h2>
         <div className="flex gap-1 bg-slate-100 rounded-full p-0.5">
-          <TabBtn active={tab === "open"} onClick={() => setTab("open")} label={`Otwarte`} n={open.length} />
-          <TabBtn active={tab === "resolved"} onClick={() => setTab("resolved")} label={`Rozwiązane`} n={resolved.length} />
+          <TabBtn active={source === "user"} onClick={() => setSource("user")} label="Użytkownicy" n={bySource.user.length} />
+          <TabBtn active={source === "business"} onClick={() => setSource("business")} label="Biznesy" n={bySource.business.length} />
+        </div>
+      </div>
+      <div className="flex justify-end mb-3">
+        <div className="flex gap-1 bg-slate-100 rounded-full p-0.5">
+          <TabBtn active={tab === "open"} onClick={() => setTab("open")} label="Otwarte" n={open.length} />
+          <TabBtn active={tab === "resolved"} onClick={() => setTab("resolved")} label="Rozwiązane" n={resolved.length} />
         </div>
       </div>
       {isLoading ? <Spin /> : isError ? <p className="text-sm text-red-500 py-8 text-center">Nie udało się wczytać.</p>
-        : shown.length === 0 ? <p className="text-sm text-slate-400 py-8 text-center">{tab === "open" ? "Brak otwartych zgłoszeń 🎉" : "Brak rozwiązanych."}</p>
+        : shown.length === 0 ? <p className="text-sm text-slate-400 py-8 text-center">{tab === "open" ? `Brak otwartych zgłoszeń od ${source === "user" ? "użytkowników" : "biznesów"} 🎉` : "Brak rozwiązanych."}</p>
         : <div className="space-y-2">{shown.map((b) => <BugRow key={b.id} bug={b} />)}</div>}
     </section>
   );

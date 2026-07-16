@@ -378,6 +378,7 @@ function BugReportSection({ userId }: { userId: string }) {
       user_id: userId,
       description: description.trim(),
       screenshot_url: screenshotUrl,
+      source: "user",
     });
     if (error) { toast.error(`Błąd: ${error.message}`); setSubmitting(false); return; }
     setDone(true);
