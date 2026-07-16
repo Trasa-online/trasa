@@ -840,11 +840,14 @@ const BusinessDashboard = () => {
 
     // loadAnalytics is triggered by useEffect when profile state updates
 
-    // Fetch posts — use real place_id from profile if available
-    const postsPlaceId = profileData.place_id ?? placeId;
-    const { data: postsData } = await (supabase as any)
-      .from("business_posts").select("*").eq("place_id", postsPlaceId).order("created_at", { ascending: false });
-    if (postsData) setPosts(postsData as BusinessPost[]);
+    // Fetch posts — tylko gdy wizytowka ma realny place_id (podlinkowane miejsce).
+    // Bez tego (self-service, place_id NULL) posty sa lokalne/preview, brak w DB.
+    const postsPlaceId = profileData.place_id ?? null;
+    if (postsPlaceId) {
+      const { data: postsData } = await (supabase as any)
+        .from("business_posts").select("*").eq("place_id", postsPlaceId).order("created_at", { ascending: false });
+      if (postsData) setPosts(postsData as BusinessPost[]);
+    }
     } finally {
       setLoading(false);
     }
@@ -1163,7 +1166,11 @@ const BusinessDashboard = () => {
 
   const handleAddPost = async () => {
     if (!postDescription.trim() && postPhotos.length === 0) return;
-    const effectivePlaceId = profile?.place_id ?? placeId;
+    // TYLKO realny place_id z profilu. Dla wizytowki bez podlinkowanego miejsca
+    // (self-service, place_id NULL) placeId z URL = business_profile.id, NIE miejsce
+    // -> insert do business_posts by padl na RLS/FK. Brak place_id => post lokalny
+    // (podglad); persystuje dopiero gdy wizytowka zostanie zaakceptowana (dostaje place_id).
+    const effectivePlaceId = profile?.place_id ?? null;
     setSubmittingPost(true);
     if (!effectivePlaceId) {
       // Draft without a real place — add locally so user can preview
@@ -1178,7 +1185,7 @@ const BusinessDashboard = () => {
       setPostDescription("");
       setPostPhotos([]);
       if (postPhotoInputRef.current) postPhotoInputRef.current.value = "";
-      toast.success("Post dodany do podglądu!");
+      toast.success("Post widoczny w podglądzie. Zapisze się na stałe po akceptacji wizytówki.");
       setSubmittingPost(false);
       return;
     }

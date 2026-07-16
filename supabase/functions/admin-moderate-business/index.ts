@@ -39,7 +39,7 @@ Deno.serve(async (req) => {
 
     const { data: bp } = await admin
       .from("business_profiles")
-      .select("id, business_name, moderation_status, activated_at")
+      .select("id, business_name, moderation_status, activated_at, place_id, city, main_category, subcategories, street, address, latitude, longitude, cover_image_url, logo_url")
       .eq("id", profileId)
       .maybeSingle();
     if (!bp) return json({ error: "Nie znaleziono wizytowki" }, 404);
@@ -67,6 +67,37 @@ Deno.serve(async (req) => {
     const { error: upErr } = await admin.from("business_profiles").update(update).eq("id", profileId);
     if (upErr) return json({ error: `update: ${upErr.message}` }, 500);
 
+    // ── Approve: podlinkuj do miejsca w `places` (jesli jeszcze nie) ──
+    // Self-service wizytowki maja place_id=NULL. Bez wpisu w places sa niewidoczne
+    // w apce i nie da sie dodawac postow (business_posts.place_id -> places).
+    // Na akcept tworzymy miejsce z danych wizytowki i linkujemy place_id.
+    let linkedPlaceId: string | null = bp.place_id ?? null;
+    if (action === "approve" && !bp.place_id) {
+      const DEFAULT_CAT: Record<string, string> = { food: "restaurant", culture: "museum", attractions: "experience", nature: "park" };
+      const subcats = Array.isArray(bp.subcategories) ? bp.subcategories : [];
+      const category = subcats[0] || DEFAULT_CAT[bp.main_category as string] || "restaurant";
+      const { data: place, error: placeErr } = await admin
+        .from("places")
+        .insert({
+          place_name: bp.business_name || "Lokal",
+          city: bp.city || "Warszawa",
+          category,
+          address: bp.address || bp.street || null,
+          latitude: bp.latitude ?? null,
+          longitude: bp.longitude ?? null,
+          photo_url: bp.cover_image_url || bp.logo_url || null,
+          is_active: true,
+        })
+        .select("id")
+        .single();
+      if (!placeErr && place) {
+        linkedPlaceId = place.id;
+        await admin.from("business_profiles").update({ place_id: place.id }).eq("id", profileId);
+      } else {
+        console.warn("[admin-moderate-business] nie udalo sie utworzyc places:", placeErr?.message);
+      }
+    }
+
     // ── Audit log (append-only, service-role) ──
     await admin.from("admin_audit_log").insert({
       actor_id: user.id,
@@ -74,10 +105,10 @@ Deno.serve(async (req) => {
       action: `business.${action}`,
       target_type: "business_profile",
       target_id: profileId,
-      metadata: { business_name: bp.business_name, reason, prev_status: bp.moderation_status },
+      metadata: { business_name: bp.business_name, reason, prev_status: bp.moderation_status, place_id: linkedPlaceId },
     });
 
-    return json({ ok: true, profile_id: profileId, status: update.moderation_status });
+    return json({ ok: true, profile_id: profileId, status: update.moderation_status, place_id: linkedPlaceId });
   } catch (err: any) {
     console.error("[admin-moderate-business]", err);
     return json({ error: err?.message ?? "Internal error" }, 500);
