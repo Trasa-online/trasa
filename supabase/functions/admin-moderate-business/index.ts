@@ -73,9 +73,17 @@ Deno.serve(async (req) => {
     // Na akcept tworzymy miejsce z danych wizytowki i linkujemy place_id.
     let linkedPlaceId: string | null = bp.place_id ?? null;
     if (action === "approve" && !bp.place_id) {
+      // subcategories trzyma ETYKIETY (np. "Kawiarnia") - mapujemy na granularne id
+      // (places.category musi byc id: cafe/restaurant/... zeby getMainCategoryFor dzialal).
+      const LABEL_TO_ID: Record<string, string> = {
+        "Restauracja": "restaurant", "Kawiarnia": "cafe", "Bar / Pub": "bar", "Bar": "bar",
+        "Muzeum": "museum", "Zabytek": "monument", "Galeria": "gallery",
+        "Doświadczenie": "experience", "Targ": "market", "Sklep": "shopping", "Klub": "club",
+        "Park": "park", "Punkt widokowy": "viewpoint",
+      };
       const DEFAULT_CAT: Record<string, string> = { food: "restaurant", culture: "museum", attractions: "experience", nature: "park" };
-      const subcats = Array.isArray(bp.subcategories) ? bp.subcategories : [];
-      const category = subcats[0] || DEFAULT_CAT[bp.main_category as string] || "restaurant";
+      const firstSub = Array.isArray(bp.subcategories) ? bp.subcategories[0] : null;
+      const category = (firstSub && LABEL_TO_ID[firstSub]) || DEFAULT_CAT[bp.main_category as string] || "restaurant";
       const { data: place, error: placeErr } = await admin
         .from("places")
         .insert({

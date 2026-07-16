@@ -543,7 +543,7 @@ function BusinessCardPreview({ logoUrl, coverImageUrl, coverVideoUrl, businessNa
           onClick={() => previewReady && onPreviewClick()}
           disabled={!previewReady}
           title={!previewReady ? "Uzupełnij nazwę i dodaj zdjęcie okładkowe" : undefined}
-          className="mt-2 w-full text-xs text-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed text-slate-400 hover:text-slate-600 disabled:hover:text-slate-400"
+          className="mt-3 w-full py-2.5 rounded-full text-xs font-bold border-2 border-[#D45113] text-[#D45113] hover:bg-[#D45113] hover:text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400 disabled:hover:bg-transparent"
         >
           Otwórz pełny podgląd →
         </button>
@@ -864,19 +864,19 @@ const BusinessDashboard = () => {
       doneBtnText: 'Gotowe!',
       steps: [
         {
-          element: '#tour-business-name',
-          popover: { title: 'Zacznij od nazwy', description: 'Kliknij tutaj i wpisz nazwę swojego lokalu. Możesz ją zmienić w każdej chwili, z poziomu dowolnej zakładki.', side: 'bottom' },
-          onHighlightStarted: () => setActiveSection('gallery'),
+          element: isMobile ? '#tour-mobile-profile' : '#tour-profile',
+          popover: { title: 'Dane lokalu', description: 'Zacznij tutaj: nazwa lokalu, adres, kontakt, opis i kategoria. To podstawa Twojej wizytówki.', side: isMobile ? 'bottom' : 'right' },
+          onHighlightStarted: () => setActiveSection('profile'),
         },
         {
           element: isMobile ? '#tour-mobile-gallery' : '#tour-gallery',
-          popover: { title: 'Wygląd', description: 'Dodaj okładkę, galerię i dostosuj kolory wizytówki - tak będą Cię widzieć goście w aplikacji.', side: isMobile ? 'bottom' : 'right' },
+          popover: { title: 'Wygląd', description: 'Dodaj okładkę, galerię i dostosuj kolor guzika akcji - tak będą Cię widzieć goście w aplikacji.', side: isMobile ? 'bottom' : 'right' },
           onHighlightStarted: () => setActiveSection('gallery'),
         },
         {
-          element: isMobile ? '#tour-mobile-profile' : '#tour-profile',
-          popover: { title: 'Dane lokalu', description: 'Uzupełnij adres, kontakt, opis i kategorię. To informacje, które goście zobaczą po kliknięciu w Twój lokal.', side: isMobile ? 'bottom' : 'right' },
-          onHighlightStarted: () => setActiveSection('profile'),
+          element: isMobile ? '#tour-mobile-menu' : '#tour-menu',
+          popover: { title: 'Menu', description: 'Wrzuć zdjęcia menu lub cennika (albo PDF). Goście zobaczą je w Twojej wizytówce.', side: isMobile ? 'bottom' : 'right' },
+          onHighlightStarted: () => setActiveSection('menu'),
         },
         {
           element: isMobile ? '#tour-mobile-posts' : '#tour-posts',
@@ -898,7 +898,7 @@ const BusinessDashboard = () => {
   // profile (activated_at = null) oraz stare konta - brak auto-tour. Manualny "Powtorz
   // tour" w sidebarze dziala niezaleznie od tych warunkow.
   useEffect(() => {
-    if (!profile || loading || activeSection !== 'gallery' || isDraft) return;
+    if (!profile || loading || activeSection !== 'profile' || isDraft) return;
     const activatedAt = (profile as any).activated_at as string | null | undefined;
     if (!activatedAt) return;
     const FRESH_ACTIVATION_MS = 7 * 24 * 60 * 60 * 1000;
@@ -1627,22 +1627,8 @@ const BusinessDashboard = () => {
         <div className="sticky top-0 z-10 bg-white border-b border-slate-100 px-4 md:px-6 h-14 flex items-center gap-3 shrink-0">
           {/* Mobile: logo */}
           <TrasaLogo size={28} className="md:hidden" />
-          <div className="flex-1 flex items-center gap-2 min-w-0">
-            <div className="relative flex items-center min-w-0 w-full max-w-[260px] group">
-              <input
-                id="tour-business-name"
-                type="text"
-                value={businessName}
-                onChange={e => { setBusinessName(e.target.value); setIsDirty(true); }}
-                placeholder="Nazwa lokalu"
-                maxLength={80}
-                className="w-full text-sm font-medium text-slate-700 bg-slate-50 hover:bg-slate-100 border border-slate-200 hover:border-slate-300 focus:bg-white focus:border-orange-300 focus:ring-2 focus:ring-orange-200/60 outline-none rounded-lg px-3 py-1.5 pr-8 placeholder:font-medium placeholder:text-slate-400 transition-colors"
-              />
-              <svg className="absolute right-2.5 h-3.5 w-3.5 text-slate-400 pointer-events-none group-focus-within:text-orange-500 transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 20h9" />
-                <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
-              </svg>
-            </div>
+          <div id="tour-business-name" className="flex-1 flex items-center gap-2 min-w-0">
+            <h1 className="text-sm font-bold text-slate-800 truncate">{businessName || 'Nazwa lokalu'}</h1>
             <span className={`hidden md:inline text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${PLAN_COLORS[plan]}`}>{PLAN_LABELS[plan]}</span>
           </div>
           <div className="flex items-center gap-2 ml-auto">
@@ -2037,6 +2023,18 @@ const BusinessDashboard = () => {
 
               <div className="flex flex-col lg:flex-row gap-5 items-start">
               <div className="flex-1 min-w-0 space-y-5">
+              {/* ── Nazwa lokalu ── */}
+              <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
+                <Label htmlFor="business_name" className="text-sm font-bold text-foreground">Nazwa lokalu</Label>
+                <Input
+                  id="business_name"
+                  value={businessName}
+                  onChange={e => { setBusinessName(e.target.value); setIsDirty(true); }}
+                  placeholder="np. Kawiarnia Wanderlust"
+                  maxLength={80}
+                  className="mt-2"
+                />
+              </div>
               {/* ── Logo - avatar style ── */}
               <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
                 <p className="text-sm font-bold text-foreground mb-4">Logo lokalu</p>
