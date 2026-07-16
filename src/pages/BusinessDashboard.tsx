@@ -23,6 +23,8 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 
 import { SHARE_BASE_URL } from "@/lib/shareUrl";
 import { useShare } from "@/hooks/useShare";
 import BusinessHoursEditor, { type OpeningHours } from "@/components/business/BusinessHoursEditor";
+import PremiumBusinessCard from "@/components/business/PremiumBusinessCard";
+import { fromDashboardState } from "@/components/business/premiumBusinessAdapters";
 import { TrasaLogo } from "@/components/TrasaLogo";
 
 interface BusinessPost {
@@ -167,27 +169,18 @@ function getContrastColor(hex: string): string {
 
 function AppLikePreviewModal({
   onClose, onConvert, isDraft, convertingDraft,
-  businessName, mainCategory, subcategories, tags, description, street, city, logoUrl, coverImageUrl, coverVideoUrl, galleryUrls, posts, eventTitle, openingHours,
+  businessName, mainCategory, subcategories, tags, description, street, city, logoUrl, coverImageUrl, coverVideoUrl, galleryUrls, menuImageUrls, posts, eventTitle, eventDescription, openingHours,
   colorBadge, colorCardBg, colorButton, colorPromo,
 }: {
   onClose: () => void; onConvert: () => void; isDraft: boolean; convertingDraft: boolean;
   businessName: string; mainCategory: string; subcategories: string[]; tags: string[]; description: string;
-  street: string; city: string; logoUrl: string; coverImageUrl: string; coverVideoUrl: string; galleryUrls: string[];
-  posts: BusinessPost[]; eventTitle: string; openingHours: OpeningHours;
+  street: string; city: string; logoUrl: string; coverImageUrl: string; coverVideoUrl: string; galleryUrls: string[]; menuImageUrls: string[];
+  posts: BusinessPost[]; eventTitle: string; eventDescription: string; openingHours: OpeningHours;
   colorBadge: string; colorCardBg: string; colorButton: string; colorPromo?: string;
 }) {
   const [view, setView] = useState<'card' | 'detail'>('card');
-  const [photoIdx, setPhotoIdx] = useState(0);
-  const photoStripRef = useRef<HTMLDivElement>(null);
   const catLabel = mainCategory ? MAIN_CATEGORIES.find(c => c.id === mainCategory)?.label : null;
   const allPhotos = [coverImageUrl, ...galleryUrls].filter(Boolean);
-
-  const goToPhoto = (idx: number) => {
-    const el = photoStripRef.current;
-    if (!el) return;
-    el.scrollTo({ left: idx * el.offsetWidth, behavior: 'smooth' });
-    setPhotoIdx(idx);
-  };
 
   const CoverMedia = ({ className }: { className: string }) => (
     coverVideoUrl
@@ -283,176 +276,29 @@ function AppLikePreviewModal({
               </div>
             </div>
           ) : (
-            /* Detail view */
+            /* Detail view — identyczna wizytowka jak w apce (PlaceSwiperDetail przez PremiumBusinessCard) */
             <>
-              {/* Photo strip — horizontal scroll snap */}
-              <div className="shrink-0 h-56 relative overflow-hidden bg-slate-900">
-                <div
-                  ref={photoStripRef}
-                  className="flex h-full overflow-x-auto snap-x snap-mandatory scrollbar-none"
-                  style={{ scrollbarWidth: "none" }}
-                  onScroll={e => {
-                    const el = e.currentTarget;
-                    setPhotoIdx(Math.round(el.scrollLeft / el.offsetWidth));
-                  }}
-                >
-                  {allPhotos.length > 0 ? allPhotos.map((src, i) => (
-                    <div key={i} className="shrink-0 w-full h-full snap-center">
-                      <img src={src} className="w-full h-full object-cover" />
-                    </div>
-                  )) : (
-                    <div className="w-full h-full bg-gradient-to-br from-orange-400 to-orange-700" />
-                  )}
-                </div>
-                <div className="absolute inset-0 bg-gradient-to-b from-black/20 to-transparent pointer-events-none" />
-                <button
-                  onClick={() => setView('card')}
-                  className="absolute top-4 left-4 h-8 w-8 bg-black/30 backdrop-blur-sm rounded-full flex items-center justify-center active:scale-90 transition-transform"
-                >
-                  <ChevronLeft className="h-4 w-4 text-white" />
-                </button>
-                {allPhotos.length > 1 && (
-                  <>
-                    <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1 pointer-events-none">
-                      {allPhotos.map((_, i) => (
-                        <div key={i} className={`h-1.5 rounded-full transition-all ${i === photoIdx ? 'w-4 bg-white' : 'w-1.5 bg-white/50'}`} />
-                      ))}
-                    </div>
-                    {photoIdx > 0 && (
-                      <button onClick={() => goToPhoto(photoIdx - 1)} className="absolute left-3 top-1/2 -translate-y-1/2 h-8 w-8 bg-black/40 backdrop-blur-sm rounded-full flex items-center justify-center active:scale-90 transition-transform">
-                        <ChevronLeft className="h-4 w-4 text-white" />
-                      </button>
-                    )}
-                    {photoIdx < allPhotos.length - 1 && (
-                      <button onClick={() => goToPhoto(photoIdx + 1)} className="absolute right-3 top-1/2 -translate-y-1/2 h-8 w-8 bg-black/40 backdrop-blur-sm rounded-full flex items-center justify-center active:scale-90 transition-transform">
-                        <svg className="h-4 w-4 text-white" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M6 3l5 5-5 5"/></svg>
-                      </button>
-                    )}
-                  </>
-                )}
+              <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden" style={{ WebkitOverflowScrolling: "touch" }}>
+                <PremiumBusinessCard
+                  data={fromDashboardState({
+                    businessName, mainCategory, subcategories, tags, description, street, city,
+                    logoUrl, coverImageUrl, coverVideoUrl, galleryUrls, menuImageUrls, posts,
+                    eventTitle, eventDescription, openingHours,
+                    colorBadge, colorCardBg, colorButton,
+                  })}
+                  mode="detail"
+                  detailPhotos={allPhotos}
+                  onClose={() => setView('card')}
+                  hideReviews
+                />
               </div>
-              <div className="flex-1 overflow-y-auto">
-                <div className="px-4 py-4 space-y-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <h2 className="text-2xl font-black text-foreground leading-tight flex-1">{businessName || 'Nazwa lokalu'}</h2>
-                    <button className="shrink-0 flex items-center gap-1 px-3 py-1.5 border border-slate-200 rounded-full text-xs font-semibold text-slate-600">
-                      <MapPin className="h-3 w-3" /> Maps
-                    </button>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <StarRow /><span className="text-sm font-semibold ml-1">4.6</span><span className="text-sm text-muted-foreground">(2 600)</span>
-                  </div>
-                  {city && (
-                    <div className="flex flex-wrap gap-2">
-                      <span className="flex items-center gap-1 px-3 py-1 border border-slate-200 rounded-full text-xs text-slate-600">
-                        <MapPin className="h-3 w-3 text-slate-400" />{city}
-                      </span>
-                    </div>
-                  )}
-                  {street && (
-                    <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                      <MapPin className="h-4 w-4 shrink-0 text-slate-400" />{street}
-                    </p>
-                  )}
-                  {/* Godziny otwarcia - z business_profiles.opening_hours, 1:1 z swiperem */}
-                  {Object.keys(openingHours).length > 0 && (() => {
-                    const dayOrder = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
-                    const dayLabels: Record<string, string> = {
-                      mon: "Poniedziałek", tue: "Wtorek", wed: "Środa", thu: "Czwartek",
-                      fri: "Piątek", sat: "Sobota", sun: "Niedziela",
-                    };
-                    const idx = new Date().getDay();
-                    const todayKey = dayOrder[idx === 0 ? 6 : idx - 1];
-                    const today = openingHours[todayKey];
-                    const isOpenNow = (() => {
-                      if (!today || "closed" in today) return false;
-                      const now = new Date();
-                      const hhmm = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
-                      return hhmm >= today.open && hhmm <= today.close;
-                    })();
-                    return (
-                      <details className="rounded-2xl border border-slate-100 bg-slate-50 overflow-hidden">
-                        <summary className="flex items-center gap-2 px-3 py-2.5 cursor-pointer list-none">
-                          <Clock className="h-4 w-4 text-slate-400 shrink-0" />
-                          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full shrink-0 ${isOpenNow ? "bg-green-500/10 text-green-600" : "bg-red-500/10 text-red-500"}`}>
-                            {isOpenNow ? "Otwarte" : "Zamknięte"}
-                          </span>
-                          <span className="text-xs text-muted-foreground truncate">
-                            · {dayLabels[todayKey].toLowerCase()}: {!today ? "-" : "closed" in today ? "Zamknięte" : `${today.open} - ${today.close}`}
-                          </span>
-                        </summary>
-                        <div className="px-3 pb-3 pt-1 space-y-1 border-t border-slate-200">
-                          {dayOrder.map((k) => {
-                            const h = openingHours[k];
-                            const isToday = k === todayKey;
-                            const val = !h ? "-" : "closed" in h ? "Zamknięte" : `${h.open} - ${h.close}`;
-                            return (
-                              <div key={k} className={`flex justify-between py-1 text-xs ${isToday ? "font-semibold text-foreground" : "text-muted-foreground"}`}>
-                                <span>{dayLabels[k]}{isToday && " (dziś)"}</span>
-                                <span>{val}</span>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </details>
-                    );
-                  })()}
-                  {description && <p className="text-sm text-foreground leading-relaxed">{description}</p>}
-                  {tags.length > 0 && (
-                    <div className="flex flex-wrap gap-2">
-                      {tags.map(t => <span key={t} className="px-3 py-1 bg-slate-100 rounded-full text-xs text-slate-600">{t}</span>)}
-                    </div>
-                  )}
-                  {/* Aktualnosci */}
-                  <div>
-                    <h3 className="font-bold text-base mb-2">Aktualnosci</h3>
-                    {posts.length === 0 ? (
-                      <div className="flex flex-col items-center gap-1.5 py-5 rounded-2xl bg-slate-50 border border-slate-100">
-                        <Megaphone className="h-7 w-7 text-slate-300" />
-                        <p className="text-xs font-medium text-muted-foreground">Brak aktualnosci</p>
-                        <p className="text-[11px] text-muted-foreground/70 text-center px-4">Dodaj pierwsza aktualnosc w zakladce Aktualnosci</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-3">
-                        {posts.slice(0, 3).map(post => (
-                          <div key={post.id} className="border border-slate-100 rounded-2xl p-3 space-y-2 bg-slate-50">
-                            {post.description && <p className="text-sm leading-relaxed">{post.description}</p>}
-                            {post.photo_urls.length > 0 && (
-                              <div className={`grid gap-1.5 ${post.photo_urls.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
-                                {post.photo_urls.slice(0, 2).map((url, idx) => (
-                                  <img key={idx} src={url} className="w-full rounded-xl object-cover aspect-square" />
-                                ))}
-                              </div>
-                            )}
-                            <p className="text-[11px] text-muted-foreground">{formatDistanceToNow(new Date(post.created_at), { addSuffix: true, locale: pl })}</p>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  {/* Opinie */}
-                  <div>
-                    <h3 className="font-bold text-base mb-3">Opinie</h3>
-                    <div className="flex items-start gap-2.5">
-                      <div className="h-9 w-9 rounded-full bg-green-500 flex items-center justify-center text-white text-sm font-bold shrink-0">M</div>
-                      <div>
-                        <p className="text-sm font-bold">Mateusz Szopka</p>
-                        <div className="flex items-center gap-0.5 mt-0.5">
-                          <StarRow size="xs" />
-                          <span className="text-xs text-muted-foreground ml-1">· w ostatnim tygodniu</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="h-2" />
-                </div>
-              </div>
-              <div className="shrink-0 flex gap-3 px-4 pb-5 pt-3 border-t border-slate-100">
-                <button onClick={() => setView('card')} className="flex-1 py-3 rounded-full border border-slate-200 text-slate-700 font-semibold text-sm flex items-center justify-center gap-1.5 active:scale-95 transition-transform">
-                  <ChevronDown className="h-4 w-4" /> Pomin
+              {/* Odrzuc / Dodaj CTA - poza PremiumBusinessCard, 1:1 z apka */}
+              <div className="shrink-0 flex gap-3 px-4 pb-5 pt-3 border-t border-slate-100 bg-[#FEFEFE]">
+                <button onClick={() => setView('card')} className="flex-1 py-3 rounded-full bg-secondary text-secondary-foreground font-bold text-sm shadow-sm active:scale-[0.97] transition-transform">
+                  Odrzuć
                 </button>
-                <button className="flex-1 py-3 rounded-full font-bold text-sm flex items-center justify-center gap-1.5 active:scale-95 transition-transform" style={{ background: colorButton, color: getContrastColor(colorButton) }}>
-                  <Heart className="h-4 w-4" style={{ fill: getContrastColor(colorButton) }} /> Chcę tu być
+                <button className="flex-1 py-3 rounded-full font-bold text-sm shadow-xl active:scale-[0.97] transition-transform" style={{ background: colorButton, color: getContrastColor(colorButton) }}>
+                  Dodaj
                 </button>
               </div>
             </>
@@ -2817,7 +2663,9 @@ const BusinessDashboard = () => {
           coverImageUrl={coverImageUrl}
           coverVideoUrl={coverVideoUrl}
           galleryUrls={galleryUrls}
+          menuImageUrls={menuImageUrls}
           eventTitle={eventTitle}
+          eventDescription={eventDescription}
           openingHours={openingHours}
           colorBadge={colorBadge}
           colorCardBg={colorCardBg}

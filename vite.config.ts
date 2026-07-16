@@ -51,7 +51,7 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "0.0.0.0",
     port: 8080,
-    allowedHosts: ["localhost", "127.0.0.1", "192.168.0.25", ".local"],
+    allowedHosts: ["localhost", "127.0.0.1", "192.168.0.24", "192.168.0.25", ".local", ".trycloudflare.com"],
   },
   plugins: [
     react(),
