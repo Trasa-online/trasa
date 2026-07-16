@@ -6,7 +6,7 @@ import posthog from "posthog-js";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Loader2, BarChart2, MapPin, MousePointerClick, Plus, X, LogOut, ImagePlus, Trash2, Users, LayoutDashboard, Images, Store, Megaphone, TrendingUp, MessageCircle, Expand, ZoomIn, Video, Play, Camera, Star, Heart, ChevronUp, ChevronDown, ChevronLeft, GripVertical, HelpCircle, Eye, KeyRound, Clock, Settings, FileText } from "lucide-react";
+import { Loader2, BarChart2, MapPin, MousePointerClick, Plus, X, LogOut, ImagePlus, Trash2, Users, LayoutDashboard, Images, Store, Megaphone, TrendingUp, MessageCircle, Expand, ZoomIn, Video, Play, Camera, Star, Heart, ChevronUp, ChevronDown, ChevronLeft, GripVertical, HelpCircle, Eye, KeyRound, Clock, Settings, FileText, BookOpen } from "lucide-react";
 
 // Menu moze byc obrazem (JPG/PNG/WEBP) albo PDF - rozpoznajemy po rozszerzeniu URL.
 const isPdfUrl = (u: string): boolean => u.split("?")[0].toLowerCase().endsWith(".pdf");
@@ -484,9 +484,9 @@ function BusinessCardPreview({ logoUrl, coverImageUrl, coverVideoUrl, businessNa
   colorBadge?: string; colorCardBg?: string; colorButton?: string; colorPromo?: string;
 }) {
   const catLabel = mainCategory ? MAIN_CATEGORIES.find(c => c.id === mainCategory)?.label : null;
-  const badge   = colorBadge  ?? "#f97316";
+  const badge   = colorBadge  ?? "#D45113";
   const overlay = colorCardBg ?? "#000000";
-  const btn     = colorButton ?? "#f97316";
+  const btn     = colorButton ?? "#D45113";
   return (
     <div className="sticky top-20">
       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Podgląd wizytówki</p>
@@ -646,9 +646,9 @@ const BusinessDashboard = () => {
   const [customSubcategory, setCustomSubcategory] = useState("");
   const [customSubcategoryStatus, setCustomSubcategoryStatus] = useState<string | null>(null);
   // Card color personalization
-  const [colorBadge, setColorBadge]   = useState<string>("#f97316"); // orange-500 default
+  const [colorBadge, setColorBadge]   = useState<string>("#D45113"); // orange-500 default
   const [colorCardBg, setColorCardBg] = useState<string>("#000000"); // black default (card overlay)
-  const [colorButton, setColorButton] = useState<string>("#f97316"); // orange default
+  const [colorButton, setColorButton] = useState<string>("#D45113"); // orange default
   const [colorPromo, setColorPromo]   = useState<string>(""); // badge promocji/aktualnosci; puste = domyslny gradient pomaranczowy
   const [plan, setPlan] = useState<BizPlan>('premium');
   const [previewTab, setPreviewTab] = useState<'basic' | 'premium'>('premium');
@@ -660,7 +660,7 @@ const BusinessDashboard = () => {
   const [uploading, setUploading] = useState<string | null>(null); // which slot is uploading
   const [isDirty, setIsDirty] = useState(false);
 
-  const [activeSection, setActiveSection] = useState<'overview' | 'gallery' | 'profile' | 'posts' | 'analytics' | 'settings'>('gallery');
+  const [activeSection, setActiveSection] = useState<'overview' | 'gallery' | 'profile' | 'menu' | 'posts' | 'analytics' | 'settings'>('profile');
   const [recentEvents, setRecentEvents] = useState<Array<{event_type: string, created_at: string}>>([]);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showSupportModal, setShowSupportModal] = useState(false);
@@ -803,9 +803,9 @@ const BusinessDashboard = () => {
     setCoverVideoUrl((profileData as any).cover_video_url ?? "");
     setGalleryUrls(profileData.gallery_urls ?? []);
     setMenuImageUrls(profileData.menu_image_urls ?? []);
-    setColorBadge((profileData as any).color_badge ?? "#f97316");
+    setColorBadge((profileData as any).color_badge ?? "#D45113");
     setColorCardBg((profileData as any).color_card_bg ?? "#000000");
-    setColorButton((profileData as any).color_button ?? "#f97316");
+    setColorButton((profileData as any).color_button ?? "#D45113");
     setColorPromo((profileData as any).color_promo ?? "");
     setOpeningHours(((profileData as any).opening_hours ?? {}) as OpeningHours);
     setEventTitle(profileData.event_title ?? "");
@@ -1556,8 +1556,9 @@ const BusinessDashboard = () => {
         {/* Nav items */}
         {([
           { id: 'overview',   label: 'Przegląd',      icon: LayoutDashboard, disabled: true,  hidden: true },
-          { id: 'gallery',    label: 'Wygląd',          icon: Images,         disabled: false, hidden: false },
           { id: 'profile',    label: 'Dane lokalu',    icon: Store,          disabled: false, hidden: false },
+          { id: 'gallery',    label: 'Wygląd',          icon: Images,         disabled: false, hidden: false },
+          { id: 'menu',       label: 'Menu',            icon: BookOpen,       disabled: false, hidden: false },
           { id: 'posts',      label: 'Aktualności',    icon: Megaphone,      disabled: false, hidden: false },
           { id: 'analytics',  label: 'Analityka',      icon: TrendingUp,     disabled: true,  hidden: false },
           { id: 'settings',   label: 'Ustawienia',     icon: Settings,       disabled: false, hidden: false },
@@ -1664,8 +1665,9 @@ const BusinessDashboard = () => {
         <div className="md:hidden sticky top-14 z-10 bg-white border-b border-slate-100 flex overflow-x-auto shrink-0 px-3 gap-1 py-2">
           {([
             { id: 'overview', label: 'Przegląd', disabled: true,  hidden: true },
-            { id: 'gallery', label: 'Wygląd', disabled: false, hidden: false },
             { id: 'profile', label: 'Dane', disabled: false, hidden: false },
+            { id: 'gallery', label: 'Wygląd', disabled: false, hidden: false },
+            { id: 'menu', label: 'Menu', disabled: false, hidden: false },
             { id: 'posts', label: 'Aktualności', disabled: false, hidden: false },
             { id: 'analytics', label: 'Analityka', disabled: true,  hidden: false },
             { id: 'settings', label: 'Ustawienia', disabled: false, hidden: false },
@@ -1986,8 +1988,8 @@ const BusinessDashboard = () => {
                 <div className="rounded-2xl border border-slate-100 bg-slate-50 p-3">
                   <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">Podgląd</p>
                   <div className="flex items-center gap-3">
-                    <span className="px-3 py-1 rounded-full text-xs font-bold shrink-0 text-white" style={{ background: "#f4a259" }}>Jedzenie &amp; Napoje</span>
-                    <span className="px-3 py-1 rounded-full text-xs font-bold shrink-0 text-white" style={{ background: "linear-gradient(to right,#F4A259,#F9662B)" }}>Promocja</span>
+                    <span className="px-3 py-1 rounded-full text-xs font-bold shrink-0 text-white" style={{ background: "#D45113" }}>{MAIN_CATEGORIES.find(c => c.id === mainCategory)?.label || "Kategoria"}</span>
+                    <span className="px-3 py-1 rounded-full text-xs font-bold shrink-0 text-white" style={{ background: "#D45113" }}>Promocja</span>
                     <button className="flex-1 py-2 rounded-full text-xs font-bold" style={{ background: colorButton, color: getContrastColor(colorButton) }}>Dodaj</button>
                   </div>
                 </div>
@@ -2033,7 +2035,7 @@ const BusinessDashboard = () => {
                 <p className="text-sm font-bold text-foreground mb-4">Logo lokalu</p>
                 <div className="flex items-center gap-5">
                   <div className="relative shrink-0">
-                    <div className="h-20 w-20 rounded-full overflow-hidden border-[3px] border-orange-500 bg-muted">
+                    <div className="h-20 w-20 rounded-full overflow-hidden border-[3px] border-[#D45113] bg-muted">
                       {uploading === 'logo'
                         ? <div className="w-full h-full flex items-center justify-center"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
                         : logoUrl
@@ -2105,7 +2107,7 @@ const BusinessDashboard = () => {
                       return (
                         <button key={cat.id} type="button"
                           onClick={() => { setMainCategory(active ? "" : cat.id); setBizSubcategories([]); setIsDirty(true); }}
-                          className={`flex items-center gap-2.5 px-3 py-3 rounded-xl border-2 text-left transition-all ${active ? 'border-orange-500 bg-orange-50 text-orange-700' : 'border-slate-100 bg-slate-50 text-slate-600 hover:border-slate-200'}`}>
+                          className={`flex items-center gap-2.5 px-3 py-3 rounded-xl border-2 text-left transition-all ${active ? 'border-[#D45113] bg-orange-50 text-orange-700' : 'border-slate-100 bg-slate-50 text-slate-600 hover:border-slate-200'}`}>
                           <span className="text-xl shrink-0">{cat.emoji}</span>
                           <div className="min-w-0">
                             <p className="text-xs font-semibold leading-tight">{cat.label}</p>
@@ -2133,7 +2135,7 @@ const BusinessDashboard = () => {
                           <button key={sub.id} type="button"
                             disabled={disabled}
                             onClick={() => { setBizSubcategories(prev => active ? prev.filter(s => s !== sub.label) : (prev.length >= 3 ? prev : [...prev, sub.label])); setIsDirty(true); }}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${active ? 'bg-orange-500 border-orange-500 text-white' : disabled ? 'bg-background border-border text-muted-foreground/40 cursor-not-allowed' : 'bg-background border-border text-muted-foreground hover:border-orange-300 hover:text-foreground'}`}>
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${active ? 'bg-[#D45113] border-[#D45113] text-white' : disabled ? 'bg-background border-border text-muted-foreground/40 cursor-not-allowed' : 'bg-background border-border text-muted-foreground hover:border-orange-300 hover:text-foreground'}`}>
                             <span>{sub.emoji}</span>{sub.label}
                           </button>
                         );
@@ -2157,7 +2159,7 @@ const BusinessDashboard = () => {
                           type="button"
                           disabled={!customSubcategory.trim() || customSubcategoryStatus === 'pending' || customSubcategoryStatus === 'approved'}
                           onClick={() => { if (customSubcategory.trim()) { setCustomSubcategoryStatus('pending'); setIsDirty(true); } }}
-                          className="shrink-0 px-4 py-2 rounded-xl text-xs font-bold bg-orange-500 hover:bg-orange-600 text-white disabled:opacity-40 disabled:hover:bg-orange-500 transition-colors"
+                          className="shrink-0 px-4 py-2 rounded-xl text-xs font-bold bg-[#D45113] hover:bg-[#D45113] text-white disabled:opacity-40 disabled:hover:bg-[#D45113] transition-colors"
                         >
                           Zaproponuj
                         </button>
@@ -2237,63 +2239,7 @@ const BusinessDashboard = () => {
                   </div>
                 </div>
 
-                {/* ── Menu / Cennik (warunkowo per main_category) ──
-                    food   -> "Menu" (zawsze, niezaleznie od subcategory)
-                    pozostale (culture, attractions, nature, brak) -> "Cennik"
-                    Dziala niezaleznie od custom subcategory - liczy sie tylko main_category. */}
-                {(() => {
-                  const menuLabel = mainCategory === 'food' ? 'Menu' : 'Cennik';
-                  const hint = menuLabel === 'Menu'
-                    ? 'Zdjęcia kartek menu (JPG, PNG) lub plik PDF. Pokażą się na wizytówce w aplikacji.'
-                    : 'Zdjęcia z cennikiem (JPG, PNG) lub plik PDF. Pokażą się na wizytówce w aplikacji.';
-                  return (
-                    <div className="pt-2 border-t border-border/40">
-                      <div className="flex items-center justify-between mb-2">
-                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{menuLabel} <span className="normal-case font-normal">(max {MAX_MENU_IMAGES})</span></p>
-                        <p className="text-xs text-muted-foreground shrink-0">{menuImageUrls.length}/{MAX_MENU_IMAGES}</p>
-                      </div>
-                      <p className="text-xs text-muted-foreground mb-2">{hint}</p>
-                      <div className="grid grid-cols-3 md:grid-cols-5 gap-2">
-                        {menuImageUrls.map((url, idx) => {
-                          const pdf = isPdfUrl(url);
-                          return (
-                          <div
-                            key={idx}
-                            className="relative aspect-square rounded-xl overflow-hidden bg-muted group cursor-pointer"
-                            onClick={() => pdf ? window.open(url, "_blank", "noopener,noreferrer") : setPhotoPreview({ url, label: `${menuLabel} ${idx + 1}` })}
-                          >
-                            {pdf ? (
-                              <div className="w-full h-full flex flex-col items-center justify-center gap-1 bg-red-50 pointer-events-none">
-                                <FileText className="h-7 w-7 text-red-400" />
-                                <span className="text-[10px] font-bold text-red-500">PDF</span>
-                              </div>
-                            ) : (
-                              <img src={url} className="w-full h-full object-cover pointer-events-none" />
-                            )}
-                            <button
-                              onClick={(e) => { e.stopPropagation(); removeMenuImage(idx); }}
-                              className="absolute top-1.5 right-1.5 h-6 w-6 rounded-full bg-black/60 flex items-center justify-center active:opacity-70 z-10"
-                            >
-                              <X className="h-3 w-3 text-white" />
-                            </button>
-                            {!pdf && (
-                              <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-black/50 to-transparent flex items-end justify-between px-1.5 pb-1.5 pointer-events-none">
-                                <ZoomIn className="h-3 w-3 text-white/80" />
-                              </div>
-                            )}
-                          </div>
-                          );
-                        })}
-                        {menuImageUrls.length < MAX_MENU_IMAGES && (
-                          <button onClick={() => menuInputRef.current?.click()} className="aspect-square rounded-xl border-2 border-dashed border-border flex items-center justify-center bg-muted/30 active:opacity-70">
-                            {uploading === 'menu' ? <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /> : <Plus className="h-5 w-5 text-muted-foreground" />}
-                          </button>
-                        )}
-                      </div>
-                      <input ref={menuInputRef} type="file" accept="image/*,application/pdf" multiple className="hidden" onChange={handleMenuUpload} />
-                    </div>
-                  );
-                })()}
+                {/* Menu / Cennik przeniesione do osobnej zakladki "Menu" (activeSection === 'menu') */}
               </div>
               </div> {/* end flex-1 min-w-0 */}
 
@@ -2310,6 +2256,71 @@ const BusinessDashboard = () => {
               </div> {/* end flex flex-col lg:flex-row */}
             </div>
           )}
+
+          {/* ── MENU / CENNIK ── */}
+          {activeSection === 'menu' && (() => {
+            const menuLabel = mainCategory === 'food' ? 'Menu' : 'Cennik';
+            const hint = menuLabel === 'Menu'
+              ? 'Zdjęcia kartek menu (JPG, PNG) lub plik PDF. Pokażą się na wizytówce w aplikacji.'
+              : 'Zdjęcia z cennikiem (JPG, PNG) lub plik PDF. Pokażą się na wizytówce w aplikacji.';
+            return (
+            <div className="space-y-5">
+              <div><h2 className="text-lg font-black">{menuLabel}</h2><p className="text-sm text-slate-400">{hint}</p></div>
+              <div className="flex flex-col lg:flex-row gap-5 items-start">
+                <div className="flex-1 min-w-0">
+                  <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
+                    <div className="flex items-center justify-between mb-3">
+                      <p className="text-sm font-bold text-foreground">{menuLabel} <span className="font-normal text-muted-foreground text-xs">(max {MAX_MENU_IMAGES})</span></p>
+                      <p className="text-xs text-muted-foreground shrink-0">{menuImageUrls.length}/{MAX_MENU_IMAGES}</p>
+                    </div>
+                    <div className="grid grid-cols-3 md:grid-cols-5 gap-2">
+                      {menuImageUrls.map((url, idx) => {
+                        const pdf = isPdfUrl(url);
+                        return (
+                        <div key={idx} className="relative aspect-square rounded-xl overflow-hidden bg-muted group cursor-pointer"
+                          onClick={() => pdf ? window.open(url, "_blank", "noopener,noreferrer") : setPhotoPreview({ url, label: `${menuLabel} ${idx + 1}` })}>
+                          {pdf ? (
+                            <div className="w-full h-full flex flex-col items-center justify-center gap-1 bg-red-50 pointer-events-none">
+                              <FileText className="h-7 w-7 text-red-400" />
+                              <span className="text-[10px] font-bold text-red-500">PDF</span>
+                            </div>
+                          ) : (
+                            <img src={url} className="w-full h-full object-cover pointer-events-none" />
+                          )}
+                          <button onClick={(e) => { e.stopPropagation(); removeMenuImage(idx); }}
+                            className="absolute top-1.5 right-1.5 h-6 w-6 rounded-full bg-black/60 flex items-center justify-center active:opacity-70 z-10">
+                            <X className="h-3 w-3 text-white" />
+                          </button>
+                          {!pdf && (
+                            <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-black/50 to-transparent flex items-end justify-between px-1.5 pb-1.5 pointer-events-none">
+                              <ZoomIn className="h-3 w-3 text-white/80" />
+                            </div>
+                          )}
+                        </div>
+                        );
+                      })}
+                      {menuImageUrls.length < MAX_MENU_IMAGES && (
+                        <button onClick={() => menuInputRef.current?.click()} className="aspect-square rounded-xl border-2 border-dashed border-border flex items-center justify-center bg-muted/30 active:opacity-70">
+                          {uploading === 'menu' ? <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /> : <Plus className="h-5 w-5 text-muted-foreground" />}
+                        </button>
+                      )}
+                    </div>
+                    <input ref={menuInputRef} type="file" accept="image/*,application/pdf" multiple className="hidden" onChange={handleMenuUpload} />
+                  </div>
+                </div>
+                <div className="hidden lg:block w-72 shrink-0">
+                  <BusinessCardPreview
+                    logoUrl={logoUrl} coverImageUrl={coverImageUrl} coverVideoUrl={coverVideoUrl}
+                    businessName={businessName} mainCategory={mainCategory} subcategories={bizSubcategories} tags={tags} eventTitle={eventTitle}
+                    street={street} description={description}
+                    onPreviewClick={() => setShowAppPreview(true)} previewReady={previewReady}
+                    colorBadge={colorBadge} colorCardBg={colorCardBg} colorButton={colorButton} colorPromo={colorPromo}
+                  />
+                </div>
+              </div>
+            </div>
+            );
+          })()}
 
           {/* ── AKTUALNOŚCI ── */}
           {activeSection === 'posts' && (
@@ -2671,7 +2682,7 @@ const BusinessDashboard = () => {
                                 {hourlyData.map((entry) => {
                                   const ratio = entry.total / maxVal;
                                   const fill = ratio >= 0.85
-                                    ? '#f97316'
+                                    ? '#D45113'
                                     : ratio >= 0.5
                                     ? '#fb923c'
                                     : ratio >= 0.2
@@ -2686,7 +2697,7 @@ const BusinessDashboard = () => {
                         {hasData && !analyticsLoading && (
                           <div className="flex items-center gap-4 mt-3 pt-3 border-t border-slate-50">
                             {[
-                              { color: '#f97316', label: 'Szczyt ruchu' },
+                              { color: '#D45113', label: 'Szczyt ruchu' },
                               { color: '#93c5fd', label: 'Aktywność' },
                               { color: '#dbeafe', label: 'Niski ruch' },
                             ].map(({ color, label }) => (
@@ -2768,7 +2779,7 @@ const BusinessDashboard = () => {
         disabled={!previewReady}
         title={!previewReady ? "Uzupełnij nazwę i dodaj zdjęcie, aby zobaczyć podgląd" : "Podgląd wizytówki w aplikacji"}
         aria-label="Podgląd wizytówki"
-        className="lg:hidden fixed z-[55] flex items-center gap-2 px-5 py-3 rounded-full bg-orange-600 text-white font-bold text-sm shadow-lg shadow-orange-600/30 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
+        className="lg:hidden fixed z-[55] flex items-center gap-2 px-5 py-3 rounded-full bg-[#D45113] text-white font-bold text-sm shadow-lg shadow-orange-600/30 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
         style={{ bottom: "max(1rem, env(safe-area-inset-bottom))", right: "1rem" }}
       >
         <Eye className="h-4 w-4" />
