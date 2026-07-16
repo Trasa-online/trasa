@@ -1941,16 +1941,24 @@ const BusinessDashboard = () => {
                       <Label htmlFor="website" className="text-xs">Strona WWW</Label>
                       <Input id="website" value={website} maxLength={200} onChange={e => { setWebsite(e.target.value); setIsDirty(true); }} type="url" />
                     </div>
-                    <div className="pt-2 border-t border-border/40">
-                      <BusinessHoursEditor
-                        value={openingHours}
-                        onChange={(next) => { setOpeningHours(next); setIsDirty(true); }}
-                      />
-                    </div>
                   </>
                 )}
+              </div>
+
+              {/* ── Godziny otwarcia (osobna sekcja) ── */}
+              {!isDraft && (
+                <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
+                  <BusinessHoursEditor
+                    value={openingHours}
+                    onChange={(next) => { setOpeningHours(next); setIsDirty(true); }}
+                  />
+                </div>
+              )}
+
+              {/* ── Kategoria główna + podkategorie (osobna sekcja) ── */}
+              <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm space-y-4">
                 {/* Kategoria główna */}
-                <div className="pt-2">
+                <div>
                   <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Kategoria główna</p>
                   <div className="grid grid-cols-2 gap-2">
                     {MAIN_CATEGORIES.map(cat => {
@@ -2029,9 +2037,10 @@ const BusinessDashboard = () => {
                     </div>
                   </div>
                 )}
+              </div>
 
-                {/* Tagi wizytówki */}
-                <div className="pt-2 border-t border-border/40">
+              {/* ── Tagi wizytówki (osobna sekcja) ── */}
+              <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
                   <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Tagi wizytówki <span className="normal-case font-normal">(max 3, widoczne na karcie w aplikacji)</span></p>
                   <div className="flex flex-wrap gap-2 mb-2">
                     {(tagsExpanded ? VIBE_TAG_SUGGESTIONS : VIBE_TAG_SUGGESTIONS.slice(0, 4)).map(tag => {
@@ -2082,15 +2091,13 @@ const BusinessDashboard = () => {
                     </div>
                   )}
                 </div>
-                <div className="pt-2 border-t border-border/40">
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Opis</p>
-                  <div className="space-y-1">
-                    <textarea rows={3} value={description} maxLength={500} onChange={e => { setDescription(e.target.value); setIsDirty(true); }} placeholder="Opisz swój lokal..." className="w-full rounded-2xl border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none" />
-                    <p className="text-[11px] text-muted-foreground text-right">{description.length}/500</p>
-                  </div>
+              {/* ── Opis (osobna sekcja) ── */}
+              <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Opis</p>
+                <div className="space-y-1">
+                  <textarea rows={3} value={description} maxLength={500} onChange={e => { setDescription(e.target.value); setIsDirty(true); }} placeholder="Opisz swój lokal..." className="w-full rounded-2xl border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none" />
+                  <p className="text-[11px] text-muted-foreground text-right">{description.length}/500</p>
                 </div>
-
-                {/* Menu / Cennik przeniesione do osobnej zakladki "Menu" (activeSection === 'menu') */}
               </div>
               </div> {/* end flex-1 min-w-0 */}
 
