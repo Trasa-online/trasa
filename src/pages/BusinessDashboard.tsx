@@ -232,7 +232,7 @@ function AppLikePreviewModal({
               <CoverMedia className="absolute inset-0 w-full h-full object-cover" />
               <div className="absolute inset-0" style={{ background: `linear-gradient(to top, ${colorCardBg}ee, ${colorCardBg}40, transparent)` }} />
               {catLabel && (
-                <div className="absolute top-4 left-4 px-3 py-1 rounded-full text-xs font-bold shadow-sm" style={{ background: colorBadge, color: getContrastColor(colorBadge) }}>
+                <div className="absolute top-4 left-4 px-3 py-1 rounded-full text-xs font-bold shadow-sm" style={{ background: colorBadge, color: "#fff" }}>
                   {catLabel}
                 </div>
               )}
@@ -499,7 +499,7 @@ function BusinessCardPreview({ logoUrl, coverImageUrl, coverVideoUrl, businessNa
         }
         <div className="absolute inset-0" style={{ background: `linear-gradient(to top, ${overlay}ee, ${overlay}40, transparent)` }} />
         {catLabel && (
-          <div className="absolute top-3 left-3 px-2.5 py-0.5 rounded-full text-[10px] font-bold shadow-sm" style={{ background: badge, color: getContrastColor(badge) }}>
+          <div className="absolute top-3 left-3 px-2.5 py-0.5 rounded-full text-[10px] font-bold shadow-sm" style={{ background: badge, color: "#fff" }}>
             {catLabel}
           </div>
         )}
@@ -1687,7 +1687,7 @@ const BusinessDashboard = () => {
         {/* ── Content ── */}
         {/* pb-40 gdy isDirty: sticky save bar (button h-12 + pt-3 + pb-6 + pb-safe-6) zajmuje
             ~110-130 px zaleznie od safe-area. pb-40 (160px) daje margines bez ucinania ostatniej sekcji. */}
-        <div className={`flex-1 p-4 md:p-6 max-w-4xl w-full ${isDirty ? 'pb-40' : 'pb-10'}`}>
+        <div className={`flex-1 p-4 md:p-6 max-w-4xl w-full ${isDirty ? 'pb-[calc(env(safe-area-inset-bottom,0px)+9rem)] md:pb-40' : 'pb-[calc(env(safe-area-inset-bottom,0px)+6rem)] md:pb-10'}`}>
 
           {/* Banners (always visible) */}
           <div className="space-y-3 mb-4">
@@ -2376,7 +2376,15 @@ const BusinessDashboard = () => {
                         <input ref={postPhotoInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handlePostPhotoUpload} />
                         <p className="ml-auto text-[11px] text-muted-foreground">Widoczny w podglądzie wizytówki</p>
                       </div>
+                      <button
+                        onClick={handleAddPost}
+                        disabled={submittingPost || (!postDescription.trim() && postPhotos.length === 0)}
+                        className="w-full py-2.5 rounded-full bg-[#D45113] text-white font-bold text-sm active:scale-[0.98] transition-transform disabled:opacity-40"
+                      >
+                        {submittingPost ? "Publikuję…" : "Publikuj"}
+                      </button>
                     </div>
+                    {posts.length > 0 && <p className="text-xs font-bold text-slate-400 uppercase tracking-widest pt-1">Historia wpisów</p>}
                     {posts.length === 0 && <p className="text-xs text-muted-foreground text-center py-4">Brak postów - dodaj pierwszy!</p>}
                     <div className="space-y-3">
                       {posts.map(post => (
