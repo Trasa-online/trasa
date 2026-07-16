@@ -1966,7 +1966,7 @@ const BusinessDashboard = () => {
                       return (
                         <button key={cat.id} type="button"
                           onClick={() => { setMainCategory(active ? "" : cat.id); setBizSubcategories([]); setIsDirty(true); }}
-                          className={`flex items-center gap-2.5 px-3 py-3 rounded-xl border-2 text-left transition-all ${active ? 'border-[#D45113] bg-orange-50 text-orange-700' : 'border-slate-100 bg-slate-50 text-slate-600 hover:border-slate-200'}`}>
+                          className={`flex items-center gap-2.5 px-3 py-3 rounded-xl border-2 text-left transition-all ${active ? 'border-slate-400 bg-slate-100 text-slate-900' : 'border-slate-100 bg-slate-50 text-slate-600 hover:border-slate-200'}`}>
                           <span className="text-xl shrink-0">{cat.emoji}</span>
                           <div className="min-w-0">
                             <p className="text-xs font-semibold leading-tight">{cat.label}</p>
@@ -1983,7 +1983,7 @@ const BusinessDashboard = () => {
                   <div className="pt-2 border-t border-border/40">
                     <div className="flex items-center justify-between mb-2">
                       <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Podkategoria</p>
-                      <span className={`text-[11px] font-bold ${bizSubcategories.length >= 3 ? 'text-orange-500' : 'text-muted-foreground'}`}>{bizSubcategories.length}/3</span>
+                      <span className={`text-[11px] font-bold ${bizSubcategories.length >= 3 ? 'text-slate-700' : 'text-muted-foreground'}`}>{bizSubcategories.length}/3</span>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {(MAIN_CATEGORIES.find(c => c.id === mainCategory)?.subcategories ?? []).map(sub => {
@@ -1994,7 +1994,7 @@ const BusinessDashboard = () => {
                           <button key={sub.id} type="button"
                             disabled={disabled}
                             onClick={() => { setBizSubcategories(prev => active ? prev.filter(s => s !== sub.label) : (prev.length >= 3 ? prev : [...prev, sub.label])); setIsDirty(true); }}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${active ? 'bg-[#D45113] border-[#D45113] text-white' : disabled ? 'bg-background border-border text-muted-foreground/40 cursor-not-allowed' : 'bg-background border-border text-muted-foreground hover:border-orange-300 hover:text-foreground'}`}>
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${active ? 'bg-slate-700 border-slate-700 text-white' : disabled ? 'bg-background border-border text-muted-foreground/40 cursor-not-allowed' : 'bg-background border-border text-muted-foreground hover:border-slate-300 hover:text-foreground'}`}>
                             <span>{sub.emoji}</span>{sub.label}
                           </button>
                         );
