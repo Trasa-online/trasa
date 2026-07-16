@@ -67,8 +67,8 @@
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>Trasa potrzebuje dostępu do biblioteki zdjęć, aby zapisać zdjęcie profilowe oraz zdjęcia z dziennika podróży.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Trasa pokazuje, jak blisko jesteś polecanych miejsc i punktów Twojej trasy. Lokalizacja liczona jest na Twoim telefonie i nigdzie jej nie zapisujemy.</string>
+	<string>Trasa pokazuje, jak blisko jesteś polecanych miejsc i punktów Twojej trasy. Dystanse liczymy na Twoim telefonie. Jeśli ustawisz swoją lokalizację jako punkt startowy trasy, zapiszemy te współrzędne jako część trasy.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>Trasa pokazuje, jak blisko jesteś polecanych miejsc i punktów Twojej trasy. Używamy lokalizacji wyłącznie gdy aplikacja jest otwarta - nie śledzimy Cię w tle. Lokalizacja liczona jest na Twoim telefonie i nigdzie jej nie zapisujemy.</string>
+	<string>Trasa pokazuje, jak blisko jesteś polecanych miejsc i punktów Twojej trasy. Używamy lokalizacji wyłącznie gdy aplikacja jest otwarta - nie śledzimy Cię w tle. Dystanse liczymy na Twoim telefonie, a jeśli ustawisz swoją lokalizację jako punkt startowy trasy, zapiszemy te współrzędne jako część trasy.</string>
 </dict>
 </plist>
