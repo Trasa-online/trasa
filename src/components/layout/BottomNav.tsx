@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate, useLocation } from "react-router-dom";
 import { NavLink } from "@/components/NavLink";
 import { BookOpen, Compass, Map, Plus, X, MapPin, Users, Link2, User, Heart, Sparkles, ArrowLeft, Layers } from "lucide-react";
@@ -22,6 +23,7 @@ function getActiveHomeCity(): string {
 }
 
 const BottomNav = () => {
+  const { t } = useTranslation("nav");
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
@@ -158,21 +160,21 @@ const BottomNav = () => {
                 className="w-full justify-center flex items-center gap-2.5 px-5 py-3 rounded-full bg-card border border-border text-foreground font-semibold text-sm shadow-xl active:scale-95 transition-transform whitespace-nowrap"
               >
                 <Sparkles className="h-4 w-4 text-orange-600" />
-                Przeglądaj miejsca
+                {t("browse_places")}
               </button>
               <button
                 onClick={handleCreateCollection}
                 className="w-full justify-center flex items-center gap-2.5 px-5 py-3 rounded-full bg-card border border-border text-foreground font-semibold text-sm shadow-xl active:scale-95 transition-transform whitespace-nowrap"
               >
                 <Layers className="h-4 w-4 text-orange-600" />
-                Stwórz zestawienie
+                {t("create_collection")}
               </button>
               <button
                 onClick={() => setPlanStep(true)}
                 className="w-full justify-center flex items-center gap-2.5 px-5 py-3 rounded-full bg-primary text-white font-semibold text-sm shadow-xl active:scale-95 transition-transform whitespace-nowrap"
               >
                 <MapPin className="h-4 w-4" />
-                Zaplanuj
+                {t("plan")}
               </button>
             </>
           ) : (
@@ -183,28 +185,28 @@ const BottomNav = () => {
                 className="w-full justify-center flex items-center gap-1.5 px-5 py-2.5 rounded-full bg-card/80 border border-border/60 text-muted-foreground font-semibold text-xs shadow-lg active:scale-95 transition-transform whitespace-nowrap"
               >
                 <ArrowLeft className="h-3.5 w-3.5" />
-                Wróć
+                {t("back")}
               </button>
               <button
                 onClick={handleSoloPlan}
                 className="w-full justify-center flex items-center gap-2.5 px-5 py-3 rounded-full bg-primary text-white font-semibold text-sm shadow-xl active:scale-95 transition-transform whitespace-nowrap"
               >
                 <MapPin className="h-4 w-4" />
-                Zaplanuj solo
+                {t("plan_solo")}
               </button>
               <button
                 onClick={handleGroupPlan}
                 className="w-full justify-center flex items-center gap-2.5 px-5 py-3 rounded-full bg-foreground text-background font-semibold text-sm shadow-xl active:scale-95 transition-transform whitespace-nowrap"
               >
                 <Users className="h-4 w-4" />
-                Zaplanuj grupowo
+                {t("plan_group")}
               </button>
               <button
                 onClick={() => { setShowMenu(false); setJoinCode(""); setShowJoinModal(true); }}
                 className="w-full justify-center flex items-center gap-2.5 px-5 py-3 rounded-full bg-card border border-border text-foreground font-semibold text-sm shadow-xl active:scale-95 transition-transform whitespace-nowrap"
               >
                 <Link2 className="h-4 w-4 text-orange-600" />
-                Dołącz do sesji
+                {t("join_session")}
               </button>
             </>
           )}
@@ -227,10 +229,12 @@ const BottomNav = () => {
               </div>
               <div className="flex-1">
                 <p className="text-base font-black leading-snug">
-                  Wykorzystać polubione z&nbsp;dziś?
+                  {t("reuse_title")}
                 </p>
                 <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
-                  Masz <strong>{reusePrompt.likes.length}</strong> {reusePrompt.likes.length === 1 ? "polubione miejsce" : reusePrompt.likes.length < 5 ? "polubione miejsca" : "polubionych miejsc"} z {reusePrompt.city}. Mogę je dodać do nowej trasy.
+                  {t("reuse_have")} <strong>{reusePrompt.likes.length}</strong>{" "}
+                  {reusePrompt.likes.length === 1 ? t("reuse_place_one") : reusePrompt.likes.length < 5 ? t("reuse_place_few") : t("reuse_place_many")}{" "}
+                  {t("reuse_from", { city: reusePrompt.city })}
                 </p>
               </div>
             </div>
@@ -239,13 +243,13 @@ const BottomNav = () => {
                 onClick={handleReuseAccept}
                 className="w-full py-3 rounded-full bg-primary text-white font-bold text-sm active:scale-[0.97] transition-transform shadow-md shadow-orange-500/20"
               >
-                Tak, wykorzystaj polubione →
+                {t("reuse_accept")}
               </button>
               <button
                 onClick={handleReuseDecline}
                 className="w-full py-3 rounded-full border border-border text-sm font-semibold text-foreground active:scale-[0.97] transition-transform"
               >
-                Nie, zacznij na nowo
+                {t("reuse_decline")}
               </button>
             </div>
           </div>
@@ -263,15 +267,15 @@ const BottomNav = () => {
             onClick={e => e.stopPropagation()}
           >
             <div>
-              <h2 className="font-black text-lg">Dołącz do sesji</h2>
-              <p className="text-xs text-muted-foreground mt-0.5">Wpisz kod sesji otrzymany od znajomych</p>
+              <h2 className="font-black text-lg">{t("join_title")}</h2>
+              <p className="text-xs text-muted-foreground mt-0.5">{t("join_desc")}</p>
             </div>
             <input
               type="text"
               value={joinCode}
               onChange={e => setJoinCode(e.target.value.toUpperCase())}
               onKeyDown={e => { if (e.key === "Enter") handleJoinSubmit(); }}
-              placeholder="np. ABC123"
+              placeholder={t("join_placeholder")}
               maxLength={10}
               className="w-full px-4 py-3.5 rounded-2xl border border-border bg-muted/40 text-base font-mono font-semibold tracking-widest text-center placeholder:text-muted-foreground/50 placeholder:font-normal placeholder:tracking-normal focus:outline-none focus:ring-2 focus:ring-orange-500/30 focus:border-orange-400 transition-colors"
             />
@@ -280,14 +284,14 @@ const BottomNav = () => {
                 onClick={() => setShowJoinModal(false)}
                 className="flex-1 py-3 rounded-full border border-border text-sm font-medium text-muted-foreground active:scale-[0.97] transition-transform"
               >
-                Anuluj
+                {t("cancel")}
               </button>
               <button
                 onClick={handleJoinSubmit}
                 disabled={!joinCode.trim()}
                 className="flex-[2] py-3 rounded-full bg-primary text-white font-bold text-sm active:scale-[0.97] transition-transform disabled:opacity-40 disabled:active:scale-100"
               >
-                Dołącz
+                {t("join_submit")}
               </button>
             </div>
           </div>
@@ -346,7 +350,7 @@ const BottomNav = () => {
           <button
             onClick={() => setShowMenu(!showMenu)}
             className="flex items-center justify-center"
-            aria-label="Dodaj trasę"
+            aria-label={t("fab_aria")}
           >
             <span className="h-11 w-11 rounded-full bg-primary flex items-center justify-center active:scale-95 transition-transform shadow-md shadow-orange-500/25">
               {showMenu

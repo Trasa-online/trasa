@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import posthog from "posthog-js";
+import { useTranslation } from "react-i18next";
 
 // Tworzenie zestawien odblokowane. Klik rejestrujemy w PostHog (funnel intent -> publikacja).
 const trackCollectionCreate = (source: string) => {
@@ -57,6 +58,7 @@ function formatGroupDate(dateStr: string): string {
 }
 
 export const LikedTab = () => {
+  const { t } = useTranslation("explore");
   const navigate = useNavigate();
   const { user } = useAuth();
   const { open: openAuthDrawer } = useAuthDrawer();
@@ -102,16 +104,16 @@ export const LikedTab = () => {
           <Heart className="h-7 w-7 text-orange-600" />
         </div>
         <div className="space-y-2">
-          <p className="text-lg font-bold tracking-tight">Brak zapisanych miejsc</p>
+          <p className="text-lg font-bold tracking-tight">{t("liked.empty_title")}</p>
           <p className="text-sm text-muted-foreground leading-relaxed max-w-[280px] mx-auto">
-            Wracaj na główną i&nbsp;przeglądaj miejsca. Te&nbsp;które zapiszesz pojawią się tutaj.
+            {t("liked.empty_desc")}
           </p>
         </div>
         <button
           onClick={() => navigate("/home")}
           className="px-6 py-3 rounded-full bg-primary text-white font-bold text-sm active:scale-95 transition-transform shadow-md shadow-orange-500/20"
         >
-          Przeglądaj miejsca
+          {t("liked.browse")}
         </button>
       </div>
     );
@@ -148,21 +150,21 @@ export const LikedTab = () => {
                   {group.city}
                 </p>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  {group.places.length} {group.places.length === 1 ? "zapisane miejsce" : group.places.length < 5 ? "zapisane miejsca" : "zapisanych miejsc"}
+                  {group.places.length} {group.places.length === 1 ? t("liked.saved_place_one") : group.places.length < 5 ? t("liked.saved_place_few") : t("liked.saved_place_many")}
                 </p>
               </div>
               <ChevronDown className={`h-5 w-5 text-muted-foreground/60 shrink-0 transition-transform ${expanded ? "rotate-180" : ""}`} />
             </button>
             <button
               onClick={() => {
-                if (!confirm(`Usunąć wszystkie zapisane z ${group.city}?`)) return;
+                if (!confirm(t("liked.confirm_clear_city", { city: group.city }))) return;
                 const placeNames = group.places.map(p => p.place_name);
                 clearCity(group.city);
                 if (user?.id) void removeReactionsFromDb(user.id, group.city, placeNames);
                 refresh();
               }}
               className="h-8 w-8 flex items-center justify-center rounded-full text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10 transition-colors active:scale-90 shrink-0"
-              aria-label="Usuń grupę"
+              aria-label={t("liked.remove_group_aria")}
             >
               <Trash2 className="h-3.5 w-3.5" />
             </button>
@@ -196,7 +198,7 @@ export const LikedTab = () => {
                     refresh();
                   }}
                   className="h-7 w-7 flex items-center justify-center rounded-full text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 transition-colors active:scale-90 shrink-0"
-                  aria-label="Usuń"
+                  aria-label={t("liked.remove_aria")}
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
@@ -211,14 +213,14 @@ export const LikedTab = () => {
                 onClick={() => handleCreateRoute(group)}
                 className="w-full py-2.5 rounded-full bg-primary text-white font-bold text-xs flex items-center justify-center gap-1.5 active:scale-[0.97] transition-transform"
               >
-                Stwórz trasę z tych miejsc
+                {t("liked.create_route")}
                 <ArrowRight className="h-3.5 w-3.5" />
               </button>
               <button
                 onClick={() => { trackCollectionCreate("liked_group"); navigate(`/zestawienie/nowe?from=liked&city=${encodeURIComponent(group.city)}`); }}
                 className="w-full py-2.5 rounded-full bg-secondary text-secondary-foreground font-bold text-xs flex items-center justify-center gap-1.5 active:scale-[0.97] transition-transform"
               >
-                Stwórz zestawienie z tych miejsc
+                {t("liked.create_collection")}
               </button>
             </div>
           )}
@@ -234,6 +236,7 @@ export const LikedTab = () => {
 // Lista zestawien stworzonych przez zalogowanego usera (wejscie z karty "Zestawienia"
 // w profilu). Tap w pozycje -> edycja. Pusty stan -> CTA "Stworz pierwsze".
 const MyCollections = () => {
+  const { t } = useTranslation("explore");
   const navigate = useNavigate();
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -248,11 +251,11 @@ const MyCollections = () => {
       await (supabase as any).from("discovery_items").delete().eq("collection_id", confirmDelete.id);
       const { error } = await (supabase as any).from("discovery_collections").delete().eq("id", confirmDelete.id).eq("user_id", user.id);
       if (error) throw new Error(error.message);
-      toast.success("Zestawienie usunięte");
+      toast.success(t("collections.toast_deleted"));
       setConfirmDelete(null);
       queryClient.invalidateQueries({ queryKey: ["my-collections", user.id] });
     } catch (e: any) {
-      toast.error(`Nie udało się usunąć: ${e?.message ?? "błąd"}`);
+      toast.error(t("collections.toast_delete_error", { error: e?.message ?? t("collections.error_fallback") }));
     } finally {
       setDeleting(false);
     }
@@ -293,16 +296,16 @@ const MyCollections = () => {
             <ListChecks className="h-6 w-6 text-orange-600" />
           </div>
           <div className="space-y-1">
-            <p className="text-base font-black">Brak zestawień</p>
+            <p className="text-base font-black">{t("collections.empty_title")}</p>
             <p className="text-sm text-muted-foreground max-w-[260px] leading-relaxed">
-              Stwórz swoją pierwszą kolekcję ulubionych miejsc i&nbsp;podziel się nią z&nbsp;innymi.
+              {t("collections.empty_desc")}
             </p>
           </div>
           <button
             onClick={() => { trackCollectionCreate("my_collections_empty"); navigate("/zestawienie/nowe"); }}
             className="mt-1 px-5 py-3 rounded-full bg-primary text-white text-sm font-bold active:scale-[0.97] transition-transform shadow-md shadow-orange-500/20"
           >
-            Stwórz zestawienie
+            {t("collections.create")}
           </button>
         </div>
       ) : (
@@ -323,23 +326,23 @@ const MyCollections = () => {
                 </div>
               )}
               <div className="flex-1 min-w-0">
-                <p className="font-bold text-sm leading-tight truncate">{col.title || "Bez tytułu"}</p>
+                <p className="font-bold text-sm leading-tight truncate">{col.title || t("collections.untitled")}</p>
                 <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                  {[col.city, `${col.count} ${col.count === 1 ? "miejsce" : col.count < 5 ? "miejsca" : "miejsc"}`].filter(Boolean).join(" · ")}
-                  {col.is_public === false ? " · prywatne" : ""}
+                  {[col.city, `${col.count} ${col.count === 1 ? t("collections.place_one") : col.count < 5 ? t("collections.place_few") : t("collections.place_many")}`].filter(Boolean).join(" · ")}
+                  {col.is_public === false ? ` · ${t("collections.private")}` : ""}
                 </p>
                 {col.moderation_status === "pending" && (
                   <span className="inline-flex items-center gap-1 mt-1 text-[10px] font-bold text-amber-700 bg-amber-100 rounded-full px-2 py-0.5">
-                    ⏳ czeka na akceptację
+                    ⏳ {t("collections.pending")}
                   </span>
                 )}
                 {col.moderation_status === "rejected" && (
                   <div className="mt-1">
                     <span className="inline-flex items-center gap-1 text-[10px] font-bold text-destructive bg-destructive/10 rounded-full px-2 py-0.5">
-                      odrzucone
+                      {t("collections.rejected")}
                     </span>
                     {col.moderation_note && (
-                      <p className="text-[11px] text-muted-foreground mt-1 leading-snug whitespace-pre-wrap">Powód: {col.moderation_note}</p>
+                      <p className="text-[11px] text-muted-foreground mt-1 leading-snug whitespace-pre-wrap">{t("collections.reason", { note: col.moderation_note })}</p>
                     )}
                   </div>
                 )}
@@ -348,14 +351,14 @@ const MyCollections = () => {
             <div className="flex items-center gap-0.5 shrink-0">
               <button
                 onClick={() => navigate(`/zestawienie/${col.id}/edytuj`)}
-                aria-label="Edytuj zestawienie"
+                aria-label={t("collections.edit_aria")}
                 className="h-9 w-9 flex items-center justify-center rounded-full text-muted-foreground/60 active:bg-muted transition-colors"
               >
                 <Pencil className="h-4 w-4" />
               </button>
               <button
-                onClick={() => setConfirmDelete({ id: col.id, title: col.title || "Bez tytułu" })}
-                aria-label="Usuń zestawienie"
+                onClick={() => setConfirmDelete({ id: col.id, title: col.title || t("collections.untitled") })}
+                aria-label={t("collections.delete_aria")}
                 className="h-9 w-9 flex items-center justify-center rounded-full text-destructive active:bg-destructive/10 transition-colors"
               >
                 <Trash2 className="h-4 w-4" />
@@ -380,9 +383,9 @@ const MyCollections = () => {
                 <Trash2 className="h-5 w-5 text-destructive" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-base font-black leading-snug">Usunąć zestawienie?</p>
+                <p className="text-base font-black leading-snug">{t("collections.delete_title")}</p>
                 <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
-                  „{confirmDelete.title}" zniknie na&nbsp;zawsze. Tej akcji nie&nbsp;można cofnąć.
+                  {t("collections.delete_desc", { title: confirmDelete.title })}
                 </p>
               </div>
             </div>
@@ -392,14 +395,14 @@ const MyCollections = () => {
                 disabled={deleting}
                 className="flex-1 py-3 rounded-full border border-border text-sm font-semibold text-foreground active:scale-[0.97] transition-transform disabled:opacity-50"
               >
-                Anuluj
+                {t("collections.cancel")}
               </button>
               <button
                 onClick={handleDelete}
                 disabled={deleting}
                 className="flex-1 py-3 rounded-full bg-destructive text-white text-sm font-bold active:scale-[0.97] transition-transform disabled:opacity-50"
               >
-                {deleting ? "Usuwam…" : "Usuń"}
+                {deleting ? t("collections.deleting") : t("collections.delete")}
               </button>
             </div>
           </div>
@@ -411,6 +414,7 @@ const MyCollections = () => {
 
 // Polubione przeniesione na /home (ikona serca). Eksploruj = sam feed polecanych.
 const Explore = () => {
+  const { t } = useTranslation("explore");
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const location = useLocation();
@@ -430,19 +434,19 @@ const Explore = () => {
             <button
               onClick={() => { if (window.history.state?.idx > 0) navigate(-1); else navigate("/moj-profil"); }}
               className="h-9 w-9 -ml-1 flex items-center justify-center text-foreground shrink-0"
-              aria-label="Wróć do eksploracji"
+              aria-label={t("explore.back_aria")}
             >
               <ArrowLeft className="h-5 w-5" />
             </button>
             <div>
-              <h1 className="text-xl font-display font-extrabold tracking-tight">Twoje zestawienia</h1>
-              <p className="text-xs text-muted-foreground mt-0.5">Kolekcje miejsc, które stworzyłeś.</p>
+              <h1 className="text-xl font-display font-extrabold tracking-tight">{t("explore.collections_title")}</h1>
+              <p className="text-xs text-muted-foreground mt-0.5">{t("explore.collections_subtitle")}</p>
             </div>
           </div>
         ) : (
           <div>
-            <h1 className="text-xl font-display font-extrabold tracking-tight pt-2">Eksploruj</h1>
-            <p className="text-xs text-muted-foreground mt-1">Polecane miejsca, trasy i&nbsp;zestawienia.</p>
+            <h1 className="text-xl font-display font-extrabold tracking-tight pt-2">{t("explore.title")}</h1>
+            <p className="text-xs text-muted-foreground mt-1">{t("explore.subtitle")}</p>
           </div>
         )}
         <div className="flex items-center gap-1.5 shrink-0 mt-2">
@@ -453,7 +457,7 @@ const Explore = () => {
             onClick={() => { trackCollectionCreate("explore_header"); navigate("/zestawienie/nowe"); }}
             className="shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-primary text-white text-xs font-bold active:scale-[0.97] transition-transform shadow-sm shadow-orange-500/20"
           >
-            <Plus className="h-3.5 w-3.5" /> Dodaj
+            <Plus className="h-3.5 w-3.5" /> {t("explore.add")}
           </button>
         </div>
       </div>

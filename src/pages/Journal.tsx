@@ -2,10 +2,12 @@ import { useAuth } from "@/hooks/useAuth";
 import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import { ArrowRight, BookOpen } from "lucide-react";
 import JournalTab from "@/components/home/JournalTab";
+import { useTranslation } from "react-i18next";
 
 const Journal = () => {
   const { user, isAnonymous } = useAuth();
   const { open } = useAuthDrawer();
+  const { t } = useTranslation("journal");
   // Anon = traktuj jak gosc (zero zapisanych danych w UI). Dziennik wymaga
   // konta z mailem zeby trasy/pocztówki byly persystowane miedzy urzadzeniami.
   const isGuestView = !user || isAnonymous;
@@ -21,9 +23,9 @@ const Journal = () => {
           <BookOpen className="h-9 w-9 text-orange-600" />
         </div>
         <div className="space-y-2 max-w-[320px]">
-          <p className="text-2xl font-display font-extrabold tracking-tight leading-tight">Twój dziennik podróży</p>
+          <p className="text-2xl font-display font-extrabold tracking-tight leading-tight">{t("guest_title")}</p>
           <p className="text-sm text-muted-foreground leading-relaxed">
-            Załóż konto, żeby zapisywać trasy, dodawać zdjęcia i&nbsp;notatki z&nbsp;każdej podróży.
+            {t("guest_desc")}
           </p>
         </div>
         <div className="flex flex-col items-center gap-3 w-full max-w-[280px]">
@@ -31,14 +33,14 @@ const Journal = () => {
             onClick={() => open({ mode: "register", hint: "journal" })}
             className="w-full px-8 py-3.5 rounded-full bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-95 transition-transform"
           >
-            Załóż konto
+            {t("register")}
             <ArrowRight className="h-4 w-4" />
           </button>
           <button
             onClick={() => open({ mode: "login", hint: "journal" })}
             className="w-full px-8 py-3.5 rounded-full bg-secondary text-secondary-foreground font-bold text-sm flex items-center justify-center gap-2 active:scale-95 transition-transform"
           >
-            Zaloguj się
+            {t("login")}
           </button>
         </div>
       </div>
@@ -48,8 +50,8 @@ const Journal = () => {
   return (
     <div className="flex-1 flex flex-col px-4 pt-2 pb-[calc(5rem+env(safe-area-inset-bottom,0px))] overflow-y-auto">
       <div className="pt-3 pb-2.5">
-        <h1 className="text-xl font-display font-extrabold tracking-tight">Dziennik podróży</h1>
-        <p className="text-xs text-muted-foreground mt-0.5">Wspomnienia z&nbsp;Twoich przebytych tras.</p>
+        <h1 className="text-xl font-display font-extrabold tracking-tight">{t("title")}</h1>
+        <p className="text-xs text-muted-foreground mt-0.5">{t("subtitle")}</p>
       </div>
       <div className="border-b border-border/40 mb-3" />
 

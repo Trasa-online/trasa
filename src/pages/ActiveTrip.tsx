@@ -14,13 +14,14 @@ import type { MockPlace } from "@/components/plan-wizard/PlaceSwiper";
 import { expandCity } from "@/lib/cities";
 import { format, parseISO, isValid } from "date-fns";
 import { pl } from "date-fns/locale";
+import { useTranslation } from "react-i18next";
 
 // Error boundary wokol RouteMap - Google Maps API (vis.gl/react-google-maps)
 // czasami crashuje (np. brak API key w env, network down, geocoding limit).
 // Bez tego cały widok ActiveTrip zostawal zablokowany przez render error.
 // Z fallback uzytkownik widzi liste pinów + checkboxy + photo - mapa to bonus.
-class MapErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
-  constructor(props: { children: ReactNode }) {
+class MapErrorBoundary extends Component<{ children: ReactNode; fallbackText: string }, { hasError: boolean }> {
+  constructor(props: { children: ReactNode; fallbackText: string }) {
     super(props);
     this.state = { hasError: false };
   }
@@ -34,7 +35,7 @@ class MapErrorBoundary extends Component<{ children: ReactNode }, { hasError: bo
     if (this.state.hasError) {
       return (
         <div className="h-full w-full flex items-center justify-center text-xs text-muted-foreground bg-muted/30">
-          Mapa chwilowo niedostępna
+          {this.props.fallbackText}
         </div>
       );
     }
@@ -75,6 +76,7 @@ const ActiveTrip = ({ routeId: propRouteId, embedded = false }: { routeId?: stri
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const { t } = useTranslation("activetrip");
   const [uploadingPinId, setUploadingPinId] = useState<string | null>(null);
   const [togglingPinId, setTogglingPinId] = useState<string | null>(null);
   const [photoPreview, setPhotoPreview] = useState<{ url: string; pinId: string; idx: number } | null>(null);
@@ -174,13 +176,13 @@ const ActiveTrip = ({ routeId: propRouteId, embedded = false }: { routeId?: stri
         queryClient.removeQueries({ queryKey: ["home-active-solo"] });
         queryClient.invalidateQueries({ queryKey: ["active-routes"] });
         queryClient.invalidateQueries({ queryKey: ["journal-entries"] });
-        toast.success("Brawo! Wszystkie miejsca odwiedzone 🎉", { description: "Sprawdź trasę i dodaj wspomnienie" });
+        toast.success(t("all_visited_title"), { description: t("all_visited_desc") });
         navigate(`/review-summary?route=${routeId}`);
       }
     } catch (err: any) {
       console.error("[ActiveTrip] toggle failed:", err);
       queryClient.invalidateQueries({ queryKey: ["active-trip", routeId] });
-      toast.error("Nie udało się zapisać", { description: err?.message ?? "" });
+      toast.error(t("save_error"), { description: err?.message ?? "" });
     }
     setTogglingPinId(null);
   };
@@ -211,7 +213,7 @@ const ActiveTrip = ({ routeId: propRouteId, embedded = false }: { routeId?: stri
 
     const remaining = MAX_PHOTOS_PER_PIN - (pin.user_photo_urls?.length ?? 0);
     if (remaining <= 0) {
-      toast.error(`Maksymalnie ${MAX_PHOTOS_PER_PIN} zdjęć na miejsce`);
+      toast.error(t("max_photos", { max: MAX_PHOTOS_PER_PIN }));
       return;
     }
     const toUpload = files.slice(0, remaining);
@@ -220,7 +222,7 @@ const ActiveTrip = ({ routeId: propRouteId, embedded = false }: { routeId?: stri
       const newUrls: string[] = [];
       for (const file of toUpload) {
         if (!ALLOWED_MIME.includes(file.type)) {
-          toast.error("Niedozwolony format pliku");
+          toast.error(t("invalid_format"));
           continue;
         }
         const optimized = await resizeImage(file);
@@ -232,7 +234,7 @@ const ActiveTrip = ({ routeId: propRouteId, embedded = false }: { routeId?: stri
           .upload(path, optimized);
         if (uploadError) {
           console.error("[ActiveTrip] upload failed:", uploadError);
-          toast.error(`Nie udało się przesłać zdjęcia: ${uploadError.message}`);
+          toast.error(t("upload_photo_error", { message: uploadError.message }));
           continue;
         }
         const url = supabase.storage.from("trip-photos").getPublicUrl(data.path).data.publicUrl;
@@ -248,10 +250,10 @@ const ActiveTrip = ({ routeId: propRouteId, embedded = false }: { routeId?: stri
         queryClient.setQueryData(["active-trip", routeId], (old: any) =>
           old ? { ...old, pins: old.pins.map((p: Pin) => p.id === pin.id ? { ...p, user_photo_urls: updatedUrls } : p) } : old
         );
-        toast.success(`Dodano ${newUrls.length} ${newUrls.length === 1 ? "zdjęcie" : "zdjęcia"}`);
+        toast.success(t("photos_added", { count: newUrls.length }));
       }
     } catch (err: any) {
-      toast.error(err.message ?? "Nie udało się przesłać zdjęć");
+      toast.error(err.message ?? t("upload_error"));
     }
     setUploadingPinId(null);
     currentUploadPinRef.current = null;
@@ -270,7 +272,7 @@ const ActiveTrip = ({ routeId: propRouteId, embedded = false }: { routeId?: stri
       if (error) throw error;
     } catch {
       queryClient.invalidateQueries({ queryKey: ["active-trip", routeId] });
-      toast.error("Nie udało się usunąć zdjęcia");
+      toast.error(t("remove_photo_error"));
     }
   };
 
@@ -285,10 +287,10 @@ const ActiveTrip = ({ routeId: propRouteId, embedded = false }: { routeId?: stri
   if (!route) {
     return (
       <div className={`flex flex-col items-center justify-center gap-4 px-8 text-center ${embedded ? "h-full flex-1 min-h-0" : "h-[100dvh]"}`}>
-        <p className="text-lg font-bold">Nie znaleziono trasy</p>
+        <p className="text-lg font-bold">{t("route_not_found")}</p>
         {queryError && (
           <p className="text-xs text-muted-foreground max-w-[280px]">
-            {(queryError as Error).message ?? "Nieznany błąd"}
+            {(queryError as Error).message ?? t("unknown_error")}
           </p>
         )}
         <p className="text-[10px] text-muted-foreground/50 font-mono">
@@ -298,7 +300,7 @@ const ActiveTrip = ({ routeId: propRouteId, embedded = false }: { routeId?: stri
           onClick={() => navigate("/home")}
           className="px-6 py-3 rounded-full bg-primary text-white font-semibold text-sm"
         >
-          Wróć na główną
+          {t("back_home")}
         </button>
       </div>
     );
@@ -316,13 +318,13 @@ const ActiveTrip = ({ routeId: propRouteId, embedded = false }: { routeId?: stri
           <button
             onClick={() => navigate("/home")}
             className="h-9 w-9 -ml-1 flex items-center justify-center text-foreground"
-            aria-label="Wróć"
+            aria-label={t("back")}
           >
             <ArrowLeft className="h-5 w-5" />
           </button>
         )}
         <div className="flex-1 min-w-0">
-          <p className="text-base font-bold leading-tight truncate">{route.city || route.title || "Trasa"}</p>
+          <p className="text-base font-bold leading-tight truncate">{route.city || route.title || t("route_fallback")}</p>
           {dateLabel && <p className="text-xs text-muted-foreground">{dateLabel}</p>}
         </div>
         {/* Reset zaznaczonych pinów - przydaje sie gdy user przetestowala wczoraj
@@ -330,7 +332,7 @@ const ActiveTrip = ({ routeId: propRouteId, embedded = false }: { routeId?: stri
         {pins.some((p) => p.visited_at) && (
           <button
             onClick={async () => {
-              if (!confirm("Cofnąć oznaczenia wszystkich miejsc jako odwiedzone?")) return;
+              if (!confirm(t("reset_confirm"))) return;
               const visitedPins = pins.filter((p) => p.visited_at);
               queryClient.setQueryData(["active-trip", routeId], (old: any) =>
                 old ? { ...old, pins: old.pins.map((p: Pin) => ({ ...p, visited_at: null })) } : old
@@ -342,15 +344,15 @@ const ActiveTrip = ({ routeId: propRouteId, embedded = false }: { routeId?: stri
                   .update({ visited_at: null })
                   .in("id", ids);
                 if (error) throw error;
-                toast.success("Wszystkie miejsca odznaczone");
+                toast.success(t("all_unmarked"));
               } catch (err: any) {
                 queryClient.invalidateQueries({ queryKey: ["active-trip", routeId] });
-                toast.error("Nie udało się", { description: err?.message ?? "" });
+                toast.error(t("save_failed"), { description: err?.message ?? "" });
               }
             }}
             className="text-xs text-muted-foreground underline px-2"
           >
-            Resetuj
+            {t("reset")}
           </button>
         )}
       </div>
@@ -359,7 +361,7 @@ const ActiveTrip = ({ routeId: propRouteId, embedded = false }: { routeId?: stri
           gdy brakuje API key albo network failuje. Lista pinów pozostaje niezalezna. */}
       {pinsWithCoords.length > 0 && (
         <div className="shrink-0 h-[35dvh] min-h-[200px] max-h-[320px] border-b border-border/30">
-          <MapErrorBoundary>
+          <MapErrorBoundary fallbackText={t("map_unavailable")}>
             <RouteMap pins={pinsWithCoords} className="h-full w-full" />
           </MapErrorBoundary>
         </div>
@@ -369,7 +371,7 @@ const ActiveTrip = ({ routeId: propRouteId, embedded = false }: { routeId?: stri
       <div className={`flex-1 min-h-0 overflow-y-auto px-4 py-3 space-y-2.5 ${embedded ? "pb-[calc(8rem+3.5rem)]" : "pb-32"}`}>
         {pins.length === 0 && (
           <div className="py-16 text-center text-sm text-muted-foreground">
-            Brak miejsc w tej trasie
+            {t("no_places")}
           </div>
         )}
         {pins.map((pin, idx) => {
@@ -397,7 +399,7 @@ const ActiveTrip = ({ routeId: propRouteId, embedded = false }: { routeId?: stri
                       ? "bg-orange-600 border-orange-600 text-white"
                       : "border-border bg-background hover:border-orange-400"
                   )}
-                  aria-label={visited ? "Cofnij oznaczenie" : "Oznacz jako odwiedzone"}
+                  aria-label={visited ? t("unmark_visited") : t("mark_visited")}
                 >
                   {togglingPinId === pin.id
                     ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -421,7 +423,7 @@ const ActiveTrip = ({ routeId: propRouteId, embedded = false }: { routeId?: stri
                     </p>
                     {isNext && !visited && (
                       <span className="shrink-0 text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-orange-100 text-orange-700">
-                        Następne
+                        {t("next")}
                       </span>
                     )}
                   </div>
@@ -455,7 +457,7 @@ const ActiveTrip = ({ routeId: propRouteId, embedded = false }: { routeId?: stri
           onClick={() => navigate(`/review-summary?route=${routeId}`)}
           className="mx-auto w-auto px-8 py-2.5 rounded-full bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 shadow-md active:scale-[0.98] transition-transform"
         >
-          Zakończ trasę
+          {t("finish_trip")}
         </button>
       </div>
 

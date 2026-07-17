@@ -1,0 +1,23 @@
+{
+  "guest_title": "Your travel journal",
+  "guest_desc": "Create an account to save routes, add photos and notes from every trip.",
+  "register": "Create account",
+  "login": "Log in",
+  "title": "Travel journal",
+  "subtitle": "Memories from the trips you've taken.",
+  "day_review": {
+    "toast_rate_limit": "Too many requests. Please try again in a moment.",
+    "toast_no_credits": "Out of AI credits. Top up your account.",
+    "toast_ai_error": "AI error ({{status}}): {{detail}}",
+    "toast_try_again": "Please try again.",
+    "toast_connection_error": "Connection error. Please try again.",
+    "initial_message": "I finished my day in {{city}}. I want to do a recap.",
+    "plan_day": "Day {{day}} plan",
+    "next_day_plan": "Plan - Day {{day}}",
+    "fix": "Edit",
+    "analyzing": "Analyzing your route…",
+    "done_title": "Great conversation!",
+    "done_desc": "I've saved your impressions from the day. You'll be taken to the summary shortly.",
+    "input_placeholder": "Write your answer..."
+  }
+}

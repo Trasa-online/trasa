@@ -1,0 +1,23 @@
+{
+  "guest_title": "Twój dziennik podróży",
+  "guest_desc": "Załóż konto, żeby zapisywać trasy, dodawać zdjęcia i notatki z każdej podróży.",
+  "register": "Załóż konto",
+  "login": "Zaloguj się",
+  "title": "Dziennik podróży",
+  "subtitle": "Wspomnienia z Twoich przebytych tras.",
+  "day_review": {
+    "toast_rate_limit": "Zbyt wiele zapytań. Spróbuj ponownie za chwilę.",
+    "toast_no_credits": "Brak kredytów AI. Doładuj konto.",
+    "toast_ai_error": "Błąd AI ({{status}}): {{detail}}",
+    "toast_try_again": "Spróbuj ponownie.",
+    "toast_connection_error": "Błąd połączenia. Spróbuj ponownie.",
+    "initial_message": "Skończyłem dzień w {{city}}. Chcę zrobić podsumowanie.",
+    "plan_day": "Plan dnia {{day}}",
+    "next_day_plan": "Plan - Dzień {{day}}",
+    "fix": "Popraw",
+    "analyzing": "Analizuję Twoją trasę…",
+    "done_title": "Świetna rozmowa!",
+    "done_desc": "Zapisałam Twoje wrażenia z dnia. Za chwilę przejdziesz do podsumowania.",
+    "input_placeholder": "Napisz odpowiedź..."
+  }
+}

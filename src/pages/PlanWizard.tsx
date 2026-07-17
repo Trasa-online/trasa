@@ -21,6 +21,7 @@ import { saveDraft, removeDraft } from "@/lib/draftRoutes";
 import LocationPrimer from "@/components/LocationPrimer";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
 
 // Steps: 1=CityPicker, 2=FullCalendarPicker, 3=StartingLocationPicker, 4=PlaceSwiper.
 // CategoryPicker (poprzednio step 3) zostal usuniety - kategorie filtruje sie teraz
@@ -29,13 +30,13 @@ type Step = 1 | 2 | 3 | 4;
 
 // Grupowanie matches po kategorii - spojne z GroupSession (parowanie grupowe).
 const MATCH_CATEGORIES = [
-  { label: "Kawiarnia",   emoji: "☕",  dbValues: ["cafe"] },
-  { label: "Restauracja", emoji: "🍽️", dbValues: ["restaurant"] },
-  { label: "Bar",         emoji: "🍺",  dbValues: ["bar"] },
-  { label: "Kultura",     emoji: "🏛️", dbValues: ["museum", "monument"] },
-  { label: "Natura",      emoji: "🌿",  dbValues: ["park", "viewpoint"] },
-  { label: "Rozrywka",    emoji: "🎪",  dbValues: ["experience"] },
-  { label: "Zakupy",      emoji: "🛍️", dbValues: ["shopping", "market"] },
+  { id: "cafe",         emoji: "☕",  dbValues: ["cafe"] },
+  { id: "restaurant",   emoji: "🍽️", dbValues: ["restaurant"] },
+  { id: "bar",          emoji: "🍺",  dbValues: ["bar"] },
+  { id: "culture",      emoji: "🏛️", dbValues: ["museum", "monument"] },
+  { id: "nature",       emoji: "🌿",  dbValues: ["park", "viewpoint"] },
+  { id: "entertainment", emoji: "🎪", dbValues: ["experience"] },
+  { id: "shopping",     emoji: "🛍️", dbValues: ["shopping", "market"] },
 ];
 
 const PlanWizard = () => {
@@ -44,6 +45,7 @@ const PlanWizard = () => {
   const { user, isAnonymous } = useAuth();
   const { open: openAuthDrawer } = useAuthDrawer();
   const posthog = usePostHog();
+  const { t } = useTranslation("plan");
   const returnState = location.state as { step?: number; city?: string; date?: string; numDays?: number; startingLocation?: string | { name: string; latitude: number; longitude: number }; likedPlaceNames?: string[]; skippedPlaceNames?: string[]; exploreMode?: boolean; fromRoute?: boolean } | null;
 
   const initialStep: Step = (() => {
@@ -147,10 +149,11 @@ const PlanWizard = () => {
 
   const categoryLabel = useMemo(() => {
     const total = selectedCategories.length + dietFilters.length + (sortMode !== "default" ? 1 : 0);
-    if (total === 0) return "Filtry";
-    if (selectedCategories.length === 1 && total === 1) return getSubcategoryLabel(selectedCategories[0]) ?? "Wybrane";
-    return `${total} ${total === 1 ? "filtr" : total < 5 ? "filtry" : "filtrów"}`;
-  }, [selectedCategories, dietFilters, sortMode]);
+    if (total === 0) return t("filters");
+    if (selectedCategories.length === 1 && total === 1) return getSubcategoryLabel(selectedCategories[0]) ?? t("filters_selected");
+    const form = total === 1 ? "one" : total < 5 ? "few" : "many";
+    return t(`filters_count_${form}`, { count: total });
+  }, [selectedCategories, dietFilters, sortMode, t]);
 
   const toggleCategory = (id: string) => {
     setSelectedCategories((prev) => {
@@ -268,7 +271,7 @@ const PlanWizard = () => {
         <button
           onClick={handleBack}
           className="h-9 w-9 flex items-center justify-center -ml-1 shrink-0 text-foreground"
-          aria-label="Wróć"
+          aria-label={t("back")}
         >
           <ArrowLeft className="h-5 w-5" />
         </button>
@@ -294,12 +297,12 @@ const PlanWizard = () => {
               }}
               className="text-sm text-muted-foreground font-medium px-2 py-1"
             >
-              Zakończ
+              {t("finish")}
             </button>
             <button
               onClick={() => setShowAddPlace(true)}
               className="h-9 w-9 flex items-center justify-center shrink-0 text-foreground"
-              aria-label="Dodaj miejsce"
+              aria-label={t("add_place")}
             >
               <Plus className="h-5 w-5" />
             </button>
@@ -392,7 +395,7 @@ const PlanWizard = () => {
                     step4Tab === "swipe" ? "text-orange-600 border-b-2 border-orange-600" : "text-muted-foreground"
                   )}
                 >
-                  Eksploruj
+                  {t("tab_explore")}
                 </button>
                 <button
                   onClick={() => setStep4Tab("matches")}
@@ -401,7 +404,7 @@ const PlanWizard = () => {
                     step4Tab === "matches" ? "text-orange-600 border-b-2 border-orange-600" : "text-muted-foreground"
                   )}
                 >
-                  Zapisane
+                  {t("tab_saved")}
                   {likedSnapshot.length > 0 && (
                     <span className="h-[18px] min-w-[18px] px-1 rounded-full bg-primary text-white text-[10px] font-bold flex items-center justify-center">
                       {likedSnapshot.length}
@@ -443,15 +446,15 @@ const PlanWizard = () => {
                   {likedSnapshot.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-16 gap-4 text-center">
                       <p className="text-4xl">🤔</p>
-                      <p className="font-bold">Brak zapisanych miejsc</p>
+                      <p className="font-bold">{t("saved_empty_title")}</p>
                       <p className="text-sm text-muted-foreground leading-relaxed max-w-[280px]">
-                        Wróć do Eksploruj i zapisz miejsca, które chcesz mieć w&nbsp;trasie.
+                        {t("saved_empty_desc")}
                       </p>
                       <button
                         onClick={() => setStep4Tab("swipe")}
                         className="py-3 px-6 rounded-full bg-primary text-white font-semibold text-sm active:scale-[0.97] transition-transform"
                       >
-                        Eksploruj dalej
+                        {t("saved_empty_cta")}
                       </button>
                     </div>
                   ) : (
@@ -465,14 +468,14 @@ const PlanWizard = () => {
                       return (
                         <div className="space-y-5">
                           <p className="text-xs text-muted-foreground px-1">
-                            Odznacz miejsca, których nie chcesz w&nbsp;trasie
+                            {t("saved_deselect_hint")}
                           </p>
                           {Object.entries(grouped).map(([cat, items]) => {
                             const meta = MATCH_CATEGORIES.find(c => c.dbValues.includes(cat));
                             return (
                               <div key={cat}>
                                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 px-1">
-                                  {meta ? `${meta.emoji} ${meta.label}` : cat}
+                                  {meta ? `${meta.emoji} ${t(`match_cat.${meta.id}`)}` : cat}
                                 </p>
                                 <div className="space-y-2">
                                   {items.map((place) => {
@@ -539,7 +542,7 @@ const PlanWizard = () => {
                         onClick={handleProceedFromMatches}
                         className="flex-1 py-3 rounded-full bg-primary text-white text-sm font-semibold flex items-center justify-center gap-2 active:scale-[0.97] transition-transform"
                       >
-                        Zaproponuj trasę z wybranych miejsc
+                        {t("saved_cta")}
                         <ArrowRight className="h-4 w-4" />
                       </button>
                     </div>
@@ -568,7 +571,7 @@ const PlanWizard = () => {
               type="button"
               onClick={() => setCategoryDrawerOpen(false)}
               className="absolute top-3 right-3 z-20 h-9 w-9 rounded-full bg-muted flex items-center justify-center active:bg-muted/70 transition-colors shadow-sm"
-              aria-label="Zamknij"
+              aria-label={t("close")}
               style={{ top: "max(0.75rem, env(safe-area-inset-top))" }}
             >
               <X className="h-4 w-4 text-foreground" />
@@ -577,22 +580,22 @@ const PlanWizard = () => {
           <div className="flex-1 min-h-0 overflow-y-auto px-5 pt-5 pb-[max(20px,env(safe-area-inset-bottom))]" style={{ WebkitOverflowScrolling: "touch" }}>
             <div className="flex items-center justify-between gap-3 mb-5 pr-12">
               <div>
-                <p className="text-lg font-black">Filtry</p>
-                <p className="text-xs text-muted-foreground mt-0.5">Domyślnie pokazujemy wszystkie miejsca. Możesz zawęzić wybór.</p>
+                <p className="text-lg font-black">{t("filters")}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">{t("filters_subtitle")}</p>
               </div>
               {activeFilterCount > 0 && (
                 <button
                   onClick={() => { setSelectedCategories([]); setDietFilters([]); setSortMode("default"); }}
                   className="text-xs text-muted-foreground underline underline-offset-2 active:opacity-60 shrink-0"
                 >
-                  Wyczyść wszystko
+                  {t("filters_clear_all")}
                 </button>
               )}
             </div>
 
             {/* Sortowanie */}
             <div className="mb-5">
-              <p className="text-sm font-bold text-foreground mb-2">Sortuj</p>
+              <p className="text-sm font-bold text-foreground mb-2">{t("sort_label")}</p>
               <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => setSortMode("default")}
@@ -603,7 +606,7 @@ const PlanWizard = () => {
                       : "bg-muted text-foreground border-transparent"
                   )}
                 >
-                  Domyślnie
+                  {t("sort_default")}
                 </button>
                 <button
                   onClick={() => setSortMode("nearest")}
@@ -615,9 +618,9 @@ const PlanWizard = () => {
                       : "bg-muted text-foreground border-transparent",
                     !hasStartRef && "opacity-40"
                   )}
-                  title={!hasStartRef ? "Wybierz punkt startowy w kroku 3 aby aktywować" : ""}
+                  title={!hasStartRef ? t("sort_nearest_disabled_hint") : ""}
                 >
-                  Od najbliższego
+                  {t("sort_nearest")}
                   {sortMode === "nearest" && <Check className="inline h-3.5 w-3.5 ml-1" />}
                 </button>
               </div>
@@ -625,13 +628,13 @@ const PlanWizard = () => {
 
             {/* Dieta */}
             <div className="mb-5">
-              <p className="text-sm font-bold text-foreground mb-2">Dieta</p>
+              <p className="text-sm font-bold text-foreground mb-2">{t("diet_label")}</p>
               <div className="flex flex-wrap gap-2">
                 {[
-                  { id: "vegan", label: "Wegańskie", emoji: "🌱" },
-                  { id: "vegetarian", label: "Wegetariańskie", emoji: "🥗" },
-                  { id: "gluten_free", label: "Bez glutenu", emoji: "🌾" },
-                  { id: "lactose_free", label: "Bez laktozy", emoji: "🥛" },
+                  { id: "vegan", label: t("diet_vegan"), emoji: "🌱" },
+                  { id: "vegetarian", label: t("diet_vegetarian"), emoji: "🥗" },
+                  { id: "gluten_free", label: t("diet_gluten_free"), emoji: "🌾" },
+                  { id: "lactose_free", label: t("diet_lactose_free"), emoji: "🥛" },
                 ].map((diet) => {
                   // TYMCZASOWO wyszarzone - filtry diety jeszcze niedostepne (toast na klik).
                   return (
@@ -639,20 +642,20 @@ const PlanWizard = () => {
                       key={diet.id}
                       onClick={() => {
                         posthog?.capture?.("plan_diet_clicked_blocked", { diet: diet.id });
-                        toast("Filtry diety będą dostępne wkrótce 🙌");
+                        toast(t("diet_toast"));
                       }}
                       className="flex items-center gap-1.5 pl-3 pr-2.5 py-2 rounded-full text-sm font-semibold border bg-muted/40 border-border/40 text-muted-foreground/60 active:scale-[0.96]"
                     >
                       <span className="opacity-50">{diet.emoji}</span>
                       <span>{diet.label}</span>
-                      <span className="text-[10px] font-semibold opacity-70 ml-0.5">wkrótce</span>
+                      <span className="text-[10px] font-semibold opacity-70 ml-0.5">{t("diet_soon")}</span>
                     </button>
                   );
                 })}
               </div>
             </div>
 
-            <p className="text-sm font-bold text-foreground mb-2">Kategorie</p>
+            <p className="text-sm font-bold text-foreground mb-2">{t("categories_label")}</p>
 
             {/* "Wszystko" - reset */}
             <button
@@ -664,7 +667,7 @@ const PlanWizard = () => {
                   : "bg-muted text-foreground"
               )}
             >
-              Wszystko
+              {t("all")}
             </button>
 
             {/* Podkategorie wg MAIN_CATEGORIES - "zawieszone" sekcje (bez bialych ramek),
@@ -707,7 +710,7 @@ const PlanWizard = () => {
               onClick={() => setCategoryDrawerOpen(false)}
               className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-sm active:scale-[0.97] transition-transform shadow-md shadow-orange-500/20"
             >
-              Pokaż miejsca
+              {t("show_places")}
             </button>
           </div>
         </SheetContent>
@@ -717,7 +720,7 @@ const PlanWizard = () => {
       <Sheet open={editDateOpen} onOpenChange={setEditDateOpen}>
         <SheetContent side="bottom" className="rounded-t-3xl p-0 [&>button]:hidden" style={{ maxHeight: "85vh" }}>
           <div className="px-5 pt-5 pb-3">
-            <p className="text-lg font-black">Zmień datę wyjazdu</p>
+            <p className="text-lg font-black">{t("edit_date_title")}</p>
           </div>
           <div className="flex justify-center pb-[calc(env(safe-area-inset-bottom,0px)+1.5rem)]">
             <Calendar
@@ -747,9 +750,9 @@ const PlanWizard = () => {
                 <MapPin className="h-5 w-5 text-orange-600" />
               </div>
               <div className="flex-1">
-                <p className="text-base font-black leading-snug">Masz już trasę w&nbsp;{dupTrip.city}</p>
+                <p className="text-base font-black leading-snug">{t("dup_title", { city: dupTrip.city })}</p>
                 <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
-                  Na ten dzień masz już aktywną trasę. Kontynuować ją, czy stworzyć osobną?
+                  {t("dup_desc")}
                 </p>
               </div>
             </div>
@@ -758,13 +761,13 @@ const PlanWizard = () => {
                 onClick={() => { setDupTrip(null); navigate("/home"); }}
                 className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-sm active:scale-[0.97] transition-transform shadow-md shadow-orange-500/20"
               >
-                Kontynuuj istniejącą
+                {t("dup_continue")}
               </button>
               <button
                 onClick={() => { setDupTrip(null); setStep(3); }}
                 className="w-full py-3.5 rounded-full border border-border text-sm font-semibold text-foreground active:scale-[0.97] transition-transform"
               >
-                Stwórz osobną
+                {t("dup_create")}
               </button>
             </div>
           </div>

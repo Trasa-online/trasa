@@ -15,6 +15,7 @@
 // dashboard state) do unified PremiumBusinessData zanim trafi tutaj.
 
 import { type ReactNode, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { createPortal } from "react-dom";
 import { MAIN_CATEGORIES } from "@/lib/categories";
 import { cn } from "@/lib/utils";
@@ -77,10 +78,6 @@ const isPdfUrl = (u: string): boolean => u.split("?")[0].toLowerCase().endsWith(
 
 // ─── Opening hours helpers ────────────────────────────────────────────────────
 
-const DAY_LABELS_PL: Record<string, string> = {
-  mon: "Poniedziałek", tue: "Wtorek", wed: "Środa", thu: "Czwartek",
-  fri: "Piątek", sat: "Sobota", sun: "Niedziela",
-};
 const DAY_ORDER = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
 
 const todayKey = (): typeof DAY_ORDER[number] => {
@@ -105,6 +102,7 @@ interface FullscreenPhotosProps {
 }
 
 const FullscreenPhotos = ({ photos, startIndex, onClose }: FullscreenPhotosProps) => {
+  const { t } = useTranslation("wizytowka");
   const [idx, setIdx] = useState(Math.max(0, Math.min(startIndex, photos.length - 1)));
   const startPos = useRef<{ x: number; y: number } | null>(null);
 
@@ -140,7 +138,7 @@ const FullscreenPhotos = ({ photos, startIndex, onClose }: FullscreenPhotosProps
         onClick={(e) => { e.stopPropagation(); onClose(); }}
         className="absolute right-4 z-[210] h-11 w-11 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center active:bg-black/80 transition-colors shadow-lg cursor-pointer"
         style={{ top: "max(1rem, env(safe-area-inset-top))" }}
-        aria-label="Zamknij"
+        aria-label={t("close")}
       >
         <X className="h-5 w-5 text-white" />
       </button>
@@ -153,7 +151,7 @@ const FullscreenPhotos = ({ photos, startIndex, onClose }: FullscreenPhotosProps
             onClick={(e) => { e.stopPropagation(); goPrev(); }}
             disabled={idx === 0}
             className="absolute left-3 z-[210] h-12 w-12 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center active:bg-black/80 disabled:opacity-30"
-            aria-label="Poprzednie zdjęcie"
+            aria-label={t("prev_photo")}
           >
             <ChevronLeft className="h-6 w-6 text-white" />
           </button>
@@ -164,7 +162,7 @@ const FullscreenPhotos = ({ photos, startIndex, onClose }: FullscreenPhotosProps
             onClick={(e) => { e.stopPropagation(); goNext(); }}
             disabled={idx === photos.length - 1}
             className="absolute right-3 z-[210] h-12 w-12 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center active:bg-black/80 disabled:opacity-30"
-            aria-label="Następne zdjęcie"
+            aria-label={t("next_photo")}
           >
             <ChevronRight className="h-6 w-6 text-white" />
           </button>
@@ -201,6 +199,7 @@ interface HeroPhotoCarouselProps {
 }
 
 function HeroPhotoCarousel({ photos, placeName, onExpand, onClose, loading, topLeftSlot }: HeroPhotoCarouselProps) {
+  const { t } = useTranslation("wizytowka");
   const [activeIdx, setActiveIdx] = useState(0);
   const swipeStartX = useRef<number | null>(null);
   const hasPhoto = photos.length > 0;
@@ -226,7 +225,7 @@ function HeroPhotoCarousel({ photos, placeName, onExpand, onClose, loading, topL
         <button
           onClick={onClose}
           className="absolute top-3 right-3 z-40 h-9 w-9 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center active:bg-black/60"
-          aria-label="Zamknij"
+          aria-label={t("close")}
         >
           <X className="h-4 w-4 text-white" />
         </button>
@@ -239,14 +238,14 @@ function HeroPhotoCarousel({ photos, placeName, onExpand, onClose, loading, topL
           <button
             onClick={() => onExpand(activeIdx)}
             className="absolute inset-0 w-full h-full"
-            aria-label="Powiększ zdjęcie"
+            aria-label={t("expand_photo")}
           >
             <img src={photos[activeIdx]} alt={placeName} className="absolute inset-0 w-full h-full object-cover" />
           </button>
           <button
             onClick={() => onExpand(activeIdx)}
             className="absolute bottom-3 right-3 z-30 h-8 w-8 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center active:bg-black/60"
-            aria-label="Pełny ekran"
+            aria-label={t("fullscreen")}
           >
             <Maximize2 className="h-3.5 w-3.5 text-white" />
           </button>
@@ -257,7 +256,7 @@ function HeroPhotoCarousel({ photos, placeName, onExpand, onClose, loading, topL
                 <button
                   onClick={(e) => { e.stopPropagation(); setActiveIdx(Math.max(0, activeIdx - 1)); }}
                   className="absolute left-0 top-0 bottom-0 w-1/2 z-20 flex items-center justify-start pl-3"
-                  aria-label="Poprzednie"
+                  aria-label={t("prev")}
                 >
                   <span className="h-9 w-9 rounded-full bg-white/85 backdrop-blur-sm flex items-center justify-center shadow active:scale-90">
                     <ChevronLeft className="h-5 w-5 text-foreground" />
@@ -269,7 +268,7 @@ function HeroPhotoCarousel({ photos, placeName, onExpand, onClose, loading, topL
                 <button
                   onClick={(e) => { e.stopPropagation(); setActiveIdx(Math.min(photos.length - 1, activeIdx + 1)); }}
                   className="absolute right-0 top-0 bottom-0 w-1/2 z-20 flex items-center justify-end pr-3"
-                  aria-label="Następne"
+                  aria-label={t("next")}
                 >
                   <span className="h-9 w-9 rounded-full bg-white/85 backdrop-blur-sm flex items-center justify-center shadow active:scale-90">
                     <ChevronRight className="h-5 w-5 text-foreground" />
@@ -289,7 +288,7 @@ function HeroPhotoCarousel({ photos, placeName, onExpand, onClose, loading, topL
       ) : (
         <div className="absolute inset-0 bg-muted flex flex-col items-center justify-center gap-3">
           {loading && (
-            <p className="text-xs text-muted-foreground/50">Wczytywanie zdjęć…</p>
+            <p className="text-xs text-muted-foreground/50">{t("loading_photos")}</p>
           )}
         </div>
       )}
@@ -328,6 +327,7 @@ function CategoriesSection({ data }: SectionProps) {
 // expandable => ocena klikalna (gwiazdka/liczba) rozwija recenzje Google (progressive
 // disclosure - domyslnie schowane, zeby nie bylo stalej sciany tekstu). Afordancja: "Opinie ⌄".
 function RatingSection({ data, expandable, expanded, onToggle }: SectionProps & { expandable?: boolean; expanded?: boolean; onToggle?: () => void }) {
+  const { t } = useTranslation("wizytowka");
   if (!data.rating) return null;
   const inner = (
     <>
@@ -343,7 +343,7 @@ function RatingSection({ data, expandable, expanded, onToggle }: SectionProps & 
       <button onClick={onToggle} className="flex items-center gap-1.5 active:opacity-70 transition-opacity" aria-expanded={expanded}>
         {inner}
         <span className="flex items-center gap-0.5 text-xs font-semibold bg-secondary text-secondary-foreground px-2.5 py-1 rounded-full ml-1">
-          Opinie<ChevronDown className={cn("h-3.5 w-3.5 transition-transform", expanded && "rotate-180")} />
+          {t("reviews_toggle")}<ChevronDown className={cn("h-3.5 w-3.5 transition-transform", expanded && "rotate-180")} />
         </span>
       </button>
     );
@@ -399,11 +399,13 @@ function TagsSection({ data, max }: SectionProps & { max?: number }) {
 }
 
 function OpeningHoursSection({ data }: SectionProps) {
+  const { t } = useTranslation("wizytowka");
   const [expanded, setExpanded] = useState(false);
   const hasBiz = data.ownerOpeningHours && Object.keys(data.ownerOpeningHours).length > 0;
   const hasGoogle = !hasBiz && data.googleWeekdayText && data.googleWeekdayText.length > 0;
   if (!hasBiz && !hasGoogle) return null;
 
+  const closedLabel = t("closed");
   const openNow = hasBiz ? isBizOpenNow(data.ownerOpeningHours!) : !!data.googleOpenNow;
   const todayK = todayKey();
 
@@ -413,8 +415,8 @@ function OpeningHoursSection({ data }: SectionProps) {
   if (hasBiz) {
     allLines = DAY_ORDER.map((k) => {
       const h = (data.ownerOpeningHours as OwnerOpeningHours)[k];
-      const value = !h ? "-" : "closed" in h ? "Zamknięte" : `${(h as { open: string; close: string }).open} - ${(h as { open: string; close: string }).close}`;
-      return { label: DAY_LABELS_PL[k], value, isToday: k === todayK };
+      const value = !h ? "-" : "closed" in h ? closedLabel : `${(h as { open: string; close: string }).open} - ${(h as { open: string; close: string }).close}`;
+      return { label: t(`days.${k}`), value, isToday: k === todayK };
     });
     const today = allLines.find((l) => l.isToday);
     todayLine = today ? `${today.label.toLowerCase()}: ${today.value}` : "";
@@ -424,7 +426,7 @@ function OpeningHoursSection({ data }: SectionProps) {
       const parts = line.split(":");
       parts.shift();
       const value = parts.join(":").trim() || line;
-      return { label: DAY_LABELS_PL[k], value, isToday: k === todayK };
+      return { label: t(`days.${k}`), value, isToday: k === todayK };
     });
     const today = allLines.find((l) => l.isToday);
     todayLine = today ? `${today.label.toLowerCase()}: ${today.value}` : "";
@@ -440,7 +442,7 @@ function OpeningHoursSection({ data }: SectionProps) {
         <div className="flex items-center gap-2 min-w-0">
           <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
           <span className={cn("text-xs font-semibold px-2 py-0.5 rounded-full shrink-0", openNow ? "bg-green-500/10 text-green-600" : "bg-red-500/10 text-red-500")}>
-            {openNow ? "Otwarte" : "Zamknięte"}
+            {openNow ? t("open_now") : t("closed")}
           </span>
           {todayLine && <span className="text-xs text-muted-foreground truncate">· {todayLine}</span>}
         </div>
@@ -451,9 +453,9 @@ function OpeningHoursSection({ data }: SectionProps) {
           {allLines.map((line, i) => (
             <div key={i} className={cn("flex justify-between py-1 text-xs", line.isToday && "font-semibold text-foreground")}>
               <span className={line.isToday ? "text-foreground" : "text-muted-foreground"}>
-                {line.label}{line.isToday && " (dziś)"}
+                {line.label}{line.isToday && ` (${t("today")})`}
               </span>
-              <span className={line.value === "Zamknięte" || line.value === "-" ? "text-muted-foreground" : "text-foreground"}>
+              <span className={line.value === closedLabel || line.value === "-" ? "text-muted-foreground" : "text-foreground"}>
                 {line.value}
               </span>
             </div>
@@ -465,11 +467,12 @@ function OpeningHoursSection({ data }: SectionProps) {
 }
 
 function PostsSection({ data, onPhotoExpand }: SectionProps & { onPhotoExpand: (photos: string[], idx: number) => void }) {
+  const { t } = useTranslation("wizytowka");
   const posts = data.posts ?? [];
   if (posts.length === 0) return null;
   return (
     <div className="space-y-3 pt-2">
-      <h3 className="text-lg font-black tracking-tight">Aktualności</h3>
+      <h3 className="text-lg font-black tracking-tight">{t("news_title")}</h3>
       <div className="space-y-3">
         {posts.map((post) => {
           const date = parseISO(post.created_at);
@@ -488,7 +491,7 @@ function PostsSection({ data, onPhotoExpand }: SectionProps & { onPhotoExpand: (
                       key={idx}
                       onClick={() => onPhotoExpand(photos, idx)}
                       className="block w-full aspect-[4/3] rounded-xl overflow-hidden bg-muted active:opacity-95"
-                      aria-label="Powiększ zdjęcie"
+                      aria-label={t("expand_photo")}
                     >
                       <img src={url} alt="" className="w-full h-full object-cover" loading="lazy" />
                     </button>
@@ -505,9 +508,10 @@ function PostsSection({ data, onPhotoExpand }: SectionProps & { onPhotoExpand: (
 }
 
 function MenuSection({ data, onPhotoExpand }: SectionProps & { onPhotoExpand: (photos: string[], idx: number) => void }) {
+  const { t } = useTranslation("wizytowka");
   const menuImages = data.menuImageUrls ?? [];
   if (menuImages.length === 0) return null;
-  const sectionLabel = data.mainCategoryId === "food" ? "Menu" : "Cennik";
+  const sectionLabel = data.mainCategoryId === "food" ? t("menu") : t("price_list");
   // PDF nie da sie pokazac w fullscreen viewerze (<img>) - do niego trafiaja tylko obrazy.
   const imageOnly = menuImages.filter((u) => !isPdfUrl(u));
   return (
@@ -525,7 +529,7 @@ function MenuSection({ data, onPhotoExpand }: SectionProps & { onPhotoExpand: (p
                 className="shrink-0 w-[78%] aspect-[4/3] rounded-2xl bg-muted snap-center flex flex-col items-center justify-center gap-2 border border-border/40 active:opacity-95"
               >
                 <FileText className="h-9 w-9 text-muted-foreground" />
-                <span className="text-sm font-bold text-foreground">Otwórz {sectionLabel} (PDF)</span>
+                <span className="text-sm font-bold text-foreground">{t("open_pdf", { label: sectionLabel })}</span>
               </a>
             );
           }
@@ -534,7 +538,7 @@ function MenuSection({ data, onPhotoExpand }: SectionProps & { onPhotoExpand: (p
               key={idx}
               onClick={() => onPhotoExpand(imageOnly, imageOnly.indexOf(url))}
               className="shrink-0 w-[78%] aspect-[4/3] rounded-2xl overflow-hidden bg-muted snap-center active:opacity-95"
-              aria-label={`Powiększ ${sectionLabel.toLowerCase()} ${idx + 1}`}
+              aria-label={t("expand_labeled", { label: sectionLabel.toLowerCase(), index: idx + 1 })}
             >
               <img src={url} alt="" className="w-full h-full object-cover" loading="lazy" />
             </button>
@@ -546,10 +550,11 @@ function MenuSection({ data, onPhotoExpand }: SectionProps & { onPhotoExpand: (p
 }
 
 function MapSection({ data, startingLocation }: SectionProps & { startingLocation?: { name: string; latitude: number; longitude: number } }) {
+  const { t } = useTranslation("wizytowka");
   if (!data.latitude || !data.longitude) return null;
   return (
     <div className="space-y-3 pt-2">
-      <h3 className="text-lg font-black tracking-tight">Na mapie</h3>
+      <h3 className="text-lg font-black tracking-tight">{t("map_title")}</h3>
       <RouteMap
         pins={[{ latitude: data.latitude, longitude: data.longitude, place_name: data.name, address: data.address }]}
         startingLocation={startingLocation}
@@ -561,13 +566,14 @@ function MapSection({ data, startingLocation }: SectionProps & { startingLocatio
 }
 
 function ReviewsSection({ data }: SectionProps) {
+  const { t } = useTranslation("wizytowka");
   const reviews = data.reviews ?? [];
   if (reviews.length === 0) return null;
   return (
     <div className="pt-2">
       {/* Google attribution wymagane przez ToS gdy pokazujemy Google reviews. */}
       <div className="flex items-baseline justify-between mb-3 gap-2">
-        <h3 className="text-lg font-black tracking-tight">Opinie</h3>
+        <h3 className="text-lg font-black tracking-tight">{t("reviews_title")}</h3>
         <span className="text-[11px] text-muted-foreground shrink-0">powered by Google</span>
       </div>
       <div className="space-y-4">
@@ -611,7 +617,7 @@ function ReviewsSection({ data }: SectionProps) {
             className="mt-3 flex items-center justify-center gap-2 w-full py-2.5 rounded-2xl border border-border text-sm text-foreground"
           >
             <span className="font-black text-[#4285F4]">G</span>
-            Więcej opinii na Google
+            {t("more_reviews_google")}
           </a>
         );
       })()}
@@ -620,6 +626,7 @@ function ReviewsSection({ data }: SectionProps) {
 }
 
 function ContactButtonsSection({ data }: SectionProps) {
+  const { t } = useTranslation("wizytowka");
   if (!data.phone && !data.website && !data.instagram && !data.facebook) return null;
   const iconBtn = "flex items-center justify-center py-2.5 px-3 rounded-2xl border border-border/60 bg-card text-foreground active:scale-[0.97] transition-transform";
   return (
@@ -630,7 +637,7 @@ function ContactButtonsSection({ data }: SectionProps) {
           className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-2xl border border-border/60 bg-card text-sm font-semibold text-foreground active:scale-[0.97] transition-transform"
         >
           <Phone className="h-4 w-4" />
-          Zadzwoń
+          {t("call")}
         </a>
       )}
       {data.website && (
@@ -641,7 +648,7 @@ function ContactButtonsSection({ data }: SectionProps) {
           className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-2xl border border-border/60 bg-card text-sm font-semibold text-foreground active:scale-[0.97] transition-transform"
         >
           <Globe className="h-4 w-4" />
-          Strona
+          {t("website")}
         </a>
       )}
       {data.instagram && (
@@ -712,6 +719,7 @@ const PremiumBusinessCard = ({
   swipeCoverImage,
   startingLocation,
 }: PremiumBusinessCardProps) => {
+  const { t } = useTranslation("wizytowka");
   const [fullscreen, setFullscreen] = useState<{ photos: string[]; idx: number } | null>(null);
   // Recenzje za tapnieciem w ocene (progressive disclosure). Gdy hideReviews=true a sa
   // recenzje, ocena staje sie klikalna i rozwija "Opinie".
@@ -874,7 +882,7 @@ const PremiumBusinessCard = ({
             <button
               onClick={() => handleExpand([data.heroPhoto, ...(data.gallery ?? [])].filter(Boolean) as string[], 0)}
               className="block w-full aspect-[4/3] rounded-2xl overflow-hidden bg-muted active:opacity-95"
-              aria-label="Powiększ zdjęcie"
+              aria-label={t("expand_photo")}
             >
               <img src={data.heroPhoto ?? data.gallery![0]} alt={data.name} className="w-full h-full object-cover" />
             </button>
@@ -890,7 +898,7 @@ const PremiumBusinessCard = ({
           {/* Business mini-section: gallery + contact */}
           {data.gallery && data.gallery.length > 1 && (
             <div className="space-y-2">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Galeria</p>
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t("gallery")}</p>
               <div className="flex gap-2 overflow-x-auto scrollbar-none -mx-4 px-4 pb-1">
                 {data.gallery.slice(1).map((url, idx) => (
                   <button

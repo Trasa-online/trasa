@@ -1,0 +1,50 @@
+{
+  "home_header": {
+    "title": "Your trips",
+    "subtitle": "Active trips, group routes and planning new ones."
+  },
+  "liked": {
+    "empty_title": "No saved places",
+    "empty_desc": "Head back to the home screen and browse places. The ones you save will show up here.",
+    "browse": "Browse places",
+    "saved_place_one": "saved place",
+    "saved_place_few": "saved places",
+    "saved_place_many": "saved places",
+    "confirm_clear_city": "Remove all saved places from {{city}}?",
+    "remove_group_aria": "Remove group",
+    "remove_aria": "Remove",
+    "create_route": "Create a route from these places",
+    "create_collection": "Create a collection from these places"
+  },
+  "collections": {
+    "toast_deleted": "Collection deleted",
+    "toast_delete_error": "Failed to delete: {{error}}",
+    "error_fallback": "error",
+    "empty_title": "No collections",
+    "empty_desc": "Create your first collection of favorite places and share it with others.",
+    "create": "Create collection",
+    "untitled": "Untitled",
+    "place_one": "place",
+    "place_few": "places",
+    "place_many": "places",
+    "private": "private",
+    "pending": "awaiting approval",
+    "rejected": "rejected",
+    "reason": "Reason: {{note}}",
+    "edit_aria": "Edit collection",
+    "delete_aria": "Delete collection",
+    "delete_title": "Delete collection?",
+    "delete_desc": "\"{{title}}\" will be gone forever. This action cannot be undone.",
+    "cancel": "Cancel",
+    "deleting": "Deleting…",
+    "delete": "Delete"
+  },
+  "explore": {
+    "back_aria": "Back to explore",
+    "collections_title": "Your collections",
+    "collections_subtitle": "Collections of places you've created.",
+    "title": "Explore",
+    "subtitle": "Recommended places, routes and collections.",
+    "add": "Add"
+  }
+}

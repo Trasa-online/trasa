@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import RoutePlanTimeline from "@/components/route/RoutePlanTimeline";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 
 interface ChatMessage {
   role: "user" | "assistant";
@@ -23,6 +24,7 @@ const DayReview = () => {
   const { user, session } = useAuth();
   const navigate = useNavigate();
   const posthog = usePostHog();
+  const { t } = useTranslation("journal");
   const [searchParams] = useSearchParams();
   const routeId = searchParams.get("route");
 
@@ -154,12 +156,12 @@ const DayReview = () => {
       );
 
       if (response.status === 429) {
-        toast.error("Zbyt wiele zapytań. Spróbuj ponownie za chwilę.");
+        toast.error(t("day_review.toast_rate_limit"));
         setIsLoading(false);
         return;
       }
       if (response.status === 402) {
-        toast.error("Brak kredytów AI. Doładuj konto.");
+        toast.error(t("day_review.toast_no_credits"));
         setIsLoading(false);
         return;
       }
@@ -167,7 +169,7 @@ const DayReview = () => {
       if (!response.ok) {
         const errData = await response.json().catch(() => ({}));
         console.error("chat-route error:", response.status, errData);
-        toast.error(`Błąd AI (${response.status}): ${errData?.error ?? "Spróbuj ponownie."}`);
+        toast.error(t("day_review.toast_ai_error", { status: response.status, detail: errData?.error ?? t("day_review.toast_try_again") }));
         setIsLoading(false);
         return;
       }
@@ -190,7 +192,7 @@ const DayReview = () => {
       }
     } catch (err) {
       console.error("Failed to call chat-route:", err);
-      toast.error("Błąd połączenia. Spróbuj ponownie.");
+      toast.error(t("day_review.toast_connection_error"));
     }
     setIsLoading(false);
   }, [routeId, session?.access_token]);
@@ -201,7 +203,7 @@ const DayReview = () => {
       setInitialSent(true);
       // Pass a hidden trigger message to the API but don't show it in the UI
       const initialMessages: ChatMessage[] = [
-        { role: "user", content: `Skończyłem dzień w ${route.city}. Chcę zrobić podsumowanie.` },
+        { role: "user", content: t("day_review.initial_message", { city: route.city }) },
       ];
       callChatRoute(initialMessages);
     }
@@ -328,7 +330,7 @@ const DayReview = () => {
             onClick={() => setPlanOpen(p => !p)}
             className="w-full flex items-center justify-between px-4 py-3 rounded-2xl bg-card border border-border/50 text-sm font-semibold"
           >
-            <span>Plan dnia {route?.day_number || 1}</span>
+            <span>{t("day_review.plan_day", { day: route?.day_number || 1 })}</span>
             <ChevronDown className={cn("h-4 w-4 transition-transform", planOpen && "rotate-180")} />
           </button>
           {planOpen && (
@@ -342,12 +344,12 @@ const DayReview = () => {
         {nextDayPins.length > 0 && (
           <div className="mx-4 mb-3 rounded-2xl bg-card border border-border/50 overflow-hidden">
             <div className="px-4 py-2.5 border-b border-border/40 flex items-center justify-between">
-              <p className="text-xs font-semibold">Plan - Dzień {(route?.day_number || 1) + 1}</p>
+              <p className="text-xs font-semibold">{t("day_review.next_day_plan", { day: (route?.day_number || 1) + 1 })}</p>
               <button
                 onClick={() => nextDayRouteRef && navigate(`/edit-plan?route=${nextDayRouteRef.id}`)}
                 className="text-[11px] text-primary font-medium"
               >
-                Popraw
+                {t("day_review.fix")}
               </button>
             </div>
             <div className="divide-y divide-border/30">
@@ -371,7 +373,7 @@ const DayReview = () => {
           {messages.length === 0 && isLoading && (
             <div className="flex flex-col items-center justify-center gap-3 py-12 text-center">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-              <p className="text-sm text-muted-foreground">Analizuję Twoją trasę…</p>
+              <p className="text-sm text-muted-foreground">{t("day_review.analyzing")}</p>
             </div>
           )}
 
@@ -407,9 +409,9 @@ const DayReview = () => {
         {isDone && (
           <div className="flex flex-col items-center px-8 py-10">
             <div className="text-4xl mb-4">✨</div>
-            <h2 className="text-2xl font-black text-center leading-tight">Świetna rozmowa!</h2>
+            <h2 className="text-2xl font-black text-center leading-tight">{t("day_review.done_title")}</h2>
             <p className="text-muted-foreground text-center mt-3 text-sm leading-relaxed max-w-xs">
-              Zapisałam Twoje wrażenia z dnia. Za chwilę przejdziesz do podsumowania.
+              {t("day_review.done_desc")}
             </p>
           </div>
         )}
@@ -440,7 +442,7 @@ const DayReview = () => {
                 value={input}
                 onChange={handleInputChange}
                 onKeyDown={handleKeyDown}
-                placeholder="Napisz odpowiedź..."
+                placeholder={t("day_review.input_placeholder")}
                 rows={1}
                 maxLength={2000}
                 disabled={isLoading}

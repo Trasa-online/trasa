@@ -9,6 +9,7 @@
 // - Maps button w header slot
 
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { MapPin, Navigation } from "lucide-react";
 import { useDistanceReference } from "@/lib/distanceReference";
 import { haversineKm, formatDistance } from "@/lib/distance";
@@ -66,6 +67,7 @@ const PlaceSwiperDetail = ({
   const [photos, setPhotos] = useState<string[]>([]);
   const [businessPosts, setBusinessPosts] = useState<BusinessPost[]>([]);
   const distanceRef = useDistanceReference();
+  const { t } = useTranslation("wizytowka");
 
   useEffect(() => {
     if (!open || !place) {
@@ -184,7 +186,7 @@ const PlaceSwiperDetail = ({
       {distanceLabel && (
         <span className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-black/40 backdrop-blur-sm text-white text-xs font-semibold">
           <Navigation className="h-3.5 w-3.5" />
-          {distanceLabel} od&nbsp;{distanceRef!.label}
+          {distanceLabel} {t("distance_from")}&nbsp;{distanceRef!.label}
         </span>
       )}
       <button
@@ -245,13 +247,13 @@ const PlaceSwiperDetail = ({
                 onClick={handleSkip}
                 className="flex-1 py-3 rounded-full bg-secondary text-secondary-foreground font-bold text-sm shadow-sm active:scale-[0.97] transition-transform"
               >
-                Odrzuć
+                {t("reject")}
               </button>
               <button
                 onClick={handleLike}
                 className="flex-1 py-3 rounded-full bg-primary text-white font-bold text-sm shadow-xl shadow-primary/30 active:scale-[0.97] transition-transform"
               >
-                Dodaj
+                {t("add")}
               </button>
             </div>
           </div>

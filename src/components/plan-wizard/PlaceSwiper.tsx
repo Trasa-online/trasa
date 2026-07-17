@@ -18,6 +18,7 @@ import { getSubcategoryIds, getMainCategoryFor, getDbCategoriesFor, MAIN_CATEGOR
 import { addLike as saveExploreLike, clearGroup as clearExploreGroup } from "@/lib/exploreLikes";
 import { expandCity } from "@/lib/cities";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -136,6 +137,7 @@ const MatchModal = ({ likedPlaces, onConfirm, onDismiss }: {
   onConfirm: () => void;
   onDismiss: () => void;
 }) => {
+  const { t } = useTranslation("plan");
   const orbs = likedPlaces.slice(0, 3);
   const extra = likedPlaces.length - 3;
   return (
@@ -159,25 +161,25 @@ const MatchModal = ({ likedPlaces, onConfirm, onDismiss }: {
           {orbs.map((p) => (
             <p key={p.id} className="text-sm font-medium text-foreground">{p.place_name}</p>
           ))}
-          {extra > 0 && <p className="text-xs text-muted-foreground mt-0.5">i {extra} więcej</p>}
+          {extra > 0 && <p className="text-xs text-muted-foreground mt-0.5">{t("match_modal.more", { count: extra })}</p>}
         </div>
         <div className="text-center space-y-1">
-          <p className="text-2xl font-black text-foreground">Bingo!</p>
-          <p className="text-sm text-muted-foreground">Mamy dla Ciebie trasę.</p>
+          <p className="text-2xl font-black text-foreground">{t("match_modal.title")}</p>
+          <p className="text-sm text-muted-foreground">{t("match_modal.subtitle")}</p>
         </div>
         <div className="w-full flex flex-col gap-2.5">
           <button
             onClick={onConfirm}
             className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-base flex items-center justify-center gap-2 active:scale-[0.97] transition-transform shadow-lg shadow-primary/25"
           >
-            Sprawdzam trasę
+            {t("match_modal.confirm")}
             <ArrowRight className="h-4 w-4" />
           </button>
           <button
             onClick={onDismiss}
             className="w-full py-3 rounded-full border border-border text-sm font-medium text-muted-foreground active:scale-[0.97] transition-transform"
           >
-            Wróć do przeglądania
+            {t("back_to_browsing")}
           </button>
         </div>
       </div>
@@ -188,24 +190,26 @@ const MatchModal = ({ likedPlaces, onConfirm, onDismiss }: {
 // ─── Guest upsell modal ───────────────────────────────────────────────────────
 
 const UPSELL_BENEFITS = [
-  { emoji: "🗺️", text: "Zapisz trasę i wróć do niej kiedy chcesz" },
-  { emoji: "👫", text: "Planuj wyjazdy razem ze znajomymi" },
-  { emoji: "📍", text: "Dodawaj własne miejsca do trasy" },
-  { emoji: "📒", text: "Prowadź dziennik podróży ze zdjęciami" },
+  { emoji: "🗺️", key: "upsell.benefit_save" },
+  { emoji: "👫", key: "upsell.benefit_group" },
+  { emoji: "📍", key: "upsell.benefit_custom" },
+  { emoji: "📒", key: "upsell.benefit_journal" },
 ];
 
-const GuestUpsellModal = ({ onSignUp, onDismiss }: { onSignUp: () => void; onDismiss: () => void }) => (
+const GuestUpsellModal = ({ onSignUp, onDismiss }: { onSignUp: () => void; onDismiss: () => void }) => {
+  const { t } = useTranslation("plan");
+  return (
   <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
     <div className="w-full max-w-sm bg-card rounded-t-3xl px-6 pt-8 pb-[max(24px,env(safe-area-inset-bottom))] flex flex-col gap-6 shadow-2xl animate-in slide-in-from-bottom-4 duration-300">
       <div className="text-center space-y-1">
-        <p className="text-2xl font-black text-foreground">Trasa gotowa! 🎉</p>
-        <p className="text-sm text-muted-foreground">Załóż konto żeby ją zobaczyć i zapisać.</p>
+        <p className="text-2xl font-black text-foreground">{t("upsell.title")}</p>
+        <p className="text-sm text-muted-foreground">{t("upsell.subtitle")}</p>
       </div>
       <div className="flex flex-col gap-3">
         {UPSELL_BENEFITS.map(b => (
-          <div key={b.text} className="flex items-center gap-3">
+          <div key={b.key} className="flex items-center gap-3">
             <span className="text-xl shrink-0">{b.emoji}</span>
-            <p className="text-sm font-medium text-foreground">{b.text}</p>
+            <p className="text-sm font-medium text-foreground">{t(b.key)}</p>
           </div>
         ))}
       </div>
@@ -214,19 +218,20 @@ const GuestUpsellModal = ({ onSignUp, onDismiss }: { onSignUp: () => void; onDis
           onClick={onSignUp}
           className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-base flex items-center justify-center gap-2 active:scale-[0.97] transition-transform shadow-lg shadow-primary/25"
         >
-          Zakładam konto - to darmowe
+          {t("upsell.cta")}
           <ArrowRight className="h-4 w-4" />
         </button>
         <button
           onClick={onDismiss}
           className="w-full py-3 rounded-full border border-border text-sm font-medium text-muted-foreground active:scale-[0.97] transition-transform"
         >
-          Wróć do przeglądania
+          {t("back_to_browsing")}
         </button>
       </div>
     </div>
   </div>
-);
+  );
+};
 
 // ─── SwipeCard ────────────────────────────────────────────────────────────────
 
@@ -247,6 +252,7 @@ interface SwipeCardProps {
 
 
 export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo, onPhotoFetched, isTop, offset, skipGoogleFetch = false, onEnableDistance }: SwipeCardProps) => {
+  const { t } = useTranslation("plan");
   const [imgFailed, setImgFailed] = useState(false);
   const [videoFailed, setVideoFailed] = useState(false);
   // Widok glowny (karta swipe) = TYLKO jedno zdjecie (cover). Galeria (extra zdjecia)
@@ -330,11 +336,11 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
         if (!place.address && data?.result?.formatted_address) setGoogleAddress(data.result.formatted_address);
         if (!place.vibe_tags?.length) {
           const TYPES_MAP: Record<string, string> = {
-            bakery: "piekarnia", cafe: "kawa", bar: "bar", restaurant: "restauracja",
-            tourist_attraction: "atrakcja", museum: "muzeum", park: "park",
-            art_gallery: "galeria", night_club: "nocne życie", spa: "spa",
-            shopping_mall: "zakupy", store: "sklep", church: "kościół",
-            beach: "plaża", lodging: "nocleg", gym: "sport", library: "biblioteka",
+            bakery: t("google_types.bakery"), cafe: t("google_types.cafe"), bar: t("google_types.bar"), restaurant: t("google_types.restaurant"),
+            tourist_attraction: t("google_types.tourist_attraction"), museum: t("google_types.museum"), park: t("google_types.park"),
+            art_gallery: t("google_types.art_gallery"), night_club: t("google_types.night_club"), spa: t("google_types.spa"),
+            shopping_mall: t("google_types.shopping_mall"), store: t("google_types.store"), church: t("google_types.church"),
+            beach: t("google_types.beach"), lodging: t("google_types.lodging"), gym: t("google_types.gym"), library: t("google_types.library"),
           };
           const tags = (data?.result?.types ?? [])
             .map((t: string) => TYPES_MAP[t])
@@ -473,7 +479,7 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
               onPointerDown={(e) => e.stopPropagation()}
               onClick={(e) => { e.stopPropagation(); setPhotoIdx(n => Math.max(0, n - 1)); }}
               disabled={photoIdx === 0}
-              aria-label="Poprzednie zdjęcie"
+              aria-label={t("photo_prev")}
               className="absolute left-0 top-0 h-[60%] w-16 z-20 flex items-center justify-start pl-2.5 active:scale-95 transition-transform disabled:opacity-0 disabled:pointer-events-none"
             >
               <span className="h-9 w-9 rounded-full bg-black/35 backdrop-blur-sm flex items-center justify-center">
@@ -484,7 +490,7 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
               onPointerDown={(e) => e.stopPropagation()}
               onClick={(e) => { e.stopPropagation(); setPhotoIdx(n => Math.min(photoUrls.length - 1, n + 1)); }}
               disabled={photoIdx === photoUrls.length - 1}
-              aria-label="Następne zdjęcie"
+              aria-label={t("photo_next")}
               className="absolute right-0 top-0 h-[60%] w-16 z-20 flex items-center justify-end pr-2.5 active:scale-95 transition-transform disabled:opacity-0 disabled:pointer-events-none"
             >
               <span className="h-9 w-9 rounded-full bg-black/35 backdrop-blur-sm flex items-center justify-center">
@@ -504,7 +510,7 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
         const bizMainLabel = place.businessMainCategory
           ? MAIN_CATEGORIES.find(c => c.id === place.businessMainCategory)?.label
           : null;
-        const subLabel = CATEGORY_LABELS[place.category];
+        const subLabel = t(`categories.${place.category}`, { defaultValue: CATEGORY_LABELS[place.category] });
         const label = bizMainLabel ?? subLabel;
         if (!label) return null;
         // Badge kategorii ZAWSZE jednolity per-kategoria (getCategoryColor) - bez personalizacji biznesu.
@@ -529,7 +535,7 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
           className="absolute top-4 right-4 z-10 flex items-center gap-1 bg-black/45 backdrop-blur-sm rounded-full px-2.5 py-1 shadow-sm active:scale-95 transition-transform"
         >
           <Navigation className="h-3 w-3 text-white/90" />
-          <span className="text-white text-[11px] font-semibold">Pokaż dystans</span>
+          <span className="text-white text-[11px] font-semibold">{t("show_distance")}</span>
         </button>
       )}
 
@@ -601,7 +607,7 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
               <button
                 onPointerDown={(e) => e.stopPropagation()}
                 onClick={(e) => { e.stopPropagation(); onTap(); }}
-                aria-label="Rozwiń wizytówkę"
+                aria-label={t("expand_card")}
                 className="h-10 w-10 rounded-full bg-white flex items-center justify-center shadow-md active:scale-90 transition-transform"
               >
                 <ChevronUp className="h-5 w-5 text-black" />
@@ -621,7 +627,7 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
             onClick={(e) => { e.stopPropagation(); onSkip(); }}
             className="flex-1 py-3 rounded-full bg-white text-foreground font-bold text-sm shadow-xl active:scale-[0.97] transition-transform"
           >
-            Odrzuć
+            {t("reject")}
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); onLike(); }}
@@ -634,7 +640,7 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
               place.businessColorButton ? "" : "bg-primary text-white shadow-primary/30"
             )}
           >
-            Dodaj
+            {t("add")}
           </button>
         </div>
       )}
@@ -644,14 +650,14 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
 
 // ─── Done state ───────────────────────────────────────────────────────────────
 
-const PERSONALITY_LABELS: Record<string, { label: string; emoji: string }> = {
-  kulturalny:  { label: "Kulturalny",   emoji: "🎭" },
-  historyczny: { label: "Historyczny",  emoji: "🏰" },
-  kawiarniany: { label: "Kawiarniany",  emoji: "☕" },
-  nocny:       { label: "Nocny",        emoji: "🌙" },
-  aktywny:     { label: "Aktywny",      emoji: "🏃" },
-  zakupowy:    { label: "Zakupowy",     emoji: "🛍️" },
-  mix:         { label: "Zrównoważony", emoji: "✨" },
+const PERSONALITY_LABELS: Record<string, { key: string; emoji: string }> = {
+  kulturalny:  { key: "personality.kulturalny",  emoji: "🎭" },
+  historyczny: { key: "personality.historyczny", emoji: "🏰" },
+  kawiarniany: { key: "personality.kawiarniany", emoji: "☕" },
+  nocny:       { key: "personality.nocny",       emoji: "🌙" },
+  aktywny:     { key: "personality.aktywny",     emoji: "🏃" },
+  zakupowy:    { key: "personality.zakupowy",    emoji: "🛍️" },
+  mix:         { key: "personality.mix",         emoji: "✨" },
 };
 
 interface RouteExamplePin {
@@ -701,6 +707,7 @@ const EmptyState = ({
   onGoToMatches?: () => void;
   reviewedTitle: string;
 }) => {
+  const { t } = useTranslation("plan");
   if (likedPlaces.length === 0) {
     // Empty from start (filter restrictive, no places match) vs swiped-through-all
     const emptyFromStart = hasCategoryFilter && !hasSwipedAny;
@@ -709,12 +716,12 @@ const EmptyState = ({
         <div className="text-5xl">{emptyFromStart ? "🔍" : "🗺️"}</div>
         <div>
           <p className="font-bold text-lg">
-            {emptyFromStart ? "Brak miejsc w tych kategoriach" : "Przejrzałeś wszystkie miejsca"}
+            {emptyFromStart ? t("empty.no_places_in_cats") : t("empty.reviewed_all")}
           </p>
           <p className="text-muted-foreground text-sm mt-1">
             {emptyFromStart
-              ? "Spróbuj wybrać inne kategorie albo zmień miasto."
-              : "Nie wybrałeś żadnego miejsca - może zacznijmy od nowa?"}
+              ? t("empty.try_other_cats")
+              : t("empty.none_picked")}
           </p>
         </div>
         <button
@@ -732,7 +739,7 @@ const EmptyState = ({
           disabled={resetting}
           className="border border-border rounded-full px-6 py-3 text-sm text-muted-foreground active:scale-95 transition-transform disabled:opacity-50"
         >
-          {resetting ? "Resetuje..." : emptyFromStart ? "Zmień filtry" : "Zacznij od nowa"}
+          {resetting ? t("empty.resetting") : emptyFromStart ? t("empty.change_filters") : t("empty.start_over")}
         </button>
       </div>
     );
@@ -750,14 +757,14 @@ const EmptyState = ({
         <div className="space-y-1.5">
           <p className="text-2xl font-black text-foreground leading-tight">{reviewedTitle}</p>
           <p className="text-sm text-muted-foreground leading-relaxed max-w-[300px]">
-            Przejdź do zakładki zapisanych i&nbsp;stwórz swój plan.
+            {t("empty.go_saved_desc")}
           </p>
         </div>
         <button
           onClick={() => (onGoToMatches ? onGoToMatches() : onProceed())}
           className="px-8 py-3.5 rounded-full bg-primary text-white font-bold text-sm flex items-center gap-2 active:scale-[0.97] transition-transform shadow-lg shadow-primary/25"
         >
-          {onGoToMatches ? "Przejdź do zapisanych" : `Ułóż plan z ${likedPlaces.length} miejsc`}
+          {onGoToMatches ? t("empty.go_saved_cta") : t("empty.plan_from_places", { count: likedPlaces.length })}
           <ArrowRight className="h-4 w-4" />
         </button>
       </div>
@@ -768,9 +775,9 @@ const EmptyState = ({
     <div className="flex-1 overflow-y-auto px-4 pb-safe-6 pb-6">
       {/* Header */}
       <div className="pt-6 pb-4 text-center">
-        <p className="text-2xl font-black text-foreground">Gotowe!</p>
+        <p className="text-2xl font-black text-foreground">{t("empty.done")}</p>
         <p className="text-sm text-muted-foreground mt-1">
-          {loadingExamples ? "Szukam tras pasujących do Twoich wyborów…" : "Znalazłam trasy pasujące do Twoich wyborów"}
+          {loadingExamples ? t("empty.searching_routes") : t("empty.found_routes")}
         </p>
       </div>
 
@@ -786,7 +793,8 @@ const EmptyState = ({
 
       {/* Matched route cards */}
       {!loadingExamples && matchedRoutes.map((route) => {
-        const meta = PERSONALITY_LABELS[route.personality_type] ?? { label: route.personality_type, emoji: "📍" };
+        const metaRaw = PERSONALITY_LABELS[route.personality_type];
+        const meta = metaRaw ? { label: t(metaRaw.key), emoji: metaRaw.emoji } : { label: route.personality_type, emoji: "📍" };
         return (
           <div key={route.id} className="mb-3 rounded-2xl border border-border bg-card p-4 space-y-3">
             <div className="flex items-start justify-between gap-2">
@@ -796,7 +804,7 @@ const EmptyState = ({
                     {meta.emoji} {meta.label}
                   </span>
                   <span className="text-xs font-semibold text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded-full">
-                    {route.score} wspólnych miejsc
+                    {t("empty.common_places", { count: route.score })}
                   </span>
                 </div>
                 <p className="font-bold text-foreground mt-1.5">{route.title}</p>
@@ -812,7 +820,7 @@ const EmptyState = ({
               ))}
               {route.pins.length - route.matchedNames.length > 0 && (
                 <span className="text-xs bg-muted text-muted-foreground px-2.5 py-1 rounded-full">
-                  +{route.pins.length - route.matchedNames.length} innych
+                  {t("empty.others", { count: route.pins.length - route.matchedNames.length })}
                 </span>
               )}
             </div>
@@ -821,7 +829,7 @@ const EmptyState = ({
               onClick={() => onPickRoute(route)}
               className="w-full py-3 rounded-full bg-foreground text-background text-sm font-semibold flex items-center justify-center gap-2 active:scale-[0.97] transition-transform"
             >
-              Wybierz tę trasę
+              {t("empty.pick_route")}
               <ArrowRight className="h-4 w-4" />
             </button>
           </div>
@@ -839,8 +847,8 @@ const EmptyState = ({
         )}
       >
         {matchedRoutes.length > 0
-          ? `Zaplanuj od zera z ${likedPlaces.length} miejsc`
-          : `Ułóż plan z ${likedPlaces.length} miejsc`}
+          ? t("empty.plan_from_scratch", { count: likedPlaces.length })
+          : t("empty.plan_from_places", { count: likedPlaces.length })}
       </button>
     </div>
   );
@@ -1066,6 +1074,7 @@ function enrichWithBusinessProfile(p: any): MockPlace {
 }
 
 const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryFilter, dietFilters, sortByNearest, initialLikedPlaceNames = [], initialSkippedPlaceNames = [], searchQuery = "", showAddPlace: showAddPlaceProp = false, onAddPlaceClose, onBatchComplete, exploreMode = false, groupSessionId, onGroupFinished, roundPlaceIds, onRoundComplete, onSuggestPlace, onLikedPlacesChange, onSwitchToMatches, onEditDate }: PlaceSwiperProps) => {
+  const { t } = useTranslation("plan");
   // Normalize categoryFilter to a stable array (single id, multiple ids, or none).
   const categoryFilters: string[] = Array.isArray(categoryFilter)
     ? categoryFilter.filter(Boolean)
@@ -1077,13 +1086,13 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
   // (1 kategoria) / "Wybrane kategorie przejrzane!" (kilka) / "Wszystkie miejsca
   // przejrzane!" (brak filtra).
   const reviewedTitle = (() => {
-    if (categoryFilters.length === 0) return "Wszystkie miejsca przejrzane!";
-    if (categoryFilters.length > 1) return "Wybrane kategorie przejrzane!";
+    if (categoryFilters.length === 0) return t("reviewed_all_title");
+    if (categoryFilters.length > 1) return t("reviewed_selected_title");
     const id = categoryFilters[0];
     const main = MAIN_CATEGORIES.find(c => c.id === id);
     const sub = MAIN_CATEGORIES.flatMap(c => c.subcategories).find(s => s.id === id);
     const label = main?.label ?? sub?.label ?? (CATEGORY_LABELS as Record<string, string>)[id];
-    return label ? `${label} przejrzana!` : "Wszystkie miejsca przejrzane!";
+    return label ? t("reviewed_category_title", { label }) : t("reviewed_all_title");
   })();
   const navigate = useNavigate();
   const { user, isAnonymous } = useAuth();
@@ -1516,7 +1525,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
       setRefreshNonce(n => n + 1);
     } catch (err) {
       console.error("[PlaceSwiper] reset today failed:", err);
-      toast.error("Nie udało się zresetować, spróbuj ponownie");
+      toast.error(t("toast_reset_error"));
     } finally {
       setResetting(false);
     }
@@ -1673,14 +1682,14 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
             <div className="text-5xl">{nothingToShow ? "🤔" : "✅"}</div>
             <div>
               <p className="font-bold text-lg">
-                {nothingToShow ? "Brak miejsc w tej kategorii" : "Kategoria wyczerpana!"}
+                {nothingToShow ? t("batch.no_places_title") : t("batch.exhausted_title")}
               </p>
               <p className="text-muted-foreground text-sm mt-1">
                 {nothingToShow
-                  ? `Nie mamy jeszcze miejsc z tej kategorii w ${city}. Spróbuj innej kategorii.`
+                  ? t("batch.no_places_city", { city })
                   : likedPlaces.length > 0
-                  ? `Wybrałeś ${likedPlaces.length} miejsc. Wybierz kolejną kategorię lub zakończ.`
-                  : "Nie wybrałeś żadnego miejsca z tej kategorii. Spróbuj innej."}
+                  ? t("batch.picked_count", { count: likedPlaces.length })
+                  : t("batch.none_picked")}
               </p>
             </div>
             <div className="w-full space-y-3">
@@ -1688,14 +1697,14 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
                 onClick={() => onBatchComplete([...likedPlaces, ...superLikedPlaces].map(p => p.place_name))}
                 className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-sm active:scale-[0.97] transition-transform"
               >
-                Wybierz kolejną kategorię →
+                {t("batch.next_category")}
               </button>
               {likedPlaces.length > 0 && (
                 <button
                   onClick={handleProceed}
                   className="w-full py-3.5 rounded-full border border-border text-sm font-semibold active:scale-[0.97] transition-transform"
                 >
-                  Zaplanuj trasę z {likedPlaces.length} miejsc
+                  {t("batch.plan_route", { count: likedPlaces.length })}
                 </button>
               )}
             </div>
@@ -1734,17 +1743,16 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
         <div className="flex-1 flex flex-col items-center justify-center px-8 gap-6 text-center">
           <div className="text-5xl">🎉</div>
           <div>
-            <p className="font-bold text-lg">Oceniłeś wszystkie miejsca!</p>
+            <p className="font-bold text-lg">{t("group.all_rated")}</p>
             <p className="text-muted-foreground text-sm mt-1">
-              Polubiłeś {likedPlaces.length + superLikedPlaces.length} miejsc.
-              Sprawdź co dopasowaliście z grupą!
+              {t("group.liked_count", { count: likedPlaces.length + superLikedPlaces.length })}
             </p>
           </div>
           <button
             onClick={onGroupFinished}
             className="py-3 px-8 rounded-full bg-primary text-white font-semibold text-sm active:scale-95 transition-transform"
           >
-            Zobacz dopasowania
+            {t("group.see_matches")}
           </button>
         </div>
       );
@@ -1783,14 +1791,14 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
       {onSiteConfirm && (
         <div className="absolute top-2 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 max-w-[92%] bg-foreground text-background rounded-full pl-3.5 pr-2 py-1.5 shadow-lg animate-in fade-in slide-in-from-top-2 duration-300">
           <Navigation className="h-3.5 w-3.5 shrink-0" />
-          <span className="text-xs font-medium truncate">Jesteś na&nbsp;miejscu - dystans od&nbsp;Ciebie</span>
+          <span className="text-xs font-medium truncate">{t("onsite_banner")}</span>
           <button
             onClick={() => { setOnSiteConfirm(false); setLocationPrimerOpen(true); }}
             className="shrink-0 text-xs font-bold px-2 py-0.5 rounded-full bg-background/15 active:scale-95 transition-transform"
           >
-            Zmień
+            {t("change")}
           </button>
-          <button onClick={() => setOnSiteConfirm(false)} aria-label="Zamknij" className="shrink-0 h-5 w-5 flex items-center justify-center rounded-full active:bg-background/15">
+          <button onClick={() => setOnSiteConfirm(false)} aria-label={t("close")} className="shrink-0 h-5 w-5 flex items-center justify-center rounded-full active:bg-background/15">
             <X className="h-3.5 w-3.5" />
           </button>
         </div>
@@ -1825,9 +1833,9 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
           a wybranych count nie ma sensu bez bottom CTA. */}
       <div className={cn("flex items-center justify-between px-5 pt-1 pb-3 shrink-0", exploreMode && "hidden")}>
         {roundPlaceIds?.length ? (
-          <span className="text-xs text-muted-foreground">Miejsce {roundPlaceIds.length - queue.length}/{roundPlaceIds.length}</span>
+          <span className="text-xs text-muted-foreground">{t("round_progress", { current: roundPlaceIds.length - queue.length, total: roundPlaceIds.length })}</span>
         ) : onEditDate ? (
-          <button onClick={onEditDate} className="text-xs text-muted-foreground inline-flex items-center gap-1 active:opacity-60" aria-label="Zmień datę">
+          <button onClick={onEditDate} className="text-xs text-muted-foreground inline-flex items-center gap-1 active:opacity-60" aria-label={t("edit_date_aria")}>
             {city} · {format(date, "d MMM")}
             <CalendarDays className="h-3 w-3 opacity-60" />
           </button>
@@ -1835,7 +1843,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
           <span className="text-xs text-muted-foreground">{city} · {format(date, "d MMM")}</span>
         )}
         <span className="text-xs text-muted-foreground">
-          {(likedPlaces.length + superLikedPlaces.length) > 0 ? `${likedPlaces.length + superLikedPlaces.length} wybranych` : ""}
+          {(likedPlaces.length + superLikedPlaces.length) > 0 ? t("selected_count", { count: likedPlaces.length + superLikedPlaces.length }) : ""}
         </span>
       </div>
 
@@ -1882,13 +1890,13 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
         <div className="flex-1 min-h-0 overflow-y-auto px-4 pt-2 pb-4">
           {displayQueue.length === 0 ? (
             <div className="py-16 flex flex-col items-center gap-3 text-center">
-              <p className="text-sm text-muted-foreground">Brak wyników dla „{searchQuery.trim()}"</p>
+              <p className="text-sm text-muted-foreground">{t("search_no_results", { query: searchQuery.trim() })}</p>
               {onSuggestPlace && (
                 <button
                   onClick={onSuggestPlace}
                   className="text-sm font-semibold text-orange-600 underline underline-offset-2"
                 >
-                  Zaproponuj dodanie miejsca
+                  {t("suggest_add_place")}
                 </button>
               )}
             </div>
@@ -1910,7 +1918,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-bold text-foreground line-clamp-1">{place.place_name}</p>
                       <p className="text-xs text-muted-foreground line-clamp-1">
-                        {CATEGORY_LABELS[place.category] ?? place.category}{place.address ? ` · ${place.address}` : ""}
+                        {t(`categories.${place.category}`, { defaultValue: CATEGORY_LABELS[place.category] ?? place.category })}{place.address ? ` · ${place.address}` : ""}
                       </p>
                     </div>
                   </button>
@@ -1976,7 +1984,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
             onClick={() => { if (onSwitchToMatches) onSwitchToMatches(); else handleProceed(); }}
             className="flex-1 py-3 rounded-full bg-primary text-white text-sm font-semibold flex items-center justify-center gap-2 active:scale-[0.97] transition-transform"
           >
-            {onSwitchToMatches ? "Przejdź do dopasowań" : `Zaplanuj trasę · ${likedPlaces.length + superLikedPlaces.length} ${(likedPlaces.length + superLikedPlaces.length) === 1 ? "miejsce" : "miejsc"}`}
+            {onSwitchToMatches ? t("go_to_matches") : t((likedPlaces.length + superLikedPlaces.length) === 1 ? "cta_plan_route_one" : "cta_plan_route_many", { count: likedPlaces.length + superLikedPlaces.length })}
             <ArrowRight className="h-4 w-4" />
           </button>
         </div>

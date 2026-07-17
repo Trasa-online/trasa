@@ -1,0 +1,50 @@
+{
+  "home_header": {
+    "title": "Twoje trasy",
+    "subtitle": "Aktywne podróże, trasy grupowe i planowanie nowych."
+  },
+  "liked": {
+    "empty_title": "Brak zapisanych miejsc",
+    "empty_desc": "Wracaj na główną i przeglądaj miejsca. Te które zapiszesz pojawią się tutaj.",
+    "browse": "Przeglądaj miejsca",
+    "saved_place_one": "zapisane miejsce",
+    "saved_place_few": "zapisane miejsca",
+    "saved_place_many": "zapisanych miejsc",
+    "confirm_clear_city": "Usunąć wszystkie zapisane z {{city}}?",
+    "remove_group_aria": "Usuń grupę",
+    "remove_aria": "Usuń",
+    "create_route": "Stwórz trasę z tych miejsc",
+    "create_collection": "Stwórz zestawienie z tych miejsc"
+  },
+  "collections": {
+    "toast_deleted": "Zestawienie usunięte",
+    "toast_delete_error": "Nie udało się usunąć: {{error}}",
+    "error_fallback": "błąd",
+    "empty_title": "Brak zestawień",
+    "empty_desc": "Stwórz swoją pierwszą kolekcję ulubionych miejsc i podziel się nią z innymi.",
+    "create": "Stwórz zestawienie",
+    "untitled": "Bez tytułu",
+    "place_one": "miejsce",
+    "place_few": "miejsca",
+    "place_many": "miejsc",
+    "private": "prywatne",
+    "pending": "czeka na akceptację",
+    "rejected": "odrzucone",
+    "reason": "Powód: {{note}}",
+    "edit_aria": "Edytuj zestawienie",
+    "delete_aria": "Usuń zestawienie",
+    "delete_title": "Usunąć zestawienie?",
+    "delete_desc": "„{{title}}\" zniknie na zawsze. Tej akcji nie można cofnąć.",
+    "cancel": "Anuluj",
+    "deleting": "Usuwam…",
+    "delete": "Usuń"
+  },
+  "explore": {
+    "back_aria": "Wróć do eksploracji",
+    "collections_title": "Twoje zestawienia",
+    "collections_subtitle": "Kolekcje miejsc, które stworzyłeś.",
+    "title": "Eksploruj",
+    "subtitle": "Polecane miejsca, trasy i zestawienia.",
+    "add": "Dodaj"
+  }
+}

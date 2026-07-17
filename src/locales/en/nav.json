@@ -1,0 +1,23 @@
+{
+  "browse_places": "Browse places",
+  "create_collection": "Create a list",
+  "plan": "Plan",
+  "back": "Back",
+  "plan_solo": "Plan solo",
+  "plan_group": "Plan with a group",
+  "join_session": "Join a session",
+  "reuse_title": "Use today's likes?",
+  "reuse_have": "You have",
+  "reuse_place_one": "liked place",
+  "reuse_place_few": "liked places",
+  "reuse_place_many": "liked places",
+  "reuse_from": "in {{city}}. I can add them to a new route.",
+  "reuse_accept": "Yes, use my likes →",
+  "reuse_decline": "No, start fresh",
+  "join_title": "Join a session",
+  "join_desc": "Enter the session code you got from friends",
+  "join_placeholder": "e.g. ABC123",
+  "cancel": "Cancel",
+  "join_submit": "Join",
+  "fab_aria": "Add route"
+}

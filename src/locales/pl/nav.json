@@ -1,0 +1,23 @@
+{
+  "browse_places": "Przeglądaj miejsca",
+  "create_collection": "Stwórz zestawienie",
+  "plan": "Zaplanuj",
+  "back": "Wróć",
+  "plan_solo": "Zaplanuj solo",
+  "plan_group": "Zaplanuj grupowo",
+  "join_session": "Dołącz do sesji",
+  "reuse_title": "Wykorzystać polubione z dziś?",
+  "reuse_have": "Masz",
+  "reuse_place_one": "polubione miejsce",
+  "reuse_place_few": "polubione miejsca",
+  "reuse_place_many": "polubionych miejsc",
+  "reuse_from": "z {{city}}. Mogę je dodać do nowej trasy.",
+  "reuse_accept": "Tak, wykorzystaj polubione →",
+  "reuse_decline": "Nie, zacznij na nowo",
+  "join_title": "Dołącz do sesji",
+  "join_desc": "Wpisz kod sesji otrzymany od znajomych",
+  "join_placeholder": "np. ABC123",
+  "cancel": "Anuluj",
+  "join_submit": "Dołącz",
+  "fab_aria": "Dodaj trasę"
+}
