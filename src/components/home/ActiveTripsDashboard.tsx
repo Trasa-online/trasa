@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import ActiveTripPlanEditor from "@/components/home/ActiveTripPlanEditor";
 import { MapPin, Users, ChevronRight, ChevronDown, Trash2, Loader2, X } from "lucide-react";
 import { format, parseISO, isValid } from "date-fns";
-import { pl } from "date-fns/locale";
+import { dateLocale } from "@/lib/dateLocale";
 import { avatarSrc } from "@/lib/avatar";
 import { notify } from "@/lib/notify";
 import { deferDelete } from "@/lib/deferDelete";
@@ -53,14 +53,14 @@ function TripCard({ trip, active, onSelect }: { trip: any; active: boolean; onSe
 // aktywne trasy grupowe. Gdy brak -> puste stany. Swiper jest pod guzikiem "+" (FAB w BottomNav).
 
 const fmtDate = (d?: string | null) =>
-  d && isValid(parseISO(d)) ? format(parseISO(d), "d MMMM yyyy", { locale: pl }) : null;
+  d && isValid(parseISO(d)) ? format(parseISO(d), "d MMMM yyyy", { locale: dateLocale() }) : null;
 const fmtShort = (d?: string | null) =>
-  d && isValid(parseISO(d)) ? format(parseISO(d), "d MMM", { locale: pl }) : null;
+  d && isValid(parseISO(d)) ? format(parseISO(d), "d MMM", { locale: dateLocale() }) : null;
 // Zakres dat trasy (wielodniowa) - "26 cze – 27 cze 2026"; jednodniowa -> pelna data.
 const fmtRange = (min?: string | null, max?: string | null) => {
   if (!min || !isValid(parseISO(min))) return null;
   if (!max || min === max || !isValid(parseISO(max))) return fmtDate(min);
-  return `${format(parseISO(min), "d MMM", { locale: pl })} – ${format(parseISO(max), "d MMM yyyy", { locale: pl })}`;
+  return `${format(parseISO(min), "d MMM", { locale: dateLocale() })} – ${format(parseISO(max), "d MMM yyyy", { locale: dateLocale() })}`;
 };
 
 // Sekcja w stylu "koncept": ikona w zaokraglonym kwadracie (lewy gorny rog), tekst do
@@ -456,7 +456,7 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
           <p className="text-sm font-bold mb-2.5 px-1">{t("dashboard.section_drafts")}</p>
           <div className="space-y-2.5">
             {drafts.map((d) => {
-              const dateLabel = d.date && isValid(parseISO(d.date)) ? format(parseISO(d.date), "d MMM", { locale: pl }) : null;
+              const dateLabel = d.date && isValid(parseISO(d.date)) ? format(parseISO(d.date), "d MMM", { locale: dateLocale() }) : null;
               const n = d.likedPlaceNames.length;
               const placesLabel = `${n} ${n === 1 ? t("places_one") : n < 5 ? t("places_few") : t("places_many")}`;
               return (

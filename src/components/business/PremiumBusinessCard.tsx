@@ -21,7 +21,7 @@ import { MAIN_CATEGORIES } from "@/lib/categories";
 import { cn } from "@/lib/utils";
 import { Star, Clock, ChevronRight, ChevronLeft, ChevronDown, X, Maximize2, Phone, Globe, FileText, Instagram, Facebook } from "lucide-react";
 import { parseISO, isValid, formatDistanceToNow } from "date-fns";
-import { pl } from "date-fns/locale";
+import { dateLocale } from "@/lib/dateLocale";
 import RouteMap from "@/components/RouteMap";
 import type {
   PremiumBusinessData,
@@ -476,7 +476,7 @@ function PostsSection({ data, onPhotoExpand }: SectionProps & { onPhotoExpand: (
       <div className="space-y-3">
         {posts.map((post) => {
           const date = parseISO(post.created_at);
-          const dateLabel = isValid(date) ? formatDistanceToNow(date, { addSuffix: true, locale: pl }) : "";
+          const dateLabel = isValid(date) ? formatDistanceToNow(date, { addSuffix: true, locale: dateLocale() }) : "";
           const photos = post.photo_urls.filter(validUrl);
           const gridPhotos = photos.slice(0, 2);
           return (

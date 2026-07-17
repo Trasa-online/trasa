@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Trash2, MapPin, Clock } from "lucide-react";
 import { format, differenceInDays, isValid, parseISO } from "date-fns";
-import { pl } from "date-fns/locale";
+import { dateLocale } from "@/lib/dateLocale";
 import { API_BASE } from "@/lib/platform";
 import { useTranslation } from "react-i18next";
 
@@ -119,7 +119,7 @@ const UpcomingTripCard = ({ trip, onDelete, onPinTap, onEdit }: UpcomingTripCard
     : t("upcoming.countdown_days", { count: daysUntil });
 
   const dateLabel = startDateObj
-    ? format(startDateObj, "d MMM", { locale: pl })
+    ? format(startDateObj, "d MMM", { locale: dateLocale() })
     : null;
 
   return (
@@ -181,7 +181,7 @@ const UpcomingTripCard = ({ trip, onDelete, onPinTap, onEdit }: UpcomingTripCard
         if (dayPins.length === 0) return null;
         const routeDateObj = safeDate(route.start_date);
         const dayDate = routeDateObj
-          ? format(routeDateObj, "EEE, d MMM", { locale: pl })
+          ? format(routeDateObj, "EEE, d MMM", { locale: dateLocale() })
           : null;
         return (
           <div key={route.id} className="space-y-2">

@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { avatarSrc } from "@/lib/avatar";
 import { useNavigate } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
-import { pl } from "date-fns/locale";
+import { dateLocale } from "@/lib/dateLocale";
 import { MapPin, Heart, Map } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -101,7 +101,7 @@ export default function FeedActivityCard({ route, actor }: { route: FeedRoute; a
   const [detailPin, setDetailPin] = useState<FeedPin | null>(null);
 
   const displayName = actor.username || actor.first_name || t("feed.someone");
-  const timeAgo = formatDistanceToNow(new Date(route.created_at), { addSuffix: false, locale: pl });
+  const timeAgo = formatDistanceToNow(new Date(route.created_at), { addSuffix: false, locale: dateLocale() });
   const photos = (route.review_photos ?? []).filter((url): url is string => !!url && typeof url === "string" && url.trim() !== "");
   const pins = (route.pins ?? []).filter(p => p.place_name);
 

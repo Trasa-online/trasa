@@ -5,7 +5,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Users, MapPin, Star, Check, UserPlus, CalendarDays, Copy, Share2, Search, X, Loader2 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { format, parseISO, isValid, addDays } from "date-fns";
-import { pl } from "date-fns/locale";
+import { dateLocale } from "@/lib/dateLocale";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -821,8 +821,8 @@ const GroupSession = () => {
               <p className="text-xs text-muted-foreground inline-flex items-center gap-1 mt-0.5">
                 <CalendarDays className="h-3 w-3 shrink-0" />
                 {end
-                  ? `${format(start, "d MMM", { locale: pl })} - ${format(end, "d MMM yyyy", { locale: pl })}`
-                  : format(start, "d MMM yyyy", { locale: pl })}
+                  ? `${format(start, "d MMM", { locale: dateLocale() })} - ${format(end, "d MMM yyyy", { locale: dateLocale() })}`
+                  : format(start, "d MMM yyyy", { locale: dateLocale() })}
               </p>
             );
           })()}

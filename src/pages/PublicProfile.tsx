@@ -6,7 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { parseISO, isValid, format } from "date-fns";
-import { pl } from "date-fns/locale";
+import { dateLocale } from "@/lib/dateLocale";
 import { ArrowLeft, Map as MapIcon, Building2, Layers, CalendarDays } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -210,7 +210,7 @@ export default function PublicProfile() {
                 const validPhotos = (e.review_photos ?? []).filter((u: any) => !!u && typeof u === "string" && u.trim() !== "");
                 const thumb = validPhotos[0] ?? e._cover ?? getRandomPinPlaceholder(e.id);
                 const d = e.start_date ? parseISO(e.start_date) : null;
-                const dateLabel = d && isValid(d) ? format(d, "d MMMM yyyy", { locale: pl }) : "";
+                const dateLabel = d && isValid(d) ? format(d, "d MMMM yyyy", { locale: dateLocale() }) : "";
                 return (
                   <button
                     key={e.id}

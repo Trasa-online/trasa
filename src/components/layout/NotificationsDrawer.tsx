@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { X, Bell, UserPlus, UserCheck, MapPin, Route, Users, Bookmark, CheckCircle2, XCircle } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
-import { pl } from "date-fns/locale";
+import { dateLocale } from "@/lib/dateLocale";
 import { avatarSrc } from "@/lib/avatar";
 
 interface Notification {
@@ -200,7 +200,7 @@ export default function NotificationsDrawer({ open, onClose, userId }: Props) {
                 };
                 const Icon = cfg.icon;
                 const username = n.actor?.username ?? "Ktoś";
-                const timeAgo = formatDistanceToNow(new Date(n.created_at), { addSuffix: true, locale: pl });
+                const timeAgo = formatDistanceToNow(new Date(n.created_at), { addSuffix: true, locale: dateLocale() });
                 const labelText = cfg.label(username, n.metadata);
 
                 return (

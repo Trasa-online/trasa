@@ -11,7 +11,7 @@ import { usePostHog } from "@posthog/react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { format, parseISO, startOfToday, differenceInCalendarDays, addDays } from "date-fns";
-import { pl } from "date-fns/locale";
+import { dateLocale } from "@/lib/dateLocale";
 import type { DateRange } from "react-day-picker";
 import { Calendar } from "@/components/ui/calendar";
 import { SHARE_BASE_URL } from "@/lib/shareUrl";
@@ -358,8 +358,8 @@ const CreateGroupSession = () => {
                 <span className="flex-1 text-left">
                   {tripDate
                     ? (dateRange?.to && numDays > 1
-                        ? `${format(dateRange.from!, "d MMM", { locale: pl })} - ${format(dateRange.to, "d MMM yyyy", { locale: pl })} · ${t("date_range_days", { count: numDays })}`
-                        : `${format(tripDate, "d MMMM yyyy", { locale: pl })} · ${t("date_pick_second_hint")}`)
+                        ? `${format(dateRange.from!, "d MMM", { locale: dateLocale() })} - ${format(dateRange.to, "d MMM yyyy", { locale: dateLocale() })} · ${t("date_range_days", { count: numDays })}`
+                        : `${format(tripDate, "d MMMM yyyy", { locale: dateLocale() })} · ${t("date_pick_second_hint")}`)
                     : t("date_placeholder")}
                 </span>
                 {tripDate && (
@@ -376,7 +376,7 @@ const CreateGroupSession = () => {
                     selected={dateRange}
                     onSelect={handleRangeSelect}
                     disabled={(d) => d < new Date(new Date().setHours(0,0,0,0))}
-                    locale={pl}
+                    locale={dateLocale()}
                     className="rounded-2xl"
                   />
                 </div>
@@ -478,7 +478,7 @@ const CreateGroupSession = () => {
                 ))}
                 {historicalSessions.map((s: any) => {
                   const dateLabel = s.trip_date
-                    ? format(parseISO(s.trip_date), "d MMM yyyy", { locale: pl })
+                    ? format(parseISO(s.trip_date), "d MMM yyyy", { locale: dateLocale() })
                     : null;
                   return (
                     <div

@@ -4,7 +4,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { PullToRefresh } from "@/components/PullToRefresh";
 import { MapPin, Heart, Trash2, ArrowRight, Plus, ArrowLeft, Pencil, ListChecks, ChevronDown } from "lucide-react";
 import { parseISO, isValid, format, isToday, isYesterday } from "date-fns";
-import { pl } from "date-fns/locale";
+import { dateLocale } from "@/lib/dateLocale";
 import DiscoveryFeed from "@/components/home/DiscoveryFeed";
 import OnboardingOverlay from "@/components/home/OnboardingOverlay";
 import HomeHeaderActions from "@/components/home/HomeHeaderActions";
@@ -54,7 +54,7 @@ function formatGroupDate(dateStr: string): string {
   if (!isValid(d)) return dateStr;
   if (isToday(d)) return "Dzisiaj";
   if (isYesterday(d)) return "Wczoraj";
-  return format(d, "d MMMM yyyy", { locale: pl });
+  return format(d, "d MMMM yyyy", { locale: dateLocale() });
 }
 
 export const LikedTab = () => {

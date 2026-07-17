@@ -15,7 +15,7 @@ import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { PlacePhoto, resolveStored } from "@/components/PlacePhoto";
 import { compressImage } from "@/lib/imageCompression";
 import { format } from "date-fns";
-import { pl } from "date-fns/locale";
+import { dateLocale } from "@/lib/dateLocale";
 import { isNative } from "@/lib/platform";
 import { Camera as CapCamera } from "@capacitor/camera";
 import { notify } from "@/lib/notify";
@@ -637,14 +637,14 @@ const ReviewSummary = () => {
     const fd = new Date(first);
     if (isMultiDay && last) {
       const ld = new Date(last);
-      return `${format(fd, "d", { locale: pl })} - ${format(ld, "d MMMM yyyy", { locale: pl })}`;
+      return `${format(fd, "d", { locale: dateLocale() })} - ${format(ld, "d MMMM yyyy", { locale: dateLocale() })}`;
     }
     const single = route?.end_date && route.end_date !== route.start_date ? route.end_date : first;
     const sd = new Date(single);
     if (route?.end_date && route.end_date !== route.start_date) {
-      return `${format(fd, "d", { locale: pl })} - ${format(sd, "d MMMM yyyy", { locale: pl })}`;
+      return `${format(fd, "d", { locale: dateLocale() })} - ${format(sd, "d MMMM yyyy", { locale: dateLocale() })}`;
     }
-    return format(fd, "d MMMM yyyy", { locale: pl });
+    return format(fd, "d MMMM yyyy", { locale: dateLocale() });
   }, [sortedDays, isMultiDay, route?.end_date, route?.start_date]);
 
   // Aktywny wpis vs wspomnienie: wspomnienie gdy trasa UKOŃCZONA (trip_type=completed - user

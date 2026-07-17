@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
 import { format, differenceInCalendarDays, addDays } from "date-fns";
-import { pl } from "date-fns/locale";
+import { dateLocale } from "@/lib/dateLocale";
 import type { DateRange } from "react-day-picker";
 
 interface FullCalendarPickerProps {
@@ -59,7 +59,7 @@ const FullCalendarPicker = ({ onConfirm }: FullCalendarPickerProps) => {
           onMonthChange={setMonth}
           disabled={(date) => date < today}
           fromDate={today}
-          locale={pl}
+          locale={dateLocale()}
           className="w-full"
           modifiers={{
             singleDay: singleDayMode && range?.from ? [range.from] : [],
@@ -100,9 +100,9 @@ const FullCalendarPicker = ({ onConfirm }: FullCalendarPickerProps) => {
             {endDate && numDays > 1 ? (
               <>
                 <p className="text-base font-semibold text-foreground">
-                  {format(startDate, "d MMM", { locale: pl })}
+                  {format(startDate, "d MMM", { locale: dateLocale() })}
                   {" - "}
-                  {format(endDate, "d MMM yyyy", { locale: pl })}
+                  {format(endDate, "d MMM yyyy", { locale: dateLocale() })}
                 </p>
                 <p className="text-sm text-muted-foreground mt-0.5">
                   {numDays} {numDays < 5 ? "dni" : "dni"} · {nights} {nights === 1 ? "noc" : nights < 5 ? "noce" : "nocy"}
@@ -111,7 +111,7 @@ const FullCalendarPicker = ({ onConfirm }: FullCalendarPickerProps) => {
             ) : (
               <>
                 <p className="text-base font-semibold text-foreground">
-                  {format(startDate, "d MMMM yyyy", { locale: pl })}
+                  {format(startDate, "d MMMM yyyy", { locale: dateLocale() })}
                 </p>
                 <p className="text-sm text-muted-foreground mt-0.5">
                   Kliknij drugi dzień, żeby wybrać zakres

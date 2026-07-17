@@ -17,7 +17,7 @@ import { resizeImage } from "@/lib/imageResize";
 import { isHeic, convertHeicToJpeg } from "@/lib/heicConvert";
 import { forwardGeocode } from "@/lib/googleMaps";
 import { formatDistanceToNow, subDays, format, addDays, differenceInCalendarDays, endOfDay, startOfDay } from "date-fns";
-import { pl } from "date-fns/locale";
+import { dateLocale } from "@/lib/dateLocale";
 import type { DateRange } from "react-day-picker";
 import { Calendar } from "@/components/ui/calendar";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
@@ -797,7 +797,7 @@ const BusinessDashboard = () => {
       for (let i = 0; i < numDays; i++) {
         const d = addDays(from, i);
         const key = format(d, "yyyy-MM-dd");
-        dayMap[key] = { date: format(d, numDays <= 14 ? "d MMM" : "d MMM", { locale: pl }), views: 0, routes: 0, clicks: 0 };
+        dayMap[key] = { date: format(d, numDays <= 14 ? "d MMM" : "d MMM", { locale: dateLocale() }), views: 0, routes: 0, clicks: 0 };
       }
       (phData.chartData ?? []).forEach((row: { date: string; views: number; routes: number; clicks: number }) => {
         if (dayMap[row.date]) {
@@ -1706,7 +1706,7 @@ const BusinessDashboard = () => {
                           <div className={`h-2 w-2 rounded-full shrink-0 ${info.dot}`} />
                           <p className="text-sm text-slate-600 flex-1">{info.txt}</p>
                           <p className="text-[10px] text-slate-400 shrink-0">
-                            {formatDistanceToNow(new Date(ev.created_at), { addSuffix: true, locale: pl })}
+                            {formatDistanceToNow(new Date(ev.created_at), { addSuffix: true, locale: dateLocale() })}
                           </p>
                         </div>
                       );
@@ -2324,7 +2324,7 @@ const BusinessDashboard = () => {
                               {post.photo_urls.map((url, idx) => <img key={idx} src={url} className="w-full rounded-2xl object-cover aspect-square" />)}
                             </div>
                           )}
-                          <p className="text-[11px] text-muted-foreground">{formatDistanceToNow(new Date(post.created_at), { addSuffix: true, locale: pl })}</p>
+                          <p className="text-[11px] text-muted-foreground">{formatDistanceToNow(new Date(post.created_at), { addSuffix: true, locale: dateLocale() })}</p>
                         </div>
                       ))}
                     </div>
@@ -2386,7 +2386,7 @@ const BusinessDashboard = () => {
                   <h2 className="text-lg font-black">Analityka</h2>
                   <p className="text-sm text-slate-400">
                     {analyticsRange === 'custom' && customDateRange?.from
-                      ? `${format(customDateRange.from, 'd MMM', { locale: pl })}${customDateRange.to && customDateRange.to !== customDateRange.from ? ` - ${format(customDateRange.to, 'd MMM yyyy', { locale: pl })}` : ''}`
+                      ? `${format(customDateRange.from, 'd MMM', { locale: dateLocale() })}${customDateRange.to && customDateRange.to !== customDateRange.from ? ` - ${format(customDateRange.to, 'd MMM yyyy', { locale: dateLocale() })}` : ''}`
                       : 'Statystyki aktywności Twojego lokalu.'}
                   </p>
                 </div>
@@ -2427,7 +2427,7 @@ const BusinessDashboard = () => {
                             }
                           }}
                           disabled={(d) => d > new Date()}
-                          locale={pl}
+                          locale={dateLocale()}
                           className="p-3"
                           classNames={{
                             months: "flex flex-col",
@@ -2666,7 +2666,7 @@ const BusinessDashboard = () => {
                             <div key={i} className="flex items-center gap-3 py-3">
                               <div className={`h-2 w-2 rounded-full shrink-0 ${info.dot}`} />
                               <p className="text-sm text-slate-600 flex-1">{info.txt}</p>
-                              <p className="text-xs text-slate-400 shrink-0">{formatDistanceToNow(new Date(ev.created_at), { addSuffix: true, locale: pl })}</p>
+                              <p className="text-xs text-slate-400 shrink-0">{formatDistanceToNow(new Date(ev.created_at), { addSuffix: true, locale: dateLocale() })}</p>
                             </div>
                           );
                         })}

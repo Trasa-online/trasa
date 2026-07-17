@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import CityPicker from "@/components/plan-wizard/CityPicker";
 import FullCalendarPicker from "@/components/plan-wizard/FullCalendarPicker";
 import { Calendar } from "@/components/ui/calendar";
-import { pl } from "date-fns/locale";
+import { dateLocale } from "@/lib/dateLocale";
 import StartingLocationPicker from "@/components/plan-wizard/StartingLocationPicker";
 import PlaceSwiper, { type MockPlace } from "@/components/plan-wizard/PlaceSwiper";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
@@ -728,7 +728,7 @@ const PlanWizard = () => {
               selected={date ?? undefined}
               onSelect={(d) => { if (d) { setDate(d); setEditDateOpen(false); } }}
               disabled={(d) => d < new Date(new Date().setHours(0, 0, 0, 0))}
-              locale={pl}
+              locale={dateLocale()}
               className="rounded-2xl"
             />
           </div>

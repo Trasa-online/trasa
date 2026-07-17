@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { formatDistanceToNow } from "date-fns";
-import { pl } from "date-fns/locale";
+import { dateLocale } from "@/lib/dateLocale";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ArrowUp, Trash2 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -104,7 +104,7 @@ export default function RouteCommentsSheet({ routeId, open, onOpenChange }: Rout
                     <div className="flex items-baseline gap-2">
                       <span className="text-sm font-semibold">{displayName}</span>
                       <span className="text-[11px] text-muted-foreground">
-                        {formatDistanceToNow(new Date(c.created_at), { addSuffix: false, locale: pl })}
+                        {formatDistanceToNow(new Date(c.created_at), { addSuffix: false, locale: dateLocale() })}
                       </span>
                     </div>
                     <p className="text-sm text-foreground/90 mt-0.5 leading-snug">{c.content}</p>

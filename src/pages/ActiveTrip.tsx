@@ -13,7 +13,7 @@ import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import type { MockPlace } from "@/components/plan-wizard/PlaceSwiper";
 import { expandCity } from "@/lib/cities";
 import { format, parseISO, isValid } from "date-fns";
-import { pl } from "date-fns/locale";
+import { dateLocale } from "@/lib/dateLocale";
 import { useTranslation } from "react-i18next";
 
 // Error boundary wokol RouteMap - Google Maps API (vis.gl/react-google-maps)
@@ -307,7 +307,7 @@ const ActiveTrip = ({ routeId: propRouteId, embedded = false }: { routeId?: stri
   }
 
   const dateLabel = route.start_date && isValid(parseISO(route.start_date))
-    ? format(parseISO(route.start_date), "d MMMM yyyy", { locale: pl })
+    ? format(parseISO(route.start_date), "d MMMM yyyy", { locale: dateLocale() })
     : null;
 
   return (

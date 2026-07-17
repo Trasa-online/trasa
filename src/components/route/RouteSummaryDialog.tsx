@@ -10,7 +10,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import { toast } from "sonner";
 import { format, addDays } from "date-fns";
-import { pl } from "date-fns/locale";
+import { dateLocale } from "@/lib/dateLocale";
 import posthog from "posthog-js";
 import { API_BASE } from "@/lib/platform";
 import { removeDraft } from "@/lib/draftRoutes";
@@ -92,7 +92,7 @@ const RouteSummaryDialog = ({
     : startDate;
 
   const dateLabel = startDate
-    ? format(startDate, "d MMM yyyy", { locale: pl })
+    ? format(startDate, "d MMM yyyy", { locale: dateLocale() })
     : null;
 
   const totalPins = days.reduce((s, d) => s + (d.pins?.length ?? 0), 0);

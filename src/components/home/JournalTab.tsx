@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { resolveStored } from "@/components/PlacePhoto";
 import { format, parseISO, isValid } from "date-fns";
-import { pl } from "date-fns/locale";
+import { dateLocale } from "@/lib/dateLocale";
 import { Globe, Lock, Loader2, Trash2, CalendarDays, Sparkles, Eye } from "lucide-react";
 import { toast } from "sonner";
 
@@ -240,7 +240,7 @@ const JournalTab = ({ userId }: JournalTabProps) => {
         const validPhotos = (entry.review_photos ?? []).filter((url: any) => !!url && typeof url === "string" && url.trim() !== "");
         const thumb = validPhotos[0] ?? (coverMap as Record<string, string>)[entry.id] ?? getRandomPinPlaceholder(entry.id);
         const _d = entry.start_date ? parseISO(entry.start_date) : null;
-        const dateLabel = _d && isValid(_d) ? format(_d, "d MMMM yyyy", { locale: pl }) : "";
+        const dateLabel = _d && isValid(_d) ? format(_d, "d MMMM yyyy", { locale: dateLocale() }) : "";
         const hasUserPhoto = validPhotos.length > 0;
 
         return (
