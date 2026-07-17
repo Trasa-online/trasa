@@ -75,7 +75,15 @@
     "publishing": "Publikuję…",
     "publish": "Publikuj",
     "history": "Historia wpisów",
-    "empty": "Brak postów - dodaj pierwszy!"
+    "empty": "Brak postów - dodaj pierwszy!",
+    "event_en_label": "Wersja angielska",
+    "event_en_auto": "(auto)",
+    "event_en_edited": "(edytowana)",
+    "event_en_translate": "Przetłumacz",
+    "event_en_translating": "Tłumaczę…",
+    "event_en_placeholder": "Auto-tłumaczenie po zapisie",
+    "event_en_hint": "Widoczne dla gości z ustawionym angielskim. Przetłumaczymy automatycznie przy zapisie - możesz też poprawić ręcznie.",
+    "event_translate_error": "Nie udało się przetłumaczyć"
   },
   "save": {
     "event_date_error": "Data końca wydarzenia nie może być wcześniejsza niż data początku",

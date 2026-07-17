@@ -75,7 +75,15 @@
     "publishing": "Publishing…",
     "publish": "Publish",
     "history": "Post history",
-    "empty": "No posts yet - add the first one!"
+    "empty": "No posts yet - add the first one!",
+    "event_en_label": "English version",
+    "event_en_auto": "(auto)",
+    "event_en_edited": "(edited)",
+    "event_en_translate": "Translate",
+    "event_en_translating": "Translating…",
+    "event_en_placeholder": "Auto-translated on save",
+    "event_en_hint": "Shown to guests using English. We translate automatically on save - you can also edit it manually.",
+    "event_translate_error": "Translation failed"
   },
   "save": {
     "event_date_error": "The event end date cannot be earlier than the start date",

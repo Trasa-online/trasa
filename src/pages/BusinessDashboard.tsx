@@ -491,6 +491,13 @@ const BusinessDashboard = () => {
   const [galleryUrls, setGalleryUrls] = useState<string[]>([]);
   const [menuImageUrls, setMenuImageUrls] = useState<string[]>([]);
   const [eventTitle, setEventTitle] = useState("");
+  // Auto-tlumaczenie EN tytulu wydarzenia (widoczne dla zagranicznych podroznikow) +
+  // flaga recznego nadpisania (wtedy nie nadpisujemy auto przy zapisie).
+  const [eventTitleEn, setEventTitleEn] = useState("");
+  const [eventTitleEnOverridden, setEventTitleEnOverridden] = useState(false);
+  const [translatingEvent, setTranslatingEvent] = useState(false);
+  // Zrodlo ostatniego auto-tlumaczenia - zeby na zapisie nie tlumaczyc w kolko tego samego tytulu.
+  const lastTranslatedEventTitleRef = useRef<string>("");
   const [eventDescription, setEventDescription] = useState("");
   const [eventStartsAt, setEventStartsAt] = useState("");
   const [eventEndsAt, setEventEndsAt] = useState("");
@@ -666,6 +673,9 @@ const BusinessDashboard = () => {
     setColorPromo((profileData as any).color_promo ?? "");
     setOpeningHours(((profileData as any).opening_hours ?? {}) as OpeningHours);
     setEventTitle(profileData.event_title ?? "");
+    setEventTitleEn((profileData as any).event_title_en ?? "");
+    setEventTitleEnOverridden((profileData as any).event_title_en_overridden ?? false);
+    lastTranslatedEventTitleRef.current = profileData.event_title ?? "";
     setEventDescription(profileData.event_description ?? "");
     setEventStartsAt(profileData.event_starts_at ?? "");
     setEventEndsAt(profileData.event_ends_at ?? "");
@@ -1128,6 +1138,29 @@ const BusinessDashboard = () => {
     });
   };
 
+  // Reczne tlumaczenie tytulu wydarzenia (przycisk). Ustawia auto (nie override).
+  const handleTranslateEvent = async () => {
+    if (!eventTitle.trim() || translatingEvent) return;
+    setTranslatingEvent(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("translate-content", {
+        body: { text: eventTitle.trim(), target_lang: "en", context: "event_title" },
+      });
+      if (error) throw error;
+      const translation = (data as any)?.translation;
+      if (translation) {
+        setEventTitleEn(translation);
+        setEventTitleEnOverridden(false);
+        lastTranslatedEventTitleRef.current = eventTitle.trim();
+        setIsDirty(true);
+      }
+    } catch {
+      toast.error(t("posts.event_translate_error"));
+    } finally {
+      setTranslatingEvent(false);
+    }
+  };
+
   const handleSave = async () => {
     if (!profile) return;
     if (eventStartsAt && eventEndsAt && eventEndsAt < eventStartsAt) {
@@ -1135,6 +1168,24 @@ const BusinessDashboard = () => {
       return;
     }
     setSaving(true);
+
+    // Auto-tlumaczenie EN tytulu wydarzenia gdy lokal go nie nadpisal recznie i tytul
+    // sie zmienil od ostatniego tlumaczenia. Pusty tytul -> pusty EN.
+    let eventTitleEnToSave = eventTitleEn;
+    if (!eventTitle.trim()) {
+      eventTitleEnToSave = "";
+    } else if (!eventTitleEnOverridden && eventTitle.trim() !== lastTranslatedEventTitleRef.current) {
+      try {
+        const { data } = await supabase.functions.invoke("translate-content", {
+          body: { text: eventTitle.trim(), target_lang: "en", context: "event_title" },
+        });
+        if ((data as any)?.translation) {
+          eventTitleEnToSave = (data as any).translation;
+          lastTranslatedEventTitleRef.current = eventTitle.trim();
+        }
+      } catch { /* zapisz profil nawet gdy tlumaczenie padnie */ }
+    }
+    setEventTitleEn(eventTitleEnToSave);
 
     // Trigger review if profile looks complete and not already requested
     const isComplete = businessName.trim() && phone.trim();
@@ -1187,6 +1238,8 @@ const BusinessDashboard = () => {
         color_button: colorButton,
         color_promo: colorPromo || null,
         event_title: eventTitle || null,
+        event_title_en: eventTitleEnToSave || null,
+        event_title_en_overridden: eventTitleEnOverridden,
         event_description: null,
         event_starts_at: eventStartsAt || null,
         event_ends_at: eventEndsAt || null,
@@ -2276,6 +2329,23 @@ const BusinessDashboard = () => {
                       <Label htmlFor="event_title">{t("posts.event_title_label")}</Label>
                       <Input id="event_title" value={eventTitle} maxLength={40} onChange={e => { setEventTitle(e.target.value); setIsDirty(true); }} placeholder={t("posts.event_title_placeholder")} />
                       <p className="text-[11px] text-muted-foreground text-right">{eventTitle.length}/40</p>
+                    </div>
+                    {/* Wersja angielska (auto-tlumaczenie z mozliwoscia nadpisania) - widoczna dla zagranicznych podroznikow */}
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <Label htmlFor="event_title_en" className="text-xs flex items-center gap-1.5 flex-wrap">
+                          🌐 {t("posts.event_en_label")}
+                          <span className="text-[10px] font-normal text-muted-foreground">{eventTitleEnOverridden ? t("posts.event_en_edited") : t("posts.event_en_auto")}</span>
+                        </Label>
+                        <button type="button" onClick={handleTranslateEvent} disabled={!eventTitle.trim() || translatingEvent}
+                          className="text-[11px] font-semibold text-blue-600 disabled:opacity-40 active:opacity-70 shrink-0">
+                          {translatingEvent ? t("posts.event_en_translating") : t("posts.event_en_translate")}
+                        </button>
+                      </div>
+                      <Input id="event_title_en" value={eventTitleEn} maxLength={60}
+                        onChange={e => { setEventTitleEn(e.target.value); setEventTitleEnOverridden(true); setIsDirty(true); }}
+                        placeholder={t("posts.event_en_placeholder")} />
+                      <p className="text-[11px] text-muted-foreground">{t("posts.event_en_hint")}</p>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div className="space-y-1 min-w-0"><Label htmlFor="event_starts_at" className="text-xs">{t("posts.from")}</Label><Input id="event_starts_at" value={eventStartsAt} onChange={e => { setEventStartsAt(e.target.value); setIsDirty(true); }} type="date" className="w-full" /></div>

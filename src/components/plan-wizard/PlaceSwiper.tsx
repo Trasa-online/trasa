@@ -19,6 +19,7 @@ import { addLike as saveExploreLike, clearGroup as clearExploreGroup } from "@/l
 import { expandCity } from "@/lib/cities";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
+import i18n from "@/i18n";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -1044,7 +1045,11 @@ function enrichWithBusinessProfile(p: any): MockPlace {
     photo_url: bp.cover_image_url || p.photo_url,
     // Show business section (logo, events, CTA) dla wszystkich biz
     businessLogoUrl: bp.logo_url ?? '',
-    businessEventTitle: bp.event_title ?? undefined,
+    // Zagraniczny podroznik (EN) widzi tytul wydarzenia po angielsku, gdy lokal go ma
+    // (auto-tlumaczenie lub reczne nadpisanie); fallback do PL.
+    businessEventTitle: (i18n.language || "").toLowerCase().startsWith("en") && (bp as any).event_title_en
+      ? (bp as any).event_title_en
+      : (bp.event_title ?? undefined),
     businessPhone: bp.phone ?? null,
     businessWebsite: bp.website ?? null,
     businessInstagram: (bp.social_links as { instagram?: string } | null)?.instagram ?? null,
@@ -1161,7 +1166,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
       if (roundPlaceIds?.length) {
         const { data, error } = await (supabase as any)
           .from("places")
-          .select("*, business_profiles(plan, logo_url, cover_image_url, cover_video_url, event_title, event_description, gallery_urls, phone, website, social_links, main_category, subcategories, tags, description, is_verified, color_badge, color_card_bg, color_button, color_promo, menu_image_urls, opening_hours, latitude, longitude, street, postal_code, address)")
+          .select("*, business_profiles(plan, logo_url, cover_image_url, cover_video_url, event_title, event_title_en, event_description, gallery_urls, phone, website, social_links, main_category, subcategories, tags, description, is_verified, color_badge, color_card_bg, color_button, color_promo, menu_image_urls, opening_hours, latitude, longitude, street, postal_code, address)")
           .in("id", roundPlaceIds);
 
         if (error) console.error("[PlaceSwiper] round fetch error:", error);
@@ -1183,7 +1188,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
       // ── Normal mode ──────────────────────────────────────────────────────
       const { data, error: placesError } = await (supabase as any)
         .from("places")
-        .select("*, business_profiles(plan, logo_url, cover_image_url, cover_video_url, event_title, event_description, gallery_urls, phone, website, social_links, main_category, subcategories, tags, description, is_verified, color_badge, color_card_bg, color_button, color_promo, menu_image_urls, opening_hours, latitude, longitude, street, postal_code, address)")
+        .select("*, business_profiles(plan, logo_url, cover_image_url, cover_video_url, event_title, event_title_en, event_description, gallery_urls, phone, website, social_links, main_category, subcategories, tags, description, is_verified, color_badge, color_card_bg, color_button, color_promo, menu_image_urls, opening_hours, latitude, longitude, street, postal_code, address)")
         .in("city", expandCity(city))
         .eq("is_active", true);
 
