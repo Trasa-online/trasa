@@ -1,0 +1,145 @@
+{
+  "not_found": {
+    "title": "Nie znaleźliśmy tej trasy",
+    "desc": "Mogła zostać usunięta albo nie masz do niej dostępu.",
+    "back_home": "Wróć do głównej"
+  },
+  "status": {
+    "saving": "Zapisywanie…"
+  },
+  "labels": {
+    "trip_fallback": "Podróż",
+    "you": "Ty",
+    "participant": "Uczestnik"
+  },
+  "entry": {
+    "add_name": "Dodaj nazwę wpisu",
+    "name_placeholder": "Nazwa wpisu"
+  },
+  "group": {
+    "participants_count": "{{count}} uczestników"
+  },
+  "note": {
+    "label": "Notka",
+    "label_own": "Notka od Ciebie",
+    "placeholder": "Twoja rada lub notka o tym miejscu…",
+    "saved": "Zapisano ✓"
+  },
+  "categories": {
+    "restaurant": "Restauracja",
+    "cafe": "Kawiarnia",
+    "museum": "Muzeum",
+    "park": "Park",
+    "bar": "Bar",
+    "club": "Klub",
+    "monument": "Zabytek",
+    "gallery": "Galeria",
+    "market": "Targ",
+    "viewpoint": "Punkt widokowy",
+    "shopping": "Zakupy",
+    "experience": "Atrakcja",
+    "walk": "Spacer",
+    "other": "Miejsce"
+  },
+  "plan": {
+    "your_plan": "Twój plan",
+    "day": "Dzień {{number}}",
+    "earlier": "Wcześniej",
+    "later": "Później",
+    "add_place": "Dodaj miejsce"
+  },
+  "empty": {
+    "no_places": "Brak miejsc w planie.",
+    "no_places_day": "Brak miejsc w planie tego dnia.",
+    "no_places_note": "Brak miejsc do oznaczenia notką."
+  },
+  "gallery": {
+    "add": "Dodaj",
+    "tap_hint": "Dotknij zdjęcia, żeby zobaczyć je w pełni i ustawić okładkę wpisu.",
+    "empty": "Brak zdjęć z tej podróży.",
+    "empty_editable": "Brak zdjęć z tej podróży. Dodaj pierwsze wspomnienia."
+  },
+  "tabs": {
+    "places": "Miejsca",
+    "photos": "Zdjęcia"
+  },
+  "stepper": {
+    "route": "Trasa",
+    "notes": "Notki",
+    "photos": "Zdjęcia"
+  },
+  "step_info": {
+    "1": "Popraw trasę tak, jak było naprawdę: usuń miejsca, w których nie byliście, lub zmień kolejność.",
+    "2": "Notka o miejscu: wspomnienie dla siebie i rada dla innych (co zamówić, pro-tip). Zapisuje się sama.",
+    "3": "Dodaj zdjęcia do wspomnienia. To opcjonalne, możesz wrócić do tego później."
+  },
+  "sharing": {
+    "title": "Podziel się trasą",
+    "help_others_title": "Pomóż innym w planowaniu",
+    "help_others_desc": "Trasa trafi do Eksploruj z Twoimi notkami i planem, żeby inni mogli zaplanować podobną podróż.",
+    "privacy_note": "Twoja galeria zdjęć zostaje prywatna i bezpieczna. W Eksploruj pokazujemy tylko plan trasy z Twoimi notkami.",
+    "anon_title": "Udostępnij anonimowo",
+    "anon_desc": "Bez Twojego profilu - trasa pojawi się w Eksploruj jako „Anonim”.",
+    "caption_label": "Podpis",
+    "optional": "(opcjonalnie)",
+    "caption_placeholder": "Napisz coś o tej podróży…"
+  },
+  "prompt": {
+    "title": "Udostępnić tę trasę innym?",
+    "desc": "Trafi do zakładki Eksploruj i pomoże innym zaplanować podróż. Udostępniamy plan trasy z Twoją okładką, notkami i ocenami - bez galerii Twoich zdjęć. Jeśli nie, zostanie prywatna w Twoich Wspomnieniach. Zmienisz to w każdej chwili.",
+    "confirm": "Udostępnij w Eksploruj",
+    "keep_private": "Zostaw prywatną"
+  },
+  "share_sheet": {
+    "title": "Udostępnianie",
+    "share_link": "Udostępnij link do trasy",
+    "stop_sharing": "Przestań udostępniać"
+  },
+  "viewer": {
+    "set_cover": "Ustaw jako okładkę",
+    "is_cover": "Okładka wpisu",
+    "remove_photo": "Usuń zdjęcie"
+  },
+  "confirm": {
+    "remove_place": "Czy na pewno chcesz usunąć {{name}} z planu dnia?",
+    "place_this": "to miejsce"
+  },
+  "cta": {
+    "back": "Wstecz",
+    "next": "Dalej",
+    "done": "Gotowe",
+    "save_changes": "Zapisz zmiany",
+    "close_edit_mode": "Zamknij tryb edycji"
+  },
+  "toast": {
+    "link_copied": "Link skopiowany",
+    "photo_pick_error": "Nie udało się wybrać zdjęć",
+    "cover_set": "Ustawiono okładkę",
+    "photo_deleted": "Zdjęcie usunięte",
+    "plan_saved": "Plan dnia zapisany",
+    "changes_saved": "Zapisano zmiany",
+    "plan_save_error": "Nie udało się zapisać planu",
+    "add_place_error": "Nie udało się dodać miejsca",
+    "place_added": "Dodano miejsce",
+    "name_save_error": "Nie udało się zapisać nazwy",
+    "name_saved": "Zapisano nazwę",
+    "route_public": "Trasa widoczna w Eksploruj",
+    "route_hidden": "Trasa ukryta z Eksploruj"
+  },
+  "share": {
+    "text": "Zobacz moją trasę w Trasa"
+  },
+  "a11y": {
+    "remove_place": "Usuń miejsce",
+    "remove_photo": "Usuń zdjęcie",
+    "list_view": "Widok listy",
+    "cards_view": "Widok kart",
+    "finish_editing": "Zakończ edycję",
+    "back_to_journal": "Wróć do dziennika",
+    "share_route": "Udostępnij trasę",
+    "save_name": "Zapisz nazwę",
+    "edit_entry": "Edytuj wpis",
+    "close": "Zamknij",
+    "more_options": "Więcej opcji"
+  }
+}

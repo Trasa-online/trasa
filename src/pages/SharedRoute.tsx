@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -21,12 +22,6 @@ const CATEGORY_EMOJI: Record<string, string> = {
   bar: "🍺", club: "🎵", monument: "🏰", gallery: "🖼️",
   market: "🛒", viewpoint: "🌅", shopping: "🛍️", experience: "🎭",
   walk: "🚶", other: "📍",
-};
-const CATEGORY_LABEL: Record<string, string> = {
-  restaurant: "Restauracja", cafe: "Kawiarnia", museum: "Muzeum", park: "Park",
-  bar: "Bar", club: "Klub", monument: "Zabytek", gallery: "Galeria",
-  market: "Targ", viewpoint: "Punkt widokowy", shopping: "Zakupy", experience: "Atrakcja",
-  walk: "Spacer", other: "Miejsce",
 };
 
 // Lekka mapa trasy (Leaflet w iframe) - bez zaleznosci od Google Maps providera,
@@ -53,6 +48,8 @@ export default function SharedRoute() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { t } = useTranslation("sharing");
+  const categoryLabel = (cat: string) => t(`categories.${cat}`, { defaultValue: t("categories.other") });
   const [planView, setPlanView] = useState<"list" | "cards">("list");
   const [detailPin, setDetailPin] = useState<any | null>(null);
   const [saving, setSaving] = useState(false);
@@ -159,19 +156,19 @@ export default function SharedRoute() {
           original_creator_id: user.id,
         }))
       );
-      notify.success("Trasa zapisana w Twoim dzienniku");
+      notify.success(t("toast_saved"));
       // Powiadom autora oryginalnej trasy, ze ktos jej uzyl (best-effort; SECURITY DEFINER RPC -
       // klient nie moze insertowac notyfikacji dla innego usera). Push leci triggerem notify_push.
       if (route.user_id && route.user_id !== user.id) {
         void (supabase as any).rpc("notify_route_used", { p_route_id: id });
         // Push Z KLIENTA (trigger DB dostaje z send-push 401). Odbiorca = autor oryginalnej trasy.
         const me = await getCurrentUserName();
-        void sendClientPush({ userId: route.user_id, title: "Ktoś korzysta z Twojej trasy 🧭", body: `${me} zapisał(a) Twoją trasę${route.city ? ` po ${route.city}` : ""}`, url: "/dziennik" });
+        void sendClientPush({ userId: route.user_id, title: t("push_used_title"), body: route.city ? t("push_used_body_city", { name: me, city: route.city }) : t("push_used_body", { name: me }), url: "/dziennik" });
       }
       navigate(`/review-summary?route=${newRoute.id}`);
     } catch (e: any) {
       console.error("[SharedRoute] save failed:", e?.message ?? e);
-      notify.error("Nie udało się zapisać trasy");
+      notify.error(t("toast_save_error"));
     }
     setSaving(false);
   };
@@ -234,7 +231,7 @@ export default function SharedRoute() {
   if (routeLoading) {
     return (
       <div className="min-h-[100dvh] bg-background flex items-center justify-center">
-        <div className="text-muted-foreground text-sm animate-pulse">Ładowanie...</div>
+        <div className="text-muted-foreground text-sm animate-pulse">{t("loading")}</div>
       </div>
     );
   }
@@ -243,10 +240,10 @@ export default function SharedRoute() {
     return (
       <div className="min-h-[100dvh] bg-background flex flex-col items-center justify-center px-6 text-center gap-4">
         <p className="text-4xl">🗺️</p>
-        <p className="text-lg font-bold">Trasa niedostępna</p>
-        <p className="text-sm text-muted-foreground">Ten link mógł wygasnąć lub trasa nie jest publiczna.</p>
+        <p className="text-lg font-bold">{t("route_unavailable_title")}</p>
+        <p className="text-sm text-muted-foreground">{t("route_unavailable_desc")}</p>
         <button onClick={() => navigate("/")} className="mt-2 px-5 py-2.5 rounded-full bg-foreground text-background text-sm font-semibold">
-          Wróć do Trasa
+          {t("back_to_trasa")}
         </button>
       </div>
     );
@@ -263,11 +260,11 @@ export default function SharedRoute() {
   const hasRealPhoto = !!cover;
   const heroPhoto = cover ?? getRandomPinPlaceholder(route.id);
   const dateLabel = route.start_date ? format(new Date(route.start_date), "d MMMM yyyy", { locale: pl }) : "";
-  const cityLabel = route.city || "Podróż";
+  const cityLabel = route.city || t("trip_default");
   // Tryb anonimowy: autor ukryty (bez profilu/awatara/lokalsa).
   const isAnon = shareMeta?.share_anonymous === true;
   // "lokals poleca!" - autor pochodzi z miasta tej trasy.
-  const authorName = isAnon ? "Anonim" : (author?.first_name || author?.username || "Użytkownik");
+  const authorName = isAnon ? t("author_anon") : (author?.first_name || author?.username || t("author_default"));
   const isLocal = !isAnon && !!author?.home_city && !!route.city &&
     author.home_city.trim().toLowerCase() === route.city.trim().toLowerCase();
 
@@ -295,7 +292,7 @@ export default function SharedRoute() {
       <div className={`mt-3 pt-3 border-t border-border/40 ${centered ? "text-center" : ""}`}>
         {r.rating ? (
           <>
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">Ocena autora</p>
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">{t("author_rating")}</p>
             <div className={`flex items-center gap-1 ${centered ? "justify-center" : ""}`}>
               {[1, 2, 3, 4, 5].map((n) => (
                 <span key={n} className={`text-lg leading-none ${n <= r.rating! ? "opacity-100" : "opacity-20"}`}>⭐</span>
@@ -306,7 +303,7 @@ export default function SharedRoute() {
         {r.note ? (
           <>
             {r.rating ? <div className="my-3 h-px bg-border/40" /> : null}
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">Notka autora</p>
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">{t("author_note")}</p>
             <p className="text-sm text-foreground/80 leading-relaxed text-left whitespace-pre-wrap">{r.note}</p>
           </>
         ) : null}
@@ -322,7 +319,7 @@ export default function SharedRoute() {
         {Object.entries(groups).map(([cat, items]) => (
           <div key={cat}>
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-1.5">
-              <span>{CATEGORY_EMOJI[cat] ?? "📍"}</span>{CATEGORY_LABEL[cat] ?? "Miejsce"}
+              <span>{CATEGORY_EMOJI[cat] ?? "📍"}</span>{categoryLabel(cat)}
             </p>
             <div className="space-y-2">
               {items.map((pin: any) => (
@@ -372,7 +369,7 @@ export default function SharedRoute() {
             </div>
             <div className="px-4 pt-4">
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted text-xs font-semibold text-foreground mb-2">
-                <span>{CATEGORY_EMOJI[pin.category] ?? "📍"}</span>{CATEGORY_LABEL[pin.category] ?? "Miejsce"}
+                <span>{CATEGORY_EMOJI[pin.category] ?? "📍"}</span>{categoryLabel(pin.category)}
               </span>
               <p className="text-base font-black leading-tight">{pin.place_name}</p>
               {(() => {
@@ -416,7 +413,7 @@ export default function SharedRoute() {
           {isLocal && (
             <span className="ml-3 text-xs font-bold text-white bg-black/45 backdrop-blur-sm rounded-full pl-1 pr-3 py-1 flex items-center gap-1.5">
               <img src={avatarSrc(author?.avatar_url)} alt="" className="h-5 w-5 rounded-full object-cover bg-orange-100" />
-              lokals poleca! · {authorName}
+              {t("local_recommends")} · {authorName}
             </span>
           )}
         </div>
@@ -438,7 +435,7 @@ export default function SharedRoute() {
             )}
             {(shareMeta?.tagged_members?.length ?? 0) > 0 && (
               <div className="flex flex-wrap items-center gap-1.5">
-                <span className="text-xs text-muted-foreground">Z:</span>
+                <span className="text-xs text-muted-foreground">{t("with_prefix")}</span>
                 {shareMeta!.tagged_members!.map((m) => (
                   <span key={m} className="inline-flex items-center rounded-full bg-secondary text-secondary-foreground px-2.5 py-1 text-xs font-semibold">{m}</span>
                 ))}
@@ -462,10 +459,10 @@ export default function SharedRoute() {
         {pins.length > 0 && (
           <div className="px-5 pt-5 pb-5 border-b border-border/30">
             <div className="flex items-center justify-between mb-3">
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Plan trasy</p>
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t("route_plan")}</p>
               <div className="flex rounded-full bg-muted p-0.5">
-                <button onClick={() => setPlanView("list")} aria-label="Widok listy" className={`px-2.5 py-1.5 rounded-full transition-colors ${planView === "list" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}><List className="h-4 w-4" /></button>
-                <button onClick={() => setPlanView("cards")} aria-label="Widok kart" className={`px-2.5 py-1.5 rounded-full transition-colors ${planView === "cards" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}><GalleryHorizontalEnd className="h-4 w-4" /></button>
+                <button onClick={() => setPlanView("list")} aria-label={t("view_list")} className={`px-2.5 py-1.5 rounded-full transition-colors ${planView === "list" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}><List className="h-4 w-4" /></button>
+                <button onClick={() => setPlanView("cards")} aria-label={t("view_cards")} className={`px-2.5 py-1.5 rounded-full transition-colors ${planView === "cards" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}><GalleryHorizontalEnd className="h-4 w-4" /></button>
               </div>
             </div>
             {planView === "list" ? renderList() : renderSwiper()}
@@ -475,9 +472,9 @@ export default function SharedRoute() {
         {/* Mapa trasy na samym dole pod miejscami */}
         {mapPins.length > 0 && (
           <div className="px-5 pt-5 pb-6">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Mapa trasy</p>
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">{t("route_map")}</p>
             <div className="rounded-2xl overflow-hidden border border-border/40 h-64">
-              <iframe srcDoc={buildRouteMapHtml(mapPins)} className="w-full h-full border-0" title="Mapa trasy" loading="lazy" />
+              <iframe srcDoc={buildRouteMapHtml(mapPins)} className="w-full h-full border-0" title={t("route_map")} loading="lazy" />
             </div>
           </div>
         )}
@@ -500,13 +497,13 @@ export default function SharedRoute() {
           disabled={saving}
           className="w-full py-3 rounded-full bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform shadow-lg shadow-primary/25 disabled:opacity-50"
         >
-          <Bookmark className="h-4 w-4" />{saving ? "Zapisywanie…" : "Użyj tej trasy"}
+          <Bookmark className="h-4 w-4" />{saving ? t("saving") : t("use_route")}
         </button>
         <button
           onClick={() => navigate(`/plan?city=${encodeURIComponent(cityLabel)}`)}
           className="w-full mt-2 py-2 text-sm font-medium text-muted-foreground active:text-foreground transition-colors"
         >
-          Zaplanuj własną trasę w&nbsp;{cityLabel}
+          {t("plan_own_route", { city: cityLabel })}
         </button>
       </div>
 
@@ -521,8 +518,8 @@ export default function SharedRoute() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="px-5 pt-5 pb-1 text-center shrink-0">
-              <p className="text-lg font-black leading-tight">Kiedy planujesz tę trasę?</p>
-              <p className="text-xs text-muted-foreground mt-1">Wybierz datę, żeby trasa trafiła do&nbsp;dziennika.</p>
+              <p className="text-lg font-black leading-tight">{t("date_sheet_title")}</p>
+              <p className="text-xs text-muted-foreground mt-1">{t("date_sheet_desc")}</p>
             </div>
             <div className="flex-1 min-h-0 overflow-y-auto">
               <FullCalendarPicker onConfirm={(d) => saveToMine(d)} />
@@ -532,7 +529,7 @@ export default function SharedRoute() {
               disabled={saving}
               className="mx-5 mt-1 mb-[max(16px,env(safe-area-inset-bottom))] py-2.5 text-sm font-medium text-muted-foreground active:text-foreground transition-colors shrink-0 disabled:opacity-50"
             >
-              Zapisz bez daty
+              {t("save_without_date")}
             </button>
           </div>
         </div>

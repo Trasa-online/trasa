@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Search, Plus, X, Loader2, Star, MapPin, ChevronRight, ChevronDown, ChevronUp, List, GalleryHorizontalEnd, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -101,6 +102,7 @@ async function fetchGooglePlace(opts: { name?: string; address?: string; lat?: n
 }
 
 const CreateRanking = () => {
+  const { t } = useTranslation("ranking");
   const navigate = useNavigate();
   const { id: editId } = useParams();
   const [params] = useSearchParams();
@@ -200,7 +202,7 @@ const CreateRanking = () => {
   }, [editId]);
 
   const addItem = (it: Omit<RankingItem, "key" | "short_desc">) => {
-    if (items.some((x) => x.place_name.toLowerCase() === it.place_name.toLowerCase())) { toast("To miejsce już jest na liście"); return; }
+    if (items.some((x) => x.place_name.toLowerCase() === it.place_name.toLowerCase())) { toast(t("toast.already_added")); return; }
     setItems((prev) => [...prev, { ...it, key: `k${Date.now()}`, short_desc: "" }]);
   };
   const removeItem = (key: string) => setItems((prev) => prev.filter((x) => x.key !== key));
@@ -242,7 +244,7 @@ const CreateRanking = () => {
     setAddingGoogleName(g.name);
     const res = await fetchGooglePlace({ name: g.name, address: g.full_address, lat: g.latitude, lng: g.longitude, city });
     setAddingGoogleName(null);
-    if (!res || !res.place_name) { toast.error("Nie udało się dodać miejsca"); return; }
+    if (!res || !res.place_name) { toast.error(t("toast.add_failed")); return; }
     addItem(res);
     setGoogleResults((prev) => prev.filter((x) => x.name !== g.name));
   };
@@ -254,7 +256,7 @@ const CreateRanking = () => {
     setAddingCustom(true);
     const res = await fetchGooglePlace({ name: name.trim(), city });
     setAddingCustom(false);
-    if (!res || !res.place_name) { toast.error("Nie znaleziono miejsca - sprawdź nazwę"); return; }
+    if (!res || !res.place_name) { toast.error(t("toast.not_found")); return; }
     setCustomPreview(res);
   };
   const confirmCustom = () => {
@@ -370,13 +372,10 @@ const CreateRanking = () => {
           body: { type: "ranking", title: collectionTitle, city, collection_id: collectionId, author: author.name },
         }).catch((e) => console.warn("[CreateRanking] notify-admin-content failed:", e));
       }
-      toast.success(
-        editId ? "Zestawienie zaktualizowane!"
-          : "Wysłane! Zestawienie pojawi się po akceptacji moderatora."
-      );
+      toast.success(editId ? t("toast.updated") : t("toast.sent"));
       navigate("/eksploruj");
     } catch (e: any) {
-      toast.error(`Nie udało się zapisać: ${e?.message ?? "błąd"}`);
+      toast.error(t("toast.save_failed", { error: e?.message ?? t("error_fallback") }));
     } finally {
       setPublishing(false);
     }
@@ -385,20 +384,20 @@ const CreateRanking = () => {
   // ── Krok 0: wybor FORMY zestawienia (Lista / Plan) ───────────────────────────
   if (showFormPicker) {
     const FORMS: { id: CollectionKind; emoji: string; label: string; hint: string }[] = [
-      { id: "list",  emoji: "📍", label: "Lista", hint: "Zbiór polecanych miejsc bez ustalonej kolejności. Np. najlepsze kawiarnie w&nbsp;mieście." },
-      { id: "route", emoji: "🗺️", label: "Plan",  hint: "Uporządkowany plan z kolejnością miejsc i&nbsp;mapą. Np. pomysł na&nbsp;cały dzień." },
+      { id: "list",  emoji: "📍", label: t("form_picker.list_label"), hint: t("form_picker.list_hint") },
+      { id: "route", emoji: "🗺️", label: t("form_picker.route_label"), hint: t("form_picker.route_hint") },
     ];
     return (
       <div className="flex flex-col h-[100dvh] bg-background max-w-lg mx-auto">
         <div className="flex items-center gap-2 px-4 pt-safe-4 pb-3 border-b border-border/20 shrink-0">
-          <button onClick={() => navigate(-1)} aria-label="Wstecz" className="h-9 w-9 flex items-center justify-center -ml-1 shrink-0 text-foreground">
+          <button onClick={() => navigate(-1)} aria-label={t("header.back")} className="h-9 w-9 flex items-center justify-center -ml-1 shrink-0 text-foreground">
             <ArrowLeft className="h-5 w-5" />
           </button>
-          <span className="font-bold text-base">Nowe zestawienie</span>
+          <span className="font-bold text-base">{t("header.new_collection")}</span>
         </div>
         <div className="flex-1 overflow-y-auto px-4 py-5">
-          <h1 className="text-2xl font-display font-extrabold tracking-tight leading-tight">Co tworzysz?</h1>
-          <p className="text-sm text-muted-foreground mt-1.5">Wybierz formę zestawienia. Od tego zależą dostępne motywy w&nbsp;kolejnym kroku.</p>
+          <h1 className="text-2xl font-display font-extrabold tracking-tight leading-tight">{t("form_picker.title")}</h1>
+          <p className="text-sm text-muted-foreground mt-1.5">{t("form_picker.subtitle")}</p>
           <div className="flex flex-col gap-3 mt-5">
             {FORMS.map((f) => (
               <button
@@ -422,15 +421,15 @@ const CreateRanking = () => {
 
   // ── Krok 1: wybor MOTYWU zestawienia (motywy filtrowane wg wybranej formy) ────
   if (showThemePicker) {
-    const themes = COLLECTION_THEMES.filter((t) => t.kind === form);
-    const formLabel = form === "route" ? "🗺️ Plan" : "📍 Lista";
+    const themes = COLLECTION_THEMES.filter((th) => th.kind === form);
+    const formLabel = form === "route" ? `🗺️ ${t("form.route")}` : `📍 ${t("form.list")}`;
     return (
       <div className="flex flex-col h-[100dvh] bg-background max-w-lg mx-auto">
         <div className="flex items-center gap-2 px-4 pt-safe-4 pb-3 border-b border-border/20 shrink-0">
-          <button onClick={() => setForm(null)} aria-label="Wstecz" className="h-9 w-9 flex items-center justify-center -ml-1 shrink-0 text-foreground">
+          <button onClick={() => setForm(null)} aria-label={t("header.back")} className="h-9 w-9 flex items-center justify-center -ml-1 shrink-0 text-foreground">
             <ArrowLeft className="h-5 w-5" />
           </button>
-          <span className="flex-1 font-bold text-base">Nowe zestawienie</span>
+          <span className="flex-1 font-bold text-base">{t("header.new_collection")}</span>
           {/* Wybrana forma jako chip - tap = powrot do wyboru formy */}
           <button onClick={() => setForm(null)} className="inline-flex items-center gap-1 rounded-full bg-secondary text-secondary-foreground px-3 py-1.5 text-xs font-bold shrink-0 active:scale-95 transition-transform">
             <span>{formLabel}</span>
@@ -438,19 +437,19 @@ const CreateRanking = () => {
           </button>
         </div>
         <div className="flex-1 overflow-y-auto px-4 py-5">
-          <h1 className="text-2xl font-display font-extrabold tracking-tight leading-tight">Jaki to motyw?</h1>
-          <p className="text-sm text-muted-foreground mt-1.5">Wybierz temat {form === "route" ? "swojego planu" : "swojej listy"}. To pomaga innym go&nbsp;znaleźć.</p>
+          <h1 className="text-2xl font-display font-extrabold tracking-tight leading-tight">{t("theme_picker.title")}</h1>
+          <p className="text-sm text-muted-foreground mt-1.5">{form === "route" ? t("theme_picker.subtitle_route") : t("theme_picker.subtitle_list")}</p>
           <div className="grid grid-cols-2 gap-3 mt-5">
-            {themes.map((t) => (
+            {themes.map((theme) => (
               <button
-                key={t.id}
-                onClick={() => setCategory(t.id)}
+                key={theme.id}
+                onClick={() => setCategory(theme.id)}
                 className="relative flex flex-col items-start gap-2.5 rounded-3xl bg-card border border-border/60 p-4 pb-3.5 text-left active:scale-[0.97] transition-transform shadow-sm"
               >
-                <div className="h-12 w-12 rounded-2xl bg-secondary flex items-center justify-center text-2xl shrink-0">{t.emoji}</div>
+                <div className="h-12 w-12 rounded-2xl bg-secondary flex items-center justify-center text-2xl shrink-0">{theme.emoji}</div>
                 <div>
-                  <span className="font-black text-sm leading-tight block text-foreground">{t.label}</span>
-                  <span className="text-[11px] text-muted-foreground leading-snug block mt-0.5">{t.hint}</span>
+                  <span className="font-black text-sm leading-tight block text-foreground">{theme.label}</span>
+                  <span className="text-[11px] text-muted-foreground leading-snug block mt-0.5">{theme.hint}</span>
                 </div>
               </button>
             ))}
@@ -468,15 +467,15 @@ const CreateRanking = () => {
     <div className="flex flex-col h-[100dvh] bg-background max-w-lg mx-auto">
       {/* Header - motyw jako chip po prawej (tap = powrot do wyboru motywu) */}
       <div className="flex items-center gap-2 px-4 pt-safe-4 pb-3 border-b border-border/20 shrink-0">
-        <button onClick={() => (step === 2 ? setStep(1) : navigate(-1))} aria-label="Wstecz" className="h-9 w-9 flex items-center justify-center -ml-1 shrink-0 text-foreground">
+        <button onClick={() => (step === 2 ? setStep(1) : navigate(-1))} aria-label={t("header.back")} className="h-9 w-9 flex items-center justify-center -ml-1 shrink-0 text-foreground">
           <ArrowLeft className="h-5 w-5" />
         </button>
-        <span className="flex-1 font-bold text-base truncate">{step === 2 ? "Notki i mapa" : editId ? "Edytuj zestawienie" : "Nowe zestawienie"}</span>
+        <span className="flex-1 font-bold text-base truncate">{step === 2 ? t("header.notes_and_map") : editId ? t("header.edit_collection") : t("header.new_collection")}</span>
         {activeTheme && (
           <button
             onClick={() => { if (!editId && step === 1) setCategory(null); }}
             disabled={!!editId || step === 2}
-            aria-label="Zmień motyw"
+            aria-label={t("header.change_theme")}
             className="inline-flex items-center gap-1 rounded-full bg-secondary text-secondary-foreground px-3 py-1.5 text-xs font-bold shrink-0 active:scale-95 transition-transform disabled:active:scale-100"
           >
             <span className="max-w-[110px] truncate">{activeTheme.emoji} {activeTheme.label}</span>
@@ -490,7 +489,7 @@ const CreateRanking = () => {
         <div className="flex-1 overflow-y-auto">
           {/* Miasto */}
           <div className="px-4 pt-4">
-            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-1.5 block">Miasto</label>
+            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-1.5 block">{t("city_label")}</label>
             <select value={city} onChange={(e) => setCity(e.target.value)}
               className="w-full rounded-2xl bg-secondary text-secondary-foreground border-0 px-4 py-3 text-base outline-none focus:ring-2 focus:ring-orange-500/40">
               {PL_CITIES.map((c) => <option key={c} value={c}>{c}</option>)}
@@ -504,7 +503,7 @@ const CreateRanking = () => {
               <input ref={searchInputRef} value={search} onChange={(e) => setSearch(e.target.value)}
                 onFocus={() => setSearchFocused(true)}
                 onBlur={() => setSearchFocused(false)}
-                placeholder={`Szukaj miejsca w ${city}…`}
+                placeholder={t("search.placeholder", { city })}
                 className="w-full rounded-2xl bg-secondary text-secondary-foreground border-0 pl-9 pr-3 py-3 text-base outline-none focus:ring-2 focus:ring-orange-500/40 placeholder:text-muted-foreground/50" />
             </div>
           </div>
@@ -525,7 +524,7 @@ const CreateRanking = () => {
                 {/* Nowe miejsca spoza bazy (Google) - dopelnienie wynikow z DB. */}
                 {googleLoading && !searchLoading && (
                   <div className="flex items-center gap-2 px-3 py-2.5 text-[11px] text-muted-foreground">
-                    <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" /> Szukam więcej miejsc…
+                    <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" /> {t("search.searching_more")}
                   </div>
                 )}
                 {googleResults.filter((g) => !addedNames.has((g.name ?? "").toLowerCase())).map((g) => (
@@ -535,7 +534,7 @@ const CreateRanking = () => {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5">
                         <p className="text-sm font-semibold truncate">{g.name}</p>
-                        <span className="text-[9px] font-bold text-orange-700 bg-orange-100 rounded-full px-1.5 py-0.5 shrink-0">nowe</span>
+                        <span className="text-[9px] font-bold text-orange-700 bg-orange-100 rounded-full px-1.5 py-0.5 shrink-0">{t("search.badge_new")}</span>
                       </div>
                       {g.full_address && <p className="text-[11px] text-muted-foreground truncate">{g.full_address}</p>}
                     </div>
@@ -547,15 +546,15 @@ const CreateRanking = () => {
                   && searchResults.filter((r) => !addedNames.has(r.place_name.toLowerCase())).length === 0
                   && googleResults.filter((g) => !addedNames.has((g.name ?? "").toLowerCase())).length === 0 && (
                   <div className="px-3 py-4 text-center">
-                    <p className="text-sm font-semibold">Nie znaleziono miejsca w&nbsp;{city}</p>
-                    <p className="text-[12px] text-muted-foreground mt-1">Sprawdź pisownię lub spróbuj innej nazwy.</p>
+                    <p className="text-sm font-semibold">{t("search.empty_title", { city })}</p>
+                    <p className="text-[12px] text-muted-foreground mt-1">{t("search.empty_hint")}</p>
                   </div>
                 )}
                 {!searchLoading && !googleLoading && (
                   <button onClick={() => previewCustomByName(search)} disabled={addingCustom}
                     className="w-full flex items-center gap-2 p-3 text-left active:bg-background/50 disabled:opacity-50">
                     {addingCustom ? <Loader2 className="h-4 w-4 animate-spin text-orange-600 shrink-0" /> : <Search className="h-4 w-4 text-orange-600 shrink-0" />}
-                    <span className="text-sm font-semibold">Zobacz „{search.trim()}" i&nbsp;dodaj</span>
+                    <span className="text-sm font-semibold">{t("search.preview_cta", { query: search.trim() })}</span>
                   </button>
                 )}
               </div>
@@ -566,13 +565,13 @@ const CreateRanking = () => {
               Bez notek - notki na kroku 2. */}
           <div className="px-4 pt-4 pb-4">
             <div className="flex items-center justify-between mb-2.5">
-              <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Wybrane miejsca ({items.length})</p>
+              <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">{t("places.selected", { count: items.length })}</p>
               {items.length > 0 && (
                 <div className="flex rounded-full bg-secondary p-0.5">
-                  <button type="button" onClick={() => setPlaceView("list")} aria-label="Widok listy" className={`px-2.5 py-1 rounded-full transition-colors ${placeView === "list" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground"}`}>
+                  <button type="button" onClick={() => setPlaceView("list")} aria-label={t("places.view_list")} className={`px-2.5 py-1 rounded-full transition-colors ${placeView === "list" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground"}`}>
                     <List className="h-4 w-4" />
                   </button>
-                  <button type="button" onClick={() => setPlaceView("detail")} aria-label="Widok kart" className={`px-2.5 py-1 rounded-full transition-colors ${placeView === "detail" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground"}`}>
+                  <button type="button" onClick={() => setPlaceView("detail")} aria-label={t("places.view_cards")} className={`px-2.5 py-1 rounded-full transition-colors ${placeView === "detail" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground"}`}>
                     <GalleryHorizontalEnd className="h-4 w-4" />
                   </button>
                 </div>
@@ -584,8 +583,8 @@ const CreateRanking = () => {
                 // Kontrolki kolejnosci (tylko Plan): strzalki gora/dol.
                 const reorder = isRoute && (
                   <div className="flex flex-col shrink-0">
-                    <button onClick={() => move(idx, -1)} disabled={idx === 0} aria-label="W górę" className="h-6 w-6 flex items-center justify-center rounded-md text-muted-foreground disabled:opacity-25 active:bg-background"><ChevronUp className="h-4 w-4" /></button>
-                    <button onClick={() => move(idx, 1)} disabled={idx === items.length - 1} aria-label="W dół" className="h-6 w-6 flex items-center justify-center rounded-md text-muted-foreground disabled:opacity-25 active:bg-background"><ChevronDown className="h-4 w-4" /></button>
+                    <button onClick={() => move(idx, -1)} disabled={idx === 0} aria-label={t("places.move_up")} className="h-6 w-6 flex items-center justify-center rounded-md text-muted-foreground disabled:opacity-25 active:bg-background"><ChevronUp className="h-4 w-4" /></button>
+                    <button onClick={() => move(idx, 1)} disabled={idx === items.length - 1} aria-label={t("places.move_down")} className="h-6 w-6 flex items-center justify-center rounded-md text-muted-foreground disabled:opacity-25 active:bg-background"><ChevronDown className="h-4 w-4" /></button>
                   </div>
                 );
                 // ── Widok kompaktowy (lista) ──
@@ -607,7 +606,7 @@ const CreateRanking = () => {
                         </div>
                       </button>
                       {reorder}
-                      <button onClick={() => removeItem(it.key)} aria-label="Usuń miejsce" className="h-7 w-7 flex items-center justify-center rounded-full text-destructive active:bg-destructive/10 shrink-0"><X className="h-4 w-4" /></button>
+                      <button onClick={() => removeItem(it.key)} aria-label={t("places.remove")} className="h-7 w-7 flex items-center justify-center rounded-full text-destructive active:bg-destructive/10 shrink-0"><X className="h-4 w-4" /></button>
                     </div>
                   );
                 }
@@ -637,11 +636,11 @@ const CreateRanking = () => {
                     <div className="absolute top-2.5 right-2.5 flex items-center gap-1.5">
                       {isRoute && (
                         <div className="flex flex-col rounded-full bg-white/90 backdrop-blur-sm shadow-sm overflow-hidden">
-                          <button onClick={() => move(idx, -1)} disabled={idx === 0} aria-label="W górę" className="h-6 w-7 flex items-center justify-center text-foreground/70 disabled:opacity-25 active:bg-black/5"><ChevronUp className="h-4 w-4" /></button>
-                          <button onClick={() => move(idx, 1)} disabled={idx === items.length - 1} aria-label="W dół" className="h-6 w-7 flex items-center justify-center text-foreground/70 disabled:opacity-25 active:bg-black/5"><ChevronDown className="h-4 w-4" /></button>
+                          <button onClick={() => move(idx, -1)} disabled={idx === 0} aria-label={t("places.move_up")} className="h-6 w-7 flex items-center justify-center text-foreground/70 disabled:opacity-25 active:bg-black/5"><ChevronUp className="h-4 w-4" /></button>
+                          <button onClick={() => move(idx, 1)} disabled={idx === items.length - 1} aria-label={t("places.move_down")} className="h-6 w-7 flex items-center justify-center text-foreground/70 disabled:opacity-25 active:bg-black/5"><ChevronDown className="h-4 w-4" /></button>
                         </div>
                       )}
-                      <button onClick={() => removeItem(it.key)} aria-label="Usuń miejsce" className="h-8 w-8 flex items-center justify-center rounded-full bg-white/90 backdrop-blur-sm shadow-sm text-destructive active:scale-95 transition-transform"><X className="h-4 w-4" /></button>
+                      <button onClick={() => removeItem(it.key)} aria-label={t("places.remove")} className="h-8 w-8 flex items-center justify-center rounded-full bg-white/90 backdrop-blur-sm shadow-sm text-destructive active:scale-95 transition-transform"><X className="h-4 w-4" /></button>
                     </div>
                   </div>
                 );
@@ -656,8 +655,8 @@ const CreateRanking = () => {
                 className={`rounded-2xl border-2 border-dashed border-border/70 bg-secondary/40 flex flex-col items-center justify-center gap-2 text-muted-foreground active:scale-[0.99] transition-transform ${placeView === "list" ? "w-full py-5" : "shrink-0 w-[80%] snap-start self-stretch min-h-[240px] px-4"}`}
               >
                 <span className="h-11 w-11 rounded-full bg-secondary flex items-center justify-center"><Plus className="h-5 w-5 text-orange-600" /></span>
-                <span className="text-sm font-bold text-foreground">Dodaj miejsce</span>
-                <span className="text-[12px] text-center">Wyszukaj lub wybierz z&nbsp;propozycji poniżej</span>
+                <span className="text-sm font-bold text-foreground">{t("places.add")}</span>
+                <span className="text-[12px] text-center">{t("places.add_hint")}</span>
               </button>
             </div>
           </div>
@@ -665,7 +664,7 @@ const CreateRanking = () => {
           {/* Propozycje w {miasto} - POD wybranymi miejscami (szybki podglad). Ukryte podczas szukania. */}
           {search.trim().length < 2 && suggestions.filter((s) => !addedNames.has(s.place_name.toLowerCase())).length > 0 && (
             <div className="px-4 pb-4">
-              <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide mb-2">Propozycje w {city}</p>
+              <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide mb-2">{t("places.suggestions", { city })}</p>
               <div className="flex gap-2.5 overflow-x-auto scrollbar-none snap-x snap-mandatory -mr-4 pr-4 pb-1">
                 {suggestions.filter((s) => !addedNames.has(s.place_name.toLowerCase())).map((s) => (
                   <button key={s.id} onClick={() => addDbPlace(s)}
@@ -694,15 +693,15 @@ const CreateRanking = () => {
         <div className="flex-1 overflow-y-auto px-4 py-5 space-y-6">
           {/* Glowna notka do calego zestawienia */}
           <div>
-            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-1.5 block">Notka do zestawienia <span className="normal-case font-medium text-muted-foreground/50">(opcjonalnie)</span></label>
+            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-1.5 block">{t("notes.collection_label")} <span className="normal-case font-medium text-muted-foreground/50">{t("notes.optional")}</span></label>
             <textarea value={description} onChange={(e) => setDescription(e.target.value)} maxLength={280} rows={3}
-              placeholder="Napisz kilka słów o tej kolekcji: dla kogo, kiedy, dlaczego właśnie te miejsca…"
+              placeholder={t("notes.collection_placeholder")}
               className="w-full rounded-2xl bg-secondary text-secondary-foreground border-0 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-orange-500/40 placeholder:text-muted-foreground/50 resize-none" />
           </div>
 
           {/* Notki do poszczegolnych miejsc */}
           <div>
-            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2 block">Notki do miejsc</label>
+            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2 block">{t("notes.places_label")}</label>
             <div className="space-y-2.5">
               {items.map((it) => (
                 <div key={it.key} className="rounded-2xl bg-secondary p-2.5">
@@ -713,7 +712,7 @@ const CreateRanking = () => {
                     <p className="text-sm font-bold truncate flex-1 min-w-0">{it.place_name}</p>
                   </div>
                   <input value={it.short_desc} onChange={(e) => setNote(it.key, e.target.value)} maxLength={120}
-                    placeholder="Twoja notka o tym miejscu (opcjonalnie)…"
+                    placeholder={t("notes.place_placeholder")}
                     className="mt-2 w-full rounded-lg bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-500/40 placeholder:text-muted-foreground/50" />
                 </div>
               ))}
@@ -723,7 +722,7 @@ const CreateRanking = () => {
           {/* Mapa z miejscami */}
           {mapPins.length > 0 && (
             <div>
-              <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2 block">{isRouteCollection(category) ? "Plan na mapie" : "Miejsca na mapie"}</label>
+              <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2 block">{isRouteCollection(category) ? t("map.route") : t("map.list")}</label>
               <div className="relative h-52 rounded-2xl overflow-hidden border border-border/40">
                 <RouteMap pins={mapPins as any} className="w-full h-full" showRoute={isRoute} />
               </div>
@@ -736,8 +735,8 @@ const CreateRanking = () => {
               {asAnon && <Check className="h-3.5 w-3.5 text-white" strokeWidth={3} />}
             </span>
             <span className="min-w-0">
-              <span className="text-sm font-bold block">Dodaj anonimowo</span>
-              <span className="text-[11px] text-muted-foreground block mt-0.5">{asAnon ? "Bez Twojego profilu i awatara." : "Domyślnie: z Twoim profilem i awatarem."}</span>
+              <span className="text-sm font-bold block">{t("anon.label")}</span>
+              <span className="text-[11px] text-muted-foreground block mt-0.5">{asAnon ? t("anon.on") : t("anon.off")}</span>
             </span>
           </button>
         </div>
@@ -750,12 +749,12 @@ const CreateRanking = () => {
           {step === 1 ? (
             <button onClick={() => setStep(2)} disabled={!canGoNext}
               className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-sm shadow-md shadow-orange-500/20 active:scale-[0.98] transition-transform disabled:opacity-50 flex items-center justify-center gap-2">
-              Dalej: notki i mapa <ChevronRight className="h-4 w-4" />
+              {t("cta.next")} <ChevronRight className="h-4 w-4" />
             </button>
           ) : (
             <button onClick={publish} disabled={!canPublish}
               className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-sm shadow-md shadow-orange-500/20 active:scale-[0.98] transition-transform disabled:opacity-50">
-              {publishing ? <Loader2 className="h-5 w-5 animate-spin mx-auto" /> : (editId ? "Zapisz zmiany" : "Opublikuj zestawienie")}
+              {publishing ? <Loader2 className="h-5 w-5 animate-spin mx-auto" /> : (editId ? t("cta.save") : t("cta.publish"))}
             </button>
           )}
         </div>
@@ -769,8 +768,8 @@ const CreateRanking = () => {
         <div className="fixed inset-0 z-[80] flex flex-col justify-end bg-black/40" onClick={() => setCustomPreview(null)}>
           <div className="bg-background rounded-t-3xl max-h-[88dvh] flex flex-col" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between px-5 pt-4 pb-2 shrink-0">
-              <p className="text-lg font-black">Dodać to miejsce?</p>
-              <button onClick={() => setCustomPreview(null)} aria-label="Zamknij" className="h-9 w-9 rounded-full bg-muted flex items-center justify-center active:bg-muted/70"><X className="h-4 w-4" /></button>
+              <p className="text-lg font-black">{t("custom_preview.title")}</p>
+              <button onClick={() => setCustomPreview(null)} aria-label={t("custom_preview.close")} className="h-9 w-9 rounded-full bg-muted flex items-center justify-center active:bg-muted/70"><X className="h-4 w-4" /></button>
             </div>
             <div className="px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))]">
               <div className="rounded-2xl overflow-hidden bg-secondary">
@@ -788,8 +787,8 @@ const CreateRanking = () => {
                 </div>
               </div>
               <div className="flex gap-2 mt-4">
-                <button onClick={() => setCustomPreview(null)} className="flex-1 py-3 rounded-full bg-secondary text-secondary-foreground text-sm font-bold active:scale-[0.97] transition-transform">Odrzuć</button>
-                <button onClick={confirmCustom} className="flex-1 py-3 rounded-full bg-primary text-white text-sm font-bold active:scale-[0.97] transition-transform">Dodaj</button>
+                <button onClick={() => setCustomPreview(null)} className="flex-1 py-3 rounded-full bg-secondary text-secondary-foreground text-sm font-bold active:scale-[0.97] transition-transform">{t("custom_preview.reject")}</button>
+                <button onClick={confirmCustom} className="flex-1 py-3 rounded-full bg-primary text-white text-sm font-bold active:scale-[0.97] transition-transform">{t("custom_preview.add")}</button>
               </div>
             </div>
           </div>

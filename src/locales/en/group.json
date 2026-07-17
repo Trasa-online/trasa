@@ -1,0 +1,132 @@
+{
+  "not_found": {
+    "title": "Session not found",
+    "desc": "Check that the invite code is correct.",
+    "back": "Back to home"
+  },
+  "login_gate": {
+    "title": "Sign in to join",
+    "desc_before": "Your friend is inviting you to pick spots together in ",
+    "cta": "Sign in"
+  },
+  "preparing": "Setting up the session…",
+  "join": {
+    "header": "Session invite",
+    "title": "Pick spots together",
+    "desc_before": "Explore spots in ",
+    "desc_after": " on your own and see what you have in common!",
+    "in_session": "In session ({{count}}/4)",
+    "joining": "Joining…",
+    "full": "Session full (max 10)",
+    "cta": "Join and start browsing"
+  },
+  "toast": {
+    "new_match_title": "New pick!",
+    "new_match_desc": "{{name}} liked {{place}} too",
+    "proposal_sent": "Proposal sent!",
+    "suggestion_thanks": "Thanks! We'll add this spot soon 🙌",
+    "suggestion_error": "Could not send the suggestion",
+    "joined": "Joined the session!",
+    "join_error": "Something went wrong while joining",
+    "save_error": "Save error: {{message}}",
+    "invite_error": "Could not send the invite",
+    "invites_sent": "Invites sent ({{count}})",
+    "invites_error": "Could not send the invites",
+    "link_copied": "Link copied",
+    "shared": "Shared"
+  },
+  "fallback": {
+    "friend": "Friend",
+    "user": "User",
+    "someone": "Someone"
+  },
+  "search_place_title": "Search for a spot",
+  "invite_title": "Invite to session",
+  "search_placeholder": "Search for a spot…",
+  "tab_explore": "Explore",
+  "tab_matches": "Picks",
+  "waiting": {
+    "title": "Waiting for someone else",
+    "desc": "Picking starts once at least one more person joins the session.",
+    "invite_friends": "Invite friends",
+    "search_placeholder": "Search by name or @nickname…",
+    "invited": "Invited",
+    "invite": "Invite",
+    "not_found": "No user found",
+    "share_link": "Share link",
+    "or_share_code": "Or share the code",
+    "copied": "Copied!",
+    "copy_code": "Copy code",
+    "share": "Share"
+  },
+  "share_sheet": {
+    "title": "Join my session in Trasa",
+    "text": "Join using the code: {{code}}"
+  },
+  "round_done_title": "Round finished!",
+  "round_done_desc": "Pick the next category or finish choosing.",
+  "pick_first": "Pick the first category",
+  "pick_next": "Pick the next category",
+  "pick_desc": "Each round is 10 spots - pick a category or free exploration (random spots).",
+  "free_used": "Everything - already done",
+  "free_available": "Everything - 10 random spots",
+  "starting": "Starting…",
+  "start_picking": "Start choosing",
+  "next_round": "Next round →",
+  "finish_check_matches": "Finish and see picks ({{count}})",
+  "organizer_picking": "The organizer is picking a category…",
+  "round_done_waiting_desc": "Waiting for the organizer to pick the next category.",
+  "finished": {
+    "done": "Done!",
+    "waiting_others": "Waiting for everyone to finish this category",
+    "ready_count": "{{done}} / {{total}} ready",
+    "skip_waiting": "Skip waiting →",
+    "so_far": "so far"
+  },
+  "shared_spot_one": "shared spot",
+  "shared_spot_few": "shared spots",
+  "shared_spot_many": "shared spots",
+  "loading_places": "Loading spots…",
+  "no_places_title": "No spots in this category",
+  "no_places_desc_before": "We don't have any spots in the ",
+  "no_places_desc_after": " category for {{city}} yet.",
+  "next_category": "Go to the next category",
+  "matches": {
+    "empty_title": "No picks yet",
+    "empty_desc": "You need at least 2 people who liked the same spot. Head back to exploring!",
+    "explore_more": "Keep exploring",
+    "propose_new_route": "Suggest a new route →",
+    "propose_route": "Suggest a route from the chosen spots →",
+    "waiting_host": "Waiting for the session host to save a route from your picks.",
+    "open_saved_route": "Open the saved route →",
+    "route_ready": "Route ready - see it on the home screen →",
+    "finish": "Finish choosing"
+  },
+  "invite_sheet": {
+    "copy": "Copy",
+    "find_friends": "Find friends",
+    "search_placeholder": "Search by name or @nickname…",
+    "no_results": "No results for \"{{query}}\"",
+    "hint_min_chars": "Type at least 2 characters to search",
+    "sending": "Sending…",
+    "send_invites": "Send invites ({{count}})",
+    "select_friends": "Select friends"
+  },
+  "suggest": {
+    "title": "Suggest adding a spot",
+    "place_name_label": "Spot name",
+    "google_link_label": "Link to the Google listing",
+    "optional": "(optional)",
+    "google_link_hint": "Paste a Google Maps link - it helps us add the spot faster",
+    "sending": "Sending…",
+    "submit": "Send suggestion"
+  },
+  "lobby": {
+    "propose_title": "Suggest spots",
+    "propose_desc": "Before you start picking together, you can suggest spots you'd like to visit to other members!",
+    "search_placeholder": "Type a spot name…",
+    "not_on_trasa": "Oops! This spot isn't on Trasa yet.",
+    "suggest_cta": "Yes! Suggest adding the spot",
+    "group_proposals": "Group proposals"
+  }
+}

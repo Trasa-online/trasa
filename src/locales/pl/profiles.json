@@ -1,0 +1,87 @@
+{
+  "search": {
+    "placeholder": "Szukaj @username...",
+    "suggested": "Osoby, które możesz znać",
+    "loading": "Ładowanie...",
+    "no_results": "Brak wyników"
+  },
+  "sections": {
+    "routes": "Trasy",
+    "routes_sub": "ukończone podróże",
+    "cities": "Miasta",
+    "cities_sub": "odwiedzone miejsca",
+    "collections": "Zestawienia",
+    "collections_sub_public": "kolekcje miejsc",
+    "collections_sub_own": "Twoje kolekcje miejsc"
+  },
+  "public": {
+    "not_found": "Nie znaleziono użytkownika",
+    "back": "Wróć",
+    "journal_title": "Dziennik {{name}}",
+    "collections_title": "Zestawienia {{name}}",
+    "loading": "Ładowanie…",
+    "no_routes_title": "Brak tras do pokazania",
+    "no_routes_desc": "Ta osoba nie udostępniła jeszcze żadnej trasy.",
+    "trip_fallback": "Podróż",
+    "days_count": "{{n}} dni",
+    "places_count_one": "{{count}} miejsce",
+    "places_count_few": "{{count}} miejsca",
+    "places_count_many": "{{count}} miejsc"
+  },
+  "profile": {
+    "header_fallback": "profil",
+    "settings_aria": "Ustawienia",
+    "change_photo_aria": "Zmień zdjęcie profilowe",
+    "user_fallback": "Użytkownik",
+    "complete_profile": "Uzupełnij profil ({{pct}}%)",
+    "friends_count": "Znajomi: {{count}}",
+    "followers": "Obserwujący",
+    "following": "Obserwuje",
+    "no_users": "Brak użytkowników",
+    "friends_title": "Znajomi",
+    "requests_title": "Zaproszenia ({{count}})",
+    "friend_added": "Dodano znajomego!",
+    "accept": "Akceptuj",
+    "decline": "Odrzuć",
+    "no_friends_hint": "Nie masz jeszcze znajomych. Zaproś kogoś linkiem albo znajdź po nazwie.",
+    "find_friends": "Znajdź znajomych",
+    "your_friends_title": "Twoi znajomi ({{count}})",
+    "avatar_type_error": "Tylko JPG, PNG lub WebP",
+    "avatar_size_error": "Maks 5 MB",
+    "avatar_upload_error": "Błąd podczas przesyłania zdjęcia",
+    "avatar_save_error": "Błąd zapisu profilu",
+    "avatar_updated": "Zdjęcie zaktualizowane!",
+    "photo_read_error": "Nie udało się odczytać zdjęcia",
+    "photo_pick_error": "Nie udało się wybrać zdjęcia"
+  },
+  "guest": {
+    "title": "Twój profil podróżnika",
+    "desc": "Załóż konto, żeby zbudować swój profil, zapraszać znajomych i śledzić podróże w jednym miejscu.",
+    "register": "Załóż konto",
+    "login": "Zaloguj się"
+  },
+  "invite": {
+    "share_title": "Zaproszenie do Trasy",
+    "link_copied": "Link skopiowany",
+    "shared": "Udostępniono",
+    "slot_label": "Zaproszenie {{slot}}",
+    "pending": "Czeka na akceptację",
+    "unused": "Niewykorzystane",
+    "invited_label": "Zaproszono:"
+  },
+  "add_friend": {
+    "inviter_fallback": "Twój znajomy",
+    "adding": "Dodajemy znajomego…",
+    "already": "Już jesteście znajomymi",
+    "success": "Jesteście znajomymi!",
+    "you_and": "Ty i {{name}}",
+    "success_desc": "Możecie teraz planować wspólne trasy jednym tapnięciem i podglądać swoje podróże.",
+    "view_profile": "Zobacz profil {{name}}",
+    "go_to_app": "Przejdź do aplikacji",
+    "self_title": "To Twój własny link",
+    "self_desc": "Wyślij go znajomym, żeby dodali Cię do listy.",
+    "home": "Strona główna",
+    "error_title": "Link nieprawidłowy lub wygasł",
+    "error_desc": "Poproś znajomego o nowy link zaproszeniowy."
+  }
+}

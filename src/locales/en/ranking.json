@@ -1,0 +1,82 @@
+{
+  "header": {
+    "new_collection": "New collection",
+    "edit_collection": "Edit collection",
+    "notes_and_map": "Notes and map",
+    "back": "Back",
+    "change_theme": "Change theme"
+  },
+  "form": {
+    "list": "List",
+    "route": "Plan"
+  },
+  "form_picker": {
+    "title": "What are you creating?",
+    "subtitle": "Choose the format of your collection. It determines the themes available in the next step.",
+    "list_label": "List",
+    "list_hint": "A set of recommended places with no fixed order. E.g. the best cafes in the city.",
+    "route_label": "Plan",
+    "route_hint": "An ordered plan with a sequence of places and a map. E.g. an idea for the whole day."
+  },
+  "theme_picker": {
+    "title": "What's the theme?",
+    "subtitle_route": "Choose a theme for your plan. It helps others find it.",
+    "subtitle_list": "Choose a theme for your list. It helps others find it."
+  },
+  "city_label": "City",
+  "search": {
+    "placeholder": "Search for a place in {{city}}…",
+    "searching_more": "Searching for more places…",
+    "badge_new": "new",
+    "empty_title": "No place found in {{city}}",
+    "empty_hint": "Check the spelling or try a different name.",
+    "preview_cta": "See \"{{query}}\" and add"
+  },
+  "places": {
+    "selected": "Selected places ({{count}})",
+    "view_list": "List view",
+    "view_cards": "Card view",
+    "move_up": "Move up",
+    "move_down": "Move down",
+    "remove": "Remove place",
+    "add": "Add place",
+    "add_hint": "Search or pick from the suggestions below",
+    "suggestions": "Suggestions in {{city}}"
+  },
+  "notes": {
+    "collection_label": "Collection note",
+    "optional": "(optional)",
+    "collection_placeholder": "Write a few words about this collection: for whom, when, why these places…",
+    "places_label": "Notes for places",
+    "place_placeholder": "Your note about this place (optional)…"
+  },
+  "map": {
+    "route": "Plan on the map",
+    "list": "Places on the map"
+  },
+  "anon": {
+    "label": "Add anonymously",
+    "on": "Without your profile and avatar.",
+    "off": "By default: with your profile and avatar."
+  },
+  "cta": {
+    "next": "Next: notes and map",
+    "save": "Save changes",
+    "publish": "Publish collection"
+  },
+  "custom_preview": {
+    "title": "Add this place?",
+    "close": "Close",
+    "reject": "Dismiss",
+    "add": "Add"
+  },
+  "toast": {
+    "already_added": "This place is already on the list",
+    "add_failed": "Could not add the place",
+    "not_found": "Place not found - check the name",
+    "updated": "Collection updated!",
+    "sent": "Sent! Your collection will appear after moderator approval.",
+    "save_failed": "Could not save: {{error}}"
+  },
+  "error_fallback": "error"
+}

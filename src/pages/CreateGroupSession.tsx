@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import { useTranslation, Trans } from "react-i18next";
 import { avatarSrc } from "@/lib/avatar";
 import { useNavigate, useLocation } from "react-router-dom";
 import { ArrowLeft, Copy, Check, ArrowRight, Users, Trash2, LogOut, Search, UserPlus, CalendarDays, Bell, Share2, Lock } from "lucide-react";
@@ -31,6 +32,7 @@ function capitalizeCity(city: string): string {
 }
 
 const CreateGroupSession = () => {
+  const { t } = useTranslation("groupcreate");
   const navigate = useNavigate();
   const location = useLocation();
   const fromJournal = (location.state as { from?: string } | null)?.from === "journal";
@@ -162,7 +164,7 @@ const CreateGroupSession = () => {
     if (loading) return; // Prevent double-submit even if button disabled state hasn't flushed
     // Data wyjazdu jest WYMAGANA - bez niej trasa nie jest poprawnie traktowana jako
     // aktywna (zakres dat napedza "Aktywne trasy" na home + auto-archiwizacje minionych).
-    if (!tripDate) { toast.error("Wybierz datę wyjazdu"); return; }
+    if (!tripDate) { toast.error(t("toast_pick_date")); return; }
     // Web: grupowe wymaga rejestracji (drives signups + nie zasmieca profiles
     // anon user_xxx rows widocznymi potem w Admin panel).
     // Native: anon OK (drives downloads + low-friction onboarding ze share-link
@@ -173,7 +175,7 @@ const CreateGroupSession = () => {
       return;
     }
     if (!user) { openAuthDrawer({ mode: "register", hint: "join_session" }); return; }
-    if (!selectedCity) { toast.error("Wybierz miasto"); return; }
+    if (!selectedCity) { toast.error(t("toast_pick_city")); return; }
     setLoading(true);
     try {
       // Idempotentne: tworzy profile row dla anon (username 'user_' + uuid prefix)
@@ -213,7 +215,7 @@ const CreateGroupSession = () => {
       setCreatedSessionId(session.id);
     } catch (e: any) {
       posthog.captureException(e);
-      toast.error(e.message || "Błąd podczas tworzenia sesji");
+      toast.error(e.message || t("toast_create_error"));
     } finally {
       setLoading(false);
     }
@@ -228,7 +230,7 @@ const CreateGroupSession = () => {
     }
     if (!user) { openAuthDrawer({ mode: "register", hint: "join_session" }); return; }
     const code = joinCode.trim().toUpperCase();
-    if (code.length < 4) { toast.error("Wpisz kod sesji"); return; }
+    if (code.length < 4) { toast.error(t("toast_enter_code")); return; }
     setJoining(true);
     try {
       // Defensywnie: ensure profile row przed insertem do members (FK -> profiles)
@@ -241,7 +243,7 @@ const CreateGroupSession = () => {
         .eq("join_code", code)
         .maybeSingle();
       if (error) throw error;
-      if (!session) { toast.error("Nie znaleziono sesji z tym kodem"); setJoining(false); return; }
+      if (!session) { toast.error(t("toast_session_not_found")); setJoining(false); return; }
 
       await (supabase as any)
         .from("group_session_members")
@@ -250,7 +252,7 @@ const CreateGroupSession = () => {
       posthog.capture("group_session_joined", { city: session.city });
       navigate(`/sesja/${code}`);
     } catch (e: any) {
-      toast.error(e.message || "Błąd podczas dołączania");
+      toast.error(e.message || t("toast_join_error"));
     } finally {
       setJoining(false);
     }
@@ -269,18 +271,18 @@ const CreateGroupSession = () => {
       if (isOwner) {
         const { error } = await (supabase as any).from("group_sessions").delete().eq("id", session.id);
         if (error) throw error;
-        toast.success("Sesja usunięta");
+        toast.success(t("toast_session_deleted"));
       } else {
         const { error } = await (supabase as any).from("group_session_members")
           .delete()
           .eq("session_id", session.id)
           .eq("user_id", user!.id);
         if (error) throw error;
-        toast.success("Wyszedłeś z sesji");
+        toast.success(t("toast_left_session"));
       }
       queryClient.invalidateQueries({ queryKey: ["my-group-sessions", user?.id] });
     } catch (err: any) {
-      toast.error("Nie udało się usunąć sesji. Spróbuj ponownie.");
+      toast.error(t("toast_delete_error"));
       console.error("[CreateGroupSession] delete/leave failed:", err);
     }
   };
@@ -311,7 +313,7 @@ const CreateGroupSession = () => {
       );
       setSendingInvites(false);
       posthog.capture("group_invites_sent", { invite_count: ids.length, city: selectedCity });
-      toast.success(`Zaproszono ${ids.length} ${ids.length === 1 ? "osobę" : "osoby"} 🔔`);
+      toast.success(ids.length === 1 ? t("toast_invites_sent_one", { count: ids.length }) : t("toast_invites_sent_many", { count: ids.length }));
     }
     navigate(`/sesja/${createdCode}`);
   };
@@ -336,7 +338,7 @@ const CreateGroupSession = () => {
         >
           <ArrowLeft className="h-5 w-5" />
         </button>
-        <span className="font-bold text-base">{fromJournal ? "Nowa trasa" : "Wybieracie miejsca razem"}</span>
+        <span className="font-bold text-base">{fromJournal ? t("header_journal") : t("header_group")}</span>
       </div>
 
       <div className="flex-1 overflow-y-auto flex flex-col px-4 py-6 gap-6">
@@ -345,7 +347,7 @@ const CreateGroupSession = () => {
 
             {/* Trip date */}
             <div>
-              <p className="text-sm font-semibold mb-3">Data wyjazdu <span className="font-normal text-muted-foreground">(wymagane)</span></p>
+              <p className="text-sm font-semibold mb-3">{t("trip_date_label")} <span className="font-normal text-muted-foreground">{t("required")}</span></p>
               <button
                 onClick={() => setDatePickerOpen(o => !o)}
                 className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl border text-sm font-medium transition-colors w-full ${
@@ -356,9 +358,9 @@ const CreateGroupSession = () => {
                 <span className="flex-1 text-left">
                   {tripDate
                     ? (dateRange?.to && numDays > 1
-                        ? `${format(dateRange.from!, "d MMM", { locale: pl })} - ${format(dateRange.to, "d MMM yyyy", { locale: pl })} · ${numDays} dni`
-                        : `${format(tripDate, "d MMMM yyyy", { locale: pl })} · kliknij drugi dzień dla zakresu`)
-                    : "Kiedy planujecie wyjazd? (max 3 dni)"}
+                        ? `${format(dateRange.from!, "d MMM", { locale: pl })} - ${format(dateRange.to, "d MMM yyyy", { locale: pl })} · ${t("date_range_days", { count: numDays })}`
+                        : `${format(tripDate, "d MMMM yyyy", { locale: pl })} · ${t("date_pick_second_hint")}`)
+                    : t("date_placeholder")}
                 </span>
                 {tripDate && (
                   <span
@@ -380,13 +382,13 @@ const CreateGroupSession = () => {
                 </div>
               )}
               {numDays > 1 && (
-                <p className="text-xs text-muted-foreground mt-2">Trasa na {numDays} dni - ułożymy plan na każdy dzień.</p>
+                <p className="text-xs text-muted-foreground mt-2">{t("multiday_hint", { count: numDays })}</p>
               )}
             </div>
 
             {/* City picker */}
             <div>
-              <p className="text-sm font-semibold mb-3">Wybierz miasto</p>
+              <p className="text-sm font-semibold mb-3">{t("city_label")}</p>
               <div className="flex flex-wrap gap-2">
                 {sortedCities.map((city) => {
                   const unlocked = isCityUnlocked(city);
@@ -396,7 +398,7 @@ const CreateGroupSession = () => {
                       key={city}
                       onClick={() => {
                         if (unlocked) setSelectedCity(city);
-                        else toast("To miasto będzie dostępne wkrótce 🔒");
+                        else toast(t("city_locked_toast"));
                       }}
                       disabled={!unlocked && !isSelected}
                       className={`px-4 py-2 rounded-full text-sm font-medium border transition-colors flex items-center gap-1.5 ${
@@ -417,12 +419,12 @@ const CreateGroupSession = () => {
 
             {/* Session name */}
             <div>
-              <p className="text-sm font-semibold mb-2">Nazwa sesji <span className="text-muted-foreground font-normal">(opcjonalnie)</span></p>
+              <p className="text-sm font-semibold mb-2">{t("session_name_label")} <span className="text-muted-foreground font-normal">{t("optional")}</span></p>
               <input
                 type="text"
                 value={sessionName}
                 onChange={(e) => setSessionName(e.target.value)}
-                placeholder={selectedCity ? `np. Majówka ${capitalizeCity(selectedCity)}` : "np. Majówka Warszawa"}
+                placeholder={t("session_name_placeholder", { city: capitalizeCity(selectedCity || "Warszawa") })}
                 maxLength={40}
                 className="w-full px-4 py-3 rounded-2xl border border-border/60 bg-card text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-orange-600/30"
                 style={{ fontSize: "16px" }}
@@ -434,7 +436,7 @@ const CreateGroupSession = () => {
               disabled={loading || !selectedCity || !tripDate}
               className="w-full py-4 rounded-full bg-primary text-white font-bold text-base active:scale-[0.97] transition-transform disabled:opacity-40"
             >
-              {loading ? (fromJournal ? "Tworzę trasę…" : "Tworzę sesję…") : (fromJournal ? "Stwórz trasę" : "Stwórz sesję grupową")}
+              {loading ? (fromJournal ? t("create_loading_journal") : t("create_loading_group")) : (fromJournal ? t("create_journal") : t("create_group"))}
             </button>
 
             {/* Active sessions - BOTTOM */}
@@ -442,7 +444,7 @@ const CreateGroupSession = () => {
               <div className="space-y-2 pt-2">
                 <div className="flex items-center gap-3 mb-1">
                   <div className="flex-1 h-px bg-border/40" />
-                  <span className="text-xs text-muted-foreground">twoje sesje</span>
+                  <span className="text-xs text-muted-foreground">{t("your_sessions")}</span>
                   <div className="flex-1 h-px bg-border/40" />
                 </div>
                 {activeSessions.map((s: any) => (
@@ -467,7 +469,7 @@ const CreateGroupSession = () => {
                       onClick={(e) => handleDeleteOrLeaveSession(s, e)}
                       className={`h-10 flex items-center justify-center rounded-full active:scale-90 transition-all shrink-0 text-xs font-bold ${confirmActionId === s.id ? "px-2 bg-red-500 text-white min-w-[70px]" : "w-10 bg-red-500/10 text-red-500"}`}
                     >
-                      {confirmActionId === s.id ? "Usunąć?" : s.created_by === user?.id
+                      {confirmActionId === s.id ? t("confirm_delete") : s.created_by === user?.id
                         ? <Trash2 className="h-4 w-4" />
                         : <LogOut className="h-4 w-4" />
                       }
@@ -493,7 +495,7 @@ const CreateGroupSession = () => {
                             <span className="text-xs text-muted-foreground">{dateLabel}</span>
                           )}
                           <span className="text-[10px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded font-medium">
-                            Zakończona
+                            {t("session_ended")}
                           </span>
                         </div>
                       </div>
@@ -506,13 +508,14 @@ const CreateGroupSession = () => {
         ) : (
           <>
             <div className="text-center py-2">
-              <p className="text-xl font-black mb-1">{fromJournal ? "Zaprosić kogoś?" : "Zaproś znajomych"}</p>
+              <p className="text-xl font-black mb-1">{fromJournal ? t("invite_title_journal") : t("invite_title_group")}</p>
               <p className="text-sm text-muted-foreground">
-                {fromJournal ? (
-                  <>Możesz dodać znajomych do tej trasy w <strong>{capitalizeCity(selectedCity)}</strong> albo zacznij sam, zaplanujesz wszystko po swojemu.</>
-                ) : (
-                  <>Wyślij znajomym powiadomienie, żeby dołączyli i razem przeglądali miejsca w <strong>{capitalizeCity(selectedCity)}</strong>.</>
-                )}
+                <Trans
+                  i18nKey={fromJournal ? "invite_desc_journal" : "invite_desc_group"}
+                  ns="groupcreate"
+                  values={{ city: capitalizeCity(selectedCity) }}
+                  components={{ b: <strong /> }}
+                />
               </p>
             </div>
 
@@ -520,7 +523,7 @@ const CreateGroupSession = () => {
             <div className="rounded-2xl border border-border/40 bg-card p-4 space-y-3">
               <div className="flex items-center gap-2">
                 <Bell className="h-4 w-4 text-orange-600 shrink-0" />
-                <p className="text-sm font-semibold">Wyślij powiadomienie</p>
+                <p className="text-sm font-semibold">{t("send_notification")}</p>
               </div>
               {/* Hidden fake fields - trick iOS into not showing Face ID */}
               <input type="text" aria-hidden="true" className="hidden" autoComplete="username" tabIndex={-1} readOnly />
@@ -532,7 +535,7 @@ const CreateGroupSession = () => {
                   inputMode="search"
                   value={friendSearch}
                   onChange={e => setFriendSearch(e.target.value)}
-                  placeholder="Szukaj @username..."
+                  placeholder={t("friend_search_placeholder")}
                   autoComplete="off"
                   autoCorrect="off"
                   autoCapitalize="off"
@@ -562,7 +565,7 @@ const CreateGroupSession = () => {
                               : "border border-border/60 text-foreground"
                           }`}
                         >
-                          {isSelected ? <><Check className="h-3 w-3" />Wybrano</> : <><UserPlus className="h-3 w-3" />Zaproś</>}
+                          {isSelected ? <><Check className="h-3 w-3" />{t("friend_selected")}</> : <><UserPlus className="h-3 w-3" />{t("friend_invite")}</>}
                         </button>
                       </div>
                     );
@@ -570,29 +573,29 @@ const CreateGroupSession = () => {
                 </div>
               )}
               {friendSearch.trim().length > 0 && friendResults.length === 0 && (
-                <p className="text-xs text-muted-foreground text-center py-1">Nie znaleziono użytkownika</p>
+                <p className="text-xs text-muted-foreground text-center py-1">{t("friend_not_found")}</p>
               )}
 
               <button
                 onClick={async () => {
                   const result = await share({
-                    title: "Dołącz do sesji w Trasa",
-                    text: createdCode ? `Kod sesji: ${createdCode}` : undefined,
+                    title: t("share_title"),
+                    text: createdCode ? t("share_code_text", { code: createdCode }) : undefined,
                     url: shareUrl,
                   });
                   if (!result.ok) return;
-                  toast.success(result.method === "clipboard" ? "Link skopiowany" : "Udostępniono");
+                  toast.success(result.method === "clipboard" ? t("toast_link_copied") : t("toast_shared"));
                 }}
                 className="w-full py-2.5 rounded-full bg-secondary text-secondary-foreground text-sm font-semibold flex items-center justify-center gap-2 active:scale-95 transition-transform"
               >
                 <Share2 className="h-4 w-4" />
-                Udostępnij link
+                {t("share_link")}
               </button>
             </div>
 
             {/* Share code - kod + ikona kopiowania (secondary) bezposrednio obok */}
             <div className="rounded-2xl border border-border/40 bg-card p-4">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Lub udostępnij kod</p>
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">{t("share_or_code")}</p>
               <div className="flex items-center justify-center gap-3">
                 <p className="text-3xl font-black tracking-widest">{createdCode}</p>
                 <button
@@ -600,9 +603,9 @@ const CreateGroupSession = () => {
                     await navigator.clipboard.writeText(createdCode!);
                     setCodeCopied(true);
                     setTimeout(() => setCodeCopied(false), 2000);
-                    toast.success("Skopiowano kod!");
+                    toast.success(t("toast_code_copied"));
                   }}
-                  aria-label="Kopiuj kod"
+                  aria-label={t("copy_code_aria")}
                   className="h-9 w-9 shrink-0 rounded-full bg-secondary text-secondary-foreground flex items-center justify-center active:scale-90 transition-transform"
                 >
                   {codeCopied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
@@ -615,7 +618,7 @@ const CreateGroupSession = () => {
               disabled={sendingInvites}
               className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-base active:scale-[0.97] transition-transform disabled:opacity-60"
             >
-              {sendingInvites ? "Wysyłam zaproszenia…" : selectedFriends.size > 0 ? `Zaproś (${selectedFriends.size}) i zacznij wybieranie` : "Zacznij wybieranie"}
+              {sendingInvites ? t("start_sending") : selectedFriends.size > 0 ? t("start_with_invites", { count: selectedFriends.size }) : t("start_choosing")}
             </button>
           </>
         )}

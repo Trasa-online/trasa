@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { getPhotoUrl } from "@/lib/placePhotos";
 import { MAIN_CATEGORIES } from "@/lib/categories";
@@ -189,6 +190,7 @@ function DemoSwiper({ places, city, category, onComplete, isBiznesDemo }: {
   onComplete: (liked: DemoPlace[]) => void;
   isBiznesDemo?: boolean;
 }) {
+  const { t } = useTranslation("demo");
   const navigate = useNavigate();
   const [queue, setQueue] = useState<DemoPlace[]>(places);
   const [liked, setLiked] = useState<DemoPlace[]>([]);
@@ -231,8 +233,8 @@ function DemoSwiper({ places, city, category, onComplete, isBiznesDemo }: {
   const handleCreateRoute = () => {
     const need = 3 - routePlaces.length;
     if (need > 0) {
-      toast(`Zaznacz jeszcze ${need} ${need === 1 ? "miejsce" : "miejsca"}`, {
-        description: "Minimum 3 miejsca potrzebne do stworzenia trasy.",
+      toast(t("select_more", { count: need, noun: need === 1 ? t("place_one") : t("place_few") }), {
+        description: t("select_more_desc"),
         duration: 3500,
       });
       return;
@@ -252,13 +254,13 @@ function DemoSwiper({ places, city, category, onComplete, isBiznesDemo }: {
           onClick={() => setActiveTab("explore")}
           className={`flex-1 py-2.5 text-sm font-semibold transition-colors ${activeTab === "explore" ? "text-orange-600 border-b-2 border-orange-600" : "text-muted-foreground"}`}
         >
-          Eksploruj
+          {t("explore_tab")}
         </button>
         <button
           onClick={() => setActiveTab("matches")}
           className={`flex-1 py-2.5 text-sm font-semibold transition-colors flex items-center justify-center gap-1.5 ${activeTab === "matches" ? "text-orange-600 border-b-2 border-orange-600" : "text-muted-foreground"}`}
         >
-          Dopasowania
+          {t("matches_tab")}
           {liked.length > 0 && (
             <span className="h-[18px] min-w-[18px] px-1 rounded-full bg-primary text-white text-[10px] font-bold flex items-center justify-center">
               {liked.length}
@@ -281,13 +283,13 @@ function DemoSwiper({ places, city, category, onComplete, isBiznesDemo }: {
                   )} />
                 ))}
                 <span className="text-[10px] font-semibold text-muted-foreground whitespace-nowrap ml-1">
-                  {PLAN_TIERS[swiped].label}
+                  {t(`plan_tiers.${swiped}`)}
                 </span>
               </div>
             </div>
           ) : (
             <div className="px-5 py-2 text-xs text-muted-foreground shrink-0">
-              Miejsce {swiped}/{places.length}
+              {t("place_progress", { current: swiped, total: places.length })}
             </div>
           )}
           {queue.length > 0 ? (
@@ -315,11 +317,11 @@ function DemoSwiper({ places, city, category, onComplete, isBiznesDemo }: {
                     "text-white text-[11px] font-bold px-3 py-1.5 rounded-full shadow-lg",
                     PLAN_TIERS[swiped].badge
                   )}>
-                    {PLAN_TIERS[swiped].label}
+                    {t(`plan_tiers.${swiped}`)}
                   </span>
                   {swiped < 2 && cardSlice.length > 1 && (
                     <span className="text-white/70 text-[10px] font-medium px-1 drop-shadow-md">
-                      Przesuń by zobaczyć kolejny plan
+                      {t("swipe_hint_next_plan")}
                     </span>
                   )}
                 </div>
@@ -328,13 +330,13 @@ function DemoSwiper({ places, city, category, onComplete, isBiznesDemo }: {
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center px-6 gap-4 text-center">
               <p className="text-5xl">✅</p>
-              <p className="font-bold text-lg">Przejrzałeś wszystkie miejsca!</p>
-              <p className="text-sm text-muted-foreground">Sprawdź swoje dopasowania w drugiej zakładce.</p>
+              <p className="font-bold text-lg">{t("all_places_seen")}</p>
+              <p className="text-sm text-muted-foreground">{t("check_matches_hint")}</p>
               <button
                 onClick={() => setActiveTab("matches")}
                 className="py-3 px-6 rounded-full bg-primary text-white font-semibold text-sm active:scale-[0.97] transition-transform"
               >
-                Zobacz dopasowania →
+                {t("see_matches")}
               </button>
             </div>
           )}
@@ -347,15 +349,15 @@ function DemoSwiper({ places, city, category, onComplete, isBiznesDemo }: {
           {liked.length === 0 ? (
             <div className="flex-1 flex flex-col items-center justify-center gap-3 text-center py-12">
               <p className="text-4xl">❤️</p>
-              <p className="font-semibold">Brak polubionych miejsc</p>
-              <p className="text-sm text-muted-foreground">Eksploruj miejsca i wróć tutaj</p>
+              <p className="font-semibold">{t("no_liked_places")}</p>
+              <p className="text-sm text-muted-foreground">{t("explore_and_return")}</p>
               <button onClick={() => setActiveTab("explore")} className="text-sm font-semibold text-orange-600">
-                Wróć do eksplorowania →
+                {t("back_to_explore")}
               </button>
             </div>
           ) : (
             <>
-              <p className="text-xs text-muted-foreground px-1">Zaznacz miejsca do trasy:</p>
+              <p className="text-xs text-muted-foreground px-1">{t("mark_places_for_route")}</p>
               {liked.map((place, i) => (
                 <div
                   key={place.id}
@@ -393,10 +395,10 @@ function DemoSwiper({ places, city, category, onComplete, isBiznesDemo }: {
                 )}
               >
                 {routePlaces.length >= 3
-                  ? `Stwórz trasę (${routePlaces.length}) →`
+                  ? t("create_route", { count: routePlaces.length })
                   : routePlaces.length > 0
-                    ? `Zaznacz jeszcze ${3 - routePlaces.length} ${3 - routePlaces.length === 1 ? "miejsce" : "miejsca"}`
-                    : "Zaznacz miejsca do trasy"}
+                    ? t("select_more", { count: 3 - routePlaces.length, noun: 3 - routePlaces.length === 1 ? t("place_one") : t("place_few") })
+                    : t("select_places_for_route")}
               </button>
             </>
           )}
@@ -471,8 +473,8 @@ function DemoSwiper({ places, city, category, onComplete, isBiznesDemo }: {
             ))}
           </svg>
           <div className="text-center space-y-2">
-            <p className="text-base font-semibold text-foreground">Tworzę Twoją trasę</p>
-            <p className="text-sm text-muted-foreground leading-relaxed">Ty się zrelaksuj!</p>
+            <p className="text-base font-semibold text-foreground">{t("creating_route")}</p>
+            <p className="text-sm text-muted-foreground leading-relaxed">{t("relax")}</p>
           </div>
         </div>
       )}
@@ -483,10 +485,10 @@ function DemoSwiper({ places, city, category, onComplete, isBiznesDemo }: {
           {/* Header */}
           <div className="flex items-center justify-between px-5 pt-safe-4 pb-3 border-b border-border/20 shrink-0">
             <div>
-              <p className="text-[10px] font-bold text-orange-600 uppercase tracking-widest mb-0.5">Twoja trasa</p>
+              <p className="text-[10px] font-bold text-orange-600 uppercase tracking-widest mb-0.5">{t("your_route")}</p>
               <p className="font-black text-lg leading-tight">{city}</p>
               <p className="text-xs text-muted-foreground">
-                Dzień 1 · {routePlaces.length} {routePlaces.length === 1 ? "miejsce" : routePlaces.length < 5 ? "miejsca" : "miejsc"}
+                {t("day_places", { count: routePlaces.length, noun: routePlaces.length === 1 ? t("place_one") : routePlaces.length < 5 ? t("place_few") : t("place_many") })}
               </p>
             </div>
             <button onClick={() => setShowRoute(false)} className="h-8 w-8 rounded-full bg-muted flex items-center justify-center shrink-0">
@@ -519,20 +521,20 @@ function DemoSwiper({ places, city, category, onComplete, isBiznesDemo }: {
                       <div className="h-7 w-7 rounded-full bg-black/60 text-white flex items-center justify-center text-xs font-bold backdrop-blur-sm">
                         {i + 1}
                       </div>
-                      <span className="text-[11px] font-semibold text-white/90 bg-black/40 backdrop-blur-sm rounded-full px-2 py-0.5">Dzień 1</span>
+                      <span className="text-[11px] font-semibold text-white/90 bg-black/40 backdrop-blur-sm rounded-full px-2 py-0.5">{t("day_1")}</span>
                     </div>
                   </div>
                   {/* Info 38% */}
                   <div className="flex-[38] min-h-0 px-3.5 py-3 flex flex-col gap-1.5">
                     <span className="text-[11px] font-medium text-muted-foreground/70 bg-muted px-2 py-0.5 rounded-full self-start">
-                      {DEMO_CAT_EMOJI[place.category ?? ""] ?? "📍"} {place.category ?? "Atrakcja"}
+                      {DEMO_CAT_EMOJI[place.category ?? ""] ?? "📍"} {place.category ?? t("attraction_fallback")}
                     </span>
                     <p className="text-sm font-bold leading-tight line-clamp-2 text-foreground">{place.name}</p>
                     {place.description && (
                       <p className="text-[11px] text-muted-foreground leading-relaxed line-clamp-2 flex-1">{place.description}</p>
                     )}
                     {i > 0 && (
-                      <p className="text-[11px] text-muted-foreground/60 mt-auto">🚶 ok. 10 min</p>
+                      <p className="text-[11px] text-muted-foreground/60 mt-auto">{t("walk_time")}</p>
                     )}
                   </div>
                 </div>
@@ -546,10 +548,10 @@ function DemoSwiper({ places, city, category, onComplete, isBiznesDemo }: {
               onClick={() => { setShowRoute(false); setShowJournal(true); }}
               className="w-full py-4 rounded-full bg-primary text-white font-bold text-base active:scale-[0.97] transition-transform shadow-lg shadow-primary/20"
             >
-              Zapisz trasę →
+              {t("save_route")}
             </button>
             <button onClick={() => setShowRoute(false)} className="w-full text-center text-sm text-muted-foreground py-1">
-              Wróć do dopasowań
+              {t("back_to_matches")}
             </button>
           </div>
         </div>
@@ -566,13 +568,13 @@ function DemoSwiper({ places, city, category, onComplete, isBiznesDemo }: {
             </button>
             <button onClick={() => navigate("/dla-firm/start")}
               className="text-xs font-semibold px-3 py-1.5 rounded-full text-blue-600 bg-blue-600/10 active:scale-95 transition-transform">
-              dla firm →
+              {t("for_business")}
             </button>
           </div>
 
           {/* Journal content */}
           <div className="flex-1 overflow-y-auto px-4 pt-2 pb-2">
-            <h1 className="text-xl font-black tracking-tight pt-2 pb-3">Dziennik podróży</h1>
+            <h1 className="text-xl font-black tracking-tight pt-2 pb-3">{t("journal_title")}</h1>
 
             {/* Main journal entry - 1:1 match with JournalTab */}
             <div
@@ -591,7 +593,7 @@ function DemoSwiper({ places, city, category, onComplete, isBiznesDemo }: {
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
                 <div className="absolute bottom-0 left-0 right-0 px-4 pb-3">
                   <p className="text-white font-bold text-lg leading-tight drop-shadow-sm">
-                    {city}<span className="font-normal text-white/80"> · Dzień 1</span>
+                    {city}<span className="font-normal text-white/80"> · {t("day_1")}</span>
                   </p>
                   <p className="text-white/70 text-xs mt-0.5">
                     {new Date().toLocaleDateString("pl-PL", { day: "numeric", month: "long", year: "numeric" })}
@@ -606,10 +608,10 @@ function DemoSwiper({ places, city, category, onComplete, isBiznesDemo }: {
               </div>
               <div className="px-4 py-3">
                 <p className="text-sm text-foreground/80 italic leading-snug mb-1.5">
-                  "Wyjątkowy dzień pełen odkryć - to miasto ma niepowtarzalny charakter"
+                  {t("journal_quote")}
                 </p>
                 <p className="text-xs text-muted-foreground line-clamp-2 leading-snug">
-                  Odwiedziliśmy {routePlaces.map(p => p.name).join(", ")}. Każde z tych miejsc zostawiło swój ślad.
+                  {t("journal_summary", { places: routePlaces.map(p => p.name).join(", ") })}
                 </p>
               </div>
             </div>
@@ -631,7 +633,7 @@ function DemoSwiper({ places, city, category, onComplete, isBiznesDemo }: {
               onClick={() => navigate("/dla-firm/start")}
               className="w-full py-3.5 rounded-full bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm active:scale-[0.97] transition-transform shadow-lg shadow-blue-200"
             >
-              Przejdź do formularza zgłoszeniowego →
+              {t("go_to_form")}
             </button>
           </div>
 
@@ -640,7 +642,7 @@ function DemoSwiper({ places, city, category, onComplete, isBiznesDemo }: {
             <div className="grid grid-cols-3 h-12 max-w-lg mx-auto">
               <button className="flex flex-col items-center justify-center gap-1 text-muted-foreground/40">
                 <Home className="h-5 w-5 stroke-2" />
-                <span className="text-[10px] font-medium">Główna</span>
+                <span className="text-[10px] font-medium">{t("nav_home")}</span>
               </button>
               <button className="flex items-center justify-center opacity-40 cursor-not-allowed">
                 <span className="h-10 w-10 rounded-full bg-primary/60 flex items-center justify-center">
@@ -649,7 +651,7 @@ function DemoSwiper({ places, city, category, onComplete, isBiznesDemo }: {
               </button>
               <button className="flex flex-col items-center justify-center gap-1 text-orange-600">
                 <BookOpen className="h-5 w-5 stroke-[2.5px]" />
-                <span className="text-[10px] font-medium">Dziennik</span>
+                <span className="text-[10px] font-medium">{t("nav_journal")}</span>
               </button>
             </div>
           </nav>
@@ -701,13 +703,13 @@ function DemoSwiper({ places, city, category, onComplete, isBiznesDemo }: {
                 <div className="absolute bottom-0 left-0 right-0 px-5 pb-6">
                   <p className="text-white/70 text-sm mb-1">{dateLabel}</p>
                   <h1 className="text-white text-3xl font-black leading-tight drop-shadow-sm">{city}</h1>
-                  <p className="text-white/70 text-base font-medium mt-0.5">Dzień 1</p>
+                  <p className="text-white/70 text-base font-medium mt-0.5">{t("day_1")}</p>
                 </div>
               </div>
 
               {/* Overall rating */}
               <div className="px-5 pt-5 pb-5 border-b border-border/30">
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Ocena trasy</p>
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">{t("review_rating_label")}</p>
                 <div className="flex gap-2">
                   {[1,2,3,4,5].map(n => (
                     <span key={n} className="text-2xl">⭐</span>
@@ -718,28 +720,28 @@ function DemoSwiper({ places, city, category, onComplete, isBiznesDemo }: {
               {/* AI highlight */}
               <div className="px-5 pt-6 pb-5 border-b border-border/30">
                 <p className="text-[22px] font-bold leading-snug text-foreground">
-                  „Wyjątkowy dzień pełen odkryć - to miasto ma niepowtarzalny charakter"
+                  {t("review_quote")}
                 </p>
               </div>
 
               {/* AI summary */}
               <div className="px-5 pt-5 pb-5 border-b border-border/30">
                 <p className="text-sm text-foreground/70 leading-relaxed">
-                  Odwiedziliśmy {demoPins.map(p => p.name).join(", ")}. Każde z tych miejsc zostawiło swój ślad i sprawiło, że ten dzień stał się niezapomniany.
+                  {t("review_summary", { places: demoPins.map(p => p.name).join(", ") })}
                 </p>
               </div>
 
               {/* Photos */}
               <div className="pt-5 pb-5 border-b border-border/30">
                 <div className="flex items-center justify-between px-5 mb-3">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Zdjęcia</p>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t("photos")}</p>
                 </div>
                 <div className="flex gap-2.5 overflow-x-auto px-5 scrollbar-none pb-1">
                   {galleryPhotos.map((url, idx) => (
                     <div key={url} className="relative flex-shrink-0 w-32 h-32 rounded-2xl overflow-hidden shadow-sm">
                       <img src={url} alt="" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
                       {idx === 0 && (
-                        <div className="absolute bottom-1.5 left-1.5 bg-primary/90 rounded-full px-1.5 py-0.5 text-[9px] font-bold text-white">Okładka</div>
+                        <div className="absolute bottom-1.5 left-1.5 bg-primary/90 rounded-full px-1.5 py-0.5 text-[9px] font-bold text-white">{t("cover")}</div>
                       )}
                       {idx !== 0 && (
                         <div className="absolute bottom-1.5 left-1.5 bg-black/60 backdrop-blur-sm rounded-full p-1">
@@ -750,7 +752,7 @@ function DemoSwiper({ places, city, category, onComplete, isBiznesDemo }: {
                   ))}
                   <div className="flex-shrink-0 w-32 h-32 rounded-2xl border-2 border-dashed border-border/50 flex flex-col items-center justify-center gap-1.5 text-muted-foreground/40">
                     <Camera className="h-6 w-6" />
-                    <span className="text-xs">Dodaj</span>
+                    <span className="text-xs">{t("add")}</span>
                   </div>
                 </div>
               </div>
@@ -759,8 +761,8 @@ function DemoSwiper({ places, city, category, onComplete, isBiznesDemo }: {
               <div className="px-5 pt-4 pb-4 border-b border-border/30 flex items-center gap-3">
                 <Globe className="h-4 w-4 text-orange-600 flex-shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold">Publiczne</p>
-                  <p className="text-xs text-muted-foreground">Widoczne na feedzie znajomych</p>
+                  <p className="text-sm font-semibold">{t("public")}</p>
+                  <p className="text-xs text-muted-foreground">{t("visible_on_feed")}</p>
                 </div>
                 <div className="flex-shrink-0 relative w-11 h-6 rounded-full bg-primary pointer-events-none">
                   <span className="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow-sm translate-x-5" />
@@ -769,7 +771,7 @@ function DemoSwiper({ places, city, category, onComplete, isBiznesDemo }: {
 
               {/* Places with ratings */}
               <div className="px-5 pt-5 pb-5 border-b border-border/30">
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">Oceń miejsca</p>
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">{t("rate_places")}</p>
                 <div className="space-y-4">
                   {demoPins.map((pin) => (
                     <div key={pin.id} className="space-y-2">
@@ -790,7 +792,7 @@ function DemoSwiper({ places, city, category, onComplete, isBiznesDemo }: {
                         </div>
                       </div>
                       <div className={`w-full py-1.5 rounded-xl text-xs font-semibold border text-center ${pin.isHighlight ? "bg-amber-400/20 border-amber-400 text-amber-700" : "border-border/40 text-muted-foreground/40"}`}>
-                        {pin.isHighlight ? "⭐ Miejsce dnia!" : "Wyróżnij jako miejsce dnia"}
+                        {pin.isHighlight ? t("place_of_day_active") : t("place_of_day_mark")}
                       </div>
                     </div>
                   ))}
@@ -799,21 +801,21 @@ function DemoSwiper({ places, city, category, onComplete, isBiznesDemo }: {
 
               {/* Narrative */}
               <div className="px-5 pt-5 pb-5 border-b border-border/30">
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">Twoje wspomnienia</p>
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">{t("your_memories")}</p>
                 <p className="text-[15px] text-foreground/70 leading-relaxed">
-                  Niesamowite doświadczenie! {city} zaskoczyło nas swoją różnorodnością - od historycznych zakątków po nowoczesne kawiarnie. Każde miejsce miało swój klimat i charakter. Zdecydowanie wrócimy z całą grupą.
+                  {t("narrative", { city })}
                 </p>
               </div>
 
               {/* Polecajka CTA (static) */}
               <div className="px-5 pt-5 pb-6">
                 <div className="rounded-2xl bg-gradient-to-br from-orange-50 to-amber-50 border border-orange-100 p-4">
-                  <p className="text-base font-black leading-tight">Podziel się tą trasą 🗺️</p>
+                  <p className="text-base font-black leading-tight">{t("share_route_title")}</p>
                   <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                    Twoje miejsca trafią na discovery feed innych. Ktoś zaplanuje trasę dzięki Tobie!
+                    {t("share_route_desc")}
                   </p>
                   <div className="mt-3 w-full py-3 rounded-full bg-gradient-to-r from-[#F4A259] to-[#F9662B] text-white font-bold text-sm text-center opacity-60">
-                    Stwórz polecajkę →
+                    {t("create_reco")}
                   </div>
                 </div>
               </div>
@@ -838,6 +840,7 @@ function DemoSwiper({ places, city, category, onComplete, isBiznesDemo }: {
 // ─── DemoSession ──────────────────────────────────────────────────────────────
 
 export default function DemoSession() {
+  const { t } = useTranslation("demo");
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [step, setStep] = useState<Step>("location");
@@ -888,8 +891,8 @@ export default function DemoSession() {
   const handleMultiStart = async () => {
     if (selectedSubcats.size === 0) return;
     if (selectedSubcats.size === 1) {
-      toast("Wybierz min. 2 kategorie dla lepszego efektu", {
-        description: "Zobaczysz bardziej różnorodne miejsca i lepiej poznasz mozliwości aplikacji!",
+      toast(t("toast_min_categories"), {
+        description: t("toast_min_categories_desc"),
         duration: 4000,
       });
       return;
@@ -969,7 +972,7 @@ export default function DemoSession() {
           setMode("group");
           setStep("swipe");
         } else {
-          toast.error("Nie znaleziono sesji - sprawdź kod i spróbuj ponownie");
+          toast.error(t("toast_session_not_found"));
         }
       });
   }, []);
@@ -992,10 +995,10 @@ export default function DemoSession() {
         setMode("group");
         setStep("swipe");
       } else {
-        toast.error("Nie znaleziono sesji - sprawdź kod i spróbuj ponownie");
+        toast.error(t("toast_session_not_found"));
       }
     } catch {
-      toast.error("Błąd połączenia - spróbuj ponownie");
+      toast.error(t("toast_connection_error"));
     } finally {
       setJoinLoading(false);
     }
@@ -1076,7 +1079,7 @@ export default function DemoSession() {
         setStep("invite");
       } catch (e: any) {
         console.error("[demo] session create error:", e);
-        toast.error("Nie udało się utworzyć sesji - spróbuj ponownie");
+        toast.error(t("toast_session_create_error"));
       } finally {
         setGroupLoading(false);
       }
@@ -1127,18 +1130,18 @@ export default function DemoSession() {
   const share = useShare();
   const handleCopyLink = async () => {
     const result = await share({
-      title: "Sprawdź Trasę",
-      text: `Dołącz do demo: ${sessionCode}`,
+      title: t("share_title"),
+      text: t("share_text", { code: sessionCode }),
       url: `${SHARE_BASE_URL}/#/demo?join=${sessionCode}`,
     });
     if (!result.ok) return;
-    toast.success(result.method === "clipboard" ? "Link skopiowany!" : "Udostępniono");
+    toast.success(result.method === "clipboard" ? t("link_copied") : t("shared"));
   };
 
   const catLabel = DEMO_CATEGORIES.find(c => c.id === category);
   const swipeCategoryLabel = selectedSubcats.size > 1
-    ? `${selectedSubcats.size} kategorie`
-    : catLabel ? `${catLabel.emoji} ${catLabel.label}` : null;
+    ? t("n_categories", { count: selectedSubcats.size })
+    : catLabel ? `${catLabel.emoji} ${t(`demo_cat.${catLabel.id}`)}` : null;
 
   // Group matches: places liked by both devices
   const groupMatches: DemoPlace[] = mode === "group" && otherDeviceDone
@@ -1153,7 +1156,7 @@ export default function DemoSession() {
       {/* Pre-launch context strip */}
       {isBiznesDemo && (
         <div className="shrink-0 bg-blue-600 text-white text-[11px] font-semibold text-center py-1.5 px-4">
-          Demo pre-launch · Tak wyglądają lokale dla użytkownika · Premiera czerwiec 2026
+          {t("prelaunch_strip")}
         </div>
       )}
       {/* Header - hidden on landing */}
@@ -1173,10 +1176,10 @@ export default function DemoSession() {
           )}
           <div className="flex-1">
             <p className="font-bold text-sm leading-tight">
-              {step === "location" ? "Wybierz miasto"
+              {step === "location" ? t("header_select_city")
                 : step === "category" ? city
-                : step === "invite" ? "Zaproś znajomego"
-                : mode === "group" ? "Wspólne dopasowania" : "Twoje propozycje"}
+                : step === "invite" ? t("header_invite")
+                : mode === "group" ? t("header_group_matches") : t("header_your_proposals")}
             </p>
             {step === "results" && <p className="text-xs text-muted-foreground">{city}</p>}
           </div>
@@ -1185,7 +1188,7 @@ export default function DemoSession() {
               onClick={() => navigate("/dla-firm/start")}
               className="text-xs font-semibold px-3 py-1.5 rounded-full text-blue-600 bg-blue-600/10 active:scale-95 transition-transform shrink-0"
             >
-              dla firm →
+              {t("for_business")}
             </button>
           )}
         </div>
@@ -1211,7 +1214,7 @@ export default function DemoSession() {
               onClick={() => navigate("/dla-firm/start")}
               className="text-xs font-semibold px-3 py-1.5 rounded-full text-blue-600 bg-blue-600/10 active:scale-95 transition-transform shrink-0"
             >
-              dla firm →
+              {t("for_business")}
             </button>
           )}
         </div>
@@ -1227,7 +1230,7 @@ export default function DemoSession() {
               onClick={() => navigate("/dla-firm/start")}
               className="text-xs font-semibold px-3 py-1.5 rounded-full active:scale-95 transition-transform text-blue-600 bg-blue-600/10"
             >
-              dla firm →
+              {t("for_business")}
             </button>
           </div>
 
@@ -1237,9 +1240,9 @@ export default function DemoSession() {
               {/* Hero */}
               <div className="overflow-hidden flex items-center gap-2">
                 <div className="flex-1 z-10">
-                  <h1 className="text-3xl font-black leading-tight">Bądź tam,<br/>gdzie szukają<br/>klienci.</h1>
+                  <h1 className="text-3xl font-black leading-tight">{t("biz_hero_1")}<br/>{t("biz_hero_2")}<br/>{t("biz_hero_3")}</h1>
                   <p className="text-sm text-muted-foreground mt-3 leading-relaxed max-w-[200px]">
-                    Twój lokal w trasach tworzonych przez turystów i lokalsów - bez reklam, z prawdziwym zasięgiem.
+                    {t("biz_hero_desc")}
                   </p>
                 </div>
                 <div className="relative shrink-0" style={{ width: "148px", height: "210px", marginRight: "-48px" }}>
@@ -1248,7 +1251,7 @@ export default function DemoSession() {
                     <img src="https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=400&q=80" alt="" className="w-full h-full object-cover" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-transparent to-transparent" />
                     <div className="absolute bottom-2.5 left-2.5">
-                      <span className="text-[9px] bg-amber-500 text-white px-1.5 py-0.5 rounded-full font-bold">Kawiarnia</span>
+                      <span className="text-[9px] bg-amber-500 text-white px-1.5 py-0.5 rounded-full font-bold">{t("cat_cafe")}</span>
                       <p className="text-white text-[11px] font-bold mt-0.5">Charlotte</p>
                       <p className="text-yellow-400 text-[9px]">★ 4.8</p>
                     </div>
@@ -1257,15 +1260,15 @@ export default function DemoSession() {
                     style={{ transform: "rotate(-2deg) translate(-8px, -6px)" }}>
                     <img src="https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400&q=80" alt="" className="w-full h-full object-cover" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-                    <div className="absolute top-2 left-2 bg-blue-600/90 backdrop-blur-sm text-white text-[8px] font-bold px-1.5 py-0.5 rounded-full">★ Premium</div>
+                    <div className="absolute top-2 left-2 bg-blue-600/90 backdrop-blur-sm text-white text-[8px] font-bold px-1.5 py-0.5 rounded-full">{t("premium_badge")}</div>
                     <div className="absolute bottom-2.5 left-2.5 right-2.5">
                       <div className="w-6 h-6 rounded-full mb-1 border border-white/40 overflow-hidden"
                         style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
                       <p className="text-white text-[11px] font-black leading-tight">Butchery & Wine</p>
-                      <p className="text-white/60 text-[9px]">Restauracja · @trasa</p>
+                      <p className="text-white/60 text-[9px]">{t("card_restaurant_handle")}</p>
                       <p className="text-yellow-400 text-[9px] mt-0.5">★ 4.7</p>
                       <div className="mt-1 inline-flex items-center gap-0.5 bg-blue-500/80 rounded-full px-1.5 py-0.5">
-                        <span className="text-white text-[8px] font-semibold">🎉 Wydarzenie dziś</span>
+                        <span className="text-white text-[8px] font-semibold">{t("event_today")}</span>
                       </div>
                     </div>
                   </div>
@@ -1275,9 +1278,9 @@ export default function DemoSession() {
               {/* Features */}
               <div className="space-y-3">
                 {[
-                  { icon: "📍", text: "Pojawiaj się w trasach tworzonych przez użytkowników" },
-                  { icon: "📊", text: "Śledź ile osób odwiedza Twój lokal dzięki Trasie" },
-                  { icon: "🤝", text: "Bezpośredni kontakt z turystami i lokalsami" },
+                  { icon: "📍", text: t("biz_feature_1") },
+                  { icon: "📊", text: t("biz_feature_2") },
+                  { icon: "🤝", text: t("biz_feature_3") },
                 ].map(item => (
                   <div key={item.icon} className="flex items-start gap-3 bg-card rounded-2xl px-4 py-4 border border-border/40">
                     <span className="text-xl leading-none mt-0.5">{item.icon}</span>
@@ -1292,13 +1295,13 @@ export default function DemoSession() {
                   onClick={() => navigate("/auth?business=true")}
                   className="w-full py-3.5 rounded-full bg-blue-600 text-white font-bold text-base flex items-center justify-center gap-2 active:scale-[0.97] transition-transform shadow-lg shadow-blue-600/25"
                 >
-                  Zaloguj się jako firma
+                  {t("biz_login")}
                 </button>
                 <button
                   onClick={() => navigate("/auth?business=true")}
                   className="w-full py-3.5 rounded-full bg-white border-2 border-blue-600 text-blue-600 font-bold text-base flex items-center justify-center gap-2 active:scale-[0.97] transition-transform"
                 >
-                  Zarejestruj lokal
+                  {t("biz_register")}
                 </button>
               </div>
             </div>
@@ -1308,9 +1311,9 @@ export default function DemoSession() {
               {/* Hero */}
               <div className="overflow-hidden flex items-center gap-2">
                 <div className="flex-1 z-10">
-                  <h1 className="text-3xl font-black leading-tight">Speed dating<br/>z miastem</h1>
+                  <h1 className="text-3xl font-black leading-tight">{t("user_hero_1")}<br/>{t("user_hero_2")}</h1>
                   <p className="text-sm text-muted-foreground mt-3 leading-relaxed max-w-[170px]">
-                    Odkryj kawiarnie, restauracje i atrakcje razem z ekipą.
+                    {t("user_hero_desc")}
                   </p>
                 </div>
                 <div className="relative shrink-0" style={{ width: "148px", height: "210px", marginRight: "-48px" }}>
@@ -1319,7 +1322,7 @@ export default function DemoSession() {
                     <img src="https://images.unsplash.com/photo-1519197924294-4ba991a11128?w=400&q=80" alt="" className="w-full h-full object-cover" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
                     <div className="absolute bottom-2.5 left-2.5">
-                      <span className="text-[9px] bg-green-600 text-white px-1.5 py-0.5 rounded-full font-bold">Park</span>
+                      <span className="text-[9px] bg-green-600 text-white px-1.5 py-0.5 rounded-full font-bold">{t("cat_park")}</span>
                       <p className="text-white text-[11px] font-bold mt-0.5">Łazienki</p>
                       <p className="text-yellow-400 text-[9px]">★ 4.9</p>
                     </div>
@@ -1329,7 +1332,7 @@ export default function DemoSession() {
                     <img src="https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400&q=80" alt="" className="w-full h-full object-cover" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
                     <div className="absolute bottom-2.5 left-2.5">
-                      <span className="text-[9px] bg-primary text-white px-1.5 py-0.5 rounded-full font-bold">Restauracja</span>
+                      <span className="text-[9px] bg-primary text-white px-1.5 py-0.5 rounded-full font-bold">{t("cat_restaurant")}</span>
                       <p className="text-white text-[11px] font-bold mt-0.5">Butchery & Wine</p>
                       <p className="text-yellow-400 text-[9px]">★ 4.7</p>
                     </div>
@@ -1339,7 +1342,7 @@ export default function DemoSession() {
                     <img src="https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=400&q=80" alt="" className="w-full h-full object-cover" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-transparent to-transparent" />
                     <div className="absolute bottom-2.5 left-2.5">
-                      <span className="text-[9px] bg-amber-500 text-white px-1.5 py-0.5 rounded-full font-bold">Kawiarnia</span>
+                      <span className="text-[9px] bg-amber-500 text-white px-1.5 py-0.5 rounded-full font-bold">{t("cat_cafe")}</span>
                       <p className="text-white text-[11px] font-bold mt-0.5">Charlotte</p>
                       <p className="text-yellow-400 text-[9px]">★ 4.8</p>
                     </div>
@@ -1353,7 +1356,7 @@ export default function DemoSession() {
                   onClick={() => { setMode("solo"); setCity("Warszawa"); setStep("category"); }}
                   className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-base flex items-center justify-center gap-2 active:scale-[0.97] transition-transform shadow-lg shadow-primary/25"
                 >
-                  Zacznij
+                  {t("start")}
                 </button>
               </div>
             </div>
@@ -1368,25 +1371,25 @@ export default function DemoSession() {
           ? [{ name: "Warszawa", locked: false }]
           : DEMO_CITIES_DATA;
         const COUNTRIES = [
-          { flag: "🇵🇱", name: "Polska",     available: true  },
-          { flag: "🇮🇹", name: "Włochy",     available: false },
-          { flag: "🇪🇸", name: "Hiszpania",  available: false },
-          { flag: "🇫🇷", name: "Francja",    available: false },
-          { flag: "🇩🇪", name: "Niemcy",     available: false },
-          { flag: "🇵🇹", name: "Portugalia", available: false },
-          { flag: "🇭🇷", name: "Chorwacja",  available: false },
-          { flag: "🇬🇷", name: "Grecja",     available: false },
-          { flag: "🇦🇹", name: "Austria",    available: false },
-          { flag: "🇨🇿", name: "Czechy",     available: false },
-          { flag: "🇭🇺", name: "Węgry",      available: false },
-          { flag: "🇳🇱", name: "Holandia",   available: false },
-          { flag: "🇲🇹", name: "Malta",      available: false },
+          { flag: "🇵🇱", name: t("country_pl"), available: true  },
+          { flag: "🇮🇹", name: t("country_it"), available: false },
+          { flag: "🇪🇸", name: t("country_es"), available: false },
+          { flag: "🇫🇷", name: t("country_fr"), available: false },
+          { flag: "🇩🇪", name: t("country_de"), available: false },
+          { flag: "🇵🇹", name: t("country_pt"), available: false },
+          { flag: "🇭🇷", name: t("country_hr"), available: false },
+          { flag: "🇬🇷", name: t("country_gr"), available: false },
+          { flag: "🇦🇹", name: t("country_at"), available: false },
+          { flag: "🇨🇿", name: t("country_cz"), available: false },
+          { flag: "🇭🇺", name: t("country_hu"), available: false },
+          { flag: "🇳🇱", name: t("country_nl"), available: false },
+          { flag: "🇲🇹", name: t("country_mt"), available: false },
         ];
         return (
           <div className="flex-1 flex flex-col min-h-0">
             {/* Country selector */}
             <div className="px-5 pt-4 pb-3 shrink-0">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2.5">Kraj</p>
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2.5">{t("country_label")}</p>
               <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
                 {COUNTRIES.map(c => (
                   <button
@@ -1402,7 +1405,7 @@ export default function DemoSession() {
                     <span>{c.flag}</span>
                     <span>{c.name}</span>
                     {!c.available && (
-                      <span className="text-[10px] font-normal ml-0.5 opacity-70">wkrótce</span>
+                      <span className="text-[10px] font-normal ml-0.5 opacity-70">{t("coming_soon")}</span>
                     )}
                   </button>
                 ))}
@@ -1490,7 +1493,7 @@ export default function DemoSession() {
                         : "bg-primary text-white shadow-lg shadow-primary/25"
                     )}
                   >
-                    {locked ? `${selectedCity} - wkrótce 🔒` : `Dalej - ${selectedCity}`}
+                    {locked ? t("city_coming_soon", { city: selectedCity }) : t("city_next", { city: selectedCity })}
                   </button>
                 );
               })()}
@@ -1504,9 +1507,9 @@ export default function DemoSession() {
         <div className="flex-1 flex flex-col min-h-0">
           <div className="flex-1 overflow-y-auto px-4 pt-6 pb-4 space-y-4">
             <div>
-              <p className="text-xl font-black mb-1">Co Cię interesuje?</p>
+              <p className="text-xl font-black mb-1">{t("category_question")}</p>
               <p className="text-sm text-muted-foreground">
-                Wybierz kategorie - zobaczysz miejsca ze wszystkich wybranych.
+                {t("category_subtitle")}
               </p>
             </div>
             {MAIN_CATEGORIES.map(cat => {
@@ -1568,7 +1571,7 @@ export default function DemoSession() {
               )}
             >
               {placesLoading && <Loader2 className="h-4 w-4 animate-spin" />}
-              {selectedSubcats.size > 0 ? `Eksploruj (${selectedSubcats.size})` : "Wybierz kategorie"}
+              {selectedSubcats.size > 0 ? t("explore_count", { count: selectedSubcats.size }) : t("select_categories")}
             </button>
           </div>
         </div>
@@ -1579,13 +1582,13 @@ export default function DemoSession() {
         <div className="flex-1 flex flex-col min-h-0">
           <div className="flex-1 overflow-y-auto px-5 pt-6 pb-4 space-y-5">
             <div>
-              <p className="text-2xl font-black mb-1.5">Zaproś znajomego</p>
-              <p className="text-sm text-muted-foreground">Wyślij kod lub link - gdy dołączy, zaczniecie swipe'ować te same miejsca i zobaczycie co Was łączy.</p>
+              <p className="text-2xl font-black mb-1.5">{t("invite_title")}</p>
+              <p className="text-sm text-muted-foreground">{t("invite_desc")}</p>
             </div>
 
             <div className="rounded-2xl bg-muted/60 px-5 py-5 flex items-center justify-between gap-3">
               <div>
-                <p className="text-xs text-muted-foreground mb-1">Kod sesji</p>
+                <p className="text-xs text-muted-foreground mb-1">{t("session_code")}</p>
                 <p className="text-3xl font-black tracking-widest text-foreground">{sessionCode}</p>
               </div>
               <button
@@ -1601,11 +1604,11 @@ export default function DemoSession() {
               className="w-full py-3.5 rounded-full border border-border/60 bg-card text-sm font-semibold flex items-center justify-center gap-2 active:scale-[0.97] transition-transform"
             >
               <Copy className="h-4 w-4" />
-              Skopiuj link zaproszenia
+              {t("copy_invite_link")}
             </button>
 
             <div className="rounded-2xl bg-muted/40 px-4 py-3 text-xs text-muted-foreground">
-              Znajomy otwiera link i od razu trafia do tej samej sesji - zero rejestracji.
+              {t("invite_no_registration")}
             </div>
           </div>
           <div className="shrink-0 px-5 pb-8 pt-3">
@@ -1614,7 +1617,7 @@ export default function DemoSession() {
               className="w-full py-4 rounded-full bg-primary text-white font-bold text-base flex items-center justify-center gap-2 active:scale-[0.97] transition-transform shadow-lg shadow-primary/20"
             >
               <Users className="h-5 w-5" />
-              Zaczynamy!
+              {t("lets_start")}
             </button>
           </div>
         </div>
@@ -1626,13 +1629,13 @@ export default function DemoSession() {
           ? <DemoSwiper places={places} city={city} category={category!} onComplete={handleSwipeComplete} isBiznesDemo={isBiznesDemo} />
           : <div className="flex-1 flex flex-col items-center justify-center px-6 gap-4 text-center">
               <p className="text-4xl">😕</p>
-              <p className="font-bold text-lg">Brak miejsc dla tej kategorii</p>
-              <p className="text-sm text-muted-foreground">Spróbuj innej kategorii lub miasta.</p>
+              <p className="font-bold text-lg">{t("no_places_category")}</p>
+              <p className="text-sm text-muted-foreground">{t("try_other_category_city")}</p>
               <button
                 onClick={() => setStep("category")}
                 className="py-3 px-6 rounded-2xl bg-primary text-white font-semibold text-sm"
               >
-                ← Wróć do kategorii
+                {t("back_to_categories")}
               </button>
             </div>
       )}
@@ -1646,8 +1649,8 @@ export default function DemoSession() {
             {mode === "group" && !otherDeviceDone && (
               <div className="rounded-2xl bg-muted/50 border border-border/40 px-5 py-5 flex flex-col items-center gap-3 text-center">
                 <Loader2 className="h-6 w-6 text-orange-600 animate-spin" />
-                <p className="font-semibold">Czekamy na znajomego…</p>
-                <p className="text-xs text-muted-foreground">Gdy skończy swipe'ować, zobaczycie wspólne dopasowania.</p>
+                <p className="font-semibold">{t("waiting_for_friend")}</p>
+                <p className="text-xs text-muted-foreground">{t("waiting_desc")}</p>
                 <p className="text-xs font-mono bg-background border border-border/50 px-3 py-1.5 rounded-2xl">{sessionCode}</p>
               </div>
             )}
@@ -1656,12 +1659,12 @@ export default function DemoSession() {
             {mode === "group" && otherDeviceDone && (
               <div className="text-center">
                 <p className="text-2xl font-black">
-                  {groupMatches.length > 0 ? "Macie wspólne miejsca! 🎉" : "Brak dopasowań"}
+                  {groupMatches.length > 0 ? t("group_matches_title") : t("group_no_matches")}
                 </p>
                 <p className="text-sm text-muted-foreground mt-1">
                   {groupMatches.length > 0
-                    ? `${groupMatches.length} ${groupMatches.length === 1 ? "miejsce" : groupMatches.length < 5 ? "miejsca" : "miejsc"} polubiliście oboje`
-                    : "Tym razem się nie pokryło - spróbujcie innej kategorii"}
+                    ? t("group_matches_count", { count: groupMatches.length, noun: groupMatches.length === 1 ? t("place_one") : groupMatches.length < 5 ? t("place_few") : t("place_many") })
+                    : t("group_no_overlap")}
                 </p>
               </div>
             )}
@@ -1670,12 +1673,12 @@ export default function DemoSession() {
             {mode === "solo" && (
               <div className="text-center">
                 <p className="text-2xl font-black">
-                  {likedPlaces.length > 0 ? "Twoje propozycje 🎉" : "Żadnych lajków"}
+                  {likedPlaces.length > 0 ? t("solo_proposals_title") : t("solo_no_likes")}
                 </p>
                 <p className="text-sm text-muted-foreground mt-1">
                   {likedPlaces.length > 0
-                    ? `Polubiłeś/aś ${likedPlaces.length} ${likedPlaces.length === 1 ? "miejsce" : likedPlaces.length < 5 ? "miejsca" : "miejsc"} w ${city}`
-                    : "Spróbuj jeszcze raz i polub jakieś miejsca!"}
+                    ? t("solo_liked_count", { count: likedPlaces.length, noun: likedPlaces.length === 1 ? t("place_one") : likedPlaces.length < 5 ? t("place_few") : t("place_many"), city })
+                    : t("solo_try_again")}
                 </p>
               </div>
             )}
@@ -1702,13 +1705,13 @@ export default function DemoSession() {
             <div className="rounded-2xl bg-gradient-to-br from-orange-600/10 to-orange-500/5 border border-orange-600/20 p-5 space-y-3">
               <div className="flex items-center gap-2">
                 <Sparkles className="h-5 w-5 text-orange-600" />
-                <p className="font-bold text-base">Spodobało się?</p>
+                <p className="font-bold text-base">{t("upsell_title")}</p>
               </div>
               <ul className="space-y-1.5 text-sm text-muted-foreground">
-                <li>✓ Paruj miejsca razem ze znajomymi</li>
-                <li>✓ Nieograniczone kategorie i rundy</li>
-                <li>✓ Zapisz trasę i nawiguj po niej</li>
-                <li>✓ Historia wszystkich wspólnych planów</li>
+                <li>{t("upsell_1")}</li>
+                <li>{t("upsell_2")}</li>
+                <li>{t("upsell_3")}</li>
+                <li>{t("upsell_4")}</li>
               </ul>
             </div>
           </div>
@@ -1722,13 +1725,13 @@ export default function DemoSession() {
               }}
               className="w-full py-4 rounded-full bg-primary text-white font-bold text-base active:scale-[0.97] transition-transform shadow-lg shadow-primary/20"
             >
-              Załóż konto - zajmuje 30 sekund →
+              {t("create_account")}
             </button>
             <button
               onClick={() => { setStep("category"); setCategory(null); setLikedPlaces([]); setGroupReactions({}); setOtherDeviceDone(false); setSelectedSubcats(new Set()); }}
               className="w-full py-3 rounded-full border border-border/50 text-sm font-semibold text-muted-foreground active:scale-[0.97] transition-transform"
             >
-              Spróbuj innej kategorii
+              {t("try_other_category")}
             </button>
           </div>
         </div>
@@ -1739,7 +1742,7 @@ export default function DemoSession() {
         <div className="rounded-2xl bg-muted/50 px-4 py-3 flex items-start gap-3">
           <Lock className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0 mt-0.5" />
           <p className="text-xs text-muted-foreground leading-relaxed">
-            Demo pokazuje działanie aplikacji. Pełne działanie aplikacji zawiera znacznie większą bazę miast oraz miejsc.
+            {t("demo_info")}
           </p>
         </div>
       </div>

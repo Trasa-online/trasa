@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { avatarSrc } from "@/lib/avatar";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -45,6 +46,9 @@ const CATEGORY_LABEL: Record<string, string> = {
 const rkey = (routeId: string, placeName: string) => `${routeId}::${placeName}`;
 
 const ReviewSummary = () => {
+  const { t } = useTranslation("review");
+  const catLabel = (cat: string) =>
+    t(`categories.${cat}`, { defaultValue: CATEGORY_LABEL[cat] ?? CATEGORY_LABEL.other });
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -242,7 +246,7 @@ const ReviewSummary = () => {
         (r.review_photos ?? []).map((url: string) => ({
           url,
           userId: r.user_id,
-          username: profileMap[r.user_id]?.first_name || profileMap[r.user_id]?.username || "Uczestnik",
+          username: profileMap[r.user_id]?.first_name || profileMap[r.user_id]?.username || t("labels.participant"),
         }))
       );
     },
@@ -314,8 +318,8 @@ const ReviewSummary = () => {
   const shareLink = async () => {
     if (!routeId) return;
     const url = `https://trasa.travel/#/route/${routeId}`;
-    const res = await share({ title: route?.title || route?.city || "Trasa", text: "Zobacz moją trasę w Trasa", url });
-    if (res.ok && res.method === "clipboard") notify.success("Link skopiowany");
+    const res = await share({ title: route?.title || route?.city || "Trasa", text: t("share.text"), url });
+    if (res.ok && res.method === "clipboard") notify.success(t("toast.link_copied"));
   };
 
   // Widocznosc trasy: profil (publicznie z profilem) | anon (publicznie anonimowo) | private.
@@ -387,7 +391,7 @@ const ReviewSummary = () => {
       const msg = String(err?.message ?? err);
       if (msg.toLowerCase().includes("cancel") || msg.toLowerCase().includes("denied")) return;
       console.error("[ReviewSummary] native photo pick failed:", msg);
-      notify.error("Nie udało się wybrać zdjęć");
+      notify.error(t("toast.photo_pick_error"));
     }
   };
 
@@ -418,7 +422,7 @@ const ReviewSummary = () => {
     queryClient.invalidateQueries({ queryKey: ["review-trip-days", folderId, routeId] });
     if (user) queryClient.invalidateQueries({ queryKey: ["journal-entries", user.id] });
     setViewerUrl(null);
-    notify.success("Ustawiono okładkę");
+    notify.success(t("toast.cover_set"));
   };
 
   // Usuwanie zdjecia: optymistycznie znika z galerii, faktyczny DB update ODROCZONY o okno
@@ -444,7 +448,7 @@ const ReviewSummary = () => {
     }
     setViewerUrl(null);
     deferDelete({
-      message: "Zdjęcie usunięte",
+      message: t("toast.photo_deleted"),
       onUndo: () => {
         if (isPrimary) setPhotos(prevPhotos);
         queryClient.invalidateQueries({ queryKey: ["review-summary-route", routeId] });
@@ -513,8 +517,8 @@ const ReviewSummary = () => {
   };
   const removeWorkingPin = (id: string) => {
     const pin = workingPins.find((p: any) => p.id === id);
-    const name = pin?.place_name ? `„${pin.place_name}"` : "to miejsce";
-    if (!confirm(`Czy na pewno chcesz usunąć ${name} z planu dnia?`)) return;
+    const name = pin?.place_name ? `„${pin.place_name}"` : t("confirm.place_this");
+    if (!confirm(t("confirm.remove_place", { name }))) return;
     setWorking(workingPins.filter((p: any) => p.id !== id));
   };
 
@@ -542,12 +546,12 @@ const ReviewSummary = () => {
         queryClient.invalidateQueries({ queryKey: ["review-trip-days", folderId, routeId] }),
         queryClient.invalidateQueries({ queryKey: ["review-summary-route", routeId] }),
       ]);
-      notify.success(finalize ? "Plan dnia zapisany" : "Zapisano zmiany");
+      notify.success(finalize ? t("toast.plan_saved") : t("toast.changes_saved"));
       // Po zatwierdzeniu planu (notki/oceny gotowe) - zapytaj o udostepnienie.
       if (finalize) setShowSharePrompt(true);
     } catch (e: any) {
       console.error("[ReviewSummary] savePlan failed:", e?.message ?? e);
-      notify.error("Nie udało się zapisać planu");
+      notify.error(t("toast.plan_save_error"));
     }
     setSavingPlan(false);
   };
@@ -574,11 +578,11 @@ const ReviewSummary = () => {
       .select("id, route_id, place_name, address, category, suggested_time, description, image_url, images, latitude, longitude, place_id, photo_url, pin_order")
       .single();
     setAddingPlace(false);
-    if (error || !row) { console.error("[ReviewSummary] add pin failed:", error?.message); notify.error("Nie udało się dodać miejsca"); return; }
+    if (error || !row) { console.error("[ReviewSummary] add pin failed:", error?.message); notify.error(t("toast.add_place_error")); return; }
     // Jesli trwa edycja (draft) - dopisz do draftu zeby nie zginal przy kolejnym zapisie.
     if (draft && draft.dayId === activeRouteId) setDraft({ dayId: activeRouteId, pins: [...draft.pins, row] });
     queryClient.invalidateQueries({ queryKey: ["review-all-pins", idsKey] });
-    notify.success("Dodano miejsce");
+    notify.success(t("toast.place_added"));
   };
 
   // Autozapis: jesli user wyjdzie z edycji bez "Zapisz", persystujemy zmiany planu
@@ -601,7 +605,7 @@ const ReviewSummary = () => {
     ));
   }, []);
 
-  const cityLabel = route?.city || "Podróż";
+  const cityLabel = route?.city || t("labels.trip_fallback");
   const isOwner = !!route && !!user && route.user_id === user.id;
 
   // Nazwa wpisu: wlasna (title) albo placeholder. Auto-tytul "City - Dzień N"
@@ -609,7 +613,7 @@ const ReviewSummary = () => {
   const isAutoTitle = (t: string | null | undefined) =>
     !t || /(-\s*Dzień\s*\d+)$/i.test(t) || t === route?.city;
   const customName = isAutoTitle(route?.title) ? "" : (route?.title ?? "");
-  const displayName = customName || (isOwner ? "Dodaj nazwę wpisu" : "");
+  const displayName = customName || (isOwner ? t("entry.add_name") : "");
 
   const saveName = async () => {
     if (!routeId) return;
@@ -618,10 +622,10 @@ const ReviewSummary = () => {
     const { error } = await (supabase as any).from("routes").update({ title: trimmed || null }).eq("id", routeId);
     setSavingName(false);
     setEditingName(false);
-    if (error) { notify.error("Nie udało się zapisać nazwy"); return; }
+    if (error) { notify.error(t("toast.name_save_error")); return; }
     queryClient.setQueryData(["review-summary-route", routeId], (old: any) => old ? { ...old, title: trimmed || null } : old);
     if (user) queryClient.invalidateQueries({ queryKey: ["journal-entries", user.id] });
-    notify.success("Zapisano nazwę");
+    notify.success(t("toast.name_saved"));
   };
 
   // Zakres dat: trasa wielodniowa => "12 - 14 maja 2026", jednodniowa => "12 maja 2026".
@@ -678,15 +682,15 @@ const ReviewSummary = () => {
   if (!route) {
     return (
       <div className="min-h-[100dvh] bg-background flex flex-col items-center justify-center gap-4 px-8 text-center">
-        <p className="text-base font-bold">Nie znaleźliśmy tej trasy</p>
+        <p className="text-base font-bold">{t("not_found.title")}</p>
         <p className="text-sm text-muted-foreground max-w-[280px]">
-          Mogła zostać usunięta albo nie&nbsp;masz do&nbsp;niej dostępu.
+          {t("not_found.desc")}
         </p>
         <button
           onClick={() => navigate("/home")}
           className="px-6 py-3 rounded-full bg-primary text-white font-bold text-sm active:scale-95 transition-transform"
         >
-          Wróć do&nbsp;głównej
+          {t("not_found.back_home")}
         </button>
       </div>
     );
@@ -702,7 +706,7 @@ const ReviewSummary = () => {
   const hasRealPhoto = !!(userCover || placeCover);
   const heroPhoto = userCover ?? placeCover ?? getRandomPinPlaceholder(routeId ?? undefined);
   const galleryPhotos = [
-    ...myPhotos.map((p) => ({ ...p, mine: true, username: "Ty" })),
+    ...myPhotos.map((p) => ({ ...p, mine: true, username: t("labels.you") })),
     ...groupPhotos.map((p: any) => ({ url: p.url, owner: "", mine: false, username: p.username })),
   ];
 
@@ -734,24 +738,24 @@ const ReviewSummary = () => {
       if (!val.trim()) return null;
       return (
         <div className={`mt-2 ${centered ? "text-center" : ""}`}>
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">Notka</p>
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">{t("note.label")}</p>
           <p className="text-sm text-foreground/80 leading-relaxed whitespace-pre-wrap">{val}</p>
         </div>
       );
     }
     return (
       <div className={`mt-3 pt-1 ${centered ? "text-center" : ""}`}>
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">Notka od Ciebie</p>
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">{t("note.label_own")}</p>
         <div className="relative">
           <textarea
             value={val}
             onChange={(e) => handleNoteChange(placeName, e.target.value)}
-            placeholder="Twoja rada lub notka o tym miejscu…"
+            placeholder={t("note.placeholder")}
             rows={2}
             className="w-full bg-muted/50 rounded-xl px-3 py-2.5 text-sm text-foreground text-left resize-none focus:outline-none border border-border/30 placeholder:text-muted-foreground/55"
           />
           {noteSaved[k] && (
-            <span className="absolute bottom-2 right-2.5 text-[10px] text-green-600 font-medium">Zapisano ✓</span>
+            <span className="absolute bottom-2 right-2.5 text-[10px] text-green-600 font-medium">{t("note.saved")}</span>
           )}
         </div>
       </div>
@@ -769,7 +773,7 @@ const ReviewSummary = () => {
           {editable && (
             <button
               onClick={(e) => { e.stopPropagation(); removeWorkingPin(pin.id); }}
-              aria-label="Usuń miejsce"
+              aria-label={t("a11y.remove_place")}
               className="absolute top-3 right-3 h-8 w-8 rounded-full bg-black/55 backdrop-blur text-white flex items-center justify-center active:scale-90"
             >
               <Trash2 className="h-4 w-4" />
@@ -778,7 +782,7 @@ const ReviewSummary = () => {
         </div>
         <div className="px-4 pt-4 pb-3">
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white text-xs font-semibold text-foreground mb-2">
-            <span>{CATEGORY_EMOJI[pin.category] ?? "📍"}</span>{CATEGORY_LABEL[pin.category] ?? "Miejsce"}
+            <span>{CATEGORY_EMOJI[pin.category] ?? "📍"}</span>{catLabel(pin.category)}
           </span>
           <p className="text-base font-black leading-tight">{pin.place_name}</p>
           {(() => {
@@ -802,10 +806,10 @@ const ReviewSummary = () => {
       {editable && (
         <div className="flex items-center justify-between px-4 py-3 mt-auto border-t border-border/30">
           <button onClick={() => movePin(i, i - 1)} disabled={i === 0} className="flex items-center gap-1 text-xs font-semibold text-muted-foreground disabled:opacity-25 active:scale-95">
-            <ChevronLeft className="h-4 w-4" />Wcześniej
+            <ChevronLeft className="h-4 w-4" />{t("plan.earlier")}
           </button>
           <button onClick={() => movePin(i, i + 1)} disabled={i === workingPins.length - 1} className="flex items-center gap-1 text-xs font-semibold text-muted-foreground disabled:opacity-25 active:scale-95">
-            Później<ChevronRight className="h-4 w-4" />
+            {t("plan.later")}<ChevronRight className="h-4 w-4" />
           </button>
         </div>
       )}
@@ -823,16 +827,16 @@ const ReviewSummary = () => {
       <button onClick={() => openDetail(pin)} className="min-w-0 flex-1 text-left">
         <p className="text-sm font-bold leading-tight truncate">{pin.place_name}</p>
         <span className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white text-[11px] font-semibold text-foreground">
-          <span>{CATEGORY_EMOJI[pin.category] ?? "📍"}</span>{CATEGORY_LABEL[pin.category] ?? "Miejsce"}
+          <span>{CATEGORY_EMOJI[pin.category] ?? "📍"}</span>{catLabel(pin.category)}
         </span>
       </button>
       {editable && (
         <div className="flex items-center gap-1 shrink-0">
           <div className="flex flex-col">
-            <button onClick={() => movePin(i, i - 1)} disabled={i === 0} aria-label="Wcześniej" className="h-6 w-6 flex items-center justify-center text-muted-foreground disabled:opacity-25 active:scale-90"><ChevronUp className="h-4 w-4" /></button>
-            <button onClick={() => movePin(i, i + 1)} disabled={i === workingPins.length - 1} aria-label="Później" className="h-6 w-6 flex items-center justify-center text-muted-foreground disabled:opacity-25 active:scale-90"><ChevronDown className="h-4 w-4" /></button>
+            <button onClick={() => movePin(i, i - 1)} disabled={i === 0} aria-label={t("plan.earlier")} className="h-6 w-6 flex items-center justify-center text-muted-foreground disabled:opacity-25 active:scale-90"><ChevronUp className="h-4 w-4" /></button>
+            <button onClick={() => movePin(i, i + 1)} disabled={i === workingPins.length - 1} aria-label={t("plan.later")} className="h-6 w-6 flex items-center justify-center text-muted-foreground disabled:opacity-25 active:scale-90"><ChevronDown className="h-4 w-4" /></button>
           </div>
-          <button onClick={() => removeWorkingPin(pin.id)} aria-label="Usuń miejsce" className="h-9 w-9 rounded-full flex items-center justify-center text-muted-foreground/60 active:scale-90"><Trash2 className="h-4 w-4" /></button>
+          <button onClick={() => removeWorkingPin(pin.id)} aria-label={t("a11y.remove_place")} className="h-9 w-9 rounded-full flex items-center justify-center text-muted-foreground/60 active:scale-90"><Trash2 className="h-4 w-4" /></button>
         </div>
       )}
     </div>
@@ -852,7 +856,7 @@ const ReviewSummary = () => {
             <div className="min-w-0 flex-1">
               <p className="text-sm font-bold leading-tight truncate">{pin.place_name}</p>
               <span className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white text-[11px] font-semibold text-foreground">
-                <span>{CATEGORY_EMOJI[pin.category] ?? "📍"}</span>{CATEGORY_LABEL[pin.category] ?? "Miejsce"}
+                <span>{CATEGORY_EMOJI[pin.category] ?? "📍"}</span>{catLabel(pin.category)}
               </span>
             </div>
           </button>
@@ -885,7 +889,7 @@ const ReviewSummary = () => {
       onClick={() => activeRouteId && navigate(`/trasa/${activeRouteId}/dodaj`)}
       className="mt-3 w-full py-3 rounded-2xl border-2 border-dashed border-border/50 text-sm font-semibold text-muted-foreground flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
     >
-      <Plus className="h-4 w-4" /> Dodaj miejsce
+      <Plus className="h-4 w-4" /> {t("plan.add_place")}
     </button>
   );
 
@@ -897,7 +901,7 @@ const ReviewSummary = () => {
           <button onClick={triggerPhotoPick} disabled={uploading}
             className="aspect-square flex flex-col items-center justify-center gap-1 bg-muted/40 text-muted-foreground active:bg-muted/60 transition-colors">
             <Camera className="h-6 w-6" />
-            <span className="text-[10px] font-medium">{uploading ? "…" : "Dodaj"}</span>
+            <span className="text-[10px] font-medium">{uploading ? "…" : t("gallery.add")}</span>
           </button>
         )}
         {galleryPhotos.map((item, idx) => (
@@ -910,7 +914,7 @@ const ReviewSummary = () => {
             {editable && item.mine && (
               <span
                 role="button"
-                aria-label="Usuń zdjęcie"
+                aria-label={t("a11y.remove_photo")}
                 onClick={(e) => { e.stopPropagation(); removePhoto(item.url, item.owner); }}
                 className="absolute top-1 right-1 h-7 w-7 rounded-full bg-black/55 backdrop-blur-sm text-white flex items-center justify-center active:scale-90"
               >
@@ -921,10 +925,10 @@ const ReviewSummary = () => {
         ))}
       </div>
       {galleryPhotos.length > 0 && (
-        <p className="text-center text-[11px] text-muted-foreground/70 px-6 pt-3">Dotknij zdjęcia, żeby zobaczyć je w&nbsp;pełni i&nbsp;ustawić okładkę wpisu.</p>
+        <p className="text-center text-[11px] text-muted-foreground/70 px-6 pt-3">{t("gallery.tap_hint")}</p>
       )}
       {galleryPhotos.length === 0 && (
-        <p className="text-center text-sm text-muted-foreground py-10 px-6">{editable ? "Brak zdjęć z tej podróży. Dodaj pierwsze wspomnienia." : "Brak zdjęć z tej podróży."}</p>
+        <p className="text-center text-sm text-muted-foreground py-10 px-6">{editable ? t("gallery.empty_editable") : t("gallery.empty")}</p>
       )}
     </div>
   );
@@ -933,12 +937,12 @@ const ReviewSummary = () => {
   const renderSharing = () => (
     <div className="px-5">
       <div className="mt-6 pt-5 border-t border-border/30">
-        <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-3">Podziel się trasą</p>
+        <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-3">{t("sharing.title")}</p>
         {/* Glowny toggle: udostepnij trase, zeby pomoc innym w planowaniu. */}
         <div className="flex items-start gap-3 rounded-2xl bg-muted p-3.5">
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-bold">Pomóż innym w&nbsp;planowaniu</p>
-            <p className="text-[11px] text-muted-foreground mt-1 leading-relaxed">Trasa trafi do&nbsp;Eksploruj z&nbsp;Twoimi notkami i&nbsp;planem, żeby inni mogli zaplanować podobną podróż.</p>
+            <p className="text-sm font-bold">{t("sharing.help_others_title")}</p>
+            <p className="text-[11px] text-muted-foreground mt-1 leading-relaxed">{t("sharing.help_others_desc")}</p>
           </div>
           <Switch
             checked={isPublic}
@@ -949,15 +953,15 @@ const ReviewSummary = () => {
         {/* Gwarancja prywatnosci: galeria zdjec nigdy nie jest udostepniana. */}
         <p className="text-[11px] text-muted-foreground mt-2.5 flex items-start gap-1.5">
           <Lock className="h-3 w-3 shrink-0 mt-0.5 text-emerald-600" />
-          <span>Twoja galeria zdjęć zostaje prywatna i&nbsp;bezpieczna. W&nbsp;Eksploruj pokazujemy tylko plan trasy z&nbsp;Twoimi notkami.</span>
+          <span>{t("sharing.privacy_note")}</span>
         </p>
       </div>
       {isPublic && (<>
         {/* Anonimowo - opcjonalny pod-toggle gdy trasa jest udostepniona. */}
         <div className="mt-3 flex items-start gap-3 rounded-2xl bg-muted p-3.5">
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-bold">Udostępnij anonimowo</p>
-            <p className="text-[11px] text-muted-foreground mt-1">Bez Twojego profilu - trasa pojawi się w&nbsp;Eksploruj jako „Anonim".</p>
+            <p className="text-sm font-bold">{t("sharing.anon_title")}</p>
+            <p className="text-[11px] text-muted-foreground mt-1">{t("sharing.anon_desc")}</p>
           </div>
           <Switch
             checked={shareAnonymous}
@@ -967,14 +971,14 @@ const ReviewSummary = () => {
         </div>
         {/* Podpis autora (#11) */}
         <div className="mt-4">
-          <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-1.5 block">Podpis <span className="normal-case font-medium text-muted-foreground/50">(opcjonalnie)</span></label>
+          <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-1.5 block">{t("sharing.caption_label")} <span className="normal-case font-medium text-muted-foreground/50">{t("sharing.optional")}</span></label>
           <textarea
             value={shareCaption}
             onChange={(e) => setShareCaption(e.target.value)}
             onBlur={() => void saveShareMeta(shareCaption)}
             maxLength={200}
             rows={2}
-            placeholder="Napisz coś o tej podróży…"
+            placeholder={t("sharing.caption_placeholder")}
             className="w-full rounded-2xl border border-border bg-card px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-orange-500/60 placeholder:text-muted-foreground/50 resize-none"
           />
         </div>
@@ -988,8 +992,8 @@ const ReviewSummary = () => {
     <div className="px-5 pt-1">
       <div className="flex items-start gap-3 rounded-2xl bg-muted p-3.5">
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-bold">Udostępnij anonimowo</p>
-          <p className="text-[11px] text-muted-foreground mt-1">Bez Twojego profilu - trasa pojawi się w&nbsp;Eksploruj jako „Anonim".</p>
+          <p className="text-sm font-bold">{t("sharing.anon_title")}</p>
+          <p className="text-[11px] text-muted-foreground mt-1">{t("sharing.anon_desc")}</p>
         </div>
         <Switch
           checked={shareAnonymous}
@@ -1000,18 +1004,18 @@ const ReviewSummary = () => {
       {/* Gwarancja prywatnosci: galeria zdjec nigdy nie jest udostepniana. */}
       <p className="text-[11px] text-muted-foreground mt-2.5 flex items-start gap-1.5">
         <Lock className="h-3 w-3 shrink-0 mt-0.5 text-emerald-600" />
-        <span>Twoja galeria zdjęć zostaje prywatna i&nbsp;bezpieczna. W&nbsp;Eksploruj pokazujemy tylko plan trasy z&nbsp;Twoimi notkami.</span>
+        <span>{t("sharing.privacy_note")}</span>
       </p>
       {/* Podpis autora */}
       <div className="mt-4">
-        <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-1.5 block">Podpis <span className="normal-case font-medium text-muted-foreground/50">(opcjonalnie)</span></label>
+        <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-1.5 block">{t("sharing.caption_label")} <span className="normal-case font-medium text-muted-foreground/50">{t("sharing.optional")}</span></label>
         <textarea
           value={shareCaption}
           onChange={(e) => setShareCaption(e.target.value)}
           onBlur={() => void saveShareMeta(shareCaption)}
           maxLength={200}
           rows={2}
-          placeholder="Napisz coś o tej podróży…"
+          placeholder={t("sharing.caption_placeholder")}
           className="w-full rounded-2xl border border-border bg-card px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-orange-500/60 placeholder:text-muted-foreground/50 resize-none"
         />
       </div>
@@ -1020,7 +1024,7 @@ const ReviewSummary = () => {
 
   // ── Nagłówek steppera: 3 kroki, klikalne (powrót/przejście), pasek postępu. ──
   const renderStepper = () => {
-    const steps = [{ n: 1, label: "Trasa" }, { n: 2, label: "Notki" }, { n: 3, label: "Zdjęcia" }] as const;
+    const steps = [{ n: 1, label: t("stepper.route") }, { n: 2, label: t("stepper.notes") }, { n: 3, label: t("stepper.photos") }] as const;
     return (
       <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border/30 px-5 pt-3 pb-2.5">
         <div className="flex items-center">
@@ -1040,15 +1044,10 @@ const ReviewSummary = () => {
     );
   };
 
-  const STEP_INFO: Record<1 | 2 | 3, string> = {
-    1: "Popraw trasę tak, jak było naprawdę: usuń miejsca, w których nie byliście, lub zmień kolejność.",
-    2: "Notka o miejscu: wspomnienie dla siebie i rada dla innych (co zamówić, pro-tip). Zapisuje się sama.",
-    3: "Dodaj zdjęcia do wspomnienia. To opcjonalne, możesz wrócić do tego później.",
-  };
   const renderStepInfo = () => (
     <div className="mb-3 flex items-start gap-2 rounded-xl bg-orange-50 border border-orange-100 px-3 py-2.5">
       <Info className="h-4 w-4 text-orange-600 shrink-0 mt-0.5" />
-      <p className="text-xs text-orange-800 leading-relaxed">{STEP_INFO[step]}</p>
+      <p className="text-xs text-orange-800 leading-relaxed">{t(`step_info.${step}`)}</p>
     </div>
   );
 
@@ -1056,13 +1055,13 @@ const ReviewSummary = () => {
   const renderPlanHeader = (showViewToggle = true) => (
     <>
       <div className="flex items-center justify-between mb-3">
-        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Twój plan</p>
+        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t("plan.your_plan")}</p>
         {showViewToggle && (
           <div className="flex rounded-full bg-muted p-0.5">
-            <button onClick={() => setPlanView("list")} aria-label="Widok listy" className={`px-2.5 py-1.5 rounded-full transition-colors ${planView === "list" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
+            <button onClick={() => setPlanView("list")} aria-label={t("a11y.list_view")} className={`px-2.5 py-1.5 rounded-full transition-colors ${planView === "list" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
               <List className="h-4 w-4" />
             </button>
-            <button onClick={() => setPlanView("cards")} aria-label="Widok kart" className={`px-2.5 py-1.5 rounded-full transition-colors ${planView === "cards" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
+            <button onClick={() => setPlanView("cards")} aria-label={t("a11y.cards_view")} className={`px-2.5 py-1.5 rounded-full transition-colors ${planView === "cards" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
               <GalleryHorizontalEnd className="h-4 w-4" />
             </button>
           </div>
@@ -1076,7 +1075,7 @@ const ReviewSummary = () => {
               onClick={() => setSelectedDayId(d.id)}
               className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-colors ${d.id === activeRouteId ? "bg-foreground text-background" : "bg-card border border-border/50 text-muted-foreground"}`}
             >
-              Dzień {d.day_number ?? "?"}
+              {t("plan.day", { number: d.day_number ?? "?" })}
             </button>
           ))}
         </div>
@@ -1101,20 +1100,20 @@ const ReviewSummary = () => {
               "Gotowe"/"Wstecz"). W podsumowaniu, u gościa i w aktywnym widoku - pokazujemy. */}
           {editingStepper ? (
             /* Tryb edycji: cofanie wraca do podsumowania wpisu (nie wychodzi z dziennika). */
-            <button onClick={() => { setEditingStepper(false); setSummaryTab("plan"); }} aria-label="Zakończ edycję" className="h-10 w-10 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center active:scale-95 transition-transform">
+            <button onClick={() => { setEditingStepper(false); setSummaryTab("plan"); }} aria-label={t("a11y.finish_editing")} className="h-10 w-10 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center active:scale-95 transition-transform">
               <ArrowLeft className="h-5 w-5 text-white" />
             </button>
           ) : !(isMemory && isOwner && !reviewed) ? (
-            <button onClick={() => navigate("/dziennik")} aria-label="Wróć do dziennika" className="h-10 w-10 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center">
+            <button onClick={() => navigate("/dziennik")} aria-label={t("a11y.back_to_journal")} className="h-10 w-10 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center">
               <ArrowLeft className="h-5 w-5 text-white" />
             </button>
           ) : <span />}
           <div className="flex items-center gap-2">
             {saving && (
-              <span className="text-xs text-white/70 bg-black/30 backdrop-blur-sm rounded-full px-3 py-1.5">Zapisywanie...</span>
+              <span className="text-xs text-white/70 bg-black/30 backdrop-blur-sm rounded-full px-3 py-1.5">{t("status.saving")}</span>
             )}
             {isOwner && isPublic && (
-              <button onClick={shareLink} aria-label="Udostępnij trasę" className="h-10 w-10 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center active:scale-95 transition-transform">
+              <button onClick={shareLink} aria-label={t("a11y.share_route")} className="h-10 w-10 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center active:scale-95 transition-transform">
                 <Share2 className="h-5 w-5 text-white" />
               </button>
             )}
@@ -1133,11 +1132,11 @@ const ReviewSummary = () => {
                 onKeyDown={(e) => { if (e.key === "Enter") saveName(); if (e.key === "Escape") setEditingName(false); }}
                 autoFocus
                 maxLength={60}
-                placeholder="Nazwa wpisu"
+                placeholder={t("entry.name_placeholder")}
                 className="flex-1 min-w-0 bg-white/20 backdrop-blur-sm border border-white/40 rounded-lg px-3 py-1.5 text-white text-base font-medium placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-white/40"
                 style={{ fontSize: "16px" }}
               />
-              <button onClick={saveName} disabled={savingName} aria-label="Zapisz nazwę"
+              <button onClick={saveName} disabled={savingName} aria-label={t("a11y.save_name")}
                 className="h-9 w-9 shrink-0 rounded-lg bg-white/90 text-orange-600 flex items-center justify-center active:scale-95 transition-transform disabled:opacity-50">
                 <Check className="h-4 w-4" strokeWidth={3} />
               </button>
@@ -1166,7 +1165,7 @@ const ReviewSummary = () => {
                   <div className="h-7 w-7 rounded-full border-2 border-white/60 bg-black/50 flex items-center justify-center text-white text-[9px] font-bold">+{groupParticipants.length - 5}</div>
                 )}
               </div>
-              <span className="text-white/70 text-xs font-medium">{groupParticipants.length} uczestników</span>
+              <span className="text-white/70 text-xs font-medium">{t("group.participants_count", { count: groupParticipants.length })}</span>
             </div>
           )}
         </div>
@@ -1187,7 +1186,7 @@ const ReviewSummary = () => {
                 <div className="px-5 pb-5">
                   {currentPins.length === 0 ? (
                     <>
-                      <p className="text-center text-sm text-muted-foreground py-8">Brak miejsc w planie tego dnia.</p>
+                      <p className="text-center text-sm text-muted-foreground py-8">{t("empty.no_places_day")}</p>
                       {renderAddPlaceButton()}
                     </>
                   ) : (
@@ -1203,7 +1202,7 @@ const ReviewSummary = () => {
               {step === 2 && (
                 <div className="px-5 pb-5">
                   {currentPins.length === 0 ? (
-                    <p className="text-center text-sm text-muted-foreground py-8">Brak miejsc do oznaczenia notką.</p>
+                    <p className="text-center text-sm text-muted-foreground py-8">{t("empty.no_places_note")}</p>
                   ) : (
                     <div className="space-y-3">
                       {currentPins.map((pin: any) => (
@@ -1236,18 +1235,18 @@ const ReviewSummary = () => {
                 <div className="flex-1 flex rounded-full bg-muted p-0.5">
                   <button onClick={() => setSummaryTab("plan")}
                     className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-full text-sm font-semibold transition-colors ${summaryTab === "plan" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
-                    <MapIcon className="h-4 w-4" /> Miejsca
+                    <MapIcon className="h-4 w-4" /> {t("tabs.places")}
                   </button>
                   <button onClick={() => setSummaryTab("galeria")}
                     className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-full text-sm font-semibold transition-colors ${summaryTab === "galeria" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
-                    <ImageIcon className="h-4 w-4" /> Zdjęcia
+                    <ImageIcon className="h-4 w-4" /> {t("tabs.photos")}
                   </button>
                 </div>
-                <button onClick={() => { if (!isPublic) { setVisibility(shareAnonymous ? "anon" : "profile"); notify.success("Trasa widoczna w Eksploruj", undefined, { position: "top-center" }); } setShareSheetOpen(true); }} aria-label="Udostępnij trasę"
+                <button onClick={() => { if (!isPublic) { setVisibility(shareAnonymous ? "anon" : "profile"); notify.success(t("toast.route_public"), undefined, { position: "top-center" }); } setShareSheetOpen(true); }} aria-label={t("a11y.share_route")}
                   className="h-9 w-9 rounded-full bg-muted flex items-center justify-center shrink-0 active:scale-95 transition-transform">
                   <Share className="h-4 w-4 text-foreground" />
                 </button>
-                <button onClick={() => { setEditingStepper(true); setStep(1); }} aria-label="Edytuj wpis"
+                <button onClick={() => { setEditingStepper(true); setStep(1); }} aria-label={t("a11y.edit_entry")}
                   className="h-9 w-9 rounded-full bg-muted flex items-center justify-center shrink-0 active:scale-95 transition-transform">
                   <Pencil className="h-4 w-4 text-foreground" />
                 </button>
@@ -1256,7 +1255,7 @@ const ReviewSummary = () => {
               {summaryTab === "plan" ? (
                 <div className="px-5 pt-4 pb-5">
                   {currentPins.length === 0 ? (
-                    <p className="text-center text-sm text-muted-foreground py-8">Brak miejsc w planie.</p>
+                    <p className="text-center text-sm text-muted-foreground py-8">{t("empty.no_places")}</p>
                   ) : (
                     <>
                       {renderPlanHeader(true)}
@@ -1339,24 +1338,24 @@ const ReviewSummary = () => {
                 <Globe className="h-5 w-5 text-orange-600" />
               </div>
               <div className="flex-1">
-                <p className="text-base font-black leading-snug">Udostępnić tę trasę innym?</p>
+                <p className="text-base font-black leading-snug">{t("prompt.title")}</p>
                 <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
-                  Trafi do zakładki Eksploruj i&nbsp;pomoże innym zaplanować podróż. Udostępniamy plan trasy z&nbsp;Twoją okładką, notkami i&nbsp;ocenami - bez galerii Twoich zdjęć. Jeśli nie, zostanie prywatna w&nbsp;Twoich Wspomnieniach. Zmienisz to w&nbsp;każdej chwili.
+                  {t("prompt.desc")}
                 </p>
               </div>
             </div>
             <div className="flex flex-col gap-2">
               <button
-                onClick={() => { togglePublic(true); setShowSharePrompt(false); notify.success("Trasa widoczna w Eksploruj"); }}
+                onClick={() => { togglePublic(true); setShowSharePrompt(false); notify.success(t("toast.route_public")); }}
                 className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-sm active:scale-[0.97] transition-transform shadow-md shadow-orange-500/20"
               >
-                Udostępnij w Eksploruj
+                {t("prompt.confirm")}
               </button>
               <button
                 onClick={() => { togglePublic(false); setShowSharePrompt(false); }}
                 className="w-full py-3.5 rounded-full border border-border text-sm font-semibold text-foreground active:scale-[0.97] transition-transform"
               >
-                Zostaw prywatną
+                {t("prompt.keep_private")}
               </button>
             </div>
           </div>
@@ -1368,8 +1367,8 @@ const ReviewSummary = () => {
         <div className="fixed inset-0 z-[80] flex flex-col justify-end bg-black/40" onClick={() => setShareSheetOpen(false)}>
           <div className="bg-background rounded-t-3xl max-h-[88dvh] flex flex-col" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between px-5 pt-4 pb-2 shrink-0">
-              <p className="text-lg font-black">Udostępnianie</p>
-              <button onClick={() => setShareSheetOpen(false)} aria-label="Zamknij" className="h-9 w-9 rounded-full bg-muted flex items-center justify-center active:bg-muted/70"><X className="h-4 w-4" /></button>
+              <p className="text-lg font-black">{t("share_sheet.title")}</p>
+              <button onClick={() => setShareSheetOpen(false)} aria-label={t("a11y.close")} className="h-9 w-9 rounded-full bg-muted flex items-center justify-center active:bg-muted/70"><X className="h-4 w-4" /></button>
             </div>
             <div className="flex-1 overflow-y-auto pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))]">
               {renderShareDrawer()}
@@ -1378,14 +1377,14 @@ const ReviewSummary = () => {
                   <div className="px-5 mt-5">
                     <button onClick={shareLink}
                       className="w-full py-3 rounded-full bg-secondary text-secondary-foreground font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform">
-                      <Share2 className="h-4 w-4" /> Udostępnij link do trasy
+                      <Share2 className="h-4 w-4" /> {t("share_sheet.share_link")}
                     </button>
                   </div>
                   {/* Cofniecie udostepnienia - trasa znika z Eksploruj (zostaje prywatna). */}
                   <div className="px-5 mt-2">
-                    <button onClick={() => { setVisibility("private"); setShareSheetOpen(false); notify.success("Trasa ukryta z Eksploruj", undefined, { position: "top-center" }); }}
+                    <button onClick={() => { setVisibility("private"); setShareSheetOpen(false); notify.success(t("toast.route_hidden"), undefined, { position: "top-center" }); }}
                       className="w-full py-3 rounded-full text-muted-foreground font-bold text-sm active:scale-[0.98] transition-transform">
-                      Przestań udostępniać
+                      {t("share_sheet.stop_sharing")}
                     </button>
                   </div>
                 </>
@@ -1408,7 +1407,7 @@ const ReviewSummary = () => {
             <div className="relative">
               <button
                 onClick={() => setViewerMenuOpen((o) => !o)}
-                aria-label="Więcej opcji"
+                aria-label={t("a11y.more_options")}
                 className="h-10 w-10 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center active:scale-95 transition-transform"
               >
                 <MoreVertical className="h-5 w-5 text-white" />
@@ -1421,7 +1420,7 @@ const ReviewSummary = () => {
                     className="w-full px-4 py-3 text-left text-sm font-medium text-foreground flex items-center gap-2.5 active:bg-muted disabled:opacity-50"
                   >
                     <ImageIcon className="h-4 w-4 shrink-0" />
-                    {viewerUrl === heroPhoto ? "Okładka wpisu" : "Ustaw jako okładkę"}
+                    {viewerUrl === heroPhoto ? t("viewer.is_cover") : t("viewer.set_cover")}
                     {viewerUrl === heroPhoto && <Check className="h-4 w-4 text-green-600 ml-auto" />}
                   </button>
                   {myPhotos.some((p) => p.url === viewerUrl) && (
@@ -1429,7 +1428,7 @@ const ReviewSummary = () => {
                       onClick={() => { const owner = myPhotos.find((p) => p.url === viewerUrl)?.owner ?? routeId!; removePhoto(viewerUrl, owner); setViewerMenuOpen(false); }}
                       className="w-full px-4 py-3 text-left text-sm font-medium text-red-600 flex items-center gap-2.5 active:bg-muted border-t border-border/40"
                     >
-                      <Trash2 className="h-4 w-4 shrink-0" /> Usuń zdjęcie
+                      <Trash2 className="h-4 w-4 shrink-0" /> {t("viewer.remove_photo")}
                     </button>
                   )}
                 </div>
@@ -1437,7 +1436,7 @@ const ReviewSummary = () => {
             </div>
             <button
               onClick={() => { setViewerUrl(null); setViewerMenuOpen(false); }}
-              aria-label="Zamknij"
+              aria-label={t("a11y.close")}
               className="h-10 w-10 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center active:scale-95 transition-transform"
             >
               <X className="h-5 w-5 text-white" />
@@ -1462,7 +1461,7 @@ const ReviewSummary = () => {
                   onClick={() => setStep((s) => (s - 1) as 1 | 2 | 3)}
                   className="px-5 py-3.5 rounded-full border border-border text-sm font-semibold text-foreground active:scale-[0.98] transition-transform shrink-0"
                 >
-                  Wstecz
+                  {t("cta.back")}
                 </button>
               )}
               {step < 3 ? (
@@ -1470,7 +1469,7 @@ const ReviewSummary = () => {
                   onClick={() => setStep((s) => (s + 1) as 1 | 2 | 3)}
                   className="flex-1 py-3.5 rounded-full bg-primary text-white font-bold text-base active:scale-[0.98] transition-transform"
                 >
-                  Dalej
+                  {t("cta.next")}
                 </button>
               ) : (
                 <button
@@ -1478,7 +1477,7 @@ const ReviewSummary = () => {
                   disabled={savingPlan}
                   className="flex-1 py-3.5 rounded-full bg-primary text-white font-bold text-base active:scale-[0.98] transition-transform disabled:opacity-40"
                 >
-                  {savingPlan ? "Zapisywanie…" : "Gotowe"}
+                  {savingPlan ? t("status.saving") : t("cta.done")}
                 </button>
               )}
             </div>
@@ -1488,7 +1487,7 @@ const ReviewSummary = () => {
               disabled={savingPlan}
               className="w-full py-3 rounded-full bg-secondary text-secondary-foreground text-sm font-semibold active:scale-[0.98] transition-transform disabled:opacity-40"
             >
-              Zamknij tryb edycji
+              {t("cta.close_edit_mode")}
             </button>
           </div>
         ) : !isMemory && draft && draft.dayId === activeRouteId ? (
@@ -1497,11 +1496,11 @@ const ReviewSummary = () => {
             disabled={savingPlan || workingPins.length === 0}
             className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-base active:scale-[0.98] transition-transform disabled:opacity-40"
           >
-            {savingPlan ? "Zapisywanie…" : "Zapisz zmiany"}
+            {savingPlan ? t("status.saving") : t("cta.save_changes")}
           </button>
         ) : (
           <button onClick={() => navigate("/dziennik")} className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-base active:scale-[0.98] transition-transform">
-            Gotowe
+            {t("cta.done")}
           </button>
         )}
       </div>

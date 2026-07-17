@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { parseISO, isValid, format, addDays } from "date-fns";
+import { useTranslation } from "react-i18next";
 import { API_BASE } from "@/lib/platform";
 
 interface PlanPin {
@@ -38,6 +39,7 @@ const QuickPlanReview = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
+  const { t } = useTranslation("myplan");
   const state = location.state as LocationState | null;
 
   const [pins, setPins] = useState<PlanPin[]>(state?.pins ?? []);
@@ -121,22 +123,22 @@ const QuickPlanReview = () => {
         );
       }
 
-      toast.success("Trasa zapisana! 🎉", { description: `${city} · ${pins.length} miejsc` });
+      toast.success(t("quick_review.saved_title"), { description: t("quick_review.saved_desc", { city, count: pins.length }) });
       navigate("/");
     } catch (err: any) {
-      toast.error("Błąd zapisu", { description: err?.message ?? "Spróbuj ponownie" });
+      toast.error(t("quick_review.save_error"), { description: err?.message ?? t("quick_review.try_again") });
     } finally {
       setSaving(false);
     }
-  }, [user, pins, city, validDate, sessionId, memberIds, navigate]);
+  }, [user, pins, city, validDate, sessionId, memberIds, navigate, t]);
 
   if (!state) {
     return (
       <div className="flex h-screen items-center justify-center flex-col gap-4 px-8 text-center">
         <p className="text-4xl">🗺️</p>
-        <p className="font-bold">Brak danych trasy</p>
+        <p className="font-bold">{t("quick_review.no_data")}</p>
         <button onClick={() => navigate("/")} className="text-sm text-orange-600 font-semibold underline">
-          Wróć do głównej
+          {t("quick_review.back_home")}
         </button>
       </div>
     );
@@ -155,7 +157,7 @@ const QuickPlanReview = () => {
         <div className="flex-1 min-w-0">
           <p className="font-bold text-base leading-tight">{city}</p>
           <p className="text-xs text-muted-foreground">
-            {pins.length} wspólnych miejsc{dateLabel ? ` · ${dateLabel}` : ""}
+            {t("quick_review.shared_places_count", { count: pins.length })}{dateLabel ? ` · ${dateLabel}` : ""}
           </p>
         </div>
       </div>
@@ -166,14 +168,14 @@ const QuickPlanReview = () => {
         {/* Map */}
         {mapUrl && (
           <div className="w-full h-40 bg-muted overflow-hidden">
-            <img src={mapUrl} alt="Mapa trasy" className="w-full h-full object-cover" />
+            <img src={mapUrl} alt={t("quick_review.map_alt")} className="w-full h-full object-cover" />
           </div>
         )}
 
         {/* Place list */}
         <div className="px-4 py-4 space-y-1">
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
-            Wspólne miejsca - przeciągnij, żeby zmienić kolejność
+            {t("quick_review.reorder_hint")}
           </p>
           {pins.map((pin, i) => (
             <div
@@ -206,10 +208,10 @@ const QuickPlanReview = () => {
                   </p>
                 )}
                 {pin.hasSuperLike && (
-                  <span className="text-[10px] font-semibold text-amber-500">⭐ Wybór całej grupy</span>
+                  <span className="text-[10px] font-semibold text-amber-500">⭐ {t("quick_review.group_choice")}</span>
                 )}
                 {pin.liked_by && pin.liked_by > 1 && !pin.hasSuperLike && (
-                  <span className="text-[10px] text-muted-foreground">❤️ {pin.liked_by} osoby</span>
+                  <span className="text-[10px] text-muted-foreground">❤️ {t("quick_review.liked_by_people", { count: pin.liked_by })}</span>
                 )}
               </div>
               {/* Drag handle */}
@@ -223,7 +225,7 @@ const QuickPlanReview = () => {
       <div className="shrink-0 px-4 pb-safe-4 pb-6 pt-3 border-t border-border/20">
         {memberIds.length > 0 && (
           <p className="text-xs text-muted-foreground text-center mb-3">
-            Trasa zostanie zapisana dla {memberIds.length + 1} osób
+            {t("quick_review.will_save_for", { count: memberIds.length + 1 })}
           </p>
         )}
         <button
@@ -232,7 +234,7 @@ const QuickPlanReview = () => {
           className="w-full py-4 rounded-full bg-primary text-white font-bold text-base active:scale-[0.97] transition-transform disabled:opacity-40 flex items-center justify-center gap-2"
         >
           {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : null}
-          {saving ? "Zapisuję…" : `Zapisz trasę (${pins.length} miejsc)`}
+          {saving ? t("quick_review.saving") : t("quick_review.save_route", { count: pins.length })}
         </button>
       </div>
     </div>

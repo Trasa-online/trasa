@@ -1,0 +1,145 @@
+{
+  "not_found": {
+    "title": "We couldn't find this route",
+    "desc": "It may have been deleted or you don't have access to it.",
+    "back_home": "Back to home"
+  },
+  "status": {
+    "saving": "Saving…"
+  },
+  "labels": {
+    "trip_fallback": "Trip",
+    "you": "You",
+    "participant": "Participant"
+  },
+  "entry": {
+    "add_name": "Add an entry name",
+    "name_placeholder": "Entry name"
+  },
+  "group": {
+    "participants_count": "{{count}} participants"
+  },
+  "note": {
+    "label": "Note",
+    "label_own": "Your note",
+    "placeholder": "Your tip or note about this place…",
+    "saved": "Saved ✓"
+  },
+  "categories": {
+    "restaurant": "Restaurant",
+    "cafe": "Cafe",
+    "museum": "Museum",
+    "park": "Park",
+    "bar": "Bar",
+    "club": "Club",
+    "monument": "Monument",
+    "gallery": "Gallery",
+    "market": "Market",
+    "viewpoint": "Viewpoint",
+    "shopping": "Shopping",
+    "experience": "Attraction",
+    "walk": "Walk",
+    "other": "Place"
+  },
+  "plan": {
+    "your_plan": "Your plan",
+    "day": "Day {{number}}",
+    "earlier": "Earlier",
+    "later": "Later",
+    "add_place": "Add a place"
+  },
+  "empty": {
+    "no_places": "No places in the plan.",
+    "no_places_day": "No places in this day's plan.",
+    "no_places_note": "No places to add a note to."
+  },
+  "gallery": {
+    "add": "Add",
+    "tap_hint": "Tap a photo to see it in full and set it as the entry cover.",
+    "empty": "No photos from this trip.",
+    "empty_editable": "No photos from this trip. Add your first memories."
+  },
+  "tabs": {
+    "places": "Places",
+    "photos": "Photos"
+  },
+  "stepper": {
+    "route": "Route",
+    "notes": "Notes",
+    "photos": "Photos"
+  },
+  "step_info": {
+    "1": "Adjust the route to how it really went: remove places you didn't visit or change the order.",
+    "2": "A note about a place: a memory for yourself and a tip for others (what to order, a pro tip). It saves automatically.",
+    "3": "Add photos to your memory. It's optional, you can come back to it later."
+  },
+  "sharing": {
+    "title": "Share your route",
+    "help_others_title": "Help others plan",
+    "help_others_desc": "Your route lands in Explore with your notes and plan, so others can plan a similar trip.",
+    "privacy_note": "Your photo gallery stays private and safe. In Explore we only show the route plan with your notes.",
+    "anon_title": "Share anonymously",
+    "anon_desc": "Without your profile - your route appears in Explore as “Anonymous”.",
+    "caption_label": "Caption",
+    "optional": "(optional)",
+    "caption_placeholder": "Write something about this trip…"
+  },
+  "prompt": {
+    "title": "Share this route with others?",
+    "desc": "It will appear in Explore and help others plan their trip. We share the route plan with your cover and notes - without your photo gallery. If not, it stays private in your Memories. You can change this anytime.",
+    "confirm": "Share in Explore",
+    "keep_private": "Keep it private"
+  },
+  "share_sheet": {
+    "title": "Sharing",
+    "share_link": "Share route link",
+    "stop_sharing": "Stop sharing"
+  },
+  "viewer": {
+    "set_cover": "Set as cover",
+    "is_cover": "Entry cover",
+    "remove_photo": "Remove photo"
+  },
+  "confirm": {
+    "remove_place": "Are you sure you want to remove {{name}} from the day's plan?",
+    "place_this": "this place"
+  },
+  "cta": {
+    "back": "Back",
+    "next": "Next",
+    "done": "Done",
+    "save_changes": "Save changes",
+    "close_edit_mode": "Close edit mode"
+  },
+  "toast": {
+    "link_copied": "Link copied",
+    "photo_pick_error": "Couldn't select photos",
+    "cover_set": "Cover set",
+    "photo_deleted": "Photo deleted",
+    "plan_saved": "Day plan saved",
+    "changes_saved": "Changes saved",
+    "plan_save_error": "Couldn't save the plan",
+    "add_place_error": "Couldn't add the place",
+    "place_added": "Place added",
+    "name_save_error": "Couldn't save the name",
+    "name_saved": "Name saved",
+    "route_public": "Route visible in Explore",
+    "route_hidden": "Route hidden from Explore"
+  },
+  "share": {
+    "text": "Check out my route on Trasa"
+  },
+  "a11y": {
+    "remove_place": "Remove place",
+    "remove_photo": "Remove photo",
+    "list_view": "List view",
+    "cards_view": "Cards view",
+    "finish_editing": "Finish editing",
+    "back_to_journal": "Back to journal",
+    "share_route": "Share route",
+    "save_name": "Save name",
+    "edit_entry": "Edit entry",
+    "close": "Close",
+    "more_options": "More options"
+  }
+}

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,6 +10,7 @@ import { Loader2, UserCheck, ArrowRight } from "lucide-react";
 // Link zaproszeniowy /dodaj/:code -> AUTO-przyjazn z wlascicielem invite_code.
 // Niezalogowany/anon -> rejestracja (return na ten link). Po loginie auto-przyjazn.
 export default function AddFriend() {
+  const { t } = useTranslation("profiles");
   const { code } = useParams<{ code: string }>();
   const navigate = useNavigate();
   const { user, isAnonymous, loading: authLoading } = useAuth();
@@ -41,14 +43,14 @@ export default function AddFriend() {
     })();
   }, [authLoading, user, isAnonymous, code, navigate]);
 
-  const name = inviter?.first_name || inviter?.username || "Twój znajomy";
+  const name = inviter?.first_name || inviter?.username || t("add_friend.inviter_fallback");
 
   return (
     <div className="flex h-[100dvh] flex-col items-center justify-center px-8 gap-5 bg-background text-center max-w-sm mx-auto">
       {state === "working" ? (
         <>
           <Loader2 className="h-8 w-8 animate-spin text-orange-600" />
-          <p className="text-sm text-muted-foreground">Dodajemy znajomego…</p>
+          <p className="text-sm text-muted-foreground">{t("add_friend.adding")}</p>
         </>
       ) : state === "ok" || state === "already" ? (
         <>
@@ -57,13 +59,13 @@ export default function AddFriend() {
           </div>
           <div className="space-y-1.5">
             <div className="inline-flex items-center gap-1.5 text-green-600 font-bold text-sm">
-              <UserCheck className="h-4 w-4" /> {state === "already" ? "Już jesteście znajomymi" : "Jesteście znajomymi!"}
+              <UserCheck className="h-4 w-4" /> {state === "already" ? t("add_friend.already") : t("add_friend.success")}
             </div>
             <p className="text-2xl font-display font-extrabold tracking-tight leading-tight">
-              Ty i&nbsp;{name} {state === "already" ? "" : "🎉"}
+              {t("add_friend.you_and", { name })} {state === "already" ? "" : "🎉"}
             </p>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              Możecie teraz planować wspólne trasy jednym tapnięciem i&nbsp;podglądać swoje podróże.
+              {t("add_friend.success_desc")}
             </p>
           </div>
           <div className="flex flex-col gap-2 w-full max-w-[260px] mt-1">
@@ -72,30 +74,30 @@ export default function AddFriend() {
                 onClick={() => navigate(`/profil/${inviter.username}`)}
                 className="w-full px-6 py-3 rounded-full bg-primary text-white font-bold text-sm active:scale-95 transition-transform"
               >
-                Zobacz profil {name}
+                {t("add_friend.view_profile", { name })}
               </button>
             )}
             <button
               onClick={() => navigate("/home")}
               className="w-full px-6 py-3 rounded-full bg-secondary text-secondary-foreground font-bold text-sm flex items-center justify-center gap-2 active:scale-95 transition-transform"
             >
-              Przejdź do aplikacji <ArrowRight className="h-4 w-4" />
+              {t("add_friend.go_to_app")} <ArrowRight className="h-4 w-4" />
             </button>
           </div>
         </>
       ) : state === "self" ? (
         <>
           <p className="text-4xl">🙂</p>
-          <p className="text-lg font-bold">To Twój własny link</p>
-          <p className="text-sm text-muted-foreground">Wyślij go znajomym, żeby dodali Cię do listy.</p>
-          <button onClick={() => navigate("/home")} className="mt-2 px-6 py-3 rounded-full bg-primary text-white font-bold text-sm">Strona główna</button>
+          <p className="text-lg font-bold">{t("add_friend.self_title")}</p>
+          <p className="text-sm text-muted-foreground">{t("add_friend.self_desc")}</p>
+          <button onClick={() => navigate("/home")} className="mt-2 px-6 py-3 rounded-full bg-primary text-white font-bold text-sm">{t("add_friend.home")}</button>
         </>
       ) : (
         <>
           <p className="text-4xl">😕</p>
-          <p className="text-lg font-bold">Link nieprawidłowy lub wygasł</p>
-          <p className="text-sm text-muted-foreground">Poproś znajomego o&nbsp;nowy link zaproszeniowy.</p>
-          <button onClick={() => navigate("/home")} className="mt-2 px-6 py-3 rounded-full bg-primary text-white font-bold text-sm">Strona główna</button>
+          <p className="text-lg font-bold">{t("add_friend.error_title")}</p>
+          <p className="text-sm text-muted-foreground">{t("add_friend.error_desc")}</p>
+          <button onClick={() => navigate("/home")} className="mt-2 px-6 py-3 rounded-full bg-primary text-white font-bold text-sm">{t("add_friend.home")}</button>
         </>
       )}
     </div>

@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Search, Compass, Heart, Loader2, Check, MapPin, ChevronLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -42,13 +43,6 @@ interface DbPlace {
   photo_url: string | null;
 }
 
-const CATEGORY_LABELS: Record<string, string> = {
-  restaurant: "Restauracja", cafe: "Kawiarnia", museum: "Muzeum", park: "Park",
-  bar: "Bar", club: "Klub", monument: "Zabytek", gallery: "Galeria",
-  market: "Targ", viewpoint: "Punkt widokowy", shopping: "Sklep", experience: "Doświadczenie",
-  walk: "Spacer", nightlife: "Nocne życie", church: "Kościół",
-};
-
 const skey = (name: string) => name.trim().toLowerCase();
 
 const dbToSelected = (p: DbPlace): SelectedPlace => ({
@@ -78,6 +72,7 @@ const AddPlaceToTripInner = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const { t } = useTranslation("myplan");
 
   const [step, setStep] = useState<Step>("choose");
   const [selected, setSelected] = useState<Map<string, SelectedPlace>>(new Map());
@@ -227,12 +222,12 @@ const AddPlaceToTripInner = () => {
       // Dziennik/ReviewSummary uzywa innego klucza pinow - odswiez tez jego.
       await queryClient.invalidateQueries({ queryKey: ["review-all-pins"] });
       notify.success(
-        rows.length === 1 ? "Dodano miejsce" : `Dodano ${rows.length} miejsc`,
+        rows.length === 1 ? t("add_place.added_one") : t("add_place.added_many", { count: rows.length }),
       );
       navigate(-1);
     } catch (e: any) {
       console.error("[AddPlaceToTrip] add selected failed:", e?.message ?? e);
-      notify.error("Nie udało się dodać miejsc");
+      notify.error(t("add_place.add_error"));
       setSaving(false);
     }
   };
@@ -254,7 +249,7 @@ const AddPlaceToTripInner = () => {
           disabled={saving}
           className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-base active:scale-[0.98] transition-transform disabled:opacity-50 flex items-center justify-center gap-2"
         >
-          {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : `Dodaj wybrane (${count})`}
+          {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : t("add_place.add_selected", { count })}
         </button>
       </div>
     ) : null;
@@ -284,7 +279,7 @@ const AddPlaceToTripInner = () => {
         <div className="min-w-0 flex-1">
           <p className="text-sm font-bold leading-tight truncate">{place.place_name}</p>
           <p className="text-xs text-muted-foreground truncate mt-0.5">
-            {CATEGORY_LABELS[place.category] ?? "Miejsce"}
+            {t(`categories.${place.category}`, { defaultValue: t("add_place.place_fallback") })}
             {place.address ? ` · ${place.address}` : ""}
           </p>
         </div>
@@ -310,24 +305,24 @@ const AddPlaceToTripInner = () => {
         <button
           onClick={back}
           className="h-9 w-9 flex items-center justify-center -ml-1 shrink-0 text-foreground"
-          aria-label="Wróć"
+          aria-label={t("add_place.back")}
         >
           <ArrowLeft className="h-5 w-5" />
         </button>
         <p className="text-base font-bold truncate">
-          {step === "choose" && "Dodaj miejsce"}
-          {step === "search" && "Szukaj miejsca"}
-          {step === "category" && "Przeglądaj kategorie"}
-          {step === "liked" && "Twoje polubione"}
+          {step === "choose" && t("add_place.header_choose")}
+          {step === "search" && t("add_place.header_search")}
+          {step === "category" && t("add_place.header_category")}
+          {step === "liked" && t("add_place.header_liked")}
         </p>
       </div>
 
       {/* ── Krok: wybor metody ── */}
       {step === "choose" && (
         <div className="flex-1 overflow-y-auto px-5 pt-6 pb-6">
-          <h1 className="text-xl font-black leading-tight mb-1">Jak chcesz dodać miejsce?</h1>
+          <h1 className="text-xl font-black leading-tight mb-1">{t("add_place.how_title")}</h1>
           <p className="text-sm text-muted-foreground mb-6">
-            {routeCity ? `Dodajesz do trasy w ${routeCity}` : "Wybierz sposób dodania"}
+            {routeCity ? t("add_place.adding_to_city", { city: routeCity }) : t("add_place.choose_method")}
           </p>
           <div className="flex flex-col gap-3">
             <button
@@ -336,8 +331,8 @@ const AddPlaceToTripInner = () => {
             >
               <div className="h-12 w-12 rounded-2xl bg-orange-100 flex items-center justify-center text-2xl shrink-0">🔍</div>
               <div className="min-w-0">
-                <p className="text-base font-bold">Szukaj po nazwie</p>
-                <p className="text-sm text-muted-foreground">Wpisz nazwę konkretnego miejsca</p>
+                <p className="text-base font-bold">{t("add_place.method_search_title")}</p>
+                <p className="text-sm text-muted-foreground">{t("add_place.method_search_desc")}</p>
               </div>
             </button>
             <button
@@ -346,8 +341,8 @@ const AddPlaceToTripInner = () => {
             >
               <div className="h-12 w-12 rounded-2xl bg-orange-100 flex items-center justify-center text-2xl shrink-0">🧭</div>
               <div className="min-w-0">
-                <p className="text-base font-bold">Przeglądaj kategorie</p>
-                <p className="text-sm text-muted-foreground">Odkrywaj miejsca po kategorii</p>
+                <p className="text-base font-bold">{t("add_place.method_category_title")}</p>
+                <p className="text-sm text-muted-foreground">{t("add_place.method_category_desc")}</p>
               </div>
             </button>
             <button
@@ -356,8 +351,8 @@ const AddPlaceToTripInner = () => {
             >
               <div className="h-12 w-12 rounded-2xl bg-orange-100 flex items-center justify-center text-2xl shrink-0">❤️</div>
               <div className="min-w-0">
-                <p className="text-base font-bold">Z polubionych</p>
-                <p className="text-sm text-muted-foreground">Miejsca, które już wybrałeś w&nbsp;tym mieście</p>
+                <p className="text-base font-bold">{t("add_place.method_liked_title")}</p>
+                <p className="text-sm text-muted-foreground">{t("add_place.method_liked_desc")}</p>
               </div>
             </button>
           </div>
@@ -374,7 +369,7 @@ const AddPlaceToTripInner = () => {
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder={routeCity ? `Szukaj w ${routeCity}…` : "Szukaj miejsca…"}
+                placeholder={routeCity ? t("add_place.search_placeholder_city", { city: routeCity }) : t("add_place.search_placeholder")}
                 autoFocus
                 className="w-full h-12 pl-10 pr-4 rounded-2xl border border-border bg-muted/30 text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:border-foreground/30"
               />
@@ -385,10 +380,10 @@ const AddPlaceToTripInner = () => {
               </div>
             )}
             {!searching && query.trim().length >= 2 && searchResults.length === 0 && (
-              <p className="text-center py-8 text-sm text-muted-foreground">Brak wyników dla „{query.trim()}"</p>
+              <p className="text-center py-8 text-sm text-muted-foreground">{t("add_place.no_results", { query: query.trim() })}</p>
             )}
             {!searching && query.trim().length < 2 && (
-              <p className="text-center py-8 text-sm text-muted-foreground">Wpisz nazwę miejsca, aby wyszukać</p>
+              <p className="text-center py-8 text-sm text-muted-foreground">{t("add_place.search_hint")}</p>
             )}
             {!searching && searchResults.length > 0 && (
               <div className="flex flex-col gap-2">
@@ -405,7 +400,7 @@ const AddPlaceToTripInner = () => {
         <>
           {!subCategoryId ? (
             <div className="flex-1 overflow-y-auto px-4 pt-4 pb-6 min-h-0 bg-[#F4F3EF]">
-              <p className="text-sm text-muted-foreground mb-4 px-1">Wybierz kategorię, którą chcesz przeglądać.</p>
+              <p className="text-sm text-muted-foreground mb-4 px-1">{t("add_place.pick_category")}</p>
               <div className="flex flex-col gap-4">
                 {MAIN_CATEGORIES.map((cat) => (
                   <div key={cat.id} className="rounded-3xl bg-white border border-black/5 shadow-sm p-4">
@@ -436,7 +431,7 @@ const AddPlaceToTripInner = () => {
                   onClick={() => { setSubCategoryId(null); setMainCategoryId(null); }}
                   className="flex items-center gap-1 text-sm font-semibold text-muted-foreground active:scale-95"
                 >
-                  <ChevronLeft className="h-4 w-4" /> Zmień kategorię
+                  <ChevronLeft className="h-4 w-4" /> {t("add_place.change_category")}
                 </button>
               </div>
               <PlaceSwiper
@@ -463,16 +458,16 @@ const AddPlaceToTripInner = () => {
                   <Heart className="h-6 w-6 text-orange-600" />
                 </div>
                 <div className="space-y-1.5">
-                  <p className="text-sm font-semibold text-foreground">Brak polubionych miejsc</p>
+                  <p className="text-sm font-semibold text-foreground">{t("add_place.liked_empty_title")}</p>
                   <p className="text-xs text-muted-foreground leading-relaxed">
-                    Nie polubiłeś jeszcze żadnych miejsc w&nbsp;tym mieście. Przeglądaj kategorie, żeby je&nbsp;zebrać.
+                    {t("add_place.liked_empty_desc")}
                   </p>
                 </div>
                 <button
                   onClick={() => setStep("category")}
                   className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-primary text-white font-semibold text-sm active:scale-[0.97] transition-transform"
                 >
-                  <Compass className="h-4 w-4" /> Przeglądaj kategorie
+                  <Compass className="h-4 w-4" /> {t("add_place.browse_categories")}
                 </button>
               </div>
             ) : (

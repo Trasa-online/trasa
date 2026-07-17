@@ -1,0 +1,132 @@
+{
+  "not_found": {
+    "title": "Nie znaleziono sesji",
+    "desc": "Sprawdź czy kod zaproszenia jest poprawny.",
+    "back": "Wróć do głównej"
+  },
+  "login_gate": {
+    "title": "Zaloguj się, żeby dołączyć",
+    "desc_before": "Twój znajomy zaprasza Cię do wspólnego wybierania miejsc w ",
+    "cta": "Zaloguj się"
+  },
+  "preparing": "Przygotowujemy sesję…",
+  "join": {
+    "header": "Zaproszenie do sesji",
+    "title": "Wybieracie miejsca razem",
+    "desc_before": "Eksplorujcie miejsca w ",
+    "desc_after": " niezależnie i sprawdźcie, co Was łączy!",
+    "in_session": "W sesji ({{count}}/4)",
+    "joining": "Dołączam…",
+    "full": "Sesja pełna (max 10)",
+    "cta": "Dołącz i zacznij przeglądać"
+  },
+  "toast": {
+    "new_match_title": "Nowe dopasowanie!",
+    "new_match_desc": "{{name}} też polubił(a) {{place}}",
+    "proposal_sent": "Propozycja wysłana!",
+    "suggestion_thanks": "Dziękujemy! Dodamy to miejsce wkrótce 🙌",
+    "suggestion_error": "Nie udało się wysłać sugestii",
+    "joined": "Dołączono do sesji!",
+    "join_error": "Błąd podczas dołączania",
+    "save_error": "Błąd zapisu: {{message}}",
+    "invite_error": "Nie udało się wysłać zaproszenia",
+    "invites_sent": "Zaproszenia wysłane ({{count}})",
+    "invites_error": "Nie udało się wysłać zaproszeń",
+    "link_copied": "Link skopiowany",
+    "shared": "Udostępniono"
+  },
+  "fallback": {
+    "friend": "Znajomy",
+    "user": "Użytkownik",
+    "someone": "Ktoś"
+  },
+  "search_place_title": "Szukaj miejsca",
+  "invite_title": "Zaproś do sesji",
+  "search_placeholder": "Szukaj miejsca…",
+  "tab_explore": "Eksploruj",
+  "tab_matches": "Dopasowania",
+  "waiting": {
+    "title": "Czekamy na kogoś jeszcze",
+    "desc": "Wybieranie zacznie się gdy co najmniej jedna osoba dołączy do sesji.",
+    "invite_friends": "Zaproś znajomych",
+    "search_placeholder": "Szukaj po imieniu lub @nickname…",
+    "invited": "Zaproszono",
+    "invite": "Zaproś",
+    "not_found": "Nie znaleziono użytkownika",
+    "share_link": "Udostępnij link",
+    "or_share_code": "Lub udostępnij kod",
+    "copied": "Skopiowano!",
+    "copy_code": "Kopiuj kod",
+    "share": "Udostępnij"
+  },
+  "share_sheet": {
+    "title": "Dołącz do mojej sesji w Trasa",
+    "text": "Dołącz używając kodu: {{code}}"
+  },
+  "round_done_title": "Runda zakończona!",
+  "round_done_desc": "Wybierz kolejną kategorię lub zakończ wybieranie.",
+  "pick_first": "Wybierz pierwszą kategorię",
+  "pick_next": "Wybierz następną kategorię",
+  "pick_desc": "Każda runda to 10 miejsc - wybierzcie kategorię albo wolną eksplorację (losowe miejsca).",
+  "free_used": "Wszystko - już zrobione",
+  "free_available": "Wszystko - 10 losowych miejsc",
+  "starting": "Startuję…",
+  "start_picking": "Zacznij wybieranie",
+  "next_round": "Następna runda →",
+  "finish_check_matches": "Zakończ i sprawdź dopasowania ({{count}})",
+  "organizer_picking": "Organizator wybiera kategorię…",
+  "round_done_waiting_desc": "Czekam aż organizator wybierze kolejną kategorię.",
+  "finished": {
+    "done": "Gotowe!",
+    "waiting_others": "Czekam aż wszyscy skończą tę kategorię",
+    "ready_count": "{{done}} / {{total}} gotowych",
+    "skip_waiting": "Pomiń oczekiwanie →",
+    "so_far": "do tej pory"
+  },
+  "shared_spot_one": "wspólne miejsce",
+  "shared_spot_few": "wspólne miejsca",
+  "shared_spot_many": "wspólnych miejsc",
+  "loading_places": "Ładowanie miejsc…",
+  "no_places_title": "Brak miejsc w tej kategorii",
+  "no_places_desc_before": "Nie mamy jeszcze miejsc z kategorii ",
+  "no_places_desc_after": " dla {{city}}.",
+  "next_category": "Przejdź do następnej kategorii",
+  "matches": {
+    "empty_title": "Brak dopasowań jeszcze",
+    "empty_desc": "Potrzeba co najmniej 2 osób, które polubiły to samo miejsce. Wróć do eksplorowania!",
+    "explore_more": "Eksploruj dalej",
+    "propose_new_route": "Zaproponuj nową trasę →",
+    "propose_route": "Zaproponuj trasę z wybranych miejsc →",
+    "waiting_host": "Czekamy aż gospodarz sesji zapisze trasę z waszych dopasowań.",
+    "open_saved_route": "Otwórz zapisaną trasę →",
+    "route_ready": "Trasa gotowa - zobacz ją na ekranie głównym →",
+    "finish": "Zakończ wybieranie"
+  },
+  "invite_sheet": {
+    "copy": "Kopiuj",
+    "find_friends": "Znajdź znajomych",
+    "search_placeholder": "Szukaj po nazwie lub @nickname…",
+    "no_results": "Brak wyników dla „{{query}}\"",
+    "hint_min_chars": "Wpisz co najmniej 2 znaki, żeby wyszukać",
+    "sending": "Wysyłanie…",
+    "send_invites": "Wyślij zaproszenia ({{count}})",
+    "select_friends": "Wybierz znajomych"
+  },
+  "suggest": {
+    "title": "Zaproponuj dodanie miejsca",
+    "place_name_label": "Nazwa miejsca",
+    "google_link_label": "Link do wizytówki Google",
+    "optional": "(opcjonalnie)",
+    "google_link_hint": "Wklej link z Google Maps - pomoże nam szybciej dodać miejsce",
+    "sending": "Wysyłam…",
+    "submit": "Wyślij sugestię"
+  },
+  "lobby": {
+    "propose_title": "Zaproponuj miejsca",
+    "propose_desc": "Zanim zaczniecie parować, możecie zaproponować miejsca, które chcecie odwiedzić innym członkom!",
+    "search_placeholder": "Wpisz nazwę miejsca…",
+    "not_on_trasa": "Ups! Tego miejsca jeszcze nie ma na Trasie.",
+    "suggest_cta": "Tak! Zaproponuj dodanie miejsca",
+    "group_proposals": "Propozycje grupy"
+  }
+}

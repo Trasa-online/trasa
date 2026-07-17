@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import PlaceDetailSheet from "@/components/home/PlaceDetailSheet";
 import RouteMap from "@/components/RouteMap";
+import { useTranslation } from "react-i18next";
 
 interface ChatMessage {
   role: "user" | "assistant";
@@ -22,6 +23,7 @@ const hasVoiceSupport =
 const EditPlan = () => {
   const { session } = useAuth();
   const navigate = useNavigate();
+  const { t } = useTranslation("myplan");
   const [searchParams] = useSearchParams();
   const routeId = searchParams.get("route");
 
@@ -77,7 +79,7 @@ const EditPlan = () => {
       );
 
       if (!response.ok) {
-        toast.error("Błąd AI. Spróbuj ponownie.");
+        toast.error(t("edit_plan.error_ai"));
         setIsLoading(false);
         return;
       }
@@ -85,26 +87,26 @@ const EditPlan = () => {
       const data = await response.json();
 
       if (data.done) {
-        setMessages(prev => [...prev, { role: "assistant", content: data.message || "Gotowe! Plan został zaktualizowany." }]);
+        setMessages(prev => [...prev, { role: "assistant", content: data.message || t("edit_plan.ai_done_fallback") }]);
         setIsDone(true);
       } else {
         setMessages(prev => [...prev, { role: "assistant", content: data.message }]);
       }
     } catch {
-      toast.error("Błąd połączenia.");
+      toast.error(t("edit_plan.error_connection"));
     }
     setIsLoading(false);
-  }, [routeId, session?.access_token]);
+  }, [routeId, session?.access_token, t]);
 
   // Trigger initial AI message when route loads
   useEffect(() => {
     if (route && !initialSent) {
       setInitialSent(true);
-      const greeting = `Cześć! Chcę poprawić plan.`;
+      const greeting = t("edit_plan.ai_greeting");
       const initial: ChatMessage[] = [{ role: "user", content: greeting }];
       callEditPlan(initial);
     }
-  }, [route, initialSent, callEditPlan]);
+  }, [route, initialSent, callEditPlan, t]);
 
   const sendMessage = useCallback(() => {
     const text = input.trim();
@@ -189,7 +191,7 @@ const EditPlan = () => {
           <ArrowLeft className="h-6 w-6" />
         </button>
         <div className="text-center">
-          <h1 className="text-base font-bold leading-tight">Popraw trasę</h1>
+          <h1 className="text-base font-bold leading-tight">{t("edit_plan.title")}</h1>
           {route?.city && (
             <p className="text-xs text-muted-foreground">{route.city}</p>
           )}
@@ -209,7 +211,7 @@ const EditPlan = () => {
               pin_order: p.pin_order,
             }))}
             startingLocation={(route as any)?.starting_location_lat && (route as any)?.starting_location_lng ? {
-              name: (route as any).starting_location_name ?? "Start",
+              name: (route as any).starting_location_name ?? t("edit_plan.start_label"),
               latitude: (route as any).starting_location_lat,
               longitude: (route as any).starting_location_lng,
             } : undefined}
@@ -252,9 +254,9 @@ const EditPlan = () => {
             <div className="h-12 w-12 rounded-full bg-foreground flex items-center justify-center">
               <Check className="h-6 w-6 text-background" />
             </div>
-            <p className="text-sm text-muted-foreground text-center">Plan został zaktualizowany</p>
+            <p className="text-sm text-muted-foreground text-center">{t("edit_plan.updated")}</p>
             <Button onClick={() => navigate("/")} className="rounded-full px-6">
-              Wróć do planu
+              {t("edit_plan.back_to_plan")}
             </Button>
           </div>
         )}
@@ -284,7 +286,7 @@ const EditPlan = () => {
                 value={input}
                 onChange={handleInputChange}
                 onKeyDown={handleKeyDown}
-                placeholder="Powiedz co zmienić..."
+                placeholder={t("edit_plan.input_placeholder")}
                 rows={1}
                 disabled={isLoading}
                 className="w-full resize-none rounded-xl border border-border/60 bg-muted/30 px-4 py-2.5 text-base placeholder:text-muted-foreground/50 focus:outline-none focus:border-foreground/30 disabled:opacity-50"

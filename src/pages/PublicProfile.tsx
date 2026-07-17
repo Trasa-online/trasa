@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useParams, useNavigate } from "react-router-dom";
 import { avatarSrc } from "@/lib/avatar";
 import { useQuery } from "@tanstack/react-query";
@@ -17,6 +18,7 @@ import { CollectionDetail, type DiscoveryCollection } from "@/components/home/Di
 import { themeBadgeLabel } from "@/lib/collectionThemes";
 
 export default function PublicProfile() {
+  const { t } = useTranslation("profiles");
   const { username } = useParams<{ username: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -143,8 +145,8 @@ export default function PublicProfile() {
   if (isLoading) return null;
   if (!profile) return (
     <div className="flex flex-col items-center justify-center min-h-screen gap-3">
-      <p className="text-muted-foreground">Nie znaleziono użytkownika</p>
-      <button onClick={() => window.history.state?.idx > 0 ? navigate(-1) : navigate("/")} className="text-orange-600 font-semibold text-sm">Wróć</button>
+      <p className="text-muted-foreground">{t("public.not_found")}</p>
+      <button onClick={() => window.history.state?.idx > 0 ? navigate(-1) : navigate("/")} className="text-orange-600 font-semibold text-sm">{t("public.back")}</button>
     </div>
   );
 
@@ -180,9 +182,9 @@ export default function PublicProfile() {
         {/* Sekcje - TEN SAM uklad/kolory co wlasny profil (jeden model mentalny).
             "Trasy" klikalne -> sheet z trasami usera (strzalka pojawia sie z onClick). */}
         <div className="space-y-3">
-          <SectionCard bg="bg-trasa-violet" icon={<MapIcon className="h-5 w-5 text-trasa-violet-ink" />} title="Trasy" subtitle="ukończone podróże" value={stats?.trips ?? 0} onClick={() => setRoutesOpen(true)} />
-          <SectionCard bg="bg-trasa-cream" icon={<Building2 className="h-5 w-5 text-trasa-cream-ink" />} title="Miasta" subtitle="odwiedzone miejsca" value={stats?.cities ?? 0} />
-          <SectionCard bg="bg-trasa-orange" icon={<Layers className="h-5 w-5 text-trasa-orange-ink" />} title="Zestawienia" subtitle="kolekcje miejsc" value={collections.length} onClick={collections.length > 0 ? () => setCollectionsOpen(true) : undefined} />
+          <SectionCard bg="bg-trasa-violet" icon={<MapIcon className="h-5 w-5 text-trasa-violet-ink" />} title={t("sections.routes")} subtitle={t("sections.routes_sub")} value={stats?.trips ?? 0} onClick={() => setRoutesOpen(true)} />
+          <SectionCard bg="bg-trasa-cream" icon={<Building2 className="h-5 w-5 text-trasa-cream-ink" />} title={t("sections.cities")} subtitle={t("sections.cities_sub")} value={stats?.cities ?? 0} />
+          <SectionCard bg="bg-trasa-orange" icon={<Layers className="h-5 w-5 text-trasa-orange-ink" />} title={t("sections.collections")} subtitle={t("sections.collections_sub_public")} value={collections.length} onClick={collections.length > 0 ? () => setCollectionsOpen(true) : undefined} />
         </div>
       </div>
 
@@ -190,17 +192,17 @@ export default function PublicProfile() {
       <Sheet open={routesOpen} onOpenChange={setRoutesOpen}>
         <SheetContent side="bottom" className="rounded-t-3xl p-0" style={{ maxHeight: "85dvh", height: "85dvh" }}>
           <SheetHeader className="px-5 pt-5 pb-3 text-left">
-            <SheetTitle>Dziennik {displayName}</SheetTitle>
+            <SheetTitle>{t("public.journal_title", { name: displayName })}</SheetTitle>
           </SheetHeader>
           <div className="flex-1 overflow-y-auto px-5 pb-8 space-y-4">
             {postcardsLoading ? (
-              <p className="text-sm text-muted-foreground text-center py-12">Ładowanie…</p>
+              <p className="text-sm text-muted-foreground text-center py-12">{t("public.loading")}</p>
             ) : postcards.length === 0 ? (
               <div className="py-16 text-center">
                 <div className="text-4xl mb-3">🗺️</div>
-                <p className="text-sm font-bold">Brak tras do pokazania</p>
+                <p className="text-sm font-bold">{t("public.no_routes_title")}</p>
                 <p className="text-xs text-muted-foreground mt-1 max-w-[260px] mx-auto leading-relaxed">
-                  Ta osoba nie udostępniła jeszcze żadnej trasy.
+                  {t("public.no_routes_desc")}
                 </p>
               </div>
             ) : (
@@ -224,12 +226,12 @@ export default function PublicProfile() {
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
                       <div className="absolute bottom-0 left-0 right-0 px-4 pb-3">
-                        <p className="text-white font-bold text-lg leading-tight drop-shadow-sm">{e.title || e.city || "Podróż"}</p>
+                        <p className="text-white font-bold text-lg leading-tight drop-shadow-sm">{e.title || e.city || t("public.trip_fallback")}</p>
                         <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                           {dateLabel && <p className="text-white/70 text-xs">{dateLabel}</p>}
                           {e._numDays > 1 && (
                             <span className="flex items-center gap-1 bg-white/20 backdrop-blur-sm rounded-full px-1.5 py-0.5 text-[10px] font-semibold text-white">
-                              <CalendarDays className="h-2.5 w-2.5" />{e._numDays} dni
+                              <CalendarDays className="h-2.5 w-2.5" />{t("public.days_count", { n: e._numDays })}
                             </span>
                           )}
                         </div>
@@ -250,7 +252,7 @@ export default function PublicProfile() {
       <Sheet open={collectionsOpen} onOpenChange={setCollectionsOpen}>
         <SheetContent side="bottom" className="rounded-t-3xl p-0" style={{ maxHeight: "85dvh", height: "85dvh" }}>
           <SheetHeader className="px-5 pt-5 pb-3 text-left">
-            <SheetTitle>Zestawienia {displayName}</SheetTitle>
+            <SheetTitle>{t("public.collections_title", { name: displayName })}</SheetTitle>
           </SheetHeader>
           <div className="flex-1 overflow-y-auto px-5 pb-8 space-y-3">
             {collections.map((col) => {
@@ -268,7 +270,7 @@ export default function PublicProfile() {
                     {badge && <span className="inline-flex items-center rounded-full bg-orange-50 border border-orange-200 px-2 py-0.5 text-[10px] font-bold text-orange-700">{badge}</span>}
                     <p className="font-bold text-sm leading-tight truncate">{col.title}</p>
                     <p className="text-xs text-muted-foreground truncate">
-                      {[col.city, `${col.items.length} ${col.items.length === 1 ? "miejsce" : col.items.length < 5 ? "miejsca" : "miejsc"}`].filter(Boolean).join(" · ")}
+                      {[col.city, t("public.places_count", { count: col.items.length })].filter(Boolean).join(" · ")}
                     </p>
                   </div>
                 </button>

@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Check, ArrowLeft, MapPin } from "lucide-react";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 
 interface Place {
   id: string;
@@ -25,6 +26,7 @@ interface BusinessProfileLite {
 const ClaimPlace = () => {
   const { placeId } = useParams<{ placeId: string }>();
   const navigate = useNavigate();
+  const { t } = useTranslation("sharing");
 
   const [loading, setLoading] = useState(true);
   const [place, setPlace] = useState<Place | null>(null);
@@ -91,7 +93,7 @@ const ClaimPlace = () => {
       setSubmitted(true);
     } catch (err: any) {
       console.error("[ClaimPlace] submit failed:", err);
-      toast.error(err?.message || "Coś poszło nie tak. Spróbuj ponownie.");
+      toast.error(err?.message || t("claim.error_generic"));
     } finally {
       setSubmitting(false);
     }
@@ -111,11 +113,11 @@ const ClaimPlace = () => {
       <div className="min-h-screen bg-[#FEFEFE] flex flex-col items-center justify-center px-6 gap-5">
         <div className="h-14 w-14 rounded-full" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
         <div className="text-center max-w-sm">
-          <h1 className="text-xl font-black text-[#0E0E0E] mb-2">Nie znaleźliśmy lokalu</h1>
-          <p className="text-sm text-[#979797]">Link mógł wygasnąć lub być nieprawidłowy. Skontaktuj się z osobą, która Ci go przesłała.</p>
+          <h1 className="text-xl font-black text-[#0E0E0E] mb-2">{t("claim.not_found_title")}</h1>
+          <p className="text-sm text-[#979797]">{t("claim.not_found_desc")}</p>
         </div>
         <Link to="/dla-firm/landing" className="text-sm text-orange-600 font-semibold hover:underline">
-          ← Strona dla firm
+          {t("claim.back_business_page")}
         </Link>
       </div>
     );
@@ -126,11 +128,11 @@ const ClaimPlace = () => {
       <div className="min-h-screen bg-[#FEFEFE] flex flex-col items-center justify-center px-6 gap-5">
         <div className="h-14 w-14 rounded-full" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
         <div className="text-center max-w-sm">
-          <h1 className="text-xl font-black text-[#0E0E0E] mb-2">{place.place_name} jest już zweryfikowany</h1>
-          <p className="text-sm text-[#979797]">Ten lokal został już przejęty przez właściciela. Jeśli to pomyłka, skontaktuj się z nami.</p>
+          <h1 className="text-xl font-black text-[#0E0E0E] mb-2">{t("claim.claimed_title", { name: place.place_name })}</h1>
+          <p className="text-sm text-[#979797]">{t("claim.claimed_desc")}</p>
         </div>
         <Link to="/auth?business=true" className="text-sm text-orange-600 font-semibold hover:underline">
-          Zaloguj się do panelu →
+          {t("claim.login_to_panel")}
         </Link>
       </div>
     );
@@ -143,9 +145,13 @@ const ClaimPlace = () => {
           <Check className="h-7 w-7 text-green-600" strokeWidth={3} />
         </div>
         <div className="text-center max-w-sm">
-          <h1 className="text-xl font-black text-[#0E0E0E] mb-2">Dzięki!</h1>
+          <h1 className="text-xl font-black text-[#0E0E0E] mb-2">{t("claim.thanks_title")}</h1>
           <p className="text-sm text-[#979797] leading-relaxed">
-            Twoje zgłoszenie dla <span className="font-semibold text-[#0E0E0E]">{place.place_name}</span> trafiło do nas. Odezwiemy się na <span className="font-semibold text-[#0E0E0E]">{contactEmail}</span> w ciągu 24h z linkiem do panelu.
+            {t("claim.submitted_desc_before")}{" "}
+            <span className="font-semibold text-[#0E0E0E]">{place.place_name}</span>{" "}
+            {t("claim.submitted_desc_middle")}{" "}
+            <span className="font-semibold text-[#0E0E0E]">{contactEmail}</span>{" "}
+            {t("claim.submitted_desc_after")}
           </p>
         </div>
       </div>
@@ -169,7 +175,7 @@ const ClaimPlace = () => {
             className="text-sm text-slate-500 hover:text-[#0E0E0E] font-medium flex items-center gap-1.5"
           >
             <ArrowLeft className="h-4 w-4" />
-            <span className="hidden sm:inline">Strona dla firm</span>
+            <span className="hidden sm:inline">{t("claim.business_page")}</span>
           </button>
         </div>
       </header>
@@ -178,7 +184,7 @@ const ClaimPlace = () => {
 
         {/* Intro */}
         <div className="mb-7 text-center">
-          <p className="text-xs font-bold text-orange-600 uppercase tracking-widest mb-2">Czy to Twój lokal?</p>
+          <p className="text-xs font-bold text-orange-600 uppercase tracking-widest mb-2">{t("claim.intro_eyebrow")}</p>
           <h1 className="text-3xl lg:text-4xl font-black text-[#0E0E0E] leading-tight">{place.place_name}</h1>
           <p className="text-sm text-[#979797] flex items-center justify-center gap-1.5 mt-2">
             <MapPin className="h-3.5 w-3.5" />
@@ -202,7 +208,7 @@ const ClaimPlace = () => {
           )}
           {businessProfile?.gallery_urls && businessProfile.gallery_urls.length > 0 && (
             <div className="px-5 pb-5">
-              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Galeria ({businessProfile.gallery_urls.length})</p>
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">{t("claim.gallery_label", { count: businessProfile.gallery_urls.length })}</p>
               <div className="flex gap-2 overflow-x-auto scrollbar-none -mx-1 px-1">
                 {businessProfile.gallery_urls.slice(0, 6).map((url, i) => (
                   <img key={i} src={url} className="h-20 w-20 lg:h-24 lg:w-24 rounded-xl object-cover shrink-0" alt="" />
@@ -215,46 +221,46 @@ const ClaimPlace = () => {
         {/* Form */}
         <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 lg:p-8 space-y-5">
           <div>
-            <h2 className="text-lg font-black text-[#0E0E0E] mb-1">Przejmij wizytówkę</h2>
+            <h2 className="text-lg font-black text-[#0E0E0E] mb-1">{t("claim.claim_heading")}</h2>
             <p className="text-sm text-[#979797] leading-relaxed">
-              Zostaw kontakt - odezwiemy się z linkiem do panelu, w którym dodasz galerię, posty i zobaczysz ile osób oglądało Twój lokal.
+              {t("claim.claim_subtitle")}
             </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-[#0E0E0E]">Email kontaktowy *</label>
+              <label className="text-xs font-semibold text-[#0E0E0E]">{t("claim.email_label")}</label>
               <input
                 type="email"
                 required
                 value={contactEmail}
                 onChange={e => setContactEmail(e.target.value)}
-                placeholder="kontakt@twojlokal.pl"
+                placeholder={t("claim.email_placeholder")}
                 maxLength={254}
                 className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-orange-300 transition-colors"
               />
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-[#0E0E0E]">Telefon <span className="text-[10px] font-normal text-slate-400">(opcjonalnie)</span></label>
+              <label className="text-xs font-semibold text-[#0E0E0E]">{t("claim.phone_label")} <span className="text-[10px] font-normal text-slate-400">{t("claim.optional")}</span></label>
               <input
                 type="tel"
                 value={contactPhone}
                 onChange={e => setContactPhone(e.target.value)}
-                placeholder="+48 ..."
+                placeholder={t("claim.phone_placeholder")}
                 maxLength={20}
                 className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-orange-300 transition-colors"
               />
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-[#0E0E0E]">Wiadomość <span className="text-[10px] font-normal text-slate-400">(opcjonalnie)</span></label>
+              <label className="text-xs font-semibold text-[#0E0E0E]">{t("claim.message_label")} <span className="text-[10px] font-normal text-slate-400">{t("claim.optional")}</span></label>
               <textarea
                 rows={3}
                 value={message}
                 onChange={e => setMessage(e.target.value)}
                 maxLength={500}
-                placeholder="Coś co chcesz nam przekazać?"
+                placeholder={t("claim.message_placeholder")}
                 className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-orange-300 transition-colors resize-none"
               />
             </div>
@@ -266,12 +272,12 @@ const ClaimPlace = () => {
               style={{ background: "linear-gradient(90deg, #F4A259, #F9662B)", boxShadow: "0 8px 24px -6px rgba(249, 102, 43, 0.4)" }}
             >
               {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
-              {submitting ? "Wysyłanie..." : "Wyślij zgłoszenie"}
+              {submitting ? t("claim.submitting") : t("claim.submit")}
             </button>
 
             <p className="text-[11px] text-slate-400 text-center leading-relaxed pt-1">
-              Zgłoszenie NIE rejestruje konta. Po weryfikacji wyślemy Ci link do panelu.{" "}
-              <Link to="/terms" className="text-slate-500 underline hover:text-slate-700">Polityka prywatności</Link>
+              {t("claim.form_disclaimer")}{" "}
+              <Link to="/terms" className="text-slate-500 underline hover:text-slate-700">{t("claim.privacy_policy")}</Link>
             </p>
           </form>
         </div>

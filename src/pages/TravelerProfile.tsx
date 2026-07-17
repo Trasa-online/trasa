@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { avatarSrc } from "@/lib/avatar";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthDrawer } from "@/hooks/useAuthDrawer";
@@ -27,20 +28,21 @@ function InviteSlot({ code, slot, usedByName, usedByEmail }: {
   usedByName: string | null;
   usedByEmail: string | null;
 }) {
+  const { t } = useTranslation("profiles");
   const [copied, setCopied] = useState(false);
   const url = `${SHARE_BASE_URL}/#/join/${code}`;
   const isUsed = !!(usedByName || usedByEmail);
   const share = useShare();
 
   const handleCopy = async () => {
-    const result = await share({ title: "Zaproszenie do Trasy", url });
+    const result = await share({ title: t("invite.share_title"), url });
     if (!result.ok) return;
     if (result.method === "clipboard") {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-      toast.success("Link skopiowany");
+      toast.success(t("invite.link_copied"));
     } else {
-      toast.success("Udostępniono");
+      toast.success(t("invite.shared"));
     }
   };
 
@@ -48,21 +50,21 @@ function InviteSlot({ code, slot, usedByName, usedByEmail }: {
     <div className="bg-card border border-border/50 rounded-2xl p-4 space-y-2.5">
       <div className="flex items-center justify-between">
         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-          Zaproszenie {slot}
+          {t("invite.slot_label", { slot })}
         </p>
         {isUsed ? (
           <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
-            Czeka na akceptację
+            {t("invite.pending")}
           </span>
         ) : (
           <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
-            Niewykorzystane
+            {t("invite.unused")}
           </span>
         )}
       </div>
       {isUsed ? (
         <p className="text-sm text-foreground/80">
-          Zaproszono: <span className="font-semibold">{usedByName || usedByEmail}</span>
+          {t("invite.invited_label")} <span className="font-semibold">{usedByName || usedByEmail}</span>
         </p>
       ) : (
         <div className="flex items-center gap-2">
@@ -86,6 +88,7 @@ function InviteSlot({ code, slot, usedByName, usedByEmail }: {
 // ── Guest empty state (same visual rytm jak Journal dla goscia) ──────────────
 
 function GuestProfile() {
+  const { t } = useTranslation("profiles");
   const { open } = useAuthDrawer();
   return (
     // Wieksze pb (20vh zamiast 5rem) zeby grupa "ikona+tytul+CTA" landowala
@@ -95,9 +98,9 @@ function GuestProfile() {
         <UserCircle2 className="h-10 w-10 text-orange-600" />
       </div>
       <div className="space-y-2 max-w-[320px]">
-        <p className="text-2xl font-black tracking-tight leading-tight">Twój profil podróżnika</p>
+        <p className="text-2xl font-black tracking-tight leading-tight">{t("guest.title")}</p>
         <p className="text-sm text-muted-foreground leading-relaxed">
-          Załóż konto, żeby zbudować swój profil, zapraszać znajomych i&nbsp;śledzić podróże w&nbsp;jednym miejscu.
+          {t("guest.desc")}
         </p>
       </div>
       <div className="flex flex-col items-center gap-3 w-full max-w-[280px]">
@@ -105,14 +108,14 @@ function GuestProfile() {
           onClick={() => open({ mode: "register" })}
           className="w-full px-8 py-3.5 rounded-full bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-95 transition-transform"
         >
-          Załóż konto
+          {t("guest.register")}
           <ArrowRight className="h-4 w-4" />
         </button>
         <button
           onClick={() => open({ mode: "login" })}
           className="w-full px-8 py-3.5 rounded-full bg-secondary text-secondary-foreground font-bold text-sm flex items-center justify-center gap-2 active:scale-95 transition-transform"
         >
-          Zaloguj się
+          {t("guest.login")}
         </button>
       </div>
     </div>
@@ -120,6 +123,7 @@ function GuestProfile() {
 }
 
 const TravelerProfile = () => {
+  const { t } = useTranslation("profiles");
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -136,17 +140,17 @@ const TravelerProfile = () => {
     if (!user) return;
     const allowed = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" } as const;
     const ext = allowed[file.type as keyof typeof allowed];
-    if (!ext) { toast.error("Tylko JPG, PNG lub WebP"); return; }
-    if (file.size > 5 * 1024 * 1024) { toast.error("Maks 5 MB"); return; }
+    if (!ext) { toast.error(t("profile.avatar_type_error")); return; }
+    if (file.size > 5 * 1024 * 1024) { toast.error(t("profile.avatar_size_error")); return; }
     const fileName = `${user.id}/avatar.${ext}`;
     const { error: uploadError } = await supabase.storage.from("avatars").upload(fileName, file, { upsert: true, contentType: file.type });
-    if (uploadError) { toast.error("Błąd podczas przesyłania zdjęcia"); return; }
+    if (uploadError) { toast.error(t("profile.avatar_upload_error")); return; }
     const { data: { publicUrl } } = supabase.storage.from("avatars").getPublicUrl(fileName);
     const bustedUrl = `${publicUrl}?v=${Date.now()}`;
     const { error: updateError } = await supabase.from("profiles").update({ avatar_url: bustedUrl } as any).eq("id", user.id);
-    if (updateError) { toast.error("Błąd zapisu profilu"); return; }
+    if (updateError) { toast.error(t("profile.avatar_save_error")); return; }
     queryClient.invalidateQueries({ queryKey: ["profile-full", user.id] });
-    toast.success("Zdjęcie zaktualizowane!");
+    toast.success(t("profile.avatar_updated"));
   };
 
   const handleNativePhotoPick = async () => {
@@ -159,7 +163,7 @@ const TravelerProfile = () => {
         height: 800,
       });
       if (!photo.base64String) {
-        toast.error("Nie udało się odczytać zdjęcia");
+        toast.error(t("profile.photo_read_error"));
         return;
       }
       const format = photo.format || "jpeg";
@@ -173,7 +177,7 @@ const TravelerProfile = () => {
       const msg = String(err?.message ?? err);
       if (msg.toLowerCase().includes("cancel") || msg.toLowerCase().includes("denied")) return;
       console.error("[TravelerProfile] native photo pick failed:", msg);
-      toast.error("Nie udało się wybrać zdjęcia");
+      toast.error(t("profile.photo_pick_error"));
     }
   };
 
@@ -273,11 +277,11 @@ const TravelerProfile = () => {
           NIE uzywac pt-safe* tutaj - podwajaloby safe-area (ogromny padding od gory). */}
       <div className="flex items-center gap-3 px-4 pt-1 pb-3 border-b border-border/40">
         <div className="w-9" />
-        <h1 className="flex-1 text-base font-bold text-center truncate">@{profile?.username || profile?.first_name || "profil"}</h1>
+        <h1 className="flex-1 text-base font-bold text-center truncate">@{profile?.username || profile?.first_name || t("profile.header_fallback")}</h1>
         <button
           onClick={() => navigate("/settings")}
           className="h-9 w-9 flex items-center justify-center rounded-2xl text-muted-foreground hover:bg-muted transition-colors active:scale-90"
-          aria-label="Ustawienia"
+          aria-label={t("profile.settings_aria")}
         >
           <Settings className="h-5 w-5" />
         </button>
@@ -300,7 +304,7 @@ const TravelerProfile = () => {
                 type="button"
                 onClick={handleNativePhotoPick}
                 className="absolute bottom-0 right-0 h-8 w-8 bg-foreground text-background rounded-full flex items-center justify-center cursor-pointer shadow-md"
-                aria-label="Zmień zdjęcie profilowe"
+                aria-label={t("profile.change_photo_aria")}
               >
                 <Camera className="h-4 w-4" />
               </button>
@@ -318,12 +322,12 @@ const TravelerProfile = () => {
           </div>
           <div className="text-center">
             <h2 className="text-2xl font-display font-extrabold leading-tight">
-              {profile?.username || profile?.first_name || "Użytkownik"}
+              {profile?.username || profile?.first_name || t("profile.user_fallback")}
             </h2>
             {profile?.username && profile?.first_name ? (
               <p className="text-sm text-muted-foreground mt-0.5">@{profile.username}</p>
             ) : completionPct < 100 ? (
-              <p className="text-sm text-muted-foreground mt-0.5">Uzupełnij profil ({completionPct}%)</p>
+              <p className="text-sm text-muted-foreground mt-0.5">{t("profile.complete_profile", { pct: completionPct })}</p>
             ) : null}
           </div>
           {/* Znajomi - pill secondary z badge zaproszeń (własna funkcja: sheet znajomych) */}
@@ -331,7 +335,7 @@ const TravelerProfile = () => {
             onClick={() => setFriendsSheet(true)}
             className="relative h-10 px-5 rounded-full bg-secondary text-secondary-foreground text-sm font-semibold flex items-center gap-2 active:scale-95 transition-transform"
           >
-            Znajomi: {realFriends.length}
+            {t("profile.friends_count", { count: realFriends.length })}
             {incomingReqs.length > 0 && (
               <span className="absolute -top-1 -right-1 h-4 min-w-4 px-1 rounded-full bg-primary text-white text-[9px] font-bold flex items-center justify-center ring-2 ring-background">
                 {incomingReqs.length}
@@ -348,23 +352,23 @@ const TravelerProfile = () => {
           <SectionCard
             bg="bg-trasa-violet"
             icon={<MapIcon className="h-5 w-5 text-trasa-violet-ink" />}
-            title="Trasy"
-            subtitle="ukończone podróże"
+            title={t("sections.routes")}
+            subtitle={t("sections.routes_sub")}
             value={stats?.trips ?? 0}
             onClick={() => navigate("/dziennik")}
           />
           <SectionCard
             bg="bg-trasa-cream"
             icon={<Building2 className="h-5 w-5 text-trasa-cream-ink" />}
-            title="Miasta"
-            subtitle="odwiedzone miejsca"
+            title={t("sections.cities")}
+            subtitle={t("sections.cities_sub")}
             value={stats?.cities ?? 0}
           />
           <SectionCard
             bg="bg-trasa-orange"
             icon={<Layers className="h-5 w-5 text-trasa-orange-ink" />}
-            title="Zestawienia"
-            subtitle="Twoje kolekcje miejsc"
+            title={t("sections.collections")}
+            subtitle={t("sections.collections_sub_own")}
             value={collectionsCount}
             onClick={() => navigate("/eksploruj", { state: { myCollections: true } })}
           />
@@ -375,16 +379,16 @@ const TravelerProfile = () => {
       <Sheet open={followSheet !== null} onOpenChange={(v) => { if (!v) setFollowSheet(null); }}>
         <SheetContent side="bottom" className="h-[60dvh] flex flex-col rounded-t-2xl">
           <SheetHeader className="pb-3 border-b border-border/20">
-            <SheetTitle>{followSheet === "followers" ? "Obserwujący" : "Obserwuje"}</SheetTitle>
+            <SheetTitle>{followSheet === "followers" ? t("profile.followers") : t("profile.following")}</SheetTitle>
           </SheetHeader>
           <div className="flex-1 overflow-y-auto py-2">
             {(followSheet === "followers" ? followersList : followingList).length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-8">Brak użytkowników</p>
+              <p className="text-sm text-muted-foreground text-center py-8">{t("profile.no_users")}</p>
             ) : (
               <div className="space-y-1">
                 {(followSheet === "followers" ? followersList : followingList).map((item: any) => {
                   const profile = item.profiles;
-                  const name = profile?.first_name || profile?.username || "Użytkownik";
+                  const name = profile?.first_name || profile?.username || t("profile.user_fallback");
                   return (
                     <div key={item.follower_id ?? item.following_id} className="flex items-center gap-3 px-4 py-2.5">
                       <div className="h-9 w-9 rounded-full bg-orange-100 flex items-center justify-center text-sm font-bold text-orange-600 shrink-0">
@@ -407,12 +411,12 @@ const TravelerProfile = () => {
       <Sheet open={friendsSheet} onOpenChange={setFriendsSheet}>
         <SheetContent side="bottom" className="h-[72dvh] flex flex-col rounded-t-2xl">
           <SheetHeader className="pb-3 border-b border-border/20">
-            <SheetTitle>Znajomi</SheetTitle>
+            <SheetTitle>{t("profile.friends_title")}</SheetTitle>
           </SheetHeader>
           <div className="flex-1 overflow-y-auto py-3 space-y-5">
             {incomingReqs.length > 0 && (
               <div>
-                <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2 px-1">Zaproszenia ({incomingReqs.length})</p>
+                <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2 px-1">{t("profile.requests_title", { count: incomingReqs.length })}</p>
                 <div className="space-y-2">
                   {incomingReqs.map((p) => (
                     <div key={p.id} className="flex items-center gap-3 px-1">
@@ -424,16 +428,16 @@ const TravelerProfile = () => {
                         {p.username && <p className="text-xs text-muted-foreground">@{p.username}</p>}
                       </div>
                       <button
-                        onClick={async () => { const { error } = await acceptFriendRequest(p.id); if (!error) { toast("Dodano znajomego!"); refreshFriends(); } }}
+                        onClick={async () => { const { error } = await acceptFriendRequest(p.id); if (!error) { toast(t("profile.friend_added")); refreshFriends(); } }}
                         className="shrink-0 h-9 px-3.5 rounded-full bg-primary text-white text-xs font-bold flex items-center gap-1.5 active:scale-95 transition-transform"
                       >
-                        <Check className="h-3.5 w-3.5" /> Akceptuj
+                        <Check className="h-3.5 w-3.5" /> {t("profile.accept")}
                       </button>
                       <button
                         onClick={async () => { const { error } = await removeFriend(p.id); if (!error) refreshFriends(); }}
                         className="shrink-0 h-9 px-3 rounded-full bg-muted text-muted-foreground text-xs font-semibold active:scale-95 transition-transform"
                       >
-                        Odrzuć
+                        {t("profile.decline")}
                       </button>
                     </div>
                   ))}
@@ -443,15 +447,15 @@ const TravelerProfile = () => {
 
             {realFriends.length === 0 && incomingReqs.length === 0 ? (
               <div className="px-1 space-y-4 pt-2">
-                <p className="text-sm text-muted-foreground text-center">Nie masz jeszcze znajomych. Zaproś kogoś linkiem albo znajdź po nazwie.</p>
+                <p className="text-sm text-muted-foreground text-center">{t("profile.no_friends_hint")}</p>
                 <InviteFriendsBanner />
                 <button onClick={() => { setFriendsSheet(false); navigate("/search"); }} className="w-full py-3 rounded-full bg-secondary text-secondary-foreground font-bold text-sm active:scale-[0.97] transition-transform">
-                  Znajdź znajomych
+                  {t("profile.find_friends")}
                 </button>
               </div>
             ) : realFriends.length > 0 ? (
               <div>
-                <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2 px-1">Twoi znajomi ({realFriends.length})</p>
+                <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2 px-1">{t("profile.your_friends_title", { count: realFriends.length })}</p>
                 <div className="space-y-1">
                   {realFriends.map((f) => (
                     <button key={f.id} onClick={() => { setFriendsSheet(false); navigate(`/profil/${f.username}`); }} className="w-full flex items-center gap-3 px-1 py-2 active:bg-muted/40 rounded-xl transition-colors text-left">

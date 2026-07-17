@@ -1,0 +1,82 @@
+{
+  "header": {
+    "new_collection": "Nowe zestawienie",
+    "edit_collection": "Edytuj zestawienie",
+    "notes_and_map": "Notki i mapa",
+    "back": "Wstecz",
+    "change_theme": "Zmień motyw"
+  },
+  "form": {
+    "list": "Lista",
+    "route": "Plan"
+  },
+  "form_picker": {
+    "title": "Co tworzysz?",
+    "subtitle": "Wybierz formę zestawienia. Od tego zależą dostępne motywy w kolejnym kroku.",
+    "list_label": "Lista",
+    "list_hint": "Zbiór polecanych miejsc bez ustalonej kolejności. Np. najlepsze kawiarnie w mieście.",
+    "route_label": "Plan",
+    "route_hint": "Uporządkowany plan z kolejnością miejsc i mapą. Np. pomysł na cały dzień."
+  },
+  "theme_picker": {
+    "title": "Jaki to motyw?",
+    "subtitle_route": "Wybierz temat swojego planu. To pomaga innym go znaleźć.",
+    "subtitle_list": "Wybierz temat swojej listy. To pomaga innym go znaleźć."
+  },
+  "city_label": "Miasto",
+  "search": {
+    "placeholder": "Szukaj miejsca w {{city}}…",
+    "searching_more": "Szukam więcej miejsc…",
+    "badge_new": "nowe",
+    "empty_title": "Nie znaleziono miejsca w {{city}}",
+    "empty_hint": "Sprawdź pisownię lub spróbuj innej nazwy.",
+    "preview_cta": "Zobacz „{{query}}\" i dodaj"
+  },
+  "places": {
+    "selected": "Wybrane miejsca ({{count}})",
+    "view_list": "Widok listy",
+    "view_cards": "Widok kart",
+    "move_up": "W górę",
+    "move_down": "W dół",
+    "remove": "Usuń miejsce",
+    "add": "Dodaj miejsce",
+    "add_hint": "Wyszukaj lub wybierz z propozycji poniżej",
+    "suggestions": "Propozycje w {{city}}"
+  },
+  "notes": {
+    "collection_label": "Notka do zestawienia",
+    "optional": "(opcjonalnie)",
+    "collection_placeholder": "Napisz kilka słów o tej kolekcji: dla kogo, kiedy, dlaczego właśnie te miejsca…",
+    "places_label": "Notki do miejsc",
+    "place_placeholder": "Twoja notka o tym miejscu (opcjonalnie)…"
+  },
+  "map": {
+    "route": "Plan na mapie",
+    "list": "Miejsca na mapie"
+  },
+  "anon": {
+    "label": "Dodaj anonimowo",
+    "on": "Bez Twojego profilu i awatara.",
+    "off": "Domyślnie: z Twoim profilem i awatarem."
+  },
+  "cta": {
+    "next": "Dalej: notki i mapa",
+    "save": "Zapisz zmiany",
+    "publish": "Opublikuj zestawienie"
+  },
+  "custom_preview": {
+    "title": "Dodać to miejsce?",
+    "close": "Zamknij",
+    "reject": "Odrzuć",
+    "add": "Dodaj"
+  },
+  "toast": {
+    "already_added": "To miejsce już jest na liście",
+    "add_failed": "Nie udało się dodać miejsca",
+    "not_found": "Nie znaleziono miejsca - sprawdź nazwę",
+    "updated": "Zestawienie zaktualizowane!",
+    "sent": "Wysłane! Zestawienie pojawi się po akceptacji moderatora.",
+    "save_failed": "Nie udało się zapisać: {{error}}"
+  },
+  "error_fallback": "błąd"
+}

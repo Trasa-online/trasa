@@ -1,0 +1,86 @@
+{
+  "search": {
+    "placeholder": "Search @username...",
+    "suggested": "People you may know",
+    "loading": "Loading...",
+    "no_results": "No results"
+  },
+  "sections": {
+    "routes": "Trips",
+    "routes_sub": "completed trips",
+    "cities": "Cities",
+    "cities_sub": "places visited",
+    "collections": "Collections",
+    "collections_sub_public": "place collections",
+    "collections_sub_own": "Your place collections"
+  },
+  "public": {
+    "not_found": "User not found",
+    "back": "Back",
+    "journal_title": "{{name}}'s journal",
+    "collections_title": "{{name}}'s collections",
+    "loading": "Loading…",
+    "no_routes_title": "No trips to show",
+    "no_routes_desc": "This person hasn't shared any trips yet.",
+    "trip_fallback": "Trip",
+    "days_count": "{{n}} days",
+    "places_count_one": "{{count}} place",
+    "places_count_other": "{{count}} places"
+  },
+  "profile": {
+    "header_fallback": "profile",
+    "settings_aria": "Settings",
+    "change_photo_aria": "Change profile photo",
+    "user_fallback": "User",
+    "complete_profile": "Complete your profile ({{pct}}%)",
+    "friends_count": "Friends: {{count}}",
+    "followers": "Followers",
+    "following": "Following",
+    "no_users": "No users",
+    "friends_title": "Friends",
+    "requests_title": "Requests ({{count}})",
+    "friend_added": "Friend added!",
+    "accept": "Accept",
+    "decline": "Decline",
+    "no_friends_hint": "You don't have any friends yet. Invite someone with a link or find them by name.",
+    "find_friends": "Find friends",
+    "your_friends_title": "Your friends ({{count}})",
+    "avatar_type_error": "Only JPG, PNG or WebP",
+    "avatar_size_error": "Max 5 MB",
+    "avatar_upload_error": "Error while uploading the photo",
+    "avatar_save_error": "Error saving profile",
+    "avatar_updated": "Photo updated!",
+    "photo_read_error": "Could not read the photo",
+    "photo_pick_error": "Could not pick a photo"
+  },
+  "guest": {
+    "title": "Your traveler profile",
+    "desc": "Create an account to build your profile, invite friends and keep track of your trips in one place.",
+    "register": "Create account",
+    "login": "Log in"
+  },
+  "invite": {
+    "share_title": "Invitation to Trasa",
+    "link_copied": "Link copied",
+    "shared": "Shared",
+    "slot_label": "Invitation {{slot}}",
+    "pending": "Awaiting acceptance",
+    "unused": "Unused",
+    "invited_label": "Invited:"
+  },
+  "add_friend": {
+    "inviter_fallback": "your friend",
+    "adding": "Adding your friend…",
+    "already": "You're already friends",
+    "success": "You're now friends!",
+    "you_and": "You and {{name}}",
+    "success_desc": "You can now plan trips together with a single tap and follow each other's journeys.",
+    "view_profile": "View {{name}}'s profile",
+    "go_to_app": "Go to the app",
+    "self_title": "This is your own link",
+    "self_desc": "Send it to friends so they can add you to their list.",
+    "home": "Home",
+    "error_title": "Link invalid or expired",
+    "error_desc": "Ask your friend for a new invite link."
+  }
+}

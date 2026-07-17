@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { avatarSrc } from "@/lib/avatar";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -12,6 +13,7 @@ import InviteFriendsBanner from "@/components/social/InviteFriendsBanner";
 type Profile = { id: string; username: string; first_name: string | null; avatar_url: string | null };
 
 export default function UserSearch() {
+  const { t } = useTranslation("profiles");
   const { user } = useAuth();
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
@@ -71,7 +73,7 @@ export default function UserSearch() {
             type="text"
             value={query}
             onChange={e => setQuery(e.target.value)}
-            placeholder="Szukaj @username..."
+            placeholder={t("search.placeholder")}
             autoComplete="off"
             autoCorrect="off"
             autoCapitalize="off"
@@ -86,13 +88,13 @@ export default function UserSearch() {
         {!trimmed && (
           <div className="px-4 pt-4">
             <InviteFriendsBanner />
-            <p className="text-sm font-bold mt-5 mb-1 px-1">Osoby, które możesz znać</p>
+            <p className="text-sm font-bold mt-5 mb-1 px-1">{t("search.suggested")}</p>
           </div>
         )}
         {isLoading ? (
-          <p className="text-sm text-muted-foreground text-center py-12">Ładowanie...</p>
+          <p className="text-sm text-muted-foreground text-center py-12">{t("search.loading")}</p>
         ) : visible.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-12">Brak wyników</p>
+          <p className="text-sm text-muted-foreground text-center py-12">{t("search.no_results")}</p>
         ) : (
           <div className="divide-y divide-border/30">
             {visible.map(profile => {

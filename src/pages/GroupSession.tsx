@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { avatarSrc } from "@/lib/avatar";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Users, MapPin, Star, Check, UserPlus, CalendarDays, Copy, Share2, Search, X, Loader2 } from "lucide-react";
@@ -68,6 +69,7 @@ const GroupSession = () => {
   const { user, isAnonymous, loading: authLoading } = useAuth();
   const { open: openAuthDrawer } = useAuthDrawer();
   const queryClient = useQueryClient();
+  const { t } = useTranslation("group");
 
   const [tab, setTab] = useState<"swipe" | "matches">("swipe");
   const [joining, setJoining] = useState(false);
@@ -362,9 +364,9 @@ const GroupSession = () => {
       // Find who else contributed to this match (not current user)
       const otherReaction = reactions.find(r => r.place_name === match.place_name && r.user_id !== user?.id);
       const otherMember = members.find((m: any) => m.user_id === otherReaction?.user_id);
-      const otherName = otherMember?.profile?.first_name || otherMember?.profile?.username || "Znajomy";
+      const otherName = otherMember?.profile?.first_name || otherMember?.profile?.username || t("fallback.friend");
       // Toast w jednolitym nowym UI (bialy, ikona w kole, x) zamiast custom czarnego bannera.
-      toast.success("Nowe dopasowanie!", { description: `${otherName} też polubił(a) ${match.place_name}` });
+      toast.success(t("toast.new_match_title"), { description: t("toast.new_match_desc", { name: otherName, place: match.place_name }) });
     }
   }, [matches]);
 
@@ -399,7 +401,7 @@ const GroupSession = () => {
     setLobbyQuery("");
     setLobbyResults([]);
     refetchLobbyProposals();
-    toast.success("Propozycja wysłana!");
+    toast.success(t("toast.proposal_sent"));
   };
 
   const handleLobbySuggestNew = async () => {
@@ -412,12 +414,12 @@ const GroupSession = () => {
         google_maps_url: lobbySuggestUrl.trim() || null,
         suggested_by: user?.id ?? null,
       });
-      toast.success("Dziękujemy! Dodamy to miejsce wkrótce 🙌");
+      toast.success(t("toast.suggestion_thanks"));
       setLobbySuggestOpen(false);
       setLobbySuggestUrl("");
       setLobbyQuery("");
     } catch {
-      toast.error("Nie udało się wysłać sugestii");
+      toast.error(t("toast.suggestion_error"));
     } finally {
       setLobbySuggestSending(false);
     }
@@ -438,9 +440,9 @@ const GroupSession = () => {
       const { error } = await supabase.rpc("join_group_session" as any, { p_session_id: session.id });
       if (error) throw error;
       queryClient.invalidateQueries({ queryKey: ["group-session-members", session.id] });
-      toast.success("Dołączono do sesji!");
+      toast.success(t("toast.joined"));
     } catch (e: any) {
-      toast.error(e.message || "Błąd podczas dołączania");
+      toast.error(e.message || t("toast.join_error"));
     } finally {
       setJoining(false);
     }
@@ -545,7 +547,7 @@ const GroupSession = () => {
       .update({ categories: newCategories, current_category_index: newIndex })
       .eq("id", session.id);
     if (error) {
-      toast.error("Błąd zapisu: " + error.message);
+      toast.error(t("toast.save_error", { message: error.message }));
       // Revert local override on failure
       setLocalActiveCategory(null);
       return;
@@ -646,7 +648,7 @@ const GroupSession = () => {
       const hostName = await getCurrentHostName();
       void sendGroupInvitePush({ targetUserId: profile.id, hostName, city: session.city, joinCode });
     } catch {
-      toast.error("Nie udało się wysłać zaproszenia");
+      toast.error(t("toast.invite_error"));
     } finally {
       setWaitingInviting(null);
     }
@@ -665,10 +667,10 @@ const GroupSession = () => {
           await sendGroupInvitePush({ targetUserId: friendId, hostName, city: session.city, joinCode });
         })
       );
-      toast.success(`Zaproszenia wysłane (${selectedFriends.size})`);
+      toast.success(t("toast.invites_sent", { count: selectedFriends.size }));
       setInviteOpen(false);
     } catch {
-      toast.error("Nie udało się wysłać zaproszeń");
+      toast.error(t("toast.invites_error"));
     } finally {
       setSendingInvites(false);
     }
@@ -684,11 +686,11 @@ const GroupSession = () => {
         google_maps_url: suggestUrl.trim() || null,
         suggested_by: user?.id ?? null,
       });
-      toast.success("Dziękujemy! Dodamy to miejsce wkrótce 🙌");
+      toast.success(t("toast.suggestion_thanks"));
       setSuggestOpen(false);
       setSuggestUrl("");
     } catch {
-      toast.error("Nie udało się wysłać sugestii");
+      toast.error(t("toast.suggestion_error"));
     } finally {
       setSuggestSending(false);
     }
@@ -712,9 +714,9 @@ const GroupSession = () => {
     return (
       <div className="flex h-screen flex-col items-center justify-center px-8 gap-4 bg-background text-center">
         <p className="text-4xl">🔍</p>
-        <p className="font-bold text-lg">Nie znaleziono sesji</p>
-        <p className="text-sm text-muted-foreground">Sprawdź czy kod zaproszenia jest poprawny.</p>
-        <button onClick={() => navigate("/")} className="text-sm text-orange-600 font-semibold underline">Wróć do głównej</button>
+        <p className="font-bold text-lg">{t("not_found.title")}</p>
+        <p className="text-sm text-muted-foreground">{t("not_found.desc")}</p>
+        <button onClick={() => navigate("/")} className="text-sm text-orange-600 font-semibold underline">{t("not_found.back")}</button>
       </div>
     );
   }
@@ -725,12 +727,12 @@ const GroupSession = () => {
       return (
         <div className="flex h-screen flex-col items-center justify-center px-8 gap-4 bg-background text-center max-w-sm mx-auto">
           <p className="text-4xl">👋</p>
-          <p className="font-bold text-lg">Zaloguj się, żeby dołączyć</p>
+          <p className="font-bold text-lg">{t("login_gate.title")}</p>
           <p className="text-sm text-muted-foreground">
-            Twój znajomy zaprasza Cię do wspólnego wybierania miejsc w <strong>{session.city}</strong>.
+            {t("login_gate.desc_before")}<strong>{session.city}</strong>.
           </p>
           <button onClick={() => navigate(`/auth?return=/sesja/${joinCode}`)} className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-base">
-            Zaloguj się
+            {t("login_gate.cta")}
           </button>
         </div>
       );
@@ -743,7 +745,7 @@ const GroupSession = () => {
             <div key={i} className="h-2 w-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
           ))}
         </div>
-        <p className="text-sm text-muted-foreground">Przygotowujemy sesję…</p>
+        <p className="text-sm text-muted-foreground">{t("preparing")}</p>
       </div>
     );
   }
@@ -757,26 +759,26 @@ const GroupSession = () => {
           <button onClick={() => navigate("/")} className="h-9 w-9 flex items-center justify-center -ml-1 shrink-0">
             <ArrowLeft className="h-5 w-5" />
           </button>
-          <span className="font-bold text-base">Zaproszenie do sesji</span>
+          <span className="font-bold text-base">{t("join.header")}</span>
         </div>
         <div className="flex-1 flex flex-col items-center justify-center px-8 gap-6 text-center">
           <div className="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center">
             <Users className="h-10 w-10 text-orange-600" />
           </div>
           <div>
-            <p className="text-xl font-black mb-1">Wybieracie miejsca razem</p>
+            <p className="text-xl font-black mb-1">{t("join.title")}</p>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              Eksplorujcie miejsca w <strong>{session.city}</strong> niezależnie i sprawdźcie, co Was łączy!
+              {t("join.desc_before")}<strong>{session.city}</strong>{t("join.desc_after")}
             </p>
           </div>
           {members.length > 0 && (
             <div className="w-full rounded-2xl border border-border/40 bg-card p-4">
-              <p className="text-xs text-muted-foreground mb-3">W sesji ({members.length}/4)</p>
+              <p className="text-xs text-muted-foreground mb-3">{t("join.in_session", { count: members.length })}</p>
               <div className="flex flex-col gap-2">
                 {members.map((m: any) => (
                   <div key={m.user_id} className="flex items-center gap-3">
                     <img src={avatarSrc(m.profile?.avatar_url)} alt="" className="h-8 w-8 rounded-full object-cover bg-orange-100 shrink-0" />
-                    <span className="text-sm font-medium">{m.profile?.first_name || m.profile?.username || "Użytkownik"}</span>
+                    <span className="text-sm font-medium">{m.profile?.first_name || m.profile?.username || t("fallback.user")}</span>
                   </div>
                 ))}
               </div>
@@ -787,7 +789,7 @@ const GroupSession = () => {
             disabled={joining || members.length >= 10}
             className="w-full py-4 rounded-full bg-primary text-white font-bold text-base active:scale-[0.97] transition-transform disabled:opacity-40"
           >
-            {joining ? "Dołączam…" : members.length >= 10 ? "Sesja pełna (max 10)" : "Dołącz i zacznij przeglądać"}
+            {joining ? t("join.joining") : members.length >= 10 ? t("join.full") : t("join.cta")}
           </button>
         </div>
       </div>
@@ -834,14 +836,14 @@ const GroupSession = () => {
           <button
             onClick={() => { setSearchOpen(o => !o); if (searchOpen) setPlaceSearchQuery(""); else setTimeout(() => searchInputRef.current?.focus(), 50); }}
             className="h-7 w-7 rounded-full bg-muted flex items-center justify-center"
-            title="Szukaj miejsca"
+            title={t("search_place_title")}
           >
             {searchOpen ? <X className="h-3.5 w-3.5 text-muted-foreground" /> : <Search className="h-3.5 w-3.5 text-muted-foreground" />}
           </button>
           <button
             onClick={() => setInviteOpen(true)}
             className="h-7 w-7 rounded-full bg-muted flex items-center justify-center"
-            title="Zaproś do sesji"
+            title={t("invite_title")}
           >
             <UserPlus className="h-3.5 w-3.5 text-muted-foreground" />
           </button>
@@ -858,7 +860,7 @@ const GroupSession = () => {
               type="text"
               value={placeSearchQuery}
               onChange={e => setPlaceSearchQuery(e.target.value)}
-              placeholder="Szukaj miejsca…"
+              placeholder={t("search_placeholder")}
               autoComplete="off"
               autoCorrect="off"
               autoCapitalize="off"
@@ -881,13 +883,13 @@ const GroupSession = () => {
           onClick={() => setTab("swipe")}
           className={`flex-1 py-2.5 text-sm font-semibold transition-colors ${tab === "swipe" ? "text-orange-600 border-b-2 border-orange-600" : "text-muted-foreground"}`}
         >
-          Eksploruj
+          {t("tab_explore")}
         </button>
         <button
           onClick={() => setTab("matches")}
           className={`flex-1 py-2.5 text-sm font-semibold transition-colors flex items-center justify-center gap-1.5 ${tab === "matches" ? "text-orange-600 border-b-2 border-orange-600" : "text-muted-foreground"}`}
         >
-          Dopasowania
+          {t("tab_matches")}
           {matches.length > 0 && (
             <span className="h-[18px] min-w-[18px] px-1 rounded-full bg-primary text-white text-[10px] font-bold flex items-center justify-center">
               {matches.length}
@@ -909,9 +911,9 @@ const GroupSession = () => {
               <div className="flex-1 overflow-y-auto px-4 py-6 flex flex-col gap-5">
                 <div className="text-center">
                   <div className="mx-auto h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center text-3xl mb-3">⏳</div>
-                  <p className="text-lg font-black mb-1">Czekamy na kogoś jeszcze</p>
+                  <p className="text-lg font-black mb-1">{t("waiting.title")}</p>
                   <p className="text-sm text-muted-foreground leading-relaxed">
-                    Wybieranie zacznie się gdy co najmniej jedna osoba dołączy do sesji.
+                    {t("waiting.desc")}
                   </p>
                 </div>
 
@@ -919,7 +921,7 @@ const GroupSession = () => {
                 <div className="rounded-2xl border border-border/40 bg-card p-4 space-y-3">
                   <div className="flex items-center gap-2">
                     <UserPlus className="h-4 w-4 text-orange-600 shrink-0" />
-                    <p className="text-sm font-semibold">Zaproś znajomych</p>
+                    <p className="text-sm font-semibold">{t("waiting.invite_friends")}</p>
                   </div>
                   <div className="flex items-center gap-2 bg-background border border-border/60 rounded-2xl px-3 h-10">
                     <Search className="h-4 w-4 text-muted-foreground shrink-0" />
@@ -928,7 +930,7 @@ const GroupSession = () => {
                       inputMode="search"
                       value={waitingSearch}
                       onChange={(e) => setWaitingSearch(e.target.value)}
-                      placeholder="Szukaj po imieniu lub @nickname…"
+                      placeholder={t("waiting.search_placeholder")}
                       autoComplete="off"
                       autoCorrect="off"
                       autoCapitalize="off"
@@ -963,7 +965,7 @@ const GroupSession = () => {
                                 isInvited ? "border border-border/60 text-emerald-600" : "bg-primary text-white"
                               )}
                             >
-                              {isInvited ? <><Check className="h-3 w-3" />Zaproszono</> : isSending ? "…" : <><UserPlus className="h-3 w-3" />Zaproś</>}
+                              {isInvited ? <><Check className="h-3 w-3" />{t("waiting.invited")}</> : isSending ? "…" : <><UserPlus className="h-3 w-3" />{t("waiting.invite")}</>}
                             </button>
                           </div>
                         );
@@ -971,29 +973,29 @@ const GroupSession = () => {
                     </div>
                   )}
                   {waitingSearch.trim().length >= 2 && waitingResults.length === 0 && (
-                    <p className="text-xs text-muted-foreground text-center py-1">Nie znaleziono użytkownika</p>
+                    <p className="text-xs text-muted-foreground text-center py-1">{t("waiting.not_found")}</p>
                   )}
 
                   <button
                     onClick={async () => {
                       const result = await share({
-                        title: "Dołącz do mojej sesji w Trasa",
-                        text: `Dołącz używając kodu: ${joinCode}`,
+                        title: t("share_sheet.title"),
+                        text: t("share_sheet.text", { code: joinCode }),
                         url: `${SHARE_BASE_URL}/#/sesja/${joinCode}`,
                       });
                       if (!result.ok) return;
-                      toast.success(result.method === "clipboard" ? "Link skopiowany" : "Udostępniono");
+                      toast.success(result.method === "clipboard" ? t("toast.link_copied") : t("toast.shared"));
                     }}
                     className="w-full py-2.5 rounded-full bg-secondary text-secondary-foreground text-sm font-semibold flex items-center justify-center gap-2 active:scale-95 transition-transform"
                   >
                     <Share2 className="h-4 w-4" />
-                    Udostępnij link
+                    {t("waiting.share_link")}
                   </button>
                 </div>
 
                 {/* Share code */}
                 <div className="rounded-2xl border border-border/40 bg-card p-4 space-y-3">
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Lub udostępnij kod</p>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t("waiting.or_share_code")}</p>
                   <p className="text-3xl font-black tracking-widest text-center py-1">{joinCode}</p>
                   <div className="flex gap-2">
                     <button
@@ -1001,23 +1003,23 @@ const GroupSession = () => {
                       className="flex-1 py-2.5 rounded-full bg-primary text-white text-sm font-semibold flex items-center justify-center gap-2 active:scale-95 transition-transform"
                     >
                       {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                      {copied ? "Skopiowano!" : "Kopiuj kod"}
+                      {copied ? t("waiting.copied") : t("waiting.copy_code")}
                     </button>
                     <button
                       onClick={async () => {
                         const result = await share({
-                          title: "Dołącz do mojej sesji w Trasa",
-                          text: `Dołącz używając kodu: ${joinCode}`,
+                          title: t("share_sheet.title"),
+                          text: t("share_sheet.text", { code: joinCode }),
                           url: `${SHARE_BASE_URL}/#/sesja/${joinCode}`,
                         });
                         if (result.ok && result.method === "clipboard") {
-                          toast.success("Link skopiowany");
+                          toast.success(t("toast.link_copied"));
                         }
                       }}
                       className="flex-1 py-2.5 rounded-full border border-border/60 bg-background text-sm font-semibold flex items-center justify-center gap-2 active:scale-95 transition-transform"
                     >
                       <Share2 className="h-4 w-4" />
-                      Udostępnij
+                      {t("waiting.share")}
                     </button>
                   </div>
                 </div>
@@ -1035,18 +1037,18 @@ const GroupSession = () => {
                     <div className="rounded-2xl bg-emerald-500/10 border border-emerald-500/20 px-4 py-3 flex items-center gap-3">
                       <span className="text-xl">✅</span>
                       <div>
-                        <p className="text-sm font-bold text-emerald-700">Runda zakończona!</p>
-                        <p className="text-xs text-emerald-600/70">Wybierz kolejną kategorię lub zakończ wybieranie.</p>
+                        <p className="text-sm font-bold text-emerald-700">{t("round_done_title")}</p>
+                        <p className="text-xs text-emerald-600/70">{t("round_done_desc")}</p>
                       </div>
                     </div>
                   )}
                   {isFirst && <LobbyProposals lobbyQuery={lobbyQuery} setLobbyQuery={setLobbyQuery} lobbyResults={lobbyResults} lobbySearching={lobbySearching} lobbyProposals={lobbyProposals} members={members} handleLobbyPropose={handleLobbyPropose} onSuggestNew={() => setLobbySuggestOpen(true)} />}
                   <div>
                     <p className="font-bold text-base mb-0.5">
-                      {isFirst ? "Wybierz pierwszą kategorię" : "Wybierz następną kategorię"}
+                      {isFirst ? t("pick_first") : t("pick_next")}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      Każda runda to 10 miejsc - wybierzcie kategorię albo wolną eksplorację (losowe miejsca).
+                      {t("pick_desc")}
                     </p>
                   </div>
                   {/* Wolna eksploracja - 10 losowych miejsc. Zablokowana jesli juz uzyta
@@ -1066,7 +1068,7 @@ const GroupSession = () => {
                         }`}
                       >
                         <span>🎲</span>
-                        <span>{freeUsed ? "Wszystko - już zrobione" : "Wszystko - 10 losowych miejsc"}</span>
+                        <span>{freeUsed ? t("free_used") : t("free_available")}</span>
                       </button>
                     );
                   })()}
@@ -1104,14 +1106,14 @@ const GroupSession = () => {
                       disabled={savingCategory || !pendingCategory}
                       className="w-full py-4 rounded-full bg-primary text-white font-bold text-base active:scale-[0.97] transition-transform disabled:opacity-40"
                     >
-                      {savingCategory ? "Startuję…" : isFirst ? "Zacznij wybieranie" : "Następna runda →"}
+                      {savingCategory ? t("starting") : isFirst ? t("start_picking") : t("next_round")}
                     </button>
                     {!isFirst && (
                       <button
                         onClick={() => setTab("matches")}
                         className="w-full py-3 rounded-2xl border border-border/50 bg-card font-semibold text-sm"
                       >
-                        Zakończ i sprawdź dopasowania ({matches.length})
+                        {t("finish_check_matches", { count: matches.length })}
                       </button>
                     )}
                   </div>
@@ -1129,7 +1131,7 @@ const GroupSession = () => {
                     <div className="flex gap-1">
                       {[0,1,2].map(i => <div key={i} className="h-1.5 w-1.5 rounded-full bg-primary/50 animate-bounce" style={{ animationDelay: `${i*0.15}s` }} />)}
                     </div>
-                    <p className="text-xs text-muted-foreground">Organizator wybiera kategorię…</p>
+                    <p className="text-xs text-muted-foreground">{t("organizer_picking")}</p>
                   </div>
                 </div>
               );
@@ -1140,9 +1142,9 @@ const GroupSession = () => {
                   <Users className="h-10 w-10 text-orange-600" />
                 </div>
                 <div>
-                  <p className="text-xl font-black mb-1">Runda zakończona!</p>
+                  <p className="text-xl font-black mb-1">{t("round_done_title")}</p>
                   <p className="text-sm text-muted-foreground leading-relaxed">
-                    Czekam aż organizator wybierze kolejną kategorię.
+                    {t("round_done_waiting_desc")}
                   </p>
                 </div>
                 <div className="flex gap-1.5">
@@ -1167,9 +1169,9 @@ const GroupSession = () => {
                 </span>
 
                 <div className="space-y-1">
-                  <p className="font-black text-2xl leading-tight">Gotowe!</p>
+                  <p className="font-black text-2xl leading-tight">{t("finished.done")}</p>
                   <p className="text-sm text-muted-foreground">
-                    Czekam aż wszyscy skończą tę kategorię
+                    {t("finished.waiting_others")}
                   </p>
                 </div>
 
@@ -1198,14 +1200,14 @@ const GroupSession = () => {
                   })}
                 </div>
 
-                <p className="text-xs text-muted-foreground">{doneCount} / {members.length} gotowych</p>
+                <p className="text-xs text-muted-foreground">{t("finished.ready_count", { done: doneCount, total: members.length })}</p>
 
                 {isCreator && (
                   <button
                     onClick={handleSkipWaiting}
                     className="py-2.5 px-5 rounded-full border border-border/50 bg-card text-sm font-semibold text-muted-foreground active:scale-[0.97] transition-transform"
                   >
-                    Pomiń oczekiwanie →
+                    {t("finished.skip_waiting")}
                   </button>
                 )}
 
@@ -1214,9 +1216,9 @@ const GroupSession = () => {
                   <div className="rounded-2xl bg-emerald-500/10 border border-emerald-500/20 px-6 py-4 flex flex-col items-center gap-1">
                     <p className="text-3xl font-black text-emerald-700">{matches.length}</p>
                     <p className="text-sm font-semibold text-emerald-600">
-                      {matches.length === 1 ? "wspólne miejsce" : matches.length < 5 ? "wspólne miejsca" : "wspólnych miejsc"}
+                      {matches.length === 1 ? t("shared_spot_one") : matches.length < 5 ? t("shared_spot_few") : t("shared_spot_many")}
                     </p>
-                    <p className="text-xs text-emerald-600/70">do tej pory</p>
+                    <p className="text-xs text-emerald-600/70">{t("finished.so_far")}</p>
                   </div>
                 )}
               </div>
@@ -1248,7 +1250,7 @@ const GroupSession = () => {
                     <div key={i} className="h-2 w-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
                   ))}
                 </div>
-                <p className="text-sm text-muted-foreground">Ładowanie miejsc…</p>
+                <p className="text-sm text-muted-foreground">{t("loading_places")}</p>
               </div>
             );
           }
@@ -1257,17 +1259,16 @@ const GroupSession = () => {
           return (
             <div className="flex-1 flex flex-col items-center justify-center px-8 gap-4 text-center">
               <p className="text-3xl">😕</p>
-              <p className="font-bold">Brak miejsc w tej kategorii</p>
+              <p className="font-bold">{t("no_places_title")}</p>
               <p className="text-sm text-muted-foreground">
-                Nie mamy jeszcze miejsc z kategorii{" "}
-                <strong>{catLabelOf(currentCategory)}</strong> dla {session.city}.
+                {t("no_places_desc_before")}<strong>{catLabelOf(currentCategory)}</strong>{t("no_places_desc_after", { city: session.city })}
               </p>
               {isCreator && (
                 <button
                   onClick={handleCategoryComplete}
                   className="py-3 px-6 rounded-full bg-primary text-white font-semibold text-sm active:scale-[0.97] transition-transform"
                 >
-                  Przejdź do następnej kategorii
+                  {t("next_category")}
                 </button>
               )}
             </div>
@@ -1283,12 +1284,12 @@ const GroupSession = () => {
               {matches.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-16 gap-4 text-center">
                   <p className="text-4xl">🤔</p>
-                  <p className="font-bold">Brak dopasowań jeszcze</p>
+                  <p className="font-bold">{t("matches.empty_title")}</p>
                   <p className="text-sm text-muted-foreground leading-relaxed max-w-[260px]">
-                    Potrzeba co najmniej 2 osób, które polubiły to samo miejsce. Wróć do eksplorowania!
+                    {t("matches.empty_desc")}
                   </p>
                   <button onClick={() => setTab("swipe")} className="py-3 px-6 rounded-full bg-primary text-white font-semibold text-sm">
-                    Eksploruj dalej
+                    {t("matches.explore_more")}
                   </button>
                 </div>
               ) : (() => {
@@ -1303,7 +1304,7 @@ const GroupSession = () => {
                   return (
                     <div className="space-y-5">
                       <p className="text-xs text-muted-foreground">
-                        {matches.length} {matches.length === 1 ? "wspólne miejsce" : "wspólnych miejsc"}
+                        {matches.length} {matches.length === 1 ? t("shared_spot_one") : t("shared_spot_many")}
                       </p>
                       {Object.entries(grouped).map(([cat, items]) => {
                         const meta = catMeta(cat);
@@ -1405,14 +1406,14 @@ const GroupSession = () => {
                   }}
                   className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-sm active:scale-[0.97] transition-transform"
                 >
-                  {existingRoute ? "Zaproponuj nową trasę →" : "Zaproponuj trasę z wybranych miejsc →"}
+                  {existingRoute ? t("matches.propose_new_route") : t("matches.propose_route")}
                 </button>
               )}
               {/* Hint dla uczestnikow gdy host jeszcze nie zapisal trasy */}
               {matches.length > 0 && !isCreator && !existingRoute && (
                 <div className="w-full py-3 rounded-2xl bg-muted/40 border border-border/30 text-center">
                   <p className="text-xs text-muted-foreground leading-relaxed px-4">
-                    Czekamy aż gospodarz sesji zapisze trasę z waszych dopasowań.
+                    {t("matches.waiting_host")}
                   </p>
                 </div>
               )}
@@ -1423,7 +1424,7 @@ const GroupSession = () => {
                   onClick={() => navigate("/create", { state: { city: existingRoute.city, existingRouteId: existingRoute.id } })}
                   className="w-full py-3.5 rounded-full bg-foreground text-background font-bold text-sm active:scale-[0.97] transition-transform"
                 >
-                  Otwórz zapisaną trasę →
+                  {t("matches.open_saved_route")}
                 </button>
               )}
               {existingRoute && !isCreator && (
@@ -1431,7 +1432,7 @@ const GroupSession = () => {
                   onClick={() => navigate("/")}
                   className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-sm active:scale-[0.97] transition-transform"
                 >
-                  {`Trasa gotowa - zobacz ją na ekranie głównym →`}
+                  {t("matches.route_ready")}
                 </button>
               )}
               {matches.length > 0 && (
@@ -1448,7 +1449,7 @@ const GroupSession = () => {
                   }}
                   className={`w-full py-3 rounded-full font-semibold text-sm active:scale-[0.97] transition-transform ${matches.length > 0 ? "border border-border/50 text-muted-foreground bg-card" : "bg-primary text-white"}`}
                 >
-                  Zakończ wybieranie
+                  {t("matches.finish")}
                 </button>
               )}
             </div>
@@ -1460,7 +1461,7 @@ const GroupSession = () => {
       <Sheet open={inviteOpen} onOpenChange={setInviteOpen}>
         <SheetContent side="bottom" className="rounded-t-2xl pb-8 max-h-[85vh] flex flex-col">
           <SheetHeader className="pb-3 shrink-0">
-            <SheetTitle>Zaproś do sesji</SheetTitle>
+            <SheetTitle>{t("invite_title")}</SheetTitle>
           </SheetHeader>
 
           {/* Code copy row */}
@@ -1477,19 +1478,19 @@ const GroupSession = () => {
               className="px-4 flex items-center justify-center gap-2 rounded-full border border-border/50 bg-card text-sm font-semibold active:scale-[0.97] transition-transform"
             >
               <Copy className="h-4 w-4" />
-              {copied ? "✓" : "Kopiuj"}
+              {copied ? "✓" : t("invite_sheet.copy")}
             </button>
           </div>
 
           {/* Friend search */}
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 shrink-0">Znajdź znajomych</p>
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 shrink-0">{t("invite_sheet.find_friends")}</p>
           <div className="relative mb-3 shrink-0">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <input
               type="text"
               value={friendSearch}
               onChange={(e) => setFriendSearch(e.target.value)}
-              placeholder="Szukaj po nazwie lub @nickname…"
+              placeholder={t("invite_sheet.search_placeholder")}
               className="w-full pl-9 pr-4 py-2.5 rounded-2xl bg-muted text-sm placeholder:text-muted-foreground/60 outline-none"
               style={{ fontSize: "16px" }}
             />
@@ -1538,9 +1539,9 @@ const GroupSession = () => {
                 })}
               </ul>
             ) : friendSearch.trim().length >= 2 ? (
-              <p className="text-sm text-muted-foreground text-center py-6">Brak wyników dla „{friendSearch}"</p>
+              <p className="text-sm text-muted-foreground text-center py-6">{t("invite_sheet.no_results", { query: friendSearch })}</p>
             ) : (
-              <p className="text-sm text-muted-foreground text-center py-6">Wpisz co najmniej 2 znaki, żeby wyszukać</p>
+              <p className="text-sm text-muted-foreground text-center py-6">{t("invite_sheet.hint_min_chars")}</p>
             )}
           </div>
 
@@ -1556,10 +1557,10 @@ const GroupSession = () => {
             )}
           >
             {sendingInvites
-              ? "Wysyłanie…"
+              ? t("invite_sheet.sending")
               : selectedFriends.size > 0
-                ? `Wyślij zaproszenia (${selectedFriends.size})`
-                : "Wybierz znajomych"}
+                ? t("invite_sheet.send_invites", { count: selectedFriends.size })
+                : t("invite_sheet.select_friends")}
           </button>
         </SheetContent>
       </Sheet>
@@ -1568,15 +1569,15 @@ const GroupSession = () => {
       <Sheet open={suggestOpen} onOpenChange={(o) => { setSuggestOpen(o); if (!o) setSuggestUrl(""); }}>
         <SheetContent side="bottom" className="rounded-t-2xl pb-safe-6 pb-8">
           <SheetHeader className="pb-4">
-            <SheetTitle>Zaproponuj dodanie miejsca</SheetTitle>
+            <SheetTitle>{t("suggest.title")}</SheetTitle>
           </SheetHeader>
           <div className="space-y-4">
             <div className="rounded-2xl bg-muted px-4 py-3">
-              <p className="text-xs text-muted-foreground mb-0.5">Nazwa miejsca</p>
+              <p className="text-xs text-muted-foreground mb-0.5">{t("suggest.place_name_label")}</p>
               <p className="font-semibold text-sm">{placeSearchQuery.trim()}</p>
             </div>
             <div>
-              <p className="text-sm font-medium mb-2">Link do wizytówki Google <span className="text-muted-foreground font-normal">(opcjonalnie)</span></p>
+              <p className="text-sm font-medium mb-2">{t("suggest.google_link_label")} <span className="text-muted-foreground font-normal">{t("suggest.optional")}</span></p>
               <input
                 type="url"
                 inputMode="url"
@@ -1587,14 +1588,14 @@ const GroupSession = () => {
                 className="w-full px-4 py-3 rounded-2xl border border-border/60 bg-background text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
                 style={{ fontSize: "16px" }}
               />
-              <p className="text-xs text-muted-foreground mt-1.5">Wklej link z Google Maps - pomoże nam szybciej dodać miejsce</p>
+              <p className="text-xs text-muted-foreground mt-1.5">{t("suggest.google_link_hint")}</p>
             </div>
             <button
               onClick={handleSuggestPlace}
               disabled={suggestSending || !placeSearchQuery.trim()}
               className="w-full py-4 rounded-full bg-primary text-white font-bold text-base active:scale-[0.97] transition-transform disabled:opacity-50"
             >
-              {suggestSending ? "Wysyłam…" : "Wyślij sugestię"}
+              {suggestSending ? t("suggest.sending") : t("suggest.submit")}
             </button>
           </div>
         </SheetContent>
@@ -1605,15 +1606,15 @@ const GroupSession = () => {
         <SheetContent side="bottom" className="rounded-t-3xl pb-safe-6 px-5 pt-6 space-y-5 [&>button]:hidden">
           <div className="w-10 h-1 bg-foreground/20 rounded-full mx-auto mb-1" />
           <SheetHeader className="text-left p-0">
-            <SheetTitle>Zaproponuj dodanie miejsca</SheetTitle>
+            <SheetTitle>{t("suggest.title")}</SheetTitle>
           </SheetHeader>
           <div className="space-y-4">
             <div className="rounded-2xl bg-muted px-4 py-3">
-              <p className="text-xs text-muted-foreground mb-0.5">Nazwa miejsca</p>
+              <p className="text-xs text-muted-foreground mb-0.5">{t("suggest.place_name_label")}</p>
               <p className="font-semibold text-sm">{lobbyQuery.trim()}</p>
             </div>
             <div>
-              <p className="text-sm font-medium mb-2">Link do wizytówki Google <span className="text-muted-foreground font-normal">(opcjonalnie)</span></p>
+              <p className="text-sm font-medium mb-2">{t("suggest.google_link_label")} <span className="text-muted-foreground font-normal">{t("suggest.optional")}</span></p>
               <input
                 type="url"
                 inputMode="url"
@@ -1624,14 +1625,14 @@ const GroupSession = () => {
                 className="w-full px-4 py-3 rounded-2xl border border-border/60 bg-background text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
                 style={{ fontSize: "16px" }}
               />
-              <p className="text-xs text-muted-foreground mt-1.5">Wklej link z Google Maps - pomoże nam szybciej dodać miejsce</p>
+              <p className="text-xs text-muted-foreground mt-1.5">{t("suggest.google_link_hint")}</p>
             </div>
             <button
               onClick={handleLobbySuggestNew}
               disabled={lobbySuggestSending || !lobbyQuery.trim()}
               className="w-full py-4 rounded-full bg-primary text-white font-bold text-base active:scale-[0.97] transition-transform disabled:opacity-50"
             >
-              {lobbySuggestSending ? "Wysyłam…" : "Wyślij sugestię"}
+              {lobbySuggestSending ? t("suggest.sending") : t("suggest.submit")}
             </button>
           </div>
         </SheetContent>
@@ -1664,12 +1665,14 @@ interface LobbyProposalsProps {
 const LobbyProposals = ({
   lobbyQuery, setLobbyQuery, lobbyResults, lobbySearching,
   lobbyProposals, members, handleLobbyPropose, onSuggestNew,
-}: LobbyProposalsProps) => (
+}: LobbyProposalsProps) => {
+  const { t } = useTranslation("group");
+  return (
   <div className="space-y-4">
     <div>
-      <p className="font-bold text-base mb-0.5">Zaproponuj miejsca</p>
+      <p className="font-bold text-base mb-0.5">{t("lobby.propose_title")}</p>
       <p className="text-sm text-muted-foreground leading-relaxed">
-        Zanim zaczniecie parować, możecie zaproponować miejsca, które chcecie odwiedzić innym członkom!
+        {t("lobby.propose_desc")}
       </p>
     </div>
 
@@ -1679,7 +1682,7 @@ const LobbyProposals = ({
       <input
         value={lobbyQuery}
         onChange={e => setLobbyQuery(e.target.value)}
-        placeholder="Wpisz nazwę miejsca…"
+        placeholder={t("lobby.search_placeholder")}
         className="w-full h-11 pl-9 pr-10 rounded-2xl border border-border/60 bg-card text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
         style={{ fontSize: "16px" }}
       />
@@ -1707,13 +1710,13 @@ const LobbyProposals = ({
             ))
           ) : (
             <div className="px-4 py-4 text-center space-y-3">
-              <p className="text-sm text-muted-foreground">Ups! Tego miejsca jeszcze nie ma na Trasie.</p>
+              <p className="text-sm text-muted-foreground">{t("lobby.not_on_trasa")}</p>
               <button
                 onMouseDown={e => e.preventDefault()}
                 onClick={onSuggestNew}
                 className="px-5 py-2.5 rounded-full bg-primary text-white text-sm font-semibold active:scale-95 transition-transform"
               >
-                Tak! Zaproponuj dodanie miejsca
+                {t("lobby.suggest_cta")}
               </button>
             </div>
           )}
@@ -1724,10 +1727,10 @@ const LobbyProposals = ({
     {/* Proposals feed */}
     {lobbyProposals.length > 0 && (
       <div className="space-y-2">
-        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Propozycje grupy</p>
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t("lobby.group_proposals")}</p>
         {lobbyProposals.map((p: any) => {
           const proposer = members.find((m: any) => m.user_id === p.proposed_by);
-          const name = proposer?.profile?.first_name || proposer?.profile?.username || "Ktoś";
+          const name = proposer?.profile?.first_name || proposer?.profile?.username || t("fallback.someone");
           return (
             <div key={p.id} className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-card border border-border/40">
               <div className="h-7 w-7 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold text-orange-700 shrink-0">
@@ -1744,6 +1747,7 @@ const LobbyProposals = ({
       </div>
     )}
   </div>
-);
+  );
+};
 
 export default GroupSession;
