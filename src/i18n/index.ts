@@ -30,6 +30,7 @@ import pl_social from "../locales/pl/social.json";
 import pl_homefeed from "../locales/pl/homefeed.json";
 import pl_homeprofile from "../locales/pl/homeprofile.json";
 import pl_homecreator from "../locales/pl/homecreator.json";
+import pl_categories from "../locales/pl/categories.json";
 
 import en_common from "../locales/en/common.json";
 import en_onboarding from "../locales/en/onboarding.json";
@@ -59,6 +60,7 @@ import en_social from "../locales/en/social.json";
 import en_homefeed from "../locales/en/homefeed.json";
 import en_homeprofile from "../locales/en/homeprofile.json";
 import en_homecreator from "../locales/en/homecreator.json";
+import en_categories from "../locales/en/categories.json";
 
 i18n
   .use(LanguageDetector)
@@ -94,6 +96,7 @@ i18n
         homefeed: pl_homefeed,
         homeprofile: pl_homeprofile,
         homecreator: pl_homecreator,
+        categories: pl_categories,
       },
       en: {
         common: en_common,
@@ -124,6 +127,7 @@ i18n
         homefeed: en_homefeed,
         homeprofile: en_homeprofile,
         homecreator: en_homecreator,
+        categories: en_categories,
       },
     },
     fallbackLng: "pl",

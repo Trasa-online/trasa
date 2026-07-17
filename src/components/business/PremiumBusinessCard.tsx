@@ -17,7 +17,7 @@
 import { type ReactNode, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { createPortal } from "react-dom";
-import { MAIN_CATEGORIES } from "@/lib/categories";
+import { MAIN_CATEGORIES, mainCategoryLabel } from "@/lib/categories";
 import { cn } from "@/lib/utils";
 import { Star, Clock, ChevronRight, ChevronLeft, ChevronDown, X, Maximize2, Phone, Globe, FileText, Instagram, Facebook } from "lucide-react";
 import { parseISO, isValid, formatDistanceToNow } from "date-fns";
@@ -304,7 +304,7 @@ interface SectionProps {
 
 function CategoriesSection({ data }: SectionProps) {
   const mainLabel = data.mainCategoryId
-    ? MAIN_CATEGORIES.find(c => c.id === data.mainCategoryId)?.label
+    ? mainCategoryLabel(data.mainCategoryId)
     : null;
   const subs = dedupSubcategories(data.subcategories);
   if (!mainLabel && subs.length === 0) return null;
@@ -791,7 +791,7 @@ const PremiumBusinessCard = ({
   if (mode === "card") {
     const coverImage = data.heroPhoto || data.gallery?.[0];
     const mainLabel = data.mainCategoryId
-      ? MAIN_CATEGORIES.find(c => c.id === data.mainCategoryId)?.label
+      ? mainCategoryLabel(data.mainCategoryId)
       : null;
     return (
       <div
@@ -941,7 +941,7 @@ const PremiumBusinessCard = ({
         <p className="text-2xl font-black leading-tight drop-shadow">{data.name}</p>
         {data.mainCategoryId && (
           <p className="text-sm opacity-90">
-            {MAIN_CATEGORIES.find(c => c.id === data.mainCategoryId)?.label ?? data.mainCategoryId}
+            {mainCategoryLabel(data.mainCategoryId) ?? data.mainCategoryId}
           </p>
         )}
         {data.description && (

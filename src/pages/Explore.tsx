@@ -9,7 +9,7 @@ import DiscoveryFeed from "@/components/home/DiscoveryFeed";
 import OnboardingOverlay from "@/components/home/OnboardingOverlay";
 import HomeHeaderActions from "@/components/home/HomeHeaderActions";
 import { getHistoryByCity, removeLikeFromCity, clearCity, type ExploreCityGroup } from "@/lib/exploreLikes";
-import { getSubcategoryLabel, MAIN_CATEGORIES } from "@/lib/categories";
+import { getSubcategoryLabel, subcategoryLabelLocalized, MAIN_CATEGORIES } from "@/lib/categories";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import { cn } from "@/lib/utils";
@@ -188,7 +188,7 @@ export const LikedTab = () => {
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold truncate leading-tight">{p.place_name}</p>
                   <p className="text-[11px] text-muted-foreground mt-0.5">
-                    {getSubcategoryLabel(p.category) ?? p.category}
+                    {subcategoryLabelLocalized(p.category)}
                   </p>
                 </div>
                 <button

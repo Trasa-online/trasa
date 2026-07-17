@@ -14,7 +14,7 @@ import StartingLocationPicker from "@/components/plan-wizard/StartingLocationPic
 import PlaceSwiper, { type MockPlace } from "@/components/plan-wizard/PlaceSwiper";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
-import { MAIN_CATEGORIES, getSubcategoryLabel } from "@/lib/categories";
+import { MAIN_CATEGORIES, getSubcategoryLabel, subcategoryLabelLocalized } from "@/lib/categories";
 import { setStartReference, markAskedForCity, tryResolveOnSite, useDistanceReference } from "@/lib/distanceReference";
 import { getTodayLikes } from "@/lib/exploreLikes";
 import { saveDraft, removeDraft } from "@/lib/draftRoutes";
@@ -150,7 +150,7 @@ const PlanWizard = () => {
   const categoryLabel = useMemo(() => {
     const total = selectedCategories.length + dietFilters.length + (sortMode !== "default" ? 1 : 0);
     if (total === 0) return t("filters");
-    if (selectedCategories.length === 1 && total === 1) return getSubcategoryLabel(selectedCategories[0]) ?? t("filters_selected");
+    if (selectedCategories.length === 1 && total === 1) return subcategoryLabelLocalized(selectedCategories[0]);
     const form = total === 1 ? "one" : total < 5 ? "few" : "many";
     return t(`filters_count_${form}`, { count: total });
   }, [selectedCategories, dietFilters, sortMode, t]);

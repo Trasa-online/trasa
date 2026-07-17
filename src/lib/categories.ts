@@ -99,6 +99,25 @@ export const getSubcategoryLabel = (subcategoryId: string): string | undefined =
   return undefined;
 };
 
+// ── i18n-aware etykiety do WYSWIETLANIA ─────────────────────────────────────
+// Kanoniczne `.label` (PL) sluza jako identyfikatory (zapis do DB, porownania) -
+// tych NIE tlumaczymy. Ponizsze helpery tlumacza tylko to, co widzi user.
+// Import i18n jest bezpieczny: i18n/index.ts nie importuje tego pliku (brak cyklu).
+import i18n from "@/i18n";
+
+/** Etykieta kategorii glownej wg aktywnego jezyka (fallback: kanoniczny PL label / id). */
+export const mainCategoryLabel = (id: string | null | undefined): string => {
+  if (!id) return "";
+  const raw = MAIN_CATEGORIES.find(c => c.id === id)?.label ?? id;
+  return i18n.t(`main.${id}`, { ns: "categories", defaultValue: raw });
+};
+
+/** Etykieta podkategorii wg aktywnego jezyka (fallback: kanoniczny PL label / surowa wartosc DB). */
+export const subcategoryLabelLocalized = (subcategoryId: string): string => {
+  const raw = getSubcategoryLabel(subcategoryId) ?? subcategoryId;
+  return i18n.t(`sub.${subcategoryId}`, { ns: "categories", defaultValue: raw });
+};
+
 // DB ma historycznie kilka wartosci `places.category` dla tego samego konceptu
 // (np. "club" z AddCustomPlacePanel vs "nightlife" z AI generation). Mapowanie
 // 1:N - subcategory ID z UI -> wszystkie wartosci DB ktore znacza to samo.

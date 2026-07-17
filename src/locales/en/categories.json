@@ -1,0 +1,33 @@
+{
+  "main": {
+    "food": "Food & Drinks",
+    "culture": "Culture & History",
+    "attractions": "Attractions",
+    "nature": "Nature & Views",
+    "shopping": "Shopping",
+    "entertainment": "Entertainment"
+  },
+  "sub": {
+    "restaurant": "Restaurant",
+    "cafe": "Café",
+    "bar": "Bar / Pub",
+    "museum": "Museum",
+    "monument": "Landmark",
+    "gallery": "Gallery",
+    "experience": "Experience",
+    "market": "Market",
+    "shopping": "Shop",
+    "club": "Club",
+    "park": "Park",
+    "viewpoint": "Viewpoint",
+    "boutique": "Boutique",
+    "concept_store": "Concept store",
+    "wine_shop": "Wine shop",
+    "bookshop": "Bookshop",
+    "theater": "Theatre",
+    "live_music": "Live music",
+    "cinema": "Cinema",
+    "nightclub": "Nightclub"
+  },
+  "other": "Place"
+}

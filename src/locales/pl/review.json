@@ -86,7 +86,7 @@
   },
   "prompt": {
     "title": "Udostępnić tę trasę innym?",
-    "desc": "Trafi do zakładki Eksploruj i pomoże innym zaplanować podróż. Udostępniamy plan trasy z Twoją okładką, notkami i ocenami - bez galerii Twoich zdjęć. Jeśli nie, zostanie prywatna w Twoich Wspomnieniach. Zmienisz to w każdej chwili.",
+    "desc": "Trafi do zakładki Eksploruj i pomoże innym zaplanować podróż. Udostępniamy plan trasy z Twoją okładką, notkami - bez galerii Twoich zdjęć. Jeśli nie, zostanie prywatna w Twoich Wspomnieniach. Zmienisz to w każdej chwili.",
     "confirm": "Udostępnij w Eksploruj",
     "keep_private": "Zostaw prywatną"
   },

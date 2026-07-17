@@ -14,7 +14,7 @@ import { getPhotoUrl, isCachedPhotoUrl, ensurePhotoCached } from "@/lib/placePho
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import { useHaptics } from "@/hooks/useHaptics";
-import { getSubcategoryIds, getMainCategoryFor, getDbCategoriesFor, MAIN_CATEGORIES } from "@/lib/categories";
+import { getSubcategoryIds, getMainCategoryFor, getDbCategoriesFor, MAIN_CATEGORIES, mainCategoryLabel } from "@/lib/categories";
 import { addLike as saveExploreLike, clearGroup as clearExploreGroup } from "@/lib/exploreLikes";
 import { expandCity } from "@/lib/cities";
 import { toast } from "sonner";
@@ -508,7 +508,7 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
           Non-biz: label podkategorii (places.category) + default Tailwind color z mapy. */}
       {(() => {
         const bizMainLabel = place.businessMainCategory
-          ? MAIN_CATEGORIES.find(c => c.id === place.businessMainCategory)?.label
+          ? mainCategoryLabel(place.businessMainCategory)
           : null;
         const subLabel = t(`categories.${place.category}`, { defaultValue: CATEGORY_LABELS[place.category] });
         const label = bizMainLabel ?? subLabel;
