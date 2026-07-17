@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Sheet, SheetContent, SheetClose } from "@/components/ui/sheet";
@@ -29,7 +30,8 @@ const CATEGORY_EMOJI: Record<string, string> = {
 };
 
 export default function CreatePolecajkaSheet({ open, onClose, onPublished, city, pins, userId }: Props) {
-  const [title, setTitle] = useState(`Moje top miejsca w ${city}`);
+  const { t } = useTranslation("homecreator");
+  const [title, setTitle] = useState(t("polecajka.default_title", { city }));
   const [selected, setSelected] = useState<Set<string>>(() => new Set(pins.map((p) => p.place_name)));
   const [descs, setDescs] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
@@ -48,7 +50,7 @@ export default function CreatePolecajkaSheet({ open, onClose, onPublished, city,
     staleTime: 60_000,
   });
 
-  const authorName = profile?.first_name || profile?.username || "Użytkownik";
+  const authorName = profile?.first_name || profile?.username || t("polecajka.author_fallback");
   const selectedPins = pins.filter((p) => selected.has(p.place_name));
 
   function togglePin(placeName: string) {
@@ -92,11 +94,11 @@ export default function CreatePolecajkaSheet({ open, onClose, onPublished, city,
       const { error: itemsErr } = await (supabase as any).from("discovery_items").insert(items);
       if (itemsErr) throw itemsErr;
 
-      toast.success("Polecajka opublikowana! 🎉");
+      toast.success(t("polecajka.toast_published"));
       onPublished();
       onClose();
     } catch {
-      toast.error("Nie udało się opublikować polecajki");
+      toast.error(t("polecajka.toast_error"));
     } finally {
       setSaving(false);
     }
@@ -112,9 +114,9 @@ export default function CreatePolecajkaSheet({ open, onClose, onPublished, city,
         {/* Header */}
         <div className="flex items-center gap-3 px-4 pt-4 pb-3 border-b border-border/20 shrink-0">
           <div className="flex-1 min-w-0">
-            <p className="font-bold text-base">Stwórz polecajkę</p>
+            <p className="font-bold text-base">{t("polecajka.header_title")}</p>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Jako <span className="font-semibold text-foreground">{authorName}</span>
+              {t("polecajka.header_as")} <span className="font-semibold text-foreground">{authorName}</span>
             </p>
           </div>
           <SheetClose className="h-8 w-8 flex items-center justify-center rounded-full bg-muted text-muted-foreground active:scale-90 transition-transform shrink-0">
@@ -127,7 +129,7 @@ export default function CreatePolecajkaSheet({ open, onClose, onPublished, city,
           {/* Title input */}
           <div>
             <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
-              Tytuł
+              {t("polecajka.label_title")}
             </label>
             <input
               type="text"
@@ -141,7 +143,7 @@ export default function CreatePolecajkaSheet({ open, onClose, onPublished, city,
           {/* Places */}
           <div>
             <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
-              Miejsca ({selectedPins.length} wybranych)
+              {t("polecajka.label_places", { count: selectedPins.length })}
             </label>
             <div className="space-y-2">
               {pins.map((pin) => {
@@ -178,7 +180,7 @@ export default function CreatePolecajkaSheet({ open, onClose, onPublished, city,
                           type="text"
                           value={descs[pin.place_name] ?? ""}
                           onChange={(e) => setDescs((d) => ({ ...d, [pin.place_name]: e.target.value }))}
-                          placeholder="Krótki opis (opcjonalnie)…"
+                          placeholder={t("polecajka.desc_placeholder")}
                           maxLength={120}
                           className="w-full px-3 py-2 rounded-xl bg-white border border-border/50 text-xs text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-orange-400/40 transition-colors"
                         />
@@ -200,7 +202,7 @@ export default function CreatePolecajkaSheet({ open, onClose, onPublished, city,
             disabled={saving || !title.trim() || selectedPins.length === 0}
             className="w-full py-3.5 rounded-full bg-gradient-to-r from-[#F4A259] to-[#F9662B] text-white font-bold text-sm active:scale-[0.97] transition-transform disabled:opacity-40 disabled:pointer-events-none shadow-md shadow-orange-500/20"
           >
-            {saving ? "Publikowanie…" : `Opublikuj polecajkę (${selectedPins.length} miejsc) →`}
+            {saving ? t("polecajka.publishing") : t("polecajka.publish", { count: selectedPins.length })}
           </button>
         </div>
       </SheetContent>

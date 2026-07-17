@@ -1,4 +1,5 @@
 import { Reorder, useDragControls } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import { Trash2, GripVertical, Plus, Footprints, RefreshCw, ChevronUp, ChevronDown, MoveRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -81,6 +82,7 @@ const PinRowContent = ({
   pin, index, pins, dayNumber, totalDays,
   onRemovePin, onReorderPins, onPinClick, onAlternatives, onMoveToDay, dragHandle,
 }: PinRowProps) => {
+  const { t } = useTranslation("route");
   const walkInfo = pin.walking_time_from_prev || pin.distance_from_prev;
   return (
     <>
@@ -113,7 +115,7 @@ const PinRowContent = ({
                   [newPins[index], newPins[index - 1]] = [newPins[index - 1], newPins[index]];
                   onReorderPins(dayNumber, newPins);
                 }}
-                aria-label="W górę"
+                aria-label={t("day.move_up")}
                 className="p-0.5 text-muted-foreground/40 hover:text-foreground disabled:opacity-20 transition-colors"
               >
                 <ChevronUp className="h-3.5 w-3.5" />
@@ -126,7 +128,7 @@ const PinRowContent = ({
                   [newPins[index], newPins[index + 1]] = [newPins[index + 1], newPins[index]];
                   onReorderPins(dayNumber, newPins);
                 }}
-                aria-label="W dół"
+                aria-label={t("day.move_down")}
                 className="p-0.5 text-muted-foreground/40 hover:text-foreground disabled:opacity-20 transition-colors"
               >
                 <ChevronDown className="h-3.5 w-3.5" />
@@ -177,7 +179,7 @@ const PinRowContent = ({
               onAlternatives(pin, index);
             }}
             className="flex-shrink-0 h-7 w-7 rounded flex items-center justify-center text-muted-foreground/40 hover:text-foreground hover:bg-muted transition-colors"
-            title="Pokaż alternatywy"
+            title={t("day.show_alternatives")}
           >
             <RefreshCw className="h-3.5 w-3.5" />
           </button>
@@ -196,7 +198,7 @@ const PinRowContent = ({
                     onMoveToDay(dayNumber, index, targetDay);
                   }}
                   className="flex items-center gap-0.5 text-[10px] text-muted-foreground/60 hover:text-foreground hover:bg-muted px-1 py-0.5 rounded transition-colors"
-                  title={`Przenieś do dnia ${targetDay}`}
+                  title={t("day.move_to_day", { day: targetDay })}
                 >
                   <MoveRight className="h-3 w-3" />
                   <span>D{targetDay}</span>
@@ -225,6 +227,7 @@ const PinRowContent = ({
 // klikniecia w przyciski (chevrony/kosz) dzialaly normalnie. HTML5 draggable nie dziala
 // w iOS WebView - framer-motion dziala na dotyk.
 const DayPinReorderItem = (props: PinRowProps) => {
+  const { t } = useTranslation("route");
   const controls = useDragControls();
   const dragHandle = (
     <div
@@ -232,7 +235,7 @@ const DayPinReorderItem = (props: PinRowProps) => {
       onClick={(e) => e.stopPropagation()}
       className="cursor-grab active:cursor-grabbing text-muted-foreground/30 hover:text-muted-foreground/60 transition-colors p-0.5"
       style={{ touchAction: "none" }}
-      aria-label="Przeciągnij, aby zmienić kolejność"
+      aria-label={t("day.drag_reorder")}
     >
       <GripVertical className="h-4 w-4" />
     </div>
@@ -261,13 +264,14 @@ const DayPinList = ({
   onAlternatives,
   onMoveToDay,
 }: DayPinListProps) => {
+  const { t } = useTranslation("route");
   const pinKey = (pin: PlanPin, index: number) => `${pin.place_id ?? pin.place_name}-${index}`;
 
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between px-1">
         <h3 className="text-sm font-semibold text-foreground">
-          {totalDays > 1 ? `Dzień ${dayNumber} z ${totalDays}` : "Plan dnia"}
+          {totalDays > 1 ? t("day.heading_multi", { day: dayNumber, total: totalDays }) : t("day.heading_single")}
         </h3>
         {onAddPin && (
           <button

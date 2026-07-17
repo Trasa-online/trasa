@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
@@ -11,6 +12,7 @@ interface FollowButtonProps {
 }
 
 export default function FollowButton({ targetUserId, initialIsFollowing, className }: FollowButtonProps) {
+  const { t } = useTranslation("social");
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
@@ -31,7 +33,7 @@ export default function FollowButton({ targetUserId, initialIsFollowing, classNa
 
   const mutation = useMutation({
     mutationFn: async (follow: boolean) => {
-      if (!user) throw new Error("Brak sesji");
+      if (!user) throw new Error(t("follow.no_session"));
       if (follow) {
         const { error } = await supabase.from("followers")
           .insert({ follower_id: user.id, following_id: targetUserId });
@@ -56,10 +58,10 @@ export default function FollowButton({ targetUserId, initialIsFollowing, classNa
     onError: (error, _follow, context) => {
       // Revert to snapshot taken before optimistic update
       queryClient.setQueryData(["following-ids", user?.id], context?.previous);
-      toast.error((error as any)?.message ?? "Spróbuj ponownie");
+      toast.error((error as any)?.message ?? t("follow.try_again"));
     },
     onSuccess: (_, follow) => {
-      toast.success(follow ? "Obserwujesz!" : "Przestałeś obserwować");
+      toast.success(follow ? t("follow.now_following") : t("follow.unfollowed"));
       queryClient.invalidateQueries({ queryKey: ["following-ids", user?.id] });
       queryClient.invalidateQueries({ queryKey: ["social-feed-v2", user?.id] });
       queryClient.invalidateQueries({ queryKey: ["is-following", user?.id, targetUserId] });
@@ -82,7 +84,7 @@ export default function FollowButton({ targetUserId, initialIsFollowing, classNa
         className
       )}
     >
-      {mutation.isPending ? "…" : (isFollowing ? "Obserwujesz" : "Obserwuj")}
+      {mutation.isPending ? "…" : (isFollowing ? t("follow.following") : t("follow.follow"))}
     </button>
   );
 }

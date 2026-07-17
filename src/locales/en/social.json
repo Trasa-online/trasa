@@ -1,0 +1,50 @@
+{
+  "invite": {
+    "share_title": "Join me on Trasa",
+    "share_text": "Let's plan city routes together! Join me on Trasa:",
+    "link_copied": "Link copied - send it to your friends!",
+    "heading": "Invite friends to your route!",
+    "subtitle": "Send the link - once they join, you're friends right away."
+  },
+  "friend": {
+    "error_generic": "Something went wrong",
+    "removed": "Removed from friends",
+    "friends": "Friends",
+    "added": "Friend added!",
+    "accept": "Accept",
+    "sent": "Sent",
+    "request_sent": "Request sent",
+    "add": "Add"
+  },
+  "follow": {
+    "no_session": "No session",
+    "try_again": "Try again",
+    "now_following": "Following!",
+    "unfollowed": "Unfollowed",
+    "following": "Following",
+    "follow": "Follow"
+  },
+  "suggested": {
+    "loading": "Loading suggestions...",
+    "maybe_know": "You may know",
+    "been_in": "was in {{city}}"
+  },
+  "search": {
+    "placeholder": "Search @username...",
+    "searching": "Searching...",
+    "not_found": "User @{{username}} not found"
+  },
+  "comments": {
+    "title": "Comments",
+    "loading": "Loading...",
+    "empty": "No comments yet. Be the first!",
+    "placeholder": "Add a comment...",
+    "user_fallback": "User"
+  },
+  "map": {
+    "no_locations": "No locations for this route"
+  },
+  "feed": {
+    "someone": "Someone"
+  }
+}

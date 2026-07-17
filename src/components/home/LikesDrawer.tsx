@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { X, Heart, ThumbsDown, Trash2 } from "lucide-react";
@@ -24,13 +25,6 @@ const CATEGORY_EMOJI: Record<string, string> = {
   market: "🛒", viewpoint: "🌅", shopping: "🛍️", experience: "🎭",
 };
 
-const CATEGORY_LABEL: Record<string, string> = {
-  restaurant: "Restauracja", cafe: "Kawiarnia", museum: "Muzeum",
-  park: "Park", bar: "Bar", club: "Klub", monument: "Zabytek",
-  gallery: "Galeria", market: "Targ", viewpoint: "Widok",
-  shopping: "Zakupy", experience: "Rozrywka",
-};
-
 // ─── PlaceRow ─────────────────────────────────────────────────────────────────
 
 const SWIPE_THRESHOLD = 72;
@@ -44,6 +38,7 @@ function PlaceRow({
   onToggle: () => void;
   onRemove: () => void;
 }) {
+  const { t } = useTranslation("homeprofile");
   const [offsetX, setOffsetX] = useState(0);
   const startX = useRef(0);
   const startY = useRef(0);
@@ -120,7 +115,7 @@ function PlaceRow({
           {place.category && (
             <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full bg-muted text-[11px] text-muted-foreground font-medium">
               {CATEGORY_EMOJI[place.category]}
-              {CATEGORY_LABEL[place.category] ?? place.category}
+              {t(`likes.categories.${place.category}`, { defaultValue: place.category })}
             </span>
           )}
         </div>
@@ -132,8 +127,8 @@ function PlaceRow({
           className="flex-shrink-0 h-8 px-2.5 rounded-full bg-muted flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground active:bg-muted/70"
         >
           {place.reaction === "liked"
-            ? <><ThumbsDown className="h-3 w-3" /> Odrzuć</>
-            : <><Heart className="h-3 w-3" /> Polub</>}
+            ? <><ThumbsDown className="h-3 w-3" /> {t("likes.reject")}</>
+            : <><Heart className="h-3 w-3" /> {t("likes.like")}</>}
         </button>
       </div>
     </div>
@@ -149,6 +144,7 @@ interface LikesDrawerProps {
 }
 
 export default function LikesDrawer({ open, onClose, userId }: LikesDrawerProps) {
+  const { t } = useTranslation("homeprofile");
   const queryClient = useQueryClient();
   const [tab, setTab] = useState<"liked" | "skipped">("liked");
 
@@ -218,7 +214,7 @@ export default function LikesDrawer({ open, onClose, userId }: LikesDrawerProps)
 
         {/* Header */}
         <div className="flex items-center px-5 pb-3 pt-1">
-          <h2 className="text-lg font-bold flex-1">Twoje miejsca</h2>
+          <h2 className="text-lg font-bold flex-1">{t("likes.title")}</h2>
           <button
             onClick={onClose}
             className="h-8 w-8 rounded-full bg-muted flex items-center justify-center"
@@ -237,7 +233,7 @@ export default function LikesDrawer({ open, onClose, userId }: LikesDrawerProps)
             )}
           >
             <Heart className={cn("h-3.5 w-3.5", tab === "liked" && "fill-current")} />
-            Polubione
+            {t("likes.liked_tab")}
             {likedCount > 0 && (
               <span className={cn(
                 "rounded-full px-1.5 py-0.5 text-[10px] font-bold leading-none",
@@ -255,7 +251,7 @@ export default function LikesDrawer({ open, onClose, userId }: LikesDrawerProps)
             )}
           >
             <ThumbsDown className="h-3.5 w-3.5" />
-            Odrzucone
+            {t("likes.skipped_tab")}
             {skippedCount > 0 && (
               <span className={cn(
                 "rounded-full px-1.5 py-0.5 text-[10px] font-bold leading-none",
@@ -271,21 +267,21 @@ export default function LikesDrawer({ open, onClose, userId }: LikesDrawerProps)
         <div className="flex-1 overflow-y-auto pb-8">
           {isLoading ? (
             <div className="flex items-center justify-center py-16 text-muted-foreground text-sm">
-              Ładowanie...
+              {t("likes.loading")}
             </div>
           ) : filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 px-6 text-center gap-2">
               {tab === "liked" ? (
                 <>
                   <Heart className="h-10 w-10 text-muted-foreground/30" />
-                  <p className="text-sm font-medium text-foreground/70">Brak polubionych miejsc</p>
-                  <p className="text-xs text-muted-foreground">Przeglądaj miejsca i lajkuj to, co Cię kręci.</p>
+                  <p className="text-sm font-medium text-foreground/70">{t("likes.empty_liked_title")}</p>
+                  <p className="text-xs text-muted-foreground">{t("likes.empty_liked_desc")}</p>
                 </>
               ) : (
                 <>
                   <ThumbsDown className="h-10 w-10 text-muted-foreground/30" />
-                  <p className="text-sm font-medium text-foreground/70">Brak odrzuconych miejsc</p>
-                  <p className="text-xs text-muted-foreground">Miejsca, które pominiesz przeglądając, pojawią się tutaj.</p>
+                  <p className="text-sm font-medium text-foreground/70">{t("likes.empty_skipped_title")}</p>
+                  <p className="text-xs text-muted-foreground">{t("likes.empty_skipped_desc")}</p>
                 </>
               )}
             </div>

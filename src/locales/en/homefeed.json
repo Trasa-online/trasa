@@ -1,0 +1,87 @@
+{
+  "toast": {
+    "saved": "Saved"
+  },
+  "confirm": {
+    "delete_collection": "Delete this collection?"
+  },
+  "aria": {
+    "already_saved": "Already saved",
+    "save_place": "Save place",
+    "edit": "Edit",
+    "delete": "Delete",
+    "list_view": "List view",
+    "cards_view": "Card view",
+    "clear": "Clear",
+    "filters": "Filters",
+    "close": "Close"
+  },
+  "not_in_trasa": "not on Trasa yet",
+  "see": "View",
+  "local_recommends": "local pick!",
+  "plan_badge": "🗺️ Plan",
+  "list_badge": "📍 List",
+  "route_plan": "Route plan",
+  "places": "Places",
+  "use_route": "Use this route",
+  "plan_from_places": "Plan from these places",
+  "plan_own_in": "or plan your own in {{city}}",
+  "day": "day",
+  "days": "days",
+  "popular_themes_warsaw": "Popular Warsaw themes",
+  "collections": "Place collections",
+  "all": "All",
+  "places_count_one": "{{count}} place",
+  "places_count_other": "{{count}} places",
+  "recommended": "Recommended",
+  "route": "Route",
+  "creator": "Creator",
+  "author_anon": "Anonymous",
+  "author_default": "User",
+  "search_placeholder": "Search routes, authors, collections…",
+  "routes_heading": "Routes",
+  "in_city": "in {{city}}",
+  "no_results": "No results",
+  "no_results_hint": "Try another word or change the filters.",
+  "newest_routes": "Newest routes",
+  "routes_in_warsaw": "Routes in Warsaw",
+  "community_soon": "Community routes coming soon",
+  "community_soon_hint": "Create your first route and share it to help others plan their trip.",
+  "plan_prompt": {
+    "title": "When are you planning this route?",
+    "desc": "Pick a date and we'll take you straight to planning with these places.",
+    "skip": "Skip, plan without a date"
+  },
+  "filters_title": "Filters",
+  "filter": {
+    "city": "City",
+    "theme": "Collection theme",
+    "category": "Place category",
+    "hint": "Theme filters collections, category filters routes.",
+    "clear": "Clear filters",
+    "apply": "Show results"
+  },
+  "cat": {
+    "restaurant": "Restaurant",
+    "cafe": "Café",
+    "museum": "Museum",
+    "park": "Park",
+    "bar": "Bar",
+    "club": "Club",
+    "monument": "Landmark",
+    "gallery": "Gallery",
+    "market": "Market",
+    "viewpoint": "Viewpoint",
+    "shopping": "Shopping",
+    "experience": "Attraction",
+    "walk": "Walk",
+    "other": "Place"
+  },
+  "banner": {
+    "title": "Discover places",
+    "subtitle": "Recommended by local creators",
+    "soon_title": "Coming soon!",
+    "soon_desc": "We're working on discovering places recommended by creators. It'll arrive in one of the next updates - stay tuned! 🚀"
+  },
+  "onboarding_next": "Next"
+}

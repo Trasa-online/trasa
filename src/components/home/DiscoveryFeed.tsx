@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
+import i18n from "@/i18n";
 import { avatarSrc } from "@/lib/avatar";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
@@ -146,6 +148,7 @@ function PlacePhoto({
 // ── Detail sheet ───────────────────────────────────────────────────────────────
 
 export function CollectionDetail({ col, onClose, onAdopt }: { col: DiscoveryCollection; onClose: () => void; onAdopt?: (city: string | null, names: string[]) => void }) {
+  const { t } = useTranslation("homefeed");
   const navigate = useNavigate();
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -197,7 +200,7 @@ export function CollectionDetail({ col, onClose, onAdopt }: { col: DiscoveryColl
       photo_url: item.photo_url ?? null,
     });
     setLikedNames((prev) => new Set(prev).add(item.place_name.toLowerCase()));
-    toast.success("Zapisano");
+    toast.success(t("toast.saved"));
     if (user?.id && item.place_id) {
       (supabase as any).from("user_place_reactions").upsert({
         user_id: user.id, place_id: item.place_id, place_name: item.place_name, city: col.city,
@@ -223,7 +226,7 @@ export function CollectionDetail({ col, onClose, onAdopt }: { col: DiscoveryColl
 
   const handleDelete = async () => {
     if (!isOwner || deleting) return;
-    if (!confirm("Usunąć to zestawienie?")) return;
+    if (!confirm(t("confirm.delete_collection"))) return;
     setDeleting(true);
     await (supabase as any).from("discovery_collections").delete().eq("id", col.id);
     queryClient.invalidateQueries({ queryKey: ["explore-rankings"] });
@@ -269,7 +272,7 @@ export function CollectionDetail({ col, onClose, onAdopt }: { col: DiscoveryColl
               <div className="absolute top-3 left-3 h-8 w-8 rounded-full bg-black/55 backdrop-blur text-white text-sm font-bold flex items-center justify-center">{idx + 1}</div>
               <div className="absolute top-3 right-3 flex items-center gap-1.5">
                 {col.city && (
-                  <span role="button" aria-label={alreadyLiked ? "Już zapisane" : "Zapisz miejsce"}
+                  <span role="button" aria-label={alreadyLiked ? t("aria.already_saved") : t("aria.save_place")}
                     onClick={(e) => { e.stopPropagation(); e.preventDefault(); if (!alreadyLiked) likePlace(item); }}
                     className="h-7 w-7 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-sm active:scale-90 transition-transform">
                     <Heart className={`h-4 w-4 ${alreadyLiked ? "fill-rose-500 text-rose-500" : "text-foreground"}`} />
@@ -285,20 +288,20 @@ export function CollectionDetail({ col, onClose, onAdopt }: { col: DiscoveryColl
               {!tappable && (
                 <div className="absolute bottom-3 left-3 flex items-center gap-1 px-2 py-1 rounded-full bg-foreground/55 backdrop-blur-sm">
                   <Globe className="h-3 w-3 text-white/90 shrink-0" />
-                  <span className="text-[9px] font-semibold text-white leading-tight">jeszcze nie&nbsp;ma w&nbsp;Trasie</span>
+                  <span className="text-[9px] font-semibold text-white leading-tight">{t("not_in_trasa")}</span>
                 </div>
               )}
             </div>
             <div className="px-4 pt-4 pb-4 flex-1">
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted text-xs font-semibold text-foreground mb-2">
-                <span>{CAT_EMOJI[cat] ?? "📍"}</span>{CAT_LABEL[cat] ?? "Miejsce"}
+                <span>{CAT_EMOJI[cat] ?? "📍"}</span>{t(`cat.${cat}`, CAT_LABEL[cat] ?? t("cat.other"))}
               </span>
               <p className="text-base font-black leading-tight">{item.place_name}</p>
               {item.address && <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-1">{item.address}</p>}
               {item.short_desc && <p className="text-sm text-muted-foreground leading-relaxed mt-2 line-clamp-3">{item.short_desc}</p>}
               {tappable && (
                 <div className="mt-3 inline-flex items-center gap-0.5 text-xs font-bold text-primary">
-                  Zobacz <ChevronRight className="h-3.5 w-3.5" />
+                  {t("see")} <ChevronRight className="h-3.5 w-3.5" />
                 </div>
               )}
             </div>
@@ -327,11 +330,11 @@ export function CollectionDetail({ col, onClose, onAdopt }: { col: DiscoveryColl
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-bold leading-tight truncate">{item.place_name}</p>
                   <span className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white text-[11px] font-semibold text-foreground">
-                    <span>{CAT_EMOJI[cat] ?? "📍"}</span>{CAT_LABEL[cat] ?? "Miejsce"}
+                    <span>{CAT_EMOJI[cat] ?? "📍"}</span>{t(`cat.${cat}`, CAT_LABEL[cat] ?? t("cat.other"))}
                   </span>
                   {!tappable && (
                     <span className="mt-1 flex items-center gap-1 text-[9px] font-semibold text-muted-foreground">
-                      <Globe className="h-3 w-3 shrink-0" />jeszcze nie&nbsp;ma w&nbsp;Trasie
+                      <Globe className="h-3 w-3 shrink-0" />{t("not_in_trasa")}
                     </span>
                   )}
                 </div>
@@ -345,7 +348,7 @@ export function CollectionDetail({ col, onClose, onAdopt }: { col: DiscoveryColl
                   </span>
                 )}
                 {col.city && (
-                  <span role="button" aria-label={alreadyLiked ? "Już zapisane" : "Zapisz miejsce"}
+                  <span role="button" aria-label={alreadyLiked ? t("aria.already_saved") : t("aria.save_place")}
                     onClick={(e) => { e.stopPropagation(); e.preventDefault(); if (!alreadyLiked) likePlace(item); }}
                     className="h-7 w-7 rounded-full bg-muted flex items-center justify-center active:scale-90 transition-transform">
                     <Heart className={`h-4 w-4 ${alreadyLiked ? "fill-rose-500 text-rose-500" : "text-foreground"}`} />
@@ -368,19 +371,19 @@ export function CollectionDetail({ col, onClose, onAdopt }: { col: DiscoveryColl
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2 min-w-0 flex-1">
             <AuthorChip name={col.author_name} avatar={col.author_avatar} />
-            {isLocal && <span className="text-[9px] font-bold text-orange-700 bg-orange-100 rounded-full px-1.5 py-0.5 shrink-0">lokals poleca!</span>}
+            {isLocal && <span className="text-[9px] font-bold text-orange-700 bg-orange-100 rounded-full px-1.5 py-0.5 shrink-0">{t("local_recommends")}</span>}
             {col.city && (
               <span className="flex items-center gap-1 min-w-0 text-xs text-muted-foreground font-medium"><span className="text-muted-foreground/40">·</span><span className="truncate">{col.city}</span></span>
             )}
           </div>
           <div className="flex items-center gap-2 shrink-0">
             {isOwner && (
-              <button onClick={() => navigate(`/zestawienie/${col.id}/edytuj`)} aria-label="Edytuj" className="h-8 w-8 flex items-center justify-center rounded-full bg-muted text-foreground active:scale-90 transition-transform">
+              <button onClick={() => navigate(`/zestawienie/${col.id}/edytuj`)} aria-label={t("aria.edit")} className="h-8 w-8 flex items-center justify-center rounded-full bg-muted text-foreground active:scale-90 transition-transform">
                 <Pencil className="h-4 w-4" />
               </button>
             )}
             {isOwner && (
-              <button onClick={handleDelete} disabled={deleting} aria-label="Usuń" className="h-8 w-8 flex items-center justify-center rounded-full bg-muted text-destructive active:scale-90 transition-transform disabled:opacity-50">
+              <button onClick={handleDelete} disabled={deleting} aria-label={t("aria.delete")} className="h-8 w-8 flex items-center justify-center rounded-full bg-muted text-destructive active:scale-90 transition-transform disabled:opacity-50">
                 <Trash2 className="h-4 w-4" />
               </button>
             )}
@@ -395,7 +398,7 @@ export function CollectionDetail({ col, onClose, onAdopt }: { col: DiscoveryColl
             <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-bold ${theme.badge}`}>{theme.emoji} {theme.label}</span>
           )}
           <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold text-muted-foreground">
-            {isRoute ? "🗺️ Plan" : "📍 Lista"}
+            {isRoute ? t("plan_badge") : t("list_badge")}
           </span>
           <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
             {(col.views_count ?? 0) > 0 && <span className="flex items-center gap-1"><Eye className="h-3 w-3" />{col.views_count}</span>}
@@ -414,13 +417,13 @@ export function CollectionDetail({ col, onClose, onAdopt }: { col: DiscoveryColl
         {col.items.length > 0 && (
           <div className="mb-1">
             <div className="flex items-center justify-between mb-3">
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{isRoute ? "Plan trasy" : "Miejsca"}</p>
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{isRoute ? t("route_plan") : t("places")}</p>
               <div className="flex rounded-full bg-muted p-0.5">
-                <button onClick={() => setPlaceView("list")} aria-label="Widok listy"
+                <button onClick={() => setPlaceView("list")} aria-label={t("aria.list_view")}
                   className={`px-2.5 py-1.5 rounded-full transition-colors ${placeView === "list" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
                   <List className="h-4 w-4" />
                 </button>
-                <button onClick={() => setPlaceView("cards")} aria-label="Widok kart"
+                <button onClick={() => setPlaceView("cards")} aria-label={t("aria.cards_view")}
                   className={`px-2.5 py-1.5 rounded-full transition-colors ${placeView === "cards" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
                   <GalleryHorizontalEnd className="h-4 w-4" />
                 </button>
@@ -444,11 +447,11 @@ export function CollectionDetail({ col, onClose, onAdopt }: { col: DiscoveryColl
           onClick={adoptRoute}
           className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.97] transition-transform shadow-md shadow-orange-500/20"
         >
-          {isRoute ? "Użyj tej trasy" : "Zaplanuj z tych miejsc"} <ArrowRight className="h-4 w-4" />
+          {isRoute ? t("use_route") : t("plan_from_places")} <ArrowRight className="h-4 w-4" />
         </button>
         {col.city && (
           <button onClick={planOwn} className="w-full mt-1.5 py-2 text-sm font-semibold text-muted-foreground active:scale-[0.97] transition-transform">
-            albo zaplanuj własną w&nbsp;{col.city}
+            {t("plan_own_in", { city: col.city })}
           </button>
         )}
       </div>
@@ -461,6 +464,7 @@ export function CollectionDetail({ col, onClose, onAdopt }: { col: DiscoveryColl
 }
 
 function CreatorPlanDetail({ plan }: { plan: PolecaneCreatorPlan }) {
+  const { t } = useTranslation("homefeed");
   return (
     <div className="flex flex-col h-full overflow-hidden">
       <div className="flex items-start gap-3 px-4 pt-4 pb-3 border-b border-border/20 shrink-0">
@@ -474,7 +478,7 @@ function CreatorPlanDetail({ plan }: { plan: PolecaneCreatorPlan }) {
             {plan.num_days && (
               <>
                 <span className="text-muted-foreground/40">·</span>
-                <span>{plan.num_days} {plan.num_days === 1 ? "dzień" : "dni"}</span>
+                <span>{plan.num_days} {plan.num_days === 1 ? t("day") : t("days")}</span>
               </>
             )}
           </div>
@@ -555,9 +559,10 @@ function MotywyRow({
   collections: DiscoveryCollection[];
   onOpen: (col: DiscoveryCollection) => void;
 }) {
+  const { t } = useTranslation("homefeed");
   return (
     <div>
-      <p className="text-sm font-bold mb-2 px-1">Popularne motywy Warszawy</p>
+      <p className="text-sm font-bold mb-2 px-1">{t("popular_themes_warsaw")}</p>
       <div className="flex gap-3 overflow-x-auto scrollbar-none snap-x snap-mandatory px-1 pb-1">
         {collections.map((col, idx) => {
           const photoItem = col.items.find((i) => i.photo_url) ?? col.items[0];
@@ -600,6 +605,7 @@ function UserPolecajkiRow({
   collections: DiscoveryCollection[];
   onOpen: (col: DiscoveryCollection) => void;
 }) {
+  const { t } = useTranslation("homefeed");
   const [themeFilter, setThemeFilter] = useState<string | null>(null);
   // Tylko motywy faktycznie obecne w zestawieniach (nie pokazujemy pustych filtrow).
   const presentThemes = COLLECTION_THEMES.filter((t) => collections.some((c) => c.category === t.id));
@@ -607,14 +613,14 @@ function UserPolecajkiRow({
 
   return (
     <div>
-      <p className="text-sm font-bold mb-2 px-1">Zestawienia miejsc</p>
+      <p className="text-sm font-bold mb-2 px-1">{t("collections")}</p>
       {presentThemes.length > 1 && (
         <div className="flex gap-2 overflow-x-auto scrollbar-none pb-2 -mx-1 px-1">
           <button
             onClick={() => setThemeFilter(null)}
             className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-bold transition-colors ${themeFilter === null ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground"}`}
           >
-            Wszystkie
+            {t("all")}
           </button>
           {presentThemes.map((t) => (
             <button
@@ -651,7 +657,7 @@ function UserPolecajkiRow({
                 )}
                 {placesCount > 0 && (
                   <div className="absolute bottom-2 left-2 px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-sm text-[10px] font-semibold text-white">
-                    {placesCount} {placesCount === 1 ? "miejsce" : placesCount < 5 ? "miejsca" : "miejsc"}
+                    {t("places_count", { count: placesCount })}
                   </div>
                 )}
               </div>
@@ -669,7 +675,7 @@ function UserPolecajkiRow({
                 </div>
                 <div className="flex items-center gap-1.5 flex-wrap">
                   <AuthorChip name={col.author_name} avatar={col.author_avatar} />
-                  {isLocal && <span className="text-[9px] font-bold text-orange-700 bg-orange-100 rounded-full px-1.5 py-0.5">lokals poleca!</span>}
+                  {isLocal && <span className="text-[9px] font-bold text-orange-700 bg-orange-100 rounded-full px-1.5 py-0.5">{t("local_recommends")}</span>}
                 </div>
               </div>
             </button>
@@ -688,11 +694,12 @@ function PolecaneRow({
   entries: PolecaneEntry[];
   onCreatorOpen: (plan: PolecaneCreatorPlan) => void;
 }) {
+  const { t } = useTranslation("homefeed");
   const navigate = useNavigate();
 
   return (
     <div>
-      <p className="text-sm font-bold mb-2 px-1">Polecane</p>
+      <p className="text-sm font-bold mb-2 px-1">{t("recommended")}</p>
       <div className="flex gap-3 overflow-x-auto scrollbar-none snap-x snap-mandatory pb-1">
         {entries.map((entry) => {
           const photo = entry.photo ?? getRandomPinPlaceholder(entry.id);
@@ -730,12 +737,12 @@ function PolecaneRow({
                   {entry.kind === "route" ? (
                     <span className="flex items-center gap-1 text-[10px] text-muted-foreground shrink-0">
                       <Globe className="h-3 w-3" />
-                      Trasa
+                      {t("route")}
                     </span>
                   ) : (
                     <span className="flex items-center gap-1 text-[10px] text-orange-600 font-semibold shrink-0">
                       <Sparkles className="h-3 w-3" />
-                      Twórca
+                      {t("creator")}
                     </span>
                   )}
                 </div>
@@ -760,13 +767,6 @@ function PolecaneRow({
 const CAT_RANK: Record<string, number> = {
   viewpoint: 0, monument: 1, park: 2, gallery: 3, museum: 4, experience: 5,
   market: 6, shopping: 7, club: 8, bar: 9, cafe: 10, restaurant: 11, walk: 12,
-};
-
-const placesLabel = (n: number): string => {
-  if (n === 1) return "1 miejsce";
-  const l = n % 10, l2 = n % 100;
-  if (l >= 2 && l <= 4 && (l2 < 10 || l2 >= 20)) return `${n} miejsca`;
-  return `${n} miejsc`;
 };
 
 // Wzbogaca wiersze routes o okladke (najatrakcyjniejsze zdjecie miejsca),
@@ -817,7 +817,7 @@ async function enrichRouteRows(routes: any[]): Promise<PolecaneRoute[]> {
       ai_highlight: r.ai_highlight ?? null,
       summary: r.ai_summary ?? null,
       categories: catMap.get(r.id) ?? [],
-      author_name: anon ? "Anonim" : (prof?.first_name || prof?.username || "Użytkownik"),
+      author_name: anon ? i18n.t("author_anon", { ns: "homefeed" }) : (prof?.first_name || prof?.username || i18n.t("author_default", { ns: "homefeed" })),
       author_avatar: anon ? null : (prof?.avatar_url ?? null),
       placeCount: countMap.get(r.id) ?? 0,
     };
@@ -848,6 +848,7 @@ function RouteCardH({ route, onClick }: { route: PolecaneRoute; onClick: () => v
 
 // Karta pionowa (Trasy w Warszawie) - duza okladka + tytul + autor pod spodem.
 function RouteCardV({ route, onClick }: { route: PolecaneRoute; onClick: () => void }) {
+  const { t } = useTranslation("homefeed");
   const photo = route.photo ?? getRandomPinPlaceholder(route.id);
   return (
     <button onClick={onClick} className="w-full text-left active:scale-[0.98] transition-transform">
@@ -857,7 +858,7 @@ function RouteCardV({ route, onClick }: { route: PolecaneRoute; onClick: () => v
         <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-transparent" />
         {route.placeCount ? (
           <span className="absolute top-3 left-3 bg-black/45 backdrop-blur-sm rounded-full px-2.5 py-1 text-[11px] font-semibold text-white flex items-center gap-1">
-            <MapPin className="h-3 w-3" />{placesLabel(route.placeCount)}
+            <MapPin className="h-3 w-3" />{t("places_count", { count: route.placeCount })}
           </span>
         ) : null}
       </div>
@@ -870,7 +871,7 @@ function RouteCardV({ route, onClick }: { route: PolecaneRoute; onClick: () => v
           <div className="flex flex-wrap gap-1.5 mt-2">
             {route.categories.slice(0, 3).map((c) => (
               <span key={c} className="text-[10px] font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
-                {CAT_LABEL[c] ?? c}
+                {t(`cat.${c}`, CAT_LABEL[c] ?? c)}
               </span>
             ))}
           </div>
@@ -915,6 +916,7 @@ async function hydrateCollections(cols: any[]): Promise<DiscoveryCollection[]> {
 const SHOW_ZESTAWIENIA = true;
 
 export default function DiscoveryFeed() {
+  const { t } = useTranslation("homefeed");
   const [activeCol, setActiveCol] = useState<DiscoveryCollection | null>(null);
   const [activeCreator, setActiveCreator] = useState<PolecaneCreatorPlan | null>(null);
   // Drawer "Kiedy planujesz te trase?" - klik "Uzyj tej trasy" w zestawieniu (podglad)
@@ -1103,7 +1105,7 @@ export default function DiscoveryFeed() {
         const profile = profileMap.get(r.user_id);
         // Okladka ze zdjec miejsc (najatrakcyjniejsze), nie ze zdjec usera.
         const photo = placePhotoMap.get(r.id) ?? null;
-        const authorName = profile?.first_name || profile?.username || "Użytkownik";
+        const authorName = profile?.first_name || profile?.username || i18n.t("author_default", { ns: "homefeed" });
         return {
           kind: "route",
           id: r.id,
@@ -1294,14 +1296,14 @@ export default function DiscoveryFeed() {
             onChange={(e) => setSearchInput(e.target.value)}
             onFocus={() => window.dispatchEvent(new CustomEvent("trasa:hide-bottomnav", { detail: true }))}
             onBlur={() => window.dispatchEvent(new CustomEvent("trasa:hide-bottomnav", { detail: false }))}
-            placeholder="Szukaj tras, autorów, zestawień…"
+            placeholder={t("search_placeholder")}
             className="flex-1 min-w-0 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
           />
           {searchInput && (
-            <button onClick={() => setSearchInput("")} aria-label="Wyczyść" className="shrink-0"><X className="h-4 w-4 text-muted-foreground" /></button>
+            <button onClick={() => setSearchInput("")} aria-label={t("aria.clear")} className="shrink-0"><X className="h-4 w-4 text-muted-foreground" /></button>
           )}
         </div>
-        <button onClick={() => setFiltersOpen(true)} aria-label="Filtry"
+        <button onClick={() => setFiltersOpen(true)} aria-label={t("aria.filters")}
           className="relative h-10 w-10 flex items-center justify-center rounded-full bg-secondary shrink-0 active:scale-90 transition-transform">
           <SlidersHorizontal className="h-4 w-4" />
           {activeFilterCount > 0 && (
@@ -1322,7 +1324,7 @@ export default function DiscoveryFeed() {
             )}
             {results.routes.length > 0 && (
               <div>
-                <p className="text-sm font-black uppercase tracking-wide mb-3 px-1">Trasy{cityFilter.length === 1 ? ` w ${cityFilter[0]}` : ""}</p>
+                <p className="text-sm font-black uppercase tracking-wide mb-3 px-1">{t("routes_heading")}{cityFilter.length === 1 ? ` ${t("in_city", { city: cityFilter[0] })}` : ""}</p>
                 <div className="space-y-5">
                   {results.routes.map((r) => (
                     <RouteCardV key={r.id} route={r} onClick={() => navigate(`/route/${r.id}`)} />
@@ -1334,8 +1336,8 @@ export default function DiscoveryFeed() {
         ) : (
           <div className="py-16 text-center px-8">
             <div className="text-5xl mb-3">🔍</div>
-            <p className="text-base font-bold">Brak wyników</p>
-            <p className="text-sm text-muted-foreground mt-1">Spróbuj innego słowa lub zmień filtry.</p>
+            <p className="text-base font-bold">{t("no_results")}</p>
+            <p className="text-sm text-muted-foreground mt-1">{t("no_results_hint")}</p>
           </div>
         )
       ) : isLoading ? (
@@ -1360,7 +1362,7 @@ export default function DiscoveryFeed() {
           {/* Najnowsze trasy - poziomy scroll (jak RECENT ISSUES) */}
           {newest.length > 0 && (
             <div>
-              <p className="text-sm font-black uppercase tracking-wide mb-3 px-1">Najnowsze trasy</p>
+              <p className="text-sm font-black uppercase tracking-wide mb-3 px-1">{t("newest_routes")}</p>
               <div className="flex gap-3 overflow-x-auto scrollbar-none snap-x snap-mandatory pb-1 -ml-1 pl-1 -mr-4">
                 {newest.map((r) => (
                   <RouteCardH key={r.id} route={r} onClick={() => navigate(`/route/${r.id}`)} />
@@ -1379,7 +1381,7 @@ export default function DiscoveryFeed() {
           {warszawa.length > 0 && (
             <div>
               <div className="mb-4 px-1">
-                <h2 className="text-xl font-black tracking-tight">Trasy w Warszawie</h2>
+                <h2 className="text-xl font-black tracking-tight">{t("routes_in_warsaw")}</h2>
               </div>
               <div className="space-y-5">
                 {warszawa.map((r) => (
@@ -1392,8 +1394,8 @@ export default function DiscoveryFeed() {
           {newest.length === 0 && warszawa.length === 0 && userPolecajki.length === 0 && (
             <div className="py-16 text-center px-8">
               <div className="text-5xl mb-3">🗺️</div>
-              <p className="text-base font-bold">Trasy społeczności już wkrótce</p>
-              <p className="text-sm text-muted-foreground mt-1">Stwórz swoją pierwszą trasę i&nbsp;udostępnij ją, żeby pomóc innym zaplanować podróż.</p>
+              <p className="text-base font-bold">{t("community_soon")}</p>
+              <p className="text-sm text-muted-foreground mt-1">{t("community_soon_hint")}</p>
             </div>
           )}
         </div>
@@ -1436,8 +1438,8 @@ export default function DiscoveryFeed() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="px-5 pt-5 pb-1 text-center shrink-0">
-              <p className="text-lg font-black leading-tight">Kiedy planujesz tę&nbsp;trasę?</p>
-              <p className="text-xs text-muted-foreground mt-1">Wybierz datę, a&nbsp;przeniesiemy Cię prosto do&nbsp;planowania z&nbsp;tymi miejscami.</p>
+              <p className="text-lg font-black leading-tight">{t("plan_prompt.title")}</p>
+              <p className="text-xs text-muted-foreground mt-1">{t("plan_prompt.desc")}</p>
             </div>
             <div className="flex-1 min-h-0 overflow-y-auto">
               <FullCalendarPicker onConfirm={(d, n) => startPlanning(d, n)} />
@@ -1446,7 +1448,7 @@ export default function DiscoveryFeed() {
               onClick={() => startPlanning(null, 1)}
               className="mx-5 mt-1 mb-[max(16px,env(safe-area-inset-bottom))] py-2.5 text-sm font-medium text-muted-foreground active:text-foreground transition-colors shrink-0"
             >
-              Pomiń, zaplanuj bez&nbsp;daty
+              {t("plan_prompt.skip")}
             </button>
           </div>
         </div>
@@ -1456,15 +1458,15 @@ export default function DiscoveryFeed() {
       <Sheet open={filtersOpen} onOpenChange={setFiltersOpen}>
         <SheetContent side="bottom" className="rounded-t-2xl p-0 [&>button:last-child]:hidden" style={{ maxHeight: "80vh" }}>
           <div className="flex items-center justify-between px-5 pt-5 mb-4">
-            <p className="text-lg font-black">Filtry</p>
-            <button onClick={() => setFiltersOpen(false)} aria-label="Zamknij" className="h-9 w-9 rounded-full bg-muted flex items-center justify-center active:bg-muted/70"><X className="h-4 w-4" /></button>
+            <p className="text-lg font-black">{t("filters_title")}</p>
+            <button onClick={() => setFiltersOpen(false)} aria-label={t("aria.close")} className="h-9 w-9 rounded-full bg-muted flex items-center justify-center active:bg-muted/70"><X className="h-4 w-4" /></button>
           </div>
           <div className="space-y-5 overflow-y-auto px-5 pb-2">
             {/* Miasto */}
             <div>
-              <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2">Miasto</p>
+              <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2">{t("filter.city")}</p>
               <div className="flex gap-2 overflow-x-auto scrollbar-none pb-1 -mx-5 px-5">
-                <button onClick={() => setCityFilter([])} className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-bold transition-colors ${cityFilter.length === 0 ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground"}`}>Wszystkie</button>
+                <button onClick={() => setCityFilter([])} className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-bold transition-colors ${cityFilter.length === 0 ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground"}`}>{t("all")}</button>
                 {ACTIVE_CITIES.map((c) => (
                   <button key={c} onClick={() => toggleFilter(setCityFilter, c)} className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-colors ${cityFilter.includes(c) ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground"}`}>{c}</button>
                 ))}
@@ -1472,9 +1474,9 @@ export default function DiscoveryFeed() {
             </div>
             {/* Motyw zestawienia */}
             <div>
-              <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2">Motyw zestawienia</p>
+              <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2">{t("filter.theme")}</p>
               <div className="flex flex-wrap gap-2">
-                <button onClick={() => setThemeFilter([])} className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-bold transition-colors ${themeFilter.length === 0 ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground"}`}>Wszystkie</button>
+                <button onClick={() => setThemeFilter([])} className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-bold transition-colors ${themeFilter.length === 0 ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground"}`}>{t("all")}</button>
                 {COLLECTION_THEMES.map((t) => (
                   <button key={t.id} onClick={() => toggleFilter(setThemeFilter, t.id)} className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-colors ${themeFilter.includes(t.id) ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground"}`}>{t.emoji} {t.label}</button>
                 ))}
@@ -1482,19 +1484,19 @@ export default function DiscoveryFeed() {
             </div>
             {/* Kategoria miejsca (w trasach) */}
             <div>
-              <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2">Kategoria miejsca</p>
+              <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2">{t("filter.category")}</p>
               <div className="flex flex-wrap gap-2">
-                <button onClick={() => setCategoryFilter([])} className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-bold transition-colors ${categoryFilter.length === 0 ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground"}`}>Wszystkie</button>
+                <button onClick={() => setCategoryFilter([])} className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-bold transition-colors ${categoryFilter.length === 0 ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground"}`}>{t("all")}</button>
                 {MAIN_CATEGORIES.flatMap((c) => c.subcategories).map((s) => (
                   <button key={s.id} onClick={() => toggleFilter(setCategoryFilter, s.id)} className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-colors ${categoryFilter.includes(s.id) ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground"}`}>{s.emoji} {s.label}</button>
                 ))}
               </div>
             </div>
-            <p className="text-[11px] text-muted-foreground">Motyw filtruje zestawienia, kategoria filtruje trasy.</p>
+            <p className="text-[11px] text-muted-foreground">{t("filter.hint")}</p>
           </div>
           <div className="flex gap-2 px-5 pt-3 pb-[max(16px,env(safe-area-inset-bottom))]">
-            <button onClick={clearFilters} className="flex-1 py-3 rounded-full bg-secondary text-secondary-foreground font-bold text-sm active:scale-[0.98] transition-transform">Wyczyść filtry</button>
-            <button onClick={() => setFiltersOpen(false)} className="flex-1 py-3 rounded-full bg-primary text-white font-bold text-sm active:scale-[0.98] transition-transform">Pokaż wyniki</button>
+            <button onClick={clearFilters} className="flex-1 py-3 rounded-full bg-secondary text-secondary-foreground font-bold text-sm active:scale-[0.98] transition-transform">{t("filter.clear")}</button>
+            <button onClick={() => setFiltersOpen(false)} className="flex-1 py-3 rounded-full bg-primary text-white font-bold text-sm active:scale-[0.98] transition-transform">{t("filter.apply")}</button>
           </div>
         </SheetContent>
       </Sheet>

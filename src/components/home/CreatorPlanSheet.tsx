@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { MapPin, ExternalLink, Clock } from "lucide-react";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -8,12 +9,6 @@ const CATEGORY_ICONS: Record<string, string> = {
   bar: "🍺", cafe: "☕", restaurant: "🍽️", viewpoint: "🌅",
   museum: "🏛️", park: "🌿", shopping: "🛍️", gallery: "🖼️",
   monument: "🏰", nightlife: "🌙",
-};
-
-const CATEGORY_LABELS: Record<string, string> = {
-  bar: "Bar", cafe: "Kawiarnia", restaurant: "Restauracja", viewpoint: "Widok",
-  museum: "Muzeum", park: "Park", shopping: "Zakupy", gallery: "Galeria",
-  monument: "Zabytek", nightlife: "Nocne życie",
 };
 
 const PLATFORM_BADGE: Record<string, { label: string; bg: string; text: string }> = {
@@ -31,6 +26,7 @@ interface CreatorPlanSheetProps {
 
 export default function CreatorPlanSheet({ plan, open, onOpenChange, onPersonalize }: CreatorPlanSheetProps) {
   const navigate = useNavigate();
+  const { t } = useTranslation("homecreator");
 
   if (!plan) return null;
 
@@ -81,7 +77,7 @@ export default function CreatorPlanSheet({ plan, open, onOpenChange, onPersonali
                   )}
                   {plan.num_days && (
                     <span className="text-white/70 text-xs">
-                      {plan.num_days} {plan.num_days === 1 ? "dzień" : "dni"}
+                      {plan.num_days} {t(plan.num_days === 1 ? "sheet.day_one" : "sheet.day_many")}
                     </span>
                   )}
                   <span className="flex items-center gap-1 text-white/60 text-xs">
@@ -133,7 +129,7 @@ export default function CreatorPlanSheet({ plan, open, onOpenChange, onPersonali
             )}
 
             <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium mb-3">
-              {plan.places.length} {plan.places.length === 1 ? "miejsce" : "miejsc"}
+              {plan.places.length} {t(plan.places.length === 1 ? "sheet.place_one" : "sheet.place_many")}
             </p>
           </div>
 
@@ -162,7 +158,7 @@ export default function CreatorPlanSheet({ plan, open, onOpenChange, onPersonali
                   <div className="flex items-center gap-2 mt-0.5">
                     {place.category && (
                       <span className="text-xs text-muted-foreground">
-                        {CATEGORY_LABELS[place.category] ?? place.category}
+                        {t(`sheet.categories.${place.category}`, { defaultValue: place.category })}
                       </span>
                     )}
                     {place.suggested_time && (
@@ -197,7 +193,7 @@ export default function CreatorPlanSheet({ plan, open, onOpenChange, onPersonali
               }
             }}
           >
-            Personalizuj ten plan →
+            {t("sheet.personalize")}
           </Button>
         </div>
       </SheetContent>

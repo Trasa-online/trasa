@@ -1,0 +1,70 @@
+{
+  "loading_title": "Tworzę Twoją trasę",
+  "loading_subtitle": "Ty się zrelaksuj!",
+  "day_label": "Dzień {{n}}",
+  "days_one": "1 dzień",
+  "days_many": "{{count}} dni",
+  "assistant": {
+    "plan_ready": "Oto Twój plan w **{{city}}** 🗺️\n\nMogę go dostosować do Twoich potrzeb - powiedz co zmienić!",
+    "continuation_intro": "Świetnie! Uzupełniam plan o Twoje nowe polubienia 🗺️",
+    "fallback_intro": "Oto wstępny plan na **{{days}} w {{city}}** 🗺️\n\nPowiedz co zmienić!",
+    "error_generic": "Przepraszam, coś poszło nie tak. Spróbuj ponownie."
+  },
+  "ai_prompt": {
+    "extend": "Uzupełnij plan o moje nowe polubione miejsca w pustych dniach. Zachowaj istniejące dni bez zmian.",
+    "generate": "Generuj plan"
+  },
+  "toast": {
+    "extend_failed_title": "Nie udało się rozszerzyć planu",
+    "extend_failed_desc": "Plan pozostanie w obecnej wersji.",
+    "generate_error_title": "Błąd generowania planu",
+    "init_error_title": "Błąd inicjalizacji",
+    "hours_warning_title": "Uwaga: część miejsc może być zamknięta o tej porze",
+    "hours_more": "; +{{count}} więcej"
+  },
+  "hours": {
+    "closed_all_day": "{{name}} zamknięte w ten dzień",
+    "closed_at": "{{name}} zamknięte o {{time}}",
+    "closed_at_until": "{{name}} zamknięte o {{time}} (czynne do {{closes}})"
+  },
+  "map": {
+    "title": "Trasa na mapie",
+    "open": "Otwórz",
+    "no_data": "Brak danych mapy",
+    "no_location": "brak lokalizacji",
+    "day_prefix": "Dzień",
+    "preview_title": "Podgląd mapy",
+    "expand_aria": "Rozwiń mapę"
+  },
+  "peek": {
+    "day_abbr": "Dz.{{n}}",
+    "places_count": "{{count}} miejsc",
+    "hint": "↑ plan"
+  },
+  "swap": {
+    "title": "Zamień na…",
+    "cancel": "Anuluj",
+    "empty": "Brak innych wybranych miejsc",
+    "walking": "{{time}} spaceru",
+    "command": "Zamień {{old}} na {{name}}"
+  },
+  "detail": {
+    "move_to_day": "Przenieś → Dzień {{n}}",
+    "remove": "Usuń",
+    "swap": "Zamień",
+    "close": "Zamknij"
+  },
+  "reasoning_title": "Dlaczego taka trasa?",
+  "adding_places": "Dodaję nowe miejsca do planu...",
+  "empty_day": {
+    "title": "Ten dzień jest pusty",
+    "desc": "Wróć do wyboru i polub jeszcze kilka miejsc, żeby wypełnić ten dzień."
+  },
+  "confirm_remove": "Usunąć \"{{name}}\" z trasy?",
+  "add_place": "Dodaj miejsce",
+  "remove_pin_aria": "Usuń punkt z trasy",
+  "back_to_matches": "Cofnij do dopasowań",
+  "map_button": "Mapa",
+  "confirm_readonly": "Wracam na główną",
+  "confirm_plan": "Wybieram ten plan!"
+}

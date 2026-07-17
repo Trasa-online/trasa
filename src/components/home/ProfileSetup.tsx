@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { avatarSrc } from "@/lib/avatar";
 import { ArrowLeft, Check, Plus, Bell, Loader2, MapPin } from "lucide-react";
 import { Camera as CapCamera, CameraResultType, CameraSource } from "@capacitor/camera";
@@ -28,6 +29,7 @@ const sanitizeUsername = (v: string) => v.toLowerCase().replace(/[^a-z0-9._]/g, 
 const escapeLike = (v: string) => v.replace(/[%_\\]/g, "\\$&");
 
 const ProfileSetup = ({ onDone }: ProfileSetupProps) => {
+  const { t } = useTranslation("homeprofile");
   const { user } = useAuth();
   const [step, setStep] = useState(0);
   const stepName: Step = STEPS[step];
@@ -118,7 +120,7 @@ const ProfileSetup = ({ onDone }: ProfileSetupProps) => {
     if (error) {
       // unique violation -> zajety
       if ((error as any).code === "23505") { setUStatus("taken"); return; }
-      toast.error("Nie udało się zapisać nazwy");
+      toast.error(t("profile.error_save_name"));
       return;
     }
     goNext();
@@ -143,7 +145,7 @@ const ProfileSetup = ({ onDone }: ProfileSetupProps) => {
     try {
       const fileName = `${user.id}/avatar.${ext}`;
       const { error: upErr } = await supabase.storage.from("avatars").upload(fileName, blob, { upsert: true, contentType });
-      if (upErr) { toast.error("Nie udało się przesłać zdjęcia"); return; }
+      if (upErr) { toast.error(t("profile.error_upload_photo")); return; }
       const { data: { publicUrl } } = supabase.storage.from("avatars").getPublicUrl(fileName);
       const busted = `${publicUrl}?t=${Date.now()}`;
       await supabase.from("profiles").update({ avatar_url: busted } as any).eq("id", user.id);
@@ -191,7 +193,7 @@ const ProfileSetup = ({ onDone }: ProfileSetupProps) => {
       if (isNative) {
         const result = await requestAndRegisterNativePush(user?.id ?? null);
         if (result === "denied") {
-          toast("Powiadomienia możesz włączyć później w ustawieniach", { icon: "🔔" });
+          toast(t("profile.notify_later"), { icon: "🔔" });
         }
       } else if ("Notification" in window) {
         try { await Notification.requestPermission(); } catch { /* ignore */ }
@@ -218,11 +220,11 @@ const ProfileSetup = ({ onDone }: ProfileSetupProps) => {
     (stepName === "location" && locLoading) ||
     (stepName === "notify" && (notifLoading || finishing));
   const primaryLabel =
-    stepName === "username" ? "Dalej" :
-    stepName === "avatar" ? "Dalej" :
-    stepName === "origin" ? "Dalej" :
-    stepName === "location" ? "Włącz lokalizację" :
-    "Pozwól na powiadomienia";
+    stepName === "username" ? t("profile.cta_next") :
+    stepName === "avatar" ? t("profile.cta_next") :
+    stepName === "origin" ? t("profile.cta_next") :
+    stepName === "location" ? t("profile.cta_enable_location") :
+    t("profile.cta_allow_notifications");
   const onPrimary =
     stepName === "username" ? saveUsername :
     stepName === "avatar" ? goNext :
@@ -237,7 +239,7 @@ const ProfileSetup = ({ onDone }: ProfileSetupProps) => {
       <div className="flex items-center gap-3 px-4 pb-3" style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 1rem)" }}>
         <button
           onClick={goBack}
-          aria-label="Wstecz"
+          aria-label={t("profile.back_aria")}
           disabled={step === 0}
           className={`h-9 w-9 -ml-1 flex items-center justify-center rounded-full text-foreground active:bg-muted ${step === 0 ? "opacity-0 pointer-events-none" : ""}`}
         >
@@ -259,13 +261,13 @@ const ProfileSetup = ({ onDone }: ProfileSetupProps) => {
         {stepName === "username" && (
           <>
             <div className="pt-6 text-center">
-              <h2 className="text-2xl font-black mb-2 leading-tight">{nbsp("Jak się nazywasz?")}</h2>
-              <p className="text-[15px] text-muted-foreground leading-relaxed">{nbsp("Później możesz to zmienić.")}</p>
+              <h2 className="text-2xl font-black mb-2 leading-tight">{nbsp(t("profile.username_title"))}</h2>
+              <p className="text-[15px] text-muted-foreground leading-relaxed">{nbsp(t("profile.username_subtitle"))}</p>
             </div>
             <div className="mt-8 space-y-5">
               {/* Imię - do personalizacji powiadomien */}
               <div>
-                <label className="block text-sm font-semibold mb-2 px-1">{nbsp("Twoje imię")}</label>
+                <label className="block text-sm font-semibold mb-2 px-1">{nbsp(t("profile.first_name_label"))}</label>
                 <div className="rounded-2xl border border-border bg-white px-4 focus-within:ring-2 focus-within:ring-orange-500/60 transition-shadow">
                   <input
                     value={firstName}
@@ -273,14 +275,14 @@ const ProfileSetup = ({ onDone }: ProfileSetupProps) => {
                     autoCapitalize="words"
                     autoCorrect="off"
                     inputMode="text"
-                    placeholder="Imię"
+                    placeholder={t("profile.first_name_placeholder")}
                     className="w-full bg-transparent py-3.5 px-1 text-lg outline-none text-foreground placeholder:text-muted-foreground/50"
                   />
                 </div>
               </div>
               {/* @username - unikalny */}
               <div>
-                <label className="block text-sm font-semibold mb-2 px-1">{nbsp("Nazwa użytkownika")}</label>
+                <label className="block text-sm font-semibold mb-2 px-1">{nbsp(t("profile.username_label"))}</label>
                 <div className="flex items-center rounded-2xl border border-border bg-white px-4 focus-within:ring-2 focus-within:ring-orange-500/60 transition-shadow">
                   <span className="text-muted-foreground text-lg select-none">@</span>
                   <input
@@ -290,16 +292,16 @@ const ProfileSetup = ({ onDone }: ProfileSetupProps) => {
                     autoCorrect="off"
                     spellCheck={false}
                     inputMode="text"
-                    placeholder="nazwa"
+                    placeholder={t("profile.username_placeholder")}
                     className="flex-1 bg-transparent py-3.5 px-1 text-lg outline-none text-foreground placeholder:text-muted-foreground/50"
                   />
                   {uStatus === "checking" && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
                   {uStatus === "ok" && <Check className="h-5 w-5 text-green-600" />}
                 </div>
                 <div className="h-6 mt-2 px-1 text-sm">
-                  {uStatus === "ok" && <span className="text-green-600 font-medium">Nazwa dostępna</span>}
-                  {uStatus === "taken" && <span className="text-red-600 font-medium">Ta nazwa jest zajęta</span>}
-                  {uStatus === "short" && <span className="text-muted-foreground">Minimum 2 znaki</span>}
+                  {uStatus === "ok" && <span className="text-green-600 font-medium">{t("profile.username_available")}</span>}
+                  {uStatus === "taken" && <span className="text-red-600 font-medium">{t("profile.username_taken")}</span>}
+                  {uStatus === "short" && <span className="text-muted-foreground">{t("profile.username_min")}</span>}
                 </div>
               </div>
             </div>
@@ -309,11 +311,11 @@ const ProfileSetup = ({ onDone }: ProfileSetupProps) => {
         {stepName === "avatar" && (
           <>
             <div className="pt-6 text-center">
-              <h2 className="text-2xl font-black mb-2 leading-tight">{nbsp("Dodaj zdjęcie profilowe")}</h2>
-              <p className="text-[15px] text-muted-foreground leading-relaxed">{nbsp("Dzięki niemu znajomi łatwiej Cię rozpoznają. Możesz pominąć ten krok.")}</p>
+              <h2 className="text-2xl font-black mb-2 leading-tight">{nbsp(t("profile.avatar_title"))}</h2>
+              <p className="text-[15px] text-muted-foreground leading-relaxed">{nbsp(t("profile.avatar_subtitle"))}</p>
             </div>
             <div className="flex-1 flex items-center justify-center">
-              <button onClick={pickAvatar} className="relative active:scale-[0.98] transition-transform" aria-label="Wybierz zdjęcie">
+              <button onClick={pickAvatar} className="relative active:scale-[0.98] transition-transform" aria-label={t("profile.avatar_pick_aria")}>
                 <div className="h-40 w-40 rounded-full overflow-hidden flex items-center justify-center bg-orange-100">
                   <img src={avatarSrc(avatarUrl)} alt="" className="h-full w-full object-cover" />
                 </div>
@@ -329,12 +331,12 @@ const ProfileSetup = ({ onDone }: ProfileSetupProps) => {
         {stepName === "origin" && (
           <>
             <div className="pt-6 text-center">
-              <h2 className="text-2xl font-black mb-2 leading-tight">{nbsp("Skąd jesteś?")}</h2>
-              <p className="text-[15px] text-muted-foreground leading-relaxed">{nbsp("Potrzebujemy tej informacji do udostępnionych przez Ciebie tras w przyszłości - jako lokals dla innych podróżnych!")}</p>
+              <h2 className="text-2xl font-black mb-2 leading-tight">{nbsp(t("profile.origin_title"))}</h2>
+              <p className="text-[15px] text-muted-foreground leading-relaxed">{nbsp(t("profile.origin_subtitle"))}</p>
             </div>
             <div className="mt-8 space-y-4">
               <div>
-                <label className="text-sm font-semibold text-foreground mb-1.5 block">Kraj</label>
+                <label className="text-sm font-semibold text-foreground mb-1.5 block">{t("profile.country_label")}</label>
                 <select
                   value={homeCountry}
                   onChange={(e) => { setHomeCountry(e.target.value); setHomeCity(""); }}
@@ -346,13 +348,13 @@ const ProfileSetup = ({ onDone }: ProfileSetupProps) => {
                 </select>
               </div>
               <div>
-                <label className="text-sm font-semibold text-foreground mb-1.5 block">Miasto</label>
+                <label className="text-sm font-semibold text-foreground mb-1.5 block">{t("profile.city_label")}</label>
                 <select
                   value={homeCity}
                   onChange={(e) => setHomeCity(e.target.value)}
                   className="w-full rounded-2xl border border-border bg-white px-4 py-3.5 text-base outline-none focus:ring-2 focus:ring-orange-500/60"
                 >
-                  <option value="" disabled>Wybierz miasto</option>
+                  <option value="" disabled>{t("profile.city_placeholder")}</option>
                   {citiesForCountry(homeCountry).map((city) => (
                     <option key={city} value={city}>{city}</option>
                   ))}
@@ -365,8 +367,8 @@ const ProfileSetup = ({ onDone }: ProfileSetupProps) => {
         {stepName === "location" && (
           <>
             <div className="pt-6 text-center">
-              <h2 className="text-2xl font-black mb-2 leading-tight">{nbsp("Dystans do miejsc")}</h2>
-              <p className="text-[15px] text-muted-foreground leading-relaxed">{nbsp("Pokażemy, jak blisko masz do miejsc, gdy jesteś na miejscu. Lokalizacji nigdzie nie zapisujemy.")}</p>
+              <h2 className="text-2xl font-black mb-2 leading-tight">{nbsp(t("profile.location_title"))}</h2>
+              <p className="text-[15px] text-muted-foreground leading-relaxed">{nbsp(t("profile.location_subtitle"))}</p>
             </div>
             <div className="flex-1 flex items-center justify-center">
               <div className="h-32 w-32 rounded-full flex items-center justify-center" style={{ background: "linear-gradient(135deg, #F4A259, #F9662B)" }}>
@@ -379,8 +381,8 @@ const ProfileSetup = ({ onDone }: ProfileSetupProps) => {
         {stepName === "notify" && (
           <>
             <div className="pt-6 text-center">
-              <h2 className="text-2xl font-black mb-2 leading-tight">{nbsp("Bądź na bieżąco")}</h2>
-              <p className="text-[15px] text-muted-foreground leading-relaxed">{nbsp("Włącz powiadomienia, aby wiedzieć o dopasowaniach w grupie, nowych trasach i wiadomościach od znajomych.")}</p>
+              <h2 className="text-2xl font-black mb-2 leading-tight">{nbsp(t("profile.notify_title"))}</h2>
+              <p className="text-[15px] text-muted-foreground leading-relaxed">{nbsp(t("profile.notify_subtitle"))}</p>
             </div>
             <div className="flex-1 flex items-center justify-center">
               <div className="h-32 w-32 rounded-full flex items-center justify-center" style={{ background: "linear-gradient(135deg, #F4A259, #F9662B)" }}>
@@ -405,16 +407,16 @@ const ProfileSetup = ({ onDone }: ProfileSetupProps) => {
         </button>
         {/* sekundarne wyjscie tylko tam, gdzie krok jest opcjonalny */}
         {stepName === "avatar" && (
-          <button onClick={goNext} className="w-full py-3 mt-1 text-sm font-medium text-muted-foreground">Pomiń</button>
+          <button onClick={goNext} className="w-full py-3 mt-1 text-sm font-medium text-muted-foreground">{t("profile.skip")}</button>
         )}
         {stepName === "location" && (
-          <button onClick={goNext} className="w-full py-3 mt-1 text-sm font-medium text-muted-foreground">Nie teraz</button>
+          <button onClick={goNext} className="w-full py-3 mt-1 text-sm font-medium text-muted-foreground">{t("profile.not_now")}</button>
         )}
         {stepName === "origin" && (
-          <button onClick={goNext} className="w-full py-3 mt-1 text-sm font-medium text-muted-foreground">Pomiń</button>
+          <button onClick={goNext} className="w-full py-3 mt-1 text-sm font-medium text-muted-foreground">{t("profile.skip")}</button>
         )}
         {stepName === "notify" && (
-          <button onClick={finish} disabled={finishing} className="w-full py-3 mt-1 text-sm font-medium text-muted-foreground">Nie teraz</button>
+          <button onClick={finish} disabled={finishing} className="w-full py-3 mt-1 text-sm font-medium text-muted-foreground">{t("profile.not_now")}</button>
         )}
       </div>
     </div>

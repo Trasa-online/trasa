@@ -1,0 +1,89 @@
+{
+  "toast": {
+    "saved": "Zapisano"
+  },
+  "confirm": {
+    "delete_collection": "Usunąć to zestawienie?"
+  },
+  "aria": {
+    "already_saved": "Już zapisane",
+    "save_place": "Zapisz miejsce",
+    "edit": "Edytuj",
+    "delete": "Usuń",
+    "list_view": "Widok listy",
+    "cards_view": "Widok kart",
+    "clear": "Wyczyść",
+    "filters": "Filtry",
+    "close": "Zamknij"
+  },
+  "not_in_trasa": "jeszcze nie ma w Trasie",
+  "see": "Zobacz",
+  "local_recommends": "lokals poleca!",
+  "plan_badge": "🗺️ Plan",
+  "list_badge": "📍 Lista",
+  "route_plan": "Plan trasy",
+  "places": "Miejsca",
+  "use_route": "Użyj tej trasy",
+  "plan_from_places": "Zaplanuj z tych miejsc",
+  "plan_own_in": "albo zaplanuj własną w {{city}}",
+  "day": "dzień",
+  "days": "dni",
+  "popular_themes_warsaw": "Popularne motywy Warszawy",
+  "collections": "Zestawienia miejsc",
+  "all": "Wszystkie",
+  "places_count_one": "{{count}} miejsce",
+  "places_count_few": "{{count}} miejsca",
+  "places_count_many": "{{count}} miejsc",
+  "places_count_other": "{{count}} miejsc",
+  "recommended": "Polecane",
+  "route": "Trasa",
+  "creator": "Twórca",
+  "author_anon": "Anonim",
+  "author_default": "Użytkownik",
+  "search_placeholder": "Szukaj tras, autorów, zestawień…",
+  "routes_heading": "Trasy",
+  "in_city": "w {{city}}",
+  "no_results": "Brak wyników",
+  "no_results_hint": "Spróbuj innego słowa lub zmień filtry.",
+  "newest_routes": "Najnowsze trasy",
+  "routes_in_warsaw": "Trasy w Warszawie",
+  "community_soon": "Trasy społeczności już wkrótce",
+  "community_soon_hint": "Stwórz swoją pierwszą trasę i udostępnij ją, żeby pomóc innym zaplanować podróż.",
+  "plan_prompt": {
+    "title": "Kiedy planujesz tę trasę?",
+    "desc": "Wybierz datę, a przeniesiemy Cię prosto do planowania z tymi miejscami.",
+    "skip": "Pomiń, zaplanuj bez daty"
+  },
+  "filters_title": "Filtry",
+  "filter": {
+    "city": "Miasto",
+    "theme": "Motyw zestawienia",
+    "category": "Kategoria miejsca",
+    "hint": "Motyw filtruje zestawienia, kategoria filtruje trasy.",
+    "clear": "Wyczyść filtry",
+    "apply": "Pokaż wyniki"
+  },
+  "cat": {
+    "restaurant": "Restauracja",
+    "cafe": "Kawiarnia",
+    "museum": "Muzeum",
+    "park": "Park",
+    "bar": "Bar",
+    "club": "Klub",
+    "monument": "Zabytek",
+    "gallery": "Galeria",
+    "market": "Targ",
+    "viewpoint": "Punkt widokowy",
+    "shopping": "Zakupy",
+    "experience": "Atrakcja",
+    "walk": "Spacer",
+    "other": "Miejsce"
+  },
+  "banner": {
+    "title": "Odkrywaj miejsca",
+    "subtitle": "Polecane przez lokalnych twórców",
+    "soon_title": "Już niedługo!",
+    "soon_desc": "Pracujemy nad funkcją odkrywania miejsc polecanych przez twórców. Będzie dostępna w jednej z najbliższych aktualizacji - stay tuned! 🚀"
+  },
+  "onboarding_next": "Dalej"
+}

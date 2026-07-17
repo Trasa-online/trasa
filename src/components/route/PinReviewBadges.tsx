@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Badge } from "@/components/ui/badge";
 import { Users, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -15,43 +16,44 @@ interface PinReviewBadgesProps {
   compact?: boolean;
 }
 
-const EXPECTATION_CONFIG: Record<string, { emoji: string; label: string; className: string }> = {
+const EXPECTATION_CONFIG: Record<string, { emoji: string; labelKey: string; className: string }> = {
   yes: {
     emoji: "😊",
-    label: "Spełniło oczekiwania",
+    labelKey: "expectation.yes",
     className: "bg-green-100 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800",
   },
   average: {
     emoji: "😐",
-    label: "Średnio",
+    labelKey: "expectation.average",
     className: "bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800",
   },
   no: {
     emoji: "😕",
-    label: "Poniżej oczekiwań",
+    labelKey: "expectation.no",
     className: "bg-red-100 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-800",
   },
 };
 
-const TRIP_ROLE_CONFIG: Record<string, { emoji: string; label: string; className: string }> = {
+const TRIP_ROLE_CONFIG: Record<string, { emoji: string; labelKey: string; className: string }> = {
   must_see: {
     emoji: "⭐",
-    label: "Punkt obowiązkowy",
+    labelKey: "trip_role.must_see",
     className: "bg-primary/10 text-primary border-primary/20",
   },
   nice_addition: {
     emoji: "➕",
-    label: "Fajny dodatek",
+    labelKey: "trip_role.nice_addition",
     className: "bg-secondary text-secondary-foreground border-border",
   },
   skippable: {
     emoji: "🔁",
-    label: "Można pominąć",
+    labelKey: "trip_role.skippable",
     className: "bg-muted text-muted-foreground border-border",
   },
 };
 
 const PinReviewBadges = ({ pin, compact = false }: PinReviewBadgesProps) => {
+  const { t } = useTranslation("routelist");
   const [expanded, setExpanded] = useState(false);
 
   const hasExpectation = pin.expectation_met && EXPECTATION_CONFIG[pin.expectation_met];
@@ -76,13 +78,13 @@ const PinReviewBadges = ({ pin, compact = false }: PinReviewBadgesProps) => {
         {expectationConfig && (
           <span className={cn("inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold rounded-full border", expectationConfig.className)}>
             <span>{expectationConfig.emoji}</span>
-            {expectationConfig.label}
+            {t(expectationConfig.labelKey)}
           </span>
         )}
         {tripRoleConfig && (
           <span className={cn("inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold rounded-full border", tripRoleConfig.className)}>
             <span>{tripRoleConfig.emoji}</span>
-            {tripRoleConfig.label}
+            {t(tripRoleConfig.labelKey)}
           </span>
         )}
       </div>
@@ -154,7 +156,7 @@ const PinReviewBadges = ({ pin, compact = false }: PinReviewBadgesProps) => {
             className="flex items-center gap-1 text-[10px] font-medium text-muted-foreground hover:text-foreground transition-colors"
           >
             <ChevronDown className={cn("h-3 w-3 transition-transform duration-200", expanded && "rotate-180")} />
-            {expanded ? "Zwiń" : "Pokaż więcej"}
+            {expanded ? t("collapse") : t("show_more")}
           </button>
         </>
       )}

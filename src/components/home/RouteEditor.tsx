@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import AddPlaceSheet from "./AddPlaceSheet";
+import { useTranslation } from "react-i18next";
 
 interface Pin {
   id: string;
@@ -23,6 +24,7 @@ interface RouteEditorProps {
 }
 
 const RouteEditor = ({ routeId, initialPins, dayLabel, dateLabel, canReview, onStartReview }: RouteEditorProps) => {
+  const { t } = useTranslation("hometrip");
   const [pins, setPins] = useState<Pin[]>(() =>
     [...initialPins].sort((a, b) => a.pin_order - b.pin_order)
   );
@@ -69,10 +71,10 @@ const RouteEditor = ({ routeId, initialPins, dayLabel, dateLabel, canReview, onS
     if (!pin) return;
     setPins(prev => prev.filter(p => p.id !== pinId));
     let undone = false;
-    toast(`Usunięto „${pin.place_name}"`, {
+    toast(t("route_editor.toast_removed", { name: pin.place_name }), {
       duration: 4000,
       action: {
-        label: "Cofnij",
+        label: t("route_editor.undo"),
         onClick: () => {
           undone = true;
           setPins(prev => [...prev, pin].sort((a, b) => a.pin_order - b.pin_order));
@@ -104,11 +106,11 @@ const RouteEditor = ({ routeId, initialPins, dayLabel, dateLabel, canReview, onS
       .single();
     if (error || !data) {
       setPins(prev => prev.filter(p => p.id !== tempId));
-      toast.error("Nie udało się dodać miejsca");
+      toast.error(t("route_editor.toast_add_error"));
       return;
     }
     setPins(prev => prev.map(p => p.id === tempId ? data : p));
-    toast.success(`Dodano „${name}"`);
+    toast.success(t("route_editor.toast_added", { name }));
   }, [pins, routeId]);
 
   return (
@@ -161,7 +163,7 @@ const RouteEditor = ({ routeId, initialPins, dayLabel, dateLabel, canReview, onS
           </div>
         ))}
         {sorted.length === 0 && (
-          <p className="text-xs text-muted-foreground text-center py-3">Brak miejsc - dodaj pierwsze!</p>
+          <p className="text-xs text-muted-foreground text-center py-3">{t("route_editor.empty")}</p>
         )}
       </div>
 
@@ -170,7 +172,7 @@ const RouteEditor = ({ routeId, initialPins, dayLabel, dateLabel, canReview, onS
         className="w-full flex items-center gap-2 px-3 py-2 rounded-2xl border border-dashed border-border/60 text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors text-sm mb-3"
       >
         <Plus className="h-3.5 w-3.5" />
-        Dodaj miejsce
+        {t("add_place")}
       </button>
 
       {canReview && (
@@ -179,7 +181,7 @@ const RouteEditor = ({ routeId, initialPins, dayLabel, dateLabel, canReview, onS
           size="sm"
           className="w-full rounded-full text-sm font-medium"
         >
-          Opowiedz o dniu
+          {t("route_editor.tell_about_day")}
         </Button>
       )}
 

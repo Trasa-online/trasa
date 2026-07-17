@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { supabase } from "@/integrations/supabase/client";
@@ -43,6 +44,7 @@ interface BusinessProfile {
 }
 
 const PlaceDetailSheet = ({ pin, open, onOpenChange }: PlaceDetailSheetProps) => {
+  const { t } = useTranslation("homeprofile");
   const { user } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -184,7 +186,7 @@ const PlaceDetailSheet = ({ pin, open, onOpenChange }: PlaceDetailSheetProps) =>
                 <span className="font-semibold text-sm">{details.rating}</span>
                 {details.user_ratings_total && (
                   <span className="text-xs text-muted-foreground">
-                    ({details.user_ratings_total.toLocaleString()} opinii)
+                    {t("place.reviews_count", { total: details.user_ratings_total.toLocaleString() })}
                   </span>
                 )}
               </div>
@@ -196,7 +198,7 @@ const PlaceDetailSheet = ({ pin, open, onOpenChange }: PlaceDetailSheetProps) =>
                 <div className="flex items-center gap-2">
                   <Clock className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                   <span className={cn("text-sm font-semibold", details.opening_hours.open_now ? "text-green-600 dark:text-green-400" : "text-red-500")}>
-                    {details.opening_hours.open_now ? "Otwarte teraz" : "Zamknięte"}
+                    {details.opening_hours.open_now ? t("place.open_now") : t("place.closed")}
                   </span>
                 </div>
                 {details.opening_hours.weekday_text?.length > 0 && (
@@ -216,7 +218,7 @@ const PlaceDetailSheet = ({ pin, open, onOpenChange }: PlaceDetailSheetProps) =>
             ) : (
               <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/40 rounded-2xl px-3 py-2.5">
                 <Clock className="h-4 w-4 flex-shrink-0" />
-                <span>Brak potwierdzonych godzin otwarcia - sprawdź w Google</span>
+                <span>{t("place.hours_missing")}</span>
               </div>
             )}
 
@@ -224,7 +226,7 @@ const PlaceDetailSheet = ({ pin, open, onOpenChange }: PlaceDetailSheetProps) =>
             {details.reviews?.length > 0 && (
               <div className="space-y-2.5">
                 <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">
-                  Ostatnie opinie
+                  {t("place.recent_reviews")}
                 </p>
                 {details.reviews.slice(0, 3).map((review: any, i: number) => (
                   <div key={i} className="bg-muted/40 rounded-2xl p-3 space-y-1.5">
@@ -252,7 +254,7 @@ const PlaceDetailSheet = ({ pin, open, onOpenChange }: PlaceDetailSheetProps) =>
               className="flex items-center gap-2 text-sm py-2.5 px-3 rounded-2xl bg-muted/40 hover:bg-muted/70 transition-colors"
             >
               <MapPin className="h-4 w-4 text-muted-foreground" />
-              <span className="flex-1">Otwórz w Google Maps</span>
+              <span className="flex-1">{t("place.open_maps")}</span>
               <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
             </a>
           </div>
@@ -263,7 +265,7 @@ const PlaceDetailSheet = ({ pin, open, onOpenChange }: PlaceDetailSheetProps) =>
           <div className="pb-6 space-y-3">
             {pin.latitude && pin.longitude && (
               <p className="text-sm text-muted-foreground text-center py-4">
-                Nie udało się pobrać szczegółów.
+                {t("place.details_error")}
               </p>
             )}
             <a
@@ -273,7 +275,7 @@ const PlaceDetailSheet = ({ pin, open, onOpenChange }: PlaceDetailSheetProps) =>
               className="flex items-center gap-2 text-sm py-2.5 px-3 rounded-2xl bg-muted/40 hover:bg-muted/70 transition-colors"
             >
               <MapPin className="h-4 w-4 text-muted-foreground" />
-              <span className="flex-1">Szukaj w Google Maps</span>
+              <span className="flex-1">{t("place.search_maps")}</span>
               <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
             </a>
           </div>
@@ -299,7 +301,7 @@ const PlaceDetailSheet = ({ pin, open, onOpenChange }: PlaceDetailSheetProps) =>
                   </div>
                 )}
                 <p className="text-xs font-semibold text-foreground">{businessProfile.business_name}</p>
-                <span className="ml-auto text-[10px] font-semibold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">Zweryfikowany</span>
+                <span className="ml-auto text-[10px] font-semibold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">{t("place.verified")}</span>
               </div>
 
               {/* Current event */}
@@ -351,7 +353,7 @@ const PlaceDetailSheet = ({ pin, open, onOpenChange }: PlaceDetailSheetProps) =>
                 onClick={() => navigate(`/biznes/${pin.place_id}`)}
                 className="w-full text-sm text-center text-orange-600 font-semibold py-2.5 rounded-2xl border border-orange-200 bg-orange-50 hover:bg-orange-100 transition-colors"
               >
-                Zarządzaj wizytówką →
+                {t("place.manage_listing")}
               </button>
             ) : (
               !showClaimForm ? (
@@ -359,27 +361,27 @@ const PlaceDetailSheet = ({ pin, open, onOpenChange }: PlaceDetailSheetProps) =>
                   onClick={() => setShowClaimForm(true)}
                   className="w-full text-xs text-center text-muted-foreground py-2 hover:text-foreground transition-colors"
                 >
-                  Jesteś właścicielem tego miejsca? Przejmij wizytówkę
+                  {t("place.claim_prompt")}
                 </button>
               ) : (
                 <div className="space-y-2">
-                  <p className="text-xs font-semibold text-foreground">Przejmij wizytówkę</p>
+                  <p className="text-xs font-semibold text-foreground">{t("place.claim_title")}</p>
                   <input
                     type="email"
-                    placeholder="E-mail kontaktowy *"
+                    placeholder={t("place.email_placeholder")}
                     value={claimEmail}
                     onChange={(e) => setClaimEmail(e.target.value)}
                     className="w-full text-sm rounded-2xl border border-input bg-background px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ring"
                   />
                   <input
                     type="tel"
-                    placeholder="Telefon (opcjonalnie)"
+                    placeholder={t("place.phone_placeholder")}
                     value={claimPhone}
                     onChange={(e) => setClaimPhone(e.target.value)}
                     className="w-full text-sm rounded-2xl border border-input bg-background px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ring"
                   />
                   <textarea
-                    placeholder="Wiadomość (opcjonalnie)"
+                    placeholder={t("place.message_placeholder")}
                     rows={2}
                     value={claimMessage}
                     onChange={(e) => setClaimMessage(e.target.value)}
@@ -390,14 +392,14 @@ const PlaceDetailSheet = ({ pin, open, onOpenChange }: PlaceDetailSheetProps) =>
                       onClick={() => setShowClaimForm(false)}
                       className="flex-1 text-sm py-2 rounded-2xl border border-border text-muted-foreground hover:bg-muted transition-colors"
                     >
-                      Anuluj
+                      {t("place.cancel")}
                     </button>
                     <button
                       onClick={handleSubmitClaim}
                       disabled={submittingClaim || !claimEmail}
                       className="flex-1 text-sm py-2 rounded-2xl bg-primary hover:bg-primary text-white font-semibold transition-colors disabled:opacity-50"
                     >
-                      {submittingClaim ? "Wysyłam..." : "Wyślij zgłoszenie"}
+                      {submittingClaim ? t("place.sending") : t("place.submit_claim")}
                     </button>
                   </div>
                 </div>

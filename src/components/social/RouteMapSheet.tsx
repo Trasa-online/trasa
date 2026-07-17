@@ -2,6 +2,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { APIProvider, Map, AdvancedMarker, useMap } from "@vis.gl/react-google-maps";
 import { GOOGLE_MAPS_API_KEY } from "@/lib/googleMaps";
 import { useMemo, useState, useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 
 interface MapPin {
   place_name: string;
@@ -79,6 +80,7 @@ function MapContent({ validPins, selectedIndex, onMarkerClick }: {
 }
 
 export default function RouteMapSheet({ city, pins, open, onOpenChange }: RouteMapSheetProps) {
+  const { t } = useTranslation("social");
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const chipRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
@@ -121,7 +123,7 @@ export default function RouteMapSheet({ city, pins, open, onOpenChange }: RouteM
         <div className="flex-1 overflow-hidden">
           {sortedPins.length === 0 ? (
             <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
-              Brak lokalizacji dla tej trasy
+              {t("map.no_locations")}
             </div>
           ) : (
             <APIProvider apiKey={GOOGLE_MAPS_API_KEY}>

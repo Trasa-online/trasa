@@ -1,0 +1,25 @@
+{
+  "stop_one": "przystanek",
+  "stop_many": "przystanki",
+  "collapse": "Zwiń",
+  "show_more_count": "Pokaż +{{count}} więcej",
+  "show_more": "Pokaż więcej",
+  "view": "Zobacz",
+  "edit": "Edytuj",
+  "route_title_range": "Twoja trasa {{range}}",
+  "route_title_date": "Twoja trasa {{date}}",
+  "route_title_city": "Twoja trasa - {{city}}",
+  "day_of": "Dzień #{{number}} z {{total}}",
+  "empty_day_title": "Ten dzień czeka na Twoje miejsca",
+  "empty_day_desc": "Wybierz więcej miejsc w edycji trasy, żeby uzupełnić ten dzień.",
+  "expectation": {
+    "yes": "Spełniło oczekiwania",
+    "average": "Średnio",
+    "no": "Poniżej oczekiwań"
+  },
+  "trip_role": {
+    "must_see": "Punkt obowiązkowy",
+    "nice_addition": "Fajny dodatek",
+    "skippable": "Można pominąć"
+  }
+}

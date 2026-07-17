@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { avatarSrc, DEFAULT_AVATAR } from "@/lib/avatar";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -17,6 +18,7 @@ interface RouteCommentsSheetProps {
 }
 
 export default function RouteCommentsSheet({ routeId, open, onOpenChange }: RouteCommentsSheetProps) {
+  const { t } = useTranslation("social");
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -74,19 +76,19 @@ export default function RouteCommentsSheet({ routeId, open, onOpenChange }: Rout
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="bottom" className="h-[80vh] flex flex-col px-0 pb-0 rounded-t-3xl">
         <SheetHeader className="px-5 pb-3 border-b border-border/40">
-          <SheetTitle className="text-base">Komentarze</SheetTitle>
+          <SheetTitle className="text-base">{t("comments.title")}</SheetTitle>
         </SheetHeader>
 
         {/* Comments list */}
         <div className="flex-1 overflow-y-auto py-2">
           {isLoading ? (
-            <p className="text-center text-sm text-muted-foreground py-8">Ładowanie...</p>
+            <p className="text-center text-sm text-muted-foreground py-8">{t("comments.loading")}</p>
           ) : comments.length === 0 ? (
-            <p className="text-center text-sm text-muted-foreground py-12">Brak komentarzy. Bądź pierwszy!</p>
+            <p className="text-center text-sm text-muted-foreground py-12">{t("comments.empty")}</p>
           ) : (
             comments.map((c: any) => {
               const profile = c.profiles;
-              const displayName = profile?.username || profile?.first_name || "Użytkownik";
+              const displayName = profile?.username || profile?.first_name || t("comments.user_fallback");
               const isOwn = user?.id === c.user_id;
               return (
                 <div key={c.id} className="flex gap-3 px-5 py-3">
@@ -135,7 +137,7 @@ export default function RouteCommentsSheet({ routeId, open, onOpenChange }: Rout
               value={text}
               onChange={e => setText(e.target.value)}
               onKeyDown={e => e.key === "Enter" && handleSubmit()}
-              placeholder="Dodaj komentarz..."
+              placeholder={t("comments.placeholder")}
               className="flex-1 bg-muted rounded-full px-4 py-2 text-sm outline-none placeholder:text-muted-foreground"
             />
             <button

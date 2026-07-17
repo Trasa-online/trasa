@@ -1,0 +1,70 @@
+{
+  "loading_title": "Creating your route",
+  "loading_subtitle": "Sit back and relax!",
+  "day_label": "Day {{n}}",
+  "days_one": "1 day",
+  "days_many": "{{count}} days",
+  "assistant": {
+    "plan_ready": "Here's your plan for **{{city}}** 🗺️\n\nI can tailor it to your needs - tell me what to change!",
+    "continuation_intro": "Great! I'm adding your new likes to the plan 🗺️",
+    "fallback_intro": "Here's a draft plan for **{{days}} in {{city}}** 🗺️\n\nTell me what to change!",
+    "error_generic": "Sorry, something went wrong. Please try again."
+  },
+  "ai_prompt": {
+    "extend": "Fill the empty days with my newly liked places. Keep the existing days unchanged. Reply in English.",
+    "generate": "Generate plan. Reply in English."
+  },
+  "toast": {
+    "extend_failed_title": "Couldn't extend the plan",
+    "extend_failed_desc": "The plan will stay in its current version.",
+    "generate_error_title": "Error generating plan",
+    "init_error_title": "Initialization error",
+    "hours_warning_title": "Heads up: some places may be closed at this time",
+    "hours_more": "; +{{count}} more"
+  },
+  "hours": {
+    "closed_all_day": "{{name}} closed on this day",
+    "closed_at": "{{name}} closed at {{time}}",
+    "closed_at_until": "{{name}} closed at {{time}} (open until {{closes}})"
+  },
+  "map": {
+    "title": "Route on the map",
+    "open": "Open",
+    "no_data": "No map data",
+    "no_location": "no location",
+    "day_prefix": "Day",
+    "preview_title": "Map preview",
+    "expand_aria": "Expand map"
+  },
+  "peek": {
+    "day_abbr": "D{{n}}",
+    "places_count": "{{count}} places",
+    "hint": "↑ plan"
+  },
+  "swap": {
+    "title": "Swap for…",
+    "cancel": "Cancel",
+    "empty": "No other selected places",
+    "walking": "{{time}} walk",
+    "command": "Swap {{old}} for {{name}}"
+  },
+  "detail": {
+    "move_to_day": "Move → Day {{n}}",
+    "remove": "Remove",
+    "swap": "Swap",
+    "close": "Close"
+  },
+  "reasoning_title": "Why this route?",
+  "adding_places": "Adding new places to the plan...",
+  "empty_day": {
+    "title": "This day is empty",
+    "desc": "Go back to selection and like a few more places to fill this day."
+  },
+  "confirm_remove": "Remove \"{{name}}\" from the route?",
+  "add_place": "Add place",
+  "remove_pin_aria": "Remove point from route",
+  "back_to_matches": "Back to selection",
+  "map_button": "Map",
+  "confirm_readonly": "Back to home",
+  "confirm_plan": "I'll take this plan!"
+}

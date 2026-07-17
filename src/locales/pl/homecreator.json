@@ -1,0 +1,87 @@
+{
+  "card": {
+    "day_one": "dzień",
+    "day_many": "dni",
+    "personalize": "Personalizuj plan →"
+  },
+  "sheet": {
+    "day_one": "dzień",
+    "day_many": "dni",
+    "place_one": "miejsce",
+    "place_many": "miejsc",
+    "personalize": "Personalizuj ten plan →",
+    "categories": {
+      "bar": "Bar",
+      "cafe": "Kawiarnia",
+      "restaurant": "Restauracja",
+      "viewpoint": "Widok",
+      "museum": "Muzeum",
+      "park": "Park",
+      "shopping": "Zakupy",
+      "gallery": "Galeria",
+      "monument": "Zabytek",
+      "nightlife": "Nocne życie"
+    }
+  },
+  "polecajka": {
+    "default_title": "Moje top miejsca w {{city}}",
+    "author_fallback": "Użytkownik",
+    "toast_published": "Polecajka opublikowana! 🎉",
+    "toast_error": "Nie udało się opublikować polecajki",
+    "header_title": "Stwórz polecajkę",
+    "header_as": "Jako",
+    "label_title": "Tytuł",
+    "label_places": "Miejsca ({{count}} wybranych)",
+    "desc_placeholder": "Krótki opis (opcjonalnie)…",
+    "publishing": "Publikowanie…",
+    "publish": "Opublikuj polecajkę ({{count}} miejsc) →"
+  },
+  "header": {
+    "login": "Zaloguj się",
+    "notifications": "Powiadomienia",
+    "search_friends": "Szukaj znajomych",
+    "saved_places": "Zapisane miejsca",
+    "saved": "Zapisane"
+  },
+  "add_place": {
+    "title": "Dodaj miejsce",
+    "search_placeholder": "Szukaj lub wpisz nazwę...",
+    "add_custom": "Dodaj „{{query}}\"",
+    "no_verification": "Bez weryfikacji",
+    "empty": "Wpisz nazwę miejsca"
+  },
+  "tour": {
+    "back": "Wstecz",
+    "skip": "Pomiń",
+    "next": "Dalej",
+    "start": "Zaczynamy! 🚀",
+    "chip_cafe": "Kawiarnia",
+    "chip_culture": "Kultura",
+    "chip_nature": "Natura",
+    "chip_food": "Jedzenie",
+    "chip_bar": "Bar",
+    "plan_solo": "Zaplanuj solo",
+    "plan_group": "Zaplanuj grupowo",
+    "join_session": "Dołącz do sesji",
+    "your_route": "TWOJA TRASA",
+    "available_cities": "DOSTĘPNE MIASTA",
+    "cities_tail": "i kolejne polskie miasta, a wkrótce cała Europa 🇪🇺",
+    "intro": {
+      "title": "Witaj w Trasie!",
+      "desc": "Trasa to speed dating z miastem. W kilka minut ułożysz plan dnia: przeglądasz miejsca, dodajesz te które Cię ciekawią i dostajesz gotową trasę."
+    },
+    "cities": {
+      "title": "Na start: polskie miasta",
+      "desc": "Zaczynamy od Warszawy i Gdańska, a kolejne miasta dochodzą na bieżąco. Trasa cały czas rośnie - wkrótce zaplanujesz podróż po całej Europie."
+    },
+    "plan": {
+      "title": "Planuj sam lub z grupą",
+      "desc": "Kliknij + na pasku i wybierz: planuj solo, zaproś grupę kodem albo dołącz do znajomych. Wy przeglądacie miejsca, a Trasa zbiera Wasze dopasowania."
+    },
+    "route": {
+      "title": "Gotowa trasa na mapie",
+      "desc": "Z dopasowań Trasa układa plan dnia w dobrej kolejności i pokazuje go na mapie. Plan dopracujesz i zapiszesz we wspomnieniach.",
+      "highlight": "Nawigujesz od punktu do punktu przez Google Maps."
+    }
+  }
+}

@@ -14,6 +14,7 @@ import { useDistanceReference, tryResolveOnSite } from "@/lib/distanceReference"
 import { haversineKm, formatDistance } from "@/lib/distance";
 import { Navigation, GripVertical, RotateCcw, CalendarDays, Loader2 } from "lucide-react";
 import { Reorder, useDragControls } from "framer-motion";
+import { useTranslation } from "react-i18next";
 
 // Edytor planu aktywnej trasy osadzony na ekranie glownym. Replika edytora planu z
 // ReviewSummary (widok Dziennika), ale jako self-contained widget na home: laduje wlasne
@@ -28,13 +29,6 @@ const CATEGORY_EMOJI: Record<string, string> = {
   walk: "🚶",
 };
 
-const CATEGORY_LABEL: Record<string, string> = {
-  restaurant: "Restauracja", cafe: "Kawiarnia", museum: "Muzeum", park: "Park",
-  bar: "Bar", club: "Klub", monument: "Zabytek", gallery: "Galeria",
-  market: "Targ", viewpoint: "Punkt widokowy", shopping: "Zakupy", experience: "Atrakcja",
-  walk: "Spacer", other: "Miejsce",
-};
-
 // Klucz kompozytowy notka per miejsce w danym dniu (route_id + place_name).
 const rkey = (routeId: string, placeName: string) => `${routeId}::${placeName}`;
 
@@ -47,6 +41,7 @@ function PlanReorderRow({ pin, isFirst, isLast, onTap, onUp, onDown, onRemove, d
   onTap: () => void; onUp: () => void; onDown: () => void; onRemove: () => void;
   distLabel: string | null; noteNode: React.ReactNode;
 }) {
+  const { t } = useTranslation("hometrip");
   const controls = useDragControls();
   return (
     <Reorder.Item
@@ -62,7 +57,7 @@ function PlanReorderRow({ pin, isFirst, isLast, onTap, onUp, onDown, onRemove, d
           onPointerDown={(e) => { e.stopPropagation(); controls.start(e); }}
           className="shrink-0 cursor-grab active:cursor-grabbing text-muted-foreground/30 hover:text-muted-foreground/60 transition-colors p-0.5"
           style={{ touchAction: "none" }}
-          aria-label="Przeciągnij, aby zmienić kolejność"
+          aria-label={t("editor.reorder_aria")}
         >
           <GripVertical className="h-4 w-4" />
         </div>
@@ -71,7 +66,7 @@ function PlanReorderRow({ pin, isFirst, isLast, onTap, onUp, onDown, onRemove, d
           <div className="min-w-0 flex-1">
             <p className="text-sm font-bold leading-tight truncate">{pin.place_name}</p>
             <div className="flex items-center gap-1.5 mt-0.5">
-              <p className="text-[11px] text-muted-foreground truncate">{CATEGORY_LABEL[pin.category] ?? "Miejsce"}</p>
+              <p className="text-[11px] text-muted-foreground truncate">{t(`categories.${pin.category}`, { defaultValue: t("categories.other") })}</p>
               {distLabel && (
                 <span className="shrink-0 inline-flex items-center gap-0.5 text-[10px] font-semibold text-orange-700">
                   <Navigation className="h-2.5 w-2.5" />{distLabel}
@@ -81,10 +76,10 @@ function PlanReorderRow({ pin, isFirst, isLast, onTap, onUp, onDown, onRemove, d
           </div>
         </button>
         <div className="flex flex-col shrink-0">
-          <button onClick={onUp} disabled={isFirst} aria-label="W górę" className="p-1 text-muted-foreground disabled:opacity-25 active:scale-90"><ChevronUp className="h-4 w-4" /></button>
-          <button onClick={onDown} disabled={isLast} aria-label="W dół" className="p-1 text-muted-foreground disabled:opacity-25 active:scale-90"><ChevronDown className="h-4 w-4" /></button>
+          <button onClick={onUp} disabled={isFirst} aria-label={t("editor.move_up")} className="p-1 text-muted-foreground disabled:opacity-25 active:scale-90"><ChevronUp className="h-4 w-4" /></button>
+          <button onClick={onDown} disabled={isLast} aria-label={t("editor.move_down")} className="p-1 text-muted-foreground disabled:opacity-25 active:scale-90"><ChevronDown className="h-4 w-4" /></button>
         </div>
-        <button onClick={onRemove} aria-label="Usuń miejsce" className="h-8 w-8 shrink-0 rounded-full bg-red-500/10 text-red-500 flex items-center justify-center active:scale-90"><Trash2 className="h-4 w-4" /></button>
+        <button onClick={onRemove} aria-label={t("editor.remove_place")} className="h-8 w-8 shrink-0 rounded-full bg-red-500/10 text-red-500 flex items-center justify-center active:scale-90"><Trash2 className="h-4 w-4" /></button>
       </div>
       {noteNode && <div className="px-0.5">{noteNode}</div>}
     </Reorder.Item>
@@ -92,6 +87,9 @@ function PlanReorderRow({ pin, isFirst, isLast, onTap, onUp, onDown, onRemove, d
 }
 
 const ActiveTripPlanEditorInner = ({ routeId, flush = false, onDelete, deleting }: { routeId: string; flush?: boolean; onDelete?: (e: React.MouseEvent) => void; deleting?: boolean }) => {
+  const { t } = useTranslation("hometrip");
+  // Etykieta kategorii miejsca (fallback -> "Miejsce"/"Place").
+  const catLabel = (cat: string) => t(`categories.${cat}`, { defaultValue: t("categories.other") });
   const { user } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -285,8 +283,8 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false, onDelete, deleting 
   };
   const removeWorkingPin = (id: string) => {
     const pin = workingPins.find((p: any) => p.id === id);
-    const name = pin?.place_name ? `„${pin.place_name}"` : "to miejsce";
-    if (!confirm(`Czy na pewno chcesz usunąć ${name} z planu dnia?`)) return;
+    const name = pin?.place_name ? `„${pin.place_name}"` : t("editor.remove_this_place");
+    if (!confirm(t("editor.remove_confirm", { name }))) return;
     setWorking(workingPins.filter((p: any) => p.id !== id));
   };
 
@@ -318,13 +316,13 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false, onDelete, deleting 
         queryClient.invalidateQueries({ queryKey: ["active-plan-trip-days", folderId, routeId] }),
         queryClient.invalidateQueries({ queryKey: ["active-plan-route", routeId] }),
       ]);
-      notify.success(finalize ? "Plan dnia zapisany" : "Zapisano zmiany", undefined, finalize ? { position: "top-center" } : undefined);
+      notify.success(finalize ? t("toast.plan_saved") : t("toast.changes_saved"), undefined, finalize ? { position: "top-center" } : undefined);
       // Zatwierdzenie trasy: przenies do wpisu w Dzienniku (uzupelnienie wspomnienia +
       // udostepnianie w kroku Zdjecia). Wczesniej pokazywal sie tu osobny share prompt.
       if (finalize) navigate(`/review-summary?route=${routeId}`);
     } catch (e: any) {
       console.error("[ActiveTripPlanEditor] savePlan failed:", e?.message ?? e);
-      notify.error("Nie udało się zapisać planu");
+      notify.error(t("toast.save_error"));
     }
     setSavingPlan(false);
   };
@@ -426,7 +424,7 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false, onDelete, deleting 
     }
     // Przenies od razu do wpisu w Dzienniku (uzupelnienie: trasa -> notki -> zdjecia).
     // Nawigacja NAJPIERW - zanim removeQueries odmontuje ten komponent (znika z home).
-    notify.success("Trasa ukończona! 🎉", "Uzupełnij wspomnienie w Dzienniku");
+    notify.success(t("toast.completed_title"), t("toast.completed_desc"));
     navigate(`/review-summary?route=${routeId}`);
     queryClient.removeQueries({ queryKey: ["home-active-solo"] });
     queryClient.invalidateQueries({ queryKey: ["active-routes"] });
@@ -441,7 +439,7 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false, onDelete, deleting 
     );
     try {
       await (supabase as any).from("pins").update({ visited_at: null }).eq("id", pinId);
-      notify.success("Cofnięto odhaczenie");
+      notify.success(t("toast.uncheck"));
     } catch (e: any) {
       console.error("[ActiveTripPlanEditor] unmarkVisited failed:", e?.message ?? e);
       queryClient.invalidateQueries({ queryKey: ["active-plan-all-pins", idsKey] });
@@ -472,7 +470,7 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false, onDelete, deleting 
     try {
       await (supabase as any).from("pins").update({ visited_at: new Date().toISOString() }).eq("id", pinId);
       if (done) await finalizeOnComplete();
-      else if (!silent) notify.success("Odhaczone!");
+      else if (!silent) notify.success(t("toast.checked"));
     } catch (e: any) {
       console.error("[ActiveTripPlanEditor] markVisited failed:", e?.message ?? e);
       queryClient.invalidateQueries({ queryKey: ["active-plan-all-pins", idsKey] });
@@ -512,14 +510,14 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false, onDelete, deleting 
             <div className="min-w-0">
               {isPastDay ? (
                 <>
-                  <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Dzień zakończony</p>
-                  <p className="text-base font-display font-extrabold text-foreground leading-tight">Ten dzień już&nbsp;minął</p>
+                  <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">{t("status.day_finished_label")}</p>
+                  <p className="text-base font-display font-extrabold text-foreground leading-tight">{t("status.day_finished")}</p>
                 </>
               ) : (
                 <>
-                  <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Zaplanowana</p>
+                  <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">{t("status.planned_label")}</p>
                   <p className="text-base font-display font-extrabold text-foreground leading-tight">
-                    Zaczyna się {daysUntilStart === 1 ? "jutro" : `za ${daysUntilStart} dni`}
+                    {daysUntilStart === 1 ? t("status.starts_tomorrow") : t("status.starts_in_days", { count: daysUntilStart })}
                   </p>
                 </>
               )}
@@ -563,17 +561,17 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false, onDelete, deleting 
     const k = rkey(activeRouteId!, placeName);
     return (
       <div className={`mt-3 pt-1 ${centered ? "text-center" : ""}`}>
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">Notka od Ciebie</p>
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">{t("editor.note_label")}</p>
         <div className="relative">
           <textarea
             value={notes[k] ?? ""}
             onChange={(e) => handleNoteChange(placeName, e.target.value)}
-            placeholder="Twoja rada lub notka o tym miejscu…"
+            placeholder={t("editor.note_placeholder")}
             rows={2}
             className="w-full bg-muted/50 rounded-xl px-3 py-2.5 text-sm text-foreground text-left resize-none focus:outline-none border border-border/30 placeholder:text-muted-foreground/55"
           />
           {noteSaved[k] && (
-            <span className="absolute bottom-2 right-2.5 text-[10px] text-green-600 font-medium">Zapisano ✓</span>
+            <span className="absolute bottom-2 right-2.5 text-[10px] text-green-600 font-medium">{t("editor.note_saved")}</span>
           )}
         </div>
       </div>
@@ -590,17 +588,17 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false, onDelete, deleting 
           <div className="absolute top-3 left-3 h-8 w-8 rounded-full bg-black/55 backdrop-blur text-white text-sm font-bold flex items-center justify-center">{i + 1}</div>
           {pin.visited_at ? (
             <div className="absolute bottom-3 left-3 flex items-center gap-1 px-2 py-1 rounded-full bg-black/60 backdrop-blur text-white text-[10px] font-bold">
-              <Check className="h-3 w-3" /> Odwiedzone
+              <Check className="h-3 w-3" /> {t("editor.visited")}
             </div>
           ) : skippedPinIds.has(pin.id) ? (
             <div className="absolute bottom-3 left-3 flex items-center gap-1 px-2 py-1 rounded-full bg-black/55 backdrop-blur text-white text-[10px] font-bold">
-              <ChevronRight className="h-3 w-3" /> Pominięte
+              <ChevronRight className="h-3 w-3" /> {t("editor.skipped")}
             </div>
           ) : null}
           {editable ? (
             <button
               onClick={(e) => { e.stopPropagation(); removeWorkingPin(pin.id); }}
-              aria-label="Usuń miejsce"
+              aria-label={t("editor.remove_place")}
               className="absolute top-3 right-3 h-8 w-8 rounded-full bg-black/55 backdrop-blur text-white flex items-center justify-center active:scale-90"
             >
               <Trash2 className="h-4 w-4" />
@@ -611,7 +609,7 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false, onDelete, deleting 
               role="button"
               tabIndex={0}
               onClick={(e) => { e.stopPropagation(); unmarkVisited(pin.id); }}
-              aria-label="Cofnij odhaczenie"
+              aria-label={t("editor.undo_check")}
               className="absolute top-3 right-3 h-10 w-10 rounded-full bg-black/55 backdrop-blur text-white flex items-center justify-center shadow-lg shadow-black/25 active:scale-90"
             >
               <RotateCcw className="h-5 w-5" strokeWidth={2.4} />
@@ -623,7 +621,7 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false, onDelete, deleting 
               role="button"
               tabIndex={0}
               onClick={(e) => { e.stopPropagation(); markVisited(pin.id); }}
-              aria-label="Odhacz"
+              aria-label={t("editor.check_off")}
               className="absolute top-3 right-3 h-10 w-10 rounded-full bg-green-600 text-white flex items-center justify-center shadow-lg shadow-black/25 active:scale-90"
             >
               <Check className="h-5 w-5" strokeWidth={2.6} />
@@ -633,7 +631,7 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false, onDelete, deleting 
         <div className="px-4 pt-4 pb-3">
           <div className="flex items-center gap-2 mb-2">
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white text-xs font-semibold text-foreground">
-              <span>{CATEGORY_EMOJI[pin.category] ?? "📍"}</span>{CATEGORY_LABEL[pin.category] ?? "Miejsce"}
+              <span>{CATEGORY_EMOJI[pin.category] ?? "📍"}</span>{catLabel(pin.category)}
             </span>
             {/* Nawiguj jako maly bialy pill dosuniety do PRAWEJ krawedzi (ml-auto).
                 Ukryte na przyszly dzien - trasa jeszcze sie nie zaczela, nie ma dokad nawigowac. */}
@@ -642,10 +640,10 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false, onDelete, deleting 
                 role="button"
                 tabIndex={0}
                 onClick={(e) => { e.stopPropagation(); const q = encodeURIComponent([pin.place_name, pin.address || route?.city].filter(Boolean).join(", ")); window.open(`https://www.google.com/maps/dir/?api=1&destination=${q}`, "_blank", "noopener,noreferrer"); }}
-                aria-label="Nawiguj"
+                aria-label={t("editor.navigate")}
                 className="ml-auto inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white text-xs font-semibold text-foreground shadow-sm active:scale-95"
               >
-                <Navigation className="h-3.5 w-3.5" /> Nawiguj
+                <Navigation className="h-3.5 w-3.5" /> {t("editor.navigate")}
               </span>
             )}
           </div>
@@ -655,10 +653,10 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false, onDelete, deleting 
       {editable && (
         <div className="flex items-center justify-between px-4 py-3 mt-auto border-t border-border/30">
           <button onClick={() => movePin(i, i - 1)} disabled={i === 0} className="flex items-center gap-1 text-xs font-semibold text-muted-foreground disabled:opacity-25 active:scale-95">
-            <ChevronLeft className="h-4 w-4" />Wcześniej
+            <ChevronLeft className="h-4 w-4" />{t("editor.earlier")}
           </button>
           <button onClick={() => movePin(i, i + 1)} disabled={i === workingPins.length - 1} className="flex items-center gap-1 text-xs font-semibold text-muted-foreground disabled:opacity-25 active:scale-95">
-            Później<ChevronRight className="h-4 w-4" />
+            {t("editor.later")}<ChevronRight className="h-4 w-4" />
           </button>
         </div>
       )}
@@ -691,23 +689,23 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false, onDelete, deleting 
         <button onClick={() => openDetail(pin)} className="min-w-0 flex-1 text-left">
           <p className="text-sm font-bold leading-tight truncate">{pin.place_name}</p>
           <span className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white text-[11px] font-semibold text-muted-foreground">
-            <span>{CATEGORY_EMOJI[pin.category] ?? "📍"}</span>{CATEGORY_LABEL[pin.category] ?? "Miejsce"}
+            <span>{CATEGORY_EMOJI[pin.category] ?? "📍"}</span>{catLabel(pin.category)}
           </span>
         </button>
         <div className="flex items-center gap-1 shrink-0">
           {editable && (
             <div className="flex flex-col">
-              <button onClick={() => movePin(i, i - 1)} disabled={i === 0} aria-label="Wcześniej" className="h-6 w-6 flex items-center justify-center text-muted-foreground disabled:opacity-25 active:scale-90"><ChevronUp className="h-4 w-4" /></button>
-              <button onClick={() => movePin(i, i + 1)} disabled={i === workingPins.length - 1} aria-label="Później" className="h-6 w-6 flex items-center justify-center text-muted-foreground disabled:opacity-25 active:scale-90"><ChevronDown className="h-4 w-4" /></button>
+              <button onClick={() => movePin(i, i - 1)} disabled={i === 0} aria-label={t("editor.earlier")} className="h-6 w-6 flex items-center justify-center text-muted-foreground disabled:opacity-25 active:scale-90"><ChevronUp className="h-4 w-4" /></button>
+              <button onClick={() => movePin(i, i + 1)} disabled={i === workingPins.length - 1} aria-label={t("editor.later")} className="h-6 w-6 flex items-center justify-center text-muted-foreground disabled:opacity-25 active:scale-90"><ChevronDown className="h-4 w-4" /></button>
             </div>
           )}
           {!isPastDay && (pin.visited_at ? (
-            <button onClick={() => unmarkVisited(pin.id)} aria-label="Cofnij odhaczenie" className="h-9 w-9 rounded-full flex items-center justify-center text-muted-foreground active:scale-90"><RotateCcw className="h-4 w-4" /></button>
+            <button onClick={() => unmarkVisited(pin.id)} aria-label={t("editor.undo_check")} className="h-9 w-9 rounded-full flex items-center justify-center text-muted-foreground active:scale-90"><RotateCcw className="h-4 w-4" /></button>
           ) : !skippedPinIds.has(pin.id) ? (
-            <button onClick={() => markVisited(pin.id)} aria-label="Odhacz" className="h-9 w-9 rounded-full border-2 border-green-500/60 text-green-600 flex items-center justify-center active:scale-90"><Check className="h-4 w-4" strokeWidth={2.6} /></button>
+            <button onClick={() => markVisited(pin.id)} aria-label={t("editor.check_off")} className="h-9 w-9 rounded-full border-2 border-green-500/60 text-green-600 flex items-center justify-center active:scale-90"><Check className="h-4 w-4" strokeWidth={2.6} /></button>
           ) : null)}
           {editable && (
-            <button onClick={() => removeWorkingPin(pin.id)} aria-label="Usuń miejsce" className="h-9 w-9 rounded-full flex items-center justify-center text-muted-foreground/60 active:scale-90"><Trash2 className="h-4 w-4" /></button>
+            <button onClick={() => removeWorkingPin(pin.id)} aria-label={t("editor.remove_place")} className="h-9 w-9 rounded-full flex items-center justify-center text-muted-foreground/60 active:scale-90"><Trash2 className="h-4 w-4" /></button>
           )}
         </div>
       </div>
@@ -728,7 +726,7 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false, onDelete, deleting 
       onClick={() => navigate(`/trasa/${activeRouteId}/dodaj`)}
       className="mt-3 w-full py-3 rounded-2xl border-2 border-dashed border-border/50 text-sm font-semibold text-muted-foreground flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
     >
-      <Plus className="h-4 w-4" /> Dodaj miejsce
+      <Plus className="h-4 w-4" /> {t("add_place")}
     </button>
   );
 
@@ -741,14 +739,14 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false, onDelete, deleting 
           <button
             onClick={() => setInfoOpen((o) => !o)}
             className={`h-8 w-8 flex items-center justify-center rounded-full transition-colors active:scale-90 ${infoOpen ? "bg-orange-100 text-orange-700" : "bg-secondary text-muted-foreground"}`}
-            aria-label="Jak edytować plan"
+            aria-label={t("editor.edit_hint_aria")}
           >
             <Info className="h-4 w-4" />
           </button>
           <button
             onClick={() => setEditMode((o) => !o)}
             className={`h-8 w-8 flex items-center justify-center rounded-full transition-colors active:scale-90 ${editMode ? "bg-orange-100 text-orange-700" : "bg-secondary text-muted-foreground"}`}
-            aria-label="Edytuj plan"
+            aria-label={t("editor.edit_plan_aria")}
           >
             <Pencil className="h-4 w-4" />
           </button>
@@ -757,7 +755,7 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false, onDelete, deleting 
             <button
               onClick={onDelete}
               disabled={deleting}
-              aria-label="Usuń trasę"
+              aria-label={t("editor.delete_route_aria")}
               className="h-8 w-8 flex items-center justify-center rounded-full bg-secondary text-muted-foreground hover:text-destructive transition-colors active:scale-90 disabled:opacity-50"
             >
               {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
@@ -766,13 +764,13 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false, onDelete, deleting 
         </div>
         {showViewToggle && (
           <div className="flex rounded-full bg-muted p-0.5">
-            <button onClick={() => setPlanView("list")} aria-label="Widok listy" className={`px-2.5 py-1.5 rounded-full transition-colors ${planView === "list" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
+            <button onClick={() => setPlanView("list")} aria-label={t("editor.view_list")} className={`px-2.5 py-1.5 rounded-full transition-colors ${planView === "list" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
               <List className="h-4 w-4" />
             </button>
-            <button onClick={() => setPlanView("cards")} aria-label="Widok kart" className={`px-2.5 py-1.5 rounded-full transition-colors ${planView === "cards" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
+            <button onClick={() => setPlanView("cards")} aria-label={t("editor.view_cards")} className={`px-2.5 py-1.5 rounded-full transition-colors ${planView === "cards" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
               <GalleryHorizontalEnd className="h-4 w-4" />
             </button>
-            <button onClick={() => setPlanView("map")} aria-label="Widok mapy" className={`px-2.5 py-1.5 rounded-full transition-colors ${planView === "map" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
+            <button onClick={() => setPlanView("map")} aria-label={t("editor.view_map")} className={`px-2.5 py-1.5 rounded-full transition-colors ${planView === "map" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
               <MapIcon className="h-4 w-4" />
             </button>
           </div>
@@ -781,7 +779,7 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false, onDelete, deleting 
       {infoOpen && (
         <div className="mb-3 rounded-xl bg-orange-50 border border-orange-100 px-3 py-2.5 animate-in fade-in slide-in-from-top-1 duration-200">
           <p className="text-xs text-orange-800 leading-relaxed">
-            Kliknij ołówek, aby edytować plan: zmień kolejność, usuń lub dodaj miejsca. Zapis blokuje trasę i&nbsp;pozwala ją&nbsp;udostępnić.
+            {t("editor.edit_hint")}
           </p>
         </div>
       )}
@@ -793,7 +791,7 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false, onDelete, deleting 
               onClick={() => setSelectedDayId(d.id)}
               className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-colors ${d.id === activeRouteId ? "bg-foreground text-background" : "bg-card border border-border/50 text-muted-foreground"}`}
             >
-              Dzień {d.day_number ?? "?"}
+              {t("day_number", { number: d.day_number ?? "?" })}
             </button>
           ))}
         </div>
@@ -816,7 +814,7 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false, onDelete, deleting 
       {renderPlanHeader(currentPins.length > 0)}
       {currentPins.length === 0 ? (
         <>
-          <p className="text-center text-sm text-muted-foreground py-8">Brak miejsc w planie tego dnia.</p>
+          <p className="text-center text-sm text-muted-foreground py-8">{t("editor.empty_day")}</p>
           {renderAddPlaceButton()}
         </>
       ) : (
@@ -849,16 +847,16 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false, onDelete, deleting 
                 <Check className="h-5 w-5 text-trasa-teal-ink" />
               </div>
               <div className="flex-1">
-                <p className="text-base font-black leading-snug">Czy byłeś w&nbsp;{skipPromptPin.place_name}?</p>
-                <p className="text-sm text-muted-foreground mt-1 leading-relaxed">Przechodzisz dalej - oznaczymy to&nbsp;miejsce, jeśli już&nbsp;tam byłeś.</p>
+                <p className="text-base font-black leading-snug">{t("skip.title", { place: skipPromptPin.place_name })}</p>
+                <p className="text-sm text-muted-foreground mt-1 leading-relaxed">{t("skip.desc")}</p>
               </div>
             </div>
             <div className="flex flex-col gap-2">
               <button onClick={confirmSkipWasThere} className="w-full py-3.5 rounded-full bg-[#0E0E0E] text-white font-bold text-sm flex items-center justify-center gap-1.5 active:scale-[0.97] transition-transform">
-                <Check className="h-4 w-4" /> Tak, byłem
+                <Check className="h-4 w-4" /> {t("skip.yes")}
               </button>
               <button onClick={confirmSkipNotYet} className="w-full py-3.5 rounded-full border border-border text-sm font-semibold text-foreground active:scale-[0.97] transition-transform">
-                Nie, pomiń to miejsce
+                {t("skip.no")}
               </button>
             </div>
           </div>
@@ -871,7 +869,7 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false, onDelete, deleting 
           disabled={savingPlan || workingPins.length === 0}
           className="mt-4 w-full py-3.5 rounded-full bg-primary text-white font-bold text-base active:scale-[0.98] transition-transform disabled:opacity-40"
         >
-          {savingPlan ? "Zapisywanie…" : showFinalizeBtn ? "Zatwierdź tę trasę" : "Zapisz zmiany"}
+          {savingPlan ? t("editor.saving") : showFinalizeBtn ? t("editor.confirm_route") : t("editor.save_changes")}
         </button>
       )}
 
@@ -898,24 +896,24 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false, onDelete, deleting 
                 <Globe className="h-5 w-5 text-orange-600" />
               </div>
               <div className="flex-1">
-                <p className="text-base font-black leading-snug">Udostępnić tę trasę innym?</p>
+                <p className="text-base font-black leading-snug">{t("share.title")}</p>
                 <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
-                  Trafi do zakładki Eksploruj i&nbsp;pomoże innym zaplanować podróż. Udostępniamy plan trasy z&nbsp;Twoją okładką, notkami i&nbsp;ocenami - bez galerii Twoich zdjęć. Jeśli nie, zostanie prywatna w&nbsp;Twoich Wspomnieniach. Zmienisz to w&nbsp;każdej chwili.
+                  {t("share.desc")}
                 </p>
               </div>
             </div>
             <div className="flex flex-col gap-2">
               <button
-                onClick={() => { togglePublic(true); setShowSharePrompt(false); notify.success("Trasa widoczna w Eksploruj"); navigate("/dziennik"); }}
+                onClick={() => { togglePublic(true); setShowSharePrompt(false); notify.success(t("toast.shared_public")); navigate("/dziennik"); }}
                 className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-sm active:scale-[0.97] transition-transform shadow-md shadow-orange-500/20"
               >
-                Udostępnij w Eksploruj
+                {t("share.public")}
               </button>
               <button
-                onClick={() => { togglePublic(false); setShowSharePrompt(false); notify.success("Zapisano w Wspomnieniach"); navigate("/dziennik"); }}
+                onClick={() => { togglePublic(false); setShowSharePrompt(false); notify.success(t("toast.saved_private")); navigate("/dziennik"); }}
                 className="w-full py-3.5 rounded-full border border-border text-sm font-semibold text-foreground active:scale-[0.97] transition-transform"
               >
-                Zostaw prywatną
+                {t("share.private")}
               </button>
             </div>
           </div>

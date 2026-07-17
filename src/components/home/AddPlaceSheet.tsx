@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { Search, Plus, MapPin, X } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { forwardGeocodeWithTypes } from "@/lib/googleMaps";
@@ -17,6 +18,7 @@ interface AddPlaceSheetProps {
 }
 
 const AddPlaceSheet = ({ open, onOpenChange, onAdd }: AddPlaceSheetProps) => {
+  const { t } = useTranslation("homecreator");
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<PlaceResult[]>([]);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
@@ -50,7 +52,7 @@ const AddPlaceSheet = ({ open, onOpenChange, onAdd }: AddPlaceSheetProps) => {
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="bottom" className="rounded-t-2xl flex flex-col" style={{ maxHeight: "75vh" }}>
         <SheetHeader className="pb-2 shrink-0">
-          <SheetTitle className="text-left">Dodaj miejsce</SheetTitle>
+          <SheetTitle className="text-left">{t("add_place.title")}</SheetTitle>
         </SheetHeader>
 
         <div className="relative shrink-0 mb-3">
@@ -59,7 +61,7 @@ const AddPlaceSheet = ({ open, onOpenChange, onAdd }: AddPlaceSheetProps) => {
             ref={inputRef}
             value={query}
             onChange={e => setQuery(e.target.value)}
-            placeholder="Szukaj lub wpisz nazwę..."
+            placeholder={t("add_place.search_placeholder")}
             className="w-full pl-10 pr-9 py-2.5 rounded-2xl border border-border/60 bg-muted/30 text-sm focus:outline-none focus:border-foreground/30"
           />
           {query && (
@@ -82,8 +84,8 @@ const AddPlaceSheet = ({ open, onOpenChange, onAdd }: AddPlaceSheetProps) => {
                 <Plus className="h-4 w-4" />
               </div>
               <div>
-                <p className="text-sm font-medium">Dodaj „{query.trim()}"</p>
-                <p className="text-xs text-muted-foreground">Bez weryfikacji</p>
+                <p className="text-sm font-medium">{t("add_place.add_custom", { query: query.trim() })}</p>
+                <p className="text-xs text-muted-foreground">{t("add_place.no_verification")}</p>
               </div>
             </button>
           )}
@@ -105,7 +107,7 @@ const AddPlaceSheet = ({ open, onOpenChange, onAdd }: AddPlaceSheetProps) => {
           ))}
 
           {!query.trim() && (
-            <p className="text-sm text-muted-foreground text-center py-8">Wpisz nazwę miejsca</p>
+            <p className="text-sm text-muted-foreground text-center py-8">{t("add_place.empty")}</p>
           )}
         </div>
       </SheetContent>

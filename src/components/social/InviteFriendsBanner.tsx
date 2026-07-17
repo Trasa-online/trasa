@@ -1,5 +1,6 @@
 import { UserPlus, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/hooks/useAuth";
 import { useShare } from "@/hooks/useShare";
 import { useMyInviteCode, inviteLinkFromCode } from "@/hooks/useFriends";
@@ -14,6 +15,7 @@ import { cn } from "@/lib/utils";
 const INVITE_LINK_ENABLED = false;
 
 export default function InviteFriendsBanner({ className }: { className?: string }) {
+  const { t } = useTranslation("social");
   const { user, isAnonymous } = useAuth();
   const share = useShare();
   const { data: code } = useMyInviteCode(isAnonymous ? null : user?.id);
@@ -24,11 +26,11 @@ export default function InviteFriendsBanner({ className }: { className?: string 
 
   const onInvite = async () => {
     const res = await share({
-      title: "Dołącz do mnie na Trasie",
-      text: "Planujmy razem trasy po mieście! Dołącz do mnie na Trasie:",
+      title: t("invite.share_title"),
+      text: t("invite.share_text"),
       url: link,
     });
-    if (res.method === "clipboard") toast("Link skopiowany - wyślij go znajomym!");
+    if (res.method === "clipboard") toast(t("invite.link_copied"));
   };
 
   return (
@@ -48,8 +50,8 @@ export default function InviteFriendsBanner({ className }: { className?: string 
         <UserPlus className="h-5 w-5 text-blue-600" />
       </div>
       <div className="relative min-w-0 flex-1">
-        <p className="font-display font-extrabold text-base leading-tight text-foreground">Zaproś znajomych do trasy!</p>
-        <p className="text-xs text-muted-foreground mt-0.5 leading-snug">Wyślij link - po dołączeniu od&nbsp;razu jesteście znajomymi.</p>
+        <p className="font-display font-extrabold text-base leading-tight text-foreground">{t("invite.heading")}</p>
+        <p className="text-xs text-muted-foreground mt-0.5 leading-snug">{t("invite.subtitle")}</p>
       </div>
       <ChevronRight className="relative h-5 w-5 text-blue-400 shrink-0" />
     </button>

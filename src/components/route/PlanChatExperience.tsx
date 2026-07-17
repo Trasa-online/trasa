@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { Sparkles, Plus, ExternalLink, ArrowLeft, ChevronDown, Map as MapIcon, ChevronLeft, ChevronRight, Loader2, Maximize2, Trash2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -252,6 +253,7 @@ function CreatorAvatar({ name, thumbnailUrl, zIndex, size = 7 }: { name: string;
 function LargeCarouselCard({
   pin, index, dayLabel, onClick, onMoveUp, onMoveDown, isFirst, isLast, onRemove,
 }: { pin: PlanPin; index: number; dayLabel?: string; onClick: () => void; onMoveUp?: () => void; onMoveDown?: () => void; isFirst?: boolean; isLast?: boolean; onRemove?: () => void }) {
+  const { t } = useTranslation("routechat");
   const [imgFailed, setImgFailed] = useState(false);
   const [fetchedPhoto, setFetchedPhoto] = useState<string | null>(pin.photoUrl ?? null);
   const pointerStart = useRef<{ x: number; y: number; t: number } | null>(null);
@@ -340,7 +342,7 @@ function LargeCarouselCard({
           <button
             onPointerDown={e => e.stopPropagation()}
             onClick={e => { e.stopPropagation(); onRemove(); }}
-            aria-label="Usuń punkt z trasy"
+            aria-label={t("remove_pin_aria")}
             className="absolute bottom-3 right-3 h-8 w-8 rounded-full bg-black/55 backdrop-blur-sm flex items-center justify-center active:bg-red-600 transition-colors"
           >
             <Trash2 className="h-4 w-4 text-white" />
@@ -487,6 +489,7 @@ function getCurrentTimeContext(): { current_time: string; current_date: string }
 }
 
 const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, likedPlacesData, skippedPlaces, superLikedPlaces, idealDay, initialUserMessage, initialPlan, altRoutes, altIndex, onSwitchAlt, readOnly, groupSession, continuationMode }: PlanChatExperienceProps) => {
+  const { t } = useTranslation("routechat");
   const [messages, setMessages] = useState<TextMessage[]>([]);
   // W trybie kontynuacji (dodawanie miejsca do istniejacej trasy) plan JUZ istnieje -
   // pokaz go od razu, bez ekranu "Tworze trase" (dodajemy tylko miejsce -> badge).
@@ -706,7 +709,7 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, likedPlaces
   useEffect(() => {
     if (initialPlan && !continuationMode) {
       enrichPlanWithPhotos(initialPlan, supabase).then(enriched => setPlan(enriched));
-      setMessages([{ role: "assistant", content: `Oto Twój plan w **${preferences.city}** 🗺️\n\nMogę go dostosować do Twoich potrzeb - powiedz co zmienić!` }]);
+      setMessages([{ role: "assistant", content: t("assistant.plan_ready", { city: preferences.city }) }]);
       setInitializing(false);
       return;
     }
@@ -715,7 +718,7 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, likedPlaces
     // zachować istniejący plan (initialPlan) jako bazę i poprosić AI o uzupełnienie
     // pustych dni nowymi polubieniami zamiast generowac nowy plan od zera.
     if (initialPlan && continuationMode) {
-      const continuationIntro = `Świetnie! Uzupełniam plan o Twoje nowe polubienia 🗺️`;
+      const continuationIntro = t("assistant.continuation_intro");
       enrichPlanWithPhotos(initialPlan, supabase).then(enriched => setPlan(enriched));
       setMessages([{ role: "assistant", content: continuationIntro }]);
       setInitializing(false);
@@ -726,7 +729,7 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, likedPlaces
           const response = await supabase.functions.invoke("plan-route", {
             body: {
               preferences,
-              messages: [{ role: "user", content: "Uzupełnij plan o moje nowe polubione miejsca w pustych dniach. Zachowaj istniejące dni bez zmian." }],
+              messages: [{ role: "user", content: t("ai_prompt.extend") }],
               force_plan: true,
               current_plan: initialPlan,
               extend_mode: true,
@@ -751,7 +754,7 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, likedPlaces
           }
         } catch (err) {
           console.error("[plan-route] continuation extend failed:", err);
-          toast.error("Nie udało się rozszerzyć planu", { description: "Plan pozostanie w obecnej wersji." });
+          toast.error(t("toast.extend_failed_title"), { description: t("toast.extend_failed_desc") });
         } finally {
           setPreparingPlan(false);
         }
@@ -760,8 +763,8 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, likedPlaces
     }
     const initialize = async () => {
       const nDays = preferences.numDays;
-      const daysLabel = nDays === 1 ? "1 dzień" : `${nDays} dni`;
-      const fallbackIntro = `Oto wstępny plan na **${daysLabel} w ${preferences.city}** 🗺️\n\nPowiedz co zmienić!`;
+      const daysLabel = nDays === 1 ? t("days_one") : t("days_many", { count: nDays });
+      const fallbackIntro = t("assistant.fallback_intro", { days: daysLabel, city: preferences.city });
 
       // Day 2+: send empty messages so server generates personalized greeting
       // referencing previous day's AAR feedback before producing the plan.
@@ -769,7 +772,7 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, likedPlaces
       const isSubsequentDay = (preferences.dayNumber ?? 1) > 1;
 
       try {
-        const initMsg = initialUserMessage ?? "Generuj plan";
+        const initMsg = initialUserMessage ?? t("ai_prompt.generate");
         const response = await supabase.functions.invoke("plan-route", {
           body: {
             preferences,
@@ -808,13 +811,13 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, likedPlaces
           }
         } else {
           console.error("plan-route error:", response.error);
-          toast.error("Błąd generowania planu", { description: String(response.error) });
+          toast.error(t("toast.generate_error_title"), { description: String(response.error) });
           setPlan(buildMockPlan(nDays));
           setMessages([{ role: "assistant", content: fallbackIntro }]);
         }
       } catch (err) {
         console.error("plan-route init failed:", err);
-        toast.error("Błąd inicjalizacji", { description: String(err) });
+        toast.error(t("toast.init_error_title"), { description: String(err) });
         setPlan(buildMockPlan(nDays));
         setMessages([{ role: "assistant", content: fallbackIntro }]);
       } finally {
@@ -931,7 +934,7 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, likedPlaces
       }
     } catch (err) {
       console.error("Chat error:", err);
-      setMessages(prev => [...prev, { role: "assistant", content: "Przepraszam, coś poszło nie tak. Spróbuj ponownie." }]);
+      setMessages(prev => [...prev, { role: "assistant", content: t("assistant.error_generic") }]);
       setSnap("peek");
       setLoading(false);
     }
@@ -1037,14 +1040,16 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, likedPlaces
           const chk = isOpenAt(oh, wk, pin.suggested_time);
           if (chk && !chk.open) {
             closed.push(chk.closedAllDay
-              ? `${pin.place_name} zamknięte w ten dzień`
-              : `${pin.place_name} zamknięte o ${pin.suggested_time}${chk.closes ? ` (czynne do ${chk.closes})` : ""}`);
+              ? t("hours.closed_all_day", { name: pin.place_name })
+              : (chk.closes
+                  ? t("hours.closed_at_until", { name: pin.place_name, time: pin.suggested_time, closes: chk.closes })
+                  : t("hours.closed_at", { name: pin.place_name, time: pin.suggested_time })));
           }
         }
       }
       if (!cancelled && closed.length) {
-        toast.warning("Uwaga: część miejsc może być zamknięta o tej porze", {
-          description: closed.slice(0, 3).join("; ") + (closed.length > 3 ? `; +${closed.length - 3} więcej` : ""),
+        toast.warning(t("toast.hours_warning_title"), {
+          description: closed.slice(0, 3).join("; ") + (closed.length > 3 ? t("toast.hours_more", { count: closed.length - 3 }) : ""),
           duration: 8000,
         });
       }
@@ -1158,8 +1163,8 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, likedPlaces
         </svg>
 
         <div className="text-center space-y-2">
-          <p className="text-base font-semibold text-foreground">Tworzę Twoją trasę</p>
-          <p className="text-sm text-muted-foreground leading-relaxed">Ty się zrelaksuj!</p>
+          <p className="text-base font-semibold text-foreground">{t("loading_title")}</p>
+          <p className="text-sm text-muted-foreground leading-relaxed">{t("loading_subtitle")}</p>
         </div>
       </div>
     );
@@ -1236,7 +1241,7 @@ Object.keys(byDay).sort((a,b)=>a-b).forEach(d=>{
   const chip=document.createElement('button');
   chip.className='chip';
   chip.style.color=col;
-  const dot=document.createElement('div'); dot.className='chipdot'; dot.style.background=col; chip.appendChild(dot); chip.appendChild(document.createTextNode('Dzień '+d));
+  const dot=document.createElement('div'); dot.className='chipdot'; dot.style.background=col; chip.appendChild(dot); chip.appendChild(document.createTextNode('${t("map.day_prefix")} '+d));
   chip.dataset.day=d;
   chip.onclick=()=>{
     if(activeDay===d){
@@ -1275,11 +1280,11 @@ window.addEventListener('message',function(e){
                 >
                   <ArrowLeft className="h-5 w-5" />
                 </button>
-                <h2 className="font-semibold flex-1">Trasa na mapie</h2>
+                <h2 className="font-semibold flex-1">{t("map.title")}</h2>
                 {mapsAppUrl && (
                   <a href={mapsAppUrl} target="_blank" rel="noopener noreferrer"
                     className="text-xs text-orange-600 font-medium flex items-center gap-1">
-                    Otwórz <ExternalLink className="h-3 w-3" />
+                    {t("map.open")} <ExternalLink className="h-3 w-3" />
                   </a>
                 )}
               </div>
@@ -1291,7 +1296,7 @@ window.addEventListener('message',function(e){
                     className="absolute inset-0 w-full h-full border-0"
                   />
                 ) : (
-                  <div className="flex items-center justify-center h-full text-muted-foreground text-sm">Brak danych mapy</div>
+                  <div className="flex items-center justify-center h-full text-muted-foreground text-sm">{t("map.no_data")}</div>
                 )}
               </div>
               <div className="shrink-0 px-4 py-3 border-t border-border/40 max-h-52 overflow-y-auto space-y-1">
@@ -1306,7 +1311,7 @@ window.addEventListener('message',function(e){
                       {plan.days.length > 1 && (
                         <div className="flex items-center gap-2 py-1.5" style={di > 0 ? { marginTop: '6px' } : {}}>
                           <div className="h-px flex-1 bg-border/60" />
-                          <span className="text-[10px] font-bold uppercase tracking-wide px-1" style={{ color }}>Dzień {day.day_number}</span>
+                          <span className="text-[10px] font-bold uppercase tracking-wide px-1" style={{ color }}>{t("day_label", { n: day.day_number })}</span>
                           <div className="h-px flex-1 bg-border/60" />
                         </div>
                       )}
@@ -1325,7 +1330,7 @@ window.addEventListener('message',function(e){
                             </div>
                             <span className="font-medium truncate flex-1">{p.place_name}</span>
                             {p.suggested_time && <span className="text-muted-foreground text-xs shrink-0">{p.suggested_time}</span>}
-                            {!hasCoords && <span className="text-[10px] text-muted-foreground shrink-0">brak lokalizacji</span>}
+                            {!hasCoords && <span className="text-[10px] text-muted-foreground shrink-0">{t("map.no_location")}</span>}
                           </button>
                         );
                       })}
@@ -1372,12 +1377,12 @@ window.addEventListener('message',function(e){
             <div className="flex-1 flex items-center gap-3 px-5 overflow-hidden min-w-0">
               {plan.days.map(d => (
                 <div key={d.day_number} className="flex items-center gap-1 text-xs text-muted-foreground flex-shrink-0">
-                  <span className="font-medium text-foreground">Dz.{d.day_number}</span>
+                  <span className="font-medium text-foreground">{t("peek.day_abbr", { n: d.day_number })}</span>
                   <span>·</span>
-                  <span>{d.pins.length} miejsc</span>
+                  <span>{t("peek.places_count", { count: d.pins.length })}</span>
                 </div>
               ))}
-              <span className="ml-auto text-xs text-muted-foreground/50 flex-shrink-0">↑ plan</span>
+              <span className="ml-auto text-xs text-muted-foreground/50 flex-shrink-0">{t("peek.hint")}</span>
             </div>
           )}
 
@@ -1408,11 +1413,11 @@ window.addEventListener('message',function(e){
                       return (
                         <div className="px-5 pt-3 pb-6">
                           <div className="flex items-center justify-between mb-3">
-                            <p className="text-sm font-semibold text-foreground">Zamień na…</p>
-                            <button onClick={() => setShowSwapOptions(false)} className="text-xs text-muted-foreground">Anuluj</button>
+                            <p className="text-sm font-semibold text-foreground">{t("swap.title")}</p>
+                            <button onClick={() => setShowSwapOptions(false)} className="text-xs text-muted-foreground">{t("swap.cancel")}</button>
                           </div>
                           {swapCandidates.length === 0 ? (
-                            <p className="text-sm text-muted-foreground text-center py-4">Brak innych wybranych miejsc</p>
+                            <p className="text-sm text-muted-foreground text-center py-4">{t("swap.empty")}</p>
                           ) : (
                             <div className="flex flex-col gap-2 max-h-56 overflow-y-auto">
                               {swapCandidates.map(place => (
@@ -1427,7 +1432,7 @@ window.addEventListener('message',function(e){
                                     requestAnimationFrame(() => {
                                       if (carouselRef.current) carouselRef.current.scrollLeft = savedCarouselScroll.current;
                                     });
-                                    sendMessage(`Zamień ${old} na ${place.place_name}`);
+                                    sendMessage(t("swap.command", { old, name: place.place_name }));
                                   }}
                                   className="text-left w-full px-3 py-3 rounded-full bg-muted active:scale-[0.97] transition-transform flex items-start gap-3"
                                 >
@@ -1453,7 +1458,7 @@ window.addEventListener('message',function(e){
                                         </span>
                                       )}
                                       {place.walking_time && (
-                                        <span className="text-[10px] text-muted-foreground">🚶 {place.walking_time} spaceru</span>
+                                        <span className="text-[10px] text-muted-foreground">🚶 {t("swap.walking", { time: place.walking_time })}</span>
                                       )}
                                     </div>
                                   </div>
@@ -1482,7 +1487,7 @@ window.addEventListener('message',function(e){
                                   }}
                                   className="flex-1 py-2.5 rounded-xl border border-border text-sm font-medium text-foreground"
                                 >
-                                  Przenieś → Dzień {d.day_number}
+                                  {t("detail.move_to_day", { n: d.day_number })}
                                 </button>
                               ))}
                           </div>
@@ -1492,14 +1497,14 @@ window.addEventListener('message',function(e){
                             onClick={() => { handleRemovePin(detailPin.dayNumber, detailPin.pinIndex); setDetailPin(null); setDetailExtra(null); setShowSwapOptions(false); setSnap("half"); }}
                             className="flex-1 py-3 rounded-xl border border-destructive/30 text-destructive text-sm font-medium"
                           >
-                            Usuń
+                            {t("detail.remove")}
                           </button>
                           {(likedPlaces?.length ?? 0) > 0 && (
                             <button
                               onClick={() => setShowSwapOptions(true)}
                               className="flex-1 py-3 rounded-xl bg-secondary text-secondary-foreground text-sm font-medium"
                             >
-                              Zamień
+                              {t("detail.swap")}
                             </button>
                           )}
                           <button
@@ -1514,7 +1519,7 @@ window.addEventListener('message',function(e){
                             }}
                             className="flex-1 py-3 rounded-xl bg-foreground text-background text-sm font-semibold"
                           >
-                            Zamknij
+                            {t("detail.close")}
                           </button>
                         </div>
                       </div>
@@ -1540,7 +1545,7 @@ window.addEventListener('message',function(e){
                           }}
                           className="flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors bg-foreground text-background border-transparent"
                         >
-                          Dzień {d.day_number}
+                          {t("day_label", { n: d.day_number })}
                           <span className="ml-1 opacity-60">· {d.pins.length}</span>
                         </button>
                       ))}
@@ -1552,14 +1557,14 @@ window.addEventListener('message',function(e){
                       className="flex items-center gap-2 px-4 py-2 border-b border-border/40 flex-shrink-0 w-full text-left active:bg-muted/50 transition-colors"
                     >
                       <Sparkles className="h-3.5 w-3.5 text-orange-600 shrink-0" />
-                      <span className="text-[12px] font-semibold text-foreground">Dlaczego taka trasa?</span>
+                      <span className="text-[12px] font-semibold text-foreground">{t("reasoning_title")}</span>
                       <ChevronRight className="h-3.5 w-3.5 text-muted-foreground ml-auto shrink-0" />
                     </button>
                   )}
                   {preparingPlan && plan && (
                     <div className="flex items-center gap-2 px-4 py-2 border-b border-border/40 flex-shrink-0">
                       <Loader2 className="h-3.5 w-3.5 text-orange-600 animate-spin shrink-0" />
-                      <span className="text-[12px] text-muted-foreground">Dodaję nowe miejsca do planu...</span>
+                      <span className="text-[12px] text-muted-foreground">{t("adding_places")}</span>
                     </div>
                   )}
                   {preparingPlan && !plan ? (
@@ -1609,9 +1614,9 @@ window.addEventListener('message',function(e){
                                 <div className="h-12 w-12 rounded-full bg-orange-100 flex items-center justify-center">
                                   <Plus className="h-6 w-6 text-orange-600" />
                                 </div>
-                                <p className="text-sm font-bold text-foreground">Ten dzień jest pusty</p>
+                                <p className="text-sm font-bold text-foreground">{t("empty_day.title")}</p>
                                 <p className="text-xs text-center leading-relaxed max-w-[260px]">
-                                  Wróć do wyboru i polub jeszcze kilka miejsc, żeby wypełnić ten dzień.
+                                  {t("empty_day.desc")}
                                 </p>
                               </button>
                             ] : day.pins.map((pin, idx) => (
@@ -1619,13 +1624,13 @@ window.addEventListener('message',function(e){
                                 key={`${day.day_number}-${pin.place_name}`}
                                 pin={pin}
                                 index={idx}
-                                dayLabel={plan.days.length > 1 ? `Dzień ${day.day_number}` : undefined}
+                                dayLabel={plan.days.length > 1 ? t("day_label", { n: day.day_number }) : undefined}
                                 onClick={() => { savedCarouselScroll.current = carouselRef.current?.scrollLeft ?? 0; setDetailPin({ pin, dayNumber: day.day_number, pinIndex: idx }); setSnap("full"); }}
                                 onMoveUp={idx > 0 ? () => handleMovePin(day.day_number, idx, "up") : undefined}
                                 onMoveDown={idx < day.pins.length - 1 ? () => handleMovePin(day.day_number, idx, "down") : undefined}
                                 isFirst={idx === 0}
                                 isLast={idx === day.pins.length - 1}
-                                onRemove={() => { if (window.confirm(`Usunąć "${pin.place_name}" z trasy?`)) handleRemovePin(day.day_number, idx); }}
+                                onRemove={() => { if (window.confirm(t("confirm_remove", { name: pin.place_name }))) handleRemovePin(day.day_number, idx); }}
                               />
                             ));
                             if (plan.days.length > 1 && dayIdx > 0) {
@@ -1633,7 +1638,7 @@ window.addEventListener('message',function(e){
                                 <div key={`divider-${day.day_number}`} className="flex-shrink-0 w-10 h-full flex flex-col items-center justify-center snap-center gap-2 select-none">
                                   <div className="flex-1 w-px" style={{ background: color, opacity: 0.25 }} />
                                   <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color, writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>
-                                    Dzień {day.day_number}
+                                    {t("day_label", { n: day.day_number })}
                                   </span>
                                   <div className="flex-1 w-px" style={{ background: color, opacity: 0.25 }} />
                                 </div>,
@@ -1650,7 +1655,7 @@ window.addEventListener('message',function(e){
                               className="flex-shrink-0 w-[80vw] h-full rounded-2xl border-2 border-dashed border-border/50 flex flex-col items-center justify-center gap-2 text-muted-foreground snap-center"
                             >
                               <Plus className="h-6 w-6" />
-                              <span className="text-sm">Dodaj miejsce</span>
+                              <span className="text-sm">{t("add_place")}</span>
                             </button>
                           )}
                         </div>
@@ -1662,8 +1667,8 @@ window.addEventListener('message',function(e){
                         return (
                           <div className="flex-shrink-0 px-4 pb-2">
                             <div className="relative h-48 rounded-2xl overflow-hidden border border-border/40 bg-muted">
-                              <iframe ref={miniMapRef} onLoad={() => setTimeout(focusMiniToActiveCard, 300)} srcDoc={buildMiniLeaflet(miniPins)} className="absolute inset-0 w-full h-full border-0" title="Podgląd mapy" />
-                              <button onClick={() => setShowMap(true)} aria-label="Rozwiń mapę" className="absolute right-2 bottom-2 h-8 w-8 rounded-lg bg-white shadow-md flex items-center justify-center active:scale-95 transition-transform">
+                              <iframe ref={miniMapRef} onLoad={() => setTimeout(focusMiniToActiveCard, 300)} srcDoc={buildMiniLeaflet(miniPins)} className="absolute inset-0 w-full h-full border-0" title={t("map.preview_title")} />
+                              <button onClick={() => setShowMap(true)} aria-label={t("map.expand_aria")} className="absolute right-2 bottom-2 h-8 w-8 rounded-lg bg-white shadow-md flex items-center justify-center active:scale-95 transition-transform">
                                 <Maximize2 className="h-4 w-4 text-foreground" />
                               </button>
                             </div>
@@ -1677,7 +1682,7 @@ window.addEventListener('message',function(e){
                             className="flex items-center gap-1.5 px-3 py-3.5 rounded-xl border border-border/60 text-sm font-medium text-muted-foreground shrink-0 whitespace-nowrap"
                           >
                             <ArrowLeft className="h-4 w-4" />
-                            Cofnij do dopasowań
+                            {t("back_to_matches")}
                           </button>
                         ) : (
                           <button
@@ -1685,14 +1690,14 @@ window.addEventListener('message',function(e){
                             className="flex items-center gap-1.5 px-4 py-3.5 rounded-xl border border-border/60 text-sm font-medium text-muted-foreground shrink-0"
                           >
                             <MapIcon className="h-4 w-4" />
-                            Mapa
+                            {t("map_button")}
                           </button>
                         )}
                         <button
                           onClick={handleConfirm}
                           className="flex-1 py-3.5 rounded-xl bg-foreground text-background text-sm font-semibold"
                         >
-                          {readOnly ? "Wracam na główną" : "Wybieram ten plan!"}
+                          {readOnly ? t("confirm_readonly") : t("confirm_plan")}
                         </button>
                       </div>
                     </div>

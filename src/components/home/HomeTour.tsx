@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { ArrowLeft, MapPin, Users, Link2, Plus, Map } from "lucide-react";
 
 // localStorage (NIE sessionStorage) - onboarding raz na urzadzenie, przetrwa restart apki.
@@ -15,7 +16,8 @@ const STYLES = `@keyframes onb-pulse { 0%,100%{transform:scale(1)} 50%{transform
 
 // 1. Intro - orba + kategorie ktore przegladasz
 function VisualIntro() {
-  const chips = [["☕", "Kawiarnia"], ["🏛️", "Kultura"], ["🌿", "Natura"], ["🍽️", "Jedzenie"], ["🍺", "Bar"]];
+  const { t } = useTranslation("homecreator");
+  const chips = [["☕", t("tour.chip_cafe")], ["🏛️", t("tour.chip_culture")], ["🌿", t("tour.chip_nature")], ["🍽️", t("tour.chip_food")], ["🍺", t("tour.chip_bar")]];
   return (
     <div className="flex flex-col items-center gap-7">
       <div className="h-28 w-28 rounded-full shadow-lg" style={{ background: ORANGE_ORB, animation: "onb-pulse 2.8s ease-in-out infinite" }} />
@@ -32,10 +34,11 @@ function VisualIntro() {
 
 // 2. Planuj sam lub z grupa - opcje spod guzika "+"
 function VisualPlan() {
+  const { t } = useTranslation("homecreator");
   const items = [
-    { icon: <MapPin className="h-4 w-4" />, label: "Zaplanuj solo", cls: "bg-orange-600 text-white" },
-    { icon: <Users className="h-4 w-4" />, label: "Zaplanuj grupowo", cls: "bg-slate-900 text-white" },
-    { icon: <Link2 className="h-4 w-4 text-orange-600" />, label: "Dołącz do sesji", cls: "bg-white border border-slate-200 text-slate-700" },
+    { icon: <MapPin className="h-4 w-4" />, label: t("tour.plan_solo"), cls: "bg-orange-600 text-white" },
+    { icon: <Users className="h-4 w-4" />, label: t("tour.plan_group"), cls: "bg-slate-900 text-white" },
+    { icon: <Link2 className="h-4 w-4 text-orange-600" />, label: t("tour.join_session"), cls: "bg-white border border-slate-200 text-slate-700" },
   ];
   return (
     <div className="flex flex-col items-center gap-3 w-full max-w-[260px]">
@@ -53,11 +56,12 @@ function VisualPlan() {
 
 // 3. Gotowa trasa - lista miejsc w dobrej kolejnosci
 function VisualRoute() {
+  const { t } = useTranslation("homecreator");
   const places = [["🏛️", "Muzeum Narodowe"], ["🥟", "Bar Mleczny Prasowy"], ["🌳", "Łazienki Królewskie"]];
   return (
     <div className="w-full max-w-[260px] rounded-3xl bg-white border border-slate-200 shadow-md p-5 flex flex-col gap-3">
       <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-400 tracking-wide">
-        <Map className="h-3.5 w-3.5 text-orange-600" /> TWOJA TRASA
+        <Map className="h-3.5 w-3.5 text-orange-600" /> {t("tour.your_route")}
       </div>
       {places.map(([emoji, name], i) => (
         <div key={name} className="flex items-center gap-2.5">
@@ -72,13 +76,14 @@ function VisualRoute() {
 
 // 4. Dostepne miasta - na start Polska, wkrotce Europa
 function VisualCities() {
+  const { t } = useTranslation("homecreator");
   const cities: [string, boolean][] = [
     ["Warszawa", true], ["Gdańsk", true], ["Kraków", false], ["Wrocław", false],
   ];
   return (
     <div className="w-full max-w-[260px] rounded-3xl bg-white border border-slate-200 shadow-md p-5 flex flex-col gap-3">
       <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-400 tracking-wide">
-        <Map className="h-3.5 w-3.5 text-orange-600" /> DOSTĘPNE MIASTA
+        <Map className="h-3.5 w-3.5 text-orange-600" /> {t("tour.available_cities")}
       </div>
       <div className="flex flex-wrap gap-2">
         {cities.map(([name, on]) => (
@@ -87,7 +92,7 @@ function VisualCities() {
           </span>
         ))}
       </div>
-      <p className="text-[12px] text-slate-500 leading-snug">i&nbsp;kolejne polskie miasta, a&nbsp;wkrótce cała Europa 🇪🇺</p>
+      <p className="text-[12px] text-slate-500 leading-snug">{t("tour.cities_tail")}</p>
     </div>
   );
 }
@@ -96,19 +101,21 @@ function VisualCities() {
 // planujesz solo/grupa -> gotowa trasa. Setup profilu (username/awatar/powiadomienia)
 // to osobny etap po zalogowaniu (ProfileSetup).
 const STEPS = [
-  { title: "Witaj w Trasie!", desc: "Trasa to speed dating z miastem. W kilka minut ułożysz plan dnia: przeglądasz miejsca, dodajesz te które Cię ciekawią i dostajesz gotową trasę.", highlight: "", Visual: VisualIntro },
-  { title: "Na start: polskie miasta", desc: "Zaczynamy od Warszawy i Gdańska, a kolejne miasta dochodzą na bieżąco. Trasa cały czas rośnie - wkrótce zaplanujesz podróż po całej Europie.", highlight: "", Visual: VisualCities },
-  { title: "Planuj sam lub z grupą", desc: "Kliknij + na pasku i wybierz: planuj solo, zaproś grupę kodem albo dołącz do znajomych. Wy przeglądacie miejsca, a Trasa zbiera Wasze dopasowania.", highlight: "", Visual: VisualPlan },
-  { title: "Gotowa trasa na mapie", desc: "Z dopasowań Trasa układa plan dnia w dobrej kolejności i pokazuje go na mapie. Plan dopracujesz i zapiszesz we wspomnieniach.", highlight: "Nawigujesz od punktu do punktu przez Google Maps.", Visual: VisualRoute },
+  { key: "intro", Visual: VisualIntro },
+  { key: "cities", Visual: VisualCities },
+  { key: "plan", Visual: VisualPlan },
+  { key: "route", Visual: VisualRoute },
 ];
 
 interface HomeTourProps { onDone: () => void; lastLabel?: string; }
 
 const HomeTour = ({ onDone, lastLabel }: HomeTourProps) => {
+  const { t } = useTranslation("homecreator");
   const [step, setStep] = useState(0);
   const current = STEPS[step];
   const isLast = step === STEPS.length - 1;
   const Visual = current.Visual;
+  const highlight = t(`tour.${current.key}.highlight`, { defaultValue: "" });
 
   const next = () => { if (isLast) onDone(); else setStep(step + 1); };
   const back = () => { if (step === 0) onDone(); else setStep(step - 1); };
@@ -119,7 +126,7 @@ const HomeTour = ({ onDone, lastLabel }: HomeTourProps) => {
 
       {/* Top: wstecz + pasek postepu + pomin */}
       <div className="flex items-center gap-3 px-4 pb-3" style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 1rem)" }}>
-        <button onClick={back} aria-label="Wstecz" className="h-9 w-9 -ml-1 flex items-center justify-center rounded-full text-foreground active:bg-muted">
+        <button onClick={back} aria-label={t("tour.back")} className="h-9 w-9 -ml-1 flex items-center justify-center rounded-full text-foreground active:bg-muted">
           <ArrowLeft className="h-5 w-5" />
         </button>
         <div className="flex-1 flex gap-1.5">
@@ -129,7 +136,7 @@ const HomeTour = ({ onDone, lastLabel }: HomeTourProps) => {
             </div>
           ))}
         </div>
-        <button onClick={onDone} className="text-sm font-medium text-muted-foreground px-1">Pomiń</button>
+        <button onClick={onDone} className="text-sm font-medium text-muted-foreground px-1">{t("tour.skip")}</button>
       </div>
 
       {/* Slajd (statyczny) */}
@@ -141,10 +148,10 @@ const HomeTour = ({ onDone, lastLabel }: HomeTourProps) => {
 
       {/* Tekst */}
       <div className="px-7 pb-2 text-center">
-        <h2 className="text-2xl font-black mb-2 leading-tight">{nbsp(current.title)}</h2>
-        <p className="text-[15px] text-muted-foreground leading-relaxed">{nbsp(current.desc)}</p>
-        {current.highlight && (
-          <p className="text-[15px] font-bold text-foreground leading-relaxed mt-2">{nbsp(current.highlight)}</p>
+        <h2 className="text-2xl font-black mb-2 leading-tight">{nbsp(t(`tour.${current.key}.title`))}</h2>
+        <p className="text-[15px] text-muted-foreground leading-relaxed">{nbsp(t(`tour.${current.key}.desc`))}</p>
+        {highlight && (
+          <p className="text-[15px] font-bold text-foreground leading-relaxed mt-2">{nbsp(highlight)}</p>
         )}
       </div>
 
@@ -153,7 +160,7 @@ const HomeTour = ({ onDone, lastLabel }: HomeTourProps) => {
         <button onClick={next}
           className="w-full py-4 rounded-full text-white font-bold text-base shadow-lg active:scale-[0.98] transition-transform"
           style={{ background: "linear-gradient(to right, #F4A259, #F9662B)" }}>
-          {isLast ? (lastLabel ?? "Zaczynamy! 🚀") : "Dalej"}
+          {isLast ? (lastLabel ?? t("tour.start")) : t("tour.next")}
         </button>
       </div>
     </div>

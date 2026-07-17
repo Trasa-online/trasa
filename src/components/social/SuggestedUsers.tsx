@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { avatarSrc } from "@/lib/avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -10,6 +11,7 @@ interface SuggestedUsersProps {
 }
 
 export default function SuggestedUsers({ currentUserId, onProfileTap }: SuggestedUsersProps) {
+  const { t } = useTranslation("social");
   const { data: suggestions = [], isLoading } = useQuery({
     queryKey: ["suggested-users", currentUserId],
     queryFn: async () => {
@@ -29,7 +31,7 @@ export default function SuggestedUsers({ currentUserId, onProfileTap }: Suggeste
   });
 
   if (isLoading) return (
-    <p className="text-xs text-muted-foreground text-center py-4">Ładowanie propozycji...</p>
+    <p className="text-xs text-muted-foreground text-center py-4">{t("suggested.loading")}</p>
   );
 
   if (suggestions.length === 0) return null;
@@ -37,7 +39,7 @@ export default function SuggestedUsers({ currentUserId, onProfileTap }: Suggeste
   return (
     <div>
       <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
-        Może znasz?
+        {t("suggested.maybe_know")}
       </p>
       <div className="space-y-2">
         {suggestions.map(user => {
@@ -54,7 +56,7 @@ export default function SuggestedUsers({ currentUserId, onProfileTap }: Suggeste
               </button>
               <div className="flex-1 min-w-0" onClick={() => onProfileTap(user.username)}>
                 <p className="text-sm font-semibold leading-tight truncate">{displayName}</p>
-                <p className="text-xs text-muted-foreground">@{user.username} · był(a) w {user.shared_city}</p>
+                <p className="text-xs text-muted-foreground">@{user.username} · {t("suggested.been_in", { city: user.shared_city })}</p>
               </div>
               <FollowButton targetUserId={user.id} initialIsFollowing={false} />
             </div>

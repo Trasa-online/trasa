@@ -1,4 +1,5 @@
 import { MapPin } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { avatarSrc } from "@/lib/avatar";
 
 export interface CreatorPlan {
@@ -44,6 +45,7 @@ const CATEGORY_ICONS: Record<string, string> = {
 };
 
 export default function CreatorPlanCard({ plan, onClick }: CreatorPlanCardProps) {
+  const { t } = useTranslation("homecreator");
   const photoPlaces = plan.places
     .filter(p => p.photo_url)
     .sort((a, b) => (a.order_index ?? 99) - (b.order_index ?? 99))
@@ -102,7 +104,7 @@ export default function CreatorPlanCard({ plan, onClick }: CreatorPlanCardProps)
           <h3 className="text-base font-bold leading-snug flex-1">{plan.title}</h3>
           {plan.num_days && (
             <span className="shrink-0 text-xs text-muted-foreground mt-0.5">
-              {plan.num_days} {plan.num_days === 1 ? "dzień" : "dni"}
+              {plan.num_days} {t(plan.num_days === 1 ? "card.day_one" : "card.day_many")}
             </span>
           )}
         </div>
@@ -154,7 +156,7 @@ export default function CreatorPlanCard({ plan, onClick }: CreatorPlanCardProps)
       {/* CTA footer */}
       <div className="px-4 pb-4">
         <div className="w-full text-center text-xs font-semibold text-orange-600 py-2 rounded-xl border border-orange-600/30 bg-primary/5">
-          Personalizuj plan →
+          {t("card.personalize")}
         </div>
       </div>
     </button>

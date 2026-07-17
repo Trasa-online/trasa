@@ -1,4 +1,5 @@
 import { ChevronUp, ChevronDown, Plus } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 interface TimelinePin {
   place_name: string;
@@ -18,13 +19,14 @@ interface RoutePlanTimelineProps {
 }
 
 const RoutePlanTimeline = ({ days, totalDays, onMovePin }: RoutePlanTimelineProps) => {
+  const { t } = useTranslation("routelist");
   return (
     <div className="px-5 py-4 space-y-6">
       {days.map((day, dayIndex) => (
         <div key={day.day_number}>
           {totalDays > 1 && (
             <h3 className="text-lg font-bold mb-3">
-              Dzień #{day.day_number} z {totalDays}
+              {t("day_of", { number: day.day_number, total: totalDays })}
             </h3>
           )}
           {day.pins.length === 0 ? (
@@ -35,9 +37,9 @@ const RoutePlanTimeline = ({ days, totalDays, onMovePin }: RoutePlanTimelineProp
               <div className="h-10 w-10 rounded-full bg-orange-100 flex items-center justify-center">
                 <Plus className="h-5 w-5 text-orange-600" />
               </div>
-              <p className="text-sm font-semibold text-foreground">Ten dzień czeka na Twoje miejsca</p>
+              <p className="text-sm font-semibold text-foreground">{t("empty_day_title")}</p>
               <p className="text-xs text-muted-foreground leading-relaxed max-w-[280px]">
-                Wybierz więcej miejsc w&nbsp;edycji trasy, żeby uzupełnić ten dzień.
+                {t("empty_day_desc")}
               </p>
             </div>
           ) : (

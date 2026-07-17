@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -62,6 +63,8 @@ const DraggablePinList = ({
   showNameEditor = false,
   compact = false,
 }: DraggablePinListProps) => {
+  const { t } = useTranslation("route");
+  const noteCountSuffix = (n: number) => (n === 1 ? "one" : n < 5 ? "few" : "many");
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [expandedNotePinIndex, setExpandedNotePinIndex] = useState<number | null>(null);
@@ -215,7 +218,7 @@ const DraggablePinList = ({
           <div className="flex items-center gap-2 text-foreground">
             <CurrentIcon className={`h-4 w-4 ${currentConfig.iconColor}`} />
             <span className="text-xs font-medium">
-              {isEditing ? "Edytuj notatkę" : "Dodaj notatkę"}
+              {isEditing ? t("note_form.edit_title") : t("note_form.add_title")}
             </span>
           </div>
         </div>
@@ -248,7 +251,7 @@ const DraggablePinList = ({
         <Textarea
           value={noteText}
           onChange={(e) => setNoteText(e.target.value)}
-          placeholder="Opisz to miejsce lub trasę..."
+          placeholder={t("note_form.placeholder")}
           maxLength={2000}
           className="min-h-[60px] text-sm resize-none"
           autoFocus
@@ -270,12 +273,12 @@ const DraggablePinList = ({
             onClick={() => fileInputRef.current?.click()}
           >
             <Camera className="h-3.5 w-3.5 mr-1.5" />
-            Dodaj zdjęcie
+            {t("note_form.add_photo")}
           </Button>
           
           {noteImage && (
             <div className="relative h-10 w-14 rounded overflow-hidden ring-1 ring-border">
-              <img src={noteImage} alt="Preview" className="w-full h-full object-cover" />
+              <img src={noteImage} alt={t("note_form.image_alt")} className="w-full h-full object-cover" />
               <button
                 type="button"
                 onClick={() => setNoteImage(null)}
@@ -295,7 +298,7 @@ const DraggablePinList = ({
             className="h-8 text-xs"
             onClick={cancelNoteEdit}
           >
-            Anuluj
+            {t("note_form.cancel")}
           </Button>
           <Button
             type="button"
@@ -305,7 +308,7 @@ const DraggablePinList = ({
             disabled={!noteText.trim() && !noteImage}
           >
             <Check className="h-3.5 w-3.5 mr-1" />
-            {isEditing ? "Zapisz" : "Dodaj"}
+            {isEditing ? t("note_form.save") : t("note_form.add")}
           </Button>
         </div>
       </div>
@@ -335,7 +338,7 @@ const DraggablePinList = ({
           )}
           {note.imageUrl && (
             <div className="mt-2 relative h-16 w-24 rounded overflow-hidden ring-1 ring-border">
-              <img src={note.imageUrl} alt="Notatka" className="w-full h-full object-cover" />
+              <img src={note.imageUrl} alt={t("note_form.image_alt")} className="w-full h-full object-cover" />
             </div>
           )}
         </div>
@@ -388,7 +391,7 @@ const DraggablePinList = ({
               })}
             </div>
             <span className="text-foreground font-medium">
-              {pinNotes.length} notat{pinNotes.length === 1 ? 'ka' : pinNotes.length < 5 ? 'ki' : 'ek'} na trasie
+              {t(`notes.on_route_${noteCountSuffix(pinNotes.length)}`, { count: pinNotes.length })}
             </span>
             <ChevronDown className="h-3.5 w-3.5 text-muted-foreground ml-auto" />
           </button>
@@ -406,7 +409,7 @@ const DraggablePinList = ({
               className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground mb-1"
             >
               <ChevronUp className="h-3.5 w-3.5" />
-              <span>Zwiń ciekawostki</span>
+              <span>{t("notes.collapse")}</span>
             </button>
             
             {pinNotes.map((note, noteIndex) => renderNoteDisplay(note, pinIndex, noteIndex))}
@@ -420,7 +423,7 @@ const DraggablePinList = ({
                 className="w-full flex items-center justify-center gap-1.5 py-2 text-xs text-muted-foreground hover:text-foreground border border-dashed border-border hover:border-foreground/50 rounded-2xl transition-colors"
               >
                 <Plus className="h-3.5 w-3.5" />
-                <span>Dodaj ciekawostkę ({pinNotes.length}/{MAX_NOTES_PER_PIN})</span>
+                <span>{t("notes.add_fact", { count: pinNotes.length, max: MAX_NOTES_PER_PIN })}</span>
               </button>
             )}
           </div>
@@ -434,7 +437,7 @@ const DraggablePinList = ({
             className="w-full flex items-center justify-center gap-1.5 py-2.5 text-xs text-muted-foreground hover:text-foreground border border-dashed border-border hover:border-foreground/50 rounded-2xl transition-colors"
           >
             <Plus className="h-3.5 w-3.5" />
-            <span>Dodaj notatkę na trasie</span>
+            <span>{t("notes.add_on_route")}</span>
           </button>
         )}
 
@@ -572,7 +575,7 @@ const DraggablePinList = ({
                           return <Icon key={i} className={`h-3 w-3 ${config.iconColor}`} />;
                         })}
                       </div>
-                      <span>{pin.notes.length} notat{pin.notes.length === 1 ? 'ka' : pin.notes.length < 5 ? 'ki' : 'ek'}</span>
+                      <span>{t(`notes.count_${noteCountSuffix(pin.notes.length)}`, { count: pin.notes.length })}</span>
                     </div>
                   )}
 

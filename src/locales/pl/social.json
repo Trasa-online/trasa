@@ -1,0 +1,50 @@
+{
+  "invite": {
+    "share_title": "Dołącz do mnie na Trasie",
+    "share_text": "Planujmy razem trasy po mieście! Dołącz do mnie na Trasie:",
+    "link_copied": "Link skopiowany - wyślij go znajomym!",
+    "heading": "Zaproś znajomych do trasy!",
+    "subtitle": "Wyślij link - po dołączeniu od razu jesteście znajomymi."
+  },
+  "friend": {
+    "error_generic": "Coś poszło nie tak",
+    "removed": "Usunięto ze znajomych",
+    "friends": "Znajomi",
+    "added": "Dodano znajomego!",
+    "accept": "Akceptuj",
+    "sent": "Wysłano",
+    "request_sent": "Zaproszenie wysłane",
+    "add": "Dodaj"
+  },
+  "follow": {
+    "no_session": "Brak sesji",
+    "try_again": "Spróbuj ponownie",
+    "now_following": "Obserwujesz!",
+    "unfollowed": "Przestałeś obserwować",
+    "following": "Obserwujesz",
+    "follow": "Obserwuj"
+  },
+  "suggested": {
+    "loading": "Ładowanie propozycji...",
+    "maybe_know": "Może znasz?",
+    "been_in": "był(a) w {{city}}"
+  },
+  "search": {
+    "placeholder": "Szukaj @username...",
+    "searching": "Szukam...",
+    "not_found": "Nie znaleziono użytkownika @{{username}}"
+  },
+  "comments": {
+    "title": "Komentarze",
+    "loading": "Ładowanie...",
+    "empty": "Brak komentarzy. Bądź pierwszy!",
+    "placeholder": "Dodaj komentarz...",
+    "user_fallback": "Użytkownik"
+  },
+  "map": {
+    "no_locations": "Brak lokalizacji dla tej trasy"
+  },
+  "feed": {
+    "someone": "Ktoś"
+  }
+}

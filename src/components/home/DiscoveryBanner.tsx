@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Sparkles, ArrowRight, Construction } from "lucide-react";
 import {
   Dialog,
@@ -9,6 +10,7 @@ import {
 } from "@/components/ui/dialog";
 
 export default function DiscoveryBanner() {
+  const { t } = useTranslation("homefeed");
   const [showDialog, setShowDialog] = useState(false);
 
   return (
@@ -21,8 +23,8 @@ export default function DiscoveryBanner() {
           <Sparkles className="h-5 w-5 text-background" />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold">Odkrywaj miejsca</p>
-          <p className="text-xs text-muted-foreground mt-0.5">Polecane przez lokalnych twórców</p>
+          <p className="text-sm font-semibold">{t("banner.title")}</p>
+          <p className="text-xs text-muted-foreground mt-0.5">{t("banner.subtitle")}</p>
         </div>
         <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
       </button>
@@ -33,9 +35,9 @@ export default function DiscoveryBanner() {
             <div className="h-14 w-14 rounded-2xl bg-muted flex items-center justify-center">
               <Construction className="h-7 w-7 text-muted-foreground" />
             </div>
-            <DialogTitle className="text-lg">Już niedługo!</DialogTitle>
+            <DialogTitle className="text-lg">{t("banner.soon_title")}</DialogTitle>
             <DialogDescription className="text-sm text-muted-foreground leading-relaxed">
-              Pracujemy nad funkcją odkrywania miejsc polecanych przez twórców. Będzie dostępna w jednej z najbliższych aktualizacji - stay tuned! 🚀
+              {t("banner.soon_desc")}
             </DialogDescription>
           </DialogHeader>
         </DialogContent>

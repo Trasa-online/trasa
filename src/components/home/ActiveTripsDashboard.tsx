@@ -16,10 +16,12 @@ import { resolveStored } from "@/components/PlacePhoto";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Compass } from "lucide-react";
 import InviteFriendsBanner from "@/components/social/InviteFriendsBanner";
+import { useTranslation } from "react-i18next";
 
 // Niski chip trasy: nazwa miasta + male okragle miniaturki miejsc obok (overlap +N).
 // Tylko kolor secondary (bez pomaranczu); aktywny = subtelny ciemny border, nieaktywny = przezroczysty.
 function TripCard({ trip, active, onSelect }: { trip: any; active: boolean; onSelect: () => void }) {
+  const { t } = useTranslation("hometrip");
   const pins = Array.isArray(trip.pins) ? trip.pins : [];
   const photos = pins.map((p: any) => resolveStored(p.photo_url)).filter(Boolean).slice(0, 4) as string[];
   const extra = Math.max(0, pins.length - photos.length);
@@ -31,7 +33,7 @@ function TripCard({ trip, active, onSelect }: { trip: any; active: boolean; onSe
         active ? "border-foreground/30" : "border-transparent",
       )}
     >
-      <span className="text-sm font-display font-extrabold leading-none truncate max-w-[120px]">{trip.city || trip.title || "Trasa"}</span>
+      <span className="text-sm font-display font-extrabold leading-none truncate max-w-[120px]">{trip.city || trip.title || t("trip_fallback")}</span>
       <div className="flex -space-x-2 shrink-0">
         {photos.length > 0 ? photos.map((url, i) => (
           <img key={i} src={url} alt="" className="h-6 w-6 rounded-full object-cover bg-muted border-2 border-secondary" style={{ zIndex: photos.length - i }} loading="lazy" />
@@ -91,6 +93,7 @@ function EmptySection({ icon, title, sub, cta, onCta, cta2, onCta2, variant }: {
 }
 
 export default function ActiveTripsDashboard({ userId }: { userId: string | null }) {
+  const { t } = useTranslation("hometrip");
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -104,13 +107,13 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
   // (piny + chat_sessions + route) ODROCZONY o okno "Cofnij" (5s). Undo przywraca liste.
   const handleDelete = (e: React.MouseEvent, r: any) => {
     e.stopPropagation();
-    const name = r.city || r.title || "Trasa";
+    const name = r.city || r.title || t("trip_fallback");
     const prev = queryClient.getQueryData(["home-active-solo", userId]);
     queryClient.setQueryData(["home-active-solo", userId], (old: any) =>
       (old ?? []).filter((x: any) => x.id !== r.id),
     );
     deferDelete({
-      message: `Trasa „${name}" usunięta`,
+      message: t("dashboard.toast_route_deleted", { name }),
       onUndo: () => queryClient.setQueryData(["home-active-solo", userId], prev),
       commit: async () => {
         try {
@@ -122,7 +125,7 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
           queryClient.invalidateQueries({ queryKey: ["journal-entries"] });
         } catch (err: any) {
           console.error("[ActiveTripsDashboard] delete failed:", err?.message ?? err);
-          notify.error("Nie udało się usunąć trasy");
+          notify.error(t("dashboard.toast_route_delete_error"));
           queryClient.invalidateQueries({ queryKey: ["home-active-solo"] });
         }
       },
@@ -137,7 +140,7 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
     // Optymistycznie ukryj; commit (DB delete) odroczony o okno "Cofnij".
     setHiddenSessionIds((prev) => new Set(prev).add(s.id));
     deferDelete({
-      message: "Sesja usunięta",
+      message: t("dashboard.toast_session_deleted"),
       onUndo: () => setHiddenSessionIds((prev) => { const n = new Set(prev); n.delete(s.id); return n; }),
       commit: async () => {
         try { await (supabase as any).from("group_sessions").delete().eq("id", s.id); }
@@ -291,7 +294,7 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
     )}>
       {/* Aktywne trasy (solo) */}
       <section className="mb-6">
-        <p className="text-sm font-bold mb-2.5 px-1">Aktywne trasy</p>
+        <p className="text-sm font-bold mb-2.5 px-1">{t("dashboard.section_active")}</p>
         {soloLoading ? (
           // Skeleton w ksztalcie realnej karty aktywnej trasy: tytul+data, potem karta z obrazem.
           <div className="space-y-3">
@@ -325,7 +328,7 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
                     <div className="min-w-0 flex-1">
                       {/* Miasto + data (bez etykiety "Trasa grupowa"). Awatary sa po PRAWEJ. */}
                       <div className="flex items-baseline gap-2 min-w-0">
-                        <p className="text-2xl font-display font-extrabold leading-tight truncate">{selected.city || selected.title || "Trasa"}</p>
+                        <p className="text-2xl font-display font-extrabold leading-tight truncate">{selected.city || selected.title || t("trip_fallback")}</p>
                         {fmtRange(selected._dateMin, selected._dateMax) && <p className="text-xs text-muted-foreground shrink-0">{fmtRange(selected._dateMin, selected._dateMax)}</p>}
                       </div>
                     </div>
@@ -358,11 +361,11 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
           <EmptySection
             variant="solo"
             icon={<MapPin className="h-6 w-6 text-orange-600" />}
-            title="Brak aktywnych tras"
-            sub="Zaplanuj nową trasę albo po prostu przeglądaj miejsca dla inspiracji."
-            cta="Zaplanuj trasę"
+            title={t("dashboard.empty_title")}
+            sub={t("dashboard.empty_sub")}
+            cta={t("dashboard.empty_cta")}
             onCta={() => setPlanChoiceOpen(true)}
-            cta2="Przeglądaj miejsca"
+            cta2={t("dashboard.empty_cta2")}
             onCta2={() => navigate("/plan", { state: { exploreMode: true } })}
           />
         ) : null}
@@ -374,7 +377,7 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
               onClick={() => setGroupOpen((o) => !o)}
               className="w-full flex items-center justify-between px-1 py-1 active:opacity-70 transition-opacity"
             >
-              <p className="text-sm font-bold">Sesje grupowe ({visibleGroupSessions.length})</p>
+              <p className="text-sm font-bold">{t("dashboard.group_sessions", { count: visibleGroupSessions.length })}</p>
               <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${groupOpen ? "" : "-rotate-90"}`} />
             </button>
             {groupOpen && visibleGroupSessions.map((s) => (
@@ -387,7 +390,7 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
                 <div className="rounded-2xl bg-secondary border border-border/40 shadow-sm p-4">
                 <div className="pb-3 flex items-start gap-2">
                   <div className="min-w-0 flex-1">
-                    <p className="text-xl font-display font-extrabold leading-tight truncate">{s.name || s.city || "Sesja grupowa"}</p>
+                    <p className="text-xl font-display font-extrabold leading-tight truncate">{s.name || s.city || t("dashboard.session_fallback")}</p>
                     {(s.city || fmtDate(s.trip_date)) && (
                       <p className="text-xs text-muted-foreground mt-0.5 truncate">
                         {s.city}{fmtDate(s.trip_date) ? ` · ${fmtDate(s.trip_date)}` : ""}
@@ -399,7 +402,7 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
                     role="button"
                     tabIndex={0}
                     onClick={(e) => handleDeleteSession(e, s)}
-                    aria-label="Usuń sesję"
+                    aria-label={t("dashboard.session_delete_aria")}
                     className="shrink-0 h-7 w-7 -mr-1 -mt-1 rounded-full flex items-center justify-center text-muted-foreground/50 hover:text-destructive active:scale-90"
                   >
                     <X className="h-4 w-4" />
@@ -414,14 +417,14 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
                         <div className="h-10 w-10 rounded-2xl bg-orange-50 border border-orange-100 flex items-center justify-center shrink-0">
                           <Users className="h-5 w-5 text-orange-600" />
                         </div>
-                        <span className="text-xs text-orange-600 font-semibold">Wybieranie w toku</span>
+                        <span className="text-xs text-orange-600 font-semibold">{t("dashboard.picking_caps")}</span>
                       </div>
                     );
                   }
                   const shown = avs.slice(0, 3);
                   const extra = avs.length - shown.length;
                   const n = avs.length;
-                  const label = n === 1 ? "osoba" : n < 5 ? "osoby" : "osób";
+                  const label = n === 1 ? t("people_one") : n < 5 ? t("people_few") : t("people_many");
                   return (
                     <div className="flex items-center gap-2.5">
                       <div className="flex -space-x-2.5 shrink-0">
@@ -436,7 +439,7 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
                           </div>
                         )}
                       </div>
-                      <span className="text-xs text-muted-foreground">{n} {label} · <span className="text-orange-600 font-semibold">wybieranie w toku</span></span>
+                      <span className="text-xs text-muted-foreground">{n} {label} · <span className="text-orange-600 font-semibold">{t("dashboard.picking")}</span></span>
                     </div>
                   );
                 })()}
@@ -450,12 +453,12 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
       {/* Trasy robocze (drafty) - niedokonczone planowanie, klik = dokoncz od swipera */}
       {drafts.length > 0 && (
         <section className="mb-6">
-          <p className="text-sm font-bold mb-2.5 px-1">Trasy robocze</p>
+          <p className="text-sm font-bold mb-2.5 px-1">{t("dashboard.section_drafts")}</p>
           <div className="space-y-2.5">
             {drafts.map((d) => {
               const dateLabel = d.date && isValid(parseISO(d.date)) ? format(parseISO(d.date), "d MMM", { locale: pl }) : null;
               const n = d.likedPlaceNames.length;
-              const placesLabel = `${n} ${n === 1 ? "miejsce" : n < 5 ? "miejsca" : "miejsc"}`;
+              const placesLabel = `${n} ${n === 1 ? t("places_one") : n < 5 ? t("places_few") : t("places_many")}`;
               return (
                 <button
                   key={d.city}
@@ -472,12 +475,12 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
                     </div>
                   )}
                   <div className="min-w-0 flex-1">
-                    <p className="font-display font-extrabold text-sm leading-tight truncate">Dokończ trasę w&nbsp;{d.city}</p>
+                    <p className="font-display font-extrabold text-sm leading-tight truncate">{t("dashboard.draft_continue", { city: d.city })}</p>
                     <p className="text-xs text-muted-foreground mt-0.5 truncate">{[dateLabel, placesLabel].filter(Boolean).join(" · ")}</p>
                   </div>
                   <span
                     role="button"
-                    aria-label="Usuń trasę roboczą"
+                    aria-label={t("dashboard.draft_delete_aria")}
                     onClick={(e) => { e.stopPropagation(); removeDraft(d.city); setDrafts(getDrafts()); }}
                     className="shrink-0 h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground/50 active:scale-90 transition-transform"
                   >
@@ -497,8 +500,8 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
       {/* Wybor: solo vs grupowe (z empty state "Zaplanuj trasę") */}
       <Sheet open={planChoiceOpen} onOpenChange={setPlanChoiceOpen}>
         <SheetContent side="bottom" className="rounded-t-3xl px-5 pt-6 pb-[max(24px,env(safe-area-inset-bottom))] [&>button]:hidden">
-          <p className="text-lg font-black mb-1">Jak chcesz zaplanować?</p>
-          <p className="text-sm text-muted-foreground mb-5">Sam albo wspólnie ze znajomymi - Trasa ułoży plan z&nbsp;Waszych dopasowań.</p>
+          <p className="text-lg font-black mb-1">{t("dashboard.plan_choice_title")}</p>
+          <p className="text-sm text-muted-foreground mb-5">{t("dashboard.plan_choice_sub")}</p>
           <div className="flex flex-col gap-2.5">
             <button
               onClick={() => { setPlanChoiceOpen(false); navigate("/plan"); }}
@@ -506,8 +509,8 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
             >
               <div className="h-10 w-10 rounded-xl bg-orange-50 flex items-center justify-center shrink-0"><MapPin className="h-5 w-5 text-orange-600" /></div>
               <div className="min-w-0">
-                <p className="font-bold text-sm">Zaplanuj solo</p>
-                <p className="text-xs text-muted-foreground">Sam przeglądasz miejsca i&nbsp;tworzysz trasę</p>
+                <p className="font-bold text-sm">{t("dashboard.plan_solo_title")}</p>
+                <p className="text-xs text-muted-foreground">{t("dashboard.plan_solo_desc")}</p>
               </div>
             </button>
             <button
@@ -516,8 +519,8 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
             >
               <div className="h-10 w-10 rounded-xl bg-orange-50 flex items-center justify-center shrink-0"><Users className="h-5 w-5 text-orange-600" /></div>
               <div className="min-w-0">
-                <p className="font-bold text-sm">Zaplanuj grupowo</p>
-                <p className="text-xs text-muted-foreground">Zaproś znajomych i&nbsp;parujcie miejsca razem</p>
+                <p className="font-bold text-sm">{t("dashboard.plan_group_title")}</p>
+                <p className="text-xs text-muted-foreground">{t("dashboard.plan_group_desc")}</p>
               </div>
             </button>
             <button
@@ -526,8 +529,8 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
             >
               <div className="h-10 w-10 rounded-xl bg-orange-50 flex items-center justify-center shrink-0"><Compass className="h-5 w-5 text-orange-600" /></div>
               <div className="min-w-0">
-                <p className="font-bold text-sm">Tylko przeglądaj</p>
-                <p className="text-xs text-muted-foreground">Zobacz miejsca bez tworzenia trasy</p>
+                <p className="font-bold text-sm">{t("dashboard.plan_browse_title")}</p>
+                <p className="text-xs text-muted-foreground">{t("dashboard.plan_browse_desc")}</p>
               </div>
             </button>
           </div>

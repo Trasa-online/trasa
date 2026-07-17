@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { UserPlus, Check, Clock, UserCheck, Loader2 } from "lucide-react";
@@ -8,6 +9,7 @@ import { cn } from "@/lib/utils";
 
 // Przycisk relacji z userem: Dodaj / Wyslano / Akceptuj / Znajomi. Mutacje przez RPC.
 export default function FriendButton({ targetUserId, className }: { targetUserId: string; className?: string }) {
+  const { t } = useTranslation("social");
   const { user } = useAuth();
   const qc = useQueryClient();
   const { data: status = "none" } = useFriendStatus(user?.id, targetUserId);
@@ -28,7 +30,7 @@ export default function FriendButton({ targetUserId, className }: { targetUserId
       if (okMsg) toast(okMsg);
       refresh();
     } catch {
-      toast.error("Coś poszło nie tak");
+      toast.error(t("friend.error_generic"));
     } finally {
       setBusy(false);
     }
@@ -40,25 +42,25 @@ export default function FriendButton({ targetUserId, className }: { targetUserId
 
   if (status === "friends")
     return (
-      <button onClick={() => act(() => removeFriend(targetUserId), "Usunięto ze znajomych")} className={cn(base, "bg-muted text-foreground", className)}>
-        <UserCheck className="h-3.5 w-3.5 text-green-600" /> Znajomi
+      <button onClick={() => act(() => removeFriend(targetUserId), t("friend.removed"))} className={cn(base, "bg-muted text-foreground", className)}>
+        <UserCheck className="h-3.5 w-3.5 text-green-600" /> {t("friend.friends")}
       </button>
     );
   if (status === "pending_in")
     return (
-      <button onClick={() => act(() => acceptFriendRequest(targetUserId), "Dodano znajomego!")} className={cn(base, "bg-primary text-white", className)}>
-        <Check className="h-3.5 w-3.5" /> Akceptuj
+      <button onClick={() => act(() => acceptFriendRequest(targetUserId), t("friend.added"))} className={cn(base, "bg-primary text-white", className)}>
+        <Check className="h-3.5 w-3.5" /> {t("friend.accept")}
       </button>
     );
   if (status === "pending_out")
     return (
       <button onClick={() => act(() => removeFriend(targetUserId))} className={cn(base, "bg-muted text-muted-foreground", className)}>
-        <Clock className="h-3.5 w-3.5" /> Wysłano
+        <Clock className="h-3.5 w-3.5" /> {t("friend.sent")}
       </button>
     );
   return (
-    <button onClick={() => act(() => sendFriendRequest(targetUserId), "Zaproszenie wysłane")} className={cn(base, "bg-primary text-white", className)}>
-      <UserPlus className="h-3.5 w-3.5" /> Dodaj
+    <button onClick={() => act(() => sendFriendRequest(targetUserId), t("friend.request_sent"))} className={cn(base, "bg-primary text-white", className)}>
+      <UserPlus className="h-3.5 w-3.5" /> {t("friend.add")}
     </button>
   );
 }

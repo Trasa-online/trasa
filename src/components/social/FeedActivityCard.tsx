@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { avatarSrc } from "@/lib/avatar";
 import { useNavigate } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
@@ -92,13 +93,14 @@ function PinsSummary({ pins, onPinClick }: { pins: FeedPin[]; onPinClick: (pin: 
 }
 
 export default function FeedActivityCard({ route, actor }: { route: FeedRoute; actor: FeedActor }) {
+  const { t } = useTranslation("social");
   const navigate = useNavigate();
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [mapOpen, setMapOpen] = useState(false);
   const [detailPin, setDetailPin] = useState<FeedPin | null>(null);
 
-  const displayName = actor.username || actor.first_name || "Ktoś";
+  const displayName = actor.username || actor.first_name || t("feed.someone");
   const timeAgo = formatDistanceToNow(new Date(route.created_at), { addSuffix: false, locale: pl });
   const photos = (route.review_photos ?? []).filter((url): url is string => !!url && typeof url === "string" && url.trim() !== "");
   const pins = (route.pins ?? []).filter(p => p.place_name);

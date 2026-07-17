@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { Search, Loader2, MapPin, Plus, Heart, Tag, PenLine, ArrowLeft } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -78,6 +79,7 @@ function dbPlaceToPin(p: DbPlace): PlanPin {
 }
 
 const AddPinSheet = ({ open, onOpenChange, onPinAdd, cityContext, likedPlaces = [], existingPinNames = [], restrictToLiked = false, isGroupMode = false, currentPlanForContinuation, continuationContext }: AddPinSheetProps) => {
+  const { t } = useTranslation("route");
   const navigate = useNavigate();
   const existingSet = new Set(existingPinNames.map(n => n.toLowerCase()));
   const availableLiked = likedPlaces.filter(n => !existingSet.has(n.toLowerCase()));
@@ -197,10 +199,10 @@ const AddPinSheet = ({ open, onOpenChange, onPinAdd, cityContext, likedPlaces = 
     : [];
 
   const tabs: { id: Tab; label: string; icon: React.ReactNode; count?: number }[] = [
-    { id: "liked", label: "Wybrane", icon: <Heart className="h-3.5 w-3.5" />, count: availableLiked.length },
-    { id: "search", label: "Szukaj", icon: <Search className="h-3.5 w-3.5" /> },
-    { id: "category", label: "Kategorie", icon: <Tag className="h-3.5 w-3.5" /> },
-    { id: "manual", label: "Własne", icon: <PenLine className="h-3.5 w-3.5" /> },
+    { id: "liked", label: t("add_pin.tab_liked"), icon: <Heart className="h-3.5 w-3.5" />, count: availableLiked.length },
+    { id: "search", label: t("add_pin.tab_search"), icon: <Search className="h-3.5 w-3.5" /> },
+    { id: "category", label: t("add_pin.tab_category"), icon: <Tag className="h-3.5 w-3.5" /> },
+    { id: "manual", label: t("add_pin.tab_manual"), icon: <PenLine className="h-3.5 w-3.5" /> },
   ];
 
   return (
@@ -210,14 +212,14 @@ const AddPinSheet = ({ open, onOpenChange, onPinAdd, cityContext, likedPlaces = 
           <SheetTitle className="flex items-center gap-2">
             <Plus className="h-5 w-5" />
             {restrictToLiked
-              ? (isGroupMode ? "Dodaj wspólne miejsce" : "Dodaj polubione miejsce")
-              : "Dodaj punkt"}
+              ? (isGroupMode ? t("add_pin.title_group") : t("add_pin.title_liked"))
+              : t("add_pin.title")}
           </SheetTitle>
           {restrictToLiked && (
             <p className="text-xs text-muted-foreground mt-0.5">
               {isGroupMode
-                ? "Tylko miejsca polubione przez wszystkich uczestników"
-                : "Z miejsc polubionych przez Ciebie w głosowaniu"}
+                ? t("add_pin.subtitle_group")
+                : t("add_pin.subtitle_liked")}
             </p>
           )}
         </SheetHeader>
@@ -263,15 +265,15 @@ const AddPinSheet = ({ open, onOpenChange, onPinAdd, cityContext, likedPlaces = 
                   <div className="space-y-1.5">
                     <p className="text-sm font-semibold text-foreground">
                       {likedPlaces.length === 0
-                        ? "Nie wybrałeś żadnych miejsc w głosowaniu"
+                        ? t("add_pin.empty_none_voted")
                         : isGroupMode
-                          ? "Wszystkie wspólne miejsca są już w planie"
-                          : "Wszystkie polubione miejsca są już w planie"}
+                          ? t("add_pin.empty_all_group")
+                          : t("add_pin.empty_all_liked")}
                     </p>
                     <p className="text-xs text-muted-foreground leading-relaxed">
                       {isGroupMode
-                        ? "Wróć do wybierania, żeby wraz z grupą wybrać więcej miejsc."
-                        : "Wróć do przeglądania, żeby polubić więcej miejsc do trasy."}
+                        ? t("add_pin.empty_hint_group")
+                        : t("add_pin.empty_hint_liked")}
                     </p>
                   </div>
                   <button
@@ -316,7 +318,7 @@ const AddPinSheet = ({ open, onOpenChange, onPinAdd, cityContext, likedPlaces = 
                     className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-primary text-white font-semibold text-sm active:scale-[0.97] transition-transform"
                   >
                     <ArrowLeft className="h-4 w-4" />
-                    {isGroupMode ? "Wróć do wybierania" : "Polub więcej miejsc"}
+                    {isGroupMode ? t("add_pin.back_group") : t("add_pin.back_liked")}
                   </button>
                 </div>
               ) : (
@@ -360,7 +362,7 @@ const AddPinSheet = ({ open, onOpenChange, onPinAdd, cityContext, likedPlaces = 
                   type="text"
                   value={query}
                   onChange={e => setQuery(e.target.value)}
-                  placeholder={cityContext ? `Szukaj w ${cityContext}…` : "Szukaj miejsca…"}
+                  placeholder={cityContext ? t("add_pin.search_placeholder_city", { city: cityContext }) : t("add_pin.search_placeholder")}
                   autoFocus
                   className="w-full h-11 pl-10 pr-4 rounded-xl border border-border bg-muted/30 text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:border-foreground/30"
                 />
@@ -372,13 +374,13 @@ const AddPinSheet = ({ open, onOpenChange, onPinAdd, cityContext, likedPlaces = 
               )}
               {!searching && query.length >= 2 && searchResults.length === 0 && (
                 <div className="flex flex-col items-center py-8 gap-3">
-                  <p className="text-sm text-muted-foreground">Brak wyników dla „{query}"</p>
+                  <p className="text-sm text-muted-foreground">{t("add_pin.no_results", { query })}</p>
                   <button
                     onClick={switchToManualWithQuery}
                     className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-foreground text-background text-sm font-semibold active:scale-[0.97] transition-transform"
                   >
                     <PenLine className="h-4 w-4" />
-                    Dodaj „{query}" ręcznie
+                    {t("add_pin.add_manual_query", { query })}
                   </button>
                 </div>
               )}
@@ -406,7 +408,7 @@ const AddPinSheet = ({ open, onOpenChange, onPinAdd, cityContext, likedPlaces = 
                 </div>
               )}
               {!searching && query.length < 2 && (
-                <p className="text-center py-8 text-sm text-muted-foreground">Wpisz nazwę miejsca, aby wyszukać</p>
+                <p className="text-center py-8 text-sm text-muted-foreground">{t("add_pin.search_hint")}</p>
               )}
             </>
           )}
@@ -440,7 +442,7 @@ const AddPinSheet = ({ open, onOpenChange, onPinAdd, cityContext, likedPlaces = 
                   {selectedCategory && (
                     <div className="space-y-1.5">
                       {categoryPlaces.length === 0 ? (
-                        <p className="text-center py-6 text-sm text-muted-foreground">Wszystkie miejsca z tej kategorii są już w planie</p>
+                        <p className="text-center py-6 text-sm text-muted-foreground">{t("add_pin.category_all_added")}</p>
                       ) : (
                         categoryPlaces.map(place => (
                           <button
@@ -468,7 +470,7 @@ const AddPinSheet = ({ open, onOpenChange, onPinAdd, cityContext, likedPlaces = 
                   )}
 
                   {!selectedCategory && (
-                    <p className="text-center py-8 text-sm text-muted-foreground">Wybierz kategorię powyżej</p>
+                    <p className="text-center py-8 text-sm text-muted-foreground">{t("add_pin.category_select")}</p>
                   )}
                 </>
               )}
@@ -481,13 +483,13 @@ const AddPinSheet = ({ open, onOpenChange, onPinAdd, cityContext, likedPlaces = 
               {/* Name */}
               <div>
                 <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">
-                  Nazwa miejsca
+                  {t("add_pin.manual_name_label")}
                 </label>
                 <input
                   type="text"
                   value={manualName}
                   onChange={e => setManualName(e.target.value)}
-                  placeholder="np. Kawiarnia u Marii"
+                  placeholder={t("add_pin.manual_name_placeholder")}
                   autoFocus={tab === "manual"}
                   className="w-full h-11 px-3 rounded-xl border border-border bg-muted/30 text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:border-foreground/30"
                 />
@@ -496,7 +498,7 @@ const AddPinSheet = ({ open, onOpenChange, onPinAdd, cityContext, likedPlaces = 
               {/* Category */}
               <div>
                 <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">
-                  Kategoria
+                  {t("add_pin.manual_category_label")}
                 </label>
                 <div className="flex flex-wrap gap-2">
                   {MANUAL_CATEGORIES.map(cat => (
@@ -519,13 +521,13 @@ const AddPinSheet = ({ open, onOpenChange, onPinAdd, cityContext, likedPlaces = 
               {/* Address (optional) */}
               <div>
                 <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">
-                  Adres <span className="font-normal normal-case">(opcjonalnie)</span>
+                  {t("add_pin.manual_address_label")} <span className="font-normal normal-case">{t("add_pin.manual_optional")}</span>
                 </label>
                 <input
                   type="text"
                   value={manualAddress}
                   onChange={e => setManualAddress(e.target.value)}
-                  placeholder="np. ul. Floriańska 5, Kraków"
+                  placeholder={t("add_pin.manual_address_placeholder")}
                   className="w-full h-11 px-3 rounded-xl border border-border bg-muted/30 text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:border-foreground/30"
                 />
               </div>
@@ -533,7 +535,7 @@ const AddPinSheet = ({ open, onOpenChange, onPinAdd, cityContext, likedPlaces = 
               {/* Suggested time (optional) */}
               <div>
                 <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">
-                  Godzina <span className="font-normal normal-case">(opcjonalnie)</span>
+                  {t("add_pin.manual_time_label")} <span className="font-normal normal-case">{t("add_pin.manual_optional")}</span>
                 </label>
                 <input
                   type="time"
@@ -549,7 +551,7 @@ const AddPinSheet = ({ open, onOpenChange, onPinAdd, cityContext, likedPlaces = 
                 disabled={!manualName.trim()}
                 className="w-full py-3.5 rounded-full bg-foreground text-background font-bold text-sm disabled:opacity-40 active:scale-[0.98] transition-transform"
               >
-                Dodaj do planu
+                {t("add_pin.manual_submit")}
               </button>
             </div>
           )}

@@ -3,6 +3,7 @@ import { ChevronRight, Map } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import PlaceDetailSheet from "./PlaceDetailSheet";
 import RouteMap from "@/components/RouteMap";
+import { useTranslation } from "react-i18next";
 
 interface Pin {
   id: string;
@@ -36,6 +37,7 @@ const getReviewAvailability = (date?: string | null): "available" | "today_too_e
 };
 
 const TripDayView = ({ pins, dayLabel, dateLabel, date, onStartReview }: TripDayViewProps) => {
+  const { t } = useTranslation("hometrip");
   const [selectedPin, setSelectedPin] = useState<Pin | null>(null);
 
   const sortedPins = [...pins].sort((a, b) => a.pin_order - b.pin_order);
@@ -77,7 +79,7 @@ const TripDayView = ({ pins, dayLabel, dateLabel, date, onStartReview }: TripDay
             className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-background/60 border border-border/60 text-sm text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors"
           >
             <Map className="h-3.5 w-3.5" />
-            Otwórz trasę w Google Maps ({pinsWithCoords.length} {pinsWithCoords.length === 1 ? "punkt" : "punktów"})
+            {t("day_view.open_maps", { count: pinsWithCoords.length, unit: pinsWithCoords.length === 1 ? t("points_one") : t("points_many") })}
           </a>
         </div>
       )}
@@ -100,7 +102,7 @@ const TripDayView = ({ pins, dayLabel, dateLabel, date, onStartReview }: TripDay
           </button>
         ))}
         {sortedPins.length === 0 && (
-          <p className="text-xs text-muted-foreground text-center py-3">Brak miejsc w planie.</p>
+          <p className="text-xs text-muted-foreground text-center py-3">{t("day_view.empty_places")}</p>
         )}
       </div>
 
@@ -112,11 +114,11 @@ const TripDayView = ({ pins, dayLabel, dateLabel, date, onStartReview }: TripDay
             size="sm"
             className="w-full rounded-full text-sm font-medium"
           >
-            Przejdź do podsumowania
+            {t("day_view.go_to_summary")}
           </Button>
         ) : reviewStatus === "today_too_early" ? (
           <p className="text-[11px] text-muted-foreground text-center py-0.5">
-            "Opowiedz o dniu" dostępne od 17:00
+            {t("day_view.review_too_early")}
           </p>
         ) : null}
       </div>

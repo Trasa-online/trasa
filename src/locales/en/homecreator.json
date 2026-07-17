@@ -1,0 +1,87 @@
+{
+  "card": {
+    "day_one": "day",
+    "day_many": "days",
+    "personalize": "Personalize plan →"
+  },
+  "sheet": {
+    "day_one": "day",
+    "day_many": "days",
+    "place_one": "place",
+    "place_many": "places",
+    "personalize": "Personalize this plan →",
+    "categories": {
+      "bar": "Bar",
+      "cafe": "Café",
+      "restaurant": "Restaurant",
+      "viewpoint": "Viewpoint",
+      "museum": "Museum",
+      "park": "Park",
+      "shopping": "Shopping",
+      "gallery": "Gallery",
+      "monument": "Monument",
+      "nightlife": "Nightlife"
+    }
+  },
+  "polecajka": {
+    "default_title": "My top places in {{city}}",
+    "author_fallback": "User",
+    "toast_published": "Recommendation published! 🎉",
+    "toast_error": "Couldn't publish the recommendation",
+    "header_title": "Create a recommendation",
+    "header_as": "As",
+    "label_title": "Title",
+    "label_places": "Places ({{count}} selected)",
+    "desc_placeholder": "Short description (optional)…",
+    "publishing": "Publishing…",
+    "publish": "Publish recommendation ({{count}} places) →"
+  },
+  "header": {
+    "login": "Log in",
+    "notifications": "Notifications",
+    "search_friends": "Search friends",
+    "saved_places": "Saved places",
+    "saved": "Saved"
+  },
+  "add_place": {
+    "title": "Add place",
+    "search_placeholder": "Search or type a name...",
+    "add_custom": "Add \"{{query}}\"",
+    "no_verification": "Unverified",
+    "empty": "Type a place name"
+  },
+  "tour": {
+    "back": "Back",
+    "skip": "Skip",
+    "next": "Next",
+    "start": "Let's go! 🚀",
+    "chip_cafe": "Café",
+    "chip_culture": "Culture",
+    "chip_nature": "Nature",
+    "chip_food": "Food",
+    "chip_bar": "Bar",
+    "plan_solo": "Plan solo",
+    "plan_group": "Plan with a group",
+    "join_session": "Join a session",
+    "your_route": "YOUR ROUTE",
+    "available_cities": "AVAILABLE CITIES",
+    "cities_tail": "and more Polish cities, with all of Europe coming soon 🇪🇺",
+    "intro": {
+      "title": "Welcome to Trasa!",
+      "desc": "Trasa is speed dating with the city. In a few minutes you'll build a day plan: browse places, add the ones that intrigue you and get a ready-made route."
+    },
+    "cities": {
+      "title": "To start: Polish cities",
+      "desc": "We're starting with Warsaw and Gdańsk, and new cities keep arriving. Trasa keeps growing - soon you'll plan trips across all of Europe."
+    },
+    "plan": {
+      "title": "Plan solo or with a group",
+      "desc": "Tap + on the bar and choose: plan solo, invite a group with a code or join friends. You browse places, and Trasa gathers your picks."
+    },
+    "route": {
+      "title": "Your route on the map",
+      "desc": "From your picks Trasa builds a day plan in the right order and shows it on the map. You can refine the plan and save it to your memories.",
+      "highlight": "You navigate point to point via Google Maps."
+    }
+  }
+}

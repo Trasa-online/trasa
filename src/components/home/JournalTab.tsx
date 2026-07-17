@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -13,18 +14,19 @@ interface JournalTabProps {
   userId: string;
 }
 
-// Polska liczba mnoga: 1 osoba obejrzala / 2-4 osoby obejrzaly / 5+ osob obejrzalo.
-const viewsLabel = (n: number): string => {
-  if (n === 1) return "1 osoba obejrzała trasę";
-  const last = n % 10, last2 = n % 100;
-  if (last >= 2 && last <= 4 && (last2 < 10 || last2 >= 20)) return `${n} osoby obejrzały trasę`;
-  return `${n} osób obejrzało trasę`;
-};
-
 const JournalTab = ({ userId }: JournalTabProps) => {
+  const { t } = useTranslation("homeprofile");
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  // Polska liczba mnoga: 1 osoba obejrzala / 2-4 osoby obejrzaly / 5+ osob obejrzalo.
+  const viewsLabel = (n: number): string => {
+    if (n === 1) return t("journal.views_one");
+    const last = n % 10, last2 = n % 100;
+    if (last >= 2 && last <= 4 && (last2 < 10 || last2 >= 20)) return t("journal.views_few", { num: n });
+    return t("journal.views_many", { num: n });
+  };
 
   const { data: entries = [], isLoading } = useQuery({
     queryKey: ["journal-entries", userId],
@@ -149,8 +151,8 @@ const JournalTab = ({ userId }: JournalTabProps) => {
   const handleDelete = async (e: React.MouseEvent, entry: any) => {
     e.stopPropagation();
     const confirmMsg = entry.is_own
-      ? `Usunąć trasę "${entry.city}"? Tego nie można cofnąć.`
-      : `Opuścić trasę "${entry.city}"? Wyjdziesz z sesji grupowej i stracisz dostęp.`;
+      ? t("journal.confirm_delete", { city: entry.city })
+      : t("journal.confirm_leave", { city: entry.city });
     if (!confirm(confirmMsg)) return;
     setDeletingId(entry.id);
     try {
@@ -159,7 +161,7 @@ const JournalTab = ({ userId }: JournalTabProps) => {
         await (supabase as any).from("chat_sessions").delete().eq("route_id", entry.id);
         const { error } = await supabase.from("routes").delete().eq("id", entry.id);
         if (error) throw error;
-        toast.success("Trasa usunięta");
+        toast.success(t("journal.toast_deleted"));
       } else {
         if (!entry.group_session_id) throw new Error("missing group_session_id");
         // count: 'exact' zeby wykryc silent RLS fail (DELETE zwraca success ale 0 rows
@@ -173,9 +175,9 @@ const JournalTab = ({ userId }: JournalTabProps) => {
           .eq("user_id", userId);
         if (error) throw error;
         if (count === 0) {
-          throw new Error("Brak uprawnień do opuszczenia trasy. Spróbuj ponownie po wklejeniu SQL z RLS policy.");
+          throw new Error(t("journal.leave_no_permission"));
         }
-        toast.success("Opuszczono trasę");
+        toast.success(t("journal.toast_left"));
       }
       // Optymistyczne usuniecie z cache + invalidate zeby trasa zniknela natychmiast
       queryClient.setQueryData(["journal-entries", userId], (old: any) =>
@@ -185,8 +187,8 @@ const JournalTab = ({ userId }: JournalTabProps) => {
       queryClient.invalidateQueries({ queryKey: ["journal-badge"] });
     } catch (err: any) {
       console.error("[JournalTab] delete/leave failed:", err);
-      const msg = err?.message ?? "Nieznany błąd";
-      toast.error("Nie udało się", { description: msg });
+      const msg = err?.message ?? t("journal.unknown_error");
+      toast.error(t("journal.toast_fail"), { description: msg });
     }
     setDeletingId(null);
   };
@@ -194,7 +196,7 @@ const JournalTab = ({ userId }: JournalTabProps) => {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-16 text-muted-foreground text-sm">
-        Ładowanie...
+        {t("journal.loading")}
       </div>
     );
   }
@@ -204,9 +206,9 @@ const JournalTab = ({ userId }: JournalTabProps) => {
       <div className="flex-1 flex flex-col items-center justify-center gap-5 px-8 py-24 text-center">
         <div className="w-20 h-20 rounded-full" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
         <div className="space-y-2">
-          <p className="text-xl font-bold tracking-tight">Twoja pierwsza trasa jest na wyciągnięcie palca</p>
+          <p className="text-xl font-bold tracking-tight">{t("journal.empty_title")}</p>
           <p className="text-sm text-muted-foreground leading-relaxed max-w-[260px] mx-auto">
-            Wybierz datę, opcjonalnie zaproś znajomego, a resztę zrobicie razem przeglądając miejsca.
+            {t("journal.empty_desc")}
           </p>
         </div>
         <button
@@ -214,7 +216,7 @@ const JournalTab = ({ userId }: JournalTabProps) => {
           className="px-6 py-3.5 rounded-full bg-primary text-white font-bold text-sm flex items-center gap-2 active:scale-95 transition-transform"
         >
           <Sparkles className="h-4 w-4" />
-          Zaplanuj swoją pierwszą trasę
+          {t("journal.empty_cta")}
         </button>
       </div>
     );
@@ -226,9 +228,9 @@ const JournalTab = ({ userId }: JournalTabProps) => {
       {visibleEntries.length === 0 && (
         <div className="py-16 text-center px-8">
           <div className="text-4xl mb-3">📸</div>
-          <p className="text-base font-bold">Tu pojawią się Twoje wspomnienia</p>
+          <p className="text-base font-bold">{t("journal.memories_empty_title")}</p>
           <p className="text-sm text-muted-foreground mt-1 leading-relaxed max-w-[260px] mx-auto">
-            Gdy ukończysz trasę, zapiszemy ją jako pocztówkę z&nbsp;podróży - ze&nbsp;zdjęciami i&nbsp;notatkami.
+            {t("journal.memories_empty_desc")}
           </p>
         </div>
       )}
@@ -271,13 +273,13 @@ const JournalTab = ({ userId }: JournalTabProps) => {
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
               <div className="absolute bottom-0 left-0 right-0 px-4 pb-3">
                 <p className="text-white font-bold text-lg leading-tight drop-shadow-sm">
-                  {entry.title || entry.city || "Podróż"}
+                  {entry.title || entry.city || t("journal.trip_fallback")}
                 </p>
                 <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                   {dateLabel && <p className="text-white/70 text-xs">{dateLabel}</p>}
                   {entry._numDays > 1 && (
                     <span className="flex items-center gap-1 bg-white/20 backdrop-blur-sm rounded-full px-1.5 py-0.5 text-[10px] font-semibold text-white">
-                      <CalendarDays className="h-2.5 w-2.5" />{entry._numDays} dni
+                      <CalendarDays className="h-2.5 w-2.5" />{t("journal.days_count", { num: entry._numDays })}
                     </span>
                   )}
                 </div>
@@ -298,12 +300,12 @@ const JournalTab = ({ userId }: JournalTabProps) => {
               <div className="absolute top-3 right-3 flex items-center gap-1.5">
                 {entry.new_for_users?.includes(userId) && (
                   <div className="bg-primary rounded-full px-2 py-0.5 text-[10px] font-bold text-white shadow">
-                    Nowa trasa!
+                    {t("journal.new_badge")}
                   </div>
                 )}
                 {hasUserPhoto && (
                   <div className="bg-black/40 backdrop-blur-sm rounded-full px-2 py-0.5 text-[10px] text-white/90">
-                    📷 Twoje zdjęcie
+                    {t("journal.your_photo")}
                   </div>
                 )}
                 {(entry.is_own || entry.group_session_id) && (
@@ -311,7 +313,7 @@ const JournalTab = ({ userId }: JournalTabProps) => {
                     onClick={(e) => handleDelete(e, entry)}
                     disabled={deletingId === entry.id}
                     className="h-7 w-7 flex items-center justify-center bg-black/40 backdrop-blur-sm rounded-full text-white/80 hover:text-white hover:bg-black/60 transition-colors disabled:opacity-50"
-                    aria-label={entry.is_own ? "Usuń trasę" : "Opuść trasę"}
+                    aria-label={entry.is_own ? t("journal.delete_aria") : t("journal.leave_aria")}
                   >
                     {deletingId === entry.id
                       ? <Loader2 className="h-3.5 w-3.5 animate-spin" />

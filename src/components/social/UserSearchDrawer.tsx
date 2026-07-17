@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { avatarSrc } from "@/lib/avatar";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -15,6 +16,7 @@ interface Props {
 }
 
 export default function UserSearchDrawer({ open, onClose }: Props) {
+  const { t } = useTranslation("social");
   const { user } = useAuth();
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
@@ -83,7 +85,7 @@ export default function UserSearchDrawer({ open, onClose }: Props) {
               type="text"
               value={query}
               onChange={e => setQuery(e.target.value)}
-              placeholder="Szukaj @username..."
+              placeholder={t("search.placeholder")}
               autoComplete="new-password"
               autoCorrect="off"
               autoCapitalize="off"
@@ -106,9 +108,9 @@ export default function UserSearchDrawer({ open, onClose }: Props) {
         <div className="flex-1 overflow-y-auto px-4 pb-8">
           {trimmed.length > 0 ? (
             isLoading ? (
-              <p className="text-sm text-muted-foreground text-center py-8">Szukam...</p>
+              <p className="text-sm text-muted-foreground text-center py-8">{t("search.searching")}</p>
             ) : results.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-8">Nie znaleziono użytkownika @{trimmed}</p>
+              <p className="text-sm text-muted-foreground text-center py-8">{t("search.not_found", { username: trimmed })}</p>
             ) : (
               <div className="space-y-1">
                 {results.map(profile => {

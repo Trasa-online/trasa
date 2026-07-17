@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Bell, Bookmark, Shield, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import NotificationsDrawer from "@/components/layout/NotificationsDrawer";
 import { useAuth } from "@/hooks/useAuth";
@@ -27,6 +28,7 @@ const HomeHeaderActions = ({
 }: HomeHeaderActionsProps = {}) => {
   const { user, isAnonymous } = useAuth();
   const navigate = useNavigate();
+  const { t } = useTranslation("homecreator");
   const isAdmin = isHardcodedAdmin(user?.email);
   const { open: openAuthDrawer } = useAuthDrawer();
   const isGuest = !user || isAnonymous;
@@ -72,14 +74,14 @@ const HomeHeaderActions = ({
             onClick={() => openAuthDrawer({ mode: "login" })}
             className="text-xs font-semibold text-orange-600 px-3 py-2 rounded-full hover:bg-orange-50 active:scale-[0.97] transition-all"
           >
-            Zaloguj się
+            {t("header.login")}
           </button>
         ) : (
           showNotifications && (
             <button
               onClick={() => setNotifOpen(true)}
               className="relative h-9 w-9 flex items-center justify-center rounded-full bg-muted text-foreground active:scale-90 transition-transform"
-              aria-label="Powiadomienia"
+              aria-label={t("header.notifications")}
             >
               <Bell className="h-[18px] w-[18px]" />
               {unreadCount > 0 && (
@@ -94,8 +96,8 @@ const HomeHeaderActions = ({
           <button
             onClick={() => navigate("/search")}
             className="h-9 w-9 flex items-center justify-center rounded-full bg-muted text-foreground active:scale-90 transition-transform"
-            aria-label="Szukaj znajomych"
-            title="Szukaj znajomych"
+            aria-label={t("header.search_friends")}
+            title={t("header.search_friends")}
           >
             <Search className="h-[18px] w-[18px]" />
           </button>
@@ -104,8 +106,8 @@ const HomeHeaderActions = ({
           <button
             onClick={() => navigate("/polubione")}
             className="h-9 w-9 flex items-center justify-center rounded-full bg-muted text-foreground active:scale-90 transition-transform"
-            aria-label="Zapisane miejsca"
-            title="Zapisane"
+            aria-label={t("header.saved_places")}
+            title={t("header.saved")}
           >
             <Bookmark className="h-[18px] w-[18px]" />
           </button>

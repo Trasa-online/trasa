@@ -5,6 +5,7 @@ import LanguageDetector from "i18next-browser-languagedetector";
 import pl_common from "../locales/pl/common.json";
 import pl_onboarding from "../locales/pl/onboarding.json";
 import pl_home from "../locales/pl/home.json";
+import pl_hometrip from "../locales/pl/hometrip.json";
 import pl_auth from "../locales/pl/auth.json";
 import pl_settings from "../locales/pl/settings.json";
 import pl_create_route from "../locales/pl/create-route.json";
@@ -22,10 +23,18 @@ import pl_review from "../locales/pl/review.json";
 import pl_ranking from "../locales/pl/ranking.json";
 import pl_sharing from "../locales/pl/sharing.json";
 import pl_demo from "../locales/pl/demo.json";
+import pl_routechat from "../locales/pl/routechat.json";
+import pl_route from "../locales/pl/route.json";
+import pl_routelist from "../locales/pl/routelist.json";
+import pl_social from "../locales/pl/social.json";
+import pl_homefeed from "../locales/pl/homefeed.json";
+import pl_homeprofile from "../locales/pl/homeprofile.json";
+import pl_homecreator from "../locales/pl/homecreator.json";
 
 import en_common from "../locales/en/common.json";
 import en_onboarding from "../locales/en/onboarding.json";
 import en_home from "../locales/en/home.json";
+import en_hometrip from "../locales/en/hometrip.json";
 import en_auth from "../locales/en/auth.json";
 import en_settings from "../locales/en/settings.json";
 import en_create_route from "../locales/en/create-route.json";
@@ -43,6 +52,13 @@ import en_review from "../locales/en/review.json";
 import en_ranking from "../locales/en/ranking.json";
 import en_sharing from "../locales/en/sharing.json";
 import en_demo from "../locales/en/demo.json";
+import en_routechat from "../locales/en/routechat.json";
+import en_route from "../locales/en/route.json";
+import en_routelist from "../locales/en/routelist.json";
+import en_social from "../locales/en/social.json";
+import en_homefeed from "../locales/en/homefeed.json";
+import en_homeprofile from "../locales/en/homeprofile.json";
+import en_homecreator from "../locales/en/homecreator.json";
 
 i18n
   .use(LanguageDetector)
@@ -53,6 +69,7 @@ i18n
         common: pl_common,
         onboarding: pl_onboarding,
         home: pl_home,
+        hometrip: pl_hometrip,
         auth: pl_auth,
         settings: pl_settings,
         "create-route": pl_create_route,
@@ -70,11 +87,19 @@ i18n
         ranking: pl_ranking,
         sharing: pl_sharing,
         demo: pl_demo,
+        routechat: pl_routechat,
+        route: pl_route,
+        routelist: pl_routelist,
+        social: pl_social,
+        homefeed: pl_homefeed,
+        homeprofile: pl_homeprofile,
+        homecreator: pl_homecreator,
       },
       en: {
         common: en_common,
         onboarding: en_onboarding,
         home: en_home,
+        hometrip: en_hometrip,
         auth: en_auth,
         settings: en_settings,
         "create-route": en_create_route,
@@ -92,6 +117,13 @@ i18n
         ranking: en_ranking,
         sharing: en_sharing,
         demo: en_demo,
+        routechat: en_routechat,
+        route: en_route,
+        routelist: en_routelist,
+        social: en_social,
+        homefeed: en_homefeed,
+        homeprofile: en_homeprofile,
+        homecreator: en_homecreator,
       },
     },
     fallbackLng: "pl",

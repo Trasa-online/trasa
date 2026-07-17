@@ -3,6 +3,7 @@ import { Trash2, MapPin, Clock } from "lucide-react";
 import { format, differenceInDays, isValid, parseISO } from "date-fns";
 import { pl } from "date-fns/locale";
 import { API_BASE } from "@/lib/platform";
+import { useTranslation } from "react-i18next";
 
 // Safe date parse - always returns a valid Date or null
 function safeDate(val: string | null | undefined): Date | null {
@@ -88,6 +89,7 @@ interface UpcomingTripCardProps {
 }
 
 const UpcomingTripCard = ({ trip, onDelete, onPinTap, onEdit }: UpcomingTripCardProps) => {
+  const { t } = useTranslation("hometrip");
   const todayMidnight = new Date();
   todayMidnight.setHours(0, 0, 0, 0);
 
@@ -111,10 +113,10 @@ const UpcomingTripCard = ({ trip, onDelete, onPinTap, onEdit }: UpcomingTripCard
   const countdownLabel = daysUntil === null
     ? null
     : daysUntil === 0
-    ? "Dzisiaj! 🔥"
+    ? t("upcoming.countdown_today")
     : daysUntil === 1
-    ? "Jutro! 🔥"
-    : `Za ${daysUntil} dni 🔥`;
+    ? t("upcoming.countdown_tomorrow")
+    : t("upcoming.countdown_days", { count: daysUntil });
 
   const dateLabel = startDateObj
     ? format(startDateObj, "d MMM", { locale: pl })
@@ -160,13 +162,13 @@ const UpcomingTripCard = ({ trip, onDelete, onPinTap, onEdit }: UpcomingTripCard
             <div className="flex items-center gap-1">
               <MapPin className="h-3 w-3 text-white/50" />
               <span className="text-white/70 text-sm">
-                {allPins.length} {allPins.length === 1 ? "miejsce" : allPins.length < 5 ? "miejsca" : "miejsc"}
+                {allPins.length} {allPins.length === 1 ? t("places_one") : allPins.length < 5 ? t("places_few") : t("places_many")}
               </span>
             </div>
             {isMultiDay && (
               <>
                 <span className="text-white/30">·</span>
-                <span className="text-white/70 text-sm">{sortedRoutes.length} dni</span>
+                <span className="text-white/70 text-sm">{t("days_count", { count: sortedRoutes.length })}</span>
               </>
             )}
           </div>
@@ -187,14 +189,14 @@ const UpcomingTripCard = ({ trip, onDelete, onPinTap, onEdit }: UpcomingTripCard
             <div className="flex items-center gap-2">
               {isMultiDay && (
                 <span className="text-[11px] font-bold bg-foreground text-background px-2 py-0.5 rounded-full">
-                  Dzień {route.day_number || routeIdx + 1}
+                  {t("day_number", { number: route.day_number || routeIdx + 1 })}
                 </span>
               )}
               {dayDate && (
                 <span className="text-xs text-muted-foreground">{dayDate}</span>
               )}
               <span className="text-xs text-muted-foreground">
-                · {dayPins.length} {dayPins.length === 1 ? "miejsce" : dayPins.length < 5 ? "miejsca" : "miejsc"}
+                · {dayPins.length} {dayPins.length === 1 ? t("places_one") : dayPins.length < 5 ? t("places_few") : t("places_many")}
               </span>
             </div>
             {/* Photo strip */}
@@ -212,7 +214,7 @@ const UpcomingTripCard = ({ trip, onDelete, onPinTap, onEdit }: UpcomingTripCard
         onClick={() => onEdit(trip)}
         className="w-full py-3 rounded-full border border-border text-sm font-semibold text-foreground active:scale-[0.98] transition-transform"
       >
-        Dostosuj plan →
+        {t("upcoming.edit_cta")}
       </button>
     </div>
   );

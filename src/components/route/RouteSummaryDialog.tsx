@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
@@ -70,6 +71,7 @@ const RouteSummaryDialog = ({
   groupSession,
   existingRouteId,
 }: RouteSummaryDialogProps) => {
+  const { t } = useTranslation("route");
   const [saving, setSaving] = useState(false);
   const [showGuestAuth, setShowGuestAuth] = useState(false);
   const { user, isAnonymous } = useAuth();
@@ -103,7 +105,7 @@ const RouteSummaryDialog = ({
     if (saving) return;
     if (existingRouteId) {
       removeDraft(plan.city);
-      toast.success("Trasa jest już zapisana!");
+      toast.success(t("summary.already_saved"));
       onOpenChange(false);
       navigate("/home");
       return;
@@ -263,8 +265,8 @@ const RouteSummaryDialog = ({
         void supabase.functions.invoke("send-push", {
           body: {
             user_id: user.id,
-            title: "Trasa gotowa",
-            body: `Plan po ${plan.city} jest gotowy - sprawdź szczegóły`,
+            title: t("summary.push_ready_title"),
+            body: t("summary.push_ready_body", { city: plan.city }),
             url: `/review-summary?route=${firstRouteId}`,
           },
         }).catch(() => {});
@@ -276,16 +278,16 @@ const RouteSummaryDialog = ({
       queryClient.removeQueries({ queryKey: ["home-active-solo"] }); // dashboard /home pokaze swiezo utworzona trase
 
       removeDraft(plan.city); // trasa stworzona -> usun trase robocza dla tego miasta
-      toast.success("Trasa zapisana! 🎉", { description: plan.city });
+      toast.success(t("summary.saved"), { description: plan.city });
       onOpenChange(false);
       navigate("/home");
     } catch (error) {
       console.error("Save error:", error);
-      toast.error("Błąd zapisu", { description: "Spróbuj ponownie." });
+      toast.error(t("summary.save_error_title"), { description: t("summary.save_error_desc") });
     } finally {
       setSaving(false);
     }
-  }, [user, saving, plan, preferences, messages, startDate, endDate, navigate, onOpenChange, toast]);
+  }, [user, saving, plan, preferences, messages, startDate, endDate, navigate, onOpenChange, toast, t]);
 
   const allMapPins = days.flatMap((d) =>
     (d.pins ?? []).filter(p => p.latitude && p.longitude && p.latitude !== 0).map((p, pi) => ({
@@ -316,13 +318,13 @@ const RouteSummaryDialog = ({
         {/* Header */}
         <div className="flex-shrink-0 flex items-start justify-between px-5 pb-4">
           <div>
-            <p className="text-xs font-medium text-orange-600 uppercase tracking-wide mb-0.5">Twoja trasa</p>
+            <p className="text-xs font-medium text-orange-600 uppercase tracking-wide mb-0.5">{t("summary.eyebrow")}</p>
             <h2 className="text-2xl font-black leading-tight">{plan.city}</h2>
             <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
               {dateLabel && <span>{dateLabel}</span>}
               {dateLabel && <span>·</span>}
-              <span>{totalPins} miejsc</span>
-              {isMultiDay && <><span>·</span><span>{days.length} dni</span></>}
+              <span>{t("summary.places_count", { count: totalPins })}</span>
+              {isMultiDay && <><span>·</span><span>{t("summary.days_count", { count: days.length })}</span></>}
             </div>
           </div>
           <button
@@ -342,7 +344,7 @@ const RouteSummaryDialog = ({
               {buildStaticMapUrl(allMapPins) ? (
                 <img
                   src={buildStaticMapUrl(allMapPins)!}
-                  alt="Mapa trasy"
+                  alt={t("summary.map_alt")}
                   className="w-full h-44 rounded-2xl object-cover"
                 />
               ) : (
@@ -358,7 +360,7 @@ const RouteSummaryDialog = ({
                 {isMultiDay && (
                   <div className="flex items-center gap-2 mb-4">
                     <div className="h-6 px-2.5 rounded-full bg-foreground flex items-center">
-                      <span className="text-[11px] font-bold text-background">Dzień {day.day_number}</span>
+                      <span className="text-[11px] font-bold text-background">{t("summary.day", { number: day.day_number })}</span>
                     </div>
                     <div className="flex-1 h-px bg-border/60" />
                   </div>
@@ -408,8 +410,8 @@ const RouteSummaryDialog = ({
             className="w-full py-4 rounded-full bg-primary text-white font-bold text-base disabled:opacity-60 flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
           >
             {saving
-              ? <><Loader2 className="h-4 w-4 animate-spin" />Zapisuję...</>
-              : "Zapisz trasę →"
+              ? <><Loader2 className="h-4 w-4 animate-spin" />{t("summary.saving")}</>
+              : t("summary.save")
             }
           </button>
           <button
@@ -417,7 +419,7 @@ const RouteSummaryDialog = ({
             disabled={saving}
             className="w-full py-3.5 rounded-full border border-border bg-muted text-sm font-medium text-foreground disabled:opacity-50 active:scale-[0.98] transition-transform"
           >
-            Wróć do edycji
+            {t("summary.back_to_edit")}
           </button>
         </div>
 
@@ -426,18 +428,18 @@ const RouteSummaryDialog = ({
           <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm">
             <div className="w-full max-w-sm bg-card rounded-t-3xl px-6 pt-8 pb-[max(24px,env(safe-area-inset-bottom))] flex flex-col gap-5 shadow-2xl animate-in slide-in-from-bottom-4 duration-300">
               <div className="text-center space-y-1">
-                <p className="text-2xl font-black">Zapisz trasę 🗺️</p>
-                <p className="text-sm text-muted-foreground">Załóż darmowe konto żeby zachować trasę i wrócić do niej kiedy chcesz.</p>
+                <p className="text-2xl font-black">{t("summary.guest_title")}</p>
+                <p className="text-sm text-muted-foreground">{t("summary.guest_desc")}</p>
               </div>
               <div className="flex flex-col gap-2 text-sm">
                 {[
-                  { e: "📍", t: "Zapisz trasę i wróć do niej kiedy chcesz" },
-                  { e: "📖", t: "Prowadź dziennik podróży ze zdjęciami" },
-                  { e: "👥", t: "Planuj wyjazdy razem ze znajomymi" },
+                  { e: "📍", label: t("summary.guest_benefit_1") },
+                  { e: "📖", label: t("summary.guest_benefit_2") },
+                  { e: "👥", label: t("summary.guest_benefit_3") },
                 ].map(b => (
-                  <div key={b.t} className="flex items-center gap-3">
+                  <div key={b.label} className="flex items-center gap-3">
                     <span className="text-xl shrink-0">{b.e}</span>
-                    <p className="font-medium">{b.t}</p>
+                    <p className="font-medium">{b.label}</p>
                   </div>
                 ))}
               </div>
@@ -449,13 +451,13 @@ const RouteSummaryDialog = ({
                   }}
                   className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-base active:scale-[0.97] transition-transform shadow-lg shadow-primary/25"
                 >
-                  Zakładam konto - to darmowe →
+                  {t("summary.guest_cta")}
                 </button>
                 <button
                   onClick={() => setShowGuestAuth(false)}
                   className="w-full py-3 rounded-full border border-border text-sm font-medium text-muted-foreground active:scale-[0.97] transition-transform"
                 >
-                  Wróć do trasy
+                  {t("summary.guest_back")}
                 </button>
               </div>
             </div>

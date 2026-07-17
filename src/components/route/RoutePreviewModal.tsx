@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { X } from "lucide-react";
@@ -42,14 +43,15 @@ const RoutePreviewModal = ({
   startDate,
   endDate,
 }: RoutePreviewModalProps) => {
+  const { t } = useTranslation("routelist");
   const start = startDate ? new Date(startDate) : null;
   const end = endDate ? new Date(endDate) : null;
 
   const dateTitle = start
     ? end && end.getTime() !== start.getTime()
-      ? `Twoja trasa ${format(start, "dd")}-${format(end, "dd.MM.yyyy")}`
-      : `Twoja trasa ${format(start, "dd.MM.yyyy")}`
-    : `Twoja trasa - ${city}`;
+      ? t("route_title_range", { range: `${format(start, "dd")}-${format(end, "dd.MM.yyyy")}` })
+      : t("route_title_date", { date: format(start, "dd.MM.yyyy") })
+    : t("route_title_city", { city });
 
   const timelineDays = days.map(d => ({
     day_number: d.day_number,
