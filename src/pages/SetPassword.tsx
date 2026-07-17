@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Eye, EyeOff } from "lucide-react";
 import { TrasaLogo } from "@/components/TrasaLogo";
 import { businessPanelPath } from "@/lib/businessRedirect";
+import { readAuthParams } from "@/lib/authParams";
 import { cn } from "@/lib/utils";
 import posthog from "posthog-js";
 
@@ -19,8 +20,9 @@ const SetPassword = ({ forceBusiness }: { forceBusiness?: boolean } = {}) => {
   const [loading, setLoading] = useState(false);
   const [ready, setReady] = useState(false);
 
-  // Business flow: either via dedicated /set-password-biznes route or legacy ?type=business param
-  const params = new URLSearchParams(window.location.search);
+  // Business flow: either via dedicated /set-password-biznes route or legacy ?type=business param.
+  // readAuthParams() czyta z search ORAZ z hasha (HashRouter dokleja ?code= w hashu).
+  const params = readAuthParams();
   const isBusiness = forceBusiness || params.get("type") === "business";
 
   // Powody trafienia na ta strone:
@@ -90,36 +92,47 @@ const SetPassword = ({ forceBusiness }: { forceBusiness?: boolean } = {}) => {
       navigate("/auth");
     };
 
-    const code = new URLSearchParams(window.location.search).get("code");
+    const code = params.get("code");
+    const hasSession = async () =>
+      !!(await supabase.auth.getSession()).data.session;
 
-    if (code) {
-      supabase.auth.exchangeCodeForSession(code).then(({ error }) => {
-        if (error) {
+    const runCallback = async () => {
+      if (code) {
+        // detectSessionInUrl (PKCE) moze juz wymienic ten sam kod na boot aplikacji.
+        // Druga wymiana tego samego kodu zwraca blad - dlatego istniejaca sesja =
+        // sukces, a blad wymiany ignorujemy jezeli sesja i tak powstala.
+        if (await hasSession()) { decideAfterAuth(); return; }
+        const { error } = await supabase.auth.exchangeCodeForSession(code);
+        if (error && !(await hasSession())) {
           console.error("[SetPassword] Code exchange failed:", error);
           toast.error("Weryfikacja nie powiodła się. Spróbuj ponownie.");
           navigate(isBusiness ? "/auth?business=true" : "/auth");
           return;
         }
         decideAfterAuth();
-      });
-    } else if (tokenHash && callbackType) {
-      supabase.auth.verifyOtp({ token_hash: tokenHash, type: callbackType as any }).then(({ error }) => {
-        if (error) {
+        return;
+      }
+
+      if (tokenHash && callbackType) {
+        if (await hasSession()) { decideAfterAuth(); return; }
+        const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type: callbackType as any });
+        if (error && !(await hasSession())) {
           console.error("[SetPassword] verifyOtp failed:", error);
           toast.error("Weryfikacja nie powiodła się. Spróbuj ponownie.");
           navigate(isBusiness ? "/auth?business=true" : "/auth");
           return;
         }
         decideAfterAuth();
-      });
-    } else {
+        return;
+      }
+
       // Brak code/token_hash w URL. User moze byc na /set-password z istniejacej sesji
       // (np. recznie z settings) ALBO Supabase juz przerobil auth callback i zostawil
       // czysty URL. W obu przypadkach decydujemy po recovery event / brak.
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        if (session) decideAfterAuth();
-      });
-    }
+      if (await hasSession()) decideAfterAuth();
+    };
+
+    runCallback();
 
     const timeout = setTimeout(() => {
       if (decisionMade) return;

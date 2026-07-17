@@ -86,6 +86,8 @@ export interface PremiumBusinessData {
   // ── Contact ────────────────────────────────────────────────────────────────
   phone?: string | null;
   website?: string | null;
+  instagram?: string | null;
+  facebook?: string | null;
 
   // ── Coordinates ────────────────────────────────────────────────────────────
   latitude?: number;

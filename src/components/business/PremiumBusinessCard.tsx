@@ -18,7 +18,7 @@ import { type ReactNode, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { MAIN_CATEGORIES } from "@/lib/categories";
 import { cn } from "@/lib/utils";
-import { Star, Clock, ChevronRight, ChevronLeft, ChevronDown, X, Maximize2, Phone, Globe, FileText } from "lucide-react";
+import { Star, Clock, ChevronRight, ChevronLeft, ChevronDown, X, Maximize2, Phone, Globe, FileText, Instagram, Facebook } from "lucide-react";
 import { parseISO, isValid, formatDistanceToNow } from "date-fns";
 import { pl } from "date-fns/locale";
 import RouteMap from "@/components/RouteMap";
@@ -620,7 +620,8 @@ function ReviewsSection({ data }: SectionProps) {
 }
 
 function ContactButtonsSection({ data }: SectionProps) {
-  if (!data.phone && !data.website) return null;
+  if (!data.phone && !data.website && !data.instagram && !data.facebook) return null;
+  const iconBtn = "flex items-center justify-center py-2.5 px-3 rounded-2xl border border-border/60 bg-card text-foreground active:scale-[0.97] transition-transform";
   return (
     <div className="flex gap-2">
       {data.phone && (
@@ -641,6 +642,16 @@ function ContactButtonsSection({ data }: SectionProps) {
         >
           <Globe className="h-4 w-4" />
           Strona
+        </a>
+      )}
+      {data.instagram && (
+        <a href={data.instagram} target="_blank" rel="noopener noreferrer" className={iconBtn} aria-label="Instagram">
+          <Instagram className="h-4 w-4" />
+        </a>
+      )}
+      {data.facebook && (
+        <a href={data.facebook} target="_blank" rel="noopener noreferrer" className={iconBtn} aria-label="Facebook">
+          <Facebook className="h-4 w-4" />
         </a>
       )}
     </div>

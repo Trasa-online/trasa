@@ -70,6 +70,8 @@ export function fromMockPlace(
 
     phone: place.businessPhone,
     website: place.businessWebsite,
+    instagram: place.businessInstagram,
+    facebook: place.businessFacebook,
 
     latitude: place.latitude,
     longitude: place.longitude,

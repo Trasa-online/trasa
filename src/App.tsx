@@ -140,6 +140,9 @@ function GlobalAuthCallback() {
     // sessionStorage gubi sie (in-app browser, np. Messenger). Lapiemy go TERAZ,
     // bo cleanUrl() ponizej zdejmie search z URL.
     const nextDest = params.get("next");
+    // Marker biznesowego resetu hasla - ustawiany w redirectTo (Auth / BusinessDashboard).
+    // Lapiemy TERAZ, bo cleanUrl() ponizej zdejmie search z URL.
+    const bizReset = params.get("bizreset") === "1";
     if (!code && !tokenHash) return;
     processed.current = true;
 
@@ -165,9 +168,16 @@ function GlobalAuthCallback() {
         email_confirmed_at: user?.email_confirmed_at,
       });
 
-      // Recovery flow (reset hasla B2B): show set-password form
-      if (type === "recovery") {
-        navigate("/set-password?recovery=1");
+      // Reset hasla: pokaz odpowiedni formularz set-password. Rozroznienie B2B/B2C:
+      // - `bizreset=1` to NASZ marker w redirectTo (przezywa utrate fragmentu #/... w
+      //   mailowym round-tripie na natywnym iOS; niezalezny od PKCE vs token_hash).
+      // - `type=recovery` to sygnal Supabase (jest przy token_hash, brak przy PKCE code).
+      // Bez markera biznesowy reset ladowal na konsumenckim /set-password (albo, przy
+      // PKCE, byl brany za zwykle logowanie i wyrzucal usera na /eksploruj).
+      const isBizReset =
+        bizReset || (window.location.hash || "").includes("set-password-biznes");
+      if (isBizReset || type === "recovery") {
+        navigate(isBizReset ? "/set-password-biznes" : "/set-password?recovery=1");
         return;
       }
 

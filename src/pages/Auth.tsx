@@ -151,9 +151,11 @@ const Auth = () => {
       // Biznes: reset musi wracac na /set-password-biznes (SetPassword forceBusiness ->
       // ustawia haslo -> panel biznesowy). B2C: /set-password (-> /home). Bez tego biznes
       // ladowal na konsumenckim set-password i konczyl na /home zamiast w panelu.
+      // bizreset=1 w SEARCH (nie w hashu) - przezywa utrate fragmentu #/... podczas
+      // mailowego round-tripu; GlobalAuthCallback czyta go i kieruje na biznesowy formularz.
       const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
         redirectTo: businessMode
-          ? "https://trasa.travel/#/set-password-biznes"
+          ? "https://trasa.travel/?bizreset=1#/set-password-biznes"
           : "https://trasa.travel/#/set-password",
       });
       if (error) throw error;

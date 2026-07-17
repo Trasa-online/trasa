@@ -14,6 +14,7 @@ import 'driver.js/dist/driver.css';
 import { driver } from 'driver.js';
 import { MAIN_CATEGORIES } from "@/lib/categories";
 import { resizeImage } from "@/lib/imageResize";
+import { isHeic, convertHeicToJpeg } from "@/lib/heicConvert";
 import { forwardGeocode } from "@/lib/googleMaps";
 import { formatDistanceToNow, subDays, format, addDays, differenceInCalendarDays, endOfDay, startOfDay } from "date-fns";
 import { pl } from "date-fns/locale";
@@ -469,6 +470,8 @@ const BusinessDashboard = () => {
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [website, setWebsite] = useState("");
+  const [instagram, setInstagram] = useState("");
+  const [facebook, setFacebook] = useState("");
   const [street, setStreet] = useState("");
   const [city, setCity] = useState("");
   const [postalCode, setPostalCode] = useState("");
@@ -635,6 +638,9 @@ const BusinessDashboard = () => {
     setPhone(profileData.phone ?? "");
     setEmail(profileData.email ?? "");
     setWebsite(profileData.website ?? "");
+    const socialLinks = ((profileData as any).social_links ?? {}) as { instagram?: string; facebook?: string };
+    setInstagram(socialLinks.instagram ?? "");
+    setFacebook(socialLinks.facebook ?? "");
     setStreet(profileData.street ?? "");
     setCity(profileData.city ?? "");
     setPostalCode(profileData.postal_code ?? "");
@@ -834,10 +840,14 @@ const BusinessDashboard = () => {
   const MAX_PDF_SIZE = 10 * 1024 * 1024; // 10MB - menu PDF moze byc wieksze niz zdjecie
 
   const uploadFile = async (file: File, folder: string, opts?: { allowPdf?: boolean }): Promise<string> => {
-    const isPdf = file.type === "application/pdf";
-    if (isPdf && !opts?.allowPdf) throw new Error("Niedozwolony format pliku (dozwolone: JPG, PNG, WEBP)");
+    const isPdf = file.type === "application/pdf" || /\.pdf$/i.test(file.name);
+    if (isPdf && !opts?.allowPdf) throw new Error("Niedozwolony format pliku (dozwolone: JPG, PNG, WEBP, HEIC)");
+    // HEIC/HEIF (domyslny format iPhone'a) -> konwersja do JPEG PRZED walidacja formatu.
+    // Bez tego iPhone'owe zdjecia byly odrzucane na ALLOWED_MIME i nie renderowaly sie
+    // na nie-Apple urzadzeniach.
+    if (!isPdf && isHeic(file)) file = await convertHeicToJpeg(file);
     if (!isPdf && !ALLOWED_MIME.includes(file.type)) {
-      throw new Error(opts?.allowPdf ? "Niedozwolony format (JPG, PNG, WEBP, PDF)" : "Niedozwolony format pliku (dozwolone: JPG, PNG, WEBP)");
+      throw new Error(opts?.allowPdf ? "Niedozwolony format (JPG, PNG, WEBP, HEIC, PDF)" : "Niedozwolony format pliku (dozwolone: JPG, PNG, WEBP, HEIC)");
     }
     if (file.size > (isPdf ? MAX_PDF_SIZE : MAX_FILE_SIZE)) throw new Error(`Plik jest za duży (max ${isPdf ? 10 : 5} MB)`);
     // PDF wgrywamy bez przetwarzania (resizeImage to canvas - zniszczyloby PDF).
@@ -872,8 +882,11 @@ const BusinessDashboard = () => {
     try {
       const url = await uploadFile(file, "cover");
       setCoverImageUrl(url);
+      // Okladka = tylko zdjecia (opcja filmiku wycofana na start). Nowe zdjecie zastepuje
+      // ewentualny starszy filmik (wyswietlanie priorytetuje video), zeby zmiana byla widoczna.
+      setCoverVideoUrl("");
       setIsDirty(true);
-      if (isDraft) await autoSaveDraft({ coverImageUrl: url });
+      if (isDraft) await autoSaveDraft({ coverImageUrl: url, coverVideoUrl: "" });
     } catch (err: any) { toast.error(err.message ?? "Nie udało się przesłać zdjęcia okładkowego"); }
     setUploading(null);
   };
@@ -981,12 +994,31 @@ const BusinessDashboard = () => {
   const handleMenuUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
     if (!files.length) return;
-    const remaining = MAX_MENU_IMAGES - menuImageUrls.length;
-    const toUpload = files.slice(0, remaining);
     setUploading("menu");
     try {
-      const urls = await Promise.all(toUpload.map(f => uploadFile(f, "menu", { allowPdf: true })));
-      setMenuImageUrls(prev => [...prev, ...urls]);
+      const additions: string[] = [];
+      for (const f of files) {
+        const isPdf = f.type === "application/pdf" || /\.pdf$/i.test(f.name);
+        if (isPdf) {
+          // PDF menu/cennika: rasteryzujemy strony na obrazy (podglad INLINE w wizytowce,
+          // proporcja 4:3). Graceful fallback: gdy pdf.js zawiedzie, zostaje sam plik PDF
+          // (kafelek "Otworz PDF") - dotychczasowe zachowanie, zero regresji.
+          let pageImages: string[] = [];
+          try {
+            const { pdfToJpegFiles } = await import("@/lib/pdfToImages");
+            const pages = await pdfToJpegFiles(f);
+            pageImages = await Promise.all(pages.map(p => uploadFile(p, "menu")));
+          } catch (err) {
+            console.warn("[menu] rasteryzacja PDF nie powiodla sie, zapisuje sam PDF:", err);
+          }
+          const pdfUrl = await uploadFile(f, "menu", { allowPdf: true });
+          // Obrazy stron najpierw (podglad), pelny PDF na koncu (kafelek "otworz").
+          additions.push(...pageImages, pdfUrl);
+        } else {
+          additions.push(await uploadFile(f, "menu", { allowPdf: true }));
+        }
+      }
+      setMenuImageUrls(prev => [...prev, ...additions].slice(0, MAX_MENU_IMAGES));
       setIsDirty(true);
     } catch (err: any) { toast.error(err.message ?? "Nie udało się przesłać zdjęć"); }
     setUploading(null);
@@ -1051,18 +1083,44 @@ const BusinessDashboard = () => {
     setSubmittingPost(false);
   };
 
-  const handleDeletePost = async (id: string) => {
-    if (!window.confirm("Usunąć ten post? Tej operacji nie można cofnąć.")) return;
-    // Optimistic remove
+  const handleDeletePost = (id: string) => {
+    // Soft-delete z oknem cofniecia (5s): usuwamy z UI od razu, realny DELETE z bazy
+    // odpala sie dopiero po uplywie okna - w miedzyczasie "Cofnij" przywraca post bez
+    // odpytywania bazy. Zastepuje twarde window.confirm("...nie mozna cofnac").
+    const index = posts.findIndex(p => p.id === id);
+    if (index === -1) return;
+    const snapshot = posts[index];
     setPosts(prev => prev.filter(p => p.id !== id));
-    const { error } = await (supabase as any).from("business_posts").delete().eq("id", id);
-    if (error) {
-      toast.error("Nie udało się usunąć posta");
-      // Rollback - reload posts
-      const { data } = await (supabase as any)
-        .from("business_posts").select("*").eq("place_id", placeId).order("created_at", { ascending: false });
-      if (data) setPosts(data as BusinessPost[]);
-    }
+
+    let undone = false;
+    const timer = setTimeout(async () => {
+      if (undone) return;
+      const { error } = await (supabase as any).from("business_posts").delete().eq("id", id);
+      if (error) {
+        toast.error("Nie udało się usunąć posta");
+        setPosts(prev => {
+          const next = [...prev];
+          next.splice(Math.min(index, next.length), 0, snapshot);
+          return next;
+        });
+      }
+    }, 5000);
+
+    toast("Post usunięty", {
+      duration: 5000,
+      action: {
+        label: "Cofnij",
+        onClick: () => {
+          undone = true;
+          clearTimeout(timer);
+          setPosts(prev => {
+            const next = [...prev];
+            next.splice(Math.min(index, next.length), 0, snapshot);
+            return next;
+          });
+        },
+      },
+    });
   };
 
   const handleSave = async () => {
@@ -1099,6 +1157,12 @@ const BusinessDashboard = () => {
         phone: phone || null,
         email: email || null,
         website: website || null,
+        social_links: (instagram.trim() || facebook.trim())
+          ? {
+              ...(instagram.trim() ? { instagram: instagram.trim() } : {}),
+              ...(facebook.trim() ? { facebook: facebook.trim() } : {}),
+            }
+          : null,
         street: street || null,
         city: city || null,
         postal_code: postalCode || null,
@@ -1256,7 +1320,7 @@ const BusinessDashboard = () => {
     setResetPasswordLoading(true);
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
-        redirectTo: `${window.location.origin}/#/set-password-biznes`,
+        redirectTo: `${window.location.origin}/?bizreset=1#/set-password-biznes`,
       });
       if (error) throw error;
       toast.success(`Link do zmiany hasła wysłany na ${user.email}. Sprawdź skrzynkę (i spam).`);
@@ -1668,9 +1732,9 @@ const BusinessDashboard = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-bold text-foreground">Okładka wizytówki</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">Zdjęcie lub filmik wyświetlany na wizytówce w aplikacji</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{"Zdjęcie wyświetlane na wizytówce w aplikacji"}</p>
                   </div>
-                  <span className="text-[11px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full shrink-0">film max 7 sek.</span>
+                  <span className="text-[11px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full shrink-0">JPG, PNG, HEIC</span>
                 </div>
 
                 {/* Upload area */}
@@ -1723,7 +1787,7 @@ const BusinessDashboard = () => {
                           </div>
                           <div className="text-center px-2">
                             <p className="text-sm font-semibold">Dodaj okładkę</p>
-                            <p className="text-xs mt-0.5 text-muted-foreground/70">Zdjęcie lub filmik (max 7 sek.)</p>
+                            <p className="text-xs mt-0.5 text-muted-foreground/70">{"Zdjęcie (JPG, PNG, HEIC)"}</p>
                           </div>
                         </div>
                       )}
@@ -1731,9 +1795,9 @@ const BusinessDashboard = () => {
                     <input
                       ref={coverVideoInputRef}
                       type="file"
-                      accept="image/*,video/*"
+                      accept="image/*,.heic,.heif"
                       className="hidden"
-                      onChange={handleCoverMediaUpload}
+                      onChange={handleCoverUpload}
                     />
                   </div>
               </div>{/* end outer section card */}
@@ -1813,7 +1877,7 @@ const BusinessDashboard = () => {
                     </button>
                   )}
                 </div>
-                <input ref={galleryInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleGalleryUpload} />
+                <input ref={galleryInputRef} type="file" accept="image/*,.heic,.heif" multiple className="hidden" onChange={handleGalleryUpload} />
               </div>
 
               {/* ── Personalizacja kolorow ── */}
@@ -1901,7 +1965,7 @@ const BusinessDashboard = () => {
                     >
                       <Camera className="h-3.5 w-3.5 text-background" />
                     </button>
-                    <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
+                    <input ref={logoInputRef} type="file" accept="image/*,.heic,.heif" className="hidden" onChange={handleLogoUpload} />
                   </div>
                   <div>
                     <p className="text-sm font-medium">{businessName || 'Nazwa lokalu'}</p>
@@ -1939,8 +2003,16 @@ const BusinessDashboard = () => {
                       <Input id="email" value={email} maxLength={100} onChange={e => { setEmail(e.target.value); setIsDirty(true); }} type="email" />
                     </div>
                     <div className="space-y-1">
-                      <Label htmlFor="website" className="text-xs">Strona WWW</Label>
-                      <Input id="website" value={website} maxLength={200} onChange={e => { setWebsite(e.target.value); setIsDirty(true); }} type="url" />
+                      <Label htmlFor="website" className="text-xs flex items-center gap-1.5 flex-wrap">Strona WWW <span className="text-[10px] font-normal text-muted-foreground">(opcjonalnie)</span></Label>
+                      <Input id="website" value={website} maxLength={200} onChange={e => { setWebsite(e.target.value); setIsDirty(true); }} type="url" placeholder="https://twojlokal.pl" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="instagram" className="text-xs flex items-center gap-1.5 flex-wrap">Instagram <span className="text-[10px] font-normal text-muted-foreground">(opcjonalnie)</span></Label>
+                      <Input id="instagram" value={instagram} maxLength={200} onChange={e => { setInstagram(e.target.value); setIsDirty(true); }} type="url" placeholder="https://instagram.com/twojlokal" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="facebook" className="text-xs flex items-center gap-1.5 flex-wrap">Facebook <span className="text-[10px] font-normal text-muted-foreground">(opcjonalnie)</span></Label>
+                      <Input id="facebook" value={facebook} maxLength={200} onChange={e => { setFacebook(e.target.value); setIsDirty(true); }} type="url" placeholder="https://facebook.com/twojlokal" />
                     </div>
                   </>
                 )}
@@ -2064,18 +2136,21 @@ const BusinessDashboard = () => {
                       <svg className={`h-3 w-3 transition-transform ${tagsExpanded ? 'rotate-180' : ''}`} viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 4l4 4 4-4"/></svg>
                     </button>
                   </div>
-                  {/* Custom tag input */}
+                  {/* Custom tag input - hashtag (#) widoczny by default; strip wiodacych # zeby nie bylo ## */}
                   <div className="flex gap-2">
-                    <input
-                      value={customVibeTag} maxLength={20}
-                      onChange={e => setCustomVibeTag(e.target.value)}
-                      onKeyDown={e => { if (e.key === 'Enter' && customVibeTag.trim() && tags.length < 3) { setTags(prev => [...prev, customVibeTag.trim()]); setCustomVibeTag(""); setIsDirty(true); } }}
-                      placeholder="Własny tag..."
-                      disabled={tags.length >= 3}
-                      className="flex-1 rounded-xl border border-input bg-background px-3 py-1.5 text-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-40"
-                    />
+                    <div className="flex-1 flex items-center rounded-xl border border-input bg-background px-3 focus-within:ring-2 focus-within:ring-ring">
+                      <span className="text-xs font-semibold text-muted-foreground select-none">#</span>
+                      <input
+                        value={customVibeTag} maxLength={20}
+                        onChange={e => setCustomVibeTag(e.target.value.replace(/^#+/, ""))}
+                        onKeyDown={e => { const v = customVibeTag.trim().replace(/^#+/, ""); if (e.key === 'Enter' && v && tags.length < 3) { setTags(prev => [...prev, v]); setCustomVibeTag(""); setIsDirty(true); } }}
+                        placeholder="wlasny-tag"
+                        disabled={tags.length >= 3}
+                        className="flex-1 bg-transparent px-1.5 py-1.5 text-xs placeholder:text-muted-foreground focus-visible:outline-none disabled:opacity-40"
+                      />
+                    </div>
                     <button type="button" disabled={!customVibeTag.trim() || tags.length >= 3}
-                      onClick={() => { if (customVibeTag.trim() && tags.length < 3) { setTags(prev => [...prev, customVibeTag.trim()]); setCustomVibeTag(""); setIsDirty(true); } }}
+                      onClick={() => { const v = customVibeTag.trim().replace(/^#+/, ""); if (v && tags.length < 3) { setTags(prev => [...prev, v]); setCustomVibeTag(""); setIsDirty(true); } }}
                       className="px-3 py-1.5 rounded-xl bg-primary text-white text-xs font-semibold disabled:opacity-40">
                       Dodaj
                     </button>
@@ -2164,7 +2239,7 @@ const BusinessDashboard = () => {
                         </button>
                       )}
                     </div>
-                    <input ref={menuInputRef} type="file" accept="image/*,application/pdf" multiple className="hidden" onChange={handleMenuUpload} />
+                    <input ref={menuInputRef} type="file" accept="image/*,.heic,.heif,application/pdf,.pdf" multiple className="hidden" onChange={handleMenuUpload} />
                   </div>
                 </div>
                 <div className="hidden lg:block w-72 shrink-0 lg:sticky lg:top-20 lg:self-start">
@@ -2190,8 +2265,8 @@ const BusinessDashboard = () => {
                 <div className="flex-1 space-y-5">
                   {/* Events */}
                   <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm space-y-4">
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Obecne wydarzenie</p>
-                    <p className="text-xs text-muted-foreground -mt-2">Np. happy hour, promocja 1+1, koncert. Widoczne na wizytówce w aplikacji.</p>
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Aktualne / nadchodzące wydarzenie</p>
+                    <p className="text-xs text-muted-foreground -mt-2">{"Promocja, koncert, happy hour - to, co dzieje się teraz albo wkrótce. Ustaw daty poniżej: wydarzenie pokaże się gościom, gdy planują pobyt w tym terminie."}</p>
                     <div className="space-y-1">
                       <Label htmlFor="event_title">Tytuł</Label>
                       <Input id="event_title" value={eventTitle} maxLength={40} onChange={e => { setEventTitle(e.target.value); setIsDirty(true); }} placeholder="np. Drinki 1+1 do 20:00" />
@@ -2201,7 +2276,7 @@ const BusinessDashboard = () => {
                       <Label htmlFor="event_description">Opis</Label>
                       <textarea id="event_description" rows={2} value={eventDescription} maxLength={300} onChange={e => { setEventDescription(e.target.value); setIsDirty(true); }} placeholder="Szczegóły wydarzenia..." className="w-full rounded-2xl border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none" />
                       <div className="flex items-center justify-between">
-                        <p className="text-[11px] text-muted-foreground">wyswietli sie po kliknieciu w guzik z tytułem promocji</p>
+                        <p className="text-[11px] text-muted-foreground">{"wyświetli się po kliknięciu w guzik z tytułem promocji"}</p>
                         <p className="text-[11px] text-muted-foreground">{eventDescription.length}/300</p>
                       </div>
                     </div>
@@ -2232,7 +2307,7 @@ const BusinessDashboard = () => {
                           {postPhotoUploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ImagePlus className="h-3.5 w-3.5" />}
                           Zdjęcia
                         </button>
-                        <input ref={postPhotoInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handlePostPhotoUpload} />
+                        <input ref={postPhotoInputRef} type="file" accept="image/*,.heic,.heif" multiple className="hidden" onChange={handlePostPhotoUpload} />
                         <p className="ml-auto text-[11px] text-muted-foreground">Widoczny w podglądzie wizytówki</p>
                       </div>
                       <button

@@ -57,6 +57,30 @@ export const MAIN_CATEGORIES: MainCategory[] = [
       { id: 'viewpoint', label: 'Punkt widokowy',   emoji: '🌅' },
     ],
   },
+  {
+    id: 'shopping',
+    label: 'Zakupy',
+    emoji: '🛍️',
+    hint: 'Sklepy · Butiki · Wino',
+    subcategories: [
+      { id: 'boutique',      label: 'Butik',          emoji: '👗' },
+      { id: 'concept_store', label: 'Concept store',  emoji: '🛍️' },
+      { id: 'wine_shop',     label: 'Sklep z winami', emoji: '🍷' },
+      { id: 'bookshop',      label: 'Księgarnia',     emoji: '📚' },
+    ],
+  },
+  {
+    id: 'entertainment',
+    label: 'Rozrywka',
+    emoji: '🎭',
+    hint: 'Teatr · Live music · Kluby',
+    subcategories: [
+      { id: 'theater',    label: 'Teatr',      emoji: '🎭' },
+      { id: 'live_music', label: 'Live music', emoji: '🎸' },
+      { id: 'cinema',     label: 'Kino',       emoji: '🎬' },
+      { id: 'nightclub',  label: 'Klub nocny', emoji: '🪩' },
+    ],
+  },
 ];
 
 export const getSubcategoryIds = (mainCategoryId: string): string[] => {
@@ -94,6 +118,15 @@ const SUBCATEGORY_DB_ALIASES: Record<string, string[]> = {
   // podkategoria. Zostawiamy bez aliasa.
   // "park" obejmuje tez "walk" (spacer) - czesto te same miejsca opisywane inaczej.
   park: ["park", "walk"],
+  // Nowe podkategorie (Zakupy / Rozrywka) - mapowanie na typy Google Places w DB.
+  boutique: ["boutique", "clothing_store", "shopping"],
+  concept_store: ["concept_store", "store", "shopping"],
+  wine_shop: ["wine_shop", "liquor_store"],
+  bookshop: ["bookshop", "book_store", "library"],
+  theater: ["theater", "performing_arts_theater", "movie_theater"],
+  live_music: ["live_music", "night_club", "concert_hall"],
+  cinema: ["cinema", "movie_theater"],
+  nightclub: ["nightclub", "night_club", "club", "nightlife"],
 };
 
 export const getDbCategoriesFor = (subcategoryId: string): string[] => {
