@@ -31,6 +31,9 @@ import pl_homefeed from "../locales/pl/homefeed.json";
 import pl_homeprofile from "../locales/pl/homeprofile.json";
 import pl_homecreator from "../locales/pl/homecreator.json";
 import pl_categories from "../locales/pl/categories.json";
+import pl_bizdash from "../locales/pl/bizdash.json";
+import pl_bizonboard from "../locales/pl/bizonboard.json";
+import pl_bizlanding from "../locales/pl/bizlanding.json";
 
 import en_common from "../locales/en/common.json";
 import en_onboarding from "../locales/en/onboarding.json";
@@ -61,6 +64,9 @@ import en_homefeed from "../locales/en/homefeed.json";
 import en_homeprofile from "../locales/en/homeprofile.json";
 import en_homecreator from "../locales/en/homecreator.json";
 import en_categories from "../locales/en/categories.json";
+import en_bizdash from "../locales/en/bizdash.json";
+import en_bizonboard from "../locales/en/bizonboard.json";
+import en_bizlanding from "../locales/en/bizlanding.json";
 
 i18n
   .use(LanguageDetector)
@@ -97,6 +103,9 @@ i18n
         homeprofile: pl_homeprofile,
         homecreator: pl_homecreator,
         categories: pl_categories,
+        bizdash: pl_bizdash,
+        bizonboard: pl_bizonboard,
+        bizlanding: pl_bizlanding,
       },
       en: {
         common: en_common,
@@ -128,6 +137,9 @@ i18n
         homeprofile: en_homeprofile,
         homecreator: en_homecreator,
         categories: en_categories,
+        bizdash: en_bizdash,
+        bizonboard: en_bizonboard,
+        bizlanding: en_bizlanding,
       },
     },
     fallbackLng: "pl",

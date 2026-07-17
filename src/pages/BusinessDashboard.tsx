@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import posthog from "posthog-js";
 import { Input } from "@/components/ui/input";
@@ -179,6 +180,7 @@ function AppLikePreviewModal({
   posts: BusinessPost[]; eventTitle: string; eventDescription: string; openingHours: OpeningHours;
   colorBadge: string; colorCardBg: string; colorButton: string; colorPromo?: string;
 }) {
+  const { t } = useTranslation("bizdash");
   const [view, setView] = useState<'card' | 'detail'>('card');
   const catLabel = mainCategory ? MAIN_CATEGORIES.find(c => c.id === mainCategory)?.label : null;
   const allPhotos = [coverImageUrl, ...galleryUrls].filter(Boolean);
@@ -208,7 +210,7 @@ function AppLikePreviewModal({
         {/* Close button — fixed top-right above the phone */}
         <button
           onClick={(e) => { e.stopPropagation(); onClose(); }}
-          aria-label="Zamknij podgląd"
+          aria-label={t("preview.close_aria")}
           className="fixed top-4 right-4 h-10 w-10 rounded-full bg-white/15 hover:bg-white/25 backdrop-blur-md flex items-center justify-center text-white shadow-lg active:scale-90 transition-all z-[100]"
           style={{ top: "max(env(safe-area-inset-top, 0px), 16px)" }}
         >
@@ -237,7 +239,7 @@ function AppLikePreviewModal({
                     <img src={logoUrl} className="w-full h-full object-cover" />
                   </div>
                 )}
-                <h3 className="text-xl font-black text-white leading-tight">{businessName || 'Nazwa lokalu'}</h3>
+                <h3 className="text-xl font-black text-white leading-tight">{businessName || t("business_name_fallback")}</h3>
                 <div className="flex items-center gap-1.5 flex-wrap">
                   <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
                   <span className="text-white/70 text-xs">4.6</span>
@@ -269,10 +271,10 @@ function AppLikePreviewModal({
               {/* Action buttons on the card */}
               <div className="absolute bottom-4 left-3 right-3 flex gap-2.5">
                 <button onClick={onClose} className="flex-1 py-3.5 rounded-full bg-white text-slate-900 font-bold text-sm active:scale-95 transition-transform">
-                  Odrzuć
+                  {t("card.reject")}
                 </button>
                 <button className="flex-1 py-3.5 rounded-full font-bold text-sm active:scale-95 transition-transform shadow-lg" style={{ background: colorButton, color: getContrastColor(colorButton) }}>
-                  Dodaj
+                  {t("card.add")}
                 </button>
               </div>
             </div>
@@ -296,10 +298,10 @@ function AppLikePreviewModal({
               {/* Odrzuc / Dodaj CTA - poza PremiumBusinessCard, 1:1 z apka */}
               <div className="shrink-0 flex gap-3 px-4 pb-5 pt-3 border-t border-slate-100 bg-[#FEFEFE]">
                 <button onClick={() => setView('card')} className="flex-1 py-3 rounded-full bg-secondary text-secondary-foreground font-bold text-sm shadow-sm active:scale-[0.97] transition-transform">
-                  Odrzuć
+                  {t("card.reject")}
                 </button>
                 <button className="flex-1 py-3 rounded-full font-bold text-sm shadow-xl active:scale-[0.97] transition-transform" style={{ background: colorButton, color: getContrastColor(colorButton) }}>
-                  Dodaj
+                  {t("card.add")}
                 </button>
               </div>
             </>
@@ -308,13 +310,13 @@ function AppLikePreviewModal({
           {/* Draft CTA */}
           {isDraft && (
             <div className="shrink-0 px-4 pb-4 pt-2.5 border-t border-slate-100 bg-white">
-              <p className="text-xs text-foreground font-medium text-center mb-2">Podoba Ci sie? Zapisz profil i wejdz do Trasy.</p>
+              <p className="text-xs text-foreground font-medium text-center mb-2">{t("preview.draft_cta_text")}</p>
               <button
                 onClick={onConvert}
                 disabled={convertingDraft}
                 className="animated-gradient-btn w-full py-3 rounded-2xl text-white font-bold text-sm active:scale-[0.98] transition-transform disabled:opacity-60"
               >
-                {convertingDraft ? "Chwile..." : "Zakladam konto i zapisuje profil"}
+                {convertingDraft ? t("preview.wait") : t("preview.draft_convert_btn")}
               </button>
             </div>
           )}
@@ -330,13 +332,14 @@ function BusinessCardPreview({ logoUrl, coverImageUrl, coverVideoUrl, businessNa
   onPreviewClick?: () => void; previewReady?: boolean;
   colorBadge?: string; colorCardBg?: string; colorButton?: string; colorPromo?: string;
 }) {
+  const { t } = useTranslation("bizdash");
   const catLabel = mainCategory ? MAIN_CATEGORIES.find(c => c.id === mainCategory)?.label : null;
   const badge   = colorBadge  ?? "#D45113";
   const overlay = colorCardBg ?? "#000000";
   const btn     = colorButton ?? "#D45113";
   return (
     <div>
-      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Podgląd wizytówki</p>
+      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">{t("card_preview.label")}</p>
       <div className="relative rounded-3xl overflow-hidden shadow-xl bg-slate-900" style={{ aspectRatio: '9/16' }}>
         {coverVideoUrl
           ? <AutoVideo src={coverVideoUrl} className="absolute inset-0 w-full h-full object-cover" />
@@ -356,7 +359,7 @@ function BusinessCardPreview({ logoUrl, coverImageUrl, coverVideoUrl, businessNa
               <img src={logoUrl} className="w-full h-full object-cover" />
             </div>
           )}
-          <h3 className="text-base font-black text-white leading-tight">{businessName || 'Nazwa lokalu'}</h3>
+          <h3 className="text-base font-black text-white leading-tight">{businessName || t("business_name_fallback")}</h3>
           <div className="flex items-center gap-1 flex-wrap">
             <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
             <span className="text-white/70 text-[10px]">4.6</span>
@@ -381,18 +384,18 @@ function BusinessCardPreview({ logoUrl, coverImageUrl, coverVideoUrl, businessNa
           <ChevronUp className="h-4 w-4 text-slate-700" />
         </div>
         <div className="absolute bottom-2 left-2 right-2 flex gap-2">
-          <div className="flex-1 py-2 rounded-full bg-white text-slate-900 font-bold text-[10px] text-center">Odrzuć</div>
-          <div className="flex-1 py-2 rounded-full font-bold text-[10px] text-center" style={{ background: btn, color: getContrastColor(btn) }}>Dodaj</div>
+          <div className="flex-1 py-2 rounded-full bg-white text-slate-900 font-bold text-[10px] text-center">{t("card.reject")}</div>
+          <div className="flex-1 py-2 rounded-full font-bold text-[10px] text-center" style={{ background: btn, color: getContrastColor(btn) }}>{t("card.add")}</div>
         </div>
       </div>
       {onPreviewClick && (
         <button
           onClick={() => previewReady && onPreviewClick()}
           disabled={!previewReady}
-          title={!previewReady ? "Uzupełnij nazwę i dodaj zdjęcie okładkowe" : undefined}
+          title={!previewReady ? t("card_preview.incomplete_title") : undefined}
           className="mt-3 w-full py-2.5 rounded-full text-xs font-bold border-2 border-[#D45113] text-[#D45113] hover:bg-[#D45113] hover:text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400 disabled:hover:bg-transparent"
         >
-          Otwórz pełny podgląd →
+          {t("card_preview.open_full")}
         </button>
       )}
     </div>
@@ -402,6 +405,7 @@ function BusinessCardPreview({ logoUrl, coverImageUrl, coverVideoUrl, businessNa
 // Usuwanie konta biznesowego (Apple 5.1.1v). RPC delete_current_user_account kasuje
 // auth.uid() + kaskadowo profil/wizytowke. Renderowane TYLKO realnemu wlascicielowi.
 function BusinessDeleteAccount() {
+  const { t } = useTranslation("bizdash");
   const [confirm, setConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const handleDelete = async () => {
@@ -412,7 +416,7 @@ function BusinessDeleteAccount() {
       await supabase.auth.signOut();
       window.location.href = "/";
     } catch {
-      toast.error("Nie udało się usunąć konta. Spróbuj ponownie.");
+      toast.error(t("delete_account.error"));
       setDeleting(false);
       setConfirm(false);
     }
@@ -421,23 +425,24 @@ function BusinessDeleteAccount() {
     return (
       <button onClick={() => setConfirm(true)} className="w-full flex items-center gap-3 px-4 py-3.5 bg-white rounded-2xl border border-red-200 hover:bg-red-50 transition-colors text-left">
         <Trash2 className="h-4 w-4 text-red-600 flex-shrink-0" />
-        <span className="text-sm font-semibold text-red-600 flex-1">Usuń konto biznesowe</span>
+        <span className="text-sm font-semibold text-red-600 flex-1">{t("delete_account.button")}</span>
       </button>
     );
   }
   return (
     <div className="rounded-2xl border border-red-300 bg-red-50 p-4 space-y-3">
-      <p className="text-sm font-bold text-red-700">Usunąć konto na stałe?</p>
-      <p className="text-xs text-slate-600 leading-relaxed">Twoja wizytówka, posty, galeria i konto zostaną trwale usunięte. Miejsce pozostanie w aplikacji jako niezarządzane. Tej operacji nie można cofnąć.</p>
+      <p className="text-sm font-bold text-red-700">{t("delete_account.confirm_title")}</p>
+      <p className="text-xs text-slate-600 leading-relaxed">{t("delete_account.confirm_desc")}</p>
       <div className="flex gap-2">
-        <button onClick={() => setConfirm(false)} disabled={deleting} className="flex-1 py-2.5 rounded-2xl border border-slate-300 text-sm font-medium text-slate-700">Anuluj</button>
-        <button onClick={handleDelete} disabled={deleting} className="flex-1 py-2.5 rounded-2xl bg-red-600 text-white text-sm font-bold disabled:opacity-60">{deleting ? "Usuwanie..." : "Usuń konto"}</button>
+        <button onClick={() => setConfirm(false)} disabled={deleting} className="flex-1 py-2.5 rounded-2xl border border-slate-300 text-sm font-medium text-slate-700">{t("delete_account.cancel")}</button>
+        <button onClick={handleDelete} disabled={deleting} className="flex-1 py-2.5 rounded-2xl bg-red-600 text-white text-sm font-bold disabled:opacity-60">{deleting ? t("delete_account.deleting") : t("delete_account.confirm_button")}</button>
       </div>
     </div>
   );
 }
 
 const BusinessDashboard = () => {
+  const { t } = useTranslation("bizdash");
   const { placeId } = useParams<{ placeId: string }>();
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
@@ -593,7 +598,7 @@ const BusinessDashboard = () => {
     if (!profileData) {
       setAccessDenied(true);
       setLoading(false);
-      if (bypass) toast.error("Nie znaleziono profilu. Uruchom migrację SQL w Supabase.");
+      if (bypass) toast.error(t("toast.profile_not_found"));
       return;
     }
 
@@ -711,28 +716,28 @@ const BusinessDashboard = () => {
     const isMobile = window.innerWidth < 768;
     const driverObj = driver({
       showProgress: true,
-      nextBtnText: 'Dalej →',
-      prevBtnText: '← Wróć',
-      doneBtnText: 'Gotowe!',
+      nextBtnText: t('tour.next'),
+      prevBtnText: t('tour.prev'),
+      doneBtnText: t('tour.done'),
       steps: [
         {
           element: isMobile ? '#tour-mobile-profile' : '#tour-profile',
-          popover: { title: 'Dane lokalu', description: 'Zacznij tutaj: nazwa lokalu, adres, kontakt, opis i kategoria. To podstawa Twojej wizytówki.', side: isMobile ? 'bottom' : 'right' },
+          popover: { title: t('tour.profile_title'), description: t('tour.profile_desc'), side: isMobile ? 'bottom' : 'right' },
           onHighlightStarted: () => setActiveSection('profile'),
         },
         {
           element: isMobile ? '#tour-mobile-gallery' : '#tour-gallery',
-          popover: { title: 'Wygląd', description: 'Dodaj okładkę, galerię i dostosuj kolor guzika akcji - tak będą Cię widzieć goście w aplikacji.', side: isMobile ? 'bottom' : 'right' },
+          popover: { title: t('tour.gallery_title'), description: t('tour.gallery_desc'), side: isMobile ? 'bottom' : 'right' },
           onHighlightStarted: () => setActiveSection('gallery'),
         },
         {
           element: isMobile ? '#tour-mobile-menu' : '#tour-menu',
-          popover: { title: 'Menu', description: 'Wrzuć zdjęcia menu lub cennika (albo PDF). Goście zobaczą je w Twojej wizytówce.', side: isMobile ? 'bottom' : 'right' },
+          popover: { title: t('tour.menu_title'), description: t('tour.menu_desc'), side: isMobile ? 'bottom' : 'right' },
           onHighlightStarted: () => setActiveSection('menu'),
         },
         {
           element: isMobile ? '#tour-mobile-posts' : '#tour-posts',
-          popover: { title: 'Aktualności', description: 'Publikuj posty, wydarzenia i promocje. Widoczne dla wszystkich osób oglądających Twoją wizytówkę.', side: isMobile ? 'bottom' : 'right' },
+          popover: { title: t('tour.posts_title'), description: t('tour.posts_desc'), side: isMobile ? 'bottom' : 'right' },
           onHighlightStarted: () => setActiveSection('posts'),
         },
       ],
@@ -841,15 +846,15 @@ const BusinessDashboard = () => {
 
   const uploadFile = async (file: File, folder: string, opts?: { allowPdf?: boolean }): Promise<string> => {
     const isPdf = file.type === "application/pdf" || /\.pdf$/i.test(file.name);
-    if (isPdf && !opts?.allowPdf) throw new Error("Niedozwolony format pliku (dozwolone: JPG, PNG, WEBP, HEIC)");
+    if (isPdf && !opts?.allowPdf) throw new Error(t("upload.invalid_format"));
     // HEIC/HEIF (domyslny format iPhone'a) -> konwersja do JPEG PRZED walidacja formatu.
     // Bez tego iPhone'owe zdjecia byly odrzucane na ALLOWED_MIME i nie renderowaly sie
     // na nie-Apple urzadzeniach.
     if (!isPdf && isHeic(file)) file = await convertHeicToJpeg(file);
     if (!isPdf && !ALLOWED_MIME.includes(file.type)) {
-      throw new Error(opts?.allowPdf ? "Niedozwolony format (JPG, PNG, WEBP, HEIC, PDF)" : "Niedozwolony format pliku (dozwolone: JPG, PNG, WEBP, HEIC)");
+      throw new Error(opts?.allowPdf ? t("upload.invalid_format_pdf") : t("upload.invalid_format"));
     }
-    if (file.size > (isPdf ? MAX_PDF_SIZE : MAX_FILE_SIZE)) throw new Error(`Plik jest za duży (max ${isPdf ? 10 : 5} MB)`);
+    if (file.size > (isPdf ? MAX_PDF_SIZE : MAX_FILE_SIZE)) throw new Error(t("upload.too_large", { max: isPdf ? 10 : 5 }));
     // PDF wgrywamy bez przetwarzania (resizeImage to canvas - zniszczyloby PDF).
     // Obrazy: resize + recompress zeby byly male i szybko sie ladowaly (src/lib/imageResize.ts).
     const body = isPdf ? file : await resizeImage(file);
@@ -871,7 +876,7 @@ const BusinessDashboard = () => {
       setLogoUrl(url);
       setIsDirty(true);
       if (isDraft) await autoSaveDraft({ logoUrl: url });
-    } catch (err: any) { toast.error(err.message ?? "Nie udało się przesłać logo"); }
+    } catch (err: any) { toast.error(err.message ?? t("upload.logo_error")); }
     setUploading(null);
   };
 
@@ -887,7 +892,7 @@ const BusinessDashboard = () => {
       setCoverVideoUrl("");
       setIsDirty(true);
       if (isDraft) await autoSaveDraft({ coverImageUrl: url, coverVideoUrl: "" });
-    } catch (err: any) { toast.error(err.message ?? "Nie udało się przesłać zdjęcia okładkowego"); }
+    } catch (err: any) { toast.error(err.message ?? t("upload.cover_error")); }
     setUploading(null);
   };
 
@@ -903,7 +908,7 @@ const BusinessDashboard = () => {
       vid.src = URL.createObjectURL(file);
     }).catch(() => Infinity);
     if (duration > 7.5) {
-      toast.error("Filmik może mieć maksymalnie 7 sekund");
+      toast.error(t("upload.video_too_long"));
       e.target.value = "";
       return;
     }
@@ -920,7 +925,7 @@ const BusinessDashboard = () => {
       setCoverVideoUrl(url);
       setIsDirty(true);
       if (isDraft) await autoSaveDraft({ coverVideoUrl: url });
-    } catch (err: any) { toast.error(err.message ?? "Nie udało się przesłać filmiku"); }
+    } catch (err: any) { toast.error(err.message ?? t("upload.video_error")); }
     setUploading(null);
     e.target.value = "";
   };
@@ -938,7 +943,7 @@ const BusinessDashboard = () => {
         vid.src = URL.createObjectURL(file);
       });
       if (duration > 7.5) {
-        toast.error("Filmik może mieć maksymalnie 7 sekund");
+        toast.error(t("upload.video_too_long"));
         e.target.value = "";
         return;
       }
@@ -956,7 +961,7 @@ const BusinessDashboard = () => {
         setCoverImageUrl("");
         setIsDirty(true);
         if (isDraft) await autoSaveDraft({ coverVideoUrl: url, coverImageUrl: "" });
-      } catch (err: any) { toast.error(err.message ?? "Nie udało się przesłać filmiku"); }
+      } catch (err: any) { toast.error(err.message ?? t("upload.video_error")); }
     } else {
       setUploading("cover");
       try {
@@ -965,7 +970,7 @@ const BusinessDashboard = () => {
         setCoverVideoUrl("");
         setIsDirty(true);
         if (isDraft) await autoSaveDraft({ coverImageUrl: url, coverVideoUrl: "" });
-      } catch (err: any) { toast.error(err.message ?? "Nie udało się przesłać okładki"); }
+      } catch (err: any) { toast.error(err.message ?? t("upload.cover_error_short")); }
     }
     setUploading(null);
     e.target.value = "";
@@ -981,7 +986,7 @@ const BusinessDashboard = () => {
       const urls = await Promise.all(toUpload.map(f => uploadFile(f, "gallery")));
       setGalleryUrls(prev => [...prev, ...urls]);
       setIsDirty(true);
-    } catch (err: any) { toast.error(err.message ?? "Nie udało się przesłać zdjęć"); }
+    } catch (err: any) { toast.error(err.message ?? t("upload.photos_error")); }
     setUploading(null);
     e.target.value = "";
   };
@@ -1020,7 +1025,7 @@ const BusinessDashboard = () => {
       }
       setMenuImageUrls(prev => [...prev, ...additions].slice(0, MAX_MENU_IMAGES));
       setIsDirty(true);
-    } catch (err: any) { toast.error(err.message ?? "Nie udało się przesłać zdjęć"); }
+    } catch (err: any) { toast.error(err.message ?? t("upload.photos_error")); }
     setUploading(null);
     e.target.value = "";
   };
@@ -1037,7 +1042,7 @@ const BusinessDashboard = () => {
     try {
       const urls = await Promise.all(files.slice(0, 4 - postPhotos.length).map(f => uploadFile(f, "posts")));
       setPostPhotos(prev => [...prev, ...urls]);
-    } catch { toast.error("Nie udało się przesłać zdjęcia"); }
+    } catch { toast.error(t("upload.photo_error")); }
     setPostPhotoUploading(false);
     e.target.value = "";
   };
@@ -1063,7 +1068,7 @@ const BusinessDashboard = () => {
       setPostDescription("");
       setPostPhotos([]);
       if (postPhotoInputRef.current) postPhotoInputRef.current.value = "";
-      toast.success("Post widoczny w podglądzie. Zapisze się na stałe po akceptacji wizytówki.");
+      toast.success(t("posts.local_added"));
       setSubmittingPost(false);
       return;
     }
@@ -1072,13 +1077,13 @@ const BusinessDashboard = () => {
       .insert({ place_id: effectivePlaceId, description: postDescription.trim() || null, photo_urls: postPhotos })
       .select()
       .single();
-    if (error) { toast.error("Nie udało się dodać posta"); }
+    if (error) { toast.error(t("posts.add_error")); }
     else {
       setPosts(prev => [data as BusinessPost, ...prev]);
       setPostDescription("");
       setPostPhotos([]);
       if (postPhotoInputRef.current) postPhotoInputRef.current.value = "";
-      toast.success("Post dodany!");
+      toast.success(t("posts.added"));
     }
     setSubmittingPost(false);
   };
@@ -1097,7 +1102,7 @@ const BusinessDashboard = () => {
       if (undone) return;
       const { error } = await (supabase as any).from("business_posts").delete().eq("id", id);
       if (error) {
-        toast.error("Nie udało się usunąć posta");
+        toast.error(t("posts.delete_error"));
         setPosts(prev => {
           const next = [...prev];
           next.splice(Math.min(index, next.length), 0, snapshot);
@@ -1106,10 +1111,10 @@ const BusinessDashboard = () => {
       }
     }, 5000);
 
-    toast("Post usunięty", {
+    toast(t("posts.deleted"), {
       duration: 5000,
       action: {
-        label: "Cofnij",
+        label: t("posts.undo"),
         onClick: () => {
           undone = true;
           clearTimeout(timer);
@@ -1126,7 +1131,7 @@ const BusinessDashboard = () => {
   const handleSave = async () => {
     if (!profile) return;
     if (eventStartsAt && eventEndsAt && eventEndsAt < eventStartsAt) {
-      toast.error("Data końca wydarzenia nie może być wcześniejsza niż data początku");
+      toast.error(t("save.event_date_error"));
       return;
     }
     setSaving(true);
@@ -1202,9 +1207,9 @@ const BusinessDashboard = () => {
       });
       const msg = error.message?.toLowerCase() ?? "";
       if (msg.includes("row-level security") || msg.includes("rls") || msg.includes("policy")) {
-        toast.error("Brak uprawnień do edycji - sprawdź czy jesteś zalogowany na właściwe konto");
+        toast.error(t("save.rls_error"));
       } else {
-        toast.error(`Błąd zapisu: ${error.message ?? "nieznany"}`);
+        toast.error(t("save.error", { msg: error.message ?? t("save.unknown") }));
       }
     } else {
       // Zapisz geokodowane wspolrzedne OSOBNYM update'em (best-effort). Gdyby kolumn
@@ -1219,9 +1224,9 @@ const BusinessDashboard = () => {
       }
       if (isComplete && !reviewRequestedAt) {
         setReviewRequestedAt(nowIso);
-        toast.success("Zmiany zapisane! Wizytówka trafiła do weryfikacji.");
+        toast.success(t("save.saved_review"));
       } else {
-        toast.success("Zmiany zapisane!");
+        toast.success(t("save.saved"));
       }
       setIsDirty(false);
     }
@@ -1274,9 +1279,9 @@ const BusinessDashboard = () => {
     });
     setSupportSubmitting(false);
     if (error) {
-      toast.error("Nie udało się wysłać zgłoszenia.");
+      toast.error(t("support.error"));
     } else {
-      toast.success("Zgłoszenie wysłane! Odezwiemy się wkrótce.");
+      toast.success(t("support.sent"));
       setSupportMessage("");
       setShowSupportModal(false);
     }
@@ -1303,7 +1308,7 @@ const BusinessDashboard = () => {
       }).catch(() => {});
       navigate(`/auth?draft=${profile.id}`);
     } catch {
-      toast.error("Spróbuj ponownie za chwilę.");
+      toast.error(t("draft.convert_error"));
     } finally {
       setConvertingDraft(false);
     }
@@ -1312,21 +1317,21 @@ const BusinessDashboard = () => {
   const [resetPasswordLoading, setResetPasswordLoading] = useState(false);
   const handlePasswordReset = async () => {
     if (!user?.email) {
-      toast.error("Brak emaila powiązanego z kontem - skontaktuj się z supportem");
+      toast.error(t("password.no_email"));
       return;
     }
     if (resetPasswordLoading) return;
-    if (!window.confirm(`Wyślemy link do zmiany hasła na ${user.email}. Kontynuować?`)) return;
+    if (!window.confirm(t("password.confirm", { email: user.email }))) return;
     setResetPasswordLoading(true);
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
         redirectTo: `${window.location.origin}/?bizreset=1#/set-password-biznes`,
       });
       if (error) throw error;
-      toast.success(`Link do zmiany hasła wysłany na ${user.email}. Sprawdź skrzynkę (i spam).`);
+      toast.success(t("password.sent", { email: user.email }));
     } catch (err: any) {
       console.error("[BusinessDashboard] password reset failed:", err);
-      toast.error(err.message || "Nie udało się wysłać linka");
+      toast.error(err.message || t("password.error"));
     } finally {
       setResetPasswordLoading(false);
     }
@@ -1361,8 +1366,8 @@ const BusinessDashboard = () => {
       <div className="w-full max-w-xs flex flex-col items-center gap-5">
         <div className="h-14 w-14 rounded-full" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
         <div className="text-center">
-          <h1 className="text-xl font-black text-foreground">Panel biznesowy</h1>
-          <p className="text-sm text-muted-foreground mt-1">Podaj hasło dostępu</p>
+          <h1 className="text-xl font-black text-foreground">{t("access.title")}</h1>
+          <p className="text-sm text-muted-foreground mt-1">{t("access.subtitle")}</p>
         </div>
         <div className="w-full space-y-3">
           <input
@@ -1378,11 +1383,11 @@ const BusinessDashboard = () => {
                 setPasswordError(true);
               }
             }}
-            placeholder="Haslo dostępu"
+            placeholder={t("access.placeholder")}
             className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-center placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-300"
           />
           {passwordError && (
-            <p className="text-xs text-center text-red-500">Nieprawidlowe haslo</p>
+            <p className="text-xs text-center text-red-500">{t("access.wrong")}</p>
           )}
           <button
             onClick={() => {
@@ -1396,7 +1401,7 @@ const BusinessDashboard = () => {
             }}
             className="w-full py-3 rounded-2xl bg-gradient-to-r from-[#F4A259] to-[#F9662B] text-white font-bold text-sm active:scale-[0.98] transition-transform"
           >
-            Otwórz panel
+            {t("access.open")}
           </button>
         </div>
       </div>
@@ -1407,12 +1412,12 @@ const BusinessDashboard = () => {
 
   const previewMissingFields = (() => {
     const missing: string[] = [];
-    if (!businessName.trim()) missing.push("nazwę lokalu");
-    if (!coverImageUrl && !coverVideoUrl && galleryUrls.length === 0) missing.push("zdjęcie okładkowe");
+    if (!businessName.trim()) missing.push(t("missing.business_name"));
+    if (!coverImageUrl && !coverVideoUrl && galleryUrls.length === 0) missing.push(t("missing.cover"));
     return missing;
   })();
   const previewMissingMsg = previewMissingFields.length > 0
-    ? `Aby zobaczyć podgląd, uzupełnij: ${previewMissingFields.join(" oraz ")}.`
+    ? t("missing.msg", { fields: previewMissingFields.join(t("missing.joiner")) })
     : "";
 
   return (
@@ -1424,7 +1429,7 @@ const BusinessDashboard = () => {
         return (
           <div className="fixed top-0 left-0 right-0 z-[60] bg-orange-50 border-b border-orange-100 px-4 py-1.5 flex items-center justify-between gap-3">
             <p className="text-xs font-medium text-orange-700 leading-snug">
-              {ready ? "Profil wygląda świetnie - gotowy na launch!" : "Uzupełnij nazwę i dodaj zdjęcie, aby zobaczyć podgląd"}
+              {ready ? t("draft.banner_ready") : t("draft.banner_incomplete")}
             </p>
             {ready && (
               <button
@@ -1432,7 +1437,7 @@ const BusinessDashboard = () => {
                 disabled={convertingDraft}
                 className="shrink-0 bg-white text-slate-900 font-bold text-xs px-3 py-1.5 rounded-full whitespace-nowrap border border-orange-200 active:scale-95 transition-transform disabled:opacity-60"
               >
-                {convertingDraft ? "Chwilę..." : "Zakładam konto →"}
+                {convertingDraft ? t("draft.wait") : t("draft.banner_convert")}
               </button>
             )}
           </div>
@@ -1442,12 +1447,12 @@ const BusinessDashboard = () => {
       {/* ── Preview mode banner ── */}
       {previewMode && !isDraft && (
         <div className="fixed top-0 left-0 right-0 z-[60] bg-gradient-to-r from-[#F4A259] to-[#F9662B] text-white px-4 py-2.5 flex items-center justify-between gap-3">
-          <p className="text-xs font-semibold leading-snug">To jest podgląd Twojego panelu w Trasie. Edycja wymagana logowania.</p>
+          <p className="text-xs font-semibold leading-snug">{t("preview_mode.banner")}</p>
           <button
             onClick={() => navigate("/set-password-biznes")}
             className="shrink-0 bg-white text-orange-600 font-bold text-xs px-3 py-1.5 rounded-full whitespace-nowrap active:scale-95 transition-transform"
           >
-            Przejmij konto
+            {t("preview_mode.claim")}
           </button>
         </div>
       )}
@@ -1462,71 +1467,71 @@ const BusinessDashboard = () => {
           </div>
           <button
             onClick={() => setSidebarOpen(v => !v)}
-            title={sidebarOpen ? undefined : 'Rozwiń menu'}
+            title={sidebarOpen ? undefined : t('sidebar.expand')}
             className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-slate-400 hover:bg-slate-50 hover:text-slate-600 transition-colors text-xs ${!sidebarOpen && 'justify-center w-full'}`}
           >
             <svg className={`h-3.5 w-3.5 shrink-0 transition-transform ${sidebarOpen ? '' : 'rotate-180'}`} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8">
               <path d="M10 3L5 8l5 5"/>
             </svg>
-            {sidebarOpen && <span>Schowaj</span>}
+            {sidebarOpen && <span>{t('sidebar.collapse')}</span>}
           </button>
         </div>
         {/* Nav items */}
         {([
-          { id: 'overview',   label: 'Przegląd',      icon: LayoutDashboard, disabled: true,  hidden: true },
-          { id: 'profile',    label: 'Dane lokalu',    icon: Store,          disabled: false, hidden: false },
-          { id: 'gallery',    label: 'Wygląd',          icon: Images,         disabled: false, hidden: false },
-          { id: 'menu',       label: 'Menu',            icon: BookOpen,       disabled: false, hidden: false },
-          { id: 'posts',      label: 'Aktualności',    icon: Megaphone,      disabled: false, hidden: false },
-          { id: 'analytics',  label: 'Analityka',      icon: TrendingUp,     disabled: true,  hidden: false },
-          { id: 'settings',   label: 'Ustawienia',     icon: Settings,       disabled: false, hidden: false },
+          { id: 'overview',   label: t('nav.overview'),  icon: LayoutDashboard, disabled: true,  hidden: true },
+          { id: 'profile',    label: t('nav.profile'),   icon: Store,          disabled: false, hidden: false },
+          { id: 'gallery',    label: t('nav.appearance'), icon: Images,        disabled: false, hidden: false },
+          { id: 'menu',       label: t('nav.menu'),      icon: BookOpen,       disabled: false, hidden: false },
+          { id: 'posts',      label: t('nav.posts'),     icon: Megaphone,      disabled: false, hidden: false },
+          { id: 'analytics',  label: t('nav.analytics'), icon: TrendingUp,     disabled: true,  hidden: false },
+          { id: 'settings',   label: t('nav.settings'),  icon: Settings,       disabled: false, hidden: false },
         ] as const).filter(item => !item.hidden).map(item => (
           <button
             key={item.id}
             id={`tour-${item.id}`}
             onClick={async () => { if (item.disabled) return; if (isDirty) await autoSaveDraft(); setActiveSection(item.id); }}
             disabled={item.disabled}
-            title={item.disabled ? 'Niedostępne - wkrótce' : (!sidebarOpen ? item.label : undefined)}
+            title={item.disabled ? t('nav.disabled_soon') : (!sidebarOpen ? item.label : undefined)}
             className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold transition-colors mb-0.5 ${sidebarOpen ? 'text-left' : 'justify-center'} ${item.disabled ? 'text-slate-300 cursor-not-allowed' : activeSection === item.id ? 'bg-blue-50 text-blue-700' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'}`}
           >
             <item.icon className="h-4 w-4 shrink-0" />
             {sidebarOpen && (
               <span className="flex items-center gap-1.5">
                 {item.label}
-                {item.disabled && <span className="text-[9px] font-bold text-slate-300 bg-slate-100 rounded-full px-1.5 py-0.5">wkrótce</span>}
+                {item.disabled && <span className="text-[9px] font-bold text-slate-300 bg-slate-100 rounded-full px-1.5 py-0.5">{t('nav.soon')}</span>}
               </span>
             )}
           </button>
         ))}
         {/* Logout + support at bottom */}
         <div className={`mt-auto px-1 space-y-1 ${!sidebarOpen && 'flex flex-col items-center'}`}>
-          <button onClick={() => setShowSupportModal(true)} title="Zgłoś problem" className={`flex items-center gap-2 text-xs text-slate-400 hover:text-slate-600 transition-colors py-2 ${sidebarOpen ? 'px-2' : 'justify-center'}`}>
+          <button onClick={() => setShowSupportModal(true)} title={t('sidebar.support')} className={`flex items-center gap-2 text-xs text-slate-400 hover:text-slate-600 transition-colors py-2 ${sidebarOpen ? 'px-2' : 'justify-center'}`}>
             <MessageCircle className="h-3.5 w-3.5 shrink-0" />
-            {sidebarOpen && 'Zgłoś problem'}
+            {sidebarOpen && t('sidebar.support')}
           </button>
           {!isDraft && (
             <>
               <button
                 onClick={handlePasswordReset}
                 disabled={resetPasswordLoading}
-                title="Zmień hasło"
+                title={t('sidebar.change_password')}
                 className={`flex items-center gap-2 text-xs text-slate-400 hover:text-slate-600 transition-colors py-2 disabled:opacity-50 ${sidebarOpen ? 'px-2' : 'justify-center'}`}
               >
                 {resetPasswordLoading
                   ? <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" />
                   : <KeyRound className="h-3.5 w-3.5 shrink-0" />
                 }
-                {sidebarOpen && (resetPasswordLoading ? 'Wysyłam...' : 'Zmień hasło')}
+                {sidebarOpen && (resetPasswordLoading ? t('sidebar.sending') : t('sidebar.change_password'))}
               </button>
-              <button onClick={handleLogout} title="Wyloguj się" className={`flex items-center gap-2 text-xs text-slate-400 hover:text-slate-600 transition-colors py-2 ${sidebarOpen ? 'px-2' : 'justify-center'}`}>
+              <button onClick={handleLogout} title={t('sidebar.logout')} className={`flex items-center gap-2 text-xs text-slate-400 hover:text-slate-600 transition-colors py-2 ${sidebarOpen ? 'px-2' : 'justify-center'}`}>
                 <LogOut className="h-3.5 w-3.5 shrink-0" />
-                {sidebarOpen && 'Wyloguj się'}
+                {sidebarOpen && t('sidebar.logout')}
               </button>
             </>
           )}
-          <button onClick={startTour} title="Powtórz tour" className={`flex items-center gap-2 text-xs text-slate-400 hover:text-slate-600 transition-colors py-2 ${sidebarOpen ? 'px-2' : 'justify-center'}`}>
+          <button onClick={startTour} title={t('sidebar.repeat_tour')} className={`flex items-center gap-2 text-xs text-slate-400 hover:text-slate-600 transition-colors py-2 ${sidebarOpen ? 'px-2' : 'justify-center'}`}>
             <HelpCircle className="h-3.5 w-3.5 shrink-0" />
-            {sidebarOpen && 'Powtórz tour'}
+            {sidebarOpen && t('sidebar.repeat_tour')}
           </button>
         </div>
       </aside>
@@ -1539,7 +1544,7 @@ const BusinessDashboard = () => {
           {/* Mobile: logo */}
           <TrasaLogo size={28} className="md:hidden" />
           <div id="tour-business-name" className="flex-1 flex items-center gap-2 min-w-0">
-            <h1 className="text-sm font-bold text-slate-800 truncate">{businessName || 'Nazwa lokalu'}</h1>
+            <h1 className="text-sm font-bold text-slate-800 truncate">{businessName || t("business_name_fallback")}</h1>
             <span className={`hidden md:inline text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${PLAN_COLORS[plan]}`}>{PLAN_LABELS[plan]}</span>
           </div>
           <div className="flex items-center gap-2 ml-auto">
@@ -1548,13 +1553,13 @@ const BusinessDashboard = () => {
               <button
                 onClick={async () => {
                   const url = `${SHARE_BASE_URL}/#/biznes/${placeId}?t=${(profile as any).preview_token}`;
-                  const result = await share({ title: "Podgląd lokalu", url });
+                  const result = await share({ title: t("topbar.preview_title"), url });
                   if (!result.ok) return;
-                  toast.success(result.method === "clipboard" ? "Link skopiowany!" : "Udostępniono");
+                  toast.success(result.method === "clipboard" ? t("topbar.link_copied") : t("topbar.shared"));
                 }}
                 className="hidden md:flex items-center gap-1.5 text-xs font-semibold text-blue-600 px-3 py-1.5 rounded-full bg-blue-50 hover:bg-blue-100 transition-colors"
               >
-                Kopiuj link dla lokalu
+                {t("topbar.copy_link")}
               </button>
             )}
             {!isDraft && (
@@ -1568,13 +1573,13 @@ const BusinessDashboard = () => {
         {/* ── Mobile horizontal tabs ── */}
         <div className="md:hidden sticky top-14 z-10 bg-white border-b border-slate-100 flex overflow-x-auto shrink-0 px-3 gap-1 py-2">
           {([
-            { id: 'overview', label: 'Przegląd', disabled: true,  hidden: true },
-            { id: 'profile', label: 'Dane', disabled: false, hidden: false },
-            { id: 'gallery', label: 'Wygląd', disabled: false, hidden: false },
-            { id: 'menu', label: 'Menu', disabled: false, hidden: false },
-            { id: 'posts', label: 'Aktualności', disabled: false, hidden: false },
-            { id: 'analytics', label: 'Analityka', disabled: true,  hidden: false },
-            { id: 'settings', label: 'Ustawienia', disabled: false, hidden: false },
+            { id: 'overview', label: t('tabs.overview'), disabled: true,  hidden: true },
+            { id: 'profile', label: t('tabs.profile'), disabled: false, hidden: false },
+            { id: 'gallery', label: t('tabs.appearance'), disabled: false, hidden: false },
+            { id: 'menu', label: t('tabs.menu'), disabled: false, hidden: false },
+            { id: 'posts', label: t('tabs.posts'), disabled: false, hidden: false },
+            { id: 'analytics', label: t('tabs.analytics'), disabled: true,  hidden: false },
+            { id: 'settings', label: t('tabs.settings'), disabled: false, hidden: false },
           ] as const).filter(item => !item.hidden).map(item => (
             <button
               key={item.id}
@@ -1583,7 +1588,7 @@ const BusinessDashboard = () => {
               disabled={item.disabled}
               className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors whitespace-nowrap ${item.disabled ? 'text-slate-300 cursor-not-allowed' : activeSection === item.id ? 'bg-blue-50 text-blue-700' : 'text-slate-500'}`}
             >
-              {item.label}{item.disabled && ' · wkrótce'}
+              {item.label}{item.disabled && ` · ${t('nav.soon')}`}
             </button>
           ))}
         </div>
@@ -1599,9 +1604,9 @@ const BusinessDashboard = () => {
               <div className="bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl p-4 text-white shadow-lg shadow-blue-600/20">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1">
-                    <p className="font-black text-base leading-tight">Witaj w Panelu Biznesowym trasy!</p>
+                    <p className="font-black text-base leading-tight">{t("welcome.title")}</p>
                     <p className="text-sm text-blue-100 mt-1.5 leading-relaxed">
-                      Dziękujemy, że lokal{businessName?.trim() ? <> <strong className="text-white">{businessName.trim()}</strong></> : null} dołączył do&nbsp;Trasy - od&nbsp;teraz budujemy razem coś wielkiego. Wypełnij wizytówkę i&nbsp;poczekaj na&nbsp;weryfikację. Masz sugestię albo widzisz błąd? Napisz do&nbsp;nas przez <strong className="text-white">&bdquo;Zgłoś problem&rdquo;</strong>.
+                      {t("welcome.thanks_prefix")}{businessName?.trim() ? <> <strong className="text-white">{businessName.trim()}</strong></> : null}{t("welcome.body_mid")}<strong className="text-white">{t("welcome.support_quote")}</strong>.
                     </p>
                   </div>
                   <button onClick={() => { setShowWelcomeBanner(false); localStorage.setItem(`welcome_seen_${profile!.id}`, "1"); }} className="mt-0.5 text-blue-200 active:opacity-60 flex-shrink-0">
@@ -1615,8 +1620,8 @@ const BusinessDashboard = () => {
               <div className="bg-gradient-to-br from-amber-50 to-amber-100 border border-amber-200 rounded-2xl p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1">
-                    <p className="font-bold text-sm text-amber-800">✓ Wizytówka zweryfikowana!</p>
-                    <p className="text-xs text-amber-700 mt-1 leading-relaxed">Twoja wizytówka została zatwierdzona przez zespół trasy. Teraz jest w pełni widoczna dla użytkowników aplikacji.</p>
+                    <p className="font-bold text-sm text-amber-800">{t("verified.title")}</p>
+                    <p className="text-xs text-amber-700 mt-1 leading-relaxed">{t("verified.desc")}</p>
                   </div>
                   <button onClick={dismissVerifiedBanner} className="text-amber-400 active:opacity-60 flex-shrink-0 mt-0.5"><X className="h-4 w-4" /></button>
                 </div>
@@ -1626,8 +1631,8 @@ const BusinessDashboard = () => {
               <div className="bg-blue-50 border border-blue-100 rounded-2xl px-4 py-3 flex items-center gap-3">
                 <div className="h-2 w-2 rounded-full bg-blue-400 animate-pulse flex-shrink-0" />
                 <div>
-                  <p className="text-xs font-semibold text-blue-700">Wizytówka oczekuje na weryfikację</p>
-                  <p className="text-[11px] text-blue-500 mt-0.5">Sprawdzimy ją i zatwierdzimy wkrótce.</p>
+                  <p className="text-xs font-semibold text-blue-700">{t("review.pending_title")}</p>
+                  <p className="text-[11px] text-blue-500 mt-0.5">{t("review.pending_desc")}</p>
                 </div>
               </div>
             )}
@@ -1638,8 +1643,8 @@ const BusinessDashboard = () => {
             <div className="space-y-5">
               <div className="flex items-start justify-between gap-3 flex-wrap">
                 <div>
-                  <h2 className="text-lg font-black text-foreground">Przegląd</h2>
-                  <p className="text-sm text-slate-400">Oto co dzieje się z Twoim lokalem.</p>
+                  <h2 className="text-lg font-black text-foreground">{t("overview.title")}</h2>
+                  <p className="text-sm text-slate-400">{t("overview.subtitle")}</p>
                 </div>
                 <div className="flex rounded-xl bg-slate-100 p-0.5 gap-0.5 shrink-0">
                   {(['7d', '30d', '90d'] as Exclude<AnalyticsRange, 'custom'>[]).map(r => (
@@ -1648,7 +1653,7 @@ const BusinessDashboard = () => {
                       onClick={() => setAnalyticsRange(r)}
                       className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${analyticsRange === r ? 'bg-white text-foreground shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
                     >
-                      {r === '7d' ? '7 dni' : r === '30d' ? '30 dni' : '3 miesiące'}
+                      {r === '7d' ? t("range.7d") : r === '30d' ? t("range.30d") : t("range.months3")}
                     </button>
                   ))}
                 </div>
@@ -1657,10 +1662,10 @@ const BusinessDashboard = () => {
               {plan === 'premium' ? (
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   {[
-                    { label: 'Wyświetlenia profilu', value: stats.views, icon: BarChart2, color: 'text-blue-500', bg: 'bg-blue-50' },
-                    { label: 'Dodania do planu dnia', value: stats.onRoutes, icon: MapPin, color: 'text-emerald-500', bg: 'bg-emerald-50' },
-                    { label: 'Kliknięcia', value: stats.websiteClicks + stats.phoneClicks, icon: MousePointerClick, color: 'text-violet-500', bg: 'bg-violet-50' },
-                    { label: 'Łączna aktywność', value: stats.views + stats.onRoutes + stats.websiteClicks + stats.phoneClicks, icon: BarChart2, color: 'text-orange-500', bg: 'bg-orange-50' },
+                    { label: t('overview.stat_views'), value: stats.views, icon: BarChart2, color: 'text-blue-500', bg: 'bg-blue-50' },
+                    { label: t('overview.stat_addplan'), value: stats.onRoutes, icon: MapPin, color: 'text-emerald-500', bg: 'bg-emerald-50' },
+                    { label: t('overview.stat_clicks'), value: stats.websiteClicks + stats.phoneClicks, icon: MousePointerClick, color: 'text-violet-500', bg: 'bg-violet-50' },
+                    { label: t('overview.stat_total'), value: stats.views + stats.onRoutes + stats.websiteClicks + stats.phoneClicks, icon: BarChart2, color: 'text-orange-500', bg: 'bg-orange-50' },
                   ].map(({ label, value, icon: Icon, color, bg }) => (
                     <div key={label} className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
                       <div className={`h-8 w-8 rounded-xl ${bg} flex items-center justify-center mb-3`}>
@@ -1668,37 +1673,37 @@ const BusinessDashboard = () => {
                       </div>
                       <p className="text-2xl font-black text-foreground leading-none mb-1">{analyticsLoading ? '-' : value}</p>
                       <p className="text-xs text-slate-400 leading-snug">{label}</p>
-                      <p className="text-[10px] text-slate-300 mt-0.5">ostatnie {analyticsRange === '7d' ? '7 dni' : analyticsRange === '30d' ? '30 dni' : '3 miesiące'}</p>
+                      <p className="text-[10px] text-slate-300 mt-0.5">{t("overview.last_prefix")} {analyticsRange === '7d' ? t("range.7d") : analyticsRange === '30d' ? t("range.30d") : t("range.months3")}</p>
                     </div>
                   ))}
                 </div>
               ) : (
                 <div className="relative rounded-2xl border border-dashed border-border/60 p-4 overflow-hidden">
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3 opacity-30 pointer-events-none select-none">
-                    {['Wyświetlenia', 'Na trasach', 'Kliknięcia', 'Aktywność'].map(l => (
+                    {[t('locked.views'), t('locked.routes'), t('locked.clicks'), t('locked.activity')].map(l => (
                       <div key={l} className="bg-white border border-slate-100 rounded-2xl p-4"><p className="text-2xl font-black">-</p><p className="text-xs text-slate-400">{l}</p></div>
                     ))}
                   </div>
                   <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5">
                     <span className="text-lg">🔒</span>
-                    <p className="text-xs font-semibold">Analityka dostępna w planie Premium</p>
+                    <p className="text-xs font-semibold">{t("analytics.locked_title")}</p>
                   </div>
                 </div>
               )}
               {/* Activity feed */}
               <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Ostatnia aktywność</p>
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">{t("activity.title")}</p>
                 {recentEvents.length === 0 ? (
-                  <p className="text-sm text-slate-400 text-center py-4">Brak aktywności w ostatnim czasie.</p>
+                  <p className="text-sm text-slate-400 text-center py-4">{t("activity.empty")}</p>
                 ) : (
                   <div className="flex flex-col divide-y divide-slate-50">
                     {recentEvents.map((ev, i) => {
                       const labels: Record<string, { txt: string; dot: string }> = {
-                        view: { txt: 'Ktoś wyświetlił Twój profil', dot: 'bg-blue-400' },
-                        add_to_route: { txt: 'Lokal dodany do planu dnia', dot: 'bg-emerald-400' },
-                        click_phone: { txt: 'Kliknięcie w numer telefonu', dot: 'bg-violet-400' },
-                        click_website: { txt: 'Kliknięcie w stronę WWW', dot: 'bg-violet-400' },
-                        click_booking: { txt: 'Kliknięcie w rezerwację', dot: 'bg-amber-400' },
+                        view: { txt: t('activity.view'), dot: 'bg-blue-400' },
+                        add_to_route: { txt: t('activity.add_route'), dot: 'bg-emerald-400' },
+                        click_phone: { txt: t('activity.click_phone'), dot: 'bg-violet-400' },
+                        click_website: { txt: t('activity.click_website'), dot: 'bg-violet-400' },
+                        click_booking: { txt: t('activity.click_booking'), dot: 'bg-amber-400' },
                       };
                       const info = labels[ev.event_type] ?? { txt: ev.event_type, dot: 'bg-slate-300' };
                       return (
@@ -1721,8 +1726,8 @@ const BusinessDashboard = () => {
           {activeSection === 'gallery' && (
             <div className="space-y-4">
               <div>
-                <h2 className="text-lg font-black">Wygląd</h2>
-                <p className="text-sm text-slate-400">Okładka i galeria dodatkowa widoczne na Twojej wizytówce.</p>
+                <h2 className="text-lg font-black">{t("gallery.title")}</h2>
+                <p className="text-sm text-slate-400">{t("gallery.subtitle")}</p>
               </div>
 
               <div className="flex flex-col lg:flex-row gap-5 items-start">
@@ -1731,8 +1736,8 @@ const BusinessDashboard = () => {
               <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-bold text-foreground">Okładka wizytówki</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">{"Zdjęcie wyświetlane na wizytówce w aplikacji"}</p>
+                    <p className="text-sm font-bold text-foreground">{t("gallery.cover_title")}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{t("gallery.cover_desc")}</p>
                   </div>
                   <span className="text-[11px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full shrink-0">JPG, PNG, HEIC</span>
                 </div>
@@ -1746,7 +1751,7 @@ const BusinessDashboard = () => {
                       {(uploading === "cover_video" || uploading === "cover") ? (
                         <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-muted-foreground">
                           <Loader2 className="h-6 w-6 animate-spin" />
-                          <span className="text-xs">Przesyłanie…</span>
+                          <span className="text-xs">{t("gallery.uploading")}</span>
                         </div>
                       ) : coverVideoUrl ? (
                         <>
@@ -1754,7 +1759,7 @@ const BusinessDashboard = () => {
                           <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 group-active:opacity-100 transition-opacity">
                             <div className="flex flex-col items-center gap-2 text-white">
                               <Camera className="h-5 w-5" />
-                              <span className="text-sm font-semibold">Zmień okładkę</span>
+                              <span className="text-sm font-semibold">{t("gallery.change_cover")}</span>
                             </div>
                           </div>
                           <button
@@ -1770,7 +1775,7 @@ const BusinessDashboard = () => {
                           <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 group-active:opacity-100 transition-opacity">
                             <div className="flex flex-col items-center gap-2 text-white">
                               <Camera className="h-5 w-5" />
-                              <span className="text-sm font-semibold">Zmień okładkę</span>
+                              <span className="text-sm font-semibold">{t("gallery.change_cover")}</span>
                             </div>
                           </div>
                           <button
@@ -1786,8 +1791,8 @@ const BusinessDashboard = () => {
                             <ImagePlus className="h-6 w-6" />
                           </div>
                           <div className="text-center px-2">
-                            <p className="text-sm font-semibold">Dodaj okładkę</p>
-                            <p className="text-xs mt-0.5 text-muted-foreground/70">{"Zdjęcie (JPG, PNG, HEIC)"}</p>
+                            <p className="text-sm font-semibold">{t("gallery.add_cover")}</p>
+                            <p className="text-xs mt-0.5 text-muted-foreground/70">{t("gallery.cover_format")}</p>
                           </div>
                         </div>
                       )}
@@ -1806,8 +1811,8 @@ const BusinessDashboard = () => {
               <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm space-y-3">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-bold text-foreground">Galeria dodatkowa</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">Zdjęcia widoczne w szczegółach wizytówki</p>
+                    <p className="text-sm font-bold text-foreground">{t("gallery.extra_title")}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{t("gallery.extra_desc")}</p>
                   </div>
                   <p className="text-xs text-muted-foreground shrink-0">{galleryUrls.length}/{MAX_GALLERY}</p>
                 </div>
@@ -1831,7 +1836,7 @@ const BusinessDashboard = () => {
                         key={idx}
                         data-gallery-idx={idx}
                         className={`relative aspect-square rounded-xl overflow-hidden bg-muted group transition-all ${isDragging ? "opacity-40 scale-95" : ""} ${isTarget ? "ring-2 ring-orange-500 ring-offset-1" : ""}`}
-                        onClick={() => { if (galleryDragIdx === null) setPhotoPreview({ url, label: `Galeria ${idx + 1}` }); }}
+                        onClick={() => { if (galleryDragIdx === null) setPhotoPreview({ url, label: t("gallery.photo_label", { n: idx + 1 }) }); }}
                       >
                         <img src={url} className="w-full h-full object-cover pointer-events-none" />
                         <button onClick={(e) => { e.stopPropagation(); removeGalleryPhoto(idx); }} className="absolute top-1.5 right-1.5 h-6 w-6 rounded-full bg-black/60 flex items-center justify-center active:opacity-70 z-10"><X className="h-3 w-3 text-white" /></button>
@@ -1842,7 +1847,7 @@ const BusinessDashboard = () => {
                             touch-action:none zapobiega scroll'owi podczas drag na mobile. */}
                         <button
                           type="button"
-                          aria-label="Przenieś zdjęcie"
+                          aria-label={t("gallery.move_photo")}
                           className="absolute bottom-1 right-1 h-7 w-7 rounded-full bg-black/60 backdrop-blur-sm flex items-center justify-center cursor-grab active:cursor-grabbing active:bg-black/80 z-10"
                           style={{ touchAction: "none" }}
                           onPointerDown={(e) => {
@@ -1883,18 +1888,18 @@ const BusinessDashboard = () => {
               {/* ── Personalizacja kolorow ── */}
               <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm space-y-4">
                 <div>
-                  <p className="text-sm font-bold text-foreground">Personalizacja wizytowki</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">Kolory widoczne na wizytowce w aplikacji</p>
+                  <p className="text-sm font-bold text-foreground">{t("personalization.title")}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{t("personalization.desc")}</p>
                 </div>
                 {/* Live preview strip NAD pickerem - zeby guzik "Dodaj" byl widoczny podczas
                     zmiany koloru (sticky bar "Zapisz zmiany" zaslanial go, gdy byl na dole karty).
                     Badge kategorii i promocji ZAWSZE pomaranczowe (jednolite w aplikacji). */}
                 <div className="rounded-2xl border border-slate-100 bg-slate-50 p-3">
-                  <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">Podgląd</p>
+                  <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">{t("personalization.preview")}</p>
                   <div className="flex items-center gap-3">
-                    <span className="px-3 py-1 rounded-full text-xs font-bold shrink-0 text-white" style={{ background: "#D45113" }}>{MAIN_CATEGORIES.find(c => c.id === mainCategory)?.label || "Kategoria"}</span>
-                    <span className="px-3 py-1 rounded-full text-xs font-bold shrink-0 text-white" style={{ background: "#D45113" }}>Promocja</span>
-                    <button className="flex-1 py-2 rounded-full text-xs font-bold" style={{ background: colorButton, color: getContrastColor(colorButton) }}>Dodaj</button>
+                    <span className="px-3 py-1 rounded-full text-xs font-bold shrink-0 text-white" style={{ background: "#D45113" }}>{MAIN_CATEGORIES.find(c => c.id === mainCategory)?.label || t("personalization.category_fallback")}</span>
+                    <span className="px-3 py-1 rounded-full text-xs font-bold shrink-0 text-white" style={{ background: "#D45113" }}>{t("personalization.promo")}</span>
+                    <button className="flex-1 py-2 rounded-full text-xs font-bold" style={{ background: colorButton, color: getContrastColor(colorButton) }}>{t("card.add")}</button>
                   </div>
                 </div>
                 <div className="space-y-3">
@@ -1902,8 +1907,8 @@ const BusinessDashboard = () => {
                       w calej aplikacji (badge kategorii i overlay nie sa juz personalizowane). */}
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-medium">Kolor guzika &quot;Dodaj&quot;</p>
-                      <p className="text-xs text-muted-foreground">Glowny guzik akcji na wizytowce</p>
+                      <p className="text-sm font-medium">{t("personalization.button_color")}</p>
+                      <p className="text-xs text-muted-foreground">{t("personalization.button_color_desc")}</p>
                     </div>
                     <input type="color" value={colorButton} onChange={e => { setColorButton(e.target.value); setIsDirty(true); }}
                       className="h-9 w-14 rounded-lg cursor-pointer border border-slate-200 p-0.5" />
@@ -1930,25 +1935,25 @@ const BusinessDashboard = () => {
           {/* ── DANE LOKALU ── */}
           {activeSection === 'profile' && (
             <div className="space-y-5">
-              <div><h2 className="text-lg font-black">Dane lokalu</h2><p className="text-sm text-slate-400">Informacje kontaktowe, opis i tagi widoczne w wizytówce.</p></div>
+              <div><h2 className="text-lg font-black">{t("profile.title")}</h2><p className="text-sm text-slate-400">{t("profile.subtitle")}</p></div>
 
               <div className="flex flex-col lg:flex-row gap-5 items-start">
               <div className="flex-1 min-w-0 space-y-5">
               {/* ── Nazwa lokalu ── */}
               <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
-                <Label htmlFor="business_name" className="text-sm font-bold text-foreground">Nazwa lokalu</Label>
+                <Label htmlFor="business_name" className="text-sm font-bold text-foreground">{t("profile.name_label")}</Label>
                 <Input
                   id="business_name"
                   value={businessName}
                   onChange={e => { setBusinessName(e.target.value); setIsDirty(true); }}
-                  placeholder="np. Kawiarnia Wanderlust"
+                  placeholder={t("profile.name_placeholder")}
                   maxLength={80}
                   className="mt-2"
                 />
               </div>
               {/* ── Logo - avatar style ── */}
               <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
-                <p className="text-sm font-bold text-foreground mb-4">Logo lokalu</p>
+                <p className="text-sm font-bold text-foreground mb-4">{t("profile.logo_title")}</p>
                 <div className="flex items-center gap-5">
                   <div className="relative shrink-0">
                     <div className="h-20 w-20 rounded-full overflow-hidden border-[3px] border-[#D45113] bg-muted">
@@ -1968,50 +1973,50 @@ const BusinessDashboard = () => {
                     <input ref={logoInputRef} type="file" accept="image/*,.heic,.heif" className="hidden" onChange={handleLogoUpload} />
                   </div>
                   <div>
-                    <p className="text-sm font-medium">{businessName || 'Nazwa lokalu'}</p>
+                    <p className="text-sm font-medium">{businessName || t("business_name_fallback")}</p>
                     <button onClick={() => logoInputRef.current?.click()} className="mt-1 text-xs text-orange-600 font-medium active:opacity-70">
-                      {logoUrl ? 'Zmień logo' : 'Dodaj logo'}
+                      {logoUrl ? t('profile.change_logo') : t('profile.add_logo')}
                     </button>
-                    <p className="text-xs text-muted-foreground mt-0.5">JPG, PNG · widoczne na wizytówce</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{t("profile.logo_hint")}</p>
                   </div>
                 </div>
               </div>
 
               <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm space-y-4">
                 <div className="space-y-1">
-                  <Label htmlFor="street" className="text-xs flex items-center gap-1.5 flex-wrap">Ulica i numer <span className="text-[10px] font-normal text-muted-foreground">(opcjonalnie)</span></Label>
+                  <Label htmlFor="street" className="text-xs flex items-center gap-1.5 flex-wrap">{t("profile.street")} <span className="text-[10px] font-normal text-muted-foreground">{t("profile.optional")}</span></Label>
                   <Input id="street" value={street} maxLength={100} onChange={e => { setStreet(e.target.value); setIsDirty(true); }} />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <Label htmlFor="city" className="text-xs flex items-center gap-1.5 flex-wrap">Miasto <span className="text-[10px] font-normal text-muted-foreground">(opcjonalnie)</span></Label>
+                    <Label htmlFor="city" className="text-xs flex items-center gap-1.5 flex-wrap">{t("profile.city")} <span className="text-[10px] font-normal text-muted-foreground">{t("profile.optional")}</span></Label>
                     <Input id="city" value={city} maxLength={80} onChange={e => { setCity(e.target.value); setIsDirty(true); }} />
                   </div>
                   <div className="space-y-1">
-                    <Label htmlFor="postal_code" className="text-xs flex items-center gap-1.5 flex-wrap">Kod pocztowy <span className="text-[10px] font-normal text-muted-foreground">(opcjonalnie)</span></Label>
+                    <Label htmlFor="postal_code" className="text-xs flex items-center gap-1.5 flex-wrap">{t("profile.postal")} <span className="text-[10px] font-normal text-muted-foreground">{t("profile.optional")}</span></Label>
                     <Input id="postal_code" value={postalCode} maxLength={10} onChange={e => { setPostalCode(e.target.value); setIsDirty(true); }} />
                   </div>
                 </div>
                 {!isDraft && (
                   <>
                     <div className="space-y-1">
-                      <Label htmlFor="phone" className="text-xs flex items-center gap-1.5 flex-wrap">Telefon <span className="text-[10px] font-normal text-muted-foreground">(opcjonalnie)</span></Label>
+                      <Label htmlFor="phone" className="text-xs flex items-center gap-1.5 flex-wrap">{t("profile.phone")} <span className="text-[10px] font-normal text-muted-foreground">{t("profile.optional")}</span></Label>
                       <Input id="phone" value={phone} maxLength={20} onChange={e => { setPhone(e.target.value); setIsDirty(true); }} type="tel" />
                     </div>
                     <div className="space-y-1">
-                      <Label htmlFor="email" className="text-xs flex items-center gap-1.5 flex-wrap">Email <span className="text-[10px] font-normal text-muted-foreground">(opcjonalnie)</span></Label>
+                      <Label htmlFor="email" className="text-xs flex items-center gap-1.5 flex-wrap">{t("profile.email")} <span className="text-[10px] font-normal text-muted-foreground">{t("profile.optional")}</span></Label>
                       <Input id="email" value={email} maxLength={100} onChange={e => { setEmail(e.target.value); setIsDirty(true); }} type="email" />
                     </div>
                     <div className="space-y-1">
-                      <Label htmlFor="website" className="text-xs flex items-center gap-1.5 flex-wrap">Strona WWW <span className="text-[10px] font-normal text-muted-foreground">(opcjonalnie)</span></Label>
+                      <Label htmlFor="website" className="text-xs flex items-center gap-1.5 flex-wrap">{t("profile.website")} <span className="text-[10px] font-normal text-muted-foreground">{t("profile.optional")}</span></Label>
                       <Input id="website" value={website} maxLength={200} onChange={e => { setWebsite(e.target.value); setIsDirty(true); }} type="url" placeholder="https://twojlokal.pl" />
                     </div>
                     <div className="space-y-1">
-                      <Label htmlFor="instagram" className="text-xs flex items-center gap-1.5 flex-wrap">Instagram <span className="text-[10px] font-normal text-muted-foreground">(opcjonalnie)</span></Label>
+                      <Label htmlFor="instagram" className="text-xs flex items-center gap-1.5 flex-wrap">Instagram <span className="text-[10px] font-normal text-muted-foreground">{t("profile.optional")}</span></Label>
                       <Input id="instagram" value={instagram} maxLength={200} onChange={e => { setInstagram(e.target.value); setIsDirty(true); }} type="url" placeholder="https://instagram.com/twojlokal" />
                     </div>
                     <div className="space-y-1">
-                      <Label htmlFor="facebook" className="text-xs flex items-center gap-1.5 flex-wrap">Facebook <span className="text-[10px] font-normal text-muted-foreground">(opcjonalnie)</span></Label>
+                      <Label htmlFor="facebook" className="text-xs flex items-center gap-1.5 flex-wrap">Facebook <span className="text-[10px] font-normal text-muted-foreground">{t("profile.optional")}</span></Label>
                       <Input id="facebook" value={facebook} maxLength={200} onChange={e => { setFacebook(e.target.value); setIsDirty(true); }} type="url" placeholder="https://facebook.com/twojlokal" />
                     </div>
                   </>
@@ -2032,7 +2037,7 @@ const BusinessDashboard = () => {
               <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm space-y-4">
                 {/* Kategoria główna */}
                 <div>
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Kategoria główna</p>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">{t("profile.main_category")}</p>
                   <div className="grid grid-cols-2 gap-2">
                     {MAIN_CATEGORIES.map(cat => {
                       const active = mainCategory === cat.id;
@@ -2055,7 +2060,7 @@ const BusinessDashboard = () => {
                 {mainCategory && (
                   <div className="pt-2 border-t border-border/40">
                     <div className="flex items-center justify-between mb-2">
-                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Podkategoria</p>
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t("profile.subcategory")}</p>
                       <span className={`text-[11px] font-bold ${bizSubcategories.length >= 3 ? 'text-slate-700' : 'text-muted-foreground'}`}>{bizSubcategories.length}/3</span>
                     </div>
                     <div className="flex flex-wrap gap-2">
@@ -2076,15 +2081,15 @@ const BusinessDashboard = () => {
                     {/* Własna podkategoria */}
                     <div className="mt-4 p-4 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-3">
                       <div>
-                        <p className="text-xs font-bold text-foreground leading-tight">Nie widzisz swojej kategorii?</p>
-                        <p className="text-[11px] text-muted-foreground leading-snug">Zaproponuj własną - sprawdzimy i dodamy.</p>
+                        <p className="text-xs font-bold text-foreground leading-tight">{t("profile.custom_cat_title")}</p>
+                        <p className="text-[11px] text-muted-foreground leading-snug">{t("profile.custom_cat_desc")}</p>
                       </div>
                       <div className="flex gap-2 items-center">
                         <input
                           value={customSubcategory}
                           onChange={e => { setCustomSubcategory(e.target.value); setCustomSubcategoryStatus(null); setIsDirty(true); }}
                           maxLength={40}
-                          placeholder="np. Browar rzemieślniczy..."
+                          placeholder={t("profile.custom_cat_placeholder")}
                           className="flex-1 min-w-0 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs text-foreground placeholder:text-slate-400 outline-none focus:border-orange-300 focus:ring-2 focus:ring-orange-200/60 transition-colors"
                         />
                         <button
@@ -2093,7 +2098,7 @@ const BusinessDashboard = () => {
                           onClick={() => { if (customSubcategory.trim()) { setCustomSubcategoryStatus('pending'); setIsDirty(true); } }}
                           className="shrink-0 px-4 py-2 rounded-xl text-xs font-bold bg-[#D45113] hover:bg-[#D45113] text-white disabled:opacity-40 disabled:hover:bg-[#D45113] transition-colors"
                         >
-                          Zaproponuj
+                          {t("profile.propose")}
                         </button>
                       </div>
                       {customSubcategory.trim() && customSubcategoryStatus && (
@@ -2102,9 +2107,9 @@ const BusinessDashboard = () => {
                           customSubcategoryStatus === 'rejected' ? 'text-red-500' :
                           'text-amber-600'
                         }`}>
-                          {customSubcategoryStatus === 'approved' ? '✓ Zatwierdzona' :
-                           customSubcategoryStatus === 'rejected' ? '✗ Odrzucona - zmień propozycję' :
-                           '⏳ Propozycja wysłana - oczekuje na akceptację'}
+                          {customSubcategoryStatus === 'approved' ? t('profile.cat_approved') :
+                           customSubcategoryStatus === 'rejected' ? t('profile.cat_rejected') :
+                           t('profile.cat_pending')}
                         </p>
                       )}
                     </div>
@@ -2114,7 +2119,7 @@ const BusinessDashboard = () => {
 
               {/* ── Tagi wizytówki (osobna sekcja) ── */}
               <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Tagi wizytówki <span className="normal-case font-normal">(max 3, widoczne na karcie w aplikacji)</span></p>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">{t("profile.tags_label")} <span className="normal-case font-normal">{t("profile.tags_hint")}</span></p>
                   <div className="flex flex-wrap gap-2 mb-2">
                     {(tagsExpanded ? VIBE_TAG_SUGGESTIONS : VIBE_TAG_SUGGESTIONS.slice(0, 4)).map(tag => {
                       const active = tags.includes(tag);
@@ -2132,7 +2137,7 @@ const BusinessDashboard = () => {
                       onClick={() => setTagsExpanded(v => !v)}
                       className="flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold border border-dashed border-border text-muted-foreground hover:border-slate-400 transition-colors"
                     >
-                      {tagsExpanded ? 'Zwiń' : `+${VIBE_TAG_SUGGESTIONS.length - 4} więcej`}
+                      {tagsExpanded ? t('profile.collapse') : t('profile.more', { count: VIBE_TAG_SUGGESTIONS.length - 4 })}
                       <svg className={`h-3 w-3 transition-transform ${tagsExpanded ? 'rotate-180' : ''}`} viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 4l4 4 4-4"/></svg>
                     </button>
                   </div>
@@ -2144,7 +2149,7 @@ const BusinessDashboard = () => {
                         value={customVibeTag} maxLength={20}
                         onChange={e => setCustomVibeTag(e.target.value.replace(/^#+/, ""))}
                         onKeyDown={e => { const v = customVibeTag.trim().replace(/^#+/, ""); if (e.key === 'Enter' && v && tags.length < 3) { setTags(prev => [...prev, v]); setCustomVibeTag(""); setIsDirty(true); } }}
-                        placeholder="wlasny-tag"
+                        placeholder={t("profile.custom_tag_placeholder")}
                         disabled={tags.length >= 3}
                         className="flex-1 bg-transparent px-1.5 py-1.5 text-xs placeholder:text-muted-foreground focus-visible:outline-none disabled:opacity-40"
                       />
@@ -2152,7 +2157,7 @@ const BusinessDashboard = () => {
                     <button type="button" disabled={!customVibeTag.trim() || tags.length >= 3}
                       onClick={() => { const v = customVibeTag.trim().replace(/^#+/, ""); if (v && tags.length < 3) { setTags(prev => [...prev, v]); setCustomVibeTag(""); setIsDirty(true); } }}
                       className="px-3 py-1.5 rounded-xl bg-primary text-white text-xs font-semibold disabled:opacity-40">
-                      Dodaj
+                      {t("card.add")}
                     </button>
                   </div>
                   {tags.length > 0 && (
@@ -2169,9 +2174,9 @@ const BusinessDashboard = () => {
                 </div>
               {/* ── Opis (osobna sekcja) ── */}
               <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Opis</p>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">{t("profile.description_label")}</p>
                 <div className="space-y-1">
-                  <textarea rows={3} value={description} maxLength={500} onChange={e => { setDescription(e.target.value); setIsDirty(true); }} placeholder="Opisz swój lokal..." className="w-full rounded-2xl border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none" />
+                  <textarea rows={3} value={description} maxLength={500} onChange={e => { setDescription(e.target.value); setIsDirty(true); }} placeholder={t("profile.description_placeholder")} className="w-full rounded-2xl border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none" />
                   <p className="text-[11px] text-muted-foreground text-right">{description.length}/500</p>
                 </div>
               </div>
@@ -2193,10 +2198,10 @@ const BusinessDashboard = () => {
 
           {/* ── MENU / CENNIK ── */}
           {activeSection === 'menu' && (() => {
-            const menuLabel = mainCategory === 'food' ? 'Menu' : 'Cennik';
-            const hint = menuLabel === 'Menu'
-              ? 'Zdjęcia kartek menu (JPG, PNG) lub plik PDF. Pokażą się na wizytówce w aplikacji.'
-              : 'Zdjęcia z cennikiem (JPG, PNG) lub plik PDF. Pokażą się na wizytówce w aplikacji.';
+            const menuLabel = mainCategory === 'food' ? t('menu.menu') : t('menu.pricelist');
+            const hint = mainCategory === 'food'
+              ? t('menu.hint_menu')
+              : t('menu.hint_pricelist');
             return (
             <div className="space-y-5">
               <div><h2 className="text-lg font-black">{menuLabel}</h2><p className="text-sm text-slate-400">{hint}</p></div>
@@ -2204,7 +2209,7 @@ const BusinessDashboard = () => {
                 <div className="flex-1 min-w-0">
                   <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
                     <div className="flex items-center justify-between mb-3">
-                      <p className="text-sm font-bold text-foreground">{menuLabel} <span className="font-normal text-muted-foreground text-xs">(max {MAX_MENU_IMAGES})</span></p>
+                      <p className="text-sm font-bold text-foreground">{menuLabel} <span className="font-normal text-muted-foreground text-xs">{t("menu.max", { max: MAX_MENU_IMAGES })}</span></p>
                       <p className="text-xs text-muted-foreground shrink-0">{menuImageUrls.length}/{MAX_MENU_IMAGES}</p>
                     </div>
                     <div className="grid grid-cols-3 md:grid-cols-5 gap-2">
@@ -2212,7 +2217,7 @@ const BusinessDashboard = () => {
                         const pdf = isPdfUrl(url);
                         return (
                         <div key={idx} className="relative aspect-square rounded-xl overflow-hidden bg-muted group cursor-pointer"
-                          onClick={() => pdf ? window.open(url, "_blank", "noopener,noreferrer") : setPhotoPreview({ url, label: `${menuLabel} ${idx + 1}` })}>
+                          onClick={() => pdf ? window.open(url, "_blank", "noopener,noreferrer") : setPhotoPreview({ url, label: t("menu.photo_label", { label: menuLabel, n: idx + 1 }) })}>
                           {pdf ? (
                             <div className="w-full h-full flex flex-col items-center justify-center gap-1 bg-red-50 pointer-events-none">
                               <FileText className="h-7 w-7 text-red-400" />
@@ -2259,30 +2264,30 @@ const BusinessDashboard = () => {
           {/* ── AKTUALNOŚCI ── */}
           {activeSection === 'posts' && (
             <div className="space-y-5">
-              <div><h2 className="text-lg font-black">Aktualności</h2><p className="text-sm text-slate-400">Wydarzenia i posty widoczne w Twojej wizytówce.</p></div>
+              <div><h2 className="text-lg font-black">{t("posts.title")}</h2><p className="text-sm text-slate-400">{t("posts.subtitle")}</p></div>
               <div className="flex flex-col lg:flex-row gap-5 items-start">
                 {/* Form */}
                 <div className="flex-1 space-y-5">
                   {/* Events */}
                   <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm space-y-4">
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Obecne wydarzenie</p>
-                    <p className="text-xs text-muted-foreground -mt-2">{"Promocja, koncert, happy hour - to, co dzieje się teraz albo wkrótce. Ustaw daty poniżej: wydarzenie pokaże się gościom, gdy planują pobyt w tym terminie."}</p>
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{t("posts.current_event")}</p>
+                    <p className="text-xs text-muted-foreground -mt-2">{t("posts.event_desc")}</p>
                     <div className="space-y-1">
-                      <Label htmlFor="event_title">Tytuł</Label>
-                      <Input id="event_title" value={eventTitle} maxLength={40} onChange={e => { setEventTitle(e.target.value); setIsDirty(true); }} placeholder="np. Drinki 1+1 do 20:00" />
+                      <Label htmlFor="event_title">{t("posts.event_title_label")}</Label>
+                      <Input id="event_title" value={eventTitle} maxLength={40} onChange={e => { setEventTitle(e.target.value); setIsDirty(true); }} placeholder={t("posts.event_title_placeholder")} />
                       <p className="text-[11px] text-muted-foreground text-right">{eventTitle.length}/40</p>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div className="space-y-1 min-w-0"><Label htmlFor="event_starts_at" className="text-xs">Od</Label><Input id="event_starts_at" value={eventStartsAt} onChange={e => { setEventStartsAt(e.target.value); setIsDirty(true); }} type="date" className="w-full" /></div>
-                      <div className="space-y-1 min-w-0"><Label htmlFor="event_ends_at" className="text-xs">Do</Label><Input id="event_ends_at" value={eventEndsAt} onChange={e => { setEventEndsAt(e.target.value); setIsDirty(true); }} type="date" className="w-full" /></div>
+                      <div className="space-y-1 min-w-0"><Label htmlFor="event_starts_at" className="text-xs">{t("posts.from")}</Label><Input id="event_starts_at" value={eventStartsAt} onChange={e => { setEventStartsAt(e.target.value); setIsDirty(true); }} type="date" className="w-full" /></div>
+                      <div className="space-y-1 min-w-0"><Label htmlFor="event_ends_at" className="text-xs">{t("posts.to")}</Label><Input id="event_ends_at" value={eventEndsAt} onChange={e => { setEventEndsAt(e.target.value); setIsDirty(true); }} type="date" className="w-full" /></div>
                     </div>
                   </div>
                   {/* Posts */}
                   <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm space-y-4">
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Posty</p>
-                    <p className="text-xs text-muted-foreground -mt-2">Aktualizacje, nowości, zdjęcia - widoczne dla odwiedzających w Twojej wizytówce.</p>
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{t("posts.posts_label")}</p>
+                    <p className="text-xs text-muted-foreground -mt-2">{t("posts.posts_desc")}</p>
                     <div className="space-y-3 border border-border/60 rounded-2xl p-3">
-                      <textarea rows={3} value={postDescription} maxLength={600} onChange={e => setPostDescription(e.target.value)} placeholder="Co nowego w Twoim lokalu?" className="w-full rounded-2xl border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none" />
+                      <textarea rows={3} value={postDescription} maxLength={600} onChange={e => setPostDescription(e.target.value)} placeholder={t("posts.post_placeholder")} className="w-full rounded-2xl border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none" />
                       <p className="text-[11px] text-muted-foreground text-right -mt-2">{postDescription.length}/600</p>
                       {postPhotos.length > 0 && (
                         <div className="flex gap-2 flex-wrap">
@@ -2297,21 +2302,21 @@ const BusinessDashboard = () => {
                       <div className="flex items-center gap-2">
                         <button onClick={() => postPhotoInputRef.current?.click()} disabled={postPhotos.length >= 4} className="flex items-center gap-1.5 text-xs text-muted-foreground px-3 py-1.5 rounded-full bg-muted active:opacity-60 disabled:opacity-40">
                           {postPhotoUploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ImagePlus className="h-3.5 w-3.5" />}
-                          Zdjęcia
+                          {t("posts.photos")}
                         </button>
                         <input ref={postPhotoInputRef} type="file" accept="image/*,.heic,.heif" multiple className="hidden" onChange={handlePostPhotoUpload} />
-                        <p className="ml-auto text-[11px] text-muted-foreground">Widoczny w podglądzie wizytówki</p>
+                        <p className="ml-auto text-[11px] text-muted-foreground">{t("posts.visible_hint")}</p>
                       </div>
                       <button
                         onClick={handleAddPost}
                         disabled={submittingPost || (!postDescription.trim() && postPhotos.length === 0)}
                         className="w-full py-2.5 rounded-full bg-[#D45113] text-white font-bold text-sm active:scale-[0.98] transition-transform disabled:opacity-40"
                       >
-                        {submittingPost ? "Publikuję…" : "Publikuj"}
+                        {submittingPost ? t("posts.publishing") : t("posts.publish")}
                       </button>
                     </div>
-                    {posts.length > 0 && <p className="text-xs font-bold text-slate-400 uppercase tracking-widest pt-1">Historia wpisów</p>}
-                    {posts.length === 0 && <p className="text-xs text-muted-foreground text-center py-4">Brak postów - dodaj pierwszy!</p>}
+                    {posts.length > 0 && <p className="text-xs font-bold text-slate-400 uppercase tracking-widest pt-1">{t("posts.history")}</p>}
+                    {posts.length === 0 && <p className="text-xs text-muted-foreground text-center py-4">{t("posts.empty")}</p>}
                     <div className="space-y-3">
                       {posts.map(post => (
                         <div key={post.id} className="border border-border/50 rounded-2xl p-3 space-y-2">
@@ -2356,23 +2361,23 @@ const BusinessDashboard = () => {
           {activeSection === 'settings' && (
             <div className="space-y-5 max-w-lg">
               <div>
-                <h2 className="text-lg font-black">Ustawienia konta</h2>
-                <p className="text-sm text-slate-400">Zarządzaj swoim kontem biznesowym.</p>
+                <h2 className="text-lg font-black">{t("settings.title")}</h2>
+                <p className="text-sm text-slate-400">{t("settings.subtitle")}</p>
               </div>
               {(!previewMode && !isDraft && user && (profile as any)?.owner_user_id === user.id) ? (
                 <div className="space-y-3">
                   <div className="bg-white rounded-2xl border border-slate-100 p-4">
-                    <p className="text-sm font-semibold text-slate-700">Zalogowano jako</p>
+                    <p className="text-sm font-semibold text-slate-700">{t("settings.logged_as")}</p>
                     <p className="text-xs text-slate-400 mt-0.5 break-all">{user.email}</p>
                   </div>
                   <div>
                     <BusinessDeleteAccount />
-                    <p className="text-[11px] text-slate-400 mt-2 leading-relaxed">Usunięcie konta kasuje wizytówkę, posty i galerię. Miejsce zostaje w aplikacji jako niezarządzane (stan zero).</p>
+                    <p className="text-[11px] text-slate-400 mt-2 leading-relaxed">{t("settings.delete_hint")}</p>
                   </div>
                 </div>
               ) : (
                 <div className="bg-white rounded-2xl border border-slate-100 p-4">
-                  <p className="text-sm text-slate-500">Zaloguj się i przejmij konto, aby zarządzać ustawieniami i usunąć konto.</p>
+                  <p className="text-sm text-slate-500">{t("settings.login_prompt")}</p>
                 </div>
               )}
             </div>
@@ -2383,11 +2388,11 @@ const BusinessDashboard = () => {
               {/* Header + range picker */}
               <div className="flex items-start justify-between gap-3 flex-wrap">
                 <div>
-                  <h2 className="text-lg font-black">Analityka</h2>
+                  <h2 className="text-lg font-black">{t("analytics.title")}</h2>
                   <p className="text-sm text-slate-400">
                     {analyticsRange === 'custom' && customDateRange?.from
                       ? `${format(customDateRange.from, 'd MMM', { locale: dateLocale() })}${customDateRange.to && customDateRange.to !== customDateRange.from ? ` - ${format(customDateRange.to, 'd MMM yyyy', { locale: dateLocale() })}` : ''}`
-                      : 'Statystyki aktywności Twojego lokalu.'}
+                      : t('analytics.subtitle')}
                   </p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
@@ -2398,7 +2403,7 @@ const BusinessDashboard = () => {
                         onClick={() => setAnalyticsRange(r)}
                         className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${analyticsRange === r ? 'bg-white text-foreground shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
                       >
-                        {r === '7d' ? '7 dni' : r === '30d' ? '30 dni' : '90 dni'}
+                        {r === '7d' ? t("range.7d") : r === '30d' ? t("range.30d") : t("range.90d")}
                       </button>
                     ))}
                   </div>
@@ -2412,7 +2417,7 @@ const BusinessDashboard = () => {
                         <rect x="2" y="3" width="12" height="11" rx="2"/>
                         <path d="M5 1v2M11 1v2M2 7h12"/>
                       </svg>
-                      Zakres
+                      {t("analytics.range")}
                     </button>
                     {showCalendar && (
                       <div className="absolute right-0 top-full mt-2 z-50 bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
@@ -2460,17 +2465,17 @@ const BusinessDashboard = () => {
               {plan !== 'premium' ? (
                 <div className="bg-white border border-slate-100 rounded-2xl p-8 text-center shadow-sm">
                   <span className="text-3xl">🔒</span>
-                  <p className="font-bold text-base mt-3">Analityka dostępna w planie Premium</p>
-                  <p className="text-sm text-slate-400 mt-1 mb-4">Odblokuj szczegółowe statystyki kliknięć, wyświetleń i aktywności.</p>
-                  <button onClick={() => setShowUpgradeBanner(true)} className="px-5 py-2.5 rounded-2xl bg-amber-500 text-white text-sm font-bold">Dowiedz się więcej →</button>
+                  <p className="font-bold text-base mt-3">{t("analytics.locked_title")}</p>
+                  <p className="text-sm text-slate-400 mt-1 mb-4">{t("analytics.locked_desc")}</p>
+                  <button onClick={() => setShowUpgradeBanner(true)} className="px-5 py-2.5 rounded-2xl bg-amber-500 text-white text-sm font-bold">{t("analytics.learn_more")}</button>
                 </div>
               ) : (
                 <>
                   {/* Draft: mock data banner */}
                   {isDraft && (
                     <div className="bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-100 rounded-2xl px-5 py-4">
-                      <p className="text-sm font-bold text-orange-900">Tak mogą wyglądać Twoje statystyki z Trasy</p>
-                      <p className="text-xs text-orange-600 mt-0.5">Poniżej przykładowe dane - po uruchomieniu profilu zobaczysz tu prawdziwe liczby.</p>
+                      <p className="text-sm font-bold text-orange-900">{t("analytics.draft_title")}</p>
+                      <p className="text-xs text-orange-600 mt-0.5">{t("analytics.draft_desc")}</p>
                     </div>
                   )}
                   {/* Stat cards */}
@@ -2481,10 +2486,10 @@ const BusinessDashboard = () => {
                     return (
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                     {[
-                      { label: 'Wyświetlenia', value: s.views, desc: 'zobaczenie wizytówki', icon: BarChart2, color: 'text-blue-500', bg: 'bg-blue-50' },
-                      { label: 'Unikalni goście', value: s.uniqueChoices, desc: 'dodało do trasy', icon: Users, color: 'text-rose-500', bg: 'bg-rose-50' },
-                      { label: 'Dodania do planu dnia', value: s.onRoutes, desc: 'razy w planie dnia', icon: MapPin, color: 'text-emerald-500', bg: 'bg-emerald-50' },
-                      { label: 'Kliknięcia', value: s.websiteClicks + s.phoneClicks, desc: `WWW: ${s.websiteClicks} · Tel: ${s.phoneClicks}`, icon: MousePointerClick, color: 'text-violet-500', bg: 'bg-violet-50' },
+                      { label: t('analytics.stat_views'), value: s.views, desc: t('analytics.views_desc'), icon: BarChart2, color: 'text-blue-500', bg: 'bg-blue-50' },
+                      { label: t('analytics.stat_unique'), value: s.uniqueChoices, desc: t('analytics.unique_desc'), icon: Users, color: 'text-rose-500', bg: 'bg-rose-50' },
+                      { label: t('analytics.stat_addplan'), value: s.onRoutes, desc: t('analytics.addplan_desc'), icon: MapPin, color: 'text-emerald-500', bg: 'bg-emerald-50' },
+                      { label: t('analytics.stat_clicks'), value: s.websiteClicks + s.phoneClicks, desc: t('analytics.clicks_desc', { www: s.websiteClicks, tel: s.phoneClicks }), icon: MousePointerClick, color: 'text-violet-500', bg: 'bg-violet-50' },
                     ].map(({ label, value, desc, icon: Icon, color, bg }) => (
                       <div key={label} className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
                         <div className={`h-9 w-9 rounded-xl ${bg} flex items-center justify-center mb-3`}>
@@ -2502,12 +2507,12 @@ const BusinessDashboard = () => {
                   {/* Daily activity chart */}
                   <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
                     <div className="flex items-center justify-between mb-4">
-                      <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Aktywność w czasie</p>
+                      <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{t("analytics.activity_over_time")}</p>
                       <div className="flex items-center gap-3">
                         {[
-                          { key: 'views', label: 'Wyświetlenia', color: '#3b82f6' },
-                          { key: 'routes', label: 'Trasa', color: '#10b981' },
-                          { key: 'clicks', label: 'Kliknięcia', color: '#8b5cf6' },
+                          { key: 'views', label: t('analytics.legend_views'), color: '#3b82f6' },
+                          { key: 'routes', label: t('analytics.legend_route'), color: '#10b981' },
+                          { key: 'clicks', label: t('analytics.legend_clicks'), color: '#8b5cf6' },
                         ].map(({ key, label, color }) => (
                           <div key={key} className="flex items-center gap-1.5">
                             <div className="h-2 w-2 rounded-full shrink-0" style={{ background: color }} />
@@ -2523,7 +2528,7 @@ const BusinessDashboard = () => {
                     ) : chartData.every(d => d.views === 0 && d.routes === 0 && d.clicks === 0) ? (
                       <div className="flex flex-col items-center justify-center h-48 gap-2">
                         <BarChart2 className="h-8 w-8 text-slate-200" />
-                        <p className="text-sm text-slate-400">Brak danych w wybranym okresie</p>
+                        <p className="text-sm text-slate-400">{t("analytics.no_data")}</p>
                       </div>
                     ) : (
                       <ResponsiveContainer width="100%" height={220}>
@@ -2552,7 +2557,7 @@ const BusinessDashboard = () => {
                             contentStyle={{ fontSize: 12, borderRadius: 12, border: '1px solid #e2e8f0', boxShadow: '0 8px 24px rgba(0,0,0,0.08)', padding: '10px 14px' }}
                             labelStyle={{ fontWeight: 700, color: '#0f172a', marginBottom: 6, fontSize: 12 }}
                             formatter={(val: number, name: string) => {
-                              const map: Record<string, string> = { views: 'Wyświetlenia', routes: 'Dodania do trasy', clicks: 'Kliknięcia' };
+                              const map: Record<string, string> = { views: t('analytics.tt_views'), routes: t('analytics.tt_routes'), clicks: t('analytics.tt_clicks') };
                               return [val, map[name] ?? name];
                             }}
                           />
@@ -2572,14 +2577,14 @@ const BusinessDashboard = () => {
                     return (
                       <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
                         <div className="flex items-center justify-between mb-1">
-                          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Ruch według godziny</p>
+                          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{t("analytics.hourly_title")}</p>
                           {hasData && !analyticsLoading && (
                             <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-orange-50 text-orange-600 border border-orange-100">
-                              Szczyt: {peakHour.hour}:00–{peakHour.hour + 1}:00
+                              {t("analytics.peak", { from: `${peakHour.hour}:00`, to: `${peakHour.hour + 1}:00` })}
                             </span>
                           )}
                         </div>
-                        <p className="text-[10px] text-slate-300 mb-4">Łączna liczba zdarzeń w danej godzinie doby (czas lokalny)</p>
+                        <p className="text-[10px] text-slate-300 mb-4">{t("analytics.hourly_desc")}</p>
                         {analyticsLoading ? (
                           <div className="flex items-center justify-center h-36">
                             <Loader2 className="h-5 w-5 animate-spin text-slate-300" />
@@ -2587,7 +2592,7 @@ const BusinessDashboard = () => {
                         ) : !hasData ? (
                           <div className="flex flex-col items-center justify-center h-36 gap-2">
                             <BarChart2 className="h-8 w-8 text-slate-200" />
-                            <p className="text-sm text-slate-400">Brak danych w wybranym okresie</p>
+                            <p className="text-sm text-slate-400">{t("analytics.no_data")}</p>
                           </div>
                         ) : (
                           <ResponsiveContainer width="100%" height={160}>
@@ -2609,8 +2614,8 @@ const BusinessDashboard = () => {
                                 cursor={{ fill: '#f8fafc' }}
                                 contentStyle={{ fontSize: 12, borderRadius: 12, border: '1px solid #e2e8f0', boxShadow: '0 8px 24px rgba(0,0,0,0.08)', padding: '10px 14px' }}
                                 labelStyle={{ fontWeight: 700, color: '#0f172a', marginBottom: 4, fontSize: 12 }}
-                                formatter={(val: number) => [val, 'Zdarzenia']}
-                                labelFormatter={(label) => `Godzina ${label}`}
+                                formatter={(val: number) => [val, t('analytics.events')]}
+                                labelFormatter={(label) => t('analytics.hour', { label })}
                               />
                               <Bar dataKey="total" radius={[4, 4, 0, 0]}>
                                 {hourlyData.map((entry) => {
@@ -2631,9 +2636,9 @@ const BusinessDashboard = () => {
                         {hasData && !analyticsLoading && (
                           <div className="flex items-center gap-4 mt-3 pt-3 border-t border-slate-50">
                             {[
-                              { color: '#D45113', label: 'Szczyt ruchu' },
-                              { color: '#93c5fd', label: 'Aktywność' },
-                              { color: '#dbeafe', label: 'Niski ruch' },
+                              { color: '#D45113', label: t('analytics.peak_traffic') },
+                              { color: '#93c5fd', label: t('analytics.activity') },
+                              { color: '#dbeafe', label: t('analytics.low_traffic') },
                             ].map(({ color, label }) => (
                               <div key={label} className="flex items-center gap-1.5">
                                 <div className="h-2.5 w-2.5 rounded-sm shrink-0" style={{ background: color }} />
@@ -2648,18 +2653,18 @@ const BusinessDashboard = () => {
 
                   {/* Activity feed */}
                   <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Ostatnia aktywność</p>
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">{t("activity.title")}</p>
                     {recentEvents.length === 0 ? (
-                      <p className="text-sm text-slate-400 text-center py-6">Brak aktywności w ostatnim czasie.</p>
+                      <p className="text-sm text-slate-400 text-center py-6">{t("activity.empty")}</p>
                     ) : (
                       <div className="flex flex-col divide-y divide-slate-50">
                         {recentEvents.map((ev, i) => {
                           const labels: Record<string, { txt: string; dot: string }> = {
-                            view: { txt: 'Wyświetlenie profilu', dot: 'bg-blue-400' },
-                            add_to_route: { txt: 'Dodanie do planu dnia', dot: 'bg-emerald-400' },
-                            click_phone: { txt: 'Kliknięcie - telefon', dot: 'bg-violet-400' },
-                            click_website: { txt: 'Kliknięcie - strona WWW', dot: 'bg-violet-400' },
-                            click_booking: { txt: 'Kliknięcie - rezerwacja', dot: 'bg-amber-400' },
+                            view: { txt: t('analytics.act_view'), dot: 'bg-blue-400' },
+                            add_to_route: { txt: t('analytics.act_add'), dot: 'bg-emerald-400' },
+                            click_phone: { txt: t('analytics.act_phone'), dot: 'bg-violet-400' },
+                            click_website: { txt: t('analytics.act_website'), dot: 'bg-violet-400' },
+                            click_booking: { txt: t('analytics.act_booking'), dot: 'bg-amber-400' },
                           };
                           const info = labels[ev.event_type] ?? { txt: ev.event_type, dot: 'bg-slate-300' };
                           return (
@@ -2688,7 +2693,7 @@ const BusinessDashboard = () => {
         <div className="fixed bottom-0 left-0 right-0 z-30 px-4 pb-safe-6 pb-6 pt-3 bg-gradient-to-t from-background via-background to-transparent">
           <button onClick={handleSave} disabled={saving || uploading !== null} className="w-full max-w-2xl mx-auto flex py-3.5 rounded-2xl bg-primary hover:bg-primary text-white font-semibold text-sm transition-colors disabled:opacity-50 items-center justify-center gap-2">
             {saving && <Loader2 className="h-4 w-4 animate-spin" />}
-            Zapisz zmiany
+            {t("save.button")}
           </button>
         </div>
       )}
@@ -2711,13 +2716,13 @@ const BusinessDashboard = () => {
       <button
         onClick={() => previewReady && setShowAppPreview(true)}
         disabled={!previewReady}
-        title={!previewReady ? "Uzupełnij nazwę i dodaj zdjęcie, aby zobaczyć podgląd" : "Podgląd wizytówki w aplikacji"}
-        aria-label="Podgląd wizytówki"
+        title={!previewReady ? t("fab.incomplete") : t("fab.preview_title")}
+        aria-label={t("fab.preview_aria")}
         className="lg:hidden fixed z-[55] flex items-center gap-2 px-5 py-3 rounded-full bg-[#D45113] text-white font-bold text-sm shadow-lg shadow-orange-600/30 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
         style={{ bottom: "max(1rem, env(safe-area-inset-bottom))", right: "1rem" }}
       >
         <Eye className="h-4 w-4" />
-        Podgląd
+        {t("fab.preview")}
       </button>
 
       {/* ── App-like preview modal (card + detail view) ── */}
@@ -2764,8 +2769,8 @@ const BusinessDashboard = () => {
           <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-6 space-y-4" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="font-bold text-base">Zgłoś problem</h3>
-                <p className="text-xs text-muted-foreground mt-0.5">Opisz co nie działa - odezwiemy się wkrótce.</p>
+                <h3 className="font-bold text-base">{t("support.title")}</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">{t("support.desc")}</p>
               </div>
               <button onClick={() => setShowSupportModal(false)} className="h-8 w-8 flex items-center justify-center rounded-full hover:bg-slate-100 transition-colors">
                 <X className="h-4 w-4" />
@@ -2774,7 +2779,7 @@ const BusinessDashboard = () => {
             <textarea
               value={supportMessage}
               onChange={e => setSupportMessage(e.target.value)}
-              placeholder="Np. nie mogę dodać zdjęcia do galerii, przycisk nie reaguje..."
+              placeholder={t("support.placeholder")}
               rows={5}
               className="w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
             />
@@ -2783,7 +2788,7 @@ const BusinessDashboard = () => {
               disabled={supportSubmitting || !supportMessage.trim()}
               className="w-full py-3 rounded-2xl bg-gradient-to-r from-[#F4A259] to-[#F9662B] text-white font-semibold text-sm disabled:opacity-50 flex items-center justify-center gap-2"
             >
-              {supportSubmitting ? <><Loader2 className="h-4 w-4 animate-spin" />Wysyłam...</> : "Wyślij zgłoszenie"}
+              {supportSubmitting ? <><Loader2 className="h-4 w-4 animate-spin" />{t("support.sending")}</> : t("support.submit")}
             </button>
           </div>
         </div>

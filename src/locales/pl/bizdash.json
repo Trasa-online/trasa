@@ -1,0 +1,323 @@
+{
+  "business_name_fallback": "Nazwa lokalu",
+  "card": {
+    "add": "Dodaj",
+    "reject": "Odrzuć"
+  },
+  "card_preview": {
+    "label": "Podgląd wizytówki",
+    "incomplete_title": "Uzupełnij nazwę i dodaj zdjęcie okładkowe",
+    "open_full": "Otwórz pełny podgląd →"
+  },
+  "preview": {
+    "close_aria": "Zamknij podgląd",
+    "draft_cta_text": "Podoba Ci się? Zapisz profil i wejdź do Trasy.",
+    "wait": "Chwile...",
+    "draft_convert_btn": "Zakladam konto i zapisuje profil"
+  },
+  "delete_account": {
+    "error": "Nie udało się usunąć konta. Spróbuj ponownie.",
+    "button": "Usuń konto biznesowe",
+    "confirm_title": "Usunąć konto na stałe?",
+    "confirm_desc": "Twoja wizytówka, posty, galeria i konto zostaną trwale usunięte. Miejsce pozostanie w aplikacji jako niezarządzane. Tej operacji nie można cofnąć.",
+    "cancel": "Anuluj",
+    "deleting": "Usuwanie...",
+    "confirm_button": "Usuń konto"
+  },
+  "tour": {
+    "next": "Dalej →",
+    "prev": "← Wróć",
+    "done": "Gotowe!",
+    "profile_title": "Dane lokalu",
+    "profile_desc": "Zacznij tutaj: nazwa lokalu, adres, kontakt, opis i kategoria. To podstawa Twojej wizytówki.",
+    "gallery_title": "Wygląd",
+    "gallery_desc": "Dodaj okładkę, galerię i dostosuj kolor guzika akcji - tak będą Cię widzieć goście w aplikacji.",
+    "menu_title": "Menu",
+    "menu_desc": "Wrzuć zdjęcia menu lub cennika (albo PDF). Goście zobaczą je w Twojej wizytówce.",
+    "posts_title": "Aktualności",
+    "posts_desc": "Publikuj posty, wydarzenia i promocje. Widoczne dla wszystkich osób oglądających Twoją wizytówkę."
+  },
+  "toast": {
+    "profile_not_found": "Nie znaleziono profilu. Uruchom migrację SQL w Supabase."
+  },
+  "upload": {
+    "invalid_format": "Niedozwolony format pliku (dozwolone: JPG, PNG, WEBP, HEIC)",
+    "invalid_format_pdf": "Niedozwolony format (JPG, PNG, WEBP, HEIC, PDF)",
+    "too_large": "Plik jest za duży (max {{max}} MB)",
+    "logo_error": "Nie udało się przesłać logo",
+    "cover_error": "Nie udało się przesłać zdjęcia okładkowego",
+    "cover_error_short": "Nie udało się przesłać okładki",
+    "video_too_long": "Filmik może mieć maksymalnie 7 sekund",
+    "video_error": "Nie udało się przesłać filmiku",
+    "photos_error": "Nie udało się przesłać zdjęć",
+    "photo_error": "Nie udało się przesłać zdjęcia"
+  },
+  "posts": {
+    "local_added": "Post widoczny w podglądzie. Zapisze się na stałe po akceptacji wizytówki.",
+    "add_error": "Nie udało się dodać posta",
+    "added": "Post dodany!",
+    "delete_error": "Nie udało się usunąć posta",
+    "deleted": "Post usunięty",
+    "undo": "Cofnij",
+    "title": "Aktualności",
+    "subtitle": "Wydarzenia i posty widoczne w Twojej wizytówce.",
+    "current_event": "Obecne wydarzenie",
+    "event_desc": "Promocja, koncert, happy hour - to, co dzieje się teraz albo wkrótce. Ustaw daty poniżej: wydarzenie pokaże się gościom, gdy planują pobyt w tym terminie.",
+    "event_title_label": "Tytuł",
+    "event_title_placeholder": "np. Drinki 1+1 do 20:00",
+    "from": "Od",
+    "to": "Do",
+    "posts_label": "Posty",
+    "posts_desc": "Aktualizacje, nowości, zdjęcia - widoczne dla odwiedzających w Twojej wizytówce.",
+    "post_placeholder": "Co nowego w Twoim lokalu?",
+    "photos": "Zdjęcia",
+    "visible_hint": "Widoczny w podglądzie wizytówki",
+    "publishing": "Publikuję…",
+    "publish": "Publikuj",
+    "history": "Historia wpisów",
+    "empty": "Brak postów - dodaj pierwszy!"
+  },
+  "save": {
+    "event_date_error": "Data końca wydarzenia nie może być wcześniejsza niż data początku",
+    "rls_error": "Brak uprawnień do edycji - sprawdź czy jesteś zalogowany na właściwe konto",
+    "error": "Błąd zapisu: {{msg}}",
+    "unknown": "nieznany",
+    "saved_review": "Zmiany zapisane! Wizytówka trafiła do weryfikacji.",
+    "saved": "Zmiany zapisane!",
+    "button": "Zapisz zmiany"
+  },
+  "support": {
+    "error": "Nie udało się wysłać zgłoszenia.",
+    "sent": "Zgłoszenie wysłane! Odezwiemy się wkrótce.",
+    "title": "Zgłoś problem",
+    "desc": "Opisz co nie działa - odezwiemy się wkrótce.",
+    "placeholder": "Np. nie mogę dodać zdjęcia do galerii, przycisk nie reaguje...",
+    "sending": "Wysyłam...",
+    "submit": "Wyślij zgłoszenie"
+  },
+  "draft": {
+    "convert_error": "Spróbuj ponownie za chwilę.",
+    "banner_ready": "Profil wygląda świetnie - gotowy na launch!",
+    "banner_incomplete": "Uzupełnij nazwę i dodaj zdjęcie, aby zobaczyć podgląd",
+    "wait": "Chwilę...",
+    "banner_convert": "Zakładam konto →"
+  },
+  "password": {
+    "no_email": "Brak emaila powiązanego z kontem - skontaktuj się z supportem",
+    "confirm": "Wyślemy link do zmiany hasła na {{email}}. Kontynuować?",
+    "sent": "Link do zmiany hasła wysłany na {{email}}. Sprawdź skrzynkę (i spam).",
+    "error": "Nie udało się wysłać linka"
+  },
+  "access": {
+    "title": "Panel biznesowy",
+    "subtitle": "Podaj hasło dostępu",
+    "placeholder": "Haslo dostępu",
+    "wrong": "Nieprawidlowe haslo",
+    "open": "Otwórz panel"
+  },
+  "missing": {
+    "business_name": "nazwę lokalu",
+    "cover": "zdjęcie okładkowe",
+    "joiner": " oraz ",
+    "msg": "Aby zobaczyć podgląd, uzupełnij: {{fields}}."
+  },
+  "preview_mode": {
+    "banner": "To jest podgląd Twojego panelu w Trasie. Edycja wymagana logowania.",
+    "claim": "Przejmij konto"
+  },
+  "sidebar": {
+    "expand": "Rozwiń menu",
+    "collapse": "Schowaj",
+    "support": "Zgłoś problem",
+    "change_password": "Zmień hasło",
+    "sending": "Wysyłam...",
+    "logout": "Wyloguj się",
+    "repeat_tour": "Powtórz tour"
+  },
+  "nav": {
+    "overview": "Przegląd",
+    "profile": "Dane lokalu",
+    "appearance": "Wygląd",
+    "menu": "Menu",
+    "posts": "Aktualności",
+    "analytics": "Analityka",
+    "settings": "Ustawienia",
+    "soon": "wkrótce",
+    "disabled_soon": "Niedostępne - wkrótce"
+  },
+  "tabs": {
+    "overview": "Przegląd",
+    "profile": "Dane",
+    "appearance": "Wygląd",
+    "menu": "Menu",
+    "posts": "Aktualności",
+    "analytics": "Analityka",
+    "settings": "Ustawienia"
+  },
+  "topbar": {
+    "preview_title": "Podgląd lokalu",
+    "link_copied": "Link skopiowany!",
+    "shared": "Udostępniono",
+    "copy_link": "Kopiuj link dla lokalu"
+  },
+  "welcome": {
+    "title": "Witaj w Panelu Biznesowym trasy!",
+    "thanks_prefix": "Dziękujemy, że lokal",
+    "body_mid": " dołączył do Trasy - od teraz budujemy razem coś wielkiego. Wypełnij wizytówkę i poczekaj na weryfikację. Masz sugestię albo widzisz błąd? Napisz do nas przez ",
+    "support_quote": "„Zgłoś problem”"
+  },
+  "verified": {
+    "title": "✓ Wizytówka zweryfikowana!",
+    "desc": "Twoja wizytówka została zatwierdzona przez zespół trasy. Teraz jest w pełni widoczna dla użytkowników aplikacji."
+  },
+  "review": {
+    "pending_title": "Wizytówka oczekuje na weryfikację",
+    "pending_desc": "Sprawdzimy ją i zatwierdzimy wkrótce."
+  },
+  "overview": {
+    "title": "Przegląd",
+    "subtitle": "Oto co dzieje się z Twoim lokalem.",
+    "stat_views": "Wyświetlenia profilu",
+    "stat_addplan": "Dodania do planu dnia",
+    "stat_clicks": "Kliknięcia",
+    "stat_total": "Łączna aktywność",
+    "last_prefix": "ostatnie"
+  },
+  "range": {
+    "7d": "7 dni",
+    "30d": "30 dni",
+    "90d": "90 dni",
+    "months3": "3 miesiące"
+  },
+  "locked": {
+    "views": "Wyświetlenia",
+    "routes": "Na trasach",
+    "clicks": "Kliknięcia",
+    "activity": "Aktywność"
+  },
+  "analytics": {
+    "locked_title": "Analityka dostępna w planie Premium",
+    "title": "Analityka",
+    "subtitle": "Statystyki aktywności Twojego lokalu.",
+    "range": "Zakres",
+    "locked_desc": "Odblokuj szczegółowe statystyki kliknięć, wyświetleń i aktywności.",
+    "learn_more": "Dowiedz się więcej →",
+    "draft_title": "Tak mogą wyglądać Twoje statystyki z Trasy",
+    "draft_desc": "Poniżej przykładowe dane - po uruchomieniu profilu zobaczysz tu prawdziwe liczby.",
+    "stat_views": "Wyświetlenia",
+    "views_desc": "zobaczenie wizytówki",
+    "stat_unique": "Unikalni goście",
+    "unique_desc": "dodało do trasy",
+    "stat_addplan": "Dodania do planu dnia",
+    "addplan_desc": "razy w planie dnia",
+    "stat_clicks": "Kliknięcia",
+    "clicks_desc": "WWW: {{www}} · Tel: {{tel}}",
+    "activity_over_time": "Aktywność w czasie",
+    "legend_views": "Wyświetlenia",
+    "legend_route": "Trasa",
+    "legend_clicks": "Kliknięcia",
+    "no_data": "Brak danych w wybranym okresie",
+    "tt_views": "Wyświetlenia",
+    "tt_routes": "Dodania do trasy",
+    "tt_clicks": "Kliknięcia",
+    "hourly_title": "Ruch według godziny",
+    "peak": "Szczyt: {{from}}-{{to}}",
+    "hourly_desc": "Łączna liczba zdarzeń w danej godzinie doby (czas lokalny)",
+    "events": "Zdarzenia",
+    "hour": "Godzina {{label}}",
+    "peak_traffic": "Szczyt ruchu",
+    "activity": "Aktywność",
+    "low_traffic": "Niski ruch",
+    "act_view": "Wyświetlenie profilu",
+    "act_add": "Dodanie do planu dnia",
+    "act_phone": "Kliknięcie - telefon",
+    "act_website": "Kliknięcie - strona WWW",
+    "act_booking": "Kliknięcie - rezerwacja"
+  },
+  "activity": {
+    "title": "Ostatnia aktywność",
+    "empty": "Brak aktywności w ostatnim czasie.",
+    "view": "Ktoś wyświetlił Twój profil",
+    "add_route": "Lokal dodany do planu dnia",
+    "click_phone": "Kliknięcie w numer telefonu",
+    "click_website": "Kliknięcie w stronę WWW",
+    "click_booking": "Kliknięcie w rezerwację"
+  },
+  "gallery": {
+    "title": "Wygląd",
+    "subtitle": "Okładka i galeria dodatkowa widoczne na Twojej wizytówce.",
+    "cover_title": "Okładka wizytówki",
+    "cover_desc": "Zdjęcie wyświetlane na wizytówce w aplikacji",
+    "uploading": "Przesyłanie…",
+    "change_cover": "Zmień okładkę",
+    "add_cover": "Dodaj okładkę",
+    "cover_format": "Zdjęcie (JPG, PNG, HEIC)",
+    "extra_title": "Galeria dodatkowa",
+    "extra_desc": "Zdjęcia widoczne w szczegółach wizytówki",
+    "photo_label": "Galeria {{n}}",
+    "move_photo": "Przenieś zdjęcie"
+  },
+  "personalization": {
+    "title": "Personalizacja wizytowki",
+    "desc": "Kolory widoczne na wizytowce w aplikacji",
+    "preview": "Podgląd",
+    "category_fallback": "Kategoria",
+    "promo": "Promocja",
+    "button_color": "Kolor guzika \"Dodaj\"",
+    "button_color_desc": "Glowny guzik akcji na wizytowce"
+  },
+  "profile": {
+    "title": "Dane lokalu",
+    "subtitle": "Informacje kontaktowe, opis i tagi widoczne w wizytówce.",
+    "name_label": "Nazwa lokalu",
+    "name_placeholder": "np. Kawiarnia Wanderlust",
+    "logo_title": "Logo lokalu",
+    "change_logo": "Zmień logo",
+    "add_logo": "Dodaj logo",
+    "logo_hint": "JPG, PNG · widoczne na wizytówce",
+    "street": "Ulica i numer",
+    "optional": "(opcjonalnie)",
+    "city": "Miasto",
+    "postal": "Kod pocztowy",
+    "phone": "Telefon",
+    "email": "Email",
+    "website": "Strona WWW",
+    "main_category": "Kategoria główna",
+    "subcategory": "Podkategoria",
+    "custom_cat_title": "Nie widzisz swojej kategorii?",
+    "custom_cat_desc": "Zaproponuj własną - sprawdzimy i dodamy.",
+    "custom_cat_placeholder": "np. Browar rzemieślniczy...",
+    "propose": "Zaproponuj",
+    "cat_approved": "✓ Zatwierdzona",
+    "cat_rejected": "✗ Odrzucona - zmień propozycję",
+    "cat_pending": "⏳ Propozycja wysłana - oczekuje na akceptację",
+    "tags_label": "Tagi wizytówki",
+    "tags_hint": "(max 3, widoczne na karcie w aplikacji)",
+    "collapse": "Zwiń",
+    "more": "+{{count}} więcej",
+    "custom_tag_placeholder": "wlasny-tag",
+    "description_label": "Opis",
+    "description_placeholder": "Opisz swój lokal..."
+  },
+  "menu": {
+    "menu": "Menu",
+    "pricelist": "Cennik",
+    "hint_menu": "Zdjęcia kartek menu (JPG, PNG) lub plik PDF. Pokażą się na wizytówce w aplikacji.",
+    "hint_pricelist": "Zdjęcia z cennikiem (JPG, PNG) lub plik PDF. Pokażą się na wizytówce w aplikacji.",
+    "max": "(max {{max}})",
+    "photo_label": "{{label}} {{n}}"
+  },
+  "settings": {
+    "title": "Ustawienia konta",
+    "subtitle": "Zarządzaj swoim kontem biznesowym.",
+    "logged_as": "Zalogowano jako",
+    "delete_hint": "Usunięcie konta kasuje wizytówkę, posty i galerię. Miejsce zostaje w aplikacji jako niezarządzane (stan zero).",
+    "login_prompt": "Zaloguj się i przejmij konto, aby zarządzać ustawieniami i usunąć konto."
+  },
+  "fab": {
+    "incomplete": "Uzupełnij nazwę i dodaj zdjęcie, aby zobaczyć podgląd",
+    "preview_title": "Podgląd wizytówki w aplikacji",
+    "preview_aria": "Podgląd wizytówki",
+    "preview": "Podgląd"
+  }
+}

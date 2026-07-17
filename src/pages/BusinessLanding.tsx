@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import posthog from "posthog-js";
 
 // ─── BusinessWaitlist (zapis do waitlisty, branding B2B = niebieski) ──────────
 
 function BusinessWaitlist({ source }: { source: string }) {
+  const { t } = useTranslation("bizlanding");
   const [email, setEmail] = useState("");
   const [consent, setConsent] = useState(false);
   const [status, setStatus] = useState<"idle" | "loading" | "done">("idle");
@@ -25,7 +27,7 @@ function BusinessWaitlist({ source }: { source: string }) {
 
   if (status === "done") return (
     <div className="w-full px-5 py-4 rounded-2xl bg-blue-50 border border-blue-200">
-      <p className="text-sm font-semibold text-[#0E0E0E]">{`Dzięki za zapis! Odezwiemy się, gdy otworzymy zapisy dla lokali.`}</p>
+      <p className="text-sm font-semibold text-[#0E0E0E]">{t("landing.waitlist.done")}</p>
     </div>
   );
 
@@ -33,7 +35,7 @@ function BusinessWaitlist({ source }: { source: string }) {
     <form onSubmit={submit} className="flex flex-col gap-3 w-full">
       <input
         type="email" required value={email} onChange={e => setEmail(e.target.value)}
-        placeholder="twoj@lokal.pl"
+        placeholder={t("landing.waitlist.email_placeholder")}
         className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-sm text-[#0E0E0E] placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-blue-300"
       />
 
@@ -41,15 +43,15 @@ function BusinessWaitlist({ source }: { source: string }) {
         <input type="checkbox" required checked={consent} onChange={e => setConsent(e.target.checked)}
           className="mt-0.5 h-4 w-4 rounded border-slate-300 accent-blue-600 focus:ring-blue-300 cursor-pointer shrink-0" />
         <span className="text-[11px] text-slate-500 leading-snug">
-          {`Wyrażam zgodę na kontakt w sprawie premiery Trasy dla firm. Zapoznałem się z `}
-          <a href="/terms" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline hover:text-blue-700">polityką prywatności</a>.
+          {t("landing.waitlist.consent")}
+          <a href="/terms" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline hover:text-blue-700">{t("landing.waitlist.privacy_link")}</a>.
         </span>
       </label>
 
       <button type="submit" disabled={status === "loading" || !consent || !email.trim()}
         className="w-full rounded-2xl text-white font-bold px-5 py-3.5 text-sm whitespace-nowrap active:scale-[0.98] transition-all disabled:opacity-50 disabled:active:scale-100 disabled:cursor-not-allowed"
         style={{ background: "linear-gradient(90deg,#3b82f6,#6366f1)", boxShadow: "0 8px 24px -6px rgba(59,130,246,0.4)" }}>
-        {status === "loading" ? "..." : "Zapisz się"}
+        {status === "loading" ? "..." : t("landing.waitlist.submit")}
       </button>
     </form>
   );
@@ -82,6 +84,7 @@ function VideoMockup({ compact = false }: { compact?: boolean }) {
 // ─── AppStoreBadge ────────────────────────────────────────────────────────────
 
 function AppStoreBadge({ store }: { store: "ios" | "android" }) {
+  const { t } = useTranslation("bizlanding");
   return (
     <div className="flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 select-none h-[52px]">
       {store === "ios" ? (
@@ -94,10 +97,10 @@ function AppStoreBadge({ store }: { store: "ios" | "android" }) {
         </svg>
       )}
       <div className="flex-1 min-w-0">
-        <p className="text-[9px] text-slate-400 uppercase tracking-wider leading-none">{store === "ios" ? "Pobierz w" : "Dostępne w"}</p>
+        <p className="text-[9px] text-slate-400 uppercase tracking-wider leading-none">{store === "ios" ? t("landing.appstore.download_ios") : t("landing.appstore.download_android")}</p>
         <p className="text-[12px] font-semibold text-slate-600 leading-tight whitespace-nowrap">{store === "ios" ? "App Store" : "Google Play"}</p>
       </div>
-      <span className="text-[9px] text-slate-400 font-medium bg-slate-100 rounded-full px-1.5 py-0.5 shrink-0">Wkrótce</span>
+      <span className="text-[9px] text-slate-400 font-medium bg-slate-100 rounded-full px-1.5 py-0.5 shrink-0">{t("landing.appstore.soon")}</span>
     </div>
   );
 }
@@ -106,6 +109,7 @@ function AppStoreBadge({ store }: { store: "ios" | "android" }) {
 
 export default function BusinessLanding() {
   const navigate = useNavigate();
+  const { t } = useTranslation("bizlanding");
 
   return (
     <div style={{ background: "#FEFEFE", minHeight: "100dvh" }}>
@@ -122,14 +126,14 @@ export default function BusinessLanding() {
               onClick={() => { posthog.capture("business_landing_login_clicked", { location: "topbar" }); navigate("/auth?business=true"); }}
               className="text-sm font-semibold text-blue-600 hover:text-blue-700 active:opacity-60 transition-colors px-2 py-1"
             >
-              Zaloguj się
+              {t("landing.nav.login")}
             </button>
             <button
               onClick={() => { posthog.capture("business_landing_cta_clicked", { location: "topbar" }); navigate("/biznes/start"); }}
               className="rounded-full text-white font-bold px-5 py-2 lg:px-6 lg:py-2.5 text-sm active:scale-95 transition-transform"
               style={{ background: "#0E0E0E" }}
             >
-              Sprawdź
+              {t("landing.nav.check")}
             </button>
           </div>
         </div>
@@ -142,8 +146,8 @@ export default function BusinessLanding() {
 
           {/* Short hero copy + blue CTA */}
           <div className="text-center max-w-xs">
-            <h2 className="text-xl font-black text-[#0E0E0E] mb-1">Bądź pierwszy</h2>
-            <p className="text-sm text-[#979797]">Twój lokal w Trasie zanim aplikacja trafi do gości.</p>
+            <h2 className="text-xl font-black text-[#0E0E0E] mb-1">{t("landing.hero.be_first")}</h2>
+            <p className="text-sm text-[#979797]">{t("landing.hero.be_first_desc")}</p>
           </div>
           <div className="w-full max-w-xs">
             <BusinessWaitlist source="mobile_hero" />
@@ -153,13 +157,13 @@ export default function BusinessLanding() {
           <div className="text-center mt-4">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-slate-200 bg-white mb-4">
               <span className="text-base">🚀</span>
-              <span className="text-sm font-semibold text-[#0E0E0E]">Premiera: czerwiec 2026</span>
+              <span className="text-sm font-semibold text-[#0E0E0E]">{t("landing.badge.premiere")}</span>
             </div>
             <h1 className="text-4xl font-black text-[#0E0E0E] leading-[1.05] mb-4">
-              Dołącz do Trasy<br />jako jeden<br />z pierwszych
+              {t("landing.hero.title_l1")}<br />{t("landing.hero.title_l2")}<br />{t("landing.hero.title_l3")}
             </h1>
             <p className="text-[#979797] text-base leading-relaxed max-w-xs mx-auto">
-              Budujemy aplikację do planowania city breaków. Szukamy pierwszych 100 lokali w Warszawie - wchodzisz bezpłatnie i zostajesz na mapie zanim użytkownicy tu trafią!
+              {t("landing.hero.body")}
             </p>
           </div>
 
@@ -178,18 +182,18 @@ export default function BusinessLanding() {
           {/* Premiera + h1 + body */}
           <div className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full border border-slate-200 bg-white mb-5">
             <span className="text-lg">🚀</span>
-            <span className="text-sm font-semibold text-[#0E0E0E]">Premiera: czerwiec 2026</span>
+            <span className="text-sm font-semibold text-[#0E0E0E]">{t("landing.badge.premiere")}</span>
           </div>
           <h1 className="text-5xl font-black text-[#0E0E0E] leading-[1.05] mb-5">
-            Dołącz do Trasy<br />jako jeden<br />z pierwszych
+            {t("landing.hero.title_l1")}<br />{t("landing.hero.title_l2")}<br />{t("landing.hero.title_l3")}
           </h1>
           <p className="text-[#979797] text-base leading-relaxed mb-10 max-w-xs">
-            Budujemy aplikację do planowania city breaków. Szukamy pierwszych 100 lokali w Warszawie - wchodzisz bezpłatnie i zostajesz na mapie zanim użytkownicy tu trafią!
+            {t("landing.hero.body")}
           </p>
 
           {/* Hero copy + blue CTA */}
-          <h2 className="text-xl font-bold text-slate-500 mb-2">Bądź pierwszy</h2>
-          <p className="text-base text-[#979797] mb-5">Twój lokal w Trasie zanim aplikacja trafi do gości.</p>
+          <h2 className="text-xl font-bold text-slate-500 mb-2">{t("landing.hero.be_first")}</h2>
+          <p className="text-base text-[#979797] mb-5">{t("landing.hero.be_first_desc")}</p>
           <div className="w-full max-w-sm mb-10">
             <BusinessWaitlist source="desktop_hero" />
           </div>

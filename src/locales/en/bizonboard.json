@@ -1,0 +1,56 @@
+{
+  "loading_panel": "Loading panel…",
+  "panel_business": "Business Panel",
+  "welcome_title": "Welcome to Trasa!",
+  "welcome_desc": "Welcome to your venue panel. Would you like us to walk you through the first steps, or do you prefer to start on your own?",
+  "guide_me": "Guide me",
+  "guide_me_desc": "A short tour of the panel",
+  "enter_myself": "I'll start myself",
+  "enter_myself_desc": "Go straight to the panel",
+  "step_progress": "Step {{current}} of {{total}}",
+  "next": "Next",
+  "go_to_panel": "Go to panel",
+  "skip_guide": "Skip the tour",
+  "steps": {
+    "profile_title": "Complete your listing",
+    "profile_body": "Add the name, category, description and photos of your venue. They are what draws travelers' attention.",
+    "review_title": "Send for approval",
+    "review_body": "Once your profile is ready, send it for approval. We will review the listing and publish it in the app.",
+    "manage_title": "Manage and track",
+    "manage_body": "After publishing, your venue will appear on users' routes, and you will see statistics and additions to routes."
+  },
+  "error": {
+    "something_wrong": "Something went wrong. Refresh the page and try again.",
+    "refresh": "Refresh",
+    "unknown": "Unknown error",
+    "no_user": "No user",
+    "create_failed": "Failed to create profile"
+  },
+  "days": {
+    "mon": "Monday",
+    "tue": "Tuesday",
+    "wed": "Wednesday",
+    "thu": "Thursday",
+    "fri": "Friday",
+    "sat": "Saturday",
+    "sun": "Sunday"
+  },
+  "hours": {
+    "title": "Opening hours",
+    "optional": "(optional)",
+    "set_hours": "+ set hours",
+    "closed": "Closed",
+    "open_action": "Open",
+    "clear": "Clear",
+    "mark_closed": "Mark as closed",
+    "close_action": "Close",
+    "open_badge": "● Open",
+    "closed_badge": "● Closed",
+    "today": "(today)"
+  },
+  "gallery": "Gallery ({{count}})",
+  "actions": {
+    "call": "Call",
+    "website": "Website"
+  }
+}

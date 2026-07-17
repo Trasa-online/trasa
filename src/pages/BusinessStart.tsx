@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
 
 const DRAFT_KEY = "draft_profile_id";
 
 export default function BusinessStart() {
+  const { t } = useTranslation("bizonboard");
   const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
 
@@ -28,7 +30,7 @@ export default function BusinessStart() {
 
         // Sign in anonymously so we get a real user.id to own the profile
         const { data: anonData, error: anonError } = await supabase.auth.signInAnonymously();
-        if (anonError || !anonData.user) throw anonError ?? new Error("Brak użytkownika");
+        if (anonError || !anonData.user) throw anonError ?? new Error(t("error.no_user"));
 
         const userId = anonData.user.id;
 
@@ -58,30 +60,30 @@ export default function BusinessStart() {
           .select("id")
           .single();
 
-        if (insertError || !profile) throw insertError ?? new Error("Nie udało się utworzyć profilu");
+        if (insertError || !profile) throw insertError ?? new Error(t("error.create_failed"));
 
         localStorage.setItem(DRAFT_KEY, profile.id);
         navigate(`/biznes/${profile.id}`, { replace: true });
       } catch (err: any) {
         console.error("[BusinessStart]", err);
-        setError(err?.message || err?.error_description || String(err) || "Nieznany błąd");
+        setError(err?.message || err?.error_description || String(err) || t("error.unknown"));
       }
     })();
-  }, []);
+  }, [t]);
 
   if (error) {
     return (
       <div className="min-h-screen bg-[#FEFEFE] flex flex-col items-center justify-center gap-5 px-6">
         <div className="h-14 w-14 rounded-full" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
         <p className="text-center text-muted-foreground text-sm max-w-[32ch]">
-          Coś poszło nie tak. Odśwież stronę i spróbuj ponownie.
+          {t("error.something_wrong")}
         </p>
         <p className="text-center text-red-500 text-xs font-mono max-w-xs break-words">{error}</p>
         <button
           onClick={() => { setError(null); window.location.reload(); }}
           className="px-6 py-2.5 rounded-full bg-gradient-to-r from-[#F4A259] to-[#F9662B] text-white font-bold text-sm"
         >
-          Odśwież
+          {t("error.refresh")}
         </button>
       </div>
     );

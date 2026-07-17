@@ -1,0 +1,94 @@
+{
+  "landing": {
+    "nav": {
+      "login": "Log in",
+      "check": "Take a look"
+    },
+    "waitlist": {
+      "done": "Thanks for signing up! We'll reach out once we open registration for venues.",
+      "email_placeholder": "you@venue.com",
+      "consent": "I agree to be contacted about the launch of Trasa for business. I have read the ",
+      "privacy_link": "privacy policy",
+      "submit": "Sign up"
+    },
+    "hero": {
+      "be_first": "Be first",
+      "be_first_desc": "Your venue in Trasa before the app reaches guests.",
+      "title_l1": "Join Trasa",
+      "title_l2": "as one of",
+      "title_l3": "the first",
+      "body": "We're building an app for planning city breaks. We're looking for the first 100 venues in Warsaw - join for free and stay on the map before users arrive!"
+    },
+    "badge": {
+      "premiere": "Launch: June 2026"
+    },
+    "appstore": {
+      "download_ios": "Download on",
+      "download_android": "Get it on",
+      "soon": "Soon"
+    }
+  },
+  "onepager": {
+    "nav": {
+      "packages": "Plans",
+      "form": "Form",
+      "submit_place": "Add venue"
+    },
+    "packages": {
+      "eyebrow": "Plans",
+      "title": "Discover everything Trasa offers",
+      "scroll_hint": "Add your venue below",
+      "cta": "Choose this"
+    },
+    "tiers": {
+      "badge": "Free until September",
+      "basic": {
+        "plan_label": "BASIC PLAN",
+        "subtitle": "You're visible",
+        "price_note": "Free"
+      },
+      "pro": {
+        "plan_label": "PROFESSIONAL PLAN",
+        "subtitle": "You're in control"
+      },
+      "premium": {
+        "plan_label": "PREMIUM PLAN",
+        "subtitle": "You stand out"
+      }
+    },
+    "features": {
+      "biz_profile": "Business profile in the app",
+      "gallery_photos": "Photo gallery",
+      "description": "Description",
+      "address": "Address",
+      "basic_analytics": "Basic analytics (views)",
+      "gallery_media": "Photo and video gallery",
+      "full_analytics": "Full analytics - views, day-plan additions, session length and more",
+      "news_promos_a": "News section and featured promotions",
+      "news_promos_b": "News section and featured promotions",
+      "push": "Push notifications for users",
+      "custom_look": "Personalized profile appearance"
+    },
+    "form": {
+      "eyebrow": "Submission",
+      "title": "Add your venue",
+      "subtitle": "Fill out the form - we'll get back to you within 24h and help launch your profile.",
+      "done_title": "Submission received!",
+      "done_desc": "You're among the first venues building Trasa. We'll be in touch within 24h.",
+      "selected_plan": "Selected plan:",
+      "change": "change",
+      "name_label": "Venue name *",
+      "name_placeholder": "e.g. Café Under the Linden",
+      "email_label": "Contact email *",
+      "email_placeholder": "you@email.com",
+      "phone_label": "Phone",
+      "optional": "(optional)",
+      "phone_placeholder": "+48 000 000 000",
+      "message_label": "Message",
+      "message_placeholder": "Anything you'd like to tell us...",
+      "submit": "Join the program →",
+      "submitting": "Sending...",
+      "error": "Failed to send submission"
+    }
+  }
+}

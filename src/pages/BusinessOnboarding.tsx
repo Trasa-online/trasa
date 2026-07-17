@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import { ImagePlus, ShieldCheck, BarChart3, ArrowRight, Compass, DoorOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -10,24 +11,13 @@ import { TrasaLogo } from "@/components/TrasaLogo";
 // Osobny ekran - NIE dotyka zamrozonego BusinessDashboard.
 
 const STEPS = [
-  {
-    icon: ImagePlus,
-    title: "Uzupełnij wizytówkę",
-    body: "Dodaj nazwę, kategorię, opis i zdjęcia swojego lokalu. To one przyciągają uwagę podróżnych.",
-  },
-  {
-    icon: ShieldCheck,
-    title: "Wyślij do akceptacji",
-    body: "Gdy profil będzie gotowy, wyślij go do zatwierdzenia. Sprawdzimy wizytówkę i opublikujemy ją w aplikacji.",
-  },
-  {
-    icon: BarChart3,
-    title: "Zarządzaj i obserwuj",
-    body: "Po publikacji Twój lokal pojawi się w trasach użytkowników, a Ty zobaczysz statystyki i dodania do trasy.",
-  },
-];
+  { icon: ImagePlus, titleKey: "steps.profile_title", bodyKey: "steps.profile_body" },
+  { icon: ShieldCheck, titleKey: "steps.review_title", bodyKey: "steps.review_body" },
+  { icon: BarChart3, titleKey: "steps.manage_title", bodyKey: "steps.manage_body" },
+] as const;
 
 export default function BusinessOnboarding() {
+  const { t } = useTranslation("bizonboard");
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const [phase, setPhase] = useState<"choice" | "guide">("choice");
@@ -70,7 +60,7 @@ export default function BusinessOnboarding() {
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="flex flex-col items-center gap-3">
           <div className="h-10 w-10 rounded-full bg-blue-200 animate-pulse" />
-          <p className="text-sm text-slate-500">Wczytuję panel…</p>
+          <p className="text-sm text-slate-500">{t("loading_panel")}</p>
         </div>
       </div>
     );
@@ -87,15 +77,15 @@ export default function BusinessOnboarding() {
             <TrasaLogo size={48} />
             <div>
               <p className="text-xs font-semibold text-blue-600 uppercase tracking-widest">trasa</p>
-              <p className="text-lg font-black text-slate-800 leading-tight">Panel Biznesowy</p>
+              <p className="text-lg font-black text-slate-800 leading-tight">{t("panel_business")}</p>
             </div>
           </div>
 
           {phase === "choice" ? (
             <>
-              <h1 className="text-2xl font-black text-slate-800 mb-1">{`Witamy na Trasie!`}</h1>
+              <h1 className="text-2xl font-black text-slate-800 mb-1">{t("welcome_title")}</h1>
               <p className="text-sm text-slate-500 mb-8 leading-relaxed">
-                {`Witaj w panelu swojego lokalu. Chcesz, żebyśmy przeprowadzili Cię przez pierwsze kroki, czy wolisz zacząć samodzielnie?`}
+                {t("welcome_desc")}
               </p>
 
               <div className="grid grid-cols-2 gap-3">
@@ -107,8 +97,8 @@ export default function BusinessOnboarding() {
                     <Compass className="h-5 w-5" />
                   </div>
                   <div className="min-w-0">
-                    <p className="font-bold text-base leading-tight">Przeprowadź mnie</p>
-                    <p className="text-sm text-blue-100/90 leading-snug mt-0.5">{`Krótki przewodnik po panelu`}</p>
+                    <p className="font-bold text-base leading-tight">{t("guide_me")}</p>
+                    <p className="text-sm text-blue-100/90 leading-snug mt-0.5">{t("guide_me_desc")}</p>
                   </div>
                 </button>
 
@@ -120,8 +110,8 @@ export default function BusinessOnboarding() {
                     <DoorOpen className="h-5 w-5 text-slate-500" />
                   </div>
                   <div className="min-w-0">
-                    <p className="font-bold text-base leading-tight">{`Wejdę samodzielnie`}</p>
-                    <p className="text-sm text-slate-500 leading-snug mt-0.5">{`Przejdź od razu do panelu`}</p>
+                    <p className="font-bold text-base leading-tight">{t("enter_myself")}</p>
+                    <p className="text-sm text-slate-500 leading-snug mt-0.5">{t("enter_myself_desc")}</p>
                   </div>
                 </button>
               </div>
@@ -149,9 +139,9 @@ export default function BusinessOnboarding() {
                     <div className="h-14 w-14 rounded-2xl bg-blue-100 flex items-center justify-center mb-5">
                       <Icon className="h-7 w-7 text-blue-600" />
                     </div>
-                    <p className="text-xs font-semibold text-blue-600 mb-2">Krok {step + 1} z {STEPS.length}</p>
-                    <h1 className="text-2xl font-black text-slate-800 mb-2 leading-tight">{S.title}</h1>
-                    <p className="text-[15px] text-slate-500 leading-relaxed">{S.body}</p>
+                    <p className="text-xs font-semibold text-blue-600 mb-2">{t("step_progress", { current: step + 1, total: STEPS.length })}</p>
+                    <h1 className="text-2xl font-black text-slate-800 mb-2 leading-tight">{t(S.titleKey)}</h1>
+                    <p className="text-[15px] text-slate-500 leading-relaxed">{t(S.bodyKey)}</p>
                   </div>
                 );
               })()}
@@ -160,7 +150,7 @@ export default function BusinessOnboarding() {
                 onClick={nextStep}
                 className="w-full py-3.5 rounded-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-base shadow-lg shadow-blue-600/25 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
               >
-                {step < STEPS.length - 1 ? "Dalej" : "Przejdź do panelu"}
+                {step < STEPS.length - 1 ? t("next") : t("go_to_panel")}
                 <ArrowRight className="h-4 w-4" />
               </button>
 
@@ -168,7 +158,7 @@ export default function BusinessOnboarding() {
                 onClick={enterPanel}
                 className="w-full mt-3 text-sm text-slate-400 hover:text-slate-600 font-medium"
               >
-                Pomiń przewodnik
+                {t("skip_guide")}
               </button>
             </>
           )}

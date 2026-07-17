@@ -1,4 +1,5 @@
 import { Camera } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import {
   Carousel,
   CarouselContent,
@@ -14,6 +15,7 @@ interface BusinessGalleryProps {
 }
 
 const BusinessGallery = ({ business, onImageClick }: BusinessGalleryProps) => {
+  const { t } = useTranslation("bizonboard");
   if (!business.images || business.images.length === 0) return null;
 
   const allImageUrls = business.images.map(img => img.url);
@@ -22,7 +24,7 @@ const BusinessGallery = ({ business, onImageClick }: BusinessGalleryProps) => {
     <div className="space-y-3">
       <h3 className="font-semibold flex items-center gap-2 px-4">
         <Camera className="h-4 w-4" />
-        Galeria ({business.images.length})
+        {t("gallery", { count: business.images.length })}
       </h3>
 
       <Carousel

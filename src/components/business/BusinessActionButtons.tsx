@@ -1,4 +1,5 @@
 import { Phone, Globe } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import posthog from "posthog-js";
 
@@ -10,6 +11,7 @@ interface BusinessActionButtonsProps {
 }
 
 const BusinessActionButtons = ({ phone, website, placeId }: BusinessActionButtonsProps) => {
+  const { t } = useTranslation("bizonboard");
   const trackEvent = (type: "place_phone_clicked" | "place_website_clicked") => {
     if (!placeId) return;
     posthog.capture(type, { place_id: placeId });
@@ -29,7 +31,7 @@ const BusinessActionButtons = ({ phone, website, placeId }: BusinessActionButton
           }}
         >
           <Phone className="h-5 w-5" />
-          <span className="text-xs">Zadzwoń</span>
+          <span className="text-xs">{t("actions.call")}</span>
         </Button>
       )}
       {website && (
@@ -42,7 +44,7 @@ const BusinessActionButtons = ({ phone, website, placeId }: BusinessActionButton
           }}
         >
           <Globe className="h-5 w-5" />
-          <span className="text-xs">Strona WWW</span>
+          <span className="text-xs">{t("actions.website")}</span>
         </Button>
       )}
     </div>

@@ -1,0 +1,323 @@
+{
+  "business_name_fallback": "Business name",
+  "card": {
+    "add": "Add",
+    "reject": "Skip"
+  },
+  "card_preview": {
+    "label": "Card preview",
+    "incomplete_title": "Add a name and a cover photo",
+    "open_full": "Open full preview →"
+  },
+  "preview": {
+    "close_aria": "Close preview",
+    "draft_cta_text": "Like it? Save your profile and step into Trasa.",
+    "wait": "One moment...",
+    "draft_convert_btn": "Create my account and save the profile"
+  },
+  "delete_account": {
+    "error": "Could not delete the account. Please try again.",
+    "button": "Delete business account",
+    "confirm_title": "Delete account permanently?",
+    "confirm_desc": "Your card, posts, gallery and account will be permanently deleted. The place stays in the app as unmanaged. This action cannot be undone.",
+    "cancel": "Cancel",
+    "deleting": "Deleting...",
+    "confirm_button": "Delete account"
+  },
+  "tour": {
+    "next": "Next →",
+    "prev": "← Back",
+    "done": "Done!",
+    "profile_title": "Business details",
+    "profile_desc": "Start here: business name, address, contact, description and category. This is the base of your card.",
+    "gallery_title": "Appearance",
+    "gallery_desc": "Add a cover, a gallery and pick your action button color - this is how guests will see you in the app.",
+    "menu_title": "Menu",
+    "menu_desc": "Upload photos of your menu or price list (or a PDF). Guests will see them on your card.",
+    "posts_title": "Updates",
+    "posts_desc": "Publish posts, events and promotions. Visible to everyone viewing your card."
+  },
+  "toast": {
+    "profile_not_found": "Profile not found. Run the SQL migration in Supabase."
+  },
+  "upload": {
+    "invalid_format": "Unsupported file format (allowed: JPG, PNG, WEBP, HEIC)",
+    "invalid_format_pdf": "Unsupported format (JPG, PNG, WEBP, HEIC, PDF)",
+    "too_large": "File is too large (max {{max}} MB)",
+    "logo_error": "Could not upload the logo",
+    "cover_error": "Could not upload the cover photo",
+    "cover_error_short": "Could not upload the cover",
+    "video_too_long": "The video can be up to 7 seconds long",
+    "video_error": "Could not upload the video",
+    "photos_error": "Could not upload the photos",
+    "photo_error": "Could not upload the photo"
+  },
+  "posts": {
+    "local_added": "Post visible in preview. It will be saved permanently once your card is approved.",
+    "add_error": "Could not add the post",
+    "added": "Post added!",
+    "delete_error": "Could not delete the post",
+    "deleted": "Post deleted",
+    "undo": "Undo",
+    "title": "Updates",
+    "subtitle": "Events and posts visible on your card.",
+    "current_event": "Current event",
+    "event_desc": "A promotion, concert, happy hour - whatever is happening now or soon. Set the dates below: the event will show to guests when they plan a stay in that period.",
+    "event_title_label": "Title",
+    "event_title_placeholder": "e.g. Drinks 1+1 until 8 PM",
+    "from": "From",
+    "to": "To",
+    "posts_label": "Posts",
+    "posts_desc": "Updates, news, photos - visible to visitors on your card.",
+    "post_placeholder": "What's new at your place?",
+    "photos": "Photos",
+    "visible_hint": "Visible in the card preview",
+    "publishing": "Publishing…",
+    "publish": "Publish",
+    "history": "Post history",
+    "empty": "No posts yet - add the first one!"
+  },
+  "save": {
+    "event_date_error": "The event end date cannot be earlier than the start date",
+    "rls_error": "No permission to edit - check that you are signed in to the right account",
+    "error": "Save error: {{msg}}",
+    "unknown": "unknown",
+    "saved_review": "Changes saved! Your card was submitted for verification.",
+    "saved": "Changes saved!",
+    "button": "Save changes"
+  },
+  "support": {
+    "error": "Could not send the report.",
+    "sent": "Report sent! We'll get back to you soon.",
+    "title": "Report a problem",
+    "desc": "Describe what's not working - we'll get back to you soon.",
+    "placeholder": "E.g. I can't add a photo to the gallery, the button doesn't respond...",
+    "sending": "Sending...",
+    "submit": "Send report"
+  },
+  "draft": {
+    "convert_error": "Please try again in a moment.",
+    "banner_ready": "Your profile looks great - ready for launch!",
+    "banner_incomplete": "Add a name and a photo to see the preview",
+    "wait": "One moment...",
+    "banner_convert": "Create my account →"
+  },
+  "password": {
+    "no_email": "No email linked to this account - contact support",
+    "confirm": "We'll send a password reset link to {{email}}. Continue?",
+    "sent": "Password reset link sent to {{email}}. Check your inbox (and spam).",
+    "error": "Could not send the link"
+  },
+  "access": {
+    "title": "Business panel",
+    "subtitle": "Enter the access password",
+    "placeholder": "Access password",
+    "wrong": "Wrong password",
+    "open": "Open panel"
+  },
+  "missing": {
+    "business_name": "business name",
+    "cover": "cover photo",
+    "joiner": " and ",
+    "msg": "To see the preview, add: {{fields}}."
+  },
+  "preview_mode": {
+    "banner": "This is a preview of your panel in Trasa. Editing requires signing in.",
+    "claim": "Claim account"
+  },
+  "sidebar": {
+    "expand": "Expand menu",
+    "collapse": "Collapse",
+    "support": "Report a problem",
+    "change_password": "Change password",
+    "sending": "Sending...",
+    "logout": "Sign out",
+    "repeat_tour": "Replay tour"
+  },
+  "nav": {
+    "overview": "Overview",
+    "profile": "Business details",
+    "appearance": "Appearance",
+    "menu": "Menu",
+    "posts": "Updates",
+    "analytics": "Analytics",
+    "settings": "Settings",
+    "soon": "soon",
+    "disabled_soon": "Unavailable - soon"
+  },
+  "tabs": {
+    "overview": "Overview",
+    "profile": "Details",
+    "appearance": "Appearance",
+    "menu": "Menu",
+    "posts": "Updates",
+    "analytics": "Analytics",
+    "settings": "Settings"
+  },
+  "topbar": {
+    "preview_title": "Place preview",
+    "link_copied": "Link copied!",
+    "shared": "Shared",
+    "copy_link": "Copy link for the place"
+  },
+  "welcome": {
+    "title": "Welcome to the trasa Business Panel!",
+    "thanks_prefix": "Thank you for letting",
+    "body_mid": " join Trasa - from now on we're building something great together. Fill in your card and wait for verification. Have a suggestion or spotted a bug? Write to us via ",
+    "support_quote": "“Report a problem”"
+  },
+  "verified": {
+    "title": "✓ Card verified!",
+    "desc": "Your card has been approved by the trasa team. It is now fully visible to app users."
+  },
+  "review": {
+    "pending_title": "Card awaiting verification",
+    "pending_desc": "We'll review and approve it soon."
+  },
+  "overview": {
+    "title": "Overview",
+    "subtitle": "Here's what's happening with your place.",
+    "stat_views": "Profile views",
+    "stat_addplan": "Added to day plan",
+    "stat_clicks": "Clicks",
+    "stat_total": "Total activity",
+    "last_prefix": "last"
+  },
+  "range": {
+    "7d": "7 days",
+    "30d": "30 days",
+    "90d": "90 days",
+    "months3": "3 months"
+  },
+  "locked": {
+    "views": "Views",
+    "routes": "On routes",
+    "clicks": "Clicks",
+    "activity": "Activity"
+  },
+  "analytics": {
+    "locked_title": "Analytics available on the Premium plan",
+    "title": "Analytics",
+    "subtitle": "Activity statistics for your place.",
+    "range": "Range",
+    "locked_desc": "Unlock detailed statistics of clicks, views and activity.",
+    "learn_more": "Learn more →",
+    "draft_title": "This is what your Trasa statistics could look like",
+    "draft_desc": "Below is sample data - once your profile is live you'll see real numbers here.",
+    "stat_views": "Views",
+    "views_desc": "card views",
+    "stat_unique": "Unique guests",
+    "unique_desc": "added to a route",
+    "stat_addplan": "Added to day plan",
+    "addplan_desc": "times in a day plan",
+    "stat_clicks": "Clicks",
+    "clicks_desc": "WWW: {{www}} · Tel: {{tel}}",
+    "activity_over_time": "Activity over time",
+    "legend_views": "Views",
+    "legend_route": "Route",
+    "legend_clicks": "Clicks",
+    "no_data": "No data in the selected period",
+    "tt_views": "Views",
+    "tt_routes": "Added to route",
+    "tt_clicks": "Clicks",
+    "hourly_title": "Traffic by hour",
+    "peak": "Peak: {{from}}-{{to}}",
+    "hourly_desc": "Total number of events in a given hour of the day (local time)",
+    "events": "Events",
+    "hour": "Hour {{label}}",
+    "peak_traffic": "Peak traffic",
+    "activity": "Activity",
+    "low_traffic": "Low traffic",
+    "act_view": "Profile view",
+    "act_add": "Added to day plan",
+    "act_phone": "Click - phone",
+    "act_website": "Click - website",
+    "act_booking": "Click - booking"
+  },
+  "activity": {
+    "title": "Recent activity",
+    "empty": "No activity recently.",
+    "view": "Someone viewed your profile",
+    "add_route": "Place added to a day plan",
+    "click_phone": "Click on the phone number",
+    "click_website": "Click on the website",
+    "click_booking": "Click on booking"
+  },
+  "gallery": {
+    "title": "Appearance",
+    "subtitle": "The cover and extra gallery visible on your card.",
+    "cover_title": "Card cover",
+    "cover_desc": "Photo shown on your card in the app",
+    "uploading": "Uploading…",
+    "change_cover": "Change cover",
+    "add_cover": "Add cover",
+    "cover_format": "Photo (JPG, PNG, HEIC)",
+    "extra_title": "Extra gallery",
+    "extra_desc": "Photos visible in the card details",
+    "photo_label": "Gallery {{n}}",
+    "move_photo": "Move photo"
+  },
+  "personalization": {
+    "title": "Card personalization",
+    "desc": "Colors visible on your card in the app",
+    "preview": "Preview",
+    "category_fallback": "Category",
+    "promo": "Promotion",
+    "button_color": "\"Add\" button color",
+    "button_color_desc": "Main action button on the card"
+  },
+  "profile": {
+    "title": "Business details",
+    "subtitle": "Contact info, description and tags visible on your card.",
+    "name_label": "Business name",
+    "name_placeholder": "e.g. Wanderlust Cafe",
+    "logo_title": "Business logo",
+    "change_logo": "Change logo",
+    "add_logo": "Add logo",
+    "logo_hint": "JPG, PNG · visible on the card",
+    "street": "Street and number",
+    "optional": "(optional)",
+    "city": "City",
+    "postal": "Postal code",
+    "phone": "Phone",
+    "email": "Email",
+    "website": "Website",
+    "main_category": "Main category",
+    "subcategory": "Subcategory",
+    "custom_cat_title": "Don't see your category?",
+    "custom_cat_desc": "Suggest your own - we'll review and add it.",
+    "custom_cat_placeholder": "e.g. Craft brewery...",
+    "propose": "Suggest",
+    "cat_approved": "✓ Approved",
+    "cat_rejected": "✗ Rejected - change your suggestion",
+    "cat_pending": "⏳ Suggestion sent - awaiting approval",
+    "tags_label": "Card tags",
+    "tags_hint": "(max 3, visible on the card in the app)",
+    "collapse": "Collapse",
+    "more": "+{{count}} more",
+    "custom_tag_placeholder": "custom-tag",
+    "description_label": "Description",
+    "description_placeholder": "Describe your place..."
+  },
+  "menu": {
+    "menu": "Menu",
+    "pricelist": "Price list",
+    "hint_menu": "Photos of menu pages (JPG, PNG) or a PDF file. They'll show on your card in the app.",
+    "hint_pricelist": "Photos of your price list (JPG, PNG) or a PDF file. They'll show on your card in the app.",
+    "max": "(max {{max}})",
+    "photo_label": "{{label}} {{n}}"
+  },
+  "settings": {
+    "title": "Account settings",
+    "subtitle": "Manage your business account.",
+    "logged_as": "Signed in as",
+    "delete_hint": "Deleting the account removes your card, posts and gallery. The place stays in the app as unmanaged (zero state).",
+    "login_prompt": "Sign in and claim the account to manage settings and delete the account."
+  },
+  "fab": {
+    "incomplete": "Add a name and a photo to see the preview",
+    "preview_title": "Card preview in the app",
+    "preview_aria": "Card preview",
+    "preview": "Preview"
+  }
+}

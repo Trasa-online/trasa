@@ -1,23 +1,15 @@
 import { Clock } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { BusinessData } from "./mockBusinessData";
 
 interface BusinessHoursProps {
   business: BusinessData;
 }
 
-const DAYS_MAP: { [key: string]: string } = {
-  mon: "Poniedziałek",
-  tue: "Wtorek",
-  wed: "Środa",
-  thu: "Czwartek",
-  fri: "Piątek",
-  sat: "Sobota",
-  sun: "Niedziela"
-};
-
 const DAYS_ORDER = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 
 const BusinessHours = ({ business }: BusinessHoursProps) => {
+  const { t } = useTranslation("bizonboard");
   const now = new Date();
   const currentDay = DAYS_ORDER[now.getDay() === 0 ? 6 : now.getDay() - 1];
   const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
@@ -31,14 +23,14 @@ const BusinessHours = ({ business }: BusinessHoursProps) => {
       <div className="flex items-center justify-between">
         <h3 className="font-semibold flex items-center gap-2">
           <Clock className="h-4 w-4" />
-          Godziny otwarcia
+          {t("hours.title")}
         </h3>
         <span className={`text-sm font-medium px-2 py-0.5 rounded-full ${
           isOpen 
             ? "bg-green-500/10 text-green-600" 
             : "bg-red-500/10 text-red-500"
         }`}>
-          {isOpen ? "● Otwarte" : "● Zamknięte"}
+          {isOpen ? t("hours.open_badge") : t("hours.closed_badge")}
         </span>
       </div>
 
@@ -56,13 +48,13 @@ const BusinessHours = ({ business }: BusinessHoursProps) => {
               }`}
             >
               <span className={isToday ? "text-primary" : "text-muted-foreground"}>
-                {DAYS_MAP[day]}
-                {isToday && " (dziś)"}
+                {t(`days.${day}`)}
+                {isToday && ` ${t("hours.today")}`}
               </span>
               <span className={isClosed ? "text-muted-foreground" : ""}>
-                {isClosed 
-                  ? "Zamknięte" 
-                  : hours && !('closed' in hours) 
+                {isClosed
+                  ? t("hours.closed")
+                  : hours && !('closed' in hours)
                     ? `${hours.open} - ${hours.close}`
                     : "-"
                 }

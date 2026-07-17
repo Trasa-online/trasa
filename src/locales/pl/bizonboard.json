@@ -1,0 +1,56 @@
+{
+  "loading_panel": "Wczytuję panel…",
+  "panel_business": "Panel Biznesowy",
+  "welcome_title": "Witamy na Trasie!",
+  "welcome_desc": "Witaj w panelu swojego lokalu. Chcesz, żebyśmy przeprowadzili Cię przez pierwsze kroki, czy wolisz zacząć samodzielnie?",
+  "guide_me": "Przeprowadź mnie",
+  "guide_me_desc": "Krótki przewodnik po panelu",
+  "enter_myself": "Wejdę samodzielnie",
+  "enter_myself_desc": "Przejdź od razu do panelu",
+  "step_progress": "Krok {{current}} z {{total}}",
+  "next": "Dalej",
+  "go_to_panel": "Przejdź do panelu",
+  "skip_guide": "Pomiń przewodnik",
+  "steps": {
+    "profile_title": "Uzupełnij wizytówkę",
+    "profile_body": "Dodaj nazwę, kategorię, opis i zdjęcia swojego lokalu. To one przyciągają uwagę podróżnych.",
+    "review_title": "Wyślij do akceptacji",
+    "review_body": "Gdy profil będzie gotowy, wyślij go do zatwierdzenia. Sprawdzimy wizytówkę i opublikujemy ją w aplikacji.",
+    "manage_title": "Zarządzaj i obserwuj",
+    "manage_body": "Po publikacji Twój lokal pojawi się w trasach użytkowników, a Ty zobaczysz statystyki i dodania do trasy."
+  },
+  "error": {
+    "something_wrong": "Coś poszło nie tak. Odśwież stronę i spróbuj ponownie.",
+    "refresh": "Odśwież",
+    "unknown": "Nieznany błąd",
+    "no_user": "Brak użytkownika",
+    "create_failed": "Nie udało się utworzyć profilu"
+  },
+  "days": {
+    "mon": "Poniedziałek",
+    "tue": "Wtorek",
+    "wed": "Środa",
+    "thu": "Czwartek",
+    "fri": "Piątek",
+    "sat": "Sobota",
+    "sun": "Niedziela"
+  },
+  "hours": {
+    "title": "Godziny otwarcia",
+    "optional": "(opcjonalnie)",
+    "set_hours": "+ ustaw godziny",
+    "closed": "Zamknięte",
+    "open_action": "Otwórz",
+    "clear": "Wyczyść",
+    "mark_closed": "Oznacz jako zamknięte",
+    "close_action": "Zamknij",
+    "open_badge": "● Otwarte",
+    "closed_badge": "● Zamknięte",
+    "today": "(dziś)"
+  },
+  "gallery": "Galeria ({{count}})",
+  "actions": {
+    "call": "Zadzwoń",
+    "website": "Strona WWW"
+  }
+}

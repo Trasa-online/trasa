@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Check, ChevronDown } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -9,54 +10,54 @@ import { supabase } from "@/integrations/supabase/client";
 const TIERS = [
   {
     id: "basic",
-    planLabel: "PLAN PODSTAWOWY",
-    subtitle: "Jesteś widoczny",
+    planLabelKey: "onepager.tiers.basic.plan_label",
+    subtitleKey: "onepager.tiers.basic.subtitle",
     price: null,
-    priceNote: "Bezpłatny",
-    badge: null,
+    priceNoteKey: "onepager.tiers.basic.price_note",
+    badge: false,
     blueTitle: false,
     features: [
-      { label: "Profil biznesowy w aplikacji" },
-      { label: "Galeria zdjęć" },
-      { label: "Opis" },
-      { label: "Adres" },
-      { label: "Podstawowa analityka (wyświetlenia)" },
+      { key: "onepager.features.biz_profile" },
+      { key: "onepager.features.gallery_photos" },
+      { key: "onepager.features.description" },
+      { key: "onepager.features.address" },
+      { key: "onepager.features.basic_analytics" },
     ],
   },
   {
     id: "pro",
-    planLabel: "PLAN PROFESJONALNY",
-    subtitle: "Masz kontrolę",
+    planLabelKey: "onepager.tiers.pro.plan_label",
+    subtitleKey: "onepager.tiers.pro.subtitle",
     price: "89zł",
-    priceNote: null,
-    badge: "DO WRZEŚNIA za 0zł",
+    priceNoteKey: null,
+    badge: true,
     blueTitle: false,
     features: [
-      { label: "Profil biznesowy w aplikacji" },
-      { label: "Galeria zdjęć i filmów", bold: true },
-      { label: "Opis" },
-      { label: "Adres" },
-      { label: "Pełna analityka - wyświetlenia, dodania do planu dnia, długość sesji i inne", bold: true },
-      { label: "Sekcja aktualności i wyróżnionych promocji", bold: true },
+      { key: "onepager.features.biz_profile" },
+      { key: "onepager.features.gallery_media", bold: true },
+      { key: "onepager.features.description" },
+      { key: "onepager.features.address" },
+      { key: "onepager.features.full_analytics", bold: true },
+      { key: "onepager.features.news_promos_a", bold: true },
     ],
   },
   {
     id: "premium",
-    planLabel: "PLAN PREMIUM",
-    subtitle: "Wyróżniasz się",
+    planLabelKey: "onepager.tiers.premium.plan_label",
+    subtitleKey: "onepager.tiers.premium.subtitle",
     price: "139zł",
-    priceNote: null,
-    badge: "DO WRZEŚNIA za 0zł",
+    priceNoteKey: null,
+    badge: true,
     blueTitle: true,
     features: [
-      { label: "Profil biznesowy w aplikacji" },
-      { label: "Galeria zdjęć i filmów", bold: true },
-      { label: "Opis" },
-      { label: "Adres" },
-      { label: "Pełna analityka - wyświetlenia, dodania do planu dnia, długość sesji i inne", bold: true },
-      { label: "Sekcja aktualności i wyróżnione promocje", bold: true },
-      { label: "Powiadomienia push dla użytkowników", bold: true },
-      { label: "Personalizowany wygląd profilu", bold: true },
+      { key: "onepager.features.biz_profile" },
+      { key: "onepager.features.gallery_media", bold: true },
+      { key: "onepager.features.description" },
+      { key: "onepager.features.address" },
+      { key: "onepager.features.full_analytics", bold: true },
+      { key: "onepager.features.news_promos_b", bold: true },
+      { key: "onepager.features.push", bold: true },
+      { key: "onepager.features.custom_look", bold: true },
     ],
   },
 ];
@@ -64,6 +65,7 @@ const TIERS = [
 // ─── Form ─────────────────────────────────────────────────────────────────────
 
 function BizForm({ selectedPlan, onPlanChange }: { selectedPlan: string | null; onPlanChange: (p: string | null) => void }) {
+  const { t } = useTranslation("bizlanding");
   const [placeName, setPlaceName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -90,7 +92,7 @@ function BizForm({ selectedPlan, onPlanChange }: { selectedPlan: string | null; 
       if (error) throw error;
       setDone(true);
     } catch (err: any) {
-      toast.error(err.message || "Błąd wysyłania zgłoszenia");
+      toast.error(err.message || t("onepager.form.error"));
     } finally {
       setLoading(false);
     }
@@ -102,8 +104,8 @@ function BizForm({ selectedPlan, onPlanChange }: { selectedPlan: string | null; 
         <div className="h-16 w-16 rounded-full bg-blue-100 flex items-center justify-center mx-auto mb-4">
           <Check className="h-8 w-8 text-blue-600" />
         </div>
-        <h3 className="text-2xl font-black text-foreground mb-2">Zgłoszenie przyjęte!</h3>
-        <p className="text-slate-500 max-w-xs mx-auto">Jesteś wśród pierwszych lokali które budują Trasę. Odezwiemy się w ciągu 24h.</p>
+        <h3 className="text-2xl font-black text-foreground mb-2">{t("onepager.form.done_title")}</h3>
+        <p className="text-slate-500 max-w-xs mx-auto">{t("onepager.form.done_desc")}</p>
       </div>
     );
   }
@@ -114,39 +116,39 @@ function BizForm({ selectedPlan, onPlanChange }: { selectedPlan: string | null; 
         <div className="flex items-center justify-between px-4 py-3 bg-blue-50 border border-blue-200 rounded-2xl">
           <div className="flex items-center gap-2">
             <Check className="h-4 w-4 text-blue-600 shrink-0" />
-            <span className="text-sm text-blue-700 font-semibold">Wybrany plan: <strong>{selectedPlan}</strong></span>
+            <span className="text-sm text-blue-700 font-semibold">{t("onepager.form.selected_plan")} <strong>{selectedPlan}</strong></span>
           </div>
-          <button type="button" onClick={() => onPlanChange(null)} className="text-blue-400 hover:text-blue-600 text-xs">zmień</button>
+          <button type="button" onClick={() => onPlanChange(null)} className="text-blue-400 hover:text-blue-600 text-xs">{t("onepager.form.change")}</button>
         </div>
       )}
       <div>
-        <label className="block text-sm font-semibold text-foreground mb-1.5">Nazwa lokalu *</label>
+        <label className="block text-sm font-semibold text-foreground mb-1.5">{t("onepager.form.name_label")}</label>
         <input required value={placeName} onChange={e => setPlaceName(e.target.value)}
-          placeholder="np. Kawiarnia Pod Lipą"
+          placeholder={t("onepager.form.name_placeholder")}
           className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-300" />
       </div>
       <div>
-        <label className="block text-sm font-semibold text-foreground mb-1.5">Email kontaktowy *</label>
+        <label className="block text-sm font-semibold text-foreground mb-1.5">{t("onepager.form.email_label")}</label>
         <input required type="email" value={email} onChange={e => setEmail(e.target.value)}
-          placeholder="twoj@email.pl"
+          placeholder={t("onepager.form.email_placeholder")}
           className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-300" />
       </div>
       <div>
-        <label className="block text-sm font-semibold text-foreground mb-1.5">Telefon <span className="font-normal text-slate-400">(opcjonalnie)</span></label>
+        <label className="block text-sm font-semibold text-foreground mb-1.5">{t("onepager.form.phone_label")} <span className="font-normal text-slate-400">{t("onepager.form.optional")}</span></label>
         <input type="tel" value={phone} onChange={e => setPhone(e.target.value)}
-          placeholder="+48 000 000 000"
+          placeholder={t("onepager.form.phone_placeholder")}
           className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-300" />
       </div>
       <div>
-        <label className="block text-sm font-semibold text-foreground mb-1.5">Wiadomość <span className="font-normal text-slate-400">(opcjonalnie)</span></label>
+        <label className="block text-sm font-semibold text-foreground mb-1.5">{t("onepager.form.message_label")} <span className="font-normal text-slate-400">{t("onepager.form.optional")}</span></label>
         <textarea value={message} onChange={e => setMessage(e.target.value)}
-          placeholder="Cokolwiek, co chcesz nam przekazać..."
+          placeholder={t("onepager.form.message_placeholder")}
           rows={3}
           className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-300 resize-none" />
       </div>
       <button type="submit" disabled={loading}
         className="w-full rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-bold py-3.5 text-sm active:scale-[0.98] transition-all shadow-lg shadow-blue-200 disabled:opacity-60">
-        {loading ? "Wysyłanie..." : "Dołącz do programu →"}
+        {loading ? t("onepager.form.submitting") : t("onepager.form.submit")}
       </button>
     </form>
   );
@@ -156,6 +158,7 @@ function BizForm({ selectedPlan, onPlanChange }: { selectedPlan: string | null; 
 
 export default function BusinessOnePager() {
   const navigate = useNavigate();
+  const { t } = useTranslation("bizlanding");
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
 
   const scrollToForm = (planSubtitle: string) => {
@@ -177,20 +180,20 @@ export default function BusinessOnePager() {
             onClick={() => document.getElementById("pakiety")?.scrollIntoView({ behavior: "smooth" })}
             className="text-sm font-semibold text-slate-600 hover:text-foreground transition-colors"
           >
-            Pakiety
+            {t("onepager.nav.packages")}
           </button>
           <button
             onClick={() => document.getElementById("formularz")?.scrollIntoView({ behavior: "smooth" })}
             className="text-sm font-semibold text-slate-600 hover:text-foreground transition-colors"
           >
-            Formularz
+            {t("onepager.nav.form")}
           </button>
         </div>
         <button
           onClick={() => document.getElementById("formularz")?.scrollIntoView({ behavior: "smooth" })}
           className="text-sm font-bold px-4 py-2 rounded-full bg-blue-600 text-white hover:bg-blue-500 active:scale-95 transition-all shrink-0"
         >
-          Zgłoś lokal
+          {t("onepager.nav.submit_place")}
         </button>
       </div>
 
@@ -198,9 +201,9 @@ export default function BusinessOnePager() {
       <section id="pakiety" className="py-8 px-5">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-6">
-            <p className="text-xs font-bold text-blue-600 uppercase tracking-widest mb-2">Pakiety</p>
+            <p className="text-xs font-bold text-blue-600 uppercase tracking-widest mb-2">{t("onepager.packages.eyebrow")}</p>
             <h2 className="text-2xl sm:text-3xl font-black text-foreground">
-              Sprawdź pełne możliwości Trasy
+              {t("onepager.packages.title")}
             </h2>
           </div>
 
@@ -209,24 +212,24 @@ export default function BusinessOnePager() {
               <div key={tier.id} className="rounded-3xl p-5 flex flex-col bg-white border border-slate-200 shadow-sm relative">
                 {/* Plan label */}
                 <p className={`text-xs font-bold uppercase tracking-widest mb-2 ${tier.id === "basic" ? "text-slate-400" : "text-foreground"}`}>
-                  {tier.planLabel}
+                  {t(tier.planLabelKey)}
                 </p>
                 {/* Badge - centered row, desktop only */}
                 <div className="hidden md:flex items-center justify-center min-h-[26px] mb-2">
                   {tier.badge && (
                     <span className="bg-blue-600 text-white text-[9px] font-bold px-2.5 py-1 rounded-full whitespace-nowrap">
-                      {tier.badge}
+                      {t("onepager.tiers.badge")}
                     </span>
                   )}
                 </div>
                 {/* Title + badge inline on mobile */}
                 <div className="flex items-center justify-between gap-2 mb-1.5">
                   <h3 className={`text-lg font-black ${tier.blueTitle ? "text-blue-600" : "text-foreground"}`}>
-                    {tier.subtitle}
+                    {t(tier.subtitleKey)}
                   </h3>
                   {tier.badge && (
                     <span className="md:hidden bg-blue-600 text-white text-[9px] font-bold px-2.5 py-1 rounded-full whitespace-nowrap">
-                      {tier.badge}
+                      {t("onepager.tiers.badge")}
                     </span>
                   )}
                 </div>
@@ -234,7 +237,7 @@ export default function BusinessOnePager() {
                 <div className="mb-3 h-5">
                   {tier.price
                     ? <p className="text-sm text-slate-400 line-through">{tier.price}</p>
-                    : <p className="text-sm font-bold text-slate-600">{tier.priceNote}</p>
+                    : <p className="text-sm font-bold text-slate-600">{t(tier.priceNoteKey as string)}</p>
                   }
                 </div>
                 {/* Features */}
@@ -243,17 +246,17 @@ export default function BusinessOnePager() {
                     <li key={j} className="flex items-start gap-2">
                       <Check className="h-3.5 w-3.5 text-blue-500 shrink-0 mt-0.5" strokeWidth={2.5} />
                       <span className={`text-xs leading-snug ${f.bold ? "font-bold text-foreground" : "text-muted-foreground"}`}>
-                        {f.label}
+                        {t(f.key)}
                       </span>
                     </li>
                   ))}
                 </ul>
                 {/* CTA */}
                 <button
-                  onClick={() => scrollToForm(tier.subtitle)}
+                  onClick={() => scrollToForm(t(tier.subtitleKey))}
                   className="mt-auto text-center text-sm font-bold px-4 py-2.5 rounded-2xl bg-foreground text-white hover:bg-slate-700 active:scale-95 transition-all"
                 >
-                  Wybieram
+                  {t("onepager.packages.cta")}
                 </button>
               </div>
             ))}
@@ -261,7 +264,7 @@ export default function BusinessOnePager() {
 
           {/* Scroll indicator */}
           <div className="flex flex-col items-center mt-6 gap-2">
-            <p className="text-xs text-slate-400 font-medium tracking-wide">Zgłoś swój lokal poniżej</p>
+            <p className="text-xs text-slate-400 font-medium tracking-wide">{t("onepager.packages.scroll_hint")}</p>
             <ChevronDown className="h-5 w-5 text-slate-300 animate-bounce" />
           </div>
         </div>
@@ -271,10 +274,10 @@ export default function BusinessOnePager() {
       <section id="formularz" className="py-16 px-5 bg-slate-50 border-t border-slate-100">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-10">
-            <p className="text-xs font-bold text-blue-600 uppercase tracking-widest mb-2">Zgłoszenie</p>
-            <h2 className="text-3xl sm:text-4xl font-black text-foreground mb-3">Zgłoś swój lokal</h2>
+            <p className="text-xs font-bold text-blue-600 uppercase tracking-widest mb-2">{t("onepager.form.eyebrow")}</p>
+            <h2 className="text-3xl sm:text-4xl font-black text-foreground mb-3">{t("onepager.form.title")}</h2>
             <p className="text-base text-muted-foreground max-w-[44ch] mx-auto">
-              Wypełnij formularz - odezwiemy się w ciągu 24h i pomożemy uruchomić Twój profil.
+              {t("onepager.form.subtitle")}
             </p>
           </div>
           <BizForm selectedPlan={selectedPlan} onPlanChange={setSelectedPlan} />
