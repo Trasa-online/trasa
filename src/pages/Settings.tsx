@@ -8,7 +8,7 @@ import { getConsent, grantConsent, denyConsent } from "@/lib/consent";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Camera, Shield, Bell, LogOut, ChevronRight, Cookie, FileText, Trash2, KeyRound, AlertCircle, X, ArrowLeft, Link as LinkIcon, Mail } from "lucide-react";
+import { Camera, Shield, Bell, LogOut, ChevronRight, Cookie, FileText, Trash2, KeyRound, AlertCircle, X, ArrowLeft, Link as LinkIcon, Mail, Languages } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { toast } from "sonner";
@@ -467,6 +467,30 @@ function BugReportSection({ userId }: { userId: string }) {
   );
 }
 
+// Przelacznik jezyka PL/EN. changeLanguage zapisuje wybor do localStorage
+// (LanguageDetector caches: localStorage), wiec przezywa restart appki.
+function LanguageSection() {
+  const { t, i18n } = useTranslation("settings");
+  const current = (i18n.language || "pl").toLowerCase().startsWith("en") ? "en" : "pl";
+  return (
+    <div className="w-full flex items-center gap-3 px-4 py-3.5 bg-card rounded-2xl border border-border/40">
+      <Languages className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+      <span className="text-sm font-medium flex-1">{t("language")}</span>
+      <div className="flex gap-1 bg-muted rounded-full p-0.5">
+        {([["pl", "Polski"], ["en", "English"]] as const).map(([code, label]) => (
+          <button
+            key={code}
+            onClick={() => { if (code !== current) i18n.changeLanguage(code); }}
+            className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${current === code ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 const Settings = () => {
   const { user, loading, signOut } = useAuth();
   const navigate = useNavigate();
@@ -665,6 +689,8 @@ const Settings = () => {
 
         {/* Other settings */}
         <div className="space-y-2">
+          <LanguageSection />
+
           <PushToggleSection />
 
           <CookieConsentSection />
