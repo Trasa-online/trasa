@@ -640,7 +640,7 @@ function UserPolecajkiRow({
           const gradient = PLACEHOLDER_GRADIENTS[idx % PLACEHOLDER_GRADIENTS.length];
           const placesCount = col.items.length;
           const isLocal = !!col.author_home_city && !!col.city && col.author_home_city.trim().toLowerCase() === col.city.trim().toLowerCase();
-          const t = getTheme(col.category);
+          const theme = getTheme(col.category);
           return (
             <button
               key={col.id}
@@ -664,8 +664,8 @@ function UserPolecajkiRow({
               <div className="px-3.5 py-2.5 space-y-1.5">
                 {/* Badge motywu (kolor wg motywu) + miasto po prawej, na tej samej wysokosci */}
                 <div className="flex items-center justify-between gap-2">
-                  {t ? (
-                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold ${t.badge}`}>{t.emoji} {t.label}</span>
+                  {theme ? (
+                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold ${theme.badge}`}>{theme.emoji} {theme.label}</span>
                   ) : <span />}
                   {col.city && (
                     <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground shrink-0">
