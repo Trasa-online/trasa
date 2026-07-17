@@ -1182,7 +1182,7 @@ const BusinessDashboard = () => {
         color_button: colorButton,
         color_promo: colorPromo || null,
         event_title: eventTitle || null,
-        event_description: eventDescription || null,
+        event_description: null,
         event_starts_at: eventStartsAt || null,
         event_ends_at: eventEndsAt || null,
         opening_hours: Object.keys(openingHours).length > 0 ? openingHours : null,
@@ -2265,20 +2265,12 @@ const BusinessDashboard = () => {
                 <div className="flex-1 space-y-5">
                   {/* Events */}
                   <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm space-y-4">
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Aktualne / nadchodzące wydarzenie</p>
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Obecne wydarzenie</p>
                     <p className="text-xs text-muted-foreground -mt-2">{"Promocja, koncert, happy hour - to, co dzieje się teraz albo wkrótce. Ustaw daty poniżej: wydarzenie pokaże się gościom, gdy planują pobyt w tym terminie."}</p>
                     <div className="space-y-1">
                       <Label htmlFor="event_title">Tytuł</Label>
                       <Input id="event_title" value={eventTitle} maxLength={40} onChange={e => { setEventTitle(e.target.value); setIsDirty(true); }} placeholder="np. Drinki 1+1 do 20:00" />
                       <p className="text-[11px] text-muted-foreground text-right">{eventTitle.length}/40</p>
-                    </div>
-                    <div className="space-y-1">
-                      <Label htmlFor="event_description">Opis</Label>
-                      <textarea id="event_description" rows={2} value={eventDescription} maxLength={300} onChange={e => { setEventDescription(e.target.value); setIsDirty(true); }} placeholder="Szczegóły wydarzenia..." className="w-full rounded-2xl border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none" />
-                      <div className="flex items-center justify-between">
-                        <p className="text-[11px] text-muted-foreground">{"wyświetli się po kliknięciu w guzik z tytułem promocji"}</p>
-                        <p className="text-[11px] text-muted-foreground">{eventDescription.length}/300</p>
-                      </div>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div className="space-y-1 min-w-0"><Label htmlFor="event_starts_at" className="text-xs">Od</Label><Input id="event_starts_at" value={eventStartsAt} onChange={e => { setEventStartsAt(e.target.value); setIsDirty(true); }} type="date" className="w-full" /></div>
