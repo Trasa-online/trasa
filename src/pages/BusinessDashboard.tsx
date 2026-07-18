@@ -17,7 +17,7 @@ import { MAIN_CATEGORIES } from "@/lib/categories";
 import { resizeImage } from "@/lib/imageResize";
 import { isHeic, convertHeicToJpeg } from "@/lib/heicConvert";
 import { forwardGeocode } from "@/lib/googleMaps";
-import { formatDistanceToNow, subDays, format, addDays, differenceInCalendarDays, endOfDay, startOfDay } from "date-fns";
+import { formatDistanceToNow, subDays, format, addDays, differenceInCalendarDays, endOfDay, startOfDay, parseISO } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
 import type { DateRange } from "react-day-picker";
 import { Calendar } from "@/components/ui/calendar";
@@ -538,6 +538,13 @@ const BusinessDashboard = () => {
   const [postPhotos, setPostPhotos] = useState<string[]>([]);
   const [postPhotoUploading, setPostPhotoUploading] = useState(false);
   const [submittingPost, setSubmittingPost] = useState(false);
+  // Wydarzenia (kolejka + historia) - tabela business_events, brak w types.ts -> (supabase as any)
+  const [events, setEvents] = useState<any[]>([]);
+  const [newEventTitle, setNewEventTitle] = useState("");
+  const [newEventStartsAt, setNewEventStartsAt] = useState("");
+  const [newEventEndsAt, setNewEventEndsAt] = useState("");
+  const [addingEvent, setAddingEvent] = useState(false);
+  const [showEventHistory, setShowEventHistory] = useState(false);
 
   const logoInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
@@ -715,6 +722,11 @@ const BusinessDashboard = () => {
         .from("business_posts").select("*").eq("place_id", postsPlaceId).order("created_at", { ascending: false });
       if (postsData) setPosts(postsData as BusinessPost[]);
     }
+
+    // Fetch zaplanowane wydarzenia (kolejka + historia) - powiazane z business_profiles.id
+    const { data: eventsData } = await (supabase as any)
+      .from("business_events").select("*").eq("business_profile_id", profileData.id).order("starts_at", { ascending: true });
+    if (eventsData) setEvents(eventsData);
     } finally {
       setLoading(false);
     }
@@ -1159,6 +1171,88 @@ const BusinessDashboard = () => {
     } finally {
       setTranslatingEvent(false);
     }
+  };
+
+  // Sort rosnaco po starts_at (string "YYYY-MM-DD" porownuje sie leksykalnie).
+  const sortEventsAsc = (list: any[]) =>
+    [...list].sort((a, b) => (a.starts_at < b.starts_at ? -1 : a.starts_at > b.starts_at ? 1 : 0));
+
+  // Format zakresu dat wydarzenia na ekranie.
+  const fmtEventRange = (ev: any) => {
+    const start = format(parseISO(ev.starts_at), "d MMM", { locale: dateLocale() });
+    if (ev.ends_at && ev.ends_at !== ev.starts_at) {
+      return `${start} - ${format(parseISO(ev.ends_at), "d MMM", { locale: dateLocale() })}`;
+    }
+    return start;
+  };
+
+  const handleAddEvent = async () => {
+    if (!profile) return;
+    const title = newEventTitle.trim();
+    if (!title) { toast.error(t("posts.events_title_required")); return; }
+    if (!newEventStartsAt) { toast.error(t("posts.events_start_required")); return; }
+    if (newEventEndsAt && newEventEndsAt < newEventStartsAt) { toast.error(t("posts.events_date_error")); return; }
+    setAddingEvent(true);
+    const { data, error } = await (supabase as any)
+      .from("business_events")
+      .insert({
+        business_profile_id: profile.id,
+        place_id: profile.place_id ?? null,
+        title,
+        starts_at: newEventStartsAt,
+        ends_at: newEventEndsAt || null,
+      })
+      .select()
+      .single();
+    if (error || !data) { toast.error(t("posts.events_add_error")); setAddingEvent(false); return; }
+    // Auto-tlumaczenie tytulu na EN (best-effort) - wzor jak handleTranslateEvent.
+    let inserted = data;
+    try {
+      const { data: tr } = await supabase.functions.invoke("translate-content", {
+        body: { text: title, target_lang: "en", context: "event_title" },
+      });
+      const translation = (tr as any)?.translation;
+      if (translation) {
+        await (supabase as any).from("business_events").update({ title_en: translation }).eq("id", data.id);
+        inserted = { ...data, title_en: translation };
+      }
+    } catch { /* dodaj wydarzenie nawet gdy tlumaczenie padnie */ }
+    setEvents(prev => sortEventsAsc([...prev, inserted]));
+    setNewEventTitle("");
+    setNewEventStartsAt("");
+    setNewEventEndsAt("");
+    toast.success(t("posts.events_added"));
+    setAddingEvent(false);
+  };
+
+  const handleDeleteEvent = (id: string) => {
+    // Soft-delete z oknem cofniecia (5s) - wzor jak handleDeletePost.
+    const index = events.findIndex(e => e.id === id);
+    if (index === -1) return;
+    const snapshot = events[index];
+    setEvents(prev => prev.filter(e => e.id !== id));
+
+    let undone = false;
+    const timer = setTimeout(async () => {
+      if (undone) return;
+      const { error } = await (supabase as any).from("business_events").delete().eq("id", id);
+      if (error) {
+        toast.error(t("posts.events_delete_error"));
+        setEvents(prev => sortEventsAsc([...prev, snapshot]));
+      }
+    }, 5000);
+
+    toast(t("posts.events_deleted"), {
+      duration: 5000,
+      action: {
+        label: t("posts.undo"),
+        onClick: () => {
+          undone = true;
+          clearTimeout(timer);
+          setEvents(prev => sortEventsAsc([...prev, snapshot]));
+        },
+      },
+    });
   };
 
   const handleSave = async () => {
@@ -2352,57 +2446,71 @@ const BusinessDashboard = () => {
                       <div className="space-y-1 min-w-0"><Label htmlFor="event_ends_at" className="text-xs">{t("posts.to")}</Label><Input id="event_ends_at" value={eventEndsAt} onChange={e => { setEventEndsAt(e.target.value); setIsDirty(true); }} type="date" className="w-full" /></div>
                     </div>
                   </div>
-                  {/* Posts */}
+                  {/* Zaplanowane wydarzenia (kolejka + historia) */}
                   <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm space-y-4">
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{t("posts.posts_label")}</p>
-                    <p className="text-xs text-muted-foreground -mt-2">{t("posts.posts_desc")}</p>
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{t("posts.events_label")}</p>
+                    <p className="text-xs text-muted-foreground -mt-2">{t("posts.events_desc")}</p>
+                    {/* Formularz dodania */}
                     <div className="space-y-3 border border-border/60 rounded-2xl p-3">
-                      <textarea rows={3} value={postDescription} maxLength={600} onChange={e => setPostDescription(e.target.value)} placeholder={t("posts.post_placeholder")} className="w-full rounded-2xl border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none" />
-                      <p className="text-[11px] text-muted-foreground text-right -mt-2">{postDescription.length}/600</p>
-                      {postPhotos.length > 0 && (
-                        <div className="flex gap-2 flex-wrap">
-                          {postPhotos.map((url, idx) => (
-                            <div key={idx} className="relative w-16 h-16 rounded-2xl overflow-hidden">
-                              <img src={url} className="w-full h-full object-cover" />
-                              <button onClick={() => setPostPhotos(prev => prev.filter((_, i) => i !== idx))} className="absolute top-0.5 right-0.5 h-4 w-4 rounded-full bg-black/60 flex items-center justify-center"><X className="h-2.5 w-2.5 text-white" /></button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                      <div className="flex items-center gap-2">
-                        <button onClick={() => postPhotoInputRef.current?.click()} disabled={postPhotos.length >= 4} className="flex items-center gap-1.5 text-xs text-muted-foreground px-3 py-1.5 rounded-full bg-muted active:opacity-60 disabled:opacity-40">
-                          {postPhotoUploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ImagePlus className="h-3.5 w-3.5" />}
-                          {t("posts.photos")}
-                        </button>
-                        <input ref={postPhotoInputRef} type="file" accept="image/*,.heic,.heif" multiple className="hidden" onChange={handlePostPhotoUpload} />
-                        <p className="ml-auto text-[11px] text-muted-foreground">{t("posts.visible_hint")}</p>
+                      <div className="space-y-1">
+                        <Label htmlFor="new_event_title" className="text-xs">{t("posts.events_title_label")}</Label>
+                        <Input id="new_event_title" value={newEventTitle} maxLength={40} onChange={e => setNewEventTitle(e.target.value)} placeholder={t("posts.events_title_placeholder")} />
+                        <p className="text-[11px] text-muted-foreground text-right">{newEventTitle.length}/40</p>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="space-y-1 min-w-0"><Label htmlFor="new_event_start" className="text-xs">{t("posts.from")}</Label><Input id="new_event_start" type="date" value={newEventStartsAt} onChange={e => setNewEventStartsAt(e.target.value)} className="w-full" /></div>
+                        <div className="space-y-1 min-w-0"><Label htmlFor="new_event_end" className="text-xs">{t("posts.events_to_optional")}</Label><Input id="new_event_end" type="date" value={newEventEndsAt} onChange={e => setNewEventEndsAt(e.target.value)} className="w-full" /></div>
                       </div>
                       <button
-                        onClick={handleAddPost}
-                        disabled={submittingPost || (!postDescription.trim() && postPhotos.length === 0)}
+                        onClick={handleAddEvent}
+                        disabled={addingEvent || !newEventTitle.trim() || !newEventStartsAt}
                         className="w-full py-2.5 rounded-full bg-[#D45113] text-white font-bold text-sm active:scale-[0.98] transition-transform disabled:opacity-40"
                       >
-                        {submittingPost ? t("posts.publishing") : t("posts.publish")}
+                        {addingEvent ? t("posts.events_adding") : t("posts.events_add")}
                       </button>
                     </div>
-                    {posts.length > 0 && <p className="text-xs font-bold text-slate-400 uppercase tracking-widest pt-1">{t("posts.history")}</p>}
-                    {posts.length === 0 && <p className="text-xs text-muted-foreground text-center py-4">{t("posts.empty")}</p>}
-                    <div className="space-y-3">
-                      {posts.map(post => (
-                        <div key={post.id} className="border border-border/50 rounded-2xl p-3 space-y-2">
-                          <div className="flex items-start justify-between gap-2">
-                            {post.description && <p className="text-sm leading-relaxed flex-1">{post.description}</p>}
-                            <button onClick={() => handleDeletePost(post.id)} className="flex-shrink-0 h-6 w-6 rounded-full bg-muted flex items-center justify-center active:opacity-60"><Trash2 className="h-3.5 w-3.5 text-muted-foreground" /></button>
-                          </div>
-                          {post.photo_urls.length > 0 && (
-                            <div className={`grid gap-1.5 ${post.photo_urls.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
-                              {post.photo_urls.map((url, idx) => <img key={idx} src={url} className="w-full rounded-2xl object-cover aspect-square" />)}
+                    {/* Lista: nadchodzace/aktywne + historia */}
+                    {(() => {
+                      const todayStr = new Date().toISOString().slice(0, 10);
+                      const upcoming = sortEventsAsc(events.filter(e => (e.ends_at ?? e.starts_at) >= todayStr));
+                      const past = [...events.filter(e => (e.ends_at ?? e.starts_at) < todayStr)]
+                        .sort((a, b) => (a.starts_at > b.starts_at ? -1 : a.starts_at < b.starts_at ? 1 : 0));
+                      if (events.length === 0) {
+                        return <p className="text-xs text-muted-foreground text-center py-4">{t("posts.events_empty")}</p>;
+                      }
+                      return (
+                        <div className="space-y-4">
+                          {upcoming.length > 0 && (
+                            <div className="space-y-2">
+                              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{t("posts.events_upcoming")}</p>
+                              {upcoming.map(ev => (
+                                <div key={ev.id} className="border border-border/50 rounded-2xl p-3 flex items-start justify-between gap-2">
+                                  <div className="min-w-0">
+                                    <p className="text-sm font-semibold leading-snug break-words">{ev.title}</p>
+                                    <p className="text-[11px] text-muted-foreground mt-0.5">{fmtEventRange(ev)}</p>
+                                  </div>
+                                  <button onClick={() => handleDeleteEvent(ev.id)} className="flex-shrink-0 h-6 w-6 rounded-full bg-muted flex items-center justify-center active:opacity-60"><Trash2 className="h-3.5 w-3.5 text-muted-foreground" /></button>
+                                </div>
+                              ))}
                             </div>
                           )}
-                          <p className="text-[11px] text-muted-foreground">{formatDistanceToNow(new Date(post.created_at), { addSuffix: true, locale: dateLocale() })}</p>
+                          {past.length > 0 && (
+                            <div className="space-y-2">
+                              <button type="button" onClick={() => setShowEventHistory(v => !v)} className="flex items-center gap-1.5 text-xs font-bold text-slate-400 uppercase tracking-widest active:opacity-60">
+                                {t("posts.events_history")} ({past.length})
+                                {showEventHistory ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                              </button>
+                              {showEventHistory && past.map(ev => (
+                                <div key={ev.id} className="border border-border/40 rounded-2xl p-3 opacity-60">
+                                  <p className="text-sm font-semibold leading-snug break-words">{ev.title}</p>
+                                  <p className="text-[11px] text-muted-foreground mt-0.5">{fmtEventRange(ev)}</p>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
-                      ))}
-                    </div>
+                      );
+                    })()}
                   </div>
                 </div>
                 {/* Preview panel - right (desktop) / bottom (mobile/tablet) */}

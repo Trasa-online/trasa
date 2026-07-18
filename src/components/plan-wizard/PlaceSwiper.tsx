@@ -1004,6 +1004,28 @@ function partitionBusinessFirst(places: MockPlace[]): MockPlace[] {
   return [...bizOrdered, ...restOrdered];
 }
 
+// Wybor pill wydarzenia dla wizytowki wg priorytetu: aktywny dzis z kolejki
+// (business_events) > staly event_title > najblizszy nadchodzacy z kolejki. EN-aware.
+function pickEventPillTitle(bp: any): string | undefined {
+  const isEn = (i18n.language || "").toLowerCase().startsWith("en");
+  const today = new Date().toISOString().slice(0, 10);
+  const titleOf = (e: any) => ((isEn && e?.title_en ? e.title_en : e?.title) || undefined);
+
+  const events: any[] = Array.isArray(bp?.business_events) ? bp.business_events : [];
+  const activeNow = events
+    .filter((e) => e.starts_at && e.starts_at <= today && (e.ends_at ?? e.starts_at) >= today)
+    .sort((a, b) => String(a.ends_at ?? a.starts_at).localeCompare(String(b.ends_at ?? b.starts_at)))[0];
+  if (activeNow) return titleOf(activeNow);
+
+  const standing = isEn && bp?.event_title_en ? bp.event_title_en : (bp?.event_title ?? undefined);
+  if (standing) return standing;
+
+  const upcoming = events
+    .filter((e) => e.starts_at && e.starts_at > today)
+    .sort((a, b) => String(a.starts_at).localeCompare(String(b.starts_at)))[0];
+  return upcoming ? titleOf(upcoming) : undefined;
+}
+
 function enrichWithBusinessProfile(p: any): MockPlace {
   const placeGallery: string[] = Array.isArray(p.gallery_urls) ? p.gallery_urls.filter(Boolean) : [];
 
@@ -1045,11 +1067,9 @@ function enrichWithBusinessProfile(p: any): MockPlace {
     photo_url: bp.cover_image_url || p.photo_url,
     // Show business section (logo, events, CTA) dla wszystkich biz
     businessLogoUrl: bp.logo_url ?? '',
-    // Zagraniczny podroznik (EN) widzi tytul wydarzenia po angielsku, gdy lokal go ma
-    // (auto-tlumaczenie lub reczne nadpisanie); fallback do PL.
-    businessEventTitle: (i18n.language || "").toLowerCase().startsWith("en") && (bp as any).event_title_en
-      ? (bp as any).event_title_en
-      : (bp.event_title ?? undefined),
+    // Pill wydarzenia: aktywny dzis z kolejki > staly event_title > najblizszy nadchodzacy.
+    // EN-aware (pokazuje EN tytul dla usera EN). Patrz pickEventPillTitle.
+    businessEventTitle: pickEventPillTitle(bp),
     businessPhone: bp.phone ?? null,
     businessWebsite: bp.website ?? null,
     businessInstagram: (bp.social_links as { instagram?: string } | null)?.instagram ?? null,
