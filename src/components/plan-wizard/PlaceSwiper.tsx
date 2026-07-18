@@ -1011,7 +1011,8 @@ function pickEventPillTitle(bp: any): string | undefined {
   const today = new Date().toISOString().slice(0, 10);
   const titleOf = (e: any) => ((isEn && e?.title_en ? e.title_en : e?.title) || undefined);
 
-  const events: any[] = Array.isArray(bp?.business_events) ? bp.business_events : [];
+  // Szkice (is_draft) nie trafiaja na wizytowke - tylko opublikowane wydarzenia.
+  const events: any[] = (Array.isArray(bp?.business_events) ? bp.business_events : []).filter((e: any) => !e?.is_draft);
   const activeNow = events
     .filter((e) => e.starts_at && e.starts_at <= today && (e.ends_at ?? e.starts_at) >= today)
     .sort((a, b) => String(a.ends_at ?? a.starts_at).localeCompare(String(b.ends_at ?? b.starts_at)))[0];

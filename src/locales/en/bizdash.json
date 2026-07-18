@@ -100,7 +100,16 @@
     "events_history": "History",
     "events_title_required": "Enter the event title",
     "events_start_required": "Pick a start date",
-    "events_date_error": "The end date cannot be earlier than the start date"
+    "events_date_error": "The end date cannot be earlier than the start date",
+    "events_draft_badge": "Draft",
+    "events_save_as_draft": "Save as draft",
+    "events_publish": "Publish",
+    "events_unpublish": "Hide (draft)",
+    "events_edit": "Edit",
+    "events_save": "Save",
+    "events_cancel": "Cancel",
+    "events_updated": "Updated",
+    "events_update_error": "Could not update the event"
   },
   "save": {
     "event_date_error": "The event end date cannot be earlier than the start date",

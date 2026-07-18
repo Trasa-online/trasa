@@ -100,7 +100,16 @@
     "events_history": "Historia",
     "events_title_required": "Podaj tytuł wydarzenia",
     "events_start_required": "Wybierz datę początku",
-    "events_date_error": "Data końca nie może być wcześniejsza niż data początku"
+    "events_date_error": "Data końca nie może być wcześniejsza niż data początku",
+    "events_draft_badge": "Szkic",
+    "events_save_as_draft": "Zapisz jako szkic",
+    "events_publish": "Opublikuj",
+    "events_unpublish": "Ukryj (szkic)",
+    "events_edit": "Edytuj",
+    "events_save": "Zapisz",
+    "events_cancel": "Anuluj",
+    "events_updated": "Zaktualizowano",
+    "events_update_error": "Nie udało się zaktualizować wydarzenia"
   },
   "save": {
     "event_date_error": "Data końca wydarzenia nie może być wcześniejsza niż data początku",

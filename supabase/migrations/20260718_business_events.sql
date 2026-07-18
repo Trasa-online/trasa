@@ -14,8 +14,13 @@ create table if not exists public.business_events (
   title_en_overridden boolean not null default false,
   starts_at date not null,
   ends_at date,
+  is_draft boolean not null default false,  -- szkic: widoczny w panelu, NIE na wizytowce
   created_at timestamptz not null default now()
 );
+
+-- Gdyby tabela istniala juz bez is_draft (wczesniejsza wersja migracji) - dodaj kolumne.
+alter table public.business_events
+  add column if not exists is_draft boolean not null default false;
 
 create index if not exists business_events_profile_idx on public.business_events(business_profile_id);
 create index if not exists business_events_place_idx on public.business_events(place_id);

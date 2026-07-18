@@ -7,7 +7,7 @@ import posthog from "posthog-js";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Loader2, BarChart2, MapPin, MousePointerClick, Plus, X, LogOut, ImagePlus, Trash2, Users, LayoutDashboard, Images, Store, Megaphone, TrendingUp, MessageCircle, Expand, ZoomIn, Video, Play, Camera, Star, Heart, ChevronUp, ChevronDown, ChevronLeft, GripVertical, HelpCircle, Eye, KeyRound, Clock, Settings, FileText, BookOpen } from "lucide-react";
+import { Loader2, BarChart2, MapPin, MousePointerClick, Plus, X, LogOut, ImagePlus, Trash2, Users, LayoutDashboard, Images, Store, Megaphone, TrendingUp, MessageCircle, Expand, ZoomIn, Video, Play, Camera, Star, Heart, ChevronUp, ChevronDown, ChevronLeft, GripVertical, HelpCircle, Eye, KeyRound, Clock, Settings, FileText, BookOpen, Pencil, Check } from "lucide-react";
 
 // Menu moze byc obrazem (JPG/PNG/WEBP) albo PDF - rozpoznajemy po rozszerzeniu URL.
 const isPdfUrl = (u: string): boolean => u.split("?")[0].toLowerCase().endsWith(".pdf");
@@ -544,7 +544,14 @@ const BusinessDashboard = () => {
   const [newEventStartsAt, setNewEventStartsAt] = useState("");
   const [newEventEndsAt, setNewEventEndsAt] = useState("");
   const [addingEvent, setAddingEvent] = useState(false);
+  const [newEventDraft, setNewEventDraft] = useState(false);
   const [showEventHistory, setShowEventHistory] = useState(false);
+  // Edycja inline istniejacego wydarzenia (tylko nadchodzace/aktywne).
+  const [editingEventId, setEditingEventId] = useState<string | null>(null);
+  const [editEventTitle, setEditEventTitle] = useState("");
+  const [editEventStartsAt, setEditEventStartsAt] = useState("");
+  const [editEventEndsAt, setEditEventEndsAt] = useState("");
+  const [savingEditEvent, setSavingEditEvent] = useState(false);
 
   const logoInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
@@ -1201,6 +1208,7 @@ const BusinessDashboard = () => {
         title,
         starts_at: newEventStartsAt,
         ends_at: newEventEndsAt || null,
+        is_draft: newEventDraft,
       })
       .select()
       .single();
@@ -1221,6 +1229,7 @@ const BusinessDashboard = () => {
     setNewEventTitle("");
     setNewEventStartsAt("");
     setNewEventEndsAt("");
+    setNewEventDraft(false);
     toast.success(t("posts.events_added"));
     setAddingEvent(false);
   };
@@ -1253,6 +1262,61 @@ const BusinessDashboard = () => {
         },
       },
     });
+  };
+
+  // Publikacja / cofniecie do szkicu (optimistic + rollback).
+  const handleTogglePublish = async (ev: any) => {
+    const next = !ev.is_draft;
+    setEvents(prev => prev.map(e => (e.id === ev.id ? { ...e, is_draft: next } : e)));
+    const { error } = await (supabase as any)
+      .from("business_events")
+      .update({ is_draft: next })
+      .eq("id", ev.id);
+    if (error) {
+      setEvents(prev => prev.map(e => (e.id === ev.id ? { ...e, is_draft: ev.is_draft } : e)));
+      toast.error(t("posts.events_update_error"));
+    }
+  };
+
+  // Wejscie w tryb edycji inline wydarzenia.
+  const handleStartEditEvent = (ev: any) => {
+    setEditingEventId(ev.id);
+    setEditEventTitle(ev.title ?? "");
+    setEditEventStartsAt(ev.starts_at ?? "");
+    setEditEventEndsAt(ev.ends_at ?? "");
+  };
+
+  const handleUpdateEvent = async (id: string) => {
+    const title = editEventTitle.trim();
+    if (!title) { toast.error(t("posts.events_title_required")); return; }
+    if (!editEventStartsAt) { toast.error(t("posts.events_start_required")); return; }
+    if (editEventEndsAt && editEventEndsAt < editEventStartsAt) { toast.error(t("posts.events_date_error")); return; }
+    const current = events.find(e => e.id === id);
+    if (!current) return;
+    setSavingEditEvent(true);
+    const { error } = await (supabase as any)
+      .from("business_events")
+      .update({ title, starts_at: editEventStartsAt, ends_at: editEventEndsAt || null })
+      .eq("id", id);
+    if (error) { toast.error(t("posts.events_update_error")); setSavingEditEvent(false); return; }
+    let updated = { ...current, title, starts_at: editEventStartsAt, ends_at: editEventEndsAt || null };
+    // Re-tlumaczenie EN gdy tytul sie zmienil i lokal go nie nadpisal recznie (best-effort).
+    if (title !== current.title && !current.title_en_overridden) {
+      try {
+        const { data: tr } = await supabase.functions.invoke("translate-content", {
+          body: { text: title, target_lang: "en", context: "event_title" },
+        });
+        const translation = (tr as any)?.translation;
+        if (translation) {
+          await (supabase as any).from("business_events").update({ title_en: translation }).eq("id", id);
+          updated = { ...updated, title_en: translation };
+        }
+      } catch { /* zapisz zmiane nawet gdy tlumaczenie padnie */ }
+    }
+    setEvents(prev => sortEventsAsc(prev.map(e => (e.id === id ? updated : e))));
+    setEditingEventId(null);
+    setSavingEditEvent(false);
+    toast.success(t("posts.events_updated"));
   };
 
   const handleSave = async () => {
@@ -2462,6 +2526,18 @@ const BusinessDashboard = () => {
                         <div className="space-y-1 min-w-0"><Label htmlFor="new_event_end" className="text-xs">{t("posts.events_to_optional")}</Label><Input id="new_event_end" type="date" value={newEventEndsAt} onChange={e => setNewEventEndsAt(e.target.value)} className="w-full" /></div>
                       </div>
                       <button
+                        type="button"
+                        role="switch"
+                        aria-checked={newEventDraft}
+                        onClick={() => setNewEventDraft(v => !v)}
+                        className="flex items-center gap-2.5 w-full active:opacity-70"
+                      >
+                        <span className={`relative inline-flex h-5 w-9 flex-shrink-0 items-center rounded-full transition-colors ${newEventDraft ? "bg-amber-500" : "bg-muted"}`}>
+                          <span className={`inline-block h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${newEventDraft ? "translate-x-4" : "translate-x-0.5"}`} />
+                        </span>
+                        <span className="text-xs text-muted-foreground">{t("posts.events_save_as_draft")}</span>
+                      </button>
+                      <button
                         onClick={handleAddEvent}
                         disabled={addingEvent || !newEventTitle.trim() || !newEventStartsAt}
                         className="w-full py-2.5 rounded-full bg-[#D45113] text-white font-bold text-sm active:scale-[0.98] transition-transform disabled:opacity-40"
@@ -2484,13 +2560,44 @@ const BusinessDashboard = () => {
                             <div className="space-y-2">
                               <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{t("posts.events_upcoming")}</p>
                               {upcoming.map(ev => (
-                                <div key={ev.id} className="border border-border/50 rounded-2xl p-3 flex items-start justify-between gap-2">
-                                  <div className="min-w-0">
-                                    <p className="text-sm font-semibold leading-snug break-words">{ev.title}</p>
-                                    <p className="text-[11px] text-muted-foreground mt-0.5">{fmtEventRange(ev)}</p>
+                                editingEventId === ev.id ? (
+                                  <div key={ev.id} className="border border-border/60 rounded-2xl p-3 space-y-3">
+                                    <div className="space-y-1">
+                                      <Label htmlFor={`edit_event_title_${ev.id}`} className="text-xs">{t("posts.events_title_label")}</Label>
+                                      <Input id={`edit_event_title_${ev.id}`} value={editEventTitle} maxLength={40} onChange={e => setEditEventTitle(e.target.value)} placeholder={t("posts.events_title_placeholder")} />
+                                      <p className="text-[11px] text-muted-foreground text-right">{editEventTitle.length}/40</p>
+                                    </div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                      <div className="space-y-1 min-w-0"><Label htmlFor={`edit_event_start_${ev.id}`} className="text-xs">{t("posts.from")}</Label><Input id={`edit_event_start_${ev.id}`} type="date" value={editEventStartsAt} onChange={e => setEditEventStartsAt(e.target.value)} className="w-full" /></div>
+                                      <div className="space-y-1 min-w-0"><Label htmlFor={`edit_event_end_${ev.id}`} className="text-xs">{t("posts.events_to_optional")}</Label><Input id={`edit_event_end_${ev.id}`} type="date" value={editEventEndsAt} onChange={e => setEditEventEndsAt(e.target.value)} className="w-full" /></div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <button onClick={() => handleUpdateEvent(ev.id)} disabled={savingEditEvent || !editEventTitle.trim() || !editEventStartsAt} className="flex-1 py-2 rounded-full bg-[#D45113] text-white font-bold text-xs active:scale-[0.98] transition-transform disabled:opacity-40 flex items-center justify-center gap-1.5"><Check className="h-3.5 w-3.5" />{t("posts.events_save")}</button>
+                                      <button onClick={() => setEditingEventId(null)} className="flex-1 py-2 rounded-full bg-secondary text-secondary-foreground font-bold text-xs active:scale-[0.98] transition-transform">{t("posts.events_cancel")}</button>
+                                    </div>
                                   </div>
-                                  <button onClick={() => handleDeleteEvent(ev.id)} className="flex-shrink-0 h-6 w-6 rounded-full bg-muted flex items-center justify-center active:opacity-60"><Trash2 className="h-3.5 w-3.5 text-muted-foreground" /></button>
-                                </div>
+                                ) : (
+                                  <div key={ev.id} className="border border-border/50 rounded-2xl p-3 space-y-2">
+                                    <div className="flex items-start justify-between gap-2">
+                                      <div className="min-w-0">
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                          <p className="text-sm font-semibold leading-snug break-words">{ev.title}</p>
+                                          {ev.is_draft && <span className="flex-shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">{t("posts.events_draft_badge")}</span>}
+                                        </div>
+                                        <p className="text-[11px] text-muted-foreground mt-0.5">{fmtEventRange(ev)}</p>
+                                      </div>
+                                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                                        <button onClick={() => handleStartEditEvent(ev)} className="h-6 w-6 rounded-full bg-muted flex items-center justify-center active:opacity-60"><Pencil className="h-3.5 w-3.5 text-muted-foreground" /></button>
+                                        <button onClick={() => handleDeleteEvent(ev.id)} className="h-6 w-6 rounded-full bg-muted flex items-center justify-center active:opacity-60"><Trash2 className="h-3.5 w-3.5 text-muted-foreground" /></button>
+                                      </div>
+                                    </div>
+                                    {ev.is_draft ? (
+                                      <button onClick={() => handleTogglePublish(ev)} className="w-full py-1.5 rounded-full bg-amber-500 text-white font-bold text-xs active:scale-[0.98] transition-transform">{t("posts.events_publish")}</button>
+                                    ) : (
+                                      <button onClick={() => handleTogglePublish(ev)} className="w-full py-1.5 rounded-full bg-secondary text-secondary-foreground font-semibold text-xs active:scale-[0.98] transition-transform">{t("posts.events_unpublish")}</button>
+                                    )}
+                                  </div>
+                                )
                               ))}
                             </div>
                           )}
