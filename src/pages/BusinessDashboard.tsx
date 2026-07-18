@@ -482,6 +482,7 @@ const BusinessDashboard = () => {
   const [postalCode, setPostalCode] = useState("");
   const [tags, setTags] = useState<string[]>([]);
   const [mainCategory, setMainCategory] = useState("");
+  const [secondaryCategory, setSecondaryCategory] = useState("");
   const [bizSubcategories, setBizSubcategories] = useState<string[]>([]);
   const [customVibeTag, setCustomVibeTag] = useState("");
   const [description, setDescription] = useState("");
@@ -672,6 +673,7 @@ const BusinessDashboard = () => {
     setPostalCode(profileData.postal_code ?? "");
     setTags(profileData.tags ?? []);
     setMainCategory(profileData.main_category ?? "");
+    setSecondaryCategory((profileData as any).secondary_category ?? "");
     setBizSubcategories(profileData.subcategories ?? []);
     setCustomSubcategory((profileData as any).custom_subcategory ?? "");
     setCustomSubcategoryStatus((profileData as any).custom_subcategory_status ?? null);
@@ -1439,6 +1441,15 @@ const BusinessDashboard = () => {
           .update({ event_title_en: eventTitleEnToSave || null, event_title_en_overridden: eventTitleEnOverridden })
           .eq("id", profile.id);
         if (enErr) console.warn("[BusinessDashboard] zapis event_title_en nie powiodl sie (uruchom migracje?):", enErr.message);
+      }
+      // secondary_category OSOBNYM update'em (best-effort) - kolumna moze nie istniec przed
+      // uruchomieniem migracji; blad nie wywala glownego zapisu.
+      {
+        const { error: secErr } = await (supabase as any)
+          .from("business_profiles")
+          .update({ secondary_category: secondaryCategory || null })
+          .eq("id", profile.id);
+        if (secErr) console.warn("[BusinessDashboard] zapis secondary_category nie powiodl sie (uruchom migracje?):", secErr.message);
       }
       if (isComplete && !reviewRequestedAt) {
         setReviewRequestedAt(nowIso);
@@ -2261,7 +2272,7 @@ const BusinessDashboard = () => {
                       const active = mainCategory === cat.id;
                       return (
                         <button key={cat.id} type="button"
-                          onClick={() => { setMainCategory(active ? "" : cat.id); setBizSubcategories([]); setIsDirty(true); }}
+                          onClick={() => { const newMain = active ? "" : cat.id; setMainCategory(newMain); setBizSubcategories([]); if (secondaryCategory === newMain) setSecondaryCategory(""); setIsDirty(true); }}
                           className={`flex items-center gap-2.5 px-3 py-3 rounded-xl border-2 text-left transition-all ${active ? 'border-slate-400 bg-slate-100 text-slate-900' : 'border-slate-100 bg-slate-50 text-slate-600 hover:border-slate-200'}`}>
                           <span className="text-xl shrink-0">{cat.emoji}</span>
                           <div className="min-w-0">
@@ -2330,6 +2341,32 @@ const BusinessDashboard = () => {
                            t('profile.cat_pending')}
                         </p>
                       )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Kategoria dodatkowa (opcjonalnie) */}
+                {mainCategory && (
+                  <div className="pt-2 border-t border-border/40">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">
+                      {t("category.secondary_label")} <span className="normal-case font-normal">{t("profile.optional")}</span>
+                    </p>
+                    <p className="text-[11px] text-muted-foreground leading-snug mb-2">{t("category.secondary_hint")}</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {MAIN_CATEGORIES.filter(cat => cat.id !== mainCategory).map(cat => {
+                        const active = secondaryCategory === cat.id;
+                        return (
+                          <button key={cat.id} type="button"
+                            onClick={() => { setSecondaryCategory(active ? "" : cat.id); setIsDirty(true); }}
+                            className={`flex items-center gap-2.5 px-3 py-3 rounded-xl border-2 text-left transition-all ${active ? 'border-slate-400 bg-slate-100 text-slate-900' : 'border-slate-100 bg-slate-50 text-slate-600 hover:border-slate-200'}`}>
+                            <span className="text-xl shrink-0">{cat.emoji}</span>
+                            <div className="min-w-0">
+                              <p className="text-xs font-semibold leading-tight">{cat.label}</p>
+                              <p className="hidden md:block text-[10px] text-muted-foreground mt-0.5 truncate">{cat.hint}</p>
+                            </div>
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
                 )}

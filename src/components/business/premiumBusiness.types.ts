@@ -42,6 +42,7 @@ export interface PremiumBusinessData {
   // ── Categorization ─────────────────────────────────────────────────────────
   /** Main category id z MAIN_CATEGORIES (np. 'food', 'culture'). */
   mainCategoryId?: string;
+  secondaryCategoryId?: string;
   /** Subcategories z business_profiles.subcategories. */
   subcategories?: string[];
   /** Custom subcategory zatwierdzona przez admina. */

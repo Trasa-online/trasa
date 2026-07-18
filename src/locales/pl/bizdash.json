@@ -300,6 +300,10 @@
     "button_color": "Kolor guzika \"Dodaj\"",
     "button_color_desc": "Glowny guzik akcji na wizytowce"
   },
+  "category": {
+    "secondary_label": "Kategoria dodatkowa",
+    "secondary_hint": "Opcjonalnie - jeśli lokal łączy dwa profile, np. kawiarnia i sklep."
+  },
   "profile": {
     "title": "Dane lokalu",
     "subtitle": "Informacje kontaktowe, opis i tagi widoczne w wizytówce.",

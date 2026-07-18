@@ -300,6 +300,10 @@
     "button_color": "\"Add\" button color",
     "button_color_desc": "Main action button on the card"
   },
+  "category": {
+    "secondary_label": "Additional category",
+    "secondary_hint": "Optional - if your place blends two profiles, e.g. cafe and shop."
+  },
   "profile": {
     "title": "Business details",
     "subtitle": "Contact info, description and tags visible on your card.",

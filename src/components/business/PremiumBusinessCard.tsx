@@ -306,13 +306,22 @@ function CategoriesSection({ data }: SectionProps) {
   const mainLabel = data.mainCategoryId
     ? mainCategoryLabel(data.mainCategoryId)
     : null;
+  // Kategoria dodatkowa (secondary) - druga top-level, gdy lokal laczy dwa profile.
+  const secondaryLabel = data.secondaryCategoryId && data.secondaryCategoryId !== data.mainCategoryId
+    ? mainCategoryLabel(data.secondaryCategoryId)
+    : null;
   const subs = dedupSubcategories(data.subcategories);
-  if (!mainLabel && subs.length === 0) return null;
+  if (!mainLabel && !secondaryLabel && subs.length === 0) return null;
   return (
     <div className="flex flex-wrap gap-1.5">
       {mainLabel && (
         <span className="px-3 py-1 rounded-full text-xs font-semibold bg-orange-50 border border-orange-100 text-orange-700">
           {mainLabel}
+        </span>
+      )}
+      {secondaryLabel && (
+        <span className="px-3 py-1 rounded-full text-xs font-semibold bg-orange-50 border border-orange-100 text-orange-700">
+          {secondaryLabel}
         </span>
       )}
       {subs.map((sub) => (

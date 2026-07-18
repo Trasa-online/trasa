@@ -37,6 +37,7 @@ export function fromMockPlace(
     coverVideoUrl: place.coverVideoUrl,
 
     mainCategoryId: place.businessMainCategory,
+    secondaryCategoryId: place.businessSecondaryCategory,
     subcategories: place.businessSubcategories ?? [],
     tags: place.businessTags?.length ? place.businessTags : (place.vibe_tags ?? []),
 

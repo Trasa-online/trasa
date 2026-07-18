@@ -51,6 +51,7 @@ export interface MockPlace {
   businessSubcategories?: string[]; // subcategories from business_profiles (for custom filtering)
   businessTags?: string[]; // custom tags z business_profiles.tags - prio nad vibe_tags w UI
   businessMainCategory?: string; // main_category id (np. "food") z MAIN_CATEGORIES - dla badge na karcie
+  businessSecondaryCategory?: string; // opcjonalna druga top-level kategoria (secondary_category)
   businessMenuImageUrls?: string[]; // zdjecia menu (food) lub cennika (culture/attractions) - max 6 sztuk
   // Godziny otwarcia ustawione przez wlasciciela lokalu (priorytet nad Google weekday_text)
   // Shape: { mon: { open: "09:00", close: "22:00" } | { closed: true }, ... }
@@ -1079,6 +1080,7 @@ function enrichWithBusinessProfile(p: any): MockPlace {
     businessSubcategories: bp.subcategories ?? [],
     businessTags: Array.isArray(bp.tags) ? bp.tags.filter(Boolean) : [],
     businessMainCategory: bp.main_category ?? undefined,
+    businessSecondaryCategory: (bp as any).secondary_category ?? undefined,
     businessMenuImageUrls: Array.isArray(bp.menu_image_urls) ? bp.menu_image_urls.filter(Boolean) : [],
     businessOpeningHours: bp.opening_hours && typeof bp.opening_hours === "object" && Object.keys(bp.opening_hours).length > 0
       ? bp.opening_hours
