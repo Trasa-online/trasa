@@ -155,5 +155,18 @@
     "all_rated": "You've rated all places!",
     "liked_count": "You liked {{count}} places. See what your group picked!",
     "see_matches": "See picks"
+  },
+  "distance_you": "you",
+  "distance_start": "the start",
+  "city_picker": {
+    "not_your_city": "Don't see your city?",
+    "city_placeholder": "Enter a city name",
+    "send": "Send",
+    "notify_hint": "We'll let you know when your city is available in the app.",
+    "send_error": "Failed to send request",
+    "notify_success": "Thanks! We'll let you know when {{city}} is available.",
+    "next": "Next",
+    "coming_soon_cta": "Coming soon 🔒",
+    "coming_soon_badge": "Soon"
   }
 }

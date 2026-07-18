@@ -19,8 +19,7 @@ import { Camera as CapCamera, CameraResultType, CameraSource } from "@capacitor/
 
 type Provider = "email" | "google" | "apple";
 
-const PROVIDER_LABEL: Record<Provider, string> = {
-  email: "Email i hasło",
+const PROVIDER_LABEL: Record<string, string> = {
   google: "Google",
   apple: "Apple",
 };
@@ -44,7 +43,10 @@ function ProviderIcon({ provider }: { provider: Provider }) {
 
 function LinkedAccountsSection() {
   const queryClient = useQueryClient();
+  const { t } = useTranslation("settings");
   const [linking, setLinking] = useState<Provider | null>(null);
+
+  const providerLabel = (p: string) => (p === "email" ? t("provider_email") : PROVIDER_LABEL[p as Provider] ?? p);
 
   const { data: identities = [], isLoading } = useQuery({
     queryKey: ["user-identities"],
@@ -67,11 +69,11 @@ function LinkedAccountsSection() {
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message.toLowerCase() : "";
       if (msg.includes("manual linking") || msg.includes("not enabled")) {
-        toast.error("Łączenie kont jest wyłączone w ustawieniach projektu.");
+        toast.error(t("link_disabled"));
       } else if (msg.includes("already")) {
-        toast.error("To konto jest już połączone z innym profilem.");
+        toast.error(t("link_already"));
       } else {
-        toast.error(err instanceof Error ? err.message : "Błąd łączenia konta");
+        toast.error(err instanceof Error ? err.message : t("link_error"));
       }
       setLinking(null);
     }
@@ -79,17 +81,17 @@ function LinkedAccountsSection() {
 
   const handleUnlink = async (identity: { id: string; provider: string }) => {
     if (identities.length <= 1) {
-      toast.error("Nie możesz odłączyć jedynego sposobu logowania.");
+      toast.error(t("unlink_only_method"));
       return;
     }
-    if (!confirm(`Odłączyć logowanie przez ${PROVIDER_LABEL[identity.provider as Provider] ?? identity.provider}?`)) return;
+    if (!confirm(t("unlink_confirm", { provider: providerLabel(identity.provider) }))) return;
     try {
       const { error } = await supabase.auth.unlinkIdentity(identity as never);
       if (error) throw error;
-      toast.success("Odłączono");
+      toast.success(t("unlinked"));
       queryClient.invalidateQueries({ queryKey: ["user-identities"] });
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Błąd odłączania");
+      toast.error(err instanceof Error ? err.message : t("unlink_error"));
     }
   };
 
@@ -99,7 +101,7 @@ function LinkedAccountsSection() {
 
   return (
     <div className="space-y-2">
-      <h3 className="text-xs uppercase tracking-wide text-muted-foreground px-1 mb-1">Połączone konta</h3>
+      <h3 className="text-xs uppercase tracking-wide text-muted-foreground px-1 mb-1">{t("linked_accounts")}</h3>
 
       {identities.map((identity) => {
         const provider = identity.provider as Provider;
@@ -108,7 +110,7 @@ function LinkedAccountsSection() {
           <div key={identity.id} className="w-full flex items-center gap-3 px-4 py-3.5 bg-card rounded-2xl border border-border/40">
             <ProviderIcon provider={provider} />
             <div className="flex-1 min-w-0">
-              <span className="text-sm font-medium block">{PROVIDER_LABEL[provider] ?? provider}</span>
+              <span className="text-sm font-medium block">{providerLabel(provider)}</span>
               {identity.identity_data?.email && (
                 <span className="text-xs text-muted-foreground truncate block">{identity.identity_data.email}</span>
               )}
@@ -118,7 +120,7 @@ function LinkedAccountsSection() {
                 onClick={() => handleUnlink(identity)}
                 className="text-xs text-muted-foreground hover:text-destructive px-2 py-1"
               >
-                Odłącz
+                {t("unlink")}
               </button>
             )}
           </div>
@@ -132,7 +134,7 @@ function LinkedAccountsSection() {
           className="w-full flex items-center gap-3 px-4 py-3.5 bg-card rounded-2xl border border-border/40 hover:bg-muted transition-colors text-left disabled:opacity-60"
         >
           <ProviderIcon provider="google" />
-          <span className="text-sm font-medium flex-1">{linking === "google" ? "Łączę..." : "Połącz konto Google"}</span>
+          <span className="text-sm font-medium flex-1">{linking === "google" ? t("linking") : t("link_google")}</span>
           <LinkIcon className="h-4 w-4 text-muted-foreground" />
         </button>
       )}
@@ -144,7 +146,7 @@ function LinkedAccountsSection() {
           className="w-full flex items-center gap-3 px-4 py-3.5 bg-card rounded-2xl border border-border/40 hover:bg-muted transition-colors text-left disabled:opacity-60"
         >
           <ProviderIcon provider="apple" />
-          <span className="text-sm font-medium flex-1">{linking === "apple" ? "Łączę..." : "Połącz konto Apple"}</span>
+          <span className="text-sm font-medium flex-1">{linking === "apple" ? t("linking") : t("link_apple")}</span>
           <LinkIcon className="h-4 w-4 text-muted-foreground" />
         </button>
       )}
@@ -194,6 +196,7 @@ function CookieConsentSection() {
 }
 
 function DeleteAccountButton({ onDeleted }: { onDeleted: () => void }) {
+  const { t } = useTranslation("settings");
   const [confirm, setConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -204,7 +207,7 @@ function DeleteAccountButton({ onDeleted }: { onDeleted: () => void }) {
       if (error) throw error;
       onDeleted();
     } catch {
-      toast.error("Nie udało się usunąć konta. Spróbuj ponownie.");
+      toast.error(t("delete_error"));
       setDeleting(false);
       setConfirm(false);
     }
@@ -217,16 +220,16 @@ function DeleteAccountButton({ onDeleted }: { onDeleted: () => void }) {
         className="w-full flex items-center gap-3 px-4 py-3.5 bg-card rounded-2xl border border-border/40 hover:bg-muted transition-colors text-left"
       >
         <Trash2 className="h-4 w-4 text-destructive flex-shrink-0" />
-        <span className="text-sm font-medium text-destructive flex-1">Usuń konto</span>
+        <span className="text-sm font-medium text-destructive flex-1">{t("delete_account")}</span>
       </button>
     );
   }
 
   return (
     <div className="rounded-2xl border border-destructive/40 bg-destructive/5 p-4 space-y-3">
-      <p className="text-sm font-semibold text-destructive">Usunąć konto na stałe?</p>
+      <p className="text-sm font-semibold text-destructive">{t("delete_confirm_title")}</p>
       <p className="text-xs text-muted-foreground leading-relaxed">
-        Wszystkie Twoje trasy, piny, preferencje i dane zostaną trwale usunięte. Tej operacji nie można cofnąć.
+        {t("delete_confirm_desc")}
       </p>
       <div className="flex gap-2">
         <button
@@ -234,14 +237,14 @@ function DeleteAccountButton({ onDeleted }: { onDeleted: () => void }) {
           disabled={deleting}
           className="flex-1 py-2.5 rounded-2xl border border-border/60 text-sm font-medium"
         >
-          Anuluj
+          {t("cancel")}
         </button>
         <button
           onClick={handleDelete}
           disabled={deleting}
           className="flex-1 py-2.5 rounded-2xl bg-destructive text-destructive-foreground text-sm font-semibold disabled:opacity-50"
         >
-          {deleting ? "Usuwam…" : "Usuń na stałe"}
+          {deleting ? t("deleting") : t("delete_permanent")}
         </button>
       </div>
     </div>
@@ -249,6 +252,7 @@ function DeleteAccountButton({ onDeleted }: { onDeleted: () => void }) {
 }
 
 function ChangePasswordSection() {
+  const { t } = useTranslation("settings");
   const [open, setOpen] = useState(false);
   const [current, setCurrent] = useState("");
   const [newPass, setNewPass] = useState("");
@@ -257,8 +261,8 @@ function ChangePasswordSection() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (newPass.length < 6) { toast.error("Hasło musi mieć co najmniej 6 znaków"); return; }
-    if (newPass !== confirm) { toast.error("Hasła nie są identyczne"); return; }
+    if (newPass.length < 6) { toast.error(t("password_too_short")); return; }
+    if (newPass !== confirm) { toast.error(t("password_mismatch")); return; }
     setLoading(true);
     try {
       // Verify current password by re-authenticating
@@ -267,15 +271,15 @@ function ChangePasswordSection() {
         email: user!.email!,
         password: current,
       });
-      if (signInErr) throw new Error("Nieprawidłowe aktualne hasło");
+      if (signInErr) throw new Error(t("password_wrong_current"));
 
       const { error } = await supabase.auth.updateUser({ password: newPass });
       if (error) throw error;
-      toast.success("Hasło zostało zmienione");
+      toast.success(t("password_changed"));
       setOpen(false);
       setCurrent(""); setNewPass(""); setConfirm("");
     } catch (err: any) {
-      toast.error(err.message || "Błąd zmiany hasła");
+      toast.error(err.message || t("password_change_error"));
     } finally {
       setLoading(false);
     }
@@ -288,7 +292,7 @@ function ChangePasswordSection() {
         className="w-full flex items-center gap-3 px-4 py-3.5 bg-card rounded-2xl border border-border/40 hover:bg-muted transition-colors text-left"
       >
         <KeyRound className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-        <span className="text-sm font-medium flex-1">Zmień hasło</span>
+        <span className="text-sm font-medium flex-1">{t("change_password")}</span>
         <ChevronRight className="h-4 w-4 text-muted-foreground" />
       </button>
     );
@@ -296,11 +300,11 @@ function ChangePasswordSection() {
 
   return (
     <div className="bg-card border border-border/40 rounded-2xl p-4 space-y-3">
-      <p className="text-sm font-semibold">Zmień hasło</p>
+      <p className="text-sm font-semibold">{t("change_password")}</p>
       <form onSubmit={handleSubmit} className="space-y-3">
         <Input
           type="password"
-          placeholder="Aktualne hasło"
+          placeholder={t("password_current_placeholder")}
           value={current}
           onChange={(e) => setCurrent(e.target.value)}
           required
@@ -308,7 +312,7 @@ function ChangePasswordSection() {
         />
         <Input
           type="password"
-          placeholder="Nowe hasło (min. 6 znaków)"
+          placeholder={t("password_new_placeholder")}
           value={newPass}
           onChange={(e) => setNewPass(e.target.value)}
           required
@@ -316,7 +320,7 @@ function ChangePasswordSection() {
         />
         <Input
           type="password"
-          placeholder="Powtórz nowe hasło"
+          placeholder={t("password_repeat_placeholder")}
           value={confirm}
           onChange={(e) => setConfirm(e.target.value)}
           required
@@ -328,14 +332,14 @@ function ChangePasswordSection() {
             onClick={() => { setOpen(false); setCurrent(""); setNewPass(""); setConfirm(""); }}
             className="flex-1 py-2.5 rounded-2xl border border-border/60 text-sm font-medium"
           >
-            Anuluj
+            {t("cancel")}
           </button>
           <button
             type="submit"
             disabled={loading}
             className="flex-1 py-2.5 rounded-2xl bg-primary hover:bg-primary/90 text-white text-sm font-semibold disabled:opacity-50"
           >
-            {loading ? "Zapisuję..." : "Zapisz"}
+            {loading ? t("saving") : t("save")}
           </button>
         </div>
       </form>
@@ -346,6 +350,7 @@ function ChangePasswordSection() {
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 
 function BugReportSection({ userId }: { userId: string }) {
+  const { t } = useTranslation("settings");
   const [open, setOpen] = useState(false);
   const [description, setDescription] = useState("");
   const [screenshotUrl, setScreenshotUrl] = useState<string | null>(null);
@@ -365,14 +370,14 @@ function BugReportSection({ userId }: { userId: string }) {
     if (!error) {
       setScreenshotUrl(`${SUPABASE_URL}/storage/v1/object/public/route-images/${path}`);
     } else {
-      toast.error("Nie udało się przesłać zdjęcia");
+      toast.error(t("bug_upload_error"));
     }
     setUploading(false);
     if (fileRef.current) fileRef.current.value = "";
   };
 
   const handleSubmit = async () => {
-    if (!description.trim()) { toast.error("Opisz błąd przed wysłaniem"); return; }
+    if (!description.trim()) { toast.error(t("bug_empty")); return; }
     setSubmitting(true);
     const { error } = await (supabase as any).from("bug_reports").insert({
       user_id: userId,
@@ -380,7 +385,7 @@ function BugReportSection({ userId }: { userId: string }) {
       screenshot_url: screenshotUrl,
       source: "user",
     });
-    if (error) { toast.error(`Błąd: ${error.message}`); setSubmitting(false); return; }
+    if (error) { toast.error(t("bug_error", { message: error.message })); setSubmitting(false); return; }
     setDone(true);
     setSubmitting(false);
   };
@@ -394,7 +399,7 @@ function BugReportSection({ userId }: { userId: string }) {
         className="w-full flex items-center gap-3 px-4 py-3.5 bg-card rounded-2xl border border-border/40 hover:bg-muted transition-colors text-left"
       >
         <AlertCircle className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-        <span className="text-sm font-medium flex-1">Zgłoś błąd</span>
+        <span className="text-sm font-medium flex-1">{t("report_bug")}</span>
         <ChevronRight className="h-4 w-4 text-muted-foreground" />
       </button>
     );
@@ -404,9 +409,9 @@ function BugReportSection({ userId }: { userId: string }) {
     return (
       <div className="bg-card border border-border/40 rounded-2xl p-5 flex flex-col items-center gap-2 text-center">
         <div className="text-3xl">🙏</div>
-        <p className="text-sm font-bold">Dziękujemy za zgłoszenie!</p>
-        <p className="text-xs text-muted-foreground leading-relaxed">Przejrzymy je jak najszybciej i wrócimy z informacją.</p>
-        <button onClick={reset} className="mt-1 text-xs text-muted-foreground/60 underline underline-offset-2">Zamknij</button>
+        <p className="text-sm font-bold">{t("bug_thanks_title")}</p>
+        <p className="text-xs text-muted-foreground leading-relaxed">{t("bug_thanks_desc")}</p>
+        <button onClick={reset} className="mt-1 text-xs text-muted-foreground/60 underline underline-offset-2">{t("bug_close")}</button>
       </div>
     );
   }
@@ -414,7 +419,7 @@ function BugReportSection({ userId }: { userId: string }) {
   return (
     <div className="bg-card border border-border/40 rounded-2xl p-4 space-y-3">
       <div className="flex items-center justify-between">
-        <p className="text-sm font-semibold">Zgłoś błąd</p>
+        <p className="text-sm font-semibold">{t("report_bug")}</p>
         <button onClick={reset} className="p-1 text-muted-foreground/60 hover:text-muted-foreground">
           <X className="h-4 w-4" />
         </button>
@@ -422,7 +427,7 @@ function BugReportSection({ userId }: { userId: string }) {
       <textarea
         value={description}
         onChange={e => setDescription(e.target.value)}
-        placeholder="Opisz co się stało - na jakim ekranie, co kliknąłeś/-aś, co pojawiło się zamiast oczekiwanego efektu…"
+        placeholder={t("bug_placeholder")}
         rows={4}
         maxLength={2000}
         className="w-full bg-background rounded-2xl px-3 py-2.5 text-sm resize-none focus:outline-none border border-border/30 placeholder:text-muted-foreground/60 leading-relaxed"
@@ -444,7 +449,7 @@ function BugReportSection({ userId }: { userId: string }) {
           className="w-full py-2.5 rounded-2xl border border-dashed border-border/50 text-xs text-muted-foreground flex items-center justify-center gap-2 hover:bg-muted/40 transition-colors"
         >
           <Camera className="h-4 w-4" />
-          {uploading ? "Przesyłam zdjęcie…" : "Dodaj zrzut ekranu (opcjonalnie)"}
+          {uploading ? t("bug_uploading") : t("bug_add_screenshot")}
         </button>
       )}
       <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleScreenshot} />
@@ -453,14 +458,14 @@ function BugReportSection({ userId }: { userId: string }) {
           onClick={reset}
           className="flex-1 py-2.5 rounded-2xl border border-border/60 text-sm font-medium"
         >
-          Anuluj
+          {t("cancel")}
         </button>
         <button
           onClick={handleSubmit}
           disabled={submitting || !description.trim()}
           className="flex-1 py-2.5 rounded-full bg-primary text-white text-sm font-semibold disabled:opacity-50 active:scale-[0.98] transition-transform"
         >
-          {submitting ? "Wysyłam…" : "Wyślij zgłoszenie"}
+          {submitting ? t("bug_submitting") : t("bug_submit")}
         </button>
       </div>
     </div>
@@ -559,8 +564,8 @@ const Settings = () => {
     if (!user) return;
     const allowed = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" } as const;
     const ext = allowed[file.type as keyof typeof allowed];
-    if (!ext) { toast.error("Tylko JPG, PNG lub WebP"); return; }
-    if (file.size > 5 * 1024 * 1024) { toast.error("Maks 5 MB"); return; }
+    if (!ext) { toast.error(t("avatar_type_error")); return; }
+    if (file.size > 5 * 1024 * 1024) { toast.error(t("avatar_size_error")); return; }
     const fileName = `${user.id}/avatar.${ext}`;
     const { error: uploadError } = await supabase.storage
       .from("avatars")
@@ -634,7 +639,7 @@ const Settings = () => {
                 type="button"
                 onClick={handleNativePhotoPick}
                 className="absolute bottom-0 right-0 bg-foreground text-background p-1.5 rounded-full cursor-pointer shadow"
-                aria-label="Zmień zdjęcie profilowe"
+                aria-label={t("avatar_change_aria")}
               >
                 <Camera className="h-3.5 w-3.5" />
               </button>
@@ -661,7 +666,7 @@ const Settings = () => {
               id="first_name"
               value={firstName}
               onChange={(e) => setFirstName(e.target.value)}
-              placeholder="np. Marta"
+              placeholder={t("first_name_placeholder")}
               className="bg-background"
             />
           </div>
@@ -671,7 +676,7 @@ const Settings = () => {
               id="username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="twoja_nazwa"
+              placeholder={t("username_placeholder")}
               className="bg-background"
             />
           </div>
@@ -680,7 +685,7 @@ const Settings = () => {
             disabled={updateProfileMutation.isPending}
             className="w-full py-3 rounded-2xl bg-primary hover:bg-primary/90 text-white font-semibold text-sm transition-colors disabled:opacity-50"
           >
-            {updateProfileMutation.isPending ? "Zapisuję..." : t("save_changes")}
+            {updateProfileMutation.isPending ? t("saving") : t("save_changes")}
           </button>
         </div>
 

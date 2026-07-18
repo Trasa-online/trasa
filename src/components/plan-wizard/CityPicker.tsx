@@ -6,6 +6,21 @@ import { toast } from "sonner";
 import { ChevronDown, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useTranslation } from "react-i18next";
+import i18n from "@/i18n";
+
+// EN display names for cities/countries. Canonical PL `name` in COUNTRIES stays
+// intact (used for DB queries / expandCity) - these maps are display-only.
+const CITY_EN: Record<string, string> = {
+  "Warszawa": "Warsaw", "Gdańsk": "Gdansk", "Sopot": "Sopot", "Gdynia": "Gdynia",
+  "Trójmiasto": "Tricity", "Kraków": "Krakow", "Łódź": "Lodz", "Poznań": "Poznan",
+  "Wrocław": "Wroclaw", "Budapeszt": "Budapest", "Valletta": "Valletta",
+  "Barcelona": "Barcelona", "Lizbona": "Lisbon", "Rzym": "Rome",
+};
+const COUNTRY_EN: Record<string, string> = {
+  "Polska": "Poland", "Węgry": "Hungary", "Malta": "Malta",
+  "Hiszpania": "Spain", "Portugalia": "Portugal", "Włochy": "Italy",
+};
 
 // ── Country / city data ────────────────────────────────────────────────────
 // comingSoon: true = shown grayed out, not selectable
@@ -75,6 +90,11 @@ interface CityPickerProps {
 }
 
 const CityPicker = ({ onConfirm }: CityPickerProps) => {
+  const { t } = useTranslation("plan");
+  const isEn = (i18n.language || "").toLowerCase().startsWith("en");
+  const cityLabel = (name: string) => (isEn ? CITY_EN[name] ?? name : name);
+  const countryLabel = (name: string) => (isEn ? COUNTRY_EN[name] ?? name : name);
+
   const [countryCode, setCountryCode] = useState<ActiveCountryCode>("PL");
   const [countryMenuOpen, setCountryMenuOpen] = useState(false);
 
@@ -128,10 +148,10 @@ const CityPicker = ({ onConfirm }: CityPickerProps) => {
   const isComingSoon = !!selectedCity?.comingSoon;
 
   const handleNotify = async () => {
-    if (!notifyCity.trim()) { toast.error("Wpisz nazwę miasta"); return; }
+    if (!notifyCity.trim()) { toast.error(t("city_picker.city_placeholder")); return; }
     const { error } = await (supabase as any).from("city_requests").insert({ user_id: user?.id ?? null, city_name: notifyCity.trim() });
-    if (error) { toast.error("Nie udało się wysłać zgłoszenia"); return; }
-    toast.success(`Dzięki! Gdy ${notifyCity} będzie dostępne, damy Ci znać.`);
+    if (error) { toast.error(t("city_picker.send_error")); return; }
+    toast.success(t("city_picker.notify_success", { city: notifyCity }));
     setNotifyCity("");
   };
 
@@ -145,7 +165,7 @@ const CityPicker = ({ onConfirm }: CityPickerProps) => {
           className="flex items-center gap-2 px-4 py-2 rounded-full bg-card border border-border/50 shadow-sm text-sm font-semibold transition-colors active:bg-muted"
         >
           <span className="text-lg leading-none">{selectedCountry.flag}</span>
-          <span>{selectedCountry.name}</span>
+          <span>{countryLabel(selectedCountry.name)}</span>
           <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform", countryMenuOpen && "rotate-180")} />
         </button>
 
@@ -163,7 +183,7 @@ const CityPicker = ({ onConfirm }: CityPickerProps) => {
                     className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium hover:bg-muted transition-colors text-left"
                   >
                     <span className="text-lg leading-none">{country.flag}</span>
-                    <span className="flex-1">{country.name}</span>
+                    <span className="flex-1">{countryLabel(country.name)}</span>
                     {country.code === countryCode && <Check className="h-4 w-4 text-orange-600" />}
                   </button>
                 ) : (
@@ -172,8 +192,8 @@ const CityPicker = ({ onConfirm }: CityPickerProps) => {
                     className="flex items-center gap-3 px-4 py-3 text-sm opacity-35"
                   >
                     <span className="text-lg leading-none">{country.flag}</span>
-                    <span className="flex-1 font-medium">{country.name}</span>
-                    <span className="text-[10px] font-semibold text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">Wkrótce</span>
+                    <span className="flex-1 font-medium">{countryLabel(country.name)}</span>
+                    <span className="text-[10px] font-semibold text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">{t("city_picker.coming_soon_badge")}</span>
                   </div>
                 );
               })}
@@ -209,7 +229,7 @@ const CityPicker = ({ onConfirm }: CityPickerProps) => {
                   className={cn("flex items-center justify-center gap-3 cursor-pointer transition-all duration-150 select-none", getTextClass(distance, city.comingSoon))}
                   style={{ height: ITEM_HEIGHT, scrollSnapAlign: "center" }}
                 >
-                  <span>{city.name}</span>
+                  <span>{cityLabel(city.name)}</span>
                   {city.comingSoon && distance <= 1 && (
                     <span className={cn(
                       "transition-all duration-150",
@@ -228,13 +248,13 @@ const CityPicker = ({ onConfirm }: CityPickerProps) => {
 
       {/* "Not your city?" banner */}
       <div className="mx-5 mb-3 px-4 py-3 rounded-2xl bg-background border border-border space-y-2 shadow-sm shrink-0">
-        <p className="text-xs font-semibold text-foreground">Nie widzisz swojego miasta?</p>
+        <p className="text-xs font-semibold text-foreground">{t("city_picker.not_your_city")}</p>
         <div className="flex gap-2">
-          <Input type="text" placeholder="Wpisz nazwę miasta" value={notifyCity} onChange={e => setNotifyCity(e.target.value)} className="h-8 text-base flex-1" onKeyDown={e => e.key === "Enter" && handleNotify()} />
-          <Button size="sm" variant="outline" onClick={handleNotify} className="h-8 text-xs px-3 shrink-0">Wyślij</Button>
+          <Input type="text" placeholder={t("city_picker.city_placeholder")} value={notifyCity} onChange={e => setNotifyCity(e.target.value)} className="h-8 text-base flex-1" onKeyDown={e => e.key === "Enter" && handleNotify()} />
+          <Button size="sm" variant="outline" onClick={handleNotify} className="h-8 text-xs px-3 shrink-0">{t("city_picker.send")}</Button>
         </div>
         <p className="text-[10px] text-foreground/60 leading-relaxed">
-          Damy Ci znać, gdy Twoje miasto pojawi się w aplikacji.
+          {t("city_picker.notify_hint")}
         </p>
       </div>
 
@@ -251,7 +271,7 @@ const CityPicker = ({ onConfirm }: CityPickerProps) => {
               : "bg-primary hover:bg-primary/90 text-white shadow-primary/20"
           )}
         >
-          {isComingSoon ? "Wkrótce dostępne 🔒" : "Dalej"}
+          {isComingSoon ? t("city_picker.coming_soon_cta") : t("city_picker.next")}
         </Button>
       </div>
     </div>

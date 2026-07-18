@@ -2,6 +2,10 @@ import { useState, useEffect } from "react";
 import { type LatLng, haversineKm } from "@/lib/distance";
 import { requestLocation, getCachedCoords } from "@/hooks/useGeolocation";
 import { getCityCenter } from "@/lib/cities";
+import i18n from "@/i18n";
+
+// Label "Ciebie"/"you" dla punktu GPS - wg aktywnego jezyka (chip "X od Ciebie" / "X from you").
+const youLabel = () => i18n.t("distance_you", { ns: "plan", defaultValue: "Ciebie" });
 
 // Prog "jestes na miejscu": GPS w promieniu od centrum miasta docelowego.
 const ONSITE_THRESHOLD_KM = 35;
@@ -54,7 +58,7 @@ try {
   if (raw) {
     const p = JSON.parse(raw);
     if (p?.coords && Number.isFinite(p.coords.lat) && Number.isFinite(p.coords.lng)) {
-      currentRef = { coords: p.coords, label: p.label ?? "Ciebie", source: "gps" };
+      currentRef = { coords: p.coords, label: p.label ?? youLabel(), source: "gps" };
     }
   }
 } catch { /* ignore */ }
@@ -65,7 +69,7 @@ export function getReference(): DistanceRef {
 
 // Ustaw punkt startowy (z mapy miasta docelowego) jako odniesienie.
 export function setStartReference(coords: LatLng) {
-  currentRef = { coords, label: "startu", source: "start" };
+  currentRef = { coords, label: i18n.t("distance_start", { ns: "plan", defaultValue: "startu" }), source: "start" };
   notifyAll();
 }
 
@@ -73,7 +77,7 @@ export function setStartReference(coords: LatLng) {
 export async function setGpsReference(): Promise<boolean> {
   const coords = await requestLocation();
   if (!coords) return false;
-  currentRef = { coords, label: "Ciebie", source: "gps" };
+  currentRef = { coords, label: youLabel(), source: "gps" };
   notifyAll();
   persistGpsRef();
   return true;
@@ -81,7 +85,7 @@ export async function setGpsReference(): Promise<boolean> {
 
 // Wymus GPS jako odniesienie z konkretnych coords (po potwierdzeniu "na pewno jestem").
 export function forceGpsReference(coords: LatLng) {
-  currentRef = { coords, label: "Ciebie", source: "gps" };
+  currentRef = { coords, label: youLabel(), source: "gps" };
   notifyAll();
   persistGpsRef();
 }
@@ -128,7 +132,7 @@ export async function tryResolveOnSite(city: string): Promise<"onsite" | "offsit
   const coords = (await requestLocation(true)) ?? getCachedCoords();
   if (!coords) return "no-gps";
   if (haversineKm(coords, center) <= ONSITE_THRESHOLD_KM) {
-    currentRef = { coords, label: "Ciebie", source: "gps" };
+    currentRef = { coords, label: youLabel(), source: "gps" };
     notifyAll();
     persistGpsRef();
     return "onsite";
