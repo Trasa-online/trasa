@@ -1396,8 +1396,6 @@ const BusinessDashboard = () => {
         color_button: colorButton,
         color_promo: colorPromo || null,
         event_title: eventTitle || null,
-        event_title_en: eventTitleEnToSave || null,
-        event_title_en_overridden: eventTitleEnOverridden,
         event_description: null,
         event_starts_at: eventStartsAt || null,
         event_ends_at: eventEndsAt || null,
@@ -1432,6 +1430,15 @@ const BusinessDashboard = () => {
           .update({ latitude: geoCoords.latitude, longitude: geoCoords.longitude })
           .eq("id", profile.id);
         if (geoErr) console.warn("[BusinessDashboard] zapis wspolrzednych nie powiodl sie (uruchom migracje?):", geoErr.message);
+      }
+      // event_title_en OSOBNYM update'em (best-effort) - kolumny moga nie istniec przed
+      // uruchomieniem migracji; blad nie wywala glownego zapisu.
+      {
+        const { error: enErr } = await (supabase as any)
+          .from("business_profiles")
+          .update({ event_title_en: eventTitleEnToSave || null, event_title_en_overridden: eventTitleEnOverridden })
+          .eq("id", profile.id);
+        if (enErr) console.warn("[BusinessDashboard] zapis event_title_en nie powiodl sie (uruchom migracje?):", enErr.message);
       }
       if (isComplete && !reviewRequestedAt) {
         setReviewRequestedAt(nowIso);
