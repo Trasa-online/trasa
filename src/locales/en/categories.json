@@ -27,7 +27,8 @@
     "theater": "Theatre",
     "live_music": "Live music",
     "cinema": "Cinema",
-    "nightclub": "Nightclub"
+    "nightclub": "Nightclub",
+    "store": "Shop"
   },
   "other": "Place"
 }

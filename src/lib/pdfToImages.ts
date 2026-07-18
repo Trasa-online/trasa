@@ -49,3 +49,39 @@ export async function pdfToJpegFiles(file: File): Promise<File[]> {
   doc.destroy();
   return out;
 }
+
+// Render pierwszej strony PDF (z URL) do data-URL JPEG - do podgladu inline w wizytowce.
+// Dziala dla PDF-ow wgranych KIEDYKOLWIEK (nie zalezy od rasteryzacji przy uploadzie).
+// Zwraca null przy bledzie (wolajacy pokazuje fallback - kafelek "otworz PDF").
+export async function renderPdfFirstPage(url: string): Promise<string | null> {
+  try {
+    const pdfjs = await import("pdfjs-dist");
+    const workerUrl = (await import("pdfjs-dist/build/pdf.worker.min.mjs?url")).default;
+    pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
+
+    const resp = await fetch(url);
+    if (!resp.ok) return null;
+    const buf = await resp.arrayBuffer();
+    const doc = await pdfjs.getDocument({ data: buf }).promise;
+    const page = await doc.getPage(1);
+    const viewport = page.getViewport({ scale: 1 });
+    const scale = Math.min(RENDER_MAX_WIDTH / viewport.width, 2);
+    const scaled = page.getViewport({ scale });
+
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(scaled.width);
+    canvas.height = Math.round(scaled.height);
+    const ctx = canvas.getContext("2d");
+    if (!ctx) { doc.destroy(); return null; }
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    await page.render({ canvasContext: ctx, viewport: scaled }).promise;
+
+    const dataUrl = canvas.toDataURL("image/jpeg", 0.82);
+    doc.destroy();
+    return dataUrl;
+  } catch (err) {
+    console.warn("[pdf] renderPdfFirstPage failed:", err);
+    return null;
+  }
+}

@@ -39,11 +39,10 @@ export const MAIN_CATEGORIES: MainCategory[] = [
     id: 'attractions',
     label: 'Atrakcje',
     emoji: '✨',
-    hint: 'Doświadczenia · Targi · Zakupy',
+    hint: 'Doświadczenia · Targi · Kluby',
     subcategories: [
       { id: 'experience', label: 'Doświadczenie', emoji: '🎭' },
       { id: 'market',     label: 'Targ',          emoji: '🏪' },
-      { id: 'shopping',   label: 'Sklep',         emoji: '🛍️' },
       { id: 'club',       label: 'Klub',          emoji: '🎵' },
     ],
   },
@@ -61,10 +60,11 @@ export const MAIN_CATEGORIES: MainCategory[] = [
     id: 'shopping',
     label: 'Zakupy',
     emoji: '🛍️',
-    hint: 'Sklepy · Butiki · Wino',
+    hint: 'Sklepy · Concept store · Wino',
     subcategories: [
+      { id: 'store',         label: 'Sklep',          emoji: '🛍️' },
       { id: 'boutique',      label: 'Butik',          emoji: '👗' },
-      { id: 'concept_store', label: 'Concept store',  emoji: '🛍️' },
+      { id: 'concept_store', label: 'Concept store',  emoji: '🛒' },
       { id: 'wine_shop',     label: 'Sklep z winami', emoji: '🍷' },
       { id: 'bookshop',      label: 'Księgarnia',     emoji: '📚' },
     ],
@@ -138,6 +138,7 @@ const SUBCATEGORY_DB_ALIASES: Record<string, string[]> = {
   // "park" obejmuje tez "walk" (spacer) - czesto te same miejsca opisywane inaczej.
   park: ["park", "walk"],
   // Nowe podkategorie (Zakupy / Rozrywka) - mapowanie na typy Google Places w DB.
+  store: ["store", "shopping"],
   boutique: ["boutique", "clothing_store", "shopping"],
   concept_store: ["concept_store", "store", "shopping"],
   wine_shop: ["wine_shop", "liquor_store"],

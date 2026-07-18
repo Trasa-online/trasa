@@ -14,7 +14,7 @@
 // Adaptery (premiumBusinessAdapters.ts) konwertuja kazde zrodlo (MockPlace, Pin,
 // dashboard state) do unified PremiumBusinessData zanim trafi tutaj.
 
-import { type ReactNode, useRef, useState } from "react";
+import { type ReactNode, useRef, useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { createPortal } from "react-dom";
 import { MAIN_CATEGORIES, mainCategoryLabel } from "@/lib/categories";
@@ -507,6 +507,37 @@ function PostsSection({ data, onPhotoExpand }: SectionProps & { onPhotoExpand: (
   );
 }
 
+// Kafelek menu-PDF z podgladem pierwszej strony (renderowany client-side przy wyswietlaniu).
+// Fallback do ikony+"Otworz PDF" gdy render sie nie powiedzie (np. pdf.js na starszym iOS).
+function PdfMenuTile({ url, label, className }: { url: string; label: string; className: string }) {
+  const [img, setImg] = useState<string | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    import("@/lib/pdfToImages")
+      .then(({ renderPdfFirstPage }) => renderPdfFirstPage(url))
+      .then((d) => { if (!cancelled) setImg(d); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [url]);
+  return (
+    <a href={url} target="_blank" rel="noopener noreferrer" className={cn(className, "relative flex flex-col items-center justify-center gap-2")}>
+      {img ? (
+        <>
+          <img src={img} alt="" className="absolute inset-0 w-full h-full object-cover" />
+          <span className="absolute bottom-2 left-2 flex items-center gap-1 px-2 py-0.5 rounded-full bg-black/60 text-white text-[10px] font-bold">
+            <FileText className="h-3 w-3" /> PDF
+          </span>
+        </>
+      ) : (
+        <>
+          <FileText className="h-9 w-9 text-muted-foreground" />
+          <span className="text-sm font-bold text-foreground px-2 text-center">{label}</span>
+        </>
+      )}
+    </a>
+  );
+}
+
 function MenuSection({ data, onPhotoExpand }: SectionProps & { onPhotoExpand: (photos: string[], idx: number) => void }) {
   const { t } = useTranslation("wizytowka");
   const menuImages = data.menuImageUrls ?? [];
@@ -521,16 +552,12 @@ function MenuSection({ data, onPhotoExpand }: SectionProps & { onPhotoExpand: (p
         {menuImages.map((url, idx) => {
           if (isPdfUrl(url)) {
             return (
-              <a
+              <PdfMenuTile
                 key={idx}
-                href={url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="shrink-0 w-[78%] aspect-[4/3] rounded-2xl bg-muted snap-center flex flex-col items-center justify-center gap-2 border border-border/40 active:opacity-95"
-              >
-                <FileText className="h-9 w-9 text-muted-foreground" />
-                <span className="text-sm font-bold text-foreground">{t("open_pdf", { label: sectionLabel })}</span>
-              </a>
+                url={url}
+                label={t("open_pdf", { label: sectionLabel })}
+                className="shrink-0 w-[78%] aspect-[4/3] rounded-2xl bg-muted snap-center overflow-hidden border border-border/40 active:opacity-95"
+              />
             );
           }
           return (
