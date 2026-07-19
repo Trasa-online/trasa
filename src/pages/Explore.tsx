@@ -2,7 +2,7 @@ import { useMemo, useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useLocation } from "react-router-dom";
 import { PullToRefresh } from "@/components/PullToRefresh";
-import { MapPin, Heart, Trash2, ArrowRight, Plus, ArrowLeft, Pencil, ListChecks, ChevronDown } from "lucide-react";
+import { MapPin, Heart, Trash2, ArrowRight, Plus, ArrowLeft, Pencil, ListChecks, ChevronDown, Star } from "lucide-react";
 import { parseISO, isValid, format, isToday, isYesterday } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
 import DiscoveryFeed from "@/components/home/DiscoveryFeed";
@@ -81,21 +81,30 @@ export const LikedTab = () => {
   }, []);
 
   const groups = useMemo<ExploreCityGroup[]>(() => {
-    // Zestawienie per MIASTO (nie per dzien). Najwiecej polubien na gorze.
     return getHistoryByCity().sort((a, b) => b.places.length - a.places.length);
   }, [nonce]);
 
-  // Sekcje miast zwiniete domyslnie - user rozwija to, co chce zobaczyc (krotka lista miast,
-  // nie sciana miejsc). Set rozwinietych miast.
-  const [expandedCities, setExpandedCities] = useState<Set<string>>(new Set());
-  const toggleCity = (city: string) =>
-    setExpandedCities((prev) => {
-      const next = new Set(prev);
-      next.has(city) ? next.delete(city) : next.add(city);
-      return next;
-    });
+  // Wszystkie zapisane miejsca splaszczone (z miastem), najnowsze na gorze.
+  const allPlaces = useMemo(
+    () => groups.flatMap(g => g.places.map(p => ({ ...p, city: g.city })))
+      .sort((a, b) => String(b.liked_at).localeCompare(String(a.liked_at))),
+    [groups],
+  );
+  const cities = groups.map(g => g.city); // posortowane po liczbie polubien
+  const [selectedCity, setSelectedCity] = useState<string>("all");
+  // Gdy wybrane miasto zniknie (usuniete ostatnie miejsce) - wroc na "Wszystkie".
+  useEffect(() => {
+    if (selectedCity !== "all" && !cities.includes(selectedCity)) setSelectedCity("all");
+  }, [cities, selectedCity]);
 
-  const totalLikes = groups.reduce((sum, g) => sum + g.places.length, 0);
+  const visible = selectedCity === "all" ? allPlaces : allPlaces.filter(p => p.city === selectedCity);
+  const totalLikes = allPlaces.length;
+
+  const handleRemove = (city: string, place_name: string) => {
+    removeLikeFromCity(city, place_name);
+    if (user?.id) void removeReactionsFromDb(user.id, city, [place_name]);
+    refresh();
+  };
 
   if (totalLikes === 0) {
     return (
@@ -119,115 +128,97 @@ export const LikedTab = () => {
     );
   }
 
-  const handleCreateRoute = (group: ExploreCityGroup) => {
+  const handleCreateRoute = (city: string) => {
     if (!user) { openAuthDrawer({ mode: "register", hint: "save_route" }); return; }
-    navigate("/plan", {
-      state: {
-        step: 3,
-        city: group.city,
-        date: new Date().toISOString(),
-        likedPlaceNames: group.places.map((p) => p.place_name),
-      },
-    });
+    const names = allPlaces.filter(p => p.city === city).map(p => p.place_name);
+    navigate("/plan", { state: { step: 3, city, date: new Date().toISOString(), likedPlaceNames: names } });
   };
 
   return (
-    <div className="flex flex-col gap-5">
-      {groups.map((group) => {
-        const expanded = expandedCities.has(group.city);
-        return (
-        <div key={group.city} className="rounded-3xl bg-card border border-border/50 overflow-hidden">
-          {/* Header - miasto (klik = rozwin/zwin) */}
-          <div className="flex items-center gap-2 pr-2">
-            <button
-              onClick={() => toggleCity(group.city)}
-              className="flex-1 min-w-0 flex items-center gap-2 px-4 pt-4 pb-3 text-left active:bg-muted/30 transition-colors"
-              aria-expanded={expanded}
-            >
-              <div className="flex-1 min-w-0">
-                <p className="font-bold text-base leading-tight flex items-center gap-1.5">
-                  <MapPin className="h-4 w-4 text-orange-600 shrink-0" />
-                  {group.city}
-                </p>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  {group.places.length} {group.places.length === 1 ? t("liked.saved_place_one") : group.places.length < 5 ? t("liked.saved_place_few") : t("liked.saved_place_many")}
-                </p>
-              </div>
-              <ChevronDown className={`h-5 w-5 text-muted-foreground/60 shrink-0 transition-transform ${expanded ? "rotate-180" : ""}`} />
-            </button>
-            <button
-              onClick={() => {
-                if (!confirm(t("liked.confirm_clear_city", { city: group.city }))) return;
-                const placeNames = group.places.map(p => p.place_name);
-                clearCity(group.city);
-                if (user?.id) void removeReactionsFromDb(user.id, group.city, placeNames);
-                refresh();
-              }}
-              className="h-8 w-8 flex items-center justify-center rounded-full text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10 transition-colors active:scale-90 shrink-0"
-              aria-label={t("liked.remove_group_aria")}
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-            </button>
-          </div>
+    <div className="flex flex-col">
+      {/* Pigulki miast (Wszystkie + kazde miasto, scroll w bok) */}
+      <div className="flex gap-2 overflow-x-auto scrollbar-none pb-3 -mx-1 px-1">
+        <button
+          onClick={() => setSelectedCity("all")}
+          className={`shrink-0 px-4 py-2 rounded-full text-sm font-bold border transition-colors ${selectedCity === "all" ? "bg-foreground text-background border-foreground" : "bg-card text-foreground border-border/60"}`}
+        >
+          {t("liked.all_cities")}
+        </button>
+        {cities.map((city) => (
+          <button
+            key={city}
+            onClick={() => setSelectedCity(city)}
+            className={`shrink-0 px-4 py-2 rounded-full text-sm font-semibold border transition-colors whitespace-nowrap ${selectedCity === city ? "bg-foreground text-background border-foreground" : "bg-card text-muted-foreground border-border/60"}`}
+          >
+            {city}
+          </button>
+        ))}
+      </div>
 
-          {expanded && (<>
-          {/* Places list */}
-          <div className="flex flex-col">
-            {group.places.map((p) => (
-              <div
-                key={p.place_name}
-                className="flex items-center gap-3 px-4 py-2.5 border-t border-border/20"
-              >
-                {p.photo_url ? (
-                  <img src={p.photo_url} alt={p.place_name} className="h-11 w-11 rounded-xl object-cover shrink-0" loading="lazy" />
-                ) : (
-                  <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-amber-100 to-orange-200 flex items-center justify-center text-lg shrink-0">
-                    {CATEGORY_EMOJI[p.category] ?? "📍"}
-                  </div>
-                )}
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold truncate leading-tight">{p.place_name}</p>
-                  <p className="text-[11px] text-muted-foreground mt-0.5">
-                    {subcategoryLabelLocalized(p.category)}
-                  </p>
-                </div>
+      {/* CTA trasy/zestawienia - tylko gdy wybrane konkretne miasto (planowanie jest per miasto) */}
+      {selectedCity !== "all" && visible.length > 0 && (
+        <div className="flex gap-2 pb-3">
+          <button
+            onClick={() => handleCreateRoute(selectedCity)}
+            className="flex-1 py-2.5 rounded-full bg-primary text-white font-bold text-xs flex items-center justify-center gap-1.5 active:scale-[0.97] transition-transform"
+          >
+            {t("liked.create_route")}
+            <ArrowRight className="h-3.5 w-3.5" />
+          </button>
+          <button
+            onClick={() => { trackCollectionCreate("liked_group"); navigate(`/zestawienie/nowe?from=liked&city=${encodeURIComponent(selectedCity)}`); }}
+            className="flex-1 py-2.5 rounded-full bg-secondary text-secondary-foreground font-bold text-xs flex items-center justify-center gap-1.5 active:scale-[0.97] transition-transform"
+          >
+            {t("liked.create_collection")}
+          </button>
+        </div>
+      )}
+
+      {/* Lista miejsc - jedno pod drugim (miniaturka + naglowek + opis 2 linie + tagi + ocena Google) */}
+      <div className="flex flex-col">
+        {visible.map((p) => (
+          <div key={`${p.city}:${p.place_name}`} className="flex gap-3 py-4 border-b border-border/15">
+            <div className="h-20 w-20 rounded-2xl overflow-hidden bg-muted shrink-0">
+              {p.photo_url ? (
+                <img src={p.photo_url} alt={p.place_name} className="w-full h-full object-cover" loading="lazy" />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-br from-amber-100 to-orange-200 flex items-center justify-center text-2xl">{CATEGORY_EMOJI[p.category] ?? "📍"}</div>
+              )}
+            </div>
+            <div className="flex-1 min-w-0 flex flex-col">
+              <div className="flex items-start justify-between gap-2">
+                <p className="text-sm font-bold leading-tight">{p.place_name}</p>
                 <button
-                  onClick={() => {
-                    removeLikeFromCity(group.city, p.place_name);
-                    if (user?.id) void removeReactionsFromDb(user.id, group.city, [p.place_name]);
-                    refresh();
-                  }}
-                  className="h-7 w-7 flex items-center justify-center rounded-full text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 transition-colors active:scale-90 shrink-0"
+                  onClick={() => handleRemove(p.city, p.place_name)}
+                  className="h-7 w-7 -mt-1 -mr-1 flex items-center justify-center rounded-full text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 transition-colors active:scale-90 shrink-0"
                   aria-label={t("liked.remove_aria")}
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
               </div>
-            ))}
-          </div>
-
-          {/* CTA */}
-          {group.places.length > 0 && (
-            <div className="px-4 py-3 border-t border-border/20 space-y-2">
-              <button
-                onClick={() => handleCreateRoute(group)}
-                className="w-full py-2.5 rounded-full bg-primary text-white font-bold text-xs flex items-center justify-center gap-1.5 active:scale-[0.97] transition-transform"
-              >
-                {t("liked.create_route")}
-                <ArrowRight className="h-3.5 w-3.5" />
-              </button>
-              <button
-                onClick={() => { trackCollectionCreate("liked_group"); navigate(`/zestawienie/nowe?from=liked&city=${encodeURIComponent(group.city)}`); }}
-                className="w-full py-2.5 rounded-full bg-secondary text-secondary-foreground font-bold text-xs flex items-center justify-center gap-1.5 active:scale-[0.97] transition-transform"
-              >
-                {t("liked.create_collection")}
-              </button>
+              {p.description && (
+                <p className="text-xs text-muted-foreground mt-1 line-clamp-2 leading-snug">{p.description}</p>
+              )}
+              <div className="flex items-end justify-between gap-2 mt-2">
+                <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+                  <span className="px-2 py-0.5 rounded-full bg-muted text-muted-foreground text-[11px] font-medium border border-border/40">{subcategoryLabelLocalized(p.category)}</span>
+                  {selectedCity === "all" && (
+                    <span className="px-2 py-0.5 rounded-full bg-muted text-muted-foreground text-[11px] font-medium border border-border/40 flex items-center gap-1">
+                      <MapPin className="h-2.5 w-2.5" />{p.city}
+                    </span>
+                  )}
+                </div>
+                {typeof p.rating === "number" && p.rating > 0 && (
+                  <div className="flex items-center gap-1 shrink-0">
+                    <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                    <span className="text-sm font-bold">{p.rating.toFixed(1)}</span>
+                  </div>
+                )}
+              </div>
             </div>
-          )}
-          </>)}
-        </div>
-        );
-      })}
+          </div>
+        ))}
+      </div>
     </div>
   );
 };

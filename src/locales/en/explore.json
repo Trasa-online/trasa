@@ -14,7 +14,8 @@
     "remove_group_aria": "Remove group",
     "remove_aria": "Remove",
     "create_route": "Create a route from these places",
-    "create_collection": "Create a collection from these places"
+    "create_collection": "Create a collection from these places",
+    "all_cities": "All"
   },
   "collections": {
     "toast_deleted": "Collection deleted",

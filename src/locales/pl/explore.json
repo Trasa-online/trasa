@@ -14,7 +14,8 @@
     "remove_group_aria": "Usuń grupę",
     "remove_aria": "Usuń",
     "create_route": "Stwórz trasę z tych miejsc",
-    "create_collection": "Stwórz zestawienie z tych miejsc"
+    "create_collection": "Stwórz zestawienie z tych miejsc",
+    "all_cities": "Wszystkie"
   },
   "collections": {
     "toast_deleted": "Zestawienie usunięte",
