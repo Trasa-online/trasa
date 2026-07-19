@@ -1553,8 +1553,9 @@ const BusinessDashboard = () => {
     if (!window.confirm(t("password.confirm", { email: user.email }))) return;
     setResetPasswordLoading(true);
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
-        redirectTo: `${window.location.origin}/?bizreset=1`,
+      // Wlasny mail resetu B2B (token-hash, niebieski) - patrz Auth.handleForgotPassword.
+      const { error } = await supabase.functions.invoke("send-business-password-reset", {
+        body: { email: user.email },
       });
       if (error) throw error;
       toast.success(t("password.sent", { email: user.email }));

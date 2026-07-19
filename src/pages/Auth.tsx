@@ -148,20 +148,21 @@ const Auth = () => {
     // Osobny resetLoading zeby button 'Zaloguj' nie pokazywal 'Logowanie...'.
     setResetLoading(true);
     try {
-      // Biznes: reset musi wracac na /set-password-biznes (SetPassword forceBusiness ->
-      // ustawia haslo -> panel biznesowy). B2C: /set-password (-> /home). Bez tego biznes
-      // ladowal na konsumenckim set-password i konczyl na /home zamiast w panelu.
-      // Token-hash flow: redirectTo BEZ fragmentu (#/...), zeby link w mailu
-      // (`{{ .RedirectTo }}&token_hash=..&type=recovery`) byl poprawny. Flaga w query:
-      // bizreset=1 (B2B) / recovery=1 (B2C). GlobalAuthCallback czyta ja i po verifyOtp
-      // kieruje na wlasciwy formularz. token_hash NIE wymaga PKCE verifiera - dziala
-      // niezaleznie od tego czy link otworzy sie w apce czy w Safari (fix natywnego resetu).
-      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-        redirectTo: businessMode
-          ? "https://trasa.travel/?bizreset=1"
-          : "https://trasa.travel/?recovery=1",
-      });
-      if (error) throw error;
+      // B2B: wlasny mail resetu przez edge function (send-business-password-reset).
+      // Generuje token serwerowo (token-hash) i sam sklada link -> NIE wymaga PKCE
+      // verifiera, wiec dziala tez gdy link otworzy sie w Safari (nie w apce). To fix
+      // natywnego resetu + niebieski branding B2B. B2C zostaje na wbudowanym Supabase.
+      if (businessMode) {
+        const { error } = await supabase.functions.invoke("send-business-password-reset", {
+          body: { email: email.trim() },
+        });
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+          redirectTo: "https://trasa.travel/?recovery=1",
+        });
+        if (error) throw error;
+      }
       toast.success("Link do resetowania hasła wysłany na " + email);
     } catch (err: any) {
       toast.error(err.message || "Błąd wysyłania emaila");
