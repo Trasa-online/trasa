@@ -97,6 +97,8 @@ export interface DashboardStateForPreview {
   description: string;
   street?: string;
   city?: string;
+  latitude?: number | null;
+  longitude?: number | null;
   logoUrl?: string;
   coverImageUrl?: string;
   coverVideoUrl?: string;
@@ -129,6 +131,8 @@ export function fromDashboardState(state: DashboardStateForPreview): PremiumBusi
     description: state.description,
     address: state.street,
     city: state.city,
+    latitude: state.latitude,
+    longitude: state.longitude,
 
     ownerOpeningHours: state.openingHours,
 

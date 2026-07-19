@@ -172,12 +172,12 @@ function getContrastColor(hex: string): string {
 
 function AppLikePreviewModal({
   onClose, onConvert, isDraft, convertingDraft,
-  businessName, mainCategory, subcategories, tags, description, street, city, logoUrl, coverImageUrl, coverVideoUrl, galleryUrls, menuImageUrls, posts, eventTitle, eventDescription, events, openingHours,
+  businessName, mainCategory, subcategories, tags, description, street, city, latitude, longitude, logoUrl, coverImageUrl, coverVideoUrl, galleryUrls, menuImageUrls, posts, eventTitle, eventDescription, events, openingHours,
   colorBadge, colorCardBg, colorButton, colorPromo,
 }: {
   onClose: () => void; onConvert: () => void; isDraft: boolean; convertingDraft: boolean;
   businessName: string; mainCategory: string; subcategories: string[]; tags: string[]; description: string;
-  street: string; city: string; logoUrl: string; coverImageUrl: string; coverVideoUrl: string; galleryUrls: string[]; menuImageUrls: string[];
+  street: string; city: string; latitude?: number | null; longitude?: number | null; logoUrl: string; coverImageUrl: string; coverVideoUrl: string; galleryUrls: string[]; menuImageUrls: string[];
   posts: BusinessPost[]; eventTitle: string; eventDescription: string; events?: any[]; openingHours: OpeningHours;
   colorBadge: string; colorCardBg: string; colorButton: string; colorPromo?: string;
 }) {
@@ -285,7 +285,7 @@ function AppLikePreviewModal({
               <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden" style={{ WebkitOverflowScrolling: "touch" }}>
                 <PremiumBusinessCard
                   data={fromDashboardState({
-                    businessName, mainCategory, subcategories, tags, description, street, city,
+                    businessName, mainCategory, subcategories, tags, description, street, city, latitude, longitude,
                     logoUrl, coverImageUrl, coverVideoUrl, galleryUrls, menuImageUrls, posts,
                     eventTitle, eventDescription, events, openingHours,
                     colorBadge, colorCardBg, colorButton,
@@ -3157,6 +3157,8 @@ const BusinessDashboard = () => {
           description={description}
           street={street}
           city={city}
+          latitude={(profile as any)?.latitude ?? null}
+          longitude={(profile as any)?.longitude ?? null}
           logoUrl={logoUrl}
           coverImageUrl={coverImageUrl}
           coverVideoUrl={coverVideoUrl}
