@@ -27,6 +27,7 @@ import { useShare } from "@/hooks/useShare";
 import BusinessHoursEditor, { type OpeningHours } from "@/components/business/BusinessHoursEditor";
 import PremiumBusinessCard from "@/components/business/PremiumBusinessCard";
 import { fromDashboardState } from "@/components/business/premiumBusinessAdapters";
+import { ImageCropModal } from "@/components/business/ImageCropModal";
 import { TrasaLogo } from "@/components/TrasaLogo";
 
 interface BusinessPost {
@@ -578,6 +579,8 @@ const BusinessDashboard = () => {
   const [savingEditEvent, setSavingEditEvent] = useState(false);
 
   const logoInputRef = useRef<HTMLInputElement>(null);
+  // Kadrowanie: kolejka plikow do skadrowania (logo 1:1 kolo, galeria 4:3).
+  const [cropJob, setCropJob] = useState<{ files: File[]; index: number; target: "logo" | "gallery"; aspect: number; shape: "rect" | "round" } | null>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
   const coverVideoInputRef = useRef<HTMLInputElement>(null);
   // PointerEvent-based DnD dla galerii - HTML5 drag nie dziala na touch screens.
@@ -921,17 +924,41 @@ const BusinessDashboard = () => {
     return supabase.storage.from("business-photos").getPublicUrl(data.path).data.publicUrl;
   };
 
-  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Logo: najpierw kadrowanie (kolo 1:1 - lokal skaluje/pozycjonuje znak), potem upload.
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    e.target.value = "";
     if (!file) return;
-    setUploading("logo");
+    setCropJob({ files: [file], index: 0, target: "logo", aspect: 1, shape: "round" });
+  };
+
+  // Upload skadrowanego pliku (z modala) + kolejka (galeria = wiele plikow po kolei).
+  const handleCropped = async (croppedFile: File) => {
+    if (!cropJob) return;
+    const { target, files, index } = cropJob;
+    setUploading(target);
     try {
-      const url = await uploadFile(file, "logo");
-      setLogoUrl(url);
-      setIsDirty(true);
-      if (isDraft) await autoSaveDraft({ logoUrl: url });
-    } catch (err: any) { toast.error(err.message ?? t("upload.logo_error")); }
+      const url = await uploadFile(croppedFile, target);
+      if (target === "logo") {
+        setLogoUrl(url);
+        setIsDirty(true);
+        if (isDraft) await autoSaveDraft({ logoUrl: url });
+      } else {
+        setGalleryUrls(prev => [...prev, url]);
+        setIsDirty(true);
+      }
+    } catch (err: any) {
+      toast.error(err?.message ?? t(target === "logo" ? "upload.logo_error" : "upload.photos_error"));
+    }
     setUploading(null);
+    if (index + 1 < files.length) setCropJob({ ...cropJob, index: index + 1 });
+    else setCropJob(null);
+  };
+
+  const handleCropCancel = () => {
+    if (!cropJob) return;
+    if (cropJob.index + 1 < cropJob.files.length) setCropJob({ ...cropJob, index: cropJob.index + 1 });
+    else setCropJob(null);
   };
 
   const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1030,19 +1057,15 @@ const BusinessDashboard = () => {
     e.target.value = "";
   };
 
-  const handleGalleryUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Galeria: kadrowanie kazdego zdjecia do 4:3 (proporcja wizytowki) po kolei, potem upload.
+  const handleGalleryUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
+    e.target.value = "";
     if (!files.length) return;
     const remaining = MAX_GALLERY - galleryUrls.length;
-    const toUpload = files.slice(0, remaining);
-    setUploading("gallery");
-    try {
-      const urls = await Promise.all(toUpload.map(f => uploadFile(f, "gallery")));
-      setGalleryUrls(prev => [...prev, ...urls]);
-      setIsDirty(true);
-    } catch (err: any) { toast.error(err.message ?? t("upload.photos_error")); }
-    setUploading(null);
-    e.target.value = "";
+    const toCrop = files.slice(0, remaining);
+    if (!toCrop.length) return;
+    setCropJob({ files: toCrop, index: 0, target: "gallery", aspect: 4 / 3, shape: "rect" });
   };
 
   const removeGalleryPhoto = (idx: number) => {
@@ -3076,6 +3099,21 @@ const BusinessDashboard = () => {
             {t("save.button")}
           </button>
         </div>
+      )}
+      {/* ── Kadrowanie zdjecia (logo 1:1 kolo / galeria 4:3) ── */}
+      {cropJob && cropJob.files[cropJob.index] && (
+        <ImageCropModal
+          file={cropJob.files[cropJob.index]}
+          aspect={cropJob.aspect}
+          cropShape={cropJob.shape}
+          title={cropJob.target === "logo"
+            ? t("crop.logo_title")
+            : t("crop.photo_title", { n: cropJob.index + 1, total: cropJob.files.length })}
+          confirmLabel={t("crop.confirm")}
+          cancelLabel={t("crop.cancel")}
+          onCropped={handleCropped}
+          onCancel={handleCropCancel}
+        />
       )}
       {/* ── Photo lightbox ── */}
       {photoPreview && (

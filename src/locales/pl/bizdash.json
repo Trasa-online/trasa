@@ -359,5 +359,11 @@
     "preview_title": "Podgląd wizytówki w aplikacji",
     "preview_aria": "Podgląd wizytówki",
     "preview": "Podgląd"
+  },
+  "crop": {
+    "logo_title": "Dostosuj logo",
+    "photo_title": "Kadruj zdjęcie {{n}}/{{total}}",
+    "confirm": "Gotowe",
+    "cancel": "Anuluj"
   }
 }

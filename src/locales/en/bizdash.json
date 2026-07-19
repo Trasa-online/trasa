@@ -359,5 +359,11 @@
     "preview_title": "Card preview in the app",
     "preview_aria": "Card preview",
     "preview": "Preview"
+  },
+  "crop": {
+    "logo_title": "Adjust logo",
+    "photo_title": "Crop photo {{n}}/{{total}}",
+    "confirm": "Done",
+    "cancel": "Cancel"
   }
 }
