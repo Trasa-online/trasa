@@ -442,7 +442,7 @@ function BusinessDeleteAccount() {
 }
 
 const BusinessDashboard = () => {
-  const { t } = useTranslation("bizdash");
+  const { t, i18n } = useTranslation("bizdash");
   const { placeId } = useParams<{ placeId: string }>();
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
@@ -1778,6 +1778,21 @@ const BusinessDashboard = () => {
             <span className={`hidden md:inline text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${PLAN_COLORS[plan]}`}>{PLAN_LABELS[plan]}</span>
           </div>
           <div className="flex items-center gap-2 ml-auto">
+            {/* Przelacznik jezyka PL/EN (changeLanguage zapisuje wybor do localStorage) */}
+            <div className="flex gap-0.5 bg-slate-100 rounded-full p-0.5 shrink-0">
+              {(["pl", "en"] as const).map((code) => {
+                const active = code === ((i18n.language || "").toLowerCase().startsWith("en") ? "en" : "pl");
+                return (
+                  <button
+                    key={code}
+                    onClick={() => { if (!active) i18n.changeLanguage(code); }}
+                    className={`px-2.5 py-1 rounded-full text-[11px] font-bold uppercase transition-colors ${active ? "bg-white text-blue-600 shadow-sm" : "text-slate-400 hover:text-slate-600"}`}
+                  >
+                    {code}
+                  </button>
+                );
+              })}
+            </div>
             {/* "Przetestuj w aplikacji" — temporarily disabled on frontend */}
             {isAdminUser && (profile as any).preview_token && (
               <button
