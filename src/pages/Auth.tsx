@@ -151,12 +151,15 @@ const Auth = () => {
       // Biznes: reset musi wracac na /set-password-biznes (SetPassword forceBusiness ->
       // ustawia haslo -> panel biznesowy). B2C: /set-password (-> /home). Bez tego biznes
       // ladowal na konsumenckim set-password i konczyl na /home zamiast w panelu.
-      // bizreset=1 w SEARCH (nie w hashu) - przezywa utrate fragmentu #/... podczas
-      // mailowego round-tripu; GlobalAuthCallback czyta go i kieruje na biznesowy formularz.
+      // Token-hash flow: redirectTo BEZ fragmentu (#/...), zeby link w mailu
+      // (`{{ .RedirectTo }}&token_hash=..&type=recovery`) byl poprawny. Flaga w query:
+      // bizreset=1 (B2B) / recovery=1 (B2C). GlobalAuthCallback czyta ja i po verifyOtp
+      // kieruje na wlasciwy formularz. token_hash NIE wymaga PKCE verifiera - dziala
+      // niezaleznie od tego czy link otworzy sie w apce czy w Safari (fix natywnego resetu).
       const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
         redirectTo: businessMode
-          ? "https://trasa.travel/?bizreset=1#/set-password-biznes"
-          : "https://trasa.travel/#/set-password",
+          ? "https://trasa.travel/?bizreset=1"
+          : "https://trasa.travel/?recovery=1",
       });
       if (error) throw error;
       toast.success("Link do resetowania hasła wysłany na " + email);

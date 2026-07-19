@@ -1554,7 +1554,7 @@ const BusinessDashboard = () => {
     setResetPasswordLoading(true);
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
-        redirectTo: `${window.location.origin}/?bizreset=1#/set-password-biznes`,
+        redirectTo: `${window.location.origin}/?bizreset=1`,
       });
       if (error) throw error;
       toast.success(t("password.sent", { email: user.email }));

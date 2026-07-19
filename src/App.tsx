@@ -174,8 +174,14 @@ function GlobalAuthCallback() {
       // - `type=recovery` to sygnal Supabase (jest przy token_hash, brak przy PKCE code).
       // Bez markera biznesowy reset ladowal na konsumenckim /set-password (albo, przy
       // PKCE, byl brany za zwykle logowanie i wyrzucal usera na /eksploruj).
+      // Token-hash flow (szablon maila): link to `.../?token_hash=..&type=recovery&next=<redirectTo>`.
+      // biznes rozpoznajemy tez z `next` (zawiera bizreset=1 / set-password-biznes), bo w tym
+      // flow bizreset moze byc zakodowany wewnatrz next, nie jako osobny param.
       const isBizReset =
-        bizReset || (window.location.hash || "").includes("set-password-biznes");
+        bizReset
+        || (window.location.hash || "").includes("set-password-biznes")
+        || (nextDest || "").includes("set-password-biznes")
+        || (nextDest || "").includes("bizreset");
       if (isBizReset || type === "recovery") {
         // ?reset=1 -> SetPassword pokazuje copy resetu (nie "Aktywuj konto").
         navigate(isBizReset ? "/set-password-biznes?reset=1" : "/set-password?recovery=1");
