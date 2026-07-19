@@ -47,6 +47,8 @@ interface PlaceSwiperDetailProps {
   onLike?: (() => void) | undefined;
   onSkip?: (() => void) | undefined;
   skipGoogleFetch?: boolean;
+  /** Data wyjazdu (YYYY-MM-DD) - agenda wydarzen pokazuje najblizsze TEJ dacie. Domyslnie dzis. */
+  referenceDate?: string;
 }
 
 const validUrl = (url?: string | null) =>
@@ -61,6 +63,7 @@ const PlaceSwiperDetail = ({
   onLike,
   onSkip,
   skipGoogleFetch = false,
+  referenceDate,
 }: PlaceSwiperDetailProps) => {
   const [detail, setDetail] = useState<PlaceDetail | null>(null);
   const [loading, setLoading] = useState(false);
@@ -230,6 +233,7 @@ const PlaceSwiperDetail = ({
           <PremiumBusinessCard
             data={businessData}
             mode="detail"
+            referenceDate={referenceDate}
             detailPhotos={displayPhotos}
             detailLoading={loading}
             onClose={() => onOpenChange(false)}

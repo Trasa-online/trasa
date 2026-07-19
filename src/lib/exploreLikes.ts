@@ -7,6 +7,7 @@ const STORAGE_KEY = "trasa_explore_likes_history";
 export interface ExploreLike {
   place_name: string;
   category: string;
+  place_id?: string | null; // places.id - pozwala doczytac pelny profil biznesu w wizytowce
   latitude?: number | null;
   longitude?: number | null;
   photo_url?: string | null;

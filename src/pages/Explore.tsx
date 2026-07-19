@@ -64,7 +64,7 @@ export const LikedTab = ({ selectMode = false, onExitSelection }: { selectMode?:
   const { user } = useAuth();
   const { open: openAuthDrawer } = useAuthDrawer();
   // Szczegol miejsca (wizytowka) - tap w kafelek poza trybem zaznaczania.
-  const [detailPin, setDetailPin] = useState<{ id: string; place_name: string; address?: string | null; latitude?: number | null; longitude?: number | null; photo_url?: string | null } | null>(null);
+  const [detailPin, setDetailPin] = useState<{ id: string; place_name: string; place_id?: string | null; address?: string | null; latitude?: number | null; longitude?: number | null; photo_url?: string | null } | null>(null);
   // Tryb zaznaczania: zbior wybranych nazw + zablokowane miasto (trasa = jedno miasto).
   const [selectedNames, setSelectedNames] = useState<Set<string>>(new Set());
   const [selectionCity, setSelectionCity] = useState<string | null>(null);
@@ -234,7 +234,7 @@ export const LikedTab = ({ selectMode = false, onExitSelection }: { selectMode?:
             tabIndex={0}
             onClick={() => {
               if (selectMode) toggleSelect(p);
-              else setDetailPin({ id: p.place_name, place_name: p.place_name, address: p.address, latitude: p.latitude, longitude: p.longitude, photo_url: p.photo_url });
+              else setDetailPin({ id: (p as any).place_id ?? p.place_name, place_name: p.place_name, place_id: (p as any).place_id ?? null, address: p.address, latitude: p.latitude, longitude: p.longitude, photo_url: p.photo_url });
             }}
             className={cn(
               "flex gap-3 py-4 border-b border-border/15 -mx-2 px-2 rounded-2xl cursor-pointer active:bg-muted/40 transition-colors",

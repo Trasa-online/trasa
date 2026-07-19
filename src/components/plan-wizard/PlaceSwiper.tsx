@@ -1006,17 +1006,20 @@ function partitionBusinessFirst(places: MockPlace[]): MockPlace[] {
   return [...bizOrdered, ...restOrdered];
 }
 
-// Wybor pill wydarzenia dla wizytowki wg priorytetu: aktywny dzis z kolejki
-// (business_events) > staly event_title > najblizszy nadchodzacy z kolejki. EN-aware.
-function pickEventPillTitle(bp: any): string | undefined {
+// Wybor pill wydarzenia dla wizytowki wg priorytetu (wzgledem daty wyjazdu `refDate`,
+// domyslnie dzis): aktywny w tym terminie z kolejki (business_events) > staly event_title >
+// najblizsze nadchodzace po tej dacie z kolejki. EN-aware.
+// `refDate` = data wyjazdu (YYYY-MM-DD) ktora user planuje - dzieki temu przy szukaniu miejsc
+// na konkretny termin pokazujemy wydarzenie najblizsze TEJ dacie, nie dzisiejszej.
+function pickEventPillTitle(bp: any, refDate?: string): string | undefined {
   const isEn = (i18n.language || "").toLowerCase().startsWith("en");
-  const today = new Date().toISOString().slice(0, 10);
+  const ref = refDate ?? new Date().toISOString().slice(0, 10);
   const titleOf = (e: any) => ((isEn && e?.title_en ? e.title_en : e?.title) || undefined);
 
   // Szkice (is_draft) nie trafiaja na wizytowke - tylko opublikowane wydarzenia.
   const events: any[] = (Array.isArray(bp?.business_events) ? bp.business_events : []).filter((e: any) => !e?.is_draft);
   const activeNow = events
-    .filter((e) => e.starts_at && e.starts_at <= today && (e.ends_at ?? e.starts_at) >= today)
+    .filter((e) => e.starts_at && e.starts_at <= ref && (e.ends_at ?? e.starts_at) >= ref)
     .sort((a, b) => String(a.ends_at ?? a.starts_at).localeCompare(String(b.ends_at ?? b.starts_at)))[0];
   if (activeNow) return titleOf(activeNow);
 
@@ -1024,12 +1027,12 @@ function pickEventPillTitle(bp: any): string | undefined {
   if (standing) return standing;
 
   const upcoming = events
-    .filter((e) => e.starts_at && e.starts_at > today)
+    .filter((e) => e.starts_at && e.starts_at > ref)
     .sort((a, b) => String(a.starts_at).localeCompare(String(b.starts_at)))[0];
   return upcoming ? titleOf(upcoming) : undefined;
 }
 
-function enrichWithBusinessProfile(p: any): MockPlace {
+function enrichWithBusinessProfile(p: any, refDate?: string): MockPlace {
   const placeGallery: string[] = Array.isArray(p.gallery_urls) ? p.gallery_urls.filter(Boolean) : [];
 
   const bp = Array.isArray(p.business_profiles) ? p.business_profiles[0] : p.business_profiles;
@@ -1072,7 +1075,7 @@ function enrichWithBusinessProfile(p: any): MockPlace {
     businessLogoUrl: bp.logo_url ?? '',
     // Pill wydarzenia: aktywny dzis z kolejki > staly event_title > najblizszy nadchodzacy.
     // EN-aware (pokazuje EN tytul dla usera EN). Patrz pickEventPillTitle.
-    businessEventTitle: pickEventPillTitle(bp),
+    businessEventTitle: pickEventPillTitle(bp, refDate),
     businessPhone: bp.phone ?? null,
     businessWebsite: bp.website ?? null,
     businessInstagram: (bp.social_links as { instagram?: string } | null)?.instagram ?? null,
@@ -1202,7 +1205,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
         roundPlaceIds.forEach((id, i) => { orderMap[id] = i; });
         const ordered = [...data]
           .sort((a: any, b: any) => orderMap[a.id] - orderMap[b.id])
-          .map(enrichWithBusinessProfile);
+          .map((pp: any) => enrichWithBusinessProfile(pp, date.toISOString().slice(0, 10)));
 
         setAllPlaces(ordered);
         setQueue(ordered);
@@ -1253,7 +1256,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
         }
       }
 
-      const enriched = (data as any[]).map(enrichWithBusinessProfile);
+      const enriched = (data as any[]).map((pp: any) => enrichWithBusinessProfile(pp, date.toISOString().slice(0, 10)));
       const likedSet = new Set(initialLikedPlaceNames.map(n => n.toLowerCase()));
       const skippedSet = new Set(initialSkippedPlaceNames.map(n => n.toLowerCase()));
       const liked = enriched.filter((p) => likedSet.has(p.place_name.toLowerCase()));
@@ -1472,6 +1475,8 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
       saveExploreLike(city, {
         place_name: top.place_name,
         category: top.category,
+        // places.id (UUID) - pozwala wizytowce w "Zapisane" doczytac pelny profil biznesu.
+        place_id: /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(top.id) ? top.id : null,
         latitude: top.latitude,
         longitude: top.longitude,
         photo_url: overridePhotoUrl ?? top.photo_url ?? null,
@@ -2025,6 +2030,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
         open={detailOpen}
         onOpenChange={setDetailOpen}
         place={detailPlace}
+        referenceDate={date.toISOString().slice(0, 10)}
         onLike={() => { handleLike(undefined, detailPlace ?? undefined); }}
         onSkip={() => { handleSkip(); }}
       />

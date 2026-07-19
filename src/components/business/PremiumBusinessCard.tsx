@@ -395,14 +395,16 @@ function EventBannerSection({ data }: SectionProps) {
 
 // Agenda zaplanowanych wydarzen (kolejka business_events) - lista nadchodzacych/aktywnych
 // (bez szkicow i przeszlych). Tytul EN-aware, data (zakres) + opcjonalny opis.
-function EventsSection({ data }: SectionProps) {
+function EventsSection({ data, referenceDate }: SectionProps & { referenceDate?: string }) {
   const { t, i18n } = useTranslation("wizytowka");
-  const today = new Date().toISOString().slice(0, 10);
+  // Odniesienie = data wyjazdu (gdy user planuje termin) albo dzis. Pokazujemy wydarzenie
+  // najblizsze TEJ dacie - aktywne w terminie albo pierwsze nadchodzace po nim.
+  const ref = referenceDate ?? new Date().toISOString().slice(0, 10);
   const isEn = (i18n.language || "").toLowerCase().startsWith("en");
-  // Tylko JEDNO najblizsze wydarzenie (aktywne dzis albo nadchodzace), nawet gdy lokal
+  // Tylko JEDNO najblizsze wydarzenie (aktywne w terminie albo nadchodzace), nawet gdy lokal
   // dodal kilka. Gdy mija - automatycznie wskakuje nastepne.
   const upcoming = (data.events ?? [])
-    .filter((e) => e && !e.is_draft && String(e.ends_at ?? e.starts_at) >= today)
+    .filter((e) => e && !e.is_draft && String(e.ends_at ?? e.starts_at) >= ref)
     .sort((a, b) => String(a.starts_at).localeCompare(String(b.starts_at)))
     .slice(0, 1);
   if (upcoming.length === 0) return null;
@@ -772,6 +774,8 @@ export interface PremiumBusinessCardProps {
   swipeCoverImage?: string;
   // Punkt startowy (GPS / lokalizacja startu) - marker na mapie "Na mapie" do oszacowania dystansu
   startingLocation?: { name: string; latitude: number; longitude: number };
+  // Data wyjazdu (YYYY-MM-DD) - agenda wydarzen (EventsSection) pokazuje najblizsze TEJ dacie. Domyslnie dzis.
+  referenceDate?: string;
 }
 
 const PremiumBusinessCard = ({
@@ -791,6 +795,7 @@ const PremiumBusinessCard = ({
   onClose,
   swipeCoverImage,
   startingLocation,
+  referenceDate,
 }: PremiumBusinessCardProps) => {
   const { t } = useTranslation("wizytowka");
   const [fullscreen, setFullscreen] = useState<{ photos: string[]; idx: number } | null>(null);
@@ -835,7 +840,7 @@ const PremiumBusinessCard = ({
                 <DescriptionSection data={data} />
                 <HoursWarningBadge data={data} />
                 {!hideEventBanner && <EventBannerSection data={data} />}
-                {!hideEventBanner && <EventsSection data={data} />}
+                {!hideEventBanner && <EventsSection data={data} referenceDate={referenceDate} />}
                 <TagsSection data={data} />
               </div>
             )}

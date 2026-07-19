@@ -61,7 +61,7 @@
     "undo": "Undo",
     "title": "Updates",
     "subtitle": "Events and posts visible on your card.",
-    "current_event": "Current event",
+    "current_event": "Featured events",
     "event_desc": "A promotion, concert, happy hour - whatever is happening now or soon. Set the dates below: the event will show to guests when they plan a stay in that period.",
     "event_title_label": "Title",
     "event_title_placeholder": "e.g. Drinks 1+1 until 8 PM",
