@@ -15,7 +15,13 @@
     "remove_aria": "Usuń",
     "create_route": "Stwórz trasę z tych miejsc",
     "create_collection": "Stwórz zestawienie z tych miejsc",
-    "all_cities": "Wszystkie"
+    "all_cities": "Wszystkie",
+    "select_places": "Zaznacz miejsca do trasy",
+    "cancel_select": "Anuluj",
+    "selected_count": "Zaznaczono: {{count}}",
+    "build_route": "Utwórz trasę",
+    "one_city_hint": "Trasę tworzysz z miejsc jednego miasta",
+    "other_city_locked": "Wybierz miejsca tylko z: {{city}}"
   },
   "collections": {
     "toast_deleted": "Zestawienie usunięte",

@@ -15,7 +15,13 @@
     "remove_aria": "Remove",
     "create_route": "Create a route from these places",
     "create_collection": "Create a collection from these places",
-    "all_cities": "All"
+    "all_cities": "All",
+    "select_places": "Select places for a route",
+    "cancel_select": "Cancel",
+    "selected_count": "Selected: {{count}}",
+    "build_route": "Create route",
+    "one_city_hint": "A route is built from places in one city",
+    "other_city_locked": "Pick places only from: {{city}}"
   },
   "collections": {
     "toast_deleted": "Collection deleted",

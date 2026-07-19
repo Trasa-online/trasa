@@ -2,7 +2,8 @@ import { useMemo, useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useLocation } from "react-router-dom";
 import { PullToRefresh } from "@/components/PullToRefresh";
-import { MapPin, Heart, Trash2, ArrowRight, Plus, ArrowLeft, Pencil, ListChecks, ChevronDown, Star } from "lucide-react";
+import { MapPin, Heart, Trash2, ArrowRight, Plus, ArrowLeft, Pencil, ListChecks, ChevronDown, Star, Check } from "lucide-react";
+import PlaceDetailSheet from "@/components/home/PlaceDetailSheet";
 import { parseISO, isValid, format, isToday, isYesterday } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
 import DiscoveryFeed from "@/components/home/DiscoveryFeed";
@@ -57,11 +58,20 @@ function formatGroupDate(dateStr: string): string {
   return format(d, "d MMMM yyyy", { locale: dateLocale() });
 }
 
-export const LikedTab = () => {
+export const LikedTab = ({ selectMode = false, onExitSelection }: { selectMode?: boolean; onExitSelection?: () => void } = {}) => {
   const { t } = useTranslation("explore");
   const navigate = useNavigate();
   const { user } = useAuth();
   const { open: openAuthDrawer } = useAuthDrawer();
+  // Szczegol miejsca (wizytowka) - tap w kafelek poza trybem zaznaczania.
+  const [detailPin, setDetailPin] = useState<{ id: string; place_name: string; address?: string | null; latitude?: number | null; longitude?: number | null; photo_url?: string | null } | null>(null);
+  // Tryb zaznaczania: zbior wybranych nazw + zablokowane miasto (trasa = jedno miasto).
+  const [selectedNames, setSelectedNames] = useState<Set<string>>(new Set());
+  const [selectionCity, setSelectionCity] = useState<string | null>(null);
+  // Wyjscie z trybu zaznaczania czysci wybor.
+  useEffect(() => {
+    if (!selectMode) { setSelectedNames(new Set()); setSelectionCity(null); }
+  }, [selectMode]);
   // Force re-render after mutations + przy fokusie na tab (lajki dodawane w PlaceSwiper
   // przez localStorage - useEffect ponizej odswieza nonce gdy user wraca do tab).
   const [nonce, setNonce] = useState(0);
@@ -134,6 +144,34 @@ export const LikedTab = () => {
     navigate("/plan", { state: { step: 3, city, date: new Date().toISOString(), likedPlaceNames: names } });
   };
 
+  // Toggle zaznaczenia miejsca. Pierwsze zaznaczenie blokuje miasto - kolejne
+  // miejsca z innego miasta sa niedostepne (trasa powstaje z jednego miasta).
+  const toggleSelect = (p: { city: string; place_name: string }) => {
+    if (selectionCity && p.city !== selectionCity) {
+      toast.info(t("liked.other_city_locked", { city: selectionCity }));
+      return;
+    }
+    setSelectedNames((prev) => {
+      const next = new Set(prev);
+      if (next.has(p.place_name)) next.delete(p.place_name);
+      else next.add(p.place_name);
+      // Ostatnie odznaczenie zwalnia blokade miasta.
+      if (next.size === 0) setSelectionCity(null);
+      else if (!selectionCity) setSelectionCity(p.city);
+      return next;
+    });
+  };
+
+  const handleBuildFromSelection = () => {
+    if (!selectionCity || selectedNames.size === 0) return;
+    if (!user) { openAuthDrawer({ mode: "register", hint: "save_route" }); return; }
+    const names = allPlaces
+      .filter(p => p.city === selectionCity && selectedNames.has(p.place_name))
+      .map(p => p.place_name);
+    onExitSelection?.();
+    navigate("/plan", { state: { step: 3, city: selectionCity, date: new Date().toISOString(), likedPlaceNames: names } });
+  };
+
   return (
     <div className="flex flex-col">
       {/* Pigulki miast (Wszystkie + kazde miasto, scroll w bok) */}
@@ -155,8 +193,8 @@ export const LikedTab = () => {
         ))}
       </div>
 
-      {/* CTA trasy/zestawienia - tylko gdy wybrane konkretne miasto (planowanie jest per miasto) */}
-      {selectedCity !== "all" && visible.length > 0 && (
+      {/* CTA trasy/zestawienia - tylko gdy wybrane konkretne miasto (planowanie jest per miasto). Ukryte w trybie zaznaczania. */}
+      {!selectMode && selectedCity !== "all" && visible.length > 0 && (
         <div className="flex gap-2 pb-3">
           <button
             onClick={() => handleCreateRoute(selectedCity)}
@@ -174,27 +212,63 @@ export const LikedTab = () => {
         </div>
       )}
 
+      {/* Hint trybu zaznaczania: trasa z jednego miasta */}
+      {selectMode && (
+        <div className="pb-3">
+          <p className="text-xs text-muted-foreground bg-muted/60 rounded-2xl px-3 py-2 flex items-center gap-1.5">
+            <ListChecks className="h-3.5 w-3.5 shrink-0" />
+            {t("liked.one_city_hint")}
+          </p>
+        </div>
+      )}
+
       {/* Lista miejsc - jedno pod drugim (miniaturka + naglowek + opis 2 linie + tagi + ocena Google) */}
-      <div className="flex flex-col">
-        {visible.map((p) => (
-          <div key={`${p.city}:${p.place_name}`} className="flex gap-3 py-4 border-b border-border/15">
-            <div className="h-20 w-20 rounded-2xl overflow-hidden bg-muted shrink-0">
+      <div className={cn("flex flex-col", selectMode && selectedNames.size > 0 && "pb-24")}>
+        {visible.map((p) => {
+          const checked = selectMode && selectedNames.has(p.place_name);
+          const locked = selectMode && !!selectionCity && p.city !== selectionCity;
+          return (
+          <div
+            key={`${p.city}:${p.place_name}`}
+            role="button"
+            tabIndex={0}
+            onClick={() => {
+              if (selectMode) toggleSelect(p);
+              else setDetailPin({ id: p.place_name, place_name: p.place_name, address: p.address, latitude: p.latitude, longitude: p.longitude, photo_url: p.photo_url });
+            }}
+            className={cn(
+              "flex gap-3 py-4 border-b border-border/15 -mx-2 px-2 rounded-2xl cursor-pointer active:bg-muted/40 transition-colors",
+              locked && "opacity-40",
+              checked && "bg-primary/5",
+            )}
+          >
+            <div className="relative h-20 w-20 rounded-2xl overflow-hidden bg-muted shrink-0">
               {p.photo_url ? (
                 <img src={p.photo_url} alt={p.place_name} className="w-full h-full object-cover" loading="lazy" />
               ) : (
                 <div className="w-full h-full bg-gradient-to-br from-amber-100 to-orange-200 flex items-center justify-center text-2xl">{CATEGORY_EMOJI[p.category] ?? "📍"}</div>
               )}
+              {selectMode && (
+                <div className={cn(
+                  "absolute top-1.5 left-1.5 h-6 w-6 rounded-full border-2 flex items-center justify-center transition-colors",
+                  checked ? "bg-primary border-primary" : "bg-black/30 border-white/80 backdrop-blur-sm",
+                )}>
+                  {checked && <Check className="h-4 w-4 text-white" strokeWidth={3} />}
+                </div>
+              )}
             </div>
             <div className="flex-1 min-w-0 flex flex-col">
               <div className="flex items-start justify-between gap-2">
                 <p className="text-sm font-bold leading-tight">{p.place_name}</p>
-                <button
-                  onClick={() => handleRemove(p.city, p.place_name)}
-                  className="h-7 w-7 -mt-1 -mr-1 flex items-center justify-center rounded-full text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 transition-colors active:scale-90 shrink-0"
-                  aria-label={t("liked.remove_aria")}
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
+                {!selectMode && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleRemove(p.city, p.place_name); }}
+                    className="h-7 w-7 -mt-1 -mr-1 flex items-center justify-center rounded-full text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 transition-colors active:scale-90 shrink-0"
+                    aria-label={t("liked.remove_aria")}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                )}
               </div>
               {p.description && (
                 <p className="text-xs text-muted-foreground mt-1 line-clamp-2 leading-snug">{p.description}</p>
@@ -217,8 +291,33 @@ export const LikedTab = () => {
               </div>
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
+
+      {/* Szczegol miejsca (wizytowka) */}
+      {detailPin && (
+        <PlaceDetailSheet
+          pin={detailPin}
+          open={!!detailPin}
+          onOpenChange={(open) => !open && setDetailPin(null)}
+        />
+      )}
+
+      {/* Pasek akcji trybu zaznaczania - utworz trase z wybranych (jedno miasto) */}
+      {selectMode && selectedNames.size > 0 && (
+        <div className="fixed left-0 right-0 bottom-[calc(4.5rem+env(safe-area-inset-bottom,0px))] z-30 px-4">
+          <button
+            onClick={handleBuildFromSelection}
+            className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-orange-500/25 active:scale-[0.98] transition-transform"
+          >
+            {t("liked.build_route")}
+            <span className="opacity-80">·</span>
+            {t("liked.selected_count", { count: selectedNames.size })}
+            <ArrowRight className="h-4 w-4" />
+          </button>
+        </div>
+      )}
     </div>
   );
 };
