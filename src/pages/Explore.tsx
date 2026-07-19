@@ -2,7 +2,7 @@ import { useMemo, useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useLocation } from "react-router-dom";
 import { PullToRefresh } from "@/components/PullToRefresh";
-import { MapPin, Heart, Trash2, ArrowRight, Plus, ArrowLeft, Pencil, ListChecks, ChevronDown, Star, Check } from "lucide-react";
+import { MapPin, Heart, Trash2, ArrowRight, ArrowLeft, Pencil, ListChecks, ChevronDown, Star, Check } from "lucide-react";
 import PlaceDetailSheet from "@/components/home/PlaceDetailSheet";
 import { parseISO, isValid, format, isToday, isYesterday } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
@@ -543,12 +543,25 @@ const Explore = () => {
           {!myCollections && (
             <HomeHeaderActions showNotifications={false} showSearch={false} showSaved={false} showAdmin={false} />
           )}
-          <button
-            onClick={() => { trackCollectionCreate("explore_header"); navigate("/zestawienie/nowe"); }}
-            className="shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-primary text-white text-xs font-bold active:scale-[0.97] transition-transform shadow-sm shadow-orange-500/20"
-          >
-            <Plus className="h-3.5 w-3.5" /> {t("explore.add")}
-          </button>
+          {/* Toggle: Przegladanie miejsc (swiper exploreMode) | Eksploracja (feed - biezacy widok).
+              Zastapil guzik "+ Dodaj". Segment "Eksploracja" jest aktywny (jestesmy w feedzie);
+              tap w "Przegladaj" przenosi do swipera miejsc (/plan exploreMode). */}
+          {!myCollections && (
+            <div className="shrink-0 flex items-center rounded-full bg-secondary p-0.5 text-xs font-bold">
+              <button
+                onClick={() => navigate("/plan", { state: { exploreMode: true } })}
+                className="px-3 py-1.5 rounded-full text-secondary-foreground/70 active:scale-95 transition-transform whitespace-nowrap"
+              >
+                {t("explore.tab_browse")}
+              </button>
+              <button
+                aria-current="true"
+                className="px-3 py-1.5 rounded-full bg-background text-foreground shadow-sm whitespace-nowrap"
+              >
+                {t("explore.tab_explore")}
+              </button>
+            </div>
+          )}
         </div>
       </div>
 

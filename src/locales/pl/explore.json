@@ -52,6 +52,8 @@
     "collections_subtitle": "Kolekcje miejsc, które stworzyłeś.",
     "title": "Eksploruj",
     "subtitle": "Polecane miejsca, trasy i zestawienia.",
-    "add": "Dodaj"
+    "add": "Dodaj",
+    "tab_browse": "Przeglądaj",
+    "tab_explore": "Eksploracja"
   }
 }

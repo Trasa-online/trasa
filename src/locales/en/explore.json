@@ -52,6 +52,8 @@
     "collections_subtitle": "Collections of places you've created.",
     "title": "Explore",
     "subtitle": "Recommended places, routes and collections.",
-    "add": "Add"
+    "add": "Add",
+    "tab_browse": "Browse",
+    "tab_explore": "Explore"
   }
 }

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useLocation } from "react-router-dom";
 import { NavLink } from "@/components/NavLink";
-import { BookOpen, Compass, Map, Plus, X, MapPin, Users, Link2, User, Heart, Sparkles, ArrowLeft, Layers } from "lucide-react";
+import { BookOpen, Compass, Map, Plus, X, MapPin, Users, Link2, User, Heart, ArrowLeft, Layers } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -102,14 +102,6 @@ const BottomNav = () => {
     navigate("/plan");
   };
 
-  // Wolna eksploracja - swiper miejsc bez tworzenia trasy. exploreMode w PlanWizard
-  // skacze z wyboru miasta od razu na swiper (bez daty/lokalizacji); polubienia trafiaja
-  // do /polubione. To "przegladanie dla przyjemnosci", nie krok kreatora trasy.
-  const handleBrowse = () => {
-    setShowMenu(false);
-    navigate("/plan", { state: { exploreMode: true } });
-  };
-
   // Tworzenie zestawienia (Lista / Plan) - ten sam flow co z eksploracji, ale dostepny
   // takze z menu "+" na kazdym ekranie z BottomNavem.
   const handleCreateCollection = () => {
@@ -154,14 +146,8 @@ const BottomNav = () => {
         <div className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom,0px))] left-1/2 -translate-x-1/2 z-50 flex flex-col gap-2 items-stretch w-[248px] pb-2">
           {!planStep ? (
             <>
-              {/* Krok 1: Przegladaj | Stworz zestawienie | Zaplanuj */}
-              <button
-                onClick={handleBrowse}
-                className="w-full justify-center flex items-center gap-2.5 px-5 py-3 rounded-full bg-card border border-border text-foreground font-semibold text-sm shadow-xl active:scale-95 transition-transform whitespace-nowrap"
-              >
-                <Sparkles className="h-4 w-4 text-orange-600" />
-                {t("browse_places")}
-              </button>
+              {/* Krok 1: Stworz zestawienie | Zaplanuj. (Przegladanie miejsc przeniesione
+                  na toggle w zakladce Eksploracja - stad usuniete z menu "+".) */}
               <button
                 onClick={handleCreateCollection}
                 className="w-full justify-center flex items-center gap-2.5 px-5 py-3 rounded-full bg-card border border-border text-foreground font-semibold text-sm shadow-xl active:scale-95 transition-transform whitespace-nowrap"
