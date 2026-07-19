@@ -28,7 +28,7 @@ function buildHtml(link: string): string {
 <html lang="pl"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/><meta name="color-scheme" content="light"/></head>
 <body style="margin:0;padding:0;background:#F4F4F5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;color:#0E0E0E;">
   <div style="max-width:480px;margin:0 auto;padding:48px 32px;text-align:center;">
-    <div style="width:64px;height:64px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#fb923c,#ea580c 60%,#c2410c);margin:0 auto 20px;"></div>
+    <img src="https://trasa.travel/icon-192.png" alt="Trasa" width="64" height="64" style="display:block;width:64px;height:64px;border-radius:50%;margin:0 auto 20px;" />
     <p style="font-size:13px;font-weight:800;letter-spacing:0.04em;color:#2563EB;margin:0 0 20px;">TRASA BIZNES</p>
     <h1 style="font-size:26px;font-weight:900;letter-spacing:-0.02em;margin:0 0 16px;color:#0E0E0E;line-height:1.25;">Zmiana hasła</h1>
     <p style="font-size:16px;line-height:1.6;color:#525252;margin:0 0 12px;">Dostaliśmy prośbę o&#160;zmianę hasła do&#160;Twojego konta biznesowego.</p>
@@ -71,7 +71,11 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const link = `https://trasa.travel/?bizreset=1&token_hash=${encodeURIComponent(hashedToken)}&type=recovery`;
+    // Link kieruje PROSTO na route /set-password-biznes (w hashu HashRoutera) - wtedy
+    // react-router ladinguje od razu na formularzu, ktory wszystkie straze biznesowe
+    // omijaja (exempt /set-password), a GlobalAuthCallback bailuje (hash ma set-password-biznes).
+    // SetPassword sam robi verifyOtp(token_hash) - bez PKCE verifiera, dziala z Safari.
+    const link = `https://trasa.travel/#/set-password-biznes?bizreset=1&token_hash=${encodeURIComponent(hashedToken)}&type=recovery`;
 
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",

@@ -441,6 +441,27 @@ function BusinessDeleteAccount() {
   );
 }
 
+// Miniaturka menu-PDF w panelu: renderuje pierwsza strone PDF (jak w wizytowce),
+// zamiast samej ikonki - zeby lokal widzial realny podglad tez przy malej rozdzielczosci.
+function MenuPdfThumb({ url }: { url: string }) {
+  const [img, setImg] = useState<string | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    import("@/lib/pdfToImages")
+      .then(({ renderPdfFirstPage }) => renderPdfFirstPage(url))
+      .then((d) => { if (!cancelled) setImg(d); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [url]);
+  if (img) return <img src={img} className="w-full h-full object-cover pointer-events-none" />;
+  return (
+    <div className="w-full h-full flex flex-col items-center justify-center gap-1 bg-red-50 pointer-events-none">
+      <FileText className="h-6 w-6 text-red-400" />
+      <span className="text-[9px] font-bold text-red-500">PDF</span>
+    </div>
+  );
+}
+
 const BusinessDashboard = () => {
   const { t, i18n } = useTranslation("bizdash");
   const { placeId } = useParams<{ placeId: string }>();
@@ -2490,10 +2511,7 @@ const BusinessDashboard = () => {
                         <div key={idx} className="relative aspect-square rounded-xl overflow-hidden bg-muted group cursor-pointer"
                           onClick={() => pdf ? window.open(url, "_blank", "noopener,noreferrer") : setPhotoPreview({ url, label: t("menu.photo_label", { label: menuLabel, n: idx + 1 }) })}>
                           {pdf ? (
-                            <div className="w-full h-full flex flex-col items-center justify-center gap-1 bg-red-50 pointer-events-none">
-                              <FileText className="h-7 w-7 text-red-400" />
-                              <span className="text-[10px] font-bold text-red-500">PDF</span>
-                            </div>
+                            <MenuPdfThumb url={url} />
                           ) : (
                             <img src={url} className="w-full h-full object-cover pointer-events-none" />
                           )}

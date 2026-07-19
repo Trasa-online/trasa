@@ -455,6 +455,15 @@ function SplashScreen({ done }: { done: boolean }) {
   );
 }
 
+// Czy aktualny URL to flow resetu hasla (recovery)? Wtedy guardy biznesowe NIE moga
+// redirectowac usera do panelu - SetPassword ma pokazac formularz nowego hasla.
+// Na boot URL to `.../?bizreset=1&token_hash=..&type=recovery` (pathname=/), wiec bez
+// tego straze wyrzucaly zalogowanego biznesa do panelu, nadpisujac nawigacje na set-password.
+function isRecoveryUrl(): boolean {
+  const s = (window.location.search || "") + (window.location.hash || "");
+  return /(type=recovery|bizreset=1|reset=1|recovery=1|token_hash=)/.test(s);
+}
+
 // Handles initial-boot auth check + business redirect while splash is visible
 function SplashController() {
   const { user, loading } = useAuth();
@@ -502,6 +511,8 @@ function SplashController() {
 
     (async () => {
       try {
+        // Recovery (reset hasla) - NIE redirectuj do panelu; SetPassword pokaze formularz.
+        if (isRecoveryUrl()) return;
         // Hardcoded admins (Nat, Tomek) zawsze moga uzywac apki konsumencko -
         // nawet jesli maja business_profile rekord (np. po testach draft upgrade).
         if (isHardcodedAdmin(user.email)) return;
@@ -556,6 +567,7 @@ function BusinessGuard() {
 
   useEffect(() => {
     if (!user) return;
+    if (isRecoveryUrl()) return; // reset hasla -> nie redirectuj do panelu
     if (
       location.pathname.startsWith("/biznes") ||
       location.pathname.startsWith("/dla-firm") ||
