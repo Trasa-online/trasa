@@ -1,0 +1,7 @@
+# Konfiguracja GitGuardian (ggshield). Pliki tlumaczen zawieraja etykiety UI ze
+# slowami "haslo"/"password" (np. "Nieprawidlowe aktualne haslo") - to teksty
+# interfejsu, NIE sekrety. Ignorujemy je, zeby nie generowaly false-positive alertow.
+version: 2
+secret:
+  ignored-paths:
+    - "src/locales/**"
