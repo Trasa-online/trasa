@@ -177,7 +177,8 @@ function GlobalAuthCallback() {
       const isBizReset =
         bizReset || (window.location.hash || "").includes("set-password-biznes");
       if (isBizReset || type === "recovery") {
-        navigate(isBizReset ? "/set-password-biznes" : "/set-password?recovery=1");
+        // ?reset=1 -> SetPassword pokazuje copy resetu (nie "Aktywuj konto").
+        navigate(isBizReset ? "/set-password-biznes?reset=1" : "/set-password?recovery=1");
         return;
       }
 

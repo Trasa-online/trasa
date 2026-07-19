@@ -24,6 +24,10 @@ const SetPassword = ({ forceBusiness }: { forceBusiness?: boolean } = {}) => {
   // readAuthParams() czyta z search ORAZ z hasha (HashRouter dokleja ?code= w hashu).
   const params = readAuthParams();
   const isBusiness = forceBusiness || params.get("type") === "business";
+  // Reset hasla (istniejace konto) vs pierwsza aktywacja (invite). Marker bizreset=1 z
+  // linku resetu, reset=1 z GlobalAuthCallback (degraded path), lub type=recovery.
+  // Rozne copy: reset = "Ustaw nowe haslo"/"Zapisz nowe haslo"; invite = "Aktywuj konto".
+  const isReset = params.get("bizreset") === "1" || params.get("reset") === "1" || params.get("type") === "recovery";
 
   // Powody trafienia na ta strone:
   // (a) Reset hasla - URL ma type=recovery LUB Supabase fire'uje PASSWORD_RECOVERY event
@@ -93,17 +97,22 @@ const SetPassword = ({ forceBusiness }: { forceBusiness?: boolean } = {}) => {
     };
 
     const code = params.get("code");
-    const hasSession = async () =>
-      !!(await supabase.auth.getSession()).data.session;
+    // WAZNE: liczy tylko PRAWDZIWA (nie-anonimowa) sesje. Zalegajaca anon sesja (demo/gosc)
+    // NIE moze zaliczyc sie jako "juz zalogowany" - inaczej pomijamy wymiane kodu resetu
+    // i przy submicie leci anon -> "Link wygasl". Reset MUSI wymienic kod na sesje biznesu.
+    const hasRealSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      return !!session && !session.user?.is_anonymous;
+    };
 
     const runCallback = async () => {
       if (code) {
         // detectSessionInUrl (PKCE) moze juz wymienic ten sam kod na boot aplikacji.
         // Druga wymiana tego samego kodu zwraca blad - dlatego istniejaca sesja =
         // sukces, a blad wymiany ignorujemy jezeli sesja i tak powstala.
-        if (await hasSession()) { decideAfterAuth(); return; }
+        if (await hasRealSession()) { decideAfterAuth(); return; }
         const { error } = await supabase.auth.exchangeCodeForSession(code);
-        if (error && !(await hasSession())) {
+        if (error && !(await hasRealSession())) {
           console.error("[SetPassword] Code exchange failed:", error);
           toast.error("Weryfikacja nie powiodła się. Spróbuj ponownie.");
           navigate(isBusiness ? "/auth?business=true" : "/auth");
@@ -114,9 +123,9 @@ const SetPassword = ({ forceBusiness }: { forceBusiness?: boolean } = {}) => {
       }
 
       if (tokenHash && callbackType) {
-        if (await hasSession()) { decideAfterAuth(); return; }
+        if (await hasRealSession()) { decideAfterAuth(); return; }
         const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type: callbackType as any });
-        if (error && !(await hasSession())) {
+        if (error && !(await hasRealSession())) {
           console.error("[SetPassword] verifyOtp failed:", error);
           toast.error("Weryfikacja nie powiodła się. Spróbuj ponownie.");
           navigate(isBusiness ? "/auth?business=true" : "/auth");
@@ -129,7 +138,7 @@ const SetPassword = ({ forceBusiness }: { forceBusiness?: boolean } = {}) => {
       // Brak code/token_hash w URL. User moze byc na /set-password z istniejacej sesji
       // (np. recznie z settings) ALBO Supabase juz przerobil auth callback i zostawil
       // czysty URL. W obu przypadkach decydujemy po recovery event / brak.
-      if (await hasSession()) decideAfterAuth();
+      if (await hasRealSession()) decideAfterAuth();
     };
 
     runCallback();
@@ -170,7 +179,9 @@ const SetPassword = ({ forceBusiness }: { forceBusiness?: boolean } = {}) => {
       // (z /biznes/start). Anon = link nie zostal zweryfikowany -> czytelny komunikat.
       const { data: { user: preUser } } = await supabase.auth.getUser();
       if (!preUser || preUser.is_anonymous) {
-        toast.error("Link aktywacyjny wygasł lub jest nieprawidłowy. Poproś o nowe zaproszenie.");
+        toast.error(isReset
+          ? "Link do resetu hasła wygasł lub jest nieprawidłowy. Poproś o nowy link."
+          : "Link aktywacyjny wygasł lub jest nieprawidłowy. Poproś o nowe zaproszenie.");
         return;
       }
 
@@ -265,9 +276,11 @@ const SetPassword = ({ forceBusiness }: { forceBusiness?: boolean } = {}) => {
           <div className="w-full max-w-md bg-white rounded-3xl shadow-xl shadow-slate-900/[0.06] border border-slate-100 p-7 sm:p-9">
             {/* Heading */}
             <div className="text-center mb-6">
-              <h1 className="text-2xl font-black text-slate-900 leading-tight">Ustaw hasło</h1>
+              <h1 className="text-2xl font-black text-slate-900 leading-tight">{isReset ? "Ustaw nowe hasło" : "Ustaw hasło"}</h1>
               <p className="text-sm text-slate-500 mt-1.5 leading-relaxed">
-                To ostatni krok. Po ustawieniu hasła uzyskasz dostęp do panelu biznesowego.
+                {isReset
+                  ? "Wpisz nowe hasło do swojego konta biznesowego."
+                  : "To ostatni krok. Po ustawieniu hasła uzyskasz dostęp do panelu biznesowego."}
               </p>
             </div>
 
@@ -337,7 +350,7 @@ const SetPassword = ({ forceBusiness }: { forceBusiness?: boolean } = {}) => {
                 disabled={loading}
                 className="w-full py-3.5 rounded-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-base shadow-lg shadow-blue-600/25 active:scale-[0.98] transition-all disabled:opacity-60 disabled:scale-100 mt-2"
               >
-                {loading ? "Zapisuję…" : "Aktywuj konto biznesowe"}
+                {loading ? "Zapisuję…" : (isReset ? "Zapisz nowe hasło" : "Aktywuj konto biznesowe")}
               </button>
             </form>
 
