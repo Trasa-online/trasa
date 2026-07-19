@@ -109,7 +109,9 @@
     "events_save": "Save",
     "events_cancel": "Cancel",
     "events_updated": "Updated",
-    "events_update_error": "Could not update the event"
+    "events_update_error": "Could not update the event",
+    "events_desc_label": "Description",
+    "events_desc_placeholder": "Event details (optional)"
   },
   "save": {
     "event_date_error": "The event end date cannot be earlier than the start date",

@@ -563,6 +563,7 @@ const BusinessDashboard = () => {
   // Wydarzenia (kolejka + historia) - tabela business_events, brak w types.ts -> (supabase as any)
   const [events, setEvents] = useState<any[]>([]);
   const [newEventTitle, setNewEventTitle] = useState("");
+  const [newEventDescription, setNewEventDescription] = useState("");
   const [newEventStartsAt, setNewEventStartsAt] = useState("");
   const [newEventEndsAt, setNewEventEndsAt] = useState("");
   const [addingEvent, setAddingEvent] = useState(false);
@@ -571,6 +572,7 @@ const BusinessDashboard = () => {
   // Edycja inline istniejacego wydarzenia (tylko nadchodzace/aktywne).
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [editEventTitle, setEditEventTitle] = useState("");
+  const [editEventDescription, setEditEventDescription] = useState("");
   const [editEventStartsAt, setEditEventStartsAt] = useState("");
   const [editEventEndsAt, setEditEventEndsAt] = useState("");
   const [savingEditEvent, setSavingEditEvent] = useState(false);
@@ -1236,8 +1238,16 @@ const BusinessDashboard = () => {
       .select()
       .single();
     if (error || !data) { toast.error(t("posts.events_add_error")); setAddingEvent(false); return; }
-    // Auto-tlumaczenie tytulu na EN (best-effort) - wzor jak handleTranslateEvent.
     let inserted = data;
+    // Opis OSOBNYM best-effort update (kolumna description moze nie istniec przed migracja).
+    const desc = newEventDescription.trim() || null;
+    if (desc) {
+      try {
+        await (supabase as any).from("business_events").update({ description: desc }).eq("id", data.id);
+        inserted = { ...inserted, description: desc };
+      } catch { /* dodaj wydarzenie nawet gdy opis padnie (brak kolumny) */ }
+    }
+    // Auto-tlumaczenie tytulu na EN (best-effort) - wzor jak handleTranslateEvent.
     try {
       const { data: tr } = await supabase.functions.invoke("translate-content", {
         body: { text: title, target_lang: "en", context: "event_title" },
@@ -1250,6 +1260,7 @@ const BusinessDashboard = () => {
     } catch { /* dodaj wydarzenie nawet gdy tlumaczenie padnie */ }
     setEvents(prev => sortEventsAsc([...prev, inserted]));
     setNewEventTitle("");
+    setNewEventDescription("");
     setNewEventStartsAt("");
     setNewEventEndsAt("");
     setNewEventDraft(false);
@@ -1305,6 +1316,7 @@ const BusinessDashboard = () => {
   const handleStartEditEvent = (ev: any) => {
     setEditingEventId(ev.id);
     setEditEventTitle(ev.title ?? "");
+    setEditEventDescription(ev.description ?? "");
     setEditEventStartsAt(ev.starts_at ?? "");
     setEditEventEndsAt(ev.ends_at ?? "");
   };
@@ -1322,7 +1334,11 @@ const BusinessDashboard = () => {
       .update({ title, starts_at: editEventStartsAt, ends_at: editEventEndsAt || null })
       .eq("id", id);
     if (error) { toast.error(t("posts.events_update_error")); setSavingEditEvent(false); return; }
-    let updated = { ...current, title, starts_at: editEventStartsAt, ends_at: editEventEndsAt || null };
+    const desc = editEventDescription.trim() || null;
+    let updated = { ...current, title, description: desc, starts_at: editEventStartsAt, ends_at: editEventEndsAt || null };
+    // Opis OSOBNYM best-effort update (kolumna description moze nie istniec przed migracja).
+    try { await (supabase as any).from("business_events").update({ description: desc }).eq("id", id); }
+    catch { /* zapisz zmiane nawet gdy opis padnie */ }
     // Re-tlumaczenie EN gdy tytul sie zmienil i lokal go nie nadpisal recznie (best-effort).
     if (title !== current.title && !current.title_en_overridden) {
       try {
@@ -2599,6 +2615,10 @@ const BusinessDashboard = () => {
                         <Input id="new_event_title" value={newEventTitle} maxLength={40} onChange={e => setNewEventTitle(e.target.value)} placeholder={t("posts.events_title_placeholder")} />
                         <p className="text-[11px] text-muted-foreground text-right">{newEventTitle.length}/40</p>
                       </div>
+                      <div className="space-y-1">
+                        <Label htmlFor="new_event_description" className="text-xs">{t("posts.events_desc_label")}</Label>
+                        <textarea id="new_event_description" rows={2} value={newEventDescription} maxLength={300} onChange={e => setNewEventDescription(e.target.value)} placeholder={t("posts.events_desc_placeholder")} className="w-full rounded-2xl border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none" />
+                      </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div className="space-y-1 min-w-0"><Label htmlFor="new_event_start" className="text-xs">{t("posts.from")}</Label><Input id="new_event_start" type="date" value={newEventStartsAt} onChange={e => setNewEventStartsAt(e.target.value)} className="w-full" /></div>
                         <div className="space-y-1 min-w-0"><Label htmlFor="new_event_end" className="text-xs">{t("posts.events_to_optional")}</Label><Input id="new_event_end" type="date" value={newEventEndsAt} onChange={e => setNewEventEndsAt(e.target.value)} className="w-full" /></div>
@@ -2645,6 +2665,10 @@ const BusinessDashboard = () => {
                                       <Input id={`edit_event_title_${ev.id}`} value={editEventTitle} maxLength={40} onChange={e => setEditEventTitle(e.target.value)} placeholder={t("posts.events_title_placeholder")} />
                                       <p className="text-[11px] text-muted-foreground text-right">{editEventTitle.length}/40</p>
                                     </div>
+                                    <div className="space-y-1">
+                                      <Label htmlFor={`edit_event_description_${ev.id}`} className="text-xs">{t("posts.events_desc_label")}</Label>
+                                      <textarea id={`edit_event_description_${ev.id}`} rows={2} value={editEventDescription} maxLength={300} onChange={e => setEditEventDescription(e.target.value)} placeholder={t("posts.events_desc_placeholder")} className="w-full rounded-2xl border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none" />
+                                    </div>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                       <div className="space-y-1 min-w-0"><Label htmlFor={`edit_event_start_${ev.id}`} className="text-xs">{t("posts.from")}</Label><Input id={`edit_event_start_${ev.id}`} type="date" value={editEventStartsAt} onChange={e => setEditEventStartsAt(e.target.value)} className="w-full" /></div>
                                       <div className="space-y-1 min-w-0"><Label htmlFor={`edit_event_end_${ev.id}`} className="text-xs">{t("posts.events_to_optional")}</Label><Input id={`edit_event_end_${ev.id}`} type="date" value={editEventEndsAt} onChange={e => setEditEventEndsAt(e.target.value)} className="w-full" /></div>
@@ -2663,6 +2687,7 @@ const BusinessDashboard = () => {
                                           {ev.is_draft && <span className="flex-shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">{t("posts.events_draft_badge")}</span>}
                                         </div>
                                         <p className="text-[11px] text-muted-foreground mt-0.5">{fmtEventRange(ev)}</p>
+                                        {ev.description && <p className="text-xs text-muted-foreground mt-1 line-clamp-2 leading-snug break-words">{ev.description}</p>}
                                       </div>
                                       <div className="flex items-center gap-1.5 flex-shrink-0">
                                         <button onClick={() => handleStartEditEvent(ev)} className="h-6 w-6 rounded-full bg-muted flex items-center justify-center active:opacity-60"><Pencil className="h-3.5 w-3.5 text-muted-foreground" /></button>

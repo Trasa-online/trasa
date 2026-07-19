@@ -109,7 +109,9 @@
     "events_save": "Zapisz",
     "events_cancel": "Anuluj",
     "events_updated": "Zaktualizowano",
-    "events_update_error": "Nie udało się zaktualizować wydarzenia"
+    "events_update_error": "Nie udało się zaktualizować wydarzenia",
+    "events_desc_label": "Opis",
+    "events_desc_placeholder": "Szczegóły wydarzenia (opcjonalnie)"
   },
   "save": {
     "event_date_error": "Data końca wydarzenia nie może być wcześniejsza niż data początku",
