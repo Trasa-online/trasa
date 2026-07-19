@@ -399,9 +399,12 @@ function EventsSection({ data }: SectionProps) {
   const { t, i18n } = useTranslation("wizytowka");
   const today = new Date().toISOString().slice(0, 10);
   const isEn = (i18n.language || "").toLowerCase().startsWith("en");
+  // Tylko JEDNO najblizsze wydarzenie (aktywne dzis albo nadchodzace), nawet gdy lokal
+  // dodal kilka. Gdy mija - automatycznie wskakuje nastepne.
   const upcoming = (data.events ?? [])
     .filter((e) => e && !e.is_draft && String(e.ends_at ?? e.starts_at) >= today)
-    .sort((a, b) => String(a.starts_at).localeCompare(String(b.starts_at)));
+    .sort((a, b) => String(a.starts_at).localeCompare(String(b.starts_at)))
+    .slice(0, 1);
   if (upcoming.length === 0) return null;
   const fmtDate = (d: string) => {
     const dt = parseISO(d);
