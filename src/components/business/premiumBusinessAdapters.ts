@@ -62,6 +62,7 @@ export function fromMockPlace(
     googleOpenNow: detail?.opening_hours?.open_now,
 
     eventTitle: place.businessEventTitle,
+    events: place.businessEvents ?? [],
     eventDescription: place.businessEventDescription,
 
     posts: posts ?? [],
@@ -103,6 +104,7 @@ export interface DashboardStateForPreview {
   menuImageUrls?: string[];
   posts?: BusinessPost[];
   eventTitle?: string;
+  events?: Array<{ title: string; title_en?: string | null; starts_at: string; ends_at?: string | null; description?: string | null; is_draft?: boolean }>;
   eventDescription?: string;
   openingHours?: Record<string, { open: string; close: string } | { closed: true }>;
   colorBadge?: string;
@@ -131,6 +133,7 @@ export function fromDashboardState(state: DashboardStateForPreview): PremiumBusi
     ownerOpeningHours: state.openingHours,
 
     eventTitle: state.eventTitle,
+    events: state.events ?? [],
     eventDescription: state.eventDescription,
 
     posts: state.posts ?? [],

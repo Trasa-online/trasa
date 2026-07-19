@@ -33,5 +33,6 @@
     "fri": "Friday",
     "sat": "Saturday",
     "sun": "Sunday"
-  }
+  },
+  "events_title": "Events"
 }

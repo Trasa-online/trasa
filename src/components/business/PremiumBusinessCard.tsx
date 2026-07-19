@@ -20,7 +20,7 @@ import { createPortal } from "react-dom";
 import { MAIN_CATEGORIES, mainCategoryLabel } from "@/lib/categories";
 import { cn } from "@/lib/utils";
 import { Star, Clock, ChevronRight, ChevronLeft, ChevronDown, X, Maximize2, Phone, Globe, FileText, Instagram, Facebook } from "lucide-react";
-import { parseISO, isValid, formatDistanceToNow } from "date-fns";
+import { parseISO, isValid, formatDistanceToNow, format } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
 import RouteMap from "@/components/RouteMap";
 import type {
@@ -389,6 +389,40 @@ function EventBannerSection({ data }: SectionProps) {
   return (
     <div className="rounded-full bg-gradient-to-r from-[#F4A259] to-[#F9662B] px-4 py-3 flex items-center justify-center text-white font-bold text-sm shadow-md shadow-orange-500/20 text-center leading-tight">
       {data.eventTitle}
+    </div>
+  );
+}
+
+// Agenda zaplanowanych wydarzen (kolejka business_events) - lista nadchodzacych/aktywnych
+// (bez szkicow i przeszlych). Tytul EN-aware, data (zakres) + opcjonalny opis.
+function EventsSection({ data }: SectionProps) {
+  const { t, i18n } = useTranslation("wizytowka");
+  const today = new Date().toISOString().slice(0, 10);
+  const isEn = (i18n.language || "").toLowerCase().startsWith("en");
+  const upcoming = (data.events ?? [])
+    .filter((e) => e && !e.is_draft && String(e.ends_at ?? e.starts_at) >= today)
+    .sort((a, b) => String(a.starts_at).localeCompare(String(b.starts_at)));
+  if (upcoming.length === 0) return null;
+  const fmtDate = (d: string) => {
+    const dt = parseISO(d);
+    return isValid(dt) ? format(dt, "d MMM", { locale: dateLocale() }) : d;
+  };
+  const range = (e: { starts_at: string; ends_at?: string | null }) =>
+    (e.ends_at && e.ends_at !== e.starts_at) ? `${fmtDate(e.starts_at)} - ${fmtDate(e.ends_at)}` : fmtDate(e.starts_at);
+  return (
+    <div className="space-y-2 pt-2">
+      <h3 className="text-lg font-black tracking-tight">{t("events_title")}</h3>
+      <div className="space-y-1.5">
+        {upcoming.map((e, i) => (
+          <div key={i} className="flex items-start gap-3 p-3 rounded-2xl bg-muted/40 border border-border/30">
+            <span className="shrink-0 mt-0.5 px-2.5 py-1 rounded-full bg-orange-50 border border-orange-100 text-orange-700 text-[11px] font-bold whitespace-nowrap">{range(e)}</span>
+            <div className="min-w-0">
+              <p className="text-sm font-bold leading-snug break-words">{isEn && e.title_en ? e.title_en : e.title}</p>
+              {e.description && <p className="text-xs text-muted-foreground mt-0.5 leading-snug break-words">{e.description}</p>}
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -798,6 +832,7 @@ const PremiumBusinessCard = ({
                 <DescriptionSection data={data} />
                 <HoursWarningBadge data={data} />
                 {!hideEventBanner && <EventBannerSection data={data} />}
+                {!hideEventBanner && <EventsSection data={data} />}
                 <TagsSection data={data} />
               </div>
             )}

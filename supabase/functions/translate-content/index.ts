@@ -9,8 +9,9 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const ALLOWED_ORIGINS = ["https://trasa.travel", "https://trasa.lovable.app", "http://localhost:8080", "http://localhost:5173", "capacitor://localhost", "https://localhost", "http://localhost"];
 
-// Model przez Lovable AI Gateway. Gdyby gateway nie akceptowal tego id - podmien tutaj.
-const MODEL = "anthropic/claude-3-5-haiku-20241022";
+// Model przez Lovable AI Gateway. google/gemini-2.5-flash jest sprawdzony (uzywa go
+// translate-place). Claude przez gateway bywa niedostepny -> "nie udalo sie przetlumaczyc".
+const MODEL = "google/gemini-2.5-flash";
 const MAX_INPUT_CHARS = 2000;
 
 serve(async (req) => {

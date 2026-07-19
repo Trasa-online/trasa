@@ -171,13 +171,13 @@ function getContrastColor(hex: string): string {
 
 function AppLikePreviewModal({
   onClose, onConvert, isDraft, convertingDraft,
-  businessName, mainCategory, subcategories, tags, description, street, city, logoUrl, coverImageUrl, coverVideoUrl, galleryUrls, menuImageUrls, posts, eventTitle, eventDescription, openingHours,
+  businessName, mainCategory, subcategories, tags, description, street, city, logoUrl, coverImageUrl, coverVideoUrl, galleryUrls, menuImageUrls, posts, eventTitle, eventDescription, events, openingHours,
   colorBadge, colorCardBg, colorButton, colorPromo,
 }: {
   onClose: () => void; onConvert: () => void; isDraft: boolean; convertingDraft: boolean;
   businessName: string; mainCategory: string; subcategories: string[]; tags: string[]; description: string;
   street: string; city: string; logoUrl: string; coverImageUrl: string; coverVideoUrl: string; galleryUrls: string[]; menuImageUrls: string[];
-  posts: BusinessPost[]; eventTitle: string; eventDescription: string; openingHours: OpeningHours;
+  posts: BusinessPost[]; eventTitle: string; eventDescription: string; events?: any[]; openingHours: OpeningHours;
   colorBadge: string; colorCardBg: string; colorButton: string; colorPromo?: string;
 }) {
   const { t } = useTranslation("bizdash");
@@ -286,7 +286,7 @@ function AppLikePreviewModal({
                   data={fromDashboardState({
                     businessName, mainCategory, subcategories, tags, description, street, city,
                     logoUrl, coverImageUrl, coverVideoUrl, galleryUrls, menuImageUrls, posts,
-                    eventTitle, eventDescription, openingHours,
+                    eventTitle, eventDescription, events, openingHours,
                     colorBadge, colorCardBg, colorButton,
                   })}
                   mode="detail"
@@ -1747,9 +1747,9 @@ const BusinessDashboard = () => {
         {([
           { id: 'overview',   label: t('nav.overview'),  icon: LayoutDashboard, disabled: true,  hidden: true },
           { id: 'profile',    label: t('nav.profile'),   icon: Store,          disabled: false, hidden: false },
-          { id: 'gallery',    label: t('nav.appearance'), icon: Images,        disabled: false, hidden: false },
           { id: 'menu',       label: t('nav.menu'),      icon: BookOpen,       disabled: false, hidden: false },
           { id: 'posts',      label: t('nav.posts'),     icon: Megaphone,      disabled: false, hidden: false },
+          { id: 'gallery',    label: t('nav.appearance'), icon: Images,        disabled: false, hidden: false },
           { id: 'analytics',  label: t('nav.analytics'), icon: TrendingUp,     disabled: true,  hidden: false },
           { id: 'settings',   label: t('nav.settings'),  icon: Settings,       disabled: false, hidden: false },
         ] as const).filter(item => !item.hidden).map(item => (
@@ -1857,9 +1857,9 @@ const BusinessDashboard = () => {
           {([
             { id: 'overview', label: t('tabs.overview'), disabled: true,  hidden: true },
             { id: 'profile', label: t('tabs.profile'), disabled: false, hidden: false },
-            { id: 'gallery', label: t('tabs.appearance'), disabled: false, hidden: false },
             { id: 'menu', label: t('tabs.menu'), disabled: false, hidden: false },
             { id: 'posts', label: t('tabs.posts'), disabled: false, hidden: false },
+            { id: 'gallery', label: t('tabs.appearance'), disabled: false, hidden: false },
             { id: 'analytics', label: t('tabs.analytics'), disabled: true,  hidden: false },
             { id: 'settings', label: t('tabs.settings'), disabled: false, hidden: false },
           ] as const).filter(item => !item.hidden).map(item => (
@@ -2176,14 +2176,6 @@ const BusinessDashboard = () => {
                 {/* Live preview strip NAD pickerem - zeby guzik "Dodaj" byl widoczny podczas
                     zmiany koloru (sticky bar "Zapisz zmiany" zaslanial go, gdy byl na dole karty).
                     Badge kategorii i promocji ZAWSZE pomaranczowe (jednolite w aplikacji). */}
-                <div className="rounded-2xl border border-slate-100 bg-slate-50 p-3">
-                  <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">{t("personalization.preview")}</p>
-                  <div className="flex items-center gap-3">
-                    <span className="px-3 py-1 rounded-full text-xs font-bold shrink-0 text-white" style={{ background: "#D45113" }}>{MAIN_CATEGORIES.find(c => c.id === mainCategory)?.label || t("personalization.category_fallback")}</span>
-                    <span className="px-3 py-1 rounded-full text-xs font-bold shrink-0 text-white" style={{ background: "#D45113" }}>{t("personalization.promo")}</span>
-                    <button className="flex-1 py-2 rounded-full text-xs font-bold" style={{ background: colorButton, color: getContrastColor(colorButton) }}>{t("card.add")}</button>
-                  </div>
-                </div>
                 <div className="space-y-3">
                   {/* Personalizacja ograniczona do koloru guzika akcji - kategorie/tlo sa jednolite
                       w calej aplikacji (badge kategorii i overlay nie sa juz personalizowane). */}
@@ -2520,11 +2512,11 @@ const BusinessDashboard = () => {
                       <p className="text-sm font-bold text-foreground">{menuLabel} <span className="font-normal text-muted-foreground text-xs">{t("menu.max", { max: MAX_MENU_IMAGES })}</span></p>
                       <p className="text-xs text-muted-foreground shrink-0">{menuImageUrls.length}/{MAX_MENU_IMAGES}</p>
                     </div>
-                    <div className="grid grid-cols-3 md:grid-cols-5 gap-2">
+                    <div className="flex flex-wrap gap-2">
                       {menuImageUrls.map((url, idx) => {
                         const pdf = isPdfUrl(url);
                         return (
-                        <div key={idx} className="relative aspect-square rounded-xl overflow-hidden bg-muted group cursor-pointer"
+                        <div key={idx} className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-xl overflow-hidden bg-muted group cursor-pointer"
                           onClick={() => pdf ? window.open(url, "_blank", "noopener,noreferrer") : setPhotoPreview({ url, label: t("menu.photo_label", { label: menuLabel, n: idx + 1 }) })}>
                           {pdf ? (
                             <MenuPdfThumb url={url} />
@@ -2544,7 +2536,7 @@ const BusinessDashboard = () => {
                         );
                       })}
                       {menuImageUrls.length < MAX_MENU_IMAGES && (
-                        <button onClick={() => menuInputRef.current?.click()} className="aspect-square rounded-xl border-2 border-dashed border-border flex items-center justify-center bg-muted/30 active:opacity-70">
+                        <button onClick={() => menuInputRef.current?.click()} className="w-24 h-24 sm:w-28 sm:h-28 rounded-xl border-2 border-dashed border-border flex items-center justify-center bg-muted/30 active:opacity-70">
                           {uploading === 'menu' ? <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /> : <Plus className="h-5 w-5 text-muted-foreground" />}
                         </button>
                       )}
@@ -3134,6 +3126,7 @@ const BusinessDashboard = () => {
           menuImageUrls={menuImageUrls}
           eventTitle={eventTitle}
           eventDescription={eventDescription}
+          events={events}
           openingHours={openingHours}
           colorBadge={colorBadge}
           colorCardBg={colorCardBg}
