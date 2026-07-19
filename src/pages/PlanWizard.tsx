@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { ArrowLeft, X, Plus, Filter, Check, Star, MapPin, ArrowRight } from "lucide-react";
+import { ArrowLeft, X, Plus, Filter, Check, Star, MapPin, ArrowRight, ChevronDown } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import { supabase } from "@/integrations/supabase/client";
@@ -48,15 +48,18 @@ const PlanWizard = () => {
   const { t } = useTranslation("plan");
   const returnState = location.state as { step?: number; city?: string; date?: string; numDays?: number; startingLocation?: string | { name: string; latitude: number; longitude: number }; likedPlaceNames?: string[]; skippedPlaceNames?: string[]; exploreMode?: boolean; fromRoute?: boolean } | null;
 
+  const exploreMode = returnState?.exploreMode ?? false;
+
   const initialStep: Step = (() => {
     const s = returnState?.step;
     if (s === 1 || s === 2 || s === 3 || s === 4) return s;
-    return 1;
+    // exploreMode ("Przegladaj") pomija wybor miasta - od razu swiper (domyslnie Warszawa).
+    return exploreMode ? 4 : 1;
   })();
 
   const [step, setStep] = useState<Step>(initialStep);
-  const [city, setCity] = useState(returnState?.city ?? "");
-  const [date, setDate] = useState<Date | null>(returnState?.date ? new Date(returnState.date) : null);
+  const [city, setCity] = useState(returnState?.city ?? (exploreMode ? "Warszawa" : ""));
+  const [date, setDate] = useState<Date | null>(returnState?.date ? new Date(returnState.date) : (exploreMode ? new Date() : null));
   const [numDays, setNumDays] = useState(returnState?.numDays ?? 1);
   // startingLocation moze byc string (tylko nazwa, legacy) lub obiekt (z lat/lng).
   // Nowe StartingLocationPicker zwraca obiekt - pin startu pojawia sie na mapie.
@@ -95,7 +98,6 @@ const PlanWizard = () => {
   const allSkippedNames: string[] = returnState?.skippedPlaceNames ?? [];
 
   const [showAddPlace, setShowAddPlace] = useState(false);
-  const exploreMode = returnState?.exploreMode ?? false;
   // Istniejaca aktywna trasa dla wybranego miasta+daty (hybryda: pytamy kontynuuj/nowa).
   const [dupTrip, setDupTrip] = useState<{ id: string; city: string; start_date: string } | null>(null);
   // Edycja daty z poziomu swipera (klik w "miasto · DD MMM") - sheet z kalendarzem.
@@ -181,10 +183,10 @@ const PlanWizard = () => {
     // Parowanie (step 4): z "Dopasowania" wracaj najpierw do "Eksploruj", nie skacz do step 3.
     else if (step === 4 && step4Tab === "matches") setStep4Tab("swipe");
     // Step 3 to auto-resolvujacy krok posredni (loader/mapa/sheet) - NIE jest celem cofania.
-    // exploreMode pomija kroki 2/3 (city -> swiper), wiec wracamy do wyboru miasta.
+    // exploreMode pomija wybor miasta (od razu swiper) - chevron wraca do feedu Eksploruj.
     // Solo: wracamy do kalendarza, pomijajac mape punktu startu (auto-resolve odpalalby
     // sie ponownie i albo bouncowal do step 4, albo pokazywal niespodziewana mape).
-    else if (step === 4) setStep(exploreMode ? 1 : 2);
+    else if (step === 4) { if (exploreMode) navigate("/eksploruj"); else setStep(2); }
     else if (step === 3) setStep(2);
     else setStep((s) => (s - 1) as Step);
   };
@@ -276,7 +278,39 @@ const PlanWizard = () => {
           <ArrowLeft className="h-5 w-5" />
         </button>
 
-        {step === 4 ? (
+        {step === 4 && exploreMode ? (
+          <>
+            {/* exploreMode ("Przegladaj"): selektor miasta (klik -> wybor miasta) + toggle
+                Przegladaj|Eksploruj (powrot do feedu). Bez "Zakoncz". Filtry po prawej. */}
+            <button
+              onClick={() => setStep(1)}
+              className="shrink-0 flex items-center gap-1 px-2.5 h-8 rounded-full bg-card border border-border/60 active:scale-[0.97] transition-transform max-w-[120px]"
+              aria-label={t("explore_change_city")}
+            >
+              <MapPin className="h-3.5 w-3.5 text-orange-600 shrink-0" />
+              <span className="text-sm font-bold text-foreground truncate">{city || "Warszawa"}</span>
+              <ChevronDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+            </button>
+            <div className="flex-1" />
+            <div className="shrink-0 flex items-center rounded-full bg-secondary p-0.5 text-xs font-bold">
+              <span className="px-2.5 py-1.5 rounded-full bg-background text-foreground shadow-sm whitespace-nowrap">{t("explore_browse")}</span>
+              <button
+                onClick={() => navigate("/eksploruj")}
+                className="px-2.5 py-1.5 rounded-full text-secondary-foreground/70 active:scale-95 transition-transform whitespace-nowrap"
+              >
+                {t("explore_explore")}
+              </button>
+            </div>
+            {/* Chip filtru */}
+            <button
+              onClick={() => setCategoryDrawerOpen(true)}
+              className="shrink-0 h-8 w-8 flex items-center justify-center rounded-full bg-card border border-border/60 active:scale-[0.97] transition-transform"
+              aria-label={t("filters")}
+            >
+              <Filter className="h-4 w-4 text-orange-600" />
+            </button>
+          </>
+        ) : step === 4 ? (
           <>
             {/* Akcje + chip filtru kategorii - chip ostatni (po prawej) */}
             <div className="flex-1" />

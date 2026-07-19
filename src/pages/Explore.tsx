@@ -2,7 +2,7 @@ import { useMemo, useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useLocation } from "react-router-dom";
 import { PullToRefresh } from "@/components/PullToRefresh";
-import { MapPin, Heart, Trash2, ArrowRight, ArrowLeft, Pencil, ListChecks, ChevronDown, Star, Check } from "lucide-react";
+import { MapPin, Heart, Trash2, ArrowRight, ArrowLeft, Pencil, ListChecks, ChevronDown, Star, Check, Search, X } from "lucide-react";
 import PlaceDetailSheet from "@/components/home/PlaceDetailSheet";
 import { parseISO, isValid, format, isToday, isYesterday } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
@@ -102,12 +102,17 @@ export const LikedTab = ({ selectMode = false, onExitSelection }: { selectMode?:
   );
   const cities = groups.map(g => g.city); // posortowane po liczbie polubien
   const [selectedCity, setSelectedCity] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState("");
   // Gdy wybrane miasto zniknie (usuniete ostatnie miejsce) - wroc na "Wszystkie".
   useEffect(() => {
     if (selectedCity !== "all" && !cities.includes(selectedCity)) setSelectedCity("all");
   }, [cities, selectedCity]);
 
-  const visible = selectedCity === "all" ? allPlaces : allPlaces.filter(p => p.city === selectedCity);
+  const byCity = selectedCity === "all" ? allPlaces : allPlaces.filter(p => p.city === selectedCity);
+  const q = searchQuery.trim().toLowerCase();
+  const visible = q
+    ? byCity.filter(p => p.place_name.toLowerCase().includes(q) || (p.description ?? "").toLowerCase().includes(q))
+    : byCity;
   const totalLikes = allPlaces.length;
 
   const handleRemove = (city: string, place_name: string) => {
@@ -137,12 +142,6 @@ export const LikedTab = ({ selectMode = false, onExitSelection }: { selectMode?:
       </div>
     );
   }
-
-  const handleCreateRoute = (city: string) => {
-    if (!user) { openAuthDrawer({ mode: "register", hint: "save_route" }); return; }
-    const names = allPlaces.filter(p => p.city === city).map(p => p.place_name);
-    navigate("/plan", { state: { step: 3, city, date: new Date().toISOString(), likedPlaceNames: names } });
-  };
 
   // Toggle zaznaczenia miejsca. Pierwsze zaznaczenie blokuje miasto - kolejne
   // miejsca z innego miasta sa niedostepne (trasa powstaje z jednego miasta).
@@ -193,24 +192,27 @@ export const LikedTab = ({ selectMode = false, onExitSelection }: { selectMode?:
         ))}
       </div>
 
-      {/* CTA trasy/zestawienia - tylko gdy wybrane konkretne miasto (planowanie jest per miasto). Ukryte w trybie zaznaczania. */}
-      {!selectMode && selectedCity !== "all" && visible.length > 0 && (
-        <div className="flex gap-2 pb-3">
+      {/* Waska wyszukiwarka - bezposrednio pod pillami miast. Filtruje po nazwie/opisie. */}
+      <div className="relative pb-3">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" style={{ marginTop: "-6px" }} />
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder={t("liked.search_placeholder")}
+          className="w-full h-9 pl-9 pr-9 rounded-full bg-muted/60 border border-border/40 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30"
+        />
+        {searchQuery && (
           <button
-            onClick={() => handleCreateRoute(selectedCity)}
-            className="flex-1 py-2.5 rounded-full bg-primary text-white font-bold text-xs flex items-center justify-center gap-1.5 active:scale-[0.97] transition-transform"
+            onClick={() => setSearchQuery("")}
+            className="absolute right-3 top-1/2 h-5 w-5 flex items-center justify-center rounded-full text-muted-foreground hover:bg-muted active:scale-90 transition"
+            style={{ marginTop: "-6px" }}
+            aria-label={t("liked.search_clear")}
           >
-            {t("liked.create_route")}
-            <ArrowRight className="h-3.5 w-3.5" />
+            <X className="h-3.5 w-3.5" />
           </button>
-          <button
-            onClick={() => { trackCollectionCreate("liked_group"); navigate(`/zestawienie/nowe?from=liked&city=${encodeURIComponent(selectedCity)}`); }}
-            className="flex-1 py-2.5 rounded-full bg-secondary text-secondary-foreground font-bold text-xs flex items-center justify-center gap-1.5 active:scale-[0.97] transition-transform"
-          >
-            {t("liked.create_collection")}
-          </button>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Hint trybu zaznaczania: trasa z jednego miasta */}
       {selectMode && (
@@ -223,7 +225,7 @@ export const LikedTab = ({ selectMode = false, onExitSelection }: { selectMode?:
       )}
 
       {/* Lista miejsc - jedno pod drugim (miniaturka + naglowek + opis 2 linie + tagi + ocena Google) */}
-      <div className={cn("flex flex-col", selectMode && selectedNames.size > 0 && "pb-24")}>
+      <div className={cn("flex flex-col", selectMode && selectedNames.size > 0 && "pb-40")}>
         {visible.map((p) => {
           const checked = selectMode && selectedNames.has(p.place_name);
           const locked = selectMode && !!selectionCity && p.city !== selectionCity;
@@ -306,7 +308,7 @@ export const LikedTab = ({ selectMode = false, onExitSelection }: { selectMode?:
 
       {/* Pasek akcji trybu zaznaczania - utworz trase z wybranych (jedno miasto) */}
       {selectMode && selectedNames.size > 0 && (
-        <div className="fixed left-0 right-0 bottom-[calc(4.5rem+env(safe-area-inset-bottom,0px))] z-30 px-4">
+        <div className="fixed left-0 right-0 bottom-[calc(6rem+env(safe-area-inset-bottom,0px))] z-30 px-4">
           <button
             onClick={handleBuildFromSelection}
             className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-orange-500/25 active:scale-[0.98] transition-transform"

@@ -21,7 +21,9 @@
     "selected_count": "Selected: {{count}}",
     "build_route": "Create route",
     "one_city_hint": "A route is built from places in one city",
-    "other_city_locked": "Pick places only from: {{city}}"
+    "other_city_locked": "Pick places only from: {{city}}",
+    "search_placeholder": "Search saved places",
+    "search_clear": "Clear"
   },
   "collections": {
     "toast_deleted": "Collection deleted",

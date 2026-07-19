@@ -21,7 +21,9 @@
     "selected_count": "Zaznaczono: {{count}}",
     "build_route": "Utwórz trasę",
     "one_city_hint": "Trasę tworzysz z miejsc jednego miasta",
-    "other_city_locked": "Wybierz miejsca tylko z: {{city}}"
+    "other_city_locked": "Wybierz miejsca tylko z: {{city}}",
+    "search_placeholder": "Szukaj w zapisanych",
+    "search_clear": "Wyczyść"
   },
   "collections": {
     "toast_deleted": "Zestawienie usunięte",
