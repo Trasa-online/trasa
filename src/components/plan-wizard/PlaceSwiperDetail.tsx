@@ -16,7 +16,7 @@ import { haversineKm, formatDistance } from "@/lib/distance";
 import { Drawer as VaulDrawer } from "vaul";
 import { supabase } from "@/integrations/supabase/client";
 import { getPhotoUrl, isCachedPhotoUrl, ensurePhotoCached } from "@/lib/placePhotos";
-import { type MockPlace } from "./PlaceSwiper";
+import { type MockPlace, fetchEnrichedPlace } from "./PlaceSwiper";
 import posthog from "posthog-js";
 import PremiumBusinessCard from "@/components/business/PremiumBusinessCard";
 import { fromMockPlace } from "@/components/business/premiumBusinessAdapters";
@@ -69,18 +69,24 @@ const PlaceSwiperDetail = ({
   const [loading, setLoading] = useState(false);
   const [photos, setPhotos] = useState<string[]>([]);
   const [businessPosts, setBusinessPosts] = useState<BusinessPost[]>([]);
+  // Swiezy profil biznesu doczytany przy otwarciu wizytowki (place ze swipera bywa starym
+  // snapshotem - po edycji profilu przez lokal zdjecia/dane byly nieaktualne). ep = "effective place".
+  const [freshPlace, setFreshPlace] = useState<MockPlace | null>(null);
   const distanceRef = useDistanceReference();
   const { t } = useTranslation("wizytowka");
+  const ep = freshPlace ?? place;
 
   useEffect(() => {
     if (!open || !place) {
       setDetail(null);
       setPhotos([]);
       setBusinessPosts([]);
+      setFreshPlace(null);
       return;
     }
 
     setLoading(true);
+    setFreshPlace(null);
 
     // Track view event for real places (UUID, not mock)
     const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -89,29 +95,37 @@ const PlaceSwiperDetail = ({
     }
 
     const fetchAll = async () => {
-      // Business with own photos → use their photos (don't override with Google),
-      // ale NADAL fetchujemy Google detail dla reviews, formatted_address, rating,
-      // user_ratings_total.
-      const hasBizPhotos = place.businessHasOwnPhoto || skipGoogleFetch;
-      if (hasBizPhotos) {
-        setPhotos([place.photo_url, ...(place.galleryPhotos ?? [])].filter(Boolean) as string[]);
+      // 1. Doczytaj SWIEZY profil biznesu (real DB place). place ze swipera to snapshot z chwili
+      //    zaladowania kolejki - po edycji profilu (zdjecia, godziny, eventy) bywa nieaktualny.
+      //    Dzieki temu wizytowka pokazuje aktualne dane niezaleznie od tego jak stary jest swiper.
+      let cur = place;
+      if (UUID_RE.test(place.id)) {
+        const fresh = await fetchEnrichedPlace(place.id, referenceDate);
+        if (fresh) { cur = fresh; setFreshPlace(fresh); }
       }
 
-      const alreadyCached = isCachedPhotoUrl(place.photo_url);
-      const hasGallery = (place.galleryPhotos ?? []).length > 0;
+      // 2. Business with own photos → use their photos (don't override with Google),
+      //    ale NADAL fetchujemy Google detail dla reviews, formatted_address, rating.
+      const hasBizPhotos = cur.businessHasOwnPhoto || skipGoogleFetch;
+      if (hasBizPhotos) {
+        setPhotos([cur.photo_url, ...(cur.galleryPhotos ?? [])].filter(Boolean) as string[]);
+      }
+
+      const alreadyCached = isCachedPhotoUrl(cur.photo_url);
+      const hasGallery = (cur.galleryPhotos ?? []).length > 0;
       const placesPromise = supabase.functions
         .invoke("google-places-proxy", {
           body: {
-            placeName: place.place_name,
-            latitude: place.latitude,
-            longitude: place.longitude,
-            city: city ?? place.city,
+            placeName: cur.place_name,
+            latitude: cur.latitude,
+            longitude: cur.longitude,
+            city: city ?? cur.city,
             // Authorytatywny place_id z bazy - inaczej proxy rozwiazuje miejsce przez
             // luzne dopasowanie nazwy (nearbysearch/textsearch) i dla lokalu o popularnej
             // nazwie (np. "Wanderlust coffee place") potrafi trafic w INNY pobliski lokal
             // -> zly adres/mapa/recenzje. Karta swipe juz przekazuje ten id; detal musi tez.
-            googlePlaceId: (place as { google_place_id?: string }).google_place_id ?? null,
-            placeDbId: place.id,
+            googlePlaceId: (cur as { google_place_id?: string }).google_place_id ?? null,
+            placeDbId: cur.id,
           },
         })
         .then(({ data }) => {
@@ -127,25 +141,25 @@ const PlaceSwiperDetail = ({
               ensurePhotoCached(
                 {
                   table: "places",
-                  id: place.id,
-                  place_name: place.place_name,
-                  city: city ?? place.city,
-                  latitude: place.latitude,
-                  longitude: place.longitude,
+                  id: cur.id,
+                  place_name: cur.place_name,
+                  city: city ?? cur.city,
+                  latitude: cur.latitude,
+                  longitude: cur.longitude,
                   place_id: data.result.place_id,
                 },
-                place.photo_url ?? null,
+                cur.photo_url ?? null,
               ).catch(() => {});
             }
           }
         })
         .catch(() => {});
 
-      const postsPromise = place.businessLogoUrl !== undefined
+      const postsPromise = cur.businessLogoUrl !== undefined
         ? (supabase as any)
             .from("business_posts")
             .select("id, description, photo_urls, created_at")
-            .eq("place_id", place.id)
+            .eq("place_id", cur.id)
             .order("created_at", { ascending: false })
             .limit(10)
             .then(({ data }: { data: BusinessPost[] | null }) => { if (data) setBusinessPosts(data); })
@@ -156,30 +170,30 @@ const PlaceSwiperDetail = ({
     };
 
     fetchAll();
-  }, [open, place, city, skipGoogleFetch]);
+  }, [open, place, city, skipGoogleFetch, referenceDate]);
 
   const handleLike = () => { onLike?.(); onOpenChange(false); };
   const handleSkip = () => { onSkip?.(); onOpenChange(false); };
 
-  // Calculate photos to display (biz cover + Google + biz gallery dedup)
+  // Calculate photos to display (biz cover + Google + biz gallery dedup). ep = swiezy profil.
   const googleAndCover = [
     ...photos.filter(validUrl),
-    ...(!photos.length && validUrl(place?.photo_url) ? [place!.photo_url!] : []),
+    ...(!photos.length && validUrl(ep?.photo_url) ? [ep!.photo_url!] : []),
   ];
   const displayPhotos = [
     ...googleAndCover,
-    ...(place?.galleryPhotos ?? []).filter(validUrl).filter(u => !googleAndCover.includes(u)),
+    ...(ep?.galleryPhotos ?? []).filter(validUrl).filter(u => !googleAndCover.includes(u)),
   ];
 
   // Maps button - renderowany w header slot PremiumBusinessCard (Maps button obok nazwy)
-  const mapsUrl = place
-    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${place.place_name} ${place.address ?? ""}`)}`
+  const mapsUrl = ep
+    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${ep.place_name} ${ep.address ?? ""}`)}`
     : "#";
   // Chip dystansu "X od {label}" - od wspolnego punktu odniesienia (GPS / punkt startowy).
   // Premium biznesy czesto maja NULL places.latitude/longitude - fallback na geometrie z
   // Google detail (proxy zwraca geometry), zeby chip dzialal tez dla wizytowek biznesowych.
-  const placeLat = place?.latitude ?? detail?.geometry?.location?.lat ?? null;
-  const placeLng = place?.longitude ?? detail?.geometry?.location?.lng ?? null;
+  const placeLat = ep?.latitude ?? detail?.geometry?.location?.lat ?? null;
+  const placeLng = ep?.longitude ?? detail?.geometry?.location?.lng ?? null;
   const distanceLabel = distanceRef && placeLat != null && placeLng != null
     ? formatDistance(haversineKm(distanceRef.coords, { lat: placeLat, lng: placeLng }))
     : null;
@@ -207,9 +221,9 @@ const PlaceSwiperDetail = ({
     </div>
   );
 
-  if (!place) return null;
+  if (!place || !ep) return null;
 
-  const businessData = fromMockPlace(place, detail, businessPosts);
+  const businessData = fromMockPlace(ep, detail, businessPosts);
 
   return (
     <VaulDrawer.Root open={open} onOpenChange={onOpenChange} shouldScaleBackground={false}>
