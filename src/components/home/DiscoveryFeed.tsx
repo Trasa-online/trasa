@@ -13,7 +13,7 @@ import { MAIN_CATEGORIES, getDbCategoriesFor } from "@/lib/categories";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import FullCalendarPicker from "@/components/plan-wizard/FullCalendarPicker";
 import RouteMap from "@/components/RouteMap";
-import { type MockPlace } from "@/components/plan-wizard/PlaceSwiper";
+import { type MockPlace, fetchEnrichedPlace } from "@/components/plan-wizard/PlaceSwiper";
 import { Sheet, SheetContent, SheetClose } from "@/components/ui/sheet";
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { resolveStored } from "@/components/PlacePhoto";
@@ -923,6 +923,29 @@ export default function DiscoveryFeed() {
   // pyta o date, a potem laduje w PlanWizard (swiper) z miejscami w Dopasowaniach.
   // (Karty tras z tabeli routes maja wlasny podglad SharedRoute i swoj przycisk.)
   const [planPrompt, setPlanPrompt] = useState<{ city: string | null; names: string[] } | null>(null);
+  // Podglad miejsca z wyszukiwarki (pelna wizytowka). Bazowy MockPlace od razu, potem doczytujemy
+  // profil biznesu (menu/eventy) po UUID - jak w "Zapisane".
+  const [placeDetail, setPlaceDetail] = useState<MockPlace | null>(null);
+  const openPlaceDetail = (p: any) => {
+    const base = {
+      id: p.id,
+      place_name: p.place_name,
+      category: p.category,
+      city: p.city,
+      latitude: p.latitude ?? undefined,
+      longitude: p.longitude ?? undefined,
+      photo_url: p.photo_url ?? undefined,
+      rating: p.rating ?? undefined,
+      address: p.address ?? undefined,
+    } as unknown as MockPlace;
+    setPlaceDetail(base);
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (p.id && UUID_RE.test(p.id)) {
+      void fetchEnrichedPlace(p.id, new Date().toISOString().slice(0, 10)).then((en) => {
+        if (en) setPlaceDetail((prev) => (prev && prev.id === base.id ? en : prev));
+      });
+    }
+  };
   const navigate = useNavigate();
 
   // Wyszukiwarka + filtry (miasto / motyw zestawienia / kategoria miejsc w trasach).
@@ -1233,7 +1256,24 @@ export default function DiscoveryFeed() {
         collections = await hydrateCollections(cols ?? []);
       }
 
-      return { routes, collections };
+      // Miejsca (places) - szukanie po nazwie, ze WSZYSTKICH miast (albo wybranych w filtrze
+      // miast/kategorii). Tap otwiera pelna wizytowke. Tylko gdy user wpisal fraze (>=2 znaki).
+      let places: any[] = [];
+      if (q) {
+        let pq = (supabase as any)
+          .from("places")
+          .select("id, place_name, city, category, address, latitude, longitude, rating, photo_url")
+          .ilike("place_name", like);
+        if (cities) pq = pq.in("city", cities);
+        if (categoryFilter.length) {
+          const dbCats = [...new Set(categoryFilter.flatMap(getDbCategoriesFor))];
+          pq = pq.in("category", dbCats);
+        }
+        const { data: placeRows } = await pq.order("rating", { ascending: false, nullsFirst: false }).limit(24);
+        places = placeRows ?? [];
+      }
+
+      return { routes, collections, places };
     },
   });
 
@@ -1317,8 +1357,48 @@ export default function DiscoveryFeed() {
           <div className="space-y-5">
             {Array.from({ length: 3 }).map((_, i) => <RouteCardVSkeleton key={i} />)}
           </div>
-        ) : (results && (results.routes.length > 0 || results.collections.length > 0)) ? (
+        ) : (results && (results.routes.length > 0 || results.collections.length > 0 || (results.places?.length ?? 0) > 0)) ? (
           <div className="space-y-7">
+            {(results.places?.length ?? 0) > 0 && (
+              <div>
+                <p className="text-sm font-black uppercase tracking-wide mb-3 px-1">{t("places_heading")}</p>
+                <div className="space-y-2">
+                  {results.places.map((p: any) => (
+                    <button
+                      key={p.id}
+                      onClick={() => openPlaceDetail(p)}
+                      className="w-full flex items-center gap-3 rounded-2xl border border-border/40 bg-secondary p-3 text-left active:scale-[0.98] transition-transform"
+                    >
+                      {p.photo_url ? (
+                        <img src={p.photo_url} alt={p.place_name} className="h-14 w-14 rounded-2xl object-cover shrink-0" loading="lazy" />
+                      ) : (
+                        <div className="h-14 w-14 rounded-2xl bg-muted flex items-center justify-center shrink-0">
+                          <MapPin className="h-5 w-5 text-muted-foreground" />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-sm leading-tight truncate">{p.place_name}</p>
+                        <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+                          {typeof p.rating === "number" && p.rating > 0 && (
+                            <span className="flex items-center gap-0.5">
+                              <Star className="h-3 w-3 text-yellow-500 fill-yellow-500" />
+                              {p.rating.toFixed(1)}
+                            </span>
+                          )}
+                          {p.city && (
+                            <span className="flex items-center gap-0.5 min-w-0">
+                              <MapPin className="h-3 w-3 shrink-0" />
+                              <span className="truncate">{p.city}</span>
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             {results.collections.length > 0 && (
               <UserPolecajkiRow collections={results.collections} onOpen={setActiveCol} />
             )}
@@ -1400,6 +1480,14 @@ export default function DiscoveryFeed() {
           )}
         </div>
       )}
+
+      {/* Pelna wizytowka miejsca z wyszukiwarki */}
+      <PlaceSwiperDetail
+        open={!!placeDetail}
+        place={placeDetail}
+        city={placeDetail?.city}
+        onOpenChange={(open) => { if (!open) setPlaceDetail(null); }}
+      />
 
       <Sheet open={!!activeCol} onOpenChange={(open) => { if (!open) setActiveCol(null); }}>
         <SheetContent

@@ -138,7 +138,7 @@ function DashboardLoadingScreen() {
   }, []);
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-5">
-      <div className="h-16 w-16 rounded-full shadow-lg" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
+      <TrasaLogo size={64} className="shadow-lg" />
       <p className="font-black text-xl tracking-tight text-foreground">trasa</p>
       <div className="flex flex-col items-center gap-1.5 w-44">
         <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">

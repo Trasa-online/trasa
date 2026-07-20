@@ -42,6 +42,7 @@
   "author_default": "Użytkownik",
   "search_placeholder": "Szukaj tras, autorów, zestawień…",
   "routes_heading": "Trasy",
+  "places_heading": "Miejsca",
   "in_city": "w {{city}}",
   "no_results": "Brak wyników",
   "no_results_hint": "Spróbuj innego słowa lub zmień filtry.",

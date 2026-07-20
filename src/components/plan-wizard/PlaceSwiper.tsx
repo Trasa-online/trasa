@@ -1625,9 +1625,14 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
     }
   }, [queue.length, loading]);
 
-  // Expose liked places to parent (PlanWizard Dopasowania tab) - rerenders na zmianie referencji array
+  // Expose liked places to parent (PlanWizard Dopasowania tab) - rerenders na zmianie referencji array.
+  // Wstrzykujemy zdjecie zafetchowane z Google (photoUrlOverrides) gdy place.photo_url jest puste -
+  // inaczej miniaturki w "Zapisane"/Dopasowania sa puste dla miast bez cache (np. Wroclaw).
   useEffect(() => {
-    onLikedPlacesChange?.([...likedPlaces, ...superLikedPlaces]);
+    const merged = [...likedPlaces, ...superLikedPlaces].map((p) =>
+      p.photo_url ? p : { ...p, photo_url: photoUrlOverrides.current[p.id] ?? p.photo_url },
+    );
+    onLikedPlacesChange?.(merged);
   }, [likedPlaces, superLikedPlaces]);
 
   // Bingo modal DISABLED globally - userka wycofala go z solo parowania (i wczesniej
