@@ -515,8 +515,9 @@ function EventBannerSection({ data }: SectionProps) {
 }
 
 // Agenda zaplanowanych wydarzen (kolejka business_events) - JEDNO najblizsze aktywne/nadchodzace.
-// Renderowane jako "charakterystyczny kafelek" (bold gradient B2C) z data, godzina (opcjonalna)
-// oraz awatarami osob ktore dodaly lokal do swojej trasy (social proof / FOMO na event).
+// Renderowane jako neutralny "paper" kafelek (bg-secondary) z data, godzina (opcjonalna) oraz
+// awatarami osob ktore dodaly lokal do swojej trasy (social proof / FOMO na event). Pomaranczowy
+// zarezerwowany dla pilla promo na gorze (EventBannerSection).
 function EventsSection({ data, referenceDate, routeAvatars }: SectionProps & { referenceDate?: string; routeAvatars?: RouteAvatars | null }) {
   const { t, i18n } = useTranslation("wizytowka");
   // Odniesienie = data wyjazdu (gdy user planuje termin) albo dzis. Pokazujemy wydarzenie
@@ -550,19 +551,21 @@ function EventsSection({ data, referenceDate, routeAvatars }: SectionProps & { r
   return (
     <div className="space-y-2 pt-2">
       <h3 className="text-lg font-black tracking-tight">{t("events_title")}</h3>
-      <div className="rounded-3xl bg-gradient-to-br from-[#F4A259] to-[#F9662B] p-4 text-white shadow-md shadow-orange-500/25">
+      {/* Kafelek neutralny (szary "paper" styl). Pomaranczowy jest TYLKO pill promo na gorze
+          (EventBannerSection), nie ten kafelek zaplanowanego wydarzenia. */}
+      <div className="rounded-3xl bg-secondary text-secondary-foreground p-4">
         {/* Data (pill) + godzina - rzucaja sie w oczy jak w kartach kalendarza */}
         <div className="flex items-center justify-between gap-3">
-          <span className="shrink-0 px-3 py-1 rounded-full bg-white/20 text-xs font-bold whitespace-nowrap">{dateRange}</span>
+          <span className="shrink-0 px-3 py-1 rounded-full bg-background text-foreground text-xs font-bold whitespace-nowrap">{dateRange}</span>
           {timeLabel && (
             <span className="flex items-center gap-1 text-sm font-bold whitespace-nowrap">
-              <Clock className="h-3.5 w-3.5" />
+              <Clock className="h-3.5 w-3.5 text-muted-foreground" />
               {timeLabel}
             </span>
           )}
         </div>
         <p className="mt-3 text-lg font-black leading-tight break-words">{isEn && e.title_en ? e.title_en : e.title}</p>
-        {e.description && <p className="mt-1 text-sm text-white/85 leading-snug break-words">{e.description}</p>}
+        {e.description && <p className="mt-1 text-sm text-muted-foreground leading-snug break-words">{e.description}</p>}
         {/* Social proof: awatary osob z tym lokalem w trasie (max 4 + "+N") */}
         {totalAdded > 0 && (
           <div className="mt-4 flex items-center gap-2.5">
@@ -573,16 +576,16 @@ function EventsSection({ data, referenceDate, routeAvatars }: SectionProps & { r
                   src={avatarSrc(a.avatar_url)}
                   alt=""
                   draggable={false}
-                  className="h-7 w-7 rounded-full border-2 border-white object-cover"
+                  className="h-7 w-7 rounded-full border-2 border-secondary object-cover"
                 />
               ))}
               {remainder > 0 && (
-                <span className="h-7 w-7 rounded-full border-2 border-white bg-white/25 flex items-center justify-center text-[11px] font-bold">
+                <span className="h-7 w-7 rounded-full border-2 border-secondary bg-background text-foreground flex items-center justify-center text-[11px] font-bold">
                   +{remainder}
                 </span>
               )}
             </div>
-            <span className="text-xs font-semibold text-white/90 leading-snug">
+            <span className="text-xs font-semibold text-muted-foreground leading-snug">
               {t("events_added_to_route", { count: totalAdded })}
             </span>
           </div>
