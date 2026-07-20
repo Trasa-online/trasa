@@ -8,6 +8,7 @@ import { useAuth, AuthProvider } from "@/hooks/useAuth";
 import { AuthDrawerProvider } from "@/hooks/useAuthDrawer";
 import { useNativePush } from "@/hooks/useNativePush";
 import { useNetworkReconnect } from "@/hooks/useNetworkReconnect";
+import { useAppResume } from "@/hooks/useAppResume";
 import AuthDrawer from "@/components/auth/AuthDrawer";
 import { TrasaLogo } from "@/components/TrasaLogo";
 import { businessPanelPath } from "@/lib/businessRedirect";
@@ -688,6 +689,8 @@ function AuthDrawerProviderWrapper({ children }: { children: React.ReactNode }) 
   // Native network reconnect detection - invalidateQueries gdy connection wraca.
   // No-op na webie (refetchOnReconnect: "always" w queryClient zalatwia sprawe).
   useNetworkReconnect();
+  // Odswiezenie danych po powrocie appki na wierzch (m.in. swieze profile biznesow po edycji).
+  useAppResume();
   return (
     <AuthDrawerProvider user={user} loading={loading}>
       {children}

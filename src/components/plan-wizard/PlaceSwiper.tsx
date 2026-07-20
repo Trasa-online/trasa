@@ -1160,6 +1160,16 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
   // - czyscimy DB reactions z dziennej + localStorage exploreLikes i fetchujemy queue na nowo.
   const [refreshNonce, setRefreshNonce] = useState(0);
   const [resetting, setResetting] = useState(false);
+  // Po powrocie appki na wierzch (event z useAppResume) dociagnij swieze miejsca - zeby edycje
+  // profilu lokalu byly widoczne bez remountu. Tylko exploreMode (HomeSwipe): tam polubione sa
+  // zachowane przy refetchu, a juz przeswipeowane miejsca dnia i tak sa odfiltrowane. Pomijamy
+  // solo/group/round (return-state moglby zresetowac biezaca liste Dopasowan).
+  useEffect(() => {
+    if (!exploreMode || groupSessionId || roundPlaceIds?.length) return;
+    const onResume = () => setRefreshNonce((n) => n + 1);
+    window.addEventListener("trasa:app-resume", onResume);
+    return () => window.removeEventListener("trasa:app-resume", onResume);
+  }, [exploreMode, groupSessionId, roundPlaceIds]);
   const [likedPlaces, setLikedPlaces] = useState<MockPlace[]>([]);
   const [skippedPlaces, setSkippedPlaces] = useState<MockPlace[]>([]);
   const [superLikedPlaces, setSuperLikedPlaces] = useState<MockPlace[]>([]);
