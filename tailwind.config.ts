@@ -91,11 +91,17 @@ export default {
           "0%, 100%": { transform: "scale(1)", boxShadow: "0 0 24px -4px rgba(212, 81, 19, 0.55)" },
           "50%": { transform: "scale(1.05)", boxShadow: "0 0 36px -2px rgba(249, 102, 43, 0.75)" },
         },
+        // Pelny slide-up arkusza od dolu ekranu - drawer wjezdza na BottomNav i go zakrywa.
+        "sheet-up": {
+          from: { transform: "translateY(100%)" },
+          to: { transform: "translateY(0)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
         "orb-flow": "orb-flow 3.5s ease-in-out infinite",
+        "sheet-up": "sheet-up 0.32s cubic-bezier(0.22, 1, 0.36, 1)",
       },
     },
   },

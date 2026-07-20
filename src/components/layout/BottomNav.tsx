@@ -153,11 +153,11 @@ const BottomNav = () => {
           "Stworz plan" -> krok 2 = [Solo | Grupowo | Dolacz do sesji]. */}
       {showMenu && (
         <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200"
+          className="fixed inset-0 z-[60] flex items-end justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200"
           onClick={() => setShowMenu(false)}
         >
           <div
-            className="w-full max-w-sm bg-card rounded-t-3xl px-6 pt-5 pb-[max(28px,env(safe-area-inset-bottom))] flex flex-col gap-6 shadow-2xl animate-in slide-in-from-bottom-4 duration-300"
+            className="w-full max-w-sm bg-card rounded-t-3xl px-6 pt-5 pb-[max(28px,env(safe-area-inset-bottom))] flex flex-col gap-6 shadow-2xl animate-sheet-up"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header: X (lub Wroc) po lewej, tytul wysrodkowany, spacer po prawej */}
@@ -290,7 +290,7 @@ const BottomNav = () => {
       {/* Floating nav: biala karta odklejona od krawedzi + lekki cien (natywny feel).
           Outer = transparentny kontener (pointer-events-none) z marginesem + safe-area;
           inner = bialy pill z cieniem (pointer-events-auto). */}
-      {!navHidden && !showMenu && (
+      {!navHidden && (
       <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-lg z-50 px-4 pb-[calc(env(safe-area-inset-bottom,0px)+10px)] pointer-events-none">
         {/* Web: 3 kolumny (Glowna, Plus, Profil - Eksploruj i Dziennik ukryte).
             Native: 5 kolumn (wszystko). */}
