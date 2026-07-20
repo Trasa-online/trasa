@@ -10,8 +10,9 @@ import { dateLocale } from "@/lib/dateLocale";
 import DiscoveryFeed from "@/components/home/DiscoveryFeed";
 import OnboardingOverlay from "@/components/home/OnboardingOverlay";
 import HomeHeaderActions from "@/components/home/HomeHeaderActions";
-import { getHistoryByCity, removeLikeFromCity, clearCity, type ExploreCityGroup } from "@/lib/exploreLikes";
+import { getHistoryByCity, removeLikeFromCity, clearCity, updateLikePhoto, type ExploreCityGroup } from "@/lib/exploreLikes";
 import { getSubcategoryLabel, subcategoryLabelLocalized, MAIN_CATEGORIES } from "@/lib/categories";
+import { getPhotoUrl } from "@/lib/placePhotos";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import { cn } from "@/lib/utils";
@@ -58,6 +59,47 @@ function formatGroupDate(dateStr: string): string {
   if (isYesterday(d)) return "Wczoraj";
   return format(d, "d MMMM yyyy", { locale: dateLocale() });
 }
+
+// Cache rozwiazanych zdjec (per sesja) - unika ponownych fetchy Google dla tego samego miejsca
+// przy re-renderach/przelaczaniu filtrow. Persist do localStorage robi updateLikePhoto.
+const resolvedThumbCache = new Map<string, string>();
+const thumbInFlight = new Set<string>();
+
+// Miniaturka zapisanego miejsca. Gdy like ma photo_url -> pokazuje od razu. Gdy NULL (miasta bez
+// cache, np. Wroclaw - zdjecia tylko z Google w locie) -> lazy fetch z proxy, cache + backfill do
+// localStorage, wiec kolejne wejscia sa juz z gotowa miniaturka (jednorazowy koszt per miejsce).
+const SavedThumb = ({ p, emoji }: { p: any; emoji: string }) => {
+  const [url, setUrl] = useState<string | null>(p.photo_url ?? null);
+
+  useEffect(() => {
+    if (p.photo_url) { setUrl(p.photo_url); return; }
+    const key = `${p.city}:${p.place_name}`.toLowerCase();
+    const cached = resolvedThumbCache.get(key);
+    if (cached) { setUrl(cached); return; }
+    if (!p.latitude || !p.longitude || thumbInFlight.has(key)) return;
+    thumbInFlight.add(key);
+    let cancelled = false;
+    supabase.functions
+      .invoke("google-places-proxy", { body: { placeName: p.place_name, latitude: p.latitude, longitude: p.longitude } })
+      .then(({ data, error }: any) => {
+        thumbInFlight.delete(key);
+        if (error || !data?.result) return;
+        const ref = data.result.photos?.[0]?.photo_reference;
+        const resolved = ref ? getPhotoUrl(ref, 300, data.result.place_id) : null;
+        if (!resolved) return;
+        resolvedThumbCache.set(key, resolved);
+        updateLikePhoto(p.city, p.place_name, resolved); // backfill na stale
+        if (!cancelled) setUrl(resolved);
+      })
+      .catch(() => { thumbInFlight.delete(key); });
+    return () => { cancelled = true; };
+  }, [p.photo_url, p.city, p.place_name, p.latitude, p.longitude]);
+
+  if (url) return <img src={url} alt={p.place_name} className="w-full h-full object-cover" loading="lazy" />;
+  return (
+    <div className="w-full h-full bg-gradient-to-br from-amber-100 to-orange-200 flex items-center justify-center text-2xl">{emoji}</div>
+  );
+};
 
 export const LikedTab = ({ selectMode = false, onExitSelection }: { selectMode?: boolean; onExitSelection?: () => void } = {}) => {
   const { t } = useTranslation("explore");
@@ -271,11 +313,7 @@ export const LikedTab = ({ selectMode = false, onExitSelection }: { selectMode?:
             )}
           >
             <div className="relative h-20 w-20 rounded-2xl overflow-hidden bg-muted shrink-0">
-              {p.photo_url ? (
-                <img src={p.photo_url} alt={p.place_name} className="w-full h-full object-cover" loading="lazy" />
-              ) : (
-                <div className="w-full h-full bg-gradient-to-br from-amber-100 to-orange-200 flex items-center justify-center text-2xl">{CATEGORY_EMOJI[p.category] ?? "📍"}</div>
-              )}
+              <SavedThumb p={p} emoji={CATEGORY_EMOJI[p.category] ?? "📍"} />
               {selectMode && (
                 <div className={cn(
                   "absolute top-1.5 left-1.5 h-6 w-6 rounded-full border-2 flex items-center justify-center transition-colors",

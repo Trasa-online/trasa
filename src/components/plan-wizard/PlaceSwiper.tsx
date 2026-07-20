@@ -1500,7 +1500,10 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
         place_id: /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(top.id) ? top.id : null,
         latitude: top.latitude,
         longitude: top.longitude,
-        photo_url: overridePhotoUrl ?? top.photo_url ?? null,
+        // Zdjecie: preferuj zafetchowane z Google (photoUrlOverrides) tak jak saveReaction -
+        // miasta bez cache (np. Wroclaw) maja places.photo_url NULL, ale karta i tak dociaga
+        // zdjecie z Google; bez tego "Zapisane" pokazywalyby placeholder zamiast miniaturki.
+        photo_url: overridePhotoUrl ?? photoUrlOverrides.current[top.id] ?? top.photo_url ?? null,
         address: top.address ?? null,
         rating: top.rating ?? null,
         description: top.description ?? null,

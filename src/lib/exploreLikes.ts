@@ -109,6 +109,26 @@ export function removeLikeFromCity(city: string, place_name: string) {
   writeHistory(next);
 }
 
+// Backfill zdjecia zapisanego miejsca (gdy w chwili polubienia photo_url bylo NULL -
+// np. miasta bez cache jak Wroclaw, gdzie zdjecia sa doczytywane z Google w locie).
+// Zapisuje URL na stale, wiec miniaturka pojawia sie od nastepnego wejscia bez ponownego fetcha.
+export function updateLikePhoto(city: string, place_name: string, photo_url: string) {
+  if (!photo_url) return;
+  const nameLower = place_name.toLowerCase();
+  let changed = false;
+  const next = getHistory().map(g => {
+    if (g.city !== city) return g;
+    return {
+      ...g,
+      places: g.places.map(p => {
+        if (p.place_name.toLowerCase() === nameLower && !p.photo_url) { changed = true; return { ...p, photo_url }; }
+        return p;
+      }),
+    };
+  });
+  if (changed) writeHistory(next);
+}
+
 // Wyczysc wszystkie polubienia danego miasta.
 export function clearCity(city: string) {
   writeHistory(getHistory().filter(g => g.city !== city));
