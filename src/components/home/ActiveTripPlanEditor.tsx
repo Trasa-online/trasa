@@ -12,7 +12,7 @@ import { notify } from "@/lib/notify";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { useDistanceReference, tryResolveOnSite } from "@/lib/distanceReference";
 import { haversineKm, formatDistance } from "@/lib/distance";
-import { Navigation, GripVertical, RotateCcw, CalendarDays, Loader2 } from "lucide-react";
+import { Navigation, GripVertical, CalendarDays, Loader2 } from "lucide-react";
 import { Reorder, useDragControls } from "framer-motion";
 import { useTranslation } from "react-i18next";
 
