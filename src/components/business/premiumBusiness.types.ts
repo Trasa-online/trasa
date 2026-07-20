@@ -73,7 +73,7 @@ export interface PremiumBusinessData {
   // ── Event / promo banner ───────────────────────────────────────────────────
   eventTitle?: string;
   // Zaplanowane wydarzenia (kolejka business_events) - agenda nadchodzacych na wizytowce.
-  events?: Array<{ title: string; title_en?: string | null; starts_at: string; ends_at?: string | null; description?: string | null; is_draft?: boolean }>;
+  events?: Array<{ title: string; title_en?: string | null; starts_at: string; ends_at?: string | null; start_time?: string | null; end_time?: string | null; description?: string | null; is_draft?: boolean }>;
   eventDescription?: string;
 
   // ── Premium content sections ───────────────────────────────────────────────

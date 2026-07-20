@@ -106,7 +106,7 @@ export interface DashboardStateForPreview {
   menuImageUrls?: string[];
   posts?: BusinessPost[];
   eventTitle?: string;
-  events?: Array<{ title: string; title_en?: string | null; starts_at: string; ends_at?: string | null; description?: string | null; is_draft?: boolean }>;
+  events?: Array<{ title: string; title_en?: string | null; starts_at: string; ends_at?: string | null; start_time?: string | null; end_time?: string | null; description?: string | null; is_draft?: boolean }>;
   eventDescription?: string;
   openingHours?: Record<string, { open: string; close: string } | { closed: true }>;
   colorBadge?: string;

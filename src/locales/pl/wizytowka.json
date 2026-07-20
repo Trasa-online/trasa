@@ -34,5 +34,9 @@
     "sat": "Sobota",
     "sun": "Niedziela"
   },
-  "events_title": "Wydarzenia"
+  "events_title": "Wydarzenia",
+  "events_added_to_route_one": "{{count}} osoba ma to w planach",
+  "events_added_to_route_few": "{{count}} osoby mają to w planach",
+  "events_added_to_route_many": "{{count}} osób ma to w planach",
+  "events_added_to_route_other": "{{count}} osób ma to w planach"
 }

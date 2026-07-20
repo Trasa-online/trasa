@@ -23,12 +23,20 @@ import { Star, Clock, ChevronRight, ChevronLeft, ChevronDown, X, Maximize2, Phon
 import { parseISO, isValid, formatDistanceToNow, format } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
 import RouteMap from "@/components/RouteMap";
+import { supabase } from "@/integrations/supabase/client";
+import { avatarSrc } from "@/lib/avatar";
 import type {
   PremiumBusinessData,
   PremiumBusinessMode,
   OwnerOpeningHours,
   DayHours,
 } from "./premiumBusiness.types";
+
+// Social proof na wizytowce: osoby ktore dodaly lokal do swojej trasy (RPC get_place_route_avatars).
+export interface RouteAvatars {
+  total: number;
+  avatars: Array<{ avatar_url: string; username?: string | null; first_name?: string | null }>;
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -393,9 +401,10 @@ function EventBannerSection({ data }: SectionProps) {
   );
 }
 
-// Agenda zaplanowanych wydarzen (kolejka business_events) - lista nadchodzacych/aktywnych
-// (bez szkicow i przeszlych). Tytul EN-aware, data (zakres) + opcjonalny opis.
-function EventsSection({ data, referenceDate }: SectionProps & { referenceDate?: string }) {
+// Agenda zaplanowanych wydarzen (kolejka business_events) - JEDNO najblizsze aktywne/nadchodzace.
+// Renderowane jako "charakterystyczny kafelek" (bold gradient B2C) z data, godzina (opcjonalna)
+// oraz awatarami osob ktore dodaly lokal do swojej trasy (social proof / FOMO na event).
+function EventsSection({ data, referenceDate, routeAvatars }: SectionProps & { referenceDate?: string; routeAvatars?: RouteAvatars | null }) {
   const { t, i18n } = useTranslation("wizytowka");
   // Odniesienie = data wyjazdu (gdy user planuje termin) albo dzis. Pokazujemy wydarzenie
   // najblizsze TEJ dacie - aktywne w terminie albo pierwsze nadchodzace po nim.
@@ -408,25 +417,63 @@ function EventsSection({ data, referenceDate }: SectionProps & { referenceDate?:
     .sort((a, b) => String(a.starts_at).localeCompare(String(b.starts_at)))
     .slice(0, 1);
   if (upcoming.length === 0) return null;
+  const e = upcoming[0];
   const fmtDate = (d: string) => {
     const dt = parseISO(d);
     return isValid(dt) ? format(dt, "d MMM", { locale: dateLocale() }) : d;
   };
-  const range = (e: { starts_at: string; ends_at?: string | null }) =>
-    (e.ends_at && e.ends_at !== e.starts_at) ? `${fmtDate(e.starts_at)} - ${fmtDate(e.ends_at)}` : fmtDate(e.starts_at);
+  const dateRange =
+    e.ends_at && e.ends_at !== e.starts_at ? `${fmtDate(e.starts_at)} - ${fmtDate(e.ends_at)}` : fmtDate(e.starts_at);
+  // "18:00:00" -> "18:00". Godzina opcjonalna (lokal moze podac sam start albo start+koniec).
+  const fmtTime = (v?: string | null) => (v ? String(v).slice(0, 5) : null);
+  const startTime = fmtTime(e.start_time);
+  const endTime = fmtTime(e.end_time);
+  const timeLabel = startTime ? (endTime ? `${startTime} - ${endTime}` : startTime) : null;
+
+  const shownAvatars = (routeAvatars?.avatars ?? []).slice(0, 4);
+  const totalAdded = routeAvatars?.total ?? 0;
+  const remainder = totalAdded - shownAvatars.length;
+
   return (
     <div className="space-y-2 pt-2">
       <h3 className="text-lg font-black tracking-tight">{t("events_title")}</h3>
-      <div className="space-y-1.5">
-        {upcoming.map((e, i) => (
-          <div key={i} className="flex items-start gap-3 p-3 rounded-2xl bg-muted/40 border border-border/30">
-            <span className="shrink-0 mt-0.5 px-2.5 py-1 rounded-full bg-orange-50 border border-orange-100 text-orange-700 text-[11px] font-bold whitespace-nowrap">{range(e)}</span>
-            <div className="min-w-0">
-              <p className="text-sm font-bold leading-snug break-words">{isEn && e.title_en ? e.title_en : e.title}</p>
-              {e.description && <p className="text-xs text-muted-foreground mt-0.5 leading-snug break-words">{e.description}</p>}
+      <div className="rounded-3xl bg-gradient-to-br from-[#F4A259] to-[#F9662B] p-4 text-white shadow-md shadow-orange-500/25">
+        {/* Data (pill) + godzina - rzucaja sie w oczy jak w kartach kalendarza */}
+        <div className="flex items-center justify-between gap-3">
+          <span className="shrink-0 px-3 py-1 rounded-full bg-white/20 text-xs font-bold whitespace-nowrap">{dateRange}</span>
+          {timeLabel && (
+            <span className="flex items-center gap-1 text-sm font-bold whitespace-nowrap">
+              <Clock className="h-3.5 w-3.5" />
+              {timeLabel}
+            </span>
+          )}
+        </div>
+        <p className="mt-3 text-lg font-black leading-tight break-words">{isEn && e.title_en ? e.title_en : e.title}</p>
+        {e.description && <p className="mt-1 text-sm text-white/85 leading-snug break-words">{e.description}</p>}
+        {/* Social proof: awatary osob z tym lokalem w trasie (max 4 + "+N") */}
+        {totalAdded > 0 && (
+          <div className="mt-4 flex items-center gap-2.5">
+            <div className="flex -space-x-2">
+              {shownAvatars.map((a, i) => (
+                <img
+                  key={i}
+                  src={avatarSrc(a.avatar_url)}
+                  alt=""
+                  draggable={false}
+                  className="h-7 w-7 rounded-full border-2 border-white object-cover"
+                />
+              ))}
+              {remainder > 0 && (
+                <span className="h-7 w-7 rounded-full border-2 border-white bg-white/25 flex items-center justify-center text-[11px] font-bold">
+                  +{remainder}
+                </span>
+              )}
             </div>
+            <span className="text-xs font-semibold text-white/90 leading-snug">
+              {t("events_added_to_route", { count: totalAdded })}
+            </span>
           </div>
-        ))}
+        )}
       </div>
     </div>
   );
@@ -804,6 +851,25 @@ const PremiumBusinessCard = ({
   const [reviewsOpen, setReviewsOpen] = useState(false);
   const hasReviews = (data.reviews?.length ?? 0) > 0;
 
+  // Awatary osob z tym lokalem w trasie - tylko na pelnej wizytowce (detail). Best-effort:
+  // brak danych / blad = po prostu nie pokazujemy social proof. data.id = places.id (UUID).
+  const [routeAvatars, setRouteAvatars] = useState<RouteAvatars | null>(null);
+  useEffect(() => {
+    if (mode !== "detail" || !data.id) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data: res } = await (supabase as any).rpc("get_place_route_avatars", { p_place_id: data.id });
+        if (!cancelled && res) setRouteAvatars(res as RouteAvatars);
+      } catch {
+        /* social proof best-effort - brak awatarow nie blokuje wizytowki */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [mode, data.id]);
+
   const handleExpand = (photos: string[], idx: number) => setFullscreen({ photos, idx });
 
   // ─── mode='detail' - PlaceSwiperDetail + AppLikePreviewModal.detail ────────────
@@ -840,7 +906,7 @@ const PremiumBusinessCard = ({
                 <DescriptionSection data={data} />
                 <HoursWarningBadge data={data} />
                 {!hideEventBanner && <EventBannerSection data={data} />}
-                {!hideEventBanner && <EventsSection data={data} referenceDate={referenceDate} />}
+                {!hideEventBanner && <EventsSection data={data} referenceDate={referenceDate} routeAvatars={routeAvatars} />}
                 <TagsSection data={data} />
               </div>
             )}

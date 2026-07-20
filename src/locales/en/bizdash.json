@@ -89,6 +89,8 @@
     "events_title_label": "Event title",
     "events_title_placeholder": "e.g. Jazz concert on Friday",
     "events_to_optional": "To (optional)",
+    "events_start_time_optional": "Start time (optional)",
+    "events_end_time_optional": "End time (optional)",
     "events_add": "Add event",
     "events_adding": "Adding…",
     "events_added": "Event added!",

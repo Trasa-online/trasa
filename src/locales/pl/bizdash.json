@@ -89,6 +89,8 @@
     "events_title_label": "Tytuł wydarzenia",
     "events_title_placeholder": "np. Koncert jazzowy w piątek",
     "events_to_optional": "Do (opcjonalnie)",
+    "events_start_time_optional": "Godzina od (opcjonalnie)",
+    "events_end_time_optional": "Godzina do (opcjonalnie)",
     "events_add": "Dodaj wydarzenie",
     "events_adding": "Dodaję…",
     "events_added": "Wydarzenie dodane!",

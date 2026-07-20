@@ -567,6 +567,8 @@ const BusinessDashboard = () => {
   const [newEventDescription, setNewEventDescription] = useState("");
   const [newEventStartsAt, setNewEventStartsAt] = useState("");
   const [newEventEndsAt, setNewEventEndsAt] = useState("");
+  const [newEventStartTime, setNewEventStartTime] = useState("");
+  const [newEventEndTime, setNewEventEndTime] = useState("");
   const [addingEvent, setAddingEvent] = useState(false);
   const [newEventDraft, setNewEventDraft] = useState(false);
   const [showEventHistory, setShowEventHistory] = useState(false);
@@ -576,6 +578,8 @@ const BusinessDashboard = () => {
   const [editEventDescription, setEditEventDescription] = useState("");
   const [editEventStartsAt, setEditEventStartsAt] = useState("");
   const [editEventEndsAt, setEditEventEndsAt] = useState("");
+  const [editEventStartTime, setEditEventStartTime] = useState("");
+  const [editEventEndTime, setEditEventEndTime] = useState("");
   const [savingEditEvent, setSavingEditEvent] = useState(false);
 
   const logoInputRef = useRef<HTMLInputElement>(null);
@@ -1235,10 +1239,15 @@ const BusinessDashboard = () => {
   // Format zakresu dat wydarzenia na ekranie.
   const fmtEventRange = (ev: any) => {
     const start = format(parseISO(ev.starts_at), "d MMM", { locale: dateLocale() });
+    let dateStr = start;
     if (ev.ends_at && ev.ends_at !== ev.starts_at) {
-      return `${start} - ${format(parseISO(ev.ends_at), "d MMM", { locale: dateLocale() })}`;
+      dateStr = `${start} - ${format(parseISO(ev.ends_at), "d MMM", { locale: dateLocale() })}`;
     }
-    return start;
+    // Godzina (opcjonalna) dopisana po dacie: "20 lip · 18:00 - 22:00".
+    const st = ev.start_time ? String(ev.start_time).slice(0, 5) : null;
+    const et = ev.end_time ? String(ev.end_time).slice(0, 5) : null;
+    if (st) dateStr += ` · ${et ? `${st} - ${et}` : st}`;
+    return dateStr;
   };
 
   const handleAddEvent = async () => {
@@ -1256,6 +1265,8 @@ const BusinessDashboard = () => {
         title,
         starts_at: newEventStartsAt,
         ends_at: newEventEndsAt || null,
+        start_time: newEventStartTime || null,
+        end_time: newEventEndTime || null,
         is_draft: newEventDraft,
       })
       .select()
@@ -1286,6 +1297,8 @@ const BusinessDashboard = () => {
     setNewEventDescription("");
     setNewEventStartsAt("");
     setNewEventEndsAt("");
+    setNewEventStartTime("");
+    setNewEventEndTime("");
     setNewEventDraft(false);
     toast.success(t("posts.events_added"));
     setAddingEvent(false);
@@ -1342,6 +1355,9 @@ const BusinessDashboard = () => {
     setEditEventDescription(ev.description ?? "");
     setEditEventStartsAt(ev.starts_at ?? "");
     setEditEventEndsAt(ev.ends_at ?? "");
+    // DB zwraca "18:00:00" - input type="time" oczekuje "HH:MM".
+    setEditEventStartTime(ev.start_time ? String(ev.start_time).slice(0, 5) : "");
+    setEditEventEndTime(ev.end_time ? String(ev.end_time).slice(0, 5) : "");
   };
 
   const handleUpdateEvent = async (id: string) => {
@@ -1354,11 +1370,11 @@ const BusinessDashboard = () => {
     setSavingEditEvent(true);
     const { error } = await (supabase as any)
       .from("business_events")
-      .update({ title, starts_at: editEventStartsAt, ends_at: editEventEndsAt || null })
+      .update({ title, starts_at: editEventStartsAt, ends_at: editEventEndsAt || null, start_time: editEventStartTime || null, end_time: editEventEndTime || null })
       .eq("id", id);
     if (error) { toast.error(t("posts.events_update_error")); setSavingEditEvent(false); return; }
     const desc = editEventDescription.trim() || null;
-    let updated = { ...current, title, description: desc, starts_at: editEventStartsAt, ends_at: editEventEndsAt || null };
+    let updated = { ...current, title, description: desc, starts_at: editEventStartsAt, ends_at: editEventEndsAt || null, start_time: editEventStartTime || null, end_time: editEventEndTime || null };
     // Opis OSOBNYM best-effort update (kolumna description moze nie istniec przed migracja).
     try { await (supabase as any).from("business_events").update({ description: desc }).eq("id", id); }
     catch { /* zapisz zmiane nawet gdy opis padnie */ }
@@ -2638,6 +2654,10 @@ const BusinessDashboard = () => {
                         <div className="space-y-1 min-w-0"><Label htmlFor="new_event_start" className="text-xs">{t("posts.from")}</Label><Input id="new_event_start" type="date" value={newEventStartsAt} onChange={e => setNewEventStartsAt(e.target.value)} className="w-full" /></div>
                         <div className="space-y-1 min-w-0"><Label htmlFor="new_event_end" className="text-xs">{t("posts.events_to_optional")}</Label><Input id="new_event_end" type="date" value={newEventEndsAt} onChange={e => setNewEventEndsAt(e.target.value)} className="w-full" /></div>
                       </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1 min-w-0"><Label htmlFor="new_event_start_time" className="text-xs">{t("posts.events_start_time_optional")}</Label><Input id="new_event_start_time" type="time" value={newEventStartTime} onChange={e => setNewEventStartTime(e.target.value)} className="w-full" /></div>
+                        <div className="space-y-1 min-w-0"><Label htmlFor="new_event_end_time" className="text-xs">{t("posts.events_end_time_optional")}</Label><Input id="new_event_end_time" type="time" value={newEventEndTime} onChange={e => setNewEventEndTime(e.target.value)} className="w-full" /></div>
+                      </div>
                       <button
                         type="button"
                         role="switch"
@@ -2687,6 +2707,10 @@ const BusinessDashboard = () => {
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                       <div className="space-y-1 min-w-0"><Label htmlFor={`edit_event_start_${ev.id}`} className="text-xs">{t("posts.from")}</Label><Input id={`edit_event_start_${ev.id}`} type="date" value={editEventStartsAt} onChange={e => setEditEventStartsAt(e.target.value)} className="w-full" /></div>
                                       <div className="space-y-1 min-w-0"><Label htmlFor={`edit_event_end_${ev.id}`} className="text-xs">{t("posts.events_to_optional")}</Label><Input id={`edit_event_end_${ev.id}`} type="date" value={editEventEndsAt} onChange={e => setEditEventEndsAt(e.target.value)} className="w-full" /></div>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-3">
+                                      <div className="space-y-1 min-w-0"><Label htmlFor={`edit_event_start_time_${ev.id}`} className="text-xs">{t("posts.events_start_time_optional")}</Label><Input id={`edit_event_start_time_${ev.id}`} type="time" value={editEventStartTime} onChange={e => setEditEventStartTime(e.target.value)} className="w-full" /></div>
+                                      <div className="space-y-1 min-w-0"><Label htmlFor={`edit_event_end_time_${ev.id}`} className="text-xs">{t("posts.events_end_time_optional")}</Label><Input id={`edit_event_end_time_${ev.id}`} type="time" value={editEventEndTime} onChange={e => setEditEventEndTime(e.target.value)} className="w-full" /></div>
                                     </div>
                                     <div className="flex items-center gap-2">
                                       <button onClick={() => handleUpdateEvent(ev.id)} disabled={savingEditEvent || !editEventTitle.trim() || !editEventStartsAt} className="flex-1 py-2 rounded-full bg-[#D45113] text-white font-bold text-xs active:scale-[0.98] transition-transform disabled:opacity-40 flex items-center justify-center gap-1.5"><Check className="h-3.5 w-3.5" />{t("posts.events_save")}</button>
