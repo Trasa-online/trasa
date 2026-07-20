@@ -530,8 +530,10 @@ function EventsSection({ data, referenceDate, routeAvatars }: SectionProps & { r
   // Domyslny miesiac = pierwszy z wydarzeniem >= data odniesienia (albo ostatni gdy wszystkie w przeszlosci).
   const defaultKey = monthKeys.find((m) => m >= ref.slice(0, 7)) ?? monthKeys[monthKeys.length - 1] ?? ref.slice(0, 7);
   const [monthDate, setMonthDate] = useState<Date>(() => startOfMonth(parseISO(`${defaultKey}-01`)));
+  // Domyslnie zwiniete - pokazujemy tylko najblizsze wydarzenie; pill "pokaz wszystkie" rozwija.
+  const [expanded, setExpanded] = useState(false);
   // Reset na wybrany miesiac gdy dane sie doczytaja (np. enrich profilu biznesu po otwarciu).
-  useEffect(() => { setMonthDate(startOfMonth(parseISO(`${defaultKey}-01`))); }, [defaultKey]);
+  useEffect(() => { setMonthDate(startOfMonth(parseISO(`${defaultKey}-01`))); setExpanded(false); }, [defaultKey]);
   const swipeX = useRef<number | null>(null);
 
   if (events.length === 0) return null;
@@ -542,19 +544,21 @@ function EventsSection({ data, referenceDate, routeAvatars }: SectionProps & { r
   const go = (delta: number) => {
     if ((delta < 0 && !canPrev) || (delta > 0 && !canNext)) return;
     setMonthDate((d) => startOfMonth(addMonths(d, delta)));
+    setExpanded(false); // nowy miesiac zaczyna zwiniety (najblizsze wydarzenie)
   };
 
   const monthEvents = events
     .filter((e) => String(e.starts_at).slice(0, 7) === selKey)
     .sort((a, b) => String(a.starts_at).localeCompare(String(b.starts_at)));
+  // Zwiniete = tylko najblizsze wydarzenie (pierwsze jeszcze nie zakonczone, albo pierwsze gdy wszystkie przeszle).
+  const nearestIdx = Math.max(0, monthEvents.findIndex((e) => String(e.ends_at ?? e.starts_at) >= ref));
+  const visibleEvents = expanded ? monthEvents : monthEvents.slice(nearestIdx, nearestIdx + 1);
 
   const fmtDay = (d: string) => {
     const dt = parseISO(d);
     return isValid(dt) ? format(dt, "d MMM", { locale: dateLocale() }) : d;
   };
   const fmtTime = (v?: string | null) => (v ? String(v).slice(0, 5) : null);
-  const prevLabel = canPrev ? format(addMonths(monthDate, -1), "LLL", { locale: dateLocale() }) : "";
-  const nextLabel = canNext ? format(addMonths(monthDate, 1), "LLL", { locale: dateLocale() }) : "";
 
   const shownAvatars = (routeAvatars?.avatars ?? []).slice(0, 4);
   const totalAdded = routeAvatars?.total ?? 0;
@@ -564,9 +568,8 @@ function EventsSection({ data, referenceDate, routeAvatars }: SectionProps & { r
     <div className="space-y-3 pt-2">
       <h3 className="text-lg font-black tracking-tight">{t("events_title")}</h3>
 
-      {/* Nawigator miesiaca (DEC ‹ STYCZEN › FEB) */}
-      <div className="flex items-center justify-center gap-2 select-none">
-        <span className="w-9 text-right text-[11px] font-semibold uppercase text-muted-foreground/40">{prevLabel}</span>
+      {/* Nawigator miesiaca (‹ LIPIEC 2026 ›) + pill "pokaz wszystkie" po prawej */}
+      <div className="relative flex items-center justify-center gap-1 select-none">
         <button
           type="button"
           disabled={!canPrev}
@@ -588,7 +591,15 @@ function EventsSection({ data, referenceDate, routeAvatars }: SectionProps & { r
         >
           <ChevronRight className="h-4 w-4" />
         </button>
-        <span className="w-9 text-left text-[11px] font-semibold uppercase text-muted-foreground/40">{nextLabel}</span>
+        {monthEvents.length > 1 && (
+          <button
+            type="button"
+            onClick={(ev) => { ev.stopPropagation(); setExpanded((v) => !v); }}
+            className="absolute right-0 top-1/2 -translate-y-1/2 text-[11px] font-bold px-2.5 py-1 rounded-full bg-secondary text-foreground active:scale-95 transition-transform whitespace-nowrap"
+          >
+            {expanded ? t("events_collapse") : t("events_show_all", { count: monthEvents.length })}
+          </button>
+        )}
       </div>
 
       {/* Wydarzenia w wybranym miesiacu (swipe w bok = zmiana miesiaca) */}
@@ -605,7 +616,7 @@ function EventsSection({ data, referenceDate, routeAvatars }: SectionProps & { r
         {monthEvents.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-6 rounded-3xl bg-secondary">{t("events_month_empty")}</p>
         ) : (
-          monthEvents.map((e, i) => {
+          visibleEvents.map((e, i) => {
             const st = fmtTime(e.start_time);
             const et = fmtTime(e.end_time);
             const timeLabel = st ? (et ? `${st} - ${et}` : st) : null;

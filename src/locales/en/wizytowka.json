@@ -39,5 +39,7 @@
   "events_added_to_route_other": "{{count}} travelers have this planned",
   "events_prev_month": "Previous month",
   "events_next_month": "Next month",
-  "events_month_empty": "No events this month"
+  "events_month_empty": "No events this month",
+  "events_show_all": "Show all ({{count}})",
+  "events_collapse": "Collapse"
 }

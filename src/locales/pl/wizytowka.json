@@ -41,5 +41,7 @@
   "events_added_to_route_other": "{{count}} osób ma to w planach",
   "events_prev_month": "Poprzedni miesiąc",
   "events_next_month": "Następny miesiąc",
-  "events_month_empty": "Brak wydarzeń w tym miesiącu"
+  "events_month_empty": "Brak wydarzeń w tym miesiącu",
+  "events_show_all": "Pokaż wszystkie ({{count}})",
+  "events_collapse": "Zwiń"
 }
