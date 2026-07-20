@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useNavigate, useLocation } from "react-router-dom";
 import { NavLink } from "@/components/NavLink";
 import { BookOpen, Compass, Map, Plus, X, MapPin, Users, Link2, User, Heart, ArrowLeft, Layers } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -10,6 +11,20 @@ import { getTodayLikes, type ExploreLike } from "@/lib/exploreLikes";
 import { isNative } from "@/lib/platform";
 
 const HOME_FILTERS_KEY = "trasa_home_filters";
+
+// Kafelek akcji w drawerze "+" (ikona w szarym kwadracie + podpis pod spodem),
+// uklad wzorowany na arkuszu tworzenia z Pinteresta.
+const ActionTile = ({ icon: Icon, label, onClick }: { icon: LucideIcon; label: string; onClick: () => void }) => (
+  <button
+    onClick={onClick}
+    className="flex flex-col items-center gap-2 w-20 active:scale-95 transition-transform"
+  >
+    <span className="h-[72px] w-[72px] rounded-2xl bg-secondary flex items-center justify-center">
+      <Icon className="h-6 w-6 text-secondary-foreground" />
+    </span>
+    <span className="text-xs font-medium text-foreground text-center leading-tight">{label}</span>
+  </button>
+);
 
 function getActiveHomeCity(): string {
   try {
@@ -133,69 +148,53 @@ const BottomNav = () => {
 
   return (
     <>
-      {/* Backdrop for + menu - przyciemnione + blur, zeby guziki akcji byly czytelne */}
+      {/* Menu "+" - dolny drawer w stylu kafelkow (ikona + podpis), wzor: arkusz
+          tworzenia z Pinteresta. Krok 1 = [Stworz zestawienie | Stworz plan];
+          "Stworz plan" -> krok 2 = [Solo | Grupowo | Dolacz do sesji]. */}
       {showMenu && (
         <div
-          className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200"
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200"
           onClick={() => setShowMenu(false)}
-        />
-      )}
+        >
+          <div
+            className="w-full max-w-sm bg-card rounded-t-3xl px-6 pt-5 pb-[max(28px,env(safe-area-inset-bottom))] flex flex-col gap-6 shadow-2xl animate-in slide-in-from-bottom-4 duration-300"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header: X (lub Wroc) po lewej, tytul wysrodkowany, spacer po prawej */}
+            <div className="flex items-center justify-between">
+              <button
+                onClick={() => (planStep ? setPlanStep(false) : setShowMenu(false))}
+                className="h-9 w-9 -ml-1.5 flex items-center justify-center rounded-full text-foreground active:bg-muted transition-colors"
+                aria-label={planStep ? t("back") : t("cancel")}
+              >
+                {planStep ? <ArrowLeft className="h-5 w-5" /> : <X className="h-5 w-5" />}
+              </button>
+              <h2 className="text-base font-black text-foreground">
+                {planStep ? t("menu_plan_title") : t("menu_title")}
+              </h2>
+              <div className="w-9" />
+            </div>
 
-      {/* Popup menu above "+" button */}
-      {showMenu && (
-        <div className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom,0px))] left-1/2 -translate-x-1/2 z-50 flex flex-col gap-2 items-stretch w-[248px] pb-2">
-          {!planStep ? (
-            <>
-              {/* Krok 1: Stworz zestawienie | Zaplanuj. (Przegladanie miejsc przeniesione
-                  na toggle w zakladce Eksploracja - stad usuniete z menu "+".) */}
-              <button
-                onClick={handleCreateCollection}
-                className="w-full justify-center flex items-center gap-2.5 px-5 py-3 rounded-full bg-card border border-border text-foreground font-semibold text-sm shadow-xl active:scale-95 transition-transform whitespace-nowrap"
-              >
-                <Layers className="h-4 w-4 text-orange-600" />
-                {t("create_collection")}
-              </button>
-              <button
-                onClick={() => setPlanStep(true)}
-                className="w-full justify-center flex items-center gap-2.5 px-5 py-3 rounded-full bg-primary text-white font-semibold text-sm shadow-xl active:scale-95 transition-transform whitespace-nowrap"
-              >
-                <MapPin className="h-4 w-4" />
-                {t("plan")}
-              </button>
-            </>
-          ) : (
-            <>
-              {/* Krok 2: Solo | Grupowo | Dolacz do sesji */}
-              <button
-                onClick={() => setPlanStep(false)}
-                className="w-full justify-center flex items-center gap-1.5 px-5 py-2.5 rounded-full bg-card/80 border border-border/60 text-muted-foreground font-semibold text-xs shadow-lg active:scale-95 transition-transform whitespace-nowrap"
-              >
-                <ArrowLeft className="h-3.5 w-3.5" />
-                {t("back")}
-              </button>
-              <button
-                onClick={handleSoloPlan}
-                className="w-full justify-center flex items-center gap-2.5 px-5 py-3 rounded-full bg-primary text-white font-semibold text-sm shadow-xl active:scale-95 transition-transform whitespace-nowrap"
-              >
-                <MapPin className="h-4 w-4" />
-                {t("plan_solo")}
-              </button>
-              <button
-                onClick={handleGroupPlan}
-                className="w-full justify-center flex items-center gap-2.5 px-5 py-3 rounded-full bg-foreground text-background font-semibold text-sm shadow-xl active:scale-95 transition-transform whitespace-nowrap"
-              >
-                <Users className="h-4 w-4" />
-                {t("plan_group")}
-              </button>
-              <button
-                onClick={() => { setShowMenu(false); setJoinCode(""); setShowJoinModal(true); }}
-                className="w-full justify-center flex items-center gap-2.5 px-5 py-3 rounded-full bg-card border border-border text-foreground font-semibold text-sm shadow-xl active:scale-95 transition-transform whitespace-nowrap"
-              >
-                <Link2 className="h-4 w-4 text-orange-600" />
-                {t("join_session")}
-              </button>
-            </>
-          )}
+            {/* Wiersz kafelkow akcji */}
+            <div className="flex justify-center gap-6 pb-1">
+              {!planStep ? (
+                <>
+                  <ActionTile icon={Layers} label={t("create_collection")} onClick={handleCreateCollection} />
+                  <ActionTile icon={MapPin} label={t("plan")} onClick={() => setPlanStep(true)} />
+                </>
+              ) : (
+                <>
+                  <ActionTile icon={MapPin} label={t("plan_solo")} onClick={handleSoloPlan} />
+                  <ActionTile icon={Users} label={t("plan_group")} onClick={handleGroupPlan} />
+                  <ActionTile
+                    icon={Link2}
+                    label={t("join_session")}
+                    onClick={() => { setShowMenu(false); setJoinCode(""); setShowJoinModal(true); }}
+                  />
+                </>
+              )}
+            </div>
+          </div>
         </div>
       )}
 
@@ -291,7 +290,7 @@ const BottomNav = () => {
       {/* Floating nav: biala karta odklejona od krawedzi + lekki cien (natywny feel).
           Outer = transparentny kontener (pointer-events-none) z marginesem + safe-area;
           inner = bialy pill z cieniem (pointer-events-auto). */}
-      {!navHidden && (
+      {!navHidden && !showMenu && (
       <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-lg z-50 px-4 pb-[calc(env(safe-area-inset-bottom,0px)+10px)] pointer-events-none">
         {/* Web: 3 kolumny (Glowna, Plus, Profil - Eksploruj i Dziennik ukryte).
             Native: 5 kolumn (wszystko). */}
