@@ -2326,11 +2326,13 @@ const BusinessDashboard = () => {
                     </div>
                     <div className="space-y-1">
                       <Label htmlFor="instagram" className="text-xs flex items-center gap-1.5 flex-wrap">Instagram <span className="text-[10px] font-normal text-muted-foreground">{t("profile.optional")}</span></Label>
-                      <Input id="instagram" value={instagram} maxLength={200} onChange={e => { setInstagram(e.target.value); setIsDirty(true); }} type="url" placeholder="https://instagram.com/twojlokal" />
+                      <Input id="instagram" value={instagram} maxLength={200} onChange={e => { setInstagram(e.target.value); setIsDirty(true); }} type="text" placeholder="@twojlokal" />
+                      <p className="text-[10px] text-muted-foreground">{t("profile.instagram_hint")}</p>
                     </div>
                     <div className="space-y-1">
                       <Label htmlFor="facebook" className="text-xs flex items-center gap-1.5 flex-wrap">Facebook <span className="text-[10px] font-normal text-muted-foreground">{t("profile.optional")}</span></Label>
-                      <Input id="facebook" value={facebook} maxLength={200} onChange={e => { setFacebook(e.target.value); setIsDirty(true); }} type="url" placeholder="https://facebook.com/twojlokal" />
+                      <Input id="facebook" value={facebook} maxLength={200} onChange={e => { setFacebook(e.target.value); setIsDirty(true); }} type="text" placeholder={t("profile.facebook_placeholder")} />
+                      <p className="text-[10px] text-muted-foreground">{t("profile.facebook_hint")}</p>
                     </div>
                   </>
                 )}

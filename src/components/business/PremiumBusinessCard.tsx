@@ -25,6 +25,7 @@ import { dateLocale } from "@/lib/dateLocale";
 import RouteMap from "@/components/RouteMap";
 import { supabase } from "@/integrations/supabase/client";
 import { avatarSrc } from "@/lib/avatar";
+import { instagramUrl, facebookUrl } from "@/lib/social";
 import type {
   PremiumBusinessData,
   PremiumBusinessMode,
@@ -927,17 +928,19 @@ function ReviewsSection({ data }: SectionProps) {
 
 // Miniaturki social media (Instagram / Facebook) - bezposrednio pod nazwa lokalu na wizytowce.
 function SocialLinksRow({ data }: SectionProps) {
-  if (!data.instagram && !data.facebook) return null;
+  const ig = instagramUrl(data.instagram);
+  const fb = facebookUrl(data.facebook);
+  if (!ig && !fb) return null;
   const btn = "h-8 w-8 flex items-center justify-center rounded-full bg-secondary text-foreground active:scale-90 transition-transform";
   return (
     <div className="flex items-center gap-2">
-      {data.instagram && (
-        <a href={data.instagram} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className={btn} aria-label="Instagram">
+      {ig && (
+        <a href={ig} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className={btn} aria-label="Instagram">
           <Instagram className="h-4 w-4" />
         </a>
       )}
-      {data.facebook && (
-        <a href={data.facebook} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className={btn} aria-label="Facebook">
+      {fb && (
+        <a href={fb} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className={btn} aria-label="Facebook">
           <Facebook className="h-4 w-4" />
         </a>
       )}
@@ -947,7 +950,9 @@ function SocialLinksRow({ data }: SectionProps) {
 
 function ContactButtonsSection({ data }: SectionProps) {
   const { t } = useTranslation("wizytowka");
-  if (!data.phone && !data.website && !data.instagram && !data.facebook) return null;
+  const ig = instagramUrl(data.instagram);
+  const fb = facebookUrl(data.facebook);
+  if (!data.phone && !data.website && !ig && !fb) return null;
   const iconBtn = "flex items-center justify-center py-2.5 px-3 rounded-2xl border border-border/60 bg-card text-foreground active:scale-[0.97] transition-transform";
   return (
     <div className="flex gap-2">
@@ -971,13 +976,13 @@ function ContactButtonsSection({ data }: SectionProps) {
           {t("website")}
         </a>
       )}
-      {data.instagram && (
-        <a href={data.instagram} target="_blank" rel="noopener noreferrer" className={iconBtn} aria-label="Instagram">
+      {ig && (
+        <a href={ig} target="_blank" rel="noopener noreferrer" className={iconBtn} aria-label="Instagram">
           <Instagram className="h-4 w-4" />
         </a>
       )}
-      {data.facebook && (
-        <a href={data.facebook} target="_blank" rel="noopener noreferrer" className={iconBtn} aria-label="Facebook">
+      {fb && (
+        <a href={fb} target="_blank" rel="noopener noreferrer" className={iconBtn} aria-label="Facebook">
           <Facebook className="h-4 w-4" />
         </a>
       )}
