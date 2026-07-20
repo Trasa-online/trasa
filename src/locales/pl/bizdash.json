@@ -19,7 +19,7 @@
     "error": "Nie udało się usunąć konta. Spróbuj ponownie.",
     "button": "Usuń konto biznesowe",
     "confirm_title": "Usunąć konto na stałe?",
-    "confirm_desc": "Twoja wizytówka, posty, galeria i konto zostaną trwale usunięte. Miejsce pozostanie w aplikacji jako niezarządzane. Tej operacji nie można cofnąć.",
+    "confirm_desc": "Czy na pewno chcesz usunąć konto? Utracisz swoją wizytówkę w Trasie - wizytówka, posty i galeria zostaną trwale usunięte. Miejsce pozostanie w aplikacji jako niezarządzane. Tej operacji nie można cofnąć.",
     "cancel": "Anuluj",
     "deleting": "Usuwanie...",
     "confirm_button": "Usuń konto"
@@ -366,6 +366,9 @@
     "logo_title": "Dostosuj logo",
     "photo_title": "Kadruj zdjęcie {{n}}/{{total}}",
     "confirm": "Gotowe",
-    "cancel": "Anuluj"
+    "cancel": "Anuluj",
+    "layout_landscape": "Poziome",
+    "layout_portrait": "Pionowe",
+    "layout_full": "Pełne"
   }
 }

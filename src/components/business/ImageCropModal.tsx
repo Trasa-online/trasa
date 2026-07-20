@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import Cropper, { type Area } from "react-easy-crop";
+import { useTranslation } from "react-i18next";
 import { isHeic, convertHeicToJpeg } from "@/lib/heicConvert";
 
 // Wspolny modal kadrowania dla panelu biznesowego:
@@ -38,16 +39,33 @@ export interface ImageCropModalProps {
   title: string;
   confirmLabel: string;
   cancelLabel: string;
+  // Gdy true (i cropShape='rect') - pokazuje przelacznik ukladu: poziome / pionowe / pelne zdjecie.
+  allowAspectChange?: boolean;
   onCropped: (file: File) => void;
   onCancel: () => void;
 }
 
-export function ImageCropModal({ file, aspect, cropShape = "rect", title, confirmLabel, cancelLabel, onCropped, onCancel }: ImageCropModalProps) {
+// Uklady kadrowania. "full" = proporcja oryginalnego zdjecia (cale zdjecie, bez przycinania).
+type CropLayout = "landscape" | "portrait" | "full";
+const LAYOUT_ASPECT: Record<Exclude<CropLayout, "full">, number> = { landscape: 4 / 3, portrait: 3 / 4 };
+
+export function ImageCropModal({ file, aspect, cropShape = "rect", title, confirmLabel, cancelLabel, allowAspectChange = false, onCropped, onCancel }: ImageCropModalProps) {
+  const { t } = useTranslation("bizdash");
   const [imageSrc, setImageSrc] = useState<string | null>(null);
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [areaPixels, setAreaPixels] = useState<Area | null>(null);
   const [busy, setBusy] = useState(false);
+  // Wybrany uklad + proporcja oryginalu (dla "full"). Domyslnie poziome (jak dotychczas 4:3).
+  const [layout, setLayout] = useState<CropLayout>("landscape");
+  const [naturalAspect, setNaturalAspect] = useState(4 / 3);
+  const activeAspect = !allowAspectChange
+    ? aspect
+    : layout === "full"
+      ? naturalAspect
+      : LAYOUT_ASPECT[layout];
+  // Zmiana ukladu resetuje kadr/zoom, zeby nowa proporcja startowala od pelnego widoku.
+  const changeLayout = (l: CropLayout) => { setLayout(l); setZoom(1); setCrop({ x: 0, y: 0 }); };
 
   useEffect(() => {
     let cancelled = false;
@@ -87,15 +105,35 @@ export function ImageCropModal({ file, aspect, cropShape = "rect", title, confir
             image={imageSrc}
             crop={crop}
             zoom={zoom}
-            aspect={aspect}
+            aspect={activeAspect}
             cropShape={cropShape}
             showGrid={cropShape === "rect"}
             onCropChange={setCrop}
             onZoomChange={setZoom}
             onCropComplete={onCropComplete}
+            onMediaLoaded={(m) => { if (m.naturalWidth && m.naturalHeight) setNaturalAspect(m.naturalWidth / m.naturalHeight); }}
           />
         )}
       </div>
+      {allowAspectChange && cropShape === "rect" && (
+        <div className="px-6 pt-4 shrink-0">
+          <div className="flex items-center gap-1.5 rounded-full bg-white/10 p-1">
+            {([
+              { key: "landscape", label: t("crop.layout_landscape") },
+              { key: "portrait", label: t("crop.layout_portrait") },
+              { key: "full", label: t("crop.layout_full") },
+            ] as { key: CropLayout; label: string }[]).map((opt) => (
+              <button
+                key={opt.key}
+                onClick={() => changeLayout(opt.key)}
+                className={`flex-1 py-2 rounded-full text-xs font-bold transition-colors ${layout === opt.key ? "bg-white text-black" : "text-white/70 active:bg-white/10"}`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
       <div className="px-6 py-5 flex items-center gap-3 shrink-0" style={{ paddingBottom: "max(1.25rem, env(safe-area-inset-bottom))" }}>
         <span className="text-white/60 text-lg leading-none">-</span>
         <input type="range" min={1} max={3} step={0.01} value={zoom} onChange={(e) => setZoom(Number(e.target.value))} className="flex-1 accent-blue-500" />

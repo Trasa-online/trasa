@@ -38,5 +38,8 @@
   "events_added_to_route_one": "{{count}} osoba ma to w planach",
   "events_added_to_route_few": "{{count}} osoby mają to w planach",
   "events_added_to_route_many": "{{count}} osób ma to w planach",
-  "events_added_to_route_other": "{{count}} osób ma to w planach"
+  "events_added_to_route_other": "{{count}} osób ma to w planach",
+  "events_prev_month": "Poprzedni miesiąc",
+  "events_next_month": "Następny miesiąc",
+  "events_month_empty": "Brak wydarzeń w tym miesiącu"
 }

@@ -20,7 +20,7 @@ import { createPortal } from "react-dom";
 import { MAIN_CATEGORIES, mainCategoryLabel } from "@/lib/categories";
 import { cn } from "@/lib/utils";
 import { Star, Clock, ChevronRight, ChevronLeft, ChevronDown, X, Maximize2, Phone, Globe, FileText, Instagram, Facebook } from "lucide-react";
-import { parseISO, isValid, formatDistanceToNow, format } from "date-fns";
+import { parseISO, isValid, formatDistanceToNow, format, startOfMonth, addMonths } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
 import RouteMap from "@/components/RouteMap";
 import { supabase } from "@/integrations/supabase/client";
@@ -514,83 +514,145 @@ function EventBannerSection({ data }: SectionProps) {
   );
 }
 
-// Agenda zaplanowanych wydarzen (kolejka business_events) - JEDNO najblizsze aktywne/nadchodzace.
-// Renderowane jako neutralny "paper" kafelek (bg-secondary) z data, godzina (opcjonalna) oraz
-// awatarami osob ktore dodaly lokal do swojej trasy (social proof / FOMO na event). Pomaranczowy
-// zarezerwowany dla pilla promo na gorze (EventBannerSection).
+// Kalendarium zaplanowanych wydarzen (kolejka business_events). Nawigacja miesiacami (chevrony +
+// swipe w bok, jak w kalendarzu) - pokazuje WSZYSTKIE wydarzenia danego miesiaca, nie tylko jedno.
+// Neutralny "paper" kafelek (bg-secondary). Pomaranczowy zarezerwowany dla pilla promo na gorze
+// (EventBannerSection). Na dole raz awatary osob ktore dodaly lokal do trasy (social proof / FOMO).
 function EventsSection({ data, referenceDate, routeAvatars }: SectionProps & { referenceDate?: string; routeAvatars?: RouteAvatars | null }) {
   const { t, i18n } = useTranslation("wizytowka");
-  // Odniesienie = data wyjazdu (gdy user planuje termin) albo dzis. Pokazujemy wydarzenie
-  // najblizsze TEJ dacie - aktywne w terminie albo pierwsze nadchodzace po nim.
-  const ref = referenceDate ?? new Date().toISOString().slice(0, 10);
   const isEn = (i18n.language || "").toLowerCase().startsWith("en");
-  // Tylko JEDNO najblizsze wydarzenie (aktywne w terminie albo nadchodzace), nawet gdy lokal
-  // dodal kilka. Gdy mija - automatycznie wskakuje nastepne.
-  const upcoming = (data.events ?? [])
-    .filter((e) => e && !e.is_draft && String(e.ends_at ?? e.starts_at) >= ref)
-    .sort((a, b) => String(a.starts_at).localeCompare(String(b.starts_at)))
-    .slice(0, 1);
-  if (upcoming.length === 0) return null;
-  const e = upcoming[0];
-  const fmtDate = (d: string) => {
+  const ref = referenceDate ?? new Date().toISOString().slice(0, 10);
+  const events = (data.events ?? []).filter((e) => e && !e.is_draft && e.starts_at);
+
+  // Miesiace z wydarzeniami (YYYY-MM) posortowane - zakres nawigacji [pierwszy .. ostatni].
+  const monthKeys = [...new Set(events.map((e) => String(e.starts_at).slice(0, 7)))].sort();
+  // Domyslny miesiac = pierwszy z wydarzeniem >= data odniesienia (albo ostatni gdy wszystkie w przeszlosci).
+  const defaultKey = monthKeys.find((m) => m >= ref.slice(0, 7)) ?? monthKeys[monthKeys.length - 1] ?? ref.slice(0, 7);
+  const [monthDate, setMonthDate] = useState<Date>(() => startOfMonth(parseISO(`${defaultKey}-01`)));
+  // Reset na wybrany miesiac gdy dane sie doczytaja (np. enrich profilu biznesu po otwarciu).
+  useEffect(() => { setMonthDate(startOfMonth(parseISO(`${defaultKey}-01`))); }, [defaultKey]);
+  const swipeX = useRef<number | null>(null);
+
+  if (events.length === 0) return null;
+
+  const selKey = format(monthDate, "yyyy-MM");
+  const canPrev = selKey > monthKeys[0];
+  const canNext = selKey < monthKeys[monthKeys.length - 1];
+  const go = (delta: number) => {
+    if ((delta < 0 && !canPrev) || (delta > 0 && !canNext)) return;
+    setMonthDate((d) => startOfMonth(addMonths(d, delta)));
+  };
+
+  const monthEvents = events
+    .filter((e) => String(e.starts_at).slice(0, 7) === selKey)
+    .sort((a, b) => String(a.starts_at).localeCompare(String(b.starts_at)));
+
+  const fmtDay = (d: string) => {
     const dt = parseISO(d);
     return isValid(dt) ? format(dt, "d MMM", { locale: dateLocale() }) : d;
   };
-  const dateRange =
-    e.ends_at && e.ends_at !== e.starts_at ? `${fmtDate(e.starts_at)} - ${fmtDate(e.ends_at)}` : fmtDate(e.starts_at);
-  // "18:00:00" -> "18:00". Godzina opcjonalna (lokal moze podac sam start albo start+koniec).
   const fmtTime = (v?: string | null) => (v ? String(v).slice(0, 5) : null);
-  const startTime = fmtTime(e.start_time);
-  const endTime = fmtTime(e.end_time);
-  const timeLabel = startTime ? (endTime ? `${startTime} - ${endTime}` : startTime) : null;
+  const prevLabel = canPrev ? format(addMonths(monthDate, -1), "LLL", { locale: dateLocale() }) : "";
+  const nextLabel = canNext ? format(addMonths(monthDate, 1), "LLL", { locale: dateLocale() }) : "";
 
   const shownAvatars = (routeAvatars?.avatars ?? []).slice(0, 4);
   const totalAdded = routeAvatars?.total ?? 0;
   const remainder = totalAdded - shownAvatars.length;
 
   return (
-    <div className="space-y-2 pt-2">
+    <div className="space-y-3 pt-2">
       <h3 className="text-lg font-black tracking-tight">{t("events_title")}</h3>
-      {/* Kafelek neutralny (szary "paper" styl). Pomaranczowy jest TYLKO pill promo na gorze
-          (EventBannerSection), nie ten kafelek zaplanowanego wydarzenia. */}
-      <div className="rounded-3xl bg-secondary text-secondary-foreground p-4">
-        {/* Data (pill) + godzina - rzucaja sie w oczy jak w kartach kalendarza */}
-        <div className="flex items-center justify-between gap-3">
-          <span className="shrink-0 px-3 py-1 rounded-full bg-background text-foreground text-xs font-bold whitespace-nowrap">{dateRange}</span>
-          {timeLabel && (
-            <span className="flex items-center gap-1 text-sm font-bold whitespace-nowrap">
-              <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-              {timeLabel}
-            </span>
-          )}
-        </div>
-        <p className="mt-3 text-lg font-black leading-tight break-words">{isEn && e.title_en ? e.title_en : e.title}</p>
-        {e.description && <p className="mt-1 text-sm text-muted-foreground leading-snug break-words">{e.description}</p>}
-        {/* Social proof: awatary osob z tym lokalem w trasie (max 4 + "+N") */}
-        {totalAdded > 0 && (
-          <div className="mt-4 flex items-center gap-2.5">
-            <div className="flex -space-x-2">
-              {shownAvatars.map((a, i) => (
-                <img
-                  key={i}
-                  src={avatarSrc(a.avatar_url)}
-                  alt=""
-                  draggable={false}
-                  className="h-7 w-7 rounded-full border-2 border-secondary object-cover"
-                />
-              ))}
-              {remainder > 0 && (
-                <span className="h-7 w-7 rounded-full border-2 border-secondary bg-background text-foreground flex items-center justify-center text-[11px] font-bold">
-                  +{remainder}
-                </span>
-              )}
-            </div>
-            <span className="text-xs font-semibold text-muted-foreground leading-snug">
-              {t("events_added_to_route", { count: totalAdded })}
-            </span>
-          </div>
+
+      {/* Nawigator miesiaca (DEC ‹ STYCZEN › FEB) */}
+      <div className="flex items-center justify-center gap-2 select-none">
+        <span className="w-9 text-right text-[11px] font-semibold uppercase text-muted-foreground/40">{prevLabel}</span>
+        <button
+          type="button"
+          disabled={!canPrev}
+          onClick={(ev) => { ev.stopPropagation(); go(-1); }}
+          className="h-8 w-8 flex items-center justify-center rounded-full active:bg-muted disabled:opacity-25"
+          aria-label={t("events_prev_month")}
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </button>
+        <span className="min-w-[104px] text-center text-sm font-black uppercase tracking-wide">
+          {format(monthDate, "LLLL yyyy", { locale: dateLocale() })}
+        </span>
+        <button
+          type="button"
+          disabled={!canNext}
+          onClick={(ev) => { ev.stopPropagation(); go(1); }}
+          className="h-8 w-8 flex items-center justify-center rounded-full active:bg-muted disabled:opacity-25"
+          aria-label={t("events_next_month")}
+        >
+          <ChevronRight className="h-4 w-4" />
+        </button>
+        <span className="w-9 text-left text-[11px] font-semibold uppercase text-muted-foreground/40">{nextLabel}</span>
+      </div>
+
+      {/* Wydarzenia w wybranym miesiacu (swipe w bok = zmiana miesiaca) */}
+      <div
+        className="space-y-2"
+        onTouchStart={(e) => { swipeX.current = e.touches[0].clientX; }}
+        onTouchEnd={(e) => {
+          if (swipeX.current === null) return;
+          const dx = e.changedTouches[0].clientX - swipeX.current;
+          swipeX.current = null;
+          if (Math.abs(dx) > 50) go(dx < 0 ? 1 : -1);
+        }}
+      >
+        {monthEvents.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-6 rounded-3xl bg-secondary">{t("events_month_empty")}</p>
+        ) : (
+          monthEvents.map((e, i) => {
+            const st = fmtTime(e.start_time);
+            const et = fmtTime(e.end_time);
+            const timeLabel = st ? (et ? `${st} - ${et}` : st) : null;
+            const dateRange =
+              e.ends_at && e.ends_at !== e.starts_at ? `${fmtDay(e.starts_at)} - ${fmtDay(e.ends_at)}` : fmtDay(e.starts_at);
+            return (
+              <div key={i} className="rounded-3xl bg-secondary text-secondary-foreground p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="shrink-0 px-3 py-1 rounded-full bg-background text-foreground text-xs font-bold whitespace-nowrap">{dateRange}</span>
+                  {timeLabel && (
+                    <span className="flex items-center gap-1 text-sm font-bold whitespace-nowrap">
+                      <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                      {timeLabel}
+                    </span>
+                  )}
+                </div>
+                <p className="mt-3 text-lg font-black leading-tight break-words">{isEn && e.title_en ? e.title_en : e.title}</p>
+                {e.description && <p className="mt-1 text-sm text-muted-foreground leading-snug break-words">{e.description}</p>}
+              </div>
+            );
+          })
         )}
       </div>
+
+      {/* Social proof (place-level): awatary osob z tym lokalem w trasie (max 4 + "+N") */}
+      {totalAdded > 0 && (
+        <div className="flex items-center gap-2.5 pt-1">
+          <div className="flex -space-x-2">
+            {shownAvatars.map((a, i) => (
+              <img
+                key={i}
+                src={avatarSrc(a.avatar_url)}
+                alt=""
+                draggable={false}
+                className="h-7 w-7 rounded-full border-2 border-[#FEFEFE] object-cover"
+              />
+            ))}
+            {remainder > 0 && (
+              <span className="h-7 w-7 rounded-full border-2 border-[#FEFEFE] bg-secondary text-foreground flex items-center justify-center text-[11px] font-bold">
+                +{remainder}
+              </span>
+            )}
+          </div>
+          <span className="text-xs font-semibold text-muted-foreground leading-snug">
+            {t("events_added_to_route", { count: totalAdded })}
+          </span>
+        </div>
+      )}
     </div>
   );
 }
@@ -863,6 +925,26 @@ function ReviewsSection({ data }: SectionProps) {
   );
 }
 
+// Miniaturki social media (Instagram / Facebook) - bezposrednio pod nazwa lokalu na wizytowce.
+function SocialLinksRow({ data }: SectionProps) {
+  if (!data.instagram && !data.facebook) return null;
+  const btn = "h-8 w-8 flex items-center justify-center rounded-full bg-secondary text-foreground active:scale-90 transition-transform";
+  return (
+    <div className="flex items-center gap-2">
+      {data.instagram && (
+        <a href={data.instagram} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className={btn} aria-label="Instagram">
+          <Instagram className="h-4 w-4" />
+        </a>
+      )}
+      {data.facebook && (
+        <a href={data.facebook} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className={btn} aria-label="Facebook">
+          <Facebook className="h-4 w-4" />
+        </a>
+      )}
+    </div>
+  );
+}
+
 function ContactButtonsSection({ data }: SectionProps) {
   const { t } = useTranslation("wizytowka");
   if (!data.phone && !data.website && !data.instagram && !data.facebook) return null;
@@ -1010,6 +1092,7 @@ const PremiumBusinessCard = ({
               {/* Nazwa = pelna szerokosc, moze sie zawinac (bez truncate) - nazwa jest wazna.
                   Chipy dystansu + Maps przeniesione na gore hero (obok X), zeby nie skracac nazwy. */}
               <h2 className="text-2xl font-bold leading-tight">{data.name}</h2>
+              <SocialLinksRow data={data} />
               <RatingSection data={data} expandable={!!hideReviews && hasReviews} expanded={reviewsOpen} onToggle={() => setReviewsOpen((o) => !o)} />
               {hideReviews && reviewsOpen && <ReviewsSection data={data} />}
               <AddressSection data={data} />

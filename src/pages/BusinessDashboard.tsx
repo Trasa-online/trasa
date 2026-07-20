@@ -3130,6 +3130,7 @@ const BusinessDashboard = () => {
           file={cropJob.files[cropJob.index]}
           aspect={cropJob.aspect}
           cropShape={cropJob.shape}
+          allowAspectChange={cropJob.target === "gallery"}
           title={cropJob.target === "logo"
             ? t("crop.logo_title")
             : t("crop.photo_title", { n: cropJob.index + 1, total: cropJob.files.length })}
