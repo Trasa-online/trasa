@@ -1,12 +1,13 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { ArrowLeft, X, Plus, Filter, Check, Star, MapPin, ArrowRight, ChevronDown } from "lucide-react";
+import { ArrowLeft, X, Plus, Filter, Check, Star, MapPin, ArrowRight, ChevronDown, Layers, Compass } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import { supabase } from "@/integrations/supabase/client";
 import { usePostHog } from "@posthog/react";
 import { toast } from "sonner";
-import CityPicker from "@/components/plan-wizard/CityPicker";
+import CityPicker, { UNLOCKED_CITIES } from "@/components/plan-wizard/CityPicker";
 import FullCalendarPicker from "@/components/plan-wizard/FullCalendarPicker";
 import { Calendar } from "@/components/ui/calendar";
 import { dateLocale } from "@/lib/dateLocale";
@@ -280,25 +281,56 @@ const PlanWizard = () => {
 
         {step === 4 && exploreMode ? (
           <>
-            {/* exploreMode ("Przegladaj"): selektor miasta (klik -> wybor miasta) + toggle
-                Przegladaj|Eksploruj (powrot do feedu). Bez "Zakoncz". Filtry po prawej. */}
-            <button
-              onClick={() => setStep(1)}
-              className="shrink-0 flex items-center gap-1 px-2.5 h-8 rounded-full bg-card border border-border/60 active:scale-[0.97] transition-transform max-w-[120px]"
-              aria-label={t("explore_change_city")}
-            >
-              <MapPin className="h-3.5 w-3.5 text-orange-600 shrink-0" />
-              <span className="text-sm font-bold text-foreground truncate">{city || "Warszawa"}</span>
-              <ChevronDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-            </button>
+            {/* exploreMode ("Przegladaj"): selektor miasta (dropdown dostepnych miast) + toggle
+                Przegladaj|Eksploruj (ikony - oszczedza miejsce, nazwa miasta sie miesci).
+                Bez "Zakoncz". Filtry po prawej. */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  className="shrink-0 flex items-center gap-1 px-2.5 h-8 rounded-full bg-card border border-border/60 active:scale-[0.97] transition-transform max-w-[160px]"
+                  aria-label={t("explore_change_city")}
+                >
+                  <MapPin className="h-3.5 w-3.5 text-orange-600 shrink-0" />
+                  <span className="text-sm font-bold text-foreground truncate">{city || "Warszawa"}</span>
+                  <ChevronDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="rounded-2xl max-h-[60vh] overflow-y-auto">
+                {UNLOCKED_CITIES.map((c) => (
+                  <DropdownMenuItem
+                    key={c}
+                    onClick={() => {
+                      if (c === city) return;
+                      setCity(c);
+                      posthog.capture("plan_city_selected", { city: c, explore_mode: true });
+                    }}
+                    className="gap-2 rounded-xl cursor-pointer"
+                  >
+                    <MapPin className={cn("h-4 w-4 shrink-0", c === (city || "Warszawa") ? "text-orange-600" : "text-muted-foreground")} />
+                    <span className={cn("flex-1", c === (city || "Warszawa") && "font-bold")}>{c}</span>
+                    {c === (city || "Warszawa") && <Check className="h-4 w-4 text-orange-600 shrink-0" />}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
             <div className="flex-1" />
-            <div className="shrink-0 flex items-center rounded-full bg-secondary p-0.5 text-xs font-bold">
-              <span className="px-2.5 py-1.5 rounded-full bg-background text-foreground shadow-sm whitespace-nowrap">{t("explore_browse")}</span>
+            {/* Toggle ikonowy: Przegladaj (karty) aktywne | Eksploracja (feed) */}
+            <div className="shrink-0 flex items-center rounded-full bg-secondary p-0.5">
+              <span
+                className="h-8 w-8 flex items-center justify-center rounded-full bg-background text-foreground shadow-sm"
+                aria-current="true"
+                aria-label={t("explore_browse")}
+                title={t("explore_browse")}
+              >
+                <Layers className="h-4 w-4" />
+              </span>
               <button
                 onClick={() => navigate("/eksploruj")}
-                className="px-2.5 py-1.5 rounded-full text-secondary-foreground/70 active:scale-95 transition-transform whitespace-nowrap"
+                className="h-8 w-8 flex items-center justify-center rounded-full text-secondary-foreground/70 active:scale-95 transition-transform"
+                aria-label={t("explore_explore")}
+                title={t("explore_explore")}
               >
-                {t("explore_explore")}
+                <Compass className="h-4 w-4" />
               </button>
             </div>
             {/* Chip filtru */}

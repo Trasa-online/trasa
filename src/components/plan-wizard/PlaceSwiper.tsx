@@ -1032,7 +1032,28 @@ function pickEventPillTitle(bp: any, refDate?: string): string | undefined {
   return upcoming ? titleOf(upcoming) : undefined;
 }
 
-function enrichWithBusinessProfile(p: any, refDate?: string): MockPlace {
+// Select `places` + zagniezdzony business_profiles (+ business_events) - jedno zrodlo prawdy
+// dla wizytowki (swiper i "Zapisane"). Zmiana tu propaguje do wszystkich call sites.
+export const PLACE_BUSINESS_SELECT =
+  "*, business_profiles(plan, logo_url, cover_image_url, cover_video_url, event_title, event_title_en, event_description, gallery_urls, phone, website, social_links, main_category, secondary_category, subcategories, tags, description, is_verified, color_badge, color_card_bg, color_button, color_promo, menu_image_urls, opening_hours, latitude, longitude, street, postal_code, address, business_events(id, title, title_en, starts_at, ends_at, start_time, end_time, description, is_draft))";
+
+// Doczytuje pojedyncze miejsce po places.id (UUID) i wzbogaca profilem biznesowym -
+// uzywane przez "Zapisane" zeby tap w kafelek otwieral pelna wizytowke (jak w swiperze).
+export async function fetchEnrichedPlace(id: string, refDate?: string): Promise<MockPlace | null> {
+  try {
+    const { data, error } = await (supabase as any)
+      .from("places")
+      .select(PLACE_BUSINESS_SELECT)
+      .eq("id", id)
+      .maybeSingle();
+    if (error || !data) return null;
+    return enrichWithBusinessProfile(data, refDate);
+  } catch {
+    return null;
+  }
+}
+
+export function enrichWithBusinessProfile(p: any, refDate?: string): MockPlace {
   const placeGallery: string[] = Array.isArray(p.gallery_urls) ? p.gallery_urls.filter(Boolean) : [];
 
   const bp = Array.isArray(p.business_profiles) ? p.business_profiles[0] : p.business_profiles;
@@ -1194,7 +1215,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
       if (roundPlaceIds?.length) {
         const { data, error } = await (supabase as any)
           .from("places")
-          .select("*, business_profiles(plan, logo_url, cover_image_url, cover_video_url, event_title, event_title_en, event_description, gallery_urls, phone, website, social_links, main_category, secondary_category, subcategories, tags, description, is_verified, color_badge, color_card_bg, color_button, color_promo, menu_image_urls, opening_hours, latitude, longitude, street, postal_code, address, business_events(id, title, title_en, starts_at, ends_at, start_time, end_time, description, is_draft))")
+          .select(PLACE_BUSINESS_SELECT)
           .in("id", roundPlaceIds);
 
         if (error) console.error("[PlaceSwiper] round fetch error:", error);
@@ -1216,7 +1237,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
       // ── Normal mode ──────────────────────────────────────────────────────
       const { data, error: placesError } = await (supabase as any)
         .from("places")
-        .select("*, business_profiles(plan, logo_url, cover_image_url, cover_video_url, event_title, event_title_en, event_description, gallery_urls, phone, website, social_links, main_category, secondary_category, subcategories, tags, description, is_verified, color_badge, color_card_bg, color_button, color_promo, menu_image_urls, opening_hours, latitude, longitude, street, postal_code, address, business_events(id, title, title_en, starts_at, ends_at, start_time, end_time, description, is_draft))")
+        .select(PLACE_BUSINESS_SELECT)
         .in("city", expandCity(city))
         .eq("is_active", true);
 

@@ -109,34 +109,137 @@ interface FullscreenPhotosProps {
   onClose: () => void;
 }
 
+const MAX_ZOOM = 4;
+
 const FullscreenPhotos = ({ photos, startIndex, onClose }: FullscreenPhotosProps) => {
   const { t } = useTranslation("wizytowka");
   const [idx, setIdx] = useState(Math.max(0, Math.min(startIndex, photos.length - 1)));
+  // Zoom (pinch) + pan (przesuwanie gdy przybliżone). scale=1 => normalny widok (swipe nawiguje).
+  const [zoom, setZoom] = useState({ scale: 1, tx: 0, ty: 0 });
+  const scaleRef = useRef(1);
+  scaleRef.current = zoom.scale;
+  const [gesturing, setGesturing] = useState(false);
+  // Stan gestu: pojedynczy tap/swipe, pinch (2 palce), pan (1 palec gdy scale>1).
   const startPos = useRef<{ x: number; y: number } | null>(null);
+  const pinchStart = useRef<{ dist: number; scale: number } | null>(null);
+  const panLast = useRef<{ x: number; y: number } | null>(null);
+  const lastTap = useRef(0);
+
+  // Reset zoomu przy zmianie zdjęcia (nowe zdjęcie = normalny widok).
+  useEffect(() => { setZoom({ scale: 1, tx: 0, ty: 0 }); }, [idx]);
 
   if (photos.length === 0) return null;
 
   const goPrev = () => setIdx((n) => Math.max(0, n - 1));
   const goNext = () => setIdx((n) => Math.min(photos.length - 1, n + 1));
 
+  const dist2 = (t0: React.Touch, t1: React.Touch) =>
+    Math.hypot(t0.clientX - t1.clientX, t0.clientY - t1.clientY);
+
+  // Clamp pan tak, żeby przybliżony obraz nie odjechał całkiem poza ekran.
+  const clampPan = (scale: number, tx: number, ty: number) => {
+    const maxX = (window.innerWidth * (scale - 1)) / 2;
+    const maxY = (window.innerHeight * (scale - 1)) / 2;
+    return {
+      tx: Math.max(-maxX, Math.min(maxX, tx)),
+      ty: Math.max(-maxY, Math.min(maxY, ty)),
+    };
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 2) {
+      pinchStart.current = { dist: dist2(e.touches[0], e.touches[1]), scale: scaleRef.current };
+      startPos.current = null;
+      panLast.current = null;
+    } else if (e.touches.length === 1) {
+      startPos.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      panLast.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    // Pinch: 2 palce -> zmiana skali.
+    if (e.touches.length === 2 && pinchStart.current) {
+      const d = dist2(e.touches[0], e.touches[1]);
+      const next = Math.max(1, Math.min(MAX_ZOOM, pinchStart.current.scale * (d / pinchStart.current.dist)));
+      setGesturing(true);
+      setZoom((z) => {
+        const p = clampPan(next, z.tx, z.ty);
+        return { scale: next, ...p };
+      });
+      return;
+    }
+    // Pan: 1 palec gdy przybliżone -> przesuwanie obrazu.
+    if (e.touches.length === 1 && scaleRef.current > 1 && panLast.current) {
+      const dx = e.touches[0].clientX - panLast.current.x;
+      const dy = e.touches[0].clientY - panLast.current.y;
+      panLast.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      setGesturing(true);
+      setZoom((z) => {
+        const p = clampPan(z.scale, z.tx + dx, z.ty + dy);
+        return { ...z, ...p };
+      });
+    }
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    const wasPinch = pinchStart.current !== null;
+    pinchStart.current = null;
+    panLast.current = null;
+    setGesturing(false);
+
+    // Pinch skończony -> gdy zeszliśmy ~do 1, wyzeruj zoom całkiem.
+    if (wasPinch) {
+      if (scaleRef.current <= 1.02) setZoom({ scale: 1, tx: 0, ty: 0 });
+      return;
+    }
+
+    const sp = startPos.current;
+    startPos.current = null;
+    if (!sp) return;
+    const dx = e.changedTouches[0].clientX - sp.x;
+    const dy = e.changedTouches[0].clientY - sp.y;
+    const tap = Math.abs(dx) < 10 && Math.abs(dy) < 10;
+
+    // Gdy przybliżone: tap nie zamyka; double-tap wyzerowuje zoom. Swipe = pan (już obsłużony).
+    if (scaleRef.current > 1) {
+      if (tap) {
+        const now = Date.now();
+        if (now - lastTap.current < 300) { setZoom({ scale: 1, tx: 0, ty: 0 }); lastTap.current = 0; }
+        else lastTap.current = now;
+      }
+      return;
+    }
+
+    // Normalny widok (scale=1): swipe nawiguje, double-tap przybliża, tap zamyka.
+    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) && photos.length > 1) {
+      if (dx < 0) goNext();
+      else goPrev();
+      return;
+    }
+    if (tap) {
+      const now = Date.now();
+      if (now - lastTap.current < 300) {
+        setZoom({ scale: 2.5, tx: 0, ty: 0 });
+        lastTap.current = 0;
+      } else {
+        lastTap.current = now;
+        // Odczekaj na ewentualny drugi tap - inaczej double-tap-zoom zamykałby viewer.
+        window.setTimeout(() => {
+          if (lastTap.current === now && scaleRef.current <= 1.01) onClose();
+        }, 280);
+      }
+    }
+  };
+
   return createPortal(
     <div
-      className="fixed inset-0 z-[200] bg-black flex items-center justify-center select-none"
+      className="fixed inset-0 z-[200] bg-black flex items-center justify-center select-none touch-none overflow-hidden"
       style={{ pointerEvents: "auto" }}
-      onTouchStart={(e) => { startPos.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }; }}
-      onTouchEnd={(e) => {
-        if (startPos.current === null) return;
-        const dx = e.changedTouches[0].clientX - startPos.current.x;
-        const dy = e.changedTouches[0].clientY - startPos.current.y;
-        startPos.current = null;
-        if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) && photos.length > 1) {
-          if (dx < 0) goNext();
-          else goPrev();
-          return;
-        }
-        if (Math.abs(dx) < 10 && Math.abs(dy) < 10) onClose();
-      }}
-      onClick={() => onClose()}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      onClick={() => { if (scaleRef.current <= 1.01) onClose(); }}
     >
       <button
         type="button"
@@ -176,7 +279,17 @@ const FullscreenPhotos = ({ photos, startIndex, onClose }: FullscreenPhotosProps
           </button>
         </>
       )}
-      <img src={photos[idx]} alt="" draggable={false} className="max-w-full max-h-full object-contain pointer-events-none" />
+      <img
+        src={photos[idx]}
+        alt=""
+        draggable={false}
+        className="max-w-full max-h-full object-contain pointer-events-none"
+        style={{
+          transform: `translate3d(${zoom.tx}px, ${zoom.ty}px, 0) scale(${zoom.scale})`,
+          transition: gesturing ? "none" : "transform 0.2s ease-out",
+          willChange: "transform",
+        }}
+      />
       {photos.length > 1 && (
         <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-1.5" onClick={(e) => e.stopPropagation()}>
           {photos.map((_, i) => (

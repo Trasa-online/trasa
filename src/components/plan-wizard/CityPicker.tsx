@@ -76,6 +76,11 @@ const COUNTRIES: Country[] = [
   },
 ];
 
+// Odblokowane miasta PL (bez comingSoon) - zrodlo prawdy dla dropdownu miast w exploreMode.
+export const UNLOCKED_CITIES: string[] = (COUNTRIES.find((c) => c.code === "PL")?.cities ?? [])
+  .filter((c) => !c.comingSoon)
+  .map((c) => c.name);
+
 type ActiveCountryCode = "PL";
 
 // ── Drum constants ─────────────────────────────────────────────────────────

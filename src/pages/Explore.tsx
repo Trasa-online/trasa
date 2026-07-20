@@ -3,7 +3,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useLocation } from "react-router-dom";
 import { PullToRefresh } from "@/components/PullToRefresh";
 import { MapPin, Heart, Trash2, ArrowRight, ArrowLeft, Pencil, ListChecks, ChevronDown, Star, Check, Search, X } from "lucide-react";
-import PlaceDetailSheet from "@/components/home/PlaceDetailSheet";
+import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
+import { fetchEnrichedPlace, type MockPlace } from "@/components/plan-wizard/PlaceSwiper";
 import { parseISO, isValid, format, isToday, isYesterday } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
 import DiscoveryFeed from "@/components/home/DiscoveryFeed";
@@ -63,8 +64,33 @@ export const LikedTab = ({ selectMode = false, onExitSelection }: { selectMode?:
   const navigate = useNavigate();
   const { user } = useAuth();
   const { open: openAuthDrawer } = useAuthDrawer();
-  // Szczegol miejsca (wizytowka) - tap w kafelek poza trybem zaznaczania.
-  const [detailPin, setDetailPin] = useState<{ id: string; place_name: string; place_id?: string | null; address?: string | null; latitude?: number | null; longitude?: number | null; photo_url?: string | null } | null>(null);
+  // Szczegol miejsca (pelna wizytowka) - tap w kafelek poza trybem zaznaczania.
+  // Ten sam komponent co w swiperze (PlaceSwiperDetail): hero, opinie, godziny, menu z zoomem,
+  // wydarzenia. Bazowy MockPlace budujemy od razu (szybkie otwarcie), a gdy miejsce ma UUID -
+  // doczytujemy pelny profil biznesu (menu/galeria/eventy) i podmieniamy.
+  const [detailPlace, setDetailPlace] = useState<MockPlace | null>(null);
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const openDetail = (p: any) => {
+    const base = {
+      id: p.place_id ?? p.place_name,
+      place_name: p.place_name,
+      category: p.category,
+      city: p.city,
+      latitude: p.latitude ?? undefined,
+      longitude: p.longitude ?? undefined,
+      photo_url: p.photo_url ?? undefined,
+      rating: p.rating ?? undefined,
+      description: p.description ?? undefined,
+      address: p.address ?? undefined,
+    } as unknown as MockPlace;
+    setDetailPlace(base);
+    if (p.place_id && UUID_RE.test(p.place_id)) {
+      void fetchEnrichedPlace(p.place_id, todayStr).then((enriched) => {
+        if (enriched) setDetailPlace((prev) => (prev && prev.id === base.id ? enriched : prev));
+      });
+    }
+  };
   // Tryb zaznaczania: zbior wybranych nazw + zablokowane miasto (trasa = jedno miasto).
   const [selectedNames, setSelectedNames] = useState<Set<string>>(new Set());
   const [selectionCity, setSelectionCity] = useState<string | null>(null);
@@ -236,7 +262,7 @@ export const LikedTab = ({ selectMode = false, onExitSelection }: { selectMode?:
             tabIndex={0}
             onClick={() => {
               if (selectMode) toggleSelect(p);
-              else setDetailPin({ id: (p as any).place_id ?? p.place_name, place_name: p.place_name, place_id: (p as any).place_id ?? null, address: p.address, latitude: p.latitude, longitude: p.longitude, photo_url: p.photo_url });
+              else openDetail(p);
             }}
             className={cn(
               "flex gap-3 py-4 border-b border-border/15 -mx-2 px-2 rounded-2xl cursor-pointer active:bg-muted/40 transition-colors",
@@ -297,14 +323,14 @@ export const LikedTab = ({ selectMode = false, onExitSelection }: { selectMode?:
         })}
       </div>
 
-      {/* Szczegol miejsca (wizytowka) */}
-      {detailPin && (
-        <PlaceDetailSheet
-          pin={detailPin}
-          open={!!detailPin}
-          onOpenChange={(open) => !open && setDetailPin(null)}
-        />
-      )}
+      {/* Szczegol miejsca - pelna wizytowka (jak w swiperze). Bez CTA Like/Skip (brak onLike/onSkip). */}
+      <PlaceSwiperDetail
+        open={!!detailPlace}
+        place={detailPlace}
+        city={detailPlace?.city}
+        referenceDate={todayStr}
+        onOpenChange={(open) => !open && setDetailPlace(null)}
+      />
 
       {/* Pasek akcji trybu zaznaczania - utworz trase z wybranych (jedno miasto) */}
       {selectMode && selectedNames.size > 0 && (
