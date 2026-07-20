@@ -48,10 +48,10 @@ const COUNTRIES: Country[] = [
       { name: "Sopot" },
       { name: "Gdynia" },
       { name: "Trójmiasto" },
+      { name: "Wrocław" },
       { name: "Kraków",     comingSoon: true },
       { name: "Łódź",       comingSoon: true },
       { name: "Poznań",     comingSoon: true },
-      { name: "Wrocław",    comingSoon: true },
     ],
   },
   {
