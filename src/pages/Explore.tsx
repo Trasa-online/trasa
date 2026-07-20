@@ -2,7 +2,7 @@ import { useMemo, useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useLocation } from "react-router-dom";
 import { PullToRefresh } from "@/components/PullToRefresh";
-import { MapPin, Heart, Trash2, ArrowRight, ArrowLeft, Pencil, ListChecks, ChevronDown, Star, Check, Search, X } from "lucide-react";
+import { MapPin, Heart, Trash2, ArrowRight, ArrowLeft, Pencil, ListChecks, ChevronDown, Star, Check, Search, X, Layers, Compass } from "lucide-react";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import { fetchEnrichedPlace, type MockPlace } from "@/components/plan-wizard/PlaceSwiper";
 import { parseISO, isValid, format, isToday, isYesterday } from "date-fns";
@@ -616,14 +616,16 @@ const Explore = () => {
             <div className="shrink-0 flex items-center rounded-full bg-secondary p-0.5 text-xs font-bold">
               <button
                 onClick={() => navigate("/plan", { state: { exploreMode: true } })}
-                className="px-3 py-1.5 rounded-full text-secondary-foreground/70 active:scale-95 transition-transform whitespace-nowrap"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-secondary-foreground/70 active:scale-95 transition-transform whitespace-nowrap"
               >
+                <Layers className="h-3.5 w-3.5" />
                 {t("explore.tab_browse")}
               </button>
               <button
                 aria-current="true"
-                className="px-3 py-1.5 rounded-full bg-background text-foreground shadow-sm whitespace-nowrap"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-background text-foreground shadow-sm whitespace-nowrap"
               >
+                <Compass className="h-3.5 w-3.5" />
                 {t("explore.tab_explore")}
               </button>
             </div>
