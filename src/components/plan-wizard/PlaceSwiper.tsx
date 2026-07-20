@@ -276,10 +276,13 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
 
   const GRADIENT_BG = ["from-slate-700 to-slate-900", "from-stone-700 to-stone-900", "from-zinc-700 to-zinc-900"];
 
-  // Prefetch Google Places data only for the TOP card and only once per card
+  // Prefetch Google Places data only for the TOP card and only once per card.
+  // Biznes z wlasnymi zdjeciami (businessHasOwnPhoto) -> NIE wolamy Google: inaczej proxy
+  // dopasowuje miejsce po nazwie (np. "testowy lokal" trafia w losowy lokal) i NADPISUJE
+  // okladke biznesu przypadkowym zdjeciem. Wizytowka juz to respektuje - karta musi tez.
   const hasFetchedRef = useRef(false);
   useEffect(() => {
-    if (offset !== 0 || skipGoogleFetch || hasFetchedRef.current) return;
+    if (offset !== 0 || skipGoogleFetch || place.businessHasOwnPhoto || hasFetchedRef.current) return;
     hasFetchedRef.current = true;
 
     // Jeśli place.photo_url jest już scache'owany w Storage → odpal cache-place-photo
@@ -1090,8 +1093,9 @@ export function enrichWithBusinessProfile(p: any, refDate?: string): MockPlace {
     // Override adresu adresem biznesu (gdy ustawiony) - zrodlo prawdy zamiast Google.
     address: bizAddress ?? p.address,
     businessHasOwnAddress: hasOwnAddress,
-    // Override photo z biz cover gdy biznes ma swoje zdjecie
-    photo_url: bp.cover_image_url || p.photo_url,
+    // Override photo z biz cover gdy biznes ma swoje zdjecie. Bez okladki, ale z wlasna galeria ->
+    // pierwsze zdjecie galerii (a NIE places.photo_url, ktory bywa backfillem z Google).
+    photo_url: bp.cover_image_url || (bizGallery.length > 0 ? bizGallery[0] : p.photo_url),
     // Show business section (logo, events, CTA) dla wszystkich biz
     businessLogoUrl: bp.logo_url ?? '',
     // Pill wydarzenia: aktywny dzis z kolejki > staly event_title > najblizszy nadchodzacy.
