@@ -40,6 +40,6 @@
   "events_prev_month": "Previous month",
   "events_next_month": "Next month",
   "events_month_empty": "No events this month",
-  "events_show_all": "Show all ({{count}})",
+  "events_show_all": "All ({{count}})",
   "events_collapse": "Collapse"
 }

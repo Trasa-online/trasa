@@ -42,6 +42,6 @@
   "events_prev_month": "Poprzedni miesiąc",
   "events_next_month": "Następny miesiąc",
   "events_month_empty": "Brak wydarzeń w tym miesiącu",
-  "events_show_all": "Pokaż wszystkie ({{count}})",
+  "events_show_all": "Wszystkie ({{count}})",
   "events_collapse": "Zwiń"
 }

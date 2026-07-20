@@ -568,38 +568,42 @@ function EventsSection({ data, referenceDate, routeAvatars }: SectionProps & { r
     <div className="space-y-3 pt-2">
       <h3 className="text-lg font-black tracking-tight">{t("events_title")}</h3>
 
-      {/* Nawigator miesiaca (‹ LIPIEC 2026 ›) + pill "pokaz wszystkie" po prawej */}
-      <div className="relative flex items-center justify-center gap-1 select-none">
+      {/* Nawigator miesiaca (‹ LIPIEC 2026 ›) wysrodkowany + pill "pokaz wszystkie" w prawej
+          strefie (flex, bez absolute) - zeby nie wchodzil na nazwe miesiaca. */}
+      <div className="flex items-center gap-1 select-none">
+        <div className="flex-1 min-w-0" />
         <button
           type="button"
           disabled={!canPrev}
           onClick={(ev) => { ev.stopPropagation(); go(-1); }}
-          className="h-8 w-8 flex items-center justify-center rounded-full active:bg-muted disabled:opacity-25"
+          className="h-8 w-8 shrink-0 flex items-center justify-center rounded-full active:bg-muted disabled:opacity-25"
           aria-label={t("events_prev_month")}
         >
           <ChevronLeft className="h-4 w-4" />
         </button>
-        <span className="min-w-[104px] text-center text-sm font-black uppercase tracking-wide">
+        <span className="shrink-0 text-center text-sm font-black uppercase tracking-wide whitespace-nowrap">
           {format(monthDate, "LLLL yyyy", { locale: dateLocale() })}
         </span>
         <button
           type="button"
           disabled={!canNext}
           onClick={(ev) => { ev.stopPropagation(); go(1); }}
-          className="h-8 w-8 flex items-center justify-center rounded-full active:bg-muted disabled:opacity-25"
+          className="h-8 w-8 shrink-0 flex items-center justify-center rounded-full active:bg-muted disabled:opacity-25"
           aria-label={t("events_next_month")}
         >
           <ChevronRight className="h-4 w-4" />
         </button>
-        {monthEvents.length > 1 && (
-          <button
-            type="button"
-            onClick={(ev) => { ev.stopPropagation(); setExpanded((v) => !v); }}
-            className="absolute right-0 top-1/2 -translate-y-1/2 text-[11px] font-bold px-2.5 py-1 rounded-full bg-secondary text-foreground active:scale-95 transition-transform whitespace-nowrap"
-          >
-            {expanded ? t("events_collapse") : t("events_show_all", { count: monthEvents.length })}
-          </button>
-        )}
+        <div className="flex-1 min-w-0 flex justify-end">
+          {monthEvents.length > 1 && (
+            <button
+              type="button"
+              onClick={(ev) => { ev.stopPropagation(); setExpanded((v) => !v); }}
+              className="shrink-0 text-[11px] font-bold px-2.5 py-1 rounded-full bg-secondary text-foreground active:scale-95 transition-transform whitespace-nowrap"
+            >
+              {expanded ? t("events_collapse") : t("events_show_all", { count: monthEvents.length })}
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Wydarzenia w wybranym miesiacu (swipe w bok = zmiana miesiaca) */}
