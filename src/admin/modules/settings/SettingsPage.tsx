@@ -41,7 +41,7 @@ export function SettingsPage() {
       {/* Hasło */}
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
         <div className="flex items-center gap-2 mb-1">
-          <KeyRound className="h-4 w-4 text-orange-600" />
+          <KeyRound className="h-4 w-4 text-slate-700" />
           <p className="text-sm font-bold text-slate-900">Ustaw hasło</p>
         </div>
         <p className="text-xs text-slate-500 mb-4 leading-relaxed">
@@ -52,7 +52,7 @@ export function SettingsPage() {
             <label className="text-sm font-medium text-slate-700">Nowe hasło</label>
             <div className="relative">
               <input type={show ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} placeholder="Min. 8 znaków"
-                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 pr-10 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-400" />
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 pr-10 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-400" />
               <button type="button" onClick={() => setShow((v) => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
                 {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
@@ -61,10 +61,10 @@ export function SettingsPage() {
           <div className="space-y-1.5">
             <label className="text-sm font-medium text-slate-700">Powtórz hasło</label>
             <input type={show ? "text" : "password"} value={confirm} onChange={(e) => setConfirm(e.target.value)} required placeholder="Powtórz hasło"
-              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-400" />
+              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-400" />
           </div>
           <button type="submit" disabled={loading}
-            className="w-full py-3 rounded-full bg-gradient-to-r from-[#F4A259] to-[#F9662B] hover:opacity-95 text-white font-bold text-sm shadow-lg shadow-orange-500/25 active:scale-[0.98] transition-all disabled:opacity-60">
+            className="w-full py-3 rounded-full bg-slate-900 hover:opacity-95 text-white font-bold text-sm shadow-lg shadow-slate-900/25 active:scale-[0.98] transition-all disabled:opacity-60">
             {loading ? "Zapisuję…" : "Ustaw hasło"}
           </button>
         </form>

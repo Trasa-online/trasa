@@ -44,7 +44,7 @@ export function RequireAdmin({ children }: { children: ReactNode }) {
   if (loading || checking) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <div className="h-8 w-8 rounded-full border-2 border-orange-500 border-t-transparent animate-spin" />
+        <div className="h-8 w-8 rounded-full border-2 border-slate-400 border-t-transparent animate-spin" />
       </div>
     );
   }
@@ -101,7 +101,7 @@ function AdminLogin() {
       <div className="flex items-center px-6 h-16">
         <div className="flex items-center gap-2">
           <TrasaLogo size={34} />
-          <span className="text-sm font-black text-slate-800">trasa<span className="text-orange-600"> ops</span></span>
+          <span className="text-sm font-black text-slate-800">trasa<span className="text-slate-700"> ops</span></span>
         </div>
       </div>
       <div className="flex-1 flex items-center justify-center px-5 pb-10">
@@ -113,7 +113,7 @@ function AdminLogin() {
               <p className="text-sm text-slate-500 leading-relaxed">
                 Wysłaliśmy link do logowania na <strong className="text-slate-700">{email}</strong>. Kliknij go, żeby wejść do panelu.
               </p>
-              <button onClick={() => setSent(false)} className="text-sm text-orange-600 font-medium underline pt-2">
+              <button onClick={() => setSent(false)} className="text-sm text-slate-700 font-medium underline pt-2">
                 Użyj innego adresu
               </button>
             </div>
@@ -128,7 +128,7 @@ function AdminLogin() {
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium text-slate-700">Email</label>
                   <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-400"
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-400"
                     placeholder="ty@trasa.travel" />
                 </div>
 
@@ -136,13 +136,13 @@ function AdminLogin() {
                   <div className="space-y-1.5">
                     <label className="text-sm font-medium text-slate-700">Hasło</label>
                     <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)}
-                      className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-400"
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-400"
                       placeholder="••••••••" />
                   </div>
                 )}
 
                 <button type="submit" disabled={loading}
-                  className="w-full py-3 rounded-full bg-gradient-to-r from-[#F4A259] to-[#F9662B] hover:opacity-95 text-white font-bold text-sm shadow-lg shadow-orange-500/25 active:scale-[0.98] transition-all disabled:opacity-60">
+                  className="w-full py-3 rounded-full bg-slate-900 hover:opacity-95 text-white font-bold text-sm shadow-lg shadow-slate-900/25 active:scale-[0.98] transition-all disabled:opacity-60">
                   {loading ? (usePassword ? "Logowanie…" : "Wysyłam…") : (usePassword ? "Zaloguj się" : "Wyślij link do logowania")}
                 </button>
               </form>
@@ -169,7 +169,7 @@ function AccessDenied({ email }: { email: string }) {
       <p className="text-sm text-slate-500 max-w-[36ch]">
         Konto <strong className="text-slate-700">{email}</strong> nie ma uprawnień do panelu operacyjnego.
       </p>
-      <button onClick={() => supabase.auth.signOut()} className="mt-6 text-sm text-orange-600 font-semibold underline">
+      <button onClick={() => supabase.auth.signOut()} className="mt-6 text-sm text-slate-700 font-semibold underline">
         Wyloguj się
       </button>
     </div>

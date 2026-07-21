@@ -37,7 +37,7 @@ export function PlacesPage() {
             {places.data!.map((p) => {
               const img = adminPhotoUrl(p.photo_url);
               return (
-                <button key={p.id} onClick={() => setSelected(p)} className="w-full flex items-center gap-3 bg-white border border-slate-100 rounded-2xl p-2.5 text-left hover:border-orange-300 transition-colors">
+                <button key={p.id} onClick={() => setSelected(p)} className="w-full flex items-center gap-3 bg-white border border-slate-100 rounded-2xl p-2.5 text-left hover:border-slate-300 transition-colors">
                   <div className="h-12 w-12 rounded-xl bg-slate-100 overflow-hidden shrink-0">
                     {img ? <img src={img} alt="" className="h-full w-full object-cover" /> : <MapPin className="h-5 w-5 text-slate-300 m-auto mt-3.5" />}
                   </div>
@@ -45,7 +45,7 @@ export function PlacesPage() {
                     <p className="text-sm font-semibold text-slate-900 truncate">{p.place_name}</p>
                     <p className="text-xs text-slate-500">{p.city} · {p.category}</p>
                   </div>
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${p.claimed ? "bg-orange-100 text-orange-700" : "bg-slate-100 text-slate-500"}`}>
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${p.claimed ? "bg-slate-200 text-slate-700" : "bg-slate-100 text-slate-500"}`}>
                     {p.claimed ? "wizytówka" : "stan zero"}
                   </span>
                 </button>
@@ -72,13 +72,13 @@ function PlaceModal({ place, range, setRange, onClose }: { place: PlaceRow; rang
           </div>
           <div className="flex gap-1 bg-slate-100 rounded-full p-0.5">
             {RANGES.map((d) => (
-              <button key={d} onClick={() => setRange(d)} className={`px-2.5 py-1 rounded-full text-xs font-semibold ${range === d ? "bg-orange-600 text-white" : "text-slate-500"}`}>{d}d</button>
+              <button key={d} onClick={() => setRange(d)} className={`px-2.5 py-1 rounded-full text-xs font-semibold ${range === d ? "bg-slate-900 text-white" : "text-slate-500"}`}>{d}d</button>
             ))}
           </div>
           <button onClick={onClose} className="p-1.5 rounded-full hover:bg-slate-100 shrink-0"><X className="h-4 w-4 text-slate-500" /></button>
         </div>
         <div className="p-5">
-          {isLoading ? <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-orange-500" /></div> : (
+          {isLoading ? <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-slate-400" /></div> : (
             <div className="grid grid-cols-2 gap-3">
               <Kpi icon={Eye} label="Wyświetlenia" value={data?.views ?? 0} />
               <Kpi icon={RouteIcon} label="Dodania do trasy" value={data?.onRoutes ?? 0} />

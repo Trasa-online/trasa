@@ -125,7 +125,7 @@ function FilterSelect({ label, value, onChange, options }: {
   return (
     <div className="relative">
       <select value={value} onChange={(e) => onChange(e.target.value)}
-        className="appearance-none rounded-full border border-slate-200 bg-white pl-3 pr-8 py-1.5 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-orange-400 cursor-pointer">
+        className="appearance-none rounded-full border border-slate-200 bg-white pl-3 pr-8 py-1.5 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-400 cursor-pointer">
         <option value="">{label}: wszystkie</option>
         {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
       </select>

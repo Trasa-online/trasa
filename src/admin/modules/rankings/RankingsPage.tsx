@@ -68,7 +68,7 @@ function RankingCard({ col }: { col: RankingCol }) {
           <div className="flex flex-wrap gap-x-3 text-xs text-slate-500 mt-0.5">
             {col.city && <span>{col.city}</span>}
             {col.author && <span>@{col.author}</span>}
-            <button onClick={openPreview} className="inline-flex items-center gap-0.5 text-orange-600 font-medium">
+            <button onClick={openPreview} className="inline-flex items-center gap-0.5 text-slate-700 font-medium">
               {col.item_count} miejsc <ChevronDown className={`h-3 w-3 transition-transform ${preview ? "rotate-180" : ""}`} />
             </button>
           </div>
@@ -137,11 +137,11 @@ function LeadCard({ lead }: { lead: Lead }) {
           {lead.city && <span>{lead.city}</span>}
           {lead.category && <span>{lead.category}</span>}
           {lead.rating != null && <span className="inline-flex items-center gap-0.5"><Star className="h-3 w-3 text-amber-400" />{lead.rating}</span>}
-          <span className="text-orange-600 font-medium">w {lead.count} zestawieniach</span>
+          <span className="text-slate-700 font-medium">w {lead.count} zestawieniach</span>
         </div>
       </div>
       <button onClick={go} disabled={promote.isPending}
-        className="shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-sm font-bold disabled:opacity-60">
+        className="shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-sm font-bold disabled:opacity-60">
         {promote.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}Dodaj
       </button>
     </div>

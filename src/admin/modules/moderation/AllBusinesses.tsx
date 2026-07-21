@@ -64,7 +64,7 @@ function BizCard({ biz }: { biz: BizRow }) {
             <Field label="Miasto" value={form.city} onChange={(v) => setForm((f) => ({ ...f, city: v }))} />
           </div>
           <div className="flex gap-2 pt-1">
-            <button onClick={save} disabled={busy} className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-sm font-bold disabled:opacity-60"><Check className="h-4 w-4" />Zapisz</button>
+            <button onClick={save} disabled={busy} className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-sm font-bold disabled:opacity-60"><Check className="h-4 w-4" />Zapisz</button>
             <button onClick={() => setEditing(false)} className="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 text-sm font-semibold">Anuluj</button>
           </div>
         </div>
@@ -113,7 +113,7 @@ function Field({ label, value, onChange }: { label: string; value: string; onCha
   return (
     <div className="space-y-1">
       <label className="text-xs font-medium text-slate-500">{label}</label>
-      <input value={value} onChange={(e) => onChange(e.target.value)} className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-400" />
+      <input value={value} onChange={(e) => onChange(e.target.value)} className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-400" />
     </div>
   );
 }

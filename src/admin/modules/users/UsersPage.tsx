@@ -80,14 +80,14 @@ function UserRow({ user }: { user: AdminUser }) {
       <div className="flex items-center gap-3">
         {user.avatar_url
           ? <img src={user.avatar_url} alt="" className="h-10 w-10 rounded-full object-cover shrink-0" />
-          : <div className={`h-10 w-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${user.isBusiness ? "bg-orange-100 text-orange-600" : "bg-slate-100 text-slate-500"}`}>
+          : <div className={`h-10 w-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${user.isBusiness ? "bg-slate-200 text-slate-600" : "bg-slate-100 text-slate-500"}`}>
               {(user.first_name || user.username || "?").charAt(0).toUpperCase()}
             </div>}
         <div className="flex-1 min-w-0">
           <p className="font-semibold text-sm text-slate-900 truncate">
             {user.first_name || "—"}
             <span className="text-slate-400 font-normal ml-1">@{user.username}</span>
-            {user.isBusiness && <span className="ml-2 px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 text-[10px] font-semibold align-middle">Firma</span>}
+            {user.isBusiness && <span className="ml-2 px-2 py-0.5 rounded-full bg-slate-200 text-slate-700 text-[10px] font-semibold align-middle">Firma</span>}
             {user.is_anonymous && <span className="ml-2 px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 text-[10px] font-semibold align-middle">Anonim</span>}
             {user.deleted && <span className="ml-2 px-2 py-0.5 rounded-full bg-red-100 text-red-600 text-[10px] font-semibold align-middle">Usunięty</span>}
           </p>

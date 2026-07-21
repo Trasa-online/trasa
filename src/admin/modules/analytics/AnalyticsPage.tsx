@@ -59,7 +59,7 @@ export function AnalyticsPage() {
           <div className="flex gap-1 bg-slate-100 rounded-full p-0.5">
             {RANGES.map((d) => (
               <button key={d} onClick={() => setRange(d)}
-                className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${range === d ? "bg-orange-600 text-white" : "text-slate-500 hover:text-slate-800"}`}>
+                className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${range === d ? "bg-slate-900 text-white" : "text-slate-500 hover:text-slate-800"}`}>
                 {d} dni
               </button>
             ))}
@@ -125,7 +125,7 @@ function Funnel({ steps }: { steps: { label: string; value: number }[] }) {
               <span className="text-slate-500">{s.value}{conv != null && <span className="text-slate-400"> · {conv}%</span>}</span>
             </div>
             <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden">
-              <div className="h-full bg-gradient-to-r from-[#F4A259] to-[#F9662B]" style={{ width: `${w}%` }} />
+              <div className="h-full bg-slate-900" style={{ width: `${w}%` }} />
             </div>
           </div>
         );

@@ -112,7 +112,7 @@ function CitiesSection() {
                 <span className="text-slate-500 font-semibold">{c.count}</span>
               </div>
               <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                <div className="h-full bg-gradient-to-r from-[#F4A259] to-[#F9662B]" style={{ width: `${Math.max(6, Math.round((c.count / max) * 100))}%` }} />
+                <div className="h-full bg-slate-900" style={{ width: `${Math.max(6, Math.round((c.count / max) * 100))}%` }} />
               </div>
             </div>
           ))}
