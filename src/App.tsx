@@ -418,6 +418,11 @@ function RootPage() {
       </div>
     );
   }
+  // First-run (native): niewidziany onboarding v2 -> prowadzony demo-przelot. Flaga per-urzadzenie.
+  const onboardingDone = (() => {
+    try { return localStorage.getItem("trasa_onboarding_v2_done") === "1"; } catch { return true; }
+  })();
+  if (isNative && !onboardingDone) return <Navigate to="/onboarding" replace />;
   return <Navigate to="/eksploruj" replace />;
 }
 
@@ -655,6 +660,7 @@ const EditPlan         = lazy(() => import("./pages/EditPlan"));
 const ReviewSummary    = lazy(() => import("./pages/ReviewSummary"));
 const ActiveTrip       = lazy(() => import("./pages/ActiveTrip"));
 const AddPlaceToTrip   = lazy(() => import("./pages/AddPlaceToTrip"));
+const Onboarding       = lazy(() => import("./pages/Onboarding"));
 const PlanWizard       = lazy(() => import("./pages/PlanWizard"));
 const CreateGroupSession = lazy(() => import("./pages/CreateGroupSession"));
 const GroupSession     = lazy(() => import("./pages/GroupSession"));
@@ -742,6 +748,7 @@ const App = () => (
           {/* Tryb uproszczony (PLANNING_DISABLED): "Twoje trasy" scalone w Wyjazdy (Dziennik). */}
           <Route path="/home" element={PLANNING_DISABLED ? <Navigate to="/dziennik" replace /> : <AppLayout hideTopBar><HomeSwipe /></AppLayout>} />
           <Route path="/eksploruj" element={<AppLayout hideTopBar><Explore /></AppLayout>} />
+          <Route path="/onboarding" element={<Onboarding />} />
           <Route path="/polubione" element={<AppLayout hideTopBar><LikedPlaces /></AppLayout>} />
           <Route path="/zestawienie/nowe" element={<RequireAuth><CreateRanking /></RequireAuth>} />
           <Route path="/zestawienie/:id/edytuj" element={<RequireAuth><CreateRanking /></RequireAuth>} />

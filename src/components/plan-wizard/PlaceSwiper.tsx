@@ -1494,6 +1494,9 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
   const handleLike = (overridePhotoUrl?: string, placeOverride?: MockPlace) => {
     const top = placeOverride ?? displayQueue[0];
     if (!top) return;
+    // Anonim moze TYLKO przegladac - zapis miejsca wymaga konta. (Onboarding + DemoSession
+    // nie uzywaja tego swipera, wiec ich nie dotyczy.)
+    if (!user || isAnonymous) { openAuthDrawer({ mode: "register", hint: "save_route" }); return; }
     haptics.medium();
     setHistory(prev => [...prev, { place: top, reaction: "liked" }]);
     setLikedPlaces(prev => [...prev, top]);
