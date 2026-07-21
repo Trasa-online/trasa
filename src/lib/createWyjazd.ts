@@ -20,6 +20,7 @@ export async function createWyjazdFromPlaces(
   city: string | null,
   title: string,
   places: WyjazdPlaceInput[],
+  dates?: { start_date?: string | null; end_date?: string | null },
 ): Promise<string | null> {
   const { data: route, error } = await (supabase as any)
     .from("routes")
@@ -31,6 +32,8 @@ export async function createWyjazdFromPlaces(
       status: "draft",
       day_number: 1,
       is_shared: false,
+      start_date: dates?.start_date ?? null,
+      end_date: dates?.end_date ?? null,
     })
     .select("id")
     .single();

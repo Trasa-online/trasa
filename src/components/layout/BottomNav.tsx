@@ -125,6 +125,12 @@ const BottomNav = () => {
     navigate("/zestawienie/nowe");
   };
 
+  // Tryb uproszczony: "Stworz wyjazd" = miasto + daty + swiper miejsc -> wyjazd (bez planu AI).
+  const handleCreateWyjazd = () => {
+    setShowMenu(false);
+    navigate("/plan", { state: { wyjazdMode: true } });
+  };
+
   const handleReuseAccept = () => {
     if (!reusePrompt) return;
     const { city, likes } = reusePrompt;
@@ -179,9 +185,11 @@ const BottomNav = () => {
             {/* Wiersz kafelkow akcji */}
             <div className="flex justify-center gap-6 pb-1">
               {PLANNING_DISABLED ? (
-                // Tryb uproszczony: planowanie wylaczone -> menu "+" tworzy tylko
-                // zestawienie (UGC). Tworzenie wyjazdu zyje wewnatrz zakladki Wyjazdy.
-                <ActionTile icon={Layers} label={t("create_collection")} onClick={handleCreateCollection} />
+                // Tryb uproszczony: menu "+" = Stworz wyjazd (miasto+daty+swiper) lub zestawienie.
+                <>
+                  <ActionTile icon={MapPin} label="Stwórz wyjazd" onClick={handleCreateWyjazd} />
+                  <ActionTile icon={Layers} label={t("create_collection")} onClick={handleCreateCollection} />
+                </>
               ) : !planStep ? (
                 <>
                   <ActionTile icon={Layers} label={t("create_collection")} onClick={handleCreateCollection} />

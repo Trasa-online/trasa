@@ -7,9 +7,8 @@ import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { resolveStored } from "@/components/PlacePhoto";
 import { format, parseISO, isValid } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
-import { Globe, Lock, Loader2, Trash2, CalendarDays, Sparkles, Eye, Plus, X } from "lucide-react";
+import { Globe, Lock, Loader2, Trash2, CalendarDays, Sparkles, Eye, Plus } from "lucide-react";
 import { toast } from "sonner";
-import { getHistoryByCity } from "@/lib/exploreLikes";
 import { PLANNING_DISABLED } from "@/lib/appMode";
 
 interface JournalTabProps {
@@ -22,54 +21,9 @@ const JournalTab = ({ userId }: JournalTabProps) => {
   const queryClient = useQueryClient();
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  // Tryb uproszczony: tworzenie prostego wyjazdu wprost z zakladki Wyjazdy.
-  const [showCreate, setShowCreate] = useState(false);
-  const [newTitle, setNewTitle] = useState("");
-  const [newCity, setNewCity] = useState("");
-  const [newStart, setNewStart] = useState("");
-  const [newEnd, setNewEnd] = useState("");
-  const [creating, setCreating] = useState(false);
-  const savedCities = useMemo(() => {
-    try {
-      const seen = new Set<string>();
-      return getHistoryByCity()
-        .map((g) => g.city)
-        .filter((c) => c && !seen.has(c) && seen.add(c));
-    } catch { return []; }
-  }, []);
-
-  const handleCreateWyjazd = async () => {
-    const city = newCity.trim();
-    const title = newTitle.trim() || city;
-    if (!title || !userId) return;
-    setCreating(true);
-    try {
-      const { data, error } = await (supabase as any)
-        .from("routes")
-        .insert({
-          user_id: userId,
-          title,
-          city: city || null,
-          trip_type: "planning",
-          status: "draft",
-          day_number: 1,
-          is_shared: false,
-          start_date: newStart || null,
-          end_date: newEnd || newStart || null,
-        })
-        .select("id")
-        .single();
-      if (error) throw error;
-      setShowCreate(false);
-      setNewTitle(""); setNewCity(""); setNewStart(""); setNewEnd("");
-      queryClient.invalidateQueries({ queryKey: ["journal-entries", userId] });
-      navigate(`/wyjazd/${data.id}`);
-    } catch (err: any) {
-      console.error("[JournalTab] create wyjazd failed:", err?.message ?? err);
-      toast.error("Nie udało się utworzyć wyjazdu");
-      setCreating(false);
-    }
-  };
+  // Tryb uproszczony: "Nowy wyjazd" = guided flow (miasto + daty + swiper miejsc -> wyjazd),
+  // ten sam co z menu "+". Kreator w PlanWizard (wyjazdMode); tu tylko wejscie.
+  const openWyjazd = () => navigate("/plan", { state: { wyjazdMode: true } });
 
   // Polska liczba mnoga: 1 osoba obejrzala / 2-4 osoby obejrzaly / 5+ osob obejrzalo.
   const viewsLabel = (n: number): string => {
@@ -248,87 +202,6 @@ const JournalTab = ({ userId }: JournalTabProps) => {
   };
 
   // Sheet tworzenia nowego wyjazdu (tryb uproszczony) - wspoldzielony miedzy stanami.
-  const createSheet = showCreate ? (
-    <div
-      className="fixed inset-0 z-[60] flex items-end justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200"
-      onClick={() => !creating && setShowCreate(false)}
-    >
-      <div
-        className="w-full max-w-sm bg-card rounded-t-3xl px-6 pt-5 pb-[max(24px,env(safe-area-inset-bottom))] flex flex-col gap-4 shadow-2xl animate-in slide-in-from-bottom-4 duration-300"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between">
-          <h2 className="text-base font-black">Nowy wyjazd</h2>
-          <button
-            onClick={() => setShowCreate(false)}
-            className="h-8 w-8 -mr-1 flex items-center justify-center rounded-full text-foreground active:bg-muted transition-colors"
-            aria-label="Zamknij"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-        <div>
-          <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">Nazwa wyjazdu</label>
-          <input
-            value={newTitle}
-            onChange={(e) => setNewTitle(e.target.value)}
-            placeholder={"np. Weekend w Krakowie"}
-            className="w-full h-12 px-4 rounded-2xl border border-border bg-muted/30 text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:border-foreground/30"
-          />
-        </div>
-        <div>
-          <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">Miasto</label>
-          <input
-            value={newCity}
-            onChange={(e) => setNewCity(e.target.value)}
-            placeholder="np. Kraków"
-            className="w-full h-12 px-4 rounded-2xl border border-border bg-muted/30 text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:border-foreground/30"
-          />
-          {savedCities.length > 0 && (
-            <div className="flex flex-wrap gap-2 mt-2">
-              {savedCities.slice(0, 6).map((c) => (
-                <button
-                  key={c}
-                  onClick={() => setNewCity(c)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
-                    newCity === c ? "border-orange-400 bg-orange-50 text-orange-700" : "border-border/60 bg-card text-muted-foreground"
-                  }`}
-                >
-                  {c}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-        <div>
-          <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">Kiedy? (opcjonalnie)</label>
-          <div className="flex items-center gap-2">
-            <input
-              type="date"
-              value={newStart}
-              onChange={(e) => setNewStart(e.target.value)}
-              className="flex-1 h-11 px-3 rounded-2xl border border-border bg-muted/30 text-sm focus:outline-none focus:border-foreground/30"
-            />
-            <span className="text-muted-foreground text-sm">-</span>
-            <input
-              type="date"
-              value={newEnd}
-              min={newStart || undefined}
-              onChange={(e) => setNewEnd(e.target.value)}
-              className="flex-1 h-11 px-3 rounded-2xl border border-border bg-muted/30 text-sm focus:outline-none focus:border-foreground/30"
-            />
-          </div>
-        </div>
-        <button
-          onClick={handleCreateWyjazd}
-          disabled={creating || (!newTitle.trim() && !newCity.trim())}
-          className="mt-1 w-full py-3.5 rounded-full bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-40"
-        >
-          {creating ? <Loader2 className="h-5 w-5 animate-spin" /> : "Utwórz wyjazd"}
-        </button>
-      </div>
-    </div>
-  ) : null;
 
   // Karta wyjazdu = ta sama pocztowka dla aktywnych wyjazdow i wspomnien (bez nowego komponentu).
   const renderTripCard = (entry: any, onOpen: () => void, inProgress = false) => {
@@ -448,14 +321,13 @@ const JournalTab = ({ userId }: JournalTabProps) => {
             </p>
           </div>
           <button
-            onClick={() => (PLANNING_DISABLED ? setShowCreate(true) : navigate("/sesja/nowa", { state: { from: "journal" } }))}
+            onClick={() => (PLANNING_DISABLED ? openWyjazd() : navigate("/sesja/nowa", { state: { from: "journal" } }))}
             className="px-6 py-3.5 rounded-full bg-primary text-white font-bold text-sm flex items-center gap-2 active:scale-95 transition-transform"
           >
             {PLANNING_DISABLED ? <Plus className="h-4 w-4" /> : <Sparkles className="h-4 w-4" />}
             {PLANNING_DISABLED ? "Nowy wyjazd" : t("journal.empty_cta")}
           </button>
         </div>
-        {createSheet}
       </>
     );
   }
@@ -466,7 +338,7 @@ const JournalTab = ({ userId }: JournalTabProps) => {
       {PLANNING_DISABLED && (
         <div className="space-y-3">
           <button
-            onClick={() => setShowCreate(true)}
+            onClick={openWyjazd}
             className="w-full py-3.5 rounded-2xl bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
           >
             <Plus className="h-4 w-4" /> Nowy wyjazd
@@ -511,7 +383,6 @@ const JournalTab = ({ userId }: JournalTabProps) => {
         }
         navigate(`/review-summary?route=${entry.id}`);
       }))}
-      {createSheet}
     </div>
   );
 };

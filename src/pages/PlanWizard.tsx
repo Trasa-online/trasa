@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from "react";
+import { createWyjazdFromPlaces } from "@/lib/createWyjazd";
 import { useNavigate, useLocation } from "react-router-dom";
 import { ArrowLeft, X, Plus, Filter, Check, Star, MapPin, ArrowRight, ChevronDown, Layers, Compass } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -47,9 +48,12 @@ const PlanWizard = () => {
   const { open: openAuthDrawer } = useAuthDrawer();
   const posthog = usePostHog();
   const { t } = useTranslation("plan");
-  const returnState = location.state as { step?: number; city?: string; date?: string; numDays?: number; startingLocation?: string | { name: string; latitude: number; longitude: number }; likedPlaceNames?: string[]; skippedPlaceNames?: string[]; exploreMode?: boolean; fromRoute?: boolean } | null;
+  const returnState = location.state as { step?: number; city?: string; date?: string; numDays?: number; startingLocation?: string | { name: string; latitude: number; longitude: number }; likedPlaceNames?: string[]; skippedPlaceNames?: string[]; exploreMode?: boolean; wyjazdMode?: boolean; fromRoute?: boolean } | null;
 
   const exploreMode = returnState?.exploreMode ?? false;
+  // Tryb WYJAZDU: miasto + daty -> swiper miejsc -> zamiast planu AI tworzymy wyjazd
+  // (routes + pins) z polubionych i ladujemy w dzienniku jako wpis/pocztowka.
+  const wyjazdMode = returnState?.wyjazdMode ?? false;
 
   const initialStep: Step = (() => {
     const s = returnState?.step;
@@ -116,7 +120,7 @@ const PlanWizard = () => {
   // wygenerował trasy. Debounce 800ms. Wraca jako karta "Dokończ trasę" na home (ActiveTripsDashboard).
   // Nie w exploreMode (HomeSwipe bez intencji trasy). Usuwany po stworzeniu trasy (RouteSummaryDialog).
   useEffect(() => {
-    if (exploreMode || !city || !date) return;
+    if (exploreMode || wyjazdMode || !city || !date) return;
     // Pusta trasa (0 polubien) nie ma sensu jako robocza - usun ew. istniejacy draft dla miasta.
     if (likedSnapshot.length === 0) { removeDraft(city); return; }
     const t = setTimeout(() => {
@@ -195,10 +199,32 @@ const PlanWizard = () => {
   // CTA z Dopasowania - przekazuje tylko ZAZNACZONE miejsca (deselectedMatches
   // odejmowane od likedSnapshot). Spojne z GroupSession.matches gdzie host
   // odznacza miejsca przed stworzeniem trasy.
-  const handleProceedFromMatches = () => {
+  const handleProceedFromMatches = async () => {
     if (!date) return;
     const selected = likedSnapshot.filter(p => !deselectedMatches.has(p.place_name));
     if (selected.length === 0) return;
+
+    // Tryb WYJAZDU: bez kulminacji w planie AI. Tworzymy wyjazd (routes + pins) z polubionych
+    // + wybrane miasto/daty i ladujemy w dzienniku (wpis/pocztowka) przez ekran /wyjazd/:id.
+    if (wyjazdMode) {
+      if (!user || isAnonymous) { openAuthDrawer({ mode: "register", hint: "save_route" }); return; }
+      const pad = (n: number) => String(n).padStart(2, "0");
+      const startISO = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+      const end = new Date(date); end.setDate(end.getDate() + Math.max(0, numDays - 1));
+      const endISO = `${end.getFullYear()}-${pad(end.getMonth() + 1)}-${pad(end.getDate())}`;
+      const id = await createWyjazdFromPlaces(user.id, city, city, selected.map((p) => ({
+        place_name: p.place_name,
+        category: p.category as string,
+        address: (p as { address?: string | null }).address ?? null,
+        description: p.description ?? null,
+        latitude: p.latitude ?? null,
+        longitude: p.longitude ?? null,
+        photo_url: p.photo_url ?? null,
+        place_id: (p as { id?: string | null }).id ?? null,
+      })), { start_date: startISO, end_date: endISO });
+      if (id) navigate(`/wyjazd/${id}`);
+      return;
+    }
 
     // Continuation flow detect - jesli user wszedl tu z "Polub wiecej miejsc"
     // CTA w AddPinSheet (PlanChat), AddPinSheet zapisal aktualny plan + previous
@@ -417,6 +443,8 @@ const PlanWizard = () => {
                 .limit(1);
               if (data?.length) { setDupTrip(data[0]); return; }
             }
+            // Wyjazd: pomijamy krok punktu startowego (bez optymalizacji trasy) - od razu swiper.
+            if (wyjazdMode) { markAskedForCity(city); setStep(4); return; }
             setStep(3);
           }} />
         )}
@@ -608,7 +636,7 @@ const PlanWizard = () => {
                         onClick={handleProceedFromMatches}
                         className="flex-1 py-3 rounded-full bg-primary text-white text-sm font-semibold flex items-center justify-center gap-2 active:scale-[0.97] transition-transform"
                       >
-                        {t("saved_cta")}
+                        {wyjazdMode ? "Stwórz wyjazd" : t("saved_cta")}
                         <ArrowRight className="h-4 w-4" />
                       </button>
                     </div>

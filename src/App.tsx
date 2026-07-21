@@ -675,8 +675,11 @@ const BusinessLanding   = lazy(() => import("./pages/BusinessLanding"));
 // blokujemy tylko wejscie w kreator planu.
 function PlanRoute() {
   const location = useLocation();
-  const exploreMode = !!(location.state as any)?.exploreMode;
-  if (PLANNING_DISABLED && !exploreMode) return <Navigate to="/eksploruj" replace />;
+  const st = location.state as any;
+  // Wpuszczamy do PlanWizard mimo wylaczonego planowania: exploreMode ("Przegladaj") oraz
+  // wyjazdMode ("Stworz wyjazd" - miasto+daty+swiper -> wyjazd, bez kulminacji w planie AI).
+  const allowed = !!st?.exploreMode || !!st?.wyjazdMode;
+  if (PLANNING_DISABLED && !allowed) return <Navigate to="/eksploruj" replace />;
   return <PlanWizard />;
 }
 
