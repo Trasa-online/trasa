@@ -568,7 +568,7 @@ const ReviewSummary = () => {
 
   // Pasek postepu "X/Y odwiedzone" + (aktywny wyjazd) przycisk GPS "Jestem tutaj".
   const renderVisitedProgress = () => {
-    if (currentPins.length === 0) return null;
+    if (!activeChecklist || currentPins.length === 0) return null;
     const pct = Math.round((visitedCount / currentPins.length) * 100);
     return (
       <div className="mb-3">
@@ -593,18 +593,21 @@ const ReviewSummary = () => {
     );
   };
 
-  // Przycisk toggle "Bylem tu" na miejscu (zielony ptaszek gdy odwiedzone).
-  const renderVisitedToggle = (pin: any) => (
-    <button
-      onClick={(e) => { e.stopPropagation(); toggleVisited(pin); }}
-      aria-label={isVisited(pin) ? "Odznacz odwiedzone" : "Byłem tu"}
-      className={`h-9 w-9 rounded-full flex items-center justify-center shrink-0 transition-colors ${
-        isVisited(pin) ? "bg-green-500 text-white" : "bg-white border border-border text-muted-foreground active:bg-muted"
-      }`}
-    >
-      <Check className="h-4 w-4" strokeWidth={2.6} />
-    </button>
-  );
+  // Przycisk toggle "Bylem tu" na miejscu (zielony ptaszek gdy odwiedzone). Tylko w aktywnej checkliscie.
+  const renderVisitedToggle = (pin: any) => {
+    if (!activeChecklist) return null;
+    return (
+      <button
+        onClick={(e) => { e.stopPropagation(); toggleVisited(pin); }}
+        aria-label={isVisited(pin) ? "Odznacz odwiedzone" : "Byłem tu"}
+        className={`h-9 w-9 rounded-full flex items-center justify-center shrink-0 transition-colors ${
+          isVisited(pin) ? "bg-green-500 text-white" : "bg-white border border-border text-muted-foreground active:bg-muted"
+        }`}
+      >
+        <Check className="h-4 w-4" strokeWidth={2.6} />
+      </button>
+    );
+  };
 
   const setWorking = (next: any[]) => { if (activeRouteId) setDraft({ dayId: activeRouteId, pins: next }); };
   const movePin = (from: number, to: number) => {
@@ -765,6 +768,19 @@ const ReviewSummary = () => {
   // zamiast steppera. localReviewed = optymistyczne po "Gotowe" (przed refetchem route).
   const reviewed = localReviewed || sortedDays.some((d: any) => d?.plan_finalized);
 
+  // Odhaczanie miejsc dostepne dopiero gdy wyjazd SIE ZACZAL (start_date <= dzis). Wyjazd
+  // zaplanowany na przyszlosc = checklista ukryta. Brak daty = traktuj jako dostepne.
+  const tripStarted = (() => {
+    const s = route?.start_date ? parseISO(route.start_date) : null;
+    if (!s || !isValid(s)) return true;
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    return s.getTime() <= today.getTime();
+  })();
+  // Interaktywna checklista (toggle + wyszarzanie + postep + GPS) TYLKO w AKTYWNYM, rozpoczetym
+  // wyjezdzie. Wspomnienie grupuje po dniach, ale BEZ odhaczania/wyszarzania (#2). Przyszly wyjazd
+  // nie ma checklisty wcale (#1).
+  const activeChecklist = tripStarted && !isMemory;
+
   if (authLoading) return null;
   if (!user) { navigate("/auth"); return null; }
 
@@ -864,7 +880,7 @@ const ReviewSummary = () => {
   // ── Lista (read-only): miejsca grupowane po kategorii. Klik => wizytowka. ──
   // Wspolna karta miejsca (karuzela + pionowa lista). fullWidth -> pelna szerokosc (stacked).
   const renderPlanCard = (pin: any, i: number, fullWidth: boolean, editable: boolean, withRating: boolean) => (
-    <div key={pin.id} className={`${fullWidth ? "w-full" : "snap-center shrink-0 w-[80vw] max-w-[320px]"} rounded-2xl bg-secondary border border-border/40 overflow-hidden shadow-sm flex flex-col transition-opacity ${isVisited(pin) ? "opacity-60" : ""}`}>
+    <div key={pin.id} className={`${fullWidth ? "w-full" : "snap-center shrink-0 w-[80vw] max-w-[320px]"} rounded-2xl bg-secondary border border-border/40 overflow-hidden shadow-sm flex flex-col transition-opacity ${activeChecklist && isVisited(pin) ? "opacity-60" : ""}`}>
       <button onClick={() => openDetail(pin)} className="block w-full text-left active:opacity-90 transition-opacity">
         <div className="relative w-full aspect-[4/3] bg-muted">
           <PlacePhoto pin={pin} className="w-full h-full object-cover" emojiClass="text-4xl" />
@@ -902,16 +918,18 @@ const ReviewSummary = () => {
           })()}
         </div>
       </button>
-      {/* Toggle "Bylem tu" (karta) - poza przyciskiem openDetail (bez zagniezdzania buttonow). */}
-      <div className="px-4 pt-2 pb-1">
-        <button
-          onClick={() => toggleVisited(pin)}
-          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${isVisited(pin) ? "bg-green-500 text-white" : "bg-white border border-border text-muted-foreground active:bg-muted"}`}
-        >
-          <Check className="h-3.5 w-3.5" strokeWidth={2.6} />
-          {isVisited(pin) ? "Odwiedzone" : "Byłem tu"}
-        </button>
-      </div>
+      {/* Toggle "Bylem tu" (karta) - tylko w aktywnej checkliscie; poza przyciskiem openDetail. */}
+      {activeChecklist && (
+        <div className="px-4 pt-2 pb-1">
+          <button
+            onClick={() => toggleVisited(pin)}
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${isVisited(pin) ? "bg-green-500 text-white" : "bg-white border border-border text-muted-foreground active:bg-muted"}`}
+          >
+            <Check className="h-3.5 w-3.5" strokeWidth={2.6} />
+            {isVisited(pin) ? "Odwiedzone" : "Byłem tu"}
+          </button>
+        </div>
+      )}
       {editable && (
         <div className="flex items-center justify-between px-4 py-3 mt-auto border-t border-border/30">
           <button onClick={() => movePin(i, i - 1)} disabled={i === 0} className="flex items-center gap-1 text-xs font-semibold text-muted-foreground disabled:opacity-25 active:scale-95">
@@ -928,13 +946,13 @@ const ReviewSummary = () => {
 
   // ── Kompaktowy wiersz listy: miniaturka + nazwa + chip kategorii (+ reorder/usuń gdy edycja). ──
   const renderPlanRow = (pin: any, i: number, editable: boolean) => (
-    <div key={pin.id} className={`flex items-center gap-3 rounded-2xl bg-secondary border border-border/40 shadow-sm p-2.5 transition-opacity ${isVisited(pin) ? "opacity-60" : ""}`}>
+    <div key={pin.id} className={`flex items-center gap-3 rounded-2xl bg-secondary border border-border/40 shadow-sm p-2.5 transition-opacity ${activeChecklist && isVisited(pin) ? "opacity-60" : ""}`}>
       <button onClick={() => openDetail(pin)} className="relative h-14 w-14 shrink-0 rounded-xl overflow-hidden bg-muted active:opacity-90">
         <PlacePhoto pin={pin} className="w-full h-full object-cover" emojiClass="text-2xl" />
         <span className="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-black/55 backdrop-blur text-white text-[10px] font-bold flex items-center justify-center">{i + 1}</span>
       </button>
       <button onClick={() => openDetail(pin)} className="min-w-0 flex-1 text-left">
-        <p className={`text-sm font-bold leading-tight truncate ${isVisited(pin) ? "line-through" : ""}`}>{pin.place_name}</p>
+        <p className={`text-sm font-bold leading-tight truncate ${activeChecklist && isVisited(pin) ? "line-through" : ""}`}>{pin.place_name}</p>
         <span className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white text-[11px] font-semibold text-foreground">
           <span>{CATEGORY_EMOJI[pin.category] ?? "📍"}</span>{catLabel(pin.category)}
         </span>
@@ -955,7 +973,7 @@ const ReviewSummary = () => {
   // Lista (read-only / podsumowanie): każde miejsce = biała sekcja (miniatura + nazwa + chip
   // + notka) na białym tle z delikatnym cieniem 1px. Tap -> wizytówka.
   const renderReadPin = (pin: any, i: number, withRating: boolean) => (
-    <div key={pin.id} className={`rounded-2xl bg-secondary border border-black/5 shadow-sm p-3 transition-opacity ${isVisited(pin) ? "opacity-60" : ""}`}>
+    <div key={pin.id} className={`rounded-2xl bg-secondary border border-black/5 shadow-sm p-3 transition-opacity ${activeChecklist && isVisited(pin) ? "opacity-60" : ""}`}>
       <div className="flex items-center gap-3">
         <button onClick={() => openDetail(pin)} className="flex items-center gap-3 flex-1 min-w-0 text-left active:opacity-90">
           <div className="relative h-14 w-14 shrink-0 rounded-xl overflow-hidden bg-muted">
@@ -963,7 +981,7 @@ const ReviewSummary = () => {
             <span className="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-black/55 backdrop-blur text-white text-[10px] font-bold flex items-center justify-center">{i + 1}</span>
           </div>
           <div className="min-w-0 flex-1">
-            <p className={`text-sm font-bold leading-tight truncate ${isVisited(pin) ? "line-through" : ""}`}>{pin.place_name}</p>
+            <p className={`text-sm font-bold leading-tight truncate ${activeChecklist && isVisited(pin) ? "line-through" : ""}`}>{pin.place_name}</p>
             <span className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white text-[11px] font-semibold text-foreground">
               <span>{CATEGORY_EMOJI[pin.category] ?? "📍"}</span>{catLabel(pin.category)}
             </span>

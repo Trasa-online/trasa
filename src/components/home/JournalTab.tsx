@@ -36,7 +36,7 @@ const JournalTab = ({ userId }: JournalTabProps) => {
       // Own routes (all statuses)
       const { data: ownRoutes } = await (supabase as any)
         .from("routes")
-        .select("id, title, city, day_number, start_date, end_date, folder_id, ai_summary, ai_highlight, review_photos, is_shared, overall_rating, views, new_for_users, chat_status, trip_type, plan_finalized")
+        .select("id, title, city, day_number, start_date, end_date, folder_id, group_session_id, ai_summary, ai_highlight, review_photos, is_shared, overall_rating, views, new_for_users, chat_status, trip_type, plan_finalized")
         .eq("user_id", userId)
         .order("updated_at", { ascending: false });
 
@@ -97,9 +97,28 @@ const JournalTab = ({ userId }: JournalTabProps) => {
   // Granica aktywny/wspomnienie liczona po OSTATNIM dniu trasy (end_date ?? start_date).
   // Trasa jednodniowa = osobny wpis, granica po end_date ?? start_date.
   const { active, postcards } = useMemo(() => {
+    // Wyjazd GRUPOWY = JEDEN wpis. Wszystkie kopie tej samej sesji (group_session_id) - wlasna
+    // (is_own) oraz cudze (przez group_session_members join) - zwijamy do jednego, preferujac
+    // WLASNA kopie (zeby notki/edycje usera dzialaly na niej). To dedupuje widok bez kasowania danych.
+    const bySession = new Map<string, any>();
+    const deduped: any[] = [];
+    for (const e of entries) {
+      if (e.group_session_id) {
+        const prev = bySession.get(e.group_session_id);
+        if (!prev) { bySession.set(e.group_session_id, e); deduped.push(e); }
+        else if (e.is_own && !prev.is_own) {
+          const idx = deduped.indexOf(prev);
+          if (idx >= 0) deduped[idx] = e;
+          bySession.set(e.group_session_id, e);
+        }
+      } else {
+        deduped.push(e);
+      }
+    }
+
     const folderMap = new Map<string, any[]>();
     const collapsed: any[] = [];
-    for (const e of entries) {
+    for (const e of deduped) {
       if (e.folder_id) {
         if (!folderMap.has(e.folder_id)) folderMap.set(e.folder_id, []);
         folderMap.get(e.folder_id)!.push(e);
