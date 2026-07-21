@@ -73,6 +73,8 @@ const ReviewSummary = () => {
   // przejscie do podsumowania zanim refetch route zaktualizuje plan_finalized.
   const [summaryTab, setSummaryTab] = useState<"plan" | "galeria">("plan");
   const [editingStepper, setEditingStepper] = useState(false);
+  // Fokus w polu notki -> chowamy dolny pasek CTA (klawiatura zabiera miejsce, guziki przeszkadzaja).
+  const [noteFocused, setNoteFocused] = useState(false);
   const [localReviewed, setLocalReviewed] = useState(false);
   // Wybrany dzien (trasa wielodniowa). Domyslnie dzien z URL.
   const [selectedDayId, setSelectedDayId] = useState<string | null>(null);
@@ -865,6 +867,8 @@ const ReviewSummary = () => {
           <textarea
             value={val}
             onChange={(e) => handleNoteChange(placeName, e.target.value)}
+            onFocus={() => setNoteFocused(true)}
+            onBlur={() => setNoteFocused(false)}
             placeholder={t("note.placeholder")}
             rows={2}
             className="w-full bg-muted/50 rounded-xl px-3 py-2.5 text-sm text-foreground text-left resize-none focus:outline-none border border-border/30 placeholder:text-muted-foreground/55"
@@ -1639,7 +1643,7 @@ const ReviewSummary = () => {
 
       {/* ── Fixed bottom CTA ────────────────────────────────────────────── */}
       {/* W PODSUMOWANIU (wpis zrecenzowany) nie ma dolnego CTA - wyjscie przez strzalke cofania. */}
-      {!((isMemory || forceEdit) && isOwner && reviewed && !editingStepper) && (
+      {!noteFocused && !((isMemory || forceEdit) && isOwner && reviewed && !editingStepper) && (
       <div className="fixed bottom-0 left-0 right-0 px-5 pt-3 bg-background/80 backdrop-blur-md border-t border-border/30"
         style={{ paddingBottom: "max(20px, env(safe-area-inset-bottom, 20px))" }}>
         {(isMemory || forceEdit) && isOwner && (!reviewed || editingStepper) ? (

@@ -436,7 +436,9 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
       )}
     >
       {/* Photo / Video */}
-      <div className="absolute inset-0">
+      {/* Baza = kolorowy gradient (widoczny podczas ladowania zdjecia i przy bledzie), zeby nie
+          bylo ciemnego pustego kadru gdy zdjecie leci wolno z proxy. Zdjecie/wideo na wierzchu. */}
+      <div className={cn("absolute inset-0 bg-gradient-to-br", GRADIENT_BG[offset % 3])}>
         {place.coverVideoUrl && !videoFailed ? (
           <video
             src={place.coverVideoUrl}
@@ -448,9 +450,7 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
             onError={() => setVideoFailed(true)}
             style={{ WebkitTransform: "translateZ(0)", transform: "translateZ(0)" }}
           />
-        ) : photoUrls.length === 0 || imgFailed ? (
-          <div className={cn("w-full h-full bg-gradient-to-br", GRADIENT_BG[offset % 3])} />
-        ) : (
+        ) : photoUrls.length > 0 && !imgFailed ? (
           <img
             src={photoUrls[photoIdx]}
             alt={place.place_name}
@@ -461,7 +461,7 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
             }}
             draggable={false}
           />
-        )}
+        ) : null}
         {/* Gradient overlay - zawsze domyslny czarny (personalizacja tla wylaczona, jednolicie wszedzie). */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/10" />
         {/* Photo progress bar - przeniesione pod badge kategorii (top-4 zajete przez badge).
@@ -1303,9 +1303,6 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
         if (likedSet.has(p.place_name.toLowerCase()) || skippedSet.has(p.place_name.toLowerCase())) return false;
         // Filtr diety - applikowany do wszystkich miejsc (zarowno batch jak normal mode)
         if (!matchesDiet(p, activeDiets)) return false;
-        // For category-filtered batch mode (user explicitly picked a category) — show all matching
-        // places regardless of past ratings. Otherwise, hide already-rated on the first batch.
-        if (hasCategoryFilter) return true;
         // Runda grupowa (roundPlaceIds - kategoria LUB wolna eksploracja): wszyscy uczestnicy widza
         // TE SAME miejsca rundy (dla dopasowan), pomijajac tylko te przeswipeowane w TEJ sesji.
         // Past solo-reakcje NIE filtruja rundy - inaczej uczestnik, ktory wczesniej ocenial te losowe

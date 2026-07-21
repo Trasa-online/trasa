@@ -8,7 +8,8 @@ import { getConsent, grantConsent, denyConsent } from "@/lib/consent";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Camera, Shield, Bell, LogOut, ChevronRight, Cookie, FileText, Trash2, KeyRound, AlertCircle, X, ArrowLeft, Link as LinkIcon, Mail, Languages } from "lucide-react";
+import { Camera, Shield, Bell, LogOut, ChevronRight, Cookie, FileText, Trash2, KeyRound, AlertCircle, X, ArrowLeft, Link as LinkIcon, Mail, Languages, RotateCcw } from "lucide-react";
+import { isHardcodedAdmin } from "@/lib/admins";
 import { Switch } from "@/components/ui/switch";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { toast } from "sonner";
@@ -720,6 +721,26 @@ const Settings = () => {
         <div className="space-y-2">
           <ChangePasswordSection />
         </div>
+
+        {/* Admin: reset onboardingu (dla testerow - czysci flage NA TYM urzadzeniu). */}
+        {isHardcodedAdmin(user.email) && (
+          <div className="space-y-2">
+            <button
+              onClick={() => {
+                try {
+                  localStorage.removeItem("trasa_onboarding_v2_1_done");
+                  localStorage.removeItem("trasa_onboarding_v2_done");
+                } catch { /* unavailable */ }
+                toast.success("Onboarding zresetowany");
+                navigate("/onboarding");
+              }}
+              className="w-full flex items-center gap-3 px-4 py-3.5 bg-card rounded-2xl border border-border/40 hover:bg-muted transition-colors text-left"
+            >
+              <RotateCcw className="h-4 w-4 text-orange-600 flex-shrink-0" />
+              <span className="text-sm font-medium flex-1">Pokaż onboarding ponownie <span className="text-muted-foreground font-normal">(admin)</span></span>
+            </button>
+          </div>
+        )}
 
         {/* Danger zone */}
         <div className="space-y-2">
