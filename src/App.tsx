@@ -457,8 +457,10 @@ function SplashScreen({ done }: { done: boolean }) {
       className="fixed inset-0 z-[9999] bg-background flex items-center justify-center"
       style={{ transition: "opacity 0.4s", opacity: done ? 0 : 1 }}
     >
-      {/* Loading = logo w kolku (pomaranczowe kolo + bialy znak Trasy), jak ikona natywna. */}
-      <TrasaLogo size={132} />
+      {/* Loading = logo w kolku (pomaranczowe kolo + bialy znak). Rozmiar dopasowany do
+          natywnego splasha (~22% szerokosci) zeby przejscie native->React bylo bezszwowe (bez
+          "duplikatu"/skoku logo). */}
+      <TrasaLogo size={88} />
     </div>
   );
 }

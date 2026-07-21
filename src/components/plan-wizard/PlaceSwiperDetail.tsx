@@ -185,10 +185,11 @@ const PlaceSwiperDetail = ({
     ...photos.filter(validUrl),
     ...(!photos.length && validUrl(ep?.photo_url) ? [ep!.photo_url!] : []),
   ];
-  const displayPhotos = [
+  // Dedup (te same URL-e sie nie powtarzaja) + MAX 4 zdjecia w wizytowce (stan zero).
+  const displayPhotos = Array.from(new Set([
     ...googleAndCover,
-    ...(ep?.galleryPhotos ?? []).filter(validUrl).filter(u => !googleAndCover.includes(u)),
-  ];
+    ...(ep?.galleryPhotos ?? []).filter(validUrl),
+  ])).slice(0, 4);
 
   // Maps button - renderowany w header slot PremiumBusinessCard (Maps button obok nazwy)
   const mapsUrl = ep

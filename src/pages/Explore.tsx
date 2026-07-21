@@ -285,25 +285,26 @@ export const LikedTab = ({ selectMode = false, onExitSelection }: { selectMode?:
       </div>
 
       {/* Waska wyszukiwarka - bezposrednio pod pillami miast. Filtruje po nazwie/opisie. */}
-      <div className="relative pb-3">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" style={{ marginTop: "-6px" }} />
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder={t("liked.search_placeholder")}
-          className="w-full h-9 pl-9 pr-9 rounded-full bg-muted/60 border border-border/40 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30"
-        />
-        {searchQuery && (
-          <button
-            onClick={() => setSearchQuery("")}
-            className="absolute right-3 top-1/2 h-5 w-5 flex items-center justify-center rounded-full text-muted-foreground hover:bg-muted active:scale-90 transition"
-            style={{ marginTop: "-6px" }}
-            aria-label={t("liked.search_clear")}
-          >
-            <X className="h-3.5 w-3.5" />
-          </button>
-        )}
+      <div className="pb-3">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder={t("liked.search_placeholder")}
+            className="w-full h-9 pl-9 pr-9 rounded-full bg-muted/60 border border-border/40 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 flex items-center justify-center rounded-full text-muted-foreground hover:bg-muted active:scale-90 transition"
+              aria-label={t("liked.search_clear")}
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Filtr kategorii - chipy z kategorii obecnych w zapisanych (pokazuj gdy >1 kategoria). */}
@@ -663,21 +664,21 @@ const Explore = () => {
               Zastapil guzik "+ Dodaj". Segment "Eksploracja" jest aktywny (jestesmy w feedzie);
               tap w "Przegladaj" przenosi do swipera miejsc (/plan exploreMode). */}
           {!myCollections && (
-            <div className="shrink-0 flex items-center rounded-full bg-secondary p-0.5 text-xs font-bold">
+            <div className="shrink-0 flex items-center rounded-full bg-secondary p-0.5">
               <button
                 onClick={() => navigate("/plan", { state: { exploreMode: true } })}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-secondary-foreground/70 active:scale-95 transition-transform whitespace-nowrap"
+                className="h-8 px-3 flex items-center gap-1.5 rounded-full text-secondary-foreground/70 text-xs font-bold active:scale-95 transition-transform whitespace-nowrap"
               >
-                <Layers className="h-3.5 w-3.5" />
+                <Layers className="h-4 w-4" />
                 {t("explore.tab_browse")}
               </button>
               <span
                 aria-current="true"
                 aria-label={t("explore.tab_explore")}
                 title={t("explore.tab_explore")}
-                className="flex items-center justify-center h-7 w-7 rounded-full bg-background text-foreground shadow-sm"
+                className="h-8 w-8 flex items-center justify-center rounded-full bg-background text-foreground shadow-sm"
               >
-                <Compass className="h-3.5 w-3.5" />
+                <Compass className="h-4 w-4" />
               </span>
             </div>
           )}

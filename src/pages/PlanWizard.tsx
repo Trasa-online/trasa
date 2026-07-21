@@ -313,10 +313,9 @@ const PlanWizard = () => {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
-                  className="shrink-0 flex items-center gap-1 px-2.5 h-8 rounded-full bg-card border border-border/60 active:scale-[0.97] transition-transform max-w-[160px]"
+                  className="shrink-0 flex items-center gap-1 px-3 h-8 rounded-full bg-card border border-border/60 active:scale-[0.97] transition-transform max-w-[160px]"
                   aria-label={t("explore_change_city")}
                 >
-                  <MapPin className="h-3.5 w-3.5 text-orange-600 shrink-0" />
                   <span className="text-sm font-bold text-foreground truncate">{city || "Warszawa"}</span>
                   <ChevronDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                 </button>

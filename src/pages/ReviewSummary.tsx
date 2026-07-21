@@ -14,7 +14,7 @@ import type { MockPlace } from "@/components/plan-wizard/PlaceSwiper";
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { PlacePhoto, resolveStored } from "@/components/PlacePhoto";
 import { compressImage } from "@/lib/imageCompression";
-import { format } from "date-fns";
+import { format, parseISO, isValid } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
 import { isNative } from "@/lib/platform";
 import { Camera as CapCamera } from "@capacitor/camera";
