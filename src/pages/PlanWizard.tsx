@@ -6,6 +6,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
+import { expandCity } from "@/lib/cities";
 import { usePostHog } from "@posthog/react";
 import { toast } from "sonner";
 import CityPicker, { UNLOCKED_CITIES } from "@/components/plan-wizard/CityPicker";
@@ -95,12 +97,37 @@ const PlanWizard = () => {
   // "Zapisane" AUTOMATYCZNIE (bez popupu). User odznacza tam czego nie chce - zamiast
   // wczesniejszego modala "wykorzystac polubione?".
   const todayLikesForCity = useMemo(() => (city ? getTodayLikes(city) : []), [city]);
+
+  // Miejsca JUZ UZYTE w wyjazdach usera dla tego miasta (piny istniejacych tras). Przy tworzeniu
+  // NOWEGO wyjazdu wykluczamy je - user dostaje swieze miejsca (swiper + zapisane), a nie te,
+  // ktore juz wykorzystal w poprzednim wyjezdzie.
+  const { data: usedPlaceNames = [] } = useQuery({
+    queryKey: ["wyjazd-used-places", user?.id, city],
+    queryFn: async () => {
+      if (!user?.id || !city) return [] as string[];
+      const { data: routes } = await (supabase as any)
+        .from("routes").select("id").eq("user_id", user.id).in("city", expandCity(city));
+      const ids = (routes ?? []).map((r: any) => r.id);
+      if (!ids.length) return [] as string[];
+      const { data: pins } = await (supabase as any)
+        .from("pins").select("place_name").in("route_id", ids);
+      return Array.from(new Set((pins ?? []).map((p: any) => p.place_name))) as string[];
+    },
+    enabled: !!user?.id && !!city && wyjazdMode,
+    staleTime: 30_000,
+  });
+  const usedSet = useMemo(() => new Set(usedPlaceNames.map((n) => n.toLowerCase())), [usedPlaceNames]);
+
   const allLikedNames: string[] = useMemo(() => {
     const fromState = returnState?.likedPlaceNames ?? [];
     const fromExplore = todayLikesForCity.map((l) => l.place_name);
-    return Array.from(new Set([...fromState, ...fromExplore]));
-  }, [returnState?.likedPlaceNames, todayLikesForCity]);
-  const allSkippedNames: string[] = returnState?.skippedPlaceNames ?? [];
+    const merged = Array.from(new Set([...fromState, ...fromExplore]));
+    return wyjazdMode ? merged.filter((n) => !usedSet.has(n.toLowerCase())) : merged;
+  }, [returnState?.likedPlaceNames, todayLikesForCity, wyjazdMode, usedSet]);
+  const allSkippedNames: string[] = useMemo(
+    () => Array.from(new Set([...(returnState?.skippedPlaceNames ?? []), ...(wyjazdMode ? usedPlaceNames : [])])),
+    [returnState?.skippedPlaceNames, wyjazdMode, usedPlaceNames],
+  );
 
   const [showAddPlace, setShowAddPlace] = useState(false);
   // Istniejaca aktywna trasa dla wybranego miasta+daty (hybryda: pytamy kontynuuj/nowa).
