@@ -654,6 +654,7 @@ const EditPlan         = lazy(() => import("./pages/EditPlan"));
 const ReviewSummary    = lazy(() => import("./pages/ReviewSummary"));
 const ActiveTrip       = lazy(() => import("./pages/ActiveTrip"));
 const AddPlaceToTrip   = lazy(() => import("./pages/AddPlaceToTrip"));
+const Wyjazd           = lazy(() => import("./pages/Wyjazd"));
 const PlanWizard       = lazy(() => import("./pages/PlanWizard"));
 const CreateGroupSession = lazy(() => import("./pages/CreateGroupSession"));
 const GroupSession     = lazy(() => import("./pages/GroupSession"));
@@ -746,6 +747,9 @@ const App = () => (
           <Route path="/review-summary" element={<ReviewSummary />} />
           <Route path="/trasa/:id/dodaj" element={<AddPlaceToTrip />} />
           <Route path="/trasa/:id" element={<ActiveTrip />} />
+          {/* Wyjazd (tryb uproszczony) - lekki detal wyjazdu bez planowania. */}
+          <Route path="/wyjazd/:id" element={<Wyjazd />} />
+          <Route path="/wyjazd/nowy" element={<Navigate to="/dziennik" replace />} />
           {/* Planowanie tras (kreator + sesje grupowe) - wylaczone w trybie uproszczonym na native. */}
           <Route path="/plan" element={PLANNING_DISABLED ? <Navigate to="/eksploruj" replace /> : <PlanWizard />} />
           <Route path="/demo" element={<DemoSession />} />
