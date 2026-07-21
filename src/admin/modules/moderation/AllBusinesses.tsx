@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Loader2, Search, Pencil, Trash2, Check, X, Eye, EyeOff } from "lucide-react";
 import { useAllBusinesses, useEditBusiness, useDeleteBusiness, type BizRow } from "./useAllBusinesses";
-import { useAdmin } from "../../RequireAdmin";
+import { RequireTier } from "../../RequireTier";
 
 const STATUS_CLS: Record<string, string> = {
   approved: "bg-emerald-100 text-emerald-700",
@@ -33,7 +33,6 @@ export function AllBusinesses() {
 }
 
 function BizCard({ biz }: { biz: BizRow }) {
-  const { isSuperAdmin } = useAdmin();
   const edit = useEditBusiness();
   const del = useDeleteBusiness();
   const [editing, setEditing] = useState(false);
@@ -90,11 +89,11 @@ function BizCard({ biz }: { biz: BizRow }) {
             <button onClick={togglePublish} disabled={busy} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-sm font-semibold disabled:opacity-60">
               {biz.is_active ? <><EyeOff className="h-3.5 w-3.5" />Ukryj</> : <><Eye className="h-3.5 w-3.5" />Publikuj</>}
             </button>
-            {isSuperAdmin && (
+            <RequireTier tier="super_admin">
               <button onClick={() => setConfirmDel((v) => !v)} disabled={busy} className="ml-auto p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50" title="Usuń"><Trash2 className="h-4 w-4" /></button>
-            )}
+            </RequireTier>
           </div>
-          {confirmDel && isSuperAdmin && (
+          {confirmDel && (
             <div className="mt-3 flex flex-col sm:flex-row gap-2">
               <input value={reason} onChange={(e) => setReason(e.target.value)} autoFocus placeholder="Powód usunięcia (audyt)…"
                 className="flex-1 rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-red-400" />

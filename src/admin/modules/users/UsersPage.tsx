@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import { Loader2, Search, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { useUsers, useSoftDelete, type AdminUser } from "./useUsers";
-import { useAdmin } from "../../RequireAdmin";
+import { RequireTier } from "../../RequireTier";
 
 type Filter = "all" | "business" | "consumer";
 
@@ -63,7 +63,6 @@ export function UsersPage() {
 }
 
 function UserRow({ user }: { user: AdminUser }) {
-  const { isSuperAdmin } = useAdmin();
   const del = useSoftDelete();
   const [confirming, setConfirming] = useState(false);
   const [reason, setReason] = useState("");
@@ -94,11 +93,13 @@ function UserRow({ user }: { user: AdminUser }) {
           </p>
           <p className="text-xs text-slate-400 mt-0.5">{user.created_at ? format(new Date(user.created_at), "dd.MM.yyyy") : "—"}</p>
         </div>
-        {isSuperAdmin && !user.deleted && (
-          <button onClick={() => setConfirming((v) => !v)} title="Usuń konto"
-            className="shrink-0 p-2 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors">
-            <Trash2 className="h-4 w-4" />
-          </button>
+        {!user.deleted && (
+          <RequireTier tier="super_admin">
+            <button onClick={() => setConfirming((v) => !v)} title="Usuń konto"
+              className="shrink-0 p-2 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors">
+              <Trash2 className="h-4 w-4" />
+            </button>
+          </RequireTier>
         )}
       </div>
 
