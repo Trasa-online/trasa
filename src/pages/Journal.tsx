@@ -1,12 +1,15 @@
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthDrawer } from "@/hooks/useAuthDrawer";
-import { ArrowRight, BookOpen } from "lucide-react";
+import { ArrowRight, BookOpen, Plus } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import JournalTab from "@/components/home/JournalTab";
 import { useTranslation } from "react-i18next";
+import { PLANNING_DISABLED } from "@/lib/appMode";
 
 const Journal = () => {
   const { user, isAnonymous } = useAuth();
   const { open } = useAuthDrawer();
+  const navigate = useNavigate();
   const { t } = useTranslation("journal");
   // Anon = traktuj jak gosc (zero zapisanych danych w UI). Dziennik wymaga
   // konta z mailem zeby trasy/pocztówki byly persystowane miedzy urzadzeniami.
@@ -49,9 +52,19 @@ const Journal = () => {
 
   return (
     <div className="flex-1 flex flex-col px-4 pt-2 pb-[calc(5rem+env(safe-area-inset-bottom,0px))] overflow-y-auto">
-      <div className="pt-3 pb-2.5">
-        <h1 className="text-xl font-display font-extrabold tracking-tight">{t("title")}</h1>
-        <p className="text-xs text-muted-foreground mt-0.5">{t("subtitle")}</p>
+      <div className="pt-3 pb-2.5 flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-display font-extrabold tracking-tight">{t("title")}</h1>
+          <p className="text-xs text-muted-foreground mt-0.5">{t("subtitle")}</p>
+        </div>
+        {PLANNING_DISABLED && (
+          <button
+            onClick={() => navigate("/plan", { state: { wyjazdMode: true } })}
+            className="shrink-0 mt-0.5 px-4 py-2.5 rounded-full bg-primary text-white font-bold text-xs flex items-center gap-1.5 active:scale-95 transition-transform"
+          >
+            <Plus className="h-3.5 w-3.5" /> Nowy wyjazd
+          </button>
+        )}
       </div>
       <div className="border-b border-border/40 mb-3" />
 

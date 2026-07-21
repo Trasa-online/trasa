@@ -22,10 +22,6 @@ const JournalTab = ({ userId }: JournalTabProps) => {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [wyjazdTab, setWyjazdTab] = useState<"active" | "memories">("active");
 
-  // Tryb uproszczony: "Nowy wyjazd" = guided flow (miasto + daty + swiper miejsc -> wyjazd),
-  // ten sam co z menu "+". Kreator w PlanWizard (wyjazdMode); tu tylko wejscie.
-  const openWyjazd = () => navigate("/plan", { state: { wyjazdMode: true } });
-
   // Polska liczba mnoga: 1 osoba obejrzala / 2-4 osoby obejrzaly / 5+ osob obejrzalo.
   const viewsLabel = (n: number): string => {
     if (n === 1) return t("journal.views_one");
@@ -321,13 +317,16 @@ const JournalTab = ({ userId }: JournalTabProps) => {
               {PLANNING_DISABLED ? "Stwórz wyjazd i dorzuć do niego miejsca, które zapisałeś z eksploracji." : t("journal.empty_desc")}
             </p>
           </div>
-          <button
-            onClick={() => (PLANNING_DISABLED ? openWyjazd() : navigate("/sesja/nowa", { state: { from: "journal" } }))}
-            className="px-6 py-3.5 rounded-full bg-primary text-white font-bold text-sm flex items-center gap-2 active:scale-95 transition-transform"
-          >
-            {PLANNING_DISABLED ? <Plus className="h-4 w-4" /> : <Sparkles className="h-4 w-4" />}
-            {PLANNING_DISABLED ? "Nowy wyjazd" : t("journal.empty_cta")}
-          </button>
+          {/* W trybie uproszczonym przycisk "Nowy wyjazd" jest w naglowku - tu go nie dublujemy. */}
+          {!PLANNING_DISABLED && (
+            <button
+              onClick={() => navigate("/sesja/nowa", { state: { from: "journal" } })}
+              className="px-6 py-3.5 rounded-full bg-primary text-white font-bold text-sm flex items-center gap-2 active:scale-95 transition-transform"
+            >
+              <Sparkles className="h-4 w-4" />
+              {t("journal.empty_cta")}
+            </button>
+          )}
         </div>
       </>
     );
@@ -360,12 +359,7 @@ const JournalTab = ({ userId }: JournalTabProps) => {
     );
     return (
       <div className="space-y-3 pb-2">
-        <button
-          onClick={openWyjazd}
-          className="w-full py-3.5 rounded-2xl bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
-        >
-          <Plus className="h-4 w-4" /> Nowy wyjazd
-        </button>
+        {/* Przycisk "Nowy wyjazd" jest w naglowku zakladki (Journal.tsx). Tu tylko toggle. */}
         <div className="flex items-center rounded-full bg-secondary p-0.5 text-sm font-bold">
           <button
             onClick={() => setWyjazdTab("active")}
@@ -385,7 +379,7 @@ const JournalTab = ({ userId }: JournalTabProps) => {
             <div className="space-y-3">
               {active.map((entry: any) => renderTripCard(entry, () => openEntry(entry), true))}
             </div>
-          ) : emptyBox("🧳", "Brak aktywnych wyjazdów", "Stwórz wyjazd, a pojawi się tutaj.")
+          ) : emptyBox("🧳", "Brak aktywnych wyjazdów", "Twoje nadchodzące wyjazdy pojawią się tutaj.")
         ) : (
           postcards.length > 0 ? (
             <div className="space-y-3">

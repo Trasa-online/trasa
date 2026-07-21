@@ -307,7 +307,7 @@ const BottomNav = () => {
       <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-lg z-50 px-4 pb-[calc(env(safe-area-inset-bottom,0px)+10px)] pointer-events-none">
         {/* Web: 3 kolumny (Glowna, Plus, Profil - Eksploruj i Dziennik ukryte).
             Native: 5 kolumn (wszystko). */}
-        {/* Same ikony, bez nazw (jak w zalaczniku) - zachowana kolorystyka (orange active). */}
+        {/* Ikony + nazwy zakladek pod spodem (orange active). */}
         <div className="pointer-events-auto bg-white rounded-[26px] border border-black/[0.04] shadow-[0_8px_28px_-6px_rgba(0,0,0,0.18)]">
           <div className={`grid ${isNative ? "grid-cols-5" : "grid-cols-3"} h-16`}>
 
@@ -323,7 +323,7 @@ const BottomNav = () => {
               {({ isActive }) => (
                 <>
                   <Compass className="h-6 w-6 stroke-2" />
-                  <span className={`h-0.5 w-5 rounded-full transition-colors ${isActive ? "bg-orange-600" : "bg-transparent"}`} />
+                  <span className="text-[9px] font-semibold leading-tight mt-0.5">Eksploruj</span>
                 </>
               )}
             </NavLink>
@@ -345,7 +345,7 @@ const BottomNav = () => {
                       <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-orange-600 ring-2 ring-background" />
                     )}
                   </div>
-                  <span className={`h-0.5 w-5 rounded-full transition-colors ${isActive ? "bg-orange-600" : "bg-transparent"}`} />
+                  <span className="text-[9px] font-semibold leading-tight mt-0.5">Wyjazdy</span>
                 </>
               )}
             </NavLink>
@@ -359,7 +359,7 @@ const BottomNav = () => {
               {({ isActive }) => (
                 <>
                   <Map className="h-6 w-6 stroke-2" />
-                  <span className={`h-0.5 w-5 rounded-full transition-colors ${isActive ? "bg-orange-600" : "bg-transparent"}`} />
+                  <span className="text-[9px] font-semibold leading-tight mt-0.5">Trasy</span>
                 </>
               )}
             </NavLink>
@@ -391,7 +391,7 @@ const BottomNav = () => {
               {({ isActive }) => (
                 <>
                   <Bookmark className="h-6 w-6 stroke-2" />
-                  <span className={`h-0.5 w-5 rounded-full transition-colors ${isActive ? "bg-orange-600" : "bg-transparent"}`} />
+                  <span className="text-[9px] font-semibold leading-tight mt-0.5">Zapisane</span>
                 </>
               )}
             </NavLink>
@@ -410,7 +410,7 @@ const BottomNav = () => {
                       <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-orange-600 ring-2 ring-background" />
                     )}
                   </div>
-                  <span className={`h-0.5 w-5 rounded-full transition-colors ${isActive ? "bg-orange-600" : "bg-transparent"}`} />
+                  <span className="text-[9px] font-semibold leading-tight mt-0.5">Dziennik</span>
                 </>
               )}
             </NavLink>
@@ -426,7 +426,7 @@ const BottomNav = () => {
             {({ isActive }) => (
               <>
                 <User className="h-6 w-6 stroke-2" />
-                <span className={`h-0.5 w-5 rounded-full transition-colors ${isActive ? "bg-orange-600" : "bg-transparent"}`} />
+                <span className="text-[9px] font-semibold leading-tight mt-0.5">Profil</span>
               </>
             )}
           </NavLink>
