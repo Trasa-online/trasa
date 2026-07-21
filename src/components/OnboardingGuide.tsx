@@ -28,30 +28,35 @@ export const useOnboarding = () => useContext(OnboardingCtx);
 
 export function OnboardingProvider({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isAnonymous } = useAuth();
   const [active, setActive] = useState(() => {
     if (!isNative) return false;
     try { return localStorage.getItem(DONE_KEY) !== "1"; } catch { return false; }
   });
 
   const finish = useCallback(async () => {
-    // Sprzatanie fejk-danych onboardingu (anon user): wyjazdy (routes+pins), reakcje, zapisane.
-    try {
-      if (user?.id) {
-        const { data: routes } = await (supabase as any).from("routes").select("id").eq("user_id", user.id);
-        const ids = (routes ?? []).map((r: any) => r.id);
-        if (ids.length) {
-          await (supabase as any).from("pins").delete().in("route_id", ids);
-          await (supabase as any).from("routes").delete().in("id", ids);
+    // ⚠️ KRYTYCZNE: sprzatanie fejk-danych onboardingu WYLACZNIE dla anonimowego konta-gosca.
+    // Dla realnego (zalogowanego mailem) konta NIGDY nie kasujemy tras/reakcji/zapisanych -
+    // to sa PRAWDZIWE dane usera. Wczesniej brak tego guardu skasowal prawdziwe trasy adminowi,
+    // ktory odpalil onboarding przez guzik resetu w Ustawieniach.
+    if (isAnonymous) {
+      try {
+        if (user?.id) {
+          const { data: routes } = await (supabase as any).from("routes").select("id").eq("user_id", user.id);
+          const ids = (routes ?? []).map((r: any) => r.id);
+          if (ids.length) {
+            await (supabase as any).from("pins").delete().in("route_id", ids);
+            await (supabase as any).from("routes").delete().in("id", ids);
+          }
+          await (supabase as any).from("user_place_reactions").delete().eq("user_id", user.id);
         }
-        await (supabase as any).from("user_place_reactions").delete().eq("user_id", user.id);
-      }
-      clearExploreLikes();
-    } catch (e) { console.warn("[onboarding] cleanup failed:", e); }
+        clearExploreLikes();
+      } catch (e) { console.warn("[onboarding] cleanup failed:", e); }
+    }
     try { localStorage.setItem(DONE_KEY, "1"); } catch { /* unavailable */ }
     setActive(false);
     navigate("/eksploruj", { replace: true });
-  }, [user?.id, navigate]);
+  }, [user?.id, isAnonymous, navigate]);
 
   const restart = useCallback(() => {
     try { localStorage.removeItem(DONE_KEY); localStorage.removeItem("trasa_onboarding_v2_1_done"); } catch { /* unavailable */ }
