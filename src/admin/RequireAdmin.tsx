@@ -97,7 +97,7 @@ function AdminLogin() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#F4F4F5]" style={dotBg}>
+    <div className="min-h-screen flex flex-col bg-slate-50">
       <div className="flex items-center px-6 h-16">
         <div className="flex items-center gap-2">
           <TrasaLogo size={34} />
@@ -163,7 +163,7 @@ function AdminLogin() {
 
 function AccessDenied({ email }: { email: string }) {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-[#F4F4F5] px-6 text-center" style={dotBg}>
+    <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 px-6 text-center">
       <TrasaLogo size={48} className="mb-5" />
       <h1 className="text-xl font-black text-slate-900 mb-1">Brak dostępu</h1>
       <p className="text-sm text-slate-500 max-w-[36ch]">
@@ -175,8 +175,3 @@ function AccessDenied({ email }: { email: string }) {
     </div>
   );
 }
-
-const dotBg = {
-  backgroundImage: "radial-gradient(rgba(15,23,42,0.06) 1px, transparent 1px)",
-  backgroundSize: "22px 22px",
-} as const;

@@ -47,7 +47,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-[#F4F4F5]" style={{ backgroundImage: "radial-gradient(rgba(15,23,42,0.05) 1px, transparent 1px)", backgroundSize: "22px 22px" }}>
+    <div className="min-h-screen bg-slate-50">
       {/* Topbar */}
       <header className="sticky top-0 z-30 flex items-center justify-between px-4 sm:px-5 h-14 border-b border-slate-200 bg-white/80 backdrop-blur">
         <div className="flex items-center gap-2">
