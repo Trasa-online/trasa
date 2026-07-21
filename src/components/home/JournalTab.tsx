@@ -20,6 +20,7 @@ const JournalTab = ({ userId }: JournalTabProps) => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [wyjazdTab, setWyjazdTab] = useState<"active" | "memories">("active");
 
   // Tryb uproszczony: "Nowy wyjazd" = guided flow (miasto + daty + swiper miejsc -> wyjazd),
   // ten sam co z menu "+". Kreator w PlanWizard (wyjazdMode); tu tylko wejscie.
@@ -332,33 +333,74 @@ const JournalTab = ({ userId }: JournalTabProps) => {
     );
   }
 
+  // Otwarcie wpisu = zawsze ReviewSummary (?route=). Nowy/aktywny wyjazd (reviewed=false)
+  // laduje w trybie edycji (stepper Trasa/Notki/Zdjecia); zakonczony/miniony = tryb read.
+  const openEntry = (entry: any) => {
+    if (entry.new_for_users?.includes(userId)) {
+      queryClient.setQueryData(["journal-entries", userId], (old: any) =>
+        (old ?? []).map((e: any) => e.id === entry.id
+          ? { ...e, new_for_users: (e.new_for_users ?? []).filter((u: string) => u !== userId) }
+          : e
+        )
+      );
+      void supabase.rpc("dismiss_route_badge", { p_route_id: entry.id });
+      queryClient.invalidateQueries({ queryKey: ["journal-badge"] });
+    }
+    navigate(`/review-summary?route=${entry.id}`);
+  };
+
+  // Tryb uproszczony: przycisk "Nowy wyjazd" + toggle Aktywne | Wspomnienia.
+  if (PLANNING_DISABLED) {
+    const emptyBox = (emoji: string, title: string, desc: string) => (
+      <div className="py-14 text-center px-8">
+        <div className="text-4xl mb-3">{emoji}</div>
+        <p className="text-base font-bold">{title}</p>
+        <p className="text-sm text-muted-foreground mt-1 leading-relaxed max-w-[260px] mx-auto">{desc}</p>
+      </div>
+    );
+    return (
+      <div className="space-y-3 pb-2">
+        <button
+          onClick={openWyjazd}
+          className="w-full py-3.5 rounded-2xl bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
+        >
+          <Plus className="h-4 w-4" /> Nowy wyjazd
+        </button>
+        <div className="flex items-center rounded-full bg-secondary p-0.5 text-sm font-bold">
+          <button
+            onClick={() => setWyjazdTab("active")}
+            className={`flex-1 py-2 rounded-full transition-colors ${wyjazdTab === "active" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}
+          >
+            {`Aktywne${active.length > 0 ? ` (${active.length})` : ""}`}
+          </button>
+          <button
+            onClick={() => setWyjazdTab("memories")}
+            className={`flex-1 py-2 rounded-full transition-colors ${wyjazdTab === "memories" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}
+          >
+            {`Wspomnienia${postcards.length > 0 ? ` (${postcards.length})` : ""}`}
+          </button>
+        </div>
+        {wyjazdTab === "active" ? (
+          active.length > 0 ? (
+            <div className="space-y-3">
+              {active.map((entry: any) => renderTripCard(entry, () => openEntry(entry), true))}
+            </div>
+          ) : emptyBox("🧳", "Brak aktywnych wyjazdów", "Stwórz wyjazd, a pojawi się tutaj.")
+        ) : (
+          postcards.length > 0 ? (
+            <div className="space-y-3">
+              {postcards.map((entry: any) => renderTripCard(entry, () => openEntry(entry)))}
+            </div>
+          ) : emptyBox("📸", t("journal.memories_empty_title"), t("journal.memories_empty_desc"))
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-3 pb-2">
-      {/* Tryb uproszczony: tworzenie wyjazdu + lista aktywnych wyjazdow (w toku) NAD wspomnieniami. */}
-      {PLANNING_DISABLED && (
-        <div className="space-y-3">
-          <button
-            onClick={openWyjazd}
-            className="w-full py-3.5 rounded-2xl bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
-          >
-            <Plus className="h-4 w-4" /> Nowy wyjazd
-          </button>
-          {active.length > 0 && (
-            <div className="space-y-3">
-              {active.map((entry: any) => renderTripCard(entry, () => navigate(`/wyjazd/${entry.id}`), true))}
-            </div>
-          )}
-          {visibleEntries.length > 0 && (
-            <div className="flex items-center gap-2 pt-1">
-              <span className="text-xs font-semibold text-muted-foreground">Wspomnienia</span>
-              <div className="flex-1 h-px bg-border/50" />
-            </div>
-          )}
-        </div>
-      )}
-
       {/* Dziennik = wspomnienia (minione podroze). Aktywne trasy/sesje sa na ekranie glownym. */}
-      {visibleEntries.length === 0 && !PLANNING_DISABLED && (
+      {visibleEntries.length === 0 && (
         <div className="py-16 text-center px-8">
           <div className="text-4xl mb-3">📸</div>
           <p className="text-base font-bold">{t("journal.memories_empty_title")}</p>
@@ -369,20 +411,7 @@ const JournalTab = ({ userId }: JournalTabProps) => {
       )}
 
       {/* Lista wspomnień - ta sama karta co aktywne wyjazdy */}
-      {visibleEntries.map((entry) => renderTripCard(entry, async () => {
-        // Optymistycznie ukryj badge "Nowa trasa!" - update cache zanim nawiguje.
-        if (entry.new_for_users?.includes(userId)) {
-          queryClient.setQueryData(["journal-entries", userId], (old: any) =>
-            (old ?? []).map((e: any) => e.id === entry.id
-              ? { ...e, new_for_users: (e.new_for_users ?? []).filter((u: string) => u !== userId) }
-              : e
-            )
-          );
-          void supabase.rpc("dismiss_route_badge", { p_route_id: entry.id });
-          queryClient.invalidateQueries({ queryKey: ["journal-badge"] });
-        }
-        navigate(`/review-summary?route=${entry.id}`);
-      }))}
+      {visibleEntries.map((entry) => renderTripCard(entry, () => openEntry(entry)))}
     </div>
   );
 };

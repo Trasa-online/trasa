@@ -263,7 +263,7 @@ export function CollectionDetail({ col, onClose, onAdopt }: { col: DiscoveryColl
         place_id: i.place_id ?? null,
       })));
       onClose();
-      if (id) navigate(`/wyjazd/${id}`);
+      if (id) navigate(`/review-summary?route=${id}`);
       return;
     }
     if (onAdopt) { onAdopt(col.city, names); return; }

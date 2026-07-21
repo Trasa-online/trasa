@@ -10,7 +10,6 @@ import { useNativePush } from "@/hooks/useNativePush";
 import { useNetworkReconnect } from "@/hooks/useNetworkReconnect";
 import { useAppResume } from "@/hooks/useAppResume";
 import AuthDrawer from "@/components/auth/AuthDrawer";
-import { TrasaLogo } from "@/components/TrasaLogo";
 import { businessPanelPath } from "@/lib/businessRedirect";
 import { supabase } from "@/integrations/supabase/client";
 import { isNative } from "@/lib/platform";
@@ -452,7 +451,9 @@ function SplashScreen({ done }: { done: boolean }) {
       className="fixed inset-0 z-[9999] bg-background flex items-center justify-center"
       style={{ transition: "opacity 0.4s", opacity: done ? 0 : 1 }}
     >
-      <TrasaLogo size={132} />
+      {/* Loading = tylko orba (gradient). Wczesniej byl tez znak w kolku (TrasaLogo) -> dwie
+          wersje loga na splashu. Zostaje jedna: orba. */}
+      <div style={{ width: 132, height: 132, borderRadius: "50%", background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
     </div>
   );
 }
@@ -654,7 +655,6 @@ const EditPlan         = lazy(() => import("./pages/EditPlan"));
 const ReviewSummary    = lazy(() => import("./pages/ReviewSummary"));
 const ActiveTrip       = lazy(() => import("./pages/ActiveTrip"));
 const AddPlaceToTrip   = lazy(() => import("./pages/AddPlaceToTrip"));
-const Wyjazd           = lazy(() => import("./pages/Wyjazd"));
 const PlanWizard       = lazy(() => import("./pages/PlanWizard"));
 const CreateGroupSession = lazy(() => import("./pages/CreateGroupSession"));
 const GroupSession     = lazy(() => import("./pages/GroupSession"));
@@ -760,9 +760,8 @@ const App = () => (
           <Route path="/review-summary" element={<ReviewSummary />} />
           <Route path="/trasa/:id/dodaj" element={<AddPlaceToTrip />} />
           <Route path="/trasa/:id" element={<ActiveTrip />} />
-          {/* Wyjazd (tryb uproszczony) - lekki detal wyjazdu bez planowania. */}
-          <Route path="/wyjazd/:id" element={<Wyjazd />} />
-          <Route path="/wyjazd/nowy" element={<Navigate to="/dziennik" replace />} />
+          {/* Wyjazd (tryb uproszczony) laduje w edytorze wpisu = /review-summary (ReviewSummary). */}
+          <Route path="/wyjazd/:id" element={<Navigate to="/dziennik" replace />} />
           {/* Planowanie tras (kreator + sesje grupowe) - wylaczone w trybie uproszczonym na native.
               Wyjatek: exploreMode ("Przegladaj") zostaje wlaczony - patrz PlanRoute. */}
           <Route path="/plan" element={<PlanRoute />} />

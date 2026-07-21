@@ -172,6 +172,7 @@ export const LikedTab = ({ selectMode = false, onExitSelection }: { selectMode?:
   );
   const cities = groups.map(g => g.city); // posortowane po liczbie polubien
   const [selectedCity, setSelectedCity] = useState<string>("all");
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   // Gdy wybrane miasto zniknie (usuniete ostatnie miejsce) - wroc na "Wszystkie".
   useEffect(() => {
@@ -179,10 +180,14 @@ export const LikedTab = ({ selectMode = false, onExitSelection }: { selectMode?:
   }, [cities, selectedCity]);
 
   const byCity = selectedCity === "all" ? allPlaces : allPlaces.filter(p => p.city === selectedCity);
+  // Filtr po kategorii miejsca (chipy zbudowane z kategorii obecnych w zapisanych, per miasto).
+  const availableCategories = Array.from(new Set(byCity.map(p => p.category).filter(Boolean))) as string[];
+  const effectiveCat = availableCategories.includes(selectedCategory) ? selectedCategory : "all";
+  const byCat = effectiveCat === "all" ? byCity : byCity.filter(p => p.category === effectiveCat);
   const q = searchQuery.trim().toLowerCase();
   const visible = q
-    ? byCity.filter(p => p.place_name.toLowerCase().includes(q) || (p.description ?? "").toLowerCase().includes(q))
-    : byCity;
+    ? byCat.filter(p => p.place_name.toLowerCase().includes(q) || (p.description ?? "").toLowerCase().includes(q))
+    : byCat;
   const totalLikes = allPlaces.length;
 
   const handleRemove = (city: string, place_name: string) => {
@@ -247,7 +252,7 @@ export const LikedTab = ({ selectMode = false, onExitSelection }: { selectMode?:
         photo_url: p.photo_url ?? null,
         place_id: (p as any).place_id ?? null,
       })));
-      if (id) navigate(`/wyjazd/${id}`);
+      if (id) navigate(`/review-summary?route=${id}`);
       return;
     }
     navigate("/plan", { state: { step: 3, city: selectionCity, date: new Date().toISOString(), likedPlaceNames: chosen.map(p => p.place_name) } });
@@ -295,6 +300,27 @@ export const LikedTab = ({ selectMode = false, onExitSelection }: { selectMode?:
           </button>
         )}
       </div>
+
+      {/* Filtr kategorii - chipy z kategorii obecnych w zapisanych (pokazuj gdy >1 kategoria). */}
+      {availableCategories.length > 1 && (
+        <div className="flex gap-2 overflow-x-auto scrollbar-none pb-3 -mx-1 px-1">
+          <button
+            onClick={() => setSelectedCategory("all")}
+            className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-colors whitespace-nowrap ${effectiveCat === "all" ? "bg-foreground text-background border-foreground" : "bg-card text-muted-foreground border-border/60"}`}
+          >
+            Wszystkie
+          </button>
+          {availableCategories.map((cat) => (
+            <button
+              key={cat}
+              onClick={() => setSelectedCategory(cat)}
+              className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-colors whitespace-nowrap ${effectiveCat === cat ? "bg-foreground text-background border-foreground" : "bg-card text-muted-foreground border-border/60"}`}
+            >
+              {subcategoryLabelLocalized(cat)}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Hint trybu zaznaczania: trasa z jednego miasta */}
       {selectMode && (

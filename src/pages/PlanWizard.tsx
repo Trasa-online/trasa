@@ -205,7 +205,7 @@ const PlanWizard = () => {
     if (selected.length === 0) return;
 
     // Tryb WYJAZDU: bez kulminacji w planie AI. Tworzymy wyjazd (routes + pins) z polubionych
-    // + wybrane miasto/daty i ladujemy w dzienniku (wpis/pocztowka) przez ekran /wyjazd/:id.
+    // + wybrane miasto/daty i otwieramy edytor wpisu (ReviewSummary, tryb edycji - stepper).
     if (wyjazdMode) {
       if (!user || isAnonymous) { openAuthDrawer({ mode: "register", hint: "save_route" }); return; }
       const pad = (n: number) => String(n).padStart(2, "0");
@@ -222,7 +222,7 @@ const PlanWizard = () => {
         photo_url: p.photo_url ?? null,
         place_id: (p as { id?: string | null }).id ?? null,
       })), { start_date: startISO, end_date: endISO });
-      if (id) navigate(`/wyjazd/${id}`);
+      if (id) navigate(`/review-summary?route=${id}`);
       return;
     }
 

@@ -251,18 +251,6 @@ const CityPicker = ({ onConfirm }: CityPickerProps) => {
         </div>
       </div>
 
-      {/* "Not your city?" banner */}
-      <div className="mx-5 mb-3 px-4 py-3 rounded-2xl bg-background border border-border space-y-2 shadow-sm shrink-0">
-        <p className="text-xs font-semibold text-foreground">{t("city_picker.not_your_city")}</p>
-        <div className="flex gap-2">
-          <Input type="text" placeholder={t("city_picker.city_placeholder")} value={notifyCity} onChange={e => setNotifyCity(e.target.value)} className="h-8 text-base flex-1" onKeyDown={e => e.key === "Enter" && handleNotify()} />
-          <Button size="sm" variant="outline" onClick={handleNotify} className="h-8 text-xs px-3 shrink-0">{t("city_picker.send")}</Button>
-        </div>
-        <p className="text-[10px] text-foreground/60 leading-relaxed">
-          {t("city_picker.notify_hint")}
-        </p>
-      </div>
-
       {/* CTA */}
       <div className="px-4 pt-3 pb-[calc(12px+env(safe-area-inset-bottom,0px))] shrink-0">
         <Button
