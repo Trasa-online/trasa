@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Camera, Shield, Bell, LogOut, ChevronRight, Cookie, FileText, Trash2, KeyRound, AlertCircle, X, ArrowLeft, Link as LinkIcon, Mail, Languages, RotateCcw } from "lucide-react";
 import { isHardcodedAdmin } from "@/lib/admins";
+import { useOnboarding } from "@/components/OnboardingGuide";
 import { Switch } from "@/components/ui/switch";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { toast } from "sonner";
@@ -502,6 +503,7 @@ const Settings = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { t } = useTranslation("settings");
+  const { restart: restartOnboarding } = useOnboarding();
 
   const [firstName, setFirstName] = useState("");
   const [username, setUsername] = useState("");
@@ -727,12 +729,8 @@ const Settings = () => {
           <div className="space-y-2">
             <button
               onClick={() => {
-                try {
-                  localStorage.removeItem("trasa_onboarding_v2_1_done");
-                  localStorage.removeItem("trasa_onboarding_v2_done");
-                } catch { /* unavailable */ }
                 toast.success("Onboarding zresetowany");
-                navigate("/onboarding");
+                restartOnboarding();
               }}
               className="w-full flex items-center gap-3 px-4 py-3.5 bg-card rounded-2xl border border-border/40 hover:bg-muted transition-colors text-left"
             >

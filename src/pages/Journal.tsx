@@ -5,15 +5,18 @@ import { useNavigate } from "react-router-dom";
 import JournalTab from "@/components/home/JournalTab";
 import { useTranslation } from "react-i18next";
 import { PLANNING_DISABLED } from "@/lib/appMode";
+import { useOnboarding } from "@/components/OnboardingGuide";
 
 const Journal = () => {
   const { user, isAnonymous } = useAuth();
   const { open } = useAuthDrawer();
   const navigate = useNavigate();
   const { t } = useTranslation("journal");
+  const { active: onboardingActive } = useOnboarding();
   // Anon = traktuj jak gosc (zero zapisanych danych w UI). Dziennik wymaga
   // konta z mailem zeby trasy/pocztówki byly persystowane miedzy urzadzeniami.
-  const isGuestView = !user || isAnonymous;
+  // WYJATEK: podczas onboardingu pokazujemy realny dziennik z fejk-wyjazdem.
+  const isGuestView = (!user || isAnonymous) && !onboardingActive;
 
   // Guest: pelnoekranowy wycentrowany empty state, bez tytulu strony (TopBar tez ukryty na route /dziennik)
   if (isGuestView) {

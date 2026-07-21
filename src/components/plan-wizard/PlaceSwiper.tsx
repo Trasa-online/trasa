@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { getPhotoUrl, isCachedPhotoUrl, ensurePhotoCached } from "@/lib/placePhotos";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthDrawer } from "@/hooks/useAuthDrawer";
+import { useOnboarding } from "@/components/OnboardingGuide";
 import { useHaptics } from "@/hooks/useHaptics";
 import { getSubcategoryIds, getMainCategoryFor, getDbCategoriesFor, MAIN_CATEGORIES, mainCategoryLabel } from "@/lib/categories";
 import { addLike as saveExploreLike, clearGroup as clearExploreGroup } from "@/lib/exploreLikes";
@@ -1155,6 +1156,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
   const navigate = useNavigate();
   const { user, isAnonymous } = useAuth();
   const { open: openAuthDrawer } = useAuthDrawer();
+  const { active: onboardingActive } = useOnboarding();
   const haptics = useHaptics();
 
   const [allPlaces, setAllPlaces] = useState<MockPlace[]>([]);
@@ -1491,9 +1493,9 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
   const handleLike = (overridePhotoUrl?: string, placeOverride?: MockPlace) => {
     const top = placeOverride ?? displayQueue[0];
     if (!top) return;
-    // Anonim moze TYLKO przegladac - zapis miejsca wymaga konta. (Onboarding + DemoSession
-    // nie uzywaja tego swipera, wiec ich nie dotyczy.)
-    if (!user || isAnonymous) { openAuthDrawer({ mode: "register", hint: "save_route" }); return; }
+    // Anonim moze TYLKO przegladac - zapis miejsca wymaga konta. WYJATEK: podczas onboardingu
+    // (fejk-konto) zapis dziala, zeby user przeszedl pelna petle. Po onboardingu blokada wraca.
+    if ((!user || isAnonymous) && !onboardingActive) { openAuthDrawer({ mode: "register", hint: "save_route" }); return; }
     haptics.medium();
     setHistory(prev => [...prev, { place: top, reaction: "liked" }]);
     setLikedPlaces(prev => [...prev, top]);

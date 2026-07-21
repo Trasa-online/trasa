@@ -4,6 +4,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { ArrowLeft, X, Plus, Filter, Check, Star, MapPin, ArrowRight, ChevronDown, Layers, Compass } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/hooks/useAuth";
+import { useOnboarding } from "@/components/OnboardingGuide";
 import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
@@ -48,6 +49,7 @@ const PlanWizard = () => {
   const location = useLocation();
   const { user, isAnonymous } = useAuth();
   const { open: openAuthDrawer } = useAuthDrawer();
+  const { active: onboardingActive } = useOnboarding();
   const posthog = usePostHog();
   const { t } = useTranslation("plan");
   const returnState = location.state as { step?: number; city?: string; date?: string; numDays?: number; startingLocation?: string | { name: string; latitude: number; longitude: number }; likedPlaceNames?: string[]; skippedPlaceNames?: string[]; exploreMode?: boolean; wyjazdMode?: boolean; fromRoute?: boolean } | null;
@@ -234,7 +236,8 @@ const PlanWizard = () => {
     // Tryb WYJAZDU: bez kulminacji w planie AI. Tworzymy wyjazd (routes + pins) z polubionych
     // + wybrane miasto/daty i otwieramy edytor wpisu (ReviewSummary, tryb edycji - stepper).
     if (wyjazdMode) {
-      if (!user || isAnonymous) { openAuthDrawer({ mode: "register", hint: "save_route" }); return; }
+      // Podczas onboardingu (fejk-konto anon) tworzenie wyjazdu dziala realnie - bez blokady.
+      if ((!user || isAnonymous) && !onboardingActive) { openAuthDrawer({ mode: "register", hint: "save_route" }); return; }
       const pad = (n: number) => String(n).padStart(2, "0");
       const startISO = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
       const end = new Date(date); end.setDate(end.getDate() + Math.max(0, numDays - 1));

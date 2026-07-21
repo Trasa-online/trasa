@@ -12,6 +12,7 @@ import { useAppResume } from "@/hooks/useAppResume";
 import AuthDrawer from "@/components/auth/AuthDrawer";
 import { businessPanelPath } from "@/lib/businessRedirect";
 import { TrasaLogo } from "@/components/TrasaLogo";
+import { OnboardingProvider } from "@/components/OnboardingGuide";
 import { supabase } from "@/integrations/supabase/client";
 import { isNative } from "@/lib/platform";
 import { PLANNING_DISABLED } from "@/lib/appMode";
@@ -418,11 +419,7 @@ function RootPage() {
       </div>
     );
   }
-  // First-run (native): niewidziany onboarding v2 -> prowadzony demo-przelot. Flaga per-urzadzenie.
-  const onboardingDone = (() => {
-    try { return localStorage.getItem("trasa_onboarding_v2_1_done") === "1"; } catch { return true; }
-  })();
-  if (isNative && !onboardingDone) return <Navigate to="/onboarding" replace />;
+  // Onboarding v3 = coach-overlay na realnych ekranach (OnboardingProvider), nie osobny route.
   return <Navigate to="/eksploruj" replace />;
 }
 
@@ -662,7 +659,6 @@ const EditPlan         = lazy(() => import("./pages/EditPlan"));
 const ReviewSummary    = lazy(() => import("./pages/ReviewSummary"));
 const ActiveTrip       = lazy(() => import("./pages/ActiveTrip"));
 const AddPlaceToTrip   = lazy(() => import("./pages/AddPlaceToTrip"));
-const Onboarding       = lazy(() => import("./pages/Onboarding"));
 const PlanWizard       = lazy(() => import("./pages/PlanWizard"));
 const CreateGroupSession = lazy(() => import("./pages/CreateGroupSession"));
 const GroupSession     = lazy(() => import("./pages/GroupSession"));
@@ -736,6 +732,7 @@ const App = () => (
         <BusinessGuard />
         <CookieBanner />
         <AuthDrawer />
+        <OnboardingProvider>
         <MaintenanceGate>
         <WebWaitlistGate>
         <Suspense fallback={<div className="h-screen flex items-center justify-center"><div className="h-8 w-8 rounded-full border-2 border-orange-500 border-t-transparent animate-spin" /></div>}>
@@ -750,7 +747,6 @@ const App = () => (
           {/* Tryb uproszczony (PLANNING_DISABLED): "Twoje trasy" scalone w Wyjazdy (Dziennik). */}
           <Route path="/home" element={PLANNING_DISABLED ? <Navigate to="/dziennik" replace /> : <AppLayout hideTopBar><HomeSwipe /></AppLayout>} />
           <Route path="/eksploruj" element={<AppLayout hideTopBar><Explore /></AppLayout>} />
-          <Route path="/onboarding" element={<Onboarding />} />
           <Route path="/polubione" element={<AppLayout hideTopBar><LikedPlaces /></AppLayout>} />
           <Route path="/zestawienie/nowe" element={<RequireAuth><CreateRanking /></RequireAuth>} />
           <Route path="/zestawienie/:id/edytuj" element={<RequireAuth><CreateRanking /></RequireAuth>} />
@@ -795,6 +791,7 @@ const App = () => (
         </Suspense>
         </WebWaitlistGate>
         </MaintenanceGate>
+        </OnboardingProvider>
         </AuthDrawerProviderWrapper>
         </AuthProvider>
         </ErrorBoundary>
