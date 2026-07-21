@@ -7,7 +7,7 @@ import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { resolveStored } from "@/components/PlacePhoto";
 import { format, parseISO, isValid } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
-import { Globe, Lock, Loader2, Trash2, CalendarDays, Sparkles, Eye, Plus } from "lucide-react";
+import { Globe, Lock, Loader2, Trash2, CalendarDays, Sparkles, Eye, Plus, BookOpen } from "lucide-react";
 import { toast } from "sonner";
 import { PLANNING_DISABLED } from "@/lib/appMode";
 
@@ -338,15 +338,24 @@ const JournalTab = ({ userId }: JournalTabProps) => {
     return (
       <>
         <div className="flex-1 flex flex-col items-center justify-center gap-5 px-8 py-24 text-center">
-          <div className="w-20 h-20 rounded-full" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
+          <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center">
+            <BookOpen className="h-9 w-9 text-muted-foreground" strokeWidth={2} />
+          </div>
           <div className="space-y-2">
             <p className="text-xl font-bold tracking-tight">{PLANNING_DISABLED ? "Twoje wyjazdy" : t("journal.empty_title")}</p>
             <p className="text-sm text-muted-foreground leading-relaxed max-w-[260px] mx-auto">
               {PLANNING_DISABLED ? "Stwórz wyjazd i dorzuć do niego miejsca, które zapisałeś z eksploracji." : t("journal.empty_desc")}
             </p>
           </div>
-          {/* W trybie uproszczonym przycisk "Nowy wyjazd" jest w naglowku - tu go nie dublujemy. */}
-          {!PLANNING_DISABLED && (
+          {PLANNING_DISABLED ? (
+            <button
+              onClick={() => navigate("/plan", { state: { wyjazdMode: true } })}
+              className="px-6 py-3.5 rounded-full bg-primary text-white font-bold text-sm flex items-center gap-2 active:scale-95 transition-transform"
+            >
+              <Plus className="h-4 w-4" />
+              Stwórz wyjazd
+            </button>
+          ) : (
             <button
               onClick={() => navigate("/sesja/nowa", { state: { from: "journal" } })}
               className="px-6 py-3.5 rounded-full bg-primary text-white font-bold text-sm flex items-center gap-2 active:scale-95 transition-transform"

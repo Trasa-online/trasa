@@ -2,7 +2,7 @@ import { useMemo, useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useLocation } from "react-router-dom";
 import { PullToRefresh } from "@/components/PullToRefresh";
-import { MapPin, Heart, Trash2, ArrowRight, ArrowLeft, Pencil, ListChecks, ChevronDown, Star, Check, Search, X, Layers, Compass } from "lucide-react";
+import { MapPin, Heart, Trash2, ArrowRight, ArrowLeft, Pencil, ListChecks, ChevronDown, Star, Check, Search, X, Layers, Compass, Bookmark } from "lucide-react";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import { fetchEnrichedPlace, type MockPlace } from "@/components/plan-wizard/PlaceSwiper";
 import { parseISO, isValid, format, isToday, isYesterday } from "date-fns";
@@ -204,8 +204,8 @@ export const LikedTab = ({ selectMode = false, onExitSelection }: { selectMode?:
   if (totalLikes === 0) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center gap-5 px-8 py-16 text-center">
-        <div className="h-16 w-16 rounded-full bg-orange-50 border border-orange-100 flex items-center justify-center">
-          <Heart className="h-7 w-7 text-orange-600" />
+        <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center">
+          <Bookmark className="h-9 w-9 text-muted-foreground" strokeWidth={2} />
         </div>
         <div className="space-y-2">
           <p className="text-lg font-bold tracking-tight">{t("liked.empty_title")}</p>
@@ -214,9 +214,10 @@ export const LikedTab = ({ selectMode = false, onExitSelection }: { selectMode?:
           </p>
         </div>
         <button
-          onClick={() => navigate("/home")}
-          className="px-6 py-3 rounded-full bg-primary text-white font-bold text-sm active:scale-95 transition-transform shadow-md shadow-orange-500/20"
+          onClick={() => navigate("/plan", { state: { exploreMode: true } })}
+          className="px-6 py-3.5 rounded-full bg-primary text-white font-bold text-sm flex items-center gap-2 active:scale-95 transition-transform"
         >
+          <Compass className="h-4 w-4" />
           {t("liked.browse")}
         </button>
       </div>
