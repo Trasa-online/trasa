@@ -168,7 +168,7 @@ const ReviewSummary = () => {
       if (!dayRouteIds.length) return [];
       const { data } = await (supabase as any)
         .from("pins")
-        .select("id, route_id, place_name, address, category, suggested_time, description, image_url, images, latitude, longitude, place_id, photo_url, pin_order")
+        .select("id, route_id, place_name, address, category, suggested_time, description, image_url, images, latitude, longitude, place_id, photo_url, pin_order, visited_at")
         .in("route_id", dayRouteIds)
         .order("pin_order", { ascending: true });
       return data ?? [];
@@ -518,6 +518,57 @@ const ReviewSummary = () => {
   // ── Edycja planu dnia (#4/#5) ──
   const workingPins = draft && draft.dayId === activeRouteId ? draft.pins : currentPins;
 
+  // ── Odwiedzone (checklist "Bylem tu") - reczne oznaczanie, backed by pins.visited_at.
+  // "Dni z dat": visited_at to timestamp, wiec wspomnienie moze grupowac po dacie odwiedzenia.
+  // (Auto check-in GPS = Stage 2). visitedOverrides = optymistyczny stan przed refetchem.
+  const [visitedOverrides, setVisitedOverrides] = useState<Record<string, boolean>>({});
+  const isVisited = (pin: any) =>
+    visitedOverrides[pin.id] ?? !!(allPins.find((p: any) => p.id === pin.id)?.visited_at);
+  const visitedCount = currentPins.filter((p: any) => isVisited(p)).length;
+  const toggleVisited = async (pin: any) => {
+    const next = !isVisited(pin);
+    setVisitedOverrides((o) => ({ ...o, [pin.id]: next }));
+    try {
+      await (supabase as any).from("pins")
+        .update({ visited_at: next ? new Date().toISOString() : null })
+        .eq("id", pin.id);
+      queryClient.invalidateQueries({ queryKey: ["review-all-pins"] });
+    } catch (e: any) {
+      console.error("[ReviewSummary] toggleVisited failed:", e?.message ?? e);
+      setVisitedOverrides((o) => ({ ...o, [pin.id]: !next })); // revert
+    }
+  };
+
+  // Pasek postepu "X/Y odwiedzone" - nad lista miejsc (aktywny wyjazd + read).
+  const renderVisitedProgress = () => {
+    if (currentPins.length === 0) return null;
+    const pct = Math.round((visitedCount / currentPins.length) * 100);
+    return (
+      <div className="mb-3">
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-xs font-semibold text-muted-foreground">Odwiedzone</span>
+          <span className="text-xs font-bold text-foreground">{visitedCount}/{currentPins.length}</span>
+        </div>
+        <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+          <div className="h-full bg-green-500 rounded-full transition-all" style={{ width: `${pct}%` }} />
+        </div>
+      </div>
+    );
+  };
+
+  // Przycisk toggle "Bylem tu" na miejscu (zielony ptaszek gdy odwiedzone).
+  const renderVisitedToggle = (pin: any) => (
+    <button
+      onClick={(e) => { e.stopPropagation(); toggleVisited(pin); }}
+      aria-label={isVisited(pin) ? "Odznacz odwiedzone" : "Byłem tu"}
+      className={`h-9 w-9 rounded-full flex items-center justify-center shrink-0 transition-colors ${
+        isVisited(pin) ? "bg-green-500 text-white" : "bg-white border border-border text-muted-foreground active:bg-muted"
+      }`}
+    >
+      <Check className="h-4 w-4" strokeWidth={2.6} />
+    </button>
+  );
+
   const setWorking = (next: any[]) => { if (activeRouteId) setDraft({ dayId: activeRouteId, pins: next }); };
   const movePin = (from: number, to: number) => {
     if (to < 0 || to >= workingPins.length) return;
@@ -830,17 +881,18 @@ const ReviewSummary = () => {
 
   // ── Kompaktowy wiersz listy: miniaturka + nazwa + chip kategorii (+ reorder/usuń gdy edycja). ──
   const renderPlanRow = (pin: any, i: number, editable: boolean) => (
-    <div key={pin.id} className="flex items-center gap-3 rounded-2xl bg-secondary border border-border/40 shadow-sm p-2.5">
+    <div key={pin.id} className={`flex items-center gap-3 rounded-2xl bg-secondary border border-border/40 shadow-sm p-2.5 transition-opacity ${isVisited(pin) ? "opacity-60" : ""}`}>
       <button onClick={() => openDetail(pin)} className="relative h-14 w-14 shrink-0 rounded-xl overflow-hidden bg-muted active:opacity-90">
         <PlacePhoto pin={pin} className="w-full h-full object-cover" emojiClass="text-2xl" />
         <span className="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-black/55 backdrop-blur text-white text-[10px] font-bold flex items-center justify-center">{i + 1}</span>
       </button>
       <button onClick={() => openDetail(pin)} className="min-w-0 flex-1 text-left">
-        <p className="text-sm font-bold leading-tight truncate">{pin.place_name}</p>
+        <p className={`text-sm font-bold leading-tight truncate ${isVisited(pin) ? "line-through" : ""}`}>{pin.place_name}</p>
         <span className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white text-[11px] font-semibold text-foreground">
           <span>{CATEGORY_EMOJI[pin.category] ?? "📍"}</span>{catLabel(pin.category)}
         </span>
       </button>
+      {renderVisitedToggle(pin)}
       {editable && (
         <div className="flex items-center gap-1 shrink-0">
           <div className="flex flex-col">
@@ -857,20 +909,24 @@ const ReviewSummary = () => {
   // + notka) na białym tle z delikatnym cieniem 1px. Tap -> wizytówka.
   const renderListReadonly = (withRating: boolean) => (
     <div className="space-y-2.5">
+      {renderVisitedProgress()}
       {currentPins.map((pin: any, i: number) => (
-        <div key={pin.id} className="rounded-2xl bg-secondary border border-black/5 shadow-sm p-3">
-          <button onClick={() => openDetail(pin)} className="flex items-center gap-3 w-full text-left active:opacity-90">
-            <div className="relative h-14 w-14 shrink-0 rounded-xl overflow-hidden bg-muted">
-              <PlacePhoto pin={pin} className="w-full h-full object-cover" emojiClass="text-2xl" />
-              <span className="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-black/55 backdrop-blur text-white text-[10px] font-bold flex items-center justify-center">{i + 1}</span>
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-bold leading-tight truncate">{pin.place_name}</p>
-              <span className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white text-[11px] font-semibold text-foreground">
-                <span>{CATEGORY_EMOJI[pin.category] ?? "📍"}</span>{catLabel(pin.category)}
-              </span>
-            </div>
-          </button>
+        <div key={pin.id} className={`rounded-2xl bg-secondary border border-black/5 shadow-sm p-3 transition-opacity ${isVisited(pin) ? "opacity-60" : ""}`}>
+          <div className="flex items-center gap-3">
+            <button onClick={() => openDetail(pin)} className="flex items-center gap-3 flex-1 min-w-0 text-left active:opacity-90">
+              <div className="relative h-14 w-14 shrink-0 rounded-xl overflow-hidden bg-muted">
+                <PlacePhoto pin={pin} className="w-full h-full object-cover" emojiClass="text-2xl" />
+                <span className="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-black/55 backdrop-blur text-white text-[10px] font-bold flex items-center justify-center">{i + 1}</span>
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className={`text-sm font-bold leading-tight truncate ${isVisited(pin) ? "line-through" : ""}`}>{pin.place_name}</p>
+                <span className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white text-[11px] font-semibold text-foreground">
+                  <span>{CATEGORY_EMOJI[pin.category] ?? "📍"}</span>{catLabel(pin.category)}
+                </span>
+              </div>
+            </button>
+            {renderVisitedToggle(pin)}
+          </div>
           {withRating && renderRatingNote(pin.place_name, false, true)}
         </div>
       ))}
@@ -889,6 +945,7 @@ const ReviewSummary = () => {
   // Lista (edytowalna): kompaktowe wiersze (miniatura + nazwa + chip + reorder/usuń).
   const renderEditablePlan = (_withRating: boolean) => (
     <div className="space-y-2">
+      {renderVisitedProgress()}
       {workingPins.map((pin: any, i: number) => renderPlanRow(pin, i, true))}
     </div>
   );
