@@ -19,6 +19,7 @@ import { useTranslation } from "react-i18next";
 import { createPortal } from "react-dom";
 import { MAIN_CATEGORIES, mainCategoryLabel } from "@/lib/categories";
 import { cn } from "@/lib/utils";
+import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { Star, Clock, ChevronRight, ChevronLeft, ChevronDown, X, Maximize2, Phone, Globe, FileText, Instagram, Facebook } from "lucide-react";
 import { parseISO, isValid, formatDistanceToNow, format, startOfMonth, addMonths } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
@@ -362,7 +363,19 @@ function HeroPhotoCarousel({ photos, placeName, onExpand, onClose, loading, topL
             className="absolute inset-0 w-full h-full"
             aria-label={t("expand_photo")}
           >
-            <img src={photos[activeIdx]} alt={placeName} className="absolute inset-0 w-full h-full object-cover" />
+            <img
+              src={photos[activeIdx]}
+              alt={placeName}
+              className="absolute inset-0 w-full h-full object-cover"
+              onError={(e) => {
+                // Gdy zdjecie sie nie zdekoduje (np. webp err=-50 na iOS) - fallback zamiast
+                // przezroczystego/pustego kadru. Guard przez data-fallback chroni przed petla.
+                const el = e.currentTarget;
+                if (el.dataset.fallback) return;
+                el.dataset.fallback = "1";
+                el.src = getRandomPinPlaceholder(placeName + activeIdx);
+              }}
+            />
           </button>
           <button
             onClick={() => onExpand(activeIdx)}

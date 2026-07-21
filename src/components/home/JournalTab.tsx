@@ -7,7 +7,7 @@ import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { resolveStored } from "@/components/PlacePhoto";
 import { format, parseISO, isValid } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
-import { Globe, Lock, Loader2, Trash2, CalendarDays, Sparkles, Eye, Plus, MapPin, X } from "lucide-react";
+import { Globe, Lock, Loader2, Trash2, CalendarDays, Sparkles, Eye, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 import { getHistoryByCity } from "@/lib/exploreLikes";
 import { PLANNING_DISABLED } from "@/lib/appMode";
@@ -141,7 +141,6 @@ const JournalTab = ({ userId }: JournalTabProps) => {
     enabled: entryIds.length > 0,
   });
   const coverMap = pinData.covers;
-  const countMap = pinData.counts;
 
   // Grupuj trasy wielodniowe (folder_id) w JEDNA pocztowke (dzien 1 = reprezentant).
   // Granica aktywny/wspomnienie liczona po OSTATNIM dniu trasy (end_date ?? start_date).
@@ -331,6 +330,104 @@ const JournalTab = ({ userId }: JournalTabProps) => {
     </div>
   ) : null;
 
+  // Karta wyjazdu = ta sama pocztowka dla aktywnych wyjazdow i wspomnien (bez nowego komponentu).
+  const renderTripCard = (entry: any, onOpen: () => void, inProgress = false) => {
+    const validPhotos = (entry.review_photos ?? []).filter((url: any) => !!url && typeof url === "string" && url.trim() !== "");
+    const thumb = validPhotos[0] ?? (coverMap as Record<string, string>)[entry.id] ?? getRandomPinPlaceholder(entry.id);
+    const _d = entry.start_date ? parseISO(entry.start_date) : null;
+    const dateLabel = _d && isValid(_d) ? format(_d, "d MMMM yyyy", { locale: dateLocale() }) : "";
+    const hasUserPhoto = validPhotos.length > 0;
+    return (
+      <div
+        key={entry.id}
+        onClick={onOpen}
+        className="w-full rounded-3xl bg-card border border-border/50 overflow-hidden text-left active:scale-[0.98] transition-transform cursor-pointer"
+      >
+        {/* Cover photo */}
+        <div className="relative w-full aspect-[16/9] overflow-hidden bg-muted">
+          <img
+            src={thumb}
+            alt=""
+            className="w-full h-full object-cover"
+            onError={(e) => { (e.target as HTMLImageElement).src = getRandomPinPlaceholder(entry.id + "_fallback"); }}
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+          <div className="absolute bottom-0 left-0 right-0 px-4 pb-3">
+            <p className="text-white font-bold text-lg leading-tight drop-shadow-sm">
+              {entry.title || entry.city || t("journal.trip_fallback")}
+            </p>
+            <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+              {dateLabel && <p className="text-white/70 text-xs">{dateLabel}</p>}
+              {inProgress && (
+                <span className="flex items-center gap-1 bg-orange-500/90 rounded-full px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                  W toku
+                </span>
+              )}
+              {entry._numDays > 1 && (
+                <span className="flex items-center gap-1 bg-white/20 backdrop-blur-sm rounded-full px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                  <CalendarDays className="h-2.5 w-2.5" />{t("journal.days_count", { num: entry._numDays })}
+                </span>
+              )}
+            </div>
+            {entry.is_shared && (entry.views ?? 0) > 0 && (
+              <div className="flex items-center gap-1 mt-1.5 bg-orange-500/90 rounded-full px-2 py-0.5 text-[10px] font-bold text-white w-fit">
+                <Eye className="h-3 w-3" />{viewsLabel(entry.views)}
+              </div>
+            )}
+          </div>
+          <div className="absolute top-3 left-3 bg-black/40 backdrop-blur-sm rounded-lg p-1.5">
+            {entry.is_shared === false
+              ? <Lock className="h-3 w-3 text-white/80" />
+              : <Globe className="h-3 w-3 text-white/80" />
+            }
+          </div>
+          {/* Top-right: badges + delete (kosz) */}
+          <div className="absolute top-3 right-3 flex items-center gap-1.5">
+            {entry.new_for_users?.includes(userId) && (
+              <div className="bg-primary rounded-full px-2 py-0.5 text-[10px] font-bold text-white shadow">
+                {t("journal.new_badge")}
+              </div>
+            )}
+            {hasUserPhoto && (
+              <div className="bg-black/40 backdrop-blur-sm rounded-full px-2 py-0.5 text-[10px] text-white/90">
+                {t("journal.your_photo")}
+              </div>
+            )}
+            {(entry.is_own || entry.group_session_id) && (
+              <button
+                onClick={(e) => handleDelete(e, entry)}
+                disabled={deletingId === entry.id}
+                className="h-7 w-7 flex items-center justify-center bg-black/40 backdrop-blur-sm rounded-full text-white/80 hover:text-white hover:bg-black/60 transition-colors disabled:opacity-50"
+                aria-label={entry.is_own ? t("journal.delete_aria") : t("journal.leave_aria")}
+              >
+                {deletingId === entry.id
+                  ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  : <Trash2 className="h-3.5 w-3.5" />
+                }
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Text below photo */}
+        {(entry.ai_highlight || entry.ai_summary) && (
+          <div className="px-4 py-3">
+            {entry.ai_highlight && (
+              <p className="text-sm text-foreground/80 italic leading-snug mb-1.5">
+                "{entry.ai_highlight}"
+              </p>
+            )}
+            {entry.ai_summary && (
+              <p className="text-xs text-muted-foreground line-clamp-2 leading-snug">
+                {entry.ai_summary}
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-16 text-muted-foreground text-sm">
@@ -375,33 +472,8 @@ const JournalTab = ({ userId }: JournalTabProps) => {
             <Plus className="h-4 w-4" /> Nowy wyjazd
           </button>
           {active.length > 0 && (
-            <div className="space-y-2">
-              {active.map((entry: any) => {
-                const cnt = (countMap as Record<string, number>)[entry.id] ?? 0;
-                const cover = (coverMap as Record<string, string>)[entry.id];
-                const cntLabel = cnt === 0 ? "brak miejsc" : `${cnt} ${cnt === 1 ? "miejsce" : cnt % 10 >= 2 && cnt % 10 <= 4 && (cnt % 100 < 10 || cnt % 100 >= 20) ? "miejsca" : "miejsc"}`;
-                return (
-                  <button
-                    key={entry.id}
-                    onClick={() => navigate(`/wyjazd/${entry.id}`)}
-                    className="w-full flex items-center gap-3 p-2.5 rounded-2xl border border-border/50 bg-card text-left active:scale-[0.99] transition-transform"
-                  >
-                    <div className="h-14 w-14 rounded-xl overflow-hidden bg-muted shrink-0 flex items-center justify-center">
-                      {cover
-                        ? <img src={cover} alt="" className="w-full h-full object-cover" />
-                        : <MapPin className="h-5 w-5 text-muted-foreground" />
-                      }
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-bold truncate">{entry.title || entry.city || "Wyjazd"}</p>
-                      <p className="text-xs text-muted-foreground truncate mt-0.5">
-                        {entry.city ? `${entry.city} · ` : ""}{cntLabel}
-                      </p>
-                    </div>
-                    <span className="text-xs font-semibold text-orange-600 shrink-0 pr-1">W toku</span>
-                  </button>
-                );
-              })}
+            <div className="space-y-3">
+              {active.map((entry: any) => renderTripCard(entry, () => navigate(`/wyjazd/${entry.id}`), true))}
             </div>
           )}
           {visibleEntries.length > 0 && (
@@ -424,113 +496,21 @@ const JournalTab = ({ userId }: JournalTabProps) => {
         </div>
       )}
 
-      {/* Lista wspomnień */}
-      {visibleEntries.map((entry) => {
-        const validPhotos = (entry.review_photos ?? []).filter((url: any) => !!url && typeof url === "string" && url.trim() !== "");
-        const thumb = validPhotos[0] ?? (coverMap as Record<string, string>)[entry.id] ?? getRandomPinPlaceholder(entry.id);
-        const _d = entry.start_date ? parseISO(entry.start_date) : null;
-        const dateLabel = _d && isValid(_d) ? format(_d, "d MMMM yyyy", { locale: dateLocale() }) : "";
-        const hasUserPhoto = validPhotos.length > 0;
-
-        return (
-          <div
-            key={entry.id}
-            onClick={async () => {
-              // Optymistycznie ukryj badge "Nowa trasa!" - update cache zanim nawiguje.
-              if (entry.new_for_users?.includes(userId)) {
-                queryClient.setQueryData(["journal-entries", userId], (old: any) =>
-                  (old ?? []).map((e: any) => e.id === entry.id
-                    ? { ...e, new_for_users: (e.new_for_users ?? []).filter((u: string) => u !== userId) }
-                    : e
-                  )
-                );
-                void supabase.rpc("dismiss_route_badge", { p_route_id: entry.id });
-                queryClient.invalidateQueries({ queryKey: ["journal-badge"] });
-              }
-              navigate(`/review-summary?route=${entry.id}`);
-            }}
-            className="w-full rounded-3xl bg-card border border-border/50 overflow-hidden text-left active:scale-[0.98] transition-transform cursor-pointer"
-          >
-            {/* Cover photo */}
-            <div className="relative w-full aspect-[16/9] overflow-hidden bg-muted">
-              <img
-                src={thumb}
-                alt=""
-                className="w-full h-full object-cover"
-                onError={(e) => { (e.target as HTMLImageElement).src = getRandomPinPlaceholder(entry.id + "_fallback"); }}
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-              <div className="absolute bottom-0 left-0 right-0 px-4 pb-3">
-                <p className="text-white font-bold text-lg leading-tight drop-shadow-sm">
-                  {entry.title || entry.city || t("journal.trip_fallback")}
-                </p>
-                <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                  {dateLabel && <p className="text-white/70 text-xs">{dateLabel}</p>}
-                  {entry._numDays > 1 && (
-                    <span className="flex items-center gap-1 bg-white/20 backdrop-blur-sm rounded-full px-1.5 py-0.5 text-[10px] font-semibold text-white">
-                      <CalendarDays className="h-2.5 w-2.5" />{t("journal.days_count", { num: entry._numDays })}
-                    </span>
-                  )}
-                </div>
-                {/* Nagroda: ile osob skorzystalo z udostepnionej trasy */}
-                {entry.is_shared && (entry.views ?? 0) > 0 && (
-                  <div className="flex items-center gap-1 mt-1.5 bg-orange-500/90 rounded-full px-2 py-0.5 text-[10px] font-bold text-white w-fit">
-                    <Eye className="h-3 w-3" />{viewsLabel(entry.views)}
-                  </div>
-                )}
-              </div>
-              <div className="absolute top-3 left-3 bg-black/40 backdrop-blur-sm rounded-lg p-1.5">
-                {entry.is_shared === false
-                  ? <Lock className="h-3 w-3 text-white/80" />
-                  : <Globe className="h-3 w-3 text-white/80" />
-                }
-              </div>
-              {/* Top-right: badges + delete (kosz) */}
-              <div className="absolute top-3 right-3 flex items-center gap-1.5">
-                {entry.new_for_users?.includes(userId) && (
-                  <div className="bg-primary rounded-full px-2 py-0.5 text-[10px] font-bold text-white shadow">
-                    {t("journal.new_badge")}
-                  </div>
-                )}
-                {hasUserPhoto && (
-                  <div className="bg-black/40 backdrop-blur-sm rounded-full px-2 py-0.5 text-[10px] text-white/90">
-                    {t("journal.your_photo")}
-                  </div>
-                )}
-                {(entry.is_own || entry.group_session_id) && (
-                  <button
-                    onClick={(e) => handleDelete(e, entry)}
-                    disabled={deletingId === entry.id}
-                    className="h-7 w-7 flex items-center justify-center bg-black/40 backdrop-blur-sm rounded-full text-white/80 hover:text-white hover:bg-black/60 transition-colors disabled:opacity-50"
-                    aria-label={entry.is_own ? t("journal.delete_aria") : t("journal.leave_aria")}
-                  >
-                    {deletingId === entry.id
-                      ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      : <Trash2 className="h-3.5 w-3.5" />
-                    }
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Text below photo */}
-            {(entry.ai_highlight || entry.ai_summary) && (
-              <div className="px-4 py-3">
-                {entry.ai_highlight && (
-                  <p className="text-sm text-foreground/80 italic leading-snug mb-1.5">
-                    "{entry.ai_highlight}"
-                  </p>
-                )}
-                {entry.ai_summary && (
-                  <p className="text-xs text-muted-foreground line-clamp-2 leading-snug">
-                    {entry.ai_summary}
-                  </p>
-                )}
-              </div>
-            )}
-          </div>
-        );
-      })}
+      {/* Lista wspomnień - ta sama karta co aktywne wyjazdy */}
+      {visibleEntries.map((entry) => renderTripCard(entry, async () => {
+        // Optymistycznie ukryj badge "Nowa trasa!" - update cache zanim nawiguje.
+        if (entry.new_for_users?.includes(userId)) {
+          queryClient.setQueryData(["journal-entries", userId], (old: any) =>
+            (old ?? []).map((e: any) => e.id === entry.id
+              ? { ...e, new_for_users: (e.new_for_users ?? []).filter((u: string) => u !== userId) }
+              : e
+            )
+          );
+          void supabase.rpc("dismiss_route_badge", { p_route_id: entry.id });
+          queryClient.invalidateQueries({ queryKey: ["journal-badge"] });
+        }
+        navigate(`/review-summary?route=${entry.id}`);
+      }))}
       {createSheet}
     </div>
   );

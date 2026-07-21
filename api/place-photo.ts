@@ -21,7 +21,12 @@ export default async function handler(req: Request): Promise<Response> {
     ? `https://places.googleapis.com/v1/places/${encodeURIComponent(placeId)}/photos/${encodeURIComponent(ref)}/media?maxHeightPx=${maxWidth}&key=${apiKey}`
     : `https://maps.googleapis.com/maps/api/place/photo?maxwidth=${maxWidth}&photo_reference=${encodeURIComponent(ref)}&key=${apiKey}`;
 
-  const upstream = await fetch(googleUrl);
+  // Preferuj JPEG. Bez Accept Google potrafi zwrocic image/webp, ktory na natywnym iOS
+  // (WebKit) czasem nie dekoduje sie ("makeImagePlus ... 'WEBP' err=-50") -> zdjecie
+  // ladowalo sie jako przezroczyste/puste. Nudge w strone JPEG/PNG ogranicza ten przypadek.
+  const upstream = await fetch(googleUrl, {
+    headers: { Accept: "image/jpeg,image/png;q=0.9,image/*;q=0.8" },
+  });
 
   if (!upstream.ok) {
     return new Response("Photo not found", { status: upstream.status });

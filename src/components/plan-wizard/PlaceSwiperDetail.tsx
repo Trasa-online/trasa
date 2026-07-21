@@ -15,7 +15,7 @@ import { useDistanceReference } from "@/lib/distanceReference";
 import { haversineKm, formatDistance } from "@/lib/distance";
 import { Drawer as VaulDrawer } from "vaul";
 import { supabase } from "@/integrations/supabase/client";
-import { getPhotoUrl, isCachedPhotoUrl, ensurePhotoCached } from "@/lib/placePhotos";
+import { getPhotoUrl, ensurePhotoCached } from "@/lib/placePhotos";
 import { type MockPlace, fetchEnrichedPlace } from "./PlaceSwiper";
 import posthog from "posthog-js";
 import PremiumBusinessCard from "@/components/business/PremiumBusinessCard";
@@ -111,8 +111,6 @@ const PlaceSwiperDetail = ({
         setPhotos([cur.photo_url, ...(cur.galleryPhotos ?? [])].filter(Boolean) as string[]);
       }
 
-      const alreadyCached = isCachedPhotoUrl(cur.photo_url);
-      const hasGallery = (cur.galleryPhotos ?? []).length > 0;
       const placesPromise = supabase.functions
         .invoke("google-places-proxy", {
           body: {
@@ -131,13 +129,20 @@ const PlaceSwiperDetail = ({
         .then(({ data }) => {
           if (data?.result) {
             setDetail(data.result);
-            // Nie nadpisuj photos Google'em gdy biznes ma juz wlasne zdjecia.
-            if (!alreadyCached && !hasGallery && !hasBizPhotos) {
-              const urls = (data.result.photos ?? [])
+            // Nie nadpisuj photos Google'em gdy biznes ma juz wlasne zdjecia. Dla zwyklych
+            // miejsc: pokazujemy MIN. 3 zdjecia - cache'owana okladka (szybki JPEG) jako
+            // pierwsze, a Google (do 3 refow) uzupelnia. Wczesniej dla cache'owanego miejsca
+            // fetch Google byl pomijany -> wizytowka miala tylko 1 zdjecie.
+            if (!hasBizPhotos) {
+              const isUsable = (u: string | undefined): u is string =>
+                typeof u === "string" && (u.startsWith("http") || u.startsWith("/api/"));
+              const googleUrls = (data.result.photos ?? [])
                 .slice(0, 3)
                 .map((p: { photo_url?: string; photo_reference?: string }) => p.photo_url ?? getPhotoUrl(p.photo_reference ?? "", 800))
-                .filter((u: string | undefined): u is string => typeof u === "string" && (u.startsWith("http") || u.startsWith("/api/")));
-              if (urls.length > 0) setPhotos(urls);
+                .filter(isUsable);
+              const coverFirst = isUsable(cur.photo_url) ? [cur.photo_url] : [];
+              const merged = [...coverFirst, ...googleUrls].filter((u, i, arr) => arr.indexOf(u) === i);
+              if (merged.length > 0) setPhotos(merged);
               ensurePhotoCached(
                 {
                   table: "places",
