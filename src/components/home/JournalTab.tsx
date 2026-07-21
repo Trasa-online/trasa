@@ -26,6 +26,8 @@ const JournalTab = ({ userId }: JournalTabProps) => {
   const [showCreate, setShowCreate] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [newCity, setNewCity] = useState("");
+  const [newStart, setNewStart] = useState("");
+  const [newEnd, setNewEnd] = useState("");
   const [creating, setCreating] = useState(false);
   const savedCities = useMemo(() => {
     try {
@@ -52,12 +54,14 @@ const JournalTab = ({ userId }: JournalTabProps) => {
           status: "draft",
           day_number: 1,
           is_shared: false,
+          start_date: newStart || null,
+          end_date: newEnd || newStart || null,
         })
         .select("id")
         .single();
       if (error) throw error;
       setShowCreate(false);
-      setNewTitle(""); setNewCity("");
+      setNewTitle(""); setNewCity(""); setNewStart(""); setNewEnd("");
       queryClient.invalidateQueries({ queryKey: ["journal-entries", userId] });
       navigate(`/wyjazd/${data.id}`);
     } catch (err: any) {
@@ -296,6 +300,25 @@ const JournalTab = ({ userId }: JournalTabProps) => {
               ))}
             </div>
           )}
+        </div>
+        <div>
+          <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">Kiedy? (opcjonalnie)</label>
+          <div className="flex items-center gap-2">
+            <input
+              type="date"
+              value={newStart}
+              onChange={(e) => setNewStart(e.target.value)}
+              className="flex-1 h-11 px-3 rounded-2xl border border-border bg-muted/30 text-sm focus:outline-none focus:border-foreground/30"
+            />
+            <span className="text-muted-foreground text-sm">-</span>
+            <input
+              type="date"
+              value={newEnd}
+              min={newStart || undefined}
+              onChange={(e) => setNewEnd(e.target.value)}
+              className="flex-1 h-11 px-3 rounded-2xl border border-border bg-muted/30 text-sm focus:outline-none focus:border-foreground/30"
+            />
+          </div>
         </div>
         <button
           onClick={handleCreateWyjazd}

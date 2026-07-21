@@ -15,6 +15,8 @@ import { getSubcategoryLabel, subcategoryLabelLocalized, MAIN_CATEGORIES } from 
 import { getPhotoUrl } from "@/lib/placePhotos";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthDrawer } from "@/hooks/useAuthDrawer";
+import { PLANNING_DISABLED } from "@/lib/appMode";
+import { createWyjazdFromPlaces } from "@/lib/createWyjazd";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -229,14 +231,26 @@ export const LikedTab = ({ selectMode = false, onExitSelection }: { selectMode?:
     });
   };
 
-  const handleBuildFromSelection = () => {
+  const handleBuildFromSelection = async () => {
     if (!selectionCity || selectedNames.size === 0) return;
     if (!user) { openAuthDrawer({ mode: "register", hint: "save_route" }); return; }
-    const names = allPlaces
-      .filter(p => p.city === selectionCity && selectedNames.has(p.place_name))
-      .map(p => p.place_name);
+    const chosen = allPlaces.filter(p => p.city === selectionCity && selectedNames.has(p.place_name));
     onExitSelection?.();
-    navigate("/plan", { state: { step: 3, city: selectionCity, date: new Date().toISOString(), likedPlaceNames: names } });
+    if (PLANNING_DISABLED) {
+      // Tryb uproszczony: z zaznaczonych zapisanych tworzymy od razu WYJAZD (bez planowania).
+      const id = await createWyjazdFromPlaces(user.id, selectionCity, selectionCity, chosen.map(p => ({
+        place_name: p.place_name,
+        category: p.category,
+        address: (p as any).address ?? null,
+        latitude: p.latitude ?? null,
+        longitude: p.longitude ?? null,
+        photo_url: p.photo_url ?? null,
+        place_id: (p as any).place_id ?? null,
+      })));
+      if (id) navigate(`/wyjazd/${id}`);
+      return;
+    }
+    navigate("/plan", { state: { step: 3, city: selectionCity, date: new Date().toISOString(), likedPlaceNames: chosen.map(p => p.place_name) } });
   };
 
   return (

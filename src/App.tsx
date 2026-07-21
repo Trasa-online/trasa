@@ -670,6 +670,16 @@ const BusinessStart     = lazy(() => import("./pages/BusinessStart"));
 const BusinessOnboarding = lazy(() => import("./pages/BusinessOnboarding"));
 const BusinessLanding   = lazy(() => import("./pages/BusinessLanding"));
 
+// Tryb uproszczony: /plan sluzy TEZ do zwyklego przegladania kart (exploreMode - "Przegladaj"
+// w eksploracji, bez intencji planowania, bez zapisu draftu). Przegladanie zostaje wlaczone;
+// blokujemy tylko wejscie w kreator planu.
+function PlanRoute() {
+  const location = useLocation();
+  const exploreMode = !!(location.state as any)?.exploreMode;
+  if (PLANNING_DISABLED && !exploreMode) return <Navigate to="/eksploruj" replace />;
+  return <PlanWizard />;
+}
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -750,8 +760,9 @@ const App = () => (
           {/* Wyjazd (tryb uproszczony) - lekki detal wyjazdu bez planowania. */}
           <Route path="/wyjazd/:id" element={<Wyjazd />} />
           <Route path="/wyjazd/nowy" element={<Navigate to="/dziennik" replace />} />
-          {/* Planowanie tras (kreator + sesje grupowe) - wylaczone w trybie uproszczonym na native. */}
-          <Route path="/plan" element={PLANNING_DISABLED ? <Navigate to="/eksploruj" replace /> : <PlanWizard />} />
+          {/* Planowanie tras (kreator + sesje grupowe) - wylaczone w trybie uproszczonym na native.
+              Wyjatek: exploreMode ("Przegladaj") zostaje wlaczony - patrz PlanRoute. */}
+          <Route path="/plan" element={<PlanRoute />} />
           <Route path="/demo" element={<DemoSession />} />
           <Route path="/sesja/nowa" element={PLANNING_DISABLED ? <Navigate to="/eksploruj" replace /> : <CreateGroupSession />} />
           <Route path="/sesja/:joinCode" element={PLANNING_DISABLED ? <Navigate to="/eksploruj" replace /> : <GroupSession />} />

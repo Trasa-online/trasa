@@ -21,6 +21,8 @@ import { COLLECTION_THEMES, getTheme, collectionKind } from "@/lib/collectionThe
 import { addLike, getHistoryByCity } from "@/lib/exploreLikes";
 import { TrasaLogo } from "@/components/TrasaLogo";
 import { toast } from "sonner";
+import { PLANNING_DISABLED } from "@/lib/appMode";
+import { createWyjazdFromPlaces } from "@/lib/createWyjazd";
 
 type DiscoveryItem = {
   id: string;
@@ -243,11 +245,27 @@ export function CollectionDetail({ col, onClose, onAdopt }: { col: DiscoveryColl
 
   // "Uzyj tej trasy" - przejmij miejsca zestawienia do nowej trasy (swiper -> Dopasowania).
   // Najpierw pyta o date (przez onAdopt -> drawer w feedzie), potem laduje w PlanWizard.
-  const adoptRoute = () => {
+  const adoptRoute = async () => {
     const names = col.items.map((i) => i.place_name).filter(Boolean);
-    // Statystyka: dodanie zestawienia do wlasnego planu.
+    // Statystyka: dodanie zestawienia do wlasnego planu/wyjazdu.
     (supabase as any).rpc("increment_collection_plan_adds", { p_collection_id: col.id })
       .then(({ error }: any) => { if (error) console.warn("[DiscoveryFeed] increment_collection_plan_adds:", error.message); });
+    // Tryb uproszczony: zamiast planowania robimy WYJAZD z miejsc zestawienia.
+    if (PLANNING_DISABLED) {
+      if (!user) { toast.error("Zaloguj się, aby zrobić wyjazd"); return; }
+      const id = await createWyjazdFromPlaces(user.id, col.city, col.title || col.city || "Wyjazd", col.items.map((i) => ({
+        place_name: i.place_name,
+        category: i.category ?? null,
+        address: i.address ?? null,
+        latitude: i.latitude ?? null,
+        longitude: i.longitude ?? null,
+        photo_url: i.photo_url ?? null,
+        place_id: i.place_id ?? null,
+      })));
+      onClose();
+      if (id) navigate(`/wyjazd/${id}`);
+      return;
+    }
     if (onAdopt) { onAdopt(col.city, names); return; }
     onClose();
     navigate("/plan", { state: { step: 4, city: col.city, date: new Date().toISOString(), likedPlaceNames: names } });
@@ -447,9 +465,9 @@ export function CollectionDetail({ col, onClose, onAdopt }: { col: DiscoveryColl
           onClick={adoptRoute}
           className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.97] transition-transform shadow-md shadow-orange-500/20"
         >
-          {isRoute ? t("use_route") : t("plan_from_places")} <ArrowRight className="h-4 w-4" />
+          {PLANNING_DISABLED ? "Zrób wyjazd z tych miejsc" : isRoute ? t("use_route") : t("plan_from_places")} <ArrowRight className="h-4 w-4" />
         </button>
-        {col.city && (
+        {col.city && !PLANNING_DISABLED && (
           <button onClick={planOwn} className="w-full mt-1.5 py-2 text-sm font-semibold text-muted-foreground active:scale-[0.97] transition-transform">
             {t("plan_own_in", { city: col.city })}
           </button>
