@@ -5,7 +5,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Camera, X, Globe, Lock, Pencil, Check, Image as ImageIcon, Map as MapIcon, ChevronUp, ChevronDown, ChevronRight, ChevronLeft, Trash2, Plus, Share, Share2, List, GalleryHorizontalEnd, Info, MoreVertical } from "lucide-react";
+import { ArrowLeft, Camera, X, Globe, Lock, Pencil, Check, Image as ImageIcon, Map as MapIcon, MapPin, ChevronUp, ChevronDown, ChevronRight, ChevronLeft, Trash2, Plus, Share, Share2, List, GalleryHorizontalEnd, Info, MoreVertical } from "lucide-react";
 import { useShare } from "@/hooks/useShare";
 import { Switch } from "@/components/ui/switch";
 import AddPinSheet from "@/components/route/AddPinSheet";
@@ -19,6 +19,8 @@ import { dateLocale } from "@/lib/dateLocale";
 import { isNative } from "@/lib/platform";
 import { Camera as CapCamera } from "@capacitor/camera";
 import { notify } from "@/lib/notify";
+import { requestLocation } from "@/hooks/useGeolocation";
+import { haversineKm } from "@/lib/distance";
 import { deferDelete } from "@/lib/deferDelete";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 
@@ -539,7 +541,32 @@ const ReviewSummary = () => {
     }
   };
 
-  // Pasek postepu "X/Y odwiedzone" - nad lista miejsc (aktywny wyjazd + read).
+  // GPS check-in (on-demand, one-shot): "Jestem tutaj" -> pobierz pozycje i oznacz pobliskie
+  // (do 150 m) niezaliczone miejsca jako odwiedzone. Bez sledzenia w tle (prosto + prywatnie).
+  const [checkingIn, setCheckingIn] = useState(false);
+  const handleCheckIn = async () => {
+    setCheckingIn(true);
+    try {
+      const coords = await requestLocation(true);
+      if (!coords) { notify.error("Nie udało się pobrać lokalizacji"); return; }
+      const nearby = currentPins.filter((p: any) =>
+        !isVisited(p) && typeof p.latitude === "number" && typeof p.longitude === "number" &&
+        haversineKm(coords, { lat: p.latitude, lng: p.longitude }) < 0.15,
+      );
+      if (nearby.length === 0) { notify.error("Brak zapisanych miejsc w pobliżu (150 m)"); return; }
+      for (const p of nearby) await toggleVisited(p);
+      notify.success(nearby.length === 1
+        ? `Oznaczono „${nearby[0].place_name}" jako odwiedzone`
+        : `Oznaczono ${nearby.length} miejsca w pobliżu`);
+    } catch (e: any) {
+      console.error("[ReviewSummary] check-in failed:", e?.message ?? e);
+      notify.error("Nie udało się sprawdzić lokalizacji");
+    } finally {
+      setCheckingIn(false);
+    }
+  };
+
+  // Pasek postepu "X/Y odwiedzone" + (aktywny wyjazd) przycisk GPS "Jestem tutaj".
   const renderVisitedProgress = () => {
     if (currentPins.length === 0) return null;
     const pct = Math.round((visitedCount / currentPins.length) * 100);
@@ -552,6 +579,16 @@ const ReviewSummary = () => {
         <div className="h-1.5 rounded-full bg-muted overflow-hidden">
           <div className="h-full bg-green-500 rounded-full transition-all" style={{ width: `${pct}%` }} />
         </div>
+        {!isMemory && visitedCount < currentPins.length && (
+          <button
+            onClick={handleCheckIn}
+            disabled={checkingIn}
+            className="mt-2.5 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-secondary text-secondary-foreground text-xs font-semibold active:scale-[0.98] transition-transform disabled:opacity-50"
+          >
+            <MapPin className="h-3.5 w-3.5" />
+            {checkingIn ? "Sprawdzam..." : "Jestem tutaj - oznacz pobliskie"}
+          </button>
+        )}
       </div>
     );
   };
@@ -827,7 +864,7 @@ const ReviewSummary = () => {
   // ── Lista (read-only): miejsca grupowane po kategorii. Klik => wizytowka. ──
   // Wspolna karta miejsca (karuzela + pionowa lista). fullWidth -> pelna szerokosc (stacked).
   const renderPlanCard = (pin: any, i: number, fullWidth: boolean, editable: boolean, withRating: boolean) => (
-    <div key={pin.id} className={`${fullWidth ? "w-full" : "snap-center shrink-0 w-[80vw] max-w-[320px]"} rounded-2xl bg-secondary border border-border/40 overflow-hidden shadow-sm flex flex-col`}>
+    <div key={pin.id} className={`${fullWidth ? "w-full" : "snap-center shrink-0 w-[80vw] max-w-[320px]"} rounded-2xl bg-secondary border border-border/40 overflow-hidden shadow-sm flex flex-col transition-opacity ${isVisited(pin) ? "opacity-60" : ""}`}>
       <button onClick={() => openDetail(pin)} className="block w-full text-left active:opacity-90 transition-opacity">
         <div className="relative w-full aspect-[4/3] bg-muted">
           <PlacePhoto pin={pin} className="w-full h-full object-cover" emojiClass="text-4xl" />
@@ -865,6 +902,16 @@ const ReviewSummary = () => {
           })()}
         </div>
       </button>
+      {/* Toggle "Bylem tu" (karta) - poza przyciskiem openDetail (bez zagniezdzania buttonow). */}
+      <div className="px-4 pt-2 pb-1">
+        <button
+          onClick={() => toggleVisited(pin)}
+          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${isVisited(pin) ? "bg-green-500 text-white" : "bg-white border border-border text-muted-foreground active:bg-muted"}`}
+        >
+          <Check className="h-3.5 w-3.5" strokeWidth={2.6} />
+          {isVisited(pin) ? "Odwiedzone" : "Byłem tu"}
+        </button>
+      </div>
       {editable && (
         <div className="flex items-center justify-between px-4 py-3 mt-auto border-t border-border/30">
           <button onClick={() => movePin(i, i - 1)} disabled={i === 0} className="flex items-center gap-1 text-xs font-semibold text-muted-foreground disabled:opacity-25 active:scale-95">
@@ -907,31 +954,89 @@ const ReviewSummary = () => {
 
   // Lista (read-only / podsumowanie): każde miejsce = biała sekcja (miniatura + nazwa + chip
   // + notka) na białym tle z delikatnym cieniem 1px. Tap -> wizytówka.
-  const renderListReadonly = (withRating: boolean) => (
-    <div className="space-y-2.5">
-      {renderVisitedProgress()}
-      {currentPins.map((pin: any, i: number) => (
-        <div key={pin.id} className={`rounded-2xl bg-secondary border border-black/5 shadow-sm p-3 transition-opacity ${isVisited(pin) ? "opacity-60" : ""}`}>
-          <div className="flex items-center gap-3">
-            <button onClick={() => openDetail(pin)} className="flex items-center gap-3 flex-1 min-w-0 text-left active:opacity-90">
-              <div className="relative h-14 w-14 shrink-0 rounded-xl overflow-hidden bg-muted">
-                <PlacePhoto pin={pin} className="w-full h-full object-cover" emojiClass="text-2xl" />
-                <span className="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-black/55 backdrop-blur text-white text-[10px] font-bold flex items-center justify-center">{i + 1}</span>
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className={`text-sm font-bold leading-tight truncate ${isVisited(pin) ? "line-through" : ""}`}>{pin.place_name}</p>
-                <span className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white text-[11px] font-semibold text-foreground">
-                  <span>{CATEGORY_EMOJI[pin.category] ?? "📍"}</span>{catLabel(pin.category)}
-                </span>
-              </div>
-            </button>
-            {renderVisitedToggle(pin)}
+  const renderReadPin = (pin: any, i: number, withRating: boolean) => (
+    <div key={pin.id} className={`rounded-2xl bg-secondary border border-black/5 shadow-sm p-3 transition-opacity ${isVisited(pin) ? "opacity-60" : ""}`}>
+      <div className="flex items-center gap-3">
+        <button onClick={() => openDetail(pin)} className="flex items-center gap-3 flex-1 min-w-0 text-left active:opacity-90">
+          <div className="relative h-14 w-14 shrink-0 rounded-xl overflow-hidden bg-muted">
+            <PlacePhoto pin={pin} className="w-full h-full object-cover" emojiClass="text-2xl" />
+            <span className="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-black/55 backdrop-blur text-white text-[10px] font-bold flex items-center justify-center">{i + 1}</span>
           </div>
-          {withRating && renderRatingNote(pin.place_name, false, true)}
-        </div>
-      ))}
+          <div className="min-w-0 flex-1">
+            <p className={`text-sm font-bold leading-tight truncate ${isVisited(pin) ? "line-through" : ""}`}>{pin.place_name}</p>
+            <span className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white text-[11px] font-semibold text-foreground">
+              <span>{CATEGORY_EMOJI[pin.category] ?? "📍"}</span>{catLabel(pin.category)}
+            </span>
+          </div>
+        </button>
+        {renderVisitedToggle(pin)}
+      </div>
+      {withRating && renderRatingNote(pin.place_name, false, true)}
     </div>
   );
+
+  const placeWord = (n: number) => n === 1 ? "miejsce" : (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20)) ? "miejsca" : "miejsc";
+
+  const renderListReadonly = (withRating: boolean) => {
+    // We WSPOMNIENIU grupujemy odwiedzone po DNIU odwiedzenia (visited_at). Dni wynikaja same
+    // z tego kiedy user odhaczal - bez planowania z gory. Aktywny widok zostaje plaska checklista.
+    const anyVisited = currentPins.some((p: any) => isVisited(p));
+    if (isMemory && anyVisited) {
+      const byDay = new Map<string, any[]>();
+      const notVisited: any[] = [];
+      currentPins.forEach((pin: any) => {
+        if (isVisited(pin)) {
+          const key = pin.visited_at ? String(pin.visited_at).slice(0, 10) : "brak";
+          if (!byDay.has(key)) byDay.set(key, []);
+          byDay.get(key)!.push(pin);
+        } else notVisited.push(pin);
+      });
+      const days = [...byDay.keys()].filter((k) => k !== "brak").sort();
+      if (byDay.has("brak")) days.push("brak");
+      const dayLabel = (k: string) => {
+        if (k === "brak") return "Odwiedzone";
+        const d = parseISO(k);
+        return isValid(d) ? format(d, "d MMMM yyyy", { locale: dateLocale() }) : k;
+      };
+      let idx = 0;
+      return (
+        <div className="space-y-5">
+          {days.map((day) => {
+            const items = byDay.get(day)!;
+            return (
+              <div key={day}>
+                <div className="flex items-center gap-2 mb-2.5">
+                  <span className="text-sm font-black text-foreground">{dayLabel(day)}</span>
+                  <span className="text-xs font-semibold text-muted-foreground">{items.length} {placeWord(items.length)}</span>
+                  <div className="flex-1 h-px bg-border/50" />
+                </div>
+                <div className="space-y-2.5">
+                  {items.map((pin: any) => renderReadPin(pin, idx++, withRating))}
+                </div>
+              </div>
+            );
+          })}
+          {notVisited.length > 0 && (
+            <div>
+              <div className="flex items-center gap-2 mb-2.5">
+                <span className="text-sm font-black text-muted-foreground">Nieodwiedzone</span>
+                <div className="flex-1 h-px bg-border/50" />
+              </div>
+              <div className="space-y-2.5">
+                {notVisited.map((pin: any) => renderReadPin(pin, idx++, withRating))}
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+    return (
+      <div className="space-y-2.5">
+        {renderVisitedProgress()}
+        {currentPins.map((pin: any, i: number) => renderReadPin(pin, i, withRating))}
+      </div>
+    );
+  };
 
   // ── Szczegoly: poziomy swiper kart (jak kreator trasy). editable => move/usun,
   // withRating => Ocena + Notka pod karta. Klik w karte => wizytowka. ──
