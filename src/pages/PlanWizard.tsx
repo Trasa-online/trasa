@@ -328,6 +328,7 @@ const PlanWizard = () => {
       {/* Header */}
       <div className="flex items-center gap-2 px-4 pt-safe-4 pb-3 border-b border-border/20 shrink-0">
         <button
+          data-ob="wizard-back"
           onClick={handleBack}
           className="h-9 w-9 flex items-center justify-center -ml-1 shrink-0 text-foreground"
           aria-label={t("back")}

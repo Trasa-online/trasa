@@ -637,6 +637,7 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
             {t("reject")}
           </button>
           <button
+            data-ob="swipe-save"
             onClick={(e) => { e.stopPropagation(); onLike(); }}
             style={place.businessColorButton
               ? { background: place.businessColorButton, color: getHexContrast(place.businessColorButton) }
@@ -1530,6 +1531,8 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
     if (UUID_RE.test(top.id)) {
       posthog.capture("place_added_to_route", { place_id: top.id });
     }
+    // Onboarding: sygnalizuj realny zapis, zeby coach przeszedl do kolejnego kroku.
+    if (onboardingActive) { try { window.dispatchEvent(new CustomEvent("trasa:ob-saved")); } catch { /* noop */ } }
   };
 
   const handleSkip = () => {

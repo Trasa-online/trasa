@@ -380,6 +380,7 @@ const BottomNav = () => {
 
           {/* Center FAB */}
           <button
+            data-ob="nav-fab"
             onClick={() => setShowMenu(!showMenu)}
             className="flex items-center justify-center"
             aria-label={t("fab_aria")}
@@ -397,6 +398,7 @@ const BottomNav = () => {
           {PLANNING_DISABLED ? (
             <NavLink
               to="/polubione"
+              data-ob="nav-zapisane"
               end={false}
               className="flex flex-col items-center justify-center gap-1 text-muted-foreground transition-colors"
               activeClassName="text-orange-600"
