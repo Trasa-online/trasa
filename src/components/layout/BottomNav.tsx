@@ -177,7 +177,7 @@ const BottomNav = () => {
                 {planStep ? <ArrowLeft className="h-5 w-5" /> : <X className="h-5 w-5" />}
               </button>
               <h2 className="text-base font-black text-foreground">
-                {planStep ? t("menu_plan_title") : t("menu_title")}
+                {planStep ? (PLANNING_DISABLED ? "Nowy wyjazd" : t("menu_plan_title")) : t("menu_title")}
               </h2>
               <div className="w-9" />
             </div>
@@ -185,11 +185,24 @@ const BottomNav = () => {
             {/* Wiersz kafelkow akcji */}
             <div className="flex justify-center gap-6 pb-1">
               {PLANNING_DISABLED ? (
-                // Tryb uproszczony: menu "+" = Stworz wyjazd (miasto+daty+swiper) lub zestawienie.
-                <>
-                  <ActionTile icon={MapPin} label="Stwórz wyjazd" onClick={handleCreateWyjazd} />
-                  <ActionTile icon={Layers} label={t("create_collection")} onClick={handleCreateCollection} />
-                </>
+                // Tryb uproszczony: krok 1 = [Stworz wyjazd | Stworz zestawienie];
+                // "Stworz wyjazd" -> krok 2 = [Solo | Grupowo | Dolacz do sesji].
+                !planStep ? (
+                  <>
+                    <ActionTile icon={MapPin} label="Stwórz wyjazd" onClick={() => setPlanStep(true)} />
+                    <ActionTile icon={Layers} label={t("create_collection")} onClick={handleCreateCollection} />
+                  </>
+                ) : (
+                  <>
+                    <ActionTile icon={MapPin} label="Solo" onClick={handleCreateWyjazd} />
+                    <ActionTile icon={Users} label="Grupowo" onClick={handleGroupPlan} />
+                    <ActionTile
+                      icon={Link2}
+                      label={t("join_session")}
+                      onClick={() => { setShowMenu(false); setJoinCode(""); setShowJoinModal(true); }}
+                    />
+                  </>
+                )
               ) : !planStep ? (
                 <>
                   <ActionTile icon={Layers} label={t("create_collection")} onClick={handleCreateCollection} />

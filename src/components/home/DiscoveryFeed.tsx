@@ -263,7 +263,7 @@ export function CollectionDetail({ col, onClose, onAdopt }: { col: DiscoveryColl
         place_id: i.place_id ?? null,
       })));
       onClose();
-      if (id) navigate(`/review-summary?route=${id}`);
+      if (id) navigate(`/review-summary?route=${id}&edit=1`);
       return;
     }
     if (onAdopt) { onAdopt(col.city, names); return; }

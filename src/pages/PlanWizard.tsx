@@ -222,7 +222,7 @@ const PlanWizard = () => {
         photo_url: p.photo_url ?? null,
         place_id: (p as { id?: string | null }).id ?? null,
       })), { start_date: startISO, end_date: endISO });
-      if (id) navigate(`/review-summary?route=${id}`);
+      if (id) navigate(`/review-summary?route=${id}&edit=1`);
       return;
     }
 

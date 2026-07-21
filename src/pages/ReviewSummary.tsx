@@ -55,6 +55,10 @@ const ReviewSummary = () => {
   const share = useShare();
   const [searchParams] = useSearchParams();
   const routeId = searchParams.get("route");
+  // ?edit=1 wymusza tryb edycji (stepper Trasa/Notki/Zdjecia) nawet dla AKTYWNEGO (przyszla data)
+  // wyjazdu - domyslnie stepper pokazuje sie tylko dla wspomnien (isMemory). Uzywane przez
+  // "Stworz wyjazd" i taps w aktywne wyjazdy w dzienniku.
+  const forceEdit = searchParams.get("edit") === "1";
   const [editingName, setEditingName] = useState(false);
   const [nameVal, setNameVal] = useState("");
   const [savingName, setSavingName] = useState(false);
@@ -466,6 +470,13 @@ const ReviewSummary = () => {
   // (plan_finalized) i pokazuje podsumowanie zamiast steppera.
   const finishEditing = async () => {
     if (draft && draft.dayId === activeRouteId) await savePlan(false);
+    // Aktywny wyjazd (przyszla data, isMemory=false): NIE finalizujemy. Wpis staje sie
+    // zakonczony (pocztowka) dopiero PO minieciu daty. Wyjscie z edycji zapisuje i wraca do dziennika.
+    if (!isMemory) {
+      queryClient.invalidateQueries({ queryKey: ["journal-entries"] });
+      navigate("/dziennik");
+      return;
+    }
     try {
       await (supabase as any).from("routes").update({ plan_finalized: true }).in("id", dayRouteIds.length ? dayRouteIds : [activeRouteId]);
     } catch (e: any) { console.error("[ReviewSummary] finishEditing failed:", e?.message ?? e); }
@@ -1174,10 +1185,10 @@ const ReviewSummary = () => {
       {/* ── Scrollable content ────────────────────────────────────────────── */}
       <div className="flex-1 overflow-y-auto pb-32">
 
-        {isMemory ? (
+        {(isMemory || forceEdit) ? (
           isOwner ? (
             (!reviewed || editingStepper) ? (
-            /* ══ WSPOMNIENIE (właściciel) - EDYCJA: stepper 1 Trasa → 2 Notki → 3 Zdjęcia ══ */
+            /* ══ EDYCJA WPISU (właściciel) - stepper 1 Trasa → 2 Notki → 3 Zdjęcia (wspomnienie lub aktywny wyjazd z ?edit=1) ══ */
             <>
               {renderStepper()}
               <div className="px-5 pt-4">{renderStepInfo()}</div>
@@ -1447,10 +1458,10 @@ const ReviewSummary = () => {
 
       {/* ── Fixed bottom CTA ────────────────────────────────────────────── */}
       {/* W PODSUMOWANIU (wpis zrecenzowany) nie ma dolnego CTA - wyjscie przez strzalke cofania. */}
-      {!(isMemory && isOwner && reviewed && !editingStepper) && (
+      {!((isMemory || forceEdit) && isOwner && reviewed && !editingStepper) && (
       <div className="fixed bottom-0 left-0 right-0 px-5 pt-3 bg-background/80 backdrop-blur-md border-t border-border/30"
         style={{ paddingBottom: "max(20px, env(safe-area-inset-bottom, 20px))" }}>
-        {isMemory && isOwner && (!reviewed || editingStepper) ? (
+        {(isMemory || forceEdit) && isOwner && (!reviewed || editingStepper) ? (
           /* Stepper wpisu: Wstecz + Dalej/Gotowe. Edycje persystują (autosave on unmount +
              savePlan(false)); "Gotowe" oznacza wpis jako zrecenzowany (plan_finalized) i
              przechodzi do PODSUMOWANIA (nie wychodzi do Dziennika). */

@@ -21,6 +21,7 @@ export async function createWyjazdFromPlaces(
   title: string,
   places: WyjazdPlaceInput[],
   dates?: { start_date?: string | null; end_date?: string | null },
+  opts?: { groupSessionId?: string | null; newForUsers?: string[] },
 ): Promise<string | null> {
   const { data: route, error } = await (supabase as any)
     .from("routes")
@@ -34,6 +35,10 @@ export async function createWyjazdFromPlaces(
       is_shared: false,
       start_date: dates?.start_date ?? null,
       end_date: dates?.end_date ?? null,
+      // Wyjazd grupowy: wiaze wpis z sesja (widoczny u pozostalych czlonkow przez
+      // group_session_members join w dzienniku) + oznacza im "Nowa trasa!" badge.
+      group_session_id: opts?.groupSessionId ?? null,
+      new_for_users: opts?.newForUsers ?? null,
     })
     .select("id")
     .single();

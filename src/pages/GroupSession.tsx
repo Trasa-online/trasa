@@ -10,6 +10,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthDrawer } from "@/hooks/useAuthDrawer";
+import { PLANNING_DISABLED } from "@/lib/appMode";
+import { createWyjazdFromPlaces } from "@/lib/createWyjazd";
 import PlaceSwiper from "@/components/plan-wizard/PlaceSwiper";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import type { MockPlace } from "@/components/plan-wizard/PlaceSwiper";
@@ -1402,6 +1404,27 @@ const GroupSession = () => {
                         .update({ status: "completed", match_count: selectedMatches.length })
                         .eq("id", session.id);
                     }
+                    // Tryb uproszczony: grupowa sesja tworzy WYJAZD (routes+pins z dopasowan,
+                    // group_session_id + new_for_users) i otwiera edytor - bez planu AI (/create).
+                    if (PLANNING_DISABLED) {
+                      const pad = (n: number) => String(n).padStart(2, "0");
+                      const startISO = session?.trip_date ?? null;
+                      let endISO = startISO;
+                      if (startISO && (session?.num_days ?? 1) > 1) {
+                        const d = new Date(startISO); d.setDate(d.getDate() + ((session!.num_days ?? 1) - 1));
+                        endISO = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+                      }
+                      const id = await createWyjazdFromPlaces(
+                        user.id,
+                        session?.city ?? null,
+                        session?.city ?? "Wyjazd",
+                        selectedMatches.map((m) => ({ place_name: m.place_name, category: m.category, photo_url: m.photo_url })),
+                        { start_date: startISO, end_date: endISO },
+                        { groupSessionId: session?.id ?? null, newForUsers: otherMemberIds },
+                      );
+                      if (id) navigate(`/review-summary?route=${id}&edit=1`);
+                      return;
+                    }
                     navigate("/create", { state: routeState });
                   }}
                   className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-sm active:scale-[0.97] transition-transform"
@@ -1421,7 +1444,7 @@ const GroupSession = () => {
                   jako aktywna - wraca TYLKO na ekran glowny (bez wchodzenia do PlanWizard/kreatora). */}
               {existingRoute && isCreator && (
                 <button
-                  onClick={() => navigate("/create", { state: { city: existingRoute.city, existingRouteId: existingRoute.id } })}
+                  onClick={() => navigate(PLANNING_DISABLED ? `/review-summary?route=${existingRoute.id}&edit=1` : "/create", PLANNING_DISABLED ? undefined : { state: { city: existingRoute.city, existingRouteId: existingRoute.id } })}
                   className="w-full py-3.5 rounded-full bg-foreground text-background font-bold text-sm active:scale-[0.97] transition-transform"
                 >
                   {t("matches.open_saved_route")}

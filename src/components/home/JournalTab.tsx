@@ -334,7 +334,7 @@ const JournalTab = ({ userId }: JournalTabProps) => {
 
   // Otwarcie wpisu = zawsze ReviewSummary (?route=). Nowy/aktywny wyjazd (reviewed=false)
   // laduje w trybie edycji (stepper Trasa/Notki/Zdjecia); zakonczony/miniony = tryb read.
-  const openEntry = (entry: any) => {
+  const openEntry = (entry: any, edit = false) => {
     if (entry.new_for_users?.includes(userId)) {
       queryClient.setQueryData(["journal-entries", userId], (old: any) =>
         (old ?? []).map((e: any) => e.id === entry.id
@@ -345,7 +345,8 @@ const JournalTab = ({ userId }: JournalTabProps) => {
       void supabase.rpc("dismiss_route_badge", { p_route_id: entry.id });
       queryClient.invalidateQueries({ queryKey: ["journal-badge"] });
     }
-    navigate(`/review-summary?route=${entry.id}`);
+    // Aktywne wyjazdy otwieramy w trybie edycji (stepper); wspomnienia - ReviewSummary decyduje.
+    navigate(`/review-summary?route=${entry.id}${edit ? "&edit=1" : ""}`);
   };
 
   // Tryb uproszczony: przycisk "Nowy wyjazd" + toggle Aktywne | Wspomnienia.
@@ -377,7 +378,7 @@ const JournalTab = ({ userId }: JournalTabProps) => {
         {wyjazdTab === "active" ? (
           active.length > 0 ? (
             <div className="space-y-3">
-              {active.map((entry: any) => renderTripCard(entry, () => openEntry(entry), true))}
+              {active.map((entry: any) => renderTripCard(entry, () => openEntry(entry, true), true))}
             </div>
           ) : emptyBox("🧳", "Brak aktywnych wyjazdów", "Twoje nadchodzące wyjazdy pojawią się tutaj.")
         ) : (

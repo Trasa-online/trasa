@@ -258,7 +258,7 @@ export const LikedTab = ({ selectMode = false, onExitSelection }: { selectMode?:
         photo_url: p.photo_url ?? null,
         place_id: (p as any).place_id ?? null,
       })));
-      if (id) navigate(`/review-summary?route=${id}`);
+      if (id) navigate(`/review-summary?route=${id}&edit=1`);
       return;
     }
     navigate("/plan", { state: { step: 3, city: selectionCity, date: new Date().toISOString(), likedPlaceNames: chosen.map(p => p.place_name) } });
@@ -353,19 +353,20 @@ export const LikedTab = ({ selectMode = false, onExitSelection }: { selectMode?:
               else openDetail(p);
             }}
             className={cn(
-              "flex gap-3 py-4 border-b border-border/15 -mx-2 px-2 rounded-2xl cursor-pointer active:bg-muted/40 transition-colors",
+              "flex gap-3 py-4 border-b border-border/15 -mx-2 px-2 rounded-2xl cursor-pointer active:bg-muted/40 active:scale-[0.99] transition-all",
               locked && "opacity-40",
-              checked && "bg-primary/5",
+              selectMode && "border border-transparent",
+              checked && "bg-primary/5 border-primary/30",
             )}
           >
             <div className="relative h-20 w-20 rounded-2xl overflow-hidden bg-muted shrink-0">
               <SavedThumb p={p} emoji={CATEGORY_EMOJI[p.category] ?? "📍"} />
               {selectMode && (
                 <div className={cn(
-                  "absolute top-1.5 left-1.5 h-6 w-6 rounded-full border-2 flex items-center justify-center transition-colors",
-                  checked ? "bg-primary border-primary" : "bg-black/30 border-white/80 backdrop-blur-sm",
+                  "absolute top-2 left-2 h-8 w-8 rounded-full border-2 flex items-center justify-center transition-colors shadow-sm",
+                  checked ? "bg-primary border-primary" : "bg-black/35 border-white/90 backdrop-blur-sm",
                 )}>
-                  {checked && <Check className="h-4 w-4 text-white" strokeWidth={3} />}
+                  {checked && <Check className="h-5 w-5 text-white" strokeWidth={3} />}
                 </div>
               )}
             </div>

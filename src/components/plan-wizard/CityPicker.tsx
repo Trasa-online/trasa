@@ -3,7 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { ChevronDown, Check } from "lucide-react";
+import { ChevronDown, Check, Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useTranslation } from "react-i18next";
@@ -86,7 +86,7 @@ type ActiveCountryCode = "PL";
 // ── Drum constants ─────────────────────────────────────────────────────────
 
 const ITEM_HEIGHT = 80;
-const VISIBLE_ITEMS = 3;
+const VISIBLE_ITEMS = 5;
 const CONTAINER_HEIGHT = ITEM_HEIGHT * VISIBLE_ITEMS;
 const PADDING = (CONTAINER_HEIGHT - ITEM_HEIGHT) / 2;
 
@@ -109,8 +109,24 @@ const CityPicker = ({ onConfirm }: CityPickerProps) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [notifyCity, setNotifyCity] = useState("");
+  const [search, setSearch] = useState("");
+  const [scrolled, setScrolled] = useState(false);
   const { user } = useAuth();
   const scrollTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Lista miast po filtrze wyszukiwarki (po polskiej i angielskiej nazwie).
+  const displayCities = search.trim()
+    ? cities.filter((c) => {
+        const q = search.trim().toLowerCase();
+        return cityLabel(c.name).toLowerCase().includes(q) || c.name.toLowerCase().includes(q);
+      })
+    : cities;
+
+  // Reset drum przy zmianie zapytania.
+  useEffect(() => {
+    setSelectedIndex(0);
+    scrollRef.current?.scrollTo({ top: 0 });
+  }, [search]);
 
   // Reset drum when country changes
   useEffect(() => {
@@ -127,8 +143,9 @@ const CityPicker = ({ onConfirm }: CityPickerProps) => {
   const handleScroll = () => {
     const el = scrollRef.current;
     if (!el) return;
+    if (!scrolled) setScrolled(true);
     const rawIndex = el.scrollTop / ITEM_HEIGHT;
-    const clamped = Math.max(0, Math.min(cities.length - 1, Math.round(rawIndex)));
+    const clamped = Math.max(0, Math.min(displayCities.length - 1, Math.round(rawIndex)));
     setSelectedIndex(clamped);
     if (scrollTimeout.current) clearTimeout(scrollTimeout.current);
     scrollTimeout.current = setTimeout(() => {
@@ -149,7 +166,7 @@ const CityPicker = ({ onConfirm }: CityPickerProps) => {
     return "text-xl font-normal text-foreground/15";
   };
 
-  const selectedCity = cities[selectedIndex];
+  const selectedCity = displayCities[selectedIndex];
   const isComingSoon = !!selectedCity?.comingSoon;
 
   const handleNotify = async () => {
@@ -207,6 +224,20 @@ const CityPicker = ({ onConfirm }: CityPickerProps) => {
         )}
       </div>
 
+      {/* Wyszukiwarka miast */}
+      <div className="px-5 pt-2 shrink-0">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={t("city_picker.search_placeholder", { defaultValue: "Szukaj miasta..." })}
+            className="w-full h-10 pl-9 pr-3 rounded-full bg-muted/50 border border-border/50 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30"
+          />
+        </div>
+      </div>
+
       {/* Drum picker — fills remaining space, vertically centered */}
       <div className="flex-1 flex items-center justify-center min-h-0">
         <div className="relative w-full" style={{ height: CONTAINER_HEIGHT }}>
@@ -218,6 +249,14 @@ const CityPicker = ({ onConfirm }: CityPickerProps) => {
               background: "linear-gradient(to bottom, transparent, rgba(0,0,0,0.03) 40%, rgba(0,0,0,0.03) 60%, transparent)",
             }}
           />
+          {/* Fade gora/dol + hint = sygnal ze lista jest przewijalna */}
+          <div className="absolute top-0 left-0 right-0 h-12 pointer-events-none z-20 bg-gradient-to-b from-background to-transparent" />
+          <div className="absolute bottom-0 left-0 right-0 h-12 pointer-events-none z-20 bg-gradient-to-t from-background to-transparent" />
+          {!scrolled && displayCities.length > VISIBLE_ITEMS && (
+            <div className="absolute bottom-1 left-1/2 -translate-x-1/2 z-20 pointer-events-none animate-bounce">
+              <ChevronDown className="h-5 w-5 text-muted-foreground/70" />
+            </div>
+          )}
           <div
             ref={scrollRef}
             onScroll={handleScroll}
@@ -225,7 +264,7 @@ const CityPicker = ({ onConfirm }: CityPickerProps) => {
             style={{ scrollSnapType: "y mandatory", WebkitOverflowScrolling: "touch", scrollbarWidth: "none", msOverflowStyle: "none" }}
           >
             <div style={{ height: PADDING }} />
-            {cities.map((city, i) => {
+            {displayCities.map((city, i) => {
               const distance = Math.abs(i - selectedIndex);
               return (
                 <div

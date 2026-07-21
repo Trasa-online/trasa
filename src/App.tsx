@@ -766,8 +766,10 @@ const App = () => (
               Wyjatek: exploreMode ("Przegladaj") zostaje wlaczony - patrz PlanRoute. */}
           <Route path="/plan" element={<PlanRoute />} />
           <Route path="/demo" element={<DemoSession />} />
-          <Route path="/sesja/nowa" element={PLANNING_DISABLED ? <Navigate to="/eksploruj" replace /> : <CreateGroupSession />} />
-          <Route path="/sesja/:joinCode" element={PLANNING_DISABLED ? <Navigate to="/eksploruj" replace /> : <GroupSession />} />
+          {/* Sesja grupowa - odblokowana tez w trybie uproszczonym (grupowy WYJAZD; finalizacja
+              w GroupSession tworzy wyjazd zamiast planu AI gdy PLANNING_DISABLED). */}
+          <Route path="/sesja/nowa" element={<CreateGroupSession />} />
+          <Route path="/sesja/:joinCode" element={<GroupSession />} />
           <Route path="/dodaj/:code" element={<AddFriend />} />
           <Route path="/search" element={<UserSearch />} />
           <Route path="/route/:id" element={<SharedRoute />} />
