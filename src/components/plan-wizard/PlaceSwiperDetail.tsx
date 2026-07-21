@@ -140,8 +140,14 @@ const PlaceSwiperDetail = ({
                 .slice(0, 3)
                 .map((p: { photo_url?: string; photo_reference?: string }) => p.photo_url ?? getPhotoUrl(p.photo_reference ?? "", 800))
                 .filter(isUsable);
+              // Cover (places.photo_url) to cache'owany JPEG PIERWSZEGO zdjecia Google
+              // (klucz gpid_<id>_800.jpg / hash_...). Wizualnie cover == googleUrls[0], ale ma
+              // INNY URL (Storage vs /api/place-photo proxy) -> dedup po stringu (Set/indexOf)
+              // go NIE lapie i wizytowka pokazywala "pierwsze i drugie zdjecie" identyczne.
+              // Gdy mamy cover, pomijamy googleUrls[0] zeby nie dublowac tej samej fotki.
               const coverFirst = isUsable(cur.photo_url) ? [cur.photo_url] : [];
-              const merged = [...coverFirst, ...googleUrls].filter((u, i, arr) => arr.indexOf(u) === i);
+              const googleTail = coverFirst.length ? googleUrls.slice(1) : googleUrls;
+              const merged = [...coverFirst, ...googleTail].filter((u, i, arr) => arr.indexOf(u) === i);
               if (merged.length > 0) setPhotos(merged);
               ensurePhotoCached(
                 {
