@@ -14,6 +14,7 @@ import { TrasaLogo } from "@/components/TrasaLogo";
 import { businessPanelPath } from "@/lib/businessRedirect";
 import { supabase } from "@/integrations/supabase/client";
 import { isNative } from "@/lib/platform";
+import { PLANNING_DISABLED } from "@/lib/appMode";
 import { App as CapApp } from "@capacitor/app";
 import { Browser } from "@capacitor/browser";
 import { toast } from "sonner";
@@ -724,34 +725,38 @@ const App = () => (
           <Route path="/terms" element={<Terms />} />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/" element={<RootPage />} />
-          <Route path="/home" element={<AppLayout hideTopBar><HomeSwipe /></AppLayout>} />
+          {/* Tryb uproszczony (PLANNING_DISABLED): "Twoje trasy" scalone w Wyjazdy (Dziennik). */}
+          <Route path="/home" element={PLANNING_DISABLED ? <Navigate to="/dziennik" replace /> : <AppLayout hideTopBar><HomeSwipe /></AppLayout>} />
           <Route path="/eksploruj" element={<AppLayout hideTopBar><Explore /></AppLayout>} />
           <Route path="/polubione" element={<AppLayout hideTopBar><LikedPlaces /></AppLayout>} />
           <Route path="/zestawienie/nowe" element={<RequireAuth><CreateRanking /></RequireAuth>} />
           <Route path="/zestawienie/:id/edytuj" element={<RequireAuth><CreateRanking /></RequireAuth>} />
-          <Route path="/create" element={<CreateRoute />} />
+          {/* /create (generowanie planu przez AI) - wylaczone w trybie uproszczonym na native.
+              Na web zostaje (testowy flow sesji grupowej odblokowany w WebWaitlistGate). */}
+          <Route path="/create" element={PLANNING_DISABLED ? <Navigate to="/eksploruj" replace /> : <CreateRoute />} />
           <Route path="/settings" element={<RequireAuth><AppLayout><Settings /></AppLayout></RequireAuth>} />
           <Route path="/day-review" element={<DayReview />} />
           <Route path="/set-password" element={<SetPassword />} />
           <Route path="/set-password-biznes" element={<SetPassword forceBusiness />} />
           {/* Panel admina przeniesiony na admin.trasa.travel (usuniety z aplikacji). */}
-          <Route path="/moje-trasy" element={<AppLayout><MyTrips /></AppLayout>} />
+          <Route path="/moje-trasy" element={PLANNING_DISABLED ? <Navigate to="/dziennik" replace /> : <AppLayout><MyTrips /></AppLayout>} />
           <Route path="/dziennik" element={<AppLayout hideTopBar><Journal /></AppLayout>} />
           <Route path="/moj-profil" element={<AppLayout hideTopBar><TravelerProfile /></AppLayout>} />
-          <Route path="/edit-plan" element={<EditPlan />} />
+          <Route path="/edit-plan" element={PLANNING_DISABLED ? <Navigate to="/eksploruj" replace /> : <EditPlan />} />
           <Route path="/review-summary" element={<ReviewSummary />} />
           <Route path="/trasa/:id/dodaj" element={<AddPlaceToTrip />} />
           <Route path="/trasa/:id" element={<ActiveTrip />} />
-          <Route path="/plan" element={<PlanWizard />} />
+          {/* Planowanie tras (kreator + sesje grupowe) - wylaczone w trybie uproszczonym na native. */}
+          <Route path="/plan" element={PLANNING_DISABLED ? <Navigate to="/eksploruj" replace /> : <PlanWizard />} />
           <Route path="/demo" element={<DemoSession />} />
-          <Route path="/sesja/nowa" element={<CreateGroupSession />} />
-          <Route path="/sesja/:joinCode" element={<GroupSession />} />
+          <Route path="/sesja/nowa" element={PLANNING_DISABLED ? <Navigate to="/eksploruj" replace /> : <CreateGroupSession />} />
+          <Route path="/sesja/:joinCode" element={PLANNING_DISABLED ? <Navigate to="/eksploruj" replace /> : <GroupSession />} />
           <Route path="/dodaj/:code" element={<AddFriend />} />
           <Route path="/search" element={<UserSearch />} />
           <Route path="/route/:id" element={<SharedRoute />} />
           <Route path="/lokal/:placeId" element={<ClaimPlace />} />
           <Route path="/profil/:username" element={<PublicProfile />} />
-          <Route path="/quick-plan-review" element={<QuickPlanReview />} />
+          <Route path="/quick-plan-review" element={PLANNING_DISABLED ? <Navigate to="/eksploruj" replace /> : <QuickPlanReview />} />
           <Route path="/biznes/start" element={<BusinessStart />} />
           <Route path="/biznes/onboarding/:id" element={<BusinessOnboarding />} />
           <Route path="/biznes/:placeId" element={<BusinessDashboard />} />

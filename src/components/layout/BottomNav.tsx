@@ -2,13 +2,14 @@ import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useLocation } from "react-router-dom";
 import { NavLink } from "@/components/NavLink";
-import { BookOpen, Compass, Map, Plus, X, MapPin, Users, Link2, User, Heart, ArrowLeft, Layers } from "lucide-react";
+import { BookOpen, Compass, Map, Plus, X, MapPin, Users, Link2, User, Heart, ArrowLeft, Layers, Bookmark } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { getTodayLikes, type ExploreLike } from "@/lib/exploreLikes";
 import { isNative } from "@/lib/platform";
+import { PLANNING_DISABLED } from "@/lib/appMode";
 
 const HOME_FILTERS_KEY = "trasa_home_filters";
 
@@ -177,7 +178,11 @@ const BottomNav = () => {
 
             {/* Wiersz kafelkow akcji */}
             <div className="flex justify-center gap-6 pb-1">
-              {!planStep ? (
+              {PLANNING_DISABLED ? (
+                // Tryb uproszczony: planowanie wylaczone -> menu "+" tworzy tylko
+                // zestawienie (UGC). Tworzenie wyjazdu zyje wewnatrz zakladki Wyjazdy.
+                <ActionTile icon={Layers} label={t("create_collection")} onClick={handleCreateCollection} />
+              ) : !planStep ? (
                 <>
                   <ActionTile icon={Layers} label={t("create_collection")} onClick={handleCreateCollection} />
                   <ActionTile icon={MapPin} label={t("plan")} onClick={() => setPlanStep(true)} />
@@ -316,20 +321,41 @@ const BottomNav = () => {
             </NavLink>
           )}
 
-          {/* Twoje trasy */}
-          <NavLink
-            to="/home"
-            end
-            className="flex flex-col items-center justify-center gap-1 text-muted-foreground transition-colors"
-            activeClassName="text-orange-600"
-          >
-            {({ isActive }) => (
-              <>
-                <Map className="h-6 w-6 stroke-2" />
-                <span className={`h-0.5 w-5 rounded-full transition-colors ${isActive ? "bg-orange-600" : "bg-transparent"}`} />
-              </>
-            )}
-          </NavLink>
+          {/* Slot 2: Tryb uproszczony -> Wyjazdy (dawny Dziennik). Stary flow -> Twoje trasy. */}
+          {PLANNING_DISABLED ? (
+            <NavLink
+              to="/dziennik"
+              end={false}
+              className="flex flex-col items-center justify-center gap-1 text-muted-foreground transition-colors"
+              activeClassName="text-orange-600"
+            >
+              {({ isActive }) => (
+                <>
+                  <div className="relative">
+                    <BookOpen className="h-6 w-6 stroke-2" />
+                    {hasNewJournalEntries && !isActive && (
+                      <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-orange-600 ring-2 ring-background" />
+                    )}
+                  </div>
+                  <span className={`h-0.5 w-5 rounded-full transition-colors ${isActive ? "bg-orange-600" : "bg-transparent"}`} />
+                </>
+              )}
+            </NavLink>
+          ) : (
+            <NavLink
+              to="/home"
+              end
+              className="flex flex-col items-center justify-center gap-1 text-muted-foreground transition-colors"
+              activeClassName="text-orange-600"
+            >
+              {({ isActive }) => (
+                <>
+                  <Map className="h-6 w-6 stroke-2" />
+                  <span className={`h-0.5 w-5 rounded-full transition-colors ${isActive ? "bg-orange-600" : "bg-transparent"}`} />
+                </>
+              )}
+            </NavLink>
+          )}
 
           {/* Center FAB */}
           <button
@@ -345,9 +371,23 @@ const BottomNav = () => {
             </span>
           </button>
 
-          {/* Dziennik - tylko w native iOS/Android. Web/PWA ukrywa - feature jeszcze
-              nie jest gotowe dla web, ale w native juz ma uzytkownikow. */}
-          {isNative && (
+          {/* Slot 4: Tryb uproszczony -> Zapisane (polubione miejsca). Stary flow -> Dziennik.
+              Dziennik/Zapisane tylko w native - na web/PWA ukryte. */}
+          {PLANNING_DISABLED ? (
+            <NavLink
+              to="/polubione"
+              end={false}
+              className="flex flex-col items-center justify-center gap-1 text-muted-foreground transition-colors"
+              activeClassName="text-orange-600"
+            >
+              {({ isActive }) => (
+                <>
+                  <Bookmark className="h-6 w-6 stroke-2" />
+                  <span className={`h-0.5 w-5 rounded-full transition-colors ${isActive ? "bg-orange-600" : "bg-transparent"}`} />
+                </>
+              )}
+            </NavLink>
+          ) : isNative && (
             <NavLink
               to="/dziennik"
               end={false}
