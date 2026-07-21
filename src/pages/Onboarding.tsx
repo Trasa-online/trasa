@@ -11,7 +11,9 @@ import { TrasaLogo } from "@/components/TrasaLogo";
 // (W realnej appce anonim moze TYLKO przegladac - zapis/wyjazd wymaga konta.)
 // ─────────────────────────────────────────────────────────────────────────────
 
-const ONBOARDING_DONE_KEY = "trasa_onboarding_v2_done";
+// Bump klucza = reset onboardingu dla WSZYSTKICH urzadzen (flaga jest device-local, nie per-email).
+// v2_1 (2026-08-14): reset dla testerow (Nat, Tomek) po zmianach w onboardingu.
+const ONBOARDING_DONE_KEY = "trasa_onboarding_v2_1_done";
 
 interface DemoPlace {
   id: string;

@@ -352,11 +352,12 @@ const PlanWizard = () => {
               </span>
               <button
                 onClick={() => navigate("/eksploruj")}
-                className="h-8 w-8 flex items-center justify-center rounded-full text-secondary-foreground/70 active:scale-95 transition-transform"
+                className="h-8 px-3 flex items-center gap-1.5 rounded-full text-secondary-foreground/70 text-xs font-bold active:scale-95 transition-transform whitespace-nowrap"
                 aria-label={t("explore_explore")}
                 title={t("explore_explore")}
               >
                 <Compass className="h-4 w-4" />
+                {t("explore_explore")}
               </button>
             </div>
             {/* Chip filtru */}

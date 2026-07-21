@@ -420,7 +420,7 @@ function RootPage() {
   }
   // First-run (native): niewidziany onboarding v2 -> prowadzony demo-przelot. Flaga per-urzadzenie.
   const onboardingDone = (() => {
-    try { return localStorage.getItem("trasa_onboarding_v2_done") === "1"; } catch { return true; }
+    try { return localStorage.getItem("trasa_onboarding_v2_1_done") === "1"; } catch { return true; }
   })();
   if (isNative && !onboardingDone) return <Navigate to="/onboarding" replace />;
   return <Navigate to="/eksploruj" replace />;

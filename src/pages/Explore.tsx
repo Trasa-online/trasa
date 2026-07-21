@@ -673,13 +673,14 @@ const Explore = () => {
                 <Layers className="h-3.5 w-3.5" />
                 {t("explore.tab_browse")}
               </button>
-              <button
+              <span
                 aria-current="true"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-background text-foreground shadow-sm whitespace-nowrap"
+                aria-label={t("explore.tab_explore")}
+                title={t("explore.tab_explore")}
+                className="flex items-center justify-center h-7 w-7 rounded-full bg-background text-foreground shadow-sm"
               >
                 <Compass className="h-3.5 w-3.5" />
-                {t("explore.tab_explore")}
-              </button>
+              </span>
             </div>
           )}
         </div>
