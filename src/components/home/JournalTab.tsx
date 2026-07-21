@@ -204,8 +204,17 @@ const JournalTab = ({ userId }: JournalTabProps) => {
   const renderTripCard = (entry: any, onOpen: () => void, inProgress = false) => {
     const validPhotos = (entry.review_photos ?? []).filter((url: any) => !!url && typeof url === "string" && url.trim() !== "");
     const thumb = validPhotos[0] ?? (coverMap as Record<string, string>)[entry.id] ?? getRandomPinPlaceholder(entry.id);
-    const _d = entry.start_date ? parseISO(entry.start_date) : null;
-    const dateLabel = _d && isValid(_d) ? format(_d, "d MMMM yyyy", { locale: dateLocale() }) : "";
+    // Zakres dat od-do dla wyjazdow 2-3 dniowych (start_date != koniec). _lastDate liczy
+    // sie z folderu (multi-day) albo end_date (pojedyncza trasa).
+    const startISO = entry.start_date;
+    const endISO = entry._lastDate ?? entry.end_date ?? entry.start_date;
+    const _d = startISO ? parseISO(startISO) : null;
+    const _e = endISO ? parseISO(endISO) : null;
+    const dateLabel = _d && isValid(_d)
+      ? (_e && isValid(_e) && endISO !== startISO
+          ? `${format(_d, "d", { locale: dateLocale() })} - ${format(_e, "d MMMM yyyy", { locale: dateLocale() })}`
+          : format(_d, "d MMMM yyyy", { locale: dateLocale() }))
+      : "";
     const hasUserPhoto = validPhotos.length > 0;
     return (
       <div

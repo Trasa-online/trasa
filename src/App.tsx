@@ -11,6 +11,7 @@ import { useNetworkReconnect } from "@/hooks/useNetworkReconnect";
 import { useAppResume } from "@/hooks/useAppResume";
 import AuthDrawer from "@/components/auth/AuthDrawer";
 import { businessPanelPath } from "@/lib/businessRedirect";
+import { TrasaLogo } from "@/components/TrasaLogo";
 import { supabase } from "@/integrations/supabase/client";
 import { isNative } from "@/lib/platform";
 import { PLANNING_DISABLED } from "@/lib/appMode";
@@ -451,9 +452,8 @@ function SplashScreen({ done }: { done: boolean }) {
       className="fixed inset-0 z-[9999] bg-background flex items-center justify-center"
       style={{ transition: "opacity 0.4s", opacity: done ? 0 : 1 }}
     >
-      {/* Loading = tylko orba (gradient). Wczesniej byl tez znak w kolku (TrasaLogo) -> dwie
-          wersje loga na splashu. Zostaje jedna: orba. */}
-      <div style={{ width: 132, height: 132, borderRadius: "50%", background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
+      {/* Loading = logo w kolku (pomaranczowe kolo + bialy znak Trasy), jak ikona natywna. */}
+      <TrasaLogo size={132} />
     </div>
   );
 }

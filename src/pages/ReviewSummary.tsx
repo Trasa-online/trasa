@@ -1098,9 +1098,10 @@ const ReviewSummary = () => {
     <div className="min-h-[100dvh] bg-background flex flex-col">
 
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
-      {/* We wpisie dziennika (isMemory) okladka jest NIZSZA - zdjecie nie jest kluczowe,
-          wazniejsza jest galeria/plan ponizej. Aktywny przeglad trasy zostaje wyzszy. */}
-      <div className={`relative w-full ${isMemory ? "aspect-[16/9]" : (hasRealPhoto ? "aspect-[4/5]" : "aspect-[16/10]")} flex-shrink-0 overflow-hidden bg-gradient-to-br from-orange-400 via-rose-400 to-purple-500`}>
+      {/* We wpisie dziennika (isMemory) ORAZ w wymuszonej edycji wyjazdu (forceEdit) okladka jest
+          NIZSZA (16/9) - zdjecie nie jest kluczowe, wazniejsza galeria/plan. Tylko legacy aktywny
+          przeglad trasy zostaje wyzszy. */}
+      <div className={`relative w-full ${(isMemory || forceEdit) ? "aspect-[16/9]" : (hasRealPhoto ? "aspect-[4/5]" : "aspect-[16/10]")} flex-shrink-0 overflow-hidden bg-gradient-to-br from-orange-400 via-rose-400 to-purple-500`}>
         <img src={heroPhoto} alt="" className="absolute inset-0 w-full h-full object-cover" />
         {/* Ciemny gradient overlay - dla placeholdera mocniejszy (kontrast tekstu, WCAG) */}
         <div className={`absolute inset-0 bg-gradient-to-b ${hasRealPhoto ? "from-black/40 via-transparent to-black/75" : "from-black/35 via-black/25 to-black/80"}`} />
