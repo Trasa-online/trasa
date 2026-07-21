@@ -348,12 +348,9 @@ export const LikedTab = ({ selectMode = false, onExitSelection }: { selectMode?:
             key={`${p.city}:${p.place_name}`}
             role="button"
             tabIndex={0}
-            onClick={() => {
-              if (selectMode) toggleSelect(p);
-              else openDetail(p);
-            }}
+            onClick={() => openDetail(p)}
             className={cn(
-              "flex gap-3 py-4 border-b border-border/15 -mx-2 px-2 rounded-2xl cursor-pointer active:bg-muted/40 active:scale-[0.99] transition-all",
+              "flex gap-3 py-4 border-b border-border/15 -mx-2 px-2 rounded-2xl cursor-pointer active:bg-muted/40 transition-colors",
               locked && "opacity-40",
               selectMode && "border border-transparent",
               checked && "bg-primary/5 border-primary/30",
@@ -362,12 +359,20 @@ export const LikedTab = ({ selectMode = false, onExitSelection }: { selectMode?:
             <div className="relative h-20 w-20 rounded-2xl overflow-hidden bg-muted shrink-0">
               <SavedThumb p={p} emoji={CATEGORY_EMOJI[p.category] ?? "📍"} />
               {selectMode && (
-                <div className={cn(
-                  "absolute top-2 left-2 h-8 w-8 rounded-full border-2 flex items-center justify-center transition-colors shadow-sm",
-                  checked ? "bg-primary border-primary" : "bg-black/35 border-white/90 backdrop-blur-sm",
-                )}>
-                  {checked && <Check className="h-5 w-5 text-white" strokeWidth={3} />}
-                </div>
+                // Checkbox = osobny cel z powiekszonym hit-area (p-2.5). Kafel otwiera wizytowke,
+                // dopiero tap w checkbox zaznacza (stopPropagation).
+                <button
+                  onClick={(e) => { e.stopPropagation(); toggleSelect(p); }}
+                  aria-label="Zaznacz miejsce"
+                  className="absolute top-0 left-0 p-2.5 z-10"
+                >
+                  <span className={cn(
+                    "h-8 w-8 rounded-full border-2 flex items-center justify-center transition-colors shadow-sm",
+                    checked ? "bg-primary border-primary" : "bg-black/40 border-white/90 backdrop-blur-sm",
+                  )}>
+                    {checked && <Check className="h-5 w-5 text-white" strokeWidth={3} />}
+                  </span>
+                </button>
               )}
             </div>
             <div className="flex-1 min-w-0 flex flex-col">
