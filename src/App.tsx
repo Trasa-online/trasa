@@ -497,18 +497,20 @@ function SplashController() {
     return () => clearTimeout(t);
   }, []);
 
-  // Ukryj natywny statyczny splash zaraz po pierwszym paint React splasha -
-  // animowany (w WebView) przejmuje plynnie (oba tla #FEFEFE).
+  // Ukryj natywny splash DOPIERO gdy boot gotowy (done). Na native to natywny splash
+  // jest JEDYNYM splashem - React SplashScreen NIE renderuje sie na native (patrz nizej),
+  // zeby nie bylo DWOCH log: wczesniejsze wczesne hide + React splash dawalo natywne logo
+  // (scaleAspectFill ~185pt) NALOZONE na React (88pt) = dwa koncentryczne loga trasy.
+  // Na trasach skipSplash (biznes/auth/...) chowamy od razu (te ekrany maja wlasne UI).
   useEffect(() => {
     if (!isNative) return;
+    if (!skipSplash && !done) return;
     let cancelled = false;
-    const t = setTimeout(() => {
-      import("@capacitor/splash-screen").then(({ SplashScreen: NativeSplash }) => {
-        if (!cancelled) NativeSplash.hide({ fadeOutDuration: 200 }).catch(() => {});
-      });
-    }, 90);
-    return () => { cancelled = true; clearTimeout(t); };
-  }, []);
+    import("@capacitor/splash-screen").then(({ SplashScreen: NativeSplash }) => {
+      if (!cancelled) NativeSplash.hide({ fadeOutDuration: skipSplash ? 0 : 300 }).catch(() => {});
+    });
+    return () => { cancelled = true; };
+  }, [done, skipSplash]);
 
   useEffect(() => {
     if (!visible || loading || booted.current) return;
@@ -548,6 +550,9 @@ function SplashController() {
   }, [done]);
 
   if (!visible) return null;
+  // Native: natywny splash (poza WebView) jest jedynym splashem - React nie renderuje
+  // drugiego loga. Web/PWA: React SplashScreen z logo (tam nie ma natywnego splasha).
+  if (isNative) return null;
   return <SplashScreen done={done} />;
 }
 
