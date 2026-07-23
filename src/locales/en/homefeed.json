@@ -17,6 +17,8 @@
     "close": "Close",
     "save_collection": "Save collection"
   },
+  "current_location": "Current location",
+  "saved_places": "Saved places",
   "gallery": "Gallery",
   "gallery_empty_title": "No photos in the gallery",
   "gallery_empty_desc": "The author hasn't added any photos to this collection yet.",

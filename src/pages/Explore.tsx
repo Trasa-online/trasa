@@ -9,6 +9,8 @@ import { parseISO, isValid, format, isToday, isYesterday } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
 import DiscoveryFeed from "@/components/home/DiscoveryFeed";
 import HomeHeaderActions from "@/components/home/HomeHeaderActions";
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { UNLOCKED_CITIES } from "@/components/plan-wizard/CityPicker";
 import { getHistoryByCity, removeLikeFromCity, clearCity, updateLikePhoto, type ExploreCityGroup } from "@/lib/exploreLikes";
 import { getSubcategoryLabel, subcategoryLabelLocalized, MAIN_CATEGORIES } from "@/lib/categories";
 import { getPhotoUrl } from "@/lib/placePhotos";
@@ -629,6 +631,8 @@ const Explore = () => {
   const location = useLocation();
   // Wejscie z profilu (karta "Zestawienia") -> pokaz liste zestawien usera zamiast feedu.
   const myCollections = (location.state as any)?.myCollections === true;
+  // Selektor miasta w naglowku (zastapil tytul "Eksploruj"). Na razie default Warszawa.
+  const [exploreCity, setExploreCity] = useState("Warszawa");
 
   const handleRefresh = async () => {
     await queryClient.invalidateQueries();
@@ -652,10 +656,25 @@ const Explore = () => {
             </div>
           </div>
         ) : (
-          <div>
-            <h1 className="text-xl font-display font-extrabold tracking-tight pt-2">{t("explore.title")}</h1>
-            <p className="text-xs text-muted-foreground mt-1">{t("explore.subtitle")}</p>
-          </div>
+          // Selektor miasta zamiast tytulu "Eksploruj" (usuniete nazwa zakladki + podtytul).
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="flex items-center gap-1.5 pt-2 pr-1 active:opacity-70 transition-opacity" aria-label={t("explore.change_city", "Zmień miasto")}>
+                <MapPin className="h-5 w-5 text-orange-600 shrink-0" />
+                <span className="text-xl font-display font-extrabold tracking-tight text-foreground">{exploreCity}</span>
+                <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="rounded-2xl max-h-[60vh] overflow-y-auto">
+              {UNLOCKED_CITIES.map((c) => (
+                <DropdownMenuItem key={c} onClick={() => setExploreCity(c)} className="gap-2 rounded-xl cursor-pointer">
+                  <MapPin className={cn("h-4 w-4 shrink-0", c === exploreCity ? "text-orange-600" : "text-muted-foreground")} />
+                  <span className={cn("flex-1", c === exploreCity && "font-bold")}>{c}</span>
+                  {c === exploreCity && <Check className="h-4 w-4 text-orange-600 shrink-0" />}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
         )}
         <div className="flex items-center gap-1.5 shrink-0 mt-2">
           {!myCollections && (
@@ -687,7 +706,7 @@ const Explore = () => {
       </div>
 
       <div className="flex-1 px-4">
-        {myCollections ? <MyCollections /> : <DiscoveryFeed />}
+        {myCollections ? <MyCollections /> : <DiscoveryFeed city={exploreCity} />}
       </div>
     </PullToRefresh>
   );

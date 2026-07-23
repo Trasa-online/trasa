@@ -17,6 +17,8 @@
     "close": "Zamknij",
     "save_collection": "Zapisz zestawienie"
   },
+  "current_location": "Bieżące położenie",
+  "saved_places": "Zapisane miejsca",
   "gallery": "Galeria",
   "gallery_empty_title": "Brak zdjęć w galerii",
   "gallery_empty_desc": "Autor nie dodał jeszcze zdjęć do tego zestawienia.",

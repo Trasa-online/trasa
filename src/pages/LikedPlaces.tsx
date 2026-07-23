@@ -30,10 +30,7 @@ const LikedPlaces = () => {
         >
           <ArrowLeft className="h-5 w-5" />
         </button>
-        <div className="flex-1 min-w-0">
-          <h1 className="text-xl font-black tracking-tight">{t("liked.title")}</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">{t("liked.subtitle")}</p>
-        </div>
+        <div className="flex-1 min-w-0" />
         {selectMode ? (
           <button
             onClick={() => setSelectMode(false)}

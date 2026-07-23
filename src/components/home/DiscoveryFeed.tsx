@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import i18n from "@/i18n";
 import { avatarSrc } from "@/lib/avatar";
@@ -6,7 +6,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { MapPin, X, Globe, Sparkles, Star, Pencil, Trash2, ChevronRight, ArrowRight, Heart, Eye, List, GalleryHorizontalEnd, Search, SlidersHorizontal, Plus, ArrowLeft, Images, Bookmark, Users } from "lucide-react";
+import { MapPin, X, Globe, Sparkles, Star, Pencil, Trash2, ChevronRight, ArrowRight, Heart, Eye, List, GalleryHorizontalEnd, Search, SlidersHorizontal, Plus, ArrowLeft, Images, Bookmark, Users, Navigation } from "lucide-react";
 import { API_BASE } from "@/lib/platform";
 import { useDebounce } from "@/hooks/useDebounce";
 import { expandCity } from "@/lib/cities";
@@ -86,6 +86,22 @@ const CAT_EMOJI: Record<string, string> = {
   market: "🛒", viewpoint: "🌅", shopping: "🛍️", experience: "🎭",
   walk: "🚶", other: "📍",
 };
+
+// Miniaturka miejsca z placeholderem: brak zdjecia LUB blad ladowania (np. miejsce
+// spoza bazy z wygaslym refem Google) -> ikona kategorii w szarym kwadracie (jak w
+// natywnych appkach map). Domyslnie 56px; klasy nadpisywalne przez `className`.
+function PlaceThumb({ url, category, name, className }: { url?: string | null; category?: string | null; name?: string; className?: string }) {
+  const [failed, setFailed] = useState(false);
+  const box = className ?? "h-14 w-14 rounded-2xl shrink-0";
+  if (!url || failed) {
+    return (
+      <div className={`${box} bg-muted flex items-center justify-center text-2xl`}>
+        {CAT_EMOJI[category ?? "other"] ?? "📍"}
+      </div>
+    );
+  }
+  return <img src={url} alt={name ?? ""} onError={() => setFailed(true)} className={`${box} object-cover`} loading="lazy" />;
+}
 
 type PolecaneCreatorPlan = {
   kind: "creator";
@@ -1215,8 +1231,10 @@ async function hydrateCollections(cols: any[]): Promise<DiscoveryCollection[]> {
 
 const SHOW_ZESTAWIENIA = true;
 
-export default function DiscoveryFeed() {
+export default function DiscoveryFeed({ city = "Warszawa" }: { city?: string } = {}) {
   const { t } = useTranslation("homefeed");
+  // Liczba zapisanych miejsc (do wiersza "Zapisane miejsca" pod wyszukiwarka).
+  const savedCount = useMemo(() => getHistoryByCity().reduce((n, g) => n + g.places.length, 0), []);
   const [activeCol, setActiveCol] = useState<DiscoveryCollection | null>(null);
   const [activeCreator, setActiveCreator] = useState<PolecaneCreatorPlan | null>(null);
   // Drawer "Kiedy planujesz te trase?" - klik "Uzyj tej trasy" w zestawieniu (podglad)
@@ -1285,12 +1303,12 @@ export default function DiscoveryFeed() {
   // Najnowsze udostepnione trasy (poziomy scroll).
   // Trasy w Warszawie (lista pionowa).
   const { data: warszawa = [], isLoading: wawaLoading } = useQuery({
-    queryKey: ["discovery-warszawa-routes"],
+    queryKey: ["discovery-city-routes", city],
     queryFn: async () => {
       const { data } = await (supabase as any)
         .from("routes")
         .select("id, title, city, ai_highlight, ai_summary, user_id, created_at, views, share_anonymous")
-        .eq("is_shared", true).not("title", "is", null).ilike("city", "warszawa%")
+        .eq("is_shared", true).not("title", "is", null).ilike("city", `${city}%`)
         .order("views", { ascending: false, nullsFirst: false })
         .limit(30);
       return enrichRouteRows(data ?? []);
@@ -1613,30 +1631,54 @@ export default function DiscoveryFeed() {
 
   return (
     <>
-      {/* Pasek wyszukiwania + przycisk filtrow */}
-      <div className="flex items-center gap-2 mb-4">
-        <div className="flex-1 flex items-center gap-2 px-3.5 py-2.5 rounded-full bg-secondary min-w-0">
-          <Search className="h-4 w-4 text-muted-foreground shrink-0" />
+      {/* Pasek wyszukiwania + przycisk filtrow (lekki redesign: obly kwadrat, border, focus) */}
+      <div className="flex items-center gap-2 mb-3.5">
+        <div className="flex-1 flex items-center gap-2.5 px-4 h-12 rounded-2xl bg-muted/60 border border-border/50 min-w-0 focus-within:border-orange-400/60 focus-within:bg-background transition-colors">
+          <Search className="h-[18px] w-[18px] text-muted-foreground shrink-0" />
           <input
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             onFocus={() => window.dispatchEvent(new CustomEvent("trasa:hide-bottomnav", { detail: true }))}
             onBlur={() => window.dispatchEvent(new CustomEvent("trasa:hide-bottomnav", { detail: false }))}
             placeholder={t("search_placeholder")}
-            className="flex-1 min-w-0 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+            className="flex-1 min-w-0 bg-transparent text-[15px] outline-none placeholder:text-muted-foreground/70"
           />
           {searchInput && (
-            <button onClick={() => setSearchInput("")} aria-label={t("aria.clear")} className="shrink-0"><X className="h-4 w-4 text-muted-foreground" /></button>
+            <button onClick={() => setSearchInput("")} aria-label={t("aria.clear")} className="shrink-0 h-6 w-6 flex items-center justify-center rounded-full text-muted-foreground active:bg-muted"><X className="h-4 w-4" /></button>
           )}
         </div>
         <button onClick={() => setFiltersOpen(true)} aria-label={t("aria.filters")}
-          className="relative h-10 w-10 flex items-center justify-center rounded-full bg-secondary shrink-0 active:scale-90 transition-transform">
-          <SlidersHorizontal className="h-4 w-4" />
+          className="relative h-12 w-12 flex items-center justify-center rounded-2xl bg-muted/60 border border-border/50 shrink-0 active:scale-95 transition-transform">
+          <SlidersHorizontal className="h-[18px] w-[18px]" />
           {activeFilterCount > 0 && (
             <span className="absolute -top-1 -right-1 h-4 min-w-4 px-1 rounded-full bg-primary text-white text-[10px] font-bold flex items-center justify-center">{activeFilterCount}</span>
           )}
         </button>
       </div>
+
+      {/* Szybkie skroty (jak w natywnych mapach): biezace polozenie + zapisane miejsca.
+          Widoczne gdy nie ma aktywnego wyszukiwania. Oba prowadza do zakladki "Zapisane". */}
+      {!isSearchActive && (
+        <div className="mb-5 rounded-2xl bg-secondary border border-border/40 overflow-hidden divide-y divide-border/40">
+          <button onClick={() => navigate("/polubione")} className="w-full flex items-center gap-3 px-3.5 py-3 text-left active:bg-muted/50 transition-colors">
+            <div className="h-10 w-10 rounded-xl bg-orange-50 flex items-center justify-center shrink-0">
+              <Navigation className="h-[18px] w-[18px] text-orange-600" />
+            </div>
+            <span className="flex-1 text-sm font-semibold">{t("current_location", "Bieżące położenie")}</span>
+            <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+          </button>
+          <button onClick={() => navigate("/polubione")} className="w-full flex items-center gap-3 px-3.5 py-3 text-left active:bg-muted/50 transition-colors">
+            <div className="h-10 w-10 rounded-xl bg-orange-50 flex items-center justify-center shrink-0">
+              <Bookmark className="h-[18px] w-[18px] text-orange-600" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold leading-tight">{t("saved_places", "Zapisane miejsca")}</p>
+              <p className="text-xs text-muted-foreground leading-tight mt-0.5">{t("places_count", { count: savedCount })}</p>
+            </div>
+            <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+          </button>
+        </div>
+      )}
 
       {isSearchActive ? (
         searchLoading ? (
@@ -1655,13 +1697,7 @@ export default function DiscoveryFeed() {
                       onClick={() => openPlaceDetail(p)}
                       className="w-full flex items-center gap-3 rounded-2xl border border-border/40 bg-secondary p-3 text-left active:scale-[0.98] transition-transform"
                     >
-                      {p.photo_url ? (
-                        <img src={p.photo_url} alt={p.place_name} className="h-14 w-14 rounded-2xl object-cover shrink-0" loading="lazy" />
-                      ) : (
-                        <div className="h-14 w-14 rounded-2xl bg-muted flex items-center justify-center shrink-0">
-                          <MapPin className="h-5 w-5 text-muted-foreground" />
-                        </div>
-                      )}
+                      <PlaceThumb url={p.photo_url} category={p.category} name={p.place_name} />
                       <div className="flex-1 min-w-0">
                         <p className="font-semibold text-sm leading-tight truncate">{p.place_name}</p>
                         <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
@@ -1738,7 +1774,7 @@ export default function DiscoveryFeed() {
           {warszawa.length > 0 && (
             <div>
               <div className="mb-4 px-1">
-                <h2 className="text-xl font-black tracking-tight">{t("routes_in_warsaw")}</h2>
+                <h2 className="text-xl font-black tracking-tight">{city === "Warszawa" ? t("routes_in_warsaw") : `Trasy w ${city}`}</h2>
               </div>
               <div className="space-y-6">
                 {warszawa.map((r) => (

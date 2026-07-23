@@ -55,11 +55,7 @@ const Journal = () => {
 
   return (
     <div className="flex-1 flex flex-col min-h-0 px-4 pt-2 pb-[calc(5rem+env(safe-area-inset-bottom,0px))] overflow-y-auto">
-      <div className="pt-3 pb-2.5 flex items-start justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-display font-extrabold tracking-tight">{t("title")}</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">{t("subtitle")}</p>
-        </div>
+      <div className="pt-3 pb-2.5 flex items-center justify-end gap-3">
         {PLANNING_DISABLED && (
           <button
             onClick={() => navigate("/plan", { state: { wyjazdMode: true } })}
@@ -71,7 +67,7 @@ const Journal = () => {
       </div>
       <div className="border-b border-border/40 mb-3" />
 
-      <JournalTab userId={user.id} />
+      {user && <JournalTab userId={user.id} />}
     </div>
   );
 };
