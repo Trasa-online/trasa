@@ -666,7 +666,7 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
               onClick={(e) => { e.stopPropagation(); onUndo(); }}
               disabled={!canUndo}
               aria-label={t("undo", { defaultValue: "Cofnij" })}
-              className="h-11 w-11 rounded-full bg-white/90 backdrop-blur flex items-center justify-center shadow-md active:scale-90 transition-transform disabled:opacity-30"
+              className="h-12 w-12 rounded-full bg-white/90 backdrop-blur flex items-center justify-center shadow-md active:scale-90 transition-transform disabled:opacity-30"
             >
               <RotateCcw className="h-5 w-5 text-black" />
             </button>
@@ -685,7 +685,7 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
           <button
             onClick={(e) => { e.stopPropagation(); onTap(); }}
             aria-label={t("expand_card")}
-            className="h-11 w-11 rounded-full bg-white flex items-center justify-center shadow-md active:scale-90 transition-transform"
+            className="h-12 w-12 rounded-full bg-white flex items-center justify-center shadow-md active:scale-90 transition-transform"
           >
             <ChevronUp className="h-5 w-5 text-black" />
           </button>
@@ -2185,8 +2185,13 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
         onOpenChange={setDetailOpen}
         place={detailPlace}
         referenceDate={date.toISOString().slice(0, 10)}
-        onLike={() => { handleLike(undefined, detailPlace ?? undefined); }}
-        onSkip={() => { handleSkip(); }}
+        onLike={() => {
+          // scrollMode (Eksploracja): "+"/Dodaj na wizytowce zapisuje BEZ zdejmowania z
+          // kolejki (jak "+" na karcie). Klasyczny swipe: handleLike (dequeue).
+          if (exploreMode) { if (detailPlace) handleSaveInPlace(detailPlace); }
+          else { handleLike(undefined, detailPlace ?? undefined); }
+        }}
+        onSkip={exploreMode ? undefined : () => { handleSkip(); }}
       />
     </div>
   );

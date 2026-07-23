@@ -273,18 +273,22 @@ const PlaceSwiperDetail = ({
         {(onLike || onSkip) && (
           <div className="shrink-0 px-4 pt-3 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] border-t border-black/5 bg-[#FEFEFE]">
             <div className="flex gap-3">
-              <button
-                onClick={handleSkip}
-                className="flex-1 py-3 rounded-full bg-secondary text-secondary-foreground font-bold text-sm shadow-sm active:scale-[0.97] transition-transform"
-              >
-                {t("reject")}
-              </button>
-              <button
-                onClick={handleLike}
-                className="flex-1 py-3 rounded-full bg-primary text-white font-bold text-sm shadow-xl shadow-primary/30 active:scale-[0.97] transition-transform"
-              >
-                {t("add")}
-              </button>
+              {onSkip && (
+                <button
+                  onClick={handleSkip}
+                  className="flex-1 py-3 rounded-full bg-secondary text-secondary-foreground font-bold text-sm shadow-sm active:scale-[0.97] transition-transform"
+                >
+                  {t("reject")}
+                </button>
+              )}
+              {onLike && (
+                <button
+                  onClick={handleLike}
+                  className="flex-1 py-3 rounded-full bg-primary text-white font-bold text-sm shadow-xl shadow-primary/30 active:scale-[0.97] transition-transform"
+                >
+                  {t("add")}
+                </button>
+              )}
             </div>
           </div>
         )}

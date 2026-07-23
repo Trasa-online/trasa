@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { createWyjazdFromPlaces } from "@/lib/createWyjazd";
 import { useNavigate, useLocation } from "react-router-dom";
-import { ArrowLeft, X, Plus, Filter, Check, Star, MapPin, ArrowRight, ChevronDown, Layers, Compass } from "lucide-react";
+import { ArrowLeft, X, Plus, Filter, Check, Star, MapPin, ArrowRight, ChevronDown, Layers, Compass, SlidersHorizontal } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/hooks/useAuth";
 import { useOnboarding } from "@/components/OnboardingGuide";
@@ -393,10 +393,10 @@ const PlanWizard = () => {
             {/* Chip filtru */}
             <button
               onClick={() => setCategoryDrawerOpen(true)}
-              className="shrink-0 h-8 w-8 flex items-center justify-center rounded-full bg-card border border-border/60 active:scale-[0.97] transition-transform"
+              className="shrink-0 h-8 w-8 flex items-center justify-center rounded-xl bg-muted active:scale-95 transition-transform"
               aria-label={t("filters")}
             >
-              <Filter className="h-4 w-4 text-orange-600" />
+              <SlidersHorizontal className="h-4 w-4 text-foreground" />
             </button>
           </>
         ) : step === 4 ? (
