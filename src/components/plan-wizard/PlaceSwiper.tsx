@@ -2099,9 +2099,9 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
           }}
           className="flex-1 min-h-0 overflow-y-auto snap-y snap-mandatory scrollbar-none overscroll-contain"
         >
-          {displayQueue.slice(0, 20).map((place, idx) => (
-            // Pierwsza karta troche nizsza (nastepna wystaje) - afordancja scrollowania.
-            <div key={place.id} className={cn("snap-start snap-always w-full flex flex-col px-3 pt-1 pb-3", idx === 0 ? "h-[calc(100%-3.5rem)]" : "h-full")}>
+          {displayQueue.slice(0, 20).map((place) => (
+            // KAZDA karta troche nizsza (nastepna zawsze wystaje) - stala afordancja "scrolluj dalej".
+            <div key={place.id} className="snap-start snap-always w-full flex flex-col px-3 pt-1 pb-3 h-[calc(100%-3.5rem)]">
               <div className="relative flex-1 min-h-0 w-full max-w-[460px] mx-auto">
                 <SwipeCard
                   place={place}
