@@ -649,6 +649,12 @@ const Explore = () => {
   // Swiper montujemy po pierwszym przejsciu i zostaje (kolejne przelaczenia natychmiastowe).
   const [hasBrowsed, setHasBrowsed] = useState(view === "browse");
   useEffect(() => { if (view === "browse") setHasBrowsed(true); }, [view]);
+  // Ukryj fixed BottomNav w widoku przegladania (swiper = pelny ekran); pokaz w feedzie.
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent("trasa:hide-bottomnav", { detail: view === "browse" }));
+  }, [view]);
+  // Przy wyjsciu z Eksploracji zawsze przywroc BottomNav.
+  useEffect(() => () => { window.dispatchEvent(new CustomEvent("trasa:hide-bottomnav", { detail: false })); }, []);
 
   const handleRefresh = async () => {
     await queryClient.invalidateQueries();
@@ -674,7 +680,7 @@ const Explore = () => {
             mode={view === "browse" ? "browse" : "explore"}
             city={exploreCity}
             onCityChange={setExploreCity}
-            onModeChange={setView}
+            onModeChange={(m) => setView(m === "browse" ? "browse" : "feed")}
             onOpenFilters={() => window.dispatchEvent(new CustomEvent("trasa:explore-open-filters"))}
             activeFilterCount={filterCount}
           />
