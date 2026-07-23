@@ -186,6 +186,9 @@
     "create_error": "Couldn't create the trip",
     "shared": "Shared",
     "link_copied": "Link copied",
-    "loading": "Loading trips..."
+    "loading": "Loading trips...",
+    "removed_from": "Removed from: {{name}}",
+    "remove_error": "Couldn't remove the place",
+    "remove_aria": "Remove from trip"
   }
 }

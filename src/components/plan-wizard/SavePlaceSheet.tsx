@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, X, Check, Loader2, Share2 } from "lucide-react";
@@ -57,7 +57,13 @@ export default function SavePlaceSheet({
 
   const [newName, setNewName] = useState("");
   const [busyId, setBusyId] = useState<string | null>(null); // route id albo "new"
-  const [addedIds, setAddedIds] = useState<Set<string>>(new Set());
+  // Optymistyczny stan przynaleznosci do wyjazdu (po dodaniu/usunieciu, zanim query sie odswiezy).
+  const [overrides, setOverrides] = useState<Map<string, boolean>>(new Map());
+
+  // Reset przy kazdym otwarciu (miejsce/stan sie zmienia).
+  useEffect(() => {
+    if (open) { setOverrides(new Map()); setNewName(""); setBusyId(null); }
+  }, [open]);
 
   const { data: trips = [], isLoading } = useQuery({
     queryKey: ["save-sheet-trips", user?.id],
@@ -83,11 +89,16 @@ export default function SavePlaceSheet({
     queryClient.invalidateQueries({ queryKey: ["active-plan-all-pins"] });
   };
 
-  const alreadyIn = (trip: TripRow) =>
-    addedIds.has(trip.id) || (trip.pins ?? []).some((p) => skey(p.place_name) === skey(place?.place_name ?? ""));
+  const isIn = (trip: TripRow) => {
+    if (overrides.has(trip.id)) return overrides.get(trip.id)!;
+    return (trip.pins ?? []).some((p) => skey(p.place_name) === skey(place?.place_name ?? ""));
+  };
 
+  // Dodanie do wyjazdu: zamyka drawer i pokazuje toast "zapisano w: X" (dopiero po
+  // zamknieciu, zeby toast nie nachodzil na drawer). Toast TYLKO przy realnym zapisie
+  // do planu - samo zapisanie zakladka (bez planu) nie pokazuje zadnego toasta.
   const addToTrip = async (trip: TripRow) => {
-    if (!place || !user || busyId || alreadyIn(trip)) return;
+    if (!place || !user || busyId || isIn(trip)) return;
     setBusyId(trip.id);
     haptics.medium();
     try {
@@ -107,12 +118,35 @@ export default function SavePlaceSheet({
         original_creator_id: user.id,
       });
       if (error) throw error;
-      setAddedIds((prev) => new Set(prev).add(trip.id));
       invalidate();
+      onOpenChange(false);
       toast.success(t("save_sheet.added_to", { name: trip.title || city }));
     } catch (e: any) {
       console.error("[SavePlaceSheet] add to trip failed:", e?.message ?? e);
       toast.error(t("save_sheet.add_error"));
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  // Usuniecie miejsca z wyjazdu (drawer zostaje otwarty, toast top-center zeby nie nachodzil).
+  const removeFromTrip = async (trip: TripRow) => {
+    if (!place || !user || busyId || !isIn(trip)) return;
+    setBusyId(trip.id);
+    haptics.medium();
+    try {
+      const { error } = await (supabase as any)
+        .from("pins")
+        .delete()
+        .eq("route_id", trip.id)
+        .ilike("place_name", place.place_name);
+      if (error) throw error;
+      setOverrides((prev) => new Map(prev).set(trip.id, false));
+      invalidate();
+      toast.success(t("save_sheet.removed_from", { name: trip.title || city }), { position: "top-center" });
+    } catch (e: any) {
+      console.error("[SavePlaceSheet] remove from trip failed:", e?.message ?? e);
+      toast.error(t("save_sheet.remove_error"));
     } finally {
       setBusyId(null);
     }
@@ -139,6 +173,7 @@ export default function SavePlaceSheet({
       if (!id) throw new Error("route insert failed");
       setNewName("");
       invalidate();
+      onOpenChange(false);
       toast.success(t("save_sheet.created", { name: name || city || "Wyjazd" }));
     } catch (e: any) {
       console.error("[SavePlaceSheet] create trip failed:", e?.message ?? e);
@@ -214,14 +249,15 @@ export default function SavePlaceSheet({
               {trips.map((trip) => {
                 const count = trip.pins?.length ?? 0;
                 const cover = trip.pins?.[0];
-                const added = alreadyIn(trip);
+                const inPlan = isIn(trip);
+                const toggle = () => (inPlan ? removeFromTrip(trip) : addToTrip(trip));
                 return (
                   <div key={trip.id} className="flex items-center gap-3 py-2.5">
                     <button
                       type="button"
-                      onClick={() => addToTrip(trip)}
-                      disabled={added || busyId === trip.id}
-                      className="flex-1 flex items-center gap-3 min-w-0 text-left active:opacity-80 disabled:active:opacity-100"
+                      onClick={toggle}
+                      disabled={busyId === trip.id}
+                      className="flex-1 flex items-center gap-3 min-w-0 text-left active:opacity-80"
                     >
                       <div className="relative h-14 w-14 rounded-xl overflow-hidden shrink-0 bg-muted">
                         {cover ? (
@@ -239,17 +275,17 @@ export default function SavePlaceSheet({
                     </button>
                     <button
                       type="button"
-                      onClick={() => addToTrip(trip)}
-                      disabled={added || busyId === trip.id}
+                      onClick={toggle}
+                      disabled={busyId === trip.id}
                       className={cn(
                         "h-9 w-9 rounded-full flex items-center justify-center shrink-0 active:scale-90 transition-transform",
-                        added ? "bg-orange-100 text-orange-600" : "text-foreground",
+                        inPlan ? "bg-orange-100 text-orange-600" : "text-foreground",
                       )}
-                      aria-label={t("save_sheet.add_aria")}
+                      aria-label={inPlan ? t("save_sheet.remove_aria") : t("save_sheet.add_aria")}
                     >
                       {busyId === trip.id ? (
                         <Loader2 className="h-5 w-5 animate-spin" />
-                      ) : added ? (
+                      ) : inPlan ? (
                         <Check className="h-5 w-5" />
                       ) : (
                         <Plus className="h-6 w-6" />

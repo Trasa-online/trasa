@@ -186,6 +186,9 @@
     "create_error": "Nie udało się utworzyć wyjazdu",
     "shared": "Udostępniono",
     "link_copied": "Skopiowano link",
-    "loading": "Ładuję wyjazdy..."
+    "loading": "Ładuję wyjazdy...",
+    "removed_from": "Usunięto z: {{name}}",
+    "remove_error": "Nie udało się usunąć miejsca",
+    "remove_aria": "Usuń z wyjazdu"
   }
 }
