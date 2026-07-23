@@ -1274,8 +1274,12 @@ export default function DiscoveryFeed({ city = "Warszawa" }: { city?: string } =
   const [themeFilter, setThemeFilter] = useState<string[]>([]);
   const [categoryFilter, setCategoryFilter] = useState<string[]>([]);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  // Zakladka wynikow wyszukiwania: najlepsze (wszystko) / miejsca / zestawienia.
+  const [searchTab, setSearchTab] = useState<"best" | "places" | "collections">("best");
   const q = debouncedQuery.length >= 2 ? debouncedQuery : "";
   const isSearchActive = !!q || cityFilter.length > 0 || themeFilter.length > 0 || categoryFilter.length > 0;
+  // Reset zakladki wynikow gdy wychodzimy z wyszukiwania.
+  useEffect(() => { if (!isSearchActive) setSearchTab("best"); }, [isSearchActive]);
   const activeFilterCount = cityFilter.length + themeFilter.length + categoryFilter.length;
   const clearFilters = () => { setCityFilter([]); setThemeFilter([]); setCategoryFilter([]); };
   // Toggle wartosci w tablicy filtra (dodaj/usun).
@@ -1686,8 +1690,19 @@ export default function DiscoveryFeed({ city = "Warszawa" }: { city?: string } =
             {Array.from({ length: 3 }).map((_, i) => <RouteCardVSkeleton key={i} />)}
           </div>
         ) : (results && (results.routes.length > 0 || results.collections.length > 0 || (results.places?.length ?? 0) > 0)) ? (
-          <div className="space-y-7">
-            {(results.places?.length ?? 0) > 0 && (
+          <div className="space-y-5">
+            {/* Badge'e filtrow wynikow: Najlepsze dopasowanie / Miejsca / Zestawienia (jesli w kolekcji) */}
+            <div className="flex gap-2 overflow-x-auto scrollbar-none -mx-1 px-1">
+              <button onClick={() => setSearchTab("best")} className={`shrink-0 px-3.5 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-colors ${searchTab === "best" ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground"}`}>{t("best_match", "Najlepsze dopasowanie")}</button>
+              {(results.places?.length ?? 0) > 0 && (
+                <button onClick={() => setSearchTab("places")} className={`shrink-0 px-3.5 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-colors ${searchTab === "places" ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground"}`}>{t("places")}</button>
+              )}
+              {results.collections.length > 0 && (
+                <button onClick={() => setSearchTab("collections")} className={`shrink-0 px-3.5 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-colors ${searchTab === "collections" ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground"}`}>{t("collections")}</button>
+              )}
+            </div>
+            <div className="space-y-7">
+            {(searchTab === "best" || searchTab === "places") && (results.places?.length ?? 0) > 0 && (
               <div>
                 <p className="text-sm font-black uppercase tracking-wide mb-3 px-1">{t("places_heading")}</p>
                 <div className="space-y-2">
@@ -1721,7 +1736,7 @@ export default function DiscoveryFeed({ city = "Warszawa" }: { city?: string } =
                 </div>
               </div>
             )}
-            {results.collections.length > 0 && (
+            {(searchTab === "best" || searchTab === "collections") && results.collections.length > 0 && (
               <div>
                 <p className="text-sm font-black uppercase tracking-wide mb-3 px-1">{t("collections")}</p>
                 <div className="space-y-6">
@@ -1731,7 +1746,7 @@ export default function DiscoveryFeed({ city = "Warszawa" }: { city?: string } =
                 </div>
               </div>
             )}
-            {results.routes.length > 0 && (
+            {searchTab === "best" && results.routes.length > 0 && (
               <div>
                 <p className="text-sm font-black uppercase tracking-wide mb-3 px-1">{t("routes_heading")}{cityFilter.length === 1 ? ` ${t("in_city", { city: cityFilter[0] })}` : ""}</p>
                 <div className="space-y-6">
@@ -1741,6 +1756,7 @@ export default function DiscoveryFeed({ city = "Warszawa" }: { city?: string } =
                 </div>
               </div>
             )}
+            </div>
           </div>
         ) : (
           <div className="py-16 text-center px-8">

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { MapPin, Star, ArrowRight, ChevronUp, ChevronLeft, ChevronRight, RotateCcw, CheckCircle2, Navigation, X, CalendarDays, Plus, Check } from "lucide-react";
+import { MapPin, Star, ArrowRight, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, RotateCcw, CheckCircle2, Navigation, X, CalendarDays, Plus, Check, Bookmark } from "lucide-react";
 import AddCustomPlacePanel from "./AddCustomPlacePanel";
 import { haversineKm as haversineKmDist, formatDistance } from "@/lib/distance";
 import { useDistanceReference, getReference, ensureCityContext, wasAskedForCity, markAskedForCity, tryResolveOnSite } from "@/lib/distanceReference";
@@ -680,7 +680,7 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
               saved ? "bg-primary text-white" : "bg-white text-black"
             )}
           >
-            {saved ? <Check className="h-6 w-6" strokeWidth={3} /> : <Plus className="h-6 w-6" strokeWidth={2.5} />}
+            {saved ? <Bookmark className="h-6 w-6 fill-current" strokeWidth={2} /> : <Bookmark className="h-6 w-6" strokeWidth={2} />}
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); onTap(); }}
@@ -1223,6 +1223,9 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
   // id aktualnie widocznej karty (fetch Google/tag odpalamy TYLKO dla niej - koszt).
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
   const [activeCardId, setActiveCardId] = useState<string | null>(null);
+  // Hint scrollowania: pierwsza karta nieco nizsza (nastepna wystaje) + puls w dol,
+  // dopoki user nie przewinie. Po pierwszym scrollu chowamy podpowiedz.
+  const [hasScrolled, setHasScrolled] = useState(false);
   const scrollWrapRef = useRef<HTMLDivElement>(null);
   const [history, setHistory] = useState<{ place: MockPlace; reaction: "liked" | "skipped" | "super_liked" }[]>([]);
   const [detailPlace, setDetailPlace] = useState<MockPlace | null>(null);
@@ -2083,6 +2086,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
         // Eksploracja pionowa (wg Figmy): scroll w dol = nastepna karta (snap per karta).
         // Karta wypelnia caly ekran, akcje po prawej (kciuk). "+" zapisuje bez zdejmowania z
         // kolejki. isTop = tylko widoczna karta (fetch Google/tagi + video odpalamy dla niej).
+        <>
         <div
           ref={scrollWrapRef}
           onScroll={(e) => {
@@ -2091,11 +2095,13 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
             const idx = Math.round(el.scrollTop / h);
             const p = displayQueue[idx];
             if (p && p.id !== activeCardId) setActiveCardId(p.id);
+            if (el.scrollTop > 24 && !hasScrolled) setHasScrolled(true);
           }}
           className="flex-1 min-h-0 overflow-y-auto snap-y snap-mandatory scrollbar-none overscroll-contain"
         >
-          {displayQueue.slice(0, 20).map((place) => (
-            <div key={place.id} className="snap-start snap-always h-full w-full flex flex-col px-3 pt-1 pb-3">
+          {displayQueue.slice(0, 20).map((place, idx) => (
+            // Pierwsza karta troche nizsza (nastepna wystaje) - afordancja scrollowania.
+            <div key={place.id} className={cn("snap-start snap-always w-full flex flex-col px-3 pt-1 pb-3", idx === 0 ? "h-[calc(100%-3.5rem)]" : "h-full")}>
               <div className="relative flex-1 min-h-0 w-full max-w-[460px] mx-auto">
                 <SwipeCard
                   place={place}
@@ -2116,6 +2122,15 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
             </div>
           ))}
         </div>
+        {/* Puls "scroll w dol" - afordancja, znika po pierwszym przewinieciu. */}
+        {!hasScrolled && displayQueue.length > 1 && (
+          <div className="absolute bottom-40 left-1/2 -translate-x-1/2 z-20 pointer-events-none animate-bounce">
+            <div className="h-9 w-9 rounded-full bg-black/45 backdrop-blur flex items-center justify-center shadow-lg">
+              <ChevronDown className="h-5 w-5 text-white" />
+            </div>
+          </div>
+        )}
+        </>
       ) : (
         <div className={cn("flex-1 min-h-0 flex justify-center w-full", exploreMode ? "items-center" : "items-start pt-2")}>
         <div
