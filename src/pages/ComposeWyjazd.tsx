@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { ArrowLeft, Search, Plus, X, Star, MapPin, ChevronDown, Calendar as CalendarIcon, List, GalleryHorizontalEnd, Loader2, Check, ArrowRight, Trash2 } from "lucide-react";
+import { ArrowLeft, Search, Plus, X, Star, MapPin, ChevronDown, Calendar as CalendarIcon, List, GalleryHorizontalEnd, Loader2, ArrowRight, Trash2, Bookmark, Maximize2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthDrawer } from "@/hooks/useAuthDrawer";
@@ -11,8 +11,11 @@ import { ORIGIN_COUNTRIES } from "@/lib/locations";
 import { expandCity } from "@/lib/cities";
 import { subcategoryLabelLocalized } from "@/lib/categories";
 import { createWyjazdFromPlaces } from "@/lib/createWyjazd";
+import { API_BASE } from "@/lib/platform";
 import FullCalendarPicker from "@/components/plan-wizard/FullCalendarPicker";
 import RouteMap from "@/components/RouteMap";
+import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
+import type { MockPlace } from "@/components/plan-wizard/PlaceSwiper";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 
 const PL_CITIES = ORIGIN_COUNTRIES.find((c) => c.name === "Polska")?.cities ?? ["Warszawa"];
@@ -30,10 +33,10 @@ type ComposeItem = {
   photo_url: string | null;
 };
 
-// Miejsce z DB (places) -> ComposeItem.
-const fromDbPlace = (p: any): ComposeItem => ({
-  key: p.id ?? `${p.place_name}:${p.latitude}`,
-  place_id: p.id ?? null,
+// Cokolwiek (DB place / wynik Google / ComposeItem) -> ComposeItem.
+const toItem = (p: any): ComposeItem => ({
+  key: p.id ?? p.key ?? `${p.place_name}:${p.latitude}`,
+  place_id: p.id ?? p.place_id ?? null,
   place_name: p.place_name,
   category: p.category ?? null,
   address: p.address ?? null,
@@ -43,9 +46,33 @@ const fromDbPlace = (p: any): ComposeItem => ({
   photo_url: p.photo_url ?? null,
 });
 
+// ComposeItem / propozycja -> MockPlace (do wizytowki PlaceSwiperDetail).
+const toMockPlace = (p: any, city: string): MockPlace => ({
+  id: p.place_id ?? p.id ?? p.key ?? p.place_name,
+  place_name: p.place_name,
+  category: (p.category ?? "other") as any,
+  city,
+  address: p.address ?? "",
+  latitude: p.latitude ?? 0,
+  longitude: p.longitude ?? 0,
+  rating: typeof p.rating === "number" ? p.rating : 0,
+  photo_url: p.photo_url ?? "",
+  vibe_tags: [],
+  description: "",
+});
+
+// Statyczna mapka (proxy /api/static-map) - pomaranczowe markery, POI/transit ukryte.
+// Auto-fit do markerow (bez center/zoom). null gdy brak wspolrzednych.
+function buildStaticMapUrl(pts: { latitude: number; longitude: number }[]): string | null {
+  const valid = pts.filter((p) => p.latitude != null && p.longitude != null).slice(0, 20);
+  if (!valid.length) return null;
+  const markers = valid.map((p) => `markers=size:small%7Ccolor:0xf9662b%7C${p.latitude},${p.longitude}`).join("&");
+  return `${API_BASE}/api/static-map?size=560x260&scale=2&maptype=roadmap&${markers}&style=feature:poi%7Cvisibility:off&style=feature:transit%7Cvisibility:off`;
+}
+
 // Kompozycja wyjazdu z zestawienia (wg Figmy "Zestawienie · nowe — klik uzyj"):
-// nazwa + daty + miasto + wybrane miejsca (prefill z zestawienia) + szukanie/propozycje
-// + mapa. Potwierdzenie tworzy wyjazd (routes) z datami. Wejscie: "Uzyj tego zestawienia".
+// nazwa + daty + miasto + wybrane miejsca (prefill z zestawienia) + szukanie (Google) /
+// propozycje z bazy (na fokusie) + statyczna mapa. Potwierdzenie tworzy wyjazd (routes).
 export default function ComposeWyjazd() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -56,26 +83,14 @@ export default function ComposeWyjazd() {
 
   const [city, setCity] = useState<string>(nav.city || "Warszawa");
   const [name, setName] = useState<string>(nav.title || "");
-  const [items, setItems] = useState<ComposeItem[]>(() =>
-    (nav.places ?? []).map((p: any, idx: number): ComposeItem => ({
-      key: p.place_id ?? p.id ?? `${p.place_name}:${idx}`,
-      place_id: p.place_id ?? p.id ?? null,
-      place_name: p.place_name,
-      category: p.category ?? null,
-      address: p.address ?? null,
-      latitude: p.latitude ?? null,
-      longitude: p.longitude ?? null,
-      rating: typeof p.rating === "number" ? p.rating : null,
-      photo_url: p.photo_url ?? null,
-    })),
-  );
+  const [items, setItems] = useState<ComposeItem[]>(() => (nav.places ?? []).map((p: any, idx: number) => toItem({ ...p, key: p.place_id ?? p.id ?? `${p.place_name}:${idx}` })));
   const [placeView, setPlaceView] = useState<"detail" | "list">("detail");
 
   // Daty wyjazdu (start + liczba dni z FullCalendarPicker).
   const [dateSheet, setDateSheet] = useState(false);
   const [tripDate, setTripDate] = useState<{ start: Date; numDays: number } | null>(null);
 
-  // Wyszukiwarka + propozycje (DB places w miescie).
+  // Wyszukiwarka: propozycje z bazy (na fokusie), Google textsearch (podczas pisania).
   const searchRef = useRef<HTMLInputElement>(null);
   const [search, setSearch] = useState("");
   const [searchFocused, setSearchFocused] = useState(false);
@@ -84,10 +99,14 @@ export default function ComposeWyjazd() {
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [creating, setCreating] = useState(false);
 
-  const addedIds = useMemo(() => new Set(items.map((i) => (i.place_id ?? i.place_name).toLowerCase())), [items]);
-  const isAdded = (p: any) => addedIds.has((p.id ?? p.place_name ?? "").toLowerCase());
+  // Wizytowka miejsca (tap w karte) + rozwinieta mapa.
+  const [detailPlace, setDetailPlace] = useState<MockPlace | null>(null);
+  const [mapExpanded, setMapExpanded] = useState(false);
 
-  // Propozycje: najlepiej oceniane miejsca w miescie (bez juz dodanych).
+  const addedIds = useMemo(() => new Set(items.map((i) => (i.place_id ?? i.place_name).toLowerCase())), [items]);
+  const isAdded = (p: any) => addedIds.has((p.id ?? p.place_id ?? p.place_name ?? "").toLowerCase());
+
+  // Propozycje z bazy (najlepiej oceniane w miescie) - pokazywane TYLKO na fokusie (pusta fraza).
   useEffect(() => {
     let alive = true;
     (async () => {
@@ -103,35 +122,47 @@ export default function ComposeWyjazd() {
     return () => { alive = false; };
   }, [city]);
 
-  // Wyszukiwarka po nazwie (DB places w miescie).
+  // Szukanie po nazwie = GOOGLE (textsearch przez proxy), zeby znalezc KAZDE miejsce, nie
+  // tylko te z naszej bazy. Debounce + cache po stronie proxy ogranicza koszt.
   useEffect(() => {
     const q = search.trim();
     if (q.length < 2) { setResults([]); setLoading(false); return; }
     setLoading(true);
     const t = setTimeout(async () => {
-      const cities = expandCity(city);
-      const { data } = await (supabase as any)
-        .from("places")
-        .select("id, place_name, city, category, address, latitude, longitude, rating, photo_url")
-        .in("city", cities)
-        .ilike("place_name", `%${q.replace(/[%_\\]/g, "\\$&")}%`)
-        .order("rating", { ascending: false, nullsFirst: false })
-        .limit(20);
-      setResults(data ?? []);
+      try {
+        const { data } = await supabase.functions.invoke("google-places-proxy", {
+          body: { action: "textsearch", query: `${q} ${city}` },
+        });
+        const raw = (data?.results ?? []) as any[];
+        setResults(raw.map((r: any) => ({
+          id: null,
+          place_id: null,
+          key: `g:${r.latitude},${r.longitude}:${r.name}`,
+          place_name: r.name,
+          address: r.full_address ?? null,
+          latitude: r.latitude ?? null,
+          longitude: r.longitude ?? null,
+          category: null,
+          rating: null,
+          photo_url: null,
+        })));
+      } catch (e: any) {
+        console.error("[ComposeWyjazd] google textsearch error:", e?.message ?? e);
+        setResults([]);
+      }
       setLoading(false);
-    }, 300);
+    }, 350);
     return () => clearTimeout(t);
   }, [search, city]);
 
-  const addPlace = (p: any) => {
-    if (isAdded(p)) return;
-    setItems((prev) => [...prev, fromDbPlace(p)]);
-  };
+  const addPlace = (p: any) => { if (!isAdded(p)) setItems((prev) => [...prev, toItem(p)]); };
   const removePlace = (key: string) => setItems((prev) => prev.filter((i) => i.key !== key));
+  const openDetail = (p: any) => setDetailPlace(toMockPlace(p, city));
 
   const mapPins = items
     .filter((i) => i.latitude != null && i.longitude != null)
     .map((i) => ({ latitude: i.latitude!, longitude: i.longitude!, place_name: i.place_name }));
+  const staticMapUrl = useMemo(() => buildStaticMapUrl(mapPins), [items]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const dateLabel = tripDate
     ? tripDate.numDays > 1
@@ -139,7 +170,9 @@ export default function ComposeWyjazd() {
       : format(tripDate.start, "d MMM", { locale: dateLocale() })
     : null;
 
-  const confirm = async () => {
+  // openEditor=true -> tworzy i otwiera edytor wyjazdu; false (zapis zakladka) -> tworzy
+  // i laduje w liscie Wyjazdow z toastem.
+  const confirm = async (openEditor: boolean) => {
     if (!user) { openAuthDrawer({ mode: "register", hint: "save_route" }); return; }
     if (!items.length) { toast.error("Dodaj przynajmniej jedno miejsce"); return; }
     setCreating(true);
@@ -165,12 +198,12 @@ export default function ComposeWyjazd() {
       dates,
     );
     setCreating(false);
-    if (id) navigate(`/review-summary?route=${id}&edit=1`);
-    else toast.error("Nie udało się utworzyć wyjazdu");
+    if (!id) { toast.error("Nie udało się utworzyć wyjazdu"); return; }
+    if (openEditor) navigate(`/review-summary?route=${id}&edit=1`);
+    else { toast.success("Zapisano wyjazd"); navigate("/dziennik"); }
   };
 
-  // Miejsca do pokazania w "PROPOZYCJE" (podczas szukania = wyniki, inaczej = sugestie),
-  // z odfiltrowaniem juz dodanych.
+  // Propozycje: podczas pisania = wyniki Google, na fokusie = sugestie z bazy (bez dodanych).
   const proposals = (search.trim().length >= 2 ? results : suggestions).filter((p) => !isAdded(p));
   const showProposals = searchFocused || search.trim().length >= 2;
 
@@ -224,28 +257,30 @@ export default function ComposeWyjazd() {
           </div>
         </div>
 
-        {/* PROPOZYCJE W {MIASTO} - poziome karty z "+" (podczas szukania/fokusu) */}
+        {/* PROPOZYCJE - poziome karty. Podczas pisania = wyniki Google, na fokusie = baza. Tap -> wizytowka, "+" -> dodaj. */}
         {showProposals && (
           <div className="pt-4">
-            <p className="px-4 text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2.5">Propozycje w {city}</p>
+            <p className="px-4 text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2.5">
+              {search.trim().length >= 2 ? "Wyniki wyszukiwania" : `Propozycje w ${city}`}
+            </p>
             {loading && search.trim().length >= 2 ? (
               <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
             ) : proposals.length === 0 ? (
-              <p className="px-4 text-sm text-muted-foreground pb-2">Brak propozycji dla tej frazy.</p>
+              <p className="px-4 text-sm text-muted-foreground pb-2">Brak wyników dla tej frazy.</p>
             ) : (
               <div className="flex gap-3 overflow-x-auto scrollbar-none snap-x snap-mandatory px-4 pb-1">
                 {proposals.slice(0, 15).map((p: any) => (
-                  <div key={p.id ?? p.place_name} className="shrink-0 w-[150px] snap-start">
+                  <button key={p.id ?? p.key ?? p.place_name} onClick={() => openDetail(p)} className="shrink-0 w-[150px] snap-start text-left active:opacity-80 transition-opacity">
                     <div className="relative aspect-[4/3] rounded-2xl overflow-hidden bg-muted">
                       {p.photo_url ? (
                         <img src={p.photo_url} alt={p.place_name} loading="lazy" className="w-full h-full object-cover" />
                       ) : (
                         <div className="w-full h-full bg-gradient-to-br from-amber-100 to-orange-200 flex items-center justify-center"><MapPin className="h-6 w-6 text-orange-400" /></div>
                       )}
-                      <button onClick={() => addPlace(p)} aria-label="Dodaj miejsce"
+                      <span role="button" tabIndex={0} onClick={(e) => { e.stopPropagation(); addPlace(p); }} aria-label="Dodaj miejsce"
                         className="absolute top-2 right-2 h-8 w-8 rounded-full bg-primary text-white flex items-center justify-center shadow-md active:scale-90 transition-transform">
                         <Plus className="h-5 w-5" strokeWidth={2.5} />
-                      </button>
+                      </span>
                       {typeof p.rating === "number" && p.rating > 0 && (
                         <span className="absolute bottom-2 left-2 flex items-center gap-0.5 px-2 py-0.5 rounded-full bg-white/90 backdrop-blur-sm shadow-sm">
                           <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
@@ -254,15 +289,15 @@ export default function ComposeWyjazd() {
                       )}
                     </div>
                     <p className="mt-1.5 px-0.5 text-sm font-bold leading-tight line-clamp-1">{p.place_name}</p>
-                    {p.category && <p className="px-0.5 text-[11px] text-muted-foreground leading-tight">{subcategoryLabelLocalized(p.category)}</p>}
-                  </div>
+                    <p className="px-0.5 text-[11px] text-muted-foreground leading-tight line-clamp-1">{p.category ? subcategoryLabelLocalized(p.category) : (p.address || city)}</p>
+                  </button>
                 ))}
               </div>
             )}
           </div>
         )}
 
-        {/* WYBRANE MIEJSCA (N) + toggle lista/karty */}
+        {/* WYBRANE MIEJSCA (N) + toggle lista/karty. Tap -> wizytowka. */}
         <div className="px-4 pt-5">
           <div className="flex items-center justify-between mb-2.5">
             <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Wybrane miejsca ({items.length})</p>
@@ -286,17 +321,17 @@ export default function ComposeWyjazd() {
           ) : placeView === "detail" ? (
             <div className="flex gap-3 overflow-x-auto scrollbar-none snap-x snap-mandatory -mr-4 pr-4 pb-1">
               {items.map((it) => (
-                <div key={it.key} className="shrink-0 w-[220px] snap-start rounded-2xl bg-secondary border border-border/40 overflow-hidden shadow-sm">
+                <button key={it.key} onClick={() => openDetail(it)} className="shrink-0 w-[220px] snap-start rounded-2xl bg-secondary border border-border/40 overflow-hidden shadow-sm text-left active:opacity-90 transition-opacity">
                   <div className="relative aspect-[4/3] bg-muted">
                     {it.photo_url ? (
                       <img src={it.photo_url} alt={it.place_name} loading="lazy" className="w-full h-full object-cover" />
                     ) : (
                       <div className="w-full h-full bg-gradient-to-br from-amber-100 to-orange-200 flex items-center justify-center"><MapPin className="h-7 w-7 text-orange-400" /></div>
                     )}
-                    <button onClick={() => removePlace(it.key)} aria-label="Usuń miejsce"
+                    <span role="button" tabIndex={0} onClick={(e) => { e.stopPropagation(); removePlace(it.key); }} aria-label="Usuń miejsce"
                       className="absolute top-2 right-2 h-8 w-8 rounded-full bg-black/45 backdrop-blur text-white flex items-center justify-center active:scale-90 transition-transform">
                       <X className="h-4 w-4" />
-                    </button>
+                    </span>
                     {typeof it.rating === "number" && it.rating > 0 && (
                       <span className="absolute bottom-2 left-2 flex items-center gap-0.5 px-2 py-0.5 rounded-full bg-white/90 backdrop-blur-sm shadow-sm">
                         <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
@@ -309,13 +344,13 @@ export default function ComposeWyjazd() {
                     <p className="text-sm font-black leading-tight line-clamp-1">{it.place_name}</p>
                     <p className="text-[11px] text-muted-foreground leading-tight line-clamp-1">{it.address || city}</p>
                   </div>
-                </div>
+                </button>
               ))}
             </div>
           ) : (
             <div className="space-y-2.5">
               {items.map((it) => (
-                <div key={it.key} className="flex items-center gap-2.5 rounded-2xl bg-secondary p-2.5">
+                <button key={it.key} onClick={() => openDetail(it)} className="w-full flex items-center gap-2.5 rounded-2xl bg-secondary p-2.5 text-left active:opacity-90 transition-opacity">
                   {it.photo_url ? (
                     <img src={it.photo_url} alt="" className="h-12 w-12 rounded-xl object-cover shrink-0" />
                   ) : (
@@ -330,35 +365,59 @@ export default function ComposeWyjazd() {
                       )}
                     </div>
                   </div>
-                  <button onClick={() => removePlace(it.key)} aria-label="Usuń miejsce" className="h-8 w-8 rounded-full bg-background flex items-center justify-center text-muted-foreground active:scale-90 transition-transform shrink-0">
+                  <span role="button" tabIndex={0} onClick={(e) => { e.stopPropagation(); removePlace(it.key); }} aria-label="Usuń miejsce" className="h-8 w-8 rounded-full bg-background flex items-center justify-center text-muted-foreground active:scale-90 transition-transform shrink-0">
                     <Trash2 className="h-4 w-4" />
-                  </button>
-                </div>
+                  </span>
+                </button>
               ))}
             </div>
           )}
         </div>
 
-        {/* MAPA */}
-        {mapPins.length > 0 && (
+        {/* MAPA - statyczna z guzikiem rozwinięcia (interaktywna mapa z zoomem) */}
+        {mapPins.length > 0 && staticMapUrl && (
           <div className="px-4 pt-6">
             <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2.5">Mapa</p>
-            <div className="relative h-52 rounded-2xl overflow-hidden border border-border/40">
-              <RouteMap pins={mapPins as any} className="w-full h-full" showRoute={false} />
+            <div className="relative h-52 rounded-2xl overflow-hidden border border-border/40 bg-muted">
+              <img src={staticMapUrl} alt="Mapa miejsc" className="w-full h-full object-cover" />
+              <button onClick={() => setMapExpanded(true)} aria-label="Rozwiń mapę"
+                className="absolute bottom-3 right-3 h-10 w-10 rounded-full bg-card shadow-md flex items-center justify-center active:scale-90 transition-transform">
+                <Maximize2 className="h-[18px] w-[18px] text-foreground" strokeWidth={2.2} />
+              </button>
             </div>
           </div>
         )}
       </div>
 
-      {/* Footer */}
-      <div className="shrink-0 border-t border-border/20 px-4 pt-3 pb-[max(16px,env(safe-area-inset-bottom))] bg-background">
-        <button onClick={confirm} disabled={creating}
-          className="w-full h-12 rounded-2xl bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform shadow-md shadow-orange-500/20 disabled:opacity-60">
-          {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-          Zrób wyjazd
-          {!creating && <ArrowRight className="h-4 w-4" />}
-        </button>
-      </div>
+      {/* Footer - ukryty gdy fokus na wyszukiwarce (wiecej miejsca na wyniki). */}
+      {!searchFocused && (
+        <div className="shrink-0 border-t border-border/20 px-4 pt-3 pb-[max(16px,env(safe-area-inset-bottom))] bg-background flex items-center gap-2">
+          <button onClick={() => confirm(true)} disabled={creating}
+            className="flex-1 h-12 rounded-2xl bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform shadow-md shadow-orange-500/20 disabled:opacity-60">
+            {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <>Stwórz wyjazd <ArrowRight className="h-4 w-4" /></>}
+          </button>
+          <button onClick={() => confirm(false)} disabled={creating} aria-label="Zapisz wyjazd"
+            className="shrink-0 h-12 w-12 rounded-2xl bg-secondary text-secondary-foreground flex items-center justify-center active:scale-95 transition-transform disabled:opacity-60">
+            <Bookmark className="h-5 w-5" />
+          </button>
+        </div>
+      )}
+
+      {/* Wizytowka miejsca (tap w karte) */}
+      <PlaceSwiperDetail open={!!detailPlace} onOpenChange={(o) => { if (!o) setDetailPlace(null); }} place={detailPlace} city={city} />
+
+      {/* Rozwinięta interaktywna mapa (zoom) */}
+      <Sheet open={mapExpanded} onOpenChange={setMapExpanded}>
+        <SheetContent side="bottom" className="p-0 [&>button:last-child]:hidden" style={{ height: "92dvh" }}>
+          <div className="relative w-full h-full">
+            <RouteMap pins={mapPins as any} className="w-full h-full" showRoute={false} />
+            <button onClick={() => setMapExpanded(false)} aria-label="Zamknij mapę"
+              className="absolute top-3 right-3 z-10 h-10 w-10 rounded-full bg-card shadow-md flex items-center justify-center active:scale-90 transition-transform" style={{ top: "max(0.75rem, env(safe-area-inset-top))" }}>
+              <X className="h-5 w-5 text-foreground" />
+            </button>
+          </div>
+        </SheetContent>
+      </Sheet>
 
       {/* Sheet z kalendarzem */}
       <Sheet open={dateSheet} onOpenChange={setDateSheet}>
