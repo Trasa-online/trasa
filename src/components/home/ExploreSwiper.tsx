@@ -48,8 +48,8 @@ export default function ExploreSwiper({ city, active }: { city: string; active: 
 
   return (
     // BottomNav ukryty w tym widoku (Explore dispatchuje hide-bottomnav) -> swiper na pelny
-    // ekran, tylko safe-area od dolu (home indicator).
-    <div className="flex-1 flex flex-col overflow-hidden pb-[env(safe-area-inset-bottom,0px)]">
+    // ekran, bez dolnego paddingu (peek nastepnej karty siega samego dolu).
+    <div className="flex-1 flex flex-col overflow-hidden">
       <PlaceSwiper
         city={city || "Warszawa"}
         date={today}

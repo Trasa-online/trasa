@@ -2099,10 +2099,13 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
           }}
           className="flex-1 min-h-0 overflow-y-auto snap-y snap-mandatory scrollbar-none overscroll-contain"
         >
-          {displayQueue.slice(0, 20).map((place) => (
-            // KAZDA karta troche nizsza (nastepna zawsze wystaje) - stala afordancja "scrolluj dalej".
+          {displayQueue.slice(0, 20).map((place) => {
+            // KAZDA karta troche nizsza (nastepna zawsze wystaje). Nieaktywna (peek) lekko
+            // przyciemniona, zeby aktualna karta byla wyrazniejsza.
+            const isActive = activeCardId ? place.id === activeCardId : place.id === displayQueue[0]?.id;
+            return (
             <div key={place.id} className="snap-start snap-always w-full flex flex-col px-3 pt-1 pb-3 h-[calc(100%-3.5rem)]">
-              <div className="relative flex-1 min-h-0 w-full max-w-[460px] mx-auto">
+              <div className={cn("relative flex-1 min-h-0 w-full max-w-[460px] mx-auto transition-opacity duration-300", !isActive && "opacity-[0.55]")}>
                 <SwipeCard
                   place={place}
                   city={city}
@@ -2114,13 +2117,14 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
                   onUndo={handleUndo}
                   canUndo={history.length > 0}
                   onPhotoFetched={(id, url) => { photoUrlOverrides.current[id] = url; }}
-                  isTop={activeCardId ? place.id === activeCardId : place.id === displayQueue[0]?.id}
+                  isTop={isActive}
                   offset={0}
                   onEnableDistance={() => setLocationPrimerOpen(true)}
                 />
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
         {/* Puls "scroll w dol" - afordancja, znika po pierwszym przewinieciu. */}
         {!hasScrolled && displayQueue.length > 1 && (
