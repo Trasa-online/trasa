@@ -653,6 +653,7 @@ const HomeSwipe        = lazy(() => import("./pages/HomeSwipe"));
 const Explore          = lazy(() => import("./pages/Explore"));
 const LikedPlaces      = lazy(() => import("./pages/LikedPlaces"));
 const CreateRanking    = lazy(() => import("./pages/CreateRanking"));
+const ComposeWyjazd    = lazy(() => import("./pages/ComposeWyjazd"));
 const CreateRoute      = lazy(() => import("./pages/CreateRoute"));
 const Settings         = lazy(() => import("./pages/Settings"));
 const DayReview        = lazy(() => import("./pages/DayReview"));
@@ -771,6 +772,8 @@ const App = () => (
           <Route path="/trasa/:id/dodaj" element={<AddPlaceToTrip />} />
           <Route path="/trasa/:id" element={<ActiveTrip />} />
           {/* Wyjazd (tryb uproszczony) laduje w edytorze wpisu = /review-summary (ReviewSummary). */}
+          {/* Kompozycja wyjazdu z zestawienia ("Uzyj tego zestawienia") - nazwa+daty+miejsca */}
+          <Route path="/wyjazd/nowy" element={<ComposeWyjazd />} />
           <Route path="/wyjazd/:id" element={<Navigate to="/dziennik" replace />} />
           {/* Planowanie tras (kreator + sesje grupowe) - wylaczone w trybie uproszczonym na native.
               Wyjatek: exploreMode ("Przegladaj") zostaje wlaczony - patrz PlanRoute. */}

@@ -295,20 +295,24 @@ export function CollectionDetail({ col, onClose, onAdopt }: { col: DiscoveryColl
     // Statystyka: dodanie zestawienia do wlasnego planu/wyjazdu.
     (supabase as any).rpc("increment_collection_plan_adds", { p_collection_id: col.id })
       .then(({ error }: any) => { if (error) console.warn("[DiscoveryFeed] increment_collection_plan_adds:", error.message); });
-    // Tryb uproszczony: zamiast planowania robimy WYJAZD z miejsc zestawienia.
+    // Tryb uproszczony: "Uzyj tego zestawienia" -> ekran kompozycji wyjazdu (nazwa+daty+
+    // miejsca, prefill z zestawienia). Potwierdzenie tam tworzy wyjazd (createWyjazd).
     if (PLANNING_DISABLED) {
-      if (!user) { toast.error("Zaloguj się, aby zrobić wyjazd"); return; }
-      const id = await createWyjazdFromPlaces(user.id, col.city, col.title || col.city || "Wyjazd", col.items.map((i) => ({
-        place_name: i.place_name,
-        category: i.category ?? null,
-        address: i.address ?? null,
-        latitude: i.latitude ?? null,
-        longitude: i.longitude ?? null,
-        photo_url: i.photo_url ?? null,
-        place_id: i.place_id ?? null,
-      })));
       onClose();
-      if (id) navigate(`/review-summary?route=${id}&edit=1`);
+      navigate("/wyjazd/nowy", { state: {
+        city: col.city,
+        title: col.title,
+        places: col.items.map((i) => ({
+          place_name: i.place_name,
+          category: i.category ?? null,
+          address: i.address ?? null,
+          latitude: i.latitude ?? null,
+          longitude: i.longitude ?? null,
+          photo_url: i.photo_url ?? null,
+          place_id: i.place_id ?? null,
+          rating: i.rating ?? null,
+        })),
+      } });
       return;
     }
     if (onAdopt) { onAdopt(col.city, names); return; }
