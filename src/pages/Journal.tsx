@@ -54,7 +54,7 @@ const Journal = () => {
   }
 
   return (
-    <div className="flex-1 flex flex-col px-4 pt-2 pb-[calc(5rem+env(safe-area-inset-bottom,0px))] overflow-y-auto">
+    <div className="flex-1 flex flex-col min-h-0 px-4 pt-2 pb-[calc(5rem+env(safe-area-inset-bottom,0px))] overflow-y-auto">
       <div className="pt-3 pb-2.5 flex items-start justify-between gap-3">
         <div>
           <h1 className="text-xl font-display font-extrabold tracking-tight">{t("title")}</h1>

@@ -97,12 +97,19 @@ const AppLayout = ({ children, hideTopBar }: AppLayoutProps) => {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-background">
+    // h-[100dvh] (nie min-h-screen): STALA wysokosc shella = viewport. Dzieki temu
+    // strony z wewnetrznym scrollerem (flex-1 min-h-0 + overflow-y-auto, np. Explore,
+    // Journal) scrolluja SIE WEWNATRZ, a nie przez scroll body (ktory w natywnym iOS
+    // WKWebView bywa martwy -> "nie da sie zjechac w dol"). Bez overflow-hidden:
+    // strony oparte o min-h-screen (Profil, Settings) nadal spilluja do scrolla body.
+    <div className="flex flex-col h-[100dvh] bg-background">
       {!hideTopBar && <TopBar onOrbClick={handleOrbClick} />}
       {/* hideTopBar routes (HomeSwipe, Explore, Journal, TravelerProfile) renderuja
           wlasny content od top main - bez safe-area trafia pod status bar na iPhone
-          z notch. pt-safe (env(safe-area-inset-top, 0px) + 0.75rem) zalatwia globalnie. */}
-      <main className={`flex-1 flex flex-col max-w-lg mx-auto w-full${hideTopBar ? " pt-safe" : ""}`}>
+          z notch. pt-safe (env(safe-area-inset-top, 0px) + 0.75rem) zalatwia globalnie.
+          min-h-0: pozwala flex-childom (scrollerom) skurczyc sie ponizej contentu, zeby
+          overflow-y:auto faktycznie sie wlaczyl. */}
+      <main className={`flex-1 flex flex-col min-h-0 max-w-lg mx-auto w-full${hideTopBar ? " pt-safe" : ""}`}>
         {children}
       </main>
       <BottomNav />

@@ -72,7 +72,9 @@ export function PullToRefresh({
   return (
     <div
       ref={ref}
-      className={className}
+      // min-h-0: scroller jest flex-childem (flex-1) - bez tego rosnie do wysokosci
+      // contentu i overflow-y:auto sie NIE wlacza (na native iOS = brak scrolla).
+      className={`min-h-0 ${className ?? ""}`}
       style={{ overflowY: "auto" }}
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
