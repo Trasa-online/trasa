@@ -321,7 +321,7 @@ const BottomNav = () => {
         {/* Web: 3 kolumny (Glowna, Plus, Profil - Eksploruj i Dziennik ukryte).
             Native: 5 kolumn (wszystko). */}
         {/* Ikony + nazwy zakladek pod spodem (orange active). */}
-        <div className="pointer-events-auto bg-white rounded-[26px] border border-black/[0.04] shadow-[0_8px_28px_-6px_rgba(0,0,0,0.18)]">
+        <div className="pointer-events-auto bg-white/70 backdrop-blur-2xl rounded-[26px] border border-white/50 shadow-[0_8px_28px_-8px_rgba(0,0,0,0.12)]">
           <div className={`grid ${isNative ? "grid-cols-5" : "grid-cols-3"} h-16`}>
 
           {/* Eksploruj - landing (skrajnie z lewej). Tylko w native iOS/Android.
@@ -382,15 +382,16 @@ const BottomNav = () => {
           <button
             data-ob="nav-fab"
             onClick={() => setShowMenu(!showMenu)}
-            className="flex items-center justify-center"
+            className="flex flex-col items-center justify-center gap-1"
             aria-label={t("fab_aria")}
           >
-            <span className="h-11 w-11 rounded-full bg-primary flex items-center justify-center active:scale-95 transition-transform shadow-md shadow-orange-500/25">
+            <span className="h-11 w-11 rounded-full bg-primary flex items-center justify-center active:scale-95 transition-transform">
               {showMenu
                 ? <X className="h-5 w-5 text-white stroke-[2.5px]" />
                 : <Plus className="h-5 w-5 text-white stroke-[2.5px]" />
               }
             </span>
+            <span className="text-[9px] font-semibold leading-tight text-muted-foreground whitespace-nowrap">Stwórz wyjazd</span>
           </button>
 
           {/* Slot 4: Tryb uproszczony -> Zapisane (polubione miejsca). Stary flow -> Dziennik.

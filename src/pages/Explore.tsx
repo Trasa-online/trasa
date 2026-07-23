@@ -106,7 +106,7 @@ const SavedThumb = ({ p, emoji }: { p: any; emoji: string }) => {
   );
 };
 
-export const LikedTab = ({ selectMode = false, onExitSelection }: { selectMode?: boolean; onExitSelection?: () => void } = {}) => {
+export const LikedTab = ({ selectMode = false, onExitSelection, city: controlledCity }: { selectMode?: boolean; onExitSelection?: () => void; city?: string } = {}) => {
   const { t } = useTranslation("explore");
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -182,7 +182,11 @@ export const LikedTab = ({ selectMode = false, onExitSelection }: { selectMode?:
     if (selectedCity !== "all" && !cities.includes(selectedCity)) setSelectedCity("all");
   }, [cities, selectedCity]);
 
-  const byCity = selectedCity === "all" ? allPlaces : allPlaces.filter(p => p.city === selectedCity);
+  // Miasto sterowane z zewnatrz (naglowek Zapisanych) ma priorytet. "all" == wszystkie.
+  const effectiveCity = controlledCity !== undefined ? controlledCity : selectedCity;
+  const byCity = effectiveCity === "all"
+    ? allPlaces
+    : allPlaces.filter(p => (p.city ?? "").toLowerCase() === effectiveCity.toLowerCase());
   // Filtr po kategorii miejsca - MULTI-SELECT. Chipy z kategorii obecnych w zapisanych (per miasto).
   // Pusty zbior = wszystkie; inaczej pokazujemy miejsca z KTOREJKOLWIEK zaznaczonej kategorii.
   const availableCategories = Array.from(new Set(byCity.map(p => p.category).filter(Boolean))) as string[];
@@ -270,26 +274,29 @@ export const LikedTab = ({ selectMode = false, onExitSelection }: { selectMode?:
 
   return (
     <div className="flex flex-col">
-      {/* Pigulki miast (Wszystkie + kazde miasto, scroll w bok) */}
-      <div className="flex gap-2 overflow-x-auto scrollbar-none pb-3 -mx-1 px-1">
-        <button
-          onClick={() => setSelectedCity("all")}
-          className={`shrink-0 px-4 py-2 rounded-full text-sm font-bold border transition-colors ${selectedCity === "all" ? "bg-foreground text-background border-foreground" : "bg-card text-foreground border-border/60"}`}
-        >
-          {t("liked.all_cities")}
-        </button>
-        {cities.map((city) => (
+      {/* Pigulki miast - TYLKO w trybie niesterowanym. Gdy miasto pochodzi z naglowka
+          (Zapisane), chowamy je (nie dublujemy selektora). */}
+      {controlledCity === undefined && (
+        <div className="flex gap-2 overflow-x-auto scrollbar-none pb-3 -mx-1 px-1">
           <button
-            key={city}
-            onClick={() => setSelectedCity(city)}
-            className={`shrink-0 px-4 py-2 rounded-full text-sm font-semibold border transition-colors whitespace-nowrap ${selectedCity === city ? "bg-foreground text-background border-foreground" : "bg-card text-muted-foreground border-border/60"}`}
+            onClick={() => setSelectedCity("all")}
+            className={`shrink-0 px-4 py-2 rounded-full text-sm font-bold border transition-colors ${selectedCity === "all" ? "bg-foreground text-background border-foreground" : "bg-card text-foreground border-border/60"}`}
           >
-            {city}
+            {t("liked.all_cities")}
           </button>
-        ))}
-      </div>
+          {cities.map((city) => (
+            <button
+              key={city}
+              onClick={() => setSelectedCity(city)}
+              className={`shrink-0 px-4 py-2 rounded-full text-sm font-semibold border transition-colors whitespace-nowrap ${selectedCity === city ? "bg-foreground text-background border-foreground" : "bg-card text-muted-foreground border-border/60"}`}
+            >
+              {city}
+            </button>
+          ))}
+        </div>
+      )}
 
-      {/* Waska wyszukiwarka - bezposrednio pod pillami miast. Filtruje po nazwie/opisie. */}
+      {/* Waska wyszukiwarka - filtruje po nazwie/opisie. */}
       <div className="pb-3">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
@@ -447,8 +454,8 @@ export const LikedTab = ({ selectMode = false, onExitSelection }: { selectMode?:
 
 // ── MyCollections ───────────────────────────────────────────────────────────
 // Lista zestawien stworzonych przez zalogowanego usera (wejscie z karty "Zestawienia"
-// w profilu). Tap w pozycje -> edycja. Pusty stan -> CTA "Stworz pierwsze".
-const MyCollections = () => {
+// w profilu / zakladka Zapisane). Tap w pozycje -> edycja. Pusty stan -> CTA "Stworz pierwsze".
+export const MyCollections = () => {
   const { t } = useTranslation("explore");
   const navigate = useNavigate();
   const { user } = useAuth();

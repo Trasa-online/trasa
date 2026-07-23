@@ -3,7 +3,8 @@ import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import { ArrowRight, BookOpen, Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import JournalTab from "@/components/home/JournalTab";
-import TabHeader from "@/components/layout/TabHeader";
+import CitySelect from "@/components/home/CitySelect";
+import { useActiveCity } from "@/hooks/useActiveCity";
 import { useTranslation } from "react-i18next";
 import { PLANNING_DISABLED } from "@/lib/appMode";
 import { useOnboarding } from "@/components/OnboardingGuide";
@@ -14,6 +15,7 @@ const Journal = () => {
   const navigate = useNavigate();
   const { t } = useTranslation("journal");
   const { active: onboardingActive } = useOnboarding();
+  const [city, setCity] = useActiveCity();
   // Anon = traktuj jak gosc (zero zapisanych danych w UI). Dziennik wymaga
   // konta z mailem zeby trasy/pocztówki byly persystowane miedzy urzadzeniami.
   // WYJATEK: podczas onboardingu pokazujemy realny dziennik z fejk-wyjazdem.
@@ -56,9 +58,10 @@ const Journal = () => {
 
   return (
     <div className="flex-1 flex flex-col min-h-0 pb-[calc(5rem+env(safe-area-inset-bottom,0px))] overflow-y-auto">
-      <TabHeader
-        title="Wyjazdy"
-        right={PLANNING_DISABLED && (
+      <div className="flex items-center gap-2 px-4 pt-1 pb-3 border-b border-border/40 shrink-0">
+        <CitySelect city={city} onCityChange={setCity} allowAll />
+        <div className="flex-1" />
+        {PLANNING_DISABLED && (
           <button
             onClick={() => navigate("/plan", { state: { wyjazdMode: true } })}
             className="shrink-0 px-4 py-2 rounded-full bg-primary text-white font-bold text-xs flex items-center gap-1.5 active:scale-95 transition-transform"
@@ -66,9 +69,9 @@ const Journal = () => {
             <Plus className="h-3.5 w-3.5" /> Nowy wyjazd
           </button>
         )}
-      />
+      </div>
       <div className="px-4 pt-3">
-        {user && <JournalTab userId={user.id} />}
+        {user && <JournalTab userId={user.id} city={city} />}
       </div>
     </div>
   );

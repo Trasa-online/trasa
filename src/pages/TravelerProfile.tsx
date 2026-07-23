@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { Settings, Copy, Check, Camera, UserCircle2, ArrowRight, ArrowUpRight, Map as MapIcon, Building2, Layers, Bell, Share2, Search } from "lucide-react";
 import TabHeader from "@/components/layout/TabHeader";
+import StatCard from "@/components/profile/StatCard";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
@@ -120,37 +121,6 @@ function GuestProfile() {
         </button>
       </div>
     </div>
-  );
-}
-
-// ── StatCard ────────────────────────────────────────────────────────────────
-// Kafel statystyki wg zalacznika: duza liczba w lewym gornym rogu, ikona w prawym
-// gornym (przygaszona), tytul + podtytul na dole. `full` = pelna szerokosc + strzalka.
-function StatCard({ value, title, subtitle, icon, className, onClick, full = false }: {
-  value: number | string; title: string; subtitle: string; icon: ReactNode;
-  className?: string; onClick?: () => void; full?: boolean;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      disabled={!onClick}
-      className={cn(
-        "relative text-left rounded-3xl p-4 flex flex-col transition-transform",
-        full ? "min-h-[108px]" : "min-h-[132px]",
-        className,
-        onClick && "active:scale-[0.98]",
-      )}
-    >
-      <div className="flex items-start justify-between">
-        <span className="text-4xl font-black leading-none tabular-nums">{value}</span>
-        <span className="opacity-40 shrink-0">{icon}</span>
-      </div>
-      <div className="mt-auto pt-6 pr-6">
-        <p className="text-lg font-display font-extrabold leading-tight">{title}</p>
-        <p className="text-xs font-medium opacity-60 mt-0.5">{subtitle}</p>
-      </div>
-      {full && onClick && <ArrowUpRight className="absolute bottom-4 right-4 h-5 w-5 opacity-50" />}
-    </button>
   );
 }
 
@@ -319,7 +289,7 @@ const TravelerProfile = () => {
           <>
             <button
               onClick={handleShareProfile}
-              className="h-9 w-9 flex items-center justify-center rounded-full text-muted-foreground hover:bg-muted transition-colors active:scale-90"
+              className="h-9 w-9 flex items-center justify-center rounded-full bg-muted text-foreground active:scale-90 transition-transform"
               aria-label={t("profile.share_profile_aria")}
             >
               <Share2 className="h-5 w-5" />
@@ -327,7 +297,7 @@ const TravelerProfile = () => {
             {/* Dzwonek = zaproszenia do znajomych / prosby (badge liczba oczekujacych) */}
             <button
               onClick={() => setFriendsSheet(true)}
-              className="relative h-9 w-9 flex items-center justify-center rounded-full text-muted-foreground hover:bg-muted transition-colors active:scale-90"
+              className="relative h-9 w-9 flex items-center justify-center rounded-full bg-muted text-foreground active:scale-90 transition-transform"
               aria-label={t("profile.notifications_aria")}
             >
               <Bell className="h-5 w-5" />
@@ -339,7 +309,7 @@ const TravelerProfile = () => {
             </button>
             <button
               onClick={() => navigate("/settings")}
-              className="h-9 w-9 flex items-center justify-center rounded-full text-muted-foreground hover:bg-muted transition-colors active:scale-90"
+              className="h-9 w-9 flex items-center justify-center rounded-full bg-muted text-foreground active:scale-90 transition-transform"
               aria-label={t("profile.settings_aria")}
             >
               <Settings className="h-5 w-5" />

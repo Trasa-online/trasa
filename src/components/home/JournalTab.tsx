@@ -15,6 +15,8 @@ import { avatarSrc } from "@/lib/avatar";
 
 interface JournalTabProps {
   userId: string;
+  // Filtr miasta z naglowka zakladki. "all" (lub brak) = wszystkie miasta.
+  city?: string;
 }
 
 type LatLng = { latitude?: number | null; longitude?: number | null };
@@ -31,7 +33,7 @@ function buildMiniMapUrl(pins: LatLng[]): string | null {
   return `${API_BASE}/api/static-map?size=120x120&scale=2&maptype=roadmap&${markers}&style=feature:poi%7Cvisibility:off&style=feature:transit%7Cvisibility:off`;
 }
 
-const JournalTab = ({ userId }: JournalTabProps) => {
+const JournalTab = ({ userId, city: cityFilter }: JournalTabProps) => {
   const { t } = useTranslation("homeprofile");
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -140,7 +142,7 @@ const JournalTab = ({ userId }: JournalTabProps) => {
   // Grupuj trasy wielodniowe (folder_id) w JEDNA pocztowke (dzien 1 = reprezentant).
   // Granica aktywny/wspomnienie liczona po OSTATNIM dniu trasy (end_date ?? start_date).
   // Trasa jednodniowa = osobny wpis, granica po end_date ?? start_date.
-  const { active, postcards } = useMemo(() => {
+  const { active: activeRaw, postcards: postcardsRaw } = useMemo(() => {
     // Wyjazd GRUPOWY = JEDEN wpis. Wszystkie kopie tej samej sesji (group_session_id) - wlasna
     // (is_own) oraz cudze (przez group_session_members join) - zwijamy do jednego, preferujac
     // WLASNA kopie (zeby notki/edycje usera dzialaly na niej). To dedupuje widok bez kasowania danych.
@@ -211,6 +213,13 @@ const JournalTab = ({ userId }: JournalTabProps) => {
     });
     return { active, postcards };
   }, [entries]);
+
+  // Filtr miasta z naglowka ("all"/brak = wszystkie). Wyjazd bez miasta pokazujemy tylko
+  // przy "Wszystkie".
+  const cityMatch = (e: any) =>
+    !cityFilter || cityFilter === "all" || (e.city ?? "").toLowerCase() === cityFilter.toLowerCase();
+  const active = useMemo(() => activeRaw.filter(cityMatch), [activeRaw, cityFilter]);
+  const postcards = useMemo(() => postcardsRaw.filter(cityMatch), [postcardsRaw, cityFilter]);
 
   // Dziennik = tylko wspomnienia (minione podroze). Aktywne trasy/sesje zyja teraz
   // na ekranie glownym (ActiveTripsDashboard), wiec tu pokazujemy wylacznie pocztowki.

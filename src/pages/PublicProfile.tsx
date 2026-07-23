@@ -13,7 +13,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { resolveStored } from "@/components/PlacePhoto";
 import FriendButton from "@/components/social/FriendButton";
-import SectionCard from "@/components/profile/SectionCard";
+import StatCard from "@/components/profile/StatCard";
 import { CollectionDetail, type DiscoveryCollection } from "@/components/home/DiscoveryFeed";
 import { themeBadgeLabel } from "@/lib/collectionThemes";
 
@@ -49,6 +49,19 @@ export default function PublicProfile() {
       const all = data ?? [];
       const cities = new Set(all.map(r => r.city).filter(Boolean)).size;
       return { trips: all.length, cities };
+    },
+    enabled: !!profile?.id,
+  });
+
+  // Liczby obserwujacych / obserwowanych (jak na wlasnym profilu).
+  const { data: followCounts = { followers: 0, following: 0 } } = useQuery({
+    queryKey: ["public-profile-follows", profile?.id],
+    queryFn: async () => {
+      const [{ count: followers }, { count: following }] = await Promise.all([
+        (supabase as any).from("followers").select("*", { count: "exact", head: true }).eq("following_id", profile!.id),
+        (supabase as any).from("followers").select("*", { count: "exact", head: true }).eq("follower_id", profile!.id),
+      ]);
+      return { followers: followers ?? 0, following: following ?? 0 };
     },
     enabled: !!profile?.id,
   });
@@ -163,28 +176,63 @@ export default function PublicProfile() {
         <div className="w-9" />
       </div>
 
-      <div className="px-5 max-w-lg mx-auto space-y-6 pt-6">
-        {/* Avatar + name + follow */}
-        <div className="flex flex-col items-center gap-4">
-          <Avatar className="h-24 w-24">
+      <div className="px-4 max-w-lg mx-auto space-y-6 pt-6">
+        {/* Avatar + nazwa - wyrownane do lewej (spojne z wlasnym profilem) */}
+        <div className="flex items-center gap-4">
+          <Avatar className="h-[76px] w-[76px] shrink-0">
             <AvatarImage src={avatarSrc(profile.avatar_url)} className="object-cover bg-orange-100" />
-            <AvatarFallback className="bg-orange-100 text-orange-600 text-4xl font-black">
+            <AvatarFallback className="bg-orange-100 text-orange-600 text-3xl font-black">
               {displayName?.charAt(0).toUpperCase() || "?"}
             </AvatarFallback>
           </Avatar>
-          <div className="text-center">
-            <h2 className="text-2xl font-black">{displayName}</h2>
-            <p className="text-sm text-muted-foreground">@{profile.username}</p>
+          <div className="min-w-0 flex-1">
+            <h2 className="text-2xl font-display font-extrabold leading-tight truncate">{displayName}</h2>
+            <p className="text-sm text-muted-foreground mt-0.5 truncate">@{profile.username}</p>
           </div>
-          <FriendButton targetUserId={profile.id} className="h-10 px-5 text-sm" />
         </div>
 
-        {/* Sekcje - TEN SAM uklad/kolory co wlasny profil (jeden model mentalny).
-            "Trasy" klikalne -> sheet z trasami usera (strzalka pojawia sie z onClick). */}
+        {/* Obserwujacy / Obserwowani + akcja (znajomy/obserwuj) */}
+        <div className="flex items-end gap-8">
+          <div>
+            <p className="text-xs font-medium text-muted-foreground">{t("profile.followers")}</p>
+            <p className="text-xl font-bold text-foreground mt-0.5 tabular-nums">{followCounts.followers}</p>
+          </div>
+          <div>
+            <p className="text-xs font-medium text-muted-foreground">{t("profile.following")}</p>
+            <p className="text-xl font-bold text-foreground mt-0.5 tabular-nums">{followCounts.following}</p>
+          </div>
+          <div className="flex-1" />
+          <FriendButton targetUserId={profile.id} className="h-9 px-4 text-sm" />
+        </div>
+
+        {/* Statystyki - TEN SAM uklad co wlasny profil (Plany+Miasta 2-kol, Zestawienia pelne). */}
         <div className="space-y-3">
-          <SectionCard bg="bg-trasa-violet" icon={<MapIcon className="h-5 w-5 text-trasa-violet-ink" />} title={t("sections.routes")} subtitle={t("sections.routes_sub")} value={stats?.trips ?? 0} onClick={() => setRoutesOpen(true)} />
-          <SectionCard bg="bg-trasa-cream" icon={<Building2 className="h-5 w-5 text-trasa-cream-ink" />} title={t("sections.cities")} subtitle={t("sections.cities_sub")} value={stats?.cities ?? 0} />
-          <SectionCard bg="bg-trasa-orange" icon={<Layers className="h-5 w-5 text-trasa-orange-ink" />} title={t("sections.collections")} subtitle={t("sections.collections_sub_public")} value={collections.length} onClick={collections.length > 0 ? () => setCollectionsOpen(true) : undefined} />
+          <div className="grid grid-cols-2 gap-3">
+            <StatCard
+              value={stats?.trips ?? 0}
+              title={t("sections.routes")}
+              subtitle={t("sections.routes_sub")}
+              icon={<MapIcon className="h-6 w-6" />}
+              className="bg-secondary text-secondary-foreground"
+              onClick={() => setRoutesOpen(true)}
+            />
+            <StatCard
+              value={stats?.cities ?? 0}
+              title={t("sections.cities")}
+              subtitle={t("sections.cities_sub")}
+              icon={<Building2 className="h-6 w-6" />}
+              className="bg-trasa-cream text-trasa-cream-ink"
+            />
+          </div>
+          <StatCard
+            full
+            value={collections.length}
+            title={t("sections.collections")}
+            subtitle={t("sections.collections_sub_public")}
+            icon={<Layers className="h-6 w-6" />}
+            className="bg-trasa-orange text-trasa-orange-ink"
+            onClick={collections.length > 0 ? () => setCollectionsOpen(true) : undefined}
+          />
         </div>
       </div>
 
