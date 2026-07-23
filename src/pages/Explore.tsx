@@ -10,6 +10,7 @@ import { dateLocale } from "@/lib/dateLocale";
 import DiscoveryFeed from "@/components/home/DiscoveryFeed";
 import HomeHeaderActions from "@/components/home/HomeHeaderActions";
 import ExploreTopBar from "@/components/home/ExploreTopBar";
+import TabTopBar from "@/components/layout/TabTopBar";
 import ExploreSwiper from "@/components/home/ExploreSwiper";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { UNLOCKED_CITIES } from "@/components/plan-wizard/CityPicker";
@@ -669,8 +670,8 @@ const Explore = () => {
 
   return (
     <div className="flex-1 flex flex-col min-h-0">
-      {/* Gorna belka - stala (jak w Przegladaj). Wspoldzielony ExploreTopBar: miasto + toggle + filtry. */}
-      <div className="flex items-center gap-2 px-4 pt-2 pb-3 shrink-0 border-b border-border/20">
+      {/* Wspoldzielona belka (TabTopBar) - identyczna wysokosc 1:1 z Wyjazdy/Zapisane. */}
+      <TabTopBar>
         {myCollections ? (
           <>
             <button
@@ -693,7 +694,7 @@ const Explore = () => {
             activeFilterCount={filterCount}
           />
         )}
-      </div>
+      </TabTopBar>
 
       {myCollections ? (
         <PullToRefresh onRefresh={handleRefresh} className="flex-1 min-h-0 flex flex-col pt-3 pb-[calc(5rem+env(safe-area-inset-bottom,0px))]">

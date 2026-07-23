@@ -4,6 +4,7 @@ import { ArrowRight, BookOpen, Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import JournalTab from "@/components/home/JournalTab";
 import CitySelect from "@/components/home/CitySelect";
+import TabTopBar from "@/components/layout/TabTopBar";
 import { useActiveCity } from "@/hooks/useActiveCity";
 import { useTranslation } from "react-i18next";
 import { PLANNING_DISABLED } from "@/lib/appMode";
@@ -58,18 +59,18 @@ const Journal = () => {
 
   return (
     <div className="flex-1 flex flex-col min-h-0 pb-[calc(5rem+env(safe-area-inset-bottom,0px))] overflow-y-auto">
-      <div className="flex items-center gap-2 px-4 pt-1 pb-3 border-b border-border/40 shrink-0">
+      <TabTopBar>
         <CitySelect city={city} onCityChange={setCity} allowAll />
         <div className="flex-1" />
         {PLANNING_DISABLED && (
           <button
             onClick={() => navigate("/plan", { state: { wyjazdMode: true } })}
-            className="shrink-0 px-4 py-2 rounded-full bg-primary text-white font-bold text-xs flex items-center gap-1.5 active:scale-95 transition-transform"
+            className="shrink-0 px-4 h-8 rounded-full bg-primary text-white font-bold text-xs flex items-center gap-1.5 active:scale-95 transition-transform"
           >
             <Plus className="h-3.5 w-3.5" /> Nowy wyjazd
           </button>
         )}
-      </div>
+      </TabTopBar>
       <div className="px-4 pt-3">
         {user && <JournalTab userId={user.id} city={city} />}
       </div>

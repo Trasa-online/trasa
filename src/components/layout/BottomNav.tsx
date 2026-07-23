@@ -391,7 +391,7 @@ const BottomNav = () => {
           <button
             data-ob="nav-fab"
             onClick={() => setShowMenu(!showMenu)}
-            className="flex flex-col items-center justify-center gap-1"
+            className="flex items-center justify-center"
             aria-label={t("fab_aria")}
           >
             <span className="h-11 w-11 rounded-full bg-primary flex items-center justify-center active:scale-95 transition-transform">
@@ -400,7 +400,6 @@ const BottomNav = () => {
                 : <Plus className="h-5 w-5 text-white stroke-[2.5px]" />
               }
             </span>
-            <span className="text-[9px] font-semibold leading-tight text-muted-foreground whitespace-nowrap">Stwórz wyjazd</span>
           </button>
 
           {/* Slot 4: Tryb uproszczony -> Zapisane (polubione miejsca). Stary flow -> Dziennik.

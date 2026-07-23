@@ -4,10 +4,12 @@ import { MoreVertical, ListChecks } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { PullToRefresh } from "@/components/PullToRefresh";
 import CitySelect from "@/components/home/CitySelect";
+import TabTopBar from "@/components/layout/TabTopBar";
+import { SavedCollections } from "@/components/home/DiscoveryFeed";
 import { useActiveCity } from "@/hooks/useActiveCity";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import { LikedTab, MyCollections } from "./Explore";
+import { LikedTab } from "./Explore";
 
 // Zakladka Zapisane (bottom nav): selektor miasta w naglowku + toggle Miejsca | Zestawienia.
 const LikedPlaces = () => {
@@ -24,13 +26,13 @@ const LikedPlaces = () => {
       className="flex-1 flex flex-col pb-[calc(5rem+env(safe-area-inset-bottom,0px))]"
     >
       {/* Naglowek: selektor miasta (jak na widoku glownym) + akcje */}
-      <div className="flex items-center gap-2 px-4 pt-1 pb-3 border-b border-border/40 shrink-0">
+      <TabTopBar>
         <CitySelect city={city} onCityChange={setCity} allowAll />
         <div className="flex-1" />
         {selectMode ? (
           <button
             onClick={() => setSelectMode(false)}
-            className="shrink-0 px-3 h-9 flex items-center rounded-full text-sm font-semibold text-primary active:bg-muted transition-colors"
+            className="shrink-0 px-3 h-8 flex items-center rounded-full text-sm font-semibold text-primary active:bg-muted transition-colors"
           >
             {tE("liked.cancel_select")}
           </button>
@@ -39,7 +41,7 @@ const LikedPlaces = () => {
             <DropdownMenuTrigger asChild>
               <button
                 aria-label={tE("liked.select_places")}
-                className="shrink-0 h-9 w-9 flex items-center justify-center rounded-full bg-muted text-foreground active:scale-90 transition-transform"
+                className="shrink-0 h-8 w-8 flex items-center justify-center rounded-full bg-muted text-foreground active:scale-90 transition-transform"
               >
                 <MoreVertical className="h-5 w-5" />
               </button>
@@ -52,7 +54,7 @@ const LikedPlaces = () => {
             </DropdownMenuContent>
           </DropdownMenu>
         )}
-      </div>
+      </TabTopBar>
 
       {/* Toggle Miejsca | Zestawienia - szybkie przejscie do konkretnego widoku */}
       <div className="px-4 pt-3">
@@ -76,7 +78,7 @@ const LikedPlaces = () => {
         {tab === "places" ? (
           <LikedTab selectMode={selectMode} onExitSelection={() => setSelectMode(false)} city={city} />
         ) : (
-          <MyCollections />
+          <SavedCollections />
         )}
       </div>
     </PullToRefresh>

@@ -14,8 +14,10 @@ export default function StatCard({ value, title, subtitle, icon, className, onCl
       onClick={onClick}
       disabled={!onClick}
       className={cn(
-        "relative text-left rounded-3xl p-4 flex flex-col transition-transform",
-        full ? "min-h-[108px]" : "min-h-[132px]",
+        // w-full: <button> z display:flex ma domyslnie fit-content (quirk form-controls),
+        // wiec karta pelnej szerokosci (Zestawienia) bez tego kurczy sie do tresci.
+        "relative w-full text-left rounded-3xl p-4 flex flex-col transition-transform",
+        full ? "min-h-[112px]" : "min-h-[140px]",
         className,
         onClick && "active:scale-[0.98]",
       )}

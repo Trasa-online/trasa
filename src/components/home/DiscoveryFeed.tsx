@@ -1232,6 +1232,123 @@ async function hydrateCollections(cols: any[]): Promise<DiscoveryCollection[]> {
 
 const SHOW_ZESTAWIENIA = true;
 
+// ── SavedCollections ──────────────────────────────────────────────────────────
+// Zestawienia ZAPISANE przez usera (bookmark z trasa_saved_collections, localStorage) -
+// czyli cudze kolekcje odlozone na pozniej. To NIE sa wlasne zestawienia usera (te sa na
+// profilu, karta "Zestawienia" -> MyCollections). Wyszukiwarka jak w zakladce Miejsca.
+// Tap otwiera pelna wizytowke zestawienia (CollectionDetail).
+function SavedCollectionCard({ col, onOpen }: { col: DiscoveryCollection; onOpen: (c: DiscoveryCollection) => void }) {
+  const coverItem = col.items?.find((i) => i.photo_url);
+  const cover = coverItem?.photo_url ? resolveStored(coverItem.photo_url) : (col.gallery_urls?.[0] ? resolveStored(col.gallery_urls[0]) : null);
+  const count = col.items?.length ?? 0;
+  const countLabel = count === 1 ? "miejsce" : count < 5 ? "miejsca" : "miejsc";
+  return (
+    <button
+      onClick={() => onOpen(col)}
+      className="w-full flex items-center gap-3 rounded-3xl bg-card border border-border/50 p-3 text-left active:scale-[0.99] transition-transform"
+    >
+      {cover ? (
+        <img src={cover} alt="" className="h-16 w-16 rounded-2xl object-cover shrink-0" loading="lazy" />
+      ) : (
+        <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-amber-100 to-orange-200 flex items-center justify-center shrink-0">
+          <Bookmark className="h-6 w-6 text-orange-600" />
+        </div>
+      )}
+      <div className="flex-1 min-w-0">
+        <p className="font-bold text-sm leading-tight truncate">{col.title || "Zestawienie"}</p>
+        <p className="text-xs text-muted-foreground mt-0.5 truncate">
+          {[col.city, `${count} ${countLabel}`, col.author_name].filter(Boolean).join(" · ")}
+        </p>
+      </div>
+      <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+    </button>
+  );
+}
+
+export function SavedCollections() {
+  const [query, setQuery] = useState("");
+  const [activeCol, setActiveCol] = useState<DiscoveryCollection | null>(null);
+  const savedIds = useMemo(() => {
+    try { return JSON.parse(localStorage.getItem("trasa_saved_collections") || "[]") as string[]; }
+    catch { return []; }
+  }, []);
+  const { data: collections = [], isLoading } = useQuery({
+    queryKey: ["saved-collections", [...savedIds].sort().join(",")],
+    enabled: savedIds.length > 0,
+    queryFn: async () => {
+      const { data: cols } = await (supabase as any).from("discovery_collections")
+        .select("id, title, city, description, category, author_name, author_avatar, user_id, views_count, saves_count, plan_adds_count")
+        .in("id", savedIds);
+      // Zachowaj kolejnosc zapisu (ostatnio zapisane na gorze).
+      const byId = new Map((cols ?? []).map((c: any) => [c.id, c]));
+      const ordered = [...savedIds].reverse().map((id) => byId.get(id)).filter(Boolean);
+      return hydrateCollections(ordered);
+    },
+  });
+  const filtered = useMemo(() => {
+    const qq = query.trim().toLowerCase();
+    if (!qq) return collections;
+    return collections.filter((c) =>
+      (c.title ?? "").toLowerCase().includes(qq) ||
+      (c.author_name ?? "").toLowerCase().includes(qq) ||
+      (c.city ?? "").toLowerCase().includes(qq),
+    );
+  }, [collections, query]);
+
+  return (
+    <div className="flex flex-col">
+      {/* Wyszukiwarka - identyczna jak w zakladce Miejsca */}
+      <div className="pb-3">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Szukaj w zapisanych zestawieniach…"
+            className="w-full h-9 pl-9 pr-9 rounded-full bg-muted/60 border border-border/40 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30"
+          />
+          {query && (
+            <button
+              onClick={() => setQuery("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 flex items-center justify-center rounded-full text-muted-foreground hover:bg-muted active:scale-90 transition"
+              aria-label="Wyczyść"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {savedIds.length === 0 ? (
+        <div className="py-14 text-center px-8">
+          <div className="text-4xl mb-3">🔖</div>
+          <p className="text-base font-bold">Brak zapisanych zestawień</p>
+          <p className="text-sm text-muted-foreground mt-1 leading-relaxed max-w-[280px] mx-auto">
+            Zapisz zestawienie zakładką podczas przeglądania, żeby pojawiło się tutaj.
+          </p>
+        </div>
+      ) : isLoading ? (
+        <div className="space-y-3">
+          {[0, 1, 2].map((i) => <div key={i} className="h-20 rounded-3xl bg-muted/40 animate-pulse" />)}
+        </div>
+      ) : filtered.length === 0 ? (
+        <p className="text-center text-sm text-muted-foreground py-10">Brak wyników dla „{query.trim()}".</p>
+      ) : (
+        <div className="space-y-3">
+          {filtered.map((col) => <SavedCollectionCard key={col.id} col={col} onOpen={setActiveCol} />)}
+        </div>
+      )}
+
+      <Sheet open={!!activeCol} onOpenChange={(o) => { if (!o) setActiveCol(null); }}>
+        <SheetContent side="bottom" className="rounded-t-2xl p-0 [&>button:last-child]:hidden" style={{ maxHeight: "92vh", height: "92vh" }}>
+          {activeCol && <CollectionDetail col={activeCol} onClose={() => setActiveCol(null)} />}
+        </SheetContent>
+      </Sheet>
+    </div>
+  );
+}
+
 export default function DiscoveryFeed({ city = "Warszawa", active = true }: { city?: string; active?: boolean } = {}) {
   const { t } = useTranslation("homefeed");
   // Liczba zapisanych miejsc (do wiersza "Zapisane miejsca" pod wyszukiwarka).
