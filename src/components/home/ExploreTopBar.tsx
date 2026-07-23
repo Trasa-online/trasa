@@ -18,15 +18,21 @@ export default function ExploreTopBar({
   onCityChange,
   onOpenFilters,
   activeFilterCount = 0,
+  onModeChange,
 }: {
   mode: "explore" | "browse";
   city: string;
   onCityChange: (city: string) => void;
   onOpenFilters: () => void;
   activeFilterCount?: number;
+  // Toggle feed<->swiper. Gdy podane -> lokalna zmiana (seamless, bez nawigacji).
+  // Gdy brak -> fallback do nawigacji miedzy /eksploruj a /plan (legacy).
+  onModeChange?: (mode: "explore" | "browse") => void;
 }) {
   const navigate = useNavigate();
   const cur = city || "Warszawa";
+  const goBrowse = () => (onModeChange ? onModeChange("browse") : navigate("/plan", { state: { exploreMode: true, city: cur } }));
+  const goExplore = () => (onModeChange ? onModeChange("explore") : navigate("/eksploruj", { state: { city: cur } }));
 
   return (
     <>
@@ -62,7 +68,7 @@ export default function ExploreTopBar({
           </span>
         ) : (
           <button
-            onClick={() => navigate("/plan", { state: { exploreMode: true, city: cur } })}
+            onClick={goBrowse}
             className="h-8 px-3 flex items-center gap-1.5 rounded-full text-secondary-foreground/70 text-xs font-bold active:scale-95 transition-transform whitespace-nowrap"
             title="Przeglądaj"
           >
@@ -76,7 +82,7 @@ export default function ExploreTopBar({
           </span>
         ) : (
           <button
-            onClick={() => navigate("/eksploruj", { state: { city: cur } })}
+            onClick={goExplore}
             className="h-8 px-3 flex items-center gap-1.5 rounded-full text-secondary-foreground/70 text-xs font-bold active:scale-95 transition-transform whitespace-nowrap"
             title="Eksploracja"
           >

@@ -688,7 +688,10 @@ function PlanRoute() {
   const st = location.state as any;
   // Wpuszczamy do PlanWizard mimo wylaczonego planowania: exploreMode ("Przegladaj") oraz
   // wyjazdMode ("Stworz wyjazd" - miasto+daty+swiper -> wyjazd, bez kulminacji w planie AI).
-  const allowed = !!st?.exploreMode || !!st?.wyjazdMode;
+  // exploreMode ("Przegladaj") wchloniete przez /eksploruj (lokalny toggle feed<->swiper,
+  // seamless). Stare wejscia do /plan exploreMode przekierowujemy na /eksploruj (widok swipera).
+  if (st?.exploreMode) return <Navigate to="/eksploruj" state={{ view: "browse", city: st?.city }} replace />;
+  const allowed = !!st?.wyjazdMode;
   if (PLANNING_DISABLED && !allowed) return <Navigate to="/eksploruj" replace />;
   return <PlanWizard />;
 }

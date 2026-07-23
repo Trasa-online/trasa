@@ -1232,7 +1232,7 @@ async function hydrateCollections(cols: any[]): Promise<DiscoveryCollection[]> {
 
 const SHOW_ZESTAWIENIA = true;
 
-export default function DiscoveryFeed({ city = "Warszawa" }: { city?: string } = {}) {
+export default function DiscoveryFeed({ city = "Warszawa", active = true }: { city?: string; active?: boolean } = {}) {
   const { t } = useTranslation("homefeed");
   // Liczba zapisanych miejsc (do wiersza "Zapisane miejsca" pod wyszukiwarka).
   const savedCount = useMemo(() => getHistoryByCity().reduce((n, g) => n + g.places.length, 0), []);
@@ -1315,13 +1315,14 @@ export default function DiscoveryFeed({ city = "Warszawa" }: { city?: string } =
   // Gorna belka (ExploreTopBar w Explore) trzyma guzik filtra - otwiera sheet eventem,
   // a DiscoveryFeed raportuje jej liczbe aktywnych filtrow (badge).
   useEffect(() => {
+    if (!active) return;
     const openH = () => setFiltersOpen(true);
     window.addEventListener("trasa:explore-open-filters", openH);
     return () => window.removeEventListener("trasa:explore-open-filters", openH);
-  }, []);
+  }, [active]);
   useEffect(() => {
-    window.dispatchEvent(new CustomEvent("trasa:explore-filter-count", { detail: activeFilterCount }));
-  }, [activeFilterCount]);
+    if (active) window.dispatchEvent(new CustomEvent("trasa:explore-filter-count", { detail: activeFilterCount }));
+  }, [active, activeFilterCount]);
   // Toggle wartosci w tablicy filtra (dodaj/usun).
   const toggleFilter = (set: (updater: (prev: string[]) => string[]) => void, v: string) =>
     set((prev) => (prev.includes(v) ? prev.filter((x) => x !== v) : [...prev, v]));

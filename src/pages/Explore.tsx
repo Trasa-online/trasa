@@ -10,6 +10,7 @@ import { dateLocale } from "@/lib/dateLocale";
 import DiscoveryFeed from "@/components/home/DiscoveryFeed";
 import HomeHeaderActions from "@/components/home/HomeHeaderActions";
 import ExploreTopBar from "@/components/home/ExploreTopBar";
+import ExploreSwiper from "@/components/home/ExploreSwiper";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { UNLOCKED_CITIES } from "@/components/plan-wizard/CityPicker";
 import { getHistoryByCity, removeLikeFromCity, clearCity, updateLikePhoto, type ExploreCityGroup } from "@/lib/exploreLikes";
@@ -643,6 +644,11 @@ const Explore = () => {
     window.addEventListener("trasa:explore-filter-count", onCount);
     return () => window.removeEventListener("trasa:explore-filter-count", onCount);
   }, []);
+  // Toggle feed<->swiper LOKALNY (seamless). "browse" = swiper (dawne /plan exploreMode).
+  const [view, setView] = useState<"feed" | "browse">((location.state as any)?.view === "browse" ? "browse" : "feed");
+  // Swiper montujemy po pierwszym przejsciu i zostaje (kolejne przelaczenia natychmiastowe).
+  const [hasBrowsed, setHasBrowsed] = useState(view === "browse");
+  useEffect(() => { if (view === "browse") setHasBrowsed(true); }, [view]);
 
   const handleRefresh = async () => {
     await queryClient.invalidateQueries();
@@ -665,20 +671,36 @@ const Explore = () => {
           </>
         ) : (
           <ExploreTopBar
-            mode="explore"
+            mode={view === "browse" ? "browse" : "explore"}
             city={exploreCity}
             onCityChange={setExploreCity}
+            onModeChange={setView}
             onOpenFilters={() => window.dispatchEvent(new CustomEvent("trasa:explore-open-filters"))}
             activeFilterCount={filterCount}
           />
         )}
       </div>
 
-      <PullToRefresh onRefresh={handleRefresh} className="flex-1 min-h-0 flex flex-col pt-3 pb-[calc(5rem+env(safe-area-inset-bottom,0px))]">
-        <div className="flex-1 px-4">
-          {myCollections ? <MyCollections /> : <DiscoveryFeed city={exploreCity} />}
-        </div>
-      </PullToRefresh>
+      {myCollections ? (
+        <PullToRefresh onRefresh={handleRefresh} className="flex-1 min-h-0 flex flex-col pt-3 pb-[calc(5rem+env(safe-area-inset-bottom,0px))]">
+          <div className="flex-1 px-4"><MyCollections /></div>
+        </PullToRefresh>
+      ) : (
+        <>
+          {/* Feed - zawsze zamontowany; ukryty gdy swiper (seamless toggle). */}
+          <div className={cn("flex-1 min-h-0 flex flex-col", view !== "feed" && "hidden")}>
+            <PullToRefresh onRefresh={handleRefresh} className="flex-1 min-h-0 flex flex-col pt-3 pb-[calc(5rem+env(safe-area-inset-bottom,0px))]">
+              <div className="flex-1 px-4"><DiscoveryFeed city={exploreCity} active={view === "feed"} /></div>
+            </PullToRefresh>
+          </div>
+          {/* Swiper - montowany po pierwszym przejsciu, potem zostaje (natychmiastowy toggle). */}
+          {hasBrowsed && (
+            <div className={cn("flex-1 min-h-0 flex flex-col", view !== "browse" && "hidden")}>
+              <ExploreSwiper city={exploreCity} active={view === "browse"} />
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 };
