@@ -171,5 +171,21 @@
     "next": "Next",
     "coming_soon_cta": "Coming soon 🔒",
     "coming_soon_badge": "Soon"
+  },
+  "save_sheet": {
+    "title": "Place saved!",
+    "new_name": "New trip name",
+    "create_aria": "Create trip",
+    "add_aria": "Add to trip",
+    "empty_hint": "You have no trips yet - name a new one above.",
+    "share": "Share",
+    "done": "Done",
+    "added_to": "Added to: {{name}}",
+    "created": "Trip created: {{name}}",
+    "add_error": "Couldn't add the place",
+    "create_error": "Couldn't create the trip",
+    "shared": "Shared",
+    "link_copied": "Link copied",
+    "loading": "Loading trips..."
   }
 }

@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import posthog from "posthog-js";
 import { format } from "date-fns";
 import PlaceSwiperDetail from "./PlaceSwiperDetail";
+import SavePlaceSheet, { type SavePlaceInput } from "./SavePlaceSheet";
 import { supabase } from "@/integrations/supabase/client";
 import { getPhotoUrl, isCachedPhotoUrl, ensurePhotoCached } from "@/lib/placePhotos";
 import { useAuth } from "@/hooks/useAuth";
@@ -1223,6 +1224,9 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
   // id aktualnie widocznej karty (fetch Google/tag odpalamy TYLKO dla niej - koszt).
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
   const [activeCardId, setActiveCardId] = useState<string | null>(null);
+  // Etap 2: drawer "Miejsce zapisane!" (dodaj do wyjazdu) po zapisaniu z karty w eksploracji.
+  const [saveSheetOpen, setSaveSheetOpen] = useState(false);
+  const [saveSheetPlace, setSaveSheetPlace] = useState<SavePlaceInput | null>(null);
   // Hint scrollowania: pierwsza karta nieco nizsza (nastepna wystaje) + puls w dol,
   // dopoki user nie przewinie. Po pierwszym scrollu chowamy podpowiedz.
   const [hasScrolled, setHasScrolled] = useState(false);
@@ -1583,28 +1587,47 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
   };
 
   // scrollMode ("+"): zapisz miejsce (Zapisane/exploreLikes) BEZ zdejmowania z kolejki -
-  // scroll zostaje na tej samej karcie, + pokazuje stan zapisane. (Etap 2: sheet wyjazdu.)
-  const handleSaveInPlace = (place: MockPlace) => {
+  // scroll zostaje na tej samej karcie, + pokazuje stan zapisane. opts.openSheet -> po
+  // zapisaniu z karty pokazujemy Etap 2 (drawer "Miejsce zapisane!" = dodaj do wyjazdu).
+  const handleSaveInPlace = (place: MockPlace, opts?: { openSheet?: boolean }) => {
     if ((!user || isAnonymous) && !onboardingActive) { openAuthDrawer({ mode: "register", hint: "save_route" }); return; }
-    if (savedIds.has(place.id)) return;
-    haptics.medium();
-    setSavedIds(prev => new Set(prev).add(place.id));
-    saveReaction(place, "liked");
-    if (!groupSessionId && !roundPlaceIds?.length) {
-      saveExploreLike(city, {
-        place_name: place.place_name,
-        category: place.category,
-        place_id: /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(place.id) ? place.id : null,
-        latitude: place.latitude,
-        longitude: place.longitude,
-        photo_url: photoUrlOverrides.current[place.id] ?? place.photo_url ?? null,
-        address: place.address ?? null,
-        rating: place.rating ?? null,
-        description: place.description ?? null,
-      });
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(place.id);
+    const alreadySaved = savedIds.has(place.id);
+    if (!alreadySaved) {
+      haptics.medium();
+      setSavedIds(prev => new Set(prev).add(place.id));
+      saveReaction(place, "liked");
+      if (!groupSessionId && !roundPlaceIds?.length) {
+        saveExploreLike(city, {
+          place_name: place.place_name,
+          category: place.category,
+          place_id: isUuid ? place.id : null,
+          latitude: place.latitude,
+          longitude: place.longitude,
+          photo_url: photoUrlOverrides.current[place.id] ?? place.photo_url ?? null,
+          address: place.address ?? null,
+          rating: place.rating ?? null,
+          description: place.description ?? null,
+        });
+      }
+      if (isUuid) posthog.capture("place_added_to_route", { place_id: place.id });
+      if (onboardingActive) { try { window.dispatchEvent(new CustomEvent("trasa:ob-saved")); } catch { /* noop */ } }
     }
-    if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(place.id)) posthog.capture("place_added_to_route", { place_id: place.id });
-    if (onboardingActive) { try { window.dispatchEvent(new CustomEvent("trasa:ob-saved")); } catch { /* noop */ } }
+    // Etap 2: drawer "Miejsce zapisane!" (dodaj do wyjazdu). Tylko eksploracja z realnym
+    // kontem - nie w onboardingu ani sesji grupowej/rundowej (tam save ma inny kontekst).
+    if (opts?.openSheet && exploreMode && !onboardingActive && !groupSessionId && !roundPlaceIds?.length && user && !isAnonymous) {
+      setSaveSheetPlace({
+        place_name: place.place_name,
+        category: place.category ?? null,
+        address: place.address ?? null,
+        description: place.description ?? null,
+        latitude: place.latitude ?? null,
+        longitude: place.longitude ?? null,
+        photo_url: photoUrlOverrides.current[place.id] ?? place.photo_url ?? null,
+        place_id: isUuid ? place.id : null,
+      });
+      setSaveSheetOpen(true);
+    }
   };
 
   const handleSkip = () => {
@@ -2111,7 +2134,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
                   city={city}
                   scrollMode
                   saved={savedIds.has(place.id)}
-                  onLike={() => handleSaveInPlace(place)}
+                  onLike={() => handleSaveInPlace(place, { openSheet: true })}
                   onSkip={() => {}}
                   onTap={() => handleTap(place)}
                   onUndo={handleUndo}
@@ -2211,6 +2234,14 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
           else { handleLike(undefined, detailPlace ?? undefined); }
         }}
         onSkip={exploreMode ? undefined : () => { handleSkip(); }}
+      />
+
+      {/* Etap 2: "Miejsce zapisane!" - dodaj zapisane miejsce do wyjazdu (nowego/istniejacego) */}
+      <SavePlaceSheet
+        open={saveSheetOpen}
+        onOpenChange={setSaveSheetOpen}
+        place={saveSheetPlace}
+        city={city}
       />
     </div>
   );

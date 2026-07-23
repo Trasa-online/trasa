@@ -171,5 +171,21 @@
     "next": "Dalej",
     "coming_soon_cta": "Wkrótce dostępne 🔒",
     "coming_soon_badge": "Wkrótce"
+  },
+  "save_sheet": {
+    "title": "Miejsce zapisane!",
+    "new_name": "Nowa nazwa wyjazdu",
+    "create_aria": "Utwórz wyjazd",
+    "add_aria": "Dodaj do wyjazdu",
+    "empty_hint": "Nie masz jeszcze wyjazdów - nazwij nowy powyżej.",
+    "share": "Udostępnij",
+    "done": "Gotowe",
+    "added_to": "Dodano do: {{name}}",
+    "created": "Utworzono wyjazd: {{name}}",
+    "add_error": "Nie udało się dodać miejsca",
+    "create_error": "Nie udało się utworzyć wyjazdu",
+    "shared": "Udostępniono",
+    "link_copied": "Skopiowano link",
+    "loading": "Ładuję wyjazdy..."
   }
 }
