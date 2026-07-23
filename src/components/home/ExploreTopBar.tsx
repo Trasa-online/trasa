@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { ChevronDown, MapPin, Check, Layers, Compass, SlidersHorizontal } from "lucide-react";
+import { ChevronDown, ChevronLeft, MapPin, Check, Layers, Compass, SlidersHorizontal } from "lucide-react";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { UNLOCKED_CITIES } from "@/components/plan-wizard/CityPicker";
 import { cn } from "@/lib/utils";
@@ -19,6 +19,7 @@ export default function ExploreTopBar({
   onOpenFilters,
   activeFilterCount = 0,
   onModeChange,
+  onBack,
 }: {
   mode: "explore" | "browse";
   city: string;
@@ -28,6 +29,9 @@ export default function ExploreTopBar({
   // Toggle feed<->swiper. Gdy podane -> lokalna zmiana (seamless, bez nawigacji).
   // Gdy brak -> fallback do nawigacji miedzy /eksploruj a /plan (legacy).
   onModeChange?: (mode: "explore" | "browse") => void;
+  // Cofniecie z przegladania na widok glowny (feed). Chevron-left przed selektorem
+  // miasta, renderowany TYLKO w trybie "browse".
+  onBack?: () => void;
 }) {
   const navigate = useNavigate();
   const cur = city || "Warszawa";
@@ -36,6 +40,17 @@ export default function ExploreTopBar({
 
   return (
     <>
+      {/* Cofnij na widok glowny (feed) - tylko w przegladaniu, obok selektora miasta */}
+      {mode === "browse" && onBack && (
+        <button
+          onClick={onBack}
+          className="shrink-0 h-8 w-8 -ml-1 flex items-center justify-center text-foreground active:scale-90 transition-transform"
+          aria-label="Wróć"
+        >
+          <ChevronLeft className="h-5 w-5" />
+        </button>
+      )}
+
       {/* Selektor miasta (pill) */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>

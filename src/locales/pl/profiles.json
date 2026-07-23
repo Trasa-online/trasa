@@ -6,7 +6,7 @@
     "no_results": "Brak wyników"
   },
   "sections": {
-    "routes": "Trasy",
+    "routes": "Plany",
     "routes_sub": "ukończone podróże",
     "cities": "Miasta",
     "cities_sub": "odwiedzone miejsca",
@@ -36,7 +36,7 @@
     "complete_profile": "Uzupełnij profil ({{pct}}%)",
     "friends_count": "Znajomi: {{count}}",
     "followers": "Obserwujący",
-    "following": "Obserwuje",
+    "following": "Obserwowani",
     "no_users": "Brak użytkowników",
     "friends_title": "Znajomi",
     "requests_title": "Zaproszenia ({{count}})",
@@ -52,7 +52,11 @@
     "avatar_save_error": "Błąd zapisu profilu",
     "avatar_updated": "Zdjęcie zaktualizowane!",
     "photo_read_error": "Nie udało się odczytać zdjęcia",
-    "photo_pick_error": "Nie udało się wybrać zdjęcia"
+    "photo_pick_error": "Nie udało się wybrać zdjęcia",
+    "your_profile": "Twój Profil",
+    "find_users_aria": "Szukaj osób",
+    "notifications_aria": "Powiadomienia",
+    "share_profile_aria": "Udostępnij profil"
   },
   "guest": {
     "title": "Twój profil podróżnika",

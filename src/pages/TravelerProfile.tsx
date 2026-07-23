@@ -1,11 +1,13 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
+import { cn } from "@/lib/utils";
 import { avatarSrc } from "@/lib/avatar";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import { Settings, Copy, Check, Camera, UserCircle2, ArrowRight, Map as MapIcon, Building2, Layers } from "lucide-react";
+import { Settings, Copy, Check, Camera, UserCircle2, ArrowRight, ArrowUpRight, Map as MapIcon, Building2, Layers, Bell, Share2, Search } from "lucide-react";
+import TabHeader from "@/components/layout/TabHeader";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
@@ -16,7 +18,6 @@ import { useShare } from "@/hooks/useShare";
 import { isNative } from "@/lib/platform";
 import { useFriends, useIncomingRequests, acceptFriendRequest, removeFriend } from "@/hooks/useFriends";
 import InviteFriendsBanner from "@/components/social/InviteFriendsBanner";
-import SectionCard from "@/components/profile/SectionCard";
 import { UserCheck } from "lucide-react";
 import { Camera as CapCamera, CameraResultType, CameraSource } from "@capacitor/camera";
 
@@ -122,6 +123,37 @@ function GuestProfile() {
   );
 }
 
+// ── StatCard ────────────────────────────────────────────────────────────────
+// Kafel statystyki wg zalacznika: duza liczba w lewym gornym rogu, ikona w prawym
+// gornym (przygaszona), tytul + podtytul na dole. `full` = pelna szerokosc + strzalka.
+function StatCard({ value, title, subtitle, icon, className, onClick, full = false }: {
+  value: number | string; title: string; subtitle: string; icon: ReactNode;
+  className?: string; onClick?: () => void; full?: boolean;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={!onClick}
+      className={cn(
+        "relative text-left rounded-3xl p-4 flex flex-col transition-transform",
+        full ? "min-h-[108px]" : "min-h-[132px]",
+        className,
+        onClick && "active:scale-[0.98]",
+      )}
+    >
+      <div className="flex items-start justify-between">
+        <span className="text-4xl font-black leading-none tabular-nums">{value}</span>
+        <span className="opacity-40 shrink-0">{icon}</span>
+      </div>
+      <div className="mt-auto pt-6 pr-6">
+        <p className="text-lg font-display font-extrabold leading-tight">{title}</p>
+        <p className="text-xs font-medium opacity-60 mt-0.5">{subtitle}</p>
+      </div>
+      {full && onClick && <ArrowUpRight className="absolute bottom-4 right-4 h-5 w-5 opacity-50" />}
+    </button>
+  );
+}
+
 const TravelerProfile = () => {
   const { t } = useTranslation("profiles");
   const { user, loading } = useAuth();
@@ -129,6 +161,7 @@ const TravelerProfile = () => {
   const queryClient = useQueryClient();
   const [followSheet, setFollowSheet] = useState<"followers" | "following" | null>(null);
   const [friendsSheet, setFriendsSheet] = useState(false);
+  const share = useShare();
   const { data: realFriends = [] } = useFriends(user?.id);
   const { data: incomingReqs = [] } = useIncomingRequests(user?.id);
   const refreshFriends = () => {
@@ -193,6 +226,13 @@ const TravelerProfile = () => {
     },
     enabled: !!user,
   });
+
+  const handleShareProfile = async () => {
+    if (!profile?.username) { toast.error(t("profile.share_no_username", { defaultValue: "Uzupełnij nazwę użytkownika, aby udostępnić profil." })); return; }
+    const url = `${SHARE_BASE_URL}/#/profil/${profile.username}`;
+    const res = await share({ title: `@${profile.username}`, url });
+    if (res.ok && res.method === "clipboard") toast.success(t("invite.link_copied"));
+  };
 
   const { data: stats } = useQuery({
     queryKey: ["profile-stats", user?.id],
@@ -271,30 +311,51 @@ const TravelerProfile = () => {
   return (
     <div className="min-h-screen bg-background pb-[calc(7rem+env(safe-area-inset-bottom,0px))]">
 
-      {/* Header - wyśrodkowany @handle + ustawienia (spójny z profilem innego usera).
-          AppLayout (hideTopBar) juz dodaje pt-safe (env(top)+0.75rem) do <main>, wiec
-          tu tylko +0.25rem (pt-1) => env(top)+1rem, dokladnie jak PublicProfile (pt-safe-4).
-          NIE uzywac pt-safe* tutaj - podwajaloby safe-area (ogromny padding od gory). */}
-      <div className="flex items-center gap-3 px-4 pt-1 pb-3 border-b border-border/40">
-        <div className="w-9" />
-        <h1 className="flex-1 text-base font-bold text-center truncate">@{profile?.username || profile?.first_name || t("profile.header_fallback")}</h1>
-        <button
-          onClick={() => navigate("/settings")}
-          className="h-9 w-9 flex items-center justify-center rounded-2xl text-muted-foreground hover:bg-muted transition-colors active:scale-90"
-          aria-label={t("profile.settings_aria")}
-        >
-          <Settings className="h-5 w-5" />
-        </button>
-      </div>
+      {/* Header zakladki: z lewej "Twój Profil", z prawej udostepnij / powiadomienia / ustawienia.
+          AppLayout (hideTopBar) dodaje juz pt-safe do <main>, TabHeader dokłada tylko pt-1. */}
+      <TabHeader
+        title={t("profile.your_profile")}
+        right={
+          <>
+            <button
+              onClick={handleShareProfile}
+              className="h-9 w-9 flex items-center justify-center rounded-full text-muted-foreground hover:bg-muted transition-colors active:scale-90"
+              aria-label={t("profile.share_profile_aria")}
+            >
+              <Share2 className="h-5 w-5" />
+            </button>
+            {/* Dzwonek = zaproszenia do znajomych / prosby (badge liczba oczekujacych) */}
+            <button
+              onClick={() => setFriendsSheet(true)}
+              className="relative h-9 w-9 flex items-center justify-center rounded-full text-muted-foreground hover:bg-muted transition-colors active:scale-90"
+              aria-label={t("profile.notifications_aria")}
+            >
+              <Bell className="h-5 w-5" />
+              {incomingReqs.length > 0 && (
+                <span className="absolute top-0.5 right-0.5 h-4 min-w-4 px-1 rounded-full bg-primary text-white text-[9px] font-bold flex items-center justify-center ring-2 ring-background">
+                  {incomingReqs.length}
+                </span>
+              )}
+            </button>
+            <button
+              onClick={() => navigate("/settings")}
+              className="h-9 w-9 flex items-center justify-center rounded-full text-muted-foreground hover:bg-muted transition-colors active:scale-90"
+              aria-label={t("profile.settings_aria")}
+            >
+              <Settings className="h-5 w-5" />
+            </button>
+          </>
+        }
+      />
 
       <div className="px-4 space-y-6 max-w-lg mx-auto pt-6">
 
-        {/* Avatar + nazwa + znajomi - WYŚRODKOWANE (jak profil innego usera) */}
-        <div className="flex flex-col items-center gap-4">
-          <div className="relative">
-            <Avatar className="h-24 w-24">
+        {/* Avatar + nazwa - WYROWNANE DO LEWEJ (wg zalacznika) */}
+        <div className="flex items-center gap-4">
+          <div className="relative shrink-0">
+            <Avatar className="h-[76px] w-[76px]">
               <AvatarImage src={avatarSrc(profile?.avatar_url)} className="object-cover bg-orange-100" />
-              <AvatarFallback className="bg-orange-100 text-orange-600 text-4xl font-black">
+              <AvatarFallback className="bg-orange-100 text-orange-600 text-3xl font-black">
                 {displayName.charAt(0).toUpperCase() || "U"}
               </AvatarFallback>
             </Avatar>
@@ -303,14 +364,14 @@ const TravelerProfile = () => {
               <button
                 type="button"
                 onClick={handleNativePhotoPick}
-                className="absolute bottom-0 right-0 h-8 w-8 bg-foreground text-background rounded-full flex items-center justify-center cursor-pointer shadow-md"
+                className="absolute bottom-0 right-0 h-7 w-7 bg-foreground text-background rounded-full flex items-center justify-center cursor-pointer shadow-md ring-2 ring-background"
                 aria-label={t("profile.change_photo_aria")}
               >
-                <Camera className="h-4 w-4" />
+                <Camera className="h-3.5 w-3.5" />
               </button>
             ) : (
-              <label className="absolute bottom-0 right-0 h-8 w-8 bg-foreground text-background rounded-full flex items-center justify-center cursor-pointer shadow-md">
-                <Camera className="h-4 w-4" />
+              <label className="absolute bottom-0 right-0 h-7 w-7 bg-foreground text-background rounded-full flex items-center justify-center cursor-pointer shadow-md ring-2 ring-background">
+                <Camera className="h-3.5 w-3.5" />
                 <input
                   type="file"
                   accept="image/*"
@@ -320,59 +381,71 @@ const TravelerProfile = () => {
               </label>
             )}
           </div>
-          <div className="text-center">
-            <h2 className="text-2xl font-display font-extrabold leading-tight">
+          <div className="min-w-0 flex-1">
+            <h2 className="text-2xl font-display font-extrabold leading-tight truncate">
               {profile?.username || profile?.first_name || t("profile.user_fallback")}
             </h2>
             {profile?.username && profile?.first_name ? (
-              <p className="text-sm text-muted-foreground mt-0.5">@{profile.username}</p>
+              <p className="text-sm text-muted-foreground mt-0.5 truncate">@{profile.username}</p>
             ) : completionPct < 100 ? (
               <p className="text-sm text-muted-foreground mt-0.5">{t("profile.complete_profile", { pct: completionPct })}</p>
             ) : null}
           </div>
-          {/* Znajomi - pill secondary z badge zaproszeń (własna funkcja: sheet znajomych) */}
+        </div>
+
+        {/* Obserwujący / Obserwowani + szukanie osob */}
+        <div className="flex items-end gap-8">
+          <button onClick={() => setFollowSheet("followers")} className="text-left active:opacity-70 transition-opacity">
+            <p className="text-xs font-medium text-muted-foreground">{t("profile.followers")}</p>
+            <p className="text-xl font-bold text-foreground mt-0.5 tabular-nums">{followersList.length}</p>
+          </button>
+          <button onClick={() => setFollowSheet("following")} className="text-left active:opacity-70 transition-opacity">
+            <p className="text-xs font-medium text-muted-foreground">{t("profile.following")}</p>
+            <p className="text-xl font-bold text-foreground mt-0.5 tabular-nums">{followingList.length}</p>
+          </button>
+          <div className="flex-1" />
           <button
-            onClick={() => setFriendsSheet(true)}
-            className="relative h-10 px-5 rounded-full bg-secondary text-secondary-foreground text-sm font-semibold flex items-center gap-2 active:scale-95 transition-transform"
+            onClick={() => navigate("/search")}
+            className="h-9 w-9 rounded-full bg-muted flex items-center justify-center text-foreground active:scale-90 transition-transform"
+            aria-label={t("profile.find_users_aria")}
           >
-            {t("profile.friends_count", { count: realFriends.length })}
-            {incomingReqs.length > 0 && (
-              <span className="absolute -top-1 -right-1 h-4 min-w-4 px-1 rounded-full bg-primary text-white text-[9px] font-bold flex items-center justify-center ring-2 ring-background">
-                {incomingReqs.length}
-              </span>
-            )}
+            <Search className="h-4 w-4" />
           </button>
         </div>
 
-        {/* Viral: zaproszenie znajomych */}
-        <InviteFriendsBanner />
-
-        {/* Trzy sekcje (stacked, kolorowe) - jak w zalaczniku */}
+        {/* Statystyki: Plany + Miasta (2 kolumny) + Zestawienia (pelna szerokosc) - wg zalacznika:
+            duza liczba w lewym gornym rogu, ikona w prawym gornym, tytul+podtytul na dole. */}
         <div className="space-y-3">
-          <SectionCard
-            bg="bg-trasa-violet"
-            icon={<MapIcon className="h-5 w-5 text-trasa-violet-ink" />}
-            title={t("sections.routes")}
-            subtitle={t("sections.routes_sub")}
-            value={stats?.trips ?? 0}
-            onClick={() => navigate("/dziennik")}
-          />
-          <SectionCard
-            bg="bg-trasa-cream"
-            icon={<Building2 className="h-5 w-5 text-trasa-cream-ink" />}
-            title={t("sections.cities")}
-            subtitle={t("sections.cities_sub")}
-            value={stats?.cities ?? 0}
-          />
-          <SectionCard
-            bg="bg-trasa-orange"
-            icon={<Layers className="h-5 w-5 text-trasa-orange-ink" />}
+          <div className="grid grid-cols-2 gap-3">
+            <StatCard
+              value={stats?.trips ?? 0}
+              title={t("sections.routes")}
+              subtitle={t("sections.routes_sub")}
+              icon={<MapIcon className="h-6 w-6" />}
+              className="bg-secondary text-secondary-foreground"
+              onClick={() => navigate("/dziennik")}
+            />
+            <StatCard
+              value={stats?.cities ?? 0}
+              title={t("sections.cities")}
+              subtitle={t("sections.cities_sub")}
+              icon={<Building2 className="h-6 w-6" />}
+              className="bg-trasa-cream text-trasa-cream-ink"
+            />
+          </div>
+          <StatCard
+            full
+            value={collectionsCount}
             title={t("sections.collections")}
             subtitle={t("sections.collections_sub_own")}
-            value={collectionsCount}
+            icon={<Layers className="h-6 w-6" />}
+            className="bg-trasa-orange text-trasa-orange-ink"
             onClick={() => navigate("/eksploruj", { state: { myCollections: true } })}
           />
         </div>
+
+        {/* Viral: zaproszenie znajomych (ponizej statystyk) */}
+        <InviteFriendsBanner />
 
       </div>
 

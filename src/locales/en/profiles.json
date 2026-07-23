@@ -6,7 +6,7 @@
     "no_results": "No results"
   },
   "sections": {
-    "routes": "Trips",
+    "routes": "Plans",
     "routes_sub": "completed trips",
     "cities": "Cities",
     "cities_sub": "places visited",
@@ -51,7 +51,11 @@
     "avatar_save_error": "Error saving profile",
     "avatar_updated": "Photo updated!",
     "photo_read_error": "Could not read the photo",
-    "photo_pick_error": "Could not pick a photo"
+    "photo_pick_error": "Could not pick a photo",
+    "your_profile": "Your Profile",
+    "find_users_aria": "Find people",
+    "notifications_aria": "Notifications",
+    "share_profile_aria": "Share profile"
   },
   "guest": {
     "title": "Your traveler profile",

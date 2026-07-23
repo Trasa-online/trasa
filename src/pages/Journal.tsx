@@ -3,6 +3,7 @@ import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import { ArrowRight, BookOpen, Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import JournalTab from "@/components/home/JournalTab";
+import TabHeader from "@/components/layout/TabHeader";
 import { useTranslation } from "react-i18next";
 import { PLANNING_DISABLED } from "@/lib/appMode";
 import { useOnboarding } from "@/components/OnboardingGuide";
@@ -54,20 +55,21 @@ const Journal = () => {
   }
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 px-4 pt-2 pb-[calc(5rem+env(safe-area-inset-bottom,0px))] overflow-y-auto">
-      <div className="pt-3 pb-2.5 flex items-center justify-end gap-3">
-        {PLANNING_DISABLED && (
+    <div className="flex-1 flex flex-col min-h-0 pb-[calc(5rem+env(safe-area-inset-bottom,0px))] overflow-y-auto">
+      <TabHeader
+        title="Wyjazdy"
+        right={PLANNING_DISABLED && (
           <button
             onClick={() => navigate("/plan", { state: { wyjazdMode: true } })}
-            className="shrink-0 mt-0.5 px-4 py-2.5 rounded-full bg-primary text-white font-bold text-xs flex items-center gap-1.5 active:scale-95 transition-transform"
+            className="shrink-0 px-4 py-2 rounded-full bg-primary text-white font-bold text-xs flex items-center gap-1.5 active:scale-95 transition-transform"
           >
             <Plus className="h-3.5 w-3.5" /> Nowy wyjazd
           </button>
         )}
+      />
+      <div className="px-4 pt-3">
+        {user && <JournalTab userId={user.id} />}
       </div>
-      <div className="border-b border-border/40 mb-3" />
-
-      {user && <JournalTab userId={user.id} />}
     </div>
   );
 };

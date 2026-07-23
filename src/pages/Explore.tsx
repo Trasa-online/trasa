@@ -681,6 +681,7 @@ const Explore = () => {
             city={exploreCity}
             onCityChange={setExploreCity}
             onModeChange={(m) => setView(m === "browse" ? "browse" : "feed")}
+            onBack={() => setView("feed")}
             onOpenFilters={() => window.dispatchEvent(new CustomEvent("trasa:explore-open-filters"))}
             activeFilterCount={filterCount}
           />
