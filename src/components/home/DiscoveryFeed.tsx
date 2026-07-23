@@ -6,7 +6,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { MapPin, X, Globe, Sparkles, Star, Pencil, Trash2, ChevronRight, ArrowRight, Heart, Eye, List, GalleryHorizontalEnd, Search, SlidersHorizontal } from "lucide-react";
+import { MapPin, X, Globe, Sparkles, Star, Pencil, Trash2, ChevronRight, ArrowRight, Heart, Eye, List, GalleryHorizontalEnd, Search, SlidersHorizontal, Plus } from "lucide-react";
+import { API_BASE } from "@/lib/platform";
 import { useDebounce } from "@/hooks/useDebounce";
 import { expandCity } from "@/lib/cities";
 import { MAIN_CATEGORIES, getDbCategoriesFor } from "@/lib/categories";
@@ -66,6 +67,8 @@ type PolecaneRoute = {
   author_name: string;
   author_avatar: string | null;
   placeCount?: number;
+  avgRating?: number;                  // srednia ocena Google z pinow (0 = brak)
+  pins?: LatLng[];                     // wspolrzedne pinow do mini-mapy na okladce
 };
 
 const CAT_LABEL: Record<string, string> = {
@@ -107,6 +110,28 @@ const PLACEHOLDER_GRADIENTS = [
   "from-emerald-200 to-teal-300",
   "from-violet-200 to-purple-300",
 ];
+
+type LatLng = { latitude?: number | null; longitude?: number | null };
+
+// Mini mapka Google (statyczna) na okladce karty - jak w referencji (maly kafel
+// z pinami trasy w rogu zdjecia). Przez proxy /api/static-map (klucz server-side,
+// 24h CDN cache). Pomaranczowe piny, POI/transit ukryte dla czystosci. null gdy
+// brak wspolrzednych. Max 12 pinow (limit dlugosci URL).
+function buildMiniMapUrl(pins: LatLng[]): string | null {
+  const pts = pins.filter((p) => p.latitude != null && p.longitude != null).slice(0, 12);
+  if (!pts.length) return null;
+  const markers = pts
+    .map((p) => `markers=size:tiny%7Ccolor:0xf9662b%7C${p.latitude},${p.longitude}`)
+    .join("&");
+  return `${API_BASE}/api/static-map?size=150x150&scale=2&maptype=roadmap&${markers}&style=feature:poi%7Cvisibility:off&style=feature:transit%7Cvisibility:off`;
+}
+
+// Srednia ocena Google z listy miejsc (tylko z ocena > 0). 0 gdy brak.
+function avgRatingOf(ratings: (number | null | undefined)[]): number {
+  const rated = ratings.filter((r): r is number => typeof r === "number" && r > 0);
+  if (!rated.length) return 0;
+  return rated.reduce((s, r) => s + r, 0) / rated.length;
+}
 
 // ── Sub-components ─────────────────────────────────────────────────────────────
 
@@ -795,9 +820,11 @@ async function enrichRouteRows(routes: any[]): Promise<PolecaneRoute[]> {
   const photoMap = new Map<string, string>();
   const countMap = new Map<string, number>();
   const catMap = new Map<string, string[]>(); // 3 glowne kategorie (wg pin_order)
+  const ratingMap = new Map<string, number[]>(); // oceny Google pinow (do sredniej)
+  const pinsMap = new Map<string, LatLng[]>();    // wspolrzedne pinow (do mini-mapy)
   const { data: pinRows } = await (supabase as any)
     .from("pins")
-    .select("route_id, photo_url, image_url, category, pin_order")
+    .select("route_id, photo_url, image_url, category, pin_order, rating, latitude, longitude")
     .in("route_id", routeIds)
     .order("pin_order", { ascending: true });
   const best = new Map<string, { url: string; rank: number; order: number }>();
@@ -806,6 +833,12 @@ async function enrichRouteRows(routes: any[]): Promise<PolecaneRoute[]> {
     if (p.category) {
       const arr = catMap.get(p.route_id) ?? [];
       if (arr.length < 3 && !arr.includes(p.category)) { arr.push(p.category); catMap.set(p.route_id, arr); }
+    }
+    if (typeof p.rating === "number" && p.rating > 0) {
+      const arr = ratingMap.get(p.route_id) ?? []; arr.push(p.rating); ratingMap.set(p.route_id, arr);
+    }
+    if (p.latitude != null && p.longitude != null) {
+      const arr = pinsMap.get(p.route_id) ?? []; arr.push({ latitude: p.latitude, longitude: p.longitude }); pinsMap.set(p.route_id, arr);
     }
     const url = resolveStored(p.photo_url || p.image_url);
     if (!url) continue;
@@ -838,6 +871,8 @@ async function enrichRouteRows(routes: any[]): Promise<PolecaneRoute[]> {
       author_name: anon ? i18n.t("author_anon", { ns: "homefeed" }) : (prof?.first_name || prof?.username || i18n.t("author_default", { ns: "homefeed" })),
       author_avatar: anon ? null : (prof?.avatar_url ?? null),
       placeCount: countMap.get(r.id) ?? 0,
+      avgRating: avgRatingOf(ratingMap.get(r.id) ?? []),
+      pins: pinsMap.get(r.id) ?? [],
     };
   });
 }
@@ -897,6 +932,160 @@ function RouteCardV({ route, onClick }: { route: PolecaneRoute; onClick: () => v
         <div className="mt-2.5"><AuthorChip name={route.author_name} avatar={route.author_avatar} /></div>
       </div>
     </button>
+  );
+}
+
+// ── Duza karta feedu (redesign wg referencji) ──────────────────────────────────
+// Pionowa, pelnej szerokosci. Okladka 16:10 z: badge kategorii + miasto (bez km),
+// mini mapka Google w rogu. Pod spodem wiersz meta (mala pomaranczowa gwiazdka +
+// srednia Google, liczba miejsc z ikonka), mocny tytul, notka rozwijana po "+".
+// Reuzywana przez zestawienia i trasy (adaptery ponizej).
+function BigCard({
+  id, photo, categoryEmoji, categoryLabel, categoryClass, city, avgRating = 0,
+  placeCount = 0, title, pins = [], note, authorName, authorAvatar, localBadge = false, onClick,
+}: {
+  id: string;
+  photo: string | null;
+  categoryEmoji?: string;
+  categoryLabel?: string;
+  categoryClass?: string;   // klasy koloru badge (motyw) - inaczej neutralny szklany
+  city?: string | null;
+  avgRating?: number;
+  placeCount?: number;
+  title: string;
+  pins?: LatLng[];
+  note?: string | null;
+  authorName: string;
+  authorAvatar: string | null;
+  localBadge?: boolean;
+  onClick: () => void;
+}) {
+  const { t } = useTranslation("homefeed");
+  const [noteOpen, setNoteOpen] = useState(false);
+  const cover = photo ?? getRandomPinPlaceholder(id);
+  const miniMap = buildMiniMapUrl(pins);
+
+  return (
+    <div className="w-full">
+      <button onClick={onClick} className="w-full text-left active:scale-[0.98] transition-transform">
+        <div className="relative aspect-[16/10] rounded-3xl overflow-hidden bg-muted shadow-sm">
+          <img src={cover} alt={title} loading="lazy" className="w-full h-full object-cover"
+            onError={(e) => { (e.target as HTMLImageElement).src = getRandomPinPlaceholder(id + "_fb"); }} />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-black/15 pointer-events-none" />
+          {/* Badge kategorii + miasto (lewy gorny rog) - bez informacji o km */}
+          <div className="absolute top-3 left-3 flex flex-col items-start gap-1.5">
+            {categoryLabel && (
+              <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold shadow-sm ${categoryClass ?? "bg-black/55 backdrop-blur-sm text-white"}`}>
+                {categoryEmoji ? <span>{categoryEmoji}</span> : null}{categoryLabel}
+              </span>
+            )}
+            {city && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-black/45 backdrop-blur-sm px-2.5 py-1 text-[11px] font-semibold text-white shadow-sm">
+                <MapPin className="h-3 w-3" />{city}
+              </span>
+            )}
+          </div>
+          {/* Mini mapka Google (prawy dolny rog) - jak w referencji */}
+          {miniMap && (
+            <div className="absolute bottom-3 right-3 h-16 w-16 rounded-2xl overflow-hidden ring-2 ring-white/85 shadow-md bg-muted">
+              <img src={miniMap} alt="" aria-hidden loading="lazy" className="w-full h-full object-cover"
+                onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = "none"; }} />
+            </div>
+          )}
+        </div>
+      </button>
+
+      {/* Wiersz meta: srednia ocena Google (mala pomaranczowa gwiazdka) + liczba miejsc */}
+      <div className="mt-2.5 flex items-center gap-3 text-sm">
+        {avgRating > 0 && (
+          <span className="flex items-center gap-1">
+            <Star className="h-3.5 w-3.5 fill-[#F9662B] text-[#F9662B]" />
+            <span className="font-bold text-foreground">{avgRating.toFixed(1)}</span>
+          </span>
+        )}
+        {placeCount > 0 && (
+          <span className="flex items-center gap-1 text-muted-foreground">
+            <MapPin className="h-3.5 w-3.5" />
+            <span className="font-semibold">{t("places_count", { count: placeCount })}</span>
+          </span>
+        )}
+      </div>
+
+      {/* Tytul - mocna hierarchia */}
+      <button onClick={onClick} className="block w-full text-left">
+        <p className="mt-1 text-lg font-black leading-tight line-clamp-2">{title}</p>
+      </button>
+
+      {/* Autor + toggle notki ("+") */}
+      <div className="mt-2 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-1.5 min-w-0">
+          <AuthorChip name={authorName} avatar={authorAvatar} />
+          {localBadge && <span className="text-[9px] font-bold text-orange-700 bg-orange-100 rounded-full px-1.5 py-0.5 shrink-0">{t("local_recommends")}</span>}
+        </div>
+        {note && (
+          <button
+            onClick={() => setNoteOpen((v) => !v)}
+            aria-expanded={noteOpen}
+            className="shrink-0 flex items-center gap-1 rounded-full bg-secondary text-secondary-foreground px-2.5 py-1 text-xs font-bold active:scale-95 transition-transform"
+          >
+            <Plus className={`h-3.5 w-3.5 transition-transform ${noteOpen ? "rotate-45" : ""}`} />
+            {t("note_toggle")}
+          </button>
+        )}
+      </div>
+      {note && noteOpen && (
+        <p className="mt-2 text-sm text-muted-foreground leading-relaxed">{note}</p>
+      )}
+    </div>
+  );
+}
+
+// Adapter: zestawienie (kolekcja) -> BigCard.
+function CollectionBigCard({ col, onOpen }: { col: DiscoveryCollection; onOpen: (col: DiscoveryCollection) => void }) {
+  const theme = getTheme(col.category);
+  const photoItem = col.items.find((i) => i.photo_url) ?? col.items[0];
+  const isLocal = !!col.author_home_city && !!col.city && col.author_home_city.trim().toLowerCase() === col.city.trim().toLowerCase();
+  return (
+    <BigCard
+      id={col.id}
+      photo={resolveStored(photoItem?.photo_url) ?? null}
+      categoryEmoji={theme?.emoji}
+      categoryLabel={theme?.label}
+      categoryClass={theme?.badge}
+      city={col.city}
+      avgRating={avgRatingOf(col.items.map((i) => i.rating))}
+      placeCount={col.items.length}
+      title={col.title}
+      pins={col.items}
+      note={col.description}
+      authorName={col.author_name}
+      authorAvatar={col.author_avatar}
+      localBadge={isLocal}
+      onClick={() => onOpen(col)}
+    />
+  );
+}
+
+// Adapter: trasa -> BigCard. Kategoria = pierwsza kategoria miejsc z trasy.
+function RouteBigCard({ route, onClick }: { route: PolecaneRoute; onClick: () => void }) {
+  const { t } = useTranslation("homefeed");
+  const cat = route.categories?.[0];
+  return (
+    <BigCard
+      id={route.id}
+      photo={route.photo}
+      categoryEmoji={cat ? CAT_EMOJI[cat] : undefined}
+      categoryLabel={cat ? t(`cat.${cat}`, CAT_LABEL[cat] ?? cat) : undefined}
+      city={route.city}
+      avgRating={route.avgRating ?? 0}
+      placeCount={route.placeCount ?? 0}
+      title={route.title}
+      pins={route.pins ?? []}
+      note={route.summary || route.ai_highlight}
+      authorName={route.author_name}
+      authorAvatar={route.author_avatar}
+      onClick={onClick}
+    />
   );
 }
 
@@ -1001,20 +1190,6 @@ export default function DiscoveryFeed() {
   };
 
   // Najnowsze udostepnione trasy (poziomy scroll).
-  const { data: newest = [], isLoading: newestLoading } = useQuery({
-    queryKey: ["discovery-newest-routes"],
-    queryFn: async () => {
-      const { data } = await (supabase as any)
-        .from("routes")
-        .select("id, title, city, ai_highlight, user_id, created_at, share_anonymous")
-        .eq("is_shared", true).not("title", "is", null)
-        .order("created_at", { ascending: false })
-        .limit(10);
-      return enrichRouteRows(data ?? []);
-    },
-    staleTime: 60_000,
-  });
-
   // Trasy w Warszawie (lista pionowa).
   const { data: warszawa = [], isLoading: wawaLoading } = useQuery({
     queryKey: ["discovery-warszawa-routes"],
@@ -1340,7 +1515,7 @@ export default function DiscoveryFeed() {
     staleTime: 5 * 60 * 1000,
   });
 
-  const isLoading = newestLoading || wawaLoading;
+  const isLoading = wawaLoading;
   void motywyLoading; void polecaneLoading;
 
   return (
@@ -1418,14 +1593,21 @@ export default function DiscoveryFeed() {
               </div>
             )}
             {results.collections.length > 0 && (
-              <UserPolecajkiRow collections={results.collections} onOpen={setActiveCol} />
+              <div>
+                <p className="text-sm font-black uppercase tracking-wide mb-3 px-1">{t("collections")}</p>
+                <div className="space-y-6">
+                  {results.collections.map((col) => (
+                    <CollectionBigCard key={col.id} col={col} onOpen={setActiveCol} />
+                  ))}
+                </div>
+              </div>
             )}
             {results.routes.length > 0 && (
               <div>
                 <p className="text-sm font-black uppercase tracking-wide mb-3 px-1">{t("routes_heading")}{cityFilter.length === 1 ? ` ${t("in_city", { city: cityFilter[0] })}` : ""}</p>
-                <div className="space-y-5">
+                <div className="space-y-6">
                   {results.routes.map((r) => (
-                    <RouteCardV key={r.id} route={r} onClick={() => navigate(`/route/${r.id}`)} />
+                    <RouteBigCard key={r.id} route={r} onClick={() => navigate(`/route/${r.id}`)} />
                   ))}
                 </div>
               </div>
@@ -1439,57 +1621,41 @@ export default function DiscoveryFeed() {
           </div>
         )
       ) : isLoading ? (
-        <div className="space-y-7">
-          {/* Najnowsze trasy - poziomy scroll */}
-          <div>
-            <div className="h-3.5 w-32 bg-muted rounded mb-3 mx-1 animate-pulse" />
-            <div className="flex gap-3 overflow-hidden pb-1 -mx-1 px-1">
-              {Array.from({ length: 3 }).map((_, i) => <RouteCardHSkeleton key={i} />)}
-            </div>
-          </div>
-          {/* Trasy w Warszawie - duze pionowe karty */}
-          <div>
-            <div className="h-6 w-44 bg-muted rounded mb-4 mx-1 animate-pulse" />
-            <div className="space-y-5">
-              {Array.from({ length: 2 }).map((_, i) => <RouteCardVSkeleton key={i} />)}
-            </div>
-          </div>
+        <div className="space-y-6">
+          <div className="h-6 w-44 bg-muted rounded mb-4 mx-1 animate-pulse" />
+          {Array.from({ length: 3 }).map((_, i) => <RouteCardVSkeleton key={i} />)}
         </div>
       ) : (
-        <div className="space-y-7">
-          {/* Najnowsze trasy - poziomy scroll (jak RECENT ISSUES) */}
-          {newest.length > 0 && (
+        <div className="space-y-8">
+          {/* Zestawienia - duze karty pionowe (glowna tresc, od razu widoczne). */}
+          {SHOW_ZESTAWIENIA && userPolecajki.length > 0 && (
             <div>
-              <p className="text-sm font-black uppercase tracking-wide mb-3 px-1">{t("newest_routes")}</p>
-              <div className="flex gap-3 overflow-x-auto scrollbar-none snap-x snap-mandatory pb-1 -ml-1 pl-1 -mr-4">
-                {newest.map((r) => (
-                  <RouteCardH key={r.id} route={r} onClick={() => navigate(`/route/${r.id}`)} />
+              <div className="mb-4 px-1">
+                <h2 className="text-xl font-black tracking-tight">{t("collections")}</h2>
+              </div>
+              <div className="space-y-6">
+                {userPolecajki.map((col) => (
+                  <CollectionBigCard key={col.id} col={col} onOpen={setActiveCol} />
                 ))}
-                <div className="shrink-0 w-0.5" />
               </div>
             </div>
           )}
 
-          {/* Zestawienia miejsc - WYLACZONE (TODO, nie w MVP). Flaga SHOW_ZESTAWIENIA. */}
-          {SHOW_ZESTAWIENIA && userPolecajki.length > 0 && (
-            <UserPolecajkiRow collections={userPolecajki} onOpen={setActiveCol} />
-          )}
-
-          {/* Trasy w Warszawie - lista pionowa (jak LATEST) */}
+          {/* Trasy w Warszawie - duze karty pionowe. */}
           {warszawa.length > 0 && (
             <div>
               <div className="mb-4 px-1">
                 <h2 className="text-xl font-black tracking-tight">{t("routes_in_warsaw")}</h2>
               </div>
-              <div className="space-y-5">
+              <div className="space-y-6">
                 {warszawa.map((r) => (
-                  <RouteCardV key={r.id} route={r} onClick={() => navigate(`/route/${r.id}`)} />
+                  <RouteBigCard key={r.id} route={r} onClick={() => navigate(`/route/${r.id}`)} />
                 ))}
               </div>
             </div>
           )}
 
-          {newest.length === 0 && warszawa.length === 0 && userPolecajki.length === 0 && (
+          {warszawa.length === 0 && userPolecajki.length === 0 && (
             <div className="py-16 text-center px-8">
               <div className="text-5xl mb-3">🗺️</div>
               <p className="text-base font-bold">{t("community_soon")}</p>
