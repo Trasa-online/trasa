@@ -174,6 +174,10 @@ function PlacePhoto({
 
 // ── Detail sheet ───────────────────────────────────────────────────────────────
 
+// Galeria zestawienia (toggle Miejsca|Galeria + pill na hero) WYLACZONA na froncie
+// do czasu zebrania trakcji. Kod widoku (renderGallery) zostaje - wystarczy true.
+const GALLERY_ENABLED = false;
+
 export function CollectionDetail({ col, onClose, onAdopt }: { col: DiscoveryCollection; onClose: () => void; onAdopt?: (city: string | null, names: string[]) => void }) {
   const { t } = useTranslation("homefeed");
   const navigate = useNavigate();
@@ -480,8 +484,8 @@ export function CollectionDetail({ col, onClose, onAdopt }: { col: DiscoveryColl
               </SheetClose>
             </div>
           </div>
-          {/* Galeria pill (lewy dol) - przelacza na widok galerii */}
-          {col.items.some((i) => i.photo_url) && (
+          {/* Galeria pill (lewy dol) - przelacza na widok galerii. Ukryta gdy galeria off. */}
+          {GALLERY_ENABLED && col.items.some((i) => i.photo_url) && (
             <button onClick={() => setContentView("gallery")} aria-label={t("gallery", "Galeria")}
               className="absolute bottom-3 left-3 h-8 px-3.5 flex items-center gap-1.5 rounded-full bg-black/35 backdrop-blur text-white text-xs font-semibold active:scale-95 transition-transform">
               <Images className="h-4 w-4" />
@@ -511,21 +515,23 @@ export function CollectionDetail({ col, onClose, onAdopt }: { col: DiscoveryColl
           <h2 className="mt-2 text-lg font-black leading-tight">{col.title}</h2>
           {col.description && <p className="mt-1 text-sm text-muted-foreground leading-relaxed">{col.description}</p>}
 
-          {/* Toggle: Miejsca | Galeria (wysrodkowany) */}
-          <div className="mt-4 flex justify-center">
-            <div className="inline-flex rounded-full bg-muted p-0.5">
-              <button onClick={() => setContentView("places")}
-                className={`flex items-center gap-1.5 h-9 px-4 rounded-full text-sm font-medium transition-colors ${contentView === "places" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
-                <MapPin className="h-4 w-4" />{t("places")}
-              </button>
-              <button onClick={() => setContentView("gallery")}
-                className={`flex items-center gap-1.5 h-9 px-4 rounded-full text-sm font-medium transition-colors ${contentView === "gallery" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
-                <Images className="h-4 w-4" />{t("gallery", "Galeria")}
-              </button>
+          {/* Toggle: Miejsca | Galeria (wysrodkowany). Ukryty gdy galeria off. */}
+          {GALLERY_ENABLED && (
+            <div className="mt-4 flex justify-center">
+              <div className="inline-flex rounded-full bg-muted p-0.5">
+                <button onClick={() => setContentView("places")}
+                  className={`flex items-center gap-1.5 h-9 px-4 rounded-full text-sm font-medium transition-colors ${contentView === "places" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
+                  <MapPin className="h-4 w-4" />{t("places")}
+                </button>
+                <button onClick={() => setContentView("gallery")}
+                  className={`flex items-center gap-1.5 h-9 px-4 rounded-full text-sm font-medium transition-colors ${contentView === "gallery" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
+                  <Images className="h-4 w-4" />{t("gallery", "Galeria")}
+                </button>
+              </div>
             </div>
-          </div>
+          )}
 
-          {contentView === "gallery" ? (
+          {GALLERY_ENABLED && contentView === "gallery" ? (
             <div className="mt-4">{renderGallery()}</div>
           ) : (
             <>
