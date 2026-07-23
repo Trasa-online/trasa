@@ -71,6 +71,15 @@ const BottomNav = () => {
   // Zawsze pokaz nav przy zmianie ekranu (bezpiecznik).
   useEffect(() => { setNavHidden(false); }, [location.pathname]);
 
+  // Publikuj wysokosc paska jako CSS var, zeby toasty (Sonner) siadaly tuz nad nawigacja
+  // gdy jest widoczna, a przy samym dole gdy ukryta (np. przegladanie). Cleanup -> 0 gdy
+  // BottomNav zniknie z ekranu (pelnoekranowe flow bez nawigacji).
+  useEffect(() => {
+    const root = document.documentElement;
+    root.style.setProperty("--trasa-nav-offset", navHidden ? "0px" : "4.75rem");
+    return () => { root.style.setProperty("--trasa-nav-offset", "0px"); };
+  }, [navHidden]);
+
   // Badge kropka na ikonie Dziennik gdy uzytkownik ma niewidziane trasy
   // (routes.new_for_users zawiera user.id). Refetch przy navigation - gdy user
   // wraca na Home, kropka znika lub pojawia sie wedlug stanu DB. Query tylko w native
