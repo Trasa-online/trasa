@@ -53,6 +53,7 @@ export type DiscoveryCollection = {
   views_count?: number | null;
   saves_count?: number | null;
   plan_adds_count?: number | null;
+  gallery_urls?: string[] | null;     // zdjecia wgrane przez autora (galeria zestawienia)
 };
 
 type PolecaneRoute = {
@@ -174,9 +175,10 @@ function PlacePhoto({
 
 // ── Detail sheet ───────────────────────────────────────────────────────────────
 
-// Galeria zestawienia (toggle Miejsca|Galeria + pill na hero) WYLACZONA na froncie
-// do czasu zebrania trakcji. Kod widoku (renderGallery) zostaje - wystarczy true.
-const GALLERY_ENABLED = false;
+// Galeria zestawienia = zdjecia wgrane przez AUTORA zestawienia (nie zdjecia miejsc).
+// Toggle Miejsca|Galeria widoczny; galeria pokazuje col.gallery_urls albo pusty stan,
+// dopoki krok dodawania zdjec w tworzeniu zestawienia nie jest gotowy.
+const GALLERY_ENABLED = true;
 
 export function CollectionDetail({ col, onClose, onAdopt }: { col: DiscoveryCollection; onClose: () => void; onAdopt?: (city: string | null, names: string[]) => void }) {
   const { t } = useTranslation("homefeed");
@@ -432,25 +434,31 @@ export function CollectionDetail({ col, onClose, onAdopt }: { col: DiscoveryColl
     </div>
   );
 
-  // ── Galeria - siatka zdjec miejsc (2 kolumny). Tap otwiera wizytowke. ──
-  const renderGallery = () => (
-    <div className="grid grid-cols-2 gap-2">
-      {col.items.map((item, idx) => {
-        const tappable = !!item.place_id;
-        return (
-          <button
-            key={item.id}
-            {...(tappable ? { onClick: () => openPlace(item) } : {})}
-            className="relative aspect-[4/3] rounded-2xl overflow-hidden bg-muted text-left active:opacity-90 transition-opacity"
-          >
-            <PlacePhoto item={item} placeholderIdx={idx} className="w-full h-full" />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
-            <p className="absolute bottom-2 left-2 right-2 text-white text-xs font-bold leading-tight line-clamp-2 drop-shadow-sm">{item.place_name}</p>
-          </button>
-        );
-      })}
-    </div>
-  );
+  // ── Galeria - zdjecia wgrane przez AUTORA zestawienia (col.gallery_urls). Siatka 2 kol.
+  // Pusty stan dopoki autor nie doda zdjec (krok w tworzeniu zestawienia - wkrotce). ──
+  const renderGallery = () => {
+    const photos = (col.gallery_urls ?? []).map((u) => resolveStored(u)).filter(Boolean) as string[];
+    if (photos.length === 0) {
+      return (
+        <div className="rounded-2xl border border-dashed border-border/60 bg-secondary/40 flex flex-col items-center text-center gap-2.5 px-6 py-10">
+          <div className="h-12 w-12 rounded-2xl bg-muted flex items-center justify-center">
+            <Images className="h-6 w-6 text-muted-foreground" />
+          </div>
+          <p className="text-sm font-bold">{t("gallery_empty_title", "Brak zdjęć w galerii")}</p>
+          <p className="text-xs text-muted-foreground max-w-[250px] leading-relaxed">{t("gallery_empty_desc", "Autor nie dodał jeszcze zdjęć do tego zestawienia.")}</p>
+        </div>
+      );
+    }
+    return (
+      <div className="grid grid-cols-2 gap-2">
+        {photos.map((url, idx) => (
+          <div key={idx} className="relative aspect-square rounded-2xl overflow-hidden bg-muted">
+            <img src={url} alt="" loading="lazy" className="w-full h-full object-cover" />
+          </div>
+        ))}
+      </div>
+    );
+  };
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
