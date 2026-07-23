@@ -17,6 +17,8 @@
     "close": "Close",
     "save_collection": "Save collection"
   },
+  "nearby_heading": "Nearest to you",
+  "nearby_empty": "No places nearby.",
   "best_match": "Best match",
   "current_location": "Current location",
   "saved_places": "Saved places",

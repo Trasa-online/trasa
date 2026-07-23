@@ -9,6 +9,7 @@ import { parseISO, isValid, format, isToday, isYesterday } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
 import DiscoveryFeed from "@/components/home/DiscoveryFeed";
 import HomeHeaderActions from "@/components/home/HomeHeaderActions";
+import ExploreTopBar from "@/components/home/ExploreTopBar";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { UNLOCKED_CITIES } from "@/components/plan-wizard/CityPicker";
 import { getHistoryByCity, removeLikeFromCity, clearCity, updateLikePhoto, type ExploreCityGroup } from "@/lib/exploreLikes";
@@ -631,18 +632,28 @@ const Explore = () => {
   const location = useLocation();
   // Wejscie z profilu (karta "Zestawienia") -> pokaz liste zestawien usera zamiast feedu.
   const myCollections = (location.state as any)?.myCollections === true;
-  // Selektor miasta w naglowku (zastapil tytul "Eksploruj"). Na razie default Warszawa.
-  const [exploreCity, setExploreCity] = useState("Warszawa");
+  // Selektor miasta w naglowku (zastapil tytul "Eksploruj"). Miasto niesione przy
+  // przelaczaniu z/do Przegladaj (location.state), inaczej default Warszawa.
+  const [exploreCity, setExploreCity] = useState<string>((location.state as any)?.city || "Warszawa");
+  // Licznik aktywnych filtrow (badge na guziku filtra w gornej belce). DiscoveryFeed
+  // trzyma stan filtrow i raportuje liczbe przez event; belka jest o poziom wyzej.
+  const [filterCount, setFilterCount] = useState(0);
+  useEffect(() => {
+    const onCount = (e: any) => setFilterCount(typeof e.detail === "number" ? e.detail : 0);
+    window.addEventListener("trasa:explore-filter-count", onCount);
+    return () => window.removeEventListener("trasa:explore-filter-count", onCount);
+  }, []);
 
   const handleRefresh = async () => {
     await queryClient.invalidateQueries();
   };
 
   return (
-    <PullToRefresh onRefresh={handleRefresh} className="flex-1 flex flex-col pt-2 pb-[calc(5rem+env(safe-area-inset-bottom,0px))]">
-      <div className="relative px-4 pb-3 mb-3 flex items-start justify-between gap-3 after:content-[''] after:absolute after:bottom-0 after:left-4 after:right-4 after:h-px after:bg-border/40">
+    <div className="flex-1 flex flex-col min-h-0">
+      {/* Gorna belka - stala (jak w Przegladaj). Wspoldzielony ExploreTopBar: miasto + toggle + filtry. */}
+      <div className="flex items-center gap-2 px-4 pt-2 pb-3 shrink-0 border-b border-border/20">
         {myCollections ? (
-          <div className="flex items-center gap-2.5 pt-2">
+          <>
             <button
               onClick={() => { if (window.history.state?.idx > 0) navigate(-1); else navigate("/moj-profil"); }}
               className="h-9 w-9 -ml-1 flex items-center justify-center text-foreground shrink-0"
@@ -650,65 +661,25 @@ const Explore = () => {
             >
               <ArrowLeft className="h-5 w-5" />
             </button>
-            <div>
-              <h1 className="text-xl font-display font-extrabold tracking-tight">{t("explore.collections_title")}</h1>
-              <p className="text-xs text-muted-foreground mt-0.5">{t("explore.collections_subtitle")}</p>
-            </div>
-          </div>
+            <h1 className="flex-1 min-w-0 text-lg font-bold truncate">{t("explore.collections_title")}</h1>
+          </>
         ) : (
-          // Selektor miasta zamiast tytulu "Eksploruj" (usuniete nazwa zakladki + podtytul).
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button className="flex items-center gap-1.5 pt-2 pr-1 active:opacity-70 transition-opacity" aria-label={t("explore.change_city", "Zmień miasto")}>
-                <MapPin className="h-5 w-5 text-orange-600 shrink-0" />
-                <span className="text-xl font-display font-extrabold tracking-tight text-foreground">{exploreCity}</span>
-                <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="rounded-2xl max-h-[60vh] overflow-y-auto">
-              {UNLOCKED_CITIES.map((c) => (
-                <DropdownMenuItem key={c} onClick={() => setExploreCity(c)} className="gap-2 rounded-xl cursor-pointer">
-                  <MapPin className={cn("h-4 w-4 shrink-0", c === exploreCity ? "text-orange-600" : "text-muted-foreground")} />
-                  <span className={cn("flex-1", c === exploreCity && "font-bold")}>{c}</span>
-                  {c === exploreCity && <Check className="h-4 w-4 text-orange-600 shrink-0" />}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <ExploreTopBar
+            mode="explore"
+            city={exploreCity}
+            onCityChange={setExploreCity}
+            onOpenFilters={() => window.dispatchEvent(new CustomEvent("trasa:explore-open-filters"))}
+            activeFilterCount={filterCount}
+          />
         )}
-        <div className="flex items-center gap-1.5 shrink-0 mt-2">
-          {!myCollections && (
-            <HomeHeaderActions showNotifications={false} showSearch={false} showSaved={false} showAdmin={false} />
-          )}
-          {/* Toggle: Przegladanie miejsc (swiper exploreMode) | Eksploracja (feed - biezacy widok).
-              Zastapil guzik "+ Dodaj". Segment "Eksploracja" jest aktywny (jestesmy w feedzie);
-              tap w "Przegladaj" przenosi do swipera miejsc (/plan exploreMode). */}
-          {!myCollections && (
-            <div className="shrink-0 flex items-center rounded-full bg-secondary p-0.5">
-              <button
-                onClick={() => navigate("/plan", { state: { exploreMode: true } })}
-                className="h-8 px-3 flex items-center gap-1.5 rounded-full text-secondary-foreground/70 text-xs font-bold active:scale-95 transition-transform whitespace-nowrap"
-              >
-                <Layers className="h-4 w-4" />
-                {t("explore.tab_browse")}
-              </button>
-              <span
-                aria-current="true"
-                aria-label={t("explore.tab_explore")}
-                title={t("explore.tab_explore")}
-                className="h-8 w-8 flex items-center justify-center rounded-full bg-background text-foreground shadow-sm"
-              >
-                <Compass className="h-4 w-4" />
-              </span>
-            </div>
-          )}
-        </div>
       </div>
 
-      <div className="flex-1 px-4">
-        {myCollections ? <MyCollections /> : <DiscoveryFeed city={exploreCity} />}
-      </div>
-    </PullToRefresh>
+      <PullToRefresh onRefresh={handleRefresh} className="flex-1 min-h-0 flex flex-col pt-3 pb-[calc(5rem+env(safe-area-inset-bottom,0px))]">
+        <div className="flex-1 px-4">
+          {myCollections ? <MyCollections /> : <DiscoveryFeed city={exploreCity} />}
+        </div>
+      </PullToRefresh>
+    </div>
   );
 };
 

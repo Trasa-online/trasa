@@ -18,6 +18,7 @@ import { dateLocale } from "@/lib/dateLocale";
 import StartingLocationPicker from "@/components/plan-wizard/StartingLocationPicker";
 import PlaceSwiper, { type MockPlace } from "@/components/plan-wizard/PlaceSwiper";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
+import ExploreTopBar from "@/components/home/ExploreTopBar";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { MAIN_CATEGORIES, getSubcategoryLabel, subcategoryLabelLocalized } from "@/lib/categories";
 import { setStartReference, markAskedForCity, tryResolveOnSite, useDistanceReference } from "@/lib/distanceReference";
@@ -337,68 +338,13 @@ const PlanWizard = () => {
         </button>
 
         {step === 4 && exploreMode ? (
-          <>
-            {/* exploreMode ("Przegladaj"): selektor miasta (dropdown dostepnych miast) + toggle
-                Przegladaj|Eksploruj (ikony - oszczedza miejsce, nazwa miasta sie miesci).
-                Bez "Zakoncz". Filtry po prawej. */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button
-                  className="shrink-0 flex items-center gap-1 px-3 h-8 rounded-full bg-card border border-border/60 active:scale-[0.97] transition-transform max-w-[160px]"
-                  aria-label={t("explore_change_city")}
-                >
-                  <span className="text-sm font-bold text-foreground truncate">{city || "Warszawa"}</span>
-                  <ChevronDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="rounded-2xl max-h-[60vh] overflow-y-auto">
-                {UNLOCKED_CITIES.map((c) => (
-                  <DropdownMenuItem
-                    key={c}
-                    onClick={() => {
-                      if (c === city) return;
-                      setCity(c);
-                      posthog.capture("plan_city_selected", { city: c, explore_mode: true });
-                    }}
-                    className="gap-2 rounded-xl cursor-pointer"
-                  >
-                    <MapPin className={cn("h-4 w-4 shrink-0", c === (city || "Warszawa") ? "text-orange-600" : "text-muted-foreground")} />
-                    <span className={cn("flex-1", c === (city || "Warszawa") && "font-bold")}>{c}</span>
-                    {c === (city || "Warszawa") && <Check className="h-4 w-4 text-orange-600 shrink-0" />}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <div className="flex-1" />
-            {/* Toggle ikonowy: Przegladaj (karty) aktywne | Eksploracja (feed) */}
-            <div className="shrink-0 flex items-center rounded-full bg-secondary p-0.5">
-              <span
-                className="h-8 w-8 flex items-center justify-center rounded-full bg-background text-foreground shadow-sm"
-                aria-current="true"
-                aria-label={t("explore_browse")}
-                title={t("explore_browse")}
-              >
-                <Layers className="h-4 w-4" />
-              </span>
-              <button
-                onClick={() => navigate("/eksploruj")}
-                className="h-8 px-3 flex items-center gap-1.5 rounded-full text-secondary-foreground/70 text-xs font-bold active:scale-95 transition-transform whitespace-nowrap"
-                aria-label={t("explore_explore")}
-                title={t("explore_explore")}
-              >
-                <Compass className="h-4 w-4" />
-                {t("explore_explore")}
-              </button>
-            </div>
-            {/* Chip filtru */}
-            <button
-              onClick={() => setCategoryDrawerOpen(true)}
-              className="shrink-0 h-8 w-8 flex items-center justify-center rounded-xl bg-muted active:scale-95 transition-transform"
-              aria-label={t("filters")}
-            >
-              <SlidersHorizontal className="h-4 w-4 text-foreground" />
-            </button>
-          </>
+          <ExploreTopBar
+            mode="browse"
+            city={city || "Warszawa"}
+            onCityChange={(c) => { if (c !== city) { setCity(c); posthog.capture("plan_city_selected", { city: c, explore_mode: true }); } }}
+            onOpenFilters={() => setCategoryDrawerOpen(true)}
+            activeFilterCount={activeFilterCount}
+          />
         ) : step === 4 ? (
           <>
             {/* Akcje + chip filtru kategorii - chip ostatni (po prawej) */}

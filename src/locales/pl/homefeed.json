@@ -17,6 +17,8 @@
     "close": "Zamknij",
     "save_collection": "Zapisz zestawienie"
   },
+  "nearby_heading": "Najbliżej Ciebie",
+  "nearby_empty": "Brak miejsc w pobliżu.",
   "best_match": "Najlepsze dopasowanie",
   "current_location": "Bieżące położenie",
   "saved_places": "Zapisane miejsca",
