@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Camera, X, Globe, Lock, Pencil, Check, Image as ImageIcon, Map as MapIcon, MapPin, ChevronUp, ChevronDown, ChevronRight, ChevronLeft, Trash2, Plus, Share, Share2, List, GalleryHorizontalEnd, Info, MoreVertical, Navigation, Maximize2 } from "lucide-react";
 import RouteMap from "@/components/RouteMap";
+import SwipeToDeleteRow from "@/components/SwipeToDeleteRow";
 import { useShare } from "@/hooks/useShare";
 import { Switch } from "@/components/ui/switch";
 import AddPinSheet from "@/components/route/AddPinSheet";
@@ -77,6 +78,7 @@ const ReviewSummary = () => {
   const [savingName, setSavingName] = useState(false);
   const [planView, setPlanView] = useState<"list" | "cards">("list");
   const [planMapOpen, setPlanMapOpen] = useState(false);
+  const [memoTab, setMemoTab] = useState<"notki" | "galeria">("notki");
   // Pod-zakladki w widoku wspomnienia: galeria zdjec / plan dnia.
   // Wpis dziennika (wlasciciel): 3-etapowy stepper. 1 Trasa (edycja) -> 2 Notki -> 3 Zdjecia.
   const [step, setStep] = useState<1 | 2 | 3>(1);
@@ -1305,10 +1307,20 @@ const ReviewSummary = () => {
   // Hero + info (avatar/nazwa/data) + widocznosc + lista miejsc (numer/kategoria/odhaczanie/
   // reorder) + statyczna mapa (rozwijalna) + footer "Nawiguj do...". Wspomnienia (isMemory)
   // i gosc ida dalej do klasycznego podsumowania/steppera.
-  if (isOwner && !isMemory && !editingStepper) {
+  if (isOwner && !editingStepper && sortedDays.length <= 1) {
     const heroMapThumb = buildTripStaticMapUrl(currentPins, "160x160");
     const bigMapUrl = buildTripStaticMapUrl(currentPins, "560x300");
     const nextPlace = currentPins.find((p: any) => !isVisited(p)) ?? currentPins[0];
+    // Ukonczony wyjazd = wszystkie miejsca odhaczone ALBO minieta data (isMemory). Wtedy w
+    // sekcji miejsc pokazujemy Notki/Galerie (notatki + zdjecia = wspomnienie).
+    const tripCompleted = isMemory || (currentPins.length > 0 && visitedCount === currentPins.length);
+    // Usuniecie miejsca z planu (swipe/kosz) z oknem "Cofnij". Zmiana draftu; autosave
+    // (on unmount) utrwala usuniecie w DB. Cofniecie przywraca poprzednia liste.
+    const removePlaceFromPlan = (pin: any) => {
+      const prev = workingPins;
+      setWorking(workingPins.filter((p: any) => p.id !== pin.id));
+      deferDelete({ message: "Usunięto miejsce", onUndo: () => setWorking(prev), commit: () => { /* DB przez autosave */ } });
+    };
     const navMapPins = currentPins
       .filter((p: any) => p.latitude != null && p.longitude != null)
       .map((p: any) => ({ latitude: p.latitude, longitude: p.longitude, place_name: p.place_name }));
@@ -1386,57 +1398,115 @@ const ReviewSummary = () => {
             </button>
           </div>
 
-          {/* MIEJSCA + toggle lista/karty */}
+          {/* MIEJSCA + toggle. Aktywny: Lista/Karty. Ukonczony: Notki/Galeria. */}
           <div className="flex items-center justify-between pt-8 pb-3">
             <p className={sectionHeadingCls}>Miejsca</p>
-            <div className="flex rounded-full bg-muted p-0.5">
-              <button onClick={() => setPlanView("list")} aria-label={t("a11y.list_view")} className={`px-2.5 py-1.5 rounded-full transition-colors ${planView === "list" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
-                <List className="h-4 w-4" />
-              </button>
-              <button onClick={() => setPlanView("cards")} aria-label={t("a11y.cards_view")} className={`px-2.5 py-1.5 rounded-full transition-colors ${planView === "cards" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
-                <GalleryHorizontalEnd className="h-4 w-4" />
-              </button>
-            </div>
+            {tripCompleted ? (
+              <div className="flex rounded-full bg-muted p-0.5 text-xs font-bold">
+                <button onClick={() => setMemoTab("notki")} className={`px-3 py-1.5 rounded-full transition-colors ${memoTab === "notki" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>Notki</button>
+                <button onClick={() => setMemoTab("galeria")} className={`px-3 py-1.5 rounded-full transition-colors ${memoTab === "galeria" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>Galeria</button>
+              </div>
+            ) : (
+              <div className="flex rounded-full bg-muted p-0.5">
+                <button onClick={() => setPlanView("list")} aria-label={t("a11y.list_view")} className={`px-2.5 py-1.5 rounded-full transition-colors ${planView === "list" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
+                  <List className="h-4 w-4" />
+                </button>
+                <button onClick={() => setPlanView("cards")} aria-label={t("a11y.cards_view")} className={`px-2.5 py-1.5 rounded-full transition-colors ${planView === "cards" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
+                  <GalleryHorizontalEnd className="h-4 w-4" />
+                </button>
+              </div>
+            )}
           </div>
 
-          {/* Lista miejsc - numer + zdjecie + nazwa + kategoria + odhaczanie + reorder */}
-          <div className="flex flex-col gap-2">
-            {workingPins.map((pin: any, i: number) => {
-              const visited = isVisited(pin);
-              return (
-                <div key={pin.id} className="flex items-center gap-3">
-                  <button onClick={() => openDetail(pin)} className="flex-1 min-w-0 flex items-center gap-3 rounded-2xl bg-secondary border border-border/40 p-2.5 text-left active:opacity-90 transition-opacity">
+          {/* Ukonczony + Galeria -> zdjecia wyjazdu (upload). */}
+          {tripCompleted && memoTab === "galeria" ? (
+            renderGallery(true)
+          ) : tripCompleted ? (
+            /* Ukonczony + Notki -> kazde miejsce z polem notatki usera. */
+            <div className="flex flex-col gap-3">
+              {workingPins.map((pin: any, i: number) => (
+                <div key={pin.id} className="rounded-2xl bg-secondary border border-border/40 p-2.5">
+                  <button onClick={() => openDetail(pin)} className="w-full flex items-center gap-3 text-left active:opacity-90 transition-opacity">
                     <div className="relative h-14 w-14 rounded-xl overflow-hidden shrink-0 bg-muted">
                       <PlacePhoto pin={pin} className="h-full w-full object-cover" emojiClass="text-2xl" />
                       <span className="absolute top-1 left-1 h-4 w-4 rounded-full bg-[#9a9a9a] text-white text-[8px] font-bold flex items-center justify-center">{i + 1}</span>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className={`text-sm font-bold leading-tight truncate ${visited ? "line-through opacity-60" : ""}`}>{pin.place_name}</p>
-                      {pin.category && (
-                        <span className="inline-flex items-center mt-1 px-2 py-0.5 rounded-full bg-card text-[11px] font-semibold text-foreground">{catLabel(pin.category)}</span>
-                      )}
+                      <p className="text-sm font-bold leading-tight truncate">{pin.place_name}</p>
+                      {pin.category && <span className="inline-flex items-center mt-1 px-2 py-0.5 rounded-full bg-card text-[11px] font-semibold text-foreground">{catLabel(pin.category)}</span>}
                     </div>
-                    <span
-                      role="button" tabIndex={0}
-                      onClick={(e) => { e.stopPropagation(); toggleVisited(pin); }}
-                      aria-label={visited ? "Odznacz odwiedzone" : "Byłem tu"}
-                      className={`shrink-0 h-8 w-8 rounded-full flex items-center justify-center transition-colors ${visited ? "bg-foreground text-white" : "bg-card border-2 border-border text-transparent"}`}
-                    >
-                      <Check className="h-5 w-5" strokeWidth={3} />
-                    </span>
                   </button>
-                  <div className="flex flex-col gap-2 shrink-0">
-                    <button onClick={() => movePin(i, i - 1)} disabled={i === 0} aria-label={t("plan.earlier")} className="h-6 w-6 flex items-center justify-center text-muted-foreground disabled:opacity-25 active:scale-90"><ChevronUp className="h-4 w-4" /></button>
-                    <button onClick={() => movePin(i, i + 1)} disabled={i === workingPins.length - 1} aria-label={t("plan.later")} className="h-6 w-6 flex items-center justify-center text-muted-foreground disabled:opacity-25 active:scale-90"><ChevronDown className="h-4 w-4" /></button>
-                  </div>
+                  <div className="pt-2">{renderRatingNote(pin.place_name)}</div>
                 </div>
-              );
-            })}
-            {/* Dodaj miejsce */}
-            <button onClick={() => setAddingPlace(true)} className="w-full rounded-2xl border border-dashed border-border/70 p-3 text-center text-sm font-bold text-muted-foreground active:bg-muted/40 transition-colors">
-              Dodaj miejsce
-            </button>
-          </div>
+              ))}
+            </div>
+          ) : planView === "cards" ? (
+            /* Aktywny + Karty -> poziome karty z koszem. */
+            <div className="flex gap-3 overflow-x-auto scrollbar-none snap-x snap-mandatory -mr-4 pr-4 pb-1">
+              {workingPins.map((pin: any, i: number) => {
+                const visited = isVisited(pin);
+                return (
+                  <button key={pin.id} onClick={() => openDetail(pin)} className="shrink-0 w-[210px] snap-start rounded-2xl bg-secondary border border-border/40 overflow-hidden shadow-sm text-left active:opacity-90 transition-opacity">
+                    <div className="relative aspect-[4/3] bg-muted">
+                      <PlacePhoto pin={pin} className="w-full h-full object-cover" emojiClass="text-3xl" />
+                      <span className="absolute top-2 left-2 h-5 w-5 rounded-full bg-black/50 text-white text-[10px] font-bold flex items-center justify-center">{i + 1}</span>
+                      <span role="button" tabIndex={0} onClick={(e) => { e.stopPropagation(); removePlaceFromPlan(pin); }} aria-label={t("a11y.remove_place")}
+                        className="absolute top-2 right-2 h-8 w-8 rounded-full bg-black/45 backdrop-blur text-white flex items-center justify-center active:scale-90 transition-transform">
+                        <Trash2 className="h-4 w-4" />
+                      </span>
+                      <span role="button" tabIndex={0} onClick={(e) => { e.stopPropagation(); toggleVisited(pin); }} aria-label={visited ? "Odznacz odwiedzone" : "Byłem tu"}
+                        className={`absolute bottom-2 right-2 h-8 w-8 rounded-full flex items-center justify-center transition-colors ${visited ? "bg-foreground text-white" : "bg-white/90 border border-border text-transparent"}`}>
+                        <Check className="h-5 w-5" strokeWidth={3} />
+                      </span>
+                    </div>
+                    <div className="px-3 py-2.5">
+                      {pin.category && <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-card text-[11px] font-semibold text-foreground mb-1">{catLabel(pin.category)}</span>}
+                      <p className={`text-sm font-black leading-tight line-clamp-1 ${visited ? "line-through opacity-60" : ""}`}>{pin.place_name}</p>
+                    </div>
+                  </button>
+                );
+              })}
+              <button onClick={() => setAddingPlace(true)} className="shrink-0 w-[130px] snap-start rounded-2xl border border-dashed border-border/70 flex flex-col items-center justify-center gap-1.5 text-muted-foreground active:bg-muted/40 transition-colors">
+                <Plus className="h-5 w-5" /> <span className="text-xs font-bold">Dodaj miejsce</span>
+              </button>
+            </div>
+          ) : (
+            /* Aktywny + Lista -> wiersze ze swipe-to-delete + reorder. */
+            <div className="flex flex-col gap-2">
+              {workingPins.map((pin: any, i: number) => {
+                const visited = isVisited(pin);
+                return (
+                  <div key={pin.id} className="flex items-center gap-3">
+                    <div className="flex-1 min-w-0">
+                      <SwipeToDeleteRow onDelete={() => removePlaceFromPlan(pin)}>
+                        <button onClick={() => openDetail(pin)} className="w-full flex items-center gap-3 rounded-2xl bg-secondary border border-border/40 p-2.5 text-left active:opacity-90 transition-opacity">
+                          <div className="relative h-14 w-14 rounded-xl overflow-hidden shrink-0 bg-muted">
+                            <PlacePhoto pin={pin} className="h-full w-full object-cover" emojiClass="text-2xl" />
+                            <span className="absolute top-1 left-1 h-4 w-4 rounded-full bg-[#9a9a9a] text-white text-[8px] font-bold flex items-center justify-center">{i + 1}</span>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className={`text-sm font-bold leading-tight truncate ${visited ? "line-through opacity-60" : ""}`}>{pin.place_name}</p>
+                            {pin.category && <span className="inline-flex items-center mt-1 px-2 py-0.5 rounded-full bg-card text-[11px] font-semibold text-foreground">{catLabel(pin.category)}</span>}
+                          </div>
+                          <span role="button" tabIndex={0} onClick={(e) => { e.stopPropagation(); toggleVisited(pin); }} aria-label={visited ? "Odznacz odwiedzone" : "Byłem tu"}
+                            className={`shrink-0 h-8 w-8 rounded-full flex items-center justify-center transition-colors ${visited ? "bg-foreground text-white" : "bg-card border-2 border-border text-transparent"}`}>
+                            <Check className="h-5 w-5" strokeWidth={3} />
+                          </span>
+                        </button>
+                      </SwipeToDeleteRow>
+                    </div>
+                    <div className="flex flex-col gap-2 shrink-0">
+                      <button onClick={() => movePin(i, i - 1)} disabled={i === 0} aria-label={t("plan.earlier")} className="h-6 w-6 flex items-center justify-center text-muted-foreground disabled:opacity-25 active:scale-90"><ChevronUp className="h-4 w-4" /></button>
+                      <button onClick={() => movePin(i, i + 1)} disabled={i === workingPins.length - 1} aria-label={t("plan.later")} className="h-6 w-6 flex items-center justify-center text-muted-foreground disabled:opacity-25 active:scale-90"><ChevronDown className="h-4 w-4" /></button>
+                    </div>
+                  </div>
+                );
+              })}
+              <button onClick={() => setAddingPlace(true)} className="w-full rounded-2xl border border-dashed border-border/70 p-3 text-center text-sm font-bold text-muted-foreground active:bg-muted/40 transition-colors">
+                Dodaj miejsce
+              </button>
+            </div>
+          )}
 
           {/* MAPA - statyczna z rozwinięciem */}
           {bigMapUrl && (
@@ -1452,8 +1522,8 @@ const ReviewSummary = () => {
           )}
         </div>
 
-        {/* Footer: Nawiguj do nastepnego (nieodwiedzonego) miejsca */}
-        {nextPlace && (
+        {/* Footer: Nawiguj do nastepnego (nieodwiedzonego) miejsca. Ukryty po ukonczeniu wyjazdu. */}
+        {!tripCompleted && nextPlace && (
           <div className="shrink-0 border-t border-border/20 px-4 pt-3 pb-[max(16px,env(safe-area-inset-bottom))] bg-background">
             <button onClick={() => navigateTo(nextPlace)} className="w-full h-12 rounded-2xl bg-primary text-white font-semibold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform shadow-md shadow-orange-500/20">
               <span className="truncate">Nawiguj do {nextPlace.place_name}</span>
@@ -1469,6 +1539,9 @@ const ReviewSummary = () => {
         {addingPlace && (
           <AddPinSheet open={addingPlace} onOpenChange={(o) => !o && setAddingPlace(false)} onPinAdd={handleAddPin} cityContext={route?.city ?? ""} existingPinNames={currentPins.map((p: any) => p.place_name)} />
         )}
+
+        {/* Input zdjec (galeria na web; native uzywa CapCamera) */}
+        <input ref={fileInputRef} type="file" accept="image/*,.heic,.heif" multiple className="hidden" onChange={handlePhotoUpload} />
 
         {/* Rozwinięta interaktywna mapa (zoom) */}
         {planMapOpen && (

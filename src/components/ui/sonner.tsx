@@ -23,9 +23,11 @@ const Toaster = ({ ...props }: ToasterProps) => {
         toastOptions={{
           classNames: {
             toast:
-              "group toast group-[.toaster]:w-[calc(100vw-2rem)] group-[.toaster]:max-w-md group-[.toaster]:bg-secondary group-[.toaster]:text-secondary-foreground group-[.toaster]:border-0 group-[.toaster]:shadow-lg group-[.toaster]:shadow-black/10 group-[.toaster]:rounded-2xl group-[.toaster]:py-3 group-[.toaster]:px-4 group-[.toaster]:gap-2 group-[.toaster]:items-center group-[.toaster]:mb-[calc(var(--trasa-nav-offset,0px)+env(safe-area-inset-bottom,0px)+10px)]",
-            title: "group-[.toast]:text-sm group-[.toast]:font-medium group-[.toast]:text-secondary-foreground group-[.toast]:leading-snug",
+              "group toast group-[.toaster]:w-[calc(100vw-2rem)] group-[.toaster]:max-w-md group-[.toaster]:bg-[#f6f6f7] group-[.toaster]:text-foreground group-[.toaster]:border group-[.toaster]:border-black/[0.06] group-[.toaster]:shadow-lg group-[.toaster]:shadow-black/[0.08] group-[.toaster]:rounded-2xl group-[.toaster]:py-3 group-[.toaster]:px-4 group-[.toaster]:gap-2 group-[.toaster]:items-center group-[.toaster]:mb-[calc(var(--trasa-nav-offset,0px)+env(safe-area-inset-bottom,0px)+10px)]",
+            title: "group-[.toast]:text-sm group-[.toast]:font-medium group-[.toast]:text-foreground group-[.toast]:leading-snug",
             description: "group-[.toast]:text-xs group-[.toast]:text-muted-foreground group-[.toast]:mt-0.5 group-[.toast]:leading-relaxed",
+            // Akcja (np. "Cofnij") - pomaranczowy link po prawej, bez tla.
+            actionButton: "group-[.toast]:!bg-transparent group-[.toast]:!text-primary group-[.toast]:!font-bold group-[.toast]:!text-sm group-[.toast]:!px-1 group-[.toast]:!shrink-0",
             // Bez ikony (Gmail-plain).
             icon: "group-[.toast]:hidden",
           },

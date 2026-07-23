@@ -9,6 +9,7 @@ import { format, parseISO, isValid } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
 import { Globe, Lock, Loader2, Trash2, CalendarDays, Sparkles, Plus, BookOpen } from "lucide-react";
 import { toast } from "sonner";
+import { deferDelete } from "@/lib/deferDelete";
 import { PLANNING_DISABLED } from "@/lib/appMode";
 import { API_BASE } from "@/lib/platform";
 import { avatarSrc } from "@/lib/avatar";
@@ -225,49 +226,48 @@ const JournalTab = ({ userId, city: cityFilter }: JournalTabProps) => {
   // na ekranie glownym (ActiveTripsDashboard), wiec tu pokazujemy wylacznie pocztowki.
   const visibleEntries = postcards;
 
-  const handleDelete = async (e: React.MouseEvent, entry: any) => {
+  // Usuwanie/opuszczanie wyjazdu z oknem "Cofnij" (deferDelete, styl Gmaila): optymistycznie
+  // znika z listy, faktyczny DB delete odroczony; klik "Cofnij" przywraca (wpis nadal w DB).
+  const restoreEntries = () => {
+    queryClient.invalidateQueries({ queryKey: ["journal-entries", userId] });
+    queryClient.invalidateQueries({ queryKey: ["journal-badge"] });
+  };
+  const handleDelete = (e: React.MouseEvent, entry: any) => {
     e.stopPropagation();
-    const confirmMsg = entry.is_own
-      ? t("journal.confirm_delete", { city: entry.city })
-      : t("journal.confirm_leave", { city: entry.city });
-    if (!confirm(confirmMsg)) return;
-    setDeletingId(entry.id);
-    try {
-      if (entry.is_own) {
-        await supabase.from("pins").delete().eq("route_id", entry.id);
-        await (supabase as any).from("chat_sessions").delete().eq("route_id", entry.id);
-        const { error } = await supabase.from("routes").delete().eq("id", entry.id);
-        if (error) throw error;
-        toast.success(t("journal.toast_deleted"));
-      } else {
-        if (!entry.group_session_id) throw new Error("missing group_session_id");
-        // count: 'exact' zeby wykryc silent RLS fail (DELETE zwraca success ale 0 rows
-        // gdy nie ma policy). Wczesniej brak DELETE policy na group_session_members
-        // powodowal ze user nie mogl opuscic trasy - DB nie blokowala explicit.
-        // Migracja 20260604_gsm_delete_policy.sql dodaje policy.
-        const { error, count } = await (supabase as any)
-          .from("group_session_members")
-          .delete({ count: "exact" })
-          .eq("session_id", entry.group_session_id)
-          .eq("user_id", userId);
-        if (error) throw error;
-        if (count === 0) {
-          throw new Error(t("journal.leave_no_permission"));
+    // Optymistyczne usuniecie z cache (natychmiast znika z listy).
+    queryClient.setQueryData(["journal-entries", userId], (old: any) =>
+      (old ?? []).filter((x: any) => x.id !== entry.id)
+    );
+    queryClient.invalidateQueries({ queryKey: ["journal-badge"] });
+    deferDelete({
+      message: entry.is_own ? t("journal.toast_deleted") : t("journal.toast_left"),
+      onUndo: restoreEntries, // wpis dalej w DB (commit odroczony) -> przywracamy do listy
+      commit: async () => {
+        try {
+          if (entry.is_own) {
+            await supabase.from("pins").delete().eq("route_id", entry.id);
+            await (supabase as any).from("chat_sessions").delete().eq("route_id", entry.id);
+            const { error } = await supabase.from("routes").delete().eq("id", entry.id);
+            if (error) throw error;
+          } else {
+            if (!entry.group_session_id) throw new Error("missing group_session_id");
+            // count: 'exact' zeby wykryc silent RLS fail (migracja 20260604_gsm_delete_policy.sql).
+            const { error, count } = await (supabase as any)
+              .from("group_session_members")
+              .delete({ count: "exact" })
+              .eq("session_id", entry.group_session_id)
+              .eq("user_id", userId);
+            if (error) throw error;
+            if (count === 0) throw new Error(t("journal.leave_no_permission"));
+          }
+          restoreEntries();
+        } catch (err: any) {
+          console.error("[JournalTab] delete/leave failed:", err);
+          toast.error(t("journal.toast_fail"), { description: err?.message ?? t("journal.unknown_error") });
+          restoreEntries(); // fail -> wpis wraca na liste
         }
-        toast.success(t("journal.toast_left"));
-      }
-      // Optymistyczne usuniecie z cache + invalidate zeby trasa zniknela natychmiast
-      queryClient.setQueryData(["journal-entries", userId], (old: any) =>
-        (old ?? []).filter((e: any) => e.id !== entry.id)
-      );
-      queryClient.invalidateQueries({ queryKey: ["journal-entries", userId] });
-      queryClient.invalidateQueries({ queryKey: ["journal-badge"] });
-    } catch (err: any) {
-      console.error("[JournalTab] delete/leave failed:", err);
-      const msg = err?.message ?? t("journal.unknown_error");
-      toast.error(t("journal.toast_fail"), { description: msg });
-    }
-    setDeletingId(null);
+      },
+    });
   };
 
   // Sheet tworzenia nowego wyjazdu (tryb uproszczony) - wspoldzielony miedzy stanami.

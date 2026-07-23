@@ -14,7 +14,8 @@ import TabTopBar from "@/components/layout/TabTopBar";
 import ExploreSwiper from "@/components/home/ExploreSwiper";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { UNLOCKED_CITIES } from "@/components/plan-wizard/CityPicker";
-import { getHistoryByCity, removeLikeFromCity, clearCity, updateLikePhoto, type ExploreCityGroup } from "@/lib/exploreLikes";
+import { getHistoryByCity, removeLikeFromCity, addLike, clearCity, updateLikePhoto, type ExploreCityGroup } from "@/lib/exploreLikes";
+import { deferDelete } from "@/lib/deferDelete";
 import { getSubcategoryLabel, subcategoryLabelLocalized, MAIN_CATEGORIES } from "@/lib/categories";
 import { getPhotoUrl } from "@/lib/placePhotos";
 import { useAuth } from "@/hooks/useAuth";
@@ -204,10 +205,24 @@ export const LikedTab = ({ selectMode = false, onExitSelection, city: controlled
     : byCat;
   const totalLikes = allPlaces.length;
 
-  const handleRemove = (city: string, place_name: string) => {
-    removeLikeFromCity(city, place_name);
-    if (user?.id) void removeReactionsFromDb(user.id, city, [place_name]);
+  // Usuwanie zapisanego miejsca z oknem "Cofnij" (deferDelete): znika od razu z listy,
+  // DB reaction usuwana z odroczeniem; "Cofnij" przywraca wpis (re-add do localStorage).
+  const handleRemove = (p: any) => {
+    removeLikeFromCity(p.city, p.place_name);
     refresh();
+    deferDelete({
+      message: t("liked.removed", { defaultValue: "Usunięto z zapisanych" }),
+      onUndo: () => {
+        addLike(p.city, {
+          place_name: p.place_name, category: p.category, place_id: p.place_id ?? null,
+          latitude: p.latitude ?? null, longitude: p.longitude ?? null,
+          photo_url: p.photo_url ?? null, address: p.address ?? null,
+          rating: p.rating ?? null, description: p.description ?? null,
+        });
+        refresh();
+      },
+      commit: () => { if (user?.id) void removeReactionsFromDb(user.id, p.city, [p.place_name]); },
+    });
   };
 
   if (totalLikes === 0) {
@@ -393,7 +408,7 @@ export const LikedTab = ({ selectMode = false, onExitSelection, city: controlled
                 <p className="text-sm font-bold leading-tight">{p.place_name}</p>
                 {!selectMode && (
                   <button
-                    onClick={(e) => { e.stopPropagation(); handleRemove(p.city, p.place_name); }}
+                    onClick={(e) => { e.stopPropagation(); handleRemove(p); }}
                     className="h-7 w-7 -mt-1 -mr-1 flex items-center justify-center rounded-full text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 transition-colors active:scale-90 shrink-0"
                     aria-label={t("liked.remove_aria")}
                   >
