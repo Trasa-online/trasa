@@ -14,8 +14,12 @@
     "cards_view": "Widok kart",
     "clear": "Wyczyść",
     "filters": "Filtry",
-    "close": "Zamknij"
+    "close": "Zamknij",
+    "save_collection": "Zapisz zestawienie"
   },
+  "gallery": "Galeria",
+  "map_heading": "Mapa",
+  "use_collection": "Użyj tego zestawienia",
   "not_in_trasa": "jeszcze nie ma w Trasie",
   "see": "Zobacz",
   "local_recommends": "lokals poleca!",

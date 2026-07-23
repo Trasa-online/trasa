@@ -14,8 +14,12 @@
     "cards_view": "Card view",
     "clear": "Clear",
     "filters": "Filters",
-    "close": "Close"
+    "close": "Close",
+    "save_collection": "Save collection"
   },
+  "gallery": "Gallery",
+  "map_heading": "Map",
+  "use_collection": "Use this collection",
   "not_in_trasa": "not on Trasa yet",
   "see": "View",
   "local_recommends": "local pick!",

@@ -6,7 +6,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { MapPin, X, Globe, Sparkles, Star, Pencil, Trash2, ChevronRight, ArrowRight, Heart, Eye, List, GalleryHorizontalEnd, Search, SlidersHorizontal, Plus } from "lucide-react";
+import { MapPin, X, Globe, Sparkles, Star, Pencil, Trash2, ChevronRight, ArrowRight, Heart, Eye, List, GalleryHorizontalEnd, Search, SlidersHorizontal, Plus, ArrowLeft, Images, Bookmark, Users } from "lucide-react";
 import { API_BASE } from "@/lib/platform";
 import { useDebounce } from "@/hooks/useDebounce";
 import { expandCity } from "@/lib/cities";
@@ -183,6 +183,21 @@ export function CollectionDetail({ col, onClose, onAdopt }: { col: DiscoveryColl
   const [deleting, setDeleting] = useState(false);
   // Widok miejsc: lista (domyslnie, jak w widoku trasy) lub karty (poziomy swiper).
   const [placeView, setPlaceView] = useState<"list" | "cards">("list");
+  // Tryb tresci: miejsca (lista/karty) vs galeria (siatka zdjec) - toggle pod tytulem.
+  const [contentView, setContentView] = useState<"places" | "gallery">("places");
+  // Zapis calego zestawienia (bookmark w stopce) - lokalny, per przegladarka/urzadzenie.
+  const [savedCol, setSavedCol] = useState<boolean>(() => {
+    try { return new Set<string>(JSON.parse(localStorage.getItem("trasa_saved_collections") || "[]")).has(col.id); } catch { return false; }
+  });
+  const toggleSaveCollection = () => {
+    try {
+      const key = "trasa_saved_collections";
+      const set = new Set<string>(JSON.parse(localStorage.getItem(key) || "[]"));
+      if (set.has(col.id)) { set.delete(col.id); setSavedCol(false); }
+      else { set.add(col.id); setSavedCol(true); toast.success(t("toast.saved")); }
+      localStorage.setItem(key, JSON.stringify([...set]));
+    } catch { /* localStorage niedostepny - ignoruj */ }
+  };
   const isOwner = !!user && user.id === col.user_id;
   const isLocal = !!col.author_home_city && !!col.city && col.author_home_city.trim().toLowerCase() === col.city.trim().toLowerCase();
   const theme = getTheme(col.category);
@@ -267,6 +282,11 @@ export function CollectionDetail({ col, onClose, onAdopt }: { col: DiscoveryColl
   const mapPins = col.items
     .map((i, idx) => ({ latitude: i.latitude, longitude: i.longitude, place_name: i.place_name, pin_order: idx }))
     .filter((i) => i.latitude && i.longitude);
+
+  // Okladka hero (pierwsze zdjecie) + mini mapka Google (statyczna) na hero.
+  const coverItem = col.items.find((i) => i.photo_url) ?? col.items[0];
+  const coverUrl = resolveStored(coverItem?.photo_url);
+  const heroMap = buildMiniMapUrl(col.items);
 
   // "Uzyj tej trasy" - przejmij miejsca zestawienia do nowej trasy (swiper -> Dopasowania).
   // Najpierw pyta o date (przez onAdopt -> drawer w feedzie), potem laduje w PlanWizard.
@@ -354,7 +374,8 @@ export function CollectionDetail({ col, onClose, onAdopt }: { col: DiscoveryColl
     </div>
   );
 
-  // ── Widok listy - zwarte ponumerowane wiersze (jak renderListReadonly w dzienniku). ──
+  // ── Widok listy - zwarte ponumerowane wiersze (redesign wg Figmy: czarny numerek,
+  // badge kategorii, gwiazdka+ocena, zapis przez Bookmark ribbon). ──
   const renderPlaceList = () => (
     <div className="space-y-2">
       {col.items.map((item, idx) => {
@@ -362,45 +383,62 @@ export function CollectionDetail({ col, onClose, onAdopt }: { col: DiscoveryColl
         const cat = item.category ?? "other";
         const alreadyLiked = likedNames.has(item.place_name.toLowerCase());
         return (
-          <div key={item.id} className="bg-secondary border border-border/40 shadow-sm rounded-2xl p-2.5">
-            <div className="flex items-center gap-3">
-              <div className="h-7 w-7 shrink-0 rounded-full bg-foreground text-background text-xs font-bold flex items-center justify-center">{idx + 1}</div>
-              <button
-                {...(tappable ? { onClick: () => openPlace(item) } : {})}
-                className={`flex items-center gap-3 min-w-0 flex-1 text-left ${tappable ? "active:opacity-70 transition-opacity" : ""}`}
-              >
-                <PlacePhoto item={item} placeholderIdx={idx} className="h-14 w-14 rounded-xl shrink-0" />
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-bold leading-tight truncate">{item.place_name}</p>
-                  <span className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white text-[11px] font-semibold text-foreground">
-                    <span>{CAT_EMOJI[cat] ?? "📍"}</span>{t(`cat.${cat}`, CAT_LABEL[cat] ?? t("cat.other"))}
-                  </span>
-                  {!tappable && (
-                    <span className="mt-1 flex items-center gap-1 text-[9px] font-semibold text-muted-foreground">
-                      <Globe className="h-3 w-3 shrink-0" />{t("not_in_trasa")}
-                    </span>
-                  )}
-                </div>
-                {tappable && <ChevronRight className="h-4 w-4 text-muted-foreground/40 shrink-0" />}
-              </button>
-              <div className="flex items-center gap-1.5 shrink-0">
-                {item.rating != null && (
-                  <span className="flex items-center gap-0.5">
-                    <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
-                    <span className="text-[11px] font-bold text-foreground">{item.rating}</span>
-                  </span>
-                )}
-                {col.city && (
-                  <span role="button" aria-label={alreadyLiked ? t("aria.already_saved") : t("aria.save_place")}
-                    onClick={(e) => { e.stopPropagation(); e.preventDefault(); if (!alreadyLiked) likePlace(item); }}
-                    className="h-7 w-7 rounded-full bg-muted flex items-center justify-center active:scale-90 transition-transform">
-                    <Heart className={`h-4 w-4 ${alreadyLiked ? "fill-rose-500 text-rose-500" : "text-foreground"}`} />
+          <div key={item.id} className="flex items-center gap-2 bg-secondary border border-border/40 shadow-sm rounded-2xl p-2.5">
+            <div className="h-7 w-7 shrink-0 rounded-full bg-foreground text-background text-xs font-bold flex items-center justify-center">{idx + 1}</div>
+            <button
+              {...(tappable ? { onClick: () => openPlace(item) } : {})}
+              className={`flex items-center gap-3 min-w-0 flex-1 text-left ${tappable ? "active:opacity-70 transition-opacity" : ""}`}
+            >
+              <PlacePhoto item={item} placeholderIdx={idx} className="h-14 w-14 rounded-xl shrink-0" />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-bold leading-tight line-clamp-1">{item.place_name}</p>
+                <span className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-card text-[11px] font-semibold text-foreground">
+                  {t(`cat.${cat}`, CAT_LABEL[cat] ?? t("cat.other"))}
+                </span>
+                {!tappable && (
+                  <span className="mt-1 flex items-center gap-1 text-[9px] font-semibold text-muted-foreground">
+                    <Globe className="h-3 w-3 shrink-0" />{t("not_in_trasa")}
                   </span>
                 )}
               </div>
+              {tappable && <ChevronRight className="h-4 w-4 text-muted-foreground/40 shrink-0" />}
+            </button>
+            <div className="flex items-center gap-1.5 shrink-0">
+              {item.rating != null && (
+                <span className="flex items-center gap-0.5">
+                  <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
+                  <span className="text-[11px] font-bold text-foreground">{item.rating}</span>
+                </span>
+              )}
+              {col.city && (
+                <button aria-label={alreadyLiked ? t("aria.already_saved") : t("aria.save_place")}
+                  onClick={(e) => { e.stopPropagation(); e.preventDefault(); if (!alreadyLiked) likePlace(item); }}
+                  className="h-7 w-7 rounded-full bg-muted flex items-center justify-center active:scale-90 transition-transform">
+                  <Bookmark className={`h-4 w-4 ${alreadyLiked ? "fill-primary text-primary" : "text-foreground"}`} />
+                </button>
+              )}
             </div>
-            {item.short_desc && <p className="text-[11px] text-muted-foreground leading-relaxed line-clamp-2 mt-2 px-0.5">{item.short_desc}</p>}
           </div>
+        );
+      })}
+    </div>
+  );
+
+  // ── Galeria - siatka zdjec miejsc (2 kolumny). Tap otwiera wizytowke. ──
+  const renderGallery = () => (
+    <div className="grid grid-cols-2 gap-2">
+      {col.items.map((item, idx) => {
+        const tappable = !!item.place_id;
+        return (
+          <button
+            key={item.id}
+            {...(tappable ? { onClick: () => openPlace(item) } : {})}
+            className="relative aspect-[4/3] rounded-2xl overflow-hidden bg-muted text-left active:opacity-90 transition-opacity"
+          >
+            <PlacePhoto item={item} placeholderIdx={idx} className="w-full h-full" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
+            <p className="absolute bottom-2 left-2 right-2 text-white text-xs font-bold leading-tight line-clamp-2 drop-shadow-sm">{item.place_name}</p>
+          </button>
         );
       })}
     </div>
@@ -408,95 +446,132 @@ export function CollectionDetail({ col, onClose, onAdopt }: { col: DiscoveryColl
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      {/* Header - bialy, waski. Rzad 1: autor + miasto | ikony akcji. Rzad 2: badge + statystyki. */}
-      <div className="shrink-0 px-4 pt-4 pb-3 border-b border-border/10">
-        {/* Rzad 1: autor/username + miasto po lewej, ikony po prawej - ta sama wysokosc */}
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2 min-w-0 flex-1">
-            <AuthorChip name={col.author_name} avatar={col.author_avatar} />
-            {isLocal && <span className="text-[9px] font-bold text-orange-700 bg-orange-100 rounded-full px-1.5 py-0.5 shrink-0">{t("local_recommends")}</span>}
-            {col.city && (
-              <span className="flex items-center gap-1 min-w-0 text-xs text-muted-foreground font-medium"><span className="text-muted-foreground/40">·</span><span className="truncate">{col.city}</span></span>
-            )}
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            {isOwner && (
-              <button onClick={() => navigate(`/zestawienie/${col.id}/edytuj`)} aria-label={t("aria.edit")} className="h-8 w-8 flex items-center justify-center rounded-full bg-muted text-foreground active:scale-90 transition-transform">
-                <Pencil className="h-4 w-4" />
-              </button>
-            )}
-            {isOwner && (
-              <button onClick={handleDelete} disabled={deleting} aria-label={t("aria.delete")} className="h-8 w-8 flex items-center justify-center rounded-full bg-muted text-destructive active:scale-90 transition-transform disabled:opacity-50">
-                <Trash2 className="h-4 w-4" />
-              </button>
-            )}
-            <SheetClose className="h-8 w-8 flex items-center justify-center rounded-full bg-muted text-muted-foreground active:scale-90 transition-transform">
-              <X className="h-4 w-4" />
-            </SheetClose>
-          </div>
-        </div>
-        {/* Rzad 2: badge motywu + typ (trasa/lista) + statystyki */}
-        <div className="flex items-center gap-2.5 mt-2.5 flex-wrap">
-          {theme && (
-            <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-bold ${theme.badge}`}>{theme.emoji} {theme.label}</span>
+      <div className="flex-1 min-h-0 overflow-y-auto">
+        {/* HERO - okladka z gradientem, akcje overlay, mini mapka + galeria (wg Figmy) */}
+        <div className="relative h-[240px] bg-muted overflow-hidden">
+          {coverUrl ? (
+            <img src={coverUrl} alt={col.title} className="w-full h-full object-cover" />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-br from-amber-200 to-orange-300 flex items-center justify-center"><span className="text-4xl opacity-60">📍</span></div>
           )}
-          <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold text-muted-foreground">
-            {isRoute ? t("plan_badge") : t("list_badge")}
-          </span>
-          <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
-            {(col.views_count ?? 0) > 0 && <span className="flex items-center gap-1"><Eye className="h-3 w-3" />{col.views_count}</span>}
-            {(col.saves_count ?? 0) > 0 && <span className="flex items-center gap-1"><Heart className="h-3 w-3" />{col.saves_count}</span>}
-            {(col.plan_adds_count ?? 0) > 0 && <span className="flex items-center gap-1"><ArrowRight className="h-3 w-3" />{col.plan_adds_count}</span>}
+          <div className="absolute inset-0 bg-gradient-to-b from-black/25 via-transparent to-black/70 pointer-events-none" />
+          {/* Akcje: back (lewa) + [owner: edytuj/usun] + close (prawa) */}
+          <div className="absolute top-3 left-3 right-3 flex items-center justify-between">
+            <SheetClose className="h-8 w-8 flex items-center justify-center rounded-full bg-black/30 backdrop-blur text-white active:scale-90 transition-transform">
+              <ArrowLeft className="h-4 w-4" />
+            </SheetClose>
+            <div className="flex items-center gap-2">
+              {isOwner && (
+                <button onClick={() => navigate(`/zestawienie/${col.id}/edytuj`)} aria-label={t("aria.edit")} className="h-8 w-8 flex items-center justify-center rounded-full bg-black/30 backdrop-blur text-white active:scale-90 transition-transform">
+                  <Pencil className="h-4 w-4" />
+                </button>
+              )}
+              {isOwner && (
+                <button onClick={handleDelete} disabled={deleting} aria-label={t("aria.delete")} className="h-8 w-8 flex items-center justify-center rounded-full bg-black/30 backdrop-blur text-white active:scale-90 transition-transform disabled:opacity-50">
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              )}
+              <SheetClose className="h-8 w-8 flex items-center justify-center rounded-full bg-black/30 backdrop-blur text-white active:scale-90 transition-transform">
+                <X className="h-4 w-4" />
+              </SheetClose>
+            </div>
           </div>
+          {/* Galeria pill (lewy dol) - przelacza na widok galerii */}
+          {col.items.some((i) => i.photo_url) && (
+            <button onClick={() => setContentView("gallery")} aria-label={t("gallery", "Galeria")}
+              className="absolute bottom-3 left-3 h-8 px-3.5 flex items-center gap-1.5 rounded-full bg-black/35 backdrop-blur text-white text-xs font-semibold active:scale-95 transition-transform">
+              <Images className="h-4 w-4" />
+            </button>
+          )}
+          {/* Mini mapka Google (prawy dol) */}
+          {heroMap && (
+            <div className="absolute bottom-3 right-3 h-14 w-14 rounded-xl overflow-hidden ring-2 ring-white/80 shadow-md bg-muted">
+              <img src={heroMap} alt="" aria-hidden className="w-full h-full object-cover"
+                onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = "none"; }} />
+            </div>
+          )}
+        </div>
+
+        {/* CONTENT */}
+        <div className="px-4 pt-3.5 pb-4">
+          {/* Meta: miasto + autor + licznik */}
+          <div className="flex items-center gap-2 flex-wrap">
+            {col.city && <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">{col.city}</span>}
+            <AuthorChip name={col.author_name} avatar={col.author_avatar} />
+            {isLocal && <span className="text-[9px] font-bold text-orange-700 bg-orange-100 rounded-full px-1.5 py-0.5">{t("local_recommends")}</span>}
+            {(col.views_count ?? 0) > 0 && (
+              <span className="flex items-center gap-1 text-[10px] text-muted-foreground"><Users className="h-3 w-3" />{col.views_count}</span>
+            )}
+          </div>
+          {/* Tytul */}
+          <h2 className="mt-2 text-lg font-black leading-tight">{col.title}</h2>
+          {col.description && <p className="mt-1 text-sm text-muted-foreground leading-relaxed">{col.description}</p>}
+
+          {/* Toggle: Miejsca | Galeria (wysrodkowany) */}
+          <div className="mt-4 flex justify-center">
+            <div className="inline-flex rounded-full bg-muted p-0.5">
+              <button onClick={() => setContentView("places")}
+                className={`flex items-center gap-1.5 h-9 px-4 rounded-full text-sm font-medium transition-colors ${contentView === "places" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
+                <MapPin className="h-4 w-4" />{t("places")}
+              </button>
+              <button onClick={() => setContentView("gallery")}
+                className={`flex items-center gap-1.5 h-9 px-4 rounded-full text-sm font-medium transition-colors ${contentView === "gallery" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
+                <Images className="h-4 w-4" />{t("gallery", "Galeria")}
+              </button>
+            </div>
+          </div>
+
+          {contentView === "gallery" ? (
+            <div className="mt-4">{renderGallery()}</div>
+          ) : (
+            <>
+              {col.items.length > 0 && (
+                <div className="mt-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{isRoute ? t("route_plan") : t("places")}</p>
+                    <div className="flex rounded-full bg-muted p-0.5">
+                      <button onClick={() => setPlaceView("list")} aria-label={t("aria.list_view")}
+                        className={`px-2.5 py-1.5 rounded-full transition-colors ${placeView === "list" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
+                        <List className="h-4 w-4" />
+                      </button>
+                      <button onClick={() => setPlaceView("cards")} aria-label={t("aria.cards_view")}
+                        className={`px-2.5 py-1.5 rounded-full transition-colors ${placeView === "cards" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
+                        <GalleryHorizontalEnd className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                  {placeView === "cards" ? renderPlaceCards() : renderPlaceList()}
+                </div>
+              )}
+
+              {mapPins.length > 0 && (
+                <div className="mt-6">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">{t("map_heading", "Mapa")}</p>
+                  <div className="relative h-52 rounded-2xl overflow-hidden border border-border/40">
+                    <RouteMap pins={mapPins as any} className="w-full h-full" showRoute={isRoute} />
+                  </div>
+                </div>
+              )}
+            </>
+          )}
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 pt-4 pb-4">
-        {col.description && (
-          <p className="text-sm text-muted-foreground leading-relaxed pb-4">{col.description}</p>
-        )}
-
-        {/* Miejsca - naglowek + przelacznik lista/karty (ikony jak w widoku trasy) */}
-        {col.items.length > 0 && (
-          <div className="mb-1">
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{isRoute ? t("route_plan") : t("places")}</p>
-              <div className="flex rounded-full bg-muted p-0.5">
-                <button onClick={() => setPlaceView("list")} aria-label={t("aria.list_view")}
-                  className={`px-2.5 py-1.5 rounded-full transition-colors ${placeView === "list" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
-                  <List className="h-4 w-4" />
-                </button>
-                <button onClick={() => setPlaceView("cards")} aria-label={t("aria.cards_view")}
-                  className={`px-2.5 py-1.5 rounded-full transition-colors ${placeView === "cards" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
-                  <GalleryHorizontalEnd className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-            {placeView === "cards" ? renderPlaceCards() : renderPlaceList()}
-          </div>
-        )}
-
-        {/* Mapa na samym dole - interaktywna (zoom/pan). Bez overlaya blokujacego gesty. */}
-        {mapPins.length > 0 && (
-          <div className="relative h-52 mt-5 rounded-2xl overflow-hidden border border-border/40">
-            <RouteMap pins={mapPins as any} className="w-full h-full" showRoute={isRoute} />
-          </div>
-        )}
-      </div>
-
-      {/* Sticky CTA */}
-      <div className="shrink-0 border-t border-border/20 px-4 pt-3 pb-[max(16px,env(safe-area-inset-bottom))] bg-background">
+      {/* Sticky footer: Uzyj tego zestawienia + zapis (bookmark) */}
+      <div className="shrink-0 border-t border-border/20 px-4 pt-3 pb-[max(16px,env(safe-area-inset-bottom))] bg-background flex items-center gap-2">
         <button
           onClick={adoptRoute}
-          className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.97] transition-transform shadow-md shadow-orange-500/20"
+          className="flex-1 h-12 rounded-2xl bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform shadow-md shadow-orange-500/20"
         >
-          {PLANNING_DISABLED ? "Zrób wyjazd z tych miejsc" : isRoute ? t("use_route") : t("plan_from_places")} <ArrowRight className="h-4 w-4" />
+          {t("use_collection", "Użyj tego zestawienia")} <ArrowRight className="h-4 w-4" />
         </button>
-        {col.city && !PLANNING_DISABLED && (
-          <button onClick={planOwn} className="w-full mt-1.5 py-2 text-sm font-semibold text-muted-foreground active:scale-[0.97] transition-transform">
-            {t("plan_own_in", { city: col.city })}
-          </button>
-        )}
+        <button
+          onClick={toggleSaveCollection}
+          aria-label={t("aria.save_collection", "Zapisz zestawienie")}
+          className="h-12 w-12 shrink-0 rounded-2xl bg-muted flex items-center justify-center active:scale-95 transition-transform"
+        >
+          <Bookmark className={`h-5 w-5 ${savedCol ? "fill-primary text-primary" : "text-foreground"}`} />
+        </button>
       </div>
 
       {detailPlace && (
