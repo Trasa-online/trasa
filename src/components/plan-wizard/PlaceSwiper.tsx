@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { MapPin, Star, ArrowRight, ChevronUp, ChevronLeft, ChevronRight, RotateCcw, CheckCircle2, Navigation, X, CalendarDays } from "lucide-react";
+import { MapPin, Star, ArrowRight, ChevronUp, ChevronLeft, ChevronRight, RotateCcw, CheckCircle2, Navigation, X, CalendarDays, Plus, Check } from "lucide-react";
 import AddCustomPlacePanel from "./AddCustomPlacePanel";
 import { haversineKm as haversineKmDist, formatDistance } from "@/lib/distance";
 import { useDistanceReference, getReference, ensureCityContext, wasAskedForCity, markAskedForCity, tryResolveOnSite } from "@/lib/distanceReference";
@@ -252,10 +252,14 @@ interface SwipeCardProps {
   offset: number; // 0 = top, 1 = second, 2 = third
   skipGoogleFetch?: boolean;
   onEnableDistance?: () => void; // otwiera wybor punktu odniesienia (Jestes juz w miescie?)
+  // Tryb scrollowania (Eksploracja, wg Figmy): karta statyczna (bez gestu drag), pelnoekranowa,
+  // akcje (cofnij/zapisz/rozwin) jako pionowa kolumna po prawej (kciuk). scroll = nastepna karta.
+  scrollMode?: boolean;
+  saved?: boolean; // scrollMode: czy miejsce juz zapisane (+ pokazuje stan zapisane)
 }
 
 
-export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo, onPhotoFetched, isTop, offset, skipGoogleFetch = false, onEnableDistance }: SwipeCardProps) => {
+export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo, onPhotoFetched, isTop, offset, skipGoogleFetch = false, onEnableDistance, scrollMode = false, saved = false }: SwipeCardProps) => {
   const { t } = useTranslation("plan");
   const [imgFailed, setImgFailed] = useState(false);
   const [videoFailed, setVideoFailed] = useState(false);
@@ -419,11 +423,11 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
   return (
     <div
       ref={cardRef}
-      onPointerDown={handlePointerDown}
-      onPointerMove={handlePointerMove}
-      onPointerUp={handlePointerUp}
-      onPointerCancel={handlePointerUp}
-      style={{
+      onPointerDown={scrollMode ? undefined : handlePointerDown}
+      onPointerMove={scrollMode ? undefined : handlePointerMove}
+      onPointerUp={scrollMode ? undefined : handlePointerUp}
+      onPointerCancel={scrollMode ? undefined : handlePointerUp}
+      style={scrollMode ? { zIndex: 1 } : {
         transform: isTop
           ? `translateX(${dragX}px) rotate(${rotation}deg)`
           : `scale(${stackScale}) translateY(${stackY}px)`,
@@ -433,7 +437,7 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
       }}
       className={cn(
         "absolute inset-0 rounded-3xl overflow-hidden shadow-md select-none",
-        isTop ? "cursor-grab active:cursor-grabbing" : "pointer-events-none"
+        scrollMode ? "" : (isTop ? "cursor-grab active:cursor-grabbing" : "pointer-events-none")
       )}
     >
       {/* Photo / Video */}
@@ -547,7 +551,7 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
       )}
 
       {/* Content */}
-      <div className="absolute bottom-0 left-0 right-0 px-5 pt-5 pb-[76px] space-y-2">
+      <div className={cn("absolute bottom-0 left-0 right-0 px-5 pt-5 space-y-2", scrollMode ? "pb-7 pr-[72px]" : "pb-[76px]")}>
 
         {/* Business logo - 1:1 z BusinessCardPreview (10x10, bez handle, jako osobny element nad nazwa) */}
         {place.businessLogoUrl !== undefined && place.businessLogoUrl && (
@@ -599,7 +603,7 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
               </span>
             ))}
           </div>
-          {isTop && (
+          {isTop && !scrollMode && (
             <div className="flex items-center gap-2 shrink-0">
               {onUndo && (
                 <button
@@ -624,8 +628,8 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
         </div>
       </div>
 
-      {/* Action buttons inside card - only on top card */}
-      {isTop && (
+      {/* Action buttons inside card - only on top card (klasyczny swipe: skip | add) */}
+      {isTop && !scrollMode && (
         <div
           className="absolute bottom-0 left-0 right-0 px-4 pb-4 flex gap-3"
           onPointerDown={(e) => e.stopPropagation()}
@@ -649,6 +653,41 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
             )}
           >
             {t("add")}
+          </button>
+        </div>
+      )}
+
+      {/* Kolumna akcji po prawej (scrollMode, wg Figmy): cofnij / zapisz (+) / rozwin (^).
+          W obszarze kciuka. scroll = nastepna karta (bez skip/add). */}
+      {scrollMode && (
+        <div className="absolute right-3 bottom-7 z-20 flex flex-col gap-3">
+          {onUndo && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onUndo(); }}
+              disabled={!canUndo}
+              aria-label={t("undo", { defaultValue: "Cofnij" })}
+              className="h-11 w-11 rounded-full bg-white/90 backdrop-blur flex items-center justify-center shadow-md active:scale-90 transition-transform disabled:opacity-30"
+            >
+              <RotateCcw className="h-5 w-5 text-black" />
+            </button>
+          )}
+          <button
+            data-ob="swipe-save"
+            onClick={(e) => { e.stopPropagation(); onLike(); }}
+            aria-label={t("add")}
+            className={cn(
+              "h-12 w-12 rounded-full flex items-center justify-center shadow-lg active:scale-90 transition-transform",
+              saved ? "bg-primary text-white" : "bg-white text-black"
+            )}
+          >
+            {saved ? <Check className="h-6 w-6" strokeWidth={3} /> : <Plus className="h-6 w-6" strokeWidth={2.5} />}
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); onTap(); }}
+            aria-label={t("expand_card")}
+            className="h-11 w-11 rounded-full bg-white flex items-center justify-center shadow-md active:scale-90 transition-transform"
+          >
+            <ChevronUp className="h-5 w-5 text-black" />
           </button>
         </div>
       )}
@@ -1180,6 +1219,11 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
   const [likedPlaces, setLikedPlaces] = useState<MockPlace[]>([]);
   const [skippedPlaces, setSkippedPlaces] = useState<MockPlace[]>([]);
   const [superLikedPlaces, setSuperLikedPlaces] = useState<MockPlace[]>([]);
+  // scrollMode (Eksploracja pionowa): zapisane miejsca (bez zdejmowania z kolejki) +
+  // id aktualnie widocznej karty (fetch Google/tag odpalamy TYLKO dla niej - koszt).
+  const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
+  const [activeCardId, setActiveCardId] = useState<string | null>(null);
+  const scrollWrapRef = useRef<HTMLDivElement>(null);
   const [history, setHistory] = useState<{ place: MockPlace; reaction: "liked" | "skipped" | "super_liked" }[]>([]);
   const [detailPlace, setDetailPlace] = useState<MockPlace | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
@@ -1532,6 +1576,31 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
       posthog.capture("place_added_to_route", { place_id: top.id });
     }
     // Onboarding: sygnalizuj realny zapis, zeby coach przeszedl do kolejnego kroku.
+    if (onboardingActive) { try { window.dispatchEvent(new CustomEvent("trasa:ob-saved")); } catch { /* noop */ } }
+  };
+
+  // scrollMode ("+"): zapisz miejsce (Zapisane/exploreLikes) BEZ zdejmowania z kolejki -
+  // scroll zostaje na tej samej karcie, + pokazuje stan zapisane. (Etap 2: sheet wyjazdu.)
+  const handleSaveInPlace = (place: MockPlace) => {
+    if ((!user || isAnonymous) && !onboardingActive) { openAuthDrawer({ mode: "register", hint: "save_route" }); return; }
+    if (savedIds.has(place.id)) return;
+    haptics.medium();
+    setSavedIds(prev => new Set(prev).add(place.id));
+    saveReaction(place, "liked");
+    if (!groupSessionId && !roundPlaceIds?.length) {
+      saveExploreLike(city, {
+        place_name: place.place_name,
+        category: place.category,
+        place_id: /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(place.id) ? place.id : null,
+        latitude: place.latitude,
+        longitude: place.longitude,
+        photo_url: photoUrlOverrides.current[place.id] ?? place.photo_url ?? null,
+        address: place.address ?? null,
+        rating: place.rating ?? null,
+        description: place.description ?? null,
+      });
+    }
+    if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(place.id)) posthog.capture("place_added_to_route", { place_id: place.id });
     if (onboardingActive) { try { window.dispatchEvent(new CustomEvent("trasa:ob-saved")); } catch { /* noop */ } }
   };
 
@@ -2009,6 +2078,43 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
               ))}
             </ul>
           )}
+        </div>
+      ) : exploreMode ? (
+        // Eksploracja pionowa (wg Figmy): scroll w dol = nastepna karta (snap per karta).
+        // Karta wypelnia caly ekran, akcje po prawej (kciuk). "+" zapisuje bez zdejmowania z
+        // kolejki. isTop = tylko widoczna karta (fetch Google/tagi + video odpalamy dla niej).
+        <div
+          ref={scrollWrapRef}
+          onScroll={(e) => {
+            const el = e.currentTarget;
+            const h = el.clientHeight || 1;
+            const idx = Math.round(el.scrollTop / h);
+            const p = displayQueue[idx];
+            if (p && p.id !== activeCardId) setActiveCardId(p.id);
+          }}
+          className="flex-1 min-h-0 overflow-y-auto snap-y snap-mandatory scrollbar-none overscroll-contain"
+        >
+          {displayQueue.slice(0, 20).map((place) => (
+            <div key={place.id} className="snap-start snap-always h-full w-full flex flex-col px-3 pt-1 pb-3">
+              <div className="relative flex-1 min-h-0 w-full max-w-[460px] mx-auto">
+                <SwipeCard
+                  place={place}
+                  city={city}
+                  scrollMode
+                  saved={savedIds.has(place.id)}
+                  onLike={() => handleSaveInPlace(place)}
+                  onSkip={() => {}}
+                  onTap={() => handleTap(place)}
+                  onUndo={handleUndo}
+                  canUndo={history.length > 0}
+                  onPhotoFetched={(id, url) => { photoUrlOverrides.current[id] = url; }}
+                  isTop={activeCardId ? place.id === activeCardId : place.id === displayQueue[0]?.id}
+                  offset={0}
+                  onEnableDistance={() => setLocationPrimerOpen(true)}
+                />
+              </div>
+            </div>
+          ))}
         </div>
       ) : (
         <div className={cn("flex-1 min-h-0 flex justify-center w-full", exploreMode ? "items-center" : "items-start pt-2")}>
