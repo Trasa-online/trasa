@@ -5,7 +5,8 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Camera, X, Globe, Lock, Pencil, Check, Image as ImageIcon, Map as MapIcon, MapPin, ChevronUp, ChevronDown, ChevronRight, ChevronLeft, Trash2, Plus, Share, Share2, List, GalleryHorizontalEnd, Info, MoreVertical } from "lucide-react";
+import { ArrowLeft, Camera, X, Globe, Lock, Pencil, Check, Image as ImageIcon, Map as MapIcon, MapPin, ChevronUp, ChevronDown, ChevronRight, ChevronLeft, Trash2, Plus, Share, Share2, List, GalleryHorizontalEnd, Info, MoreVertical, Navigation, Maximize2 } from "lucide-react";
+import RouteMap from "@/components/RouteMap";
 import { useShare } from "@/hooks/useShare";
 import { Switch } from "@/components/ui/switch";
 import AddPinSheet from "@/components/route/AddPinSheet";
@@ -17,7 +18,7 @@ import { compressImage } from "@/lib/imageCompression";
 import { isHeic, convertHeicToJpeg } from "@/lib/heicConvert";
 import { format, parseISO, isValid } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
-import { isNative } from "@/lib/platform";
+import { isNative, API_BASE } from "@/lib/platform";
 import { Camera as CapCamera } from "@capacitor/camera";
 import { notify } from "@/lib/notify";
 import { requestLocation } from "@/hooks/useGeolocation";
@@ -48,6 +49,15 @@ const CATEGORY_LABEL: Record<string, string> = {
 // zeby to samo miejsce w roznych dniach trasy wielodniowej bylo niezalezne.
 const rkey = (routeId: string, placeName: string) => `${routeId}::${placeName}`;
 
+// Statyczna mapka planu (proxy /api/static-map) - pomaranczowe markery miejsc, POI/transit
+// ukryte, auto-fit. null gdy brak wspolrzednych.
+function buildTripStaticMapUrl(pins: any[], size = "560x260"): string | null {
+  const pts = pins.filter((p) => p.latitude != null && p.longitude != null).slice(0, 20);
+  if (!pts.length) return null;
+  const markers = pts.map((p) => `markers=size:small%7Ccolor:0xf9662b%7C${p.latitude},${p.longitude}`).join("&");
+  return `${API_BASE}/api/static-map?size=${size}&scale=2&maptype=roadmap&${markers}&style=feature:poi%7Cvisibility:off&style=feature:transit%7Cvisibility:off`;
+}
+
 const ReviewSummary = () => {
   const { t } = useTranslation("review");
   const catLabel = (cat: string) =>
@@ -66,6 +76,7 @@ const ReviewSummary = () => {
   const [nameVal, setNameVal] = useState("");
   const [savingName, setSavingName] = useState(false);
   const [planView, setPlanView] = useState<"list" | "cards">("list");
+  const [planMapOpen, setPlanMapOpen] = useState(false);
   // Pod-zakladki w widoku wspomnienia: galeria zdjec / plan dnia.
   // Wpis dziennika (wlasciciel): 3-etapowy stepper. 1 Trasa (edycja) -> 2 Notki -> 3 Zdjecia.
   const [step, setStep] = useState<1 | 2 | 3>(1);
@@ -1289,6 +1300,213 @@ const ReviewSummary = () => {
       )}
     </>
   );
+
+  // ── Widok "Plan wyjazdu" (aktywny / najblizszy wyjazd wlasciciela) wg Figmy ──
+  // Hero + info (avatar/nazwa/data) + widocznosc + lista miejsc (numer/kategoria/odhaczanie/
+  // reorder) + statyczna mapa (rozwijalna) + footer "Nawiguj do...". Wspomnienia (isMemory)
+  // i gosc ida dalej do klasycznego podsumowania/steppera.
+  if (isOwner && !isMemory && !editingStepper) {
+    const heroMapThumb = buildTripStaticMapUrl(currentPins, "160x160");
+    const bigMapUrl = buildTripStaticMapUrl(currentPins, "560x300");
+    const nextPlace = currentPins.find((p: any) => !isVisited(p)) ?? currentPins[0];
+    const navMapPins = currentPins
+      .filter((p: any) => p.latitude != null && p.longitude != null)
+      .map((p: any) => ({ latitude: p.latitude, longitude: p.longitude, place_name: p.place_name }));
+    const navigateTo = (p: any) => {
+      if (!p) return;
+      const dest = (typeof p.latitude === "number" && typeof p.longitude === "number")
+        ? `${p.latitude},${p.longitude}`
+        : encodeURIComponent([p.place_name, p.address, route?.city].filter(Boolean).join(" "));
+      window.open(`https://www.google.com/maps/dir/?api=1&destination=${dest}`, "_blank", "noopener,noreferrer");
+    };
+    const sectionHeadingCls = "font-display text-base font-black text-muted-foreground uppercase tracking-wider";
+
+    return (
+      <div className="min-h-[100dvh] bg-background flex flex-col max-w-lg mx-auto">
+        {/* Hero */}
+        <div className="relative w-full aspect-[16/10] shrink-0 overflow-hidden bg-gradient-to-br from-orange-400 via-rose-400 to-purple-500 rounded-b-2xl">
+          <img src={heroPhoto} alt="" className="absolute inset-0 w-full h-full object-cover" />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/15 via-transparent to-black/55" />
+          <div className="absolute left-0 right-0 z-20 flex items-center justify-between px-4" style={{ top: "max(12px, env(safe-area-inset-top, 12px))" }}>
+            <button onClick={() => navigate("/dziennik")} aria-label={t("a11y.back_to_journal")} className="h-8 w-8 rounded-full bg-black/35 backdrop-blur-sm flex items-center justify-center active:scale-90 transition-transform">
+              <ChevronLeft className="h-5 w-5 text-white" />
+            </button>
+            <button onClick={() => navigate("/dziennik")} aria-label={t("a11y.back_to_journal")} className="h-8 w-8 rounded-full bg-white/25 backdrop-blur-sm flex items-center justify-center active:scale-90 transition-transform">
+              <X className="h-4 w-4 text-white" />
+            </button>
+          </div>
+          {heroMapThumb && (
+            <button onClick={() => setPlanMapOpen(true)} aria-label="Rozwiń mapę" className="absolute bottom-3 right-3 h-14 w-14 rounded-xl overflow-hidden border-2 border-white shadow-md bg-white active:scale-95 transition-transform">
+              <img src={heroMapThumb} alt="" className="w-full h-full object-cover" />
+            </button>
+          )}
+        </div>
+
+        <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-5">
+          {/* Avatar + nazwa + data */}
+          <div className="flex items-center gap-3 pt-4 pb-6">
+            <div className="h-9 w-9 rounded-full bg-[#f0ccb9] flex items-center justify-center shrink-0">
+              <MapPin className="h-5 w-5 text-orange-700" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xl font-bold text-foreground leading-tight truncate">{displayName || cityLabel}</p>
+              {dateLabel && <p className="text-sm text-muted-foreground mt-0.5">{dateLabel}</p>}
+            </div>
+          </div>
+
+          {/* Badge "Plan wyjazdu" + nazwa (edytowalna) + widocznosc */}
+          <div className="flex flex-col gap-2">
+            <span className="self-start bg-muted text-muted-foreground text-[10px] font-medium px-2 py-0.5 rounded-full">Plan wyjazdu</span>
+            {editingName ? (
+              <div className="flex items-center gap-2">
+                <input
+                  value={nameVal}
+                  onChange={(e) => setNameVal(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") saveName(); if (e.key === "Escape") setEditingName(false); }}
+                  autoFocus maxLength={60} placeholder={t("entry.name_placeholder")}
+                  className="flex-1 min-w-0 rounded-xl border border-border bg-background px-3 py-2 text-lg font-bold text-foreground outline-none focus:ring-2 focus:ring-orange-500/40"
+                  style={{ fontSize: "16px" }}
+                />
+                <button onClick={saveName} disabled={savingName} aria-label={t("a11y.save_name")} className="h-9 w-9 shrink-0 rounded-xl bg-primary text-white flex items-center justify-center active:scale-95 transition-transform disabled:opacity-50">
+                  <Check className="h-4 w-4" strokeWidth={3} />
+                </button>
+              </div>
+            ) : (
+              <button onClick={() => { setNameVal(customName); setEditingName(true); }} className="flex items-center gap-1.5 active:opacity-70">
+                <p className="text-xl font-bold text-foreground leading-tight text-left">{displayName || cityLabel}</p>
+                <Pencil className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+              </button>
+            )}
+            <button onClick={() => setShareSheetOpen(true)} className="flex items-center justify-between active:opacity-70">
+              <span className="flex items-center gap-1.5 min-w-0">
+                {isPublic ? <Globe className="h-5 w-5 text-foreground shrink-0" /> : <Lock className="h-5 w-5 text-foreground shrink-0" />}
+                <span className="text-base text-foreground truncate"><span className="font-bold">Widoczność: </span>{isPublic ? "publiczne" : "prywatne"}</span>
+              </span>
+              <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+            </button>
+          </div>
+
+          {/* MIEJSCA + toggle lista/karty */}
+          <div className="flex items-center justify-between pt-8 pb-3">
+            <p className={sectionHeadingCls}>Miejsca</p>
+            <div className="flex rounded-full bg-muted p-0.5">
+              <button onClick={() => setPlanView("list")} aria-label={t("a11y.list_view")} className={`px-2.5 py-1.5 rounded-full transition-colors ${planView === "list" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
+                <List className="h-4 w-4" />
+              </button>
+              <button onClick={() => setPlanView("cards")} aria-label={t("a11y.cards_view")} className={`px-2.5 py-1.5 rounded-full transition-colors ${planView === "cards" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
+                <GalleryHorizontalEnd className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+
+          {/* Lista miejsc - numer + zdjecie + nazwa + kategoria + odhaczanie + reorder */}
+          <div className="flex flex-col gap-2">
+            {workingPins.map((pin: any, i: number) => {
+              const visited = isVisited(pin);
+              return (
+                <div key={pin.id} className="flex items-center gap-3">
+                  <button onClick={() => openDetail(pin)} className="flex-1 min-w-0 flex items-center gap-3 rounded-2xl bg-secondary border border-border/40 p-2.5 text-left active:opacity-90 transition-opacity">
+                    <div className="relative h-14 w-14 rounded-xl overflow-hidden shrink-0 bg-muted">
+                      <PlacePhoto pin={pin} className="h-full w-full object-cover" emojiClass="text-2xl" />
+                      <span className="absolute top-1 left-1 h-4 w-4 rounded-full bg-[#9a9a9a] text-white text-[8px] font-bold flex items-center justify-center">{i + 1}</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-sm font-bold leading-tight truncate ${visited ? "line-through opacity-60" : ""}`}>{pin.place_name}</p>
+                      {pin.category && (
+                        <span className="inline-flex items-center mt-1 px-2 py-0.5 rounded-full bg-card text-[11px] font-semibold text-foreground">{catLabel(pin.category)}</span>
+                      )}
+                    </div>
+                    <span
+                      role="button" tabIndex={0}
+                      onClick={(e) => { e.stopPropagation(); toggleVisited(pin); }}
+                      aria-label={visited ? "Odznacz odwiedzone" : "Byłem tu"}
+                      className={`shrink-0 h-8 w-8 rounded-full flex items-center justify-center transition-colors ${visited ? "bg-foreground text-white" : "bg-card border-2 border-border text-transparent"}`}
+                    >
+                      <Check className="h-5 w-5" strokeWidth={3} />
+                    </span>
+                  </button>
+                  <div className="flex flex-col gap-2 shrink-0">
+                    <button onClick={() => movePin(i, i - 1)} disabled={i === 0} aria-label={t("plan.earlier")} className="h-6 w-6 flex items-center justify-center text-muted-foreground disabled:opacity-25 active:scale-90"><ChevronUp className="h-4 w-4" /></button>
+                    <button onClick={() => movePin(i, i + 1)} disabled={i === workingPins.length - 1} aria-label={t("plan.later")} className="h-6 w-6 flex items-center justify-center text-muted-foreground disabled:opacity-25 active:scale-90"><ChevronDown className="h-4 w-4" /></button>
+                  </div>
+                </div>
+              );
+            })}
+            {/* Dodaj miejsce */}
+            <button onClick={() => setAddingPlace(true)} className="w-full rounded-2xl border border-dashed border-border/70 p-3 text-center text-sm font-bold text-muted-foreground active:bg-muted/40 transition-colors">
+              Dodaj miejsce
+            </button>
+          </div>
+
+          {/* MAPA - statyczna z rozwinięciem */}
+          {bigMapUrl && (
+            <div className="pt-8">
+              <p className={`${sectionHeadingCls} pb-3`}>Mapa</p>
+              <button onClick={() => setPlanMapOpen(true)} className="relative block w-full h-52 rounded-2xl overflow-hidden border border-border/40 bg-muted active:opacity-95 transition-opacity">
+                <img src={bigMapUrl} alt="Mapa planu" className="w-full h-full object-cover" />
+                <span className="absolute bottom-3 right-3 h-10 w-10 rounded-full bg-card shadow-md flex items-center justify-center">
+                  <Maximize2 className="h-[18px] w-[18px] text-foreground" strokeWidth={2.2} />
+                </span>
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Footer: Nawiguj do nastepnego (nieodwiedzonego) miejsca */}
+        {nextPlace && (
+          <div className="shrink-0 border-t border-border/20 px-4 pt-3 pb-[max(16px,env(safe-area-inset-bottom))] bg-background">
+            <button onClick={() => navigateTo(nextPlace)} className="w-full h-12 rounded-2xl bg-primary text-white font-semibold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform shadow-md shadow-orange-500/20">
+              <span className="truncate">Nawiguj do {nextPlace.place_name}</span>
+              <Navigation className="h-4 w-4 shrink-0" />
+            </button>
+          </div>
+        )}
+
+        {/* Wizytowka miejsca */}
+        <PlaceSwiperDetail open={!!detailPin} onOpenChange={(o) => !o && setDetailPin(null)} place={detailPin} city={route?.city} />
+
+        {/* Dodawanie miejsca */}
+        {addingPlace && (
+          <AddPinSheet open={addingPlace} onOpenChange={(o) => !o && setAddingPlace(false)} onPinAdd={handleAddPin} cityContext={route?.city ?? ""} existingPinNames={currentPins.map((p: any) => p.place_name)} />
+        )}
+
+        {/* Rozwinięta interaktywna mapa (zoom) */}
+        {planMapOpen && (
+          <div className="fixed inset-0 z-[90] bg-background flex flex-col animate-in fade-in duration-200">
+            <div className="relative flex-1 min-h-0">
+              <RouteMap pins={navMapPins as any} className="w-full h-full" showRoute={false} />
+              <button onClick={() => setPlanMapOpen(false)} aria-label={t("close", { defaultValue: "Zamknij" })} className="absolute right-3 z-10 h-10 w-10 rounded-full bg-card shadow-md flex items-center justify-center active:scale-90 transition-transform" style={{ top: "max(0.75rem, env(safe-area-inset-top))" }}>
+                <X className="h-5 w-5 text-foreground" />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Widocznosc / udostepnianie (kontrola prywatnosci) */}
+        {shareSheetOpen && (
+          <div className="fixed inset-0 z-[80] flex flex-col justify-end bg-black/40" onClick={() => setShareSheetOpen(false)}>
+            <div className="bg-background rounded-t-3xl max-h-[88dvh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between px-5 pt-4 pb-2 shrink-0">
+                <p className="text-lg font-black">{t("share_sheet.title")}</p>
+                <button onClick={() => setShareSheetOpen(false)} aria-label={t("a11y.close")} className="h-9 w-9 rounded-full bg-muted flex items-center justify-center active:bg-muted/70"><X className="h-4 w-4" /></button>
+              </div>
+              <div className="flex-1 overflow-y-auto pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))]">
+                {renderShareDrawer()}
+                {isPublic && (
+                  <div className="px-5 mt-5">
+                    <button onClick={() => { setVisibility("private"); setShareSheetOpen(false); notify.success(t("toast.route_hidden"), undefined, { position: "top-center" }); }}
+                      className="w-full py-3 rounded-full text-muted-foreground font-bold text-sm active:scale-[0.98] transition-transform">
+                      {t("share_sheet.stop_sharing")}
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-[100dvh] bg-background flex flex-col">
