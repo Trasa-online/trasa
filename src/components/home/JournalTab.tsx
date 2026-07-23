@@ -7,12 +7,28 @@ import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { resolveStored } from "@/components/PlacePhoto";
 import { format, parseISO, isValid } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
-import { Globe, Lock, Loader2, Trash2, CalendarDays, Sparkles, Eye, Plus, BookOpen } from "lucide-react";
+import { Globe, Lock, Loader2, Trash2, CalendarDays, Sparkles, Plus, BookOpen } from "lucide-react";
 import { toast } from "sonner";
 import { PLANNING_DISABLED } from "@/lib/appMode";
+import { API_BASE } from "@/lib/platform";
+import { avatarSrc } from "@/lib/avatar";
 
 interface JournalTabProps {
   userId: string;
+}
+
+type LatLng = { latitude?: number | null; longitude?: number | null };
+
+// Mini mapka Google (statyczna) w rogu okladki karty wyjazdu - pomaranczowe piny miejsc,
+// POI/transit ukryte. Przez proxy /api/static-map (klucz server-side, 24h CDN). null gdy
+// brak wspolrzednych. Wzorzec 1:1 z DiscoveryFeed.
+function buildMiniMapUrl(pins: LatLng[]): string | null {
+  const pts = pins.filter((p) => p.latitude != null && p.longitude != null).slice(0, 12);
+  if (!pts.length) return null;
+  const markers = pts
+    .map((p) => `markers=size:tiny%7Ccolor:0xf9662b%7C${p.latitude},${p.longitude}`)
+    .join("&");
+  return `${API_BASE}/api/static-map?size=120x120&scale=2&maptype=roadmap&${markers}&style=feature:poi%7Cvisibility:off&style=feature:transit%7Cvisibility:off`;
 }
 
 const JournalTab = ({ userId }: JournalTabProps) => {
@@ -21,14 +37,6 @@ const JournalTab = ({ userId }: JournalTabProps) => {
   const queryClient = useQueryClient();
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [wyjazdTab, setWyjazdTab] = useState<"active" | "memories">("active");
-
-  // Polska liczba mnoga: 1 osoba obejrzala / 2-4 osoby obejrzaly / 5+ osob obejrzalo.
-  const viewsLabel = (n: number): string => {
-    if (n === 1) return t("journal.views_one");
-    const last = n % 10, last2 = n % 100;
-    if (last >= 2 && last <= 4 && (last2 < 10 || last2 >= 20)) return t("journal.views_few", { num: n });
-    return t("journal.views_many", { num: n });
-  };
 
   const { data: entries = [], isLoading } = useQuery({
     queryKey: ["journal-entries", userId],
@@ -70,28 +78,64 @@ const JournalTab = ({ userId }: JournalTabProps) => {
   // (cached pin.photo_url/image_url). Mapa route_id -> URL (pierwszy pin Z
   // jakimkolwiek zdjeciem, wg pin_order). Reprezentant multi-day = dzien 1.
   const entryIds = useMemo(() => entries.map((e: any) => e.id), [entries]);
-  const { data: pinData = { covers: {}, counts: {} } } = useQuery({
+  const { data: pinData = { covers: {}, counts: {}, maps: {} } } = useQuery({
     queryKey: ["journal-cover-pins", entryIds.join(",")],
     queryFn: async () => {
-      if (!entryIds.length) return { covers: {}, counts: {} };
+      if (!entryIds.length) return { covers: {}, counts: {}, maps: {} };
       const { data } = await (supabase as any)
         .from("pins")
-        .select("route_id, photo_url, image_url, pin_order")
+        .select("route_id, photo_url, image_url, pin_order, latitude, longitude")
         .in("route_id", entryIds)
         .order("pin_order", { ascending: true });
       const covers: Record<string, string> = {};
       const counts: Record<string, number> = {};
+      const coords: Record<string, LatLng[]> = {};
       for (const p of data ?? []) {
         counts[p.route_id] = (counts[p.route_id] ?? 0) + 1;
+        (coords[p.route_id] ??= []).push({ latitude: p.latitude, longitude: p.longitude });
         if (covers[p.route_id]) continue;
         const u = resolveStored(p.photo_url || p.image_url);
         if (u) covers[p.route_id] = u;
       }
-      return { covers, counts };
+      // Prebuild mini-map URL per route (max 12 pinow, tylko gdy sa wspolrzedne).
+      const maps: Record<string, string> = {};
+      for (const [rid, pts] of Object.entries(coords)) {
+        const u = buildMiniMapUrl(pts);
+        if (u) maps[rid] = u;
+      }
+      return { covers, counts, maps };
     },
     enabled: entryIds.length > 0,
   });
   const coverMap = pinData.covers;
+  const countMap = pinData.counts as Record<string, number>;
+  const mapMap = pinData.maps as Record<string, string>;
+
+  // Awatary uczestnikow dla wyjazdow grupowych (group_session_id) - stack na karcie.
+  const groupIds = useMemo(
+    () => [...new Set(entries.filter((e: any) => e.group_session_id).map((e: any) => e.group_session_id))] as string[],
+    [entries],
+  );
+  const { data: memberAvatars = {} } = useQuery({
+    queryKey: ["journal-group-members", groupIds.join(",")],
+    queryFn: async () => {
+      if (!groupIds.length) return {} as Record<string, { avatar_url: string | null; name: string }[]>;
+      const { data: members } = await (supabase as any)
+        .from("group_session_members").select("session_id, user_id").in("session_id", groupIds);
+      if (!members?.length) return {};
+      const uids = [...new Set(members.map((m: any) => m.user_id))];
+      const { data: profiles } = await (supabase as any)
+        .from("profiles").select("id, avatar_url, username, first_name").in("id", uids);
+      const pmap = new Map((profiles ?? []).map((p: any) => [p.id, p]));
+      const map: Record<string, { avatar_url: string | null; name: string }[]> = {};
+      for (const m of members) {
+        const p: any = pmap.get(m.user_id);
+        (map[m.session_id] ??= []).push({ avatar_url: p?.avatar_url ?? null, name: p?.first_name || p?.username || "?" });
+      }
+      return map;
+    },
+    enabled: groupIds.length > 0,
+  });
 
   // Grupuj trasy wielodniowe (folder_id) w JEDNA pocztowke (dzien 1 = reprezentant).
   // Granica aktywny/wspomnienie liczona po OSTATNIM dniu trasy (end_date ?? start_date).
@@ -219,7 +263,16 @@ const JournalTab = ({ userId }: JournalTabProps) => {
 
   // Sheet tworzenia nowego wyjazdu (tryb uproszczony) - wspoldzielony miedzy stanami.
 
-  // Karta wyjazdu = ta sama pocztowka dla aktywnych wyjazdow i wspomnien (bez nowego komponentu).
+  // Polska liczba mnoga miejsc: 1 miejsce / 2-4 miejsca / 5+ miejsc.
+  const placesCountLabel = (n: number): string => {
+    if (n === 1) return t("journal.places_one", { num: n });
+    const last = n % 10, last2 = n % 100;
+    if (last >= 2 && last <= 4 && (last2 < 10 || last2 >= 20)) return t("journal.places_few", { num: n });
+    return t("journal.places_many", { num: n });
+  };
+
+  // Karta wyjazdu (redesign): uklad poziomy - okladka po lewej (zamek + mini-mapa w rogach),
+  // po prawej tytul, miasto + data, liczba miejsc i awatary uczestnikow (dla grup).
   const renderTripCard = (entry: any, onOpen: () => void, inProgress = false) => {
     const validPhotos = (entry.review_photos ?? []).filter((url: any) => !!url && typeof url === "string" && url.trim() !== "");
     const thumb = validPhotos[0] ?? (coverMap as Record<string, string>)[entry.id] ?? getRandomPinPlaceholder(entry.id);
@@ -231,97 +284,99 @@ const JournalTab = ({ userId }: JournalTabProps) => {
     const _e = endISO ? parseISO(endISO) : null;
     const dateLabel = _d && isValid(_d)
       ? (_e && isValid(_e) && endISO !== startISO
-          ? `${format(_d, "d", { locale: dateLocale() })} - ${format(_e, "d MMMM yyyy", { locale: dateLocale() })}`
-          : format(_d, "d MMMM yyyy", { locale: dateLocale() }))
+          ? `${format(_d, "d", { locale: dateLocale() })}-${format(_e, "d MMM yyyy", { locale: dateLocale() })}`
+          : format(_d, "d MMM yyyy", { locale: dateLocale() }))
       : "";
-    const hasUserPhoto = validPhotos.length > 0;
+    const count = countMap[entry.id] ?? 0;
+    const miniMap = mapMap[entry.id];
+    const isPrivate = entry.is_shared === false;
+    const isNew = entry.new_for_users?.includes(userId);
+    const canDelete = entry.is_own || entry.group_session_id;
+    const title = entry.title || entry.city || t("journal.trip_fallback");
+    const avatars = entry.group_session_id
+      ? (memberAvatars as Record<string, { avatar_url: string | null; name: string }[]>)[entry.group_session_id] ?? []
+      : [];
+
     return (
       <div
         key={entry.id}
         onClick={onOpen}
-        className="w-full rounded-3xl bg-card border border-border/50 overflow-hidden text-left active:scale-[0.98] transition-transform cursor-pointer"
+        className="relative w-full flex gap-3.5 p-2.5 rounded-3xl bg-card border border-border/50 text-left active:scale-[0.99] transition-transform cursor-pointer"
       >
-        {/* Cover photo */}
-        <div className="relative w-full aspect-[16/9] overflow-hidden bg-muted">
+        {/* Okladka po lewej */}
+        <div className="relative w-[118px] shrink-0 aspect-[4/5] rounded-2xl overflow-hidden bg-muted">
           <img
             src={thumb}
             alt=""
             className="w-full h-full object-cover"
             onError={(e) => { (e.target as HTMLImageElement).src = getRandomPinPlaceholder(entry.id + "_fallback"); }}
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-          <div className="absolute bottom-0 left-0 right-0 px-4 pb-3">
-            <p className="text-white font-bold text-lg leading-tight drop-shadow-sm">
-              {entry.title || entry.city || t("journal.trip_fallback")}
-            </p>
-            <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-              {dateLabel && <p className="text-white/70 text-xs">{dateLabel}</p>}
-              {inProgress && (
-                <span className="flex items-center gap-1 bg-orange-500/90 rounded-full px-1.5 py-0.5 text-[10px] font-semibold text-white">
-                  W toku
-                </span>
-              )}
+          {/* Zamek / globus (widocznosc) */}
+          <div className="absolute top-2 left-2 h-7 w-7 rounded-full bg-black/35 backdrop-blur-sm flex items-center justify-center">
+            {isPrivate ? <Lock className="h-3.5 w-3.5 text-white/90" /> : <Globe className="h-3.5 w-3.5 text-white/90" />}
+          </div>
+          {/* Mini-mapka trasy */}
+          {miniMap && (
+            <div className="absolute bottom-2 right-2 h-[46px] w-[46px] rounded-xl overflow-hidden border-2 border-white shadow-md bg-white">
+              <img src={miniMap} alt="" className="w-full h-full object-cover" />
+            </div>
+          )}
+        </div>
+
+        {/* Tresc po prawej */}
+        <div className="flex-1 min-w-0 flex flex-col py-0.5 pr-0.5">
+          <div className="flex items-start gap-2">
+            <p className="flex-1 min-w-0 text-lg font-bold leading-tight text-foreground line-clamp-2">{title}</p>
+            {canDelete && (
+              <button
+                onClick={(e) => handleDelete(e, entry)}
+                disabled={deletingId === entry.id}
+                aria-label={entry.is_own ? t("journal.delete_aria") : t("journal.leave_aria")}
+                className="shrink-0 -mr-0.5 -mt-0.5 h-7 w-7 flex items-center justify-center rounded-full text-muted-foreground/50 hover:text-destructive active:scale-90 transition-colors disabled:opacity-50"
+              >
+                {deletingId === entry.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+              </button>
+            )}
+          </div>
+
+          {/* Miasto + data */}
+          <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground min-w-0">
+            {entry.city && <span className="truncate">{entry.city}</span>}
+            {dateLabel && <span className="text-muted-foreground/70 whitespace-nowrap">{dateLabel}</span>}
+          </div>
+
+          {/* Statusy (nowe / w toku / wielodniowe) */}
+          {(isNew || inProgress || entry._numDays > 1) && (
+            <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+              {isNew && <span className="bg-primary text-white rounded-full px-2 py-0.5 text-[10px] font-bold">{t("journal.new_badge")}</span>}
+              {inProgress && <span className="bg-orange-100 text-orange-700 rounded-full px-2 py-0.5 text-[10px] font-semibold">W toku</span>}
               {entry._numDays > 1 && (
-                <span className="flex items-center gap-1 bg-white/20 backdrop-blur-sm rounded-full px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                <span className="flex items-center gap-1 bg-muted text-muted-foreground rounded-full px-2 py-0.5 text-[10px] font-semibold">
                   <CalendarDays className="h-2.5 w-2.5" />{t("journal.days_count", { num: entry._numDays })}
                 </span>
               )}
             </div>
-            {entry.is_shared && (entry.views ?? 0) > 0 && (
-              <div className="flex items-center gap-1 mt-1.5 bg-orange-500/90 rounded-full px-2 py-0.5 text-[10px] font-bold text-white w-fit">
-                <Eye className="h-3 w-3" />{viewsLabel(entry.views)}
+          )}
+
+          {/* Liczba miejsc + awatary uczestnikow */}
+          <div className="mt-auto flex items-center gap-2.5 pt-2">
+            <span className="text-sm font-medium text-muted-foreground">{placesCountLabel(count)}</span>
+            {avatars.length > 0 && (
+              <div className="flex -space-x-2">
+                {avatars.slice(0, 3).map((a, i) => (
+                  <div key={i} className="h-6 w-6 rounded-full border-2 border-card overflow-hidden bg-orange-100" style={{ zIndex: 3 - i }}>
+                    <img src={avatarSrc(a.avatar_url)} alt={a.name} className="w-full h-full object-cover" />
+                  </div>
+                ))}
+                {avatars.length > 3 && (
+                  <div className="h-6 w-6 rounded-full border-2 border-card bg-foreground/85 text-background text-[9px] font-bold flex items-center justify-center" style={{ zIndex: 0 }}>
+                    +{avatars.length - 3}
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-          <div className="absolute top-3 left-3 bg-black/40 backdrop-blur-sm rounded-lg p-1.5">
-            {entry.is_shared === false
-              ? <Lock className="h-3 w-3 text-white/80" />
-              : <Globe className="h-3 w-3 text-white/80" />
-            }
-          </div>
-          {/* Top-right: badges + delete (kosz) */}
-          <div className="absolute top-3 right-3 flex items-center gap-1.5">
-            {entry.new_for_users?.includes(userId) && (
-              <div className="bg-primary rounded-full px-2 py-0.5 text-[10px] font-bold text-white shadow">
-                {t("journal.new_badge")}
-              </div>
-            )}
-            {hasUserPhoto && (
-              <div className="bg-black/40 backdrop-blur-sm rounded-full px-2 py-0.5 text-[10px] text-white/90">
-                {t("journal.your_photo")}
-              </div>
-            )}
-            {(entry.is_own || entry.group_session_id) && (
-              <button
-                onClick={(e) => handleDelete(e, entry)}
-                disabled={deletingId === entry.id}
-                className="h-7 w-7 flex items-center justify-center bg-black/40 backdrop-blur-sm rounded-full text-white/80 hover:text-white hover:bg-black/60 transition-colors disabled:opacity-50"
-                aria-label={entry.is_own ? t("journal.delete_aria") : t("journal.leave_aria")}
-              >
-                {deletingId === entry.id
-                  ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  : <Trash2 className="h-3.5 w-3.5" />
-                }
-              </button>
             )}
           </div>
         </div>
-
-        {/* Text below photo */}
-        {(entry.ai_highlight || entry.ai_summary) && (
-          <div className="px-4 py-3">
-            {entry.ai_highlight && (
-              <p className="text-sm text-foreground/80 italic leading-snug mb-1.5">
-                "{entry.ai_highlight}"
-              </p>
-            )}
-            {entry.ai_summary && (
-              <p className="text-xs text-muted-foreground line-clamp-2 leading-snug">
-                {entry.ai_summary}
-              </p>
-            )}
-          </div>
-        )}
       </div>
     );
   };
@@ -403,7 +458,7 @@ const JournalTab = ({ userId }: JournalTabProps) => {
             onClick={() => setWyjazdTab("active")}
             className={`flex-1 py-2 rounded-full transition-colors ${wyjazdTab === "active" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}
           >
-            {`Aktywne${active.length > 0 ? ` (${active.length})` : ""}`}
+            {`Najbliższe${active.length > 0 ? ` (${active.length})` : ""}`}
           </button>
           <button
             onClick={() => setWyjazdTab("memories")}
@@ -417,7 +472,7 @@ const JournalTab = ({ userId }: JournalTabProps) => {
             <div className="space-y-3">
               {active.map((entry: any) => renderTripCard(entry, () => openEntry(entry, true), true))}
             </div>
-          ) : emptyBox("🧳", "Brak aktywnych wyjazdów", "Twoje nadchodzące wyjazdy pojawią się tutaj.")
+          ) : emptyBox("🧳", "Brak najbliższych wyjazdów", "Twoje nadchodzące wyjazdy pojawią się tutaj.")
         ) : (
           postcards.length > 0 ? (
             <div className="space-y-3">

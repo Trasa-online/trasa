@@ -99,6 +99,9 @@
     "toast_fail": "Nie udało się",
     "views_one": "1 osoba obejrzała trasę",
     "views_few": "{{num}} osoby obejrzały trasę",
-    "views_many": "{{num}} osób obejrzało trasę"
+    "views_many": "{{num}} osób obejrzało trasę",
+    "places_one": "{{num}} miejsce",
+    "places_few": "{{num}} miejsca",
+    "places_many": "{{num}} miejsc"
   }
 }

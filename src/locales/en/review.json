@@ -124,7 +124,9 @@
     "name_save_error": "Couldn't save the name",
     "name_saved": "Name saved",
     "route_public": "Route visible in Explore",
-    "route_hidden": "Route hidden from Explore"
+    "route_hidden": "Route hidden from Explore",
+    "photo_upload_error": "Couldn't add photos. Please try again.",
+    "photo_upload_partial": "Some photos couldn't be added."
   },
   "share": {
     "text": "Check out my route on Trasa"

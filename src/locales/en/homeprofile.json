@@ -99,6 +99,9 @@
     "toast_fail": "Something went wrong",
     "views_one": "1 person viewed the route",
     "views_few": "{{num}} people viewed the route",
-    "views_many": "{{num}} people viewed the route"
+    "views_many": "{{num}} people viewed the route",
+    "places_one": "{{num}} place",
+    "places_few": "{{num}} places",
+    "places_many": "{{num}} places"
   }
 }

@@ -14,6 +14,7 @@ import type { MockPlace } from "@/components/plan-wizard/PlaceSwiper";
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { PlacePhoto, resolveStored } from "@/components/PlacePhoto";
 import { compressImage } from "@/lib/imageCompression";
+import { isHeic, convertHeicToJpeg } from "@/lib/heicConvert";
 import { format, parseISO, isValid } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
 import { isNative } from "@/lib/platform";
@@ -353,15 +354,24 @@ const ReviewSummary = () => {
     if (!files.length || !routeId || !user) return;
     setUploading(true);
     const newUrls: string[] = [];
-    for (const file of files.slice(0, MAX_PHOTOS - photos.length)) {
+    let failed = 0;
+    for (const rawFile of files.slice(0, MAX_PHOTOS - photos.length)) {
       try {
+        // iPhone robi zdjecia w HEIC/HEIF - canvas/Image w WebView tego nie zdekoduje, wiec
+        // compressImage rzucalo, a blad byl polykany (zdjecie nie dodawalo sie, bez komunikatu).
+        // Konwertujemy HEIC->JPEG przed kompresja (jak w dashboardzie biznesu).
+        const file = isHeic(rawFile) ? await convertHeicToJpeg(rawFile) : rawFile;
         const compressed = await compressImage(file, 1200, 1200, 0.8);
         const path = `${user.id}/${routeId}/review_${Date.now()}_${Math.floor(Math.random() * 10000)}.jpg`;
         const { error } = await supabase.storage
           .from("route-images")
           .upload(path, compressed, { contentType: "image/jpeg", upsert: false });
-        if (!error) newUrls.push(`${SUPABASE_URL}/storage/v1/object/public/route-images/${path}`);
-      } catch {}
+        if (error) { failed++; console.error("[ReviewSummary] photo upload failed:", error.message); continue; }
+        newUrls.push(`${SUPABASE_URL}/storage/v1/object/public/route-images/${path}`);
+      } catch (err: any) {
+        failed++;
+        console.error("[ReviewSummary] photo processing failed:", err?.message ?? err);
+      }
     }
     if (newUrls.length) {
       const updated = [...photos, ...newUrls];
@@ -369,6 +379,8 @@ const ReviewSummary = () => {
       await supabase.from("routes").update({ review_photos: updated } as any).eq("id", routeId);
       queryClient.invalidateQueries({ queryKey: ["review-trip-days", folderId, routeId] });
     }
+    // Nie chowaj cichych bledow - jesli nic sie nie dodalo (albo tylko czesc), powiedz o tym.
+    if (failed > 0) notify.error(newUrls.length === 0 ? t("toast.photo_upload_error") : t("toast.photo_upload_partial"));
     setUploading(false);
   };
 
@@ -1497,7 +1509,7 @@ const ReviewSummary = () => {
           </>
         )}
 
-        <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handlePhotoUpload} />
+        <input ref={fileInputRef} type="file" accept="image/*,.heic,.heif" multiple className="hidden" onChange={handlePhotoUpload} />
       </div>
 
       {/* ── Podglad wizytowki miejsca (ta sama co na swiperze) ───────────── */}

@@ -658,20 +658,10 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
         </div>
       )}
 
-      {/* Kolumna akcji po prawej (scrollMode, wg Figmy): cofnij / zapisz (+) / rozwin (^).
-          W obszarze kciuka. scroll = nastepna karta (bez skip/add). */}
+      {/* Kolumna akcji po prawej (scrollMode, wg Figmy): zapisz (zakladka) / rozwin (^).
+          W obszarze kciuka. scroll = nastepna karta (bez skip/add/cofnij - cofasz scrollem w gore). */}
       {scrollMode && (
         <div className="absolute right-3 bottom-7 z-20 flex flex-col gap-3">
-          {onUndo && (
-            <button
-              onClick={(e) => { e.stopPropagation(); onUndo(); }}
-              disabled={!canUndo}
-              aria-label={t("undo", { defaultValue: "Cofnij" })}
-              className="h-12 w-12 rounded-full bg-white/90 backdrop-blur flex items-center justify-center shadow-md active:scale-90 transition-transform disabled:opacity-30"
-            >
-              <RotateCcw className="h-5 w-5 text-black" />
-            </button>
-          )}
           <button
             data-ob="swipe-save"
             onClick={(e) => { e.stopPropagation(); onLike(); }}
@@ -2128,7 +2118,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
             const isActive = activeCardId ? place.id === activeCardId : place.id === displayQueue[0]?.id;
             return (
             <div key={place.id} className="snap-start snap-always w-full flex flex-col px-3 pt-1 pb-3 h-[calc(100%-3.5rem)]">
-              <div className={cn("relative flex-1 min-h-0 w-full max-w-[460px] mx-auto transition-opacity duration-300", !isActive && "opacity-[0.55]")}>
+              <div className={cn("relative flex-1 min-h-0 w-full max-w-[460px] mx-auto transition-opacity duration-150", !isActive && "opacity-[0.55]")}>
                 <SwipeCard
                   place={place}
                   city={city}

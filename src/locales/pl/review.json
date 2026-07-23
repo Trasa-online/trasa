@@ -124,7 +124,9 @@
     "name_save_error": "Nie udało się zapisać nazwy",
     "name_saved": "Zapisano nazwę",
     "route_public": "Trasa widoczna w Eksploruj",
-    "route_hidden": "Trasa ukryta z Eksploruj"
+    "route_hidden": "Trasa ukryta z Eksploruj",
+    "photo_upload_error": "Nie udało się dodać zdjęć. Spróbuj ponownie.",
+    "photo_upload_partial": "Część zdjęć się nie dodała."
   },
   "share": {
     "text": "Zobacz moją trasę w Trasa"
