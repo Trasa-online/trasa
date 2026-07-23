@@ -10,7 +10,7 @@ import { expandCity } from "@/lib/cities";
 import { getHistoryByCity } from "@/lib/exploreLikes";
 import { forwardGeocode, reverseGeocode, forwardGeocodeWithTypes } from "@/lib/googleMaps";
 import { getPhotoUrl } from "@/lib/placePhotos";
-import { COLLECTION_THEMES, getTheme, isRouteCollection, type CollectionKind } from "@/lib/collectionThemes";
+import { isRouteCollection } from "@/lib/collectionThemes";
 import { MAIN_CATEGORIES, getDbCategoriesFor } from "@/lib/categories";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import { type MockPlace } from "@/components/plan-wizard/PlaceSwiper";
@@ -108,14 +108,11 @@ const CreateRanking = () => {
   const [params] = useSearchParams();
   const { user } = useAuth();
 
+  // Motyw (category): wybor USUNIETY z flow. null dla nowych zestawien; przy edycji
+  // starych zachowujemy istniejacy motyw (bez UI zmiany), zeby nie kasowac danych.
   const [category, setCategory] = useState<string | null>(null);
-  // Forma zestawienia (wybor 1. kroku): "list" = Lista, "route" = Plan. Na tej podstawie
-  // filtrujemy motywy w kolejnym widoku. Po wyborze motywu forma i tak wynika z motywu
-  // (motyw ma przypisany kind), wiec `form` to tylko stan UI kroku wyboru.
-  const [form, setForm] = useState<CollectionKind | null>(null);
-  // Tytul = etykieta motywu (usuniete pole tytulu). `legacyTitle` tylko dla starych
-  // zestawien bez motywu (edycja) - zeby edycja nie kasowala istniejacego tytulu.
-  const [legacyTitle, setLegacyTitle] = useState("");
+  // Nazwa zestawienia - pole tekstowe (zastapilo motyw jako zrodlo tytulu).
+  const [title, setTitle] = useState("");
   const [city, setCity] = useState(params.get("city") || "Warszawa");
   const [items, setItems] = useState<RankingItem[]>([]);
   const [publishing, setPublishing] = useState(false);
@@ -147,12 +144,6 @@ const CreateRanking = () => {
   const [customPreview, setCustomPreview] = useState<Omit<RankingItem, "key" | "short_desc"> | null>(null);
   const [author, setAuthor] = useState<{ name: string; avatar: string | null }>({ name: "Użytkownik", avatar: null });
 
-  // Ekrany wstepne (tylko nowe zestawienie, bez wybranego motywu):
-  //  1. wybor FORMY (Lista / Plan)  -> showFormPicker
-  //  2. wybor MOTYWU (filtrowany forma) -> showThemePicker
-  // Edycja i zestawienia z juz wybranym motywem od razu wchodza w formularz.
-  const showFormPicker = !editId && !category && !form;
-  const showThemePicker = !editId && !category && !!form;
 
   // ── Author + edit/liked prefill ───────────────────────────────────────────
   useEffect(() => {
@@ -166,7 +157,7 @@ const CreateRanking = () => {
       (async () => {
         const { data: col } = await (supabase as any).from("discovery_collections").select("title, city, category, description, author_name, author_avatar").eq("id", editId).maybeSingle();
         if (col) {
-          setLegacyTitle(col.title ?? ""); if (col.city) setCity(col.city); setCategory(col.category ?? null);
+          setTitle(col.title ?? ""); if (col.city) setCity(col.city); setCategory(col.category ?? null);
           setDescription(col.description ?? "");
           setAsAnon(col.author_name === "Anonim" && !col.author_avatar);
         }
@@ -329,9 +320,9 @@ const CreateRanking = () => {
     return () => { alive = false; };
   }, [city, category]);
 
-  const collectionTitle = getTheme(category)?.label || legacyTitle.trim() || "Zestawienie";
-  const isRoute = isRouteCollection(category); // trasa/plan -> mozna ustawiac kolejnosc
-  const canGoNext = !!category && !!city && items.length >= 2; // krok 1 -> 2
+  const collectionTitle = title.trim() || "Zestawienie";
+  const isRoute = isRouteCollection(category); // stare trasy (edycja) -> mozna ustawiac kolejnosc
+  const canGoNext = !!city && items.length >= 2 && title.trim().length > 0; // krok 1 -> 2
   const canPublish = canGoNext && !publishing;
 
   const publish = async () => {
@@ -381,107 +372,17 @@ const CreateRanking = () => {
     }
   };
 
-  // ── Krok 0: wybor FORMY zestawienia (Lista / Plan) ───────────────────────────
-  if (showFormPicker) {
-    const FORMS: { id: CollectionKind; emoji: string; label: string; hint: string }[] = [
-      { id: "list",  emoji: "📍", label: t("form_picker.list_label"), hint: t("form_picker.list_hint") },
-      { id: "route", emoji: "🗺️", label: t("form_picker.route_label"), hint: t("form_picker.route_hint") },
-    ];
-    return (
-      <div className="flex flex-col h-[100dvh] bg-background max-w-lg mx-auto">
-        <div className="flex items-center gap-2 px-4 pt-safe-4 pb-3 border-b border-border/20 shrink-0">
-          <button onClick={() => navigate(-1)} aria-label={t("header.back")} className="h-9 w-9 flex items-center justify-center -ml-1 shrink-0 text-foreground">
-            <ArrowLeft className="h-5 w-5" />
-          </button>
-          <span className="font-bold text-base">{t("header.new_collection")}</span>
-        </div>
-        <div className="flex-1 overflow-y-auto px-4 py-5">
-          <h1 className="text-2xl font-display font-extrabold tracking-tight leading-tight">{t("form_picker.title")}</h1>
-          <p className="text-sm text-muted-foreground mt-1.5">{t("form_picker.subtitle")}</p>
-          <div className="flex flex-col gap-3 mt-5">
-            {FORMS.map((f) => (
-              <button
-                key={f.id}
-                onClick={() => setForm(f.id)}
-                className="relative flex items-center gap-4 rounded-3xl bg-card border border-border/60 p-4 text-left active:scale-[0.98] transition-transform shadow-sm"
-              >
-                <div className="h-14 w-14 rounded-2xl bg-secondary flex items-center justify-center text-3xl shrink-0">{f.emoji}</div>
-                <div className="min-w-0">
-                  <span className="font-black text-lg leading-tight block text-foreground">{f.label}</span>
-                  <span className="text-[13px] text-muted-foreground leading-snug block mt-0.5" dangerouslySetInnerHTML={{ __html: f.hint }} />
-                </div>
-                <ChevronRight className="h-5 w-5 text-muted-foreground/50 shrink-0 ml-auto" />
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // ── Krok 1: wybor MOTYWU zestawienia (motywy filtrowane wg wybranej formy) ────
-  if (showThemePicker) {
-    const themes = COLLECTION_THEMES.filter((th) => th.kind === form);
-    const formLabel = form === "route" ? `🗺️ ${t("form.route")}` : `📍 ${t("form.list")}`;
-    return (
-      <div className="flex flex-col h-[100dvh] bg-background max-w-lg mx-auto">
-        <div className="flex items-center gap-2 px-4 pt-safe-4 pb-3 border-b border-border/20 shrink-0">
-          <button onClick={() => setForm(null)} aria-label={t("header.back")} className="h-9 w-9 flex items-center justify-center -ml-1 shrink-0 text-foreground">
-            <ArrowLeft className="h-5 w-5" />
-          </button>
-          <span className="flex-1 font-bold text-base">{t("header.new_collection")}</span>
-          {/* Wybrana forma jako chip - tap = powrot do wyboru formy */}
-          <button onClick={() => setForm(null)} className="inline-flex items-center gap-1 rounded-full bg-secondary text-secondary-foreground px-3 py-1.5 text-xs font-bold shrink-0 active:scale-95 transition-transform">
-            <span>{formLabel}</span>
-            <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
-          </button>
-        </div>
-        <div className="flex-1 overflow-y-auto px-4 py-5">
-          <h1 className="text-2xl font-display font-extrabold tracking-tight leading-tight">{t("theme_picker.title")}</h1>
-          <p className="text-sm text-muted-foreground mt-1.5">{form === "route" ? t("theme_picker.subtitle_route") : t("theme_picker.subtitle_list")}</p>
-          <div className="grid grid-cols-2 gap-3 mt-5">
-            {themes.map((theme) => (
-              <button
-                key={theme.id}
-                onClick={() => setCategory(theme.id)}
-                className="relative flex flex-col items-start gap-2.5 rounded-3xl bg-card border border-border/60 p-4 pb-3.5 text-left active:scale-[0.97] transition-transform shadow-sm"
-              >
-                <div className="h-12 w-12 rounded-2xl bg-secondary flex items-center justify-center text-2xl shrink-0">{theme.emoji}</div>
-                <div>
-                  <span className="font-black text-sm leading-tight block text-foreground">{theme.label}</span>
-                  <span className="text-[11px] text-muted-foreground leading-snug block mt-0.5">{theme.hint}</span>
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const activeTheme = getTheme(category);
   const mapPins = items.filter((i) => i.latitude != null && i.longitude != null)
     .map((i) => ({ latitude: i.latitude!, longitude: i.longitude!, place_name: i.place_name }));
 
   return (
     <div className="flex flex-col h-[100dvh] bg-background max-w-lg mx-auto">
-      {/* Header - motyw jako chip po prawej (tap = powrot do wyboru motywu) */}
+      {/* Header */}
       <div className="flex items-center gap-2 px-4 pt-safe-4 pb-3 border-b border-border/20 shrink-0">
         <button onClick={() => (step === 2 ? setStep(1) : navigate(-1))} aria-label={t("header.back")} className="h-9 w-9 flex items-center justify-center -ml-1 shrink-0 text-foreground">
           <ArrowLeft className="h-5 w-5" />
         </button>
         <span className="flex-1 font-bold text-base truncate">{step === 2 ? t("header.notes_and_map") : editId ? t("header.edit_collection") : t("header.new_collection")}</span>
-        {activeTheme && (
-          <button
-            onClick={() => { if (!editId && step === 1) setCategory(null); }}
-            disabled={!!editId || step === 2}
-            aria-label={t("header.change_theme")}
-            className="inline-flex items-center gap-1 rounded-full bg-secondary text-secondary-foreground px-3 py-1.5 text-xs font-bold shrink-0 active:scale-95 transition-transform disabled:active:scale-100"
-          >
-            <span className="max-w-[110px] truncate">{activeTheme.emoji} {activeTheme.label}</span>
-            {!editId && step === 1 && <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />}
-          </button>
-        )}
       </div>
 
       {/* ══ KROK 1: miasto + wyszukiwarka (sticky) + propozycje + wybrane miejsca ══ */}
@@ -494,6 +395,14 @@ const CreateRanking = () => {
               className="w-full rounded-2xl bg-secondary text-secondary-foreground border-0 px-4 py-3 text-base outline-none focus:ring-2 focus:ring-orange-500/40">
               {PL_CITIES.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
+          </div>
+
+          {/* Nazwa zestawienia (zastapila wybor motywu jako zrodlo tytulu) */}
+          <div className="px-4 pt-3">
+            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-1.5 block">{t("name_label", "Nazwa")}</label>
+            <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={80}
+              placeholder={t("name_placeholder", "Nazwa zestawienia")}
+              className="w-full rounded-2xl bg-secondary text-secondary-foreground border-0 px-4 py-3 text-base outline-none focus:ring-2 focus:ring-orange-500/40 placeholder:text-muted-foreground/50" />
           </div>
 
           {/* Wyszukiwarka - STICKY na gorze (najwazniejsza) */}

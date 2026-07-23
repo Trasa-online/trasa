@@ -24,6 +24,8 @@
     "subtitle_list": "Wybierz temat swojej listy. To pomaga innym go znaleźć."
   },
   "city_label": "Miasto",
+  "name_label": "Nazwa",
+  "name_placeholder": "Nazwa zestawienia",
   "search": {
     "placeholder": "Szukaj miejsca w {{city}}…",
     "searching_more": "Szukam więcej miejsc…",

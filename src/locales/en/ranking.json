@@ -24,6 +24,8 @@
     "subtitle_list": "Choose a theme for your list. It helps others find it."
   },
   "city_label": "City",
+  "name_label": "Name",
+  "name_placeholder": "Collection name",
   "search": {
     "placeholder": "Search for a place in {{city}}…",
     "searching_more": "Searching for more places…",
