@@ -1418,8 +1418,9 @@ const ReviewSummary = () => {
           {/* Tresc planu */}
           <div className="px-4 pt-5">
           {/* Badge "Plan wyjazdu" + nazwa (edytowalna) + data (edytowalna) + widocznosc */}
-          <div className="flex flex-col gap-2.5">
+          <div className="flex flex-col gap-4">
             <span className="self-start bg-muted text-muted-foreground text-[10px] font-medium px-2 py-0.5 rounded-full">Plan wyjazdu</span>
+            {/* Nazwa wyjazdu - edytowalna inline; olowek dosuniety do prawej (justify-between) */}
             {editingName ? (
               <div className="flex items-center gap-2">
                 <input
@@ -1435,21 +1436,24 @@ const ReviewSummary = () => {
                 </button>
               </div>
             ) : (
-              <button onClick={() => { setNameVal(customName); setEditingName(true); }} className="flex items-center gap-2 active:opacity-70">
-                <p className="text-2xl font-black text-foreground leading-tight text-left truncate">{displayName || cityLabel}</p>
-                <span className="h-7 w-7 rounded-full bg-secondary flex items-center justify-center shrink-0"><Pencil className="h-3.5 w-3.5 text-muted-foreground" /></span>
+              <button onClick={() => { setNameVal(customName); setEditingName(true); }} aria-label={t("a11y.edit_name", { defaultValue: "Edytuj nazwę" })} className="flex items-center justify-between gap-2 text-left active:opacity-70">
+                <p className="flex-1 min-w-0 text-2xl font-black text-foreground leading-tight truncate">{displayName || cityLabel}</p>
+                <Pencil className="h-5 w-5 text-muted-foreground shrink-0" />
               </button>
             )}
-            {/* Data - klik otwiera kalendarz (edytowalna) */}
-            <button onClick={() => setDatePickerOpen(true)} className="flex items-center gap-1.5 self-start text-muted-foreground active:opacity-70">
-              <CalendarIcon className="h-4 w-4 shrink-0" />
-              <span className="text-sm">{dateLabel || "Dodaj datę"}</span>
-              <Pencil className="h-3 w-3 shrink-0" />
+            {/* Data - wiersz jak widocznosc (ikona + zakres, chevron po prawej); klik otwiera kalendarz */}
+            <button onClick={() => setDatePickerOpen(true)} className="flex items-center justify-between gap-2 active:opacity-70">
+              <span className="flex items-center gap-1.5 min-w-0">
+                <CalendarIcon className="h-5 w-5 text-foreground shrink-0" />
+                <span className="text-base text-foreground truncate">{dateLabel || "Dodaj datę"}</span>
+              </span>
+              <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
             </button>
-            <button onClick={() => setPrivacyOpen(true)} className="flex items-center justify-between active:opacity-70">
+            {/* Widocznosc - klik otwiera ustawienia prywatnosci */}
+            <button onClick={() => setPrivacyOpen(true)} className="flex items-center justify-between gap-2 active:opacity-70">
               <span className="flex items-center gap-1.5 min-w-0">
                 {privacyMode === "public" ? <Globe className="h-5 w-5 text-foreground shrink-0" /> : privacyMode === "friends" ? <Users className="h-5 w-5 text-foreground shrink-0" /> : <Lock className="h-5 w-5 text-foreground shrink-0" />}
-                <span className="text-base text-foreground truncate"><span className="font-bold">Widoczność: </span>{privacyMode === "public" ? "publiczne" : privacyMode === "friends" ? "znajomi" : "prywatne"}</span>
+                <span className="text-base text-foreground truncate"><span className="font-bold">Widoczność: </span>{privacyMode === "public" ? "publiczne" : privacyMode === "friends" ? "bliscy znajomi" : "prywatne"}</span>
               </span>
               <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
             </button>
