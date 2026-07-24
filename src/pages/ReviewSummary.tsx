@@ -1334,7 +1334,7 @@ const ReviewSummary = () => {
     const sectionHeadingCls = "font-display text-base font-black text-muted-foreground uppercase tracking-wider";
 
     return (
-      <div className="min-h-[100dvh] bg-background flex flex-col max-w-lg mx-auto">
+      <div className="h-[100dvh] bg-background flex flex-col max-w-lg mx-auto">
         {/* Hero */}
         <div className="relative w-full aspect-[16/10] shrink-0 overflow-hidden bg-gradient-to-br from-orange-400 via-rose-400 to-purple-500 rounded-b-2xl">
           <img src={heroPhoto} alt="" className="absolute inset-0 w-full h-full object-cover" />

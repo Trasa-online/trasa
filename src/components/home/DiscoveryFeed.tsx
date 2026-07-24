@@ -16,6 +16,9 @@ import FullCalendarPicker from "@/components/plan-wizard/FullCalendarPicker";
 import RouteMap from "@/components/RouteMap";
 import { type MockPlace, fetchEnrichedPlace } from "@/components/plan-wizard/PlaceSwiper";
 import { Sheet, SheetContent, SheetClose } from "@/components/ui/sheet";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { format as fmtDate, parseISO as parseISODate, isValid as isValidDate } from "date-fns";
+import { dateLocale } from "@/lib/dateLocale";
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { resolveStored } from "@/components/PlacePhoto";
 import { COLLECTION_THEMES, getTheme, collectionKind } from "@/lib/collectionThemes";
@@ -216,9 +219,13 @@ export function CollectionDetail({ col, onClose, onAdopt }: { col: DiscoveryColl
     try {
       const key = "trasa_saved_collections";
       const set = new Set<string>(JSON.parse(localStorage.getItem(key) || "[]"));
-      if (set.has(col.id)) { set.delete(col.id); setSavedCol(false); }
-      else { set.add(col.id); setSavedCol(true); toast.success(t("toast.saved")); }
+      // Rownolegly zapis daty zapisania (do wyswietlenia w zakladce Zapisane).
+      const dkey = "trasa_saved_collections_dates";
+      const dates: Record<string, string> = (() => { try { return JSON.parse(localStorage.getItem(dkey) || "{}"); } catch { return {}; } })();
+      if (set.has(col.id)) { set.delete(col.id); delete dates[col.id]; setSavedCol(false); }
+      else { set.add(col.id); dates[col.id] = new Date().toISOString(); setSavedCol(true); toast.success(t("toast.saved")); }
       localStorage.setItem(key, JSON.stringify([...set]));
+      localStorage.setItem(dkey, JSON.stringify(dates));
     } catch { /* localStorage niedostepny - ignoruj */ }
   };
   const isOwner = !!user && user.id === col.user_id;
@@ -1082,7 +1089,7 @@ function BigCard({
           <img src={cover} alt={title} loading="lazy" className="w-full h-full object-cover"
             onError={(e) => { (e.target as HTMLImageElement).src = getRandomPinPlaceholder(id + "_fb"); }} />
           <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-black/15 pointer-events-none" />
-          {/* Badge kategorii + miasto (lewy gorny rog) - bez informacji o km */}
+          {/* Badge kategorii (motyw, gdy podany) + miasto (bez ikony pina) - lewy gorny rog */}
           <div className="absolute top-3 left-3 flex flex-col items-start gap-1.5">
             {categoryLabel && (
               <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold shadow-sm ${categoryClass ?? "bg-black/55 backdrop-blur-sm text-white"}`}>
@@ -1090,8 +1097,8 @@ function BigCard({
               </span>
             )}
             {city && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-black/45 backdrop-blur-sm px-2.5 py-1 text-[11px] font-semibold text-white shadow-sm">
-                <MapPin className="h-3 w-3" />{city}
+              <span className="inline-flex items-center rounded-full bg-black/45 backdrop-blur-sm px-2.5 py-1 text-[11px] font-semibold text-white shadow-sm">
+                {city}
               </span>
             )}
           </div>
@@ -1152,16 +1159,12 @@ function BigCard({
 
 // Adapter: zestawienie (kolekcja) -> BigCard.
 function CollectionBigCard({ col, onOpen }: { col: DiscoveryCollection; onOpen: (col: DiscoveryCollection) => void }) {
-  const theme = getTheme(col.category);
   const photoItem = col.items.find((i) => i.photo_url) ?? col.items[0];
   const isLocal = !!col.author_home_city && !!col.city && col.author_home_city.trim().toLowerCase() === col.city.trim().toLowerCase();
   return (
     <BigCard
       id={col.id}
       photo={resolveStored(photoItem?.photo_url) ?? null}
-      categoryEmoji={theme?.emoji}
-      categoryLabel={theme?.label}
-      categoryClass={theme?.badge}
       city={col.city}
       avgRating={avgRatingOf(col.items.map((i) => i.rating))}
       placeCount={col.items.length}
@@ -1237,41 +1240,62 @@ const SHOW_ZESTAWIENIA = true;
 // czyli cudze kolekcje odlozone na pozniej. To NIE sa wlasne zestawienia usera (te sa na
 // profilu, karta "Zestawienia" -> MyCollections). Wyszukiwarka jak w zakladce Miejsca.
 // Tap otwiera pelna wizytowke zestawienia (CollectionDetail).
-function SavedCollectionCard({ col, onOpen }: { col: DiscoveryCollection; onOpen: (c: DiscoveryCollection) => void }) {
+function SavedCollectionCard({ col, savedAt, onOpen, onDelete }: { col: DiscoveryCollection; savedAt?: string | null; onOpen: (c: DiscoveryCollection) => void; onDelete: () => void }) {
   const coverItem = col.items?.find((i) => i.photo_url);
   const cover = coverItem?.photo_url ? resolveStored(coverItem.photo_url) : (col.gallery_urls?.[0] ? resolveStored(col.gallery_urls[0]) : null);
   const count = col.items?.length ?? 0;
   const countLabel = count === 1 ? "miejsce" : count < 5 ? "miejsca" : "miejsc";
+  const d = savedAt ? parseISODate(savedAt) : null;
+  const savedLabel = d && isValidDate(d) ? fmtDate(d, "d MMM yyyy", { locale: dateLocale() }) : null;
   return (
-    <button
-      onClick={() => onOpen(col)}
-      className="w-full flex items-center gap-3 rounded-3xl bg-card border border-border/50 p-3 text-left active:scale-[0.99] transition-transform"
-    >
-      {cover ? (
-        <img src={cover} alt="" className="h-16 w-16 rounded-2xl object-cover shrink-0" loading="lazy" />
-      ) : (
-        <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-amber-100 to-orange-200 flex items-center justify-center shrink-0">
-          <Bookmark className="h-6 w-6 text-orange-600" />
+    <div className="relative w-full flex items-center gap-3 rounded-3xl bg-card border border-border/50 p-3">
+      <button onClick={() => onOpen(col)} className="flex-1 min-w-0 flex items-center gap-3 text-left active:opacity-80 transition-opacity">
+        {cover ? (
+          <img src={cover} alt="" className="h-16 w-16 rounded-2xl object-cover shrink-0" loading="lazy" />
+        ) : (
+          <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-amber-100 to-orange-200 flex items-center justify-center shrink-0">
+            <Bookmark className="h-6 w-6 text-orange-600" />
+          </div>
+        )}
+        <div className="flex-1 min-w-0">
+          <p className="font-bold text-sm leading-tight truncate">{col.title || "Zestawienie"}</p>
+          {/* Bez miasta - zostaje liczba miejsc + autor */}
+          <p className="text-xs text-muted-foreground mt-0.5 truncate">
+            {[`${count} ${countLabel}`, col.author_name].filter(Boolean).join(" · ")}
+          </p>
+          {savedLabel && <p className="text-[11px] text-muted-foreground/70 mt-1">Zapisano {savedLabel}</p>}
         </div>
-      )}
-      <div className="flex-1 min-w-0">
-        <p className="font-bold text-sm leading-tight truncate">{col.title || "Zestawienie"}</p>
-        <p className="text-xs text-muted-foreground mt-0.5 truncate">
-          {[col.city, `${count} ${countLabel}`, col.author_name].filter(Boolean).join(" · ")}
-        </p>
-      </div>
-      <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
-    </button>
+      </button>
+      <button onClick={onDelete} aria-label="Usuń z zapisanych" className="h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10 active:scale-90 transition-colors shrink-0">
+        <Trash2 className="h-4 w-4" />
+      </button>
+    </div>
   );
 }
 
 export function SavedCollections() {
   const [query, setQuery] = useState("");
   const [activeCol, setActiveCol] = useState<DiscoveryCollection | null>(null);
-  const savedIds = useMemo(() => {
+  const [pendingUnsave, setPendingUnsave] = useState<DiscoveryCollection | null>(null);
+  const [savedIds, setSavedIds] = useState<string[]>(() => {
     try { return JSON.parse(localStorage.getItem("trasa_saved_collections") || "[]") as string[]; }
     catch { return []; }
-  }, []);
+  });
+  const savedDates = useMemo(() => {
+    try { return JSON.parse(localStorage.getItem("trasa_saved_collections_dates") || "{}") as Record<string, string>; }
+    catch { return {}; }
+  }, [savedIds]);
+  // Usuniecie z zapisanych (po potwierdzeniu w modalu) - localStorage + odswiez liste.
+  const unsave = (id: string) => {
+    try {
+      const set = new Set(savedIds); set.delete(id);
+      const dates: Record<string, string> = JSON.parse(localStorage.getItem("trasa_saved_collections_dates") || "{}");
+      delete dates[id];
+      localStorage.setItem("trasa_saved_collections", JSON.stringify([...set]));
+      localStorage.setItem("trasa_saved_collections_dates", JSON.stringify(dates));
+      setSavedIds([...set]);
+    } catch { /* noop */ }
+  };
   const { data: collections = [], isLoading } = useQuery({
     queryKey: ["saved-collections", [...savedIds].sort().join(",")],
     enabled: savedIds.length > 0,
@@ -1336,7 +1360,9 @@ export function SavedCollections() {
         <p className="text-center text-sm text-muted-foreground py-10">Brak wyników dla „{query.trim()}".</p>
       ) : (
         <div className="space-y-3">
-          {filtered.map((col) => <SavedCollectionCard key={col.id} col={col} onOpen={setActiveCol} />)}
+          {filtered.map((col) => (
+            <SavedCollectionCard key={col.id} col={col} savedAt={savedDates[col.id]} onOpen={setActiveCol} onDelete={() => setPendingUnsave(col)} />
+          ))}
         </div>
       )}
 
@@ -1345,6 +1371,27 @@ export function SavedCollections() {
           {activeCol && <CollectionDetail col={activeCol} onClose={() => setActiveCol(null)} />}
         </SheetContent>
       </Sheet>
+
+      {/* Modal potwierdzenia usuniecia z zapisanych */}
+      <AlertDialog open={!!pendingUnsave} onOpenChange={(o) => { if (!o) setPendingUnsave(null); }}>
+        <AlertDialogContent className="rounded-3xl max-w-[340px]">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Na pewno chcesz usunąć to zestawienie z zapisanych?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Zniknie ono z Twoich zapisanych zestawień. Zawsze możesz zapisać je ponownie z eksploracji.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="rounded-full">Anuluj</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => { const c = pendingUnsave; setPendingUnsave(null); if (c) unsave(c.id); }}
+              className="rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Usuń
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

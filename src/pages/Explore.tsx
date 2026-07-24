@@ -371,6 +371,8 @@ export const LikedTab = ({ selectMode = false, onExitSelection, city: controlled
         {visible.map((p) => {
           const checked = selectMode && selectedNames.has(p.place_name);
           const locked = selectMode && !!selectionCity && p.city !== selectionCity;
+          const savedD = (p as any).liked_at ? parseISO((p as any).liked_at) : null;
+          const savedLabel = savedD && isValid(savedD) ? format(savedD, "d MMM yyyy", { locale: dateLocale() }) : null;
           return (
           <div
             key={`${p.city}:${p.place_name}`}
@@ -405,7 +407,11 @@ export const LikedTab = ({ selectMode = false, onExitSelection, city: controlled
             </div>
             <div className="flex-1 min-w-0 flex flex-col">
               <div className="flex items-start justify-between gap-2">
-                <p className="text-sm font-bold leading-tight">{p.place_name}</p>
+                <div className="min-w-0">
+                  {/* Badge kategorii NAD nazwa (bez badge miasta) */}
+                  <span className="inline-flex px-2 py-0.5 rounded-full bg-muted text-muted-foreground text-[11px] font-medium border border-border/40">{subcategoryLabelLocalized(p.category)}</span>
+                  <p className="text-sm font-bold leading-tight mt-1">{p.place_name}</p>
+                </div>
                 {!selectMode && (
                   <button
                     onClick={(e) => { e.stopPropagation(); handleRemove(p); }}
@@ -420,14 +426,9 @@ export const LikedTab = ({ selectMode = false, onExitSelection, city: controlled
                 <p className="text-xs text-muted-foreground mt-1 line-clamp-2 leading-snug">{p.description}</p>
               )}
               <div className="flex items-end justify-between gap-2 mt-2">
-                <div className="flex items-center gap-1.5 flex-wrap min-w-0">
-                  <span className="px-2 py-0.5 rounded-full bg-muted text-muted-foreground text-[11px] font-medium border border-border/40">{subcategoryLabelLocalized(p.category)}</span>
-                  {selectedCity === "all" && (
-                    <span className="px-2 py-0.5 rounded-full bg-muted text-muted-foreground text-[11px] font-medium border border-border/40 flex items-center gap-1">
-                      <MapPin className="h-2.5 w-2.5" />{p.city}
-                    </span>
-                  )}
-                </div>
+                {savedLabel ? (
+                  <span className="text-[11px] text-muted-foreground/70 min-w-0 truncate">Zapisano {savedLabel}</span>
+                ) : <span />}
                 {typeof p.rating === "number" && p.rating > 0 && (
                   <div className="flex items-center gap-1 shrink-0">
                     <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />

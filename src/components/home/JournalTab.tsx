@@ -9,7 +9,7 @@ import { format, parseISO, isValid } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
 import { Globe, Lock, Loader2, Trash2, CalendarDays, Sparkles, Plus, BookOpen } from "lucide-react";
 import { toast } from "sonner";
-import { deferDelete } from "@/lib/deferDelete";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { PLANNING_DISABLED } from "@/lib/appMode";
 import { API_BASE } from "@/lib/platform";
 import { avatarSrc } from "@/lib/avatar";
@@ -39,6 +39,7 @@ const JournalTab = ({ userId, city: cityFilter }: JournalTabProps) => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<any | null>(null);
   const [wyjazdTab, setWyjazdTab] = useState<"active" | "memories">("active");
 
   const { data: entries = [], isLoading } = useQuery({
@@ -226,49 +227,75 @@ const JournalTab = ({ userId, city: cityFilter }: JournalTabProps) => {
   // na ekranie glownym (ActiveTripsDashboard), wiec tu pokazujemy wylacznie pocztowki.
   const visibleEntries = postcards;
 
-  // Usuwanie/opuszczanie wyjazdu z oknem "Cofnij" (deferDelete, styl Gmaila): optymistycznie
-  // znika z listy, faktyczny DB delete odroczony; klik "Cofnij" przywraca (wpis nadal w DB).
+  // Usuwanie/opuszczanie wyjazdu z potwierdzeniem w modalu (nieodwracalne). Trash otwiera
+  // modal (setPendingDelete); potwierdzenie wola doDelete (hard delete + optymistyczny cache).
   const restoreEntries = () => {
     queryClient.invalidateQueries({ queryKey: ["journal-entries", userId] });
     queryClient.invalidateQueries({ queryKey: ["journal-badge"] });
   };
   const handleDelete = (e: React.MouseEvent, entry: any) => {
     e.stopPropagation();
+    setPendingDelete(entry);
+  };
+  const doDelete = async (entry: any) => {
     // Optymistyczne usuniecie z cache (natychmiast znika z listy).
     queryClient.setQueryData(["journal-entries", userId], (old: any) =>
       (old ?? []).filter((x: any) => x.id !== entry.id)
     );
     queryClient.invalidateQueries({ queryKey: ["journal-badge"] });
-    deferDelete({
-      message: entry.is_own ? t("journal.toast_deleted") : t("journal.toast_left"),
-      onUndo: restoreEntries, // wpis dalej w DB (commit odroczony) -> przywracamy do listy
-      commit: async () => {
-        try {
-          if (entry.is_own) {
-            await supabase.from("pins").delete().eq("route_id", entry.id);
-            await (supabase as any).from("chat_sessions").delete().eq("route_id", entry.id);
-            const { error } = await supabase.from("routes").delete().eq("id", entry.id);
-            if (error) throw error;
-          } else {
-            if (!entry.group_session_id) throw new Error("missing group_session_id");
-            // count: 'exact' zeby wykryc silent RLS fail (migracja 20260604_gsm_delete_policy.sql).
-            const { error, count } = await (supabase as any)
-              .from("group_session_members")
-              .delete({ count: "exact" })
-              .eq("session_id", entry.group_session_id)
-              .eq("user_id", userId);
-            if (error) throw error;
-            if (count === 0) throw new Error(t("journal.leave_no_permission"));
-          }
-          restoreEntries();
-        } catch (err: any) {
-          console.error("[JournalTab] delete/leave failed:", err);
-          toast.error(t("journal.toast_fail"), { description: err?.message ?? t("journal.unknown_error") });
-          restoreEntries(); // fail -> wpis wraca na liste
-        }
-      },
-    });
+    try {
+      if (entry.is_own) {
+        await supabase.from("pins").delete().eq("route_id", entry.id);
+        await (supabase as any).from("chat_sessions").delete().eq("route_id", entry.id);
+        const { error } = await supabase.from("routes").delete().eq("id", entry.id);
+        if (error) throw error;
+        toast.success(t("journal.toast_deleted"));
+      } else {
+        if (!entry.group_session_id) throw new Error("missing group_session_id");
+        // count: 'exact' zeby wykryc silent RLS fail (migracja 20260604_gsm_delete_policy.sql).
+        const { error, count } = await (supabase as any)
+          .from("group_session_members")
+          .delete({ count: "exact" })
+          .eq("session_id", entry.group_session_id)
+          .eq("user_id", userId);
+        if (error) throw error;
+        if (count === 0) throw new Error(t("journal.leave_no_permission"));
+        toast.success(t("journal.toast_left"));
+      }
+      restoreEntries();
+    } catch (err: any) {
+      console.error("[JournalTab] delete/leave failed:", err);
+      toast.error(t("journal.toast_fail"), { description: err?.message ?? t("journal.unknown_error") });
+      restoreEntries(); // fail -> wpis wraca na liste
+    }
   };
+
+  // Modal potwierdzenia usuniecia/opuszczenia wyjazdu (nieodwracalne, copy jak systemowy alert).
+  const deleteModal = (
+    <AlertDialog open={!!pendingDelete} onOpenChange={(o) => { if (!o) setPendingDelete(null); }}>
+      <AlertDialogContent className="rounded-3xl max-w-[340px]">
+        <AlertDialogHeader>
+          <AlertDialogTitle>
+            {pendingDelete?.is_own ? "Na pewno chcesz usunąć ten wyjazd?" : "Na pewno chcesz opuścić ten wyjazd?"}
+          </AlertDialogTitle>
+          <AlertDialogDescription>
+            {pendingDelete?.is_own
+              ? "Jeżeli usuniesz ten wyjazd, zniknie on bezpowrotnie z Twojego profilu. Nie można tego cofnąć."
+              : "Przestaniesz być uczestnikiem tego wyjazdu i zniknie on z Twojego profilu. Nie można tego cofnąć."}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel className="rounded-full">Anuluj</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={() => { const e = pendingDelete; setPendingDelete(null); if (e) void doDelete(e); }}
+            className="rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90"
+          >
+            {pendingDelete?.is_own ? "Usuń" : "Opuść"}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
 
   // Sheet tworzenia nowego wyjazdu (tryb uproszczony) - wspoldzielony miedzy stanami.
 
@@ -489,12 +516,14 @@ const JournalTab = ({ userId, city: cityFilter }: JournalTabProps) => {
             </div>
           ) : emptyBox("📸", t("journal.memories_empty_title"), t("journal.memories_empty_desc"))
         )}
+        {deleteModal}
       </div>
     );
   }
 
   return (
     <div className="space-y-3 pb-2">
+      {deleteModal}
       {/* Dziennik = wspomnienia (minione podroze). Aktywne trasy/sesje sa na ekranie glownym. */}
       {visibleEntries.length === 0 && (
         <div className="py-16 text-center px-8">
