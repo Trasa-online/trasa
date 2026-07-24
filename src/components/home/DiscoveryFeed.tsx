@@ -1227,7 +1227,7 @@ function TrasaBigCard({
     ? `${placeCount} ${placeCount === 1 ? "miejsce" : placeCount < 5 ? "miejsca" : "miejsc"}`
     : null;
   return (
-    <div className="relative w-full shrink-0 rounded-3xl overflow-hidden bg-muted shadow-sm h-[calc(100dvh-13rem)] min-h-[440px]">
+    <div className="relative w-full shrink-0 snap-start snap-always rounded-3xl overflow-hidden bg-muted shadow-sm h-[calc(100dvh-14rem-env(safe-area-inset-top,0px))] min-h-[420px]">
       <img
         src={cover}
         alt={title}
