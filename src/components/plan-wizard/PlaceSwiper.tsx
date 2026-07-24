@@ -2121,7 +2121,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
             // isActive dalej gatuje fetch Google/tagow tylko do widocznej karty (koszt).
             const isActive = activeCardId ? place.id === activeCardId : place.id === displayQueue[0]?.id;
             return (
-            <div key={place.id} className="snap-start snap-always w-full flex flex-col px-4 pt-1 h-[calc(100%-var(--trasa-nav-offset,4rem)-env(safe-area-inset-bottom,0px)-0.5rem)]">
+            <div key={place.id} className="snap-start snap-always w-full flex flex-col px-4 pt-1 h-[calc(100dvh-8rem-env(safe-area-inset-top,0px)-env(safe-area-inset-bottom,0px))]">
               <div className="relative flex-1 min-h-0 w-full max-w-[460px] mx-auto">
                 <SwipeCard
                   place={place}

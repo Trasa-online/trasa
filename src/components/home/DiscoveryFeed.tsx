@@ -1202,6 +1202,11 @@ function RouteBigCard({ route, onClick }: { route: PolecaneRoute; onClick: () =>
   );
 }
 
+// Wysokosc pelnoekranowej karty feedu = viewport - topbar(3.25rem) - BottomNav(4rem) -
+// 16px odstepu do nawigacji - safe-area (gora+dol). Ten sam wzor uzywa karta Miejsc (swiper),
+// zeby oba widoki mialy identyczny rozmiar wizytowki i 16px do BottomNava na kazdym iPhonie.
+const TRASA_CARD_H = "h-[calc(100dvh-8rem-env(safe-area-inset-top,0px)-env(safe-area-inset-bottom,0px))]";
+
 // Redesign 2026-07-24: pelnoekranowa karta feedu "Trasy" (immersyjny scroll, jeden ekran
 // = jedna trasa/zestawienie). Zdjecie na cala kafle + gradient + opis na dole + prawy stack
 // (mini-mapka, bookmark = zapisz, strzalka = otworz wizytowke). Bez swipe'a - naturalny scroll.
@@ -1227,7 +1232,7 @@ function TrasaBigCard({
     ? `${placeCount} ${placeCount === 1 ? "miejsce" : placeCount < 5 ? "miejsca" : "miejsc"}`
     : null;
   return (
-    <div className="relative w-full shrink-0 snap-start snap-always rounded-3xl overflow-hidden bg-muted shadow-sm h-[calc(100dvh-14rem-env(safe-area-inset-top,0px))] min-h-[420px]">
+    <div className={`relative w-full shrink-0 snap-start snap-always rounded-3xl overflow-hidden bg-muted shadow-sm min-h-[420px] ${TRASA_CARD_H}`}>
       <img
         src={cover}
         alt={title}
@@ -2090,9 +2095,30 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
           </div>
         )
       ) : isLoading ? (
-        <div className="space-y-6">
-          <div className="h-6 w-44 bg-muted rounded mb-4 mx-1 animate-pulse" />
-          {Array.from({ length: 3 }).map((_, i) => <RouteCardVSkeleton key={i} />)}
+        // Skeleton pelnoekranowej karty feedu (1:1 z TrasaBigCard) - immersyjny, nie stary kompaktowy.
+        <div className="space-y-4">
+          {Array.from({ length: 2 }).map((_, i) => (
+            <div key={i} className={`relative w-full shrink-0 rounded-3xl overflow-hidden bg-muted animate-pulse min-h-[420px] ${TRASA_CARD_H}`}>
+              <div className="absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-black/25 to-transparent" />
+              {/* prawy stack: mapka + 2 guziki */}
+              <div className="absolute right-4 bottom-5 flex flex-col items-center gap-2.5">
+                <div className="h-12 w-12 rounded-full bg-white/30" />
+                <div className="h-12 w-12 rounded-full bg-white/40" />
+                <div className="h-12 w-12 rounded-full bg-white/40" />
+              </div>
+              {/* dolny-lewy opis */}
+              <div className="absolute left-5 bottom-6 right-20 space-y-2">
+                <div className="h-3.5 w-28 bg-white/30 rounded-full" />
+                <div className="h-6 w-4/5 bg-white/45 rounded-lg" />
+                <div className="h-3 w-full bg-white/25 rounded-full" />
+                <div className="flex gap-1.5 pt-1">
+                  <div className="h-5 w-14 bg-white/25 rounded-full" />
+                  <div className="h-5 w-12 bg-white/25 rounded-full" />
+                  <div className="h-5 w-16 bg-white/25 rounded-full" />
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       ) : (
         // Redesign: immersyjny feed Tras - pelnoekranowe karty (zestawienia + trasy), scroll.
