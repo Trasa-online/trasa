@@ -515,25 +515,10 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
 
 
 
-      {/* Category badge - top-left absolute, 1:1 z BusinessCardPreview na dashboardzie.
-          Biz: label kategorii glownej z business_profiles.main_category + colorBadge custom.
-          Non-biz: label podkategorii (places.category) + default Tailwind color z mapy. */}
-      {(() => {
-        const bizMainLabel = place.businessMainCategory
-          ? mainCategoryLabel(place.businessMainCategory)
-          : null;
-        const subLabel = t(`categories.${place.category}`, { defaultValue: CATEGORY_LABELS[place.category] });
-        const label = bizMainLabel ?? subLabel;
-        if (!label) return null;
-        // Badge kategorii ZAWSZE jednolity per-kategoria (getCategoryColor) - bez personalizacji biznesu.
-        return (
-          <span className={cn("absolute top-4 left-4 px-3 py-1 rounded-full text-xs font-bold shadow-sm z-10", getCategoryColor(place.category))}>
-            {label}
-          </span>
-        );
-      })()}
+      {/* Redesign 2026-07-24: badge kategorii PRZENIESIONY z gornego-lewego rogu na DOL karty
+          (pod tagami vibe) - gora karty czysta. Renderowany na koncu dolnego overlaya. */}
 
-      {/* Chip dystansu - prawy gorny rog, nad paginacja (top-4, badge kategorii po lewej) */}
+      {/* Chip dystansu - prawy gorny rog, nad paginacja */}
       {isTop && distanceLabel && (
         <div className="absolute top-4 right-4 z-10 flex items-center gap-1 bg-black/45 backdrop-blur-sm rounded-full px-2.5 py-1 shadow-sm">
           <Navigation className="h-3 w-3 text-white/90" />
@@ -627,6 +612,21 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
             </div>
           )}
         </div>
+
+        {/* Badge kategorii - na DOLE karty (redesign 2026-07-24), pod tagami vibe. */}
+        {(() => {
+          const bizMainLabel = place.businessMainCategory ? mainCategoryLabel(place.businessMainCategory) : null;
+          const subLabel = t(`categories.${place.category}`, { defaultValue: CATEGORY_LABELS[place.category] });
+          const label = bizMainLabel ?? subLabel;
+          if (!label) return null;
+          return (
+            <div className="pt-0.5">
+              <span className={cn("inline-flex px-3 py-1 rounded-full text-xs font-bold shadow-sm", getCategoryColor(place.category))}>
+                {label}
+              </span>
+            </div>
+          );
+        })()}
       </div>
 
       {/* Action buttons inside card - only on top card (klasyczny swipe: skip | add) */}

@@ -57,34 +57,35 @@ export default function ExploreTopBar({
 
       <div className="flex-1" />
 
-      {/* Toggle Przegladaj | Eksploracja (aktywny segment = ikona, nieaktywny = ikona + etykieta) */}
+      {/* Toggle Miejsca | Trasy. Aktywny segment = pomaranczowa orba (gradient) z bialа ikonа,
+          nieaktywny = szara ikona + etykieta. Miejsca = pojedyncze miejsca (swiper), Trasy = feed. */}
       <div className="shrink-0 flex items-center rounded-full bg-secondary p-0.5">
         {mode === "browse" ? (
-          <span className="h-8 w-8 flex items-center justify-center rounded-full bg-background text-foreground shadow-sm" aria-current="true" title="Przeglądaj">
+          <span className="h-8 w-8 flex items-center justify-center rounded-full bg-gradient-to-br from-[#F4A259] to-[#F9662B] text-white shadow-sm" aria-current="true" title="Miejsca">
             <Layers className="h-4 w-4" />
           </span>
         ) : (
           <button
             onClick={goBrowse}
             className="h-8 px-3 flex items-center gap-1.5 rounded-full text-secondary-foreground/70 text-xs font-bold active:scale-95 transition-transform whitespace-nowrap"
-            title="Przeglądaj"
+            title="Miejsca"
           >
             <Layers className="h-4 w-4" />
-            Przeglądaj
+            Miejsca
           </button>
         )}
         {mode === "explore" ? (
-          <span className="h-8 w-8 flex items-center justify-center rounded-full bg-background text-foreground shadow-sm" aria-current="true" title="Eksploracja">
+          <span className="h-8 w-8 flex items-center justify-center rounded-full bg-gradient-to-br from-[#F4A259] to-[#F9662B] text-white shadow-sm" aria-current="true" title="Trasy">
             <Compass className="h-4 w-4" />
           </span>
         ) : (
           <button
             onClick={goExplore}
             className="h-8 px-3 flex items-center gap-1.5 rounded-full text-secondary-foreground/70 text-xs font-bold active:scale-95 transition-transform whitespace-nowrap"
-            title="Eksploracja"
+            title="Trasy"
           >
             <Compass className="h-4 w-4" />
-            Eksploracja
+            Trasy
           </button>
         )}
       </div>

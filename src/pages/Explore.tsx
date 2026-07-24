@@ -680,9 +680,11 @@ const Explore = () => {
   const [feedSearch, setFeedSearch] = useState("");
   const openSearch = () => { setView("feed"); setSearchOpen(true); };
   const closeSearch = () => { setSearchOpen(false); setFeedSearch(""); };
-  // Ukryj fixed BottomNav w widoku przegladania (swiper) ORAZ gdy szukamy (pelny ekran wynikow).
+  // BottomNav (glassmorficzny) widoczny w OBU widokach - Miejsca (swiper) i Trasy (feed) -
+  // dla spojnosci wg redesignu 2026-07-24. Ukrywamy tylko gdy szukamy (pelny ekran wynikow).
+  // Karta swipera w exploreMode ma pb chroniace przed BottomNavem (patrz CLAUDE.md PlaceSwiper).
   useEffect(() => {
-    window.dispatchEvent(new CustomEvent("trasa:hide-bottomnav", { detail: view === "browse" || searchOpen }));
+    window.dispatchEvent(new CustomEvent("trasa:hide-bottomnav", { detail: searchOpen }));
   }, [view, searchOpen]);
   // Przy wyjsciu z Eksploracji zawsze przywroc BottomNav.
   useEffect(() => () => { window.dispatchEvent(new CustomEvent("trasa:hide-bottomnav", { detail: false })); }, []);

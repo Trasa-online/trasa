@@ -6,7 +6,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { MapPin, X, Globe, Sparkles, Star, Pencil, Trash2, ChevronRight, ArrowRight, Heart, Eye, List, GalleryHorizontalEnd, Search, SlidersHorizontal, Plus, ArrowLeft, Images, Bookmark, Users, Navigation, Loader2 } from "lucide-react";
+import { MapPin, X, Globe, Sparkles, Star, Pencil, Trash2, ChevronRight, ChevronUp, ArrowRight, Heart, Eye, List, GalleryHorizontalEnd, Search, SlidersHorizontal, Plus, ArrowLeft, Images, Bookmark, Building2, Users, Navigation, Loader2 } from "lucide-react";
 import { API_BASE } from "@/lib/platform";
 import { useDebounce } from "@/hooks/useDebounce";
 import { expandCity } from "@/lib/cities";
@@ -1202,6 +1202,94 @@ function RouteBigCard({ route, onClick }: { route: PolecaneRoute; onClick: () =>
   );
 }
 
+// Redesign 2026-07-24: pelnoekranowa karta feedu "Trasy" (immersyjny scroll, jeden ekran
+// = jedna trasa/zestawienie). Zdjecie na cala kafle + gradient + opis na dole + prawy stack
+// (mini-mapka, bookmark = zapisz, strzalka = otworz wizytowke). Bez swipe'a - naturalny scroll.
+function TrasaBigCard({
+  id, photo, city, placeCount = 0, title, description, tags = [], pins = [],
+  saved, onToggleSave, onOpen,
+}: {
+  id: string;
+  photo: string | null;
+  city?: string | null;
+  placeCount?: number;
+  title: string;
+  description?: string | null;
+  tags?: string[];
+  pins?: LatLng[];
+  saved?: boolean;
+  onToggleSave?: () => void;
+  onOpen: () => void;
+}) {
+  const cover = photo ?? getRandomPinPlaceholder(id);
+  const miniMap = buildMiniMapUrl(pins);
+  const countLabel = placeCount > 0
+    ? `${placeCount} ${placeCount === 1 ? "miejsce" : placeCount < 5 ? "miejsca" : "miejsc"}`
+    : null;
+  return (
+    <div className="relative w-full shrink-0 rounded-3xl overflow-hidden bg-muted shadow-sm h-[calc(100dvh-13rem)] min-h-[440px]">
+      <img
+        src={cover}
+        alt={title}
+        loading="lazy"
+        className="absolute inset-0 w-full h-full object-cover"
+        onError={(e) => { (e.target as HTMLImageElement).src = getRandomPinPlaceholder(id + "_fb"); }}
+      />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-black/25 pointer-events-none" />
+      {/* Tap na kafle = otworz wizytowke trasy/zestawienia */}
+      <button onClick={onOpen} aria-label={title} className="absolute inset-0" />
+
+      {/* Prawy dolny stack: mini-mapka + bookmark + rozwin */}
+      <div className="absolute right-4 bottom-5 z-10 flex flex-col items-center gap-2.5">
+        {miniMap && (
+          <div className="h-14 w-14 rounded-full overflow-hidden ring-2 ring-white/85 shadow-md bg-muted mb-0.5">
+            <img
+              src={miniMap} alt="" aria-hidden loading="lazy"
+              className="w-full h-full object-cover"
+              onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = "none"; }}
+            />
+          </div>
+        )}
+        {onToggleSave && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onToggleSave(); }}
+            aria-label="Zapisz"
+            className="h-12 w-12 rounded-full bg-white flex items-center justify-center shadow-lg active:scale-90 transition-transform"
+          >
+            <Bookmark className={`h-5 w-5 text-foreground ${saved ? "fill-current" : ""}`} strokeWidth={2} />
+          </button>
+        )}
+        <button
+          onClick={onOpen}
+          aria-label="Rozwiń"
+          className="h-12 w-12 rounded-full bg-white flex items-center justify-center shadow-lg active:scale-90 transition-transform"
+        >
+          <ChevronUp className="h-5 w-5 text-foreground" strokeWidth={2.5} />
+        </button>
+      </div>
+
+      {/* Dolny-lewy opis */}
+      <div className="absolute left-0 right-[4.75rem] bottom-6 z-10 px-5 pointer-events-none">
+        <div className="flex items-center gap-3 text-white text-[13px] font-semibold mb-1.5 [text-shadow:_0_1px_3px_rgb(0_0_0_/_40%)]">
+          {city && <span className="flex items-center gap-1"><Building2 className="h-4 w-4" />{city}</span>}
+          {countLabel && <span className="flex items-center gap-1"><MapPin className="h-4 w-4" />{countLabel}</span>}
+        </div>
+        <p className="text-white text-2xl font-black leading-tight line-clamp-2 [text-shadow:_0_2px_6px_rgb(0_0_0_/_45%)]">{title}</p>
+        {description && (
+          <p className="text-white/85 text-sm leading-snug mt-1.5 line-clamp-2 [text-shadow:_0_1px_3px_rgb(0_0_0_/_45%)]">{description}</p>
+        )}
+        {tags.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mt-2.5">
+            {tags.slice(0, 4).map((tag) => (
+              <span key={tag} className="rounded-full bg-white/20 backdrop-blur-sm px-2.5 py-1 text-[11px] font-semibold text-white capitalize">{tag}</span>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── Main export ────────────────────────────────────────────────────────────────
 
 // Sekcja "Zestawienia miejsc" w Eksploruj - AKTYWNA (launch feature).
@@ -1467,6 +1555,21 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
   const debouncedQuery = useDebounce(searchInput.trim(), 300);
   // Gdy user zaczyna pisac, zamknij ewentualny wynik "Najblizej Ciebie".
   useEffect(() => { if (searchInput && nearbyPlaces) setNearbyPlaces(null); }, [searchInput]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Zapis zestawienia bookmarkiem na karcie feedu Tras - localStorage (jak CollectionDetail/Zapisane).
+  const [savedColIds, setSavedColIds] = useState<Set<string>>(() => {
+    try { return new Set<string>(JSON.parse(localStorage.getItem("trasa_saved_collections") || "[]")); } catch { return new Set(); }
+  });
+  const toggleSaveCol = (colId: string) => {
+    try {
+      const set = new Set(savedColIds);
+      const dates: Record<string, string> = (() => { try { return JSON.parse(localStorage.getItem("trasa_saved_collections_dates") || "{}"); } catch { return {}; } })();
+      if (set.has(colId)) { set.delete(colId); delete dates[colId]; }
+      else { set.add(colId); dates[colId] = new Date().toISOString(); toast.success(t("toast.saved")); }
+      localStorage.setItem("trasa_saved_collections", JSON.stringify([...set]));
+      localStorage.setItem("trasa_saved_collections_dates", JSON.stringify(dates));
+      setSavedColIds(set);
+    } catch { /* localStorage niedostepny */ }
+  };
   // Filtry wielokrotnego wyboru (mozna zaznaczyc kilka miast / motywow / kategorii).
   const [cityFilter, setCityFilter] = useState<string[]>([]);
   const [themeFilter, setThemeFilter] = useState<string[]>([]);
@@ -1983,34 +2086,43 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
           {Array.from({ length: 3 }).map((_, i) => <RouteCardVSkeleton key={i} />)}
         </div>
       ) : (
-        <div className="space-y-8">
-          {/* Zestawienia - duze karty pionowe (glowna tresc, od razu widoczne). */}
-          {SHOW_ZESTAWIENIA && userPolecajki.length > 0 && (
-            <div>
-              <div className="mb-4 px-1">
-                <h2 className="text-xl font-black tracking-tight">{t("collections")}</h2>
-              </div>
-              <div className="space-y-6">
-                {userPolecajki.map((col) => (
-                  <CollectionBigCard key={col.id} col={col} onOpen={setActiveCol} />
-                ))}
-              </div>
-            </div>
-          )}
+        // Redesign: immersyjny feed Tras - pelnoekranowe karty (zestawienia + trasy), scroll.
+        <div className="space-y-4">
+          {SHOW_ZESTAWIENIA && userPolecajki.map((col) => {
+            const ph = col.items.find((i) => i.photo_url)?.photo_url ?? col.gallery_urls?.[0] ?? null;
+            const catTags = [...new Set(col.items.map((i) => i.category).filter(Boolean).map((c) => String(c).toLowerCase()))];
+            return (
+              <TrasaBigCard
+                key={`col-${col.id}`}
+                id={col.id}
+                photo={ph ? resolveStored(ph) : null}
+                city={col.city}
+                placeCount={col.items.length}
+                title={col.title}
+                description={col.description}
+                tags={catTags}
+                pins={col.items}
+                saved={savedColIds.has(col.id)}
+                onToggleSave={() => toggleSaveCol(col.id)}
+                onOpen={() => setActiveCol(col)}
+              />
+            );
+          })}
 
-          {/* Trasy w Warszawie - duze karty pionowe. */}
-          {warszawa.length > 0 && (
-            <div>
-              <div className="mb-4 px-1">
-                <h2 className="text-xl font-black tracking-tight">{city === "Warszawa" ? t("routes_in_warsaw") : `Trasy w ${city}`}</h2>
-              </div>
-              <div className="space-y-6">
-                {warszawa.map((r) => (
-                  <RouteBigCard key={r.id} route={r} onClick={() => navigate(`/route/${r.id}`)} />
-                ))}
-              </div>
-            </div>
-          )}
+          {warszawa.map((r) => (
+            <TrasaBigCard
+              key={`route-${r.id}`}
+              id={r.id}
+              photo={r.photo}
+              city={r.city}
+              placeCount={r.placeCount ?? 0}
+              title={r.title}
+              description={r.summary || r.ai_highlight}
+              tags={r.categories ?? []}
+              pins={r.pins ?? []}
+              onOpen={() => navigate(`/route/${r.id}`)}
+            />
+          ))}
 
           {warszawa.length === 0 && userPolecajki.length === 0 && (
             <div className="py-16 text-center px-8">
