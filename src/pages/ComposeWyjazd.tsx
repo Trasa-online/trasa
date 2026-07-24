@@ -235,7 +235,7 @@ export default function ComposeWyjazd() {
             className="flex-1 min-w-0 rounded-2xl bg-secondary text-secondary-foreground border-0 px-4 py-3 text-base outline-none focus:ring-2 focus:ring-orange-500/40 placeholder:text-muted-foreground/60" />
           <button onClick={() => setDateSheet(true)}
             className={`shrink-0 h-[50px] rounded-2xl bg-secondary flex items-center gap-2 px-3.5 active:scale-95 transition-transform ${dateLabel ? "text-foreground font-semibold" : "text-muted-foreground"}`}>
-            <CalendarIcon className="h-5 w-5 text-orange-600" />
+            <CalendarIcon className="h-5 w-5 text-muted-foreground" />
             {dateLabel && <span className="text-sm whitespace-nowrap">{dateLabel}</span>}
           </button>
         </div>

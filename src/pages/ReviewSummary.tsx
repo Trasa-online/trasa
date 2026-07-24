@@ -13,6 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import AddPinSheet from "@/components/route/AddPinSheet";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import type { MockPlace } from "@/components/plan-wizard/PlaceSwiper";
+import { QRCodeSVG } from "qrcode.react";
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { PlacePhoto, resolveStored } from "@/components/PlacePhoto";
 import { compressImage } from "@/lib/imageCompression";
@@ -78,6 +79,10 @@ const ReviewSummary = () => {
   const [savingName, setSavingName] = useState(false);
   const [planView, setPlanView] = useState<"list" | "cards">("list");
   const [planMapOpen, setPlanMapOpen] = useState(false);
+  // Okladka planu wyjazdu: zdjecie (false) lub mapka (true) - toggle klikiem w miniaturke.
+  const [heroShowMap, setHeroShowMap] = useState(false);
+  // QR do udostepnienia wyjazdu (arkusz z kodem + linkiem).
+  const [qrShareOpen, setQrShareOpen] = useState(false);
   const [memoTab, setMemoTab] = useState<"notki" | "galeria">("notki");
   // Pod-zakladki w widoku wspomnienia: galeria zdjec / plan dnia.
   // Wpis dziennika (wlasciciel): 3-etapowy stepper. 1 Trasa (edycja) -> 2 Notki -> 3 Zdjecia.
@@ -340,11 +345,17 @@ const ReviewSummary = () => {
   }, [existingRatings]);
 
   // Udostepnij link do publicznej trasy (/#/route/:id). HashRouter => link z #.
+  const shareUrl = routeId ? `https://trasa.travel/#/route/${routeId}` : "";
   const shareLink = async () => {
     if (!routeId) return;
-    const url = `https://trasa.travel/#/route/${routeId}`;
-    const res = await share({ title: route?.title || route?.city || "Trasa", text: t("share.text"), url });
+    const res = await share({ title: route?.title || route?.city || "Trasa", text: t("share.text"), url: shareUrl });
     if (res.ok && res.method === "clipboard") notify.success(t("toast.link_copied"));
+  };
+  // Kopiowanie linku do schowka (arkusz QR).
+  const copyShareLink = async () => {
+    if (!shareUrl) return;
+    try { await navigator.clipboard.writeText(shareUrl); notify.success(t("toast.link_copied")); }
+    catch { shareLink(); }
   };
 
   // Widocznosc trasy: profil (publicznie z profilem) | anon (publicznie anonimowo) | private.
@@ -1329,6 +1340,7 @@ const ReviewSummary = () => {
   if (isOwner && !editingStepper && sortedDays.length <= 1) {
     const heroMapThumb = buildTripStaticMapUrl(currentPins, "160x160");
     const bigMapUrl = buildTripStaticMapUrl(currentPins, "560x300");
+    const heroMapCover = buildTripStaticMapUrl(currentPins, "560x350"); // 16:10, pod okladke hero
     const nextPlace = currentPins.find((p: any) => !isVisited(p)) ?? currentPins[0];
     // Ukonczony wyjazd = wszystkie miejsca odhaczone ALBO minieta data (isMemory). Wtedy w
     // sekcji miejsc pokazujemy Notki/Galerie (notatki + zdjecia = wspomnienie).
@@ -1356,8 +1368,8 @@ const ReviewSummary = () => {
       <div className="h-[100dvh] bg-background flex flex-col max-w-lg mx-auto">
         {/* Hero */}
         <div className="relative w-full aspect-[16/10] shrink-0 overflow-hidden bg-gradient-to-br from-orange-400 via-rose-400 to-purple-500 rounded-b-2xl">
-          <img src={heroPhoto} alt="" className="absolute inset-0 w-full h-full object-cover" />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/15 via-transparent to-black/55" />
+          <img src={heroShowMap && heroMapCover ? heroMapCover : heroPhoto} alt="" className="absolute inset-0 w-full h-full object-cover" />
+          <div className={`absolute inset-0 bg-gradient-to-b from-black/15 via-transparent to-black/55 ${heroShowMap ? "opacity-40" : ""}`} />
           <div className="absolute left-0 right-0 z-20 flex items-center justify-between px-4" style={{ top: "max(12px, env(safe-area-inset-top, 12px))" }}>
             <button onClick={() => navigate("/dziennik")} aria-label={t("a11y.back_to_journal")} className="h-8 w-8 rounded-full bg-black/35 backdrop-blur-sm flex items-center justify-center active:scale-90 transition-transform">
               <ChevronLeft className="h-5 w-5 text-white" />
@@ -1367,8 +1379,13 @@ const ReviewSummary = () => {
             </button>
           </div>
           {heroMapThumb && (
-            <button onClick={() => setPlanMapOpen(true)} aria-label="Rozwiń mapę" className="absolute bottom-3 right-3 h-14 w-14 rounded-xl overflow-hidden border-2 border-white shadow-md bg-white active:scale-95 transition-transform">
-              <img src={heroMapThumb} alt="" className="w-full h-full object-cover" />
+            // Klik miniaturki -> mapka pojawia sie na okladce (zamiast zdjecia); ponowny klik wraca do zdjecia.
+            <button
+              onClick={() => setHeroShowMap((v) => !v)}
+              aria-label={heroShowMap ? "Pokaż zdjęcie" : "Pokaż mapę na okładce"}
+              className="absolute bottom-3 right-3 h-14 w-14 rounded-xl overflow-hidden border-2 border-white shadow-md bg-white active:scale-95 transition-transform"
+            >
+              <img src={heroShowMap ? heroPhoto : heroMapThumb} alt="" className="w-full h-full object-cover" />
             </button>
           )}
         </div>
@@ -1610,11 +1627,43 @@ const ReviewSummary = () => {
               </div>
 
               <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mt-8 mb-3">Dostęp ogólny</p>
-              <button onClick={shareLink} className="w-full flex items-center gap-2.5 rounded-2xl bg-secondary p-4 active:scale-[0.99] transition-transform">
+              <button onClick={() => setQrShareOpen(true)} className="w-full flex items-center gap-2.5 rounded-2xl bg-secondary p-4 active:scale-[0.99] transition-transform">
                 <Share className="h-5 w-5 text-foreground shrink-0" />
                 <span className="text-base font-semibold text-foreground">Udostępnij ten wyjazd</span>
               </button>
               <p className="text-xs text-muted-foreground mt-2 leading-relaxed">Udostępniaj linki do swoich wyjazdów niezależnie od ustawień prywatności.</p>
+            </div>
+          </div>
+        )}
+
+        {/* Arkusz QR: udostepnij wyjazd kodem QR + link. */}
+        {qrShareOpen && (
+          <div className="fixed inset-0 z-[95] flex items-end justify-center" onClick={() => setQrShareOpen(false)}>
+            <div className="absolute inset-0 bg-black/50 animate-in fade-in duration-200" />
+            <div onClick={(e) => e.stopPropagation()} className="relative w-full max-w-lg bg-card rounded-t-3xl px-5 pt-3 pb-[max(20px,env(safe-area-inset-bottom))] shadow-2xl animate-in slide-in-from-bottom-4 duration-300">
+              <div className="mx-auto h-1 w-10 rounded-full bg-muted-foreground/25 mb-4" />
+              <button onClick={() => setQrShareOpen(false)} aria-label="Zamknij" className="absolute right-4 top-4 h-8 w-8 rounded-full bg-muted flex items-center justify-center active:scale-90 transition-transform">
+                <X className="h-4 w-4" />
+              </button>
+              <p className="text-lg font-bold mb-4 pr-8">Udostępnij wyjazd kodem QR</p>
+              <div className="flex items-center gap-4 pb-4 border-b border-border/30">
+                <div className="shrink-0 rounded-2xl bg-white p-2.5 border border-border/40">
+                  <QRCodeSVG value={shareUrl} size={104} bgColor="#ffffff" fgColor="#0E0E0E" level="M" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-base font-bold leading-tight truncate">{displayName || cityLabel}</p>
+                  {dateLabel && <p className="text-sm text-muted-foreground mt-1"><span className="font-semibold text-foreground">Data:</span> {dateLabel}</p>}
+                  <div className="mt-3 flex items-center justify-between gap-2">
+                    <button onClick={copyShareLink} className="text-sm font-semibold text-foreground active:opacity-70">Skopiuj link</button>
+                    <button onClick={shareLink} aria-label="Udostępnij link" className="h-9 w-9 rounded-full bg-muted flex items-center justify-center active:scale-90 transition-transform">
+                      <Share2 className="h-4 w-4 text-foreground" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <button onClick={shareLink} className="w-full h-12 rounded-2xl bg-orange-100 text-foreground font-semibold text-sm mt-4 active:scale-[0.98] transition-transform">
+                Zaproś znajomych do trasy
+              </button>
             </div>
           </div>
         )}

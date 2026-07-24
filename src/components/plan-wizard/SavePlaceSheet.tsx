@@ -308,21 +308,14 @@ export default function SavePlaceSheet({
           )}
         </div>
 
-        {/* Stopka: Udostepnij / Gotowe */}
-        <div className="shrink-0 px-5 pt-2 pb-safe-4 border-t border-border/20 flex gap-2">
+        {/* Stopka: tylko jeden guzik - Udostepnij (zamkniecie przez X u gory). */}
+        <div className="shrink-0 px-5 pt-2 pb-safe-4 border-t border-border/20">
           <button
             type="button"
             onClick={onShare}
-            className="flex-1 h-11 rounded-2xl bg-orange-100 text-foreground font-semibold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
+            className="w-full h-11 rounded-2xl bg-orange-100 text-foreground font-semibold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
           >
             <Share2 className="h-4 w-4" /> {t("save_sheet.share")}
-          </button>
-          <button
-            type="button"
-            onClick={() => onOpenChange(false)}
-            className="flex-1 h-11 rounded-2xl bg-primary text-white font-semibold text-sm active:scale-[0.98] transition-transform"
-          >
-            {t("save_sheet.done")}
           </button>
         </div>
       </SheetContent>

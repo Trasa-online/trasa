@@ -1222,6 +1222,9 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
   // Hint scrollowania: pierwsza karta nieco nizsza (nastepna wystaje) + puls w dol,
   // dopoki user nie przewinie. Po pierwszym scrollu chowamy podpowiedz.
   const [hasScrolled, setHasScrolled] = useState(false);
+  // Feed Miejsc renderuje CALA baze przez infinite-scroll (nie zalewamy DOM od razu).
+  // Reset przy zmianie miasta/filtrow/wyszukiwania (nizej, po zdefiniowaniu isSearching).
+  const [exploreVisible, setExploreVisible] = useState(24);
   const scrollWrapRef = useRef<HTMLDivElement>(null);
   const [history, setHistory] = useState<{ place: MockPlace; reaction: "liked" | "skipped" | "super_liked" }[]>([]);
   const [detailPlace, setDetailPlace] = useState<MockPlace | null>(null);
@@ -1406,7 +1409,8 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
           if (bizSubs && bizSubs.some(s => customSubIds.has(s))) return true;
           return false;
         });
-        const pool = applyNearestSort(partitionBusinessFirst(filtered)).slice(0, 20);
+        // Feed Miejsc = CALA baza (renderowanie ograniczone infinite-scrollem, nie tu).
+        const pool = applyNearestSort(partitionBusinessFirst(filtered));
         console.log("[PlaceSwiper] batch pool:", { categoryFilters, standardSubIds: [...standardSubIds], dbCategorySet: [...dbCategorySet], customSubIds: [...customSubIds], poolSize: pool.length, remainingTotal: remaining.length });
         setQueue(pool);
       } else {
@@ -1454,6 +1458,8 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
   };
 
   const isSearching = searchQuery.trim().length >= 2;
+  // Reset okna infinite-scrolla przy zmianie miasta / filtrow / wyszukiwania.
+  useEffect(() => { setExploreVisible(24); if (scrollWrapRef.current) scrollWrapRef.current.scrollTop = 0; }, [city, categoryFilterKey, dietFilterKey, isSearching]);
   const baseQueue = isSearching
     ? allPlaces.filter(p => p.place_name.toLowerCase().includes(searchQuery.trim().toLowerCase()))
     : queue;
@@ -2112,10 +2118,14 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
             const p = displayQueue[idx];
             if (p && p.id !== activeCardId) setActiveCardId(p.id);
             if (el.scrollTop > 24 && !hasScrolled) setHasScrolled(true);
+            // Infinite scroll: dociagaj kolejne karty gdy zblizamy sie do konca (2.5 ekranu).
+            if (el.scrollHeight - el.scrollTop - el.clientHeight < el.clientHeight * 2.5) {
+              setExploreVisible((v) => (v < displayQueue.length ? Math.min(displayQueue.length, v + 12) : v));
+            }
           }}
           className="flex-1 min-h-0 overflow-y-auto snap-y snap-mandatory scrollbar-none overscroll-contain"
         >
-          {displayQueue.slice(0, 20).map((place) => {
+          {displayQueue.slice(0, exploreVisible).map((place) => {
             // KAZDA karta troche nizsza (nastepna zawsze wystaje) - stala afordancja "scrolluj
             // dalej". BEZ wyszarzania peeka (za agresywne + stan gubil sie przy szybkim scrollu).
             // isActive dalej gatuje fetch Google/tagow tylko do widocznej karty (koszt).
