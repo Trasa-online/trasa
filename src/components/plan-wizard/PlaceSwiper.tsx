@@ -662,7 +662,7 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
           W obszarze kciuka. scroll = nastepna karta (bez skip/add/cofnij - cofasz scrollem w gore). */}
       {scrollMode && (
         // Ujednolicone z karta Tras (TrasaBigCard): biale kolka, ikona foreground, fill przy zapisie.
-        <div className="absolute right-3 bottom-7 z-20 flex flex-col gap-3">
+        <div className="absolute right-3 bottom-4 z-20 flex flex-col gap-3">
           <button
             data-ob="swipe-save"
             onClick={(e) => { e.stopPropagation(); onLike(); }}

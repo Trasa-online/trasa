@@ -1247,8 +1247,8 @@ function TrasaBigCard({
       {/* Tap na kafle = otworz wizytowke trasy/zestawienia */}
       <button onClick={onOpen} aria-label={title} className="absolute inset-0" />
 
-      {/* Prawy dolny stack: mini-mapka + bookmark + rozwin */}
-      <div className="absolute right-4 bottom-5 z-10 flex flex-col items-center gap-2.5">
+      {/* Prawy dolny stack: mini-mapka + bookmark + rozwin (12px od prawej, 16px od dolu) */}
+      <div className="absolute right-3 bottom-4 z-10 flex flex-col items-center gap-2.5">
         {miniMap && (
           <div className="h-12 w-12 rounded-full overflow-hidden ring-2 ring-white/85 shadow-md bg-muted mb-0.5">
             <img
@@ -1276,8 +1276,9 @@ function TrasaBigCard({
         </button>
       </div>
 
-      {/* Dolny-lewy opis */}
-      <div className="absolute left-0 right-[4.75rem] bottom-6 z-10 px-5 pointer-events-none">
+      {/* Dolny-lewy opis. right-[3.25rem]=52px + px-5(20px) -> tekst konczy sie 72px od
+          prawej = 12px odstepu od guzikow (right-3=12 + w-12=48 -> lewa krawedz 60px). */}
+      <div className="absolute left-0 right-[3.25rem] bottom-6 z-10 px-5 pointer-events-none">
         <div className="flex items-center gap-3 text-white text-[13px] font-semibold mb-1.5 [text-shadow:_0_1px_3px_rgb(0_0_0_/_40%)]">
           {city && <span className="flex items-center gap-1"><Building2 className="h-4 w-4" />{city}</span>}
           {countLabel && <span className="flex items-center gap-1"><MapPin className="h-4 w-4" />{countLabel}</span>}
