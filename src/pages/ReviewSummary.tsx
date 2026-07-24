@@ -85,6 +85,7 @@ const ReviewSummary = () => {
   // Czy plan wyjazdu jest przewiniety (okladka zjechala) -> sticky pasek back+X dostaje tlo.
   const [planScrolled, setPlanScrolled] = useState(false);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const [coverPickerOpen, setCoverPickerOpen] = useState(false);
   // QR do udostepnienia wyjazdu (arkusz z kodem + linkiem).
   const [qrShareOpen, setQrShareOpen] = useState(false);
   const [memoTab, setMemoTab] = useState<"notki" | "galeria">("notki");
@@ -146,7 +147,7 @@ const ReviewSummary = () => {
       if (!routeId || !user) return null;
       const { data } = await (supabase as any)
         .from("routes")
-        .select("id, title, user_id, city, day_number, start_date, end_date, folder_id, plan_finalized, trip_type, ai_summary, ai_highlight, review_photos, is_shared, share_friends, group_session_id")
+        .select("id, title, user_id, city, day_number, start_date, end_date, folder_id, plan_finalized, trip_type, ai_summary, ai_highlight, review_photos, cover_url, is_shared, share_friends, group_session_id")
         .eq("id", routeId)
         .single();
       return data as any;
@@ -166,7 +167,7 @@ const ReviewSummary = () => {
       if (!folderId) return [route];
       const { data } = await (supabase as any)
         .from("routes")
-        .select("id, title, city, day_number, start_date, end_date, plan_finalized, trip_type, ai_summary, ai_highlight, review_photos")
+        .select("id, title, city, day_number, start_date, end_date, plan_finalized, trip_type, ai_summary, ai_highlight, review_photos, cover_url")
         .eq("folder_id", folderId)
         .eq("user_id", route.user_id)
         .order("day_number", { ascending: true });
@@ -207,6 +208,18 @@ const ReviewSummary = () => {
   const currentPins = useMemo(
     () => allPins.filter((p: any) => p.route_id === activeRouteId),
     [allPins, activeRouteId],
+  );
+
+  // Zdjecia miejsc trasy do wyboru jako okladka wyjazdu (tylko te z rozwiazywalnym URL-em).
+  const coverOptions = useMemo(
+    () => currentPins
+      .map((pin: any) => ({
+        id: pin.id as string,
+        name: pin.place_name as string,
+        url: resolveStored(pin.photo_url || pin.image_url || (Array.isArray(pin.images) ? pin.images[0] : null)),
+      }))
+      .filter((o): o is { id: string; name: string; url: string } => !!o.url),
+    [currentPins],
   );
 
   // Opis + tagi (vibe_tags) z tabeli places - dla wizytowek i kart (lista/szczegoly).
@@ -485,10 +498,25 @@ const ReviewSummary = () => {
     if (!routeId) return;
     const updated = [url, ...photos.filter((p) => p !== url)];
     setPhotos(updated);
-    await supabase.from("routes").update({ review_photos: updated } as any).eq("id", routeId);
+    // Zdjecie usera jako okladka -> czyscimy recznie wybrana okladke miejsca (cover_url),
+    // zeby to zdjecie faktycznie stalo sie tlem (planCover ma wyzszy priorytet).
+    await supabase.from("routes").update({ review_photos: updated, cover_url: null } as any).eq("id", routeId);
+    queryClient.setQueryData(["review-summary-route", routeId], (old: any) => old ? { ...old, cover_url: null } : old);
     queryClient.invalidateQueries({ queryKey: ["review-trip-days", folderId, routeId] });
     if (user) queryClient.invalidateQueries({ queryKey: ["journal-entries", user.id] });
     setViewerUrl(null);
+    notify.success(t("toast.cover_set"));
+  };
+
+  // Recznie wybrana okladka wyjazdu = zdjecie jednego z miejsc trasy. Zapis do routes.cover_url.
+  const setPlanCover = async (url: string) => {
+    if (!routeId) return;
+    setCoverPickerOpen(false);
+    const { error } = await (supabase as any).from("routes").update({ cover_url: url }).eq("id", routeId);
+    if (error) { notify.error(t("toast.cover_set_error", { defaultValue: "Nie udało się ustawić okładki" })); return; }
+    queryClient.setQueryData(["review-summary-route", routeId], (old: any) => old ? { ...old, cover_url: url } : old);
+    queryClient.invalidateQueries({ queryKey: ["review-trip-days", folderId, routeId] });
+    if (user) queryClient.invalidateQueries({ queryKey: ["journal-entries", user.id] });
     notify.success(t("toast.cover_set"));
   };
 
@@ -893,8 +921,10 @@ const ReviewSummary = () => {
   // jako realne tlo (wyzsze hero).
   const userCover = myPhotos[0]?.url ?? (groupPhotos[0] as any)?.url ?? null;
   const placeCover = resolveStored(currentPins[0]?.photo_url || currentPins[0]?.image_url);
-  const hasRealPhoto = !!(userCover || placeCover);
-  const heroPhoto = userCover ?? placeCover ?? getRandomPinPlaceholder(routeId ?? undefined);
+  // Recznie wybrana okladka (zdjecie miejsca) ma pierwszenstwo nad auto-okladka.
+  const planCover = resolveStored((route as any)?.cover_url);
+  const hasRealPhoto = !!(planCover || userCover || placeCover);
+  const heroPhoto = planCover ?? userCover ?? placeCover ?? getRandomPinPlaceholder(routeId ?? undefined);
   const galleryPhotos = [
     ...myPhotos.map((p) => ({ ...p, mine: true, username: t("labels.you") })),
     ...groupPhotos.map((p: any) => ({ url: p.url, owner: "", mine: false, username: p.username })),
@@ -1403,6 +1433,16 @@ const ReviewSummary = () => {
           <div className="relative w-full aspect-[16/10] overflow-hidden bg-gradient-to-br from-orange-400 via-rose-400 to-purple-500">
             <img src={heroShowMap && heroMapCover ? heroMapCover : heroPhoto} alt="" className="absolute inset-0 w-full h-full object-cover" />
             <div className={`absolute inset-0 bg-gradient-to-b from-black/15 via-transparent to-black/55 ${heroShowMap ? "opacity-40" : ""}`} />
+            {/* Zmiana okladki: wybor zdjecia sposrod miejsc trasy (tylko wlasciciel, gdy pokazane zdjecie) */}
+            {!heroShowMap && coverOptions.length > 0 && (
+              <button
+                onClick={() => setCoverPickerOpen(true)}
+                aria-label="Zmień okładkę wyjazdu"
+                className="absolute bottom-3 left-3 z-20 h-10 w-10 rounded-full bg-black/40 backdrop-blur-sm text-white flex items-center justify-center active:scale-90 transition-transform"
+              >
+                <ImageIcon className="h-[18px] w-[18px]" />
+              </button>
+            )}
             {heroMapThumb && (
               // Klik miniaturki -> mapka pojawia sie na okladce (zamiast zdjecia); ponowny klik wraca do zdjecia.
               <button
@@ -1600,6 +1640,44 @@ const ReviewSummary = () => {
         {/* Dodawanie miejsca */}
         {addingPlace && (
           <AddPinSheet open={addingPlace} onOpenChange={(o) => !o && setAddingPlace(false)} onPinAdd={handleAddPin} cityContext={route?.city ?? ""} existingPinNames={currentPins.map((p: any) => p.place_name)} />
+        )}
+
+        {/* Arkusz wyboru okladki wyjazdu (zdjecia miejsc trasy) */}
+        {coverPickerOpen && (
+          <div className="fixed inset-0 z-[95] flex items-end justify-center" onClick={() => setCoverPickerOpen(false)}>
+            <div className="absolute inset-0 bg-black/50 animate-in fade-in duration-200" />
+            <div onClick={(e) => e.stopPropagation()} className="relative w-full max-w-lg bg-card rounded-t-3xl px-5 pt-3 pb-[max(20px,env(safe-area-inset-bottom))] shadow-2xl animate-in slide-in-from-bottom-4 duration-300" style={{ maxHeight: "82dvh" }}>
+              <div className="mx-auto h-1 w-10 rounded-full bg-muted-foreground/25 mb-4" />
+              <button onClick={() => setCoverPickerOpen(false)} aria-label={t("close", { defaultValue: "Zamknij" })} className="absolute right-4 top-4 h-8 w-8 rounded-full bg-muted flex items-center justify-center active:scale-90 transition-transform">
+                <X className="h-4 w-4" />
+              </button>
+              <p className="text-lg font-bold pr-8">Okładka wyjazdu</p>
+              <p className="text-sm text-muted-foreground mt-1 mb-4">Wybierz zdjęcie miejsca na okładkę.</p>
+              <div className="overflow-y-auto -mx-1 px-1" style={{ maxHeight: "62dvh" }}>
+                <div className="grid grid-cols-3 gap-2 pb-1">
+                  {coverOptions.map((opt) => {
+                    const isCurrent = heroPhoto === opt.url;
+                    return (
+                      <button
+                        key={opt.id}
+                        onClick={() => setPlanCover(opt.url)}
+                        className={`relative aspect-square rounded-2xl overflow-hidden bg-muted active:scale-95 transition-transform ${isCurrent ? "ring-2 ring-primary ring-offset-2 ring-offset-card" : ""}`}
+                      >
+                        <img src={opt.url} alt={opt.name} loading="lazy" className="w-full h-full object-cover" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-transparent to-transparent" />
+                        <span className="absolute bottom-1.5 left-1.5 right-1.5 text-[10px] font-semibold text-white leading-tight line-clamp-2 [text-shadow:_0_1px_2px_rgb(0_0_0/60%)]">{opt.name}</span>
+                        {isCurrent && (
+                          <span className="absolute top-1.5 right-1.5 h-5 w-5 rounded-full bg-primary text-white flex items-center justify-center shadow-md">
+                            <Check className="h-3 w-3" strokeWidth={3} />
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
         )}
 
         {/* Arkusz edycji daty wyjazdu (kalendarz) */}
