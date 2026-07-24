@@ -5,12 +5,13 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Camera, X, Globe, Lock, Pencil, Check, Image as ImageIcon, Map as MapIcon, MapPin, ChevronUp, ChevronDown, ChevronRight, ChevronLeft, Trash2, Plus, Share, Share2, List, GalleryHorizontalEnd, Info, MoreVertical, Navigation, Maximize2, Users } from "lucide-react";
+import { ArrowLeft, Camera, X, Globe, Lock, Pencil, Check, Image as ImageIcon, Map as MapIcon, MapPin, ChevronUp, ChevronDown, ChevronRight, ChevronLeft, Trash2, Plus, Share, Share2, List, GalleryHorizontalEnd, Info, MoreVertical, Navigation, Maximize2, Users, Calendar as CalendarIcon } from "lucide-react";
 import RouteMap from "@/components/RouteMap";
 import SwipeToDeleteRow from "@/components/SwipeToDeleteRow";
 import { useShare } from "@/hooks/useShare";
 import { Switch } from "@/components/ui/switch";
 import AddPinSheet from "@/components/route/AddPinSheet";
+import FullCalendarPicker from "@/components/plan-wizard/FullCalendarPicker";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import type { MockPlace } from "@/components/plan-wizard/PlaceSwiper";
 import { QRCodeSVG } from "qrcode.react";
@@ -18,7 +19,7 @@ import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { PlacePhoto, resolveStored } from "@/components/PlacePhoto";
 import { compressImage } from "@/lib/imageCompression";
 import { isHeic, convertHeicToJpeg } from "@/lib/heicConvert";
-import { format, parseISO, isValid } from "date-fns";
+import { format, parseISO, isValid, addDays } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
 import { isNative, API_BASE } from "@/lib/platform";
 import { Camera as CapCamera } from "@capacitor/camera";
@@ -83,6 +84,7 @@ const ReviewSummary = () => {
   const [heroShowMap, setHeroShowMap] = useState(false);
   // Czy plan wyjazdu jest przewiniety (okladka zjechala) -> sticky pasek back+X dostaje tlo.
   const [planScrolled, setPlanScrolled] = useState(false);
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
   // QR do udostepnienia wyjazdu (arkusz z kodem + linkiem).
   const [qrShareOpen, setQrShareOpen] = useState(false);
   const [memoTab, setMemoTab] = useState<"notki" | "galeria">("notki");
@@ -789,6 +791,20 @@ const ReviewSummary = () => {
     notify.success(t("toast.name_saved"));
   };
 
+  // Edycja daty wyjazdu (inline, z kalendarza) - zapisuje start_date/end_date na route.
+  const saveDate = async (start: Date, numDays: number) => {
+    if (!routeId) return;
+    const startStr = format(start, "yyyy-MM-dd");
+    const endStr = format(addDays(start, Math.max(1, numDays) - 1), "yyyy-MM-dd");
+    setDatePickerOpen(false);
+    const { error } = await (supabase as any).from("routes").update({ start_date: startStr, end_date: endStr }).eq("id", routeId);
+    if (error) { notify.error(t("toast.name_save_error")); return; }
+    queryClient.setQueryData(["review-summary-route", routeId], (old: any) => old ? { ...old, start_date: startStr, end_date: endStr } : old);
+    queryClient.invalidateQueries({ queryKey: ["review-trip-days", folderId, routeId] });
+    if (user) queryClient.invalidateQueries({ queryKey: ["journal-entries", user.id] });
+    notify.success("Zapisano datę");
+  };
+
   // Zakres dat: trasa wielodniowa => "12 - 14 maja 2026", jednodniowa => "12 maja 2026".
   const dateLabel = useMemo(() => {
     const first = sortedDays[0]?.start_date;
@@ -1364,7 +1380,7 @@ const ReviewSummary = () => {
         : encodeURIComponent([p.place_name, p.address, route?.city].filter(Boolean).join(" "));
       window.open(`https://www.google.com/maps/dir/?api=1&destination=${dest}`, "_blank", "noopener,noreferrer");
     };
-    const sectionHeadingCls = "font-display text-base font-black text-muted-foreground uppercase tracking-wider";
+    const sectionHeadingCls = "font-display text-xl font-bold text-foreground tracking-tight";
 
     return (
       <div className="relative h-[100dvh] bg-background flex flex-col max-w-lg mx-auto">
@@ -1383,8 +1399,8 @@ const ReviewSummary = () => {
         </div>
 
         <div onScroll={(e) => setPlanScrolled(e.currentTarget.scrollTop > 170)} className="flex-1 min-h-0 overflow-y-auto pb-5">
-          {/* Okladka - w scrollu, przewija sie (NIE sticky) */}
-          <div className="relative w-full aspect-[16/10] overflow-hidden bg-gradient-to-br from-orange-400 via-rose-400 to-purple-500 rounded-b-2xl">
+          {/* Okladka - w scrollu, przewija sie (NIE sticky), bez zaokraglen na dole */}
+          <div className="relative w-full aspect-[16/10] overflow-hidden bg-gradient-to-br from-orange-400 via-rose-400 to-purple-500">
             <img src={heroShowMap && heroMapCover ? heroMapCover : heroPhoto} alt="" className="absolute inset-0 w-full h-full object-cover" />
             <div className={`absolute inset-0 bg-gradient-to-b from-black/15 via-transparent to-black/55 ${heroShowMap ? "opacity-40" : ""}`} />
             {heroMapThumb && (
@@ -1400,20 +1416,9 @@ const ReviewSummary = () => {
           </div>
 
           {/* Tresc planu */}
-          <div className="px-4 pt-4">
-          {/* Avatar + nazwa + data */}
-          <div className="flex items-center gap-3 pt-4 pb-6">
-            <div className="h-9 w-9 rounded-full bg-[#f0ccb9] flex items-center justify-center shrink-0">
-              <MapPin className="h-5 w-5 text-orange-700" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-xl font-bold text-foreground leading-tight truncate">{displayName || cityLabel}</p>
-              {dateLabel && <p className="text-sm text-muted-foreground mt-0.5">{dateLabel}</p>}
-            </div>
-          </div>
-
-          {/* Badge "Plan wyjazdu" + nazwa (edytowalna) + widocznosc */}
-          <div className="flex flex-col gap-2">
+          <div className="px-4 pt-5">
+          {/* Badge "Plan wyjazdu" + nazwa (edytowalna) + data (edytowalna) + widocznosc */}
+          <div className="flex flex-col gap-2.5">
             <span className="self-start bg-muted text-muted-foreground text-[10px] font-medium px-2 py-0.5 rounded-full">Plan wyjazdu</span>
             {editingName ? (
               <div className="flex items-center gap-2">
@@ -1430,11 +1435,17 @@ const ReviewSummary = () => {
                 </button>
               </div>
             ) : (
-              <button onClick={() => { setNameVal(customName); setEditingName(true); }} className="flex items-center gap-1.5 active:opacity-70">
-                <p className="text-xl font-bold text-foreground leading-tight text-left">{displayName || cityLabel}</p>
-                <Pencil className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+              <button onClick={() => { setNameVal(customName); setEditingName(true); }} className="flex items-center gap-2 active:opacity-70">
+                <p className="text-2xl font-black text-foreground leading-tight text-left truncate">{displayName || cityLabel}</p>
+                <span className="h-7 w-7 rounded-full bg-secondary flex items-center justify-center shrink-0"><Pencil className="h-3.5 w-3.5 text-muted-foreground" /></span>
               </button>
             )}
+            {/* Data - klik otwiera kalendarz (edytowalna) */}
+            <button onClick={() => setDatePickerOpen(true)} className="flex items-center gap-1.5 self-start text-muted-foreground active:opacity-70">
+              <CalendarIcon className="h-4 w-4 shrink-0" />
+              <span className="text-sm">{dateLabel || "Dodaj datę"}</span>
+              <Pencil className="h-3 w-3 shrink-0" />
+            </button>
             <button onClick={() => setPrivacyOpen(true)} className="flex items-center justify-between active:opacity-70">
               <span className="flex items-center gap-1.5 min-w-0">
                 {privacyMode === "public" ? <Globe className="h-5 w-5 text-foreground shrink-0" /> : privacyMode === "friends" ? <Users className="h-5 w-5 text-foreground shrink-0" /> : <Lock className="h-5 w-5 text-foreground shrink-0" />}
@@ -1572,8 +1583,8 @@ const ReviewSummary = () => {
         {/* Footer: Nawiguj do nastepnego (nieodwiedzonego) miejsca. Ukryty po ukonczeniu wyjazdu. */}
         {!tripCompleted && nextPlace && (
           <div className="shrink-0 border-t border-border/20 px-4 pt-3 pb-[max(16px,env(safe-area-inset-bottom))] bg-background">
-            <button onClick={() => navigateTo(nextPlace)} className="w-full h-12 rounded-2xl bg-primary text-white font-semibold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform shadow-md shadow-orange-500/20">
-              <span className="truncate">Nawiguj do {nextPlace.place_name}</span>
+            <button onClick={() => navigateTo(nextPlace)} className="w-full h-12 rounded-2xl bg-primary text-white font-medium text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform shadow-md shadow-orange-500/20">
+              <span className="truncate">Nawiguj do <span className="font-bold">{nextPlace.place_name}</span></span>
               <Navigation className="h-4 w-4 shrink-0" />
             </button>
           </div>
@@ -1585,6 +1596,21 @@ const ReviewSummary = () => {
         {/* Dodawanie miejsca */}
         {addingPlace && (
           <AddPinSheet open={addingPlace} onOpenChange={(o) => !o && setAddingPlace(false)} onPinAdd={handleAddPin} cityContext={route?.city ?? ""} existingPinNames={currentPins.map((p: any) => p.place_name)} />
+        )}
+
+        {/* Arkusz edycji daty wyjazdu (kalendarz) */}
+        {datePickerOpen && (
+          <div className="fixed inset-0 z-[95] flex items-end justify-center" onClick={() => setDatePickerOpen(false)}>
+            <div className="absolute inset-0 bg-black/50 animate-in fade-in duration-200" />
+            <div onClick={(e) => e.stopPropagation()} className="relative w-full max-w-lg bg-card rounded-t-3xl px-2 pt-3 pb-[max(12px,env(safe-area-inset-bottom))] shadow-2xl animate-in slide-in-from-bottom-4 duration-300" style={{ maxHeight: "88dvh" }}>
+              <div className="mx-auto h-1 w-10 rounded-full bg-muted-foreground/25 mb-3" />
+              <div className="px-3 pb-1 text-center">
+                <p className="text-lg font-black leading-tight">Kiedy jedziesz?</p>
+                <p className="text-xs text-muted-foreground mt-1">Wybierz daty wyjazdu.</p>
+              </div>
+              <FullCalendarPicker onConfirm={saveDate} />
+            </div>
+          </div>
         )}
 
         {/* Input zdjec (galeria na web; native uzywa CapCamera) */}
