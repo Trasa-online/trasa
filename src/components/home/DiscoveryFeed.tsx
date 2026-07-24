@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import i18n from "@/i18n";
 import { avatarSrc } from "@/lib/avatar";
@@ -27,7 +27,7 @@ import { TrasaLogo } from "@/components/TrasaLogo";
 import { toast } from "sonner";
 import { PLANNING_DISABLED } from "@/lib/appMode";
 import { createWyjazdFromPlaces } from "@/lib/createWyjazd";
-import { requestLocation } from "@/hooks/useGeolocation";
+import { setGpsReference } from "@/lib/distanceReference";
 
 type DiscoveryItem = {
   id: string;
@@ -1501,31 +1501,16 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
   // najblizsze miejsca z bazy (geo + sort po dystansie), "Zapisane" -> zakladka Zapisane.
   // Wyszukiwarka zyje w gornej belce (Explore) i steruje feedem propsem searchOpen.
   const searchFocused = searchOpen;
-  const [nearbyPlaces, setNearbyPlaces] = useState<any[] | null>(null);
   const [nearbyLoading, setNearbyLoading] = useState(false);
+  // "Biezace polozenie": ustaw punkt odniesienia GPS i przejdz na widok Miejsc posortowany
+  // od najblizszego (Explore slucha trasa:explore-nearby -> browse + sort nearest).
   const handleNearby = async () => {
     if (nearbyLoading) return;
     setNearbyLoading(true);
-    const coords = await requestLocation();
-    if (!coords) { setNearbyLoading(false); toast.error("Nie udało się pobrać lokalizacji"); return; }
-    const hav = (a: { lat: number; lng: number }, b: { lat: number; lng: number }) => {
-      const R = 6371, dLat = (b.lat - a.lat) * Math.PI / 180, dLng = (b.lng - a.lng) * Math.PI / 180;
-      const s = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * Math.PI / 180) * Math.cos(b.lat * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
-      return R * 2 * Math.atan2(Math.sqrt(s), Math.sqrt(1 - s));
-    };
-    const { data } = await (supabase as any).from("places")
-      .select("id, place_name, city, category, address, latitude, longitude, rating, photo_url")
-      .eq("is_active", true)
-      .gte("latitude", coords.lat - 0.35).lte("latitude", coords.lat + 0.35)
-      .gte("longitude", coords.lng - 0.5).lte("longitude", coords.lng + 0.5)
-      .limit(100);
-    const sorted = (data ?? [])
-      .filter((p: any) => p.latitude != null && p.longitude != null)
-      .map((p: any) => ({ ...p, _dist: hav({ lat: coords.lat, lng: coords.lng }, { lat: p.latitude, lng: p.longitude }) }))
-      .sort((a: any, b: any) => a._dist - b._dist)
-      .slice(0, 25);
-    setNearbyPlaces(sorted);
+    const ok = await setGpsReference();
     setNearbyLoading(false);
+    if (!ok) { toast.error("Nie udało się pobrać lokalizacji"); return; }
+    window.dispatchEvent(new CustomEvent("trasa:explore-nearby"));
   };
   const [activeCol, setActiveCol] = useState<DiscoveryCollection | null>(null);
   const [activeCreator, setActiveCreator] = useState<PolecaneCreatorPlan | null>(null);
@@ -1562,8 +1547,15 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
   // Input trzyma gorna belka (Explore) - tu przychodzi jako prop (searchQuery).
   const searchInput = searchQuery;
   const debouncedQuery = useDebounce(searchInput.trim(), 300);
-  // Gdy user zaczyna pisac, zamknij ewentualny wynik "Najblizej Ciebie".
-  useEffect(() => { if (searchInput && nearbyPlaces) setNearbyPlaces(null); }, [searchInput]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Reset scrolla feedu na gore gdy otwieramy wyszukiwarke / zmieniamy fraze - inaczej skroty
+  // i wyniki (na gorze fragmentu) zostaja przewiniete poza ekran, gdy user wczesniej scrollowal feed.
+  const topAnchorRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!searchOpen) return;
+    let el = topAnchorRef.current?.parentElement as HTMLElement | null;
+    while (el && !(el.scrollHeight > el.clientHeight + 20 && getComputedStyle(el).overflowY === "auto")) el = el.parentElement;
+    el?.scrollTo({ top: 0, behavior: "auto" });
+  }, [searchOpen, debouncedQuery]);
   // Zapis zestawienia bookmarkiem na karcie feedu Tras - localStorage (jak CollectionDetail/Zapisane).
   const [savedColIds, setSavedColIds] = useState<Set<string>>(() => {
     try { return new Set<string>(JSON.parse(localStorage.getItem("trasa_saved_collections") || "[]")); } catch { return new Set(); }
@@ -1965,40 +1957,12 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
 
   return (
     <>
-      {nearbyPlaces !== null ? (
-        // Najblizej Ciebie - wynik "Biezace polozenie" (geo + sort po dystansie).
-        <div>
-          <div className="flex items-center justify-between mb-3 px-1">
-            <p className="text-sm font-black uppercase tracking-wide">{t("nearby_heading", "Najbliżej Ciebie")}</p>
-            <button onClick={() => setNearbyPlaces(null)} className="text-xs font-bold text-primary active:opacity-70">{t("filter.clear", "Wyczyść")}</button>
-          </div>
-          {nearbyPlaces.length === 0 ? (
-            <p className="text-sm text-muted-foreground px-1 py-6 text-center">{t("nearby_empty", "Brak miejsc w pobliżu.")}</p>
-          ) : (
-            <div className="space-y-2">
-              {nearbyPlaces.map((p: any) => (
-                <button key={p.id} onClick={() => openPlaceDetail(p)} className="w-full flex items-center gap-3 rounded-2xl border border-border/40 bg-secondary p-3 text-left active:scale-[0.98] transition-transform">
-                  <PlaceThumb url={p.photo_url} category={p.category} name={p.place_name} />
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-sm leading-tight truncate">{p.place_name}</p>
-                    <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
-                      {typeof p._dist === "number" && (
-                        <span className="flex items-center gap-0.5 text-orange-600 font-semibold"><Navigation className="h-3 w-3" />{p._dist < 1 ? `${Math.round(p._dist * 1000)} m` : `${p._dist.toFixed(1)} km`}</span>
-                      )}
-                      {typeof p.rating === "number" && p.rating > 0 && (
-                        <span className="flex items-center gap-0.5"><Star className="h-3 w-3 text-yellow-500 fill-yellow-500" />{p.rating.toFixed(1)}</span>
-                      )}
-                    </div>
-                  </div>
-                  <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      ) : (searchFocused && !isSearchActive) ? (
-        // Szybkie skroty po kliknieciu w wyszukiwarke: biezace polozenie + zapisane.
-        <div className="rounded-2xl bg-secondary border border-border/40 overflow-hidden divide-y divide-border/40">
+      {/* Kotwica do resetu scrolla feedu na gore przy otwarciu wyszukiwarki. */}
+      <div ref={topAnchorRef} aria-hidden className="h-0" />
+      {/* Szybkie skroty po kliknieciu w wyszukiwarke (pusta fraza) - NAD feedem; wizytowki
+          zostaja widoczne pod spodem (feed nie znika). */}
+      {searchFocused && !isSearchActive && (
+        <div className="rounded-2xl bg-secondary border border-border/40 overflow-hidden divide-y divide-border/40 mb-4">
           <button onClick={handleNearby} disabled={nearbyLoading} className="w-full flex items-center gap-3 px-3.5 py-3 text-left active:bg-muted/50 transition-colors disabled:opacity-60">
             <div className="h-10 w-10 rounded-xl bg-orange-50 flex items-center justify-center shrink-0">
               {nearbyLoading ? <Loader2 className="h-[18px] w-[18px] text-orange-600 animate-spin" /> : <Navigation className="h-[18px] w-[18px] text-orange-600" />}
@@ -2017,8 +1981,12 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
             <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
           </button>
         </div>
-      ) : isSearchActive ? (
-        searchLoading ? (
+      )}
+
+      {/* Wyniki wyszukiwania (po wpisaniu frazy) - najlepsze dopasowania NAD feedem. */}
+      {isSearchActive && (
+        <div className="mb-6">
+          {searchLoading ? (
           <div className="space-y-5">
             {Array.from({ length: 3 }).map((_, i) => <RouteCardVSkeleton key={i} />)}
           </div>
@@ -2097,8 +2065,12 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
             <p className="text-base font-bold">{t("no_results")}</p>
             <p className="text-sm text-muted-foreground mt-1">{t("no_results_hint")}</p>
           </div>
-        )
-      ) : isLoading ? (
+          )}
+        </div>
+      )}
+
+      {/* Feed Tras - ZAWSZE widoczny pod skrotami/wynikami (nie znika przy wyszukiwaniu). */}
+      {isLoading ? (
         // Skeleton pelnoekranowej karty feedu (1:1 z TrasaBigCard) - immersyjny, nie stary kompaktowy.
         <div className="space-y-4">
           {Array.from({ length: 2 }).map((_, i) => (

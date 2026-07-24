@@ -46,23 +46,9 @@ export default function ExploreTopBar({
 
       <div className="flex-1" />
 
-      {/* Toggle Miejsca | Trasy. Aktywny segment = pomaranczowa orba (gradient) z bialа ikonа,
-          nieaktywny = szara ikona + etykieta. Miejsca = pojedyncze miejsca (swiper), Trasy = feed. */}
+      {/* Toggle Trasy | Miejsca. Aktywny segment = pomaranczowa orba (gradient) z bialа ikonа,
+          nieaktywny = szara ikona + etykieta. Trasy = feed (domyslny widok), Miejsca = swiper. */}
       <div className="shrink-0 flex items-center rounded-full bg-secondary p-0.5">
-        {mode === "browse" ? (
-          <span className="h-8 w-8 flex items-center justify-center rounded-full bg-gradient-to-br from-[#F4A259] to-[#F9662B] text-white shadow-sm" aria-current="true" title="Miejsca">
-            <Layers className="h-4 w-4" />
-          </span>
-        ) : (
-          <button
-            onClick={goBrowse}
-            className="h-8 px-3 flex items-center gap-1.5 rounded-full text-secondary-foreground/70 text-xs font-bold active:scale-95 transition-transform whitespace-nowrap"
-            title="Miejsca"
-          >
-            <Layers className="h-4 w-4" />
-            Miejsca
-          </button>
-        )}
         {mode === "explore" ? (
           <span className="h-8 w-8 flex items-center justify-center rounded-full bg-gradient-to-br from-[#F4A259] to-[#F9662B] text-white shadow-sm" aria-current="true" title="Trasy">
             <Compass className="h-4 w-4" />
@@ -75,6 +61,20 @@ export default function ExploreTopBar({
           >
             <Compass className="h-4 w-4" />
             Trasy
+          </button>
+        )}
+        {mode === "browse" ? (
+          <span className="h-8 w-8 flex items-center justify-center rounded-full bg-gradient-to-br from-[#F4A259] to-[#F9662B] text-white shadow-sm" aria-current="true" title="Miejsca">
+            <Layers className="h-4 w-4" />
+          </span>
+        ) : (
+          <button
+            onClick={goBrowse}
+            className="h-8 px-3 flex items-center gap-1.5 rounded-full text-secondary-foreground/70 text-xs font-bold active:scale-95 transition-transform whitespace-nowrap"
+            title="Miejsca"
+          >
+            <Layers className="h-4 w-4" />
+            Miejsca
           </button>
         )}
       </div>

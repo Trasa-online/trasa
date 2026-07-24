@@ -680,6 +680,14 @@ const Explore = () => {
   const [feedSearch, setFeedSearch] = useState("");
   const openSearch = () => { setView("feed"); setSearchOpen(true); };
   const closeSearch = () => { setSearchOpen(false); setFeedSearch(""); };
+  // "Biezace polozenie" (DiscoveryFeed) -> przejdz na widok Miejsc posortowany od najblizszego.
+  // Nonce rosnie z kazdym klikiem, zeby ExploreSwiper reagowal takze na ponowne klikniecie.
+  const [nearbyNonce, setNearbyNonce] = useState(0);
+  useEffect(() => {
+    const h = () => { setSearchOpen(false); setFeedSearch(""); setView("browse"); setNearbyNonce((n) => n + 1); };
+    window.addEventListener("trasa:explore-nearby", h);
+    return () => window.removeEventListener("trasa:explore-nearby", h);
+  }, []);
   // BottomNav (glassmorficzny) widoczny w OBU widokach - Miejsca (swiper) i Trasy (feed) -
   // dla spojnosci wg redesignu 2026-07-24. Ukrywamy tylko gdy szukamy (pelny ekran wynikow).
   // Karta swipera w exploreMode ma pb chroniace przed BottomNavem (patrz CLAUDE.md PlaceSwiper).
@@ -749,14 +757,16 @@ const Explore = () => {
         <>
           {/* Feed - zawsze zamontowany; ukryty gdy swiper (seamless toggle). */}
           <div className={cn("flex-1 min-h-0 flex flex-col", view !== "feed" && "hidden")}>
-            <PullToRefresh onRefresh={handleRefresh} className="flex-1 min-h-0 flex flex-col pt-3 pb-[calc(6rem+env(safe-area-inset-bottom,0px))] snap-y snap-mandatory scroll-pt-3">
+            {/* Snap tylko w trybie przegladania feedu. Przy wyszukiwaniu WYLACZAMY snap, zeby
+                skroty/wyniki na gorze byly widoczne, a wizytowki zostawaly przewijalne pod spodem. */}
+            <PullToRefresh onRefresh={handleRefresh} className={cn("flex-1 min-h-0 flex flex-col pt-3 pb-[calc(6rem+env(safe-area-inset-bottom,0px))]", !searchOpen && "snap-y snap-mandatory scroll-pt-3")}>
               <div className="flex-1 px-4"><DiscoveryFeed city={exploreCity} active={view === "feed"} searchQuery={feedSearch} searchOpen={searchOpen} /></div>
             </PullToRefresh>
           </div>
           {/* Swiper - montowany po pierwszym przejsciu, potem zostaje (natychmiastowy toggle). */}
           {hasBrowsed && (
             <div className={cn("flex-1 min-h-0 flex flex-col", view !== "browse" && "hidden")}>
-              <ExploreSwiper city={exploreCity} active={view === "browse"} />
+              <ExploreSwiper city={exploreCity} active={view === "browse"} sortNearestNonce={nearbyNonce} />
             </div>
           )}
         </>

@@ -16,7 +16,7 @@ import { cn } from "@/lib/utils";
 // (trasa:explore-open-filters); licznik raportuje z powrotem (trasa:explore-filter-count).
 // `active` = czy ten widok jest aktualnie pokazany (gatuje event listenery/dispatch, bo
 // feed i swiper sa zamontowane rownolegle dla plynnego przelaczania).
-export default function ExploreSwiper({ city, active }: { city: string; active: boolean }) {
+export default function ExploreSwiper({ city, active, sortNearestNonce = 0 }: { city: string; active: boolean; sortNearestNonce?: number }) {
   const { t } = useTranslation("plan");
   const posthog = usePostHog();
   const today = useMemo(() => new Date(), []);
@@ -29,6 +29,11 @@ export default function ExploreSwiper({ city, active }: { city: string; active: 
   const distanceRef = useDistanceReference();
   const hasStartRef = !!distanceRef;
   const activeFilterCount = selectedCategories.length + dietFilters.length + (sortMode !== "default" ? 1 : 0);
+
+  // "Biezace polozenie" (Explore) -> wymus sort od najblizszego. Nonce rosnie z kazdym klikiem.
+  useEffect(() => {
+    if (sortNearestNonce > 0) setSortMode("nearest");
+  }, [sortNearestNonce]);
 
   const initialLiked = useMemo(() => (city ? getTodayLikes(city).map((p) => p.place_name) : []), [city]);
   const toggleCategory = (id: string) =>
