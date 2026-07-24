@@ -1286,7 +1286,7 @@ function TrasaBigCard({
         {tags.length > 0 && (
           <div className="flex flex-wrap gap-1.5 mt-2.5">
             {tags.slice(0, 4).map((tag) => (
-              <span key={tag} className="rounded-full bg-white/20 backdrop-blur-sm px-2.5 py-1 text-[11px] font-semibold text-white capitalize">{tag}</span>
+              <span key={tag} className="rounded-full bg-white/15 backdrop-blur-sm px-2.5 py-1 text-[11px] font-medium text-white/80 capitalize">{tag}</span>
             ))}
           </div>
         )}

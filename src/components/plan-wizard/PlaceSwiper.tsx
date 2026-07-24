@@ -584,7 +584,7 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
         <div className="flex items-center justify-between gap-2 pt-0.5">
           <div className="flex gap-1.5 flex-wrap">
             {displayTags.map((tag) => (
-              <span key={tag} className="text-[11px] text-white/50 bg-white/10 px-2 py-0.5 rounded-full">
+              <span key={tag} className="text-[11px] font-medium text-white/80 bg-white/15 backdrop-blur-sm px-2.5 py-1 rounded-full">
                 {tag}
               </span>
             ))}
@@ -661,24 +661,22 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
       {/* Kolumna akcji po prawej (scrollMode, wg Figmy): zapisz (zakladka) / rozwin (^).
           W obszarze kciuka. scroll = nastepna karta (bez skip/add/cofnij - cofasz scrollem w gore). */}
       {scrollMode && (
+        // Ujednolicone z karta Tras (TrasaBigCard): biale kolka, ikona foreground, fill przy zapisie.
         <div className="absolute right-3 bottom-7 z-20 flex flex-col gap-3">
           <button
             data-ob="swipe-save"
             onClick={(e) => { e.stopPropagation(); onLike(); }}
             aria-label={t("add")}
-            className={cn(
-              "h-12 w-12 rounded-full flex items-center justify-center shadow-lg active:scale-90 transition-transform",
-              saved ? "bg-primary text-white" : "bg-white text-black"
-            )}
+            className="h-12 w-12 rounded-full bg-white flex items-center justify-center shadow-lg active:scale-90 transition-transform"
           >
-            {saved ? <Bookmark className="h-6 w-6 fill-current" strokeWidth={2} /> : <Bookmark className="h-6 w-6" strokeWidth={2} />}
+            <Bookmark className={cn("h-5 w-5 text-foreground", saved && "fill-current")} strokeWidth={2} />
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); onTap(); }}
             aria-label={t("expand_card")}
-            className="h-12 w-12 rounded-full bg-white flex items-center justify-center shadow-md active:scale-90 transition-transform"
+            className="h-12 w-12 rounded-full bg-white flex items-center justify-center shadow-lg active:scale-90 transition-transform"
           >
-            <ChevronUp className="h-5 w-5 text-black" />
+            <ChevronUp className="h-5 w-5 text-foreground" strokeWidth={2.5} />
           </button>
         </div>
       )}
