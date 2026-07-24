@@ -20,7 +20,7 @@ import { createPortal } from "react-dom";
 import { MAIN_CATEGORIES, mainCategoryLabel } from "@/lib/categories";
 import { cn } from "@/lib/utils";
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
-import { Star, Clock, ChevronRight, ChevronLeft, ChevronDown, X, Maximize2, Phone, Globe, FileText, Instagram, Facebook } from "lucide-react";
+import { Star, Clock, ChevronRight, ChevronLeft, ChevronDown, X, Maximize2, Phone, Globe, FileText, Instagram, Facebook, MapPin } from "lucide-react";
 import { parseISO, isValid, formatDistanceToNow, format, startOfMonth, addMonths } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
 import RouteMap from "@/components/RouteMap";
@@ -318,10 +318,11 @@ interface HeroPhotoCarouselProps {
   onExpand: (idx: number) => void;
   onClose?: () => void;
   loading?: boolean;
-  topLeftSlot?: ReactNode; // chipy dystansu + Maps na gorze hero (obok X)
+  topLeftSlot?: ReactNode; // chip dystansu na gorze hero (obok X)
+  bottomLeftSlot?: ReactNode; // pill promo na dole hero (wg Figmy)
 }
 
-function HeroPhotoCarousel({ photos, placeName, onExpand, onClose, loading, topLeftSlot }: HeroPhotoCarouselProps) {
+function HeroPhotoCarousel({ photos, placeName, onExpand, onClose, loading, topLeftSlot, bottomLeftSlot }: HeroPhotoCarouselProps) {
   const { t } = useTranslation("wizytowka");
   const [activeIdx, setActiveIdx] = useState(0);
   const swipeStartX = useRef<number | null>(null);
@@ -355,6 +356,9 @@ function HeroPhotoCarousel({ photos, placeName, onExpand, onClose, loading, topL
       )}
       {topLeftSlot && (
         <div className="absolute top-3 left-3 z-40 flex items-center gap-2">{topLeftSlot}</div>
+      )}
+      {bottomLeftSlot && (
+        <div className="absolute bottom-3 left-3 z-40 max-w-[72%]">{bottomLeftSlot}</div>
       )}
       {hasPhoto ? (
         <>
@@ -883,7 +887,18 @@ function MapSection({ data, startingLocation }: SectionProps & { startingLocatio
   if (!data.latitude || !data.longitude) return null;
   return (
     <div className="space-y-3 pt-2">
-      <h3 className="text-lg font-black tracking-tight">{t("map_title")}</h3>
+      {/* Naglowek "Na mapie" + link "Zobacz w Google Maps" (wg Figmy) */}
+      <div className="flex items-center justify-between gap-2">
+        <h3 className="text-lg font-black tracking-tight">{t("map_title")}</h3>
+        <a
+          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${data.name} ${data.address ?? ""}`)}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1.5 rounded-full bg-secondary text-secondary-foreground px-3 py-1.5 text-xs font-semibold active:scale-95 transition-transform shrink-0"
+        >
+          <MapPin className="h-3.5 w-3.5" /> {t("open_in_google_maps", "Zobacz w Google Maps")}
+        </a>
+      </div>
       <RouteMap
         pins={[{ latitude: data.latitude, longitude: data.longitude, place_name: data.name, address: data.address }]}
         startingLocation={startingLocation}
@@ -1115,30 +1130,41 @@ const PremiumBusinessCard = ({
             onClose={onClose}
             loading={detailLoading}
             topLeftSlot={header}
+            // Promo (aktualnosc biznesu) na DOLE hero wg Figmy - kompaktowy pill. Miejsca bez
+            // biznesu (stan zero) nie maja eventTitle -> brak pilla (zgodnie z ustaleniem).
+            bottomLeftSlot={!hideEventBanner && data.eventTitle ? (
+              <span className="inline-flex items-center px-3 py-1.5 rounded-full bg-gradient-to-r from-[#F4A259] to-[#F9662B] text-white font-bold text-xs shadow-md line-clamp-1">
+                {data.eventTitle}
+              </span>
+            ) : undefined}
           />
-          {/* space-y-6 = duzy odstep MIEDZY sekcjami (prawo bliskosci / common region).
-              Wewnatrz kazdej grupy ciasny spacing - powiazane elementy trzymaja sie razem. */}
+          {/* space-y-6 = duzy odstep MIEDZY sekcjami (prawo bliskosci / common region). */}
           <div className="flex-1 px-4 pt-4 pb-6 space-y-6">
 
-            {/* Tozsamosc lokalu - jedna zwarta grupa */}
+            {/* Tozsamosc lokalu - nazwa -> adres -> wiersz [kategoria · ocena/Opinie] -> godziny */}
             <div className="space-y-2.5">
-              {/* Nazwa = pelna szerokosc, moze sie zawinac (bez truncate) - nazwa jest wazna.
-                  Chipy dystansu + Maps przeniesione na gore hero (obok X), zeby nie skracac nazwy. */}
               <h2 className="text-2xl font-bold leading-tight">{data.name}</h2>
               <SocialLinksRow data={data} />
-              <RatingSection data={data} expandable={!!hideReviews && hasReviews} expanded={reviewsOpen} onToggle={() => setReviewsOpen((o) => !o)} />
-              {hideReviews && reviewsOpen && <ReviewsSection data={data} />}
               <AddressSection data={data} />
-              <CategoriesSection data={data} />
+              {/* Kategoria + ocena w JEDNYM wierszu (wg Figmy) */}
+              <div className="flex items-center gap-x-2.5 gap-y-1.5 flex-wrap">
+                <CategoriesSection data={data} />
+                <RatingSection data={data} expandable={!!hideReviews && hasReviews} expanded={reviewsOpen} onToggle={() => setReviewsOpen((o) => !o)} />
+              </div>
+              {hideReviews && reviewsOpen && <ReviewsSection data={data} />}
+              {!hideHours && <OpeningHoursSection data={data} />}
+              <HoursWarningBadge data={data} />
             </div>
 
-            {/* Opis + promo + tagi - zwarta grupa */}
-            {(data.description || data.eventTitle || (data.tags && data.tags.length > 0)) && (
+            {/* Opis miejsca + tagi (promo przeniesione na hero) */}
+            {(data.description || (data.tags && data.tags.length > 0)) && (
               <div className="space-y-3">
-                <DescriptionSection data={data} />
-                <HoursWarningBadge data={data} />
-                {!hideEventBanner && <EventBannerSection data={data} />}
-                {!hideEventBanner && <EventsSection data={data} referenceDate={referenceDate} routeAvatars={routeAvatars} />}
+                {data.description && (
+                  <div className="space-y-2">
+                    <h3 className="text-lg font-black tracking-tight">{t("description_title", "Opis miejsca")}</h3>
+                    <DescriptionSection data={data} />
+                  </div>
+                )}
                 <TagsSection data={data} />
               </div>
             )}
@@ -1147,8 +1173,8 @@ const PremiumBusinessCard = ({
             {!hidePosts && <PostsSection data={data} onPhotoExpand={handleExpand} />}
             {!hideMenu && <MenuSection data={data} onPhotoExpand={handleExpand} />}
             <MapSection data={data} startingLocation={startingLocation} />
-            {/* Godziny otwarcia POD mapa (przeniesione z grupy tozsamosci nad opisem). */}
-            {!hideHours && <OpeningHoursSection data={data} />}
+            {/* Wydarzenia POD mapa (wg Figmy: "Nadchodzace Wydarzenia"). Stan zero = brak eventow. */}
+            {!hideEventBanner && <EventsSection data={data} referenceDate={referenceDate} routeAvatars={routeAvatars} />}
             {!hideReviews && <ReviewsSection data={data} />}
             {footer}
           </div>

@@ -34,7 +34,8 @@
     "sat": "Saturday",
     "sun": "Sunday"
   },
-  "events_title": "Events",
+  "events_title": "Upcoming events",
+  "description_title": "About the place",
   "events_added_to_route_one": "{{count}} traveler has this planned",
   "events_added_to_route_other": "{{count}} travelers have this planned",
   "events_prev_month": "Previous month",

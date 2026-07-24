@@ -210,28 +210,14 @@ const PlaceSwiperDetail = ({
     ? formatDistance(haversineKm(distanceRef.coords, { lat: placeLat, lng: placeLng }))
     : null;
 
-  const headerSlot = (
-    <div className="flex items-center gap-2">
-      {distanceLabel && (
-        <span className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-black/40 backdrop-blur-sm text-white text-xs font-semibold">
-          <Navigation className="h-3.5 w-3.5" />
-          {distanceLabel} {t("distance_from")}&nbsp;{distanceRef!.label}
-        </span>
-      )}
-      <button
-        type="button"
-        onClick={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          window.open(mapsUrl, "_blank", "noopener,noreferrer");
-        }}
-        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/40 backdrop-blur-sm text-white text-xs font-semibold active:scale-95 transition-transform"
-      >
-        <MapPin className="h-3.5 w-3.5" />
-        Maps
-      </button>
-    </div>
-  );
+  // Tylko chip dystansu na gorze hero (wg Figmy). "Maps" przeniesiony do sekcji "Na mapie".
+  void mapsUrl;
+  const headerSlot = distanceLabel ? (
+    <span className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-black/40 backdrop-blur-sm text-white text-xs font-semibold">
+      <Navigation className="h-3.5 w-3.5" />
+      {distanceLabel} {t("distance_from")}&nbsp;{distanceRef!.label}
+    </span>
+  ) : undefined;
 
   if (!place || !ep) return null;
 
