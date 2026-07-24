@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { ChevronLeft, Layers, Compass, SlidersHorizontal } from "lucide-react";
+import { ChevronLeft, Layers, Compass, SlidersHorizontal, Search } from "lucide-react";
 import CitySelect from "@/components/home/CitySelect";
 
 // Wspoldzielona zawartosc gornej belki dla Eksploracji (feed) i Przegladania (swiper):
@@ -15,6 +15,7 @@ export default function ExploreTopBar({
   city,
   onCityChange,
   onOpenFilters,
+  onOpenSearch,
   activeFilterCount = 0,
   onModeChange,
   onBack,
@@ -23,6 +24,8 @@ export default function ExploreTopBar({
   city: string;
   onCityChange: (city: string) => void;
   onOpenFilters: () => void;
+  // Klik lupy -> rodzic rozwija pelnoszerokosciowa wyszukiwarke w belce.
+  onOpenSearch: () => void;
   activeFilterCount?: number;
   // Toggle feed<->swiper. Gdy podane -> lokalna zmiana (seamless, bez nawigacji).
   // Gdy brak -> fallback do nawigacji miedzy /eksploruj a /plan (legacy).
@@ -96,6 +99,15 @@ export default function ExploreTopBar({
         {activeFilterCount > 0 && (
           <span className="absolute -top-1 -right-1 h-4 min-w-4 px-1 rounded-full bg-primary text-white text-[10px] font-bold flex items-center justify-center">{activeFilterCount}</span>
         )}
+      </button>
+
+      {/* Szukaj - rozwija pelnoszerokosciowa wyszukiwarke w belce (rodzic zarzadza stanem) */}
+      <button
+        onClick={onOpenSearch}
+        className="shrink-0 h-8 w-8 flex items-center justify-center rounded-xl bg-muted active:scale-95 transition-transform"
+        aria-label="Szukaj"
+      >
+        <Search className="h-4 w-4 text-foreground" />
       </button>
     </>
   );

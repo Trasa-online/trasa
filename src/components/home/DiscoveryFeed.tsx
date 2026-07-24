@@ -1396,13 +1396,14 @@ export function SavedCollections() {
   );
 }
 
-export default function DiscoveryFeed({ city = "Warszawa", active = true }: { city?: string; active?: boolean } = {}) {
+export default function DiscoveryFeed({ city = "Warszawa", active = true, searchQuery = "", searchOpen = false }: { city?: string; active?: boolean; searchQuery?: string; searchOpen?: boolean } = {}) {
   const { t } = useTranslation("homefeed");
   // Liczba zapisanych miejsc (do wiersza "Zapisane miejsca" pod wyszukiwarka).
   const savedCount = useMemo(() => getHistoryByCity().reduce((n, g) => n + g.places.length, 0), []);
-  // Szybkie skroty widoczne po kliknieciu w wyszukiwarke (fokus). "Biezace polozenie" ->
+  // Szybkie skroty widoczne po otwarciu wyszukiwarki (pusta). "Biezace polozenie" ->
   // najblizsze miejsca z bazy (geo + sort po dystansie), "Zapisane" -> zakladka Zapisane.
-  const [searchFocused, setSearchFocused] = useState(false);
+  // Wyszukiwarka zyje w gornej belce (Explore) i steruje feedem propsem searchOpen.
+  const searchFocused = searchOpen;
   const [nearbyPlaces, setNearbyPlaces] = useState<any[] | null>(null);
   const [nearbyLoading, setNearbyLoading] = useState(false);
   const handleNearby = async () => {
@@ -1461,8 +1462,11 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true }: { ci
   const navigate = useNavigate();
 
   // Wyszukiwarka + filtry (miasto / motyw zestawienia / kategoria miejsc w trasach).
-  const [searchInput, setSearchInput] = useState("");
+  // Input trzyma gorna belka (Explore) - tu przychodzi jako prop (searchQuery).
+  const searchInput = searchQuery;
   const debouncedQuery = useDebounce(searchInput.trim(), 300);
+  // Gdy user zaczyna pisac, zamknij ewentualny wynik "Najblizej Ciebie".
+  useEffect(() => { if (searchInput && nearbyPlaces) setNearbyPlaces(null); }, [searchInput]); // eslint-disable-line react-hooks/exhaustive-deps
   // Filtry wielokrotnego wyboru (mozna zaznaczyc kilka miast / motywow / kategorii).
   const [cityFilter, setCityFilter] = useState<string[]>([]);
   const [themeFilter, setThemeFilter] = useState<string[]>([]);
@@ -1840,24 +1844,6 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true }: { ci
 
   return (
     <>
-      {/* Pasek wyszukiwania (pelna szerokosc - filtry przeniesione do gornej belki) */}
-      <div className="mb-3.5">
-        <div className="flex items-center gap-2.5 px-4 h-12 rounded-2xl bg-muted/60 border border-border/50 min-w-0 focus-within:border-orange-400/60 focus-within:bg-background transition-colors">
-          <Search className="h-[18px] w-[18px] text-muted-foreground shrink-0" />
-          <input
-            value={searchInput}
-            onChange={(e) => { setSearchInput(e.target.value); if (e.target.value && nearbyPlaces) setNearbyPlaces(null); }}
-            onFocus={() => { setSearchFocused(true); window.dispatchEvent(new CustomEvent("trasa:hide-bottomnav", { detail: true })); }}
-            onBlur={() => { setTimeout(() => setSearchFocused(false), 150); window.dispatchEvent(new CustomEvent("trasa:hide-bottomnav", { detail: false })); }}
-            placeholder={t("search_placeholder")}
-            className="flex-1 min-w-0 bg-transparent text-[15px] outline-none placeholder:text-muted-foreground/70"
-          />
-          {searchInput && (
-            <button onClick={() => setSearchInput("")} aria-label={t("aria.clear")} className="shrink-0 h-6 w-6 flex items-center justify-center rounded-full text-muted-foreground active:bg-muted"><X className="h-4 w-4" /></button>
-          )}
-        </div>
-      </div>
-
       {nearbyPlaces !== null ? (
         // Najblizej Ciebie - wynik "Biezace polozenie" (geo + sort po dystansie).
         <div>

@@ -673,10 +673,17 @@ const Explore = () => {
   // Swiper montujemy po pierwszym przejsciu i zostaje (kolejne przelaczenia natychmiastowe).
   const [hasBrowsed, setHasBrowsed] = useState(view === "browse");
   useEffect(() => { if (view === "browse") setHasBrowsed(true); }, [view]);
-  // Ukryj fixed BottomNav w widoku przegladania (swiper = pelny ekran); pokaz w feedzie.
+  // Wyszukiwarka w gornej belce: domyslnie zwinieta (lupa). Klik lupy -> pelna szerokosc.
+  // Klik "x" -> powrot do domyslnej belki + wyczyszczenie zapytania. Stan trzymamy tu
+  // (o poziom wyzej niz DiscoveryFeed), bo input renderuje sie w belce a wyniki w feedzie.
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [feedSearch, setFeedSearch] = useState("");
+  const openSearch = () => { setView("feed"); setSearchOpen(true); };
+  const closeSearch = () => { setSearchOpen(false); setFeedSearch(""); };
+  // Ukryj fixed BottomNav w widoku przegladania (swiper) ORAZ gdy szukamy (pelny ekran wynikow).
   useEffect(() => {
-    window.dispatchEvent(new CustomEvent("trasa:hide-bottomnav", { detail: view === "browse" }));
-  }, [view]);
+    window.dispatchEvent(new CustomEvent("trasa:hide-bottomnav", { detail: view === "browse" || searchOpen }));
+  }, [view, searchOpen]);
   // Przy wyjsciu z Eksploracji zawsze przywroc BottomNav.
   useEffect(() => () => { window.dispatchEvent(new CustomEvent("trasa:hide-bottomnav", { detail: false })); }, []);
 
@@ -688,7 +695,26 @@ const Explore = () => {
     <div className="flex-1 flex flex-col min-h-0">
       {/* Wspoldzielona belka (TabTopBar) - identyczna wysokosc 1:1 z Wyjazdy/Zapisane. */}
       <TabTopBar>
-        {myCollections ? (
+        {searchOpen && !myCollections ? (
+          // Rozwinieta wyszukiwarka na CALA SZEROKOSC belki (lupa + input + "x").
+          <div className="flex-1 flex items-center gap-2.5 px-4 h-10 rounded-full bg-muted/70 border border-border/50 min-w-0 focus-within:border-orange-400/60 focus-within:bg-background transition-colors">
+            <Search className="h-[18px] w-[18px] text-muted-foreground shrink-0" />
+            <input
+              autoFocus
+              value={feedSearch}
+              onChange={(e) => setFeedSearch(e.target.value)}
+              placeholder="Szukaj tras, miejsc…"
+              className="flex-1 min-w-0 bg-transparent text-[15px] outline-none placeholder:text-muted-foreground/70"
+            />
+            <button
+              onClick={closeSearch}
+              aria-label="Zamknij wyszukiwanie"
+              className="shrink-0 h-6 w-6 flex items-center justify-center rounded-full text-muted-foreground active:bg-muted active:scale-90 transition"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        ) : myCollections ? (
           <>
             <button
               onClick={() => { if (window.history.state?.idx > 0) navigate(-1); else navigate("/moj-profil"); }}
@@ -707,6 +733,7 @@ const Explore = () => {
             onModeChange={(m) => setView(m === "browse" ? "browse" : "feed")}
             onBack={() => setView("feed")}
             onOpenFilters={() => window.dispatchEvent(new CustomEvent("trasa:explore-open-filters"))}
+            onOpenSearch={openSearch}
             activeFilterCount={filterCount}
           />
         )}
@@ -721,7 +748,7 @@ const Explore = () => {
           {/* Feed - zawsze zamontowany; ukryty gdy swiper (seamless toggle). */}
           <div className={cn("flex-1 min-h-0 flex flex-col", view !== "feed" && "hidden")}>
             <PullToRefresh onRefresh={handleRefresh} className="flex-1 min-h-0 flex flex-col pt-3 pb-[calc(5rem+env(safe-area-inset-bottom,0px))]">
-              <div className="flex-1 px-4"><DiscoveryFeed city={exploreCity} active={view === "feed"} /></div>
+              <div className="flex-1 px-4"><DiscoveryFeed city={exploreCity} active={view === "feed"} searchQuery={feedSearch} searchOpen={searchOpen} /></div>
             </PullToRefresh>
           </div>
           {/* Swiper - montowany po pierwszym przejsciu, potem zostaje (natychmiastowy toggle). */}
