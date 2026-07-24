@@ -17,10 +17,11 @@
 import { type ReactNode, useRef, useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { createPortal } from "react-dom";
-import { MAIN_CATEGORIES, mainCategoryLabel } from "@/lib/categories";
+import { MAIN_CATEGORIES, mainCategoryLabel, subcategoryLabelLocalized } from "@/lib/categories";
 import { cn } from "@/lib/utils";
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
-import { Star, Clock, ChevronRight, ChevronLeft, ChevronDown, X, Maximize2, Phone, Globe, FileText, Instagram, Facebook, MapPin } from "lucide-react";
+import { API_BASE } from "@/lib/platform";
+import { Star, Clock, ChevronRight, ChevronLeft, ChevronDown, X, Maximize2, Phone, Globe, FileText, Instagram, Facebook, MapPin, Bookmark } from "lucide-react";
 import { parseISO, isValid, formatDistanceToNow, format, startOfMonth, addMonths } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
 import RouteMap from "@/components/RouteMap";
@@ -320,9 +321,11 @@ interface HeroPhotoCarouselProps {
   loading?: boolean;
   topLeftSlot?: ReactNode; // chip dystansu na gorze hero (obok X)
   bottomLeftSlot?: ReactNode; // pill promo na dole hero (wg Figmy)
+  onSave?: () => void; // zapis miejsca (zakladka na hero zamiast ikony powiekszenia)
+  saved?: boolean;
 }
 
-function HeroPhotoCarousel({ photos, placeName, onExpand, onClose, loading, topLeftSlot, bottomLeftSlot }: HeroPhotoCarouselProps) {
+function HeroPhotoCarousel({ photos, placeName, onExpand, onClose, loading, topLeftSlot, bottomLeftSlot, onSave, saved }: HeroPhotoCarouselProps) {
   const { t } = useTranslation("wizytowka");
   const [activeIdx, setActiveIdx] = useState(0);
   const swipeStartX = useRef<number | null>(null);
@@ -381,37 +384,35 @@ function HeroPhotoCarousel({ photos, placeName, onExpand, onClose, loading, topL
               }}
             />
           </button>
-          <button
-            onClick={() => onExpand(activeIdx)}
-            className="absolute bottom-3 right-3 z-30 h-8 w-8 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center active:bg-black/60"
-            aria-label={t("fullscreen")}
-          >
-            <Maximize2 className="h-3.5 w-3.5 text-white" />
-          </button>
+          {/* Zapis miejsca (zakladka) zamiast ikony powiekszenia - powiekszenie po tapie w zdjecie. */}
+          {onSave && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onSave(); }}
+              className="absolute bottom-3 right-3 z-30 h-9 w-9 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center active:scale-90 transition-transform"
+              aria-label={t("add")}
+            >
+              <Bookmark className={cn("h-[18px] w-[18px] text-white", saved && "fill-white")} strokeWidth={2} />
+            </button>
+          )}
           {photos.length > 1 && (
             <>
-              {/* Tap-zona: CALA lewa polowa zdjecia = poprzednie (duzy obszar kliknicia). */}
+              {/* Chevron nawigacji - MALE guziki (nie cala polowa), zeby tap w zdjecie = powiekszenie. */}
               {activeIdx > 0 && (
                 <button
                   onClick={(e) => { e.stopPropagation(); setActiveIdx(Math.max(0, activeIdx - 1)); }}
-                  className="absolute left-0 top-0 bottom-0 w-1/2 z-20 flex items-center justify-start pl-3"
+                  className="absolute left-2 top-1/2 -translate-y-1/2 z-20 h-9 w-9 rounded-full bg-white/85 backdrop-blur-sm flex items-center justify-center shadow active:scale-90"
                   aria-label={t("prev")}
                 >
-                  <span className="h-9 w-9 rounded-full bg-white/85 backdrop-blur-sm flex items-center justify-center shadow active:scale-90">
-                    <ChevronLeft className="h-5 w-5 text-foreground" />
-                  </span>
+                  <ChevronLeft className="h-5 w-5 text-foreground" />
                 </button>
               )}
-              {/* Tap-zona: CALA prawa polowa zdjecia = nastepne. */}
               {activeIdx < photos.length - 1 && (
                 <button
                   onClick={(e) => { e.stopPropagation(); setActiveIdx(Math.min(photos.length - 1, activeIdx + 1)); }}
-                  className="absolute right-0 top-0 bottom-0 w-1/2 z-20 flex items-center justify-end pr-3"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 z-20 h-9 w-9 rounded-full bg-white/85 backdrop-blur-sm flex items-center justify-center shadow active:scale-90"
                   aria-label={t("next")}
                 >
-                  <span className="h-9 w-9 rounded-full bg-white/85 backdrop-blur-sm flex items-center justify-center shadow active:scale-90">
-                    <ChevronRight className="h-5 w-5 text-foreground" />
-                  </span>
+                  <ChevronRight className="h-5 w-5 text-foreground" />
                 </button>
               )}
             </>
@@ -450,9 +451,18 @@ function CategoriesSection({ data }: SectionProps) {
     ? mainCategoryLabel(data.secondaryCategoryId)
     : null;
   const subs = dedupSubcategories(data.subcategories);
-  if (!mainLabel && !secondaryLabel && subs.length === 0) return null;
+  // Fallback dla miejsc bez profilu biznesowego: kategoria z places.category (np. 'restaurant' -> 'Restauracja').
+  const placeLabel = !mainLabel && !secondaryLabel && subs.length === 0 && data.placeCategory
+    ? subcategoryLabelLocalized(data.placeCategory)
+    : null;
+  if (!mainLabel && !secondaryLabel && subs.length === 0 && !placeLabel) return null;
   return (
     <div className="flex flex-wrap gap-1.5">
+      {placeLabel && (
+        <span className="px-3 py-1 rounded-full text-xs font-semibold bg-orange-50 border border-orange-100 text-orange-700">
+          {placeLabel}
+        </span>
+      )}
       {mainLabel && (
         <span className="px-3 py-1 rounded-full text-xs font-semibold bg-orange-50 border border-orange-100 text-orange-700">
           {mainLabel}
@@ -583,7 +593,7 @@ function EventsSection({ data, referenceDate, routeAvatars }: SectionProps & { r
 
   return (
     <div className="space-y-3 pt-2">
-      <h3 className="text-lg font-black tracking-tight">{t("events_title")}</h3>
+      <h3 className="text-lg font-semibold tracking-tight">{t("events_title")}</h3>
 
       {/* Nawigator miesiaca (‹ LIPIEC 2026 ›) wysrodkowany + pill "pokaz wszystkie" w prawej
           strefie (flex, bez absolute) - zeby nie wchodzil na nazwe miesiaca. */}
@@ -738,24 +748,27 @@ function OpeningHoursSection({ data }: SectionProps) {
     todayLine = today ? `${today.label.toLowerCase()}: ${today.value}` : "";
   }
 
+  // Godziny jako expandable toggle - taki sam komponent jak "Opinie" (RatingSection expandable):
+  // status + chip [Godziny ⌄], po rozwinieciu lista dni w karcie bg-secondary.
+  void todayLine;
   return (
-    <div className="rounded-2xl bg-secondary overflow-hidden">
+    <div>
       <button
         type="button"
         onClick={(e) => { e.preventDefault(); e.stopPropagation(); setExpanded((v) => !v); }}
-        className="w-full flex items-center justify-between px-4 py-3 gap-3 active:bg-muted/50"
+        className="flex items-center gap-1.5 active:opacity-70 transition-opacity"
+        aria-expanded={expanded}
       >
-        <div className="flex items-center gap-2 min-w-0">
-          <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
-          <span className={cn("text-xs font-semibold px-2 py-0.5 rounded-full shrink-0", openNow ? "bg-green-500/10 text-green-600" : "bg-red-500/10 text-red-500")}>
-            {openNow ? t("open_now") : t("closed")}
-          </span>
-          {todayLine && <span className="text-xs text-muted-foreground truncate">· {todayLine}</span>}
-        </div>
-        <ChevronRight className={cn("h-4 w-4 text-muted-foreground shrink-0 transition-transform", expanded && "rotate-90")} />
+        <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
+        <span className={cn("text-xs font-semibold px-2 py-0.5 rounded-full shrink-0", openNow ? "bg-green-500/10 text-green-600" : "bg-red-500/10 text-red-500")}>
+          {openNow ? t("open_now") : t("closed")}
+        </span>
+        <span className="flex items-center gap-0.5 text-xs font-semibold bg-secondary text-secondary-foreground px-2.5 py-1 rounded-full ml-0.5">
+          {t("hours_toggle", "Godziny")}<ChevronDown className={cn("h-3.5 w-3.5 transition-transform", expanded && "rotate-180")} />
+        </span>
       </button>
       {expanded && (
-        <div className="px-4 pb-3 pt-1 space-y-1 border-t border-border/30">
+        <div className="mt-2.5 rounded-2xl bg-secondary px-4 py-3 space-y-1">
           {allLines.map((line, i) => (
             <div key={i} className={cn("flex justify-between py-1 text-xs", line.isToday && "font-semibold text-foreground")}>
               <span className={line.isToday ? "text-foreground" : "text-muted-foreground"}>
@@ -778,7 +791,7 @@ function PostsSection({ data, onPhotoExpand }: SectionProps & { onPhotoExpand: (
   if (posts.length === 0) return null;
   return (
     <div className="space-y-3 pt-2">
-      <h3 className="text-lg font-black tracking-tight">{t("news_title")}</h3>
+      <h3 className="text-lg font-semibold tracking-tight">{t("news_title")}</h3>
       <div className="space-y-3">
         {posts.map((post) => {
           const date = parseISO(post.created_at);
@@ -853,7 +866,7 @@ function MenuSection({ data, onPhotoExpand }: SectionProps & { onPhotoExpand: (p
   const imageOnly = menuImages.filter((u) => !isPdfUrl(u));
   return (
     <div className="space-y-3 pt-2">
-      <h3 className="text-lg font-black tracking-tight">{sectionLabel}</h3>
+      <h3 className="text-lg font-semibold tracking-tight">{sectionLabel}</h3>
       <div className="flex gap-2 overflow-x-auto scrollbar-none snap-x snap-mandatory -mx-4 px-4 pb-1">
         {menuImages.map((url, idx) => {
           if (isPdfUrl(url)) {
@@ -884,12 +897,15 @@ function MenuSection({ data, onPhotoExpand }: SectionProps & { onPhotoExpand: (p
 
 function MapSection({ data, startingLocation }: SectionProps & { startingLocation?: { name: string; latitude: number; longitude: number } }) {
   const { t } = useTranslation("wizytowka");
+  const [fullscreen, setFullscreen] = useState(false);
   if (!data.latitude || !data.longitude) return null;
+  // Statyczny punkt (proxy /api/static-map) - pomaranczowy marker, POI/transit ukryte.
+  const staticUrl = `${API_BASE}/api/static-map?size=600x340&scale=2&maptype=roadmap&zoom=15&markers=color:0xf9662b%7C${data.latitude},${data.longitude}&style=feature:poi%7Cvisibility:off&style=feature:transit%7Cvisibility:off`;
   return (
     <div className="space-y-3 pt-2">
       {/* Naglowek "Na mapie" + link "Zobacz w Google Maps" (wg Figmy) */}
       <div className="flex items-center justify-between gap-2">
-        <h3 className="text-lg font-black tracking-tight">{t("map_title")}</h3>
+        <h3 className="text-lg font-semibold tracking-tight">{t("map_title")}</h3>
         <a
           href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${data.name} ${data.address ?? ""}`)}`}
           target="_blank"
@@ -899,12 +915,39 @@ function MapSection({ data, startingLocation }: SectionProps & { startingLocatio
           <MapPin className="h-3.5 w-3.5" /> {t("open_in_google_maps", "Zobacz w Google Maps")}
         </a>
       </div>
-      <RouteMap
-        pins={[{ latitude: data.latitude, longitude: data.longitude, place_name: data.name, address: data.address }]}
-        startingLocation={startingLocation}
-        singlePlace
-        className="h-44 rounded-2xl border-2 border-primary/25"
-      />
+      {/* Statyczny punkt + ikona otwarcia mapy na pelen ekran (interaktywna mapa w overlayu). */}
+      <button
+        type="button"
+        onClick={() => setFullscreen(true)}
+        className="relative block w-full h-44 rounded-2xl overflow-hidden border-2 border-primary/25 bg-muted active:opacity-95 transition-opacity"
+        aria-label={t("fullscreen")}
+      >
+        <img src={staticUrl} alt="" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.opacity = "0"; }} />
+        <span className="absolute bottom-3 right-3 h-10 w-10 rounded-full bg-card shadow-md flex items-center justify-center">
+          <Maximize2 className="h-[18px] w-[18px] text-foreground" strokeWidth={2.2} />
+        </span>
+      </button>
+      {fullscreen && createPortal(
+        <div className="fixed inset-0 z-[120] bg-background flex flex-col animate-in fade-in duration-200">
+          <div className="relative flex-1 min-h-0">
+            <RouteMap
+              pins={[{ latitude: data.latitude, longitude: data.longitude, place_name: data.name, address: data.address }]}
+              startingLocation={startingLocation}
+              singlePlace
+              className="w-full h-full"
+            />
+            <button
+              onClick={() => setFullscreen(false)}
+              aria-label={t("close")}
+              className="absolute right-3 z-10 h-10 w-10 rounded-full bg-card shadow-md flex items-center justify-center active:scale-90 transition-transform"
+              style={{ top: "max(0.75rem, env(safe-area-inset-top))" }}
+            >
+              <X className="h-5 w-5 text-foreground" />
+            </button>
+          </div>
+        </div>,
+        document.body,
+      )}
     </div>
   );
 }
@@ -917,7 +960,7 @@ function ReviewsSection({ data }: SectionProps) {
     <div className="pt-2">
       {/* Google attribution wymagane przez ToS gdy pokazujemy Google reviews. */}
       <div className="flex items-baseline justify-between mb-3 gap-2">
-        <h3 className="text-lg font-black tracking-tight">{t("reviews_title")}</h3>
+        <h3 className="text-lg font-semibold tracking-tight">{t("reviews_title")}</h3>
         <span className="text-[11px] text-muted-foreground shrink-0">powered by Google</span>
       </div>
       <div className="space-y-4">
@@ -1069,6 +1112,9 @@ export interface PremiumBusinessCardProps {
   startingLocation?: { name: string; latitude: number; longitude: number };
   // Data wyjazdu (YYYY-MM-DD) - agenda wydarzen (EventsSection) pokazuje najblizsze TEJ dacie. Domyslnie dzis.
   referenceDate?: string;
+  // mode='detail' - zapis miejsca (zakladka na hero). Gdy brak -> zakladka ukryta.
+  onSave?: () => void;
+  saved?: boolean;
 }
 
 const PremiumBusinessCard = ({
@@ -1089,6 +1135,8 @@ const PremiumBusinessCard = ({
   swipeCoverImage,
   startingLocation,
   referenceDate,
+  onSave,
+  saved,
 }: PremiumBusinessCardProps) => {
   const { t } = useTranslation("wizytowka");
   const [fullscreen, setFullscreen] = useState<{ photos: string[]; idx: number } | null>(null);
@@ -1129,6 +1177,8 @@ const PremiumBusinessCard = ({
             onExpand={(idx) => handleExpand(detailPhotos, idx)}
             onClose={onClose}
             loading={detailLoading}
+            onSave={onSave}
+            saved={saved}
             topLeftSlot={header}
             // Promo (aktualnosc biznesu) na DOLE hero wg Figmy - kompaktowy pill. Miejsca bez
             // biznesu (stan zero) nie maja eventTitle -> brak pilla (zgodnie z ustaleniem).
@@ -1141,18 +1191,19 @@ const PremiumBusinessCard = ({
           {/* space-y-6 = duzy odstep MIEDZY sekcjami (prawo bliskosci / common region). */}
           <div className="flex-1 px-4 pt-4 pb-6 space-y-6">
 
-            {/* Tozsamosc lokalu - nazwa -> adres -> wiersz [kategoria · ocena/Opinie] -> godziny */}
+            {/* Tozsamosc lokalu - nazwa -> adres -> kategoria (pod adresem) -> wiersz [Opinie · Godziny] */}
             <div className="space-y-2.5">
               <h2 className="text-2xl font-bold leading-tight">{data.name}</h2>
               <SocialLinksRow data={data} />
               <AddressSection data={data} />
-              {/* Kategoria + ocena w JEDNYM wierszu (wg Figmy) */}
+              {/* Kategoria POD adresem (wlasny wiersz) */}
+              <CategoriesSection data={data} />
+              {/* Ocena/Opinie + Godziny - te same expandable toggle chipy w jednym wierszu */}
               <div className="flex items-center gap-x-2.5 gap-y-1.5 flex-wrap">
-                <CategoriesSection data={data} />
                 <RatingSection data={data} expandable={!!hideReviews && hasReviews} expanded={reviewsOpen} onToggle={() => setReviewsOpen((o) => !o)} />
+                {!hideHours && <OpeningHoursSection data={data} />}
               </div>
               {hideReviews && reviewsOpen && <ReviewsSection data={data} />}
-              {!hideHours && <OpeningHoursSection data={data} />}
               <HoursWarningBadge data={data} />
             </div>
 
@@ -1161,7 +1212,7 @@ const PremiumBusinessCard = ({
               <div className="space-y-3">
                 {data.description && (
                   <div className="space-y-2">
-                    <h3 className="text-lg font-black tracking-tight">{t("description_title", "Opis miejsca")}</h3>
+                    <h3 className="text-lg font-semibold tracking-tight">{t("description_title", "Opis miejsca")}</h3>
                     <DescriptionSection data={data} />
                   </div>
                 )}

@@ -39,6 +39,7 @@ export function fromMockPlace(
     mainCategoryId: place.businessMainCategory,
     secondaryCategoryId: place.businessSecondaryCategory,
     subcategories: place.businessSubcategories ?? [],
+    placeCategory: place.category ?? undefined,
     tags: place.businessTags?.length ? place.businessTags : (place.vibe_tags ?? []),
 
     logoUrl: place.businessLogoUrl,

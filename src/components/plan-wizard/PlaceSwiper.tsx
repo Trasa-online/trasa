@@ -2229,6 +2229,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
         onOpenChange={setDetailOpen}
         place={detailPlace}
         referenceDate={date.toISOString().slice(0, 10)}
+        saved={detailPlace ? savedIds.has(detailPlace.id) : false}
         onLike={() => {
           // scrollMode (Eksploracja): "+"/Dodaj na wizytowce zapisuje BEZ zdejmowania z
           // kolejki (jak "+" na karcie). Klasyczny swipe: handleLike (dequeue).

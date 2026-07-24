@@ -46,6 +46,8 @@ interface PlaceSwiperDetailProps {
   city?: string;
   onLike?: (() => void) | undefined;
   onSkip?: (() => void) | undefined;
+  /** Czy miejsce jest juz zapisane - stan zakladki na hero. */
+  saved?: boolean;
   skipGoogleFetch?: boolean;
   /** Data wyjazdu (YYYY-MM-DD) - agenda wydarzen pokazuje najblizsze TEJ dacie. Domyslnie dzis. */
   referenceDate?: string;
@@ -62,6 +64,7 @@ const PlaceSwiperDetail = ({
   city,
   onLike,
   onSkip,
+  saved,
   skipGoogleFetch = false,
   referenceDate,
 }: PlaceSwiperDetailProps) => {
@@ -185,6 +188,8 @@ const PlaceSwiperDetail = ({
 
   const handleLike = () => { onLike?.(); onOpenChange(false); };
   const handleSkip = () => { onSkip?.(); onOpenChange(false); };
+  // Zapis z zakladki na hero - zapisuje BEZ zamykania wizytowki (stan zakladki sie aktualizuje).
+  const handleSaveFromHero = onLike ? () => { onLike(); } : undefined;
 
   // Calculate photos to display (biz cover + Google + biz gallery dedup). ep = swiezy profil.
   const googleAndCover = [
@@ -250,6 +255,8 @@ const PlaceSwiperDetail = ({
             detailLoading={loading}
             onClose={() => onOpenChange(false)}
             header={headerSlot}
+            onSave={handleSaveFromHero}
+            saved={saved}
             hideReviews
             startingLocation={distanceRef ? { name: distanceRef.label, latitude: distanceRef.coords.lat, longitude: distanceRef.coords.lng } : undefined}
           />

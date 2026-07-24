@@ -42,6 +42,8 @@ export interface PremiumBusinessData {
   // ── Categorization ─────────────────────────────────────────────────────────
   /** Main category id z MAIN_CATEGORIES (np. 'food', 'culture'). */
   mainCategoryId?: string;
+  /** Kategoria miejsca (places.category, np. 'restaurant') - fallback dla miejsc bez profilu biznesowego. */
+  placeCategory?: string;
   secondaryCategoryId?: string;
   /** Subcategories z business_profiles.subcategories. */
   subcategories?: string[];
