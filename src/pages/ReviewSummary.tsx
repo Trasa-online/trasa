@@ -81,6 +81,8 @@ const ReviewSummary = () => {
   const [planMapOpen, setPlanMapOpen] = useState(false);
   // Okladka planu wyjazdu: zdjecie (false) lub mapka (true) - toggle klikiem w miniaturke.
   const [heroShowMap, setHeroShowMap] = useState(false);
+  // Czy plan wyjazdu jest przewiniety (okladka zjechala) -> sticky pasek back+X dostaje tlo.
+  const [planScrolled, setPlanScrolled] = useState(false);
   // QR do udostepnienia wyjazdu (arkusz z kodem + linkiem).
   const [qrShareOpen, setQrShareOpen] = useState(false);
   const [memoTab, setMemoTab] = useState<"notki" | "galeria">("notki");
@@ -1365,32 +1367,40 @@ const ReviewSummary = () => {
     const sectionHeadingCls = "font-display text-base font-black text-muted-foreground uppercase tracking-wider";
 
     return (
-      <div className="h-[100dvh] bg-background flex flex-col max-w-lg mx-auto">
-        {/* Hero */}
-        <div className="relative w-full aspect-[16/10] shrink-0 overflow-hidden bg-gradient-to-br from-orange-400 via-rose-400 to-purple-500 rounded-b-2xl">
-          <img src={heroShowMap && heroMapCover ? heroMapCover : heroPhoto} alt="" className="absolute inset-0 w-full h-full object-cover" />
-          <div className={`absolute inset-0 bg-gradient-to-b from-black/15 via-transparent to-black/55 ${heroShowMap ? "opacity-40" : ""}`} />
-          <div className="absolute left-0 right-0 z-20 flex items-center justify-between px-4" style={{ top: "max(12px, env(safe-area-inset-top, 12px))" }}>
-            <button onClick={() => navigate("/dziennik")} aria-label={t("a11y.back_to_journal")} className="h-8 w-8 rounded-full bg-black/35 backdrop-blur-sm flex items-center justify-center active:scale-90 transition-transform">
-              <ChevronLeft className="h-5 w-5 text-white" />
-            </button>
-            <button onClick={() => navigate("/dziennik")} aria-label={t("a11y.back_to_journal")} className="h-8 w-8 rounded-full bg-white/25 backdrop-blur-sm flex items-center justify-center active:scale-90 transition-transform">
-              <X className="h-4 w-4 text-white" />
-            </button>
-          </div>
-          {heroMapThumb && (
-            // Klik miniaturki -> mapka pojawia sie na okladce (zamiast zdjecia); ponowny klik wraca do zdjecia.
-            <button
-              onClick={() => setHeroShowMap((v) => !v)}
-              aria-label={heroShowMap ? "Pokaż zdjęcie" : "Pokaż mapę na okładce"}
-              className="absolute bottom-3 right-3 h-14 w-14 rounded-xl overflow-hidden border-2 border-white shadow-md bg-white active:scale-95 transition-transform"
-            >
-              <img src={heroShowMap ? heroPhoto : heroMapThumb} alt="" className="w-full h-full object-cover" />
-            </button>
-          )}
+      <div className="relative h-[100dvh] bg-background flex flex-col max-w-lg mx-auto">
+        {/* Sticky pasek back + X - NAD scrollem. Przezroczysty nad okladka, tlo gdy przewiniete.
+            Okladka (zdjecie) NIE jest sticky - przewija sie razem z trescia (wg Figmy). */}
+        <div
+          className={`absolute top-0 left-0 right-0 z-30 flex items-center justify-between px-4 pb-3 transition-colors duration-200 ${planScrolled ? "bg-[#FEFEFE]/95 backdrop-blur-md border-b border-black/[0.06]" : ""}`}
+          style={{ paddingTop: "max(12px, env(safe-area-inset-top, 12px))" }}
+        >
+          <button onClick={() => navigate("/dziennik")} aria-label={t("a11y.back_to_journal")} className={`h-8 w-8 rounded-full flex items-center justify-center active:scale-90 transition-transform ${planScrolled ? "bg-secondary text-foreground" : "bg-black/35 backdrop-blur-sm text-white"}`}>
+            <ChevronLeft className="h-5 w-5" />
+          </button>
+          <button onClick={() => navigate("/dziennik")} aria-label={t("a11y.back_to_journal")} className={`h-8 w-8 rounded-full flex items-center justify-center active:scale-90 transition-transform ${planScrolled ? "bg-secondary text-foreground" : "bg-white/25 backdrop-blur-sm text-white"}`}>
+            <X className="h-4 w-4" />
+          </button>
         </div>
 
-        <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-5">
+        <div onScroll={(e) => setPlanScrolled(e.currentTarget.scrollTop > 170)} className="flex-1 min-h-0 overflow-y-auto pb-5">
+          {/* Okladka - w scrollu, przewija sie (NIE sticky) */}
+          <div className="relative w-full aspect-[16/10] overflow-hidden bg-gradient-to-br from-orange-400 via-rose-400 to-purple-500 rounded-b-2xl">
+            <img src={heroShowMap && heroMapCover ? heroMapCover : heroPhoto} alt="" className="absolute inset-0 w-full h-full object-cover" />
+            <div className={`absolute inset-0 bg-gradient-to-b from-black/15 via-transparent to-black/55 ${heroShowMap ? "opacity-40" : ""}`} />
+            {heroMapThumb && (
+              // Klik miniaturki -> mapka pojawia sie na okladce (zamiast zdjecia); ponowny klik wraca do zdjecia.
+              <button
+                onClick={() => setHeroShowMap((v) => !v)}
+                aria-label={heroShowMap ? "Pokaż zdjęcie" : "Pokaż mapę na okładce"}
+                className="absolute bottom-3 right-3 h-14 w-14 rounded-xl overflow-hidden border-2 border-white shadow-md bg-white active:scale-95 transition-transform"
+              >
+                <img src={heroShowMap ? heroPhoto : heroMapThumb} alt="" className="w-full h-full object-cover" />
+              </button>
+            )}
+          </div>
+
+          {/* Tresc planu */}
+          <div className="px-4 pt-4">
           {/* Avatar + nazwa + data */}
           <div className="flex items-center gap-3 pt-4 pb-6">
             <div className="h-9 w-9 rounded-full bg-[#f0ccb9] flex items-center justify-center shrink-0">
@@ -1556,6 +1566,7 @@ const ReviewSummary = () => {
               </button>
             </div>
           )}
+          </div>
         </div>
 
         {/* Footer: Nawiguj do nastepnego (nieodwiedzonego) miejsca. Ukryty po ukonczeniu wyjazdu. */}
