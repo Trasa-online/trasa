@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { ChevronLeft, Layers, Compass, SlidersHorizontal, Search } from "lucide-react";
+import { Layers, Compass, SlidersHorizontal, Search } from "lucide-react";
 import CitySelect from "@/components/home/CitySelect";
 
 // Wspoldzielona zawartosc gornej belki dla Eksploracji (feed) i Przegladania (swiper):
@@ -41,17 +41,6 @@ export default function ExploreTopBar({
 
   return (
     <>
-      {/* Cofnij na widok glowny (feed) - tylko w przegladaniu, obok selektora miasta */}
-      {mode === "browse" && onBack && (
-        <button
-          onClick={onBack}
-          className="shrink-0 h-8 w-8 -ml-1 flex items-center justify-center text-foreground active:scale-90 transition-transform"
-          aria-label="Wróć"
-        >
-          <ChevronLeft className="h-5 w-5" />
-        </button>
-      )}
-
       {/* Selektor miasta (pill) */}
       <CitySelect city={cur} onCityChange={onCityChange} />
 

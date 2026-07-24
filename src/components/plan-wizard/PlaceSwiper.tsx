@@ -2121,7 +2121,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
               setExploreVisible((v) => (v < displayQueue.length ? Math.min(displayQueue.length, v + 12) : v));
             }
           }}
-          className="flex-1 min-h-0 overflow-y-auto snap-y snap-mandatory scrollbar-none overscroll-contain"
+          className="flex-1 min-h-0 overflow-y-auto snap-y snap-mandatory scrollbar-none overscroll-contain pt-3 scroll-pt-3"
         >
           {displayQueue.slice(0, exploreVisible).map((place) => {
             // KAZDA karta troche nizsza (nastepna zawsze wystaje) - stala afordancja "scrolluj
@@ -2129,8 +2129,8 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
             // isActive dalej gatuje fetch Google/tagow tylko do widocznej karty (koszt).
             const isActive = activeCardId ? place.id === activeCardId : place.id === displayQueue[0]?.id;
             return (
-            <div key={place.id} className="snap-start snap-always w-full flex flex-col px-4 pt-1 h-[calc(100dvh-8rem-env(safe-area-inset-top,0px)-env(safe-area-inset-bottom,0px))]">
-              <div className="relative flex-1 min-h-0 w-full max-w-[460px] mx-auto">
+            <div key={place.id} className="snap-start snap-always w-full flex flex-col px-4 mb-4 h-[calc(100dvh-8rem-env(safe-area-inset-top,0px)-env(safe-area-inset-bottom,0px))]">
+              <div className="relative flex-1 min-h-0 w-full">
                 <SwipeCard
                   place={place}
                   city={city}
