@@ -1242,7 +1242,7 @@ function TrasaBigCard({
       {/* Prawy dolny stack: mini-mapka + bookmark + rozwin */}
       <div className="absolute right-4 bottom-5 z-10 flex flex-col items-center gap-2.5">
         {miniMap && (
-          <div className="h-14 w-14 rounded-full overflow-hidden ring-2 ring-white/85 shadow-md bg-muted mb-0.5">
+          <div className="h-12 w-12 rounded-full overflow-hidden ring-2 ring-white/85 shadow-md bg-muted mb-0.5">
             <img
               src={miniMap} alt="" aria-hidden loading="lazy"
               className="w-full h-full object-cover"
@@ -1561,10 +1561,19 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
   });
   const toggleSaveCol = (colId: string) => {
     try {
-      const set = new Set(savedColIds);
+      // Czytamy z localStorage (zrodlo prawdy) - dzieki temu "Cofnij" w toascie dziala
+      // mimo domkniec (stale closure na savedColIds by przywracalo zly stan).
+      const set = new Set<string>(JSON.parse(localStorage.getItem("trasa_saved_collections") || "[]"));
       const dates: Record<string, string> = (() => { try { return JSON.parse(localStorage.getItem("trasa_saved_collections_dates") || "{}"); } catch { return {}; } })();
-      if (set.has(colId)) { set.delete(colId); delete dates[colId]; }
-      else { set.add(colId); dates[colId] = new Date().toISOString(); toast.success(t("toast.saved")); }
+      if (set.has(colId)) {
+        set.delete(colId); delete dates[colId];
+        toast(t("toast.removed_saved", "Usunięto z zapisanych"), {
+          action: { label: t("undo", "Cofnij"), onClick: () => toggleSaveCol(colId) },
+        });
+      } else {
+        set.add(colId); dates[colId] = new Date().toISOString();
+        toast.success(t("toast.saved"));
+      }
       localStorage.setItem("trasa_saved_collections", JSON.stringify([...set]));
       localStorage.setItem("trasa_saved_collections_dates", JSON.stringify(dates));
       setSavedColIds(set);
@@ -2090,7 +2099,9 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
         <div className="space-y-4">
           {SHOW_ZESTAWIENIA && userPolecajki.map((col) => {
             const ph = col.items.find((i) => i.photo_url)?.photo_url ?? col.gallery_urls?.[0] ?? null;
-            const catTags = [...new Set(col.items.map((i) => i.category).filter(Boolean).map((c) => String(c).toLowerCase()))];
+            // Tagi = kategorie miejsc z zestawienia -> polskie etykiety (CAT_LABEL), zdedupowane.
+            const catTags = [...new Set(col.items.map((i) => i.category).filter(Boolean).map((c) => String(c).toLowerCase()))]
+              .map((c) => CAT_LABEL[c] ?? c);
             return (
               <TrasaBigCard
                 key={`col-${col.id}`}
@@ -2118,7 +2129,7 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
               placeCount={r.placeCount ?? 0}
               title={r.title}
               description={r.summary || r.ai_highlight}
-              tags={r.categories ?? []}
+              tags={(r.categories ?? []).map((c) => CAT_LABEL[c] ?? c)}
               pins={r.pins ?? []}
               onOpen={() => navigate(`/route/${r.id}`)}
             />

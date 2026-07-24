@@ -43,11 +43,15 @@ export default function SavePlaceSheet({
   onOpenChange,
   place,
   city,
+  onFullyRemoved,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   place: SavePlaceInput | null;
   city: string;
+  // Wywolane gdy miejsce zostalo usuniete z OSTATNIEGO wyjazdu (nie ma go juz w zadnym) -
+  // rodzic moze wtedy zdjac stan "zapisane" z karty.
+  onFullyRemoved?: () => void;
 }) {
   const { t } = useTranslation("plan");
   const { user } = useAuth();
@@ -141,9 +145,15 @@ export default function SavePlaceSheet({
         .eq("route_id", trip.id)
         .ilike("place_name", place.place_name);
       if (error) throw error;
-      setOverrides((prev) => new Map(prev).set(trip.id, false));
+      const nextOverrides = new Map(overrides).set(trip.id, false);
+      setOverrides(nextOverrides);
       invalidate();
       toast.success(t("save_sheet.removed_from", { name: trip.title || city }), { position: "top-center" });
+      // Czy miejsce jest jeszcze w JAKIMKOLWIEK wyjezdzie? Jesli nie -> zglos pelne usuniecie.
+      const isInNow = (tt: TripRow) => nextOverrides.has(tt.id)
+        ? nextOverrides.get(tt.id)!
+        : (tt.pins ?? []).some((p) => skey(p.place_name) === skey(place.place_name ?? ""));
+      if (!trips.some(isInNow)) onFullyRemoved?.();
     } catch (e: any) {
       console.error("[SavePlaceSheet] remove from trip failed:", e?.message ?? e);
       toast.error(t("save_sheet.remove_error"));

@@ -17,7 +17,7 @@ import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import { useOnboarding } from "@/components/OnboardingGuide";
 import { useHaptics } from "@/hooks/useHaptics";
 import { getSubcategoryIds, getMainCategoryFor, getDbCategoriesFor, MAIN_CATEGORIES, mainCategoryLabel } from "@/lib/categories";
-import { addLike as saveExploreLike, clearGroup as clearExploreGroup } from "@/lib/exploreLikes";
+import { addLike as saveExploreLike, clearGroup as clearExploreGroup, removeLikeFromCity } from "@/lib/exploreLikes";
 import { expandCity } from "@/lib/cities";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
@@ -1217,6 +1217,8 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
   // Etap 2: drawer "Miejsce zapisane!" (dodaj do wyjazdu) po zapisaniu z karty w eksploracji.
   const [saveSheetOpen, setSaveSheetOpen] = useState(false);
   const [saveSheetPlace, setSaveSheetPlace] = useState<SavePlaceInput | null>(null);
+  // id karty swipera dla miejsca w drawerze - do zdjecia stanu "zapisane" po usunieciu z wyjazdu.
+  const [saveSheetSwiperId, setSaveSheetSwiperId] = useState<string | null>(null);
   // Hint scrollowania: pierwsza karta nieco nizsza (nastepna wystaje) + puls w dol,
   // dopoki user nie przewinie. Po pierwszym scrollu chowamy podpowiedz.
   const [hasScrolled, setHasScrolled] = useState(false);
@@ -1616,6 +1618,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
         photo_url: photoUrlOverrides.current[place.id] ?? place.photo_url ?? null,
         place_id: isUuid ? place.id : null,
       });
+      setSaveSheetSwiperId(place.id);
       setSaveSheetOpen(true);
     }
   };
@@ -2118,7 +2121,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
             // isActive dalej gatuje fetch Google/tagow tylko do widocznej karty (koszt).
             const isActive = activeCardId ? place.id === activeCardId : place.id === displayQueue[0]?.id;
             return (
-            <div key={place.id} className="snap-start snap-always w-full flex flex-col px-3 pt-1 pb-3 h-[calc(100%-3.5rem)]">
+            <div key={place.id} className="snap-start snap-always w-full flex flex-col px-4 pt-1 h-[calc(100%-var(--trasa-nav-offset,4rem)-env(safe-area-inset-bottom,0px)-0.5rem)]">
               <div className="relative flex-1 min-h-0 w-full max-w-[460px] mx-auto">
                 <SwipeCard
                   place={place}
@@ -2233,6 +2236,12 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
         onOpenChange={setSaveSheetOpen}
         place={saveSheetPlace}
         city={city}
+        onFullyRemoved={() => {
+          // Miejsce usuniete ze WSZYSTKICH wyjazdow -> zdejmij stan "zapisane" z karty
+          // (bookmark) + usun z polubionych, zeby wizytowka nie pokazywala falszywego zapisu.
+          if (saveSheetSwiperId) setSavedIds((prev) => { const n = new Set(prev); n.delete(saveSheetSwiperId); return n; });
+          if (saveSheetPlace?.place_name) removeLikeFromCity(city, saveSheetPlace.place_name);
+        }}
       />
     </div>
   );
