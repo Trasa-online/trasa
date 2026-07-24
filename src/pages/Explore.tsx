@@ -749,7 +749,7 @@ const Explore = () => {
         <>
           {/* Feed - zawsze zamontowany; ukryty gdy swiper (seamless toggle). */}
           <div className={cn("flex-1 min-h-0 flex flex-col", view !== "feed" && "hidden")}>
-            <PullToRefresh onRefresh={handleRefresh} className="flex-1 min-h-0 flex flex-col pt-3 pb-[calc(5rem+env(safe-area-inset-bottom,0px))] snap-y snap-mandatory scroll-pt-3">
+            <PullToRefresh onRefresh={handleRefresh} className="flex-1 min-h-0 flex flex-col pt-3 pb-[calc(6rem+env(safe-area-inset-bottom,0px))] snap-y snap-mandatory scroll-pt-3">
               <div className="flex-1 px-4"><DiscoveryFeed city={exploreCity} active={view === "feed"} searchQuery={feedSearch} searchOpen={searchOpen} /></div>
             </PullToRefresh>
           </div>

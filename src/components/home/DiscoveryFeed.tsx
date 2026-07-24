@@ -1205,7 +1205,10 @@ function RouteBigCard({ route, onClick }: { route: PolecaneRoute; onClick: () =>
 // Wysokosc pelnoekranowej karty feedu = viewport - topbar(3.25rem) - BottomNav(4rem) -
 // 16px odstepu do nawigacji - safe-area (gora+dol). Ten sam wzor uzywa karta Miejsc (swiper),
 // zeby oba widoki mialy identyczny rozmiar wizytowki i 16px do BottomNava na kazdym iPhonie.
-const TRASA_CARD_H = "h-[calc(100dvh-8rem-env(safe-area-inset-top,0px)-env(safe-area-inset-bottom,0px))]";
+// Wysokosc karty tak, by dol karty konczyl sie 16px NAD plywajacym BottomNavem.
+// 150px = pt-safe(12) + topbar(52) + pt-3(12) + nav pill(58) + gap 16. Nav plywa
+// max(16px, safe-bottom) nad krawedzia (patrz BottomNav pb), wiec odejmujemy to samo.
+const TRASA_CARD_H = "h-[calc(100dvh-150px-env(safe-area-inset-top,0px)-max(16px,env(safe-area-inset-bottom,0px)))]";
 
 // Redesign 2026-07-24: pelnoekranowa karta feedu "Trasy" (immersyjny scroll, jeden ekran
 // = jedna trasa/zestawienie). Zdjecie na cala kafle + gradient + opis na dole + prawy stack

@@ -76,7 +76,7 @@ const BottomNav = () => {
   // BottomNav zniknie z ekranu (pelnoekranowe flow bez nawigacji).
   useEffect(() => {
     const root = document.documentElement;
-    root.style.setProperty("--trasa-nav-offset", navHidden ? "0px" : "4rem");
+    root.style.setProperty("--trasa-nav-offset", navHidden ? "0px" : "calc(5rem + env(safe-area-inset-bottom, 0px))");
     return () => { root.style.setProperty("--trasa-nav-offset", "0px"); };
   }, [navHidden]);
 
@@ -326,7 +326,7 @@ const BottomNav = () => {
           Outer = transparentny kontener (pointer-events-none) z marginesem + safe-area;
           inner = bialy pill z cieniem (pointer-events-auto). */}
       {!navHidden && (
-      <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-lg z-50 px-4 pb-[calc(env(safe-area-inset-bottom,0px)+4px)] pointer-events-none">
+      <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-lg z-50 px-4 pb-[max(16px,env(safe-area-inset-bottom,0px))] pointer-events-none">
         {/* Web: 3 kolumny (Glowna, Plus, Profil - Eksploruj i Dziennik ukryte).
             Native: 5 kolumn (wszystko). */}
         {/* Ikony + nazwy zakladek pod spodem (orange active). */}
