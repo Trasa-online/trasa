@@ -8,6 +8,7 @@ import { OpsPage } from "./modules/ops/OpsPage";
 import { SettingsPage } from "./modules/settings/SettingsPage";
 import { RankingsPage } from "./modules/rankings/RankingsPage";
 import { PlacesPage } from "./modules/places/PlacesPage";
+import { PlaceFlagsPage } from "./modules/flags/PlaceFlagsPage";
 import { AuditPage } from "./modules/audit/AuditPage";
 
 // Panel operacyjny - wszystkie 4 moduly MVP aktywne (moderacja, users,
@@ -23,6 +24,7 @@ export default function AdminApp() {
           <Route path="/users" element={<UsersPage />} />
           <Route path="/analityka" element={<AnalyticsPage />} />
           <Route path="/miejsca" element={<PlacesPage />} />
+          <Route path="/flagi" element={<PlaceFlagsPage />} />
           <Route path="/ops" element={<OpsPage />} />
           <Route path="/audyt" element={<AuditPage />} />
           <Route path="/ustawienia" element={<SettingsPage />} />

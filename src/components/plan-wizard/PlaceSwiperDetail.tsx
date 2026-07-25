@@ -21,6 +21,10 @@ import posthog from "posthog-js";
 import PremiumBusinessCard from "@/components/business/PremiumBusinessCard";
 import { fromMockPlace } from "@/components/business/premiumBusinessAdapters";
 import type { BusinessPost, GoogleReview } from "@/components/business/premiumBusiness.types";
+import ReportPlaceLink from "@/components/place/ReportPlaceLink";
+
+// Zgłoszenie dozwolone tylko dla realnego miejsca z bazy (uuid), nie dla demo/mocków.
+const isRealPlaceId = (id?: string) => !!id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
 
 interface PlaceDetail {
   place_id?: string;
@@ -260,6 +264,12 @@ const PlaceSwiperDetail = ({
             hideReviews
             startingLocation={distanceRef ? { name: distanceRef.label, latitude: distanceRef.coords.lat, longitude: distanceRef.coords.lng } : undefined}
           />
+          {/* Zgłoś problem - tylko dla realnych miejsc z bazy (uuid), na dole tresci wizytowki. */}
+          {isRealPlaceId(ep.id) && (
+            <div className="px-4 pb-6 pt-1">
+              <ReportPlaceLink placeId={ep.id} placeName={ep.place_name} />
+            </div>
+          )}
         </div>
 
         {/* Like / Skip CTA - fixed bottom poza PremiumBusinessCard */}

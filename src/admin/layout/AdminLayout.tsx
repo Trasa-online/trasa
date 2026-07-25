@@ -3,7 +3,7 @@ import { NavLink } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { TrasaLogo } from "@/components/TrasaLogo";
 import { useAdmin } from "../RequireAdmin";
-import { ShieldCheck, Users, BarChart3, Bug, Settings, ListChecks, MapPin, ScrollText, Menu, X } from "lucide-react";
+import { ShieldCheck, Users, BarChart3, Bug, Settings, ListChecks, MapPin, ScrollText, Menu, X, Flag } from "lucide-react";
 
 const NAV = [
   { to: "/moderacja", label: "Moderacja", icon: ShieldCheck },
@@ -11,6 +11,7 @@ const NAV = [
   { to: "/users", label: "Użytkownicy", icon: Users },
   { to: "/analityka", label: "Analityka", icon: BarChart3 },
   { to: "/miejsca", label: "Miejsca", icon: MapPin },
+  { to: "/flagi", label: "Flagi miejsc", icon: Flag },
   { to: "/ops", label: "Zgłoszenia", icon: Bug },
   { to: "/audyt", label: "Audyt", icon: ScrollText },
   { to: "/ustawienia", label: "Ustawienia", icon: Settings },
