@@ -6,7 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import { Settings, Copy, Check, Camera, UserCircle2, ArrowRight, ArrowUpRight, Map as MapIcon, Building2, Layers, Bell, Share2, Search } from "lucide-react";
+import { Settings, Copy, Check, Camera, UserCircle2, ArrowRight, ArrowUpRight, Map as MapIcon, Building2, Bell, Share2, Search } from "lucide-react";
 import TabHeader from "@/components/layout/TabHeader";
 import StatCard from "@/components/profile/StatCard";
 import { toast } from "sonner";
@@ -226,19 +226,6 @@ const TravelerProfile = () => {
     staleTime: 0,
   });
 
-  // Liczba zestawien (discovery_collections) stworzonych przez uzytkownika.
-  const { data: collectionsCount = 0 } = useQuery({
-    queryKey: ["profile-collections-count", user?.id],
-    queryFn: async () => {
-      const { count } = await (supabase as any)
-        .from("discovery_collections")
-        .select("*", { count: "exact", head: true })
-        .eq("user_id", user!.id);
-      return count ?? 0;
-    },
-    enabled: !!user,
-  });
-
   const { data: followersList = [] } = useQuery({
     queryKey: ["followers-list", user?.id],
     queryFn: async () => {
@@ -383,34 +370,22 @@ const TravelerProfile = () => {
           </button>
         </div>
 
-        {/* Statystyki: Plany + Miasta (2 kolumny) + Zestawienia (pelna szerokosc) - wg zalacznika:
-            duza liczba w lewym gornym rogu, ikona w prawym gornym, tytul+podtytul na dole. */}
-        <div className="space-y-3">
-          <div className="grid grid-cols-2 gap-3">
-            <StatCard
-              value={stats?.trips ?? 0}
-              title={t("sections.routes")}
-              subtitle={t("sections.routes_sub")}
-              icon={<MapIcon className="h-6 w-6" />}
-              className="bg-secondary text-secondary-foreground"
-              onClick={() => navigate("/dziennik")}
-            />
-            <StatCard
-              value={stats?.cities ?? 0}
-              title={t("sections.cities")}
-              subtitle={t("sections.cities_sub")}
-              icon={<Building2 className="h-6 w-6" />}
-              className="bg-trasa-cream text-trasa-cream-ink"
-            />
-          </div>
+        {/* Statystyki: Plany + Miasta (2 kolumny). Zestawienia usuniete - nie istnieja w aplikacji. */}
+        <div className="grid grid-cols-2 gap-3">
           <StatCard
-            full
-            value={collectionsCount}
-            title={t("sections.collections")}
-            subtitle={t("sections.collections_sub_own")}
-            icon={<Layers className="h-6 w-6" />}
-            className="bg-trasa-orange text-trasa-orange-ink"
-            onClick={() => navigate("/eksploruj", { state: { myCollections: true } })}
+            value={stats?.trips ?? 0}
+            title={t("sections.routes")}
+            subtitle={t("sections.routes_sub")}
+            icon={<MapIcon className="h-6 w-6" />}
+            className="bg-secondary text-secondary-foreground"
+            onClick={() => navigate("/dziennik")}
+          />
+          <StatCard
+            value={stats?.cities ?? 0}
+            title={t("sections.cities")}
+            subtitle={t("sections.cities_sub")}
+            icon={<Building2 className="h-6 w-6" />}
+            className="bg-trasa-cream text-trasa-cream-ink"
           />
         </div>
 

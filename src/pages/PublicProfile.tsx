@@ -7,15 +7,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { parseISO, isValid, format } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
-import { ArrowLeft, Map as MapIcon, Building2, Layers, CalendarDays } from "lucide-react";
+import { ArrowLeft, Map as MapIcon, Building2, CalendarDays } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { resolveStored } from "@/components/PlacePhoto";
 import FriendButton from "@/components/social/FriendButton";
 import StatCard from "@/components/profile/StatCard";
-import { CollectionDetail, type DiscoveryCollection } from "@/components/home/DiscoveryFeed";
-import { themeBadgeLabel } from "@/lib/collectionThemes";
 
 export default function PublicProfile() {
   const { t } = useTranslation("profiles");
@@ -23,8 +21,6 @@ export default function PublicProfile() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [routesOpen, setRoutesOpen] = useState(false);
-  const [collectionsOpen, setCollectionsOpen] = useState(false);
-  const [activeCol, setActiveCol] = useState<DiscoveryCollection | null>(null);
 
   const { data: profile, isLoading } = useQuery({
     queryKey: ["public-profile", username],
@@ -67,36 +63,6 @@ export default function PublicProfile() {
   });
 
 
-  // Zestawienia usera (publiczne + zaakceptowane). Count do karty + pelne dane
-  // (z itemami + statystyki + home_city autora) do sheeta z podgladem.
-  const { data: collections = [] } = useQuery({
-    queryKey: ["public-collections", profile?.id],
-    enabled: !!profile?.id,
-    queryFn: async () => {
-      const { data: cols } = await (supabase as any)
-        .from("discovery_collections")
-        .select("id, title, city, description, category, author_name, author_avatar, user_id, views_count, saves_count, plan_adds_count")
-        .eq("user_id", profile!.id)
-        .eq("kind", "ranking")
-        .eq("is_public", true)
-        .eq("hidden_by_admin", false)
-        .eq("moderation_status", "approved")
-        .order("updated_at", { ascending: false });
-      if (!cols?.length) return [] as DiscoveryCollection[];
-      const ids = cols.map((c: any) => c.id);
-      const { data: items } = await (supabase as any)
-        .from("discovery_items")
-        .select("id, collection_id, order_index, place_name, short_desc, photo_url, latitude, longitude, place_id, category, address, rating")
-        .in("collection_id", ids)
-        .order("order_index", { ascending: true });
-      const { data: prof } = await (supabase as any).from("profiles").select("home_city").eq("id", profile!.id).maybeSingle();
-      return cols.map((col: any): DiscoveryCollection => ({
-        ...col,
-        author_home_city: prof?.home_city ?? null,
-        items: (items ?? []).filter((i: any) => i.collection_id === col.id),
-      }));
-    },
-  });
 
   // Dziennik usera (read-only): pocztowki jak we wlasnym Dzienniku. Trasy wielodniowe
   // zwiniete po folderze (dzien 1 = reprezentant), okladka z review_photos lub pierwszego
@@ -205,33 +171,22 @@ export default function PublicProfile() {
           <FriendButton targetUserId={profile.id} className="h-9 px-4 text-sm" />
         </div>
 
-        {/* Statystyki - TEN SAM uklad co wlasny profil (Plany+Miasta 2-kol, Zestawienia pelne). */}
-        <div className="space-y-3">
-          <div className="grid grid-cols-2 gap-3">
-            <StatCard
-              value={stats?.trips ?? 0}
-              title={t("sections.routes")}
-              subtitle={t("sections.routes_sub")}
-              icon={<MapIcon className="h-6 w-6" />}
-              className="bg-secondary text-secondary-foreground"
-              onClick={() => setRoutesOpen(true)}
-            />
-            <StatCard
-              value={stats?.cities ?? 0}
-              title={t("sections.cities")}
-              subtitle={t("sections.cities_sub")}
-              icon={<Building2 className="h-6 w-6" />}
-              className="bg-trasa-cream text-trasa-cream-ink"
-            />
-          </div>
+        {/* Statystyki - TEN SAM uklad co wlasny profil (Plany + Miasta, 2 kolumny). */}
+        <div className="grid grid-cols-2 gap-3">
           <StatCard
-            full
-            value={collections.length}
-            title={t("sections.collections")}
-            subtitle={t("sections.collections_sub_public")}
-            icon={<Layers className="h-6 w-6" />}
-            className="bg-trasa-orange text-trasa-orange-ink"
-            onClick={collections.length > 0 ? () => setCollectionsOpen(true) : undefined}
+            value={stats?.trips ?? 0}
+            title={t("sections.routes")}
+            subtitle={t("sections.routes_sub")}
+            icon={<MapIcon className="h-6 w-6" />}
+            className="bg-secondary text-secondary-foreground"
+            onClick={() => setRoutesOpen(true)}
+          />
+          <StatCard
+            value={stats?.cities ?? 0}
+            title={t("sections.cities")}
+            subtitle={t("sections.cities_sub")}
+            icon={<Building2 className="h-6 w-6" />}
+            className="bg-trasa-cream text-trasa-cream-ink"
           />
         </div>
       </div>
@@ -296,44 +251,6 @@ export default function PublicProfile() {
         </SheetContent>
       </Sheet>
 
-      {/* Sheet: zestawienia usera (lista) -> tap otwiera podglad (CollectionDetail) */}
-      <Sheet open={collectionsOpen} onOpenChange={setCollectionsOpen}>
-        <SheetContent side="bottom" className="rounded-t-3xl p-0" style={{ maxHeight: "85dvh", height: "85dvh" }}>
-          <SheetHeader className="px-5 pt-5 pb-3 text-left">
-            <SheetTitle>{t("public.collections_title", { name: displayName })}</SheetTitle>
-          </SheetHeader>
-          <div className="flex-1 overflow-y-auto px-5 pb-8 space-y-3">
-            {collections.map((col) => {
-              const cover = resolveStored(col.items.find((i) => i.photo_url)?.photo_url) ?? getRandomPinPlaceholder(col.id);
-              const badge = themeBadgeLabel(col.category);
-              return (
-                <button
-                  key={col.id}
-                  onClick={() => { setCollectionsOpen(false); setActiveCol(col); }}
-                  className="w-full flex items-center gap-3 rounded-3xl bg-card border border-border/50 p-3 text-left active:scale-[0.98] transition-transform"
-                >
-                  <img src={cover} alt="" className="h-16 w-16 rounded-2xl object-cover shrink-0" loading="lazy"
-                    onError={(ev) => { (ev.target as HTMLImageElement).src = getRandomPinPlaceholder(col.id + "_fb"); }} />
-                  <div className="flex-1 min-w-0 space-y-0.5">
-                    {badge && <span className="inline-flex items-center rounded-full bg-orange-50 border border-orange-200 px-2 py-0.5 text-[10px] font-bold text-orange-700">{badge}</span>}
-                    <p className="font-bold text-sm leading-tight truncate">{col.title}</p>
-                    <p className="text-xs text-muted-foreground truncate">
-                      {[col.city, t("public.places_count", { count: col.items.length })].filter(Boolean).join(" · ")}
-                    </p>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </SheetContent>
-      </Sheet>
-
-      {/* Sheet: podglad zestawienia (reuzyty komponent z DiscoveryFeed) */}
-      <Sheet open={!!activeCol} onOpenChange={(o) => { if (!o) setActiveCol(null); }}>
-        <SheetContent side="bottom" className="rounded-t-2xl p-0 [&>button:last-child]:hidden" style={{ maxHeight: "92vh", height: "92vh" }}>
-          {activeCol && <CollectionDetail col={activeCol} onClose={() => setActiveCol(null)} />}
-        </SheetContent>
-      </Sheet>
     </div>
   );
 }

@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { X, Bell, UserPlus, UserCheck, MapPin, Route, Users, Bookmark, CheckCircle2, XCircle } from "lucide-react";
+import { X, Bell, UserPlus, UserCheck, MapPin, Route, Users, Bookmark, CheckCircle2, XCircle, MessageCircle } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
 import { avatarSrc } from "@/lib/avatar";
@@ -29,6 +29,8 @@ const TYPE_CONFIG: Record<string, { icon: React.ElementType; color: string; labe
   friend_request: { icon: UserPlus,      color: "text-violet-500 bg-violet-100",  label: u => `${u} chce dodać Cię do znajomych` },
   friend_accept:  { icon: UserCheck,     color: "text-emerald-500 bg-emerald-100",label: u => `${u} przyjął(a) Twoje zaproszenie do znajomych` },
   group_match:    { icon: Users,         color: "text-orange-600 bg-orange-100",  label: (u, meta) => `${u} też polubił(a) ${meta?.place_name ?? "to samo miejsce"}! 🎉` },
+  visit_comment:  { icon: MessageCircle, color: "text-sky-500 bg-sky-100",         label: (u, meta) => `${u} skomentował(a) Twój wpis${meta?.place_name ? ` o ${meta.place_name}` : ""}` },
+  discovery_used: { icon: Bookmark,      color: "text-orange-600 bg-orange-100",  label: (u, meta) => `${u} skorzystał(a) z Twojego planu${meta?.city ? ` po ${meta.city}` : ""}` },
   group_invite:       { icon: Users,  color: "text-violet-500 bg-violet-100",  label: (u, meta) => `${u} zaprasza Cię do wspólnego wybierania miejsc w ${meta?.city ?? "sesji grupowej"}` },
   group_route_ready:  { icon: Route, color: "text-orange-600 bg-orange-100",  label: (u, meta) => `${u} stworzył(a) trasę${meta?.city ? ` w ${meta.city}` : ""} - sprawdź!` },
   collection_approved: { icon: CheckCircle2, color: "text-emerald-500 bg-emerald-100", label: (_u, meta) => `Twoje zestawienie „${meta?.title ?? "kolekcja"}" zostało zaakceptowane 🎉` },
@@ -52,8 +54,9 @@ export default function NotificationsDrawer({ open, onClose, userId }: Props) {
         .from("notifications")
         .select("id, type, actor_id, route_id, created_at, read, metadata")
         .eq("user_id", userId)
-        // group_match idzie tylko jako push; like/comment/mention to nieistniejace juz funkcje.
-        .not("type", "in", "(group_match,like,comment,mention)")
+        // Pokazujemy WSZYSTKIE aktualne powiadomienia (grupowe, obserwacje, push...). Odfiltrowujemy
+        // tylko martwe funkcje (like/comment/mention - juz nie istnieja). Nieznane typy -> fallback.
+        .not("type", "in", "(like,comment,mention)")
         .order("created_at", { ascending: false })
         .limit(50);
 
@@ -188,7 +191,7 @@ export default function NotificationsDrawer({ open, onClose, userId }: Props) {
             <div className="flex flex-col items-center justify-center py-16 px-6 text-center gap-3">
               <Bell className="h-10 w-10 text-muted-foreground/30" />
               <p className="text-sm font-medium text-foreground/70">Brak powiadomień</p>
-              <p className="text-xs text-muted-foreground">Tutaj pojawią się powiadomienia o aktywności na Twoich trasach.</p>
+              <p className="text-xs text-muted-foreground">Tutaj pojawią się wszystkie Twoje powiadomienia - zaproszenia, obserwacje, aktywność w sesjach grupowych.</p>
             </div>
           ) : (
             <div className="mx-4 rounded-2xl bg-card border border-border/50 overflow-hidden divide-y divide-border/20">
