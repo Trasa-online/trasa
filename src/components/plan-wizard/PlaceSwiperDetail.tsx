@@ -10,7 +10,7 @@
 
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { MapPin, Navigation } from "lucide-react";
+import { MapPin, Navigation, Bookmark } from "lucide-react";
 import { useDistanceReference } from "@/lib/distanceReference";
 import { haversineKm, formatDistance } from "@/lib/distance";
 import { Drawer as VaulDrawer } from "vaul";
@@ -242,8 +242,7 @@ const PlaceSwiperDetail = ({
           style={{ height: "min(96dvh, calc(100dvh - env(safe-area-inset-top, 0px) - 0.5rem))" }}
         >
           <VaulDrawer.Title className="sr-only">{place.place_name}</VaulDrawer.Title>
-          {/* Uchwyt drag-to-dismiss - nad hero, pol-przezroczysty (hero ma wlasny X). */}
-          <div className="absolute top-2 left-1/2 -translate-x-1/2 z-30 h-1.5 w-10 rounded-full bg-white/70 pointer-events-none" />
+          {/* Uchwyt drag-to-dismiss renderuje HeroPhotoCarousel (jeden, nie dublujemy). */}
           {/* Scroll wrapper - vaul inicjuje drag-to-dismiss tylko gdy scroll jest na gorze,
               wiec native scroll do recenzji/galerii dziala normalnie (bez buga z iOS WebView).
               Wyjscie: drag w dol, tap w tlo (overlay), Esc, albo Hero X. */}
@@ -272,14 +271,14 @@ const PlaceSwiperDetail = ({
           )}
         </div>
 
-        {/* Like / Skip CTA - fixed bottom poza PremiumBusinessCard */}
+        {/* Zapisz / Odrzuc CTA - fixed bottom. Guzik 44px (h-11), pt 12px, pb 16px do krawedzi. */}
         {(onLike || onSkip) && (
-          <div className="shrink-0 px-4 pt-3 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] border-t border-black/5 bg-[#FEFEFE]">
+          <div className="shrink-0 px-4 pt-3 pb-[max(16px,env(safe-area-inset-bottom,0px))] border-t border-black/5 bg-[#FEFEFE]">
             <div className="flex gap-3">
               {onSkip && (
                 <button
                   onClick={handleSkip}
-                  className="flex-1 py-3 rounded-full bg-secondary text-secondary-foreground font-bold text-sm shadow-sm active:scale-[0.97] transition-transform"
+                  className="flex-1 h-11 rounded-full bg-secondary text-secondary-foreground font-bold text-sm flex items-center justify-center shadow-sm active:scale-[0.97] transition-transform"
                 >
                   {t("reject")}
                 </button>
@@ -287,9 +286,10 @@ const PlaceSwiperDetail = ({
               {onLike && (
                 <button
                   onClick={handleLike}
-                  className="flex-1 py-3 rounded-full bg-primary text-white font-bold text-sm shadow-xl shadow-primary/30 active:scale-[0.97] transition-transform"
+                  className="flex-1 h-11 rounded-full bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 shadow-xl shadow-primary/30 active:scale-[0.97] transition-transform"
                 >
-                  {t("add")}
+                  {t("save_place", "Zapisz to miejsce")}
+                  <Bookmark className="h-4 w-4" strokeWidth={2.2} />
                 </button>
               )}
             </div>

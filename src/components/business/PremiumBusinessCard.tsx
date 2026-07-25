@@ -17,7 +17,7 @@
 import { type ReactNode, useRef, useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { createPortal } from "react-dom";
-import { MAIN_CATEGORIES, mainCategoryLabel, subcategoryLabelLocalized } from "@/lib/categories";
+import { MAIN_CATEGORIES, mainCategoryLabel, subcategoryLabelLocalized, subcategoryEmoji, parentMainOfSub } from "@/lib/categories";
 import { cn } from "@/lib/utils";
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { API_BASE } from "@/lib/platform";
@@ -384,11 +384,11 @@ function HeroPhotoCarousel({ photos, placeName, onExpand, onClose, loading, topL
               }}
             />
           </button>
-          {/* Zapis miejsca (zakladka) zamiast ikony powiekszenia - powiekszenie po tapie w zdjecie. */}
+          {/* Zapis miejsca (zakladka, pomaranczowa wg Figmy) zamiast ikony powiekszenia. */}
           {onSave && (
             <button
               onClick={(e) => { e.stopPropagation(); onSave(); }}
-              className="absolute bottom-3 right-3 z-30 h-9 w-9 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center active:scale-90 transition-transform"
+              className="absolute bottom-3 right-3 z-30 h-10 w-10 rounded-full bg-gradient-to-br from-[#F4A259] to-[#F9662B] shadow-md shadow-orange-500/25 flex items-center justify-center active:scale-90 transition-transform"
               aria-label={t("add")}
             >
               <Bookmark className={cn("h-[18px] w-[18px] text-white", saved && "fill-white")} strokeWidth={2} />
@@ -442,42 +442,36 @@ interface SectionProps {
   data: PremiumBusinessData;
 }
 
+// Kategoria jako TEKST (wg Figmy): emoji + kategoria główna (primary, normalna waga) +
+// podkategoria obok wytłuszczona. Biznes: mainCategoryId + subcategories. Zwykłe miejsce:
+// placeCategory (np. 'cafe') -> rodzic 'Jedzenie & Napoje' + 'Kawiarnia' bold.
 function CategoriesSection({ data }: SectionProps) {
-  const mainLabel = data.mainCategoryId
-    ? mainCategoryLabel(data.mainCategoryId)
-    : null;
-  // Kategoria dodatkowa (secondary) - druga top-level, gdy lokal laczy dwa profile.
-  const secondaryLabel = data.secondaryCategoryId && data.secondaryCategoryId !== data.mainCategoryId
-    ? mainCategoryLabel(data.secondaryCategoryId)
-    : null;
   const subs = dedupSubcategories(data.subcategories);
-  // Fallback dla miejsc bez profilu biznesowego: kategoria z places.category (np. 'restaurant' -> 'Restauracja').
-  const placeLabel = !mainLabel && !secondaryLabel && subs.length === 0 && data.placeCategory
-    ? subcategoryLabelLocalized(data.placeCategory)
-    : null;
-  if (!mainLabel && !secondaryLabel && subs.length === 0 && !placeLabel) return null;
+  let emoji: string | undefined;
+  let mainText: string | null = null;
+  let boldText: string | null = null;
+
+  if (data.mainCategoryId) {
+    mainText = mainCategoryLabel(data.mainCategoryId);
+    // subs bywaja idami ('cafe') albo etykietami ('Kawiarnia') - lokalizujemy (idempotentne).
+    boldText = subs[0]
+      ? subcategoryLabelLocalized(subs[0])
+      : (data.secondaryCategoryId && data.secondaryCategoryId !== data.mainCategoryId ? mainCategoryLabel(data.secondaryCategoryId) : null);
+    emoji = (data.placeCategory ? subcategoryEmoji(data.placeCategory) : undefined)
+      ?? MAIN_CATEGORIES.find((c) => c.id === data.mainCategoryId)?.emoji;
+  } else if (data.placeCategory) {
+    const parent = parentMainOfSub(data.placeCategory);
+    mainText = parent?.label ?? null;
+    boldText = subcategoryLabelLocalized(data.placeCategory);
+    emoji = subcategoryEmoji(data.placeCategory) ?? parent?.emoji;
+  }
+
+  if (!mainText && !boldText) return null;
   return (
-    <div className="flex flex-wrap gap-1.5">
-      {placeLabel && (
-        <span className="px-3 py-1 rounded-full text-xs font-semibold bg-orange-50 border border-orange-100 text-orange-700">
-          {placeLabel}
-        </span>
-      )}
-      {mainLabel && (
-        <span className="px-3 py-1 rounded-full text-xs font-semibold bg-orange-50 border border-orange-100 text-orange-700">
-          {mainLabel}
-        </span>
-      )}
-      {secondaryLabel && (
-        <span className="px-3 py-1 rounded-full text-xs font-semibold bg-orange-50 border border-orange-100 text-orange-700">
-          {secondaryLabel}
-        </span>
-      )}
-      {subs.map((sub) => (
-        <span key={sub} className="px-3 py-1 rounded-full text-xs font-medium bg-muted text-muted-foreground border border-border/40">
-          {sub}
-        </span>
-      ))}
+    <div className="flex items-center gap-1.5 min-w-0 text-sm">
+      {emoji && <span className="text-[15px] leading-none shrink-0">{emoji}</span>}
+      {mainText && <span className="text-foreground truncate">{mainText}</span>}
+      {boldText && <span className="font-bold text-foreground truncate">{boldText}</span>}
     </div>
   );
 }
@@ -489,7 +483,7 @@ function RatingSection({ data, expandable, expanded, onToggle }: SectionProps & 
   if (!data.rating) return null;
   const inner = (
     <>
-      <Stars rating={data.rating} />
+      <Star className="h-4 w-4 fill-yellow-400 text-yellow-400 shrink-0" />
       <span className="text-sm font-bold">{data.rating}</span>
       {data.ratingCount !== undefined && data.ratingCount > 0 && (
         <span className="text-sm text-muted-foreground">({data.ratingCount.toLocaleString("pl")})</span>
@@ -507,6 +501,20 @@ function RatingSection({ data, expandable, expanded, onToggle }: SectionProps & 
     );
   }
   return <div className="flex items-center gap-1.5">{inner}</div>;
+}
+
+// Osobny chip "[Opinie ⌄]" (wg Figmy ocena jest przy kategorii, a Opinie to oddzielny toggle).
+function ReviewsToggle({ expanded, onToggle }: { expanded: boolean; onToggle: () => void }) {
+  const { t } = useTranslation("wizytowka");
+  return (
+    <button
+      onClick={onToggle}
+      aria-expanded={expanded}
+      className="flex items-center gap-0.5 text-xs font-semibold bg-secondary text-secondary-foreground px-3 py-1.5 rounded-full active:scale-95 transition-transform shrink-0"
+    >
+      {t("reviews_toggle")}<ChevronDown className={cn("h-3.5 w-3.5 transition-transform", expanded && "rotate-180")} />
+    </button>
+  );
 }
 
 function AddressSection({ data }: SectionProps) {
@@ -748,24 +756,22 @@ function OpeningHoursSection({ data }: SectionProps) {
     todayLine = today ? `${today.label.toLowerCase()}: ${today.value}` : "";
   }
 
-  // Godziny jako expandable toggle - taki sam komponent jak "Opinie" (RatingSection expandable):
-  // status + chip [Godziny ⌄], po rozwinieciu lista dni w karcie bg-secondary.
+  // Godziny jako JEDEN chip (wg Figmy): [🕐 Godziny otwarcia · Otwarte ⌄]. Po rozwinieciu lista dni.
   void todayLine;
   return (
     <div>
       <button
         type="button"
         onClick={(e) => { e.preventDefault(); e.stopPropagation(); setExpanded((v) => !v); }}
-        className="flex items-center gap-1.5 active:opacity-70 transition-opacity"
+        className="flex items-center gap-1.5 text-xs font-semibold bg-secondary text-secondary-foreground px-3 py-1.5 rounded-full active:scale-95 transition-transform"
         aria-expanded={expanded}
       >
-        <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
-        <span className={cn("text-xs font-semibold px-2 py-0.5 rounded-full shrink-0", openNow ? "bg-green-500/10 text-green-600" : "bg-red-500/10 text-red-500")}>
+        <Clock className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+        <span>{t("opening_hours_label", "Godziny otwarcia")}</span>
+        <span className={cn("font-bold", openNow ? "text-green-600" : "text-red-500")}>
           {openNow ? t("open_now") : t("closed")}
         </span>
-        <span className="flex items-center gap-0.5 text-xs font-semibold bg-secondary text-secondary-foreground px-2.5 py-1 rounded-full ml-0.5">
-          {t("hours_toggle", "Godziny")}<ChevronDown className={cn("h-3.5 w-3.5 transition-transform", expanded && "rotate-180")} />
-        </span>
+        <ChevronDown className={cn("h-3.5 w-3.5 shrink-0 transition-transform", expanded && "rotate-180")} />
       </button>
       {expanded && (
         <div className="mt-2.5 rounded-2xl bg-secondary px-4 py-3 space-y-1">
@@ -928,7 +934,17 @@ function MapSection({ data, startingLocation }: SectionProps & { startingLocatio
         </span>
       </button>
       {fullscreen && createPortal(
-        <div className="fixed inset-0 z-[120] bg-background flex flex-col animate-in fade-in duration-200">
+        // data-vaul-no-drag + stopPropagation: portal renderuje sie w document.body, ale zdarzenia
+        // React BUBBLUJA przez drzewo Reacta do drawera (vaul) -> pan/drag mapy zamykal wizytowke.
+        // Blokujemy propagacje pointer/touch, zeby vaul nie interpretowal gestu mapy jako dismiss.
+        <div
+          data-vaul-no-drag
+          className="fixed inset-0 z-[120] bg-background flex flex-col animate-in fade-in duration-200"
+          onPointerDown={(e) => e.stopPropagation()}
+          onPointerMove={(e) => e.stopPropagation()}
+          onTouchStart={(e) => e.stopPropagation()}
+          onTouchMove={(e) => e.stopPropagation()}
+        >
           <div className="relative flex-1 min-h-0">
             <RouteMap
               pins={[{ latitude: data.latitude, longitude: data.longitude, place_name: data.name, address: data.address }]}
@@ -1196,11 +1212,14 @@ const PremiumBusinessCard = ({
               <h2 className="text-2xl font-bold leading-tight">{data.name}</h2>
               <SocialLinksRow data={data} />
               <AddressSection data={data} />
-              {/* Kategoria POD adresem (wlasny wiersz) */}
-              <CategoriesSection data={data} />
-              {/* Ocena/Opinie + Godziny - te same expandable toggle chipy w jednym wierszu */}
+              {/* Kategoria (tekst, po lewej) + ocena (gwiazdki, po prawej) w jednym wierszu (wg Figmy). */}
+              <div className="flex items-center justify-between gap-2">
+                <CategoriesSection data={data} />
+                <div className="shrink-0"><RatingSection data={data} /></div>
+              </div>
+              {/* Toggle Opinie + Godziny otwarcia (osobny wiersz) */}
               <div className="flex items-center gap-x-2.5 gap-y-1.5 flex-wrap">
-                <RatingSection data={data} expandable={!!hideReviews && hasReviews} expanded={reviewsOpen} onToggle={() => setReviewsOpen((o) => !o)} />
+                {hideReviews && hasReviews && <ReviewsToggle expanded={reviewsOpen} onToggle={() => setReviewsOpen((o) => !o)} />}
                 {!hideHours && <OpeningHoursSection data={data} />}
               </div>
               {hideReviews && reviewsOpen && <ReviewsSection data={data} />}

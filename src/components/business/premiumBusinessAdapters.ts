@@ -43,9 +43,11 @@ export function fromMockPlace(
     tags: place.businessTags?.length ? place.businessTags : (place.vibe_tags ?? []),
 
     logoUrl: place.businessLogoUrl,
-    // Nie nadpisujemy opisu opisem biznesowym (bp.description) - pokazujemy zwykly, rzeczowy
-    // opis miejsca (places.description). Opisy biznesowe (np. Bajka, Wanderlust) bywaly slabe.
-    description: place.description,
+    // Opis: preferuj opis biznesowy (bp.description) gdy lokal go uzupelnil - to jego wlasna
+    // tresc; fallback do rzeczowego opisu miejsca (places.description).
+    description: (place.businessDescription && place.businessDescription.trim())
+      ? place.businessDescription
+      : place.description,
     // Biznes z wlasnym adresem -> uzyj jego adresu (NIE Google formatted_address, ktory dla lokalu
     // o popularnej nazwie moze trafic w inny lokal). Inaczej fallback do Google -> places.address.
     address: place.businessHasOwnAddress ? (place.address || detail?.formatted_address) : (detail?.formatted_address || place.address),

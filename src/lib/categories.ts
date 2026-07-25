@@ -99,6 +99,19 @@ export const getSubcategoryLabel = (subcategoryId: string): string | undefined =
   return undefined;
 };
 
+// Emoji podkategorii (np. 'cafe' -> '☕') - do ikonki kategorii na wizytówce.
+export const subcategoryEmoji = (subcategoryId: string): string | undefined => {
+  for (const cat of MAIN_CATEGORIES) {
+    const sub = cat.subcategories.find(s => s.id === subcategoryId);
+    if (sub) return sub.emoji;
+  }
+  return undefined;
+};
+
+// Kategoria główna zawierająca daną podkategorię (np. 'cafe' -> {id:'food', label:'Jedzenie & Napoje'}).
+export const parentMainOfSub = (subcategoryId: string): MainCategory | undefined =>
+  MAIN_CATEGORIES.find(cat => cat.subcategories.some(s => s.id === subcategoryId));
+
 // ── i18n-aware etykiety do WYSWIETLANIA ─────────────────────────────────────
 // Kanoniczne `.label` (PL) sluza jako identyfikatory (zapis do DB, porownania) -
 // tych NIE tlumaczymy. Ponizsze helpery tlumacza tylko to, co widzi user.
