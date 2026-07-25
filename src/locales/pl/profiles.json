@@ -37,6 +37,7 @@
     "friends_count": "Znajomi: {{count}}",
     "followers": "Obserwujący",
     "following": "Obserwowani",
+    "friends": "Znajomi",
     "no_users": "Brak użytkowników",
     "friends_title": "Znajomi",
     "requests_title": "Zaproszenia ({{count}})",

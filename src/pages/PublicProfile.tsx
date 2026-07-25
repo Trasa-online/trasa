@@ -49,17 +49,15 @@ export default function PublicProfile() {
     enabled: !!profile?.id,
   });
 
-  // Liczby obserwujacych / obserwowanych (jak na wlasnym profilu).
-  const { data: followCounts = { followers: 0, following: 0 } } = useQuery({
-    queryKey: ["public-profile-follows", profile?.id],
-    queryFn: async () => {
-      const [{ count: followers }, { count: following }] = await Promise.all([
-        (supabase as any).from("followers").select("*", { count: "exact", head: true }).eq("following_id", profile!.id),
-        (supabase as any).from("followers").select("*", { count: "exact", head: true }).eq("follower_id", profile!.id),
-      ]);
-      return { followers: followers ?? 0, following: following ?? 0 };
-    },
+  // Liczba znajomych (symetryczny model friendships). friendships ma RLS self-only,
+  // wiec dla cudzego profilu liczymy przez SECURITY DEFINER RPC friend_count.
+  const { data: friendCount = 0 } = useQuery({
+    queryKey: ["public-friend-count", profile?.id],
     enabled: !!profile?.id,
+    queryFn: async () => {
+      const { data } = await (supabase as any).rpc("friend_count", { uid: profile!.id });
+      return (data as number) ?? 0;
+    },
   });
 
 
@@ -157,15 +155,11 @@ export default function PublicProfile() {
           </div>
         </div>
 
-        {/* Obserwujacy / Obserwowani + akcja (znajomy/obserwuj) */}
+        {/* Znajomi (symetryczny model) + akcja (dodaj/znajomy) */}
         <div className="flex items-end gap-8">
           <div>
-            <p className="text-xs font-medium text-muted-foreground">{t("profile.followers")}</p>
-            <p className="text-xl font-bold text-foreground mt-0.5 tabular-nums">{followCounts.followers}</p>
-          </div>
-          <div>
-            <p className="text-xs font-medium text-muted-foreground">{t("profile.following")}</p>
-            <p className="text-xl font-bold text-foreground mt-0.5 tabular-nums">{followCounts.following}</p>
+            <p className="text-xs font-medium text-muted-foreground">{t("profile.friends", "Znajomi")}</p>
+            <p className="text-xl font-bold text-foreground mt-0.5 tabular-nums">{friendCount}</p>
           </div>
           <div className="flex-1" />
           <FriendButton targetUserId={profile.id} className="h-9 px-4 text-sm" />

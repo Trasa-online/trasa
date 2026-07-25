@@ -36,6 +36,7 @@
     "friends_count": "Friends: {{count}}",
     "followers": "Followers",
     "following": "Following",
+    "friends": "Friends",
     "no_users": "No users",
     "friends_title": "Friends",
     "requests_title": "Requests ({{count}})",

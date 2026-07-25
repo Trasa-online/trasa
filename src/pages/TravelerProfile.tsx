@@ -129,7 +129,6 @@ const TravelerProfile = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [followSheet, setFollowSheet] = useState<"followers" | "following" | null>(null);
   const [friendsSheet, setFriendsSheet] = useState(false);
   const share = useShare();
   const { data: realFriends = [] } = useFriends(user?.id);
@@ -226,30 +225,6 @@ const TravelerProfile = () => {
     staleTime: 0,
   });
 
-  const { data: followersList = [] } = useQuery({
-    queryKey: ["followers-list", user?.id],
-    queryFn: async () => {
-      if (!user) return [];
-      const { data } = await supabase
-        .from("followers")
-        .select("follower_id, profiles!followers_follower_id_fkey(username, first_name, avatar_url)")
-        .eq("following_id", user.id);
-      return (data ?? []) as any[];
-    },
-    enabled: !!user,
-  });
-  const { data: followingList = [] } = useQuery({
-    queryKey: ["following-list", user?.id],
-    queryFn: async () => {
-      if (!user) return [];
-      const { data } = await supabase
-        .from("followers")
-        .select("following_id, profiles!followers_following_id_fkey(username, first_name, avatar_url)")
-        .eq("follower_id", user.id);
-      return (data ?? []) as any[];
-    },
-    enabled: !!user,
-  });
 
   if (loading) return null;
 
@@ -350,15 +325,12 @@ const TravelerProfile = () => {
           </div>
         </div>
 
-        {/* Obserwujący / Obserwowani + szukanie osob */}
+        {/* Znajomi (symetryczny model) + szukanie osob. Wczesniej liczyl martwa tabele
+            'followers' (stad bledne "1") - teraz realna liczba znajomych z friendships. */}
         <div className="flex items-end gap-8">
-          <button onClick={() => setFollowSheet("followers")} className="text-left active:opacity-70 transition-opacity">
-            <p className="text-xs font-medium text-muted-foreground">{t("profile.followers")}</p>
-            <p className="text-xl font-bold text-foreground mt-0.5 tabular-nums">{followersList.length}</p>
-          </button>
-          <button onClick={() => setFollowSheet("following")} className="text-left active:opacity-70 transition-opacity">
-            <p className="text-xs font-medium text-muted-foreground">{t("profile.following")}</p>
-            <p className="text-xl font-bold text-foreground mt-0.5 tabular-nums">{followingList.length}</p>
+          <button onClick={() => setFriendsSheet(true)} className="text-left active:opacity-70 transition-opacity">
+            <p className="text-xs font-medium text-muted-foreground">{t("profile.friends", "Znajomi")}</p>
+            <p className="text-xl font-bold text-foreground mt-0.5 tabular-nums">{realFriends.length}</p>
           </button>
           <div className="flex-1" />
           <button
@@ -394,36 +366,6 @@ const TravelerProfile = () => {
 
       </div>
 
-      <Sheet open={followSheet !== null} onOpenChange={(v) => { if (!v) setFollowSheet(null); }}>
-        <SheetContent side="bottom" className="h-[60dvh] flex flex-col rounded-t-2xl">
-          <SheetHeader className="pb-3 border-b border-border/20">
-            <SheetTitle>{followSheet === "followers" ? t("profile.followers") : t("profile.following")}</SheetTitle>
-          </SheetHeader>
-          <div className="flex-1 overflow-y-auto py-2">
-            {(followSheet === "followers" ? followersList : followingList).length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-8">{t("profile.no_users")}</p>
-            ) : (
-              <div className="space-y-1">
-                {(followSheet === "followers" ? followersList : followingList).map((item: any) => {
-                  const profile = item.profiles;
-                  const name = profile?.first_name || profile?.username || t("profile.user_fallback");
-                  return (
-                    <div key={item.follower_id ?? item.following_id} className="flex items-center gap-3 px-4 py-2.5">
-                      <div className="h-9 w-9 rounded-full bg-orange-100 flex items-center justify-center text-sm font-bold text-orange-600 shrink-0">
-                        {name.charAt(0).toUpperCase()}
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold">{name}</p>
-                        {profile?.username && <p className="text-xs text-muted-foreground">@{profile.username}</p>}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </SheetContent>
-      </Sheet>
 
       {/* Znajomi - realne friendships + zaproszenia */}
       <Sheet open={friendsSheet} onOpenChange={setFriendsSheet}>
