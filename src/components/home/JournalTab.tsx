@@ -487,13 +487,16 @@ const JournalTab = ({ userId, city: cityFilter }: JournalTabProps) => {
     );
     return (
       <div className="space-y-3 pb-2">
-        {/* Toggle Najbliższe|Wspomnienia usunięty (2026-07-26) - Wyjazdy pokazują tylko
-            najbliższe/aktywne wyjazdy. Przycisk "Nowy wyjazd" jest w nagłówku (Journal.tsx). */}
-        {active.length > 0 ? (
+        {/* Zakładka "Trasy" (2026-07-26): trasy stworzone przez użytkownika - najbliższe/aktywne
+            + wspomnienia (minione), w jednej liście. Przycisk "Nowy wyjazd" jest w nagłówku (Journal.tsx). */}
+        {active.length === 0 && postcards.length === 0 ? (
+          emptyBox("🧳", "Brak tras", "Twoje trasy - najbliższe i minione - pojawią się tutaj.")
+        ) : (
           <div className="space-y-3">
             {active.map((entry: any) => renderTripCard(entry, () => openEntry(entry, true), true))}
+            {postcards.map((entry: any) => renderTripCard(entry, () => openEntry(entry)))}
           </div>
-        ) : emptyBox("🧳", "Brak najbliższych wyjazdów", "Twoje nadchodzące wyjazdy pojawią się tutaj.")}
+        )}
         {deleteModal}
       </div>
     );

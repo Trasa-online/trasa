@@ -362,12 +362,12 @@ const BottomNav = () => {
               {({ isActive }) => (
                 <>
                   <div className="relative">
-                    <BookOpen className="h-6 w-6 stroke-2" />
+                    <Map className="h-6 w-6 stroke-2" />
                     {hasNewJournalEntries && !isActive && (
                       <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-orange-600 ring-2 ring-background" />
                     )}
                   </div>
-                  <span className="text-[9px] font-semibold leading-tight mt-0.5">Wyjazdy</span>
+                  <span className="text-[9px] font-semibold leading-tight mt-0.5">Trasy</span>
                 </>
               )}
             </NavLink>
@@ -387,10 +387,12 @@ const BottomNav = () => {
             </NavLink>
           )}
 
-          {/* Center FAB */}
+          {/* Center FAB. Tryb uproszczony: "+" prowadzi PROSTO na ekran kompozycji trasy
+              (/wyjazd/nowy) - jedyna akcja tworzenia (zestawienia usuniete 2026-07-26).
+              Stary flow (web): otwiera menu wyboru (plan/zestawienie). */}
           <button
             data-ob="nav-fab"
-            onClick={() => setShowMenu(!showMenu)}
+            onClick={() => (PLANNING_DISABLED ? navigate("/wyjazd/nowy") : setShowMenu(!showMenu))}
             className="flex items-center justify-center"
             aria-label={t("fab_aria")}
           >

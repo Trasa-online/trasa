@@ -5,6 +5,7 @@ import { avatarSrc } from "@/lib/avatar";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import { supabase } from "@/integrations/supabase/client";
 import { MapPin, X, Globe, Sparkles, Star, Pencil, Trash2, ChevronRight, ChevronUp, ArrowRight, Heart, Eye, List, GalleryHorizontalEnd, Search, SlidersHorizontal, Plus, ArrowLeft, Images, Bookmark, Building2, Users, Navigation, Loader2 } from "lucide-react";
 import { API_BASE } from "@/lib/platform";
@@ -1334,6 +1335,89 @@ async function hydrateCollections(cols: any[]): Promise<DiscoveryCollection[]> {
 
 const SHOW_ZESTAWIENIA = true;
 
+// ── SavedRoutes ─────────────────────────────────────────────────────────────────
+// Trasy ZAPISANE przez usera (bookmark -> tabela saved_routes) - cudze trasy odlozone
+// na pozniej. Zakladka "Zapisane" (bottom nav). Tap otwiera publiczny widok trasy
+// (/route/:id), bookmark na karcie usuwa z zapisanych. Wymaga zalogowania.
+export function SavedRoutes({ city }: { city?: string }) {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { data: routes = [], isLoading } = useQuery({
+    queryKey: ["saved-routes", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data: saved } = await (supabase as any)
+        .from("saved_routes").select("route_id, created_at")
+        .eq("user_id", user!.id).order("created_at", { ascending: false });
+      const ids = (saved ?? []).map((s: { route_id: string }) => s.route_id);
+      if (!ids.length) return [] as PolecaneRoute[];
+      const { data: rows } = await (supabase as any)
+        .from("routes")
+        .select("id, title, city, ai_highlight, ai_summary, user_id, created_at, views, share_anonymous")
+        .in("id", ids);
+      const enriched = await enrichRouteRows(rows ?? []);
+      // Zachowaj kolejnosc zapisu (najnowsze zapisane na gorze).
+      const order = new Map(ids.map((id: string, i: number) => [id, i]));
+      return enriched.sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0));
+    },
+    staleTime: 30_000,
+  });
+
+  const unsave = async (id: string) => {
+    if (!user) return;
+    await (supabase as any).from("saved_routes").delete().eq("user_id", user.id).eq("route_id", id);
+    queryClient.invalidateQueries({ queryKey: ["saved-routes"] });
+    toast(i18n.t("toast.removed_saved", { ns: "homefeed", defaultValue: "Usunięto z zapisanych" }));
+  };
+
+  const shown = city && city !== "all"
+    ? routes.filter((r) => (r.city ?? "").toLowerCase().startsWith(city.toLowerCase()))
+    : routes;
+
+  if (!user) {
+    return (
+      <div className="py-14 text-center px-8">
+        <div className="text-4xl mb-3">🔖</div>
+        <p className="text-base font-bold">Zaloguj się, żeby zapisywać trasy</p>
+        <p className="text-sm text-muted-foreground mt-1 leading-relaxed max-w-[260px] mx-auto">Twoje zapisane trasy od innych użytkowników pojawią się tutaj.</p>
+      </div>
+    );
+  }
+  if (isLoading) {
+    return <div className="space-y-4">{Array.from({ length: 2 }).map((_, i) => <div key={i} className={`w-full rounded-3xl bg-muted animate-pulse min-h-[420px] ${TRASA_CARD_H}`} />)}</div>;
+  }
+  if (!shown.length) {
+    return (
+      <div className="py-14 text-center px-8">
+        <div className="text-4xl mb-3">🔖</div>
+        <p className="text-base font-bold">Brak zapisanych tras</p>
+        <p className="text-sm text-muted-foreground mt-1 leading-relaxed max-w-[260px] mx-auto">Zapisz trasę innego użytkownika bookmarkiem w Eksploruj, a wróci tutaj.</p>
+      </div>
+    );
+  }
+  return (
+    <div className="space-y-4">
+      {shown.map((r) => (
+        <TrasaBigCard
+          key={`saved-${r.id}`}
+          id={r.id}
+          photo={r.photo}
+          city={r.city}
+          placeCount={r.placeCount ?? 0}
+          title={r.title}
+          description={r.summary || r.ai_highlight}
+          tags={(r.categories ?? []).map((c) => CAT_LABEL[c] ?? c)}
+          pins={r.pins ?? []}
+          saved
+          onToggleSave={() => unsave(r.id)}
+          onOpen={() => navigate(`/route/${r.id}`)}
+        />
+      ))}
+    </div>
+  );
+}
+
 // ── SavedCollections ──────────────────────────────────────────────────────────
 // Zestawienia ZAPISANE przez usera (bookmark z trasa_saved_collections, localStorage) -
 // czyli cudze kolekcje odlozone na pozniej. To NIE sa wlasne zestawienia usera (te sa na
@@ -1497,6 +1581,9 @@ export function SavedCollections() {
 
 export default function DiscoveryFeed({ city = "Warszawa", active = true, searchQuery = "", searchOpen = false }: { city?: string; active?: boolean; searchQuery?: string; searchOpen?: boolean } = {}) {
   const { t } = useTranslation("homefeed");
+  const { user } = useAuth();
+  const { open: openAuthDrawer } = useAuthDrawer();
+  const queryClient = useQueryClient();
   // Liczba zapisanych miejsc (do wiersza "Zapisane miejsca" pod wyszukiwarka).
   const savedCount = useMemo(() => getHistoryByCity().reduce((n, g) => n + g.places.length, 0), []);
   // Szybkie skroty widoczne po otwarciu wyszukiwarki (pusta). "Biezace polozenie" ->
@@ -1558,6 +1645,35 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
     while (el && !(el.scrollHeight > el.clientHeight + 20 && getComputedStyle(el).overflowY === "auto")) el = el.parentElement;
     el?.scrollTo({ top: 0, behavior: "auto" });
   }, [searchOpen, debouncedQuery]);
+  // Zapis CUDZEJ trasy bookmarkiem na karcie feedu -> tabela saved_routes (per user, w bazie).
+  // Zakladka "Zapisane" czyta te trasy. Wymaga zalogowania (guest -> auth drawer).
+  const [savedRouteIds, setSavedRouteIds] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    if (!user) { setSavedRouteIds(new Set()); return; }
+    let cancelled = false;
+    (supabase as any).from("saved_routes").select("route_id").eq("user_id", user.id)
+      .then(({ data }: { data: { route_id: string }[] | null }) => {
+        if (!cancelled) setSavedRouteIds(new Set((data ?? []).map((s) => s.route_id)));
+      });
+    return () => { cancelled = true; };
+  }, [user]);
+  const toggleSaveRoute = async (routeId: string) => {
+    if (!user) { openAuthDrawer({ mode: "register", hint: "save" }); return; }
+    const has = savedRouteIds.has(routeId);
+    const next = new Set(savedRouteIds);
+    has ? next.delete(routeId) : next.add(routeId);
+    setSavedRouteIds(next);
+    if (has) {
+      await (supabase as any).from("saved_routes").delete().eq("user_id", user.id).eq("route_id", routeId);
+      toast(t("toast.removed_saved", "Usunięto z zapisanych"), {
+        action: { label: t("undo", "Cofnij"), onClick: () => toggleSaveRoute(routeId) },
+      });
+    } else {
+      await (supabase as any).from("saved_routes").insert({ user_id: user.id, route_id: routeId });
+      toast.success(t("toast.saved", "Zapisano"));
+    }
+    queryClient.invalidateQueries({ queryKey: ["saved-routes"] });
+  };
   // Zapis zestawienia bookmarkiem na karcie feedu Tras - localStorage (jak CollectionDetail/Zapisane).
   const [savedColIds, setSavedColIds] = useState<Set<string>>(() => {
     try { return new Set<string>(JSON.parse(localStorage.getItem("trasa_saved_collections") || "[]")); } catch { return new Set(); }
@@ -2136,6 +2252,8 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
               description={r.summary || r.ai_highlight}
               tags={(r.categories ?? []).map((c) => CAT_LABEL[c] ?? c)}
               pins={r.pins ?? []}
+              saved={savedRouteIds.has(r.id)}
+              onToggleSave={() => toggleSaveRoute(r.id)}
               onOpen={() => navigate(`/route/${r.id}`)}
             />
           ))}
