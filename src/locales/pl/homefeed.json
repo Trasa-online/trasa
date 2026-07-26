@@ -3,7 +3,7 @@
     "saved": "Zapisano"
   },
   "confirm": {
-    "delete_collection": "Usunąć to zestawienie?"
+    "delete_collection": "Usunąć tę trasę?"
   },
   "aria": {
     "already_saved": "Już zapisane",
@@ -15,7 +15,7 @@
     "clear": "Wyczyść",
     "filters": "Filtry",
     "close": "Zamknij",
-    "save_collection": "Zapisz zestawienie"
+    "save_collection": "Zapisz trasę"
   },
   "nearby_heading": "Najbliżej Ciebie",
   "nearby_empty": "Brak miejsc w pobliżu.",
@@ -24,9 +24,9 @@
   "saved_places": "Zapisane miejsca",
   "gallery": "Galeria",
   "gallery_empty_title": "Brak zdjęć w galerii",
-  "gallery_empty_desc": "Autor nie dodał jeszcze zdjęć do tego zestawienia.",
+  "gallery_empty_desc": "Autor nie dodał jeszcze zdjęć do tej trasy.",
   "map_heading": "Mapa",
-  "use_collection": "Użyj tego zestawienia",
+  "use_collection": "Użyj tej trasy",
   "not_in_trasa": "jeszcze nie ma w Trasie",
   "see": "Zobacz",
   "local_recommends": "lokals poleca!",
@@ -40,7 +40,7 @@
   "day": "dzień",
   "days": "dni",
   "popular_themes_warsaw": "Popularne motywy Warszawy",
-  "collections": "Zestawienia miejsc",
+  "collections": "Trasy",
   "all": "Wszystkie",
   "places_count_one": "{{count}} miejsce",
   "places_count_few": "{{count}} miejsca",
@@ -51,7 +51,7 @@
   "creator": "Twórca",
   "author_anon": "Anonim",
   "author_default": "Użytkownik",
-  "search_placeholder": "Szukaj tras, autorów, zestawień…",
+  "search_placeholder": "Szukaj tras, autorów…",
   "routes_heading": "Trasy",
   "places_heading": "Miejsca",
   "in_city": "w {{city}}",
@@ -70,9 +70,9 @@
   "filters_title": "Filtry",
   "filter": {
     "city": "Miasto",
-    "theme": "Motyw zestawienia",
+    "theme": "Motyw",
     "category": "Kategoria miejsca",
-    "hint": "Motyw filtruje zestawienia, kategoria filtruje trasy.",
+    "hint": "Motyw i kategoria zawężają listę tras.",
     "clear": "Wyczyść filtry",
     "apply": "Pokaż wyniki"
   },
