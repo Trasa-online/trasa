@@ -5,19 +5,16 @@ import { useTranslation } from "react-i18next";
 import { PullToRefresh } from "@/components/PullToRefresh";
 import CitySelect from "@/components/home/CitySelect";
 import TabTopBar from "@/components/layout/TabTopBar";
-import { SavedCollections } from "@/components/home/DiscoveryFeed";
 import { useActiveCity } from "@/hooks/useActiveCity";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { cn } from "@/lib/utils";
 import { LikedTab } from "./Explore";
 
-// Zakladka Zapisane (bottom nav): selektor miasta w naglowku + toggle Miejsca | Zestawienia.
+// Zakladka Zapisane (bottom nav): selektor miasta w naglowku + lista zapisanych miejsc.
 const LikedPlaces = () => {
   const queryClient = useQueryClient();
   const { t: tE } = useTranslation("explore");
   // Tryb zaznaczania miejsc do trasy (wlaczany z menu trzech kropek).
   const [selectMode, setSelectMode] = useState(false);
-  const [tab, setTab] = useState<"places" | "collections">("places");
   const [city, setCity] = useActiveCity();
 
   return (
@@ -47,7 +44,7 @@ const LikedPlaces = () => {
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="rounded-2xl">
-              <DropdownMenuItem onClick={() => { setTab("places"); setSelectMode(true); }} className="gap-2 rounded-xl cursor-pointer">
+              <DropdownMenuItem onClick={() => setSelectMode(true)} className="gap-2 rounded-xl cursor-pointer">
                 <ListChecks className="h-4 w-4" />
                 {tE("liked.select_places")}
               </DropdownMenuItem>
@@ -56,30 +53,10 @@ const LikedPlaces = () => {
         )}
       </TabTopBar>
 
-      {/* Toggle Miejsca | Zestawienia - szybkie przejscie do konkretnego widoku */}
-      <div className="px-4 pt-3">
-        <div className="flex items-center rounded-full bg-secondary p-0.5 text-sm font-bold">
-          <button
-            onClick={() => { setTab("places"); setSelectMode(false); }}
-            className={cn("flex-1 py-2 rounded-full transition-colors", tab === "places" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground")}
-          >
-            Miejsca
-          </button>
-          <button
-            onClick={() => { setTab("collections"); setSelectMode(false); }}
-            className={cn("flex-1 py-2 rounded-full transition-colors", tab === "collections" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground")}
-          >
-            Zestawienia
-          </button>
-        </div>
-      </div>
-
+      {/* Toggle Miejsca|Zestawienia usunięty (2026-07-26) - Zapisane pokazują tylko
+          zapisane miejsca. Zestawienia (SavedCollections) wstrzymane. */}
       <div className="flex-1 px-4 pt-3">
-        {tab === "places" ? (
-          <LikedTab selectMode={selectMode} onExitSelection={() => setSelectMode(false)} city={city} />
-        ) : (
-          <SavedCollections />
-        )}
+        <LikedTab selectMode={selectMode} onExitSelection={() => setSelectMode(false)} city={city} />
       </div>
     </PullToRefresh>
   );

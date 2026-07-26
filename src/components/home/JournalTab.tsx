@@ -40,7 +40,6 @@ const JournalTab = ({ userId, city: cityFilter }: JournalTabProps) => {
   const queryClient = useQueryClient();
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<any | null>(null);
-  const [wyjazdTab, setWyjazdTab] = useState<"active" | "memories">("active");
 
   const { data: entries = [], isLoading } = useQuery({
     queryKey: ["journal-entries", userId],
@@ -488,34 +487,13 @@ const JournalTab = ({ userId, city: cityFilter }: JournalTabProps) => {
     );
     return (
       <div className="space-y-3 pb-2">
-        {/* Przycisk "Nowy wyjazd" jest w naglowku zakladki (Journal.tsx). Tu tylko toggle. */}
-        <div className="flex items-center rounded-full bg-secondary p-0.5 text-sm font-bold">
-          <button
-            onClick={() => setWyjazdTab("active")}
-            className={`flex-1 py-2 rounded-full transition-colors ${wyjazdTab === "active" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}
-          >
-            {`Najbliższe${active.length > 0 ? ` (${active.length})` : ""}`}
-          </button>
-          <button
-            onClick={() => setWyjazdTab("memories")}
-            className={`flex-1 py-2 rounded-full transition-colors ${wyjazdTab === "memories" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}
-          >
-            {`Wspomnienia${postcards.length > 0 ? ` (${postcards.length})` : ""}`}
-          </button>
-        </div>
-        {wyjazdTab === "active" ? (
-          active.length > 0 ? (
-            <div className="space-y-3">
-              {active.map((entry: any) => renderTripCard(entry, () => openEntry(entry, true), true))}
-            </div>
-          ) : emptyBox("🧳", "Brak najbliższych wyjazdów", "Twoje nadchodzące wyjazdy pojawią się tutaj.")
-        ) : (
-          postcards.length > 0 ? (
-            <div className="space-y-3">
-              {postcards.map((entry: any) => renderTripCard(entry, () => openEntry(entry)))}
-            </div>
-          ) : emptyBox("📸", t("journal.memories_empty_title"), t("journal.memories_empty_desc"))
-        )}
+        {/* Toggle Najbliższe|Wspomnienia usunięty (2026-07-26) - Wyjazdy pokazują tylko
+            najbliższe/aktywne wyjazdy. Przycisk "Nowy wyjazd" jest w nagłówku (Journal.tsx). */}
+        {active.length > 0 ? (
+          <div className="space-y-3">
+            {active.map((entry: any) => renderTripCard(entry, () => openEntry(entry, true), true))}
+          </div>
+        ) : emptyBox("🧳", "Brak najbliższych wyjazdów", "Twoje nadchodzące wyjazdy pojawią się tutaj.")}
         {deleteModal}
       </div>
     );

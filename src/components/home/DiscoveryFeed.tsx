@@ -1247,17 +1247,19 @@ function TrasaBigCard({
       {/* Tap na kafle = otworz wizytowke trasy/zestawienia */}
       <button onClick={onOpen} aria-label={title} className="absolute inset-0" />
 
-      {/* Prawy dolny stack: mini-mapka + bookmark + rozwin (12px od prawej, 16px od dolu) */}
+      {/* Podgląd trasy: większa mapka w zaokrąglonym kwadracie, prawy-górny róg (2026-07-26). */}
+      {miniMap && (
+        <div className="absolute right-3 top-3 z-10 h-24 w-24 rounded-2xl overflow-hidden ring-2 ring-white/85 shadow-lg bg-muted pointer-events-none">
+          <img
+            src={miniMap} alt="" aria-hidden loading="lazy"
+            className="w-full h-full object-cover"
+            onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = "none"; }}
+          />
+        </div>
+      )}
+
+      {/* Prawy dolny stack: bookmark + rozwin (12px od prawej, 16px od dolu) */}
       <div className="absolute right-3 bottom-4 z-10 flex flex-col items-center gap-2.5">
-        {miniMap && (
-          <div className="h-12 w-12 rounded-full overflow-hidden ring-2 ring-white/85 shadow-md bg-muted mb-0.5">
-            <img
-              src={miniMap} alt="" aria-hidden loading="lazy"
-              className="w-full h-full object-cover"
-              onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = "none"; }}
-            />
-          </div>
-        )}
         {onToggleSave && (
           <button
             onClick={(e) => { e.stopPropagation(); onToggleSave(); }}
@@ -2076,9 +2078,10 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
           {Array.from({ length: 2 }).map((_, i) => (
             <div key={i} className={`relative w-full shrink-0 rounded-3xl overflow-hidden bg-muted animate-pulse min-h-[420px] ${TRASA_CARD_H}`}>
               <div className="absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-black/25 to-transparent" />
-              {/* prawy stack: mapka + 2 guziki */}
+              {/* podglad trasy: mapka w prawym-gornym rogu */}
+              <div className="absolute right-3 top-3 h-24 w-24 rounded-2xl bg-white/30" />
+              {/* prawy dolny stack: 2 guziki */}
               <div className="absolute right-4 bottom-5 flex flex-col items-center gap-2.5">
-                <div className="h-12 w-12 rounded-full bg-white/30" />
                 <div className="h-12 w-12 rounded-full bg-white/40" />
                 <div className="h-12 w-12 rounded-full bg-white/40" />
               </div>

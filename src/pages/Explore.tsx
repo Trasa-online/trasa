@@ -748,6 +748,7 @@ const Explore = () => {
             onOpenFilters={() => window.dispatchEvent(new CustomEvent("trasa:explore-open-filters"))}
             onOpenSearch={openSearch}
             activeFilterCount={filterCount}
+            hideModeToggle
           />
         )}
       </TabTopBar>
