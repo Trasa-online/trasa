@@ -12,6 +12,7 @@ import PlaceSwiperDetail from "./PlaceSwiperDetail";
 import SavePlaceSheet, { type SavePlaceInput } from "./SavePlaceSheet";
 import { supabase } from "@/integrations/supabase/client";
 import { getPhotoUrl, isCachedPhotoUrl, ensurePhotoCached } from "@/lib/placePhotos";
+import { GOOGLE_PLACE_DETAILS_DISABLED } from "@/lib/appMode";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import { useOnboarding } from "@/components/OnboardingGuide";
@@ -297,6 +298,32 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
     // Gdy mamy galerie (places.gallery_urls z backfillu), nie nadpisujemy photoUrls
     // pojedynczym URL-em z Google - to dropowaloby gallery. Galeria ma cover + extras.
     const hasGallery = (place.galleryPhotos ?? []).length > 0;
+
+    // Cięcie kosztów: nie wołamy płatnego Place Details dla karty. Gdy brak
+    // scache'owanej okładki - dociągamy JĄ RAZ przez cache-place-photo (tanie,
+    // cache na zawsze). Rating/adres/tagi bierzemy z bazy (Google fallbacky zostają
+    // puste). Recenzje/godziny user znajdzie przez "Zobacz w Google Maps".
+    if (GOOGLE_PLACE_DETAILS_DISABLED) {
+      if (!alreadyCached && !hasGallery) {
+        ensurePhotoCached(
+          {
+            table: "places",
+            id: place.id,
+            place_name: place.place_name,
+            city,
+            latitude: place.latitude,
+            longitude: place.longitude,
+            place_id: (place as any).google_place_id ?? null,
+          },
+          place.photo_url ?? null,
+        )
+          .then((u) => {
+            if (u) { setPhotoUrls([u]); setImgFailed(false); onPhotoFetched?.(place.id, u); }
+          })
+          .catch(() => {});
+      }
+      return;
+    }
 
     // Oszczednosc kosztu: gdy okladka jest juz scache'owana w Storage i miejsce ma rating
     // z bazy, NIE wolamy google-places-proxy (Place Details) dla karty - karta pokazuje

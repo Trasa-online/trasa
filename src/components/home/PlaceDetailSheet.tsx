@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Loader2, Star, MapPin, ExternalLink, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getPhotoUrl, isCachedPhotoUrl, ensurePhotoCached, getCachedPhotoVariant } from "@/lib/placePhotos";
+import { GOOGLE_PLACE_DETAILS_DISABLED } from "@/lib/appMode";
 import BusinessActionButtons from "@/components/business/BusinessActionButtons";
 import posthog from "posthog-js";
 
@@ -90,6 +91,28 @@ const PlaceDetailSheet = ({ pin, open, onOpenChange }: PlaceDetailSheetProps) =>
       setCachedPhotoUrl(getCachedPhotoVariant(pin.photo_url, "large"));
     } else {
       setCachedPhotoUrl(null);
+    }
+
+    // Cięcie kosztów: nie wołamy płatnego Place Details. details zostaje null
+    // (komponent to obsługuje). Zdjęcie dociągamy RAZ przez cache-place-photo.
+    if (GOOGLE_PLACE_DETAILS_DISABLED) {
+      if (!alreadyCached) {
+        ensurePhotoCached(
+          {
+            table: "pins",
+            id: pin.id,
+            place_name: pin.place_name,
+            latitude: pin.latitude,
+            longitude: pin.longitude,
+            place_id: pin.place_id ?? null,
+          },
+          pin.photo_url ?? null,
+        )
+          .then((u) => { if (u) setCachedPhotoUrl(u); })
+          .catch(() => {});
+      }
+      setLoading(false);
+      return;
     }
 
     supabase.functions.invoke("google-places-proxy", {

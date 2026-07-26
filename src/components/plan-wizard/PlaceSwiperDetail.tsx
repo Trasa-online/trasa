@@ -16,6 +16,7 @@ import { haversineKm, formatDistance } from "@/lib/distance";
 import { Drawer as VaulDrawer } from "vaul";
 import { supabase } from "@/integrations/supabase/client";
 import { getPhotoUrl, ensurePhotoCached } from "@/lib/placePhotos";
+import { GOOGLE_PLACE_DETAILS_DISABLED } from "@/lib/appMode";
 import { type MockPlace, fetchEnrichedPlace } from "./PlaceSwiper";
 import posthog from "posthog-js";
 import PremiumBusinessCard from "@/components/business/PremiumBusinessCard";
@@ -118,7 +119,32 @@ const PlaceSwiperDetail = ({
         setPhotos([cur.photo_url, ...(cur.galleryPhotos ?? [])].filter(Boolean) as string[]);
       }
 
-      const placesPromise = supabase.functions
+      // Cięcie kosztów: NIE wołamy płatnego Place Details od Google. detail zostaje
+      // null (komponent to obsługuje - recenzje i tak ukryte przez `hideReviews`,
+      // adres/ocena z bazy, link "Zobacz w Google Maps" w sekcji "Na mapie").
+      // Zdjęcie okładki dociągamy RAZ przez cache-place-photo (tanie, cache na zawsze);
+      // displayPhotos i tak spada na cover+galerię gdy `photos` puste.
+      const placesPromise = GOOGLE_PLACE_DETAILS_DISABLED
+        ? (hasBizPhotos
+            ? Promise.resolve()
+            : ensurePhotoCached(
+                {
+                  table: "places",
+                  id: cur.id,
+                  place_name: cur.place_name,
+                  city: city ?? cur.city,
+                  latitude: cur.latitude,
+                  longitude: cur.longitude,
+                  place_id: (cur as { google_place_id?: string }).google_place_id ?? null,
+                },
+                cur.photo_url ?? null,
+              )
+                .then((u) => {
+                  const cover = u ?? cur.photo_url;
+                  if (cover) setPhotos([cover, ...(cur.galleryPhotos ?? [])].filter(Boolean) as string[]);
+                })
+                .catch(() => {}))
+        : supabase.functions
         .invoke("google-places-proxy", {
           body: {
             placeName: cur.place_name,

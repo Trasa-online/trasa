@@ -19,3 +19,25 @@ export const SIMPLIFIED_APP = true;
 // Web/PWA zostaje bez zmian - m.in. testowy flow sesji grupowej (/sesja, /create)
 // odblokowany w WebWaitlistGate nadal działa.
 export const PLANNING_DISABLED = SIMPLIFIED_APP && isNative;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Cięcie kosztów Google Places (2026-07-26)
+//
+// Decyzja: przestajemy wołać PŁATNE Place Details od Google (recenzje, godziny,
+// opis, oceny "na żywo"). To był najdroższy telefon do Google - odpalany przy
+// KAŻDYM otwarciu wizytówki, w najwyższym koszyku cenowym (Atmosphere + Reviews),
+// dodatkowo poprzedzony 2-3 telefonami "które to miejsce?" (Nearby/Text Search).
+//
+// Co ZOSTAJE:
+//   - Nasze dane z bazy (nazwa, kategoria, lokalizacja, ocena/adres jeśli w DB)
+//   - Zdjęcia przez `cache-place-photo` (jeden tani telefon, cache w Storage NA ZAWSZE)
+//   - Link "Zobacz w Google Maps" w sekcji "Na mapie" wizytówki (user idzie po
+//     recenzje/godziny bezpośrednio do Google)
+//   - Wizytówki firm B2B (mają własne dane, nigdy nie zależały od Google Details)
+//
+// Co ZNIKA z wizytówki zwykłego miejsca: recenzje/godziny/opis z Google w apce
+// (były już częściowo ukryte - reviews przez `hideReviews`).
+//
+// To przełącznik, NIE usunięcie kodu. Ustaw = false, żeby wrócić do Place Details.
+// ─────────────────────────────────────────────────────────────────────────────
+export const GOOGLE_PLACE_DETAILS_DISABLED = true;

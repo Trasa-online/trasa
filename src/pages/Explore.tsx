@@ -20,7 +20,7 @@ import { getSubcategoryLabel, subcategoryLabelLocalized, MAIN_CATEGORIES } from 
 import { getPhotoUrl } from "@/lib/placePhotos";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthDrawer } from "@/hooks/useAuthDrawer";
-import { PLANNING_DISABLED } from "@/lib/appMode";
+import { PLANNING_DISABLED, GOOGLE_PLACE_DETAILS_DISABLED } from "@/lib/appMode";
 import { createWyjazdFromPlaces } from "@/lib/createWyjazd";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -84,6 +84,9 @@ const SavedThumb = ({ p, emoji }: { p: any; emoji: string }) => {
     const cached = resolvedThumbCache.get(key);
     if (cached) { setUrl(cached); return; }
     if (!p.latitude || !p.longitude || thumbInFlight.has(key)) return;
+    // Cięcie kosztów: nie wołamy płatnego Place Details tylko po miniaturkę. Zapisane
+    // miejsca zwykle mają już photo_url; brakujące pokazują fallback (emoji/gradient).
+    if (GOOGLE_PLACE_DETAILS_DISABLED) return;
     thumbInFlight.add(key);
     let cancelled = false;
     supabase.functions
