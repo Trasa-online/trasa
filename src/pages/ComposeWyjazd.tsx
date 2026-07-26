@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { ArrowLeft, Search, Plus, X, Star, MapPin, ChevronDown, Calendar as CalendarIcon, List, GalleryHorizontalEnd, Loader2, ArrowRight, Trash2, Bookmark, Maximize2 } from "lucide-react";
+import { ArrowLeft, Search, Plus, X, Star, MapPin, ChevronDown, ChevronUp, Calendar as CalendarIcon, List, GalleryHorizontalEnd, Loader2, ArrowRight, Trash2, Bookmark, Maximize2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthDrawer } from "@/hooks/useAuthDrawer";
@@ -157,6 +157,15 @@ export default function ComposeWyjazd() {
 
   const addPlace = (p: any) => { if (!isAdded(p)) setItems((prev) => [...prev, toItem(p)]); };
   const removePlace = (key: string) => setItems((prev) => prev.filter((i) => i.key !== key));
+  // Zmiana kolejnosci miejsc (kolejnosc = przebieg trasy). dir: -1 w gore, +1 w dol.
+  const moveItem = (key: string, dir: -1 | 1) => setItems((prev) => {
+    const idx = prev.findIndex((i) => i.key === key);
+    const to = idx + dir;
+    if (idx < 0 || to < 0 || to >= prev.length) return prev;
+    const next = [...prev];
+    [next[idx], next[to]] = [next[to], next[idx]];
+    return next;
+  });
   const openDetail = (p: any) => setDetailPlace(toMockPlace(p, city));
 
   const mapPins = items
@@ -349,8 +358,10 @@ export default function ComposeWyjazd() {
             </div>
           ) : (
             <div className="space-y-2.5">
-              {items.map((it) => (
+              {items.map((it, idx) => (
                 <button key={it.key} onClick={() => openDetail(it)} className="w-full flex items-center gap-2.5 rounded-2xl bg-secondary p-2.5 text-left active:opacity-90 transition-opacity">
+                  {/* Numer porzadkowy = pozycja w trasie */}
+                  <span className="shrink-0 h-6 w-6 rounded-full bg-foreground text-background text-xs font-bold flex items-center justify-center">{idx + 1}</span>
                   {it.photo_url ? (
                     <img src={it.photo_url} alt="" className="h-12 w-12 rounded-xl object-cover shrink-0" />
                   ) : (
@@ -365,6 +376,19 @@ export default function ComposeWyjazd() {
                       )}
                     </div>
                   </div>
+                  {/* Zmiana kolejnosci: strzalki gora/dol (wylaczone na krancach) */}
+                  <span className="shrink-0 flex flex-col -my-0.5">
+                    <span role="button" tabIndex={0} aria-label="Przesuń wyżej" aria-disabled={idx === 0}
+                      onClick={(e) => { e.stopPropagation(); if (idx > 0) moveItem(it.key, -1); }}
+                      className={`h-6 w-7 flex items-center justify-center rounded-lg transition-transform ${idx === 0 ? "text-muted-foreground/30" : "text-muted-foreground active:scale-90 active:bg-background"}`}>
+                      <ChevronUp className="h-4 w-4" strokeWidth={2.5} />
+                    </span>
+                    <span role="button" tabIndex={0} aria-label="Przesuń niżej" aria-disabled={idx === items.length - 1}
+                      onClick={(e) => { e.stopPropagation(); if (idx < items.length - 1) moveItem(it.key, 1); }}
+                      className={`h-6 w-7 flex items-center justify-center rounded-lg transition-transform ${idx === items.length - 1 ? "text-muted-foreground/30" : "text-muted-foreground active:scale-90 active:bg-background"}`}>
+                      <ChevronDown className="h-4 w-4" strokeWidth={2.5} />
+                    </span>
+                  </span>
                   <span role="button" tabIndex={0} onClick={(e) => { e.stopPropagation(); removePlace(it.key); }} aria-label="Usuń miejsce" className="h-8 w-8 rounded-full bg-background flex items-center justify-center text-muted-foreground active:scale-90 transition-transform shrink-0">
                     <Trash2 className="h-4 w-4" />
                   </span>
