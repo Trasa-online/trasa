@@ -17,7 +17,8 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { SHARE_BASE_URL } from "@/lib/shareUrl";
 import { useShare } from "@/hooks/useShare";
 import { isNative } from "@/lib/platform";
-import { useFriends, useIncomingRequests, acceptFriendRequest, removeFriend } from "@/hooks/useFriends";
+import { useFollowCounts, useFollowList } from "@/hooks/useFollow";
+import NotificationsDrawer from "@/components/layout/NotificationsDrawer";
 import InviteFriendsBanner from "@/components/social/InviteFriendsBanner";
 import { UserCheck } from "lucide-react";
 import { Camera as CapCamera, CameraResultType, CameraSource } from "@capacitor/camera";
@@ -129,14 +130,12 @@ const TravelerProfile = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [friendsSheet, setFriendsSheet] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [followSheet, setFollowSheet] = useState<"followers" | "following" | null>(null);
   const share = useShare();
-  const { data: realFriends = [] } = useFriends(user?.id);
-  const { data: incomingReqs = [] } = useIncomingRequests(user?.id);
-  const refreshFriends = () => {
-    queryClient.invalidateQueries({ queryKey: ["friends", user?.id] });
-    queryClient.invalidateQueries({ queryKey: ["friend-requests-in", user?.id] });
-  };
+  // Asymetryczny follow: liczniki + listy obserwujacych/obserwowanych.
+  const { data: followCounts = { followers: 0, following: 0 } } = useFollowCounts(user?.id);
+  const followList = useFollowList(user?.id, followSheet === "following" ? "following" : "followers");
 
   const handleAvatarUpload = async (file: File) => {
     if (!user) return;
@@ -256,18 +255,13 @@ const TravelerProfile = () => {
             >
               <Share2 className="h-5 w-5" />
             </button>
-            {/* Dzwonek = zaproszenia do znajomych / prosby (badge liczba oczekujacych) */}
+            {/* Dzwonek = WSZYSTKIE powiadomienia (nowi obserwujacy, sesje grupowe, itp.) */}
             <button
-              onClick={() => setFriendsSheet(true)}
+              onClick={() => setNotificationsOpen(true)}
               className="relative h-9 w-9 flex items-center justify-center rounded-full bg-muted text-foreground active:scale-90 transition-transform"
               aria-label={t("profile.notifications_aria")}
             >
               <Bell className="h-5 w-5" />
-              {incomingReqs.length > 0 && (
-                <span className="absolute top-0.5 right-0.5 h-4 min-w-4 px-1 rounded-full bg-primary text-white text-[9px] font-bold flex items-center justify-center ring-2 ring-background">
-                  {incomingReqs.length}
-                </span>
-              )}
             </button>
             <button
               onClick={() => navigate("/settings")}
@@ -325,12 +319,15 @@ const TravelerProfile = () => {
           </div>
         </div>
 
-        {/* Znajomi (symetryczny model) + szukanie osob. Wczesniej liczyl martwa tabele
-            'followers' (stad bledne "1") - teraz realna liczba znajomych z friendships. */}
+        {/* Obserwujacy / Obserwowani (asymetryczny follow) + szukanie osob. */}
         <div className="flex items-end gap-8">
-          <button onClick={() => setFriendsSheet(true)} className="text-left active:opacity-70 transition-opacity">
-            <p className="text-xs font-medium text-muted-foreground">{t("profile.friends", "Znajomi")}</p>
-            <p className="text-xl font-bold text-foreground mt-0.5 tabular-nums">{realFriends.length}</p>
+          <button onClick={() => setFollowSheet("followers")} className="text-left active:opacity-70 transition-opacity">
+            <p className="text-xs font-medium text-muted-foreground">{t("profile.followers")}</p>
+            <p className="text-xl font-bold text-foreground mt-0.5 tabular-nums">{followCounts.followers}</p>
+          </button>
+          <button onClick={() => setFollowSheet("following")} className="text-left active:opacity-70 transition-opacity">
+            <p className="text-xs font-medium text-muted-foreground">{t("profile.following")}</p>
+            <p className="text-xl font-bold text-foreground mt-0.5 tabular-nums">{followCounts.following}</p>
           </button>
           <div className="flex-1" />
           <button
@@ -367,72 +364,43 @@ const TravelerProfile = () => {
       </div>
 
 
-      {/* Znajomi - realne friendships + zaproszenia */}
-      <Sheet open={friendsSheet} onOpenChange={setFriendsSheet}>
+      {/* Obserwujacy / Obserwowani - lista (follow, asymetryczny) */}
+      <Sheet open={followSheet !== null} onOpenChange={(v) => { if (!v) setFollowSheet(null); }}>
         <SheetContent side="bottom" className="h-[72dvh] flex flex-col rounded-t-2xl">
           <SheetHeader className="pb-3 border-b border-border/20">
-            <SheetTitle>{t("profile.friends_title")}</SheetTitle>
+            <SheetTitle>{followSheet === "following" ? t("profile.following") : t("profile.followers")}</SheetTitle>
           </SheetHeader>
-          <div className="flex-1 overflow-y-auto py-3 space-y-5">
-            {incomingReqs.length > 0 && (
-              <div>
-                <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2 px-1">{t("profile.requests_title", { count: incomingReqs.length })}</p>
-                <div className="space-y-2">
-                  {incomingReqs.map((p) => (
-                    <div key={p.id} className="flex items-center gap-3 px-1">
-                      <button onClick={() => { setFriendsSheet(false); navigate(`/profil/${p.username}`); }} className="shrink-0">
-                        <Avatar className="h-10 w-10"><AvatarImage src={avatarSrc(p.avatar_url)} className="object-cover bg-orange-100" /><AvatarFallback className="bg-orange-100 text-orange-600 font-bold text-sm">{(p.first_name || p.username || "?").charAt(0).toUpperCase()}</AvatarFallback></Avatar>
-                      </button>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold truncate">{p.first_name || p.username}</p>
-                        {p.username && <p className="text-xs text-muted-foreground">@{p.username}</p>}
-                      </div>
-                      <button
-                        onClick={async () => { const { error } = await acceptFriendRequest(p.id); if (!error) { toast(t("profile.friend_added")); refreshFriends(); } }}
-                        className="shrink-0 h-9 px-3.5 rounded-full bg-primary text-white text-xs font-bold flex items-center gap-1.5 active:scale-95 transition-transform"
-                      >
-                        <Check className="h-3.5 w-3.5" /> {t("profile.accept")}
-                      </button>
-                      <button
-                        onClick={async () => { const { error } = await removeFriend(p.id); if (!error) refreshFriends(); }}
-                        className="shrink-0 h-9 px-3 rounded-full bg-muted text-muted-foreground text-xs font-semibold active:scale-95 transition-transform"
-                      >
-                        {t("profile.decline")}
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {realFriends.length === 0 && incomingReqs.length === 0 ? (
+          <div className="flex-1 overflow-y-auto py-3">
+            {followList.isLoading ? (
+              <p className="text-sm text-muted-foreground text-center py-8">…</p>
+            ) : (followList.data ?? []).length === 0 ? (
               <div className="px-1 space-y-4 pt-2">
-                <p className="text-sm text-muted-foreground text-center">{t("profile.no_friends_hint")}</p>
+                <p className="text-sm text-muted-foreground text-center">
+                  {followSheet === "following" ? t("profile.no_following", "Nie obserwujesz jeszcze nikogo.") : t("profile.no_followers", "Nikt Cię jeszcze nie obserwuje.")}
+                </p>
                 <InviteFriendsBanner />
-                <button onClick={() => { setFriendsSheet(false); navigate("/search"); }} className="w-full py-3 rounded-full bg-secondary text-secondary-foreground font-bold text-sm active:scale-[0.97] transition-transform">
+                <button onClick={() => { setFollowSheet(null); navigate("/search"); }} className="w-full py-3 rounded-full bg-secondary text-secondary-foreground font-bold text-sm active:scale-[0.97] transition-transform">
                   {t("profile.find_friends")}
                 </button>
               </div>
-            ) : realFriends.length > 0 ? (
-              <div>
-                <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2 px-1">{t("profile.your_friends_title", { count: realFriends.length })}</p>
-                <div className="space-y-1">
-                  {realFriends.map((f) => (
-                    <button key={f.id} onClick={() => { setFriendsSheet(false); navigate(`/profil/${f.username}`); }} className="w-full flex items-center gap-3 px-1 py-2 active:bg-muted/40 rounded-xl transition-colors text-left">
-                      <Avatar className="h-10 w-10"><AvatarImage src={avatarSrc(f.avatar_url)} className="object-cover bg-orange-100" /><AvatarFallback className="bg-orange-100 text-orange-600 font-bold text-sm">{(f.first_name || f.username || "?").charAt(0).toUpperCase()}</AvatarFallback></Avatar>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold truncate">{f.first_name || f.username}</p>
-                        {f.username && <p className="text-xs text-muted-foreground">@{f.username}</p>}
-                      </div>
-                      <UserCheck className="h-4 w-4 text-green-600 shrink-0" />
-                    </button>
-                  ))}
-                </div>
+            ) : (
+              <div className="space-y-1">
+                {(followList.data ?? []).map((p) => (
+                  <button key={p.id} onClick={() => { setFollowSheet(null); navigate(`/profil/${p.username}`); }} className="w-full flex items-center gap-3 px-1 py-2 active:bg-muted/40 rounded-xl transition-colors text-left">
+                    <Avatar className="h-10 w-10"><AvatarImage src={avatarSrc(p.avatar_url)} className="object-cover bg-orange-100" /><AvatarFallback className="bg-orange-100 text-orange-600 font-bold text-sm">{(p.first_name || p.username || "?").charAt(0).toUpperCase()}</AvatarFallback></Avatar>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold truncate">{p.first_name || p.username}</p>
+                      {p.username && <p className="text-xs text-muted-foreground">@{p.username}</p>}
+                    </div>
+                  </button>
+                ))}
               </div>
-            ) : null}
+            )}
           </div>
         </SheetContent>
       </Sheet>
+
+      {user && <NotificationsDrawer open={notificationsOpen} onClose={() => setNotificationsOpen(false)} userId={user.id} />}
     </div>
   );
 };

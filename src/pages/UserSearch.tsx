@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { ArrowLeft, Search } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import FriendButton from "@/components/social/FriendButton";
+import FollowButton from "@/components/social/FollowButton";
 import InviteFriendsBanner from "@/components/social/InviteFriendsBanner";
 
 type Profile = { id: string; username: string; first_name: string | null; avatar_url: string | null };
@@ -116,7 +116,7 @@ export default function UserSearch() {
                     <p className="text-sm font-semibold leading-tight">{displayName}</p>
                     <p className="text-xs text-muted-foreground">@{profile.username}</p>
                   </div>
-                  <FriendButton targetUserId={profile.id} />
+                  <FollowButton targetUserId={profile.id} />
                 </div>
               );
             })}

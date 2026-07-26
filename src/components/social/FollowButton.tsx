@@ -2,18 +2,21 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 interface FollowButtonProps {
   targetUserId: string;
-  initialIsFollowing: boolean;
+  /** Wartosc poczatkowa zanim doczyta sie realny stat (opcjonalna - komponent i tak sam pobiera). */
+  initialIsFollowing?: boolean;
   className?: string;
 }
 
-export default function FollowButton({ targetUserId, initialIsFollowing, className }: FollowButtonProps) {
+export default function FollowButton({ targetUserId, initialIsFollowing = false, className }: FollowButtonProps) {
   const { t } = useTranslation("social");
-  const { user } = useAuth();
+  const { user, isAnonymous } = useAuth();
+  const { open: openAuthDrawer } = useAuthDrawer();
   const queryClient = useQueryClient();
 
   // useQuery subscribes to the cache - component re-renders on setQueryData
@@ -74,7 +77,7 @@ export default function FollowButton({ targetUserId, initialIsFollowing, classNa
 
   return (
     <button
-      onClick={() => mutation.mutate(!isFollowing)}
+      onClick={() => { if (isAnonymous) { openAuthDrawer({ mode: "register", hint: "follow" }); return; } mutation.mutate(!isFollowing); }}
       disabled={mutation.isPending}
       className={cn(
         "px-5 py-2 rounded-full text-sm font-semibold transition-all active:scale-95 disabled:opacity-60",

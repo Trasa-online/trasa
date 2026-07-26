@@ -12,7 +12,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { resolveStored } from "@/components/PlacePhoto";
-import FriendButton from "@/components/social/FriendButton";
+import FollowButton from "@/components/social/FollowButton";
+import { useFollowCounts } from "@/hooks/useFollow";
 import StatCard from "@/components/profile/StatCard";
 
 export default function PublicProfile() {
@@ -49,16 +50,8 @@ export default function PublicProfile() {
     enabled: !!profile?.id,
   });
 
-  // Liczba znajomych (symetryczny model friendships). friendships ma RLS self-only,
-  // wiec dla cudzego profilu liczymy przez SECURITY DEFINER RPC friend_count.
-  const { data: friendCount = 0 } = useQuery({
-    queryKey: ["public-friend-count", profile?.id],
-    enabled: !!profile?.id,
-    queryFn: async () => {
-      const { data } = await (supabase as any).rpc("friend_count", { uid: profile!.id });
-      return (data as number) ?? 0;
-    },
-  });
+  // Liczniki follow (asymetryczny model). followers SELECT jest publiczny -> dziala dla cudzego profilu.
+  const { data: followCounts = { followers: 0, following: 0 } } = useFollowCounts(profile?.id);
 
 
 
@@ -155,14 +148,18 @@ export default function PublicProfile() {
           </div>
         </div>
 
-        {/* Znajomi (symetryczny model) + akcja (dodaj/znajomy) */}
+        {/* Obserwujacy / Obserwowani (asymetryczny follow) + akcja Obserwuj */}
         <div className="flex items-end gap-8">
           <div>
-            <p className="text-xs font-medium text-muted-foreground">{t("profile.friends", "Znajomi")}</p>
-            <p className="text-xl font-bold text-foreground mt-0.5 tabular-nums">{friendCount}</p>
+            <p className="text-xs font-medium text-muted-foreground">{t("profile.followers")}</p>
+            <p className="text-xl font-bold text-foreground mt-0.5 tabular-nums">{followCounts.followers}</p>
+          </div>
+          <div>
+            <p className="text-xs font-medium text-muted-foreground">{t("profile.following")}</p>
+            <p className="text-xl font-bold text-foreground mt-0.5 tabular-nums">{followCounts.following}</p>
           </div>
           <div className="flex-1" />
-          <FriendButton targetUserId={profile.id} className="h-9 px-4 text-sm" />
+          <FollowButton targetUserId={profile.id} className="h-9 px-4 text-sm" />
         </div>
 
         {/* Statystyki - TEN SAM uklad co wlasny profil (Plany + Miasta, 2 kolumny). */}
