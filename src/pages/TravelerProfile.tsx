@@ -6,7 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import { Settings, Copy, Check, Camera, UserCircle2, ArrowRight, ArrowUpRight, Map as MapIcon, Building2, Bell, Share2, Search } from "lucide-react";
+import { Settings, Copy, Check, Camera, UserCircle2, ArrowRight, ArrowUpRight, Map as MapIcon, Building2, Bell, Share2, Search, BarChart3 } from "lucide-react";
 import TabHeader from "@/components/layout/TabHeader";
 import StatCard from "@/components/profile/StatCard";
 import { toast } from "sonner";
@@ -18,6 +18,7 @@ import { SHARE_BASE_URL } from "@/lib/shareUrl";
 import { useShare } from "@/hooks/useShare";
 import { isNative } from "@/lib/platform";
 import { useFollowCounts, useFollowList } from "@/hooks/useFollow";
+import { useMyRouteStats } from "@/hooks/useRouteStats";
 import NotificationsDrawer from "@/components/layout/NotificationsDrawer";
 import InviteFriendsBanner from "@/components/social/InviteFriendsBanner";
 import { UserCheck } from "lucide-react";
@@ -136,6 +137,7 @@ const TravelerProfile = () => {
   // Asymetryczny follow: liczniki + listy obserwujacych/obserwowanych.
   const { data: followCounts = { followers: 0, following: 0 } } = useFollowCounts(user?.id);
   const followList = useFollowList(user?.id, followSheet === "following" ? "following" : "followers");
+  const { data: routeStats } = useMyRouteStats();
 
   const handleAvatarUpload = async (file: File) => {
     if (!user) return;
@@ -339,22 +341,34 @@ const TravelerProfile = () => {
           </button>
         </div>
 
-        {/* Statystyki: Plany + Miasta (2 kolumny). Zestawienia usuniete - nie istnieja w aplikacji. */}
-        <div className="grid grid-cols-2 gap-3">
+        {/* Plany + Miasta (2 kolumny) + Statystyki (pelna szerokosc, pomaranczowa). */}
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <StatCard
+              value={stats?.trips ?? 0}
+              title={t("sections.routes")}
+              subtitle={t("sections.routes_sub")}
+              icon={<MapIcon className="h-6 w-6" />}
+              className="bg-secondary text-secondary-foreground"
+              onClick={() => navigate("/dziennik")}
+            />
+            <StatCard
+              value={stats?.cities ?? 0}
+              title={t("sections.cities")}
+              subtitle={t("sections.cities_sub")}
+              icon={<Building2 className="h-6 w-6" />}
+              className="bg-trasa-cream text-trasa-cream-ink"
+            />
+          </div>
+          {/* Statystyki wykorzystania tras przez innych -> widok /statystyki. */}
           <StatCard
-            value={stats?.trips ?? 0}
-            title={t("sections.routes")}
-            subtitle={t("sections.routes_sub")}
-            icon={<MapIcon className="h-6 w-6" />}
-            className="bg-secondary text-secondary-foreground"
-            onClick={() => navigate("/dziennik")}
-          />
-          <StatCard
-            value={stats?.cities ?? 0}
-            title={t("sections.cities")}
-            subtitle={t("sections.cities_sub")}
-            icon={<Building2 className="h-6 w-6" />}
-            className="bg-trasa-cream text-trasa-cream-ink"
+            full
+            value={routeStats?.people ?? 0}
+            title={t("sections.stats", "Statystyki")}
+            subtitle={t("sections.stats_sub", "wykorzystanie Twoich tras")}
+            icon={<BarChart3 className="h-6 w-6" />}
+            className="bg-trasa-orange text-trasa-orange-ink"
+            onClick={() => navigate("/statystyki")}
           />
         </div>
 

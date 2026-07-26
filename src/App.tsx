@@ -656,6 +656,7 @@ const CreateRanking    = lazy(() => import("./pages/CreateRanking"));
 const ComposeWyjazd    = lazy(() => import("./pages/ComposeWyjazd"));
 const CreateRoute      = lazy(() => import("./pages/CreateRoute"));
 const Settings         = lazy(() => import("./pages/Settings"));
+const Stats            = lazy(() => import("./pages/Stats"));
 const DayReview        = lazy(() => import("./pages/DayReview"));
 const SetPassword      = lazy(() => import("./pages/SetPassword"));
 const TravelerProfile  = lazy(() => import("./pages/TravelerProfile"));
@@ -763,6 +764,7 @@ const App = () => (
               Na web zostaje (testowy flow sesji grupowej odblokowany w WebWaitlistGate). */}
           <Route path="/create" element={PLANNING_DISABLED ? <Navigate to="/eksploruj" replace /> : <CreateRoute />} />
           <Route path="/settings" element={<RequireAuth><AppLayout><Settings /></AppLayout></RequireAuth>} />
+          <Route path="/statystyki" element={<RequireAuth><Stats /></RequireAuth>} />
           <Route path="/day-review" element={<DayReview />} />
           <Route path="/set-password" element={<SetPassword />} />
           <Route path="/set-password-biznes" element={<SetPassword forceBusiness />} />
