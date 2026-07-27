@@ -137,6 +137,12 @@ const ReviewSummary = () => {
   const [noteSaved, setNoteSaved] = useState<Record<string, boolean>>({});
   const noteTimer = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Pytanie "Czy ten plan dnia mial sens?" (poziom trasy). overall_rating: 1=Tak, 0=Nie, null=brak.
+  // review_narrative = odpowiedz tekstowa. Autosave debounce (jak notki miejsc).
+  const [planSense, setPlanSense] = useState<boolean | null>(null);
+  const [senseAnswer, setSenseAnswer] = useState("");
+  const [senseSaved, setSenseSaved] = useState(false);
+  const senseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Udostepnianie historycznej trasy: podpis + oznaczeni czlonkowie (#11).
   const [shareCaption, setShareCaption] = useState("");
@@ -147,7 +153,7 @@ const ReviewSummary = () => {
       if (!routeId || !user) return null;
       const { data } = await (supabase as any)
         .from("routes")
-        .select("id, title, user_id, city, day_number, start_date, end_date, folder_id, plan_finalized, trip_type, ai_summary, ai_highlight, review_photos, cover_url, is_shared, share_friends, group_session_id")
+        .select("id, title, user_id, city, day_number, start_date, end_date, folder_id, plan_finalized, trip_type, ai_summary, ai_highlight, review_photos, cover_url, is_shared, share_friends, group_session_id, overall_rating, review_narrative")
         .eq("id", routeId)
         .single();
       return data as any;
@@ -184,6 +190,28 @@ const ReviewSummary = () => {
   const dayRouteIds = useMemo(() => sortedDays.map((d: any) => d.id), [sortedDays]);
   const activeRouteId = selectedDayId && dayRouteIds.includes(selectedDayId) ? selectedDayId : routeId;
   const activeDay = sortedDays.find((d: any) => d.id === activeRouteId) ?? route;
+
+  // Init pytania "Czy plan mial sens?" z danych trasy (overall_rating + review_narrative).
+  useEffect(() => {
+    if (!route) return;
+    setPlanSense(route.overall_rating === 1 ? true : route.overall_rating === 0 ? false : null);
+    setSenseAnswer(route.review_narrative ?? "");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [route?.id]);
+
+  // Autosave odpowiedzi na "Czy plan mial sens?" (debounce). sense=null czysci ocene.
+  const saveSense = (sense: boolean | null, answer: string) => {
+    if (!routeId || !user) return;
+    if (senseTimer.current) clearTimeout(senseTimer.current);
+    senseTimer.current = setTimeout(async () => {
+      await (supabase as any).from("routes").update({
+        overall_rating: sense === true ? 1 : sense === false ? 0 : null,
+        review_narrative: answer.trim() || null,
+      }).eq("id", routeId);
+      setSenseSaved(true);
+      setTimeout(() => setSenseSaved(false), 2000);
+    }, 700);
+  };
 
   // Domyslny wybrany dzien = dzien z URL (pierwszy raz po zaladowaniu).
   useEffect(() => {
@@ -1909,6 +1937,38 @@ const ReviewSummary = () => {
 
               {step === 2 && (
                 <div className="px-5 pb-5">
+                  {/* Pytanie: czy ten plan dnia mial sens? (Tak/Nie + odpowiedz) */}
+                  <div className="pb-5">
+                    <p className="text-base font-bold text-foreground mb-3">Czy ten plan dnia miał sens?</p>
+                    <div className="flex rounded-full bg-secondary p-0.5 text-sm font-bold mb-3">
+                      <button
+                        type="button"
+                        onClick={() => { setPlanSense(true); saveSense(true, senseAnswer); }}
+                        className={`flex-1 py-2.5 rounded-full transition-colors ${planSense === true ? "bg-background shadow-sm text-foreground" : "text-muted-foreground"}`}
+                      >
+                        Tak
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setPlanSense(false); saveSense(false, senseAnswer); }}
+                        className={`flex-1 py-2.5 rounded-full transition-colors ${planSense === false ? "bg-background shadow-sm text-foreground" : "text-muted-foreground"}`}
+                      >
+                        Nie
+                      </button>
+                    </div>
+                    <div className="relative">
+                      <textarea
+                        value={senseAnswer}
+                        onChange={(e) => { setSenseAnswer(e.target.value); saveSense(planSense, e.target.value); }}
+                        placeholder="Twoja odpowiedź..."
+                        rows={4}
+                        className="w-full bg-secondary/60 rounded-2xl px-4 py-3 text-sm text-foreground resize-none focus:outline-none border border-border/30 placeholder:text-muted-foreground/55"
+                      />
+                      {senseSaved && <span className="absolute bottom-2.5 right-3 text-[10px] text-green-600 font-medium">Zapisano</span>}
+                    </div>
+                  </div>
+
+                  <p className="font-display text-xl font-bold text-foreground tracking-tight mb-3">Miejsca</p>
                   {currentPins.length === 0 ? (
                     <p className="text-center text-sm text-muted-foreground py-8">{t("empty.no_places_note")}</p>
                   ) : (
@@ -2177,7 +2237,7 @@ const ReviewSummary = () => {
                   onClick={() => setStep((s) => (s + 1) as 1 | 2 | 3)}
                   className="flex-1 py-3.5 rounded-full bg-primary text-white font-bold text-base active:scale-[0.98] transition-transform"
                 >
-                  {t("cta.next")}
+                  {step === 2 ? "Przejdź do Galerii" : t("cta.next")}
                 </button>
               ) : (
                 <button
