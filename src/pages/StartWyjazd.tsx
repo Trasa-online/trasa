@@ -59,7 +59,8 @@ export default function StartWyjazd() {
   const [query, setQuery] = useState("");
   const [loadingId, setLoadingId] = useState<string | null>(null);
 
-  // Robocze = wlasne trasy usera (bazy do skopiowania).
+  // Robocze = wlasne SZKICE (drafty), NIE gotowe trasy. "Gotowa" = trip_type 'completed'
+  // ALBO plan_finalized=true (jak w JournalTab). Szkic = jeszcze w planowaniu, niesfinalizowany.
   const { data: robocze = [], isLoading: roboczeLoading } = useQuery({
     queryKey: ["start-robocze", user?.id],
     enabled: !!user,
@@ -68,6 +69,8 @@ export default function StartWyjazd() {
         .from("routes")
         .select("id, title, city, review_photos, updated_at")
         .eq("user_id", user!.id)
+        .eq("trip_type", "planning")
+        .or("plan_finalized.is.null,plan_finalized.eq.false")
         .order("updated_at", { ascending: false })
         .limit(30);
       return enrichRoutes((data ?? []).map((r: any) => ({ ...r, __own: true })));
