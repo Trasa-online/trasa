@@ -392,7 +392,7 @@ const BottomNav = () => {
               Stary flow (web): otwiera menu wyboru (plan/zestawienie). */}
           <button
             data-ob="nav-fab"
-            onClick={() => (PLANNING_DISABLED ? navigate("/wyjazd/nowy") : setShowMenu(!showMenu))}
+            onClick={() => (PLANNING_DISABLED ? navigate("/wyjazd/start") : setShowMenu(!showMenu))}
             className="flex items-center justify-center"
             aria-label={t("fab_aria")}
           >
