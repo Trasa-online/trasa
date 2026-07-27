@@ -1347,78 +1347,125 @@ export function SavedRoutes({ city }: { city?: string }) {
   const { user } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { data: routes = [], isLoading } = useQuery({
+
+  // 1) Zapisane TRASY (tabela saved_routes)
+  const { data: routeData, isLoading: routesLoading } = useQuery({
     queryKey: ["saved-routes", user?.id],
     enabled: !!user,
     queryFn: async () => {
       const { data: saved } = await (supabase as any)
         .from("saved_routes").select("route_id, created_at")
         .eq("user_id", user!.id).order("created_at", { ascending: false });
-      const ids = (saved ?? []).map((s: { route_id: string }) => s.route_id);
-      if (!ids.length) return [] as PolecaneRoute[];
+      const rows0 = (saved ?? []) as { route_id: string; created_at: string | null }[];
+      const ids = rows0.map((r) => r.route_id);
+      const dates: Record<string, string> = {};
+      rows0.forEach((r) => { if (r.created_at) dates[r.route_id] = r.created_at; });
+      if (!ids.length) return { list: [] as PolecaneRoute[], dates };
       const { data: rows } = await (supabase as any)
         .from("routes")
         .select("id, title, city, ai_highlight, ai_summary, user_id, created_at, views, share_anonymous")
         .in("id", ids);
-      const enriched = await enrichRouteRows(rows ?? []);
-      // Zachowaj kolejnosc zapisu (najnowsze zapisane na gorze).
-      const order = new Map(ids.map((id: string, i: number) => [id, i]));
-      return enriched.sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0));
+      const list = await enrichRouteRows(rows ?? []);
+      return { list, dates };
     },
     staleTime: 30_000,
   });
+  const routes = routeData?.list ?? [];
+  const routeDates = routeData?.dates ?? {};
 
-  const unsave = async (id: string) => {
+  const unsaveRoute = async (id: string) => {
     if (!user) return;
     await (supabase as any).from("saved_routes").delete().eq("user_id", user.id).eq("route_id", id);
     queryClient.invalidateQueries({ queryKey: ["saved-routes"] });
-    toast(i18n.t("toast.removed_saved", { ns: "homefeed", defaultValue: "Usunięto z zapisanych" }));
+    toast(i18n.t("toast.removed_saved", { ns: "homefeed", defaultValue: "Usunięto z zapisanych" }));
   };
 
-  const shown = city && city !== "all"
-    ? routes.filter((r) => (r.city ?? "").toLowerCase().startsWith(city.toLowerCase()))
-    : routes;
+  // 2) Zapisane ZESTAWIENIA (localStorage) - pokazywane jako trasy (pivot: zestawienia = trasy).
+  //    Feed zapisuje kolekcje bookmarkiem do localStorage; tu je pokazujemy razem z trasami.
+  const [savedColIds, setSavedColIds] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem("trasa_saved_collections") || "[]") as string[]; } catch { return []; }
+  });
+  const colDates = useMemo(() => {
+    try { return JSON.parse(localStorage.getItem("trasa_saved_collections_dates") || "{}") as Record<string, string>; } catch { return {}; }
+  }, [savedColIds]);
+  const { data: collections = [], isLoading: colLoading } = useQuery({
+    queryKey: ["saved-collections-trasy", [...savedColIds].sort().join(",")],
+    enabled: savedColIds.length > 0,
+    queryFn: async () => {
+      const { data: cols } = await (supabase as any).from("discovery_collections")
+        .select("id, title, city, description, category, author_name, author_avatar, user_id, views_count, saves_count, plan_adds_count")
+        .in("id", savedColIds);
+      const byId = new Map((cols ?? []).map((c: any) => [c.id, c]));
+      const ordered = [...savedColIds].reverse().map((id) => byId.get(id)).filter(Boolean);
+      return hydrateCollections(ordered);
+    },
+  });
+  const [activeCol, setActiveCol] = useState<DiscoveryCollection | null>(null);
+  const unsaveCol = (id: string) => {
+    try {
+      const set = new Set(savedColIds); set.delete(id);
+      const dates: Record<string, string> = JSON.parse(localStorage.getItem("trasa_saved_collections_dates") || "{}");
+      delete dates[id];
+      localStorage.setItem("trasa_saved_collections", JSON.stringify([...set]));
+      localStorage.setItem("trasa_saved_collections_dates", JSON.stringify(dates));
+      setSavedColIds([...set]);
+      toast(i18n.t("toast.removed_saved", { ns: "homefeed", defaultValue: "Usunięto z zapisanych" }));
+    } catch { /* noop */ }
+  };
 
-  if (!user) {
-    return (
-      <div className="py-14 text-center px-8">
-        <div className="text-4xl mb-3">🔖</div>
-        <p className="text-base font-bold">Zaloguj się, żeby zapisywać trasy</p>
-        <p className="text-sm text-muted-foreground mt-1 leading-relaxed max-w-[260px] mx-auto">Twoje zapisane trasy od innych użytkowników pojawią się tutaj.</p>
-      </div>
-    );
-  }
-  if (isLoading) {
+  const cityOk = (c?: string | null) => !city || city === "all" || (c ?? "").toLowerCase().startsWith(city.toLowerCase());
+
+  // Zunifikowana lista (trasy + zestawienia) posortowana po dacie zapisu (najnowsze na górze).
+  const rows: { key: string; savedAt: string; el: JSX.Element }[] = [];
+  routes.filter((r) => cityOk(r.city)).forEach((r) => {
+    rows.push({
+      key: `route-${r.id}`, savedAt: routeDates[r.id] ?? "",
+      el: (
+        <TrasaBigCard key={`route-${r.id}`} id={r.id} photo={r.photo} city={r.city}
+          placeCount={r.placeCount ?? 0} title={r.title} description={r.summary || r.ai_highlight}
+          tags={(r.categories ?? []).map((c) => CAT_LABEL[c] ?? c)} pins={r.pins ?? []}
+          saved onToggleSave={() => unsaveRoute(r.id)} onOpen={() => navigate(`/route/${r.id}`)} />
+      ),
+    });
+  });
+  collections.filter((c) => cityOk(c.city)).forEach((col) => {
+    const ph = col.items?.find((it) => it.photo_url)?.photo_url ?? null;
+    const catTags = [...new Set((col.items ?? []).map((it) => it.category).filter(Boolean).map((c) => String(c).toLowerCase()))].map((c) => CAT_LABEL[c] ?? c);
+    rows.push({
+      key: `col-${col.id}`, savedAt: colDates[col.id] ?? "",
+      el: (
+        <TrasaBigCard key={`col-${col.id}`} id={col.id} photo={ph ? resolveStored(ph) : null} city={col.city}
+          placeCount={col.items?.length ?? 0} title={col.title} description={col.description}
+          tags={catTags} pins={col.items ?? []}
+          saved onToggleSave={() => unsaveCol(col.id)} onOpen={() => setActiveCol(col)} />
+      ),
+    });
+  });
+  rows.sort((a, b) => (b.savedAt || "").localeCompare(a.savedAt || ""));
+
+  const loading = (!!user && routesLoading) || (savedColIds.length > 0 && colLoading);
+
+  if (loading && rows.length === 0) {
     return <div className="space-y-4">{Array.from({ length: 2 }).map((_, i) => <div key={i} className={`w-full rounded-3xl bg-muted animate-pulse min-h-[420px] ${TRASA_CARD_H}`} />)}</div>;
   }
-  if (!shown.length) {
+  if (rows.length === 0) {
     return (
       <div className="py-14 text-center px-8">
         <div className="text-4xl mb-3">🔖</div>
         <p className="text-base font-bold">Brak zapisanych tras</p>
-        <p className="text-sm text-muted-foreground mt-1 leading-relaxed max-w-[260px] mx-auto">Zapisz trasę innego użytkownika bookmarkiem w Eksploruj, a wróci tutaj.</p>
+        <p className="text-sm text-muted-foreground mt-1 leading-relaxed max-w-[260px] mx-auto">Zapisz trasę bookmarkiem w Eksploruj, a wróci tutaj.</p>
       </div>
     );
   }
   return (
-    <div className="space-y-4">
-      {shown.map((r) => (
-        <TrasaBigCard
-          key={`saved-${r.id}`}
-          id={r.id}
-          photo={r.photo}
-          city={r.city}
-          placeCount={r.placeCount ?? 0}
-          title={r.title}
-          description={r.summary || r.ai_highlight}
-          tags={(r.categories ?? []).map((c) => CAT_LABEL[c] ?? c)}
-          pins={r.pins ?? []}
-          saved
-          onToggleSave={() => unsave(r.id)}
-          onOpen={() => navigate(`/route/${r.id}`)}
-        />
-      ))}
-    </div>
+    <>
+      <div className="space-y-4">{rows.map((r) => r.el)}</div>
+      <Sheet open={!!activeCol} onOpenChange={(o) => { if (!o) setActiveCol(null); }}>
+        <SheetContent side="bottom" className="rounded-t-2xl p-0 [&>button:last-child]:hidden" style={{ maxHeight: "92vh", height: "92vh" }}>
+          {activeCol && <CollectionDetail col={activeCol} onClose={() => setActiveCol(null)} />}
+        </SheetContent>
+      </Sheet>
+    </>
   );
 }
 
