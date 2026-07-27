@@ -212,6 +212,8 @@ export function CollectionDetail({ col, onClose, onAdopt }: { col: DiscoveryColl
   const [placeView, setPlaceView] = useState<"list" | "cards">("list");
   // Tryb tresci: miejsca (lista/karty) vs galeria (siatka zdjec) - toggle pod tytulem.
   const [contentView, setContentView] = useState<"places" | "gallery">("places");
+  // Hero: okladka (zdjecie) vs mapa. Klik miniatury w rogu podmienia je miejscami.
+  const [heroMode, setHeroMode] = useState<"photo" | "map">("photo");
   // Zapis calego zestawienia (bookmark w stopce) - lokalny, per przegladarka/urzadzenie.
   const [savedCol, setSavedCol] = useState<boolean>(() => {
     try { return new Set<string>(JSON.parse(localStorage.getItem("trasa_saved_collections") || "[]")).has(col.id); } catch { return false; }
@@ -419,12 +421,15 @@ export function CollectionDetail({ col, onClose, onAdopt }: { col: DiscoveryColl
         const alreadyLiked = likedNames.has(item.place_name.toLowerCase());
         return (
           <div key={item.id} className="flex items-center gap-2 bg-secondary border border-border/40 shadow-sm rounded-2xl p-2.5">
-            <div className="h-7 w-7 shrink-0 rounded-full bg-foreground text-background text-xs font-bold flex items-center justify-center">{idx + 1}</div>
             <button
               {...(tappable ? { onClick: () => openPlace(item) } : {})}
               className={`flex items-center gap-3 min-w-0 flex-1 text-left ${tappable ? "active:opacity-70 transition-opacity" : ""}`}
             >
-              <PlacePhoto item={item} placeholderIdx={idx} className="h-14 w-14 rounded-xl shrink-0" />
+              {/* Numer miejsca bezposrednio na okladce miniatury (wg Figmy) */}
+              <div className="relative h-14 w-14 shrink-0">
+                <PlacePhoto item={item} placeholderIdx={idx} className="h-14 w-14 rounded-xl" />
+                <span className="absolute top-1 left-1 h-5 w-5 rounded-full bg-foreground text-background text-[10px] font-bold flex items-center justify-center shadow-sm ring-1 ring-black/5">{idx + 1}</span>
+              </div>
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-bold leading-tight line-clamp-1">{item.place_name}</p>
                 <span className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-card text-[11px] font-semibold text-foreground">
@@ -485,17 +490,21 @@ export function CollectionDetail({ col, onClose, onAdopt }: { col: DiscoveryColl
     );
   };
 
+  const mapOnHero = heroMode === "map" && mapPins.length > 0;
   return (
-    <div className="flex flex-col h-full overflow-hidden">
+    <div className="flex flex-col h-full overflow-hidden rounded-t-2xl">
       <div className="flex-1 min-h-0 overflow-y-auto">
-        {/* HERO - okladka z gradientem, akcje overlay, mini mapka + galeria (wg Figmy) */}
-        <div className="relative h-[240px] bg-muted overflow-hidden">
-          {coverUrl ? (
+        {/* HERO - okladka z gradientem, akcje overlay, mini mapka + galeria (wg Figmy).
+            rounded-t-2xl -> zaokraglona gora bez bialego paska pod krawedzia sheetu. */}
+        <div className="relative h-[240px] bg-muted overflow-hidden rounded-t-2xl">
+          {mapOnHero ? (
+            <RouteMap pins={mapPins as any} className="w-full h-full" showRoute={isRoute} />
+          ) : coverUrl ? (
             <img src={coverUrl} alt={col.title} className="w-full h-full object-cover" />
           ) : (
             <div className="w-full h-full bg-gradient-to-br from-amber-200 to-orange-300 flex items-center justify-center"><span className="text-4xl opacity-60">📍</span></div>
           )}
-          <div className="absolute inset-0 bg-gradient-to-b from-black/25 via-transparent to-black/70 pointer-events-none" />
+          {!mapOnHero && <div className="absolute inset-0 bg-gradient-to-b from-black/25 via-transparent to-black/70 pointer-events-none" />}
           {/* Akcje: back (lewa) + [owner: edytuj/usun] + close (prawa) */}
           <div className="absolute top-3 left-3 right-3 flex items-center justify-between">
             <SheetClose className="h-8 w-8 flex items-center justify-center rounded-full bg-black/30 backdrop-blur text-white active:scale-90 transition-transform">
@@ -524,12 +533,23 @@ export function CollectionDetail({ col, onClose, onAdopt }: { col: DiscoveryColl
               <Images className="h-4 w-4" />
             </button>
           )}
-          {/* Mini mapka Google (prawy dol) */}
-          {heroMap && (
-            <div className="absolute bottom-3 right-3 h-14 w-14 rounded-xl overflow-hidden ring-2 ring-white/80 shadow-md bg-muted">
-              <img src={heroMap} alt="" aria-hidden className="w-full h-full object-cover"
-                onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = "none"; }} />
-            </div>
+          {/* Miniatura w rogu (prawy dol): klik PODMIENIA okladke z mapka i odwrotnie. */}
+          {heroMap && mapPins.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setHeroMode((m) => (m === "photo" ? "map" : "photo"))}
+              aria-label={mapOnHero ? "Pokaż zdjęcie" : "Pokaż mapę"}
+              className="absolute bottom-3 right-3 h-14 w-14 rounded-xl overflow-hidden ring-2 ring-white/80 shadow-md bg-muted active:scale-95 transition-transform"
+            >
+              {mapOnHero ? (
+                coverUrl
+                  ? <img src={coverUrl} alt="" aria-hidden className="w-full h-full object-cover" />
+                  : <div className="w-full h-full bg-gradient-to-br from-amber-200 to-orange-300 flex items-center justify-center text-lg">📍</div>
+              ) : (
+                <img src={heroMap} alt="" aria-hidden className="w-full h-full object-cover"
+                  onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = "none"; }} />
+              )}
+            </button>
           )}
         </div>
 
@@ -550,14 +570,14 @@ export function CollectionDetail({ col, onClose, onAdopt }: { col: DiscoveryColl
 
           {/* Toggle: Miejsca | Galeria (wysrodkowany). Ukryty gdy galeria off. */}
           {GALLERY_ENABLED && (
-            <div className="mt-4 flex justify-center">
-              <div className="inline-flex rounded-full bg-muted p-0.5">
+            <div className="mt-4">
+              <div className="flex rounded-full bg-muted p-0.5">
                 <button onClick={() => setContentView("places")}
-                  className={`flex items-center gap-1.5 h-9 px-4 rounded-full text-sm font-medium transition-colors ${contentView === "places" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
+                  className={`flex-1 flex items-center justify-center gap-1.5 h-9 rounded-full text-sm font-medium transition-colors ${contentView === "places" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
                   <MapPin className="h-4 w-4" />{t("places")}
                 </button>
                 <button onClick={() => setContentView("gallery")}
-                  className={`flex items-center gap-1.5 h-9 px-4 rounded-full text-sm font-medium transition-colors ${contentView === "gallery" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
+                  className={`flex-1 flex items-center justify-center gap-1.5 h-9 rounded-full text-sm font-medium transition-colors ${contentView === "gallery" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
                   <Images className="h-4 w-4" />{t("gallery", "Galeria")}
                 </button>
               </div>

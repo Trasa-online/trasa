@@ -39,14 +39,14 @@ export default function Stats() {
           <p className="text-sm text-muted-foreground mt-1">Zobacz, jak inni korzystają z tras, które stworzyłaś.</p>
         </div>
 
-        {/* Glowna metryka: ile OSOB wykorzystalo trasy (pomaranczowa karta) */}
-        <div className="rounded-3xl bg-gradient-to-br from-[#F4A259] to-[#F9662B] text-white p-5 shadow-md shadow-orange-500/20">
+        {/* Glowna metryka: ile OSOB wykorzystalo trasy (szara karta - spojna z reszta) */}
+        <div className="rounded-3xl bg-secondary p-5">
           <div className="flex items-start justify-between">
-            <span className="text-5xl font-black tabular-nums leading-none">{isLoading ? "–" : (stats?.people ?? 0)}</span>
-            <Users className="h-7 w-7 opacity-70 shrink-0" />
+            <span className="text-5xl font-black tabular-nums leading-none text-foreground">{isLoading ? "–" : (stats?.people ?? 0)}</span>
+            <Users className="h-7 w-7 text-foreground opacity-40 shrink-0" />
           </div>
-          <p className="text-base font-bold mt-4">osób wykorzystało Twoje trasy</p>
-          <p className="text-xs opacity-80 mt-0.5 leading-relaxed">Tyle różnych osób zapisało Twoje trasy u siebie, żeby z nich skorzystać.</p>
+          <p className="text-base font-bold mt-4 text-foreground">osób wykorzystało Twoje trasy</p>
+          <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">Tyle różnych osób zapisało Twoje trasy u&nbsp;siebie, żeby z&nbsp;nich skorzystać.</p>
         </div>
 
         {/* Metryki dodatkowe */}

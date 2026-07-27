@@ -191,7 +191,7 @@ export default function NotificationsDrawer({ open, onClose, userId }: Props) {
             <div className="flex flex-col items-center justify-center py-16 px-6 text-center gap-3">
               <Bell className="h-10 w-10 text-muted-foreground/30" />
               <p className="text-sm font-medium text-foreground/70">Brak powiadomień</p>
-              <p className="text-xs text-muted-foreground">Tutaj pojawią się wszystkie Twoje powiadomienia - zaproszenia, obserwacje, aktywność w sesjach grupowych.</p>
+              <p className="text-xs text-muted-foreground">Tutaj pojawią się wszystkie Twoje powiadomienia - zaproszenia, obserwacje, statystyki z&nbsp;Twoich tras.</p>
             </div>
           ) : (
             <div className="mx-4 rounded-2xl bg-card border border-border/50 overflow-hidden divide-y divide-border/20">

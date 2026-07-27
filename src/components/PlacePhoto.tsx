@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { getPhotoUrl } from "@/lib/placePhotos";
+import { GOOGLE_PLACE_DETAILS_DISABLED } from "@/lib/appMode";
 
 export const PLACE_CATEGORY_EMOJI: Record<string, string> = {
   restaurant: "🍽️", cafe: "☕", museum: "🏛️", park: "🌳",
@@ -26,6 +27,10 @@ export function PlacePhoto({ pin, className, emojiClass }: { pin: any; className
 
   useEffect(() => {
     if (url) return;
+    // Cięcie kosztów: miejsca SPOZA bazy (dodane z Google, bez zapisanej okładki) NIE
+    // dociągają zdjęcia z Google - pokazujemy placeholder (emoji kategorii). Zdjęcia mają
+    // tylko miejsca z bazy / z cache. Sterowane globalną flagą (jak reszta cost-cut).
+    if (GOOGLE_PLACE_DETAILS_DISABLED) return;
     let cancelled = false;
     supabase.functions
       .invoke("google-places-proxy", {
