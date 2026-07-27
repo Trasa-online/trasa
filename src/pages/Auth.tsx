@@ -20,9 +20,9 @@ type BizMode = "login" | "register";
 // USP aplikacji na ekranie logowania (auto-rotujaca karuzela). NBSP ( ) po
 // pojedynczych literach - regula polskich sierot.
 const AUTH_USP = [
-  { title: "Gotowy plan w kilka sekund", desc: "Bez godzin researchu - dopasowane miejsca i trasa dnia od ręki." },
-  { title: "Solo albo z grupą", desc: "Zwiedzaj po swojemu albo dogadajcie wspólną trasę bez chaosu." },
-  { title: "Zapisuj wspomnienia", desc: "Zbieraj miejsca, w których byłeś, i dziel się trasami z innymi." },
+  { title: "Odkrywaj trasy po mieście", desc: "Sprawdzone miejsca i gotowe trasy, polecane przez innych użytkowników." },
+  { title: "Twórz własne trasy", desc: "Zapisz miejsca, w których byłeś, i ułóż z nich swoją trasę." },
+  { title: "Zapisuj na później", desc: "Odkładaj ciekawe trasy innych i wracaj do nich, kiedy chcesz." },
 ] as const;
 
 function AuthUspCarousel() {
@@ -33,22 +33,9 @@ function AuthUspCarousel() {
   }, []);
   const cur = AUTH_USP[i];
   return (
-    <div className="w-full max-w-sm mx-auto">
-      <div key={i} className="animate-auth-fade rounded-3xl bg-white/70 backdrop-blur-md border border-black/[0.06] shadow-sm px-6 py-7 text-center">
-        <p className="font-display text-xl font-extrabold leading-tight text-foreground">{cur.title}</p>
-        <p className="mt-2 text-sm leading-snug text-muted-foreground">{cur.desc}</p>
-      </div>
-      <div className="mt-4 flex justify-center gap-1.5">
-        {AUTH_USP.map((_, idx) => (
-          <button
-            key={idx}
-            type="button"
-            onClick={() => setI(idx)}
-            aria-label={`Pokaż zaletę ${idx + 1}`}
-            className={`h-1.5 rounded-full transition-all ${idx === i ? "w-6 bg-foreground" : "w-1.5 bg-black/15"}`}
-          />
-        ))}
-      </div>
+    <div key={i} className="animate-auth-fade w-full max-w-sm mx-auto text-center px-2">
+      <p className="font-display text-2xl font-extrabold leading-tight text-foreground">{cur.title}</p>
+      <p className="mt-2.5 text-sm leading-relaxed text-muted-foreground max-w-[300px] mx-auto">{cur.desc}</p>
     </div>
   );
 }
@@ -644,13 +631,12 @@ const Auth = () => {
 
       {/* Tresc */}
       <div className="relative z-10 flex flex-1 flex-col px-6 pt-[max(3.5rem,env(safe-area-inset-top,0px))] pb-[max(1.5rem,env(safe-area-inset-bottom,0px))]">
-        {/* Gora: logo + naglowek + tagline */}
-        <div className="flex flex-col items-center text-center pt-2">
-          <TrasaLogo size={72} className="mb-5" />
-          <h1 className="font-display text-[1.9rem] font-extrabold leading-[1.1] tracking-tight text-foreground">
+        {/* Gora: naglowek + tagline (logo usuniete wg feedbacku) */}
+        <div className="flex flex-col items-center text-center pt-6">
+          <h1 className="font-display text-[2rem] font-extrabold leading-[1.1] tracking-tight text-foreground">
             Odkrywaj i&nbsp;zwiedzaj
           </h1>
-          <p className="mt-2 text-sm font-semibold text-muted-foreground">speed dating z&nbsp;miastem</p>
+          <p className="mt-2.5 text-sm font-semibold text-muted-foreground">speed dating z&nbsp;miastem</p>
         </div>
 
         {/* Srodek: karuzela USP */}
