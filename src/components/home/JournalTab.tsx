@@ -5,9 +5,9 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { resolveStored } from "@/components/PlacePhoto";
-import { format, parseISO, isValid } from "date-fns";
+import { format, parseISO, isValid, differenceInCalendarDays } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
-import { Globe, Lock, Loader2, Trash2, CalendarDays, Sparkles, Plus, BookOpen } from "lucide-react";
+import { Globe, Lock, Loader2, Trash2, CalendarDays, Sparkles, Plus, BookOpen, Building2 } from "lucide-react";
 import { toast } from "sonner";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { PLANNING_DISABLED } from "@/lib/appMode";
@@ -308,11 +308,9 @@ const JournalTab = ({ userId, city: cityFilter }: JournalTabProps) => {
 
   // Karta wyjazdu (redesign): uklad poziomy - okladka po lewej (zamek + mini-mapa w rogach),
   // po prawej tytul, miasto + data, liczba miejsc i awatary uczestnikow (dla grup).
-  const renderTripCard = (entry: any, onOpen: () => void, inProgress = false) => {
+  const renderTripCard = (entry: any, onOpen: () => void, _inProgress = false) => {
     const validPhotos = (entry.review_photos ?? []).filter((url: any) => !!url && typeof url === "string" && url.trim() !== "");
     const thumb = validPhotos[0] ?? (coverMap as Record<string, string>)[entry.id] ?? getRandomPinPlaceholder(entry.id);
-    // Zakres dat od-do dla wyjazdow 2-3 dniowych (start_date != koniec). _lastDate liczy
-    // sie z folderu (multi-day) albo end_date (pojedyncza trasa).
     const startISO = entry.start_date;
     const endISO = entry._lastDate ?? entry.end_date ?? entry.start_date;
     const _d = startISO ? parseISO(startISO) : null;
@@ -325,32 +323,34 @@ const JournalTab = ({ userId, city: cityFilter }: JournalTabProps) => {
     const count = countMap[entry.id] ?? 0;
     const miniMap = mapMap[entry.id];
     const isPrivate = entry.is_shared === false;
-    const isNew = entry.new_for_users?.includes(userId);
     const canDelete = entry.is_own || entry.group_session_id;
     const title = entry.title || entry.city || t("journal.trip_fallback");
     const avatars = entry.group_session_id
       ? (memberAvatars as Record<string, { avatar_url: string | null; name: string }[]>)[entry.group_session_id] ?? []
       : [];
+    // Odliczanie "Za X dni" dla nadchodzacych wyjazdow (start w przyszlosci).
+    const daysUntil = _d && isValid(_d) ? differenceInCalendarDays(_d, new Date()) : null;
+    const countdown = daysUntil != null && daysUntil >= 0
+      ? (daysUntil === 0 ? "Dziś" : daysUntil === 1 ? "Jutro" : `Za ${daysUntil} dni`)
+      : null;
 
     return (
       <div
         key={entry.id}
         onClick={onOpen}
-        className="relative w-full flex gap-3.5 p-2.5 rounded-3xl bg-card border border-border/50 text-left active:scale-[0.99] transition-transform cursor-pointer"
+        className="relative w-full flex gap-3.5 py-4 text-left active:opacity-90 transition-opacity cursor-pointer"
       >
-        {/* Okladka po lewej */}
-        <div className="relative w-[118px] shrink-0 aspect-[4/5] rounded-2xl overflow-hidden bg-muted">
+        {/* Okladka po lewej (118x160) */}
+        <div className="relative w-[118px] h-[160px] shrink-0 rounded-2xl overflow-hidden bg-muted">
           <img
             src={thumb}
             alt=""
             className="w-full h-full object-cover"
             onError={(e) => { (e.target as HTMLImageElement).src = getRandomPinPlaceholder(entry.id + "_fallback"); }}
           />
-          {/* Zamek / globus (widocznosc) */}
           <div className="absolute top-2 left-2 h-7 w-7 rounded-full bg-black/35 backdrop-blur-sm flex items-center justify-center">
             {isPrivate ? <Lock className="h-3.5 w-3.5 text-white/90" /> : <Globe className="h-3.5 w-3.5 text-white/90" />}
           </div>
-          {/* Mini-mapka trasy */}
           {miniMap && (
             <div className="absolute bottom-2 right-2 h-[46px] w-[46px] rounded-xl overflow-hidden border-2 border-white shadow-md bg-white">
               <img src={miniMap} alt="" className="w-full h-full object-cover" />
@@ -360,6 +360,7 @@ const JournalTab = ({ userId, city: cityFilter }: JournalTabProps) => {
 
         {/* Tresc po prawej */}
         <div className="flex-1 min-w-0 flex flex-col py-0.5 pr-0.5">
+          {/* Tytul + usun */}
           <div className="flex items-start gap-2">
             <p className="flex-1 min-w-0 text-lg font-bold leading-tight text-foreground line-clamp-2">{title}</p>
             {canDelete && (
@@ -374,42 +375,43 @@ const JournalTab = ({ userId, city: cityFilter }: JournalTabProps) => {
             )}
           </div>
 
-          {/* Miasto + data */}
-          <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground min-w-0">
-            {entry.city && <span className="truncate">{entry.city}</span>}
-            {dateLabel && <span className="text-muted-foreground/70 whitespace-nowrap">{dateLabel}</span>}
-          </div>
-
-          {/* Statusy (nowe / w toku / wielodniowe) */}
-          {(isNew || inProgress || entry._numDays > 1) && (
-            <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-              {isNew && <span className="bg-primary text-white rounded-full px-2 py-0.5 text-[10px] font-bold">{t("journal.new_badge")}</span>}
-              {inProgress && <span className="bg-orange-100 text-orange-700 rounded-full px-2 py-0.5 text-[10px] font-semibold">W toku</span>}
-              {entry._numDays > 1 && (
-                <span className="flex items-center gap-1 bg-muted text-muted-foreground rounded-full px-2 py-0.5 text-[10px] font-semibold">
-                  <CalendarDays className="h-2.5 w-2.5" />{t("journal.days_count", { num: entry._numDays })}
-                </span>
+          {/* Data + odliczanie (tylko gdy jest data) */}
+          {dateLabel && (
+            <div className="flex items-center justify-between gap-2 mt-1">
+              <span className="text-sm text-muted-foreground/70 whitespace-nowrap">{dateLabel}</span>
+              {countdown && (
+                <span className="shrink-0 bg-orange-100 text-foreground rounded-lg px-2 py-0.5 text-[10px] font-semibold">{countdown}</span>
               )}
             </div>
           )}
 
-          {/* Liczba miejsc + awatary uczestnikow */}
-          <div className="mt-auto flex items-center gap-2.5 pt-2">
-            <span className="text-sm font-medium text-muted-foreground">{placesCountLabel(count)}</span>
-            {avatars.length > 0 && (
-              <div className="flex -space-x-2">
-                {avatars.slice(0, 3).map((a, i) => (
-                  <div key={i} className="h-6 w-6 rounded-full border-2 border-card overflow-hidden bg-orange-100" style={{ zIndex: 3 - i }}>
-                    <img src={avatarSrc(a.avatar_url)} alt={a.name} className="w-full h-full object-cover" />
+          {/* Dol: miasto (lewo) + ikonki miejsc + liczba (prawo) */}
+          <div className="mt-auto flex items-center justify-between gap-2 pt-2">
+            <div className="flex items-center gap-2 min-w-0">
+              {entry.city && <span className="text-sm text-muted-foreground truncate">{entry.city}</span>}
+              {avatars.length > 0 && (
+                <div className="flex -space-x-2 shrink-0">
+                  {avatars.slice(0, 3).map((a: { avatar_url: string | null; name: string }, i: number) => (
+                    <div key={i} className="h-5 w-5 rounded-full border-2 border-background overflow-hidden bg-orange-100" style={{ zIndex: 3 - i }}>
+                      <img src={avatarSrc(a.avatar_url)} alt={a.name} className="w-full h-full object-cover" />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="flex items-center gap-1.5 shrink-0">
+              {count > 0 && (
+                <div className="flex items-center">
+                  <div className="flex -space-x-1">
+                    {Array.from({ length: Math.min(count, 3) }).map((_, i) => (
+                      <Building2 key={i} className="h-4 w-4 text-muted-foreground/50" strokeWidth={1.8} style={{ zIndex: 3 - i }} />
+                    ))}
                   </div>
-                ))}
-                {avatars.length > 3 && (
-                  <div className="h-6 w-6 rounded-full border-2 border-card bg-foreground/85 text-background text-[9px] font-bold flex items-center justify-center" style={{ zIndex: 0 }}>
-                    +{avatars.length - 3}
-                  </div>
-                )}
-              </div>
-            )}
+                  {count > 3 && <span className="ml-0.5 text-[10px] font-medium text-muted-foreground">+{count - 3}</span>}
+                </div>
+              )}
+              <span className="text-sm font-medium text-muted-foreground">{placesCountLabel(count)}</span>
+            </div>
           </div>
         </div>
       </div>
@@ -492,7 +494,7 @@ const JournalTab = ({ userId, city: cityFilter }: JournalTabProps) => {
         {active.length === 0 && postcards.length === 0 ? (
           emptyBox("🧳", "Brak tras", "Twoje trasy - najbliższe i minione - pojawią się tutaj.")
         ) : (
-          <div className="space-y-3">
+          <div className="divide-y divide-border/50">
             {active.map((entry: any) => renderTripCard(entry, () => openEntry(entry, true), true))}
             {postcards.map((entry: any) => renderTripCard(entry, () => openEntry(entry)))}
           </div>
@@ -517,7 +519,11 @@ const JournalTab = ({ userId, city: cityFilter }: JournalTabProps) => {
       )}
 
       {/* Lista wspomnień - ta sama karta co aktywne wyjazdy */}
-      {visibleEntries.map((entry) => renderTripCard(entry, () => openEntry(entry)))}
+      {visibleEntries.length > 0 && (
+        <div className="divide-y divide-border/50">
+          {visibleEntries.map((entry) => renderTripCard(entry, () => openEntry(entry)))}
+        </div>
+      )}
     </div>
   );
 };
