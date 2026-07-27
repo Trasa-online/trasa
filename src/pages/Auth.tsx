@@ -36,9 +36,9 @@ function AuthUspCarousel() {
   const Icon = cur.icon;
   return (
     <div className="w-full max-w-sm mx-auto">
-      <div key={i} className="animate-auth-fade rounded-3xl bg-white/70 backdrop-blur-md border border-orange-100/80 shadow-sm shadow-orange-500/[0.06] px-5 py-6 flex items-start gap-4">
-        <div className="shrink-0 h-12 w-12 rounded-2xl bg-gradient-to-br from-[#F4A259] to-[#F9662B] flex items-center justify-center shadow-md shadow-orange-500/30">
-          <Icon className="h-6 w-6 text-white" strokeWidth={2.2} />
+      <div key={i} className="animate-auth-fade rounded-3xl bg-white/70 backdrop-blur-md border border-black/[0.06] shadow-sm px-5 py-6 flex items-start gap-4">
+        <div className="shrink-0 h-12 w-12 rounded-2xl bg-secondary flex items-center justify-center">
+          <Icon className="h-6 w-6 text-foreground" strokeWidth={2} />
         </div>
         <div className="min-w-0 pt-0.5">
           <p className="font-display text-lg font-extrabold leading-tight text-foreground">{cur.title}</p>
@@ -52,7 +52,7 @@ function AuthUspCarousel() {
             type="button"
             onClick={() => setI(idx)}
             aria-label={`Pokaż zaletę ${idx + 1}`}
-            className={`h-1.5 rounded-full transition-all ${idx === i ? "w-6 bg-orange-500" : "w-1.5 bg-orange-200"}`}
+            className={`h-1.5 rounded-full transition-all ${idx === i ? "w-6 bg-foreground" : "w-1.5 bg-black/15"}`}
           />
         ))}
       </div>
@@ -641,11 +641,11 @@ const Auth = () => {
   // w srodku, guziki OAuth przypiete na dole. B2B ma osobny early-return powyzej.
   return (
     <div className="relative min-h-screen flex flex-col overflow-hidden bg-[#FEFEFE]">
-      {/* Tlo: miekkie, wolno dryfujace pomaranczowe gradienty (light-mode) */}
+      {/* Tlo: bardzo subtelne, wolno dryfujace neutralne gradienty (light-mode, bez koloru) */}
       <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -top-28 -left-24 h-72 w-72 rounded-full bg-gradient-to-br from-[#F9662B]/30 to-[#F4A259]/10 blur-3xl animate-auth-blob" />
-        <div className="absolute top-1/4 -right-28 h-80 w-80 rounded-full bg-gradient-to-br from-[#F4A259]/25 to-[#F9662B]/10 blur-3xl animate-auth-blob-2" />
-        <div className="absolute -bottom-24 left-1/4 h-72 w-72 rounded-full bg-gradient-to-tr from-[#FDBA74]/30 to-[#F9662B]/10 blur-3xl animate-auth-blob-3" />
+        <div className="absolute -top-28 -left-24 h-72 w-72 rounded-full bg-gradient-to-br from-slate-300/25 to-slate-200/5 blur-3xl animate-auth-blob" />
+        <div className="absolute top-1/4 -right-28 h-80 w-80 rounded-full bg-gradient-to-br from-slate-200/25 to-slate-300/5 blur-3xl animate-auth-blob-2" />
+        <div className="absolute -bottom-24 left-1/4 h-72 w-72 rounded-full bg-gradient-to-tr from-slate-300/20 to-slate-200/5 blur-3xl animate-auth-blob-3" />
       </div>
 
       {/* Tresc */}
@@ -656,7 +656,7 @@ const Auth = () => {
           <h1 className="font-display text-[1.9rem] font-extrabold leading-[1.1] tracking-tight text-foreground">
             Odkrywaj i&nbsp;zwiedzaj
           </h1>
-          <p className="mt-2 text-sm font-bold text-orange-600">speed dating z&nbsp;miastem</p>
+          <p className="mt-2 text-sm font-semibold text-muted-foreground">speed dating z&nbsp;miastem</p>
         </div>
 
         {/* Srodek: karuzela USP */}
@@ -667,7 +667,7 @@ const Auth = () => {
         {/* Dol: OAuth + stopka */}
         <div className="w-full max-w-sm mx-auto">
           {hintMessage && (
-            <div className="mb-5 px-4 py-3 rounded-2xl bg-orange-50 border border-orange-200">
+            <div className="mb-5 px-4 py-3 rounded-2xl bg-secondary border border-black/[0.06]">
               <p className="text-sm text-foreground leading-snug">{hintMessage}</p>
             </div>
           )}
