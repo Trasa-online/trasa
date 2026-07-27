@@ -13,7 +13,6 @@ import { Browser } from "@capacitor/browser";
 import { useAuth } from "@/hooks/useAuth";
 import { TrasaLogo } from "@/components/TrasaLogo";
 import { businessPanelPath } from "@/lib/businessRedirect";
-import { Sparkles, Users, Camera } from "lucide-react";
 
 type Mode = "login" | "register";
 type BizMode = "login" | "register";
@@ -21,9 +20,9 @@ type BizMode = "login" | "register";
 // USP aplikacji na ekranie logowania (auto-rotujaca karuzela). NBSP ( ) po
 // pojedynczych literach - regula polskich sierot.
 const AUTH_USP = [
-  { icon: Sparkles, title: "Gotowy plan w kilka sekund", desc: "Bez godzin researchu - dopasowane miejsca i trasa dnia od ręki." },
-  { icon: Users, title: "Solo albo z grupą", desc: "Zwiedzaj po swojemu albo dogadajcie wspólną trasę bez chaosu." },
-  { icon: Camera, title: "Zapisuj wspomnienia", desc: "Zbieraj miejsca, w których byłeś, i dziel się trasami z innymi." },
+  { title: "Gotowy plan w kilka sekund", desc: "Bez godzin researchu - dopasowane miejsca i trasa dnia od ręki." },
+  { title: "Solo albo z grupą", desc: "Zwiedzaj po swojemu albo dogadajcie wspólną trasę bez chaosu." },
+  { title: "Zapisuj wspomnienia", desc: "Zbieraj miejsca, w których byłeś, i dziel się trasami z innymi." },
 ] as const;
 
 function AuthUspCarousel() {
@@ -33,17 +32,11 @@ function AuthUspCarousel() {
     return () => clearInterval(id);
   }, []);
   const cur = AUTH_USP[i];
-  const Icon = cur.icon;
   return (
     <div className="w-full max-w-sm mx-auto">
-      <div key={i} className="animate-auth-fade rounded-3xl bg-white/70 backdrop-blur-md border border-black/[0.06] shadow-sm px-5 py-6 flex items-start gap-4">
-        <div className="shrink-0 h-12 w-12 rounded-2xl bg-secondary flex items-center justify-center">
-          <Icon className="h-6 w-6 text-foreground" strokeWidth={2} />
-        </div>
-        <div className="min-w-0 pt-0.5">
-          <p className="font-display text-lg font-extrabold leading-tight text-foreground">{cur.title}</p>
-          <p className="mt-1 text-sm leading-snug text-muted-foreground">{cur.desc}</p>
-        </div>
+      <div key={i} className="animate-auth-fade rounded-3xl bg-white/70 backdrop-blur-md border border-black/[0.06] shadow-sm px-6 py-7 text-center">
+        <p className="font-display text-xl font-extrabold leading-tight text-foreground">{cur.title}</p>
+        <p className="mt-2 text-sm leading-snug text-muted-foreground">{cur.desc}</p>
       </div>
       <div className="mt-4 flex justify-center gap-1.5">
         {AUTH_USP.map((_, idx) => (
@@ -641,11 +634,12 @@ const Auth = () => {
   // w srodku, guziki OAuth przypiete na dole. B2B ma osobny early-return powyzej.
   return (
     <div className="relative min-h-screen flex flex-col overflow-hidden bg-[#FEFEFE]">
-      {/* Tlo: bardzo subtelne, wolno dryfujace neutralne gradienty (light-mode, bez koloru) */}
+      {/* Tlo: delikatny, wolno dryfujacy pomaranczowy ambient (light-mode). Kolor TYLKO
+          w tle - reszta ekranu neutralna. Niska krycie + duzy blur = subtelnie, nie krzykliwie. */}
       <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -top-28 -left-24 h-72 w-72 rounded-full bg-gradient-to-br from-slate-300/25 to-slate-200/5 blur-3xl animate-auth-blob" />
-        <div className="absolute top-1/4 -right-28 h-80 w-80 rounded-full bg-gradient-to-br from-slate-200/25 to-slate-300/5 blur-3xl animate-auth-blob-2" />
-        <div className="absolute -bottom-24 left-1/4 h-72 w-72 rounded-full bg-gradient-to-tr from-slate-300/20 to-slate-200/5 blur-3xl animate-auth-blob-3" />
+        <div className="absolute -top-32 -left-24 h-80 w-80 rounded-full bg-gradient-to-br from-[#F9662B]/18 to-[#F4A259]/[0.04] blur-3xl animate-auth-blob" />
+        <div className="absolute top-1/3 -right-28 h-80 w-80 rounded-full bg-gradient-to-br from-[#F4A259]/16 to-[#F9662B]/[0.04] blur-3xl animate-auth-blob-2" />
+        <div className="absolute -bottom-28 left-1/5 h-80 w-80 rounded-full bg-gradient-to-tr from-[#FDBA74]/18 to-[#F9662B]/[0.04] blur-3xl animate-auth-blob-3" />
       </div>
 
       {/* Tresc */}
@@ -702,10 +696,6 @@ const Auth = () => {
               Kontynuuj z&nbsp;Google
             </button>
           </div>
-
-          <p className="text-xs text-muted-foreground text-center leading-relaxed">
-            Konto zakładasz automatycznie przy pierwszym logowaniu. Miałeś&nbsp;już konto z&nbsp;hasłem? Użyj Google lub Apple z&nbsp;tym samym adresem - połączymy je&nbsp;automatycznie.
-          </p>
 
           {/* Business link - tylko web (na natywnej apce panel biznesowy nie ma sensu) */}
           {!isNative && (
