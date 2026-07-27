@@ -15,6 +15,26 @@ import { haversineKm, formatDistance } from "@/lib/distance";
 import { Navigation, GripVertical, CalendarDays, Loader2 } from "lucide-react";
 import { Reorder, useDragControls } from "framer-motion";
 import { useTranslation } from "react-i18next";
+import { API_BASE } from "@/lib/platform";
+
+// Statyczna mapka pojedynczego miejsca (okladka karty planu). Tania (Maps Static + 24h CDN),
+// pomaranczowy pin, POI/transit ukryte. null gdy brak wspolrzednych.
+function placeStaticMap(lat?: number | null, lng?: number | null): string | null {
+  if (lat == null || lng == null) return null;
+  return `${API_BASE}/api/static-map?size=400x300&scale=2&maptype=roadmap&zoom=15&markers=color:0xf9662b%7C${lat},${lng}&style=feature:poi%7Cvisibility:off&style=feature:transit%7Cvisibility:off`;
+}
+
+// Kolorowe logo Google (guzik "otworz wizytowke miejsca").
+function GoogleG({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} aria-hidden="true">
+      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+    </svg>
+  );
+}
 
 // Edytor planu aktywnej trasy osadzony na ekranie glownym. Replika edytora planu z
 // ReviewSummary (widok Dziennika), ale jako self-contained widget na home: laduje wlasne
@@ -584,17 +604,22 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false, onDelete, deleting 
     <div key={pin.id} id={`active-pin-${pin.id}`} className={`${fullWidth ? "w-full" : "snap-center shrink-0 w-[80vw] max-w-[320px]"} rounded-2xl bg-secondary border overflow-hidden shadow-sm flex flex-col transition-all ${highlightPinId === pin.id ? "border-trasa-teal-ink ring-2 ring-trasa-teal-ink/50" : "border-border/40"} ${pin.visited_at || isPastDay || skippedPinIds.has(pin.id) ? "opacity-55" : ""}`}>
       <button onClick={() => openDetail(pin)} className="block w-full text-left active:opacity-90 transition-opacity">
         <div className="relative w-full aspect-[4/3] bg-muted">
-          <PlacePhoto pin={pin} className={`w-full h-full object-cover ${pin.visited_at || isPastDay || skippedPinIds.has(pin.id) ? "grayscale" : ""}`} emojiClass="text-4xl" />
+          {/* Okladka = mapka miejsca (statyczna, tania). Fallback: zdjecie/placeholder gdy brak coords. */}
+          {placeStaticMap(pin.latitude, pin.longitude) ? (
+            <img src={placeStaticMap(pin.latitude, pin.longitude)!} alt="" loading="lazy"
+              className={`w-full h-full object-cover ${pin.visited_at || isPastDay || skippedPinIds.has(pin.id) ? "grayscale opacity-90" : ""}`} />
+          ) : (
+            <PlacePhoto pin={pin} className={`w-full h-full object-cover ${pin.visited_at || isPastDay || skippedPinIds.has(pin.id) ? "grayscale" : ""}`} emojiClass="text-4xl" />
+          )}
+          {/* Numer miejsca (lewy gorny) */}
           <div className="absolute top-3 left-3 h-8 w-8 rounded-full bg-black/55 backdrop-blur text-white text-sm font-bold flex items-center justify-center">{i + 1}</div>
-          {pin.visited_at ? (
-            <div className="absolute bottom-3 left-3 flex items-center gap-1 px-2 py-1 rounded-full bg-black/60 backdrop-blur text-white text-[10px] font-bold">
-              <Check className="h-3 w-3" /> {t("editor.visited")}
+          {/* Miniatura zdjecia okladkowego miejsca (prawy dol) */}
+          {placeStaticMap(pin.latitude, pin.longitude) && (
+            <div className="absolute bottom-3 right-3 h-16 w-16 rounded-xl overflow-hidden ring-2 ring-white/85 shadow-md bg-muted">
+              <PlacePhoto pin={pin} className="w-full h-full object-cover" emojiClass="text-2xl" />
             </div>
-          ) : skippedPinIds.has(pin.id) ? (
-            <div className="absolute bottom-3 left-3 flex items-center gap-1 px-2 py-1 rounded-full bg-black/55 backdrop-blur text-white text-[10px] font-bold">
-              <ChevronRight className="h-3 w-3" /> {t("editor.skipped")}
-            </div>
-          ) : null}
+          )}
+          {/* Prawy gorny: usun (edycja) LUB guzik Google -> wizytowka miejsca (zamiast odhaczania). */}
           {editable ? (
             <button
               onClick={(e) => { e.stopPropagation(); removeWorkingPin(pin.id); }}
@@ -603,30 +628,17 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false, onDelete, deleting 
             >
               <Trash2 className="h-4 w-4" />
             </button>
-          ) : pin.visited_at ? (
-            // Po odhaczeniu: kolko z ikona cofniecia (undo) w tym samym rogu - klik cofa odhaczenie.
+          ) : (
             <span
               role="button"
               tabIndex={0}
-              onClick={(e) => { e.stopPropagation(); unmarkVisited(pin.id); }}
-              aria-label={t("editor.undo_check")}
-              className="absolute top-3 right-3 h-10 w-10 rounded-full bg-black/55 backdrop-blur text-white flex items-center justify-center shadow-lg shadow-black/25 active:scale-90"
+              onClick={(e) => { e.stopPropagation(); openDetail(pin); }}
+              aria-label={t("editor.open_place", "Zobacz miejsce")}
+              className="absolute top-3 right-3 h-10 w-10 rounded-full bg-white flex items-center justify-center shadow-lg shadow-black/20 active:scale-90"
             >
-              <RotateCcw className="h-5 w-5" strokeWidth={2.4} />
+              <GoogleG className="h-5 w-5" />
             </span>
-          ) : (!skippedPinIds.has(pin.id) && !isPastDay && !isFutureDay) ? (
-            // Odhacz jako zielone kolko na zdjeciu (prawy gorny rog). Ukryte na przyszly dzien
-            // (trasa jeszcze sie nie zaczela - nie ma czego odhaczac).
-            <span
-              role="button"
-              tabIndex={0}
-              onClick={(e) => { e.stopPropagation(); markVisited(pin.id); }}
-              aria-label={t("editor.check_off")}
-              className="absolute top-3 right-3 h-10 w-10 rounded-full bg-green-600 text-white flex items-center justify-center shadow-lg shadow-black/25 active:scale-90"
-            >
-              <Check className="h-5 w-5" strokeWidth={2.6} />
-            </span>
-          ) : null}
+          )}
         </div>
         <div className="px-4 pt-4 pb-3">
           <div className="flex items-center gap-2 mb-2">
@@ -699,11 +711,8 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false, onDelete, deleting 
               <button onClick={() => movePin(i, i + 1)} disabled={i === workingPins.length - 1} aria-label={t("editor.later")} className="h-6 w-6 flex items-center justify-center text-muted-foreground disabled:opacity-25 active:scale-90"><ChevronDown className="h-4 w-4" /></button>
             </div>
           )}
-          {!isPastDay && (pin.visited_at ? (
-            <button onClick={() => unmarkVisited(pin.id)} aria-label={t("editor.undo_check")} className="h-9 w-9 rounded-full flex items-center justify-center text-muted-foreground active:scale-90"><RotateCcw className="h-4 w-4" /></button>
-          ) : !skippedPinIds.has(pin.id) ? (
-            <button onClick={() => markVisited(pin.id)} aria-label={t("editor.check_off")} className="h-9 w-9 rounded-full border-2 border-green-500/60 text-green-600 flex items-center justify-center active:scale-90"><Check className="h-4 w-4" strokeWidth={2.6} /></button>
-          ) : null)}
+          {/* Guzik Google -> wizytowka miejsca (zamiast odhaczania) */}
+          <button onClick={() => openDetail(pin)} aria-label={t("editor.open_place", "Zobacz miejsce")} className="h-9 w-9 rounded-full bg-white border border-border/50 shadow-sm flex items-center justify-center active:scale-90"><GoogleG className="h-4 w-4" /></button>
           {editable && (
             <button onClick={() => removeWorkingPin(pin.id)} aria-label={t("editor.remove_place")} className="h-9 w-9 rounded-full flex items-center justify-center text-muted-foreground/60 active:scale-90"><Trash2 className="h-4 w-4" /></button>
           )}
