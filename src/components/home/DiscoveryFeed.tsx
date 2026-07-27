@@ -1333,7 +1333,10 @@ async function hydrateCollections(cols: any[]): Promise<DiscoveryCollection[]> {
   }));
 }
 
-const SHOW_ZESTAWIENIA = true;
+// Zestawienia w feedzie WYLACZONE (2026-07-27, pivot trasy-only): feed pokazuje same
+// trasy. Query userPolecajki + karty kolekcji ukryte. Juz zapisane zestawienia nadal
+// widoczne w zakladce Zapisane. Ustaw true, by przywrocic kolekcje w feedzie.
+const SHOW_ZESTAWIENIA = false;
 
 // Szybkie skroty w wyszukiwarce ("Biezace polozenie" + "Zapisane miejsca") - WYLACZONE
 // (2026-07-27): dopoki scroller nie ma miejsc, nie maja sensu. Ustaw true, by przywrocic.
