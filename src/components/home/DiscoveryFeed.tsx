@@ -1342,10 +1342,58 @@ const SHOW_ZESTAWIENIA = false;
 // (2026-07-27): dopoki scroller nie ma miejsc, nie maja sensu. Ustaw true, by przywrocic.
 const SHOW_SEARCH_SHORTCUTS = false;
 
+// Kompaktowy kafelek zapisanej trasy/zestawienia (spojny ze stylem kart Wyjazdow):
+// miniatura + mini-mapka w rogu, tytul, miasto, liczba miejsc, bookmark = usun z zapisanych.
+function SavedTile({ id, photo, title, city, placeCount, pins, onOpen, onUnsave }: {
+  id: string; photo: string | null; title: string; city?: string | null;
+  placeCount: number; pins: LatLng[]; onOpen: () => void; onUnsave: () => void;
+}) {
+  const cover = photo ?? getRandomPinPlaceholder(id);
+  const miniMap = buildMiniMapUrl(pins);
+  const countLabel = placeCount > 0
+    ? `${placeCount} ${placeCount === 1 ? "miejsce" : placeCount < 5 ? "miejsca" : "miejsc"}`
+    : null;
+  return (
+    <div
+      onClick={onOpen}
+      className="relative w-full flex gap-3.5 p-2.5 rounded-3xl bg-card border border-border/50 text-left active:scale-[0.99] transition-transform cursor-pointer"
+    >
+      <div className="relative w-[118px] shrink-0 aspect-[4/5] rounded-2xl overflow-hidden bg-muted">
+        <img src={cover} alt="" className="w-full h-full object-cover"
+          onError={(e) => { (e.target as HTMLImageElement).src = getRandomPinPlaceholder(id + "_fb"); }} />
+        {miniMap && (
+          <div className="absolute bottom-2 right-2 h-[46px] w-[46px] rounded-xl overflow-hidden border-2 border-white shadow-md bg-white">
+            <img src={miniMap} alt="" className="w-full h-full object-cover"
+              onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = "none"; }} />
+          </div>
+        )}
+      </div>
+      <div className="flex-1 min-w-0 flex flex-col py-0.5 pr-0.5">
+        <div className="flex items-start gap-2">
+          <p className="flex-1 min-w-0 text-lg font-bold leading-tight text-foreground line-clamp-2">{title}</p>
+          <button
+            onClick={(e) => { e.stopPropagation(); onUnsave(); }}
+            aria-label="Usuń z zapisanych"
+            className="shrink-0 -mr-0.5 -mt-0.5 h-8 w-8 flex items-center justify-center rounded-full text-primary active:scale-90 transition-transform"
+          >
+            <Bookmark className="h-5 w-5 fill-primary text-primary" strokeWidth={2} />
+          </button>
+        </div>
+        {city && <p className="mt-1 text-sm text-muted-foreground truncate">{city}</p>}
+        {countLabel && (
+          <div className="mt-auto pt-2">
+            <span className="text-sm font-medium text-muted-foreground">{countLabel}</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── SavedRoutes ─────────────────────────────────────────────────────────────────
-// Trasy ZAPISANE przez usera (bookmark -> tabela saved_routes) - cudze trasy odlozone
-// na pozniej. Zakladka "Zapisane" (bottom nav). Tap otwiera publiczny widok trasy
-// (/route/:id), bookmark na karcie usuwa z zapisanych. Wymaga zalogowania.
+// Trasy ZAPISANE przez usera (saved_routes + zapisane zestawienia z localStorage),
+// pokazywane jako KAFELKI. Zakladka "Zapisane" (bottom nav). Tap otwiera trase
+// (/route/:id) lub wizytowke zestawienia, bookmark usuwa z zapisanych.
 export function SavedRoutes({ city }: { city?: string }) {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -1424,23 +1472,20 @@ export function SavedRoutes({ city }: { city?: string }) {
     rows.push({
       key: `route-${r.id}`, savedAt: routeDates[r.id] ?? "",
       el: (
-        <TrasaBigCard key={`route-${r.id}`} id={r.id} photo={r.photo} city={r.city}
-          placeCount={r.placeCount ?? 0} title={r.title} description={r.summary || r.ai_highlight}
-          tags={(r.categories ?? []).map((c) => CAT_LABEL[c] ?? c)} pins={r.pins ?? []}
-          saved onToggleSave={() => unsaveRoute(r.id)} onOpen={() => navigate(`/route/${r.id}`)} />
+        <SavedTile key={`route-${r.id}`} id={r.id} photo={r.photo} title={r.title} city={r.city}
+          placeCount={r.placeCount ?? 0} pins={r.pins ?? []}
+          onOpen={() => navigate(`/route/${r.id}`)} onUnsave={() => unsaveRoute(r.id)} />
       ),
     });
   });
   collections.filter((c) => cityOk(c.city)).forEach((col) => {
     const ph = col.items?.find((it) => it.photo_url)?.photo_url ?? null;
-    const catTags = [...new Set((col.items ?? []).map((it) => it.category).filter(Boolean).map((c) => String(c).toLowerCase()))].map((c) => CAT_LABEL[c] ?? c);
     rows.push({
       key: `col-${col.id}`, savedAt: colDates[col.id] ?? "",
       el: (
-        <TrasaBigCard key={`col-${col.id}`} id={col.id} photo={ph ? resolveStored(ph) : null} city={col.city}
-          placeCount={col.items?.length ?? 0} title={col.title} description={col.description}
-          tags={catTags} pins={col.items ?? []}
-          saved onToggleSave={() => unsaveCol(col.id)} onOpen={() => setActiveCol(col)} />
+        <SavedTile key={`col-${col.id}`} id={col.id} photo={ph ? resolveStored(ph) : null} title={col.title} city={col.city}
+          placeCount={col.items?.length ?? 0} pins={(col.items ?? []) as LatLng[]}
+          onOpen={() => setActiveCol(col)} onUnsave={() => unsaveCol(col.id)} />
       ),
     });
   });
@@ -1449,7 +1494,7 @@ export function SavedRoutes({ city }: { city?: string }) {
   const loading = (!!user && routesLoading) || (savedColIds.length > 0 && colLoading);
 
   if (loading && rows.length === 0) {
-    return <div className="space-y-4">{Array.from({ length: 2 }).map((_, i) => <div key={i} className={`w-full rounded-3xl bg-muted animate-pulse min-h-[420px] ${TRASA_CARD_H}`} />)}</div>;
+    return <div className="space-y-3">{Array.from({ length: 3 }).map((_, i) => <div key={i} className="w-full h-[164px] rounded-3xl bg-muted/50 animate-pulse" />)}</div>;
   }
   if (rows.length === 0) {
     return (
@@ -1462,7 +1507,7 @@ export function SavedRoutes({ city }: { city?: string }) {
   }
   return (
     <>
-      <div className="space-y-4">{rows.map((r) => r.el)}</div>
+      <div className="space-y-3">{rows.map((r) => r.el)}</div>
       <Sheet open={!!activeCol} onOpenChange={(o) => { if (!o) setActiveCol(null); }}>
         <SheetContent side="bottom" className="rounded-t-2xl p-0 [&>button:last-child]:hidden" style={{ maxHeight: "92vh", height: "92vh" }}>
           {activeCol && <CollectionDetail col={activeCol} onClose={() => setActiveCol(null)} />}
