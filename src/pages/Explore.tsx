@@ -716,7 +716,7 @@ const Explore = () => {
               autoFocus
               value={feedSearch}
               onChange={(e) => setFeedSearch(e.target.value)}
-              placeholder="Szukaj tras, miejsc…"
+              placeholder="Szukaj tras, miejsc na trasie..."
               className="flex-1 min-w-0 bg-transparent text-[15px] outline-none placeholder:text-muted-foreground/70"
             />
             <button
