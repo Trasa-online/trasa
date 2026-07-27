@@ -11,7 +11,7 @@ import { dateLocale } from "@/lib/dateLocale";
 import { ORIGIN_COUNTRIES } from "@/lib/locations";
 import { expandCity } from "@/lib/cities";
 import { subcategoryLabelLocalized, MAIN_CATEGORIES } from "@/lib/categories";
-import { createWyjazdFromPlaces } from "@/lib/createWyjazd";
+import { createWyjazdFromPlaces, updateWyjazdPlaces } from "@/lib/createWyjazd";
 import { API_BASE } from "@/lib/platform";
 import FullCalendarPicker from "@/components/plan-wizard/FullCalendarPicker";
 import RouteMap from "@/components/RouteMap";
@@ -141,7 +141,10 @@ export default function ComposeWyjazd() {
   const { user } = useAuth();
   const { open: openAuthDrawer } = useAuthDrawer();
 
-  const nav = (location.state ?? {}) as { city?: string | null; title?: string | null; places?: any[] };
+  // draftId: gdy wchodzimy z ekranu wyboru bazy w SWOJA robocza trase -> edytujemy JA
+  // (update), a nie tworzymy duplikatu. Brak = tryb tworzenia nowej trasy.
+  const nav = (location.state ?? {}) as { city?: string | null; title?: string | null; places?: any[]; draftId?: string };
+  const draftId = nav.draftId ?? null;
 
   const [city, setCity] = useState<string>(nav.city || "Warszawa");
   const [name, setName] = useState<string>(nav.title || "");
@@ -266,25 +269,23 @@ export default function ComposeWyjazd() {
           end_date: format(addDays(tripDate.start, tripDate.numDays - 1), "yyyy-MM-dd"),
         }
       : undefined;
-    const id = await createWyjazdFromPlaces(
-      user.id,
-      city,
-      name.trim() || city || "Wyjazd",
-      items.map((i) => ({
-        place_name: i.place_name,
-        category: i.category,
-        address: i.address,
-        latitude: i.latitude,
-        longitude: i.longitude,
-        photo_url: i.photo_url,
-        place_id: i.place_id,
-      })),
-      dates,
-    );
+    const places = items.map((i) => ({
+      place_name: i.place_name,
+      category: i.category,
+      address: i.address,
+      latitude: i.latitude,
+      longitude: i.longitude,
+      photo_url: i.photo_url,
+      place_id: i.place_id,
+    }));
+    // draftId -> aktualizuj istniejaca robocza (bez duplikatu). Inaczej stworz nowa.
+    const id = draftId
+      ? await updateWyjazdPlaces(draftId, city, name.trim() || city || "Wyjazd", places, dates)
+      : await createWyjazdFromPlaces(user.id, city, name.trim() || city || "Wyjazd", places, dates);
     setCreating(false);
-    if (!id) { toast.error("Nie udało się utworzyć wyjazdu"); return; }
+    if (!id) { toast.error(draftId ? "Nie udało się zapisać zmian" : "Nie udało się utworzyć wyjazdu"); return; }
     if (openEditor) navigate(`/review-summary?route=${id}&edit=1`);
-    else { toast.success("Zapisano wyjazd"); navigate("/dziennik"); }
+    else { toast.success(draftId ? "Zapisano zmiany" : "Zapisano wyjazd"); navigate("/dziennik"); }
   };
 
   // Propozycje: podczas pisania = wyniki Google, na fokusie = sugestie z bazy (bez dodanych).
@@ -467,7 +468,7 @@ export default function ComposeWyjazd() {
         <div className="shrink-0 border-t border-border/20 px-4 pt-3 pb-[max(16px,env(safe-area-inset-bottom))] bg-background flex items-center gap-2">
           <button onClick={() => confirm(true)} disabled={creating}
             className="flex-1 h-12 rounded-2xl bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform shadow-md shadow-orange-500/20 disabled:opacity-60">
-            {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <>Stwórz wyjazd <ArrowRight className="h-4 w-4" /></>}
+            {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <>{draftId ? "Zapisz zmiany" : "Stwórz wyjazd"} <ArrowRight className="h-4 w-4" /></>}
           </button>
         </div>
       )}
@@ -509,9 +510,11 @@ export default function ComposeWyjazd() {
             className="w-full max-w-md bg-card rounded-t-3xl px-5 pt-6 pb-[max(20px,env(safe-area-inset-bottom))] shadow-2xl animate-in slide-in-from-bottom-4 duration-300"
             onClick={(e) => e.stopPropagation()}
           >
-            <p className="text-lg font-black leading-tight">Zapisać trasę do roboczych?</p>
+            <p className="text-lg font-black leading-tight">{draftId ? "Zapisać zmiany?" : "Zapisać trasę do roboczych?"}</p>
             <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed">
-              {`Masz ${items.length} ${items.length === 1 ? "miejsce" : items.length < 5 ? "miejsca" : "miejsc"} w trasie. Zapisz ją jako roboczą, żeby wrócić do niej później.`}
+              {draftId
+                ? "Masz niezapisane zmiany w tej roboczej trasie. Zapisać je?"
+                : `Masz ${items.length} ${items.length === 1 ? "miejsce" : items.length < 5 ? "miejsca" : "miejsc"} w trasie. Zapisz ją jako roboczą, żeby wrócić do niej później.`}
             </p>
             <div className="mt-5 flex flex-col gap-2">
               <button
@@ -519,7 +522,7 @@ export default function ComposeWyjazd() {
                 disabled={creating}
                 className="w-full h-12 rounded-2xl bg-primary text-white font-bold text-sm flex items-center justify-center active:scale-[0.98] transition-transform disabled:opacity-60"
               >
-                Zapisz jako roboczą
+                {draftId ? "Zapisz zmiany" : "Zapisz jako roboczą"}
               </button>
               <button
                 onClick={() => { setShowBackConfirm(false); navigate(-1); }}

@@ -123,7 +123,8 @@ export default function StartWyjazd() {
       place_id: p.place_id ?? null,
       rating: typeof p.rating === "number" ? p.rating : null,
     }));
-    navigate("/wyjazd/nowy", { state: { city: route.city, title: route.title, places } });
+    // Robocza (wlasny szkic) -> edytuj JA (draftId). Zapisana od innych -> nowa kopia (bez draftId).
+    navigate("/wyjazd/nowy", { state: { city: route.city, title: route.title, places, draftId: route.own ? route.id : undefined } });
   };
 
   const deleteDraft = async (id: string) => {

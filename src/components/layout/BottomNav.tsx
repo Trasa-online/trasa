@@ -76,8 +76,10 @@ const BottomNav = () => {
   // BottomNav zniknie z ekranu (pelnoekranowe flow bez nawigacji).
   useEffect(() => {
     const root = document.documentElement;
-    root.style.setProperty("--trasa-nav-offset", navHidden ? "0px" : "calc(5rem + env(safe-area-inset-bottom, 0px))");
-    return () => { root.style.setProperty("--trasa-nav-offset", "0px"); };
+    // Nav widoczny: 5rem + bezpieczna strefa. Ukryty: sama bezpieczna strefa (toast i tak
+    // ma zostac nad home-indicatorem, nie pod nim). Toast dokłada tylko +10px odstepu.
+    root.style.setProperty("--trasa-nav-offset", navHidden ? "env(safe-area-inset-bottom, 0px)" : "calc(5rem + env(safe-area-inset-bottom, 0px))");
+    return () => { root.style.setProperty("--trasa-nav-offset", "env(safe-area-inset-bottom, 0px)"); };
   }, [navHidden]);
 
   // Badge kropka na ikonie Dziennik gdy uzytkownik ma niewidziane trasy

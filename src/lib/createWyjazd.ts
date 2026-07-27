@@ -66,3 +66,47 @@ export async function createWyjazdFromPlaces(
   }
   return route.id as string;
 }
+
+// Aktualizacja ISTNIEJACEJ trasy roboczej (edycja szkicu z ekranu wyboru bazy) - NIE tworzy
+// duplikatu. Nadpisuje meta (tytul/miasto/daty) i podmienia wszystkie piny (kolejnosc = pin_order).
+export async function updateWyjazdPlaces(
+  routeId: string,
+  city: string | null,
+  title: string,
+  places: WyjazdPlaceInput[],
+  dates?: { start_date?: string | null; end_date?: string | null },
+): Promise<string | null> {
+  const { error: updErr } = await (supabase as any)
+    .from("routes")
+    .update({
+      title: title || city || "Wyjazd",
+      city: city || null,
+      start_date: dates?.start_date ?? null,
+      end_date: dates?.end_date ?? null,
+    })
+    .eq("id", routeId);
+  if (updErr) {
+    console.error("[updateWyjazd] route update failed:", updErr.message);
+    return null;
+  }
+  // Podmiana pinow: usun stare, wstaw nowe w aktualnej kolejnosci.
+  await (supabase as any).from("pins").delete().eq("route_id", routeId);
+  const rows = places.map((p, idx) => ({
+    route_id: routeId,
+    place_name: p.place_name,
+    address: p.address ?? null,
+    description: p.description ?? null,
+    category: p.category || "other",
+    latitude: p.latitude ?? null,
+    longitude: p.longitude ?? null,
+    place_id: p.place_id ?? null,
+    suggested_time: null,
+    photo_url: p.photo_url ?? null,
+    pin_order: idx,
+  }));
+  if (rows.length) {
+    const { error: pinsErr } = await (supabase as any).from("pins").insert(rows);
+    if (pinsErr) console.warn("[updateWyjazd] pins insert failed:", pinsErr.message);
+  }
+  return routeId;
+}
