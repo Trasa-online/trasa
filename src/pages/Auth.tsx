@@ -624,9 +624,9 @@ const Auth = () => {
       {/* Tlo: delikatny, wolno dryfujacy pomaranczowy ambient (light-mode). Kolor TYLKO
           w tle - reszta ekranu neutralna. Niska krycie + duzy blur = subtelnie, nie krzykliwie. */}
       <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -top-32 -left-24 h-80 w-80 rounded-full bg-gradient-to-br from-[#F9662B]/18 to-[#F4A259]/[0.04] blur-3xl animate-auth-blob" />
-        <div className="absolute top-1/3 -right-28 h-80 w-80 rounded-full bg-gradient-to-br from-[#F4A259]/16 to-[#F9662B]/[0.04] blur-3xl animate-auth-blob-2" />
-        <div className="absolute -bottom-28 left-1/5 h-80 w-80 rounded-full bg-gradient-to-tr from-[#FDBA74]/18 to-[#F9662B]/[0.04] blur-3xl animate-auth-blob-3" />
+        <div className="absolute -top-20 -left-16 h-72 w-72 rounded-full bg-gradient-to-br from-[#F9662B]/30 to-[#F4A259]/[0.05] blur-3xl animate-auth-blob" />
+        <div className="absolute top-1/3 -right-20 h-80 w-80 rounded-full bg-gradient-to-br from-[#F4A259]/28 to-[#F9662B]/[0.05] blur-3xl animate-auth-blob-2" />
+        <div className="absolute bottom-4 -left-10 h-72 w-72 rounded-full bg-gradient-to-tr from-[#FDBA74]/30 to-[#F9662B]/[0.05] blur-3xl animate-auth-blob-3" />
       </div>
 
       {/* Tresc */}

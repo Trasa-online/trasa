@@ -97,17 +97,21 @@ export default {
           to: { transform: "translateY(0)" },
         },
         // Miekkie, wolno dryfujace gradienty w tle ekranu logowania (light-mode).
+        // Duza amplituda ruchu (zeby dryf byl WIDOCZNY mimo delikatnego koloru).
         "auth-blob": {
           "0%, 100%": { transform: "translate(0px, 0px) scale(1)" },
-          "50%": { transform: "translate(30px, 40px) scale(1.12)" },
+          "33%": { transform: "translate(80px, 60px) scale(1.25)" },
+          "66%": { transform: "translate(40px, 110px) scale(0.9)" },
         },
         "auth-blob-2": {
-          "0%, 100%": { transform: "translate(0px, 0px) scale(1.05)" },
-          "50%": { transform: "translate(-40px, 30px) scale(0.92)" },
+          "0%, 100%": { transform: "translate(0px, 0px) scale(1.1)" },
+          "33%": { transform: "translate(-90px, 50px) scale(0.85)" },
+          "66%": { transform: "translate(-50px, -60px) scale(1.15)" },
         },
         "auth-blob-3": {
-          "0%, 100%": { transform: "translate(0px, 0px) scale(0.98)" },
-          "50%": { transform: "translate(24px, -36px) scale(1.1)" },
+          "0%, 100%": { transform: "translate(0px, 0px) scale(0.95)" },
+          "33%": { transform: "translate(70px, -70px) scale(1.2)" },
+          "66%": { transform: "translate(-40px, -30px) scale(1)" },
         },
         // Wejscie karty USP przy zmianie slajdu (fade + delikatny slide).
         "auth-fade": {
@@ -120,9 +124,9 @@ export default {
         "accordion-up": "accordion-up 0.2s ease-out",
         "orb-flow": "orb-flow 3.5s ease-in-out infinite",
         "sheet-up": "sheet-up 0.32s cubic-bezier(0.22, 1, 0.36, 1)",
-        "auth-blob": "auth-blob 16s ease-in-out infinite",
-        "auth-blob-2": "auth-blob-2 20s ease-in-out infinite",
-        "auth-blob-3": "auth-blob-3 18s ease-in-out infinite",
+        "auth-blob": "auth-blob 14s ease-in-out infinite",
+        "auth-blob-2": "auth-blob-2 17s ease-in-out infinite",
+        "auth-blob-3": "auth-blob-3 15s ease-in-out infinite",
         "auth-fade": "auth-fade 0.45s cubic-bezier(0.22, 1, 0.36, 1)",
       },
     },
