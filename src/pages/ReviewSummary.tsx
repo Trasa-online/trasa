@@ -137,12 +137,10 @@ const ReviewSummary = () => {
   const [noteSaved, setNoteSaved] = useState<Record<string, boolean>>({});
   const noteTimer = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
-  // Pytanie "Czy ten plan dnia mial sens?" (poziom trasy). overall_rating: 1=Tak, 0=Nie, null=brak.
-  // review_narrative = odpowiedz tekstowa. Autosave debounce (jak notki miejsc).
-  const [planSense, setPlanSense] = useState<boolean | null>(null);
-  const [senseAnswer, setSenseAnswer] = useState("");
-  const [senseSaved, setSenseSaved] = useState(false);
-  const senseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // "Twoja sugestia dla innych podroznych" (poziom trasy) - review_narrative. Autosave debounce.
+  const [suggestion, setSuggestion] = useState("");
+  const [suggestionSaved, setSuggestionSaved] = useState(false);
+  const suggestionTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Udostepnianie historycznej trasy: podpis + oznaczeni czlonkowie (#11).
   const [shareCaption, setShareCaption] = useState("");
@@ -191,25 +189,21 @@ const ReviewSummary = () => {
   const activeRouteId = selectedDayId && dayRouteIds.includes(selectedDayId) ? selectedDayId : routeId;
   const activeDay = sortedDays.find((d: any) => d.id === activeRouteId) ?? route;
 
-  // Init pytania "Czy plan mial sens?" z danych trasy (overall_rating + review_narrative).
+  // Init sugestii z danych trasy (review_narrative).
   useEffect(() => {
     if (!route) return;
-    setPlanSense(route.overall_rating === 1 ? true : route.overall_rating === 0 ? false : null);
-    setSenseAnswer(route.review_narrative ?? "");
+    setSuggestion(route.review_narrative ?? "");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [route?.id]);
 
-  // Autosave odpowiedzi na "Czy plan mial sens?" (debounce). sense=null czysci ocene.
-  const saveSense = (sense: boolean | null, answer: string) => {
+  // Autosave sugestii dla innych podroznych (debounce, jak notki miejsc).
+  const saveSuggestion = (answer: string) => {
     if (!routeId || !user) return;
-    if (senseTimer.current) clearTimeout(senseTimer.current);
-    senseTimer.current = setTimeout(async () => {
-      await (supabase as any).from("routes").update({
-        overall_rating: sense === true ? 1 : sense === false ? 0 : null,
-        review_narrative: answer.trim() || null,
-      }).eq("id", routeId);
-      setSenseSaved(true);
-      setTimeout(() => setSenseSaved(false), 2000);
+    if (suggestionTimer.current) clearTimeout(suggestionTimer.current);
+    suggestionTimer.current = setTimeout(async () => {
+      await (supabase as any).from("routes").update({ review_narrative: answer.trim() || null }).eq("id", routeId);
+      setSuggestionSaved(true);
+      setTimeout(() => setSuggestionSaved(false), 2000);
     }, 700);
   };
 
@@ -1937,54 +1931,55 @@ const ReviewSummary = () => {
 
               {step === 2 && (
                 <div className="px-5 pb-5">
-                  {/* Pytanie: czy ten plan dnia mial sens? (Tak/Nie + odpowiedz) */}
-                  <div className="pb-5">
-                    <p className="text-base font-bold text-foreground mb-3">Czy ten plan dnia miał sens?</p>
-                    <div className="flex rounded-full bg-secondary p-0.5 text-sm font-bold mb-3">
-                      <button
-                        type="button"
-                        onClick={() => { setPlanSense(true); saveSense(true, senseAnswer); }}
-                        className={`flex-1 py-2.5 rounded-full transition-colors ${planSense === true ? "bg-background shadow-sm text-foreground" : "text-muted-foreground"}`}
-                      >
-                        Tak
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => { setPlanSense(false); saveSense(false, senseAnswer); }}
-                        className={`flex-1 py-2.5 rounded-full transition-colors ${planSense === false ? "bg-background shadow-sm text-foreground" : "text-muted-foreground"}`}
-                      >
-                        Nie
-                      </button>
-                    </div>
+                  {/* Twoja sugestia dla innych podroznych (review_narrative, autosave) */}
+                  <div className="pb-6">
+                    <p className="text-base text-foreground mb-3">Twoja sugestia dla innych podróżnych</p>
                     <div className="relative">
                       <textarea
-                        value={senseAnswer}
-                        onChange={(e) => { setSenseAnswer(e.target.value); saveSense(planSense, e.target.value); }}
-                        placeholder="Twoja odpowiedź..."
-                        rows={4}
+                        value={suggestion}
+                        onChange={(e) => { setSuggestion(e.target.value); saveSuggestion(e.target.value); }}
+                        onFocus={() => setNoteFocused(true)}
+                        onBlur={() => setNoteFocused(false)}
+                        placeholder="Co zmienić, czego brakowało, czy warto coś odpuścić..."
+                        rows={5}
                         className="w-full bg-secondary/60 rounded-2xl px-4 py-3 text-sm text-foreground resize-none focus:outline-none border border-border/30 placeholder:text-muted-foreground/55"
                       />
-                      {senseSaved && <span className="absolute bottom-2.5 right-3 text-[10px] text-green-600 font-medium">Zapisano</span>}
+                      {suggestionSaved && <span className="absolute bottom-2.5 right-3 text-[10px] text-green-600 font-medium">Zapisano</span>}
                     </div>
                   </div>
 
-                  <p className="font-display text-xl font-bold text-foreground tracking-tight mb-3">Miejsca</p>
+                  {/* Miejsca + toggle Lista/Karty */}
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="font-display text-xl font-bold text-foreground tracking-tight">Miejsca</p>
+                    <div className="flex rounded-full bg-muted p-0.5">
+                      <button onClick={() => setPlanView("list")} aria-label={t("a11y.list_view")} className={`px-2.5 py-1.5 rounded-full transition-colors ${planView === "list" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}><List className="h-4 w-4" /></button>
+                      <button onClick={() => setPlanView("cards")} aria-label={t("a11y.cards_view")} className={`px-2.5 py-1.5 rounded-full transition-colors ${planView === "cards" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}><GalleryHorizontalEnd className="h-4 w-4" /></button>
+                    </div>
+                  </div>
+
                   {currentPins.length === 0 ? (
                     <p className="text-center text-sm text-muted-foreground py-8">{t("empty.no_places_note")}</p>
-                  ) : (
-                    <div className="space-y-3">
-                      {currentPins.map((pin: any) => (
-                        <div key={pin.id} className="rounded-2xl bg-card border border-border/40 p-3">
-                          <div className="flex items-center gap-3">
-                            <div className="h-11 w-11 shrink-0 rounded-xl overflow-hidden bg-muted">
-                              <PlacePhoto pin={pin} className="w-full h-full object-cover" emojiClass="text-xl" />
-                            </div>
-                            <p className="text-sm font-bold leading-tight truncate">{pin.place_name}</p>
+                  ) : planView === "list" ? (
+                    <div className="space-y-2.5">
+                      {workingPins.map((pin: any, i: number) => (
+                        <div key={pin.id}>
+                          {renderPlanRow(pin, i, true)}
+                          <div className="mt-2">
+                            <textarea
+                              value={notes[rkey(activeRouteId!, pin.place_name)] ?? ""}
+                              onChange={(e) => handleNoteChange(pin.place_name, e.target.value)}
+                              onFocus={() => setNoteFocused(true)}
+                              onBlur={() => setNoteFocused(false)}
+                              placeholder="Notatka dotycząca miejsca"
+                              rows={2}
+                              className="w-full bg-secondary/60 rounded-2xl px-4 py-3 text-sm text-foreground resize-none focus:outline-none border border-border/30 placeholder:text-muted-foreground/55"
+                            />
                           </div>
-                          {renderRatingNote(pin.place_name)}
                         </div>
                       ))}
                     </div>
+                  ) : (
+                    renderSwiper(true, true)
                   )}
                 </div>
               )}
