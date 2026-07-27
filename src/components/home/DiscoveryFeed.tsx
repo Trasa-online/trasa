@@ -1335,6 +1335,10 @@ async function hydrateCollections(cols: any[]): Promise<DiscoveryCollection[]> {
 
 const SHOW_ZESTAWIENIA = true;
 
+// Szybkie skroty w wyszukiwarce ("Biezace polozenie" + "Zapisane miejsca") - WYLACZONE
+// (2026-07-27): dopoki scroller nie ma miejsc, nie maja sensu. Ustaw true, by przywrocic.
+const SHOW_SEARCH_SHORTCUTS = false;
+
 // ── SavedRoutes ─────────────────────────────────────────────────────────────────
 // Trasy ZAPISANE przez usera (bookmark -> tabela saved_routes) - cudze trasy odlozone
 // na pozniej. Zakladka "Zapisane" (bottom nav). Tap otwiera publiczny widok trasy
@@ -2078,8 +2082,8 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
       {/* Kotwica do resetu scrolla feedu na gore przy otwarciu wyszukiwarki. */}
       <div ref={topAnchorRef} aria-hidden className="h-0" />
       {/* Szybkie skroty po kliknieciu w wyszukiwarke (pusta fraza) - NAD feedem; wizytowki
-          zostaja widoczne pod spodem (feed nie znika). */}
-      {searchFocused && !isSearchActive && (
+          zostaja widoczne pod spodem (feed nie znika). Wylaczone flaga SHOW_SEARCH_SHORTCUTS. */}
+      {SHOW_SEARCH_SHORTCUTS && searchFocused && !isSearchActive && (
         <div className="rounded-2xl bg-secondary border border-border/40 overflow-hidden divide-y divide-border/40 mb-4">
           <button onClick={handleNearby} disabled={nearbyLoading} className="w-full flex items-center gap-3 px-3.5 py-3 text-left active:bg-muted/50 transition-colors disabled:opacity-60">
             <div className="h-10 w-10 rounded-xl bg-orange-50 flex items-center justify-center shrink-0">
