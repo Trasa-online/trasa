@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { ArrowLeft, Search, Plus, X, Star, MapPin, ChevronDown, ChevronUp, Calendar as CalendarIcon, List, GalleryHorizontalEnd, Loader2, ArrowRight, Trash2, Bookmark, Maximize2 } from "lucide-react";
+import { ArrowLeft, Search, Plus, X, Star, ChevronDown, Calendar as CalendarIcon, List, GalleryHorizontalEnd, Loader2, ArrowRight, Trash2, Maximize2, GripVertical } from "lucide-react";
+import { Reorder, useDragControls } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthDrawer } from "@/hooks/useAuthDrawer";
@@ -9,7 +10,7 @@ import { format, addDays } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
 import { ORIGIN_COUNTRIES } from "@/lib/locations";
 import { expandCity } from "@/lib/cities";
-import { subcategoryLabelLocalized } from "@/lib/categories";
+import { subcategoryLabelLocalized, MAIN_CATEGORIES } from "@/lib/categories";
 import { createWyjazdFromPlaces } from "@/lib/createWyjazd";
 import { API_BASE } from "@/lib/platform";
 import FullCalendarPicker from "@/components/plan-wizard/FullCalendarPicker";
@@ -19,6 +20,18 @@ import type { MockPlace } from "@/components/plan-wizard/PlaceSwiper";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 
 const PL_CITIES = ORIGIN_COUNTRIES.find((c) => c.name === "Polska")?.cities ?? ["Warszawa"];
+
+// Emoji dopasowane do typu miejsca (placeholder gdy brak zdjecia). Mapa glowna kategoria +
+// podkategoria -> emoji z definicji kategorii. Fallback: 📍.
+const CAT_EMOJI: Record<string, string> = (() => {
+  const m: Record<string, string> = {};
+  for (const c of MAIN_CATEGORIES) {
+    m[c.id] = c.emoji;
+    for (const s of c.subcategories) m[s.id] = s.emoji;
+  }
+  return m;
+})();
+const catEmoji = (cat?: string | null): string => (cat && CAT_EMOJI[cat]) || "📍";
 
 // Miejsce w kompozycji wyjazdu. place_id != null = z bazy.
 type ComposeItem = {
@@ -70,6 +83,55 @@ function buildStaticMapUrl(pts: { latitude: number; longitude: number }[]): stri
   return `${API_BASE}/api/static-map?size=560x260&scale=2&maptype=roadmap&${markers}&style=feature:poi%7Cvisibility:off&style=feature:transit%7Cvisibility:off`;
 }
 
+// Wiersz listy wybranych miejsc z DRAG & DROP (framer-motion Reorder). Przeciaganie
+// uchwytem (GripVertical) - reszta wiersza nadal tapowalna (otwiera wizytowke).
+function SortableComposeRow({ it, idx, onOpen, onRemove }: {
+  it: ComposeItem; idx: number; onOpen: () => void; onRemove: () => void;
+}) {
+  const controls = useDragControls();
+  return (
+    <Reorder.Item
+      value={it}
+      dragListener={false}
+      dragControls={controls}
+      className="w-full flex items-center gap-2.5 rounded-2xl bg-secondary p-2.5 select-none"
+    >
+      <span className="shrink-0 h-6 w-6 rounded-full bg-foreground text-background text-xs font-bold flex items-center justify-center">{idx + 1}</span>
+      <button onClick={onOpen} className="flex items-center gap-2.5 min-w-0 flex-1 text-left active:opacity-90 transition-opacity">
+        {it.photo_url ? (
+          <img src={it.photo_url} alt="" className="h-12 w-12 rounded-xl object-cover shrink-0" />
+        ) : (
+          <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-amber-100 to-orange-200 flex items-center justify-center text-xl shrink-0">{catEmoji(it.category)}</div>
+        )}
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-bold truncate">{it.place_name}</p>
+          <div className="flex items-center gap-1.5 mt-0.5">
+            {it.category && <span className="text-[11px] text-muted-foreground truncate">{subcategoryLabelLocalized(it.category)}</span>}
+            {typeof it.rating === "number" && it.rating > 0 && (
+              <span className="flex items-center gap-0.5 text-[11px] text-muted-foreground shrink-0"><Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />{it.rating.toFixed(1)}</span>
+            )}
+          </div>
+        </div>
+      </button>
+      {/* Uchwyt przeciagania (przytrzymaj i przesun) */}
+      <span
+        onPointerDown={(e) => controls.start(e)}
+        aria-label="Przeciągnij, by zmienić kolejność"
+        className="shrink-0 h-9 w-7 flex items-center justify-center text-muted-foreground/50 cursor-grab active:cursor-grabbing touch-none"
+      >
+        <GripVertical className="h-5 w-5" />
+      </span>
+      <button
+        onClick={onRemove}
+        aria-label="Usuń miejsce"
+        className="h-8 w-8 rounded-full bg-background flex items-center justify-center text-muted-foreground active:scale-90 transition-transform shrink-0"
+      >
+        <Trash2 className="h-4 w-4" />
+      </button>
+    </Reorder.Item>
+  );
+}
+
 // Kompozycja wyjazdu z zestawienia (wg Figmy "Zestawienie · nowe — klik uzyj"):
 // nazwa + daty + miasto + wybrane miejsca (prefill z zestawienia) + szukanie (Google) /
 // propozycje z bazy (na fokusie) + statyczna mapa. Potwierdzenie tworzy wyjazd (routes).
@@ -102,6 +164,14 @@ export default function ComposeWyjazd() {
   // Wizytowka miejsca (tap w karte) + rozwinieta mapa.
   const [detailPlace, setDetailPlace] = useState<MockPlace | null>(null);
   const [mapExpanded, setMapExpanded] = useState(false);
+  // Popup przy cofaniu z niezapisana trasa (zapis do roboczych albo wyjscie bez zapisu).
+  const [showBackConfirm, setShowBackConfirm] = useState(false);
+
+  // Cofniecie: gdy sa juz miejsca w trasie -> zapytaj czy zapisac do roboczych. Inaczej wyjdz.
+  const handleBack = () => {
+    if (items.length > 0 && !creating) setShowBackConfirm(true);
+    else navigate(-1);
+  };
 
   const addedIds = useMemo(() => new Set(items.map((i) => (i.place_id ?? i.place_name).toLowerCase())), [items]);
   const isAdded = (p: any) => addedIds.has((p.id ?? p.place_id ?? p.place_name ?? "").toLowerCase());
@@ -155,7 +225,12 @@ export default function ComposeWyjazd() {
     return () => clearTimeout(t);
   }, [search, city]);
 
-  const addPlace = (p: any) => { if (!isAdded(p)) setItems((prev) => [...prev, toItem(p)]); };
+  // Dodanie miejsca: dorzuca do trasy i CZYSCI pole wyszukiwania (by od razu szukac kolejnego).
+  const addPlace = (p: any) => {
+    if (!isAdded(p)) setItems((prev) => [...prev, toItem(p)]);
+    setSearch("");
+    setResults([]);
+  };
   const removePlace = (key: string) => setItems((prev) => prev.filter((i) => i.key !== key));
   // Zmiana kolejnosci miejsc (kolejnosc = przebieg trasy). dir: -1 w gore, +1 w dol.
   const moveItem = (key: string, dir: -1 | 1) => setItems((prev) => {
@@ -220,7 +295,7 @@ export default function ComposeWyjazd() {
     <div className="flex flex-col h-[100dvh] bg-background max-w-lg mx-auto">
       {/* Header */}
       <div className="flex items-center gap-2 px-4 pt-safe-4 pb-3 border-b border-border/20 shrink-0">
-        <button onClick={() => navigate(-1)} aria-label="Wróć" className="h-9 w-9 flex items-center justify-center -ml-1 shrink-0 text-foreground active:scale-90 transition-transform">
+        <button onClick={handleBack} aria-label="Wróć" className="h-9 w-9 flex items-center justify-center -ml-1 shrink-0 text-foreground active:scale-90 transition-transform">
           <ArrowLeft className="h-5 w-5" />
         </button>
         <span className="flex-1 font-bold text-base truncate">{nav.title ? `Zestawienie - ${nav.title}` : "Nowy wyjazd"}</span>
@@ -259,7 +334,7 @@ export default function ComposeWyjazd() {
               placeholder={`Szukaj miejsca w ${city}...`}
               className="w-full rounded-full bg-secondary text-secondary-foreground border border-border/40 pl-10 pr-9 py-3 text-base outline-none focus:ring-2 focus:ring-orange-500/40 focus:border-orange-400/50 placeholder:text-muted-foreground/60" />
             {search && (
-              <button onClick={() => setSearch("")} aria-label="Wyczyść" className="absolute right-3 top-1/2 -translate-y-1/2 h-6 w-6 flex items-center justify-center rounded-full text-muted-foreground active:bg-muted">
+              <button onClick={() => { setSearch(""); searchRef.current?.blur(); }} aria-label="Wyczyść" className="absolute right-3 top-1/2 -translate-y-1/2 h-6 w-6 flex items-center justify-center rounded-full text-muted-foreground active:bg-muted">
                 <X className="h-4 w-4" />
               </button>
             )}
@@ -284,7 +359,7 @@ export default function ComposeWyjazd() {
                       {p.photo_url ? (
                         <img src={p.photo_url} alt={p.place_name} loading="lazy" className="w-full h-full object-cover" />
                       ) : (
-                        <div className="w-full h-full bg-gradient-to-br from-amber-100 to-orange-200 flex items-center justify-center"><MapPin className="h-6 w-6 text-orange-400" /></div>
+                        <div className="w-full h-full bg-gradient-to-br from-amber-100 to-orange-200 flex items-center justify-center text-2xl">{catEmoji(p.category)}</div>
                       )}
                       <span role="button" tabIndex={0} onClick={(e) => { e.stopPropagation(); addPlace(p); }} aria-label="Dodaj miejsce"
                         className="absolute top-2 right-2 h-8 w-8 rounded-full bg-primary text-white flex items-center justify-center shadow-md active:scale-90 transition-transform">
@@ -335,7 +410,7 @@ export default function ComposeWyjazd() {
                     {it.photo_url ? (
                       <img src={it.photo_url} alt={it.place_name} loading="lazy" className="w-full h-full object-cover" />
                     ) : (
-                      <div className="w-full h-full bg-gradient-to-br from-amber-100 to-orange-200 flex items-center justify-center"><MapPin className="h-7 w-7 text-orange-400" /></div>
+                      <div className="w-full h-full bg-gradient-to-br from-amber-100 to-orange-200 flex items-center justify-center text-3xl">{catEmoji(it.category)}</div>
                     )}
                     <span role="button" tabIndex={0} onClick={(e) => { e.stopPropagation(); removePlace(it.key); }} aria-label="Usuń miejsce"
                       className="absolute top-2 right-2 h-8 w-8 rounded-full bg-black/45 backdrop-blur text-white flex items-center justify-center active:scale-90 transition-transform">
@@ -357,44 +432,18 @@ export default function ComposeWyjazd() {
               ))}
             </div>
           ) : (
-            <div className="space-y-2.5">
+            /* Widok listy z DRAG & DROP (przeciaganie uchwytem zmienia kolejnosc = przebieg trasy). */
+            <Reorder.Group axis="y" values={items} onReorder={setItems} className="space-y-2.5">
               {items.map((it, idx) => (
-                <button key={it.key} onClick={() => openDetail(it)} className="w-full flex items-center gap-2.5 rounded-2xl bg-secondary p-2.5 text-left active:opacity-90 transition-opacity">
-                  {/* Numer porzadkowy = pozycja w trasie */}
-                  <span className="shrink-0 h-6 w-6 rounded-full bg-foreground text-background text-xs font-bold flex items-center justify-center">{idx + 1}</span>
-                  {it.photo_url ? (
-                    <img src={it.photo_url} alt="" className="h-12 w-12 rounded-xl object-cover shrink-0" />
-                  ) : (
-                    <div className="h-12 w-12 rounded-xl bg-background flex items-center justify-center text-muted-foreground shrink-0"><MapPin className="h-4 w-4" /></div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold truncate">{it.place_name}</p>
-                    <div className="flex items-center gap-1.5 mt-0.5">
-                      {it.category && <span className="text-[11px] text-muted-foreground truncate">{subcategoryLabelLocalized(it.category)}</span>}
-                      {typeof it.rating === "number" && it.rating > 0 && (
-                        <span className="flex items-center gap-0.5 text-[11px] text-muted-foreground shrink-0"><Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />{it.rating.toFixed(1)}</span>
-                      )}
-                    </div>
-                  </div>
-                  {/* Zmiana kolejnosci: strzalki gora/dol (wylaczone na krancach) */}
-                  <span className="shrink-0 flex flex-col -my-0.5">
-                    <span role="button" tabIndex={0} aria-label="Przesuń wyżej" aria-disabled={idx === 0}
-                      onClick={(e) => { e.stopPropagation(); if (idx > 0) moveItem(it.key, -1); }}
-                      className={`h-6 w-7 flex items-center justify-center rounded-lg transition-transform ${idx === 0 ? "text-muted-foreground/30" : "text-muted-foreground active:scale-90 active:bg-background"}`}>
-                      <ChevronUp className="h-4 w-4" strokeWidth={2.5} />
-                    </span>
-                    <span role="button" tabIndex={0} aria-label="Przesuń niżej" aria-disabled={idx === items.length - 1}
-                      onClick={(e) => { e.stopPropagation(); if (idx < items.length - 1) moveItem(it.key, 1); }}
-                      className={`h-6 w-7 flex items-center justify-center rounded-lg transition-transform ${idx === items.length - 1 ? "text-muted-foreground/30" : "text-muted-foreground active:scale-90 active:bg-background"}`}>
-                      <ChevronDown className="h-4 w-4" strokeWidth={2.5} />
-                    </span>
-                  </span>
-                  <span role="button" tabIndex={0} onClick={(e) => { e.stopPropagation(); removePlace(it.key); }} aria-label="Usuń miejsce" className="h-8 w-8 rounded-full bg-background flex items-center justify-center text-muted-foreground active:scale-90 transition-transform shrink-0">
-                    <Trash2 className="h-4 w-4" />
-                  </span>
-                </button>
+                <SortableComposeRow
+                  key={it.key}
+                  it={it}
+                  idx={idx}
+                  onOpen={() => openDetail(it)}
+                  onRemove={() => removePlace(it.key)}
+                />
               ))}
-            </div>
+            </Reorder.Group>
           )}
         </div>
 
@@ -419,10 +468,6 @@ export default function ComposeWyjazd() {
           <button onClick={() => confirm(true)} disabled={creating}
             className="flex-1 h-12 rounded-2xl bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform shadow-md shadow-orange-500/20 disabled:opacity-60">
             {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <>Stwórz wyjazd <ArrowRight className="h-4 w-4" /></>}
-          </button>
-          <button onClick={() => confirm(false)} disabled={creating} aria-label="Zapisz wyjazd"
-            className="shrink-0 h-12 w-12 rounded-2xl bg-secondary text-secondary-foreground flex items-center justify-center active:scale-95 transition-transform disabled:opacity-60">
-            <Bookmark className="h-5 w-5" />
           </button>
         </div>
       )}
@@ -450,9 +495,48 @@ export default function ComposeWyjazd() {
             <p className="text-lg font-black leading-tight">Kiedy jedziesz?</p>
             <p className="text-xs text-muted-foreground mt-1">Wybierz daty wyjazdu (opcjonalnie).</p>
           </div>
-          <FullCalendarPicker onConfirm={(d, n) => { setTripDate({ start: d, numDays: n }); setDateSheet(false); }} />
+          <FullCalendarPicker allowPast onConfirm={(d, n) => { setTripDate({ start: d, numDays: n }); setDateSheet(false); }} />
         </SheetContent>
       </Sheet>
+
+      {/* Popup przy cofaniu: zapis do roboczych albo wyjscie bez zapisu. */}
+      {showBackConfirm && (
+        <div
+          className="fixed inset-0 z-[70] flex items-end justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200"
+          onClick={() => setShowBackConfirm(false)}
+        >
+          <div
+            className="w-full max-w-md bg-card rounded-t-3xl px-5 pt-6 pb-[max(20px,env(safe-area-inset-bottom))] shadow-2xl animate-in slide-in-from-bottom-4 duration-300"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className="text-lg font-black leading-tight">Zapisać trasę do roboczych?</p>
+            <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed">
+              {`Masz ${items.length} ${items.length === 1 ? "miejsce" : items.length < 5 ? "miejsca" : "miejsc"} w trasie. Zapisz ją jako roboczą, żeby wrócić do niej później.`}
+            </p>
+            <div className="mt-5 flex flex-col gap-2">
+              <button
+                onClick={() => { setShowBackConfirm(false); confirm(false); }}
+                disabled={creating}
+                className="w-full h-12 rounded-2xl bg-primary text-white font-bold text-sm flex items-center justify-center active:scale-[0.98] transition-transform disabled:opacity-60"
+              >
+                Zapisz jako roboczą
+              </button>
+              <button
+                onClick={() => { setShowBackConfirm(false); navigate(-1); }}
+                className="w-full h-12 rounded-2xl bg-secondary text-secondary-foreground font-bold text-sm flex items-center justify-center active:scale-95 transition-transform"
+              >
+                Nie zapisuj, wyjdź
+              </button>
+              <button
+                onClick={() => setShowBackConfirm(false)}
+                className="w-full py-2 text-sm font-medium text-muted-foreground active:text-foreground transition-colors"
+              >
+                Anuluj
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

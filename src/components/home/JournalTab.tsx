@@ -7,7 +7,7 @@ import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { resolveStored } from "@/components/PlacePhoto";
 import { format, parseISO, isValid, differenceInCalendarDays } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
-import { Globe, Lock, Loader2, Trash2, CalendarDays, Sparkles, Plus, BookOpen, Building2 } from "lucide-react";
+import { Globe, Lock, Loader2, Trash2, Sparkles, Plus, BookOpen } from "lucide-react";
 import { toast } from "sonner";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { PLANNING_DISABLED } from "@/lib/appMode";
@@ -400,16 +400,6 @@ const JournalTab = ({ userId, city: cityFilter }: JournalTabProps) => {
               )}
             </div>
             <div className="flex items-center gap-1.5 shrink-0">
-              {count > 0 && (
-                <div className="flex items-center">
-                  <div className="flex -space-x-1">
-                    {Array.from({ length: Math.min(count, 3) }).map((_, i) => (
-                      <Building2 key={i} className="h-4 w-4 text-muted-foreground/50" strokeWidth={1.8} style={{ zIndex: 3 - i }} />
-                    ))}
-                  </div>
-                  {count > 3 && <span className="ml-0.5 text-[10px] font-medium text-muted-foreground">+{count - 3}</span>}
-                </div>
-              )}
               <span className="text-sm font-medium text-muted-foreground">{placesCountLabel(count)}</span>
             </div>
           </div>
