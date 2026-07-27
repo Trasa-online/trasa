@@ -13,9 +13,52 @@ import { Browser } from "@capacitor/browser";
 import { useAuth } from "@/hooks/useAuth";
 import { TrasaLogo } from "@/components/TrasaLogo";
 import { businessPanelPath } from "@/lib/businessRedirect";
+import { Sparkles, Users, Camera } from "lucide-react";
 
 type Mode = "login" | "register";
 type BizMode = "login" | "register";
+
+// USP aplikacji na ekranie logowania (auto-rotujaca karuzela). NBSP ( ) po
+// pojedynczych literach - regula polskich sierot.
+const AUTH_USP = [
+  { icon: Sparkles, title: "Gotowy plan w kilka sekund", desc: "Bez godzin researchu - dopasowane miejsca i trasa dnia od ręki." },
+  { icon: Users, title: "Solo albo z grupą", desc: "Zwiedzaj po swojemu albo dogadajcie wspólną trasę bez chaosu." },
+  { icon: Camera, title: "Zapisuj wspomnienia", desc: "Zbieraj miejsca, w których byłeś, i dziel się trasami z innymi." },
+] as const;
+
+function AuthUspCarousel() {
+  const [i, setI] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setI((p) => (p + 1) % AUTH_USP.length), 3800);
+    return () => clearInterval(id);
+  }, []);
+  const cur = AUTH_USP[i];
+  const Icon = cur.icon;
+  return (
+    <div className="w-full max-w-sm mx-auto">
+      <div key={i} className="animate-auth-fade rounded-3xl bg-white/70 backdrop-blur-md border border-orange-100/80 shadow-sm shadow-orange-500/[0.06] px-5 py-6 flex items-start gap-4">
+        <div className="shrink-0 h-12 w-12 rounded-2xl bg-gradient-to-br from-[#F4A259] to-[#F9662B] flex items-center justify-center shadow-md shadow-orange-500/30">
+          <Icon className="h-6 w-6 text-white" strokeWidth={2.2} />
+        </div>
+        <div className="min-w-0 pt-0.5">
+          <p className="font-display text-lg font-extrabold leading-tight text-foreground">{cur.title}</p>
+          <p className="mt-1 text-sm leading-snug text-muted-foreground">{cur.desc}</p>
+        </div>
+      </div>
+      <div className="mt-4 flex justify-center gap-1.5">
+        {AUTH_USP.map((_, idx) => (
+          <button
+            key={idx}
+            type="button"
+            onClick={() => setI(idx)}
+            aria-label={`Pokaż zaletę ${idx + 1}`}
+            className={`h-1.5 rounded-full transition-all ${idx === i ? "w-6 bg-orange-500" : "w-1.5 bg-orange-200"}`}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
 
 const Auth = () => {
   const [searchParams] = useSearchParams();
@@ -593,184 +636,36 @@ const Auth = () => {
     );
   }
 
+  // B2C: jasny ekran powitalny (light-mode). Miekkie, wolno dryfujace pomaranczowe
+  // gradienty w tle, logo + naglowek + tagline u gory, auto-rotujaca karuzela USP
+  // w srodku, guziki OAuth przypiete na dole. B2B ma osobny early-return powyzej.
   return (
-    <div className={`min-h-screen flex flex-col ${businessMode ? "bg-blue-950" : "bg-background"}`}>
-      {/* Hero - B2C: logo+tagline u gory, guziki na dole (mt-auto). B2B: wycentrowane. */}
-      <div className={`flex-1 flex flex-col items-center px-6 pt-12 pb-6 ${businessMode ? "justify-center" : ""}`}>
-        {/* Logo + naglowek + body. B2C: wycentrowane w pionie wzgledem strony (flex-1).
-            B2B: czesc wycentrowanej sekcji (hero ma justify-center). */}
-        <div className={`flex flex-col items-center ${businessMode ? "" : "flex-1 justify-center"}`}>
-        {/* Logo mark - B2C: realne logo Trasy (orba). B2B: niebieska orba (branding biznesowy). */}
-        {businessMode ? (
-          <div
-            className="w-14 h-14 rounded-full mb-4"
-            style={{ background: "radial-gradient(circle at 35% 35%, #60a5fa, #2563eb 60%, #1d4ed8)" }}
-          />
-        ) : (
-          <TrasaLogo size={80} className="mb-4" />
-        )}
-        {businessMode && <h1 className="text-4xl font-black tracking-tight mb-1.5 text-white">TRASA</h1>}
-        {businessMode ? (
-          <>
-            <span className="mb-3 px-3 py-1 rounded-full bg-blue-500/20 border border-blue-400/30 text-blue-300 text-xs font-bold tracking-wide uppercase">
-              Panel Biznesowy
-            </span>
-            <p className="text-blue-300/70 text-center text-sm max-w-[280px] leading-relaxed mb-6">
-              Zaloguj się kontem powiązanym z Twoim lokalem.
-            </p>
-          </>
-        ) : (
-          <>
-            <p className="text-foreground/70 text-center text-base font-bold mb-3">Odkrywaj i&nbsp;zwiedzaj</p>
-            <p className="text-muted-foreground text-center text-sm max-w-[320px] leading-relaxed mb-7">
-              Lokalne atrakcje - solo lub z&nbsp;grupą. Nie martwisz się planowaniem: gotowy plan dnia masz w&nbsp;kilka sekund, a&nbsp;wspomnienia zapisujesz, żeby dzielić się nimi z&nbsp;innymi.
-            </p>
-          </>
-        )}
+    <div className="relative min-h-screen flex flex-col overflow-hidden bg-[#FEFEFE]">
+      {/* Tlo: miekkie, wolno dryfujace pomaranczowe gradienty (light-mode) */}
+      <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute -top-28 -left-24 h-72 w-72 rounded-full bg-gradient-to-br from-[#F9662B]/30 to-[#F4A259]/10 blur-3xl animate-auth-blob" />
+        <div className="absolute top-1/4 -right-28 h-80 w-80 rounded-full bg-gradient-to-br from-[#F4A259]/25 to-[#F9662B]/10 blur-3xl animate-auth-blob-2" />
+        <div className="absolute -bottom-24 left-1/4 h-72 w-72 rounded-full bg-gradient-to-tr from-[#FDBA74]/30 to-[#F9662B]/10 blur-3xl animate-auth-blob-3" />
+      </div>
+
+      {/* Tresc */}
+      <div className="relative z-10 flex flex-1 flex-col px-6 pt-[max(3.5rem,env(safe-area-inset-top,0px))] pb-[max(1.5rem,env(safe-area-inset-bottom,0px))]">
+        {/* Gora: logo + naglowek + tagline */}
+        <div className="flex flex-col items-center text-center pt-2">
+          <TrasaLogo size={72} className="mb-5" />
+          <h1 className="font-display text-[1.9rem] font-extrabold leading-[1.1] tracking-tight text-foreground">
+            Odkrywaj i&nbsp;zwiedzaj
+          </h1>
+          <p className="mt-2 text-sm font-bold text-orange-600">speed dating z&nbsp;miastem</p>
         </div>
 
-        <div className="w-full max-w-sm">
-          {businessMode ? (
-            <>
-              <button
-                onClick={() => {
-                  // Wyjdz z auth biznesowego do miejsca skad firma przyszla (landing dla firm),
-                  // NIE przelaczaj na auth B2C (setBusinessMode(false) pokazywalo ekran konsumencki).
-                  setBizDone(false);
-                  if (window.history.length > 1) navigate(-1);
-                  else navigate("/dla-firm");
-                }}
-                className="flex items-center gap-1 text-sm text-blue-400 mb-6 active:opacity-60"
-              >
-                ← Wróć
-              </button>
+        {/* Srodek: karuzela USP */}
+        <div className="flex flex-1 items-center justify-center py-8">
+          <AuthUspCarousel />
+        </div>
 
-              {/* Biz tabs */}
-              <div className="flex rounded-2xl bg-blue-900/60 p-1 mb-6">
-                <button
-                  onClick={() => setBizMode("login")}
-                  className={`flex-1 py-2 text-sm font-semibold rounded-2xl transition-all ${
-                    bizMode === "login" ? "bg-blue-600 text-white shadow-sm" : "text-blue-300 hover:text-white"
-                  }`}
-                >
-                  Zaloguj się
-                </button>
-                <button
-                  onClick={() => setBizMode("register")}
-                  className={`flex-1 py-2 text-sm font-semibold rounded-2xl transition-all ${
-                    bizMode === "register" ? "bg-blue-600 text-white shadow-sm" : "text-blue-300 hover:text-white"
-                  }`}
-                >
-                  Zarejestruj lokal
-                </button>
-              </div>
-
-              {bizMode === "login" ? (
-                <form onSubmit={handleLogin} className="space-y-4">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="biz-email" className="text-blue-200">{t("fields.email")}</Label>
-                    <Input
-                      id="biz-email"
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      required
-                      placeholder={t("fields.email_placeholder")}
-                      className="bg-blue-900/50 border-blue-700/60 text-white placeholder:text-blue-400/50 focus-visible:ring-blue-500"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="biz-password" className="text-blue-200">{t("fields.password")}</Label>
-                    <Input
-                      id="biz-password"
-                      type="password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                      placeholder={t("fields.password_placeholder")}
-                      className="bg-blue-900/50 border-blue-700/60 text-white placeholder:text-blue-400/50 focus-visible:ring-blue-500"
-                    />
-                  </div>
-                  <Button type="submit" className="w-full rounded-2xl py-6 bg-blue-600 hover:bg-blue-700 text-white font-bold text-base border-0" disabled={loading}>
-                    {loading ? t("logging_in") : "Zaloguj się do panelu"}
-                  </Button>
-                </form>
-              ) : bizDone ? (
-                <div className="text-center py-8 space-y-3">
-                  <p className="text-4xl">📬</p>
-                  <p className="text-white font-bold text-lg">Sprawdź skrzynkę mailową</p>
-                  <p className="text-blue-300 text-sm leading-relaxed">
-                    {`Wysłaliśmy link aktywacyjny na `}<strong>{email}</strong>{`. Kliknij go, ustaw hasło i wejdź do panelu swojego lokalu.`}
-                  </p>
-                  <p className="text-blue-400/60 text-xs leading-relaxed">
-                    {`Nie widzisz maila? Sprawdź folder spam. Link jest ważny przez 24 godziny.`}
-                  </p>
-                  <button
-                    onClick={() => { setBizDone(false); setBizMode("login"); }}
-                    className="text-sm text-blue-400 underline pt-2"
-                  >
-                    Wróć do logowania
-                  </button>
-                </div>
-              ) : (
-                <form onSubmit={handleBizRegister} className="space-y-3">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="biz-place" className="text-blue-200">Nazwa lokalu</Label>
-                    <Input
-                      id="biz-place"
-                      type="text"
-                      value={bizPlace}
-                      onChange={(e) => setBizPlace(e.target.value)}
-                      required
-                      placeholder="np. Kawiarnia Stara Kamienica, Kraków"
-                      className="bg-blue-900/50 border-blue-700/60 text-white placeholder:text-blue-400/50 focus-visible:ring-blue-500"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="biz-reg-email" className="text-blue-200">{t("fields.email")}</Label>
-                    <Input
-                      id="biz-reg-email"
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      required
-                      placeholder={t("fields.email_placeholder")}
-                      className="bg-blue-900/50 border-blue-700/60 text-white placeholder:text-blue-400/50 focus-visible:ring-blue-500"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="biz-phone" className="text-blue-200">Telefon kontaktowy <span className="text-blue-400/60 font-normal">(opcjonalnie)</span></Label>
-                    <Input
-                      id="biz-phone"
-                      type="tel"
-                      value={bizPhone}
-                      onChange={(e) => setBizPhone(e.target.value)}
-                      placeholder="+48 600 000 000"
-                      className="bg-blue-900/50 border-blue-700/60 text-white placeholder:text-blue-400/50 focus-visible:ring-blue-500"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="biz-message" className="text-blue-200">Wiadomość <span className="text-blue-400/60 font-normal">(opcjonalnie)</span></Label>
-                    <textarea
-                      id="biz-message"
-                      value={bizMessage}
-                      onChange={(e) => setBizMessage(e.target.value)}
-                      placeholder="Coś jeszcze, co chcesz nam powiedzieć..."
-                      rows={2}
-                      className="w-full rounded-2xl px-3 py-2 text-sm bg-blue-900/50 border border-blue-700/60 text-white placeholder:text-blue-400/50 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-                    />
-                  </div>
-                  <Button type="submit" className="w-full rounded-2xl py-6 bg-blue-600 hover:bg-blue-700 text-white font-bold text-base border-0" disabled={loading}>
-                    {loading ? "Zakładam konto..." : "Załóż konto biznesowe"}
-                  </Button>
-                  <p className="text-xs text-blue-400/60 text-center leading-relaxed">
-                    {`Wyślemy link aktywacyjny na Twój email. Konto założysz od razu, bez czekania na akceptację.`}
-                  </p>
-                </form>
-              )}
-            </>
-          ) : (
-          <>
+        {/* Dol: OAuth + stopka */}
+        <div className="w-full max-w-sm mx-auto">
           {hintMessage && (
             <div className="mb-5 px-4 py-3 rounded-2xl bg-orange-50 border border-orange-200">
               <p className="text-sm text-foreground leading-snug">{hintMessage}</p>
@@ -778,24 +673,24 @@ const Auth = () => {
           )}
 
           {/* OAuth - Apple + Google */}
-          <div className="flex flex-col gap-2 mb-5">
+          <div className="flex flex-col gap-2.5 mb-4">
             <button
               type="button"
               onClick={() => handleOAuth("apple")}
               disabled={loading}
-              className="w-full flex items-center justify-center gap-2 rounded-2xl py-3 bg-black text-white font-semibold text-sm active:scale-[0.98] transition-transform disabled:opacity-60"
+              className="w-full flex items-center justify-center gap-2 rounded-2xl py-3.5 bg-black text-white font-semibold text-sm shadow-lg shadow-black/10 active:scale-[0.98] transition-transform disabled:opacity-60"
               aria-label="Kontynuuj z Apple"
             >
               <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                 <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z" />
               </svg>
-              Kontynuuj z Apple
+              Kontynuuj z&nbsp;Apple
             </button>
             <button
               type="button"
               onClick={() => handleOAuth("google")}
               disabled={loading}
-              className="w-full flex items-center justify-center gap-2 rounded-2xl py-3 bg-white border border-slate-200 text-foreground font-semibold text-sm active:scale-[0.98] transition-transform disabled:opacity-60"
+              className="w-full flex items-center justify-center gap-2 rounded-2xl py-3.5 bg-white border border-slate-200 text-foreground font-semibold text-sm shadow-sm active:scale-[0.98] transition-transform disabled:opacity-60"
               aria-label="Kontynuuj z Google"
             >
               <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true">
@@ -804,17 +699,17 @@ const Auth = () => {
                 <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
                 <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
               </svg>
-              Kontynuuj z Google
+              Kontynuuj z&nbsp;Google
             </button>
           </div>
 
-          <p className="text-xs text-muted-foreground text-center mb-2 leading-relaxed">
+          <p className="text-xs text-muted-foreground text-center leading-relaxed">
             Konto zakładasz automatycznie przy pierwszym logowaniu. Miałeś&nbsp;już konto z&nbsp;hasłem? Użyj Google lub Apple z&nbsp;tym samym adresem - połączymy je&nbsp;automatycznie.
           </p>
 
           {/* Business link - tylko web (na natywnej apce panel biznesowy nie ma sensu) */}
           {!isNative && (
-            <p className="text-xs text-muted-foreground text-center mt-6">
+            <p className="text-xs text-muted-foreground text-center mt-4">
               Jesteś właścicielem lokalu?{" "}
               <button
                 onClick={() => setBusinessMode(true)}
@@ -824,14 +719,12 @@ const Auth = () => {
               </button>
             </p>
           )}
-          </>
-          )}
+
+          <p className="text-center text-xs text-muted-foreground mt-4">
+            <Link to="/terms" className="underline">{t("terms")}</Link>
+          </p>
         </div>
       </div>
-
-      <p className="text-center text-xs text-muted-foreground pb-6">
-        <Link to="/terms" className="underline">{t("terms")}</Link>
-      </p>
     </div>
   );
 };

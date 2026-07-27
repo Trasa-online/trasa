@@ -96,12 +96,34 @@ export default {
           from: { transform: "translateY(100%)" },
           to: { transform: "translateY(0)" },
         },
+        // Miekkie, wolno dryfujace gradienty w tle ekranu logowania (light-mode).
+        "auth-blob": {
+          "0%, 100%": { transform: "translate(0px, 0px) scale(1)" },
+          "50%": { transform: "translate(30px, 40px) scale(1.12)" },
+        },
+        "auth-blob-2": {
+          "0%, 100%": { transform: "translate(0px, 0px) scale(1.05)" },
+          "50%": { transform: "translate(-40px, 30px) scale(0.92)" },
+        },
+        "auth-blob-3": {
+          "0%, 100%": { transform: "translate(0px, 0px) scale(0.98)" },
+          "50%": { transform: "translate(24px, -36px) scale(1.1)" },
+        },
+        // Wejscie karty USP przy zmianie slajdu (fade + delikatny slide).
+        "auth-fade": {
+          from: { opacity: "0", transform: "translateY(8px)" },
+          to: { opacity: "1", transform: "translateY(0)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
         "orb-flow": "orb-flow 3.5s ease-in-out infinite",
         "sheet-up": "sheet-up 0.32s cubic-bezier(0.22, 1, 0.36, 1)",
+        "auth-blob": "auth-blob 16s ease-in-out infinite",
+        "auth-blob-2": "auth-blob-2 20s ease-in-out infinite",
+        "auth-blob-3": "auth-blob-3 18s ease-in-out infinite",
+        "auth-fade": "auth-fade 0.45s cubic-bezier(0.22, 1, 0.36, 1)",
       },
     },
   },
