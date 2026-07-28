@@ -1561,7 +1561,10 @@ const ReviewSummary = () => {
   // Hero + info (avatar/nazwa/data) + widocznosc + lista miejsc (numer/kategoria/odhaczanie/
   // reorder) + statyczna mapa (rozwijalna) + footer "Nawiguj do...". Wspomnienia (isMemory)
   // i gosc ida dalej do klasycznego podsumowania/steppera.
-  if (isOwner && !editingStepper && sortedDays.length <= 1) {
+  // forceEdit (?edit=1, np. "Przejdz do sugestii" z ComposeWyjazd) MUSI pominac ten widok i
+  // trafic do steppera (Trasa -> Sugestie -> Galeria) - inaczej user laduje w widoku planu
+  // z nawigacja do Dziennika zamiast na kroku sugestii.
+  if (isOwner && !editingStepper && !forceEdit && sortedDays.length <= 1) {
     const heroMapThumb = buildTripStaticMapUrl(currentPins, "160x160");
     const bigMapUrl = buildTripStaticMapUrl(currentPins, "560x300");
     const heroMapCover = buildTripStaticMapUrl(currentPins, "560x350"); // 16:10, pod okladke hero
