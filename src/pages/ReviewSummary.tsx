@@ -2106,9 +2106,10 @@ const ReviewSummary = () => {
             <>
               {step === 2 && (
                 <div className="px-5 pb-5">
-                  {/* Twoja sugestia dla innych podroznych (review_narrative, autosave) */}
+                  {/* Naglowek + Twoja sugestia dla innych podroznych (review_narrative, autosave) */}
                   <div className="pb-6">
-                    <p className="text-base text-foreground mb-3">Twoja sugestia dla innych podróżnych</p>
+                    <h2 className="font-display text-xl font-bold text-foreground tracking-tight mb-1">Sugestie do trasy</h2>
+                    <p className="text-[13px] text-muted-foreground mb-3">Twoja sugestia dla innych podróżnych</p>
                     <div className="relative">
                       <textarea
                         value={suggestion}
@@ -2178,7 +2179,7 @@ const ReviewSummary = () => {
               {step === 3 && (
                 <div className="pb-5">
                   <p className="px-5 font-display text-xl font-bold text-foreground tracking-tight mb-1">Zdjęcia z wyjazdu</p>
-                  <p className="px-5 text-[13px] text-muted-foreground mb-3 leading-relaxed">Dodaj zdjęcia z całej podróży.</p>
+                  <p className="px-5 text-[13px] text-muted-foreground mb-3 leading-relaxed">Dodaj zdjęcia z całej podróży</p>
                   {renderGallery(true)}
                   {renderPinPhotoSection()}
                   {renderSharing()}
@@ -2459,41 +2460,36 @@ const ReviewSummary = () => {
           /* Stepper wpisu: Wstecz + Dalej/Gotowe. Edycje persystują (autosave on unmount +
              savePlan(false)); "Gotowe" oznacza wpis jako zrecenzowany (plan_finalized) i
              przechodzi do PODSUMOWANIA (nie wychodzi do Dziennika). */
-          step === 2 ? (
-            /* Sugestie: TYLKO "Przejdź do Galerii" (wstecz przez chevron w nagłówku). */
+          /* Sugestie(2): Wstecz + Przejdź do Galerii. Galeria(3): Wstecz + Zapisz trasę. */
+          <div className="flex gap-2">
             <button
-              onClick={() => { haptics.light(); setStep(3); }}
-              className="w-full py-3.5 rounded-2xl bg-primary text-white font-bold text-base active:scale-[0.98] transition-transform"
+              onClick={() => {
+                haptics.light();
+                if (step === 3) { setStep(2); return; }
+                if (editingStepper) { setEditingStepper(false); setSummaryTab("plan"); return; }
+                navigate(-1);
+              }}
+              className="px-5 py-3.5 rounded-2xl border border-border text-sm font-semibold text-foreground active:scale-[0.98] transition-transform shrink-0"
             >
-              Przejdź do Galerii
+              {t("cta.back")}
             </button>
-          ) : (
-            /* Galeria (3): Wstecz + Gotowe + wyjście z trybu edycji. */
-            <div className="flex flex-col gap-2">
-              <div className="flex gap-2">
-                <button
-                  onClick={() => { haptics.light(); setStep(2); }}
-                  className="px-5 py-3.5 rounded-2xl border border-border text-sm font-semibold text-foreground active:scale-[0.98] transition-transform shrink-0"
-                >
-                  {t("cta.back")}
-                </button>
-                <button
-                  onClick={finishEditing}
-                  disabled={savingPlan}
-                  className="flex-1 py-3.5 rounded-2xl bg-primary text-white font-bold text-base active:scale-[0.98] transition-transform disabled:opacity-40"
-                >
-                  {savingPlan ? t("status.saving") : t("cta.done")}
-                </button>
-              </div>
+            {step === 2 ? (
+              <button
+                onClick={() => { haptics.light(); setStep(3); }}
+                className="flex-1 py-3.5 rounded-2xl bg-primary text-white font-bold text-base active:scale-[0.98] transition-transform"
+              >
+                Przejdź do Galerii
+              </button>
+            ) : (
               <button
                 onClick={finishEditing}
                 disabled={savingPlan}
-                className="w-full py-3 rounded-2xl bg-secondary text-secondary-foreground text-sm font-semibold active:scale-[0.98] transition-transform disabled:opacity-40"
+                className="flex-1 py-3.5 rounded-2xl bg-primary text-white font-bold text-base active:scale-[0.98] transition-transform disabled:opacity-40"
               >
-                {t("cta.close_edit_mode")}
+                {savingPlan ? t("status.saving") : "Zapisz trasę"}
               </button>
-            </div>
-          )
+            )}
+          </div>
         ) : !isMemory && draft && draft.dayId === activeRouteId ? (
           <button
             onClick={() => savePlan(false)}
