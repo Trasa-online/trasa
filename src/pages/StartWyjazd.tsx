@@ -60,8 +60,11 @@ export default function StartWyjazd() {
   const [query, setQuery] = useState("");
   const [loadingId, setLoadingId] = useState<string | null>(null);
 
-  // Robocze = wlasne SZKICE (drafty), NIE gotowe trasy. "Gotowa" = trip_type 'completed'
-  // ALBO plan_finalized=true (jak w JournalTab). Szkic = jeszcze w planowaniu, niesfinalizowany.
+  // Robocze = TYLKO porzucone szkice (trasy, z ktorych user wyszedl w trakcie tworzenia),
+  // NIE gotowe trasy. "Gotowa" = trip_type 'completed' ALBO plan_finalized=true ALBO
+  // is_shared=true. Kluczowe: is_shared=true ustawia sie dopiero w ReviewSummary (krok
+  // publikacji na koncu flow) - wiec udostepniona trasa = user dokonczyl tworzenie. Szkic =
+  // w planowaniu, niesfinalizowany i JESZCZE nieudostepniony.
   const { data: robocze = [], isLoading: roboczeLoading } = useQuery({
     queryKey: ["start-robocze", user?.id],
     enabled: !!user,
@@ -71,6 +74,7 @@ export default function StartWyjazd() {
         .select("id, title, city, review_photos, updated_at")
         .eq("user_id", user!.id)
         .eq("trip_type", "planning")
+        .eq("is_shared", false)
         .or("plan_finalized.is.null,plan_finalized.eq.false")
         .order("updated_at", { ascending: false })
         .limit(30);
