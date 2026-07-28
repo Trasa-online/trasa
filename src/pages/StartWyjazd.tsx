@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { ArrowLeft, ArrowRight, Search, X, Trash2, Plus, Loader2 } from "lucide-react";
 import { resolveStored } from "@/components/PlacePhoto";
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
+import { haptics } from "@/hooks/useHaptics";
 import { toast } from "sonner";
 
 // Ekran po kliknieciu "+": wybor bazy nowego wyjazdu. Robocze (wlasne trasy usera) lub
@@ -106,6 +107,7 @@ export default function StartWyjazd() {
   // Wybor bazy: dociagnij miejsca tej trasy -> ComposeWyjazd z prefill.
   const useAsBase = async (route: ChooserRoute) => {
     if (loadingId) return;
+    haptics.light();
     setLoadingId(route.id);
     const { data: pins } = await (supabase as any)
       .from("pins")
@@ -129,6 +131,7 @@ export default function StartWyjazd() {
 
   const deleteDraft = async (id: string) => {
     if (!confirm("Usunąć tę roboczą trasę?")) return;
+    haptics.warning();
     await (supabase as any).from("pins").delete().eq("route_id", id);
     await (supabase as any).from("routes").delete().eq("id", id);
     queryClient.invalidateQueries({ queryKey: ["start-robocze"] });
@@ -149,13 +152,13 @@ export default function StartWyjazd() {
       <div className="px-4 pt-1">
         <div className="flex rounded-full bg-secondary p-0.5 text-sm font-bold">
           <button
-            onClick={() => setTab("robocze")}
+            onClick={() => { haptics.selection(); setTab("robocze"); }}
             className={`flex-1 py-2.5 rounded-full transition-colors ${tab === "robocze" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground"}`}
           >
             Robocze
           </button>
           <button
-            onClick={() => setTab("zapisane")}
+            onClick={() => { haptics.selection(); setTab("zapisane"); }}
             className={`flex-1 py-2.5 rounded-full transition-colors ${tab === "zapisane" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground"}`}
           >
             Zapisane
@@ -233,7 +236,7 @@ export default function StartWyjazd() {
       {/* CTA: Zacznij od nowa (pusty ComposeWyjazd) */}
       <div className="shrink-0 border-t border-border/20 px-4 pt-3 pb-[max(16px,env(safe-area-inset-bottom))] bg-background">
         <button
-          onClick={() => navigate("/wyjazd/nowy")}
+          onClick={() => { haptics.light(); navigate("/wyjazd/nowy"); }}
           className="w-full h-12 rounded-2xl bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform shadow-md shadow-orange-500/20"
         >
           <Plus className="h-4 w-4" strokeWidth={2.5} />

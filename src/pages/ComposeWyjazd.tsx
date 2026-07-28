@@ -12,6 +12,7 @@ import { ORIGIN_COUNTRIES } from "@/lib/locations";
 import { expandCity } from "@/lib/cities";
 import { subcategoryLabelLocalized, MAIN_CATEGORIES } from "@/lib/categories";
 import { createWyjazdFromPlaces, updateWyjazdPlaces } from "@/lib/createWyjazd";
+import { haptics } from "@/hooks/useHaptics";
 import { API_BASE } from "@/lib/platform";
 import FullCalendarPicker from "@/components/plan-wizard/FullCalendarPicker";
 import RouteMap from "@/components/RouteMap";
@@ -115,7 +116,7 @@ function SortableComposeRow({ it, idx, onOpen, onRemove }: {
       </button>
       {/* Uchwyt przeciagania (przytrzymaj i przesun) */}
       <span
-        onPointerDown={(e) => controls.start(e)}
+        onPointerDown={(e) => { haptics.light(); controls.start(e); }}
         aria-label="Przeciągnij, by zmienić kolejność"
         className="shrink-0 h-9 w-7 flex items-center justify-center text-muted-foreground/50 cursor-grab active:cursor-grabbing touch-none"
       >
@@ -230,11 +231,11 @@ export default function ComposeWyjazd() {
 
   // Dodanie miejsca: dorzuca do trasy i CZYSCI pole wyszukiwania (by od razu szukac kolejnego).
   const addPlace = (p: any) => {
-    if (!isAdded(p)) setItems((prev) => [...prev, toItem(p)]);
+    if (!isAdded(p)) { setItems((prev) => [...prev, toItem(p)]); haptics.light(); }
     setSearch("");
     setResults([]);
   };
-  const removePlace = (key: string) => setItems((prev) => prev.filter((i) => i.key !== key));
+  const removePlace = (key: string) => { haptics.light(); setItems((prev) => prev.filter((i) => i.key !== key)); };
   // Zmiana kolejnosci miejsc (kolejnosc = przebieg trasy). dir: -1 w gore, +1 w dol.
   const moveItem = (key: string, dir: -1 | 1) => setItems((prev) => {
     const idx = prev.findIndex((i) => i.key === key);
@@ -283,7 +284,8 @@ export default function ComposeWyjazd() {
       ? await updateWyjazdPlaces(draftId, city, name.trim() || city || "Wyjazd", places, dates)
       : await createWyjazdFromPlaces(user.id, city, name.trim() || city || "Wyjazd", places, dates);
     setCreating(false);
-    if (!id) { toast.error(draftId ? "Nie udało się zapisać zmian" : "Nie udało się utworzyć wyjazdu"); return; }
+    if (!id) { haptics.error(); toast.error(draftId ? "Nie udało się zapisać zmian" : "Nie udało się utworzyć wyjazdu"); return; }
+    haptics.success();
     if (openEditor) navigate(`/review-summary?route=${id}&edit=1`);
     else { toast.success(draftId ? "Zapisano zmiany" : "Zapisano wyjazd"); navigate("/dziennik"); }
   };

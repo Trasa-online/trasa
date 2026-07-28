@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { avatarSrc } from "@/lib/avatar";
+import { haptics } from "@/hooks/useHaptics";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -582,6 +583,7 @@ const ReviewSummary = () => {
   // ale dostepna na kazdym kroku. Zapisuje draft planu, oznacza wpis jako zrecenzowany
   // (plan_finalized) i pokazuje podsumowanie zamiast steppera.
   const finishEditing = async () => {
+    haptics.success();
     if (draft && draft.dayId === activeRouteId) await savePlan(false);
     // Aktywny wyjazd (przyszla data, isMemory=false): NIE finalizujemy. Wpis staje sie
     // zakonczony (pocztowka) dopiero PO minieciu daty. Wyjscie z edycji zapisuje i wraca do dziennika.
@@ -723,6 +725,7 @@ const ReviewSummary = () => {
   const setWorking = (next: any[]) => { if (activeRouteId) setDraft({ dayId: activeRouteId, pins: next }); };
   const movePin = (from: number, to: number) => {
     if (to < 0 || to >= workingPins.length) return;
+    haptics.light();
     const next = [...workingPins];
     const [m] = next.splice(from, 1);
     next.splice(to, 0, m);
@@ -2229,7 +2232,7 @@ const ReviewSummary = () => {
               )}
               {step < 3 ? (
                 <button
-                  onClick={() => setStep((s) => (s + 1) as 1 | 2 | 3)}
+                  onClick={() => { haptics.light(); setStep((s) => (s + 1) as 1 | 2 | 3); }}
                   className="flex-1 py-3.5 rounded-full bg-primary text-white font-bold text-base active:scale-[0.98] transition-transform"
                 >
                   {step === 2 ? "Przejdź do Galerii" : t("cta.next")}

@@ -11,7 +11,10 @@ import { isNative } from "@/lib/platform";
  * - warning(): destructive confirm prompt
  * - error(): failed action
  */
-export const useHaptics = () => ({
+// Zwykly obiekt (nie hook) - mozna importowac i wolac wszedzie, tez w funkcjach modulowych:
+//   import { haptics } from "@/hooks/useHaptics";  haptics.light();
+// Na web to no-op. Uzywaj oszczednie (momenty oczekiwanego dotyku).
+export const haptics = {
   light: () => {
     if (!isNative) return;
     Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
@@ -23,6 +26,11 @@ export const useHaptics = () => ({
   heavy: () => {
     if (!isNative) return;
     Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => {});
+  },
+  selection: () => {
+    // Lekki "tick" przy przelaczaniu (toggle/segment). Na iOS = selectionChanged.
+    if (!isNative) return;
+    Haptics.selectionChanged().catch(() => {});
   },
   success: () => {
     if (!isNative) return;
@@ -36,4 +44,7 @@ export const useHaptics = () => ({
     if (!isNative) return;
     Haptics.notification({ type: NotificationType.Error }).catch(() => {});
   },
-});
+};
+
+// Hook zachowany dla kompatybilnosci (zwraca ten sam obiekt).
+export const useHaptics = () => haptics;

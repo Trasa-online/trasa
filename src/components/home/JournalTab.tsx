@@ -13,6 +13,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { PLANNING_DISABLED } from "@/lib/appMode";
 import { API_BASE } from "@/lib/platform";
 import { avatarSrc } from "@/lib/avatar";
+import { haptics } from "@/hooks/useHaptics";
 
 interface JournalTabProps {
   userId: string;
@@ -237,6 +238,7 @@ const JournalTab = ({ userId, city: cityFilter }: JournalTabProps) => {
     setPendingDelete(entry);
   };
   const doDelete = async (entry: any) => {
+    haptics.warning();
     // Optymistyczne usuniecie z cache (natychmiast znika z listy).
     queryClient.setQueryData(["journal-entries", userId], (old: any) =>
       (old ?? []).filter((x: any) => x.id !== entry.id)

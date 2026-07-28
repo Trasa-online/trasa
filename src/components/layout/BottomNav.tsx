@@ -10,6 +10,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { getTodayLikes, type ExploreLike } from "@/lib/exploreLikes";
 import { isNative } from "@/lib/platform";
 import { PLANNING_DISABLED } from "@/lib/appMode";
+import { haptics } from "@/hooks/useHaptics";
 
 const HOME_FILTERS_KEY = "trasa_home_filters";
 
@@ -394,7 +395,7 @@ const BottomNav = () => {
               Stary flow (web): otwiera menu wyboru (plan/zestawienie). */}
           <button
             data-ob="nav-fab"
-            onClick={() => (PLANNING_DISABLED ? navigate("/wyjazd/start") : setShowMenu(!showMenu))}
+            onClick={() => { haptics.light(); PLANNING_DISABLED ? navigate("/wyjazd/start") : setShowMenu(!showMenu); }}
             className="flex items-center justify-center"
             aria-label={t("fab_aria")}
           >

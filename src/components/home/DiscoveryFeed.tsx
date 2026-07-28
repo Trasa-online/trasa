@@ -6,6 +6,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthDrawer } from "@/hooks/useAuthDrawer";
+import { haptics } from "@/hooks/useHaptics";
 import { supabase } from "@/integrations/supabase/client";
 import { MapPin, X, Globe, Sparkles, Star, Pencil, Trash2, ChevronRight, ChevronUp, ArrowRight, Heart, Eye, List, GalleryHorizontalEnd, Search, SlidersHorizontal, Plus, ArrowLeft, Images, Bookmark, Building2, Users, Navigation, Loader2 } from "lucide-react";
 import { API_BASE } from "@/lib/platform";
@@ -225,6 +226,7 @@ export function CollectionDetail({ col, onClose, onAdopt }: { col: DiscoveryColl
       // Rownolegly zapis daty zapisania (do wyswietlenia w zakladce Zapisane).
       const dkey = "trasa_saved_collections_dates";
       const dates: Record<string, string> = (() => { try { return JSON.parse(localStorage.getItem(dkey) || "{}"); } catch { return {}; } })();
+      haptics.light();
       if (set.has(col.id)) { set.delete(col.id); delete dates[col.id]; setSavedCol(false); }
       else { set.add(col.id); dates[col.id] = new Date().toISOString(); setSavedCol(true); toast.success(t("toast.saved")); }
       localStorage.setItem(key, JSON.stringify([...set]));
@@ -324,6 +326,7 @@ export function CollectionDetail({ col, onClose, onAdopt }: { col: DiscoveryColl
   // "Uzyj tej trasy" - przejmij miejsca zestawienia do nowej trasy (swiper -> Dopasowania).
   // Najpierw pyta o date (przez onAdopt -> drawer w feedzie), potem laduje w PlanWizard.
   const adoptRoute = async () => {
+    haptics.light();
     const names = col.items.map((i) => i.place_name).filter(Boolean);
     // Statystyka: dodanie zestawienia do wlasnego planu/wyjazdu.
     (supabase as any).rpc("increment_collection_plan_adds", { p_collection_id: col.id })
@@ -537,7 +540,7 @@ export function CollectionDetail({ col, onClose, onAdopt }: { col: DiscoveryColl
           {heroMap && mapPins.length > 0 && (
             <button
               type="button"
-              onClick={() => setHeroMode((m) => (m === "photo" ? "map" : "photo"))}
+              onClick={() => { haptics.selection(); setHeroMode((m) => (m === "photo" ? "map" : "photo")); }}
               aria-label={mapOnHero ? "Pokaż zdjęcie" : "Pokaż mapę"}
               className="absolute bottom-3 right-3 h-14 w-14 rounded-xl overflow-hidden ring-2 ring-white/80 shadow-md bg-muted active:scale-95 transition-transform"
             >
@@ -1782,6 +1785,7 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
     const next = new Set(savedRouteIds);
     has ? next.delete(routeId) : next.add(routeId);
     setSavedRouteIds(next);
+    haptics.light();
     if (has) {
       await (supabase as any).from("saved_routes").delete().eq("user_id", user.id).eq("route_id", routeId);
       toast(t("toast.removed_saved", "Usunięto z zapisanych"), {
