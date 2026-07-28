@@ -1,4 +1,4 @@
-import { ChevronDown, MapPin, Check } from "lucide-react";
+import { ChevronDown, Check } from "lucide-react";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { UNLOCKED_CITIES } from "@/components/plan-wizard/CityPicker";
 import { cn } from "@/lib/utils";
@@ -35,14 +35,12 @@ export default function CitySelect({
       <DropdownMenuContent align="start" className="rounded-2xl max-h-[60vh] overflow-y-auto">
         {allowAll && (
           <DropdownMenuItem onClick={() => onCityChange(ALL_CITIES)} className="gap-2 rounded-xl cursor-pointer">
-            <MapPin className={cn("h-4 w-4 shrink-0", cur === ALL_CITIES ? "text-orange-600" : "text-muted-foreground")} />
             <span className={cn("flex-1", cur === ALL_CITIES && "font-bold")}>{allLabel}</span>
             {cur === ALL_CITIES && <Check className="h-4 w-4 text-orange-600 shrink-0" />}
           </DropdownMenuItem>
         )}
         {UNLOCKED_CITIES.map((c) => (
           <DropdownMenuItem key={c} onClick={() => onCityChange(c)} className="gap-2 rounded-xl cursor-pointer">
-            <MapPin className={cn("h-4 w-4 shrink-0", c === cur ? "text-orange-600" : "text-muted-foreground")} />
             <span className={cn("flex-1", c === cur && "font-bold")}>{c}</span>
             {c === cur && <Check className="h-4 w-4 text-orange-600 shrink-0" />}
           </DropdownMenuItem>

@@ -49,6 +49,7 @@ const COUNTRIES: Country[] = [
       { name: "Gdynia" },
       { name: "Trójmiasto" },
       { name: "Wrocław" },
+      { name: "Olsztyn" },
       { name: "Kraków",     comingSoon: true },
       { name: "Łódź",       comingSoon: true },
       { name: "Poznań",     comingSoon: true },

@@ -6,7 +6,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Camera, X, Globe, Lock, Pencil, Check, Image as ImageIcon, Map as MapIcon, MapPin, ChevronUp, ChevronDown, ChevronRight, ChevronLeft, Trash2, Plus, Share, Share2, List, GalleryHorizontalEnd, Info, MoreVertical, Navigation, Maximize2, Users, Calendar as CalendarIcon } from "lucide-react";
+import { ArrowLeft, Camera, X, Globe, Lock, Pencil, Check, Image as ImageIcon, Map as MapIcon, MapPin, ChevronUp, ChevronDown, ChevronRight, ChevronLeft, Trash2, Plus, Share, Share2, List, GalleryHorizontalEnd, Info, MoreVertical, Navigation, Maximize2, Users, Calendar as CalendarIcon, Loader2 } from "lucide-react";
 import RouteMap from "@/components/RouteMap";
 import SwipeToDeleteRow from "@/components/SwipeToDeleteRow";
 import { useShare } from "@/hooks/useShare";
@@ -143,6 +143,10 @@ const ReviewSummary = () => {
   const [noteSaved, setNoteSaved] = useState<Record<string, boolean>>({});
   const noteTimer = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Zdjecia przypisane do konkretnego miejsca (pins.images). Osobny input (web) + spinner per pin.
+  const pinFileInputRef = useRef<HTMLInputElement>(null);
+  const pinTargetRef = useRef<any>(null);
+  const [pinUploadingId, setPinUploadingId] = useState<string | null>(null);
   // "Twoja sugestia dla innych podroznych" (poziom trasy) - review_narrative. Autosave debounce.
   const [suggestion, setSuggestion] = useState("");
   const [suggestionSaved, setSuggestionSaved] = useState(false);
@@ -506,6 +510,95 @@ const ReviewSummary = () => {
   const triggerPhotoPick = () => {
     if (isNative) handleNativePhotoPick();
     else fileInputRef.current?.click();
+  };
+
+  // ── Zdjecia per-miejsce (pins.images) ─────────────────────────────────────
+  // Wspoldzielony rdzen uploadu: HEIC->JPEG, kompresja, wrzut do route-images, zwrot URL-i.
+  const uploadImages = async (files: File[]): Promise<string[]> => {
+    if (!routeId || !user || !files.length) return [];
+    const urls: string[] = [];
+    let failed = 0;
+    for (const rawFile of files) {
+      try {
+        const file = isHeic(rawFile) ? await convertHeicToJpeg(rawFile) : rawFile;
+        const compressed = await compressImage(file, 1200, 1200, 0.8);
+        const path = `${user.id}/${routeId}/pin_${Date.now()}_${Math.floor(Math.random() * 10000)}.jpg`;
+        const { error } = await supabase.storage.from("route-images").upload(path, compressed, { contentType: "image/jpeg", upsert: false });
+        if (error) { failed++; console.error("[ReviewSummary] pin photo upload failed:", error.message); continue; }
+        urls.push(`${SUPABASE_URL}/storage/v1/object/public/route-images/${path}`);
+      } catch (err: any) { failed++; console.error("[ReviewSummary] pin photo processing failed:", err?.message ?? err); }
+    }
+    if (failed > 0) notify.error(urls.length === 0 ? t("toast.photo_upload_error") : t("toast.photo_upload_partial"));
+    return urls;
+  };
+
+  // Native photo picker -> lista File (wspolne dla galerii i zdjec per-miejsce).
+  const pickNativeImageFiles = async (limit: number): Promise<File[]> => {
+    const result = await CapCamera.pickImages({ quality: 90, limit, width: 1200, height: 1200 });
+    const files: File[] = [];
+    for (const photo of result.photos) {
+      if (!photo.webPath) continue;
+      try {
+        const response = await fetch(photo.webPath);
+        const blob = await response.blob();
+        const fmt = photo.format || "jpeg";
+        const mime = fmt === "png" ? "image/png" : "image/jpeg";
+        files.push(new File([blob], `pin-${Date.now()}-${files.length}.${fmt}`, { type: mime }));
+      } catch {}
+    }
+    return files;
+  };
+
+  // Zapis nowej listy zdjec pinu: optymistyczny cache ["review-all-pins"] + DB update pins.images.
+  const commitPinImages = async (pin: any, images: string[]) => {
+    queryClient.setQueryData(["review-all-pins", idsKey], (old: any) =>
+      (old ?? []).map((p: any) => (p.id === pin.id ? { ...p, images } : p)));
+    const { error } = await (supabase as any).from("pins").update({ images }).eq("id", pin.id);
+    if (error) { notify.error(t("toast.photo_upload_error")); queryClient.invalidateQueries({ queryKey: ["review-all-pins", idsKey] }); }
+  };
+
+  const addPinPhotos = async (pin: any, files: File[]) => {
+    if (!files.length) return;
+    setPinUploadingId(pin.id);
+    const urls = await uploadImages(files.slice(0, 8));
+    if (urls.length) {
+      const cur = Array.isArray(pin.images) ? pin.images : [];
+      await commitPinImages(pin, [...cur, ...urls]);
+    }
+    setPinUploadingId(null);
+  };
+
+  const removePinPhoto = async (pin: any, url: string) => {
+    haptics.light();
+    const cur = Array.isArray(pin.images) ? pin.images : [];
+    await commitPinImages(pin, cur.filter((u: string) => u !== url));
+  };
+
+  const triggerPinPhotoPick = async (pin: any) => {
+    if (pinUploadingId) return;
+    haptics.light();
+    if (isNative) {
+      try {
+        const files = await pickNativeImageFiles(8);
+        if (files.length) await addPinPhotos(pin, files);
+      } catch (err: any) {
+        const msg = String(err?.message ?? err);
+        if (msg.toLowerCase().includes("cancel") || msg.toLowerCase().includes("denied")) return;
+        console.error("[ReviewSummary] native pin photo pick failed:", msg);
+        notify.error(t("toast.photo_pick_error"));
+      }
+    } else {
+      pinTargetRef.current = pin;
+      pinFileInputRef.current?.click();
+    }
+  };
+
+  const handlePinFileInput = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const pin = pinTargetRef.current;
+    const files = Array.from(e.target.files ?? []);
+    if (pin && files.length) await addPinPhotos(pin, files);
+    if (pinFileInputRef.current) pinFileInputRef.current.value = "";
+    pinTargetRef.current = null;
   };
 
   // Zdjecia uzytkownika ze wszystkich dni (do wspolnej galerii). owner = route_id
@@ -1261,6 +1354,59 @@ const ReviewSummary = () => {
     </div>
   );
 
+  // ── Zdjęcia przypisane do miejsc (pins.images) - poziomy pasek miniatur per punkt. ──
+  const renderPinPhotoSection = () => {
+    if (!workingPins.length) return null;
+    return (
+      <div className="px-5 pt-7">
+        <p className="font-display text-xl font-bold text-foreground tracking-tight">Zdjęcia do miejsc</p>
+        <p className="text-[13px] text-muted-foreground mt-1 mb-4 leading-relaxed">Dołącz zdjęcia do konkretnych punktów trasy.</p>
+        <div className="space-y-3">
+          {workingPins.map((pin: any, i: number) => {
+            const imgs: string[] = Array.isArray(pin.images) ? pin.images : [];
+            return (
+              <div key={pin.id} className="rounded-2xl bg-secondary/50 border border-border/30 p-3">
+                <div className="flex items-center gap-2 mb-2.5">
+                  <span className="h-6 w-6 rounded-full bg-primary text-white text-xs font-bold flex items-center justify-center shrink-0">{i + 1}</span>
+                  <p className="text-sm font-bold text-foreground truncate">{pin.place_name}</p>
+                </div>
+                <div className="flex gap-2 overflow-x-auto pb-1 -mx-0.5 px-0.5">
+                  <button
+                    onClick={() => triggerPinPhotoPick(pin)}
+                    disabled={pinUploadingId === pin.id}
+                    className="shrink-0 h-20 w-20 rounded-xl bg-muted/50 border border-dashed border-border flex flex-col items-center justify-center gap-1 text-muted-foreground active:bg-muted/70 transition-colors"
+                  >
+                    {pinUploadingId === pin.id ? <Loader2 className="h-5 w-5 animate-spin" /> : <><Camera className="h-5 w-5" /><span className="text-[10px] font-medium">Dodaj</span></>}
+                  </button>
+                  {imgs.map((url, idx) => {
+                    const src = resolveStored(url) ?? url;
+                    return (
+                      <button
+                        key={`${url}-${idx}`}
+                        onClick={() => { setViewerUrl(src); setViewerMenuOpen(false); }}
+                        className="relative shrink-0 h-20 w-20 rounded-xl overflow-hidden bg-muted active:opacity-90"
+                      >
+                        <img src={src} alt="" className="w-full h-full object-cover" />
+                        <span
+                          role="button"
+                          aria-label={t("a11y.remove_photo")}
+                          onClick={(e) => { e.stopPropagation(); removePinPhoto(pin, url); }}
+                          className="absolute top-0.5 right-0.5 h-6 w-6 rounded-full bg-black/55 backdrop-blur-sm text-white flex items-center justify-center active:scale-90"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
   // ── Udostępnianie wpisu: prosty toggle (udostepnij/prywatnie) + anonim + podpis + osoby. ──
   const renderSharing = () => (
     <div className="px-5">
@@ -1727,6 +1873,7 @@ const ReviewSummary = () => {
 
         {/* Input zdjec (galeria na web; native uzywa CapCamera) */}
         <input ref={fileInputRef} type="file" accept="image/*,.heic,.heif" multiple className="hidden" onChange={handlePhotoUpload} />
+        <input ref={pinFileInputRef} type="file" accept="image/*,.heic,.heif" multiple className="hidden" onChange={handlePinFileInput} />
 
         {/* Rozwinięta interaktywna mapa (zoom) */}
         {planMapOpen && (
@@ -1994,7 +2141,10 @@ const ReviewSummary = () => {
 
               {step === 3 && (
                 <div className="pb-5">
+                  <p className="px-5 font-display text-xl font-bold text-foreground tracking-tight mb-1">Zdjęcia z wyjazdu</p>
+                  <p className="px-5 text-[13px] text-muted-foreground mb-3 leading-relaxed">Dodaj zdjęcia z całej podróży.</p>
                   {renderGallery(true)}
+                  {renderPinPhotoSection()}
                   {renderSharing()}
                 </div>
               )}
@@ -2073,6 +2223,7 @@ const ReviewSummary = () => {
         )}
 
         <input ref={fileInputRef} type="file" accept="image/*,.heic,.heif" multiple className="hidden" onChange={handlePhotoUpload} />
+        <input ref={pinFileInputRef} type="file" accept="image/*,.heic,.heif" multiple className="hidden" onChange={handlePinFileInput} />
       </div>
 
       {/* ── Podglad wizytowki miejsca (ta sama co na swiperze) ───────────── */}
