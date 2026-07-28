@@ -497,8 +497,7 @@ export default function ComposeWyjazd() {
       <Sheet open={dateSheet} onOpenChange={setDateSheet}>
         <SheetContent side="bottom" className="rounded-t-2xl p-0 [&>button:last-child]:hidden" style={{ maxHeight: "88vh" }}>
           <div className="px-5 pt-5 pb-1 text-center">
-            <p className="text-lg font-black leading-tight">Kiedy jedziesz?</p>
-            <p className="text-xs text-muted-foreground mt-1">Wybierz daty wyjazdu (opcjonalnie).</p>
+            <p className="text-base font-bold leading-tight">Wybierz daty dla trasy <span className="font-normal text-muted-foreground">(opcjonalnie)</span></p>
           </div>
           <FullCalendarPicker allowPast onConfirm={(d, n) => { setTripDate({ start: d, numDays: n }); setDateSheet(false); }} />
         </SheetContent>

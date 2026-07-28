@@ -35,6 +35,16 @@ const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 // Limit zdjec dodawanych do galerii wpisu.
 const MAX_PHOTOS = 10;
 
+// Oficjalne logo Google (4-kolorowe "G") - guzik nawigacji do miejsca w Google Maps.
+const GoogleGlyph = ({ className }: { className?: string }) => (
+  <svg viewBox="0 0 48 48" className={className} aria-hidden="true">
+    <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
+    <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" />
+    <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" />
+    <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
+  </svg>
+);
+
 const CATEGORY_EMOJI: Record<string, string> = {
   restaurant: "🍽️", cafe: "☕", museum: "🏛️", park: "🌳",
   bar: "🍺", club: "🎵", monument: "🏰", gallery: "🖼️",
@@ -95,8 +105,9 @@ const ReviewSummary = () => {
   // Krok startowy z URL (?step=2) - wejscie "Przejdz do sugestii" z kompozycji ladauje od razu
   // na kroku sugestii+notek (plan miejsc user ulozyl juz w ComposeWyjazd).
   const [step, setStep] = useState<1 | 2 | 3>(() => {
+    // Bez kroku "Trasa" (step 1) - miejsca ustawia sie w ComposeWyjazd. Domyslnie Sugestie (2).
     const s = searchParams.get("step");
-    return s === "2" ? 2 : s === "3" ? 3 : 1;
+    return s === "3" ? 3 : 2;
   });
   // Po ukonczeniu steppera ("Gotowe") wpis przechodzi w tryb PODSUMOWANIA (read-only:
   // Miejsca+notki | Zdjecia). Edycja (olowek) wraca do steppera. localReviewed = optymistyczne
@@ -147,6 +158,10 @@ const ReviewSummary = () => {
   const pinFileInputRef = useRef<HTMLInputElement>(null);
   const pinTargetRef = useRef<any>(null);
   const [pinUploadingId, setPinUploadingId] = useState<string | null>(null);
+  // Zwinięte/rozwinięte notki per miejsce (pin.id) na widoku Sugestii - domyślnie zwinięte ("+ Twoja sugestia").
+  const [openNotes, setOpenNotes] = useState<Set<string>>(new Set());
+  // Arkusz "Dodaj zdjęcia do miejsca": wybór ze zdjęć galerii wyjazdu (przypisanie) albo nowe. Trzyma pin.id.
+  const [pinPickerId, setPinPickerId] = useState<string | null>(null);
   // "Twoja sugestia dla innych podroznych" (poziom trasy) - review_narrative. Autosave debounce.
   const [suggestion, setSuggestion] = useState("");
   const [suggestionSaved, setSuggestionSaved] = useState(false);
@@ -572,6 +587,13 @@ const ReviewSummary = () => {
     haptics.light();
     const cur = Array.isArray(pin.images) ? pin.images : [];
     await commitPinImages(pin, cur.filter((u: string) => u !== url));
+  };
+
+  // Przypisanie/odpiecie zdjecia z galerii wyjazdu do miejsca (toggle).
+  const toggleAssignPinPhoto = async (pin: any, url: string) => {
+    haptics.light();
+    const cur = Array.isArray(pin.images) ? pin.images : [];
+    await commitPinImages(pin, cur.includes(url) ? cur.filter((u: string) => u !== url) : [...cur, url]);
   };
 
   const triggerPinPhotoPick = async (pin: any) => {
@@ -1372,7 +1394,7 @@ const ReviewSummary = () => {
                 </div>
                 <div className="flex gap-2 overflow-x-auto pb-1 -mx-0.5 px-0.5">
                   <button
-                    onClick={() => triggerPinPhotoPick(pin)}
+                    onClick={() => { haptics.light(); setPinPickerId(pin.id); }}
                     disabled={pinUploadingId === pin.id}
                     className="shrink-0 h-20 w-20 rounded-xl bg-muted/50 border border-dashed border-border flex flex-col items-center justify-center gap-1 text-muted-foreground active:bg-muted/70 transition-colors"
                   >
@@ -1734,9 +1756,9 @@ const ReviewSummary = () => {
                         className="absolute top-2 right-2 h-8 w-8 rounded-full bg-black/45 backdrop-blur text-white flex items-center justify-center active:scale-90 transition-transform">
                         <Trash2 className="h-4 w-4" />
                       </span>
-                      <span role="button" tabIndex={0} onClick={(e) => { e.stopPropagation(); toggleVisited(pin); }} aria-label={visited ? "Odznacz odwiedzone" : "Byłem tu"}
-                        className={`absolute bottom-2 right-2 h-8 w-8 rounded-full flex items-center justify-center transition-colors ${visited ? "bg-foreground text-white" : "bg-white/90 border border-border text-transparent"}`}>
-                        <Check className="h-5 w-5" strokeWidth={3} />
+                      <span role="button" tabIndex={0} onClick={(e) => { e.stopPropagation(); haptics.light(); navigateTo(pin); }} aria-label={`Otwórz ${pin.place_name} w Google Maps`}
+                        className="absolute bottom-2 right-2 h-9 w-9 rounded-full bg-white flex items-center justify-center active:scale-90 transition-transform shadow-md">
+                        <GoogleGlyph className="h-[18px] w-[18px]" />
                       </span>
                     </div>
                     <div className="px-3 py-2.5">
@@ -1768,9 +1790,9 @@ const ReviewSummary = () => {
                             <p className={`text-sm font-bold leading-tight truncate ${visited ? "line-through opacity-60" : ""}`}>{pin.place_name}</p>
                             {pin.category && <span className="inline-flex items-center mt-1 px-2 py-0.5 rounded-full bg-card text-[11px] font-semibold text-foreground">{catLabel(pin.category)}</span>}
                           </div>
-                          <span role="button" tabIndex={0} onClick={(e) => { e.stopPropagation(); toggleVisited(pin); }} aria-label={visited ? "Odznacz odwiedzone" : "Byłem tu"}
-                            className={`shrink-0 h-8 w-8 rounded-full flex items-center justify-center transition-colors ${visited ? "bg-foreground text-white" : "bg-card border-2 border-border text-transparent"}`}>
-                            <Check className="h-5 w-5" strokeWidth={3} />
+                          <span role="button" tabIndex={0} onClick={(e) => { e.stopPropagation(); haptics.light(); navigateTo(pin); }} aria-label={`Otwórz ${pin.place_name} w Google Maps`}
+                            className="shrink-0 h-9 w-9 rounded-full bg-card border border-border flex items-center justify-center active:scale-90 transition-transform shadow-sm">
+                            <GoogleGlyph className="h-[18px] w-[18px]" />
                           </span>
                         </button>
                       </SwipeToDeleteRow>
@@ -1866,8 +1888,7 @@ const ReviewSummary = () => {
             <div onClick={(e) => e.stopPropagation()} className="relative w-full max-w-lg bg-card rounded-t-3xl px-2 pt-3 pb-[max(12px,env(safe-area-inset-bottom))] shadow-2xl animate-in slide-in-from-bottom-4 duration-300" style={{ maxHeight: "88dvh" }}>
               <div className="mx-auto h-1 w-10 rounded-full bg-muted-foreground/25 mb-3" />
               <div className="px-3 pb-1 text-center">
-                <p className="text-lg font-black leading-tight">Kiedy jedziesz?</p>
-                <p className="text-xs text-muted-foreground mt-1">Wybierz daty wyjazdu.</p>
+                <p className="text-base font-bold leading-tight">Wybierz daty dla trasy <span className="font-normal text-muted-foreground">(opcjonalnie)</span></p>
               </div>
               <FullCalendarPicker onConfirm={saveDate} />
             </div>
@@ -2065,28 +2086,9 @@ const ReviewSummary = () => {
         {(isMemory || forceEdit) ? (
           isOwner ? (
             (!reviewed || editingStepper) ? (
-            /* ══ EDYCJA WPISU (właściciel) - stepper 1 Trasa → 2 Notki → 3 Zdjęcia (wspomnienie lub aktywny wyjazd z ?edit=1) ══ */
+            /* ══ EDYCJA WPISU (właściciel) - BEZ steppera: Sugestie → Galeria (wg Figmy 897:1832).
+               Miejsca user ulozyl w ComposeWyjazd; tutaj tylko sugestia + notki per miejsce, potem galeria. ══ */
             <>
-              {renderStepper()}
-              <div className="px-5 pt-4">{renderStepInfo()}</div>
-
-              {step === 1 && (
-                <div className="px-5 pb-5">
-                  {currentPins.length === 0 ? (
-                    <>
-                      <p className="text-center text-sm text-muted-foreground py-8">{t("empty.no_places_day")}</p>
-                      {renderAddPlaceButton()}
-                    </>
-                  ) : (
-                    <>
-                      {renderPlanHeader(true)}
-                      {planView === "list" ? renderEditablePlan(false) : renderSwiper(true, false)}
-                      {renderAddPlaceButton()}
-                    </>
-                  )}
-                </div>
-              )}
-
               {step === 2 && (
                 <div className="px-5 pb-5">
                   {/* Twoja sugestia dla innych podroznych (review_narrative, autosave) */}
@@ -2119,22 +2121,38 @@ const ReviewSummary = () => {
                     <p className="text-center text-sm text-muted-foreground py-8">{t("empty.no_places_note")}</p>
                   ) : planView === "list" ? (
                     <div className="space-y-2.5">
-                      {workingPins.map((pin: any, i: number) => (
-                        <div key={pin.id}>
-                          {renderPlanRow(pin, i, true)}
-                          <div className="mt-2">
-                            <textarea
-                              value={notes[rkey(activeRouteId!, pin.place_name)] ?? ""}
-                              onChange={(e) => handleNoteChange(pin.place_name, e.target.value)}
-                              onFocus={() => setNoteFocused(true)}
-                              onBlur={() => setNoteFocused(false)}
-                              placeholder="Notatka dotycząca miejsca"
-                              rows={2}
-                              className="w-full bg-secondary/60 rounded-2xl px-4 py-3 text-sm text-foreground resize-none focus:outline-none border border-border/30 placeholder:text-muted-foreground/55"
-                            />
+                      {workingPins.map((pin: any, i: number) => {
+                        const noteVal = notes[rkey(activeRouteId!, pin.place_name)] ?? "";
+                        const open = openNotes.has(pin.id) || !!noteVal.trim();
+                        return (
+                          <div key={pin.id}>
+                            {renderPlanRow(pin, i, true)}
+                            {/* Notka per miejsce: zwinieta jako "+ Twoja sugestia" (wg Figmy), rozwija sie w textarea. */}
+                            {open ? (
+                              <div className="mt-2">
+                                <textarea
+                                  value={noteVal}
+                                  onChange={(e) => handleNoteChange(pin.place_name, e.target.value)}
+                                  onFocus={() => setNoteFocused(true)}
+                                  onBlur={() => setNoteFocused(false)}
+                                  placeholder="Notatka dotycząca miejsca"
+                                  rows={2}
+                                  autoFocus={openNotes.has(pin.id) && !noteVal}
+                                  className="w-full bg-secondary/60 rounded-2xl px-4 py-3 text-sm text-foreground resize-none focus:outline-none border border-border/30 placeholder:text-muted-foreground/55"
+                                />
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => { haptics.light(); setOpenNotes((s) => new Set(s).add(pin.id)); }}
+                                className="mt-2 w-full flex items-center gap-2.5 rounded-2xl bg-secondary/60 border border-border/30 px-4 py-3 text-left active:bg-secondary transition-colors"
+                              >
+                                <Plus className="h-5 w-5 text-muted-foreground shrink-0" />
+                                <span className="text-sm text-muted-foreground">Twoja sugestia</span>
+                              </button>
+                            )}
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   ) : (
                     renderSwiper(true, true)
@@ -2170,7 +2188,7 @@ const ReviewSummary = () => {
                   className="h-9 w-9 rounded-full bg-muted flex items-center justify-center shrink-0 active:scale-95 transition-transform">
                   <Share className="h-4 w-4 text-foreground" />
                 </button>
-                <button onClick={() => { setEditingStepper(true); setStep(1); }} aria-label={t("a11y.edit_entry")}
+                <button onClick={() => { setEditingStepper(true); setStep(2); }} aria-label={t("a11y.edit_entry")}
                   className="h-9 w-9 rounded-full bg-muted flex items-center justify-center shrink-0 active:scale-95 transition-transform">
                   <Pencil className="h-4 w-4 text-foreground" />
                 </button>
@@ -2320,6 +2338,53 @@ const ReviewSummary = () => {
       )}
 
       {/* ── Fullscreen photo viewer ──────────────────────────────────────── */}
+      {/* Arkusz "Dodaj zdjęcia do miejsca": najpierw wybór ze zdjęć galerii wyjazdu (przypisanie),
+          plus opcja dodania nowego zdjęcia z urządzenia. */}
+      {pinPickerId && (() => {
+        const pickerPin = currentPins.find((p: any) => p.id === pinPickerId);
+        if (!pickerPin) return null;
+        const assigned: string[] = Array.isArray(pickerPin.images) ? pickerPin.images : [];
+        return (
+          <div className="fixed inset-0 z-[75] flex items-end justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setPinPickerId(null)}>
+            <div onClick={(e) => e.stopPropagation()} className="relative w-full max-w-lg bg-card rounded-t-3xl px-4 pt-3 pb-[max(16px,env(safe-area-inset-bottom))] shadow-2xl animate-in slide-in-from-bottom-4 duration-300 flex flex-col" style={{ maxHeight: "82dvh" }}>
+              <div className="mx-auto h-1 w-10 rounded-full bg-muted-foreground/25 mb-3 shrink-0" />
+              <p className="font-display text-lg font-bold text-foreground px-1 shrink-0">Zdjęcia do miejsca</p>
+              <p className="text-[13px] text-muted-foreground px-1 mt-0.5 mb-3 shrink-0 truncate">{pickerPin.place_name}</p>
+              <button
+                onClick={() => { const p = pickerPin; setPinPickerId(null); triggerPinPhotoPick(p); }}
+                className="shrink-0 w-full flex items-center justify-center gap-2 rounded-2xl bg-secondary text-secondary-foreground py-3 mb-3 text-sm font-semibold active:scale-[0.98] transition-transform"
+              >
+                <Camera className="h-4 w-4" /> Dodaj nowe zdjęcie
+              </button>
+              <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide px-1 mb-2 shrink-0">Z galerii wyjazdu</p>
+              <div className="overflow-y-auto min-h-0 flex-1">
+                {myPhotos.length === 0 ? (
+                  <p className="text-center text-sm text-muted-foreground py-10 px-6">Brak zdjęć w galerii wyjazdu. Dodaj je najpierw w sekcji „Zdjęcia z wyjazdu" albo dodaj nowe powyżej.</p>
+                ) : (
+                  <div className="grid grid-cols-3 gap-1.5 pb-1">
+                    {myPhotos.map(({ url }) => {
+                      const src = resolveStored(url) ?? url;
+                      const isOn = assigned.includes(url);
+                      return (
+                        <button key={url} onClick={() => toggleAssignPinPhoto(pickerPin, url)} className="relative aspect-square rounded-xl overflow-hidden bg-muted active:opacity-90">
+                          <img src={src} alt="" className="w-full h-full object-cover" />
+                          {isOn && (
+                            <span className="absolute inset-0 bg-primary/40 flex items-center justify-center">
+                              <span className="h-7 w-7 rounded-full bg-primary text-white flex items-center justify-center"><Check className="h-4 w-4" strokeWidth={3} /></span>
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+              <button onClick={() => setPinPickerId(null)} className="shrink-0 w-full py-3 rounded-full bg-primary text-white font-bold text-sm mt-3 active:scale-[0.98] transition-transform">Gotowe</button>
+            </div>
+          </div>
+        );
+      })()}
+
       {viewerUrl && (
         <div className="fixed inset-0 z-[70] bg-black flex items-center justify-center" onClick={() => { setViewerUrl(null); setViewerMenuOpen(false); }}>
           <img src={viewerUrl} alt="" className="max-w-full max-h-full object-contain" />
@@ -2381,14 +2446,13 @@ const ReviewSummary = () => {
              przechodzi do PODSUMOWANIA (nie wychodzi do Dziennika). */
           <div className="flex flex-col gap-2">
             <div className="flex gap-2">
-              {step > 1 && (
-                <button
-                  onClick={() => setStep((s) => (s - 1) as 1 | 2 | 3)}
-                  className="px-5 py-3.5 rounded-full border border-border text-sm font-semibold text-foreground active:scale-[0.98] transition-transform shrink-0"
-                >
-                  {t("cta.back")}
-                </button>
-              )}
+              {/* Wstecz: z Galerii (3) wraca do Sugestii (2); z Sugestii wychodzi z widoku (do kompozycji). */}
+              <button
+                onClick={() => { haptics.light(); step === 3 ? setStep(2) : navigate(-1); }}
+                className="px-5 py-3.5 rounded-full border border-border text-sm font-semibold text-foreground active:scale-[0.98] transition-transform shrink-0"
+              >
+                {t("cta.back")}
+              </button>
               {step < 3 ? (
                 <button
                   onClick={() => { haptics.light(); setStep((s) => (s + 1) as 1 | 2 | 3); }}
