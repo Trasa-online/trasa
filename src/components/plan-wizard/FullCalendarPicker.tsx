@@ -132,7 +132,7 @@ const FullCalendarPicker = ({ onConfirm, allowPast = false }: FullCalendarPicker
           onClick={handleConfirm}
           disabled={!startDate}
           size="lg"
-          className="w-full rounded-full text-base font-semibold bg-primary hover:bg-primary/90 text-white border-0 shadow-lg shadow-primary/20 disabled:opacity-40"
+          className="w-full rounded-2xl text-base font-semibold bg-primary hover:bg-primary/90 text-white border-0 shadow-lg shadow-primary/20 disabled:opacity-40"
         >
           Dalej
         </Button>

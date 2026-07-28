@@ -1209,7 +1209,6 @@ const ReviewSummary = () => {
           <span>{CATEGORY_EMOJI[pin.category] ?? "📍"}</span>{catLabel(pin.category)}
         </span>
       </button>
-      {renderVisitedToggle(pin)}
       {editable && (
         <div className="flex items-center gap-1 shrink-0">
           <div className="flex flex-col">
@@ -1994,10 +1993,25 @@ const ReviewSummary = () => {
   return (
     <div className="min-h-[100dvh] bg-background flex flex-col">
 
-      {/* ── Hero ─────────────────────────────────────────────────────────── */}
-      {/* We wpisie dziennika (isMemory) ORAZ w wymuszonej edycji wyjazdu (forceEdit) okladka jest
-          NIZSZA (16/9) - zdjecie nie jest kluczowe, wazniejsza galeria/plan. Tylko legacy aktywny
-          przeglad trasy zostaje wyzszy. */}
+      {/* ── Header: minimalny (Sugestie/Galeria) albo pełne Hero ──────────── */}
+      {((isMemory || forceEdit) && isOwner && (!reviewed || editingStepper)) ? (
+        /* Widok Sugestie/Galeria (wg Figmy 897:1832): tylko chevron wstecz - bez okładki i tytułu. */
+        <div className="flex items-center px-3 shrink-0" style={{ paddingTop: "calc(max(16px, env(safe-area-inset-top, 16px)) + 6px)", paddingBottom: "8px" }}>
+          <button
+            onClick={() => {
+              haptics.light();
+              if (step === 3) { setStep(2); return; }
+              if (editingStepper) { setEditingStepper(false); setSummaryTab("plan"); return; }
+              navigate(-1);
+            }}
+            aria-label={t("cta.back")}
+            className="h-10 w-10 rounded-2xl bg-secondary flex items-center justify-center active:scale-95 transition-transform"
+          >
+            <ChevronLeft className="h-5 w-5 text-foreground" />
+          </button>
+        </div>
+      ) : (
+      /* ── Hero (podsumowanie / gość / aktywny przegląd) ──────────────────── */
       <div className={`relative w-full ${(isMemory || forceEdit) ? "aspect-[16/9]" : (hasRealPhoto ? "aspect-[4/5]" : "aspect-[16/10]")} flex-shrink-0 overflow-hidden bg-gradient-to-br from-orange-400 via-rose-400 to-purple-500`}>
         <img src={heroPhoto} alt="" className="absolute inset-0 w-full h-full object-cover" />
         {/* Ciemny gradient overlay - dla placeholdera mocniejszy (kontrast tekstu, WCAG) */}
@@ -2079,6 +2093,7 @@ const ReviewSummary = () => {
           )}
         </div>
       </div>
+      )}
 
       {/* ── Scrollable content ────────────────────────────────────────────── */}
       <div className="flex-1 overflow-y-auto pb-32">
@@ -2135,7 +2150,7 @@ const ReviewSummary = () => {
                                   onChange={(e) => handleNoteChange(pin.place_name, e.target.value)}
                                   onFocus={() => setNoteFocused(true)}
                                   onBlur={() => setNoteFocused(false)}
-                                  placeholder="Notatka dotycząca miejsca"
+                                  placeholder="Twoja sugestia"
                                   rows={2}
                                   autoFocus={openNotes.has(pin.id) && !noteVal}
                                   className="w-full bg-secondary/60 rounded-2xl px-4 py-3 text-sm text-foreground resize-none focus:outline-none border border-border/30 placeholder:text-muted-foreground/55"
@@ -2379,7 +2394,7 @@ const ReviewSummary = () => {
                   </div>
                 )}
               </div>
-              <button onClick={() => setPinPickerId(null)} className="shrink-0 w-full py-3 rounded-full bg-primary text-white font-bold text-sm mt-3 active:scale-[0.98] transition-transform">Gotowe</button>
+              <button onClick={() => setPinPickerId(null)} className="shrink-0 w-full py-3 rounded-2xl bg-primary text-white font-bold text-sm mt-3 active:scale-[0.98] transition-transform">Gotowe</button>
             </div>
           </div>
         );
@@ -2444,41 +2459,41 @@ const ReviewSummary = () => {
           /* Stepper wpisu: Wstecz + Dalej/Gotowe. Edycje persystują (autosave on unmount +
              savePlan(false)); "Gotowe" oznacza wpis jako zrecenzowany (plan_finalized) i
              przechodzi do PODSUMOWANIA (nie wychodzi do Dziennika). */
-          <div className="flex flex-col gap-2">
-            <div className="flex gap-2">
-              {/* Wstecz: z Galerii (3) wraca do Sugestii (2); z Sugestii wychodzi z widoku (do kompozycji). */}
-              <button
-                onClick={() => { haptics.light(); step === 3 ? setStep(2) : navigate(-1); }}
-                className="px-5 py-3.5 rounded-full border border-border text-sm font-semibold text-foreground active:scale-[0.98] transition-transform shrink-0"
-              >
-                {t("cta.back")}
-              </button>
-              {step < 3 ? (
+          step === 2 ? (
+            /* Sugestie: TYLKO "Przejdź do Galerii" (wstecz przez chevron w nagłówku). */
+            <button
+              onClick={() => { haptics.light(); setStep(3); }}
+              className="w-full py-3.5 rounded-2xl bg-primary text-white font-bold text-base active:scale-[0.98] transition-transform"
+            >
+              Przejdź do Galerii
+            </button>
+          ) : (
+            /* Galeria (3): Wstecz + Gotowe + wyjście z trybu edycji. */
+            <div className="flex flex-col gap-2">
+              <div className="flex gap-2">
                 <button
-                  onClick={() => { haptics.light(); setStep((s) => (s + 1) as 1 | 2 | 3); }}
-                  className="flex-1 py-3.5 rounded-full bg-primary text-white font-bold text-base active:scale-[0.98] transition-transform"
+                  onClick={() => { haptics.light(); setStep(2); }}
+                  className="px-5 py-3.5 rounded-2xl border border-border text-sm font-semibold text-foreground active:scale-[0.98] transition-transform shrink-0"
                 >
-                  {step === 2 ? "Przejdź do Galerii" : t("cta.next")}
+                  {t("cta.back")}
                 </button>
-              ) : (
                 <button
                   onClick={finishEditing}
                   disabled={savingPlan}
-                  className="flex-1 py-3.5 rounded-full bg-primary text-white font-bold text-base active:scale-[0.98] transition-transform disabled:opacity-40"
+                  className="flex-1 py-3.5 rounded-2xl bg-primary text-white font-bold text-base active:scale-[0.98] transition-transform disabled:opacity-40"
                 >
                   {savingPlan ? t("status.saving") : t("cta.done")}
                 </button>
-              )}
+              </div>
+              <button
+                onClick={finishEditing}
+                disabled={savingPlan}
+                className="w-full py-3 rounded-2xl bg-secondary text-secondary-foreground text-sm font-semibold active:scale-[0.98] transition-transform disabled:opacity-40"
+              >
+                {t("cta.close_edit_mode")}
+              </button>
             </div>
-            {/* Wyjscie z trybu edycji dostepne na kazdym kroku (nie tylko po "Gotowe"). */}
-            <button
-              onClick={finishEditing}
-              disabled={savingPlan}
-              className="w-full py-3 rounded-full bg-secondary text-secondary-foreground text-sm font-semibold active:scale-[0.98] transition-transform disabled:opacity-40"
-            >
-              {t("cta.close_edit_mode")}
-            </button>
-          </div>
+          )
         ) : !isMemory && draft && draft.dayId === activeRouteId ? (
           <button
             onClick={() => savePlan(false)}
