@@ -16,6 +16,7 @@
 
 import { type ReactNode, useRef, useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import { haptics } from "@/hooks/useHaptics";
 import { createPortal } from "react-dom";
 import { MAIN_CATEGORIES, mainCategoryLabel, subcategoryLabelLocalized, subcategoryEmoji, parentMainOfSub } from "@/lib/categories";
 import { cn } from "@/lib/utils";
@@ -330,6 +331,11 @@ function HeroPhotoCarousel({ photos, placeName, onExpand, onClose, loading, topL
   const [activeIdx, setActiveIdx] = useState(0);
   const swipeStartX = useRef<number | null>(null);
   const hasPhoto = photos.length > 0;
+  // Zmiana zdjecia (swipe/strzalki) z delikatna haptyka - tylko gdy indeks faktycznie sie zmienia.
+  const changePhoto = (idx: number) => {
+    const clamped = Math.max(0, Math.min(photos.length - 1, idx));
+    if (clamped !== activeIdx) { haptics.light(); setActiveIdx(clamped); }
+  };
 
   return (
     <div
@@ -340,8 +346,7 @@ function HeroPhotoCarousel({ photos, placeName, onExpand, onClose, loading, topL
         const dx = e.changedTouches[0].clientX - swipeStartX.current;
         swipeStartX.current = null;
         if (Math.abs(dx) > 40 && photos.length > 1) {
-          if (dx < 0) setActiveIdx(Math.min(photos.length - 1, activeIdx + 1));
-          else setActiveIdx(Math.max(0, activeIdx - 1));
+          changePhoto(dx < 0 ? activeIdx + 1 : activeIdx - 1);
         }
       }}
     >
@@ -399,7 +404,7 @@ function HeroPhotoCarousel({ photos, placeName, onExpand, onClose, loading, topL
               {/* Chevron nawigacji - MALE guziki (nie cala polowa), zeby tap w zdjecie = powiekszenie. */}
               {activeIdx > 0 && (
                 <button
-                  onClick={(e) => { e.stopPropagation(); setActiveIdx(Math.max(0, activeIdx - 1)); }}
+                  onClick={(e) => { e.stopPropagation(); changePhoto(activeIdx - 1); }}
                   className="absolute left-2 top-1/2 -translate-y-1/2 z-20 h-9 w-9 rounded-full bg-white/85 backdrop-blur-sm flex items-center justify-center shadow active:scale-90"
                   aria-label={t("prev")}
                 >
@@ -408,7 +413,7 @@ function HeroPhotoCarousel({ photos, placeName, onExpand, onClose, loading, topL
               )}
               {activeIdx < photos.length - 1 && (
                 <button
-                  onClick={(e) => { e.stopPropagation(); setActiveIdx(Math.min(photos.length - 1, activeIdx + 1)); }}
+                  onClick={(e) => { e.stopPropagation(); changePhoto(activeIdx + 1); }}
                   className="absolute right-2 top-1/2 -translate-y-1/2 z-20 h-9 w-9 rounded-full bg-white/85 backdrop-blur-sm flex items-center justify-center shadow active:scale-90"
                   aria-label={t("next")}
                 >

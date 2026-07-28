@@ -286,7 +286,9 @@ export default function ComposeWyjazd() {
     setCreating(false);
     if (!id) { haptics.error(); toast.error(draftId ? "Nie udało się zapisać zmian" : "Nie udało się utworzyć wyjazdu"); return; }
     haptics.success();
-    if (openEditor) navigate(`/review-summary?route=${id}&edit=1`);
+    // openEditor -> review-summary od razu na kroku SUGESTII (step 2), bo plan miejsc user juz
+    // ulozyl tutaj w kompozycji. Guzik "Przejdz do sugestii".
+    if (openEditor) navigate(`/review-summary?route=${id}&edit=1&step=2`);
     else { toast.success(draftId ? "Zapisano zmiany" : "Zapisano wyjazd"); navigate("/dziennik"); }
   };
 
@@ -470,7 +472,7 @@ export default function ComposeWyjazd() {
         <div className="shrink-0 border-t border-border/20 px-4 pt-3 pb-[max(16px,env(safe-area-inset-bottom))] bg-background flex items-center gap-2">
           <button onClick={() => confirm(true)} disabled={creating}
             className="flex-1 h-12 rounded-2xl bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform shadow-md shadow-orange-500/20 disabled:opacity-60">
-            {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <>{draftId ? "Zapisz zmiany" : "Stwórz wyjazd"} <ArrowRight className="h-4 w-4" /></>}
+            {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <>Przejdź do sugestii <ArrowRight className="h-4 w-4" /></>}
           </button>
         </div>
       )}

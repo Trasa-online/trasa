@@ -92,7 +92,12 @@ const ReviewSummary = () => {
   const [memoTab, setMemoTab] = useState<"notki" | "galeria">("notki");
   // Pod-zakladki w widoku wspomnienia: galeria zdjec / plan dnia.
   // Wpis dziennika (wlasciciel): 3-etapowy stepper. 1 Trasa (edycja) -> 2 Notki -> 3 Zdjecia.
-  const [step, setStep] = useState<1 | 2 | 3>(1);
+  // Krok startowy z URL (?step=2) - wejscie "Przejdz do sugestii" z kompozycji ladauje od razu
+  // na kroku sugestii+notek (plan miejsc user ulozyl juz w ComposeWyjazd).
+  const [step, setStep] = useState<1 | 2 | 3>(() => {
+    const s = searchParams.get("step");
+    return s === "2" ? 2 : s === "3" ? 3 : 1;
+  });
   // Po ukonczeniu steppera ("Gotowe") wpis przechodzi w tryb PODSUMOWANIA (read-only:
   // Miejsca+notki | Zdjecia). Edycja (olowek) wraca do steppera. localReviewed = optymistyczne
   // przejscie do podsumowania zanim refetch route zaktualizuje plan_finalized.
