@@ -1872,10 +1872,13 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
   const { data: warszawa = [], isLoading: wawaLoading } = useQuery({
     queryKey: ["discovery-city-routes", city],
     queryFn: async () => {
-      const { data } = await (supabase as any)
+      // city === "all" (ALL_CITIES) -> feed agreguje Trasy ze wszystkich miast (bez filtra).
+      let q = (supabase as any)
         .from("routes")
         .select("id, title, city, ai_highlight, ai_summary, user_id, created_at, views, share_anonymous")
-        .eq("is_shared", true).not("title", "is", null).ilike("city", `${city}%`)
+        .eq("is_shared", true).not("title", "is", null);
+      if (city && city !== "all") q = q.ilike("city", `${city}%`);
+      const { data } = await q
         .order("views", { ascending: false, nullsFirst: false })
         .limit(30);
       return enrichRouteRows(data ?? []);

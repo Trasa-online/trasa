@@ -47,7 +47,7 @@ export default function ExploreTopBar({
   return (
     <>
       {/* Selektor miasta (pill) */}
-      <CitySelect city={cur} onCityChange={onCityChange} />
+      <CitySelect city={cur} onCityChange={onCityChange} allowAll allLabel="Wszystkie miasta" />
 
       <div className="flex-1" />
 
