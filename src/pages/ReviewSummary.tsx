@@ -1802,12 +1802,8 @@ const ReviewSummary = () => {
             <button onClick={() => { haptics.selection(); setPlanTab("galeria"); }} className={`flex-1 py-2 rounded-full transition-colors ${planTab === "galeria" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>Galeria</button>
           </div>
 
-          {planTab === "galeria" ? (
-            <>
-              {renderGallery(true)}
-              {renderPinPhotoSection()}
-            </>
-          ) : (
+          {/* Galeria: zdjecia wyjazdu z badge miejsca (przypisanie robi sie na etapie tworzenia, tu read-only). */}
+          {planTab === "galeria" ? renderGallery(true) : (
           <>
           {/* Sub-toggle podglądu miejsc (Lista/Karty) - tylko dla aktywnego (nieukończonego) wyjazdu. */}
           {!tripCompleted && (
@@ -1932,8 +1928,7 @@ const ReviewSummary = () => {
         {/* Wizytowka miejsca */}
         <PlaceSwiperDetail open={!!detailPin} onOpenChange={(o) => !o && setDetailPin(null)} place={detailPin} city={route?.city} />
 
-        {/* Arkusz przypisania zdjęć + fullscreen viewer (galeria w widoku planu). */}
-        {renderPinPickerSheet()}
+        {/* Fullscreen podgląd zdjęcia (tap w galerię) - ustawienie okładki / usuniecie. */}
         {renderPhotoViewer()}
 
         {/* Dodawanie miejsca */}
