@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { parseISO, isValid, format, addDays } from "date-fns";
 import { useTranslation } from "react-i18next";
 import { API_BASE } from "@/lib/platform";
+import { CategoryIcon } from "@/components/CategoryIcon";
 
 interface PlanPin {
   place_name: string;
@@ -27,13 +28,6 @@ interface LocationState {
   memberIds: string[];
   backTo: string;
 }
-
-const CATEGORY_EMOJI: Record<string, string> = {
-  restaurant: "🍽️", cafe: "☕", museum: "🏛️", park: "🌿",
-  bar: "🍺", club: "🎵", monument: "🏰", gallery: "🖼️",
-  market: "🛒", viewpoint: "🔭", shopping: "🛍️", experience: "🎪",
-  walk: "🚶", church: "⛪",
-};
 
 const QuickPlanReview = () => {
   const navigate = useNavigate();
@@ -199,8 +193,8 @@ const QuickPlanReview = () => {
               </div>
               {/* Info */}
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold leading-tight truncate">
-                  {CATEGORY_EMOJI[pin.category] ?? "📍"} {pin.place_name}
+                <p className="text-sm font-semibold leading-tight truncate flex items-center gap-1.5">
+                  <CategoryIcon category={pin.category} className="h-4 w-4 shrink-0" />{pin.place_name}
                 </p>
                 {pin.address && (
                   <p className="text-xs text-muted-foreground truncate mt-0.5 flex items-center gap-1">

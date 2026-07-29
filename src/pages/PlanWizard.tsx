@@ -25,6 +25,7 @@ import { setStartReference, markAskedForCity, tryResolveOnSite, useDistanceRefer
 import { getTodayLikes } from "@/lib/exploreLikes";
 import { saveDraft, removeDraft } from "@/lib/draftRoutes";
 import LocationPrimer from "@/components/LocationPrimer";
+import { CategoryIcon } from "@/components/CategoryIcon";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
@@ -545,8 +546,8 @@ const PlanWizard = () => {
                             const meta = MATCH_CATEGORIES.find(c => c.dbValues.includes(cat));
                             return (
                               <div key={cat}>
-                                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 px-1">
-                                  {meta ? `${meta.emoji} ${t(`match_cat.${meta.id}`)}` : cat}
+                                <p className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 px-1">
+                                  {meta ? <><CategoryIcon category={meta.id} className="h-3.5 w-3.5 shrink-0" />{t(`match_cat.${meta.id}`)}</> : cat}
                                 </p>
                                 <div className="space-y-2">
                                   {items.map((place) => {
@@ -741,7 +742,7 @@ const PlanWizard = () => {
               {MAIN_CATEGORIES.map((cat) => (
                 <div key={cat.id}>
                   <div className="flex items-center gap-2 mb-3">
-                    <span className="text-base">{cat.emoji}</span>
+                    <CategoryIcon category={cat.id} className="h-5 w-5 shrink-0" />
                     <p className="text-sm font-bold text-foreground">{cat.label}</p>
                   </div>
                   <div className="flex flex-wrap gap-2">
@@ -758,7 +759,7 @@ const PlanWizard = () => {
                               : "bg-white text-foreground border-border/60"
                           )}
                         >
-                          <span>{sub.emoji}</span>
+                          <CategoryIcon category={sub.id} className="h-4 w-4 shrink-0" />
                           <span>{sub.label}</span>
                           {active
                             ? <Check className="h-3.5 w-3.5 ml-0.5 text-orange-600" />

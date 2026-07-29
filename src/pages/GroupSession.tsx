@@ -21,6 +21,7 @@ import { SHARE_BASE_URL } from "@/lib/shareUrl";
 import { useShare } from "@/hooks/useShare";
 import { sendGroupInvitePush, getCurrentHostName } from "@/lib/sendGroupInvitePush";
 import { getDbCategoriesFor } from "@/lib/categories";
+import { CategoryIcon } from "@/components/CategoryIcon";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -270,12 +271,6 @@ const GroupSession = () => {
     members.every((m: any) => (m.categories_done ?? []).includes(currentCategory));
   // Admin needs to pick: either no category set yet, or everyone finished current one
   const needsCategoryPick = !currentCategory || allMembersDoneCategory;
-
-  const CATEGORY_EMOJI: Record<string, string> = {
-    Kawiarnia: "☕", "Śniadania": "🍳",
-    Restauracja: "🍽️", Bar: "🍺", Muzeum: "🏛️",
-    Park: "🌿", Market: "🛒", Landmark: "🏰", Rozrywka: "🎪",
-  };
 
   // Deterministic seeded shuffle - same session+category = same order for all users
   function seededShuffle<T>(arr: T[], seed: string): T[] {
@@ -1096,7 +1091,7 @@ const GroupSession = () => {
                           }`}
                         >
                           {used && <Check className="h-3.5 w-3.5" />}
-                          <span>{cat.emoji}</span>
+                          <CategoryIcon category={cat.id} className="h-4 w-4 shrink-0" />
                           <span>{cat.label}</span>
                         </button>
                       );
@@ -1160,14 +1155,14 @@ const GroupSession = () => {
 
           // ── I finished this category, waiting for others ─────────────────
           if (iMyCategoryDone && !allMembersDoneCategory) {
-            const catEmoji = currentCategory === FREE_CATEGORY ? "🎲" : (CATEGORY_EMOJI[currentCategory!] ?? "");
             const catLabel = catLabelOf(currentCategory);
             const doneCount = members.filter((m: any) => (m.categories_done ?? []).includes(currentCategory)).length;
             return (
               <div className="flex-1 flex flex-col items-center justify-center px-6 gap-6 text-center">
                 {/* Category chip */}
                 <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-orange-600/20 text-orange-700 font-semibold text-base">
-                  {catEmoji} {catLabel}
+                  {currentCategory !== FREE_CATEGORY && <CategoryIcon category={currentCategory} className="h-4 w-4 shrink-0" />}
+                  {catLabel}
                 </span>
 
                 <div className="space-y-1">

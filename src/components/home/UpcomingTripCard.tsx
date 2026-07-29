@@ -13,13 +13,7 @@ function safeDate(val: string | null | undefined): Date | null {
   return isValid(d) ? d : null;
 }
 import { ensurePhotoCached, getCachedPhotoVariant, isCachedPhotoUrl } from "@/lib/placePhotos";
-
-const CATEGORY_EMOJI: Record<string, string> = {
-  restaurant: "🍽️", cafe: "☕", museum: "🏛️", park: "🌿",
-  bar: "🍺", club: "🎵", monument: "🏰", gallery: "🖼️",
-  market: "🛒", viewpoint: "🔭", shopping: "🛍️", experience: "🎪",
-  walk: "🚶", church: "⛪", nightlife: "🌙",
-};
+import { CategoryIcon } from "@/components/CategoryIcon";
 
 // ─── Lazy pin photo thumbnail ──────────────────────────────────────────────
 
@@ -63,8 +57,8 @@ function PinThumb({ pin, onClick }: { pin: any; onClick: () => void }) {
         {photo ? (
           <img src={photo} alt={pin.place_name} className="w-full h-full object-cover" />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-3xl bg-gradient-to-br from-stone-100 to-stone-200 dark:from-stone-800 dark:to-stone-900">
-            {CATEGORY_EMOJI[pin.category] ?? "📍"}
+          <div className="w-full h-full flex items-center justify-center bg-[#fcede3]">
+            <CategoryIcon category={pin.category} className="w-2/5 max-w-[56px] opacity-90" />
           </div>
         )}
         {pin.suggested_time && (

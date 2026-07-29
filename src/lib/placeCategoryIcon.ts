@@ -51,6 +51,33 @@ const CATEGORY_ICON_MAP: Record<string, string> = {
   bookshop: "/Ikona__Zakupy.svg",
   book_store: "/Ikona__Zakupy.svg",
   market: "/Ikona__Zakupy.svg",
+
+  // Kategorie GLOWNE (MAIN_CATEGORIES z categories.ts) - reprezentatywna ikona.
+  food: "/Ikona__Restauracja-18.svg",
+  culture: "/Ikona__Landmark.svg",
+  attractions: "/Ikona__Landmark.svg",
+  nature: "/Ikona__Natura.svg",
+  shopping: "/Ikona__Zakupy.svg",
+  entertainment: "/Ikona__Sztuka.svg",
+
+  // Dodatkowe typy Google Places.
+  beach: "/Ikona__Natura.svg",
+  library: "/Ikona__Sztuka.svg",
+
+  // Polskie ETYKIETY kategorii (uzywane m.in. w GroupSession, danych z labelami PL).
+  kawiarnia: "/Ikona__Kawiarnia.svg",
+  restauracja: "/Ikona__Restauracja-18.svg",
+  "śniadania": "/Ikona__Kawiarnia.svg",
+  muzeum: "/Ikona__Landmark.svg",
+  zabytek: "/Ikona__Landmark.svg",
+  galeria: "/Ikona__Sztuka.svg",
+  rozrywka: "/Ikona__Sztuka.svg",
+  zakupy: "/Ikona__Zakupy.svg",
+  natura: "/Ikona__Natura.svg",
+  "punkt widokowy": "/Ikona__Punkt%20widokowy.svg",
+  piekarnia: "/Ikona__Piekarnia.svg",
+  cukiernia: "/Ikona__Cukiernia.svg",
+  sztuka: "/Ikona__Sztuka.svg",
 };
 
 const FALLBACK_ICON = "/Ikona__Landmark.svg";

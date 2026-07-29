@@ -16,7 +16,7 @@ import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuIte
 import { UNLOCKED_CITIES } from "@/components/plan-wizard/CityPicker";
 import { getHistoryByCity, removeLikeFromCity, addLike, clearCity, updateLikePhoto, type ExploreCityGroup } from "@/lib/exploreLikes";
 import { deferDelete } from "@/lib/deferDelete";
-import { getSubcategoryLabel, subcategoryLabelLocalized, MAIN_CATEGORIES } from "@/lib/categories";
+import { getSubcategoryLabel, subcategoryLabelLocalized } from "@/lib/categories";
 import { getPhotoUrl } from "@/lib/placePhotos";
 import { categoryIconSrc } from "@/lib/placeCategoryIcon";
 import { useAuth } from "@/hooks/useAuth";
@@ -54,11 +54,6 @@ async function removeReactionsFromDb(userId: string, city: string, placeNames: s
 
 type Tab = "feed" | "liked";
 
-const CATEGORY_EMOJI: Record<string, string> = (() => {
-  const map: Record<string, string> = {};
-  MAIN_CATEGORIES.forEach(cat => cat.subcategories.forEach(sub => { map[sub.id] = sub.emoji; }));
-  return map;
-})();
 
 function formatGroupDate(dateStr: string): string {
   const d = parseISO(dateStr);
@@ -76,7 +71,7 @@ const thumbInFlight = new Set<string>();
 // Miniaturka zapisanego miejsca. Gdy like ma photo_url -> pokazuje od razu. Gdy NULL (miasta bez
 // cache, np. Wroclaw - zdjecia tylko z Google w locie) -> lazy fetch z proxy, cache + backfill do
 // localStorage, wiec kolejne wejscia sa juz z gotowa miniaturka (jednorazowy koszt per miejsce).
-const SavedThumb = ({ p, emoji }: { p: any; emoji: string }) => {
+const SavedThumb = ({ p }: { p: any }) => {
   const [url, setUrl] = useState<string | null>(p.photo_url ?? null);
 
   useEffect(() => {
@@ -394,7 +389,7 @@ export const LikedTab = ({ selectMode = false, onExitSelection, city: controlled
             )}
           >
             <div className="relative h-20 w-20 rounded-2xl overflow-hidden bg-muted shrink-0">
-              <SavedThumb p={p} emoji={CATEGORY_EMOJI[p.category] ?? "📍"} />
+              <SavedThumb p={p} />
               {selectMode && (
                 // Checkbox = osobny cel z powiekszonym hit-area (p-2.5). Kafel otwiera wizytowke,
                 // dopiero tap w checkbox zaznacza (stopPropagation).

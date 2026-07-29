@@ -6,6 +6,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { expandCity } from "@/lib/cities";
+import { CategoryIcon } from "@/components/CategoryIcon";
 import type { PlanPin } from "./DayPinList";
 
 interface AddPinSheetProps {
@@ -51,13 +52,6 @@ const CATEGORY_LABELS: Record<string, string> = {
   gallery: "Galeria", market: "Targ", viewpoint: "Widok",
   shopping: "Zakupy", experience: "Rozrywka", walk: "Spacer",
   nightlife: "Nocne życie", church: "Kościół",
-};
-
-const CATEGORY_EMOJI: Record<string, string> = {
-  restaurant: "🍽️", cafe: "☕", museum: "🏛️", park: "🌿",
-  bar: "🍺", club: "🎵", monument: "🏰", gallery: "🖼️",
-  market: "🛒", viewpoint: "🔭", shopping: "🛍️", experience: "🎪",
-  walk: "🚶", nightlife: "🎶", church: "⛪",
 };
 
 const MANUAL_CATEGORIES = [
@@ -331,8 +325,8 @@ const AddPinSheet = ({ open, onOpenChange, onPinAdd, cityContext, likedPlaces = 
                       disabled={addingName === name}
                       className="w-full flex items-center gap-3 p-3 rounded-full bg-muted/40 active:scale-[0.98] transition-all text-left"
                     >
-                      <div className="flex-shrink-0 h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center text-lg">
-                        {CATEGORY_EMOJI[dbPlace?.category ?? ""] ?? "📍"}
+                      <div className="flex-shrink-0 h-9 w-9 rounded-full bg-[#fcede3] flex items-center justify-center">
+                        <CategoryIcon category={dbPlace?.category} className="w-2/5 max-w-[56px] opacity-90" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold text-foreground truncate">{name}</p>
@@ -392,8 +386,8 @@ const AddPinSheet = ({ open, onOpenChange, onPinAdd, cityContext, likedPlaces = 
                       onClick={() => handleAddDbPlace(place)}
                       className="w-full flex items-start gap-3 p-3 rounded-full bg-muted/40 active:scale-[0.98] transition-all text-left"
                     >
-                      <div className="flex-shrink-0 h-9 w-9 rounded-full bg-muted flex items-center justify-center text-lg">
-                        {CATEGORY_EMOJI[place.category] ?? "📍"}
+                      <div className="flex-shrink-0 h-9 w-9 rounded-full bg-[#fcede3] flex items-center justify-center">
+                        <CategoryIcon category={place.category} className="w-2/5 max-w-[56px] opacity-90" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold text-foreground truncate">{place.place_name}</p>
@@ -434,7 +428,7 @@ const AddPinSheet = ({ open, onOpenChange, onPinAdd, cityContext, likedPlaces = 
                             : "bg-muted text-muted-foreground"
                         )}
                       >
-                        {CATEGORY_EMOJI[cat] ?? "📍"} {CATEGORY_LABELS[cat] ?? cat}
+                        <CategoryIcon category={cat} className="h-4 w-4 shrink-0" /> {CATEGORY_LABELS[cat] ?? cat}
                       </button>
                     ))}
                   </div>
@@ -512,7 +506,7 @@ const AddPinSheet = ({ open, onOpenChange, onPinAdd, cityContext, likedPlaces = 
                           : "bg-muted text-muted-foreground"
                       )}
                     >
-                      {CATEGORY_EMOJI[cat]} {CATEGORY_LABELS[cat]}
+                      <CategoryIcon category={cat} className="h-4 w-4 shrink-0" /> {CATEGORY_LABELS[cat]}
                     </button>
                   ))}
                 </div>

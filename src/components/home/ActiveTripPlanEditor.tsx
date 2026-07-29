@@ -16,6 +16,7 @@ import { Navigation, GripVertical, CalendarDays, Loader2 } from "lucide-react";
 import { Reorder, useDragControls } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { API_BASE } from "@/lib/platform";
+import { CategoryIcon } from "@/components/CategoryIcon";
 
 // Statyczna mapka pojedynczego miejsca (okladka karty planu). Tania (Maps Static + 24h CDN),
 // pomaranczowy pin, POI/transit ukryte. null gdy brak wspolrzednych.
@@ -41,13 +42,6 @@ function GoogleG({ className }: { className?: string }) {
 // dane po routeId, trzyma wlasny stan, renderuje hint + plan (Lista/Szczegoly) + dodawanie
 // miejsca + wizytowke + przycisk zapisu inline (NIE fixed) + popup udostepniania.
 // ReviewSummary.tsx jest zamrozony - tu replikujemy jego logike, nie importujemy.
-
-const CATEGORY_EMOJI: Record<string, string> = {
-  restaurant: "🍽️", cafe: "☕", museum: "🏛️", park: "🌳",
-  bar: "🍺", club: "🎵", monument: "🏰", gallery: "🖼️",
-  market: "🛒", viewpoint: "🌅", shopping: "🛍️", experience: "🎭",
-  walk: "🚶",
-};
 
 // Klucz kompozytowy notka per miejsce w danym dniu (route_id + place_name).
 const rkey = (routeId: string, placeName: string) => `${routeId}::${placeName}`;
@@ -643,7 +637,7 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false, onDelete, deleting 
         <div className="px-4 pt-4 pb-3">
           <div className="flex items-center gap-2 mb-2">
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white text-xs font-semibold text-foreground">
-              <span>{CATEGORY_EMOJI[pin.category] ?? "📍"}</span>{catLabel(pin.category)}
+              <CategoryIcon category={pin.category} className="h-4 w-4 shrink-0" />{catLabel(pin.category)}
             </span>
             {/* Nawiguj jako maly bialy pill dosuniety do PRAWEJ krawedzi (ml-auto).
                 Ukryte na przyszly dzien - trasa jeszcze sie nie zaczela, nie ma dokad nawigowac. */}
@@ -701,7 +695,7 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false, onDelete, deleting 
         <button onClick={() => openDetail(pin)} className="min-w-0 flex-1 text-left">
           <p className="text-sm font-bold leading-tight truncate">{pin.place_name}</p>
           <span className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white text-[11px] font-semibold text-muted-foreground">
-            <span>{CATEGORY_EMOJI[pin.category] ?? "📍"}</span>{catLabel(pin.category)}
+            <CategoryIcon category={pin.category} className="h-3.5 w-3.5 shrink-0" />{catLabel(pin.category)}
           </span>
         </button>
         <div className="flex items-center gap-1 shrink-0">

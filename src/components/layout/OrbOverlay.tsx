@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { CategoryIcon } from "@/components/CategoryIcon";
 
 interface ActiveRoute {
   id: string;
@@ -45,12 +46,6 @@ interface OrbOverlayProps {
   activeRoutes?: ActiveRoute[];
   userInterests?: string[];
 }
-
-const CATEGORY_EMOJI: Record<string, string> = {
-  restaurant: "🍽️", cafe: "☕", museum: "🏛️", bar: "🍺",
-  nightlife: "🎶", monument: "🏰", walk: "🚶", park: "🌿",
-  shopping: "🛍️", church: "⛪", gallery: "🖼️", market: "🏪",
-};
 
 const OrbOverlay = ({ onClose, isSpeaking = false, activeRoutes = [], userInterests = [] }: OrbOverlayProps) => {
   const navigate = useNavigate();
@@ -262,18 +257,18 @@ const OrbOverlay = ({ onClose, isSpeaking = false, activeRoutes = [], userIntere
 
   const sightseeingCategories = i18n.language === "en"
     ? [
-        { label: "Monuments", emoji: "🏰", query: "Show me 3 interesting monuments and landmarks" },
-        { label: "Museums", emoji: "🏛️", query: "Show me 3 interesting museums" },
-        { label: "Parks", emoji: "🌳", query: "Show me 3 beautiful parks and places for a walk" },
-        { label: "Restaurants", emoji: "🍽️", query: "Recommend 3 restaurants" },
-        { label: "Cafés", emoji: "☕", query: "Recommend 3 cafés" },
+        { label: "Monuments", id: "monument", query: "Show me 3 interesting monuments and landmarks" },
+        { label: "Museums", id: "museum", query: "Show me 3 interesting museums" },
+        { label: "Parks", id: "park", query: "Show me 3 beautiful parks and places for a walk" },
+        { label: "Restaurants", id: "restaurant", query: "Recommend 3 restaurants" },
+        { label: "Cafés", id: "cafe", query: "Recommend 3 cafés" },
       ]
     : [
-        { label: "Zabytki", emoji: "🏰", query: "Pokaż mi 3 najciekawsze zabytki" },
-        { label: "Muzea", emoji: "🏛️", query: "Pokaż mi 3 interesujące muzea" },
-        { label: "Parki", emoji: "🌳", query: "Pokaż mi 3 najpiękniejsze parki i miejsca na spacer" },
-        { label: "Restauracje", emoji: "🍽️", query: "Polecisz mi 3 restauracje?" },
-        { label: "Kawiarnie", emoji: "☕", query: "Polecisz mi 3 kawiarnie?" },
+        { label: "Zabytki", id: "monument", query: "Pokaż mi 3 najciekawsze zabytki" },
+        { label: "Muzea", id: "museum", query: "Pokaż mi 3 interesujące muzea" },
+        { label: "Parki", id: "park", query: "Pokaż mi 3 najpiękniejsze parki i miejsca na spacer" },
+        { label: "Restauracje", id: "restaurant", query: "Polecisz mi 3 restauracje?" },
+        { label: "Kawiarnie", id: "cafe", query: "Polecisz mi 3 kawiarnie?" },
       ];
 
   const handleSightseeingCategory = (baseQuery: string) => {
@@ -364,9 +359,7 @@ const OrbOverlay = ({ onClose, isSpeaking = false, activeRoutes = [], userIntere
                     const added = addedPlaces.has(place.name);
                     return (
                       <div key={i} className="rounded-2xl bg-card border border-border/50 p-4 flex items-start gap-3">
-                        <div className="text-xl flex-shrink-0 mt-0.5">
-                          {CATEGORY_EMOJI[place.category] ?? "📍"}
-                        </div>
+                        <CategoryIcon category={place.category} className="h-5 w-5 flex-shrink-0 mt-0.5" />
                         <div className="flex-1 min-w-0">
                           <p className="font-semibold text-sm leading-tight">{place.name}</p>
                           <p className="text-xs text-muted-foreground mt-0.5">{place.address}</p>
@@ -424,7 +417,7 @@ const OrbOverlay = ({ onClose, isSpeaking = false, activeRoutes = [], userIntere
                         onClick={() => handleSightseeingCategory(cat.query)}
                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-card border border-border text-xs text-foreground hover:bg-muted active:scale-95 transition-transform"
                       >
-                        {cat.emoji} {cat.label}
+                        <CategoryIcon category={cat.id} className="h-4 w-4 shrink-0" /> {cat.label}
                       </button>
                     ))}
                     <button

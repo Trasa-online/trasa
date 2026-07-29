@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { type PlanPin } from "./DayPinList";
 import AddPinSheet from "./AddPinSheet";
 import { getPhotoUrl } from "@/lib/placePhotos";
+import { CategoryIcon } from "@/components/CategoryIcon";
 import { isOpenAt, weekdayKeyFromDate, type OpeningHours } from "@/lib/openingHours";
 import PremiumBusinessCard from "@/components/business/PremiumBusinessCard";
 import { fromPin, type BusinessProfileForPreview } from "@/components/business/premiumBusinessAdapters";
@@ -202,12 +203,6 @@ function parseSuggestions(message: string): { cleanMessage: string; suggestions:
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 
-const CATEGORY_EMOJI: Record<string, string> = {
-  restaurant: "🍽️", cafe: "☕", museum: "🏛️", park: "🌿",
-  viewpoint: "🔭", shopping: "🛍️", nightlife: "🎶", monument: "🏰",
-  church: "⛪", market: "🏪", bar: "🍺", gallery: "🖼️", walk: "🚶",
-};
-
 const CATEGORY_LABEL: Record<string, string> = {
   restaurant: "Restauracja", cafe: "Kawiarnia", museum: "Muzeum", park: "Park",
   viewpoint: "Widok", shopping: "Zakupy", nightlife: "Nocne życie",
@@ -302,8 +297,8 @@ function LargeCarouselCard({
         {fetchedPhoto && !imgFailed ? (
           <img src={fetchedPhoto} alt={pin.place_name} className="w-full h-full object-cover" onError={() => setImgFailed(true)} />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-5xl bg-gradient-to-br from-stone-100 to-stone-200">
-            {CATEGORY_EMOJI[pin.category] ?? "📍"}
+          <div className="w-full h-full flex items-center justify-center bg-[#fcede3]">
+            <CategoryIcon category={pin.category} className="w-2/5 max-w-[56px] opacity-90" />
           </div>
         )}
         <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-black/50" />
@@ -371,8 +366,8 @@ function LargeCarouselCard({
       <div className="flex-[38] min-h-0 px-3.5 py-3 flex items-stretch gap-2">
         {/* Left: text content */}
         <div className="flex-1 min-w-0 flex flex-col gap-1.5">
-          <span className="text-[11px] font-medium text-muted-foreground/70 bg-muted px-2 py-0.5 rounded-full self-start">
-            {CATEGORY_EMOJI[pin.category]} {CATEGORY_LABEL[pin.category] ?? pin.category}
+          <span className="inline-flex items-center gap-1 text-[11px] font-medium text-muted-foreground/70 bg-muted px-2 py-0.5 rounded-full self-start">
+            <CategoryIcon category={pin.category} className="h-3.5 w-3.5 shrink-0" /> {CATEGORY_LABEL[pin.category] ?? pin.category}
           </span>
           <p className="text-sm font-bold leading-tight line-clamp-2 text-foreground">{pin.place_name}</p>
           {pin.description && (
@@ -1437,8 +1432,8 @@ window.addEventListener('message',function(e){
                                   className="text-left w-full px-3 py-3 rounded-full bg-muted active:scale-[0.97] transition-transform flex items-start gap-3"
                                 >
                                   {/* Category icon circle */}
-                                  <div className={`shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-lg ${CATEGORY_BG[place.category] ?? "bg-muted-foreground/10 text-muted-foreground"}`}>
-                                    {CATEGORY_EMOJI[place.category] ?? "📍"}
+                                  <div className="shrink-0 w-10 h-10 rounded-full flex items-center justify-center bg-[#fcede3]">
+                                    <CategoryIcon category={place.category} className="w-2/5 max-w-[56px] opacity-90" />
                                   </div>
                                   {/* Content */}
                                   <div className="flex-1 min-w-0">

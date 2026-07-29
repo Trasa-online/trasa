@@ -14,6 +14,7 @@ import { dateLocale } from "@/lib/dateLocale";
 import posthog from "posthog-js";
 import { API_BASE } from "@/lib/platform";
 import { removeDraft } from "@/lib/draftRoutes";
+import { CategoryIcon } from "@/components/CategoryIcon";
 import type { PlanPin } from "./DayPinList";
 const buildStaticMapUrl = (pins: { latitude: number; longitude: number }[]) => {
   if (pins.length === 0) return null;
@@ -54,13 +55,6 @@ interface RouteSummaryDialogProps {
   groupSession?: { sessionId: string; otherMemberIds: string[] };
   existingRouteId?: string;
 }
-
-const CATEGORY_EMOJI: Record<string, string> = {
-  restaurant: "🍽️", cafe: "☕", museum: "🏛️", park: "🌿",
-  bar: "🍺", club: "🎵", monument: "🏰", gallery: "🖼️",
-  market: "🛒", viewpoint: "🔭", shopping: "🛍️", experience: "🎪",
-  walk: "🚶", church: "⛪", nightlife: "🌙",
-};
 
 const RouteSummaryDialog = ({
   open,
@@ -384,7 +378,7 @@ const RouteSummaryDialog = ({
                           <div className="flex items-start justify-between gap-2">
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-1.5 mb-0.5">
-                                <span className="text-sm">{CATEGORY_EMOJI[pin.category] ?? "📍"}</span>
+                                <CategoryIcon category={pin.category} className="h-4 w-4 shrink-0" />
                                 <p className="text-[15px] font-semibold leading-tight truncate">{pin.place_name}</p>
                               </div>
                               {pin.description && (

@@ -11,6 +11,7 @@ import { getHistoryByCity } from "@/lib/exploreLikes";
 import { forwardGeocode, reverseGeocode, forwardGeocodeWithTypes } from "@/lib/googleMaps";
 import { isRouteCollection } from "@/lib/collectionThemes";
 import { MAIN_CATEGORIES, getDbCategoriesFor } from "@/lib/categories";
+import { CategoryIcon } from "@/components/CategoryIcon";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import { type MockPlace } from "@/components/plan-wizard/PlaceSwiper";
 import RouteMap from "@/components/RouteMap";
@@ -504,7 +505,7 @@ const CreateRanking = () => {
                           <div className="flex items-center gap-1.5">
                             <p className="text-sm font-bold truncate">{it.place_name}</p>
                           </div>
-                          {cat && <p className="text-[11px] text-muted-foreground truncate">{cat.emoji} {cat.label}</p>}
+                          {cat && <p className="text-[11px] text-muted-foreground truncate flex items-center gap-1"><CategoryIcon category={it.category} className="h-3 w-3 shrink-0" />{cat.label}</p>}
                         </div>
                       </button>
                       {reorder}
@@ -524,7 +525,7 @@ const CreateRanking = () => {
                         {isRoute && <span className="absolute top-3 left-3 h-8 w-8 rounded-full bg-black/55 backdrop-blur text-white text-sm font-bold flex items-center justify-center shadow-sm">{idx + 1}</span>}
                       </div>
                       <div className="px-4 pt-3 pb-3.5">
-                        {cat && <span className="inline-flex items-center gap-1 rounded-full bg-background px-2.5 py-0.5 text-[11px] font-semibold mb-1.5">{cat.emoji} {cat.label}</span>}
+                        {cat && <span className="inline-flex items-center gap-1 rounded-full bg-background px-2.5 py-0.5 text-[11px] font-semibold mb-1.5"><CategoryIcon category={it.category} className="h-3 w-3 shrink-0" />{cat.label}</span>}
                         <p className="text-base font-black leading-tight">{it.place_name}</p>
                         {it.address && <p className="text-[12px] text-muted-foreground leading-snug mt-1 truncate">{it.address}</p>}
                       </div>

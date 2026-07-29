@@ -11,6 +11,7 @@ import { getHistoryByCity } from "@/lib/exploreLikes";
 import { notify } from "@/lib/notify";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { PlacePhoto } from "@/components/PlacePhoto";
+import { CategoryIcon } from "@/components/CategoryIcon";
 import PlaceSwiper, { type MockPlace } from "@/components/plan-wizard/PlaceSwiper";
 
 // Pelnoekranowy widok dodawania miejsc do istniejacej aktywnej trasy. Zastapil drawer
@@ -405,7 +406,7 @@ const AddPlaceToTripInner = () => {
                 {MAIN_CATEGORIES.map((cat) => (
                   <div key={cat.id} className="rounded-3xl bg-white border border-black/5 shadow-sm p-4">
                     <div className="flex items-center gap-2 mb-3">
-                      <span className="text-lg">{cat.emoji}</span>
+                      <CategoryIcon category={cat.id} className="h-5 w-5 shrink-0" />
                       <p className="text-[15px] font-bold">{cat.label}</p>
                     </div>
                     <div className="flex flex-wrap gap-2">
@@ -415,7 +416,7 @@ const AddPlaceToTripInner = () => {
                           onClick={() => { setMainCategoryId(cat.id); setSubCategoryId(sub.id); }}
                           className="flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-white border border-border/60 shadow-sm text-sm font-semibold active:scale-[0.97] transition-transform"
                         >
-                          <span>{sub.emoji}</span>
+                          <CategoryIcon category={sub.id} className="h-4 w-4 shrink-0" />
                           {sub.label}
                         </button>
                       ))}

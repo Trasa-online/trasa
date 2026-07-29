@@ -12,13 +12,7 @@ import { useAuth } from "@/hooks/useAuth";
 import RouteMapSheet from "./RouteMapSheet";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import type { MockPlace } from "@/components/plan-wizard/PlaceSwiper";
-
-const CATEGORY_EMOJI: Record<string, string> = {
-  restaurant: "🍽️", cafe: "☕", museum: "🏛️", park: "🌳",
-  bar: "🍺", club: "🎵", monument: "🏰", gallery: "🖼️",
-  market: "🛒", viewpoint: "🌅", shopping: "🛍️", experience: "🎭",
-  walk: "🚶",
-};
+import { CategoryIcon } from "@/components/CategoryIcon";
 
 interface FeedPin {
   place_name: string;
@@ -84,7 +78,7 @@ function PinsSummary({ pins, onPinClick }: { pins: FeedPin[]; onPinClick: (pin: 
           onClick={() => onPinClick(pin)}
           className="flex items-center gap-1 bg-muted rounded-full px-2.5 py-1 flex-shrink-0 active:bg-muted/70 transition-colors"
         >
-          <span className="text-[11px]">{CATEGORY_EMOJI[pin.category ?? ""] ?? "📍"}</span>
+          <CategoryIcon category={pin.category} className="h-3 w-3 shrink-0" />
           <span className="text-[11px] font-medium text-foreground/80 whitespace-nowrap">{pin.place_name}</span>
         </button>
       ))}

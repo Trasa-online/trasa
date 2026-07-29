@@ -26,6 +26,7 @@ import { resolveStored } from "@/components/PlacePhoto";
 import { COLLECTION_THEMES, getTheme, collectionKind } from "@/lib/collectionThemes";
 import { addLike, getHistoryByCity } from "@/lib/exploreLikes";
 import { TrasaLogo } from "@/components/TrasaLogo";
+import { CategoryIcon } from "@/components/CategoryIcon";
 import { toast } from "sonner";
 import { PLANNING_DISABLED } from "@/lib/appMode";
 import { createWyjazdFromPlaces } from "@/lib/createWyjazd";
@@ -85,14 +86,6 @@ const CAT_LABEL: Record<string, string> = {
   walk: "Spacer", other: "Miejsce",
 };
 
-// Emoji kategorii (klucze jak CAT_LABEL) - chip kategorii na kartach jak w widoku trasy.
-const CAT_EMOJI: Record<string, string> = {
-  restaurant: "🍽️", cafe: "☕", museum: "🏛️", park: "🌳",
-  bar: "🍺", club: "🎵", monument: "🏰", gallery: "🖼️",
-  market: "🛒", viewpoint: "🌅", shopping: "🛍️", experience: "🎭",
-  walk: "🚶", other: "📍",
-};
-
 // Miniaturka miejsca z placeholderem: brak zdjecia LUB blad ladowania (np. miejsce
 // spoza bazy z wygaslym refem Google) -> ikona kategorii w szarym kwadracie (jak w
 // natywnych appkach map). Domyslnie 56px; klasy nadpisywalne przez `className`.
@@ -101,8 +94,8 @@ function PlaceThumb({ url, category, name, className }: { url?: string | null; c
   const box = className ?? "h-14 w-14 rounded-2xl shrink-0";
   if (!url || failed) {
     return (
-      <div className={`${box} bg-muted flex items-center justify-center text-2xl`}>
-        {CAT_EMOJI[category ?? "other"] ?? "📍"}
+      <div className={`${box} bg-[#fcede3] flex items-center justify-center`}>
+        <CategoryIcon category={category} className="w-2/5 max-w-[56px] opacity-90" />
       </div>
     );
   }
@@ -391,7 +384,7 @@ export function CollectionDetail({ col, onClose, onAdopt }: { col: DiscoveryColl
             </div>
             <div className="px-4 pt-4 pb-4 flex-1">
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted text-xs font-semibold text-foreground mb-2">
-                <span>{CAT_EMOJI[cat] ?? "📍"}</span>{t(`cat.${cat}`, CAT_LABEL[cat] ?? t("cat.other"))}
+                <CategoryIcon category={cat} className="h-4 w-4 shrink-0" />{t(`cat.${cat}`, CAT_LABEL[cat] ?? t("cat.other"))}
               </span>
               <p className="text-base font-black leading-tight">{item.place_name}</p>
               {item.address && <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-1">{item.address}</p>}
@@ -1070,12 +1063,12 @@ function RouteCardV({ route, onClick }: { route: PolecaneRoute; onClick: () => v
 // srednia Google, liczba miejsc z ikonka), mocny tytul, notka rozwijana po "+".
 // Reuzywana przez zestawienia i trasy (adaptery ponizej).
 function BigCard({
-  id, photo, categoryEmoji, categoryLabel, categoryClass, city,
+  id, photo, categoryKey, categoryLabel, categoryClass, city,
   placeCount = 0, title, pins = [], note, authorName, authorAvatar, localBadge = false, onClick,
 }: {
   id: string;
   photo: string | null;
-  categoryEmoji?: string;
+  categoryKey?: string;
   categoryLabel?: string;
   categoryClass?: string;   // klasy koloru badge (motyw) - inaczej neutralny szklany
   city?: string | null;
@@ -1105,7 +1098,7 @@ function BigCard({
           <div className="absolute top-3 left-3 flex flex-col items-start gap-1.5">
             {categoryLabel && (
               <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold shadow-sm ${categoryClass ?? "bg-black/55 backdrop-blur-sm text-white"}`}>
-                {categoryEmoji ? <span>{categoryEmoji}</span> : null}{categoryLabel}
+                {categoryKey ? <CategoryIcon category={categoryKey} className="h-4 w-4 shrink-0" /> : null}{categoryLabel}
               </span>
             )}
             {city && (
@@ -1193,7 +1186,7 @@ function RouteBigCard({ route, onClick }: { route: PolecaneRoute; onClick: () =>
     <BigCard
       id={route.id}
       photo={route.photo}
-      categoryEmoji={cat ? CAT_EMOJI[cat] : undefined}
+      categoryKey={cat ?? undefined}
       categoryLabel={cat ? t(`cat.${cat}`, CAT_LABEL[cat] ?? cat) : undefined}
       city={route.city}
       avgRating={route.avgRating ?? 0}
@@ -2465,7 +2458,7 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
               <div className="flex flex-wrap gap-2">
                 <button onClick={() => setCategoryFilter([])} className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-bold transition-colors ${categoryFilter.length === 0 ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground"}`}>{t("all")}</button>
                 {MAIN_CATEGORIES.flatMap((c) => c.subcategories).map((s) => (
-                  <button key={s.id} onClick={() => toggleFilter(setCategoryFilter, s.id)} className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-colors ${categoryFilter.includes(s.id) ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground"}`}>{s.emoji} {s.label}</button>
+                  <button key={s.id} onClick={() => toggleFilter(setCategoryFilter, s.id)} className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-colors ${categoryFilter.includes(s.id) ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground"}`}><CategoryIcon category={s.id} className="h-4 w-4 shrink-0" />{s.label}</button>
                 ))}
               </div>
             </div>

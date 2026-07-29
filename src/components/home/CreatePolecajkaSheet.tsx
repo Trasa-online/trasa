@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Sheet, SheetContent, SheetClose } from "@/components/ui/sheet";
 import { X, Check } from "lucide-react";
 import { toast } from "sonner";
+import { CategoryIcon } from "@/components/CategoryIcon";
 
 type Pin = {
   id: string;
@@ -21,12 +22,6 @@ type Props = {
   city: string;
   pins: Pin[];
   userId: string;
-};
-
-const CATEGORY_EMOJI: Record<string, string> = {
-  restaurant: "🍽️", cafe: "☕", museum: "🏛️", park: "🌳",
-  bar: "🍺", club: "🎵", monument: "🏰", gallery: "🖼️",
-  market: "🛒", viewpoint: "🌅", shopping: "🛍️", experience: "🎭", walk: "🚶",
 };
 
 export default function CreatePolecajkaSheet({ open, onClose, onPublished, city, pins, userId }: Props) {
@@ -148,7 +143,6 @@ export default function CreatePolecajkaSheet({ open, onClose, onPublished, city,
             <div className="space-y-2">
               {pins.map((pin) => {
                 const thumb = pin.images?.[0] ?? pin.image_url ?? null;
-                const emoji = CATEGORY_EMOJI[pin.category] ?? "📍";
                 const isOn = selected.has(pin.place_name);
                 return (
                   <div
@@ -160,11 +154,13 @@ export default function CreatePolecajkaSheet({ open, onClose, onPublished, city,
                       onClick={() => togglePin(pin.place_name)}
                       className="w-full flex items-center gap-3 p-3 text-left"
                     >
-                      <div className="h-11 w-11 rounded-xl overflow-hidden bg-muted shrink-0">
+                      <div className="h-11 w-11 rounded-xl overflow-hidden bg-[#fcede3] shrink-0">
                         {thumb ? (
                           <img src={thumb} alt={pin.place_name} className="w-full h-full object-cover" />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center text-xl">{emoji}</div>
+                          <div className="w-full h-full flex items-center justify-center">
+                            <CategoryIcon category={pin.category} className="w-2/5 max-w-[56px] opacity-90" />
+                          </div>
                         )}
                       </div>
                       <p className="flex-1 text-sm font-semibold leading-tight">{pin.place_name}</p>

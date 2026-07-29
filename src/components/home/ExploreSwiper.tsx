@@ -6,6 +6,7 @@ import { usePostHog } from "@posthog/react";
 import PlaceSwiper from "@/components/plan-wizard/PlaceSwiper";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { MAIN_CATEGORIES } from "@/lib/categories";
+import { CategoryIcon } from "@/components/CategoryIcon";
 import { useDistanceReference } from "@/lib/distanceReference";
 import { getTodayLikes } from "@/lib/exploreLikes";
 import { cn } from "@/lib/utils";
@@ -163,7 +164,7 @@ export default function ExploreSwiper({ city, active, sortNearestNonce = 0 }: { 
               {MAIN_CATEGORIES.map((cat) => (
                 <div key={cat.id}>
                   <div className="flex items-center gap-2 mb-3">
-                    <span className="text-base">{cat.emoji}</span>
+                    <CategoryIcon category={cat.id} className="h-4 w-4 shrink-0" />
                     <p className="text-sm font-bold text-foreground">{cat.label}</p>
                   </div>
                   <div className="flex flex-wrap gap-2">
@@ -178,7 +179,7 @@ export default function ExploreSwiper({ city, active, sortNearestNonce = 0 }: { 
                             on ? "bg-orange-50 border-orange-300 text-orange-700" : "bg-white text-foreground border-border/60"
                           )}
                         >
-                          <span>{sub.emoji}</span>
+                          <CategoryIcon category={sub.id} className="h-4 w-4 shrink-0" />
                           <span>{sub.label}</span>
                           {on ? <Check className="h-3.5 w-3.5 ml-0.5 text-orange-600" /> : <Plus className="h-3.5 w-3.5 ml-0.5 text-muted-foreground/50" />}
                         </button>

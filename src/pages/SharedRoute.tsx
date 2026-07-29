@@ -16,13 +16,7 @@ import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import FullCalendarPicker from "@/components/plan-wizard/FullCalendarPicker";
 import { resolveStored } from "@/components/PlacePhoto";
 import type { MockPlace } from "@/components/plan-wizard/PlaceSwiper";
-
-const CATEGORY_EMOJI: Record<string, string> = {
-  restaurant: "🍽️", cafe: "☕", museum: "🏛️", park: "🌳",
-  bar: "🍺", club: "🎵", monument: "🏰", gallery: "🖼️",
-  market: "🛒", viewpoint: "🌅", shopping: "🛍️", experience: "🎭",
-  walk: "🚶", other: "📍",
-};
+import { CategoryIcon } from "@/components/CategoryIcon";
 
 // Lekka mapa trasy (Leaflet w iframe) - bez zaleznosci od Google Maps providera,
 // dziala na samodzielnej publicznej stronie udostepnionej trasy.
@@ -319,7 +313,7 @@ export default function SharedRoute() {
         {Object.entries(groups).map(([cat, items]) => (
           <div key={cat}>
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-1.5">
-              <span>{CATEGORY_EMOJI[cat] ?? "📍"}</span>{categoryLabel(cat)}
+              <CategoryIcon category={cat} className="h-3.5 w-3.5 shrink-0" />{categoryLabel(cat)}
             </p>
             <div className="space-y-2">
               {items.map((pin: any) => (
@@ -369,7 +363,7 @@ export default function SharedRoute() {
             </div>
             <div className="px-4 pt-4">
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted text-xs font-semibold text-foreground mb-2">
-                <span>{CATEGORY_EMOJI[pin.category] ?? "📍"}</span>{categoryLabel(pin.category)}
+                <CategoryIcon category={pin.category} className="h-3.5 w-3.5 shrink-0" />{categoryLabel(pin.category)}
               </span>
               <p className="text-base font-black leading-tight">{pin.place_name}</p>
               {(() => {

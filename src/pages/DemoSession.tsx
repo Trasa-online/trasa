@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { getPhotoUrl } from "@/lib/placePhotos";
 import { MAIN_CATEGORIES } from "@/lib/categories";
+import { CategoryIcon } from "@/components/CategoryIcon";
 import { ArrowLeft, Lock, Copy, Check, Loader2, X, Globe, Home, Plus, BookOpen, Star, Camera } from "lucide-react";
 import { SwipeCard } from "@/components/plan-wizard/PlaceSwiper";
 import type { MockPlace, PlaceCategory } from "@/components/plan-wizard/PlaceSwiper";
@@ -126,22 +127,16 @@ const DEMO_CITIES_DATA = [
 ];
 const DEMO_CITIES = DEMO_CITIES_DATA.map(c => c.name);
 const DEMO_CATEGORIES = [
-  { id: "cafe",       label: "Kawiarnia",   emoji: "☕"  },
-  { id: "restaurant", label: "Restauracja", emoji: "🍽️" },
-  { id: "bar",        label: "Bar",         emoji: "🍺"  },
-  { id: "museum",     label: "Kultura",     emoji: "🏛️" },
-  { id: "park",       label: "Natura",      emoji: "🌿"  },
-  { id: "experience", label: "Rozrywka",    emoji: "🎪"  },
-  { id: "shopping",   label: "Zakupy",      emoji: "🛍️" },
+  { id: "cafe",       label: "Kawiarnia"   },
+  { id: "restaurant", label: "Restauracja" },
+  { id: "bar",        label: "Bar"         },
+  { id: "museum",     label: "Kultura"     },
+  { id: "park",       label: "Natura"      },
+  { id: "experience", label: "Rozrywka"    },
+  { id: "shopping",   label: "Zakupy"      },
 ];
 
 type Step = "city" | "location" | "mode" | "category" | "swipe" | "results" | "invite";
-
-const DEMO_CAT_EMOJI: Record<string, string> = {
-  cafe: "☕", restaurant: "🍽️", bar: "🍺", museum: "🏛️", monument: "🏛️",
-  gallery: "🎨", park: "🌿", viewpoint: "🌅", experience: "🎪", shopping: "🛍️",
-  market: "🛒", club: "🎶",
-};
 
 // ─── Convert DemoPlace → MockPlace ────────────────────────────────────────────
 
@@ -512,8 +507,8 @@ function DemoSwiper({ places, city, category, onComplete, isBiznesDemo }: {
                     {place.photo ? (
                       <img src={place.photo} alt={place.name} className="w-full h-full object-cover" />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-5xl bg-gradient-to-br from-stone-100 to-stone-200">
-                        {DEMO_CAT_EMOJI[place.category ?? ""] ?? "📍"}
+                      <div className="w-full h-full flex items-center justify-center bg-[#fcede3]">
+                        <CategoryIcon category={place.category ?? ""} className="w-2/5 max-w-[56px] opacity-90" />
                       </div>
                     )}
                     <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-black/50" />
@@ -527,7 +522,7 @@ function DemoSwiper({ places, city, category, onComplete, isBiznesDemo }: {
                   {/* Info 38% */}
                   <div className="flex-[38] min-h-0 px-3.5 py-3 flex flex-col gap-1.5">
                     <span className="text-[11px] font-medium text-muted-foreground/70 bg-muted px-2 py-0.5 rounded-full self-start">
-                      {DEMO_CAT_EMOJI[place.category ?? ""] ?? "📍"} {place.category ?? t("attraction_fallback")}
+                      <CategoryIcon category={place.category ?? ""} className="h-3.5 w-3.5 shrink-0 inline-block align-text-bottom mr-1" />{place.category ?? t("attraction_fallback")}
                     </span>
                     <p className="text-sm font-bold leading-tight line-clamp-2 text-foreground">{place.name}</p>
                     {place.description && (
@@ -669,16 +664,16 @@ function DemoSwiper({ places, city, category, onComplete, isBiznesDemo }: {
         const demoPins = routePlaces.length > 0 ? routePlaces.map((p, i) => ({
           id: p.id,
           name: p.name,
-          emoji: DEMO_CAT_EMOJI[p.category as string] ?? "📍",
+          category: p.category,
           photo: p.photo,
           rating: [5, 4, 5, 4, 5][i % 5],
           isHighlight: i === 2 % routePlaces.length,
         })) : [
-          { id: "d1", name: "Karmnik Restauracja & Cocktail Bar", emoji: "🍽️", photo: null, rating: 5, isHighlight: false },
-          { id: "d2", name: "U Fukiera - Stare Miasto", emoji: "🍽️", photo: null, rating: 4, isHighlight: false },
-          { id: "d3", name: "Bazylika Katedralna", emoji: "🏰", photo: null, rating: 5, isHighlight: true },
-          { id: "d4", name: "Fotoplastikon Warszawski", emoji: "🏛️", photo: null, rating: 4, isHighlight: false },
-          { id: "d5", name: "White Bear Coffee Marszałkowska", emoji: "☕", photo: null, rating: 5, isHighlight: false },
+          { id: "d1", name: "Karmnik Restauracja & Cocktail Bar", category: "restaurant", photo: null, rating: 5, isHighlight: false },
+          { id: "d2", name: "U Fukiera - Stare Miasto", category: "restaurant", photo: null, rating: 4, isHighlight: false },
+          { id: "d3", name: "Bazylika Katedralna", category: "monument", photo: null, rating: 5, isHighlight: true },
+          { id: "d4", name: "Fotoplastikon Warszawski", category: "museum", photo: null, rating: 4, isHighlight: false },
+          { id: "d5", name: "White Bear Coffee Marszałkowska", category: "cafe", photo: null, rating: 5, isHighlight: false },
         ];
         const dateLabel = new Date().toLocaleDateString("pl-PL", { day: "numeric", month: "long", year: "numeric" });
         return (
@@ -776,10 +771,10 @@ function DemoSwiper({ places, city, category, onComplete, isBiznesDemo }: {
                   {demoPins.map((pin) => (
                     <div key={pin.id} className="space-y-2">
                       <div className="flex items-center gap-3">
-                        <div className="h-11 w-11 rounded-xl overflow-hidden bg-muted shrink-0 flex items-center justify-center text-lg">
+                        <div className="h-11 w-11 rounded-xl overflow-hidden bg-[#fcede3] shrink-0 flex items-center justify-center">
                           {pin.photo
                             ? <img src={pin.photo} alt="" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
-                            : pin.emoji
+                            : <CategoryIcon category={pin.category} className="w-2/5 opacity-90" />
                           }
                         </div>
                         <div className="flex-1 min-w-0">
@@ -1141,7 +1136,7 @@ export default function DemoSession() {
   const catLabel = DEMO_CATEGORIES.find(c => c.id === category);
   const swipeCategoryLabel = selectedSubcats.size > 1
     ? t("n_categories", { count: selectedSubcats.size })
-    : catLabel ? `${catLabel.emoji} ${t(`demo_cat.${catLabel.id}`)}` : null;
+    : catLabel ? t(`demo_cat.${catLabel.id}`) : null;
 
   // Group matches: places liked by both devices
   const groupMatches: DemoPlace[] = mode === "group" && otherDeviceDone
@@ -1528,7 +1523,7 @@ export default function DemoSession() {
                           : "bg-card border-border/40"
                     )}
                   >
-                    <span className="text-2xl leading-none">{cat.emoji}</span>
+                    <CategoryIcon category={cat.id} className="h-6 w-6" />
                     <div className="flex-1">
                       <p className="font-semibold text-sm">{cat.label}</p>
                       <p className="text-xs text-muted-foreground">{cat.hint}</p>
@@ -1549,7 +1544,7 @@ export default function DemoSession() {
                               : "bg-card text-muted-foreground border-border/60"
                           )}
                         >
-                          <span>{sub.emoji}</span>
+                          <CategoryIcon category={sub.id} className="h-5 w-5" />
                           {sub.label}
                         </button>
                       );

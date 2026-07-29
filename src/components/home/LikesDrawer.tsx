@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { X, Heart, ThumbsDown, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { CategoryIcon } from "@/components/CategoryIcon";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -16,14 +17,6 @@ export interface PlaceReaction {
   photo_url: string | null;
   reaction: "liked" | "skipped";
 }
-
-// ─── Category config ──────────────────────────────────────────────────────────
-
-const CATEGORY_EMOJI: Record<string, string> = {
-  restaurant: "🍽️", cafe: "☕", museum: "🏛️", park: "🌳",
-  bar: "🍺", club: "🎵", monument: "🏰", gallery: "🖼️",
-  market: "🛒", viewpoint: "🌅", shopping: "🛍️", experience: "🎭",
-};
 
 // ─── PlaceRow ─────────────────────────────────────────────────────────────────
 
@@ -99,12 +92,12 @@ function PlaceRow({
         onPointerCancel={handlePointerCancel}
       >
         {/* Thumbnail */}
-        <div className="h-12 w-12 rounded-2xl overflow-hidden bg-muted flex-shrink-0">
+        <div className="h-12 w-12 rounded-2xl overflow-hidden bg-[#fcede3] flex-shrink-0">
           {place.photo_url ? (
             <img src={place.photo_url} alt="" className="w-full h-full object-cover" />
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-xl">
-              {CATEGORY_EMOJI[place.category ?? ""] ?? "📍"}
+            <div className="w-full h-full flex items-center justify-center">
+              <CategoryIcon category={place.category} className="w-2/5 max-w-[56px] opacity-90" />
             </div>
           )}
         </div>
@@ -114,7 +107,7 @@ function PlaceRow({
           <p className="text-sm font-semibold leading-tight truncate">{place.place_name}</p>
           {place.category && (
             <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full bg-muted text-[11px] text-muted-foreground font-medium">
-              {CATEGORY_EMOJI[place.category]}
+              <CategoryIcon category={place.category} className="h-3.5 w-3.5 shrink-0" />
               {t(`likes.categories.${place.category}`, { defaultValue: place.category })}
             </span>
           )}

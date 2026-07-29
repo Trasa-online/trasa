@@ -13,6 +13,7 @@ import SavePlaceSheet, { type SavePlaceInput } from "./SavePlaceSheet";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchPlaceUserPhotos, pickRandom } from "@/lib/placeUserPhotos";
 import { categoryIconSrc } from "@/lib/placeCategoryIcon";
+import { CategoryIcon } from "@/components/CategoryIcon";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import { useOnboarding } from "@/components/OnboardingGuide";
@@ -131,13 +132,6 @@ const BINGO_REPEAT_CATEGORIES = 6;    // re-show banner after dismissal (≥6 ca
 
 // ─── Bingo banner ─────────────────────────────────────────────────────────────
 
-const CATEGORY_EMOJI_MAP: Record<string, string> = {
-  restaurant: "🍽️", cafe: "☕", museum: "🏛️", bar: "🍺",
-  nightlife: "🎶", monument: "🏰", walk: "🚶", park: "🌿",
-  shopping: "🛍️", church: "⛪", gallery: "🖼️", market: "🏪",
-  viewpoint: "🌅", experience: "🎭", club: "🎵",
-};
-
 const MatchModal = ({ likedPlaces, onConfirm, onDismiss }: {
   likedPlaces: MockPlace[];
   onConfirm: () => void;
@@ -152,8 +146,8 @@ const MatchModal = ({ likedPlaces, onConfirm, onDismiss }: {
         <div className="flex items-center justify-center gap-3">
           {orbs.map((p) => (
             <div key={p.id} className="flex flex-col items-center gap-2">
-              <div className="h-14 w-14 rounded-full bg-gradient-to-br from-orange-400/20 to-amber-400/20 border border-orange-300/30 flex items-center justify-center text-2xl shadow-sm">
-                {CATEGORY_EMOJI_MAP[p.category] ?? "📍"}
+              <div className="h-14 w-14 rounded-full bg-gradient-to-br from-orange-400/20 to-amber-400/20 border border-orange-300/30 flex items-center justify-center shadow-sm">
+                <CategoryIcon category={p.category} className="w-2/5 max-w-[56px] opacity-90" />
               </div>
             </div>
           ))}
@@ -2037,11 +2031,11 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
                     onClick={() => handleTap(place)}
                     className="w-full flex items-center gap-3 p-2 rounded-2xl bg-secondary border border-border/40 shadow-sm active:scale-[0.98] transition-transform text-left"
                   >
-                    <div className="h-14 w-14 rounded-xl overflow-hidden bg-muted shrink-0 flex items-center justify-center text-2xl">
+                    <div className="h-14 w-14 rounded-xl overflow-hidden bg-[#fcede3] shrink-0 flex items-center justify-center">
                       {place.photo_url ? (
                         <img src={place.photo_url} alt={place.place_name} className="w-full h-full object-cover" loading="lazy" />
                       ) : (
-                        <span>{CATEGORY_EMOJI_MAP[place.category] ?? "📍"}</span>
+                        <CategoryIcon category={place.category} className="w-2/5 max-w-[56px] opacity-90" />
                       )}
                     </div>
                     <div className="flex-1 min-w-0">

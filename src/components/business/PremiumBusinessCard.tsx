@@ -18,7 +18,8 @@ import { type ReactNode, useRef, useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { haptics } from "@/hooks/useHaptics";
 import { createPortal } from "react-dom";
-import { MAIN_CATEGORIES, mainCategoryLabel, subcategoryLabelLocalized, subcategoryEmoji, parentMainOfSub } from "@/lib/categories";
+import { mainCategoryLabel, subcategoryLabelLocalized, parentMainOfSub } from "@/lib/categories";
+import { CategoryIcon } from "@/components/CategoryIcon";
 import { cn } from "@/lib/utils";
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { API_BASE } from "@/lib/platform";
@@ -442,7 +443,6 @@ interface SectionProps {
 // placeCategory (np. 'cafe') -> rodzic 'Jedzenie & Napoje' + 'Kawiarnia' bold.
 function CategoriesSection({ data }: SectionProps) {
   const subs = dedupSubcategories(data.subcategories);
-  let emoji: string | undefined;
   let mainText: string | null = null;
   let boldText: string | null = null;
 
@@ -452,19 +452,16 @@ function CategoriesSection({ data }: SectionProps) {
     boldText = subs[0]
       ? subcategoryLabelLocalized(subs[0])
       : (data.secondaryCategoryId && data.secondaryCategoryId !== data.mainCategoryId ? mainCategoryLabel(data.secondaryCategoryId) : null);
-    emoji = (data.placeCategory ? subcategoryEmoji(data.placeCategory) : undefined)
-      ?? MAIN_CATEGORIES.find((c) => c.id === data.mainCategoryId)?.emoji;
   } else if (data.placeCategory) {
     const parent = parentMainOfSub(data.placeCategory);
     mainText = parent?.label ?? null;
     boldText = subcategoryLabelLocalized(data.placeCategory);
-    emoji = subcategoryEmoji(data.placeCategory) ?? parent?.emoji;
   }
 
   if (!mainText && !boldText) return null;
   return (
     <div className="flex items-center gap-1.5 min-w-0 text-sm">
-      {emoji && <span className="text-[15px] leading-none shrink-0">{emoji}</span>}
+      <CategoryIcon category={data.placeCategory ?? data.mainCategoryId} className="h-4 w-4 shrink-0" />
       {mainText && <span className="text-foreground truncate">{mainText}</span>}
       {boldText && <span className="font-bold text-foreground truncate">{boldText}</span>}
     </div>
