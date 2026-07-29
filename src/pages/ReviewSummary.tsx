@@ -45,13 +45,6 @@ const GoogleGlyph = ({ className }: { className?: string }) => (
   </svg>
 );
 
-const CATEGORY_EMOJI: Record<string, string> = {
-  restaurant: "🍽️", cafe: "☕", museum: "🏛️", park: "🌳",
-  bar: "🍺", club: "🎵", monument: "🏰", gallery: "🖼️",
-  market: "🛒", viewpoint: "🌅", shopping: "🛍️", experience: "🎭",
-  walk: "🚶",
-};
-
 const CATEGORY_LABEL: Record<string, string> = {
   restaurant: "Restauracja", cafe: "Kawiarnia", museum: "Muzeum", park: "Park",
   bar: "Bar", club: "Klub", monument: "Zabytek", gallery: "Galeria",
@@ -1170,7 +1163,7 @@ const ReviewSummary = () => {
         </div>
         <div className="px-4 pt-4 pb-3">
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white text-xs font-semibold text-foreground mb-2">
-            <span>{CATEGORY_EMOJI[pin.category] ?? "📍"}</span>{catLabel(pin.category)}
+            {catLabel(pin.category)}
           </span>
           <p className="text-base font-black leading-tight">{pin.place_name}</p>
           {(() => {
@@ -1227,7 +1220,7 @@ const ReviewSummary = () => {
       <button onClick={() => openDetail(pin)} className="min-w-0 flex-1 text-left">
         <p className={`text-sm font-bold leading-tight truncate ${activeChecklist && isVisited(pin) ? "line-through" : ""}`}>{pin.place_name}</p>
         <span className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white text-[11px] font-semibold text-foreground">
-          <span>{CATEGORY_EMOJI[pin.category] ?? "📍"}</span>{catLabel(pin.category)}
+          {catLabel(pin.category)}
         </span>
       </button>
       {editable && (
@@ -1255,7 +1248,7 @@ const ReviewSummary = () => {
           <div className="min-w-0 flex-1">
             <p className={`text-sm font-bold leading-tight truncate ${activeChecklist && isVisited(pin) ? "line-through" : ""}`}>{pin.place_name}</p>
             <span className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white text-[11px] font-semibold text-foreground">
-              <span>{CATEGORY_EMOJI[pin.category] ?? "📍"}</span>{catLabel(pin.category)}
+              {catLabel(pin.category)}
             </span>
           </div>
         </button>
