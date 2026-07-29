@@ -1348,6 +1348,87 @@ const ReviewSummary = () => {
   );
 
   // ── Galeria zdjęć (grid 3-kol, jak instagram). editable -> przycisk dodawania. ──
+  // ── Arkusz "Zdjęcia do miejsca" (przypisanie z galerii / nowe) - reużywany w widoku planu i kroku Galeria. ──
+  const renderPinPickerSheet = () => {
+    if (!pinPickerId) return null;
+    const pickerPin = currentPins.find((p: any) => p.id === pinPickerId);
+    if (!pickerPin) return null;
+    const assigned: string[] = Array.isArray(pickerPin.images) ? pickerPin.images : [];
+    return (
+      <div className="fixed inset-0 z-[95] flex items-end justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setPinPickerId(null)}>
+        <div onClick={(e) => e.stopPropagation()} className="relative w-full max-w-lg bg-card rounded-t-3xl px-4 pt-3 pb-[max(16px,env(safe-area-inset-bottom))] shadow-2xl animate-in slide-in-from-bottom-4 duration-300 flex flex-col" style={{ maxHeight: "82dvh" }}>
+          <div className="mx-auto h-1 w-10 rounded-full bg-muted-foreground/25 mb-3 shrink-0" />
+          <p className="font-display text-lg font-bold text-foreground px-1 shrink-0">Zdjęcia do miejsca</p>
+          <p className="text-[13px] text-muted-foreground px-1 mt-0.5 mb-3 shrink-0 truncate">{pickerPin.place_name}</p>
+          <button
+            onClick={() => { const p = pickerPin; setPinPickerId(null); triggerPinPhotoPick(p); }}
+            className="shrink-0 w-full flex items-center justify-center gap-2 rounded-2xl bg-secondary text-secondary-foreground py-3 mb-3 text-sm font-semibold active:scale-[0.98] transition-transform"
+          >
+            <Camera className="h-4 w-4" /> Dodaj nowe zdjęcie
+          </button>
+          <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide px-1 mb-2 shrink-0">Z galerii wyjazdu</p>
+          <div className="overflow-y-auto min-h-0 flex-1">
+            {myPhotos.length === 0 ? (
+              <p className="text-center text-sm text-muted-foreground py-10 px-6">Brak zdjęć w galerii wyjazdu. Dodaj je najpierw w sekcji „Zdjęcia z wyjazdu" albo dodaj nowe powyżej.</p>
+            ) : (
+              <div className="grid grid-cols-3 gap-1.5 pb-1">
+                {myPhotos.map(({ url }) => {
+                  const src = resolveStored(url) ?? url;
+                  const isOn = assigned.includes(url);
+                  return (
+                    <button key={url} onClick={() => toggleAssignPinPhoto(pickerPin, url)} className="relative aspect-square rounded-xl overflow-hidden bg-muted active:opacity-90">
+                      <img src={src} alt="" className="w-full h-full object-cover" />
+                      {isOn && (
+                        <span className="absolute inset-0 bg-primary/40 flex items-center justify-center">
+                          <span className="h-7 w-7 rounded-full bg-primary text-white flex items-center justify-center"><Check className="h-4 w-4" strokeWidth={3} /></span>
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+          <button onClick={() => setPinPickerId(null)} className="shrink-0 w-full py-3 rounded-2xl bg-primary text-white font-bold text-sm mt-3 active:scale-[0.98] transition-transform">Gotowe</button>
+        </div>
+      </div>
+    );
+  };
+
+  // Fullscreen podgląd zdjęcia + menu (okładka / usuń) - reużywany w widoku planu i kroku Galeria.
+  const renderPhotoViewer = () => {
+    if (!viewerUrl) return null;
+    return (
+      <div className="fixed inset-0 z-[90] bg-black flex items-center justify-center" onClick={() => { setViewerUrl(null); setViewerMenuOpen(false); }}>
+        <img src={viewerUrl} alt="" className="max-w-full max-h-full object-contain" />
+        <div className="absolute flex items-center gap-2" style={{ top: "max(16px, env(safe-area-inset-top, 16px))", right: "16px" }} onClick={(e) => e.stopPropagation()}>
+          <div className="relative">
+            <button onClick={() => setViewerMenuOpen((o) => !o)} aria-label={t("a11y.more_options")} className="h-10 w-10 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center active:scale-95 transition-transform">
+              <MoreVertical className="h-5 w-5 text-white" />
+            </button>
+            {viewerMenuOpen && (
+              <div className="absolute right-0 top-12 w-56 rounded-2xl bg-card shadow-xl overflow-hidden py-1">
+                <button onClick={() => { if (viewerUrl !== heroPhoto) setCover(viewerUrl); setViewerMenuOpen(false); }} disabled={viewerUrl === heroPhoto} className="w-full px-4 py-3 text-left text-sm font-medium text-foreground flex items-center gap-2.5 active:bg-muted disabled:opacity-50">
+                  <ImageIcon className="h-4 w-4 shrink-0" />
+                  {viewerUrl === heroPhoto ? t("viewer.is_cover") : t("viewer.set_cover")}
+                  {viewerUrl === heroPhoto && <Check className="h-4 w-4 text-green-600 ml-auto" />}
+                </button>
+                {myPhotos.some((p) => p.url === viewerUrl) && (
+                  <button onClick={() => { const owner = myPhotos.find((p) => p.url === viewerUrl)?.owner ?? routeId!; removePhoto(viewerUrl, owner); setViewerMenuOpen(false); }} className="w-full px-4 py-3 text-left text-sm font-medium text-red-600 flex items-center gap-2.5 active:bg-muted border-t border-border/40">
+                    <Trash2 className="h-4 w-4 shrink-0" /> {t("viewer.remove_photo")}
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+          <button onClick={() => { setViewerUrl(null); setViewerMenuOpen(false); }} aria-label={t("a11y.close")} className="h-10 w-10 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center active:scale-95 transition-transform">
+            <X className="h-5 w-5 text-white" />
+          </button>
+        </div>
+      </div>
+    );
+  };
+
   const renderGallery = (editable: boolean) => (
     <div className="px-1 pt-1">
       <div className="grid grid-cols-3 gap-0.5">
@@ -1721,7 +1802,12 @@ const ReviewSummary = () => {
             <button onClick={() => { haptics.selection(); setPlanTab("galeria"); }} className={`flex-1 py-2 rounded-full transition-colors ${planTab === "galeria" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>Galeria</button>
           </div>
 
-          {planTab === "galeria" ? renderGallery(true) : (
+          {planTab === "galeria" ? (
+            <>
+              {renderGallery(true)}
+              {renderPinPhotoSection()}
+            </>
+          ) : (
           <>
           {/* Sub-toggle podglądu miejsc (Lista/Karty) - tylko dla aktywnego (nieukończonego) wyjazdu. */}
           {!tripCompleted && (
@@ -1845,6 +1931,10 @@ const ReviewSummary = () => {
 
         {/* Wizytowka miejsca */}
         <PlaceSwiperDetail open={!!detailPin} onOpenChange={(o) => !o && setDetailPin(null)} place={detailPin} city={route?.city} />
+
+        {/* Arkusz przypisania zdjęć + fullscreen viewer (galeria w widoku planu). */}
+        {renderPinPickerSheet()}
+        {renderPhotoViewer()}
 
         {/* Dodawanie miejsca */}
         {addingPlace && (
@@ -2362,103 +2452,9 @@ const ReviewSummary = () => {
         </div>
       )}
 
-      {/* ── Fullscreen photo viewer ──────────────────────────────────────── */}
-      {/* Arkusz "Dodaj zdjęcia do miejsca": najpierw wybór ze zdjęć galerii wyjazdu (przypisanie),
-          plus opcja dodania nowego zdjęcia z urządzenia. */}
-      {pinPickerId && (() => {
-        const pickerPin = currentPins.find((p: any) => p.id === pinPickerId);
-        if (!pickerPin) return null;
-        const assigned: string[] = Array.isArray(pickerPin.images) ? pickerPin.images : [];
-        return (
-          <div className="fixed inset-0 z-[75] flex items-end justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setPinPickerId(null)}>
-            <div onClick={(e) => e.stopPropagation()} className="relative w-full max-w-lg bg-card rounded-t-3xl px-4 pt-3 pb-[max(16px,env(safe-area-inset-bottom))] shadow-2xl animate-in slide-in-from-bottom-4 duration-300 flex flex-col" style={{ maxHeight: "82dvh" }}>
-              <div className="mx-auto h-1 w-10 rounded-full bg-muted-foreground/25 mb-3 shrink-0" />
-              <p className="font-display text-lg font-bold text-foreground px-1 shrink-0">Zdjęcia do miejsca</p>
-              <p className="text-[13px] text-muted-foreground px-1 mt-0.5 mb-3 shrink-0 truncate">{pickerPin.place_name}</p>
-              <button
-                onClick={() => { const p = pickerPin; setPinPickerId(null); triggerPinPhotoPick(p); }}
-                className="shrink-0 w-full flex items-center justify-center gap-2 rounded-2xl bg-secondary text-secondary-foreground py-3 mb-3 text-sm font-semibold active:scale-[0.98] transition-transform"
-              >
-                <Camera className="h-4 w-4" /> Dodaj nowe zdjęcie
-              </button>
-              <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide px-1 mb-2 shrink-0">Z galerii wyjazdu</p>
-              <div className="overflow-y-auto min-h-0 flex-1">
-                {myPhotos.length === 0 ? (
-                  <p className="text-center text-sm text-muted-foreground py-10 px-6">Brak zdjęć w galerii wyjazdu. Dodaj je najpierw w sekcji „Zdjęcia z wyjazdu" albo dodaj nowe powyżej.</p>
-                ) : (
-                  <div className="grid grid-cols-3 gap-1.5 pb-1">
-                    {myPhotos.map(({ url }) => {
-                      const src = resolveStored(url) ?? url;
-                      const isOn = assigned.includes(url);
-                      return (
-                        <button key={url} onClick={() => toggleAssignPinPhoto(pickerPin, url)} className="relative aspect-square rounded-xl overflow-hidden bg-muted active:opacity-90">
-                          <img src={src} alt="" className="w-full h-full object-cover" />
-                          {isOn && (
-                            <span className="absolute inset-0 bg-primary/40 flex items-center justify-center">
-                              <span className="h-7 w-7 rounded-full bg-primary text-white flex items-center justify-center"><Check className="h-4 w-4" strokeWidth={3} /></span>
-                            </span>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-              <button onClick={() => setPinPickerId(null)} className="shrink-0 w-full py-3 rounded-2xl bg-primary text-white font-bold text-sm mt-3 active:scale-[0.98] transition-transform">Gotowe</button>
-            </div>
-          </div>
-        );
-      })()}
-
-      {viewerUrl && (
-        <div className="fixed inset-0 z-[70] bg-black flex items-center justify-center" onClick={() => { setViewerUrl(null); setViewerMenuOpen(false); }}>
-          <img src={viewerUrl} alt="" className="max-w-full max-h-full object-contain" />
-          {/* Górne akcje: wielokropek (ustaw okładkę / usuń) + zamknięcie. */}
-          <div
-            className="absolute flex items-center gap-2"
-            style={{ top: "max(16px, env(safe-area-inset-top, 16px))", right: "16px" }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="relative">
-              <button
-                onClick={() => setViewerMenuOpen((o) => !o)}
-                aria-label={t("a11y.more_options")}
-                className="h-10 w-10 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center active:scale-95 transition-transform"
-              >
-                <MoreVertical className="h-5 w-5 text-white" />
-              </button>
-              {viewerMenuOpen && (
-                <div className="absolute right-0 top-12 w-56 rounded-2xl bg-card shadow-xl overflow-hidden py-1">
-                  <button
-                    onClick={() => { if (viewerUrl !== heroPhoto) setCover(viewerUrl); setViewerMenuOpen(false); }}
-                    disabled={viewerUrl === heroPhoto}
-                    className="w-full px-4 py-3 text-left text-sm font-medium text-foreground flex items-center gap-2.5 active:bg-muted disabled:opacity-50"
-                  >
-                    <ImageIcon className="h-4 w-4 shrink-0" />
-                    {viewerUrl === heroPhoto ? t("viewer.is_cover") : t("viewer.set_cover")}
-                    {viewerUrl === heroPhoto && <Check className="h-4 w-4 text-green-600 ml-auto" />}
-                  </button>
-                  {myPhotos.some((p) => p.url === viewerUrl) && (
-                    <button
-                      onClick={() => { const owner = myPhotos.find((p) => p.url === viewerUrl)?.owner ?? routeId!; removePhoto(viewerUrl, owner); setViewerMenuOpen(false); }}
-                      className="w-full px-4 py-3 text-left text-sm font-medium text-red-600 flex items-center gap-2.5 active:bg-muted border-t border-border/40"
-                    >
-                      <Trash2 className="h-4 w-4 shrink-0" /> {t("viewer.remove_photo")}
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
-            <button
-              onClick={() => { setViewerUrl(null); setViewerMenuOpen(false); }}
-              aria-label={t("a11y.close")}
-              className="h-10 w-10 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center active:scale-95 transition-transform"
-            >
-              <X className="h-5 w-5 text-white" />
-            </button>
-          </div>
-        </div>
-      )}
+      {/* Arkusz "Zdjęcia do miejsca" + fullscreen viewer (wspólne dla widoku planu i kroku Galeria). */}
+      {renderPinPickerSheet()}
+      {renderPhotoViewer()}
 
       {/* ── Fixed bottom CTA ────────────────────────────────────────────── */}
       {/* W PODSUMOWANIU (wpis zrecenzowany) nie ma dolnego CTA - wyjscie przez strzalke cofania. */}
