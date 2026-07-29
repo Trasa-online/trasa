@@ -23,6 +23,7 @@ import { cn } from "@/lib/utils";
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { API_BASE } from "@/lib/platform";
 import { Star, Clock, ChevronRight, ChevronLeft, ChevronDown, X, Maximize2, Phone, Globe, FileText, Instagram, Facebook, MapPin, Bookmark } from "lucide-react";
+import { categoryIconSrc } from "@/lib/placeCategoryIcon";
 import { parseISO, isValid, formatDistanceToNow, format, startOfMonth, addMonths } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
 import RouteMap from "@/components/RouteMap";
@@ -317,6 +318,7 @@ const FullscreenPhotos = ({ photos, startIndex, onClose }: FullscreenPhotosProps
 interface HeroPhotoCarouselProps {
   photos: string[];
   placeName: string;
+  category?: string; // kategoria miejsca - do ikony placeholdera gdy brak zdjec (stan zero)
   onExpand: (idx: number) => void;
   onClose?: () => void;
   loading?: boolean;
@@ -326,7 +328,7 @@ interface HeroPhotoCarouselProps {
   saved?: boolean;
 }
 
-function HeroPhotoCarousel({ photos, placeName, onExpand, onClose, loading, topLeftSlot, bottomLeftSlot, onSave, saved }: HeroPhotoCarouselProps) {
+function HeroPhotoCarousel({ photos, placeName, category, onExpand, onClose, loading, topLeftSlot, bottomLeftSlot, onSave, saved }: HeroPhotoCarouselProps) {
   const { t } = useTranslation("wizytowka");
   const [activeIdx, setActiveIdx] = useState(0);
   const swipeStartX = useRef<number | null>(null);
@@ -431,9 +433,12 @@ function HeroPhotoCarousel({ photos, placeName, onExpand, onClose, loading, topL
           )}
         </>
       ) : (
-        <div className="absolute inset-0 bg-muted flex flex-col items-center justify-center gap-3">
+        // Stan zero (brak zdjec): ikona kategorii na tle #fcede3 (placeholder). Gdy userzy
+        // dodadza zdjecia do miejsca w trasach, wskocza tu w miejsce ikony.
+        <div className="absolute inset-0 bg-[#fcede3] flex flex-col items-center justify-center gap-3">
+          <img src={categoryIconSrc(category)} alt="" className="w-1/4 max-w-[96px] opacity-90" draggable={false} />
           {loading && (
-            <p className="text-xs text-muted-foreground/50">{t("loading_photos")}</p>
+            <p className="text-xs text-[#c98a63]/70">{t("loading_photos")}</p>
           )}
         </div>
       )}
@@ -1195,6 +1200,7 @@ const PremiumBusinessCard = ({
           <HeroPhotoCarousel
             photos={detailPhotos}
             placeName={data.name}
+            category={data.placeCategory ?? data.mainCategoryId}
             onExpand={(idx) => handleExpand(detailPhotos, idx)}
             onClose={onClose}
             loading={detailLoading}

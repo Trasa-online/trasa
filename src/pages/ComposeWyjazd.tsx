@@ -179,11 +179,21 @@ export default function ComposeWyjazd() {
       const cities = expandCity(city);
       const { data } = await (supabase as any)
         .from("places")
-        .select("id, place_name, city, category, address, latitude, longitude, rating, photo_url")
+        .select("id, place_name, city, category, address, latitude, longitude, rating, photo_url, business_profiles(cover_image_url, gallery_urls)")
         .in("city", cities)
         .order("rating", { ascending: false, nullsFirst: false })
         .limit(20);
-      if (alive) setSuggestions(data ?? []);
+      // Okladka propozycji: biznes z wlasnym zdjeciem -> jego cover (uzupelnia lokal). Inaczej
+      // null -> ikona kategorii (zdjecia userow z tras dojda pozniej). Google backfill
+      // (place.photo_url) juz odciety, wiec go nie uzywamy.
+      const mapped = (data ?? []).map((p: any) => {
+        const bp = Array.isArray(p.business_profiles) ? p.business_profiles[0] : p.business_profiles;
+        const bizCover = bp?.cover_image_url
+          || (Array.isArray(bp?.gallery_urls) ? bp.gallery_urls.find(Boolean) : null)
+          || null;
+        return { ...p, photo_url: bizCover };
+      });
+      if (alive) setSuggestions(mapped);
     })();
     return () => { alive = false; };
   }, [city]);
