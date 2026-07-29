@@ -45,21 +45,6 @@ export interface RouteAvatars {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const Stars = ({ rating, size = "md" }: { rating: number; size?: "sm" | "md" }) => (
-  <div className="flex items-center gap-0.5">
-    {[1, 2, 3, 4, 5].map((n) => (
-      <Star
-        key={n}
-        className={cn(
-          size === "sm" ? "h-3 w-3" : "h-3.5 w-3.5",
-          n <= Math.round(rating)
-            ? "fill-yellow-400 text-yellow-400"
-            : "text-muted-foreground/30"
-        )}
-      />
-    ))}
-  </div>
-);
 
 function getHexContrast(hex: string): string {
   const clean = hex.replace("#", "");
@@ -436,7 +421,7 @@ function HeroPhotoCarousel({ photos, placeName, category, onExpand, onClose, loa
         // Stan zero (brak zdjec): ikona kategorii na tle #fcede3 (placeholder). Gdy userzy
         // dodadza zdjecia do miejsca w trasach, wskocza tu w miejsce ikony.
         <div className="absolute inset-0 bg-[#fcede3] flex flex-col items-center justify-center gap-3">
-          <img src={categoryIconSrc(category)} alt="" className="w-1/4 max-w-[96px] opacity-90" draggable={false} />
+          <img src={categoryIconSrc(category)} alt="" className="w-[12.5%] max-w-[48px] opacity-90" draggable={false} />
           {loading && (
             <p className="text-xs text-[#c98a63]/70">{t("loading_photos")}</p>
           )}
@@ -488,42 +473,15 @@ function CategoriesSection({ data }: SectionProps) {
 
 // expandable => ocena klikalna (gwiazdka/liczba) rozwija recenzje Google (progressive
 // disclosure - domyslnie schowane, zeby nie bylo stalej sciany tekstu). Afordancja: "Opinie ⌄".
-function RatingSection({ data, expandable, expanded, onToggle }: SectionProps & { expandable?: boolean; expanded?: boolean; onToggle?: () => void }) {
-  const { t } = useTranslation("wizytowka");
+// Ocena (gwiazdki Google - zewnetrzny rating do wyswietlania, dozwolony). Recenzje (opinie
+// tekstowe) usuniete z aplikacji - bez toggle "Opinie".
+function RatingSection({ data }: SectionProps) {
   if (!data.rating) return null;
-  const inner = (
-    <>
+  return (
+    <div className="flex items-center gap-1.5">
       <Star className="h-4 w-4 fill-yellow-400 text-yellow-400 shrink-0" />
       <span className="text-sm font-bold">{data.rating}</span>
-      {data.ratingCount !== undefined && data.ratingCount > 0 && (
-        <span className="text-sm text-muted-foreground">({data.ratingCount.toLocaleString("pl")})</span>
-      )}
-    </>
-  );
-  if (expandable) {
-    return (
-      <button onClick={onToggle} className="flex items-center gap-1.5 active:opacity-70 transition-opacity" aria-expanded={expanded}>
-        {inner}
-        <span className="flex items-center gap-0.5 text-xs font-semibold bg-secondary text-secondary-foreground px-2.5 py-1 rounded-full ml-1">
-          {t("reviews_toggle")}<ChevronDown className={cn("h-3.5 w-3.5 transition-transform", expanded && "rotate-180")} />
-        </span>
-      </button>
-    );
-  }
-  return <div className="flex items-center gap-1.5">{inner}</div>;
-}
-
-// Osobny chip "[Opinie ⌄]" (wg Figmy ocena jest przy kategorii, a Opinie to oddzielny toggle).
-function ReviewsToggle({ expanded, onToggle }: { expanded: boolean; onToggle: () => void }) {
-  const { t } = useTranslation("wizytowka");
-  return (
-    <button
-      onClick={onToggle}
-      aria-expanded={expanded}
-      className="flex items-center gap-0.5 text-xs font-semibold bg-secondary text-secondary-foreground px-3 py-1.5 rounded-full active:scale-95 transition-transform shrink-0"
-    >
-      {t("reviews_toggle")}<ChevronDown className={cn("h-3.5 w-3.5 transition-transform", expanded && "rotate-180")} />
-    </button>
+    </div>
   );
 }
 
@@ -978,66 +936,6 @@ function MapSection({ data, startingLocation }: SectionProps & { startingLocatio
   );
 }
 
-function ReviewsSection({ data }: SectionProps) {
-  const { t } = useTranslation("wizytowka");
-  const reviews = data.reviews ?? [];
-  if (reviews.length === 0) return null;
-  return (
-    <div className="pt-2">
-      {/* Google attribution wymagane przez ToS gdy pokazujemy Google reviews. */}
-      <div className="flex items-baseline justify-between mb-3 gap-2">
-        <h3 className="text-lg font-semibold tracking-tight">{t("reviews_title")}</h3>
-        <span className="text-[11px] text-muted-foreground shrink-0">powered by Google</span>
-      </div>
-      <div className="space-y-4">
-        {reviews.slice(0, 3).map((review, i) => (
-          <div key={i} className="space-y-1.5">
-            <div className="flex items-center gap-2.5">
-              <img
-                src={review.profile_photo_url}
-                alt={review.author_name}
-                className="h-8 w-8 rounded-full object-cover shrink-0"
-                onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-              />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold truncate">{review.author_name}</p>
-                <div className="flex items-center gap-1.5">
-                  <Stars rating={review.rating} size="sm" />
-                  <span className="text-xs text-muted-foreground">· {review.relative_time_description}</span>
-                </div>
-              </div>
-            </div>
-            <p className="text-sm text-foreground/80 leading-relaxed line-clamp-4 pl-10">{review.text}</p>
-          </div>
-        ))}
-      </div>
-      {(() => {
-        // URL strategy:
-        // - Mamy prawidłowy place_id -> direct link do reviews tab w Google Maps
-        // - Brak place_id -> search query z nazwą + adresem (zawsze dziala)
-        // Wczesniej uzywany link 'maps/place/?q=place_id:XXX' bral randomowe location
-        // gdy place_id byl pusty albo stale - teraz mamy fallback.
-        const placeIdValid = data.googlePlaceId && data.googlePlaceId.length > 10;
-        const searchQuery = [data.name, data.address, data.city].filter(Boolean).join(" ");
-        const url = placeIdValid
-          ? `https://search.google.com/local/reviews?placeid=${data.googlePlaceId}`
-          : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(searchQuery)}`;
-        return (
-          <a
-            href={url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-3 flex items-center justify-center gap-2 w-full py-2.5 rounded-2xl border border-border text-sm text-foreground"
-          >
-            <span className="font-black text-[#4285F4]">G</span>
-            {t("more_reviews_google")}
-          </a>
-        );
-      })()}
-    </div>
-  );
-}
-
 // Miniaturki social media (Instagram / Facebook) - bezposrednio pod nazwa lokalu na wizytowce.
 function SocialLinksRow({ data }: SectionProps) {
   const ig = instagramUrl(data.instagram);
@@ -1149,7 +1047,6 @@ const PremiumBusinessCard = ({
   className,
   hideEventBanner,
   hideMenu,
-  hideReviews,
   hideHours,
   hidePosts,
   hideContact,
@@ -1166,10 +1063,6 @@ const PremiumBusinessCard = ({
 }: PremiumBusinessCardProps) => {
   const { t } = useTranslation("wizytowka");
   const [fullscreen, setFullscreen] = useState<{ photos: string[]; idx: number } | null>(null);
-  // Recenzje za tapnieciem w ocene (progressive disclosure). Gdy hideReviews=true a sa
-  // recenzje, ocena staje sie klikalna i rozwija "Opinie".
-  const [reviewsOpen, setReviewsOpen] = useState(false);
-  const hasReviews = (data.reviews?.length ?? 0) > 0;
 
   // Awatary osob z tym lokalem w trasie - tylko na pelnej wizytowce (detail). Best-effort:
   // brak danych / blad = po prostu nie pokazujemy social proof. data.id = places.id (UUID).
@@ -1228,12 +1121,10 @@ const PremiumBusinessCard = ({
                 <CategoriesSection data={data} />
                 <div className="shrink-0"><RatingSection data={data} /></div>
               </div>
-              {/* Toggle Opinie + Godziny otwarcia (osobny wiersz) */}
+              {/* Godziny otwarcia (recenzje usuniete - aplikacja nie pokazuje opinii Google). */}
               <div className="flex items-center gap-x-2.5 gap-y-1.5 flex-wrap">
-                {hideReviews && hasReviews && <ReviewsToggle expanded={reviewsOpen} onToggle={() => setReviewsOpen((o) => !o)} />}
                 {!hideHours && <OpeningHoursSection data={data} />}
               </div>
-              {hideReviews && reviewsOpen && <ReviewsSection data={data} />}
               <HoursWarningBadge data={data} />
             </div>
 
@@ -1256,7 +1147,6 @@ const PremiumBusinessCard = ({
             <MapSection data={data} startingLocation={startingLocation} />
             {/* Wydarzenia POD mapa (wg Figmy: "Nadchodzace Wydarzenia"). Stan zero = brak eventow. */}
             {!hideEventBanner && <EventsSection data={data} referenceDate={referenceDate} routeAvatars={routeAvatars} />}
-            {!hideReviews && <ReviewsSection data={data} />}
             {footer}
           </div>
         </div>
@@ -1372,13 +1262,11 @@ const PremiumBusinessCard = ({
             </button>
           )}
           <h2 className="text-xl font-bold leading-tight">{data.name}</h2>
-          <RatingSection data={data} expandable={!!hideReviews && hasReviews} expanded={reviewsOpen} onToggle={() => setReviewsOpen((o) => !o)} />
-          {hideReviews && reviewsOpen && <ReviewsSection data={data} />}
+          <RatingSection data={data} />
           <AddressSection data={data} />
           {!hideHours && <OpeningHoursSection data={data} />}
           <DescriptionSection data={data} />
           {!hideEventBanner && <EventBannerSection data={data} />}
-          {!hideReviews && <ReviewsSection data={data} />}
           {/* Business mini-section: gallery + contact */}
           {data.gallery && data.gallery.length > 1 && (
             <div className="space-y-2">

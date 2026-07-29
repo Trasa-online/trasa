@@ -419,7 +419,7 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
             <img
               src={categoryIconSrc(place.category)}
               alt=""
-              className="w-2/5 max-w-[160px] opacity-90"
+              className="w-1/5 max-w-[80px] opacity-90"
               draggable={false}
             />
           </div>

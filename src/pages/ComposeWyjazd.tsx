@@ -94,7 +94,7 @@ function SortableComposeRow({ it, idx, onOpen, onRemove }: {
         {it.photo_url ? (
           <img src={it.photo_url} alt="" className="h-12 w-12 rounded-xl object-cover shrink-0" />
         ) : (
-          <div className="h-12 w-12 rounded-xl bg-[#fcede3] flex items-center justify-center shrink-0"><img src={categoryIconSrc(it.category)} alt="" className="w-3/5" draggable={false} /></div>
+          <div className="h-12 w-12 rounded-xl bg-[#fcede3] flex items-center justify-center shrink-0"><img src={categoryIconSrc(it.category)} alt="" className="w-[30%]" draggable={false} /></div>
         )}
         <div className="flex-1 min-w-0">
           <p className="text-sm font-bold truncate">{it.place_name}</p>
@@ -361,7 +361,7 @@ export default function ComposeWyjazd() {
               onFocus={() => setSearchFocused(true)}
               onBlur={() => setTimeout(() => setSearchFocused(false), 150)}
               placeholder={`Szukaj miejsca w ${city}...`}
-              className="w-full rounded-full bg-secondary text-secondary-foreground border border-border/40 pl-10 pr-9 py-3 text-base outline-none focus:ring-2 focus:ring-orange-500/40 focus:border-orange-400/50 placeholder:text-muted-foreground/60" />
+              className="w-full rounded-2xl bg-secondary text-secondary-foreground border border-border/40 pl-10 pr-9 py-3 text-base outline-none focus:ring-2 focus:ring-orange-500/40 focus:border-orange-400/50 placeholder:text-muted-foreground/60" />
             {search && (
               <button onClick={() => { setSearch(""); searchRef.current?.blur(); }} aria-label="Wyczyść" className="absolute right-3 top-1/2 -translate-y-1/2 h-6 w-6 flex items-center justify-center rounded-full text-muted-foreground active:bg-muted">
                 <X className="h-4 w-4" />
@@ -388,7 +388,7 @@ export default function ComposeWyjazd() {
                       {p.photo_url ? (
                         <img src={p.photo_url} alt={p.place_name} loading="lazy" className="w-full h-full object-cover" />
                       ) : (
-                        <div className="w-full h-full bg-[#fcede3] flex items-center justify-center"><img src={categoryIconSrc(p.category)} alt="" className="w-2/5 max-w-[64px] opacity-90" draggable={false} /></div>
+                        <div className="w-full h-full bg-[#fcede3] flex items-center justify-center"><img src={categoryIconSrc(p.category)} alt="" className="w-1/5 max-w-[32px] opacity-90" draggable={false} /></div>
                       )}
                       <span role="button" tabIndex={0} onClick={(e) => { e.stopPropagation(); addPlace(p); }} aria-label="Dodaj miejsce"
                         className="absolute top-2 right-2 h-8 w-8 rounded-full bg-primary text-white flex items-center justify-center shadow-md active:scale-90 transition-transform">
@@ -439,7 +439,7 @@ export default function ComposeWyjazd() {
                     {it.photo_url ? (
                       <img src={it.photo_url} alt={it.place_name} loading="lazy" className="w-full h-full object-cover" />
                     ) : (
-                      <div className="w-full h-full bg-[#fcede3] flex items-center justify-center"><img src={categoryIconSrc(it.category)} alt="" className="w-2/5 max-w-[80px] opacity-90" draggable={false} /></div>
+                      <div className="w-full h-full bg-[#fcede3] flex items-center justify-center"><img src={categoryIconSrc(it.category)} alt="" className="w-1/5 max-w-[40px] opacity-90" draggable={false} /></div>
                     )}
                     <span role="button" tabIndex={0} onClick={(e) => { e.stopPropagation(); removePlace(it.key); }} aria-label="Usuń miejsce"
                       className="absolute top-2 right-2 h-8 w-8 rounded-full bg-black/45 backdrop-blur text-white flex items-center justify-center active:scale-90 transition-transform">

@@ -110,7 +110,7 @@ const SavedThumb = ({ p, emoji }: { p: any; emoji: string }) => {
   // Empty-state: ikona kategorii na tle #fcede3 (zero Google, brak zdjecia usera).
   return (
     <div className="w-full h-full bg-[#fcede3] flex items-center justify-center">
-      <img src={categoryIconSrc(p.category)} alt="" className="w-2/5 max-w-[64px] opacity-90" draggable={false} />
+      <img src={categoryIconSrc(p.category)} alt="" className="w-1/5 max-w-[32px] opacity-90" draggable={false} />
     </div>
   );
 };
