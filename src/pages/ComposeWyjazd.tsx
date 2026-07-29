@@ -89,13 +89,16 @@ function SortableComposeRow({ it, idx, onOpen, onRemove }: {
       dragControls={controls}
       className="w-full flex items-center gap-2.5 rounded-2xl bg-secondary p-2.5 select-none"
     >
-      <span className="shrink-0 h-6 w-6 rounded-full bg-foreground text-background text-xs font-bold flex items-center justify-center">{idx + 1}</span>
       <button onClick={onOpen} className="flex items-center gap-2.5 min-w-0 flex-1 text-left active:opacity-90 transition-opacity">
-        {it.photo_url ? (
-          <img src={it.photo_url} alt="" className="h-12 w-12 rounded-xl object-cover shrink-0" />
-        ) : (
-          <div className="h-12 w-12 rounded-xl bg-[#fcede3] flex items-center justify-center shrink-0"><img src={categoryIconSrc(it.category)} alt="" className="w-[30%]" draggable={false} /></div>
-        )}
+        <div className="relative shrink-0">
+          {it.photo_url ? (
+            <img src={it.photo_url} alt="" className="h-12 w-12 rounded-xl object-cover" />
+          ) : (
+            <div className="h-12 w-12 rounded-xl bg-[#fcede3] flex items-center justify-center"><img src={categoryIconSrc(it.category)} alt="" className="w-[30%]" draggable={false} /></div>
+          )}
+          {/* Numer kolejnosci - overlay na miniaturce (rog gorny-lewy). */}
+          <span className="absolute top-1 left-1 h-5 w-5 rounded-full bg-black/65 backdrop-blur-sm text-white text-[11px] font-bold flex items-center justify-center">{idx + 1}</span>
+        </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-bold truncate">{it.place_name}</p>
           <div className="flex items-center gap-1.5 mt-0.5">
@@ -139,7 +142,7 @@ export default function ComposeWyjazd() {
   const [city, setCity] = useState<string>(nav.city || "Warszawa");
   const [name, setName] = useState<string>(nav.title || "");
   const [items, setItems] = useState<ComposeItem[]>(() => (nav.places ?? []).map((p: any, idx: number) => toItem({ ...p, key: p.place_id ?? p.id ?? `${p.place_name}:${idx}` })));
-  const [placeView, setPlaceView] = useState<"detail" | "list">("detail");
+  const [placeView, setPlaceView] = useState<"detail" | "list">("list");
 
   // Daty wyjazdu (start + liczba dni z FullCalendarPicker).
   const [dateSheet, setDateSheet] = useState(false);
@@ -379,11 +382,10 @@ export default function ComposeWyjazd() {
               <p className="px-4 text-sm text-muted-foreground pb-2">Brak wyników dla tej frazy.</p>
             ) : (
               <div className="flex gap-3 overflow-x-auto scrollbar-none snap-x snap-mandatory pb-1">
-                {/* Leading spacer = 16px lewy inset (w-1 4px + gap-3 12px). Padding-left bywa
-                    ignorowany w iOS WKWebView na scroll-kontenerach - spacer jest niezawodny. */}
-                <div className="shrink-0 w-1" aria-hidden="true" />
-                {proposals.slice(0, 15).map((p: any) => (
-                  <button key={p.id ?? p.key ?? p.place_name} onClick={() => openDetail(p)} className="shrink-0 w-[150px] snap-start text-left active:opacity-80 transition-opacity">
+                {proposals.slice(0, 15).map((p: any, i: number) => (
+                  // ml-4 na PIERWSZEJ karcie = 16px lewy inset (margines na elemencie dziala
+                  // niezawodnie w iOS WKWebView, w przeciwienstwie do padding-left kontenera scrolla).
+                  <button key={p.id ?? p.key ?? p.place_name} onClick={() => openDetail(p)} className={`shrink-0 w-[150px] snap-start text-left active:opacity-80 transition-opacity${i === 0 ? " ml-4" : ""}`}>
                     <div className="relative aspect-[4/3] rounded-2xl overflow-hidden bg-muted">
                       {p.photo_url ? (
                         <img src={p.photo_url} alt={p.place_name} loading="lazy" className="w-full h-full object-cover" />
