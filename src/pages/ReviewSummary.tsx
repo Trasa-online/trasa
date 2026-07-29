@@ -1841,15 +1841,7 @@ const ReviewSummary = () => {
           </div>
         </div>
 
-        {/* Footer: Nawiguj do nastepnego (nieodwiedzonego) miejsca. Ukryty po ukonczeniu wyjazdu i na zakladce Galeria. */}
-        {!tripCompleted && nextPlace && planTab === "miejsca" && (
-          <div className="shrink-0 border-t border-border/20 px-4 pt-3 pb-[max(16px,env(safe-area-inset-bottom))] bg-background">
-            <button onClick={() => navigateTo(nextPlace)} className="w-full h-12 rounded-2xl bg-primary text-white font-medium text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform shadow-md shadow-orange-500/20">
-              <span className="truncate">Nawiguj do <span className="font-bold">{nextPlace.place_name}</span></span>
-              <Navigation className="h-4 w-4 shrink-0" />
-            </button>
-          </div>
-        )}
+        {/* Footer "Nawiguj do..." usuniety - nawigacja jest per-miejsce (guziki Google w wierszach). */}
 
         {/* Wizytowka miejsca */}
         <PlaceSwiperDetail open={!!detailPin} onOpenChange={(o) => !o && setDetailPin(null)} place={detailPin} city={route?.city} />
