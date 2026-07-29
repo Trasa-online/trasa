@@ -10,7 +10,7 @@ import { format, addDays } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
 import { ORIGIN_COUNTRIES } from "@/lib/locations";
 import { expandCity } from "@/lib/cities";
-import { subcategoryLabelLocalized, MAIN_CATEGORIES } from "@/lib/categories";
+import { subcategoryLabelLocalized } from "@/lib/categories";
 import { createWyjazdFromPlaces, updateWyjazdPlaces } from "@/lib/createWyjazd";
 import { haptics } from "@/hooks/useHaptics";
 import { API_BASE } from "@/lib/platform";
@@ -18,21 +18,11 @@ import FullCalendarPicker from "@/components/plan-wizard/FullCalendarPicker";
 import RouteMap from "@/components/RouteMap";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import { fetchEnrichedPlace, type MockPlace } from "@/components/plan-wizard/PlaceSwiper";
+import { categoryIconSrc } from "@/lib/placeCategoryIcon";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 
 const PL_CITIES = ORIGIN_COUNTRIES.find((c) => c.name === "Polska")?.cities ?? ["Warszawa"];
 
-// Emoji dopasowane do typu miejsca (placeholder gdy brak zdjecia). Mapa glowna kategoria +
-// podkategoria -> emoji z definicji kategorii. Fallback: 📍.
-const CAT_EMOJI: Record<string, string> = (() => {
-  const m: Record<string, string> = {};
-  for (const c of MAIN_CATEGORIES) {
-    m[c.id] = c.emoji;
-    for (const s of c.subcategories) m[s.id] = s.emoji;
-  }
-  return m;
-})();
-const catEmoji = (cat?: string | null): string => (cat && CAT_EMOJI[cat]) || "📍";
 
 // Miejsce w kompozycji wyjazdu. place_id != null = z bazy.
 type ComposeItem = {
@@ -104,7 +94,7 @@ function SortableComposeRow({ it, idx, onOpen, onRemove }: {
         {it.photo_url ? (
           <img src={it.photo_url} alt="" className="h-12 w-12 rounded-xl object-cover shrink-0" />
         ) : (
-          <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-amber-100 to-orange-200 flex items-center justify-center text-xl shrink-0">{catEmoji(it.category)}</div>
+          <div className="h-12 w-12 rounded-xl bg-[#fcede3] flex items-center justify-center shrink-0"><img src={categoryIconSrc(it.category)} alt="" className="w-3/5" draggable={false} /></div>
         )}
         <div className="flex-1 min-w-0">
           <p className="text-sm font-bold truncate">{it.place_name}</p>
@@ -388,7 +378,7 @@ export default function ComposeWyjazd() {
                       {p.photo_url ? (
                         <img src={p.photo_url} alt={p.place_name} loading="lazy" className="w-full h-full object-cover" />
                       ) : (
-                        <div className="w-full h-full bg-gradient-to-br from-amber-100 to-orange-200 flex items-center justify-center text-2xl">{catEmoji(p.category)}</div>
+                        <div className="w-full h-full bg-[#fcede3] flex items-center justify-center"><img src={categoryIconSrc(p.category)} alt="" className="w-2/5 max-w-[64px] opacity-90" draggable={false} /></div>
                       )}
                       <span role="button" tabIndex={0} onClick={(e) => { e.stopPropagation(); addPlace(p); }} aria-label="Dodaj miejsce"
                         className="absolute top-2 right-2 h-8 w-8 rounded-full bg-primary text-white flex items-center justify-center shadow-md active:scale-90 transition-transform">
@@ -439,7 +429,7 @@ export default function ComposeWyjazd() {
                     {it.photo_url ? (
                       <img src={it.photo_url} alt={it.place_name} loading="lazy" className="w-full h-full object-cover" />
                     ) : (
-                      <div className="w-full h-full bg-gradient-to-br from-amber-100 to-orange-200 flex items-center justify-center text-3xl">{catEmoji(it.category)}</div>
+                      <div className="w-full h-full bg-[#fcede3] flex items-center justify-center"><img src={categoryIconSrc(it.category)} alt="" className="w-2/5 max-w-[80px] opacity-90" draggable={false} /></div>
                     )}
                     <span role="button" tabIndex={0} onClick={(e) => { e.stopPropagation(); removePlace(it.key); }} aria-label="Usuń miejsce"
                       className="absolute top-2 right-2 h-8 w-8 rounded-full bg-black/45 backdrop-blur text-white flex items-center justify-center active:scale-90 transition-transform">
