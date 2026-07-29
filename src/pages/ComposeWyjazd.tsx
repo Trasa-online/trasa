@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { ArrowLeft, Search, Plus, X, Star, ChevronDown, Calendar as CalendarIcon, List, GalleryHorizontalEnd, Loader2, ArrowRight, Trash2, Maximize2, GripVertical } from "lucide-react";
+import { ArrowLeft, Search, Plus, X, ChevronDown, Calendar as CalendarIcon, List, GalleryHorizontalEnd, Loader2, ArrowRight, Trash2, Maximize2, GripVertical } from "lucide-react";
 import { Reorder, useDragControls } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -100,9 +100,6 @@ function SortableComposeRow({ it, idx, onOpen, onRemove }: {
           <p className="text-sm font-bold truncate">{it.place_name}</p>
           <div className="flex items-center gap-1.5 mt-0.5">
             {it.category && <span className="text-[11px] text-muted-foreground truncate">{subcategoryLabelLocalized(it.category)}</span>}
-            {typeof it.rating === "number" && it.rating > 0 && (
-              <span className="flex items-center gap-0.5 text-[11px] text-muted-foreground shrink-0"><Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />{it.rating.toFixed(1)}</span>
-            )}
           </div>
         </div>
       </button>
@@ -381,7 +378,10 @@ export default function ComposeWyjazd() {
             ) : proposals.length === 0 ? (
               <p className="px-4 text-sm text-muted-foreground pb-2">Brak wyników dla tej frazy.</p>
             ) : (
-              <div className="flex gap-3 overflow-x-auto scrollbar-none snap-x snap-mandatory pl-4 -mr-4 pr-4 pb-1">
+              <div className="flex gap-3 overflow-x-auto scrollbar-none snap-x snap-mandatory pb-1">
+                {/* Leading spacer = 16px lewy inset (w-1 4px + gap-3 12px). Padding-left bywa
+                    ignorowany w iOS WKWebView na scroll-kontenerach - spacer jest niezawodny. */}
+                <div className="shrink-0 w-1" aria-hidden="true" />
                 {proposals.slice(0, 15).map((p: any) => (
                   <button key={p.id ?? p.key ?? p.place_name} onClick={() => openDetail(p)} className="shrink-0 w-[150px] snap-start text-left active:opacity-80 transition-opacity">
                     <div className="relative aspect-[4/3] rounded-2xl overflow-hidden bg-muted">
@@ -394,12 +394,6 @@ export default function ComposeWyjazd() {
                         className="absolute top-2 right-2 h-8 w-8 rounded-full bg-primary text-white flex items-center justify-center shadow-md active:scale-90 transition-transform">
                         <Plus className="h-5 w-5" strokeWidth={2.5} />
                       </span>
-                      {typeof p.rating === "number" && p.rating > 0 && (
-                        <span className="absolute bottom-2 left-2 flex items-center gap-0.5 px-2 py-0.5 rounded-full bg-white/90 backdrop-blur-sm shadow-sm">
-                          <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                          <span className="text-[11px] font-bold text-foreground">{p.rating.toFixed(1)}</span>
-                        </span>
-                      )}
                     </div>
                     <p className="mt-1.5 px-0.5 text-sm font-bold leading-tight line-clamp-1">{p.place_name}</p>
                     <p className="px-0.5 text-[11px] text-muted-foreground leading-tight line-clamp-1">{p.category ? subcategoryLabelLocalized(p.category) : (p.address || city)}</p>
@@ -445,12 +439,6 @@ export default function ComposeWyjazd() {
                       className="absolute top-2 right-2 h-8 w-8 rounded-full bg-black/45 backdrop-blur text-white flex items-center justify-center active:scale-90 transition-transform">
                       <X className="h-4 w-4" />
                     </span>
-                    {typeof it.rating === "number" && it.rating > 0 && (
-                      <span className="absolute bottom-2 left-2 flex items-center gap-0.5 px-2 py-0.5 rounded-full bg-white/90 backdrop-blur-sm shadow-sm">
-                        <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                        <span className="text-[11px] font-bold text-foreground">{it.rating.toFixed(1)}</span>
-                      </span>
-                    )}
                   </div>
                   <div className="px-3 py-2.5">
                     {it.category && <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-card text-[11px] font-semibold text-foreground mb-1">{subcategoryLabelLocalized(it.category)}</span>}

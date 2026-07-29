@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { createWyjazdFromPlaces } from "@/lib/createWyjazd";
 import { useNavigate, useLocation } from "react-router-dom";
-import { ArrowLeft, X, Plus, Filter, Check, Star, MapPin, ArrowRight, ChevronDown, Layers, Compass, SlidersHorizontal } from "lucide-react";
+import { ArrowLeft, X, Plus, Filter, Check, MapPin, ArrowRight, ChevronDown, Layers, Compass, SlidersHorizontal } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/hooks/useAuth";
 import { useOnboarding } from "@/components/OnboardingGuide";
@@ -570,12 +570,6 @@ const PlanWizard = () => {
                                         <div className="flex-1 min-w-0">
                                           <p className="font-semibold text-sm leading-tight truncate">{place.place_name}</p>
                                           <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
-                                            {place.rating ? (
-                                              <span className="flex items-center gap-0.5">
-                                                <Star className="h-3 w-3 text-yellow-500 fill-yellow-500" />
-                                                {place.rating}
-                                              </span>
-                                            ) : null}
                                             {place.address && <span className="truncate">{place.address.split(",")[0]}</span>}
                                           </div>
                                         </div>

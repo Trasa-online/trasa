@@ -2,7 +2,7 @@ import { useMemo, useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useLocation } from "react-router-dom";
 import { PullToRefresh } from "@/components/PullToRefresh";
-import { MapPin, Heart, Trash2, ArrowRight, ArrowLeft, Pencil, ListChecks, ChevronDown, Star, Check, Search, X, Layers, Compass, Bookmark } from "lucide-react";
+import { MapPin, Heart, Trash2, ArrowRight, ArrowLeft, Pencil, ListChecks, ChevronDown, Check, Search, X, Layers, Compass, Bookmark } from "lucide-react";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import { fetchEnrichedPlace, type MockPlace } from "@/components/plan-wizard/PlaceSwiper";
 import { parseISO, isValid, format, isToday, isYesterday } from "date-fns";
@@ -432,17 +432,11 @@ export const LikedTab = ({ selectMode = false, onExitSelection, city: controlled
               {p.description && (
                 <p className="text-xs text-muted-foreground mt-1 line-clamp-2 leading-snug">{p.description}</p>
               )}
-              <div className="flex items-end justify-between gap-2 mt-2">
-                {savedLabel ? (
+              {savedLabel && (
+                <div className="mt-2">
                   <span className="text-[11px] text-muted-foreground/70 min-w-0 truncate">Zapisano {savedLabel}</span>
-                ) : <span />}
-                {typeof p.rating === "number" && p.rating > 0 && (
-                  <div className="flex items-center gap-1 shrink-0">
-                    <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                    <span className="text-sm font-bold">{p.rating.toFixed(1)}</span>
-                  </div>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           </div>
           );

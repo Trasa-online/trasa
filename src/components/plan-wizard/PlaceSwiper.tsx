@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { MapPin, Star, ArrowRight, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, RotateCcw, CheckCircle2, Navigation, X, CalendarDays, Plus, Check, Bookmark } from "lucide-react";
+import { MapPin, ArrowRight, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, RotateCcw, CheckCircle2, Navigation, X, CalendarDays, Plus, Check, Bookmark } from "lucide-react";
 import AddCustomPlacePanel from "./AddCustomPlacePanel";
 import { haversineKm as haversineKmDist, formatDistance } from "@/lib/distance";
 import { useDistanceReference, getReference, ensureCityContext, wasAskedForCity, markAskedForCity, tryResolveOnSite } from "@/lib/distanceReference";
@@ -307,8 +307,7 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
       .catch(() => {});
   }, [offset]);
 
-  // Rating/adres/tagi z bazy (Google fallbacky odciete - zero Google).
-  const displayRating = place.rating;
+  // Adres z bazy (ocena-gwiazdki usunieta z aplikacji; Google fallbacky odciete - zero Google).
   const displayAddress = place.address;
   // Chip dystansu "X od {label}" - od wspolnego punktu odniesienia (GPS "od Ciebie" gdy
   // jestes na miejscu, albo punkt startowy "od startu" gdy planujesz). Gdy brak ref a
@@ -510,12 +509,6 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
 
         {/* Meta row */}
         <div className="flex items-center gap-3">
-          {displayRating ? (
-            <div className="flex items-center gap-1">
-              <Star className="h-3.5 w-3.5 text-yellow-400 fill-yellow-400" />
-              <span className="text-white/90 text-sm font-medium">{displayRating}</span>
-            </div>
-          ) : null}
           {place.price_level && (
             <span className="text-white/60 text-sm">{PRICE_DOTS(place.price_level)}</span>
           )}

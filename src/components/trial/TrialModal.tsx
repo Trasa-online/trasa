@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { X, Heart, Star, ArrowRight, ChevronLeft } from "lucide-react";
+import { X, Heart, ArrowRight, ChevronLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { usePostHog } from "@posthog/react";
 
@@ -199,10 +199,6 @@ function SwipeCard({
 
       <div className="absolute bottom-20 left-4 right-4">
         <div className="flex items-center gap-1.5 mb-1">
-          <span className="flex items-center gap-0.5 text-xs font-bold text-amber-400">
-            <Star className="h-3 w-3 fill-amber-400" />{place.rating.toFixed(1)}
-          </span>
-          <span className="text-white/50 text-xs">·</span>
           <span className="text-white/70 text-xs capitalize">{place.category}</span>
         </div>
         <h3 className="text-white font-black text-2xl leading-tight">{place.place_name}</h3>
@@ -433,9 +429,6 @@ export default function TrialModal({ open, onClose }: TrialModalProps) {
                     <p className="text-sm font-bold truncate">{place.place_name}</p>
                     <p className="text-xs text-muted-foreground capitalize">{place.category}</p>
                   </div>
-                  <span className="flex items-center gap-0.5 text-xs font-semibold text-amber-500 shrink-0">
-                    <Star className="h-3 w-3 fill-amber-400" />{place.rating}
-                  </span>
                 </div>
               ))}
             </div>

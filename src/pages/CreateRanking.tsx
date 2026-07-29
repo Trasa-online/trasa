@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Search, Plus, X, Loader2, Star, MapPin, ChevronRight, ChevronDown, ChevronUp, List, GalleryHorizontalEnd, Check } from "lucide-react";
+import { ArrowLeft, Search, Plus, X, Loader2, MapPin, ChevronRight, ChevronDown, ChevronUp, List, GalleryHorizontalEnd, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -503,7 +503,6 @@ const CreateRanking = () => {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-1.5">
                             <p className="text-sm font-bold truncate">{it.place_name}</p>
-                            {it.rating != null && <span className="text-[11px] text-muted-foreground flex items-center gap-0.5 shrink-0"><Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />{it.rating}</span>}
                           </div>
                           {cat && <p className="text-[11px] text-muted-foreground truncate">{cat.emoji} {cat.label}</p>}
                         </div>
@@ -523,11 +522,6 @@ const CreateRanking = () => {
                           : <div className="absolute inset-0 flex items-center justify-center text-muted-foreground"><MapPin className="h-8 w-8" /></div>}
                         {/* Numer kroku (tylko Plan - kolejnosc zwiedzania) */}
                         {isRoute && <span className="absolute top-3 left-3 h-8 w-8 rounded-full bg-black/55 backdrop-blur text-white text-sm font-bold flex items-center justify-center shadow-sm">{idx + 1}</span>}
-                        {it.rating != null && (
-                          <div className="absolute bottom-3 left-3 flex items-center gap-0.5 px-2 py-0.5 rounded-full bg-white/90 backdrop-blur-sm shadow-sm">
-                            <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" /><span className="text-[11px] font-bold">{it.rating}</span>
-                          </div>
-                        )}
                       </div>
                       <div className="px-4 pt-3 pb-3.5">
                         {cat && <span className="inline-flex items-center gap-1 rounded-full bg-background px-2.5 py-0.5 text-[11px] font-semibold mb-1.5">{cat.emoji} {cat.label}</span>}
@@ -575,11 +569,6 @@ const CreateRanking = () => {
                     <div className="relative aspect-[4/3] bg-background">
                       {s.photo_url ? <img src={s.photo_url} alt="" className="absolute inset-0 w-full h-full object-cover" loading="lazy" /> : <div className="absolute inset-0 flex items-center justify-center text-muted-foreground"><MapPin className="h-5 w-5" /></div>}
                       <div className="absolute top-1.5 right-1.5 h-6 w-6 rounded-full bg-primary text-white flex items-center justify-center shadow-sm"><Plus className="h-3.5 w-3.5" /></div>
-                      {s.rating != null && (
-                        <div className="absolute bottom-1.5 left-1.5 flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-white/90 backdrop-blur-sm">
-                          <Star className="h-2.5 w-2.5 fill-yellow-400 text-yellow-400" /><span className="text-[9px] font-bold">{s.rating}</span>
-                        </div>
-                      )}
                     </div>
                     <p className="text-xs font-bold leading-tight truncate px-2 py-2">{s.place_name}</p>
                   </button>
@@ -684,7 +673,6 @@ const CreateRanking = () => {
                 <div className="p-3.5">
                   <div className="flex items-center gap-2">
                     <p className="text-base font-black leading-tight flex-1 min-w-0">{customPreview.place_name}</p>
-                    {customPreview.rating != null && <span className="text-xs text-muted-foreground flex items-center gap-0.5 shrink-0"><Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />{customPreview.rating}</span>}
                   </div>
                   {customPreview.address && <p className="text-xs text-muted-foreground mt-1">{customPreview.address}</p>}
                 </div>

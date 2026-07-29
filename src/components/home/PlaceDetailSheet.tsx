@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { Loader2, Star, MapPin, ExternalLink } from "lucide-react";
+import { Loader2, MapPin, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getPhotoUrl, isCachedPhotoUrl, ensurePhotoCached, getCachedPhotoVariant } from "@/lib/placePhotos";
 import { GOOGLE_PLACE_DETAILS_DISABLED } from "@/lib/appMode";
@@ -199,19 +199,6 @@ const PlaceDetailSheet = ({ pin, open, onOpenChange }: PlaceDetailSheetProps) =>
                   alt={pin.place_name}
                   className="h-48 w-full object-cover rounded-2xl"
                 />
-              </div>
-            )}
-
-            {/* Rating */}
-            {details.rating && (
-              <div className="flex items-center gap-2">
-                <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
-                <span className="font-semibold text-sm">{details.rating}</span>
-                {details.user_ratings_total && (
-                  <span className="text-xs text-muted-foreground">
-                    {t("place.reviews_count", { total: details.user_ratings_total.toLocaleString() })}
-                  </span>
-                )}
               </div>
             )}
 

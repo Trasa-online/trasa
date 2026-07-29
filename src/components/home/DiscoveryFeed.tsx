@@ -8,7 +8,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import { haptics } from "@/hooks/useHaptics";
 import { supabase } from "@/integrations/supabase/client";
-import { MapPin, X, Globe, Sparkles, Star, Pencil, Trash2, ChevronRight, ChevronUp, ArrowRight, Heart, Eye, List, GalleryHorizontalEnd, Search, SlidersHorizontal, Plus, ArrowLeft, Images, Bookmark, Building2, Users, Navigation, Loader2 } from "lucide-react";
+import { MapPin, X, Globe, Sparkles, Pencil, Trash2, ChevronRight, ChevronUp, ArrowRight, Heart, Eye, List, GalleryHorizontalEnd, Search, SlidersHorizontal, Plus, ArrowLeft, Images, Bookmark, Building2, Users, Navigation, Loader2 } from "lucide-react";
 import { API_BASE } from "@/lib/platform";
 import { useDebounce } from "@/hooks/useDebounce";
 import { expandCity } from "@/lib/cities";
@@ -381,12 +381,6 @@ export function CollectionDetail({ col, onClose, onAdopt }: { col: DiscoveryColl
                     <Heart className={`h-4 w-4 ${alreadyLiked ? "fill-rose-500 text-rose-500" : "text-foreground"}`} />
                   </span>
                 )}
-                {item.rating != null && (
-                  <span className="flex items-center gap-0.5 px-2 py-1 rounded-full bg-white/90 backdrop-blur-sm shadow-sm">
-                    <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                    <span className="text-[11px] font-bold text-foreground">{item.rating}</span>
-                  </span>
-                )}
               </div>
               {!tappable && (
                 <div className="absolute bottom-3 left-3 flex items-center gap-1 px-2 py-1 rounded-full bg-foreground/55 backdrop-blur-sm">
@@ -447,12 +441,6 @@ export function CollectionDetail({ col, onClose, onAdopt }: { col: DiscoveryColl
               {tappable && <ChevronRight className="h-4 w-4 text-muted-foreground/40 shrink-0" />}
             </button>
             <div className="flex items-center gap-1.5 shrink-0">
-              {item.rating != null && (
-                <span className="flex items-center gap-0.5">
-                  <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
-                  <span className="text-[11px] font-bold text-foreground">{item.rating}</span>
-                </span>
-              )}
               {col.city && (
                 <button aria-label={alreadyLiked ? t("aria.already_saved") : t("aria.save_place")}
                   onClick={(e) => { e.stopPropagation(); e.preventDefault(); if (!alreadyLiked) likePlace(item); }}
@@ -1082,7 +1070,7 @@ function RouteCardV({ route, onClick }: { route: PolecaneRoute; onClick: () => v
 // srednia Google, liczba miejsc z ikonka), mocny tytul, notka rozwijana po "+".
 // Reuzywana przez zestawienia i trasy (adaptery ponizej).
 function BigCard({
-  id, photo, categoryEmoji, categoryLabel, categoryClass, city, avgRating = 0,
+  id, photo, categoryEmoji, categoryLabel, categoryClass, city,
   placeCount = 0, title, pins = [], note, authorName, authorAvatar, localBadge = false, onClick,
 }: {
   id: string;
@@ -1136,14 +1124,8 @@ function BigCard({
         </div>
       </button>
 
-      {/* Wiersz meta: srednia ocena Google (mala pomaranczowa gwiazdka) + liczba miejsc */}
+      {/* Wiersz meta: liczba miejsc (ocena-gwiazdki usunieta z aplikacji). */}
       <div className="mt-2.5 flex items-center gap-3 text-sm">
-        {avgRating > 0 && (
-          <span className="flex items-center gap-1">
-            <Star className="h-3.5 w-3.5 fill-[#F9662B] text-[#F9662B]" />
-            <span className="font-bold text-foreground">{avgRating.toFixed(1)}</span>
-          </span>
-        )}
         {placeCount > 0 && (
           <span className="flex items-center gap-1 text-muted-foreground">
             <MapPin className="h-3.5 w-3.5" />
@@ -2261,12 +2243,6 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
                       <div className="flex-1 min-w-0">
                         <p className="font-semibold text-sm leading-tight truncate">{p.place_name}</p>
                         <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
-                          {typeof p.rating === "number" && p.rating > 0 && (
-                            <span className="flex items-center gap-0.5">
-                              <Star className="h-3 w-3 text-yellow-500 fill-yellow-500" />
-                              {p.rating.toFixed(1)}
-                            </span>
-                          )}
                           {p.city && (
                             <span className="flex items-center gap-0.5 min-w-0">
                               <MapPin className="h-3 w-3 shrink-0" />
