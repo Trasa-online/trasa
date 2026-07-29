@@ -17,7 +17,7 @@ import { API_BASE } from "@/lib/platform";
 import FullCalendarPicker from "@/components/plan-wizard/FullCalendarPicker";
 import RouteMap from "@/components/RouteMap";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
-import type { MockPlace } from "@/components/plan-wizard/PlaceSwiper";
+import { fetchEnrichedPlace, type MockPlace } from "@/components/plan-wizard/PlaceSwiper";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 
 const PL_CITIES = ORIGIN_COUNTRIES.find((c) => c.name === "Polska")?.cities ?? ["Warszawa"];
@@ -59,6 +59,8 @@ const toItem = (p: any): ComposeItem => ({
   rating: typeof p.rating === "number" ? p.rating : null,
   photo_url: p.photo_url ?? null,
 });
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // ComposeItem / propozycja -> MockPlace (do wizytowki PlaceSwiperDetail).
 const toMockPlace = (p: any, city: string): MockPlace => ({
@@ -245,7 +247,29 @@ export default function ComposeWyjazd() {
     [next[idx], next[to]] = [next[to], next[idx]];
     return next;
   });
-  const openDetail = (p: any) => setDetailPlace(toMockPlace(p, city));
+  const openDetail = async (p: any) => {
+    const base = toMockPlace(p, city);
+    setDetailPlace(base);
+    // Wynik wyszukiwania Google ma id = "g:..." (nie UUID) - PlaceSwiperDetail nie wzbogaci
+    // go o profil biznesu (brama UUID). Dociagamy rekord z tabeli places po nazwie+miescie,
+    // zeby zaladowac pelna wizytowke biznesu (logo, kategorie, galeria, wydarzenia) zamiast
+    // "wizytowki zero". Wzorzec jak w PlanChatExperience (dopasowanie po place_name/city).
+    if (!UUID_RE.test(base.id)) {
+      try {
+        const { data } = await supabase
+          .from("places")
+          .select("id")
+          .ilike("place_name", base.place_name)
+          .ilike("city", city)
+          .limit(1)
+          .maybeSingle();
+        if (data?.id) {
+          const enriched = await fetchEnrichedPlace(data.id, new Date().toISOString().slice(0, 10));
+          if (enriched) setDetailPlace((prev) => (prev && prev.id === base.id ? enriched : prev));
+        }
+      } catch { /* brak dopasowania w bazie - zostaje wizytowka z danych Google */ }
+    }
+  };
 
   const mapPins = items
     .filter((i) => i.latitude != null && i.longitude != null)
