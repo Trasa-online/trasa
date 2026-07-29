@@ -1534,58 +1534,6 @@ const ReviewSummary = () => {
     );
   };
 
-  // ── Udostępnianie wpisu: prosty toggle (udostepnij/prywatnie) + anonim + podpis + osoby. ──
-  const renderSharing = () => (
-    <div className="px-5">
-      <div className="mt-6 pt-5 border-t border-border/30">
-        <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-3">{t("sharing.title")}</p>
-        {/* Glowny toggle: udostepnij trase, zeby pomoc innym w planowaniu. */}
-        <div className="flex items-start gap-3 rounded-2xl bg-muted p-3.5">
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-bold">{t("sharing.help_others_title")}</p>
-            <p className="text-[11px] text-muted-foreground mt-1 leading-relaxed">{t("sharing.help_others_desc")}</p>
-          </div>
-          <Switch
-            checked={isPublic}
-            onCheckedChange={(v) => setVisibility(v ? (shareAnonymous ? "anon" : "profile") : "private")}
-            className="mt-0.5 shrink-0"
-          />
-        </div>
-        {/* Gwarancja prywatnosci: galeria zdjec nigdy nie jest udostepniana. */}
-        <p className="text-[11px] text-muted-foreground mt-2.5 flex items-start gap-1.5">
-          <Lock className="h-3 w-3 shrink-0 mt-0.5 text-emerald-600" />
-          <span>{t("sharing.privacy_note")}</span>
-        </p>
-      </div>
-      {isPublic && (<>
-        {/* Anonimowo - opcjonalny pod-toggle gdy trasa jest udostepniona. */}
-        <div className="mt-3 flex items-start gap-3 rounded-2xl bg-muted p-3.5">
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-bold">{t("sharing.anon_title")}</p>
-            <p className="text-[11px] text-muted-foreground mt-1">{t("sharing.anon_desc")}</p>
-          </div>
-          <Switch
-            checked={shareAnonymous}
-            onCheckedChange={(v) => setVisibility(v ? "anon" : "profile")}
-            className="mt-0.5 shrink-0"
-          />
-        </div>
-        {/* Podpis autora (#11) */}
-        <div className="mt-4">
-          <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-1.5 block">{t("sharing.caption_label")} <span className="normal-case font-medium text-muted-foreground/50">{t("sharing.optional")}</span></label>
-          <textarea
-            value={shareCaption}
-            onChange={(e) => setShareCaption(e.target.value)}
-            onBlur={() => void saveShareMeta(shareCaption)}
-            maxLength={200}
-            rows={2}
-            placeholder={t("sharing.caption_placeholder")}
-            className="w-full rounded-2xl border border-border bg-card px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-orange-500/60 placeholder:text-muted-foreground/50 resize-none"
-          />
-        </div>
-      </>)}
-    </div>
-  );
 
   // ── Drawer udostepniania (skrot z ikony): trasa juz jest udostepniona (klik w ikone
   // publikuje), wiec pokazujemy TYLKO: anonimowo + gwarancja prywatnosci galerii + podpis. ──
@@ -2240,38 +2188,11 @@ const ReviewSummary = () => {
                     <p className="text-center text-sm text-muted-foreground py-8">{t("empty.no_places_note")}</p>
                   ) : planView === "list" ? (
                     <div className="space-y-2.5">
-                      {workingPins.map((pin: any, i: number) => {
-                        const noteVal = notes[rkey(activeRouteId!, pin.place_name)] ?? "";
-                        const open = openNotes.has(pin.id) || !!noteVal.trim();
-                        return (
-                          <div key={pin.id}>
-                            {renderPlanRow(pin, i, true)}
-                            {/* Notka per miejsce: zwinieta jako "+ Twoja sugestia" (wg Figmy), rozwija sie w textarea. */}
-                            {open ? (
-                              <div className="mt-2">
-                                <textarea
-                                  value={noteVal}
-                                  onChange={(e) => handleNoteChange(pin.place_name, e.target.value)}
-                                  onFocus={() => setNoteFocused(true)}
-                                  onBlur={() => setNoteFocused(false)}
-                                  placeholder="Twoja sugestia"
-                                  rows={2}
-                                  autoFocus={openNotes.has(pin.id) && !noteVal}
-                                  className="w-full bg-secondary/60 rounded-2xl px-4 py-3 text-sm text-foreground resize-none focus:outline-none border border-border/30 placeholder:text-muted-foreground/55"
-                                />
-                              </div>
-                            ) : (
-                              <button
-                                onClick={() => { haptics.light(); setOpenNotes((s) => new Set(s).add(pin.id)); }}
-                                className="mt-2 w-full flex items-center gap-2.5 rounded-2xl bg-secondary/60 border border-border/30 px-4 py-3 text-left active:bg-secondary transition-colors"
-                              >
-                                <Plus className="h-5 w-5 text-muted-foreground shrink-0" />
-                                <span className="text-sm text-muted-foreground">Twoja sugestia</span>
-                              </button>
-                            )}
-                          </div>
-                        );
-                      })}
+                      {/* Notki per-miejsce usuniete (2026-07-29): obnizamy friction, skupiamy sie na
+                          zdjeciach do miejsc. Zostaje tylko ogolna sugestia do calej trasy (wyzej). */}
+                      {workingPins.map((pin: any, i: number) => (
+                        <div key={pin.id}>{renderPlanRow(pin, i, true)}</div>
+                      ))}
                     </div>
                   ) : (
                     renderSwiper(true, true)
@@ -2285,7 +2206,8 @@ const ReviewSummary = () => {
                   <p className="px-5 text-[13px] text-muted-foreground mb-3 leading-relaxed">Dodaj zdjęcia z całej podróży</p>
                   {renderGallery(true)}
                   {renderPinPhotoSection()}
-                  {renderSharing()}
+                  {/* Sekcja "Podziel sie trasa" usunieta (2026-07-29): trasy sa domyslnie publiczne,
+                      obnizamy friction - user nie musi nic przelaczac. */}
                 </div>
               )}
             </>

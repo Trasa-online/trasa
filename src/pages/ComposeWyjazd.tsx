@@ -381,26 +381,28 @@ export default function ComposeWyjazd() {
             ) : proposals.length === 0 ? (
               <p className="px-4 text-sm text-muted-foreground pb-2">Brak wyników dla tej frazy.</p>
             ) : (
-              <div className="flex gap-3 overflow-x-auto scrollbar-none snap-x snap-mandatory pb-1">
-                {proposals.slice(0, 15).map((p: any, i: number) => (
-                  // ml-4 na PIERWSZEJ karcie = 16px lewy inset (margines na elemencie dziala
-                  // niezawodnie w iOS WKWebView, w przeciwienstwie do padding-left kontenera scrolla).
-                  <button key={p.id ?? p.key ?? p.place_name} onClick={() => openDetail(p)} className={`shrink-0 w-[150px] snap-start text-left active:opacity-80 transition-opacity${i === 0 ? " ml-4" : ""}`}>
-                    <div className="relative aspect-[4/3] rounded-2xl overflow-hidden bg-muted">
-                      {p.photo_url ? (
-                        <img src={p.photo_url} alt={p.place_name} loading="lazy" className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full bg-[#fcede3] flex items-center justify-center"><img src={categoryIconSrc(p.category)} alt="" className="w-1/5 max-w-[32px] opacity-90" draggable={false} /></div>
-                      )}
-                      <span role="button" tabIndex={0} onClick={(e) => { e.stopPropagation(); addPlace(p); }} aria-label="Dodaj miejsce"
-                        className="absolute top-2 right-2 h-8 w-8 rounded-full bg-primary text-white flex items-center justify-center shadow-md active:scale-90 transition-transform">
-                        <Plus className="h-5 w-5" strokeWidth={2.5} />
-                      </span>
-                    </div>
-                    <p className="mt-1.5 px-0.5 text-sm font-bold leading-tight line-clamp-1">{p.place_name}</p>
-                    <p className="px-0.5 text-[11px] text-muted-foreground leading-tight line-clamp-1">{p.category ? subcategoryLabelLocalized(p.category) : (p.address || city)}</p>
-                  </button>
-                ))}
+              // Scroll owiniety w NIE-scrollowy div z px-4: padding na normalnym bloku dziala
+              // niezawodnie w iOS WKWebView (w przeciwienstwie do padding na overflow-x kontenerze).
+              <div className="px-4">
+                <div className="flex gap-3 overflow-x-auto scrollbar-none snap-x snap-mandatory pb-1">
+                  {proposals.slice(0, 15).map((p: any) => (
+                    <button key={p.id ?? p.key ?? p.place_name} onClick={() => openDetail(p)} className="shrink-0 w-[150px] snap-start text-left active:opacity-80 transition-opacity">
+                      <div className="relative aspect-[4/3] rounded-2xl overflow-hidden bg-muted">
+                        {p.photo_url ? (
+                          <img src={p.photo_url} alt={p.place_name} loading="lazy" className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full bg-[#fcede3] flex items-center justify-center"><img src={categoryIconSrc(p.category)} alt="" className="w-1/5 max-w-[32px] opacity-90" draggable={false} /></div>
+                        )}
+                        <span role="button" tabIndex={0} onClick={(e) => { e.stopPropagation(); addPlace(p); }} aria-label="Dodaj miejsce"
+                          className="absolute top-2 right-2 h-8 w-8 rounded-full bg-primary text-white flex items-center justify-center shadow-md active:scale-90 transition-transform">
+                          <Plus className="h-5 w-5" strokeWidth={2.5} />
+                        </span>
+                      </div>
+                      <p className="mt-1.5 px-0.5 text-sm font-semibold leading-tight line-clamp-1">{p.place_name}</p>
+                      <p className="px-0.5 text-[11px] text-muted-foreground leading-tight line-clamp-1">{p.category ? subcategoryLabelLocalized(p.category) : (p.address || city)}</p>
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
           </div>
@@ -444,7 +446,7 @@ export default function ComposeWyjazd() {
                   </div>
                   <div className="px-3 py-2.5">
                     {it.category && <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-card text-[11px] font-semibold text-foreground mb-1">{subcategoryLabelLocalized(it.category)}</span>}
-                    <p className="text-sm font-black leading-tight line-clamp-1">{it.place_name}</p>
+                    <p className="text-sm font-semibold leading-tight line-clamp-1">{it.place_name}</p>
                     <p className="text-[11px] text-muted-foreground leading-tight line-clamp-1">{it.address || city}</p>
                   </div>
                 </button>
