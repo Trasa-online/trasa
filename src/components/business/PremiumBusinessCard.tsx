@@ -22,7 +22,7 @@ import { MAIN_CATEGORIES, mainCategoryLabel, subcategoryLabelLocalized, subcateg
 import { cn } from "@/lib/utils";
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { API_BASE } from "@/lib/platform";
-import { Star, Clock, ChevronRight, ChevronLeft, ChevronDown, X, Maximize2, Phone, Globe, FileText, Instagram, Facebook, MapPin, Bookmark } from "lucide-react";
+import { Clock, ChevronRight, ChevronLeft, ChevronDown, X, Maximize2, Phone, Globe, FileText, Instagram, Facebook, MapPin, Bookmark } from "lucide-react";
 import { categoryIconSrc } from "@/lib/placeCategoryIcon";
 import { parseISO, isValid, formatDistanceToNow, format, startOfMonth, addMonths } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
@@ -473,17 +473,6 @@ function CategoriesSection({ data }: SectionProps) {
 
 // expandable => ocena klikalna (gwiazdka/liczba) rozwija recenzje Google (progressive
 // disclosure - domyslnie schowane, zeby nie bylo stalej sciany tekstu). Afordancja: "Opinie ⌄".
-// Ocena (gwiazdki Google - zewnetrzny rating do wyswietlania, dozwolony). Recenzje (opinie
-// tekstowe) usuniete z aplikacji - bez toggle "Opinie".
-function RatingSection({ data }: SectionProps) {
-  if (!data.rating) return null;
-  return (
-    <div className="flex items-center gap-1.5">
-      <Star className="h-4 w-4 fill-yellow-400 text-yellow-400 shrink-0" />
-      <span className="text-sm font-bold">{data.rating}</span>
-    </div>
-  );
-}
 
 function AddressSection({ data }: SectionProps) {
   // Chip z miastem usuniety - user wybiera miasto przy planowaniu, wiec wie ktorego dotyczy miejsce.
@@ -1116,11 +1105,8 @@ const PremiumBusinessCard = ({
               <h2 className="text-2xl font-bold leading-tight">{data.name}</h2>
               <SocialLinksRow data={data} />
               <AddressSection data={data} />
-              {/* Kategoria (tekst, po lewej) + ocena (gwiazdki, po prawej) w jednym wierszu (wg Figmy). */}
-              <div className="flex items-center justify-between gap-2">
-                <CategoriesSection data={data} />
-                <div className="shrink-0"><RatingSection data={data} /></div>
-              </div>
+              {/* Kategoria miejsca (ocena-gwiazdki usunieta - nie stosujemy ocen w aplikacji). */}
+              <CategoriesSection data={data} />
               {/* Godziny otwarcia (recenzje usuniete - aplikacja nie pokazuje opinii Google). */}
               <div className="flex items-center gap-x-2.5 gap-y-1.5 flex-wrap">
                 {!hideHours && <OpeningHoursSection data={data} />}
@@ -1262,7 +1248,6 @@ const PremiumBusinessCard = ({
             </button>
           )}
           <h2 className="text-xl font-bold leading-tight">{data.name}</h2>
-          <RatingSection data={data} />
           <AddressSection data={data} />
           {!hideHours && <OpeningHoursSection data={data} />}
           <DescriptionSection data={data} />

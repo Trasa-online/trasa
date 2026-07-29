@@ -381,7 +381,7 @@ export default function ComposeWyjazd() {
             ) : proposals.length === 0 ? (
               <p className="px-4 text-sm text-muted-foreground pb-2">Brak wyników dla tej frazy.</p>
             ) : (
-              <div className="flex gap-3 overflow-x-auto scrollbar-none snap-x snap-mandatory px-4 pb-1">
+              <div className="flex gap-3 overflow-x-auto scrollbar-none snap-x snap-mandatory pl-4 -mr-4 pr-4 pb-1">
                 {proposals.slice(0, 15).map((p: any) => (
                   <button key={p.id ?? p.key ?? p.place_name} onClick={() => openDetail(p)} className="shrink-0 w-[150px] snap-start text-left active:opacity-80 transition-opacity">
                     <div className="relative aspect-[4/3] rounded-2xl overflow-hidden bg-muted">
