@@ -48,7 +48,7 @@ const JournalTab = ({ userId, city: cityFilter }: JournalTabProps) => {
       // Own routes (all statuses)
       const { data: ownRoutes } = await (supabase as any)
         .from("routes")
-        .select("id, title, city, day_number, start_date, end_date, folder_id, group_session_id, ai_summary, ai_highlight, review_photos, is_shared, overall_rating, views, new_for_users, chat_status, trip_type, plan_finalized")
+        .select("id, title, city, day_number, start_date, end_date, folder_id, group_session_id, ai_summary, ai_highlight, review_photos, cover_url, is_shared, overall_rating, views, new_for_users, chat_status, trip_type, plan_finalized")
         .eq("user_id", userId)
         .order("updated_at", { ascending: false });
 
@@ -63,7 +63,7 @@ const JournalTab = ({ userId, city: cityFilter }: JournalTabProps) => {
         const sessionIds = memberRows.map((m: any) => m.session_id);
         const { data } = await (supabase as any)
           .from("routes")
-          .select("id, title, city, day_number, start_date, end_date, folder_id, ai_summary, ai_highlight, review_photos, new_for_users, chat_status, group_session_id, trip_type, plan_finalized")
+          .select("id, title, city, day_number, start_date, end_date, folder_id, ai_summary, ai_highlight, review_photos, cover_url, new_for_users, chat_status, group_session_id, trip_type, plan_finalized")
           .in("group_session_id", sessionIds)
           .neq("user_id", userId)
           .order("updated_at", { ascending: false });
@@ -312,7 +312,9 @@ const JournalTab = ({ userId, city: cityFilter }: JournalTabProps) => {
   // po prawej tytul, miasto + data, liczba miejsc i awatary uczestnikow (dla grup).
   const renderTripCard = (entry: any, onOpen: () => void, _inProgress = false) => {
     const validPhotos = (entry.review_photos ?? []).filter((url: any) => !!url && typeof url === "string" && url.trim() !== "");
-    const thumb = validPhotos[0] ?? (coverMap as Record<string, string>)[entry.id] ?? getRandomPinPlaceholder(entry.id);
+    // Okladka: recznie wybrana (cover_url) ma pierwszenstwo, potem 1. zdjecie galerii, potem 1. pin.
+    const chosenCover = resolveStored(entry.cover_url);
+    const thumb = chosenCover ?? validPhotos[0] ?? (coverMap as Record<string, string>)[entry.id] ?? getRandomPinPlaceholder(entry.id);
     const startISO = entry.start_date;
     const endISO = entry._lastDate ?? entry.end_date ?? entry.start_date;
     const _d = startISO ? parseISO(startISO) : null;

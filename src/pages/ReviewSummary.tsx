@@ -647,6 +647,15 @@ const ReviewSummary = () => {
     return out;
   }, [photos, sortedDays, routeId]);
 
+  // Opcje okladki wyjazdu: NAJPIERW Twoje zdjecia z galerii (z etykieta miejsca gdy przypisane),
+  // potem zdjecia miejsc trasy (bez duplikatow). Uzywane w arkuszu wyboru okladki.
+  const coverPickerOptions = useMemo(() => {
+    const gallery = myPhotos.map(({ url }) => ({ id: `g:${url}`, name: photoPlaceLabel.get(url) ?? "Twoje zdjęcie", url: resolveStored(url) ?? url }));
+    const seen = new Set(gallery.map((o) => o.url));
+    const places = coverOptions.filter((o) => !seen.has(o.url));
+    return [...gallery, ...places];
+  }, [myPhotos, coverOptions, photoPlaceLabel]);
+
   // Okladka wpisu = pierwsze zdjecie primary route (myPhotos[0]). Przenosi url na
   // poczatek review_photos primary route (dziala tez dla zdjec z innych dni/grupy).
   const setCover = async (url: string) => {
@@ -1730,8 +1739,8 @@ const ReviewSummary = () => {
           <div className="relative w-full aspect-[16/10] overflow-hidden bg-gradient-to-br from-orange-400 via-rose-400 to-purple-500">
             <img src={heroShowMap && heroMapCover ? heroMapCover : heroPhoto} alt="" className="absolute inset-0 w-full h-full object-cover" />
             <div className={`absolute inset-0 bg-gradient-to-b from-black/15 via-transparent to-black/55 ${heroShowMap ? "opacity-40" : ""}`} />
-            {/* Zmiana okladki: wybor zdjecia sposrod miejsc trasy (tylko wlasciciel, gdy pokazane zdjecie) */}
-            {!heroShowMap && coverOptions.length > 0 && (
+            {/* Zmiana okladki: wybor zdjecia z galerii usera LUB miejsc trasy (tylko wlasciciel, gdy pokazane zdjecie) */}
+            {!heroShowMap && coverPickerOptions.length > 0 && (
               <button
                 onClick={() => setCoverPickerOpen(true)}
                 aria-label="Zmień okładkę wyjazdu"
@@ -1946,10 +1955,10 @@ const ReviewSummary = () => {
                 <X className="h-4 w-4" />
               </button>
               <p className="text-lg font-bold pr-8">Okładka wyjazdu</p>
-              <p className="text-sm text-muted-foreground mt-1 mb-4">Wybierz zdjęcie miejsca na okładkę.</p>
+              <p className="text-sm text-muted-foreground mt-1 mb-4">Wybierz zdjęcie na okładkę - z Twojej galerii albo z miejsc trasy.</p>
               <div className="overflow-y-auto -mx-1 px-1" style={{ maxHeight: "62dvh" }}>
                 <div className="grid grid-cols-3 gap-2 pb-1">
-                  {coverOptions.map((opt) => {
+                  {coverPickerOptions.map((opt) => {
                     const isCurrent = heroPhoto === opt.url;
                     return (
                       <button
