@@ -113,6 +113,8 @@ const ReviewSummary = () => {
   // Miejsca+notki | Zdjecia). Edycja (olowek) wraca do steppera. localReviewed = optymistyczne
   // przejscie do podsumowania zanim refetch route zaktualizuje plan_finalized.
   const [summaryTab, setSummaryTab] = useState<"plan" | "galeria">("plan");
+  // Widok "Plan wyjazdu" (aktywny): top-toggle Miejsca | Galeria (komplet: plan+mapa albo zdjęcia).
+  const [planTab, setPlanTab] = useState<"miejsca" | "galeria">("miejsca");
   const [editingStepper, setEditingStepper] = useState(false);
   // Fokus w polu notki -> chowamy dolny pasek CTA (klawiatura zabiera miejsce, guziki przeszkadzaja).
   const [noteFocused, setNoteFocused] = useState(false);
@@ -1699,15 +1701,17 @@ const ReviewSummary = () => {
             </button>
           </div>
 
-          {/* MIEJSCA + toggle. Aktywny: Lista/Karty. Ukonczony: Notki/Galeria. */}
-          <div className="flex items-center justify-between pt-8 pb-3">
-            <p className={sectionHeadingCls}>Miejsca</p>
-            {tripCompleted ? (
-              <div className="flex rounded-full bg-muted p-0.5 text-xs font-bold">
-                <button onClick={() => setMemoTab("notki")} className={`px-3 py-1.5 rounded-full transition-colors ${memoTab === "notki" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>Notki</button>
-                <button onClick={() => setMemoTab("galeria")} className={`px-3 py-1.5 rounded-full transition-colors ${memoTab === "galeria" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>Galeria</button>
-              </div>
-            ) : (
+          {/* Top-toggle Miejsca | Galeria - komplet planu na jednym widoku (plan+mapa albo zdjęcia). */}
+          <div className="flex rounded-full bg-muted p-0.5 mt-8 mb-4 text-sm font-bold">
+            <button onClick={() => { haptics.selection(); setPlanTab("miejsca"); }} className={`flex-1 py-2 rounded-full transition-colors ${planTab === "miejsca" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>Miejsca</button>
+            <button onClick={() => { haptics.selection(); setPlanTab("galeria"); }} className={`flex-1 py-2 rounded-full transition-colors ${planTab === "galeria" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>Galeria</button>
+          </div>
+
+          {planTab === "galeria" ? renderGallery(true) : (
+          <>
+          {/* Sub-toggle podglądu miejsc (Lista/Karty) - tylko dla aktywnego (nieukończonego) wyjazdu. */}
+          {!tripCompleted && (
+            <div className="flex items-center justify-end pb-3">
               <div className="flex rounded-full bg-muted p-0.5">
                 <button onClick={() => setPlanView("list")} aria-label={t("a11y.list_view")} className={`px-2.5 py-1.5 rounded-full transition-colors ${planView === "list" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
                   <List className="h-4 w-4" />
@@ -1716,13 +1720,10 @@ const ReviewSummary = () => {
                   <GalleryHorizontalEnd className="h-4 w-4" />
                 </button>
               </div>
-            )}
-          </div>
+            </div>
+          )}
 
-          {/* Ukonczony + Galeria -> zdjecia wyjazdu (upload). */}
-          {tripCompleted && memoTab === "galeria" ? (
-            renderGallery(true)
-          ) : tripCompleted ? (
+          {tripCompleted ? (
             /* Ukonczony + Notki -> kazde miejsce z polem notatki usera. */
             <div className="flex flex-col gap-3">
               {workingPins.map((pin: any, i: number) => (
@@ -1821,11 +1822,13 @@ const ReviewSummary = () => {
               </button>
             </div>
           )}
+          </>
+          )}
           </div>
         </div>
 
-        {/* Footer: Nawiguj do nastepnego (nieodwiedzonego) miejsca. Ukryty po ukonczeniu wyjazdu. */}
-        {!tripCompleted && nextPlace && (
+        {/* Footer: Nawiguj do nastepnego (nieodwiedzonego) miejsca. Ukryty po ukonczeniu wyjazdu i na zakladce Galeria. */}
+        {!tripCompleted && nextPlace && planTab === "miejsca" && (
           <div className="shrink-0 border-t border-border/20 px-4 pt-3 pb-[max(16px,env(safe-area-inset-bottom))] bg-background">
             <button onClick={() => navigateTo(nextPlace)} className="w-full h-12 rounded-2xl bg-primary text-white font-medium text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform shadow-md shadow-orange-500/20">
               <span className="truncate">Nawiguj do <span className="font-bold">{nextPlace.place_name}</span></span>
