@@ -259,6 +259,16 @@ const ReviewSummary = () => {
     [allPins, activeRouteId],
   );
 
+  // Mapa: url zdjęcia -> nazwa miejsca, do którego zostało przypisane (pins.images). Badge w galerii.
+  const photoPlaceLabel = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const pin of currentPins) {
+      const imgs = Array.isArray(pin.images) ? pin.images : [];
+      for (const u of imgs) if (u && !m.has(u)) m.set(u, pin.place_name);
+    }
+    return m;
+  }, [currentPins]);
+
   // Zdjecia miejsc trasy do wyboru jako okladka wyjazdu (tylko te z rozwiazywalnym URL-em).
   const coverOptions = useMemo(
     () => currentPins
@@ -1352,7 +1362,11 @@ const ReviewSummary = () => {
           <button key={`${item.url}-${idx}`} onClick={() => { setViewerUrl(item.url); setViewerMenuOpen(false); }}
             className="relative aspect-square overflow-hidden bg-muted active:opacity-90">
             <img src={item.url} alt="" className="w-full h-full object-cover" />
-            {!item.mine && (
+            {/* Badge: nazwa miejsca, do którego zdjęcie zostało przypisane (pins.images). */}
+            {photoPlaceLabel.get(item.url) && (
+              <span className="absolute bottom-1 left-1 right-1 bg-black/60 backdrop-blur-sm rounded px-1.5 py-0.5 text-[9px] font-medium text-white truncate">{photoPlaceLabel.get(item.url)}</span>
+            )}
+            {!item.mine && !photoPlaceLabel.get(item.url) && (
               <span className="absolute bottom-1 left-1 bg-black/55 backdrop-blur-sm rounded px-1.5 py-0.5 text-[9px] font-medium text-white max-w-[90%] truncate">{item.username}</span>
             )}
             {editable && item.mine && (
