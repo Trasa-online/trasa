@@ -487,7 +487,9 @@ const JournalTab = ({ userId, city: cityFilter }: JournalTabProps) => {
           emptyBox("🧳", "Brak tras", "Twoje trasy - najbliższe i minione - pojawią się tutaj.")
         ) : (
           <div className="divide-y divide-border/50">
-            {active.map((entry: any) => renderTripCard(entry, () => openEntry(entry, true), true))}
+            {/* Klik w trasę = widok "Plan wyjazdu" (read/overview), NIE od razu edycja sugestii.
+                Edycję (Sugestie/Galeria) user wywołuje z widoku planu. */}
+            {active.map((entry: any) => renderTripCard(entry, () => openEntry(entry), true))}
             {postcards.map((entry: any) => renderTripCard(entry, () => openEntry(entry)))}
           </div>
         )}
