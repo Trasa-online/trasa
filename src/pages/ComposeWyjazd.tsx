@@ -87,6 +87,10 @@ function SortableComposeRow({ it, idx, onOpen, onRemove }: {
       value={it}
       dragListener={false}
       dragControls={controls}
+      // Bez animacji layoutu (spring "zwijania/rozwijania" przy dodaniu/usunieciu miejsca) -
+      // zmiany natychmiastowe (duration 0). Drag & drop nadal dziala (dragControls), a
+      // przestawianie w trakcie przeciagania jest natychmiastowe zamiast springowac.
+      transition={{ duration: 0 }}
       className="w-full flex items-center gap-2.5 rounded-2xl bg-secondary p-2.5 select-none"
     >
       <button onClick={onOpen} className="flex items-center gap-2.5 min-w-0 flex-1 text-left active:opacity-90 transition-opacity">
