@@ -18,6 +18,7 @@ import { getHistoryByCity, removeLikeFromCity, addLike, clearCity, updateLikePho
 import { deferDelete } from "@/lib/deferDelete";
 import { getSubcategoryLabel, subcategoryLabelLocalized, MAIN_CATEGORIES } from "@/lib/categories";
 import { getPhotoUrl } from "@/lib/placePhotos";
+import { categoryIconSrc } from "@/lib/placeCategoryIcon";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import { PLANNING_DISABLED, GOOGLE_PLACE_DETAILS_DISABLED } from "@/lib/appMode";
@@ -106,8 +107,11 @@ const SavedThumb = ({ p, emoji }: { p: any; emoji: string }) => {
   }, [p.photo_url, p.city, p.place_name, p.latitude, p.longitude]);
 
   if (url) return <img src={url} alt={p.place_name} className="w-full h-full object-cover" loading="lazy" />;
+  // Empty-state: ikona kategorii na tle #fcede3 (zero Google, brak zdjecia usera).
   return (
-    <div className="w-full h-full bg-gradient-to-br from-amber-100 to-orange-200 flex items-center justify-center text-2xl">{emoji}</div>
+    <div className="w-full h-full bg-[#fcede3] flex items-center justify-center">
+      <img src={categoryIconSrc(p.category)} alt="" className="w-2/5 max-w-[64px] opacity-90" draggable={false} />
+    </div>
   );
 };
 

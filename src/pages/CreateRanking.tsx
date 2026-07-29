@@ -9,7 +9,6 @@ import { ORIGIN_COUNTRIES } from "@/lib/locations";
 import { expandCity } from "@/lib/cities";
 import { getHistoryByCity } from "@/lib/exploreLikes";
 import { forwardGeocode, reverseGeocode, forwardGeocodeWithTypes } from "@/lib/googleMaps";
-import { getPhotoUrl } from "@/lib/placePhotos";
 import { isRouteCollection } from "@/lib/collectionThemes";
 import { MAIN_CATEGORIES, getDbCategoriesFor } from "@/lib/categories";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
@@ -77,23 +76,18 @@ async function fetchGooglePlace(opts: { name?: string; address?: string; lat?: n
       if (rev) { name = rev.placeName; address = address ?? rev.fullAddress; }
     }
     if (!name && lat == null) return null;
-    // Wzbogacenie przez proxy (rating, user_ratings_total, photos, formatted_address, place_id).
-    const { data } = await supabase.functions.invoke("google-places-proxy", {
-      body: { placeName: name, latitude: lat, longitude: lng, city: opts.city },
-    });
-    const r = (data as any)?.result;
-    const photoRef = r?.photos?.[0]?.photo_reference;
-    const photoUrl = r?.photos?.[0]?.photo_url ?? (photoRef ? getPhotoUrl(photoRef, 800) : null);
+    // ZERO Google (2026-07-29): bez wzbogacania Place Details (rating/photos/place_id).
+    // Uzywamy tylko wyniku geokodowania. Zdjecie miejsca przyjdzie z tras userow / ikona.
     return {
       place_id: null,
-      place_name: r?.name ?? name ?? "",
+      place_name: name ?? "",
       category: null,
-      address: r?.formatted_address ?? address,
-      latitude: r?.geometry?.location?.lat ?? lat,
-      longitude: r?.geometry?.location?.lng ?? lng,
-      rating: r?.rating ?? null,
-      google_place_id: r?.place_id ?? null,
-      photo_url: photoUrl,
+      address: address ?? null,
+      latitude: lat,
+      longitude: lng,
+      rating: null,
+      google_place_id: null,
+      photo_url: null,
     };
   } catch (e) {
     console.warn("[CreateRanking] fetchGooglePlace failed:", e);

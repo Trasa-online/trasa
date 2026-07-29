@@ -11,8 +11,8 @@ import { format } from "date-fns";
 import PlaceSwiperDetail from "./PlaceSwiperDetail";
 import SavePlaceSheet, { type SavePlaceInput } from "./SavePlaceSheet";
 import { supabase } from "@/integrations/supabase/client";
-import { getPhotoUrl, isCachedPhotoUrl, ensurePhotoCached } from "@/lib/placePhotos";
-import { GOOGLE_PLACE_DETAILS_DISABLED } from "@/lib/appMode";
+import { fetchPlaceUserPhotos, pickRandom } from "@/lib/placeUserPhotos";
+import { categoryIconSrc } from "@/lib/placeCategoryIcon";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import { useOnboarding } from "@/components/OnboardingGuide";
@@ -274,10 +274,6 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
   const [photoIdx, setPhotoIdx] = useState(0);
   const [dragX, setDragX] = useState(0);
   const [dragging, setDragging] = useState(false);
-  const [googleRating, setGoogleRating] = useState<number | null>(null);
-  const [googleRatingCount, setGoogleRatingCount] = useState<number | null>(null);
-  const [googleAddress, setGoogleAddress] = useState<string | null>(null);
-  const [googleTags, setGoogleTags] = useState<string[] | null>(null);
   const pointerStart = useRef<{ x: number; y: number; t: number } | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
 
@@ -289,110 +285,31 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
   // okladke biznesu przypadkowym zdjeciem. Wizytowka juz to respektuje - karta musi tez.
   const hasFetchedRef = useRef(false);
   useEffect(() => {
+    // Zdjecie miejsca ZERO Google (2026-07-29): okladki nie pochodza juz z Google Photos.
+    // Biznes z wlasnym zdjeciem ma je juz w photoUrls (enrich). Dla zwyklego miejsca
+    // dociagamy LOSOWE zdjecie usera przypisane do tego miejsca w trasach
+    // (pins.user_photo_urls). Brak zdjecia -> zostaje pusto i renderuje sie ikona
+    // kategorii (empty-state). Tylko dla top karty, raz.
     if (offset !== 0 || skipGoogleFetch || place.businessHasOwnPhoto || hasFetchedRef.current) return;
+    if (photoUrls.length > 0) return; // okladka juz dostarczona przez enrich (biznes)
     hasFetchedRef.current = true;
 
-    // Jeśli place.photo_url jest już scache'owany w Storage → odpal cache-place-photo
-    // tylko by upewnić się że jest spójny (idempotentne), nie wywołujemy Google
-    const alreadyCached = isCachedPhotoUrl(place.photo_url);
-    // Gdy mamy galerie (places.gallery_urls z backfillu), nie nadpisujemy photoUrls
-    // pojedynczym URL-em z Google - to dropowaloby gallery. Galeria ma cover + extras.
-    const hasGallery = (place.galleryPhotos ?? []).length > 0;
-
-    // Cięcie kosztów: nie wołamy płatnego Place Details dla karty. Gdy brak
-    // scache'owanej okładki - dociągamy JĄ RAZ przez cache-place-photo (tanie,
-    // cache na zawsze). Rating/adres/tagi bierzemy z bazy (Google fallbacky zostają
-    // puste). Recenzje/godziny user znajdzie przez "Zobacz w Google Maps".
-    if (GOOGLE_PLACE_DETAILS_DISABLED) {
-      if (!alreadyCached && !hasGallery) {
-        ensurePhotoCached(
-          {
-            table: "places",
-            id: place.id,
-            place_name: place.place_name,
-            city,
-            latitude: place.latitude,
-            longitude: place.longitude,
-            place_id: (place as any).google_place_id ?? null,
-          },
-          place.photo_url ?? null,
-        )
-          .then((u) => {
-            if (u) { setPhotoUrls([u]); setImgFailed(false); onPhotoFetched?.(place.id, u); }
-          })
-          .catch(() => {});
-      }
-      return;
-    }
-
-    // Oszczednosc kosztu: gdy okladka jest juz scache'owana w Storage i miejsce ma rating
-    // z bazy, NIE wolamy google-places-proxy (Place Details) dla karty - karta pokazuje
-    // tylko okladke/rating/adres/tagi. Recenzje + galeria Google dociagaja sie dopiero
-    // w wizytowce (PlaceSwiperDetail). Bez tego kazda karta = jedno Place Details.
-    if (alreadyCached && (place.rating ?? 0) > 0) return;
-
-    supabase.functions
-      .invoke("google-places-proxy", {
-        body: {
-          placeName: place.place_name,
-          latitude: place.latitude,
-          longitude: place.longitude,
-          city,
-          googlePlaceId: (place as any).google_place_id ?? null,
-          placeDbId: place.id,
-        },
+    fetchPlaceUserPhotos({
+      placeDbId: place.id,
+      googlePlaceId: (place as any).google_place_id ?? null,
+      placeName: place.place_name,
+      city,
+    })
+      .then((urls) => {
+        const url = pickRandom(urls);
+        if (url) { setPhotoUrls([url]); setImgFailed(false); onPhotoFetched?.(place.id, url); }
       })
-      .then(({ data, error }) => {
-        if (error) { console.error("[PlaceSwiper] proxy error:", error); return; }
-        // Prefer full photo_url returned by proxy (no client key needed)
-        const photo = data?.result?.photos?.[0];
-        const resolvedPlaceId: string | undefined = data?.result?.place_id ?? undefined;
-        const url = photo?.photo_url ?? (photo?.photo_reference ? getPhotoUrl(photo.photo_reference, 800, resolvedPlaceId) : null);
-        if (!url && !alreadyCached) console.warn("[PlaceSwiper] no photo returned for:", place.place_name, data);
-        // Nie nadpisuj jeśli mamy już cache'owany URL ani galerie (oba bardziej wiarygodne)
-        if (url && !alreadyCached && !hasGallery) {
-          setPhotoUrls([url]);
-          setImgFailed(false);
-          onPhotoFetched?.(place.id, url);
-        }
-        // Background: trigger cache-place-photo żeby kolejne wyświetlenia szły z Storage (zero kosztów Google)
-        if (!alreadyCached) {
-          ensurePhotoCached(
-            {
-              table: "places",
-              id: place.id,
-              place_name: place.place_name,
-              city,
-              latitude: place.latitude,
-              longitude: place.longitude,
-              place_id: resolvedPlaceId,
-            },
-            place.photo_url ?? null,
-          ).catch(() => {});
-        }
-        if (!place.rating && data?.result?.rating) setGoogleRating(data.result.rating);
-        if (data?.result?.user_ratings_total) setGoogleRatingCount(data.result.user_ratings_total);
-        if (!place.address && data?.result?.formatted_address) setGoogleAddress(data.result.formatted_address);
-        if (!place.vibe_tags?.length) {
-          const TYPES_MAP: Record<string, string> = {
-            bakery: t("google_types.bakery"), cafe: t("google_types.cafe"), bar: t("google_types.bar"), restaurant: t("google_types.restaurant"),
-            tourist_attraction: t("google_types.tourist_attraction"), museum: t("google_types.museum"), park: t("google_types.park"),
-            art_gallery: t("google_types.art_gallery"), night_club: t("google_types.night_club"), spa: t("google_types.spa"),
-            shopping_mall: t("google_types.shopping_mall"), store: t("google_types.store"), church: t("google_types.church"),
-            beach: t("google_types.beach"), lodging: t("google_types.lodging"), gym: t("google_types.gym"), library: t("google_types.library"),
-          };
-          const tags = (data?.result?.types ?? [])
-            .map((t: string) => TYPES_MAP[t])
-            .filter(Boolean)
-            .slice(0, 3) as string[];
-          if (tags.length) setGoogleTags(tags);
-        }
-      })
-      .catch((err) => { console.error("[PlaceSwiper] google-places-proxy error:", err); });
+      .catch(() => {});
   }, [offset]);
 
-  const displayRating = place.rating || googleRating;
-  const displayAddress = place.address || googleAddress;
+  // Rating/adres/tagi z bazy (Google fallbacky odciete - zero Google).
+  const displayRating = place.rating;
+  const displayAddress = place.address;
   // Chip dystansu "X od {label}" - od wspolnego punktu odniesienia (GPS "od Ciebie" gdy
   // jestes na miejscu, albo punkt startowy "od startu" gdy planujesz). Gdy brak ref a
   // miejsce MA wspolrzedne - maly przycisk "Pokaz dystans" otwiera wybor (Jestes juz w meiscie?).
@@ -402,10 +319,13 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
     ? formatDistance(haversineKmDist(distanceRef.coords, { lat: place.latitude, lng: place.longitude }))
     : null;
   const showEnableDistance = !distanceRef && placeHasCoords;
-  // Priorytet: tagi z business_profiles.tags (ustawione przez wlasciciela) > Google vibe_tags > fallback do typow z proxy
+  // Priorytet: tagi z business_profiles.tags (ustawione przez wlasciciela) > vibe_tags z bazy.
   const displayTags = place.businessTags?.length
     ? place.businessTags
-    : (place.vibe_tags?.length ? place.vibe_tags : (googleTags ?? []));
+    : (place.vibe_tags ?? []);
+
+  // Czy karta ma realne zdjecie/wideo. Gdy nie - empty-state = ikona kategorii na #fcede3.
+  const hasMedia = (!!place.coverVideoUrl && !videoFailed) || (photoUrls.length > 0 && !imgFailed);
 
   const handlePointerDown = (e: React.PointerEvent) => {
     if (!isTop) return;
@@ -468,10 +388,10 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
         scrollMode ? "" : (isTop ? "cursor-grab active:cursor-grabbing" : "pointer-events-none")
       )}
     >
-      {/* Photo / Video */}
-      {/* Baza = kolorowy gradient (widoczny podczas ladowania zdjecia i przy bledzie), zeby nie
-          bylo ciemnego pustego kadru gdy zdjecie leci wolno z proxy. Zdjecie/wideo na wierzchu. */}
-      <div className={cn("absolute inset-0 bg-gradient-to-br", GRADIENT_BG[offset % 3])}>
+      {/* Photo / Video / Ikona kategorii (empty-state) */}
+      {/* Gdy jest zdjecie/wideo: ciemna baza (widoczna przy ladowaniu) + zdjecie na wierzchu.
+          Gdy brak (zero Google, brak zdjecia usera): tlo #fcede3 + wysrodkowana ikona kategorii. */}
+      <div className={cn("absolute inset-0", hasMedia ? cn("bg-gradient-to-br", GRADIENT_BG[offset % 3]) : "bg-[#fcede3]")}>
         {place.coverVideoUrl && !videoFailed ? (
           <video
             src={place.coverVideoUrl}
@@ -494,9 +414,21 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
             }}
             draggable={false}
           />
-        ) : null}
-        {/* Gradient overlay - zawsze domyslny czarny (personalizacja tla wylaczona, jednolicie wszedzie). */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/10" />
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <img
+              src={categoryIconSrc(place.category)}
+              alt=""
+              className="w-2/5 max-w-[160px] opacity-90"
+              draggable={false}
+            />
+          </div>
+        )}
+        {/* Overlay: pelny ciemny gdy jest zdjecie (legibilnosc bialego tekstu). Przy ikonie tylko
+            delikatny dolny gradient - nazwa/meta czytelne na peach, gora zostaje jasna. */}
+        <div className={cn("absolute inset-0", hasMedia
+          ? "bg-gradient-to-t from-black/90 via-black/40 to-black/10"
+          : "bg-gradient-to-t from-black/55 via-transparent to-transparent")} />
         {/* Photo progress bar - przeniesione pod badge kategorii (top-4 zajete przez badge).
             Instagram-style cienki bar pelnej szerokosci na top-14 (pod badge ktore ma top-4 + ~32px). */}
         {isTop && !place.coverVideoUrl && photoUrls.length > 1 && (
@@ -582,9 +514,6 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
             <div className="flex items-center gap-1">
               <Star className="h-3.5 w-3.5 text-yellow-400 fill-yellow-400" />
               <span className="text-white/90 text-sm font-medium">{displayRating}</span>
-              {googleRatingCount ? (
-                <span className="text-white/60 text-sm">({googleRatingCount.toLocaleString("pl")})</span>
-              ) : null}
             </div>
           ) : null}
           {place.price_level && (
@@ -1118,7 +1047,10 @@ export function enrichWithBusinessProfile(p: any, refDate?: string): MockPlace {
 
   const bp = Array.isArray(p.business_profiles) ? p.business_profiles[0] : p.business_profiles;
   if (!bp) {
-    return { ...p, galleryPhotos: placeGallery } as MockPlace;
+    // Zwykle miejsce (bez profilu biznesu): ZERO Google (2026-07-29). Nie uzywamy
+    // Google backfillu (places.photo_url / places.gallery_urls) - okladka przyjdzie
+    // z losowego zdjecia usera z tras (SwipeCard), a brak -> ikona kategorii.
+    return { ...p, photo_url: undefined, galleryPhotos: [] } as MockPlace;
   }
   // Per decyzja produktowa (CLAUDE.md): wszystkie aktywne biznesy traktujemy jak
   // premium - logo, eventy, cover image, dane kontaktowe widoczne dla kazdego
@@ -1132,7 +1064,9 @@ export function enrichWithBusinessProfile(p: any, refDate?: string): MockPlace {
   // Jesli biznes NIE ma zadnych wlasnych zdjec -> uzywamy placeGallery (Google backfill)
   // jako fallback zeby wizytowka miala chociaz placeholder.
   const hasBizPhotos = !!(bp.cover_image_url || bp.cover_video_url || bizGallery.length > 0);
-  const mergedGallery = hasBizPhotos ? bizGallery : placeGallery;
+  // ZERO Google (2026-07-29): gdy biznes nie ma wlasnych zdjec, NIE fallbackujemy do
+  // placeGallery (Google backfill) - zostaje pusto (-> ikona kategorii / zdjecia usera).
+  const mergedGallery = hasBizPhotos ? bizGallery : [];
   // Adres z profilu biznesu (street + postal + miasto). Biznes wpisuje wlasny adres w dashboardzie -
   // to autorytatywne zrodlo. Inaczej adres bralby sie z Google (detail.formatted_address), ktory dla
   // lokalu o popularnej nazwie potrafi trafic w zupelnie inny lokal -> losowy adres na wizytowce.
@@ -1150,9 +1084,9 @@ export function enrichWithBusinessProfile(p: any, refDate?: string): MockPlace {
     // Override adresu adresem biznesu (gdy ustawiony) - zrodlo prawdy zamiast Google.
     address: bizAddress ?? p.address,
     businessHasOwnAddress: hasOwnAddress,
-    // Override photo z biz cover gdy biznes ma swoje zdjecie. Bez okladki, ale z wlasna galeria ->
-    // pierwsze zdjecie galerii (a NIE places.photo_url, ktory bywa backfillem z Google).
-    photo_url: bp.cover_image_url || (bizGallery.length > 0 ? bizGallery[0] : p.photo_url),
+    // Okladka biznesu = cover_image lub pierwsze zdjecie wlasnej galerii. ZERO Google:
+    // bez fallbacku do places.photo_url (backfill Google). Brak -> ikona / zdjecie usera.
+    photo_url: bp.cover_image_url || bizGallery[0] || undefined,
     // Show business section (logo, events, CTA) dla wszystkich biz
     businessLogoUrl: bp.logo_url ?? '',
     // Pill wydarzenia: aktywny dzis z kolejki > staly event_title > najblizszy nadchodzacy.
