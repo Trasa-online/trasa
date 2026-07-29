@@ -1145,8 +1145,8 @@ const ReviewSummary = () => {
 
   // ── Lista (read-only): miejsca grupowane po kategorii. Klik => wizytowka. ──
   // Wspolna karta miejsca (karuzela + pionowa lista). fullWidth -> pelna szerokosc (stacked).
-  const renderPlanCard = (pin: any, i: number, fullWidth: boolean, editable: boolean, withRating: boolean) => (
-    <div key={pin.id} className={`${fullWidth ? "w-full" : "snap-center shrink-0 w-[80vw] max-w-[320px]"} rounded-2xl bg-secondary border border-border/40 overflow-hidden shadow-sm flex flex-col transition-opacity ${activeChecklist && isVisited(pin) ? "opacity-60" : ""}`}>
+  const renderPlanCard = (pin: any, i: number, fullWidth: boolean, editable: boolean, withRating: boolean, checklist: boolean = activeChecklist) => (
+    <div key={pin.id} className={`${fullWidth ? "w-full" : "snap-center shrink-0 w-[80vw] max-w-[320px]"} rounded-2xl bg-secondary border border-border/40 overflow-hidden shadow-sm flex flex-col transition-opacity ${checklist && isVisited(pin) ? "opacity-60" : ""}`}>
       <button onClick={() => openDetail(pin)} className="block w-full text-left active:opacity-90 transition-opacity">
         <div className="relative w-full aspect-[4/3] bg-muted">
           <PlacePhoto pin={pin} className="w-full h-full object-cover" emojiClass="text-4xl" />
@@ -1184,8 +1184,9 @@ const ReviewSummary = () => {
           })()}
         </div>
       </button>
-      {/* Toggle "Bylem tu" (karta) - tylko w aktywnej checkliscie; poza przyciskiem openDetail. */}
-      {activeChecklist && (
+      {/* Toggle "Bylem tu" (karta) - tylko w aktywnej checkliscie; poza przyciskiem openDetail.
+          W KREATORZE (step 2 "Sugestie do trasy") checklist=false -> guzik ukryty. */}
+      {checklist && (
         <div className="px-4 pt-2 pb-1">
           <button
             onClick={() => toggleVisited(pin)}
@@ -1211,14 +1212,14 @@ const ReviewSummary = () => {
   );
 
   // ── Kompaktowy wiersz listy: miniaturka + nazwa + chip kategorii (+ reorder/usuń gdy edycja). ──
-  const renderPlanRow = (pin: any, i: number, editable: boolean) => (
-    <div key={pin.id} className={`flex items-center gap-3 rounded-2xl bg-secondary border border-border/40 shadow-sm p-2.5 transition-opacity ${activeChecklist && isVisited(pin) ? "opacity-60" : ""}`}>
+  const renderPlanRow = (pin: any, i: number, editable: boolean, checklist: boolean = activeChecklist) => (
+    <div key={pin.id} className={`flex items-center gap-3 rounded-2xl bg-secondary border border-border/40 shadow-sm p-2.5 transition-opacity ${checklist && isVisited(pin) ? "opacity-60" : ""}`}>
       <button onClick={() => openDetail(pin)} className="relative h-14 w-14 shrink-0 rounded-xl overflow-hidden bg-muted active:opacity-90">
         <PlacePhoto pin={pin} className="w-full h-full object-cover" emojiClass="text-2xl" />
         <span className="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-black/55 backdrop-blur text-white text-[10px] font-bold flex items-center justify-center">{i + 1}</span>
       </button>
       <button onClick={() => openDetail(pin)} className="min-w-0 flex-1 text-left">
-        <p className={`text-sm font-bold leading-tight truncate ${activeChecklist && isVisited(pin) ? "line-through" : ""}`}>{pin.place_name}</p>
+        <p className={`text-sm font-bold leading-tight truncate ${checklist && isVisited(pin) ? "line-through" : ""}`}>{pin.place_name}</p>
         <span className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white text-[11px] font-semibold text-foreground">
           {catLabel(pin.category)}
         </span>
@@ -1324,9 +1325,9 @@ const ReviewSummary = () => {
   // ── Szczegoly: poziomy swiper kart (jak kreator trasy). editable => move/usun,
   // withRating => Ocena + Notka pod karta. Klik w karte => wizytowka. ──
   // Szczegoly: poziomy swiper kart.
-  const renderSwiper = (editable: boolean, withRating: boolean) => (
+  const renderSwiper = (editable: boolean, withRating: boolean, checklist: boolean = activeChecklist) => (
     <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory scrollbar-none -mx-5 px-5 pb-2">
-      {workingPins.map((pin: any, i: number) => renderPlanCard(pin, i, false, editable, withRating))}
+      {workingPins.map((pin: any, i: number) => renderPlanCard(pin, i, false, editable, withRating, checklist))}
     </div>
   );
 
@@ -2184,11 +2185,11 @@ const ReviewSummary = () => {
                       {/* Notki per-miejsce usuniete (2026-07-29): obnizamy friction, skupiamy sie na
                           zdjeciach do miejsc. Zostaje tylko ogolna sugestia do calej trasy (wyzej). */}
                       {workingPins.map((pin: any, i: number) => (
-                        <div key={pin.id}>{renderPlanRow(pin, i, true)}</div>
+                        <div key={pin.id}>{renderPlanRow(pin, i, true, false)}</div>
                       ))}
                     </div>
                   ) : (
-                    renderSwiper(true, true)
+                    renderSwiper(true, true, false)
                   )}
                 </div>
               )}

@@ -8,7 +8,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import { haptics } from "@/hooks/useHaptics";
 import { supabase } from "@/integrations/supabase/client";
-import { MapPin, X, Globe, Sparkles, Pencil, Trash2, ChevronRight, ChevronUp, ArrowRight, Heart, Eye, List, GalleryHorizontalEnd, Search, SlidersHorizontal, Plus, ArrowLeft, Images, Bookmark, Building2, Users, Navigation, Loader2 } from "lucide-react";
+import { MapPin, X, Globe, Sparkles, Pencil, Trash2, ChevronRight, ChevronUp, ArrowRight, Eye, List, GalleryHorizontalEnd, Search, SlidersHorizontal, Plus, ArrowLeft, Images, Bookmark, Building2, Users, Navigation, Loader2 } from "lucide-react";
 import { API_BASE } from "@/lib/platform";
 import { useDebounce } from "@/hooks/useDebounce";
 import { expandCity } from "@/lib/cities";
@@ -24,7 +24,7 @@ import { dateLocale } from "@/lib/dateLocale";
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { resolveStored } from "@/components/PlacePhoto";
 import { COLLECTION_THEMES, getTheme, collectionKind } from "@/lib/collectionThemes";
-import { addLike, getHistoryByCity } from "@/lib/exploreLikes";
+import { getHistoryByCity } from "@/lib/exploreLikes";
 import { TrasaLogo } from "@/components/TrasaLogo";
 import { CategoryIcon } from "@/components/CategoryIcon";
 import { toast } from "sonner";
@@ -175,15 +175,15 @@ function PlacePhoto({
   className?: string;
   placeholderIdx?: number;
 }) {
-  const gradient = PLACEHOLDER_GRADIENTS[placeholderIdx % PLACEHOLDER_GRADIENTS.length];
   // Custom miejsca (spoza bazy) trzymaja surowy Google photo_reference - przepusc przez proxy
   // (resolveStored: pelny URL bez zmian, raw ref -> getPhotoUrl). Inaczej <img src=ref> = pusty kafel.
   const url = resolveStored(item.photo_url);
   return url ? (
     <img src={url} alt={item.place_name} className={`object-cover ${className ?? ""}`} loading="lazy" />
   ) : (
-    <div className={`bg-gradient-to-br ${gradient} flex items-center justify-center ${className ?? ""}`}>
-      <span className="text-2xl opacity-60">📍</span>
+    // Brak zdjecia (nie-biznesowe / brak zdjecia usera) -> ikona kategorii na tle peach (jak globalny PlacePhoto).
+    <div className={`bg-[#fcede3] flex items-center justify-center ${className ?? ""}`}>
+      <CategoryIcon category={item.category} className="w-2/5 max-w-[56px] opacity-90" />
     </div>
   );
 }
@@ -231,14 +231,6 @@ export function CollectionDetail({ col, onClose, onAdopt }: { col: DiscoveryColl
   const theme = getTheme(col.category);
   const isRoute = collectionKind(col.category) === "route";
 
-  // Ktore miejsca sa juz polubione (localStorage per miasto) -> badge "juz polubione".
-  // Set nazw miejsc; refresh po dodaniu polubienia w tym widoku.
-  const likedInCity = () => new Set(
-    (getHistoryByCity().find((g) => col.city && g.city.toLowerCase() === col.city!.toLowerCase())?.places ?? [])
-      .map((p) => p.place_name.toLowerCase())
-  );
-  const [likedNames, setLikedNames] = useState<Set<string>>(likedInCity);
-
   // Licznik wyswietlen: dedup per-widz w localStorage (wzor increment_route_views).
   useEffect(() => {
     const key = "trasa_seen_collections";
@@ -255,32 +247,6 @@ export function CollectionDetail({ col, onClose, onAdopt }: { col: DiscoveryColl
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [col.id]);
-
-  // Dodaj miejsce do polubien (localStorage + user_place_reactions dla zalogowanych).
-  const likePlace = async (item: DiscoveryItem) => {
-    if (!col.city) return;
-    if (likedNames.has(item.place_name.toLowerCase())) return;
-    addLike(col.city, {
-      place_name: item.place_name,
-      category: item.category ?? "other",
-      address: item.address ?? null,
-      latitude: item.latitude ?? null,
-      longitude: item.longitude ?? null,
-      rating: item.rating ?? null,
-      photo_url: item.photo_url ?? null,
-    });
-    setLikedNames((prev) => new Set(prev).add(item.place_name.toLowerCase()));
-    toast.success(t("toast.saved"));
-    if (user?.id && item.place_id) {
-      (supabase as any).from("user_place_reactions").upsert({
-        user_id: user.id, place_id: item.place_id, place_name: item.place_name, city: col.city,
-        category: item.category ?? null, photo_url: item.photo_url ?? null, reaction: "liked",
-      }, { onConflict: "user_id,place_id" }).then(({ error }: any) => { if (error) console.warn("[DiscoveryFeed] reaction upsert:", error.message); });
-    }
-    // Statystyka zestawienia: polubienie miejsca z kolekcji.
-    (supabase as any).rpc("increment_collection_saves", { p_collection_id: col.id })
-      .then(({ error }: any) => { if (error) console.warn("[DiscoveryFeed] increment_collection_saves:", error.message); });
-  };
 
   // Miejsce z bazy (place_id) -> otworz pelna wizytowke. Custom (place_id null) = nieklikalne.
   const openPlace = async (item: DiscoveryItem) => {
@@ -356,7 +322,6 @@ export function CollectionDetail({ col, onClose, onAdopt }: { col: DiscoveryColl
       {col.items.map((item, idx) => {
         const tappable = !!item.place_id;
         const cat = item.category ?? "other";
-        const alreadyLiked = likedNames.has(item.place_name.toLowerCase());
         return (
           <div key={item.id} className="snap-center shrink-0 w-[80vw] max-w-[320px] rounded-2xl bg-secondary border border-border/40 overflow-hidden shadow-sm flex flex-col">
             <div
@@ -366,21 +331,6 @@ export function CollectionDetail({ col, onClose, onAdopt }: { col: DiscoveryColl
               <PlacePhoto item={item} placeholderIdx={idx} className="w-full h-full" />
               <div className="absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-transparent pointer-events-none" />
               <div className="absolute top-3 left-3 h-8 w-8 rounded-full bg-black/55 backdrop-blur text-white text-sm font-bold flex items-center justify-center">{idx + 1}</div>
-              <div className="absolute top-3 right-3 flex items-center gap-1.5">
-                {col.city && (
-                  <span role="button" aria-label={alreadyLiked ? t("aria.already_saved") : t("aria.save_place")}
-                    onClick={(e) => { e.stopPropagation(); e.preventDefault(); if (!alreadyLiked) likePlace(item); }}
-                    className="h-7 w-7 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-sm active:scale-90 transition-transform">
-                    <Heart className={`h-4 w-4 ${alreadyLiked ? "fill-rose-500 text-rose-500" : "text-foreground"}`} />
-                  </span>
-                )}
-              </div>
-              {!tappable && (
-                <div className="absolute bottom-3 left-3 flex items-center gap-1 px-2 py-1 rounded-full bg-foreground/55 backdrop-blur-sm">
-                  <Globe className="h-3 w-3 text-white/90 shrink-0" />
-                  <span className="text-[9px] font-semibold text-white leading-tight">{t("not_in_trasa")}</span>
-                </div>
-              )}
             </div>
             <div className="px-4 pt-4 pb-4 flex-1">
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted text-xs font-semibold text-foreground mb-2">
@@ -401,14 +351,13 @@ export function CollectionDetail({ col, onClose, onAdopt }: { col: DiscoveryColl
     </div>
   );
 
-  // ── Widok listy - zwarte ponumerowane wiersze (redesign wg Figmy: czarny numerek,
-  // badge kategorii, gwiazdka+ocena, zapis przez Bookmark ribbon). ──
+  // ── Widok listy - zwarte ponumerowane wiersze (redesign wg Figmy: czarny numerek
+  // na okladce miniatury, badge kategorii). Bez per-miejsce zapisu. ──
   const renderPlaceList = () => (
     <div className="space-y-2">
       {col.items.map((item, idx) => {
         const tappable = !!item.place_id;
         const cat = item.category ?? "other";
-        const alreadyLiked = likedNames.has(item.place_name.toLowerCase());
         return (
           <div key={item.id} className="flex items-center gap-2 bg-secondary border border-border/40 shadow-sm rounded-2xl p-2.5">
             <button
@@ -425,23 +374,9 @@ export function CollectionDetail({ col, onClose, onAdopt }: { col: DiscoveryColl
                 <span className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-card text-[11px] font-semibold text-foreground">
                   {t(`cat.${cat}`, CAT_LABEL[cat] ?? t("cat.other"))}
                 </span>
-                {!tappable && (
-                  <span className="mt-1 flex items-center gap-1 text-[9px] font-semibold text-muted-foreground">
-                    <Globe className="h-3 w-3 shrink-0" />{t("not_in_trasa")}
-                  </span>
-                )}
               </div>
               {tappable && <ChevronRight className="h-4 w-4 text-muted-foreground/40 shrink-0" />}
             </button>
-            <div className="flex items-center gap-1.5 shrink-0">
-              {col.city && (
-                <button aria-label={alreadyLiked ? t("aria.already_saved") : t("aria.save_place")}
-                  onClick={(e) => { e.stopPropagation(); e.preventDefault(); if (!alreadyLiked) likePlace(item); }}
-                  className="h-7 w-7 rounded-full bg-muted flex items-center justify-center active:scale-90 transition-transform">
-                  <Bookmark className={`h-4 w-4 ${alreadyLiked ? "fill-primary text-primary" : "text-foreground"}`} />
-                </button>
-              )}
-            </div>
           </div>
         );
       })}
@@ -479,8 +414,9 @@ export function CollectionDetail({ col, onClose, onAdopt }: { col: DiscoveryColl
     <div className="flex flex-col h-full overflow-hidden rounded-t-2xl">
       <div className="flex-1 min-h-0 overflow-y-auto">
         {/* HERO - okladka z gradientem, akcje overlay, mini mapka + galeria (wg Figmy).
-            rounded-t-2xl -> zaokraglona gora bez bialego paska pod krawedzia sheetu. */}
-        <div className="relative h-[240px] bg-muted overflow-hidden rounded-t-2xl">
+            Rounding zapewnia root (overflow-hidden rounded-t-2xl) - hero bez wlasnego
+            zaokraglenia, zeby okladka siegala samej gory bez bialego paska/crescentu. */}
+        <div className="relative h-[240px] bg-muted overflow-hidden">
           {mapOnHero ? (
             <RouteMap pins={mapPins as any} className="w-full h-full" showRoute={isRoute} />
           ) : coverUrl ? (

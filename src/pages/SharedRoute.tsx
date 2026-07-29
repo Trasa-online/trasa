@@ -319,7 +319,7 @@ export default function SharedRoute() {
               {items.map((pin: any) => (
                 <div key={pin.id} className="bg-secondary border border-border/40 shadow-sm rounded-2xl p-2.5">
                   <button onClick={() => openDetail(pin)} className="w-full flex items-center gap-3 text-left active:opacity-70 transition-opacity">
-                    <PlacePhoto pin={pin} className="h-14 w-14 rounded-xl object-cover shrink-0" emojiClass="text-xl" />
+                    <PlacePhoto pin={pin} className="h-14 w-14 rounded-xl object-cover shrink-0" />
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-bold leading-tight truncate">{pin.place_name}</p>
                       {pin.address && <p className="text-[11px] text-muted-foreground mt-0.5 truncate">{pin.address}</p>}
@@ -358,7 +358,7 @@ export default function SharedRoute() {
         <div key={pin.id} className="snap-center shrink-0 w-[80vw] max-w-[320px] rounded-2xl bg-secondary border border-border/40 overflow-hidden shadow-sm flex flex-col">
           <button onClick={() => openDetail(pin)} className="block w-full text-left active:opacity-90 transition-opacity">
             <div className="relative w-full aspect-[4/3] bg-muted">
-              <PlacePhoto pin={pin} className="w-full h-full object-cover" emojiClass="text-4xl" />
+              <PlacePhoto pin={pin} className="w-full h-full object-cover" />
               <div className="absolute top-3 left-3 h-8 w-8 rounded-full bg-black/55 backdrop-blur text-white text-sm font-bold flex items-center justify-center">{i + 1}</div>
             </div>
             <div className="px-4 pt-4">
