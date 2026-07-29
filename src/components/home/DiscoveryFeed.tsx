@@ -1429,38 +1429,6 @@ export function SavedRoutes({ city }: { city?: string }) {
     toast(i18n.t("toast.removed_saved", { ns: "homefeed", defaultValue: "Usunięto z zapisanych" }));
   };
 
-  // 2) Zapisane ZESTAWIENIA (localStorage) - pokazywane jako trasy (pivot: zestawienia = trasy).
-  //    Feed zapisuje kolekcje bookmarkiem do localStorage; tu je pokazujemy razem z trasami.
-  const [savedColIds, setSavedColIds] = useState<string[]>(() => {
-    try { return JSON.parse(localStorage.getItem("trasa_saved_collections") || "[]") as string[]; } catch { return []; }
-  });
-  const colDates = useMemo(() => {
-    try { return JSON.parse(localStorage.getItem("trasa_saved_collections_dates") || "{}") as Record<string, string>; } catch { return {}; }
-  }, [savedColIds]);
-  const { data: collections = [], isLoading: colLoading } = useQuery({
-    queryKey: ["saved-collections-trasy", [...savedColIds].sort().join(",")],
-    enabled: savedColIds.length > 0,
-    queryFn: async () => {
-      const { data: cols } = await (supabase as any).from("discovery_collections")
-        .select("id, title, city, description, category, author_name, author_avatar, user_id, views_count, saves_count, plan_adds_count")
-        .in("id", savedColIds);
-      const byId = new Map((cols ?? []).map((c: any) => [c.id, c]));
-      const ordered = [...savedColIds].reverse().map((id) => byId.get(id)).filter(Boolean);
-      return hydrateCollections(ordered);
-    },
-  });
-  const [activeCol, setActiveCol] = useState<DiscoveryCollection | null>(null);
-  const unsaveCol = (id: string) => {
-    try {
-      const set = new Set(savedColIds); set.delete(id);
-      const dates: Record<string, string> = JSON.parse(localStorage.getItem("trasa_saved_collections_dates") || "{}");
-      delete dates[id];
-      localStorage.setItem("trasa_saved_collections", JSON.stringify([...set]));
-      localStorage.setItem("trasa_saved_collections_dates", JSON.stringify(dates));
-      setSavedColIds([...set]);
-      toast(i18n.t("toast.removed_saved", { ns: "homefeed", defaultValue: "Usunięto z zapisanych" }));
-    } catch { /* noop */ }
-  };
 
   const cityOk = (c?: string | null) => !city || city === "all" || (c ?? "").toLowerCase().startsWith(city.toLowerCase());
 
@@ -1476,20 +1444,9 @@ export function SavedRoutes({ city }: { city?: string }) {
       ),
     });
   });
-  collections.filter((c) => cityOk(c.city)).forEach((col) => {
-    const ph = col.items?.find((it) => it.photo_url)?.photo_url ?? null;
-    rows.push({
-      key: `col-${col.id}`, savedAt: colDates[col.id] ?? "",
-      el: (
-        <SavedTile key={`col-${col.id}`} id={col.id} photo={ph ? resolveStored(ph) : null} title={col.title} city={col.city}
-          placeCount={col.items?.length ?? 0} pins={(col.items ?? []) as LatLng[]}
-          onOpen={() => setActiveCol(col)} onUnsave={() => unsaveCol(col.id)} />
-      ),
-    });
-  });
   rows.sort((a, b) => (b.savedAt || "").localeCompare(a.savedAt || ""));
 
-  const loading = (!!user && routesLoading) || (savedColIds.length > 0 && colLoading);
+  const loading = !!user && routesLoading;
 
   if (loading && rows.length === 0) {
     return <div className="space-y-3">{Array.from({ length: 3 }).map((_, i) => <div key={i} className="w-full h-[164px] rounded-3xl bg-muted/50 animate-pulse" />)}</div>;
@@ -1497,21 +1454,14 @@ export function SavedRoutes({ city }: { city?: string }) {
   if (rows.length === 0) {
     return (
       <div className="py-14 text-center px-8">
-        <div className="text-4xl mb-3">🔖</div>
+        <Bookmark className="h-9 w-9 mx-auto mb-3 text-muted-foreground/40" strokeWidth={1.75} />
         <p className="text-base font-bold">Brak zapisanych tras</p>
         <p className="text-sm text-muted-foreground mt-1 leading-relaxed max-w-[260px] mx-auto">Zapisz trasę bookmarkiem w Eksploruj, a wróci tutaj.</p>
       </div>
     );
   }
   return (
-    <>
-      <div className="space-y-3">{rows.map((r) => r.el)}</div>
-      <Sheet open={!!activeCol} onOpenChange={(o) => { if (!o) setActiveCol(null); }}>
-        <SheetContent side="bottom" className="rounded-t-2xl p-0 [&>button:last-child]:hidden" style={{ maxHeight: "92vh", height: "92vh" }}>
-          {activeCol && <CollectionDetail col={activeCol} onClose={() => setActiveCol(null)} />}
-        </SheetContent>
-      </Sheet>
-    </>
+    <div className="space-y-3">{rows.map((r) => r.el)}</div>
   );
 }
 
