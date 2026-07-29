@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { Loader2, Star, MapPin, ExternalLink, Clock } from "lucide-react";
+import { Loader2, Star, MapPin, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getPhotoUrl, isCachedPhotoUrl, ensurePhotoCached, getCachedPhotoVariant } from "@/lib/placePhotos";
 import { GOOGLE_PLACE_DETAILS_DISABLED } from "@/lib/appMode";
@@ -215,59 +215,9 @@ const PlaceDetailSheet = ({ pin, open, onOpenChange }: PlaceDetailSheetProps) =>
               </div>
             )}
 
-            {/* Opening hours */}
-            {details.opening_hours ? (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                  <span className={cn("text-sm font-semibold", details.opening_hours.open_now ? "text-green-600 dark:text-green-400" : "text-red-500")}>
-                    {details.opening_hours.open_now ? t("place.open_now") : t("place.closed")}
-                  </span>
-                </div>
-                {details.opening_hours.weekday_text?.length > 0 && (
-                  <div className="bg-muted/40 rounded-2xl p-3 space-y-1">
-                    {(details.opening_hours.weekday_text as string[]).map((line, i) => {
-                      const [day, ...rest] = line.split(": ");
-                      return (
-                        <div key={i} className="flex gap-2 text-xs">
-                          <span className="text-muted-foreground w-24 flex-shrink-0">{day}</span>
-                          <span className="text-foreground/80">{rest.join(": ")}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/40 rounded-2xl px-3 py-2.5">
-                <Clock className="h-4 w-4 flex-shrink-0" />
-                <span>{t("place.hours_missing")}</span>
-              </div>
-            )}
-
-            {/* Reviews */}
-            {details.reviews?.length > 0 && (
-              <div className="space-y-2.5">
-                <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">
-                  {t("place.recent_reviews")}
-                </p>
-                {details.reviews.slice(0, 3).map((review: any, i: number) => (
-                  <div key={i} className="bg-muted/40 rounded-2xl p-3 space-y-1.5">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-medium truncate">{review.author_name}</span>
-                      <div className="flex gap-0.5 shrink-0">
-                        {Array.from({ length: review.rating ?? 0 }).map((_, j) => (
-                          <Star key={j} className="h-3 w-3 fill-amber-400 text-amber-400" />
-                        ))}
-                      </div>
-                    </div>
-                    <p className="text-xs text-muted-foreground leading-relaxed line-clamp-4">
-                      {review.text}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            )}
+            {/* Godziny otwarcia + recenzje Google USUNIETE (2026-07-29): nie pokazujemy danych
+                Place Details od Google w apce. User idzie po godziny/opinie do Google Maps
+                (link ponizej). Godziny firm B2B maja wlasna wizytowke (BusinessDashboard). */}
 
             {/* Map link */}
             <a

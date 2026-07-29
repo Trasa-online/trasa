@@ -59,10 +59,12 @@ export function fromMockPlace(
     priceLevel: detail?.price_level ?? place.price_level,
 
     ownerOpeningHours: place.businessOpeningHours,
-    // Godziny: najpierw live Google detail, w fallbacku weekday_text z bazy (backfill) -
-    // dzieki temu wizytowka pokazuje godziny od razu, bez czekania na fetch Google.
-    googleWeekdayText: detail?.opening_hours?.weekday_text ?? place.opening_hours?.weekday_text ?? undefined,
-    googleOpenNow: detail?.opening_hours?.open_now,
+    // Godziny GOOGLE wylaczone (2026-07-29, native-only + ciecie kosztow): dla ZWYKLYCH miejsc
+    // nie pokazujemy godzin z Google ani z backfillu (place.opening_hours) - user idzie po nie
+    // do "Zobacz w Google Maps". ZOSTAJA wylacznie wlasne godziny firm B2B (ownerOpeningHours),
+    // ktore lokal wpisuje w dashboardzie. OpeningHoursSection zwraca null gdy brak obu.
+    googleWeekdayText: undefined,
+    googleOpenNow: undefined,
 
     eventTitle: place.businessEventTitle,
     events: place.businessEvents ?? [],
@@ -70,7 +72,8 @@ export function fromMockPlace(
 
     posts: posts ?? [],
     menuImageUrls: place.businessMenuImageUrls ?? [],
-    reviews: detail?.reviews,
+    // Recenzje Google usuniete calkowicie (2026-07-29): nie pokazujemy opinii Google w apce.
+    reviews: undefined,
     googlePlaceId: detail?.place_id,
 
     phone: place.businessPhone,

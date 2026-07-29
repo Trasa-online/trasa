@@ -74,26 +74,26 @@ function MaintenanceGate({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-// Na WEB chowamy aplikacje B2C za waitlista - userzy nie maja ogladac dema apki webowej.
-// Native (iOS) = pelna apka, bez redirectu. Allowlista (zostaje na web): biznes, auth,
-// set-password, marketing (landing/dla-firm), legal, linki publiczne (shared route / profil /
-// claim lokalu) + callbacki auth (?code=/?token_hash=). Reszta (w tym /demo) -> /waitlist.
+// NATIVE-ONLY: apka konsumencka B2C NIE jest wspierana w przegladarce. Web sluzy TYLKO
+// do: marketingu (landing / waitlist / legal), B2B (auth biznesowy, set-password, dashboard
+// /biznes, /dla-firm, claim lokalu /lokal) + callbackow auth (?code=/?token_hash=).
+// Native (iOS/Capacitor) = pelna apka, bez redirectu. Cala reszta (rdzen B2C: eksploruj,
+// wyjazdy, trasy, sesje grupowe, planer, linki share /route//profil, /demo) -> /waitlist.
+//
+// Pre-launch: docelowo /waitlist (lapie odwiedzajacego). Po wejsciu do App Store podmienic
+// redirect na dedykowany ekran "Pobierz z App Store" (komponent NativeGate).
 function WebWaitlistGate({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   if (isNative) return <>{children}</>;
   const hasAuthParams = /[?&#](code|token_hash|error|access_token)=/.test(window.location.href);
   const p = location.pathname;
   const allowed =
-    p === "/waitlist" || p === "/landing" || p === "/landing-v2" || p === "/auth" ||
+    // Marketing / legal (B2C web presence)
+    p === "/waitlist" || p === "/landing" || p === "/landing-v2" ||
     p === "/terms" || p === "/privacy" ||
-    p.startsWith("/set-password") || p.startsWith("/biznes") ||
-    p.startsWith("/dla-firm") || p.startsWith("/route/") ||
-    p.startsWith("/profil/") || p.startsWith("/lokal/") ||
-    // TEST: odblokowane parowanie grupowe na web (sesja grupowa + swipe + tworzenie trasy
-    // z grupy przez PlanChatExperience). Reszta apki B2C nadal za waitlista.
-    p.startsWith("/sesja") || p === "/create" || p.startsWith("/quick-plan-review") ||
-    // Link zaproszeniowy znajomych (viral) - musi byc publiczny na web
-    p.startsWith("/dodaj");
+    // B2B: auth biznesowy, ustawianie hasla, dashboard, landing dla firm, claim lokalu
+    p === "/auth" || p.startsWith("/set-password") || p.startsWith("/biznes") ||
+    p.startsWith("/dla-firm") || p.startsWith("/lokal/");
   if (!allowed && !hasAuthParams) return <Navigate to="/waitlist" replace />;
   return <>{children}</>;
 }

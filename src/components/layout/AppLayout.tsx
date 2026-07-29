@@ -86,8 +86,6 @@ const AppLayout = ({ children, hideTopBar }: AppLayoutProps) => {
       : t("greeting");
     setShowOrbOverlay(true);
     if (audioCtxRef.current) { audioCtxRef.current.close(); audioCtxRef.current = null; }
-
-    // ElevenLabs disabled
   };
 
   const handleClose = () => {
