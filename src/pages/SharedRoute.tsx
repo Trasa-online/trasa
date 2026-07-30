@@ -8,7 +8,7 @@ import { notify } from "@/lib/notify";
 import { sendClientPush, getCurrentUserName } from "@/lib/clientPush";
 import { format } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
-import { MapPin, ArrowLeft, Sparkles, ChevronRight, ChevronLeft, Bookmark, List, GalleryHorizontalEnd, Calendar as CalendarIcon, Image as ImageIcon, Maximize2, X } from "lucide-react";
+import { MapPin, ArrowLeft, Sparkles, ChevronRight, ChevronLeft, Bookmark, List, GalleryHorizontalEnd, Calendar as CalendarIcon, Image as ImageIcon, Maximize2, X, Building2 } from "lucide-react";
 import { PlacePhoto } from "@/components/PlacePhoto";
 import { RoutePlaceRow } from "@/components/route/RoutePlaceRow";
 import RouteMap from "@/components/RouteMap";
@@ -423,7 +423,15 @@ export default function SharedRoute() {
 
         {/* Naglowek: badge + tytul + data + opis */}
         <div className="px-5 pt-5">
-          <span className="inline-flex bg-muted text-muted-foreground text-[11px] font-medium px-2.5 py-1 rounded-full">Plan wyjazdu</span>
+          {/* Autor trasy (awatar + @username) + miasto + liczba miejsc - zamiast badge "Plan wyjazdu". */}
+          <div className="flex items-center gap-2.5 flex-wrap text-sm">
+            <span className="flex items-center gap-1.5 font-semibold text-foreground">
+              {!isAnon && <img src={avatarSrc(author?.avatar_url)} alt="" className="h-6 w-6 rounded-full object-cover bg-orange-100" />}
+              {isAnon ? authorName : (author?.username ? `@${author.username}` : authorName)}
+            </span>
+            {cityLabel && <span className="flex items-center gap-1 text-muted-foreground"><Building2 className="h-4 w-4" />{cityLabel}</span>}
+            <span className="flex items-center gap-1 text-muted-foreground"><MapPin className="h-4 w-4" />{pins.length} {pins.length === 1 ? "miejsce" : pins.length < 5 ? "miejsca" : "miejsc"}</span>
+          </div>
           <h1 className="text-2xl font-black text-foreground leading-tight mt-3">{route.title || cityLabel}</h1>
           {dateLabel && (
             <div className="flex items-center gap-1.5 mt-2.5 text-foreground">

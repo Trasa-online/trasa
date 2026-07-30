@@ -6,7 +6,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Camera, X, Globe, Lock, Pencil, Check, Image as ImageIcon, Map as MapIcon, MapPin, ChevronUp, ChevronDown, ChevronRight, ChevronLeft, Trash2, Plus, Share, Share2, List, GalleryHorizontalEnd, Info, MoreVertical, Navigation, Maximize2, Users, Calendar as CalendarIcon, Loader2, GripVertical } from "lucide-react";
+import { ArrowLeft, Camera, X, Globe, Lock, Pencil, Check, Image as ImageIcon, Map as MapIcon, MapPin, ChevronUp, ChevronDown, ChevronRight, ChevronLeft, Trash2, Plus, Share, Share2, List, GalleryHorizontalEnd, Info, MoreVertical, Navigation, Maximize2, Users, Calendar as CalendarIcon, Loader2, GripVertical, Building2 } from "lucide-react";
 import { Reorder, useDragControls } from "framer-motion";
 import RouteMap from "@/components/RouteMap";
 import SwipeToDeleteRow from "@/components/SwipeToDeleteRow";
@@ -275,6 +275,16 @@ const ReviewSummary = () => {
 
   const folderId = route?.folder_id ?? null;
 
+  // Autor trasy (wlasciciel) - do naglowka (awatar + @username), zamiast badge "Plan wyjazdu".
+  const { data: routeAuthor } = useQuery({
+    queryKey: ["review-route-author", route?.user_id],
+    enabled: !!route?.user_id,
+    queryFn: async () => {
+      const { data } = await (supabase as any).from("profiles").select("username, first_name, avatar_url").eq("id", route!.user_id).maybeSingle();
+      return data as { username: string | null; first_name: string | null; avatar_url: string | null } | null;
+    },
+  });
+
   // Dni trasy: jesli wpis nalezy do folderu (trasa wielodniowa) - wszystkie dni;
   // inaczej tylko ten jeden route. Jeden wpis w dzienniku = cala trasa, dni
   // przelaczane wewnatrz.
@@ -532,8 +542,8 @@ const ReviewSummary = () => {
       queryClient.invalidateQueries({ queryKey: ["review-summary-route", routeId] });
       queryClient.invalidateQueries({ queryKey: ["journal-entries"] });
       // Feed Eksploruj (Anonim vs profil na kartach tras) - wymus odswiezenie.
-      queryClient.invalidateQueries({ queryKey: ["discovery-newest-routes"] });
-      queryClient.invalidateQueries({ queryKey: ["discovery-warszawa-routes"] });
+      queryClient.invalidateQueries({ queryKey: ["discovery-city-routes"] });
+      queryClient.invalidateQueries({ queryKey: ["discovery-polecane"] });
       queryClient.invalidateQueries({ queryKey: ["shared-route-meta", routeId] });
     }
   };
@@ -551,8 +561,8 @@ const ReviewSummary = () => {
     await supabase.from("routes").update({ is_shared: pub, share_friends: fri, ...(pub ? {} : { share_anonymous: false }) } as any).eq("id", routeId);
     queryClient.invalidateQueries({ queryKey: ["review-summary-route", routeId] });
     queryClient.invalidateQueries({ queryKey: ["journal-entries"] });
-    queryClient.invalidateQueries({ queryKey: ["discovery-newest-routes"] });
-    queryClient.invalidateQueries({ queryKey: ["discovery-warszawa-routes"] });
+    queryClient.invalidateQueries({ queryKey: ["discovery-city-routes"] });
+    queryClient.invalidateQueries({ queryKey: ["discovery-polecane"] });
     queryClient.invalidateQueries({ queryKey: ["shared-route-meta", routeId] });
   };
 
@@ -1846,7 +1856,15 @@ const ReviewSummary = () => {
           <div className="px-4 pt-5">
           {/* Badge "Plan wyjazdu" + nazwa (edytowalna) + data (edytowalna) + widocznosc */}
           <div className="flex flex-col gap-4">
-            <span className="self-start bg-muted text-muted-foreground text-[10px] font-medium px-2 py-0.5 rounded-full">Plan wyjazdu</span>
+            {/* Autor trasy (awatar + @username) + miasto + liczba miejsc - zamiast badge "Plan wyjazdu". */}
+            <div className="flex items-center gap-2.5 flex-wrap text-sm">
+              <span className="flex items-center gap-1.5 font-semibold text-foreground">
+                <img src={avatarSrc(routeAuthor?.avatar_url)} alt="" className="h-6 w-6 rounded-full object-cover bg-orange-100" />
+                {routeAuthor?.username ? `@${routeAuthor.username}` : (routeAuthor?.first_name || t("labels.you", { defaultValue: "Ty" }))}
+              </span>
+              {cityLabel && <span className="flex items-center gap-1 text-muted-foreground"><Building2 className="h-4 w-4" />{cityLabel}</span>}
+              <span className="flex items-center gap-1 text-muted-foreground"><MapPin className="h-4 w-4" />{currentPins.length} {currentPins.length === 1 ? "miejsce" : currentPins.length < 5 ? "miejsca" : "miejsc"}</span>
+            </div>
             {/* Nazwa wyjazdu - edytowalna inline; olowek dosuniety do prawej (justify-between) */}
             {editingName ? (
               <div className="flex items-center gap-2">

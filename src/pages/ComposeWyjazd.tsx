@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useLocation } from "react-router-dom";
 import { ArrowLeft, Search, Plus, X, ChevronDown, Calendar as CalendarIcon, List, GalleryHorizontalEnd, Loader2, ArrowRight, Trash2, Maximize2, GripVertical } from "lucide-react";
 import { Reorder, useDragControls } from "framer-motion";
@@ -137,6 +138,7 @@ function SortableComposeRow({ it, idx, onOpen, onRemove }: {
 // propozycje z bazy (na fokusie) + statyczna mapa. Potwierdzenie tworzy wyjazd (routes).
 export default function ComposeWyjazd() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const location = useLocation();
   const { user } = useAuth();
   const { open: openAuthDrawer } = useAuthDrawer();
@@ -364,6 +366,10 @@ export default function ComposeWyjazd() {
     setCreating(false);
     if (!id) { haptics.error(); toast.error(draftId ? "Nie udało się zapisać zmian" : "Nie udało się utworzyć wyjazdu"); return; }
     haptics.success();
+    // Nowa/edytowana trasa jest publiczna (is_shared) - wymus odswiezenie feedu Eksploruj,
+    // zeby pojawila sie na zakladce eksploracji bez recznego reloadu.
+    queryClient.invalidateQueries({ queryKey: ["discovery-city-routes"] });
+    queryClient.invalidateQueries({ queryKey: ["discovery-polecane"] });
     // openEditor -> review-summary od razu na kroku SUGESTII (step 2), bo plan miejsc user juz
     // ulozyl tutaj w kompozycji. Guzik "Przejdz do sugestii".
     if (openEditor) {

@@ -18,7 +18,7 @@ const HOME_FILTERS_KEY = "trasa_home_filters";
 // uklad wzorowany na arkuszu tworzenia z Pinteresta.
 // Ikona nawigacji z pliku SVG (public/Ikona_*.svg). Uzywa CSS mask + currentColor, wiec
 // przejmuje kolor tekstu rodzica (czarny #0E0E0E gdy aktywna, szary gdy nie) - jak ikony lucide.
-const NavIcon = ({ src, className = "h-6 w-6" }: { src: string; className?: string }) => (
+const NavIcon = ({ src, className = "h-5 w-5" }: { src: string; className?: string }) => (
   <span
     aria-hidden
     className={className}
@@ -416,10 +416,10 @@ const BottomNav = () => {
             className="flex items-center justify-center"
             aria-label={t("fab_aria")}
           >
-            <span className={`h-11 w-11 rounded-full flex items-center justify-center active:scale-95 transition-transform ${showMenu ? "bg-primary" : ""}`}>
+            <span className="h-11 w-11 rounded-full bg-primary flex items-center justify-center active:scale-95 transition-transform shadow-sm">
               {showMenu
-                ? <X className="h-5 w-5 text-white stroke-[2.5px]" />
-                : <img src="/Ikona_Dodaj.svg" alt="" className="h-11 w-11 object-contain" draggable={false} />
+                ? <X className="h-6 w-6 text-white stroke-[2.5px]" />
+                : <Plus className="h-6 w-6 text-white stroke-[2.5px]" />
               }
             </span>
           </button>
