@@ -7,6 +7,10 @@ const CACHE_TTL_HOURS = 168; // 7 days
 // Dzienny limit wywolan platnego Google API (bezpiecznik kosztowy). Env-configurable.
 const GOOGLE_DAILY_CALL_LIMIT = Number(Deno.env.get("GOOGLE_DAILY_CALL_LIMIT") ?? "2500");
 
+// Miesieczny limit BUDZETOWY dla Text Search (wyszukiwarka). 8000/mies ~= $256 @ $32/1000
+// (cel: max ~$260/mies na wyszukiwarce). Env-configurable.
+const GOOGLE_TEXTSEARCH_MONTHLY_LIMIT = Number(Deno.env.get("GOOGLE_TEXTSEARCH_MONTHLY_LIMIT") ?? "8000");
+
 // Atomowo rezerwuje n wywolan Google na dzis. false => limit przekroczony (NIE wolaj Google).
 // Fail-open: gdy RPC niedostepny/blad -> przepuszczamy (nie blokujemy legalnego ruchu).
 async function consumeGoogleQuota(sb: ReturnType<typeof createClient>, n: number): Promise<boolean> {
@@ -16,6 +20,19 @@ async function consumeGoogleQuota(sb: ReturnType<typeof createClient>, n: number
     return data !== false;
   } catch {
     return true;
+  }
+}
+
+// Atomowo rezerwuje n wywolan Text Search na biezacy miesiac. false => budzet wyczerpany.
+// Fail-CLOSED: gdy RPC niedostepny/blad -> BLOKUJEMY (priorytet: zero ryzyka rachunku).
+async function consumeTextsearchMonthly(sb: ReturnType<typeof createClient>, n: number): Promise<boolean> {
+  try {
+    const { data, error } = await sb.rpc("try_consume_textsearch_month", { p_n: n, p_limit: GOOGLE_TEXTSEARCH_MONTHLY_LIMIT });
+    if (error) { console.error("textsearch monthly quota rpc error:", error.message); return false; }
+    return data !== false;
+  } catch (e) {
+    console.error("textsearch monthly quota exception:", (e as Error).message);
+    return false;
   }
 }
 
@@ -78,8 +95,13 @@ Deno.serve(async (req) => {
       if (cacheHit && Date.now() - cacheHit.ts < TEXTSEARCH_TTL_MS) {
         return new Response(JSON.stringify({ results: cacheHit.results }), { headers: { ...corsHeaders, "Content-Type": "application/json", "X-Cache": "HIT" } });
       }
+      // 1) Miesieczny budzet (~$256, fail-CLOSED) - twardy sufit kosztu wyszukiwarki.
+      if (!(await consumeTextsearchMonthly(sb, 1))) {
+        return new Response(JSON.stringify({ results: [], quota_exceeded: true, period: "month" }), { headers: { ...corsHeaders, "Content-Type": "application/json", "X-Quota": "MONTH-EXCEEDED" } });
+      }
+      // 2) Dzienny burst limit (fail-open).
       if (!(await consumeGoogleQuota(sb, 1))) {
-        return new Response(JSON.stringify({ results: [], quota_exceeded: true }), { headers: { ...corsHeaders, "Content-Type": "application/json", "X-Quota": "EXCEEDED" } });
+        return new Response(JSON.stringify({ results: [], quota_exceeded: true, period: "day" }), { headers: { ...corsHeaders, "Content-Type": "application/json", "X-Quota": "EXCEEDED" } });
       }
       const res = await fetch(`${BASE}/place/textsearch/json?query=${encodeURIComponent(body.query)}&key=${apiKey}&language=pl`, { headers: { Referer: REFERER } });
       const data = await res.json();

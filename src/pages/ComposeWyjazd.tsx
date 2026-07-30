@@ -185,6 +185,8 @@ export default function ComposeWyjazd() {
   const [searchFocused, setSearchFocused] = useState(false);
   const [results, setResults] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  // Budzet miesieczny Text Search wyczerpany (proxy zwraca quota_exceeded) - blokada wyszukiwarki Google.
+  const [searchBlocked, setSearchBlocked] = useState(false);
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [creating, setCreating] = useState(false);
 
@@ -242,6 +244,7 @@ export default function ComposeWyjazd() {
         const { data } = await supabase.functions.invoke("google-places-proxy", {
           body: { action: "textsearch", query: `${q} ${city}` },
         });
+        setSearchBlocked(!!data?.quota_exceeded);
         const raw = (data?.results ?? []) as any[];
         setResults(raw.map((r: any) => ({
           id: null,
@@ -433,6 +436,8 @@ export default function ComposeWyjazd() {
             </p>
             {loading && search.trim().length >= 2 ? (
               <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+            ) : searchBlocked && proposals.length === 0 ? (
+              <p className="px-4 text-sm text-muted-foreground pb-2 leading-relaxed">Wyszukiwarka miejsc jest chwilowo niedostępna. Wybierz z propozycji poniżej albo spróbuj później.</p>
             ) : proposals.length === 0 ? (
               <p className="px-4 text-sm text-muted-foreground pb-2">Brak wyników dla tej frazy.</p>
             ) : (
