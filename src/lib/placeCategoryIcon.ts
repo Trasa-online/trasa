@@ -86,3 +86,33 @@ export function categoryIconSrc(category?: string | null): string {
   if (!category) return FALLBACK_ICON;
   return CATEGORY_ICON_MAP[category.toLowerCase().trim()] ?? FALLBACK_ICON;
 }
+
+// Mapowanie TYPOW Google Places (r.types z textsearch/details) na NASZA kategorie
+// (klucz z CATEGORY_ICON_MAP). Wyniki wyszukiwarki nie maja naszej kategorii - bez tego
+// KAZDE wyszukane miejsce dostaje ikone fallback (Landmark). Iterujemy po types w kolejnosci
+// (Google zwraca od najbardziej szczegolowego), pierwszy trafiony wygrywa.
+const GOOGLE_TYPE_TO_CATEGORY: Record<string, string> = {
+  restaurant: "restaurant", food: "restaurant", meal_takeaway: "restaurant", meal_delivery: "restaurant",
+  cafe: "cafe", coffee_shop: "cafe", breakfast_restaurant: "cafe",
+  bar: "bar", pub: "bar", wine_bar: "bar", night_club: "nightclub",
+  bakery: "bakery",
+  museum: "museum",
+  art_gallery: "gallery",
+  tourist_attraction: "landmark", point_of_interest: "landmark", landmark: "landmark", historical_landmark: "monument",
+  church: "church", place_of_worship: "church", hindu_temple: "church", mosque: "church", synagogue: "church",
+  park: "park", national_park: "park", garden: "park", campground: "nature", hiking_area: "nature", beach: "beach",
+  movie_theater: "movie_theater", performing_arts_theater: "theater", concert_hall: "concert_hall",
+  shopping_mall: "shopping", store: "store", clothing_store: "clothing_store", department_store: "shopping",
+  supermarket: "shopping", market: "market", book_store: "book_store", liquor_store: "liquor_store",
+  library: "library",
+  amusement_park: "attractions", zoo: "attractions", aquarium: "attractions", stadium: "attractions", spa: "attractions",
+};
+
+export function categoryFromGoogleTypes(types?: string[] | null): string | null {
+  if (!Array.isArray(types)) return null;
+  for (const t of types) {
+    const key = GOOGLE_TYPE_TO_CATEGORY[String(t).toLowerCase().trim()];
+    if (key) return key;
+  }
+  return null;
+}

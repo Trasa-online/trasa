@@ -352,9 +352,7 @@ const JournalTab = ({ userId, city: cityFilter }: JournalTabProps) => {
             className="w-full h-full object-cover"
             onError={(e) => { (e.target as HTMLImageElement).src = getRandomPinPlaceholder(entry.id + "_fallback"); }}
           />
-          <div className="absolute top-2 left-2 h-7 w-7 rounded-full bg-black/35 backdrop-blur-sm flex items-center justify-center">
-            {isPrivate ? <Lock className="h-3.5 w-3.5 text-white/90" /> : <Globe className="h-3.5 w-3.5 text-white/90" />}
-          </div>
+          {/* Ikona prywatne/publiczne (Lock/Globe) usunieta 2026-07-30: wszystkie trasy publiczne. */}
           {miniMap && (
             <div className="absolute bottom-2 right-2 h-[46px] w-[46px] rounded-xl overflow-hidden border-2 border-white shadow-md bg-white">
               <img src={miniMap} alt="" className="w-full h-full object-cover" />

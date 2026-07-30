@@ -19,7 +19,7 @@ import RouteMap from "@/components/RouteMap";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import { TRIP_COUNTRIES, TRIP_REGIONS, citiesForCountry, countryForCity } from "@/lib/tripCountries";
 import { fetchEnrichedPlace, type MockPlace } from "@/components/plan-wizard/PlaceSwiper";
-import { categoryIconSrc } from "@/lib/placeCategoryIcon";
+import { categoryIconSrc, categoryFromGoogleTypes } from "@/lib/placeCategoryIcon";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 
 const PL_CITIES = ORIGIN_COUNTRIES.find((c) => c.name === "Polska")?.cities ?? ["Warszawa"];
@@ -258,7 +258,8 @@ export default function ComposeWyjazd() {
           address: r.full_address ?? null,
           latitude: r.latitude ?? null,
           longitude: r.longitude ?? null,
-          category: null,
+          // Kategoria z typow Google (inaczej wszystkie wyszukane miejsca = ikona Landmark).
+          category: categoryFromGoogleTypes(r.types),
           rating: null,
           photo_url: null,
         })));
