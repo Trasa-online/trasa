@@ -344,8 +344,8 @@ const JournalTab = ({ userId, city: cityFilter }: JournalTabProps) => {
         onClick={onOpen}
         className="relative w-full flex gap-3.5 py-4 text-left active:opacity-90 transition-opacity cursor-pointer"
       >
-        {/* Okladka po lewej (118x160) */}
-        <div className="relative w-[118px] h-[160px] shrink-0 rounded-2xl overflow-hidden bg-muted">
+        {/* Okladka po lewej - 9:16 (118x210) wg Figmy (sekcja IN-PROGRESS POPRAWKI, /Wyjazdy). */}
+        <div className="relative w-[118px] aspect-[9/16] shrink-0 rounded-2xl overflow-hidden bg-muted">
           <img
             src={thumb}
             alt=""
