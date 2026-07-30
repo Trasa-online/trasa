@@ -7,7 +7,7 @@ import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { resolveStored } from "@/components/PlacePhoto";
 import { format, parseISO, isValid, differenceInCalendarDays } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
-import { Globe, Lock, Loader2, Trash2, Sparkles, Plus, BookOpen } from "lucide-react";
+import { Globe, Lock, Loader2, Trash2, Sparkles, BookOpen } from "lucide-react";
 import { toast } from "sonner";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { PLANNING_DISABLED } from "@/lib/appMode";
@@ -421,7 +421,7 @@ const JournalTab = ({ userId, city: cityFilter }: JournalTabProps) => {
   if (entries.length === 0) {
     return (
       <>
-        <div className="flex-1 flex flex-col items-center justify-center gap-5 px-8 py-24 text-center">
+        <div className="flex-1 flex flex-col items-center gap-5 px-8 pt-20 pb-12 text-center">
           {PLANNING_DISABLED ? (
             <span
               aria-hidden
@@ -439,15 +439,7 @@ const JournalTab = ({ userId, city: cityFilter }: JournalTabProps) => {
               {PLANNING_DISABLED ? "Stwórz wyjazd klikając guzik „+”, aby zobaczyć je tutaj." : t("journal.empty_desc")}
             </p>
           </div>
-          {PLANNING_DISABLED ? (
-            <button
-              onClick={() => navigate("/plan", { state: { wyjazdMode: true } })}
-              className="px-6 py-3.5 rounded-full bg-primary text-white font-bold text-sm flex items-center gap-2 active:scale-95 transition-transform"
-            >
-              <Plus className="h-4 w-4" />
-              Stwórz wyjazd
-            </button>
-          ) : (
+          {!PLANNING_DISABLED && (
             <button
               onClick={() => navigate("/sesja/nowa", { state: { from: "journal" } })}
               className="px-6 py-3.5 rounded-full bg-primary text-white font-bold text-sm flex items-center gap-2 active:scale-95 transition-transform"
