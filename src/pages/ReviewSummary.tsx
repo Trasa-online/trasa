@@ -1730,11 +1730,18 @@ const ReviewSummary = () => {
                 })}
               </div>
             );
+            // Regula (tworzenie nowej trasy): dopoki trasa NIE jest sfinalizowana (reviewed=false),
+            // okladka wizytowki miejsca NIE aktualizuje sie o swiezo dodane zdjecia - pokazuje
+            // baseline (ikona kategorii). Dodane zdjecia widac w pasku ponizej; okladka miejsca
+            // zaczyna je odzwierciedlac dopiero po rzeczywistym stworzeniu trasy (reviewed=true).
+            const coverPin = reviewed
+              ? pin
+              : { ...pin, images: undefined, user_photo_urls: undefined, image_url: undefined, photo_url: undefined };
             // Wizytowka miejsca (jak w liscie Miejsca) na gorze; Dodaj + zdjecia pod spodem (note).
             return (
               <RoutePlaceRow
                 key={pin.id}
-                pin={pin}
+                pin={coverPin}
                 index={i}
                 categoryLabel={catLabel(pin.category)}
                 onOpen={() => openDetail(pin)}
