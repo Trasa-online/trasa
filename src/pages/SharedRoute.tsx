@@ -163,6 +163,12 @@ export default function SharedRoute() {
       // Powiadom autora oryginalnej trasy, ze ktos jej uzyl (best-effort; SECURITY DEFINER RPC -
       // klient nie moze insertowac notyfikacji dla innego usera). Push leci triggerem notify_push.
       if (route.user_id && route.user_id !== user.id) {
+        // Zapisz "wykorzystanie" oryginalnej trasy (feeduje statystyki autora: my_route_stats
+        // liczy saved_routes -> "osób wykorzystało Twoje trasy" + "Zapisania"). PK(user_id, route_id)
+        // -> upsert idempotentny, ponowne uzycie tej samej trasy nie duplikuje.
+        void (supabase as any)
+          .from("saved_routes")
+          .upsert({ user_id: user.id, route_id: id }, { onConflict: "user_id,route_id", ignoreDuplicates: true });
         void (supabase as any).rpc("notify_route_used", { p_route_id: id });
         // Push Z KLIENTA (trigger DB dostaje z send-push 401). Odbiorca = autor oryginalnej trasy.
         const me = await getCurrentUserName();
