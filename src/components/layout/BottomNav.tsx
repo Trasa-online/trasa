@@ -17,7 +17,7 @@ const HOME_FILTERS_KEY = "trasa_home_filters";
 // Kafelek akcji w drawerze "+" (ikona w szarym kwadracie + podpis pod spodem),
 // uklad wzorowany na arkuszu tworzenia z Pinteresta.
 // Ikona nawigacji z pliku SVG (public/Ikona_*.svg). Uzywa CSS mask + currentColor, wiec
-// przejmuje kolor tekstu rodzica (orange gdy aktywna, szary gdy nie) - jak ikony lucide.
+// przejmuje kolor tekstu rodzica (czarny #0E0E0E gdy aktywna, szary gdy nie) - jak ikony lucide.
 const NavIcon = ({ src, className = "h-6 w-6" }: { src: string; className?: string }) => (
   <span
     aria-hidden
@@ -360,7 +360,7 @@ const BottomNav = () => {
               to="/eksploruj"
               end={false}
               className="flex flex-col items-center justify-center gap-1 text-muted-foreground transition-colors"
-              activeClassName="text-orange-600"
+              activeClassName="text-foreground"
             >
               {({ isActive }) => (
                 <>
@@ -377,7 +377,7 @@ const BottomNav = () => {
               to="/dziennik"
               end={false}
               className="flex flex-col items-center justify-center gap-1 text-muted-foreground transition-colors"
-              activeClassName="text-orange-600"
+              activeClassName="text-foreground"
             >
               {({ isActive }) => (
                 <>
@@ -396,7 +396,7 @@ const BottomNav = () => {
               to="/home"
               end
               className="flex flex-col items-center justify-center gap-1 text-muted-foreground transition-colors"
-              activeClassName="text-orange-600"
+              activeClassName="text-foreground"
             >
               {({ isActive }) => (
                 <>
@@ -432,7 +432,7 @@ const BottomNav = () => {
               data-ob="nav-zapisane"
               end={false}
               className="flex flex-col items-center justify-center gap-1 text-muted-foreground transition-colors"
-              activeClassName="text-orange-600"
+              activeClassName="text-foreground"
             >
               {({ isActive }) => (
                 <>
@@ -446,7 +446,7 @@ const BottomNav = () => {
               to="/dziennik"
               end={false}
               className="flex flex-col items-center justify-center gap-1 text-muted-foreground transition-colors"
-              activeClassName="text-orange-600"
+              activeClassName="text-foreground"
             >
               {({ isActive }) => (
                 <>
@@ -467,7 +467,7 @@ const BottomNav = () => {
             to="/moj-profil"
             end={false}
             className="flex flex-col items-center justify-center gap-1 text-muted-foreground transition-colors"
-            activeClassName="text-orange-600"
+            activeClassName="text-foreground"
           >
             {({ isActive }) => (
               <>

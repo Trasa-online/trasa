@@ -1813,9 +1813,9 @@ const ReviewSummary = () => {
             <button
               onClick={() => setCoverPickerOpen(true)}
               aria-label="Zmień okładkę wyjazdu"
-              className="absolute top-14 right-3 z-20 w-[5.75rem] rounded-2xl overflow-hidden border-[3px] border-white shadow-xl bg-muted active:scale-95 transition-transform"
+              className="absolute bottom-3 right-3 z-20 w-20 rounded-2xl overflow-hidden border-[3px] border-white shadow-xl bg-muted active:scale-95 transition-transform"
             >
-              <div className="relative w-full aspect-[3/4]">
+              <div className="relative w-full aspect-[9/16]">
                 <img src={heroPhoto} alt="" className="w-full h-full object-cover" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/5 to-black/10" />
                 {/* Mini-overlay jak na karcie eksploracji (miasto · liczba miejsc + tytul). */}
