@@ -188,7 +188,7 @@ export default function SharedRoute() {
     queryFn: async () => {
       const { data } = await (supabase as any)
         .from("pins")
-        .select("id, place_name, address, category, suggested_time, images, image_url, photo_url, place_id, latitude, longitude, pin_order, description")
+        .select("id, place_name, address, category, suggested_time, images, image_url, user_photo_urls, photo_url, place_id, latitude, longitude, pin_order, description")
         .eq("route_id", id!)
         .order("pin_order");
       return (data ?? []) as any[];

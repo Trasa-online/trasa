@@ -14,7 +14,11 @@ export const resolveStored = (img: string | null | undefined): string | null => 
 // Google (zdjecia miejsc pochodza ze zdjec userow z tras). Prop `emojiClass` zostaje w
 // sygnaturze dla kompatybilnosci call-site'ow, ale nie jest juz uzywany.
 export function PlacePhoto({ pin, className }: { pin: any; className?: string; emojiClass?: string }) {
-  const stored = pin.image_url || (Array.isArray(pin.images) ? pin.images[0] : null) || pin.photo_url;
+  // Zdjecia usera z miejsca (obojetnie ktorym kanalem dodane): pins.images (edytor trasy)
+  // + pins.user_photo_urls (aktywny wyjazd). Zdjecie usera ZAWSZE przed placeholderem;
+  // ikona+peachy tlo dopiero gdy BRAK jakiegokolwiek zdjecia.
+  const firstOf = (v: any): string | null => (Array.isArray(v) ? (v.find((x) => typeof x === "string" && x) ?? null) : null);
+  const stored = pin.image_url || firstOf(pin.images) || firstOf(pin.user_photo_urls) || pin.photo_url;
   const url = resolveStored(stored);
   const [failed, setFailed] = useState(false);
 

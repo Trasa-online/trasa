@@ -30,7 +30,7 @@ async function enrichRoutes(rows: any[]): Promise<ChooserRoute[]> {
   const ids = rows.map((r) => r.id);
   const { data: pins } = await (supabase as any)
     .from("pins")
-    .select("route_id, photo_url, image_url, pin_order")
+    .select("route_id, photo_url, image_url, images, user_photo_urls, pin_order")
     .in("route_id", ids)
     .order("pin_order", { ascending: true });
   const cover: Record<string, string> = {};
@@ -38,7 +38,7 @@ async function enrichRoutes(rows: any[]): Promise<ChooserRoute[]> {
   for (const p of (pins ?? []) as any[]) {
     count[p.route_id] = (count[p.route_id] ?? 0) + 1;
     if (!cover[p.route_id]) {
-      const u = resolveStored(p.photo_url || p.image_url);
+      const u = resolveStored((Array.isArray(p.images) && p.images[0]) || (Array.isArray(p.user_photo_urls) && p.user_photo_urls[0]) || p.photo_url || p.image_url);
       if (u) cover[p.route_id] = u;
     }
   }
@@ -115,7 +115,7 @@ export default function StartWyjazd() {
     setLoadingId(route.id);
     const { data: pins } = await (supabase as any)
       .from("pins")
-      .select("place_name, category, address, latitude, longitude, photo_url, image_url, place_id, rating, pin_order")
+      .select("place_name, category, address, latitude, longitude, photo_url, image_url, images, user_photo_urls, place_id, rating, pin_order")
       .eq("route_id", route.id)
       .order("pin_order", { ascending: true });
     setLoadingId(null);
@@ -125,7 +125,7 @@ export default function StartWyjazd() {
       address: p.address ?? null,
       latitude: p.latitude ?? null,
       longitude: p.longitude ?? null,
-      photo_url: resolveStored(p.photo_url || p.image_url) ?? null,
+      photo_url: resolveStored((Array.isArray(p.images) && p.images[0]) || (Array.isArray(p.user_photo_urls) && p.user_photo_urls[0]) || p.photo_url || p.image_url) ?? null,
       place_id: p.place_id ?? null,
       rating: typeof p.rating === "number" ? p.rating : null,
     }));

@@ -884,7 +884,7 @@ async function enrichRouteRows(routes: any[]): Promise<PolecaneRoute[]> {
   const pinsMap = new Map<string, LatLng[]>();    // wspolrzedne pinow (do mini-mapy)
   const { data: pinRows } = await (supabase as any)
     .from("pins")
-    .select("route_id, photo_url, image_url, user_photo_urls, category, pin_order, rating, latitude, longitude")
+    .select("route_id, photo_url, image_url, images, user_photo_urls, category, pin_order, rating, latitude, longitude")
     .in("route_id", routeIds)
     .order("pin_order", { ascending: true });
   const best = new Map<string, { url: string; rank: number; order: number }>();
@@ -904,7 +904,7 @@ async function enrichRouteRows(routes: any[]): Promise<PolecaneRoute[]> {
       const u = resolveStored(p.user_photo_urls.find(Boolean));
       if (u) userPhotoMap.set(p.route_id, u);
     }
-    const url = resolveStored(p.photo_url || p.image_url);
+    const url = resolveStored((Array.isArray(p.images) && p.images[0]) || (Array.isArray(p.user_photo_urls) && p.user_photo_urls[0]) || p.photo_url || p.image_url);
     if (!url) continue;
     const rank = CAT_RANK[p.category as string] ?? 50;
     const order = p.pin_order ?? 999;
@@ -1854,7 +1854,7 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
       if (routeIds.length > 0) {
         const { data: pinRows } = await (supabase as any)
           .from("pins")
-          .select("route_id, photo_url, image_url, category, pin_order")
+          .select("route_id, photo_url, image_url, images, user_photo_urls, category, pin_order")
           .in("route_id", routeIds);
         const RANK: Record<string, number> = {
           viewpoint: 0, monument: 1, park: 2, gallery: 3, museum: 4, experience: 5,
@@ -1862,7 +1862,7 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
         };
         const best = new Map<string, { url: string; rank: number; order: number }>();
         for (const p of (pinRows ?? []) as any[]) {
-          const url = resolveStored(p.photo_url || p.image_url);
+          const url = resolveStored((Array.isArray(p.images) && p.images[0]) || (Array.isArray(p.user_photo_urls) && p.user_photo_urls[0]) || p.photo_url || p.image_url);
           if (!url) continue;
           const rank = RANK[p.category as string] ?? 50;
           const order = p.pin_order ?? 999;

@@ -109,7 +109,7 @@ const ActiveTrip = ({ routeId: propRouteId, embedded = false }: { routeId?: stri
 
       const { data: pins, error: pinsError } = await (supabase as any)
         .from("pins")
-        .select("id, place_name, pin_order, suggested_time, address, description, latitude, longitude, visited_at, user_photo_urls, photo_url")
+        .select("id, place_name, pin_order, suggested_time, address, description, latitude, longitude, visited_at, user_photo_urls, images, image_url, photo_url")
         .eq("route_id", routeId)
         .order("pin_order", { ascending: true });
       if (pinsError) {

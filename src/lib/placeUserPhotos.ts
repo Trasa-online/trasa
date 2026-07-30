@@ -23,11 +23,11 @@ export async function fetchPlaceUserPhotos(opts: FetchPlaceUserPhotosOpts): Prom
   if (orParts.length === 0) return [];
 
   try {
-    // user_photo_urls nie ma w wygenerowanych typach (patrz ActiveTrip.tsx) - cast na any.
+    // Zdjecia usera z miejsca dwoma kanalami: user_photo_urls (aktywny wyjazd) + images
+    // (edytor trasy). Oba to zdjecia usera dla tego miejsca. Cast na any (kolumny nie w typach).
     const { data, error } = await (supabase as any)
       .from("pins")
-      .select("user_photo_urls")
-      .not("user_photo_urls", "is", null)
+      .select("user_photo_urls, images")
       .or(orParts.join(","));
 
     if (error) {
@@ -36,7 +36,7 @@ export async function fetchPlaceUserPhotos(opts: FetchPlaceUserPhotosOpts): Prom
     }
 
     const urls = (data ?? [])
-      .flatMap((row: { user_photo_urls?: string[] | null }) => row.user_photo_urls ?? [])
+      .flatMap((row: { user_photo_urls?: string[] | null; images?: string[] | null }) => [...(row.user_photo_urls ?? []), ...(row.images ?? [])])
       .filter((u: unknown): u is string => typeof u === "string" && u.length > 0);
 
     return Array.from(new Set(urls));

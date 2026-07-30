@@ -73,11 +73,11 @@ export default function PublicProfile() {
       const coverMap: Record<string, string> = {};
       if (ids.length) {
         const { data: pins } = await (supabase as any)
-          .from("pins").select("route_id, photo_url, image_url, pin_order")
+          .from("pins").select("route_id, photo_url, image_url, images, user_photo_urls, pin_order")
           .in("route_id", ids).order("pin_order", { ascending: true });
         for (const p of pins ?? []) {
           if (coverMap[p.route_id]) continue;
-          const u = resolveStored(p.photo_url || p.image_url);
+          const u = resolveStored((Array.isArray(p.images) && p.images[0]) || (Array.isArray(p.user_photo_urls) && p.user_photo_urls[0]) || p.photo_url || p.image_url);
           if (u) coverMap[p.route_id] = u;
         }
       }

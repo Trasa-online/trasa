@@ -88,7 +88,7 @@ const JournalTab = ({ userId, city: cityFilter }: JournalTabProps) => {
       if (!entryIds.length) return { covers: {}, counts: {}, maps: {} };
       const { data } = await (supabase as any)
         .from("pins")
-        .select("route_id, photo_url, image_url, pin_order, latitude, longitude")
+        .select("route_id, photo_url, image_url, images, user_photo_urls, pin_order, latitude, longitude")
         .in("route_id", entryIds)
         .order("pin_order", { ascending: true });
       const covers: Record<string, string> = {};
@@ -98,7 +98,7 @@ const JournalTab = ({ userId, city: cityFilter }: JournalTabProps) => {
         counts[p.route_id] = (counts[p.route_id] ?? 0) + 1;
         (coords[p.route_id] ??= []).push({ latitude: p.latitude, longitude: p.longitude });
         if (covers[p.route_id]) continue;
-        const u = resolveStored(p.photo_url || p.image_url);
+        const u = resolveStored((Array.isArray(p.images) && p.images[0]) || (Array.isArray(p.user_photo_urls) && p.user_photo_urls[0]) || p.photo_url || p.image_url);
         if (u) covers[p.route_id] = u;
       }
       // Prebuild mini-map URL per route (max 12 pinow, tylko gdy sa wspolrzedne).

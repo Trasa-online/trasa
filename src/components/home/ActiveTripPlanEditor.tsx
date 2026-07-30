@@ -184,7 +184,7 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false, onDelete, deleting 
       if (!dayRouteIds.length) return [];
       const { data } = await (supabase as any)
         .from("pins")
-        .select("id, route_id, place_name, address, category, suggested_time, description, image_url, images, latitude, longitude, place_id, photo_url, pin_order, visited_at")
+        .select("id, route_id, place_name, address, category, suggested_time, description, image_url, images, user_photo_urls, latitude, longitude, place_id, photo_url, pin_order, visited_at")
         .in("route_id", dayRouteIds)
         .order("pin_order", { ascending: true });
       return data ?? [];
