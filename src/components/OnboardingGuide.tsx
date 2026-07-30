@@ -31,9 +31,12 @@ export const useOnboarding = () => useContext(OnboardingCtx);
 export function OnboardingProvider({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const { user, isAnonymous } = useAuth();
+  // ⏸️ Onboarding TYMCZASOWO WYŁĄCZONY (2026-07-30) - wpuszczamy nowych userów bez couch-toura.
+  // Przywrócenie: usuń `false &&` poniżej (wróci logika localStorage(DONE_KEY) na native).
   const [active, setActive] = useState(() => {
     if (!isNative) return false;
-    try { return localStorage.getItem(DONE_KEY) !== "1"; } catch { return false; }
+    // eslint-disable-next-line no-constant-binary-expression
+    return false && (() => { try { return localStorage.getItem(DONE_KEY) !== "1"; } catch { return false; } })();
   });
 
   const finish = useCallback(async () => {
@@ -61,8 +64,10 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
   }, [user?.id, isAnonymous, navigate]);
 
   const restart = useCallback(() => {
+    // ⏸️ Onboarding wyłączony (2026-07-30) - reset czyści flagi, ale NIE odpala touru.
+    // Przywrócenie: odkomentuj setActive(true) i usuń `false &&` w useState powyżej.
     try { localStorage.removeItem(DONE_KEY); localStorage.removeItem("trasa_onboarding_v2_1_done"); } catch { /* unavailable */ }
-    setActive(true);
+    // setActive(true);
     navigate("/eksploruj", { replace: true });
   }, [navigate]);
 
