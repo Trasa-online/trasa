@@ -8,8 +8,9 @@ import { notify } from "@/lib/notify";
 import { sendClientPush, getCurrentUserName } from "@/lib/clientPush";
 import { format } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
-import { MapPin, ArrowLeft, Sparkles, ChevronRight, ChevronLeft, Bookmark, List, GalleryHorizontalEnd } from "lucide-react";
+import { MapPin, ArrowLeft, Sparkles, ChevronRight, ChevronLeft, Bookmark, List, GalleryHorizontalEnd, Calendar as CalendarIcon, Image as ImageIcon } from "lucide-react";
 import { PlacePhoto } from "@/components/PlacePhoto";
+import { RoutePlaceRow } from "@/components/route/RoutePlaceRow";
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { avatarSrc } from "@/lib/avatar";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
@@ -45,9 +46,21 @@ export default function SharedRoute() {
   const { t } = useTranslation("sharing");
   const categoryLabel = (cat: string) => t(`categories.${cat}`, { defaultValue: t("categories.other") });
   const [planView, setPlanView] = useState<"list" | "cards">("list");
+  const [planTab, setPlanTab] = useState<"miejsca" | "galeria">("miejsca");
   const [detailPin, setDetailPin] = useState<any | null>(null);
   const [saving, setSaving] = useState(false);
   const [showDateSheet, setShowDateSheet] = useState(false);
+
+  // Otworz miejsce w Google Maps (WIZYTOWKA / place page, NIE nawigacja). query_place_id gdy
+  // pin.place_id to Google Place ID (nie nasze DB uuid) - trafiamy w dokladne miejsce.
+  const openGooglePlace = (pin: any) => {
+    if (!pin) return;
+    const q = encodeURIComponent([pin.place_name, pin.address, route?.city].filter(Boolean).join(", "));
+    const pid = typeof pin.place_id === "string" && pin.place_id.trim() ? pin.place_id.trim() : "";
+    const isDbUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(pid);
+    const placeIdParam = pid && !isDbUuid ? `&query_place_id=${encodeURIComponent(pid)}` : "";
+    window.open(`https://www.google.com/maps/search/?api=1&query=${q}${placeIdParam}`, "_blank", "noopener,noreferrer");
+  };
 
   const { data: route, isLoading: routeLoading } = useQuery({
     queryKey: ["shared-route", id],
@@ -253,6 +266,12 @@ export default function SharedRoute() {
   const cover = userCover ?? placeCover;
   const hasRealPhoto = !!cover;
   const heroPhoto = cover ?? getRandomPinPlaceholder(route.id);
+  // Opis trasy (pod tytulem) = podsumowanie AI albo podpis autora.
+  const routeDescription: string = route.ai_summary || shareMeta?.share_caption || "";
+  // Galeria = wszystkie zdjecia wyjazdu autora (review_photos), z rozwiazanym URL-em.
+  const galleryPhotos: string[] = ((route.review_photos ?? []) as any[])
+    .map((u) => (typeof u === "string" ? resolveStored(u) : null))
+    .filter((u): u is string => !!u);
   const dateLabel = route.start_date ? format(new Date(route.start_date), "d MMMM yyyy", { locale: dateLocale() }) : "";
   const cityLabel = route.city || t("trip_default");
   // Tryb anonimowy: autor ukryty (bez profilu/awatara/lokalsa).
@@ -305,52 +324,23 @@ export default function SharedRoute() {
     );
   };
 
-  const renderList = () => {
-    const groups: Record<string, any[]> = {};
-    pins.forEach((p: any) => { const k = p.category || "other"; (groups[k] ??= []).push(p); });
-    return (
-      <div className="space-y-4">
-        {Object.entries(groups).map(([cat, items]) => (
-          <div key={cat}>
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-1.5">
-              <CategoryIcon category={cat} className="h-3.5 w-3.5 shrink-0" />{categoryLabel(cat)}
-            </p>
-            <div className="space-y-2">
-              {items.map((pin: any) => (
-                <div key={pin.id} className="bg-secondary border border-border/40 shadow-sm rounded-2xl p-2.5">
-                  <button onClick={() => openDetail(pin)} className="w-full flex items-center gap-3 text-left active:opacity-70 transition-opacity">
-                    <PlacePhoto pin={pin} className="h-14 w-14 rounded-xl object-cover shrink-0" />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-bold leading-tight truncate">{pin.place_name}</p>
-                      {pin.address && <p className="text-[11px] text-muted-foreground mt-0.5 truncate">{pin.address}</p>}
-                    </div>
-                    <ChevronRight className="h-4 w-4 text-muted-foreground/40 shrink-0" />
-                  </button>
-                  {(() => {
-                    const m = metaFor(pin);
-                    const desc = pin.description || m.description;
-                    return (desc || m.tags.length > 0) ? (
-                      <div className="mt-2 px-0.5">
-                        {desc && <p className="text-[11px] text-muted-foreground leading-relaxed line-clamp-2">{desc}</p>}
-                        {m.tags.length > 0 && (
-                          <div className="flex flex-wrap gap-1.5 mt-1.5">
-                            {m.tags.slice(0, 3).map((t: string) => (
-                              <span key={t} className="text-[10px] text-muted-foreground bg-white px-2 py-0.5 rounded-full">{t}</span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    ) : null;
-                  })()}
-                  {renderRatingNote(pin.place_name)}
-                </div>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-    );
-  };
+  // Plaska lista miejsc (wg Figmy: bez grupowania po kategorii) - wspoldzielony RoutePlaceRow
+  // (duze zdjecie 104px, chip kategorii + guzik Google). Notka autora pod wierszem gdy jest.
+  const renderList = () => (
+    <div className="space-y-2.5">
+      {pins.map((pin: any, i: number) => (
+        <RoutePlaceRow
+          key={pin.id}
+          pin={pin}
+          index={i}
+          categoryLabel={categoryLabel(pin.category || "other")}
+          onOpen={() => openDetail(pin)}
+          onGoogle={() => openGooglePlace(pin)}
+          note={renderRatingNote(pin.place_name)}
+        />
+      ))}
+    </div>
+  );
 
   const renderSwiper = () => (
     <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory scrollbar-none -mx-5 px-5 pb-2">
@@ -412,64 +402,85 @@ export default function SharedRoute() {
           )}
         </div>
 
-        <div className="absolute bottom-0 left-0 right-0 px-5 pb-6">
-          {dateLabel && <p className="text-white/70 text-sm mb-1">{dateLabel}</p>}
-          <h1 className="text-white text-3xl font-black leading-tight drop-shadow-sm">{route.title || cityLabel}</h1>
-        </div>
       </div>
 
-      {/* Content */}
+      {/* Content - ujednolicony z widokiem "Plan wyjazdu" (zakladka Trasy) */}
       <div className="flex-1 overflow-y-auto pb-44">
 
-        {/* Podpis autora + z kim (oznaczeni czlonkowie) */}
-        {(shareMeta?.share_caption || (shareMeta?.tagged_members?.length ?? 0) > 0) && (
-          <div className="px-5 pt-5 pb-4 border-b border-border/30 space-y-2">
-            {shareMeta?.share_caption && (
-              <p className="text-sm text-foreground/80 leading-relaxed">{shareMeta.share_caption}</p>
+        {/* Naglowek: badge + tytul + data + opis */}
+        <div className="px-5 pt-5">
+          <span className="inline-flex bg-muted text-muted-foreground text-[11px] font-medium px-2.5 py-1 rounded-full">Plan wyjazdu</span>
+          <h1 className="text-2xl font-black text-foreground leading-tight mt-3">{route.title || cityLabel}</h1>
+          {dateLabel && (
+            <div className="flex items-center gap-1.5 mt-2.5 text-foreground">
+              <CalendarIcon className="h-5 w-5 shrink-0" />
+              <span className="text-base">{dateLabel}</span>
+            </div>
+          )}
+          {route.ai_highlight && (
+            <p className="text-[17px] font-bold leading-snug text-foreground mt-3">„{route.ai_highlight}"</p>
+          )}
+          {routeDescription && (
+            <p className="text-sm text-muted-foreground leading-relaxed mt-3">{routeDescription}</p>
+          )}
+          {(shareMeta?.tagged_members?.length ?? 0) > 0 && (
+            <div className="flex flex-wrap items-center gap-1.5 mt-3">
+              <span className="text-xs text-muted-foreground">{t("with_prefix")}</span>
+              {shareMeta!.tagged_members!.map((m) => (
+                <span key={m} className="inline-flex items-center rounded-full bg-secondary text-secondary-foreground px-2.5 py-1 text-xs font-semibold">{m}</span>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Miejsca | Galeria */}
+        <div className="px-5 pt-6">
+          <div className="flex rounded-full bg-muted p-0.5 text-sm font-bold">
+            <button onClick={() => setPlanTab("miejsca")} className={`flex-1 py-2 rounded-full transition-colors ${planTab === "miejsca" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>Miejsca</button>
+            <button onClick={() => setPlanTab("galeria")} className={`flex-1 py-2 rounded-full transition-colors ${planTab === "galeria" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>Galeria</button>
+          </div>
+        </div>
+
+        {planTab === "miejsca" ? (
+          <div className="px-5 pt-4">
+            {pins.length > 0 && (
+              <>
+                <div className="flex items-center justify-end pb-3">
+                  <div className="flex rounded-full bg-muted p-0.5">
+                    <button onClick={() => setPlanView("list")} aria-label={t("view_list")} className={`px-2.5 py-1.5 rounded-full transition-colors ${planView === "list" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}><List className="h-4 w-4" /></button>
+                    <button onClick={() => setPlanView("cards")} aria-label={t("view_cards")} className={`px-2.5 py-1.5 rounded-full transition-colors ${planView === "cards" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}><GalleryHorizontalEnd className="h-4 w-4" /></button>
+                  </div>
+                </div>
+                {planView === "list" ? renderList() : renderSwiper()}
+              </>
             )}
-            {(shareMeta?.tagged_members?.length ?? 0) > 0 && (
-              <div className="flex flex-wrap items-center gap-1.5">
-                <span className="text-xs text-muted-foreground">{t("with_prefix")}</span>
-                {shareMeta!.tagged_members!.map((m) => (
-                  <span key={m} className="inline-flex items-center rounded-full bg-secondary text-secondary-foreground px-2.5 py-1 text-xs font-semibold">{m}</span>
+
+            {/* Mapa */}
+            {mapPins.length > 0 && (
+              <div className="pt-8">
+                <p className="text-xl font-black text-foreground tracking-tight pb-3">{t("route_map")}</p>
+                <div className="rounded-2xl overflow-hidden border border-border/40 h-64">
+                  <iframe srcDoc={buildRouteMapHtml(mapPins)} className="w-full h-full border-0" title={t("route_map")} loading="lazy" />
+                </div>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="px-5 pt-4">
+            {galleryPhotos.length > 0 ? (
+              <div className="grid grid-cols-2 gap-2">
+                {galleryPhotos.map((url, i) => (
+                  <div key={i} className="relative aspect-[4/3] rounded-2xl overflow-hidden bg-muted">
+                    <img src={url} alt="" loading="lazy" className="w-full h-full object-cover" />
+                  </div>
                 ))}
               </div>
-            )}
-          </div>
-        )}
-
-        {route.ai_highlight && (
-          <div className="px-5 pt-6 pb-5 border-b border-border/30">
-            <p className="text-[22px] font-bold leading-snug text-foreground">„{route.ai_highlight}"</p>
-          </div>
-        )}
-        {route.ai_summary && (
-          <div className="px-5 pt-5 pb-5 border-b border-border/30">
-            <p className="text-sm text-foreground/70 leading-relaxed">{route.ai_summary}</p>
-          </div>
-        )}
-
-        {/* Plan trasy - toggle Lista / Szczegoly */}
-        {pins.length > 0 && (
-          <div className="px-5 pt-5 pb-5 border-b border-border/30">
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t("route_plan")}</p>
-              <div className="flex rounded-full bg-muted p-0.5">
-                <button onClick={() => setPlanView("list")} aria-label={t("view_list")} className={`px-2.5 py-1.5 rounded-full transition-colors ${planView === "list" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}><List className="h-4 w-4" /></button>
-                <button onClick={() => setPlanView("cards")} aria-label={t("view_cards")} className={`px-2.5 py-1.5 rounded-full transition-colors ${planView === "cards" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}><GalleryHorizontalEnd className="h-4 w-4" /></button>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-14 text-center gap-2">
+                <ImageIcon className="h-8 w-8 text-muted-foreground/50" />
+                <p className="text-sm text-muted-foreground">{t("gallery_empty", { defaultValue: "Brak zdjęć w tej trasie" })}</p>
               </div>
-            </div>
-            {planView === "list" ? renderList() : renderSwiper()}
-          </div>
-        )}
-
-        {/* Mapa trasy na samym dole pod miejscami */}
-        {mapPins.length > 0 && (
-          <div className="px-5 pt-5 pb-6">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">{t("route_map")}</p>
-            <div className="rounded-2xl overflow-hidden border border-border/40 h-64">
-              <iframe srcDoc={buildRouteMapHtml(mapPins)} className="w-full h-full border-0" title={t("route_map")} loading="lazy" />
-            </div>
+            )}
           </div>
         )}
 
@@ -491,7 +502,7 @@ export default function SharedRoute() {
           disabled={saving}
           className="w-full py-3 rounded-full bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform shadow-lg shadow-primary/25 disabled:opacity-50"
         >
-          <Bookmark className="h-4 w-4" />{saving ? t("saving") : t("use_route")}
+          <Bookmark className="h-4 w-4" />{saving ? t("saving") : "Zapisz tą trasę"}
         </button>
         <button
           onClick={() => navigate(`/plan?city=${encodeURIComponent(cityLabel)}`)}

@@ -19,6 +19,7 @@ import type { MockPlace } from "@/components/plan-wizard/PlaceSwiper";
 import { QRCodeSVG } from "qrcode.react";
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { PlacePhoto, resolveStored } from "@/components/PlacePhoto";
+import { RoutePlaceRow } from "@/components/route/RoutePlaceRow";
 import { compressImage } from "@/lib/imageCompression";
 import { isHeic, convertHeicToJpeg } from "@/lib/heicConvert";
 import { format, parseISO, isValid, addDays } from "date-fns";
@@ -102,6 +103,31 @@ function SortableReviewRow({ pin, idx, categoryLabel, visited, onOpen, onRemove,
           {noteValue.trim() ? "Twoje wrażenia" : "Podziel się wrażeniami"}
         </button>
       )}
+    </Reorder.Item>
+  );
+}
+
+// Wiersz planu (widok "Plan wyjazdu" wlasciciela) - wspoldzielony RoutePlaceRow z uchwytem
+// DRAG (Reorder) po lewej + swipe-to-delete + opcjonalna notka. Ujednolicony z eksploracja.
+function SortablePlanRow({ pin, index, categoryLabel, visited, onOpen, onGoogle, onDelete, note }: {
+  pin: any; index: number; categoryLabel: React.ReactNode; visited: boolean;
+  onOpen: () => void; onGoogle: () => void; onDelete: () => void; note?: React.ReactNode;
+}) {
+  const controls = useDragControls();
+  const grip = (
+    <span
+      onPointerDown={(e) => { haptics.light(); controls.start(e); }}
+      aria-label="Przeciągnij, by zmienić kolejność"
+      className="shrink-0 w-6 flex items-center justify-center text-muted-foreground/45 cursor-grab active:cursor-grabbing touch-none"
+    >
+      <GripVertical className="h-5 w-5" />
+    </span>
+  );
+  return (
+    <Reorder.Item value={pin} dragListener={false} dragControls={controls} transition={{ duration: 0 }}>
+      <SwipeToDeleteRow onDelete={onDelete}>
+        <RoutePlaceRow pin={pin} index={index} categoryLabel={categoryLabel} visited={visited} onOpen={onOpen} onGoogle={onGoogle} dragHandle={grip} note={note} />
+      </SwipeToDeleteRow>
     </Reorder.Item>
   );
 }
@@ -1829,6 +1855,10 @@ const ReviewSummary = () => {
               </span>
               <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
             </button>
+            {/* Opis trasy (podsumowanie AI) - jak w widoku eksploracji (ujednolicenie). */}
+            {route?.ai_summary && (
+              <p className="text-sm text-muted-foreground leading-relaxed">{route.ai_summary}</p>
+            )}
             {/* Wiersz "Widoczność" usuniety (2026-07-30): wszystkie trasy sa publiczne by default. */}
           </div>
 
@@ -1905,47 +1935,32 @@ const ReviewSummary = () => {
               </button>
             </div>
           ) : (
-            /* Aktywny + Lista -> wiersze ze swipe-to-delete + reorder. */
-            <div className="flex flex-col gap-2">
-              {workingPins.map((pin: any, i: number) => {
-                const visited = isVisited(pin);
-                const noteText = (notes[rkey(activeRouteId!, pin.place_name)] ?? "").trim();
-                return (
-                  <div key={pin.id} className="flex flex-col gap-2">
-                    <div className="flex items-center gap-3">
-                      <div className="flex-1 min-w-0">
-                        <SwipeToDeleteRow onDelete={() => removePlaceFromPlan(pin)}>
-                          <button onClick={() => openDetail(pin)} className="w-full flex items-center gap-3 rounded-2xl bg-secondary border border-border/40 p-2.5 text-left active:opacity-90 transition-opacity">
-                            <div className="relative h-14 w-14 rounded-xl overflow-hidden shrink-0 bg-muted">
-                              <PlacePhoto pin={pin} className="h-full w-full object-cover" emojiClass="text-2xl" />
-                              <span className="absolute top-1 left-1 h-4 w-4 rounded-full bg-[#9a9a9a] text-white text-[8px] font-bold flex items-center justify-center">{i + 1}</span>
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className={`text-sm font-bold leading-tight truncate ${visited ? "line-through opacity-60" : ""}`}>{pin.place_name}</p>
-                              {pin.category && <span className="inline-flex items-center mt-1 px-2 py-0.5 rounded-full bg-card text-[11px] font-semibold text-foreground">{catLabel(pin.category)}</span>}
-                            </div>
-                            <span role="button" tabIndex={0} onClick={(e) => { e.stopPropagation(); openGooglePlace(pin); }} aria-label={`Otwórz ${pin.place_name} w Google Maps`}
-                              className="shrink-0 h-9 w-9 rounded-full bg-card border border-border flex items-center justify-center active:scale-90 transition-transform shadow-sm">
-                              <GoogleGlyph className="h-[18px] w-[18px]" />
-                            </span>
-                          </button>
-                        </SwipeToDeleteRow>
-                      </div>
-                      <div className="flex flex-col gap-2 shrink-0">
-                        <button onClick={() => movePin(i, i - 1)} disabled={i === 0} aria-label={t("plan.earlier")} className="h-6 w-6 flex items-center justify-center text-muted-foreground disabled:opacity-25 active:scale-90"><ChevronUp className="h-4 w-4" /></button>
-                        <button onClick={() => movePin(i, i + 1)} disabled={i === workingPins.length - 1} aria-label={t("plan.later")} className="h-6 w-6 flex items-center justify-center text-muted-foreground disabled:opacity-25 active:scale-90"><ChevronDown className="h-4 w-4" /></button>
-                      </div>
+            /* Aktywny + Lista -> duze wiersze (RoutePlaceRow) z uchwytem DRAG + swipe-to-delete. */
+            <div className="flex flex-col gap-2.5">
+              <Reorder.Group axis="y" values={workingPins} onReorder={setWorking} className="flex flex-col gap-2.5">
+                {workingPins.map((pin: any, i: number) => {
+                  const noteText = (notes[rkey(activeRouteId!, pin.place_name)] ?? "").trim();
+                  const note = noteText ? (
+                    <div className="mt-2.5 rounded-xl bg-white border border-border/40 px-3 py-2">
+                      <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-0.5">Notka</p>
+                      <p className="text-sm text-foreground/80 leading-relaxed whitespace-pre-wrap">{noteText}</p>
                     </div>
-                    {/* Notka autora o tym miejscu (read-only, gdy dodana w "Sugestie do trasy"). */}
-                    {noteText && (
-                      <div className="ml-1 mr-11 rounded-xl bg-secondary/60 border border-border/40 px-3 py-2">
-                        <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-0.5">Notka</p>
-                        <p className="text-sm text-foreground/80 leading-relaxed whitespace-pre-wrap">{noteText}</p>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+                  ) : undefined;
+                  return (
+                    <SortablePlanRow
+                      key={pin.id}
+                      pin={pin}
+                      index={i}
+                      categoryLabel={catLabel(pin.category)}
+                      visited={isVisited(pin)}
+                      onOpen={() => openDetail(pin)}
+                      onGoogle={() => openGooglePlace(pin)}
+                      onDelete={() => removePlaceFromPlan(pin)}
+                      note={note}
+                    />
+                  );
+                })}
+              </Reorder.Group>
               <button onClick={() => setAddingPlace(true)} className="w-full rounded-2xl border border-dashed border-border/70 p-3 text-center text-sm font-bold text-muted-foreground active:bg-muted/40 transition-colors">
                 Dodaj miejsce
               </button>
