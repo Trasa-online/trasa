@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useLocation } from "react-router-dom";
 import { NavLink } from "@/components/NavLink";
-import { BookOpen, Compass, Map, Plus, X, MapPin, Users, Link2, User, Heart, ArrowLeft, Layers, Bookmark } from "lucide-react";
+import { BookOpen, Compass, Map, X, MapPin, Users, Link2, User, Heart, ArrowLeft, Layers, Bookmark } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -416,11 +416,24 @@ const BottomNav = () => {
             className="flex items-center justify-center"
             aria-label={t("fab_aria")}
           >
-            <span className="h-11 w-11 rounded-full bg-primary flex items-center justify-center active:scale-95 transition-transform shadow-sm">
-              {showMenu
-                ? <X className="h-6 w-6 text-white stroke-[2.5px]" />
-                : <Plus className="h-6 w-6 text-white stroke-[2.5px]" />
-              }
+            <span className={`h-11 w-11 rounded-full flex items-center justify-center active:scale-95 transition-transform ${showMenu ? "bg-primary shadow-sm" : ""}`}>
+              {showMenu ? (
+                <X className="h-6 w-6 text-white stroke-[2.5px]" />
+              ) : (
+                /* Ikona_Dodaj.svg przekolorowana na brandowy pomaranczowy gradient (CSS mask). */
+                <span
+                  aria-hidden
+                  className="h-11 w-11"
+                  style={{
+                    display: "block",
+                    backgroundImage: "linear-gradient(to right, #F4A259, #F9662B)",
+                    WebkitMaskImage: "url(/Ikona_Dodaj.svg)", maskImage: "url(/Ikona_Dodaj.svg)",
+                    WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat",
+                    WebkitMaskSize: "contain", maskSize: "contain",
+                    WebkitMaskPosition: "center", maskPosition: "center",
+                  }}
+                />
+              )}
             </span>
           </button>
 
