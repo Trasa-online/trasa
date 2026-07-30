@@ -1819,28 +1819,27 @@ const ReviewSummary = () => {
           <div className="relative w-full aspect-[16/10] overflow-hidden bg-gradient-to-br from-orange-400 via-rose-400 to-purple-500">
             <img src={heroPhoto} alt="" className="absolute inset-0 w-full h-full object-cover" />
             <div className="absolute inset-0 bg-gradient-to-b from-black/15 via-transparent to-black/55" />
-            {/* Podglad "jak okladka wyglada w eksploracji" = mini karta trasy (jak TrasaBigCard).
-                Klik otwiera picker okladki (dodaj zdjecie / wybierz z Twoich zdjec). Badge z
-                aparatem sygnalizuje ze jest klikalny. Prawy-gorny rog, pod paskiem back+X. */}
+            {/* Ikona galerii = ZMIANA zdjecia okladkowego (dodaj nowe / wybierz z galerii / z miejsc).
+                Lewy-dolny rog. Osobna funkcja od podgladu na eksploracji (prawy-dolny). */}
             <button
               onClick={() => setCoverPickerOpen(true)}
               aria-label="Zmień okładkę wyjazdu"
-              className="absolute bottom-3 right-3 z-20 w-20 rounded-2xl overflow-hidden border-[3px] border-white shadow-xl bg-muted active:scale-95 transition-transform"
+              className="absolute bottom-3 left-3 z-20 h-10 w-10 rounded-full bg-black/45 backdrop-blur-sm text-white flex items-center justify-center active:scale-90 transition-transform"
             >
+              <ImageIcon className="h-[18px] w-[18px]" />
+            </button>
+            {/* Podglad "jak okladka wyglada w eksploracji" - SAM podglad (nie zmienia okladki).
+                Prawy-dolny rog. Mini karta trasy (miasto · liczba miejsc + tytul). */}
+            <div className="absolute bottom-3 right-3 z-20 w-20 rounded-2xl overflow-hidden border-[3px] border-white shadow-xl bg-muted">
               <div className="relative w-full aspect-[9/16]">
                 <img src={heroPhoto} alt="" className="w-full h-full object-cover" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/5 to-black/10" />
-                {/* Mini-overlay jak na karcie eksploracji (miasto · liczba miejsc + tytul). */}
                 <div className="absolute bottom-1.5 left-2 right-2">
                   <p className="text-white text-[7px] font-semibold leading-none [text-shadow:_0_1px_2px_rgb(0_0_0/70%)]">{cityLabel} · {currentPins.length} miejsc</p>
                   <p className="text-white text-[9px] font-black leading-tight truncate mt-0.5 [text-shadow:_0_1px_2px_rgb(0_0_0/70%)]">{displayName || cityLabel}</p>
                 </div>
-                {/* Badge aparatu - sygnal ze mozna zmienic okladke. */}
-                <span className="absolute top-1.5 right-1.5 h-5 w-5 rounded-full bg-black/55 backdrop-blur-sm flex items-center justify-center shadow-sm">
-                  <Camera className="h-3 w-3 text-white" />
-                </span>
               </div>
-            </button>
+            </div>
           </div>
 
           {/* Tresc planu */}

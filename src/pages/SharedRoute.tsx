@@ -46,6 +46,7 @@ export default function SharedRoute() {
   const [saving, setSaving] = useState(false);
   const [showDateSheet, setShowDateSheet] = useState(false);
   const [planMapOpen, setPlanMapOpen] = useState(false);
+  const [viewerIndex, setViewerIndex] = useState<number | null>(null); // fullscreen podglad zdjecia galerii
 
   // Otworz miejsce w Google Maps (WIZYTOWKA / place page, NIE nawigacja). query_place_id gdy
   // pin.place_id to Google Place ID (nie nasze DB uuid) - trafiamy w dokladne miejsce.
@@ -488,9 +489,9 @@ export default function SharedRoute() {
             {galleryPhotos.length > 0 ? (
               <div className="grid grid-cols-2 gap-2">
                 {galleryPhotos.map((url, i) => (
-                  <div key={i} className="relative aspect-[4/3] rounded-2xl overflow-hidden bg-muted">
+                  <button key={i} onClick={() => setViewerIndex(i)} className="relative aspect-[4/3] rounded-2xl overflow-hidden bg-muted active:opacity-90 transition-opacity">
                     <img src={url} alt="" loading="lazy" className="w-full h-full object-cover" />
-                  </div>
+                  </button>
                 ))}
               </div>
             ) : (
@@ -521,6 +522,27 @@ export default function SharedRoute() {
               <X className="h-5 w-5 text-foreground" />
             </button>
           </div>
+        </div>
+      )}
+
+      {/* Fullscreen podglad zdjecia galerii (object-contain, strzalki + licznik). */}
+      {viewerIndex !== null && galleryPhotos[viewerIndex] && (
+        <div className="fixed inset-0 z-[95] bg-black flex items-center justify-center animate-in fade-in duration-200" onClick={() => setViewerIndex(null)}>
+          <img src={galleryPhotos[viewerIndex]} alt="" className="max-w-full max-h-full object-contain" onClick={(e) => e.stopPropagation()} />
+          <button onClick={() => setViewerIndex(null)} aria-label={t("close", { defaultValue: "Zamknij" })} className="absolute right-3 z-10 h-10 w-10 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center active:scale-90 transition-transform" style={{ top: "max(0.75rem, env(safe-area-inset-top))" }}>
+            <X className="h-5 w-5 text-white" />
+          </button>
+          {galleryPhotos.length > 1 && (
+            <>
+              <button onClick={(e) => { e.stopPropagation(); setViewerIndex((viewerIndex - 1 + galleryPhotos.length) % galleryPhotos.length); }} aria-label="Poprzednie" className="absolute left-2 top-1/2 -translate-y-1/2 h-11 w-11 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center active:scale-90 transition-transform">
+                <ChevronLeft className="h-6 w-6 text-white" />
+              </button>
+              <button onClick={(e) => { e.stopPropagation(); setViewerIndex((viewerIndex + 1) % galleryPhotos.length); }} aria-label="Następne" className="absolute right-2 top-1/2 -translate-y-1/2 h-11 w-11 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center active:scale-90 transition-transform">
+                <ChevronRight className="h-6 w-6 text-white" />
+              </button>
+              <span className="absolute bottom-[max(24px,env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 text-white/85 text-sm font-medium">{viewerIndex + 1} / {galleryPhotos.length}</span>
+            </>
+          )}
         </div>
       )}
 
