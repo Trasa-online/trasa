@@ -544,7 +544,10 @@ export default function ComposeWyjazd() {
             </div>
           ) : (
             /* Widok listy z DRAG & DROP (przeciaganie uchwytem zmienia kolejnosc = przebieg trasy). */
-            <Reorder.Group axis="y" values={items} onReorder={setItems} className="space-y-2.5">
+            /* key={items.length}: Reorder.Group czasem nie renderuje swiezo DODANYCH itemow do czasu
+               remountu (trzeba bylo przelaczyc widok). Remount przy zmianie liczby miejsc naprawia to;
+               reorder NIE zmienia dlugosci, wiec drag & drop dziala plynnie (bez remountu). */
+            <Reorder.Group key={items.length} axis="y" values={items} onReorder={setItems} className="space-y-2.5">
               {items.map((it, idx) => (
                 <SortableComposeRow
                   key={it.key}

@@ -49,9 +49,10 @@ const GoogleGlyph = ({ className }: { className?: string }) => (
 
 // Wiersz listy miejsc z DRAG & DROP (framer-motion Reorder) na ekranie "Sugestie do trasy".
 // Przeciaganie uchwytem (GripVertical) - reszta wiersza nadal tapowalna (otwiera wizytowke).
-function SortableReviewRow({ pin, idx, categoryLabel, visited, onOpen, onRemove, noteValue, noteOpen, onToggleNote, onNoteChange, noteSaved }: {
+function SortableReviewRow({ pin, idx, categoryLabel, visited, onOpen, onRemove, noteValue, noteOpen, onToggleNote, onNoteChange, noteSaved, onNoteFocusChange }: {
   pin: any; idx: number; categoryLabel: React.ReactNode; visited: boolean; onOpen: () => void; onRemove: () => void;
   noteValue: string; noteOpen: boolean; onToggleNote: () => void; onNoteChange: (v: string) => void; noteSaved: boolean;
+  onNoteFocusChange?: (focused: boolean) => void;
 }) {
   const controls = useDragControls();
   return (
@@ -88,6 +89,8 @@ function SortableReviewRow({ pin, idx, categoryLabel, visited, onOpen, onRemove,
           <textarea
             value={noteValue}
             onChange={(e) => onNoteChange(e.target.value)}
+            onFocus={() => onNoteFocusChange?.(true)}
+            onBlur={() => onNoteFocusChange?.(false)}
             placeholder="Podziel się wrażeniami o tym miejscu..."
             rows={3}
             className="w-full bg-white rounded-xl px-3.5 py-3 text-sm text-foreground resize-none focus:outline-none border border-border/50 focus:border-orange-400/60 placeholder:text-muted-foreground/55"
@@ -1737,13 +1740,11 @@ const ReviewSummary = () => {
                 })}
               </div>
             );
-            // Regula (tworzenie nowej trasy): dopoki trasa NIE jest sfinalizowana (reviewed=false),
-            // okladka wizytowki miejsca NIE aktualizuje sie o swiezo dodane zdjecia - pokazuje
-            // baseline (ikona kategorii). Dodane zdjecia widac w pasku ponizej; okladka miejsca
-            // zaczyna je odzwierciedlac dopiero po rzeczywistym stworzeniu trasy (reviewed=true).
-            const coverPin = reviewed
-              ? pin
-              : { ...pin, images: undefined, user_photo_urls: undefined, image_url: undefined, photo_url: undefined };
+            // Regula (tworzenie nowej trasy): okladka wizytowki miejsca POKAZUJE istniejaca okladke
+            // miejsca (photo_url / zdjecia usera z innych tras), ale NIE zaciaga MOICH swiezo dodanych
+            // zdjec (kanal pins.images) jako okladki dopoki trasa nie jest stworzona (reviewed=false).
+            // Dodane zdjecia widac w pasku ponizej. Po stworzeniu trasy (reviewed=true) - pelna okladka.
+            const coverPin = reviewed ? pin : { ...pin, images: undefined };
             // Wizytowka miejsca (jak w liscie Miejsca) na gorze; Dodaj + zdjecia pod spodem (note).
             return (
               <RoutePlaceRow
@@ -2497,6 +2498,7 @@ const ReviewSummary = () => {
                             onToggleNote={() => setOpenNotes((prev) => { const n = new Set(prev); n.has(pin.id) ? n.delete(pin.id) : n.add(pin.id); return n; })}
                             onNoteChange={(v) => handleNoteChange(pin.place_name, v)}
                             noteSaved={!!noteSaved[nk]}
+                            onNoteFocusChange={setNoteFocused}
                           />
                         );
                       })}
