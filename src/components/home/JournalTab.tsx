@@ -48,9 +48,11 @@ const JournalTab = ({ userId, city: cityFilter }: JournalTabProps) => {
       // Own routes (all statuses)
       const { data: ownRoutes } = await (supabase as any)
         .from("routes")
-        .select("id, title, city, day_number, start_date, end_date, folder_id, group_session_id, ai_summary, ai_highlight, review_photos, cover_url, is_shared, overall_rating, views, new_for_users, chat_status, trip_type, plan_finalized")
+        .select("id, title, city, day_number, start_date, end_date, folder_id, group_session_id, ai_summary, ai_highlight, review_photos, cover_url, is_shared, overall_rating, views, new_for_users, chat_status, trip_type, plan_finalized, created_at")
         .eq("user_id", userId)
-        .order("updated_at", { ascending: false });
+        // Sortuj po created_at (stabilne) - otwarcie/edycja trasy NIE zmienia jej pozycji na
+        // liscie (updated_at wypychalo edytowana trase na gore, czego user nie chce).
+        .order("created_at", { ascending: false });
 
       // Group routes created by others that user is a member of
       const { data: memberRows } = await (supabase as any)
@@ -63,10 +65,10 @@ const JournalTab = ({ userId, city: cityFilter }: JournalTabProps) => {
         const sessionIds = memberRows.map((m: any) => m.session_id);
         const { data } = await (supabase as any)
           .from("routes")
-          .select("id, title, city, day_number, start_date, end_date, folder_id, ai_summary, ai_highlight, review_photos, cover_url, new_for_users, chat_status, group_session_id, trip_type, plan_finalized")
+          .select("id, title, city, day_number, start_date, end_date, folder_id, ai_summary, ai_highlight, review_photos, cover_url, new_for_users, chat_status, group_session_id, trip_type, plan_finalized, created_at")
           .in("group_session_id", sessionIds)
           .neq("user_id", userId)
-          .order("updated_at", { ascending: false });
+          .order("created_at", { ascending: false });
         groupRoutes = data || [];
       }
 
