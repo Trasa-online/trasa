@@ -93,6 +93,14 @@ function SortableComposeRow({ it, idx, onOpen, onRemove }: {
       transition={{ duration: 0 }}
       className="w-full flex items-center gap-2.5 rounded-2xl bg-secondary p-2.5 select-none"
     >
+      {/* Uchwyt przeciagania - z LEWEJ, tuz przy okladce (daleko od kosza po prawej, zeby nie mylic). */}
+      <span
+        onPointerDown={(e) => { haptics.light(); controls.start(e); }}
+        aria-label="Przeciągnij, by zmienić kolejność"
+        className="shrink-0 h-9 w-6 flex items-center justify-center text-muted-foreground/50 cursor-grab active:cursor-grabbing touch-none"
+      >
+        <GripVertical className="h-5 w-5" />
+      </span>
       <button onClick={onOpen} className="flex items-center gap-2.5 min-w-0 flex-1 text-left active:opacity-90 transition-opacity">
         <div className="relative shrink-0">
           {it.photo_url ? (
@@ -110,14 +118,6 @@ function SortableComposeRow({ it, idx, onOpen, onRemove }: {
           </div>
         </div>
       </button>
-      {/* Uchwyt przeciagania (przytrzymaj i przesun) */}
-      <span
-        onPointerDown={(e) => { haptics.light(); controls.start(e); }}
-        aria-label="Przeciągnij, by zmienić kolejność"
-        className="shrink-0 h-9 w-7 flex items-center justify-center text-muted-foreground/50 cursor-grab active:cursor-grabbing touch-none"
-      >
-        <GripVertical className="h-5 w-5" />
-      </span>
       <button
         onClick={onRemove}
         aria-label="Usuń miejsce"
@@ -141,16 +141,42 @@ export default function ComposeWyjazd() {
   // draftId: gdy wchodzimy z ekranu wyboru bazy w SWOJA robocza trase -> edytujemy JA
   // (update), a nie tworzymy duplikatu. Brak = tryb tworzenia nowej trasy.
   const nav = (location.state ?? {}) as { city?: string | null; title?: string | null; places?: any[]; draftId?: string };
-  const draftId = nav.draftId ?? null;
 
-  const [city, setCity] = useState<string>(nav.city || "Warszawa");
-  const [name, setName] = useState<string>(nav.title || "");
-  const [items, setItems] = useState<ComposeItem[]>(() => (nav.places ?? []).map((p: any, idx: number) => toItem({ ...p, key: p.place_id ?? p.id ?? `${p.place_name}:${idx}` })));
+  // ── Soft-save (lekki zapis roboczy) ──────────────────────────────────────
+  // Problem: "Przejdz do sugestii" tworzy trase i navigate'uje dalej; cofniecie (navigate(-1))
+  // RE-MONTUJE ten ekran ze stanem z location.state (tylko prefill), gubiac miejsca dodane
+  // chwile wczesniej. Fix: trzymamy roboczy stan w sessionStorage kluczowanym po location.key
+  // (stabilny per wpis historii - fresh entry ma nowy key, powrot wraca do tego samego).
+  // Po utworzeniu trasy zapisujemy draftId, wiec ponowny "Przejdz do sugestii" AKTUALIZUJE
+  // istniejaca trase zamiast tworzyc duplikat.
+  const softKey = `trasa_compose_soft:${location.key}`;
+  const soft = (() => {
+    try { const raw = sessionStorage.getItem(softKey); return raw ? JSON.parse(raw) : null; } catch { return null; }
+  })();
+
+  const [draftId, setDraftId] = useState<string | null>(soft?.draftId ?? nav.draftId ?? null);
+  const [city, setCity] = useState<string>(soft?.city ?? nav.city ?? "Warszawa");
+  const [name, setName] = useState<string>(soft?.name ?? nav.title ?? "");
+  const [items, setItems] = useState<ComposeItem[]>(() =>
+    soft?.items ?? (nav.places ?? []).map((p: any, idx: number) => toItem({ ...p, key: p.place_id ?? p.id ?? `${p.place_name}:${idx}` })));
   const [placeView, setPlaceView] = useState<"detail" | "list">("list");
 
   // Daty wyjazdu (start + liczba dni z FullCalendarPicker).
   const [dateSheet, setDateSheet] = useState(false);
-  const [tripDate, setTripDate] = useState<{ start: Date; numDays: number } | null>(null);
+  const [tripDate, setTripDate] = useState<{ start: Date; numDays: number } | null>(
+    soft?.tripDate ? { start: new Date(soft.tripDate.start), numDays: soft.tripDate.numDays } : null);
+
+  // Persystencja roboczego stanu przy kazdej zmianie (miasto/nazwa/miejsca/daty/draftId).
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(softKey, JSON.stringify({
+        draftId, city, name, items,
+        tripDate: tripDate ? { start: tripDate.start.toISOString(), numDays: tripDate.numDays } : null,
+      }));
+    } catch { /* sessionStorage unavailable */ }
+  }, [softKey, draftId, city, name, items, tripDate]);
+
+  const clearSoft = () => { try { sessionStorage.removeItem(softKey); } catch { /* unavailable */ } };
 
   // Wyszukiwarka: propozycje z bazy (na fokusie), Google textsearch (podczas pisania).
   const searchRef = useRef<HTMLInputElement>(null);
@@ -166,11 +192,13 @@ export default function ComposeWyjazd() {
   const [mapExpanded, setMapExpanded] = useState(false);
   // Popup przy cofaniu z niezapisana trasa (zapis do roboczych albo wyjscie bez zapisu).
   const [showBackConfirm, setShowBackConfirm] = useState(false);
+  // Potwierdzenie usuniecia miejsca z trasy ("czy na pewno") - trzyma klucz+nazwe usuwanego.
+  const [confirmRemove, setConfirmRemove] = useState<{ key: string; name: string } | null>(null);
 
   // Cofniecie: gdy sa juz miejsca w trasie -> zapytaj czy zapisac do roboczych. Inaczej wyjdz.
   const handleBack = () => {
     if (items.length > 0 && !creating) setShowBackConfirm(true);
-    else navigate(-1);
+    else { clearSoft(); navigate(-1); }
   };
 
   const addedIds = useMemo(() => new Set(items.map((i) => (i.place_id ?? i.place_name).toLowerCase())), [items]);
@@ -316,8 +344,20 @@ export default function ComposeWyjazd() {
     haptics.success();
     // openEditor -> review-summary od razu na kroku SUGESTII (step 2), bo plan miejsc user juz
     // ulozyl tutaj w kompozycji. Guzik "Przejdz do sugestii".
-    if (openEditor) navigate(`/review-summary?route=${id}&edit=1&step=2`);
-    else { toast.success(draftId ? "Zapisano zmiany" : "Zapisano wyjazd"); navigate("/dziennik"); }
+    if (openEditor) {
+      // Zapamietaj draftId w soft-save SYNCHRONICZNIE (przed navigate/unmount), zeby powrot
+      // z sugestii przywrocil miejsca i traktowal ta trase jako edytowana (bez duplikatu).
+      setDraftId(id);
+      try {
+        const cur = JSON.parse(sessionStorage.getItem(softKey) || "{}");
+        sessionStorage.setItem(softKey, JSON.stringify({ ...cur, draftId: id }));
+      } catch { /* unavailable */ }
+      navigate(`/review-summary?route=${id}&edit=1&step=2`);
+    } else {
+      clearSoft();
+      toast.success(draftId ? "Zapisano zmiany" : "Zapisano wyjazd");
+      navigate("/dziennik");
+    }
   };
 
   // Propozycje: podczas pisania = wyniki Google, na fokusie = sugestie z bazy (bez dodanych).
@@ -443,7 +483,7 @@ export default function ComposeWyjazd() {
                     ) : (
                       <div className="w-full h-full bg-[#fcede3] flex items-center justify-center"><img src={categoryIconSrc(it.category)} alt="" className="w-1/5 max-w-[40px] opacity-90" draggable={false} /></div>
                     )}
-                    <span role="button" tabIndex={0} onClick={(e) => { e.stopPropagation(); removePlace(it.key); }} aria-label="Usuń miejsce"
+                    <span role="button" tabIndex={0} onClick={(e) => { e.stopPropagation(); setConfirmRemove({ key: it.key, name: it.place_name }); }} aria-label="Usuń miejsce"
                       className="absolute top-2 right-2 h-8 w-8 rounded-full bg-black/45 backdrop-blur text-white flex items-center justify-center active:scale-90 transition-transform">
                       <X className="h-4 w-4" />
                     </span>
@@ -465,7 +505,7 @@ export default function ComposeWyjazd() {
                   it={it}
                   idx={idx}
                   onOpen={() => openDetail(it)}
-                  onRemove={() => removePlace(it.key)}
+                  onRemove={() => setConfirmRemove({ key: it.key, name: it.place_name })}
                 />
               ))}
             </Reorder.Group>
@@ -523,6 +563,38 @@ export default function ComposeWyjazd() {
         </SheetContent>
       </Sheet>
 
+      {/* Popup potwierdzenia usuniecia miejsca z trasy. */}
+      {confirmRemove && (
+        <div
+          className="fixed inset-0 z-[70] flex items-end justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200"
+          onClick={() => setConfirmRemove(null)}
+        >
+          <div
+            className="w-full max-w-md bg-card rounded-t-3xl px-5 pt-6 pb-[max(20px,env(safe-area-inset-bottom))] shadow-2xl animate-in slide-in-from-bottom-4 duration-300"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className="text-lg font-black leading-tight">Usunąć miejsce z trasy?</p>
+            <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed">
+              {confirmRemove.name ? `„${confirmRemove.name}" zniknie z tej trasy.` : "To miejsce zniknie z tej trasy."}
+            </p>
+            <div className="mt-5 flex flex-col gap-2">
+              <button
+                onClick={() => { removePlace(confirmRemove.key); setConfirmRemove(null); }}
+                className="w-full h-12 rounded-2xl bg-destructive text-white font-bold text-sm flex items-center justify-center active:scale-[0.98] transition-transform"
+              >
+                Usuń miejsce
+              </button>
+              <button
+                onClick={() => setConfirmRemove(null)}
+                className="w-full h-12 rounded-2xl bg-secondary text-secondary-foreground font-bold text-sm flex items-center justify-center active:scale-95 transition-transform"
+              >
+                Anuluj
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Popup przy cofaniu: zapis do roboczych albo wyjscie bez zapisu. */}
       {showBackConfirm && (
         <div
@@ -548,7 +620,7 @@ export default function ComposeWyjazd() {
                 {draftId ? "Zapisz zmiany" : "Zapisz jako roboczą"}
               </button>
               <button
-                onClick={() => { setShowBackConfirm(false); navigate(-1); }}
+                onClick={() => { setShowBackConfirm(false); clearSoft(); navigate(-1); }}
                 className="w-full h-12 rounded-2xl bg-secondary text-secondary-foreground font-bold text-sm flex items-center justify-center active:scale-95 transition-transform"
               >
                 Nie zapisuj, wyjdź

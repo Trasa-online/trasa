@@ -639,19 +639,8 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false, onDelete, deleting 
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white text-xs font-semibold text-foreground">
               <CategoryIcon category={pin.category} className="h-4 w-4 shrink-0" />{catLabel(pin.category)}
             </span>
-            {/* Nawiguj jako maly bialy pill dosuniety do PRAWEJ krawedzi (ml-auto).
-                Ukryte na przyszly dzien - trasa jeszcze sie nie zaczela, nie ma dokad nawigowac. */}
-            {pin.latitude && pin.longitude && !isFutureDay && (
-              <span
-                role="button"
-                tabIndex={0}
-                onClick={(e) => { e.stopPropagation(); const q = encodeURIComponent([pin.place_name, pin.address || route?.city].filter(Boolean).join(", ")); window.open(`https://www.google.com/maps/dir/?api=1&destination=${q}`, "_blank", "noopener,noreferrer"); }}
-                aria-label={t("editor.navigate")}
-                className="ml-auto inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white text-xs font-semibold text-foreground shadow-sm active:scale-95"
-              >
-                <Navigation className="h-3.5 w-3.5" /> {t("editor.navigate")}
-              </span>
-            )}
+            {/* Pill "Nawiguj" (Google Maps directions) usuniety (2026-07-30): rezygnujemy z
+                zewnetrznej nawigacji - miejsce otwiera sie w wizytowce (guzik w prawym gornym rogu). */}
           </div>
           <p className="text-base font-bold leading-tight">{pin.place_name}</p>
         </div>

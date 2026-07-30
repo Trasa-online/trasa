@@ -6,7 +6,8 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Camera, X, Globe, Lock, Pencil, Check, Image as ImageIcon, Map as MapIcon, MapPin, ChevronUp, ChevronDown, ChevronRight, ChevronLeft, Trash2, Plus, Share, Share2, List, GalleryHorizontalEnd, Info, MoreVertical, Navigation, Maximize2, Users, Calendar as CalendarIcon, Loader2 } from "lucide-react";
+import { ArrowLeft, Camera, X, Globe, Lock, Pencil, Check, Image as ImageIcon, Map as MapIcon, MapPin, ChevronUp, ChevronDown, ChevronRight, ChevronLeft, Trash2, Plus, Share, Share2, List, GalleryHorizontalEnd, Info, MoreVertical, Navigation, Maximize2, Users, Calendar as CalendarIcon, Loader2, GripVertical } from "lucide-react";
+import { Reorder, useDragControls } from "framer-motion";
 import RouteMap from "@/components/RouteMap";
 import SwipeToDeleteRow from "@/components/SwipeToDeleteRow";
 import { useShare } from "@/hooks/useShare";
@@ -33,7 +34,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 
 // Limit zdjec dodawanych do galerii wpisu.
-const MAX_PHOTOS = 10;
+const MAX_PHOTOS = 20;
 
 // Oficjalne logo Google (4-kolorowe "G") - guzik nawigacji do miejsca w Google Maps.
 const GoogleGlyph = ({ className }: { className?: string }) => (
@@ -44,6 +45,41 @@ const GoogleGlyph = ({ className }: { className?: string }) => (
     <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
   </svg>
 );
+
+// Wiersz listy miejsc z DRAG & DROP (framer-motion Reorder) na ekranie "Sugestie do trasy".
+// Przeciaganie uchwytem (GripVertical) - reszta wiersza nadal tapowalna (otwiera wizytowke).
+function SortableReviewRow({ pin, idx, categoryLabel, visited, onOpen, onRemove }: {
+  pin: any; idx: number; categoryLabel: React.ReactNode; visited: boolean; onOpen: () => void; onRemove: () => void;
+}) {
+  const controls = useDragControls();
+  return (
+    <Reorder.Item
+      value={pin}
+      dragListener={false}
+      dragControls={controls}
+      transition={{ duration: 0 }}
+      className={`flex items-center gap-2.5 rounded-2xl bg-secondary border border-border/40 shadow-sm p-2.5 select-none ${visited ? "opacity-60" : ""}`}
+    >
+      {/* Uchwyt przeciagania - z LEWEJ, obok okladki (daleko od kosza po prawej). */}
+      <span
+        onPointerDown={(e) => { haptics.light(); controls.start(e); }}
+        aria-label="Przeciągnij, by zmienić kolejność"
+        className="shrink-0 h-9 w-6 flex items-center justify-center text-muted-foreground/50 cursor-grab active:cursor-grabbing touch-none"
+      >
+        <GripVertical className="h-5 w-5" />
+      </span>
+      <button onClick={onOpen} className="relative h-14 w-14 shrink-0 rounded-xl overflow-hidden bg-muted active:opacity-90">
+        <PlacePhoto pin={pin} className="w-full h-full object-cover" />
+        <span className="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-black/55 backdrop-blur text-white text-[10px] font-bold flex items-center justify-center">{idx + 1}</span>
+      </button>
+      <button onClick={onOpen} className="min-w-0 flex-1 text-left">
+        <p className={`text-sm font-bold leading-tight truncate ${visited ? "line-through" : ""}`}>{pin.place_name}</p>
+        <span className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white text-[11px] font-semibold text-foreground">{categoryLabel}</span>
+      </button>
+      <button onClick={onRemove} aria-label="Usuń miejsce" className="h-9 w-9 rounded-full flex items-center justify-center text-muted-foreground/60 active:scale-90 shrink-0"><Trash2 className="h-4 w-4" /></button>
+    </Reorder.Item>
+  );
+}
 
 const CATEGORY_LABEL: Record<string, string> = {
   restaurant: "Restauracja", cafe: "Kawiarnia", museum: "Muzeum", park: "Park",
@@ -1803,9 +1839,9 @@ const ReviewSummary = () => {
                         className="absolute top-2 right-2 h-8 w-8 rounded-full bg-black/45 backdrop-blur text-white flex items-center justify-center active:scale-90 transition-transform">
                         <Trash2 className="h-4 w-4" />
                       </span>
-                      <span role="button" tabIndex={0} onClick={(e) => { e.stopPropagation(); haptics.light(); navigateTo(pin); }} aria-label={`Otwórz ${pin.place_name} w Google Maps`}
+                      <span role="button" tabIndex={0} onClick={(e) => { e.stopPropagation(); haptics.light(); openDetail(pin); }} aria-label={`Zobacz szczegóły ${pin.place_name}`}
                         className="absolute bottom-2 right-2 h-9 w-9 rounded-full bg-white flex items-center justify-center active:scale-90 transition-transform shadow-md">
-                        <GoogleGlyph className="h-[18px] w-[18px]" />
+                        <Info className="h-[18px] w-[18px] text-foreground/70" />
                       </span>
                     </div>
                     <div className="px-3 py-2.5">
@@ -1837,9 +1873,9 @@ const ReviewSummary = () => {
                             <p className={`text-sm font-bold leading-tight truncate ${visited ? "line-through opacity-60" : ""}`}>{pin.place_name}</p>
                             {pin.category && <span className="inline-flex items-center mt-1 px-2 py-0.5 rounded-full bg-card text-[11px] font-semibold text-foreground">{catLabel(pin.category)}</span>}
                           </div>
-                          <span role="button" tabIndex={0} onClick={(e) => { e.stopPropagation(); haptics.light(); navigateTo(pin); }} aria-label={`Otwórz ${pin.place_name} w Google Maps`}
+                          <span role="button" tabIndex={0} onClick={(e) => { e.stopPropagation(); haptics.light(); openDetail(pin); }} aria-label={`Zobacz szczegóły ${pin.place_name}`}
                             className="shrink-0 h-9 w-9 rounded-full bg-card border border-border flex items-center justify-center active:scale-90 transition-transform shadow-sm">
-                            <GoogleGlyph className="h-[18px] w-[18px]" />
+                            <Info className="h-[18px] w-[18px] text-foreground/70" />
                           </span>
                         </button>
                       </SwipeToDeleteRow>
@@ -2181,13 +2217,22 @@ const ReviewSummary = () => {
                   {currentPins.length === 0 ? (
                     <p className="text-center text-sm text-muted-foreground py-8">{t("empty.no_places_note")}</p>
                   ) : planView === "list" ? (
-                    <div className="space-y-2.5">
-                      {/* Notki per-miejsce usuniete (2026-07-29): obnizamy friction, skupiamy sie na
-                          zdjeciach do miejsc. Zostaje tylko ogolna sugestia do calej trasy (wyzej). */}
+                    /* Notki per-miejsce usuniete (2026-07-29): obnizamy friction, skupiamy sie na
+                       zdjeciach do miejsc. Zostaje tylko ogolna sugestia do calej trasy (wyzej).
+                       Kolejnosc miejsc = DRAG & DROP (uchwyt z lewej) + kosz z potwierdzeniem. */
+                    <Reorder.Group axis="y" values={workingPins} onReorder={setWorking} className="space-y-2.5">
                       {workingPins.map((pin: any, i: number) => (
-                        <div key={pin.id}>{renderPlanRow(pin, i, true, false)}</div>
+                        <SortableReviewRow
+                          key={pin.id}
+                          pin={pin}
+                          idx={i}
+                          categoryLabel={catLabel(pin.category)}
+                          visited={isVisited(pin)}
+                          onOpen={() => openDetail(pin)}
+                          onRemove={() => removeWorkingPin(pin.id)}
+                        />
                       ))}
-                    </div>
+                    </Reorder.Group>
                   ) : (
                     renderSwiper(true, true, false)
                   )}
