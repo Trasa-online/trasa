@@ -49,7 +49,8 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, dra
           </div>
         </div>
       </div>
-      {note}
+      {/* Notka (autora / usera) - linia oddzielajaca + tresc, wewnatrz kafelka (wg Figmy). */}
+      {note && <div className="mt-3 pt-3 border-t border-border/50">{note}</div>}
     </div>
   );
 }

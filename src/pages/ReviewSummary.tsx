@@ -1965,9 +1965,9 @@ const ReviewSummary = () => {
                 {workingPins.map((pin: any, i: number) => {
                   const noteText = (notes[rkey(activeRouteId!, pin.place_name)] ?? "").trim();
                   const note = noteText ? (
-                    <div className="mt-2.5 rounded-xl bg-white border border-border/40 px-3 py-2">
-                      <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-0.5">Notka</p>
-                      <p className="text-sm text-foreground/80 leading-relaxed whitespace-pre-wrap">{noteText}</p>
+                    <div>
+                      <p className="text-sm font-semibold text-foreground">Twoja Notka</p>
+                      <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap mt-0.5">{noteText}</p>
                     </div>
                   ) : undefined;
                   return (

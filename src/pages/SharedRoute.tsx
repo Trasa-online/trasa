@@ -326,17 +326,26 @@ export default function SharedRoute() {
   // (duze zdjecie 104px, chip kategorii + guzik Google). Notka autora pod wierszem gdy jest.
   const renderList = () => (
     <div className="space-y-2.5">
-      {pins.map((pin: any, i: number) => (
-        <RoutePlaceRow
-          key={pin.id}
-          pin={pin}
-          index={i}
-          categoryLabel={categoryLabel(pin.category || "other")}
-          onOpen={() => openDetail(pin)}
-          onGoogle={() => openGooglePlace(pin)}
-          note={renderRatingNote(pin.place_name)}
-        />
-      ))}
+      {pins.map((pin: any, i: number) => {
+        const noteText = (ratingMap[pin.place_name]?.note ?? "").trim();
+        const note = noteText ? (
+          <div>
+            <p className="text-sm font-semibold text-foreground">Notka Autora</p>
+            <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap mt-0.5">{noteText}</p>
+          </div>
+        ) : undefined;
+        return (
+          <RoutePlaceRow
+            key={pin.id}
+            pin={pin}
+            index={i}
+            categoryLabel={categoryLabel(pin.category || "other")}
+            onOpen={() => openDetail(pin)}
+            onGoogle={() => openGooglePlace(pin)}
+            note={note}
+          />
+        );
+      })}
     </div>
   );
 
