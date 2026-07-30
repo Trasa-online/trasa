@@ -17,7 +17,7 @@ import { API_BASE } from "@/lib/platform";
 import FullCalendarPicker from "@/components/plan-wizard/FullCalendarPicker";
 import RouteMap from "@/components/RouteMap";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
-import CountrySelect from "@/components/home/CountrySelect";
+import { COUNTRIES } from "@/components/plan-wizard/CityPicker";
 import { fetchEnrichedPlace, type MockPlace } from "@/components/plan-wizard/PlaceSwiper";
 import { categoryIconSrc } from "@/lib/placeCategoryIcon";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
@@ -376,10 +376,15 @@ export default function ComposeWyjazd() {
       </div>
 
       <div className="flex-1 min-h-0 overflow-y-auto pb-4">
-        {/* Kraj (Polska aktywna, zagraniczne wyszarzone) - nad wyborem miasta */}
+        {/* Kraj (Polska aktywna, zagraniczne wyszarzone) - pelnowymiarowy select nad miastem */}
         <div className="px-4 pt-4">
-          <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-1.5">Kraj</p>
-          <CountrySelect />
+          <div className="relative">
+            <select value="Polska" onChange={() => { /* tylko Polska aktywna */ }}
+              className="w-full appearance-none rounded-2xl bg-secondary text-secondary-foreground border-0 px-4 py-3 text-base outline-none focus:ring-2 focus:ring-orange-500/40">
+              {COUNTRIES.map((c) => <option key={c.code} value={c.name} disabled={!!c.comingSoon}>{c.name}{c.comingSoon ? " (wkrótce)" : ""}</option>)}
+            </select>
+            <ChevronDown className="h-4 w-4 text-muted-foreground absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" />
+          </div>
         </div>
         {/* Miasto */}
         <div className="px-4 pt-3">

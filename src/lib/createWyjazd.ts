@@ -32,7 +32,8 @@ export async function createWyjazdFromPlaces(
       trip_type: "planning",
       status: "draft",
       day_number: 1,
-      is_shared: false,
+      // Wszystkie nowe trasy sa PUBLICZNE by default (2026-07-30) - trafiaja do eksploracji.
+      is_shared: true,
       start_date: dates?.start_date ?? null,
       end_date: dates?.end_date ?? null,
       // Wyjazd grupowy: wiaze wpis z sesja (widoczny u pozostalych czlonkow przez

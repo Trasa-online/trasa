@@ -1174,7 +1174,7 @@ function TrasaBigCard({
   return (
     <div className={`relative w-full shrink-0 snap-start snap-always rounded-3xl overflow-hidden bg-muted shadow-sm min-h-[420px] ${TRASA_CARD_H}`}>
       <img
-        src={mapExpanded && bigMap ? bigMap : cover}
+        src={cover}
         alt={title}
         loading="lazy"
         className="absolute inset-0 w-full h-full object-cover"
@@ -1184,17 +1184,17 @@ function TrasaBigCard({
       {/* Tap na kafle = otworz wizytowke trasy/zestawienia */}
       <button onClick={onOpen} aria-label={title} className="absolute inset-0" />
 
-      {/* Podglad trasy: mapka w prawym-gornym rogu. Klik = rozwija mape na cala okladke
-          (z nazwa miasta + liczba miejsc), ponowny klik chowa do malej. Thumbnail pokazuje
-          wtedy zdjecie (powrot). */}
+      {/* Podglad trasy: sama miniaturka mapki ROZWIJA sie na okladce (nie podmienia zdjecia).
+          Maly kwadrat w prawym-gornym rogu -> po kliknieciu rosnie do duzego prostokata
+          (od gory do tekstu z nazwa miasta + liczba miejsc); ponowny klik chowa do malego. */}
       {miniMap && (
         <button
           onClick={(e) => { e.stopPropagation(); haptics.selection(); setMapExpanded((v) => !v); }}
-          aria-label={mapExpanded ? "Pokaż zdjęcie" : "Pokaż mapę trasy"}
-          className="absolute right-3 top-3 z-10 h-24 w-24 rounded-2xl overflow-hidden ring-2 ring-white/85 shadow-lg bg-muted active:scale-95 transition-transform"
+          aria-label={mapExpanded ? "Zwiń mapę" : "Pokaż mapę trasy"}
+          className={`absolute z-20 rounded-2xl overflow-hidden ring-2 ring-white/85 shadow-lg bg-muted active:scale-[0.99] transition-all duration-300 ease-out ${mapExpanded ? "top-3 left-3 right-3 h-[62%]" : "top-3 right-3 h-24 w-24"}`}
         >
           <img
-            src={mapExpanded ? cover : miniMap} alt="" aria-hidden loading="lazy"
+            src={mapExpanded && bigMap ? bigMap : miniMap} alt="" aria-hidden loading="lazy"
             className="w-full h-full object-cover"
             onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = "none"; }}
           />

@@ -83,22 +83,22 @@ function SortableReviewRow({ pin, idx, categoryLabel, visited, onOpen, onRemove,
 
       {/* "+ Podziel sie wrazeniami" - zwijana notka usera o tym miejscu (opt-in, domyslnie zwinieta). */}
       {noteOpen ? (
-        <div className="mt-2.5 pl-8 relative">
+        <div className="mt-4 pl-8 relative">
           <textarea
             value={noteValue}
             onChange={(e) => onNoteChange(e.target.value)}
             placeholder="Podziel się wrażeniami o tym miejscu..."
-            rows={2}
-            className="w-full bg-muted/60 rounded-xl px-3 py-2.5 text-sm text-foreground resize-none focus:outline-none border border-border/30 placeholder:text-muted-foreground/55"
+            rows={3}
+            className="w-full bg-white rounded-xl px-3.5 py-3 text-sm text-foreground resize-none focus:outline-none border border-border/50 focus:border-orange-400/60 placeholder:text-muted-foreground/55"
           />
-          <div className="flex items-center justify-between mt-1">
-            <button onClick={onToggleNote} className="text-[11px] font-semibold text-muted-foreground active:opacity-60">Zwiń</button>
-            {noteSaved && <span className="text-[10px] text-green-600 font-medium">Zapisano</span>}
+          <div className="flex items-center justify-between mt-2">
+            <button onClick={onToggleNote} className="px-4 py-2 rounded-full bg-muted text-sm font-semibold text-foreground active:scale-95 transition-transform">Zwiń</button>
+            {noteSaved && <span className="text-xs text-green-600 font-medium">Zapisano</span>}
           </div>
         </div>
       ) : (
-        <button onClick={onToggleNote} className="mt-2 ml-8 self-start inline-flex items-center gap-1.5 text-xs font-semibold text-orange-600 active:opacity-60">
-          <Plus className="h-3.5 w-3.5" strokeWidth={2.6} />
+        <button onClick={onToggleNote} className="mt-4 mb-1 ml-8 self-start inline-flex items-center gap-2 py-1.5 text-sm font-bold text-foreground active:opacity-60">
+          <span className="h-6 w-6 rounded-full bg-muted flex items-center justify-center"><Plus className="h-4 w-4" strokeWidth={2.6} /></span>
           {noteValue.trim() ? "Twoje wrażenia" : "Podziel się wrażeniami"}
         </button>
       )}
@@ -1189,6 +1189,19 @@ const ReviewSummary = () => {
     description: pin.description || metaFor(pin).description || "",
   } satisfies MockPlace);
 
+  // Otworz miejsce w Google Maps (WIZYTOWKA / place page, NIE nawigacja/directions).
+  // Uzywa query_place_id gdy pin.place_id to Google Place ID (nie nasze DB uuid) - wtedy
+  // trafiamy w DOKLADNIE to miejsce; inaczej szukamy po nazwie+adresie+miescie.
+  const openGooglePlace = (pin: any) => {
+    if (!pin) return;
+    haptics.light();
+    const q = encodeURIComponent([pin.place_name, pin.address, route?.city].filter(Boolean).join(", "));
+    const pid = typeof pin.place_id === "string" && pin.place_id.trim() ? pin.place_id.trim() : "";
+    const isDbUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(pid);
+    const placeIdParam = pid && !isDbUuid ? `&query_place_id=${encodeURIComponent(pid)}` : "";
+    window.open(`https://www.google.com/maps/search/?api=1&query=${q}${placeIdParam}`, "_blank", "noopener,noreferrer");
+  };
+
   // ── Sekcja Ocena + Notka pod miejscem (widok wspomnienia / plan dnia). ──
   // centered => gwiazdki + etykiety wysrodkowane (widok Szczegoly / swiper).
   // Oceny gwiazdkowe USUNIETE - bazujemy wylacznie na wartosciowych notkach userow.
@@ -1773,21 +1786,15 @@ const ReviewSummary = () => {
             >
               <ImageIcon className="h-[18px] w-[18px]" />
             </button>
-            {/* Prostokatny podglad "jak okladka wyglada w eksploracji" (zamiast kwadratu z mapka). */}
+            {/* Pionowa miniaturka "jak okladka wyglada w eksploracji" - podglad przez usera.
+                Klik -> fullscreen mock karty. Pozycja prawy-gorny rog (pod paskiem back+X). */}
             <button
               onClick={() => setExplorePreviewOpen(true)}
               aria-label="Podgląd okładki w eksploracji"
-              className="absolute bottom-3 right-3 w-28 rounded-xl overflow-hidden border-2 border-white shadow-md bg-muted active:scale-95 transition-transform"
+              className="absolute top-16 right-3 z-20 w-[4.5rem] aspect-[3/4] rounded-xl overflow-hidden ring-2 ring-white/90 shadow-lg bg-muted active:scale-95 transition-transform"
             >
-              <div className="relative w-full aspect-[16/10]">
-                <img src={heroPhoto} alt="" className="w-full h-full object-cover" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
-                <div className="absolute bottom-1 left-1.5 right-1.5">
-                  <p className="text-white text-[8px] font-semibold leading-none [text-shadow:_0_1px_2px_rgb(0_0_0/70%)]">{cityLabel} · {currentPins.length} miejsc</p>
-                  <p className="text-white text-[9px] font-black leading-tight truncate mt-0.5 [text-shadow:_0_1px_2px_rgb(0_0_0/70%)]">{displayName || cityLabel}</p>
-                </div>
-              </div>
-              <span className="block bg-white text-[8px] font-bold text-muted-foreground text-center py-0.5">Podgląd</span>
+              <img src={heroPhoto} alt="" className="w-full h-full object-cover" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-transparent" />
             </button>
           </div>
 
@@ -1884,9 +1891,9 @@ const ReviewSummary = () => {
                         className="absolute top-2 right-2 h-8 w-8 rounded-full bg-black/45 backdrop-blur text-white flex items-center justify-center active:scale-90 transition-transform">
                         <Trash2 className="h-4 w-4" />
                       </span>
-                      <span role="button" tabIndex={0} onClick={(e) => { e.stopPropagation(); haptics.light(); openDetail(pin); }} aria-label={`Zobacz szczegóły ${pin.place_name}`}
+                      <span role="button" tabIndex={0} onClick={(e) => { e.stopPropagation(); openGooglePlace(pin); }} aria-label={`Otwórz ${pin.place_name} w Google Maps`}
                         className="absolute bottom-2 right-2 h-9 w-9 rounded-full bg-white flex items-center justify-center active:scale-90 transition-transform shadow-md">
-                        <Info className="h-[18px] w-[18px] text-foreground/70" />
+                        <GoogleGlyph className="h-[18px] w-[18px]" />
                       </span>
                     </div>
                     <div className="px-3 py-2.5">
@@ -1905,30 +1912,40 @@ const ReviewSummary = () => {
             <div className="flex flex-col gap-2">
               {workingPins.map((pin: any, i: number) => {
                 const visited = isVisited(pin);
+                const noteText = (notes[rkey(activeRouteId!, pin.place_name)] ?? "").trim();
                 return (
-                  <div key={pin.id} className="flex items-center gap-3">
-                    <div className="flex-1 min-w-0">
-                      <SwipeToDeleteRow onDelete={() => removePlaceFromPlan(pin)}>
-                        <button onClick={() => openDetail(pin)} className="w-full flex items-center gap-3 rounded-2xl bg-secondary border border-border/40 p-2.5 text-left active:opacity-90 transition-opacity">
-                          <div className="relative h-14 w-14 rounded-xl overflow-hidden shrink-0 bg-muted">
-                            <PlacePhoto pin={pin} className="h-full w-full object-cover" emojiClass="text-2xl" />
-                            <span className="absolute top-1 left-1 h-4 w-4 rounded-full bg-[#9a9a9a] text-white text-[8px] font-bold flex items-center justify-center">{i + 1}</span>
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className={`text-sm font-bold leading-tight truncate ${visited ? "line-through opacity-60" : ""}`}>{pin.place_name}</p>
-                            {pin.category && <span className="inline-flex items-center mt-1 px-2 py-0.5 rounded-full bg-card text-[11px] font-semibold text-foreground">{catLabel(pin.category)}</span>}
-                          </div>
-                          <span role="button" tabIndex={0} onClick={(e) => { e.stopPropagation(); haptics.light(); openDetail(pin); }} aria-label={`Zobacz szczegóły ${pin.place_name}`}
-                            className="shrink-0 h-9 w-9 rounded-full bg-card border border-border flex items-center justify-center active:scale-90 transition-transform shadow-sm">
-                            <Info className="h-[18px] w-[18px] text-foreground/70" />
-                          </span>
-                        </button>
-                      </SwipeToDeleteRow>
+                  <div key={pin.id} className="flex flex-col gap-2">
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1 min-w-0">
+                        <SwipeToDeleteRow onDelete={() => removePlaceFromPlan(pin)}>
+                          <button onClick={() => openDetail(pin)} className="w-full flex items-center gap-3 rounded-2xl bg-secondary border border-border/40 p-2.5 text-left active:opacity-90 transition-opacity">
+                            <div className="relative h-14 w-14 rounded-xl overflow-hidden shrink-0 bg-muted">
+                              <PlacePhoto pin={pin} className="h-full w-full object-cover" emojiClass="text-2xl" />
+                              <span className="absolute top-1 left-1 h-4 w-4 rounded-full bg-[#9a9a9a] text-white text-[8px] font-bold flex items-center justify-center">{i + 1}</span>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className={`text-sm font-bold leading-tight truncate ${visited ? "line-through opacity-60" : ""}`}>{pin.place_name}</p>
+                              {pin.category && <span className="inline-flex items-center mt-1 px-2 py-0.5 rounded-full bg-card text-[11px] font-semibold text-foreground">{catLabel(pin.category)}</span>}
+                            </div>
+                            <span role="button" tabIndex={0} onClick={(e) => { e.stopPropagation(); openGooglePlace(pin); }} aria-label={`Otwórz ${pin.place_name} w Google Maps`}
+                              className="shrink-0 h-9 w-9 rounded-full bg-card border border-border flex items-center justify-center active:scale-90 transition-transform shadow-sm">
+                              <GoogleGlyph className="h-[18px] w-[18px]" />
+                            </span>
+                          </button>
+                        </SwipeToDeleteRow>
+                      </div>
+                      <div className="flex flex-col gap-2 shrink-0">
+                        <button onClick={() => movePin(i, i - 1)} disabled={i === 0} aria-label={t("plan.earlier")} className="h-6 w-6 flex items-center justify-center text-muted-foreground disabled:opacity-25 active:scale-90"><ChevronUp className="h-4 w-4" /></button>
+                        <button onClick={() => movePin(i, i + 1)} disabled={i === workingPins.length - 1} aria-label={t("plan.later")} className="h-6 w-6 flex items-center justify-center text-muted-foreground disabled:opacity-25 active:scale-90"><ChevronDown className="h-4 w-4" /></button>
+                      </div>
                     </div>
-                    <div className="flex flex-col gap-2 shrink-0">
-                      <button onClick={() => movePin(i, i - 1)} disabled={i === 0} aria-label={t("plan.earlier")} className="h-6 w-6 flex items-center justify-center text-muted-foreground disabled:opacity-25 active:scale-90"><ChevronUp className="h-4 w-4" /></button>
-                      <button onClick={() => movePin(i, i + 1)} disabled={i === workingPins.length - 1} aria-label={t("plan.later")} className="h-6 w-6 flex items-center justify-center text-muted-foreground disabled:opacity-25 active:scale-90"><ChevronDown className="h-4 w-4" /></button>
-                    </div>
+                    {/* Notka autora o tym miejscu (read-only, gdy dodana w "Sugestie do trasy"). */}
+                    {noteText && (
+                      <div className="ml-1 mr-11 rounded-xl bg-secondary/60 border border-border/40 px-3 py-2">
+                        <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-0.5">Notka</p>
+                        <p className="text-sm text-foreground/80 leading-relaxed whitespace-pre-wrap">{noteText}</p>
+                      </div>
+                    )}
                   </div>
                 );
               })}
