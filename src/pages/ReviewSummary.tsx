@@ -767,9 +767,14 @@ const ReviewSummary = () => {
     setPhotos(updated);
     // Zdjecie usera jako okladka -> czyscimy recznie wybrana okladke miejsca (cover_url),
     // zeby to zdjecie faktycznie stalo sie tlem (planCover ma wyzszy priorytet).
-    await supabase.from("routes").update({ review_photos: updated, cover_url: null } as any).eq("id", routeId);
-    queryClient.setQueryData(["review-summary-route", routeId], (old: any) => old ? { ...old, cover_url: null } : old);
+    // Zmiana okladki wyjazdu synchronizuje TEZ miniature eksploracji (list_cover_url), zeby
+    // karta w eksploracji od razu pokazala nowa okladke. Osobny picker miniatury moze ja pozniej
+    // nadpisac wlasnym zdjeciem.
+    await supabase.from("routes").update({ review_photos: updated, cover_url: null, list_cover_url: url } as any).eq("id", routeId);
+    queryClient.setQueryData(["review-summary-route", routeId], (old: any) => old ? { ...old, cover_url: null, list_cover_url: url } : old);
     queryClient.invalidateQueries({ queryKey: ["review-trip-days", folderId, routeId] });
+    queryClient.invalidateQueries({ queryKey: ["discovery-city-routes"] });
+    queryClient.invalidateQueries({ queryKey: ["discovery-polecane"] });
     if (user) queryClient.invalidateQueries({ queryKey: ["journal-entries", user.id] });
     setViewerUrl(null);
     notify.success(t("toast.cover_set"));
@@ -798,10 +803,13 @@ const ReviewSummary = () => {
   const setPlanCover = async (url: string) => {
     if (!routeId) return;
     setCoverPickerOpen(false);
-    const { error } = await (supabase as any).from("routes").update({ cover_url: url }).eq("id", routeId);
+    // Okladka wyjazdu synchronizuje tez miniature eksploracji (list_cover_url) - patrz setCover.
+    const { error } = await (supabase as any).from("routes").update({ cover_url: url, list_cover_url: url }).eq("id", routeId);
     if (error) { notify.error(t("toast.cover_set_error", { defaultValue: "Nie udało się ustawić okładki" })); return; }
-    queryClient.setQueryData(["review-summary-route", routeId], (old: any) => old ? { ...old, cover_url: url } : old);
+    queryClient.setQueryData(["review-summary-route", routeId], (old: any) => old ? { ...old, cover_url: url, list_cover_url: url } : old);
     queryClient.invalidateQueries({ queryKey: ["review-trip-days", folderId, routeId] });
+    queryClient.invalidateQueries({ queryKey: ["discovery-city-routes"] });
+    queryClient.invalidateQueries({ queryKey: ["discovery-polecane"] });
     if (user) queryClient.invalidateQueries({ queryKey: ["journal-entries", user.id] });
     notify.success(t("toast.cover_set"));
   };

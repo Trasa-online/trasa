@@ -381,7 +381,7 @@ const BottomNav = () => {
             >
               {({ isActive }) => (
                 <>
-                  <div className="relative">
+                  <div className="relative flex items-center justify-center">
                     <NavIcon src="/Ikona_Trasy.svg" />
                     {hasNewJournalEntries && !isActive && (
                       <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-orange-600 ring-2 ring-background" />
@@ -420,19 +420,8 @@ const BottomNav = () => {
               {showMenu ? (
                 <X className="h-6 w-6 text-white stroke-[2.5px]" />
               ) : (
-                /* Ikona_Dodaj.svg przekolorowana na brandowy pomaranczowy gradient (CSS mask). */
-                <span
-                  aria-hidden
-                  className="h-11 w-11"
-                  style={{
-                    display: "block",
-                    backgroundImage: "linear-gradient(to right, #F4A259, #F9662B)",
-                    WebkitMaskImage: "url(/Ikona_Dodaj.svg)", maskImage: "url(/Ikona_Dodaj.svg)",
-                    WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat",
-                    WebkitMaskSize: "contain", maskSize: "contain",
-                    WebkitMaskPosition: "center", maskPosition: "center",
-                  }}
-                />
+                /* Ikona_Dodaj w brandowym pomaranczowym kole + bialy plus (wg zalacznika). */
+                <img src="/Ikona_Dodaj_orange.svg" alt="" className="h-11 w-11 object-contain" draggable={false} />
               )}
             </span>
           </button>
