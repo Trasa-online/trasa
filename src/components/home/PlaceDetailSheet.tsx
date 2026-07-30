@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Loader2, MapPin, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getPhotoUrl, isCachedPhotoUrl, ensurePhotoCached, getCachedPhotoVariant } from "@/lib/placePhotos";
+import { fetchPlaceUserPhotos } from "@/lib/placeUserPhotos";
 import { GOOGLE_PLACE_DETAILS_DISABLED } from "@/lib/appMode";
 import BusinessActionButtons from "@/components/business/BusinessActionButtons";
 import posthog from "posthog-js";
@@ -93,24 +94,20 @@ const PlaceDetailSheet = ({ pin, open, onOpenChange }: PlaceDetailSheetProps) =>
       setCachedPhotoUrl(null);
     }
 
-    // Cięcie kosztów: nie wołamy płatnego Place Details. details zostaje null
-    // (komponent to obsługuje). Zdjęcie dociągamy RAZ przez cache-place-photo.
+    // ZERO Google (2026-07-30): NIE wolamy Place Details ani cache-place-photo (oba bija
+    // Google Places API). Zdjecie wizytowki = TYLKO zdjecie usera z tras (pins.images /
+    // user_photo_urls). Brak -> brak zdjecia (fallback ikony obsluguje widok listy). Ignorujemy
+    // pin.photo_url gdy to cache Google (alreadyCached) - nie pokazujemy zdjec Google.
     if (GOOGLE_PLACE_DETAILS_DISABLED) {
-      if (!alreadyCached) {
-        ensurePhotoCached(
-          {
-            table: "pins",
-            id: pin.id,
-            place_name: pin.place_name,
-            latitude: pin.latitude,
-            longitude: pin.longitude,
-            place_id: pin.place_id ?? null,
-          },
-          pin.photo_url ?? null,
-        )
-          .then((u) => { if (u) setCachedPhotoUrl(u); })
-          .catch(() => {});
-      }
+      setCachedPhotoUrl(null);
+      fetchPlaceUserPhotos({
+        placeDbId: null,
+        googlePlaceId: pin.place_id ?? null,
+        placeName: pin.place_name,
+        city: (pin as { city?: string }).city ?? null,
+      })
+        .then((urls) => { if (urls[0]) setCachedPhotoUrl(urls[0]); })
+        .catch(() => {});
       setLoading(false);
       return;
     }
@@ -220,10 +217,15 @@ const PlaceDetailSheet = ({ pin, open, onOpenChange }: PlaceDetailSheetProps) =>
           </div>
         )}
 
-        {/* No coordinates fallback */}
+        {/* Tryb ZERO Google (details = null): zdjecie usera z tras jako cover (bez Google). */}
         {!loading && !details && (
           <div className="pb-6 space-y-3">
-            {pin.latitude && pin.longitude && (
+            {cachedPhotoUrl && (
+              <div className="-mx-6 px-6 pb-1">
+                <img src={cachedPhotoUrl} alt={pin.place_name} className="h-48 w-full object-cover rounded-2xl" />
+              </div>
+            )}
+            {pin.latitude && pin.longitude && !cachedPhotoUrl && (
               <p className="text-sm text-muted-foreground text-center py-4">
                 {t("place.details_error")}
               </p>

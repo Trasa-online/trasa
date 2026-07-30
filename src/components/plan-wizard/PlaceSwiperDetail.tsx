@@ -212,15 +212,15 @@ const PlaceSwiperDetail = ({
   // Zapis z zakladki na hero - zapisuje BEZ zamykania wizytowki (stan zakladki sie aktualizuje).
   const handleSaveFromHero = onLike ? () => { onLike(); } : undefined;
 
-  // Calculate photos to display (biz cover + Google + biz gallery dedup). ep = swiezy profil.
-  const googleAndCover = [
-    ...photos.filter(validUrl),
-    ...(!photos.length && validUrl(ep?.photo_url) ? [ep!.photo_url!] : []),
-  ];
-  // Dedup (te same URL-e sie nie powtarzaja) + MAX 4 zdjecia w wizytowce (stan zero).
+  // ZERO Google w wizytowce (2026-07-30): pokazujemy WYLACZNIE zdjecia userow z tras
+  // (photos = fetchPlaceUserPhotos) LUB - dla lokalu z WLASNYMI zdjeciami - jego wlasne
+  // (cover + galeria biznesu). NIGDY places.photo_url / places.gallery_urls (cache Google).
+  // Brak zdjec -> displayPhotos puste -> hero pokazuje ikone kategorii na tle peachy (#fcede3).
+  const bizOwnPhotos = !!(ep as { businessHasOwnPhoto?: boolean })?.businessHasOwnPhoto || skipGoogleFetch;
   const displayPhotos = Array.from(new Set([
-    ...googleAndCover,
-    ...(ep?.galleryPhotos ?? []).filter(validUrl),
+    ...photos.filter(validUrl),
+    ...(bizOwnPhotos && !photos.length && validUrl(ep?.photo_url) ? [ep!.photo_url!] : []),
+    ...(bizOwnPhotos ? (ep?.galleryPhotos ?? []).filter(validUrl) : []),
   ])).slice(0, 4);
 
   // Maps button - renderowany w header slot PremiumBusinessCard (Maps button obok nazwy)
