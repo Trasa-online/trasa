@@ -152,7 +152,6 @@ const ReviewSummary = () => {
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [coverPickerOpen, setCoverPickerOpen] = useState(false);
   // Podglad "jak okladka wyglada w eksploracji" (fullscreen mock karty trasy).
-  const [explorePreviewOpen, setExplorePreviewOpen] = useState(false);
   // QR do udostepnienia wyjazdu (arkusz z kodem + linkiem).
   const [qrShareOpen, setQrShareOpen] = useState(false);
   const [memoTab, setMemoTab] = useState<"notki" | "galeria">("notki");
@@ -1230,7 +1229,7 @@ const ReviewSummary = () => {
             onBlur={() => setNoteFocused(false)}
             placeholder={t("note.placeholder")}
             rows={2}
-            className="w-full bg-muted/50 rounded-xl px-3 py-2.5 text-sm text-foreground text-left resize-none focus:outline-none border border-border/30 placeholder:text-muted-foreground/55"
+            className="w-full bg-white rounded-xl px-3 py-2.5 text-sm text-foreground text-left resize-none focus:outline-none border border-border/50 focus:border-orange-400/60 placeholder:text-muted-foreground/55"
           />
           {noteSaved[k] && (
             <span className="absolute bottom-2 right-2.5 text-[10px] text-green-600 font-medium">{t("note.saved")}</span>
@@ -1786,16 +1785,14 @@ const ReviewSummary = () => {
             >
               <ImageIcon className="h-[18px] w-[18px]" />
             </button>
-            {/* Pionowa miniaturka "jak okladka wyglada w eksploracji" - podglad przez usera.
-                Klik -> fullscreen mock karty. Pozycja prawy-gorny rog (pod paskiem back+X). */}
-            <button
-              onClick={() => setExplorePreviewOpen(true)}
+            {/* Pionowa miniaturka-podglad "jak okladka wyglada w eksploracji" - SAM podglad
+                (bez tapniecia), czysta karta portretowa w prawym-gornym rogu (pod paskiem back+X). */}
+            <div
               aria-label="Podgląd okładki w eksploracji"
-              className="absolute top-16 right-3 z-20 w-[4.5rem] aspect-[3/4] rounded-xl overflow-hidden ring-2 ring-white/90 shadow-lg bg-muted active:scale-95 transition-transform"
+              className="absolute top-14 right-3 z-20 w-[5.5rem] aspect-[3/4] rounded-2xl overflow-hidden border-[3px] border-white shadow-xl bg-muted"
             >
               <img src={heroPhoto} alt="" className="w-full h-full object-cover" />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-transparent" />
-            </button>
+            </div>
           </div>
 
           {/* Tresc planu */}
@@ -2028,40 +2025,6 @@ const ReviewSummary = () => {
                   })}
                 </div>
               </div>
-            </div>
-          </div>
-        )}
-
-        {/* Podglad "jak okladka wyglada w eksploracji" - mock karty trasy (TrasaBigCard). */}
-        {explorePreviewOpen && (
-          <div className="fixed inset-0 z-[95] flex flex-col items-center justify-center px-5" onClick={() => setExplorePreviewOpen(false)}>
-            <div className="absolute inset-0 bg-black/70 animate-in fade-in duration-200" />
-            <div className="relative w-full max-w-sm animate-in fade-in zoom-in-95 duration-300" onClick={(e) => e.stopPropagation()}>
-              <p className="text-white/80 text-sm font-semibold text-center mb-3">Tak trasa wygląda w eksploracji</p>
-              {/* Mock karty jak w DiscoveryFeed (TrasaBigCard) */}
-              <div className="relative rounded-[26px] overflow-hidden shadow-2xl bg-muted aspect-[3/4]">
-                <img src={heroPhoto} alt="" className="absolute inset-0 w-full h-full object-cover" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/10 to-black/25" />
-                {heroMapThumb && (
-                  <div className="absolute right-3 top-3 h-20 w-20 rounded-2xl overflow-hidden ring-2 ring-white/85 shadow-lg bg-muted">
-                    <img src={heroMapThumb} alt="" className="w-full h-full object-cover" />
-                  </div>
-                )}
-                <div className="absolute bottom-0 left-0 right-0 p-5">
-                  <div className="flex items-center gap-2 text-white/90 text-sm font-semibold mb-1.5">
-                    <MapPin className="h-4 w-4" /> {cityLabel} <span className="opacity-60">·</span> {currentPins.length} miejsc
-                  </div>
-                  <p className="text-white text-2xl font-black leading-tight [text-shadow:_0_1px_3px_rgb(0_0_0/50%)]">{displayName || cityLabel}</p>
-                  <div className="flex flex-wrap gap-1.5 mt-3">
-                    {Array.from(new Set(currentPins.map((p: any) => catLabel(p.category)))).slice(0, 3).map((c: any) => (
-                      <span key={c} className="px-2.5 py-1 rounded-full bg-white/20 backdrop-blur-sm text-white text-[11px] font-semibold">{c}</span>
-                    ))}
-                  </div>
-                </div>
-              </div>
-              <button onClick={() => setExplorePreviewOpen(false)} className="mt-4 mx-auto block px-6 py-2.5 rounded-full bg-white/15 backdrop-blur-sm text-white text-sm font-semibold active:scale-95 transition-transform">
-                Zamknij podgląd
-              </button>
             </div>
           </div>
         )}

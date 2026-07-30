@@ -74,6 +74,7 @@ type PolecaneRoute = {
   categories?: string[];
   author_name: string;
   author_avatar: string | null;
+  author_username?: string | null;     // @handle - do etykiety autora na karcie eksploracji
   placeCount?: number;
   avgRating?: number;                  // srednia ocena Google z pinow (0 = brak)
   pins?: LatLng[];                     // wspolrzedne pinow do mini-mapy na okladce
@@ -928,6 +929,7 @@ async function enrichRouteRows(routes: any[]): Promise<PolecaneRoute[]> {
       categories: catMap.get(r.id) ?? [],
       author_name: anon ? i18n.t("author_anon", { ns: "homefeed" }) : (prof?.first_name || prof?.username || i18n.t("author_default", { ns: "homefeed" })),
       author_avatar: anon ? null : (prof?.avatar_url ?? null),
+      author_username: anon ? null : (prof?.username ?? null),
       placeCount: countMap.get(r.id) ?? 0,
       avgRating: avgRatingOf(ratingMap.get(r.id) ?? []),
       pins: pinsMap.get(r.id) ?? [],
@@ -1150,7 +1152,7 @@ const TRASA_CARD_H = "h-[calc(100dvh-150px-env(safe-area-inset-top,0px)-max(16px
 // (mini-mapka, bookmark = zapisz, strzalka = otworz wizytowke). Bez swipe'a - naturalny scroll.
 function TrasaBigCard({
   id, photo, city, placeCount = 0, title, description, tags = [], pins = [],
-  saved, onToggleSave, onOpen,
+  saved, onToggleSave, onOpen, authorName, authorAvatar,
 }: {
   id: string;
   photo: string | null;
@@ -1163,6 +1165,8 @@ function TrasaBigCard({
   saved?: boolean;
   onToggleSave?: () => void;
   onOpen: () => void;
+  authorName?: string | null;
+  authorAvatar?: string | null;
 }) {
   const cover = photo ?? getRandomPinPlaceholder(id);
   const miniMap = buildMiniMapUrl(pins);
@@ -1225,6 +1229,12 @@ function TrasaBigCard({
           prawej = 12px odstepu od guzikow (right-3=12 + w-12=48 -> lewa krawedz 60px). */}
       <div className="absolute left-0 right-[3.25rem] bottom-6 z-10 px-5 pointer-events-none">
         <div className="flex items-center gap-3 text-white text-[13px] font-semibold mb-1.5 [text-shadow:_0_1px_3px_rgb(0_0_0_/_40%)]">
+          {authorName && (
+            <span className="flex items-center gap-1.5">
+              <img src={avatarSrc(authorAvatar ?? null)} alt="" className="h-5 w-5 rounded-full object-cover bg-orange-100 ring-1 ring-white/40" />
+              {authorName}
+            </span>
+          )}
           {city && <span className="flex items-center gap-1"><Building2 className="h-4 w-4" />{city}</span>}
           {countLabel && <span className="flex items-center gap-1"><MapPin className="h-4 w-4" />{countLabel}</span>}
         </div>
@@ -2226,6 +2236,8 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
                 saved={savedColIds.has(col.id)}
                 onToggleSave={() => toggleSaveCol(col.id)}
                 onOpen={() => setActiveCol(col)}
+                authorName={col.author_name}
+                authorAvatar={col.author_avatar}
               />
             );
           })}
@@ -2244,6 +2256,8 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
               saved={savedRouteIds.has(r.id)}
               onToggleSave={() => toggleSaveRoute(r.id)}
               onOpen={() => navigate(`/route/${r.id}`)}
+              authorName={r.author_username ? `@${r.author_username}` : r.author_name}
+              authorAvatar={r.author_avatar}
             />
           ))}
 

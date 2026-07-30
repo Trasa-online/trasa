@@ -17,7 +17,7 @@ import { API_BASE } from "@/lib/platform";
 import FullCalendarPicker from "@/components/plan-wizard/FullCalendarPicker";
 import RouteMap from "@/components/RouteMap";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
-import { COUNTRIES } from "@/components/plan-wizard/CityPicker";
+import { TRIP_COUNTRIES, TRIP_REGIONS, citiesForCountry, countryForCity } from "@/lib/tripCountries";
 import { fetchEnrichedPlace, type MockPlace } from "@/components/plan-wizard/PlaceSwiper";
 import { categoryIconSrc } from "@/lib/placeCategoryIcon";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
@@ -157,6 +157,10 @@ export default function ComposeWyjazd() {
 
   const [draftId, setDraftId] = useState<string | null>(soft?.draftId ?? nav.draftId ?? null);
   const [city, setCity] = useState<string>(soft?.city ?? nav.city ?? "Warszawa");
+  // Kraj wywiedziony z miasta (Europa/Azja odblokowane) - zmiana kraju resetuje miasto.
+  const [country, setCountry] = useState<string>(() => countryForCity(soft?.city ?? nav.city ?? "Warszawa"));
+  const cities = citiesForCountry(country);
+  const onCountryChange = (c: string) => { setCountry(c); setCity(citiesForCountry(c)[0]); };
   const [name, setName] = useState<string>(soft?.name ?? nav.title ?? "");
   const [items, setItems] = useState<ComposeItem[]>(() =>
     soft?.items ?? (nav.places ?? []).map((p: any, idx: number) => toItem({ ...p, key: p.place_id ?? p.id ?? `${p.place_name}:${idx}` })));
@@ -379,22 +383,28 @@ export default function ComposeWyjazd() {
       </div>
 
       <div className="flex-1 min-h-0 overflow-y-auto pb-4">
-        {/* Kraj (Polska aktywna, zagraniczne wyszarzone) - pelnowymiarowy select nad miastem */}
+        {/* Kraj - pelnowymiarowy select (Polska + Europa + Azja odblokowane), grupowany po regionie */}
         <div className="px-4 pt-4">
           <div className="relative">
-            <select value="Polska" onChange={() => { /* tylko Polska aktywna */ }}
+            <select value={country} onChange={(e) => onCountryChange(e.target.value)}
               className="w-full appearance-none rounded-2xl bg-secondary text-secondary-foreground border-0 px-4 py-3 text-base outline-none focus:ring-2 focus:ring-orange-500/40">
-              {COUNTRIES.map((c) => <option key={c.code} value={c.name} disabled={!!c.comingSoon}>{c.name}{c.comingSoon ? " (wkrótce)" : ""}</option>)}
+              {TRIP_REGIONS.map((region) => (
+                <optgroup key={region} label={region}>
+                  {TRIP_COUNTRIES.filter((c) => c.region === region).map((c) => (
+                    <option key={c.name} value={c.name}>{c.name}</option>
+                  ))}
+                </optgroup>
+              ))}
             </select>
             <ChevronDown className="h-4 w-4 text-muted-foreground absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" />
           </div>
         </div>
-        {/* Miasto */}
+        {/* Miasto (miasta wybranego kraju) */}
         <div className="px-4 pt-3">
           <div className="relative">
             <select value={city} onChange={(e) => setCity(e.target.value)}
               className="w-full appearance-none rounded-2xl bg-secondary text-secondary-foreground border-0 px-4 py-3 text-base outline-none focus:ring-2 focus:ring-orange-500/40">
-              {PL_CITIES.map((c) => <option key={c} value={c}>{c}</option>)}
+              {cities.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
             <ChevronDown className="h-4 w-4 text-muted-foreground absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" />
           </div>

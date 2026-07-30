@@ -16,6 +16,23 @@ const HOME_FILTERS_KEY = "trasa_home_filters";
 
 // Kafelek akcji w drawerze "+" (ikona w szarym kwadracie + podpis pod spodem),
 // uklad wzorowany na arkuszu tworzenia z Pinteresta.
+// Ikona nawigacji z pliku SVG (public/Ikona_*.svg). Uzywa CSS mask + currentColor, wiec
+// przejmuje kolor tekstu rodzica (orange gdy aktywna, szary gdy nie) - jak ikony lucide.
+const NavIcon = ({ src, className = "h-6 w-6" }: { src: string; className?: string }) => (
+  <span
+    aria-hidden
+    className={className}
+    style={{
+      backgroundColor: "currentColor",
+      WebkitMaskImage: `url(${src})`, maskImage: `url(${src})`,
+      WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat",
+      WebkitMaskSize: "contain", maskSize: "contain",
+      WebkitMaskPosition: "center", maskPosition: "center",
+      display: "inline-block",
+    }}
+  />
+);
+
 const ActionTile = ({ icon: Icon, label, onClick }: { icon: LucideIcon; label: string; onClick: () => void }) => (
   <button
     onClick={onClick}
@@ -347,7 +364,7 @@ const BottomNav = () => {
             >
               {({ isActive }) => (
                 <>
-                  <Compass className="h-6 w-6 stroke-2" />
+                  <NavIcon src="/Ikona_Eksploracja.svg" />
                   <span className="text-[9px] font-semibold leading-tight mt-0.5">Eksploruj</span>
                 </>
               )}
@@ -365,7 +382,7 @@ const BottomNav = () => {
               {({ isActive }) => (
                 <>
                   <div className="relative">
-                    <Map className="h-6 w-6 stroke-2" />
+                    <NavIcon src="/Ikona_Trasy.svg" />
                     {hasNewJournalEntries && !isActive && (
                       <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-orange-600 ring-2 ring-background" />
                     )}
@@ -383,7 +400,7 @@ const BottomNav = () => {
             >
               {({ isActive }) => (
                 <>
-                  <Map className="h-6 w-6 stroke-2" />
+                  <NavIcon src="/Ikona_Trasy.svg" />
                   <span className="text-[9px] font-semibold leading-tight mt-0.5">Trasy</span>
                 </>
               )}
@@ -419,7 +436,7 @@ const BottomNav = () => {
             >
               {({ isActive }) => (
                 <>
-                  <Bookmark className="h-6 w-6 stroke-2" />
+                  <NavIcon src="/Ikona_Zapisane.svg" />
                   <span className="text-[9px] font-semibold leading-tight mt-0.5">Zapisane</span>
                 </>
               )}
@@ -454,7 +471,7 @@ const BottomNav = () => {
           >
             {({ isActive }) => (
               <>
-                <User className="h-6 w-6 stroke-2" />
+                <NavIcon src="/Ikona_Profil.svg" />
                 <span className="text-[9px] font-semibold leading-tight mt-0.5">Profil</span>
               </>
             )}
