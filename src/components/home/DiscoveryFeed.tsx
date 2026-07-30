@@ -877,13 +877,14 @@ async function enrichRouteRows(routes: any[]): Promise<PolecaneRoute[]> {
   if (!routes.length) return [];
   const routeIds = routes.map((r) => r.id);
   const photoMap = new Map<string, string>();
+  const userPhotoMap = new Map<string, string>(); // pierwsze zdjecie usera z pinow (user_photo_urls)
   const countMap = new Map<string, number>();
   const catMap = new Map<string, string[]>(); // 3 glowne kategorie (wg pin_order)
   const ratingMap = new Map<string, number[]>(); // oceny Google pinow (do sredniej)
   const pinsMap = new Map<string, LatLng[]>();    // wspolrzedne pinow (do mini-mapy)
   const { data: pinRows } = await (supabase as any)
     .from("pins")
-    .select("route_id, photo_url, image_url, category, pin_order, rating, latitude, longitude")
+    .select("route_id, photo_url, image_url, user_photo_urls, category, pin_order, rating, latitude, longitude")
     .in("route_id", routeIds)
     .order("pin_order", { ascending: true });
   const best = new Map<string, { url: string; rank: number; order: number }>();
@@ -898,6 +899,10 @@ async function enrichRouteRows(routes: any[]): Promise<PolecaneRoute[]> {
     }
     if (p.latitude != null && p.longitude != null) {
       const arr = pinsMap.get(p.route_id) ?? []; arr.push({ latitude: p.latitude, longitude: p.longitude }); pinsMap.set(p.route_id, arr);
+    }
+    if (!userPhotoMap.has(p.route_id) && Array.isArray(p.user_photo_urls) && p.user_photo_urls.length) {
+      const u = resolveStored(p.user_photo_urls.find(Boolean));
+      if (u) userPhotoMap.set(p.route_id, u);
     }
     const url = resolveStored(p.photo_url || p.image_url);
     if (!url) continue;
@@ -923,7 +928,14 @@ async function enrichRouteRows(routes: any[]): Promise<PolecaneRoute[]> {
     const anon = r.share_anonymous === true;
     return {
       kind: "route", id: r.id, title: r.title, city: r.city,
-      photo: photoMap.get(r.id) ?? null,
+      // Okladka: recznie wybrana (cover_url) -> zdjecie usera (review_photos[0]) -> najlepsze
+      // zdjecie pinu -> zdjecie usera z pinow -> null (placeholder). Wczesniej TYLKO zdjecie pinu,
+      // wiec trasy bez zdjec pinow (Google odciety) pokazywaly placeholder mimo wlasnej okladki.
+      photo: resolveStored(r.cover_url)
+        ?? resolveStored(Array.isArray(r.review_photos) ? r.review_photos.find((u: any) => typeof u === "string" && u.trim()) : null)
+        ?? photoMap.get(r.id)
+        ?? userPhotoMap.get(r.id)
+        ?? null,
       ai_highlight: r.ai_highlight ?? null,
       summary: r.ai_summary ?? null,
       categories: catMap.get(r.id) ?? [],
@@ -1366,7 +1378,7 @@ export function SavedRoutes({ city }: { city?: string }) {
       if (!ids.length) return { list: [] as PolecaneRoute[], dates };
       const { data: rows } = await (supabase as any)
         .from("routes")
-        .select("id, title, city, ai_highlight, ai_summary, user_id, created_at, views, share_anonymous")
+        .select("id, title, city, ai_highlight, ai_summary, user_id, created_at, views, share_anonymous, cover_url, review_photos")
         .in("id", ids);
       const list = await enrichRouteRows(rows ?? []);
       return { list, dates };
@@ -1754,7 +1766,7 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
       // city === "all" (ALL_CITIES) -> feed agreguje Trasy ze wszystkich miast (bez filtra).
       let q = (supabase as any)
         .from("routes")
-        .select("id, title, city, ai_highlight, ai_summary, user_id, created_at, views, share_anonymous")
+        .select("id, title, city, ai_highlight, ai_summary, user_id, created_at, views, share_anonymous, cover_url, review_photos")
         .eq("is_shared", true).not("title", "is", null);
       if (city && city !== "all") q = q.ilike("city", `${city}%`);
       const { data } = await q
@@ -1952,7 +1964,7 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
       // Wiele miast -> suma expandCity dla kazdego wybranego (dedupe).
       const cities = cityFilter.length ? [...new Set(cityFilter.flatMap(expandCity))] : null;
       const like = `%${escapeLike(q)}%`;
-      const routeCols = "id, title, city, ai_highlight, ai_summary, user_id, created_at, views, share_anonymous";
+      const routeCols = "id, title, city, ai_highlight, ai_summary, user_id, created_at, views, share_anonymous, cover_url, review_photos";
 
       // Kategorie miejsc -> zbior route_id z pinow tych kategorii (routes nie ma kolumny category).
       let allow: Set<string> | null = null;

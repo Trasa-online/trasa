@@ -1105,6 +1105,18 @@ const ReviewSummary = () => {
     notify.success("Zapisano datę");
   };
 
+  // Wyczyść daty wyjazdu (usun start/end).
+  const clearDate = async () => {
+    if (!routeId) return;
+    setDatePickerOpen(false);
+    const { error } = await (supabase as any).from("routes").update({ start_date: null, end_date: null }).eq("id", routeId);
+    if (error) { notify.error(t("toast.name_save_error")); return; }
+    queryClient.setQueryData(["review-summary-route", routeId], (old: any) => old ? { ...old, start_date: null, end_date: null } : old);
+    queryClient.invalidateQueries({ queryKey: ["review-trip-days", folderId, routeId] });
+    if (user) queryClient.invalidateQueries({ queryKey: ["journal-entries", user.id] });
+    notify.success("Usunięto daty");
+  };
+
   // Zakres dat: trasa wielodniowa => "12 - 14 maja 2026", jednodniowa => "12 maja 2026".
   const dateLabel = useMemo(() => {
     const first = sortedDays[0]?.start_date;
@@ -2065,7 +2077,7 @@ const ReviewSummary = () => {
               <div className="px-3 pb-1 text-center">
                 <p className="text-base font-bold leading-tight">Wybierz daty dla trasy <span className="font-normal text-muted-foreground">(opcjonalnie)</span></p>
               </div>
-              <FullCalendarPicker onConfirm={saveDate} />
+              <FullCalendarPicker onConfirm={saveDate} allowPast onClear={clearDate} />
             </div>
           </div>
         )}

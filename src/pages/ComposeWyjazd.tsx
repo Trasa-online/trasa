@@ -586,7 +586,7 @@ export default function ComposeWyjazd() {
           <div className="px-5 pt-5 pb-1 text-center">
             <p className="text-base font-bold leading-tight">Wybierz daty dla trasy <span className="font-normal text-muted-foreground">(opcjonalnie)</span></p>
           </div>
-          <FullCalendarPicker allowPast onConfirm={(d, n) => { setTripDate({ start: d, numDays: n }); setDateSheet(false); }} />
+          <FullCalendarPicker allowPast onConfirm={(d, n) => { setTripDate({ start: d, numDays: n }); setDateSheet(false); }} onClear={() => { setTripDate(null); setDateSheet(false); }} />
         </SheetContent>
       </Sheet>
 
