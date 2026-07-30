@@ -928,10 +928,11 @@ async function enrichRouteRows(routes: any[]): Promise<PolecaneRoute[]> {
     const anon = r.share_anonymous === true;
     return {
       kind: "route", id: r.id, title: r.title, city: r.city,
-      // Okladka: recznie wybrana (cover_url) -> zdjecie usera (review_photos[0]) -> najlepsze
-      // zdjecie pinu -> zdjecie usera z pinow -> null (placeholder). Wczesniej TYLKO zdjecie pinu,
-      // wiec trasy bez zdjec pinow (Google odciety) pokazywaly placeholder mimo wlasnej okladki.
-      photo: resolveStored(r.cover_url)
+      // Miniatura eksploracji = OSOBNA okladka (list_cover_url), niezalezna od okladki trasy
+      // (cover_url). Kolejnosc: miniatura -> okladka trasy -> zdjecie usera (review_photos[0]) ->
+      // najlepsze zdjecie pinu -> zdjecie usera z pinow -> null (placeholder).
+      photo: resolveStored(r.list_cover_url)
+        ?? resolveStored(r.cover_url)
         ?? resolveStored(Array.isArray(r.review_photos) ? r.review_photos.find((u: any) => typeof u === "string" && u.trim()) : null)
         ?? photoMap.get(r.id)
         ?? userPhotoMap.get(r.id)
@@ -1378,7 +1379,7 @@ export function SavedRoutes({ city }: { city?: string }) {
       if (!ids.length) return { list: [] as PolecaneRoute[], dates };
       const { data: rows } = await (supabase as any)
         .from("routes")
-        .select("id, title, city, ai_highlight, ai_summary, user_id, created_at, views, share_anonymous, cover_url, review_photos")
+        .select("id, title, city, ai_highlight, ai_summary, user_id, created_at, views, share_anonymous, cover_url, list_cover_url, review_photos")
         .in("id", ids);
       const list = await enrichRouteRows(rows ?? []);
       return { list, dates };
@@ -1420,9 +1421,9 @@ export function SavedRoutes({ city }: { city?: string }) {
   if (rows.length === 0) {
     return (
       <div className="py-14 text-center px-8">
-        <Bookmark className="h-9 w-9 mx-auto mb-3 text-muted-foreground/40" strokeWidth={1.75} />
+        <span aria-hidden className="mx-auto mb-4 h-20 w-20" style={{ display: "block", backgroundColor: "#ef9d78", WebkitMaskImage: "url(/Ikona_Zapisane.svg)", maskImage: "url(/Ikona_Zapisane.svg)", WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat", WebkitMaskSize: "contain", maskSize: "contain", WebkitMaskPosition: "center", maskPosition: "center" }} />
         <p className="text-base font-bold">Brak zapisanych tras</p>
-        <p className="text-sm text-muted-foreground mt-1 leading-relaxed max-w-[260px] mx-auto">Zapisz trasę bookmarkiem w Eksploruj, a wróci tutaj.</p>
+        <p className="text-sm text-muted-foreground mt-1 leading-relaxed max-w-[260px] mx-auto">Zapisz trasę bookmarkiem w zakładce Eksploruj, żeby zobaczyć je tutaj.</p>
       </div>
     );
   }
@@ -1766,8 +1767,10 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
       // city === "all" (ALL_CITIES) -> feed agreguje Trasy ze wszystkich miast (bez filtra).
       let q = (supabase as any)
         .from("routes")
-        .select("id, title, city, ai_highlight, ai_summary, user_id, created_at, views, share_anonymous, cover_url, review_photos")
-        .eq("is_shared", true).not("title", "is", null);
+        .select("id, title, city, ai_highlight, ai_summary, user_id, created_at, views, share_anonymous, cover_url, list_cover_url, review_photos")
+        // Bramka "sfinalizowane": trasa pojawia sie w eksploracji dopiero gdy ma ustawiona
+        // miniature (list_cover_url) - auto-losowana ze zdjec usera przy tworzeniu/finalizacji.
+        .eq("is_shared", true).not("title", "is", null).not("list_cover_url", "is", null);
       if (city && city !== "all") q = q.ilike("city", `${city}%`);
       const { data } = await q
         .order("views", { ascending: false, nullsFirst: false })
@@ -1830,9 +1833,10 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
       const [routesRes, creatorRes] = await Promise.all([
         (supabase as any)
           .from("routes")
-          .select("id, title, city, review_photos, ai_highlight, user_id, views")
+          .select("id, title, city, review_photos, cover_url, list_cover_url, ai_highlight, user_id, views")
           .eq("is_shared", true)
           .not("title", "is", null)
+          .not("list_cover_url", "is", null)
           .order("views", { ascending: false, nullsFirst: false })
           .limit(8),
         (supabase as any)
@@ -1964,7 +1968,7 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
       // Wiele miast -> suma expandCity dla kazdego wybranego (dedupe).
       const cities = cityFilter.length ? [...new Set(cityFilter.flatMap(expandCity))] : null;
       const like = `%${escapeLike(q)}%`;
-      const routeCols = "id, title, city, ai_highlight, ai_summary, user_id, created_at, views, share_anonymous, cover_url, review_photos";
+      const routeCols = "id, title, city, ai_highlight, ai_summary, user_id, created_at, views, share_anonymous, cover_url, list_cover_url, review_photos";
 
       // Kategorie miejsc -> zbior route_id z pinow tych kategorii (routes nie ma kolumny category).
       let allow: Set<string> | null = null;
@@ -1979,7 +1983,8 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
       }
 
       const applyRoute = (b: any) => {
-        let x = b.eq("is_shared", true).not("title", "is", null);
+        // Bramka jak w feedzie: tylko trasy ze sfinalizowana miniatura (list_cover_url).
+        let x = b.eq("is_shared", true).not("title", "is", null).not("list_cover_url", "is", null);
         if (cities) x = x.in("city", cities);
         return x;
       };

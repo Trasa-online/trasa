@@ -194,10 +194,10 @@ export default function StartWyjazd() {
           Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-[120px] rounded-3xl bg-muted/40 animate-pulse" />)
         ) : shown.length === 0 ? (
           <div className="py-14 text-center px-8">
-            <div className="text-4xl mb-3">🧳</div>
-            <p className="text-base font-bold">{tab === "robocze" ? "Brak roboczych tras" : "Brak zapisanych tras"}</p>
+            <span aria-hidden className="mx-auto mb-4 h-20 w-20" style={{ display: "block", backgroundColor: "#ef9d78", WebkitMaskImage: tab === "robocze" ? "url(/Ikona_Trasy.svg)" : "url(/Ikona_Zapisane.svg)", maskImage: tab === "robocze" ? "url(/Ikona_Trasy.svg)" : "url(/Ikona_Zapisane.svg)", WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat", WebkitMaskSize: "contain", maskSize: "contain", WebkitMaskPosition: "center", maskPosition: "center" }} />
+            <p className="text-base font-bold">{tab === "robocze" ? "Robocze trasy" : "Brak zapisanych tras"}</p>
             <p className="text-sm text-muted-foreground mt-1 leading-relaxed max-w-[260px] mx-auto">
-              {tab === "robocze" ? "Zacznij od nowa, żeby stworzyć pierwszą trasę." : "Zapisz trasę innego użytkownika w Eksploruj, a użyjesz jej tutaj jako bazy."}
+              {tab === "robocze" ? "Nie masz obecnie żadnych zapisanych roboczych tras." : "Zapisz trasę innego użytkownika w Eksploruj, a użyjesz jej tutaj jako bazy."}
             </p>
           </div>
         ) : (

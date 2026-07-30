@@ -181,6 +181,8 @@ const ReviewSummary = () => {
   const [planScrolled, setPlanScrolled] = useState(false);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [coverPickerOpen, setCoverPickerOpen] = useState(false);
+  // Miniatura eksploracji = OSOBNA okladka (routes.list_cover_url), niezalezna od okladki trasy.
+  const [listCoverPickerOpen, setListCoverPickerOpen] = useState(false);
   // Podglad "jak okladka wyglada w eksploracji" (fullscreen mock karty trasy).
   // QR do udostepnienia wyjazdu (arkusz z kodem + linkiem).
   const [qrShareOpen, setQrShareOpen] = useState(false);
@@ -246,6 +248,7 @@ const ReviewSummary = () => {
   const pinTargetRef = useRef<any>(null);
   // Nowe zdjecie -> od razu okladka wyjazdu (input web; native uzywa CapCamera).
   const coverFileInputRef = useRef<HTMLInputElement>(null);
+  const listCoverFileInputRef = useRef<HTMLInputElement>(null);
   const [pinUploadingId, setPinUploadingId] = useState<string | null>(null);
   // Zwinięte/rozwinięte notki per miejsce (pin.id) na widoku Sugestii - domyślnie zwinięte ("+ Twoja sugestia").
   const [openNotes, setOpenNotes] = useState<Set<string>>(new Set());
@@ -265,7 +268,7 @@ const ReviewSummary = () => {
       if (!routeId || !user) return null;
       const { data } = await (supabase as any)
         .from("routes")
-        .select("id, title, user_id, city, day_number, start_date, end_date, folder_id, plan_finalized, trip_type, ai_summary, ai_highlight, review_photos, cover_url, is_shared, share_friends, group_session_id, overall_rating, review_narrative")
+        .select("id, title, user_id, city, day_number, start_date, end_date, folder_id, plan_finalized, trip_type, ai_summary, ai_highlight, review_photos, cover_url, list_cover_url, is_shared, share_friends, group_session_id, overall_rating, review_narrative")
         .eq("id", routeId)
         .single();
       return data as any;
@@ -295,7 +298,7 @@ const ReviewSummary = () => {
       if (!folderId) return [route];
       const { data } = await (supabase as any)
         .from("routes")
-        .select("id, title, city, day_number, start_date, end_date, plan_finalized, trip_type, ai_summary, ai_highlight, review_photos, cover_url")
+        .select("id, title, city, day_number, start_date, end_date, plan_finalized, trip_type, ai_summary, ai_highlight, review_photos, cover_url, list_cover_url")
         .eq("folder_id", folderId)
         .eq("user_id", route.user_id)
         .order("day_number", { ascending: true });
@@ -594,6 +597,9 @@ const ReviewSummary = () => {
       setPhotos(updated);
       await supabase.from("routes").update({ review_photos: updated } as any).eq("id", routeId);
       queryClient.invalidateQueries({ queryKey: ["review-trip-days", folderId, routeId] });
+      // Auto-miniatura eksploracji: gdy trasa nie ma jeszcze list_cover_url, ustaw LOSOWE
+      // zdjecie z galerii (task 3) - trasa "finalizuje sie" i pojawia w eksploracji.
+      await ensureListCover(routeId, updated);
     }
     // Nie chowaj cichych bledow - jesli nic sie nie dodalo (albo tylko czesc), powiedz o tym.
     if (failed > 0) notify.error(newUrls.length === 0 ? t("toast.photo_upload_error") : t("toast.photo_upload_partial"));
@@ -800,6 +806,58 @@ const ReviewSummary = () => {
     notify.success(t("toast.cover_set"));
   };
 
+  // ── Miniatura eksploracji (list_cover_url) - OSOBNA okladka od okladki trasy (cover_url). ──
+  // Reczny wybor zdjecia (galeria / miejsca trasy). Zapis do routes.list_cover_url.
+  const setPlanListCover = async (url: string) => {
+    if (!routeId) return;
+    setListCoverPickerOpen(false);
+    const { error } = await (supabase as any).from("routes").update({ list_cover_url: url }).eq("id", routeId);
+    if (error) { notify.error(t("toast.cover_set_error", { defaultValue: "Nie udało się ustawić okładki" })); return; }
+    queryClient.setQueryData(["review-summary-route", routeId], (old: any) => old ? { ...old, list_cover_url: url } : old);
+    queryClient.invalidateQueries({ queryKey: ["discovery-city-routes"] });
+    queryClient.invalidateQueries({ queryKey: ["discovery-polecane"] });
+    if (user) queryClient.invalidateQueries({ queryKey: ["journal-entries", user.id] });
+    notify.success(t("toast.cover_set"));
+  };
+  // Nowe zdjecie z telefonu -> upload -> miniatura eksploracji (+ trafia tez do galerii wyjazdu).
+  const addNewListCoverPhoto = async (files: File[]) => {
+    if (!files.length || uploading || !routeId) return;
+    setUploading(true);
+    const urls = await uploadImages(files.slice(0, 1));
+    setUploading(false);
+    if (!urls[0]) return;
+    const updated = photos.includes(urls[0]) ? photos : [...photos, urls[0]];
+    setPhotos(updated);
+    await supabase.from("routes").update({ review_photos: updated } as any).eq("id", routeId);
+    await setPlanListCover(urls[0]);
+  };
+  const triggerListCoverPhotoPick = async () => {
+    if (uploading) return;
+    if (isNative) { try { const f = await pickNativeImageFiles(1); await addNewListCoverPhoto(f); } catch { /* cancel */ } }
+    else listCoverFileInputRef.current?.click();
+  };
+  const handleListCoverFileInput = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    await addNewListCoverPhoto(Array.from(e.target.files ?? []));
+    if (listCoverFileInputRef.current) listCoverFileInputRef.current.value = "";
+  };
+  // Auto-losowanie miniatury (task 3): gdy trasa ma zdjecia usera a brak miniatury, ustaw LOSOWE
+  // zdjecie z galerii na list_cover_url. Dzieki temu trasa "finalizuje sie" i pojawia w eksploracji
+  // bez recznego ustawiania okladek. NIE nadpisuje juz ustawionej miniatury (auto ani recznej).
+  const ensureListCover = async (rid: string | null, poolUrls?: string[]) => {
+    if (!rid) return;
+    const pool = (poolUrls && poolUrls.length ? poolUrls : coverPickerOptions.map((o) => o.url))
+      .map((u) => resolveStored(u) ?? u)
+      .filter((u): u is string => typeof u === "string" && u.length > 0);
+    if (pool.length === 0) return;
+    const r: any = queryClient.getQueryData(["review-summary-route", rid]);
+    if (r?.list_cover_url) return;
+    const pick = pool[Math.floor(Math.random() * pool.length)];
+    await (supabase as any).from("routes").update({ list_cover_url: pick }).eq("id", rid);
+    queryClient.setQueryData(["review-summary-route", rid], (old: any) => old ? { ...old, list_cover_url: pick } : old);
+    queryClient.invalidateQueries({ queryKey: ["discovery-city-routes"] });
+    queryClient.invalidateQueries({ queryKey: ["discovery-polecane"] });
+  };
+
   // Usuwanie zdjecia: optymistycznie znika z galerii, faktyczny DB update ODROCZONY o okno
   // "Cofnij" (5s). Undo przywraca zdjecie (DB niezmieniona -> refetch je wraca).
   const removePhoto = (url: string, owner: string) => {
@@ -852,6 +910,8 @@ const ReviewSummary = () => {
     try {
       await (supabase as any).from("routes").update({ plan_finalized: true }).in("id", dayRouteIds.length ? dayRouteIds : [activeRouteId]);
     } catch (e: any) { console.error("[ReviewSummary] finishEditing failed:", e?.message ?? e); }
+    // Auto-miniatura eksploracji przy finalizacji (task 3) - jesli trasa ma zdjecia a brak miniatury.
+    await ensureListCover(routeId);
     setLocalReviewed(true); setEditingStepper(false); setSummaryTab("plan");
     queryClient.invalidateQueries({ queryKey: ["review-summary-route", routeId] });
     queryClient.invalidateQueries({ queryKey: ["review-trip-days", folderId, routeId] });
@@ -1219,6 +1279,8 @@ const ReviewSummary = () => {
   const planCover = resolveStored((route as any)?.cover_url);
   const hasRealPhoto = !!(planCover || userCover || placeCover);
   const heroPhoto = planCover ?? userCover ?? placeCover ?? getRandomPinPlaceholder(routeId ?? undefined);
+  // Miniatura eksploracji = OSOBNA okladka (list_cover_url). Gdy nieustawiona -> fallback do hero.
+  const listCoverPhoto = resolveStored((route as any)?.list_cover_url) ?? heroPhoto;
   const galleryPhotos = [
     ...myPhotos.map((p) => ({ ...p, mine: true, username: t("labels.you") })),
     ...groupPhotos.map((p: any) => ({ url: p.url, owner: "", mine: false, username: p.username })),
@@ -1838,18 +1900,25 @@ const ReviewSummary = () => {
             >
               <ImageIcon className="h-[18px] w-[18px]" />
             </button>
-            {/* Podglad "jak okladka wyglada w eksploracji" - SAM podglad (nie zmienia okladki).
-                Prawy-dolny rog. Mini karta trasy (miasto · liczba miejsc + tytul). */}
-            <div className="absolute bottom-3 right-3 z-20 w-20 rounded-2xl overflow-hidden border-[3px] border-white shadow-xl bg-muted">
+            {/* Miniatura eksploracji - OSOBNA okladka (list_cover_url), klik = zmiana zdjecia
+                (dodaj nowe / wybierz z galerii/miejsc trasy). Prawy-dolny rog. Ikona = edytowalna. */}
+            <button
+              onClick={() => setListCoverPickerOpen(true)}
+              aria-label="Zmień miniaturę w eksploracji"
+              className="absolute bottom-3 right-3 z-20 w-20 rounded-2xl overflow-hidden border-[3px] border-white shadow-xl bg-muted active:scale-95 transition-transform"
+            >
               <div className="relative w-full aspect-[9/16]">
-                <img src={heroPhoto} alt="" className="w-full h-full object-cover" />
+                <img src={listCoverPhoto} alt="" className="w-full h-full object-cover" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/5 to-black/10" />
-                <div className="absolute bottom-1.5 left-2 right-2">
+                <span className="absolute top-1 right-1 h-5 w-5 rounded-full bg-black/45 backdrop-blur-sm text-white flex items-center justify-center">
+                  <ImageIcon className="h-3 w-3" />
+                </span>
+                <div className="absolute bottom-1.5 left-2 right-2 text-left">
                   <p className="text-white text-[7px] font-semibold leading-none [text-shadow:_0_1px_2px_rgb(0_0_0/70%)]">{cityLabel} · {currentPins.length} miejsc</p>
                   <p className="text-white text-[9px] font-black leading-tight truncate mt-0.5 [text-shadow:_0_1px_2px_rgb(0_0_0/70%)]">{displayName || cityLabel}</p>
                 </div>
               </div>
-            </div>
+            </button>
           </div>
 
           {/* Tresc planu */}
@@ -2085,6 +2154,52 @@ const ReviewSummary = () => {
           </div>
         )}
 
+        {/* Arkusz wyboru MINIATURY w eksploracji (list_cover_url) - osobny od okladki wyjazdu. */}
+        {listCoverPickerOpen && (
+          <div className="fixed inset-0 z-[95] flex items-end justify-center" onClick={() => setListCoverPickerOpen(false)}>
+            <div className="absolute inset-0 bg-black/50 animate-in fade-in duration-200" />
+            <div onClick={(e) => e.stopPropagation()} className="relative w-full max-w-lg bg-card rounded-t-3xl px-5 pt-3 pb-[max(20px,env(safe-area-inset-bottom))] shadow-2xl animate-in slide-in-from-bottom-4 duration-300" style={{ maxHeight: "82dvh" }}>
+              <div className="mx-auto h-1 w-10 rounded-full bg-muted-foreground/25 mb-4" />
+              <button onClick={() => setListCoverPickerOpen(false)} aria-label={t("close", { defaultValue: "Zamknij" })} className="absolute right-4 top-4 h-8 w-8 rounded-full bg-muted flex items-center justify-center active:scale-90 transition-transform">
+                <X className="h-4 w-4" />
+              </button>
+              <p className="text-lg font-bold pr-8">Miniatura w eksploracji</p>
+              <p className="text-sm text-muted-foreground mt-1 mb-4">Zdjęcie widoczne na karcie trasy w eksploracji - dodaj nowe albo wybierz z galerii lub miejsc trasy.</p>
+              <div className="overflow-y-auto -mx-1 px-1" style={{ maxHeight: "62dvh" }}>
+                <div className="grid grid-cols-3 gap-2 pb-1">
+                  <button
+                    onClick={triggerListCoverPhotoPick}
+                    disabled={uploading}
+                    className="relative aspect-square rounded-2xl border-2 border-dashed border-border/70 flex flex-col items-center justify-center gap-1.5 text-muted-foreground active:scale-95 transition-transform disabled:opacity-50"
+                  >
+                    {uploading ? <Loader2 className="h-6 w-6 animate-spin" /> : <Plus className="h-6 w-6" />}
+                    <span className="text-[11px] font-semibold leading-tight text-center px-1">Nowe zdjęcie</span>
+                  </button>
+                  {coverPickerOptions.map((opt) => {
+                    const isCurrent = listCoverPhoto === opt.url;
+                    return (
+                      <button
+                        key={opt.id}
+                        onClick={() => setPlanListCover(opt.url)}
+                        className={`relative aspect-square rounded-2xl overflow-hidden bg-muted active:scale-95 transition-transform ${isCurrent ? "ring-2 ring-primary ring-offset-2 ring-offset-card" : ""}`}
+                      >
+                        <img src={opt.url} alt={opt.name} loading="lazy" className="w-full h-full object-cover" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-transparent to-transparent" />
+                        <span className="absolute bottom-1.5 left-1.5 right-1.5 text-[10px] font-semibold text-white leading-tight line-clamp-2 [text-shadow:_0_1px_2px_rgb(0_0_0/60%)]">{opt.name}</span>
+                        {isCurrent && (
+                          <span className="absolute top-1.5 right-1.5 h-5 w-5 rounded-full bg-primary text-white flex items-center justify-center shadow-md">
+                            <Check className="h-3 w-3" strokeWidth={3} />
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Arkusz edycji daty wyjazdu (kalendarz) */}
         {datePickerOpen && (
           <div className="fixed inset-0 z-[95] flex items-end justify-center" onClick={() => setDatePickerOpen(false)}>
@@ -2103,6 +2218,7 @@ const ReviewSummary = () => {
         <input ref={fileInputRef} type="file" accept="image/*,.heic,.heif" multiple className="hidden" onChange={handlePhotoUpload} />
         <input ref={pinFileInputRef} type="file" accept="image/*,.heic,.heif" multiple className="hidden" onChange={handlePinFileInput} />
         <input ref={coverFileInputRef} type="file" accept="image/*,.heic,.heif" className="hidden" onChange={handleCoverFileInput} />
+        <input ref={listCoverFileInputRef} type="file" accept="image/*,.heic,.heif" className="hidden" onChange={handleListCoverFileInput} />
 
         {/* Rozwinięta interaktywna mapa (zoom) */}
         {planMapOpen && (

@@ -422,13 +422,21 @@ const JournalTab = ({ userId, city: cityFilter }: JournalTabProps) => {
     return (
       <>
         <div className="flex-1 flex flex-col items-center justify-center gap-5 px-8 py-24 text-center">
-          <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center">
-            <BookOpen className="h-9 w-9 text-muted-foreground" strokeWidth={2} />
-          </div>
+          {PLANNING_DISABLED ? (
+            <span
+              aria-hidden
+              className="h-24 w-24"
+              style={{ display: "block", backgroundColor: "#ef9d78", WebkitMaskImage: "url(/Ikona_Trasy.svg)", maskImage: "url(/Ikona_Trasy.svg)", WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat", WebkitMaskSize: "contain", maskSize: "contain", WebkitMaskPosition: "center", maskPosition: "center" }}
+            />
+          ) : (
+            <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center">
+              <BookOpen className="h-9 w-9 text-muted-foreground" strokeWidth={2} />
+            </div>
+          )}
           <div className="space-y-2">
             <p className="text-xl font-bold tracking-tight">{PLANNING_DISABLED ? "Twoje wyjazdy" : t("journal.empty_title")}</p>
             <p className="text-sm text-muted-foreground leading-relaxed max-w-[260px] mx-auto">
-              {PLANNING_DISABLED ? "Stwórz wyjazd i dorzuć do niego miejsca, które zapisałeś z eksploracji." : t("journal.empty_desc")}
+              {PLANNING_DISABLED ? "Stwórz wyjazd klikając guzik „+”, aby zobaczyć je tutaj." : t("journal.empty_desc")}
             </p>
           </div>
           {PLANNING_DISABLED ? (
