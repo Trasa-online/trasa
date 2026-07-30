@@ -148,7 +148,11 @@ const rkey = (routeId: string, placeName: string) => `${routeId}::${placeName}`;
 function buildTripStaticMapUrl(pins: any[], size = "560x260"): string | null {
   const pts = pins.filter((p) => p.latitude != null && p.longitude != null).slice(0, 20);
   if (!pts.length) return null;
-  const markers = pts.map((p) => `markers=size:small%7Ccolor:0xf0a583%7C${p.latitude},${p.longitude}`).join("&");
+  // Numerowane peachy piny (label 1-9; Google static przyjmuje 1 znak - dla 10+ bez numeru).
+  const markers = pts.map((p, i) => {
+    const label = i + 1 <= 9 ? `label:${i + 1}%7C` : "";
+    return `markers=color:0xf0a583%7C${label}${p.latitude},${p.longitude}`;
+  }).join("&");
   return `${API_BASE}/api/static-map?size=${size}&scale=2&maptype=roadmap&${markers}&style=feature:poi%7Cvisibility:off&style=feature:transit%7Cvisibility:off`;
 }
 
@@ -195,7 +199,7 @@ const ReviewSummary = () => {
   // przejscie do podsumowania zanim refetch route zaktualizuje plan_finalized.
   const [summaryTab, setSummaryTab] = useState<"plan" | "galeria">("plan");
   // Widok "Plan wyjazdu" (aktywny): top-toggle Miejsca | Galeria (komplet: plan+mapa albo zdjęcia).
-  const [planTab, setPlanTab] = useState<"miejsca" | "galeria">("miejsca");
+  const [planTab, setPlanTab] = useState<"miejsca" | "galeria" | "mapa">("miejsca");
   const [editingStepper, setEditingStepper] = useState(false);
   // Fokus w polu notki -> chowamy dolny pasek CTA (klawiatura zabiera miejsce, guziki przeszkadzaja).
   const [noteFocused, setNoteFocused] = useState(false);
@@ -1868,14 +1872,28 @@ const ReviewSummary = () => {
             {/* Wiersz "Widoczność" usuniety (2026-07-30): wszystkie trasy sa publiczne by default. */}
           </div>
 
-          {/* Top-toggle Miejsca | Galeria - komplet planu na jednym widoku (plan+mapa albo zdjęcia). */}
+          {/* Top-toggle Miejsca | Galeria | Mapa */}
           <div className="flex rounded-full bg-muted p-0.5 mt-8 mb-4 text-sm font-bold">
             <button onClick={() => { haptics.selection(); setPlanTab("miejsca"); }} className={`flex-1 py-2 rounded-full transition-colors ${planTab === "miejsca" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>Miejsca</button>
             <button onClick={() => { haptics.selection(); setPlanTab("galeria"); }} className={`flex-1 py-2 rounded-full transition-colors ${planTab === "galeria" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>Galeria</button>
+            <button onClick={() => { haptics.selection(); setPlanTab("mapa"); }} className={`flex-1 py-2 rounded-full transition-colors ${planTab === "mapa" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>Mapa</button>
           </div>
 
-          {/* Galeria: zdjecia wyjazdu z badge miejsca (przypisanie robi sie na etapie tworzenia, tu read-only). */}
-          {planTab === "galeria" ? renderGallery(true) : (
+          {/* Galeria / Mapa / Miejsca (mapa przeniesiona do wlasnej zakladki obok Galeria). */}
+          {planTab === "galeria" ? renderGallery(true) : planTab === "mapa" ? (
+            <div className="pt-1">
+              {bigMapUrl ? (
+                <button onClick={() => setPlanMapOpen(true)} className="relative block w-full h-64 rounded-2xl overflow-hidden border border-border/40 bg-muted active:opacity-95 transition-opacity">
+                  <img src={bigMapUrl} alt="Mapa planu" className="w-full h-full object-cover" />
+                  <span className="absolute bottom-3 right-3 h-10 w-10 rounded-full bg-card shadow-md flex items-center justify-center">
+                    <Maximize2 className="h-[18px] w-[18px] text-foreground" strokeWidth={2.2} />
+                  </span>
+                </button>
+              ) : (
+                <p className="text-center text-sm text-muted-foreground py-10">Brak lokalizacji miejsc na mapie.</p>
+              )}
+            </div>
+          ) : (
           <>
           {/* Sub-toggle podglądu miejsc (Lista/Karty) - tylko dla aktywnego (nieukończonego) wyjazdu. */}
           {!tripCompleted && (
@@ -1972,19 +1990,7 @@ const ReviewSummary = () => {
               </button>
             </div>
           )}
-
-          {/* MAPA - statyczna z rozwinięciem */}
-          {bigMapUrl && (
-            <div className="pt-8">
-              <p className={`${sectionHeadingCls} pb-3`}>Mapa</p>
-              <button onClick={() => setPlanMapOpen(true)} className="relative block w-full h-52 rounded-2xl overflow-hidden border border-border/40 bg-muted active:opacity-95 transition-opacity">
-                <img src={bigMapUrl} alt="Mapa planu" className="w-full h-full object-cover" />
-                <span className="absolute bottom-3 right-3 h-10 w-10 rounded-full bg-card shadow-md flex items-center justify-center">
-                  <Maximize2 className="h-[18px] w-[18px] text-foreground" strokeWidth={2.2} />
-                </span>
-              </button>
-            </div>
-          )}
+          {/* MAPA przeniesiona do wlasnej zakladki "Mapa" (obok Galeria) - patrz wyzej. */}
           </>
           )}
           </div>

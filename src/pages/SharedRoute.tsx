@@ -19,7 +19,11 @@ import { API_BASE } from "@/lib/platform";
 function buildStaticRouteMap(pins: { latitude: number; longitude: number }[], size = "560x300"): string | null {
   const pts = pins.filter((p) => p.latitude != null && p.longitude != null).slice(0, 20);
   if (!pts.length) return null;
-  const markers = pts.map((p) => `markers=size:small%7Ccolor:0xf0a583%7C${p.latitude},${p.longitude}`).join("&");
+  // Numerowane peachy piny (label 1-9; Google static przyjmuje 1 znak - dla 10+ bez numeru).
+  const markers = pts.map((p, i) => {
+    const label = i + 1 <= 9 ? `label:${i + 1}%7C` : "";
+    return `markers=color:0xf0a583%7C${label}${p.latitude},${p.longitude}`;
+  }).join("&");
   return `${API_BASE}/api/static-map?size=${size}&scale=2&maptype=roadmap&${markers}&style=feature:poi%7Cvisibility:off&style=feature:transit%7Cvisibility:off`;
 }
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
@@ -37,7 +41,7 @@ export default function SharedRoute() {
   const { t } = useTranslation("sharing");
   const categoryLabel = (cat: string) => t(`categories.${cat}`, { defaultValue: t("categories.other") });
   const [planView, setPlanView] = useState<"list" | "cards">("list");
-  const [planTab, setPlanTab] = useState<"miejsca" | "galeria">("miejsca");
+  const [planTab, setPlanTab] = useState<"miejsca" | "galeria" | "mapa">("miejsca");
   const [detailPin, setDetailPin] = useState<any | null>(null);
   const [saving, setSaving] = useState(false);
   const [showDateSheet, setShowDateSheet] = useState(false);
@@ -427,11 +431,12 @@ export default function SharedRoute() {
           )}
         </div>
 
-        {/* Miejsca | Galeria */}
+        {/* Miejsca | Galeria | Mapa */}
         <div className="px-5 pt-6">
           <div className="flex rounded-full bg-muted p-0.5 text-sm font-bold">
             <button onClick={() => setPlanTab("miejsca")} className={`flex-1 py-2 rounded-full transition-colors ${planTab === "miejsca" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>Miejsca</button>
             <button onClick={() => setPlanTab("galeria")} className={`flex-1 py-2 rounded-full transition-colors ${planTab === "galeria" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>Galeria</button>
+            <button onClick={() => setPlanTab("mapa")} className={`flex-1 py-2 rounded-full transition-colors ${planTab === "mapa" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>Mapa</button>
           </div>
         </div>
 
@@ -448,18 +453,19 @@ export default function SharedRoute() {
                 {planView === "list" ? renderList() : renderSwiper()}
               </>
             )}
-
-            {/* Mapa - ujednolicona z widokiem Trasy: statyczna Google + rozwiniecie do interaktywnej */}
-            {navMapPins.length > 0 && staticMapUrl && (
-              <div className="pt-8">
-                <p className="text-xl font-black text-foreground tracking-tight pb-3">{t("route_map")}</p>
-                <button onClick={() => setPlanMapOpen(true)} className="relative block w-full h-64 rounded-2xl overflow-hidden border border-border/40 bg-muted active:opacity-95 transition-opacity">
-                  <img src={staticMapUrl} alt={t("route_map")} className="w-full h-full object-cover" />
-                  <span className="absolute bottom-3 right-3 h-10 w-10 rounded-full bg-card shadow-md flex items-center justify-center">
-                    <Maximize2 className="h-[18px] w-[18px] text-foreground" strokeWidth={2.2} />
-                  </span>
-                </button>
-              </div>
+          </div>
+        ) : planTab === "mapa" ? (
+          /* Mapa w wlasnej zakladce (obok Galeria) - statyczna Google + rozwiniecie do interaktywnej. */
+          <div className="px-5 pt-4">
+            {navMapPins.length > 0 && staticMapUrl ? (
+              <button onClick={() => setPlanMapOpen(true)} className="relative block w-full h-64 rounded-2xl overflow-hidden border border-border/40 bg-muted active:opacity-95 transition-opacity">
+                <img src={staticMapUrl} alt={t("route_map")} className="w-full h-full object-cover" />
+                <span className="absolute bottom-3 right-3 h-10 w-10 rounded-full bg-card shadow-md flex items-center justify-center">
+                  <Maximize2 className="h-[18px] w-[18px] text-foreground" strokeWidth={2.2} />
+                </span>
+              </button>
+            ) : (
+              <p className="text-center text-sm text-muted-foreground py-10">Brak lokalizacji miejsc na mapie.</p>
             )}
           </div>
         ) : (
