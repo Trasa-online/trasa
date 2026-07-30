@@ -8,9 +8,20 @@ import { notify } from "@/lib/notify";
 import { sendClientPush, getCurrentUserName } from "@/lib/clientPush";
 import { format } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
-import { MapPin, ArrowLeft, Sparkles, ChevronRight, ChevronLeft, Bookmark, List, GalleryHorizontalEnd, Calendar as CalendarIcon, Image as ImageIcon } from "lucide-react";
+import { MapPin, ArrowLeft, Sparkles, ChevronRight, ChevronLeft, Bookmark, List, GalleryHorizontalEnd, Calendar as CalendarIcon, Image as ImageIcon, Maximize2, X } from "lucide-react";
 import { PlacePhoto } from "@/components/PlacePhoto";
 import { RoutePlaceRow } from "@/components/route/RoutePlaceRow";
+import RouteMap from "@/components/RouteMap";
+import { API_BASE } from "@/lib/platform";
+
+// Statyczna mapa trasy (Google przez proxy) - ujednolicona z widokiem "Plan wyjazdu".
+// Pomaranczowo-peachy markery (#F0A583). Klik -> interaktywna RouteMap (pelny ekran).
+function buildStaticRouteMap(pins: { latitude: number; longitude: number }[], size = "560x300"): string | null {
+  const pts = pins.filter((p) => p.latitude != null && p.longitude != null).slice(0, 20);
+  if (!pts.length) return null;
+  const markers = pts.map((p) => `markers=size:small%7Ccolor:0xf0a583%7C${p.latitude},${p.longitude}`).join("&");
+  return `${API_BASE}/api/static-map?size=${size}&scale=2&maptype=roadmap&${markers}&style=feature:poi%7Cvisibility:off&style=feature:transit%7Cvisibility:off`;
+}
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { avatarSrc } from "@/lib/avatar";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
@@ -18,26 +29,6 @@ import FullCalendarPicker from "@/components/plan-wizard/FullCalendarPicker";
 import { resolveStored } from "@/components/PlacePhoto";
 import type { MockPlace } from "@/components/plan-wizard/PlaceSwiper";
 import { CategoryIcon } from "@/components/CategoryIcon";
-
-// Lekka mapa trasy (Leaflet w iframe) - bez zaleznosci od Google Maps providera,
-// dziala na samodzielnej publicznej stronie udostepnionej trasy.
-function buildRouteMapHtml(pins: { lat: number; lng: number; n: number; name: string }[]): string {
-  const json = JSON.stringify(pins);
-  return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"><\/script>
-<style>*{margin:0;padding:0;box-sizing:border-box}#map{height:100vh;width:100%}
-.pm{color:#fff;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;font-family:-apple-system,sans-serif;border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.3);background:#ea580c}</style>
-</head><body><div id="map"></div><script>
-const pins=${json};
-const map=L.map('map',{zoomControl:true,attributionControl:false,scrollWheelZoom:false,touchZoom:true,dragging:true});
-L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{maxZoom:19}).addTo(map);
-const ll=pins.map(p=>[p.lat,p.lng]);
-if(ll.length>1)L.polyline(ll,{color:'#ea580c',weight:3,opacity:.7,dashArray:'6 5'}).addTo(map);
-pins.forEach(p=>{L.marker([p.lat,p.lng],{icon:L.divIcon({className:'',html:'<div class=pm>'+p.n+'</div>',iconSize:[26,26],iconAnchor:[13,13]})}).bindPopup('<b style="font-size:12px">'+p.name+'</b>').addTo(map);});
-if(ll.length>1)map.fitBounds(ll,{padding:[30,30]});else if(ll.length===1)map.setView(ll[0],14);
-<\/script></body></html>`;
-}
 
 export default function SharedRoute() {
   const { id } = useParams<{ id: string }>();
@@ -50,6 +41,7 @@ export default function SharedRoute() {
   const [detailPin, setDetailPin] = useState<any | null>(null);
   const [saving, setSaving] = useState(false);
   const [showDateSheet, setShowDateSheet] = useState(false);
+  const [planMapOpen, setPlanMapOpen] = useState(false);
 
   // Otworz miejsce w Google Maps (WIZYTOWKA / place page, NIE nawigacja). query_place_id gdy
   // pin.place_id to Google Place ID (nie nasze DB uuid) - trafiamy w dokladne miejsce.
@@ -260,9 +252,11 @@ export default function SharedRoute() {
   // -> ilustracja placeholder. Sama okladka/zdjecie miejsca (galeria zdjec nie).
   const userCover = (route.review_photos ?? []).find((u: any) => typeof u === "string" && u.trim() !== "") ?? null;
   const placeCover = resolveStored(pins[0]?.photo_url || pins[0]?.image_url);
-  const mapPins = (pins as any[])
-    .filter((p) => p.latitude && p.longitude)
-    .map((p, i) => ({ lat: p.latitude as number, lng: p.longitude as number, n: i + 1, name: p.place_name as string }));
+  // Piny do mapy (ujednolicone z widokiem Trasy - RouteMap oczekuje latitude/longitude/place_name).
+  const navMapPins = (pins as any[])
+    .filter((p) => p.latitude != null && p.longitude != null)
+    .map((p) => ({ latitude: p.latitude as number, longitude: p.longitude as number, place_name: p.place_name as string }));
+  const staticMapUrl = buildStaticRouteMap(navMapPins);
   const cover = userCover ?? placeCover;
   const hasRealPhoto = !!cover;
   const heroPhoto = cover ?? getRandomPinPlaceholder(route.id);
@@ -455,13 +449,16 @@ export default function SharedRoute() {
               </>
             )}
 
-            {/* Mapa */}
-            {mapPins.length > 0 && (
+            {/* Mapa - ujednolicona z widokiem Trasy: statyczna Google + rozwiniecie do interaktywnej */}
+            {navMapPins.length > 0 && staticMapUrl && (
               <div className="pt-8">
                 <p className="text-xl font-black text-foreground tracking-tight pb-3">{t("route_map")}</p>
-                <div className="rounded-2xl overflow-hidden border border-border/40 h-64">
-                  <iframe srcDoc={buildRouteMapHtml(mapPins)} className="w-full h-full border-0" title={t("route_map")} loading="lazy" />
-                </div>
+                <button onClick={() => setPlanMapOpen(true)} className="relative block w-full h-64 rounded-2xl overflow-hidden border border-border/40 bg-muted active:opacity-95 transition-opacity">
+                  <img src={staticMapUrl} alt={t("route_map")} className="w-full h-full object-cover" />
+                  <span className="absolute bottom-3 right-3 h-10 w-10 rounded-full bg-card shadow-md flex items-center justify-center">
+                    <Maximize2 className="h-[18px] w-[18px] text-foreground" strokeWidth={2.2} />
+                  </span>
+                </button>
               </div>
             )}
           </div>
@@ -493,6 +490,18 @@ export default function SharedRoute() {
         place={detailPin}
         city={route.city}
       />
+
+      {/* Rozwinięta interaktywna mapa (zoom) - jak w widoku "Plan wyjazdu" */}
+      {planMapOpen && (
+        <div className="fixed inset-0 z-[90] bg-background flex flex-col animate-in fade-in duration-200">
+          <div className="relative flex-1 min-h-0">
+            <RouteMap pins={navMapPins as any} className="w-full h-full" showRoute={false} />
+            <button onClick={() => setPlanMapOpen(false)} aria-label={t("close", { defaultValue: "Zamknij" })} className="absolute right-3 z-10 h-10 w-10 rounded-full bg-card shadow-md flex items-center justify-center active:scale-90 transition-transform" style={{ top: "max(0.75rem, env(safe-area-inset-top))" }}>
+              <X className="h-5 w-5 text-foreground" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* CTA */}
       <div className="fixed bottom-0 left-0 right-0 max-w-lg mx-auto px-5 pt-3 bg-background/90 backdrop-blur-md border-t border-border/30"

@@ -189,7 +189,7 @@ const MapContent = ({ validPins, onPinClick, startingLocation, singlePlace = fal
       {validPins.map((pin, index) => {
         if (!pin.latitude || !pin.longitude) return null;
         const dayNum = pin.day_number ?? 1;
-        const color = isMultiDay ? dayColor(dayNum) : '#000';
+        const color = isMultiDay ? dayColor(dayNum) : '#F0A583';
         const label = isMultiDay ? pinNumberByDay[index] : (pin.pin_order !== undefined ? pin.pin_order + 1 : index + 1);
 
         return (

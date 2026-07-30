@@ -148,7 +148,7 @@ const rkey = (routeId: string, placeName: string) => `${routeId}::${placeName}`;
 function buildTripStaticMapUrl(pins: any[], size = "560x260"): string | null {
   const pts = pins.filter((p) => p.latitude != null && p.longitude != null).slice(0, 20);
   if (!pts.length) return null;
-  const markers = pts.map((p) => `markers=size:small%7Ccolor:0xf9662b%7C${p.latitude},${p.longitude}`).join("&");
+  const markers = pts.map((p) => `markers=size:small%7Ccolor:0xf0a583%7C${p.latitude},${p.longitude}`).join("&");
   return `${API_BASE}/api/static-map?size=${size}&scale=2&maptype=roadmap&${markers}&style=feature:poi%7Cvisibility:off&style=feature:transit%7Cvisibility:off`;
 }
 
@@ -1272,7 +1272,7 @@ const ReviewSummary = () => {
       <button onClick={() => openDetail(pin)} className="block w-full text-left active:opacity-90 transition-opacity">
         <div className="relative w-full aspect-[4/3] bg-muted">
           <PlacePhoto pin={pin} className="w-full h-full object-cover" emojiClass="text-4xl" />
-          <div className="absolute top-3 left-3 h-8 w-8 rounded-full bg-black/55 backdrop-blur text-white text-sm font-bold flex items-center justify-center">{i + 1}</div>
+          <div className="absolute top-3 left-3 h-8 w-8 rounded-full bg-[#F0A583] text-white text-sm font-bold flex items-center justify-center">{i + 1}</div>
           {editable && (
             <button
               onClick={(e) => { e.stopPropagation(); removeWorkingPin(pin.id); }}
@@ -1850,7 +1850,7 @@ const ReviewSummary = () => {
             ) : (
               <button onClick={() => { setNameVal(customName); setEditingName(true); }} aria-label={t("a11y.edit_name", { defaultValue: "Edytuj nazwę" })} className="flex items-center justify-between gap-2 text-left active:opacity-70">
                 <p className="flex-1 min-w-0 text-2xl font-black text-foreground leading-tight truncate">{displayName || cityLabel}</p>
-                <Pencil className="h-5 w-5 text-muted-foreground shrink-0" />
+                <ChevronRight className="h-5 w-5 text-muted-foreground shrink-0" />
               </button>
             )}
             {/* Data - wiersz (ikona + zakres, chevron po prawej); klik otwiera kalendarz */}

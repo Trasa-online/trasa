@@ -29,9 +29,9 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, dra
     <div className={`flex flex-col rounded-2xl bg-secondary border border-border/40 shadow-sm p-2.5 ${visited ? "opacity-60" : ""}`}>
       <div className="flex items-stretch gap-3">
         {dragHandle}
-        <button onClick={onOpen} className="relative h-[104px] w-[104px] shrink-0 rounded-xl overflow-hidden bg-muted active:opacity-90">
+        <button onClick={onOpen} className="relative h-[84px] w-[84px] shrink-0 rounded-xl overflow-hidden bg-muted active:opacity-90">
           <PlacePhoto pin={pin} className="w-full h-full object-cover" />
-          <span className="absolute top-1.5 left-1.5 h-6 w-6 rounded-full bg-black/60 backdrop-blur-sm text-white text-[11px] font-bold flex items-center justify-center">{index + 1}</span>
+          <span className="absolute top-1.5 left-1.5 h-[22px] w-[22px] rounded-full bg-[#F0A583] text-white text-[11px] font-bold flex items-center justify-center">{index + 1}</span>
         </button>
         <div className="flex-1 min-w-0 flex flex-col py-0.5">
           <button onClick={onOpen} className="text-left min-w-0">
