@@ -416,10 +416,10 @@ const BottomNav = () => {
             className="flex items-center justify-center"
             aria-label={t("fab_aria")}
           >
-            <span className="h-11 w-11 rounded-full bg-primary flex items-center justify-center active:scale-95 transition-transform">
+            <span className={`h-11 w-11 rounded-full flex items-center justify-center active:scale-95 transition-transform ${showMenu ? "bg-primary" : ""}`}>
               {showMenu
                 ? <X className="h-5 w-5 text-white stroke-[2.5px]" />
-                : <Plus className="h-5 w-5 text-white stroke-[2.5px]" />
+                : <img src="/Ikona_Dodaj.svg" alt="" className="h-11 w-11 object-contain" draggable={false} />
               }
             </span>
           </button>
