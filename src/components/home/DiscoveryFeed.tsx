@@ -133,13 +133,13 @@ type LatLng = { latitude?: number | null; longitude?: number | null };
 // z pinami trasy w rogu zdjecia). Przez proxy /api/static-map (klucz server-side,
 // 24h CDN cache). Pomaranczowe piny, POI/transit ukryte dla czystosci. null gdy
 // brak wspolrzednych. Max 12 pinow (limit dlugosci URL).
-function buildMiniMapUrl(pins: LatLng[]): string | null {
+function buildMiniMapUrl(pins: LatLng[], size = "150x150"): string | null {
   const pts = pins.filter((p) => p.latitude != null && p.longitude != null).slice(0, 12);
   if (!pts.length) return null;
   const markers = pts
     .map((p) => `markers=size:tiny%7Ccolor:0xf9662b%7C${p.latitude},${p.longitude}`)
     .join("&");
-  return `${API_BASE}/api/static-map?size=150x150&scale=2&maptype=roadmap&${markers}&style=feature:poi%7Cvisibility:off&style=feature:transit%7Cvisibility:off`;
+  return `${API_BASE}/api/static-map?size=${size}&scale=2&maptype=roadmap&${markers}&style=feature:poi%7Cvisibility:off&style=feature:transit%7Cvisibility:off`;
 }
 
 // Srednia ocena Google z listy miejsc (tylko z ocena > 0). 0 gdy brak.
@@ -1166,13 +1166,15 @@ function TrasaBigCard({
 }) {
   const cover = photo ?? getRandomPinPlaceholder(id);
   const miniMap = buildMiniMapUrl(pins);
+  const bigMap = buildMiniMapUrl(pins, "440x560");
+  const [mapExpanded, setMapExpanded] = useState(false);
   const countLabel = placeCount > 0
     ? `${placeCount} ${placeCount === 1 ? "miejsce" : placeCount < 5 ? "miejsca" : "miejsc"}`
     : null;
   return (
     <div className={`relative w-full shrink-0 snap-start snap-always rounded-3xl overflow-hidden bg-muted shadow-sm min-h-[420px] ${TRASA_CARD_H}`}>
       <img
-        src={cover}
+        src={mapExpanded && bigMap ? bigMap : cover}
         alt={title}
         loading="lazy"
         className="absolute inset-0 w-full h-full object-cover"
@@ -1182,15 +1184,21 @@ function TrasaBigCard({
       {/* Tap na kafle = otworz wizytowke trasy/zestawienia */}
       <button onClick={onOpen} aria-label={title} className="absolute inset-0" />
 
-      {/* Podgląd trasy: większa mapka w zaokrąglonym kwadracie, prawy-górny róg (2026-07-26). */}
+      {/* Podglad trasy: mapka w prawym-gornym rogu. Klik = rozwija mape na cala okladke
+          (z nazwa miasta + liczba miejsc), ponowny klik chowa do malej. Thumbnail pokazuje
+          wtedy zdjecie (powrot). */}
       {miniMap && (
-        <div className="absolute right-3 top-3 z-10 h-24 w-24 rounded-2xl overflow-hidden ring-2 ring-white/85 shadow-lg bg-muted pointer-events-none">
+        <button
+          onClick={(e) => { e.stopPropagation(); haptics.selection(); setMapExpanded((v) => !v); }}
+          aria-label={mapExpanded ? "Pokaż zdjęcie" : "Pokaż mapę trasy"}
+          className="absolute right-3 top-3 z-10 h-24 w-24 rounded-2xl overflow-hidden ring-2 ring-white/85 shadow-lg bg-muted active:scale-95 transition-transform"
+        >
           <img
-            src={miniMap} alt="" aria-hidden loading="lazy"
+            src={mapExpanded ? cover : miniMap} alt="" aria-hidden loading="lazy"
             className="w-full h-full object-cover"
             onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = "none"; }}
           />
-        </div>
+        </button>
       )}
 
       {/* Prawy dolny stack: bookmark + rozwin (12px od prawej, 16px od dolu) */}

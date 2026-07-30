@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { Layers, Compass, SlidersHorizontal, Search } from "lucide-react";
 import CitySelect from "@/components/home/CitySelect";
+import CountrySelect from "@/components/home/CountrySelect";
 
 // Wspoldzielona zawartosc gornej belki dla Eksploracji (feed) i Przegladania (swiper):
 // selektor miasta (pill) + toggle Przegladaj|Eksploracja + filtry. Renderuje FRAGMENT
@@ -46,7 +47,8 @@ export default function ExploreTopBar({
 
   return (
     <>
-      {/* Selektor miasta (pill) */}
+      {/* Selektor kraju (Polska aktywna, zagraniczne wyszarzone) + miasta (pill) */}
+      <CountrySelect />
       <CitySelect city={cur} onCityChange={onCityChange} allowAll allLabel="Wszystkie miasta" />
 
       <div className="flex-1" />

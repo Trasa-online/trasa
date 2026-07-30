@@ -48,8 +48,9 @@ const GoogleGlyph = ({ className }: { className?: string }) => (
 
 // Wiersz listy miejsc z DRAG & DROP (framer-motion Reorder) na ekranie "Sugestie do trasy".
 // Przeciaganie uchwytem (GripVertical) - reszta wiersza nadal tapowalna (otwiera wizytowke).
-function SortableReviewRow({ pin, idx, categoryLabel, visited, onOpen, onRemove }: {
+function SortableReviewRow({ pin, idx, categoryLabel, visited, onOpen, onRemove, noteValue, noteOpen, onToggleNote, onNoteChange, noteSaved }: {
   pin: any; idx: number; categoryLabel: React.ReactNode; visited: boolean; onOpen: () => void; onRemove: () => void;
+  noteValue: string; noteOpen: boolean; onToggleNote: () => void; onNoteChange: (v: string) => void; noteSaved: boolean;
 }) {
   const controls = useDragControls();
   return (
@@ -58,25 +59,49 @@ function SortableReviewRow({ pin, idx, categoryLabel, visited, onOpen, onRemove 
       dragListener={false}
       dragControls={controls}
       transition={{ duration: 0 }}
-      className={`flex items-center gap-2.5 rounded-2xl bg-secondary border border-border/40 shadow-sm p-2.5 select-none ${visited ? "opacity-60" : ""}`}
+      className={`flex flex-col rounded-2xl bg-secondary border border-border/40 shadow-sm p-2.5 select-none ${visited ? "opacity-60" : ""}`}
     >
-      {/* Uchwyt przeciagania - z LEWEJ, obok okladki (daleko od kosza po prawej). */}
-      <span
-        onPointerDown={(e) => { haptics.light(); controls.start(e); }}
-        aria-label="Przeciągnij, by zmienić kolejność"
-        className="shrink-0 h-9 w-6 flex items-center justify-center text-muted-foreground/50 cursor-grab active:cursor-grabbing touch-none"
-      >
-        <GripVertical className="h-5 w-5" />
-      </span>
-      <button onClick={onOpen} className="relative h-14 w-14 shrink-0 rounded-xl overflow-hidden bg-muted active:opacity-90">
-        <PlacePhoto pin={pin} className="w-full h-full object-cover" />
-        <span className="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-black/55 backdrop-blur text-white text-[10px] font-bold flex items-center justify-center">{idx + 1}</span>
-      </button>
-      <button onClick={onOpen} className="min-w-0 flex-1 text-left">
-        <p className={`text-sm font-bold leading-tight truncate ${visited ? "line-through" : ""}`}>{pin.place_name}</p>
-        <span className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white text-[11px] font-semibold text-foreground">{categoryLabel}</span>
-      </button>
-      <button onClick={onRemove} aria-label="Usuń miejsce" className="h-9 w-9 rounded-full flex items-center justify-center text-muted-foreground/60 active:scale-90 shrink-0"><Trash2 className="h-4 w-4" /></button>
+      <div className="flex items-center gap-2.5">
+        {/* Uchwyt przeciagania - z LEWEJ, obok okladki (daleko od kosza po prawej). */}
+        <span
+          onPointerDown={(e) => { haptics.light(); controls.start(e); }}
+          aria-label="Przeciągnij, by zmienić kolejność"
+          className="shrink-0 h-9 w-6 flex items-center justify-center text-muted-foreground/50 cursor-grab active:cursor-grabbing touch-none"
+        >
+          <GripVertical className="h-5 w-5" />
+        </span>
+        <button onClick={onOpen} className="relative h-14 w-14 shrink-0 rounded-xl overflow-hidden bg-muted active:opacity-90">
+          <PlacePhoto pin={pin} className="w-full h-full object-cover" />
+          <span className="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-black/55 backdrop-blur text-white text-[10px] font-bold flex items-center justify-center">{idx + 1}</span>
+        </button>
+        <button onClick={onOpen} className="min-w-0 flex-1 text-left">
+          <p className={`text-sm font-bold leading-tight truncate ${visited ? "line-through" : ""}`}>{pin.place_name}</p>
+          <span className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white text-[11px] font-semibold text-foreground">{categoryLabel}</span>
+        </button>
+        <button onClick={onRemove} aria-label="Usuń miejsce" className="h-9 w-9 rounded-full flex items-center justify-center text-muted-foreground/60 active:scale-90 shrink-0"><Trash2 className="h-4 w-4" /></button>
+      </div>
+
+      {/* "+ Podziel sie wrazeniami" - zwijana notka usera o tym miejscu (opt-in, domyslnie zwinieta). */}
+      {noteOpen ? (
+        <div className="mt-2.5 pl-8 relative">
+          <textarea
+            value={noteValue}
+            onChange={(e) => onNoteChange(e.target.value)}
+            placeholder="Podziel się wrażeniami o tym miejscu..."
+            rows={2}
+            className="w-full bg-muted/60 rounded-xl px-3 py-2.5 text-sm text-foreground resize-none focus:outline-none border border-border/30 placeholder:text-muted-foreground/55"
+          />
+          <div className="flex items-center justify-between mt-1">
+            <button onClick={onToggleNote} className="text-[11px] font-semibold text-muted-foreground active:opacity-60">Zwiń</button>
+            {noteSaved && <span className="text-[10px] text-green-600 font-medium">Zapisano</span>}
+          </div>
+        </div>
+      ) : (
+        <button onClick={onToggleNote} className="mt-2 ml-8 self-start inline-flex items-center gap-1.5 text-xs font-semibold text-orange-600 active:opacity-60">
+          <Plus className="h-3.5 w-3.5" strokeWidth={2.6} />
+          {noteValue.trim() ? "Twoje wrażenia" : "Podziel się wrażeniami"}
+        </button>
+      )}
     </Reorder.Item>
   );
 }
@@ -126,6 +151,8 @@ const ReviewSummary = () => {
   const [planScrolled, setPlanScrolled] = useState(false);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [coverPickerOpen, setCoverPickerOpen] = useState(false);
+  // Podglad "jak okladka wyglada w eksploracji" (fullscreen mock karty trasy).
+  const [explorePreviewOpen, setExplorePreviewOpen] = useState(false);
   // QR do udostepnienia wyjazdu (arkusz z kodem + linkiem).
   const [qrShareOpen, setQrShareOpen] = useState(false);
   const [memoTab, setMemoTab] = useState<"notki" | "galeria">("notki");
@@ -188,6 +215,8 @@ const ReviewSummary = () => {
   // Zdjecia przypisane do konkretnego miejsca (pins.images). Osobny input (web) + spinner per pin.
   const pinFileInputRef = useRef<HTMLInputElement>(null);
   const pinTargetRef = useRef<any>(null);
+  // Nowe zdjecie -> od razu okladka wyjazdu (input web; native uzywa CapCamera).
+  const coverFileInputRef = useRef<HTMLInputElement>(null);
   const [pinUploadingId, setPinUploadingId] = useState<string | null>(null);
   // Zwinięte/rozwinięte notki per miejsce (pin.id) na widoku Sugestii - domyślnie zwinięte ("+ Twoja sugestia").
   const [openNotes, setOpenNotes] = useState<Set<string>>(new Set());
@@ -699,6 +728,25 @@ const ReviewSummary = () => {
     if (user) queryClient.invalidateQueries({ queryKey: ["journal-entries", user.id] });
     setViewerUrl(null);
     notify.success(t("toast.cover_set"));
+  };
+
+  // Nowe zdjecie z galerii telefonu -> upload do route-images -> od razu okladka wyjazdu.
+  // (widok jak przy dodawaniu zdjec do miejsc). Trafia tez do galerii wyjazdu (review_photos).
+  const addNewCoverPhoto = async (files: File[]) => {
+    if (!files.length || uploading) return;
+    setUploading(true);
+    const urls = await uploadImages(files.slice(0, 1));
+    setUploading(false);
+    if (urls[0]) { setCoverPickerOpen(false); await setCover(urls[0]); }
+  };
+  const triggerCoverPhotoPick = async () => {
+    if (uploading) return;
+    if (isNative) { try { const f = await pickNativeImageFiles(1); await addNewCoverPhoto(f); } catch { /* cancel */ } }
+    else coverFileInputRef.current?.click();
+  };
+  const handleCoverFileInput = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    await addNewCoverPhoto(Array.from(e.target.files ?? []));
+    if (coverFileInputRef.current) coverFileInputRef.current.value = "";
   };
 
   // Recznie wybrana okladka wyjazdu = zdjecie jednego z miejsc trasy. Zapis do routes.cover_url.
@@ -1715,28 +1763,32 @@ const ReviewSummary = () => {
         <div onScroll={(e) => setPlanScrolled(e.currentTarget.scrollTop > 170)} className="flex-1 min-h-0 overflow-y-auto pb-5">
           {/* Okladka - w scrollu, przewija sie (NIE sticky), bez zaokraglen na dole */}
           <div className="relative w-full aspect-[16/10] overflow-hidden bg-gradient-to-br from-orange-400 via-rose-400 to-purple-500">
-            <img src={heroShowMap && heroMapCover ? heroMapCover : heroPhoto} alt="" className="absolute inset-0 w-full h-full object-cover" />
-            <div className={`absolute inset-0 bg-gradient-to-b from-black/15 via-transparent to-black/55 ${heroShowMap ? "opacity-40" : ""}`} />
-            {/* Zmiana okladki: wybor zdjecia z galerii usera LUB miejsc trasy (tylko wlasciciel, gdy pokazane zdjecie) */}
-            {!heroShowMap && coverPickerOptions.length > 0 && (
-              <button
-                onClick={() => setCoverPickerOpen(true)}
-                aria-label="Zmień okładkę wyjazdu"
-                className="absolute bottom-3 left-3 z-20 h-10 w-10 rounded-full bg-black/40 backdrop-blur-sm text-white flex items-center justify-center active:scale-90 transition-transform"
-              >
-                <ImageIcon className="h-[18px] w-[18px]" />
-              </button>
-            )}
-            {heroMapThumb && (
-              // Klik miniaturki -> mapka pojawia sie na okladce (zamiast zdjecia); ponowny klik wraca do zdjecia.
-              <button
-                onClick={() => setHeroShowMap((v) => !v)}
-                aria-label={heroShowMap ? "Pokaż zdjęcie" : "Pokaż mapę na okładce"}
-                className="absolute bottom-3 right-3 h-14 w-14 rounded-xl overflow-hidden border-2 border-white shadow-md bg-white active:scale-95 transition-transform"
-              >
-                <img src={heroShowMap ? heroPhoto : heroMapThumb} alt="" className="w-full h-full object-cover" />
-              </button>
-            )}
+            <img src={heroPhoto} alt="" className="absolute inset-0 w-full h-full object-cover" />
+            <div className="absolute inset-0 bg-gradient-to-b from-black/15 via-transparent to-black/55" />
+            {/* Zmiana okladki: dodaj nowe zdjecie / wybierz z galerii usera / z miejsc trasy. */}
+            <button
+              onClick={() => setCoverPickerOpen(true)}
+              aria-label="Zmień okładkę wyjazdu"
+              className="absolute bottom-3 left-3 z-20 h-10 w-10 rounded-full bg-black/40 backdrop-blur-sm text-white flex items-center justify-center active:scale-90 transition-transform"
+            >
+              <ImageIcon className="h-[18px] w-[18px]" />
+            </button>
+            {/* Prostokatny podglad "jak okladka wyglada w eksploracji" (zamiast kwadratu z mapka). */}
+            <button
+              onClick={() => setExplorePreviewOpen(true)}
+              aria-label="Podgląd okładki w eksploracji"
+              className="absolute bottom-3 right-3 w-28 rounded-xl overflow-hidden border-2 border-white shadow-md bg-muted active:scale-95 transition-transform"
+            >
+              <div className="relative w-full aspect-[16/10]">
+                <img src={heroPhoto} alt="" className="w-full h-full object-cover" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
+                <div className="absolute bottom-1 left-1.5 right-1.5">
+                  <p className="text-white text-[8px] font-semibold leading-none [text-shadow:_0_1px_2px_rgb(0_0_0/70%)]">{cityLabel} · {currentPins.length} miejsc</p>
+                  <p className="text-white text-[9px] font-black leading-tight truncate mt-0.5 [text-shadow:_0_1px_2px_rgb(0_0_0/70%)]">{displayName || cityLabel}</p>
+                </div>
+              </div>
+              <span className="block bg-white text-[8px] font-bold text-muted-foreground text-center py-0.5">Podgląd</span>
+            </button>
           </div>
 
           {/* Tresc planu */}
@@ -1765,7 +1817,7 @@ const ReviewSummary = () => {
                 <Pencil className="h-5 w-5 text-muted-foreground shrink-0" />
               </button>
             )}
-            {/* Data - wiersz jak widocznosc (ikona + zakres, chevron po prawej); klik otwiera kalendarz */}
+            {/* Data - wiersz (ikona + zakres, chevron po prawej); klik otwiera kalendarz */}
             <button onClick={() => setDatePickerOpen(true)} className="flex items-center justify-between gap-2 active:opacity-70">
               <span className="flex items-center gap-1.5 min-w-0">
                 <CalendarIcon className="h-5 w-5 text-foreground shrink-0" />
@@ -1773,14 +1825,7 @@ const ReviewSummary = () => {
               </span>
               <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
             </button>
-            {/* Widocznosc - klik otwiera ustawienia prywatnosci */}
-            <button onClick={() => setPrivacyOpen(true)} className="flex items-center justify-between gap-2 active:opacity-70">
-              <span className="flex items-center gap-1.5 min-w-0">
-                {privacyMode === "public" ? <Globe className="h-5 w-5 text-foreground shrink-0" /> : privacyMode === "friends" ? <Users className="h-5 w-5 text-foreground shrink-0" /> : <Lock className="h-5 w-5 text-foreground shrink-0" />}
-                <span className="text-base text-foreground truncate"><span className="font-bold">Widoczność: </span>{privacyMode === "public" ? "publiczne" : privacyMode === "friends" ? "bliscy znajomi" : "prywatne"}</span>
-              </span>
-              <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
-            </button>
+            {/* Wiersz "Widoczność" usuniety (2026-07-30): wszystkie trasy sa publiczne by default. */}
           </div>
 
           {/* Top-toggle Miejsca | Galeria - komplet planu na jednym widoku (plan+mapa albo zdjęcia). */}
@@ -1933,9 +1978,18 @@ const ReviewSummary = () => {
                 <X className="h-4 w-4" />
               </button>
               <p className="text-lg font-bold pr-8">Okładka wyjazdu</p>
-              <p className="text-sm text-muted-foreground mt-1 mb-4">Wybierz zdjęcie na okładkę - z Twojej galerii albo z miejsc trasy.</p>
+              <p className="text-sm text-muted-foreground mt-1 mb-4">Wybierz zdjęcie na okładkę - dodaj nowe, z galerii albo z miejsc trasy.</p>
               <div className="overflow-y-auto -mx-1 px-1" style={{ maxHeight: "62dvh" }}>
                 <div className="grid grid-cols-3 gap-2 pb-1">
+                  {/* Nowe zdjecie z telefonu -> od razu okladka (jak przy dodawaniu zdjec do miejsc). */}
+                  <button
+                    onClick={triggerCoverPhotoPick}
+                    disabled={uploading}
+                    className="relative aspect-square rounded-2xl border-2 border-dashed border-border/70 flex flex-col items-center justify-center gap-1.5 text-muted-foreground active:scale-95 transition-transform disabled:opacity-50"
+                  >
+                    {uploading ? <Loader2 className="h-6 w-6 animate-spin" /> : <Plus className="h-6 w-6" />}
+                    <span className="text-[11px] font-semibold leading-tight text-center px-1">Nowe zdjęcie</span>
+                  </button>
                   {coverPickerOptions.map((opt) => {
                     const isCurrent = heroPhoto === opt.url;
                     return (
@@ -1961,6 +2015,40 @@ const ReviewSummary = () => {
           </div>
         )}
 
+        {/* Podglad "jak okladka wyglada w eksploracji" - mock karty trasy (TrasaBigCard). */}
+        {explorePreviewOpen && (
+          <div className="fixed inset-0 z-[95] flex flex-col items-center justify-center px-5" onClick={() => setExplorePreviewOpen(false)}>
+            <div className="absolute inset-0 bg-black/70 animate-in fade-in duration-200" />
+            <div className="relative w-full max-w-sm animate-in fade-in zoom-in-95 duration-300" onClick={(e) => e.stopPropagation()}>
+              <p className="text-white/80 text-sm font-semibold text-center mb-3">Tak trasa wygląda w eksploracji</p>
+              {/* Mock karty jak w DiscoveryFeed (TrasaBigCard) */}
+              <div className="relative rounded-[26px] overflow-hidden shadow-2xl bg-muted aspect-[3/4]">
+                <img src={heroPhoto} alt="" className="absolute inset-0 w-full h-full object-cover" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/10 to-black/25" />
+                {heroMapThumb && (
+                  <div className="absolute right-3 top-3 h-20 w-20 rounded-2xl overflow-hidden ring-2 ring-white/85 shadow-lg bg-muted">
+                    <img src={heroMapThumb} alt="" className="w-full h-full object-cover" />
+                  </div>
+                )}
+                <div className="absolute bottom-0 left-0 right-0 p-5">
+                  <div className="flex items-center gap-2 text-white/90 text-sm font-semibold mb-1.5">
+                    <MapPin className="h-4 w-4" /> {cityLabel} <span className="opacity-60">·</span> {currentPins.length} miejsc
+                  </div>
+                  <p className="text-white text-2xl font-black leading-tight [text-shadow:_0_1px_3px_rgb(0_0_0/50%)]">{displayName || cityLabel}</p>
+                  <div className="flex flex-wrap gap-1.5 mt-3">
+                    {Array.from(new Set(currentPins.map((p: any) => catLabel(p.category)))).slice(0, 3).map((c: any) => (
+                      <span key={c} className="px-2.5 py-1 rounded-full bg-white/20 backdrop-blur-sm text-white text-[11px] font-semibold">{c}</span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <button onClick={() => setExplorePreviewOpen(false)} className="mt-4 mx-auto block px-6 py-2.5 rounded-full bg-white/15 backdrop-blur-sm text-white text-sm font-semibold active:scale-95 transition-transform">
+                Zamknij podgląd
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Arkusz edycji daty wyjazdu (kalendarz) */}
         {datePickerOpen && (
           <div className="fixed inset-0 z-[95] flex items-end justify-center" onClick={() => setDatePickerOpen(false)}>
@@ -1978,6 +2066,7 @@ const ReviewSummary = () => {
         {/* Input zdjec (galeria na web; native uzywa CapCamera) */}
         <input ref={fileInputRef} type="file" accept="image/*,.heic,.heif" multiple className="hidden" onChange={handlePhotoUpload} />
         <input ref={pinFileInputRef} type="file" accept="image/*,.heic,.heif" multiple className="hidden" onChange={handlePinFileInput} />
+        <input ref={coverFileInputRef} type="file" accept="image/*,.heic,.heif" className="hidden" onChange={handleCoverFileInput} />
 
         {/* Rozwinięta interaktywna mapa (zoom) */}
         {planMapOpen && (
@@ -2221,17 +2310,25 @@ const ReviewSummary = () => {
                        zdjeciach do miejsc. Zostaje tylko ogolna sugestia do calej trasy (wyzej).
                        Kolejnosc miejsc = DRAG & DROP (uchwyt z lewej) + kosz z potwierdzeniem. */
                     <Reorder.Group axis="y" values={workingPins} onReorder={setWorking} className="space-y-2.5">
-                      {workingPins.map((pin: any, i: number) => (
-                        <SortableReviewRow
-                          key={pin.id}
-                          pin={pin}
-                          idx={i}
-                          categoryLabel={catLabel(pin.category)}
-                          visited={isVisited(pin)}
-                          onOpen={() => openDetail(pin)}
-                          onRemove={() => removeWorkingPin(pin.id)}
-                        />
-                      ))}
+                      {workingPins.map((pin: any, i: number) => {
+                        const nk = rkey(activeRouteId!, pin.place_name);
+                        return (
+                          <SortableReviewRow
+                            key={pin.id}
+                            pin={pin}
+                            idx={i}
+                            categoryLabel={catLabel(pin.category)}
+                            visited={isVisited(pin)}
+                            onOpen={() => openDetail(pin)}
+                            onRemove={() => removeWorkingPin(pin.id)}
+                            noteValue={notes[nk] ?? ""}
+                            noteOpen={openNotes.has(pin.id)}
+                            onToggleNote={() => setOpenNotes((prev) => { const n = new Set(prev); n.has(pin.id) ? n.delete(pin.id) : n.add(pin.id); return n; })}
+                            onNoteChange={(v) => handleNoteChange(pin.place_name, v)}
+                            noteSaved={!!noteSaved[nk]}
+                          />
+                        );
+                      })}
                     </Reorder.Group>
                   ) : (
                     renderSwiper(true, true, false)
@@ -2325,6 +2422,7 @@ const ReviewSummary = () => {
 
         <input ref={fileInputRef} type="file" accept="image/*,.heic,.heif" multiple className="hidden" onChange={handlePhotoUpload} />
         <input ref={pinFileInputRef} type="file" accept="image/*,.heic,.heif" multiple className="hidden" onChange={handlePinFileInput} />
+        <input ref={coverFileInputRef} type="file" accept="image/*,.heic,.heif" className="hidden" onChange={handleCoverFileInput} />
       </div>
 
       {/* ── Podglad wizytowki miejsca (ta sama co na swiperze) ───────────── */}

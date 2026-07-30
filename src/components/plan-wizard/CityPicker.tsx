@@ -36,7 +36,7 @@ type Country = {
   cities: City[];
 };
 
-const COUNTRIES: Country[] = [
+export const COUNTRIES: Country[] = [
   {
     code: "PL", flag: "🇵🇱", name: "Polska",
     cities: [
