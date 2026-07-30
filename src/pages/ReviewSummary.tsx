@@ -903,6 +903,13 @@ const ReviewSummary = () => {
   const finishEditing = async () => {
     haptics.success();
     if (draft && draft.dayId === activeRouteId) await savePlan(false);
+    // "Zapisz trase" = trasa STWORZONA: status draft->published. Dopiero teraz zdjecia z pinow
+    // (pins.images) zasilaja okladki miejsc w wyszukiwarce/eksploracji - fetchPlaceUserPhotos
+    // pomija piny tras 'draft'. Podczas tworzenia (draft) zdjecia sa tylko lokalnie na wpisie.
+    try {
+      await (supabase as any).from("routes").update({ status: "published" })
+        .in("id", dayRouteIds.length ? dayRouteIds : [activeRouteId]);
+    } catch (e: any) { console.error("[ReviewSummary] publish status failed:", e?.message ?? e); }
     // Aktywny wyjazd (przyszla data, isMemory=false): NIE finalizujemy. Wpis staje sie
     // zakonczony (pocztowka) dopiero PO minieciu daty. Wyjscie z edycji zapisuje i wraca do dziennika.
     if (!isMemory) {

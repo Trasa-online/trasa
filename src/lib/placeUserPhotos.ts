@@ -25,10 +25,13 @@ export async function fetchPlaceUserPhotos(opts: FetchPlaceUserPhotosOpts): Prom
   try {
     // Zdjecia usera z miejsca dwoma kanalami: user_photo_urls (aktywny wyjazd) + images
     // (edytor trasy). Oba to zdjecia usera dla tego miejsca. Cast na any (kolumny nie w typach).
+    // routes!inner(status) + neq draft: zdjecie zasila okladke miejsca DOPIERO po stworzeniu
+    // trasy (status draft->published przy "Zapisz trase"), nie od razu przy tworzeniu.
     const { data, error } = await (supabase as any)
       .from("pins")
-      .select("user_photo_urls, images")
-      .or(orParts.join(","));
+      .select("user_photo_urls, images, routes!inner(status)")
+      .or(orParts.join(","))
+      .neq("routes.status", "draft");
 
     if (error) {
       console.warn("[placeUserPhotos] query error:", error.message);
@@ -55,8 +58,9 @@ export async function fetchUserPhotosByNames(names: string[]): Promise<Map<strin
   try {
     const { data, error } = await (supabase as any)
       .from("pins")
-      .select("place_name, images, user_photo_urls")
-      .in("place_name", uniq);
+      .select("place_name, images, user_photo_urls, routes!inner(status)")
+      .in("place_name", uniq)
+      .neq("routes.status", "draft");
     if (error) { console.warn("[placeUserPhotos] byNames error:", error.message); return map; }
     for (const row of (data ?? []) as { place_name: string; images?: string[] | null; user_photo_urls?: string[] | null }[]) {
       if (!row.place_name || map.has(row.place_name)) continue;
