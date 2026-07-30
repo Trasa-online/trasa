@@ -46,6 +46,29 @@ export async function fetchPlaceUserPhotos(opts: FetchPlaceUserPhotosOpts): Prom
   }
 }
 
+// Batch: dla listy NAZW miejsc zwraca mape place_name -> pierwsze zdjecie usera (images lub
+// user_photo_urls). Jednym zapytaniem - do okladek w wynikach wyszukiwarki / propozycji.
+export async function fetchUserPhotosByNames(names: string[]): Promise<Map<string, string>> {
+  const map = new Map<string, string>();
+  const uniq = Array.from(new Set(names.filter((n): n is string => typeof n === "string" && n.length > 0)));
+  if (uniq.length === 0) return map;
+  try {
+    const { data, error } = await (supabase as any)
+      .from("pins")
+      .select("place_name, images, user_photo_urls")
+      .in("place_name", uniq);
+    if (error) { console.warn("[placeUserPhotos] byNames error:", error.message); return map; }
+    for (const row of (data ?? []) as { place_name: string; images?: string[] | null; user_photo_urls?: string[] | null }[]) {
+      if (!row.place_name || map.has(row.place_name)) continue;
+      const url = (row.images ?? []).find(Boolean) || (row.user_photo_urls ?? []).find(Boolean);
+      if (typeof url === "string" && url) map.set(row.place_name, url);
+    }
+  } catch (err) {
+    console.warn("[placeUserPhotos] byNames unexpected:", err);
+  }
+  return map;
+}
+
 // Losowy element tablicy. Math.random() OK w kodzie aplikacji (nie workflow script).
 export function pickRandom<T>(arr: T[]): T | undefined {
   if (arr.length === 0) return undefined;

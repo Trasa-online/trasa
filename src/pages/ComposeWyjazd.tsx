@@ -20,6 +20,8 @@ import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import { TRIP_COUNTRIES, TRIP_REGIONS, citiesForCountry, countryForCity } from "@/lib/tripCountries";
 import { fetchEnrichedPlace, type MockPlace } from "@/components/plan-wizard/PlaceSwiper";
 import { categoryIconSrc, categoryFromGoogleTypes } from "@/lib/placeCategoryIcon";
+import { fetchUserPhotosByNames } from "@/lib/placeUserPhotos";
+import { resolveStored } from "@/components/PlacePhoto";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 
 const PL_CITIES = ORIGIN_COUNTRIES.find((c) => c.name === "Polska")?.cities ?? ["Warszawa"];
@@ -225,12 +227,16 @@ export default function ComposeWyjazd() {
       // Okladka propozycji: biznes z wlasnym zdjeciem -> jego cover (uzupelnia lokal). Inaczej
       // null -> ikona kategorii (zdjecia userow z tras dojda pozniej). Google backfill
       // (place.photo_url) juz odciety, wiec go nie uzywamy.
+      // Okladka: biznes z wlasnym zdjeciem -> jego cover. Inaczej zdjecie usera dodane do
+      // tego miejsca w dowolnej trasie (images/user_photo_urls). Inaczej null -> ikona kategorii.
+      const userPhotos = await fetchUserPhotosByNames((data ?? []).map((p: any) => p.place_name));
       const mapped = (data ?? []).map((p: any) => {
         const bp = Array.isArray(p.business_profiles) ? p.business_profiles[0] : p.business_profiles;
         const bizCover = bp?.cover_image_url
           || (Array.isArray(bp?.gallery_urls) ? bp.gallery_urls.find(Boolean) : null)
           || null;
-        return { ...p, photo_url: bizCover };
+        const userPhoto = userPhotos.has(p.place_name) ? resolveStored(userPhotos.get(p.place_name)!) : null;
+        return { ...p, photo_url: bizCover || userPhoto };
       });
       if (alive) setSuggestions(mapped);
     })();
@@ -250,7 +256,7 @@ export default function ComposeWyjazd() {
         });
         setSearchBlocked(!!data?.quota_exceeded);
         const raw = (data?.results ?? []) as any[];
-        setResults(raw.map((r: any) => ({
+        const mappedResults = raw.map((r: any) => ({
           id: null,
           place_id: null,
           key: `g:${r.latitude},${r.longitude}:${r.name}`,
@@ -261,8 +267,15 @@ export default function ComposeWyjazd() {
           // Kategoria z typow Google (inaczej wszystkie wyszukane miejsca = ikona Landmark).
           category: categoryFromGoogleTypes(r.types),
           rating: null,
-          photo_url: null,
-        })));
+          photo_url: null as string | null,
+        }));
+        setResults(mappedResults);
+        // Zdjecie usera dla wyszukanych miejsc (jak wizytowka): jesli ktos dodal zdjecie do
+        // tego miejsca w swojej trasie -> pokaz je na karcie zamiast ikony-placeholdera.
+        const photoMap = await fetchUserPhotosByNames(mappedResults.map((r) => r.place_name));
+        if (photoMap.size) {
+          setResults((prev) => prev.map((r: any) => (r.photo_url == null && photoMap.has(r.place_name) ? { ...r, photo_url: resolveStored(photoMap.get(r.place_name)!) } : r)));
+        }
       } catch (e: any) {
         console.error("[ComposeWyjazd] google textsearch error:", e?.message ?? e);
         setResults([]);
