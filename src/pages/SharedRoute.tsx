@@ -425,10 +425,20 @@ export default function SharedRoute() {
         <div className="px-5 pt-5">
           {/* Autor trasy (awatar + @username) + miasto + liczba miejsc - zamiast badge "Plan wyjazdu". */}
           <div className="flex items-center gap-2.5 flex-wrap text-sm">
-            <span className="flex items-center gap-1.5 font-semibold text-foreground">
-              {!isAnon && <img src={avatarSrc(author?.avatar_url)} alt="" className="h-6 w-6 rounded-full object-cover bg-orange-100" />}
-              {isAnon ? authorName : (author?.username ? `@${author.username}` : authorName)}
-            </span>
+            {!isAnon && author?.username ? (
+              <button
+                onClick={() => navigate(`/profil/${author.username}`)}
+                className="flex items-center gap-1.5 font-semibold text-foreground active:opacity-60 transition-opacity"
+              >
+                <img src={avatarSrc(author?.avatar_url)} alt="" className="h-6 w-6 rounded-full object-cover bg-orange-100" />
+                @{author.username}
+              </button>
+            ) : (
+              <span className="flex items-center gap-1.5 font-semibold text-foreground">
+                {!isAnon && <img src={avatarSrc(author?.avatar_url)} alt="" className="h-6 w-6 rounded-full object-cover bg-orange-100" />}
+                {authorName}
+              </span>
+            )}
             {cityLabel && <span className="flex items-center gap-1 text-muted-foreground"><Building2 className="h-4 w-4" />{cityLabel}</span>}
             <span className="flex items-center gap-1 text-muted-foreground"><MapPin className="h-4 w-4" />{pins.length} {pins.length === 1 ? "miejsce" : pins.length < 5 ? "miejsca" : "miejsc"}</span>
           </div>

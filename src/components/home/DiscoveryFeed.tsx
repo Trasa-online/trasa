@@ -1773,7 +1773,8 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
         .eq("is_shared", true).not("title", "is", null).not("list_cover_url", "is", null);
       if (city && city !== "all") q = q.ilike("city", `${city}%`);
       const { data } = await q
-        .order("views", { ascending: false, nullsFirst: false })
+        // Najnowsze trasy na gorze feedu (created_at malejaco) - nowo dodana trasa od razu na czele.
+        .order("created_at", { ascending: false, nullsFirst: false })
         .limit(30);
       return enrichRouteRows(data ?? []);
     },

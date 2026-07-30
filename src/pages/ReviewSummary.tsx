@@ -1695,42 +1695,49 @@ const ReviewSummary = () => {
         <div className="space-y-3">
           {workingPins.map((pin: any, i: number) => {
             const imgs: string[] = Array.isArray(pin.images) ? pin.images : [];
-            return (
-              <div key={pin.id} className="rounded-2xl bg-secondary/50 border border-border/30 p-3">
-                <div className="flex items-center gap-2 mb-2.5">
-                  <span className="h-6 w-6 rounded-full bg-primary text-white text-xs font-bold flex items-center justify-center shrink-0">{i + 1}</span>
-                  <p className="text-sm font-bold text-foreground truncate">{pin.place_name}</p>
-                </div>
-                <div className="flex gap-2 overflow-x-auto pb-1 -mx-0.5 px-0.5">
-                  <button
-                    onClick={() => { haptics.light(); setPinPickerId(pin.id); }}
-                    disabled={pinUploadingId === pin.id}
-                    className="shrink-0 h-20 w-20 rounded-xl bg-muted/50 border border-dashed border-border flex flex-col items-center justify-center gap-1 text-muted-foreground active:bg-muted/70 transition-colors"
-                  >
-                    {pinUploadingId === pin.id ? <Loader2 className="h-5 w-5 animate-spin" /> : <><Camera className="h-5 w-5" /><span className="text-[10px] font-medium">Dodaj</span></>}
-                  </button>
-                  {imgs.map((url, idx) => {
-                    const src = resolveStored(url) ?? url;
-                    return (
-                      <button
-                        key={`${url}-${idx}`}
-                        onClick={() => { setViewerUrl(src); setViewerMenuOpen(false); }}
-                        className="relative shrink-0 h-20 w-20 rounded-xl overflow-hidden bg-muted active:opacity-90"
+            // Pasek zarzadzania zdjeciami (Dodaj + dodane) - renderowany POD wizytowka miejsca.
+            const photosRow = (
+              <div className="flex gap-2 overflow-x-auto pb-1 -mx-0.5 px-0.5">
+                <button
+                  onClick={() => { haptics.light(); setPinPickerId(pin.id); }}
+                  disabled={pinUploadingId === pin.id}
+                  className="shrink-0 h-20 w-20 rounded-xl bg-muted/50 border border-dashed border-border flex flex-col items-center justify-center gap-1 text-muted-foreground active:bg-muted/70 transition-colors"
+                >
+                  {pinUploadingId === pin.id ? <Loader2 className="h-5 w-5 animate-spin" /> : <><Camera className="h-5 w-5" /><span className="text-[10px] font-medium">Dodaj</span></>}
+                </button>
+                {imgs.map((url, idx) => {
+                  const src = resolveStored(url) ?? url;
+                  return (
+                    <button
+                      key={`${url}-${idx}`}
+                      onClick={() => { setViewerUrl(src); setViewerMenuOpen(false); }}
+                      className="relative shrink-0 h-20 w-20 rounded-xl overflow-hidden bg-muted active:opacity-90"
+                    >
+                      <img src={src} alt="" className="w-full h-full object-cover" />
+                      <span
+                        role="button"
+                        aria-label={t("a11y.remove_photo")}
+                        onClick={(e) => { e.stopPropagation(); removePinPhoto(pin, url); }}
+                        className="absolute top-0.5 right-0.5 h-6 w-6 rounded-full bg-black/55 backdrop-blur-sm text-white flex items-center justify-center active:scale-90"
                       >
-                        <img src={src} alt="" className="w-full h-full object-cover" />
-                        <span
-                          role="button"
-                          aria-label={t("a11y.remove_photo")}
-                          onClick={(e) => { e.stopPropagation(); removePinPhoto(pin, url); }}
-                          className="absolute top-0.5 right-0.5 h-6 w-6 rounded-full bg-black/55 backdrop-blur-sm text-white flex items-center justify-center active:scale-90"
-                        >
-                          <X className="h-3.5 w-3.5" />
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
+                        <X className="h-3.5 w-3.5" />
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
+            );
+            // Wizytowka miejsca (jak w liscie Miejsca) na gorze; Dodaj + zdjecia pod spodem (note).
+            return (
+              <RoutePlaceRow
+                key={pin.id}
+                pin={pin}
+                index={i}
+                categoryLabel={catLabel(pin.category)}
+                onOpen={() => openDetail(pin)}
+                onGoogle={() => openGooglePlace(pin)}
+                note={photosRow}
+              />
             );
           })}
         </div>
@@ -1909,14 +1916,9 @@ const ReviewSummary = () => {
             >
               <div className="relative w-full aspect-[9/16]">
                 <img src={listCoverPhoto} alt="" className="w-full h-full object-cover" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/5 to-black/10" />
                 <span className="absolute top-1 right-1 h-5 w-5 rounded-full bg-black/45 backdrop-blur-sm text-white flex items-center justify-center">
                   <ImageIcon className="h-3 w-3" />
                 </span>
-                <div className="absolute bottom-1.5 left-2 right-2 text-left">
-                  <p className="text-white text-[7px] font-semibold leading-none [text-shadow:_0_1px_2px_rgb(0_0_0/70%)]">{cityLabel} · {currentPins.length} miejsc</p>
-                  <p className="text-white text-[9px] font-black leading-tight truncate mt-0.5 [text-shadow:_0_1px_2px_rgb(0_0_0/70%)]">{displayName || cityLabel}</p>
-                </div>
               </div>
             </button>
           </div>
