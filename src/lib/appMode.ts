@@ -41,3 +41,16 @@ export const PLANNING_DISABLED = SIMPLIFIED_APP && isNative;
 // To przełącznik, NIE usunięcie kodu. Ustaw = false, żeby wrócić do Place Details.
 // ─────────────────────────────────────────────────────────────────────────────
 export const GOOGLE_PLACE_DETAILS_DISABLED = true;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Fake door (web, 2026-07-31)
+//
+// Osobny byt WEBOWY do walidacji "szukania i wykorzystywania tras" (fake door
+// testing). Zyje na branchu `web` + domenie trasatravel.com, deployowany jako
+// osobny projekt Vercel. NIE dotyczy apki natywnej (tam flaga = off).
+//
+// Wlaczana WYLACZNIE przez env `VITE_FAKE_DOOR=1` w projekcie Vercel `web`.
+// Gdy true: App.tsx robi early-return na dedykowany landing fake doora,
+// z pominieciem routera i WebWaitlistGate (patrz App.tsx).
+// ─────────────────────────────────────────────────────────────────────────────
+export const FAKE_DOOR = import.meta.env.VITE_FAKE_DOOR === "1";

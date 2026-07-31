@@ -15,7 +15,8 @@ import { TrasaLogo } from "@/components/TrasaLogo";
 import { OnboardingProvider } from "@/components/OnboardingGuide";
 import { supabase } from "@/integrations/supabase/client";
 import { isNative } from "@/lib/platform";
-import { PLANNING_DISABLED } from "@/lib/appMode";
+import { PLANNING_DISABLED, FAKE_DOOR } from "@/lib/appMode";
+import FakeDoorLanding from "@/pages/FakeDoorLanding";
 import { App as CapApp } from "@capacitor/app";
 import { Browser } from "@capacitor/browser";
 import { toast } from "sonner";
@@ -728,7 +729,13 @@ function AuthDrawerProviderWrapper({ children }: { children: React.ReactNode }) 
   );
 }
 
-const App = () => (
+const App = () => {
+  // Fake door (web, branch `web`): calkowicie osobny byt. Gdy VITE_FAKE_DOOR=1
+  // pomijamy router + gate'y apki i renderujemy dedykowany landing. Na native
+  // i normalnym webie flaga = off, wiec ten branch jest martwy.
+  if (FAKE_DOOR) return <FakeDoorLanding />;
+
+  return (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Sonner />
@@ -813,6 +820,7 @@ const App = () => (
       </HashRouter>
     </TooltipProvider>
   </QueryClientProvider>
-);
+  );
+};
 
 export default App;
