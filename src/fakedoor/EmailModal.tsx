@@ -63,7 +63,9 @@ export default function EmailModal({ variant, route, onClose }: Props) {
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "sending" | "done" | "error">("idle");
   const [shown, setShown] = useState(false);
-  const copy = COPY[variant];
+  // Fallback zeby zly/undefined variant nie wywalil calego fake doora (brak
+  // ErrorBoundary nad tym drzewem - patrz early-return FAKE_DOOR w App.tsx).
+  const copy = COPY[variant] ?? COPY.create_route;
 
   // Wjazd sheeta od dolu (native feel).
   useEffect(() => {

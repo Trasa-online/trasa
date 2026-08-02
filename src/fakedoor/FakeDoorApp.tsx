@@ -166,7 +166,7 @@ export default function FakeDoorApp() {
         </main>
       </div>
 
-      {modal && <EmailModal source={modal.source} route={modal.route} onClose={() => setModal(null)} />}
+      {modal && <EmailModal variant={modal.variant} route={modal.route} onClose={() => setModal(null)} />}
     </div>
   );
 }
