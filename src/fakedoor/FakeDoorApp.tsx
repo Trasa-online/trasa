@@ -1,11 +1,19 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Search, Plus, X } from "lucide-react";
+import { TrasaLogo } from "@/components/TrasaLogo";
 import { nbsp } from "./text";
 import { fdTrack } from "./analytics";
 import { MOCK_ROUTES, CITIES, routeById, type MockRoute } from "./mockRoutes";
 import TrasaCard from "./TrasaCard";
 import RouteDetail from "./RouteDetail";
 import EmailModal, { type DoorSource } from "./EmailModal";
+import Selector, { type Option } from "./Selector";
+
+const CITY_OPTIONS: Option[] = [
+  { value: "Wszystkie", label: "Wszystkie miasta" },
+  ...CITIES.map((c) => ({ value: c, label: c })),
+];
+const COUNTRY_OPTIONS: Option[] = [{ value: "Polska", label: "Polska" }];
 
 type View = { name: "list" } | { name: "detail"; id: string };
 type Modal = { source: DoorSource; route: MockRoute | null } | null;
@@ -16,20 +24,12 @@ export default function FakeDoorApp() {
   const [query, setQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const [city, setCity] = useState<string>("Wszystkie");
+  const [country, setCountry] = useState<string>("Polska");
   const [saved, setSaved] = useState<Set<string>>(new Set());
   const searchedOnce = useRef(false);
 
   useEffect(() => {
     fdTrack("fd_view_list");
-    // Rebranding trasa -> spontaway: tytul karty + favicon (sygnet).
-    document.title = "spontaway";
-    let link = document.querySelector("link[rel~='icon']") as HTMLLinkElement | null;
-    if (!link) {
-      link = document.createElement("link");
-      link.rel = "icon";
-      document.head.appendChild(link);
-    }
-    link.href = "/spontaway_sygnet.png";
   }, []);
 
   useEffect(() => {
@@ -100,27 +100,34 @@ export default function FakeDoorApp() {
   return (
     <div className="flex h-[100dvh] flex-col bg-[#FEFEFE]" style={{ fontFamily: "Inter, system-ui, sans-serif" }}>
       <div className="mx-auto flex h-full w-full max-w-[480px] flex-col">
-        {/* Header */}
+        {/* Belka z logo */}
         <header className="z-30 shrink-0 px-4 pt-3">
           <div className="flex items-center gap-2">
-            <img src="/spontaway.png" alt="spontaway" className="h-7 w-auto" />
-            <div className="ml-auto flex items-center gap-2">
-              <button
-                onClick={() => setSearchOpen((v) => !v)}
-                aria-label="Szukaj"
-                className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary text-[#0E0E0E] transition active:scale-95"
-              >
-                {searchOpen ? <X size={19} /> : <Search size={19} />}
-              </button>
-              <button
-                onClick={openCreateDoor}
-                aria-label="Stwórz własną trasę"
-                className="flex h-10 w-10 items-center justify-center rounded-full text-white shadow-md transition active:scale-95"
-                style={{ background: "linear-gradient(135deg,#F4A259,#F9662B)" }}
-              >
-                <Plus size={22} strokeWidth={2.5} />
-              </button>
+            <TrasaLogo size={30} />
+            <span className="text-lg font-extrabold tracking-tight text-[#0E0E0E]">trasa</span>
+            <button
+              onClick={openCreateDoor}
+              aria-label="Stwórz własną trasę"
+              className="ml-auto flex h-10 w-10 items-center justify-center rounded-full text-white shadow-md transition active:scale-95"
+              style={{ background: "linear-gradient(135deg,#F4A259,#F9662B)" }}
+            >
+              <Plus size={22} strokeWidth={2.5} />
+            </button>
+          </div>
+
+          {/* Kraj + miasto + wyszukiwarka (bez filtrów) */}
+          <div className="mt-3 flex items-center gap-2">
+            <Selector options={COUNTRY_OPTIONS} value={country} onChange={setCountry} ariaLabel="Kraj" />
+            <div className="min-w-0 flex-1">
+              <Selector options={CITY_OPTIONS} value={city} onChange={setCity} ariaLabel="Miasto" />
             </div>
+            <button
+              onClick={() => setSearchOpen((v) => !v)}
+              aria-label="Szukaj"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-secondary text-[#0E0E0E] transition active:scale-95"
+            >
+              {searchOpen ? <X size={19} /> : <Search size={19} />}
+            </button>
           </div>
 
           {searchOpen && (
@@ -135,25 +142,7 @@ export default function FakeDoorApp() {
               />
             </div>
           )}
-
-          {/* City chips */}
-          <div className="mt-3 flex gap-2 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {["Wszystkie", ...CITIES].map((c) => {
-              const on = city === c;
-              return (
-                <button
-                  key={c}
-                  onClick={() => setCity(c)}
-                  className={`shrink-0 rounded-full px-4 py-1.5 text-sm font-semibold transition ${
-                    on ? "text-white" : "bg-secondary text-secondary-foreground"
-                  }`}
-                  style={on ? { background: "linear-gradient(90deg,#F4A259,#F9662B)" } : undefined}
-                >
-                  {c}
-                </button>
-              );
-            })}
-          </div>
+          <div className="pb-2" />
         </header>
 
         {/* Immersyjny feed tras - snap scroll (jak apka natywna) */}
