@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Search, Plus } from "lucide-react";
+import { Search, Plus, X } from "lucide-react";
 import { TrasaLogo } from "@/components/TrasaLogo";
 import { nbsp } from "./text";
 import { fdTrack } from "./analytics";
 import { MOCK_ROUTES, CITIES, routeById, type MockRoute } from "./mockRoutes";
-import RouteCard from "./RouteCard";
+import TrasaCard from "./TrasaCard";
 import RouteDetail from "./RouteDetail";
 import EmailModal, { type DoorSource } from "./EmailModal";
 
@@ -15,15 +15,15 @@ export default function FakeDoorApp() {
   const [view, setView] = useState<View>({ name: "list" });
   const [modal, setModal] = useState<Modal>(null);
   const [query, setQuery] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
   const [city, setCity] = useState<string>("Wszystkie");
+  const [saved, setSaved] = useState<Set<string>>(new Set());
   const searchedOnce = useRef(false);
 
-  // Wejscie na landing = gora lejka.
   useEffect(() => {
     fdTrack("fd_view_list");
   }, []);
 
-  // Scroll na gore przy zmianie widoku.
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "auto" });
   }, [view]);
@@ -56,8 +56,8 @@ export default function FakeDoorApp() {
     setView({ name: "detail", id });
   };
 
-  const openUseDoor = (route: MockRoute) => {
-    fdTrack("fd_click_use", { route: route.id, city: route.city });
+  const openUseDoor = (route: MockRoute, via: "detail" | "save") => {
+    fdTrack("fd_click_use", { route: route.id, city: route.city, via });
     setModal({ source: "use_route", route });
   };
 
@@ -66,46 +66,68 @@ export default function FakeDoorApp() {
     setModal({ source: "create_route", route: null });
   };
 
+  const onSave = (route: MockRoute) => {
+    setSaved((prev) => new Set(prev).add(route.id));
+    openUseDoor(route, "save");
+  };
+
   const active = view.name === "detail" ? routeById(view.id) : null;
 
+  if (active) {
+    return (
+      <div className="min-h-[100dvh] bg-[#FEFEFE]" style={{ fontFamily: "Inter, system-ui, sans-serif" }}>
+        <div className="mx-auto w-full max-w-[480px]">
+          <RouteDetail route={active} onBack={() => setView({ name: "list" })} onUse={() => openUseDoor(active, "detail")} />
+        </div>
+        {modal && <EmailModal source={modal.source} route={modal.route} onClose={() => setModal(null)} />}
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-[100dvh] bg-[#FEFEFE]" style={{ fontFamily: "Inter, system-ui, sans-serif" }}>
-      {/* Top bar */}
-      <header className="sticky top-0 z-30 flex items-center gap-2 border-b border-black/[0.05] bg-[#FEFEFE]/90 px-4 py-3 backdrop-blur">
-        <button onClick={() => setView({ name: "list" })} className="flex items-center gap-2">
-          <TrasaLogo size={32} />
-          <span className="text-lg font-extrabold tracking-tight text-[#0E0E0E]">trasa</span>
-        </button>
-      </header>
-
-      {active ? (
-        <RouteDetail route={active} onBack={() => setView({ name: "list" })} onUse={() => openUseDoor(active)} />
-      ) : (
-        <main className="mx-auto max-w-2xl px-4 pb-16">
-          {/* Hero */}
-          <section className="pt-6 pb-4">
-            <p className="text-sm font-semibold text-[#F9662B]">{nbsp("speed dating z miastem")}</p>
-            <h1 className="mt-1.5 text-3xl font-extrabold leading-tight tracking-tight text-[#0E0E0E] sm:text-4xl">
-              {nbsp("Gotowe trasy po mieście, od ludzi którzy je znają")}
-            </h1>
-            <p className="mt-2 text-[#979797] leading-relaxed">
-              {nbsp("Wybierz trasę, ruszaj w drogę. Sprawdzone miejsca, bez godzin szukania.")}
-            </p>
-          </section>
-
-          {/* Search */}
-          <div className="relative">
-            <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#CFCFCF]" />
-            <input
-              value={query}
-              onChange={(e) => onSearch(e.target.value)}
-              placeholder="Szukaj trasy, miasta, miejsca..."
-              className="w-full rounded-2xl border border-black/[0.08] bg-white py-3 pl-11 pr-4 text-base text-[#0E0E0E] outline-none transition placeholder:text-[#CFCFCF] focus:border-[#F9662B]"
-            />
+    <div className="flex h-[100dvh] flex-col bg-[#FEFEFE]" style={{ fontFamily: "Inter, system-ui, sans-serif" }}>
+      <div className="mx-auto flex h-full w-full max-w-[480px] flex-col">
+        {/* Header */}
+        <header className="z-30 shrink-0 px-4 pt-3">
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2">
+              <TrasaLogo size={32} />
+              <span className="text-lg font-extrabold tracking-tight text-[#0E0E0E]">trasa</span>
+            </div>
+            <div className="ml-auto flex items-center gap-2">
+              <button
+                onClick={() => setSearchOpen((v) => !v)}
+                aria-label="Szukaj"
+                className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary text-[#0E0E0E] transition active:scale-95"
+              >
+                {searchOpen ? <X size={19} /> : <Search size={19} />}
+              </button>
+              <button
+                onClick={openCreateDoor}
+                aria-label="Stwórz własną trasę"
+                className="flex h-10 w-10 items-center justify-center rounded-full text-white shadow-md transition active:scale-95"
+                style={{ background: "linear-gradient(135deg,#F4A259,#F9662B)" }}
+              >
+                <Plus size={22} strokeWidth={2.5} />
+              </button>
+            </div>
           </div>
 
+          {searchOpen && (
+            <div className="relative mt-3">
+              <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#CFCFCF]" />
+              <input
+                autoFocus
+                value={query}
+                onChange={(e) => onSearch(e.target.value)}
+                placeholder="Szukaj trasy, miasta, miejsca..."
+                className="w-full rounded-2xl border border-black/[0.08] bg-white py-3 pl-11 pr-4 text-base text-[#0E0E0E] outline-none transition placeholder:text-[#CFCFCF] focus:border-[#F9662B]"
+              />
+            </div>
+          )}
+
           {/* City chips */}
-          <div className="mt-3 flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="mt-3 flex gap-2 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {["Wszystkie", ...CITIES].map((c) => {
               const on = city === c;
               return (
@@ -122,37 +144,29 @@ export default function FakeDoorApp() {
               );
             })}
           </div>
+        </header>
 
-          {/* Create-route door */}
-          <button
-            onClick={openCreateDoor}
-            className="mt-4 flex w-full items-center gap-3 rounded-2xl border border-dashed border-[#F9662B]/40 bg-[#fcede3]/60 px-4 py-3 text-left transition hover:bg-[#fcede3]"
-          >
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white" style={{ background: "linear-gradient(135deg,#F4A259,#F9662B)" }}>
-              <Plus size={18} />
-            </span>
-            <span>
-              <span className="block font-bold text-[#0E0E0E]">Stwórz własną trasę</span>
-              <span className="block text-xs text-[#979797]">{nbsp("Ułóż swoją i podziel się nią z innymi")}</span>
-            </span>
-          </button>
-
-          {/* Routes grid */}
-          <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {filtered.map((r) => (
-              <RouteCard key={r.id} route={r} onClick={() => openRoute(r.id)} />
-            ))}
-          </div>
+        {/* Immersyjny feed tras - snap scroll (jak apka natywna) */}
+        <main className="min-h-0 flex-1 snap-y snap-mandatory space-y-4 overflow-y-auto px-4 pb-4 pt-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {filtered.map((r) => (
+            <TrasaCard
+              key={r.id}
+              route={r}
+              saved={saved.has(r.id)}
+              onOpen={() => openRoute(r.id)}
+              onSave={() => onSave(r)}
+            />
+          ))}
 
           {filtered.length === 0 && (
-            <p className="mt-10 text-center text-[#979797]">{nbsp("Brak tras dla tego wyszukiwania. Spróbuj innego miasta.")}</p>
+            <div className="pt-24 text-center text-[#979797]">
+              {nbsp("Brak tras dla tego wyszukiwania. Spróbuj innego miasta.")}
+            </div>
           )}
 
-          <footer className="mt-14 border-t border-black/[0.05] pt-6 text-center">
-            <p className="text-xs text-[#CFCFCF]">web · fake-door v1</p>
-          </footer>
+          <p className="pb-2 pt-4 text-center text-xs text-[#CFCFCF]">web · fake-door v1</p>
         </main>
-      )}
+      </div>
 
       {modal && <EmailModal source={modal.source} route={modal.route} onClose={() => setModal(null)} />}
     </div>
