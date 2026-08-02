@@ -14,16 +14,31 @@ type Props = {
   onClose: () => void;
 };
 
-const COPY: Record<DoorSource, { title: string; sub: string; cta: string }> = {
+type Copy = {
+  eyebrow: string;
+  title: string;
+  sub: string;
+  cta: string;
+  doneTitle: string;
+  doneSub: string;
+};
+
+const COPY: Record<DoorSource, Copy> = {
   use_route: {
-    title: "Świetny wybór!",
-    sub: "Trasy w apce ruszają niedługo. Zostaw maila, a odezwiemy się jak tylko odpalimy - i od razu odblokujesz tę trasę.",
-    cta: "Powiadomcie mnie",
+    eyebrow: "Wybrana trasa",
+    title: "Dobry wybór",
+    sub: "Apka rusza lada chwila. Zostaw maila, a odłożymy tę trasę dla Ciebie i damy znać na starcie.",
+    cta: "Chcę tę trasę",
+    doneTitle: "Trasa zaklepana",
+    doneSub: "Damy znać na tego maila, gdy tylko odpalimy. Trasa czeka na Ciebie.",
   },
   create_route: {
-    title: "Twórz własne trasy",
-    sub: "Tworzenie własnych tras jest już w drodze. Zostaw maila, a odezwiemy się jak tylko będzie gotowe.",
-    cta: "Powiadomcie mnie",
+    eyebrow: "Własna trasa",
+    title: "Ułóż własną trasę",
+    sub: "Tworzenie tras dopinamy właśnie teraz. Zostaw maila, a damy znać, gdy tylko ruszy.",
+    cta: "Chcę tworzyć",
+    doneTitle: "Jesteś na liście",
+    doneSub: "Damy znać na tego maila, gdy ruszy tworzenie tras. Będziesz wśród pierwszych.",
   },
 };
 
@@ -103,10 +118,8 @@ export default function EmailModal({ source, route, onClose }: Props) {
               <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full" style={{ background: BRAND }}>
                 <Check size={28} className="text-white" />
               </div>
-              <h2 className="text-2xl font-black text-[#0E0E0E]">Jesteś na liście</h2>
-              <p className="mt-2 leading-relaxed text-[#6b6b6b]">
-                {nbsp("Dzięki! Odezwiemy się na tego maila, gdy tylko wystartujemy.")}
-              </p>
+              <h2 className="text-2xl font-black text-[#0E0E0E]">{nbsp(copy.doneTitle)}</h2>
+              <p className="mt-2 leading-relaxed text-[#6b6b6b]">{nbsp(copy.doneSub)}</p>
               <button
                 onClick={close}
                 className="mt-6 w-full rounded-2xl bg-[#f0f0f1] py-3.5 font-bold text-[#0E0E0E] transition active:scale-[0.99]"
@@ -120,7 +133,7 @@ export default function EmailModal({ source, route, onClose }: Props) {
                 <div className="mb-4 flex items-center gap-3 rounded-2xl bg-[#f4f4f5] p-2.5">
                   <img src={routeCover(route.id)} alt="" className="h-12 w-12 shrink-0 rounded-xl object-cover" />
                   <div className="min-w-0">
-                    <p className="text-[11px] font-semibold uppercase tracking-wide text-[#979797]">Zapisujesz trasę</p>
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-[#979797]">{copy.eyebrow}</p>
                     <p className="truncate font-bold text-[#0E0E0E]">{route.title}</p>
                   </div>
                 </div>
@@ -145,7 +158,7 @@ export default function EmailModal({ source, route, onClose }: Props) {
                 }`}
               />
               {status === "error" && (
-                <p className="mt-1.5 text-sm text-red-500">{nbsp("Wpisz poprawny adres e-mail.")}</p>
+                <p className="mt-1.5 text-sm text-red-500">{nbsp("Sprawdź jeszcze ten adres e-mail.")}</p>
               )}
 
               <button
@@ -155,7 +168,7 @@ export default function EmailModal({ source, route, onClose }: Props) {
                 style={{ background: BRAND }}
               >
                 {status === "sending" ? <Loader2 size={18} className="animate-spin" /> : null}
-                {status === "sending" ? "Zapisuję..." : copy.cta}
+                {status === "sending" ? "Zapisuję..." : nbsp(copy.cta)}
               </button>
             </>
           )}
