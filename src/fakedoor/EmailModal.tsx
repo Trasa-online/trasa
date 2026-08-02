@@ -101,6 +101,25 @@ export default function EmailModal({ variant, route, onClose }: Props) {
       if (error && !`${error.message}`.toLowerCase().includes("duplicate")) {
         console.warn("[fakedoor] lead insert:", error.message);
       }
+      // Mail potwierdzajacy (Resend) - fire-and-forget, nie blokuje sukcesu.
+      supabase.functions
+        .invoke("fakedoor-lead-email", {
+          body: {
+            email: trimmed,
+            variant,
+            route: route
+              ? {
+                  title: route.title,
+                  city: route.city,
+                  author: route.author,
+                  duration: route.duration,
+                  intro: route.intro,
+                  places: route.places,
+                }
+              : null,
+          },
+        })
+        .catch((e) => console.warn("[fakedoor] email invoke:", e?.message));
       fdTrack("fd_submit_email", { source: variant, ...(route ? { route: route.id, city: route.city } : {}) });
       setStatus("done");
     } catch {

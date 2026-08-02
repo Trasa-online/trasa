@@ -4,6 +4,9 @@ project_id = "chxphfcpehxshvijqtlf"
 [functions.register-business]
 verify_jwt = false
 
+[functions.fakedoor-lead-email]
+verify_jwt = false
+
 [functions.admin-analytics]
 verify_jwt = true
 
