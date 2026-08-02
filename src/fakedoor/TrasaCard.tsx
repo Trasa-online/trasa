@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Bookmark, ChevronUp, MapPin, Building2 } from "lucide-react";
 import { nbsp } from "./text";
 import MiniMap from "./MiniMap";
+import { AuthorAvatar } from "./avatars";
 import { routeCover, type MockRoute } from "./mockRoutes";
 
 // Immersyjna, pelnoekranowa karta trasy - odwzorowanie TrasaBigCard z apki
@@ -23,7 +24,6 @@ export default function TrasaCard({
   onSave: () => void;
 }) {
   const [imgOk, setImgOk] = useState(true);
-  const initial = route.author?.trim()?.[0]?.toUpperCase() ?? "T";
 
   return (
     <div
@@ -73,9 +73,7 @@ export default function TrasaCard({
       <div className="pointer-events-none absolute bottom-6 left-0 right-[3.25rem] z-10 px-5">
         <div className="mb-1.5 flex items-center gap-3 text-[13px] font-semibold text-white [text-shadow:_0_1px_3px_rgb(0_0_0_/_40%)]">
           <span className="flex items-center gap-1.5">
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-orange-100 text-[10px] font-bold text-[#F9662B] ring-1 ring-white/40">
-              {initial}
-            </span>
+            <AuthorAvatar seed={route.author} name={route.author} size={20} className="ring-1 ring-white/40" />
             {route.author}
           </span>
           <span className="flex items-center gap-1"><Building2 size={15} />{route.city}</span>

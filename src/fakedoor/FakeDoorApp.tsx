@@ -77,7 +77,12 @@ export default function FakeDoorApp() {
     return (
       <div className="min-h-[100dvh] bg-[#FEFEFE]" style={{ fontFamily: "Inter, system-ui, sans-serif" }}>
         <div className="mx-auto w-full max-w-[480px]">
-          <RouteDetail route={active} onBack={() => setView({ name: "list" })} onUse={() => openUseDoor(active, "detail")} />
+          <RouteDetail
+            route={active}
+            onBack={() => setView({ name: "list" })}
+            onUse={() => openUseDoor(active, "detail")}
+            onPlan={openCreateDoor}
+          />
         </div>
         {modal && <EmailModal source={modal.source} route={modal.route} onClose={() => setModal(null)} />}
       </div>
