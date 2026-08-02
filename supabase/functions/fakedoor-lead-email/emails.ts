@@ -25,6 +25,20 @@ const BRAND = "#D25014";
 const PEACH = "#fcede3";
 const LOGO = "https://www.trasatravel.com/icon-512.png";
 const SITE = "https://www.trasatravel.com";
+const ICON_BASE = "https://www.trasatravel.com/email-icons";
+
+// Kategoria -> hostowana ikona PNG (te same glify co w apce, skonwertowane z SVG).
+const CATEGORY_ICON: Record<string, string> = {
+  kawiarnia: "kawiarnia", restauracja: "restauracja", restauraca: "restauracja",
+  bar: "bar", klub: "bar", muzeum: "landmark", galeria: "sztuka", sztuka: "sztuka",
+  park: "natura", spacer: "natura", natura: "natura", "punkt widokowy": "punkt-widokowy",
+  sklep: "zakupy", zakupy: "zakupy", miejsce: "landmark", piekarnia: "piekarnia", cukiernia: "cukiernia",
+};
+
+function categoryIcon(category: string): string {
+  const key = String(category ?? "").toLowerCase().trim();
+  return `${ICON_BASE}/${CATEGORY_ICON[key] ?? "landmark"}.png`;
+}
 
 const placesLabel = (n: number) => `${n} ${n === 1 ? "miejsce" : n < 5 ? "miejsca" : "miejsc"}`;
 
@@ -65,13 +79,15 @@ function shell(inner: string): string {
 </div>`;
 }
 
-function placeRow(i: number, name: string, category: string, note?: string): string {
+function placeRow(name: string, category: string, note?: string): string {
   return `
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:10px;background:#f7f7f8;border-radius:14px;">
     <tr>
       <td width="72" valign="top" style="padding:12px 6px 12px 12px;">
         <table role="presentation" cellpadding="0" cellspacing="0"><tr>
-          <td style="width:52px;height:52px;background:${PEACH};border-radius:13px;text-align:center;vertical-align:middle;color:${BRAND};font-weight:800;font-size:19px;">${i + 1}</td>
+          <td style="width:52px;height:52px;background:${PEACH};border-radius:13px;text-align:center;vertical-align:middle;">
+            <img src="${categoryIcon(category)}" width="30" height="30" alt="" style="vertical-align:middle;" />
+          </td>
         </tr></table>
       </td>
       <td valign="top" style="padding:12px 14px 12px 2px;">
@@ -114,7 +130,7 @@ export function routeHtml(r: RoutePayload): string {
     ${r.intro ? `<p style="color:#5a5a5a;line-height:1.6;margin:14px 0 0;">${escapeHtml(r.intro)}</p>` : ""}
     <div style="height:1px;background:#eee;margin:20px 0 16px;"></div>
     <p style="font-weight:800;color:#0E0E0E;margin:0 0 12px;font-size:16px;">Plan trasy</p>
-    ${(r.places ?? []).map((p, i) => placeRow(i, p.name, p.category, p.note)).join("")}
+    ${(r.places ?? []).map((p) => placeRow(p.name, p.category, p.note)).join("")}
     <div style="height:1px;background:#eee;margin:16px 0;"></div>
     <p style="color:#5a5a5a;line-height:1.6;margin:0;">
       Apka rusza lada chwila - wtedy odblokujesz tę trasę i ruszysz w miasto. Trzymaj tego maila!
