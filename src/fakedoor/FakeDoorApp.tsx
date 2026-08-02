@@ -6,7 +6,7 @@ import { fdTrack } from "./analytics";
 import { MOCK_ROUTES, CITIES, routeById, type MockRoute } from "./mockRoutes";
 import TrasaCard from "./TrasaCard";
 import RouteDetail from "./RouteDetail";
-import EmailModal, { type DoorSource } from "./EmailModal";
+import EmailModal, { type DoorVariant } from "./EmailModal";
 import Selector, { type Option } from "./Selector";
 
 const CITY_OPTIONS: Option[] = [
@@ -16,7 +16,7 @@ const CITY_OPTIONS: Option[] = [
 const COUNTRY_OPTIONS: Option[] = [{ value: "Polska", label: "Polska" }];
 
 type View = { name: "list" } | { name: "detail"; id: string };
-type Modal = { source: DoorSource; route: MockRoute | null } | null;
+type Modal = { variant: DoorVariant; route: MockRoute | null } | null;
 
 export default function FakeDoorApp() {
   const [view, setView] = useState<View>({ name: "list" });
@@ -66,12 +66,12 @@ export default function FakeDoorApp() {
 
   const openUseDoor = (route: MockRoute, via: "detail" | "save") => {
     fdTrack("fd_click_use", { route: route.id, city: route.city, via });
-    setModal({ source: "use_route", route });
+    setModal({ variant: via === "detail" ? "get_route" : "save_route", route });
   };
 
   const openCreateDoor = () => {
     fdTrack("fd_click_create");
-    setModal({ source: "create_route", route: null });
+    setModal({ variant: "create_route", route: null });
   };
 
   const onSave = (route: MockRoute) => {
@@ -92,7 +92,7 @@ export default function FakeDoorApp() {
             onPlan={openCreateDoor}
           />
         </div>
-        {modal && <EmailModal source={modal.source} route={modal.route} onClose={() => setModal(null)} />}
+        {modal && <EmailModal variant={modal.variant} route={modal.route} onClose={() => setModal(null)} />}
       </div>
     );
   }

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Check, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { fdTrack } from "./analytics";
@@ -6,16 +6,21 @@ import { nbsp } from "./text";
 import { BRAND } from "./theme";
 import { routeCover, type MockRoute } from "./mockRoutes";
 
-export type DoorSource = "use_route" | "create_route";
+// Warianty drzwi fake doora:
+//   save_route  -> bookmark na karcie w feedzie (lekki zapis trasy)
+//   get_route   -> "Zapisz tą trasę" w szczegole trasy (odbior trasy)
+//   create_route -> "+" / "Zaplanuj wlasna trase"
+export type DoorVariant = "save_route" | "get_route" | "create_route";
 
 type Props = {
-  source: DoorSource;
+  variant: DoorVariant;
   route?: MockRoute | null;
   onClose: () => void;
 };
 
 type Copy = {
-  eyebrow: string;
+  showRoute: boolean;
+  eyebrow?: string;
   title: string;
   sub: string;
   cta: string;
@@ -23,32 +28,42 @@ type Copy = {
   doneSub: string;
 };
 
-const COPY: Record<DoorSource, Copy> = {
-  use_route: {
+const COPY: Record<DoorVariant, Copy> = {
+  save_route: {
+    showRoute: true,
     eyebrow: "Wybrana trasa",
-    title: "Dobry wybór",
-    sub: "Apka rusza lada chwila. Zostaw maila, a odłożymy tę trasę dla Ciebie i damy znać na starcie.",
-    cta: "Chcę tę trasę",
-    doneTitle: "Trasa zaklepana",
-    doneSub: "Damy znać na tego maila, gdy tylko odpalimy. Trasa czeka na Ciebie.",
+    title: "Dobry wybór!",
+    sub: "Apka rusza lada chwila, zostaw nam swojego maila, a powiadomimy Cię o jej starcie.",
+    cta: "Zapisuję się na waitlistę",
+    doneTitle: "Juhu! Jesteś na liście!",
+    doneSub: "Damy znać na Twojego maila, gdy tylko apka wystartuje. Do zobaczenia w mieście!",
+  },
+  get_route: {
+    showRoute: true,
+    eyebrow: "Wybrana trasa",
+    title: "Trasa wybrana... co dalej?",
+    sub: "Podaj swojego maila, prześlemy Ci ją. Trasa czeka na Ciebie!",
+    cta: "Odbieram moją nową trasę",
+    doneTitle: "Juhu! Trasa jest Twoja!",
+    doneSub: "Wyślemy ją na Twojego maila, gdy tylko odpalimy apkę. Trasa czeka na Ciebie!",
   },
   create_route: {
-    eyebrow: "Własna trasa",
-    title: "Ułóż własną trasę",
-    sub: "Tworzenie tras dopinamy właśnie teraz. Zostaw maila, a damy znać, gdy tylko ruszy.",
-    cta: "Chcę tworzyć",
-    doneTitle: "Jesteś na liście",
-    doneSub: "Damy znać na tego maila, gdy ruszy tworzenie tras. Będziesz wśród pierwszych.",
+    showRoute: false,
+    title: "Twoja własna trasa...",
+    sub: "Tworzenie tras jeszcze dopinamy. Zostaw swojego maila, a damy znać, gdy tylko apka ruszy!",
+    cta: "Zapisuję się na waitlistę",
+    doneTitle: "Juhu! Jesteś na liście!",
+    doneSub: "Damy znać na Twojego maila, gdy ruszy tworzenie tras. Będziesz wśród pierwszych!",
   },
 };
 
 const isValidEmail = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
 
-export default function EmailModal({ source, route, onClose }: Props) {
+export default function EmailModal({ variant, route, onClose }: Props) {
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "sending" | "done" | "error">("idle");
   const [shown, setShown] = useState(false);
-  const copy = COPY[source];
+  const copy = COPY[variant];
 
   // Wjazd sheeta od dolu (native feel).
   useEffect(() => {
@@ -56,10 +71,17 @@ export default function EmailModal({ source, route, onClose }: Props) {
     return () => cancelAnimationFrame(r);
   }, []);
 
-  const close = () => {
+  const close = useCallback(() => {
     setShown(false);
     window.setTimeout(onClose, 220);
-  };
+  }, [onClose]);
+
+  // Sukces: brak CTA, sam znika po 10s (jesli user nie zamknie recznie).
+  useEffect(() => {
+    if (status !== "done") return;
+    const t = window.setTimeout(() => close(), 10000);
+    return () => window.clearTimeout(t);
+  }, [status, close]);
 
   const submit = async () => {
     const trimmed = email.trim().toLowerCase();
@@ -71,7 +93,7 @@ export default function EmailModal({ source, route, onClose }: Props) {
     try {
       const { error } = await supabase.from("fakedoor_leads").insert({
         email: trimmed,
-        source,
+        source: variant,
         route_id: route?.id ?? null,
         route_title: route?.title ?? null,
         city: route?.city ?? null,
@@ -79,10 +101,10 @@ export default function EmailModal({ source, route, onClose }: Props) {
       if (error && !`${error.message}`.toLowerCase().includes("duplicate")) {
         console.warn("[fakedoor] lead insert:", error.message);
       }
-      fdTrack("fd_submit_email", { source, ...(route ? { route: route.id, city: route.city } : {}) });
+      fdTrack("fd_submit_email", { source: variant, ...(route ? { route: route.id, city: route.city } : {}) });
       setStatus("done");
     } catch {
-      fdTrack("fd_submit_email", { source, ...(route ? { route: route.id } : {}) });
+      fdTrack("fd_submit_email", { source: variant, ...(route ? { route: route.id } : {}) });
       setStatus("done");
     }
   };
@@ -120,20 +142,16 @@ export default function EmailModal({ source, route, onClose }: Props) {
               </div>
               <h2 className="text-2xl font-black text-[#0E0E0E]">{nbsp(copy.doneTitle)}</h2>
               <p className="mt-2 leading-relaxed text-[#6b6b6b]">{nbsp(copy.doneSub)}</p>
-              <button
-                onClick={close}
-                className="mt-6 w-full rounded-2xl bg-[#f0f0f1] py-3.5 font-bold text-[#0E0E0E] transition active:scale-[0.99]"
-              >
-                Gotowe
-              </button>
             </div>
           ) : (
             <>
-              {route && source === "use_route" && (
+              {copy.showRoute && route && (
                 <div className="mb-4 flex items-center gap-3 rounded-2xl bg-[#f4f4f5] p-2.5">
                   <img src={routeCover(route.id)} alt="" className="h-12 w-12 shrink-0 rounded-xl object-cover" />
                   <div className="min-w-0">
-                    <p className="text-[11px] font-semibold uppercase tracking-wide text-[#979797]">{copy.eyebrow}</p>
+                    {copy.eyebrow && (
+                      <p className="text-[11px] font-semibold uppercase tracking-wide text-[#979797]">{copy.eyebrow}</p>
+                    )}
                     <p className="truncate font-bold text-[#0E0E0E]">{route.title}</p>
                   </div>
                 </div>
