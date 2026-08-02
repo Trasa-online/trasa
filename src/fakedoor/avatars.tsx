@@ -1,26 +1,12 @@
-import { useState } from "react";
+// Awatary autorow - LOKALNE, generowane inline SVG (zero sieci, zawsze sie
+// renderuja). Wczesniej DiceBear (zewnetrzny) nie ladowal sie na live - stad
+// wlasny generator "twarzy": kolor tla + akcent + oczy + usmiech, wszystko
+// deterministyczne z seeda, wiec kazdy profil ma stala, unikalna twarz.
 
-// Zroznicowane awatary autorow tras. DiceBear (SVG, deterministyczny per seed,
-// zawsze sie renderuje) - kazdemu autorowi przypisany INNY styl, zeby feed nie
-// wygladal generycznie. Fallback: kolorowe kolko z inicjalem (gdyby DiceBear
-// nie odpowiedzial w trakcie kampanii - nigdy zlamany obrazek).
-
-const STYLES = [
-  "adventurer",
-  "lorelei",
-  "notionists",
-  "avataaars",
-  "big-smile",
-  "open-peeps",
-  "fun-emoji",
-  "personas",
-  "miniavs",
-  "thumbs",
-  "bottts",
-  "big-ears",
+const PALETTE = [
+  "#F9662B", "#2BB673", "#3DA5D9", "#7B61FF", "#E84393",
+  "#00B894", "#FFB020", "#5C7CFA", "#FF7A59", "#12B5CB",
 ];
-
-const BG = ["ffd5dc", "d1f4e0", "ffe8c8", "d9e4ff", "f3d9ff", "d9f7ff"];
 
 function hash(str: string): number {
   let h = 2166136261;
@@ -31,11 +17,13 @@ function hash(str: string): number {
   return h >>> 0;
 }
 
-export function avatarUrl(seed: string): string {
-  const h = hash(seed);
-  const style = STYLES[h % STYLES.length];
-  const bg = BG[(h >> 5) % BG.length];
-  return `https://api.dicebear.com/9.x/${style}/svg?seed=${encodeURIComponent(seed)}&radius=50&backgroundColor=${bg}`;
+function mulberry32(seed: number) {
+  return () => {
+    seed = (seed + 0x6d2b79f5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
 }
 
 export function AuthorAvatar({
@@ -49,28 +37,56 @@ export function AuthorAvatar({
   size?: number;
   className?: string;
 }) {
-  const [ok, setOk] = useState(true);
-  const initial = name?.trim()?.[0]?.toUpperCase() ?? "T";
+  const h = hash(seed);
+  const rand = mulberry32(h);
+  const bg = PALETTE[h % PALETTE.length];
+  const accent = PALETTE[(h >> 4) % PALETTE.length];
 
-  if (!ok) {
-    return (
-      <span
-        className={`flex items-center justify-center rounded-full bg-orange-100 font-bold text-[#F9662B] ${className}`}
-        style={{ width: size, height: size, fontSize: Math.round(size * 0.5) }}
-      >
-        {initial}
-      </span>
-    );
-  }
+  const cx = 18;
+  const eyeY = 15 + Math.round(rand() * 2); // 15-17
+  const spread = 4.5 + rand() * 1.5;
+  const smile = rand() > 0.35;
+  const accentX = rand() * 36;
+  const accentY = 6 + rand() * 8;
 
   return (
-    <img
-      src={avatarUrl(seed)}
-      alt={name}
-      loading="lazy"
-      onError={() => setOk(false)}
-      className={`rounded-full object-cover ${className}`}
-      style={{ width: size, height: size, background: "#fff" }}
-    />
+    <svg
+      viewBox="0 0 36 36"
+      role="img"
+      aria-label={name}
+      className={`rounded-full ${className}`}
+      style={{ width: size, height: size, display: "block" }}
+    >
+      <rect width="36" height="36" fill={bg} />
+      {/* miekki akcent dla charakteru */}
+      <circle cx={accentX} cy={accentY} r="11" fill={accent} opacity="0.35" />
+      {/* oczy */}
+      <g fill="#0E0E0E" fillOpacity="0.82">
+        <circle cx={cx - spread} cy={eyeY} r="1.7" />
+        <circle cx={cx + spread} cy={eyeY} r="1.7" />
+      </g>
+      {/* usta */}
+      {smile ? (
+        <path
+          d={`M${cx - 5.5} ${eyeY + 4.5} Q${cx} ${eyeY + 8.5} ${cx + 5.5} ${eyeY + 4.5}`}
+          fill="none"
+          stroke="#0E0E0E"
+          strokeOpacity="0.82"
+          strokeWidth="1.7"
+          strokeLinecap="round"
+        />
+      ) : (
+        <line
+          x1={cx - 4.5}
+          y1={eyeY + 5.5}
+          x2={cx + 4.5}
+          y2={eyeY + 5.5}
+          stroke="#0E0E0E"
+          strokeOpacity="0.82"
+          strokeWidth="1.7"
+          strokeLinecap="round"
+        />
+      )}
+    </svg>
   );
 }

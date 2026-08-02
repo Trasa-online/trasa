@@ -30,19 +30,13 @@ function GoogleButton({ query }: { query: string }) {
   );
 }
 
-function PlaceThumb({ routeId, index, category, big }: { routeId: string; index: number; category: string; big?: boolean }) {
+function PlaceThumb({ category, big }: { category: string; big?: boolean }) {
   const s = big ? "h-full w-full" : "h-16 w-16";
   return (
     <div className={`relative ${s} shrink-0 overflow-hidden rounded-2xl`} style={{ background: "#fcede3" }}>
       <div className="flex h-full w-full items-center justify-center">
         <img src={placeIconSrc(category)} alt="" className={big ? "h-14 w-14" : "h-8 w-8"} />
       </div>
-      <span
-        className="absolute -left-1.5 -top-1.5 flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold text-white shadow"
-        style={{ background: BRAND }}
-      >
-        {index + 1}
-      </span>
     </div>
   );
 }
@@ -50,18 +44,16 @@ function PlaceThumb({ routeId, index, category, big }: { routeId: string; index:
 function PlaceCard({
   route,
   place,
-  index,
   onOpen,
 }: {
   route: MockRoute;
   place: MockPlace;
-  index: number;
   onOpen: () => void;
 }) {
   return (
     <button onClick={onOpen} className="w-full rounded-2xl bg-[#f4f4f5] p-3 text-left transition active:scale-[0.99]">
       <div className="flex items-center gap-3">
-        <PlaceThumb routeId={route.id} index={index} category={place.category} />
+        <PlaceThumb category={place.category} />
         <div className="min-w-0 flex-1">
           <h4 className="font-bold leading-snug text-[#0E0E0E]">{nbsp(place.name)}</h4>
           <span className="mt-1 inline-block rounded-full border border-black/10 bg-white px-2.5 py-0.5 text-[11px] font-semibold text-[#0E0E0E]">
@@ -187,7 +179,7 @@ export default function RouteDetail({
             {view === "list" ? (
               <div className="space-y-3">
                 {route.places.map((p, i) => (
-                  <PlaceCard key={i} route={route} place={p} index={i} onOpen={() => selectPlace(p, i)} />
+                  <PlaceCard key={i} route={route} place={p} onOpen={() => selectPlace(p, i)} />
                 ))}
               </div>
             ) : (
@@ -199,7 +191,7 @@ export default function RouteDetail({
                     className="rounded-2xl bg-[#f4f4f5] p-3 text-left transition active:scale-[0.99]"
                   >
                     <div className="aspect-square w-full">
-                      <PlaceThumb routeId={route.id} index={i} category={p.category} big />
+                      <PlaceThumb category={p.category} big />
                     </div>
                     <h4 className="mt-2 line-clamp-1 font-bold text-[#0E0E0E]">{p.name}</h4>
                     <span className="mt-1 inline-block rounded-full border border-black/10 bg-white px-2 py-0.5 text-[10px] font-semibold text-[#0E0E0E]">

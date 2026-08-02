@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Search, Plus, X } from "lucide-react";
+import { Search, X } from "lucide-react";
 import { TrasaLogo } from "@/components/TrasaLogo";
 import { nbsp } from "./text";
 import { fdTrack } from "./analytics";
@@ -8,7 +8,6 @@ import TrasaCard from "./TrasaCard";
 import RouteDetail from "./RouteDetail";
 import EmailModal, { type DoorSource } from "./EmailModal";
 import Selector, { type Option } from "./Selector";
-import { BRAND } from "./theme";
 
 const CITY_OPTIONS: Option[] = [
   { value: "Wszystkie", label: "Wszystkie miasta" },
@@ -109,10 +108,9 @@ export default function FakeDoorApp() {
             <button
               onClick={openCreateDoor}
               aria-label="Stwórz własną trasę"
-              className="ml-auto flex h-10 w-10 items-center justify-center rounded-full text-white shadow-md transition active:scale-95"
-              style={{ background: BRAND }}
+              className="ml-auto shrink-0 transition active:scale-95"
             >
-              <Plus size={22} strokeWidth={2.5} />
+              <img src="/Ikona_Dodaj_orange.svg" alt="" className="h-10 w-10 drop-shadow-sm" />
             </button>
           </div>
 
