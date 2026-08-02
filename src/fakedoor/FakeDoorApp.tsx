@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Search, Plus, X } from "lucide-react";
-import { TrasaLogo } from "@/components/TrasaLogo";
 import { nbsp } from "./text";
 import { fdTrack } from "./analytics";
 import { MOCK_ROUTES, CITIES, routeById, type MockRoute } from "./mockRoutes";
@@ -22,6 +21,15 @@ export default function FakeDoorApp() {
 
   useEffect(() => {
     fdTrack("fd_view_list");
+    // Rebranding trasa -> spontaway: tytul karty + favicon (sygnet).
+    document.title = "spontaway";
+    let link = document.querySelector("link[rel~='icon']") as HTMLLinkElement | null;
+    if (!link) {
+      link = document.createElement("link");
+      link.rel = "icon";
+      document.head.appendChild(link);
+    }
+    link.href = "/spontaway_sygnet.png";
   }, []);
 
   useEffect(() => {
@@ -95,10 +103,7 @@ export default function FakeDoorApp() {
         {/* Header */}
         <header className="z-30 shrink-0 px-4 pt-3">
           <div className="flex items-center gap-2">
-            <div className="flex items-center gap-2">
-              <TrasaLogo size={32} />
-              <span className="text-lg font-extrabold tracking-tight text-[#0E0E0E]">trasa</span>
-            </div>
+            <img src="/spontaway.png" alt="spontaway" className="h-7 w-auto" />
             <div className="ml-auto flex items-center gap-2">
               <button
                 onClick={() => setSearchOpen((v) => !v)}
