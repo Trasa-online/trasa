@@ -1,9 +1,10 @@
-import { useState } from "react";
-import { X, Check, Loader2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Check, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { fdTrack } from "./analytics";
 import { nbsp } from "./text";
-import type { MockRoute } from "./mockRoutes";
+import { BRAND } from "./theme";
+import { routeCover, type MockRoute } from "./mockRoutes";
 
 export type DoorSource = "use_route" | "create_route";
 
@@ -13,14 +14,16 @@ type Props = {
   onClose: () => void;
 };
 
-const COPY: Record<DoorSource, { title: string; sub: string }> = {
+const COPY: Record<DoorSource, { title: string; sub: string; cta: string }> = {
   use_route: {
     title: "Świetny wybór!",
-    sub: "Trasy w apce ruszają niedługo. Zostaw maila, a damy Ci znać jako jednej z pierwszych - i od razu odblokujesz tę trasę.",
+    sub: "Trasy w apce ruszają niedługo. Zostaw maila, a odezwiemy się jak tylko odpalimy - i od razu odblokujesz tę trasę.",
+    cta: "Powiadomcie mnie",
   },
   create_route: {
     title: "Twórz własne trasy",
-    sub: "Tworzenie własnych tras jest już w drodze. Zostaw maila, a odezwiemy się gdy tylko będzie gotowe.",
+    sub: "Tworzenie własnych tras jest już w drodze. Zostaw maila, a odezwiemy się jak tylko będzie gotowe.",
+    cta: "Powiadomcie mnie",
   },
 };
 
@@ -29,7 +32,19 @@ const isValidEmail = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
 export default function EmailModal({ source, route, onClose }: Props) {
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "sending" | "done" | "error">("idle");
+  const [shown, setShown] = useState(false);
   const copy = COPY[source];
+
+  // Wjazd sheeta od dolu (native feel).
+  useEffect(() => {
+    const r = requestAnimationFrame(() => setShown(true));
+    return () => cancelAnimationFrame(r);
+  }, []);
+
+  const close = () => {
+    setShown(false);
+    window.setTimeout(onClose, 220);
+  };
 
   const submit = async () => {
     const trimmed = email.trim().toLowerCase();
@@ -46,105 +61,105 @@ export default function EmailModal({ source, route, onClose }: Props) {
         route_title: route?.title ?? null,
         city: route?.city ?? null,
       });
-      // Duplikat / kolizja tez traktujemy jak sukces (mail juz zlapany).
       if (error && !`${error.message}`.toLowerCase().includes("duplicate")) {
-        // Nie blokujemy sygnalu na bledzie DB - event i tak leci.
         console.warn("[fakedoor] lead insert:", error.message);
       }
-      fdTrack("fd_submit_email", {
-        source,
-        ...(route ? { route: route.id, city: route.city } : {}),
-      });
+      fdTrack("fd_submit_email", { source, ...(route ? { route: route.id, city: route.city } : {}) });
       setStatus("done");
-    } catch (e) {
-      // Sygnal (event) juz poszedl przy kliknieciu drzwi; pokazujemy sukces.
+    } catch {
       fdTrack("fd_submit_email", { source, ...(route ? { route: route.id } : {}) });
       setStatus("done");
     }
   };
 
   return (
-    <div
-      className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-4"
-      style={{ background: "rgba(14,14,14,0.45)" }}
-      onClick={onClose}
-    >
+    <div className="fixed inset-0 z-[100] flex items-end justify-center" onClick={close}>
+      {/* Overlay */}
       <div
-        className="w-full max-w-md rounded-3xl bg-white shadow-xl p-6 sm:p-7"
-        style={{ fontFamily: "Inter, system-ui, sans-serif" }}
+        className="absolute inset-0 transition-opacity duration-200"
+        style={{ background: "rgba(14,14,14,0.5)", opacity: shown ? 1 : 0 }}
+      />
+
+      {/* Sheet */}
+      <div
         onClick={(e) => e.stopPropagation()}
+        className="relative w-full max-w-[480px] rounded-t-[28px] bg-white transition-transform ease-out"
+        style={{
+          fontFamily: "Inter, system-ui, sans-serif",
+          transform: shown ? "translateY(0)" : "translateY(100%)",
+          transitionDuration: "240ms",
+          paddingBottom: "calc(1.5rem + env(safe-area-inset-bottom, 0px))",
+          boxShadow: "0 -12px 40px rgba(0,0,0,0.18)",
+        }}
       >
-        <div className="flex justify-end -mt-1 -mr-1">
-          <button
-            onClick={onClose}
-            aria-label="Zamknij"
-            className="p-1.5 rounded-full text-[#979797] hover:bg-black/5 transition"
-          >
-            <X size={20} />
-          </button>
+        {/* Uchwyt */}
+        <div className="flex justify-center pt-3">
+          <div className="h-1.5 w-10 rounded-full bg-black/15" />
         </div>
 
-        {status === "done" ? (
-          <div className="text-center px-2 pb-2">
-            <div
-              className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full"
-              style={{ background: "linear-gradient(135deg,#F4A259,#F9662B)" }}
-            >
-              <Check size={28} className="text-white" />
-            </div>
-            <h2 className="text-xl font-extrabold text-[#0E0E0E]">Jesteś na liście</h2>
-            <p className="mt-2 text-[#979797] leading-relaxed">
-              {nbsp("Dzięki! Odezwiemy się na tego maila, gdy tylko wystartujemy.")}
-            </p>
-            <button
-              onClick={onClose}
-              className="mt-6 w-full rounded-2xl py-3 font-bold text-[#0E0E0E] bg-secondary hover:opacity-90 transition"
-            >
-              Wróć do tras
-            </button>
-          </div>
-        ) : (
-          <div className="px-1">
-            {route && source === "use_route" && (
-              <p className="text-xs font-semibold uppercase tracking-wide text-[#F9662B] mb-1">
-                {route.title}
+        <div className="px-5 pt-3">
+          {status === "done" ? (
+            <div className="pb-2">
+              <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full" style={{ background: BRAND }}>
+                <Check size={28} className="text-white" />
+              </div>
+              <h2 className="text-2xl font-black text-[#0E0E0E]">Jesteś na liście</h2>
+              <p className="mt-2 leading-relaxed text-[#6b6b6b]">
+                {nbsp("Dzięki! Odezwiemy się na tego maila, gdy tylko wystartujemy.")}
               </p>
-            )}
-            <h2 className="text-xl font-extrabold text-[#0E0E0E]">{nbsp(copy.title)}</h2>
-            <p className="mt-2 text-[#979797] leading-relaxed">{nbsp(copy.sub)}</p>
+              <button
+                onClick={close}
+                className="mt-6 w-full rounded-2xl bg-[#f0f0f1] py-3.5 font-bold text-[#0E0E0E] transition active:scale-[0.99]"
+              >
+                Gotowe
+              </button>
+            </div>
+          ) : (
+            <>
+              {route && source === "use_route" && (
+                <div className="mb-4 flex items-center gap-3 rounded-2xl bg-[#f4f4f5] p-2.5">
+                  <img src={routeCover(route.id)} alt="" className="h-12 w-12 shrink-0 rounded-xl object-cover" />
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-[#979797]">Zapisujesz trasę</p>
+                    <p className="truncate font-bold text-[#0E0E0E]">{route.title}</p>
+                  </div>
+                </div>
+              )}
 
-            <input
-              type="email"
-              inputMode="email"
-              autoComplete="email"
-              value={email}
-              onChange={(e) => {
-                setEmail(e.target.value);
-                if (status === "error") setStatus("idle");
-              }}
-              onKeyDown={(e) => e.key === "Enter" && submit()}
-              placeholder="twój@email.pl"
-              className="mt-5 w-full rounded-2xl border px-4 py-3 text-base text-[#0E0E0E] outline-none transition placeholder:text-[#CFCFCF] focus:border-[#F9662B]"
-              style={{ borderColor: status === "error" ? "#ef4444" : "#e5e7eb" }}
-            />
-            {status === "error" && (
-              <p className="mt-1.5 text-xs text-red-500">{nbsp("Wpisz poprawny adres e-mail.")}</p>
-            )}
+              <h2 className="text-2xl font-black text-[#0E0E0E]">{nbsp(copy.title)}</h2>
+              <p className="mt-2 leading-relaxed text-[#6b6b6b]">{nbsp(copy.sub)}</p>
 
-            <button
-              onClick={submit}
-              disabled={status === "sending"}
-              className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl py-3.5 font-bold text-white transition disabled:opacity-70"
-              style={{ background: "linear-gradient(90deg,#F4A259,#F9662B)" }}
-            >
-              {status === "sending" ? <Loader2 size={18} className="animate-spin" /> : null}
-              {status === "sending" ? "Zapisuję..." : "Powiadomcie mnie"}
-            </button>
-            <p className="mt-3 text-center text-[11px] text-[#CFCFCF]">
-              {nbsp("Bez spamu. Jeden mail, gdy ruszamy.")}
-            </p>
-          </div>
-        )}
+              <input
+                type="email"
+                inputMode="email"
+                autoComplete="email"
+                value={email}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  if (status === "error") setStatus("idle");
+                }}
+                onKeyDown={(e) => e.key === "Enter" && submit()}
+                placeholder="twój@email.pl"
+                className={`mt-5 w-full rounded-2xl px-4 py-3.5 text-base text-[#0E0E0E] outline-none transition placeholder:text-[#a8a8ad] ${
+                  status === "error" ? "bg-red-50 ring-2 ring-red-300" : "bg-[#f2f2f4] focus:ring-2 focus:ring-[#D25014]/40"
+                }`}
+              />
+              {status === "error" && (
+                <p className="mt-1.5 text-sm text-red-500">{nbsp("Wpisz poprawny adres e-mail.")}</p>
+              )}
+
+              <button
+                onClick={submit}
+                disabled={status === "sending"}
+                className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl py-4 text-base font-bold text-white transition active:scale-[0.99] disabled:opacity-70"
+                style={{ background: BRAND }}
+              >
+                {status === "sending" ? <Loader2 size={18} className="animate-spin" /> : null}
+                {status === "sending" ? "Zapisuję..." : copy.cta}
+              </button>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

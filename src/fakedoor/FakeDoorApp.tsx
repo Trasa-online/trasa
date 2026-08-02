@@ -8,6 +8,7 @@ import TrasaCard from "./TrasaCard";
 import RouteDetail from "./RouteDetail";
 import EmailModal, { type DoorSource } from "./EmailModal";
 import Selector, { type Option } from "./Selector";
+import { BRAND } from "./theme";
 
 const CITY_OPTIONS: Option[] = [
   { value: "Wszystkie", label: "Wszystkie miasta" },
@@ -109,7 +110,7 @@ export default function FakeDoorApp() {
               onClick={openCreateDoor}
               aria-label="Stwórz własną trasę"
               className="ml-auto flex h-10 w-10 items-center justify-center rounded-full text-white shadow-md transition active:scale-95"
-              style={{ background: "linear-gradient(135deg,#F4A259,#F9662B)" }}
+              style={{ background: BRAND }}
             >
               <Plus size={22} strokeWidth={2.5} />
             </button>

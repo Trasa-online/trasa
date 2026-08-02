@@ -6,6 +6,7 @@ import { AuthorAvatar } from "./avatars";
 import { placeIconSrc } from "./placeIcon";
 import PlaceSheet from "./PlaceSheet";
 import MiniMap from "./MiniMap";
+import { BRAND } from "./theme";
 import { routeCover, type MockRoute, type MockPlace } from "./mockRoutes";
 
 const countLabel = (n: number) => `${n} ${n === 1 ? "miejsce" : n < 5 ? "miejsca" : "miejsc"}`;
@@ -38,7 +39,7 @@ function PlaceThumb({ routeId, index, category, big }: { routeId: string; index:
       </div>
       <span
         className="absolute -left-1.5 -top-1.5 flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold text-white shadow"
-        style={{ background: "linear-gradient(135deg,#F4A259,#F9662B)" }}
+        style={{ background: BRAND }}
       >
         {index + 1}
       </span>
@@ -243,7 +244,7 @@ export default function RouteDetail({
         <button
           onClick={onUse}
           className="flex w-full items-center justify-center gap-2 rounded-2xl py-4 text-base font-bold text-white shadow-lg transition active:scale-[0.99]"
-          style={{ background: "linear-gradient(90deg,#F4A259,#F9662B)" }}
+          style={{ background: BRAND }}
         >
           Zapisz tą trasę <Bookmark size={18} className="fill-white" />
         </button>

@@ -3,6 +3,7 @@ import { Bookmark, ChevronUp, MapPin, Building2 } from "lucide-react";
 import { nbsp } from "./text";
 import MiniMap from "./MiniMap";
 import { AuthorAvatar } from "./avatars";
+import { BRAND } from "./theme";
 import { routeCover, type MockRoute } from "./mockRoutes";
 
 // Immersyjna, pelnoekranowa karta trasy - odwzorowanie TrasaBigCard z apki
@@ -39,7 +40,7 @@ export default function TrasaCard({
           className="absolute inset-0 h-full w-full object-cover"
         />
       ) : (
-        <div className="absolute inset-0" style={{ background: "linear-gradient(135deg,#F4A259,#F9662B)" }} />
+        <div className="absolute inset-0" style={{ background: BRAND }} />
       )}
       <div className="pointer-events-none absolute inset-0" style={{ background: "linear-gradient(to top, rgba(0,0,0,0.82), rgba(0,0,0,0.08) 45%, rgba(0,0,0,0.28))" }} />
 
