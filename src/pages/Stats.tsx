@@ -1,16 +1,15 @@
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Users, Bookmark, Eye, CheckCircle2, Heart } from "lucide-react";
+import { ArrowLeft, Bookmark, Eye } from "lucide-react";
 import type { ReactNode } from "react";
 import { useMyRouteStats } from "@/hooks/useRouteStats";
 
 // Widok "Statystyki" (otwierany z pomaranczowej karty na profilu): jak inni korzystaja
-// z tras usera. Glowna metryka = ile osob wykorzystalo trasy. "Polecenia" - placeholder
-// (do dodania pozniej).
-function StatBox({ icon, value, label, sub, muted }: { icon: ReactNode; value: ReactNode; label: string; sub: string; muted?: boolean }) {
+// z tras usera. Na razie pokazujemy tylko Zapisania i Wyswietlenia.
+function StatBox({ icon, value, label, sub }: { icon: ReactNode; value: ReactNode; label: string; sub: string }) {
   return (
-    <div className={`rounded-2xl p-4 flex flex-col ${muted ? "bg-muted/50" : "bg-secondary"}`}>
+    <div className="rounded-2xl p-4 flex flex-col bg-secondary">
       <div className="flex items-start justify-between">
-        <span className={`text-3xl font-black tabular-nums leading-none ${muted ? "text-muted-foreground" : "text-foreground"}`}>{value}</span>
+        <span className="text-3xl font-black tabular-nums leading-none text-foreground">{value}</span>
         <span className="opacity-40 shrink-0">{icon}</span>
       </div>
       <p className="text-sm font-bold text-foreground mt-4 leading-tight">{label}</p>
@@ -39,22 +38,10 @@ export default function Stats() {
           <p className="text-sm text-muted-foreground mt-1">Zobacz, jak inni korzystają z tras, które stworzyłaś.</p>
         </div>
 
-        {/* Glowna metryka: ile OSOB wykorzystalo trasy (szara karta - spojna z reszta) */}
-        <div className="rounded-3xl bg-secondary p-5">
-          <div className="flex items-start justify-between">
-            <span className="text-5xl font-black tabular-nums leading-none text-foreground">{isLoading ? "–" : (stats?.people ?? 0)}</span>
-            <Users className="h-7 w-7 text-foreground opacity-40 shrink-0" />
-          </div>
-          <p className="text-base font-bold mt-4 text-foreground">osób wykorzystało Twoje trasy</p>
-          <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">Tyle różnych osób zapisało Twoje trasy u&nbsp;siebie, żeby z&nbsp;nich skorzystać.</p>
-        </div>
-
-        {/* Metryki dodatkowe */}
+        {/* Metryki: na razie tylko Zapisania i Wyswietlenia */}
         <div className="grid grid-cols-2 gap-3">
           <StatBox icon={<Bookmark className="h-5 w-5" />} value={isLoading ? "–" : (stats?.uses ?? 0)} label="Zapisania" sub="łącznie wszystkich tras" />
           <StatBox icon={<Eye className="h-5 w-5" />} value={isLoading ? "–" : (stats?.views ?? 0)} label="Wyświetlenia" sub="Twoich tras" />
-          <StatBox icon={<CheckCircle2 className="h-5 w-5" />} value={isLoading ? "–" : (stats?.completions ?? 0)} label="Ukończenia" sub="przez innych" />
-          <StatBox icon={<Heart className="h-5 w-5" />} value="—" label="Polecenia" sub="wkrótce" muted />
         </div>
       </div>
     </div>
