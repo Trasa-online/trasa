@@ -16,7 +16,7 @@ import { OnboardingProvider } from "@/components/OnboardingGuide";
 import { supabase } from "@/integrations/supabase/client";
 import { isNative } from "@/lib/platform";
 import { PLANNING_DISABLED, FAKE_DOOR } from "@/lib/appMode";
-import FakeDoorLanding from "@/pages/FakeDoorLanding";
+import FakeDoorApp from "@/fakedoor/FakeDoorApp";
 import { App as CapApp } from "@capacitor/app";
 import { Browser } from "@capacitor/browser";
 import { toast } from "sonner";
@@ -733,7 +733,7 @@ const App = () => {
   // Fake door (web, branch `web`): calkowicie osobny byt. Gdy VITE_FAKE_DOOR=1
   // pomijamy router + gate'y apki i renderujemy dedykowany landing. Na native
   // i normalnym webie flaga = off, wiec ten branch jest martwy.
-  if (FAKE_DOOR) return <FakeDoorLanding />;
+  if (FAKE_DOOR) return <FakeDoorApp />;
 
   return (
   <QueryClientProvider client={queryClient}>
