@@ -8,8 +8,24 @@ export default async function handler(req: Request): Promise<Response> {
     return new Response("API key not configured", { status: 500 });
   }
 
-  // Forward all query params from the client, but inject the server-side key
-  const params = new URLSearchParams(searchParams);
+  // Allowlist parametrow (anti cost-abuse) - nie forwardujemy dowolnych.
+  const ALLOWED = new Set(["center", "zoom", "size", "markers", "path", "maptype", "scale", "format", "language", "region", "visible"]);
+  const params = new URLSearchParams();
+  for (const [k, v] of searchParams) {
+    if (ALLOWED.has(k)) params.append(k, v);
+  }
+  // Clamp rozmiaru do <=640x640 (Google free max), scale do 1|2, maptype whitelist.
+  const size = params.get("size");
+  if (!size || !/^\d{1,4}x\d{1,4}$/.test(size)) {
+    params.set("size", "400x400");
+  } else {
+    const [w, h] = size.split("x").map((n) => Math.min(Math.max(parseInt(n) || 400, 1), 640));
+    params.set("size", `${w}x${h}`);
+  }
+  const scale = params.get("scale");
+  if (scale && scale !== "1" && scale !== "2") params.delete("scale");
+  const maptype = params.get("maptype");
+  if (maptype && !["roadmap", "satellite", "terrain", "hybrid"].includes(maptype)) params.delete("maptype");
   params.set("key", apiKey);
 
   const googleUrl = `https://maps.googleapis.com/maps/api/staticmap?${params.toString()}`;
