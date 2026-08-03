@@ -40,16 +40,18 @@ export const COUNTRIES: Country[] = [
   {
     code: "PL", flag: "🇵🇱", name: "Polska",
     cities: [
-      // Etap 1 (Warszawa) - cache zdjęć działa tylko dla Warszawy.
-      // Pozostałe miasta zablokowane do czasu rozszerzenia cache.
+      // Pre-launch (2026-08-03): kontent (trasy + miejsca) jest tylko w Warszawie,
+      // wiec TYLKO Warszawa jest odblokowana. Reszta = comingSoon do czasu zebrania
+      // tras/miejsc w kolejnych miastach. UNLOCKED_CITIES (nizej) = same odblokowane,
+      // zasila selektor miast w eksploracji - trzymaj to zawezone do realnego kontentu.
       { name: "Warszawa" },
       // Trójmiasto: sub-miasta osobno + "Trójmiasto" = wszystkie trzy naraz (expandCity).
-      { name: "Gdańsk" },
-      { name: "Sopot" },
-      { name: "Gdynia" },
-      { name: "Trójmiasto" },
-      { name: "Wrocław" },
-      { name: "Olsztyn" },
+      { name: "Gdańsk",     comingSoon: true },
+      { name: "Sopot",      comingSoon: true },
+      { name: "Gdynia",     comingSoon: true },
+      { name: "Trójmiasto", comingSoon: true },
+      { name: "Wrocław",    comingSoon: true },
+      { name: "Olsztyn",    comingSoon: true },
       { name: "Kraków",     comingSoon: true },
       { name: "Łódź",       comingSoon: true },
       { name: "Poznań",     comingSoon: true },

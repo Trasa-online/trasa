@@ -49,7 +49,9 @@ export default function ExploreTopBar({
     <>
       {/* Selektor kraju (Polska aktywna, zagraniczne wyszarzone) + miasta (pill) */}
       <CountrySelect />
-      <CitySelect city={cur} onCityChange={onCityChange} allowAll allLabel="Wszystkie miasta" />
+      {/* Pre-launch: kontent tylko w Warszawie - bez opcji "Wszystkie miasta" (allowAll),
+          bo widok Miejsc filtruje po konkretnym miescie. Wroci przy rozszerzeniu miast. */}
+      <CitySelect city={cur} onCityChange={onCityChange} />
 
       <div className="flex-1" />
 

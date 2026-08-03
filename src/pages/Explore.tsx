@@ -655,9 +655,10 @@ const Explore = () => {
   const myCollections = (location.state as any)?.myCollections === true;
   // Selektor miasta w naglowku (zastapil tytul "Eksploruj"). Miasto niesione przy
   // przelaczaniu z/do Przegladaj (location.state), inaczej default Warszawa.
-  // Default "all" = agregat wszystkich miast (feed Tras z każdego miasta). Selektor
-  // w belce ma allowAll (opcja "Wszystkie miasta"). Konkretne miasto zawężą filtry.
-  const [exploreCity, setExploreCity] = useState<string>((location.state as any)?.city || "all");
+  // Pre-launch: caly kontent (trasy + miejsca) jest tylko w Warszawie, wiec default =
+  // "Warszawa" (NIE "all"). Widok Miejsc (swiper) filtruje places.in("city", expandCity(city))
+  // - "all" dalby pusta liste, dlatego trzymamy konkretne miasto.
+  const [exploreCity, setExploreCity] = useState<string>((location.state as any)?.city || "Warszawa");
   // Licznik aktywnych filtrow (badge na guziku filtra w gornej belce). DiscoveryFeed
   // trzyma stan filtrow i raportuje liczbe przez event; belka jest o poziom wyzej.
   const [filterCount, setFilterCount] = useState(0);
@@ -743,7 +744,6 @@ const Explore = () => {
             onOpenFilters={() => window.dispatchEvent(new CustomEvent("trasa:explore-open-filters"))}
             onOpenSearch={openSearch}
             activeFilterCount={filterCount}
-            hideModeToggle
           />
         )}
       </TabTopBar>

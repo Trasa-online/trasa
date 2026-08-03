@@ -23,6 +23,12 @@ export async function createWyjazdFromPlaces(
   dates?: { start_date?: string | null; end_date?: string | null },
   opts?: { groupSessionId?: string | null; newForUsers?: string[] },
 ): Promise<string | null> {
+  // list_cover_url = miniatura w eksploracji. Feed (DiscoveryFeed) wymaga
+  // list_cover_url NOT NULL, inaczej trasa jest niewidoczna. Zasilamy ja od razu
+  // pierwszym dostepnym zdjeciem miejsca, zeby swiezo utworzona trasa trafila do
+  // eksploracji bez koniecznosci recznego ustawiania okladki w ReviewSummary.
+  // (Gdy zaden pin nie ma zdjecia -> null; ensureListCover/manualny pick uzupelni pozniej.)
+  const firstPhoto = places.find((p) => p.photo_url)?.photo_url ?? null;
   const { data: route, error } = await (supabase as any)
     .from("routes")
     .insert({
@@ -34,6 +40,7 @@ export async function createWyjazdFromPlaces(
       day_number: 1,
       // Wszystkie nowe trasy sa PUBLICZNE by default (2026-07-30) - trafiaja do eksploracji.
       is_shared: true,
+      list_cover_url: firstPhoto,
       start_date: dates?.start_date ?? null,
       end_date: dates?.end_date ?? null,
       // Wyjazd grupowy: wiaze wpis z sesja (widoczny u pozostalych czlonkow przez
