@@ -27,6 +27,10 @@ drop table if exists public.pin_visits     cascade;   -- "visited checklist" - n
 drop table if exists public.memory_embeddings cascade;  -- zastapione przez user_memory
 drop table if exists public.pins_backup       cascade;  -- one-off snapshot
 
+-- Demo (feature usuniety z produktu 2026-08-04):
+drop table if exists public.demo_sessions  cascade;
+drop table if exists public.demo_reactions cascade;
+
 -- Fake door (strona trasatravel.com wygaszana):
 drop table if exists public.fakedoor_leads cascade;
 -- (usun tez edge function fakedoor-lead-email w Dashboard/CLI)

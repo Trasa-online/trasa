@@ -13,33 +13,25 @@ export default function BusinessStart() {
   useEffect(() => {
     (async () => {
       try {
-        // Resume existing draft if still valid
-        const existingId = localStorage.getItem(DRAFT_KEY);
-        if (existingId) {
-          const { data } = await (supabase as any)
-            .from("business_profiles")
-            .select("id")
-            .eq("id", existingId)
-            .maybeSingle();
-          if (data?.id) {
-            navigate(`/biznes/${existingId}`, { replace: true });
-            return;
-          }
-          localStorage.removeItem(DRAFT_KEY);
+        // Login-first: koniec trybu goscia. Wlasciciel lokalu musi byc zalogowany
+        // (rejestracja/login przez email w /auth?business=true), potem budujemy
+        // szkic wizytowki pod jego REALNYM kontem.
+        const { data: { user } } = await supabase.auth.getUser();
+        const realUser = user && !(user as any).is_anonymous;
+        if (!realUser) {
+          try { sessionStorage.setItem("trasa_post_login_redirect", "/biznes/start"); } catch { /* noop */ }
+          navigate("/auth?business=true", { replace: true });
+          return;
         }
+        const userId = user!.id;
 
-        // Sign in anonymously so we get a real user.id to own the profile
-        const { data: anonData, error: anonError } = await supabase.auth.signInAnonymously();
-        if (anonError || !anonData.user) throw anonError ?? new Error(t("error.no_user"));
-
-        const userId = anonData.user.id;
-
-        // If this anon user already has a draft, go there
+        // Masz juz jakas wizytowke (szkic lub aktywna)? -> otworz ja.
         const { data: existing } = await (supabase as any)
           .from("business_profiles")
           .select("id")
           .eq("owner_user_id", userId)
-          .eq("is_draft", true)
+          .order("created_at", { ascending: true })
+          .limit(1)
           .maybeSingle();
         if (existing?.id) {
           localStorage.setItem(DRAFT_KEY, existing.id);
@@ -47,7 +39,7 @@ export default function BusinessStart() {
           return;
         }
 
-        // Create a fresh draft profile
+        // Nowy szkic pod realnym kontem.
         const { data: profile, error: insertError } = await (supabase as any)
           .from("business_profiles")
           .insert({
@@ -69,7 +61,7 @@ export default function BusinessStart() {
         setError(err?.message || err?.error_description || String(err) || t("error.unknown"));
       }
     })();
-  }, [t]);
+  }, [t, navigate]);
 
   if (error) {
     return (

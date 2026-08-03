@@ -22,7 +22,6 @@ import pl_groupcreate from "../locales/pl/groupcreate.json";
 import pl_review from "../locales/pl/review.json";
 import pl_ranking from "../locales/pl/ranking.json";
 import pl_sharing from "../locales/pl/sharing.json";
-import pl_demo from "../locales/pl/demo.json";
 import pl_routechat from "../locales/pl/routechat.json";
 import pl_route from "../locales/pl/route.json";
 import pl_routelist from "../locales/pl/routelist.json";
@@ -55,7 +54,6 @@ import en_groupcreate from "../locales/en/groupcreate.json";
 import en_review from "../locales/en/review.json";
 import en_ranking from "../locales/en/ranking.json";
 import en_sharing from "../locales/en/sharing.json";
-import en_demo from "../locales/en/demo.json";
 import en_routechat from "../locales/en/routechat.json";
 import en_route from "../locales/en/route.json";
 import en_routelist from "../locales/en/routelist.json";
@@ -94,7 +92,6 @@ i18n
         review: pl_review,
         ranking: pl_ranking,
         sharing: pl_sharing,
-        demo: pl_demo,
         routechat: pl_routechat,
         route: pl_route,
         routelist: pl_routelist,
@@ -128,7 +125,6 @@ i18n
         review: en_review,
         ranking: en_ranking,
         sharing: en_sharing,
-        demo: en_demo,
         routechat: en_routechat,
         route: en_route,
         routelist: en_routelist,

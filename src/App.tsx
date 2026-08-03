@@ -504,8 +504,7 @@ function SplashController() {
     location.pathname.startsWith("/biznes") ||
     location.pathname.startsWith("/dla-firm") ||
     location.pathname === "/auth" ||
-    location.pathname.startsWith("/set-password") ||
-    location.pathname === "/demo";
+    location.pathname.startsWith("/set-password");
 
   const [visible, setVisible] = useState(!skipSplash);
   const [bootDone, setBootDone] = useState(false);
@@ -609,8 +608,7 @@ function BusinessGuard() {
       location.pathname === "/auth" ||
       location.pathname.startsWith("/set-password") ||
       location.pathname === "/settings" ||
-      location.pathname === "/moj-profil" ||
-      location.pathname === "/demo"
+      location.pathname === "/moj-profil"
     ) return;
 
     (async () => {
@@ -663,7 +661,6 @@ function lazy(factory: Parameters<typeof reactLazy>[0]) {
 const WaitlistPage = lazy(() => import("./pages/WaitlistPage"));
 const LandingPage = lazy(() => import("./pages/LandingPage"));
 const LandingV2 = lazy(() => import("./pages/LandingV2"));
-const DemoSession = lazy(() => import("./pages/DemoSession"));
 import ForBusinessPage from "./pages/ForBusinessPage";
 import Auth from "./pages/Auth";
 import Terms from "./pages/Terms";
@@ -808,7 +805,6 @@ const App = () => (
           {/* Planowanie tras (kreator + sesje grupowe) - wylaczone w trybie uproszczonym na native.
               Wyjatek: exploreMode ("Przegladaj") zostaje wlaczony - patrz PlanRoute. */}
           <Route path="/plan" element={<PlanRoute />} />
-          <Route path="/demo" element={<DemoSession />} />
           {/* Sesja grupowa - odblokowana tez w trybie uproszczonym (grupowy WYJAZD; finalizacja
               w GroupSession tworzy wyjazd zamiast planu AI gdy PLANNING_DISABLED). */}
           <Route path="/sesja/nowa" element={<CreateGroupSession />} />

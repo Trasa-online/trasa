@@ -209,25 +209,15 @@ const GroupSession = () => {
     if (session?.status === "completed") setTab("matches");
   }, [session?.status]);
 
-  // Auto-gosc: gdy zaproszony bez konta otwiera istniejaca sesje (np. z Messengera),
-  // tworzymy anon sesje zamiast sciany logowania. handleJoin obsluguje juz anona
-  // (ensure_current_user_profile + join). OAuth-w-in-app-browserze gubil redirect powrotu.
+  // Login-first (koniec trybu goscia): zaproszony bez konta otwierajacy sesje
+  // (np. link z Messengera) -> ekran logowania, potem powrot do TEJ sesji
+  // (deep-link zachowany w sessionStorage). Wczesniej tworzylismy anon sesje.
   useEffect(() => {
     if (authLoading || sessionLoading) return;
-    if (user || !session || guestSigningIn || guestSignInFailed) return;
-    let cancelled = false;
-    setGuestSigningIn(true);
-    (async () => {
-      const { error } = await supabase.auth.signInAnonymously();
-      if (cancelled) return;
-      if (error) {
-        console.error("[group-session] anon sign-in failed:", error.message);
-        setGuestSignInFailed(true);
-      }
-      setGuestSigningIn(false);
-    })();
-    return () => { cancelled = true; };
-  }, [authLoading, sessionLoading, user, session, guestSigningIn, guestSignInFailed]);
+    if (user || !session) return;
+    try { sessionStorage.setItem("trasa_post_login_redirect", window.location.pathname + window.location.search); } catch { /* noop */ }
+    navigate("/auth", { replace: true });
+  }, [authLoading, sessionLoading, user, session, navigate]);
 
   // ── Computed ────────────────────────────────────────────────────────────────
 
@@ -719,30 +709,14 @@ const GroupSession = () => {
   }
 
   if (!user) {
-    // Fallback: auto-gosc padl (np. blokada storage w in-app browserze) -> reczne logowanie.
-    if (guestSignInFailed) {
-      return (
-        <div className="flex h-screen flex-col items-center justify-center px-8 gap-4 bg-background text-center max-w-sm mx-auto">
-          <p className="text-4xl">👋</p>
-          <p className="font-bold text-lg">{t("login_gate.title")}</p>
-          <p className="text-sm text-muted-foreground">
-            {t("login_gate.desc_before")}<strong>{session.city}</strong>.
-          </p>
-          <button onClick={() => navigate(`/auth?return=/sesja/${joinCode}`)} className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-base">
-            {t("login_gate.cta")}
-          </button>
-        </div>
-      );
-    }
-    // Tworzymy anon sesje (auto-gosc) - krotki stan zamiast promptu logowania.
+    // Login-first: zaproszony bez konta -> ekran logowania (efekt wyzej tez robi redirect).
     return (
       <div className="flex h-screen flex-col items-center justify-center px-8 gap-4 bg-background text-center max-w-sm mx-auto">
-        <div className="flex gap-1.5">
-          {[0, 1, 2].map((i) => (
-            <div key={i} className="h-2 w-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
-          ))}
-        </div>
-        <p className="text-sm text-muted-foreground">{t("preparing")}</p>
+        <p className="font-bold text-lg">{t("login_gate.title")}</p>
+        <p className="text-sm text-muted-foreground">{t("login_gate.desc_before")}<strong>{session.city}</strong>.</p>
+        <button onClick={() => navigate(`/auth?return=/sesja/${joinCode}`)} className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-base">
+          {t("login_gate.cta")}
+        </button>
       </div>
     );
   }
