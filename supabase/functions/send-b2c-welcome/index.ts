@@ -1,3 +1,4 @@
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { buildB2cWelcomeHtml, buildB2cWelcomeText } from "./welcome.ts";
 
 const corsHeaders = {
@@ -34,6 +35,20 @@ Deno.serve(async (req) => {
     if (!rawEmail || typeof rawEmail !== "string") throw new Error("email required");
     const email = rawEmail.trim().slice(0, 254);
     if (!EMAIL_RE.test(email)) throw new Error("invalid email format");
+
+    // Trwaly throttle (per IP i per email) - anty mail-bombing.
+    try {
+      const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+      const since = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+      const [ipHit, emailHit] = await Promise.all([
+        admin.from("fn_throttle").select("id", { count: "exact", head: true }).eq("bucket", `wc:ip:${ip}`).gte("created_at", since),
+        admin.from("fn_throttle").select("id", { count: "exact", head: true }).eq("bucket", `wc:email:${email}`).gte("created_at", since),
+      ]);
+      if ((ipHit.count ?? 0) >= 15 || (emailHit.count ?? 0) >= 3) {
+        return new Response(JSON.stringify({ ok: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      await admin.from("fn_throttle").insert([{ bucket: `wc:ip:${ip}` }, { bucket: `wc:email:${email}` }]);
+    } catch (_e) { /* fn_throttle moze nie istniec */ }
 
     const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
     if (!RESEND_API_KEY) throw new Error("RESEND_API_KEY not set");
