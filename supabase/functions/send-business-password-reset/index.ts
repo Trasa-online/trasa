@@ -62,6 +62,19 @@ Deno.serve(async (req) => {
 
     const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
+    // Trwaly throttle (per IP i per email) - blokuje reset-bombing ofiary.
+    try {
+      const since = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+      const [ipHit, emailHit] = await Promise.all([
+        supabase.from("fn_throttle").select("id", { count: "exact", head: true }).eq("bucket", `rst:ip:${ip}`).gte("created_at", since),
+        supabase.from("fn_throttle").select("id", { count: "exact", head: true }).eq("bucket", `rst:email:${email}`).gte("created_at", since),
+      ]);
+      if ((ipHit.count ?? 0) >= 10 || (emailHit.count ?? 0) >= 3) {
+        return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      await supabase.from("fn_throttle").insert([{ bucket: `rst:ip:${ip}` }, { bucket: `rst:email:${email}` }]);
+    } catch (_e) { /* fn_throttle moze nie istniec - polegamy na in-memory */ }
+
     // Generuj token resetu serwerowo. Jesli konto nie istnieje - NIE zdradzamy tego
     // (zwracamy sukces), zeby nie dalo sie enumerowac adresow.
     const { data, error } = await supabase.auth.admin.generateLink({ type: "recovery", email });
