@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { supabase } from "@/integrations/supabase/client";
 import { isNative } from "@/lib/platform";
@@ -20,6 +21,7 @@ const AuthDrawer = () => {
   const posthog = usePostHog();
 
   const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
   // Intent-based cleanup: gdy user otwiera login NIE w celu zapisu trasy
   // (np. z Dziennika, Profilu, HomeSwipe topbar), wyczyść 'trasa_guest_plan' i
@@ -51,7 +53,7 @@ const AuthDrawer = () => {
     }
   }, [user, isAnonymous, isOpen, close]);
 
-  const handleOAuth = async (provider: "apple" | "google") => {
+  const handleOAuth = async (provider: "apple" | "google" | "facebook") => {
     setLoading(true);
     try {
       // Zachowaj sciezke sesji grupowej przed OAuth (web wraca na origin/ -> GlobalAuthCallback).
@@ -83,7 +85,8 @@ const AuthDrawer = () => {
       posthog.captureException(err);
       const msg = err?.message?.toLowerCase() || "";
       if (msg.includes("provider is not enabled") || msg.includes("unsupported")) {
-        toast.error(`Logowanie przez ${provider === "apple" ? "Apple" : "Google"} nie jest jeszcze skonfigurowane.`);
+        const label = { apple: "Apple", google: "Google", facebook: "Facebook" }[provider];
+        toast.error(`Logowanie przez ${label} nie jest jeszcze skonfigurowane.`);
       } else {
         toast.error(err.message || "Błąd logowania");
       }
@@ -136,7 +139,7 @@ const AuthDrawer = () => {
               Zaloguj się lub dołącz do&nbsp;Trasy
             </p>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              Zapisuj trasy, prowadź dziennik, planuj grupowo. Albo&nbsp;przeglądaj jako gość.
+              Zapisuj trasy, prowadź dziennik, planuj grupowo.
             </p>
           </div>
 
@@ -173,22 +176,28 @@ const AuthDrawer = () => {
               </svg>
               Kontynuuj z Google
             </button>
+            <button
+              type="button"
+              onClick={() => handleOAuth("facebook")}
+              disabled={loading}
+              className="w-full flex items-center justify-center gap-2 rounded-2xl py-3 text-white font-semibold text-sm active:scale-[0.98] transition-transform disabled:opacity-60"
+              style={{ background: "#1877F2" }}
+            >
+              <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M24 12.07C24 5.4 18.63 0 12 0S0 5.4 0 12.07C0 18.1 4.39 23.1 10.13 24v-8.44H7.08v-3.49h3.05V9.41c0-3.02 1.79-4.68 4.53-4.68 1.31 0 2.68.24 2.68.24v2.97h-1.51c-1.49 0-1.96.93-1.96 1.89v2.24h3.33l-.53 3.49h-2.8V24C19.61 23.1 24 18.1 24 12.07z" />
+              </svg>
+              Kontynuuj z Facebookiem
+            </button>
           </div>
 
-          <p className="text-xs text-muted-foreground text-center -mt-1 mb-2 leading-relaxed">
-            Konto zakładasz automatycznie przy pierwszym logowaniu. Miałeś&#160;już konto z&#160;hasłem? Użyj Google lub Apple z&#160;tym samym adresem - połączymy je&#160;automatycznie.
-          </p>
-
-          {/* Continue as guest */}
+          {/* Email + haslo -> pelny ekran /auth (logowanie i rejestracja) */}
           <button
-            onClick={close}
-            className="w-full mt-5 py-3 rounded-2xl border border-border/60 text-foreground font-semibold text-sm active:scale-[0.98] transition-transform"
+            type="button"
+            onClick={() => { close(); navigate("/auth"); }}
+            className="w-full mt-1 py-3 rounded-2xl border border-border/60 text-foreground font-semibold text-sm active:scale-[0.98] transition-transform"
           >
-            Kontynuuj jako gość
+            Kontynuuj przez e-mail
           </button>
-          <p className="text-[11px] text-muted-foreground text-center mt-2 leading-relaxed">
-            Gość przegląda miejsca bez zapisu. Trasy i dziennik wymagają konta.
-          </p>
         </div>
       </SheetContent>
     </Sheet>
