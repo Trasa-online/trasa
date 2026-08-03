@@ -231,7 +231,7 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false, onDelete, deleting 
       if (!dayRouteIds.length || !user) return [];
       const { data } = await (supabase as any)
         .from("pin_ratings")
-        .select("route_id, place_name, rating, note")
+        .select("route_id, place_name, note")
         .in("route_id", dayRouteIds)
         .eq("user_id", user.id);
       return data ?? [];

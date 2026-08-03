@@ -98,6 +98,31 @@ function WebWaitlistGate({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+// AuthGate (NATIVE): apka konsumencka = TYLKO zalogowany/zarejestrowany user.
+// Koniec trybu goscia. Niezalogowany (lub anon) -> /auth, z zachowaniem celu
+// (deep-link, np. zaproszenie do grupy). Publiczne: auth, set-password, B2B
+// (biznes/dla-firm/claim lokalu), legal + callbacki auth.
+function AuthGate({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth();
+  const location = useLocation();
+  if (!isNative) return <>{children}</>; // web ma WebWaitlistGate
+  if (loading) return null;
+  const realUser = !!user && !(user as any).is_anonymous;
+  const hasAuthParams = /[?&#](code|token_hash|error|access_token)=/.test(window.location.href);
+  const p = location.pathname;
+  const isPublic =
+    p === "/auth" || p.startsWith("/set-password") ||
+    p.startsWith("/biznes") || p.startsWith("/dla-firm") || p.startsWith("/lokal/") ||
+    p === "/terms" || p === "/privacy";
+  if (!realUser && !isPublic && !hasAuthParams) {
+    try {
+      if (p && p !== "/" && p !== "/auth") sessionStorage.setItem("trasa_post_login_redirect", p + location.search);
+    } catch { /* sessionStorage unavailable */ }
+    return <Navigate to="/auth" replace />;
+  }
+  return <>{children}</>;
+}
+
 // Module-level cache: pamieta promise dla danego auth-code zeby uniknac
 // double-execution przy React Strict Mode double-mount w dev (uses tej samej
 // promise dla obu mount'ow zamiast dwoch oddzielnych HTTP calls). Bez tego
@@ -743,6 +768,7 @@ const App = () => (
         <OnboardingProvider>
         <MaintenanceGate>
         <WebWaitlistGate>
+        <AuthGate>
         <Suspense fallback={<div className="h-screen flex items-center justify-center"><div className="h-8 w-8 rounded-full border-2 border-orange-500 border-t-transparent animate-spin" /></div>}>
         <Routes>
           <Route path="/auth" element={<Auth />} />
@@ -801,6 +827,7 @@ const App = () => (
 <Route path="*" element={<NotFound />} />
         </Routes>
         </Suspense>
+        </AuthGate>
         </WebWaitlistGate>
         </MaintenanceGate>
         </OnboardingProvider>

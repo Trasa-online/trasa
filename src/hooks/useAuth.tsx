@@ -76,41 +76,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  // Auto-anon signin: jesli po splash nie ma sesji, w tle tworzymy anon konto.
-  // Daje to gosciowi prawdziwy user_id - sesje grupowe i reactions dzialaja
-  // przez RLS jak dla zalogowanego. Routes/Journal nadal gateuje isAnonymous.
-  useEffect(() => {
-    if (loading) return;
-    if (user) return;
-    if (anonSignInAttempted.current) return;
-    let skipAnon = false;
-    try { skipAnon = sessionStorage.getItem(SKIP_ANON_SIGNIN_KEY) === "1"; } catch { /* unavailable */ }
-    if (skipAnon) return;
-    // KRYTYCZNE: jezeli URL ma ?code= / ?token_hash= (powrot z linka aktywacyjnego),
-    // NIE wlanczaj anon-signin. Anon-signin nadpisuje session ktora wlasnie sie tworzy
-    // przez auth callback, wiec user zostaje gosciem mimo udanego confirmation.
-    if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      if (params.get("code") || params.get("token_hash")) {
-        console.log("[useAuth] auth callback in URL, skipping anon signin");
-        return;
-      }
-    }
-    anonSignInAttempted.current = true;
-    // Final check przed signInAnonymously - moglo sie zdarzyc ze session zostala
-    // utworzona przez auth callback (race conditions). Nie nadpisuj jej.
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        console.log("[useAuth] session exists, skipping anon signin");
-        return;
-      }
-      supabase.auth.signInAnonymously().catch((err) => {
-        // Najczestsze powody: Anonymous Sign-Ins wylaczone w Dashboard, rate limit IP.
-        // Failujemy grace - aplikacja dziala jako "stary" guest (null user) jak wczesniej.
-        console.warn("[useAuth] anon signin failed:", err?.message ?? err);
-      });
-    });
-  }, [loading, user]);
+  // Tryb goscia WYLACZONY: NIE tworzymy juz automatycznie konta anonimowego.
+  // Apka konsumencka wymaga realnego logowania (AuthGate w App.tsx przekierowuje
+  // niezalogowanych na /auth). B2B onboarding (BusinessStart) uzywa wlasnego anon.
 
   const signOut = async () => {
     try { sessionStorage.setItem(SKIP_ANON_SIGNIN_KEY, "1"); } catch { /* unavailable */ }

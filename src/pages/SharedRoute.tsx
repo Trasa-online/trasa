@@ -196,14 +196,14 @@ export default function SharedRoute() {
     enabled: !!id,
   });
 
-  // Oceny + notki autora trasy (pin_ratings SELECT jest publiczny).
-  const { data: ratings = [] } = useQuery({
-    queryKey: ["shared-route-ratings", id, route?.user_id],
+  // Notki autora trasy (pin_ratings SELECT jest publiczny).
+  const { data: authorNotes = [] } = useQuery({
+    queryKey: ["shared-route-notes", id, route?.user_id],
     queryFn: async () => {
       if (!route?.user_id) return [];
       const { data } = await (supabase as any)
         .from("pin_ratings")
-        .select("place_name, rating, note")
+        .select("place_name, note")
         .eq("route_id", id!)
         .eq("user_id", route.user_id);
       return (data ?? []) as any[];
@@ -211,8 +211,8 @@ export default function SharedRoute() {
     enabled: !!id && !!route?.user_id,
   });
 
-  const ratingMap: Record<string, { rating: number | null; note: string | null }> = {};
-  for (const r of ratings) ratingMap[r.place_name] = { rating: r.rating, note: r.note };
+  const noteMap: Record<string, { note: string | null }> = {};
+  for (const r of authorNotes) noteMap[r.place_name] = { note: r.note };
 
   // Opis + tagi z tabeli places (wizytowka miejsca). Piny nie maja vibe_tags.
   const { data: placeMeta = {} } = useQuery({
@@ -302,29 +302,14 @@ export default function SharedRoute() {
     description: metaFor(pin).description || pin.description || "",
   } satisfies MockPlace);
 
-  // Read-only ocena + notka autora pod miejscem.
+  // Read-only notka autora pod miejscem.
   const renderRatingNote = (placeName: string, centered = false) => {
-    const r = ratingMap[placeName];
-    if (!r || (!r.rating && !r.note)) return null;
+    const r = noteMap[placeName];
+    if (!r || !r.note) return null;
     return (
       <div className={`mt-3 pt-3 border-t border-border/40 ${centered ? "text-center" : ""}`}>
-        {r.rating ? (
-          <>
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">{t("author_rating")}</p>
-            <div className={`flex items-center gap-1 ${centered ? "justify-center" : ""}`}>
-              {[1, 2, 3, 4, 5].map((n) => (
-                <span key={n} className={`text-lg leading-none ${n <= r.rating! ? "opacity-100" : "opacity-20"}`}>⭐</span>
-              ))}
-            </div>
-          </>
-        ) : null}
-        {r.note ? (
-          <>
-            {r.rating ? <div className="my-3 h-px bg-border/40" /> : null}
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">{t("author_note")}</p>
-            <p className="text-sm text-foreground/80 leading-relaxed text-left whitespace-pre-wrap">{r.note}</p>
-          </>
-        ) : null}
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">{t("author_note")}</p>
+        <p className="text-sm text-foreground/80 leading-relaxed text-left whitespace-pre-wrap">{r.note}</p>
       </div>
     );
   };
@@ -334,7 +319,7 @@ export default function SharedRoute() {
   const renderList = () => (
     <div className="space-y-2.5">
       {pins.map((pin: any, i: number) => {
-        const noteText = (ratingMap[pin.place_name]?.note ?? "").trim();
+        const noteText = (noteMap[pin.place_name]?.note ?? "").trim();
         const note = noteText ? (
           <div>
             <p className="text-sm font-semibold text-foreground">Notka Autora</p>

@@ -241,7 +241,6 @@ const ReviewSummary = () => {
   const [privacyOpen, setPrivacyOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [pinRatings, setPinRatings] = useState<Record<string, number>>({});
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [noteSaved, setNoteSaved] = useState<Record<string, boolean>>({});
   const noteTimer = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
@@ -461,14 +460,14 @@ const ReviewSummary = () => {
     enabled: !!route?.group_session_id,
   });
 
-  // Oceny + notki (wszystkie dni naraz).
-  const { data: existingRatings = [] } = useQuery({
-    queryKey: ["pin-ratings", idsKey, user?.id],
+  // Notki miejsc (wszystkie dni naraz).
+  const { data: existingNotes = [] } = useQuery({
+    queryKey: ["pin-notes", idsKey, user?.id],
     queryFn: async () => {
       if (!dayRouteIds.length || !user) return [];
       const { data } = await (supabase as any)
         .from("pin_ratings")
-        .select("route_id, place_name, rating, note")
+        .select("route_id, place_name, note")
         .in("route_id", dayRouteIds)
         .eq("user_id", user.id);
       return data ?? [];
@@ -510,18 +509,15 @@ const ReviewSummary = () => {
   };
 
   useEffect(() => {
-    if (existingRatings.length) {
-      const rmap: Record<string, number> = {};
+    if (existingNotes.length) {
       const nmap: Record<string, string> = {};
-      for (const r of existingRatings) {
+      for (const r of existingNotes) {
         const k = rkey(r.route_id, r.place_name);
-        if (r.rating) rmap[k] = r.rating;
         if (r.note) nmap[k] = r.note;
       }
-      setPinRatings(rmap);
       setNotes(nmap);
     }
-  }, [existingRatings]);
+  }, [existingNotes]);
 
   // Udostepnij link do publicznej trasy (/#/route/:id). HashRouter => link z #.
   const shareUrl = routeId ? `https://trasa.travel/#/route/${routeId}` : "";
@@ -929,17 +925,6 @@ const ReviewSummary = () => {
     queryClient.invalidateQueries({ queryKey: ["review-summary-route", routeId] });
     queryClient.invalidateQueries({ queryKey: ["review-trip-days", folderId, routeId] });
     queryClient.invalidateQueries({ queryKey: ["journal-entries"] });
-  };
-
-  const ratePinHandler = async (placeName: string, rating: number) => {
-    if (!activeRouteId || !user) return;
-    setPinRatings((prev) => ({ ...prev, [rkey(activeRouteId, placeName)]: rating }));
-    await (supabase as any).from("pin_ratings").upsert({
-      route_id: activeRouteId,
-      user_id: user.id,
-      place_name: placeName,
-      rating,
-    }, { onConflict: "route_id,user_id,place_name" });
   };
 
   const handleNoteChange = (placeName: string, value: string) => {

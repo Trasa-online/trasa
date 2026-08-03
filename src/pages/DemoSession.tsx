@@ -593,9 +593,6 @@ function DemoSwiper({ places, city, category, onComplete, isBiznesDemo }: {
                   <p className="text-white/70 text-xs mt-0.5">
                     {new Date().toLocaleDateString("pl-PL", { day: "numeric", month: "long", year: "numeric" })}
                   </p>
-                  <div className="flex items-center gap-0.5 mt-0.5">
-                    {Array.from({ length: 5 }).map((_, i) => <span key={i} className="text-[10px]">⭐</span>)}
-                  </div>
                 </div>
                 <div className="absolute top-3 left-3 bg-black/40 backdrop-blur-sm rounded-full p-1.5">
                   <Globe className="h-3 w-3 text-white/80" />
@@ -702,16 +699,6 @@ function DemoSwiper({ places, city, category, onComplete, isBiznesDemo }: {
                 </div>
               </div>
 
-              {/* Overall rating */}
-              <div className="px-5 pt-5 pb-5 border-b border-border/30">
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">{t("review_rating_label")}</p>
-                <div className="flex gap-2">
-                  {[1,2,3,4,5].map(n => (
-                    <span key={n} className="text-2xl">⭐</span>
-                  ))}
-                </div>
-              </div>
-
               {/* AI highlight */}
               <div className="px-5 pt-6 pb-5 border-b border-border/30">
                 <p className="text-[22px] font-bold leading-snug text-foreground">
@@ -764,7 +751,7 @@ function DemoSwiper({ places, city, category, onComplete, isBiznesDemo }: {
                 </div>
               </div>
 
-              {/* Places with ratings */}
+              {/* Places with highlight toggle */}
               <div className="px-5 pt-5 pb-5 border-b border-border/30">
                 <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">{t("rate_places")}</p>
                 <div className="space-y-4">
@@ -779,11 +766,6 @@ function DemoSwiper({ places, city, category, onComplete, isBiznesDemo }: {
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-semibold leading-tight truncate">{pin.name}</p>
-                          <div className="flex items-center gap-0.5 mt-1">
-                            {[1,2,3,4,5].map(n => (
-                              <span key={n} className={`text-lg leading-none ${n <= pin.rating ? "opacity-100" : "opacity-20"}`}>⭐</span>
-                            ))}
-                          </div>
                         </div>
                       </div>
                       <div className={`w-full py-1.5 rounded-xl text-xs font-semibold border text-center ${pin.isHighlight ? "bg-amber-400/20 border-amber-400 text-amber-700" : "border-border/40 text-muted-foreground/40"}`}>
