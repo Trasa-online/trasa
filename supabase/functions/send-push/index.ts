@@ -405,7 +405,9 @@ Deno.serve(async (req) => {
     // KTOKOLWIEK moglby wyslac dowolny push (z dowolnym deep-link url) do dowolnego
     // usera. Dozwolone: wywolanie service-role (push-scheduler) ALBO zalogowany user.
     const authToken = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "");
-    let authorized = !!authToken && authToken === serviceRoleKey;
+    const isService = !!authToken && authToken === serviceRoleKey;
+    let authorized = isService;
+    let senderId: string | null = null;
     if (!authorized && authToken) {
       try {
         const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
@@ -414,6 +416,7 @@ Deno.serve(async (req) => {
         });
         const { data: { user } } = await authClient.auth.getUser(authToken);
         authorized = !!user;
+        senderId = user?.id ?? null;
       } catch (_e) { /* nieprawidlowy token */ }
     }
     if (!authorized) {
@@ -424,6 +427,10 @@ Deno.serve(async (req) => {
     }
 
     const { user_id, title, body, url } = await req.json();
+
+    // [H4] Deep-link push tylko na wewnetrzne sciezki - blokuje phishing przez
+    // dowolny url (np. javascript:, http://zlo). Wszystko inne -> "/".
+    const safeUrl = (typeof url === "string" && /^\/(?!\/)/.test(url)) ? url : "/";
 
     if (!user_id || !title) {
       return new Response(
@@ -437,6 +444,26 @@ Deno.serve(async (req) => {
     const vapidSubject = Deno.env.get("VAPID_SUBJECT") ?? "mailto:admin@trasa.app";
 
     const supabase = createClient(supabaseUrl, serviceRoleKey);
+
+    // [H4] Rate-limit nadawcy (best-effort; nie dotyczy service_role/push-scheduler).
+    // Chroni przed masowym spamem push przez pojedyncze konto. Wymaga tabeli
+    // fn_throttle (migracja 20260804) - jesli brak, degraduje bez blokowania.
+    if (!isService && senderId) {
+      try {
+        const since = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+        const { count } = await supabase
+          .from("fn_throttle")
+          .select("id", { count: "exact", head: true })
+          .eq("bucket", `push:${senderId}`)
+          .gte("created_at", since);
+        if ((count ?? 0) >= 120) {
+          return new Response(JSON.stringify({ error: "rate_limited" }), {
+            status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        await supabase.from("fn_throttle").insert({ bucket: `push:${senderId}` });
+      } catch (_e) { /* tabela moze jeszcze nie istniec - nie blokuj */ }
+    }
 
     const { data: subscriptions, error: subError } = await supabase
       .from("push_subscriptions")
@@ -454,7 +481,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    const payloadStr = JSON.stringify({ title, body: body || "", url: url || "/" });
+    const payloadStr = JSON.stringify({ title, body: body || "", url: safeUrl });
 
     let sent = 0;
     let failed = 0;

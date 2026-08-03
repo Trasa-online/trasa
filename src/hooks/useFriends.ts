@@ -82,9 +82,10 @@ export function useMyInviteCode(userId: string | null | undefined) {
     queryKey: ["my-invite-code", userId],
     enabled: !!userId,
     queryFn: async (): Promise<string | null> => {
-      const { data } = await (supabase as any)
-        .from("profiles").select("invite_code").eq("id", userId).maybeSingle();
-      return (data?.invite_code as string) ?? null;
+      // [H3] wlasny invite_code przez RPC (kolumna nie jest juz publicznie czytelna).
+      const { data: rows } = await (supabase as any).rpc("get_my_profile");
+      const row = Array.isArray(rows) ? rows[0] : rows;
+      return (row?.invite_code as string) ?? null;
     },
   });
 }

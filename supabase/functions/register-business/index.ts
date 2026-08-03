@@ -50,6 +50,23 @@ Deno.serve(async (req) => {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
+    // [H5] Trwaly rate-limit (per IP i per email) - chroni przed masowa rejestracja
+    // i email-bombingiem. In-memory wyzej to fast-path; to jest twarda bramka.
+    // Wymaga tabeli fn_throttle (migracja 20260804); brak -> degraduje (in-memory zostaje).
+    try {
+      const since = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+      const [ipHit, emailHit] = await Promise.all([
+        admin.from("fn_throttle").select("id", { count: "exact", head: true }).eq("bucket", `rb:ip:${ip}`).gte("created_at", since),
+        admin.from("fn_throttle").select("id", { count: "exact", head: true }).eq("bucket", `rb:email:${email}`).gte("created_at", since),
+      ]);
+      if ((ipHit.count ?? 0) >= 10 || (emailHit.count ?? 0) >= 3) {
+        return new Response(JSON.stringify({ ok: true }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      await admin.from("fn_throttle").insert([{ bucket: `rb:ip:${ip}` }, { bucket: `rb:email:${email}` }]);
+    } catch (_e) { /* tabela moze jeszcze nie istniec - polegamy na in-memory */ }
+
     const safeName = placeName.slice(0, 120);
 
     // ── Generuj link aktywacyjny (invite dla nowego, recovery/magiclink dla istniejacego) ──
@@ -170,8 +187,9 @@ Deno.serve(async (req) => {
     const mail = await res.json();
     if (!res.ok) throw new Error(`resend: ${JSON.stringify(mail)}`);
 
+    // [H5] Generyczna odpowiedz - NIE ujawniamy czy konto juz istnialo (email oracle).
     return new Response(
-      JSON.stringify({ ok: true, email, existing: isExistingUser, profileId: bp?.id }),
+      JSON.stringify({ ok: true }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (err: any) {

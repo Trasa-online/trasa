@@ -516,12 +516,11 @@ const Settings = () => {
   const { data: profile } = useQuery({
     queryKey: ["profile", user?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", user?.id)
-        .single();
+      // [H3] wlasny profil przez RPC (SECURITY DEFINER) - po REVOKE invite_code/
+      // deleted_* z profiles bezposredni select("*") nie zwrocilby tych kolumn.
+      const { data: rows, error } = await (supabase as any).rpc("get_my_profile");
       if (error) throw error;
+      const data = Array.isArray(rows) ? rows[0] : rows;
       return data;
     },
     enabled: !!user,

@@ -38,7 +38,7 @@ export default function UserSearch() {
   const { data: businessOwnerIds = [] } = useQuery({
     queryKey: ["business-owner-ids"],
     queryFn: async () => {
-      const { data } = await supabase.from("business_profiles").select("owner_user_id");
+      const { data } = await supabase.from("business_profiles_public" as any).select("owner_user_id");
       return (data ?? []).map((b: any) => b.owner_user_id).filter(Boolean) as string[];
     },
   });

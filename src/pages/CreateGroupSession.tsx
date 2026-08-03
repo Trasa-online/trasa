@@ -130,7 +130,7 @@ const CreateGroupSession = () => {
     queryFn: async () => {
       // Fetch business owner IDs to exclude them from invite list
       const { data: bizOwners } = await (supabase as any)
-        .from("business_profiles")
+        .from("business_profiles_public")
         .select("owner_user_id");
       const bizIds: string[] = (bizOwners ?? []).map((b: any) => b.owner_user_id).filter(Boolean);
 

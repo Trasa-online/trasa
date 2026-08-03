@@ -56,7 +56,7 @@ const ClaimPlace = () => {
         if (!placeData) return;
 
         const { data: bpData } = await (supabase as any)
-          .from("business_profiles")
+          .from("business_profiles_public")
           .select("id, business_name, cover_image_url, gallery_urls, owner_user_id")
           .eq("place_id", placeId)
           .maybeSingle();

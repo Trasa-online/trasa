@@ -73,7 +73,7 @@ const PlaceDetailSheet = ({ pin, open, onOpenChange }: PlaceDetailSheetProps) =>
 
       // Load business profile
       (supabase as any)
-        .from("business_profiles")
+        .from("business_profiles_public")
         .select("id, place_id, owner_user_id, business_name, is_active, logo_url, gallery_urls, phone, website, event_title, event_description, event_starts_at, event_ends_at")
         .eq("place_id", pin.place_id)
         .maybeSingle()
