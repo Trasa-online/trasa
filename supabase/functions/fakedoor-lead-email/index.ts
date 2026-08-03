@@ -1,3 +1,4 @@
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { joinHtml, routeHtml, type RoutePayload } from "./emails.ts";
 
 // Maile potwierdzajace zapis z fake doora (web, trasatravel.com).
@@ -41,6 +42,33 @@ Deno.serve(async (req) => {
     const route = (body?.route ?? null) as RoutePayload | null;
 
     if (!EMAIL_RE.test(email)) throw new Error("invalid email format");
+
+    // [H6] Twardy throttle + wysylka TYLKO do realnie zapisanego leada (nie open-relay).
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+    const admin = (supabaseUrl && serviceKey)
+      ? createClient(supabaseUrl, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } })
+      : null;
+    const genericOk = () => new Response(JSON.stringify({ ok: true }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+    if (admin) {
+      try {
+        const hourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+        const [ipHit, emailHit] = await Promise.all([
+          admin.from("fn_throttle").select("id", { count: "exact", head: true }).eq("bucket", `fd:ip:${ip}`).gte("created_at", hourAgo),
+          admin.from("fn_throttle").select("id", { count: "exact", head: true }).eq("bucket", `fd:email:${email}`).gte("created_at", hourAgo),
+        ]);
+        if ((ipHit.count ?? 0) >= 20 || (emailHit.count ?? 0) >= 5) return genericOk();
+        await admin.from("fn_throttle").insert([{ bucket: `fd:ip:${ip}` }, { bucket: `fd:email:${email}` }]);
+      } catch (_e) { /* tabela fn_throttle moze jeszcze nie istniec - polegamy na in-memory */ }
+      // Bramka anty-relay: mail idzie tylko gdy ten email realnie zapisal sie w ostatnich 15 min.
+      try {
+        const since = new Date(Date.now() - 15 * 60 * 1000).toISOString();
+        const { data: lead } = await admin.from("fakedoor_leads").select("id").eq("email", email).gte("created_at", since).limit(1).maybeSingle();
+        if (!lead) return genericOk();
+      } catch (_e) { /* blad odczytu - degraduj do wyslania (klient wlasnie wstawil leada) */ }
+    }
 
     const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
     if (!RESEND_API_KEY) throw new Error("RESEND_API_KEY not set");
