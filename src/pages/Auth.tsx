@@ -50,7 +50,6 @@ const Auth = () => {
   const [password, setPassword] = useState("");
   const [firstName, setFirstName] = useState("");
   const [username, setUsername] = useState("");
-  const [emailMode, setEmailMode] = useState<"hidden" | "login" | "register">("hidden");
   const [agreed, setAgreed] = useState(false);
   const [loading, setLoading] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
@@ -618,24 +617,6 @@ const Auth = () => {
     );
   }
 
-  // Po rejestracji email+haslo: ekran "sprawdz maila" (potwierdzenie konta).
-  if (signupDone) {
-    return (
-      <div className="min-h-screen bg-[#FEFEFE] flex flex-col items-center justify-center px-6 text-center" style={{ fontFamily: "Inter, system-ui, sans-serif" }}>
-        <div className="w-full max-w-sm flex flex-col items-center gap-4">
-          <div className="h-16 w-16 rounded-full" style={{ background: "linear-gradient(135deg,#F4A259,#F9662B)" }} />
-          <h1 className="text-2xl font-black text-foreground">Sprawdź swoją skrzynkę</h1>
-          <p className="text-sm text-muted-foreground leading-relaxed">
-            Wysłaliśmy link potwierdzający na <span className="font-semibold text-foreground">{email}</span>. Kliknij go, żeby dokończyć rejestrację.
-          </p>
-          <button onClick={() => { setSignupDone(false); setEmailMode("login"); }} className="mt-2 text-sm font-semibold text-foreground underline">
-            Wróć do logowania
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   // B2C: jasny ekran powitalny (light-mode). Miekkie, wolno dryfujace pomaranczowe
   // gradienty w tle, logo + naglowek + tagline u gory, auto-rotujaca karuzela USP
   // w srodku, guziki OAuth przypiete na dole. B2B ma osobny early-return powyzej.
@@ -714,71 +695,6 @@ const Auth = () => {
               </svg>
               Kontynuuj z&nbsp;Facebookiem
             </button>
-          </div>
-
-          {/* Email + haslo (login / rejestracja) */}
-          <div className="mb-4">
-            {emailMode === "hidden" ? (
-              <button
-                type="button"
-                onClick={() => setEmailMode("login")}
-                className="w-full text-center text-sm font-semibold text-foreground underline underline-offset-2 py-1"
-              >
-                Kontynuuj przez e-mail
-              </button>
-            ) : (
-              <form onSubmit={emailMode === "login" ? handleLogin : handleRegister} className="space-y-2.5">
-                {emailMode === "register" && (
-                  <input
-                    type="text"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    placeholder="Nazwa użytkownika"
-                    autoCapitalize="none"
-                    className="w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#F9662B]"
-                  />
-                )}
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="twój@email.pl"
-                  autoCapitalize="none"
-                  autoComplete="email"
-                  className="w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#F9662B]"
-                />
-                <input
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder={emailMode === "register" ? "Hasło (min. 6 znaków)" : "Hasło"}
-                  autoComplete={emailMode === "login" ? "current-password" : "new-password"}
-                  className="w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#F9662B]"
-                />
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full py-3.5 rounded-2xl text-white font-bold text-sm active:scale-[0.98] transition-transform disabled:opacity-60"
-                  style={{ background: "linear-gradient(90deg,#F4A259,#F9662B)" }}
-                >
-                  {loading ? "Chwila..." : emailMode === "login" ? "Zaloguj się" : "Zarejestruj się"}
-                </button>
-                {emailMode === "login" && (
-                  <button type="button" onClick={handleForgotPassword} disabled={resetLoading} className="w-full text-center text-xs text-muted-foreground underline disabled:opacity-60">
-                    Nie pamiętasz hasła?
-                  </button>
-                )}
-                <p className="text-center text-xs text-muted-foreground pt-0.5">
-                  {emailMode === "login" ? (
-                    <>Nie masz konta?{" "}<button type="button" onClick={() => setEmailMode("register")} className="text-foreground font-semibold underline">Zarejestruj się</button></>
-                  ) : (
-                    <>Masz już konto?{" "}<button type="button" onClick={() => setEmailMode("login")} className="text-foreground font-semibold underline">Zaloguj się</button></>
-                  )}
-                </p>
-              </form>
-            )}
           </div>
 
           {/* Business link - tylko web (na natywnej apce panel biznesowy nie ma sensu) */}

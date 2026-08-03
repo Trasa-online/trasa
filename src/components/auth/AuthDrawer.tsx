@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { supabase } from "@/integrations/supabase/client";
 import { isNative } from "@/lib/platform";
@@ -21,7 +20,6 @@ const AuthDrawer = () => {
   const posthog = usePostHog();
 
   const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
 
   // Intent-based cleanup: gdy user otwiera login NIE w celu zapisu trasy
   // (np. z Dziennika, Profilu, HomeSwipe topbar), wyczyść 'trasa_guest_plan' i
@@ -190,14 +188,6 @@ const AuthDrawer = () => {
             </button>
           </div>
 
-          {/* Email + haslo -> pelny ekran /auth (logowanie i rejestracja) */}
-          <button
-            type="button"
-            onClick={() => { close(); navigate("/auth"); }}
-            className="w-full mt-1 py-3 rounded-2xl border border-border/60 text-foreground font-semibold text-sm active:scale-[0.98] transition-transform"
-          >
-            Kontynuuj przez e-mail
-          </button>
         </div>
       </SheetContent>
     </Sheet>
