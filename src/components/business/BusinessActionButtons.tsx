@@ -27,7 +27,9 @@ const BusinessActionButtons = ({ phone, website, placeId }: BusinessActionButton
           className="flex-col h-auto py-3 gap-1"
           onClick={() => {
             trackEvent("place_phone_clicked");
-            window.location.href = `tel:${phone}`;
+            // Sanityzacja: tylko cyfry/+/spacje (blokuje payloady typu javascript:).
+            const safePhone = String(phone).replace(/[^\d+\s]/g, "");
+            if (safePhone) window.location.href = `tel:${safePhone}`;
           }}
         >
           <Phone className="h-5 w-5" />
@@ -40,7 +42,10 @@ const BusinessActionButtons = ({ phone, website, placeId }: BusinessActionButton
           className="flex-col h-auto py-3 gap-1"
           onClick={() => {
             trackEvent("place_website_clicked");
-            window.open(website, "_blank", "noopener,noreferrer");
+            // Otwieramy tylko http/https - blokuje javascript:/data: (stored XSS).
+            if (/^https?:\/\//i.test(String(website))) {
+              window.open(website, "_blank", "noopener,noreferrer");
+            }
           }}
         >
           <Globe className="h-5 w-5" />

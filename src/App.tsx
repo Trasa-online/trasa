@@ -223,7 +223,8 @@ function GlobalAuthCallback() {
           const stored = sessionStorage.getItem("trasa_post_login_redirect");
           if (stored) { dest = stored; sessionStorage.removeItem("trasa_post_login_redirect"); }
         } catch { /* sessionStorage unavailable */ }
-        if (nextDest) dest = nextDest;
+        // Open-redirect guard: tylko wewnetrzna sciezka (start "/", nie "//").
+        if (nextDest && nextDest.startsWith("/") && !nextDest.startsWith("//")) dest = nextDest;
         navigate(dest);
         return;
       }
@@ -272,20 +273,16 @@ function NativeDeepLinkHandler() {
       const queryIdx = url.indexOf("?");
       const fragmentIdx = url.indexOf("#");
       const query = queryIdx >= 0 ? url.slice(queryIdx + 1, fragmentIdx >= 0 ? fragmentIdx : undefined) : "";
-      const fragment = fragmentIdx >= 0 ? url.slice(fragmentIdx + 1) : "";
       const params = new URLSearchParams(query);
-      const hashParams = new URLSearchParams(fragment);
       const code = params.get("code");
-      const access_token = hashParams.get("access_token");
-      const refresh_token = hashParams.get("refresh_token");
+      // Akceptujemy WYLACZNIE PKCE code (flowType=pkce). Implicit access_token/
+      // refresh_token z deep-linku NIE jest przyjmowany - to wektor session
+      // fixation (podsuniety link logowalby ofiare w konto atakujacego).
       if (code) {
         const { error } = await dedupedExchange(code);
         if (error) console.error("[NativeDeepLink] exchange failed:", error.message);
-      } else if (access_token && refresh_token) {
-        const { error } = await supabase.auth.setSession({ access_token, refresh_token });
-        if (error) console.error("[NativeDeepLink] setSession failed:", error.message);
       } else {
-        console.warn("[NativeDeepLink] auth/callback URL bez code i token:", url);
+        console.warn("[NativeDeepLink] auth/callback bez PKCE code - ignoruje:", url);
       }
       // AppLayout useEffect zlapie auth state change i zdecyduje gdzie navigate'owac
       // (intent-aware: guest_plan -> /create, biz -> /biznes, inaczej zostan).

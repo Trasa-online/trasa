@@ -246,19 +246,7 @@ async function getApnsJwt(): Promise<string> {
     throw new Error("Missing APNs env (APNS_TEAM_ID, APNS_KEY_ID, APNS_PRIVATE_KEY)");
   }
 
-  // Diagnostyka env vars (bezpiecznie - bez ujawniania pelnego klucza)
-  console.log("[apns] env check", {
-    team_id: teamId, // public id, OK pokazac
-    team_id_len: teamId.length,
-    key_id: keyId, // public id, OK pokazac
-    key_id_len: keyId.length,
-    pem_len: privateKeyPem.length,
-    pem_starts_with_BEGIN: privateKeyPem.trim().startsWith("-----BEGIN PRIVATE KEY-----"),
-    pem_ends_with_END: privateKeyPem.trim().endsWith("-----END PRIVATE KEY-----"),
-    pem_first_20: privateKeyPem.slice(0, 20).replace(/\n/g, "\\n"),
-    pem_last_20: privateKeyPem.slice(-20).replace(/\n/g, "\\n"),
-  });
-
+  // (usunieto diagnostyczny log env/PEM - nie logujemy metadanych klucza .p8)
   const now = Math.floor(Date.now() / 1000);
   if (cachedJwt && cachedJwt.exp - now > 300) {
     return cachedJwt.token;
