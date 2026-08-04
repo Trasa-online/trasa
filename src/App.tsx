@@ -448,7 +448,12 @@ function RootPage() {
 function RouteTracker() {
   const location = useLocation();
   useEffect(() => {
-    trackPageView(location.pathname + location.search);
+    trackPageView(location.pathname + location.search); // GA4
+    // PostHog: apka uzywa HashRouter, wiec nawigacja zmienia tylko location.hash - automatyczny
+    // $pageview PostHoga (sluchacz History API) NIE lapie zmian route w SPA (liczyl tylko
+    // pierwszy load). Capturujemy $pageview recznie przy kazdej zmianie lokalizacji.
+    // (capture dziala tylko po opt-in przez cookie banner; opted-out userzy nic nie wysylaja.)
+    (window as any).posthog?.capture?.("$pageview");
   }, [location]);
   return null;
 }

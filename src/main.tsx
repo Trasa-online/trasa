@@ -46,7 +46,10 @@ function PostHogBoot({ children }: { children: React.ReactNode }) {
         api_host: import.meta.env.VITE_PUBLIC_POSTHOG_HOST,
         defaults: "2026-01-30",
         autocapture: true,
-        capture_pageview: true,
+        // capture_pageview: false - apka na HashRouter, automatyczny $pageview (History API)
+        // nie lapie zmian route (tylko pierwszy load). Pageviews capturuje recznie RouteTracker
+        // (App.tsx) przy kazdej zmianie lokalizacji - dziala tak samo na native i web.
+        capture_pageview: false,
         capture_pageleave: true,
         // GDPR: czekamy na zgode usera (cookie banner). Jesli juz wczesniej
         // zaakceptowal, opt_in_capturing() ponizej wlaczy tracking.
