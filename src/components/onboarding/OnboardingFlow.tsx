@@ -10,6 +10,21 @@ import { requestAndRegisterNativePush } from "@/hooks/useNativePush";
 import { requestLocation } from "@/hooks/useGeolocation";
 import { grantConsent, denyConsent } from "@/lib/consent";
 import TrasaLogo from "@/components/TrasaLogo";
+import { CategoryIcon } from "@/components/CategoryIcon";
+import { cn } from "@/lib/utils";
+
+// Limit slow (np. dla pola "Inne").
+const capWords = (v: string, n = 10) => {
+  const parts = v.split(/\s+/);
+  return parts.length > n ? parts.slice(0, n).join(" ") : v;
+};
+
+// Przykladowe miejsca (ilustracja na ekranie lokalizacji - UI listy miejsc z aplikacji).
+const SAMPLE_NEARBY = [
+  { name: "Kawiarnia Cztery Łapy", cat: "cafe", catLabel: "Kawiarnia", dist: "0,3 km" },
+  { name: "Muzeum Nowoczesne", cat: "museum", catLabel: "Muzeum", dist: "0,8 km" },
+  { name: "Park nad rzeką", cat: "park", catLabel: "Park", dist: "1,2 km" },
+];
 
 // Onboarding Czesc A (po pierwszym logowaniu, real user): welcome -> 2 pytania ankietowe
 // (opcje + "inne") -> profil (nazwa uzytkownika max 20 znakow + zdjecie). Po ukonczeniu
@@ -70,6 +85,8 @@ const OnboardingFlow = ({ onDone }: Props) => {
   const [uploading, setUploading] = useState(false);
   const [finishing, setFinishing] = useState(false);
   const [permBusy, setPermBusy] = useState(false);
+  // Gdy pole "Inne" (input) jest w fokusie -> chowamy guzik "Dalej" (nie zaslania klawiatury).
+  const [otherFocused, setOtherFocused] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   // Prefill z profilu (OAuth nadaje wstepny username/avatar/first_name).
@@ -288,26 +305,35 @@ const OnboardingFlow = ({ onDone }: Props) => {
             <div className="mt-6 flex flex-col gap-2.5">
               {SOURCE_OPTS.map((o) => {
                 const active = source === o.id;
+                if (o.id === "other" && active) {
+                  return (
+                    <div key={o.id} className="w-full rounded-2xl border-2 border-orange-500 bg-white px-4 py-3 flex items-center gap-2">
+                      <input
+                        autoFocus
+                        value={sourceOther}
+                        onChange={(e) => setSourceOther(capWords(e.target.value, 10))}
+                        onFocus={() => setOtherFocused(true)}
+                        onBlur={() => setOtherFocused(false)}
+                        placeholder="Wpisz, skąd znasz spontaway"
+                        className="flex-1 bg-transparent text-[15px] font-semibold outline-none placeholder:font-normal placeholder:text-muted-foreground/50"
+                      />
+                      <span className="h-6 w-6 rounded-full bg-orange-600 flex items-center justify-center shrink-0"><Check className="h-4 w-4 text-white" strokeWidth={3} /></span>
+                    </div>
+                  );
+                }
                 return (
                   <button
                     key={o.id}
                     onClick={() => setSource(o.id)}
-                    className={`w-full text-left px-4 py-3.5 rounded-2xl border text-[15px] font-semibold transition-colors flex items-center justify-between ${active ? "border-orange-500 bg-orange-50 text-foreground" : "border-border bg-white text-foreground"}`}
+                    className="w-full text-left px-4 py-3.5 rounded-2xl border border-border bg-white text-foreground text-[15px] font-semibold flex items-center justify-between active:scale-[0.99] transition-transform"
                   >
-                    {o.label}
-                    {active && <Check className="h-5 w-5 text-orange-600 shrink-0" />}
+                    <span>{o.label}</span>
+                    <span className={cn("h-6 w-6 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors", active ? "bg-orange-600 border-orange-600" : "border-muted-foreground/30")}>
+                      {active && <Check className="h-4 w-4 text-white" strokeWidth={3} />}
+                    </span>
                   </button>
                 );
               })}
-              {source === "other" && (
-                <input
-                  autoFocus
-                  value={sourceOther}
-                  onChange={(e) => setSourceOther(e.target.value.slice(0, 80))}
-                  placeholder="Wpisz, skąd znasz spontaway"
-                  className="w-full rounded-2xl border border-border bg-white px-4 py-3.5 text-[15px] outline-none focus:ring-2 focus:ring-orange-500/60"
-                />
-              )}
             </div>
           </>
         )}
@@ -321,26 +347,35 @@ const OnboardingFlow = ({ onDone }: Props) => {
             <div className="mt-6 flex flex-col gap-2.5">
               {GOAL_OPTS.map((o) => {
                 const active = goals.includes(o.id);
+                if (o.id === "other" && active) {
+                  return (
+                    <div key={o.id} className="w-full rounded-2xl border-2 border-orange-500 bg-white px-4 py-3 flex items-center gap-2">
+                      <input
+                        autoFocus
+                        value={goalsOther}
+                        onChange={(e) => setGoalsOther(capWords(e.target.value, 10))}
+                        onFocus={() => setOtherFocused(true)}
+                        onBlur={() => setOtherFocused(false)}
+                        placeholder="Wpisz swój cel"
+                        className="flex-1 bg-transparent text-[15px] font-semibold outline-none placeholder:font-normal placeholder:text-muted-foreground/50"
+                      />
+                      <button onClick={() => toggleGoal(o.id)} aria-label="Odznacz" className="h-6 w-6 rounded-full bg-orange-600 flex items-center justify-center shrink-0"><Check className="h-4 w-4 text-white" strokeWidth={3} /></button>
+                    </div>
+                  );
+                }
                 return (
                   <button
                     key={o.id}
                     onClick={() => toggleGoal(o.id)}
-                    className={`w-full text-left px-4 py-3.5 rounded-2xl border text-[15px] font-semibold transition-colors flex items-center justify-between ${active ? "border-orange-500 bg-orange-50 text-foreground" : "border-border bg-white text-foreground"}`}
+                    className="w-full text-left px-4 py-3.5 rounded-2xl border border-border bg-white text-foreground text-[15px] font-semibold flex items-center justify-between active:scale-[0.99] transition-transform"
                   >
-                    {o.label}
-                    {active && <Check className="h-5 w-5 text-orange-600 shrink-0" />}
+                    <span>{o.label}</span>
+                    <span className={cn("h-6 w-6 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors", active ? "bg-orange-600 border-orange-600" : "border-muted-foreground/30")}>
+                      {active && <Check className="h-4 w-4 text-white" strokeWidth={3} />}
+                    </span>
                   </button>
                 );
               })}
-              {goals.includes("other") && (
-                <input
-                  autoFocus
-                  value={goalsOther}
-                  onChange={(e) => setGoalsOther(e.target.value.slice(0, 80))}
-                  placeholder="Wpisz swój cel"
-                  className="w-full rounded-2xl border border-border bg-white px-4 py-3.5 text-[15px] outline-none focus:ring-2 focus:ring-orange-500/60"
-                />
-              )}
             </div>
           </>
         )}
@@ -416,13 +451,10 @@ const OnboardingFlow = ({ onDone }: Props) => {
         )}
 
         {stepName === "notify" && (
-          <>
-            <div className="pt-6 text-center">
-              <h2 className="text-2xl font-black mb-2 leading-tight">{nbsp("Bądź na bieżąco")}</h2>
-              <p className="text-[15px] text-muted-foreground leading-relaxed">{nbsp("Włącz powiadomienia, żeby wiedzieć o nowych trasach i ważnych aktualizacjach. Zawsze możesz to wyłączyć w ustawieniach.")}</p>
-            </div>
-            <div className="flex-1" />
-          </>
+          <div className="flex-1 flex flex-col items-center justify-center text-center">
+            <h2 className="text-2xl font-black mb-3 leading-tight">{nbsp("Bądź na bieżąco")}</h2>
+            <p className="text-[15px] text-muted-foreground leading-relaxed max-w-xs">{nbsp("Włącz powiadomienia, żeby wiedzieć o nowych trasach i ważnych aktualizacjach. Zawsze możesz to wyłączyć w ustawieniach.")}</p>
+          </div>
         )}
 
         {stepName === "location" && (
@@ -431,28 +463,40 @@ const OnboardingFlow = ({ onDone }: Props) => {
               <h2 className="text-2xl font-black mb-2 leading-tight">{nbsp("Miejsca blisko Ciebie")}</h2>
               <p className="text-[15px] text-muted-foreground leading-relaxed">{nbsp("Pozwól na dostęp do lokalizacji, żeby sortować miejsca według odległości od Ciebie. Nieobowiązkowe.")}</p>
             </div>
+            {/* Podglad listy miejsc (UI listy z aplikacji) - ilustracja "posortowane po odleglosci". */}
+            <div className="mt-6 flex flex-col gap-2.5">
+              {SAMPLE_NEARBY.map((p) => (
+                <div key={p.name} className="flex items-center gap-3 rounded-2xl bg-secondary px-3 py-2.5">
+                  <div className="h-12 w-12 rounded-xl bg-[#fcede3] flex items-center justify-center shrink-0">
+                    <CategoryIcon category={p.cat} className="h-6 w-6" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-foreground truncate">{p.name}</p>
+                    <p className="text-xs text-muted-foreground">{p.catLabel}</p>
+                  </div>
+                  <span className="text-xs font-semibold text-muted-foreground shrink-0">{p.dist}</span>
+                </div>
+              ))}
+            </div>
             <div className="flex-1" />
           </>
         )}
 
         {stepName === "tracking" && (
-          <>
-            <div className="pt-6 text-center">
-              <h2 className="text-2xl font-black mb-2 leading-tight">{nbsp("Pomóż nam ulepszać spontaway")}</h2>
-              <p className="text-[15px] text-muted-foreground leading-relaxed">{nbsp("Zbieramy anonimowe dane o tym, jak korzystasz z aplikacji (np. które ekrany odwiedzasz), żeby ją rozwijać. Nie sprzedajemy Twoich danych. Zgodę zmienisz w każdej chwili w ustawieniach.")}</p>
-            </div>
-            <div className="flex-1" />
-          </>
+          <div className="flex-1 flex flex-col items-center justify-center text-center">
+            <h2 className="text-2xl font-black mb-3 leading-tight">{nbsp("Pomóż nam ulepszać spontaway")}</h2>
+            <p className="text-[15px] text-muted-foreground leading-relaxed max-w-xs">{nbsp("Zbieramy anonimowe dane o tym, jak korzystasz z aplikacji (np. które ekrany odwiedzasz), żeby ją rozwijać. Nie sprzedajemy Twoich danych. Zgodę zmienisz w każdej chwili w ustawieniach.")}</p>
+          </div>
         )}
       </div>
 
-      {/* CTA */}
+      {/* CTA - solidny pomaranczowy guzik (bez gradientu). Chowany gdy input "Inne" w fokusie. */}
+      {!otherFocused && (
       <div className="px-6 pt-4" style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 1.5rem)" }}>
         <button
           onClick={onPrimary}
           disabled={!canNext || permBusy || (stepName === "tracking" && finishing)}
-          className="w-full py-4 rounded-2xl text-white font-bold text-base shadow-lg active:scale-[0.98] transition-transform disabled:opacity-50"
-          style={{ background: "linear-gradient(to right, #F4A259, #F9662B)" }}
+          className="w-full py-4 rounded-2xl bg-orange-600 text-white font-bold text-base shadow-lg active:scale-[0.98] transition-transform disabled:opacity-50"
         >
           {(savingU || permBusy || (stepName === "tracking" && finishing))
             ? <Loader2 className="h-5 w-5 animate-spin mx-auto" />
@@ -468,6 +512,7 @@ const OnboardingFlow = ({ onDone }: Props) => {
           <button onClick={declineTracking} disabled={finishing} className="w-full py-3 mt-1 text-sm font-medium text-muted-foreground">Nie teraz</button>
         )}
       </div>
+      )}
     </div>
   );
 };

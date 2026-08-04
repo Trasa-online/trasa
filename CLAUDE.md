@@ -70,7 +70,7 @@ Oficjalny tagline aplikacji: **"speed dating z miastem"** (wszystkie litery mał
 
 ### Przyciski
 
-- **Primary:** fill pomarańczowy (gradient), zaokrąglone — `rounded-2xl` lub `rounded-full`
+- **Primary:** **SOLIDNY pomarańczowy fill** (`bg-orange-600` / `bg-primary`), zaokrąglenie **16px** (`rounded-2xl`). ⛔ **ZAKAZ gradientu na guzikach** (`linear-gradient(#F4A259 → #F9662B)` itp.) - domyślny guzik MUSI być jednolicie pomarańczowy. Gradientowy guzik tylko gdy Nat wyraźnie napisze, żeby go wprowadzić (decyzja 2026-08-04). Gradient zostaje wyłącznie dla logo/orba/akcentów tła, NIE dla guzików.
 - **Secondary:** **szary fill** `bg-secondary text-secondary-foreground` (styl YouTube - jasny szary, ciemny tekst). NIE biały+pomarańczowy stroke. Dotyczy wszystkich guzików akcji secondary oraz komponentów "paper" (karty sugerujące klik, np. karty miejsc we wpisie dziennika = `bg-secondary`).
 - **Destrukcyjne:** `bg-destructive` (czerwony), tylko dla nieodwracalnych akcji
 - Wszystkie przyciski obłe, `rounded-2xl` minimum
