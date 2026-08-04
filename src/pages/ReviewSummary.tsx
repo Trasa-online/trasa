@@ -1986,6 +1986,15 @@ const ReviewSummary = () => {
             ) : (suggestion?.trim() || route?.ai_summary) ? (
               <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">{suggestion?.trim() || route?.ai_summary}</p>
             ) : null}
+            {/* Wyrazne wejscie w pelny edytor trasy (dodaj/usun/kolejnosc miejsc + opis + notki). */}
+            {isOwner && (
+              <button
+                onClick={() => { haptics.light(); navigate(`/review-summary?route=${routeId}&edit=1&step=2`); }}
+                className="w-full mt-1 py-3 rounded-2xl bg-secondary text-secondary-foreground font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
+              >
+                <Pencil className="h-4 w-4" /> Edytuj trasę
+              </button>
+            )}
             {/* Wiersz "Widoczność" usuniety (2026-07-30): wszystkie trasy sa publiczne by default. */}
           </div>
 
