@@ -64,7 +64,7 @@ export default function SharedRoute() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("routes")
-        .select("id, title, city, user_id, day_number, start_date, ai_summary, ai_highlight, review_photos, review_narrative")
+        .select("id, title, city, user_id, day_number, start_date, ai_summary, ai_highlight, review_photos, review_narrative, group_session_id")
         .eq("id", id as string)
         .eq("is_shared", true)
         .single();
@@ -85,6 +85,20 @@ export default function SharedRoute() {
         .eq("id", route!.user_id)
         .maybeSingle();
       return data as any;
+    },
+  });
+
+  // Uczestnicy trasy grupowej (awatary obok hosta) - bez hosta.
+  const { data: groupParticipants = [] } = useQuery({
+    queryKey: ["shared-route-participants", (route as any)?.group_session_id, route?.user_id],
+    enabled: !!(route as any)?.group_session_id,
+    queryFn: async () => {
+      const { data: members } = await (supabase as any)
+        .from("group_session_members").select("user_id").eq("session_id", (route as any).group_session_id);
+      const ids = (members ?? []).map((m: any) => m.user_id).filter((id: string) => id !== route!.user_id);
+      if (!ids.length) return [] as (string | null)[];
+      const { data: profs } = await (supabase as any).from("profiles").select("id, avatar_url").in("id", ids);
+      return (profs ?? []).map((p: any) => (p.avatar_url ?? null)) as (string | null)[];
     },
   });
 
@@ -423,6 +437,17 @@ export default function SharedRoute() {
               <span className="flex items-center gap-1.5 font-semibold text-foreground">
                 {!isAnon && <img src={avatarSrc(author?.avatar_url)} alt="" className="h-6 w-6 rounded-full object-cover bg-orange-100" />}
                 {authorName}
+              </span>
+            )}
+            {/* Uczestnicy trasy grupowej - nachodzacy stack awatarow obok hosta. */}
+            {groupParticipants.length > 0 && (
+              <span className="flex items-center -space-x-2">
+                {groupParticipants.slice(0, 3).map((a, i) => (
+                  <img key={i} src={avatarSrc(a)} alt="" className="h-6 w-6 rounded-full object-cover bg-orange-100 ring-2 ring-background" />
+                ))}
+                {groupParticipants.length > 3 && (
+                  <span className="h-6 w-6 rounded-full bg-muted ring-2 ring-background flex items-center justify-center text-[9px] font-bold text-foreground">+{groupParticipants.length - 3}</span>
+                )}
               </span>
             )}
             {cityLabel && <span className="flex items-center gap-1 text-muted-foreground"><Building2 className="h-4 w-4" />{cityLabel}</span>}
