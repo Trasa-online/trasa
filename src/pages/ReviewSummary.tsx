@@ -20,6 +20,7 @@ import { QRCodeSVG } from "qrcode.react";
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { PlacePhoto, resolveStored } from "@/components/PlacePhoto";
 import { RoutePlaceRow } from "@/components/route/RoutePlaceRow";
+import InviteFriendsSheet from "@/components/route/InviteFriendsSheet";
 import { compressImage } from "@/lib/imageCompression";
 import { isHeic, convertHeicToJpeg } from "@/lib/heicConvert";
 import { format, parseISO, isValid, addDays } from "date-fns";
@@ -206,6 +207,7 @@ const ReviewSummary = () => {
   // Widok "Plan wyjazdu" (aktywny): top-toggle Miejsca | Galeria (komplet: plan+mapa albo zdjęcia).
   const [planTab, setPlanTab] = useState<"miejsca" | "galeria" | "mapa">("miejsca");
   const [editingStepper, setEditingStepper] = useState(false);
+  const [inviteOpen, setInviteOpen] = useState(false);
   // Fokus w polu notki -> chowamy dolny pasek CTA (klawiatura zabiera miejsce, guziki przeszkadzaja).
   const [noteFocused, setNoteFocused] = useState(false);
   const [localReviewed, setLocalReviewed] = useState(false);
@@ -2010,6 +2012,23 @@ const ReviewSummary = () => {
               >
                 <Pencil className="h-4 w-4" /> Edytuj trasę
               </button>
+            )}
+            {/* Zapros znajomych (solo -> grupowy): podpina trase do sesji + dodaje uczestnikow po username. */}
+            {isOwner && (
+              <button
+                onClick={() => { haptics.light(); setInviteOpen(true); }}
+                className="w-full mt-1 py-3 rounded-2xl bg-secondary text-secondary-foreground font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
+              >
+                <Users className="h-4 w-4" /> Zaproś znajomych
+              </button>
+            )}
+            {isOwner && routeId && (
+              <InviteFriendsSheet
+                open={inviteOpen}
+                onOpenChange={setInviteOpen}
+                route={{ id: routeId, city: route?.city ?? null, title: (route as any)?.title ?? null, group_session_id: (route as any)?.group_session_id ?? null }}
+                onInvited={() => { queryClient.invalidateQueries({ queryKey: ["review-summary-route", routeId] }); }}
+              />
             )}
             {/* Wiersz "Widoczność" usuniety (2026-07-30): wszystkie trasy sa publiczne by default. */}
           </div>
