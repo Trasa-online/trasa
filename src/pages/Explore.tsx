@@ -654,11 +654,28 @@ const Explore = () => {
   // Wejscie z profilu (karta "Zestawienia") -> pokaz liste zestawien usera zamiast feedu.
   const myCollections = (location.state as any)?.myCollections === true;
   // Selektor miasta w naglowku (zastapil tytul "Eksploruj"). Miasto niesione przy
-  // przelaczaniu z/do Przegladaj (location.state), inaczej default Warszawa.
-  // Pre-launch: caly kontent (trasy + miejsca) jest tylko w Warszawie, wiec default =
-  // "Warszawa" (NIE "all"). Widok Miejsc (swiper) filtruje places.in("city", expandCity(city))
-  // - "all" dalby pusta liste, dlatego trzymamy konkretne miasto.
-  const [exploreCity, setExploreCity] = useState<string>((location.state as any)?.city || "Warszawa");
+  // przelaczaniu z/do Przegladaj (location.state), inaczej default "all" = WSZYSTKIE trasy
+  // (bez filtra miasta). Dopiero po kliknieciu selektora user wybiera konkretne miasto.
+  // Widok Miejsc pod "all" pokazuje wszystkie miejsca (PlaceSwiper pomija filtr miasta).
+  const [exploreCity, setExploreCity] = useState<string>((location.state as any)?.city || "all");
+  // Miasta ktore realnie maja trasy w eksploracji (do selektora, obok "Wszystkie").
+  // Bramka jak w feedzie: is_shared + list_cover_url != null. Distinct po stronie klienta.
+  const { data: routeCities = [] } = useQuery({
+    queryKey: ["explore-route-cities"],
+    queryFn: async () => {
+      const { data } = await (supabase as any)
+        .from("routes")
+        .select("city")
+        .eq("is_shared", true)
+        .not("title", "is", null)
+        .not("list_cover_url", "is", null)
+        .not("city", "is", null);
+      const set = new Set<string>();
+      (data ?? []).forEach((r: any) => { if (r.city) set.add(r.city as string); });
+      return Array.from(set).sort((a, b) => a.localeCompare(b, "pl"));
+    },
+    staleTime: 60_000,
+  });
   // Licznik aktywnych filtrow (badge na guziku filtra w gornej belce). DiscoveryFeed
   // trzyma stan filtrow i raportuje liczbe przez event; belka jest o poziom wyzej.
   const [filterCount, setFilterCount] = useState(0);
@@ -738,6 +755,7 @@ const Explore = () => {
           <ExploreTopBar
             mode={view === "browse" ? "browse" : "explore"}
             city={exploreCity}
+            cities={routeCities}
             onCityChange={setExploreCity}
             onModeChange={(m) => setView(m === "browse" ? "browse" : "feed")}
             onBack={() => setView("feed")}

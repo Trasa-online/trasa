@@ -1244,11 +1244,14 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
       }
 
       // ── Normal mode ──────────────────────────────────────────────────────
-      const { data, error: placesError } = await (supabase as any)
+      // city === "all" (opcja "Wszystkie") -> bez filtra miasta (wszystkie miejsca).
+      const scoped = !!city && city !== "all";
+      let placesQuery = (supabase as any)
         .from("places")
         .select(PLACE_BUSINESS_SELECT)
-        .in("city", expandCity(city))
         .eq("is_active", true);
+      if (scoped) placesQuery = placesQuery.in("city", expandCity(city));
+      const { data, error: placesError } = await placesQuery;
 
       if (placesError) console.error("[PlaceSwiper] places fetch error:", placesError);
       console.log("[PlaceSwiper] fetched places:", { count: data?.length ?? 0, city, categoryFilter });
@@ -1263,12 +1266,13 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
       if (user) {
         const todayStart = new Date();
         todayStart.setHours(0, 0, 0, 0);
-        const { data: reactions } = await (supabase as any)
+        let reactionsQuery = (supabase as any)
           .from("user_place_reactions")
           .select("place_id")
           .eq("user_id", user.id)
-          .in("city", expandCity(city))
           .gte("created_at", todayStart.toISOString());
+        if (scoped) reactionsQuery = reactionsQuery.in("city", expandCity(city));
+        const { data: reactions } = await reactionsQuery;
         if (reactions?.length) {
           ratedPlaceIds = new Set(reactions.map((r: { place_id: string }) => r.place_id));
         }

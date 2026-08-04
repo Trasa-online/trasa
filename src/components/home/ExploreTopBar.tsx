@@ -13,6 +13,7 @@ import RegionSelect from "@/components/home/RegionSelect";
 export default function ExploreTopBar({
   mode,
   city,
+  cities,
   onCityChange,
   onOpenFilters,
   onOpenSearch,
@@ -23,6 +24,8 @@ export default function ExploreTopBar({
 }: {
   mode: "explore" | "browse";
   city: string;
+  // Miasta z trasami (do selektora, obok "Wszystkie"). Gdy puste -> selektor pokazuje samo "Wszystkie".
+  cities?: string[];
   onCityChange: (city: string) => void;
   onOpenFilters: () => void;
   // Klik lupy -> rodzic rozwija pelnoszerokosciowa wyszukiwarke w belce.
@@ -40,15 +43,15 @@ export default function ExploreTopBar({
   hideModeToggle?: boolean;
 }) {
   const navigate = useNavigate();
-  const cur = city || "Warszawa";
+  const cur = city || "all";
   const goBrowse = () => (onModeChange ? onModeChange("browse") : navigate("/plan", { state: { exploreMode: true, city: cur } }));
   const goExplore = () => (onModeChange ? onModeChange("explore") : navigate("/eksploruj", { state: { city: cur } }));
 
   return (
     <>
-      {/* Polaczony selektor kraj + miasto w jednym pillu (oszczedza szerokosc belki, zeby
-          toggle Trasy|Miejsca + filtry + lupa sie miescily). Pre-launch: tylko Warszawa. */}
-      <RegionSelect city={cur} onCityChange={onCityChange} />
+      {/* Selektor: domyslnie "Wszystkie" (wszystkie trasy), po kliknieciu lista miast
+          ktore realnie maja trasy. Jeden pill (oszczedza szerokosc belki). */}
+      <RegionSelect city={cur} cities={cities} onCityChange={onCityChange} />
 
       <div className="flex-1" />
 
