@@ -360,7 +360,7 @@ const OnboardingFlow = ({ onDone }: Props) => {
                         placeholder="Wpisz swój cel"
                         className="flex-1 bg-transparent text-[15px] font-semibold outline-none placeholder:font-normal placeholder:text-muted-foreground/50"
                       />
-                      <button onClick={() => toggleGoal(o.id)} aria-label="Odznacz" className="h-6 w-6 rounded-full bg-orange-600 flex items-center justify-center shrink-0"><Check className="h-4 w-4 text-white" strokeWidth={3} /></button>
+                      <button onClick={() => toggleGoal(o.id)} aria-label="Odznacz" className="h-6 w-6 rounded-md bg-orange-600 flex items-center justify-center shrink-0"><Check className="h-4 w-4 text-white" strokeWidth={3} /></button>
                     </div>
                   );
                 }
@@ -371,7 +371,7 @@ const OnboardingFlow = ({ onDone }: Props) => {
                     className="w-full text-left px-4 py-3.5 rounded-2xl border border-border bg-white text-foreground text-[15px] font-semibold flex items-center justify-between active:scale-[0.99] transition-transform"
                   >
                     <span>{o.label}</span>
-                    <span className={cn("h-6 w-6 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors", active ? "bg-orange-600 border-orange-600" : "border-muted-foreground/30")}>
+                    <span className={cn("h-6 w-6 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors", active ? "bg-orange-600 border-orange-600" : "border-muted-foreground/30")}>
                       {active && <Check className="h-4 w-4 text-white" strokeWidth={3} />}
                     </span>
                   </button>
@@ -484,10 +484,18 @@ const OnboardingFlow = ({ onDone }: Props) => {
         )}
 
         {stepName === "tracking" && (
-          <div className="flex-1 flex flex-col items-center justify-center text-center">
-            <h2 className="text-2xl font-black mb-3 leading-tight">{nbsp("Pomóż nam ulepszać spontaway")}</h2>
-            <p className="text-[15px] text-muted-foreground leading-relaxed max-w-xs">{nbsp("Zbieramy anonimowe dane o tym, jak korzystasz z aplikacji (np. które ekrany odwiedzasz), żeby ją rozwijać. Nie sprzedajemy Twoich danych. Zgodę zmienisz w każdej chwili w ustawieniach.")}</p>
-          </div>
+          <>
+            <div className="pt-6 text-center">
+              <h2 className="text-2xl font-black mb-2 leading-tight">{nbsp("Pomóż nam ulepszać spontaway")}</h2>
+              <p className="text-[15px] text-muted-foreground leading-relaxed">{nbsp("Zbieramy anonimowe dane o tym, jak korzystasz z aplikacji (np. które ekrany odwiedzasz), żeby ją rozwijać. Nie sprzedajemy Twoich danych. Zgodę zmienisz w każdej chwili w ustawieniach.")}</p>
+            </div>
+            {/* Placeholder ikony - nat doda custom ikone do tego widoku. */}
+            <div className="flex-1 flex items-center justify-center">
+              <div className="h-24 w-24 rounded-full bg-[#fcede3] flex items-center justify-center">
+                <img src="/Ikona_Eksploracja.svg" alt="" className="h-11 w-11" draggable={false} />
+              </div>
+            </div>
+          </>
         )}
       </div>
 
