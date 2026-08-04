@@ -2103,10 +2103,13 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
             );
           })}
         </div>
-        {/* Puls "scroll w dol" - afordancja, znika po pierwszym przewinieciu. */}
+        {/* Puls "scroll w dol" - afordancja, znika po pierwszym przewinieciu.
+            Centrowanie (-translate-x-1/2) MUSI byc na osobnym, zewnetrznym divie - animate-bounce
+            nadpisuje transform elementu (translateY), co skasowaloby -translate-x-1/2 i przesunelo
+            hint w prawo o pol szerokosci. Zewnetrzny centruje (nad guzikiem "+"), wewnetrzny skacze. */}
         {!hasScrolled && displayQueue.length > 1 && (
-          <div className="absolute bottom-40 left-1/2 -translate-x-1/2 z-20 pointer-events-none animate-bounce">
-            <div className="h-9 w-9 rounded-full bg-black/45 backdrop-blur flex items-center justify-center shadow-lg">
+          <div className="absolute bottom-40 left-1/2 -translate-x-1/2 z-20 pointer-events-none">
+            <div className="animate-bounce h-9 w-9 rounded-full bg-black/45 backdrop-blur flex items-center justify-center shadow-lg">
               <ChevronDown className="h-5 w-5 text-white" />
             </div>
           </div>
