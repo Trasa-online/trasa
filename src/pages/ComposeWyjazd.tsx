@@ -2,7 +2,8 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useLocation } from "react-router-dom";
-import { ArrowLeft, Search, Plus, X, ChevronDown, Calendar as CalendarIcon, List, GalleryHorizontalEnd, Loader2, ArrowRight, Trash2, Maximize2, GripVertical } from "lucide-react";
+import { ArrowLeft, Search, Plus, X, ChevronDown, Calendar as CalendarIcon, List, GalleryHorizontalEnd, Loader2, ArrowRight, Trash2, Maximize2, GripVertical, UserPlus } from "lucide-react";
+import InviteFriendsSheet from "@/components/route/InviteFriendsSheet";
 import { Reorder, useDragControls } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -210,6 +211,36 @@ export default function ComposeWyjazd() {
   const [searchBlocked, setSearchBlocked] = useState(false);
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [creating, setCreating] = useState(false);
+  const [inviteOpen, setInviteOpen] = useState(false);
+  // Sesja grupowa trasy (po pierwszym zaproszeniu) - zeby drugie zaproszenie nie tworzylo drugiej.
+  const [groupSessionId, setGroupSessionId] = useState<string | null>(null);
+
+  // "Zapros znajomych" przy tworzeniu: trasa jeszcze nie istnieje, wiec najpierw tworzymy
+  // szkic (draft) zeby miec routeId, potem otwieramy sheet (podpina zaproszonych do tej trasy).
+  const handleOpenInvite = async () => {
+    if (!user) return;
+    if (!items.length) { toast("Najpierw dodaj miejsca do trasy"); return; }
+    let id = draftId;
+    if (!id) {
+      setCreating(true);
+      const dates = tripDate
+        ? { start_date: format(tripDate.start, "yyyy-MM-dd"), end_date: format(addDays(tripDate.start, tripDate.numDays - 1), "yyyy-MM-dd") }
+        : undefined;
+      const places = items.map((i) => ({
+        place_name: i.place_name, category: i.category, address: i.address,
+        latitude: i.latitude, longitude: i.longitude, photo_url: i.photo_url, place_id: i.place_id,
+      }));
+      id = await createWyjazdFromPlaces(user.id, city, name.trim() || city || "Wyjazd", places, dates);
+      setCreating(false);
+      if (!id) { toast.error("Nie udało się utworzyć trasy"); return; }
+      setDraftId(id);
+      try {
+        const cur = JSON.parse(sessionStorage.getItem(softKey) || "{}");
+        sessionStorage.setItem(softKey, JSON.stringify({ ...cur, draftId: id }));
+      } catch { /* unavailable */ }
+    }
+    setInviteOpen(true);
+  };
 
   // Wizytowka miejsca (tap w karte) + rozwinieta mapa.
   const [detailPlace, setDetailPlace] = useState<MockPlace | null>(null);
@@ -425,7 +456,24 @@ export default function ComposeWyjazd() {
           <ArrowLeft className="h-5 w-5" />
         </button>
         <span className="flex-1 font-bold text-base truncate">{nav.title ? `Zestawienie - ${nav.title}` : "Nowy wyjazd"}</span>
+        {/* Zapros znajomych - tworzy szkic trasy (jesli trzeba) i otwiera sheet zaproszen po username. */}
+        <button
+          onClick={handleOpenInvite}
+          disabled={creating}
+          aria-label="Zaproś znajomych"
+          className="shrink-0 flex items-center gap-1.5 h-9 pl-2.5 pr-3 rounded-full bg-secondary text-secondary-foreground text-sm font-bold active:scale-95 transition-transform disabled:opacity-50"
+        >
+          <UserPlus className="h-4 w-4" /> Zaproś
+        </button>
       </div>
+      {draftId && (
+        <InviteFriendsSheet
+          open={inviteOpen}
+          onOpenChange={setInviteOpen}
+          route={{ id: draftId, city: city ?? null, title: name || null, group_session_id: groupSessionId }}
+          onInvited={(sid) => { if (sid) setGroupSessionId(sid); }}
+        />
+      )}
 
       <div className="flex-1 min-h-0 overflow-y-auto pb-4">
         {/* Kraj - pelnowymiarowy select (Polska + Europa + Azja odblokowane), grupowany po regionie */}
