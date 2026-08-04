@@ -1267,26 +1267,26 @@ function TrasaBigCard({
       {/* Dolny-lewy opis. right-[3.25rem]=52px + px-5(20px) -> tekst konczy sie 72px od
           prawej = 12px odstepu od guzikow (right-3=12 + w-12=48 -> lewa krawedz 60px). */}
       <div className="absolute left-0 right-[3.25rem] bottom-6 z-10 px-5 pointer-events-none">
-        <div className="flex items-center gap-3 text-white text-[13px] font-semibold mb-1.5 [text-shadow:_0_1px_3px_rgb(0_0_0_/_40%)]">
-          {authorName && (
-            <span className="flex items-center gap-1.5">
-              <img src={avatarSrc(authorAvatar ?? null)} alt="" className="h-5 w-5 rounded-full object-cover bg-orange-100 ring-1 ring-white/40" />
-              {authorName}
-            </span>
-          )}
-          {/* Uczestnicy trasy grupowej - awatary obok hosta (stack). */}
-          {participants.length > 0 && (
-            <span className="flex items-center -space-x-1.5">
+        {/* Meta: nachodzacy stack awatarow (host + uczestnicy) + jedna linia tekstu bez lamania. */}
+        <div className="flex items-center gap-2 text-white text-[13px] font-semibold mb-1.5 min-w-0 [text-shadow:_0_1px_3px_rgb(0_0_0_/_45%)]">
+          {(authorName || participants.length > 0) && (
+            <span className="flex items-center -space-x-2 shrink-0">
+              {authorName && (
+                <img src={avatarSrc(authorAvatar ?? null)} alt="" className="h-6 w-6 rounded-full object-cover bg-orange-100 ring-2 ring-black/25" />
+              )}
               {participants.slice(0, 3).map((a, i) => (
-                <img key={i} src={avatarSrc(a ?? null)} alt="" className="h-5 w-5 rounded-full object-cover bg-orange-100 ring-1 ring-white/60" />
+                <img key={i} src={avatarSrc(a ?? null)} alt="" className="h-6 w-6 rounded-full object-cover bg-orange-100 ring-2 ring-black/25" />
               ))}
               {participants.length > 3 && (
-                <span className="h-5 w-5 rounded-full bg-black/55 ring-1 ring-white/60 flex items-center justify-center text-[9px] font-bold">+{participants.length - 3}</span>
+                <span className="h-6 w-6 rounded-full bg-black/60 ring-2 ring-black/25 flex items-center justify-center text-[9px] font-bold">+{participants.length - 3}</span>
               )}
             </span>
           )}
-          {city && <span className="flex items-center gap-1"><Building2 className="h-4 w-4" />{city}</span>}
-          {countLabel && <span className="flex items-center gap-1"><MapPin className="h-4 w-4" />{countLabel}</span>}
+          <span className="flex items-center gap-1.5 min-w-0 whitespace-nowrap">
+            {authorName && <span className="truncate max-w-[7.5rem]">{authorName}</span>}
+            {city && (<><span className="opacity-50 shrink-0">·</span><span className="truncate">{city}</span></>)}
+            {countLabel && (<><span className="opacity-50 shrink-0">·</span><span className="shrink-0">{countLabel}</span></>)}
+          </span>
         </div>
         <p className="text-white text-2xl font-black leading-tight line-clamp-2 [text-shadow:_0_2px_6px_rgb(0_0_0_/_45%)]">{title}</p>
         {description && (
