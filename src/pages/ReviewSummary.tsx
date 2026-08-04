@@ -2096,9 +2096,8 @@ const ReviewSummary = () => {
                   </button>
                 );
               })}
-              <button onClick={() => setAddingPlace(true)} className="shrink-0 w-[130px] snap-start rounded-2xl border border-dashed border-border/70 flex flex-col items-center justify-center gap-1.5 text-muted-foreground active:bg-muted/40 transition-colors">
-                <Plus className="h-5 w-5" /> <span className="text-xs font-bold">Dodaj miejsce</span>
-              </button>
+              {/* "Dodaj miejsce" usuniete z widoku wyswietlania (2026-08-04) - dodawanie miejsc
+                  jest w edytorze pod guzikiem "Edytuj trase". */}
             </div>
           ) : (
             /* Aktywny + Lista -> duze wiersze (RoutePlaceRow) z uchwytem DRAG + swipe-to-delete. */
@@ -2127,9 +2126,7 @@ const ReviewSummary = () => {
                   );
                 })}
               </Reorder.Group>
-              <button onClick={() => setAddingPlace(true)} className="w-full rounded-2xl border border-dashed border-border/70 p-3 text-center text-sm font-bold text-muted-foreground active:bg-muted/40 transition-colors">
-                Dodaj miejsce
-              </button>
+              {/* "Dodaj miejsce" usuniete z widoku wyswietlania - dodawanie w edytorze ("Edytuj trase"). */}
             </div>
           )}
           {/* MAPA przeniesiona do wlasnej zakladki "Mapa" (obok Galeria) - patrz wyzej. */}
