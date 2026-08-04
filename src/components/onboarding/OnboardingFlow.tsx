@@ -60,7 +60,7 @@ const GOAL_OPTS = [
   { id: "other", label: "Inne" },
 ];
 
-const STEPS = ["welcome", "source", "goals", "username", "avatar", "notify", "location", "tracking"] as const;
+const STEPS = ["welcome", "source", "goals", "username", "avatar", "home", "notify", "location", "tracking"] as const;
 type Step = typeof STEPS[number];
 type UStatus = "idle" | "short" | "checking" | "ok" | "taken";
 
@@ -79,6 +79,7 @@ const OnboardingFlow = ({ onDone }: Props) => {
 
   // Profil
   const [firstName, setFirstName] = useState("");
+  const [homeCity, setHomeCity] = useState("");
   const [username, setUsername] = useState("");
   const [uStatus, setUStatus] = useState<UStatus>("idle");
   const [savingU, setSavingU] = useState(false);
@@ -101,6 +102,10 @@ const OnboardingFlow = ({ onDone }: Props) => {
         if ((data as any).avatar_url) setAvatarUrl((data as any).avatar_url);
         if ((data as any).first_name) setFirstName((data as any).first_name);
       });
+    // home_city osobno (best-effort - kolumna moze wymagac migracji, nie psuj prefilla).
+    (supabase as any).from("profiles").select("home_city").eq("id", user.id).maybeSingle()
+      .then(({ data }: any) => { if (!cancelled && data?.home_city) setHomeCity(data.home_city); })
+      .catch(() => {});
     return () => { cancelled = true; };
   }, [user]);
 
@@ -246,9 +251,19 @@ const OnboardingFlow = ({ onDone }: Props) => {
     stepName === "username" ? (uStatus === "ok" && firstName.trim().length >= 2 && !savingU) :
     true; // avatar - opcjonalny
 
+  // Zapis miasta zamieszkania (best-effort - kolumna home_city moze wymagac migracji).
+  const saveHomeCity = async () => {
+    if (user && homeCity.trim()) {
+      try { await (supabase as any).from("profiles").update({ home_city: homeCity.trim() }).eq("id", user.id); }
+      catch { /* migracja jeszcze niewklejona - nie blokuj */ }
+    }
+    goNext();
+  };
+
   const onPrimary = () => {
     if (stepName === "welcome" || stepName === "source" || stepName === "goals" || stepName === "avatar") goNext();
     else if (stepName === "username") saveUsername();
+    else if (stepName === "home") saveHomeCity();
     else if (stepName === "notify") allowNotifications();
     else if (stepName === "location") allowLocation();
     else if (stepName === "tracking") acceptTracking();
@@ -448,6 +463,28 @@ const OnboardingFlow = ({ onDone }: Props) => {
               </button>
             </div>
             <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onFile} />
+          </>
+        )}
+
+        {stepName === "home" && (
+          <>
+            <div className="pt-6 text-center">
+              <h2 className="text-2xl font-black mb-2 leading-tight">{nbsp("Gdzie mieszkasz?")}</h2>
+              <p className="text-[15px] text-muted-foreground leading-relaxed">{nbsp("Podaj swoje miasto - pomoże nam podpowiadać trasy blisko Ciebie.")}</p>
+            </div>
+            <div className="mt-8">
+              <label className="block text-sm font-semibold mb-2 px-1">Miasto</label>
+              <div className="rounded-2xl border border-border bg-white px-4 focus-within:ring-2 focus-within:ring-orange-500/60 transition-shadow">
+                <input
+                  value={homeCity}
+                  onChange={(e) => setHomeCity(e.target.value.slice(0, 60))}
+                  autoCapitalize="words"
+                  autoCorrect="off"
+                  placeholder="np. Warszawa"
+                  className="w-full bg-transparent py-3.5 px-1 text-lg outline-none text-foreground placeholder:text-muted-foreground/50"
+                />
+              </div>
+            </div>
           </>
         )}
 

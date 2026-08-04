@@ -4,6 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useLocation } from "react-router-dom";
 import { ArrowLeft, Search, Plus, X, ChevronDown, Calendar as CalendarIcon, List, GalleryHorizontalEnd, Loader2, ArrowRight, Trash2, Maximize2, GripVertical, UserPlus } from "lucide-react";
 import InviteFriendsSheet from "@/components/route/InviteFriendsSheet";
+import { avatarSrc } from "@/lib/avatar";
 import { Reorder, useDragControls } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -214,6 +215,8 @@ export default function ComposeWyjazd() {
   const [inviteOpen, setInviteOpen] = useState(false);
   // Sesja grupowa trasy (po pierwszym zaproszeniu) - zeby drugie zaproszenie nie tworzylo drugiej.
   const [groupSessionId, setGroupSessionId] = useState<string | null>(null);
+  // Zaproszeni (awatary obok guzika "Zapros" - stan po zaproszeniu). Dedup po id.
+  const [invited, setInvited] = useState<{ id: string; avatar_url: string | null }[]>([]);
 
   // "Zapros znajomych" przy tworzeniu: trasa jeszcze nie istnieje, wiec najpierw tworzymy
   // szkic (draft) zeby miec routeId, potem otwieramy sheet (podpina zaproszonych do tej trasy).
@@ -456,6 +459,17 @@ export default function ComposeWyjazd() {
           <ArrowLeft className="h-5 w-5" />
         </button>
         <span className="flex-1 font-bold text-base truncate">{nav.title ? `Zestawienie - ${nav.title}` : "Nowy wyjazd"}</span>
+        {/* Awatary zaproszonych (stan po zaproszeniu) - obok guzika "Zapros". */}
+        {invited.length > 0 && (
+          <span className="flex items-center -space-x-2 shrink-0">
+            {invited.slice(0, 3).map((p) => (
+              <img key={p.id} src={avatarSrc(p.avatar_url)} alt="" className="h-7 w-7 rounded-full object-cover bg-orange-100 ring-2 ring-background" />
+            ))}
+            {invited.length > 3 && (
+              <span className="h-7 w-7 rounded-full bg-muted ring-2 ring-background flex items-center justify-center text-[10px] font-bold text-foreground">+{invited.length - 3}</span>
+            )}
+          </span>
+        )}
         {/* Zapros znajomych - tworzy szkic trasy (jesli trzeba) i otwiera sheet zaproszen po username. */}
         <button
           onClick={handleOpenInvite}
@@ -471,7 +485,14 @@ export default function ComposeWyjazd() {
           open={inviteOpen}
           onOpenChange={setInviteOpen}
           route={{ id: draftId, city: city ?? null, title: name || null, group_session_id: groupSessionId }}
-          onInvited={(sid) => { if (sid) setGroupSessionId(sid); }}
+          onInvited={(sid, list) => {
+            if (sid) setGroupSessionId(sid);
+            setInvited((prev) => {
+              const map = new Map(prev.map((p) => [p.id, p]));
+              list.forEach((p) => map.set(p.id, p));
+              return [...map.values()];
+            });
+          }}
         />
       )}
 

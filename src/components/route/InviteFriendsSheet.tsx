@@ -16,7 +16,7 @@ export default function InviteFriendsSheet({ open, onOpenChange, route, onInvite
   open: boolean;
   onOpenChange: (o: boolean) => void;
   route: InviteRoute;
-  onInvited?: (sessionId?: string) => void;
+  onInvited?: (sessionId: string | undefined, invited: { id: string; avatar_url: string | null }[]) => void;
 }) {
   const { user } = useAuth();
   const [q, setQ] = useState("");
@@ -59,7 +59,7 @@ export default function InviteFriendsSheet({ open, onOpenChange, route, onInvite
     setSending(false);
     if (!res.ok) { toast.error("Nie udało się zaprosić. Spróbuj ponownie."); return; }
     toast.success(selectedList.length === 1 ? "Zaproszono" : `Zaproszono ${selectedList.length} osób`);
-    onInvited?.(res.sessionId);
+    onInvited?.(res.sessionId, selectedList.map((p) => ({ id: p.id, avatar_url: p.avatar_url })));
     onOpenChange(false);
   };
 
