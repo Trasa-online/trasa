@@ -90,15 +90,17 @@ Oficjalny tagline aplikacji: **"speed dating z miastem"** (wszystkie litery mał
 - **NIE** dodawaj napisu "trasa" obok orby bez wyraźnej prośby
 - CSS orby: `radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)`
 
-### ⛔ Znak Trasy ZAWSZE w kółku (pomarańczowe koło + biały znak, jak ikona natywna)
+### Znak spontaway (rebrand 2026-08-04) - sam pomarańczowy symbol, BEZ kółka
 
-Znak Trasy (plik `/Icon_Trasa.png`, stylizowane „T") **nigdy nie może być „zawieszony w powietrzu" sam** na tle strony - zawsze umieszczaj go w **kółku w wariancie „reverse": pomarańczowe koło (gradient `#F4A259 → #F9662B`) z BIAŁYM znakiem w środku** (tak jak ikona aplikacji natywnej). Dotyczy to całej aplikacji **i** stron marketingowych (landingi, nawigacje, footery, ekrany auth, splash, avatary oficjalnych tras).
+**Marka: spontaway** (tylko logo/znak - nazewnictwo „trasa/trasy" w UI zostaje jako zwykłe słowo = route/routes). Znak = faliste „S" (plik `/spontaway-symbol.png`, pomarańczowy `#F75708` na przezroczystym tle).
 
-- **Używaj komponentu `TrasaLogo`** ([src/components/TrasaLogo.tsx](src/components/TrasaLogo.tsx)) zamiast wstawiać `<img src="/Icon_Trasa.png">` bezpośrednio. Prop `size` = średnica kółka w px (znak renderuje się wewnątrz na ~56%, biały przez filtr `brightness(0) invert(1)`).
-- Kółko działa zarówno na jasnych (`#FEFEFE`/`slate-50`), jak i ciemnych tłach - wygląda jak app-icon.
-- **Historia:** wcześniej było odwrotnie (białe koło `#FAFAFA` + pomarańczowy znak). 2026-07-16 zmienione na reverse (pomarańczowe koło + biały znak) dla spójności z ikoną natywną.
-- Wyjątek: **orba** (kula z gradientem) to osobny element - jej NIE pakuj w kółko (jest samodzielna).
-- **B2B branding + logo:** kółko z logo (pomarańczowe) pojawia się nawet w niebieskim kontekście biznesowym (nagłówki auth, SetPassword, onboarding). To świadomy wyjątek od reguły „B2B = tylko niebiesko" - logo marki zawsze w swoim kolorze.
+- **Sam symbol, NIE w kółku.** Kolor przewodni pomarańcz, ale symbol nie jest już zamknięty w krążku (poprzednia reguła „znak zawsze w pomarańczowym kółku" = NIEAKTUALNA).
+- **Używaj komponentu `TrasaLogo`** ([src/components/TrasaLogo.tsx](src/components/TrasaLogo.tsx)). Prop `size` = rozmiar boxu w px (symbol `object-contain`). Prop `tone`: `"orange"` (domyślnie, symbol pomarańczowy na jasnym tle) lub `"white"` (biały symbol na pomarańczu/ciemnym tle, np. loading/splash - przez filtr `brightness(0) invert(1)`).
+- **Warianty kolorów wg tła:** jasne tło (`#FEFEFE`) → pomarańczowy symbol. Pomarańczowe/ciemne tło (ikona aplikacji, splash, loading) → BIAŁY symbol.
+- **Ikona aplikacji + splash:** pomarańczowy kafelek (`#F75708`) + biały symbol. Źródła masterów: `public/ikonka_telefon.png` (gotowy kafelek) i `public/logo_ikona.png` (sam pomarańczowy symbol). Wszystkie rozmiary (AppIcon, splash 2732, PWA `icon-192/512`, `apple-touch-icon`, `favicon`, `Avatar_Trasa`) generuje skrypt `sips`/Pillow z tych dwóch plików.
+- Wyjątek: **orba** (kula z gradientem) to osobny element - jej NIE ruszamy.
+- **B2B branding + logo:** logo marki (pomarańczowy symbol) pojawia się nawet w niebieskim kontekście biznesowym (nagłówki auth, SetPassword, onboarding). Świadomy wyjątek od „B2B = tylko niebiesko".
+- **Historia:** do 2026-08-04 znak = „T" w pomarańczowym kółku (wariant reverse, biały znak na gradiencie). Rebrand na spontaway: sam pomarańczowy symbol bez kółka.
 
 ---
 
