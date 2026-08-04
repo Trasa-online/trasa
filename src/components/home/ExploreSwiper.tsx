@@ -82,19 +82,8 @@ export default function ExploreSwiper({ city, active, sortNearestNonce = 0 }: { 
             </button>
           </div>
           <div className="flex-1 min-h-0 overflow-y-auto px-5 pt-5 pb-[max(20px,env(safe-area-inset-bottom))]" style={{ WebkitOverflowScrolling: "touch" }}>
-            <div className="flex items-center justify-between gap-3 mb-5 pr-12">
-              <div>
-                <p className="text-lg font-black">{t("filters")}</p>
-                <p className="text-xs text-muted-foreground mt-0.5">{t("filters_subtitle")}</p>
-              </div>
-              {activeFilterCount > 0 && (
-                <button
-                  onClick={() => { setSelectedCategories([]); setSortMode("default"); }}
-                  className="text-xs text-muted-foreground underline underline-offset-2 active:opacity-60 shrink-0"
-                >
-                  {t("filters_clear_all")}
-                </button>
-              )}
+            <div className="mb-5 pr-12">
+              <p className="text-lg font-black">{t("filters")}</p>
             </div>
 
             {/* Sortowanie */}
@@ -164,7 +153,9 @@ export default function ExploreSwiper({ city, active, sortNearestNonce = 0 }: { 
               {MAIN_CATEGORIES.map((cat) => (
                 <div key={cat.id}>
                   <div className="flex items-center gap-2 mb-3">
-                    <CategoryIcon category={cat.id} className="h-4 w-4 shrink-0" />
+                    {/* Ikona glownej kategorii = brandowa ikona pierwszej podkategorii (id glownej
+                        kategorii, np. "food", nie ma w mapie ikon -> lecial fallback Landmark). */}
+                    <CategoryIcon category={cat.subcategories[0]?.id ?? cat.id} className="h-4 w-4 shrink-0" />
                     <p className="text-sm font-bold text-foreground">{cat.label}</p>
                   </div>
                   <div className="flex flex-wrap gap-2">
@@ -189,12 +180,21 @@ export default function ExploreSwiper({ city, active, sortNearestNonce = 0 }: { 
               ))}
             </div>
 
-            <button
-              onClick={() => setCategoryDrawerOpen(false)}
-              className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-sm active:scale-[0.97] transition-transform shadow-md shadow-orange-500/20"
-            >
-              {t("show_places")}
-            </button>
+            {/* Dwa guziki, ujednolicone z filtrem Tras: Wyczysc (secondary) + Pokaz (primary), radius 16px. */}
+            <div className="flex gap-2">
+              <button
+                onClick={() => { setSelectedCategories([]); setSortMode("default"); }}
+                className="flex-1 py-3.5 rounded-2xl bg-secondary text-secondary-foreground font-bold text-sm active:scale-[0.98] transition-transform"
+              >
+                {t("filters_clear_all")}
+              </button>
+              <button
+                onClick={() => setCategoryDrawerOpen(false)}
+                className="flex-1 py-3.5 rounded-2xl bg-primary text-white font-bold text-sm active:scale-[0.98] transition-transform"
+              >
+                {t("show_places")}
+              </button>
+            </div>
           </div>
         </SheetContent>
       </Sheet>

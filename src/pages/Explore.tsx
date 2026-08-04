@@ -704,6 +704,12 @@ const Explore = () => {
     window.addEventListener("trasa:explore-nearby", h);
     return () => window.removeEventListener("trasa:explore-nearby", h);
   }, []);
+  // Coach-marki (onboarding) przelaczaja widok, zeby user widzial zmiane zakladki pod banerem.
+  useEffect(() => {
+    const h = (e: any) => { const v = e?.detail; if (v === "browse" || v === "feed") setView(v); };
+    window.addEventListener("trasa:explore-set-view", h);
+    return () => window.removeEventListener("trasa:explore-set-view", h);
+  }, []);
   // BottomNav (glassmorficzny) widoczny w OBU widokach - Miejsca (swiper) i Trasy (feed) -
   // dla spojnosci wg redesignu 2026-07-24. Ukrywamy tylko gdy szukamy (pelny ekran wynikow).
   // Karta swipera w exploreMode ma pb chroniace przed BottomNavem (patrz CLAUDE.md PlaceSwiper).

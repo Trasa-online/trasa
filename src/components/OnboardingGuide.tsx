@@ -74,17 +74,18 @@ interface StepCfg {
   body: string;
   target: string | null;   // selektor data-ob elementu do podswietlenia
   cta: string;
+  view?: "feed" | "browse"; // przelacz widok eksploracji, zeby user widzial zmiane zakladki pod spodem
 }
 
 const STEPS: StepCfg[] = [
   {
-    icon: Compass, label: "TRASY", target: '[data-ob="toggle-trasy"]',
+    icon: Compass, label: "TRASY", target: '[data-ob="toggle-trasy"]', view: "feed",
     title: "Zakładka Trasy",
     body: "Tu przeglądasz gotowe trasy stworzone przez innych. Wejdź w trasę, żeby zobaczyć miejsca i zainspirować się do własnej.",
     cta: "Dalej",
   },
   {
-    icon: Layers, label: "MIEJSCA", target: '[data-ob="toggle-miejsca"]',
+    icon: Layers, label: "MIEJSCA", target: '[data-ob="toggle-miejsca"]', view: "browse",
     title: "Zakładka Miejsca",
     body: "Tu przeglądasz pojedyncze miejsca w Twoim mieście, jedno po drugim: kawiarnie, restauracje, bary, miejsca kultury i natury.",
     cta: "Dalej",
@@ -117,6 +118,13 @@ function OnboardingCoach({ finish }: { finish: () => void }) {
     navigate("/eksploruj", { replace: true });
   }, [navigate]);
 
+  // Przelacz widok eksploracji POD spodem, zeby user widzial zmiane zakladki (Trasy -> feed,
+  // Miejsca -> swiper). Explore.tsx nasluchuje "trasa:explore-set-view".
+  useEffect(() => {
+    const v = STEPS[idx].view;
+    if (v) window.dispatchEvent(new CustomEvent("trasa:explore-set-view", { detail: v }));
+  }, [idx]);
+
   // Pomiar pozycji podswietlanego elementu (rAF - nadaza za layoutem).
   useEffect(() => {
     if (!cfg.target) { setRect(null); return; }
@@ -143,9 +151,9 @@ function OnboardingCoach({ finish }: { finish: () => void }) {
     : null;
   const DIM = "rgba(15,15,15,0.62)";
 
-  // Baner: przy podswietlonym elemencie U GORY (toggle) siada NAD BottomNavem (dol); przy
-  // elemencie na dole ("+") tez dol - i tak nie koliduja. Gdy brak targetu - wysrodkowany.
-  const bannerBottom = "calc(env(safe-area-inset-bottom, 0px) + 96px)";
+  // Baner NA GORZE (pod TabTopBarem) - zeby user widzial, jak pod spodem zmienia sie zakladka
+  // (Trasy/Miejsca) i podswietlone elementy. Nie zaslania contentu na srodku ekranu.
+  const bannerTop = "calc(env(safe-area-inset-top, 0px) + 76px)";
 
   return (
     <>
@@ -164,7 +172,7 @@ function OnboardingCoach({ finish }: { finish: () => void }) {
       )}
 
       {/* Baner: czarny naglowek + body, stepper na dole nad guzikiem (16px radius). Bez ikon. */}
-      <div style={{ position: "fixed", left: 0, right: 0, bottom: bannerBottom, zIndex: 57 } as CSSProperties} className="px-4">
+      <div style={{ position: "fixed", left: 0, right: 0, top: bannerTop, zIndex: 57 } as CSSProperties} className="px-4">
         <div className="max-w-md mx-auto rounded-3xl bg-card border border-border/60 shadow-xl shadow-black/20 p-5">
           <p className="text-lg font-black leading-tight text-foreground">{cfg.title}</p>
           <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed">{cfg.body}</p>
