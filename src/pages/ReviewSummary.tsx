@@ -1982,10 +1982,30 @@ const ReviewSummary = () => {
             {(suggestion?.trim() || route?.ai_summary) && (
               <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">{suggestion?.trim() || route?.ai_summary}</p>
             )}
-            {/* Wyrazne wejscie w pelny edytor trasy (dodaj/usun/kolejnosc miejsc + opis + notki). */}
+            {/* "Edytuj trase" -> edytor ComposeWyjazd (ten sam co przy tworzeniu): wyszukiwarka
+                miejsc + dodaj/usun/kolejnosc + nazwa. Zaladowany ta trasa (draftId), wiec zapis
+                AKTUALIZUJE ja (bez duplikatu). Opis + notki edytuje sie dalej w "Przejdz do sugestii". */}
             {isOwner && (
               <button
-                onClick={() => { haptics.light(); navigate(`/review-summary?route=${routeId}&edit=1&step=2`); }}
+                onClick={() => {
+                  haptics.light();
+                  navigate("/wyjazd/nowy", {
+                    state: {
+                      draftId: routeId,
+                      city: route?.city ?? null,
+                      title: displayName || (route as any)?.title || null,
+                      places: currentPins.map((p: any) => ({
+                        place_id: p.place_id ?? null,
+                        place_name: p.place_name,
+                        category: p.category,
+                        address: p.address,
+                        latitude: p.latitude,
+                        longitude: p.longitude,
+                        photo_url: p.photo_url,
+                      })),
+                    },
+                  });
+                }}
                 className="w-full mt-1 py-3 rounded-2xl bg-secondary text-secondary-foreground font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
               >
                 <Pencil className="h-4 w-4" /> Edytuj trasę
