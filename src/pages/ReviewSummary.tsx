@@ -2433,17 +2433,17 @@ const ReviewSummary = () => {
             <>
               {step === 2 && (
                 <div className="px-5 pb-5">
-                  {/* Naglowek + Twoja sugestia dla innych podroznych (review_narrative, autosave) */}
+                  {/* Opis ogolny trasy (review_narrative, autosave) */}
                   <div className="pb-6">
-                    <h2 className="font-display text-xl font-bold text-foreground tracking-tight mb-1">Sugestie do trasy</h2>
-                    <p className="text-[13px] text-muted-foreground mb-3">Twoja sugestia dla innych podróżnych</p>
+                    <h2 className="font-display text-xl font-bold text-foreground tracking-tight mb-1">Opis trasy</h2>
+                    <p className="text-[13px] text-muted-foreground mb-3">Ogólny opis Twojej trasy: dla kogo, na jaką okazję, co ją wyróżnia</p>
                     <div className="relative">
                       <textarea
                         value={suggestion}
                         onChange={(e) => { setSuggestion(e.target.value); saveSuggestion(e.target.value); }}
                         onFocus={() => setNoteFocused(true)}
                         onBlur={() => setNoteFocused(false)}
-                        placeholder="Co zmienić, czego brakowało, czy warto coś odpuścić..."
+                        placeholder="Opisz swoją trasę: dla kogo, na jaką okazję, co warto zobaczyć..."
                         rows={5}
                         className="w-full bg-secondary/60 rounded-2xl px-4 py-3 text-sm text-foreground resize-none focus:outline-none border border-border/30 placeholder:text-muted-foreground/55"
                       />
@@ -2535,6 +2535,22 @@ const ReviewSummary = () => {
                     <p className="text-center text-sm text-muted-foreground py-8">{t("empty.no_places")}</p>
                   ) : (
                     <>
+                      {/* Wyrazne wejscie w edycje istniejacej trasy (opis + notki per miejsce) */}
+                      {isOwner && (
+                        <button
+                          onClick={() => { setEditingStepper(true); setStep(2); }}
+                          className="w-full mb-4 py-3 rounded-2xl bg-secondary text-secondary-foreground font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
+                        >
+                          <Pencil className="h-4 w-4" /> Edytuj trasę
+                        </button>
+                      )}
+                      {/* Opis trasy (read) */}
+                      {suggestion?.trim() && (
+                        <div className="mb-5">
+                          <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">Opis trasy</p>
+                          <p className="text-sm text-foreground/80 leading-relaxed whitespace-pre-wrap">{suggestion}</p>
+                        </div>
+                      )}
                       {renderPlanHeader(true)}
                       {planView === "list" ? renderListReadonly(true) : renderSwiper(false, true)}
                     </>

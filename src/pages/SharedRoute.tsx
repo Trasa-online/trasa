@@ -64,7 +64,7 @@ export default function SharedRoute() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("routes")
-        .select("id, title, city, user_id, day_number, start_date, ai_summary, ai_highlight, review_photos")
+        .select("id, title, city, user_id, day_number, start_date, ai_summary, ai_highlight, review_photos, review_narrative")
         .eq("id", id as string)
         .eq("is_shared", true)
         .single();
@@ -272,7 +272,8 @@ export default function SharedRoute() {
   const hasRealPhoto = !!cover;
   const heroPhoto = cover ?? getRandomPinPlaceholder(route.id);
   // Opis trasy (pod tytulem) = podsumowanie AI albo podpis autora.
-  const routeDescription: string = route.ai_summary || shareMeta?.share_caption || "";
+  // Opis trasy: preferuj reczny opis autora (review_narrative), potem AI/podpis udostepnienia.
+  const routeDescription: string = (route as any).review_narrative || route.ai_summary || shareMeta?.share_caption || "";
   // Galeria = wszystkie zdjecia wyjazdu autora (review_photos), z rozwiazanym URL-em.
   const galleryPhotos: string[] = ((route.review_photos ?? []) as any[])
     .map((u) => (typeof u === "string" ? resolveStored(u) : null))
