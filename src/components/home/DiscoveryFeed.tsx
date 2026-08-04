@@ -78,6 +78,7 @@ type PolecaneRoute = {
   placeCount?: number;
   avgRating?: number;                  // srednia ocena Google z pinow (0 = brak)
   pins?: LatLng[];                     // wspolrzedne pinow do mini-mapy na okladce
+  participants?: (string | null)[];   // awatary uczestnikow trasy grupowej (bez hosta)
 };
 
 const CAT_LABEL: Record<string, string> = {
@@ -923,6 +924,25 @@ async function enrichRouteRows(routes: any[]): Promise<PolecaneRoute[]> {
     for (const p of profiles ?? []) profileMap.set(p.id, p);
   }
 
+  // Uczestnicy sesji grupowych (awatary obok hosta na kafelku eksploracji).
+  const sessionIds = [...new Set(routes.map((r) => r.group_session_id).filter(Boolean))];
+  const membersBySession = new Map<string, string[]>();
+  if (sessionIds.length) {
+    const { data: members } = await (supabase as any)
+      .from("group_session_members").select("session_id, user_id").in("session_id", sessionIds);
+    const memberIds = new Set<string>();
+    for (const m of members ?? []) {
+      if (!membersBySession.has(m.session_id)) membersBySession.set(m.session_id, []);
+      membersBySession.get(m.session_id)!.push(m.user_id);
+      memberIds.add(m.user_id);
+    }
+    const missing = [...memberIds].filter((id) => !profileMap.has(id));
+    if (missing.length) {
+      const { data: mp } = await (supabase as any).from("profiles").select("id, avatar_url").in("id", missing);
+      for (const p of mp ?? []) if (!profileMap.has(p.id)) profileMap.set(p.id, p);
+    }
+  }
+
   return routes.map((r): PolecaneRoute => {
     const prof = profileMap.get(r.user_id);
     const anon = r.share_anonymous === true;
@@ -946,6 +966,11 @@ async function enrichRouteRows(routes: any[]): Promise<PolecaneRoute[]> {
       placeCount: countMap.get(r.id) ?? 0,
       avgRating: avgRatingOf(ratingMap.get(r.id) ?? []),
       pins: pinsMap.get(r.id) ?? [],
+      participants: r.group_session_id
+        ? (membersBySession.get(r.group_session_id) ?? [])
+            .filter((uid: string) => uid !== r.user_id)
+            .map((uid: string) => (profileMap.get(uid)?.avatar_url ?? null))
+        : [],
     };
   });
 }
@@ -1165,7 +1190,7 @@ const TRASA_CARD_H = "h-[calc(100dvh-150px-env(safe-area-inset-top,0px)-max(16px
 // (mini-mapka, bookmark = zapisz, strzalka = otworz wizytowke). Bez swipe'a - naturalny scroll.
 function TrasaBigCard({
   id, photo, city, placeCount = 0, title, description, tags = [], pins = [],
-  saved, onToggleSave, onOpen, authorName, authorAvatar,
+  saved, onToggleSave, onOpen, authorName, authorAvatar, participants = [],
 }: {
   id: string;
   photo: string | null;
@@ -1180,6 +1205,7 @@ function TrasaBigCard({
   onOpen: () => void;
   authorName?: string | null;
   authorAvatar?: string | null;
+  participants?: (string | null)[];   // awatary uczestnikow trasy grupowej (obok hosta)
 }) {
   const cover = photo ?? getRandomPinPlaceholder(id);
   const miniMap = buildMiniMapUrl(pins);
@@ -1246,6 +1272,17 @@ function TrasaBigCard({
             <span className="flex items-center gap-1.5">
               <img src={avatarSrc(authorAvatar ?? null)} alt="" className="h-5 w-5 rounded-full object-cover bg-orange-100 ring-1 ring-white/40" />
               {authorName}
+            </span>
+          )}
+          {/* Uczestnicy trasy grupowej - awatary obok hosta (stack). */}
+          {participants.length > 0 && (
+            <span className="flex items-center -space-x-1.5">
+              {participants.slice(0, 3).map((a, i) => (
+                <img key={i} src={avatarSrc(a ?? null)} alt="" className="h-5 w-5 rounded-full object-cover bg-orange-100 ring-1 ring-white/60" />
+              ))}
+              {participants.length > 3 && (
+                <span className="h-5 w-5 rounded-full bg-black/55 ring-1 ring-white/60 flex items-center justify-center text-[9px] font-bold">+{participants.length - 3}</span>
+              )}
             </span>
           )}
           {city && <span className="flex items-center gap-1"><Building2 className="h-4 w-4" />{city}</span>}
@@ -1379,7 +1416,7 @@ export function SavedRoutes({ city }: { city?: string }) {
       if (!ids.length) return { list: [] as PolecaneRoute[], dates };
       const { data: rows } = await (supabase as any)
         .from("routes")
-        .select("id, title, city, ai_highlight, ai_summary, user_id, created_at, views, share_anonymous, cover_url, list_cover_url, review_photos")
+        .select("id, title, city, ai_highlight, ai_summary, user_id, created_at, views, share_anonymous, cover_url, list_cover_url, review_photos, group_session_id")
         .in("id", ids);
       const list = await enrichRouteRows(rows ?? []);
       return { list, dates };
@@ -1767,7 +1804,7 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
       // city === "all" (ALL_CITIES) -> feed agreguje Trasy ze wszystkich miast (bez filtra).
       let q = (supabase as any)
         .from("routes")
-        .select("id, title, city, ai_highlight, ai_summary, user_id, created_at, views, share_anonymous, cover_url, list_cover_url, review_photos")
+        .select("id, title, city, ai_highlight, ai_summary, user_id, created_at, views, share_anonymous, cover_url, list_cover_url, review_photos, group_session_id")
         // Bramka "sfinalizowane": trasa pojawia sie w eksploracji dopiero gdy ma ustawiona
         // miniature (list_cover_url) - auto-losowana ze zdjec usera przy tworzeniu/finalizacji.
         .eq("is_shared", true).not("title", "is", null).not("list_cover_url", "is", null);
@@ -1969,7 +2006,7 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
       // Wiele miast -> suma expandCity dla kazdego wybranego (dedupe).
       const cities = cityFilter.length ? [...new Set(cityFilter.flatMap(expandCity))] : null;
       const like = `%${escapeLike(q)}%`;
-      const routeCols = "id, title, city, ai_highlight, ai_summary, user_id, created_at, views, share_anonymous, cover_url, list_cover_url, review_photos";
+      const routeCols = "id, title, city, ai_highlight, ai_summary, user_id, created_at, views, share_anonymous, cover_url, list_cover_url, review_photos, group_session_id";
 
       // Kategorie miejsc -> zbior route_id z pinow tych kategorii (routes nie ma kolumny category).
       let allow: Set<string> | null = null;
@@ -2276,6 +2313,7 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
               onOpen={() => navigate(`/route/${r.id}`)}
               authorName={r.author_username ? `@${r.author_username}` : r.author_name}
               authorAvatar={r.author_avatar}
+              participants={r.participants ?? []}
             />
           ))}
 
