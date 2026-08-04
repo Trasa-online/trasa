@@ -1,5 +1,17 @@
 import { supabase } from "@/integrations/supabase/client";
 
+// Dedup miejsc po znormalizowanym kluczu (place_id albo place_name). Zabezpiecza przed
+// duplikatami pinow w trasie niezaleznie od tego, ile razy user wraca do etapu dodawania.
+function dedupePlaces(places: WyjazdPlaceInput[]): WyjazdPlaceInput[] {
+  const seen = new Set<string>();
+  return places.filter((p) => {
+    const k = String(p.place_id || p.place_name || "").toLowerCase().trim();
+    if (!k || seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
+}
+
 // Tryb uproszczony: tworzenie prostego wyjazdu (routes) z podanego zestawu miejsc (pins),
 // BEZ planowania/AI/timeline. Reuzywa ten sam substrat co reszta appki. Zwraca id nowego
 // wyjazdu albo null (gdy insert routes zawiedzie).
@@ -23,6 +35,7 @@ export async function createWyjazdFromPlaces(
   dates?: { start_date?: string | null; end_date?: string | null },
   opts?: { groupSessionId?: string | null; newForUsers?: string[] },
 ): Promise<string | null> {
+  places = dedupePlaces(places);
   // list_cover_url = miniatura w eksploracji. Feed (DiscoveryFeed) wymaga
   // list_cover_url NOT NULL, inaczej trasa jest niewidoczna. Zasilamy ja od razu
   // pierwszym dostepnym zdjeciem miejsca, zeby swiezo utworzona trasa trafila do
@@ -84,6 +97,7 @@ export async function updateWyjazdPlaces(
   places: WyjazdPlaceInput[],
   dates?: { start_date?: string | null; end_date?: string | null },
 ): Promise<string | null> {
+  places = dedupePlaces(places);
   const { error: updErr } = await (supabase as any)
     .from("routes")
     .update({
@@ -98,7 +112,13 @@ export async function updateWyjazdPlaces(
     return null;
   }
   // Podmiana pinow: usun stare, wstaw nowe w aktualnej kolejnosci.
-  await (supabase as any).from("pins").delete().eq("route_id", routeId);
+  // KRYTYCZNE: gdy delete zawiedzie (RLS/blad), NIE wstawiaj - inaczej piny sie DUBLUJA
+  // (stare zostaja + dochodza nowe). Lepiej przerwac niz mnozyc duplikaty.
+  const { error: delErr } = await (supabase as any).from("pins").delete().eq("route_id", routeId);
+  if (delErr) {
+    console.error("[updateWyjazd] pins delete failed (abort, zeby nie dublowac):", delErr.message);
+    return null;
+  }
   const rows = places.map((p, idx) => ({
     route_id: routeId,
     place_name: p.place_name,

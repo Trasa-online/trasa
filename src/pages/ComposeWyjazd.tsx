@@ -391,6 +391,13 @@ export default function ComposeWyjazd() {
         const cur = JSON.parse(sessionStorage.getItem(softKey) || "{}");
         sessionStorage.setItem(softKey, JSON.stringify({ ...cur, draftId: id }));
       } catch { /* unavailable */ }
+      // Utrwal draftId TAKZE w stanie historii ComposeWyjazd (replace) - niezaleznie od
+      // sessionStorage (bywa gubione w iOS WebView). Dzieki temu powrot z sugestii lapie
+      // draftId i AKTUALIZUJE trase (updateWyjazdPlaces) zamiast tworzyc NOWA za kazdym razem.
+      navigate(`${location.pathname}${location.search}`, {
+        replace: true,
+        state: { ...(location.state as any || {}), draftId: id, city, title: name, places },
+      });
       navigate(`/review-summary?route=${id}&edit=1&step=2`);
     } else {
       clearSoft();
