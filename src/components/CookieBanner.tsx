@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { getConsent, grantConsent, denyConsent, syncConsentFromProfile } from "@/lib/consent";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { isNative } from "@/lib/platform";
 import { X } from "lucide-react";
 import posthog from "posthog-js";
 
@@ -22,6 +23,9 @@ const CookieBanner = () => {
     }
   }, [user, loading]);
 
+  // Native: BEZ banera cookies (to wzorzec webowy). Zgode na analityke zbieramy w onboardingu
+  // (ekran "Pomoz nam ulepszac spontaway" -> grantConsent/denyConsent). Baner tylko na web/PWA.
+  if (isNative) return null;
   if (!visible) return null;
 
   const handleGrant = () => {

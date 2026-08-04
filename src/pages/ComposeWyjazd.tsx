@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useLocation } from "react-router-dom";
 import { ArrowLeft, Search, Plus, X, ChevronDown, Calendar as CalendarIcon, List, GalleryHorizontalEnd, Loader2, ArrowRight, Trash2, Maximize2, GripVertical } from "lucide-react";
@@ -142,6 +143,9 @@ export default function ComposeWyjazd() {
   const location = useLocation();
   const { user } = useAuth();
   const { open: openAuthDrawer } = useAuthDrawer();
+  const { i18n } = useTranslation();
+  // Domyslna nazwa wyjazdu zalezna od jezyka (PL: "Wyjazd do X", EN: "Trip to X").
+  const isEn = (i18n.language || "").toLowerCase().startsWith("en");
 
   // draftId: gdy wchodzimy z ekranu wyboru bazy w SWOJA robocza trase -> edytujemy JA
   // (update), a nie tworzymy duplikatu. Brak = tryb tworzenia nowej trasy.
@@ -165,7 +169,14 @@ export default function ComposeWyjazd() {
   const [country, setCountry] = useState<string>(() => countryForCity(soft?.city ?? nav.city ?? "Warszawa"));
   const cities = citiesForCountry(country);
   const onCountryChange = (c: string) => { setCountry(c); setCity(citiesForCountry(c)[0]); };
-  const [name, setName] = useState<string>(soft?.name ?? nav.title ?? "");
+  const [name, setName] = useState<string>(
+    soft?.name ?? nav.title ?? (isEn ? `Trip to ${soft?.city ?? nav.city ?? "Warszawa"}` : `Wyjazd do ${soft?.city ?? nav.city ?? "Warszawa"}`));
+  // Nazwa uzupelniona z gory (edytowalna). Dopoki user nie edytowal recznie, synchronizuje sie
+  // ze zmiana miasta. Prefill z draftu/nav = traktujemy jako juz "edytowane" (nie nadpisujemy).
+  const [nameDirty, setNameDirty] = useState<boolean>(!!(soft?.name || nav.title));
+  useEffect(() => {
+    if (!nameDirty) setName(isEn ? `Trip to ${city}` : `Wyjazd do ${city}`);
+  }, [city, nameDirty, isEn]);
   const [items, setItems] = useState<ComposeItem[]>(() =>
     soft?.items ?? (nav.places ?? []).map((p: any, idx: number) => toItem({ ...p, key: p.place_id ?? p.id ?? `${p.place_name}:${idx}` })));
   const [placeView, setPlaceView] = useState<"detail" | "list">("list");
@@ -432,7 +443,7 @@ export default function ComposeWyjazd() {
 
         {/* Nazwa + data */}
         <div className="px-4 pt-3 flex items-center gap-2">
-          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Twoja nazwa"
+          <input value={name} onChange={(e) => { setName(e.target.value); setNameDirty(true); }} placeholder={isEn ? "Your trip name" : "Twoja nazwa"}
             className="flex-1 min-w-0 rounded-2xl bg-secondary text-secondary-foreground border-0 px-4 py-3 text-base outline-none focus:ring-2 focus:ring-orange-500/40 placeholder:text-muted-foreground/60" />
           <button onClick={() => setDateSheet(true)}
             className={`shrink-0 h-[50px] rounded-2xl bg-secondary flex items-center gap-2 px-3.5 active:scale-95 transition-transform ${dateLabel ? "text-foreground font-semibold" : "text-muted-foreground"}`}>

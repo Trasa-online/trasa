@@ -1,11 +1,14 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { avatarSrc } from "@/lib/avatar";
-import { ArrowLeft, Check, Plus, Loader2 } from "lucide-react";
+import { ArrowLeft, Check, Plus, Loader2, Bell, MapPin, BarChart3 } from "lucide-react";
 import { Camera as CapCamera, CameraResultType, CameraSource } from "@capacitor/camera";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { isNative } from "@/lib/platform";
+import { requestAndRegisterNativePush } from "@/hooks/useNativePush";
+import { requestLocation } from "@/hooks/useGeolocation";
+import { grantConsent, denyConsent } from "@/lib/consent";
 import TrasaLogo from "@/components/TrasaLogo";
 
 // Onboarding Czesc A (po pierwszym logowaniu, real user): welcome -> 2 pytania ankietowe
@@ -41,7 +44,7 @@ const GOAL_OPTS = [
   { id: "other", label: "Inne" },
 ];
 
-const STEPS = ["welcome", "source", "goals", "username", "avatar"] as const;
+const STEPS = ["welcome", "source", "goals", "username", "avatar", "notify", "location", "tracking"] as const;
 type Step = typeof STEPS[number];
 type UStatus = "idle" | "short" | "checking" | "ok" | "taken";
 
@@ -66,6 +69,7 @@ const OnboardingFlow = ({ onDone }: Props) => {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [finishing, setFinishing] = useState(false);
+  const [permBusy, setPermBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   // Prefill z profilu (OAuth nadaje wstepny username/avatar/first_name).
@@ -188,6 +192,34 @@ const OnboardingFlow = ({ onDone }: Props) => {
     try { window.dispatchEvent(new CustomEvent("spontaway:start-coach")); } catch { /* ignore */ }
   }, [user, finishing, source, sourceOther, goals, goalsOther, onDone]);
 
+  // ── Zgody / uprawnienia ──
+  const allowNotifications = async () => {
+    if (permBusy) return;
+    setPermBusy(true);
+    try {
+      if (isNative) await requestAndRegisterNativePush(user?.id ?? null);
+      else if ("Notification" in window) { try { await Notification.requestPermission(); } catch { /* ignore */ } }
+    } finally { setPermBusy(false); goNext(); }
+  };
+
+  const allowLocation = async () => {
+    if (permBusy) return;
+    setPermBusy(true);
+    try { await requestLocation(); } catch { /* odmowa/blad - nie blokuj */ } finally { setPermBusy(false); goNext(); }
+  };
+
+  // Zgoda na analityke: opt-in/opt-out PostHog (+ zapis do profilu przez consent.ts).
+  const acceptTracking = async () => {
+    if (finishing) return;
+    try { await grantConsent(); } catch { /* ignore */ }
+    finish();
+  };
+  const declineTracking = async () => {
+    if (finishing) return;
+    try { denyConsent(); } catch { /* ignore */ }
+    finish();
+  };
+
   // CTA per krok
   const canNext =
     stepName === "welcome" ? true :
@@ -197,14 +229,19 @@ const OnboardingFlow = ({ onDone }: Props) => {
     true; // avatar - opcjonalny
 
   const onPrimary = () => {
-    if (stepName === "welcome" || stepName === "source" || stepName === "goals") goNext();
+    if (stepName === "welcome" || stepName === "source" || stepName === "goals" || stepName === "avatar") goNext();
     else if (stepName === "username") saveUsername();
-    else finish(); // avatar
+    else if (stepName === "notify") allowNotifications();
+    else if (stepName === "location") allowLocation();
+    else if (stepName === "tracking") acceptTracking();
   };
 
   const primaryLabel =
     stepName === "welcome" ? "Zaczynamy" :
-    stepName === "avatar" ? "Gotowe" : "Dalej";
+    stepName === "notify" ? "Włącz powiadomienia" :
+    stepName === "location" ? "Włącz lokalizację" :
+    stepName === "tracking" ? "Zgadzam się" :
+    "Dalej";
 
   return (
     <div className="fixed inset-0 z-[71] bg-[#FEFEFE] flex flex-col">
@@ -377,22 +414,70 @@ const OnboardingFlow = ({ onDone }: Props) => {
             <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onFile} />
           </>
         )}
+
+        {stepName === "notify" && (
+          <>
+            <div className="pt-6 text-center">
+              <h2 className="text-2xl font-black mb-2 leading-tight">{nbsp("Bądź na bieżąco")}</h2>
+              <p className="text-[15px] text-muted-foreground leading-relaxed">{nbsp("Włącz powiadomienia, żeby wiedzieć o nowych trasach i ważnych aktualizacjach. Zawsze możesz to wyłączyć w ustawieniach.")}</p>
+            </div>
+            <div className="flex-1 flex items-center justify-center">
+              <div className="h-32 w-32 rounded-full flex items-center justify-center" style={{ background: "linear-gradient(135deg, #F4A259, #F9662B)" }}>
+                <Bell className="h-14 w-14 text-white" strokeWidth={2} />
+              </div>
+            </div>
+          </>
+        )}
+
+        {stepName === "location" && (
+          <>
+            <div className="pt-6 text-center">
+              <h2 className="text-2xl font-black mb-2 leading-tight">{nbsp("Miejsca blisko Ciebie")}</h2>
+              <p className="text-[15px] text-muted-foreground leading-relaxed">{nbsp("Pozwól na dostęp do lokalizacji, żeby sortować miejsca według odległości od Ciebie. Nieobowiązkowe.")}</p>
+            </div>
+            <div className="flex-1 flex items-center justify-center">
+              <div className="h-32 w-32 rounded-full flex items-center justify-center" style={{ background: "linear-gradient(135deg, #F4A259, #F9662B)" }}>
+                <MapPin className="h-14 w-14 text-white" strokeWidth={2} />
+              </div>
+            </div>
+          </>
+        )}
+
+        {stepName === "tracking" && (
+          <>
+            <div className="pt-6 text-center">
+              <h2 className="text-2xl font-black mb-2 leading-tight">{nbsp("Pomóż nam ulepszać spontaway")}</h2>
+              <p className="text-[15px] text-muted-foreground leading-relaxed">{nbsp("Zbieramy anonimowe dane o tym, jak korzystasz z aplikacji (np. które ekrany odwiedzasz), żeby ją rozwijać. Nie sprzedajemy Twoich danych. Zgodę zmienisz w każdej chwili w ustawieniach.")}</p>
+            </div>
+            <div className="flex-1 flex items-center justify-center">
+              <div className="h-32 w-32 rounded-full flex items-center justify-center" style={{ background: "linear-gradient(135deg, #F4A259, #F9662B)" }}>
+                <BarChart3 className="h-14 w-14 text-white" strokeWidth={2} />
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       {/* CTA */}
       <div className="px-6 pt-4" style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 1.5rem)" }}>
         <button
           onClick={onPrimary}
-          disabled={!canNext || (stepName === "avatar" && finishing)}
+          disabled={!canNext || permBusy || (stepName === "tracking" && finishing)}
           className="w-full py-4 rounded-full text-white font-bold text-base shadow-lg active:scale-[0.98] transition-transform disabled:opacity-50"
           style={{ background: "linear-gradient(to right, #F4A259, #F9662B)" }}
         >
-          {(savingU || (stepName === "avatar" && finishing))
+          {(savingU || permBusy || (stepName === "tracking" && finishing))
             ? <Loader2 className="h-5 w-5 animate-spin mx-auto" />
             : primaryLabel}
         </button>
         {stepName === "avatar" && (
-          <button onClick={finish} disabled={finishing} className="w-full py-3 mt-1 text-sm font-medium text-muted-foreground">Pomiń</button>
+          <button onClick={goNext} className="w-full py-3 mt-1 text-sm font-medium text-muted-foreground">Pomiń</button>
+        )}
+        {(stepName === "notify" || stepName === "location") && (
+          <button onClick={goNext} disabled={permBusy} className="w-full py-3 mt-1 text-sm font-medium text-muted-foreground">Nie teraz</button>
+        )}
+        {stepName === "tracking" && (
+          <button onClick={declineTracking} disabled={finishing} className="w-full py-3 mt-1 text-sm font-medium text-muted-foreground">Nie teraz</button>
         )}
       </div>
     </div>
