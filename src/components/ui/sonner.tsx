@@ -27,7 +27,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
             // env(safe-area-inset-bottom)). offset={0} na Sonnerze zdejmuje domyslny odstep, zeby
             // toast siedzial tuz nad paskiem nawigacji, a nie w polowie ekranu.
             toast:
-              "group toast group-[.toaster]:w-[calc(100vw-2rem)] group-[.toaster]:max-w-md group-[.toaster]:bg-[#f6f6f7] group-[.toaster]:text-foreground group-[.toaster]:border group-[.toaster]:border-black/[0.06] group-[.toaster]:shadow-lg group-[.toaster]:shadow-black/[0.08] group-[.toaster]:rounded-2xl group-[.toaster]:min-h-[60px] group-[.toaster]:py-4 group-[.toaster]:px-4 group-[.toaster]:gap-2 group-[.toaster]:items-center group-[.toaster]:mb-[calc(var(--trasa-nav-offset,0px)+10px)]",
+              "group toast group-[.toaster]:w-[calc(100vw-2rem)] group-[.toaster]:max-w-md group-[.toaster]:bg-[#f6f6f7] group-[.toaster]:text-foreground group-[.toaster]:border group-[.toaster]:border-black/[0.06] group-[.toaster]:shadow-lg group-[.toaster]:shadow-black/[0.08] group-[.toaster]:rounded-2xl group-[.toaster]:min-h-[60px] group-[.toaster]:py-4 group-[.toaster]:px-4 group-[.toaster]:gap-2 group-[.toaster]:items-center group-[.toaster]:mb-[max(16px,calc(var(--trasa-nav-offset,0px)-8px))]",
             title: "group-[.toast]:text-sm group-[.toast]:font-medium group-[.toast]:text-foreground group-[.toast]:leading-snug",
             description: "group-[.toast]:text-xs group-[.toast]:text-muted-foreground group-[.toast]:mt-0.5 group-[.toast]:leading-relaxed",
             // Akcja (np. "Cofnij") - pomaranczowy link po prawej, bez tla.

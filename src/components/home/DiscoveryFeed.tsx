@@ -2354,47 +2354,24 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
 
       {/* Sheet filtrow: miasto / motyw zestawienia / kategoria miejsc */}
       <Sheet open={filtersOpen} onOpenChange={setFiltersOpen}>
-        <SheetContent side="bottom" className="rounded-t-2xl p-0 [&>button:last-child]:hidden" style={{ maxHeight: "80vh" }}>
-          <div className="flex items-center justify-between px-5 pt-5 mb-4">
+        <SheetContent side="bottom" className="rounded-t-2xl p-0 [&>button:last-child]:hidden flex flex-col" style={{ height: "80vh", maxHeight: "80vh" }}>
+          <div className="flex items-center justify-between px-5 pt-5 mb-2 shrink-0">
             <p className="text-lg font-black">{t("filters_title")}</p>
             <button onClick={() => setFiltersOpen(false)} aria-label={t("aria.close")} className="h-9 w-9 rounded-full bg-muted flex items-center justify-center active:bg-muted/70"><X className="h-4 w-4" /></button>
           </div>
-          <div className="space-y-5 overflow-y-auto px-5 pb-2">
-            {/* Miasto */}
-            <div>
-              <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2">{t("filter.city")}</p>
-              <div className="flex gap-2 overflow-x-auto scrollbar-none pb-1 -mx-5 px-5">
-                <button onClick={() => setCityFilter([])} className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-bold transition-colors ${cityFilter.length === 0 ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground"}`}>{t("all")}</button>
-                {ACTIVE_CITIES.map((c) => (
-                  <button key={c} onClick={() => toggleFilter(setCityFilter, c)} className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-colors ${cityFilter.includes(c) ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground"}`}>{c}</button>
-                ))}
-              </div>
+          {/* Tylko kategoria miejsca (miasto + motyw usuniete). Chipy powiekszone na wysokosc drawera. */}
+          <div className="flex-1 min-h-0 overflow-y-auto px-5 pb-2">
+            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-3">{t("filter.category")}</p>
+            <div className="flex flex-wrap gap-2.5">
+              <button onClick={() => setCategoryFilter([])} className={`px-4 py-3 rounded-2xl text-sm font-bold transition-colors ${categoryFilter.length === 0 ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground"}`}>{t("all")}</button>
+              {MAIN_CATEGORIES.flatMap((c) => c.subcategories).map((s) => (
+                <button key={s.id} onClick={() => toggleFilter(setCategoryFilter, s.id)} className={`px-4 py-3 rounded-2xl text-sm font-bold whitespace-nowrap transition-colors ${categoryFilter.includes(s.id) ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground"}`}>{s.label}</button>
+              ))}
             </div>
-            {/* Motyw zestawienia */}
-            <div>
-              <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2">{t("filter.theme")}</p>
-              <div className="flex flex-wrap gap-2">
-                <button onClick={() => setThemeFilter([])} className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-bold transition-colors ${themeFilter.length === 0 ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground"}`}>{t("all")}</button>
-                {COLLECTION_THEMES.map((t) => (
-                  <button key={t.id} onClick={() => toggleFilter(setThemeFilter, t.id)} className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-colors ${themeFilter.includes(t.id) ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground"}`}>{t.emoji} {t.label}</button>
-                ))}
-              </div>
-            </div>
-            {/* Kategoria miejsca (w trasach) */}
-            <div>
-              <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2">{t("filter.category")}</p>
-              <div className="flex flex-wrap gap-2">
-                <button onClick={() => setCategoryFilter([])} className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-bold transition-colors ${categoryFilter.length === 0 ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground"}`}>{t("all")}</button>
-                {MAIN_CATEGORIES.flatMap((c) => c.subcategories).map((s) => (
-                  <button key={s.id} onClick={() => toggleFilter(setCategoryFilter, s.id)} className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-colors ${categoryFilter.includes(s.id) ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground"}`}><CategoryIcon category={s.id} className="h-4 w-4 shrink-0" />{s.label}</button>
-                ))}
-              </div>
-            </div>
-            <p className="text-[11px] text-muted-foreground">{t("filter.hint")}</p>
           </div>
-          <div className="flex gap-2 px-5 pt-3 pb-[max(16px,env(safe-area-inset-bottom))]">
-            <button onClick={clearFilters} className="flex-1 py-3 rounded-full bg-secondary text-secondary-foreground font-bold text-sm active:scale-[0.98] transition-transform">{t("filter.clear")}</button>
-            <button onClick={() => setFiltersOpen(false)} className="flex-1 py-3 rounded-full bg-primary text-white font-bold text-sm active:scale-[0.98] transition-transform">{t("filter.apply")}</button>
+          <div className="flex gap-2 px-5 pt-3 pb-[max(16px,env(safe-area-inset-bottom))] shrink-0 border-t border-border/40">
+            <button onClick={clearFilters} className="flex-1 py-3 rounded-2xl bg-secondary text-secondary-foreground font-bold text-sm active:scale-[0.98] transition-transform">{t("filter.clear")}</button>
+            <button onClick={() => setFiltersOpen(false)} className="flex-1 py-3 rounded-2xl bg-primary text-white font-bold text-sm active:scale-[0.98] transition-transform">{t("filter.apply")}</button>
           </div>
         </SheetContent>
       </Sheet>

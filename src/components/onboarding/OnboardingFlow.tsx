@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { avatarSrc } from "@/lib/avatar";
-import { ArrowLeft, Check, Plus, Loader2, Bell, MapPin, BarChart3 } from "lucide-react";
+import { ArrowLeft, Check, Plus, Loader2 } from "lucide-react";
 import { Camera as CapCamera, CameraResultType, CameraSource } from "@capacitor/camera";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -421,11 +421,7 @@ const OnboardingFlow = ({ onDone }: Props) => {
               <h2 className="text-2xl font-black mb-2 leading-tight">{nbsp("Bądź na bieżąco")}</h2>
               <p className="text-[15px] text-muted-foreground leading-relaxed">{nbsp("Włącz powiadomienia, żeby wiedzieć o nowych trasach i ważnych aktualizacjach. Zawsze możesz to wyłączyć w ustawieniach.")}</p>
             </div>
-            <div className="flex-1 flex items-center justify-center">
-              <div className="h-32 w-32 rounded-full flex items-center justify-center" style={{ background: "linear-gradient(135deg, #F4A259, #F9662B)" }}>
-                <Bell className="h-14 w-14 text-white" strokeWidth={2} />
-              </div>
-            </div>
+            <div className="flex-1" />
           </>
         )}
 
@@ -435,11 +431,7 @@ const OnboardingFlow = ({ onDone }: Props) => {
               <h2 className="text-2xl font-black mb-2 leading-tight">{nbsp("Miejsca blisko Ciebie")}</h2>
               <p className="text-[15px] text-muted-foreground leading-relaxed">{nbsp("Pozwól na dostęp do lokalizacji, żeby sortować miejsca według odległości od Ciebie. Nieobowiązkowe.")}</p>
             </div>
-            <div className="flex-1 flex items-center justify-center">
-              <div className="h-32 w-32 rounded-full flex items-center justify-center" style={{ background: "linear-gradient(135deg, #F4A259, #F9662B)" }}>
-                <MapPin className="h-14 w-14 text-white" strokeWidth={2} />
-              </div>
-            </div>
+            <div className="flex-1" />
           </>
         )}
 
@@ -449,11 +441,7 @@ const OnboardingFlow = ({ onDone }: Props) => {
               <h2 className="text-2xl font-black mb-2 leading-tight">{nbsp("Pomóż nam ulepszać spontaway")}</h2>
               <p className="text-[15px] text-muted-foreground leading-relaxed">{nbsp("Zbieramy anonimowe dane o tym, jak korzystasz z aplikacji (np. które ekrany odwiedzasz), żeby ją rozwijać. Nie sprzedajemy Twoich danych. Zgodę zmienisz w każdej chwili w ustawieniach.")}</p>
             </div>
-            <div className="flex-1 flex items-center justify-center">
-              <div className="h-32 w-32 rounded-full flex items-center justify-center" style={{ background: "linear-gradient(135deg, #F4A259, #F9662B)" }}>
-                <BarChart3 className="h-14 w-14 text-white" strokeWidth={2} />
-              </div>
-            </div>
+            <div className="flex-1" />
           </>
         )}
       </div>
@@ -463,7 +451,7 @@ const OnboardingFlow = ({ onDone }: Props) => {
         <button
           onClick={onPrimary}
           disabled={!canNext || permBusy || (stepName === "tracking" && finishing)}
-          className="w-full py-4 rounded-full text-white font-bold text-base shadow-lg active:scale-[0.98] transition-transform disabled:opacity-50"
+          className="w-full py-4 rounded-2xl text-white font-bold text-base shadow-lg active:scale-[0.98] transition-transform disabled:opacity-50"
           style={{ background: "linear-gradient(to right, #F4A259, #F9662B)" }}
         >
           {(savingU || permBusy || (stepName === "tracking" && finishing))

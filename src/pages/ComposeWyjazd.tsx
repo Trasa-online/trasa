@@ -400,8 +400,13 @@ export default function ComposeWyjazd() {
   };
 
   // Propozycje: podczas pisania = wyniki Google, na fokusie = sugestie z bazy (bez dodanych).
-  const proposals = (search.trim().length >= 2 ? results : suggestions).filter((p) => !isAdded(p));
-  const showProposals = searchFocused || search.trim().length >= 2;
+  const isSearching = search.trim().length >= 2;
+  const proposals = (isSearching ? results : suggestions).filter((p) => !isAdded(p));
+  // Bazowe "Propozycje w {miasto}" (na fokusie) pokazujemy TYLKO dla miast z tresci (Warszawa +
+  // Trojmiasto). Dla innych miast/krajow blok propozycji znika (wyszukiwanie dziala wszedzie).
+  const SUGGESTION_CITIES = ["Warszawa", "Gdańsk", "Sopot", "Gdynia", "Trójmiasto"];
+  const suggestionsSupported = SUGGESTION_CITIES.includes(city);
+  const showProposals = isSearching || (searchFocused && suggestionsSupported);
 
   return (
     <div className="flex flex-col h-[100dvh] bg-background max-w-lg mx-auto">
