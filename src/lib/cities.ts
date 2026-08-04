@@ -32,3 +32,48 @@ export function getCityCenter(city: string): LatLng | null {
   if (!city) return null;
   return CITY_CENTERS[city] ?? CITY_CENTERS[expandCity(city)[0]] ?? null;
 }
+
+// Dopelniacz nazwy miasta ("Wyjazd do <tu>") - do ladnych, odmienionych nazw tras.
+// Mapa recznie dla znanych miast; heurystyka dla nieznanych (zenskie -a -> -y), inaczej mianownik.
+const CITY_GENITIVE: Record<string, string> = {
+  "Warszawa": "Warszawy",
+  "Kraków": "Krakowa",
+  "Gdańsk": "Gdańska",
+  "Sopot": "Sopotu",
+  "Gdynia": "Gdyni",
+  "Trójmiasto": "Trójmiasta",
+  "Wrocław": "Wrocławia",
+  "Olsztyn": "Olsztyna",
+  "Łódź": "Łodzi",
+  "Poznań": "Poznania",
+  "Zakopane": "Zakopanego",
+  "Katowice": "Katowic",
+  "Lublin": "Lublina",
+  "Szczecin": "Szczecina",
+  "Bydgoszcz": "Bydgoszczy",
+  "Toruń": "Torunia",
+  // Zagraniczne
+  "Berlin": "Berlina",
+  "Rzym": "Rzymu",
+  "Budapeszt": "Budapesztu",
+  "Barcelona": "Barcelony",
+  "Lizbona": "Lizbony",
+  "Valletta": "Valletty",
+  "Tokio": "Tokio",
+  "Paryż": "Paryża",
+  "Londyn": "Londynu",
+  "Praga": "Pragi",
+  "Wiedeń": "Wiednia",
+  "Amsterdam": "Amsterdamu",
+  "Madryt": "Madrytu",
+  "Mediolan": "Mediolanu",
+};
+
+export function cityGenitive(city: string | null | undefined): string {
+  const c = (city ?? "").trim();
+  if (!c) return c;
+  if (CITY_GENITIVE[c]) return CITY_GENITIVE[c];
+  // Heurystyka: zakonczone spolgloska + "a" -> "y" (Barcelona->Barcelony). Inaczej mianownik.
+  if (/[bcdfghjklmnprstwz]a$/i.test(c)) return c.slice(0, -1) + "y";
+  return c;
+}

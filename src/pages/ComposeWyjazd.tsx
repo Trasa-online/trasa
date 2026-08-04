@@ -11,7 +11,7 @@ import { toast } from "sonner";
 import { format, addDays } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
 import { ORIGIN_COUNTRIES } from "@/lib/locations";
-import { expandCity } from "@/lib/cities";
+import { expandCity, cityGenitive } from "@/lib/cities";
 import { subcategoryLabelLocalized } from "@/lib/categories";
 import { createWyjazdFromPlaces, updateWyjazdPlaces } from "@/lib/createWyjazd";
 import { haptics } from "@/hooks/useHaptics";
@@ -169,13 +169,15 @@ export default function ComposeWyjazd() {
   const [country, setCountry] = useState<string>(() => countryForCity(soft?.city ?? nav.city ?? "Warszawa"));
   const cities = citiesForCountry(country);
   const onCountryChange = (c: string) => { setCountry(c); setCity(citiesForCountry(c)[0]); };
+  // Domyslna nazwa: PL z dopelniaczem miasta ("Wyjazd do Warszawy/Berlina/Krakowa"), EN "Trip to X".
+  const defaultTripName = (c: string) => (isEn ? `Trip to ${c}` : `Wyjazd do ${cityGenitive(c)}`);
   const [name, setName] = useState<string>(
-    soft?.name ?? nav.title ?? (isEn ? `Trip to ${soft?.city ?? nav.city ?? "Warszawa"}` : `Wyjazd do ${soft?.city ?? nav.city ?? "Warszawa"}`));
+    soft?.name ?? nav.title ?? defaultTripName(soft?.city ?? nav.city ?? "Warszawa"));
   // Nazwa uzupelniona z gory (edytowalna). Dopoki user nie edytowal recznie, synchronizuje sie
   // ze zmiana miasta. Prefill z draftu/nav = traktujemy jako juz "edytowane" (nie nadpisujemy).
   const [nameDirty, setNameDirty] = useState<boolean>(!!(soft?.name || nav.title));
   useEffect(() => {
-    if (!nameDirty) setName(isEn ? `Trip to ${city}` : `Wyjazd do ${city}`);
+    if (!nameDirty) setName(defaultTripName(city));
   }, [city, nameDirty, isEn]);
   const [items, setItems] = useState<ComposeItem[]>(() =>
     soft?.items ?? (nav.places ?? []).map((p: any, idx: number) => toItem({ ...p, key: p.place_id ?? p.id ?? `${p.place_name}:${idx}` })));
