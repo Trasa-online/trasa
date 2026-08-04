@@ -5,6 +5,7 @@ import TopBar from "./TopBar";
 import BottomNav from "./BottomNav";
 import OrbOverlay from "./OrbOverlay";
 import GuestWelcomeSheet from "@/components/auth/GuestWelcomeSheet";
+import OnboardingFlow, { useOnboardingGate } from "@/components/onboarding/OnboardingFlow";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useTranslation } from "react-i18next";
@@ -18,6 +19,7 @@ const AppLayout = ({ children, hideTopBar }: AppLayoutProps) => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { t } = useTranslation("home");
+  const onboarding = useOnboardingGate();
 
   // Global redirect po loginie - dziala dla wszystkich method logowania
   // (AuthDrawer password/OAuth/magic link, Auth.tsx page). User wybral miejsca jako
@@ -112,6 +114,7 @@ const AppLayout = ({ children, hideTopBar }: AppLayoutProps) => {
       </main>
       <BottomNav />
       <GuestWelcomeSheet />
+      {onboarding.show && <OnboardingFlow onDone={onboarding.hide} />}
       {showOrbOverlay && (
         <OrbOverlay
           isSpeaking={isSpeaking}

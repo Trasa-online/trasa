@@ -60,11 +60,12 @@ export default function ExploreTopBar({
           hideModeToggle -> ukryty (homepage pokazuje same Trasy). */}
       <div className={`shrink-0 items-center rounded-full bg-secondary p-0.5 ${hideModeToggle ? "hidden" : "flex"}`}>
         {mode === "explore" ? (
-          <span className="h-8 w-8 flex items-center justify-center rounded-full bg-gradient-to-br from-[#F4A259] to-[#F9662B] text-white shadow-sm" aria-current="true" title="Trasy">
+          <span data-ob="toggle-trasy" className="h-8 w-8 flex items-center justify-center rounded-full bg-gradient-to-br from-[#F4A259] to-[#F9662B] text-white shadow-sm" aria-current="true" title="Trasy">
             <Compass className="h-4 w-4" />
           </span>
         ) : (
           <button
+            data-ob="toggle-trasy"
             onClick={goExplore}
             className="h-8 px-3 flex items-center gap-1.5 rounded-full text-secondary-foreground/70 text-xs font-bold active:scale-95 transition-transform whitespace-nowrap"
             title="Trasy"
@@ -74,11 +75,12 @@ export default function ExploreTopBar({
           </button>
         )}
         {mode === "browse" ? (
-          <span className="h-8 w-8 flex items-center justify-center rounded-full bg-gradient-to-br from-[#F4A259] to-[#F9662B] text-white shadow-sm" aria-current="true" title="Miejsca">
+          <span data-ob="toggle-miejsca" className="h-8 w-8 flex items-center justify-center rounded-full bg-gradient-to-br from-[#F4A259] to-[#F9662B] text-white shadow-sm" aria-current="true" title="Miejsca">
             <Layers className="h-4 w-4" />
           </span>
         ) : (
           <button
+            data-ob="toggle-miejsca"
             onClick={goBrowse}
             className="h-8 px-3 flex items-center gap-1.5 rounded-full text-secondary-foreground/70 text-xs font-bold active:scale-95 transition-transform whitespace-nowrap"
             title="Miejsca"
