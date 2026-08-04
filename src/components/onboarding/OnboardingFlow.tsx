@@ -20,10 +20,11 @@ const capWords = (v: string, n = 10) => {
 };
 
 // Przykladowe miejsca (ilustracja na ekranie lokalizacji - UI listy miejsc z aplikacji).
+// Realne warszawskie lokale (z bazy places) - dla autentycznosci podgladu.
 const SAMPLE_NEARBY = [
-  { name: "Kawiarnia Cztery Łapy", cat: "cafe", catLabel: "Kawiarnia", dist: "0,3 km" },
-  { name: "Muzeum Nowoczesne", cat: "museum", catLabel: "Muzeum", dist: "0,8 km" },
-  { name: "Park nad rzeką", cat: "park", catLabel: "Park", dist: "1,2 km" },
+  { name: "Prodiż Warszawski", cat: "restaurant", catLabel: "Restauracja", dist: "0,4 km" },
+  { name: "5 ciastek", cat: "cafe", catLabel: "Kawiarnia", dist: "0,8 km" },
+  { name: "Same Krafty", cat: "bar", catLabel: "Bar", dist: "1,2 km" },
 ];
 
 // Onboarding Czesc A (po pierwszym logowaniu, real user): welcome -> 2 pytania ankietowe
