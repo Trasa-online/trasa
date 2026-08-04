@@ -2281,7 +2281,9 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
 
           {warszawa.length === 0 && userPolecajki.length === 0 && (
             <div className="py-16 text-center px-8">
-              <div className="text-5xl mb-3">🗺️</div>
+              <div className="mx-auto mb-3 h-16 w-16 rounded-full bg-[#fcede3] flex items-center justify-center">
+                <img src="/Ikona_Eksploracja.svg" alt="" className="h-8 w-8" draggable={false} />
+              </div>
               <p className="text-base font-bold">{t("community_soon")}</p>
               <p className="text-sm text-muted-foreground mt-1">{t("community_soon_hint")}</p>
             </div>
