@@ -12,10 +12,9 @@ const config: CapacitorConfig = {
       launchAutoHide: false,
       // Smooth fade-out
       launchFadeOutDuration: 300,
-      // Pomarańcz brandu (#F75708) - splash = pełny pomarańczowy ekran z białym symbolem
-      // spontaway. Tło musi być pomarańczowe (nie biel), żeby ewentualny letterbox wokół
-      // obrazu splasha też był pomarańczowy (bezszwowo z symbolem).
-      backgroundColor: '#F75708',
+      // Złamana biel (#FEFEFE) - splash = białe tło + POMARAŃCZOWY symbol spontaway
+      // (nie pełny pomarańcz - żeby nie było oczopląsu przy przejściu do jasnej apki).
+      backgroundColor: '#FEFEFE',
       // No spinner — splash image only
       showSpinner: false,
       androidScaleType: 'CENTER_CROP',

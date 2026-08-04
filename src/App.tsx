@@ -473,13 +473,13 @@ function SplashScreen({ done }: { done: boolean }) {
 
   return (
     <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center"
-      style={{ transition: "opacity 0.4s", opacity: done ? 0 : 1, background: "#F75708" }}
+      className="fixed inset-0 z-[9999] bg-background flex items-center justify-center"
+      style={{ transition: "opacity 0.4s", opacity: done ? 0 : 1 }}
     >
-      {/* Loading = bialy symbol spontaway na pomaranczu, 1:1 z natywnym splashem (orange +
-          bialy symbol) zeby przejscie native->React bylo bezszwowe (bez skoku koloru/logo).
-          Rozmiar ~22% szerokosci ekranu jak symbol na natywnym splashu. */}
-      <TrasaLogo size={88} tone="white" />
+      {/* Loading = POMARAŃCZOWY symbol spontaway na białym tle (#FEFEFE), 1:1 z natywnym
+          splashem, żeby przejście native->React było bezszwowe (bez skoku koloru).
+          Rozmiar ~22% szerokości ekranu jak symbol na natywnym splashu. */}
+      <TrasaLogo size={88} />
     </div>
   );
 }
