@@ -18,7 +18,7 @@ const Privacy = () => {
         <section>
           <h2 className="font-bold text-base mb-2">1. Administrator danych osobowych</h2>
           <p className="text-muted-foreground">
-            Administratorem Twoich danych osobowych przetwarzanych w&nbsp;ramach aplikacji Trasa (dalej: „Aplikacja") jest Bartosz Tomala, e-mail:{" "}
+            Administratorem Twoich danych osobowych przetwarzanych w&nbsp;ramach aplikacji spontaway (dalej: „Aplikacja") jest Bartosz Tomala, e-mail:{" "}
             <a href="mailto:tomalab97@gmail.com" className="underline">tomalab97@gmail.com</a> (dalej: „Operator" lub „Administrator").
           </p>
           <p className="text-muted-foreground mt-2">
@@ -30,11 +30,11 @@ const Privacy = () => {
           <h2 className="font-bold text-base mb-2">2. Jakie dane zbieramy</h2>
           <p className="text-muted-foreground">W&nbsp;ramach korzystania z&nbsp;Aplikacji zbieramy:</p>
           <ul className="text-muted-foreground list-disc list-inside mt-1 space-y-1">
-            <li>adres e-mail i&nbsp;imię (przy rejestracji),</li>
+            <li>adres e-mail i&nbsp;imię (z logowania Apple lub Google),</li>
             <li>nazwę użytkownika i&nbsp;zdjęcie profilowe,</li>
-            <li>historię tras, odwiedzonych miejsc i&nbsp;Twoich reakcji na miejsca,</li>
-            <li>preferencje podróżnicze (na potrzeby personalizacji),</li>
-            <li>zdjęcia dodawane do dziennika podróży,</li>
+            <li>Twoje trasy, zapisane i&nbsp;polubione miejsca oraz reakcje na miejsca,</li>
+            <li>odpowiedzi ankietowe podane podczas onboardingu (np. skąd znasz Aplikację, w&nbsp;jakim celu z&nbsp;niej korzystasz),</li>
+            <li>zdjęcia i&nbsp;notatki dodawane do miejsc oraz tras,</li>
             <li>identyfikator urządzenia i&nbsp;informacje techniczne (typ urządzenia, system, wersja Aplikacji).</li>
           </ul>
           <p className="text-muted-foreground mt-2">
@@ -51,21 +51,21 @@ const Privacy = () => {
           <ul className="text-muted-foreground list-disc list-inside mt-1 space-y-1">
             <li>w&nbsp;celu świadczenia usług, prowadzenia konta i&nbsp;realizacji funkcji Aplikacji - art. 6 ust. 1 lit. b RODO (wykonanie umowy),</li>
             <li>w&nbsp;celach analitycznych, statystycznych i&nbsp;ulepszania Aplikacji - art. 6 ust. 1 lit. a RODO (zgoda),</li>
-            <li>w&nbsp;zakresie profilowania AI i&nbsp;personalizacji rekomendacji - art. 6 ust. 1 lit. a RODO (zgoda),</li>
+            <li>w&nbsp;celu personalizacji (m.in. kolejności prezentowanych miejsc) na podstawie Twoich interakcji - art. 6 ust. 1 lit. a RODO (zgoda),</li>
             <li>w&nbsp;celach związanych z&nbsp;bezpieczeństwem Aplikacji - art. 6 ust. 1 lit. f RODO (prawnie uzasadniony interes).</li>
           </ul>
         </section>
 
         <section>
-          <h2 className="font-bold text-base mb-2">4. Profilowanie AI</h2>
+          <h2 className="font-bold text-base mb-2">4. Personalizacja</h2>
           <p className="text-muted-foreground">
-            Aplikacja tworzy spersonalizowany profil Twoich preferencji podróżniczych na podstawie reakcji na miejsca i&nbsp;historii tras.
+            Aplikacja może dopasowywać prezentowane treści (m.in. kolejność miejsc) na podstawie Twoich interakcji - zapisanych i&nbsp;polubionych miejsc oraz reakcji.
           </p>
           <p className="text-muted-foreground mt-2">
-            Profilowanie odbywa się wyłącznie za Twoją wyraźną zgodą udzieloną podczas konfiguracji konta. Możesz wycofać tę zgodę w&nbsp;dowolnym momencie w&nbsp;Ustawieniach Aplikacji.
+            Personalizacja odbywa się wyłącznie za Twoją wyraźną zgodą, którą możesz wycofać w&nbsp;dowolnym momencie w&nbsp;Ustawieniach Aplikacji.
           </p>
           <p className="text-muted-foreground mt-2">
-            Profilowanie ma charakter rekomendacyjny - nie wywołuje wobec Ciebie skutków prawnych ani w&nbsp;podobny sposób istotnie na Ciebie nie wpływa (art. 22 RODO).
+            Personalizacja ma charakter pomocniczy - nie wywołuje wobec Ciebie skutków prawnych ani w&nbsp;podobny sposób istotnie na Ciebie nie wpływa (art. 22 RODO).
           </p>
         </section>
 
@@ -101,7 +101,7 @@ const Privacy = () => {
         <section>
           <h2 className="font-bold text-base mb-2">7. Analityka i&nbsp;technologie śledzące</h2>
           <p className="text-muted-foreground">
-            Aplikacja korzysta z&nbsp;narzędzi analitycznych wyłącznie po udzieleniu przez Ciebie wyraźnej zgody (cookie banner).
+            Aplikacja korzysta z&nbsp;narzędzi analitycznych wyłącznie po udzieleniu przez Ciebie wyraźnej zgody (w&nbsp;aplikacji mobilnej podczas onboardingu, w&nbsp;wersji webowej przez baner zgody). Zgodę możesz zmienić w&nbsp;Ustawieniach.
           </p>
           <p className="text-muted-foreground mt-2">
             <strong>PostHog</strong> - analiza zachowań użytkowników (odwiedzane podstrony, czas trwania sesji, typ urządzenia, interakcje z&nbsp;interfejsem). Hostowane na serwerach w&nbsp;Unii Europejskiej (eu.posthog.com).
@@ -119,7 +119,6 @@ const Privacy = () => {
           <p className="text-muted-foreground">Korzystamy z&nbsp;następujących dostawców usług, którym powierzamy przetwarzanie danych:</p>
           <ul className="text-muted-foreground list-disc list-inside mt-1 space-y-1">
             <li><strong>Supabase</strong> - baza danych i&nbsp;uwierzytelnianie (serwery w&nbsp;UE),</li>
-            <li><strong>Google Gemini</strong> - przetwarzanie AI w&nbsp;celu dopasowania miejsc i&nbsp;generowania rekomendacji,</li>
             <li><strong>Google Maps / Google Places API</strong> - mapy i&nbsp;wyszukiwanie miejsc (przekazujemy zapytanie tekstowe, np. nazwę miasta),</li>
             <li><strong>Apple (Sign in with Apple)</strong> - opcjonalne logowanie przez Apple ID,</li>
             <li><strong>Google (OAuth)</strong> - opcjonalne logowanie przez konto Google,</li>
@@ -187,7 +186,7 @@ const Privacy = () => {
         </p>
 
         <p className="text-xs text-muted-foreground">
-          Ostatnia aktualizacja: maj 2026
+          Ostatnia aktualizacja: sierpień 2026
         </p>
       </div>
     </div>
