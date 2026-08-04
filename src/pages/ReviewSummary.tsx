@@ -508,16 +508,25 @@ const ReviewSummary = () => {
     }
   };
 
+  // Auto-rozwiniecie notek z trescia (raz) - zeby przy wejsciu w edycje bylo widac, ze uzupelnione.
+  const notesAutoOpened = useRef(false);
   useEffect(() => {
-    if (existingNotes.length) {
-      const nmap: Record<string, string> = {};
-      for (const r of existingNotes) {
-        const k = rkey(r.route_id, r.place_name);
-        if (r.note) nmap[k] = r.note;
-      }
-      setNotes(nmap);
+    if (!existingNotes.length) return;
+    const nmap: Record<string, string> = {};
+    for (const r of existingNotes) {
+      const k = rkey(r.route_id, r.place_name);
+      if (r.note) nmap[k] = r.note;
     }
-  }, [existingNotes]);
+    setNotes(nmap);
+    // Rozwin notki miejsc, ktore juz maja tresc (dopasowanie po route_id+place_name -> pin.id).
+    if (!notesAutoOpened.current && allPins.length) {
+      const ids = new Set<string>();
+      for (const p of allPins as any[]) {
+        if (nmap[rkey(p.route_id, p.place_name)]) ids.add(p.id);
+      }
+      if (ids.size) { setOpenNotes((prev) => new Set([...prev, ...ids])); notesAutoOpened.current = true; }
+    }
+  }, [existingNotes, allPins]);
 
   // Udostepnij link do publicznej trasy (/#/route/:id). HashRouter => link z #.
   const shareUrl = routeId ? `https://trasa.travel/#/route/${routeId}` : "";
