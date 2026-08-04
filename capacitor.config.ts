@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'travel.trasa.app',
-  appName: 'Trasa',
+  appName: 'spontaway',
   webDir: 'dist',
   plugins: {
     SplashScreen: {

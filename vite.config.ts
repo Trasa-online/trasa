@@ -64,8 +64,8 @@ export default defineConfig(({ mode }) => ({
       registerType: "autoUpdate",
       includeAssets: ["favicon.png", "apple-touch-icon.png", "icon-192.png", "icon-512.png"],
       manifest: {
-        name: "trasa",
-        short_name: "trasa",
+        name: "spontaway",
+        short_name: "spontaway",
         description: "Planuj trasy podróży z AI",
         theme_color: "#FEFEFE",
         background_color: "#FEFEFE",
