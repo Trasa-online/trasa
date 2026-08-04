@@ -439,27 +439,37 @@ const ReviewSummary = () => {
     queryKey: ["review-summary-group-photos", route?.group_session_id],
     queryFn: async () => {
       if (!route?.group_session_id || !user) return [];
-      const { data: groupRoutes } = await supabase
-        .from("routes")
-        .select("id, user_id, review_photos")
-        .eq("group_session_id", route.group_session_id)
-        .neq("user_id", user.id);
-      if (!groupRoutes?.length) return [];
-      const userIds = [...new Set(groupRoutes.map((r: any) => r.user_id))];
+      // Faza 3: wspolne zdjecia sesji (group_trip_photos) - kazdy czlonek dodaje, wszyscy widza.
+      const { data: rows } = await (supabase as any)
+        .from("group_trip_photos")
+        .select("url, user_id")
+        .eq("session_id", route.group_session_id)
+        .order("created_at", { ascending: true });
+      if (!rows?.length) return [];
+      const userIds = [...new Set(rows.map((r: any) => r.user_id))];
       const { data: profiles } = await supabase
         .from("profiles")
         .select("id, username, first_name, avatar_url")
         .in("id", userIds);
       const profileMap = Object.fromEntries((profiles ?? []).map((p: any) => [p.id, p]));
-      return groupRoutes.flatMap((r: any) =>
-        (r.review_photos ?? []).map((url: string) => ({
-          url,
-          userId: r.user_id,
-          username: profileMap[r.user_id]?.first_name || profileMap[r.user_id]?.username || t("labels.participant"),
-        }))
-      );
+      return rows.map((r: any) => ({
+        url: r.url,
+        userId: r.user_id,
+        username: profileMap[r.user_id]?.first_name || profileMap[r.user_id]?.username || t("labels.participant"),
+      }));
     },
     enabled: !!route?.group_session_id,
+  });
+
+  // Czy zalogowany user jest CZLONKIEM (nie-hostem) sesji grupowej - zeby mogl dodac wspolne zdjecia.
+  const { data: isGroupMember = false } = useQuery({
+    queryKey: ["review-is-group-member", route?.group_session_id, user?.id],
+    enabled: !!route?.group_session_id && !!user && route?.user_id !== user?.id,
+    queryFn: async () => {
+      const { data } = await (supabase as any).from("group_session_members")
+        .select("user_id").eq("session_id", route!.group_session_id).eq("user_id", user!.id).maybeSingle();
+      return !!data;
+    },
   });
 
   // Notki miejsc (wszystkie dni naraz).
@@ -603,13 +613,24 @@ const ReviewSummary = () => {
       }
     }
     if (newUrls.length) {
-      const updated = [...photos, ...newUrls];
-      setPhotos(updated);
-      await supabase.from("routes").update({ review_photos: updated } as any).eq("id", routeId);
-      queryClient.invalidateQueries({ queryKey: ["review-trip-days", folderId, routeId] });
-      // Auto-miniatura eksploracji: gdy trasa nie ma jeszcze list_cover_url, ustaw LOSOWE
-      // zdjecie z galerii (task 3) - trasa "finalizuje sie" i pojawia w eksploracji.
-      await ensureListCover(routeId, updated);
+      if ((route as any)?.group_session_id) {
+        // Trasa grupowa: zdjecia sa WSPOLNE (group_trip_photos), nie na review_photos (owner-only).
+        // Dzieki temu KAZDY uczestnik moze dodawac zdjecia widoczne dla calej grupy.
+        await (supabase as any).from("group_trip_photos").insert(
+          newUrls.map((u) => ({ session_id: (route as any).group_session_id, route_id: routeId, user_id: user.id, url: u }))
+        );
+        queryClient.invalidateQueries({ queryKey: ["review-summary-group-photos", (route as any).group_session_id] });
+        // list_cover_url ustawi tylko wlasciciel (RLS) - dla czlonka po prostu pominie sie.
+        await ensureListCover(routeId, newUrls);
+      } else {
+        const updated = [...photos, ...newUrls];
+        setPhotos(updated);
+        await supabase.from("routes").update({ review_photos: updated } as any).eq("id", routeId);
+        queryClient.invalidateQueries({ queryKey: ["review-trip-days", folderId, routeId] });
+        // Auto-miniatura eksploracji: gdy trasa nie ma jeszcze list_cover_url, ustaw LOSOWE
+        // zdjecie z galerii (task 3) - trasa "finalizuje sie" i pojawia w eksploracji.
+        await ensureListCover(routeId, updated);
+      }
     }
     // Nie chowaj cichych bledow - jesli nic sie nie dodalo (albo tylko czesc), powiedz o tym.
     if (failed > 0) notify.error(newUrls.length === 0 ? t("toast.photo_upload_error") : t("toast.photo_upload_partial"));
@@ -2619,7 +2640,7 @@ const ReviewSummary = () => {
           ) : (
             /* ══ WSPOMNIENIE (gość): read-only galeria + plan ══ */
             <div className="pt-2 pb-5">
-              {renderGallery(false)}
+              {renderGallery(isGroupMember)}
               {currentPins.length > 0 && <div className="px-5 mt-5">{renderListReadonly(false)}</div>}
             </div>
           )

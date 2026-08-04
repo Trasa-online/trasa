@@ -943,6 +943,14 @@ async function enrichRouteRows(routes: any[]): Promise<PolecaneRoute[]> {
     }
   }
 
+  // Wspolne zdjecia grupowe (Faza 3) - okladka kafelka dla tras grupowych (pierwsze zdjecie sesji).
+  const groupCoverBySession = new Map<string, string>();
+  if (sessionIds.length) {
+    const { data: gphotos } = await (supabase as any)
+      .from("group_trip_photos").select("session_id, url").in("session_id", sessionIds).order("created_at", { ascending: true });
+    for (const g of gphotos ?? []) if (!groupCoverBySession.has(g.session_id)) groupCoverBySession.set(g.session_id, g.url);
+  }
+
   return routes.map((r): PolecaneRoute => {
     const prof = profileMap.get(r.user_id);
     const anon = r.share_anonymous === true;
@@ -953,6 +961,7 @@ async function enrichRouteRows(routes: any[]): Promise<PolecaneRoute[]> {
       // najlepsze zdjecie pinu -> zdjecie usera z pinow -> null (placeholder).
       photo: resolveStored(r.list_cover_url)
         ?? resolveStored(r.cover_url)
+        ?? (r.group_session_id ? resolveStored(groupCoverBySession.get(r.group_session_id)) : null)
         ?? resolveStored(Array.isArray(r.review_photos) ? r.review_photos.find((u: any) => typeof u === "string" && u.trim()) : null)
         ?? photoMap.get(r.id)
         ?? userPhotoMap.get(r.id)
