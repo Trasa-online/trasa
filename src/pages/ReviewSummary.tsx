@@ -1968,10 +1968,24 @@ const ReviewSummary = () => {
               </span>
               <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
             </button>
-            {/* Opis trasy (podsumowanie AI) - jak w widoku eksploracji (ujednolicenie). */}
-            {route?.ai_summary && (
-              <p className="text-sm text-muted-foreground leading-relaxed">{route.ai_summary}</p>
-            )}
+            {/* Opis ogolny trasy (reczny, edytowalny - review_narrative, autosave). Widoczny w
+                eksploracji (SharedRoute) i u wlasciciela tutaj. */}
+            {isOwner ? (
+              <div className="relative">
+                <textarea
+                  value={suggestion}
+                  onChange={(e) => { setSuggestion(e.target.value); saveSuggestion(e.target.value); }}
+                  onFocus={() => setNoteFocused(true)}
+                  onBlur={() => setNoteFocused(false)}
+                  placeholder="Dodaj opis trasy: dla kogo, na jaką okazję, co warto zobaczyć..."
+                  rows={2}
+                  className="w-full bg-secondary/50 rounded-xl px-3 py-2.5 text-sm text-foreground resize-none focus:outline-none border border-border/40 focus:border-orange-400/60 placeholder:text-muted-foreground/55"
+                />
+                {suggestionSaved && <span className="absolute bottom-2 right-2.5 text-[10px] text-green-600 font-medium">Zapisano</span>}
+              </div>
+            ) : (suggestion?.trim() || route?.ai_summary) ? (
+              <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">{suggestion?.trim() || route?.ai_summary}</p>
+            ) : null}
             {/* Wiersz "Widoczność" usuniety (2026-07-30): wszystkie trasy sa publiczne by default. */}
           </div>
 
