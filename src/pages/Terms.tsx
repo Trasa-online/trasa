@@ -88,6 +88,9 @@ const Terms = () => {
             <strong>Widoczność.</strong> Trasy oraz zdjęcia dodane do miejsc mogą być <strong>publiczne</strong> i&nbsp;widoczne dla innych użytkowników w&nbsp;Aplikacji (m.in. w&nbsp;eksploracji tras oraz jako zdjęcia miejsc). Użytkownik powinien dodawać wyłącznie treści, które godzi się upublicznić.
           </p>
           <p className="text-muted-foreground mt-2">
+            <strong>Zdjęcia przypisane do miejsc.</strong> Dodając zdjęcie przypisane do konkretnego miejsca, użytkownik wyraża zgodę na jego wykorzystanie do <strong>ilustrowania tego miejsca w&nbsp;Aplikacji</strong> - w&nbsp;szczególności na kartach miejsc, w&nbsp;eksploracji oraz na <strong>wizytówce danego lokalu</strong> (również gdy lokal posiada profil biznesowy). Zdjęcie może być prezentowane innym użytkownikom jako zdjęcie tego miejsca, niezależnie od trasy, w&nbsp;ramach której zostało dodane. Zgoda ta pozostaje w&nbsp;mocy dopóki zdjęcie nie zostanie usunięte przez użytkownika, z&nbsp;zastrzeżeniem kopii technicznych i&nbsp;już udostępnionych zgodnie z&nbsp;pkt&nbsp;4.
+          </p>
+          <p className="text-muted-foreground mt-2">
             <strong>Zdjęcia i&nbsp;wizerunek.</strong> Publikując zdjęcie, użytkownik zapewnia, że ma do niego prawa oraz że nie narusza prawa do wizerunku ani prywatności osób na nim widocznych. Nie wolno publikować zdjęć osób bez wymaganej zgody, ani zdjęć chronionych prawem autorskim osób trzecich bez uprawnienia.
           </p>
           <p className="text-muted-foreground mt-2">
