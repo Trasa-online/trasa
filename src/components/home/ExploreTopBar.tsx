@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { Layers, Compass, SlidersHorizontal, Search } from "lucide-react";
 import RegionSelect from "@/components/home/RegionSelect";
+import { haptics } from "@/hooks/useHaptics";
 
 // Wspoldzielona zawartosc gornej belki dla Eksploracji (feed) i Przegladania (swiper):
 // (opcjonalny selektor miasta) + toggle Trasy|Miejsca + filtry + szukanie. Renderuje FRAGMENT
@@ -45,8 +46,9 @@ export default function ExploreTopBar({
   const navigate = useNavigate();
   const cur = city || "all";
   const showRegion = !!onCityChange;
-  const goBrowse = () => (onModeChange ? onModeChange("browse") : navigate("/plan", { state: { exploreMode: true, city: cur } }));
-  const goExplore = () => (onModeChange ? onModeChange("explore") : navigate("/eksploruj", { state: { city: cur } }));
+  // Lekki "tick" przy przelaczeniu Trasy<->Miejsca (native; no-op na web).
+  const goBrowse = () => { haptics.selection(); onModeChange ? onModeChange("browse") : navigate("/plan", { state: { exploreMode: true, city: cur } }); };
+  const goExplore = () => { haptics.selection(); onModeChange ? onModeChange("explore") : navigate("/eksploruj", { state: { city: cur } }); };
 
   return (
     <>
