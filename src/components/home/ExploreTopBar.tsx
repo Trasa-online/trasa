@@ -3,13 +3,16 @@ import { Layers, Compass, SlidersHorizontal, Search } from "lucide-react";
 import RegionSelect from "@/components/home/RegionSelect";
 
 // Wspoldzielona zawartosc gornej belki dla Eksploracji (feed) i Przegladania (swiper):
-// selektor miasta (pill) + toggle Przegladaj|Eksploracja + filtry. Renderuje FRAGMENT
-// (bez kontenera) - rodzic dostarcza wiersz naglowka (safe-area, ew. back). Dzieki temu
-// oba widoki maja IDENTYCZNA belke (te same guziki, ta sama wysokosc).
+// (opcjonalny selektor miasta) + toggle Trasy|Miejsca + filtry + szukanie. Renderuje FRAGMENT
+// (bez kontenera) - rodzic dostarcza wiersz naglowka. Dzieki temu widoki maja IDENTYCZNA belke.
 //
-// mode: "explore" = jestesmy w feedzie (Eksploracja aktywna), "browse" = w swiperze
-// (Przegladaj aktywne). Toggle nawiguje miedzy /eksploruj a /plan (exploreMode), niosac
-// wybrane miasto, zeby zostalo spojne przy przelaczaniu.
+// 2026-08-05: w EKSPLORACJI (Explore.tsx) selektor miasta zniknal z belki - toggle Trasy|Miejsca
+// przejal jego miejsce (lewa strona), a wybor miasta zszedl do sheetu "Filtry" (CityFilterRow).
+// Selektor renderuje sie TYLKO gdy podano `onCityChange` (uzywa go jeszcze PlanWizard /plan
+// exploreMode, gdzie wybor miasta w belce ma sens). Bez `onCityChange` -> toggle po lewej.
+//
+// mode: "explore" = feed (Eksploracja aktywna), "browse" = swiper. Toggle nawiguje miedzy
+// /eksploruj a /plan (exploreMode) TYLKO w fallbacku (gdy brak onModeChange).
 export default function ExploreTopBar({
   mode,
   city,
@@ -19,24 +22,21 @@ export default function ExploreTopBar({
   onOpenSearch,
   activeFilterCount = 0,
   onModeChange,
-  onBack,
   hideModeToggle = false,
 }: {
   mode: "explore" | "browse";
-  city: string;
-  // Miasta z trasami (do selektora, obok "Wszystkie"). Gdy puste -> selektor pokazuje samo "Wszystkie".
+  // Selektor miasta w belce - renderowany tylko gdy podano onCityChange (PlanWizard).
+  // W Eksploracji NIE podajemy tych propsow (miasto wybiera sie w sheecie Filtry).
+  city?: string;
   cities?: string[];
-  onCityChange: (city: string) => void;
+  onCityChange?: (city: string) => void;
   onOpenFilters: () => void;
   // Klik lupy -> rodzic rozwija pelnoszerokosciowa wyszukiwarke w belce.
-  onOpenSearch: () => void;
+  onOpenSearch?: () => void;
   activeFilterCount?: number;
   // Toggle feed<->swiper. Gdy podane -> lokalna zmiana (seamless, bez nawigacji).
   // Gdy brak -> fallback do nawigacji miedzy /eksploruj a /plan (legacy).
   onModeChange?: (mode: "explore" | "browse") => void;
-  // Cofniecie z przegladania na widok glowny (feed). Chevron-left przed selektorem
-  // miasta, renderowany TYLKO w trybie "browse".
-  onBack?: () => void;
   // Ukrywa toggle Trasy|Miejsca (2026-07-26: na homepage zostają same Trasy - widok
   // "Miejsca" wstrzymany do czasu zebrania większej liczby lokali). Zdejmuje dostęp
   // do swipera z belki, feed Tras zostaje jedynym widokiem.
@@ -44,20 +44,19 @@ export default function ExploreTopBar({
 }) {
   const navigate = useNavigate();
   const cur = city || "all";
+  const showRegion = !!onCityChange;
   const goBrowse = () => (onModeChange ? onModeChange("browse") : navigate("/plan", { state: { exploreMode: true, city: cur } }));
   const goExplore = () => (onModeChange ? onModeChange("explore") : navigate("/eksploruj", { state: { city: cur } }));
 
   return (
     <>
-      {/* Selektor: domyslnie "Wszystkie" (wszystkie trasy), po kliknieciu lista miast
-          ktore realnie maja trasy. Jeden pill (oszczedza szerokosc belki). */}
-      <RegionSelect city={cur} cities={cities} onCityChange={onCityChange} />
+      {/* Selektor miasta - tylko z onCityChange (PlanWizard). W Eksploracji ukryty. */}
+      {showRegion && <RegionSelect city={cur} cities={cities} onCityChange={onCityChange!} />}
+      {showRegion && <div className="flex-1" />}
 
-      <div className="flex-1" />
-
-      {/* Toggle Trasy | Miejsca. Aktywny segment = pomaranczowa orba (gradient) z bialа ikonа,
-          nieaktywny = szara ikona + etykieta. Trasy = feed (domyslny widok), Miejsca = swiper.
-          hideModeToggle -> ukryty (homepage pokazuje same Trasy). */}
+      {/* Toggle Trasy | Miejsca. Bez selektora (Eksploracja) stoi po lewej - w miejscu
+          dawnego selektora miasta. Aktywny segment = pomaranczowa orba (gradient) z biala
+          ikona, nieaktywny = szara ikona + etykieta. hideModeToggle -> ukryty. */}
       <div className={`shrink-0 items-center rounded-full bg-secondary p-0.5 ${hideModeToggle ? "hidden" : "flex"}`}>
         {mode === "explore" ? (
           <span data-ob="toggle-trasy" className="h-8 w-8 flex items-center justify-center rounded-full bg-gradient-to-br from-[#F4A259] to-[#F9662B] text-white shadow-sm" aria-current="true" title="Trasy">
@@ -90,6 +89,10 @@ export default function ExploreTopBar({
           </button>
         )}
       </div>
+
+      {/* Bez selektora (Eksploracja): spacer po toggle -> filtry/szukanie na prawo.
+          Z selektorem (PlanWizard): spacer jest juz przed toggle, drugiego nie dodajemy. */}
+      {!showRegion && <div className="flex-1" />}
 
       {/* Filtry */}
       <button

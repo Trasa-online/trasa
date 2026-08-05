@@ -27,6 +27,7 @@ import { COLLECTION_THEMES, getTheme, collectionKind } from "@/lib/collectionThe
 import { getHistoryByCity } from "@/lib/exploreLikes";
 import { TrasaLogo } from "@/components/TrasaLogo";
 import { CategoryIcon } from "@/components/CategoryIcon";
+import CityFilterRow from "@/components/home/CityFilterRow";
 import { toast } from "sonner";
 import { PLANNING_DISABLED } from "@/lib/appMode";
 import { createWyjazdFromPlaces } from "@/lib/createWyjazd";
@@ -1639,7 +1640,7 @@ export function SavedCollections() {
   );
 }
 
-export default function DiscoveryFeed({ city = "Warszawa", active = true, searchQuery = "", searchOpen = false }: { city?: string; active?: boolean; searchQuery?: string; searchOpen?: boolean } = {}) {
+export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityChange, active = true, searchQuery = "", searchOpen = false }: { city?: string; cities?: string[]; onCityChange?: (city: string) => void; active?: boolean; searchQuery?: string; searchOpen?: boolean } = {}) {
   const { t } = useTranslation("homefeed");
   const { user } = useAuth();
   const { open: openAuthDrawer } = useAuthDrawer();
@@ -1770,8 +1771,11 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
   const isSearchActive = !!q || cityFilter.length > 0 || themeFilter.length > 0 || categoryFilter.length > 0;
   // Reset zakladki wynikow gdy wychodzimy z wyszukiwania.
   useEffect(() => { if (!isSearchActive) setSearchTab("best"); }, [isSearchActive]);
-  const activeFilterCount = cityFilter.length + themeFilter.length + categoryFilter.length;
-  const clearFilters = () => { setCityFilter([]); setThemeFilter([]); setCategoryFilter([]); };
+  // Miasto z gornej belki zeszlo do sheetu (parent `city`) - liczymy je do badge filtra,
+  // ale trzymamy osobno od cityFilter[] (ten zostaje dla filtra wynikow wyszukiwania).
+  const cityActive = !!city && city !== "all";
+  const activeFilterCount = cityFilter.length + themeFilter.length + categoryFilter.length + (cityActive ? 1 : 0);
+  const clearFilters = () => { setCityFilter([]); setThemeFilter([]); setCategoryFilter([]); onCityChange?.("all"); };
   // Gorna belka (ExploreTopBar w Explore) trzyma guzik filtra - otwiera sheet eventem,
   // a DiscoveryFeed raportuje jej liczbe aktywnych filtrow (badge).
   useEffect(() => {
@@ -2406,8 +2410,9 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
             <p className="text-lg font-black">{t("filters_title")}</p>
             <button onClick={() => setFiltersOpen(false)} aria-label={t("aria.close")} className="h-9 w-9 rounded-full bg-muted flex items-center justify-center active:bg-muted/70"><X className="h-4 w-4" /></button>
           </div>
-          {/* Tylko kategoria miejsca (miasto + motyw usuniete). Chipy powiekszone na wysokosc drawera. */}
+          {/* Miasto (przeniesione z gornej belki 2026-08-05) + kategoria miejsca. */}
           <div className="flex-1 min-h-0 overflow-y-auto px-5 pb-2">
+            {onCityChange && <CityFilterRow city={city} cities={cities} onChange={onCityChange} />}
             <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-3">{t("filter.category")}</p>
             <div className="flex flex-wrap gap-2.5">
               <button onClick={() => setCategoryFilter([])} className={`px-4 py-3 rounded-2xl text-sm font-bold transition-colors ${categoryFilter.length === 0 ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground"}`}>{t("all")}</button>

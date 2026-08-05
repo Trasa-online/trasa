@@ -676,6 +676,22 @@ const Explore = () => {
     },
     staleTime: 60_000,
   });
+  // Miasta ktore realnie maja miejsca (do wyboru miasta w sheecie Filtry, widok Miejsca).
+  // Distinct po stronie klienta z aktywnych miejsc.
+  const { data: placeCities = [] } = useQuery({
+    queryKey: ["explore-place-cities"],
+    queryFn: async () => {
+      const { data } = await (supabase as any)
+        .from("places")
+        .select("city")
+        .eq("is_active", true)
+        .not("city", "is", null);
+      const set = new Set<string>();
+      (data ?? []).forEach((r: any) => { if (r.city) set.add(r.city as string); });
+      return Array.from(set).sort((a, b) => a.localeCompare(b, "pl"));
+    },
+    staleTime: 60_000,
+  });
   // Licznik aktywnych filtrow (badge na guziku filtra w gornej belce). DiscoveryFeed
   // trzyma stan filtrow i raportuje liczbe przez event; belka jest o poziom wyzej.
   const [filterCount, setFilterCount] = useState(0);
@@ -760,11 +776,7 @@ const Explore = () => {
         ) : (
           <ExploreTopBar
             mode={view === "browse" ? "browse" : "explore"}
-            city={exploreCity}
-            cities={routeCities}
-            onCityChange={setExploreCity}
             onModeChange={(m) => setView(m === "browse" ? "browse" : "feed")}
-            onBack={() => setView("feed")}
             onOpenFilters={() => window.dispatchEvent(new CustomEvent("trasa:explore-open-filters"))}
             onOpenSearch={openSearch}
             activeFilterCount={filterCount}
@@ -783,13 +795,13 @@ const Explore = () => {
             {/* Snap tylko w trybie przegladania feedu. Przy wyszukiwaniu WYLACZAMY snap, zeby
                 skroty/wyniki na gorze byly widoczne, a wizytowki zostawaly przewijalne pod spodem. */}
             <PullToRefresh onRefresh={handleRefresh} className={cn("flex-1 min-h-0 flex flex-col pt-3 pb-[calc(6rem+env(safe-area-inset-bottom,0px))]", !searchOpen && "snap-y snap-mandatory scroll-pt-3")}>
-              <div className="flex-1 px-4"><DiscoveryFeed city={exploreCity} active={view === "feed"} searchQuery={feedSearch} searchOpen={searchOpen} /></div>
+              <div className="flex-1 px-4"><DiscoveryFeed city={exploreCity} cities={routeCities} onCityChange={setExploreCity} active={view === "feed"} searchQuery={feedSearch} searchOpen={searchOpen} /></div>
             </PullToRefresh>
           </div>
           {/* Swiper - montowany po pierwszym przejsciu, potem zostaje (natychmiastowy toggle). */}
           {hasBrowsed && (
             <div className={cn("flex-1 min-h-0 flex flex-col", view !== "browse" && "hidden")}>
-              <ExploreSwiper city={exploreCity} active={view === "browse"} sortNearestNonce={nearbyNonce} />
+              <ExploreSwiper city={exploreCity} cities={placeCities} onCityChange={setExploreCity} active={view === "browse"} sortNearestNonce={nearbyNonce} />
             </div>
           )}
         </>

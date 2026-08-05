@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { usePostHog } from "@posthog/react";
 import PlaceSwiper from "@/components/plan-wizard/PlaceSwiper";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
+import CityFilterRow from "@/components/home/CityFilterRow";
 import { MAIN_CATEGORIES } from "@/lib/categories";
 import { CategoryIcon } from "@/components/CategoryIcon";
 import { useDistanceReference } from "@/lib/distanceReference";
@@ -17,7 +18,7 @@ import { cn } from "@/lib/utils";
 // (trasa:explore-open-filters); licznik raportuje z powrotem (trasa:explore-filter-count).
 // `active` = czy ten widok jest aktualnie pokazany (gatuje event listenery/dispatch, bo
 // feed i swiper sa zamontowane rownolegle dla plynnego przelaczania).
-export default function ExploreSwiper({ city, active, sortNearestNonce = 0 }: { city: string; active: boolean; sortNearestNonce?: number }) {
+export default function ExploreSwiper({ city, cities = [], onCityChange, active, sortNearestNonce = 0 }: { city: string; cities?: string[]; onCityChange?: (city: string) => void; active: boolean; sortNearestNonce?: number }) {
   const { t } = useTranslation("plan");
   const posthog = usePostHog();
   const today = useMemo(() => new Date(), []);
@@ -29,7 +30,8 @@ export default function ExploreSwiper({ city, active, sortNearestNonce = 0 }: { 
 
   const distanceRef = useDistanceReference();
   const hasStartRef = !!distanceRef;
-  const activeFilterCount = selectedCategories.length + dietFilters.length + (sortMode !== "default" ? 1 : 0);
+  const cityActive = !!city && city !== "all";
+  const activeFilterCount = selectedCategories.length + dietFilters.length + (sortMode !== "default" ? 1 : 0) + (cityActive ? 1 : 0);
 
   // "Biezace polozenie" (Explore) -> wymus sort od najblizszego. Nonce rosnie z kazdym klikiem.
   useEffect(() => {
@@ -85,6 +87,9 @@ export default function ExploreSwiper({ city, active, sortNearestNonce = 0 }: { 
             <div className="mb-5 pr-12">
               <p className="text-lg font-black">{t("filters")}</p>
             </div>
+
+            {/* Miasto - przeniesione z gornej belki (2026-08-05). "Wszystkie" = bez filtra. */}
+            {onCityChange && <CityFilterRow city={city} cities={cities} onChange={onCityChange} />}
 
             {/* Sortowanie */}
             <div className="mb-5">
@@ -183,7 +188,7 @@ export default function ExploreSwiper({ city, active, sortNearestNonce = 0 }: { 
             {/* Dwa guziki, ujednolicone z filtrem Tras: Wyczysc (secondary) + Pokaz (primary), radius 16px. */}
             <div className="flex gap-2">
               <button
-                onClick={() => { setSelectedCategories([]); setSortMode("default"); }}
+                onClick={() => { setSelectedCategories([]); setSortMode("default"); onCityChange?.("all"); }}
                 className="flex-1 py-3.5 rounded-2xl bg-secondary text-secondary-foreground font-bold text-sm active:scale-[0.98] transition-transform"
               >
                 {t("filters_clear_all")}
