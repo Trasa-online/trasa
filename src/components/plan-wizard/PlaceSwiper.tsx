@@ -467,8 +467,21 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
 
 
 
-      {/* Redesign 2026-07-24: badge kategorii PRZENIESIONY z gornego-lewego rogu na DOL karty
-          (pod tagami vibe) - gora karty czysta. Renderowany na koncu dolnego overlaya. */}
+      {/* Badge kategorii - lewy gorny rog, na wysokosci chipa dystansu (redesign 2026-08-05:
+          przeniesiony z dolu karty z powrotem na gore, w parze z chipem "X km od Ciebie"). */}
+      {(() => {
+        const bizMainLabel = place.businessMainCategory ? mainCategoryLabel(place.businessMainCategory) : null;
+        const subLabel = t(`categories.${place.category}`, { defaultValue: CATEGORY_LABELS[place.category] });
+        const label = bizMainLabel ?? subLabel;
+        if (!label) return null;
+        return (
+          <div className="absolute top-4 left-4 z-10">
+            <span className={cn("inline-flex px-3 py-1 rounded-full text-xs font-bold shadow-sm", getCategoryColor(place.category))}>
+              {label}
+            </span>
+          </div>
+        );
+      })()}
 
       {/* Chip dystansu - prawy gorny rog, nad paginacja */}
       {isTop && distanceLabel && (
@@ -556,20 +569,7 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
           )}
         </div>
 
-        {/* Badge kategorii - na DOLE karty (redesign 2026-07-24), pod tagami vibe. */}
-        {(() => {
-          const bizMainLabel = place.businessMainCategory ? mainCategoryLabel(place.businessMainCategory) : null;
-          const subLabel = t(`categories.${place.category}`, { defaultValue: CATEGORY_LABELS[place.category] });
-          const label = bizMainLabel ?? subLabel;
-          if (!label) return null;
-          return (
-            <div className="pt-0.5">
-              <span className={cn("inline-flex px-3 py-1 rounded-full text-xs font-bold shadow-sm", getCategoryColor(place.category))}>
-                {label}
-              </span>
-            </div>
-          );
-        })()}
+        {/* Badge kategorii przeniesiony na gore karty (lewy gorny rog) - patrz wyzej. */}
       </div>
 
       {/* Action buttons inside card - only on top card (klasyczny swipe: skip | add) */}
