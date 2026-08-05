@@ -57,10 +57,17 @@ const norm = (s: string) =>
 // Wersja bez polskich znakow - fallback gdy plik nazwany ascii (np. "Bazylika sw Mikolaja").
 const fold = (s: string) => norm(s).normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/ł/g, "l");
 
+// Aliasy: znormalizowana (folded) nazwa PLIKU -> dokladna nazwa miejsca w bazie.
+// Dla przypadkow gdzie plik nazwany zupelnie inaczej niz rekord (nie zlapie substring).
+const ALIASES: Record<string, string> = {
+  "punkt widokowy na gorze gradowej": "Góra Gradowa",
+  "gora gradowa": "Góra Gradowa",
+  "brama zielona": "Zielona Brama",
+};
+
 const CONTENT_TYPE: Record<string, string> = {
   ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".webp": "image/webp",
 };
-const citySlug = fold(CITY).replace(/\s+/g, "-");
 
 async function main() {
   const files = readdirSync(COVERS_DIR).filter((f) => CONTENT_TYPE[extname(f).toLowerCase()]);
@@ -69,35 +76,46 @@ async function main() {
     process.exit(1);
   }
 
+  // Szukamy po WSZYSTKICH miastach (plik moze byc np. z Gdyni - Klif Orlowski). CITY sluzy
+  // tylko jako tie-breaker gdy nazwa wystepuje w kilku miastach (np. Bazylika Mariacka).
   const { data: places, error } = await supabase
     .from("places")
-    .select("id, place_name, photo_url")
-    .eq("city", CITY);
+    .select("id, place_name, city, photo_url")
+    .eq("is_active", true);
   if (error) { console.error("❌ Blad pobierania miejsc:", error.message); process.exit(1); }
+  const all = places ?? [];
 
-  // Mapy dopasowan: dokladna + folded (ascii). Wykryj kolizje nazw.
-  const byNorm = new Map<string, any[]>();
-  const byFold = new Map<string, any[]>();
-  for (const p of places ?? []) {
-    (byNorm.get(norm(p.place_name)) ?? byNorm.set(norm(p.place_name), []).get(norm(p.place_name))!).push(p);
-    (byFold.get(fold(p.place_name)) ?? byFold.set(fold(p.place_name), []).get(fold(p.place_name))!).push(p);
+  // Dopasowanie pliku -> miejsce: 1) dokladne (norm/fold, z preferencja CITY), 2) alias,
+  // 3) fragment (nazwa pliku ⊂ nazwa miejsca lub odwrotnie, unikalne, min 4 znaki).
+  function findPlace(key: string): any[] {
+    const nk = norm(key), fk = fold(key);
+    let cands = all.filter((p) => norm(p.place_name) === nk || fold(p.place_name) === fk);
+    if (!cands.length && ALIASES[fk]) cands = all.filter((p) => p.place_name === ALIASES[fk]);
+    if (!cands.length && fk.length >= 4) {
+      cands = all.filter((p) => { const pf = fold(p.place_name); return pf.length >= 4 && (pf.includes(fk) || fk.includes(pf)); });
+    }
+    if (cands.length > 1 && CITY) {
+      const inCity = cands.filter((c) => c.city === CITY);
+      if (inCity.length) cands = inCity;
+    }
+    return cands;
   }
 
-  console.log(`\n📁 ${files.length} plikow w ${COVERS_DIR} | miasto: ${CITY} | ${DRY ? "DRY-RUN" : "WGRYWANIE"}\n`);
+  console.log(`\n📁 ${files.length} plikow w ${COVERS_DIR} | tie-break miasto: ${CITY} | ${DRY ? "DRY-RUN" : "WGRYWANIE"}\n`);
   let ok = 0; const unmatched: string[] = []; const ambiguous: string[] = [];
 
   for (const file of files) {
     const key = basename(file, extname(file));
-    let hits = byNorm.get(norm(key)) ?? byFold.get(fold(key)) ?? [];
+    const hits = findPlace(key);
     if (hits.length === 0) { unmatched.push(file); console.log(`  ❓ BRAK dopasowania: "${file}"`); continue; }
-    if (hits.length > 1) { ambiguous.push(file); console.log(`  ⚠️  NIEJEDNOZNACZNE ("${file}" -> ${hits.length} miejsc): ${hits.map((h) => h.place_name).join(", ")}`); continue; }
+    if (hits.length > 1) { ambiguous.push(file); console.log(`  ⚠️  NIEJEDNOZNACZNE ("${file}" -> ${hits.length}): ${hits.map((h) => `${h.place_name} [${h.city}]`).join(", ")}`); continue; }
     const place = hits[0];
     if (place.photo_url && !OVERWRITE) { console.log(`  ⏭️  MA JUZ zdjecie (pomijam, OVERWRITE=1 by nadpisac): ${place.place_name}`); continue; }
 
-    if (DRY) { console.log(`  ✅ ${file}  ->  ${place.place_name}`); ok++; continue; }
+    if (DRY) { console.log(`  ✅ ${file}  ->  ${place.place_name} [${place.city}]`); ok++; continue; }
 
     const ext = extname(file).toLowerCase();
-    const path = `manual/${citySlug}/${place.id}${ext}`;
+    const path = `manual/${fold(place.city).replace(/\s+/g, "-")}/${place.id}${ext}`;
     const body = readFileSync(join(COVERS_DIR, file));
     const up = await supabase.storage.from(BUCKET).upload(path, body, { contentType: CONTENT_TYPE[ext], upsert: true });
     if (up.error) { console.log(`  ❌ upload ${file}: ${up.error.message}`); continue; }
