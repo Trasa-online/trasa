@@ -7,7 +7,7 @@ import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { resolveStored } from "@/components/PlacePhoto";
 import { format, parseISO, isValid, differenceInCalendarDays } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
-import { Globe, Lock, Loader2, Trash2, Sparkles, BookOpen } from "lucide-react";
+import { Globe, Lock, Loader2, Trash2, Sparkles, BookOpen, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { PLANNING_DISABLED } from "@/lib/appMode";
@@ -48,7 +48,7 @@ const JournalTab = ({ userId, city: cityFilter }: JournalTabProps) => {
       // Own routes (all statuses)
       const { data: ownRoutes } = await (supabase as any)
         .from("routes")
-        .select("id, title, city, day_number, start_date, end_date, folder_id, group_session_id, ai_summary, ai_highlight, review_photos, cover_url, is_shared, overall_rating, views, new_for_users, chat_status, trip_type, plan_finalized, created_at")
+        .select("id, title, city, day_number, start_date, end_date, folder_id, group_session_id, ai_summary, ai_highlight, review_photos, cover_url, list_cover_url, is_shared, overall_rating, views, new_for_users, chat_status, trip_type, plan_finalized, created_at")
         .eq("user_id", userId)
         // Sortuj po created_at (stabilne) - otwarcie/edycja trasy NIE zmienia jej pozycji na
         // liscie (updated_at wypychalo edytowana trase na gore, czego user nie chce).
@@ -329,6 +329,12 @@ const JournalTab = ({ userId, city: cityFilter }: JournalTabProps) => {
     const count = countMap[entry.id] ?? 0;
     const miniMap = mapMap[entry.id];
     const isPrivate = entry.is_shared === false;
+    // Publikacja w eksploracji = is_shared=true + list_cover_url ustawiony (miniatura).
+    // Bramka 1:1 z feedem (DiscoveryFeed). Brak miniatury = trasa ROBOCZA (widoczna tylko
+    // dla usera, nie w eksploracji). Badge tylko dla WLASNYCH tras (cudze kopie grupowe
+    // publikuje host). list_cover_url przechodzi przez collapse (...rep/...e).
+    const isPublished = entry.is_shared !== false && !!entry.list_cover_url;
+    const showPublishState = !!entry.is_own;
     const canDelete = entry.is_own || entry.group_session_id;
     const title = entry.title || entry.city || t("journal.trip_fallback");
     const avatars = entry.group_session_id
@@ -354,7 +360,19 @@ const JournalTab = ({ userId, city: cityFilter }: JournalTabProps) => {
             className="w-full h-full object-cover"
             onError={(e) => { (e.target as HTMLImageElement).src = getRandomPinPlaceholder(entry.id + "_fallback"); }}
           />
-          {/* Ikona prywatne/publiczne (Lock/Globe) usunieta 2026-07-30: wszystkie trasy publiczne. */}
+          {/* Status publikacji w eksploracji (2026-08-05) - tylko wlasne trasy. Robocza (brak
+              miniatury list_cover_url) = amber "Robocza"; opublikowana = subtelny "W eksploracji". */}
+          {showPublishState && (
+            isPublished ? (
+              <div className="absolute top-2 left-2 flex items-center gap-1 bg-black/55 backdrop-blur-sm rounded-full pl-1.5 pr-2 py-0.5 text-white text-[10px] font-semibold shadow-sm">
+                <Globe className="h-3 w-3" /> W eksploracji
+              </div>
+            ) : (
+              <div className="absolute top-2 left-2 flex items-center gap-1 bg-amber-500 rounded-full pl-1.5 pr-2 py-0.5 text-white text-[10px] font-bold shadow-sm">
+                <EyeOff className="h-3 w-3" /> Robocza
+              </div>
+            )
+          )}
           {miniMap && (
             <div className="absolute bottom-2 right-2 h-[46px] w-[46px] rounded-xl overflow-hidden border-2 border-white shadow-md bg-white">
               <img src={miniMap} alt="" className="w-full h-full object-cover" />
