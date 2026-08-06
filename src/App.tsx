@@ -692,8 +692,6 @@ const ReviewSummary    = lazy(() => import("./pages/ReviewSummary"));
 const ActiveTrip       = lazy(() => import("./pages/ActiveTrip"));
 const AddPlaceToTrip   = lazy(() => import("./pages/AddPlaceToTrip"));
 const PlanWizard       = lazy(() => import("./pages/PlanWizard"));
-const CreateGroupSession = lazy(() => import("./pages/CreateGroupSession"));
-const GroupSession     = lazy(() => import("./pages/GroupSession"));
 const AddFriend        = lazy(() => import("./pages/AddFriend"));
 const QuickPlanReview  = lazy(() => import("./pages/QuickPlanReview"));
 const UserSearch       = lazy(() => import("./pages/UserSearch"));
@@ -810,10 +808,6 @@ const App = () => (
           {/* Planowanie tras (kreator + sesje grupowe) - wylaczone w trybie uproszczonym na native.
               Wyjatek: exploreMode ("Przegladaj") zostaje wlaczony - patrz PlanRoute. */}
           <Route path="/plan" element={<PlanRoute />} />
-          {/* Sesja grupowa - odblokowana tez w trybie uproszczonym (grupowy WYJAZD; finalizacja
-              w GroupSession tworzy wyjazd zamiast planu AI gdy PLANNING_DISABLED). */}
-          <Route path="/sesja/nowa" element={<CreateGroupSession />} />
-          <Route path="/sesja/:joinCode" element={<GroupSession />} />
           <Route path="/dodaj/:code" element={<AddFriend />} />
           <Route path="/search" element={<UserSearch />} />
           <Route path="/route/:id" element={<SharedRoute />} />

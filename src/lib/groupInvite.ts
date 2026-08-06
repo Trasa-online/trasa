@@ -34,7 +34,6 @@ export async function inviteUsersToRoute(
     await (supabase as any).rpc("ensure_current_user_profile");
 
     let sessionId = route.group_session_id ?? null;
-    let joinCode: string | null = null;
 
     if (!sessionId) {
       const code = generateJoinCode();
@@ -49,18 +48,14 @@ export async function inviteUsersToRoute(
           expires_at: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
           ...(route.title ? { name: route.title } : {}),
         })
-        .select("id, join_code")
+        .select("id")
         .single();
       if (error || !session) return { ok: false, error: error?.message ?? "session insert failed" };
       sessionId = session.id;
-      joinCode = session.join_code;
       // Host do members (self-insert dozwolony) + podpiecie trasy (owner update).
       await (supabase as any).from("group_session_members").insert({ session_id: sessionId, user_id: hostUserId });
       const { error: linkErr } = await (supabase as any).from("routes").update({ group_session_id: sessionId }).eq("id", route.id);
       if (linkErr) return { ok: false, error: linkErr.message };
-    } else {
-      const { data } = await (supabase as any).from("group_sessions").select("join_code").eq("id", sessionId).maybeSingle();
-      joinCode = data?.join_code ?? null;
     }
 
     // Dodaj zaproszonych (host-only RPC).
@@ -74,10 +69,10 @@ export async function inviteUsersToRoute(
     const merged = Array.from(new Set([...cur, ...ids]));
     await (supabase as any).from("routes").update({ new_for_users: merged }).eq("id", route.id);
 
-    // Push (best-effort).
+    // Push (best-effort) - deep-link prosto do wspoldzielonej trasy.
     const hostName = await getCurrentHostName();
     for (const uid of ids) {
-      void sendGroupInvitePush({ targetUserId: uid, hostName, city: route.city ?? "", joinCode: joinCode ?? "" });
+      void sendGroupInvitePush({ targetUserId: uid, hostName, city: route.city ?? "", routeId: route.id });
     }
 
     return { ok: true, sessionId: sessionId! };

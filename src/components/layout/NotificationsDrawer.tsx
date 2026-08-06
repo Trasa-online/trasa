@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { X, Bell, UserPlus, UserCheck, MapPin, Route, Users, Bookmark, CheckCircle2, XCircle, MessageCircle } from "lucide-react";
+import { X, Bell, UserPlus, UserCheck, MapPin, Route, Bookmark, CheckCircle2, XCircle, MessageCircle } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
 import { avatarSrc } from "@/lib/avatar";
@@ -28,10 +28,9 @@ const TYPE_CONFIG: Record<string, { icon: React.ElementType; color: string; labe
   pin_visit:      { icon: MapPin,        color: "text-teal-500 bg-teal-100",      label: u => `${u} odwiedził(a) Twoje miejsce` },
   friend_request: { icon: UserPlus,      color: "text-violet-500 bg-violet-100",  label: u => `${u} chce dodać Cię do znajomych` },
   friend_accept:  { icon: UserCheck,     color: "text-emerald-500 bg-emerald-100",label: u => `${u} przyjął(a) Twoje zaproszenie do znajomych` },
-  group_match:    { icon: Users,         color: "text-orange-600 bg-orange-100",  label: (u, meta) => `${u} też polubił(a) ${meta?.place_name ?? "to samo miejsce"}! 🎉` },
   visit_comment:  { icon: MessageCircle, color: "text-sky-500 bg-sky-100",         label: (u, meta) => `${u} skomentował(a) Twój wpis${meta?.place_name ? ` o ${meta.place_name}` : ""}` },
   discovery_used: { icon: Bookmark,      color: "text-orange-600 bg-orange-100",  label: (u, meta) => `${u} skorzystał(a) z Twojego planu${meta?.city ? ` po ${meta.city}` : ""}` },
-  group_invite:       { icon: Users,  color: "text-violet-500 bg-violet-100",  label: (u, meta) => `${u} zaprasza Cię do wspólnego wybierania miejsc w ${meta?.city ?? "sesji grupowej"}` },
+  group_invite:       { icon: Route,  color: "text-orange-600 bg-orange-100",  label: (u, meta) => `${u} dodał(a) Cię do wspólnej trasy${meta?.city ? ` po ${meta.city}` : ""}` },
   group_route_ready:  { icon: Route, color: "text-orange-600 bg-orange-100",  label: (u, meta) => `${u} stworzył(a) trasę${meta?.city ? ` w ${meta.city}` : ""} - sprawdź!` },
   collection_approved: { icon: CheckCircle2, color: "text-emerald-500 bg-emerald-100", label: (_u, meta) => `Twoje zestawienie „${meta?.title ?? "kolekcja"}" zostało zaakceptowane 🎉` },
   collection_rejected: { icon: XCircle,      color: "text-destructive bg-destructive/10", label: (_u, meta) => meta?.moderation_note ? `Zestawienie „${meta?.title ?? "kolekcja"}" odrzucone. Powód: ${meta.moderation_note}` : `Twoje zestawienie „${meta?.title ?? "kolekcja"}" zostało odrzucone` },
@@ -226,23 +225,13 @@ export default function NotificationsDrawer({ open, onClose, userId }: Props) {
                     <div className="flex-1 min-w-0">
                       <p className="text-sm leading-snug text-foreground/80">{labelText}</p>
                       <p className="text-[11px] text-muted-foreground mt-0.5">{timeAgo}</p>
-                      {n.type === "group_invite" && n.metadata?.join_code && (
+                      {(n.type === "group_invite" || n.type === "group_route_ready") && (
                         <button
-                          onClick={async () => {
-                            await supabase.from("notifications").delete().eq("id", n.id);
-                            queryClient.invalidateQueries({ queryKey: ["notifications", userId] });
-                            queryClient.invalidateQueries({ queryKey: ["notifications-unread", userId] });
+                          onClick={() => {
                             onClose();
-                            navigate(`/sesja/${n.metadata!.join_code}`);
+                            // Deep-link do konkretnej trasy gdy znamy route_id, inaczej do zakladki Trasy.
+                            navigate(n.metadata?.route_id ? `/review-summary?route=${n.metadata.route_id}` : "/dziennik");
                           }}
-                          className="mt-2 px-3 py-1.5 rounded-full bg-primary text-white text-xs font-semibold active:scale-95 transition-transform"
-                        >
-                          Dołącz do sesji →
-                        </button>
-                      )}
-                      {n.type === "group_route_ready" && (
-                        <button
-                          onClick={() => { onClose(); navigate("/moje-podroze"); }}
                           className="mt-2 px-3 py-1.5 rounded-full bg-primary text-white text-xs font-semibold active:scale-95 transition-transform"
                         >
                           Zobacz trasę →

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useLocation } from "react-router-dom";
 import { NavLink } from "@/components/NavLink";
-import { BookOpen, Compass, Map, X, MapPin, Users, Link2, User, Heart, ArrowLeft, Layers, Bookmark } from "lucide-react";
+import { BookOpen, Compass, Map, X, MapPin, User, Heart, ArrowLeft, Layers, Bookmark } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -62,11 +62,10 @@ const BottomNav = () => {
   const location = useLocation();
   const { user } = useAuth();
   const [showMenu, setShowMenu] = useState(false);
-  const [showJoinModal, setShowJoinModal] = useState(false);
-  const [joinCode, setJoinCode] = useState("");
   const [reusePrompt, setReusePrompt] = useState<{ city: string; likes: ExploreLike[] } | null>(null);
-  // Menu "+" ma 2 kroki: krok 1 = [Zaplanuj | Przegladaj miejsca]; po "Zaplanuj" ->
-  // krok 2 = [Solo | Grupowo | Dolacz do sesji]. Reset przy zamknieciu/otwarciu.
+  // Menu "+": tworzenie wyjazdu SOLO / zestawienia. Trasy grupowe powstaja jako wyjazd solo,
+  // a potem zapraszasz znajomych z widoku trasy (InviteFriendsSheet) - bez osobnej "sesji".
+  // planStep uzywany tylko w legacy (nie-uproszczonym) trybie planowania.
   const [planStep, setPlanStep] = useState(false);
   useEffect(() => { if (!showMenu) setPlanStep(false); }, [showMenu]);
 
@@ -122,21 +121,6 @@ const BottomNav = () => {
   useEffect(() => {
     if (user?.id && isNative) refetchJournalBadge();
   }, [location.pathname, user?.id, refetchJournalBadge]);
-
-  const handleJoinSubmit = () => {
-    const code = joinCode.trim();
-    if (!code) return;
-    setShowJoinModal(false);
-    setJoinCode("");
-    navigate(`/sesja/${code}`);
-  };
-
-  const handleGroupPlan = () => {
-    setShowMenu(false);
-    // Group sessions dzialaja dla goscia (sesja jest identyfikowana po join_code,
-    // nie po user identity - mozna zaprosic przez kod, nie po username).
-    navigate("/sesja/nowa");
-  };
 
   const handleSoloPlan = () => {
     setShowMenu(false);
@@ -214,24 +198,12 @@ const BottomNav = () => {
             {/* Wiersz kafelkow akcji */}
             <div className="flex justify-center gap-6 pb-1">
               {PLANNING_DISABLED ? (
-                // Tryb uproszczony: krok 1 = [Stworz wyjazd | Stworz zestawienie];
-                // "Stworz wyjazd" -> krok 2 = [Solo | Grupowo | Dolacz do sesji].
-                !planStep ? (
-                  <>
-                    <ActionTile icon={MapPin} label="Stwórz wyjazd" onClick={() => setPlanStep(true)} />
-                    <ActionTile icon={Layers} label={t("create_collection")} onClick={handleCreateCollection} />
-                  </>
-                ) : (
-                  <>
-                    <ActionTile icon={MapPin} label="Solo" onClick={handleCreateWyjazd} />
-                    <ActionTile icon={Users} label="Grupowo" onClick={handleGroupPlan} />
-                    <ActionTile
-                      icon={Link2}
-                      label={t("join_session")}
-                      onClick={() => { setShowMenu(false); setJoinCode(""); setShowJoinModal(true); }}
-                    />
-                  </>
-                )
+                // Tryb uproszczony: [Stworz wyjazd (solo) | Stworz zestawienie]. Grupowa trasa =
+                // wyjazd solo + zaproszenie znajomych z widoku trasy (bez osobnej sesji).
+                <>
+                  <ActionTile icon={MapPin} label="Stwórz wyjazd" onClick={handleCreateWyjazd} />
+                  <ActionTile icon={Layers} label={t("create_collection")} onClick={handleCreateCollection} />
+                </>
               ) : !planStep ? (
                 <>
                   <ActionTile icon={Layers} label={t("create_collection")} onClick={handleCreateCollection} />
@@ -240,12 +212,6 @@ const BottomNav = () => {
               ) : (
                 <>
                   <ActionTile icon={MapPin} label={t("plan_solo")} onClick={handleSoloPlan} />
-                  <ActionTile icon={Users} label={t("plan_group")} onClick={handleGroupPlan} />
-                  <ActionTile
-                    icon={Link2}
-                    label={t("join_session")}
-                    onClick={() => { setShowMenu(false); setJoinCode(""); setShowJoinModal(true); }}
-                  />
                 </>
               )}
             </div>
@@ -290,48 +256,6 @@ const BottomNav = () => {
                 className="w-full py-3 rounded-full border border-border text-sm font-semibold text-foreground active:scale-[0.97] transition-transform"
               >
                 {t("reuse_decline")}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Join session modal */}
-      {showJoinModal && (
-        <div
-          className="fixed inset-0 z-[60] flex items-end justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200"
-          onClick={() => setShowJoinModal(false)}
-        >
-          <div
-            className="w-full max-w-sm bg-card rounded-t-3xl px-6 pt-6 pb-[max(24px,env(safe-area-inset-bottom))] flex flex-col gap-4 shadow-2xl animate-in slide-in-from-bottom-4 duration-300"
-            onClick={e => e.stopPropagation()}
-          >
-            <div>
-              <h2 className="font-black text-lg">{t("join_title")}</h2>
-              <p className="text-xs text-muted-foreground mt-0.5">{t("join_desc")}</p>
-            </div>
-            <input
-              type="text"
-              value={joinCode}
-              onChange={e => setJoinCode(e.target.value.toUpperCase())}
-              onKeyDown={e => { if (e.key === "Enter") handleJoinSubmit(); }}
-              placeholder={t("join_placeholder")}
-              maxLength={10}
-              className="w-full px-4 py-3.5 rounded-2xl border border-border bg-muted/40 text-base font-mono font-semibold tracking-widest text-center placeholder:text-muted-foreground/50 placeholder:font-normal placeholder:tracking-normal focus:outline-none focus:ring-2 focus:ring-orange-500/30 focus:border-orange-400 transition-colors"
-            />
-            <div className="flex gap-2">
-              <button
-                onClick={() => setShowJoinModal(false)}
-                className="flex-1 py-3 rounded-full border border-border text-sm font-medium text-muted-foreground active:scale-[0.97] transition-transform"
-              >
-                {t("cancel")}
-              </button>
-              <button
-                onClick={handleJoinSubmit}
-                disabled={!joinCode.trim()}
-                className="flex-[2] py-3 rounded-full bg-primary text-white font-bold text-sm active:scale-[0.97] transition-transform disabled:opacity-40 disabled:active:scale-100"
-              >
-                {t("join_submit")}
               </button>
             </div>
           </div>
