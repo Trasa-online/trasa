@@ -7,13 +7,14 @@ import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { resolveStored } from "@/components/PlacePhoto";
 import { format, parseISO, isValid, differenceInCalendarDays } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
-import { Globe, Lock, Loader2, Trash2, Sparkles, BookOpen, EyeOff } from "lucide-react";
+import { Loader2, Trash2, Sparkles, BookOpen } from "lucide-react";
 import { toast } from "sonner";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { PLANNING_DISABLED } from "@/lib/appMode";
 import { API_BASE } from "@/lib/platform";
 import { avatarSrc } from "@/lib/avatar";
 import { haptics } from "@/hooks/useHaptics";
+import { cn } from "@/lib/utils";
 
 interface JournalTabProps {
   userId: string;
@@ -41,6 +42,8 @@ const JournalTab = ({ userId, city: cityFilter }: JournalTabProps) => {
   const queryClient = useQueryClient();
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<any | null>(null);
+  // Podzial zakladki Trasy na pigulki: Robocze (aktywne/w toku) vs Wspomnienia (minione).
+  const [tripTab, setTripTab] = useState<"robocze" | "wspomnienia">("robocze");
 
   const { data: entries = [], isLoading } = useQuery({
     queryKey: ["journal-entries", userId],
@@ -329,12 +332,6 @@ const JournalTab = ({ userId, city: cityFilter }: JournalTabProps) => {
     const count = countMap[entry.id] ?? 0;
     const miniMap = mapMap[entry.id];
     const isPrivate = entry.is_shared === false;
-    // Publikacja w eksploracji = is_shared=true + list_cover_url ustawiony (miniatura).
-    // Bramka 1:1 z feedem (DiscoveryFeed). Brak miniatury = trasa ROBOCZA (widoczna tylko
-    // dla usera, nie w eksploracji). Badge tylko dla WLASNYCH tras (cudze kopie grupowe
-    // publikuje host). list_cover_url przechodzi przez collapse (...rep/...e).
-    const isPublished = entry.is_shared !== false && !!entry.list_cover_url;
-    const showPublishState = !!entry.is_own;
     const canDelete = entry.is_own || entry.group_session_id;
     const title = entry.title || entry.city || t("journal.trip_fallback");
     const avatars = entry.group_session_id
@@ -360,19 +357,6 @@ const JournalTab = ({ userId, city: cityFilter }: JournalTabProps) => {
             className="w-full h-full object-cover"
             onError={(e) => { (e.target as HTMLImageElement).src = getRandomPinPlaceholder(entry.id + "_fallback"); }}
           />
-          {/* Status publikacji w eksploracji (2026-08-05) - tylko wlasne trasy. Robocza (brak
-              miniatury list_cover_url) = amber "Robocza"; opublikowana = subtelny "W eksploracji". */}
-          {showPublishState && (
-            isPublished ? (
-              <div className="absolute top-2 left-2 flex items-center gap-1 bg-black/55 backdrop-blur-sm rounded-full pl-1.5 pr-2 py-0.5 text-white text-[10px] font-semibold shadow-sm">
-                <Globe className="h-3 w-3" /> W eksploracji
-              </div>
-            ) : (
-              <div className="absolute top-2 left-2 flex items-center gap-1 bg-amber-500 rounded-full pl-1.5 pr-2 py-0.5 text-white text-[10px] font-bold shadow-sm">
-                <EyeOff className="h-3 w-3" /> Robocza
-              </div>
-            )
-          )}
           {miniMap && (
             <div className="absolute bottom-2 right-2 h-[46px] w-[46px] rounded-xl overflow-hidden border-2 border-white shadow-md bg-white">
               <img src={miniMap} alt="" className="w-full h-full object-cover" />
@@ -499,18 +483,36 @@ const JournalTab = ({ userId, city: cityFilter }: JournalTabProps) => {
         <p className="text-sm text-muted-foreground mt-1 leading-relaxed max-w-[260px] mx-auto">{desc}</p>
       </div>
     );
+    // Pigulki: Robocze (aktywne/w toku) | Wspomnienia (minione) - jak toggle w zakladce Zapisane.
+    const shown = tripTab === "robocze" ? active : postcards;
     return (
       <div className="space-y-3 pb-2">
-        {/* Zakładka "Trasy" (2026-07-26): trasy stworzone przez użytkownika - najbliższe/aktywne
-            + wspomnienia (minione), w jednej liście. Przycisk "Nowy wyjazd" jest w nagłówku (Journal.tsx). */}
-        {active.length === 0 && postcards.length === 0 ? (
-          emptyBox("🧳", "Brak tras", "Twoje trasy - najbliższe i minione - pojawią się tutaj.")
+        <div className="flex p-1 bg-secondary rounded-full">
+          {([
+            { id: "robocze", label: "Robocze" },
+            { id: "wspomnienia", label: "Wspomnienia" },
+          ] as { id: "robocze" | "wspomnienia"; label: string }[]).map((s) => (
+            <button
+              key={s.id}
+              onClick={() => setTripTab(s.id)}
+              className={cn(
+                "flex-1 h-9 rounded-full text-sm font-bold transition-colors active:scale-[0.98]",
+                tripTab === s.id ? "bg-background text-foreground shadow-sm" : "text-secondary-foreground/70",
+              )}
+            >
+              {s.label}
+            </button>
+          ))}
+        </div>
+
+        {shown.length === 0 ? (
+          tripTab === "robocze"
+            ? emptyBox("🧳", "Brak roboczych tras", "Trasy w toku - te które tworzysz i planujesz - pojawią się tutaj.")
+            : emptyBox("📸", "Brak wspomnień", "Minione wyjazdy wylądują tutaj jako wspomnienia.")
         ) : (
           <div className="divide-y divide-border/50">
-            {/* Klik w trasę = widok "Plan wyjazdu" (read/overview), NIE od razu edycja sugestii.
-                Edycję (Sugestie/Galeria) user wywołuje z widoku planu. */}
-            {active.map((entry: any) => renderTripCard(entry, () => openEntry(entry), true))}
-            {postcards.map((entry: any) => renderTripCard(entry, () => openEntry(entry)))}
+            {/* Klik w trasę = widok "Plan wyjazdu" (read/overview), NIE od razu edycja sugestii. */}
+            {shown.map((entry: any) => renderTripCard(entry, () => openEntry(entry), tripTab === "robocze"))}
           </div>
         )}
         {deleteModal}
