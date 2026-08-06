@@ -17,7 +17,7 @@ export default function CreateTabs({ active }: { active: "tworz" | "robocze" | "
       {tabs.map((t) => (
         <button
           key={t.id}
-          onClick={() => { if (t.id !== active) navigate(t.to); }}
+          onClick={() => { if (t.id !== active) navigate(t.to, { replace: true }); }}
           className={cn(
             "flex-1 h-9 rounded-full text-sm font-bold transition-colors active:scale-[0.98]",
             active === t.id ? "bg-background text-foreground shadow-sm" : "text-secondary-foreground/70",

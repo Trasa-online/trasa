@@ -405,7 +405,7 @@ const CreateRanking = () => {
       {step === 1 && !editId ? (
         <div className="px-4 pt-safe-4 pb-3 border-b border-border/20 shrink-0 space-y-2.5">
           <div className="flex items-center gap-2">
-            <button onClick={() => navigate(-1)} aria-label={t("header.back")} className="h-9 w-9 flex items-center justify-center -ml-1 shrink-0 text-foreground active:scale-90 transition-transform">
+            <button onClick={() => (window.history.length > 1 ? navigate(-1) : navigate("/eksploruj"))} aria-label={t("header.back")} className="h-9 w-9 flex items-center justify-center -ml-1 shrink-0 text-foreground active:scale-90 transition-transform">
               <ArrowLeft className="h-5 w-5" />
             </button>
             <div className="flex-1"><CreateTabs active="tworz" /></div>
@@ -427,7 +427,7 @@ const CreateRanking = () => {
         </div>
       ) : (
         <div className="flex items-center gap-2 px-4 pt-safe-4 pb-3 border-b border-border/20 shrink-0">
-          <button onClick={() => (step === 2 ? setStep(1) : navigate(-1))} aria-label={t("header.back")} className="h-9 w-9 flex items-center justify-center -ml-1 shrink-0 text-foreground">
+          <button onClick={() => (step === 2 ? setStep(1) : (window.history.length > 1 ? navigate(-1) : navigate("/eksploruj")))} aria-label={t("header.back")} className="h-9 w-9 flex items-center justify-center -ml-1 shrink-0 text-foreground">
             <ArrowLeft className="h-5 w-5" />
           </button>
           <span className="flex-1 font-bold text-base truncate">{step === 2 ? t("header.notes_and_map") : editId ? t("header.edit_collection") : t("header.new_collection")}</span>

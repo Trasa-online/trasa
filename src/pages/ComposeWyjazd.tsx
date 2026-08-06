@@ -256,9 +256,12 @@ export default function ComposeWyjazd() {
   const [confirmRemove, setConfirmRemove] = useState<{ key: string; name: string } | null>(null);
 
   // Cofniecie: gdy sa juz miejsca w trasie -> zapytaj czy zapisac do roboczych. Inaczej wyjdz.
+  // Wyjscie z tworzenia do ekranu glownego. Historia jest plytka (nawigacje wewnatrz
+  // tworzenia = replace), wiec navigate(-1) wraca do eksploracji; fallback gdyby brak historii.
+  const exitCreate = () => { clearSoft(); if (window.history.length > 1) navigate(-1); else navigate("/eksploruj"); };
   const handleBack = () => {
     if (items.length > 0 && !creating) setShowBackConfirm(true);
-    else { clearSoft(); navigate(-1); }
+    else exitCreate();
   };
 
   const addedIds = useMemo(() => new Set(items.map((i) => (i.place_id ?? i.place_name).toLowerCase())), [items]);
@@ -757,7 +760,7 @@ export default function ComposeWyjazd() {
                 {draftId ? "Zapisz zmiany" : "Zapisz jako roboczą"}
               </button>
               <button
-                onClick={() => { setShowBackConfirm(false); clearSoft(); navigate(-1); }}
+                onClick={() => { setShowBackConfirm(false); exitCreate(); }}
                 className="w-full h-12 rounded-2xl bg-secondary text-secondary-foreground font-bold text-sm flex items-center justify-center active:scale-95 transition-transform"
               >
                 Nie zapisuj, wyjdź
