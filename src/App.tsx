@@ -678,6 +678,7 @@ const Explore          = lazy(() => import("./pages/Explore"));
 const LikedPlaces      = lazy(() => import("./pages/LikedPlaces"));
 const CreateRanking    = lazy(() => import("./pages/CreateRanking"));
 const ComposeWyjazd    = lazy(() => import("./pages/ComposeWyjazd"));
+const CountryCityPicker = lazy(() => import("./pages/CountryCityPicker"));
 const CreateDrafts     = lazy(() => import("./pages/CreateDrafts"));
 const CreateSaved      = lazy(() => import("./pages/CreateSaved"));
 const StartWyjazd      = lazy(() => import("./pages/StartWyjazd"));
@@ -807,6 +808,7 @@ const App = () => (
           {/* Kompozycja wyjazdu z zestawienia ("Uzyj tego zestawienia") - nazwa+daty+miejsca */}
           <Route path="/wyjazd/start" element={<StartWyjazd />} />
           <Route path="/wyjazd/nowy" element={<ComposeWyjazd />} />
+          <Route path="/utworz" element={<CountryCityPicker />} />
           <Route path="/utworz/robocze" element={<CreateDrafts />} />
           <Route path="/utworz/zapisane" element={<CreateSaved />} />
           <Route path="/wyjazd/:id" element={<Navigate to="/dziennik" replace />} />

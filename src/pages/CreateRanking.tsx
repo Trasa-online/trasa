@@ -437,35 +437,9 @@ const CreateRanking = () => {
       {/* ══ KROK 1: miasto + wyszukiwarka (sticky) + propozycje + wybrane miejsca ══ */}
       {step === 1 && (
         <div className="flex-1 overflow-y-auto">
-          {/* Kraj (1:1 z widokiem trasy) */}
-          <div className="px-4 pt-4">
-            <div className="relative">
-              <select value={country} onChange={(e) => onCountryChange(e.target.value)}
-                className="w-full appearance-none rounded-2xl bg-secondary text-secondary-foreground border-0 px-4 py-3 text-base outline-none focus:ring-2 focus:ring-orange-500/40">
-                {TRIP_REGIONS.map((region) => (
-                  <optgroup key={region} label={region}>
-                    {TRIP_COUNTRIES.filter((c) => c.region === region).map((c) => (
-                      <option key={c.name} value={c.name}>{c.name}</option>
-                    ))}
-                  </optgroup>
-                ))}
-              </select>
-              <ChevronDown className="h-4 w-4 text-muted-foreground absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" />
-            </div>
-          </div>
-          {/* Miasto (miasta wybranego kraju) */}
-          <div className="px-4 pt-3">
-            <div className="relative">
-              <select value={city} onChange={(e) => setCity(e.target.value)}
-                className="w-full appearance-none rounded-2xl bg-secondary text-secondary-foreground border-0 px-4 py-3 text-base outline-none focus:ring-2 focus:ring-orange-500/40">
-                {cities.map((c) => <option key={c} value={c}>{c}</option>)}
-              </select>
-              <ChevronDown className="h-4 w-4 text-muted-foreground absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" />
-            </div>
-          </div>
-
+          {/* Kraj + miasto wybrane wczesniej drum-scrollem (/utworz) - tu bez selektora. */}
           {/* Nazwa listy (generyczna domyslna, edytowalna) */}
-          <div className="px-4 pt-3">
+          <div className="px-4 pt-4">
             <input value={title} onChange={(e) => { setTitle(e.target.value); setTitleDirty(true); }} maxLength={80}
               placeholder={t("name_placeholder", "Nazwa listy")}
               className="w-full rounded-2xl bg-secondary text-secondary-foreground border-0 px-4 py-3 text-base outline-none focus:ring-2 focus:ring-orange-500/40 placeholder:text-muted-foreground/50" />

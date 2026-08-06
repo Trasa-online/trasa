@@ -517,35 +517,9 @@ export default function ComposeWyjazd() {
       )}
 
       <div className="flex-1 min-h-0 overflow-y-auto pb-4">
-        {/* Kraj - pelnowymiarowy select (Polska + Europa + Azja odblokowane), grupowany po regionie */}
-        <div className="px-4 pt-4">
-          <div className="relative">
-            <select value={country} onChange={(e) => onCountryChange(e.target.value)}
-              className="w-full appearance-none rounded-2xl bg-secondary text-secondary-foreground border-0 px-4 py-3 text-base outline-none focus:ring-2 focus:ring-orange-500/40">
-              {TRIP_REGIONS.map((region) => (
-                <optgroup key={region} label={region}>
-                  {TRIP_COUNTRIES.filter((c) => c.region === region).map((c) => (
-                    <option key={c.name} value={c.name}>{c.name}</option>
-                  ))}
-                </optgroup>
-              ))}
-            </select>
-            <ChevronDown className="h-4 w-4 text-muted-foreground absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" />
-          </div>
-        </div>
-        {/* Miasto (miasta wybranego kraju) */}
-        <div className="px-4 pt-3">
-          <div className="relative">
-            <select value={city} onChange={(e) => setCity(e.target.value)}
-              className="w-full appearance-none rounded-2xl bg-secondary text-secondary-foreground border-0 px-4 py-3 text-base outline-none focus:ring-2 focus:ring-orange-500/40">
-              {cities.map((c) => <option key={c} value={c}>{c}</option>)}
-            </select>
-            <ChevronDown className="h-4 w-4 text-muted-foreground absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" />
-          </div>
-        </div>
-
-        {/* Nazwa + data */}
-        <div className="px-4 pt-3 flex items-center gap-2">
+        {/* Kraj + miasto wybrane wczesniej drum-scrollem (/utworz) - tu bez selektora.
+            Nazwa + data */}
+        <div className="px-4 pt-4 flex items-center gap-2">
           <input value={name} onChange={(e) => { setName(e.target.value); setNameDirty(true); }} placeholder={isEn ? "Your trip name" : "Twoja nazwa"}
             className="flex-1 min-w-0 rounded-2xl bg-secondary text-secondary-foreground border-0 px-4 py-3 text-base outline-none focus:ring-2 focus:ring-orange-500/40 placeholder:text-muted-foreground/60" />
           <button onClick={() => setDateSheet(true)}

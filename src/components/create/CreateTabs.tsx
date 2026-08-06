@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 export default function CreateTabs({ active }: { active: "tworz" | "robocze" | "zapisane" }) {
   const navigate = useNavigate();
   const tabs = [
-    { id: "tworz", label: "Twórz", to: "/wyjazd/nowy" },
+    { id: "tworz", label: "Twórz", to: "/utworz" },
     { id: "robocze", label: "Robocze", to: "/utworz/robocze" },
     { id: "zapisane", label: "Zapisane", to: "/utworz/zapisane" },
   ] as const;
