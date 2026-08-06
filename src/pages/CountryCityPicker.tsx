@@ -1,17 +1,17 @@
 import { useRef, useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import CreateTabs from "@/components/create/CreateTabs";
-import { TRIP_COUNTRIES, citiesForCountry, countryForCity } from "@/lib/tripCountries";
+import { TRIP_COUNTRIES, TRIP_REGIONS, citiesForCountry, countryForCity } from "@/lib/tripCountries";
 
-// Wybor kraju + miasta drum-scrollem - PIERWSZY krok tworzenia (po "+"). Zastapil selecty
-// kraj/miasto na widoku formy. Po "Dalej" ląduje na formie (/wyjazd/nowy) z wybranym miastem;
-// toggle Trasa|Lista na formie przenosi je dalej. WSZYSTKIE miasta odblokowane (tworzysz
-// content w kazdym miescie - miejsca dociagane z Google przez proxy).
+// Wybor kraju + miasta - PIERWSZY krok tworzenia (po "+"). Kraj = SELEKTOR (dropdown),
+// miasto = DRUM-SCROLL. Zastapil selecty na formie. Po "Dalej" ląduje na formie (/wyjazd/nowy)
+// z wybranym miastem; toggle Trasa|Lista przenosi je dalej. WSZYSTKIE miasta odblokowane
+// (tworzysz content w kazdym miescie - miejsca dociagane z Google przez proxy).
 
 const IH = 54;            // wysokosc pozycji
-const VIS = 3;            // widoczne pozycje (srodek + 1 gora/dol)
+const VIS = 5;            // widoczne pozycje (srodek + 2 gora/dol)
 const CH = IH * VIS;      // wysokosc drumu
 const PAD = (CH - IH) / 2;
 
@@ -30,8 +30,8 @@ function Drum({ items, index, setIndex }: { items: string[]; index: number; setI
     <div className="relative w-full" style={{ height: CH }}>
       {/* Podswietlony srodek */}
       <div className="absolute left-4 right-4 rounded-2xl bg-secondary pointer-events-none" style={{ top: PAD, height: IH }} />
-      <div className="absolute top-0 left-0 right-0 h-8 bg-gradient-to-b from-background to-transparent pointer-events-none z-10" />
-      <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-background to-transparent pointer-events-none z-10" />
+      <div className="absolute top-0 left-0 right-0 h-12 bg-gradient-to-b from-background to-transparent pointer-events-none z-10" />
+      <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-background to-transparent pointer-events-none z-10" />
       <div ref={ref} onScroll={onScroll} className="absolute inset-0 overflow-y-scroll"
         style={{ scrollSnapType: "y mandatory", scrollbarWidth: "none", WebkitOverflowScrolling: "touch" }}>
         <div style={{ height: PAD }} />
@@ -40,7 +40,7 @@ function Drum({ items, index, setIndex }: { items: string[]; index: number; setI
           return (
             <div key={it} onClick={() => { setIndex(i); ref.current?.scrollTo({ top: i * IH, behavior: "smooth" }); }}
               className={cn("flex items-center justify-center select-none cursor-pointer transition-all duration-150 px-6",
-                d === 0 ? "text-xl font-black text-foreground" : d === 1 ? "text-base font-semibold text-foreground/45" : "text-sm text-foreground/20")}
+                d === 0 ? "text-2xl font-black text-foreground" : d === 1 ? "text-lg font-semibold text-foreground/45" : "text-base text-foreground/20")}
               style={{ height: IH, scrollSnapAlign: "center" }}>
               <span className="truncate">{it}</span>
             </div>
@@ -56,12 +56,11 @@ export default function CountryCityPicker() {
   const navigate = useNavigate();
   const location = useLocation();
   const initCity = (location.state as any)?.city as string | undefined;
-  const countryNames = TRIP_COUNTRIES.map((c) => c.name);
-  const [ci, setCi] = useState(() => Math.max(0, countryNames.indexOf(countryForCity(initCity))));
-  const cities = citiesForCountry(countryNames[ci]);
+  const [country, setCountry] = useState<string>(() => countryForCity(initCity));
+  const cities = citiesForCountry(country);
   const [cyi, setCyi] = useState(() => (initCity ? Math.max(0, cities.indexOf(initCity)) : 0));
-  // Zmiana kraju: reset miasta na 1. (city drum remountuje sie przez key={country}).
-  useEffect(() => { setCyi(0); }, [ci]);
+  // Zmiana kraju resetuje miasto na 1. (drum remountuje sie przez key={country}).
+  useEffect(() => { setCyi(0); }, [country]);
   const city = cities[cyi] ?? cities[0];
 
   const back = () => { if (window.history.length > 1) navigate(-1); else navigate("/eksploruj"); };
@@ -76,15 +75,28 @@ export default function CountryCityPicker() {
         <div className="flex-1"><CreateTabs active="tworz" /></div>
       </div>
 
-      <div className="flex-1 min-h-0 flex flex-col justify-center gap-8 px-4">
-        <div>
-          <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-1.5 text-center">Kraj</p>
-          <Drum items={countryNames} index={ci} setIndex={setCi} />
+      {/* Kraj - SELEKTOR (dropdown), grupowany po regionie */}
+      <div className="px-4 pt-4 shrink-0">
+        <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-1.5">Kraj</p>
+        <div className="relative">
+          <select value={country} onChange={(e) => setCountry(e.target.value)}
+            className="w-full appearance-none rounded-2xl bg-secondary text-secondary-foreground border-0 px-4 py-3 text-base outline-none focus:ring-2 focus:ring-orange-500/40">
+            {TRIP_REGIONS.map((region) => (
+              <optgroup key={region} label={region}>
+                {TRIP_COUNTRIES.filter((c) => c.region === region).map((c) => (
+                  <option key={c.name} value={c.name}>{c.name}</option>
+                ))}
+              </optgroup>
+            ))}
+          </select>
+          <ChevronDown className="h-4 w-4 text-muted-foreground absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" />
         </div>
-        <div>
-          <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-1.5 text-center">Miasto</p>
-          <Drum key={countryNames[ci]} items={cities} index={cyi} setIndex={setCyi} />
-        </div>
+      </div>
+
+      {/* Miasto - DRUM-SCROLL, wypelnia reszte, wysrodkowany */}
+      <div className="flex-1 min-h-0 flex flex-col justify-center px-0">
+        <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-1.5 text-center">Miasto</p>
+        <Drum key={country} items={cities} index={cyi} setIndex={setCyi} />
       </div>
 
       <div className="px-4 pt-3 pb-[calc(14px+env(safe-area-inset-bottom,0px))] shrink-0">
