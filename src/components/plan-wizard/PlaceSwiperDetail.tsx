@@ -212,16 +212,22 @@ const PlaceSwiperDetail = ({
   // Zapis z zakladki na hero - zapisuje BEZ zamykania wizytowki (stan zakladki sie aktualizuje).
   const handleSaveFromHero = onLike ? () => { onLike(); } : undefined;
 
-  // ZERO Google w wizytowce (2026-07-30): pokazujemy WYLACZNIE zdjecia userow z tras
-  // (photos = fetchPlaceUserPhotos) LUB - dla lokalu z WLASNYMI zdjeciami - jego wlasne
-  // (cover + galeria biznesu). NIGDY places.photo_url / places.gallery_urls (cache Google).
-  // Brak zdjec -> displayPhotos puste -> hero pokazuje ikone kategorii na tle peachy (#fcede3).
-  const bizOwnPhotos = !!(ep as { businessHasOwnPhoto?: boolean })?.businessHasOwnPhoto || skipGoogleFetch;
-  const displayPhotos = Array.from(new Set([
-    ...photos.filter(validUrl),
-    ...(bizOwnPhotos && !photos.length && validUrl(ep?.photo_url) ? [ep!.photo_url!] : []),
-    ...(bizOwnPhotos ? (ep?.galleryPhotos ?? []).filter(validUrl) : []),
-  ])).slice(0, 4);
+  // ZERO Google w wizytowce (2026-07-30): pokazujemy zdjecia userow z tras (photos =
+  // fetchPlaceUserPhotos), WLASNE zdjecia lokalu (biznes) ORAZ recznie skurowana okladke
+  // (ep.photo_url / galleryPhotos). enrich juz odsial Google-backfill (gpid_) - do ep.photo_url
+  // trafia WYLACZNIE nasz content (cover biznesu lub upload /manual/), wiec pokazujemy go
+  // bezpiecznie. Brak zdjec -> hero = ikona kategorii na tle peachy (#fcede3).
+  // Zwykle miejsce: skurowana okladka jest HERO (na przodzie). Biznes: bez zmian - zdjecia
+  // userow (social proof) pierwsze, potem cover/galeria lokalu.
+  const isBusiness = ep?.businessLogoUrl !== undefined;
+  const ownCover = validUrl(ep?.photo_url) ? [ep!.photo_url!] : [];
+  const ownGallery = (ep?.galleryPhotos ?? []).filter(validUrl);
+  const userPhotos = photos.filter(validUrl);
+  const displayPhotos = Array.from(new Set(
+    isBusiness
+      ? [...userPhotos, ...ownCover, ...ownGallery]
+      : [...ownCover, ...userPhotos, ...ownGallery],
+  )).slice(0, 4);
 
   // Maps button - renderowany w header slot PremiumBusinessCard (Maps button obok nazwy)
   const mapsUrl = ep
