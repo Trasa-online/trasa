@@ -696,6 +696,7 @@ const AddFriend        = lazy(() => import("./pages/AddFriend"));
 const QuickPlanReview  = lazy(() => import("./pages/QuickPlanReview"));
 const UserSearch       = lazy(() => import("./pages/UserSearch"));
 const SharedRoute      = lazy(() => import("./pages/SharedRoute"));
+const SharedList       = lazy(() => import("./pages/SharedList"));
 const PublicProfile    = lazy(() => import("./pages/PublicProfile"));
 const ClaimPlace       = lazy(() => import("./pages/ClaimPlace"));
 const BusinessDashboard = lazy(() => import("./pages/BusinessDashboard"));
@@ -811,6 +812,7 @@ const App = () => (
           <Route path="/dodaj/:code" element={<AddFriend />} />
           <Route path="/search" element={<UserSearch />} />
           <Route path="/route/:id" element={<SharedRoute />} />
+          <Route path="/lista/:id" element={<SharedList />} />
           <Route path="/lokal/:placeId" element={<ClaimPlace />} />
           <Route path="/profil/:username" element={<PublicProfile />} />
           <Route path="/quick-plan-review" element={PLANNING_DISABLED ? <Navigate to="/eksploruj" replace /> : <QuickPlanReview />} />

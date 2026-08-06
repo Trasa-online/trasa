@@ -6,7 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import { Settings, Copy, Check, Camera, UserCircle2, ArrowRight, ArrowUpRight, Map as MapIcon, Building2, Bell, Share2, Search, BarChart3 } from "lucide-react";
+import { Settings, Copy, Check, Camera, UserCircle2, ArrowRight, ArrowUpRight, Map as MapIcon, Building2, Bell, Share2, Search, BarChart3, ListChecks } from "lucide-react";
 import TabHeader from "@/components/layout/TabHeader";
 import StatCard from "@/components/profile/StatCard";
 import { toast } from "sonner";
@@ -138,6 +138,19 @@ const TravelerProfile = () => {
   const { data: followCounts = { followers: 0, following: 0 } } = useFollowCounts(user?.id);
   const followList = useFollowList(user?.id, followSheet === "following" ? "following" : "followers");
   const { data: routeStats } = useMyRouteStats();
+  // Liczba wlasnych list miejsc (dawne "zestawienia") - do karty "Moje listy".
+  const { data: myListsCount = 0 } = useQuery({
+    queryKey: ["my-lists-count", user?.id],
+    enabled: !!user?.id,
+    queryFn: async () => {
+      const { count } = await (supabase as any)
+        .from("discovery_collections")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user!.id)
+        .eq("kind", "ranking");
+      return count ?? 0;
+    },
+  });
 
   const handleAvatarUpload = async (file: File) => {
     if (!user) return;
@@ -360,6 +373,16 @@ const TravelerProfile = () => {
               className="bg-trasa-cream text-trasa-cream-ink"
             />
           </div>
+          {/* Moje listy miejsc (polecajki) -> MyCollections. */}
+          <StatCard
+            full
+            value={myListsCount}
+            title="Moje listy"
+            subtitle="Twoje polecajki miejsc"
+            icon={<ListChecks className="h-6 w-6" />}
+            className="bg-secondary text-secondary-foreground"
+            onClick={() => navigate("/eksploruj", { state: { myCollections: true } })}
+          />
           {/* Statystyki wykorzystania tras przez innych -> widok /statystyki. */}
           <StatCard
             full

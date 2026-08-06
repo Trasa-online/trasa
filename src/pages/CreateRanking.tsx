@@ -315,7 +315,7 @@ const CreateRanking = () => {
     return () => { alive = false; };
   }, [city, category]);
 
-  const collectionTitle = title.trim() || "Zestawienie";
+  const collectionTitle = title.trim() || "Lista";
   const isRoute = isRouteCollection(category); // stare trasy (edycja) -> mozna ustawiac kolejnosc
   const canGoNext = !!city && items.length >= 2 && title.trim().length > 0; // krok 1 -> 2
   const canPublish = canGoNext && !publishing;

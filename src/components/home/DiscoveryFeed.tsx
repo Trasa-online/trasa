@@ -1345,10 +1345,9 @@ async function hydrateCollections(cols: any[]): Promise<DiscoveryCollection[]> {
   }));
 }
 
-// Zestawienia w feedzie WYLACZONE (2026-07-27, pivot trasy-only): feed pokazuje same
-// trasy. Query userPolecajki + karty kolekcji ukryte. Juz zapisane zestawienia nadal
-// widoczne w zakladce Zapisane. Ustaw true, by przywrocic kolekcje w feedzie.
-const SHOW_ZESTAWIENIA = false;
+// Listy miejsc (dawne "zestawienia") w feedzie WLACZONE (2026-08-06): feed eksploracji
+// pokazuje trasy I listy razem (przeplot), z filtrem typu (Wszystko|Trasy|Listy) w sheecie.
+const SHOW_ZESTAWIENIA = true;
 
 // Szybkie skroty w wyszukiwarce ("Biezace polozenie" + "Zapisane miejsca") - WYLACZONE
 // (2026-07-27): dopoki scroller nie ma miejsc, nie maja sensu. Ustaw true, by przywrocic.
@@ -1502,7 +1501,7 @@ function SavedCollectionCard({ col, savedAt, onOpen, onDelete }: { col: Discover
           </div>
         )}
         <div className="flex-1 min-w-0">
-          <p className="font-bold text-sm leading-tight truncate">{col.title || "Zestawienie"}</p>
+          <p className="font-bold text-sm leading-tight truncate">{col.title || "Lista"}</p>
           {/* Bez miasta - zostaje liczba miejsc + autor */}
           <p className="text-xs text-muted-foreground mt-0.5 truncate">
             {[`${count} ${countLabel}`, col.author_name].filter(Boolean).join(" · ")}
@@ -1518,8 +1517,8 @@ function SavedCollectionCard({ col, savedAt, onOpen, onDelete }: { col: Discover
 }
 
 export function SavedCollections() {
+  const navigate = useNavigate();
   const [query, setQuery] = useState("");
-  const [activeCol, setActiveCol] = useState<DiscoveryCollection | null>(null);
   const [pendingUnsave, setPendingUnsave] = useState<DiscoveryCollection | null>(null);
   const [savedIds, setSavedIds] = useState<string[]>(() => {
     try { return JSON.parse(localStorage.getItem("trasa_saved_collections") || "[]") as string[]; }
@@ -1605,16 +1604,10 @@ export function SavedCollections() {
       ) : (
         <div className="space-y-3">
           {filtered.map((col) => (
-            <SavedCollectionCard key={col.id} col={col} savedAt={savedDates[col.id]} onOpen={setActiveCol} onDelete={() => setPendingUnsave(col)} />
+            <SavedCollectionCard key={col.id} col={col} savedAt={savedDates[col.id]} onOpen={(c) => navigate(`/lista/${c.id}`)} onDelete={() => setPendingUnsave(col)} />
           ))}
         </div>
       )}
-
-      <Sheet open={!!activeCol} onOpenChange={(o) => { if (!o) setActiveCol(null); }}>
-        <SheetContent side="bottom" className="rounded-t-2xl p-0 [&>button:last-child]:hidden" style={{ maxHeight: "92vh", height: "92vh" }}>
-          {activeCol && <CollectionDetail col={activeCol} onClose={() => setActiveCol(null)} />}
-        </SheetContent>
-      </Sheet>
 
       {/* Modal potwierdzenia usuniecia z zapisanych */}
       <AlertDialog open={!!pendingUnsave} onOpenChange={(o) => { if (!o) setPendingUnsave(null); }}>
@@ -1764,6 +1757,8 @@ export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityCh
   const [cityFilter, setCityFilter] = useState<string[]>([]);
   const [themeFilter, setThemeFilter] = useState<string[]>([]);
   const [categoryFilter, setCategoryFilter] = useState<string[]>([]);
+  // Filtr typu tresci w feedzie eksploracji: wszystko / same trasy / same listy.
+  const [contentType, setContentType] = useState<"all" | "routes" | "lists">("all");
   const [filtersOpen, setFiltersOpen] = useState(false);
   // Zakladka wynikow wyszukiwania: najlepsze (wszystko) / miejsca / zestawienia.
   const [searchTab, setSearchTab] = useState<"best" | "places" | "collections">("best");
@@ -1774,8 +1769,8 @@ export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityCh
   // Miasto z gornej belki zeszlo do sheetu (parent `city`) - liczymy je do badge filtra,
   // ale trzymamy osobno od cityFilter[] (ten zostaje dla filtra wynikow wyszukiwania).
   const cityActive = !!city && city !== "all";
-  const activeFilterCount = cityFilter.length + themeFilter.length + categoryFilter.length + (cityActive ? 1 : 0);
-  const clearFilters = () => { setCityFilter([]); setThemeFilter([]); setCategoryFilter([]); onCityChange?.("all"); };
+  const activeFilterCount = cityFilter.length + themeFilter.length + categoryFilter.length + (cityActive ? 1 : 0) + (contentType !== "all" ? 1 : 0);
+  const clearFilters = () => { setCityFilter([]); setThemeFilter([]); setCategoryFilter([]); onCityChange?.("all"); setContentType("all"); };
   // Gorna belka (ExploreTopBar w Explore) trzyma guzik filtra - otwiera sheet eventem,
   // a DiscoveryFeed raportuje jej liczbe aktywnych filtrow (badge).
   useEffect(() => {
@@ -2285,60 +2280,70 @@ export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityCh
       ) : (
         // Redesign: immersyjny feed Tras - pelnoekranowe karty (zestawienia + trasy), scroll.
         <div className="space-y-4">
-          {SHOW_ZESTAWIENIA && userPolecajki.map((col) => {
-            const ph = col.items.find((i) => i.photo_url)?.photo_url ?? col.gallery_urls?.[0] ?? null;
-            // Tagi = kategorie miejsc z zestawienia -> polskie etykiety (CAT_LABEL), zdedupowane.
-            const catTags = [...new Set(col.items.map((i) => i.category).filter(Boolean).map((c) => String(c).toLowerCase()))]
-              .map((c) => CAT_LABEL[c] ?? c);
-            return (
+          {(() => {
+            // Wspolny feed: trasy + listy PRZEPLECIONE (trasa, lista, trasa, lista...), z filtrem typu.
+            // Karta identyczna (TrasaBigCard); rozni sie tylko onOpen (trasa -> /route, lista -> /lista).
+            const routeCards = (contentType === "lists" ? [] : warszawa).map((r) => (
               <TrasaBigCard
-                key={`col-${col.id}`}
-                id={col.id}
-                photo={ph ? resolveStored(ph) : null}
-                city={col.city}
-                placeCount={col.items.length}
-                title={col.title}
-                description={col.description}
-                tags={catTags}
-                pins={col.items}
-                saved={savedColIds.has(col.id)}
-                onToggleSave={() => toggleSaveCol(col.id)}
-                onOpen={() => setActiveCol(col)}
-                authorName={col.author_name}
-                authorAvatar={col.author_avatar}
+                key={`route-${r.id}`}
+                id={r.id}
+                photo={r.photo}
+                city={r.city}
+                placeCount={r.placeCount ?? 0}
+                title={r.title}
+                description={r.summary || r.ai_highlight}
+                tags={(r.categories ?? []).map((c) => CAT_LABEL[c] ?? c)}
+                pins={r.pins ?? []}
+                saved={savedRouteIds.has(r.id)}
+                onToggleSave={() => toggleSaveRoute(r.id)}
+                onOpen={() => navigate(`/route/${r.id}`)}
+                authorName={r.author_username ? `@${r.author_username}` : r.author_name}
+                authorAvatar={r.author_avatar}
+                participants={r.participants ?? []}
               />
-            );
-          })}
-
-          {warszawa.map((r) => (
-            <TrasaBigCard
-              key={`route-${r.id}`}
-              id={r.id}
-              photo={r.photo}
-              city={r.city}
-              placeCount={r.placeCount ?? 0}
-              title={r.title}
-              description={r.summary || r.ai_highlight}
-              tags={(r.categories ?? []).map((c) => CAT_LABEL[c] ?? c)}
-              pins={r.pins ?? []}
-              saved={savedRouteIds.has(r.id)}
-              onToggleSave={() => toggleSaveRoute(r.id)}
-              onOpen={() => navigate(`/route/${r.id}`)}
-              authorName={r.author_username ? `@${r.author_username}` : r.author_name}
-              authorAvatar={r.author_avatar}
-              participants={r.participants ?? []}
-            />
-          ))}
-
-          {warszawa.length === 0 && userPolecajki.length === 0 && (
-            <div className="py-16 text-center px-8">
-              <div className="mx-auto mb-3 h-16 w-16 rounded-full bg-[#fcede3] flex items-center justify-center">
-                <img src="/Ikona_Eksploracja.svg" alt="" className="h-8 w-8" draggable={false} />
-              </div>
-              <p className="text-base font-bold">{t("community_soon")}</p>
-              <p className="text-sm text-muted-foreground mt-1">{t("community_soon_hint")}</p>
-            </div>
-          )}
+            ));
+            const listCards = (contentType === "routes" ? [] : userPolecajki).map((col) => {
+              const ph = col.items.find((i) => i.photo_url)?.photo_url ?? col.gallery_urls?.[0] ?? null;
+              const catTags = [...new Set(col.items.map((i) => i.category).filter(Boolean).map((c) => String(c).toLowerCase()))]
+                .map((c) => CAT_LABEL[c] ?? c);
+              return (
+                <TrasaBigCard
+                  key={`col-${col.id}`}
+                  id={col.id}
+                  photo={ph ? resolveStored(ph) : null}
+                  city={col.city}
+                  placeCount={col.items.length}
+                  title={col.title}
+                  description={col.description}
+                  tags={catTags}
+                  pins={col.items}
+                  saved={savedColIds.has(col.id)}
+                  onToggleSave={() => toggleSaveCol(col.id)}
+                  onOpen={() => navigate(`/lista/${col.id}`)}
+                  authorName={col.author_name}
+                  authorAvatar={col.author_avatar}
+                />
+              );
+            });
+            if (routeCards.length === 0 && listCards.length === 0) {
+              return (
+                <div className="py-16 text-center px-8">
+                  <div className="mx-auto mb-3 h-16 w-16 rounded-full bg-[#fcede3] flex items-center justify-center">
+                    <img src="/Ikona_Eksploracja.svg" alt="" className="h-8 w-8" draggable={false} />
+                  </div>
+                  <p className="text-base font-bold">{t("community_soon")}</p>
+                  <p className="text-sm text-muted-foreground mt-1">{t("community_soon_hint")}</p>
+                </div>
+              );
+            }
+            const mixed: any[] = [];
+            const max = Math.max(routeCards.length, listCards.length);
+            for (let i = 0; i < max; i++) {
+              if (i < routeCards.length) mixed.push(routeCards[i]);
+              if (i < listCards.length) mixed.push(listCards[i]);
+            }
+            return mixed;
+          })()}
         </div>
       )}
 
@@ -2412,6 +2417,23 @@ export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityCh
           </div>
           {/* Miasto (przeniesione z gornej belki 2026-08-05) + kategoria miejsca. */}
           <div className="flex-1 min-h-0 overflow-y-auto px-5 pb-2">
+            {/* Typ tresci: Wszystko | Trasy | Listy - segment na gorze sheetu (2026-08-06). */}
+            <p className="text-sm font-bold text-foreground mb-2">Pokaż</p>
+            <div className="flex gap-2 mb-5">
+              {([
+                { id: "all", label: "Wszystko" },
+                { id: "routes", label: "Trasy" },
+                { id: "lists", label: "Listy" },
+              ] as { id: "all" | "routes" | "lists"; label: string }[]).map((s) => (
+                <button
+                  key={s.id}
+                  onClick={() => setContentType(s.id)}
+                  className={`flex-1 py-2.5 rounded-2xl text-sm font-bold transition-colors active:scale-[0.98] ${contentType === s.id ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground"}`}
+                >
+                  {s.label}
+                </button>
+              ))}
+            </div>
             {onCityChange && <CityFilterRow city={city} cities={cities} onChange={onCityChange} />}
             <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-3">{t("filter.category")}</p>
             <div className="flex flex-wrap gap-2.5">

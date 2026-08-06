@@ -1,7 +1,7 @@
 {
   "header": {
-    "new_collection": "Nowe zestawienie",
-    "edit_collection": "Edytuj zestawienie",
+    "new_collection": "Nowa lista",
+    "edit_collection": "Edytuj listę",
     "notes_and_map": "Notki i mapa",
     "back": "Wstecz",
     "change_theme": "Zmień motyw"
@@ -12,7 +12,7 @@
   },
   "form_picker": {
     "title": "Co tworzysz?",
-    "subtitle": "Wybierz formę zestawienia. Od tego zależą dostępne motywy w kolejnym kroku.",
+    "subtitle": "Wybierz formę listy. Od tego zależą dostępne motywy w kolejnym kroku.",
     "list_label": "Lista",
     "list_hint": "Zbiór polecanych miejsc bez ustalonej kolejności. Np. najlepsze kawiarnie w mieście.",
     "route_label": "Plan",
@@ -25,7 +25,7 @@
   },
   "city_label": "Miasto",
   "name_label": "Nazwa",
-  "name_placeholder": "Nazwa zestawienia",
+  "name_placeholder": "Nazwa listy",
   "search": {
     "placeholder": "Szukaj miejsca w {{city}}…",
     "searching_more": "Szukam więcej miejsc…",
@@ -46,9 +46,9 @@
     "suggestions": "Propozycje w {{city}}"
   },
   "notes": {
-    "collection_label": "Notka do zestawienia",
+    "collection_label": "Notka do listy",
     "optional": "(opcjonalnie)",
-    "collection_placeholder": "Napisz kilka słów o tej kolekcji: dla kogo, kiedy, dlaczego właśnie te miejsca…",
+    "collection_placeholder": "Napisz kilka słów o tej liście: dla kogo, kiedy, dlaczego właśnie te miejsca…",
     "places_label": "Notki do miejsc",
     "place_placeholder": "Twoja notka o tym miejscu (opcjonalnie)…"
   },
@@ -64,7 +64,7 @@
   "cta": {
     "next": "Dalej: notki i mapa",
     "save": "Zapisz zmiany",
-    "publish": "Opublikuj zestawienie"
+    "publish": "Opublikuj listę"
   },
   "custom_preview": {
     "title": "Dodać to miejsce?",
@@ -76,8 +76,8 @@
     "already_added": "To miejsce już jest na liście",
     "add_failed": "Nie udało się dodać miejsca",
     "not_found": "Nie znaleziono miejsca - sprawdź nazwę",
-    "updated": "Zestawienie zaktualizowane!",
-    "sent": "Wysłane! Zestawienie pojawi się po akceptacji moderatora.",
+    "updated": "Lista zaktualizowana!",
+    "sent": "Wysłane! Lista pojawi się po akceptacji moderatora.",
     "save_failed": "Nie udało się zapisać: {{error}}"
   },
   "error_fallback": "błąd"

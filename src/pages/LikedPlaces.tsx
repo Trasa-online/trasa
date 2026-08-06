@@ -4,15 +4,14 @@ import { PullToRefresh } from "@/components/PullToRefresh";
 import CitySelect from "@/components/home/CitySelect";
 import TabTopBar from "@/components/layout/TabTopBar";
 import { useActiveCity } from "@/hooks/useActiveCity";
-import { SavedRoutes } from "@/components/home/DiscoveryFeed";
+import { SavedRoutes, SavedCollections } from "@/components/home/DiscoveryFeed";
 import { LikedTab } from "@/pages/Explore";
 import { cn } from "@/lib/utils";
 
 // Zakladka Zapisane (bottom nav): selektor miasta w naglowku + segmentowy toggle
-// Miejsca | Trasy (2026-08-05). "Miejsca" = zapisane miejsca (LikedTab, localStorage
-// polubienia). "Trasy" = zapisane trasy od innych (saved_routes) + zapisane zestawienia.
-// Oba filtrowane wspolnym miastem z naglowka.
-type SavedTab = "places" | "routes";
+// Miejsca | Trasy | Listy (2026-08-06). "Miejsca" = zapisane miejsca (LikedTab). "Trasy" =
+// zapisane trasy od innych (saved_routes). "Listy" = zapisane listy miejsc (SavedCollections).
+type SavedTab = "places" | "routes" | "lists";
 
 const LikedPlaces = () => {
   const queryClient = useQueryClient();
@@ -30,12 +29,13 @@ const LikedPlaces = () => {
         <div className="flex-1" />
       </TabTopBar>
 
-      {/* Segmentowy toggle Miejsca | Trasy */}
+      {/* Segmentowy toggle Miejsca | Trasy | Listy */}
       <div className="px-4 pt-3">
         <div className="flex p-1 bg-secondary rounded-full">
           {([
             { id: "places", label: "Miejsca" },
             { id: "routes", label: "Trasy" },
+            { id: "lists", label: "Listy" },
           ] as { id: SavedTab; label: string }[]).map((s) => (
             <button
               key={s.id}
@@ -52,9 +52,9 @@ const LikedPlaces = () => {
       </div>
 
       <div className="flex-1 px-4 pt-3">
-        {tab === "places"
-          ? <LikedTab city={city} />
-          : <SavedRoutes city={city} />}
+        {tab === "places" ? <LikedTab city={city} />
+          : tab === "routes" ? <SavedRoutes city={city} />
+          : <SavedCollections />}
       </div>
     </PullToRefresh>
   );
