@@ -971,15 +971,21 @@ function interleaveByCategory(places: MockPlace[], prevCat: string | null = null
 // tylko gdy nested bp istnieje.
 function partitionBusinessFirst(places: MockPlace[]): MockPlace[] {
   const biz: MockPlace[] = [];
-  const rest: MockPlace[] = [];
+  const restPhoto: MockPlace[] = [];
+  const restNoPhoto: MockPlace[] = [];
+  // Priorytet kolejki: 1) biznesy (wizytowka), 2) zwykle miejsca ZE zdjeciem (skurowana
+  // okladka - eksploracja nie wyglada wtedy pusto/ikonowo), 3) reszta (ikona kategorii).
+  // W obrebie kazdego tieru przeplot kategorii. `hasCover` = curated cover z enrich.
   for (const p of places) {
     if ((p as any).businessPlan) biz.push(p);
-    else rest.push(p);
+    else if (p.photo_url || (p.galleryPhotos ?? [])[0]) restPhoto.push(p);
+    else restNoPhoto.push(p);
   }
+  const lastCat = (arr: MockPlace[], prev: string | null) => (arr.length ? (arr[arr.length - 1].category || "_") : prev);
   const bizOrdered = interleaveByCategory(biz);
-  const lastBizCat = bizOrdered.length ? (bizOrdered[bizOrdered.length - 1].category || "_") : null;
-  const restOrdered = interleaveByCategory(rest, lastBizCat);
-  return [...bizOrdered, ...restOrdered];
+  const photoOrdered = interleaveByCategory(restPhoto, lastCat(bizOrdered, null));
+  const noPhotoOrdered = interleaveByCategory(restNoPhoto, lastCat(photoOrdered, lastCat(bizOrdered, null)));
+  return [...bizOrdered, ...photoOrdered, ...noPhotoOrdered];
 }
 
 // Wybor pill wydarzenia dla wizytowki wg priorytetu (wzgledem daty wyjazdu `refDate`,
@@ -1034,10 +1040,14 @@ export function enrichWithBusinessProfile(p: any, refDate?: string): MockPlace {
 
   const bp = Array.isArray(p.business_profiles) ? p.business_profiles[0] : p.business_profiles;
   if (!bp) {
-    // Zwykle miejsce (bez profilu biznesu): ZERO Google (2026-07-29). Nie uzywamy
-    // Google backfillu (places.photo_url / places.gallery_urls) - okladka przyjdzie
-    // z losowego zdjecia usera z tras (SwipeCard), a brak -> ikona kategorii.
-    return { ...p, photo_url: undefined, galleryPhotos: [] } as MockPlace;
+    // Zwykle miejsce (bez profilu biznesu). ZERO Google (2026-07-29): NIE uzywamy Google
+    // backfillu (stare places.photo_url z prefiksem gpid_). ALE recznie skurowana okladka
+    // (upload przez scripts/upload-place-covers.ts do storage /manual/) to NASZ content -
+    // zachowujemy ja jako cover. Brak -> okladka z losowego zdjecia usera (SwipeCard) / ikona.
+    const curated = typeof p.photo_url === "string" && p.photo_url.includes("/place-photos-cache/manual/")
+      ? p.photo_url
+      : undefined;
+    return { ...p, photo_url: curated, galleryPhotos: curated ? [curated] : [] } as MockPlace;
   }
   // Per decyzja produktowa (CLAUDE.md): wszystkie aktywne biznesy traktujemy jak
   // premium - logo, eventy, cover image, dane kontaktowe widoczne dla kazdego
