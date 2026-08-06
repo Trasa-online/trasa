@@ -6,8 +6,9 @@ import { ArrowLeft, Search, Plus, X, Loader2, MapPin, ChevronRight, ChevronDown,
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
-import { ORIGIN_COUNTRIES } from "@/lib/locations";
-import { expandCity } from "@/lib/cities";
+import CreateTabs from "@/components/create/CreateTabs";
+import { expandCity, cityGenitive } from "@/lib/cities";
+import { TRIP_COUNTRIES, TRIP_REGIONS, citiesForCountry, countryForCity } from "@/lib/tripCountries";
 import { getHistoryByCity } from "@/lib/exploreLikes";
 import { forwardGeocode, reverseGeocode, forwardGeocodeWithTypes } from "@/lib/googleMaps";
 import { isRouteCollection } from "@/lib/collectionThemes";
@@ -32,7 +33,6 @@ interface RankingItem {
   short_desc: string;
 }
 
-const PL_CITIES = ORIGIN_COUNTRIES.find((c) => c.name === "Polska")?.cities ?? ["Warszawa"];
 
 // Kategoria (moze byc alias DB) -> emoji + etykieta, jak w dzienniku/home.
 const CAT_META: Record<string, { emoji: string; label: string }> = {};
@@ -108,9 +108,17 @@ const CreateRanking = () => {
   // Motyw (category): wybor USUNIETY z flow. null dla nowych zestawien; przy edycji
   // starych zachowujemy istniejacy motyw (bez UI zmiany), zeby nie kasowac danych.
   const [category, setCategory] = useState<string | null>(null);
-  // Nazwa zestawienia - pole tekstowe (zastapilo motyw jako zrodlo tytulu).
-  const [title, setTitle] = useState("");
+  // Miasto + kraj (1:1 z widokiem trasy ComposeWyjazd - tripCountries).
   const [city, setCity] = useState(params.get("city") || "Warszawa");
+  const [country, setCountry] = useState<string>(() => countryForCity(params.get("city") || "Warszawa"));
+  const cities = citiesForCountry(country);
+  const onCountryChange = (c: string) => { setCountry(c); setCity(citiesForCountry(c)[0]); };
+  // Nazwa listy - generyczna domyslna (jak "Wyjazd do X" w trasie); titleDirty blokuje auto-update
+  // po recznej edycji, a zmiana miasta aktualizuje domyslna nazwe.
+  const defaultListName = (c: string) => `Lista miejsc - ${c}`;
+  const [title, setTitle] = useState(() => defaultListName(params.get("city") || "Warszawa"));
+  const [titleDirty, setTitleDirty] = useState(false);
+  useEffect(() => { if (!titleDirty) setTitle(defaultListName(city)); }, [city, titleDirty]);
   const [items, setItems] = useState<RankingItem[]>([]);
   const [publishing, setPublishing] = useState(false);
   // Krok formularza po wyborze motywu: 1 = miasto + miejsca, 2 = notki + mapa + publikacja.
@@ -154,7 +162,7 @@ const CreateRanking = () => {
       (async () => {
         const { data: col } = await (supabase as any).from("discovery_collections").select("title, city, category, description, author_name, author_avatar").eq("id", editId).maybeSingle();
         if (col) {
-          setTitle(col.title ?? ""); if (col.city) setCity(col.city); setCategory(col.category ?? null);
+          setTitle(col.title ?? ""); setTitleDirty(true); if (col.city) { setCity(col.city); setCountry(countryForCity(col.city)); } setCategory(col.category ?? null);
           setDescription(col.description ?? "");
           setAsAnon(col.author_name === "Anonim" && !col.author_avatar);
         }
@@ -194,8 +202,8 @@ const CreateRanking = () => {
   useEffect(() => {
     if (editId) return;
     const st = (location.state ?? {}) as { city?: string | null; title?: string | null; places?: any[] };
-    if (st.city) setCity(st.city);
-    if (st.title) setTitle(st.title);
+    if (st.city) { setCity(st.city); setCountry(countryForCity(st.city)); }
+    if (st.title) { setTitle(st.title); setTitleDirty(true); }
     if (Array.isArray(st.places) && st.places.length) {
       setItems(st.places.map((p: any, idx: number) => ({
         key: `h${idx}`, place_id: p.place_id ?? null, place_name: p.place_name, category: p.category ?? null,
@@ -391,46 +399,75 @@ const CreateRanking = () => {
 
   return (
     <div className="flex flex-col h-[100dvh] bg-background max-w-lg mx-auto">
-      {/* Header */}
-      <div className="flex items-center gap-2 px-4 pt-safe-4 pb-3 border-b border-border/20 shrink-0">
-        <button onClick={() => (step === 2 ? setStep(1) : navigate(-1))} aria-label={t("header.back")} className="h-9 w-9 flex items-center justify-center -ml-1 shrink-0 text-foreground">
-          <ArrowLeft className="h-5 w-5" />
-        </button>
-        {step === 1 && !editId ? (
-          <CreateModeToggle
-            mode="lista"
-            getHandoff={() => ({
-              city,
-              title: title || null,
-              places: items.map((i) => ({
-                place_name: i.place_name, category: i.category, address: i.address,
-                latitude: i.latitude, longitude: i.longitude, photo_url: i.photo_url,
-                place_id: i.place_id, google_place_id: i.google_place_id,
-              })),
-            })}
-          />
-        ) : (
+      {/* Header - hub tworzenia (krok 1, nowa lista): wiersz 1 = back + zakladki Twórz|Robocze|
+          Zapisane; wiersz 2 = toggle Trasa|Lista wysrodkowany (ta sama pozycja co w trasie).
+          Krok 2 / edycja = prosty naglowek z tytulem. */}
+      {step === 1 && !editId ? (
+        <div className="px-4 pt-safe-4 pb-3 border-b border-border/20 shrink-0 space-y-2.5">
+          <div className="flex items-center gap-2">
+            <button onClick={() => navigate(-1)} aria-label={t("header.back")} className="h-9 w-9 flex items-center justify-center -ml-1 shrink-0 text-foreground active:scale-90 transition-transform">
+              <ArrowLeft className="h-5 w-5" />
+            </button>
+            <div className="flex-1"><CreateTabs active="tworz" /></div>
+          </div>
+          <div className="flex items-center justify-center min-h-9">
+            <CreateModeToggle
+              mode="lista"
+              getHandoff={() => ({
+                city,
+                title: titleDirty ? title : null,
+                places: items.map((i) => ({
+                  place_name: i.place_name, category: i.category, address: i.address,
+                  latitude: i.latitude, longitude: i.longitude, photo_url: i.photo_url,
+                  place_id: i.place_id, google_place_id: i.google_place_id,
+                })),
+              })}
+            />
+          </div>
+        </div>
+      ) : (
+        <div className="flex items-center gap-2 px-4 pt-safe-4 pb-3 border-b border-border/20 shrink-0">
+          <button onClick={() => (step === 2 ? setStep(1) : navigate(-1))} aria-label={t("header.back")} className="h-9 w-9 flex items-center justify-center -ml-1 shrink-0 text-foreground">
+            <ArrowLeft className="h-5 w-5" />
+          </button>
           <span className="flex-1 font-bold text-base truncate">{step === 2 ? t("header.notes_and_map") : editId ? t("header.edit_collection") : t("header.new_collection")}</span>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* ══ KROK 1: miasto + wyszukiwarka (sticky) + propozycje + wybrane miejsca ══ */}
       {step === 1 && (
         <div className="flex-1 overflow-y-auto">
-          {/* Miasto */}
+          {/* Kraj (1:1 z widokiem trasy) */}
           <div className="px-4 pt-4">
-            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-1.5 block">{t("city_label")}</label>
-            <select value={city} onChange={(e) => setCity(e.target.value)}
-              className="w-full rounded-2xl bg-secondary text-secondary-foreground border-0 px-4 py-3 text-base outline-none focus:ring-2 focus:ring-orange-500/40">
-              {PL_CITIES.map((c) => <option key={c} value={c}>{c}</option>)}
-            </select>
+            <div className="relative">
+              <select value={country} onChange={(e) => onCountryChange(e.target.value)}
+                className="w-full appearance-none rounded-2xl bg-secondary text-secondary-foreground border-0 px-4 py-3 text-base outline-none focus:ring-2 focus:ring-orange-500/40">
+                {TRIP_REGIONS.map((region) => (
+                  <optgroup key={region} label={region}>
+                    {TRIP_COUNTRIES.filter((c) => c.region === region).map((c) => (
+                      <option key={c.name} value={c.name}>{c.name}</option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
+              <ChevronDown className="h-4 w-4 text-muted-foreground absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" />
+            </div>
+          </div>
+          {/* Miasto (miasta wybranego kraju) */}
+          <div className="px-4 pt-3">
+            <div className="relative">
+              <select value={city} onChange={(e) => setCity(e.target.value)}
+                className="w-full appearance-none rounded-2xl bg-secondary text-secondary-foreground border-0 px-4 py-3 text-base outline-none focus:ring-2 focus:ring-orange-500/40">
+                {cities.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+              <ChevronDown className="h-4 w-4 text-muted-foreground absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" />
+            </div>
           </div>
 
-          {/* Nazwa zestawienia (zastapila wybor motywu jako zrodlo tytulu) */}
+          {/* Nazwa listy (generyczna domyslna, edytowalna) */}
           <div className="px-4 pt-3">
-            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-1.5 block">{t("name_label", "Nazwa")}</label>
-            <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={80}
-              placeholder={t("name_placeholder", "Nazwa zestawienia")}
+            <input value={title} onChange={(e) => { setTitle(e.target.value); setTitleDirty(true); }} maxLength={80}
+              placeholder={t("name_placeholder", "Nazwa listy")}
               className="w-full rounded-2xl bg-secondary text-secondary-foreground border-0 px-4 py-3 text-base outline-none focus:ring-2 focus:ring-orange-500/40 placeholder:text-muted-foreground/50" />
           </div>
 

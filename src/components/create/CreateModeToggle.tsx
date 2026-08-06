@@ -24,21 +24,21 @@ export default function CreateModeToggle({ mode, getHandoff }: {
     navigate(target === "trasa" ? "/wyjazd/nowy" : "/zestawienie/nowe", { state: getHandoff(), replace: true });
   };
   return (
-    <div className="flex-1 flex justify-center">
-      <div className="inline-flex items-center rounded-full bg-secondary p-0.5">
-        {(["trasa", "lista"] as const).map((m) => (
-          <button
-            key={m}
-            onClick={() => go(m)}
-            className={cn(
-              "px-5 h-8 rounded-full text-sm font-bold transition-colors active:scale-95",
-              mode === m ? "bg-background text-foreground shadow-sm" : "text-secondary-foreground/70",
-            )}
-          >
-            {m === "trasa" ? "Trasa" : "Lista"}
-          </button>
-        ))}
-      </div>
+    // Sam pill - centrowanie/pozycjonowanie ustawia rodzic (zeby toggle byl w tym samym
+    // miejscu na obu ekranach tworzenia, niezaleznie od akcji po prawej jak "Zapros").
+    <div className="inline-flex items-center rounded-full bg-secondary p-0.5">
+      {(["trasa", "lista"] as const).map((m) => (
+        <button
+          key={m}
+          onClick={() => go(m)}
+          className={cn(
+            "px-5 h-8 rounded-full text-sm font-bold transition-colors active:scale-95",
+            mode === m ? "bg-background text-foreground shadow-sm" : "text-secondary-foreground/70",
+          )}
+        >
+          {m === "trasa" ? "Trasa" : "Lista"}
+        </button>
+      ))}
     </div>
   );
 }

@@ -5,6 +5,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { ArrowLeft, Search, Plus, X, ChevronDown, Calendar as CalendarIcon, List, GalleryHorizontalEnd, Loader2, ArrowRight, Trash2, Maximize2, GripVertical, UserPlus } from "lucide-react";
 import InviteFriendsSheet from "@/components/route/InviteFriendsSheet";
 import CreateModeToggle from "@/components/create/CreateModeToggle";
+import CreateTabs from "@/components/create/CreateTabs";
 import { avatarSrc } from "@/lib/avatar";
 import { Reorder, useDragControls } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
@@ -450,46 +451,54 @@ export default function ComposeWyjazd() {
   // Trojmiasto). Dla innych miast/krajow blok propozycji znika (wyszukiwanie dziala wszedzie).
   const SUGGESTION_CITIES = ["Warszawa", "Gdańsk", "Sopot", "Gdynia", "Trójmiasto"];
   const suggestionsSupported = SUGGESTION_CITIES.includes(city);
-  const showProposals = isSearching || (searchFocused && suggestionsSupported);
+  // Propozycje z bazy miasta pokazujemy OD RAZU (nie tylko na fokusie) - ujednolicone z widokiem
+  // listy. Podczas pisania pokazujemy wyniki wyszukiwania.
+  const showProposals = isSearching || suggestionsSupported;
 
   return (
     <div className="flex flex-col h-[100dvh] bg-background max-w-lg mx-auto">
-      {/* Header */}
-      <div className="flex items-center gap-2 px-4 pt-safe-4 pb-3 border-b border-border/20 shrink-0">
-        <button onClick={handleBack} aria-label="Wróć" className="h-9 w-9 flex items-center justify-center -ml-1 shrink-0 text-foreground active:scale-90 transition-transform">
-          <ArrowLeft className="h-5 w-5" />
-        </button>
-        <CreateModeToggle
-          mode="trasa"
-          getHandoff={() => ({
-            city,
-            title: nameDirty ? name : null,
-            places: items.map((i) => ({
-              place_name: i.place_name, category: i.category, address: i.address,
-              latitude: i.latitude, longitude: i.longitude, photo_url: i.photo_url, place_id: i.place_id,
-            })),
-          })}
-        />
-        {/* Awatary zaproszonych (stan po zaproszeniu) - obok guzika "Zapros". */}
-        {invited.length > 0 && (
-          <span className="flex items-center -space-x-2 shrink-0">
-            {invited.slice(0, 3).map((p) => (
-              <img key={p.id} src={avatarSrc(p.avatar_url)} alt="" className="h-7 w-7 rounded-full object-cover bg-orange-100 ring-2 ring-background" />
-            ))}
-            {invited.length > 3 && (
-              <span className="h-7 w-7 rounded-full bg-muted ring-2 ring-background flex items-center justify-center text-[10px] font-bold text-foreground">+{invited.length - 3}</span>
+      {/* Header - hub tworzenia: wiersz 1 = back + zakladki (Twórz|Robocze|Zapisane);
+          wiersz 2 = toggle Trasa|Lista wysrodkowany (Zapros absolute po prawej - nie przesuwa toggle). */}
+      <div className="px-4 pt-safe-4 pb-3 border-b border-border/20 shrink-0 space-y-2.5">
+        <div className="flex items-center gap-2">
+          <button onClick={handleBack} aria-label="Wróć" className="h-9 w-9 flex items-center justify-center -ml-1 shrink-0 text-foreground active:scale-90 transition-transform">
+            <ArrowLeft className="h-5 w-5" />
+          </button>
+          <div className="flex-1"><CreateTabs active="tworz" /></div>
+        </div>
+        <div className="relative flex items-center justify-center min-h-9">
+          <CreateModeToggle
+            mode="trasa"
+            getHandoff={() => ({
+              city,
+              title: nameDirty ? name : null,
+              places: items.map((i) => ({
+                place_name: i.place_name, category: i.category, address: i.address,
+                latitude: i.latitude, longitude: i.longitude, photo_url: i.photo_url, place_id: i.place_id,
+              })),
+            })}
+          />
+          <div className="absolute right-0 flex items-center gap-1.5">
+            {invited.length > 0 && (
+              <span className="flex items-center -space-x-2 shrink-0">
+                {invited.slice(0, 3).map((p) => (
+                  <img key={p.id} src={avatarSrc(p.avatar_url)} alt="" className="h-7 w-7 rounded-full object-cover bg-orange-100 ring-2 ring-background" />
+                ))}
+                {invited.length > 3 && (
+                  <span className="h-7 w-7 rounded-full bg-muted ring-2 ring-background flex items-center justify-center text-[10px] font-bold text-foreground">+{invited.length - 3}</span>
+                )}
+              </span>
             )}
-          </span>
-        )}
-        {/* Zapros znajomych - tworzy szkic trasy (jesli trzeba) i otwiera sheet zaproszen po username. */}
-        <button
-          onClick={handleOpenInvite}
-          disabled={creating}
-          aria-label="Zaproś znajomych"
-          className="shrink-0 flex items-center gap-1.5 h-9 pl-2.5 pr-3 rounded-full bg-secondary text-secondary-foreground text-sm font-bold active:scale-95 transition-transform disabled:opacity-50"
-        >
-          <UserPlus className="h-4 w-4" /> Zaproś
-        </button>
+            <button
+              onClick={handleOpenInvite}
+              disabled={creating}
+              aria-label="Zaproś znajomych"
+              className="shrink-0 flex items-center gap-1.5 h-9 pl-2.5 pr-3 rounded-full bg-secondary text-secondary-foreground text-sm font-bold active:scale-95 transition-transform disabled:opacity-50"
+            >
+              <UserPlus className="h-4 w-4" /> Zaproś
+            </button>
+          </div>
+        </div>
       </div>
       {draftId && (
         <InviteFriendsSheet
