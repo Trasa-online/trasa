@@ -4,6 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useLocation } from "react-router-dom";
 import { ArrowLeft, Search, Plus, X, ChevronDown, Calendar as CalendarIcon, List, GalleryHorizontalEnd, Loader2, ArrowRight, Trash2, Maximize2, GripVertical, UserPlus } from "lucide-react";
 import InviteFriendsSheet from "@/components/route/InviteFriendsSheet";
+import CreateModeToggle from "@/components/create/CreateModeToggle";
 import { avatarSrc } from "@/lib/avatar";
 import { Reorder, useDragControls } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
@@ -458,7 +459,17 @@ export default function ComposeWyjazd() {
         <button onClick={handleBack} aria-label="Wróć" className="h-9 w-9 flex items-center justify-center -ml-1 shrink-0 text-foreground active:scale-90 transition-transform">
           <ArrowLeft className="h-5 w-5" />
         </button>
-        <span className="flex-1 font-bold text-base truncate">{nav.title ? `Zestawienie - ${nav.title}` : "Nowy wyjazd"}</span>
+        <CreateModeToggle
+          mode="trasa"
+          getHandoff={() => ({
+            city,
+            title: nameDirty ? name : null,
+            places: items.map((i) => ({
+              place_name: i.place_name, category: i.category, address: i.address,
+              latitude: i.latitude, longitude: i.longitude, photo_url: i.photo_url, place_id: i.place_id,
+            })),
+          })}
+        />
         {/* Awatary zaproszonych (stan po zaproszeniu) - obok guzika "Zapros". */}
         {invited.length > 0 && (
           <span className="flex items-center -space-x-2 shrink-0">

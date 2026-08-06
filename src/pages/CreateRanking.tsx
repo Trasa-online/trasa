@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams, useLocation } from "react-router-dom";
+import CreateModeToggle from "@/components/create/CreateModeToggle";
 import { ArrowLeft, Search, Plus, X, Loader2, MapPin, ChevronRight, ChevronDown, ChevronUp, List, GalleryHorizontalEnd, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -101,6 +102,7 @@ const CreateRanking = () => {
   const navigate = useNavigate();
   const { id: editId } = useParams();
   const [params] = useSearchParams();
+  const location = useLocation();
   const { user } = useAuth();
 
   // Motyw (category): wybor USUNIETY z flow. null dla nowych zestawien; przy edycji
@@ -186,6 +188,23 @@ const CreateRanking = () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editId]);
+
+  // Prefill z handoffu Trasa->Lista (CreateModeToggle) - przenosi miasto + wybrane miejsca
+  // (+ tytul), zeby przelaczenie use case nie kasowalo wpisanej pracy. Tylko nowa lista.
+  useEffect(() => {
+    if (editId) return;
+    const st = (location.state ?? {}) as { city?: string | null; title?: string | null; places?: any[] };
+    if (st.city) setCity(st.city);
+    if (st.title) setTitle(st.title);
+    if (Array.isArray(st.places) && st.places.length) {
+      setItems(st.places.map((p: any, idx: number) => ({
+        key: `h${idx}`, place_id: p.place_id ?? null, place_name: p.place_name, category: p.category ?? null,
+        address: p.address ?? null, latitude: p.latitude ?? null, longitude: p.longitude ?? null,
+        rating: p.rating ?? null, google_place_id: p.google_place_id ?? null, photo_url: p.photo_url ?? null, short_desc: "",
+      })));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const addItem = (it: Omit<RankingItem, "key" | "short_desc">) => {
     if (items.some((x) => x.place_name.toLowerCase() === it.place_name.toLowerCase())) { toast(t("toast.already_added")); return; }
@@ -377,7 +396,22 @@ const CreateRanking = () => {
         <button onClick={() => (step === 2 ? setStep(1) : navigate(-1))} aria-label={t("header.back")} className="h-9 w-9 flex items-center justify-center -ml-1 shrink-0 text-foreground">
           <ArrowLeft className="h-5 w-5" />
         </button>
-        <span className="flex-1 font-bold text-base truncate">{step === 2 ? t("header.notes_and_map") : editId ? t("header.edit_collection") : t("header.new_collection")}</span>
+        {step === 1 && !editId ? (
+          <CreateModeToggle
+            mode="lista"
+            getHandoff={() => ({
+              city,
+              title: title || null,
+              places: items.map((i) => ({
+                place_name: i.place_name, category: i.category, address: i.address,
+                latitude: i.latitude, longitude: i.longitude, photo_url: i.photo_url,
+                place_id: i.place_id, google_place_id: i.google_place_id,
+              })),
+            })}
+          />
+        ) : (
+          <span className="flex-1 font-bold text-base truncate">{step === 2 ? t("header.notes_and_map") : editId ? t("header.edit_collection") : t("header.new_collection")}</span>
+        )}
       </div>
 
       {/* ══ KROK 1: miasto + wyszukiwarka (sticky) + propozycje + wybrane miejsca ══ */}
