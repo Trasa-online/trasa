@@ -1,7 +1,8 @@
 import { supabase } from "@/integrations/supabase/client";
 import { sendGroupInvitePush, getCurrentHostName } from "@/lib/sendGroupInvitePush";
 
-// Kod dolaczenia do sesji (jak w CreateGroupSession) - do linku push /sesja/<code>.
+// Kod sesji grupowej (join_code) - kolumna group_sessions.join_code wymaga wartosci.
+// Nie sluzy juz do deep-linku (zaproszony trafia prosto na trase /review-summary).
 function generateJoinCode(): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   let code = "";

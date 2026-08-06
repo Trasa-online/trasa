@@ -856,12 +856,6 @@ interface PlaceSwiperProps {
   /** Called with accumulated liked place names when the category batch (20 places) runs out. */
   onBatchComplete?: (likedNames: string[]) => void;
   exploreMode?: boolean;
-  groupSessionId?: string;
-  onGroupFinished?: () => void;
-  /** When set, PlaceSwiper loads exactly these place IDs in this order (group round mode). */
-  roundPlaceIds?: string[];
-  /** Called when the user finishes swiping all round places (instead of showing the default empty state). */
-  onRoundComplete?: () => void;
   /** Called when user taps "suggest adding a place" in the empty search state. */
   onSuggestPlace?: () => void;
   /** Called whenever the array of liked places changes - used by parent (PlanWizard)
@@ -1119,7 +1113,7 @@ export function enrichWithBusinessProfile(p: any, refDate?: string): MockPlace {
   } as MockPlace;
 }
 
-const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryFilter, dietFilters, sortByNearest, initialLikedPlaceNames = [], initialSkippedPlaceNames = [], searchQuery = "", showAddPlace: showAddPlaceProp = false, onAddPlaceClose, onBatchComplete, exploreMode = false, groupSessionId, onGroupFinished, roundPlaceIds, onRoundComplete, onSuggestPlace, onLikedPlacesChange, onSwitchToMatches, onEditDate }: PlaceSwiperProps) => {
+const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryFilter, dietFilters, sortByNearest, initialLikedPlaceNames = [], initialSkippedPlaceNames = [], searchQuery = "", showAddPlace: showAddPlaceProp = false, onAddPlaceClose, onBatchComplete, exploreMode = false, onSuggestPlace, onLikedPlacesChange, onSwitchToMatches, onEditDate }: PlaceSwiperProps) => {
   const { t } = useTranslation("plan");
   // Normalize categoryFilter to a stable array (single id, multiple ids, or none).
   const categoryFilters: string[] = Array.isArray(categoryFilter)
@@ -1156,13 +1150,13 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
   // Po powrocie appki na wierzch (event z useAppResume) dociagnij swieze miejsca - zeby edycje
   // profilu lokalu byly widoczne bez remountu. Tylko exploreMode (HomeSwipe): tam polubione sa
   // zachowane przy refetchu, a juz przeswipeowane miejsca dnia i tak sa odfiltrowane. Pomijamy
-  // solo/group/round (return-state moglby zresetowac biezaca liste Dopasowan).
+  // solo (return-state moglby zresetowac biezaca liste Dopasowan).
   useEffect(() => {
-    if (!exploreMode || groupSessionId || roundPlaceIds?.length) return;
+    if (!exploreMode) return;
     const onResume = () => setRefreshNonce((n) => n + 1);
     window.addEventListener("trasa:app-resume", onResume);
     return () => window.removeEventListener("trasa:app-resume", onResume);
-  }, [exploreMode, groupSessionId, roundPlaceIds]);
+  }, [exploreMode]);
   const [likedPlaces, setLikedPlaces] = useState<MockPlace[]>([]);
   const [skippedPlaces, setSkippedPlaces] = useState<MockPlace[]>([]);
   const [superLikedPlaces, setSuperLikedPlaces] = useState<MockPlace[]>([]);
@@ -1205,9 +1199,9 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
 
   // Lokalizacja: po zaladowaniu miejsc, raz na miasto, jesli brak ref. Najpierw auto-detect
   // przez GPS (gdy mamy zgode): on-site -> "od Ciebie" + baner potwierdzenia; inaczej jawny
-  // sheet "Jestes juz w miescie?". Nie w trybie rundy grupowej (roundPlaceIds).
+  // sheet "Jestes juz w miescie?".
   useEffect(() => {
-    if (loading || roundPlaceIds?.length || distanceRef || wasAskedForCity(city)) return;
+    if (loading || distanceRef || wasAskedForCity(city)) return;
     let cancelled = false;
     (async () => {
       const res = await tryResolveOnSite(city);
@@ -1217,7 +1211,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
       else setLocationPrimerOpen(true);
     })();
     return () => { cancelled = true; };
-  }, [loading, roundPlaceIds, distanceRef, city]);
+  }, [loading, distanceRef, city]);
 
   useEffect(() => {
     setLoading(true);
@@ -1229,29 +1223,6 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
 
     const fetchPlaces = async () => {
       try {
-
-      // ── Group round mode: load exactly the round's place IDs in order ──
-      if (roundPlaceIds?.length) {
-        const { data, error } = await (supabase as any)
-          .from("places")
-          .select(PLACE_BUSINESS_SELECT)
-          .in("id", roundPlaceIds);
-
-        if (error) console.error("[PlaceSwiper] round fetch error:", error);
-        if (!data?.length) { setLoading(false); return; }
-
-        // Preserve server-defined order
-        const orderMap: Record<string, number> = {};
-        roundPlaceIds.forEach((id, i) => { orderMap[id] = i; });
-        const ordered = [...data]
-          .sort((a: any, b: any) => orderMap[a.id] - orderMap[b.id])
-          .map((pp: any) => enrichWithBusinessProfile(pp, date.toISOString().slice(0, 10)));
-
-        setAllPlaces(ordered);
-        setQueue(ordered);
-        setLoading(false);
-        return;
-      }
 
       // ── Normal mode ──────────────────────────────────────────────────────
       // city === "all" (opcja "Wszystkie") -> bez filtra miasta (wszystkie miejsca).
@@ -1272,7 +1243,6 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
       // każdy nowy dzień zaczyna z czystą talia. Reactions w DB persyst dla taste profile,
       // ale UI filter polega tylko na today (gte start of today UTC).
       let ratedPlaceIds = new Set<string>();
-      const groupRatedIds = new Set<string>();
       if (user) {
         const todayStart = new Date();
         todayStart.setHours(0, 0, 0, 0);
@@ -1285,18 +1255,6 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
         const { data: reactions } = await reactionsQuery;
         if (reactions?.length) {
           ratedPlaceIds = new Set(reactions.map((r: { place_id: string }) => r.place_id));
-        }
-        // Miejsca juz przeswipeowane W TEJ SESJI grupowej - OSOBNY set. Nie mieszamy z solo-reakcjami,
-        // bo past solo-reakcje NIE moga filtrowac miejsc rundy grupowej (patrz filtr `remaining`).
-        if (groupSessionId) {
-          const { data: groupReactions } = await (supabase as any)
-            .from("group_session_reactions")
-            .select("place_id")
-            .eq("session_id", groupSessionId)
-            .eq("user_id", user.id);
-          if (groupReactions?.length) {
-            for (const r of groupReactions) groupRatedIds.add(r.place_id);
-          }
         }
       }
 
@@ -1312,11 +1270,6 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
         if (likedSet.has(p.place_name.toLowerCase()) || skippedSet.has(p.place_name.toLowerCase())) return false;
         // Filtr diety - applikowany do wszystkich miejsc (zarowno batch jak normal mode)
         if (!matchesDiet(p, activeDiets)) return false;
-        // Runda grupowa (roundPlaceIds - kategoria LUB wolna eksploracja): wszyscy uczestnicy widza
-        // TE SAME miejsca rundy (dla dopasowan), pomijajac tylko te przeswipeowane w TEJ sesji.
-        // Past solo-reakcje NIE filtruja rundy - inaczej uczestnik, ktory wczesniej ocenial te losowe
-        // miejsca, dostawal pusta kolejke -> instant "Gotowe" (wolna eksploracja "nie dzialala").
-        if (roundPlaceIds?.length) return !groupRatedIds.has(p.id);
         if (!hasReturnState && ratedPlaceIds.has(p.id)) return false;
         return true;
       });
@@ -1385,7 +1338,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
     fetchPlaces().finally(() => clearTimeout(safetyTimeout));
     // UWAGA: sortByNearest CELOWO nie jest w deps - zmiana sortu nie przebudowuje queue
     // (inaczej ocenione miejsca wracaly = reset swipe). Sort stosowany reaktywnie nizej.
-  }, [city, user, roundPlaceIds, categoryFilterKey, dietFilterKey, refreshNonce]);
+  }, [city, user, categoryFilterKey, dietFilterKey, refreshNonce]);
 
   // Reorder queue when a category group has been liked too many times consecutively
   const rebalanceQueue = (newRecentGroups: (Set<string> | null)[]) => {
@@ -1445,52 +1398,27 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
   const saveReaction = (place: MockPlace, reaction: "liked" | "skipped" | "super_liked", overridePhotoUrl?: string) => {
     if (!user) return;
     const photoUrl = overridePhotoUrl ?? photoUrlOverrides.current[place.id] ?? place.photo_url ?? null;
-    if (!groupSessionId) {
-      (supabase as any)
-        .from("user_place_reactions")
-        .upsert({
-          user_id: user.id,
-          place_id: place.id,
-          place_name: place.place_name,
-          city: place.city,
-          category: place.category,
-          photo_url: photoUrl,
-          reaction,
-        }, { onConflict: "user_id,place_id" })
-        .then(() => {});
-    }
-    if (groupSessionId) {
-      (supabase as any)
-        .from("group_session_reactions")
-        .upsert({
-          session_id: groupSessionId,
-          user_id: user.id,
-          place_name: place.place_name,
-          place_id: place.id,
-          photo_url: photoUrl,
-          category: place.category,
-          reaction,
-        }, { onConflict: "session_id,user_id,place_name" })
-        .then(() => {});
-    }
+    (supabase as any)
+      .from("user_place_reactions")
+      .upsert({
+        user_id: user.id,
+        place_id: place.id,
+        place_name: place.place_name,
+        city: place.city,
+        category: place.category,
+        photo_url: photoUrl,
+        reaction,
+      }, { onConflict: "user_id,place_id" })
+      .then(() => {});
   };
 
   const deleteReaction = (place: MockPlace) => {
     if (!user) return;
-    if (!groupSessionId) {
-      (supabase as any)
-        .from("user_place_reactions")
-        .delete()
-        .match({ user_id: user.id, place_id: place.id })
-        .then(() => {});
-    }
-    if (groupSessionId) {
-      (supabase as any)
-        .from("group_session_reactions")
-        .delete()
-        .match({ session_id: groupSessionId, user_id: user.id, place_name: place.place_name })
-        .then(() => {});
-    }
+    (supabase as any)
+      .from("user_place_reactions")
+      .delete()
+      .match({ user_id: user.id, place_id: place.id })
+      .then(() => {});
   };
 
   const trackAndRebalance = (place: MockPlace) => {
@@ -1516,25 +1444,22 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
     // Persist do localStorage history zawsze (poza group session i round mode) -
     // uzywane przez Eksploruj 'Polubione' tab i 'Zaplanuj solo' reuse prompt.
     // Wczesniej zapis byl tylko w exploreMode (HomeSwipe), wiec lajki z planu konkretnej
-    // trasy (PlanWizard step 4) nie ladowaly w Eksploruj. Group/round to wspolne sesje
-    // gdzie polubione miejsca maja inny model (sync miedzy uczestnikami).
-    if (!groupSessionId && !roundPlaceIds?.length) {
-      saveExploreLike(city, {
-        place_name: top.place_name,
-        category: top.category,
-        // places.id (UUID) - pozwala wizytowce w "Zapisane" doczytac pelny profil biznesu.
-        place_id: /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(top.id) ? top.id : null,
-        latitude: top.latitude,
-        longitude: top.longitude,
-        // Zdjecie: preferuj zafetchowane z Google (photoUrlOverrides) tak jak saveReaction -
-        // miasta bez cache (np. Wroclaw) maja places.photo_url NULL, ale karta i tak dociaga
-        // zdjecie z Google; bez tego "Zapisane" pokazywalyby placeholder zamiast miniaturki.
-        photo_url: overridePhotoUrl ?? photoUrlOverrides.current[top.id] ?? top.photo_url ?? null,
-        address: top.address ?? null,
-        rating: top.rating ?? null,
-        description: top.description ?? null,
-      });
-    }
+    // trasy (PlanWizard step 4) nie ladowaly w Eksploruj.
+    saveExploreLike(city, {
+      place_name: top.place_name,
+      category: top.category,
+      // places.id (UUID) - pozwala wizytowce w "Zapisane" doczytac pelny profil biznesu.
+      place_id: /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(top.id) ? top.id : null,
+      latitude: top.latitude,
+      longitude: top.longitude,
+      // Zdjecie: preferuj zafetchowane z Google (photoUrlOverrides) tak jak saveReaction -
+      // miasta bez cache (np. Wroclaw) maja places.photo_url NULL, ale karta i tak dociaga
+      // zdjecie z Google; bez tego "Zapisane" pokazywalyby placeholder zamiast miniaturki.
+      photo_url: overridePhotoUrl ?? photoUrlOverrides.current[top.id] ?? top.photo_url ?? null,
+      address: top.address ?? null,
+      rating: top.rating ?? null,
+      description: top.description ?? null,
+    });
     // Track add_to_route for real (non-mock) places
     const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (UUID_RE.test(top.id)) {
@@ -1555,25 +1480,23 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
       haptics.medium();
       setSavedIds(prev => new Set(prev).add(place.id));
       saveReaction(place, "liked");
-      if (!groupSessionId && !roundPlaceIds?.length) {
-        saveExploreLike(city, {
-          place_name: place.place_name,
-          category: place.category,
-          place_id: isUuid ? place.id : null,
-          latitude: place.latitude,
-          longitude: place.longitude,
-          photo_url: photoUrlOverrides.current[place.id] ?? place.photo_url ?? null,
-          address: place.address ?? null,
-          rating: place.rating ?? null,
-          description: place.description ?? null,
-        });
-      }
+      saveExploreLike(city, {
+        place_name: place.place_name,
+        category: place.category,
+        place_id: isUuid ? place.id : null,
+        latitude: place.latitude,
+        longitude: place.longitude,
+        photo_url: photoUrlOverrides.current[place.id] ?? place.photo_url ?? null,
+        address: place.address ?? null,
+        rating: place.rating ?? null,
+        description: place.description ?? null,
+      });
       if (isUuid) posthog.capture("place_added_to_route", { place_id: place.id });
       if (onboardingActive) { try { window.dispatchEvent(new CustomEvent("trasa:ob-saved")); } catch { /* noop */ } }
     }
     // Etap 2: drawer "Miejsce zapisane!" (dodaj do wyjazdu). Tylko eksploracja z realnym
-    // kontem - nie w onboardingu ani sesji grupowej/rundowej (tam save ma inny kontekst).
-    if (opts?.openSheet && exploreMode && !onboardingActive && !groupSessionId && !roundPlaceIds?.length && user && !isAnonymous) {
+    // kontem - nie w onboardingu.
+    if (opts?.openSheet && exploreMode && !onboardingActive && user && !isAnonymous) {
       setSaveSheetPlace({
         place_name: place.place_name,
         category: place.category ?? null,
@@ -1690,13 +1613,6 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
     }
     navigate("/create", { state: routeState });
   };
-
-  // Notify parent when round is complete (must be in effect, not render)
-  useEffect(() => {
-    if (queue.length === 0 && !loading && onRoundComplete) {
-      onRoundComplete();
-    }
-  }, [queue.length, loading]);
 
   // Expose liked places to parent (PlanWizard Dopasowania tab) - rerenders na zmianie referencji array.
   // Wstrzykujemy zdjecie zafetchowane z Google (photoUrlOverrides) gdy place.photo_url jest puste -
@@ -1871,29 +1787,6 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
       );
     }
 
-    // Round mode: onRoundComplete is called via useEffect above; just render nothing
-    if (onRoundComplete) {
-      return null;
-    }
-    if (groupSessionId) {
-      return (
-        <div className="flex-1 flex flex-col items-center justify-center px-8 gap-6 text-center">
-          <div className="text-5xl">🎉</div>
-          <div>
-            <p className="font-bold text-lg">{t("group.all_rated")}</p>
-            <p className="text-muted-foreground text-sm mt-1">
-              {t("group.liked_count", { count: likedPlaces.length + superLikedPlaces.length })}
-            </p>
-          </div>
-          <button
-            onClick={onGroupFinished}
-            className="py-3 px-8 rounded-full bg-primary text-white font-semibold text-sm active:scale-95 transition-transform"
-          >
-            {t("group.see_matches")}
-          </button>
-        </div>
-      );
-    }
     return (
       <EmptyState
         likedPlaces={likedPlaces}
@@ -1969,9 +1862,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
       {/* Progress. Hidden in exploreMode (HomeSwipe) - miasto juz jest w chip filter,
           a wybranych count nie ma sensu bez bottom CTA. */}
       <div className={cn("flex items-center justify-between px-5 pt-1 pb-3 shrink-0", exploreMode && "hidden")}>
-        {roundPlaceIds?.length ? (
-          <span className="text-xs text-muted-foreground">{t("round_progress", { current: roundPlaceIds.length - queue.length, total: roundPlaceIds.length })}</span>
-        ) : onEditDate ? (
+        {onEditDate ? (
           <button onClick={onEditDate} className="text-xs text-muted-foreground inline-flex items-center gap-1 active:opacity-60" aria-label={t("edit_date_aria")}>
             {city} · {format(date, "d MMM")}
             <CalendarDays className="h-3 w-3 opacity-60" />
@@ -2176,7 +2067,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
           W PlanWizard solo (onSwitchToMatches przekazane) CTA przelacza do tabki
           Dopasowania, NIE nawiguje od razu do /create - user wybiera tam ktore
           miejsca wezmie do trasy. Bez prop'a (legacy fallback) wywoluje handleProceed. */}
-      {!exploreMode && !groupSessionId && (likedPlaces.length + superLikedPlaces.length > 0) && !showAddPlace && (
+      {!exploreMode && (likedPlaces.length + superLikedPlaces.length > 0) && !showAddPlace && (
         <div className="px-4 pb-safe-4 pt-2 shrink-0 flex gap-2">
           <button
             onClick={() => { if (onSwitchToMatches) onSwitchToMatches(); else handleProceed(); }}

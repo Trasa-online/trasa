@@ -71,9 +71,6 @@ interface PlanChatExperienceProps {
   altIndex?: number;
   readOnly?: boolean;
   onSwitchAlt?: (i: number) => void;
-  // Group session context - wpływa na copy w AddPinSheet ("wspólne miejsce" vs
-  // "polubione miejsce") i niektore CTA. Solo = undefined.
-  groupSession?: { sessionId: string; otherMemberIds: string[] };
   // Continuation flow - jesli true, initialPlan jest dostarczony jako bazowy
   // (poprzedni stan trasy), a PlanChatExperience wywola plan-route z current_plan
   // + force_plan + merged likes zeby AI rozbudowal istniejacy plan zamiast
@@ -483,7 +480,7 @@ function getCurrentTimeContext(): { current_time: string; current_date: string }
   };
 }
 
-const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, likedPlacesData, skippedPlaces, superLikedPlaces, idealDay, initialUserMessage, initialPlan, altRoutes, altIndex, onSwitchAlt, readOnly, groupSession, continuationMode }: PlanChatExperienceProps) => {
+const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, likedPlacesData, skippedPlaces, superLikedPlaces, idealDay, initialUserMessage, initialPlan, altRoutes, altIndex, onSwitchAlt, readOnly, continuationMode }: PlanChatExperienceProps) => {
   const { t } = useTranslation("routechat");
   const [messages, setMessages] = useState<TextMessage[]>([]);
   // W trybie kontynuacji (dodawanie miejsca do istniejacej trasy) plan JUZ istnieje -
@@ -1054,11 +1051,9 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, likedPlaces
 
   // Powrót do swipera BEZ kasowania trasy. Zapisuje bieżący plan do trasa_continue_route -
   // PlanWizard po dolajkowaniu odczyta go, zmerguje polubienia i wróci z continuationMode
-  // (extend_mode), więc plan zostaje rozszerzony zamiast generowany od zera. Group mode ->
-  // navigate(-1) (powrót do sesji parowania zachowuje stan). Wzorzec 1:1 z "Polub więcej
-  // miejsc" w AddPinSheet - back NIE jest destrukcyjny.
+  // (extend_mode), więc plan zostaje rozszerzony zamiast generowany od zera. Wzorzec 1:1 z
+  // "Polub więcej miejsc" w AddPinSheet - back NIE jest destrukcyjny.
   const handleBackToSwiper = () => {
-    if (groupSession) { navigate(-1); return; }
     if (plan) {
       try {
         localStorage.setItem("trasa_continue_route", JSON.stringify({
@@ -1713,7 +1708,6 @@ window.addEventListener('message',function(e){
           cityContext={preferences.city}
           likedPlaces={likedPlaces}
           restrictToLiked={!!likedPlacesData?.length}
-          isGroupMode={!!groupSession}
           existingPinNames={plan?.days.flatMap(d => d.pins).map(p => p.place_name)}
           currentPlanForContinuation={plan}
           continuationContext={{

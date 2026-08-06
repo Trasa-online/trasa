@@ -52,7 +52,6 @@ interface RouteSummaryDialogProps {
   plan: RoutePlan;
   preferences: TripPreferences;
   messages: ChatMessage[];
-  groupSession?: { sessionId: string; otherMemberIds: string[] };
   existingRouteId?: string;
 }
 
@@ -62,7 +61,6 @@ const RouteSummaryDialog = ({
   plan,
   preferences,
   messages,
-  groupSession,
   existingRouteId,
 }: RouteSummaryDialogProps) => {
   const { t } = useTranslation("route");
@@ -147,12 +145,11 @@ const RouteSummaryDialog = ({
           // new_for_users = [user.id] dla solo zeby badge kropka w BottomNav Dziennik
           // pojawila sie po stworzeniu trasy (analogicznie do group memberow). Po
           // wejsciu do trasy, dismiss_route_badge RPC usuwa user.id z array.
-          new_for_users: groupSession ? null : [user.id],
+          new_for_users: [user.id],
           // Punkt startowy (hotel/nocleg) - identyczny dla wszystkich dni multi-day trasy.
           starting_location_name: preferences.startingLocation || null,
           starting_location_lat: preferences.startingLocationLat ?? null,
           starting_location_lng: preferences.startingLocationLng ?? null,
-          ...(groupSession ? { group_session_id: groupSession.sessionId } : {}),
         };
 
         const { data: route, error: routeError } = await supabase
@@ -214,18 +211,6 @@ const RouteSummaryDialog = ({
 
       }
 
-      // Kopie trasy dla pozostalych czlonkow grupy robimy server-side jednym RPC
-      // (SECURITY DEFINER) PO zapisaniu wszystkich dni hosta. Wczesniej klient wstawial
-      // trasy z cudzym user_id, co bylo blokowane przez RLS i cicho padalo (czlonkowie
-      // nie dostawali trasy). RPC omija RLS, jest atomowe i idempotentne. Czlonkow bierze
-      // z group_session_members (nie z przekazanego otherMemberIds - odporne na utrate stanu).
-      if (groupSession?.sessionId) {
-        const { error: copyErr } = await (supabase as any).rpc("copy_group_session_routes", {
-          p_session_id: groupSession.sessionId,
-        });
-        if (copyErr) console.error("[RouteSummaryDialog] copy_group_session_routes failed:", copyErr.message);
-      }
-
       // Submit to route_examples as candidate (silent). Personality bazowal na deklarowanych
       // preferencjach (pace/priorities), ktore usunelismy - bez nich zawsze "mix".
       const personalityType = "mix";
@@ -251,7 +236,7 @@ const RouteSummaryDialog = ({
         city: plan.city,
         days_count: days.length,
         pins_count: days.reduce((sum, d) => sum + (d.pins?.length ?? 0), 0),
-        is_group: !!groupSession,
+        is_group: false,
       });
 
       // Push 'Trasa gotowa' do twórcy - confirmation + path back-to-app.

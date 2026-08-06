@@ -445,7 +445,7 @@ const JournalTab = ({ userId, city: cityFilter }: JournalTabProps) => {
           </div>
           {!PLANNING_DISABLED && (
             <button
-              onClick={() => navigate("/sesja/nowa", { state: { from: "journal" } })}
+              onClick={() => navigate("/plan", { state: { from: "journal" } })}
               className="px-6 py-3.5 rounded-full bg-primary text-white font-bold text-sm flex items-center gap-2 active:scale-95 transition-transform"
             >
               <Sparkles className="h-4 w-4" />

@@ -383,7 +383,7 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
             {groupOpen && visibleGroupSessions.map((s) => (
               <button
                 key={s.id}
-                onClick={() => navigate(`/sesja/${s.join_code}`)}
+                onClick={() => navigate("/dziennik")}
                 className="w-full text-left active:scale-[0.98] transition-transform"
               >
                 {/* Karta sesji grupowej (secondary) - spojna z pozostalymi kartami. */}
@@ -514,7 +514,7 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
               </div>
             </button>
             <button
-              onClick={() => { setPlanChoiceOpen(false); navigate("/sesja/nowa"); }}
+              onClick={() => { setPlanChoiceOpen(false); navigate("/plan"); }}
               className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl border border-border/60 bg-card active:scale-[0.98] transition-transform text-left"
             >
               <div className="h-10 w-10 rounded-xl bg-orange-50 flex items-center justify-center shrink-0"><Users className="h-5 w-5 text-orange-600" /></div>
