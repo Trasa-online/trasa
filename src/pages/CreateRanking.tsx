@@ -433,9 +433,15 @@ const CreateRanking = () => {
       {/* ══ KROK 1: miasto + wyszukiwarka (sticky) + propozycje + wybrane miejsca ══ */}
       {step === 1 && (
         <div className="flex-1 overflow-y-auto">
+          {/* Hint: czym jest lista i co tu zrobic */}
+          <div className="px-4 pt-4">
+            <p className="text-sm text-muted-foreground leading-snug">
+              {`Lista to zbiór polecanych miejsc bez ustalonej kolejności - np. najlepsze kawiarnie w mieście. Dodaj miejsca, nazwij listę i opublikuj, żeby inni z niej korzystali.`}
+            </p>
+          </div>
           {/* Kraj + miasto wybrane wczesniej drum-scrollem (/utworz) - tu bez selektora. */}
           {/* Nazwa listy (generyczna domyslna, edytowalna) */}
-          <div className="px-4 pt-4">
+          <div className="px-4 pt-3">
             <input value={title} onChange={(e) => { setTitle(e.target.value); setTitleDirty(true); }} maxLength={80}
               placeholder={t("name_placeholder", "Nazwa listy")}
               className="w-full rounded-2xl bg-secondary text-secondary-foreground border-0 px-4 py-3 text-base outline-none focus:ring-2 focus:ring-orange-500/40 placeholder:text-muted-foreground/50" />

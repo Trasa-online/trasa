@@ -20,6 +20,8 @@ interface JournalTabProps {
   userId: string;
   // Filtr miasta z naglowka zakladki. "all" (lub brak) = wszystkie miasta.
   city?: string;
+  // Tylko robocze (bez pigulki Wspomnienia) - uzywane w hubie tworzenia (/utworz/robocze).
+  draftsOnly?: boolean;
 }
 
 type LatLng = { latitude?: number | null; longitude?: number | null };
@@ -36,7 +38,7 @@ function buildMiniMapUrl(pins: LatLng[]): string | null {
   return `${API_BASE}/api/static-map?size=120x120&scale=2&maptype=roadmap&${markers}&style=feature:poi%7Cvisibility:off&style=feature:transit%7Cvisibility:off`;
 }
 
-const JournalTab = ({ userId, city: cityFilter }: JournalTabProps) => {
+const JournalTab = ({ userId, city: cityFilter, draftsOnly = false }: JournalTabProps) => {
   const { t } = useTranslation("homeprofile");
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -483,36 +485,39 @@ const JournalTab = ({ userId, city: cityFilter }: JournalTabProps) => {
         <p className="text-sm text-muted-foreground mt-1 leading-relaxed max-w-[260px] mx-auto">{desc}</p>
       </div>
     );
-    // Pigulki: Robocze (aktywne/w toku) | Wspomnienia (minione) - jak toggle w zakladce Zapisane.
-    const shown = tripTab === "robocze" ? active : postcards;
+    // Pigulki: Robocze (aktywne/w toku) | Wspomnienia (minione). draftsOnly -> tylko robocze.
+    const effTab = draftsOnly ? "robocze" : tripTab;
+    const shown = effTab === "robocze" ? active : postcards;
     return (
       <div className="space-y-3 pb-2">
-        <div className="flex p-1 bg-secondary rounded-full">
-          {([
-            { id: "robocze", label: "Robocze" },
-            { id: "wspomnienia", label: "Wspomnienia" },
-          ] as { id: "robocze" | "wspomnienia"; label: string }[]).map((s) => (
-            <button
-              key={s.id}
-              onClick={() => setTripTab(s.id)}
-              className={cn(
-                "flex-1 h-9 rounded-full text-sm font-bold transition-colors active:scale-[0.98]",
-                tripTab === s.id ? "bg-background text-foreground shadow-sm" : "text-secondary-foreground/70",
-              )}
-            >
-              {s.label}
-            </button>
-          ))}
-        </div>
+        {!draftsOnly && (
+          <div className="flex p-1 bg-secondary rounded-full">
+            {([
+              { id: "robocze", label: "Robocze" },
+              { id: "wspomnienia", label: "Wspomnienia" },
+            ] as { id: "robocze" | "wspomnienia"; label: string }[]).map((s) => (
+              <button
+                key={s.id}
+                onClick={() => setTripTab(s.id)}
+                className={cn(
+                  "flex-1 h-9 rounded-full text-sm font-bold transition-colors active:scale-[0.98]",
+                  tripTab === s.id ? "bg-background text-foreground shadow-sm" : "text-secondary-foreground/70",
+                )}
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
+        )}
 
         {shown.length === 0 ? (
-          tripTab === "robocze"
+          effTab === "robocze"
             ? emptyBox("🧳", "Brak roboczych tras", "Trasy w toku - te które tworzysz i planujesz - pojawią się tutaj.")
             : emptyBox("📸", "Brak wspomnień", "Minione wyjazdy wylądują tutaj jako wspomnienia.")
         ) : (
           <div className="divide-y divide-border/50">
             {/* Klik w trasę = widok "Plan wyjazdu" (read/overview), NIE od razu edycja sugestii. */}
-            {shown.map((entry: any) => renderTripCard(entry, () => openEntry(entry), tripTab === "robocze"))}
+            {shown.map((entry: any) => renderTripCard(entry, () => openEntry(entry), effTab === "robocze"))}
           </div>
         )}
         {deleteModal}

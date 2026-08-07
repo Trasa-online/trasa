@@ -495,9 +495,15 @@ export default function ComposeWyjazd() {
       )}
 
       <div className="flex-1 min-h-0 overflow-y-auto pb-4">
+        {/* Hint: czym jest trasa i co tu zrobic */}
+        <div className="px-4 pt-4">
+          <p className="text-sm text-muted-foreground leading-snug">
+            {`Trasa to plan wyjazdu: miejsca w kolejności do odwiedzenia. Dodaj miejsca, nazwij trasę i ustaw datę - po zapisaniu zaprosisz znajomych i podzielisz się nią.`}
+          </p>
+        </div>
         {/* Kraj + miasto wybrane wczesniej drum-scrollem (/utworz) - tu bez selektora.
             Nazwa + data */}
-        <div className="px-4 pt-4 flex items-center gap-2">
+        <div className="px-4 pt-3 flex items-center gap-2">
           <input value={name} onChange={(e) => { setName(e.target.value); setNameDirty(true); }} placeholder={isEn ? "Your trip name" : "Twoja nazwa"}
             className="flex-1 min-w-0 rounded-2xl bg-secondary text-secondary-foreground border-0 px-4 py-3 text-base outline-none focus:ring-2 focus:ring-orange-500/40 placeholder:text-muted-foreground/60" />
           <button onClick={() => setDateSheet(true)}

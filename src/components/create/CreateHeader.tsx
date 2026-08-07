@@ -8,11 +8,13 @@ import { cn } from "@/lib/utils";
 //   Twórz   -> tryb tworzenia (forma trasy vs listy)  [onMode nawiguje z handoffem]
 //   Robocze -> twoje szkice tras vs list                [onMode = lokalny stan]
 //   Zapisane-> zapisane trasy vs listy                  [onMode = lokalny stan]
-export default function CreateHeader({ active, mode, onMode, onBack }: {
+export default function CreateHeader({ active, mode, onMode, onBack, showMode = true }: {
   active: "tworz" | "robocze" | "zapisane";
-  mode: "trasy" | "listy";
-  onMode: (m: "trasy" | "listy") => void;
+  mode?: "trasy" | "listy";
+  onMode?: (m: "trasy" | "listy") => void;
   onBack: () => void;
+  // Wiersz Trasy|Listy - ukryty na pickerze kraju/miasta (toggle dopiero na formie).
+  showMode?: boolean;
 }) {
   const navigate = useNavigate();
   const tabs = [
@@ -47,21 +49,23 @@ export default function CreateHeader({ active, mode, onMode, onBack }: {
           })}
         </div>
       </div>
-      {/* Trasy | Listy - pelna szerokosc, ta sama pozycja na kazdym widoku. */}
-      <div className="flex p-1 bg-secondary rounded-full">
-        {(["trasy", "listy"] as const).map((m) => (
-          <button
-            key={m}
-            onClick={() => onMode(m)}
-            className={cn(
-              "flex-1 h-9 rounded-full text-sm font-bold transition-colors active:scale-[0.98]",
-              mode === m ? "bg-background text-foreground shadow-sm" : "text-secondary-foreground/70",
-            )}
-          >
-            {m === "trasy" ? "Trasy" : "Listy"}
-          </button>
-        ))}
-      </div>
+      {/* Trasy | Listy - pelna szerokosc, ta sama pozycja na kazdym widoku (ukryte na pickerze). */}
+      {showMode && onMode && (
+        <div className="flex p-1 bg-secondary rounded-full">
+          {(["trasy", "listy"] as const).map((m) => (
+            <button
+              key={m}
+              onClick={() => onMode(m)}
+              className={cn(
+                "flex-1 h-9 rounded-full text-sm font-bold transition-colors active:scale-[0.98]",
+                mode === m ? "bg-background text-foreground shadow-sm" : "text-secondary-foreground/70",
+              )}
+            >
+              {m === "trasy" ? "Trasy" : "Listy"}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
