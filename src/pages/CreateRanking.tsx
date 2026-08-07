@@ -447,10 +447,10 @@ const CreateRanking = () => {
       {/* ══ KROK 1: miasto + wyszukiwarka (sticky) + propozycje + wybrane miejsca ══ */}
       {step === 1 && (
         <div className="flex-1 overflow-y-auto">
-          {/* Hint: czym jest lista i co tu zrobic */}
+          {/* Hint: jedno zdanie czym jest lista */}
           <div className="px-4 pt-4">
             <p className="text-sm text-muted-foreground leading-snug">
-              {`Lista to zbiór polecanych miejsc bez ustalonej kolejności - np. najlepsze kawiarnie w mieście. Dodaj miejsca, nazwij listę i opublikuj, żeby inni z niej korzystali.`}
+              {`Lista to zbiór Twoich ulubionych miejsc bez ustalonej kolejności - np. Twoje ukochane kawiarnie w mieście.`}
             </p>
           </div>
           {/* Kraj + miasto wybrane wczesniej drum-scrollem (/utworz) - tu bez selektora. */}

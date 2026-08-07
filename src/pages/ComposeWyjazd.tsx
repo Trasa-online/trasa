@@ -502,10 +502,10 @@ export default function ComposeWyjazd() {
       )}
 
       <div className="flex-1 min-h-0 overflow-y-auto pb-4">
-        {/* Hint: czym jest trasa i co tu zrobic */}
+        {/* Hint: jedno zdanie czym jest trasa */}
         <div className="px-4 pt-4">
           <p className="text-sm text-muted-foreground leading-snug">
-            {`Trasa to plan wyjazdu: miejsca w kolejności do odwiedzenia. Dodaj miejsca, nazwij trasę i ustaw datę - po zapisaniu zaprosisz znajomych i podzielisz się nią.`}
+            {`Trasa to Twój plan wyjazdu: miejsca w kolejności, które zostały odwiedzone.`}
           </p>
         </div>
         {/* Kraj + miasto wybrane wczesniej drum-scrollem (/utworz) - tu bez selektora.
