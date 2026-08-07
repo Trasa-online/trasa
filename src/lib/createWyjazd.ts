@@ -111,27 +111,61 @@ export async function updateWyjazdPlaces(
     console.error("[updateWyjazd] route update failed:", updErr.message);
     return null;
   }
+  // KRYTYCZNE: zachowaj ZDJECIA USEROW przez delete+reinsert. Piny trzymaja zdjecia w
+  // images / user_photo_urls / image_url / photo_url - to ZRODLO zdjec miejsc w eksploracji.
+  // Bez tego edycja trasy kasowala wszystkie zdjecia przypisane do miejsc (bug 2026-08).
+  // 1) Czytamy istniejace piny (zdjecia) PRZED delete. 2) Fallback: pin_photo_backup (trigger
+  //    kopiuje przy kazdym delete) - ratuje gdy live piny juz byly wyczyszczone.
+  const normKey = (s: string | null | undefined) => String(s ?? "").toLowerCase().trim();
+  const photoByKey = new Map<string, any>();
+  const rememberPhotos = (rowsIn: any[]) => {
+    for (const ep of rowsIn ?? []) {
+      const hasPhotos = (ep.images?.length) || (ep.user_photo_urls?.length) || ep.image_url || ep.photo_url;
+      if (!hasPhotos) continue;
+      if (ep.place_id) { if (!photoByKey.has(`id:${ep.place_id}`)) photoByKey.set(`id:${ep.place_id}`, ep); }
+      const nk = `nm:${normKey(ep.place_name)}`;
+      if (!photoByKey.has(nk)) photoByKey.set(nk, ep);
+    }
+  };
+  const { data: existingPins } = await (supabase as any)
+    .from("pins").select("place_id, place_name, images, user_photo_urls, image_url, photo_url, photo_cached_at")
+    .eq("route_id", routeId);
+  rememberPhotos(existingPins);
+  const { data: backupPins } = await (supabase as any)
+    .from("pin_photo_backup").select("place_id, place_name, images, user_photo_urls, image_url, photo_url")
+    .eq("route_id", routeId);
+  rememberPhotos(backupPins); // fallback (nie nadpisuje - live ma priorytet przez has-check)
+  const photosFor = (p: WyjazdPlaceInput) =>
+    (p.place_id && photoByKey.get(`id:${p.place_id}`)) || photoByKey.get(`nm:${normKey(p.place_name)}`) || null;
+
   // Podmiana pinow: usun stare, wstaw nowe w aktualnej kolejnosci.
-  // KRYTYCZNE: gdy delete zawiedzie (RLS/blad), NIE wstawiaj - inaczej piny sie DUBLUJA
-  // (stare zostaja + dochodza nowe). Lepiej przerwac niz mnozyc duplikaty.
+  // KRYTYCZNE: gdy delete zawiedzie (RLS/blad), NIE wstawiaj - inaczej piny sie DUBLUJA.
   const { error: delErr } = await (supabase as any).from("pins").delete().eq("route_id", routeId);
   if (delErr) {
     console.error("[updateWyjazd] pins delete failed (abort, zeby nie dublowac):", delErr.message);
     return null;
   }
-  const rows = places.map((p, idx) => ({
-    route_id: routeId,
-    place_name: p.place_name,
-    address: p.address ?? null,
-    description: p.description ?? null,
-    category: p.category || "other",
-    latitude: p.latitude ?? null,
-    longitude: p.longitude ?? null,
-    place_id: p.place_id ?? null,
-    suggested_time: null,
-    photo_url: p.photo_url ?? null,
-    pin_order: idx,
-  }));
+  const rows = places.map((p, idx) => {
+    const old = photosFor(p);
+    return {
+      route_id: routeId,
+      place_name: p.place_name,
+      address: p.address ?? null,
+      description: p.description ?? null,
+      category: p.category || "other",
+      latitude: p.latitude ?? null,
+      longitude: p.longitude ?? null,
+      place_id: p.place_id ?? null,
+      suggested_time: null,
+      pin_order: idx,
+      // Zdjecia usera zachowane z istniejacego pinu / backupu tego samego miejsca.
+      photo_url: p.photo_url ?? old?.photo_url ?? null,
+      images: old?.images ?? null,
+      user_photo_urls: old?.user_photo_urls ?? null,
+      image_url: old?.image_url ?? null,
+      photo_cached_at: old?.photo_cached_at ?? null,
+    };
+  });
   if (rows.length) {
     const { error: pinsErr } = await (supabase as any).from("pins").insert(rows);
     if (pinsErr) console.warn("[updateWyjazd] pins insert failed:", pinsErr.message);
