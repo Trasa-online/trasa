@@ -108,17 +108,31 @@ const CreateRanking = () => {
   // starych zachowujemy istniejacy motyw (bez UI zmiany), zeby nie kasowac danych.
   const [category, setCategory] = useState<string | null>(null);
   // Miasto + kraj (1:1 z widokiem trasy ComposeWyjazd - tripCountries).
-  const [city, setCity] = useState(params.get("city") || "Warszawa");
-  const [country, setCountry] = useState<string>(() => countryForCity(params.get("city") || "Warszawa"));
+  // KRYTYCZNE: miasto z handoffu Trasa->Lista przychodzi w location.state.city (drum-scroll),
+  // NIE w query param. Bez czytania state forma spadala do "Warszawa" i "Twoje zapisane miejsca"
+  // nie pasowaly do miasta wybranego przez usera (bug 2026-08).
+  const nav = (location.state ?? {}) as { city?: string | null; title?: string | null; places?: any[] };
+  const initCity = nav.city || params.get("city") || "Warszawa";
+  const [city, setCity] = useState(initCity);
+  const [country, setCountry] = useState<string>(() => countryForCity(initCity));
   const cities = citiesForCountry(country);
   const onCountryChange = (c: string) => { setCountry(c); setCity(citiesForCountry(c)[0]); };
   // Nazwa listy - generyczna domyslna (jak "Wyjazd do X" w trasie); titleDirty blokuje auto-update
   // po recznej edycji, a zmiana miasta aktualizuje domyslna nazwe.
   const defaultListName = (c: string) => `Lista miejsc - ${c}`;
-  const [title, setTitle] = useState(() => defaultListName(params.get("city") || "Warszawa"));
-  const [titleDirty, setTitleDirty] = useState(false);
+  const [title, setTitle] = useState(() => nav.title || defaultListName(initCity));
+  const [titleDirty, setTitleDirty] = useState(!!nav.title);
   useEffect(() => { if (!titleDirty) setTitle(defaultListName(city)); }, [city, titleDirty]);
-  const [items, setItems] = useState<RankingItem[]>([]);
+  // Prefill miejsc z handoffu Trasa->Lista (zachowanie wybranych miejsc przy przelaczeniu trybu).
+  const [items, setItems] = useState<RankingItem[]>(() =>
+    (nav.places ?? []).map((p: any, i: number) => ({
+      key: `handoff-${i}-${p.place_id ?? p.place_name}`,
+      place_name: p.place_name, category: p.category ?? null,
+      address: p.address ?? "", latitude: p.latitude ?? 0, longitude: p.longitude ?? 0,
+      photo_url: p.photo_url ?? null, place_id: p.place_id ?? null,
+      rating: p.rating ?? null, google_place_id: p.google_place_id ?? null, short_desc: "",
+    })),
+  );
   const [publishing, setPublishing] = useState(false);
   // Krok formularza po wyborze motywu: 1 = miasto + miejsca, 2 = notki + mapa + publikacja.
   const [step, setStep] = useState<1 | 2>(1);
@@ -641,7 +655,7 @@ const CreateRanking = () => {
                     <div className="shrink-0 w-1" />
                   </div>
                 ) : (
-                  <p className="text-sm text-muted-foreground leading-snug">{`Nie masz zapisanych miejsc w ${city}. Zapisz je w eksploracji (serduszko), a pojawią się tu do szybkiego dodania. Możesz też znaleźć miejsce wyszukiwarką powyżej.`}</p>
+                  <p className="text-sm text-muted-foreground leading-snug">{`Nie masz jeszcze zapisanych miejsc w mieście ${city}.`}</p>
                 )}
               </div>
             );

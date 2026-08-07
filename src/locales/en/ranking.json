@@ -42,7 +42,7 @@
     "move_down": "Move down",
     "remove": "Remove place",
     "add": "Add place",
-    "add_hint": "Search or pick from the suggestions below",
+    "add_hint": "Search or pick from your saved places below",
     "suggestions": "Suggestions in {{city}}"
   },
   "notes": {

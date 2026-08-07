@@ -461,8 +461,10 @@ export default function ComposeWyjazd() {
       }));
   }, [city]);
   const isSearching = search.trim().length >= 2;
-  const proposals = (isSearching ? results : savedForCity).filter((p) => !isAdded(p));
-  const showProposals = true; // sekcja zawsze widoczna (zapisane / wyniki / hint)
+  // Ujednolicony uklad z widokiem listy (CreateRanking): wyniki wyszukiwania POD wyszukiwarka,
+  // "Wybrane miejsca" (z kafelkiem "+") wyzej, "Twoje zapisane miejsca" POD spodem.
+  const searchProposals = results.filter((p) => !isAdded(p));
+  const savedProposals = savedForCity.filter((p) => !isAdded(p));
 
   return (
     <div className="flex flex-col h-[100dvh] bg-background max-w-lg mx-auto">
@@ -540,26 +542,22 @@ export default function ComposeWyjazd() {
           </div>
         </div>
 
-        {/* PROPOZYCJE - poziome karty. Podczas pisania = wyniki Google, na fokusie = baza. Tap -> wizytowka, "+" -> dodaj. */}
-        {showProposals && (
+        {/* WYNIKI WYSZUKIWANIA - poziome karty pod wyszukiwarka (tylko podczas pisania). Tap -> wizytowka, "+" -> dodaj. */}
+        {isSearching && (
           <div className="pt-4">
-            <p className="px-4 text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2.5">
-              {isSearching ? "Wyniki wyszukiwania" : "Twoje zapisane miejsca"}
-            </p>
-            {loading && isSearching ? (
+            <p className="px-4 text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2.5">Wyniki wyszukiwania</p>
+            {loading ? (
               <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
-            ) : searchBlocked && proposals.length === 0 ? (
+            ) : searchBlocked && searchProposals.length === 0 ? (
               <p className="px-4 text-sm text-muted-foreground pb-2 leading-relaxed">Wyszukiwarka miejsc jest chwilowo niedostępna. Spróbuj później.</p>
-            ) : proposals.length === 0 ? (
-              <p className="px-4 text-sm text-muted-foreground pb-2 leading-snug">
-                {isSearching ? "Brak wyników dla tej frazy." : `Nie masz zapisanych miejsc w ${city}. Zapisz je w eksploracji (serduszko), a pojawią się tu do szybkiego dodania. Możesz też znaleźć miejsce wyszukiwarką powyżej.`}
-              </p>
+            ) : searchProposals.length === 0 ? (
+              <p className="px-4 text-sm text-muted-foreground pb-2 leading-snug">Brak wyników dla tej frazy.</p>
             ) : (
               // Scroll owiniety w NIE-scrollowy div z px-4: padding na normalnym bloku dziala
               // niezawodnie w iOS WKWebView (w przeciwienstwie do padding na overflow-x kontenerze).
               <div className="px-4">
                 <div className="flex gap-3 overflow-x-auto scrollbar-none snap-x snap-mandatory pb-1">
-                  {proposals.slice(0, 15).map((p: any) => (
+                  {searchProposals.slice(0, 15).map((p: any) => (
                     <button key={p.id ?? p.key ?? p.place_name} onClick={() => openDetail(p)} className="shrink-0 w-[150px] snap-start text-left active:opacity-80 transition-opacity">
                       <div className="relative aspect-[4/3] rounded-2xl overflow-hidden bg-muted">
                         {p.photo_url ? (
@@ -599,10 +597,13 @@ export default function ComposeWyjazd() {
           </div>
 
           {items.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-border/60 bg-secondary/40 px-6 py-8 text-center">
-              <p className="text-sm font-semibold text-foreground">Brak miejsc</p>
-              <p className="text-xs text-muted-foreground mt-1">Dodaj miejsca z propozycji powyżej.</p>
-            </div>
+            /* Pusty stan = kafelek "Dodaj miejsce" (klik = fokus wyszukiwarki), ujednolicony z lista. */
+            <button type="button" onClick={() => searchRef.current?.focus()}
+              className="w-full rounded-2xl border-2 border-dashed border-border/70 bg-secondary/40 flex flex-col items-center justify-center gap-2 py-8 text-muted-foreground active:scale-[0.99] transition-transform">
+              <span className="h-11 w-11 rounded-full bg-secondary flex items-center justify-center"><Plus className="h-5 w-5 text-orange-600" /></span>
+              <span className="text-sm font-bold text-foreground">Dodaj miejsce</span>
+              <span className="text-[12px] text-center">Wyszukaj lub wybierz z zapisanych poniżej</span>
+            </button>
           ) : placeView === "detail" ? (
             <div className="flex gap-3 overflow-x-auto scrollbar-none snap-x snap-mandatory -mr-4 pr-4 pb-1">
               {items.map((it) => (
@@ -643,7 +644,45 @@ export default function ComposeWyjazd() {
               ))}
             </Reorder.Group>
           )}
+
+          {/* Kafelek "Dodaj miejsce" pod wybranymi (gdy sa juz miejsca) - klik = fokus wyszukiwarki. */}
+          {items.length > 0 && (
+            <button type="button" onClick={() => searchRef.current?.focus()}
+              className="mt-2.5 w-full rounded-2xl border-2 border-dashed border-border/70 bg-secondary/40 flex items-center justify-center gap-2 py-3.5 text-muted-foreground active:scale-[0.99] transition-transform">
+              <Plus className="h-4 w-4 text-orange-600" /><span className="text-sm font-bold text-foreground">Dodaj miejsce</span>
+            </button>
+          )}
         </div>
+
+        {/* TWOJE ZAPISANE MIEJSCA - szybka sciaga pod wybranymi (ukryte podczas szukania). Ujednolicone z lista. */}
+        {!isSearching && (
+          <div className="px-4 pt-5">
+            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2.5">Twoje zapisane miejsca</p>
+            {savedProposals.length === 0 ? (
+              <p className="text-sm text-muted-foreground leading-snug">{`Nie masz jeszcze zapisanych miejsc w mieście ${city}.`}</p>
+            ) : (
+              <div className="flex gap-3 overflow-x-auto scrollbar-none snap-x snap-mandatory -mr-4 pr-4 pb-1">
+                {savedProposals.slice(0, 15).map((p: any) => (
+                  <button key={p.id ?? p.key ?? p.place_name} onClick={() => openDetail(p)} className="shrink-0 w-[150px] snap-start text-left active:opacity-80 transition-opacity">
+                    <div className="relative aspect-[4/3] rounded-2xl overflow-hidden bg-muted">
+                      {p.photo_url ? (
+                        <img src={p.photo_url} alt={p.place_name} loading="lazy" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full bg-[#fcede3] flex items-center justify-center"><img src={categoryIconSrc(p.category)} alt="" className="w-1/5 max-w-[32px] opacity-90" draggable={false} /></div>
+                      )}
+                      <span role="button" tabIndex={0} onClick={(e) => { e.stopPropagation(); addPlace(p); }} aria-label="Dodaj miejsce"
+                        className="absolute top-2 right-2 h-8 w-8 rounded-full bg-primary text-white flex items-center justify-center shadow-md active:scale-90 transition-transform">
+                        <Plus className="h-5 w-5" strokeWidth={2.5} />
+                      </span>
+                    </div>
+                    <p className="mt-1.5 px-0.5 text-sm font-semibold leading-tight line-clamp-1">{p.place_name}</p>
+                    <p className="px-0.5 text-[11px] text-muted-foreground leading-tight line-clamp-1">{p.category ? subcategoryLabelLocalized(p.category) : (p.address || city)}</p>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* MAPA - statyczna z guzikiem rozwinięcia (interaktywna mapa z zoomem) */}
         {mapPins.length > 0 && staticMapUrl && (
