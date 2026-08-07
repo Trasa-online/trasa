@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams, useSearchParams, useLocation } from "react-router-dom";
 import { ArrowLeft, Search, Plus, X, Loader2, MapPin, ChevronRight, ChevronDown, ChevronUp, List, GalleryHorizontalEnd, Check } from "lucide-react";
@@ -248,6 +248,20 @@ const CreateRanking = () => {
     addItem({ place_id: r.id, place_name: r.place_name, category: r.category ?? null, address: r.address ?? null, latitude: r.latitude ?? null, longitude: r.longitude ?? null, rating: r.rating ?? null, google_place_id: null, photo_url: r.photo_url ?? null });
     setSuggestions((prev) => prev.filter((s) => s.id !== r.id));
   };
+
+  // "Twoje zapisane miejsca" (z eksploracji, per miasto) - szybka sciaga do dodania jednym tapem.
+  // Zastapily "Propozycje z bazy". id = place_id (do addItem) lub null (custom); key osobny.
+  const savedForCity = useMemo(() => {
+    const wanted = new Set(expandCity(city).map((c) => c.toLowerCase()));
+    return getHistoryByCity()
+      .filter((g) => wanted.has(g.city.toLowerCase()))
+      .flatMap((g) => g.places)
+      .map((p: any) => ({
+        key: p.place_id ?? p.place_name, id: p.place_id ?? null, place_name: p.place_name, category: p.category,
+        address: p.address ?? null, latitude: p.latitude ?? null, longitude: p.longitude ?? null,
+        rating: p.rating ?? null, photo_url: p.photo_url ?? null,
+      }));
+  }, [city]);
 
   // Dodaj miejsce spoza bazy (wynik Google text search). Dociagamy okladke/rating/place_id
   // przez proxy dopiero przy dodaniu (nie dla kazdego wyniku - min. kosztow Google).
@@ -606,25 +620,32 @@ const CreateRanking = () => {
             </div>
           </div>
 
-          {/* Propozycje w {miasto} - POD wybranymi miejscami (szybki podglad). Ukryte podczas szukania. */}
-          {search.trim().length < 2 && suggestions.filter((s) => !addedNames.has(s.place_name.toLowerCase())).length > 0 && (
-            <div className="px-4 pb-4">
-              <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide mb-2">{t("places.suggestions", { city })}</p>
-              <div className="flex gap-2.5 overflow-x-auto scrollbar-none snap-x snap-mandatory -mr-4 pr-4 pb-1">
-                {suggestions.filter((s) => !addedNames.has(s.place_name.toLowerCase())).map((s) => (
-                  <button key={s.id} onClick={() => addDbPlace(s)}
-                    className="shrink-0 w-[40%] snap-start rounded-2xl bg-secondary overflow-hidden text-left active:scale-[0.97] transition-transform">
-                    <div className="relative aspect-[4/3] bg-background">
-                      {s.photo_url ? <img src={s.photo_url} alt="" className="absolute inset-0 w-full h-full object-cover" loading="lazy" /> : <div className="absolute inset-0 flex items-center justify-center text-muted-foreground"><MapPin className="h-5 w-5" /></div>}
-                      <div className="absolute top-1.5 right-1.5 h-6 w-6 rounded-full bg-primary text-white flex items-center justify-center shadow-sm"><Plus className="h-3.5 w-3.5" /></div>
-                    </div>
-                    <p className="text-xs font-bold leading-tight truncate px-2 py-2">{s.place_name}</p>
-                  </button>
-                ))}
-                <div className="shrink-0 w-1" />
+          {/* "Twoje zapisane miejsca" - szybka sciaga (zamiast propozycji z bazy). Ukryte podczas szukania. */}
+          {search.trim().length < 2 && (() => {
+            const saved = savedForCity.filter((s) => !addedNames.has(s.place_name.toLowerCase()));
+            return (
+              <div className="px-4 pb-4">
+                <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide mb-2">Twoje zapisane miejsca</p>
+                {saved.length > 0 ? (
+                  <div className="flex gap-2.5 overflow-x-auto scrollbar-none snap-x snap-mandatory -mr-4 pr-4 pb-1">
+                    {saved.map((s) => (
+                      <button key={s.key} onClick={() => addDbPlace(s)}
+                        className="shrink-0 w-[40%] snap-start rounded-2xl bg-secondary overflow-hidden text-left active:scale-[0.97] transition-transform">
+                        <div className="relative aspect-[4/3] bg-background">
+                          {s.photo_url ? <img src={s.photo_url} alt="" className="absolute inset-0 w-full h-full object-cover" loading="lazy" /> : <div className="absolute inset-0 flex items-center justify-center text-muted-foreground"><MapPin className="h-5 w-5" /></div>}
+                          <div className="absolute top-1.5 right-1.5 h-6 w-6 rounded-full bg-primary text-white flex items-center justify-center shadow-sm"><Plus className="h-3.5 w-3.5" /></div>
+                        </div>
+                        <p className="text-xs font-bold leading-tight truncate px-2 py-2">{s.place_name}</p>
+                      </button>
+                    ))}
+                    <div className="shrink-0 w-1" />
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground leading-snug">{`Nie masz zapisanych miejsc w ${city}. Zapisz je w eksploracji (serduszko), a pojawią się tu do szybkiego dodania. Możesz też znaleźć miejsce wyszukiwarką powyżej.`}</p>
+                )}
               </div>
-            </div>
-          )}
+            );
+          })()}
         </div>
       )}
 

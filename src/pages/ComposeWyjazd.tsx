@@ -16,6 +16,7 @@ import { dateLocale } from "@/lib/dateLocale";
 import { ORIGIN_COUNTRIES } from "@/lib/locations";
 import { expandCity, cityGenitive } from "@/lib/cities";
 import { subcategoryLabelLocalized } from "@/lib/categories";
+import { getHistoryByCity } from "@/lib/exploreLikes";
 import { createWyjazdFromPlaces, updateWyjazdPlaces } from "@/lib/createWyjazd";
 import { haptics } from "@/hooks/useHaptics";
 import { API_BASE } from "@/lib/platform";
@@ -446,16 +447,22 @@ export default function ComposeWyjazd() {
     }
   };
 
-  // Propozycje: podczas pisania = wyniki Google, na fokusie = sugestie z bazy (bez dodanych).
+  // "Twoje zapisane miejsca" (z eksploracji, per miasto) - szybka sciaga do dodania jednym tapem.
+  // Zastapily "Propozycje z bazy". Podczas pisania pokazujemy wyniki wyszukiwania.
+  const savedForCity = useMemo(() => {
+    const wanted = new Set(expandCity(city).map((c) => c.toLowerCase()));
+    return getHistoryByCity()
+      .filter((g) => wanted.has(g.city.toLowerCase()))
+      .flatMap((g) => g.places)
+      .map((p: any) => ({
+        id: p.place_id ?? p.place_name, place_id: p.place_id ?? null, place_name: p.place_name,
+        category: p.category, latitude: p.latitude ?? null, longitude: p.longitude ?? null,
+        photo_url: p.photo_url ?? null, address: p.address ?? null, rating: p.rating ?? null,
+      }));
+  }, [city]);
   const isSearching = search.trim().length >= 2;
-  const proposals = (isSearching ? results : suggestions).filter((p) => !isAdded(p));
-  // Bazowe "Propozycje w {miasto}" (na fokusie) pokazujemy TYLKO dla miast z tresci (Warszawa +
-  // Trojmiasto). Dla innych miast/krajow blok propozycji znika (wyszukiwanie dziala wszedzie).
-  const SUGGESTION_CITIES = ["Warszawa", "Gdańsk", "Sopot", "Gdynia", "Trójmiasto"];
-  const suggestionsSupported = SUGGESTION_CITIES.includes(city);
-  // Propozycje z bazy miasta pokazujemy OD RAZU (nie tylko na fokusie) - ujednolicone z widokiem
-  // listy. Podczas pisania pokazujemy wyniki wyszukiwania.
-  const showProposals = isSearching || suggestionsSupported;
+  const proposals = (isSearching ? results : savedForCity).filter((p) => !isAdded(p));
+  const showProposals = true; // sekcja zawsze widoczna (zapisane / wyniki / hint)
 
   return (
     <div className="flex flex-col h-[100dvh] bg-background max-w-lg mx-auto">
@@ -537,14 +544,16 @@ export default function ComposeWyjazd() {
         {showProposals && (
           <div className="pt-4">
             <p className="px-4 text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2.5">
-              {search.trim().length >= 2 ? "Wyniki wyszukiwania" : `Propozycje w ${city}`}
+              {isSearching ? "Wyniki wyszukiwania" : "Twoje zapisane miejsca"}
             </p>
-            {loading && search.trim().length >= 2 ? (
+            {loading && isSearching ? (
               <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
             ) : searchBlocked && proposals.length === 0 ? (
-              <p className="px-4 text-sm text-muted-foreground pb-2 leading-relaxed">Wyszukiwarka miejsc jest chwilowo niedostępna. Wybierz z propozycji poniżej albo spróbuj później.</p>
+              <p className="px-4 text-sm text-muted-foreground pb-2 leading-relaxed">Wyszukiwarka miejsc jest chwilowo niedostępna. Spróbuj później.</p>
             ) : proposals.length === 0 ? (
-              <p className="px-4 text-sm text-muted-foreground pb-2">Brak wyników dla tej frazy.</p>
+              <p className="px-4 text-sm text-muted-foreground pb-2 leading-snug">
+                {isSearching ? "Brak wyników dla tej frazy." : `Nie masz zapisanych miejsc w ${city}. Zapisz je w eksploracji (serduszko), a pojawią się tu do szybkiego dodania. Możesz też znaleźć miejsce wyszukiwarką powyżej.`}
+              </p>
             ) : (
               // Scroll owiniety w NIE-scrollowy div z px-4: padding na normalnym bloku dziala
               // niezawodnie w iOS WKWebView (w przeciwienstwie do padding na overflow-x kontenerze).
