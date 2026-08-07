@@ -507,26 +507,8 @@ export default function ComposeWyjazd() {
           </button>
         </div>
 
-        {/* Zaproś znajomych (trasa grupowa) - przeniesione z naglowka do body. */}
-        <div className="px-4 pt-3 flex items-center gap-2">
-          <button
-            onClick={handleOpenInvite}
-            disabled={creating}
-            className="shrink-0 flex items-center gap-1.5 h-9 pl-2.5 pr-3.5 rounded-full bg-secondary text-secondary-foreground text-sm font-bold active:scale-95 transition-transform disabled:opacity-50"
-          >
-            <UserPlus className="h-4 w-4" /> Zaproś znajomych
-          </button>
-          {invited.length > 0 && (
-            <span className="flex items-center -space-x-2">
-              {invited.slice(0, 4).map((p) => (
-                <img key={p.id} src={avatarSrc(p.avatar_url)} alt="" className="h-7 w-7 rounded-full object-cover bg-orange-100 ring-2 ring-background" />
-              ))}
-              {invited.length > 4 && (
-                <span className="h-7 w-7 rounded-full bg-muted ring-2 ring-background flex items-center justify-center text-[10px] font-bold text-foreground">+{invited.length - 4}</span>
-              )}
-            </span>
-          )}
-        </div>
+        {/* Zapraszanie znajomych PRZENIESIONE na widok trasy po zapisaniu (ReviewSummary) -
+            pierwszy widok skupia usera na dodawaniu miejsc. */}
 
         {/* Wyszukiwarka */}
         <div className="px-4 pt-3">
