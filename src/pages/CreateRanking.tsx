@@ -1,12 +1,11 @@
 import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams, useSearchParams, useLocation } from "react-router-dom";
-import CreateModeToggle from "@/components/create/CreateModeToggle";
 import { ArrowLeft, Search, Plus, X, Loader2, MapPin, ChevronRight, ChevronDown, ChevronUp, List, GalleryHorizontalEnd, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
-import CreateTabs from "@/components/create/CreateTabs";
+import CreateHeader from "@/components/create/CreateHeader";
 import { expandCity, cityGenitive } from "@/lib/cities";
 import { TRIP_COUNTRIES, TRIP_REGIONS, citiesForCountry, countryForCity } from "@/lib/tripCountries";
 import { getHistoryByCity } from "@/lib/exploreLikes";
@@ -403,17 +402,12 @@ const CreateRanking = () => {
           Zapisane; wiersz 2 = toggle Trasa|Lista wysrodkowany (ta sama pozycja co w trasie).
           Krok 2 / edycja = prosty naglowek z tytulem. */}
       {step === 1 && !editId ? (
-        <div className="px-4 pt-safe-4 pb-3 border-b border-border/20 shrink-0 space-y-2.5">
-          <div className="flex items-center gap-2">
-            <button onClick={() => (window.history.length > 1 ? navigate(-1) : navigate("/eksploruj"))} aria-label={t("header.back")} className="h-9 w-9 flex items-center justify-center -ml-1 shrink-0 text-foreground active:scale-90 transition-transform">
-              <ArrowLeft className="h-5 w-5" />
-            </button>
-            <div className="flex-1"><CreateTabs active="tworz" /></div>
-          </div>
-          <div className="flex items-center justify-center min-h-9">
-            <CreateModeToggle
-              mode="lista"
-              getHandoff={() => ({
+        <CreateHeader
+          active="tworz"
+          mode="listy"
+          onMode={(m) => {
+            if (m === "trasy") navigate("/wyjazd/nowy", {
+              state: {
                 city,
                 title: titleDirty ? title : null,
                 places: items.map((i) => ({
@@ -421,10 +415,12 @@ const CreateRanking = () => {
                   latitude: i.latitude, longitude: i.longitude, photo_url: i.photo_url,
                   place_id: i.place_id, google_place_id: i.google_place_id,
                 })),
-              })}
-            />
-          </div>
-        </div>
+              },
+              replace: true,
+            });
+          }}
+          onBack={() => (window.history.length > 1 ? navigate(-1) : navigate("/eksploruj"))}
+        />
       ) : (
         <div className="flex items-center gap-2 px-4 pt-safe-4 pb-3 border-b border-border/20 shrink-0">
           <button onClick={() => (step === 2 ? setStep(1) : (window.history.length > 1 ? navigate(-1) : navigate("/eksploruj")))} aria-label={t("header.back")} className="h-9 w-9 flex items-center justify-center -ml-1 shrink-0 text-foreground">

@@ -1,8 +1,8 @@
 import { useRef, useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { ArrowLeft, ChevronDown } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
-import CreateTabs from "@/components/create/CreateTabs";
+import CreateHeader from "@/components/create/CreateHeader";
 import { TRIP_COUNTRIES, TRIP_REGIONS, citiesForCountry, countryForCity } from "@/lib/tripCountries";
 
 // Wybor kraju + miasta - PIERWSZY krok tworzenia (po "+"). Kraj = SELEKTOR (dropdown),
@@ -62,18 +62,15 @@ export default function CountryCityPicker() {
   // Zmiana kraju resetuje miasto na 1. (drum remountuje sie przez key={country}).
   useEffect(() => { setCyi(0); }, [country]);
   const city = cities[cyi] ?? cities[0];
+  // Tryb (Trasy|Listy) wybrany juz na pickerze - "Dalej" ląduje na wlasciwej formie.
+  const [mode, setMode] = useState<"trasy" | "listy">("trasy");
 
   const back = () => { if (window.history.length > 1) navigate(-1); else navigate("/eksploruj"); };
-  const next = () => navigate("/wyjazd/nowy", { state: { city }, replace: true });
+  const next = () => navigate(mode === "listy" ? "/zestawienie/nowe" : "/wyjazd/nowy", { state: { city }, replace: true });
 
   return (
     <div className="flex flex-col h-[100dvh] bg-background max-w-lg mx-auto">
-      <div className="flex items-center gap-2 px-4 pt-safe-4 pb-3 border-b border-border/20 shrink-0">
-        <button onClick={back} aria-label="Wróć" className="h-9 w-9 flex items-center justify-center -ml-1 shrink-0 text-foreground active:scale-90 transition-transform">
-          <ArrowLeft className="h-5 w-5" />
-        </button>
-        <div className="flex-1"><CreateTabs active="tworz" /></div>
-      </div>
+      <CreateHeader active="tworz" mode={mode} onMode={setMode} onBack={back} />
 
       {/* Kraj - SELEKTOR (dropdown), grupowany po regionie */}
       <div className="px-4 pt-4 shrink-0">
