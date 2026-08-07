@@ -476,6 +476,12 @@ const JournalTab = ({ userId, city: cityFilter, draftsOnly = false }: JournalTab
     navigate(`/review-summary?route=${entry.id}${edit ? "&edit=1" : ""}`);
   };
 
+  // Hub "Robocze" (draftsOnly): klik w robocza trase -> od razu widok TWORZENIA (ComposeWyjazd)
+  // z uzupelnionymi miejscami (draftId doladowuje piny), a NIE read-only "Plan wyjazdu".
+  const openDraftInCreator = (entry: any) => {
+    navigate("/wyjazd/nowy", { state: { draftId: entry.id, city: entry.city, title: entry.title } });
+  };
+
   // Tryb uproszczony: przycisk "Nowy wyjazd" + toggle Aktywne | Wspomnienia.
   if (PLANNING_DISABLED) {
     const emptyBox = (emoji: string, title: string, desc: string) => (
@@ -516,8 +522,9 @@ const JournalTab = ({ userId, city: cityFilter, draftsOnly = false }: JournalTab
             : emptyBox("📸", "Brak wspomnień", "Minione wyjazdy wylądują tutaj jako wspomnienia.")
         ) : (
           <div className="divide-y divide-border/50">
-            {/* Klik w trasę = widok "Plan wyjazdu" (read/overview), NIE od razu edycja sugestii. */}
-            {shown.map((entry: any) => renderTripCard(entry, () => openEntry(entry), effTab === "robocze"))}
+            {/* Hub "Robocze" (draftsOnly): klik -> widok tworzenia (ComposeWyjazd z miejscami).
+                Poza hubem: klik -> "Plan wyjazdu" (read/overview). */}
+            {shown.map((entry: any) => renderTripCard(entry, () => (draftsOnly ? openDraftInCreator(entry) : openEntry(entry)), effTab === "robocze"))}
           </div>
         )}
         {deleteModal}

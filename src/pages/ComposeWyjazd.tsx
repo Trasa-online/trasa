@@ -204,6 +204,40 @@ export default function ComposeWyjazd() {
 
   const clearSoft = () => { try { sessionStorage.removeItem(softKey); } catch { /* unavailable */ } };
 
+  // Doladowanie ROBOCZEJ trasy z DB gdy wchodzimy przez draftId BEZ przekazanych miejsc
+  // (klik w robocza trase w hubie "Robocze"). Prefill miasto + nazwa + miejsca z pinow, zeby
+  // user od razu byl na etapie tworzenia z uzupelnionymi miejscami. Guard: tylko gdy brak
+  // soft-save i brak nav.places (zeby nie nadpisac swiezej pracy usera po powrocie).
+  const draftLoadedRef = useRef(false);
+  useEffect(() => {
+    if (draftLoadedRef.current) return;
+    if (!draftId) return;
+    if ((soft?.items?.length ?? 0) > 0 || (nav.places?.length ?? 0) > 0) { draftLoadedRef.current = true; return; }
+    draftLoadedRef.current = true;
+    (async () => {
+      const { data: route } = await (supabase as any)
+        .from("routes").select("title, city, start_date, end_date").eq("id", draftId).maybeSingle();
+      if (route) {
+        if (route.city) { setCity(route.city); setCountry(countryForCity(route.city)); }
+        if (route.title) { setName(route.title); setNameDirty(true); }
+        if (route.start_date) {
+          const start = new Date(route.start_date);
+          const numDays = route.end_date ? Math.max(1, Math.round((+new Date(route.end_date) - +start) / 86400000) + 1) : 1;
+          setTripDate({ start, numDays });
+        }
+      }
+      const { data: pins } = await (supabase as any)
+        .from("pins").select("place_id, place_name, category, address, latitude, longitude, photo_url, pin_order")
+        .eq("route_id", draftId).order("pin_order", { ascending: true });
+      if (pins?.length) setItems(pins.map((p: any, idx: number) => toItem({
+        id: p.place_id ?? undefined, place_id: p.place_id ?? null, place_name: p.place_name,
+        category: p.category, address: p.address, latitude: p.latitude, longitude: p.longitude,
+        photo_url: p.photo_url, key: p.place_id ?? `${p.place_name}:${idx}`,
+      })));
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftId]);
+
   // Wyszukiwarka: propozycje z bazy (na fokusie), Google textsearch (podczas pisania).
   const searchRef = useRef<HTMLInputElement>(null);
   const [search, setSearch] = useState("");
