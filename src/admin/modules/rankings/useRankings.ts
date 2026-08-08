@@ -59,11 +59,11 @@ export function useModerateRanking() {
       if (error) throw error;
       // Powiadomienie autora (in-app przez trigger DB przy zmianie statusu + push). Best-effort.
       if (col.user_id) {
-        const title = col.title || "Twoje zestawienie";
+        const title = col.title || "Twoja lista";
         await sendClientPush(
           status === "approved"
-            ? { userId: col.user_id, title: "Zestawienie zaakceptowane 🎉", body: `„${title}" jest już widoczne dla innych`, url: "/eksploruj" }
-            : { userId: col.user_id, title: "Zestawienie odrzucone", body: note?.trim() ? `Powód: ${note.trim()}` : `„${title}" nie przeszło moderacji`, url: "/moj-profil" },
+            ? { userId: col.user_id, title: "Lista zaakceptowana 🎉", body: `„${title}" jest już widoczna dla innych`, url: "/eksploruj" }
+            : { userId: col.user_id, title: "Lista odrzucona", body: note?.trim() ? `Powód: ${note.trim()}` : `„${title}" nie przeszła moderacji`, url: "/moj-profil" },
         );
       }
     },

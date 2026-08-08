@@ -32,8 +32,8 @@ const TYPE_CONFIG: Record<string, { icon: React.ElementType; color: string; labe
   discovery_used: { icon: Bookmark,      color: "text-orange-600 bg-orange-100",  label: (u, meta) => `${u} skorzystał(a) z Twojego planu${meta?.city ? ` po ${meta.city}` : ""}` },
   group_invite:       { icon: Route,  color: "text-orange-600 bg-orange-100",  label: (u, meta) => `${u} dodał(a) Cię do wspólnej trasy${meta?.city ? ` po ${meta.city}` : ""}` },
   group_route_ready:  { icon: Route, color: "text-orange-600 bg-orange-100",  label: (u, meta) => `${u} stworzył(a) trasę${meta?.city ? ` w ${meta.city}` : ""} - sprawdź!` },
-  collection_approved: { icon: CheckCircle2, color: "text-emerald-500 bg-emerald-100", label: (_u, meta) => `Twoje zestawienie „${meta?.title ?? "kolekcja"}" zostało zaakceptowane 🎉` },
-  collection_rejected: { icon: XCircle,      color: "text-destructive bg-destructive/10", label: (_u, meta) => meta?.moderation_note ? `Zestawienie „${meta?.title ?? "kolekcja"}" odrzucone. Powód: ${meta.moderation_note}` : `Twoje zestawienie „${meta?.title ?? "kolekcja"}" zostało odrzucone` },
+  collection_approved: { icon: CheckCircle2, color: "text-emerald-500 bg-emerald-100", label: (_u, meta) => `Twoja lista „${meta?.title ?? "lista"}" została zaakceptowana 🎉` },
+  collection_rejected: { icon: XCircle,      color: "text-destructive bg-destructive/10", label: (_u, meta) => meta?.moderation_note ? `Lista „${meta?.title ?? "lista"}" odrzucona. Powód: ${meta.moderation_note}` : `Twoja lista „${meta?.title ?? "lista"}" została odrzucona` },
 };
 
 interface Props {
