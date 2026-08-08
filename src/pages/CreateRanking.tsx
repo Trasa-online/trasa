@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams, useSearchParams, useLocation } from "react-router-dom";
-import { ArrowLeft, Search, Plus, X, Loader2, ChevronRight, ChevronDown, ChevronUp, List, GalleryHorizontalEnd, Check, Image as ImageIcon } from "lucide-react";
+import { ArrowLeft, Search, Plus, X, Loader2, ChevronRight, ChevronDown, ChevronUp, List, GalleryHorizontalEnd, Image as ImageIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -157,6 +157,9 @@ const CreateRanking = () => {
   // Wyszukiwarka + propozycje miejsc (bez zargonu "baza/spoza bazy").
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [searchFocused, setSearchFocused] = useState(false);
+  // Fokus na polu NAZWY listy - chowa CTA i wylacza sticky wyszukiwarki (inaczej sticky
+  // search naježdža na pole nazwy gdy klawiatura przewija widok). Patrz krok 1.
+  const [titleFocused, setTitleFocused] = useState(false);
   const [search, setSearch] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
@@ -518,12 +521,14 @@ const CreateRanking = () => {
           {/* Nazwa listy (generyczna domyslna, edytowalna) */}
           <div className="px-4 pt-3">
             <input value={title} onChange={(e) => { setTitle(e.target.value); setTitleDirty(true); }} maxLength={80}
+              onFocus={() => setTitleFocused(true)} onBlur={() => setTitleFocused(false)}
               placeholder={t("name_placeholder", "Nazwa listy")}
               className="w-full rounded-2xl bg-secondary text-secondary-foreground border-0 px-4 py-3 text-base outline-none focus:ring-2 focus:ring-orange-500/40 placeholder:text-muted-foreground/50" />
           </div>
 
-          {/* Wyszukiwarka - STICKY na gorze (najwazniejsza) */}
-          <div className="sticky top-0 z-20 bg-background px-4 pt-3 pb-2">
+          {/* Wyszukiwarka - sticky na gorze, ale NIE podczas edycji nazwy (inaczej naježdža
+              na pole nazwy gdy klawiatura przewija widok). */}
+          <div className={`${titleFocused ? "" : "sticky top-0 z-20"} bg-background px-4 pt-3 pb-2`}>
             <div className="relative">
               <Search className="h-4 w-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2 z-10" />
               <input ref={searchInputRef} value={search} onChange={(e) => setSearch(e.target.value)}
@@ -785,22 +790,12 @@ const CreateRanking = () => {
             </div>
           )}
 
-          {/* Anonimowo - checkbox na koncu (domyslnie z profilem) */}
-          <button type="button" onClick={() => setAsAnon((v) => !v)} className="w-full flex items-start gap-3 rounded-2xl bg-secondary p-3.5 text-left active:scale-[0.99] transition-transform">
-            <span className={`h-5 w-5 rounded-md border-2 flex items-center justify-center shrink-0 mt-0.5 transition-colors ${asAnon ? "bg-primary border-orange-600" : "border-border bg-background"}`}>
-              {asAnon && <Check className="h-3.5 w-3.5 text-white" strokeWidth={3} />}
-            </span>
-            <span className="min-w-0">
-              <span className="text-sm font-bold block">{t("anon.label")}</span>
-              <span className="text-[11px] text-muted-foreground block mt-0.5">{asAnon ? t("anon.on") : t("anon.off")}</span>
-            </span>
-          </button>
         </div>
       )}
 
-      {/* CTA - Dalej (krok 1) / Opublikuj (krok 2). Ukryte gdy fokus na wyszukiwarce
-          (krok 1) - zeby nie zaslaniac wynikow nad klawiatura. */}
-      {!(step === 1 && searchFocused) && (
+      {/* CTA - Dalej (krok 1) / Zapisz (krok 2). Ukryte gdy fokus na wyszukiwarce LUB
+          na polu nazwy (krok 1) - zeby nie zaslaniac wynikow / pola nad klawiatura. */}
+      {!(step === 1 && (searchFocused || titleFocused)) && (
         <div className="shrink-0 px-4 pt-3 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] border-t border-border/20">
           {step === 1 ? (
             <button onClick={() => setStep(2)} disabled={!canGoNext}
@@ -810,7 +805,7 @@ const CreateRanking = () => {
           ) : (
             <button onClick={publish} disabled={!canPublish}
               className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-sm shadow-md shadow-orange-500/20 active:scale-[0.98] transition-transform disabled:opacity-50">
-              {publishing ? <Loader2 className="h-5 w-5 animate-spin mx-auto" /> : (editId ? t("cta.save") : t("cta.publish"))}
+              {publishing ? <Loader2 className="h-5 w-5 animate-spin mx-auto" /> : (editId ? t("cta.save") : t("cta.publish", "Zapisz moją listę"))}
             </button>
           )}
         </div>

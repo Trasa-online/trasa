@@ -354,8 +354,18 @@ const TravelerProfile = () => {
           </button>
         </div>
 
-        {/* Plany + Miasta (2 kolumny) + Statystyki (pelna szerokosc, pomaranczowa). */}
+        {/* Moje listy (gora, klikalne) -> Plany + Miasta (2 kol) -> Statystyki (pomaranczowa). */}
         <div className="space-y-3">
+          {/* Moje listy miejsc (polecajki) -> MyCollections. NA GORZE (wg prosby). */}
+          <StatCard
+            full
+            value={myListsCount}
+            title="Moje listy"
+            subtitle="Twoje polecajki miejsc"
+            icon={<ListChecks className="h-6 w-6" />}
+            className="bg-secondary text-secondary-foreground"
+            onClick={() => navigate("/eksploruj", { state: { myCollections: true } })}
+          />
           <div className="grid grid-cols-2 gap-3">
             <StatCard
               value={stats?.trips ?? 0}
@@ -373,16 +383,6 @@ const TravelerProfile = () => {
               className="bg-trasa-cream text-trasa-cream-ink"
             />
           </div>
-          {/* Moje listy miejsc (polecajki) -> MyCollections. */}
-          <StatCard
-            full
-            value={myListsCount}
-            title="Moje listy"
-            subtitle="Twoje polecajki miejsc"
-            icon={<ListChecks className="h-6 w-6" />}
-            className="bg-secondary text-secondary-foreground"
-            onClick={() => navigate("/eksploruj", { state: { myCollections: true } })}
-          />
           {/* Statystyki wykorzystania tras przez innych -> widok /statystyki. */}
           <StatCard
             full

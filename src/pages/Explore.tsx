@@ -579,44 +579,52 @@ export const MyCollections = () => {
           const title = col.title || t("collections.untitled");
           return (
             <div key={col.id} className="rounded-3xl bg-card border border-border/50 overflow-hidden shadow-sm">
-              {/* Okladka - duza (kafelek wiekszy, pkt 2). Tap = rozwin/zwin podglad (accordion). */}
-              <button
-                onClick={() => setExpanded(isOpen ? null : col.id)}
-                aria-expanded={isOpen}
-                className="relative block w-full aspect-[16/10] overflow-hidden bg-gradient-to-br from-amber-100 to-orange-200 active:opacity-95 transition-opacity"
-              >
-                <img src={col.cover ? (resolveStored(col.cover) ?? col.cover) : getRandomPinPlaceholder(col.id)} alt={title} className="absolute inset-0 w-full h-full object-cover" loading="lazy" />
-                <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-black/75" />
-                {/* Status (pending/rejected) - lewy gorny rog */}
-                {(col.moderation_status === "pending" || col.moderation_status === "rejected" || col.is_public === false) && (
-                  <div className="absolute top-3 left-3 flex flex-wrap gap-1.5">
-                    {col.moderation_status === "pending" && (
-                      <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-800 bg-amber-100 rounded-full px-2 py-0.5 shadow-sm">{t("collections.pending")}</span>
-                    )}
-                    {col.moderation_status === "rejected" && (
-                      <span className="inline-flex items-center gap-1 text-[10px] font-bold text-white bg-destructive rounded-full px-2 py-0.5 shadow-sm">{t("collections.rejected")}</span>
-                    )}
-                    {col.is_public === false && (
-                      <span className="inline-flex items-center gap-1 text-[10px] font-bold text-foreground bg-white/90 rounded-full px-2 py-0.5 shadow-sm">{t("collections.private")}</span>
-                    )}
+              {/* Kafelek poziomy - wzor 1:1 z zakladka Trasy (JournalTab): okladka 9:16 z eksploracji
+                  (list_cover_url) po lewej, tresc po prawej. Tap = rozwin/zwin podglad (accordion). */}
+              <div className="relative w-full flex gap-3.5 p-3">
+                <button
+                  onClick={() => setExpanded(isOpen ? null : col.id)}
+                  aria-expanded={isOpen}
+                  className="relative w-[104px] aspect-[9/16] shrink-0 rounded-2xl overflow-hidden bg-muted active:opacity-90 transition-opacity"
+                >
+                  <img src={col.cover ? (resolveStored(col.cover) ?? col.cover) : getRandomPinPlaceholder(col.id)} alt={title} className="w-full h-full object-cover" loading="lazy" />
+                </button>
+                <div className="flex-1 min-w-0 flex flex-col py-0.5">
+                  <div className="flex items-start gap-2">
+                    <button onClick={() => setExpanded(isOpen ? null : col.id)} className="flex-1 min-w-0 text-left">
+                      <p className="text-lg font-bold leading-tight line-clamp-2 text-foreground">{title}</p>
+                    </button>
+                    <button
+                      onClick={() => setConfirmDelete({ id: col.id, title })}
+                      aria-label={t("collections.delete_aria")}
+                      className="shrink-0 -mr-0.5 -mt-0.5 h-7 w-7 flex items-center justify-center rounded-full text-muted-foreground/50 active:text-destructive active:scale-90 transition-colors"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
                   </div>
-                )}
-                {/* Chevron rozwijania - prawy gorny rog */}
-                <span className={`absolute top-3 right-3 h-8 w-8 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center text-white transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}>
-                  <ChevronDown className="h-4 w-4" />
-                </span>
-                {/* Tytul + meta - dol okladki */}
-                <div className="absolute bottom-0 left-0 right-0 p-4 text-left">
-                  <p className="text-white text-lg font-black leading-tight line-clamp-2 [text-shadow:_0_1px_4px_rgb(0_0_0/55%)]">{title}</p>
-                  <p className="text-white/85 text-xs font-medium mt-1 [text-shadow:_0_1px_3px_rgb(0_0_0/55%)]">
-                    {[col.city, countLabel(col.count)].filter(Boolean).join(" · ")}
-                  </p>
+                  {/* Status moderacji - badge tekstowy pod tytulem */}
+                  {col.moderation_status === "pending" && (
+                    <span className="mt-1.5 inline-flex w-fit items-center text-[10px] font-bold text-amber-700 bg-amber-100 rounded-full px-2 py-0.5">{t("collections.pending")}</span>
+                  )}
+                  {col.moderation_status === "rejected" && (
+                    <span className="mt-1.5 inline-flex w-fit items-center text-[10px] font-bold text-destructive bg-destructive/10 rounded-full px-2 py-0.5">{t("collections.rejected")}</span>
+                  )}
+                  {col.is_public === false && (
+                    <span className="mt-1.5 inline-flex w-fit items-center text-[10px] font-bold text-muted-foreground bg-muted rounded-full px-2 py-0.5">{t("collections.private")}</span>
+                  )}
+                  {/* Dol: miasto + liczba (lewo) + chevron rozwijania (prawo) */}
+                  <button onClick={() => setExpanded(isOpen ? null : col.id)} className="mt-auto flex items-center justify-between gap-2 pt-2 text-left">
+                    <span className="text-sm text-muted-foreground truncate">{[col.city, countLabel(col.count)].filter(Boolean).join(" · ")}</span>
+                    <span className={`shrink-0 h-7 w-7 rounded-full bg-secondary flex items-center justify-center text-muted-foreground transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}>
+                      <ChevronDown className="h-4 w-4" />
+                    </span>
+                  </button>
                 </div>
-              </button>
+              </div>
 
               {/* Podglad listy (accordion) - miejsca w stylu widoku trasy (RoutePlaceRow, pkt 4) */}
               {isOpen && (
-                <div className="px-3 pt-3 space-y-2.5">
+                <div className="px-3 pt-1 pb-3 space-y-2.5 border-t border-border/40 mt-1">
                   {col.moderation_status === "rejected" && col.moderation_note && (
                     <p className="text-[11px] text-muted-foreground leading-snug whitespace-pre-wrap px-1">{t("collections.reason", { note: col.moderation_note })}</p>
                   )}
@@ -644,31 +652,23 @@ export const MyCollections = () => {
                       );
                     })
                   )}
-                  {/* Pelny widok listy (jak po kliknieciu w trase) */}
-                  <button
-                    onClick={() => navigate(`/lista/${col.id}`)}
-                    className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-2xl bg-secondary text-secondary-foreground text-sm font-bold active:scale-[0.98] transition-transform"
-                  >
-                    {t("collections.open_full", "Zobacz pełny widok listy")} <ChevronRight className="h-4 w-4" />
-                  </button>
+                  {/* Akcje: Edytuj + pelny widok listy (usuwanie = kosz na kafelku) */}
+                  <div className="flex flex-col gap-2 pt-1">
+                    <button
+                      onClick={() => navigate(`/zestawienie/${col.id}/edytuj`)}
+                      className="w-full flex items-center justify-center gap-2 py-2.5 rounded-2xl bg-secondary text-secondary-foreground text-sm font-bold active:scale-[0.98] transition-transform"
+                    >
+                      <Pencil className="h-4 w-4" /> {t("collections.edit", "Edytuj listę")}
+                    </button>
+                    <button
+                      onClick={() => navigate(`/lista/${col.id}`)}
+                      className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-2xl bg-secondary/60 text-secondary-foreground text-sm font-semibold active:scale-[0.98] transition-transform"
+                    >
+                      {t("collections.open_full", "Zobacz pełny widok listy")} <ChevronRight className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
               )}
-
-              {/* Guziki akcji - DWA POD SOBA (pkt 2): Edytuj / Usuń */}
-              <div className="p-3 flex flex-col gap-2">
-                <button
-                  onClick={() => navigate(`/zestawienie/${col.id}/edytuj`)}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-2xl bg-secondary text-secondary-foreground text-sm font-bold active:scale-[0.98] transition-transform"
-                >
-                  <Pencil className="h-4 w-4" /> {t("collections.edit", "Edytuj listę")}
-                </button>
-                <button
-                  onClick={() => setConfirmDelete({ id: col.id, title })}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-2xl bg-destructive/10 text-destructive text-sm font-bold active:scale-[0.98] transition-transform"
-                >
-                  <Trash2 className="h-4 w-4" /> {t("collections.delete_list", "Usuń listę")}
-                </button>
-              </div>
             </div>
           );
         })

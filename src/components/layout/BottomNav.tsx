@@ -336,7 +336,14 @@ const BottomNav = () => {
               Stary flow (web): otwiera menu wyboru (plan/zestawienie). */}
           <button
             data-ob="nav-fab"
-            onClick={() => { haptics.light(); PLANNING_DISABLED ? navigate("/utworz") : setShowMenu(!showMenu); }}
+            onClick={() => {
+              haptics.light();
+              if (!PLANNING_DISABLED) { setShowMenu(!showMenu); return; }
+              // Kontekst "Moje listy" (/eksploruj state.myCollections) -> "+" prowadzi wprost
+              // do tworzenia LISTY (mode:listy), nie trasy. Inne ekrany = tworzenie trasy.
+              const inLists = location.pathname === "/eksploruj" && (location.state as any)?.myCollections === true;
+              navigate("/utworz", inLists ? { state: { mode: "listy" } } : undefined);
+            }}
             className="flex items-center justify-center"
             aria-label={t("fab_aria")}
           >
