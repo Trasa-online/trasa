@@ -2,9 +2,12 @@ import { useMemo, useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useLocation } from "react-router-dom";
 import { PullToRefresh } from "@/components/PullToRefresh";
-import { MapPin, Heart, Trash2, ArrowRight, ArrowLeft, Pencil, ListChecks, ChevronDown, Check, Search, X, Layers, Compass, Bookmark } from "lucide-react";
+import { MapPin, Heart, Trash2, ArrowRight, ArrowLeft, Pencil, ListChecks, ChevronDown, ChevronRight, Check, Search, X, Layers, Compass, Bookmark, Plus } from "lucide-react";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import { fetchEnrichedPlace, type MockPlace } from "@/components/plan-wizard/PlaceSwiper";
+import { RoutePlaceRow } from "@/components/route/RoutePlaceRow";
+import { resolveStored } from "@/components/PlacePhoto";
+import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { parseISO, isValid, format, isToday, isYesterday } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
 import DiscoveryFeed from "@/components/home/DiscoveryFeed";
@@ -476,6 +479,10 @@ export const MyCollections = () => {
   // Potwierdzenie usuniecia zestawienia (nieodwracalne -> walidacja "czy na pewno?").
   const [confirmDelete, setConfirmDelete] = useState<{ id: string; title: string } | null>(null);
   const [deleting, setDeleting] = useState(false);
+  // Accordion: ktora lista jest rozwinieta (podglad miejsc). Null = wszystkie zwiniete.
+  const [expanded, setExpanded] = useState<string | null>(null);
+  // Wizytowka miejsca z podgladu (tap w wiersz) - jak w SharedList.
+  const [detailPin, setDetailPin] = useState<{ place: MockPlace; city: string | null; skip: boolean } | null>(null);
 
   const handleDelete = async () => {
     if (!confirmDelete || !user) return;
@@ -500,28 +507,59 @@ export const MyCollections = () => {
     queryFn: async () => {
       const { data: cols } = await (supabase as any)
         .from("discovery_collections")
-        .select("id, title, city, description, is_public, moderation_status, moderation_note")
+        .select("id, title, city, description, is_public, moderation_status, moderation_note, cover_url, list_cover_url")
         .eq("user_id", user!.id)
         .eq("kind", "ranking")
         .order("updated_at", { ascending: false });
       if (!cols?.length) return [] as any[];
       const ids = cols.map((c: any) => c.id);
+      // Pelne itemy do podgladu (accordion w stylu widoku trasy - RoutePlaceRow).
       const { data: items } = await (supabase as any)
         .from("discovery_items")
-        .select("collection_id, photo_url")
-        .in("collection_id", ids);
+        .select("id, collection_id, place_id, place_name, category, address, latitude, longitude, rating, google_place_id, photo_url, short_desc, order_index")
+        .in("collection_id", ids)
+        .order("order_index", { ascending: true });
       return cols.map((c: any) => {
         const own = (items ?? []).filter((i: any) => i.collection_id === c.id);
-        return { ...c, count: own.length, cover: own.find((i: any) => i.photo_url)?.photo_url ?? null };
+        // Miniatura kafelka = miniatura eksploracji (list_cover_url) -> okladka listy (cover_url)
+        // -> zdjecie pierwszego miejsca.
+        const cover = c.list_cover_url ?? c.cover_url ?? own.find((i: any) => i.photo_url)?.photo_url ?? null;
+        return { ...c, items: own, count: own.length, cover };
       });
     },
   });
 
+  const openPlace = (pin: any, city: string | null) => setDetailPin({
+    skip: !pin.place_id,
+    city,
+    place: {
+      id: pin.place_id ?? pin.google_place_id ?? pin.place_name,
+      place_name: pin.place_name, category: (pin.category || "other") as any,
+      city: city ?? "", address: pin.address ?? "", latitude: pin.latitude ?? 0, longitude: pin.longitude ?? 0,
+      rating: pin.rating ?? 0, photo_url: resolveStored(pin.photo_url) ?? "", vibe_tags: [], description: pin.short_desc || "",
+    } as MockPlace,
+  });
+  const openGoogle = (pin: any, city: string | null) => {
+    const q = encodeURIComponent([pin.place_name, pin.address, city].filter(Boolean).join(", "));
+    const pid = typeof pin.google_place_id === "string" && pin.google_place_id.trim() ? `&query_place_id=${encodeURIComponent(pin.google_place_id.trim())}` : "";
+    window.open(`https://www.google.com/maps/search/?api=1&query=${q}${pid}`, "_blank", "noopener,noreferrer");
+  };
+
+  const countLabel = (n: number) => `${n} ${n === 1 ? t("collections.place_one") : n < 5 ? t("collections.place_few") : t("collections.place_many")}`;
+
   return (
     <div className="space-y-3">
+      {/* Osobny guzik "Nowa lista" (pkt 3) - zawsze na gorze, prowadzi przez wybor miasta (drum). */}
+      <button
+        onClick={() => { trackCollectionCreate("my_collections_header"); navigate("/utworz", { state: { mode: "listy" } }); }}
+        className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-primary text-white text-sm font-bold active:scale-[0.98] transition-transform shadow-md shadow-orange-500/20"
+      >
+        <Plus className="h-4 w-4" strokeWidth={2.5} /> {t("collections.create_new", "Nowa lista miejsc")}
+      </button>
+
       {isLoading ? (
         <div className="space-y-3">
-          {[0, 1, 2].map((i) => <div key={i} className="h-20 rounded-3xl bg-muted/40 animate-pulse" />)}
+          {[0, 1, 2].map((i) => <div key={i} className="h-56 rounded-3xl bg-muted/40 animate-pulse" />)}
         </div>
       ) : collections.length === 0 ? (
         <div className="rounded-3xl border border-dashed border-border/60 bg-orange-50/40 flex flex-col items-center text-center gap-3 px-6 py-10">
@@ -534,72 +572,115 @@ export const MyCollections = () => {
               {t("collections.empty_desc")}
             </p>
           </div>
-          <button
-            onClick={() => { trackCollectionCreate("my_collections_empty"); navigate("/zestawienie/nowe"); }}
-            className="mt-1 px-5 py-3 rounded-full bg-primary text-white text-sm font-bold active:scale-[0.97] transition-transform shadow-md shadow-orange-500/20"
-          >
-            {t("collections.create")}
-          </button>
         </div>
       ) : (
-        collections.map((col: any) => (
-          <div
-            key={col.id}
-            className="w-full flex items-center gap-3 rounded-3xl bg-card border border-border/50 p-3"
-          >
-            <button
-              onClick={() => navigate(`/zestawienie/${col.id}/edytuj`)}
-              className="flex items-center gap-3 flex-1 min-w-0 text-left active:opacity-80 transition-opacity"
-            >
-              {col.cover ? (
-                <img src={col.cover} alt={col.title} className="h-16 w-16 rounded-2xl object-cover shrink-0" loading="lazy" />
-              ) : (
-                <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-amber-100 to-orange-200 flex items-center justify-center shrink-0">
-                  <ListChecks className="h-6 w-6 text-orange-600" />
-                </div>
-              )}
-              <div className="flex-1 min-w-0">
-                <p className="font-bold text-sm leading-tight truncate">{col.title || t("collections.untitled")}</p>
-                <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                  {[col.city, `${col.count} ${col.count === 1 ? t("collections.place_one") : col.count < 5 ? t("collections.place_few") : t("collections.place_many")}`].filter(Boolean).join(" · ")}
-                  {col.is_public === false ? ` · ${t("collections.private")}` : ""}
-                </p>
-                {col.moderation_status === "pending" && (
-                  <span className="inline-flex items-center gap-1 mt-1 text-[10px] font-bold text-amber-700 bg-amber-100 rounded-full px-2 py-0.5">
-                    ⏳ {t("collections.pending")}
-                  </span>
-                )}
-                {col.moderation_status === "rejected" && (
-                  <div className="mt-1">
-                    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-destructive bg-destructive/10 rounded-full px-2 py-0.5">
-                      {t("collections.rejected")}
-                    </span>
-                    {col.moderation_note && (
-                      <p className="text-[11px] text-muted-foreground mt-1 leading-snug whitespace-pre-wrap">{t("collections.reason", { note: col.moderation_note })}</p>
+        collections.map((col: any) => {
+          const isOpen = expanded === col.id;
+          const title = col.title || t("collections.untitled");
+          return (
+            <div key={col.id} className="rounded-3xl bg-card border border-border/50 overflow-hidden shadow-sm">
+              {/* Okladka - duza (kafelek wiekszy, pkt 2). Tap = rozwin/zwin podglad (accordion). */}
+              <button
+                onClick={() => setExpanded(isOpen ? null : col.id)}
+                aria-expanded={isOpen}
+                className="relative block w-full aspect-[16/10] overflow-hidden bg-gradient-to-br from-amber-100 to-orange-200 active:opacity-95 transition-opacity"
+              >
+                <img src={col.cover ? (resolveStored(col.cover) ?? col.cover) : getRandomPinPlaceholder(col.id)} alt={title} className="absolute inset-0 w-full h-full object-cover" loading="lazy" />
+                <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-black/75" />
+                {/* Status (pending/rejected) - lewy gorny rog */}
+                {(col.moderation_status === "pending" || col.moderation_status === "rejected" || col.is_public === false) && (
+                  <div className="absolute top-3 left-3 flex flex-wrap gap-1.5">
+                    {col.moderation_status === "pending" && (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-800 bg-amber-100 rounded-full px-2 py-0.5 shadow-sm">{t("collections.pending")}</span>
+                    )}
+                    {col.moderation_status === "rejected" && (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-bold text-white bg-destructive rounded-full px-2 py-0.5 shadow-sm">{t("collections.rejected")}</span>
+                    )}
+                    {col.is_public === false && (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-bold text-foreground bg-white/90 rounded-full px-2 py-0.5 shadow-sm">{t("collections.private")}</span>
                     )}
                   </div>
                 )}
+                {/* Chevron rozwijania - prawy gorny rog */}
+                <span className={`absolute top-3 right-3 h-8 w-8 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center text-white transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}>
+                  <ChevronDown className="h-4 w-4" />
+                </span>
+                {/* Tytul + meta - dol okladki */}
+                <div className="absolute bottom-0 left-0 right-0 p-4 text-left">
+                  <p className="text-white text-lg font-black leading-tight line-clamp-2 [text-shadow:_0_1px_4px_rgb(0_0_0/55%)]">{title}</p>
+                  <p className="text-white/85 text-xs font-medium mt-1 [text-shadow:_0_1px_3px_rgb(0_0_0/55%)]">
+                    {[col.city, countLabel(col.count)].filter(Boolean).join(" · ")}
+                  </p>
+                </div>
+              </button>
+
+              {/* Podglad listy (accordion) - miejsca w stylu widoku trasy (RoutePlaceRow, pkt 4) */}
+              {isOpen && (
+                <div className="px-3 pt-3 space-y-2.5">
+                  {col.moderation_status === "rejected" && col.moderation_note && (
+                    <p className="text-[11px] text-muted-foreground leading-snug whitespace-pre-wrap px-1">{t("collections.reason", { note: col.moderation_note })}</p>
+                  )}
+                  {col.items.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-4">{t("collections.empty_list", "Ta lista nie ma jeszcze miejsc.")}</p>
+                  ) : (
+                    col.items.map((pin: any, i: number) => {
+                      const noteText = (pin.short_desc ?? "").trim();
+                      const note = noteText ? (
+                        <div>
+                          <p className="text-sm font-semibold text-foreground">{t("collections.author_note", "Notka autora")}</p>
+                          <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap mt-0.5">{noteText}</p>
+                        </div>
+                      ) : undefined;
+                      return (
+                        <RoutePlaceRow
+                          key={pin.id}
+                          pin={pin}
+                          index={i}
+                          categoryLabel={pin.category ? subcategoryLabelLocalized(pin.category) : t("collections.place_generic", "Miejsce")}
+                          onOpen={() => openPlace(pin, col.city)}
+                          onGoogle={() => openGoogle(pin, col.city)}
+                          note={note}
+                        />
+                      );
+                    })
+                  )}
+                  {/* Pelny widok listy (jak po kliknieciu w trase) */}
+                  <button
+                    onClick={() => navigate(`/lista/${col.id}`)}
+                    className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-2xl bg-secondary text-secondary-foreground text-sm font-bold active:scale-[0.98] transition-transform"
+                  >
+                    {t("collections.open_full", "Zobacz pełny widok listy")} <ChevronRight className="h-4 w-4" />
+                  </button>
+                </div>
+              )}
+
+              {/* Guziki akcji - DWA POD SOBA (pkt 2): Edytuj / Usuń */}
+              <div className="p-3 flex flex-col gap-2">
+                <button
+                  onClick={() => navigate(`/zestawienie/${col.id}/edytuj`)}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-2xl bg-secondary text-secondary-foreground text-sm font-bold active:scale-[0.98] transition-transform"
+                >
+                  <Pencil className="h-4 w-4" /> {t("collections.edit", "Edytuj listę")}
+                </button>
+                <button
+                  onClick={() => setConfirmDelete({ id: col.id, title })}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-2xl bg-destructive/10 text-destructive text-sm font-bold active:scale-[0.98] transition-transform"
+                >
+                  <Trash2 className="h-4 w-4" /> {t("collections.delete_list", "Usuń listę")}
+                </button>
               </div>
-            </button>
-            <div className="flex items-center gap-0.5 shrink-0">
-              <button
-                onClick={() => navigate(`/zestawienie/${col.id}/edytuj`)}
-                aria-label={t("collections.edit_aria")}
-                className="h-9 w-9 flex items-center justify-center rounded-full text-muted-foreground/60 active:bg-muted transition-colors"
-              >
-                <Pencil className="h-4 w-4" />
-              </button>
-              <button
-                onClick={() => setConfirmDelete({ id: col.id, title: col.title || t("collections.untitled") })}
-                aria-label={t("collections.delete_aria")}
-                className="h-9 w-9 flex items-center justify-center rounded-full text-destructive active:bg-destructive/10 transition-colors"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
             </div>
-          </div>
-        ))
+          );
+        })
       )}
+
+      <PlaceSwiperDetail
+        open={!!detailPin}
+        onOpenChange={(o) => { if (!o) setDetailPin(null); }}
+        place={detailPin?.place ?? null}
+        city={detailPin?.city ?? ""}
+        skipGoogleFetch={detailPin?.skip ?? false}
+      />
 
       {/* Potwierdzenie usuniecia (nieodwracalne) */}
       {confirmDelete && (

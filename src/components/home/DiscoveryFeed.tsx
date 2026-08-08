@@ -62,6 +62,8 @@ export type DiscoveryCollection = {
   saves_count?: number | null;
   plan_adds_count?: number | null;
   gallery_urls?: string[] | null;     // zdjecia wgrane przez autora (galeria zestawienia)
+  cover_url?: string | null;          // okladka listy (hero w /lista/:id) - reczny wybor autora
+  list_cover_url?: string | null;     // miniatura na karcie w eksploracji (feed)
 };
 
 type PolecaneRoute = {
@@ -280,9 +282,9 @@ export function CollectionDetail({ col, onClose, onAdopt }: { col: DiscoveryColl
     .map((i, idx) => ({ latitude: i.latitude, longitude: i.longitude, place_name: i.place_name, pin_order: idx }))
     .filter((i) => i.latitude && i.longitude);
 
-  // Okladka hero (pierwsze zdjecie) + mini mapka Google (statyczna) na hero.
+  // Okladka hero = reczny cover_url autora; fallback do zdjecia pierwszego miejsca. + mini mapka.
   const coverItem = col.items.find((i) => i.photo_url) ?? col.items[0];
-  const coverUrl = resolveStored(coverItem?.photo_url);
+  const coverUrl = resolveStored(col.cover_url) ?? resolveStored(coverItem?.photo_url);
   const heroMap = buildMiniMapUrl(col.items);
 
   // "Uzyj tej trasy" - przejmij miejsca zestawienia do nowej trasy (swiper -> Dopasowania).
@@ -670,7 +672,7 @@ function MotywyRow({
       <div className="flex gap-3 overflow-x-auto scrollbar-none snap-x snap-mandatory px-1 pb-1">
         {collections.map((col, idx) => {
           const photoItem = col.items.find((i) => i.photo_url) ?? col.items[0];
-          const photoUrl = resolveStored(photoItem?.photo_url);
+          const photoUrl = resolveStored(col.list_cover_url) ?? resolveStored(photoItem?.photo_url);
           const gradient = PLACEHOLDER_GRADIENTS[idx % PLACEHOLDER_GRADIENTS.length];
           return (
             <button
@@ -740,7 +742,7 @@ function UserPolecajkiRow({
       <div className="flex gap-3 overflow-x-auto scrollbar-none snap-x snap-mandatory pb-1 -mr-4">
         {filtered.map((col, idx) => {
           const photoItem = col.items.find((i) => i.photo_url) ?? col.items[0];
-          const photoUrl = resolveStored(photoItem?.photo_url);
+          const photoUrl = resolveStored(col.list_cover_url) ?? resolveStored(photoItem?.photo_url);
           const gradient = PLACEHOLDER_GRADIENTS[idx % PLACEHOLDER_GRADIENTS.length];
           const placesCount = col.items.length;
           const isLocal = !!col.author_home_city && !!col.city && col.author_home_city.trim().toLowerCase() === col.city.trim().toLowerCase();
@@ -1149,7 +1151,7 @@ function CollectionBigCard({ col, onOpen }: { col: DiscoveryCollection; onOpen: 
   return (
     <BigCard
       id={col.id}
-      photo={resolveStored(photoItem?.photo_url) ?? null}
+      photo={resolveStored(col.list_cover_url) ?? resolveStored(photoItem?.photo_url) ?? null}
       city={col.city}
       avgRating={avgRatingOf(col.items.map((i) => i.rating))}
       placeCount={col.items.length}
@@ -1485,7 +1487,7 @@ export function SavedRoutes({ city }: { city?: string }) {
 // Tap otwiera pelna wizytowke zestawienia (CollectionDetail).
 function SavedCollectionCard({ col, savedAt, onOpen, onDelete }: { col: DiscoveryCollection; savedAt?: string | null; onOpen: (c: DiscoveryCollection) => void; onDelete: () => void }) {
   const coverItem = col.items?.find((i) => i.photo_url);
-  const cover = coverItem?.photo_url ? resolveStored(coverItem.photo_url) : (col.gallery_urls?.[0] ? resolveStored(col.gallery_urls[0]) : null);
+  const cover = resolveStored(col.list_cover_url) ?? (coverItem?.photo_url ? resolveStored(coverItem.photo_url) : (col.gallery_urls?.[0] ? resolveStored(col.gallery_urls[0]) : null));
   const count = col.items?.length ?? 0;
   const countLabel = count === 1 ? "miejsce" : count < 5 ? "miejsca" : "miejsc";
   const d = savedAt ? parseISODate(savedAt) : null;
@@ -1544,7 +1546,7 @@ export function SavedCollections() {
     enabled: savedIds.length > 0,
     queryFn: async () => {
       const { data: cols } = await (supabase as any).from("discovery_collections")
-        .select("id, title, city, description, category, author_name, author_avatar, user_id, views_count, saves_count, plan_adds_count")
+        .select("id, title, city, description, category, author_name, author_avatar, user_id, views_count, saves_count, plan_adds_count, cover_url, list_cover_url")
         .in("id", savedIds);
       // Zachowaj kolejnosc zapisu (ostatnio zapisane na gorze).
       const byId = new Map((cols ?? []).map((c: any) => [c.id, c]));
@@ -1992,7 +1994,7 @@ export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityCh
     queryFn: async () => {
       const { data: cols, error } = await (supabase as any)
         .from("discovery_collections")
-        .select("id, title, city, description, category, author_name, author_avatar, user_id, views_count, saves_count, plan_adds_count")
+        .select("id, title, city, description, category, author_name, author_avatar, user_id, views_count, saves_count, plan_adds_count, cover_url, list_cover_url")
         .eq("is_public", true)
         .eq("kind", "ranking")
         .eq("hidden_by_admin", false)
@@ -2063,7 +2065,7 @@ export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityCh
       let collections: DiscoveryCollection[] = [];
       if (!categoryFilter.length) {
         let colQ = (supabase as any).from("discovery_collections")
-          .select("id, title, city, description, category, author_name, author_avatar, user_id, views_count, saves_count, plan_adds_count")
+          .select("id, title, city, description, category, author_name, author_avatar, user_id, views_count, saves_count, plan_adds_count, cover_url, list_cover_url")
           .eq("is_public", true).eq("kind", "ranking").eq("hidden_by_admin", false).eq("moderation_status", "approved");
         if (q) colQ = colQ.or(`title.ilike.${like},author_name.ilike.${like}`);
         if (themeFilter.length) colQ = colQ.in("category", themeFilter);

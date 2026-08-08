@@ -71,8 +71,10 @@ export default function CountryCityPicker() {
   const city = cities[cyi] ?? cities[0];
 
   const back = () => { if (window.history.length > 1) navigate(-1); else navigate("/eksploruj"); };
-  // Toggle Trasy|Listy dopiero na formie - picker zawsze prowadzi na forme trasy (default).
-  const next = () => navigate("/wyjazd/nowy", { state: { city }, replace: true });
+  // Tryb docelowy: domyslnie trasa (toggle Trasy|Listy na formie). Gdy wejscie z guzika
+  // "Nowa lista" (profil) -> state.mode="listy" -> picker prowadzi wprost na forme listy.
+  const mode = (location.state as any)?.mode === "listy" ? "listy" : "trasy";
+  const next = () => navigate(mode === "listy" ? "/zestawienie/nowe" : "/wyjazd/nowy", { state: { city }, replace: true });
 
   return (
     <div className="flex flex-col h-[100dvh] bg-background max-w-lg mx-auto">

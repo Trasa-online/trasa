@@ -1,10 +1,14 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams, useSearchParams, useLocation } from "react-router-dom";
-import { ArrowLeft, Search, Plus, X, Loader2, MapPin, ChevronRight, ChevronDown, ChevronUp, List, GalleryHorizontalEnd, Check } from "lucide-react";
+import { ArrowLeft, Search, Plus, X, Loader2, MapPin, ChevronRight, ChevronDown, ChevronUp, List, GalleryHorizontalEnd, Check, Image as ImageIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+import { isNative } from "@/lib/platform";
+import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
+import { uploadCoverImage, pickNativeCoverFiles } from "@/lib/coverUpload";
+import CoverPickerSheet, { type CoverOption } from "@/components/create/CoverPickerSheet";
 import CreateHeader from "@/components/create/CreateHeader";
 import { expandCity, cityGenitive } from "@/lib/cities";
 import { TRIP_COUNTRIES, TRIP_REGIONS, citiesForCountry, countryForCity } from "@/lib/tripCountries";
@@ -140,6 +144,14 @@ const CreateRanking = () => {
   const [description, setDescription] = useState("");
   // Tozsamosc autora: domyslnie z profilem; checkbox "anonimowo" na koncu (krok 2).
   const [asAnon, setAsAnon] = useState(false);
+  // Okladki listy (1:1 z modelem tras): cover_url = hero na /lista/:id, list_cover_url =
+  // miniatura na karcie w eksploracji. NULL = fallback do zdjecia pierwszego miejsca.
+  const [coverUrl, setCoverUrl] = useState<string | null>(null);
+  const [listCoverUrl, setListCoverUrl] = useState<string | null>(null);
+  // Ktory picker otwarty: hero (cover) | miniatura (list) | zamkniety.
+  const [pickerTarget, setPickerTarget] = useState<null | "hero" | "list">(null);
+  const [uploadingCover, setUploadingCover] = useState(false);
+  const coverFileInputRef = useRef<HTMLInputElement>(null);
 
   // Wyszukiwarka + propozycje miejsc (bez zargonu "baza/spoza bazy").
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -173,11 +185,12 @@ const CreateRanking = () => {
   useEffect(() => {
     if (editId) {
       (async () => {
-        const { data: col } = await (supabase as any).from("discovery_collections").select("title, city, category, description, author_name, author_avatar").eq("id", editId).maybeSingle();
+        const { data: col } = await (supabase as any).from("discovery_collections").select("title, city, category, description, author_name, author_avatar, cover_url, list_cover_url").eq("id", editId).maybeSingle();
         if (col) {
           setTitle(col.title ?? ""); setTitleDirty(true); if (col.city) { setCity(col.city); setCountry(countryForCity(col.city)); } setCategory(col.category ?? null);
           setDescription(col.description ?? "");
           setAsAnon(col.author_name === "Anonim" && !col.author_avatar);
+          setCoverUrl(col.cover_url ?? null); setListCoverUrl(col.list_cover_url ?? null);
         }
         const { data: its } = await (supabase as any).from("discovery_items").select("*").eq("collection_id", editId).order("order_index", { ascending: true });
         if (its) setItems(its.map((i: any, idx: number) => ({
@@ -387,13 +400,20 @@ const CreateRanking = () => {
       const authorName = asAnon ? "Anonim" : author.name;
       const authorAvatar = asAnon ? null : author.avatar;
       const desc = description.trim() || null;
+      // Okladki: hero (cover_url) + miniatura eksploracji (list_cover_url). Gdy user nic nie
+      // wybral, zapisujemy zdjecie pierwszego miejsca jako sensowny default (fallback UI i tak
+      // to robi, ale utrwalenie daje spojnosc w feedzie/edycji).
+      const firstItemPhoto = items.find((it) => it.photo_url)?.photo_url ?? null;
+      const coverToSave = coverUrl ?? firstItemPhoto;
+      const listCoverToSave = listCoverUrl ?? firstItemPhoto;
       if (editId) {
-        await (supabase as any).from("discovery_collections").update({ title: collectionTitle, city, category, description: desc, is_public: isPublic, author_name: authorName, author_avatar: authorAvatar, updated_at: new Date().toISOString() }).eq("id", editId);
+        await (supabase as any).from("discovery_collections").update({ title: collectionTitle, city, category, description: desc, is_public: isPublic, author_name: authorName, author_avatar: authorAvatar, cover_url: coverToSave, list_cover_url: listCoverToSave, updated_at: new Date().toISOString() }).eq("id", editId);
         await (supabase as any).from("discovery_items").delete().eq("collection_id", editId);
       } else {
         const { data: col, error } = await (supabase as any).from("discovery_collections").insert({
           user_id: user.id, author_name: authorName, author_avatar: authorAvatar, title: collectionTitle,
           category, city, description: desc, kind: "ranking", is_public: isPublic,
+          cover_url: coverToSave, list_cover_url: listCoverToSave,
           moderation_status: moderationStatus,
         }).select("id").single();
         if (error || !col) throw new Error(error?.message ?? "insert failed");
@@ -419,6 +439,32 @@ const CreateRanking = () => {
     } finally {
       setPublishing(false);
     }
+  };
+
+  // ── Okladki (hero + miniatura) - opcje = zdjecia miejsc listy + upload nowego ──
+  const firstItemPhoto = items.find((i) => i.photo_url)?.photo_url ?? null;
+  const heroCover = coverUrl ?? firstItemPhoto ?? getRandomPinPlaceholder(editId ?? title);
+  const listCover = listCoverUrl ?? firstItemPhoto ?? heroCover;
+  const coverOptions: CoverOption[] = items
+    .filter((i) => i.photo_url)
+    .map((i) => ({ id: i.key, name: i.place_name, url: i.photo_url as string }));
+  const applyCover = (url: string) => {
+    if (pickerTarget === "hero") setCoverUrl(url);
+    else if (pickerTarget === "list") setListCoverUrl(url);
+    setPickerTarget(null);
+  };
+  const handleCoverFiles = async (files: File[]) => {
+    if (!user || !files.length || uploadingCover) return;
+    setUploadingCover(true);
+    const url = await uploadCoverImage(files[0], user.id);
+    setUploadingCover(false);
+    if (url) applyCover(url);
+    else toast.error(t("cover.upload_error", "Nie udało się wgrać zdjęcia"));
+  };
+  const triggerCoverUpload = async () => {
+    if (uploadingCover) return;
+    if (isNative) { try { const f = await pickNativeCoverFiles(1); await handleCoverFiles(f); } catch { /* cancel */ } }
+    else coverFileInputRef.current?.click();
   };
 
   const mapPins = items.filter((i) => i.latitude != null && i.longitude != null)
@@ -666,6 +712,40 @@ const CreateRanking = () => {
       {/* ══ KROK 2: glowna notka + notki do miejsc + mapa + anonimowo ══ */}
       {step === 2 && (
         <div className="flex-1 overflow-y-auto px-4 py-5 space-y-6">
+          {/* Okladki listy: hero (cover_url) + miniatura eksploracji (list_cover_url) - 1:1
+              z modelem tras. Tap w kafel = picker (zdjecia miejsc / wgraj nowe). */}
+          <div>
+            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2 block">{t("cover.section_label", "Okładki")}</label>
+            <div className="relative w-full aspect-[16/10] rounded-2xl overflow-hidden bg-gradient-to-br from-orange-400 via-rose-400 to-purple-500">
+              <img src={heroCover} alt="" className="absolute inset-0 w-full h-full object-cover" />
+              <div className="absolute inset-0 bg-gradient-to-b from-black/15 via-transparent to-black/55" />
+              {/* Hero = okladka listy (lewy-dolny rog) */}
+              <button
+                type="button"
+                onClick={() => setPickerTarget("hero")}
+                aria-label={t("cover.change_hero_aria", "Zmień okładkę listy")}
+                className="absolute bottom-3 left-3 z-20 inline-flex items-center gap-1.5 h-10 pl-3 pr-3.5 rounded-full bg-black/45 backdrop-blur-sm text-white text-xs font-bold active:scale-95 transition-transform"
+              >
+                <ImageIcon className="h-[18px] w-[18px]" /> {t("cover.hero_label", "Okładka")}
+              </button>
+              {/* Miniatura eksploracji (prawy-dolny rog) - osobna okladka 9:16 */}
+              <button
+                type="button"
+                onClick={() => setPickerTarget("list")}
+                aria-label={t("cover.change_thumb_aria", "Zmień miniaturę w eksploracji")}
+                className="absolute bottom-3 right-3 z-20 w-16 rounded-2xl overflow-hidden border-[3px] border-white shadow-xl bg-muted active:scale-95 transition-transform"
+              >
+                <div className="relative w-full aspect-[9/16]">
+                  <img src={listCover} alt="" className="w-full h-full object-cover" />
+                  <span className="absolute top-1 right-1 h-5 w-5 rounded-full bg-black/45 backdrop-blur-sm text-white flex items-center justify-center">
+                    <ImageIcon className="h-3 w-3" />
+                  </span>
+                </div>
+              </button>
+            </div>
+            <p className="text-[11px] text-muted-foreground mt-2 leading-snug">{t("cover.hint", "Okładka to zdjęcie w widoku listy, miniatura to kafelek w eksploracji.")}</p>
+          </div>
+
           {/* Glowna notka do calego zestawienia */}
           <div>
             <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-1.5 block">{t("notes.collection_label")} <span className="normal-case font-medium text-muted-foreground/50">{t("notes.optional")}</span></label>
@@ -738,6 +818,23 @@ const CreateRanking = () => {
       {detailPlace && (
         <PlaceSwiperDetail open={!!detailPlace} onOpenChange={(o) => { if (!o) setDetailPlace(null); }} place={detailPlace} city={city} skipGoogleFetch={detailSkip} />
       )}
+
+      {/* Picker okladki (hero lub miniatura wg pickerTarget) + web file input */}
+      <CoverPickerSheet
+        open={pickerTarget !== null}
+        onClose={() => setPickerTarget(null)}
+        title={pickerTarget === "list" ? t("cover.thumb_title", "Miniatura w eksploracji") : t("cover.hero_title", "Okładka listy")}
+        subtitle={pickerTarget === "list"
+          ? t("cover.thumb_subtitle", "Zdjęcie na karcie listy w eksploracji - wgraj nowe albo wybierz z miejsc listy.")
+          : t("cover.hero_subtitle", "Zdjęcie w widoku listy - wgraj nowe albo wybierz z miejsc listy.")}
+        options={coverOptions}
+        currentUrl={pickerTarget === "list" ? listCover : heroCover}
+        onPick={applyCover}
+        onUploadNew={triggerCoverUpload}
+        uploading={uploadingCover}
+      />
+      <input ref={coverFileInputRef} type="file" accept="image/*,.heic,.heif" className="hidden"
+        onChange={(e) => { const f = Array.from(e.target.files ?? []); if (coverFileInputRef.current) coverFileInputRef.current.value = ""; void handleCoverFiles(f); }} />
       {/* Podglad miejsca spoza bazy - TYLKO okladka (bez godzin/recenzji, min. kosztow Google) */}
       {customPreview && (
         <div className="fixed inset-0 z-[80] flex flex-col justify-end bg-black/40" onClick={() => setCustomPreview(null)}>

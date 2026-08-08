@@ -52,7 +52,7 @@ export default function SharedList() {
     queryFn: async () => {
       const { data } = await (supabase as any)
         .from("discovery_collections")
-        .select("id, title, city, description, user_id, author_name, author_avatar")
+        .select("id, title, city, description, user_id, author_name, author_avatar, cover_url")
         .eq("id", id as string)
         .maybeSingle();
       return data as any;
@@ -165,7 +165,8 @@ export default function SharedList() {
     );
   }
 
-  const cover = resolveStored(items.find((i: any) => i.photo_url)?.photo_url) ?? null;
+  // Hero = recznie wybrana okladka listy (cover_url); fallback do zdjecia pierwszego miejsca.
+  const cover = resolveStored(col.cover_url) ?? resolveStored(items.find((i: any) => i.photo_url)?.photo_url) ?? null;
   const hasRealPhoto = !!cover;
   const heroPhoto = cover ?? getRandomPinPlaceholder(col.id);
   const cityLabel = col.city || "";
