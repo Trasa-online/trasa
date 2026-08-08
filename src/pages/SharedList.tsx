@@ -52,7 +52,7 @@ export default function SharedList() {
     queryFn: async () => {
       const { data } = await (supabase as any)
         .from("discovery_collections")
-        .select("id, title, city, description, user_id, author_name, author_avatar, cover_url")
+        .select("id, title, city, description, user_id, author_name, author_avatar, cover_url, tags")
         .eq("id", id as string)
         .maybeSingle();
       return data as any;
@@ -215,7 +215,7 @@ export default function SharedList() {
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted text-xs font-semibold text-foreground mb-2">
                 <CategoryIcon category={pin.category} className="h-3.5 w-3.5 shrink-0" />{categoryLabel(pin.category)}
               </span>
-              <p className="text-base font-black leading-tight">{pin.place_name}</p>
+              <p className="text-[15px] font-bold leading-snug">{pin.place_name}</p>
               {pin.short_desc && <p className="text-sm text-muted-foreground leading-relaxed mt-2 line-clamp-3">{pin.short_desc}</p>}
             </div>
           </button>
@@ -257,6 +257,13 @@ export default function SharedList() {
           </div>
           <h1 className="text-2xl font-black text-foreground leading-tight mt-3">{col.title || cityLabel}</h1>
           {col.description && <p className="text-sm text-muted-foreground leading-relaxed mt-3">{col.description}</p>}
+          {Array.isArray(col.tags) && col.tags.length > 0 && (
+            <div className="flex flex-wrap gap-2 mt-3">
+              {col.tags.map((tg: string) => (
+                <span key={tg} className="inline-flex items-center px-3 py-1 rounded-full bg-secondary text-secondary-foreground text-[13px] font-semibold">{tg}</span>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Miejsca | Mapa */}

@@ -64,7 +64,10 @@
   "cta": {
     "next": "Next: notes and map",
     "save": "Save changes",
-    "publish": "Save my list"
+    "publish": "Save my list",
+    "need_city": "Pick a city first",
+    "need_title": "Add a list name",
+    "need_two": "Add at least 2 places to create a list"
   },
   "custom_preview": {
     "title": "Add this place?",
@@ -80,5 +83,13 @@
     "sent": "Sent! Your collection will appear after moderator approval.",
     "save_failed": "Could not save: {{error}}"
   },
-  "error_fallback": "error"
+  "error_fallback": "error",
+  "tags": {
+    "label": "Tags",
+    "hint": "Add tags so others can find your list more easily.",
+    "more": "Show more",
+    "less": "Show less",
+    "custom_placeholder": "Add your own tag",
+    "add": "Add"
+  }
 }

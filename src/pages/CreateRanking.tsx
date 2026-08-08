@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams, useSearchParams, useLocation } from "react-router-dom";
-import { ArrowLeft, Search, Plus, X, Loader2, ChevronRight, ChevronDown, ChevronUp, List, GalleryHorizontalEnd, Image as ImageIcon } from "lucide-react";
+import { ArrowLeft, Search, Plus, X, Loader2, ChevronRight, ChevronDown, List, GalleryHorizontalEnd, GripVertical, Check, Image as ImageIcon } from "lucide-react";
+import { Reorder, useDragControls } from "framer-motion";
+import { haptics } from "@/hooks/useHaptics";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -101,6 +103,58 @@ async function fetchGooglePlace(opts: { name?: string; address?: string; lat?: n
   }
 }
 
+// Wiersz wybranego miejsca (widok listy) z DRAG & DROP (framer-motion Reorder) - 1:1 z
+// SortableComposeRow w tworzeniu trasy. Uchwyt GripVertical po lewej; reszta wiersza tapowalna.
+function SortableRankingRow({ it, onOpen, onRemove }: { it: RankingItem; onOpen: () => void; onRemove: () => void }) {
+  const controls = useDragControls();
+  const cat = categoryBadge(it.category);
+  return (
+    <Reorder.Item
+      value={it}
+      dragListener={false}
+      dragControls={controls}
+      transition={{ duration: 0 }}
+      className="w-full flex items-center gap-2 rounded-2xl bg-secondary p-2.5 select-none"
+    >
+      <span
+        onPointerDown={(e) => { haptics.light(); controls.start(e); }}
+        aria-label="Przeciągnij, by zmienić kolejność"
+        className="shrink-0 h-9 w-5 flex items-center justify-center text-muted-foreground/50 cursor-grab active:cursor-grabbing touch-none"
+      >
+        <GripVertical className="h-5 w-5" />
+      </span>
+      <button onClick={onOpen} className="flex items-center gap-2.5 flex-1 min-w-0 text-left active:opacity-80 transition-opacity">
+        {it.photo_url
+          ? <img src={it.photo_url} alt="" className="h-11 w-11 rounded-lg object-cover shrink-0" />
+          : <div className="h-11 w-11 rounded-lg bg-[#fcede3] flex items-center justify-center shrink-0"><CategoryIcon category={it.category} className="w-1/2" /></div>}
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-bold truncate">{it.place_name}</p>
+          {cat && <p className="text-[11px] text-muted-foreground truncate flex items-center gap-1 mt-0.5"><CategoryIcon category={it.category} className="h-3 w-3 shrink-0" />{cat.label}</p>}
+        </div>
+      </button>
+      <button onClick={onRemove} aria-label="Usuń miejsce" className="h-7 w-7 flex items-center justify-center rounded-full text-destructive active:bg-destructive/10 shrink-0"><X className="h-4 w-4" /></button>
+    </Reorder.Item>
+  );
+}
+
+// Predefiniowane tagi list (krok 2, zamiast glownej notki). User widzi pierwsze 4, reszta
+// pod accordionem. Moze tez dodac wlasny tag. Zapisywane w discovery_collections.tags.
+const PREDEFINED_TAGS = [
+  "Przyjazne dla psów",
+  "Miejsca z vibem",
+  "Dobre na randkę",
+  "Na rodzinny wypad",
+  "Klimatyczne wnętrza",
+  "Dobra kawa",
+  "Na wieczór",
+  "Tanio zjesz",
+  "Instagramowe",
+  "Cicho i spokojnie",
+  "Dla znajomych",
+  "Roślinne / wege",
+];
+const TAGS_VISIBLE = 4;
+
 const CreateRanking = () => {
   const { t } = useTranslation("ranking");
   const navigate = useNavigate();
@@ -143,6 +197,17 @@ const CreateRanking = () => {
   const [step, setStep] = useState<1 | 2>(1);
   // Glowna notka do calego zestawienia (krok 2).
   const [description, setDescription] = useState("");
+  // Tagi listy (krok 2) - zastapily glowna notke. Predefiniowane + wlasne usera.
+  const [tags, setTags] = useState<string[]>([]);
+  const [tagsExpanded, setTagsExpanded] = useState(false);
+  const [customTag, setCustomTag] = useState("");
+  const toggleTag = (tag: string) => setTags((prev) => prev.includes(tag) ? prev.filter((x) => x !== tag) : [...prev, tag]);
+  const addCustomTag = () => {
+    const v = customTag.trim();
+    if (!v) return;
+    if (!tags.some((x) => x.toLowerCase() === v.toLowerCase())) setTags((prev) => [...prev, v]);
+    setCustomTag("");
+  };
   // Tozsamosc autora: domyslnie z profilem; checkbox "anonimowo" na koncu (krok 2).
   const [asAnon, setAsAnon] = useState(false);
   // Okladki listy (1:1 z modelem tras): cover_url = hero na /lista/:id, list_cover_url =
@@ -189,12 +254,13 @@ const CreateRanking = () => {
   useEffect(() => {
     if (editId) {
       (async () => {
-        const { data: col } = await (supabase as any).from("discovery_collections").select("title, city, category, description, author_name, author_avatar, cover_url, list_cover_url").eq("id", editId).maybeSingle();
+        const { data: col } = await (supabase as any).from("discovery_collections").select("title, city, category, description, author_name, author_avatar, cover_url, list_cover_url, tags").eq("id", editId).maybeSingle();
         if (col) {
           setTitle(col.title ?? ""); setTitleDirty(true); if (col.city) { setCity(col.city); setCountry(countryForCity(col.city)); } setCategory(col.category ?? null);
           setDescription(col.description ?? "");
           setAsAnon(col.author_name === "Anonim" && !col.author_avatar);
           setCoverUrl(col.cover_url ?? null); setListCoverUrl(col.list_cover_url ?? null);
+          setTags(Array.isArray(col.tags) ? col.tags : []);
         }
         const { data: its } = await (supabase as any).from("discovery_items").select("*").eq("collection_id", editId).order("order_index", { ascending: true });
         if (its) setItems(its.map((i: any, idx: number) => ({
@@ -250,14 +316,7 @@ const CreateRanking = () => {
   };
   const removeItem = (key: string) => setItems((prev) => prev.filter((x) => x.key !== key));
   const setNote = (key: string, v: string) => setItems((prev) => prev.map((x) => x.key === key ? { ...x, short_desc: v } : x));
-  // Zmiana kolejnosci (tylko trasa/plan). order_index zapisuje sie z pozycji w tablicy.
-  const move = (idx: number, dir: -1 | 1) => setItems((prev) => {
-    const j = idx + dir;
-    if (j < 0 || j >= prev.length) return prev;
-    const next = [...prev];
-    [next[idx], next[j]] = [next[j], next[idx]];
-    return next;
-  });
+  // Kolejnosc zmienia drag & drop (Reorder) w widoku listy; order_index z pozycji w tablicy.
 
   // Otworz wizytowke miejsca. Miejsca z bazy (place_id) dociagaja galerie/recenzje
   // z Google. Miejsca spoza bazy (custom) NIE dociagaja niczego (min. kosztow) -
@@ -283,15 +342,19 @@ const CreateRanking = () => {
   // "Twoje zapisane miejsca" (z eksploracji, per miasto) - szybka sciaga do dodania jednym tapem.
   // Zastapily "Propozycje z bazy". id = place_id (do addItem) lub null (custom); key osobny.
   const savedForCity = useMemo(() => {
+    const mapPlace = (p: any) => ({
+      key: p.place_id ?? p.place_name, id: p.place_id ?? null, place_name: p.place_name, category: p.category,
+      address: p.address ?? null, latitude: p.latitude ?? null, longitude: p.longitude ?? null,
+      rating: p.rating ?? null, photo_url: p.photo_url ?? null,
+    });
     const wanted = new Set(expandCity(city).map((c) => c.toLowerCase()));
-    return getHistoryByCity()
-      .filter((g) => wanted.has(g.city.toLowerCase()))
-      .flatMap((g) => g.places)
-      .map((p: any) => ({
-        key: p.place_id ?? p.place_name, id: p.place_id ?? null, place_name: p.place_name, category: p.category,
-        address: p.address ?? null, latitude: p.latitude ?? null, longitude: p.longitude ?? null,
-        rating: p.rating ?? null, photo_url: p.photo_url ?? null,
-      }));
+    const groups = getHistoryByCity();
+    const forCity = groups.filter((g) => wanted.has(g.city.toLowerCase())).flatMap((g) => g.places).map(mapPlace);
+    if (forCity.length > 0) return { places: forCity, fallback: false };
+    // Fallback: user ma zapisane miejsca, ale w INNYM miescie niz domyslne (forma spada do
+    // Warszawy). Zamiast "brak" pokazujemy WSZYSTKIE zapisane (szybka sciaga i tak dziala).
+    const all = groups.flatMap((g) => g.places).map(mapPlace);
+    return { places: all, fallback: true };
   }, [city]);
 
   // Dodaj miejsce spoza bazy (wynik Google text search). Dociagamy okladke/rating/place_id
@@ -302,7 +365,9 @@ const CreateRanking = () => {
     const res = await fetchGooglePlace({ name: g.name, address: g.full_address, lat: g.latitude, lng: g.longitude, city });
     setAddingGoogleName(null);
     if (!res || !res.place_name) { toast.error(t("toast.add_failed")); return; }
-    addItem(res);
+    // Kategoria z typow Google (jak w wynikach wyszukiwarki) - zeby ikona po DODANIU
+    // byla ta sama co w liscie wynikow (fetchGooglePlace zwraca category=null).
+    addItem({ ...res, category: res.category ?? categoryFromGoogleTypes(g.types) });
     setGoogleResults((prev) => prev.filter((x) => x.name !== g.name));
   };
 
@@ -390,6 +455,13 @@ const CreateRanking = () => {
   const isRoute = isRouteCollection(category); // stare trasy (edycja) -> mozna ustawiac kolejnosc
   const canGoNext = !!city && items.length >= 2 && title.trim().length > 0; // krok 1 -> 2
   const canPublish = canGoNext && !publishing;
+  // Przejscie do kroku 2 - gdy warunki niespelnione, TOAST z powodem (guzik nie jest disabled).
+  const goNext = () => {
+    if (!city) { toast(t("cta.need_city", "Najpierw wybierz miasto")); return; }
+    if (title.trim().length === 0) { toast(t("cta.need_title", "Dodaj nazwę listy")); return; }
+    if (items.length < 2) { toast(t("cta.need_two", "Dodaj co najmniej 2 miejsca, żeby stworzyć listę")); return; }
+    setStep(2);
+  };
 
   const publish = async () => {
     if (!user || !canPublish) return;
@@ -410,14 +482,15 @@ const CreateRanking = () => {
       const firstItemPhoto = items.find((it) => it.photo_url)?.photo_url ?? null;
       const coverToSave = coverUrl ?? firstItemPhoto;
       const listCoverToSave = listCoverUrl ?? firstItemPhoto;
+      const tagsToSave = tags.map((x) => x.trim()).filter(Boolean).slice(0, 20);
       if (editId) {
-        await (supabase as any).from("discovery_collections").update({ title: collectionTitle, city, category, description: desc, is_public: isPublic, author_name: authorName, author_avatar: authorAvatar, cover_url: coverToSave, list_cover_url: listCoverToSave, updated_at: new Date().toISOString() }).eq("id", editId);
+        await (supabase as any).from("discovery_collections").update({ title: collectionTitle, city, category, description: desc, is_public: isPublic, author_name: authorName, author_avatar: authorAvatar, cover_url: coverToSave, list_cover_url: listCoverToSave, tags: tagsToSave, updated_at: new Date().toISOString() }).eq("id", editId);
         await (supabase as any).from("discovery_items").delete().eq("collection_id", editId);
       } else {
         const { data: col, error } = await (supabase as any).from("discovery_collections").insert({
           user_id: user.id, author_name: authorName, author_avatar: authorAvatar, title: collectionTitle,
           category, city, description: desc, kind: "ranking", is_public: isPublic,
-          cover_url: coverToSave, list_cover_url: listCoverToSave,
+          cover_url: coverToSave, list_cover_url: listCoverToSave, tags: tagsToSave,
           moderation_status: moderationStatus,
         }).select("id").single();
         if (error || !col) throw new Error(error?.message ?? "insert failed");
@@ -608,90 +681,74 @@ const CreateRanking = () => {
                 </div>
               )}
             </div>
-            <div className={placeView === "detail" ? "flex gap-3 overflow-x-auto scrollbar-none snap-x snap-mandatory -mr-4 pr-4 pb-1" : "space-y-2.5"}>
-              {items.map((it, idx) => {
-                const cat = categoryBadge(it.category);
-                // Kontrolki kolejnosci (tylko Plan): strzalki gora/dol.
-                const reorder = isRoute && (
-                  <div className="flex flex-col shrink-0">
-                    <button onClick={() => move(idx, -1)} disabled={idx === 0} aria-label={t("places.move_up")} className="h-6 w-6 flex items-center justify-center rounded-md text-muted-foreground disabled:opacity-25 active:bg-background"><ChevronUp className="h-4 w-4" /></button>
-                    <button onClick={() => move(idx, 1)} disabled={idx === items.length - 1} aria-label={t("places.move_down")} className="h-6 w-6 flex items-center justify-center rounded-md text-muted-foreground disabled:opacity-25 active:bg-background"><ChevronDown className="h-4 w-4" /></button>
-                  </div>
-                );
-                // ── Widok kompaktowy (lista) ──
-                if (placeView === "list") {
-                  const stepNo = isRoute && <span className="h-6 w-6 rounded-full bg-orange-600 text-white text-[11px] font-bold flex items-center justify-center shrink-0">{idx + 1}</span>;
+            {placeView === "list" ? (
+              // ── Widok listy z DRAG & DROP (1:1 z tworzeniem trasy). Uchwyt zmienia kolejnosc;
+              //    order_index zapisuje sie z pozycji przy publikacji. ──
+              <>
+                <Reorder.Group key={items.length} axis="y" values={items} onReorder={setItems} className="space-y-2.5">
+                  {items.map((it) => (
+                    <SortableRankingRow key={it.key} it={it} onOpen={() => openDetail(it)} onRemove={() => removeItem(it.key)} />
+                  ))}
+                </Reorder.Group>
+                {/* Dodaj miejsce - pelna szerokosc pod lista */}
+                <button
+                  type="button"
+                  onClick={() => searchInputRef.current?.focus()}
+                  className="mt-2.5 w-full rounded-2xl border-2 border-dashed border-border/70 bg-secondary/40 flex flex-col items-center justify-center gap-2 py-5 text-muted-foreground active:scale-[0.99] transition-transform"
+                >
+                  <span className="h-11 w-11 rounded-full bg-secondary flex items-center justify-center"><Plus className="h-5 w-5 text-orange-600" /></span>
+                  <span className="text-sm font-bold text-foreground">{t("places.add")}</span>
+                  <span className="text-[12px] text-center">{t("places.add_hint")}</span>
+                </button>
+              </>
+            ) : (
+              // ── Widok kart (karuzela 4:3) - bez dnd (kolejnosc przez widok listy). ──
+              <div className="flex gap-3 overflow-x-auto scrollbar-none snap-x snap-mandatory -mr-4 pr-4 pb-1">
+                {items.map((it, idx) => {
+                  const cat = categoryBadge(it.category);
                   return (
-                    <div key={it.key} className="rounded-2xl bg-secondary p-2.5 flex items-center gap-2">
-                      {stepNo}
-                      <button onClick={() => openDetail(it)} className="flex items-center gap-2.5 flex-1 min-w-0 text-left active:opacity-80 transition-opacity">
-                        {it.photo_url
-                          ? <img src={it.photo_url} alt="" className="h-11 w-11 rounded-lg object-cover shrink-0" />
-                          : <div className="h-11 w-11 rounded-lg bg-[#fcede3] flex items-center justify-center shrink-0"><CategoryIcon category={it.category} className="w-1/2" /></div>}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1.5">
-                            <p className="text-sm font-bold truncate">{it.place_name}</p>
-                          </div>
-                          {cat && <p className="text-[11px] text-muted-foreground truncate flex items-center gap-1"><CategoryIcon category={it.category} className="h-3 w-3 shrink-0" />{cat.label}</p>}
+                    <div key={it.key} className="relative shrink-0 w-[80%] snap-start rounded-2xl bg-secondary border border-border/40 overflow-hidden shadow-sm">
+                      <button onClick={() => openDetail(it)} className="w-full text-left active:opacity-90 transition-opacity">
+                        <div className="relative w-full aspect-[4/3] bg-muted">
+                          {it.photo_url
+                            ? <img src={it.photo_url} alt="" className="absolute inset-0 w-full h-full object-cover" loading="lazy" />
+                            : <div className="absolute inset-0 flex items-center justify-center bg-[#fcede3]"><CategoryIcon category={it.category} className="w-1/4 max-w-[72px]" /></div>}
+                          {isRoute && <span className="absolute top-3 left-3 h-8 w-8 rounded-full bg-black/55 backdrop-blur text-white text-sm font-bold flex items-center justify-center shadow-sm">{idx + 1}</span>}
+                        </div>
+                        <div className="px-4 pt-3 pb-3.5">
+                          {cat && <span className="inline-flex items-center gap-1 rounded-full bg-background px-2.5 py-0.5 text-[11px] font-semibold mb-1.5"><CategoryIcon category={it.category} className="h-3 w-3 shrink-0" />{cat.label}</span>}
+                          <p className="text-[15px] font-bold leading-snug">{it.place_name}</p>
+                          {it.address && <p className="text-[12px] text-muted-foreground leading-snug mt-1 truncate">{it.address}</p>}
                         </div>
                       </button>
-                      {reorder}
-                      <button onClick={() => removeItem(it.key)} aria-label={t("places.remove")} className="h-7 w-7 flex items-center justify-center rounded-full text-destructive active:bg-destructive/10 shrink-0"><X className="h-4 w-4" /></button>
+                      <div className="absolute top-2.5 right-2.5 flex items-center gap-1.5">
+                        <button onClick={() => removeItem(it.key)} aria-label={t("places.remove")} className="h-8 w-8 flex items-center justify-center rounded-full bg-white/90 backdrop-blur-sm shadow-sm text-destructive active:scale-95 transition-transform"><X className="h-4 w-4" /></button>
+                      </div>
                     </div>
                   );
-                }
-                // ── Widok kart: duza karta 4:3 (jak w dzienniku) ──
-                return (
-                  <div key={it.key} className="relative shrink-0 w-[80%] snap-start rounded-2xl bg-secondary border border-border/40 overflow-hidden shadow-sm">
-                    <button onClick={() => openDetail(it)} className="w-full text-left active:opacity-90 transition-opacity">
-                      <div className="relative w-full aspect-[4/3] bg-muted">
-                        {it.photo_url
-                          ? <img src={it.photo_url} alt="" className="absolute inset-0 w-full h-full object-cover" loading="lazy" />
-                          : <div className="absolute inset-0 flex items-center justify-center bg-[#fcede3]"><CategoryIcon category={it.category} className="w-1/4 max-w-[72px]" /></div>}
-                        {/* Numer kroku (tylko Plan - kolejnosc zwiedzania) */}
-                        {isRoute && <span className="absolute top-3 left-3 h-8 w-8 rounded-full bg-black/55 backdrop-blur text-white text-sm font-bold flex items-center justify-center shadow-sm">{idx + 1}</span>}
-                      </div>
-                      <div className="px-4 pt-3 pb-3.5">
-                        {cat && <span className="inline-flex items-center gap-1 rounded-full bg-background px-2.5 py-0.5 text-[11px] font-semibold mb-1.5"><CategoryIcon category={it.category} className="h-3 w-3 shrink-0" />{cat.label}</span>}
-                        <p className="text-base font-black leading-tight">{it.place_name}</p>
-                        {it.address && <p className="text-[12px] text-muted-foreground leading-snug mt-1 truncate">{it.address}</p>}
-                      </div>
-                    </button>
-                    {/* Akcje: reorder (Plan) + usun - overlay w prawym gornym rogu nad zdjeciem */}
-                    <div className="absolute top-2.5 right-2.5 flex items-center gap-1.5">
-                      {isRoute && (
-                        <div className="flex flex-col rounded-full bg-white/90 backdrop-blur-sm shadow-sm overflow-hidden">
-                          <button onClick={() => move(idx, -1)} disabled={idx === 0} aria-label={t("places.move_up")} className="h-6 w-7 flex items-center justify-center text-foreground/70 disabled:opacity-25 active:bg-black/5"><ChevronUp className="h-4 w-4" /></button>
-                          <button onClick={() => move(idx, 1)} disabled={idx === items.length - 1} aria-label={t("places.move_down")} className="h-6 w-7 flex items-center justify-center text-foreground/70 disabled:opacity-25 active:bg-black/5"><ChevronDown className="h-4 w-4" /></button>
-                        </div>
-                      )}
-                      <button onClick={() => removeItem(it.key)} aria-label={t("places.remove")} className="h-8 w-8 flex items-center justify-center rounded-full bg-white/90 backdrop-blur-sm shadow-sm text-destructive active:scale-95 transition-transform"><X className="h-4 w-4" /></button>
-                    </div>
-                  </div>
-                );
-              })}
-
-              {/* Szkielet "Dodaj miejsce" - klik = fokus na wyszukiwarce. Zawsze widoczny:
-                  jako pusty stan (gdy 0 miejsc) i jako sposob dodania kolejnych. W trybie kart
-                  = kafel w karuzeli (obok miejsc), w trybie listy = pelna szerokosc pod spodem. */}
-              <button
-                type="button"
-                onClick={() => searchInputRef.current?.focus()}
-                className={`rounded-2xl border-2 border-dashed border-border/70 bg-secondary/40 flex flex-col items-center justify-center gap-2 text-muted-foreground active:scale-[0.99] transition-transform ${placeView === "list" ? "w-full py-5" : "shrink-0 w-[80%] snap-start self-stretch min-h-[240px] px-4"}`}
-              >
-                <span className="h-11 w-11 rounded-full bg-secondary flex items-center justify-center"><Plus className="h-5 w-5 text-orange-600" /></span>
-                <span className="text-sm font-bold text-foreground">{t("places.add")}</span>
-                <span className="text-[12px] text-center">{t("places.add_hint")}</span>
-              </button>
-            </div>
+                })}
+                {/* Dodaj miejsce - kafel w karuzeli */}
+                <button
+                  type="button"
+                  onClick={() => searchInputRef.current?.focus()}
+                  className="rounded-2xl border-2 border-dashed border-border/70 bg-secondary/40 flex flex-col items-center justify-center gap-2 shrink-0 w-[80%] snap-start self-stretch min-h-[240px] px-4 text-muted-foreground active:scale-[0.99] transition-transform"
+                >
+                  <span className="h-11 w-11 rounded-full bg-secondary flex items-center justify-center"><Plus className="h-5 w-5 text-orange-600" /></span>
+                  <span className="text-sm font-bold text-foreground">{t("places.add")}</span>
+                  <span className="text-[12px] text-center">{t("places.add_hint")}</span>
+                </button>
+              </div>
+            )}
           </div>
 
           {/* "Twoje zapisane miejsca" - szybka sciaga (zamiast propozycji z bazy). Ukryte podczas szukania. */}
           {search.trim().length < 2 && (() => {
-            const saved = savedForCity.filter((s) => !addedNames.has(s.place_name.toLowerCase()));
+            const saved = savedForCity.places.filter((s) => !addedNames.has(s.place_name.toLowerCase()));
             return (
               <div className="px-4 pb-4">
-                <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide mb-2">Twoje zapisane miejsca</p>
+                <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide mb-2">
+                  {savedForCity.fallback && saved.length > 0 ? "Twoje zapisane miejsca (z innych miast)" : "Twoje zapisane miejsca"}
+                </p>
                 {saved.length > 0 ? (
                   <div className="flex gap-2.5 overflow-x-auto scrollbar-none snap-x snap-mandatory -mr-4 pr-4 pb-1">
                     {saved.map((s) => (
@@ -707,7 +764,7 @@ const CreateRanking = () => {
                     <div className="shrink-0 w-1" />
                   </div>
                 ) : (
-                  <p className="text-sm text-muted-foreground leading-snug">{`Nie masz jeszcze zapisanych miejsc w mieście ${city}.`}</p>
+                  <p className="text-sm text-muted-foreground leading-snug">{`Nie masz jeszcze zapisanych miejsc. Polub miejsca w eksploracji, żeby dodać je tu jednym tapem.`}</p>
                 )}
               </div>
             );
@@ -752,12 +809,50 @@ const CreateRanking = () => {
             <p className="text-[11px] text-muted-foreground mt-2 leading-snug">{t("cover.hint", "Okładka to zdjęcie w widoku listy, miniatura to kafelek w eksploracji.")}</p>
           </div>
 
-          {/* Glowna notka do calego zestawienia */}
+          {/* Tagi listy (zamiast glownej notki) - predefiniowane (pierwsze 4 + accordion) + wlasne. */}
           <div>
-            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-1.5 block">{t("notes.collection_label")} <span className="normal-case font-medium text-muted-foreground/50">{t("notes.optional")}</span></label>
-            <textarea value={description} onChange={(e) => setDescription(e.target.value)} maxLength={280} rows={3}
-              placeholder={t("notes.collection_placeholder")}
-              className="w-full rounded-2xl bg-secondary text-secondary-foreground border-0 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-orange-500/40 placeholder:text-muted-foreground/50 resize-none" />
+            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-1.5 block">
+              {t("tags.label", "Tagi")} <span className="normal-case font-medium text-muted-foreground/50">{t("notes.optional")}</span>
+            </label>
+            <p className="text-[12px] text-muted-foreground leading-snug mb-2.5">{t("tags.hint", "Dodaj tagi, żeby inni łatwiej trafili na Twoją listę.")}</p>
+            <div className="flex flex-wrap gap-2">
+              {/* Wlasne tagi usera (spoza predefiniowanych) - zawsze widoczne, zaznaczone */}
+              {tags.filter((tg) => !PREDEFINED_TAGS.includes(tg)).map((tg) => (
+                <button key={tg} type="button" onClick={() => toggleTag(tg)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary text-white text-sm font-semibold active:scale-95 transition-transform">
+                  {tg} <X className="h-3.5 w-3.5" />
+                </button>
+              ))}
+              {/* Predefiniowane: pierwsze TAGS_VISIBLE, reszta pod accordionem */}
+              {(tagsExpanded ? PREDEFINED_TAGS : PREDEFINED_TAGS.slice(0, TAGS_VISIBLE)).map((tg) => {
+                const on = tags.includes(tg);
+                return (
+                  <button key={tg} type="button" onClick={() => toggleTag(tg)}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold active:scale-95 transition-transform ${on ? "bg-primary text-white" : "bg-secondary text-secondary-foreground"}`}>
+                    {on && <Check className="h-3.5 w-3.5" strokeWidth={3} />}{tg}
+                  </button>
+                );
+              })}
+              {/* Accordion: pokaz wiecej / zwin */}
+              {PREDEFINED_TAGS.length > TAGS_VISIBLE && (
+                <button type="button" onClick={() => setTagsExpanded((v) => !v)}
+                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-secondary/60 text-muted-foreground text-sm font-semibold active:scale-95 transition-transform">
+                  {tagsExpanded ? t("tags.less", "Zwiń") : t("tags.more", "Pokaż więcej")}
+                  <ChevronDown className={`h-4 w-4 transition-transform ${tagsExpanded ? "rotate-180" : ""}`} />
+                </button>
+              )}
+            </div>
+            {/* Wlasny tag */}
+            <div className="flex gap-2 mt-2.5">
+              <input value={customTag} onChange={(e) => setCustomTag(e.target.value)} maxLength={30}
+                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCustomTag(); } }}
+                placeholder={t("tags.custom_placeholder", "Dodaj własny tag")}
+                className="flex-1 min-w-0 rounded-2xl bg-secondary text-secondary-foreground border-0 px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-orange-500/40 placeholder:text-muted-foreground/50" />
+              <button type="button" onClick={addCustomTag} disabled={!customTag.trim()}
+                className="shrink-0 px-4 rounded-2xl bg-secondary text-secondary-foreground text-sm font-bold active:scale-95 transition-transform disabled:opacity-40">
+                {t("tags.add", "Dodaj")}
+              </button>
+            </div>
           </div>
 
           {/* Notki do poszczegolnych miejsc */}
@@ -798,13 +893,15 @@ const CreateRanking = () => {
       {!(step === 1 && (searchFocused || titleFocused)) && (
         <div className="shrink-0 px-4 pt-3 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] border-t border-border/20">
           {step === 1 ? (
-            <button onClick={() => setStep(2)} disabled={!canGoNext}
-              className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-sm shadow-md shadow-orange-500/20 active:scale-[0.98] transition-transform disabled:opacity-50 flex items-center justify-center gap-2">
+            // Guzik NIE jest `disabled` - klik przy niespelnionych warunkach pokazuje toast
+            // z powodem (inaczej user nie wie czemu wyszarzone). Wyszarzenie = wizualny sygnal.
+            <button onClick={goNext}
+              className={`w-full py-3.5 rounded-2xl bg-primary text-white font-bold text-sm shadow-md shadow-orange-500/20 active:scale-[0.98] transition-transform flex items-center justify-center gap-2 ${canGoNext ? "" : "opacity-50"}`}>
               {t("cta.next")} <ChevronRight className="h-4 w-4" />
             </button>
           ) : (
             <button onClick={publish} disabled={!canPublish}
-              className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-sm shadow-md shadow-orange-500/20 active:scale-[0.98] transition-transform disabled:opacity-50">
+              className="w-full py-3.5 rounded-2xl bg-primary text-white font-bold text-sm shadow-md shadow-orange-500/20 active:scale-[0.98] transition-transform disabled:opacity-50">
               {publishing ? <Loader2 className="h-5 w-5 animate-spin mx-auto" /> : (editId ? t("cta.save") : t("cta.publish", "Zapisz moją listę"))}
             </button>
           )}
@@ -854,8 +951,8 @@ const CreateRanking = () => {
                 </div>
               </div>
               <div className="flex gap-2 mt-4">
-                <button onClick={() => setCustomPreview(null)} className="flex-1 py-3 rounded-full bg-secondary text-secondary-foreground text-sm font-bold active:scale-[0.97] transition-transform">{t("custom_preview.reject")}</button>
-                <button onClick={confirmCustom} className="flex-1 py-3 rounded-full bg-primary text-white text-sm font-bold active:scale-[0.97] transition-transform">{t("custom_preview.add")}</button>
+                <button onClick={() => setCustomPreview(null)} className="flex-1 py-3 rounded-2xl bg-secondary text-secondary-foreground text-sm font-bold active:scale-[0.97] transition-transform">{t("custom_preview.reject")}</button>
+                <button onClick={confirmCustom} className="flex-1 py-3 rounded-2xl bg-primary text-white text-sm font-bold active:scale-[0.97] transition-transform">{t("custom_preview.add")}</button>
               </div>
             </div>
           </div>

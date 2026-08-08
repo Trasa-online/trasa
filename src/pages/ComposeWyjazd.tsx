@@ -484,21 +484,24 @@ export default function ComposeWyjazd() {
   // "Twoje zapisane miejsca" (z eksploracji, per miasto) - szybka sciaga do dodania jednym tapem.
   // Zastapily "Propozycje z bazy". Podczas pisania pokazujemy wyniki wyszukiwania.
   const savedForCity = useMemo(() => {
+    const mapPlace = (p: any) => ({
+      id: p.place_id ?? p.place_name, place_id: p.place_id ?? null, place_name: p.place_name,
+      category: p.category, latitude: p.latitude ?? null, longitude: p.longitude ?? null,
+      photo_url: p.photo_url ?? null, address: p.address ?? null, rating: p.rating ?? null,
+    });
     const wanted = new Set(expandCity(city).map((c) => c.toLowerCase()));
-    return getHistoryByCity()
-      .filter((g) => wanted.has(g.city.toLowerCase()))
-      .flatMap((g) => g.places)
-      .map((p: any) => ({
-        id: p.place_id ?? p.place_name, place_id: p.place_id ?? null, place_name: p.place_name,
-        category: p.category, latitude: p.latitude ?? null, longitude: p.longitude ?? null,
-        photo_url: p.photo_url ?? null, address: p.address ?? null, rating: p.rating ?? null,
-      }));
+    const groups = getHistoryByCity();
+    const forCity = groups.filter((g) => wanted.has(g.city.toLowerCase())).flatMap((g) => g.places).map(mapPlace);
+    if (forCity.length > 0) return { places: forCity, fallback: false };
+    // Fallback: zapisane miejsca sa w innym miescie niz domyslne - pokaz wszystkie (szybka sciaga).
+    return { places: groups.flatMap((g) => g.places).map(mapPlace), fallback: true };
   }, [city]);
   const isSearching = search.trim().length >= 2;
   // Ujednolicony uklad z widokiem listy (CreateRanking): wyniki wyszukiwania POD wyszukiwarka,
   // "Wybrane miejsca" (z kafelkiem "+") wyzej, "Twoje zapisane miejsca" POD spodem.
   const searchProposals = results.filter((p) => !isAdded(p));
-  const savedProposals = savedForCity.filter((p) => !isAdded(p));
+  const savedProposals = savedForCity.places.filter((p) => !isAdded(p));
+  const savedFallback = savedForCity.fallback;
 
   return (
     <div className="flex flex-col h-[100dvh] bg-background max-w-lg mx-auto">
@@ -691,9 +694,11 @@ export default function ComposeWyjazd() {
         {/* TWOJE ZAPISANE MIEJSCA - szybka sciaga pod wybranymi (ukryte podczas szukania). Ujednolicone z lista. */}
         {!isSearching && (
           <div className="px-4 pt-5">
-            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2.5">Twoje zapisane miejsca</p>
+            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2.5">
+              {savedFallback && savedProposals.length > 0 ? "Twoje zapisane miejsca (z innych miast)" : "Twoje zapisane miejsca"}
+            </p>
             {savedProposals.length === 0 ? (
-              <p className="text-sm text-muted-foreground leading-snug">{`Nie masz jeszcze zapisanych miejsc w mieście ${city}.`}</p>
+              <p className="text-sm text-muted-foreground leading-snug">{`Nie masz jeszcze zapisanych miejsc. Polub miejsca w eksploracji, żeby dodać je tu jednym tapem.`}</p>
             ) : (
               <div className="flex gap-3 overflow-x-auto scrollbar-none snap-x snap-mandatory -mr-4 pr-4 pb-1">
                 {savedProposals.slice(0, 15).map((p: any) => (

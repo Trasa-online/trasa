@@ -64,7 +64,10 @@
   "cta": {
     "next": "Dalej: notki i mapa",
     "save": "Zapisz zmiany",
-    "publish": "Zapisz moją listę"
+    "publish": "Zapisz moją listę",
+    "need_city": "Najpierw wybierz miasto",
+    "need_title": "Dodaj nazwę listy",
+    "need_two": "Dodaj co najmniej 2 miejsca, żeby stworzyć listę"
   },
   "custom_preview": {
     "title": "Dodać to miejsce?",
@@ -80,5 +83,13 @@
     "sent": "Wysłane! Lista pojawi się po akceptacji moderatora.",
     "save_failed": "Nie udało się zapisać: {{error}}"
   },
-  "error_fallback": "błąd"
+  "error_fallback": "błąd",
+  "tags": {
+    "label": "Tagi",
+    "hint": "Dodaj tagi, żeby inni łatwiej trafili na Twoją listę.",
+    "more": "Pokaż więcej",
+    "less": "Zwiń",
+    "custom_placeholder": "Dodaj własny tag",
+    "add": "Dodaj"
+  }
 }
