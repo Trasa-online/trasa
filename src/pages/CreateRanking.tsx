@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams, useSearchParams, useLocation } from "react-router-dom";
-import { ArrowLeft, Search, Plus, X, Loader2, MapPin, ChevronRight, ChevronDown, ChevronUp, List, GalleryHorizontalEnd, Check, Image as ImageIcon } from "lucide-react";
+import { ArrowLeft, Search, Plus, X, Loader2, ChevronRight, ChevronDown, ChevronUp, List, GalleryHorizontalEnd, Check, Image as ImageIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -17,6 +17,7 @@ import { forwardGeocode, reverseGeocode, forwardGeocodeWithTypes } from "@/lib/g
 import { isRouteCollection } from "@/lib/collectionThemes";
 import { MAIN_CATEGORIES, getDbCategoriesFor } from "@/lib/categories";
 import { CategoryIcon } from "@/components/CategoryIcon";
+import { categoryFromGoogleTypes } from "@/lib/placeCategoryIcon";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import { type MockPlace } from "@/components/plan-wizard/PlaceSwiper";
 import RouteMap from "@/components/RouteMap";
@@ -541,7 +542,7 @@ const CreateRanking = () => {
                 {searchResults.filter((r) => !addedNames.has(r.place_name.toLowerCase())).map((r) => (
                   <button key={r.id} onClick={() => addDbPlace(r)}
                     className="w-full flex items-center gap-3 p-2.5 active:bg-background/50 text-left">
-                    {r.photo_url ? <img src={r.photo_url} alt="" className="h-11 w-11 rounded-xl object-cover shrink-0" /> : <div className="h-11 w-11 rounded-xl bg-background flex items-center justify-center shrink-0"><MapPin className="h-4 w-4 text-muted-foreground" /></div>}
+                    {r.photo_url ? <img src={r.photo_url} alt="" className="h-11 w-11 rounded-xl object-cover shrink-0" /> : <div className="h-11 w-11 rounded-xl bg-[#fcede3] flex items-center justify-center shrink-0"><CategoryIcon category={r.category} className="w-1/2" /></div>}
                     <div className="flex-1 min-w-0"><p className="text-sm font-semibold truncate">{r.place_name}</p>{r.address && <p className="text-[11px] text-muted-foreground truncate">{r.address}</p>}</div>
                     <Plus className="h-4 w-4 text-orange-600 shrink-0" />
                   </button>
@@ -555,7 +556,7 @@ const CreateRanking = () => {
                 {googleResults.filter((g) => !addedNames.has((g.name ?? "").toLowerCase())).map((g) => (
                   <button key={g.name + g.latitude} onClick={() => addGooglePlace(g)} disabled={!!addingGoogleName}
                     className="w-full flex items-center gap-3 p-2.5 active:bg-background/50 text-left disabled:opacity-50">
-                    <div className="h-11 w-11 rounded-xl bg-background flex items-center justify-center shrink-0"><MapPin className="h-4 w-4 text-muted-foreground" /></div>
+                    <div className="h-11 w-11 rounded-xl bg-[#fcede3] flex items-center justify-center shrink-0"><CategoryIcon category={categoryFromGoogleTypes(g.types)} className="w-1/2" /></div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5">
                         <p className="text-sm font-semibold truncate">{g.name}</p>
@@ -621,7 +622,7 @@ const CreateRanking = () => {
                       <button onClick={() => openDetail(it)} className="flex items-center gap-2.5 flex-1 min-w-0 text-left active:opacity-80 transition-opacity">
                         {it.photo_url
                           ? <img src={it.photo_url} alt="" className="h-11 w-11 rounded-lg object-cover shrink-0" />
-                          : <div className="h-11 w-11 rounded-lg bg-background flex items-center justify-center text-muted-foreground shrink-0"><MapPin className="h-4 w-4" /></div>}
+                          : <div className="h-11 w-11 rounded-lg bg-[#fcede3] flex items-center justify-center shrink-0"><CategoryIcon category={it.category} className="w-1/2" /></div>}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-1.5">
                             <p className="text-sm font-bold truncate">{it.place_name}</p>
@@ -641,7 +642,7 @@ const CreateRanking = () => {
                       <div className="relative w-full aspect-[4/3] bg-muted">
                         {it.photo_url
                           ? <img src={it.photo_url} alt="" className="absolute inset-0 w-full h-full object-cover" loading="lazy" />
-                          : <div className="absolute inset-0 flex items-center justify-center text-muted-foreground"><MapPin className="h-8 w-8" /></div>}
+                          : <div className="absolute inset-0 flex items-center justify-center bg-[#fcede3]"><CategoryIcon category={it.category} className="w-1/4 max-w-[72px]" /></div>}
                         {/* Numer kroku (tylko Plan - kolejnosc zwiedzania) */}
                         {isRoute && <span className="absolute top-3 left-3 h-8 w-8 rounded-full bg-black/55 backdrop-blur text-white text-sm font-bold flex items-center justify-center shadow-sm">{idx + 1}</span>}
                       </div>
@@ -692,7 +693,7 @@ const CreateRanking = () => {
                       <button key={s.key} onClick={() => addDbPlace(s)}
                         className="shrink-0 w-[40%] snap-start rounded-2xl bg-secondary overflow-hidden text-left active:scale-[0.97] transition-transform">
                         <div className="relative aspect-[4/3] bg-background">
-                          {s.photo_url ? <img src={s.photo_url} alt="" className="absolute inset-0 w-full h-full object-cover" loading="lazy" /> : <div className="absolute inset-0 flex items-center justify-center text-muted-foreground"><MapPin className="h-5 w-5" /></div>}
+                          {s.photo_url ? <img src={s.photo_url} alt="" className="absolute inset-0 w-full h-full object-cover" loading="lazy" /> : <div className="absolute inset-0 flex items-center justify-center bg-[#fcede3]"><CategoryIcon category={s.category} className="w-1/3 max-w-[56px]" /></div>}
                           <div className="absolute top-1.5 right-1.5 h-6 w-6 rounded-full bg-primary text-white flex items-center justify-center shadow-sm"><Plus className="h-3.5 w-3.5" /></div>
                         </div>
                         <p className="text-xs font-bold leading-tight truncate px-2 py-2">{s.place_name}</p>
@@ -763,7 +764,7 @@ const CreateRanking = () => {
                   <div className="flex items-center gap-2.5">
                     {it.photo_url
                       ? <img src={it.photo_url} alt="" className="h-10 w-10 rounded-lg object-cover shrink-0" />
-                      : <div className="h-10 w-10 rounded-lg bg-background flex items-center justify-center text-muted-foreground shrink-0"><MapPin className="h-4 w-4" /></div>}
+                      : <div className="h-10 w-10 rounded-lg bg-[#fcede3] flex items-center justify-center shrink-0"><CategoryIcon category={it.category} className="w-1/2" /></div>}
                     <p className="text-sm font-bold truncate flex-1 min-w-0">{it.place_name}</p>
                   </div>
                   <input value={it.short_desc} onChange={(e) => setNote(it.key, e.target.value)} maxLength={120}
@@ -848,7 +849,7 @@ const CreateRanking = () => {
                 <div className="relative w-full aspect-[4/3] bg-muted">
                   {customPreview.photo_url
                     ? <img src={customPreview.photo_url} alt="" className="absolute inset-0 w-full h-full object-cover" />
-                    : <div className="absolute inset-0 flex items-center justify-center text-muted-foreground"><MapPin className="h-8 w-8" /></div>}
+                    : <div className="absolute inset-0 flex items-center justify-center bg-[#fcede3]"><CategoryIcon category={customPreview.category} className="w-1/4 max-w-[72px]" /></div>}
                 </div>
                 <div className="p-3.5">
                   <div className="flex items-center gap-2">
