@@ -19,7 +19,7 @@ import { forwardGeocode, reverseGeocode, forwardGeocodeWithTypes } from "@/lib/g
 import { isRouteCollection } from "@/lib/collectionThemes";
 import { MAIN_CATEGORIES, getDbCategoriesFor } from "@/lib/categories";
 import { CategoryIcon } from "@/components/CategoryIcon";
-import { categoryFromGoogleTypes } from "@/lib/placeCategoryIcon";
+import { categoryFromGoogleTypes, inferCategoryFromName } from "@/lib/placeCategoryIcon";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import { type MockPlace } from "@/components/plan-wizard/PlaceSwiper";
 import RouteMap from "@/components/RouteMap";
@@ -264,7 +264,7 @@ const CreateRanking = () => {
         }
         const { data: its } = await (supabase as any).from("discovery_items").select("*").eq("collection_id", editId).order("order_index", { ascending: true });
         if (its) setItems(its.map((i: any, idx: number) => ({
-          key: `e${idx}`, place_id: i.place_id ?? null, place_name: i.place_name, category: i.category ?? null,
+          key: `e${idx}`, place_id: i.place_id ?? null, place_name: i.place_name, category: i.category ?? inferCategoryFromName(i.place_name),
           address: i.address ?? null, latitude: i.latitude ?? null, longitude: i.longitude ?? null,
           rating: i.rating ?? null, google_place_id: i.google_place_id ?? null, photo_url: i.photo_url ?? null, short_desc: i.short_desc ?? "",
         })));
@@ -367,7 +367,7 @@ const CreateRanking = () => {
     if (!res || !res.place_name) { toast.error(t("toast.add_failed")); return; }
     // Kategoria z typow Google (jak w wynikach wyszukiwarki) - zeby ikona po DODANIU
     // byla ta sama co w liscie wynikow (fetchGooglePlace zwraca category=null).
-    addItem({ ...res, category: res.category ?? categoryFromGoogleTypes(g.types) });
+    addItem({ ...res, category: res.category ?? categoryFromGoogleTypes(g.types) ?? inferCategoryFromName(res.place_name) });
     setGoogleResults((prev) => prev.filter((x) => x.name !== g.name));
   };
 
@@ -383,7 +383,7 @@ const CreateRanking = () => {
   };
   const confirmCustom = () => {
     if (!customPreview) return;
-    addItem(customPreview);
+    addItem({ ...customPreview, category: customPreview.category ?? inferCategoryFromName(customPreview.place_name) });
     setCustomPreview(null);
     setSearch("");
     setSearchResults([]);

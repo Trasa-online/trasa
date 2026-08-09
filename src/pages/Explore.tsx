@@ -20,6 +20,7 @@ import { UNLOCKED_CITIES } from "@/components/plan-wizard/CityPicker";
 import { getHistoryByCity, removeLikeFromCity, addLike, clearCity, updateLikePhoto, type ExploreCityGroup } from "@/lib/exploreLikes";
 import { deferDelete } from "@/lib/deferDelete";
 import { getSubcategoryLabel, subcategoryLabelLocalized } from "@/lib/categories";
+import { inferCategoryFromName } from "@/lib/placeCategoryIcon";
 import { getPhotoUrl } from "@/lib/placePhotos";
 import { categoryIconSrc } from "@/lib/placeCategoryIcon";
 import { useAuth } from "@/hooks/useAuth";
@@ -471,7 +472,7 @@ export const LikedTab = ({ selectMode = false, onExitSelection, city: controlled
 // ── MyCollections ───────────────────────────────────────────────────────────
 // Lista zestawien stworzonych przez zalogowanego usera (wejscie z karty "Zestawienia"
 // w profilu / zakladka Zapisane). Tap w pozycje -> edycja. Pusty stan -> CTA "Stworz pierwsze".
-export const MyCollections = () => {
+export const MyCollections = ({ showCreate = true }: { showCreate?: boolean } = {}) => {
   const { t } = useTranslation("explore");
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -534,7 +535,7 @@ export const MyCollections = () => {
     city,
     place: {
       id: pin.place_id ?? pin.google_place_id ?? pin.place_name,
-      place_name: pin.place_name, category: (pin.category || "other") as any,
+      place_name: pin.place_name, category: (pin.category ?? inferCategoryFromName(pin.place_name) ?? "other") as any,
       city: city ?? "", address: pin.address ?? "", latitude: pin.latitude ?? 0, longitude: pin.longitude ?? 0,
       rating: pin.rating ?? 0, photo_url: resolveStored(pin.photo_url) ?? "", vibe_tags: [], description: pin.short_desc || "",
     } as MockPlace,
@@ -549,13 +550,16 @@ export const MyCollections = () => {
 
   return (
     <div className="space-y-3">
-      {/* Osobny guzik "Nowa lista" - wprost do tworzenia listy (bez drumu kraj+miasto - narazie). */}
-      <button
-        onClick={() => { trackCollectionCreate("my_collections_header"); navigate("/zestawienie/nowe"); }}
-        className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-primary text-white text-sm font-bold active:scale-[0.98] transition-transform shadow-md shadow-orange-500/20"
-      >
-        <Plus className="h-4 w-4" strokeWidth={2.5} /> {t("collections.create_new", "Nowa lista miejsc")}
-      </button>
+      {/* Osobny guzik "Nowa lista" - wprost do tworzenia listy. Ukryty w hubie "Robocze"
+          (showCreate=false), gdzie "+" tworzenia jest juz w naglowku (zbedny duplikat). */}
+      {showCreate && (
+        <button
+          onClick={() => { trackCollectionCreate("my_collections_header"); navigate("/zestawienie/nowe"); }}
+          className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-primary text-white text-sm font-bold active:scale-[0.98] transition-transform shadow-md shadow-orange-500/20"
+        >
+          <Plus className="h-4 w-4" strokeWidth={2.5} /> {t("collections.create_new", "Nowa lista miejsc")}
+        </button>
+      )}
 
       {isLoading ? (
         <div className="space-y-3">
@@ -639,12 +643,15 @@ export const MyCollections = () => {
                           <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap mt-0.5">{noteText}</p>
                         </div>
                       ) : undefined;
+                      // Kategoria: zapisana -> wywnioskowana z nazwy (miejsca z Google bywaja bez
+                      // kategorii -> inaczej ikona=Landmark, chip="Miejsce"). Pin z catKey dla PlacePhoto.
+                      const catKey = pin.category ?? inferCategoryFromName(pin.place_name);
                       return (
                         <RoutePlaceRow
                           key={pin.id}
-                          pin={pin}
+                          pin={{ ...pin, category: catKey }}
                           index={i}
-                          categoryLabel={pin.category ? subcategoryLabelLocalized(pin.category) : t("collections.place_generic", "Miejsce")}
+                          categoryLabel={catKey ? subcategoryLabelLocalized(catKey) : t("collections.place_generic", "Miejsce")}
                           onOpen={() => openPlace(pin, col.city)}
                           onGoogle={() => openGoogle(pin, col.city)}
                           note={note}

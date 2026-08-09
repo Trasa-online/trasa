@@ -14,6 +14,7 @@ import { avatarSrc } from "@/lib/avatar";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import { CategoryIcon } from "@/components/CategoryIcon";
 import { subcategoryLabelLocalized } from "@/lib/categories";
+import { inferCategoryFromName } from "@/lib/placeCategoryIcon";
 import { createWyjazdFromPlaces } from "@/lib/createWyjazd";
 import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 
@@ -97,6 +98,9 @@ export default function SharedList() {
   }, [col?.id]);
 
   const categoryLabel = (cat: string | null) => (cat ? subcategoryLabelLocalized(cat) : "Miejsce");
+  // Kategoria: zapisana -> wywnioskowana z nazwy (miejsca z Google bywaja bez kategorii,
+  // inaczej ikona=Landmark, chip="Miejsce").
+  const catOf = (pin: any): string | null => pin.category ?? inferCategoryFromName(pin.place_name);
 
   const openGoogle = (pin: any) => {
     const q = encodeURIComponent([pin.place_name, pin.address, col?.city].filter(Boolean).join(", "));
@@ -108,7 +112,7 @@ export default function SharedList() {
   const openDetail = (pin: any) => setDetailPin({
     id: pin.place_id || pin.id || pin.place_name,
     place_name: pin.place_name,
-    category: (pin.category || "other") as any,
+    category: (catOf(pin) || "other") as any,
     city: col?.city ?? "",
     address: pin.address || "",
     latitude: pin.latitude ?? 0,
@@ -190,9 +194,9 @@ export default function SharedList() {
         return (
           <RoutePlaceRow
             key={pin.id}
-            pin={pin}
+            pin={{ ...pin, category: catOf(pin) }}
             index={i}
-            categoryLabel={categoryLabel(pin.category)}
+            categoryLabel={categoryLabel(catOf(pin))}
             onOpen={() => openDetail(pin)}
             onGoogle={() => openGoogle(pin)}
             note={note}
@@ -208,12 +212,12 @@ export default function SharedList() {
         <div key={pin.id} className="snap-center shrink-0 w-[80vw] max-w-[320px] rounded-2xl bg-secondary border border-border/40 overflow-hidden shadow-sm flex flex-col">
           <button onClick={() => openDetail(pin)} className="block w-full text-left active:opacity-90 transition-opacity">
             <div className="relative w-full aspect-[4/3] bg-muted">
-              <PlacePhoto pin={pin} className="w-full h-full object-cover" />
+              <PlacePhoto pin={{ ...pin, category: catOf(pin) }} className="w-full h-full object-cover" />
               <div className="absolute top-3 left-3 h-8 w-8 rounded-full bg-black/55 backdrop-blur text-white text-sm font-bold flex items-center justify-center">{i + 1}</div>
             </div>
             <div className="px-4 pt-4 pb-4">
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted text-xs font-semibold text-foreground mb-2">
-                <CategoryIcon category={pin.category} className="h-3.5 w-3.5 shrink-0" />{categoryLabel(pin.category)}
+                <CategoryIcon category={catOf(pin)} className="h-3.5 w-3.5 shrink-0" />{categoryLabel(catOf(pin))}
               </span>
               <p className="text-[15px] font-bold leading-snug">{pin.place_name}</p>
               {pin.short_desc && <p className="text-sm text-muted-foreground leading-relaxed mt-2 line-clamp-3">{pin.short_desc}</p>}

@@ -116,3 +116,27 @@ export function categoryFromGoogleTypes(types?: string[] | null): string | null 
   }
   return null;
 }
+
+// Heurystyka: zgadnij kategorie z NAZWY miejsca (klucz z CATEGORY_ICON_MAP) - fallback dla
+// miejsc bez zapisanej kategorii (dodane z Google przed backfillem -> inaczej ikona/chip
+// leca na Landmark/"Miejsce"). Best-effort; brak dopasowania = null (zostaje generyczny stan).
+const NAME_CATEGORY_HINTS: [RegExp, string][] = [
+  [/ramen|sushi|udon|ramenown|restaurac|restaurant|bistro|kuchni|burger|pizz|tapas|grill|kebab|thai|wietnam|indyj|makaron|noodle|jad[łl]odajni|obiad|street\s?food/i, "restaurant"],
+  [/kaw(a|ia|ka)|coffee|caf[eé]|espresso|roaster|roastery|latte/i, "cafe"],
+  [/\bbar\b|\bpub\b|drink|koktajl|cocktail|winiar|\bwine\b|piwn|browar|nalewa|whisky/i, "bar"],
+  [/klub\b|\bclub\b|nightclub|disco/i, "club"],
+  [/piekarni|bakery|bu[łl]eczk|chleb/i, "bakery"],
+  [/cukierni|p[ąa]czk|deser|\blody\b|ice\s?cream|gelat|s[łl]odko|donut|pastry/i, "pastry"],
+  [/muzeum|museum/i, "museum"],
+  [/galeri|gallery|sztuk|\bart\b/i, "gallery"],
+  [/\bkino\b|cinema|teatr|theat/i, "theater"],
+  [/\bpark\b|ogr[óo]d|garden|plaż|beach|\blas\b|skwer|bulwar|natur/i, "park"],
+  [/pa[łl]ac|zamek|katedr|ko[śs]ci[óo][łl]|bazylik|pomnik|monument|ratusz|kamienic|zabytek/i, "monument"],
+  [/sklep|store|shop|butik|boutique|market|\btarg\b|zakupy|concept/i, "store"],
+  [/punkt\s?widokow|viewpoint|taras\s?widokow/i, "viewpoint"],
+];
+export function inferCategoryFromName(name?: string | null): string | null {
+  if (!name) return null;
+  for (const [re, cat] of NAME_CATEGORY_HINTS) if (re.test(name)) return cat;
+  return null;
+}

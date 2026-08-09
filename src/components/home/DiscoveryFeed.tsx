@@ -1591,12 +1591,15 @@ export function SavedCollections() {
         </div>
       </div>
 
-      {savedIds.length === 0 ? (
-        <div className="py-14 text-center px-8">
-          <div className="text-4xl mb-3">🔖</div>
-          <p className="text-base font-bold">Brak zapisanych zestawień</p>
+      {savedIds.length === 0 || (!isLoading && filtered.length === 0 && !query.trim()) ? (
+        // Pusty stan (brak zapisanych list) - placeholderowa ikona brandingowa (spontaway).
+        <div className="py-14 text-center px-8 flex flex-col items-center">
+          <div className="h-20 w-20 rounded-3xl bg-[#fcede3] flex items-center justify-center mb-4">
+            <TrasaLogo size={44} tone="orange" />
+          </div>
+          <p className="text-base font-bold">Brak zapisanych list</p>
           <p className="text-sm text-muted-foreground mt-1 leading-relaxed max-w-[280px] mx-auto">
-            Zapisz zestawienie zakładką podczas przeglądania, żeby pojawiło się tutaj.
+            Zapisz listę zakładką podczas przeglądania, żeby pojawiła się tutaj.
           </p>
         </div>
       ) : isLoading ? (

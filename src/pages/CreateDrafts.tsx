@@ -22,7 +22,7 @@ export default function CreateDrafts() {
       <div className="flex-1 overflow-y-auto px-4 pt-3 pb-[calc(2rem+env(safe-area-inset-bottom,0px))]">
         {mode === "trasy"
           ? (user ? <JournalTab userId={user.id} city={city} draftsOnly /> : <p className="py-16 text-center text-sm text-muted-foreground">Zaloguj się, żeby zobaczyć swoje trasy.</p>)
-          : <MyCollections />}
+          : <MyCollections showCreate={false} />}
       </div>
     </div>
   );
