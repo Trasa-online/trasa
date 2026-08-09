@@ -376,9 +376,27 @@ const CreateRanking = () => {
   const previewCustomByName = async (name: string) => {
     if (!name.trim() || addingCustom) return;
     setAddingCustom(true);
-    const res = await fetchGooglePlace({ name: name.trim(), city });
+    // Najpierw TEXTSEARCH (zwraca typy Google -> realna kategoria, bez Place Details).
+    // Preferujemy trafienie w wybranym miescie; fallback = geocode (bez typow) + inferencja.
+    let res: Omit<RankingItem, "key" | "short_desc"> | null = null;
+    try {
+      const hits = await forwardGeocodeWithTypes(`${name.trim()} ${city}`);
+      const cityAliases = expandCity(city).map((c) => c.toLowerCase());
+      const best = hits.find((h) => cityAliases.some((c) => (h.full_address ?? "").toLowerCase().includes(c))) ?? hits[0];
+      if (best?.name) {
+        res = {
+          place_id: null, place_name: best.name,
+          category: categoryFromGoogleTypes(best.types) ?? inferCategoryFromName(best.name),
+          address: best.full_address ?? null, latitude: best.latitude ?? null, longitude: best.longitude ?? null,
+          rating: null, google_place_id: null, photo_url: null,
+        };
+      }
+    } catch { /* fallback ponizej */ }
+    if (!res) res = await fetchGooglePlace({ name: name.trim(), city });
     setAddingCustom(false);
     if (!res || !res.place_name) { toast.error(t("toast.not_found")); return; }
+    // Gwarancja kategorii nawet gdy fallback geocode nie mial typow.
+    if (!res.category) res = { ...res, category: inferCategoryFromName(res.place_name) };
     setCustomPreview(res);
   };
   const confirmCustom = () => {
