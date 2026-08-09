@@ -1347,9 +1347,11 @@ async function hydrateCollections(cols: any[]): Promise<DiscoveryCollection[]> {
   }));
 }
 
-// Listy miejsc (dawne "zestawienia") w feedzie WLACZONE (2026-08-06): feed eksploracji
-// pokazuje trasy I listy razem (przeplot), z filtrem typu (Wszystko|Trasy|Listy) w sheecie.
-const SHOW_ZESTAWIENIA = true;
+// Listy miejsc (dawne "zestawienia") w EKSPLORACJI WYLACZONE (2026-08-09, decyzja Nat):
+// opublikowane listy widoczne TYLKO na profilu usera ("Moje listy"), NIE w feedzie/wyszukiwarce
+// eksploracji. Flaga = master switch: gatuje feed (userPolecajki), wyszukiwarke (collections)
+// i segment typu (Wszystko|Trasy|Listy). Ustaw true, by wrocic listy do eksploracji.
+const SHOW_ZESTAWIENIA = false;
 
 // Szybkie skroty w wyszukiwarce ("Biezace polozenie" + "Zapisane miejsca") - WYLACZONE
 // (2026-07-27): dopoki scroller nie ma miejsc, nie maja sensu. Ustaw true, by przywrocic.
@@ -2061,9 +2063,10 @@ export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityCh
       if (allow) routeRows = routeRows.filter((r) => allow!.has(r.id));
       const routes = await enrichRouteRows(routeRows);
 
-      // Zestawienia - pomijamy gdy aktywny filtr kategorii miejsc (to pojecie tras).
+      // Zestawienia (listy) - pomijamy gdy aktywny filtr kategorii miejsc (to pojecie tras)
+      // ORAZ gdy listy sa wylaczone w eksploracji (SHOW_ZESTAWIENIA=false - widoczne tylko w profilu).
       let collections: DiscoveryCollection[] = [];
-      if (!categoryFilter.length) {
+      if (!categoryFilter.length && SHOW_ZESTAWIENIA) {
         let colQ = (supabase as any).from("discovery_collections")
           .select("id, title, city, description, category, author_name, author_avatar, user_id, views_count, saves_count, plan_adds_count, cover_url, list_cover_url")
           .eq("is_public", true).eq("kind", "ranking").eq("hidden_by_admin", false).eq("moderation_status", "approved");
@@ -2419,23 +2422,28 @@ export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityCh
           </div>
           {/* Miasto (przeniesione z gornej belki 2026-08-05) + kategoria miejsca. */}
           <div className="flex-1 min-h-0 overflow-y-auto px-5 pb-2">
-            {/* Typ tresci: Wszystko | Trasy | Listy - segment na gorze sheetu (2026-08-06). */}
-            <p className="text-sm font-bold text-foreground mb-2">Pokaż</p>
-            <div className="flex gap-2 mb-5">
-              {([
-                { id: "all", label: "Wszystko" },
-                { id: "routes", label: "Trasy" },
-                { id: "lists", label: "Listy" },
-              ] as { id: "all" | "routes" | "lists"; label: string }[]).map((s) => (
-                <button
-                  key={s.id}
-                  onClick={() => setContentType(s.id)}
-                  className={`flex-1 py-2.5 rounded-2xl text-sm font-bold transition-colors active:scale-[0.98] ${contentType === s.id ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground"}`}
-                >
-                  {s.label}
-                </button>
-              ))}
-            </div>
+            {/* Typ tresci: Wszystko | Trasy | Listy - TYLKO gdy listy sa w eksploracji (SHOW_ZESTAWIENIA).
+                Wylaczone -> feed ma same trasy, segment bezuzyteczny. */}
+            {SHOW_ZESTAWIENIA && (
+              <>
+                <p className="text-sm font-bold text-foreground mb-2">Pokaż</p>
+                <div className="flex gap-2 mb-5">
+                  {([
+                    { id: "all", label: "Wszystko" },
+                    { id: "routes", label: "Trasy" },
+                    { id: "lists", label: "Listy" },
+                  ] as { id: "all" | "routes" | "lists"; label: string }[]).map((s) => (
+                    <button
+                      key={s.id}
+                      onClick={() => setContentType(s.id)}
+                      className={`flex-1 py-2.5 rounded-2xl text-sm font-bold transition-colors active:scale-[0.98] ${contentType === s.id ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground"}`}
+                    >
+                      {s.label}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
             {onCityChange && <CityFilterRow city={city} cities={cities} onChange={onCityChange} />}
             <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-3">{t("filter.category")}</p>
             <div className="flex flex-wrap gap-2.5">
