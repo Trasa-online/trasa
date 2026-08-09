@@ -549,9 +549,9 @@ export const MyCollections = () => {
 
   return (
     <div className="space-y-3">
-      {/* Osobny guzik "Nowa lista" (pkt 3) - zawsze na gorze, prowadzi przez wybor miasta (drum). */}
+      {/* Osobny guzik "Nowa lista" - wprost do tworzenia listy (bez drumu kraj+miasto - narazie). */}
       <button
-        onClick={() => { trackCollectionCreate("my_collections_header"); navigate("/utworz", { state: { mode: "listy" } }); }}
+        onClick={() => { trackCollectionCreate("my_collections_header"); navigate("/zestawienie/nowe"); }}
         className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-primary text-white text-sm font-bold active:scale-[0.98] transition-transform shadow-md shadow-orange-500/20"
       >
         <Plus className="h-4 w-4" strokeWidth={2.5} /> {t("collections.create_new", "Nowa lista miejsc")}

@@ -339,10 +339,11 @@ const BottomNav = () => {
             onClick={() => {
               haptics.light();
               if (!PLANNING_DISABLED) { setShowMenu(!showMenu); return; }
-              // Kontekst "Moje listy" (/eksploruj state.myCollections) -> "+" prowadzi wprost
-              // do tworzenia LISTY (mode:listy), nie trasy. Inne ekrany = tworzenie trasy.
+              // Kontekst "Moje listy" (/eksploruj state.myCollections) -> "+" prowadzi WPROST
+              // do tworzenia LISTY (bez drumu kraj+miasto - narazie). Inne ekrany = drum -> trasa.
               const inLists = location.pathname === "/eksploruj" && (location.state as any)?.myCollections === true;
-              navigate("/utworz", inLists ? { state: { mode: "listy" } } : undefined);
+              if (inLists) { navigate("/zestawienie/nowe"); return; }
+              navigate("/utworz");
             }}
             className="flex items-center justify-center"
             aria-label={t("fab_aria")}
