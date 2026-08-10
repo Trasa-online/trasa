@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { avatarSrc } from "@/lib/avatar";
+import { ROUTE_TAGS, ROUTE_TAGS_VISIBLE, PLACE_TAGS, PLACE_TAGS_VISIBLE } from "@/lib/routeTags";
 import { haptics } from "@/hooks/useHaptics";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -50,10 +51,11 @@ const GoogleGlyph = ({ className }: { className?: string }) => (
 
 // Wiersz listy miejsc z DRAG & DROP (framer-motion Reorder) na ekranie "Sugestie do trasy".
 // Przeciaganie uchwytem (GripVertical) - reszta wiersza nadal tapowalna (otwiera wizytowke).
-function SortableReviewRow({ pin, idx, categoryLabel, visited, onOpen, onRemove, noteValue, noteOpen, onToggleNote, onNoteChange, noteSaved, onNoteFocusChange }: {
+function SortableReviewRow({ pin, idx, categoryLabel, visited, onOpen, onRemove, noteValue, noteOpen, onToggleNote, onNoteChange, noteSaved, onNoteFocusChange, tags, onToggleTag }: {
   pin: any; idx: number; categoryLabel: React.ReactNode; visited: boolean; onOpen: () => void; onRemove: () => void;
   noteValue: string; noteOpen: boolean; onToggleNote: () => void; onNoteChange: (v: string) => void; noteSaved: boolean;
   onNoteFocusChange?: (focused: boolean) => void;
+  tags: string[]; onToggleTag: (tag: string) => void;
 }) {
   const controls = useDragControls();
   return (
@@ -96,6 +98,21 @@ function SortableReviewRow({ pin, idx, categoryLabel, visited, onOpen, onRemove,
             rows={3}
             className="w-full bg-white rounded-xl px-3.5 py-3 text-sm text-foreground resize-none focus:outline-none border border-border/50 focus:border-orange-400/60 placeholder:text-muted-foreground/55"
           />
+          {/* Tagi miejsca (predefiniowana pula) - alternatywa dla pisania notki. Klik = dodaj. */}
+          <div className="mt-3">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">Tagi miejsca <span className="normal-case font-medium text-muted-foreground/50">(zamiast notki)</span></p>
+            <div className="flex flex-wrap gap-1.5">
+              {PLACE_TAGS.map((tg) => {
+                const on = tags.includes(tg);
+                return (
+                  <button key={tg} type="button" onClick={() => onToggleTag(tg)}
+                    className={`flex items-center gap-1 px-2.5 py-1.5 rounded-full text-[13px] font-semibold transition-colors active:scale-[0.97] border ${on ? "bg-orange-50 border-orange-300 text-orange-700" : "bg-white text-foreground border-border/60"}`}>
+                    {tg}{on ? <Check className="h-3 w-3 text-orange-600" /> : <Plus className="h-3 w-3 text-muted-foreground/50" />}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
           <div className="flex items-center justify-between mt-2">
             <button onClick={onToggleNote} className="px-4 py-2 rounded-full bg-muted text-sm font-semibold text-foreground active:scale-95 transition-transform">Zwiń</button>
             {noteSaved && <span className="text-xs text-green-600 font-medium">Zapisano</span>}
@@ -239,6 +256,9 @@ const ReviewSummary = () => {
   const [photos, setPhotos] = useState<string[]>([]);
   const [isPublic, setIsPublic] = useState(true);
   const [shareAnonymous, setShareAnonymous] = useState(false);
+  // Tagi CALEJ TRASY (predefiniowana pula, ROUTE_TAGS). Zapis natychmiast do routes.tags.
+  const [routeTags, setRouteTags] = useState<string[]>([]);
+  const [routeTagsExpanded, setRouteTagsExpanded] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [notes, setNotes] = useState<Record<string, string>>({});
@@ -270,7 +290,7 @@ const ReviewSummary = () => {
       if (!routeId || !user) return null;
       const { data } = await (supabase as any)
         .from("routes")
-        .select("id, title, user_id, city, day_number, start_date, end_date, folder_id, plan_finalized, trip_type, ai_summary, ai_highlight, review_photos, cover_url, list_cover_url, is_shared, share_friends, group_session_id, overall_rating, review_narrative")
+        .select("id, title, user_id, city, day_number, start_date, end_date, folder_id, plan_finalized, trip_type, ai_summary, ai_highlight, review_photos, cover_url, list_cover_url, is_shared, share_friends, group_session_id, overall_rating, review_narrative, tags")
         .eq("id", routeId)
         .single();
       return data as any;
@@ -349,7 +369,7 @@ const ReviewSummary = () => {
       if (!dayRouteIds.length) return [];
       const { data } = await (supabase as any)
         .from("pins")
-        .select("id, route_id, place_name, address, category, suggested_time, description, image_url, images, user_photo_urls, latitude, longitude, place_id, photo_url, pin_order, visited_at")
+        .select("id, route_id, place_name, address, category, suggested_time, description, image_url, images, user_photo_urls, latitude, longitude, place_id, photo_url, pin_order, visited_at, tags")
         .in("route_id", dayRouteIds)
         .order("pin_order", { ascending: true });
       return data ?? [];
@@ -488,7 +508,32 @@ const ReviewSummary = () => {
   useEffect(() => {
     if (route?.review_photos?.length) setPhotos(route.review_photos);
     if (route?.is_shared != null) setIsPublic(route.is_shared);
-  }, [route?.review_photos, route?.is_shared]);
+    if (Array.isArray((route as any)?.tags)) setRouteTags((route as any).tags);
+  }, [route?.review_photos, route?.is_shared, (route as any)?.tags]);
+
+  // Toggle tagu trasy - zapis natychmiast do routes.tags (widoczne na karcie eksploracji).
+  const toggleRouteTag = async (tag: string) => {
+    const next = routeTags.includes(tag) ? routeTags.filter((x) => x !== tag) : [...routeTags, tag];
+    setRouteTags(next);
+    if (!routeId) return;
+    await (supabase as any).from("routes").update({ tags: next }).eq("id", routeId);
+    queryClient.invalidateQueries({ queryKey: ["discovery-city-routes"] });
+    queryClient.invalidateQueries({ queryKey: ["review-summary-route", routeId] });
+  };
+
+  // Tagi PER MIEJSCE (pins.tags) - alternatywa dla notki. Zapis natychmiast do pina.
+  const [pinTags, setPinTags] = useState<Record<string, string[]>>({});
+  useEffect(() => {
+    const m: Record<string, string[]> = {};
+    for (const p of allPins) if (Array.isArray((p as any).tags)) m[p.id] = (p as any).tags;
+    setPinTags(m);
+  }, [allPins]);
+  const togglePinTag = async (pinId: string, tag: string) => {
+    const cur = pinTags[pinId] ?? [];
+    const next = cur.includes(tag) ? cur.filter((x) => x !== tag) : [...cur, tag];
+    setPinTags((prev) => ({ ...prev, [pinId]: next }));
+    await (supabase as any).from("pins").update({ tags: next }).eq("id", pinId);
+  };
 
   // Podpis + oznaczeni czlonkowie: osobny best-effort load (kolumny z migracji
   // 20260705). Gdy migracja jeszcze nie zaaplikowana -> po prostu brak wartosci,
@@ -2486,6 +2531,29 @@ const ReviewSummary = () => {
                     </div>
                   </div>
 
+                  {/* Tagi CALEJ TRASY (predefiniowana pula) - widoczne na karcie w eksploracji. */}
+                  <div className="pb-6">
+                    <h2 className="font-display text-xl font-bold text-foreground tracking-tight mb-1">Tagi trasy</h2>
+                    <p className="text-[13px] text-muted-foreground mb-3">Dodaj tagi, żeby inni łatwiej trafili na Twoją trasę</p>
+                    <div className="flex flex-wrap gap-2">
+                      {(routeTagsExpanded ? ROUTE_TAGS : ROUTE_TAGS.slice(0, ROUTE_TAGS_VISIBLE)).map((tg) => {
+                        const on = routeTags.includes(tg);
+                        return (
+                          <button key={tg} type="button" onClick={() => toggleRouteTag(tg)}
+                            className={`flex items-center gap-1 px-3.5 py-2 rounded-full text-sm font-semibold transition-colors active:scale-[0.97] border ${on ? "bg-orange-50 border-orange-300 text-orange-700" : "bg-white text-foreground border-border/60"}`}>
+                            {tg}{on ? <Check className="h-3.5 w-3.5 text-orange-600" /> : <Plus className="h-3.5 w-3.5 text-muted-foreground/50" />}
+                          </button>
+                        );
+                      })}
+                      {ROUTE_TAGS.length > ROUTE_TAGS_VISIBLE && (
+                        <button type="button" onClick={() => setRouteTagsExpanded((v) => !v)}
+                          className="px-3.5 py-2 rounded-full text-sm font-semibold bg-secondary text-secondary-foreground active:scale-[0.97] transition-transform">
+                          {routeTagsExpanded ? "Mniej" : "Pokaż więcej"}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
                   {/* Miejsca + toggle Lista/Karty */}
                   <div className="flex items-center justify-between mb-3">
                     <p className="font-display text-xl font-bold text-foreground tracking-tight">Miejsca</p>
@@ -2519,6 +2587,8 @@ const ReviewSummary = () => {
                             onNoteChange={(v) => handleNoteChange(pin.place_name, v)}
                             noteSaved={!!noteSaved[nk]}
                             onNoteFocusChange={setNoteFocused}
+                            tags={pinTags[pin.id] ?? (Array.isArray(pin.tags) ? pin.tags : [])}
+                            onToggleTag={(tg) => togglePinTag(pin.id, tg)}
                           />
                         );
                       })}

@@ -75,6 +75,7 @@ type PolecaneRoute = {
   ai_highlight: string | null;
   summary?: string | null;
   categories?: string[];
+  routeTags?: string[];                // tagi CALEJ trasy (routes.tags) - priorytet nad kategoriami na karcie
   author_name: string;
   author_avatar: string | null;
   author_username?: string | null;     // @handle - do etykiety autora na karcie eksploracji
@@ -972,6 +973,7 @@ async function enrichRouteRows(routes: any[]): Promise<PolecaneRoute[]> {
       ai_highlight: r.ai_highlight ?? null,
       summary: r.ai_summary ?? null,
       categories: catMap.get(r.id) ?? [],
+      routeTags: Array.isArray(r.tags) ? r.tags : [],
       author_name: anon ? i18n.t("author_anon", { ns: "homefeed" }) : (prof?.first_name || prof?.username || i18n.t("author_default", { ns: "homefeed" })),
       author_avatar: anon ? null : (prof?.avatar_url ?? null),
       author_username: anon ? null : (prof?.username ?? null),
@@ -1429,7 +1431,7 @@ export function SavedRoutes({ city }: { city?: string }) {
       if (!ids.length) return { list: [] as PolecaneRoute[], dates };
       const { data: rows } = await (supabase as any)
         .from("routes")
-        .select("id, title, city, ai_highlight, ai_summary, user_id, created_at, views, share_anonymous, cover_url, list_cover_url, review_photos, group_session_id")
+        .select("id, title, city, ai_highlight, ai_summary, user_id, created_at, views, share_anonymous, cover_url, list_cover_url, review_photos, group_session_id, tags")
         .in("id", ids);
       const list = await enrichRouteRows(rows ?? []);
       return { list, dates };
@@ -1819,7 +1821,7 @@ export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityCh
       // city === "all" (ALL_CITIES) -> feed agreguje Trasy ze wszystkich miast (bez filtra).
       let q = (supabase as any)
         .from("routes")
-        .select("id, title, city, ai_highlight, ai_summary, user_id, created_at, views, share_anonymous, cover_url, list_cover_url, review_photos, group_session_id")
+        .select("id, title, city, ai_highlight, ai_summary, user_id, created_at, views, share_anonymous, cover_url, list_cover_url, review_photos, group_session_id, tags")
         // Bramka "sfinalizowane": trasa pojawia sie w eksploracji dopiero gdy ma ustawiona
         // miniature (list_cover_url) - auto-losowana ze zdjec usera przy tworzeniu/finalizacji.
         .eq("is_shared", true).not("title", "is", null).not("list_cover_url", "is", null);
@@ -2021,7 +2023,7 @@ export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityCh
       // Wiele miast -> suma expandCity dla kazdego wybranego (dedupe).
       const cities = cityFilter.length ? [...new Set(cityFilter.flatMap(expandCity))] : null;
       const like = `%${escapeLike(q)}%`;
-      const routeCols = "id, title, city, ai_highlight, ai_summary, user_id, created_at, views, share_anonymous, cover_url, list_cover_url, review_photos, group_session_id";
+      const routeCols = "id, title, city, ai_highlight, ai_summary, user_id, created_at, views, share_anonymous, cover_url, list_cover_url, review_photos, group_session_id, tags";
 
       // Kategorie miejsc -> zbior route_id z pinow tych kategorii (routes nie ma kolumny category).
       let allow: Set<string> | null = null;
@@ -2316,7 +2318,7 @@ export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityCh
                 placeCount={r.placeCount ?? 0}
                 title={r.title}
                 description={r.summary || r.ai_highlight}
-                tags={(r.categories ?? []).map((c) => CAT_LABEL[c] ?? c)}
+                tags={r.routeTags?.length ? r.routeTags : (r.categories ?? []).map((c) => CAT_LABEL[c] ?? c)}
                 pins={r.pins ?? []}
                 saved={savedRouteIds.has(r.id)}
                 onToggleSave={() => toggleSaveRoute(r.id)}
