@@ -3,20 +3,19 @@ import CitySelect from "@/components/home/CitySelect";
 import TabTopBar from "@/components/layout/TabTopBar";
 import { useActiveCity } from "@/hooks/useActiveCity";
 import { SavedRoutes, SavedCollections } from "@/components/home/DiscoveryFeed";
-import { LikedTab } from "@/pages/Explore";
 import { cn } from "@/lib/utils";
 
-// Zakladka Zapisane (bottom nav): selektor miasta w naglowku + segmentowy toggle
-// Miejsca | Trasy | Listy (2026-08-06). "Miejsca" = zapisane miejsca (LikedTab). "Trasy" =
-// zapisane trasy od innych (saved_routes). "Listy" = zapisane listy miejsc (SavedCollections).
-type SavedTab = "places" | "routes" | "lists";
+// Zakladka Zapisane (bottom nav): selektor miasta + toggle Trasy | Listy (2026-08-10).
+// Zapisane MIEJSCA usuniete - miejsca zapisuje sie teraz do LIST (odwiedzone/do odwiedzenia)
+// przez SavePlaceSheet. "Trasy" = zapisane trasy od innych (saved_routes). "Listy" = zapisane
+// listy zbiorcze (SavedCollections).
+type SavedTab = "routes" | "lists";
 
 const LikedPlaces = () => {
   const [city, setCity] = useActiveCity();
-  const [tab, setTab] = useState<SavedTab>("places");
+  const [tab, setTab] = useState<SavedTab>("routes");
 
   return (
-    // Bez pull-to-refresh (usuniete 2026-08-10 na prosbe) - zwykly kontener.
     <div className="flex-1 flex flex-col pb-[calc(5rem+env(safe-area-inset-bottom,0px))]">
       {/* Naglowek: selektor miasta (jak na widoku glownym) */}
       <TabTopBar>
@@ -24,11 +23,10 @@ const LikedPlaces = () => {
         <div className="flex-1" />
       </TabTopBar>
 
-      {/* Segmentowy toggle Miejsca | Trasy | Listy */}
+      {/* Segmentowy toggle Trasy | Listy */}
       <div className="px-4 pt-3">
         <div className="flex p-1 bg-secondary rounded-full">
           {([
-            { id: "places", label: "Miejsca" },
             { id: "routes", label: "Trasy" },
             { id: "lists", label: "Listy" },
           ] as { id: SavedTab; label: string }[]).map((s) => (
@@ -47,9 +45,7 @@ const LikedPlaces = () => {
       </div>
 
       <div className="flex-1 px-4 pt-3">
-        {tab === "places" ? <LikedTab city={city} />
-          : tab === "routes" ? <SavedRoutes city={city} />
-          : <SavedCollections />}
+        {tab === "routes" ? <SavedRoutes city={city} /> : <SavedCollections />}
       </div>
     </div>
   );

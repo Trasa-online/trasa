@@ -29,6 +29,7 @@ function buildStaticRouteMap(pins: { latitude: number; longitude: number }[], si
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { avatarSrc } from "@/lib/avatar";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
+import SavePlaceSheet, { type SavePlaceInput } from "@/components/plan-wizard/SavePlaceSheet";
 import FullCalendarPicker from "@/components/plan-wizard/FullCalendarPicker";
 import { resolveStored } from "@/components/PlacePhoto";
 import type { MockPlace } from "@/components/plan-wizard/PlaceSwiper";
@@ -40,6 +41,12 @@ export default function SharedRoute() {
   const { user } = useAuth();
   const { t } = useTranslation("sharing");
   const categoryLabel = (cat: string) => t(`categories.${cat}`, { defaultValue: t("categories.other") });
+  const [savePlace, setSavePlace] = useState<SavePlaceInput | null>(null);
+  const pinToSave = (pin: any): SavePlaceInput => ({
+    place_name: pin.place_name, category: pin.category ?? null, address: pin.address ?? null,
+    description: pin.description ?? null, latitude: pin.latitude ?? null, longitude: pin.longitude ?? null,
+    photo_url: pin.photo_url ?? null, place_id: pin.place_id ?? null,
+  });
   const [planView, setPlanView] = useState<"list" | "cards">("list");
   const [planTab, setPlanTab] = useState<"miejsca" | "galeria" | "mapa">("miejsca");
   const [detailPin, setDetailPin] = useState<any | null>(null);
@@ -349,6 +356,7 @@ export default function SharedRoute() {
             categoryLabel={categoryLabel(pin.category || "other")}
             onOpen={() => openDetail(pin)}
             onGoogle={() => openGooglePlace(pin)}
+            onSave={user ? () => setSavePlace(pinToSave(pin)) : undefined}
             note={note}
           />
         );
@@ -540,6 +548,15 @@ export default function SharedRoute() {
         onOpenChange={(o) => !o && setDetailPin(null)}
         place={detailPin}
         city={route.city}
+        onLike={user && detailPin ? () => setSavePlace(pinToSave(detailPin)) : undefined}
+      />
+
+      {/* Zapis miejsca do listy (odwiedzone / do odwiedzenia) - bookmark przy wierszu miejsca */}
+      <SavePlaceSheet
+        open={!!savePlace}
+        onOpenChange={(o) => { if (!o) setSavePlace(null); }}
+        place={savePlace}
+        city={route.city ?? ""}
       />
 
       {/* Rozwinięta interaktywna mapa (zoom) - jak w widoku "Plan wyjazdu" */}

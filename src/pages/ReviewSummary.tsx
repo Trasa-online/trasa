@@ -21,6 +21,8 @@ import { QRCodeSVG } from "qrcode.react";
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { PlacePhoto, resolveStored } from "@/components/PlacePhoto";
 import { RoutePlaceRow } from "@/components/route/RoutePlaceRow";
+import SavePlaceSheet, { type SavePlaceInput } from "@/components/plan-wizard/SavePlaceSheet";
+import { moveToVisited } from "@/lib/placeLists";
 import InviteFriendsSheet from "@/components/route/InviteFriendsSheet";
 import { compressImage } from "@/lib/imageCompression";
 import { isHeic, convertHeicToJpeg } from "@/lib/heicConvert";
@@ -130,9 +132,9 @@ function SortableReviewRow({ pin, idx, categoryLabel, visited, onOpen, onRemove,
 
 // Wiersz planu (widok "Plan wyjazdu" wlasciciela) - wspoldzielony RoutePlaceRow z uchwytem
 // DRAG (Reorder) po lewej + swipe-to-delete + opcjonalna notka. Ujednolicony z eksploracja.
-function SortablePlanRow({ pin, index, categoryLabel, visited, onOpen, onGoogle, onDelete, note }: {
+function SortablePlanRow({ pin, index, categoryLabel, visited, onOpen, onGoogle, onDelete, onSave, note }: {
   pin: any; index: number; categoryLabel: React.ReactNode; visited: boolean;
-  onOpen: () => void; onGoogle: () => void; onDelete: () => void; note?: React.ReactNode;
+  onOpen: () => void; onGoogle: () => void; onDelete: () => void; onSave?: () => void; note?: React.ReactNode;
 }) {
   const controls = useDragControls();
   const grip = (
@@ -147,7 +149,7 @@ function SortablePlanRow({ pin, index, categoryLabel, visited, onOpen, onGoogle,
   return (
     <Reorder.Item value={pin} dragListener={false} dragControls={controls} transition={{ duration: 0 }}>
       <SwipeToDeleteRow onDelete={onDelete}>
-        <RoutePlaceRow pin={pin} index={index} categoryLabel={categoryLabel} visited={visited} onOpen={onOpen} onGoogle={onGoogle} dragHandle={grip} note={note} />
+        <RoutePlaceRow pin={pin} index={index} categoryLabel={categoryLabel} visited={visited} onOpen={onOpen} onGoogle={onGoogle} onSave={onSave} dragHandle={grip} note={note} />
       </SwipeToDeleteRow>
     </Reorder.Item>
   );
@@ -520,6 +522,14 @@ const ReviewSummary = () => {
     queryClient.invalidateQueries({ queryKey: ["discovery-city-routes"] });
     queryClient.invalidateQueries({ queryKey: ["review-summary-route", routeId] });
   };
+
+  // Zapis miejsca do listy (odwiedzone / do odwiedzenia) - bookmark przy wierszu miejsca.
+  const [savePlace, setSavePlace] = useState<SavePlaceInput | null>(null);
+  const pinToSave = (pin: any): SavePlaceInput => ({
+    place_name: pin.place_name, category: pin.category ?? null, address: pin.address ?? null,
+    description: pin.description ?? null, latitude: pin.latitude ?? null, longitude: pin.longitude ?? null,
+    photo_url: pin.photo_url ?? null, place_id: pin.place_id ?? null,
+  });
 
   // Tagi PER MIEJSCE (pins.tags) - alternatywa dla notki. Zapis natychmiast do pina.
   const [pinTags, setPinTags] = useState<Record<string, string[]>>({});
@@ -977,6 +987,17 @@ const ReviewSummary = () => {
       queryClient.invalidateQueries({ queryKey: ["discovery-city-routes"] });
       queryClient.invalidateQueries({ queryKey: ["discovery-polecane"] });
     } catch (e: any) { console.error("[ReviewSummary] publish is_shared failed:", e?.message ?? e); }
+    // #4: miejsca z list usera "do odwiedzenia" -> po publikacji trasy przenies do "Odwiedzone".
+    try {
+      if (user) {
+        const names = [...new Set((currentPins ?? []).map((p: any) => p.place_name).filter(Boolean))];
+        if (names.length) {
+          await moveToVisited(user.id, names, route?.city ?? null);
+          queryClient.invalidateQueries({ queryKey: ["save-sheet-lists", user.id] });
+          queryClient.invalidateQueries({ queryKey: ["public-profile-lists"] });
+        }
+      }
+    } catch (e: any) { console.warn("[ReviewSummary] moveToVisited failed:", e?.message ?? e); }
     // "Zapisz trase" = trasa STWORZONA: status draft->published. Dopiero teraz zdjecia z pinow
     // (pins.images) zasilaja okladki miejsc w wyszukiwarce/eksploracji - fetchPlaceUserPhotos
     // pomija piny tras 'draft'. Podczas tworzenia (draft) zdjecia sa tylko lokalnie na wpisie.
@@ -1820,6 +1841,7 @@ const ReviewSummary = () => {
                 categoryLabel={catLabel(pin.category)}
                 onOpen={() => openDetail(pin)}
                 onGoogle={() => openGooglePlace(pin)}
+                onSave={user ? () => setSavePlace(pinToSave(pin)) : undefined}
                 note={photosRow}
               />
             );
@@ -2210,6 +2232,7 @@ const ReviewSummary = () => {
                       onOpen={() => openDetail(pin)}
                       onGoogle={() => openGooglePlace(pin)}
                       onDelete={() => removePlaceFromPlan(pin)}
+                      onSave={user ? () => setSavePlace(pinToSave(pin)) : undefined}
                       note={note}
                     />
                   );
@@ -2227,7 +2250,8 @@ const ReviewSummary = () => {
         {/* Footer "Nawiguj do..." usuniety - nawigacja jest per-miejsce (guziki Google w wierszach). */}
 
         {/* Wizytowka miejsca */}
-        <PlaceSwiperDetail open={!!detailPin} onOpenChange={(o) => !o && setDetailPin(null)} place={detailPin} city={route?.city} />
+        <PlaceSwiperDetail open={!!detailPin} onOpenChange={(o) => !o && setDetailPin(null)} place={detailPin} city={route?.city} onLike={user && detailPin ? () => setSavePlace(pinToSave(detailPin)) : undefined} />
+        <SavePlaceSheet open={!!savePlace} onOpenChange={(o) => { if (!o) setSavePlace(null); }} place={savePlace} city={route?.city ?? ""} />
 
         {/* Fullscreen podgląd zdjęcia (tap w galerię) - ustawienie okładki / usuniecie. */}
         {renderPhotoViewer()}
@@ -2739,6 +2763,15 @@ const ReviewSummary = () => {
         onOpenChange={(o) => !o && setDetailPin(null)}
         place={detailPin}
         city={route?.city}
+        onLike={user && detailPin ? () => setSavePlace(pinToSave(detailPin)) : undefined}
+      />
+
+      {/* Zapis miejsca do listy (odwiedzone / do odwiedzenia) - bookmark przy wierszu miejsca */}
+      <SavePlaceSheet
+        open={!!savePlace}
+        onOpenChange={(o) => { if (!o) setSavePlace(null); }}
+        place={savePlace}
+        city={route?.city ?? ""}
       />
 
       {/* ── Dodawanie miejsca do planu dnia ──────────────────────────────── */}

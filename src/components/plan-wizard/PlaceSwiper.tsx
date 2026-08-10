@@ -1488,22 +1488,13 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
       haptics.medium();
       setSavedIds(prev => new Set(prev).add(place.id));
       saveReaction(place, "liked");
-      saveExploreLike(city, {
-        place_name: place.place_name,
-        category: place.category,
-        place_id: isUuid ? place.id : null,
-        latitude: place.latitude,
-        longitude: place.longitude,
-        photo_url: photoUrlOverrides.current[place.id] ?? place.photo_url ?? null,
-        address: place.address ?? null,
-        rating: place.rating ?? null,
-        description: place.description ?? null,
-      });
+      // NIE zapisujemy juz do starego "zapisane" (exploreLikes) - realny zapis to wybor listy
+      // w SavePlaceSheet (odwiedzone / do odwiedzenia). Zostaje tylko reakcja (pamiec kolejki swipera).
       if (isUuid) posthog.capture("place_added_to_route", { place_id: place.id });
       if (onboardingActive) { try { window.dispatchEvent(new CustomEvent("trasa:ob-saved")); } catch { /* noop */ } }
     }
-    // Etap 2: drawer "Miejsce zapisane!" (dodaj do wyjazdu). Tylko eksploracja z realnym
-    // kontem - nie w onboardingu.
+    // Sheet "Gdzie chcesz zapisac to miejsce?" - wybor listy (odwiedzone/do odwiedzenia).
+    // Tylko eksploracja z realnym kontem - nie w onboardingu.
     if (opts?.openSheet && exploreMode && !onboardingActive && user && !isAnonymous) {
       setSaveSheetPlace({
         place_name: place.place_name,

@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Bookmark } from "lucide-react";
 import { PlacePhoto } from "@/components/PlacePhoto";
 
 // Oficjalne logo Google (4-kolorowe "G") - guzik "otworz miejsce w Google Maps".
@@ -15,12 +16,13 @@ const GoogleGlyph = ({ className }: { className?: string }) => (
 // ReviewSummary). Duze zdjecie 104px, numer, nazwa (2 linie), chip kategorii + guzik Google.
 // dragHandle (opcjonalny) = uchwyt przeciagania po lewej (tryb wlasciciela). note = dodatkowa
 // tresc pod wierszem (np. notka autora). visited = wyszarzenie.
-export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, dragHandle, note, visited }: {
+export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onSave, dragHandle, note, visited }: {
   pin: any;
   index: number;
   categoryLabel: ReactNode;
   onOpen: () => void;
   onGoogle: () => void;
+  onSave?: () => void; // bookmark: zapisz miejsce do listy (odwiedzone/do odwiedzenia)
   dragHandle?: ReactNode;
   note?: ReactNode;
   visited?: boolean;
@@ -39,13 +41,24 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, dra
           </button>
           <div className="mt-auto flex items-end justify-between gap-2 pt-2">
             <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-white text-[12px] font-semibold text-foreground">{categoryLabel}</span>
-            <button
-              onClick={(e) => { e.stopPropagation(); onGoogle(); }}
-              aria-label="Otwórz w Google Maps"
-              className="h-9 w-9 rounded-full bg-white flex items-center justify-center shadow-sm active:scale-90 transition-transform shrink-0"
-            >
-              <GoogleGlyph className="h-[18px] w-[18px]" />
-            </button>
+            <div className="flex items-center gap-1.5 shrink-0">
+              {onSave && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); onSave(); }}
+                  aria-label="Zapisz miejsce do listy"
+                  className="h-9 w-9 rounded-full bg-white flex items-center justify-center shadow-sm active:scale-90 transition-transform"
+                >
+                  <Bookmark className="h-[18px] w-[18px] text-foreground" strokeWidth={2} />
+                </button>
+              )}
+              <button
+                onClick={(e) => { e.stopPropagation(); onGoogle(); }}
+                aria-label="Otwórz w Google Maps"
+                className="h-9 w-9 rounded-full bg-white flex items-center justify-center shadow-sm active:scale-90 transition-transform"
+              >
+                <GoogleGlyph className="h-[18px] w-[18px]" />
+              </button>
+            </div>
           </div>
         </div>
       </div>

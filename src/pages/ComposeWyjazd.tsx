@@ -520,21 +520,50 @@ export default function ComposeWyjazd() {
     }
   };
 
-  // "Twoje zapisane miejsca" (z eksploracji, per miasto) - szybka sciaga do dodania jednym tapem.
-  // Zastapily "Propozycje z bazy". Podczas pisania pokazujemy wyniki wyszukiwania.
+  // #5: miejsca z LIST usera "do odwiedzenia" (to_visit) - glowne zrodlo "Twoich zapisanych
+  // miejsc" przy tworzeniu trasy (zastapily stare exploreLikes). Filtr po miescie listy.
+  const [toVisitPlaces, setToVisitPlaces] = useState<any[]>([]);
+  useEffect(() => {
+    if (!user) { setToVisitPlaces([]); return; }
+    let alive = true;
+    (async () => {
+      const cities = expandCity(city).map((c) => c.toLowerCase());
+      const { data: lists } = await (supabase as any).from("discovery_collections")
+        .select("id, city").eq("user_id", user.id).eq("kind", "ranking").eq("list_status", "to_visit");
+      const listRows = (lists ?? []) as any[];
+      if (!listRows.length) { if (alive) setToVisitPlaces([]); return; }
+      const cityByList: Record<string, string> = {};
+      for (const l of listRows) cityByList[l.id] = String(l.city ?? "").toLowerCase();
+      const { data: items } = await (supabase as any).from("discovery_items")
+        .select("collection_id, place_id, place_name, category, latitude, longitude, photo_url, address, rating")
+        .in("collection_id", listRows.map((l) => l.id));
+      const rows = (items ?? []) as any[];
+      const forCity = rows.filter((it) => cities.includes(cityByList[it.collection_id] ?? ""));
+      if (alive) setToVisitPlaces(forCity.length ? forCity : rows);
+    })();
+    return () => { alive = false; };
+  }, [user, city]);
+
+  // "Twoje zapisane miejsca" - miejsca z list "do odwiedzenia" (#5) + fallback legacy exploreLikes.
   const savedForCity = useMemo(() => {
     const mapPlace = (p: any) => ({
       id: p.place_id ?? p.place_name, place_id: p.place_id ?? null, place_name: p.place_name,
       category: p.category, latitude: p.latitude ?? null, longitude: p.longitude ?? null,
       photo_url: p.photo_url ?? null, address: p.address ?? null, rating: p.rating ?? null,
     });
+    const seen = new Set<string>();
+    const dedupe = (arr: any[]) => arr.filter((p) => {
+      const k = String(p.place_name ?? "").toLowerCase().trim();
+      if (!k || seen.has(k)) return false; seen.add(k); return true;
+    });
+    const fromLists = toVisitPlaces.map(mapPlace);
     const wanted = new Set(expandCity(city).map((c) => c.toLowerCase()));
     const groups = getHistoryByCity();
-    const forCity = groups.filter((g) => wanted.has(g.city.toLowerCase())).flatMap((g) => g.places).map(mapPlace);
-    if (forCity.length > 0) return { places: forCity, fallback: false };
-    // Fallback: zapisane miejsca sa w innym miescie niz domyslne - pokaz wszystkie (szybka sciaga).
-    return { places: groups.flatMap((g) => g.places).map(mapPlace), fallback: true };
-  }, [city]);
+    const legacy = groups.filter((g) => wanted.has(g.city.toLowerCase())).flatMap((g) => g.places).map(mapPlace);
+    const merged = dedupe([...fromLists, ...legacy]);
+    if (merged.length > 0) return { places: merged, fallback: false };
+    return { places: dedupe(groups.flatMap((g) => g.places).map(mapPlace)), fallback: true };
+  }, [city, toVisitPlaces]);
   const isSearching = search.trim().length >= 2;
   // Ujednolicony uklad z widokiem listy (CreateRanking): wyniki wyszukiwania POD wyszukiwarka,
   // "Wybrane miejsca" (z kafelkiem "+") wyzej, "Twoje zapisane miejsca" POD spodem.
