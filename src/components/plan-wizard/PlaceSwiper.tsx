@@ -372,6 +372,10 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
       onPointerMove={scrollMode ? undefined : handlePointerMove}
       onPointerUp={scrollMode ? undefined : handlePointerUp}
       onPointerCancel={scrollMode ? undefined : handlePointerUp}
+      // scrollMode (Eksploracja pionowa): tap w CALA karte otwiera wizytowke. onClick fire'uje
+      // tylko na tap (nie na scroll), a wszystkie interaktywne dzieci (strzalki zdjec, zapisz,
+      // rozwin) robia stopPropagation. Bez tego wizytowke otwieral tylko maly guzik ^.
+      onClick={scrollMode ? () => onTap() : undefined}
       style={scrollMode ? { zIndex: 1 } : {
         transform: isTop
           ? `translateX(${dragX}px) rotate(${rotation}deg)`
@@ -382,7 +386,7 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
       }}
       className={cn(
         "absolute inset-0 rounded-3xl overflow-hidden shadow-md select-none",
-        scrollMode ? "" : (isTop ? "cursor-grab active:cursor-grabbing" : "pointer-events-none")
+        scrollMode ? "cursor-pointer" : (isTop ? "cursor-grab active:cursor-grabbing" : "pointer-events-none")
       )}
     >
       {/* Photo / Video / Ikona kategorii (empty-state) */}
