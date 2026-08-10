@@ -163,8 +163,25 @@ export default function ComposeWyjazd() {
   // Po utworzeniu trasy zapisujemy draftId, wiec ponowny "Przejdz do sugestii" AKTUALIZUJE
   // istniejaca trase zamiast tworzyc duplikat.
   const softKey = `trasa_compose_soft:${location.key}`;
+  // Trwaly backup (localStorage) - PRZEZYWA ubicie apki / restart iOS WebView, w przeciwienstwie
+  // do sessionStorage (czyszczony przy zamknieciu). Chroni przed utrata dlugiej kompozycji.
+  const DURABLE_KEY = "trasa_compose_backup";
+  let restoredFromDurable = false;
   const soft = (() => {
-    try { const raw = sessionStorage.getItem(softKey); return raw ? JSON.parse(raw) : null; } catch { return null; }
+    try {
+      const raw = sessionStorage.getItem(softKey);
+      if (raw) return JSON.parse(raw);
+      // Fallback: trwaly backup - tylko gdy pasuje do tego wejscia (ten sam draftId albo oba nowe),
+      // ma miejsca i jest swiezy (< 24h) - zeby nie wskrzeszac starych porzuconych kompozycji.
+      const durRaw = localStorage.getItem(DURABLE_KEY);
+      if (durRaw) {
+        const d = JSON.parse(durRaw);
+        const fresh = d?.ts && (Date.now() - d.ts) < 24 * 3600 * 1000;
+        const sameEntry = (d?.draftId ?? null) === (nav.draftId ?? null);
+        if (fresh && sameEntry && (d?.items?.length ?? 0) > 0) { restoredFromDurable = true; return d; }
+      }
+    } catch { /* storage unavailable */ }
+    return null;
   })();
 
   const [draftId, setDraftId] = useState<string | null>(soft?.draftId ?? nav.draftId ?? null);
@@ -194,15 +211,26 @@ export default function ComposeWyjazd() {
 
   // Persystencja roboczego stanu przy kazdej zmianie (miasto/nazwa/miejsca/daty/draftId).
   useEffect(() => {
-    try {
-      sessionStorage.setItem(softKey, JSON.stringify({
-        draftId, city, name, items,
-        tripDate: tripDate ? { start: tripDate.start.toISOString(), numDays: tripDate.numDays } : null,
-      }));
-    } catch { /* sessionStorage unavailable */ }
+    const payload = JSON.stringify({
+      draftId, city, name, items,
+      tripDate: tripDate ? { start: tripDate.start.toISOString(), numDays: tripDate.numDays } : null,
+      ts: Date.now(),
+    });
+    try { sessionStorage.setItem(softKey, payload); } catch { /* sessionStorage unavailable */ }
+    // Trwaly mirror TYLKO gdy sa miejsca (pusty stan nie nadpisuje dobrej kopii zapasowej).
+    try { if (items.length) localStorage.setItem(DURABLE_KEY, payload); } catch { /* unavailable */ }
   }, [softKey, draftId, city, name, items, tripDate]);
 
-  const clearSoft = () => { try { sessionStorage.removeItem(softKey); } catch { /* unavailable */ } };
+  const clearSoft = () => {
+    try { sessionStorage.removeItem(softKey); } catch { /* unavailable */ }
+    try { localStorage.removeItem(DURABLE_KEY); } catch { /* unavailable */ }
+  };
+
+  // Odzyskano niezapisana trase z trwalego backupu (po ubiciu apki / crashu) - poinformuj usera.
+  useEffect(() => {
+    if (restoredFromDurable) toast("Przywrócono niezapisaną trasę", { description: "Twoje miejsca zostały odzyskane." });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Doladowanie ROBOCZEJ trasy z DB gdy wchodzimy przez draftId BEZ przekazanych miejsc
   // (klik w robocza trase w hubie "Robocze"). Prefill miasto + nazwa + miejsca z pinow, zeby
