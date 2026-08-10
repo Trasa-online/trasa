@@ -334,12 +334,23 @@ export default function ComposeWyjazd() {
     let alive = true;
     (async () => {
       const cities = expandCity(city);
-      const { data } = await (supabase as any)
-        .from("places")
-        .select("id, place_name, city, category, address, latitude, longitude, rating, photo_url, business_profiles(cover_image_url, gallery_urls)")
-        .in("city", cities)
-        .order("rating", { ascending: false, nullsFirst: false })
-        .limit(20);
+      const selectCols = "id, place_name, city, category, address, latitude, longitude, rating, photo_url, business_profiles(cover_image_url, gallery_urls)";
+      // PRIORYTET B2B: lokale z wizytowka (business_profiles) ZAWSZE na gorze propozycji, jak
+      // w swiperze eksploracji. Bez tego lokale bez ratingu Google (czeste dla B2B) wypadaly
+      // poza top-20 (order by rating nullslast) i w ogole sie nie pokazywaly przy tworzeniu.
+      const [{ data: bizRows }, { data: restRows }] = await Promise.all([
+        (supabase as any).from("places")
+          .select("id, place_name, city, category, address, latitude, longitude, rating, photo_url, business_profiles!inner(cover_image_url, gallery_urls)")
+          .in("city", cities).limit(30),
+        (supabase as any).from("places")
+          .select(selectCols)
+          .in("city", cities).order("rating", { ascending: false, nullsFirst: false }).limit(20),
+      ]);
+      // Merge: B2B pierwsze, potem reszta po ratingu; dedup po id.
+      const seenIds = new Set<string>();
+      const data = [...(bizRows ?? []), ...(restRows ?? [])].filter((r: any) => {
+        if (seenIds.has(r.id)) return false; seenIds.add(r.id); return true;
+      });
       // Okladka propozycji: biznes z wlasnym zdjeciem -> jego cover (uzupelnia lokal). Inaczej
       // null -> ikona kategorii (zdjecia userow z tras dojda pozniej). Google backfill
       // (place.photo_url) juz odciety, wiec go nie uzywamy.
