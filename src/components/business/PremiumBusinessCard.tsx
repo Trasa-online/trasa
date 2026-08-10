@@ -389,23 +389,28 @@ function HeroPhotoCarousel({ photos, placeName, category, onExpand, onClose, loa
           )}
           {photos.length > 1 && (
             <>
-              {/* Chevron nawigacji - MALE guziki (nie cala polowa), zeby tap w zdjecie = powiekszenie. */}
+              {/* Chevron nawigacji - tap-zona na PELNEJ WYSOKOSCI (mniej missclickow), ale
+                  WEZSZA niz pol zdjecia, zeby srodek zostal klikalny na powiekszenie. */}
               {activeIdx > 0 && (
                 <button
                   onClick={(e) => { e.stopPropagation(); changePhoto(activeIdx - 1); }}
-                  className="absolute left-2 top-1/2 -translate-y-1/2 z-20 h-9 w-9 rounded-full bg-white/85 backdrop-blur-sm flex items-center justify-center shadow active:scale-90"
+                  className="absolute left-0 top-0 bottom-0 w-16 z-20 flex items-center justify-start pl-2"
                   aria-label={t("prev")}
                 >
-                  <ChevronLeft className="h-5 w-5 text-foreground" />
+                  <span className="h-9 w-9 rounded-full bg-white/85 backdrop-blur-sm flex items-center justify-center shadow active:scale-90">
+                    <ChevronLeft className="h-5 w-5 text-foreground" />
+                  </span>
                 </button>
               )}
               {activeIdx < photos.length - 1 && (
                 <button
                   onClick={(e) => { e.stopPropagation(); changePhoto(activeIdx + 1); }}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 z-20 h-9 w-9 rounded-full bg-white/85 backdrop-blur-sm flex items-center justify-center shadow active:scale-90"
+                  className="absolute right-0 top-0 bottom-0 w-16 z-20 flex items-center justify-end pr-2"
                   aria-label={t("next")}
                 >
-                  <ChevronRight className="h-5 w-5 text-foreground" />
+                  <span className="h-9 w-9 rounded-full bg-white/85 backdrop-blur-sm flex items-center justify-center shadow active:scale-90">
+                    <ChevronRight className="h-5 w-5 text-foreground" />
+                  </span>
                 </button>
               )}
             </>

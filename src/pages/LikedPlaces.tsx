@@ -1,6 +1,4 @@
 import { useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
-import { PullToRefresh } from "@/components/PullToRefresh";
 import CitySelect from "@/components/home/CitySelect";
 import TabTopBar from "@/components/layout/TabTopBar";
 import { useActiveCity } from "@/hooks/useActiveCity";
@@ -14,15 +12,12 @@ import { cn } from "@/lib/utils";
 type SavedTab = "places" | "routes" | "lists";
 
 const LikedPlaces = () => {
-  const queryClient = useQueryClient();
   const [city, setCity] = useActiveCity();
   const [tab, setTab] = useState<SavedTab>("places");
 
   return (
-    <PullToRefresh
-      onRefresh={async () => { await queryClient.invalidateQueries(); }}
-      className="flex-1 flex flex-col pb-[calc(5rem+env(safe-area-inset-bottom,0px))]"
-    >
+    // Bez pull-to-refresh (usuniete 2026-08-10 na prosbe) - zwykly kontener.
+    <div className="flex-1 flex flex-col pb-[calc(5rem+env(safe-area-inset-bottom,0px))]">
       {/* Naglowek: selektor miasta (jak na widoku glownym) */}
       <TabTopBar>
         <CitySelect city={city} onCityChange={setCity} allowAll />
@@ -56,7 +51,7 @@ const LikedPlaces = () => {
           : tab === "routes" ? <SavedRoutes city={city} />
           : <SavedCollections />}
       </div>
-    </PullToRefresh>
+    </div>
   );
 };
 

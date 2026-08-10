@@ -307,9 +307,13 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
   // jestes na miejscu, albo punkt startowy "od startu" gdy planujesz). Gdy brak ref a
   // miejsce MA wspolrzedne - maly przycisk "Pokaz dystans" otwiera wybor (Jestes juz w meiscie?).
   const distanceRef = useDistanceReference();
-  const placeHasCoords = !!(place.latitude && place.longitude);
+  // Odporne na koordy jako string / 0 / NaN - inaczej chip dystansu znikal "czasami"
+  // (np. gdy latitude przyszlo jako "52.2" albo 0,0 -> falsy/NaN i chip sie nie renderowal).
+  const placeLat = Number(place.latitude);
+  const placeLng = Number(place.longitude);
+  const placeHasCoords = Number.isFinite(placeLat) && Number.isFinite(placeLng) && (placeLat !== 0 || placeLng !== 0);
   const distanceLabel = distanceRef && placeHasCoords
-    ? formatDistance(haversineKmDist(distanceRef.coords, { lat: place.latitude, lng: place.longitude }))
+    ? formatDistance(haversineKmDist(distanceRef.coords, { lat: placeLat, lng: placeLng }))
     : null;
   const showEnableDistance = !distanceRef && placeHasCoords;
   // Priorytet: tagi z business_profiles.tags (ustawione przez wlasciciela) > vibe_tags z bazy.
