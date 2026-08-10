@@ -2667,10 +2667,39 @@ const ReviewSummary = () => {
             </>
             )
           ) : (
-            /* ══ WSPOMNIENIE (gość): read-only galeria + plan ══ */
+            /* ══ Trasa grupowa (uczestnik) / wspomnienie gościa: SPÓJNY widok read-only jak u hosta,
+               bez edycji i bez dodawania miejsca. Plan z toggle Lista/Karty + mapa + wspólna galeria
+               (uczestnik-członek dodaje własne zdjęcia). ══ */
             <div className="pt-2 pb-5">
-              {renderGallery(isGroupMember)}
-              {currentPins.length > 0 && <div className="px-5 mt-5">{renderListReadonly(false)}</div>}
+              {/* Plan miejsc z toggle Lista/Karty (read-only) */}
+              {currentPins.length > 0 && (
+                <div className="px-5 pt-2">
+                  {renderPlanHeader(true)}
+                  {planView === "list" ? renderListReadonly(true) : renderSwiper(false, true)}
+                </div>
+              )}
+              {/* Mapa trasy (statyczna) - tap otwiera Google Maps z trasą */}
+              {(() => {
+                const mapUrl = buildTripStaticMapUrl(currentPins, "560x300");
+                if (!mapUrl) return null;
+                const openMap = () => {
+                  const pts = currentPins.filter((p: any) => p.latitude != null && p.longitude != null);
+                  if (!pts.length) return;
+                  const dest = `${pts[pts.length - 1].latitude},${pts[pts.length - 1].longitude}`;
+                  const waypoints = pts.slice(0, -1).map((p: any) => `${p.latitude},${p.longitude}`).join("|");
+                  window.open(`https://www.google.com/maps/dir/?api=1&destination=${dest}${waypoints ? `&waypoints=${encodeURIComponent(waypoints)}` : ""}`, "_blank", "noopener,noreferrer");
+                };
+                return (
+                  <div className="px-5 mt-6">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">{t("plan.map", { defaultValue: "Mapa trasy" })}</p>
+                    <button onClick={openMap} className="block w-full rounded-2xl overflow-hidden border border-border/30 bg-muted active:opacity-95 transition-opacity">
+                      <img src={mapUrl} alt="" className="w-full aspect-[16/9] object-cover" />
+                    </button>
+                  </div>
+                );
+              })()}
+              {/* Wspólna galeria wyjazdu - uczestnik-członek sesji może dodać własne zdjęcia */}
+              <div className="mt-6">{renderGallery(isGroupMember)}</div>
             </div>
           )
         ) : (

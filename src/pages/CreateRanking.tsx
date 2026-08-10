@@ -17,7 +17,7 @@ import { TRIP_COUNTRIES, TRIP_REGIONS, citiesForCountry, countryForCity } from "
 import { getHistoryByCity } from "@/lib/exploreLikes";
 import { forwardGeocode, reverseGeocode, forwardGeocodeWithTypes } from "@/lib/googleMaps";
 import { isRouteCollection } from "@/lib/collectionThemes";
-import { MAIN_CATEGORIES, getDbCategoriesFor } from "@/lib/categories";
+import { MAIN_CATEGORIES, getDbCategoriesFor, mainCategoryLabel } from "@/lib/categories";
 import { CategoryIcon } from "@/components/CategoryIcon";
 import { categoryFromGoogleTypes, inferCategoryFromName } from "@/lib/placeCategoryIcon";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
@@ -214,6 +214,9 @@ const CreateRanking = () => {
   // miniatura na karcie w eksploracji. NULL = fallback do zdjecia pierwszego miejsca.
   const [coverUrl, setCoverUrl] = useState<string | null>(null);
   const [listCoverUrl, setListCoverUrl] = useState<string | null>(null);
+  // Dane B2B (premium) wybranych miejsc - do pokazania na karcie pelnego adresu, tagow i
+  // kategorii glownej+drugiej. Klucz = place_id (UUID). Tylko miejsca z business_profiles.
+  const [bizMap, setBizMap] = useState<Record<string, any>>({});
   // Ktory picker otwarty: hero (cover) | miniatura (list) | zamkniety.
   const [pickerTarget, setPickerTarget] = useState<null | "hero" | "list">(null);
   const [uploadingCover, setUploadingCover] = useState(false);
@@ -243,6 +246,29 @@ const CreateRanking = () => {
   const [customPreview, setCustomPreview] = useState<Omit<RankingItem, "key" | "short_desc"> | null>(null);
   const [author, setAuthor] = useState<{ name: string; avatar: string | null }>({ name: "Użytkownik", avatar: null });
 
+
+  // Dociagnij dane B2B dla wybranych miejsc (po place_id) - pelny adres, tagi, kategorie.
+  const placeIdsKey = items.map((i) => i.place_id).filter(Boolean).join(",");
+  useEffect(() => {
+    const ids = items.map((i) => i.place_id).filter(Boolean) as string[];
+    if (!ids.length) { setBizMap({}); return; }
+    let alive = true;
+    (async () => {
+      const { data } = await (supabase as any)
+        .from("places")
+        .select("id, business_profiles(street, postal_code, address, tags, main_category, secondary_category)")
+        .in("id", ids);
+      if (!alive) return;
+      const m: Record<string, any> = {};
+      for (const p of data ?? []) {
+        const bp = Array.isArray(p.business_profiles) ? p.business_profiles[0] : p.business_profiles;
+        if (bp) m[p.id] = bp;
+      }
+      setBizMap(m);
+    })();
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [placeIdsKey]);
 
   // ── Author + edit/liked prefill ───────────────────────────────────────────
   useEffect(() => {
@@ -727,6 +753,12 @@ const CreateRanking = () => {
               <div className="flex gap-3 overflow-x-auto scrollbar-none snap-x snap-mandatory -mr-4 pr-4 pb-1">
                 {items.map((it, idx) => {
                   const cat = categoryBadge(it.category);
+                  // Premium B2B: pelne dane z business_profiles (adres, kategoria glowna+druga, tagi).
+                  const bp = it.place_id ? bizMap[it.place_id] : null;
+                  const bpAddress = bp?.street
+                    ? [bp.street, [bp.postal_code, city].filter(Boolean).join(" ")].filter(Boolean).join(", ")
+                    : (bp?.address || null);
+                  const bpTags: string[] = Array.isArray(bp?.tags) ? bp.tags.filter(Boolean) : [];
                   return (
                     <div key={it.key} className="relative shrink-0 w-[80%] snap-start rounded-2xl bg-secondary border border-border/40 overflow-hidden shadow-sm">
                       <button onClick={() => openDetail(it)} className="w-full text-left active:opacity-90 transition-opacity">
@@ -737,9 +769,26 @@ const CreateRanking = () => {
                           {isRoute && <span className="absolute top-3 left-3 h-8 w-8 rounded-full bg-black/55 backdrop-blur text-white text-sm font-bold flex items-center justify-center shadow-sm">{idx + 1}</span>}
                         </div>
                         <div className="px-4 pt-3 pb-3.5">
-                          {cat && <span className="inline-flex items-center gap-1 rounded-full bg-background px-2.5 py-0.5 text-[11px] font-semibold mb-1.5"><CategoryIcon category={it.category} className="h-3 w-3 shrink-0" />{cat.label}</span>}
+                          {/* Kategorie: premium -> glowna + druga; zwykle miejsce -> pojedynczy badge. */}
+                          {bp ? (
+                            <div className="flex flex-wrap gap-1.5 mb-1.5">
+                              {bp.main_category && <span className="inline-flex items-center rounded-full bg-background px-2.5 py-0.5 text-[11px] font-semibold">{mainCategoryLabel(bp.main_category)}</span>}
+                              {bp.secondary_category && bp.secondary_category !== bp.main_category && <span className="inline-flex items-center rounded-full bg-background/70 px-2.5 py-0.5 text-[11px] font-medium text-muted-foreground">{mainCategoryLabel(bp.secondary_category)}</span>}
+                            </div>
+                          ) : (
+                            cat && <span className="inline-flex items-center gap-1 rounded-full bg-background px-2.5 py-0.5 text-[11px] font-semibold mb-1.5"><CategoryIcon category={it.category} className="h-3 w-3 shrink-0" />{cat.label}</span>
+                          )}
                           <p className="text-[15px] font-bold leading-snug">{it.place_name}</p>
-                          {it.address && <p className="text-[12px] text-muted-foreground leading-snug mt-1 truncate">{it.address}</p>}
+                          {/* Pelny adres (premium bez truncate) lub zwykly adres (truncate). */}
+                          {(bpAddress || it.address) && <p className={`text-[12px] text-muted-foreground leading-snug mt-1 ${bpAddress ? "" : "truncate"}`}>{bpAddress || it.address}</p>}
+                          {/* Tagi lokalu (premium). */}
+                          {bpTags.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-2">
+                              {bpTags.slice(0, 4).map((tg) => (
+                                <span key={tg} className="text-[10px] font-medium text-foreground/70 bg-background rounded-full px-2 py-0.5">{tg}</span>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       </button>
                       <div className="absolute top-2.5 right-2.5 flex items-center gap-1.5">

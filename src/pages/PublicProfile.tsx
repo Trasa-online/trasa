@@ -53,6 +53,42 @@ export default function PublicProfile() {
   // Liczniki follow (asymetryczny model). followers SELECT jest publiczny -> dziala dla cudzego profilu.
   const { data: followCounts = { followers: 0, following: 0 } } = useFollowCounts(profile?.id);
 
+  // Listy (polecajki) utworzone przez tego usera - TYLKO publiczne i zatwierdzone (moderacja).
+  const { data: userLists = [] } = useQuery({
+    queryKey: ["public-profile-lists", profile?.id],
+    enabled: !!profile?.id,
+    queryFn: async () => {
+      const { data: cols } = await supabase
+        .from("discovery_collections")
+        .select("id, title, city, cover_url, list_cover_url")
+        .eq("user_id", profile!.id)
+        .eq("kind", "ranking")
+        .eq("is_public", true)
+        .eq("hidden_by_admin", false)
+        .eq("moderation_status", "approved")
+        .order("updated_at", { ascending: false });
+      const rows = (cols ?? []) as any[];
+      if (!rows.length) return [];
+      const ids = rows.map((r) => r.id);
+      const { data: items } = await (supabase as any)
+        .from("discovery_items")
+        .select("collection_id, photo_url, order_index")
+        .in("collection_id", ids)
+        .order("order_index", { ascending: true });
+      const coverMap: Record<string, string> = {};
+      const countMap: Record<string, number> = {};
+      for (const it of items ?? []) {
+        countMap[it.collection_id] = (countMap[it.collection_id] ?? 0) + 1;
+        if (!coverMap[it.collection_id] && it.photo_url) coverMap[it.collection_id] = it.photo_url;
+      }
+      return rows.map((r) => ({
+        ...r,
+        _cover: resolveStored(r.list_cover_url) ?? resolveStored(r.cover_url) ?? resolveStored(coverMap[r.id]) ?? null,
+        _count: countMap[r.id] ?? 0,
+      }));
+    },
+  });
+
 
 
   // Dziennik usera (read-only): pocztowki jak we wlasnym Dzienniku. Trasy wielodniowe
@@ -161,6 +197,37 @@ export default function PublicProfile() {
           <div className="flex-1" />
           <FollowButton targetUserId={profile.id} className="h-9 px-4 text-sm" />
         </div>
+
+        {/* Listy usera (polecajki) - PIERWSZA sekcja, nad Plany/Miasta. Tap -> /lista/:id. */}
+        {userLists.length > 0 && (
+          <div>
+            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-3">{t("sections.lists", { defaultValue: "Listy" })}</p>
+            <div className="flex gap-3 overflow-x-auto scrollbar-none -mx-4 px-4 pb-1">
+              {userLists.map((l: any) => (
+                <button
+                  key={l.id}
+                  onClick={() => navigate(`/lista/${l.id}`)}
+                  className="shrink-0 w-40 text-left active:scale-[0.98] transition-transform"
+                >
+                  <div className="relative w-full aspect-[4/3] rounded-2xl overflow-hidden bg-[#fcede3]">
+                    {l._cover && (
+                      <img
+                        src={l._cover}
+                        alt=""
+                        className="w-full h-full object-cover"
+                        onError={(ev) => { (ev.target as HTMLImageElement).style.opacity = "0"; }}
+                      />
+                    )}
+                  </div>
+                  <p className="text-sm font-bold leading-tight mt-2 line-clamp-1">{l.title}</p>
+                  <p className="text-xs text-muted-foreground line-clamp-1">
+                    {l._count} {l._count === 1 ? "miejsce" : l._count < 5 ? "miejsca" : "miejsc"}
+                  </p>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Statystyki - TEN SAM uklad co wlasny profil (Plany + Miasta, 2 kolumny). */}
         <div className="grid grid-cols-2 gap-3">
