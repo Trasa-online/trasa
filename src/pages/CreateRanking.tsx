@@ -528,7 +528,10 @@ const CreateRanking = () => {
         }).catch((e) => console.warn("[CreateRanking] notify-admin-content failed:", e));
       }
       toast.success(editId ? t("toast.updated") : t("toast.sent"));
-      navigate("/eksploruj");
+      // Listy sa widoczne TYLKO w profilu (SHOW_ZESTAWIENIA=false w eksploracji), a nowa lista
+      // czeka na moderacje. Kieruj do "Moje listy" zamiast na pusty feed - inaczej user ma
+      // wrazenie, ze nic sie nie zapisalo.
+      navigate("/eksploruj", { state: { myCollections: true } });
     } catch (e: any) {
       toast.error(t("toast.save_failed", { error: e?.message ?? t("error_fallback") }));
     } finally {

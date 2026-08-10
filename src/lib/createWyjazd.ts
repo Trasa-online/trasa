@@ -27,6 +27,35 @@ export interface WyjazdPlaceInput {
   place_id?: string | null;
 }
 
+// Wybor okladki miniatury (list_cover_url). Priorytet: zdjecie przekazane wprost z pinu.
+// Fallback: zdjecie z tabeli `places` (agreguje zdjecia userow/B2B) dopasowane po nazwie -
+// dzieki temu trasa zlozona z wynikow wyszukiwania (photo_url=null) i tak dostaje realna
+// okladke i trafia do eksploracji. Gdy nigdzie nie ma zdjecia -> null (ReviewSummary uzupelni).
+async function pickCoverPhoto(places: WyjazdPlaceInput[], city: string | null): Promise<string | null> {
+  const direct = places.find((p) => p.photo_url)?.photo_url;
+  if (direct) return direct;
+  const names = [...new Set(places.map((p) => p.place_name).filter(Boolean))];
+  if (!names.length) return null;
+  try {
+    // 1) Zdjecie z tabeli `places` (cache zdjec miejsc) po nazwie, najpierw w miescie trasy.
+    let q = (supabase as any).from("places").select("photo_url")
+      .in("place_name", names).not("photo_url", "is", null).limit(1);
+    if (city) q = q.ilike("city", `${city}%`);
+    const { data } = await q;
+    if (data?.[0]?.photo_url) return data[0].photo_url as string;
+    const { data: placesAny } = await (supabase as any).from("places").select("photo_url")
+      .in("place_name", names).not("photo_url", "is", null).limit(1);
+    if (placesAny?.[0]?.photo_url) return placesAny[0].photo_url as string;
+    // 2) Zdjecie z innych pinow tych samych miejsc (photo_url = cache zdjec miejsc z tras userow).
+    const { data: pinsAny } = await (supabase as any).from("pins").select("photo_url")
+      .in("place_name", names).not("photo_url", "is", null).limit(1);
+    if (pinsAny?.[0]?.photo_url) return pinsAny[0].photo_url as string;
+  } catch (e) {
+    console.warn("[createWyjazd] pickCoverPhoto failed:", (e as any)?.message ?? e);
+  }
+  return null;
+}
+
 export async function createWyjazdFromPlaces(
   userId: string,
   city: string | null,
@@ -40,8 +69,7 @@ export async function createWyjazdFromPlaces(
   // list_cover_url NOT NULL, inaczej trasa jest niewidoczna. Zasilamy ja od razu
   // pierwszym dostepnym zdjeciem miejsca, zeby swiezo utworzona trasa trafila do
   // eksploracji bez koniecznosci recznego ustawiania okladki w ReviewSummary.
-  // (Gdy zaden pin nie ma zdjecia -> null; ensureListCover/manualny pick uzupelni pozniej.)
-  const firstPhoto = places.find((p) => p.photo_url)?.photo_url ?? null;
+  const firstPhoto = await pickCoverPhoto(places, city);
   const { data: route, error } = await (supabase as any)
     .from("routes")
     .insert({
