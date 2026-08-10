@@ -239,8 +239,6 @@ const ReviewSummary = () => {
   const [photos, setPhotos] = useState<string[]>([]);
   const [isPublic, setIsPublic] = useState(true);
   const [shareAnonymous, setShareAnonymous] = useState(false);
-  const [shareFriends, setShareFriends] = useState(false);
-  const [privacyOpen, setPrivacyOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [notes, setNotes] = useState<Record<string, string>>({});
@@ -490,8 +488,7 @@ const ReviewSummary = () => {
   useEffect(() => {
     if (route?.review_photos?.length) setPhotos(route.review_photos);
     if (route?.is_shared != null) setIsPublic(route.is_shared);
-    if (typeof (route as any)?.share_friends === "boolean") setShareFriends((route as any).share_friends);
-  }, [route?.review_photos, route?.is_shared, (route as any)?.share_friends]);
+  }, [route?.review_photos, route?.is_shared]);
 
   // Podpis + oznaczeni czlonkowie: osobny best-effort load (kolumny z migracji
   // 20260705). Gdy migracja jeszcze nie zaaplikowana -> po prostu brak wartosci,
@@ -572,22 +569,6 @@ const ReviewSummary = () => {
   };
   // Kompat: showSharePrompt uzywa togglePublic(true/false).
   const togglePublic = (val: boolean) => setVisibility(val ? "profile" : "private");
-
-  // 3-poziomowa widocznosc (Ustawienia prywatnosci): Tylko ja / Bliscy znajomi / Wszyscy.
-  const privacyMode: "public" | "friends" | "private" = isPublic ? "public" : shareFriends ? "friends" : "private";
-  const setPrivacy = async (mode: "public" | "friends" | "private") => {
-    const pub = mode === "public";
-    const fri = mode === "friends";
-    setIsPublic(pub); setShareFriends(fri);
-    if (!pub) setShareAnonymous(false);
-    if (!routeId) return;
-    await supabase.from("routes").update({ is_shared: pub, share_friends: fri, ...(pub ? {} : { share_anonymous: false }) } as any).eq("id", routeId);
-    queryClient.invalidateQueries({ queryKey: ["review-summary-route", routeId] });
-    queryClient.invalidateQueries({ queryKey: ["journal-entries"] });
-    queryClient.invalidateQueries({ queryKey: ["discovery-city-routes"] });
-    queryClient.invalidateQueries({ queryKey: ["discovery-polecane"] });
-    queryClient.invalidateQueries({ queryKey: ["shared-route-meta", routeId] });
-  };
 
   const processFiles = async (files: File[]) => {
     if (!files.length || !routeId || !user) return;
@@ -2332,51 +2313,6 @@ const ReviewSummary = () => {
               <button onClick={() => setPlanMapOpen(false)} aria-label={t("close", { defaultValue: "Zamknij" })} className="absolute right-3 z-10 h-10 w-10 rounded-full bg-card shadow-md flex items-center justify-center active:scale-90 transition-transform" style={{ top: "max(0.75rem, env(safe-area-inset-top))" }}>
                 <X className="h-5 w-5 text-foreground" />
               </button>
-            </div>
-          </div>
-        )}
-
-        {/* Ustawienia prywatnosci (pelnoekranowo, wg zalacznika - jasny motyw, copy pod Trase) */}
-        {privacyOpen && (
-          <div className="fixed inset-0 z-[85] bg-background flex flex-col max-w-lg mx-auto animate-in slide-in-from-right duration-200">
-            <div className="flex items-center gap-3 px-4 pt-safe-4 pb-3 border-b border-border/20 shrink-0">
-              <button onClick={() => setPrivacyOpen(false)} aria-label={t("a11y.back_to_journal", { defaultValue: "Wróć" })} className="h-9 w-9 flex items-center justify-center -ml-1 rounded-full text-foreground active:scale-90 transition-transform">
-                <ArrowLeft className="h-5 w-5" />
-              </button>
-              <p className="text-lg font-bold">Ustawienia prywatności</p>
-            </div>
-            <div className="flex-1 min-h-0 overflow-y-auto px-4 py-5 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))]">
-              <p className="text-2xl font-black leading-tight mb-5">Kto może zobaczyć ten wyjazd?</p>
-              <div className="flex flex-col gap-3">
-                {([
-                  { mode: "private" as const, Icon: Lock, title: "Tylko ja", desc: "Maksymalna prywatność. Widzisz ten wyjazd tylko Ty oraz osoby, które zaprosisz lub oznaczysz. Nie pojawia się nigdzie w Trasie." },
-                  { mode: "friends" as const, Icon: Users, title: "Bliscy znajomi", desc: "Ten wyjazd widzą tylko Twoi znajomi oraz osoby zaproszone lub oznaczone." },
-                  { mode: "public" as const, Icon: Globe, title: "Wszyscy", desc: "Wyjazd jest widoczny publicznie - pojawia się w eksploracji i każdy może go zobaczyć." },
-                ]).map((opt) => {
-                  const selected = privacyMode === opt.mode;
-                  return (
-                    <button key={opt.mode} onClick={() => setPrivacy(opt.mode)} className={`w-full text-left rounded-2xl p-4 border-2 transition-colors active:scale-[0.99] ${selected ? "border-primary bg-primary/5" : "border-border/50 bg-secondary/40"}`}>
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <opt.Icon className="h-5 w-5 text-foreground shrink-0" />
-                          <p className="text-base font-bold text-foreground truncate">{opt.title}</p>
-                        </div>
-                        <span className={`h-6 w-6 rounded-full border-2 flex items-center justify-center shrink-0 ${selected ? "border-primary" : "border-border"}`}>
-                          {selected && <span className="h-3 w-3 rounded-full bg-primary" />}
-                        </span>
-                      </div>
-                      <p className="text-sm text-muted-foreground mt-2 leading-relaxed">{opt.desc}</p>
-                    </button>
-                  );
-                })}
-              </div>
-
-              <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mt-8 mb-3">Dostęp ogólny</p>
-              <button onClick={() => setQrShareOpen(true)} className="w-full flex items-center gap-2.5 rounded-2xl bg-secondary p-4 active:scale-[0.99] transition-transform">
-                <Share className="h-5 w-5 text-foreground shrink-0" />
-                <span className="text-base font-semibold text-foreground">Udostępnij ten wyjazd</span>
-              </button>
-              <p className="text-xs text-muted-foreground mt-2 leading-relaxed">Udostępniaj linki do swoich wyjazdów niezależnie od ustawień prywatności.</p>
             </div>
           </div>
         )}
