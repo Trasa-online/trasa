@@ -480,8 +480,8 @@ export default function ComposeWyjazd() {
     setCreating(false);
     if (!id) { haptics.error(); toast.error(draftId ? "Nie udało się zapisać zmian" : "Nie udało się utworzyć wyjazdu"); return; }
     haptics.success();
-    // Nowa/edytowana trasa jest publiczna (is_shared) - wymus odswiezenie feedu Eksploruj,
-    // zeby pojawila sie na zakladce eksploracji bez recznego reloadu.
+    // Trasa jest PRYWATNYM draftem (is_shared=false) - publikuje sie dopiero przy "Zapisz trase"
+    // w ReviewSummary. Odswiezamy feed profilaktycznie (np. przy edycji juz opublikowanej trasy).
     queryClient.invalidateQueries({ queryKey: ["discovery-city-routes"] });
     queryClient.invalidateQueries({ queryKey: ["discovery-polecane"] });
     // openEditor -> review-summary od razu na kroku SUGESTII (step 2), bo plan miejsc user juz

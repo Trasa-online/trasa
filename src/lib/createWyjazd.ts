@@ -89,8 +89,15 @@ export async function createWyjazdFromPlaces(
       trip_type: "planning",
       status: "draft",
       day_number: 1,
-      // Wszystkie nowe trasy sa PUBLICZNE by default (2026-07-30) - trafiaja do eksploracji.
-      is_shared: true,
+      // Trasa SOLO powstaje jako PRYWATNY draft (is_shared=false). Publikacja do eksploracji =
+      // swiadomy krok "Zapisz trase" w ReviewSummary (finishEditing ustawia is_shared=true).
+      // Dzieki temu praca w toku NIE jest publiczna zanim user ja skonczy (2026-08-10).
+      // Zgodne z RLS (wlasciciel czyta swoje niezaleznie od is_shared), StartWyjazd "Robocze"
+      // (pyta o is_shared=false) i DEFAULT kolumny (false).
+      // WYJATEK: trasa GRUPOWA zostaje is_shared=true - inaczej zaproszeni czlonkowie (nie-wlasciciele)
+      // nie przeczytaja jej przez RLS (routes SELECT = status='published' OR user_id OR is_shared;
+      // brak polityki czlonkostwa grupy). Docelowo: polityka group_session_members -> wtedy tez false.
+      is_shared: !!opts?.groupSessionId,
       list_cover_url: firstPhoto,
       start_date: dates?.start_date ?? null,
       end_date: dates?.end_date ?? null,

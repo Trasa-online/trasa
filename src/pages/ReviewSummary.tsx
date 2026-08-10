@@ -944,6 +944,13 @@ const ReviewSummary = () => {
       notify.error(t("toast.route_needs_place", { defaultValue: "Trasa musi mieć co najmniej jedno miejsce" }));
       return;
     }
+    // "Zapisz trase" = SWIADOMA PUBLIKACJA: trasa staje sie publiczna (is_shared=true) i trafia
+    // do eksploracji. Trasa jest prywatnym draftem az do tego kroku (createWyjazd is_shared=false).
+    try {
+      await (supabase as any).from("routes").update({ is_shared: true }).in("id", finRids);
+      queryClient.invalidateQueries({ queryKey: ["discovery-city-routes"] });
+      queryClient.invalidateQueries({ queryKey: ["discovery-polecane"] });
+    } catch (e: any) { console.error("[ReviewSummary] publish is_shared failed:", e?.message ?? e); }
     // "Zapisz trase" = trasa STWORZONA: status draft->published. Dopiero teraz zdjecia z pinow
     // (pins.images) zasilaja okladki miejsc w wyszukiwarce/eksploracji - fetchPlaceUserPhotos
     // pomija piny tras 'draft'. Podczas tworzenia (draft) zdjecia sa tylko lokalnie na wpisie.
