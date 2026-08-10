@@ -8,7 +8,8 @@ import { getConsent, grantConsent, denyConsent } from "@/lib/consent";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Camera, Shield, Bell, LogOut, ChevronRight, Cookie, FileText, Trash2, KeyRound, AlertCircle, X, ArrowLeft, Link as LinkIcon, Mail, Languages, RotateCcw } from "lucide-react";
+import { Camera, Shield, Bell, LogOut, ChevronRight, Cookie, FileText, Trash2, KeyRound, AlertCircle, X, ArrowLeft, Link as LinkIcon, Mail, Languages, RotateCcw, Instagram, MessagesSquare } from "lucide-react";
+import { Browser } from "@capacitor/browser";
 import { isHardcodedAdmin } from "@/lib/admins";
 import { useOnboarding } from "@/components/OnboardingGuide";
 import { Switch } from "@/components/ui/switch";
@@ -350,6 +351,41 @@ function ChangePasswordSection() {
 }
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
+
+// Otworz zewnetrzny link: natywnie w in-app Safari (Browser.open), na web w nowej karcie.
+async function openExternal(url: string) {
+  if (isNative) {
+    try { await Browser.open({ url }); return; } catch { /* fallback nizej */ }
+  }
+  window.open(url, "_blank", "noopener,noreferrer");
+}
+
+function SocialContactSection() {
+  const rows = [
+    { icon: Instagram, label: "Instagram", sub: "@spontaway", onClick: () => openExternal("https://instagram.com/spontaway") },
+    { icon: MessagesSquare, label: "Discord", sub: "Dołącz do serwera", onClick: () => openExternal("https://discord.gg/6nY6bYdYX") },
+    { icon: Mail, label: "Napisz do nas", sub: "trasa.app@gmail.com", onClick: () => { window.location.href = "mailto:trasa.app@gmail.com"; } },
+  ];
+  return (
+    <div className="space-y-2">
+      <h3 className="text-xs uppercase tracking-wide text-muted-foreground px-1 mb-1">Społeczność i kontakt</h3>
+      {rows.map((r) => (
+        <button
+          key={r.label}
+          onClick={r.onClick}
+          className="w-full flex items-center gap-3 px-4 py-3.5 bg-card rounded-2xl border border-border/40 hover:bg-muted transition-colors text-left"
+        >
+          <r.icon className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium leading-tight">{r.label}</p>
+            <p className="text-xs text-muted-foreground leading-tight mt-0.5 truncate">{r.sub}</p>
+          </div>
+          <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+        </button>
+      ))}
+    </div>
+  );
+}
 
 function BugReportSection({ userId }: { userId: string }) {
   const { t } = useTranslation("settings");
@@ -712,6 +748,9 @@ const Settings = () => {
           </Link>
 
         </div>
+
+        {/* Spolecznosc i kontakt */}
+        <SocialContactSection />
 
         {/* Bug report */}
         <div className="space-y-2">
