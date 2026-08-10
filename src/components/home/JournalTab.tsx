@@ -7,7 +7,7 @@ import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { resolveStored } from "@/components/PlacePhoto";
 import { format, parseISO, isValid, differenceInCalendarDays } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
-import { Loader2, Trash2, Sparkles, BookOpen } from "lucide-react";
+import { Loader2, Trash2, Sparkles, BookOpen, Images } from "lucide-react";
 import { toast } from "sonner";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { PLANNING_DISABLED } from "@/lib/appMode";
@@ -484,13 +484,23 @@ const JournalTab = ({ userId, city: cityFilter, draftsOnly = false }: JournalTab
 
   // Tryb uproszczony: przycisk "Nowy wyjazd" + toggle Aktywne | Wspomnienia.
   if (PLANNING_DISABLED) {
-    const emptyBox = (emoji: string, title: string, desc: string) => (
-      <div className="py-14 text-center px-8">
-        <div className="text-4xl mb-3">{emoji}</div>
+    // Ikona w brandowym peachy kolku (#fcede3, ikona #ef9d78) - ZERO emoji w UI.
+    const emptyBox = (icon: JSX.Element, title: string, desc: string) => (
+      <div className="py-14 text-center px-8 flex flex-col items-center">
+        <div className="w-16 h-16 rounded-full bg-[#fcede3] flex items-center justify-center mb-3">{icon}</div>
         <p className="text-base font-bold">{title}</p>
         <p className="text-sm text-muted-foreground mt-1 leading-relaxed max-w-[260px] mx-auto">{desc}</p>
       </div>
     );
+    // Ikona "Robocze" = znak Trasy (mask-image, peachy). "Wspomnienia" = Lucide Images.
+    const draftIcon = (
+      <span
+        aria-hidden
+        className="h-8 w-8"
+        style={{ display: "block", backgroundColor: "#ef9d78", WebkitMaskImage: "url(/Ikona_Trasy.svg)", maskImage: "url(/Ikona_Trasy.svg)", WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat", WebkitMaskSize: "contain", maskSize: "contain", WebkitMaskPosition: "center", maskPosition: "center" }}
+      />
+    );
+    const memoryIcon = <Images className="h-8 w-8 text-[#ef9d78]" strokeWidth={2} />;
     // Pigulki: Robocze (aktywne/w toku) | Wspomnienia (minione). draftsOnly -> tylko robocze.
     const effTab = draftsOnly ? "robocze" : tripTab;
     const shown = effTab === "robocze" ? active : postcards;
@@ -518,8 +528,8 @@ const JournalTab = ({ userId, city: cityFilter, draftsOnly = false }: JournalTab
 
         {shown.length === 0 ? (
           effTab === "robocze"
-            ? emptyBox("🧳", "Brak roboczych tras", "Trasy w toku - te które tworzysz i planujesz - pojawią się tutaj.")
-            : emptyBox("📸", "Brak wspomnień", "Minione wyjazdy wylądują tutaj jako wspomnienia.")
+            ? emptyBox(draftIcon, "Brak roboczych tras", "Trasy w toku - te które tworzysz i planujesz - pojawią się tutaj.")
+            : emptyBox(memoryIcon, "Brak wspomnień", "Minione wyjazdy wylądują tutaj jako wspomnienia.")
         ) : (
           <div className="divide-y divide-border/50">
             {/* Hub "Robocze" (draftsOnly): klik -> widok tworzenia (ComposeWyjazd z miejscami).
@@ -537,8 +547,10 @@ const JournalTab = ({ userId, city: cityFilter, draftsOnly = false }: JournalTab
       {deleteModal}
       {/* Dziennik = wspomnienia (minione podroze). Aktywne trasy/sesje sa na ekranie glownym. */}
       {visibleEntries.length === 0 && (
-        <div className="py-16 text-center px-8">
-          <div className="text-4xl mb-3">📸</div>
+        <div className="py-16 text-center px-8 flex flex-col items-center">
+          <div className="w-16 h-16 rounded-full bg-[#fcede3] flex items-center justify-center mb-3">
+            <Images className="h-8 w-8 text-[#ef9d78]" strokeWidth={2} />
+          </div>
           <p className="text-base font-bold">{t("journal.memories_empty_title")}</p>
           <p className="text-sm text-muted-foreground mt-1 leading-relaxed max-w-[260px] mx-auto">
             {t("journal.memories_empty_desc")}

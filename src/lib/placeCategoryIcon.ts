@@ -39,7 +39,9 @@ const CATEGORY_ICON_MAP: Record<string, string> = {
   garden: "/Ikona__Natura.svg",
   nature: "/Ikona__Natura.svg",
 
-  viewpoint: "/Ikona__Punkt%20widokowy.svg",
+  viewpoint: "/Ikona__Punkt_widokowy.svg",
+
+  experience: "/Ikona__Sztuka.svg",
 
   store: "/Ikona__Zakupy.svg",
   boutique: "/Ikona__Zakupy.svg",
@@ -74,7 +76,7 @@ const CATEGORY_ICON_MAP: Record<string, string> = {
   rozrywka: "/Ikona__Sztuka.svg",
   zakupy: "/Ikona__Zakupy.svg",
   natura: "/Ikona__Natura.svg",
-  "punkt widokowy": "/Ikona__Punkt%20widokowy.svg",
+  "punkt widokowy": "/Ikona__Punkt_widokowy.svg",
   piekarnia: "/Ikona__Piekarnia.svg",
   cukiernia: "/Ikona__Cukiernia.svg",
   sztuka: "/Ikona__Sztuka.svg",

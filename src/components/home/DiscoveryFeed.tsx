@@ -2044,10 +2044,24 @@ export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityCh
 
       const routeMap = new Map<string, any>();
       if (q) {
+        // 1) Po TYTULE trasy.
         const { data: byTitle } = await applyRoute((supabase as any).from("routes").select(routeCols).ilike("title", like))
           .order("views", { ascending: false, nullsFirst: false }).limit(30);
         for (const r of byTitle ?? []) if (!routeMap.has(r.id)) routeMap.set(r.id, r);
-        // Trasy autorow, ktorych nick/imie pasuje.
+        // 2) Po MIESCIE trasy - user naturalnie wpisuje nazwe miasta (np. "Rzym", "Lodz").
+        const { data: byCity } = await applyRoute((supabase as any).from("routes").select(routeCols).ilike("city", like))
+          .order("views", { ascending: false, nullsFirst: false }).limit(30);
+        for (const r of byCity ?? []) if (!routeMap.has(r.id)) routeMap.set(r.id, r);
+        // 3) Po NAZWIE MIEJSCA na trasie (pin) - placeholder obiecuje "miejsc na trasie".
+        const { data: pinHits } = await (supabase as any).from("pins")
+          .select("route_id").ilike("place_name", like).not("route_id", "is", null).limit(80);
+        const pinRouteIds = [...new Set((pinHits ?? []).map((p: any) => p.route_id))].filter((id) => !routeMap.has(id));
+        if (pinRouteIds.length) {
+          const { data: byPlace } = await applyRoute((supabase as any).from("routes").select(routeCols).in("id", pinRouteIds))
+            .order("views", { ascending: false, nullsFirst: false }).limit(30);
+          for (const r of byPlace ?? []) if (!routeMap.has(r.id)) routeMap.set(r.id, r);
+        }
+        // 4) Po AUTORZE - trasy autorow, ktorych nick/imie pasuje.
         const { data: profs } = await (supabase as any).from("profiles").select("id")
           .or(`username.ilike.${like},first_name.ilike.${like}`).limit(50);
         const uids = (profs ?? []).map((p: any) => p.id);
@@ -2248,8 +2262,10 @@ export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityCh
             </div>
           </div>
         ) : (
-          <div className="py-16 text-center px-8">
-            <div className="text-5xl mb-3">🔍</div>
+          <div className="py-16 text-center px-8 flex flex-col items-center">
+            <div className="w-16 h-16 rounded-full bg-[#fcede3] flex items-center justify-center mb-3">
+              <Search className="h-8 w-8 text-[#ef9d78]" strokeWidth={2} />
+            </div>
             <p className="text-base font-bold">{t("no_results")}</p>
             <p className="text-sm text-muted-foreground mt-1">{t("no_results_hint")}</p>
           </div>
