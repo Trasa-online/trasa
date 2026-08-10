@@ -934,6 +934,16 @@ const ReviewSummary = () => {
   const finishEditing = async () => {
     haptics.success();
     if (draft && draft.dayId === activeRouteId) await savePlan(false);
+    // Zabezpieczenie: NIE publikuj pustej trasy (0 miejsc). Autorytatywny count z DB - gdy 0,
+    // zdejmij z feedu (is_shared=false) i zglos blad. (bug 2026-08-10: pusta trasa w feedzie)
+    const finRids = (dayRouteIds.length ? dayRouteIds : [activeRouteId]).filter(Boolean);
+    const { count: finPinCount } = await (supabase as any).from("pins")
+      .select("id", { count: "exact", head: true }).in("route_id", finRids);
+    if (!finPinCount) {
+      await (supabase as any).from("routes").update({ is_shared: false }).in("id", finRids);
+      notify.error(t("toast.route_needs_place", { defaultValue: "Trasa musi mieć co najmniej jedno miejsce" }));
+      return;
+    }
     // "Zapisz trase" = trasa STWORZONA: status draft->published. Dopiero teraz zdjecia z pinow
     // (pins.images) zasilaja okladki miejsc w wyszukiwarce/eksploracji - fetchPlaceUserPhotos
     // pomija piny tras 'draft'. Podczas tworzenia (draft) zdjecia sa tylko lokalnie na wpisie.
@@ -1089,6 +1099,12 @@ const ReviewSummary = () => {
   // ocene/notki/share. finalize=false (aktywny wpis): tylko persystuje zmiany.
   const savePlan = async (finalize: boolean) => {
     if (!activeRouteId) return;
+    // SAFETY: nie pozwol wykasowac WSZYSTKICH miejsc do zera (race/blad stanu prowadzil do
+    // pustej opublikowanej trasy, bug 2026-08-10). Trasa musi miec >=1 miejsce.
+    if (workingPins.length === 0 && currentPins.length > 0) {
+      notify.error(t("toast.route_needs_place", { defaultValue: "Trasa musi mieć co najmniej jedno miejsce" }));
+      return;
+    }
     setSavingPlan(true);
     try {
       const removed = currentPins.filter((p: any) => !workingPins.some((w: any) => w.id === p.id));

@@ -67,6 +67,14 @@ export async function createWyjazdFromPlaces(
   opts?: { groupSessionId?: string | null; newForUsers?: string[] },
 ): Promise<string | null> {
   places = dedupePlaces(places);
+  // Odrzuc miejsca bez nazwy - place_name jest NOT NULL w pins, a jeden bledny rekord
+  // wywalal CALY batch insert (0 pinow, cicha PUSTA trasa mimo "sukcesu"). Lepiej pominac
+  // zly rekord niz stworzyc pusta trase.
+  places = places.filter((p) => p.place_name && String(p.place_name).trim());
+  if (!places.length) {
+    console.error("[createWyjazd] brak poprawnych miejsc (place_name) - nie tworze pustej trasy");
+    return null;
+  }
   // list_cover_url = miniatura w eksploracji. Feed (DiscoveryFeed) wymaga
   // list_cover_url NOT NULL, inaczej trasa jest niewidoczna. Zasilamy ja od razu
   // pierwszym dostepnym zdjeciem miejsca, zeby swiezo utworzona trasa trafila do
@@ -113,7 +121,14 @@ export async function createWyjazdFromPlaces(
   }));
   if (rows.length) {
     const { error: pinsErr } = await (supabase as any).from("pins").insert(rows);
-    if (pinsErr) console.warn("[createWyjazd] pins insert failed:", pinsErr.message);
+    if (pinsErr) {
+      // KRYTYCZNE: piny sie nie wstawily -> trasa bylaby PUSTA a mimo to publiczna (is_shared).
+      // Usun osierocona trase i zglos blad (confirm() pokaze toast), zamiast zostawic pusta
+      // trase w feedzie. (bug 2026-08-10: pusta trasa opublikowana w eksploracji)
+      console.error("[createWyjazd] pins insert failed - usuwam osierocona pusta trase:", pinsErr.message);
+      await (supabase as any).from("routes").delete().eq("id", route.id);
+      return null;
+    }
   }
   return route.id as string;
 }
@@ -127,7 +142,20 @@ export async function updateWyjazdPlaces(
   places: WyjazdPlaceInput[],
   dates?: { start_date?: string | null; end_date?: string | null },
 ): Promise<string | null> {
-  places = dedupePlaces(places);
+  places = dedupePlaces(places).filter((p) => p.place_name && String(p.place_name).trim());
+  // SAFETY: pusta lista miejsc = prawie zawsze race/blad stanu (np. draft nie doladowal sie).
+  // NIE kasuj wszystkich pinow do zera (delete+reinsert ponizej) - to prowadzilo do pustej
+  // trasy. Aktualizuj tylko meta i zwroc bez ruszania pinow.
+  if (!places.length) {
+    console.warn("[updateWyjazd] pusta lista miejsc - pomijam podmiane pinow (ochrona przed pusta trasa)");
+    await (supabase as any).from("routes").update({
+      title: title || city || "Wyjazd",
+      city: city || null,
+      start_date: dates?.start_date ?? null,
+      end_date: dates?.end_date ?? null,
+    }).eq("id", routeId);
+    return routeId;
+  }
   const { error: updErr } = await (supabase as any)
     .from("routes")
     .update({
