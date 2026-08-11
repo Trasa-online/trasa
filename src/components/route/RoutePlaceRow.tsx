@@ -16,13 +16,14 @@ const GoogleGlyph = ({ className }: { className?: string }) => (
 // ReviewSummary). Duze zdjecie 104px, numer, nazwa (2 linie), chip kategorii + guzik Google.
 // dragHandle (opcjonalny) = uchwyt przeciagania po lewej (tryb wlasciciela). note = dodatkowa
 // tresc pod wierszem (np. notka autora). visited = wyszarzenie.
-export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onSave, dragHandle, note, visited }: {
+export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onSave, saved, dragHandle, note, visited }: {
   pin: any;
   index: number;
   categoryLabel: ReactNode;
   onOpen: () => void;
   onGoogle: () => void;
   onSave?: () => void; // bookmark: zapisz miejsce do listy (odwiedzone/do odwiedzenia)
+  saved?: boolean;     // czy miejsce jest juz w jakiejs liscie usera (wypelniony bookmark)
   dragHandle?: ReactNode;
   note?: ReactNode;
   visited?: boolean;
@@ -45,10 +46,10 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
               {onSave && (
                 <button
                   onClick={(e) => { e.stopPropagation(); onSave(); }}
-                  aria-label="Zapisz miejsce do listy"
-                  className="h-9 w-9 rounded-full bg-white flex items-center justify-center shadow-sm active:scale-90 transition-transform"
+                  aria-label={saved ? "Miejsce zapisane w liście" : "Zapisz miejsce do listy"}
+                  className={`h-9 w-9 rounded-full flex items-center justify-center shadow-sm active:scale-90 transition-transform ${saved ? "bg-orange-100" : "bg-white"}`}
                 >
-                  <Bookmark className="h-[18px] w-[18px] text-foreground" strokeWidth={2} />
+                  <Bookmark className={`h-[18px] w-[18px] ${saved ? "text-orange-600 fill-orange-600" : "text-foreground"}`} strokeWidth={2} />
                 </button>
               )}
               <button

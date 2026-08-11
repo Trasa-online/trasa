@@ -76,6 +76,7 @@ export default function SavePlaceSheet({
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ["save-sheet-lists", user?.id] });
+    queryClient.invalidateQueries({ queryKey: ["saved-place-names", user?.id] });
     queryClient.invalidateQueries({ queryKey: ["my-collections"] });
     queryClient.invalidateQueries({ queryKey: ["public-profile-lists"] });
     queryClient.invalidateQueries({ queryKey: ["explore-my-collections"] });

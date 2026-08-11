@@ -30,6 +30,7 @@ import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { avatarSrc } from "@/lib/avatar";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import SavePlaceSheet, { type SavePlaceInput } from "@/components/plan-wizard/SavePlaceSheet";
+import { useSavedPlaces } from "@/hooks/useSavedPlaces";
 import FullCalendarPicker from "@/components/plan-wizard/FullCalendarPicker";
 import { resolveStored } from "@/components/PlacePhoto";
 import type { MockPlace } from "@/components/plan-wizard/PlaceSwiper";
@@ -41,6 +42,7 @@ export default function SharedRoute() {
   const { user } = useAuth();
   const { t } = useTranslation("sharing");
   const categoryLabel = (cat: string) => t(`categories.${cat}`, { defaultValue: t("categories.other") });
+  const { isSaved } = useSavedPlaces();
   const [savePlace, setSavePlace] = useState<SavePlaceInput | null>(null);
   const pinToSave = (pin: any): SavePlaceInput => ({
     place_name: pin.place_name, category: pin.category ?? null, address: pin.address ?? null,
@@ -357,6 +359,7 @@ export default function SharedRoute() {
             onOpen={() => openDetail(pin)}
             onGoogle={() => openGooglePlace(pin)}
             onSave={user ? () => setSavePlace(pinToSave(pin)) : undefined}
+            saved={isSaved(pin.place_name)}
             note={note}
           />
         );

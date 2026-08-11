@@ -23,6 +23,7 @@ import { PlacePhoto, resolveStored } from "@/components/PlacePhoto";
 import { RoutePlaceRow } from "@/components/route/RoutePlaceRow";
 import SavePlaceSheet, { type SavePlaceInput } from "@/components/plan-wizard/SavePlaceSheet";
 import { moveToVisited } from "@/lib/placeLists";
+import { useSavedPlaces } from "@/hooks/useSavedPlaces";
 import InviteFriendsSheet from "@/components/route/InviteFriendsSheet";
 import { compressImage } from "@/lib/imageCompression";
 import { isHeic, convertHeicToJpeg } from "@/lib/heicConvert";
@@ -132,9 +133,9 @@ function SortableReviewRow({ pin, idx, categoryLabel, visited, onOpen, onRemove,
 
 // Wiersz planu (widok "Plan wyjazdu" wlasciciela) - wspoldzielony RoutePlaceRow z uchwytem
 // DRAG (Reorder) po lewej + swipe-to-delete + opcjonalna notka. Ujednolicony z eksploracja.
-function SortablePlanRow({ pin, index, categoryLabel, visited, onOpen, onGoogle, onDelete, onSave, note }: {
+function SortablePlanRow({ pin, index, categoryLabel, visited, onOpen, onGoogle, onDelete, onSave, saved, note }: {
   pin: any; index: number; categoryLabel: React.ReactNode; visited: boolean;
-  onOpen: () => void; onGoogle: () => void; onDelete: () => void; onSave?: () => void; note?: React.ReactNode;
+  onOpen: () => void; onGoogle: () => void; onDelete: () => void; onSave?: () => void; saved?: boolean; note?: React.ReactNode;
 }) {
   const controls = useDragControls();
   const grip = (
@@ -149,7 +150,7 @@ function SortablePlanRow({ pin, index, categoryLabel, visited, onOpen, onGoogle,
   return (
     <Reorder.Item value={pin} dragListener={false} dragControls={controls} transition={{ duration: 0 }}>
       <SwipeToDeleteRow onDelete={onDelete}>
-        <RoutePlaceRow pin={pin} index={index} categoryLabel={categoryLabel} visited={visited} onOpen={onOpen} onGoogle={onGoogle} onSave={onSave} dragHandle={grip} note={note} />
+        <RoutePlaceRow pin={pin} index={index} categoryLabel={categoryLabel} visited={visited} onOpen={onOpen} onGoogle={onGoogle} onSave={onSave} saved={saved} dragHandle={grip} note={note} />
       </SwipeToDeleteRow>
     </Reorder.Item>
   );
@@ -524,6 +525,7 @@ const ReviewSummary = () => {
   };
 
   // Zapis miejsca do listy (odwiedzone / do odwiedzenia) - bookmark przy wierszu miejsca.
+  const { isSaved } = useSavedPlaces();
   const [savePlace, setSavePlace] = useState<SavePlaceInput | null>(null);
   const pinToSave = (pin: any): SavePlaceInput => ({
     place_name: pin.place_name, category: pin.category ?? null, address: pin.address ?? null,
@@ -994,6 +996,7 @@ const ReviewSummary = () => {
         if (names.length) {
           await moveToVisited(user.id, names, route?.city ?? null);
           queryClient.invalidateQueries({ queryKey: ["save-sheet-lists", user.id] });
+          queryClient.invalidateQueries({ queryKey: ["saved-place-names", user.id] });
           queryClient.invalidateQueries({ queryKey: ["public-profile-lists"] });
         }
       }
@@ -1842,6 +1845,7 @@ const ReviewSummary = () => {
                 onOpen={() => openDetail(pin)}
                 onGoogle={() => openGooglePlace(pin)}
                 onSave={user ? () => setSavePlace(pinToSave(pin)) : undefined}
+                saved={isSaved(pin.place_name)}
                 note={photosRow}
               />
             );
@@ -2233,6 +2237,7 @@ const ReviewSummary = () => {
                       onGoogle={() => openGooglePlace(pin)}
                       onDelete={() => removePlaceFromPlan(pin)}
                       onSave={user ? () => setSavePlace(pinToSave(pin)) : undefined}
+                      saved={isSaved(pin.place_name)}
                       note={note}
                     />
                   );

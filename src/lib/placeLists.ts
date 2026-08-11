@@ -69,6 +69,20 @@ export function listHasPlace(list: UserList, placeName: string): boolean {
   return list.place_names.some((n) => skey(n) === skey(placeName));
 }
 
+// Zbior znormalizowanych nazw WSZYSTKICH miejsc zapisanych przez usera (w dowolnej liscie).
+// Do wskazania stanu "zapisane" na ikonie bookmark (karta/wiersz trasy/wizytowka).
+export async function fetchSavedPlaceNames(userId: string): Promise<Set<string>> {
+  const { data: cols } = await (supabase as any)
+    .from("discovery_collections").select("id").eq("user_id", userId).eq("kind", "ranking");
+  const ids = (cols ?? []).map((c: any) => c.id);
+  if (!ids.length) return new Set();
+  const { data: items } = await (supabase as any)
+    .from("discovery_items").select("place_name").in("collection_id", ids);
+  return new Set((items ?? []).map((i: any) => skey(i.place_name)).filter(Boolean));
+}
+
+export const normalizePlaceName = skey;
+
 // Dodaj miejsce do listy (discovery_items). Dedup po nazwie. Zwraca false gdy juz bylo.
 export async function addPlaceToList(listId: string, place: PlaceForList): Promise<boolean> {
   const { data: existing } = await (supabase as any)

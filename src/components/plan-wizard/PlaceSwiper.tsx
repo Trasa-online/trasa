@@ -18,6 +18,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import { useOnboarding } from "@/components/OnboardingGuide";
 import { useHaptics } from "@/hooks/useHaptics";
+import { useSavedPlaces } from "@/hooks/useSavedPlaces";
 import { getSubcategoryIds, getMainCategoryFor, getDbCategoriesFor, MAIN_CATEGORIES, mainCategoryLabel } from "@/lib/categories";
 import { addLike as saveExploreLike, clearGroup as clearExploreGroup, removeLikeFromCity } from "@/lib/exploreLikes";
 import { expandCity } from "@/lib/cities";
@@ -1147,6 +1148,8 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
   const { open: openAuthDrawer } = useAuthDrawer();
   const { active: onboardingActive } = useOnboarding();
   const haptics = useHaptics();
+  // Stan "zapisane" wg czlonkostwa w listach usera (bookmark wypelniony gdy miejsce juz w liscie).
+  const { isSaved: isSavedInList } = useSavedPlaces();
 
   const [allPlaces, setAllPlaces] = useState<MockPlace[]>([]);
   const [queue, setQueue] = useState<MockPlace[]>([]);
@@ -1987,7 +1990,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
                   place={place}
                   city={city}
                   scrollMode
-                  saved={savedIds.has(place.id)}
+                  saved={savedIds.has(place.id) || isSavedInList(place.place_name)}
                   onLike={() => handleSaveInPlace(place, { openSheet: true })}
                   onSkip={() => {}}
                   onTap={() => handleTap(place)}
@@ -2084,7 +2087,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
         onOpenChange={setDetailOpen}
         place={detailPlace}
         referenceDate={date.toISOString().slice(0, 10)}
-        saved={detailPlace ? savedIds.has(detailPlace.id) : false}
+        saved={detailPlace ? (savedIds.has(detailPlace.id) || isSavedInList(detailPlace.place_name)) : false}
         onLike={() => {
           // scrollMode (Eksploracja): "+"/Dodaj na wizytowce zapisuje BEZ zdejmowania z
           // kolejki (jak "+" na karcie). Klasyczny swipe: handleLike (dequeue).
