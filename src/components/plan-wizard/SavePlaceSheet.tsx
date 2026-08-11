@@ -11,7 +11,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { resolveStored } from "@/components/PlacePhoto";
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
-import { fetchUserLists, addPlaceToList, createListWithPlace, listHasPlace, type UserList, type ListStatus } from "@/lib/placeLists";
+import { fetchUserLists, addPlaceToList, removePlaceFromList, createListWithPlace, listHasPlace, type UserList, type ListStatus } from "@/lib/placeLists";
 
 // Sheet "Gdzie chcesz zapisać to miejsce?" - zapis miejsca do LISTY usera. Listy mają dwie
 // kategorie: Odwiedzone miejsca (visited) i Miejsca do odwiedzenia (to_visit). User może dodać
@@ -49,10 +49,11 @@ export default function SavePlaceSheet({
   const [newName, setNewName] = useState("");
   const [newStatus, setNewStatus] = useState<ListStatus>("to_visit");
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [added, setAdded] = useState<Set<string>>(new Set());
+  // Optymistyczny stan przynaleznosci: listId -> true (w liscie) / false (usuniete), zanim query sie odswiezy.
+  const [override, setOverride] = useState<Map<string, boolean>>(new Map());
 
   useEffect(() => {
-    if (open) { setNewName(""); setNewStatus("to_visit"); setBusyId(null); setAdded(new Set()); }
+    if (open) { setNewName(""); setNewStatus("to_visit"); setBusyId(null); setOverride(new Map()); }
   }, [open]);
 
   const { data: author } = useQuery({
@@ -80,19 +81,27 @@ export default function SavePlaceSheet({
     queryClient.invalidateQueries({ queryKey: ["explore-my-collections"] });
   };
 
-  const isIn = (l: UserList) => added.has(l.id) || listHasPlace(l, place?.place_name ?? "");
+  const isIn = (l: UserList) => (override.has(l.id) ? override.get(l.id)! : listHasPlace(l, place?.place_name ?? ""));
 
-  const addTo = async (l: UserList) => {
-    if (!place || !user || busyId || isIn(l)) return;
+  // Toggle: gdy miejsce jest w liscie -> usun, inaczej -> dodaj.
+  const toggle = async (l: UserList) => {
+    if (!place || !user || busyId) return;
+    const currentlyIn = isIn(l);
     setBusyId(l.id); haptics.medium();
     try {
-      await addPlaceToList(l.id, { ...place });
-      setAdded((prev) => new Set(prev).add(l.id));
+      if (currentlyIn) {
+        await removePlaceFromList(l.id, place.place_name);
+        setOverride((prev) => new Map(prev).set(l.id, false));
+        toast.success(`Usunięto z „${l.title}"`);
+      } else {
+        await addPlaceToList(l.id, { ...place });
+        setOverride((prev) => new Map(prev).set(l.id, true));
+        toast.success(`Dodano do „${l.title}"`);
+      }
       invalidate();
-      toast.success(`Dodano do „${l.title}"`);
     } catch (e: any) {
-      console.error("[SavePlaceSheet] add to list failed:", e?.message ?? e);
-      toast.error("Nie udało się dodać do listy");
+      console.error("[SavePlaceSheet] toggle list failed:", e?.message ?? e);
+      toast.error("Nie udało się zapisać zmiany");
     } finally { setBusyId(null); }
   };
 
@@ -129,9 +138,9 @@ export default function SavePlaceSheet({
       <button
         key={l.id}
         type="button"
-        onClick={() => addTo(l)}
-        disabled={busyId === l.id || inList}
-        className="w-full flex items-center gap-3 py-2.5 text-left active:opacity-80 disabled:opacity-100"
+        onClick={() => toggle(l)}
+        disabled={busyId === l.id}
+        className="w-full flex items-center gap-3 py-2.5 text-left active:opacity-80"
       >
         <div className="relative h-14 w-14 rounded-xl overflow-hidden shrink-0 bg-muted">
           <img src={cover} alt="" className="h-full w-full object-cover" onError={(e) => { (e.target as HTMLImageElement).src = getRandomPinPlaceholder(l.id + "_fb"); }} />
