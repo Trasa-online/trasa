@@ -508,7 +508,7 @@ export const MyCollections = ({ showCreate = true }: { showCreate?: boolean } = 
     queryFn: async () => {
       const { data: cols } = await (supabase as any)
         .from("discovery_collections")
-        .select("id, title, city, description, is_public, moderation_status, moderation_note, cover_url, list_cover_url")
+        .select("id, title, city, description, is_public, moderation_status, moderation_note, cover_url, list_cover_url, list_status")
         .eq("user_id", user!.id)
         .eq("kind", "ranking")
         .order("updated_at", { ascending: false });
@@ -578,7 +578,8 @@ export const MyCollections = ({ showCreate = true }: { showCreate?: boolean } = 
           </div>
         </div>
       ) : (
-        collections.map((col: any) => {
+        (() => {
+        const renderCol = (col: any) => {
           const isOpen = expanded === col.id;
           const title = col.title || t("collections.untitled");
           return (
@@ -678,7 +679,27 @@ export const MyCollections = ({ showCreate = true }: { showCreate?: boolean } = 
               )}
             </div>
           );
-        })
+        };
+        // Podzial na dwie sekcje: Odwiedzone miejsca (visited) vs Miejsca do odwiedzenia (to_visit).
+        const visited = collections.filter((c: any) => c.list_status !== "to_visit");
+        const toVisit = collections.filter((c: any) => c.list_status === "to_visit");
+        return (
+          <div className="space-y-6">
+            {visited.length > 0 && (
+              <div className="space-y-3">
+                <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide px-1">Odwiedzone miejsca</p>
+                {visited.map(renderCol)}
+              </div>
+            )}
+            {toVisit.length > 0 && (
+              <div className="space-y-3">
+                <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide px-1">Miejsca do odwiedzenia</p>
+                {toVisit.map(renderCol)}
+              </div>
+            )}
+          </div>
+        );
+        })()
       )}
 
       <PlaceSwiperDetail
