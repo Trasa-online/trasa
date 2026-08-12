@@ -478,12 +478,11 @@ function SplashScreen({ done }: { done: boolean }) {
 
   return (
     <div
-      className="fixed inset-0 z-[9999] bg-background flex items-center justify-center"
-      style={{ transition: "opacity 0.4s", opacity: done ? 0 : 1 }}
+      className="fixed inset-0 z-[9999] flex items-center justify-center"
+      style={{ transition: "opacity 0.4s", opacity: done ? 0 : 1, background: "linear-gradient(to bottom right, #FDF184, #FDCD84)" }}
     >
-      {/* Loading = POMARAŃCZOWY symbol spontaway na białym tle (#FEFEFE), 1:1 z natywnym
-          splashem, żeby przejście native->React było bezszwowe (bez skoku koloru).
-          Rozmiar ~22% szerokości ekranu jak symbol na natywnym splashu. */}
+      {/* Loading = POMARAŃCZOWY symbol spontaway na gradiencie żółto-złotym (#FDF184 -> #FDCD84),
+          1:1 z natywnym splashem, żeby przejście native->React było bezszwowe (bez skoku koloru). */}
       <TrasaLogo size={88} />
     </div>
   );
