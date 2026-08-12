@@ -989,6 +989,15 @@ const ReviewSummary = () => {
       queryClient.invalidateQueries({ queryKey: ["discovery-city-routes"] });
       queryClient.invalidateQueries({ queryKey: ["discovery-polecane"] });
     } catch (e: any) { console.error("[ReviewSummary] publish is_shared failed:", e?.message ?? e); }
+    // Feedback okladki: trasa trafia do eksploracji TYLKO z okladka (list_cover_url). Sprobuj
+    // auto-okladki ze zdjec usera; gdy dalej brak -> jasny komunikat, ze trzeba dodac okladke.
+    try {
+      await ensureListCover(routeId);
+      const { data: covRow } = await (supabase as any).from("routes").select("list_cover_url").eq("id", routeId).maybeSingle();
+      if (!covRow?.list_cover_url) {
+        notify.error("Trasa zapisana. Dodaj zdjęcia miejsc lub okładkę, żeby pojawiła się w eksploracji.");
+      }
+    } catch (e: any) { console.warn("[ReviewSummary] cover feedback failed:", e?.message ?? e); }
     // #4: miejsca z list usera "do odwiedzenia" -> po publikacji trasy przenies do "Odwiedzone".
     try {
       if (user) {
@@ -2075,6 +2084,21 @@ const ReviewSummary = () => {
               </span>
               <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
             </button>
+            {/* Feedback okladki: trasa POJAWIA SIE w eksploracji tylko z okladka (list_cover_url).
+                Gdy publiczna (is_shared) ale bez okladki -> baner z CTA do dodania (picker miniatury). */}
+            {isOwner && !!route?.is_shared && !(route as any)?.list_cover_url && (
+              <button
+                onClick={() => setListCoverPickerOpen(true)}
+                className="flex items-center gap-3 rounded-2xl bg-orange-50 border border-orange-200 px-4 py-3 text-left active:scale-[0.99] transition-transform"
+              >
+                <ImageIcon className="h-5 w-5 text-orange-600 shrink-0" />
+                <span className="flex-1 min-w-0">
+                  <span className="block text-sm font-bold text-foreground">Dodaj okładkę, żeby trasa była widoczna</span>
+                  <span className="block text-xs text-muted-foreground mt-0.5">Bez okładki trasa nie pojawia się w eksploracji.</span>
+                </span>
+                <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+              </button>
+            )}
             {/* Opis ogolny trasy - READ-ONLY tutaj (review_narrative). Edycja tylko pod guzikiem
                 "Edytuj trase" (tryb edycji). Fallback: ai_summary. */}
             {(suggestion?.trim() || route?.ai_summary) && (
