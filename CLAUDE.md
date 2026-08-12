@@ -24,11 +24,14 @@ Aplikacja pokazuje **wyłącznie miejsca z bazy Supabase** (tabela `places`). Ni
 
 ```
 Primary (akcent):     gradient #F4A259 → #F9662B (orb, fill primary buttons)
+Akcent żółty (2026-08-12): #FDF184 (żółty) + #FDCD84 (złoty), gradient #FDF184 → #FDCD84
 Tło / biel:           #FEFEFE (złamana biel — NIE czyste #FFFFFF)
 Typografia główna:    #0E0E0E (niemal-czarna)
 Typografia secondary: #979797
 Typografia tertiary:  #CFCFCF (niedostępne/placeholder)
 ```
+
+**Akcenty żółte (rebrand ikony 2026-08-12):** `#FDF184` i `#FDCD84` to kolory AKCENTOWE (z nowej ikony aplikacji, gradient żółty→złoty). **Pomarańczowy zostaje PRIMARY** - żółte to tylko akcenty (tła, wyróżnienia, dekoracje), NIE zastępują pomarańczu na guzikach primary. W Tailwind: `bg-trasa-yellow` (DEFAULT #FDF184) / `bg-trasa-gold` (#FDCD84), `text-trasa-yellow-ink` / `text-trasa-gold-ink`, gradient `bg-trasa-yellow` (util backgroundImage) lub `bg-gradient-to-r from-[#FDF184] to-[#FDCD84]`. Zakaz gradientu na guzikach dotyczy też żółtego.
 
 W Tailwind odpowiedniki klas:
 - Primary fill = `bg-orange-600` lub `bg-gradient-to-r from-[#F4A259] to-[#F9662B]`

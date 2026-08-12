@@ -63,7 +63,17 @@ export default {
           violet: { DEFAULT: "#C6BFF4", ink: "#5B4FC4" },
           cream: { DEFAULT: "#DDD6C8", ink: "#8A7E63" },
           teal: { DEFAULT: "#BFE6DE", ink: "#0F766E" },
+          // Akcenty żółte (rebrand ikony 2026-08-12) - gradient żółty #FDF184 -> #FDCD84.
+          // Pomarańcz zostaje PRIMARY; te dwa to kolory akcentowe. ink = czytelny tekst na tle.
+          yellow: { DEFAULT: "#FDF184", ink: "#A16207" },
+          gold: { DEFAULT: "#FDCD84", ink: "#B45309" },
         },
+      },
+      backgroundImage: {
+        // Gradient akcentowy (żółty -> złoty) z nowej ikony. Do akcentów/teł, NIE na guziki
+        // primary (te zostają solidnie pomarańczowe wg reguły "zakaz gradientu na guzikach").
+        "trasa-yellow": "linear-gradient(90deg, #FDF184, #FDCD84)",
+        "trasa-yellow-br": "linear-gradient(to bottom right, #FDF184, #FDCD84)",
       },
       fontFamily: {
         // Naglowki B2C - Baloo 2 (zaokraglony, brandowy). Body zostaje systemowy (Inter fallback).
