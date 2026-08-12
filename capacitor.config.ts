@@ -12,9 +12,10 @@ const config: CapacitorConfig = {
       launchAutoHide: false,
       // Smooth fade-out
       launchFadeOutDuration: 300,
-      // Złamana biel (#FEFEFE) - splash = białe tło + POMARAŃCZOWY symbol spontaway
-      // (nie pełny pomarańcz - żeby nie było oczopląsu przy przejściu do jasnej apki).
-      backgroundColor: '#FEFEFE',
+      // Splash = gradient żółto-złoty (#FDF184 -> #FDCD84) + POMARAŃCZOWY symbol spontaway,
+      // spójny z nową ikoną aplikacji (decyzja Nat 2026-08-12, zastąpiło białe tło #FEFEFE).
+      // backgroundColor = mid gradientu, żeby ewentualny margines wokół obrazka splash zlał się.
+      backgroundColor: '#FDDF84',
       // No spinner — splash image only
       showSpinner: false,
       androidScaleType: 'CENTER_CROP',
