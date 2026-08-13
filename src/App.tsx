@@ -483,7 +483,7 @@ function SplashScreen({ done }: { done: boolean }) {
     >
       {/* Loading = POMARAŃCZOWY symbol spontaway na gradiencie żółto-złotym (#FDF184 -> #FDCD84),
           1:1 z natywnym splashem, żeby przejście native->React było bezszwowe (bez skoku koloru). */}
-      <TrasaLogo size={88} />
+      <TrasaLogo size={64} />
     </div>
   );
 }
