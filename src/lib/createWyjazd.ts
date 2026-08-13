@@ -204,19 +204,15 @@ export async function updateWyjazdPlaces(
   const photosFor = (p: WyjazdPlaceInput) =>
     (p.place_id && photoByKey.get(`id:${p.place_id}`)) || photoByKey.get(`nm:${normKey(p.place_name)}`) || null;
 
-  // Podmiana pinow: usun stare, wstaw nowe w aktualnej kolejnosci.
-  // KRYTYCZNE: gdy delete zawiedzie (RLS/blad), NIE wstawiaj - inaczej piny sie DUBLUJA.
-  const { error: delErr } = await (supabase as any).from("pins").delete().eq("route_id", routeId);
-  if (delErr) {
-    console.error("[updateWyjazd] pins delete failed (abort, zeby nie dublowac):", delErr.message);
-    return null;
-  }
+  // Podmiana pinow z zachowaniem zdjec usera. Wiersze buduje JS (merge zdjec ze starych/backupu),
+  // a ATOMOWA podmiana (delete+insert) idzie przez RPC replace_route_pins - jedna transakcja.
+  // Gdy insert padnie (np. constraint), CALA operacja sie wycofuje -> stare piny nietkniete.
+  // (prewencja krytycznego buga 2026-08-13: delete przechodzil, reinsert padal -> UTRATA miejsc)
   const rows = places.map((p, idx) => {
     const old = photosFor(p);
     return {
-      route_id: routeId,
       place_name: p.place_name,
-      address: p.address ?? null,
+      address: p.address ?? "",                 // NOT NULL
       description: p.description ?? null,
       category: p.category || "other",
       latitude: p.latitude ?? null,
@@ -224,32 +220,20 @@ export async function updateWyjazdPlaces(
       place_id: p.place_id ?? null,
       suggested_time: null,
       pin_order: idx,
-      // Zdjecia usera zachowane z istniejacego pinu / backupu tego samego miejsca.
-      // KRYTYCZNE: images / user_photo_urls sa NOT NULL (default []) - NIGDY null, inaczej
-      // insert pada na constraint, a delete juz przeszedl -> UTRATA WSZYSTKICH miejsc (bug 2026-08-13).
       photo_url: p.photo_url ?? old?.photo_url ?? null,
-      images: old?.images ?? [],
-      user_photo_urls: old?.user_photo_urls ?? [],
+      images: old?.images ?? [],                // NOT NULL (default [])
+      user_photo_urls: old?.user_photo_urls ?? [], // NOT NULL (default [])
       image_url: old?.image_url ?? null,
       photo_cached_at: old?.photo_cached_at ?? null,
+      original_creator_id: (old as any)?.original_creator_id ?? null,
     };
   });
-  if (rows.length) {
-    const { error: pinsErr } = await (supabase as any).from("pins").insert(rows);
-    if (pinsErr) {
-      // ROLLBACK: reinsert padl (np. constraint), a delete juz usunal stare piny. Zeby NIE zostawic
-      // pustej trasy, przywracamy piny sprzed edycji (pelny snapshot existingPins bez id).
-      console.error("[updateWyjazd] pins insert failed - ROLLBACK do stanu sprzed edycji:", pinsErr.message);
-      const restore = (existingPins ?? []).map((ep: any) => {
-        const { ...rest } = ep;
-        return { ...rest, images: ep.images ?? [], user_photo_urls: ep.user_photo_urls ?? [] };
-      });
-      if (restore.length) {
-        const { error: restErr } = await (supabase as any).from("pins").insert(restore);
-        if (restErr) console.error("[updateWyjazd] ROLLBACK tez padl:", restErr.message);
-      }
-      return null; // sygnal bledu -> confirm() pokaze toast "Nie udalo sie zapisac zmian"
-    }
+  const { error: rpcErr } = await (supabase as any).rpc("replace_route_pins", { p_route_id: routeId, p_pins: rows });
+  if (rpcErr) {
+    // Transakcja RPC wycofana - piny sprzed edycji ZOSTAJA nietkniete. Sygnal bledu -> confirm()
+    // pokaze toast "Nie udalo sie zapisac zmian".
+    console.error("[updateWyjazd] replace_route_pins failed (piny nietkniete):", rpcErr.message);
+    return null;
   }
   return routeId;
 }
