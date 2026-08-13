@@ -192,8 +192,9 @@ export async function updateWyjazdPlaces(
       if (!photoByKey.has(nk)) photoByKey.set(nk, ep);
     }
   };
+  // Pelne piny PRZED delete - do zachowania zdjec ORAZ do ROLLBACKU gdy reinsert padnie.
   const { data: existingPins } = await (supabase as any)
-    .from("pins").select("place_id, place_name, images, user_photo_urls, image_url, photo_url, photo_cached_at")
+    .from("pins").select("route_id, place_name, address, description, category, latitude, longitude, place_id, suggested_time, pin_order, photo_url, images, user_photo_urls, image_url, photo_cached_at, original_creator_id")
     .eq("route_id", routeId);
   rememberPhotos(existingPins);
   const { data: backupPins } = await (supabase as any)
@@ -224,16 +225,31 @@ export async function updateWyjazdPlaces(
       suggested_time: null,
       pin_order: idx,
       // Zdjecia usera zachowane z istniejacego pinu / backupu tego samego miejsca.
+      // KRYTYCZNE: images / user_photo_urls sa NOT NULL (default []) - NIGDY null, inaczej
+      // insert pada na constraint, a delete juz przeszedl -> UTRATA WSZYSTKICH miejsc (bug 2026-08-13).
       photo_url: p.photo_url ?? old?.photo_url ?? null,
-      images: old?.images ?? null,
-      user_photo_urls: old?.user_photo_urls ?? null,
+      images: old?.images ?? [],
+      user_photo_urls: old?.user_photo_urls ?? [],
       image_url: old?.image_url ?? null,
       photo_cached_at: old?.photo_cached_at ?? null,
     };
   });
   if (rows.length) {
     const { error: pinsErr } = await (supabase as any).from("pins").insert(rows);
-    if (pinsErr) console.warn("[updateWyjazd] pins insert failed:", pinsErr.message);
+    if (pinsErr) {
+      // ROLLBACK: reinsert padl (np. constraint), a delete juz usunal stare piny. Zeby NIE zostawic
+      // pustej trasy, przywracamy piny sprzed edycji (pelny snapshot existingPins bez id).
+      console.error("[updateWyjazd] pins insert failed - ROLLBACK do stanu sprzed edycji:", pinsErr.message);
+      const restore = (existingPins ?? []).map((ep: any) => {
+        const { ...rest } = ep;
+        return { ...rest, images: ep.images ?? [], user_photo_urls: ep.user_photo_urls ?? [] };
+      });
+      if (restore.length) {
+        const { error: restErr } = await (supabase as any).from("pins").insert(restore);
+        if (restErr) console.error("[updateWyjazd] ROLLBACK tez padl:", restErr.message);
+      }
+      return null; // sygnal bledu -> confirm() pokaze toast "Nie udalo sie zapisac zmian"
+    }
   }
   return routeId;
 }
