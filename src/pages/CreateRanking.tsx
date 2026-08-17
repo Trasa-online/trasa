@@ -221,9 +221,10 @@ const CreateRanking = () => {
   // miniatura na karcie w eksploracji. NULL = fallback do zdjecia pierwszego miejsca.
   const [coverUrl, setCoverUrl] = useState<string | null>(null);
   const [listCoverUrl, setListCoverUrl] = useState<string | null>(null);
-  // Status listy (discovery_collections.list_status): "visited" | "to_visit" | null (nowa/stara).
-  // Listy "do odwiedzenia" maja uproszczony krok 2 (bez tagow i notek per miejsce).
-  const [listStatus, setListStatus] = useState<string | null>(null);
+  // Status listy (discovery_collections.list_status): "visited" | "to_visit".
+  // Nowa lista: user WYBIERA (toggle) czy juz odwiedzil te miejsca czy dopiero chce - domyslnie
+  // "do odwiedzenia". Edycja: ladowane z col. Listy "do odwiedzenia" maja uproszczony krok 2.
+  const [listStatus, setListStatus] = useState<string | null>(editId ? null : "to_visit");
   // Dane B2B (premium) wybranych miejsc - do pokazania na karcie pelnego adresu, tagow i
   // kategorii glownej+drugiej. Klucz = place_id (UUID). Tylko miejsca z business_profiles.
   const [bizMap, setBizMap] = useState<Record<string, any>>({});
@@ -579,14 +580,14 @@ const CreateRanking = () => {
       // Miasto opcjonalne: "" (Wszedzie) -> null (lista globalna, karta pokaze tylko liczbe miejsc).
       const cityToSave = city.trim() || null;
       if (editId) {
-        await (supabase as any).from("discovery_collections").update({ title: collectionTitle, city: cityToSave, category, description: desc, is_public: isPublic, author_name: authorName, author_avatar: authorAvatar, cover_url: coverToSave, list_cover_url: listCoverToSave, tags: tagsToSave, updated_at: new Date().toISOString() }).eq("id", editId);
+        await (supabase as any).from("discovery_collections").update({ title: collectionTitle, city: cityToSave, category, description: desc, is_public: isPublic, author_name: authorName, author_avatar: authorAvatar, cover_url: coverToSave, list_cover_url: listCoverToSave, tags: tagsToSave, list_status: listStatus, updated_at: new Date().toISOString() }).eq("id", editId);
         await (supabase as any).from("discovery_items").delete().eq("collection_id", editId);
       } else {
         const { data: col, error } = await (supabase as any).from("discovery_collections").insert({
           user_id: user.id, author_name: authorName, author_avatar: authorAvatar, title: collectionTitle,
           category, city: cityToSave, description: desc, kind: "ranking", is_public: isPublic,
           cover_url: coverToSave, list_cover_url: listCoverToSave, tags: tagsToSave,
-          moderation_status: moderationStatus,
+          list_status: listStatus, moderation_status: moderationStatus,
         }).select("id").single();
         if (error || !col) throw new Error(error?.message ?? "insert failed");
         collectionId = col.id;
@@ -694,6 +695,21 @@ const CreateRanking = () => {
               onFocus={() => setTitleFocused(true)} onBlur={() => setTitleFocused(false)}
               placeholder={t("name_placeholder", "Nazwa listy")}
               className="w-full rounded-2xl bg-secondary text-secondary-foreground border-0 px-4 py-3 text-base outline-none focus:ring-2 focus:ring-orange-500/40 placeholder:text-muted-foreground/50" />
+          </div>
+
+          {/* #2: user WYBIERA czy juz odwiedzil te miejsca (visited) czy dopiero chce (to_visit). */}
+          <div className="px-4 pt-3">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">{`Te miejsca`}</p>
+            <div className="flex rounded-2xl bg-secondary p-1 text-sm font-bold">
+              <button type="button" onClick={() => setListStatus("visited")}
+                className={`flex-1 py-2 rounded-xl transition-colors ${listStatus === "visited" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
+                {`Już odwiedziłem`}
+              </button>
+              <button type="button" onClick={() => setListStatus("to_visit")}
+                className={`flex-1 py-2 rounded-xl transition-colors ${listStatus === "to_visit" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
+                {`Chcę odwiedzić`}
+              </button>
+            </div>
           </div>
 
           {/* OPCJONALNY filtr miasta wyszukiwarki (miasto NIE jest obowiazkowe - lista moze byc

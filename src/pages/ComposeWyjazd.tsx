@@ -306,6 +306,8 @@ export default function ComposeWyjazd() {
         const cur = JSON.parse(sessionStorage.getItem(softKey) || "{}");
         sessionStorage.setItem(softKey, JSON.stringify({ ...cur, draftId: id }));
       } catch { /* unavailable */ }
+      // Trasa w DB - skasuj trwaly backup (nie moze wskrzesic tej trasy przy nastepnym tworzeniu).
+      try { localStorage.removeItem(DURABLE_KEY); } catch { /* unavailable */ }
     }
     setInviteOpen(true);
   };
@@ -531,6 +533,9 @@ export default function ComposeWyjazd() {
     setCreating(false);
     if (!id) { haptics.error(); toast.error(draftId ? "Nie udało się zapisać zmian" : "Nie udało się utworzyć wyjazdu"); return; }
     haptics.success();
+    // Trasa jest juz w DB (draft) - trwaly backup kompozycji nie jest potrzebny i NIE moze
+    // wskrzeszac tej trasy przy tworzeniu NASTEPNEJ (bug: nowa trasa dziedziczyla opublikowana).
+    try { localStorage.removeItem(DURABLE_KEY); } catch { /* unavailable */ }
     // Trasa jest PRYWATNYM draftem (is_shared=false) - publikuje sie dopiero przy "Zapisz trase"
     // w ReviewSummary. Odswiezamy feed profilaktycznie (np. przy edycji juz opublikowanej trasy).
     queryClient.invalidateQueries({ queryKey: ["discovery-city-routes"] });
