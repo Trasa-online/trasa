@@ -11,6 +11,7 @@ import { dateLocale } from "@/lib/dateLocale";
 import { MapPin, ArrowLeft, Sparkles, ChevronRight, ChevronLeft, Bookmark, List, GalleryHorizontalEnd, Calendar as CalendarIcon, Image as ImageIcon, Maximize2, X, Building2 } from "lucide-react";
 import { PlacePhoto } from "@/components/PlacePhoto";
 import { RoutePlaceRow } from "@/components/route/RoutePlaceRow";
+import { pinCoverKeys, fetchPlacePhotosForKeys } from "@/lib/placePhotoSocial";
 import RouteMap from "@/components/RouteMap";
 import { API_BASE } from "@/lib/platform";
 
@@ -219,6 +220,15 @@ export default function SharedRoute() {
     enabled: !!id,
   });
 
+  // #okladki: zdjecia userow dodane do miejsc tej trasy (place_photos) - do okladek miejsc bez
+  // wlasnego zdjecia. Klucze inline (male tablice); queryKey stabilny per zestaw pinow+miasto.
+  const routePinKeys = Array.from(new Set((pins as any[]).flatMap((p) => pinCoverKeys(p, route?.city ?? null)))).filter(Boolean);
+  const { data: placePhotoCoverMap } = useQuery({
+    queryKey: ["shared-route-place-photos", routePinKeys.join("|")],
+    enabled: routePinKeys.length > 0,
+    queryFn: () => fetchPlacePhotosForKeys(routePinKeys),
+  });
+
   // Notki autora trasy (pin_ratings SELECT jest publiczny).
   const { data: authorNotes = [] } = useQuery({
     queryKey: ["shared-route-notes", id, route?.user_id],
@@ -282,10 +292,22 @@ export default function SharedRoute() {
     );
   }
 
-  // Hero: okladka autora (review_photos[0]) -> zdjecie pierwszego miejsca z trasy
-  // -> ilustracja placeholder. Sama okladka/zdjecie miejsca (galeria zdjec nie).
+  // Okladki miejsc ze zdjec dodanych przez userow w wizytowkach (place_photos) - gdy pin nie ma
+  // wlasnego zdjecia. Spojnie z widokiem trasy/listy: place_photos to zdjecia miejsca (Storage).
+  const routeCity = route.city ?? null;
+  const pinHasOwnPhoto = (p: any) =>
+    !!(p.image_url || (Array.isArray(p.images) && p.images[0]) || (Array.isArray(p.user_photo_urls) && p.user_photo_urls[0]) || p.photo_url);
+  const coverFor = (p: any): string | null => {
+    if (pinHasOwnPhoto(p)) return null; // PlacePhoto sam wybierze wlasne zdjecie pinu
+    if (!placePhotoCoverMap) return null;
+    const urls = pinCoverKeys(p, routeCity).map((k) => placePhotoCoverMap.get(k)).find((u) => u && u.length);
+    return urls && urls.length ? urls[0] : null;
+  };
+
+  // Hero: okladka autora (review_photos[0]) -> zdjecie pierwszego miejsca z trasy (wlasne LUB
+  // place_photo) -> ilustracja placeholder.
   const userCover = (route.review_photos ?? []).find((u: any) => typeof u === "string" && u.trim() !== "") ?? null;
-  const placeCover = resolveStored(pins[0]?.photo_url || pins[0]?.image_url);
+  const placeCover = resolveStored(pins[0]?.photo_url || pins[0]?.image_url) ?? (pins[0] ? coverFor(pins[0]) : null);
   // Piny do mapy (ujednolicone z widokiem Trasy - RouteMap oczekuje latitude/longitude/place_name).
   const navMapPins = (pins as any[])
     .filter((p) => p.latitude != null && p.longitude != null)
@@ -353,7 +375,7 @@ export default function SharedRoute() {
         return (
           <RoutePlaceRow
             key={pin.id}
-            pin={pin}
+            pin={coverFor(pin) ? { ...pin, photo_url: coverFor(pin) } : pin}
             index={i}
             categoryLabel={categoryLabel(pin.category || "other")}
             onOpen={() => openDetail(pin)}
@@ -373,7 +395,7 @@ export default function SharedRoute() {
         <div key={pin.id} className="snap-center shrink-0 w-[80vw] max-w-[320px] rounded-2xl bg-secondary border border-border/40 overflow-hidden shadow-sm flex flex-col">
           <button onClick={() => openDetail(pin)} className="block w-full text-left active:opacity-90 transition-opacity">
             <div className="relative w-full aspect-[4/3] bg-muted">
-              <PlacePhoto pin={pin} className="w-full h-full object-cover" />
+              <PlacePhoto pin={coverFor(pin) ? { ...pin, photo_url: coverFor(pin) } : pin} className="w-full h-full object-cover" />
               <div className="absolute top-3 left-3 h-8 w-8 rounded-full bg-black/55 backdrop-blur text-white text-sm font-bold flex items-center justify-center">{i + 1}</div>
             </div>
             <div className="px-4 pt-4">

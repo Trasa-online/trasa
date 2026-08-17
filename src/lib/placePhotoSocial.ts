@@ -19,6 +19,15 @@ export function photoRefForUserPhoto(placePhotoId: string): string {
   return `pp:${placePhotoId}`;
 }
 
+// Kandydujace klucze miejsca (pin/item) do dopasowania place_photos. Sprawdzamy DWA:
+// gpid:{google_place_id} oraz nc:{nazwa|miasto} - wizytowka zapisuje zdjecie pod jednym z nich
+// (MockPlace z tworzenia trasy czesto nie ma google_place_id -> nc:).
+export function pinCoverKeys(pin: { google_place_id?: string | null; place_name?: string | null }, city?: string | null): string[] {
+  const nc = placeKeyOf({ googlePlaceId: null, placeName: pin.place_name, city });
+  const gp = pin.google_place_id ? placeKeyOf({ googlePlaceId: pin.google_place_id, placeName: pin.place_name, city }) : null;
+  return gp ? [gp, nc] : [nc];
+}
+
 export interface PlacePhotoRow {
   id: string;
   photo_url: string;
