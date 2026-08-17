@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useLocation } from "react-router-dom";
 import { PullToRefresh } from "@/components/PullToRefresh";
 import { MapPin, Heart, Trash2, ArrowRight, ArrowLeft, Pencil, ListChecks, ChevronDown, ChevronRight, Check, Search, X, Layers, Compass, Bookmark, Plus } from "lucide-react";
+import { InfoTooltip } from "@/components/ui/InfoTooltip";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import { fetchEnrichedPlace, type MockPlace } from "@/components/plan-wizard/PlaceSwiper";
 import { RoutePlaceRow } from "@/components/route/RoutePlaceRow";
@@ -880,6 +881,9 @@ const Explore = () => {
               <ArrowLeft className="h-5 w-5" />
             </button>
             <h1 className="flex-1 min-w-0 text-lg font-bold truncate">{t("explore.collections_title")}</h1>
+            <InfoTooltip title="Twoje listy">
+              {`Listy to Twoje zbiory ulubionych miejsc (bez ustalonej kolejności): odwiedzone albo do odwiedzenia. Np. ukochane kawiarnie w mieście. Tworzysz je sam i możesz udostępniać innym.`}
+            </InfoTooltip>
           </>
         ) : (
           <ExploreTopBar

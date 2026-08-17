@@ -3,6 +3,7 @@ import CitySelect from "@/components/home/CitySelect";
 import TabTopBar from "@/components/layout/TabTopBar";
 import { useActiveCity } from "@/hooks/useActiveCity";
 import { SavedRoutes, SavedCollections } from "@/components/home/DiscoveryFeed";
+import { InfoTooltip } from "@/components/ui/InfoTooltip";
 import { cn } from "@/lib/utils";
 
 // Zakladka Zapisane (bottom nav): selektor miasta + toggle Trasy | Listy (2026-08-10).
@@ -21,6 +22,9 @@ const LikedPlaces = () => {
       <TabTopBar>
         <CitySelect city={city} onCityChange={setCity} allowAll />
         <div className="flex-1" />
+        <InfoTooltip title="Zapisane">
+          {`Zapisane to trasy i listy innych osób, które zapisałeś bookmarkiem w eksploracji. Wracaj do nich w każdej chwili. Tu nie tworzysz nic swojego - to Twoja kolekcja cudzych inspiracji.`}
+        </InfoTooltip>
       </TabTopBar>
 
       {/* Segmentowy toggle Trasy | Listy */}
