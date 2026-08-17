@@ -552,12 +552,12 @@ const CreateRanking = () => {
 
   const collectionTitle = title.trim() || "Lista";
   const isRoute = isRouteCollection(category); // stare trasy (edycja) -> mozna ustawiac kolejnosc
-  const canGoNext = items.length >= 2 && title.trim().length > 0; // krok 1 -> 2 (miasto opcjonalne)
+  const canGoNext = items.length >= 1 && title.trim().length > 0; // krok 1 -> 2 (min. 1 miejsce, miasto opcjonalne)
   const canPublish = canGoNext && !publishing;
   // Przejscie do kroku 2 - gdy warunki niespelnione, TOAST z powodem (guzik nie jest disabled).
   const goNext = () => {
     if (title.trim().length === 0) { toast(t("cta.need_title", "Dodaj nazwę listy")); return; }
-    if (items.length < 2) { toast(t("cta.need_two", "Dodaj co najmniej 2 miejsca, żeby stworzyć listę")); return; }
+    if (items.length < 1) { toast(t("cta.need_one", "Dodaj co najmniej jedno miejsce")); return; }
     setStep(2);
   };
 

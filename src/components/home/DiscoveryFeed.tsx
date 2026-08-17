@@ -1570,35 +1570,35 @@ export function SavedCollections() {
 
   return (
     <div className="flex flex-col">
-      {/* Wyszukiwarka - identyczna jak w zakladce Miejsca */}
-      <div className="pb-3">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-          <input
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Szukaj w zapisanych zestawieniach…"
-            className="w-full h-9 pl-9 pr-9 rounded-full bg-muted/60 border border-border/40 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30"
-          />
-          {query && (
-            <button
-              onClick={() => setQuery("")}
-              className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 flex items-center justify-center rounded-full text-muted-foreground hover:bg-muted active:scale-90 transition"
-              aria-label="Wyczyść"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          )}
+      {/* Wyszukiwarka - tylko gdy sa zapisane listy (w pustym stanie zbedna). */}
+      {savedIds.length > 0 && (
+        <div className="pb-3">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Szukaj w zapisanych zestawieniach…"
+              className="w-full h-9 pl-9 pr-9 rounded-full bg-muted/60 border border-border/40 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30"
+            />
+            {query && (
+              <button
+                onClick={() => setQuery("")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 flex items-center justify-center rounded-full text-muted-foreground hover:bg-muted active:scale-90 transition"
+                aria-label="Wyczyść"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {savedIds.length === 0 || (!isLoading && filtered.length === 0 && !query.trim()) ? (
-        // Pusty stan (brak zapisanych list) - placeholderowa ikona brandingowa (spontaway).
-        <div className="py-14 text-center px-8 flex flex-col items-center">
-          <div className="h-20 w-20 rounded-3xl bg-[#fcede3] flex items-center justify-center mb-4">
-            <TrasaLogo size={44} tone="orange" />
-          </div>
+        // Pusty stan (brak zapisanych list) - ikona zapisania (spojnie z pustym stanem "Trasy").
+        <div className="pt-20 pb-12 text-center px-8">
+          <span aria-hidden className="mx-auto mb-4 h-20 w-20" style={{ display: "block", backgroundColor: "#ef9d78", WebkitMaskImage: "url(/Ikona_Zapisane.svg)", maskImage: "url(/Ikona_Zapisane.svg)", WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat", WebkitMaskSize: "contain", maskSize: "contain", WebkitMaskPosition: "center", maskPosition: "center" }} />
           <p className="text-base font-bold">Brak zapisanych list</p>
           <p className="text-sm text-muted-foreground mt-1 leading-relaxed max-w-[280px] mx-auto">
             Zapisz listę zakładką podczas przeglądania, żeby pojawiła się tutaj.

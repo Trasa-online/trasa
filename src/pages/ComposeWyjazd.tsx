@@ -179,7 +179,11 @@ export default function ComposeWyjazd() {
         const d = JSON.parse(durRaw);
         const fresh = d?.ts && (Date.now() - d.ts) < 24 * 3600 * 1000;
         const sameEntry = (d?.draftId ?? null) === (nav.draftId ?? null);
-        if (fresh && sameEntry && (d?.items?.length ?? 0) > 0) { restoredFromDurable = true; return d; }
+        // KRYTYCZNE: gdy user wybral NOWE miasto (nav.city) inne niz w backupie -> to nowa trasa,
+        // NIE wskrzeszamy starej kompozycji (bug: wybor nowego kraju/miasta wracal do starej trasy).
+        // Recovery tylko gdy to samo miasto (albo brak nav.city - wejscie bez jawnego wyboru).
+        const sameCity = !nav.city || (d?.city ?? null) === nav.city;
+        if (fresh && sameEntry && sameCity && (d?.items?.length ?? 0) > 0) { restoredFromDurable = true; return d; }
       }
     } catch { /* storage unavailable */ }
     return null;

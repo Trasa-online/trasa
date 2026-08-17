@@ -312,7 +312,7 @@ const BottomNav = () => {
                       <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-orange-600 ring-2 ring-background" />
                     )}
                   </div>
-                  <span className="text-[9px] font-semibold leading-tight mt-0.5">Trasy</span>
+                  <span className="text-[9px] font-semibold leading-tight mt-0.5">Wyjazdy</span>
                 </>
               )}
             </NavLink>
@@ -326,7 +326,7 @@ const BottomNav = () => {
               {({ isActive }) => (
                 <>
                   <NavIcon src="/Ikona_Trasy.svg" />
-                  <span className="text-[9px] font-semibold leading-tight mt-0.5">Trasy</span>
+                  <span className="text-[9px] font-semibold leading-tight mt-0.5">Wyjazdy</span>
                 </>
               )}
             </NavLink>
