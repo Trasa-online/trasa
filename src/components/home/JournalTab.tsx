@@ -207,7 +207,11 @@ const JournalTab = ({ userId, city: cityFilter, draftsOnly = false }: JournalTab
       // trasa ukonczona DZIS znikala z aktywnych (trip_type!=planning), a do Dziennika
       // nie trafiala (data nie minela) = "nie zapisala sie nigdzie". To byl bug.
       const isDone = e.trip_type === "completed" || e.plan_finalized === true;
-      if (isPast || isDone) postcards.push(e);
+      // Wspomnienie takze gdy trasa ma OKLADKE (zdjecie hero lub domyslny gradient) albo zdjecia
+      // galerii - "robocza" = trasa BEZ zadnej okladki/zdjec. Trasa z okladka = gotowa (#2).
+      const hasCover = !!resolveStored(e.cover_url)
+        || (Array.isArray(e.review_photos) && e.review_photos.some((u: any) => typeof u === "string" && u.trim() !== ""));
+      if (isPast || isDone || hasCover) postcards.push(e);
       else active.push(e);
     }
     active.sort((a, b) => {

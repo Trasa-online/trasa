@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams, useSearchParams, useLocation } from "react-router-dom";
-import { ArrowLeft, Search, Plus, X, Loader2, ChevronRight, ChevronDown, List, GalleryHorizontalEnd, GripVertical, MapPin, Image as ImageIcon } from "lucide-react";
+import { ArrowLeft, Search, Plus, X, Loader2, ChevronRight, ChevronDown, List, GalleryHorizontalEnd, GripVertical, Image as ImageIcon } from "lucide-react";
 import { Reorder, useDragControls } from "framer-motion";
 import { haptics } from "@/hooks/useHaptics";
 import { supabase } from "@/integrations/supabase/client";
@@ -220,6 +220,9 @@ const CreateRanking = () => {
   // miniatura na karcie w eksploracji. NULL = fallback do zdjecia pierwszego miejsca.
   const [coverUrl, setCoverUrl] = useState<string | null>(null);
   const [listCoverUrl, setListCoverUrl] = useState<string | null>(null);
+  // Status listy (discovery_collections.list_status): "visited" | "to_visit" | null (nowa/stara).
+  // Listy "do odwiedzenia" maja uproszczony krok 2 (bez tagow i notek per miejsce).
+  const [listStatus, setListStatus] = useState<string | null>(null);
   // Dane B2B (premium) wybranych miejsc - do pokazania na karcie pelnego adresu, tagow i
   // kategorii glownej+drugiej. Klucz = place_id (UUID). Tylko miejsca z business_profiles.
   const [bizMap, setBizMap] = useState<Record<string, any>>({});
@@ -286,13 +289,14 @@ const CreateRanking = () => {
   useEffect(() => {
     if (editId) {
       (async () => {
-        const { data: col } = await (supabase as any).from("discovery_collections").select("title, city, category, description, author_name, author_avatar, cover_url, list_cover_url, tags").eq("id", editId).maybeSingle();
+        const { data: col } = await (supabase as any).from("discovery_collections").select("title, city, category, description, author_name, author_avatar, cover_url, list_cover_url, tags, list_status").eq("id", editId).maybeSingle();
         if (col) {
           setTitle(col.title ?? ""); setTitleDirty(true); if (col.city) { setCity(col.city); setCountry(countryForCity(col.city)); } setCategory(col.category ?? null);
           setDescription(col.description ?? "");
           setAsAnon(col.author_name === "Anonim" && !col.author_avatar);
           setCoverUrl(col.cover_url ?? null); setListCoverUrl(col.list_cover_url ?? null);
           setTags(Array.isArray(col.tags) ? col.tags : []);
+          setListStatus(col.list_status ?? null);
         }
         const { data: its } = await (supabase as any).from("discovery_items").select("*").eq("collection_id", editId).order("order_index", { ascending: true });
         if (its) setItems(its.map((i: any, idx: number) => ({
@@ -673,7 +677,6 @@ const CreateRanking = () => {
           <div className="px-4 pt-3">
             <button type="button" onClick={() => setCityPickerOpen((o) => !o)}
               className="w-full flex items-center gap-2 rounded-2xl bg-secondary text-secondary-foreground px-4 py-3 active:opacity-80 transition-opacity">
-              <MapPin className="h-4 w-4 text-orange-600 shrink-0" />
               <span className="text-sm text-muted-foreground shrink-0">{`Szukasz w:`}</span>
               <span className="flex-1 text-left text-sm font-bold text-foreground truncate">{city || "Wszędzie"}</span>
               <ChevronDown className={`h-4 w-4 text-muted-foreground shrink-0 transition-transform ${cityPickerOpen ? "rotate-180" : ""}`} />
@@ -912,7 +915,7 @@ const CreateRanking = () => {
           {/* Okladki listy: hero (cover_url) + miniatura eksploracji (list_cover_url) - 1:1
               z modelem tras. Tap w kafel = picker (zdjecia miejsc / wgraj nowe). */}
           <div>
-            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2 block">{t("cover.section_label", "Okładki")}</label>
+            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2 block">{`Okładka`}</label>
             <div className="relative w-full aspect-[16/10] rounded-2xl overflow-hidden bg-gradient-to-br from-orange-400 via-rose-400 to-purple-500">
               <img src={heroCover} alt="" className="absolute inset-0 w-full h-full object-cover" />
               <div className="absolute inset-0 bg-gradient-to-b from-black/15 via-transparent to-black/55" />
@@ -925,25 +928,13 @@ const CreateRanking = () => {
               >
                 <ImageIcon className="h-[18px] w-[18px]" /> {t("cover.hero_label", "Okładka")}
               </button>
-              {/* Miniatura eksploracji (prawy-dolny rog) - osobna okladka 9:16 */}
-              <button
-                type="button"
-                onClick={() => setPickerTarget("list")}
-                aria-label={t("cover.change_thumb_aria", "Zmień miniaturę w eksploracji")}
-                className="absolute bottom-3 right-3 z-20 w-16 rounded-2xl overflow-hidden border-[3px] border-white shadow-xl bg-muted active:scale-95 transition-transform"
-              >
-                <div className="relative w-full aspect-[9/16]">
-                  <img src={listCover} alt="" className="w-full h-full object-cover" />
-                  <span className="absolute top-1 right-1 h-5 w-5 rounded-full bg-black/45 backdrop-blur-sm text-white flex items-center justify-center">
-                    <ImageIcon className="h-3 w-3" />
-                  </span>
-                </div>
-              </button>
             </div>
-            <p className="text-[11px] text-muted-foreground mt-2 leading-snug">{t("cover.hint", "Okładka to zdjęcie w widoku listy, miniatura to kafelek w eksploracji.")}</p>
+            <p className="text-[11px] text-muted-foreground mt-2 leading-snug">{`Okładka to zdjęcie w widoku listy.`}</p>
           </div>
 
-          {/* Tagi listy (zamiast glownej notki) - chip-cloud (wszystkie widoczne) + wlasne usera. */}
+          {/* Tagi listy (zamiast glownej notki) - chip-cloud (wszystkie widoczne) + wlasne usera.
+              Ukryte dla list "do odwiedzenia" (list_status="to_visit") - uproszczony krok 2. */}
+          {listStatus !== "to_visit" && (
           <div className="pt-6 border-t border-border/40">
             <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-1.5 block">
               {t("tags.label", "Tagi")} <span className="normal-case font-medium text-muted-foreground/50">{t("notes.optional")}</span>
@@ -980,8 +971,10 @@ const CreateRanking = () => {
               </button>
             </div>
           </div>
+          )}
 
-          {/* Notki do poszczegolnych miejsc */}
+          {/* Notki do poszczegolnych miejsc. Ukryte dla list "do odwiedzenia" (uproszczony krok 2). */}
+          {listStatus !== "to_visit" && (
           <div className="pt-6 border-t border-border/40">
             <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2 block">{t("notes.places_label")}</label>
             <div className="space-y-2.5">
@@ -1000,6 +993,7 @@ const CreateRanking = () => {
               ))}
             </div>
           </div>
+          )}
 
           {/* Mapa z miejscami */}
           {mapPins.length > 0 && (

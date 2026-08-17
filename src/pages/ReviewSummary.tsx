@@ -41,6 +41,11 @@ const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 // Limit zdjec dodawanych do galerii wpisu.
 const MAX_PHOTOS = 20;
 
+// #2: domyslne tlo trasy = gradient zolto-zloty (#FDF184 -> #FDCD84) jako data-URI SVG. Zapisywane
+// w routes.cover_url, renderuje sie jak zwykle zdjecie (resolveStored przepuszcza data:), a trasa
+// z ta okladka liczy sie jako "gotowa" (Wspomnienie, nie robocza).
+const GRADIENT_COVER = "data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='16'%20height='16'%20preserveAspectRatio='none'%3E%3Cdefs%3E%3ClinearGradient%20id='g'%20x1='0'%20y1='0'%20x2='1'%20y2='1'%3E%3Cstop%20offset='0'%20stop-color='%23FDF184'/%3E%3Cstop%20offset='1'%20stop-color='%23FDCD84'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect%20width='16'%20height='16'%20fill='url(%23g)'/%3E%3C/svg%3E";
+
 // Oficjalne logo Google (4-kolorowe "G") - guzik nawigacji do miejsca w Google Maps.
 const GoogleGlyph = ({ className }: { className?: string }) => (
   <svg viewBox="0 0 48 48" className={className} aria-hidden="true">
@@ -509,6 +514,7 @@ const ReviewSummary = () => {
         url: r.url,
         userId: r.user_id,
         username: profileMap[r.user_id]?.first_name || profileMap[r.user_id]?.username || t("labels.participant"),
+        avatar: profileMap[r.user_id]?.avatar_url ?? null,
       }));
     },
     enabled: !!route?.group_session_id,
@@ -1415,10 +1421,31 @@ const ReviewSummary = () => {
   const heroPhoto = planCover ?? userCover ?? placeCover ?? getRandomPinPlaceholder(routeId ?? undefined);
   // Miniatura eksploracji = OSOBNA okladka (list_cover_url). Gdy nieustawiona -> fallback do hero.
   const listCoverPhoto = resolveStored((route as any)?.list_cover_url) ?? heroPhoto;
-  const galleryPhotos = [
-    ...myPhotos.map((p) => ({ ...p, mine: true, username: t("labels.you") })),
-    ...groupPhotos.map((p: any) => ({ url: p.url, owner: "", mine: false, username: p.username })),
-  ];
+  // #1: Galeria BEZ duplikatow. To samo zdjecie moze byc przypisane do miejsca (myPhotos) i
+  // nalezec do uczestnika (groupPhotos) - scalamy w JEDEN kafelek: nazwa miejsca + awatar/username.
+  const galleryPhotos = useMemo(() => {
+    const map = new Map<string, { url: string; owner: string; mine: boolean; username: string; avatar: string | null; placeLabel: string | null }>();
+    const push = (rawUrl: string, meta: { owner: string; mine: boolean; username: string; avatar: string | null }) => {
+      const url = resolveStored(rawUrl) ?? rawUrl;
+      const placeLabel = photoPlaceLabel.get(rawUrl) ?? null;
+      const ex = map.get(url);
+      if (ex) {
+        map.set(url, {
+          ...ex,
+          mine: ex.mine || meta.mine,
+          // Preferuj username/awatar realnego uploadera (nie "Ty") gdy dostepny.
+          username: (!ex.mine ? ex.username : meta.username) || ex.username,
+          avatar: ex.avatar ?? meta.avatar,
+          placeLabel: ex.placeLabel ?? placeLabel,
+        });
+      } else {
+        map.set(url, { url, owner: meta.owner, mine: meta.mine, username: meta.username, avatar: meta.avatar, placeLabel });
+      }
+    };
+    myPhotos.forEach((p) => push(p.url, { owner: p.owner, mine: true, username: t("labels.you"), avatar: null }));
+    (groupPhotos as any[]).forEach((p) => push(p.url, { owner: "", mine: false, username: p.username, avatar: p.avatar ?? null }));
+    return Array.from(map.values());
+  }, [myPhotos, groupPhotos, photoPlaceLabel, t]);
 
   // Podglad wizytowki miejsca - ta sama wizytowka co na swiperze (PlaceSwiperDetail).
   // Mapujemy pin na MockPlace (jak w FeedActivityCard).
@@ -1804,13 +1831,18 @@ const ReviewSummary = () => {
           <button key={`${item.url}-${idx}`} onClick={() => { setViewerUrl(item.url); setViewerMenuOpen(false); }}
             className="relative aspect-square overflow-hidden bg-muted active:opacity-90">
             <img src={item.url} alt="" className="w-full h-full object-cover" />
-            {/* Badge: nazwa miejsca, do którego zdjęcie zostało przypisane (pins.images). */}
-            {photoPlaceLabel.get(item.url) && (
-              <span className="absolute bottom-1 left-1 right-1 bg-black/60 backdrop-blur-sm rounded px-1.5 py-0.5 text-[9px] font-medium text-white truncate">{photoPlaceLabel.get(item.url)}</span>
-            )}
-            {!item.mine && !photoPlaceLabel.get(item.url) && (
-              <span className="absolute bottom-1 left-1 bg-black/55 backdrop-blur-sm rounded px-1.5 py-0.5 text-[9px] font-medium text-white max-w-[90%] truncate">{item.username}</span>
-            )}
+            {/* #1: nazwa miejsca (gdy przypisane) + awatar/username uploadera (gdy nie moje) - oba naraz. */}
+            <div className="absolute inset-x-1 bottom-1 flex flex-col items-start gap-1">
+              {item.placeLabel && (
+                <span className="max-w-full bg-black/60 backdrop-blur-sm rounded px-1.5 py-0.5 text-[9px] font-medium text-white truncate">{item.placeLabel}</span>
+              )}
+              {!item.mine && item.username && (
+                <span className="max-w-full flex items-center gap-1 bg-black/55 backdrop-blur-sm rounded-full pl-0.5 pr-1.5 py-0.5 text-[9px] font-medium text-white">
+                  <img src={avatarSrc(item.avatar)} alt="" className="h-3.5 w-3.5 rounded-full object-cover bg-orange-100 shrink-0" />
+                  <span className="truncate">{item.username}</span>
+                </span>
+              )}
+            </div>
             {editable && item.mine && (
               <span
                 role="button"
@@ -2390,6 +2422,19 @@ const ReviewSummary = () => {
                   >
                     {uploading ? <Loader2 className="h-6 w-6 animate-spin" /> : <Plus className="h-6 w-6" />}
                     <span className="text-[11px] font-semibold leading-tight text-center px-1">Nowe zdjęcie</span>
+                  </button>
+                  {/* #2: domyslne tlo (gradient zolto-zloty) - bez zdjecia, ale trasa liczy sie jako gotowa. */}
+                  <button
+                    onClick={() => setPlanCover(GRADIENT_COVER)}
+                    className={`relative aspect-square rounded-2xl overflow-hidden active:scale-95 transition-transform ${heroPhoto === GRADIENT_COVER ? "ring-2 ring-primary ring-offset-2 ring-offset-card" : ""}`}
+                    style={{ backgroundImage: "linear-gradient(135deg, #FDF184, #FDCD84)" }}
+                  >
+                    <span className="absolute bottom-1.5 left-1.5 right-1.5 text-[10px] font-semibold text-foreground/80 leading-tight [text-shadow:_0_1px_1px_rgb(255_255_255/40%)]">{`Domyślne tło`}</span>
+                    {heroPhoto === GRADIENT_COVER && (
+                      <span className="absolute top-1.5 right-1.5 h-5 w-5 rounded-full bg-primary text-white flex items-center justify-center shadow-md">
+                        <Check className="h-3 w-3" strokeWidth={3} />
+                      </span>
+                    )}
                   </button>
                   {coverPickerOptions.map((opt) => {
                     const isCurrent = heroPhoto === opt.url;
