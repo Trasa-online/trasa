@@ -8,15 +8,18 @@
 // - Like/Skip CTA fixed bottom (tylko gdy props onLike/onSkip podane)
 // - Maps button w header slot
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, type ChangeEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { MapPin, Navigation, Bookmark } from "lucide-react";
 import { useDistanceReference } from "@/lib/distanceReference";
 import { haversineKm, formatDistance } from "@/lib/distance";
 import { Drawer as VaulDrawer } from "vaul";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
 import { getPhotoUrl, ensurePhotoCached } from "@/lib/placePhotos";
 import { fetchPlaceUserPhotos } from "@/lib/placeUserPhotos";
+import { placeKeyOf, fetchPlacePhotos, uploadPlacePhoto, fetchPhotoLikes, togglePhotoLike, type LikeState } from "@/lib/placePhotoSocial";
 import { GOOGLE_PLACE_DETAILS_DISABLED } from "@/lib/appMode";
 import { type MockPlace, fetchEnrichedPlace } from "./PlaceSwiper";
 import posthog from "posthog-js";
@@ -81,9 +84,17 @@ const PlaceSwiperDetail = ({
   // Swiezy profil biznesu doczytany przy otwarciu wizytowki (place ze swipera bywa starym
   // snapshotem - po edycji profilu przez lokal zdjecia/dane byly nieaktualne). ep = "effective place".
   const [freshPlace, setFreshPlace] = useState<MockPlace | null>(null);
+  // #3e: zdjecia userow dodane bezposrednio do miejsca (galeria wspoldzielona, place_photos).
+  const [userPlacePhotos, setUserPlacePhotos] = useState<string[]>([]);
+  const [addingPhoto, setAddingPhoto] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  // #6: lajki zdjec w galerii (ref = URL zdjecia -> stabilny dla Storage/B2B/user).
+  const [photoLikes, setPhotoLikes] = useState<Map<string, LikeState>>(new Map());
   const distanceRef = useDistanceReference();
+  const { user } = useAuth();
   const { t } = useTranslation("wizytowka");
   const ep = freshPlace ?? place;
+  const placeKey = ep ? placeKeyOf({ googlePlaceId: (ep as any).google_place_id ?? null, placeName: ep.place_name, city: ep.city ?? city ?? null }) : "";
 
   useEffect(() => {
     if (!open || !place) {
@@ -91,6 +102,8 @@ const PlaceSwiperDetail = ({
       setPhotos([]);
       setBusinessPosts([]);
       setFreshPlace(null);
+      setUserPlacePhotos([]);
+      setPhotoLikes(new Map());
       return;
     }
 
@@ -223,11 +236,66 @@ const PlaceSwiperDetail = ({
   const ownCover = validUrl(ep?.photo_url) ? [ep!.photo_url!] : [];
   const ownGallery = (ep?.galleryPhotos ?? []).filter(validUrl);
   const userPhotos = photos.filter(validUrl);
+  const contributed = userPlacePhotos.filter(validUrl); // #3e - zdjecia userow dodane do miejsca
+  // Cap podniesiony 4 -> 10, zeby zdjecia dodane przez userow (#3e) sie zmiescily.
   const displayPhotos = Array.from(new Set(
     isBusiness
-      ? [...userPhotos, ...ownCover, ...ownGallery]
-      : [...ownCover, ...userPhotos, ...ownGallery],
-  )).slice(0, 4);
+      ? [...userPhotos, ...contributed, ...ownCover, ...ownGallery]
+      : [...ownCover, ...userPhotos, ...contributed, ...ownGallery],
+  )).slice(0, 10);
+
+  // #3e: pobierz zdjecia userow przypisane do tego miejsca (galeria wspoldzielona).
+  useEffect(() => {
+    if (!open || !placeKey) { return; }
+    let alive = true;
+    fetchPlacePhotos(placeKey).then((rows) => { if (alive) setUserPlacePhotos(rows.map((r) => r.photo_url)); });
+    return () => { alive = false; };
+  }, [open, placeKey]);
+
+  // #6: pobierz stan lajkow dla zdjec aktualnie w galerii.
+  const photoRefsKey = displayPhotos.join("|");
+  useEffect(() => {
+    if (!open || displayPhotos.length === 0) { return; }
+    let alive = true;
+    fetchPhotoLikes(displayPhotos, user?.id ?? null).then((m) => { if (alive) setPhotoLikes(m); });
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, photoRefsKey, user?.id]);
+
+  // #6: przelacz lajk zdjecia (optymistycznie + persist). Wymaga logowania.
+  const handleToggleLike = (ref: string) => {
+    if (!user) { toast("Zaloguj się, aby polubić zdjęcie"); return; }
+    const cur = photoLikes.get(ref) ?? { count: 0, liked: false };
+    const nextLiked = !cur.liked;
+    setPhotoLikes((prev) => {
+      const next = new Map(prev);
+      next.set(ref, { liked: nextLiked, count: Math.max(0, cur.count + (nextLiked ? 1 : -1)) });
+      return next;
+    });
+    void togglePhotoLike(ref, user.id, cur.liked).then((confirmed) => {
+      // Gdy DB nie potwierdzi zmiany (np. blad), cofnij optymizm.
+      if (confirmed !== nextLiked) {
+        setPhotoLikes((prev) => { const n = new Map(prev); n.set(ref, cur); return n; });
+      }
+    });
+  };
+
+  // #3e: dodaj wlasne zdjecie do miejsca - wybor pliku -> upload -> odswiez galerie.
+  const handleAddPhoto = () => {
+    if (!user) { toast("Zaloguj się, aby dodać zdjęcie"); return; }
+    fileInputRef.current?.click();
+  };
+  const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // reset, zeby ten sam plik dalo sie wybrac ponownie
+    if (!file || !user || !ep || !placeKey) return;
+    if (!file.type.startsWith("image/")) { toast.error("Wybierz plik graficzny"); return; }
+    setAddingPhoto(true);
+    const row = await uploadPlacePhoto(file, { userId: user.id, placeKey, placeName: ep.place_name, city: ep.city ?? city ?? null });
+    setAddingPhoto(false);
+    if (row) { setUserPlacePhotos((prev) => [row.photo_url, ...prev]); toast.success("Dodano Twoje zdjęcie"); }
+    else toast.error("Nie udało się dodać zdjęcia");
+  };
 
   // Maps button - renderowany w header slot PremiumBusinessCard (Maps button obok nazwy)
   const mapsUrl = ep
@@ -273,6 +341,8 @@ const PlaceSwiperDetail = ({
             className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden"
             style={{ WebkitOverflowScrolling: "touch" }}
           >
+          {/* Hidden input do uploadu wlasnego zdjecia miejsca (#3e). */}
+          <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
           <PremiumBusinessCard
             data={businessData}
             mode="detail"
@@ -284,6 +354,10 @@ const PlaceSwiperDetail = ({
             onSave={handleSaveFromHero}
             saved={saved}
             hideReviews
+            photoLikes={photoLikes}
+            onToggleLike={handleToggleLike}
+            onAddPhoto={!isBusiness ? handleAddPhoto : undefined}
+            addingPhoto={addingPhoto}
             startingLocation={distanceRef ? { name: distanceRef.label, latitude: distanceRef.coords.lat, longitude: distanceRef.coords.lng } : undefined}
           />
           {/* Zgłoś problem - tylko dla realnych miejsc z bazy (uuid), na dole tresci wizytowki. */}

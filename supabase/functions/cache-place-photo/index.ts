@@ -78,42 +78,47 @@ Deno.serve(async (req) => {
       latitude,
       longitude,
       place_id, // Google place_id (opcjonalne)
-      target_table, // 'pins' | 'places'
-      target_id, // UUID
+      target_table, // 'pins' | 'places' | 'discovery_items' (opcjonalne)
+      target_id, // UUID (opcjonalne - gdy brak, tylko cache do Storage + zwrot URL)
     } = body as {
       place_name?: string;
       city?: string;
       latitude?: number;
       longitude?: number;
       place_id?: string;
-      target_table?: "pins" | "places";
+      target_table?: "pins" | "places" | "discovery_items";
       target_id?: string;
     };
 
-    if (!place_name || !target_table || !target_id) {
-      return jsonResponse(
-        { error: "Missing required fields: place_name, target_table, target_id" },
-        400,
-      );
+    // target_table/target_id sa OPCJONALNE. Gdy podane -> aktualizujemy wiersz (persist,
+    // idempotencja). Gdy brak (np. cache przy dodawaniu miejsca do listy PRZED zapisem) ->
+    // tylko cache do Storage + zwrot URL; klient sam zapisze URL przy publikacji.
+    const ALLOWED_TABLES = ["pins", "places", "discovery_items"];
+    const hasTarget = !!target_table && !!target_id;
+    if (!place_name) {
+      return jsonResponse({ error: "Missing required field: place_name" }, 400);
     }
-    if (target_table !== "pins" && target_table !== "places") {
-      return jsonResponse({ error: "target_table must be 'pins' or 'places'" }, 400);
+    if (target_table && !ALLOWED_TABLES.includes(target_table)) {
+      return jsonResponse({ error: "target_table must be 'pins', 'places' or 'discovery_items'" }, 400);
     }
-
-    // 1. Already cached? (idempotency)
-    const { data: record } = await sb
-      .from(target_table)
-      .select("photo_url, photo_cached_at")
-      .eq("id", target_id)
-      .single();
 
     const STORAGE_MARKER = "/storage/v1/object/public/place-photos-cache/";
-    if (record?.photo_url && record.photo_url.includes(STORAGE_MARKER)) {
-      return jsonResponse({
-        photo_url: record.photo_url,
-        cached: true,
-        skipped: true,
-      });
+
+    // 1. Already cached? (idempotency) - tylko gdy mamy target do sprawdzenia.
+    if (hasTarget) {
+      const { data: record } = await sb
+        .from(target_table!)
+        .select("photo_url, photo_cached_at")
+        .eq("id", target_id!)
+        .single();
+
+      if (record?.photo_url && record.photo_url.includes(STORAGE_MARKER)) {
+        return jsonResponse({
+          photo_url: record.photo_url,
+          cached: true,
+          skipped: true,
+        });
+      }
     }
 
     // 2. Stabilny klucz pliku
@@ -131,13 +136,15 @@ Deno.serve(async (req) => {
     const has400 = existingFiles?.some((f) => f.name === fileKey400);
 
     if (has800 && has400) {
-      // Pliki istnieją — tylko zaktualizuj DB i zwróć URL bez wywołań Google
+      // Pliki istnieją — tylko zaktualizuj DB (gdy target) i zwróć URL bez wywołań Google
       const { data: publicData } = sb.storage.from(BUCKET).getPublicUrl(fileKey800);
       const photoUrl = publicData.publicUrl;
-      await sb
-        .from(target_table)
-        .update({ photo_url: photoUrl, photo_cached_at: new Date().toISOString() })
-        .eq("id", target_id);
+      if (hasTarget) {
+        await sb
+          .from(target_table!)
+          .update({ photo_url: photoUrl, photo_cached_at: new Date().toISOString() })
+          .eq("id", target_id!);
+      }
       return jsonResponse({
         photo_url: photoUrl,
         photo_url_small: photoUrl.replace("_800.jpg", "_400.jpg"),
@@ -249,20 +256,23 @@ Deno.serve(async (req) => {
     const { data: publicData } = sb.storage.from(BUCKET).getPublicUrl(fileKey800);
     const photoUrl = publicData.publicUrl;
 
-    // 8. UPDATE target_table z stałym URL
-    const { error: updateError } = await sb
-      .from(target_table)
-      .update({
-        photo_url: photoUrl,
-        photo_cached_at: new Date().toISOString(),
-      })
-      .eq("id", target_id);
+    // 8. UPDATE target_table z stałym URL (tylko gdy podano target - inaczej klient
+    //    zapisze URL sam, np. discovery_items przy publikacji listy).
+    if (hasTarget) {
+      const { error: updateError } = await sb
+        .from(target_table!)
+        .update({
+          photo_url: photoUrl,
+          photo_cached_at: new Date().toISOString(),
+        })
+        .eq("id", target_id!);
 
-    if (updateError) {
-      return jsonResponse(
-        { error: "DB update failed", details: updateError.message },
-        500,
-      );
+      if (updateError) {
+        return jsonResponse(
+          { error: "DB update failed", details: updateError.message },
+          500,
+        );
+      }
     }
 
     return jsonResponse({

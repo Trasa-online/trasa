@@ -198,33 +198,40 @@ export default function PublicProfile() {
           <FollowButton targetUserId={profile.id} className="h-9 px-4 text-sm" />
         </div>
 
-        {/* Listy usera (polecajki) - PIERWSZA sekcja, nad Plany/Miasta. Tap -> /lista/:id. */}
+        {/* Listy usera (polecajki) - PIERWSZA sekcja, nad Plany/Miasta. Kolekcja inspiracji:
+            masonry 2-kol (CSS columns), okladki roznej wysokosci = efekt Pinterest. Tap -> /lista/:id. */}
         {userLists.length > 0 && (
           <div>
             <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-3">{t("sections.lists", { defaultValue: "Listy" })}</p>
-            <div className="flex gap-3 overflow-x-auto scrollbar-none -mx-4 px-4 pb-1">
-              {userLists.map((l: any) => (
-                <button
-                  key={l.id}
-                  onClick={() => navigate(`/lista/${l.id}`)}
-                  className="shrink-0 w-40 text-left active:scale-[0.98] transition-transform"
-                >
-                  <div className="relative w-full aspect-[4/3] rounded-2xl overflow-hidden bg-[#fcede3]">
-                    {l._cover && (
-                      <img
-                        src={l._cover}
-                        alt=""
-                        className="w-full h-full object-cover"
-                        onError={(ev) => { (ev.target as HTMLImageElement).style.opacity = "0"; }}
-                      />
-                    )}
-                  </div>
-                  <p className="text-sm font-bold leading-tight mt-2 line-clamp-1">{l.title}</p>
-                  <p className="text-xs text-muted-foreground line-clamp-1">
-                    {l._count} {l._count === 1 ? "miejsce" : l._count < 5 ? "miejsca" : "miejsc"}
-                  </p>
-                </button>
-              ))}
+            <div className="columns-2 gap-3 [column-fill:balance]">
+              {userLists.map((l: any) => {
+                // Deterministyczna wysokosc okladki z id (efekt Pinterest, stabilny miedzy renderami).
+                const seed = String(l.id).charCodeAt(0) % 3;
+                const aspect = seed === 0 ? "aspect-[3/4]" : seed === 1 ? "aspect-[4/5]" : "aspect-square";
+                const countLabel = `${l._count} ${l._count === 1 ? "miejsce" : l._count < 5 ? "miejsca" : "miejsc"}`;
+                return (
+                  <button
+                    key={l.id}
+                    onClick={() => navigate(`/lista/${l.id}`)}
+                    className="break-inside-avoid mb-3 w-full text-left active:scale-[0.98] transition-transform"
+                  >
+                    <div className={`relative w-full ${aspect} rounded-2xl overflow-hidden bg-[#fcede3] shadow-sm`}>
+                      {l._cover && (
+                        <img
+                          src={l._cover}
+                          alt=""
+                          className="w-full h-full object-cover"
+                          onError={(ev) => { (ev.target as HTMLImageElement).style.opacity = "0"; }}
+                        />
+                      )}
+                    </div>
+                    <p className="text-sm font-bold leading-tight mt-2 line-clamp-2">{l.title}</p>
+                    <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
+                      {l.city ? `${l.city} · ${countLabel}` : countLabel}
+                    </p>
+                  </button>
+                );
+              })}
             </div>
           </div>
         )}

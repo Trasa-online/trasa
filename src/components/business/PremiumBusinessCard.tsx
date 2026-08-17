@@ -23,7 +23,8 @@ import { CategoryIcon } from "@/components/CategoryIcon";
 import { cn } from "@/lib/utils";
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { API_BASE } from "@/lib/platform";
-import { Clock, ChevronRight, ChevronLeft, ChevronDown, X, Maximize2, Phone, Globe, FileText, Instagram, Facebook, MapPin, Bookmark } from "lucide-react";
+import { Clock, ChevronRight, ChevronLeft, ChevronDown, X, Maximize2, Phone, Globe, FileText, Instagram, Facebook, MapPin, Bookmark, Heart, ImagePlus } from "lucide-react";
+import type { LikeState } from "@/lib/placePhotoSocial";
 import { categoryIconSrc } from "@/lib/placeCategoryIcon";
 import { parseISO, isValid, formatDistanceToNow, format, startOfMonth, addMonths } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
@@ -98,11 +99,14 @@ interface FullscreenPhotosProps {
   photos: string[];
   startIndex: number;
   onClose: () => void;
+  // #6: lajki zdjec (opcjonalne). Gdy podane -> serce z licznikiem na aktywnym zdjeciu.
+  likes?: Map<string, LikeState>;
+  onToggleLike?: (ref: string) => void;
 }
 
 const MAX_ZOOM = 4;
 
-const FullscreenPhotos = ({ photos, startIndex, onClose }: FullscreenPhotosProps) => {
+const FullscreenPhotos = ({ photos, startIndex, onClose, likes, onToggleLike }: FullscreenPhotosProps) => {
   const { t } = useTranslation("wizytowka");
   const [idx, setIdx] = useState(Math.max(0, Math.min(startIndex, photos.length - 1)));
   // Zoom (pinch) + pan (przesuwanie gdy przybliżone). scale=1 => normalny widok (swipe nawiguje).
@@ -294,6 +298,25 @@ const FullscreenPhotos = ({ photos, startIndex, onClose }: FullscreenPhotosProps
           ))}
         </div>
       )}
+      {/* #6: serce (lajk) aktywnego zdjecia - dol-lewo. Pomaranczowy fill (brand), NIE czerwony. */}
+      {onToggleLike && photos[idx] && (() => {
+        const ref = photos[idx];
+        const st = likes?.get(ref);
+        return (
+          <button
+            type="button"
+            onPointerDown={(e) => e.stopPropagation()}
+            onTouchEnd={(e) => { e.stopPropagation(); e.preventDefault(); haptics.light(); onToggleLike(ref); }}
+            onClick={(e) => { e.stopPropagation(); haptics.light(); onToggleLike(ref); }}
+            className="absolute left-4 bottom-5 z-[210] h-11 pl-3 pr-4 rounded-full bg-black/60 backdrop-blur-md flex items-center gap-2 active:scale-90 transition-transform shadow-lg"
+            style={{ bottom: "max(1.25rem, env(safe-area-inset-bottom))" }}
+            aria-label={st?.liked ? "Cofnij polubienie zdjęcia" : "Polub zdjęcie"}
+          >
+            <Heart className={cn("h-5 w-5 transition-colors", st?.liked ? "text-orange-500 fill-orange-500" : "text-white")} strokeWidth={2} />
+            {!!st?.count && <span className="text-white text-sm font-semibold tabular-nums">{st.count}</span>}
+          </button>
+        );
+      })()}
     </div>,
     document.body,
   );
@@ -1030,6 +1053,12 @@ export interface PremiumBusinessCardProps {
   // mode='detail' - zapis miejsca (zakladka na hero). Gdy brak -> zakladka ukryta.
   onSave?: () => void;
   saved?: boolean;
+  // #6 lajki zdjec w galerii (fullscreen viewer). Gdy brak -> serce ukryte.
+  photoLikes?: Map<string, LikeState>;
+  onToggleLike?: (ref: string) => void;
+  // #3e dodawanie zdjecia do miejsca (galeria wizytowki). Gdy brak -> przycisk ukryty.
+  onAddPhoto?: () => void;
+  addingPhoto?: boolean;
 }
 
 const PremiumBusinessCard = ({
@@ -1051,6 +1080,10 @@ const PremiumBusinessCard = ({
   referenceDate,
   onSave,
   saved,
+  photoLikes,
+  onToggleLike,
+  onAddPhoto,
+  addingPhoto = false,
 }: PremiumBusinessCardProps) => {
   const { t } = useTranslation("wizytowka");
   const [fullscreen, setFullscreen] = useState<{ photos: string[]; idx: number } | null>(null);
@@ -1099,6 +1132,18 @@ const PremiumBusinessCard = ({
               </span>
             ) : undefined}
           />
+          {/* #3e: dodaj wlasne zdjecie do miejsca (galeria wspoldzielona). Pod hero, subtelny. */}
+          {onAddPhoto && (
+            <button
+              type="button"
+              onClick={onAddPhoto}
+              disabled={addingPhoto}
+              className="mx-4 mt-3 flex items-center justify-center gap-2 py-2.5 rounded-2xl bg-secondary text-secondary-foreground text-sm font-semibold active:scale-[0.98] transition-transform disabled:opacity-60"
+            >
+              <ImagePlus className="h-4 w-4" strokeWidth={2} />
+              {addingPhoto ? "Dodaję zdjęcie..." : "Dodaj swoje zdjęcie"}
+            </button>
+          )}
           {/* space-y-6 = duzy odstep MIEDZY sekcjami (prawo bliskosci / common region). */}
           <div className="flex-1 px-4 pt-4 pb-6 space-y-6">
 
@@ -1143,6 +1188,8 @@ const PremiumBusinessCard = ({
             photos={fullscreen.photos}
             startIndex={fullscreen.idx}
             onClose={() => setFullscreen(null)}
+            likes={photoLikes}
+            onToggleLike={onToggleLike}
           />
         )}
       </>

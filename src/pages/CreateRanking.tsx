@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams, useSearchParams, useLocation } from "react-router-dom";
-import { ArrowLeft, Search, Plus, X, Loader2, ChevronRight, ChevronDown, List, GalleryHorizontalEnd, GripVertical, Check, MapPin, Image as ImageIcon } from "lucide-react";
+import { ArrowLeft, Search, Plus, X, Loader2, ChevronRight, ChevronDown, List, GalleryHorizontalEnd, GripVertical, MapPin, Image as ImageIcon } from "lucide-react";
 import { Reorder, useDragControls } from "framer-motion";
 import { haptics } from "@/hooks/useHaptics";
 import { supabase } from "@/integrations/supabase/client";
@@ -20,6 +20,7 @@ import { isRouteCollection } from "@/lib/collectionThemes";
 import { MAIN_CATEGORIES, getDbCategoriesFor, mainCategoryLabel } from "@/lib/categories";
 import { CategoryIcon } from "@/components/CategoryIcon";
 import { categoryFromGoogleTypes, inferCategoryFromName } from "@/lib/placeCategoryIcon";
+import { cacheListItemPhoto } from "@/lib/placePhotos";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import { type MockPlace } from "@/components/plan-wizard/PlaceSwiper";
 import RouteMap from "@/components/RouteMap";
@@ -137,8 +138,8 @@ function SortableRankingRow({ it, onOpen, onRemove }: { it: RankingItem; onOpen:
   );
 }
 
-// Predefiniowane tagi list (krok 2, zamiast glownej notki). User widzi pierwsze 4, reszta
-// pod accordionem. Moze tez dodac wlasny tag. Zapisywane w discovery_collections.tags.
+// Predefiniowane tagi list (krok 2, zamiast glownej notki). Wszystkie chipy widoczne od razu
+// (styl chip-cloud). Moze tez dodac wlasny tag. Zapisywane w discovery_collections.tags.
 const PREDEFINED_TAGS = [
   "Przyjazne dla psów",
   "Miejsca z vibem",
@@ -153,7 +154,6 @@ const PREDEFINED_TAGS = [
   "Dla znajomych",
   "Roślinne / wege",
 ];
-const TAGS_VISIBLE = 4;
 
 const CreateRanking = () => {
   const { t } = useTranslation("ranking");
@@ -204,7 +204,6 @@ const CreateRanking = () => {
   const [description, setDescription] = useState("");
   // Tagi listy (krok 2) - zastapily glowna notke. Predefiniowane + wlasne usera.
   const [tags, setTags] = useState<string[]>([]);
-  const [tagsExpanded, setTagsExpanded] = useState(false);
   const [customTag, setCustomTag] = useState("");
   const toggleTag = (tag: string) => setTags((prev) => prev.includes(tag) ? prev.filter((x) => x !== tag) : [...prev, tag]);
   const addCustomTag = () => {
@@ -343,7 +342,15 @@ const CreateRanking = () => {
 
   const addItem = (it: Omit<RankingItem, "key" | "short_desc">) => {
     if (items.some((x) => x.place_name.toLowerCase() === it.place_name.toLowerCase())) { toast(t("toast.already_added")); return; }
-    setItems((prev) => [...prev, { ...it, key: `k${Date.now()}`, short_desc: "" }]);
+    const key = `k${Date.now()}`;
+    setItems((prev) => [...prev, { ...it, key, short_desc: "" }]);
+    // #5: miejsce bez okladki (dodane z Google) -> zcache'uj zdjecie ASYNCHRONICZNIE (nie blokuj
+    // dodania). 1 fetch Google/miejsce, potem $0 (guard kosztowy w edge function). Miejsca z bazy
+    // maja juz photo_url z cache - pomijamy (zero kosztu). Null z helpera -> zostaje ikona kategorii.
+    if (!it.photo_url) {
+      void cacheListItemPhoto({ place_name: it.place_name, city, latitude: it.latitude, longitude: it.longitude, google_place_id: it.google_place_id })
+        .then((url) => { if (url) setItems((prev) => prev.map((x) => x.key === key ? { ...x, photo_url: url } : x)); });
+    }
   };
   const removeItem = (key: string) => setItems((prev) => prev.filter((x) => x.key !== key));
   const setNote = (key: string, v: string) => setItems((prev) => prev.map((x) => x.key === key ? { ...x, short_desc: v } : x));
@@ -889,7 +896,7 @@ const CreateRanking = () => {
 
       {/* ══ KROK 2: glowna notka + notki do miejsc + mapa + anonimowo ══ */}
       {step === 2 && (
-        <div className="flex-1 overflow-y-auto px-4 py-5 space-y-6">
+        <div className="flex-1 overflow-y-auto px-4 py-5">
           {/* Okladki listy: hero (cover_url) + miniatura eksploracji (list_cover_url) - 1:1
               z modelem tras. Tap w kafel = picker (zdjecia miejsc / wgraj nowe). */}
           <div>
@@ -924,8 +931,8 @@ const CreateRanking = () => {
             <p className="text-[11px] text-muted-foreground mt-2 leading-snug">{t("cover.hint", "Okładka to zdjęcie w widoku listy, miniatura to kafelek w eksploracji.")}</p>
           </div>
 
-          {/* Tagi listy (zamiast glownej notki) - predefiniowane (pierwsze 4 + accordion) + wlasne. */}
-          <div>
+          {/* Tagi listy (zamiast glownej notki) - chip-cloud (wszystkie widoczne) + wlasne usera. */}
+          <div className="pt-6 border-t border-border/40">
             <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-1.5 block">
               {t("tags.label", "Tagi")} <span className="normal-case font-medium text-muted-foreground/50">{t("notes.optional")}</span>
             </label>
@@ -934,28 +941,20 @@ const CreateRanking = () => {
               {/* Wlasne tagi usera (spoza predefiniowanych) - zawsze widoczne, zaznaczone */}
               {tags.filter((tg) => !PREDEFINED_TAGS.includes(tg)).map((tg) => (
                 <button key={tg} type="button" onClick={() => toggleTag(tg)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary text-white text-sm font-semibold active:scale-95 transition-transform">
+                  className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-primary text-white text-sm font-semibold active:scale-95 transition-transform">
                   {tg} <X className="h-3.5 w-3.5" />
                 </button>
               ))}
-              {/* Predefiniowane: pierwsze TAGS_VISIBLE, reszta pod accordionem */}
-              {(tagsExpanded ? PREDEFINED_TAGS : PREDEFINED_TAGS.slice(0, TAGS_VISIBLE)).map((tg) => {
+              {/* Chip-cloud: wszystkie predefiniowane tagi widoczne od razu */}
+              {PREDEFINED_TAGS.map((tg) => {
                 const on = tags.includes(tg);
                 return (
                   <button key={tg} type="button" onClick={() => toggleTag(tg)}
-                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold active:scale-95 transition-transform ${on ? "bg-primary text-white" : "bg-secondary text-secondary-foreground"}`}>
-                    {on && <Check className="h-3.5 w-3.5" strokeWidth={3} />}{tg}
+                    className={`px-4 py-2.5 rounded-full text-sm font-semibold active:scale-95 transition-transform ${on ? "bg-primary text-white" : "bg-secondary text-secondary-foreground"}`}>
+                    {tg}
                   </button>
                 );
               })}
-              {/* Accordion: pokaz wiecej / zwin */}
-              {PREDEFINED_TAGS.length > TAGS_VISIBLE && (
-                <button type="button" onClick={() => setTagsExpanded((v) => !v)}
-                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-secondary/60 text-muted-foreground text-sm font-semibold active:scale-95 transition-transform">
-                  {tagsExpanded ? t("tags.less", "Zwiń") : t("tags.more", "Pokaż więcej")}
-                  <ChevronDown className={`h-4 w-4 transition-transform ${tagsExpanded ? "rotate-180" : ""}`} />
-                </button>
-              )}
             </div>
             {/* Wlasny tag */}
             <div className="flex gap-2 mt-2.5">
@@ -971,7 +970,7 @@ const CreateRanking = () => {
           </div>
 
           {/* Notki do poszczegolnych miejsc */}
-          <div>
+          <div className="pt-6 border-t border-border/40">
             <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2 block">{t("notes.places_label")}</label>
             <div className="space-y-2.5">
               {items.map((it) => (
@@ -992,7 +991,7 @@ const CreateRanking = () => {
 
           {/* Mapa z miejscami */}
           {mapPins.length > 0 && (
-            <div>
+            <div className="pt-6 border-t border-border/40">
               <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2 block">{isRouteCollection(category) ? t("map.route") : t("map.list")}</label>
               <div className="relative h-52 rounded-2xl overflow-hidden border border-border/40">
                 <RouteMap pins={mapPins as any} className="w-full h-full" showRoute={isRoute} />
