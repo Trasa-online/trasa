@@ -163,31 +163,21 @@ export default function ComposeWyjazd() {
   // (stabilny per wpis historii - fresh entry ma nowy key, powrot wraca do tego samego).
   // Po utworzeniu trasy zapisujemy draftId, wiec ponowny "Przejdz do sugestii" AKTUALIZUJE
   // istniejaca trase zamiast tworzyc duplikat.
+  // Lekki soft-save (sessionStorage, kluczowany po location.key = wpis historii). Sluzy WYLACZNIE
+  // do przejscia "do sugestii i z powrotem" (navigate(-1) re-montuje ekran) bez gubienia pracy.
+  // Swieze wejscie ("+/Tworz") ma NOWY location.key -> brak soft -> ZAWSZE pusta, nowa trasa (stan
+  // zero). Kontynuacja roboczej trasy = tylko przez zakladke Robocze (draftId). Brak trwalego
+  // backupu w localStorage (wczesniej wskrzeszal stare/porzucone kompozycje - klasa bugow).
   const softKey = `trasa_compose_soft:${location.key}`;
-  // Trwaly backup (localStorage) - PRZEZYWA ubicie apki / restart iOS WebView, w przeciwienstwie
-  // do sessionStorage (czyszczony przy zamknieciu). Chroni przed utrata dlugiej kompozycji.
-  const DURABLE_KEY = "trasa_compose_backup";
-  let restoredFromDurable = false;
   const soft = (() => {
     try {
       const raw = sessionStorage.getItem(softKey);
       if (raw) return JSON.parse(raw);
-      // Fallback: trwaly backup - tylko gdy pasuje do tego wejscia (ten sam draftId albo oba nowe),
-      // ma miejsca i jest swiezy (< 24h) - zeby nie wskrzeszac starych porzuconych kompozycji.
-      const durRaw = localStorage.getItem(DURABLE_KEY);
-      if (durRaw) {
-        const d = JSON.parse(durRaw);
-        const fresh = d?.ts && (Date.now() - d.ts) < 24 * 3600 * 1000;
-        const sameEntry = (d?.draftId ?? null) === (nav.draftId ?? null);
-        // KRYTYCZNE: gdy user wybral NOWE miasto (nav.city) inne niz w backupie -> to nowa trasa,
-        // NIE wskrzeszamy starej kompozycji (bug: wybor nowego kraju/miasta wracal do starej trasy).
-        // Recovery tylko gdy to samo miasto (albo brak nav.city - wejscie bez jawnego wyboru).
-        const sameCity = !nav.city || (d?.city ?? null) === nav.city;
-        if (fresh && sameEntry && sameCity && (d?.items?.length ?? 0) > 0) { restoredFromDurable = true; return d; }
-      }
     } catch { /* storage unavailable */ }
     return null;
   })();
+  // Jednorazowe wyczyszczenie legacy trwalego backupu (usuniety mechanizm) - zeby nie zajmowal miejsca.
+  useEffect(() => { try { localStorage.removeItem("trasa_compose_backup"); } catch { /* unavailable */ } }, []);
 
   const [draftId, setDraftId] = useState<string | null>(soft?.draftId ?? nav.draftId ?? null);
   const [city, setCity] = useState<string>(soft?.city ?? nav.city ?? "Warszawa");
@@ -222,20 +212,11 @@ export default function ComposeWyjazd() {
       ts: Date.now(),
     });
     try { sessionStorage.setItem(softKey, payload); } catch { /* sessionStorage unavailable */ }
-    // Trwaly mirror TYLKO gdy sa miejsca (pusty stan nie nadpisuje dobrej kopii zapasowej).
-    try { if (items.length) localStorage.setItem(DURABLE_KEY, payload); } catch { /* unavailable */ }
   }, [softKey, draftId, city, name, items, tripDate]);
 
   const clearSoft = () => {
     try { sessionStorage.removeItem(softKey); } catch { /* unavailable */ }
-    try { localStorage.removeItem(DURABLE_KEY); } catch { /* unavailable */ }
   };
-
-  // Odzyskano niezapisana trase z trwalego backupu (po ubiciu apki / crashu) - poinformuj usera.
-  useEffect(() => {
-    if (restoredFromDurable) toast("Przywrócono niezapisaną trasę", { description: "Twoje miejsca zostały odzyskane." });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   // Doladowanie ROBOCZEJ trasy z DB gdy wchodzimy przez draftId BEZ przekazanych miejsc
   // (klik w robocza trase w hubie "Robocze"). Prefill miasto + nazwa + miejsca z pinow, zeby
@@ -310,8 +291,6 @@ export default function ComposeWyjazd() {
         const cur = JSON.parse(sessionStorage.getItem(softKey) || "{}");
         sessionStorage.setItem(softKey, JSON.stringify({ ...cur, draftId: id }));
       } catch { /* unavailable */ }
-      // Trasa w DB - skasuj trwaly backup (nie moze wskrzesic tej trasy przy nastepnym tworzeniu).
-      try { localStorage.removeItem(DURABLE_KEY); } catch { /* unavailable */ }
     }
     setInviteOpen(true);
   };
@@ -537,9 +516,6 @@ export default function ComposeWyjazd() {
     setCreating(false);
     if (!id) { haptics.error(); toast.error(draftId ? "Nie udało się zapisać zmian" : "Nie udało się utworzyć wyjazdu"); return; }
     haptics.success();
-    // Trasa jest juz w DB (draft) - trwaly backup kompozycji nie jest potrzebny i NIE moze
-    // wskrzeszac tej trasy przy tworzeniu NASTEPNEJ (bug: nowa trasa dziedziczyla opublikowana).
-    try { localStorage.removeItem(DURABLE_KEY); } catch { /* unavailable */ }
     // Trasa jest PRYWATNYM draftem (is_shared=false) - publikuje sie dopiero przy "Zapisz trase"
     // w ReviewSummary. Odswiezamy feed profilaktycznie (np. przy edycji juz opublikowanej trasy).
     queryClient.invalidateQueries({ queryKey: ["discovery-city-routes"] });
