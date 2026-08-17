@@ -1421,13 +1421,15 @@ const ReviewSummary = () => {
   const heroPhoto = planCover ?? userCover ?? placeCover ?? getRandomPinPlaceholder(routeId ?? undefined);
   // Miniatura eksploracji = OSOBNA okladka (list_cover_url). Gdy nieustawiona -> fallback do hero.
   const listCoverPhoto = resolveStored((route as any)?.list_cover_url) ?? heroPhoto;
-  // #1: Galeria BEZ duplikatow. To samo zdjecie moze byc przypisane do miejsca (myPhotos) i
-  // nalezec do uczestnika (groupPhotos) - scalamy w JEDEN kafelek: nazwa miejsca + awatar/username.
-  // UWAGA: zwykla stala (NIE useMemo) - ten kod jest PO wczesnym returnie (authLoading), wiec hook
-  // tutaj lamalby kolejnosc hookow (React #310). Dedup jest tani, memo niepotrzebne.
+  // Galeria BEZ duplikatow. TRASA GRUPOWA: galeria = WSPOLNA pula (group_trip_photos) - jedno
+  // zrodlo, koniec duplikacji "wlasciciel (review_photos) vs grupa". Zdjecia per-miejsce
+  // (pins.images) sa widoczne w sekcji per-pin, nie dubluja glownej galerii. TRASA SOLO: review_photos.
+  // UWAGA: zwykla stala (NIE useMemo) - kod jest PO wczesnym returnie (authLoading), hook lamalby
+  // kolejnosc hookow (React #310). Dedup po URL jest tani.
+  const isGroupRoute = !!(route as any)?.group_session_id;
   const galleryPhotos = (() => {
-    const map = new Map<string, { url: string; owner: string; mine: boolean; username: string; avatar: string | null; placeLabel: string | null }>();
-    const push = (rawUrl: string, meta: { owner: string; mine: boolean; username: string; avatar: string | null }) => {
+    const map = new Map<string, { url: string; owner: string; mine: boolean; isGroup: boolean; username: string; avatar: string | null; placeLabel: string | null }>();
+    const push = (rawUrl: string, meta: { owner: string; mine: boolean; isGroup: boolean; username: string; avatar: string | null }) => {
       const url = resolveStored(rawUrl) ?? rawUrl;
       const placeLabel = photoPlaceLabel.get(rawUrl) ?? null;
       const ex = map.get(url);
@@ -1435,19 +1437,30 @@ const ReviewSummary = () => {
         map.set(url, {
           ...ex,
           mine: ex.mine || meta.mine,
-          // Preferuj username/awatar realnego uploadera (nie "Ty") gdy dostepny.
           username: (!ex.mine ? ex.username : meta.username) || ex.username,
           avatar: ex.avatar ?? meta.avatar,
           placeLabel: ex.placeLabel ?? placeLabel,
         });
       } else {
-        map.set(url, { url, owner: meta.owner, mine: meta.mine, username: meta.username, avatar: meta.avatar, placeLabel });
+        map.set(url, { url, owner: meta.owner, mine: meta.mine, isGroup: meta.isGroup, username: meta.username, avatar: meta.avatar, placeLabel });
       }
     };
-    myPhotos.forEach((p) => push(p.url, { owner: p.owner, mine: true, username: t("labels.you"), avatar: null }));
-    (groupPhotos as any[]).forEach((p) => push(p.url, { owner: "", mine: false, username: p.username, avatar: p.avatar ?? null }));
+    if (isGroupRoute) {
+      (groupPhotos as any[]).forEach((p) => push(p.url, { owner: "", mine: p.userId === user?.id, isGroup: true, username: p.userId === user?.id ? t("labels.you") : p.username, avatar: p.avatar ?? null }));
+    } else {
+      myPhotos.forEach((p) => push(p.url, { owner: p.owner, mine: true, isGroup: false, username: t("labels.you"), avatar: null }));
+    }
     return Array.from(map.values());
   })();
+
+  // Usuwanie wspolnego zdjecia grupowego (wlasne - RLS gtp_delete_own).
+  const removeGroupPhoto = async (url: string) => {
+    const sid = (route as any)?.group_session_id;
+    if (!sid || !user) return;
+    setViewerUrl(null);
+    await (supabase as any).from("group_trip_photos").delete().eq("session_id", sid).eq("url", url).eq("user_id", user.id);
+    queryClient.invalidateQueries({ queryKey: ["review-summary-group-photos", sid] });
+  };
 
   // Podglad wizytowki miejsca - ta sama wizytowka co na swiperze (PlaceSwiperDetail).
   // Mapujemy pin na MockPlace (jak w FeedActivityCard).
@@ -1789,8 +1802,8 @@ const ReviewSummary = () => {
                   {viewerUrl === heroPhoto ? t("viewer.is_cover") : t("viewer.set_cover")}
                   {viewerUrl === heroPhoto && <Check className="h-4 w-4 text-green-600 ml-auto" />}
                 </button>
-                {myPhotos.some((p) => p.url === viewerUrl) && (
-                  <button onClick={() => { const owner = myPhotos.find((p) => p.url === viewerUrl)?.owner ?? routeId!; removePhoto(viewerUrl, owner); setViewerMenuOpen(false); }} className="w-full px-4 py-3 text-left text-sm font-medium text-red-600 flex items-center gap-2.5 active:bg-muted border-t border-border/40">
+                {galleryPhotos.find((g) => g.url === viewerUrl)?.mine && (
+                  <button onClick={() => { const gi = galleryPhotos.find((g) => g.url === viewerUrl); if (gi?.isGroup) removeGroupPhoto(viewerUrl); else removePhoto(viewerUrl, gi?.owner ?? routeId!); setViewerMenuOpen(false); }} className="w-full px-4 py-3 text-left text-sm font-medium text-red-600 flex items-center gap-2.5 active:bg-muted border-t border-border/40">
                     <Trash2 className="h-4 w-4 shrink-0" /> {t("viewer.remove_photo")}
                   </button>
                 )}
@@ -1849,7 +1862,7 @@ const ReviewSummary = () => {
               <span
                 role="button"
                 aria-label={t("a11y.remove_photo")}
-                onClick={(e) => { e.stopPropagation(); removePhoto(item.url, item.owner); }}
+                onClick={(e) => { e.stopPropagation(); item.isGroup ? removeGroupPhoto(item.url) : removePhoto(item.url, item.owner); }}
                 className="absolute top-1 right-1 h-7 w-7 rounded-full bg-black/55 backdrop-blur-sm text-white flex items-center justify-center active:scale-90"
               >
                 <X className="h-4 w-4" />
