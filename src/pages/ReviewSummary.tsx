@@ -1423,7 +1423,9 @@ const ReviewSummary = () => {
   const listCoverPhoto = resolveStored((route as any)?.list_cover_url) ?? heroPhoto;
   // #1: Galeria BEZ duplikatow. To samo zdjecie moze byc przypisane do miejsca (myPhotos) i
   // nalezec do uczestnika (groupPhotos) - scalamy w JEDEN kafelek: nazwa miejsca + awatar/username.
-  const galleryPhotos = useMemo(() => {
+  // UWAGA: zwykla stala (NIE useMemo) - ten kod jest PO wczesnym returnie (authLoading), wiec hook
+  // tutaj lamalby kolejnosc hookow (React #310). Dedup jest tani, memo niepotrzebne.
+  const galleryPhotos = (() => {
     const map = new Map<string, { url: string; owner: string; mine: boolean; username: string; avatar: string | null; placeLabel: string | null }>();
     const push = (rawUrl: string, meta: { owner: string; mine: boolean; username: string; avatar: string | null }) => {
       const url = resolveStored(rawUrl) ?? rawUrl;
@@ -1445,7 +1447,7 @@ const ReviewSummary = () => {
     myPhotos.forEach((p) => push(p.url, { owner: p.owner, mine: true, username: t("labels.you"), avatar: null }));
     (groupPhotos as any[]).forEach((p) => push(p.url, { owner: "", mine: false, username: p.username, avatar: p.avatar ?? null }));
     return Array.from(map.values());
-  }, [myPhotos, groupPhotos, photoPlaceLabel, t]);
+  })();
 
   // Podglad wizytowki miejsca - ta sama wizytowka co na swiperze (PlaceSwiperDetail).
   // Mapujemy pin na MockPlace (jak w FeedActivityCard).
