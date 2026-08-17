@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { avatarSrc } from "@/lib/avatar";
-import { ROUTE_TAGS, ROUTE_TAGS_VISIBLE, PLACE_TAGS, PLACE_TAGS_VISIBLE } from "@/lib/routeTags";
+import { ROUTE_TAGS, ROUTE_TAGS_VISIBLE, placeTagsForCategory } from "@/lib/routeTags";
 import { haptics } from "@/hooks/useHaptics";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { placeKeyOf } from "@/lib/placePhotoSocial";
+import { placeKeyOf, fetchPlacePhotosForKeys } from "@/lib/placePhotoSocial";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Camera, X, Globe, Lock, Pencil, Check, Image as ImageIcon, Map as MapIcon, MapPin, ChevronUp, ChevronDown, ChevronRight, ChevronLeft, Trash2, Plus, Share, Share2, List, GalleryHorizontalEnd, Info, MoreVertical, Navigation, Maximize2, Users, Calendar as CalendarIcon, Loader2, GripVertical, Building2 } from "lucide-react";
@@ -104,12 +104,13 @@ function SortableReviewRow({ pin, idx, categoryLabel, visited, onOpen, onRemove,
           <div className="mt-3">
             <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">Tagi miejsca <span className="normal-case font-medium text-muted-foreground/50">(zamiast notki)</span></p>
             <div className="flex flex-wrap gap-1.5">
-              {PLACE_TAGS.map((tg) => {
+              {/* #5: tagi zalezne od kategorii miejsca (zabytek != kawiarnia). #6: wybrany = zolty fill. */}
+              {placeTagsForCategory(pin.category).map((tg) => {
                 const on = tags.includes(tg);
                 return (
                   <button key={tg} type="button" onClick={() => onToggleTag(tg)}
-                    className={`flex items-center gap-1 px-2.5 py-1.5 rounded-full text-[13px] font-semibold transition-colors active:scale-[0.97] border ${on ? "bg-orange-50 border-orange-300 text-orange-700" : "bg-white text-foreground border-border/60"}`}>
-                    {tg}{on ? <Check className="h-3 w-3 text-orange-600" /> : <Plus className="h-3 w-3 text-muted-foreground/50" />}
+                    className={`flex items-center gap-1 px-2.5 py-1.5 rounded-full text-[13px] font-semibold transition-colors active:scale-[0.97] border ${on ? "bg-[#FDF184] border-[#FDCD84] text-foreground" : "bg-white text-foreground border-border/60"}`}>
+                    {tg}{on ? <Check className="h-3 w-3 text-foreground" /> : <Plus className="h-3 w-3 text-muted-foreground/50" />}
                   </button>
                 );
               })}
@@ -378,9 +379,39 @@ const ReviewSummary = () => {
     },
     enabled: dayRouteIds.length > 0,
   });
-  const currentPins = useMemo(
+  const rawCurrentPins = useMemo(
     () => allPins.filter((p: any) => p.route_id === activeRouteId),
     [allPins, activeRouteId],
+  );
+
+  // #1: okladki miejsc ze zdjec dodanych przez userow w wizytowkach (place_photos) - gdy pin nie
+  // ma zadnego wlasnego zdjecia. place_photos to wlasne zdjecia (Storage), wiec bezpieczne jako cover.
+  // Sprawdzamy DWA klucze (gpid: oraz nc:nazwa|miasto) - wizytowka z ComposeWyjazd zapisuje pod
+  // nc: (MockPlace bez google_place_id), a pin w DB moze miec google_place_id -> inny klucz.
+  const routeCity = (route as any)?.city ?? null;
+  const pinCoverKeys = (p: any): string[] => {
+    const nc = placeKeyOf({ googlePlaceId: null, placeName: p.place_name, city: routeCity });
+    const gp = p.google_place_id ? placeKeyOf({ googlePlaceId: p.google_place_id, placeName: p.place_name, city: routeCity }) : null;
+    return gp ? [gp, nc] : [nc];
+  };
+  const routePinKeys = useMemo(
+    () => Array.from(new Set((rawCurrentPins as any[]).flatMap(pinCoverKeys))).filter(Boolean),
+    [rawCurrentPins, routeCity],
+  );
+  const { data: placePhotoCoverMap } = useQuery({
+    queryKey: ["route-place-photo-cover", routePinKeys.join("|")],
+    enabled: routePinKeys.length > 0,
+    queryFn: () => fetchPlacePhotosForKeys(routePinKeys),
+  });
+  const pinHasOwnPhoto = (p: any) =>
+    !!(p.photo_url || (Array.isArray(p.images) && p.images[0]) || (Array.isArray(p.user_photo_urls) && p.user_photo_urls[0]));
+  const currentPins = useMemo(
+    () => (rawCurrentPins as any[]).map((p) => {
+      if (pinHasOwnPhoto(p) || !placePhotoCoverMap) return p;
+      const urls = pinCoverKeys(p).map((k) => placePhotoCoverMap.get(k)).find((u) => u && u.length);
+      return urls && urls.length ? { ...p, photo_url: urls[0] } : p;
+    }),
+    [rawCurrentPins, placePhotoCoverMap, routeCity],
   );
 
   // Mapa: url zdjęcia -> nazwa miejsca, do którego zostało przypisane (pins.images). Badge w galerii.
@@ -1057,21 +1088,16 @@ const ReviewSummary = () => {
 
   // #3e: zdjecia ktore user dodal do miejsc tej trasy w wizytowkach (place_photos). Pokazujemy je
   // read-only na widoku Galerii, zeby user od razu widzial co juz dodal (potwierdzenie).
-  const routePlaceKeys = useMemo(
-    () => Array.from(new Set((workingPins as any[]).map((p) =>
-      placeKeyOf({ googlePlaceId: p.google_place_id ?? null, placeName: p.place_name, city: route?.city ?? null }),
-    ))).filter(Boolean),
-    [workingPins, route?.city],
-  );
+  // Uzywamy routePinKeys (oba klucze gpid:/nc:) - spojnie z okladkami (#1).
   const { data: myPlacePhotos = [] } = useQuery({
-    queryKey: ["route-my-place-photos", user?.id, routePlaceKeys.join("|")],
-    enabled: !!user && routePlaceKeys.length > 0,
+    queryKey: ["route-my-place-photos", user?.id, routePinKeys.join("|")],
+    enabled: !!user && routePinKeys.length > 0,
     queryFn: async () => {
       const { data } = await (supabase as any)
         .from("place_photos")
         .select("photo_url")
         .eq("user_id", user!.id)
-        .in("place_key", routePlaceKeys)
+        .in("place_key", routePinKeys)
         .order("created_at", { ascending: false });
       return (data ?? []).map((r: any) => r.photo_url as string);
     },
@@ -2110,14 +2136,12 @@ const ReviewSummary = () => {
             {isOwner && !!route?.is_shared && !(route as any)?.list_cover_url && (
               <button
                 onClick={() => setListCoverPickerOpen(true)}
-                className="flex items-center gap-3 rounded-2xl bg-orange-50 border border-orange-200 px-4 py-3 text-left active:scale-[0.99] transition-transform"
+                className="flex items-center rounded-2xl bg-[#FDF184] border border-[#FDCD84] px-4 py-3 text-left active:scale-[0.99] transition-transform"
               >
-                <ImageIcon className="h-5 w-5 text-orange-600 shrink-0" />
                 <span className="flex-1 min-w-0">
                   <span className="block text-sm font-bold text-foreground">Dodaj okładkę, żeby trasa była widoczna</span>
-                  <span className="block text-xs text-muted-foreground mt-0.5">Bez okładki trasa nie pojawia się w eksploracji.</span>
+                  <span className="block text-xs text-foreground/60 mt-0.5">Bez okładki trasa nie pojawia się w eksploracji.</span>
                 </span>
-                <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
               </button>
             )}
             {/* Opis ogolny trasy - READ-ONLY tutaj (review_narrative). Edycja tylko pod guzikiem
@@ -2128,40 +2152,41 @@ const ReviewSummary = () => {
             {/* "Edytuj trase" -> edytor ComposeWyjazd (ten sam co przy tworzeniu): wyszukiwarka
                 miejsc + dodaj/usun/kolejnosc + nazwa. Zaladowany ta trasa (draftId), wiec zapis
                 AKTUALIZUJE ja (bez duplikatu). Opis + notki edytuje sie dalej w "Przejdz do sugestii". */}
+            {/* Akcje wlasciciela w jednym kontenerze gap-2 (8px miedzy guzikami; parent ma gap-4). */}
             {isOwner && (
-              <button
-                onClick={() => {
-                  haptics.light();
-                  navigate("/wyjazd/nowy", {
-                    state: {
-                      draftId: routeId,
-                      city: route?.city ?? null,
-                      title: displayName || (route as any)?.title || null,
-                      places: currentPins.map((p: any) => ({
-                        place_id: p.place_id ?? null,
-                        place_name: p.place_name,
-                        category: p.category,
-                        address: p.address,
-                        latitude: p.latitude,
-                        longitude: p.longitude,
-                        photo_url: p.photo_url,
-                      })),
-                    },
-                  });
-                }}
-                className="w-full mt-1 py-3 rounded-2xl bg-secondary text-secondary-foreground font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
-              >
-                <Pencil className="h-4 w-4" /> Edytuj trasę
-              </button>
-            )}
-            {/* Zapros znajomych (solo -> grupowy): podpina trase do sesji + dodaje uczestnikow po username. */}
-            {isOwner && (
-              <button
-                onClick={() => { haptics.light(); setInviteOpen(true); }}
-                className="w-full mt-1 py-3 rounded-2xl bg-secondary text-secondary-foreground font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
-              >
-                <Users className="h-4 w-4" /> Zaproś znajomych
-              </button>
+              <div className="flex flex-col gap-2">
+                <button
+                  onClick={() => {
+                    haptics.light();
+                    navigate("/wyjazd/nowy", {
+                      state: {
+                        draftId: routeId,
+                        city: route?.city ?? null,
+                        title: displayName || (route as any)?.title || null,
+                        places: currentPins.map((p: any) => ({
+                          place_id: p.place_id ?? null,
+                          place_name: p.place_name,
+                          category: p.category,
+                          address: p.address,
+                          latitude: p.latitude,
+                          longitude: p.longitude,
+                          photo_url: p.photo_url,
+                        })),
+                      },
+                    });
+                  }}
+                  className="w-full py-3 rounded-2xl bg-secondary text-secondary-foreground font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
+                >
+                  <Pencil className="h-4 w-4" /> Edytuj trasę
+                </button>
+                {/* Zapros znajomych (solo -> grupowy): podpina trase do sesji + dodaje uczestnikow po username. */}
+                <button
+                  onClick={() => { haptics.light(); setInviteOpen(true); }}
+                  className="w-full py-3 rounded-2xl bg-secondary text-secondary-foreground font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
+                >
+                  <Users className="h-4 w-4" /> Zaproś znajomych
+                </button>
+              </div>
             )}
             {isOwner && routeId && (
               <InviteFriendsSheet
@@ -2630,8 +2655,8 @@ const ReviewSummary = () => {
                         const on = routeTags.includes(tg);
                         return (
                           <button key={tg} type="button" onClick={() => toggleRouteTag(tg)}
-                            className={`flex items-center gap-1 px-3.5 py-2 rounded-full text-sm font-semibold transition-colors active:scale-[0.97] border ${on ? "bg-orange-50 border-orange-300 text-orange-700" : "bg-white text-foreground border-border/60"}`}>
-                            {tg}{on ? <Check className="h-3.5 w-3.5 text-orange-600" /> : <Plus className="h-3.5 w-3.5 text-muted-foreground/50" />}
+                            className={`flex items-center gap-1 px-3.5 py-2 rounded-full text-sm font-semibold transition-colors active:scale-[0.97] border ${on ? "bg-[#FDF184] border-[#FDCD84] text-foreground" : "bg-white text-foreground border-border/60"}`}>
+                            {tg}{on ? <Check className="h-3.5 w-3.5 text-foreground" /> : <Plus className="h-3.5 w-3.5 text-muted-foreground/50" />}
                           </button>
                         );
                       })}

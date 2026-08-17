@@ -953,16 +953,16 @@ const CreateRanking = () => {
               {/* Wlasne tagi usera (spoza predefiniowanych) - zawsze widoczne, zaznaczone */}
               {tags.filter((tg) => !PREDEFINED_TAGS.includes(tg)).map((tg) => (
                 <button key={tg} type="button" onClick={() => toggleTag(tg)}
-                  className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-primary text-white text-sm font-semibold active:scale-95 transition-transform">
+                  className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-[#FDF184] border border-[#FDCD84] text-foreground text-sm font-semibold active:scale-95 transition-transform">
                   {tg} <X className="h-3.5 w-3.5" />
                 </button>
               ))}
-              {/* Chip-cloud: wszystkie predefiniowane tagi widoczne od razu */}
+              {/* Chip-cloud: wszystkie predefiniowane tagi widoczne od razu (wybrany = zolty fill #6) */}
               {PREDEFINED_TAGS.map((tg) => {
                 const on = tags.includes(tg);
                 return (
                   <button key={tg} type="button" onClick={() => toggleTag(tg)}
-                    className={`px-4 py-2.5 rounded-full text-sm font-semibold active:scale-95 transition-transform ${on ? "bg-primary text-white" : "bg-secondary text-secondary-foreground"}`}>
+                    className={`px-4 py-2.5 rounded-full text-sm font-semibold active:scale-95 transition-transform border ${on ? "bg-[#FDF184] border-[#FDCD84] text-foreground" : "bg-secondary border-transparent text-secondary-foreground"}`}>
                     {tg}
                   </button>
                 );

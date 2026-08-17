@@ -578,13 +578,18 @@ export default function ComposeWyjazd() {
         .select("collection_id, place_id, place_name, category, latitude, longitude, photo_url, address, rating")
         .in("collection_id", listRows.map((l) => l.id));
       const rows = (items ?? []) as any[];
-      const forCity = rows.filter((it) => cities.includes(cityByList[it.collection_id] ?? ""));
-      if (alive) setToVisitPlaces(forCity.length ? forCity : rows);
+      // Pokazuj TYLKO miejsca z list pasujacych do miasta trasy. Gdy zadne nie pasuje ->
+      // pusta lista (BEZ fallbacku do miejsc z innych miast). Miasto puste -> pokaz wszystkie.
+      const hasCity = city.trim().length > 0;
+      const forCity = hasCity ? rows.filter((it) => cities.includes(cityByList[it.collection_id] ?? "")) : rows;
+      if (alive) setToVisitPlaces(forCity);
     })();
     return () => { alive = false; };
   }, [user, city]);
 
-  // "Twoje zapisane miejsca" - miejsca z list "do odwiedzenia" (#5) + fallback legacy exploreLikes.
+  // "Twoje zapisane miejsca" - miejsca z list "do odwiedzenia" (#5) + legacy exploreLikes,
+  // WYLACZNIE dopasowane do miasta trasy. Brak dopasowania -> pusta lista (BEZ pokazywania
+  // zapisanych z innych miast). Miasto puste -> pokaz wszystkie zapisane (rozsadny default).
   const savedForCity = useMemo(() => {
     const mapPlace = (p: any) => ({
       id: p.place_id ?? p.place_name, place_id: p.place_id ?? null, place_name: p.place_name,
@@ -597,19 +602,18 @@ export default function ComposeWyjazd() {
       if (!k || seen.has(k)) return false; seen.add(k); return true;
     });
     const fromLists = toVisitPlaces.map(mapPlace);
+    const hasCity = city.trim().length > 0;
     const wanted = new Set(expandCity(city).map((c) => c.toLowerCase()));
     const groups = getHistoryByCity();
-    const legacy = groups.filter((g) => wanted.has(g.city.toLowerCase())).flatMap((g) => g.places).map(mapPlace);
-    const merged = dedupe([...fromLists, ...legacy]);
-    if (merged.length > 0) return { places: merged, fallback: false };
-    return { places: dedupe(groups.flatMap((g) => g.places).map(mapPlace)), fallback: true };
+    const legacyGroups = hasCity ? groups.filter((g) => wanted.has(g.city.toLowerCase())) : groups;
+    const legacy = legacyGroups.flatMap((g) => g.places).map(mapPlace);
+    return dedupe([...fromLists, ...legacy]);
   }, [city, toVisitPlaces]);
   const isSearching = search.trim().length >= 2;
   // Ujednolicony uklad z widokiem listy (CreateRanking): wyniki wyszukiwania POD wyszukiwarka,
   // "Wybrane miejsca" (z kafelkiem "+") wyzej, "Twoje zapisane miejsca" POD spodem.
   const searchProposals = results.filter((p) => !isAdded(p));
-  const savedProposals = savedForCity.places.filter((p) => !isAdded(p));
-  const savedFallback = savedForCity.fallback;
+  const savedProposals = savedForCity.filter((p) => !isAdded(p));
 
   return (
     <div className="flex flex-col h-[100dvh] bg-background max-w-lg mx-auto">
@@ -799,11 +803,12 @@ export default function ComposeWyjazd() {
           )}
         </div>
 
-        {/* TWOJE ZAPISANE MIEJSCA - szybka sciaga pod wybranymi (ukryte podczas szukania). Ujednolicone z lista. */}
-        {!isSearching && (
+        {/* TWOJE ZAPISANE MIEJSCA - szybka sciaga pod wybranymi (ukryte podczas szukania + gdy brak
+            miejsc dopasowanych do miasta trasy: bez naglowka i bez placeholdera). Ujednolicone z lista. */}
+        {!isSearching && savedProposals.length > 0 && (
           <div className="px-4 pt-5">
             <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2.5">
-              {savedFallback && savedProposals.length > 0 ? "Twoje zapisane miejsca (z innych miast)" : "Twoje zapisane miejsca"}
+              Twoje zapisane miejsca
             </p>
             {savedProposals.length === 0 ? (
               <p className="text-sm text-muted-foreground leading-snug">{`Nie masz jeszcze zapisanych miejsc. Polub miejsca w eksploracji, żeby dodać je tu jednym tapem.`}</p>
