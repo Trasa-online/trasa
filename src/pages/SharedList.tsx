@@ -11,6 +11,7 @@ import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { avatarSrc } from "@/lib/avatar";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import SavePlaceSheet, { type SavePlaceInput } from "@/components/plan-wizard/SavePlaceSheet";
+import { placeKeyOf, fetchPlacePhotosForKeys } from "@/lib/placePhotoSocial";
 import { useSavedPlaces } from "@/hooks/useSavedPlaces";
 import { CategoryIcon } from "@/components/CategoryIcon";
 import { subcategoryLabelLocalized } from "@/lib/categories";
@@ -60,6 +61,22 @@ export default function SharedList() {
         .order("order_index", { ascending: true });
       return (data ?? []) as any[];
     },
+  });
+
+  // #2/#3: zdjecia userow dodane do miejsc tej listy w wizytowkach (place_photos). Sluza jako
+  // okladki miejsc (gdy discovery_items nie ma photo_url) ORAZ zasilaja Galerie listy.
+  // Dwa klucze na miejsce (gpid: oraz nc:nazwa|miasto) - wizytowka zapisuje pod jednym z nich.
+  const listCity = (col as any)?.city ?? null;
+  const itemCoverKeys = (p: any): string[] => {
+    const nc = placeKeyOf({ googlePlaceId: null, placeName: p.place_name, city: listCity });
+    const gp = p.google_place_id ? placeKeyOf({ googlePlaceId: p.google_place_id, placeName: p.place_name, city: listCity }) : null;
+    return gp ? [gp, nc] : [nc];
+  };
+  const listItemKeys = Array.from(new Set((items as any[]).flatMap(itemCoverKeys))).filter(Boolean);
+  const { data: placePhotoMap } = useQuery({
+    queryKey: ["shared-list-place-photos", listItemKeys.join("|")],
+    enabled: listItemKeys.length > 0,
+    queryFn: () => fetchPlacePhotosForKeys(listItemKeys),
   });
 
   // Autor listy (link do profilu + awatar). author_name/avatar sa denormalizowane na kolekcji,
@@ -158,10 +175,31 @@ export default function SharedList() {
   const authorName = author?.first_name || author?.username || col.author_name || "Ktoś";
   const isOwner = !!user && col.user_id === user.id;
   const placesCountLabel = `${items.length} ${items.length === 1 ? "miejsce" : items.length < 5 ? "miejsca" : "miejsc"}`;
-  // Galeria listy = zdjecia miejsc (discovery_items.photo_url), grid jak w widoku trasy. BEZ mapy.
-  const galleryItems = (items as any[])
-    .map((pin) => ({ pin, url: resolveStored(pin.photo_url) ?? pin.photo_url }))
-    .filter((g) => typeof g.url === "string" && (g.url.startsWith("http") || g.url.startsWith("/")));
+
+  // #2: okladka miejsca = zapisane zdjecie (discovery_items.photo_url) LUB zdjecie usera dodane
+  // w wizytowce (place_photos). Gdy pin nie ma photo_url, bierzemy pierwsze place_photo.
+  const pinCover = (p: any): string | null => {
+    const own = resolveStored(p.photo_url) ?? p.photo_url;
+    if (typeof own === "string" && (own.startsWith("http") || own.startsWith("/"))) return own;
+    if (!placePhotoMap) return null;
+    const urls = itemCoverKeys(p).map((k) => placePhotoMap.get(k)).find((u) => u && u.length);
+    return urls && urls.length ? urls[0] : null;
+  };
+
+  // #3: Galeria listy = okladki miejsc + WSZYSTKIE zdjecia userow dodane do tych miejsc (place_photos).
+  // Kazde zdjecie zmapowane na miejsce (tap -> wizytowka). Dedup po URL.
+  const galleryMap = new Map<string, any>();
+  for (const pin of items as any[]) {
+    const c = pinCover(pin);
+    if (c && !galleryMap.has(c)) galleryMap.set(c, pin);
+  }
+  if (placePhotoMap) {
+    for (const pin of items as any[]) {
+      const urls = itemCoverKeys(pin).flatMap((k) => placePhotoMap.get(k) ?? []);
+      for (const u of urls) if (u && !galleryMap.has(u)) galleryMap.set(u, pin);
+    }
+  }
+  const galleryItems = Array.from(galleryMap.entries()).map(([url, pin]) => ({ url, pin }));
 
   const renderList = () => (
     <div className="space-y-2.5">
@@ -176,7 +214,7 @@ export default function SharedList() {
         return (
           <RoutePlaceRow
             key={pin.id}
-            pin={{ ...pin, category: catOf(pin) }}
+            pin={{ ...pin, category: catOf(pin), photo_url: pinCover(pin) }}
             index={i}
             categoryLabel={categoryLabel(catOf(pin))}
             onOpen={() => openDetail(pin)}
@@ -196,7 +234,7 @@ export default function SharedList() {
         <div key={pin.id} className="snap-center shrink-0 w-[80vw] max-w-[320px] rounded-2xl bg-secondary border border-border/40 overflow-hidden shadow-sm flex flex-col">
           <div className="relative w-full aspect-[4/3] bg-muted">
             <button onClick={() => openDetail(pin)} className="block w-full h-full text-left active:opacity-90 transition-opacity">
-              <PlacePhoto pin={{ ...pin, category: catOf(pin) }} className="w-full h-full object-cover" />
+              <PlacePhoto pin={{ ...pin, category: catOf(pin), photo_url: pinCover(pin) }} className="w-full h-full object-cover" />
             </button>
             <div className="absolute top-3 left-3 h-8 w-8 rounded-full bg-black/55 backdrop-blur text-white text-sm font-bold flex items-center justify-center">{i + 1}</div>
             <button
@@ -318,13 +356,15 @@ export default function SharedList() {
 
       <PlaceSwiperDetail open={!!detailPin} onOpenChange={(o) => !o && setDetailPin(null)} place={detailPin} city={col.city} />
 
-      {/* CTA - zapis CAŁEJ listy (ważny driver engagementu, zostaje). Zapis pojedynczych miejsc
-          = bookmark przy każdym miejscu (SavePlaceSheet). */}
-      <div className="fixed bottom-0 left-0 right-0 max-w-lg mx-auto px-5 pt-3 bg-background/90 backdrop-blur-md border-t border-border/30" style={{ paddingBottom: "max(20px, env(safe-area-inset-bottom, 20px))" }}>
-        <button onClick={toggleSave} className="w-full py-3 rounded-full bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform shadow-lg shadow-primary/25">
-          <Bookmark className={`h-4 w-4 ${saved ? "fill-current" : ""}`} />{saved ? "Zapisano listę" : "Zapisz tę listę"}
-        </button>
-      </div>
+      {/* CTA - zapis CAŁEJ listy (driver engagementu). TYLKO cudza lista - nie zapisujesz wlasnej (#4).
+          Zapis pojedynczych miejsc = bookmark przy każdym miejscu (SavePlaceSheet). */}
+      {!isOwner && (
+        <div className="fixed bottom-0 left-0 right-0 max-w-lg mx-auto px-5 pt-3 bg-background/90 backdrop-blur-md border-t border-border/30" style={{ paddingBottom: "max(20px, env(safe-area-inset-bottom, 20px))" }}>
+          <button onClick={toggleSave} className="w-full py-3 rounded-full bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform shadow-lg shadow-primary/25">
+            <Bookmark className={`h-4 w-4 ${saved ? "fill-current" : ""}`} />{saved ? "Zapisano listę" : "Zapisz tę listę"}
+          </button>
+        </div>
+      )}
 
       <SavePlaceSheet open={!!savePlace} onOpenChange={(o) => !o && setSavePlace(null)} place={savePlace} city={col.city ?? ""} />
     </div>
