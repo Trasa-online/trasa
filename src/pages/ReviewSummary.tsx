@@ -2209,7 +2209,7 @@ const ReviewSummary = () => {
             {routeTags.length > 0 && (
               <div className="flex flex-wrap gap-2">
                 {routeTags.map((tg) => (
-                  <span key={tg} className="bg-secondary text-secondary-foreground rounded-full px-3 py-1 text-[13px] font-semibold">{tg}</span>
+                  <span key={tg} className="bg-white border border-border/60 text-foreground rounded-full px-3 py-1 text-[13px] font-semibold">{tg}</span>
                 ))}
               </div>
             )}

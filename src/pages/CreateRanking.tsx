@@ -705,15 +705,14 @@ const CreateRanking = () => {
 
           {/* #2: user WYBIERA czy juz odwiedzil te miejsca (visited) czy dopiero chce (to_visit). */}
           <div className="px-4 pt-3">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">{`Te miejsca`}</p>
             <div className="flex rounded-2xl bg-secondary p-1 text-sm font-bold">
               <button type="button" onClick={() => setListStatus("visited")}
                 className={`flex-1 py-2 rounded-xl transition-colors ${listStatus === "visited" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
-                {`Już odwiedziłem`}
+                {`Odwiedzone`}
               </button>
               <button type="button" onClick={() => setListStatus("to_visit")}
                 className={`flex-1 py-2 rounded-xl transition-colors ${listStatus === "to_visit" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
-                {`Chcę odwiedzić`}
+                {`Do odwiedzenia`}
               </button>
             </div>
           </div>

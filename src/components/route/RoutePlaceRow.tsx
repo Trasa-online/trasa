@@ -63,11 +63,11 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
           </div>
         </div>
       </div>
-      {/* Tagi miejsca (pins.tags) - listowane przy miejscu (zolty fill, spojnie z wyborem tagow). */}
+      {/* Tagi miejsca (pins.tags) - listowane przy miejscu. Neutralny bialy chip (display). */}
       {Array.isArray(pin.tags) && pin.tags.length > 0 && (
         <div className="flex flex-wrap gap-1.5 mt-2.5">
           {pin.tags.map((tg: string) => (
-            <span key={tg} className="inline-flex items-center px-2.5 py-1 rounded-full bg-[#FDF184] border border-[#FDCD84] text-foreground text-[12px] font-semibold">{tg}</span>
+            <span key={tg} className="inline-flex items-center px-2.5 py-1 rounded-full bg-white border border-border/60 text-foreground text-[12px] font-semibold">{tg}</span>
           ))}
         </div>
       )}

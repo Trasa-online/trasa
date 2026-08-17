@@ -607,10 +607,9 @@ export const MyCollections = ({ showCreate = true }: { showCreate?: boolean } = 
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
                   </div>
-                  {/* Status moderacji - badge tekstowy pod tytulem */}
-                  {col.moderation_status === "pending" && (
-                    <span className="mt-1.5 inline-flex w-fit items-center text-[10px] font-bold text-amber-700 bg-amber-100 rounded-full px-2 py-0.5">{t("collections.pending")}</span>
-                  )}
+                  {/* Status moderacji - badge tekstowy pod tytulem. "Pending" NIE pokazywany userowi
+                      (straszy) - lista wyglada dla niego normalnie, moderacja dzieje sie po stronie
+                      admina. Pokazujemy tylko "rejected" (potrzebny feedback) i "private". */}
                   {col.moderation_status === "rejected" && (
                     <span className="mt-1.5 inline-flex w-fit items-center text-[10px] font-bold text-destructive bg-destructive/10 rounded-full px-2 py-0.5">{t("collections.rejected")}</span>
                   )}

@@ -308,7 +308,7 @@ export default function SharedList() {
           {Array.isArray(col.tags) && col.tags.length > 0 && (
             <div className="flex flex-wrap gap-2 mt-3">
               {col.tags.map((tg: string) => (
-                <span key={tg} className="inline-flex items-center px-3 py-1 rounded-full bg-secondary text-secondary-foreground text-[13px] font-semibold">{tg}</span>
+                <span key={tg} className="inline-flex items-center px-3 py-1 rounded-full bg-white border border-border/60 text-foreground text-[13px] font-semibold">{tg}</span>
               ))}
             </div>
           )}

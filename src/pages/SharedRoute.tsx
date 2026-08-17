@@ -74,7 +74,7 @@ export default function SharedRoute() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("routes")
-        .select("id, title, city, user_id, day_number, start_date, ai_summary, ai_highlight, review_photos, review_narrative, group_session_id")
+        .select("id, title, city, user_id, day_number, start_date, ai_summary, ai_highlight, review_photos, review_narrative, group_session_id, tags")
         .eq("id", id as string)
         .eq("is_shared", true)
         .single();
@@ -212,7 +212,7 @@ export default function SharedRoute() {
     queryFn: async () => {
       const { data } = await (supabase as any)
         .from("pins")
-        .select("id, place_name, address, category, suggested_time, images, image_url, user_photo_urls, photo_url, place_id, latitude, longitude, pin_order, description")
+        .select("id, place_name, address, category, suggested_time, images, image_url, user_photo_urls, photo_url, place_id, latitude, longitude, pin_order, description, tags")
         .eq("route_id", id!)
         .order("pin_order");
       return (data ?? []) as any[];
@@ -496,6 +496,14 @@ export default function SharedRoute() {
           )}
           {routeDescription && (
             <p className="text-sm text-muted-foreground leading-relaxed mt-3">{routeDescription}</p>
+          )}
+          {/* Tagi CALEJ TRASY (routes.tags) - neutralny bialy chip. */}
+          {Array.isArray((route as any).tags) && (route as any).tags.length > 0 && (
+            <div className="flex flex-wrap gap-2 mt-3">
+              {(route as any).tags.map((tg: string) => (
+                <span key={tg} className="inline-flex items-center rounded-full bg-white border border-border/60 text-foreground px-3 py-1 text-[13px] font-semibold">{tg}</span>
+              ))}
+            </div>
           )}
           {(shareMeta?.tagged_members?.length ?? 0) > 0 && (
             <div className="flex flex-wrap items-center gap-1.5 mt-3">
