@@ -554,7 +554,7 @@ export const MyCollections = ({ showCreate = true }: { showCreate?: boolean } = 
           (showCreate=false), gdzie "+" tworzenia jest juz w naglowku (zbedny duplikat). */}
       {showCreate && (
         <button
-          onClick={() => { trackCollectionCreate("my_collections_header"); navigate("/zestawienie/nowe"); }}
+          onClick={() => { trackCollectionCreate("my_collections_header"); navigate("/utworz", { state: { mode: "listy" } }); }}
           className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-primary text-white text-sm font-bold active:scale-[0.98] transition-transform shadow-md shadow-orange-500/20"
         >
           <Plus className="h-4 w-4" strokeWidth={2.5} /> {t("collections.create_new", "Nowa lista miejsc")}
@@ -588,15 +588,15 @@ export const MyCollections = ({ showCreate = true }: { showCreate?: boolean } = 
                   (list_cover_url) po lewej, tresc po prawej. Tap = rozwin/zwin podglad (accordion). */}
               <div className="relative w-full flex gap-3.5 p-3">
                 <button
-                  onClick={() => setExpanded(isOpen ? null : col.id)}
-                  aria-expanded={isOpen}
+                  onClick={() => navigate(`/lista/${col.id}`)}
+                  aria-label={t("collections.open_full", "Zobacz pełny widok listy")}
                   className="relative w-[104px] aspect-[9/16] shrink-0 rounded-2xl overflow-hidden bg-muted active:opacity-90 transition-opacity"
                 >
                   <img src={col.cover ? (resolveStored(col.cover) ?? col.cover) : getRandomPinPlaceholder(col.id)} alt={title} className="w-full h-full object-cover" loading="lazy" />
                 </button>
                 <div className="flex-1 min-w-0 flex flex-col py-0.5">
                   <div className="flex items-start gap-2">
-                    <button onClick={() => setExpanded(isOpen ? null : col.id)} className="flex-1 min-w-0 text-left">
+                    <button onClick={() => navigate(`/lista/${col.id}`)} className="flex-1 min-w-0 text-left">
                       <p className="text-lg font-bold leading-tight line-clamp-2 text-foreground">{title}</p>
                     </button>
                     <button

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams, useSearchParams, useLocation } from "react-router-dom";
-import { ArrowLeft, Search, Plus, X, Loader2, ChevronRight, ChevronDown, List, GalleryHorizontalEnd, GripVertical, Check, Image as ImageIcon } from "lucide-react";
+import { ArrowLeft, Search, Plus, X, Loader2, ChevronRight, ChevronDown, List, GalleryHorizontalEnd, GripVertical, Check, MapPin, Image as ImageIcon } from "lucide-react";
 import { Reorder, useDragControls } from "framer-motion";
 import { haptics } from "@/hooks/useHaptics";
 import { supabase } from "@/integrations/supabase/client";
@@ -181,7 +181,9 @@ const CreateRanking = () => {
   const defaultListName = (c: string) => `Lista miejsc - ${c}`;
   const [title, setTitle] = useState(() => nav.title || defaultListName(initCity));
   const [titleDirty, setTitleDirty] = useState(!!nav.title);
-  useEffect(() => { if (!titleDirty) setTitle(defaultListName(city)); }, [city, titleDirty]);
+  // Inline selektor miasta wyszukiwania (multi-miasto): pozwala zmienic miasto w trakcie
+  // dodawania i dolozyc miejsca z innego miasta (Krakow + Olsztyn w jednej liscie).
+  const [cityPickerOpen, setCityPickerOpen] = useState(false);
   // Prefill miejsc z handoffu Trasa->Lista (zachowanie wybranych miejsc przy przelaczeniu trybu).
   const [items, setItems] = useState<RankingItem[]>(() =>
     (nav.places ?? []).map((p: any, i: number) => ({
@@ -192,6 +194,9 @@ const CreateRanking = () => {
       rating: p.rating ?? null, google_place_id: p.google_place_id ?? null, short_desc: "",
     })),
   );
+  // Auto-nazwa aktualizuje sie z miastem TYLKO na pustej liscie (korekta zlego domyslnego
+  // miasta). Po dodaniu miejsc zmiana miasta = budowanie listy multi-miasto -> nie zmieniamy nazwy.
+  useEffect(() => { if (!titleDirty && items.length === 0) setTitle(defaultListName(city)); }, [city, titleDirty, items.length]);
   const [publishing, setPublishing] = useState(false);
   // Krok formularza po wyborze motywu: 1 = miasto + miejsca, 2 = notki + mapa + publikacja.
   const [step, setStep] = useState<1 | 2>(1);
@@ -637,13 +642,53 @@ const CreateRanking = () => {
               {`Lista to zbiór Twoich ulubionych miejsc bez ustalonej kolejności - np. Twoje ukochane kawiarnie w mieście.`}
             </p>
           </div>
-          {/* Kraj + miasto wybrane wczesniej drum-scrollem (/utworz) - tu bez selektora. */}
           {/* Nazwa listy (generyczna domyslna, edytowalna) */}
           <div className="px-4 pt-3">
             <input value={title} onChange={(e) => { setTitle(e.target.value); setTitleDirty(true); }} maxLength={80}
               onFocus={() => setTitleFocused(true)} onBlur={() => setTitleFocused(false)}
               placeholder={t("name_placeholder", "Nazwa listy")}
               className="w-full rounded-2xl bg-secondary text-secondary-foreground border-0 px-4 py-3 text-base outline-none focus:ring-2 focus:ring-orange-500/40 placeholder:text-muted-foreground/50" />
+          </div>
+
+          {/* Selektor miasta wyszukiwania (MULTI-MIASTO): user moze zmienic miasto w trakcie
+              dodawania i dolozyc miejsca z innego miasta do JEDNEJ listy (Krakow + Olsztyn...). */}
+          <div className="px-4 pt-3">
+            <button type="button" onClick={() => setCityPickerOpen((o) => !o)}
+              className="w-full flex items-center gap-2 rounded-2xl bg-secondary text-secondary-foreground px-4 py-3 active:opacity-80 transition-opacity">
+              <MapPin className="h-4 w-4 text-orange-600 shrink-0" />
+              <span className="text-sm text-muted-foreground shrink-0">{`Szukasz w:`}</span>
+              <span className="flex-1 text-left text-sm font-bold text-foreground truncate">{city}</span>
+              <ChevronDown className={`h-4 w-4 text-muted-foreground shrink-0 transition-transform ${cityPickerOpen ? "rotate-180" : ""}`} />
+            </button>
+            {cityPickerOpen && (
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <div className="relative">
+                  <select value={country} onChange={(e) => onCountryChange(e.target.value)}
+                    className="w-full appearance-none rounded-2xl bg-secondary text-secondary-foreground border-0 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-orange-500/40">
+                    {TRIP_REGIONS.map((region) => (
+                      <optgroup key={region} label={region}>
+                        {TRIP_COUNTRIES.filter((c) => c.region === region).map((c) => (
+                          <option key={c.name} value={c.name}>{c.name}</option>
+                        ))}
+                      </optgroup>
+                    ))}
+                  </select>
+                  <ChevronDown className="h-4 w-4 text-muted-foreground absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                </div>
+                <div className="relative">
+                  <select value={city} onChange={(e) => setCity(e.target.value)}
+                    className="w-full appearance-none rounded-2xl bg-secondary text-secondary-foreground border-0 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-orange-500/40">
+                    {cities.map((c) => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                  <ChevronDown className="h-4 w-4 text-muted-foreground absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                </div>
+              </div>
+            )}
+            {items.length > 0 && (
+              <p className="text-[11px] text-muted-foreground mt-2 leading-snug">
+                {`Możesz zmienić miasto i dodać miejsca z innych miast do tej samej listy.`}
+              </p>
+            )}
           </div>
 
           {/* Wyszukiwarka - sticky na gorze, ale NIE podczas edycji nazwy (inaczej naježdža

@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
-import { MapPin, ArrowLeft, Bookmark, List, GalleryHorizontalEnd, Maximize2, X, Building2, Sparkles } from "lucide-react";
+import { MapPin, ArrowLeft, Bookmark, List, GalleryHorizontalEnd, Maximize2, X, Building2 } from "lucide-react";
 import { PlacePhoto, resolveStored } from "@/components/PlacePhoto";
 import { RoutePlaceRow } from "@/components/route/RoutePlaceRow";
 import RouteMap from "@/components/RouteMap";
@@ -12,11 +12,11 @@ import { API_BASE } from "@/lib/platform";
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { avatarSrc } from "@/lib/avatar";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
+import SavePlaceSheet, { type SavePlaceInput } from "@/components/plan-wizard/SavePlaceSheet";
+import { useSavedPlaces } from "@/hooks/useSavedPlaces";
 import { CategoryIcon } from "@/components/CategoryIcon";
 import { subcategoryLabelLocalized } from "@/lib/categories";
 import { inferCategoryFromName } from "@/lib/placeCategoryIcon";
-import { createWyjazdFromPlaces } from "@/lib/createWyjazd";
-import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 
 // Statyczna mapa (Google przez proxy) - 1:1 z SharedRoute (peachy numerowane piny).
 function buildStaticMap(pins: { latitude: number; longitude: number }[], size = "560x300"): string | null {
@@ -37,12 +37,14 @@ export default function SharedList() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { open: openAuthDrawer } = useAuthDrawer();
+  const { isSaved } = useSavedPlaces();
   const [planView, setPlanView] = useState<"list" | "cards">("list");
   const [planTab, setPlanTab] = useState<"miejsca" | "mapa">("miejsca");
   const [detailPin, setDetailPin] = useState<any | null>(null);
   const [mapOpen, setMapOpen] = useState(false);
-  const [saving, setSaving] = useState(false);
+  // Zapis pojedynczego miejsca z listy (bookmark per-miejsce -> SavePlaceSheet). Zapis CAŁEJ listy
+  // (przycisk na dole) to osobna akcja (localStorage trasa_saved_collections) - oba zostają.
+  const [savePlace, setSavePlace] = useState<SavePlaceInput | null>(null);
   const [saved, setSaved] = useState<boolean>(() => {
     try { return new Set<string>(JSON.parse(localStorage.getItem("trasa_saved_collections") || "[]")).has(id ?? ""); } catch { return false; }
   });
@@ -135,25 +137,17 @@ export default function SharedList() {
     } catch { /* localStorage niedostepny */ }
   };
 
-  // Uzyj listy - stworz wyjazd z jej miejsc (adopt). Jak w CollectionDetail (plan_adds).
-  const useList = async () => {
-    if (!user) { openAuthDrawer({ mode: "register", hint: "save_route" }); return; }
-    if (!items.length || saving) return;
-    setSaving(true);
-    void (supabase as any).rpc("increment_collection_plan_adds", { p_collection_id: id });
-    const routeId = await createWyjazdFromPlaces(user.id, col?.city ?? null, col?.title ?? (col?.city ?? "Wyjazd"), items.map((p: any) => ({
-      place_name: p.place_name,
-      category: p.category,
-      address: p.address ?? null,
-      latitude: p.latitude ?? null,
-      longitude: p.longitude ?? null,
-      photo_url: p.photo_url ?? null,
-      place_id: p.place_id ?? null,
-    })));
-    setSaving(false);
-    if (routeId) navigate(`/review-summary?route=${routeId}&edit=1`);
-    else toast.error("Nie udało się utworzyć wyjazdu");
-  };
+  // Otwórz sheet zapisu pojedynczego miejsca do listy usera (bookmark per-miejsce).
+  const openSavePlace = (pin: any) => setSavePlace({
+    place_name: pin.place_name,
+    category: catOf(pin),
+    address: pin.address ?? null,
+    description: pin.short_desc ?? null,
+    latitude: pin.latitude ?? null,
+    longitude: pin.longitude ?? null,
+    photo_url: pin.photo_url ?? null,
+    place_id: pin.place_id ?? null,
+  });
 
   if (isLoading) {
     return <div className="min-h-[100dvh] bg-background flex items-center justify-center"><div className="text-muted-foreground text-sm animate-pulse">Ładowanie...</div></div>;
@@ -199,6 +193,8 @@ export default function SharedList() {
             categoryLabel={categoryLabel(catOf(pin))}
             onOpen={() => openDetail(pin)}
             onGoogle={() => openGoogle(pin)}
+            onSave={() => openSavePlace(pin)}
+            saved={isSaved(pin.place_name)}
             note={note}
           />
         );
@@ -210,11 +206,20 @@ export default function SharedList() {
     <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory scrollbar-none -mx-5 px-5 pb-2">
       {items.map((pin: any, i: number) => (
         <div key={pin.id} className="snap-center shrink-0 w-[80vw] max-w-[320px] rounded-2xl bg-secondary border border-border/40 overflow-hidden shadow-sm flex flex-col">
-          <button onClick={() => openDetail(pin)} className="block w-full text-left active:opacity-90 transition-opacity">
-            <div className="relative w-full aspect-[4/3] bg-muted">
+          <div className="relative w-full aspect-[4/3] bg-muted">
+            <button onClick={() => openDetail(pin)} className="block w-full h-full text-left active:opacity-90 transition-opacity">
               <PlacePhoto pin={{ ...pin, category: catOf(pin) }} className="w-full h-full object-cover" />
-              <div className="absolute top-3 left-3 h-8 w-8 rounded-full bg-black/55 backdrop-blur text-white text-sm font-bold flex items-center justify-center">{i + 1}</div>
-            </div>
+            </button>
+            <div className="absolute top-3 left-3 h-8 w-8 rounded-full bg-black/55 backdrop-blur text-white text-sm font-bold flex items-center justify-center">{i + 1}</div>
+            <button
+              onClick={(e) => { e.stopPropagation(); openSavePlace(pin); }}
+              aria-label={isSaved(pin.place_name) ? "Miejsce zapisane w liście" : "Zapisz miejsce do listy"}
+              className={`absolute top-3 right-3 h-9 w-9 rounded-full flex items-center justify-center shadow-sm active:scale-90 transition-transform ${isSaved(pin.place_name) ? "bg-orange-100" : "bg-white/90 backdrop-blur-sm"}`}
+            >
+              <Bookmark className={`h-[18px] w-[18px] ${isSaved(pin.place_name) ? "text-orange-600 fill-orange-600" : "text-foreground"}`} strokeWidth={2} />
+            </button>
+          </div>
+          <button onClick={() => openDetail(pin)} className="block w-full text-left active:opacity-90 transition-opacity">
             <div className="px-4 pt-4 pb-4">
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted text-xs font-semibold text-foreground mb-2">
                 <CategoryIcon category={catOf(pin)} className="h-3.5 w-3.5 shrink-0" />{categoryLabel(catOf(pin))}
@@ -319,15 +324,15 @@ export default function SharedList() {
         </div>
       )}
 
-      {/* CTA - 1:1 z SharedRoute */}
+      {/* CTA - zapis CAŁEJ listy (ważny driver engagementu, zostaje). Zapis pojedynczych miejsc
+          = bookmark przy każdym miejscu (SavePlaceSheet). */}
       <div className="fixed bottom-0 left-0 right-0 max-w-lg mx-auto px-5 pt-3 bg-background/90 backdrop-blur-md border-t border-border/30" style={{ paddingBottom: "max(20px, env(safe-area-inset-bottom, 20px))" }}>
         <button onClick={toggleSave} className="w-full py-3 rounded-full bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform shadow-lg shadow-primary/25">
           <Bookmark className={`h-4 w-4 ${saved ? "fill-current" : ""}`} />{saved ? "Zapisano listę" : "Zapisz tę listę"}
         </button>
-        <button onClick={useList} disabled={saving} className="w-full mt-2 py-2 text-sm font-medium text-muted-foreground active:text-foreground transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50">
-          <Sparkles className="h-4 w-4" />{saving ? "Tworzę wyjazd..." : "Zrób wyjazd z tej listy"}
-        </button>
       </div>
+
+      <SavePlaceSheet open={!!savePlace} onOpenChange={(o) => !o && setSavePlace(null)} place={savePlace} city={col.city ?? ""} />
     </div>
   );
 }
