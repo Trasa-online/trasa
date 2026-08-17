@@ -11,7 +11,7 @@ import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { avatarSrc } from "@/lib/avatar";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import SavePlaceSheet, { type SavePlaceInput } from "@/components/plan-wizard/SavePlaceSheet";
-import { placeKeyOf, fetchPlacePhotosForKeys } from "@/lib/placePhotoSocial";
+import { placeKeyOf, fetchPlacePhotosForKeys, pickPlaceCover } from "@/lib/placePhotoSocial";
 import { useSavedPlaces } from "@/hooks/useSavedPlaces";
 import { CategoryIcon } from "@/components/CategoryIcon";
 import { subcategoryLabelLocalized } from "@/lib/categories";
@@ -181,9 +181,7 @@ export default function SharedList() {
   const pinCover = (p: any): string | null => {
     const own = resolveStored(p.photo_url) ?? p.photo_url;
     if (typeof own === "string" && (own.startsWith("http") || own.startsWith("/"))) return own;
-    if (!placePhotoMap) return null;
-    const urls = itemCoverKeys(p).map((k) => placePhotoMap.get(k)).find((u) => u && u.length);
-    return urls && urls.length ? urls[0] : null;
+    return pickPlaceCover(placePhotoMap, itemCoverKeys(p));
   };
 
   // #3: Galeria listy = okladki miejsc + WSZYSTKIE zdjecia userow dodane do tych miejsc (place_photos).

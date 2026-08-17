@@ -11,7 +11,7 @@ import { dateLocale } from "@/lib/dateLocale";
 import { MapPin, ArrowLeft, Sparkles, ChevronRight, ChevronLeft, Bookmark, List, GalleryHorizontalEnd, Calendar as CalendarIcon, Image as ImageIcon, Maximize2, X, Building2 } from "lucide-react";
 import { PlacePhoto } from "@/components/PlacePhoto";
 import { RoutePlaceRow } from "@/components/route/RoutePlaceRow";
-import { pinCoverKeys, fetchPlacePhotosForKeys } from "@/lib/placePhotoSocial";
+import { pinCoverKeys, fetchPlacePhotosForKeys, pickPlaceCover } from "@/lib/placePhotoSocial";
 import RouteMap from "@/components/RouteMap";
 import { API_BASE } from "@/lib/platform";
 
@@ -299,9 +299,7 @@ export default function SharedRoute() {
     !!(p.image_url || (Array.isArray(p.images) && p.images[0]) || (Array.isArray(p.user_photo_urls) && p.user_photo_urls[0]) || p.photo_url);
   const coverFor = (p: any): string | null => {
     if (pinHasOwnPhoto(p)) return null; // PlacePhoto sam wybierze wlasne zdjecie pinu
-    if (!placePhotoCoverMap) return null;
-    const urls = pinCoverKeys(p, routeCity).map((k) => placePhotoCoverMap.get(k)).find((u) => u && u.length);
-    return urls && urls.length ? urls[0] : null;
+    return pickPlaceCover(placePhotoCoverMap, pinCoverKeys(p, routeCity));
   };
 
   // Hero: okladka autora (review_photos[0]) -> zdjecie pierwszego miejsca z trasy (wlasne LUB

@@ -5,13 +5,16 @@ import { supabase } from "@/integrations/supabase/client";
 
 const BUCKET = "place-photos";
 
-// Stabilna tozsamosc miejsca dla place_photos: google_place_id -> 'nazwa|miasto' (lower).
+// Stabilna, GLOBALNA tozsamosc miejsca dla place_photos: google_place_id -> sama nazwa (lower).
+// WAZNE: klucz NIE zawiera miasta - miejsce akumuluje zdjecia userow niezaleznie od kontekstu
+// (lista globalna city="", trasa w innym miescie itp.). Dzieki temu okladka miejsca jest spojna
+// wszedzie (wizja: miejsce zbiera zdjecia -> losowa okladka -> zacheta do przejecia przez biznes).
+// Parametr `city` zostaje w sygnaturze dla zgodnosci call-site'ow, ale jest IGNOROWANY.
 export function placeKeyOf(opts: { googlePlaceId?: string | null; placeName?: string | null; city?: string | null }): string {
   const gp = (opts.googlePlaceId ?? "").trim();
   if (gp) return `gpid:${gp}`;
   const name = (opts.placeName ?? "").trim().toLowerCase();
-  const city = (opts.city ?? "").trim().toLowerCase();
-  return `nc:${name}|${city}`;
+  return `nm:${name}`;
 }
 
 // Stabilny klucz lajka: zdjecie usera (#3e) -> 'pp:{id}', inne (Storage/B2B) -> URL.
@@ -20,12 +23,30 @@ export function photoRefForUserPhoto(placePhotoId: string): string {
 }
 
 // Kandydujace klucze miejsca (pin/item) do dopasowania place_photos. Sprawdzamy DWA:
-// gpid:{google_place_id} oraz nc:{nazwa|miasto} - wizytowka zapisuje zdjecie pod jednym z nich
-// (MockPlace z tworzenia trasy czesto nie ma google_place_id -> nc:).
-export function pinCoverKeys(pin: { google_place_id?: string | null; place_name?: string | null }, city?: string | null): string[] {
-  const nc = placeKeyOf({ googlePlaceId: null, placeName: pin.place_name, city });
-  const gp = pin.google_place_id ? placeKeyOf({ googlePlaceId: pin.google_place_id, placeName: pin.place_name, city }) : null;
-  return gp ? [gp, nc] : [nc];
+// gpid:{google_place_id} oraz nm:{nazwa} - wizytowka zapisuje zdjecie pod jednym z nich
+// (MockPlace z tworzenia czesto nie ma google_place_id -> nm:). Miasto ignorowane (klucz globalny).
+export function pinCoverKeys(pin: { google_place_id?: string | null; place_name?: string | null }, _city?: string | null): string[] {
+  const nm = placeKeyOf({ googlePlaceId: null, placeName: pin.place_name });
+  const gp = pin.google_place_id ? placeKeyOf({ googlePlaceId: pin.google_place_id, placeName: pin.place_name }) : null;
+  return gp ? [gp, nm] : [nm];
+}
+
+// Stabilny "losowy" wybor okladki miejsca sposrod jego zdjec (deterministyczny per klucz -
+// nie migocze przy renderach, ale rozklada okladke miedzy roznych userow zamiast zawsze
+// najnowszego). Wizja: miejsce z wieloma zdjeciami -> losowa okladka -> zacheta do przejecia
+// profilu przez biznes. Zwraca URL lub null.
+function hashIndex(s: string, n: number): number {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return n > 0 ? h % n : 0;
+}
+export function pickPlaceCover(map: Map<string, string[]> | undefined | null, keys: string[]): string | null {
+  if (!map) return null;
+  for (const k of keys) {
+    const urls = map.get(k);
+    if (urls && urls.length) return urls[hashIndex(k, urls.length)];
+  }
+  return null;
 }
 
 export interface PlacePhotoRow {

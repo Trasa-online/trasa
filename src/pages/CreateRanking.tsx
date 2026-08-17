@@ -20,6 +20,7 @@ import { isRouteCollection } from "@/lib/collectionThemes";
 import { MAIN_CATEGORIES, getDbCategoriesFor, mainCategoryLabel } from "@/lib/categories";
 import { CategoryIcon } from "@/components/CategoryIcon";
 import { categoryFromGoogleTypes, inferCategoryFromName } from "@/lib/placeCategoryIcon";
+import { pinCoverKeys, fetchPlacePhotosForKeys, pickPlaceCover } from "@/lib/placePhotoSocial";
 import { cacheListItemPhoto } from "@/lib/placePhotos";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import { type MockPlace } from "@/components/plan-wizard/PlaceSwiper";
@@ -278,6 +279,30 @@ const CreateRanking = () => {
     return () => { alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [placeIdsKey]);
+
+  // #3: okladki miejsc ze zdjec dodanych przez userow w wizytowkach (place_photos) - dla miejsc bez
+  // wlasnego zdjecia. Wypelniamy item.photo_url (raz per klucz) -> pokazuje sie w kartach/liscie i
+  // zapisuje sie na discovery_items przy publikacji. Losowy (stabilny) wybor sposrod zdjec miejsca.
+  const filledCoverKeysRef = useRef<Set<string>>(new Set());
+  const missingCoverKey = items.filter((i) => !i.photo_url).map((i) => i.place_name).join("|");
+  useEffect(() => {
+    const missing = items.filter((i) => !i.photo_url);
+    const keys = Array.from(new Set(missing.flatMap((i) => pinCoverKeys({ google_place_id: i.google_place_id, place_name: i.place_name }))))
+      .filter((k) => k && !filledCoverKeysRef.current.has(k));
+    if (!keys.length) return;
+    keys.forEach((k) => filledCoverKeysRef.current.add(k));
+    let alive = true;
+    fetchPlacePhotosForKeys(keys).then((map) => {
+      if (!alive || map.size === 0) return;
+      setItems((prev) => prev.map((i) => {
+        if (i.photo_url) return i;
+        const cover = pickPlaceCover(map, pinCoverKeys({ google_place_id: i.google_place_id, place_name: i.place_name }));
+        return cover ? { ...i, photo_url: cover } : i;
+      }));
+    });
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [missingCoverKey]);
 
   // ── Author + edit/liked prefill ───────────────────────────────────────────
   useEffect(() => {
@@ -684,8 +709,11 @@ const CreateRanking = () => {
             {cityPickerOpen && (
               <div className="mt-2 grid grid-cols-2 gap-2">
                 <div className="relative">
-                  <select value={country} onChange={(e) => onCountryChange(e.target.value)}
+                  {/* Gdy miasto = "Wszedzie" (city=""), kraj tez pokazuje "Wszedzie". Wybor realnego
+                      kraju zawezaja do jego pierwszego miasta; wybor "Wszedzie" -> globalnie (city=""). */}
+                  <select value={city ? country : ""} onChange={(e) => { const v = e.target.value; if (!v) setCity(""); else onCountryChange(v); }}
                     className="w-full appearance-none rounded-2xl bg-secondary text-secondary-foreground border-0 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-orange-500/40">
+                    <option value="">Wszędzie</option>
                     {TRIP_REGIONS.map((region) => (
                       <optgroup key={region} label={region}>
                         {TRIP_COUNTRIES.filter((c) => c.region === region).map((c) => (

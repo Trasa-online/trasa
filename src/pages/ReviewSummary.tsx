@@ -5,7 +5,7 @@ import { ROUTE_TAGS, ROUTE_TAGS_VISIBLE, placeTagsForCategory } from "@/lib/rout
 import { haptics } from "@/hooks/useHaptics";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { placeKeyOf, fetchPlacePhotosForKeys } from "@/lib/placePhotoSocial";
+import { placeKeyOf, fetchPlacePhotosForKeys, pickPlaceCover } from "@/lib/placePhotoSocial";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Camera, X, Globe, Lock, Pencil, Check, Image as ImageIcon, Map as MapIcon, MapPin, ChevronUp, ChevronDown, ChevronRight, ChevronLeft, Trash2, Plus, Share, Share2, List, GalleryHorizontalEnd, Info, MoreVertical, Navigation, Maximize2, Users, Calendar as CalendarIcon, Loader2, GripVertical, Building2 } from "lucide-react";
@@ -415,8 +415,8 @@ const ReviewSummary = () => {
   const currentPins = useMemo(
     () => (rawCurrentPins as any[]).map((p) => {
       if (pinHasOwnPhoto(p) || !placePhotoCoverMap) return p;
-      const urls = pinCoverKeys(p).map((k) => placePhotoCoverMap.get(k)).find((u) => u && u.length);
-      return urls && urls.length ? { ...p, photo_url: urls[0] } : p;
+      const cover = pickPlaceCover(placePhotoCoverMap, pinCoverKeys(p));
+      return cover ? { ...p, photo_url: cover } : p;
     }),
     [rawCurrentPins, placePhotoCoverMap, routeCity],
   );

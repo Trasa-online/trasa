@@ -28,7 +28,7 @@ import { fetchEnrichedPlace, type MockPlace } from "@/components/plan-wizard/Pla
 import { categoryIconSrc, categoryFromGoogleTypes } from "@/lib/placeCategoryIcon";
 import { fetchUserPhotosByNames } from "@/lib/placeUserPhotos";
 import { resolveStored } from "@/components/PlacePhoto";
-import { placeKeyOf, fetchPlacePhotosForKeys } from "@/lib/placePhotoSocial";
+import { placeKeyOf, pinCoverKeys, fetchPlacePhotosForKeys, pickPlaceCover } from "@/lib/placePhotoSocial";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 
 const PL_CITIES = ORIGIN_COUNTRIES.find((c) => c.name === "Polska")?.cities ?? ["Warszawa"];
@@ -473,9 +473,9 @@ export default function ComposeWyjazd() {
   // (np. po ponownym otwarciu roboczej trasy, gdy zdjecia dodano wczesniej w wizytowce).
   const filledCoverKeysRef = useRef<Set<string>>(new Set());
   useEffect(() => {
-    const keys = items
+    const keys = Array.from(new Set(items
       .filter((i) => !i.photo_url)
-      .map((i) => placeKeyOf({ googlePlaceId: (i as any).google_place_id ?? null, placeName: i.place_name, city }))
+      .flatMap((i) => pinCoverKeys({ google_place_id: (i as any).google_place_id ?? null, place_name: i.place_name }))))
       .filter((k) => k && !filledCoverKeysRef.current.has(k));
     if (!keys.length) return;
     keys.forEach((k) => filledCoverKeysRef.current.add(k));
@@ -484,12 +484,12 @@ export default function ComposeWyjazd() {
       if (!alive || m.size === 0) return;
       setItems((prev) => prev.map((i) => {
         if (i.photo_url) return i;
-        const k = placeKeyOf({ googlePlaceId: (i as any).google_place_id ?? null, placeName: i.place_name, city });
-        const urls = m.get(k);
-        return urls && urls.length ? { ...i, photo_url: urls[0] } : i;
+        const cover = pickPlaceCover(m, pinCoverKeys({ google_place_id: (i as any).google_place_id ?? null, place_name: i.place_name }));
+        return cover ? { ...i, photo_url: cover } : i;
       }));
     });
     return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items, city]);
 
   const mapPins = items
