@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { X, Bell, UserPlus, UserCheck, MapPin, Route, Bookmark, CheckCircle2, XCircle, MessageCircle } from "lucide-react";
+import { X, Bell, UserPlus, UserCheck, MapPin, Route, Bookmark, CheckCircle2, XCircle, MessageCircle, Heart } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
 import { avatarSrc } from "@/lib/avatar";
@@ -29,10 +29,11 @@ const TYPE_CONFIG: Record<string, { icon: React.ElementType; color: string; labe
   friend_request: { icon: UserPlus,      color: "text-violet-500 bg-violet-100",  label: u => `${u} chce dodać Cię do znajomych` },
   friend_accept:  { icon: UserCheck,     color: "text-emerald-500 bg-emerald-100",label: u => `${u} przyjął(a) Twoje zaproszenie do znajomych` },
   visit_comment:  { icon: MessageCircle, color: "text-sky-500 bg-sky-100",         label: (u, meta) => `${u} skomentował(a) Twój wpis${meta?.place_name ? ` o ${meta.place_name}` : ""}` },
+  photo_like:     { icon: Heart,         color: "text-orange-600 bg-orange-100",  label: (u, meta) => `${u} polubił(a) Twoje zdjęcie${meta?.place_name ? ` (${meta.place_name})` : ""}` },
   discovery_used: { icon: Bookmark,      color: "text-orange-600 bg-orange-100",  label: (u, meta) => `${u} skorzystał(a) z Twojego planu${meta?.city ? ` po ${meta.city}` : ""}` },
   group_invite:       { icon: Route,  color: "text-orange-600 bg-orange-100",  label: (u, meta) => `${u} dodał(a) Cię do wspólnej trasy${meta?.city ? ` po ${meta.city}` : ""}` },
   group_route_ready:  { icon: Route, color: "text-orange-600 bg-orange-100",  label: (u, meta) => `${u} stworzył(a) trasę${meta?.city ? ` w ${meta.city}` : ""} - sprawdź!` },
-  collection_approved: { icon: CheckCircle2, color: "text-emerald-500 bg-emerald-100", label: (_u, meta) => `Twoja lista „${meta?.title ?? "lista"}" została zaakceptowana 🎉` },
+  collection_approved: { icon: CheckCircle2, color: "text-emerald-500 bg-emerald-100", label: (_u, meta) => `Twoja lista „${meta?.title ?? "lista"}" została zaakceptowana` },
   collection_rejected: { icon: XCircle,      color: "text-destructive bg-destructive/10", label: (_u, meta) => meta?.moderation_note ? `Lista „${meta?.title ?? "lista"}" odrzucona. Powód: ${meta.moderation_note}` : `Twoja lista „${meta?.title ?? "lista"}" została odrzucona` },
 };
 

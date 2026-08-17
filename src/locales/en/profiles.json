@@ -6,8 +6,8 @@
     "no_results": "No results"
   },
   "sections": {
-    "routes": "Plans",
-    "routes_sub": "completed trips",
+    "routes": "Routes",
+    "routes_sub": "shared trips",
     "cities": "Cities",
     "cities_sub": "places visited",
     "collections": "Collections",

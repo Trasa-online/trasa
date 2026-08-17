@@ -171,14 +171,16 @@ const CreateRanking = () => {
   // NIE w query param. Bez czytania state forma spadala do "Warszawa" i "Twoje zapisane miejsca"
   // nie pasowaly do miasta wybranego przez usera (bug 2026-08).
   const nav = (location.state ?? {}) as { city?: string | null; title?: string | null; places?: any[] };
-  const initCity = nav.city || params.get("city") || "Warszawa";
+  // "" = "Wszędzie" (lista globalna). Miasto NIE jest obowiazkowe przy tworzeniu listy -
+  // user moze zrobic liste z miejsc z calego swiata. Selektor miasta = OPCJONALNY filtr wyszukiwarki.
+  const initCity = nav.city || params.get("city") || "";
   const [city, setCity] = useState(initCity);
   const [country, setCountry] = useState<string>(() => countryForCity(initCity));
   const cities = citiesForCountry(country);
   const onCountryChange = (c: string) => { setCountry(c); setCity(citiesForCountry(c)[0]); };
   // Nazwa listy - generyczna domyslna (jak "Wyjazd do X" w trasie); titleDirty blokuje auto-update
   // po recznej edycji, a zmiana miasta aktualizuje domyslna nazwe.
-  const defaultListName = (c: string) => `Lista miejsc - ${c}`;
+  const defaultListName = (c: string) => (c ? `Lista miejsc - ${c}` : "Nowa lista");
   const [title, setTitle] = useState(() => nav.title || defaultListName(initCity));
   const [titleDirty, setTitleDirty] = useState(!!nav.title);
   // Inline selektor miasta wyszukiwania (multi-miasto): pozwala zmienic miasto w trakcie
@@ -385,8 +387,10 @@ const CreateRanking = () => {
       address: p.address ?? null, latitude: p.latitude ?? null, longitude: p.longitude ?? null,
       rating: p.rating ?? null, photo_url: p.photo_url ?? null,
     });
-    const wanted = new Set(expandCity(city).map((c) => c.toLowerCase()));
     const groups = getHistoryByCity();
+    // Lista globalna (city="") -> wszystkie zapisane miejsca usera (bez filtra miasta).
+    if (!city) return { places: groups.flatMap((g) => g.places).map(mapPlace), fallback: false };
+    const wanted = new Set(expandCity(city).map((c) => c.toLowerCase()));
     const forCity = groups.filter((g) => wanted.has(g.city.toLowerCase())).flatMap((g) => g.places).map(mapPlace);
     if (forCity.length > 0) return { places: forCity, fallback: false };
     // Fallback: user ma zapisane miejsca, ale w INNYM miescie niz domyslne (forma spada do
@@ -418,9 +422,9 @@ const CreateRanking = () => {
     // Preferujemy trafienie w wybranym miescie; fallback = geocode (bez typow) + inferencja.
     let res: Omit<RankingItem, "key" | "short_desc"> | null = null;
     try {
-      const hits = await forwardGeocodeWithTypes(`${name.trim()} ${city}`);
-      const cityAliases = expandCity(city).map((c) => c.toLowerCase());
-      const best = hits.find((h) => cityAliases.some((c) => (h.full_address ?? "").toLowerCase().includes(c))) ?? hits[0];
+      const hits = await forwardGeocodeWithTypes(`${name.trim()} ${city}`.trim());
+      const cityAliases = city ? expandCity(city).map((c) => c.toLowerCase()) : [];
+      const best = (cityAliases.length ? hits.find((h) => cityAliases.some((c) => (h.full_address ?? "").toLowerCase().includes(c))) : hits[0]) ?? hits[0];
       if (best?.name) {
         res = {
           place_id: null, place_name: best.name,
@@ -455,18 +459,20 @@ const CreateRanking = () => {
     setGoogleLoading(true);
     setGoogleResults([]);
     const t = setTimeout(async () => {
-      const { data } = await (supabase as any).from("places")
+      // Miasto opcjonalne: gdy wybrane -> filtr; gdy "Wszedzie" (city="") -> szukamy globalnie.
+      let dbq = (supabase as any).from("places")
         .select("id, place_name, category, address, latitude, longitude, rating, photo_url")
-        .in("city", expandCity(city)).ilike("place_name", `%${q}%`).eq("is_active", true).limit(50);
+        .ilike("place_name", `%${q}%`).eq("is_active", true).limit(50);
+      if (city) dbq = dbq.in("city", expandCity(city));
+      const { data } = await dbq;
       const dbRows = data ?? [];
       setSearchResults(dbRows); setSearchLoading(false);
       // Dopelnienie: miejsca spoza bazy z Google (max 3), z pominieciem duplikatow nazw z DB.
       try {
-        const g = await forwardGeocodeWithTypes(`${q} ${city}`);
+        const g = await forwardGeocodeWithTypes(`${q} ${city}`.trim());
         const dbNames = new Set(dbRows.map((r: any) => (r.place_name ?? "").toLowerCase().trim()));
-        // Szukamy TYLKO w wybranym miescie - odrzucamy wyniki spoza (Google potrafi zwrocic
-        // np. lokal o podobnej nazwie w innym miescie). Dopasowanie po nazwie miasta w adresie.
-        const cityAliases = expandCity(city).map((c) => c.toLowerCase());
+        // Gdy wybrane miasto -> odrzucamy wyniki spoza niego. Gdy "Wszedzie" -> akceptujemy globalnie.
+        const cityAliases = city ? expandCity(city).map((c) => c.toLowerCase()) : [];
         const seen = new Set<string>();
         const extra = g
           .filter((x) => {
@@ -475,9 +481,11 @@ const CreateRanking = () => {
             // Odrzuc czyste wyniki geograficzne (miasta, dzielnice, drogi) - chcemy lokale.
             const geoOnly = ["locality", "sublocality", "administrative_area_level_1", "administrative_area_level_2", "country", "route", "postal_code", "political"];
             if ((x.types ?? []).length > 0 && (x.types ?? []).every((t) => geoOnly.includes(t))) return false;
-            // Tylko lokale w wybranym miescie (adres zawiera nazwe miasta/dzielnicy).
-            const addr = (x.full_address ?? "").toLowerCase();
-            if (!cityAliases.some((c) => addr.includes(c))) return false;
+            // Tylko lokale w wybranym miescie (gdy miasto ustawione). "Wszedzie" -> bez filtra miasta.
+            if (cityAliases.length) {
+              const addr = (x.full_address ?? "").toLowerCase();
+              if (!cityAliases.some((c) => addr.includes(c))) return false;
+            }
             seen.add(name);
             return true;
           })
@@ -497,7 +505,8 @@ const CreateRanking = () => {
       const cats = themeDbCategories(category);
       let q = (supabase as any).from("places")
         .select("id, place_name, category, address, latitude, longitude, rating, photo_url")
-        .in("city", expandCity(city)).eq("is_active", true);
+        .eq("is_active", true);
+      if (city) q = q.in("city", expandCity(city));
       if (cats) q = q.in("category", cats);
       const { data } = await q.limit(40);
       if (!alive) return;
@@ -509,11 +518,10 @@ const CreateRanking = () => {
 
   const collectionTitle = title.trim() || "Lista";
   const isRoute = isRouteCollection(category); // stare trasy (edycja) -> mozna ustawiac kolejnosc
-  const canGoNext = !!city && items.length >= 2 && title.trim().length > 0; // krok 1 -> 2
+  const canGoNext = items.length >= 2 && title.trim().length > 0; // krok 1 -> 2 (miasto opcjonalne)
   const canPublish = canGoNext && !publishing;
   // Przejscie do kroku 2 - gdy warunki niespelnione, TOAST z powodem (guzik nie jest disabled).
   const goNext = () => {
-    if (!city) { toast(t("cta.need_city", "Najpierw wybierz miasto")); return; }
     if (title.trim().length === 0) { toast(t("cta.need_title", "Dodaj nazwę listy")); return; }
     if (items.length < 2) { toast(t("cta.need_two", "Dodaj co najmniej 2 miejsca, żeby stworzyć listę")); return; }
     setStep(2);
@@ -539,13 +547,15 @@ const CreateRanking = () => {
       const coverToSave = coverUrl ?? firstItemPhoto;
       const listCoverToSave = listCoverUrl ?? firstItemPhoto;
       const tagsToSave = tags.map((x) => x.trim()).filter(Boolean).slice(0, 20);
+      // Miasto opcjonalne: "" (Wszedzie) -> null (lista globalna, karta pokaze tylko liczbe miejsc).
+      const cityToSave = city.trim() || null;
       if (editId) {
-        await (supabase as any).from("discovery_collections").update({ title: collectionTitle, city, category, description: desc, is_public: isPublic, author_name: authorName, author_avatar: authorAvatar, cover_url: coverToSave, list_cover_url: listCoverToSave, tags: tagsToSave, updated_at: new Date().toISOString() }).eq("id", editId);
+        await (supabase as any).from("discovery_collections").update({ title: collectionTitle, city: cityToSave, category, description: desc, is_public: isPublic, author_name: authorName, author_avatar: authorAvatar, cover_url: coverToSave, list_cover_url: listCoverToSave, tags: tagsToSave, updated_at: new Date().toISOString() }).eq("id", editId);
         await (supabase as any).from("discovery_items").delete().eq("collection_id", editId);
       } else {
         const { data: col, error } = await (supabase as any).from("discovery_collections").insert({
           user_id: user.id, author_name: authorName, author_avatar: authorAvatar, title: collectionTitle,
-          category, city, description: desc, kind: "ranking", is_public: isPublic,
+          category, city: cityToSave, description: desc, kind: "ranking", is_public: isPublic,
           cover_url: coverToSave, list_cover_url: listCoverToSave, tags: tagsToSave,
           moderation_status: moderationStatus,
         }).select("id").single();
@@ -657,14 +667,15 @@ const CreateRanking = () => {
               className="w-full rounded-2xl bg-secondary text-secondary-foreground border-0 px-4 py-3 text-base outline-none focus:ring-2 focus:ring-orange-500/40 placeholder:text-muted-foreground/50" />
           </div>
 
-          {/* Selektor miasta wyszukiwania (MULTI-MIASTO): user moze zmienic miasto w trakcie
-              dodawania i dolozyc miejsca z innego miasta do JEDNEJ listy (Krakow + Olsztyn...). */}
+          {/* OPCJONALNY filtr miasta wyszukiwarki (miasto NIE jest obowiazkowe - lista moze byc
+              globalna). Domyslnie "Wszedzie" (city="") -> szukamy na calym swiecie. User moze zawezic
+              do miasta i dolozyc miejsca z roznych miast do JEDNEJ listy (Krakow + Olsztyn...). */}
           <div className="px-4 pt-3">
             <button type="button" onClick={() => setCityPickerOpen((o) => !o)}
               className="w-full flex items-center gap-2 rounded-2xl bg-secondary text-secondary-foreground px-4 py-3 active:opacity-80 transition-opacity">
               <MapPin className="h-4 w-4 text-orange-600 shrink-0" />
               <span className="text-sm text-muted-foreground shrink-0">{`Szukasz w:`}</span>
-              <span className="flex-1 text-left text-sm font-bold text-foreground truncate">{city}</span>
+              <span className="flex-1 text-left text-sm font-bold text-foreground truncate">{city || "Wszędzie"}</span>
               <ChevronDown className={`h-4 w-4 text-muted-foreground shrink-0 transition-transform ${cityPickerOpen ? "rotate-180" : ""}`} />
             </button>
             {cityPickerOpen && (
@@ -685,6 +696,7 @@ const CreateRanking = () => {
                 <div className="relative">
                   <select value={city} onChange={(e) => setCity(e.target.value)}
                     className="w-full appearance-none rounded-2xl bg-secondary text-secondary-foreground border-0 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-orange-500/40">
+                    <option value="">Wszędzie (cały świat)</option>
                     {cities.map((c) => <option key={c} value={c}>{c}</option>)}
                   </select>
                   <ChevronDown className="h-4 w-4 text-muted-foreground absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -693,7 +705,7 @@ const CreateRanking = () => {
             )}
             {items.length > 0 && (
               <p className="text-[11px] text-muted-foreground mt-2 leading-snug">
-                {`Możesz zmienić miasto i dodać miejsca z innych miast do tej samej listy.`}
+                {`Miasto jest opcjonalne - możesz dodać miejsca z różnych miast do tej samej listy.`}
               </p>
             )}
           </div>

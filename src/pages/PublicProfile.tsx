@@ -39,13 +39,19 @@ export default function PublicProfile() {
   const { data: stats } = useQuery({
     queryKey: ["public-profile-stats", profile?.id],
     queryFn: async () => {
+      // Na cudzym profilu liczymy tylko PUBLICZNY dorobek (trasy udostepnione, is_shared=true).
+      // Prywatne solo-drafty (is_shared=false) nie sa widoczne przez RLS ogladajacemu i nie wliczaja
+      // sie do statystyk - bez tego filtra licznik pokazywal 0 dla profili z samymi trasami solo.
       const { data } = await supabase
         .from("routes")
-        .select("city")
-        .eq("user_id", profile!.id);
+        .select("city, folder_id")
+        .eq("user_id", profile!.id)
+        .eq("is_shared", true);
       const all = data ?? [];
+      // Trasy wielodniowe dziela wspolny folder_id = jedna podroz (spojne ze zwijaniem w dzienniku nizej).
+      const trips = new Set(all.map((r, i) => r.folder_id ?? `single_${i}`)).size;
       const cities = new Set(all.map(r => r.city).filter(Boolean)).size;
-      return { trips: all.length, cities };
+      return { trips, cities };
     },
     enabled: !!profile?.id,
   });
@@ -93,7 +99,7 @@ export default function PublicProfile() {
 
   // Dziennik usera (read-only): pocztowki jak we wlasnym Dzienniku. Trasy wielodniowe
   // zwiniete po folderze (dzien 1 = reprezentant), okladka z review_photos lub pierwszego
-  // pina ze zdjeciem. RLS zwraca trasy widoczne dla ogladajacego (udostepnione).
+  // pina ze zdjeciem. Pokazujemy tylko PUBLICZNY dorobek (is_shared=true) - spojne z licznikiem statystyk.
   const { data: postcards = [], isLoading: postcardsLoading } = useQuery({
     queryKey: ["public-journal", profile?.id],
     enabled: !!profile?.id && routesOpen,
@@ -102,6 +108,7 @@ export default function PublicProfile() {
         .from("routes")
         .select("id, city, title, day_number, start_date, end_date, folder_id, ai_summary, review_photos")
         .eq("user_id", profile!.id)
+        .eq("is_shared", true)
         .order("created_at", { ascending: false });
       const rows = (routes ?? []) as any[];
       // Okladki: pierwszy pin ze zdjeciem (wg pin_order) per trasa.

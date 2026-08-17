@@ -32,8 +32,6 @@ import { dateLocale } from "@/lib/dateLocale";
 import { isNative, API_BASE } from "@/lib/platform";
 import { Camera as CapCamera } from "@capacitor/camera";
 import { notify } from "@/lib/notify";
-import { requestLocation } from "@/hooks/useGeolocation";
-import { haversineKm } from "@/lib/distance";
 import { deferDelete } from "@/lib/deferDelete";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 
@@ -1077,32 +1075,7 @@ const ReviewSummary = () => {
     }
   };
 
-  // GPS check-in (on-demand, one-shot): "Jestem tutaj" -> pobierz pozycje i oznacz pobliskie
-  // (do 150 m) niezaliczone miejsca jako odwiedzone. Bez sledzenia w tle (prosto + prywatnie).
-  const [checkingIn, setCheckingIn] = useState(false);
-  const handleCheckIn = async () => {
-    setCheckingIn(true);
-    try {
-      const coords = await requestLocation(true);
-      if (!coords) { notify.error("Nie udało się pobrać lokalizacji"); return; }
-      const nearby = currentPins.filter((p: any) =>
-        !isVisited(p) && typeof p.latitude === "number" && typeof p.longitude === "number" &&
-        haversineKm(coords, { lat: p.latitude, lng: p.longitude }) < 0.15,
-      );
-      if (nearby.length === 0) { notify.error("Brak zapisanych miejsc w pobliżu (150 m)"); return; }
-      for (const p of nearby) await toggleVisited(p);
-      notify.success(nearby.length === 1
-        ? `Oznaczono „${nearby[0].place_name}" jako odwiedzone`
-        : `Oznaczono ${nearby.length} miejsca w pobliżu`);
-    } catch (e: any) {
-      console.error("[ReviewSummary] check-in failed:", e?.message ?? e);
-      notify.error("Nie udało się sprawdzić lokalizacji");
-    } finally {
-      setCheckingIn(false);
-    }
-  };
-
-  // Pasek postepu "X/Y odwiedzone" + (aktywny wyjazd) przycisk GPS "Jestem tutaj".
+  // Pasek postepu "X/Y odwiedzone" (checklista wlasciciela aktywnego wyjazdu).
   const renderVisitedProgress = () => {
     if (!activeChecklist || currentPins.length === 0) return null;
     const pct = Math.round((visitedCount / currentPins.length) * 100);
@@ -1115,16 +1088,6 @@ const ReviewSummary = () => {
         <div className="h-1.5 rounded-full bg-muted overflow-hidden">
           <div className="h-full bg-green-500 rounded-full transition-all" style={{ width: `${pct}%` }} />
         </div>
-        {!isMemory && visitedCount < currentPins.length && (
-          <button
-            onClick={handleCheckIn}
-            disabled={checkingIn}
-            className="mt-2.5 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-secondary text-secondary-foreground text-xs font-semibold active:scale-[0.98] transition-transform disabled:opacity-50"
-          >
-            <MapPin className="h-3.5 w-3.5" />
-            {checkingIn ? "Sprawdzam..." : "Jestem tutaj - oznacz pobliskie"}
-          </button>
-        )}
       </div>
     );
   };
@@ -1348,7 +1311,8 @@ const ReviewSummary = () => {
   // Interaktywna checklista (toggle + wyszarzanie + postep + GPS) TYLKO w AKTYWNYM, rozpoczetym
   // wyjezdzie. Wspomnienie grupuje po dniach, ale BEZ odhaczania/wyszarzania (#2). Przyszly wyjazd
   // nie ma checklisty wcale (#1).
-  const activeChecklist = tripStarted && !isMemory;
+  // Checklista dostepna TYLKO dla wlasciciela - uczestnik trasy wspolnej nie odhacza cudzej trasy.
+  const activeChecklist = isOwner && tripStarted && !isMemory;
 
   if (authLoading) return null;
   if (!user) { navigate("/auth"); return null; }
@@ -1969,7 +1933,10 @@ const ReviewSummary = () => {
   // forceEdit (?edit=1, np. "Przejdz do sugestii" z ComposeWyjazd) MUSI pominac ten widok i
   // trafic do steppera (Trasa -> Sugestie -> Galeria) - inaczej user laduje w widoku planu
   // z nawigacja do Dziennika zamiast na kroku sugestii.
-  if (isOwner && !editingStepper && !forceEdit && sortedDays.length <= 1) {
+  // Widok "Plan wyjazdu" (pills Miejsca|Galeria|Mapa) dla WLASCICIELA (pelna edycja) oraz
+  // UCZESTNIKA trasy wspolnej (read-only + dodawanie wlasnych zdjec). Uczestnik NIGDY nie dostaje
+  // kontrolek reorder/kosz/checklisty/Gotowe - te sa gejtowane przez isOwner ponizej.
+  if (!editingStepper && !forceEdit && sortedDays.length <= 1) {
     const heroMapThumb = buildTripStaticMapUrl(currentPins, "160x160");
     const bigMapUrl = buildTripStaticMapUrl(currentPins, "560x300");
     const heroMapCover = buildTripStaticMapUrl(currentPins, "560x350"); // 16:10, pod okladke hero
@@ -2013,33 +1980,39 @@ const ReviewSummary = () => {
         </div>
 
         <div onScroll={(e) => setPlanScrolled(e.currentTarget.scrollTop > 170)} className="flex-1 min-h-0 overflow-y-auto pb-5">
-          {/* Okladka - w scrollu, przewija sie (NIE sticky), bez zaokraglen na dole */}
-          <div className="relative w-full aspect-[16/10] overflow-hidden bg-gradient-to-br from-orange-400 via-rose-400 to-purple-500">
+          {/* Okladka - w scrollu, przewija sie (NIE sticky), bez zaokraglen na dole.
+              Uczestnik (non-owner) dostaje nizsza okladke (podglad), wlasciciel pelna 16:10. */}
+          <div className={`relative w-full ${isOwner ? "aspect-[16/10]" : "h-40"} overflow-hidden bg-gradient-to-br from-orange-400 via-rose-400 to-purple-500`}>
             <img src={heroPhoto} alt="" className="absolute inset-0 w-full h-full object-cover" />
             <div className="absolute inset-0 bg-gradient-to-b from-black/15 via-transparent to-black/55" />
-            {/* Ikona galerii = ZMIANA zdjecia okladkowego (dodaj nowe / wybierz z galerii / z miejsc).
-                Lewy-dolny rog. Osobna funkcja od podgladu na eksploracji (prawy-dolny). */}
-            <button
-              onClick={() => setCoverPickerOpen(true)}
-              aria-label="Zmień okładkę wyjazdu"
-              className="absolute bottom-3 left-3 z-20 h-10 w-10 rounded-full bg-black/45 backdrop-blur-sm text-white flex items-center justify-center active:scale-90 transition-transform"
-            >
-              <ImageIcon className="h-[18px] w-[18px]" />
-            </button>
-            {/* Miniatura eksploracji - OSOBNA okladka (list_cover_url), klik = zmiana zdjecia
-                (dodaj nowe / wybierz z galerii/miejsc trasy). Prawy-dolny rog. Ikona = edytowalna. */}
-            <button
-              onClick={() => setListCoverPickerOpen(true)}
-              aria-label="Zmień miniaturę w eksploracji"
-              className="absolute bottom-3 right-3 z-20 w-20 rounded-2xl overflow-hidden border-[3px] border-white shadow-xl bg-muted active:scale-95 transition-transform"
-            >
-              <div className="relative w-full aspect-[9/16]">
-                <img src={listCoverPhoto} alt="" className="w-full h-full object-cover" />
-                <span className="absolute top-1 right-1 h-5 w-5 rounded-full bg-black/45 backdrop-blur-sm text-white flex items-center justify-center">
-                  <ImageIcon className="h-3 w-3" />
-                </span>
-              </div>
-            </button>
+            {/* Edycja okladki (zmiana zdjecia + miniatura eksploracji) - tylko wlasciciel. */}
+            {isOwner && (
+              <>
+                {/* Ikona galerii = ZMIANA zdjecia okladkowego (dodaj nowe / wybierz z galerii / z miejsc).
+                    Lewy-dolny rog. Osobna funkcja od podgladu na eksploracji (prawy-dolny). */}
+                <button
+                  onClick={() => setCoverPickerOpen(true)}
+                  aria-label="Zmień okładkę wyjazdu"
+                  className="absolute bottom-3 left-3 z-20 h-10 w-10 rounded-full bg-black/45 backdrop-blur-sm text-white flex items-center justify-center active:scale-90 transition-transform"
+                >
+                  <ImageIcon className="h-[18px] w-[18px]" />
+                </button>
+                {/* Miniatura eksploracji - OSOBNA okladka (list_cover_url), klik = zmiana zdjecia
+                    (dodaj nowe / wybierz z galerii/miejsc trasy). Prawy-dolny rog. Ikona = edytowalna. */}
+                <button
+                  onClick={() => setListCoverPickerOpen(true)}
+                  aria-label="Zmień miniaturę w eksploracji"
+                  className="absolute bottom-3 right-3 z-20 w-20 rounded-2xl overflow-hidden border-[3px] border-white shadow-xl bg-muted active:scale-95 transition-transform"
+                >
+                  <div className="relative w-full aspect-[9/16]">
+                    <img src={listCoverPhoto} alt="" className="w-full h-full object-cover" />
+                    <span className="absolute top-1 right-1 h-5 w-5 rounded-full bg-black/45 backdrop-blur-sm text-white flex items-center justify-center">
+                      <ImageIcon className="h-3 w-3" />
+                    </span>
+                  </div>
+                </button>
+              </>
+            )}
           </div>
 
           {/* Tresc planu */}
@@ -2055,8 +2028,10 @@ const ReviewSummary = () => {
               {cityLabel && <span className="flex items-center gap-1 text-muted-foreground"><Building2 className="h-4 w-4" />{cityLabel}</span>}
               <span className="flex items-center gap-1 text-muted-foreground"><MapPin className="h-4 w-4" />{currentPins.length} {currentPins.length === 1 ? "miejsce" : currentPins.length < 5 ? "miejsca" : "miejsc"}</span>
             </div>
-            {/* Nazwa wyjazdu - edytowalna inline; olowek dosuniety do prawej (justify-between) */}
-            {editingName ? (
+            {/* Nazwa wyjazdu - edytowalna inline (wlasciciel); uczestnik widzi tylko tekst. */}
+            {!isOwner ? (
+              <p className="text-2xl font-black text-foreground leading-tight">{displayName || cityLabel}</p>
+            ) : editingName ? (
               <div className="flex items-center gap-2">
                 <input
                   value={nameVal}
@@ -2076,14 +2051,23 @@ const ReviewSummary = () => {
                 <ChevronRight className="h-5 w-5 text-muted-foreground shrink-0" />
               </button>
             )}
-            {/* Data - wiersz (ikona + zakres, chevron po prawej); klik otwiera kalendarz */}
-            <button onClick={() => setDatePickerOpen(true)} className="flex items-center justify-between gap-2 active:opacity-70">
-              <span className="flex items-center gap-1.5 min-w-0">
-                <CalendarIcon className="h-5 w-5 text-foreground shrink-0" />
-                <span className="text-base text-foreground truncate">{dateLabel || "Dodaj datę"}</span>
-              </span>
-              <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
-            </button>
+            {/* Data - wiersz (ikona + zakres); klik otwiera kalendarz (wlasciciel). Uczestnik: read-only. */}
+            {!isOwner ? (
+              dateLabel ? (
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <CalendarIcon className="h-5 w-5 text-foreground shrink-0" />
+                  <span className="text-base text-foreground truncate">{dateLabel}</span>
+                </div>
+              ) : null
+            ) : (
+              <button onClick={() => setDatePickerOpen(true)} className="flex items-center justify-between gap-2 active:opacity-70">
+                <span className="flex items-center gap-1.5 min-w-0">
+                  <CalendarIcon className="h-5 w-5 text-foreground shrink-0" />
+                  <span className="text-base text-foreground truncate">{dateLabel || "Dodaj datę"}</span>
+                </span>
+                <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+              </button>
+            )}
             {/* Feedback okladki: trasa POJAWIA SIE w eksploracji tylko z okladka (list_cover_url).
                 Gdy publiczna (is_shared) ale bez okladki -> baner z CTA do dodania (picker miniatury). */}
             {isOwner && !!route?.is_shared && !(route as any)?.list_cover_url && (
@@ -2160,8 +2144,9 @@ const ReviewSummary = () => {
             <button onClick={() => { haptics.selection(); setPlanTab("mapa"); }} className={`flex-1 py-2 rounded-full transition-colors ${planTab === "mapa" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>Mapa</button>
           </div>
 
-          {/* Galeria / Mapa / Miejsca (mapa przeniesiona do wlasnej zakladki obok Galeria). */}
-          {planTab === "galeria" ? renderGallery(true) : planTab === "mapa" ? (
+          {/* Galeria / Mapa / Miejsca (mapa przeniesiona do wlasnej zakladki obok Galeria).
+              Galeria editable: wlasciciel zawsze, uczestnik-czlonek moze dodawac wlasne zdjecia. */}
+          {planTab === "galeria" ? renderGallery(isOwner || isGroupMember) : planTab === "mapa" ? (
             <div className="pt-1">
               {bigMapUrl ? (
                 <button onClick={() => setPlanMapOpen(true)} className="relative block w-full h-64 rounded-2xl overflow-hidden border border-border/40 bg-muted active:opacity-95 transition-opacity">
@@ -2173,6 +2158,21 @@ const ReviewSummary = () => {
               ) : (
                 <p className="text-center text-sm text-muted-foreground py-10">Brak lokalizacji miejsc na mapie.</p>
               )}
+            </div>
+          ) : !isOwner ? (
+            /* UCZESTNIK: read-only podglad miejsc (Lista/Karty) - bez reorder, kosza, checklisty. */
+            <div className="pt-1">
+              <div className="flex items-center justify-end pb-3">
+                <div className="flex rounded-full bg-muted p-0.5">
+                  <button onClick={() => setPlanView("list")} aria-label={t("a11y.list_view")} className={`px-2.5 py-1.5 rounded-full transition-colors ${planView === "list" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
+                    <List className="h-4 w-4" />
+                  </button>
+                  <button onClick={() => setPlanView("cards")} aria-label={t("a11y.cards_view")} className={`px-2.5 py-1.5 rounded-full transition-colors ${planView === "cards" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
+                    <GalleryHorizontalEnd className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+              {planView === "list" ? renderListReadonly(false) : renderSwiper(false, false)}
             </div>
           ) : (
           <>
@@ -2761,7 +2761,10 @@ const ReviewSummary = () => {
             {currentPins.length > 0 && (
               <div className="px-5 pt-5 pb-5 border-b border-border/30">
                 {renderPlanHeader(true)}
-                {planView === "list" ? renderEditablePlan(false) : renderSwiper(true, false)}
+                {/* Wlasciciel: edytowalny plan (reorder/kosz). Uczestnik: read-only podglad. */}
+                {isOwner
+                  ? (planView === "list" ? renderEditablePlan(false) : renderSwiper(true, false))
+                  : (planView === "list" ? renderListReadonly(false) : renderSwiper(false, false))}
               </div>
             )}
 
@@ -2890,8 +2893,9 @@ const ReviewSummary = () => {
       {renderPhotoViewer()}
 
       {/* ── Fixed bottom CTA ────────────────────────────────────────────── */}
-      {/* W PODSUMOWANIU (wpis zrecenzowany) nie ma dolnego CTA - wyjscie przez strzalke cofania. */}
-      {!noteFocused && !((isMemory || forceEdit) && isOwner && reviewed && !editingStepper) && (
+      {/* W PODSUMOWANIU (wpis zrecenzowany) nie ma dolnego CTA - wyjscie przez strzalke cofania.
+          Uczestnik (non-owner) nie ma zadnego CTA edycji/Gotowe - wychodzi strzalka w hero. */}
+      {isOwner && !noteFocused && !((isMemory || forceEdit) && isOwner && reviewed && !editingStepper) && (
       <div className="fixed bottom-0 left-0 right-0 px-5 pt-3 bg-background/80 backdrop-blur-md border-t border-border/30"
         style={{ paddingBottom: "max(20px, env(safe-area-inset-bottom, 20px))" }}>
         {(isMemory || forceEdit) && isOwner && (!reviewed || editingStepper) ? (

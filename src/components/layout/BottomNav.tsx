@@ -135,9 +135,8 @@ const BottomNav = () => {
   // takze z menu "+" na kazdym ekranie z BottomNavem.
   const handleCreateCollection = () => {
     setShowMenu(false);
-    // Przez picker kraj+miasto (mode="listy") -> forma listy dostaje wybrane miasto.
-    // Bez tego forma spadala do "Warszawa" (bug #7 - listy tylko w Warszawie).
-    navigate("/utworz", { state: { mode: "listy" } });
+    // Lista NIE wymaga miasta (moze byc globalna) -> wprost do formy, bez drumu kraj+miasto.
+    navigate("/zestawienie/nowe");
   };
 
   // Tryb uproszczony: "Stworz wyjazd" = miasto + daty + swiper miejsc -> wyjazd (bez planu AI).
@@ -341,10 +340,10 @@ const BottomNav = () => {
             onClick={() => {
               haptics.light();
               if (!PLANNING_DISABLED) { setShowMenu(!showMenu); return; }
-              // Kontekst "Moje listy" (/eksploruj state.myCollections) -> "+" prowadzi do tworzenia
-              // LISTY przez drum kraj+miasto (mode="listy"), inaczej forma spadala do Warszawy (#7).
+              // Kontekst "Moje listy" -> "+" prowadzi WPROST do tworzenia LISTY (bez drumu kraj+miasto -
+              // miasto opcjonalne, lista moze byc globalna). Inne ekrany = drum -> trasa.
               const inLists = location.pathname === "/eksploruj" && (location.state as any)?.myCollections === true;
-              if (inLists) { navigate("/utworz", { state: { mode: "listy" } }); return; }
+              if (inLists) { navigate("/zestawienie/nowe"); return; }
               navigate("/utworz");
             }}
             className="flex items-center justify-center"

@@ -6,8 +6,8 @@
     "no_results": "Brak wyników"
   },
   "sections": {
-    "routes": "Plany",
-    "routes_sub": "ukończone podróże",
+    "routes": "Trasy",
+    "routes_sub": "udostępnione podróże",
     "cities": "Miasta",
     "cities_sub": "odwiedzone miejsca",
     "collections": "Listy",

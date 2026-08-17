@@ -4,11 +4,9 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
-import { MapPin, ArrowLeft, Bookmark, List, GalleryHorizontalEnd, Maximize2, X, Building2 } from "lucide-react";
+import { MapPin, ArrowLeft, Bookmark, List, GalleryHorizontalEnd, Building2, Pencil } from "lucide-react";
 import { PlacePhoto, resolveStored } from "@/components/PlacePhoto";
 import { RoutePlaceRow } from "@/components/route/RoutePlaceRow";
-import RouteMap from "@/components/RouteMap";
-import { API_BASE } from "@/lib/platform";
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { avatarSrc } from "@/lib/avatar";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
@@ -17,17 +15,6 @@ import { useSavedPlaces } from "@/hooks/useSavedPlaces";
 import { CategoryIcon } from "@/components/CategoryIcon";
 import { subcategoryLabelLocalized } from "@/lib/categories";
 import { inferCategoryFromName } from "@/lib/placeCategoryIcon";
-
-// Statyczna mapa (Google przez proxy) - 1:1 z SharedRoute (peachy numerowane piny).
-function buildStaticMap(pins: { latitude: number; longitude: number }[], size = "560x300"): string | null {
-  const pts = pins.filter((p) => p.latitude != null && p.longitude != null).slice(0, 20);
-  if (!pts.length) return null;
-  const markers = pts.map((p, i) => {
-    const label = i + 1 <= 9 ? `label:${i + 1}%7C` : "";
-    return `markers=color:0xf0a583%7C${label}${p.latitude},${p.longitude}`;
-  }).join("&");
-  return `${API_BASE}/api/static-map?size=${size}&scale=2&maptype=roadmap&${markers}&style=feature:poi%7Cvisibility:off&style=feature:transit%7Cvisibility:off`;
-}
 
 // Widok LISTY miejsc (polecajki) - UI/UX 1:1 z widokiem trasy (SharedRoute), ale zasilany z
 // discovery_collections/discovery_items. Lista NIE jest trasa (brak kolejnosci-planu), ale
@@ -39,9 +26,9 @@ export default function SharedList() {
   const { user } = useAuth();
   const { isSaved } = useSavedPlaces();
   const [planView, setPlanView] = useState<"list" | "cards">("list");
-  const [planTab, setPlanTab] = useState<"miejsca" | "mapa">("miejsca");
+  // Widok listy jak trasa: Miejsca | Galeria (BEZ mapy - decyzja Nat). Galeria = zdjecia miejsc z listy.
+  const [planTab, setPlanTab] = useState<"miejsca" | "galeria">("miejsca");
   const [detailPin, setDetailPin] = useState<any | null>(null);
-  const [mapOpen, setMapOpen] = useState(false);
   // Zapis pojedynczego miejsca z listy (bookmark per-miejsce -> SavePlaceSheet). Zapis CAŁEJ listy
   // (przycisk na dole) to osobna akcja (localStorage trasa_saved_collections) - oba zostają.
   const [savePlace, setSavePlace] = useState<SavePlaceInput | null>(null);
@@ -169,11 +156,12 @@ export default function SharedList() {
   const heroPhoto = cover ?? getRandomPinPlaceholder(col.id);
   const cityLabel = col.city || "";
   const authorName = author?.first_name || author?.username || col.author_name || "Ktoś";
-  const mapPins = (items as any[])
-    .filter((p) => p.latitude != null && p.longitude != null)
-    .map((p) => ({ latitude: p.latitude as number, longitude: p.longitude as number, place_name: p.place_name as string }));
-  const staticMapUrl = buildStaticMap(mapPins);
+  const isOwner = !!user && col.user_id === user.id;
   const placesCountLabel = `${items.length} ${items.length === 1 ? "miejsce" : items.length < 5 ? "miejsca" : "miejsc"}`;
+  // Galeria listy = zdjecia miejsc (discovery_items.photo_url), grid jak w widoku trasy. BEZ mapy.
+  const galleryItems = (items as any[])
+    .map((pin) => ({ pin, url: resolveStored(pin.photo_url) ?? pin.photo_url }))
+    .filter((g) => typeof g.url === "string" && (g.url.startsWith("http") || g.url.startsWith("/")));
 
   const renderList = () => (
     <div className="space-y-2.5">
@@ -233,6 +221,21 @@ export default function SharedList() {
     </div>
   );
 
+  // Galeria zdjec miejsc z listy (grid 3-kol jak instagram). Tap -> wizytowka miejsca.
+  const renderGallery = () => (
+    galleryItems.length === 0 ? (
+      <p className="text-center text-sm text-muted-foreground py-10">{`Brak zdjęć w tej liście.`}</p>
+    ) : (
+      <div className="grid grid-cols-3 gap-1.5">
+        {galleryItems.map((g, i) => (
+          <button key={i} onClick={() => openDetail(g.pin)} className="relative aspect-square rounded-xl overflow-hidden bg-muted active:opacity-90 transition-opacity">
+            <img src={g.url as string} alt={g.pin.place_name} className="w-full h-full object-cover" loading="lazy" />
+          </button>
+        ))}
+      </div>
+    )
+  );
+
   return (
     <div className="min-h-[100dvh] bg-background flex flex-col max-w-lg mx-auto">
       {/* Hero */}
@@ -273,13 +276,22 @@ export default function SharedList() {
               ))}
             </div>
           )}
+          {/* Wlasciciel listy: edycja (jak "Edytuj trasę" w widoku trasy). */}
+          {isOwner && (
+            <button
+              onClick={() => navigate(`/zestawienie/${col.id}/edytuj`)}
+              className="w-full mt-4 flex items-center justify-center gap-2 py-3 rounded-2xl bg-secondary text-secondary-foreground text-sm font-bold active:scale-[0.98] transition-transform"
+            >
+              <Pencil className="h-4 w-4" /> {`Edytuj listę`}
+            </button>
+          )}
         </div>
 
-        {/* Miejsca | Mapa */}
+        {/* Miejsca | Galeria (BEZ mapy) */}
         <div className="px-5 pt-6">
           <div className="flex rounded-full bg-muted p-0.5 text-sm font-bold">
             <button onClick={() => setPlanTab("miejsca")} className={`flex-1 py-2 rounded-full transition-colors ${planTab === "miejsca" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>Miejsca</button>
-            <button onClick={() => setPlanTab("mapa")} className={`flex-1 py-2 rounded-full transition-colors ${planTab === "mapa" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>Mapa</button>
+            <button onClick={() => setPlanTab("galeria")} className={`flex-1 py-2 rounded-full transition-colors ${planTab === "galeria" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>Galeria</button>
           </div>
         </div>
 
@@ -299,30 +311,12 @@ export default function SharedList() {
           </div>
         ) : (
           <div className="px-5 pt-4">
-            {mapPins.length > 0 && staticMapUrl ? (
-              <button onClick={() => setMapOpen(true)} className="relative block w-full h-64 rounded-2xl overflow-hidden border border-border/40 bg-muted active:opacity-95 transition-opacity">
-                <img src={staticMapUrl} alt="Mapa listy" className="w-full h-full object-cover" />
-                <span className="absolute bottom-3 right-3 h-10 w-10 rounded-full bg-card shadow-md flex items-center justify-center"><Maximize2 className="h-[18px] w-[18px] text-foreground" strokeWidth={2.2} /></span>
-              </button>
-            ) : (
-              <p className="text-center text-sm text-muted-foreground py-10">Brak lokalizacji miejsc na mapie.</p>
-            )}
+            {renderGallery()}
           </div>
         )}
       </div>
 
       <PlaceSwiperDetail open={!!detailPin} onOpenChange={(o) => !o && setDetailPin(null)} place={detailPin} city={col.city} />
-
-      {mapOpen && (
-        <div className="fixed inset-0 z-[90] bg-background flex flex-col animate-in fade-in duration-200">
-          <div className="relative flex-1 min-h-0">
-            <RouteMap pins={mapPins as any} className="w-full h-full" showRoute={false} />
-            <button onClick={() => setMapOpen(false)} aria-label="Zamknij" className="absolute right-3 z-10 h-10 w-10 rounded-full bg-card shadow-md flex items-center justify-center active:scale-90 transition-transform" style={{ top: "max(0.75rem, env(safe-area-inset-top))" }}>
-              <X className="h-5 w-5 text-foreground" />
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* CTA - zapis CAŁEJ listy (ważny driver engagementu, zostaje). Zapis pojedynczych miejsc
           = bookmark przy każdym miejscu (SavePlaceSheet). */}
