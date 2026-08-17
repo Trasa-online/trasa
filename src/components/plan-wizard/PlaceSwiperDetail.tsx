@@ -60,6 +60,9 @@ interface PlaceSwiperDetailProps {
   skipGoogleFetch?: boolean;
   /** Data wyjazdu (YYYY-MM-DD) - agenda wydarzen pokazuje najblizsze TEJ dacie. Domyslnie dzis. */
   referenceDate?: string;
+  /** #3e: fires po dodaniu zdjecia usera do miejsca (place_photos). Rodzic (np. tworzenie trasy)
+   *  moze od razu odswiezyc okladke miejsca. (url = nowe zdjecie, placeKey = tozsamosc miejsca). */
+  onPhotoAdded?: (url: string, placeKey: string) => void;
 }
 
 const validUrl = (url?: string | null) =>
@@ -76,6 +79,7 @@ const PlaceSwiperDetail = ({
   saved,
   skipGoogleFetch = false,
   referenceDate,
+  onPhotoAdded,
 }: PlaceSwiperDetailProps) => {
   const [detail, setDetail] = useState<PlaceDetail | null>(null);
   const [loading, setLoading] = useState(false);
@@ -293,7 +297,7 @@ const PlaceSwiperDetail = ({
     setAddingPhoto(true);
     const row = await uploadPlacePhoto(file, { userId: user.id, placeKey, placeName: ep.place_name, city: ep.city ?? city ?? null });
     setAddingPhoto(false);
-    if (row) { setUserPlacePhotos((prev) => [row.photo_url, ...prev]); toast.success("Dodano Twoje zdjęcie"); }
+    if (row) { setUserPlacePhotos((prev) => [row.photo_url, ...prev]); onPhotoAdded?.(row.photo_url, placeKey); toast.success("Dodano Twoje zdjęcie"); }
     else toast.error("Nie udało się dodać zdjęcia");
   };
 

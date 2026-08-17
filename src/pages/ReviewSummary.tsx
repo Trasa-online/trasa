@@ -5,6 +5,7 @@ import { ROUTE_TAGS, ROUTE_TAGS_VISIBLE, PLACE_TAGS, PLACE_TAGS_VISIBLE } from "
 import { haptics } from "@/hooks/useHaptics";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { placeKeyOf } from "@/lib/placePhotoSocial";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Camera, X, Globe, Lock, Pencil, Check, Image as ImageIcon, Map as MapIcon, MapPin, ChevronUp, ChevronDown, ChevronRight, ChevronLeft, Trash2, Plus, Share, Share2, List, GalleryHorizontalEnd, Info, MoreVertical, Navigation, Maximize2, Users, Calendar as CalendarIcon, Loader2, GripVertical, Building2 } from "lucide-react";
@@ -1054,6 +1055,28 @@ const ReviewSummary = () => {
   // ── Edycja planu dnia (#4/#5) ──
   const workingPins = draft && draft.dayId === activeRouteId ? draft.pins : currentPins;
 
+  // #3e: zdjecia ktore user dodal do miejsc tej trasy w wizytowkach (place_photos). Pokazujemy je
+  // read-only na widoku Galerii, zeby user od razu widzial co juz dodal (potwierdzenie).
+  const routePlaceKeys = useMemo(
+    () => Array.from(new Set((workingPins as any[]).map((p) =>
+      placeKeyOf({ googlePlaceId: p.google_place_id ?? null, placeName: p.place_name, city: route?.city ?? null }),
+    ))).filter(Boolean),
+    [workingPins, route?.city],
+  );
+  const { data: myPlacePhotos = [] } = useQuery({
+    queryKey: ["route-my-place-photos", user?.id, routePlaceKeys.join("|")],
+    enabled: !!user && routePlaceKeys.length > 0,
+    queryFn: async () => {
+      const { data } = await (supabase as any)
+        .from("place_photos")
+        .select("photo_url")
+        .eq("user_id", user!.id)
+        .in("place_key", routePlaceKeys)
+        .order("created_at", { ascending: false });
+      return (data ?? []).map((r: any) => r.photo_url as string);
+    },
+  });
+
   // ── Odwiedzone (checklist "Bylem tu") - reczne oznaczanie, backed by pins.visited_at.
   // "Dni z dat": visited_at to timestamp, wiec wspomnienie moze grupowac po dacie odwiedzenia.
   // (Auto check-in GPS = Stage 2). visitedOverrides = optymistyczny stan przed refetchem.
@@ -1720,6 +1743,20 @@ const ReviewSummary = () => {
 
   const renderGallery = (editable: boolean) => (
     <div className="px-1 pt-1">
+      {/* #3e: zdjecia dodane w wizytowkach miejsc (place_photos) - read-only strip, potwierdzenie. */}
+      {myPlacePhotos.length > 0 && (
+        <div className="mb-3 px-1">
+          <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2">{`Twoje zdjęcia miejsc`}</p>
+          <div className="flex gap-2 overflow-x-auto scrollbar-none pb-1">
+            {myPlacePhotos.map((url: string, i: number) => (
+              <button key={`${url}-${i}`} onClick={() => { setViewerUrl(url); setViewerMenuOpen(false); }}
+                className="shrink-0 h-20 w-20 rounded-xl overflow-hidden bg-muted active:opacity-90">
+                <img src={url} alt="" className="w-full h-full object-cover" loading="lazy" />
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
       <div className="grid grid-cols-3 gap-0.5">
         {editable && photos.length < MAX_PHOTOS && (
           <button onClick={triggerPhotoPick} disabled={uploading}

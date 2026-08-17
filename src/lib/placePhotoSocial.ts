@@ -38,6 +38,26 @@ export async function fetchPlacePhotos(placeKey: string): Promise<PlacePhotoRow[
   return (data ?? []) as PlacePhotoRow[];
 }
 
+// Batch: dla zestawu place_key zwraca mape place_key -> zdjecia userow (najnowsze pierwsze).
+// Do okladek miejsc w tworzeniu trasy / galerii (bez N zapytan).
+export async function fetchPlacePhotosForKeys(keys: string[]): Promise<Map<string, string[]>> {
+  const map = new Map<string, string[]>();
+  const uniq = Array.from(new Set(keys.filter(Boolean)));
+  if (!uniq.length) return map;
+  const { data, error } = await (supabase as any)
+    .from("place_photos")
+    .select("place_key, photo_url, created_at")
+    .in("place_key", uniq)
+    .order("created_at", { ascending: false });
+  if (error) { console.warn("[placePhotoSocial] fetchPlacePhotosForKeys:", error.message); return map; }
+  for (const row of data ?? []) {
+    const arr = map.get(row.place_key) ?? [];
+    arr.push(row.photo_url);
+    map.set(row.place_key, arr);
+  }
+  return map;
+}
+
 // Upload zdjecia usera do miejsca: plik -> Storage (folder = uid) -> wiersz place_photos.
 export async function uploadPlacePhoto(
   file: File,

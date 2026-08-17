@@ -28,6 +28,7 @@ import { fetchEnrichedPlace, type MockPlace } from "@/components/plan-wizard/Pla
 import { categoryIconSrc, categoryFromGoogleTypes } from "@/lib/placeCategoryIcon";
 import { fetchUserPhotosByNames } from "@/lib/placeUserPhotos";
 import { resolveStored } from "@/components/PlacePhoto";
+import { placeKeyOf, fetchPlacePhotosForKeys } from "@/lib/placePhotoSocial";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 
 const PL_CITIES = ORIGIN_COUNTRIES.find((c) => c.name === "Polska")?.cities ?? ["Warszawa"];
@@ -452,6 +453,45 @@ export default function ComposeWyjazd() {
     }
   };
 
+  // #3e: zdjecie dodane w wizytowce (place_photos) -> od razu okladka miejsca w tworzeniu trasy.
+  // Aktualizuje wybrane miejsca + wyniki + propozycje (dopasowanie po place_key lub nazwie).
+  const applyPlacePhotoCover = (placeKey: string, url: string, placeName?: string | null) => {
+    const patch = <T extends { place_name?: string; photo_url?: string | null; google_place_id?: string | null }>(arr: T[]): T[] =>
+      arr.map((p) => {
+        if (p.photo_url) return p;
+        const key = placeKeyOf({ googlePlaceId: p.google_place_id ?? null, placeName: p.place_name, city });
+        const nameMatch = !!placeName && (p.place_name ?? "").toLowerCase() === placeName.toLowerCase();
+        return (key === placeKey || nameMatch) ? { ...p, photo_url: url } : p;
+      });
+    setItems((prev) => patch(prev));
+    setResults((prev) => patch(prev));
+    setSuggestions((prev) => patch(prev));
+    setToVisitPlaces((prev) => patch(prev));
+  };
+
+  // Doczytaj zdjecia userow (place_photos) jako okladki wybranych miejsc bez zdjecia - raz per klucz
+  // (np. po ponownym otwarciu roboczej trasy, gdy zdjecia dodano wczesniej w wizytowce).
+  const filledCoverKeysRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    const keys = items
+      .filter((i) => !i.photo_url)
+      .map((i) => placeKeyOf({ googlePlaceId: (i as any).google_place_id ?? null, placeName: i.place_name, city }))
+      .filter((k) => k && !filledCoverKeysRef.current.has(k));
+    if (!keys.length) return;
+    keys.forEach((k) => filledCoverKeysRef.current.add(k));
+    let alive = true;
+    fetchPlacePhotosForKeys(keys).then((m) => {
+      if (!alive || m.size === 0) return;
+      setItems((prev) => prev.map((i) => {
+        if (i.photo_url) return i;
+        const k = placeKeyOf({ googlePlaceId: (i as any).google_place_id ?? null, placeName: i.place_name, city });
+        const urls = m.get(k);
+        return urls && urls.length ? { ...i, photo_url: urls[0] } : i;
+      }));
+    });
+    return () => { alive = false; };
+  }, [items, city]);
+
   const mapPins = items
     .filter((i) => i.latitude != null && i.longitude != null)
     .map((i) => ({ latitude: i.latitude!, longitude: i.longitude!, place_name: i.place_name }));
@@ -817,7 +857,8 @@ export default function ComposeWyjazd() {
       )}
 
       {/* Wizytowka miejsca (tap w karte) */}
-      <PlaceSwiperDetail open={!!detailPlace} onOpenChange={(o) => { if (!o) setDetailPlace(null); }} place={detailPlace} city={city} />
+      <PlaceSwiperDetail open={!!detailPlace} onOpenChange={(o) => { if (!o) setDetailPlace(null); }} place={detailPlace} city={city}
+        onPhotoAdded={(url, placeKey) => applyPlacePhotoCover(placeKey, url, detailPlace?.place_name)} />
 
       {/* Rozwinięta interaktywna mapa (zoom) */}
       <Sheet open={mapExpanded} onOpenChange={setMapExpanded}>
