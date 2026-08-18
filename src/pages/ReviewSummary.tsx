@@ -1421,12 +1421,13 @@ const ReviewSummary = () => {
   const heroPhoto = planCover ?? userCover ?? placeCover ?? getRandomPinPlaceholder(routeId ?? undefined);
   // Miniatura eksploracji = OSOBNA okladka (list_cover_url). Gdy nieustawiona -> fallback do hero.
   const listCoverPhoto = resolveStored((route as any)?.list_cover_url) ?? heroPhoto;
-  // Galeria BEZ duplikatow. TRASA GRUPOWA: galeria = WSPOLNA pula (group_trip_photos) - jedno
-  // zrodlo, koniec duplikacji "wlasciciel (review_photos) vs grupa". Zdjecia per-miejsce
-  // (pins.images) sa widoczne w sekcji per-pin, nie dubluja glownej galerii. TRASA SOLO: review_photos.
+  // Galeria = zdjecia wlasciciela (review_photos = myPhotos) + wspolne grupowe (group_trip_photos).
+  // KRYTYCZNE: pokazujemy OBIE pule. Wczesniej trasa grupowa czytala TYLKO group_trip_photos, wiec
+  // po zaproszeniu kogos do STAREJ trasy jej zdjecia (w review_photos) znikaly z widoku (nie byly
+  // kasowane - tylko ukryte). Dedup po URL scala te same zdjecia; rozne pliki (ta sama scena wgrana
+  // dwoma kanalami) zostaja osobno - to mniejszy problem niz znikajace zdjecia.
   // UWAGA: zwykla stala (NIE useMemo) - kod jest PO wczesnym returnie (authLoading), hook lamalby
   // kolejnosc hookow (React #310). Dedup po URL jest tani.
-  const isGroupRoute = !!(route as any)?.group_session_id;
   const galleryPhotos = (() => {
     const map = new Map<string, { url: string; owner: string; mine: boolean; isGroup: boolean; username: string; avatar: string | null; placeLabel: string | null }>();
     const push = (rawUrl: string, meta: { owner: string; mine: boolean; isGroup: boolean; username: string; avatar: string | null }) => {
@@ -1445,11 +1446,10 @@ const ReviewSummary = () => {
         map.set(url, { url, owner: meta.owner, mine: meta.mine, isGroup: meta.isGroup, username: meta.username, avatar: meta.avatar, placeLabel });
       }
     };
-    if (isGroupRoute) {
-      (groupPhotos as any[]).forEach((p) => push(p.url, { owner: "", mine: p.userId === user?.id, isGroup: true, username: p.userId === user?.id ? t("labels.you") : p.username, avatar: p.avatar ?? null }));
-    } else {
-      myPhotos.forEach((p) => push(p.url, { owner: p.owner, mine: true, isGroup: false, username: t("labels.you"), avatar: null }));
-    }
+    // Zdjecia wlasciciela (review_photos) - pierwsze, wiec przy tym samym URL wygrywa isGroup=false
+    // (usuwanie przez removePhoto z review_photos). Potem wspolne grupowe.
+    myPhotos.forEach((p) => push(p.url, { owner: p.owner, mine: true, isGroup: false, username: t("labels.you"), avatar: null }));
+    (groupPhotos as any[]).forEach((p) => push(p.url, { owner: "", mine: p.userId === user?.id, isGroup: true, username: p.userId === user?.id ? t("labels.you") : p.username, avatar: p.avatar ?? null }));
     return Array.from(map.values());
   })();
 
