@@ -274,7 +274,8 @@ export default function PublicProfile() {
               <p className="text-sm text-muted-foreground text-center py-12">{t("public.loading")}</p>
             ) : postcards.length === 0 ? (
               <div className="py-16 text-center">
-                <div className="text-4xl mb-3">🗺️</div>
+                {/* Ikona trasy (peachy) zamiast emoji - zakaz emoji w UI. */}
+                <span aria-hidden className="mx-auto mb-3 h-14 w-14" style={{ display: "block", backgroundColor: "#ef9d78", WebkitMaskImage: "url(/Ikona_Trasy.svg)", maskImage: "url(/Ikona_Trasy.svg)", WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat", WebkitMaskSize: "contain", maskSize: "contain", WebkitMaskPosition: "center", maskPosition: "center" }} />
                 <p className="text-sm font-bold">{t("public.no_routes_title")}</p>
                 <p className="text-xs text-muted-foreground mt-1 max-w-[260px] mx-auto leading-relaxed">
                   {t("public.no_routes_desc")}

@@ -49,6 +49,28 @@ export function pickPlaceCover(map: Map<string, string[]> | undefined | null, ke
   return null;
 }
 
+// #3: dedup galerii po TRESCI. Hash (sha256) zdjecia pozwala scalic ten sam plik wgrany dwoma
+// kanalami (review_photos vs group_trip_photos = rozne URL, identyczna zawartosc).
+export async function sha256OfFile(file: Blob): Promise<string> {
+  const buf = await file.arrayBuffer();
+  const hash = await crypto.subtle.digest("SHA-256", buf);
+  return Array.from(new Uint8Array(hash)).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+export async function upsertPhotoHash(url: string, sha256: string): Promise<void> {
+  try { await (supabase as any).from("photo_hashes").upsert({ url, sha256 }, { onConflict: "url" }); }
+  catch (e: any) { console.warn("[placePhotoSocial] upsertPhotoHash:", e?.message ?? e); }
+}
+export async function fetchPhotoHashes(urls: string[]): Promise<Map<string, string>> {
+  const m = new Map<string, string>();
+  const uniq = Array.from(new Set(urls.filter(Boolean)));
+  if (!uniq.length) return m;
+  try {
+    const { data } = await (supabase as any).from("photo_hashes").select("url, sha256").in("url", uniq);
+    for (const r of data ?? []) m.set(r.url, r.sha256);
+  } catch (e: any) { console.warn("[placePhotoSocial] fetchPhotoHashes:", e?.message ?? e); }
+  return m;
+}
+
 export interface PlacePhotoRow {
   id: string;
   photo_url: string;

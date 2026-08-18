@@ -5,7 +5,7 @@ import { ROUTE_TAGS, ROUTE_TAGS_VISIBLE, placeTagsForCategory } from "@/lib/rout
 import { haptics } from "@/hooks/useHaptics";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { placeKeyOf, fetchPlacePhotosForKeys, pickPlaceCover } from "@/lib/placePhotoSocial";
+import { placeKeyOf, fetchPlacePhotosForKeys, pickPlaceCover, fetchPhotoHashes, sha256OfFile, upsertPhotoHash } from "@/lib/placePhotoSocial";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Camera, X, Globe, Lock, Pencil, Check, Image as ImageIcon, Map as MapIcon, MapPin, ChevronUp, ChevronDown, ChevronRight, ChevronLeft, Trash2, Plus, Share, Share2, List, GalleryHorizontalEnd, Info, MoreVertical, Navigation, Maximize2, Users, Calendar as CalendarIcon, Loader2, GripVertical, Building2 } from "lucide-react";
@@ -689,7 +689,10 @@ const ReviewSummary = () => {
           .from("route-images")
           .upload(path, compressed, { contentType: "image/jpeg", upsert: false });
         if (error) { failed++; console.error("[ReviewSummary] photo upload failed:", error.message); continue; }
-        newUrls.push(`${SUPABASE_URL}/storage/v1/object/public/route-images/${path}`);
+        const uploadedUrl = `${SUPABASE_URL}/storage/v1/object/public/route-images/${path}`;
+        newUrls.push(uploadedUrl);
+        // #3: hash tresci -> dedup galerii po tresci (rozny URL, ta sama zawartosc = jeden kafelek).
+        void sha256OfFile(compressed).then((h) => upsertPhotoHash(uploadedUrl, h)).catch(() => {});
       } catch (err: any) {
         failed++;
         console.error("[ReviewSummary] photo processing failed:", err?.message ?? err);
@@ -769,7 +772,10 @@ const ReviewSummary = () => {
         const path = `${user.id}/${routeId}/pin_${Date.now()}_${Math.floor(Math.random() * 10000)}.jpg`;
         const { error } = await supabase.storage.from("route-images").upload(path, compressed, { contentType: "image/jpeg", upsert: false });
         if (error) { failed++; console.error("[ReviewSummary] pin photo upload failed:", error.message); continue; }
-        urls.push(`${SUPABASE_URL}/storage/v1/object/public/route-images/${path}`);
+        const uploadedUrl = `${SUPABASE_URL}/storage/v1/object/public/route-images/${path}`;
+        urls.push(uploadedUrl);
+        // #3: hash tresci -> dedup galerii (ten sam plik wgrany dwoma kanalami = jeden kafelek).
+        void sha256OfFile(compressed).then((h) => upsertPhotoHash(uploadedUrl, h)).catch(() => {});
       } catch (err: any) { failed++; console.error("[ReviewSummary] pin photo processing failed:", err?.message ?? err); }
     }
     if (failed > 0) notify.error(urls.length === 0 ? t("toast.photo_upload_error") : t("toast.photo_upload_partial"));
@@ -863,6 +869,20 @@ const ReviewSummary = () => {
     }));
     return out;
   }, [photos, sortedDays, routeId]);
+
+  // #3: hashe zdjec galerii (do dedupu po TRESCI). Liczymy klucze PRZED early-returnem (hook).
+  const galleryUrls = useMemo(
+    () => Array.from(new Set([
+      ...myPhotos.map((p) => resolveStored(p.url) ?? p.url),
+      ...(groupPhotos as any[]).map((p) => resolveStored(p.url) ?? p.url),
+    ].filter(Boolean))),
+    [myPhotos, groupPhotos],
+  );
+  const { data: photoHashMap } = useQuery({
+    queryKey: ["photo-hashes", galleryUrls.join("|")],
+    enabled: galleryUrls.length > 0,
+    queryFn: () => fetchPhotoHashes(galleryUrls),
+  });
 
   // Opcje okladki wyjazdu: NAJPIERW Twoje zdjecia z galerii (z etykieta miejsca gdy przypisane),
   // potem zdjecia miejsc trasy (bez duplikatow). Uzywane w arkuszu wyboru okladki.
@@ -1450,7 +1470,28 @@ const ReviewSummary = () => {
     // (usuwanie przez removePhoto z review_photos). Potem wspolne grupowe.
     myPhotos.forEach((p) => push(p.url, { owner: p.owner, mine: true, isGroup: false, username: t("labels.you"), avatar: null }));
     (groupPhotos as any[]).forEach((p) => push(p.url, { owner: "", mine: p.userId === user?.id, isGroup: true, username: p.userId === user?.id ? t("labels.you") : p.username, avatar: p.avatar ?? null }));
-    return Array.from(map.values());
+    const byUrl = Array.from(map.values());
+    // #3: drugi dedup - po TRESCI (sha256). Ten sam plik wgrany dwoma kanalami (rozny URL, ta sama
+    // zawartosc) -> jeden kafelek. Zdjecia BEZ hasha (jeszcze nie policzony) zostaja unikalne -
+    // NIGDY nie ukrywamy zdjecia, tylko scalamy pewne duplikaty.
+    if (!photoHashMap || photoHashMap.size === 0) return byUrl;
+    const byHash = new Map<string, typeof byUrl[number]>();
+    const result: typeof byUrl = [];
+    for (const item of byUrl) {
+      const h = photoHashMap.get(item.url);
+      if (!h) { result.push(item); continue; }
+      const ex = byHash.get(h);
+      if (ex) {
+        ex.mine = ex.mine || item.mine;
+        ex.placeLabel = ex.placeLabel ?? item.placeLabel;
+        if (!ex.mine) ex.username = ex.username || item.username;
+        ex.avatar = ex.avatar ?? item.avatar;
+        continue;
+      }
+      byHash.set(h, item);
+      result.push(item);
+    }
+    return result;
   })();
 
   // Usuwanie wspolnego zdjecia grupowego (wlasne - RLS gtp_delete_own).

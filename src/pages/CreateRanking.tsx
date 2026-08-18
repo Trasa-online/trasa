@@ -20,6 +20,7 @@ import { isRouteCollection } from "@/lib/collectionThemes";
 import { MAIN_CATEGORIES, getDbCategoriesFor, mainCategoryLabel } from "@/lib/categories";
 import { CategoryIcon } from "@/components/CategoryIcon";
 import { categoryFromGoogleTypes, inferCategoryFromName } from "@/lib/placeCategoryIcon";
+import { placeTagsForCategory } from "@/lib/routeTags";
 import { pinCoverKeys, fetchPlacePhotosForKeys, pickPlaceCover } from "@/lib/placePhotoSocial";
 
 // Domyslne tlo listy = gradient zolto-zloty (#FDF184 -> #FDCD84) jako data-URI SVG (renderuje sie
@@ -43,6 +44,7 @@ interface RankingItem {
   google_place_id: string | null;
   photo_url: string | null;
   short_desc: string;
+  tags?: string[];
 }
 
 
@@ -333,6 +335,7 @@ const CreateRanking = () => {
           key: `e${idx}`, place_id: i.place_id ?? null, place_name: i.place_name, category: i.category ?? inferCategoryFromName(i.place_name),
           address: i.address ?? null, latitude: i.latitude ?? null, longitude: i.longitude ?? null,
           rating: i.rating ?? null, google_place_id: i.google_place_id ?? null, photo_url: i.photo_url ?? null, short_desc: i.short_desc ?? "",
+          tags: Array.isArray(i.tags) ? i.tags : [],
         })));
       })();
       return;
@@ -390,6 +393,12 @@ const CreateRanking = () => {
   };
   const removeItem = (key: string) => setItems((prev) => prev.filter((x) => x.key !== key));
   const setNote = (key: string, v: string) => setItems((prev) => prev.map((x) => x.key === key ? { ...x, short_desc: v } : x));
+  // Tagi per miejsce (alternatywa dla notki, jak pins.tags przy trasach). Klik = toggle w it.tags.
+  const toggleItemTag = (key: string, tag: string) => setItems((prev) => prev.map((x) => {
+    if (x.key !== key) return x;
+    const cur = x.tags ?? [];
+    return { ...x, tags: cur.includes(tag) ? cur.filter((tg) => tg !== tag) : [...cur, tag] };
+  }));
   // Kolejnosc zmienia drag & drop (Reorder) w widoku listy; order_index z pozycji w tablicy.
 
   // Otworz wizytowke miejsca. Miejsca z bazy (place_id) dociagaja galerie/recenzje
@@ -600,6 +609,7 @@ const CreateRanking = () => {
         collection_id: collectionId, order_index: idx, place_id: it.place_id, place_name: it.place_name,
         category: it.category, address: it.address, latitude: it.latitude, longitude: it.longitude,
         rating: it.rating, google_place_id: it.google_place_id, photo_url: it.photo_url, short_desc: it.short_desc.trim() || null,
+        tags: (it.tags ?? []).slice(0, 8),
       }));
       const { error: itemsErr } = await (supabase as any).from("discovery_items").insert(rows);
       if (itemsErr) throw new Error(itemsErr.message);
@@ -1038,6 +1048,19 @@ const CreateRanking = () => {
                   <input value={it.short_desc} onChange={(e) => setNote(it.key, e.target.value)} maxLength={120}
                     placeholder={t("notes.place_placeholder")}
                     className="mt-2 w-full rounded-lg bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-500/40 placeholder:text-muted-foreground/50" />
+                  {/* Tagi miejsca (alternatywa dla notki) - pula zalezna od kategorii, wybrany = zolty fill */}
+                  <p className="text-[11px] text-muted-foreground mt-2 mb-1.5">{`Tagi miejsca`}</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {placeTagsForCategory(it.category).map((tg) => {
+                      const on = (it.tags ?? []).includes(tg);
+                      return (
+                        <button key={tg} type="button" onClick={() => toggleItemTag(it.key, tg)}
+                          className={`px-3 py-1.5 rounded-full text-xs font-semibold active:scale-95 transition-transform border ${on ? "bg-[#FDF184] border-[#FDCD84] text-foreground" : "bg-background border-transparent text-muted-foreground"}`}>
+                          {tg}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               ))}
             </div>

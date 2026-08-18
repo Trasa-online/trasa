@@ -56,7 +56,7 @@ export default function SharedList() {
     queryFn: async () => {
       const { data } = await (supabase as any)
         .from("discovery_items")
-        .select("id, place_id, place_name, category, address, latitude, longitude, rating, google_place_id, photo_url, short_desc, order_index")
+        .select("id, place_id, place_name, category, address, latitude, longitude, rating, google_place_id, photo_url, short_desc, tags, order_index")
         .eq("collection_id", id as string)
         .order("order_index", { ascending: true });
       return (data ?? []) as any[];
