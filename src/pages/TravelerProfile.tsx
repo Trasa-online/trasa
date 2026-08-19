@@ -270,7 +270,7 @@ const TravelerProfile = () => {
   const displayName = profile?.username || profile?.first_name || "";
 
   return (
-    <div className="min-h-screen bg-background pb-[calc(10rem+env(safe-area-inset-bottom,0px))]">
+    <div className="flex flex-col flex-1 min-h-0 bg-background">
 
       <TabHeader
         title={t("profile.your_profile")}
@@ -289,7 +289,8 @@ const TravelerProfile = () => {
         }
       />
 
-      <div className="px-4 space-y-5 max-w-lg mx-auto pt-6">
+      <div className="flex-1 min-h-0 overflow-y-auto">
+      <div className="px-4 space-y-5 max-w-lg mx-auto pt-6 pb-[calc(7rem+env(safe-area-inset-bottom,0px))]">
 
         {/* Avatar + nazwa + bio (Figma: nazwa | separator | bio) */}
         <div className="flex items-stretch gap-3">
@@ -421,6 +422,7 @@ const TravelerProfile = () => {
             })
           )}
         </div>
+      </div>
       </div>
 
       {/* Obserwujacy / Obserwowani - lista */}
