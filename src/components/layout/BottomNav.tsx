@@ -276,8 +276,8 @@ const BottomNav = () => {
             Pill HUG (nie full-width) i wyśrodkowany - węższy pasek. Fat-thumb: każdy target w-16 (64px)
             × h-14 (56px), pill px-1.5. */}
         {/* Ikony + nazwy zakladek pod spodem (orange active). */}
-        <div className="pointer-events-auto bg-white/70 backdrop-blur-2xl rounded-[26px] border border-white/50 shadow-[0_8px_28px_-8px_rgba(0,0,0,0.12)] px-1.5">
-          <div className="flex items-center h-14">
+        <div className="pointer-events-auto bg-white/70 backdrop-blur-2xl rounded-[26px] border border-white/50 shadow-[0_8px_28px_-8px_rgba(0,0,0,0.12)] px-4">
+          <div className="flex items-center gap-3 h-14">
 
           {/* Eksploruj - landing (skrajnie z lewej). Tylko w native iOS/Android.
               Web/PWA ukrywa (na web B2C jest za waitlista). */}
