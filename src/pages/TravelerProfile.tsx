@@ -270,7 +270,7 @@ const TravelerProfile = () => {
   const displayName = profile?.username || profile?.first_name || "";
 
   return (
-    <div className="min-h-screen bg-background pb-[calc(7rem+env(safe-area-inset-bottom,0px))]">
+    <div className="min-h-screen bg-background pb-[calc(10rem+env(safe-area-inset-bottom,0px))]">
 
       <TabHeader
         title={t("profile.your_profile")}
@@ -319,7 +319,7 @@ const TravelerProfile = () => {
           </div>
           {profile?.bio ? (
             <>
-              <div className="w-px bg-border/60 self-stretch my-1.5" />
+              <div className="w-px h-9 bg-border/60 self-center" />
               <p className="flex-1 min-w-0 self-center text-[13px] text-muted-foreground leading-snug line-clamp-3">{profile.bio}</p>
             </>
           ) : (
