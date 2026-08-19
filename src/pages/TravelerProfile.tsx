@@ -5,7 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import { Settings, Camera, UserCircle2, ArrowRight, Bell, Share2, Search, LayoutGrid, ListChecks, MapPinned } from "lucide-react";
+import { Settings, Camera, UserCircle2, ArrowRight, Bell, Share2, Search, LayoutGrid, ListChecks, MapPinned, Bookmark } from "lucide-react";
 import TabHeader from "@/components/layout/TabHeader";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
@@ -22,6 +22,8 @@ import InviteFriendsBanner from "@/components/social/InviteFriendsBanner";
 import { Camera as CapCamera, CameraResultType, CameraSource } from "@capacitor/camera";
 import { ProfileFeedCard } from "@/components/profile/ProfileFeedCard";
 import { SpontawayTabIcon } from "@/components/profile/SpontawayTabIcon";
+import { SavedRoutes, SavedCollections } from "@/components/home/DiscoveryFeed";
+import { ALL_CITIES } from "@/components/home/CitySelect";
 import { shortRelativeTime } from "@/lib/relativeTime";
 import { countryForCity } from "@/lib/tripCountries";
 import { parseISO, format } from "date-fns";
@@ -98,7 +100,8 @@ const TravelerProfile = () => {
   const queryClient = useQueryClient();
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [followSheet, setFollowSheet] = useState<"followers" | "following" | null>(null);
-  const [tab, setTab] = useState<"listy" | "wyjazdy">("listy");
+  const [tab, setTab] = useState<"listy" | "wyjazdy" | "zapisane">("listy");
+  const [savedTab, setSavedTab] = useState<"routes" | "lists">("routes");
   // Potwierdzenie usuniecia (lista albo wyjazd) - nieodwracalne, walidacja "czy na pewno?".
   const [confirmDelete, setConfirmDelete] = useState<{ kind: "list" | "trip"; id: string; routeIds?: string[]; title: string } | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -194,9 +197,9 @@ const TravelerProfile = () => {
         .from("discovery_collections")
         .select("id, title, city, list_status, views_count, saves_count, likes_count, updated_at")
         .eq("user_id", user!.id).eq("kind", "ranking")
-        // Zakładka Listy = publiczne POLECAJKI (visited). Prywatne "Do zobaczenia" (to_visit)
-        // żyją w Zapisane→Miejsca, nie na profilu.
-        .eq("list_status", "visited")
+        // Zakładka Listy (WŁASNY profil) = WSZYSTKIE moje listy: publiczne (Odwiedzone) +
+        // prywatne (to_visit -> "Prywatne", kłódka). Prywatne widoczne TYLKO tu; na cudzym
+        // profilu (PublicProfile) filtr list_status='visited' je ukrywa.
         .order("updated_at", { ascending: false });
       const rows = (cols ?? []) as any[];
       if (!rows.length) return [];
@@ -363,15 +366,18 @@ const TravelerProfile = () => {
           </button>
         </div>
 
-        {/* Zakladki: Listy | Wyjazdy (ikony, underline aktywnej) */}
+        {/* Zakladki: Listy | Wyjazdy | Zapisane (ikony, underline aktywnej) */}
         <div className="flex border-b border-border/40 -mx-1">
-          {(["listy", "wyjazdy"] as const).map((tk) => {
+          {(["listy", "wyjazdy", "zapisane"] as const).map((tk) => {
             const active = tab === tk;
+            const aria = tk === "listy" ? t("sections.lists", { defaultValue: "Listy" }) : tk === "wyjazdy" ? t("sections.trips", { defaultValue: "Wyjazdy" }) : t("sections.saved", { defaultValue: "Zapisane" });
             return (
-              <button key={tk} onClick={() => setTab(tk)} className="relative flex-1 flex items-center justify-center py-2.5" aria-label={tk === "listy" ? t("sections.lists", { defaultValue: "Listy" }) : t("sections.trips", { defaultValue: "Wyjazdy" })}>
+              <button key={tk} onClick={() => setTab(tk)} className="relative flex-1 flex items-center justify-center py-2.5" aria-label={aria}>
                 {tk === "listy"
                   ? <LayoutGrid className="h-5 w-5" style={{ color: active ? "#0E0E0E" : "#CFCFCF" }} />
-                  : <SpontawayTabIcon active={active} />}
+                  : tk === "wyjazdy"
+                  ? <SpontawayTabIcon active={active} />
+                  : <Bookmark className="h-5 w-5" style={{ color: active ? "#0E0E0E" : "#CFCFCF" }} />}
                 {active && <span className="absolute -bottom-px left-0 right-0 h-0.5 bg-foreground rounded-full" />}
               </button>
             );
@@ -384,9 +390,9 @@ const TravelerProfile = () => {
             listCards.length === 0 ? (
               <FeedEmpty
                 icon={<ListChecks className="h-6 w-6" />}
-                title={t("feed.lists_empty_title", "Nie masz jeszcze polecajek")}
-                desc={t("feed.lists_empty_desc", "Twórz listy miejsc, które polecasz innym.")}
-                ctaLabel={t("feed.lists_empty_cta", "Nowa lista polecajek")}
+                title={t("feed.lists_empty_title", "Nie masz jeszcze list")}
+                desc={t("feed.lists_empty_desc", "Twórz listy miejsc: publiczne polecajki albo prywatne do zobaczenia.")}
+                ctaLabel={t("feed.lists_empty_cta", "Nowa lista miejsc")}
                 onCta={() => navigate("/zestawienie/nowe")}
               />
             ) : (
@@ -395,7 +401,8 @@ const TravelerProfile = () => {
                   key={l.id}
                   avatarUrl={profile?.avatar_url}
                   fallback={displayName}
-                  eyebrow={t("feed.recommend", "Odwiedzone")}
+                  eyebrow=""
+                  isPrivate={l.list_status === "to_visit"}
                   timestamp={shortRelativeTime(l.updated_at)}
                   title={l.title || t("feed.list_fallback", "Lista miejsc")}
                   tiles={l.tiles}
@@ -406,34 +413,53 @@ const TravelerProfile = () => {
                 />
               ))
             )
-          ) : tripCards.length === 0 ? (
-            <FeedEmpty
-              icon={<MapPinned className="h-6 w-6" />}
-              title={t("feed.trips_empty_title", "Nie masz jeszcze wyjazdów")}
-              desc={t("feed.trips_empty_desc", "Zaplanuj trasę i podziel się nią ze znajomymi.")}
-              ctaLabel={t("feed.trips_empty_cta", "Zaplanuj wyjazd")}
-              onCta={() => navigate("/utworz")}
-            />
+          ) : tab === "wyjazdy" ? (
+            tripCards.length === 0 ? (
+              <FeedEmpty
+                icon={<MapPinned className="h-6 w-6" />}
+                title={t("feed.trips_empty_title", "Nie masz jeszcze wyjazdów")}
+                desc={t("feed.trips_empty_desc", "Zaplanuj trasę i podziel się nią ze znajomymi.")}
+                ctaLabel={t("feed.trips_empty_cta", "Zaplanuj wyjazd")}
+                onCta={() => navigate("/utworz")}
+              />
+            ) : (
+              tripCards.map((tr: any) => {
+                const dateLabel = tr.start_date ? format(parseISO(tr.start_date), "d LLLL yyyy", { locale: dateLocale() }) : "";
+                const eyebrow = [countryForCity(tr.city), tr.city, dateLabel].filter(Boolean).join(" · ");
+                return (
+                  <ProfileFeedCard
+                    key={tr.id}
+                    avatarUrl={profile?.avatar_url}
+                    fallback={displayName}
+                    eyebrow={eyebrow}
+                    timestamp={shortRelativeTime(tr.created_at)}
+                    title={tr.title || (tr.city ? t("feed.trip_fallback", { city: tr.city, defaultValue: `Wyjazd do ${tr.city}` }) : t("feed.trip_fallback_generic", "Wyjazd"))}
+                    tiles={tr.tiles}
+                    counts={{ saves: tr.saves, likes: tr.likes, views: tr.views }}
+                    onOpen={() => navigate(`/route/${tr.id}`)}
+                    onEdit={() => navigate(`/review-summary?route=${tr.id}&edit=1`)}
+                    onDelete={() => setConfirmDelete({ kind: "trip", id: tr.id, routeIds: tr.routeIds, title: tr.title || tr.city || t("feed.trip_fallback_generic", "Wyjazd") })}
+                  />
+                );
+              })
+            )
           ) : (
-            tripCards.map((tr: any) => {
-              const dateLabel = tr.start_date ? format(parseISO(tr.start_date), "d LLLL yyyy", { locale: dateLocale() }) : "";
-              const eyebrow = [countryForCity(tr.city), tr.city, dateLabel].filter(Boolean).join(" · ");
-              return (
-                <ProfileFeedCard
-                  key={tr.id}
-                  avatarUrl={profile?.avatar_url}
-                  fallback={displayName}
-                  eyebrow={eyebrow}
-                  timestamp={shortRelativeTime(tr.created_at)}
-                  title={tr.title || (tr.city ? t("feed.trip_fallback", { city: tr.city, defaultValue: `Wyjazd do ${tr.city}` }) : t("feed.trip_fallback_generic", "Wyjazd"))}
-                  tiles={tr.tiles}
-                  counts={{ saves: tr.saves, likes: tr.likes, views: tr.views }}
-                  onOpen={() => navigate(`/route/${tr.id}`)}
-                  onEdit={() => navigate(`/review-summary?route=${tr.id}&edit=1`)}
-                  onDelete={() => setConfirmDelete({ kind: "trip", id: tr.id, routeIds: tr.routeIds, title: tr.title || tr.city || t("feed.trip_fallback_generic", "Wyjazd") })}
-                />
-              );
-            })
+            /* Zakładka ZAPISANE (IA 2026-08-20): zapisane od innych - trasy + listy.
+               Zastąpiła dawną zakładkę nav "Zapisane" (/polubione). */
+            <div className="space-y-3">
+              <div className="flex p-1 bg-secondary rounded-full">
+                {([{ id: "routes", label: "Trasy" }, { id: "lists", label: "Listy" }] as { id: "routes" | "lists"; label: string }[]).map((s) => (
+                  <button
+                    key={s.id}
+                    onClick={() => setSavedTab(s.id)}
+                    className={`flex-1 h-9 rounded-full text-sm font-bold transition-colors active:scale-[0.98] ${savedTab === s.id ? "bg-background text-foreground shadow-sm" : "text-secondary-foreground/70"}`}
+                  >
+                    {s.label}
+                  </button>
+                ))}
+              </div>
+              {savedTab === "routes" ? <SavedRoutes city={ALL_CITIES} /> : <SavedCollections />}
+            </div>
           )}
         </div>
       </div>

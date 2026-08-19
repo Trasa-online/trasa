@@ -272,11 +272,11 @@ const BottomNav = () => {
           inner = bialy pill z cieniem (pointer-events-auto). */}
       {!navHidden && (
       <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-lg z-50 px-4 pb-[max(16px,env(safe-area-inset-bottom,0px))] pointer-events-none">
-        {/* Web: 3 kolumny (Glowna, Plus, Profil - Eksploruj i Dziennik ukryte).
-            Native: 5 kolumn (wszystko). */}
+        {/* IA 2026-08-20: 3 kolumny wszędzie. Native: Eksploruj · + · Profil (Wyjazdy i Zapisane
+            przeniesione do zakładek profilu). Web: Wyjazdy(/home) · + · Profil. */}
         {/* Ikony + nazwy zakladek pod spodem (orange active). */}
         <div className="pointer-events-auto bg-white/70 backdrop-blur-2xl rounded-[26px] border border-white/50 shadow-[0_8px_28px_-8px_rgba(0,0,0,0.12)]">
-          <div className={`grid ${isNative ? "grid-cols-5" : "grid-cols-3"} h-14`}>
+          <div className="grid grid-cols-3 h-14">
 
           {/* Eksploruj - landing (skrajnie z lewej). Tylko w native iOS/Android.
               Web/PWA ukrywa (na web B2C jest za waitlista). */}
@@ -296,27 +296,9 @@ const BottomNav = () => {
             </NavLink>
           )}
 
-          {/* Slot 2: Tryb uproszczony -> Wyjazdy (dawny Dziennik). Stary flow -> Twoje trasy. */}
-          {PLANNING_DISABLED ? (
-            <NavLink
-              to="/dziennik"
-              end={false}
-              className="flex flex-col items-center justify-center gap-1 text-muted-foreground transition-colors"
-              activeClassName="text-foreground"
-            >
-              {({ isActive }) => (
-                <>
-                  <div className="relative flex items-center justify-center">
-                    <NavIcon src="/Ikona_Trasy.svg" />
-                    {hasNewJournalEntries && !isActive && (
-                      <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-orange-600 ring-2 ring-background" />
-                    )}
-                  </div>
-                  <span className="text-[9px] font-semibold leading-tight mt-0.5">Wyjazdy</span>
-                </>
-              )}
-            </NavLink>
-          ) : (
+          {/* Slot 2: TYLKO web (stary flow) -> Wyjazdy (/home). Native: brak - Wyjazdy to teraz
+              zakładka profilu. */}
+          {!PLANNING_DISABLED && (
             <NavLink
               to="/home"
               end
@@ -340,10 +322,6 @@ const BottomNav = () => {
             onClick={() => {
               haptics.light();
               if (!PLANNING_DISABLED) { setShowMenu(!showMenu); return; }
-              // Kontekst "Moje listy" -> "+" prowadzi WPROST do tworzenia LISTY (bez drumu kraj+miasto -
-              // miasto opcjonalne, lista moze byc globalna). Inne ekrany = drum -> trasa.
-              const inLists = location.pathname === "/eksploruj" && (location.state as any)?.myCollections === true;
-              if (inLists) { navigate("/zestawienie/nowe"); return; }
               navigate("/utworz");
             }}
             className="flex items-center justify-center"
@@ -359,43 +337,7 @@ const BottomNav = () => {
             </span>
           </button>
 
-          {/* Slot 4: Tryb uproszczony -> Zapisane (polubione miejsca). Stary flow -> Dziennik.
-              Dziennik/Zapisane tylko w native - na web/PWA ukryte. */}
-          {PLANNING_DISABLED ? (
-            <NavLink
-              to="/polubione"
-              data-ob="nav-zapisane"
-              end={false}
-              className="flex flex-col items-center justify-center gap-1 text-muted-foreground transition-colors"
-              activeClassName="text-foreground"
-            >
-              {({ isActive }) => (
-                <>
-                  <NavIcon src="/Ikona_Zapisane.svg" />
-                  <span className="text-[9px] font-semibold leading-tight mt-0.5">Zapisane</span>
-                </>
-              )}
-            </NavLink>
-          ) : isNative && (
-            <NavLink
-              to="/dziennik"
-              end={false}
-              className="flex flex-col items-center justify-center gap-1 text-muted-foreground transition-colors"
-              activeClassName="text-foreground"
-            >
-              {({ isActive }) => (
-                <>
-                  <div className="relative">
-                    <BookOpen className="h-6 w-6 stroke-2" />
-                    {hasNewJournalEntries && !isActive && (
-                      <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-orange-600 ring-2 ring-background" />
-                    )}
-                  </div>
-                  <span className="text-[9px] font-semibold leading-tight mt-0.5">Dziennik</span>
-                </>
-              )}
-            </NavLink>
-          )}
+          {/* Slot 4 (Zapisane/Dziennik) USUNIĘTY - Zapisane to teraz zakładka profilu (IA 2026-08-20). */}
 
           {/* Profil */}
           <NavLink

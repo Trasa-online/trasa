@@ -1,4 +1,4 @@
-import { Bookmark, Heart, Eye, Pencil, Trash2 } from "lucide-react";
+import { Bookmark, Heart, Pencil, Trash2, Lock } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { avatarSrc } from "@/lib/avatar";
 import { PlaceTile } from "@/components/profile/PlaceTile";
@@ -9,11 +9,13 @@ export interface FeedCounts {
   views: number;
 }
 
-// Karta feedu profilu (redesign 07): avatar + eyebrow + timestamp + tytul, siatka 3-kol
-// kafelkow miejsc, stopka z metrykami (statystyki wg decyzji: zapisania + polubienia +
-// wyswietlenia). Uzywana dla LIST i WYJAZDOW - rozni je tylko eyebrow/tytul/dane.
-// onEdit/onDelete: opcjonalne akcje wlasciciela (olowek + kosz w stopce). Podawane TYLKO na
-// wlasnym profilu; na cudzym (PublicProfile) pomijane -> ikony sie nie renderuja.
+// Karta feedu profilu (redesign 07/08, IA 2026-08-20): avatar + (opcjonalny eyebrow) + timestamp
+// + tytul, siatka 3-kol kafelkow miejsc, stopka.
+// - eyebrow: WYJAZDY pokazuja (kraj·miasto·data); LISTY nie (eyebrow="" -> ukryty, tytul u gory).
+// - isPrivate: prywatna lista "do zobaczenia" -> stopka = kłódka + "Prywatne" (bez metryk, bo
+//   prywatna = nikt jej nie widzi); publiczna/wyjazd -> metryki (zapisania + polubienia).
+// - onEdit/onDelete: akcje wlasciciela (olowek + kosz). TYLKO na wlasnym profilu; na cudzym
+//   (PublicProfile) i w zakładce Zapisane (cudza tresc) pomijane.
 export function ProfileFeedCard({
   avatarUrl,
   fallback,
@@ -25,10 +27,11 @@ export function ProfileFeedCard({
   onOpen,
   onEdit,
   onDelete,
+  isPrivate,
 }: {
   avatarUrl?: string | null;
   fallback?: string;
-  eyebrow: string;
+  eyebrow?: string;
   timestamp?: string;
   title: string;
   tiles: any[];
@@ -36,6 +39,7 @@ export function ProfileFeedCard({
   onOpen: () => void;
   onEdit?: () => void;
   onDelete?: () => void;
+  isPrivate?: boolean;
 }) {
   const shown = (tiles ?? []).slice(0, 6);
   return (
@@ -52,13 +56,22 @@ export function ProfileFeedCard({
             </AvatarFallback>
           </Avatar>
           <div className="min-w-0 flex-1 pt-0.5">
-            <div className="flex items-center gap-2">
-              <p className="flex-1 min-w-0 text-[11px] font-bold uppercase tracking-wide text-muted-foreground truncate">
-                {eyebrow}
-              </p>
-              {timestamp && <span className="shrink-0 text-[11px] text-muted-foreground">{timestamp}</span>}
-            </div>
-            <p className="text-lg font-bold leading-tight line-clamp-1 text-foreground">{title}</p>
+            {eyebrow ? (
+              <>
+                <div className="flex items-center gap-2">
+                  <p className="flex-1 min-w-0 text-[11px] font-bold uppercase tracking-wide text-muted-foreground truncate">
+                    {eyebrow}
+                  </p>
+                  {timestamp && <span className="shrink-0 text-[11px] text-muted-foreground">{timestamp}</span>}
+                </div>
+                <p className="text-lg font-bold leading-tight line-clamp-1 text-foreground">{title}</p>
+              </>
+            ) : (
+              <div className="flex items-start gap-2">
+                <p className="flex-1 min-w-0 text-lg font-bold leading-tight line-clamp-1 text-foreground">{title}</p>
+                {timestamp && <span className="shrink-0 pt-1 text-[11px] text-muted-foreground">{timestamp}</span>}
+              </div>
+            )}
           </div>
         </div>
 
@@ -72,17 +85,22 @@ export function ProfileFeedCard({
         )}
       </button>
 
-      {/* Stopka: zapisania / polubienia / wyswietlenia + (wlasciciel) edycja / usuniecie */}
+      {/* Stopka: prywatna -> kłódka; publiczna/wyjazd -> metryki. + (wlasciciel) edycja/usuniecie */}
       <div className="flex items-center gap-5 pt-3 mt-3 border-t border-border/40 text-muted-foreground">
-        <span className="flex items-center gap-1.5 text-sm tabular-nums">
-          <Bookmark className="h-[18px] w-[18px]" /> {counts.saves}
-        </span>
-        <span className="flex items-center gap-1.5 text-sm tabular-nums">
-          <Heart className="h-[18px] w-[18px]" /> {counts.likes}
-        </span>
-        <span className="flex items-center gap-1.5 text-sm tabular-nums">
-          <Eye className="h-[18px] w-[18px]" /> {counts.views}
-        </span>
+        {isPrivate ? (
+          <span className="flex items-center gap-1.5 text-sm font-medium">
+            <Lock className="h-[16px] w-[16px]" /> Prywatne
+          </span>
+        ) : (
+          <>
+            <span className="flex items-center gap-1.5 text-sm tabular-nums">
+              <Bookmark className="h-[18px] w-[18px]" /> {counts.saves}
+            </span>
+            <span className="flex items-center gap-1.5 text-sm tabular-nums">
+              <Heart className="h-[18px] w-[18px]" /> {counts.likes}
+            </span>
+          </>
+        )}
         {(onEdit || onDelete) && (
           <>
             <div className="flex-1" />

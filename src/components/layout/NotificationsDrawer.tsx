@@ -248,10 +248,10 @@ export default function NotificationsDrawer({ open, onClose, userId }: Props) {
                       )}
                       {(n.type === "collection_approved" || n.type === "collection_rejected") && (
                         <button
-                          onClick={() => { onClose(); navigate("/eksploruj", { state: { myCollections: true } }); }}
+                          onClick={() => { onClose(); navigate("/moj-profil"); }}
                           className="mt-2 px-3 py-1.5 rounded-full bg-primary text-white text-xs font-semibold active:scale-95 transition-transform"
                         >
-                          {n.type === "collection_rejected" ? "Zobacz szczegóły →" : "Zobacz zestawienia →"}
+                          {n.type === "collection_rejected" ? "Zobacz szczegóły →" : "Zobacz listy →"}
                         </button>
                       )}
                     </div>

@@ -580,8 +580,11 @@ const CreateRanking = () => {
       // Wszystkie nowe zestawienia czekaja na akceptacje admina (App Store Guideline
       // 1.2 UGC + decyzja: moderacja na starcie dla wszystkich, nie tylko anonimow).
       const moderationStatus = "pending";
-      // Zestawienia zawsze publiczne; tozsamosc wg wyboru (profil vs anonim).
-      const isPublic = true;
+      // Widoczność z list_status: NOWA lista (default "visited") = publiczna polecajka.
+      // EDYCJA istniejącej -> zachowaj stan (prywatna to_visit zostaje prywatna, nie flip na public).
+      // null (przed doładowaniem na edycji) -> "visited" (bezpiecznie, list_status jest NOT NULL).
+      const listStatusToSave = listStatus === "to_visit" ? "to_visit" : "visited";
+      const isPublic = listStatusToSave === "visited";
       const authorName = asAnon ? "Anonim" : author.name;
       const authorAvatar = asAnon ? null : author.avatar;
       const desc = description.trim() || null;
@@ -595,14 +598,14 @@ const CreateRanking = () => {
       // Miasto opcjonalne: "" (Wszedzie) -> null (lista globalna, karta pokaze tylko liczbe miejsc).
       const cityToSave = city.trim() || null;
       if (editId) {
-        await (supabase as any).from("discovery_collections").update({ title: collectionTitle, city: cityToSave, category, description: desc, is_public: isPublic, author_name: authorName, author_avatar: authorAvatar, cover_url: coverToSave, list_cover_url: listCoverToSave, tags: tagsToSave, list_status: "visited", updated_at: new Date().toISOString() }).eq("id", editId);
+        await (supabase as any).from("discovery_collections").update({ title: collectionTitle, city: cityToSave, category, description: desc, is_public: isPublic, author_name: authorName, author_avatar: authorAvatar, cover_url: coverToSave, list_cover_url: listCoverToSave, tags: tagsToSave, list_status: listStatusToSave, updated_at: new Date().toISOString() }).eq("id", editId);
         await (supabase as any).from("discovery_items").delete().eq("collection_id", editId);
       } else {
         const { data: col, error } = await (supabase as any).from("discovery_collections").insert({
           user_id: user.id, author_name: authorName, author_avatar: authorAvatar, title: collectionTitle,
           category, city: cityToSave, description: desc, kind: "ranking", is_public: isPublic,
           cover_url: coverToSave, list_cover_url: listCoverToSave, tags: tagsToSave,
-          list_status: "visited", moderation_status: moderationStatus,
+          list_status: listStatusToSave, moderation_status: moderationStatus,
         }).select("id").single();
         if (error || !col) throw new Error(error?.message ?? "insert failed");
         collectionId = col.id;
@@ -622,10 +625,9 @@ const CreateRanking = () => {
         }).catch((e) => console.warn("[CreateRanking] notify-admin-content failed:", e));
       }
       toast.success(editId ? t("toast.updated") : t("toast.sent"));
-      // Listy sa widoczne TYLKO w profilu (SHOW_ZESTAWIENIA=false w eksploracji), a nowa lista
-      // czeka na moderacje. Kieruj do "Moje listy" zamiast na pusty feed - inaczej user ma
-      // wrazenie, ze nic sie nie zapisalo.
-      navigate("/eksploruj", { state: { myCollections: true } });
+      // Listy widoczne w profilu (zakładka Listy). Kieruj na profil zamiast na pusty feed -
+      // inaczej user ma wrazenie, ze nic sie nie zapisalo. (Osobny widok "Twoje listy" usuniety, IA 2026-08-20.)
+      navigate("/moj-profil");
     } catch (e: any) {
       toast.error(t("toast.save_failed", { error: e?.message ?? t("error_fallback") }));
     } finally {

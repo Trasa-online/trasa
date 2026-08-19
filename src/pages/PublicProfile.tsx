@@ -227,7 +227,7 @@ export default function PublicProfile() {
                   key={l.id}
                   avatarUrl={profile.avatar_url}
                   fallback={displayName}
-                  eyebrow={t("feed.recommend", "Odwiedzone")}
+                  eyebrow=""
                   timestamp={shortRelativeTime(l.updated_at)}
                   title={l.title || t("feed.list_fallback", "Lista miejsc")}
                   tiles={l.tiles}
