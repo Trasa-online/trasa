@@ -271,12 +271,13 @@ const BottomNav = () => {
           Outer = transparentny kontener (pointer-events-none) z marginesem + safe-area;
           inner = bialy pill z cieniem (pointer-events-auto). */}
       {!navHidden && (
-      <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-lg z-50 px-4 pb-[max(16px,env(safe-area-inset-bottom,0px))] pointer-events-none">
-        {/* IA 2026-08-20: 3 kolumny wszędzie. Native: Eksploruj · + · Profil (Wyjazdy i Zapisane
-            przeniesione do zakładek profilu). Web: Wyjazdy(/home) · + · Profil. */}
+      <nav className="fixed bottom-0 left-0 right-0 z-50 flex justify-center px-4 pb-[max(16px,env(safe-area-inset-bottom,0px))] pointer-events-none">
+        {/* IA 2026-08-20: 3 pozycje. Native: Eksploruj · + · Profil. Web: Wyjazdy(/home) · + · Profil.
+            Pill HUG (nie full-width) i wyśrodkowany - węższy pasek. Fat-thumb: każdy target w-16 (64px)
+            × h-14 (56px), pill px-1.5. */}
         {/* Ikony + nazwy zakladek pod spodem (orange active). */}
-        <div className="pointer-events-auto bg-white/70 backdrop-blur-2xl rounded-[26px] border border-white/50 shadow-[0_8px_28px_-8px_rgba(0,0,0,0.12)]">
-          <div className="grid grid-cols-3 h-14">
+        <div className="pointer-events-auto bg-white/70 backdrop-blur-2xl rounded-[26px] border border-white/50 shadow-[0_8px_28px_-8px_rgba(0,0,0,0.12)] px-1.5">
+          <div className="flex items-center h-14">
 
           {/* Eksploruj - landing (skrajnie z lewej). Tylko w native iOS/Android.
               Web/PWA ukrywa (na web B2C jest za waitlista). */}
@@ -284,7 +285,7 @@ const BottomNav = () => {
             <NavLink
               to="/eksploruj"
               end={false}
-              className="flex flex-col items-center justify-center gap-1 text-muted-foreground transition-colors"
+              className="w-16 flex flex-col items-center justify-center gap-1 text-muted-foreground transition-colors"
               activeClassName="text-foreground"
             >
               {({ isActive }) => (
@@ -302,7 +303,7 @@ const BottomNav = () => {
             <NavLink
               to="/home"
               end
-              className="flex flex-col items-center justify-center gap-1 text-muted-foreground transition-colors"
+              className="w-16 flex flex-col items-center justify-center gap-1 text-muted-foreground transition-colors"
               activeClassName="text-foreground"
             >
               {({ isActive }) => (
@@ -324,7 +325,7 @@ const BottomNav = () => {
               if (!PLANNING_DISABLED) { setShowMenu(!showMenu); return; }
               navigate("/utworz");
             }}
-            className="flex items-center justify-center"
+            className="w-16 flex items-center justify-center"
             aria-label={t("fab_aria")}
           >
             <span className={`h-11 w-11 rounded-full flex items-center justify-center active:scale-95 transition-transform ${showMenu ? "bg-primary shadow-sm" : ""}`}>
