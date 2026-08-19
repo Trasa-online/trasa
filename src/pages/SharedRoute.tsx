@@ -8,7 +8,9 @@ import { notify } from "@/lib/notify";
 import { sendClientPush, getCurrentUserName } from "@/lib/clientPush";
 import { format } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
-import { MapPin, ArrowLeft, Sparkles, ChevronRight, ChevronLeft, Bookmark, List, GalleryHorizontalEnd, Calendar as CalendarIcon, Image as ImageIcon, Maximize2, X, Building2 } from "lucide-react";
+import { MapPin, ArrowLeft, Sparkles, ChevronRight, ChevronLeft, Bookmark, List, GalleryHorizontalEnd, Calendar as CalendarIcon, Image as ImageIcon, Maximize2, X, Building2, Pencil, Trash2 } from "lucide-react";
+import { toast } from "sonner";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { PlacePhoto } from "@/components/PlacePhoto";
 import { RoutePlaceRow } from "@/components/route/RoutePlaceRow";
 import { pinCoverKeys, fetchPlacePhotosForKeys, pickPlaceCover } from "@/lib/placePhotoSocial";
@@ -57,6 +59,9 @@ export default function SharedRoute() {
   const [showDateSheet, setShowDateSheet] = useState(false);
   const [planMapOpen, setPlanMapOpen] = useState(false);
   const [viewerIndex, setViewerIndex] = useState<number | null>(null); // fullscreen podglad zdjecia galerii
+  // Usuniecie wyjazdu (wlasciciel) - nieodwracalne, walidacja "czy na pewno?".
+  const [askDelete, setAskDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   // Otworz miejsce w Google Maps (WIZYTOWKA / place page, NIE nawigacja). query_place_id gdy
   // pin.place_id to Google Place ID (nie nasze DB uuid) - trafiamy w dokladne miejsce.
@@ -74,7 +79,7 @@ export default function SharedRoute() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("routes")
-        .select("id, title, city, user_id, day_number, start_date, ai_summary, ai_highlight, review_photos, review_narrative, group_session_id, tags")
+        .select("id, title, city, user_id, day_number, folder_id, start_date, ai_summary, ai_highlight, review_photos, review_narrative, group_session_id, tags")
         .eq("id", id as string)
         .eq("is_shared", true)
         .single();
@@ -291,6 +296,33 @@ export default function SharedRoute() {
       </div>
     );
   }
+
+  const isOwner = !!user && route.user_id === user.id;
+
+  const handleDelete = async () => {
+    if (!user) return;
+    setDeleting(true);
+    try {
+      // Wielodniowy wyjazd (folder_id) -> usuwamy WSZYSTKIE dni; inaczej pojedyncza trase.
+      let ids: string[] = [route.id];
+      if ((route as any).folder_id) {
+        const { data: days } = await (supabase as any)
+          .from("routes").select("id").eq("folder_id", (route as any).folder_id).eq("user_id", user.id);
+        if (days?.length) ids = days.map((d: any) => d.id);
+      }
+      await supabase.from("pins").delete().in("route_id", ids);
+      await (supabase as any).from("chat_sessions").delete().in("route_id", ids);
+      const { error } = await supabase.from("routes").delete().in("id", ids).eq("user_id", user.id);
+      if (error) throw new Error(error.message);
+      toast.success("Usunięto wyjazd.");
+      setAskDelete(false);
+      if (window.history.length > 1) navigate(-1); else navigate("/moj-profil");
+    } catch (e: any) {
+      toast.error("Nie udało się usunąć wyjazdu.");
+      console.error("[SharedRoute] delete failed:", e?.message ?? e);
+      setDeleting(false);
+    }
+  };
 
   // Okladki miejsc ze zdjec dodanych przez userow w wizytowkach (place_photos) - gdy pin nie ma
   // wlasnego zdjecia. Spojnie z widokiem trasy/listy: place_photos to zdjecia miejsca (Storage).
@@ -623,22 +655,42 @@ export default function SharedRoute() {
         </div>
       )}
 
-      {/* CTA */}
+      {/* CTA: wlasciciel = edytuj + usun; gosc = zapisz trase */}
       <div className="fixed bottom-0 left-0 right-0 max-w-lg mx-auto px-5 pt-3 bg-background/90 backdrop-blur-md border-t border-border/30"
         style={{ paddingBottom: "max(20px, env(safe-area-inset-bottom, 20px))" }}>
-        <button
-          onClick={() => { if (!user) { navigate("/auth"); return; } setShowDateSheet(true); }}
-          disabled={saving}
-          className="w-full py-3 rounded-full bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform shadow-lg shadow-primary/25 disabled:opacity-50"
-        >
-          <Bookmark className="h-4 w-4" />{saving ? t("saving") : "Zapisz tą trasę"}
-        </button>
-        <button
-          onClick={() => navigate(`/plan?city=${encodeURIComponent(cityLabel)}`)}
-          className="w-full mt-2 py-2 text-sm font-medium text-muted-foreground active:text-foreground transition-colors"
-        >
-          {t("plan_own_route", { city: cityLabel })}
-        </button>
+        {isOwner ? (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => navigate(`/review-summary?route=${route.id}&edit=1`)}
+              className="flex-1 py-3 rounded-full bg-secondary text-secondary-foreground font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
+            >
+              <Pencil className="h-4 w-4" /> Edytuj trasę
+            </button>
+            <button
+              onClick={() => setAskDelete(true)}
+              aria-label="Usuń wyjazd"
+              className="h-12 w-12 shrink-0 flex items-center justify-center rounded-full bg-secondary text-destructive active:scale-[0.98] transition-transform"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          </div>
+        ) : (
+          <>
+            <button
+              onClick={() => { if (!user) { navigate("/auth"); return; } setShowDateSheet(true); }}
+              disabled={saving}
+              className="w-full py-3 rounded-full bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform shadow-lg shadow-primary/25 disabled:opacity-50"
+            >
+              <Bookmark className="h-4 w-4" />{saving ? t("saving") : "Zapisz tą trasę"}
+            </button>
+            <button
+              onClick={() => navigate(`/plan?city=${encodeURIComponent(cityLabel)}`)}
+              className="w-full mt-2 py-2 text-sm font-medium text-muted-foreground active:text-foreground transition-colors"
+            >
+              {t("plan_own_route", { city: cityLabel })}
+            </button>
+          </>
+        )}
       </div>
 
       {/* Sheet wyboru daty wyjazdu przy zapisie cudzej trasy do dziennika */}
@@ -668,6 +720,24 @@ export default function SharedRoute() {
           </div>
         </div>
       )}
+
+      {/* Potwierdzenie usuniecia wyjazdu - nieodwracalne. */}
+      <AlertDialog open={askDelete} onOpenChange={(o) => { if (!o && !deleting) setAskDelete(false); }}>
+        <AlertDialogContent className="rounded-3xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Na pewno chcesz usunąć ten wyjazd?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {`„${route.title || route.city || "Wyjazd"}" zniknie bezpowrotnie z Twojego profilu. Nie można tego cofnąć.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Anuluj</AlertDialogCancel>
+            <AlertDialogAction onClick={(e) => { e.preventDefault(); void handleDelete(); }} disabled={deleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {deleting ? "Usuwanie…" : "Usuń"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

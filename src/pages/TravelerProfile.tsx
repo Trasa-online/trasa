@@ -12,6 +12,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { SHARE_BASE_URL } from "@/lib/shareUrl";
 import { useShare } from "@/hooks/useShare";
 import { isNative } from "@/lib/platform";
@@ -98,9 +99,39 @@ const TravelerProfile = () => {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [followSheet, setFollowSheet] = useState<"followers" | "following" | null>(null);
   const [tab, setTab] = useState<"listy" | "wyjazdy">("listy");
+  // Potwierdzenie usuniecia (lista albo wyjazd) - nieodwracalne, walidacja "czy na pewno?".
+  const [confirmDelete, setConfirmDelete] = useState<{ kind: "list" | "trip"; id: string; routeIds?: string[]; title: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const share = useShare();
   const { data: followCounts = { followers: 0, following: 0 } } = useFollowCounts(user?.id);
   const followList = useFollowList(user?.id, followSheet === "following" ? "following" : "followers");
+
+  const doDelete = async () => {
+    if (!confirmDelete || !user) return;
+    setDeleting(true);
+    try {
+      if (confirmDelete.kind === "list") {
+        await (supabase as any).from("discovery_items").delete().eq("collection_id", confirmDelete.id);
+        const { error } = await (supabase as any).from("discovery_collections").delete().eq("id", confirmDelete.id).eq("user_id", user.id);
+        if (error) throw new Error(error.message);
+        queryClient.invalidateQueries({ queryKey: ["profile-list-feed", user.id] });
+      } else {
+        const ids = confirmDelete.routeIds?.length ? confirmDelete.routeIds : [confirmDelete.id];
+        await supabase.from("pins").delete().in("route_id", ids);
+        await (supabase as any).from("chat_sessions").delete().in("route_id", ids);
+        const { error } = await supabase.from("routes").delete().in("id", ids).eq("user_id", user.id);
+        if (error) throw new Error(error.message);
+        queryClient.invalidateQueries({ queryKey: ["profile-trip-feed", user.id] });
+      }
+      toast.success(t("profile.delete_success", { defaultValue: "Usunięto." }));
+      setConfirmDelete(null);
+    } catch (e: any) {
+      toast.error(t("profile.delete_error", { defaultValue: "Nie udało się usunąć." }));
+      console.error("[TravelerProfile] delete failed:", e?.message ?? e);
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const handleAvatarUpload = async (file: File) => {
     if (!user) return;
@@ -231,6 +262,7 @@ const TravelerProfile = () => {
       grouped.sort((a, b) => new Date(b.rep.created_at ?? 0).getTime() - new Date(a.rep.created_at ?? 0).getTime());
       return grouped.map(({ rep, days }) => ({
         id: rep.id,
+        routeIds: days.map((d) => d.id), // wszystkie dni (folder) - do usuniecia calej podrozy
         city: rep.city,
         title: rep.title,
         start_date: rep.start_date,
@@ -366,6 +398,8 @@ const TravelerProfile = () => {
                   tiles={l.tiles}
                   counts={{ saves: l.saves_count ?? 0, likes: l.likes_count ?? 0, views: l.views_count ?? 0 }}
                   onOpen={() => navigate(`/lista/${l.id}`)}
+                  onEdit={() => navigate(`/zestawienie/${l.id}/edytuj`)}
+                  onDelete={() => setConfirmDelete({ kind: "list", id: l.id, title: l.title || t("feed.list_fallback", "Lista miejsc") })}
                 />
               ))
             )
@@ -392,6 +426,8 @@ const TravelerProfile = () => {
                   tiles={tr.tiles}
                   counts={{ saves: tr.saves, likes: tr.likes, views: tr.views }}
                   onOpen={() => navigate(`/route/${tr.id}`)}
+                  onEdit={() => navigate(`/review-summary?route=${tr.id}&edit=1`)}
+                  onDelete={() => setConfirmDelete({ kind: "trip", id: tr.id, routeIds: tr.routeIds, title: tr.title || tr.city || t("feed.trip_fallback_generic", "Wyjazd") })}
                 />
               );
             })
@@ -437,6 +473,30 @@ const TravelerProfile = () => {
       </Sheet>
 
       {user && <NotificationsDrawer open={notificationsOpen} onClose={() => setNotificationsOpen(false)} userId={user.id} />}
+
+      {/* Potwierdzenie usuniecia (lista albo wyjazd) - nieodwracalne. */}
+      <AlertDialog open={!!confirmDelete} onOpenChange={(o) => { if (!o && !deleting) setConfirmDelete(null); }}>
+        <AlertDialogContent className="rounded-3xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {confirmDelete?.kind === "list"
+                ? t("profile.delete_list_title", { defaultValue: "Na pewno chcesz usunąć tę listę?" })
+                : t("profile.delete_trip_title", { defaultValue: "Na pewno chcesz usunąć ten wyjazd?" })}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirmDelete?.title
+                ? t("profile.delete_desc", { title: confirmDelete.title, defaultValue: `„${confirmDelete.title}" zniknie bezpowrotnie z Twojego profilu. Nie można tego cofnąć.` })
+                : t("profile.delete_desc_generic", { defaultValue: "To zniknie bezpowrotnie z Twojego profilu. Nie można tego cofnąć." })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>{t("profile.delete_cancel", { defaultValue: "Anuluj" })}</AlertDialogCancel>
+            <AlertDialogAction onClick={(e) => { e.preventDefault(); void doDelete(); }} disabled={deleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {deleting ? t("profile.delete_progress", { defaultValue: "Usuwanie…" }) : t("profile.delete_confirm", { defaultValue: "Usuń" })}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

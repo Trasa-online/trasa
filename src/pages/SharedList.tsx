@@ -4,7 +4,8 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
-import { MapPin, ArrowLeft, Bookmark, List, GalleryHorizontalEnd, Building2, Pencil } from "lucide-react";
+import { MapPin, ArrowLeft, Bookmark, List, GalleryHorizontalEnd, Building2, Pencil, Trash2 } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { PlacePhoto, resolveStored } from "@/components/PlacePhoto";
 import { RoutePlaceRow } from "@/components/route/RoutePlaceRow";
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
@@ -36,6 +37,26 @@ export default function SharedList() {
   const [saved, setSaved] = useState<boolean>(() => {
     try { return new Set<string>(JSON.parse(localStorage.getItem("trasa_saved_collections") || "[]")).has(id ?? ""); } catch { return false; }
   });
+  // Usuniecie listy (wlasciciel) - nieodwracalne, walidacja "czy na pewno?".
+  const [askDelete, setAskDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDelete = async () => {
+    if (!user || !id) return;
+    setDeleting(true);
+    try {
+      await (supabase as any).from("discovery_items").delete().eq("collection_id", id);
+      const { error } = await (supabase as any).from("discovery_collections").delete().eq("id", id).eq("user_id", user.id);
+      if (error) throw new Error(error.message);
+      toast.success("Usunięto listę.");
+      setAskDelete(false);
+      if (window.history.length > 1) navigate(-1); else navigate("/moj-profil");
+    } catch (e: any) {
+      toast.error("Nie udało się usunąć listy.");
+      console.error("[SharedList] delete failed:", e?.message ?? e);
+      setDeleting(false);
+    }
+  };
 
   const { data: col, isLoading } = useQuery({
     queryKey: ["shared-list", id],
@@ -312,14 +333,23 @@ export default function SharedList() {
               ))}
             </div>
           )}
-          {/* Wlasciciel listy: edycja (jak "Edytuj trasę" w widoku trasy). */}
+          {/* Wlasciciel listy: edycja + usuniecie (jak w widoku trasy). */}
           {isOwner && (
-            <button
-              onClick={() => navigate(`/zestawienie/${col.id}/edytuj`)}
-              className="w-full mt-4 flex items-center justify-center gap-2 py-3 rounded-2xl bg-secondary text-secondary-foreground text-sm font-bold active:scale-[0.98] transition-transform"
-            >
-              <Pencil className="h-4 w-4" /> {`Edytuj listę`}
-            </button>
+            <div className="mt-4 flex items-center gap-2">
+              <button
+                onClick={() => navigate(`/zestawienie/${col.id}/edytuj`)}
+                className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl bg-secondary text-secondary-foreground text-sm font-bold active:scale-[0.98] transition-transform"
+              >
+                <Pencil className="h-4 w-4" /> {`Edytuj listę`}
+              </button>
+              <button
+                onClick={() => setAskDelete(true)}
+                aria-label="Usuń listę"
+                className="h-11 w-11 shrink-0 flex items-center justify-center rounded-2xl bg-secondary text-destructive active:scale-[0.98] transition-transform"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </div>
           )}
         </div>
 
@@ -365,6 +395,24 @@ export default function SharedList() {
       )}
 
       <SavePlaceSheet open={!!savePlace} onOpenChange={(o) => !o && setSavePlace(null)} place={savePlace} city={col.city ?? ""} />
+
+      {/* Potwierdzenie usuniecia listy - nieodwracalne. */}
+      <AlertDialog open={askDelete} onOpenChange={(o) => { if (!o && !deleting) setAskDelete(false); }}>
+        <AlertDialogContent className="rounded-3xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Na pewno chcesz usunąć tę listę?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {`„${col.title}" zniknie bezpowrotnie z Twojego profilu. Nie można tego cofnąć.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Anuluj</AlertDialogCancel>
+            <AlertDialogAction onClick={(e) => { e.preventDefault(); void handleDelete(); }} disabled={deleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {deleting ? "Usuwanie…" : "Usuń"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
