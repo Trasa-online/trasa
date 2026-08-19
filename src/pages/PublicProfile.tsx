@@ -4,326 +4,275 @@ import { useParams, useNavigate } from "react-router-dom";
 import { avatarSrc } from "@/lib/avatar";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
-import { parseISO, isValid, format } from "date-fns";
+import { parseISO, format } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
-import { ArrowLeft, Map as MapIcon, Building2, CalendarDays } from "lucide-react";
+import { ArrowLeft, LayoutGrid, ListChecks, MapPinned } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
-import { resolveStored } from "@/components/PlacePhoto";
 import FollowButton from "@/components/social/FollowButton";
 import { useFollowCounts } from "@/hooks/useFollow";
-import StatCard from "@/components/profile/StatCard";
+import { ProfileFeedCard } from "@/components/profile/ProfileFeedCard";
+import { SpontawayTabIcon } from "@/components/profile/SpontawayTabIcon";
+import { shortRelativeTime } from "@/lib/relativeTime";
+import { countryForCity } from "@/lib/tripCountries";
+import { pinCoverKeys, fetchPlacePhotosForKeys, pickPlaceCover } from "@/lib/placePhotoSocial";
+
+// ── Empty state feedu (cudzy profil, read-only - bez CTA tworzenia) ─────────────
+function FeedEmptyRO({ icon, title }: { icon: React.ReactNode; title: string }) {
+  return (
+    <div className="flex flex-col items-center text-center gap-3 px-6 py-12">
+      <div className="h-14 w-14 rounded-2xl bg-[#fcede3] flex items-center justify-center text-orange-500">
+        {icon}
+      </div>
+      <p className="text-base font-black">{title}</p>
+    </div>
+  );
+}
 
 export default function PublicProfile() {
   const { t } = useTranslation("profiles");
   const { username } = useParams<{ username: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const [routesOpen, setRoutesOpen] = useState(false);
+  const [tab, setTab] = useState<"listy" | "wyjazdy">("listy");
 
   const { data: profile, isLoading } = useQuery({
     queryKey: ["public-profile", username],
     queryFn: async () => {
       const { data } = await supabase
         .from("profiles")
-        .select("id, username, first_name, avatar_url")
+        .select("id, username, first_name, avatar_url, bio")
         .eq("username", username!)
         .maybeSingle();
-      return data as { id: string; username: string; first_name: string | null; avatar_url: string | null } | null;
+      return data as { id: string; username: string; first_name: string | null; avatar_url: string | null; bio: string | null } | null;
     },
     enabled: !!username,
   });
 
+  // Liczba miast z publicznego dorobku (spojne z licznikiem na wlasnym profilu).
   const { data: stats } = useQuery({
     queryKey: ["public-profile-stats", profile?.id],
     queryFn: async () => {
-      // Na cudzym profilu liczymy tylko PUBLICZNY dorobek (trasy udostepnione, is_shared=true).
-      // Prywatne solo-drafty (is_shared=false) nie sa widoczne przez RLS ogladajacemu i nie wliczaja
-      // sie do statystyk - bez tego filtra licznik pokazywal 0 dla profili z samymi trasami solo.
       const { data } = await supabase
         .from("routes")
-        .select("city, folder_id")
+        .select("city")
         .eq("user_id", profile!.id)
         .eq("is_shared", true);
-      const all = data ?? [];
-      // Trasy wielodniowe dziela wspolny folder_id = jedna podroz (spojne ze zwijaniem w dzienniku nizej).
-      const trips = new Set(all.map((r, i) => r.folder_id ?? `single_${i}`)).size;
-      const cities = new Set(all.map(r => r.city).filter(Boolean)).size;
-      return { trips, cities };
+      const cities = new Set((data ?? []).map((r) => r.city).filter(Boolean)).size;
+      return { cities };
     },
     enabled: !!profile?.id,
   });
 
-  // Liczniki follow (asymetryczny model). followers SELECT jest publiczny -> dziala dla cudzego profilu.
+  // Liczniki follow (asymetryczny model, publiczny SELECT).
   const { data: followCounts = { followers: 0, following: 0 } } = useFollowCounts(profile?.id);
 
-  // Listy (polecajki) utworzone przez tego usera - TYLKO publiczne i zatwierdzone (moderacja).
-  const { data: userLists = [] } = useQuery({
-    queryKey: ["public-profile-lists", profile?.id],
+  // Feed LIST (zakladka Listy): publiczne + zatwierdzone listy usera + kafelki miejsc + liczniki.
+  const { data: listCards = [] } = useQuery({
+    queryKey: ["public-list-feed", profile?.id],
     enabled: !!profile?.id,
     queryFn: async () => {
-      const { data: cols } = await supabase
+      const { data: cols } = await (supabase as any)
         .from("discovery_collections")
-        .select("id, title, city, cover_url, list_cover_url")
-        .eq("user_id", profile!.id)
-        .eq("kind", "ranking")
-        .eq("is_public", true)
-        .eq("hidden_by_admin", false)
-        .eq("moderation_status", "approved")
+        .select("id, title, city, list_status, views_count, saves_count, likes_count, updated_at")
+        .eq("user_id", profile!.id).eq("kind", "ranking")
+        .eq("is_public", true).eq("hidden_by_admin", false).eq("moderation_status", "approved")
         .order("updated_at", { ascending: false });
       const rows = (cols ?? []) as any[];
       if (!rows.length) return [];
       const ids = rows.map((r) => r.id);
       const { data: items } = await (supabase as any)
         .from("discovery_items")
-        .select("collection_id, photo_url, order_index")
-        .in("collection_id", ids)
-        .order("order_index", { ascending: true });
-      const coverMap: Record<string, string> = {};
-      const countMap: Record<string, number> = {};
-      for (const it of items ?? []) {
-        countMap[it.collection_id] = (countMap[it.collection_id] ?? 0) + 1;
-        if (!coverMap[it.collection_id] && it.photo_url) coverMap[it.collection_id] = it.photo_url;
+        .select("id, collection_id, place_name, category, google_place_id, photo_url, order_index")
+        .in("collection_id", ids).order("order_index", { ascending: true });
+      const allItems = (items ?? []) as any[];
+      const keys = Array.from(new Set(allItems.flatMap((it) => pinCoverKeys(it)))).filter(Boolean);
+      const photoMap = keys.length ? await fetchPlacePhotosForKeys(keys) : null;
+      const byCol: Record<string, any[]> = {};
+      for (const it of allItems) {
+        const _cover = pickPlaceCover(photoMap, pinCoverKeys(it));
+        (byCol[it.collection_id] ??= []).push({ ...it, _cover });
       }
-      return rows.map((r) => ({
-        ...r,
-        _cover: resolveStored(r.list_cover_url) ?? resolveStored(r.cover_url) ?? resolveStored(coverMap[r.id]) ?? null,
-        _count: countMap[r.id] ?? 0,
-      }));
+      return rows.map((r) => ({ ...r, tiles: byCol[r.id] ?? [] }));
     },
   });
 
-
-
-  // Dziennik usera (read-only): pocztowki jak we wlasnym Dzienniku. Trasy wielodniowe
-  // zwiniete po folderze (dzien 1 = reprezentant), okladka z review_photos lub pierwszego
-  // pina ze zdjeciem. Pokazujemy tylko PUBLICZNY dorobek (is_shared=true) - spojne z licznikiem statystyk.
-  const { data: postcards = [], isLoading: postcardsLoading } = useQuery({
-    queryKey: ["public-journal", profile?.id],
-    enabled: !!profile?.id && routesOpen,
+  // Feed WYJAZDOW (zakladka Wyjazdy): publiczne trasy usera, zwiniete po folderze,
+  // kafelki z pinow + liczniki (saved_routes / likes / routes.views).
+  const { data: tripCards = [] } = useQuery({
+    queryKey: ["public-trip-feed", profile?.id],
+    enabled: !!profile?.id,
     queryFn: async () => {
-      const { data: routes } = await supabase
-        .from("routes")
-        .select("id, city, title, day_number, start_date, end_date, folder_id, ai_summary, review_photos")
-        .eq("user_id", profile!.id)
-        .eq("is_shared", true)
+      const { data: routes } = await (supabase as any)
+        .from("routes").select("id, title, city, start_date, day_number, folder_id, views, created_at")
+        .eq("user_id", profile!.id).eq("is_shared", true)
         .order("created_at", { ascending: false });
       const rows = (routes ?? []) as any[];
-      // Okladki: pierwszy pin ze zdjeciem (wg pin_order) per trasa.
+      if (!rows.length) return [];
       const ids = rows.map((r) => r.id);
-      const coverMap: Record<string, string> = {};
-      if (ids.length) {
-        const { data: pins } = await (supabase as any)
-          .from("pins").select("route_id, photo_url, image_url, images, user_photo_urls, pin_order")
-          .in("route_id", ids).order("pin_order", { ascending: true });
-        for (const p of pins ?? []) {
-          if (coverMap[p.route_id]) continue;
-          const u = resolveStored((Array.isArray(p.images) && p.images[0]) || (Array.isArray(p.user_photo_urls) && p.user_photo_urls[0]) || p.photo_url || p.image_url);
-          if (u) coverMap[p.route_id] = u;
-        }
+      const [pinsRes, savesRes, likesRes] = await Promise.all([
+        (supabase as any).from("pins").select("id, route_id, place_name, category, photo_url, image_url, images, user_photo_urls, pin_order").in("route_id", ids).order("pin_order", { ascending: true }),
+        (supabase as any).from("saved_routes").select("route_id").in("route_id", ids),
+        (supabase as any).from("likes").select("route_id").in("route_id", ids),
+      ]);
+      const allPins = (pinsRes.data ?? []) as any[];
+      const keys = Array.from(new Set(allPins.flatMap((p) => pinCoverKeys(p)))).filter(Boolean);
+      const photoMap = keys.length ? await fetchPlacePhotosForKeys(keys) : null;
+      const pinsByRoute: Record<string, any[]> = {};
+      for (const p of allPins) {
+        const _cover = pickPlaceCover(photoMap, pinCoverKeys(p));
+        (pinsByRoute[p.route_id] ??= []).push({ ...p, _cover });
       }
-      // Zwin trasy wielodniowe (folder_id) w jedna pocztowke.
+      const saveCount: Record<string, number> = {};
+      for (const s of savesRes.data ?? []) saveCount[s.route_id] = (saveCount[s.route_id] ?? 0) + 1;
+      const likeCount: Record<string, number> = {};
+      for (const l of likesRes.data ?? []) likeCount[l.route_id] = (likeCount[l.route_id] ?? 0) + 1;
       const folderMap = new Map<string, any[]>();
-      const out: any[] = [];
-      for (const e of rows) {
-        if (e.folder_id) {
-          if (!folderMap.has(e.folder_id)) folderMap.set(e.folder_id, []);
-          folderMap.get(e.folder_id)!.push(e);
-        } else {
-          out.push({ ...e, _numDays: 1, _cover: coverMap[e.id] });
-        }
+      const grouped: { rep: any; days: any[] }[] = [];
+      for (const r of rows) {
+        if (r.folder_id) {
+          if (!folderMap.has(r.folder_id)) folderMap.set(r.folder_id, []);
+          folderMap.get(r.folder_id)!.push(r);
+        } else grouped.push({ rep: r, days: [r] });
       }
       for (const days of folderMap.values()) {
         const sorted = [...days].sort((a, b) => (a.day_number ?? 0) - (b.day_number ?? 0));
-        const rep = sorted[0];
-        out.push({
-          ...rep,
-          title: sorted.length > 1 ? null : rep.title,
-          _numDays: sorted.length,
-          review_photos: sorted.flatMap((d) => d.review_photos ?? []),
-          _cover: sorted.map((d) => coverMap[d.id]).find(Boolean),
-        });
+        grouped.push({ rep: sorted[0], days: sorted });
       }
-      out.sort((a, b) => {
-        const ad = a.start_date ? parseISO(a.start_date).getTime() : 0;
-        const bd = b.start_date ? parseISO(b.start_date).getTime() : 0;
-        return bd - ad;
-      });
-      return out;
+      grouped.sort((a, b) => new Date(b.rep.created_at ?? 0).getTime() - new Date(a.rep.created_at ?? 0).getTime());
+      return grouped.map(({ rep, days }) => ({
+        id: rep.id,
+        city: rep.city,
+        title: rep.title,
+        start_date: rep.start_date,
+        created_at: rep.created_at,
+        tiles: days.flatMap((d) => pinsByRoute[d.id] ?? []),
+        saves: saveCount[rep.id] ?? 0,
+        likes: likeCount[rep.id] ?? 0,
+        views: Number(rep.views ?? 0),
+      }));
     },
   });
 
   if (isLoading) return null;
   if (!profile) return (
-    <div className="flex flex-col items-center justify-center min-h-screen gap-3">
+    <div className="flex flex-col items-center justify-center h-[100dvh] gap-3">
       <p className="text-muted-foreground">{t("public.not_found")}</p>
       <button onClick={() => window.history.state?.idx > 0 ? navigate(-1) : navigate("/")} className="text-orange-600 font-semibold text-sm">{t("public.back")}</button>
     </div>
   );
 
-  const displayName = profile.username || profile.first_name;
+  const displayName = profile.username || profile.first_name || "";
 
   return (
-    <div className="min-h-screen bg-background pb-8">
-      {/* Header */}
+    <div className="flex flex-col h-[100dvh] bg-background">
+      {/* Header: powrot + @username */}
       <div className="flex items-center gap-3 px-4 pt-safe-4 pb-3 border-b border-border/40">
-        <button onClick={() => window.history.state?.idx > 0 ? navigate(-1) : navigate("/")} className="h-9 w-9 flex items-center justify-center text-foreground">
+        <button onClick={() => window.history.state?.idx > 0 ? navigate(-1) : navigate("/")} className="h-9 w-9 flex items-center justify-center text-foreground active:scale-90 transition-transform">
           <ArrowLeft className="h-5 w-5" />
         </button>
-        <h1 className="flex-1 text-base font-bold text-center">@{profile.username}</h1>
+        <h1 className="flex-1 text-base font-bold text-center truncate">@{profile.username}</h1>
         <div className="w-9" />
       </div>
 
-      <div className="px-4 max-w-lg mx-auto space-y-6 pt-6">
-        {/* Avatar + nazwa - wyrownane do lewej (spojne z wlasnym profilem) */}
-        <div className="flex items-center gap-4">
+      <div className="flex-1 min-h-0 overflow-y-auto">
+      <div className="px-4 space-y-5 max-w-lg mx-auto pt-6 pb-[calc(2rem+env(safe-area-inset-bottom,0px))]">
+
+        {/* Avatar + nazwa + bio (Figma: nazwa | separator | bio) */}
+        <div className="flex items-start gap-4">
           <Avatar className="h-[76px] w-[76px] shrink-0">
             <AvatarImage src={avatarSrc(profile.avatar_url)} className="object-cover bg-orange-100" />
             <AvatarFallback className="bg-orange-100 text-orange-600 text-3xl font-black">
-              {displayName?.charAt(0).toUpperCase() || "?"}
+              {displayName.charAt(0).toUpperCase() || "?"}
             </AvatarFallback>
           </Avatar>
-          <div className="min-w-0 flex-1">
-            <h2 className="text-2xl font-display font-extrabold leading-tight truncate">{displayName}</h2>
+          <div className="min-w-0 shrink-0 pt-1">
+            <h2 className="text-xl font-display font-extrabold leading-tight truncate">{displayName}</h2>
             <p className="text-sm text-muted-foreground mt-0.5 truncate">@{profile.username}</p>
           </div>
+          {profile.bio && (
+            <>
+              <div className="w-px h-9 bg-border/60 self-center" />
+              <p className="flex-1 min-w-0 self-center text-[13px] text-muted-foreground leading-snug line-clamp-3">{profile.bio}</p>
+            </>
+          )}
         </div>
 
-        {/* Obserwujacy / Obserwowani (asymetryczny follow) + akcja Obserwuj */}
-        <div className="flex items-end gap-8">
-          <div>
+        {/* Statystyki inline: Obserwujacy / Obserwowani / Miasta + akcja Obserwuj */}
+        <div className="flex items-end gap-7">
+          <div className="text-left">
             <p className="text-xs font-medium text-muted-foreground">{t("profile.followers")}</p>
             <p className="text-xl font-bold text-foreground mt-0.5 tabular-nums">{followCounts.followers}</p>
           </div>
-          <div>
+          <div className="text-left">
             <p className="text-xs font-medium text-muted-foreground">{t("profile.following")}</p>
             <p className="text-xl font-bold text-foreground mt-0.5 tabular-nums">{followCounts.following}</p>
+          </div>
+          <div className="text-left">
+            <p className="text-xs font-medium text-muted-foreground">{t("sections.cities")}</p>
+            <p className="text-xl font-bold text-foreground mt-0.5 tabular-nums">{stats?.cities ?? 0}</p>
           </div>
           <div className="flex-1" />
           <FollowButton targetUserId={profile.id} className="h-9 px-4 text-sm" />
         </div>
 
-        {/* Listy usera (polecajki) - PIERWSZA sekcja, nad Plany/Miasta. Kolekcja inspiracji:
-            masonry 2-kol (CSS columns), okladki roznej wysokosci = efekt Pinterest. Tap -> /lista/:id. */}
-        {userLists.length > 0 && (
-          <div>
-            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-3">{t("sections.lists", { defaultValue: "Listy" })}</p>
-            <div className="columns-2 gap-3 [column-fill:balance]">
-              {userLists.map((l: any) => {
-                // Deterministyczna wysokosc okladki z id (efekt Pinterest, stabilny miedzy renderami).
-                const seed = String(l.id).charCodeAt(0) % 3;
-                const aspect = seed === 0 ? "aspect-[3/4]" : seed === 1 ? "aspect-[4/5]" : "aspect-square";
-                const countLabel = `${l._count} ${l._count === 1 ? "miejsce" : l._count < 5 ? "miejsca" : "miejsc"}`;
-                return (
-                  <button
-                    key={l.id}
-                    onClick={() => navigate(`/lista/${l.id}`)}
-                    className="break-inside-avoid mb-3 w-full text-left active:scale-[0.98] transition-transform"
-                  >
-                    <div className={`relative w-full ${aspect} rounded-2xl overflow-hidden bg-[#fcede3] shadow-sm`}>
-                      {l._cover && (
-                        <img
-                          src={l._cover}
-                          alt=""
-                          className="w-full h-full object-cover"
-                          onError={(ev) => { (ev.target as HTMLImageElement).style.opacity = "0"; }}
-                        />
-                      )}
-                    </div>
-                    <p className="text-sm font-bold leading-tight mt-2 line-clamp-2">{l.title}</p>
-                    <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
-                      {l.city ? `${l.city} · ${countLabel}` : countLabel}
-                    </p>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
+        {/* Zakladki: Listy | Wyjazdy (ikony, underline aktywnej) */}
+        <div className="flex border-b border-border/40 -mx-1">
+          {(["listy", "wyjazdy"] as const).map((tk) => {
+            const active = tab === tk;
+            return (
+              <button key={tk} onClick={() => setTab(tk)} className="relative flex-1 flex items-center justify-center py-2.5" aria-label={tk === "listy" ? t("sections.lists", { defaultValue: "Listy" }) : t("sections.trips", { defaultValue: "Wyjazdy" })}>
+                {tk === "listy"
+                  ? <LayoutGrid className="h-5 w-5" style={{ color: active ? "#0E0E0E" : "#CFCFCF" }} />
+                  : <SpontawayTabIcon active={active} />}
+                {active && <span className="absolute -bottom-px left-0 right-0 h-0.5 bg-foreground rounded-full" />}
+              </button>
+            );
+          })}
+        </div>
 
-        {/* Statystyki - TEN SAM uklad co wlasny profil (Plany + Miasta, 2 kolumny). */}
-        <div className="grid grid-cols-2 gap-3">
-          <StatCard
-            value={stats?.trips ?? 0}
-            title={t("sections.routes")}
-            subtitle={t("sections.routes_sub")}
-            icon={<MapIcon className="h-6 w-6" />}
-            className="bg-secondary text-secondary-foreground"
-            onClick={() => setRoutesOpen(true)}
-          />
-          <StatCard
-            value={stats?.cities ?? 0}
-            title={t("sections.cities")}
-            subtitle={t("sections.cities_sub")}
-            icon={<Building2 className="h-6 w-6" />}
-            className="bg-trasa-cream text-trasa-cream-ink"
-          />
+        {/* Feed zakladki */}
+        <div className="space-y-6 pt-1">
+          {tab === "listy" ? (
+            listCards.length === 0 ? (
+              <FeedEmptyRO icon={<ListChecks className="h-6 w-6" />} title={t("feed.lists_empty_public", { defaultValue: "Brak list" })} />
+            ) : (
+              listCards.map((l: any) => (
+                <ProfileFeedCard
+                  key={l.id}
+                  avatarUrl={profile.avatar_url}
+                  fallback={displayName}
+                  eyebrow={l.list_status === "visited" ? t("feed.visited", "Odwiedzone miejsca") : t("feed.to_visit", "Do odwiedzenia miejsca")}
+                  timestamp={shortRelativeTime(l.updated_at)}
+                  title={l.title || t("feed.list_fallback", "Lista miejsc")}
+                  tiles={l.tiles}
+                  counts={{ saves: l.saves_count ?? 0, likes: l.likes_count ?? 0, views: l.views_count ?? 0 }}
+                  onOpen={() => navigate(`/lista/${l.id}`)}
+                />
+              ))
+            )
+          ) : tripCards.length === 0 ? (
+            <FeedEmptyRO icon={<MapPinned className="h-6 w-6" />} title={t("feed.trips_empty_public", { defaultValue: "Brak wyjazdów" })} />
+          ) : (
+            tripCards.map((tr: any) => {
+              const dateLabel = tr.start_date ? format(parseISO(tr.start_date), "d LLLL yyyy", { locale: dateLocale() }) : "";
+              const eyebrow = [countryForCity(tr.city), tr.city, dateLabel].filter(Boolean).join(" · ");
+              return (
+                <ProfileFeedCard
+                  key={tr.id}
+                  avatarUrl={profile.avatar_url}
+                  fallback={displayName}
+                  eyebrow={eyebrow}
+                  timestamp={shortRelativeTime(tr.created_at)}
+                  title={tr.title || (tr.city ? t("feed.trip_fallback", { city: tr.city, defaultValue: `Wyjazd do ${tr.city}` }) : t("feed.trip_fallback_generic", "Wyjazd"))}
+                  tiles={tr.tiles}
+                  counts={{ saves: tr.saves, likes: tr.likes, views: tr.views }}
+                  onOpen={() => navigate(`/route/${tr.id}`)}
+                />
+              );
+            })
+          )}
         </div>
       </div>
-
-      {/* Sheet: dziennik usera (pocztowki, read-only). Tap karty -> szczegoly trasy. */}
-      <Sheet open={routesOpen} onOpenChange={setRoutesOpen}>
-        <SheetContent side="bottom" className="rounded-t-3xl p-0" style={{ maxHeight: "85dvh", height: "85dvh" }}>
-          <SheetHeader className="px-5 pt-5 pb-3 text-left">
-            <SheetTitle>{t("public.journal_title", { name: displayName })}</SheetTitle>
-          </SheetHeader>
-          <div className="flex-1 overflow-y-auto px-5 pb-8 space-y-4">
-            {postcardsLoading ? (
-              <p className="text-sm text-muted-foreground text-center py-12">{t("public.loading")}</p>
-            ) : postcards.length === 0 ? (
-              <div className="py-16 text-center">
-                {/* Ikona trasy (peachy) zamiast emoji - zakaz emoji w UI. */}
-                <span aria-hidden className="mx-auto mb-3 h-14 w-14" style={{ display: "block", backgroundColor: "#ef9d78", WebkitMaskImage: "url(/Ikona_Trasy.svg)", maskImage: "url(/Ikona_Trasy.svg)", WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat", WebkitMaskSize: "contain", maskSize: "contain", WebkitMaskPosition: "center", maskPosition: "center" }} />
-                <p className="text-sm font-bold">{t("public.no_routes_title")}</p>
-                <p className="text-xs text-muted-foreground mt-1 max-w-[260px] mx-auto leading-relaxed">
-                  {t("public.no_routes_desc")}
-                </p>
-              </div>
-            ) : (
-              postcards.map((e: any) => {
-                const validPhotos = (e.review_photos ?? []).filter((u: any) => !!u && typeof u === "string" && u.trim() !== "");
-                const thumb = validPhotos[0] ?? e._cover ?? getRandomPinPlaceholder(e.id);
-                const d = e.start_date ? parseISO(e.start_date) : null;
-                const dateLabel = d && isValid(d) ? format(d, "d MMMM yyyy", { locale: dateLocale() }) : "";
-                return (
-                  <button
-                    key={e.id}
-                    onClick={() => { setRoutesOpen(false); navigate(`/route/${e.id}`); }}
-                    className="w-full rounded-3xl bg-card border border-border/50 overflow-hidden text-left active:scale-[0.98] transition-transform"
-                  >
-                    <div className="relative w-full aspect-[16/9] overflow-hidden bg-muted">
-                      <img
-                        src={thumb}
-                        alt=""
-                        className="w-full h-full object-cover"
-                        onError={(ev) => { (ev.target as HTMLImageElement).src = getRandomPinPlaceholder(e.id + "_fb"); }}
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-                      <div className="absolute bottom-0 left-0 right-0 px-4 pb-3">
-                        <p className="text-white font-bold text-lg leading-tight drop-shadow-sm">{e.title || e.city || t("public.trip_fallback")}</p>
-                        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                          {dateLabel && <p className="text-white/70 text-xs">{dateLabel}</p>}
-                          {e._numDays > 1 && (
-                            <span className="flex items-center gap-1 bg-white/20 backdrop-blur-sm rounded-full px-1.5 py-0.5 text-[10px] font-semibold text-white">
-                              <CalendarDays className="h-2.5 w-2.5" />{t("public.days_count", { n: e._numDays })}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    {e.ai_summary && (
-                      <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed px-4 py-3">{e.ai_summary}</p>
-                    )}
-                  </button>
-                );
-              })
-            )}
-          </div>
-        </SheetContent>
-      </Sheet>
-
+      </div>
     </div>
   );
 }

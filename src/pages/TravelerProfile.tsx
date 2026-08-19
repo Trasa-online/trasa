@@ -20,10 +20,12 @@ import NotificationsDrawer from "@/components/layout/NotificationsDrawer";
 import InviteFriendsBanner from "@/components/social/InviteFriendsBanner";
 import { Camera as CapCamera, CameraResultType, CameraSource } from "@capacitor/camera";
 import { ProfileFeedCard } from "@/components/profile/ProfileFeedCard";
+import { SpontawayTabIcon } from "@/components/profile/SpontawayTabIcon";
 import { shortRelativeTime } from "@/lib/relativeTime";
 import { countryForCity } from "@/lib/tripCountries";
 import { parseISO, format } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
+import { pinCoverKeys, fetchPlacePhotosForKeys, pickPlaceCover } from "@/lib/placePhotoSocial";
 
 // ── Guest empty state (same visual rytm jak Journal dla goscia) ──────────────
 
@@ -83,29 +85,6 @@ function FeedEmpty({ icon, title, desc, ctaLabel, onCta }: {
         {ctaLabel}
       </button>
     </div>
-  );
-}
-
-// ── Ikona zakladki "wyjazdy" = znak spontaway (maska -> kontrola koloru active/inactive) ──
-
-function SpontawayTabIcon({ active }: { active: boolean }) {
-  return (
-    <span
-      aria-hidden
-      className="h-5 w-5"
-      style={{
-        display: "block",
-        backgroundColor: active ? "#0E0E0E" : "#CFCFCF",
-        WebkitMaskImage: "url(/spontaway-symbol.png)",
-        maskImage: "url(/spontaway-symbol.png)",
-        WebkitMaskRepeat: "no-repeat",
-        maskRepeat: "no-repeat",
-        WebkitMaskSize: "contain",
-        maskSize: "contain",
-        WebkitMaskPosition: "center",
-        maskPosition: "center",
-      }}
-    />
   );
 }
 
@@ -204,10 +183,17 @@ const TravelerProfile = () => {
       const ids = rows.map((r) => r.id);
       const { data: items } = await (supabase as any)
         .from("discovery_items")
-        .select("id, collection_id, place_name, category, photo_url, order_index")
+        .select("id, collection_id, place_name, category, google_place_id, photo_url, order_index")
         .in("collection_id", ids).order("order_index", { ascending: true });
+      const allItems = (items ?? []) as any[];
+      // Okladki miejsc ze zdjec userow (place_photos) - gdy element nie ma wlasnego photo_url.
+      const keys = Array.from(new Set(allItems.flatMap((it) => pinCoverKeys(it)))).filter(Boolean);
+      const photoMap = keys.length ? await fetchPlacePhotosForKeys(keys) : null;
       const byCol: Record<string, any[]> = {};
-      for (const it of items ?? []) (byCol[it.collection_id] ??= []).push(it);
+      for (const it of allItems) {
+        const _cover = pickPlaceCover(photoMap, pinCoverKeys(it));
+        (byCol[it.collection_id] ??= []).push({ ...it, _cover });
+      }
       return rows.map((r) => ({ ...r, tiles: byCol[r.id] ?? [] }));
     },
   });
@@ -230,8 +216,15 @@ const TravelerProfile = () => {
         (supabase as any).from("saved_routes").select("route_id").in("route_id", ids),
         (supabase as any).from("likes").select("route_id").in("route_id", ids),
       ]);
+      const allPins = (pinsRes.data ?? []) as any[];
+      // Okladki miejsc ze zdjec userow (place_photos) - gdy pin nie ma wlasnego zdjecia.
+      const keys = Array.from(new Set(allPins.flatMap((p) => pinCoverKeys(p)))).filter(Boolean);
+      const photoMap = keys.length ? await fetchPlacePhotosForKeys(keys) : null;
       const pinsByRoute: Record<string, any[]> = {};
-      for (const p of pinsRes.data ?? []) (pinsByRoute[p.route_id] ??= []).push(p);
+      for (const p of allPins) {
+        const _cover = pickPlaceCover(photoMap, pinCoverKeys(p));
+        (pinsByRoute[p.route_id] ??= []).push({ ...p, _cover });
+      }
       const saveCount: Record<string, number> = {};
       for (const s of savesRes.data ?? []) saveCount[s.route_id] = (saveCount[s.route_id] ?? 0) + 1;
       const likeCount: Record<string, number> = {};

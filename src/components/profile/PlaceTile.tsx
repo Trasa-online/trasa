@@ -8,8 +8,10 @@ const firstOf = (v: any): string | null =>
   Array.isArray(v) ? (v.find((x) => typeof x === "string" && x) ?? null) : null;
 
 export function PlaceTile({ tile }: { tile: any }) {
+  // Zdjecie usera: wlasne z pinu/elementu (image_url/images/user_photo_urls/photo_url), a gdy
+  // brak - okladka ze zdjec userow dodanych do MIEJSCA w wizytowce (place_photos, tile._cover).
   const stored = tile.image_url || firstOf(tile.images) || firstOf(tile.user_photo_urls) || tile.photo_url;
-  const url = resolveStored(stored);
+  const url = resolveStored(stored) ?? resolveStored(tile._cover);
   const name = tile.place_name || "";
   return (
     <div className="relative aspect-square rounded-2xl overflow-hidden bg-[#fcede3]">
