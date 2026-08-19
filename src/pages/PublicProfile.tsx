@@ -8,8 +8,9 @@ import { parseISO, format } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
 import { ArrowLeft, LayoutGrid, ListChecks, MapPinned } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import FollowButton from "@/components/social/FollowButton";
-import { useFollowCounts } from "@/hooks/useFollow";
+import { useFollowCounts, useFollowList } from "@/hooks/useFollow";
 import { ProfileFeedCard } from "@/components/profile/ProfileFeedCard";
 import { SpontawayTabIcon } from "@/components/profile/SpontawayTabIcon";
 import { shortRelativeTime } from "@/lib/relativeTime";
@@ -33,6 +34,7 @@ export default function PublicProfile() {
   const { username } = useParams<{ username: string }>();
   const navigate = useNavigate();
   const [tab, setTab] = useState<"listy" | "wyjazdy">("listy");
+  const [followSheet, setFollowSheet] = useState<"followers" | "following" | null>(null);
 
   const { data: profile, isLoading } = useQuery({
     queryKey: ["public-profile", username],
@@ -49,6 +51,7 @@ export default function PublicProfile() {
 
   // Liczniki follow (asymetryczny model, publiczny SELECT).
   const { data: followCounts = { followers: 0, following: 0 } } = useFollowCounts(profile?.id);
+  const followList = useFollowList(profile?.id, followSheet === "following" ? "following" : "followers");
 
   // Feed LIST (zakladka Listy): publiczne + zatwierdzone listy usera + kafelki miejsc + liczniki.
   const { data: listCards = [] } = useQuery({
@@ -181,16 +184,16 @@ export default function PublicProfile() {
           )}
         </div>
 
-        {/* Statystyki inline: Obserwujacy / Obserwowani / Miasta + akcja Obserwuj */}
+        {/* Statystyki inline: Obserwujacy / Obserwowani (klik -> lista) + akcja Obserwuj */}
         <div className="flex items-end gap-7">
-          <div className="text-left">
+          <button onClick={() => setFollowSheet("followers")} className="text-left active:opacity-70 transition-opacity">
             <p className="text-xs font-medium text-muted-foreground">{t("profile.followers")}</p>
             <p className="text-xl font-bold text-foreground mt-0.5 tabular-nums">{followCounts.followers}</p>
-          </div>
-          <div className="text-left">
+          </button>
+          <button onClick={() => setFollowSheet("following")} className="text-left active:opacity-70 transition-opacity">
             <p className="text-xs font-medium text-muted-foreground">{t("profile.following")}</p>
             <p className="text-xl font-bold text-foreground mt-0.5 tabular-nums">{followCounts.following}</p>
-          </div>
+          </button>
           <div className="flex-1" />
           <FollowButton targetUserId={profile.id} className="h-9 px-4 text-sm" />
         </div>
@@ -254,6 +257,38 @@ export default function PublicProfile() {
         </div>
       </div>
       </div>
+
+      {/* Obserwujacy / Obserwowani - lista (klik -> profil danej osoby) */}
+      <Sheet open={followSheet !== null} onOpenChange={(v) => { if (!v) setFollowSheet(null); }}>
+        <SheetContent side="bottom" className="h-[72dvh] flex flex-col rounded-t-2xl">
+          <SheetHeader className="pb-3 border-b border-border/20">
+            <SheetTitle>{followSheet === "following" ? t("profile.following") : t("profile.followers")}</SheetTitle>
+          </SheetHeader>
+          <div className="flex-1 overflow-y-auto py-3">
+            {followList.isLoading ? (
+              <p className="text-sm text-muted-foreground text-center py-8">…</p>
+            ) : (followList.data ?? []).length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center pt-6">
+                {followSheet === "following"
+                  ? t("public.no_following", { name: displayName, defaultValue: `${displayName} nikogo jeszcze nie obserwuje.` })
+                  : t("public.no_followers", { name: displayName, defaultValue: `Nikt jeszcze nie obserwuje ${displayName}.` })}
+              </p>
+            ) : (
+              <div className="space-y-1">
+                {(followList.data ?? []).map((p) => (
+                  <button key={p.id} onClick={() => { setFollowSheet(null); navigate(`/profil/${p.username}`); }} className="w-full flex items-center gap-3 px-1 py-2 active:bg-muted/40 rounded-xl transition-colors text-left">
+                    <Avatar className="h-10 w-10"><AvatarImage src={avatarSrc(p.avatar_url)} className="object-cover bg-orange-100" /><AvatarFallback className="bg-orange-100 text-orange-600 font-bold text-sm">{(p.first_name || p.username || "?").charAt(0).toUpperCase()}</AvatarFallback></Avatar>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold truncate">{p.first_name || p.username}</p>
+                      {p.username && <p className="text-xs text-muted-foreground">@{p.username}</p>}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
