@@ -154,20 +154,6 @@ const TravelerProfile = () => {
     if (res.ok && res.method === "clipboard") toast.success(t("invite.link_copied"));
   };
 
-  const { data: stats } = useQuery({
-    queryKey: ["profile-stats", user?.id],
-    queryFn: async () => {
-      const { data: routes } = await (supabase as any)
-        .from("routes").select("city, start_date, trip_type, group_session_id")
-        .eq("user_id", user!.id).eq("trip_type", "completed").is("group_session_id", null);
-      const all = routes ?? [];
-      const cities = new Set(all.map((r: any) => r.city).filter(Boolean)).size;
-      return { trips: all.length, cities };
-    },
-    enabled: !!user,
-    staleTime: 0,
-  });
-
   // Feed LIST (zakladka Listy): wlasne listy + kafelki miejsc + liczniki z kolumn.
   const { data: listCards = [] } = useQuery({
     queryKey: ["profile-list-feed", user?.id],
@@ -336,10 +322,6 @@ const TravelerProfile = () => {
             <p className="text-xs font-medium text-muted-foreground">{t("profile.following")}</p>
             <p className="text-xl font-bold text-foreground mt-0.5 tabular-nums">{followCounts.following}</p>
           </button>
-          <div className="text-left">
-            <p className="text-xs font-medium text-muted-foreground">{t("sections.cities")}</p>
-            <p className="text-xl font-bold text-foreground mt-0.5 tabular-nums">{stats?.cities ?? 0}</p>
-          </div>
           <div className="flex-1" />
           <button onClick={() => navigate("/search")} className="h-9 w-9 rounded-full bg-muted flex items-center justify-center text-foreground active:scale-90 transition-transform" aria-label={t("profile.find_users_aria")}>
             <Search className="h-4 w-4" />

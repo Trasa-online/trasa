@@ -47,21 +47,6 @@ export default function PublicProfile() {
     enabled: !!username,
   });
 
-  // Liczba miast z publicznego dorobku (spojne z licznikiem na wlasnym profilu).
-  const { data: stats } = useQuery({
-    queryKey: ["public-profile-stats", profile?.id],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("routes")
-        .select("city")
-        .eq("user_id", profile!.id)
-        .eq("is_shared", true);
-      const cities = new Set((data ?? []).map((r) => r.city).filter(Boolean)).size;
-      return { cities };
-    },
-    enabled: !!profile?.id,
-  });
-
   // Liczniki follow (asymetryczny model, publiczny SELECT).
   const { data: followCounts = { followers: 0, following: 0 } } = useFollowCounts(profile?.id);
 
@@ -205,10 +190,6 @@ export default function PublicProfile() {
           <div className="text-left">
             <p className="text-xs font-medium text-muted-foreground">{t("profile.following")}</p>
             <p className="text-xl font-bold text-foreground mt-0.5 tabular-nums">{followCounts.following}</p>
-          </div>
-          <div className="text-left">
-            <p className="text-xs font-medium text-muted-foreground">{t("sections.cities")}</p>
-            <p className="text-xl font-bold text-foreground mt-0.5 tabular-nums">{stats?.cities ?? 0}</p>
           </div>
           <div className="flex-1" />
           <FollowButton targetUserId={profile.id} className="h-9 px-4 text-sm" />
