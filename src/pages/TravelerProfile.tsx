@@ -23,6 +23,7 @@ import { Camera as CapCamera, CameraResultType, CameraSource } from "@capacitor/
 import { ProfileFeedCard } from "@/components/profile/ProfileFeedCard";
 import { SpontawayTabIcon } from "@/components/profile/SpontawayTabIcon";
 import { SavedRoutes, SavedCollections } from "@/components/home/DiscoveryFeed";
+import { SavedPlacesGrid } from "@/components/saved/SavedPlacesGrid";
 import { ALL_CITIES } from "@/components/home/CitySelect";
 import { shortRelativeTime } from "@/lib/relativeTime";
 import { countryForCity } from "@/lib/tripCountries";
@@ -101,7 +102,7 @@ const TravelerProfile = () => {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [followSheet, setFollowSheet] = useState<"followers" | "following" | null>(null);
   const [tab, setTab] = useState<"listy" | "wyjazdy" | "zapisane">("listy");
-  const [savedTab, setSavedTab] = useState<"routes" | "lists">("routes");
+  const [savedTab, setSavedTab] = useState<"miejsca" | "listy_trasy">("miejsca");
   // Potwierdzenie usuniecia (lista albo wyjazd) - nieodwracalne, walidacja "czy na pewno?".
   const [confirmDelete, setConfirmDelete] = useState<{ kind: "list" | "trip"; id: string; routeIds?: string[]; title: string } | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -444,11 +445,11 @@ const TravelerProfile = () => {
               })
             )
           ) : (
-            /* Zakładka ZAPISANE (IA 2026-08-20): zapisane od innych - trasy + listy.
-               Zastąpiła dawną zakładkę nav "Zapisane" (/polubione). */
+            /* Zakładka ZAPISANE (IA 2026-08-20): zapisane rzeczy. Segmenty: Miejsca (siatka
+               zapisanych miejsc) + "Listy | Trasy" (zapisane listy + trasy razem, jeden feed). */
             <div className="space-y-3">
               <div className="flex p-1 bg-secondary rounded-full">
-                {([{ id: "routes", label: "Trasy" }, { id: "lists", label: "Listy" }] as { id: "routes" | "lists"; label: string }[]).map((s) => (
+                {([{ id: "miejsca", label: "Miejsca" }, { id: "listy_trasy", label: "Listy | Trasy" }] as { id: "miejsca" | "listy_trasy"; label: string }[]).map((s) => (
                   <button
                     key={s.id}
                     onClick={() => setSavedTab(s.id)}
@@ -458,7 +459,14 @@ const TravelerProfile = () => {
                   </button>
                 ))}
               </div>
-              {savedTab === "routes" ? <SavedRoutes city={ALL_CITIES} /> : <SavedCollections />}
+              {savedTab === "miejsca" ? (
+                <SavedPlacesGrid />
+              ) : (
+                <div className="space-y-6">
+                  <SavedRoutes city={ALL_CITIES} />
+                  <SavedCollections />
+                </div>
+              )}
             </div>
           )}
         </div>
