@@ -62,5 +62,7 @@
   "bug_upload_error": "Nie udało się przesłać zdjęcia",
   "bug_submit": "Wyślij zgłoszenie",
   "bug_submitting": "Wysyłam…",
-  "bug_error": "Błąd: {{message}}"
+  "bug_error": "Błąd: {{message}}",
+  "bio": "O mnie",
+  "bio_placeholder": "Krótko o sobie, np. Uwielbiam city breaki!"
 }

@@ -46,7 +46,8 @@
     "delete_desc": "\"{{title}}\" will be gone forever. This action cannot be undone.",
     "cancel": "Cancel",
     "deleting": "Deleting…",
-    "delete": "Delete"
+    "delete": "Delete",
+    "create_new": "New place list"
   },
   "explore": {
     "back_aria": "Back to explore",
@@ -58,5 +59,9 @@
     "tab_browse": "Browse",
     "tab_explore": "Explore",
     "change_city": "Change city"
+  },
+  "feed": {
+    "visited": "Visited places",
+    "to_visit": "Places to visit"
   }
 }

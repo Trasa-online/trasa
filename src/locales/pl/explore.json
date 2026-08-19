@@ -46,7 +46,8 @@
     "delete_desc": "„{{title}}\" zniknie na zawsze. Tej akcji nie można cofnąć.",
     "cancel": "Anuluj",
     "deleting": "Usuwam…",
-    "delete": "Usuń"
+    "delete": "Usuń",
+    "create_new": "Nowa lista miejsc"
   },
   "explore": {
     "back_aria": "Wróć do eksploracji",
@@ -58,5 +59,9 @@
     "tab_browse": "Przeglądaj",
     "tab_explore": "Eksploracja",
     "change_city": "Zmień miasto"
+  },
+  "feed": {
+    "visited": "Odwiedzone miejsca",
+    "to_visit": "Do odwiedzenia miejsca"
   }
 }

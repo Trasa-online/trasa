@@ -12,7 +12,8 @@
     "cities_sub": "places visited",
     "collections": "Collections",
     "collections_sub_public": "place collections",
-    "collections_sub_own": "Your place collections"
+    "collections_sub_own": "Your place collections",
+    "trips": "Trips"
   },
   "public": {
     "not_found": "User not found",
@@ -56,7 +57,8 @@
     "your_profile": "Your Profile",
     "find_users_aria": "Find people",
     "notifications_aria": "Notifications",
-    "share_profile_aria": "Share profile"
+    "share_profile_aria": "Share profile",
+    "add_bio": "Add a short bio about yourself"
   },
   "guest": {
     "title": "Your traveler profile",
@@ -87,5 +89,18 @@
     "home": "Home",
     "error_title": "Link invalid or expired",
     "error_desc": "Ask your friend for a new invite link."
+  },
+  "feed": {
+    "visited": "Visited places",
+    "to_visit": "Places to visit",
+    "list_fallback": "Place list",
+    "trip_fallback": "Trip to {{city}}",
+    "trip_fallback_generic": "Trip",
+    "lists_empty_title": "No lists yet",
+    "lists_empty_desc": "Create lists of favourite places: visited or to visit.",
+    "lists_empty_cta": "New place list",
+    "trips_empty_title": "No trips yet",
+    "trips_empty_desc": "Plan a route and share it with friends.",
+    "trips_empty_cta": "Plan a trip"
   }
 }

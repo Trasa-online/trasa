@@ -62,5 +62,7 @@
   "bug_upload_error": "Failed to upload photo",
   "bug_submit": "Send report",
   "bug_submitting": "Sending…",
-  "bug_error": "Error: {{message}}"
+  "bug_error": "Error: {{message}}",
+  "bio": "About me",
+  "bio_placeholder": "A short line about you, e.g. I love city breaks!"
 }

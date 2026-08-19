@@ -12,7 +12,8 @@
     "cities_sub": "odwiedzone miejsca",
     "collections": "Listy",
     "collections_sub_public": "kolekcje miejsc",
-    "collections_sub_own": "Twoje kolekcje miejsc"
+    "collections_sub_own": "Twoje kolekcje miejsc",
+    "trips": "Wyjazdy"
   },
   "public": {
     "not_found": "Nie znaleziono użytkownika",
@@ -57,7 +58,8 @@
     "your_profile": "Twój Profil",
     "find_users_aria": "Szukaj osób",
     "notifications_aria": "Powiadomienia",
-    "share_profile_aria": "Udostępnij profil"
+    "share_profile_aria": "Udostępnij profil",
+    "add_bio": "Dodaj krótki opis o sobie"
   },
   "guest": {
     "title": "Twój profil podróżnika",
@@ -88,5 +90,18 @@
     "home": "Strona główna",
     "error_title": "Link nieprawidłowy lub wygasł",
     "error_desc": "Poproś znajomego o nowy link zaproszeniowy."
+  },
+  "feed": {
+    "visited": "Odwiedzone miejsca",
+    "to_visit": "Do odwiedzenia miejsca",
+    "list_fallback": "Lista miejsc",
+    "trip_fallback": "Wyjazd do {{city}}",
+    "trip_fallback_generic": "Wyjazd",
+    "lists_empty_title": "Nie masz jeszcze list",
+    "lists_empty_desc": "Twórz listy ulubionych miejsc: odwiedzonych albo do odwiedzenia.",
+    "lists_empty_cta": "Nowa lista miejsc",
+    "trips_empty_title": "Nie masz jeszcze wyjazdów",
+    "trips_empty_desc": "Zaplanuj trasę i podziel się nią ze znajomymi.",
+    "trips_empty_cta": "Zaplanuj wyjazd"
   }
 }

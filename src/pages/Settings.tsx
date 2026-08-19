@@ -544,6 +544,7 @@ const Settings = () => {
   const [firstName, setFirstName] = useState("");
   const [username, setUsername] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
+  const [bio, setBio] = useState("");
 
   useEffect(() => {
     if (!loading && !user) navigate("/auth");
@@ -581,6 +582,7 @@ const Settings = () => {
       setFirstName((profile as any).first_name || "");
       setUsername(profile.username || "");
       setAvatarUrl(profile.avatar_url || "");
+      setBio((profile as any).bio || "");
     }
   }, [profile]);
 
@@ -588,7 +590,7 @@ const Settings = () => {
     mutationFn: async () => {
       const { error } = await supabase
         .from("profiles")
-        .update({ first_name: firstName, username, avatar_url: avatarUrl } as any)
+        .update({ first_name: firstName, username, avatar_url: avatarUrl, bio: bio.trim() || null } as any)
         .eq("id", user?.id);
       if (error) throw error;
     },
@@ -716,6 +718,21 @@ const Settings = () => {
               onChange={(e) => setUsername(e.target.value)}
               placeholder={t("username_placeholder")}
               className="bg-background"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="bio">{t("bio", "O mnie")}</Label>
+              <span className="text-xs text-muted-foreground/70 tabular-nums">{bio.length}/80</span>
+            </div>
+            <textarea
+              id="bio"
+              value={bio}
+              onChange={(e) => setBio(e.target.value.slice(0, 80))}
+              maxLength={80}
+              rows={2}
+              placeholder={t("bio_placeholder", "Krótko o sobie, np. Uwielbiam city breaki!")}
+              className="w-full bg-background rounded-2xl px-3 py-2.5 text-sm resize-none focus:outline-none border border-border/40 placeholder:text-muted-foreground/60 leading-relaxed"
             />
           </div>
           <button

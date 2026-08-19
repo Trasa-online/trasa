@@ -8,6 +8,9 @@ import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import { fetchEnrichedPlace, type MockPlace } from "@/components/plan-wizard/PlaceSwiper";
 import { RoutePlaceRow } from "@/components/route/RoutePlaceRow";
 import { resolveStored } from "@/components/PlacePhoto";
+import { PlaceTile } from "@/components/profile/PlaceTile";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { avatarSrc } from "@/lib/avatar";
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { parseISO, isValid, format, isToday, isYesterday } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
@@ -509,7 +512,7 @@ export const MyCollections = ({ showCreate = true }: { showCreate?: boolean } = 
     queryFn: async () => {
       const { data: cols } = await (supabase as any)
         .from("discovery_collections")
-        .select("id, title, city, description, is_public, moderation_status, moderation_note, cover_url, list_cover_url, list_status")
+        .select("id, title, city, description, is_public, moderation_status, moderation_note, cover_url, list_cover_url, list_status, author_avatar, author_name")
         .eq("user_id", user!.id)
         .eq("kind", "ranking")
         .order("updated_at", { ascending: false });
@@ -580,125 +583,57 @@ export const MyCollections = ({ showCreate = true }: { showCreate?: boolean } = 
         </div>
       ) : (
         (() => {
+        // Blok listy (redesign 08): avatar + eyebrow statusu + tytul + siatka kafelkow miejsc.
+        // Tap w blok -> pelny widok listy (/lista/:id). Kosz (usuwanie) w rogu.
         const renderCol = (col: any) => {
-          const isOpen = expanded === col.id;
           const title = col.title || t("collections.untitled");
+          const eyebrow = col.list_status === "to_visit"
+            ? t("feed.to_visit", "Do odwiedzenia miejsca")
+            : t("feed.visited", "Odwiedzone miejsca");
+          const initial = (col.author_name || title || "?").charAt(0).toUpperCase();
           return (
-            <div key={col.id} className="rounded-3xl bg-card border border-border/50 overflow-hidden shadow-sm">
-              {/* Kafelek poziomy - wzor 1:1 z zakladka Trasy (JournalTab): okladka 9:16 z eksploracji
-                  (list_cover_url) po lewej, tresc po prawej. Tap = rozwin/zwin podglad (accordion). */}
-              <div className="relative w-full flex gap-3.5 p-3">
-                <button
-                  onClick={() => navigate(`/lista/${col.id}`)}
-                  aria-label={t("collections.open_full", "Zobacz pełny widok listy")}
-                  className="relative w-[104px] aspect-[9/16] shrink-0 rounded-2xl overflow-hidden bg-muted active:opacity-90 transition-opacity"
-                >
-                  <img src={col.cover ? (resolveStored(col.cover) ?? col.cover) : getRandomPinPlaceholder(col.id)} alt={title} className="w-full h-full object-cover" loading="lazy" />
-                </button>
-                <div className="flex-1 min-w-0 flex flex-col py-0.5">
-                  <div className="flex items-start gap-2">
-                    <button onClick={() => navigate(`/lista/${col.id}`)} className="flex-1 min-w-0 text-left">
-                      <p className="text-lg font-bold leading-tight line-clamp-2 text-foreground">{title}</p>
-                    </button>
-                    <button
-                      onClick={() => setConfirmDelete({ id: col.id, title })}
-                      aria-label={t("collections.delete_aria")}
-                      className="shrink-0 -mr-0.5 -mt-0.5 h-7 w-7 flex items-center justify-center rounded-full text-muted-foreground/50 active:text-destructive active:scale-90 transition-colors"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                  {/* Status moderacji - badge tekstowy pod tytulem. "Pending" NIE pokazywany userowi
-                      (straszy) - lista wyglada dla niego normalnie, moderacja dzieje sie po stronie
-                      admina. Pokazujemy tylko "rejected" (potrzebny feedback) i "private". */}
-                  {col.moderation_status === "rejected" && (
-                    <span className="mt-1.5 inline-flex w-fit items-center text-[10px] font-bold text-destructive bg-destructive/10 rounded-full px-2 py-0.5">{t("collections.rejected")}</span>
-                  )}
-                  {col.is_public === false && (
-                    <span className="mt-1.5 inline-flex w-fit items-center text-[10px] font-bold text-muted-foreground bg-muted rounded-full px-2 py-0.5">{t("collections.private")}</span>
-                  )}
-                  {/* Dol: miasto + liczba (lewo) + chevron rozwijania (prawo) */}
-                  <button onClick={() => setExpanded(isOpen ? null : col.id)} className="mt-auto flex items-center justify-between gap-2 pt-2 text-left">
-                    <span className="text-sm text-muted-foreground truncate">{[col.city, countLabel(col.count)].filter(Boolean).join(" · ")}</span>
-                    <span className={`shrink-0 h-7 w-7 rounded-full bg-secondary flex items-center justify-center text-muted-foreground transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}>
-                      <ChevronDown className="h-4 w-4" />
-                    </span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Podglad listy (accordion) - miejsca w stylu widoku trasy (RoutePlaceRow, pkt 4) */}
-              {isOpen && (
-                <div className="px-3 pt-1 pb-3 space-y-2.5 border-t border-border/40 mt-1">
-                  {col.moderation_status === "rejected" && col.moderation_note && (
-                    <p className="text-[11px] text-muted-foreground leading-snug whitespace-pre-wrap px-1">{t("collections.reason", { note: col.moderation_note })}</p>
-                  )}
-                  {col.items.length === 0 ? (
-                    <p className="text-sm text-muted-foreground text-center py-4">{t("collections.empty_list", "Ta lista nie ma jeszcze miejsc.")}</p>
-                  ) : (
-                    col.items.map((pin: any, i: number) => {
-                      const noteText = (pin.short_desc ?? "").trim();
-                      const note = noteText ? (
-                        <div>
-                          <p className="text-sm font-semibold text-foreground">{t("collections.author_note", "Notka autora")}</p>
-                          <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap mt-0.5">{noteText}</p>
-                        </div>
-                      ) : undefined;
-                      // Kategoria: zapisana -> wywnioskowana z nazwy (miejsca z Google bywaja bez
-                      // kategorii -> inaczej ikona=Landmark, chip="Miejsce"). Pin z catKey dla PlacePhoto.
-                      const catKey = pin.category ?? inferCategoryFromName(pin.place_name);
-                      return (
-                        <RoutePlaceRow
-                          key={pin.id}
-                          pin={{ ...pin, category: catKey }}
-                          index={i}
-                          categoryLabel={catKey ? subcategoryLabelLocalized(catKey) : t("collections.place_generic", "Miejsce")}
-                          onOpen={() => openPlace(pin, col.city)}
-                          onGoogle={() => openGoogle(pin, col.city)}
-                          note={note}
-                        />
-                      );
-                    })
-                  )}
-                  {/* Akcje: Edytuj + pelny widok listy (usuwanie = kosz na kafelku) */}
-                  <div className="flex flex-col gap-2 pt-1">
-                    <button
-                      onClick={() => navigate(`/zestawienie/${col.id}/edytuj`)}
-                      className="w-full flex items-center justify-center gap-2 py-2.5 rounded-2xl bg-secondary text-secondary-foreground text-sm font-bold active:scale-[0.98] transition-transform"
-                    >
-                      <Pencil className="h-4 w-4" /> {t("collections.edit", "Edytuj listę")}
-                    </button>
-                    <button
-                      onClick={() => navigate(`/lista/${col.id}`)}
-                      className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-2xl bg-secondary/60 text-secondary-foreground text-sm font-semibold active:scale-[0.98] transition-transform"
-                    >
-                      {t("collections.open_full", "Zobacz pełny widok listy")} <ChevronRight className="h-4 w-4" />
-                    </button>
+            <div key={col.id} className="relative">
+              <button
+                onClick={() => navigate(`/lista/${col.id}`)}
+                className="w-full text-left block active:opacity-95 transition-opacity"
+              >
+                <div className="flex items-center gap-2.5 pr-8">
+                  <Avatar className="h-9 w-9 shrink-0">
+                    <AvatarImage src={avatarSrc(col.author_avatar)} className="object-cover bg-orange-100" />
+                    <AvatarFallback className="bg-orange-100 text-orange-600 font-bold text-xs">{initial}</AvatarFallback>
+                  </Avatar>
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground truncate">{eyebrow}</p>
+                    <p className="text-lg font-bold leading-tight line-clamp-1 text-foreground">{title}</p>
                   </div>
                 </div>
-              )}
+                {col.items.length > 0 && (
+                  <div className="grid grid-cols-3 gap-1.5 mt-2.5">
+                    {col.items.slice(0, 6).map((it: any, i: number) => <PlaceTile key={it.id ?? i} tile={it} />)}
+                  </div>
+                )}
+                {/* Status moderacji: "pending" NIE pokazywany userowi (straszy). Tylko rejected/private. */}
+                {col.moderation_status === "rejected" && (
+                  <span className="mt-2 inline-flex w-fit items-center text-[10px] font-bold text-destructive bg-destructive/10 rounded-full px-2 py-0.5">{t("collections.rejected")}</span>
+                )}
+                {col.is_public === false && (
+                  <span className="mt-2 inline-flex w-fit items-center text-[10px] font-bold text-muted-foreground bg-muted rounded-full px-2 py-0.5">{t("collections.private")}</span>
+                )}
+              </button>
+              <button
+                onClick={() => setConfirmDelete({ id: col.id, title })}
+                aria-label={t("collections.delete_aria")}
+                className="absolute top-0 right-0 h-7 w-7 flex items-center justify-center rounded-full text-muted-foreground/40 active:text-destructive active:scale-90 transition-colors"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
             </div>
           );
         };
-        // Podzial na dwie sekcje: Odwiedzone miejsca (visited) vs Miejsca do odwiedzenia (to_visit).
-        const visited = collections.filter((c: any) => c.list_status !== "to_visit");
-        const toVisit = collections.filter((c: any) => c.list_status === "to_visit");
-        return (
-          <div className="space-y-6">
-            {visited.length > 0 && (
-              <div className="space-y-3">
-                <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide px-1">Odwiedzone miejsca</p>
-                {visited.map(renderCol)}
-              </div>
-            )}
-            {toVisit.length > 0 && (
-              <div className="space-y-3">
-                <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide px-1">Miejsca do odwiedzenia</p>
-                {toVisit.map(renderCol)}
-              </div>
-            )}
-          </div>
-        );
+        // Kolejnosc: odwiedzone najpierw, potem do odwiedzenia (jak w Figmie 08).
+        const ordered = [...collections].sort((a: any, b: any) =>
+          (a.list_status === "to_visit" ? 1 : 0) - (b.list_status === "to_visit" ? 1 : 0));
+        return <div className="space-y-7">{ordered.map(renderCol)}</div>;
         })()
       )}
 
@@ -881,9 +816,12 @@ const Explore = () => {
               <ArrowLeft className="h-5 w-5" />
             </button>
             <h1 className="flex-1 min-w-0 text-lg font-bold truncate">{t("explore.collections_title")}</h1>
-            <InfoTooltip title="Twoje listy">
-              {`Listy to Twoje zbiory ulubionych miejsc (bez ustalonej kolejności): odwiedzone albo do odwiedzenia. Np. ukochane kawiarnie w mieście. Tworzysz je sam i możesz udostępniać innym.`}
-            </InfoTooltip>
+            <button
+              onClick={() => { trackCollectionCreate("twoje_listy_header"); navigate("/zestawienie/nowe"); }}
+              className="shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-full border border-primary/70 text-primary text-sm font-bold active:scale-[0.97] transition-transform"
+            >
+              <Plus className="h-4 w-4" strokeWidth={2.5} /> {t("collections.create_new", "Nowa lista miejsc")}
+            </button>
           </>
         ) : (
           <ExploreTopBar
@@ -898,7 +836,7 @@ const Explore = () => {
 
       {myCollections ? (
         <PullToRefresh onRefresh={handleRefresh} className="flex-1 min-h-0 flex flex-col pt-3 pb-[calc(5rem+env(safe-area-inset-bottom,0px))]">
-          <div className="flex-1 px-4"><MyCollections /></div>
+          <div className="flex-1 px-4"><MyCollections showCreate={false} /></div>
         </PullToRefresh>
       ) : (
         <>
