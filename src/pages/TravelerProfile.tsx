@@ -395,7 +395,7 @@ const TravelerProfile = () => {
                   key={l.id}
                   avatarUrl={profile?.avatar_url}
                   fallback={displayName}
-                  eyebrow={t("feed.recommend", "Polecam")}
+                  eyebrow={t("feed.recommend", "Odwiedzone")}
                   timestamp={shortRelativeTime(l.updated_at)}
                   title={l.title || t("feed.list_fallback", "Lista miejsc")}
                   tiles={l.tiles}

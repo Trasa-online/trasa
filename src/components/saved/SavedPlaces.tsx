@@ -9,8 +9,9 @@ import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import { type MockPlace } from "@/components/plan-wizard/PlaceSwiper";
 import { inferCategoryFromName, categoryFromGoogleTypes } from "@/lib/placeCategoryIcon";
 import { subcategoryLabelLocalized } from "@/lib/categories";
+import { countryForCity } from "@/lib/tripCountries";
 import { forwardGeocodeWithTypes } from "@/lib/googleMaps";
-import { fetchSavedPlaces, removeSavedPlaceById, quickSavePlace, type SavedPlace } from "@/lib/placeLists";
+import { fetchSavedPlaces, removeSavedPlaceById, addPlaceToList, quickSavePlace, type SavedPlace } from "@/lib/placeLists";
 
 // Segment "Miejsca" w zakładce Zapisane: PRYWATNA wishlista usera "Do zobaczenia" (agregat
 // pozycji ze wszystkich list to_visit). User może dodać miejsce BEZPOŚREDNIO ("Dodaj miejsce")
@@ -50,7 +51,26 @@ export function SavedPlaces({ city }: { city?: string }) {
     try {
       await removeSavedPlaceById(p.id);
       invalidate();
-      toast.success(`Usunięto „${p.place_name}"`);
+      // Toast z opcją "Cofnij" (5s) - re-insert do tej samej listy.
+      toast.success(`Usunięto „${p.place_name}"`, {
+        duration: 5000,
+        action: {
+          label: "Cofnij",
+          onClick: async () => {
+            try {
+              await addPlaceToList(p.collection_id, {
+                place_name: p.place_name, category: p.category, address: p.address, description: p.short_desc,
+                latitude: p.latitude, longitude: p.longitude, place_id: p.place_id,
+                google_place_id: p.google_place_id, rating: p.rating, photo_url: p.photo_url,
+              });
+              invalidate();
+            } catch (e: any) {
+              console.error("[SavedPlaces] undo remove failed:", e?.message ?? e);
+              toast.error("Nie udało się cofnąć");
+            }
+          },
+        },
+      });
     } catch (e: any) {
       console.error("[SavedPlaces] remove failed:", e?.message ?? e);
       toast.error("Nie udało się usunąć");
@@ -61,6 +81,41 @@ export function SavedPlaces({ city }: { city?: string }) {
     const cat = p.category ?? inferCategoryFromName(p.place_name);
     return cat ? subcategoryLabelLocalized(cat) : "Miejsce";
   };
+
+  // #2: grupowanie po mieście (nagłówek "Kraj · Miasto"), żeby wszystko nie wpadało do jednego wora.
+  // Miasta alfabetycznie; miejsca bez miasta na końcu ("Bez miasta").
+  const groups = new Map<string, SavedPlace[]>();
+  for (const p of places) {
+    const key = (p.city ?? "").trim();
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(p);
+  }
+  const groupKeys = [...groups.keys()].sort((a, b) => {
+    if (!a) return 1; if (!b) return -1;
+    return a.localeCompare(b, "pl");
+  });
+  const groupLabel = (city: string) => city ? [countryForCity(city), city].filter(Boolean).join(" · ") : "Bez miasta";
+
+  const renderRow = (p: SavedPlace) => (
+    <div key={p.id} className="flex items-center gap-3 py-2.5">
+      <button onClick={() => openDetail(p)} className="flex items-center gap-3 flex-1 min-w-0 text-left active:opacity-80">
+        <div className="h-14 w-14 rounded-xl overflow-hidden shrink-0 bg-muted">
+          <PlacePhoto pin={{ photo_url: p.photo_url, category: p.category }} className="h-full w-full object-cover" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-bold text-foreground truncate">{p.place_name}</p>
+          <p className="text-xs text-muted-foreground truncate">{catLabel(p)}</p>
+        </div>
+      </button>
+      <button
+        onClick={() => remove(p)}
+        aria-label="Usuń miejsce"
+        className="h-9 w-9 shrink-0 flex items-center justify-center rounded-full text-destructive active:bg-destructive/10 transition-colors"
+      >
+        <Trash2 className="h-[18px] w-[18px]" />
+      </button>
+    </div>
+  );
 
   return (
     <div className="space-y-3">
@@ -92,25 +147,13 @@ export function SavedPlaces({ city }: { city?: string }) {
           </div>
         </div>
       ) : (
-        <div className="divide-y divide-border/40">
-          {places.map((p) => (
-            <div key={p.id} className="flex items-center gap-3 py-2.5">
-              <button onClick={() => openDetail(p)} className="flex items-center gap-3 flex-1 min-w-0 text-left active:opacity-80">
-                <div className="h-14 w-14 rounded-xl overflow-hidden shrink-0 bg-muted">
-                  <PlacePhoto pin={{ photo_url: p.photo_url, category: p.category }} className="h-full w-full object-cover" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-bold text-foreground truncate">{p.place_name}</p>
-                  <p className="text-xs text-muted-foreground truncate">{[p.city, catLabel(p)].filter(Boolean).join(" · ")}</p>
-                </div>
-              </button>
-              <button
-                onClick={() => remove(p)}
-                aria-label="Usuń miejsce"
-                className="h-9 w-9 shrink-0 flex items-center justify-center rounded-full text-destructive active:bg-destructive/10 transition-colors"
-              >
-                <Trash2 className="h-[18px] w-[18px]" />
-              </button>
+        <div className="space-y-5">
+          {groupKeys.map((key) => (
+            <div key={key || "_none"}>
+              <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-1">{groupLabel(key)}</p>
+              <div className="divide-y divide-border/40">
+                {groups.get(key)!.map(renderRow)}
+              </div>
             </div>
           ))}
         </div>

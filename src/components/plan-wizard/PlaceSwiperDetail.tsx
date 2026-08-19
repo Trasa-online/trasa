@@ -360,7 +360,7 @@ const PlaceSwiperDetail = ({
             hideReviews
             photoLikes={photoLikes}
             onToggleLike={handleToggleLike}
-            onAddPhoto={!isBusiness ? handleAddPhoto : undefined}
+            onAddPhoto={undefined /* #3 (Nat): usunięte "Dodaj swoje zdjęcie" z wizytówki */}
             addingPhoto={addingPhoto}
             startingLocation={distanceRef ? { name: distanceRef.label, latitude: distanceRef.coords.lat, longitude: distanceRef.coords.lng } : undefined}
           />

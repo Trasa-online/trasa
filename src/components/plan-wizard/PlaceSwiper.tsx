@@ -2093,7 +2093,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
         onLike={() => {
           // scrollMode (Eksploracja): "+"/Dodaj na wizytowce zapisuje BEZ zdejmowania z
           // kolejki (jak "+" na karcie). Klasyczny swipe: handleLike (dequeue).
-          if (exploreMode) { if (detailPlace) handleSaveInPlace(detailPlace); }
+          if (exploreMode) { if (detailPlace) handleSaveInPlace(detailPlace, { openSheet: true }); }
           else { handleLike(undefined, detailPlace ?? undefined); }
         }}
         onSkip={exploreMode ? undefined : () => { handleSkip(); }}

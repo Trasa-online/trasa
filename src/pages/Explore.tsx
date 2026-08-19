@@ -590,7 +590,7 @@ export const MyCollections = ({ showCreate = true }: { showCreate?: boolean } = 
         // Tap w blok -> pelny widok listy (/lista/:id). Kosz (usuwanie) w rogu.
         const renderCol = (col: any) => {
           const title = col.title || t("collections.untitled");
-          const eyebrow = t("feed.recommend", "Polecam");
+          const eyebrow = t("feed.recommend", "Odwiedzone");
           const initial = (col.author_name || title || "?").charAt(0).toUpperCase();
           return (
             <div key={col.id} className="relative">
