@@ -1043,11 +1043,13 @@ export function enrichWithBusinessProfile(p: any, refDate?: string): MockPlace {
 
   const bp = Array.isArray(p.business_profiles) ? p.business_profiles[0] : p.business_profiles;
   if (!bp) {
-    // Zwykle miejsce (bez profilu biznesu). ZERO Google (2026-07-29): NIE uzywamy Google
-    // backfillu (stare places.photo_url z prefiksem gpid_). ALE recznie skurowana okladka
-    // (upload przez scripts/upload-place-covers.ts do storage /manual/) to NASZ content -
-    // zachowujemy ja jako cover. Brak -> okladka z losowego zdjecia usera (SwipeCard) / ikona.
-    const curated = typeof p.photo_url === "string" && p.photo_url.includes("/place-photos-cache/manual/")
+    // Zwykle miejsce (bez profilu biznesu). ZERO Google (2026-07-29): NIE uzywamy starego Google
+    // backfillu (places.photo_url z prefiksem gpid_/cache). Zachowujemy: (a) recznie skurowana
+    // okladka (upload /manual/) = NASZ content, (b) proxy Google na zywo (/api/place-photo) - swiadomy
+    // backfill zdjec dla ODBLOKOWANYCH miejsc zakladki "Miejsca" (proxy = pobranie live, bez cache
+    // bajtow, zgodnie z ToS Google). Brak -> okladka z losowego zdjecia usera (SwipeCard) / ikona.
+    const curated = typeof p.photo_url === "string"
+      && (p.photo_url.includes("/place-photos-cache/manual/") || p.photo_url.includes("/api/place-photo"))
       ? p.photo_url
       : undefined;
     return { ...p, photo_url: curated, galleryPhotos: curated ? [curated] : [] } as MockPlace;
