@@ -344,7 +344,7 @@ const BottomNav = () => {
           <NavLink
             to="/moj-profil"
             end={false}
-            className="flex flex-col items-center justify-center gap-1 text-muted-foreground transition-colors"
+            className="w-16 flex flex-col items-center justify-center gap-1 text-muted-foreground transition-colors"
             activeClassName="text-foreground"
           >
             {({ isActive }) => (
