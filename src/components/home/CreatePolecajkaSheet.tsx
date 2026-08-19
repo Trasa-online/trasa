@@ -70,7 +70,12 @@ export default function CreatePolecajkaSheet({ open, onClose, onPublished, city,
           title: title.trim(),
           city: city || null,
           description: null,
+          // Polecajka = publiczna lista (visited) do moderacji. Bez kind/list_status defaultowała
+          // na to_visit+pending i bez kind='ranking' była niewidoczna w zapytaniach list.
+          kind: "ranking",
+          list_status: "visited",
           is_public: true,
+          moderation_status: "pending",
         })
         .select("id")
         .single();

@@ -2004,6 +2004,7 @@ export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityCh
         .select("id, title, city, description, category, author_name, author_avatar, user_id, views_count, saves_count, plan_adds_count, cover_url, list_cover_url")
         .eq("is_public", true)
         .eq("kind", "ranking")
+        .eq("list_status", "visited") // tylko polecajki; prywatne wishlisty to_visit nigdy w feedzie
         .eq("hidden_by_admin", false)
         .eq("moderation_status", "approved")
         .order("updated_at", { ascending: false })
@@ -2088,7 +2089,7 @@ export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityCh
       if (!categoryFilter.length && SHOW_ZESTAWIENIA) {
         let colQ = (supabase as any).from("discovery_collections")
           .select("id, title, city, description, category, author_name, author_avatar, user_id, views_count, saves_count, plan_adds_count, cover_url, list_cover_url")
-          .eq("is_public", true).eq("kind", "ranking").eq("hidden_by_admin", false).eq("moderation_status", "approved");
+          .eq("is_public", true).eq("kind", "ranking").eq("list_status", "visited").eq("hidden_by_admin", false).eq("moderation_status", "approved");
         if (q) colQ = colQ.or(`title.ilike.${like},author_name.ilike.${like}`);
         if (themeFilter.length) colQ = colQ.in("category", themeFilter);
         if (cities) colQ = colQ.in("city", cities);

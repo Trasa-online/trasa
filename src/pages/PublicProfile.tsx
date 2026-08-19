@@ -62,6 +62,9 @@ export default function PublicProfile() {
         .from("discovery_collections")
         .select("id, title, city, list_status, views_count, saves_count, likes_count, updated_at")
         .eq("user_id", profile!.id).eq("kind", "ranking")
+        // TYLKO publiczne polecajki (visited). Prywatne wishlisty "Do zobaczenia" (to_visit) NIGDY
+        // na cudzym profilu - guard nawet gdyby jakaś została jako public+approved.
+        .eq("list_status", "visited")
         .eq("is_public", true).eq("hidden_by_admin", false).eq("moderation_status", "approved")
         .order("updated_at", { ascending: false });
       const rows = (cols ?? []) as any[];
@@ -224,7 +227,7 @@ export default function PublicProfile() {
                   key={l.id}
                   avatarUrl={profile.avatar_url}
                   fallback={displayName}
-                  eyebrow={l.list_status === "visited" ? t("feed.visited", "Odwiedzone miejsca") : t("feed.to_visit", "Do odwiedzenia miejsca")}
+                  eyebrow={t("feed.recommend", "Polecam")}
                   timestamp={shortRelativeTime(l.updated_at)}
                   title={l.title || t("feed.list_fallback", "Lista miejsc")}
                   tiles={l.tiles}

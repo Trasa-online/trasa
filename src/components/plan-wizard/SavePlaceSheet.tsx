@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, X, Check, Loader2, Share2, Eye } from "lucide-react";
+import { Plus, X, Check, Loader2, Share2, ChevronDown, Bookmark } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -11,11 +11,12 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { resolveStored } from "@/components/PlacePhoto";
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
-import { fetchUserLists, addPlaceToList, removePlaceFromList, createListWithPlace, listHasPlace, type UserList, type ListStatus } from "@/lib/placeLists";
+import { fetchUserLists, addPlaceToList, removePlaceFromList, createListWithPlace, quickSavePlace, listHasPlace, type UserList } from "@/lib/placeLists";
 
-// Sheet "Gdzie chcesz zapisać to miejsce?" - zapis miejsca do LISTY usera. Listy mają dwie
-// kategorie: Odwiedzone miejsca (visited) i Miejsca do odwiedzenia (to_visit). User może dodać
-// miejsce do istniejącej listy albo utworzyć nową (toggle kategorii). Wszystkie listy publiczne.
+// Sheet zapisu miejsca. Dwie intencje ROZDZIELONE:
+// 1) Primary (1 tap): "Zapisz na później" -> PRYWATNA wishlista "Do zobaczenia" (to_visit,
+//    is_public=false). Nigdy publiczne, bez wyboru listy. To domyślny zapis "chcę odwiedzić".
+// 2) Secondary (zwinięte): "Dodaj do polecajki" -> publiczna lista (visited) do polecenia innym.
 
 export interface SavePlaceInput {
   place_name: string;
@@ -47,13 +48,16 @@ export default function SavePlaceSheet({
   const share = useShare();
 
   const [newName, setNewName] = useState("");
-  const [newStatus, setNewStatus] = useState<ListStatus>("to_visit");
   const [busyId, setBusyId] = useState<string | null>(null);
   // Optymistyczny stan przynaleznosci: listId -> true (w liscie) / false (usuniete), zanim query sie odswiezy.
   const [override, setOverride] = useState<Map<string, boolean>>(new Map());
+  // Optymistyczny stan zapisu prywatnego "na później" (null = licz z danych listy).
+  const [savedLater, setSavedLater] = useState<boolean | null>(null);
+  // Sekcja "Dodaj do polecajki" domyślnie zwinięta (świadoma, drugorzędna akcja).
+  const [showRecommend, setShowRecommend] = useState(false);
 
   useEffect(() => {
-    if (open) { setNewName(""); setNewStatus("to_visit"); setBusyId(null); setOverride(new Map()); }
+    if (open) { setNewName(""); setBusyId(null); setOverride(new Map()); setSavedLater(null); setShowRecommend(false); }
   }, [open]);
 
   const { data: author } = useQuery({
@@ -77,6 +81,7 @@ export default function SavePlaceSheet({
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ["save-sheet-lists", user?.id] });
     queryClient.invalidateQueries({ queryKey: ["saved-place-names", user?.id] });
+    queryClient.invalidateQueries({ queryKey: ["saved-places", user?.id] });
     queryClient.invalidateQueries({ queryKey: ["my-collections"] });
     queryClient.invalidateQueries({ queryKey: ["public-profile-lists"] });
     queryClient.invalidateQueries({ queryKey: ["explore-my-collections"] });
@@ -84,7 +89,31 @@ export default function SavePlaceSheet({
 
   const isIn = (l: UserList) => (override.has(l.id) ? override.get(l.id)! : listHasPlace(l, place?.place_name ?? ""));
 
-  // Toggle: gdy miejsce jest w liscie -> usun, inaczej -> dodaj.
+  // Czy miejsce jest już w prywatnej wishliście (dowolnej liście to_visit usera).
+  const inWishlist = savedLater !== null ? savedLater : toVisitLists.some((l) => isIn(l));
+
+  // Primary: prywatny zapis "na później" (dodaj/usuń z "Do zobaczenia").
+  const onQuickSave = async () => {
+    if (!place || !user || busyId) return;
+    setBusyId("quick"); haptics.medium();
+    try {
+      if (inWishlist) {
+        for (const l of toVisitLists) { if (isIn(l)) await removePlaceFromList(l.id, place.place_name); }
+        setSavedLater(false);
+        toast.success(`Usunięto z „Do zobaczenia"`);
+      } else {
+        const { added } = await quickSavePlace(user.id, { ...place }, city || null, author);
+        setSavedLater(true);
+        toast.success(added ? `Zapisano do „Do zobaczenia"` : `Już jest w „Do zobaczenia"`);
+      }
+      invalidate();
+    } catch (e: any) {
+      console.error("[SavePlaceSheet] quick save failed:", e?.message ?? e);
+      toast.error("Nie udało się zapisać");
+    } finally { setBusyId(null); }
+  };
+
+  // Toggle listy polecajek (visited): gdy miejsce w liscie -> usun, inaczej -> dodaj.
   const toggle = async (l: UserList) => {
     if (!place || !user || busyId) return;
     const currentlyIn = isIn(l);
@@ -106,16 +135,17 @@ export default function SavePlaceSheet({
     } finally { setBusyId(null); }
   };
 
+  // Utworz nowa PUBLICZNA liste polecajek (visited) z tym miejscem.
   const createNew = async () => {
     if (!place || !user || busyId) return;
     setBusyId("new"); haptics.medium();
     try {
-      const id = await createListWithPlace(user.id, newName.trim(), newStatus, city || null, { ...place }, author);
+      const id = await createListWithPlace(user.id, newName.trim(), "visited", city || null, { ...place }, author);
       if (!id) throw new Error("create failed");
       setNewName("");
       invalidate();
       onOpenChange(false);
-      toast.success(`Utworzono listę „${newName.trim() || (newStatus === "visited" ? "Odwiedzone miejsca" : "Do odwiedzenia")}"`);
+      toast.success(`Utworzono listę „${newName.trim() || "Odwiedzone miejsca"}"`);
     } catch (e: any) {
       console.error("[SavePlaceSheet] create list failed:", e?.message ?? e);
       toast.error("Nie udało się utworzyć listy");
@@ -174,60 +204,70 @@ export default function SavePlaceSheet({
         </div>
 
         <div className="flex-1 min-h-0 overflow-y-auto px-5 pt-1 pb-3" style={{ WebkitOverflowScrolling: "touch" }}>
-          <p className="text-xl font-black text-foreground mb-3">Gdzie chcesz zapisać to miejsce?</p>
+          <p className="text-xl font-black text-foreground mb-1">Zapisz miejsce</p>
+          <p className="text-sm text-muted-foreground mb-3">{`Odłóż na później dla siebie albo dodaj do listy, którą polecasz innym.`}</p>
 
-          {/* Nowa lista: nazwa + toggle kategorii + "+" */}
-          <div className="flex items-center gap-2 pb-1">
-            <div className="flex-1 flex items-center gap-1.5 h-12 pl-3.5 pr-1.5 rounded-2xl border border-border bg-background min-w-0">
-              <input
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter") createNew(); }}
-                placeholder="Nowa lista"
-                className="flex-1 min-w-0 bg-transparent text-base text-foreground placeholder:text-muted-foreground/50 focus:outline-none"
-              />
-              {/* Toggle kategorii nowej listy: Odwiedzone | Do odwiedzenia */}
-              <button
-                type="button"
-                onClick={() => setNewStatus((s) => (s === "visited" ? "to_visit" : "visited"))}
-                className={cn(
-                  "flex items-center gap-1.5 h-9 pl-1 pr-3 rounded-full text-xs font-semibold shrink-0 transition-colors active:scale-95",
-                  newStatus === "visited" ? "bg-orange-100 text-orange-700" : "bg-secondary text-secondary-foreground",
-                )}
-              >
-                <span className={cn("h-7 w-7 rounded-full flex items-center justify-center", newStatus === "visited" ? "bg-orange-500 text-white" : "bg-muted text-muted-foreground")}>
-                  {newStatus === "visited" ? <Check className="h-4 w-4" strokeWidth={3} /> : <Eye className="h-4 w-4" />}
-                </span>
-                {newStatus === "visited" ? "Odwiedzone" : "Do odwiedzenia"}
-              </button>
-            </div>
-            <button type="button" onClick={createNew} disabled={busyId === "new"} className="h-10 w-10 rounded-full flex items-center justify-center shrink-0 text-foreground active:scale-90 transition-transform disabled:opacity-50" aria-label="Utwórz listę">
-              {busyId === "new" ? <Loader2 className="h-5 w-5 animate-spin" /> : <Plus className="h-6 w-6" />}
-            </button>
-          </div>
+          {/* Primary: prywatny zapis "na później" (1 tap, bez wyboru listy) */}
+          <button
+            type="button"
+            onClick={onQuickSave}
+            disabled={busyId === "quick"}
+            className={cn(
+              "w-full h-14 rounded-2xl flex items-center gap-3 px-4 text-left active:scale-[0.99] transition-transform",
+              inWishlist ? "bg-orange-100" : "bg-primary",
+            )}
+          >
+            <span className={cn("h-9 w-9 rounded-full flex items-center justify-center shrink-0", inWishlist ? "bg-orange-500 text-white" : "bg-white/20 text-white")}>
+              {busyId === "quick" ? <Loader2 className="h-5 w-5 animate-spin" /> : inWishlist ? <Check className="h-5 w-5" strokeWidth={3} /> : <Bookmark className="h-5 w-5" />}
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className={cn("block text-sm font-bold leading-tight", inWishlist ? "text-orange-800" : "text-white")}>
+                {inWishlist ? "Zapisane na później" : "Zapisz na później"}
+              </span>
+              <span className={cn("block text-xs leading-tight", inWishlist ? "text-orange-700/80" : "text-white/80")}>
+                {`Prywatna lista "Do zobaczenia"`}
+              </span>
+            </span>
+          </button>
 
-          {isLoading ? (
-            <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
-          ) : (
-            <div className="pt-2">
-              {/* Odwiedzone miejsca */}
-              {visitedLists.length > 0 && (
-                <div className="mb-2">
-                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mt-3 mb-1">Odwiedzone miejsca</p>
-                  <div className="divide-y divide-border/40">{visitedLists.map(renderList)}</div>
+          {/* Secondary: świadoma, drugorzędna akcja - dodaj do publicznej listy polecajek */}
+          <button
+            type="button"
+            onClick={() => setShowRecommend((v) => !v)}
+            className="w-full flex items-center gap-2 mt-4 mb-1 text-left"
+          >
+            <span className="text-sm font-bold text-foreground">Dodaj do polecajki</span>
+            <span className="text-xs text-muted-foreground">{`publiczna lista`}</span>
+            <span className="flex-1" />
+            <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform", showRecommend && "rotate-180")} />
+          </button>
+
+          {showRecommend && (
+            <>
+              {/* Nowa lista polecajek (zawsze visited/publiczna) */}
+              <div className="flex items-center gap-2 pb-1">
+                <div className="flex-1 flex items-center h-12 px-3.5 rounded-2xl border border-border bg-background min-w-0">
+                  <input
+                    value={newName}
+                    onChange={(e) => setNewName(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") createNew(); }}
+                    placeholder="Nowa lista z polecankami"
+                    className="flex-1 min-w-0 bg-transparent text-base text-foreground placeholder:text-muted-foreground/50 focus:outline-none"
+                  />
                 </div>
+                <button type="button" onClick={createNew} disabled={busyId === "new"} className="h-10 w-10 rounded-full flex items-center justify-center shrink-0 text-foreground active:scale-90 transition-transform disabled:opacity-50" aria-label="Utwórz listę">
+                  {busyId === "new" ? <Loader2 className="h-5 w-5 animate-spin" /> : <Plus className="h-6 w-6" />}
+                </button>
+              </div>
+
+              {isLoading ? (
+                <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+              ) : visitedLists.length > 0 ? (
+                <div className="divide-y divide-border/40 pt-1">{visitedLists.map(renderList)}</div>
+              ) : (
+                <p className="text-sm text-muted-foreground py-3">Nie masz jeszcze list z polecankami. Utwórz pierwszą powyżej.</p>
               )}
-              {/* Miejsca do odwiedzenia */}
-              {toVisitLists.length > 0 && (
-                <div className="mb-2">
-                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mt-3 mb-1">Miejsca do odwiedzenia</p>
-                  <div className="divide-y divide-border/40">{toVisitLists.map(renderList)}</div>
-                </div>
-              )}
-              {lists.length === 0 && (
-                <p className="text-sm text-muted-foreground py-4">Nie masz jeszcze list. Utwórz pierwszą powyżej.</p>
-              )}
-            </div>
+            </>
           )}
         </div>
 

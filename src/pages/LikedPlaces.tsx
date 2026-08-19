@@ -3,14 +3,14 @@ import CitySelect from "@/components/home/CitySelect";
 import TabTopBar from "@/components/layout/TabTopBar";
 import { useActiveCity } from "@/hooks/useActiveCity";
 import { SavedRoutes, SavedCollections } from "@/components/home/DiscoveryFeed";
+import { SavedPlaces } from "@/components/saved/SavedPlaces";
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
 import { cn } from "@/lib/utils";
 
-// Zakladka Zapisane (bottom nav): selektor miasta + toggle Trasy | Listy (2026-08-10).
-// Zapisane MIEJSCA usuniete - miejsca zapisuje sie teraz do LIST (odwiedzone/do odwiedzenia)
-// przez SavePlaceSheet. "Trasy" = zapisane trasy od innych (saved_routes). "Listy" = zapisane
-// listy zbiorcze (SavedCollections).
-type SavedTab = "routes" | "lists";
+// Zakladka Zapisane (bottom nav): selektor miasta + toggle Trasy | Listy | Miejsca.
+// "Trasy"/"Listy" = zapisane od innych (saved_routes / SavedCollections). "Miejsca" = PRYWATNA
+// wishlista usera "Do zobaczenia" (to_visit) - jego własne miejsca na później (SavedPlaces).
+type SavedTab = "routes" | "lists" | "places";
 
 const LikedPlaces = () => {
   const [city, setCity] = useActiveCity();
@@ -23,7 +23,7 @@ const LikedPlaces = () => {
         <CitySelect city={city} onCityChange={setCity} allowAll />
         <div className="flex-1" />
         <InfoTooltip title="Zapisane">
-          {`Zapisane to trasy i listy innych osób, które zapisałeś bookmarkiem w eksploracji. Wracaj do nich w każdej chwili. Tu nie tworzysz nic swojego - to Twoja kolekcja cudzych inspiracji.`}
+          {`Zapisane to Twój schowek na później: własne miejsca "do zobaczenia" oraz trasy i listy innych osób, które zapisałeś bookmarkiem. Wracaj do nich w każdej chwili.`}
         </InfoTooltip>
       </TabTopBar>
 
@@ -33,6 +33,7 @@ const LikedPlaces = () => {
           {([
             { id: "routes", label: "Trasy" },
             { id: "lists", label: "Listy" },
+            { id: "places", label: "Miejsca" },
           ] as { id: SavedTab; label: string }[]).map((s) => (
             <button
               key={s.id}
@@ -49,7 +50,7 @@ const LikedPlaces = () => {
       </div>
 
       <div className="flex-1 px-4 pt-3">
-        {tab === "routes" ? <SavedRoutes city={city} /> : <SavedCollections />}
+        {tab === "routes" ? <SavedRoutes city={city} /> : tab === "lists" ? <SavedCollections /> : <SavedPlaces city={city} />}
       </div>
     </div>
   );

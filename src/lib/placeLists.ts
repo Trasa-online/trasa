@@ -83,6 +83,58 @@ export async function fetchSavedPlaceNames(userId: string): Promise<Set<string>>
 
 export const normalizePlaceName = skey;
 
+export interface SavedPlace {
+  id: string;              // discovery_items.id (do usuniecia)
+  collection_id: string;
+  place_name: string;
+  category: string | null;
+  address: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  place_id: string | null;
+  google_place_id: string | null;
+  rating: number | null;
+  photo_url: string | null;
+  short_desc: string | null;
+  city: string | null;     // z listy (per-miasto)
+}
+
+// Plaska lista PRYWATNYCH zapisanych miejsc usera - agregat pozycji ze WSZYSTKICH list to_visit.
+// Do segmentu Zapisane→Miejsca (user mysli "pojedyncze miejsca", nie listy). Dedup po nazwie.
+export async function fetchSavedPlaces(userId: string): Promise<SavedPlace[]> {
+  const { data: cols } = await (supabase as any)
+    .from("discovery_collections")
+    .select("id, city").eq("user_id", userId).eq("kind", "ranking").eq("list_status", "to_visit");
+  const rows = (cols ?? []) as any[];
+  if (!rows.length) return [];
+  const cityByList: Record<string, string | null> = {};
+  for (const c of rows) cityByList[c.id] = c.city ?? null;
+  const { data: items } = await (supabase as any)
+    .from("discovery_items")
+    .select("id, collection_id, place_name, category, address, latitude, longitude, place_id, google_place_id, rating, photo_url, short_desc, order_index")
+    .in("collection_id", rows.map((r) => r.id))
+    .order("order_index", { ascending: false });
+  const seen = new Set<string>();
+  const out: SavedPlace[] = [];
+  for (const it of (items ?? []) as any[]) {
+    const k = skey(it.place_name);
+    if (!k || seen.has(k)) continue;
+    seen.add(k);
+    out.push({
+      id: it.id, collection_id: it.collection_id, place_name: it.place_name, category: it.category,
+      address: it.address, latitude: it.latitude, longitude: it.longitude, place_id: it.place_id,
+      google_place_id: it.google_place_id, rating: it.rating, photo_url: it.photo_url,
+      short_desc: it.short_desc, city: cityByList[it.collection_id] ?? null,
+    });
+  }
+  return out;
+}
+
+// Usun zapisane miejsce po id pozycji (discovery_items.id).
+export async function removeSavedPlaceById(itemId: string): Promise<void> {
+  await (supabase as any).from("discovery_items").delete().eq("id", itemId);
+}
+
 // Dodaj miejsce do listy (discovery_items). Dedup po nazwie. Zwraca false gdy juz bylo.
 export async function addPlaceToList(listId: string, place: PlaceForList): Promise<boolean> {
   const { data: existing } = await (supabase as any)
@@ -114,20 +166,23 @@ export async function removePlaceFromList(listId: string, placeName: string): Pr
   await (supabase as any).from("discovery_items").delete().eq("collection_id", listId).ilike("place_name", placeName);
 }
 
-// Utworz nowa liste danej kategorii z pierwszym miejscem. Wszystkie listy publiczne (moderacja pending).
+// Utworz nowa liste danej kategorii z pierwszym miejscem.
+// Widocznosc z INTENCJI: visited = publiczna polecajka (moderacja pending); to_visit = PRYWATNA
+// wishlista "Do zobaczenia" (is_public=false + approved -> poza kolejka moderacji, nigdy publiczna).
 export async function createListWithPlace(
   userId: string, title: string, listStatus: ListStatus, city: string | null, place: PlaceForList, author?: ListAuthor,
 ): Promise<string | null> {
+  const isRecommend = listStatus === "visited";
   const { data: col, error } = await (supabase as any)
     .from("discovery_collections")
     .insert({
       user_id: userId,
-      title: title || (listStatus === "visited" ? "Odwiedzone miejsca" : "Do odwiedzenia"),
+      title: title || (isRecommend ? "Odwiedzone miejsca" : "Do zobaczenia"),
       city: city || null,
       kind: "ranking",
       list_status: listStatus,
-      is_public: true,
-      moderation_status: "pending",
+      is_public: isRecommend,
+      moderation_status: isRecommend ? "pending" : "approved",
       author_name: author?.name ?? "Użytkownik",
       author_avatar: author?.avatar ?? null,
     })
@@ -138,47 +193,36 @@ export async function createListWithPlace(
   return col.id as string;
 }
 
-// #4: znajdz albo utworz domyslna liste "Odwiedzone miejsca" (visited) usera.
-export async function ensureVisitedList(userId: string, city: string | null, author?: ListAuthor): Promise<string | null> {
-  const { data } = await (supabase as any)
+// Prywatna wishlista "Do zobaczenia" (to_visit, is_public=false) usera - PER MIASTO.
+// Per-miasto, bo podpowiedzi przy tworzeniu trasy (ComposeWyjazd #5) filtrują po mieście listy.
+// Zapisane→Miejsca agreguje je płasko, więc user i tak widzi jeden schowek "Miejsca".
+export async function ensureToVisitList(userId: string, city: string | null, author?: ListAuthor): Promise<string | null> {
+  const base = (supabase as any)
     .from("discovery_collections")
-    .select("id").eq("user_id", userId).eq("kind", "ranking").eq("list_status", "visited")
-    .order("created_at", { ascending: true }).limit(1).maybeSingle();
+    .select("id").eq("user_id", userId).eq("kind", "ranking").eq("list_status", "to_visit");
+  const scoped = city ? base.eq("city", city) : base.is("city", null);
+  const { data } = await scoped.order("created_at", { ascending: true }).limit(1).maybeSingle();
   if (data?.id) return data.id as string;
   const { data: col } = await (supabase as any).from("discovery_collections").insert({
-    user_id: userId, title: "Odwiedzone miejsca", city: city || null, kind: "ranking",
-    list_status: "visited", is_public: true, moderation_status: "pending",
+    user_id: userId, title: "Do zobaczenia", city: city || null, kind: "ranking",
+    list_status: "to_visit", is_public: false, moderation_status: "approved",
     author_name: author?.name ?? "Użytkownik", author_avatar: author?.avatar ?? null,
   }).select("id").single();
   return col?.id ?? null;
 }
 
-// #4: przenies miejsca (po nazwie) z list 'do odwiedzenia' usera do domyslnej listy 'Odwiedzone'.
-// Wolane po publikacji trasy zlozonej z miejsc z wishlisty.
-export async function moveToVisited(userId: string, placeNames: string[], city: string | null, author?: ListAuthor): Promise<void> {
-  const names = new Set(placeNames.map(skey));
-  if (!names.size) return;
-  // Pozycje w listach 'do odwiedzenia' usera pasujace po nazwie.
-  const { data: lists } = await (supabase as any)
-    .from("discovery_collections").select("id").eq("user_id", userId).eq("kind", "ranking").eq("list_status", "to_visit");
-  const listIds = (lists ?? []).map((l: any) => l.id);
-  if (!listIds.length) return;
-  const { data: items } = await (supabase as any)
-    .from("discovery_items")
-    .select("id, collection_id, place_name, category, address, latitude, longitude, place_id, google_place_id, rating, photo_url, short_desc")
-    .in("collection_id", listIds);
-  const matching = (items ?? []).filter((it: any) => names.has(skey(it.place_name)));
-  if (!matching.length) return;
-  const visitedListId = await ensureVisitedList(userId, city, author);
-  if (!visitedListId) return;
-  for (const it of matching) {
-    const added = await addPlaceToList(visitedListId, {
-      place_name: it.place_name, category: it.category, address: it.address, description: it.short_desc,
-      latitude: it.latitude, longitude: it.longitude, place_id: it.place_id,
-      google_place_id: it.google_place_id, rating: it.rating, photo_url: it.photo_url,
-    });
-    // Usun z listy 'do odwiedzenia' niezaleznie (added=false gdy juz byl w odwiedzonych).
-    void added;
-    await (supabase as any).from("discovery_items").delete().eq("id", it.id);
-  }
+// Zapis 1-tap: dodaj miejsce do prywatnej "Do zobaczenia" (tworzy listę per-miasto gdy brak).
+// Dedup po nazwie w addPlaceToList. Zwraca listId + czy faktycznie dodano (false gdy już było).
+export async function quickSavePlace(
+  userId: string, place: PlaceForList, city: string | null, author?: ListAuthor,
+): Promise<{ listId: string | null; added: boolean }> {
+  const listId = await ensureToVisitList(userId, city, author);
+  if (!listId) return { listId: null, added: false };
+  const added = await addPlaceToList(listId, place);
+  return { listId, added };
 }
+
+// (Usunięto ensureVisitedList + moveToVisited: retirowany cykl "#4" auto-move do-odwiedzenia
+// -> Odwiedzone. Po rozdzieleniu intencji visited=publiczna polecajka, prywatna wishlista NIE
+// może auto-trafiać do publicznej listy. Odwiedzenie miejsca != chęć polecenia. Polecanie =
+// świadomy bookmark "Dodaj do polecajki" w SavePlaceSheet.)

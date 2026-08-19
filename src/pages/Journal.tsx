@@ -61,7 +61,7 @@ const Journal = () => {
         <CitySelect city={city} onCityChange={setCity} allowAll />
         <div className="flex-1" />
         <InfoTooltip title="Wyjazdy">
-          {`Wyjazdy to Twoje podróże: te które planujesz (Robocze) i te ukończone (Wspomnienia). Tu układasz wyjazd z miejsc, dodajesz zdjęcia i notki, a gotowy wyjazd możesz udostępnić innym.`}
+          {`Wyjazdy to Twoje trasy: te w przygotowaniu (Robocze) i te ukończone (Wspomnienia). Tu układasz wyjazd z miejsc, dodajesz zdjęcia i notki, a gotowy wyjazd możesz udostępnić innym. Pojedyncze miejsca na później zapisujesz w zakładce Zapisane.`}
         </InfoTooltip>
       </TabTopBar>
       <div className="px-4 pt-3">

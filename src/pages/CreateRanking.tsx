@@ -230,7 +230,9 @@ const CreateRanking = () => {
   // Status listy (discovery_collections.list_status): "visited" | "to_visit".
   // Nowa lista: user WYBIERA (toggle) czy juz odwiedzil te miejsca czy dopiero chce - domyslnie
   // "do odwiedzenia". Edycja: ladowane z col. Listy "do odwiedzenia" maja uproszczony krok 2.
-  const [listStatus, setListStatus] = useState<string | null>(editId ? null : "to_visit");
+  // CreateRanking = autor POLECAJEK (publiczna lista, list_status="visited"). Prywatne miejsca
+  // "do zobaczenia" zapisuje się bookmarkiem (SavePlaceSheet) -> Zapisane→Miejsca, nie tutaj.
+  const [listStatus, setListStatus] = useState<string | null>(editId ? null : "visited");
   // Dane B2B (premium) wybranych miejsc - do pokazania na karcie pelnego adresu, tagow i
   // kategorii glownej+drugiej. Klucz = place_id (UUID). Tylko miejsca z business_profiles.
   const [bizMap, setBizMap] = useState<Record<string, any>>({});
@@ -593,14 +595,14 @@ const CreateRanking = () => {
       // Miasto opcjonalne: "" (Wszedzie) -> null (lista globalna, karta pokaze tylko liczbe miejsc).
       const cityToSave = city.trim() || null;
       if (editId) {
-        await (supabase as any).from("discovery_collections").update({ title: collectionTitle, city: cityToSave, category, description: desc, is_public: isPublic, author_name: authorName, author_avatar: authorAvatar, cover_url: coverToSave, list_cover_url: listCoverToSave, tags: tagsToSave, list_status: listStatus, updated_at: new Date().toISOString() }).eq("id", editId);
+        await (supabase as any).from("discovery_collections").update({ title: collectionTitle, city: cityToSave, category, description: desc, is_public: isPublic, author_name: authorName, author_avatar: authorAvatar, cover_url: coverToSave, list_cover_url: listCoverToSave, tags: tagsToSave, list_status: "visited", updated_at: new Date().toISOString() }).eq("id", editId);
         await (supabase as any).from("discovery_items").delete().eq("collection_id", editId);
       } else {
         const { data: col, error } = await (supabase as any).from("discovery_collections").insert({
           user_id: user.id, author_name: authorName, author_avatar: authorAvatar, title: collectionTitle,
           category, city: cityToSave, description: desc, kind: "ranking", is_public: isPublic,
           cover_url: coverToSave, list_cover_url: listCoverToSave, tags: tagsToSave,
-          list_status: listStatus, moderation_status: moderationStatus,
+          list_status: "visited", moderation_status: moderationStatus,
         }).select("id").single();
         if (error || !col) throw new Error(error?.message ?? "insert failed");
         collectionId = col.id;
@@ -711,20 +713,6 @@ const CreateRanking = () => {
               onFocus={() => setTitleFocused(true)} onBlur={() => setTitleFocused(false)}
               placeholder={t("name_placeholder", "Nazwa listy")}
               className="w-full rounded-2xl bg-secondary text-secondary-foreground border-0 px-4 py-3 text-base outline-none focus:ring-2 focus:ring-orange-500/40 placeholder:text-muted-foreground/50" />
-          </div>
-
-          {/* #2: user WYBIERA czy juz odwiedzil te miejsca (visited) czy dopiero chce (to_visit). */}
-          <div className="px-4 pt-3">
-            <div className="flex rounded-2xl bg-secondary p-1 text-sm font-bold">
-              <button type="button" onClick={() => setListStatus("visited")}
-                className={`flex-1 py-2 rounded-xl transition-colors ${listStatus === "visited" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
-                {`Odwiedzone`}
-              </button>
-              <button type="button" onClick={() => setListStatus("to_visit")}
-                className={`flex-1 py-2 rounded-xl transition-colors ${listStatus === "to_visit" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
-                {`Do odwiedzenia`}
-              </button>
-            </div>
           </div>
 
           {/* OPCJONALNY filtr miasta wyszukiwarki (miasto NIE jest obowiazkowe - lista moze byc
@@ -991,9 +979,7 @@ const CreateRanking = () => {
             <p className="text-[11px] text-muted-foreground mt-2 leading-snug">{`Okładka to zdjęcie w widoku listy.`}</p>
           </div>
 
-          {/* Tagi listy (zamiast glownej notki) - chip-cloud (wszystkie widoczne) + wlasne usera.
-              Ukryte dla list "do odwiedzenia" (list_status="to_visit") - uproszczony krok 2. */}
-          {listStatus !== "to_visit" && (
+          {/* Tagi listy (zamiast glownej notki) - chip-cloud (wszystkie widoczne) + wlasne usera. */}
           <div className="pt-6">
             <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-1.5 block">
               {t("tags.label", "Tagi")} <span className="normal-case font-medium text-muted-foreground/50">{t("notes.optional")}</span>
@@ -1030,10 +1016,8 @@ const CreateRanking = () => {
               </button>
             </div>
           </div>
-          )}
 
-          {/* Notki do poszczegolnych miejsc. Ukryte dla list "do odwiedzenia" (uproszczony krok 2). */}
-          {listStatus !== "to_visit" && (
+          {/* Notki do poszczegolnych miejsc. */}
           <div className="pt-6">
             <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2 block">{t("notes.places_label")}</label>
             <div className="space-y-2.5">
@@ -1065,7 +1049,6 @@ const CreateRanking = () => {
               ))}
             </div>
           </div>
-          )}
 
           {/* Mapa z miejscami */}
           {mapPins.length > 0 && (

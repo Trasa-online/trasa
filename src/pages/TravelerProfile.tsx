@@ -194,6 +194,9 @@ const TravelerProfile = () => {
         .from("discovery_collections")
         .select("id, title, city, list_status, views_count, saves_count, likes_count, updated_at")
         .eq("user_id", user!.id).eq("kind", "ranking")
+        // Zakładka Listy = publiczne POLECAJKI (visited). Prywatne "Do zobaczenia" (to_visit)
+        // żyją w Zapisane→Miejsca, nie na profilu.
+        .eq("list_status", "visited")
         .order("updated_at", { ascending: false });
       const rows = (cols ?? []) as any[];
       if (!rows.length) return [];
@@ -381,9 +384,9 @@ const TravelerProfile = () => {
             listCards.length === 0 ? (
               <FeedEmpty
                 icon={<ListChecks className="h-6 w-6" />}
-                title={t("feed.lists_empty_title", "Nie masz jeszcze list")}
-                desc={t("feed.lists_empty_desc", "Twórz listy ulubionych miejsc: odwiedzonych albo do odwiedzenia.")}
-                ctaLabel={t("feed.lists_empty_cta", "Nowa lista miejsc")}
+                title={t("feed.lists_empty_title", "Nie masz jeszcze polecajek")}
+                desc={t("feed.lists_empty_desc", "Twórz listy miejsc, które polecasz innym.")}
+                ctaLabel={t("feed.lists_empty_cta", "Nowa lista polecajek")}
                 onCta={() => navigate("/zestawienie/nowe")}
               />
             ) : (
@@ -392,7 +395,7 @@ const TravelerProfile = () => {
                   key={l.id}
                   avatarUrl={profile?.avatar_url}
                   fallback={displayName}
-                  eyebrow={l.list_status === "visited" ? t("feed.visited", "Odwiedzone miejsca") : t("feed.to_visit", "Do odwiedzenia miejsca")}
+                  eyebrow={t("feed.recommend", "Polecam")}
                   timestamp={shortRelativeTime(l.updated_at)}
                   title={l.title || t("feed.list_fallback", "Lista miejsc")}
                   tiles={l.tiles}

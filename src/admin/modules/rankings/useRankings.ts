@@ -25,6 +25,9 @@ export function useRankings() {
         .from("discovery_collections")
         .select("id, title, city, user_id, is_public, hidden_by_admin, moderation_status, updated_at")
         .eq("kind", "ranking")
+        // Tylko PUBLICZNE polecajki (visited) do moderacji. Prywatne wishlisty "Do zobaczenia"
+        // (to_visit, is_public=false) nigdy nie trafiają do kolejki.
+        .eq("list_status", "visited")
         .not("user_id", "is", null)
         .order("updated_at", { ascending: false });
       if (error) throw error;

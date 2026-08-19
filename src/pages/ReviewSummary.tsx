@@ -23,7 +23,6 @@ import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { PlacePhoto, resolveStored } from "@/components/PlacePhoto";
 import { RoutePlaceRow } from "@/components/route/RoutePlaceRow";
 import SavePlaceSheet, { type SavePlaceInput } from "@/components/plan-wizard/SavePlaceSheet";
-import { moveToVisited } from "@/lib/placeLists";
 import { useSavedPlaces } from "@/hooks/useSavedPlaces";
 import InviteFriendsSheet from "@/components/route/InviteFriendsSheet";
 import { compressImage } from "@/lib/imageCompression";
@@ -1063,18 +1062,9 @@ const ReviewSummary = () => {
         notify.error("Trasa zapisana. Dodaj zdjęcia miejsc lub okładkę, żeby pojawiła się w eksploracji.");
       }
     } catch (e: any) { console.warn("[ReviewSummary] cover feedback failed:", e?.message ?? e); }
-    // #4: miejsca z list usera "do odwiedzenia" -> po publikacji trasy przenies do "Odwiedzone".
-    try {
-      if (user) {
-        const names = [...new Set((currentPins ?? []).map((p: any) => p.place_name).filter(Boolean))];
-        if (names.length) {
-          await moveToVisited(user.id, names, route?.city ?? null);
-          queryClient.invalidateQueries({ queryKey: ["save-sheet-lists", user.id] });
-          queryClient.invalidateQueries({ queryKey: ["saved-place-names", user.id] });
-          queryClient.invalidateQueries({ queryKey: ["public-profile-lists"] });
-        }
-      }
-    } catch (e: any) { console.warn("[ReviewSummary] moveToVisited failed:", e?.message ?? e); }
+    // (Usunięto auto-move #4 "do odwiedzenia -> Odwiedzone": prywatna wishlista NIE może trafiać
+    // do publicznej polecajki. Odwiedzenie miejsca != chęć polecenia go innym. Miejsce zostaje
+    // w prywatnym schowku Zapisane→Miejsca, user zarządza nim sam. Polecanie = świadomy bookmark.)
     // "Zapisz trase" = trasa STWORZONA: status draft->published. Dopiero teraz zdjecia z pinow
     // (pins.images) zasilaja okladki miejsc w wyszukiwarce/eksploracji - fetchPlaceUserPhotos
     // pomija piny tras 'draft'. Podczas tworzenia (draft) zdjecia sa tylko lokalnie na wpisie.

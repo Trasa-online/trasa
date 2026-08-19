@@ -515,6 +515,9 @@ export const MyCollections = ({ showCreate = true }: { showCreate?: boolean } = 
         .select("id, title, city, description, is_public, moderation_status, moderation_note, cover_url, list_cover_url, list_status, author_avatar, author_name")
         .eq("user_id", user!.id)
         .eq("kind", "ranking")
+        // Twoje listy = publiczne POLECAJKI (visited). Prywatne "Do zobaczenia" (to_visit) są
+        // w Zapisane→Miejsca, nie tutaj.
+        .eq("list_status", "visited")
         .order("updated_at", { ascending: false });
       if (!cols?.length) return [] as any[];
       const ids = cols.map((c: any) => c.id);
@@ -587,9 +590,7 @@ export const MyCollections = ({ showCreate = true }: { showCreate?: boolean } = 
         // Tap w blok -> pelny widok listy (/lista/:id). Kosz (usuwanie) w rogu.
         const renderCol = (col: any) => {
           const title = col.title || t("collections.untitled");
-          const eyebrow = col.list_status === "to_visit"
-            ? t("feed.to_visit", "Do odwiedzenia miejsca")
-            : t("feed.visited", "Odwiedzone miejsca");
+          const eyebrow = t("feed.recommend", "Polecam");
           const initial = (col.author_name || title || "?").charAt(0).toUpperCase();
           return (
             <div key={col.id} className="relative">
@@ -612,12 +613,9 @@ export const MyCollections = ({ showCreate = true }: { showCreate?: boolean } = 
                     {col.items.slice(0, 6).map((it: any, i: number) => <PlaceTile key={it.id ?? i} tile={it} />)}
                   </div>
                 )}
-                {/* Status moderacji: "pending" NIE pokazywany userowi (straszy). Tylko rejected/private. */}
+                {/* Status moderacji: "pending" NIE pokazywany userowi (straszy). Tylko rejected. */}
                 {col.moderation_status === "rejected" && (
                   <span className="mt-2 inline-flex w-fit items-center text-[10px] font-bold text-destructive bg-destructive/10 rounded-full px-2 py-0.5">{t("collections.rejected")}</span>
-                )}
-                {col.is_public === false && (
-                  <span className="mt-2 inline-flex w-fit items-center text-[10px] font-bold text-muted-foreground bg-muted rounded-full px-2 py-0.5">{t("collections.private")}</span>
                 )}
               </button>
               <button
@@ -630,10 +628,7 @@ export const MyCollections = ({ showCreate = true }: { showCreate?: boolean } = 
             </div>
           );
         };
-        // Kolejnosc: odwiedzone najpierw, potem do odwiedzenia (jak w Figmie 08).
-        const ordered = [...collections].sort((a: any, b: any) =>
-          (a.list_status === "to_visit" ? 1 : 0) - (b.list_status === "to_visit" ? 1 : 0));
-        return <div className="space-y-7">{ordered.map(renderCol)}</div>;
+        return <div className="space-y-7">{collections.map(renderCol)}</div>;
         })()
       )}
 
