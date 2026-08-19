@@ -22,8 +22,8 @@ import InviteFriendsBanner from "@/components/social/InviteFriendsBanner";
 import { Camera as CapCamera, CameraResultType, CameraSource } from "@capacitor/camera";
 import { ProfileFeedCard } from "@/components/profile/ProfileFeedCard";
 import { SpontawayTabIcon } from "@/components/profile/SpontawayTabIcon";
-import { SavedRoutes, SavedCollections } from "@/components/home/DiscoveryFeed";
 import { SavedPlacesGrid } from "@/components/saved/SavedPlacesGrid";
+import { SavedListsRoutes } from "@/components/saved/SavedListsRoutes";
 import { ALL_CITIES } from "@/components/home/CitySelect";
 import { shortRelativeTime } from "@/lib/relativeTime";
 import { countryForCity } from "@/lib/tripCountries";
@@ -462,10 +462,7 @@ const TravelerProfile = () => {
               {savedTab === "miejsca" ? (
                 <SavedPlacesGrid />
               ) : (
-                <div className="space-y-6">
-                  <SavedRoutes city={ALL_CITIES} />
-                  <SavedCollections />
-                </div>
+                <SavedListsRoutes city={ALL_CITIES} />
               )}
             </div>
           )}

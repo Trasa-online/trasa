@@ -1411,7 +1411,7 @@ function SavedTile({ id, photo, title, city, placeCount, pins, onOpen, onUnsave 
 // Trasy ZAPISANE przez usera (saved_routes + zapisane zestawienia z localStorage),
 // pokazywane jako KAFELKI. Zakladka "Zapisane" (bottom nav). Tap otwiera trase
 // (/route/:id) lub wizytowke zestawienia, bookmark usuwa z zapisanych.
-export function SavedRoutes({ city }: { city?: string }) {
+export function SavedRoutes({ city, hideEmptyState }: { city?: string; hideEmptyState?: boolean }) {
   const { user } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -1471,6 +1471,7 @@ export function SavedRoutes({ city }: { city?: string }) {
     return <div className="space-y-3">{Array.from({ length: 3 }).map((_, i) => <div key={i} className="w-full h-[164px] rounded-3xl bg-muted/50 animate-pulse" />)}</div>;
   }
   if (rows.length === 0) {
+    if (hideEmptyState) return null;
     return (
       <div className="pt-20 pb-12 text-center px-8">
         <span aria-hidden className="mx-auto mb-4 h-20 w-20" style={{ display: "block", backgroundColor: "#ef9d78", WebkitMaskImage: "url(/Ikona_Zapisane.svg)", maskImage: "url(/Ikona_Zapisane.svg)", WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat", WebkitMaskSize: "contain", maskSize: "contain", WebkitMaskPosition: "center", maskPosition: "center" }} />
@@ -1522,7 +1523,7 @@ function SavedCollectionCard({ col, savedAt, onOpen, onDelete }: { col: Discover
   );
 }
 
-export function SavedCollections() {
+export function SavedCollections({ hideEmptyState }: { hideEmptyState?: boolean } = {}) {
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
   const [pendingUnsave, setPendingUnsave] = useState<DiscoveryCollection | null>(null);
@@ -1570,8 +1571,8 @@ export function SavedCollections() {
 
   return (
     <div className="flex flex-col">
-      {/* Wyszukiwarka - tylko gdy sa zapisane listy (w pustym stanie zbedna). */}
-      {savedIds.length > 0 && (
+      {/* Wyszukiwarka - tylko gdy sa ZAŁADOWANE zapisane listy (nie stale localStorage id). */}
+      {collections.length > 0 && (
         <div className="pb-3">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
@@ -1596,7 +1597,8 @@ export function SavedCollections() {
       )}
 
       {savedIds.length === 0 || (!isLoading && filtered.length === 0 && !query.trim()) ? (
-        // Pusty stan (brak zapisanych list) - ikona zapisania (spojnie z pustym stanem "Trasy").
+        // Pusty stan. hideEmptyState -> null (wspólny pusty stan obsługuje wrapper SavedListsRoutes).
+        hideEmptyState ? null : (
         <div className="pt-20 pb-12 text-center px-8">
           <span aria-hidden className="mx-auto mb-4 h-20 w-20" style={{ display: "block", backgroundColor: "#ef9d78", WebkitMaskImage: "url(/Ikona_Zapisane.svg)", maskImage: "url(/Ikona_Zapisane.svg)", WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat", WebkitMaskSize: "contain", maskSize: "contain", WebkitMaskPosition: "center", maskPosition: "center" }} />
           <p className="text-base font-bold">Brak zapisanych list</p>
@@ -1604,6 +1606,7 @@ export function SavedCollections() {
             Zapisz listę zakładką podczas przeglądania, żeby pojawiła się tutaj.
           </p>
         </div>
+        )
       ) : isLoading ? (
         <div className="space-y-3">
           {[0, 1, 2].map((i) => <div key={i} className="h-20 rounded-3xl bg-muted/40 animate-pulse" />)}
