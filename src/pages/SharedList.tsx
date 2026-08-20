@@ -5,8 +5,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { MapPin, ArrowLeft, Bookmark, List, GalleryHorizontalEnd, Building2, Pencil, Trash2, Heart, Image as ImageIcon } from "lucide-react";
+import { MapPin, ArrowLeft, Bookmark, List, GalleryHorizontalEnd, Building2, Pencil, Trash2, Heart, Image as ImageIcon, Share2, Plus } from "lucide-react";
 import { fetchListLike, toggleListLike, type LikeState } from "@/lib/likes";
+import AddPlaceSheet from "@/components/route/AddPlaceSheet";
+import { addPlaceToList, type PlaceForList } from "@/lib/placeLists";
+import { useShare } from "@/hooks/useShare";
+import { buildShareUrl } from "@/lib/shareUrl";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { PlacePhoto, resolveStored } from "@/components/PlacePhoto";
 import { RoutePlaceRow } from "@/components/route/RoutePlaceRow";
@@ -62,6 +66,8 @@ export default function SharedList() {
   const [deleting, setDeleting] = useState(false);
   // Rodzaj listy (Prywatna|Publiczna) - lokalny override dla optymistycznej zmiany.
   const [listPublicOverride, setListPublicOverride] = useState<boolean | null>(null);
+  const [addPlaceOpen, setAddPlaceOpen] = useState(false);
+  const share = useShare();
 
   const handleDelete = async () => {
     if (!user || !id) return;
@@ -232,6 +238,15 @@ export default function SharedList() {
     toast.success(pub ? "Lista publiczna" : "Lista prywatna");
   };
 
+  const handleShare = () => { void share({ title: col.title || cityLabel || "Lista", url: buildShareUrl(`/lista/${col.id}`) }); };
+
+  // Wlasciciel dodaje miejsca do listy (drawer jak w wyjazdach): batch insert do discovery_items.
+  const handleAddPlacesToList = async (places: PlaceForList[]) => {
+    for (const p of places) await addPlaceToList(col.id, p);
+    queryClient.invalidateQueries({ queryKey: ["shared-list-items", id] });
+    toast.success("Zaktualizowano listę");
+  };
+
   // Usun miejsce z listy (wlasciciel, kosz w wierszu). Toast + "Cofnij".
   const handleDeleteItem = async (item: any) => {
     const { error } = await (supabase as any).from("discovery_items").delete().eq("id", item.id);
@@ -374,6 +389,14 @@ export default function SharedList() {
           </div>
           <div className="flex items-start gap-3 mt-[35px]">
             <h1 className="flex-1 text-2xl font-black text-foreground leading-tight">{col.title || cityLabel}</h1>
+            {/* a) Ikony jak na wyjazdach: udostepnij / edytuj / usun */}
+            {isOwner && (
+              <div className="shrink-0 flex items-center gap-2">
+                <button onClick={handleShare} aria-label="Udostępnij" className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center active:scale-90 transition-transform"><Share2 className="h-4 w-4 text-foreground" /></button>
+                <button onClick={() => navigate(`/zestawienie/${col.id}/edytuj`)} aria-label="Edytuj listę" className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center active:scale-90 transition-transform"><Pencil className="h-4 w-4 text-foreground" /></button>
+                <button onClick={() => setAskDelete(true)} aria-label="Usuń listę" className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center active:scale-90 transition-transform"><Trash2 className="h-4 w-4 text-destructive" /></button>
+              </div>
+            )}
           </div>
           {col.description && <p className="text-sm text-muted-foreground leading-relaxed mt-3">{col.description}</p>}
           {Array.isArray(col.tags) && col.tags.length > 0 && (
@@ -393,24 +416,6 @@ export default function SharedList() {
                     className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-colors ${listIsPublic === o.k ? "bg-white text-foreground shadow-sm" : "text-foreground/55"}`}>{o.l}</button>
                 ))}
               </div>
-            </div>
-          )}
-          {/* Wlasciciel listy: edycja + usuniecie (jak w widoku trasy). */}
-          {isOwner && (
-            <div className="mt-3 flex items-center gap-2">
-              <button
-                onClick={() => navigate(`/zestawienie/${col.id}/edytuj`)}
-                className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl bg-secondary text-secondary-foreground text-sm font-bold active:scale-[0.98] transition-transform"
-              >
-                <Pencil className="h-4 w-4" /> {`Edytuj listę`}
-              </button>
-              <button
-                onClick={() => setAskDelete(true)}
-                aria-label="Usuń listę"
-                className="h-11 w-11 shrink-0 flex items-center justify-center rounded-2xl bg-secondary text-destructive active:scale-[0.98] transition-transform"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
             </div>
           )}
         </div>
@@ -459,12 +464,31 @@ export default function SharedList() {
 
       {/* CTA - zapis CAŁEJ listy (driver engagementu). TYLKO cudza lista - nie zapisujesz wlasnej (#4).
           Zapis pojedynczych miejsc = bookmark przy każdym miejscu (SavePlaceSheet). */}
-      {!isOwner && (
-        <div className="fixed bottom-0 left-0 right-0 max-w-lg mx-auto px-5 pt-3 bg-background/90 backdrop-blur-md border-t border-border/30" style={{ paddingBottom: "max(20px, env(safe-area-inset-bottom, 20px))" }}>
+      {/* b) Dolny CTA: wlasciciel = "Dodaj nowe miejsce" (drawer jak w wyjazdach); gosc = zapisz liste. */}
+      <div className="fixed bottom-0 left-0 right-0 max-w-lg mx-auto px-5 pt-2 bg-background border-t border-border/30" style={{ paddingBottom: "max(12px, env(safe-area-inset-bottom, 12px))" }}>
+        {isOwner ? (
+          <button onClick={() => setAddPlaceOpen(true)} className="w-full py-3 rounded-full border border-border bg-background text-foreground font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform">
+            <Plus className="h-4 w-4" /> Dodaj nowe miejsce
+          </button>
+        ) : (
           <button onClick={toggleSave} className="w-full py-3 rounded-full bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform shadow-lg shadow-primary/25">
             <Bookmark className={`h-4 w-4 ${saved ? "fill-current" : ""}`} />{saved ? "Zapisano listę" : "Zapisz tę listę"}
           </button>
-        </div>
+        )}
+      </div>
+
+      {isOwner && (
+        <AddPlaceSheet
+          open={addPlaceOpen}
+          onClose={() => setAddPlaceOpen(false)}
+          city={col.city ?? null}
+          existingPlaces={items.map((it: any) => ({
+            place_name: it.place_name, category: it.category ?? null, address: it.address ?? null, description: it.short_desc ?? null,
+            latitude: it.latitude ?? null, longitude: it.longitude ?? null, photo_url: it.photo_url ?? null, place_id: it.place_id ?? null,
+            google_place_id: it.google_place_id ?? null, rating: it.rating ?? null,
+          }))}
+          onAdd={handleAddPlacesToList}
+        />
       )}
 
       <SavePlaceSheet open={!!savePlace} onOpenChange={(o) => !o && setSavePlace(null)} place={savePlace} city={col.city ?? ""} />

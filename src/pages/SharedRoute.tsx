@@ -10,7 +10,7 @@ import { notify } from "@/lib/notify";
 import { sendClientPush, getCurrentUserName } from "@/lib/clientPush";
 import { format } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
-import { MapPin, ArrowLeft, Sparkles, ChevronRight, ChevronLeft, Bookmark, List, GalleryHorizontalEnd, Calendar as CalendarIcon, Image as ImageIcon, Maximize2, X, Building2, Pencil, Trash2, Heart, Share2, Plus, Map as MapIcon, Loader2 } from "lucide-react";
+import { MapPin, ArrowLeft, Sparkles, ChevronRight, ChevronLeft, Bookmark, List, GalleryHorizontalEnd, Calendar as CalendarIcon, Image as ImageIcon, Maximize2, X, Building2, Pencil, Trash2, Heart, Share2, Plus, Map as MapIcon, Loader2, Star } from "lucide-react";
 import { toast } from "sonner";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { PlacePhoto } from "@/components/PlacePhoto";
@@ -124,7 +124,7 @@ export default function SharedRoute() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("routes")
-        .select("id, title, city, user_id, day_number, folder_id, start_date, ai_summary, ai_highlight, review_photos, review_narrative, group_session_id, tags")
+        .select("id, title, city, user_id, day_number, folder_id, start_date, ai_summary, ai_highlight, review_photos, review_narrative, group_session_id, tags, list_cover_url")
         .eq("id", id as string)
         .eq("is_shared", true)
         .single();
@@ -421,6 +421,15 @@ export default function SharedRoute() {
         },
       },
     });
+  };
+
+  // #c: ustaw zdjecie jako OKLADKE EKSPLORACJI (list_cover_url). Tylko wlasne zdjecia (galeria) -
+  // zgodne z regula "okladka listy/trasy nigdy z Google".
+  const handleSetCover = async (url: string) => {
+    const { error } = await (supabase as any).from("routes").update({ list_cover_url: url }).eq("id", route.id);
+    if (error) { toast.error("Nie udało się ustawić okładki"); return; }
+    queryClient.invalidateQueries({ queryKey: ["shared-route", id] });
+    toast.success("Ustawiono okładkę eksploracji");
   };
 
   const handleDelete = async () => {
@@ -732,12 +741,21 @@ export default function SharedRoute() {
                 {galleryPhotos.map((url, i) => (
                   <div key={i} onClick={() => setViewerIndex(i)} role="button" className="relative aspect-[4/3] rounded-2xl overflow-hidden bg-muted active:opacity-90 transition-opacity cursor-pointer">
                     <img src={url} alt="" loading="lazy" className="w-full h-full object-cover" />
-                    {/* #3: wlasciciel - usun zdjecie */}
+                    {/* #c: ustaw okladke eksploracji (gwiazdka) + #3: usun zdjecie (kosz) - wlasciciel */}
                     {isOwner && (
-                      <button onClick={(e) => { e.stopPropagation(); void handleDeletePhoto(url); }} aria-label="Usuń zdjęcie"
-                        className="absolute top-1.5 right-1.5 h-7 w-7 rounded-full bg-black/45 backdrop-blur-sm flex items-center justify-center active:scale-90 transition-transform">
-                        <Trash2 className="h-3.5 w-3.5 text-white" />
-                      </button>
+                      <>
+                        <button onClick={(e) => { e.stopPropagation(); void handleSetCover(url); }} aria-label="Ustaw jako okładkę eksploracji"
+                          className="absolute top-1.5 left-1.5 h-7 w-7 rounded-full bg-black/45 backdrop-blur-sm flex items-center justify-center active:scale-90 transition-transform">
+                          <Star className={`h-3.5 w-3.5 ${(route as any).list_cover_url === url ? "fill-yellow-400 text-yellow-400" : "text-white"}`} />
+                        </button>
+                        <button onClick={(e) => { e.stopPropagation(); void handleDeletePhoto(url); }} aria-label="Usuń zdjęcie"
+                          className="absolute top-1.5 right-1.5 h-7 w-7 rounded-full bg-black/45 backdrop-blur-sm flex items-center justify-center active:scale-90 transition-transform">
+                          <Trash2 className="h-3.5 w-3.5 text-white" />
+                        </button>
+                        {(route as any).list_cover_url === url && (
+                          <span className="absolute bottom-1.5 left-1.5 text-[10px] font-bold text-white bg-black/55 backdrop-blur-sm rounded-full px-2 py-0.5">Okładka</span>
+                        )}
+                      </>
                     )}
                   </div>
                 ))}
