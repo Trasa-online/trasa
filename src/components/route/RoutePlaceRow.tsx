@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Bookmark } from "lucide-react";
+import { Bookmark, Trash2 } from "lucide-react";
 import { PlacePhoto } from "@/components/PlacePhoto";
 
 // Oficjalne logo Google (4-kolorowe "G") - guzik "otworz miejsce w Google Maps".
@@ -16,7 +16,7 @@ const GoogleGlyph = ({ className }: { className?: string }) => (
 // ReviewSummary). Duze zdjecie 104px, numer, nazwa (2 linie), chip kategorii + guzik Google.
 // dragHandle (opcjonalny) = uchwyt przeciagania po lewej (tryb wlasciciela). note = dodatkowa
 // tresc pod wierszem (np. notka autora). visited = wyszarzenie.
-export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onSave, saved, dragHandle, note, visited }: {
+export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onSave, saved, onDelete, dragHandle, note, visited }: {
   pin: any;
   index: number;
   categoryLabel: ReactNode;
@@ -24,6 +24,7 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
   onGoogle: () => void;
   onSave?: () => void; // bookmark: zapisz miejsce do listy (odwiedzone/do odwiedzenia)
   saved?: boolean;     // czy miejsce jest juz w jakiejs liscie usera (wypelniony bookmark)
+  onDelete?: () => void; // wlasciciel: usun miejsce z trasy/listy (kosz zamiast bookmarka)
   dragHandle?: ReactNode;
   note?: ReactNode;
   visited?: boolean;
@@ -53,13 +54,21 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
             ))}
           </div>
         )}
-        {/* Zobacz w Google (lewo) + bookmark (prawo) */}
+        {/* Zobacz w Google (lewo) + akcja (prawo): wlasciciel = kosz (usun), inaczej bookmark (zapisz) */}
         <div className="mt-2 flex items-center justify-between gap-2">
           <button onClick={(e) => { e.stopPropagation(); onGoogle(); }} aria-label="Otwórz w Google Maps" className="flex items-center gap-2 active:opacity-70 transition-opacity">
             <GoogleGlyph className="h-[18px] w-[18px]" />
             <span className="text-sm font-medium text-foreground">Zobacz w Google</span>
           </button>
-          {onSave && (
+          {onDelete ? (
+            <button
+              onClick={(e) => { e.stopPropagation(); onDelete(); }}
+              aria-label="Usuń miejsce z trasy"
+              className="h-8 w-8 rounded-full flex items-center justify-center text-destructive active:scale-90 transition-transform"
+            >
+              <Trash2 className="h-5 w-5" strokeWidth={2} />
+            </button>
+          ) : onSave ? (
             <button
               onClick={(e) => { e.stopPropagation(); onSave(); }}
               aria-label={saved ? "Miejsce zapisane w liście" : "Zapisz miejsce do listy"}
@@ -67,7 +76,7 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
             >
               <Bookmark className={`h-5 w-5 ${saved ? "text-[#F0A583] fill-[#F0A583]" : "text-foreground/70"}`} strokeWidth={2} />
             </button>
-          )}
+          ) : null}
         </div>
       </div>
     </div>

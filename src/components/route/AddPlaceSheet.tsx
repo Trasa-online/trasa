@@ -22,7 +22,7 @@ interface Props {
   open: boolean;
   onClose: () => void;
   city?: string | null;                 // kontekst miasta do wyszukiwarki Google
-  existingNames?: Set<string>;          // nazwy juz w trasie/liscie (znormalizowane) - odfiltruj
+  existingPlaces?: PlaceForList[];      // miejsca JUŻ w tej trasie/liście - pokazane u góry (info)
   onAdd: (places: PlaceForList[]) => Promise<void> | void;   // zapis (pins.insert / addPlaceToList)
   onInvitePeople?: () => void;          // trasa: otwiera zaproszenia; brak = ukryty wiersz (listy)
 }
@@ -31,7 +31,7 @@ interface Props {
 // Domyslnie: siatka Twoich zapisanych + kafelek "Dodaj nowe miejsce" (fokus na wyszukiwarke).
 // Wpisanie frazy (>=2 znaki) -> Google Places (proxy) -> klik wyniku = nowy zaznaczony kafelek +
 // odblokowanie "Dalej". "Dalej" zapisuje wybrane miejsca (onAdd).
-export default function AddPlaceSheet({ open, onClose, city, existingNames, onAdd, onInvitePeople }: Props) {
+export default function AddPlaceSheet({ open, onClose, city, existingPlaces, onAdd, onInvitePeople }: Props) {
   const { user } = useAuth();
   const [selected, setSelected] = useState<PlaceForList[]>([]);
   const [manual, setManual] = useState<PlaceForList[]>([]);   // dodane z Google (poza zapisanymi)
@@ -85,17 +85,20 @@ export default function AddPlaceSheet({ open, onClose, city, existingNames, onAd
   };
 
   // Siatka: dodane z Google (manual) + zapisane, dedup po nazwie, bez tych juz w trasie.
+  const existingNameSet = useMemo(() => new Set((existingPlaces ?? []).map(keyOf).filter(Boolean)), [existingPlaces]);
+
+  // Zapisane (do wyboru) = dodane z Google + zapisane, dedup, BEZ tych juz w trasie/liscie.
   const tiles = useMemo(() => {
     const seen = new Set<string>();
     const out: PlaceForList[] = [];
     for (const p of [...manual, ...savedPlaces.map(toPlaceForList)]) {
       const k = keyOf(p);
       if (!k || seen.has(k)) continue;
-      if (existingNames?.has(k)) continue;
+      if (existingNameSet.has(k)) continue;
       seen.add(k); out.push(p);
     }
     return out;
-  }, [manual, savedPlaces, existingNames]);
+  }, [manual, savedPlaces, existingNameSet]);
 
   const doAdd = async () => {
     if (!selected.length || adding) return;
@@ -182,23 +185,45 @@ export default function AddPlaceSheet({ open, onClose, city, existingNames, onAd
               })}
             </div>
           ) : (
-            <div className="grid grid-cols-3 gap-1.5 pt-1">
-              {/* Dodaj nowe miejsce -> fokus na wyszukiwarke */}
-              <button onClick={() => inputRef.current?.focus()} className="aspect-square rounded-2xl bg-[#fcede3] flex flex-col items-center justify-center gap-1.5 active:scale-[0.97] transition-transform">
-                <Plus className="h-6 w-6 text-[#f0a583]" strokeWidth={2.5} />
-                <span className="text-[11px] font-semibold text-foreground/80 px-1 text-center leading-tight">Dodaj nowe miejsce</span>
-              </button>
-              {tiles.map((p, i) => {
-                const on = isSel(p);
-                return (
-                  <button key={`${keyOf(p)}-${i}`} onClick={() => toggle(p)} className={`relative rounded-2xl transition-all active:scale-[0.97] ${on ? "ring-2 ring-[#f0a583]" : ""}`}>
-                    <PlaceTile showCity tile={{ photo_url: p.photo_url, category: p.category, place_name: p.place_name, city }} />
-                    <span className={`absolute top-1.5 right-1.5 h-6 w-6 rounded-full flex items-center justify-center ${on ? "bg-[#f0a583] text-white" : "bg-white/85 border border-black/10"}`}>
-                      {on && <Check className="h-3.5 w-3.5 stroke-[3]" />}
-                    </span>
+            <div className="pt-1 space-y-3">
+              {/* #5: NAJPIERW miejsca juz w tej trasie/liscie (info, zaznaczone), potem divider, potem zapisane */}
+              {existingPlaces && existingPlaces.length > 0 && (
+                <>
+                  <div>
+                    <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground mb-1.5 px-0.5">Już dodane</p>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {existingPlaces.map((p, i) => (
+                        <div key={`ex-${keyOf(p)}-${i}`} className="relative rounded-2xl opacity-95">
+                          <PlaceTile showCity tile={{ photo_url: p.photo_url, category: p.category, place_name: p.place_name, city }} />
+                          <span className="absolute top-1.5 right-1.5 h-6 w-6 rounded-full bg-[#f0a583] text-white flex items-center justify-center"><Check className="h-3.5 w-3.5 stroke-[3]" /></span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="border-t border-border/60" />
+                </>
+              )}
+              <div>
+                {existingPlaces && existingPlaces.length > 0 && <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground mb-1.5 px-0.5">Zapisane</p>}
+                <div className="grid grid-cols-3 gap-1.5">
+                  {/* Dodaj nowe miejsce -> fokus na wyszukiwarke */}
+                  <button onClick={() => inputRef.current?.focus()} className="aspect-square rounded-2xl bg-[#fcede3] flex flex-col items-center justify-center gap-1.5 active:scale-[0.97] transition-transform outline-none">
+                    <Plus className="h-6 w-6 text-[#f0a583]" strokeWidth={2.5} />
+                    <span className="text-[11px] font-semibold text-foreground/80 px-1 text-center leading-tight">Dodaj nowe miejsce</span>
                   </button>
-                );
-              })}
+                  {tiles.map((p, i) => {
+                    const on = isSel(p);
+                    return (
+                      <button key={`${keyOf(p)}-${i}`} onClick={() => toggle(p)} className={`relative rounded-2xl transition-all active:scale-[0.97] ${on ? "ring-2 ring-[#f0a583]" : ""}`}>
+                        <PlaceTile showCity tile={{ photo_url: p.photo_url, category: p.category, place_name: p.place_name, city }} />
+                        <span className={`absolute top-1.5 right-1.5 h-6 w-6 rounded-full flex items-center justify-center ${on ? "bg-[#f0a583] text-white" : "bg-white/85 border border-black/10"}`}>
+                          {on && <Check className="h-3.5 w-3.5 stroke-[3]" />}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           )}
         </div>

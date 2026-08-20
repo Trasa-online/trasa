@@ -388,6 +388,41 @@ export default function SharedRoute() {
     setUploadingPhotos(false);
   };
 
+  // #4: wlasciciel usuwa miejsce z trasy (kosz w wierszu). Toast + "Cofnij" (re-insert).
+  const handleDeletePin = async (pin: any) => {
+    const { id: _id, created_at, updated_at, ...rest } = pin;
+    const { error } = await (supabase as any).from("pins").delete().eq("id", pin.id);
+    if (error) { toast.error("Nie udało się usunąć miejsca"); return; }
+    queryClient.invalidateQueries({ queryKey: ["shared-route-pins", id] });
+    toast.success("Usunięto miejsce", {
+      action: {
+        label: "Cofnij",
+        onClick: async () => {
+          await (supabase as any).from("pins").insert({ ...rest });
+          queryClient.invalidateQueries({ queryKey: ["shared-route-pins", id] });
+        },
+      },
+    });
+  };
+
+  // #3: usun zdjecie z galerii wyjazdu (review_photos). Toast + "Cofnij".
+  const handleDeletePhoto = async (url: string) => {
+    const before = ((route.review_photos ?? []) as string[]);
+    const merged = before.filter((u) => u !== url);
+    const { error } = await (supabase as any).from("routes").update({ review_photos: merged }).eq("id", route.id);
+    if (error) { toast.error("Nie udało się usunąć zdjęcia"); return; }
+    queryClient.invalidateQueries({ queryKey: ["shared-route", id] });
+    toast.success("Usunięto zdjęcie", {
+      action: {
+        label: "Cofnij",
+        onClick: async () => {
+          await (supabase as any).from("routes").update({ review_photos: before }).eq("id", route.id);
+          queryClient.invalidateQueries({ queryKey: ["shared-route", id] });
+        },
+      },
+    });
+  };
+
   const handleDelete = async () => {
     if (!user) return;
     setDeleting(true);
@@ -499,8 +534,9 @@ export default function SharedRoute() {
             categoryLabel={categoryLabel(pin.category || "other")}
             onOpen={() => openDetail(pin)}
             onGoogle={() => openGooglePlace(pin)}
-            onSave={user ? () => setSavePlace(pinToSave(pin)) : undefined}
+            onSave={!isOwner && user ? () => setSavePlace(pinToSave(pin)) : undefined}
             saved={isSaved(pin.place_name)}
+            onDelete={isOwner ? () => handleDeletePin(pin) : undefined}
             note={note}
           />
         );
@@ -594,7 +630,7 @@ export default function SharedRoute() {
               <span className="text-xs font-semibold tabular-nums text-muted-foreground">{routeLike.count}</span>
             </button>
           </div>
-          <div className="flex items-start gap-3 mt-3">
+          <div className="flex items-start gap-3 mt-[35px]">
             <h1 className="flex-1 text-2xl font-black text-foreground leading-tight">{route.title || cityLabel}</h1>
             {isOwner && (
               <div className="shrink-0 flex items-center gap-2">
@@ -634,8 +670,8 @@ export default function SharedRoute() {
           )}
         </div>
 
-        {/* #2: Zakladki jak na profilu - ikony + podkreslenie aktywnej (nie pill). */}
-        <div className="px-5 pt-5">
+        {/* #2: Zakladki jak na profilu - ikony + podkreslenie aktywnej, FULL WIDTH (bez px). */}
+        <div className="pt-5">
           <div className="flex border-b border-border/60">
             {([
               { k: "miejsca", Icon: MapPin, label: "Miejsca" },
@@ -694,9 +730,16 @@ export default function SharedRoute() {
                   </button>
                 )}
                 {galleryPhotos.map((url, i) => (
-                  <button key={i} onClick={() => setViewerIndex(i)} className="relative aspect-[4/3] rounded-2xl overflow-hidden bg-muted active:opacity-90 transition-opacity">
+                  <div key={i} onClick={() => setViewerIndex(i)} role="button" className="relative aspect-[4/3] rounded-2xl overflow-hidden bg-muted active:opacity-90 transition-opacity cursor-pointer">
                     <img src={url} alt="" loading="lazy" className="w-full h-full object-cover" />
-                  </button>
+                    {/* #3: wlasciciel - usun zdjecie */}
+                    {isOwner && (
+                      <button onClick={(e) => { e.stopPropagation(); void handleDeletePhoto(url); }} aria-label="Usuń zdjęcie"
+                        className="absolute top-1.5 right-1.5 h-7 w-7 rounded-full bg-black/45 backdrop-blur-sm flex items-center justify-center active:scale-90 transition-transform">
+                        <Trash2 className="h-3.5 w-3.5 text-white" />
+                      </button>
+                    )}
+                  </div>
                 ))}
               </div>
             ) : (
@@ -743,7 +786,11 @@ export default function SharedRoute() {
           open={addPlaceOpen}
           onClose={() => setAddPlaceOpen(false)}
           city={route.city ?? null}
-          existingNames={existingPinNames}
+          existingPlaces={pins.map((p: any) => ({
+            place_name: p.place_name, category: p.category ?? null, address: p.address ?? null, description: p.description ?? null,
+            latitude: p.latitude ?? null, longitude: p.longitude ?? null, photo_url: p.photo_url ?? null, place_id: p.place_id ?? null,
+            google_place_id: p.google_place_id ?? null, rating: p.rating ?? null,
+          }))}
           onAdd={handleAddPlaces}
           onInvitePeople={() => setInviteOpen(true)}
         />

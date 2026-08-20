@@ -232,11 +232,26 @@ const TravelerProfile = () => {
     queryKey: ["profile-trip-feed", user?.id],
     enabled: !!user?.id,
     queryFn: async () => {
-      const { data: routes } = await (supabase as any)
-        .from("routes").select("id, title, city, start_date, day_number, folder_id, views, created_at")
-        .eq("user_id", user!.id).eq("is_shared", true)
-        .order("created_at", { ascending: false });
-      const rows = (routes ?? []) as any[];
+      const sel = "id, title, city, start_date, day_number, folder_id, views, created_at, user_id";
+      // Wlasne trasy + trasy grupowe, do ktorych jestem zaproszony (member) - zeby zaproszeni
+      // TAKZE widzieli wyjazd na swoim profilu (jak w JournalTab).
+      const [ownRes, memberRes] = await Promise.all([
+        (supabase as any).from("routes").select(sel).eq("user_id", user!.id).eq("is_shared", true).order("created_at", { ascending: false }),
+        (supabase as any).from("group_session_members").select("session_id").eq("user_id", user!.id),
+      ]);
+      const sessionIds = (memberRes.data ?? []).map((m: any) => m.session_id);
+      let groupRows: any[] = [];
+      if (sessionIds.length) {
+        const { data } = await (supabase as any).from("routes").select(sel)
+          .in("group_session_id", sessionIds).neq("user_id", user!.id).eq("is_shared", true)
+          .order("created_at", { ascending: false });
+        groupRows = data ?? [];
+      }
+      const seen = new Set<string>();
+      const rows = [
+        ...((ownRes.data ?? []) as any[]).map((r) => ({ ...r, is_own: true })),
+        ...(groupRows as any[]).map((r) => ({ ...r, is_own: false })),
+      ].filter((r) => { if (seen.has(r.id)) return false; seen.add(r.id); return true; });
       if (!rows.length) return [];
       const ids = rows.map((r) => r.id);
       const [pinsRes, savesRes, likesRes] = await Promise.all([
@@ -273,6 +288,7 @@ const TravelerProfile = () => {
       grouped.sort((a, b) => new Date(b.rep.created_at ?? 0).getTime() - new Date(a.rep.created_at ?? 0).getTime());
       return grouped.map(({ rep, days }) => ({
         id: rep.id,
+        is_own: rep.is_own !== false, // trasa grupowa zaproszonego = false (bez edycji/usuwania)
         routeIds: days.map((d) => d.id), // wszystkie dni (folder) - do usuniecia calej podrozy
         city: rep.city,
         title: rep.title,
@@ -441,8 +457,8 @@ const TravelerProfile = () => {
                     tiles={tr.tiles}
                     counts={{ saves: tr.saves, likes: tr.likes, views: tr.views }}
                     onOpen={() => navigate(`/route/${tr.id}`)}
-                    onEdit={() => navigate(`/review-summary?route=${tr.id}&edit=1`)}
-                    onDelete={() => setConfirmDelete({ kind: "trip", id: tr.id, routeIds: tr.routeIds, title: tr.title || tr.city || t("feed.trip_fallback_generic", "Wyjazd") })}
+                    onEdit={tr.is_own ? () => navigate(`/review-summary?route=${tr.id}&edit=1`) : undefined}
+                    onDelete={tr.is_own ? () => setConfirmDelete({ kind: "trip", id: tr.id, routeIds: tr.routeIds, title: tr.title || tr.city || t("feed.trip_fallback_generic", "Wyjazd") }) : undefined}
                   />
                 );
               })

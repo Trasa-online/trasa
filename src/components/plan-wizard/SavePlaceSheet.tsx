@@ -114,7 +114,14 @@ export default function SavePlaceSheet({
       } else if (isIn(l)) {
         await removePlaceFromList(l.id, place.place_name);
         setOverride((prev) => new Map(prev).set(l.id, false));
-        toast.success(`Usunięto z „${l.title}"`);
+        // #7: ZAWSZE toast z "Cofnij" (re-dodaj do tej listy).
+        toast.success(`Usunięto z „${l.title}"`, {
+          action: { label: "Cofnij", onClick: async () => {
+            await addPlaceToList(l.id, { ...place });
+            setOverride((prev) => new Map(prev).set(l.id, true));
+            invalidate();
+          } },
+        });
       } else {
         await addPlaceToList(l.id, { ...place });
         setOverride((prev) => new Map(prev).set(l.id, true));
@@ -127,18 +134,19 @@ export default function SavePlaceSheet({
     } finally { setBusyId(null); }
   };
 
-  // Utwórz NOWĄ listę z tym miejscem. Nowa lista = publiczna polecajka (visited) - domyślnie.
+  // Utwórz NOWĄ listę z tym miejscem. Nowa lista = PRYWATNA (visited + is_public=false) domyślnie;
+  // user może zmienić na publiczną toggle "Rodzaj listy" na widoku listy.
   const createNew = async () => {
     if (!place || !user || busyId) return;
     const name = newName.trim();
     if (!name) return;
     setBusyId("new"); haptics.medium();
     try {
-      const id = await createListWithPlace(user.id, name, "visited", city || null, { ...place }, author);
+      const id = await createListWithPlace(user.id, name, "visited", city || null, { ...place }, author, false);
       if (!id) throw new Error("create failed");
       setNewName("");
       invalidate();
-      toast.success(`Utworzono listę „${name}"`);
+      toast.success(`Utworzono prywatną listę „${name}"`);
     } catch (e: any) {
       console.error("[SavePlaceSheet] create list failed:", e?.message ?? e);
       toast.error("Nie udało się utworzyć listy");

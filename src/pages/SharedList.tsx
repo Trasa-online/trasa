@@ -60,6 +60,8 @@ export default function SharedList() {
   // Usuniecie listy (wlasciciel) - nieodwracalne, walidacja "czy na pewno?".
   const [askDelete, setAskDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  // Rodzaj listy (Prywatna|Publiczna) - lokalny override dla optymistycznej zmiany.
+  const [listPublicOverride, setListPublicOverride] = useState<boolean | null>(null);
 
   const handleDelete = async () => {
     if (!user || !id) return;
@@ -84,7 +86,7 @@ export default function SharedList() {
     queryFn: async () => {
       const { data } = await (supabase as any)
         .from("discovery_collections")
-        .select("id, title, city, description, user_id, author_name, author_avatar, cover_url, tags")
+        .select("id, title, city, description, user_id, author_name, author_avatar, cover_url, tags, is_public, list_status")
         .eq("id", id as string)
         .maybeSingle();
       return data as any;
@@ -217,6 +219,33 @@ export default function SharedList() {
   const isOwner = !!user && col.user_id === user.id;
   const placesCountLabel = `${items.length} ${items.length === 1 ? "miejsce" : items.length < 5 ? "miejsca" : "miejsc"}`;
 
+  // Rodzaj listy: Prywatna|Publiczna (wlasciciel zmienia z widoku listy). Aktualizuje is_public.
+  const listIsPublic = listPublicOverride ?? (col.is_public ?? true);
+  const handleSetPublic = async (pub: boolean) => {
+    if (!user || pub === listIsPublic) return;
+    setListPublicOverride(pub);
+    const { error } = await (supabase as any).from("discovery_collections")
+      .update({ is_public: pub }).eq("id", col.id).eq("user_id", user.id);
+    if (error) { setListPublicOverride(!pub); toast.error("Nie udało się zmienić"); return; }
+    queryClient.invalidateQueries({ queryKey: ["shared-list", id] });
+    queryClient.invalidateQueries({ queryKey: ["profile-list-feed", user.id] });
+    toast.success(pub ? "Lista publiczna" : "Lista prywatna");
+  };
+
+  // Usun miejsce z listy (wlasciciel, kosz w wierszu). Toast + "Cofnij".
+  const handleDeleteItem = async (item: any) => {
+    const { error } = await (supabase as any).from("discovery_items").delete().eq("id", item.id);
+    if (error) { toast.error("Nie udało się usunąć miejsca"); return; }
+    queryClient.invalidateQueries({ queryKey: ["shared-list-items", id] });
+    const { id: _id, ...rest } = item;
+    toast.success("Usunięto miejsce", {
+      action: { label: "Cofnij", onClick: async () => {
+        await (supabase as any).from("discovery_items").insert({ ...rest });
+        queryClient.invalidateQueries({ queryKey: ["shared-list-items", id] });
+      } },
+    });
+  };
+
   // #2: okladka miejsca = zapisane zdjecie (discovery_items.photo_url) LUB zdjecie usera dodane
   // w wizytowce (place_photos). Gdy pin nie ma photo_url, bierzemy pierwsze place_photo.
   const pinCover = (p: any): string | null => {
@@ -241,7 +270,7 @@ export default function SharedList() {
   const galleryItems = Array.from(galleryMap.entries()).map(([url, pin]) => ({ url, pin }));
 
   const renderList = () => (
-    <div className="space-y-2.5">
+    <div>
       {items.map((pin: any, i: number) => {
         const noteText = (pin.short_desc ?? "").trim();
         const note = noteText ? (
@@ -258,8 +287,9 @@ export default function SharedList() {
             categoryLabel={categoryLabel(catOf(pin))}
             onOpen={() => openDetail(pin)}
             onGoogle={() => openGoogle(pin)}
-            onSave={() => openSavePlace(pin)}
+            onSave={!isOwner ? () => openSavePlace(pin) : undefined}
             saved={isSaved(pin.place_name)}
+            onDelete={isOwner ? () => handleDeleteItem(pin) : undefined}
             note={note}
           />
         );
@@ -342,7 +372,7 @@ export default function SharedList() {
               <span className="text-xs font-semibold tabular-nums text-muted-foreground">{listLike.count}</span>
             </button>
           </div>
-          <div className="flex items-start gap-3 mt-3">
+          <div className="flex items-start gap-3 mt-[35px]">
             <h1 className="flex-1 text-2xl font-black text-foreground leading-tight">{col.title || cityLabel}</h1>
           </div>
           {col.description && <p className="text-sm text-muted-foreground leading-relaxed mt-3">{col.description}</p>}
@@ -353,9 +383,21 @@ export default function SharedList() {
               ))}
             </div>
           )}
+          {/* Rodzaj listy: Prywatna|Publiczna (wlasciciel). */}
+          {isOwner && (
+            <div className="mt-4 flex items-center justify-between gap-3">
+              <p className="text-[15px] font-medium text-foreground">Rodzaj listy</p>
+              <div className="flex items-center rounded-full bg-[#ededed] p-0.5">
+                {[{ k: false, l: "Prywatna" }, { k: true, l: "Publiczna" }].map((o) => (
+                  <button key={o.l} onClick={() => handleSetPublic(o.k)}
+                    className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-colors ${listIsPublic === o.k ? "bg-white text-foreground shadow-sm" : "text-foreground/55"}`}>{o.l}</button>
+                ))}
+              </div>
+            </div>
+          )}
           {/* Wlasciciel listy: edycja + usuniecie (jak w widoku trasy). */}
           {isOwner && (
-            <div className="mt-4 flex items-center gap-2">
+            <div className="mt-3 flex items-center gap-2">
               <button
                 onClick={() => navigate(`/zestawienie/${col.id}/edytuj`)}
                 className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl bg-secondary text-secondary-foreground text-sm font-bold active:scale-[0.98] transition-transform"
@@ -373,8 +415,8 @@ export default function SharedList() {
           )}
         </div>
 
-        {/* #3: Zakladki jak na profilu/trasie - ikony + podkreslenie (nie pill). BEZ mapy. */}
-        <div className="px-5 pt-5">
+        {/* #3: Zakladki jak na profilu/trasie - ikony + podkreslenie (nie pill), FULL WIDTH. BEZ mapy. */}
+        <div className="pt-5">
           <div className="flex border-b border-border/60">
             {([
               { k: "miejsca", Icon: MapPin, label: "Miejsca" },

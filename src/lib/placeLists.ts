@@ -173,8 +173,12 @@ export async function removePlaceFromList(listId: string, placeName: string): Pr
 // wishlista "Do zobaczenia" (is_public=false + approved -> poza kolejka moderacji, nigdy publiczna).
 export async function createListWithPlace(
   userId: string, title: string, listStatus: ListStatus, city: string | null, place: PlaceForList, author?: ListAuthor,
+  isPublicOverride?: boolean,
 ): Promise<string | null> {
   const isRecommend = listStatus === "visited";
+  // Domyslnie widocznosc z intencji (visited=publiczna), ale caller moze wymusic (np. nowa lista
+  // z drawera "Miejsce zapisane!" = PRYWATNA z toggle na widoku listy).
+  const isPublic = typeof isPublicOverride === "boolean" ? isPublicOverride : isRecommend;
   const { data: col, error } = await (supabase as any)
     .from("discovery_collections")
     .insert({
@@ -183,8 +187,8 @@ export async function createListWithPlace(
       city: city || null,
       kind: "ranking",
       list_status: listStatus,
-      is_public: isRecommend,
-      moderation_status: isRecommend ? "pending" : "approved",
+      is_public: isPublic,
+      moderation_status: isPublic ? "pending" : "approved",
       author_name: author?.name ?? "Użytkownik",
       author_avatar: author?.avatar ?? null,
     })
