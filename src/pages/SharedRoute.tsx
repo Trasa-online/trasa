@@ -10,11 +10,17 @@ import { notify } from "@/lib/notify";
 import { sendClientPush, getCurrentUserName } from "@/lib/clientPush";
 import { format } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
-import { MapPin, ArrowLeft, Sparkles, ChevronRight, ChevronLeft, Bookmark, List, GalleryHorizontalEnd, Calendar as CalendarIcon, Image as ImageIcon, Maximize2, X, Building2, Pencil, Trash2, Heart } from "lucide-react";
+import { MapPin, ArrowLeft, Sparkles, ChevronRight, ChevronLeft, Bookmark, List, GalleryHorizontalEnd, Calendar as CalendarIcon, Image as ImageIcon, Maximize2, X, Building2, Pencil, Trash2, Heart, Share2, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { PlacePhoto } from "@/components/PlacePhoto";
 import { RoutePlaceRow } from "@/components/route/RoutePlaceRow";
+import AddPlaceSheet from "@/components/route/AddPlaceSheet";
+import InviteFriendsSheet from "@/components/route/InviteFriendsSheet";
+import { inviteUsersToRoute } from "@/lib/groupInvite";
+import { useShare } from "@/hooks/useShare";
+import { buildShareUrl } from "@/lib/shareUrl";
+import type { PlaceForList } from "@/lib/placeLists";
 import { pinCoverKeys, fetchPlacePhotosForKeys, pickPlaceCover } from "@/lib/placePhotoSocial";
 import RouteMap from "@/components/RouteMap";
 import { API_BASE } from "@/lib/platform";
@@ -82,6 +88,9 @@ export default function SharedRoute() {
   // Usuniecie wyjazdu (wlasciciel) - nieodwracalne, walidacja "czy na pewno?".
   const [askDelete, setAskDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [addPlaceOpen, setAddPlaceOpen] = useState(false);
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const share = useShare();
 
   // Otworz miejsce w Google Maps (WIZYTOWKA / place page, NIE nawigacja). query_place_id gdy
   // pin.place_id to Google Place ID (nie nasze DB uuid) - trafiamy w dokladne miejsce.
@@ -319,6 +328,25 @@ export default function SharedRoute() {
 
   const isOwner = !!user && route.user_id === user.id;
 
+  const handleShare = () => { void share({ title: route.title || cityLabel || "Wyjazd", url: buildShareUrl(`/route/${route.id}`) }); };
+
+  // Wlasciciel dodaje miejsca do ISTNIEJACEJ trasy: append do pins (jak AddPlaceToTrip), potem refetch.
+  const handleAddPlaces = async (places: PlaceForList[]) => {
+    if (!user) return;
+    const maxOrder = pins.reduce((m: number, p: any) => Math.max(m, p.pin_order ?? -1), -1);
+    const rows = places.map((p, i) => ({
+      route_id: route.id, place_name: p.place_name, address: p.address ?? null, description: p.description ?? null,
+      category: p.category ?? "other", latitude: p.latitude ?? null, longitude: p.longitude ?? null,
+      place_id: p.place_id ?? null, suggested_time: null, photo_url: p.photo_url ?? null,
+      pin_order: maxOrder + 1 + i, original_creator_id: user.id,
+    }));
+    const { error } = await (supabase as any).from("pins").insert(rows);
+    if (error) throw error;
+    queryClient.invalidateQueries({ queryKey: ["shared-route-pins", id] });
+  };
+
+  const existingPinNames = new Set(pins.map((p: any) => (p.place_name || "").trim().toLowerCase()));
+
   const handleDelete = async () => {
     if (!user) return;
     setDeleting(true);
@@ -538,10 +566,18 @@ export default function SharedRoute() {
           </div>
           <div className="flex items-start gap-3 mt-3">
             <h1 className="flex-1 text-2xl font-black text-foreground leading-tight">{route.title || cityLabel}</h1>
-            <button onClick={toggleLike} aria-label="Polub trasę" className="shrink-0 flex flex-col items-center gap-0.5 active:scale-90 transition-transform">
-              <Heart className={cn("h-6 w-6", routeLike.liked ? "fill-red-500 text-red-500" : "text-foreground")} />
-              <span className="text-xs font-semibold tabular-nums text-muted-foreground">{routeLike.count}</span>
-            </button>
+            {isOwner ? (
+              <div className="shrink-0 flex items-center gap-2">
+                <button onClick={handleShare} aria-label="Udostępnij" className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center active:scale-90 transition-transform"><Share2 className="h-4 w-4 text-foreground" /></button>
+                <button onClick={() => navigate(`/review-summary?route=${route.id}&edit=1`)} aria-label="Edytuj trasę" className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center active:scale-90 transition-transform"><Pencil className="h-4 w-4 text-foreground" /></button>
+                <button onClick={() => setAskDelete(true)} aria-label="Usuń wyjazd" className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center active:scale-90 transition-transform"><Trash2 className="h-4 w-4 text-destructive" /></button>
+              </div>
+            ) : (
+              <button onClick={toggleLike} aria-label="Polub trasę" className="shrink-0 flex flex-col items-center gap-0.5 active:scale-90 transition-transform">
+                <Heart className={cn("h-6 w-6", routeLike.liked ? "fill-red-500 text-red-500" : "text-foreground")} />
+                <span className="text-xs font-semibold tabular-nums text-muted-foreground">{routeLike.count}</span>
+              </button>
+            )}
           </div>
           {dateLabel && (
             <div className="flex items-center gap-1.5 mt-2.5 text-foreground">
@@ -648,6 +684,25 @@ export default function SharedRoute() {
         city={route.city ?? ""}
       />
 
+      {/* Wlasciciel: dodaj nowe miejsce (zapisane + wyszukiwarka Google) do tej trasy */}
+      {isOwner && (
+        <AddPlaceSheet
+          open={addPlaceOpen}
+          onClose={() => setAddPlaceOpen(false)}
+          city={route.city ?? null}
+          existingNames={existingPinNames}
+          onAdd={handleAddPlaces}
+          onInvitePeople={() => setInviteOpen(true)}
+        />
+      )}
+      {isOwner && (
+        <InviteFriendsSheet
+          open={inviteOpen}
+          onOpenChange={setInviteOpen}
+          route={{ id: route.id, city: route.city ?? null, title: route.title ?? null, group_session_id: (route as any).group_session_id ?? null }}
+        />
+      )}
+
       {/* Rozwinięta interaktywna mapa (zoom) - jak w widoku "Plan wyjazdu" */}
       {planMapOpen && (
         <div className="fixed inset-0 z-[90] bg-background flex flex-col animate-in fade-in duration-200">
@@ -685,21 +740,12 @@ export default function SharedRoute() {
       <div className="fixed bottom-0 left-0 right-0 max-w-lg mx-auto px-5 pt-3 bg-background/90 backdrop-blur-md border-t border-border/30"
         style={{ paddingBottom: "max(20px, env(safe-area-inset-bottom, 20px))" }}>
         {isOwner ? (
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => navigate(`/review-summary?route=${route.id}&edit=1`)}
-              className="flex-1 py-3 rounded-full bg-secondary text-secondary-foreground font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
-            >
-              <Pencil className="h-4 w-4" /> Edytuj trasę
-            </button>
-            <button
-              onClick={() => setAskDelete(true)}
-              aria-label="Usuń wyjazd"
-              className="h-12 w-12 shrink-0 flex items-center justify-center rounded-full bg-secondary text-destructive active:scale-[0.98] transition-transform"
-            >
-              <Trash2 className="h-4 w-4" />
-            </button>
-          </div>
+          <button
+            onClick={() => setAddPlaceOpen(true)}
+            className="w-full py-3 rounded-full border border-border bg-background text-foreground font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
+          >
+            <Plus className="h-4 w-4" /> Dodaj nowe miejsce
+          </button>
         ) : (
           <>
             <button
