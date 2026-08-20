@@ -96,21 +96,38 @@ export default function SavePlaceSheet({
 
   // Prywatne (to_visit) najpierw, potem publiczne. Gdy brak prywatnej listy - wirtualny wiersz
   // "Do zobaczenia" (utworzy się przy pierwszym zapisie przez quickSavePlace).
-  const toVisit = lists.filter((l) => l.list_status === "to_visit");
   const visited = lists.filter((l) => l.list_status === "visited");
+  // Prywatna wishlista "Do zobaczenia" jest PER-MIASTO w bazie, ale w drawerze pokazujemy JEDEN
+  // wiersz (kolaps) - inaczej user widzi "całą masę" tych samych list. Zapis idzie do listy
+  // biezacego miasta (quickSavePlace); "zapisane" = miejsce w KTOREJKOLWIEK z tych list.
+  const wishlistLists = lists.filter((l) => l.list_status === "to_visit");
   const virtualWishlist: UserList = { id: WISHLIST_ID, title: "Do zobaczenia", city: null, list_status: "to_visit", count: 0, cover: null, place_names: [] };
-  const displayLists: UserList[] = toVisit.length > 0 ? [...toVisit, ...visited] : [virtualWishlist, ...visited];
+  const displayLists: UserList[] = [virtualWishlist, ...visited];
 
-  const isIn = (l: UserList) => (override.has(l.id) ? override.get(l.id)! : listHasPlace(l, place?.place_name ?? ""));
+  const inWishlist = override.has(WISHLIST_ID) ? override.get(WISHLIST_ID)! : wishlistLists.some((l) => listHasPlace(l, place?.place_name ?? ""));
+  const isIn = (l: UserList) => l.id === WISHLIST_ID ? inWishlist : (override.has(l.id) ? override.get(l.id)! : listHasPlace(l, place?.place_name ?? ""));
 
   const toggle = async (l: UserList) => {
     if (!place || !user || busyId) return;
     setBusyId(l.id); haptics.medium();
     try {
       if (l.id === WISHLIST_ID) {
-        const { added } = await quickSavePlace(user.id, { ...place }, city || null, author);
-        setOverride((prev) => new Map(prev).set(l.id, true));
-        toast.success(added ? `Dodano do „Do zobaczenia"` : `Już jest w „Do zobaczenia"`);
+        if (inWishlist) {
+          // Usun z wishlisty - ze WSZYSTKICH miast (miejsce moglo byc zapisane w innym miescie).
+          for (const wl of wishlistLists) await removePlaceFromList(wl.id, place.place_name);
+          setOverride((prev) => new Map(prev).set(WISHLIST_ID, false));
+          toast.success(`Usunięto z „Do zobaczenia"`, {
+            action: { label: "Cofnij", onClick: async () => {
+              await quickSavePlace(user.id, { ...place }, city || null, author);
+              setOverride((prev) => new Map(prev).set(WISHLIST_ID, true));
+              invalidate();
+            } },
+          });
+        } else {
+          const { added } = await quickSavePlace(user.id, { ...place }, city || null, author);
+          setOverride((prev) => new Map(prev).set(WISHLIST_ID, true));
+          toast.success(added ? `Dodano do „Do zobaczenia"` : `Już jest w „Do zobaczenia"`);
+        }
       } else if (isIn(l)) {
         await removePlaceFromList(l.id, place.place_name);
         setOverride((prev) => new Map(prev).set(l.id, false));

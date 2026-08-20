@@ -76,6 +76,9 @@ export default function SharedList() {
       await (supabase as any).from("discovery_items").delete().eq("collection_id", id);
       const { error } = await (supabase as any).from("discovery_collections").delete().eq("id", id).eq("user_id", user.id);
       if (error) throw new Error(error.message);
+      // Odswiez listy w drawerze zapisu + na profilu (inaczej usunieta lista wisi w cache).
+      queryClient.invalidateQueries({ queryKey: ["save-sheet-lists", user.id] });
+      queryClient.invalidateQueries({ queryKey: ["profile-list-feed", user.id] });
       toast.success("Usunięto listę.");
       setAskDelete(false);
       if (window.history.length > 1) navigate(-1); else navigate("/moj-profil");

@@ -122,6 +122,8 @@ const TravelerProfile = () => {
         const { error } = await (supabase as any).from("discovery_collections").delete().eq("id", confirmDelete.id).eq("user_id", user.id);
         if (error) throw new Error(error.message);
         queryClient.invalidateQueries({ queryKey: ["profile-list-feed", user.id] });
+        // Odswiez listy w drawerze zapisu miejsca (inaczej usunieta lista wisi w cache).
+        queryClient.invalidateQueries({ queryKey: ["save-sheet-lists", user.id] });
       } else {
         const ids = confirmDelete.routeIds?.length ? confirmDelete.routeIds : [confirmDelete.id];
         await supabase.from("pins").delete().in("route_id", ids);

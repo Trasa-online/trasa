@@ -7,7 +7,7 @@ import { PlaceTile } from "@/components/profile/PlaceTile";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import { type MockPlace } from "@/components/plan-wizard/PlaceSwiper";
 import { resolveStored } from "@/components/PlacePhoto";
-import { inferCategoryFromName } from "@/lib/placeCategoryIcon";
+import { inferCategoryFromName, categoryIconSrc } from "@/lib/placeCategoryIcon";
 import { fetchSavedPlaces, removeSavedPlaceById, addPlaceToList, type SavedPlace } from "@/lib/placeLists";
 
 // Segment "Miejsca" w zakładce Zapisane (profil): siatka 3-kol zapisanych miejsc usera
@@ -26,7 +26,14 @@ export function SavedPlacesGrid() {
   const handleUnsave = async (p: SavedPlace) => {
     await removeSavedPlaceById(p.id);
     invalidateSaved();
-    toast.success("Usunięto z zapisanych", {
+    // #1: pełna nazwa miejsca + miniaturka po lewej (zdjęcie usera albo ikona kategorii na peachy).
+    const photo = resolveStored(p.photo_url);
+    const thumb = photo
+      ? <img src={photo} alt="" className="h-9 w-9 rounded-lg object-cover shrink-0" />
+      : <span className="h-9 w-9 rounded-lg bg-[#fcede3] flex items-center justify-center shrink-0"><img src={categoryIconSrc(p.category)} alt="" className="w-1/2" /></span>;
+    toast.success(p.place_name, {
+      icon: thumb,
+      description: "Usunięto z zapisanych",
       action: {
         label: "Cofnij",
         onClick: async () => {
