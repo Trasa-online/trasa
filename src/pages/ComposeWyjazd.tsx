@@ -5,7 +5,6 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { ArrowLeft, Search, Plus, X, ChevronDown, Calendar as CalendarIcon, List, GalleryHorizontalEnd, Loader2, ArrowRight, Trash2, Maximize2, GripVertical, UserPlus } from "lucide-react";
 import InviteFriendsSheet from "@/components/route/InviteFriendsSheet";
 import { inviteUsersToRoute } from "@/lib/groupInvite";
-import CreateHeader from "@/components/create/CreateHeader";
 import { avatarSrc } from "@/lib/avatar";
 import { Reorder, useDragControls } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
@@ -618,25 +617,14 @@ export default function ComposeWyjazd() {
 
   return (
     <div className="flex flex-col h-[100dvh] bg-background max-w-lg mx-auto">
-      {/* Naglowek huba tworzenia: ikonowe zakladki + Trasy|Listy. "Listy" -> forma listy z handoffem. */}
-      <CreateHeader
-        active="tworz"
-        mode="trasy"
-        onMode={(m) => {
-          if (m === "listy") navigate("/zestawienie/nowe", {
-            state: {
-              city,
-              title: nameDirty ? name : null,
-              places: items.map((i) => ({
-                place_name: i.place_name, category: i.category, address: i.address,
-                latitude: i.latitude, longitude: i.longitude, photo_url: i.photo_url, place_id: i.place_id,
-              })),
-            },
-            replace: true,
-          });
-        }}
-        onBack={handleBack}
-      />
+      {/* Naglowek: prosty (wejscie z arkusza "Co dzisiaj tworzymy?"). Bez zakladek huba
+          (Twórz|Robocze|Zapisane) i toggle Trasy|Listy - wybor typu jest juz w arkuszu. */}
+      <div className="flex items-center gap-2 px-4 pt-safe-4 pb-3 border-b border-border/20 shrink-0">
+        <button onClick={handleBack} aria-label="Wróć" className="h-9 w-9 flex items-center justify-center -ml-1 shrink-0 text-foreground active:scale-90 transition-transform">
+          <ArrowLeft className="h-5 w-5" />
+        </button>
+        <h1 className="flex-1 text-center text-base font-bold text-foreground pr-9">Nowy wyjazd</h1>
+      </div>
       {draftId && (
         <InviteFriendsSheet
           open={inviteOpen}

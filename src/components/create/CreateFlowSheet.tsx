@@ -8,8 +8,9 @@ import { useAuth } from "@/hooks/useAuth";
 import { haptics } from "@/hooks/useHaptics";
 import { supabase } from "@/integrations/supabase/client";
 import { PlaceTile } from "@/components/profile/PlaceTile";
+import { avatarSrc } from "@/lib/avatar";
 import CityCountryPicker, { defaultCityIndex } from "@/components/create/CityDrum";
-import AddPeoplePicker from "@/components/create/AddPeoplePicker";
+import AddPeoplePicker, { type PersonLite } from "@/components/create/AddPeoplePicker";
 import { fetchSavedPlaces, createListFromSavedPlaces, type SavedPlace, type PlaceForList } from "@/lib/placeLists";
 import { citiesForCountry } from "@/lib/tripCountries";
 
@@ -42,13 +43,13 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
   // Wyjazd
   const [tripName, setTripName] = useState("");
   const [tripCity, setTripCity] = useState(defaultCity);
-  const [tripPeople, setTripPeople] = useState<Set<string>>(new Set());
+  const [tripPeople, setTripPeople] = useState<PersonLite[]>([]);
 
   // Reset przy kazdym otwarciu.
   useEffect(() => {
     if (open) {
       setStep("entry"); setListName(""); setListPublic(true); setSelected(new Set());
-      setTripName(""); setTripCity(defaultCity()); setTripPeople(new Set()); setCreating(false);
+      setTripName(""); setTripCity(defaultCity()); setTripPeople([]); setCreating(false);
     }
   }, [open]);
 
@@ -70,7 +71,8 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
 
   const close = () => onClose();
   const toggleSel = (id: string) => setSelected((prev) => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
-  const togglePerson = (id: string) => setTripPeople((prev) => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const togglePerson = (p: PersonLite) => setTripPeople((prev) => prev.some((x) => x.id === p.id) ? prev.filter((x) => x.id !== p.id) : [...prev, p]);
+  const tripPeopleIds = new Set(tripPeople.map((p) => p.id));
 
   // "Dodaj nowe" -> pelny edytor listy (CreateRanking) z wyszukiwarka; przenosimy nazwe/prywatnosc/zaznaczone.
   const goFullEditor = () => {
@@ -96,7 +98,9 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
 
   const startTrip = () => {
     close();
-    navigate("/wyjazd/nowy", { state: { city: tripCity, title: tripName.trim(), inviteeIds: [...tripPeople] } });
+    // title || undefined: ComposeWyjazd czyta nav.title przez ?? (pusty string zostalby jako pusta
+    // nazwa), wiec przy braku nazwy przekazujemy undefined -> tam default "Wyjazd do {miasto}".
+    navigate("/wyjazd/nowy", { state: { city: tripCity, title: tripName.trim() || undefined, inviteeIds: tripPeople.map((p) => p.id) } });
   };
 
   // ── wspolny nagłowek Anuluj / tytul / Dalej ──
@@ -104,19 +108,19 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
     title: string; onBack: () => void; onNext?: () => void; nextLabel?: string; nextEnabled?: boolean; backLabel?: string;
   }) => (
     <div className="flex items-center justify-between gap-2 px-5 pt-1 pb-3">
-      <button onClick={onBack} className="text-sm font-medium text-[#181818] active:opacity-60 transition-opacity shrink-0 min-w-[60px] text-left">{backLabel}</button>
+      <button onClick={onBack} className="text-sm font-medium text-[#181818] rounded-full border border-black/15 bg-white px-3.5 py-1.5 active:opacity-60 transition-opacity shrink-0">{backLabel}</button>
       <h2 className="text-[20px] font-semibold text-foreground truncate">{title}</h2>
       {onNext ? (
         <button onClick={onNext} disabled={!nextEnabled}
-          className={`text-sm font-medium shrink-0 min-w-[60px] text-right transition-opacity ${nextEnabled ? "text-[#181818] active:opacity-60" : "text-[#acacac]"}`}>
+          className={`text-sm font-medium rounded-full border bg-white px-3.5 py-1.5 shrink-0 transition-opacity ${nextEnabled ? "text-[#181818] border-black/15 active:opacity-60" : "text-[#bcbcbc] border-black/[0.07]"}`}>
           {nextLabel}
         </button>
-      ) : <span className="min-w-[60px]" />}
+      ) : <span className="w-[68px] shrink-0" />}
     </div>
   );
 
   // ── wiersz "Dodaj osoby" ──
-  const PeopleRow = ({ kind, disabled, count, onClick }: { kind: "listy" | "wyjazdu"; disabled?: boolean; count?: number; onClick?: () => void }) => (
+  const PeopleRow = ({ kind, disabled, people, onClick }: { kind: "listy" | "wyjazdu"; disabled?: boolean; people?: PersonLite[]; onClick?: () => void }) => (
     <button onClick={disabled ? undefined : onClick} disabled={disabled}
       className={`w-full flex items-center gap-4 px-5 py-3 text-left ${disabled ? "opacity-45" : "active:bg-muted/50"} transition-colors`}>
       <Users className="h-6 w-6 text-foreground shrink-0" strokeWidth={1.8} />
@@ -127,8 +131,17 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
       {disabled ? (
         <span className="shrink-0 text-[11px] font-bold text-muted-foreground bg-secondary rounded-full px-2 py-0.5">Wkrótce</span>
       ) : (
-        <span className="shrink-0 flex items-center gap-1.5">
-          {!!count && <span className="text-[13px] font-bold text-primary">{count}</span>}
+        <span className="shrink-0 flex items-center gap-2">
+          {people && people.length > 0 && (
+            <span className="flex items-center -space-x-2">
+              {people.slice(0, 3).map((p) => (
+                <img key={p.id} src={avatarSrc(p.avatar_url)} alt="" className="h-7 w-7 rounded-full border-2 border-white object-cover bg-secondary" />
+              ))}
+              {people.length > 3 && (
+                <span className="h-7 w-7 rounded-full border-2 border-white bg-secondary text-[10px] font-bold text-foreground flex items-center justify-center">+{people.length - 3}</span>
+              )}
+            </span>
+          )}
           <ChevronRight className="h-5 w-5 text-muted-foreground" />
         </span>
       )}
@@ -247,7 +260,7 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
                 <CityCountryPicker city={tripCity} onCityChange={setTripCity} compact />
               </div>
               <div className="mt-2 border-t border-border/50">
-                <PeopleRow kind="wyjazdu" count={tripPeople.size} onClick={() => setStep("tripPeople")} />
+                <PeopleRow kind="wyjazdu" people={tripPeople} onClick={() => setStep("tripPeople")} />
               </div>
             </div>
           </>
@@ -259,10 +272,10 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
             <div className="flex items-center justify-between gap-2 px-5 pt-1 pb-3">
               <button onClick={() => setStep("trip")} className="h-8 w-8 -ml-1 flex items-center justify-center rounded-full active:bg-muted transition-colors"><ArrowLeft className="h-5 w-5" /></button>
               <h2 className="text-[20px] font-semibold text-foreground">Dodaj osoby</h2>
-              <button onClick={() => setStep("trip")} className="text-sm font-medium text-[#181818] active:opacity-60 min-w-[52px] text-right">Gotowe</button>
+              <button onClick={() => setStep("trip")} className="text-sm font-medium text-[#181818] rounded-full border border-black/15 bg-white px-3.5 py-1.5 active:opacity-60 shrink-0">Gotowe</button>
             </div>
             <div className="flex-1 min-h-0 overflow-y-auto px-5 pb-[max(16px,env(safe-area-inset-bottom))]">
-              {user && <AddPeoplePicker userId={user.id} selected={tripPeople} onToggle={togglePerson} />}
+              {user && <AddPeoplePicker userId={user.id} selected={tripPeopleIds} onToggle={togglePerson} />}
             </div>
           </>
         )}

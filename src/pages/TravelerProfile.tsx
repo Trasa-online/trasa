@@ -424,7 +424,7 @@ const TravelerProfile = () => {
                 title={t("feed.trips_empty_title", "Nie masz jeszcze wyjazdów")}
                 desc={t("feed.trips_empty_desc", "Zaplanuj trasę i podziel się nią ze znajomymi.")}
                 ctaLabel={t("feed.trips_empty_cta", "Zaplanuj wyjazd")}
-                onCta={() => navigate("/utworz")}
+                onCta={() => window.dispatchEvent(new Event("trasa:open-plan-menu"))}
               />
             ) : (
               tripCards.map((tr: any) => {
