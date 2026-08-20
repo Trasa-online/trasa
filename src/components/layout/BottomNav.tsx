@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useLocation } from "react-router-dom";
 import { NavLink } from "@/components/NavLink";
+import CreateFlowSheet from "@/components/create/CreateFlowSheet";
 import { X, MapPin, Heart, ArrowLeft, Layers } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
@@ -60,6 +61,8 @@ const BottomNav = () => {
   const location = useLocation();
   const { user } = useAuth();
   const [showMenu, setShowMenu] = useState(false);
+  // Nowy arkusz tworzenia (sheet-first, native). "+" -> "Co dzisiaj tworzymy?" [Lista|Wyjazd].
+  const [showCreate, setShowCreate] = useState(false);
   const [reusePrompt, setReusePrompt] = useState<{ city: string; likes: ExploreLike[] } | null>(null);
   // Menu "+": tworzenie wyjazdu SOLO / zestawienia. Trasy grupowe powstaja jako wyjazd solo,
   // a potem zapraszasz znajomych z widoku trasy (InviteFriendsSheet) - bez osobnej "sesji".
@@ -70,7 +73,8 @@ const BottomNav = () => {
   // Inne ekrany (np. baner "Zaplanuj nową trasę" w dzienniku) moga otworzyc to
   // samo menu nad orba "+" zamiast wlasnego drawera.
   useEffect(() => {
-    const open = () => setShowMenu(true);
+    // Native: to samo wejscie co "+" (nowy arkusz). Web (stary flow): menu wyboru.
+    const open = () => (PLANNING_DISABLED ? setShowCreate(true) : setShowMenu(true));
     window.addEventListener("trasa:open-plan-menu", open);
     return () => window.removeEventListener("trasa:open-plan-menu", open);
   }, []);
@@ -298,7 +302,7 @@ const BottomNav = () => {
             onClick={() => {
               haptics.light();
               if (!PLANNING_DISABLED) { setShowMenu(!showMenu); return; }
-              navigate("/utworz");
+              setShowCreate(true);
             }}
             className="w-16 flex items-center justify-center"
             aria-label={t("fab_aria")}
@@ -334,6 +338,9 @@ const BottomNav = () => {
         </div>
       </nav>
       )}
+
+      {/* Nowy arkusz tworzenia (sheet-first) - wejscie z "+" na native. */}
+      <CreateFlowSheet open={showCreate} onClose={() => setShowCreate(false)} />
     </>
   );
 };

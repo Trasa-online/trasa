@@ -177,7 +177,7 @@ const CreateRanking = () => {
   // KRYTYCZNE: miasto z handoffu Trasa->Lista przychodzi w location.state.city (drum-scroll),
   // NIE w query param. Bez czytania state forma spadala do "Warszawa" i "Twoje zapisane miejsca"
   // nie pasowaly do miasta wybranego przez usera (bug 2026-08).
-  const nav = (location.state ?? {}) as { city?: string | null; title?: string | null; places?: any[] };
+  const nav = (location.state ?? {}) as { city?: string | null; title?: string | null; places?: any[]; listStatus?: string | null; isPublic?: boolean };
   // "" = "Wszędzie" (lista globalna). Miasto NIE jest obowiazkowe przy tworzeniu listy -
   // user moze zrobic liste z miejsc z calego swiata. Selektor miasta = OPCJONALNY filtr wyszukiwarki.
   const initCity = nav.city || params.get("city") || "";
@@ -232,7 +232,7 @@ const CreateRanking = () => {
   // "do odwiedzenia". Edycja: ladowane z col. Listy "do odwiedzenia" maja uproszczony krok 2.
   // CreateRanking = autor POLECAJEK (publiczna lista, list_status="visited"). Prywatne miejsca
   // "do zobaczenia" zapisuje się bookmarkiem (SavePlaceSheet) -> Zapisane→Miejsca, nie tutaj.
-  const [listStatus, setListStatus] = useState<string | null>(editId ? null : "visited");
+  const [listStatus, setListStatus] = useState<string | null>(editId ? null : ((nav.listStatus as string) ?? "visited"));
   // Dane B2B (premium) wybranych miejsc - do pokazania na karcie pelnego adresu, tagow i
   // kategorii glownej+drugiej. Klucz = place_id (UUID). Tylko miejsca z business_profiles.
   const [bizMap, setBizMap] = useState<Record<string, any>>({});
@@ -579,12 +579,14 @@ const CreateRanking = () => {
       let collectionId = editId;
       // Wszystkie nowe zestawienia czekaja na akceptacje admina (App Store Guideline
       // 1.2 UGC + decyzja: moderacja na starcie dla wszystkich, nie tylko anonimow).
-      const moderationStatus = "pending";
       // Widoczność z list_status: NOWA lista (default "visited") = publiczna polecajka.
       // EDYCJA istniejącej -> zachowaj stan (prywatna to_visit zostaje prywatna, nie flip na public).
       // null (przed doładowaniem na edycji) -> "visited" (bezpiecznie, list_status jest NOT NULL).
       const listStatusToSave = listStatus === "to_visit" ? "to_visit" : "visited";
-      const isPublic = listStatusToSave === "visited";
+      // Prywatnosc z handoffu (arkusz "Dodaj nowe"): honoruj nav.isPublic gdy podane (prywatna
+      // lista kuratorska = visited + is_public=false). Inaczej wg intencji (visited=publiczna).
+      const isPublic = typeof nav.isPublic === "boolean" ? nav.isPublic : (listStatusToSave === "visited");
+      const moderationStatus = isPublic ? "pending" : "approved";
       const authorName = asAnon ? "Anonim" : author.name;
       const authorAvatar = asAnon ? null : author.avatar;
       const desc = description.trim() || null;

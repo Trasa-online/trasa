@@ -54,8 +54,10 @@ export async function inviteUsersToRoute(
       if (error || !session) return { ok: false, error: error?.message ?? "session insert failed" };
       sessionId = session.id;
       // Host do members (self-insert dozwolony) + podpiecie trasy (owner update).
+      // is_shared=true: trasa grupowa MUSI byc shared (brak RLS czlonkostwa na routes -> inaczej
+      // zaproszeni jej nie odczytaja). Dotyczy tez draftow tworzonych z arkusza "Nowy wyjazd".
       await (supabase as any).from("group_session_members").insert({ session_id: sessionId, user_id: hostUserId });
-      const { error: linkErr } = await (supabase as any).from("routes").update({ group_session_id: sessionId }).eq("id", route.id);
+      const { error: linkErr } = await (supabase as any).from("routes").update({ group_session_id: sessionId, is_shared: true }).eq("id", route.id);
       if (linkErr) return { ok: false, error: linkErr.message };
     }
 

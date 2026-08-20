@@ -193,6 +193,56 @@ export async function createListWithPlace(
   return col.id as string;
 }
 
+// Utworz kuratorska liste (polecajke) z wybranych ZAPISANYCH miejsc jednym insertem.
+// is_public NIEZALEZNE od list_status: Publiczna = is_public true + moderacja pending;
+// Prywatna = is_public false + approved (kuratorska prywatna lista, owner-only przez RLS).
+// Oba warianty to list_status='visited' (kuratorska lista, nie wishlista to_visit).
+export async function createListFromSavedPlaces(
+  userId: string,
+  opts: { title: string; isPublic: boolean; places: PlaceForList[]; author?: ListAuthor },
+): Promise<string | null> {
+  const { title, isPublic, places, author } = opts;
+  const { data: col, error } = await (supabase as any)
+    .from("discovery_collections")
+    .insert({
+      user_id: userId,
+      title: title.trim() || "Nowa lista",
+      city: null,
+      kind: "ranking",
+      list_status: "visited",
+      is_public: isPublic,
+      moderation_status: isPublic ? "pending" : "approved",
+      author_name: author?.name ?? "Użytkownik",
+      author_avatar: author?.avatar ?? null,
+      cover_url: null,
+      list_cover_url: null,
+    })
+    .select("id")
+    .single();
+  if (error || !col) { console.error("[placeLists] createListFromSavedPlaces failed:", error?.message ?? error); return null; }
+  const listId = col.id as string;
+  // Batch insert pozycji (dedup po nazwie, kolejnosc = kolejnosc zaznaczenia).
+  const seen = new Set<string>();
+  const rows = places
+    .filter((p) => { const k = skey(p.place_name); if (!k || seen.has(k)) return false; seen.add(k); return true; })
+    .map((p, i) => ({
+      collection_id: listId, place_name: p.place_name, category: p.category, address: p.address,
+      short_desc: p.description ?? "", latitude: p.latitude, longitude: p.longitude, place_id: p.place_id,
+      google_place_id: p.google_place_id ?? null, rating: p.rating ?? null, photo_url: p.photo_url, order_index: i,
+    }));
+  if (rows.length) {
+    const { error: itemsErr } = await (supabase as any).from("discovery_items").insert(rows);
+    if (itemsErr) console.error("[placeLists] createListFromSavedPlaces items failed:", itemsErr.message);
+  }
+  // Publiczna -> powiadom admina do moderacji (best-effort, nie blokuj flow).
+  if (isPublic) {
+    supabase.functions.invoke("notify-admin-content", {
+      body: { type: "ranking", title: title.trim(), city: null, collection_id: listId, author: author?.name ?? "Użytkownik" },
+    }).catch((e) => console.warn("[placeLists] notify-admin-content failed:", e));
+  }
+  return listId;
+}
+
 // Prywatna wishlista "Do zobaczenia" (to_visit, is_public=false) usera - PER MIASTO.
 // Per-miasto, bo podpowiedzi przy tworzeniu trasy (ComposeWyjazd #5) filtrują po mieście listy.
 // Zapisane→Miejsca agreguje je płasko, więc user i tak widzi jeden schowek "Miejsca".

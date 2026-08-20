@@ -4,6 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useLocation } from "react-router-dom";
 import { ArrowLeft, Search, Plus, X, ChevronDown, Calendar as CalendarIcon, List, GalleryHorizontalEnd, Loader2, ArrowRight, Trash2, Maximize2, GripVertical, UserPlus } from "lucide-react";
 import InviteFriendsSheet from "@/components/route/InviteFriendsSheet";
+import { inviteUsersToRoute } from "@/lib/groupInvite";
 import CreateHeader from "@/components/create/CreateHeader";
 import { avatarSrc } from "@/lib/avatar";
 import { Reorder, useDragControls } from "framer-motion";
@@ -154,7 +155,7 @@ export default function ComposeWyjazd() {
 
   // draftId: gdy wchodzimy z ekranu wyboru bazy w SWOJA robocza trase -> edytujemy JA
   // (update), a nie tworzymy duplikatu. Brak = tryb tworzenia nowej trasy.
-  const nav = (location.state ?? {}) as { city?: string | null; title?: string | null; places?: any[]; draftId?: string };
+  const nav = (location.state ?? {}) as { city?: string | null; title?: string | null; places?: any[]; draftId?: string; inviteeIds?: string[] };
 
   // ── Soft-save (lekki zapis roboczy) ──────────────────────────────────────
   // Problem: "Przejdz do sugestii" tworzy trase i navigate'uje dalej; cofniecie (navigate(-1))
@@ -267,6 +268,21 @@ export default function ComposeWyjazd() {
   const [groupSessionId, setGroupSessionId] = useState<string | null>(null);
   // Zaproszeni (awatary obok guzika "Zapros" - stan po zaproszeniu). Dedup po id.
   const [invited, setInvited] = useState<{ id: string; avatar_url: string | null }[]>([]);
+
+  // Zaproszeni przeniesieni z arkusza "Nowy wyjazd" (state.inviteeIds) - zastosuj RAZ gdy tylko
+  // istnieje draft trasy. inviteUsersToRoute tworzy sesje grupowa + ustawia is_shared=true.
+  const prefillInviteesRef = useRef(false);
+  useEffect(() => {
+    if (!draftId || !user || prefillInviteesRef.current) return;
+    const ids = nav.inviteeIds ?? [];
+    if (!ids.length) return;
+    prefillInviteesRef.current = true;
+    void (async () => {
+      const res = await inviteUsersToRoute({ id: draftId, city: city ?? null, title: name || null, group_session_id: groupSessionId }, ids, user.id);
+      if (res.ok && res.sessionId) setGroupSessionId(res.sessionId);
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftId, user, nav.inviteeIds]);
 
   // "Zapros znajomych" przy tworzeniu: trasa jeszcze nie istnieje, wiec najpierw tworzymy
   // szkic (draft) zeby miec routeId, potem otwieramy sheet (podpina zaproszonych do tej trasy).
