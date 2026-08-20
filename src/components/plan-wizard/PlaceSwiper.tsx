@@ -10,6 +10,7 @@ import posthog from "posthog-js";
 import { format } from "date-fns";
 import PlaceSwiperDetail from "./PlaceSwiperDetail";
 import SavePlaceSheet, { type SavePlaceInput } from "./SavePlaceSheet";
+import { useUnsavePlace } from "@/hooks/useUnsavePlace";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchPlaceUserPhotos, pickRandom } from "@/lib/placeUserPhotos";
 import { categoryIconSrc } from "@/lib/placeCategoryIcon";
@@ -1152,6 +1153,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
   const haptics = useHaptics();
   // Stan "zapisane" wg czlonkostwa w listach usera (bookmark wypelniony gdy miejsce juz w liscie).
   const { isSaved: isSavedInList } = useSavedPlaces();
+  const unsave = useUnsavePlace();
 
   const [allPlaces, setAllPlaces] = useState<MockPlace[]>([]);
   const [queue, setQueue] = useState<MockPlace[]>([]);
@@ -1488,6 +1490,17 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
   const handleSaveInPlace = (place: MockPlace, opts?: { openSheet?: boolean }) => {
     if ((!user || isAnonymous) && !onboardingActive) { openAuthDrawer({ mode: "register", hint: "save_route" }); return; }
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(place.id);
+    // Ponowny tap na zapisanym = ODZAPISZ (toast+cofnij), bez otwierania drawera. Poza onboardingiem.
+    if (!onboardingActive && (savedIds.has(place.id) || isSavedInList(place.place_name))) {
+      haptics.medium();
+      setSavedIds((prev) => { const n = new Set(prev); n.delete(place.id); return n; });
+      void unsave({
+        place_name: place.place_name, category: place.category ?? null, address: place.address ?? null,
+        description: place.description ?? null, latitude: place.latitude ?? null, longitude: place.longitude ?? null,
+        photo_url: photoUrlOverrides.current[place.id] ?? place.photo_url ?? null, place_id: isUuid ? place.id : null,
+      });
+      return;
+    }
     const alreadySaved = savedIds.has(place.id);
     if (!alreadySaved) {
       haptics.medium();

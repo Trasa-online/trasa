@@ -10,6 +10,7 @@ import { fetchListLike, toggleListLike, type LikeState } from "@/lib/likes";
 import AddPlaceSheet from "@/components/route/AddPlaceSheet";
 import { addPlaceToList, type PlaceForList } from "@/lib/placeLists";
 import { useShare } from "@/hooks/useShare";
+import { useUnsavePlace } from "@/hooks/useUnsavePlace";
 import { buildShareUrl } from "@/lib/shareUrl";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { PlacePhoto, resolveStored } from "@/components/PlacePhoto";
@@ -34,6 +35,7 @@ export default function SharedList() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { isSaved } = useSavedPlaces();
+  const unsave = useUnsavePlace();
 
   // Polubienie listy (heart). Owner powiadamiany przez trigger notify_list_like.
   const { data: likeData } = useQuery({
@@ -194,7 +196,7 @@ export default function SharedList() {
   };
 
   // Otwórz sheet zapisu pojedynczego miejsca do listy usera (bookmark per-miejsce).
-  const openSavePlace = (pin: any) => setSavePlace({
+  const itemToPlace = (pin: any) => ({
     place_name: pin.place_name,
     category: catOf(pin),
     address: pin.address ?? null,
@@ -204,6 +206,9 @@ export default function SharedList() {
     photo_url: pin.photo_url ?? null,
     place_id: pin.place_id ?? null,
   });
+  const openSavePlace = (pin: any) => setSavePlace(itemToPlace(pin));
+  // Tap bookmarka: zapisane -> odzapisz (toast+cofnij); niezapisane -> otworz drawer zapisu.
+  const toggleSaveBookmark = (pin: any) => { if (isSaved(pin.place_name)) void unsave(itemToPlace(pin) as any); else openSavePlace(pin); };
 
   if (isLoading) {
     return <div className="min-h-[100dvh] bg-background flex items-center justify-center"><div className="text-muted-foreground text-sm animate-pulse">Ładowanie...</div></div>;
@@ -305,7 +310,7 @@ export default function SharedList() {
             categoryLabel={categoryLabel(catOf(pin))}
             onOpen={() => openDetail(pin)}
             onGoogle={() => openGoogle(pin)}
-            onSave={!isOwner ? () => openSavePlace(pin) : undefined}
+            onSave={!isOwner ? () => toggleSaveBookmark(pin) : undefined}
             saved={isSaved(pin.place_name)}
             onDelete={isOwner ? () => handleDeleteItem(pin) : undefined}
             note={note}
@@ -325,8 +330,8 @@ export default function SharedList() {
             </button>
             <div className="absolute top-3 left-3 h-8 w-8 rounded-full bg-black/55 backdrop-blur text-white text-sm font-bold flex items-center justify-center">{i + 1}</div>
             <button
-              onClick={(e) => { e.stopPropagation(); openSavePlace(pin); }}
-              aria-label={isSaved(pin.place_name) ? "Miejsce zapisane w liście" : "Zapisz miejsce do listy"}
+              onClick={(e) => { e.stopPropagation(); toggleSaveBookmark(pin); }}
+              aria-label={isSaved(pin.place_name) ? "Usuń z zapisanych" : "Zapisz miejsce do listy"}
               className={`absolute top-3 right-3 h-9 w-9 rounded-full flex items-center justify-center shadow-sm active:scale-90 transition-transform ${isSaved(pin.place_name) ? "bg-orange-100" : "bg-white/90 backdrop-blur-sm"}`}
             >
               <Bookmark className={`h-[18px] w-[18px] ${isSaved(pin.place_name) ? "text-orange-600 fill-orange-600" : "text-foreground"}`} strokeWidth={2} />

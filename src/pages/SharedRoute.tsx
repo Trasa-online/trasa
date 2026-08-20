@@ -19,6 +19,7 @@ import AddPlaceSheet from "@/components/route/AddPlaceSheet";
 import InviteFriendsSheet from "@/components/route/InviteFriendsSheet";
 import { inviteUsersToRoute } from "@/lib/groupInvite";
 import { useShare } from "@/hooks/useShare";
+import { useUnsavePlace } from "@/hooks/useUnsavePlace";
 import { buildShareUrl } from "@/lib/shareUrl";
 import type { PlaceForList } from "@/lib/placeLists";
 import { pinCoverKeys, fetchPlacePhotosForKeys, pickPlaceCover } from "@/lib/placePhotoSocial";
@@ -107,6 +108,9 @@ export default function SharedRoute() {
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
   const photoInputRef = useRef<HTMLInputElement>(null);
   const share = useShare();
+  const unsave = useUnsavePlace();
+  // Tap bookmarka: zapisane -> odzapisz (toast+cofnij); niezapisane -> otworz drawer zapisu.
+  const toggleSaveBookmark = (pin: any) => { if (isSaved(pin.place_name)) void unsave(pinToSave(pin)); else setSavePlace(pinToSave(pin)); };
 
   // Otworz miejsce w Google Maps (WIZYTOWKA / place page, NIE nawigacja). query_place_id gdy
   // pin.place_id to Google Place ID (nie nasze DB uuid) - trafiamy w dokladne miejsce.
@@ -543,7 +547,7 @@ export default function SharedRoute() {
             categoryLabel={categoryLabel(pin.category || "other")}
             onOpen={() => openDetail(pin)}
             onGoogle={() => openGooglePlace(pin)}
-            onSave={!isOwner && user ? () => setSavePlace(pinToSave(pin)) : undefined}
+            onSave={!isOwner && user ? () => toggleSaveBookmark(pin) : undefined}
             saved={isSaved(pin.place_name)}
             onDelete={isOwner ? () => handleDeletePin(pin) : undefined}
             note={note}
@@ -567,7 +571,7 @@ export default function SharedRoute() {
               <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-transparent" />
               <span className="absolute top-2 left-2 px-2.5 py-1 rounded-full bg-white text-[11px] font-semibold text-foreground shadow-sm">{categoryLabel(pin.category)}</span>
               {user && (
-                <button onClick={(e) => { e.stopPropagation(); setSavePlace(pinToSave(pin)); }} aria-label="Zapisz miejsce"
+                <button onClick={(e) => { e.stopPropagation(); toggleSaveBookmark(pin); }} aria-label={isSaved(pin.place_name) ? "Usuń z zapisanych" : "Zapisz miejsce"}
                   className="absolute top-2 right-2 h-8 w-8 rounded-full bg-white/90 flex items-center justify-center shadow-sm active:scale-90 transition-transform">
                   <Bookmark className={cn("h-4 w-4", isSaved(pin.place_name) ? "fill-orange-600 text-orange-600" : "text-foreground")} strokeWidth={2} />
                 </button>
