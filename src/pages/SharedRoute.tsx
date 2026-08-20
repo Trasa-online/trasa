@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { PlacePhoto } from "@/components/PlacePhoto";
 import { RoutePlaceRow } from "@/components/route/RoutePlaceRow";
+import { EmptyPlacesState } from "@/components/route/EmptyPlacesState";
 import AddPlaceSheet from "@/components/route/AddPlaceSheet";
 import InviteFriendsSheet from "@/components/route/InviteFriendsSheet";
 import { inviteUsersToRoute } from "@/lib/groupInvite";
@@ -163,6 +164,19 @@ export default function SharedRoute() {
       if (!ids.length) return [] as (string | null)[];
       const { data: profs } = await (supabase as any).from("profiles").select("id, avatar_url").in("id", ids);
       return (profs ?? []).map((p: any) => (p.avatar_url ?? null)) as (string | null)[];
+    },
+  });
+
+  // Czy zalogowany user jest UCZESTNIKIEM wspolnego wyjazdu (czlonek sesji, nie host).
+  // Uczestnik moze dodawac zdjecia do galerii i NIE widzi CTA "Zapisz/Zaplanuj" (trasa juz jego).
+  const { data: isGroupMember = false } = useQuery({
+    queryKey: ["shared-route-membership", (route as any)?.group_session_id, user?.id],
+    enabled: !!(route as any)?.group_session_id && !!user?.id,
+    queryFn: async () => {
+      const { data } = await (supabase as any)
+        .from("group_session_members").select("user_id")
+        .eq("session_id", (route as any).group_session_id).eq("user_id", user!.id).maybeSingle();
+      return !!data;
     },
   });
 
@@ -347,6 +361,8 @@ export default function SharedRoute() {
   }
 
   const isOwner = !!user && route.user_id === user.id;
+  // Zdjecia moze dodawac wlasciciel LUB uczestnik wspolnego wyjazdu (przez RPC append_route_photos).
+  const canAddPhotos = isOwner || isGroupMember;
 
   const handleShare = () => { void share({ title: route.title || cityLabel || "Wyjazd", url: buildShareUrl(`/route/${route.id}`) }); };
 
@@ -367,8 +383,8 @@ export default function SharedRoute() {
 
   const existingPinNames = new Set(pins.map((p: any) => (p.place_name || "").trim().toLowerCase()));
 
-  // #7: wlasciciel dodaje zdjecia do wyjazdu z widoku (Galeria). HEIC->JPEG + kompresja ->
-  // route-images -> dopisz do routes.review_photos -> refetch. Wzor: ReviewSummary.uploadImages.
+  // #7: wlasciciel LUB uczestnik wspolnego wyjazdu dodaje zdjecia z widoku (Galeria). HEIC->JPEG
+  // + kompresja -> route-images -> RPC append_route_photos (owner|czlonek) -> refetch.
   const handleAddPhotos = async (files: File[]) => {
     if (!user || !files.length) return;
     setUploadingPhotos(true);
@@ -384,8 +400,9 @@ export default function SharedRoute() {
       } catch (e: any) { console.error("[SharedRoute] photo processing failed:", e?.message ?? e); }
     }
     if (urls.length) {
-      const merged = [...((route.review_photos ?? []) as string[]), ...urls];
-      const { error } = await (supabase as any).from("routes").update({ review_photos: merged }).eq("id", route.id);
+      // RPC (SECURITY DEFINER) - dziala dla wlasciciela ORAZ uczestnika wspolnego wyjazdu
+      // (routes UPDATE RLS = tylko owner; czlonek dopisuje zdjecia przez append_route_photos).
+      const { error } = await (supabase as any).rpc("append_route_photos", { p_route_id: route.id, p_urls: urls });
       if (error) { toast.error("Nie udało się zapisać zdjęć"); }
       else { toast.success(urls.length === 1 ? "Dodano zdjęcie" : `Dodano ${urls.length} zdjęcia`); queryClient.invalidateQueries({ queryKey: ["shared-route", id] }); }
     } else { toast.error("Nie udało się dodać zdjęć"); }
@@ -600,11 +617,12 @@ export default function SharedRoute() {
   return (
     <div className="min-h-[100dvh] bg-background flex flex-col max-w-lg mx-auto">
 
-      {/* Content - #1: BEZ okladki tla trasy (okladka zostaje TYLKO w eksploracji). */}
-      <div className="flex-1 overflow-y-auto pb-44">
+      {/* Content - #1: BEZ okladki tla trasy (okladka zostaje TYLKO w eksploracji).
+          Uczestnik wspolnego wyjazdu nie ma dolnego CTA -> mniejszy padding. */}
+      <div className={cn("flex-1 overflow-y-auto", (isOwner || !isGroupMember) ? "pb-44" : "pb-8")}>
 
-        {/* Naglowek: wstecz + autor + miasto + liczba miejsc (bez hero) + tytul + opis */}
-        <div className="px-5" style={{ paddingTop: "max(12px, env(safe-area-inset-top, 12px))" }}>
+        {/* Sticky TopBar: wstecz + autor + uczestnicy + miasto + liczba miejsc + serce */}
+        <div className="sticky top-0 z-30 bg-background px-5 pb-2.5 border-b border-border/40" style={{ paddingTop: "max(12px, env(safe-area-inset-top, 12px))" }}>
           <div className="flex items-center gap-2 flex-wrap text-sm">
             <button onClick={() => { if (window.history.length > 1) navigate(-1); else navigate("/eksploruj"); }} aria-label="Wróć"
               className="h-9 w-9 -ml-2 shrink-0 rounded-full flex items-center justify-center active:scale-90 transition-transform">
@@ -643,7 +661,10 @@ export default function SharedRoute() {
               <span className="text-xs font-semibold tabular-nums text-muted-foreground">{routeLike.count}</span>
             </button>
           </div>
-          <div className="flex items-start gap-3 mt-[35px]">
+        </div>
+        {/* Naglowek: tytul + opis (przewija sie pod sticky TopBarem), spacing 35px */}
+        <div className="px-5 pt-[35px]">
+          <div className="flex items-start gap-3">
             <h1 className="flex-1 text-2xl font-black text-foreground leading-tight">{route.title || cityLabel}</h1>
             {isOwner && (
               <div className="shrink-0 flex items-center gap-2">
@@ -705,7 +726,7 @@ export default function SharedRoute() {
 
         {planTab === "miejsca" ? (
           <div className="px-5 pt-4">
-            {pins.length > 0 && (
+            {pins.length > 0 ? (
               <>
                 <div className="flex items-center justify-end pb-3">
                   <div className="flex rounded-full bg-muted p-0.5">
@@ -715,6 +736,11 @@ export default function SharedRoute() {
                 </div>
                 {planView === "list" ? renderList() : renderSwiper()}
               </>
+            ) : (
+              <EmptyPlacesState
+                title="Trasa jest pusta"
+                hint={isOwner ? "Dodaj pierwsze miejsce klikając guzik „+ Dodaj nowe miejsce”" : "Ta trasa nie ma jeszcze żadnych miejsc."}
+              />
             )}
           </div>
         ) : planTab === "mapa" ? (
@@ -735,8 +761,8 @@ export default function SharedRoute() {
           <div className="px-5 pt-4">
             {galleryPhotos.length > 0 ? (
               <div className="grid grid-cols-2 gap-2">
-                {/* #7: wlasciciel - kafelek dodawania zdjecia */}
-                {isOwner && (
+                {/* #7: wlasciciel LUB uczestnik wspolnego wyjazdu - kafelek dodawania zdjecia */}
+                {canAddPhotos && (
                   <button onClick={() => photoInputRef.current?.click()} disabled={uploadingPhotos}
                     className="aspect-[4/3] rounded-2xl border-2 border-dashed border-border flex flex-col items-center justify-center gap-1.5 text-muted-foreground active:scale-[0.98] transition-transform disabled:opacity-60">
                     {uploadingPhotos ? <Loader2 className="h-6 w-6 animate-spin" /> : <><Plus className="h-6 w-6" /><span className="text-xs font-semibold">Dodaj zdjęcie</span></>}
@@ -768,7 +794,7 @@ export default function SharedRoute() {
               <div className="flex flex-col items-center justify-center py-14 text-center gap-3">
                 <ImageIcon className="h-8 w-8 text-muted-foreground/50" />
                 <p className="text-sm text-muted-foreground">{t("gallery_empty", { defaultValue: "Brak zdjęć w tej trasie" })}</p>
-                {isOwner && (
+                {canAddPhotos && (
                   <button onClick={() => photoInputRef.current?.click()} disabled={uploadingPhotos}
                     className="mt-1 px-4 py-2.5 rounded-full border border-border text-foreground font-bold text-sm flex items-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-60">
                     {uploadingPhotos ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />} Dodaj zdjęcie
@@ -776,7 +802,7 @@ export default function SharedRoute() {
                 )}
               </div>
             )}
-            {isOwner && (
+            {canAddPhotos && (
               <input ref={photoInputRef} type="file" accept="image/*,.heic,.heif" multiple className="hidden"
                 onChange={(e) => { const files = Array.from(e.target.files ?? []); e.currentTarget.value = ""; if (files.length) void handleAddPhotos(files); }} />
             )}
@@ -858,34 +884,37 @@ export default function SharedRoute() {
         </div>
       )}
 
-      {/* CTA: wlasciciel = edytuj + usun; gosc = zapisz trase */}
-      <div className="fixed bottom-0 left-0 right-0 max-w-lg mx-auto px-5 pt-2 bg-background border-t border-border/30"
-        style={{ paddingBottom: "max(12px, env(safe-area-inset-bottom, 12px))" }}>
-        {isOwner ? (
-          <button
-            onClick={() => setAddPlaceOpen(true)}
-            className="w-full py-3 rounded-full border border-border bg-background text-foreground font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
-          >
-            <Plus className="h-4 w-4" /> Dodaj nowe miejsce
-          </button>
-        ) : (
-          <>
+      {/* CTA: wlasciciel = "Dodaj nowe miejsce"; gosc = zapisz trase + zaplanuj wlasna.
+          Uczestnik wspolnego wyjazdu NIE widzi CTA (trasa juz jego) - caly pasek ukryty. */}
+      {(isOwner || !isGroupMember) && (
+        <div className="fixed bottom-0 left-0 right-0 max-w-lg mx-auto px-5 pt-2 bg-background border-t border-border/30"
+          style={{ paddingBottom: "max(12px, env(safe-area-inset-bottom, 12px))" }}>
+          {isOwner ? (
             <button
-              onClick={() => { if (!user) { navigate("/auth"); return; } setShowDateSheet(true); }}
-              disabled={saving}
-              className="w-full py-3 rounded-full bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform shadow-lg shadow-primary/25 disabled:opacity-50"
+              onClick={() => setAddPlaceOpen(true)}
+              className="w-full py-3 rounded-full border border-border bg-background text-foreground font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
             >
-              <Bookmark className="h-4 w-4" />{saving ? t("saving") : "Zapisz tą trasę"}
+              <Plus className="h-4 w-4" /> Dodaj nowe miejsce
             </button>
-            <button
-              onClick={() => navigate(`/plan?city=${encodeURIComponent(cityLabel)}`)}
-              className="w-full mt-2 py-2 text-sm font-medium text-muted-foreground active:text-foreground transition-colors"
-            >
-              {t("plan_own_route", { city: cityLabel })}
-            </button>
-          </>
-        )}
-      </div>
+          ) : (
+            <>
+              <button
+                onClick={() => { if (!user) { navigate("/auth"); return; } setShowDateSheet(true); }}
+                disabled={saving}
+                className="w-full py-3 rounded-full bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform shadow-lg shadow-primary/25 disabled:opacity-50"
+              >
+                <Bookmark className="h-4 w-4" />{saving ? t("saving") : "Zapisz tą trasę"}
+              </button>
+              <button
+                onClick={() => navigate(`/plan?city=${encodeURIComponent(cityLabel)}`)}
+                className="w-full mt-2 py-2 text-sm font-medium text-muted-foreground active:text-foreground transition-colors"
+              >
+                {t("plan_own_route", { city: cityLabel })}
+              </button>
+            </>
+          )}
+        </div>
+      )}
 
       {/* Sheet wyboru daty wyjazdu przy zapisie cudzej trasy do dziennika */}
       {showDateSheet && (

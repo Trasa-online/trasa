@@ -15,6 +15,7 @@ import { buildShareUrl } from "@/lib/shareUrl";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { PlacePhoto, resolveStored } from "@/components/PlacePhoto";
 import { RoutePlaceRow } from "@/components/route/RoutePlaceRow";
+import { EmptyPlacesState } from "@/components/route/EmptyPlacesState";
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { avatarSrc } from "@/lib/avatar";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
@@ -370,7 +371,8 @@ export default function SharedList() {
     <div className="min-h-[100dvh] bg-background flex flex-col max-w-lg mx-auto">
       {/* Content - #3: BEZ okladki tla listy (spojne z widokiem trasy). */}
       <div className="flex-1 overflow-y-auto pb-44">
-        <div className="px-5" style={{ paddingTop: "max(12px, env(safe-area-inset-top, 12px))" }}>
+        {/* Sticky TopBar: wstecz + autor + miasto + liczba miejsc + serce */}
+        <div className="sticky top-0 z-30 bg-background px-5 pb-2.5 border-b border-border/40" style={{ paddingTop: "max(12px, env(safe-area-inset-top, 12px))" }}>
           <div className="flex items-center gap-2 flex-wrap text-sm">
             <button onClick={() => { if (window.history.length > 1) navigate(-1); else navigate("/eksploruj"); }} aria-label="Wróć"
               className="h-9 w-9 -ml-2 shrink-0 rounded-full flex items-center justify-center active:scale-90 transition-transform">
@@ -395,7 +397,10 @@ export default function SharedList() {
               <span className="text-xs font-semibold tabular-nums text-muted-foreground">{listLike.count}</span>
             </button>
           </div>
-          <div className="flex items-start gap-3 mt-[35px]">
+        </div>
+        {/* Naglowek: tytul + opis (przewija sie pod sticky TopBarem), spacing 35px */}
+        <div className="px-5 pt-[35px]">
+          <div className="flex items-start gap-3">
             <h1 className="flex-1 text-2xl font-black text-foreground leading-tight">{col.title || cityLabel}</h1>
             {/* a) Ikony jak na wyjazdach: udostepnij / edytuj / usun */}
             {isOwner && (
@@ -449,7 +454,7 @@ export default function SharedList() {
 
         {planTab === "miejsca" ? (
           <div className="px-5 pt-4">
-            {items.length > 0 && (
+            {items.length > 0 ? (
               <>
                 <div className="flex items-center justify-end pb-3">
                   <div className="flex rounded-full bg-muted p-0.5">
@@ -459,6 +464,11 @@ export default function SharedList() {
                 </div>
                 {planView === "list" ? renderList() : renderCards()}
               </>
+            ) : (
+              <EmptyPlacesState
+                title="Lista jest pusta"
+                hint={isOwner ? "Dodaj pierwsze miejsce klikając guzik „+ Dodaj nowe miejsce”" : "Ta lista nie ma jeszcze żadnych miejsc."}
+              />
             )}
           </div>
         ) : (
