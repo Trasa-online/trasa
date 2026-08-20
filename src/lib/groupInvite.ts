@@ -1,5 +1,4 @@
 import { supabase } from "@/integrations/supabase/client";
-import { sendGroupInvitePush, getCurrentHostName } from "@/lib/sendGroupInvitePush";
 
 // Kod sesji grupowej (join_code) - kolumna group_sessions.join_code wymaga wartosci.
 // Nie sluzy juz do deep-linku (zaproszony trafia prosto na trase /review-summary).
@@ -72,10 +71,10 @@ export async function inviteUsersToRoute(
     const merged = Array.from(new Set([...cur, ...ids]));
     await (supabase as any).from("routes").update({ new_for_users: merged }).eq("id", route.id);
 
-    // Push (best-effort) - deep-link prosto do wspoldzielonej trasy.
-    const hostName = await getCurrentHostName();
+    // Powiadomienie IN-APP (dzwonek) + push - jeden kanal przez trigger notify_push na wpisie
+    // route_invite (SECURITY DEFINER RPC, bo klient nie ma INSERT na notifications).
     for (const uid of ids) {
-      void sendGroupInvitePush({ targetUserId: uid, hostName, city: route.city ?? "", routeId: route.id });
+      await (supabase as any).rpc("notify_route_invite", { p_route_id: route.id, p_user_id: uid });
     }
 
     return { ok: true, sessionId: sessionId! };

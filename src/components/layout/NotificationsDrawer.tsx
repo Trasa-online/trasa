@@ -32,6 +32,7 @@ const TYPE_CONFIG: Record<string, { icon: React.ElementType; color: string; labe
   photo_like:     { icon: Heart,         color: "text-orange-600 bg-orange-100",  label: (u, meta) => `${u} polubił(a) Twoje zdjęcie${meta?.place_name ? ` (${meta.place_name})` : ""}` },
   discovery_used: { icon: Bookmark,      color: "text-orange-600 bg-orange-100",  label: (u, meta) => `${u} skorzystał(a) z Twojego planu${meta?.city ? ` po ${meta.city}` : ""}` },
   group_invite:       { icon: Route,  color: "text-orange-600 bg-orange-100",  label: (u, meta) => `${u} dodał(a) Cię do wspólnej trasy${meta?.city ? ` po ${meta.city}` : ""}` },
+  route_invite:       { icon: Route,  color: "text-orange-600 bg-orange-100",  label: (u, meta) => `${u} dodał(a) Cię do wspólnego wyjazdu${meta?.city ? ` po ${meta.city}` : ""}` },
   group_route_ready:  { icon: Route, color: "text-orange-600 bg-orange-100",  label: (u, meta) => `${u} stworzył(a) trasę${meta?.city ? ` w ${meta.city}` : ""} - sprawdź!` },
   collection_approved: { icon: CheckCircle2, color: "text-emerald-500 bg-emerald-100", label: (_u, meta) => `Twoja lista „${meta?.title ?? "lista"}" została zaakceptowana` },
   collection_rejected: { icon: XCircle,      color: "text-destructive bg-destructive/10", label: (_u, meta) => meta?.moderation_note ? `Lista „${meta?.title ?? "lista"}" odrzucona. Powód: ${meta.moderation_note}` : `Twoja lista „${meta?.title ?? "lista"}" została odrzucona` },
@@ -229,12 +230,13 @@ export default function NotificationsDrawer({ open, onClose, userId }: Props) {
                     <div className="flex-1 min-w-0">
                       <p className="text-sm leading-snug text-foreground/80">{labelText}</p>
                       <p className="text-[11px] text-muted-foreground mt-0.5">{timeAgo}</p>
-                      {(n.type === "group_invite" || n.type === "group_route_ready") && (
+                      {(n.type === "group_invite" || n.type === "group_route_ready" || n.type === "route_invite") && (
                         <button
                           onClick={() => {
                             onClose();
-                            // Deep-link do konkretnej trasy gdy znamy route_id, inaczej do zakladki Trasy.
-                            navigate(n.metadata?.route_id ? `/review-summary?route=${n.metadata.route_id}` : "/moj-profil?tab=wyjazdy");
+                            // Deep-link do konkretnej trasy gdy znamy route_id (kolumna lub metadata), inaczej do zakladki Wyjazdy.
+                            const rid = n.route_id ?? n.metadata?.route_id;
+                            navigate(rid ? `/review-summary?route=${rid}` : "/moj-profil?tab=wyjazdy");
                           }}
                           className="mt-2 px-3 py-1.5 rounded-full bg-primary text-white text-xs font-semibold active:scale-95 transition-transform"
                         >
