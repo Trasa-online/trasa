@@ -233,6 +233,8 @@ const CreateRanking = () => {
   // CreateRanking = autor POLECAJEK (publiczna lista, list_status="visited"). Prywatne miejsca
   // "do zobaczenia" zapisuje się bookmarkiem (SavePlaceSheet) -> Zapisane→Miejsca, nie tutaj.
   const [listStatus, setListStatus] = useState<string | null>(editId ? null : ((nav.listStatus as string) ?? "visited"));
+  // Prywatnosc istniejacej listy (edycja) - ladowana z DB, zachowywana przy zapisie.
+  const [editIsPublic, setEditIsPublic] = useState<boolean | null>(null);
   // Dane B2B (premium) wybranych miejsc - do pokazania na karcie pelnego adresu, tagow i
   // kategorii glownej+drugiej. Klucz = place_id (UUID). Tylko miejsca z business_profiles.
   const [bizMap, setBizMap] = useState<Record<string, any>>({});
@@ -323,7 +325,7 @@ const CreateRanking = () => {
   useEffect(() => {
     if (editId) {
       (async () => {
-        const { data: col } = await (supabase as any).from("discovery_collections").select("title, city, category, description, author_name, author_avatar, cover_url, list_cover_url, tags, list_status").eq("id", editId).maybeSingle();
+        const { data: col } = await (supabase as any).from("discovery_collections").select("title, city, category, description, author_name, author_avatar, cover_url, list_cover_url, tags, list_status, is_public").eq("id", editId).maybeSingle();
         if (col) {
           setTitle(col.title ?? ""); setTitleDirty(true); if (col.city) { setCity(col.city); setCountry(countryForCity(col.city)); } setCategory(col.category ?? null);
           setDescription(col.description ?? "");
@@ -331,6 +333,8 @@ const CreateRanking = () => {
           setCoverUrl(col.cover_url ?? null); setListCoverUrl(col.list_cover_url ?? null);
           setTags(Array.isArray(col.tags) ? col.tags : []);
           setListStatus(col.list_status ?? null);
+          // Zachowaj prywatnosc istniejacej listy przy edycji (inaczej prywatna -> publiczna).
+          setEditIsPublic(typeof col.is_public === "boolean" ? col.is_public : null);
         }
         const { data: its } = await (supabase as any).from("discovery_items").select("*").eq("collection_id", editId).order("order_index", { ascending: true });
         if (its) setItems(its.map((i: any, idx: number) => ({
@@ -583,9 +587,11 @@ const CreateRanking = () => {
       // EDYCJA istniejącej -> zachowaj stan (prywatna to_visit zostaje prywatna, nie flip na public).
       // null (przed doładowaniem na edycji) -> "visited" (bezpiecznie, list_status jest NOT NULL).
       const listStatusToSave = listStatus === "to_visit" ? "to_visit" : "visited";
-      // Prywatnosc z handoffu (arkusz "Dodaj nowe"): honoruj nav.isPublic gdy podane (prywatna
-      // lista kuratorska = visited + is_public=false). Inaczej wg intencji (visited=publiczna).
-      const isPublic = typeof nav.isPublic === "boolean" ? nav.isPublic : (listStatusToSave === "visited");
+      // Prywatnosc: EDYCJA -> zachowaj stan z DB (prywatna zostaje prywatna, NIE flip na public).
+      // TWORZENIE -> handoff nav.isPublic (arkusz "Dodaj nowe") lub wg intencji (visited=publiczna).
+      const isPublic = editId
+        ? (editIsPublic ?? (listStatusToSave === "visited"))
+        : (typeof nav.isPublic === "boolean" ? nav.isPublic : (listStatusToSave === "visited"));
       const moderationStatus = isPublic ? "pending" : "approved";
       const authorName = asAnon ? "Anonim" : author.name;
       const authorAvatar = asAnon ? null : author.avatar;

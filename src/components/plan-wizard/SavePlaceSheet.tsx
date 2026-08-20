@@ -5,6 +5,7 @@ import { Plus, Check, Loader2, Share2, Bookmark, ListChecks } from "lucide-react
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useSavedPlaces } from "@/hooks/useSavedPlaces";
 import { useHaptics } from "@/hooks/useHaptics";
 import { useShare } from "@/hooks/useShare";
 import { toast } from "sonner";
@@ -44,6 +45,7 @@ export default function SavePlaceSheet({
 }) {
   const { t } = useTranslation("plan");
   const { user } = useAuth();
+  const { isSaved } = useSavedPlaces();
   const queryClient = useQueryClient();
   const haptics = useHaptics();
   const share = useShare();
@@ -81,6 +83,9 @@ export default function SavePlaceSheet({
   // wypełniony WSZĘDZIE (fetchSavedPlaceNames), nawet gdy user nie wybierze żadnej listy. Dedup.
   useEffect(() => {
     if (!open || !place || !user) return;
+    // Auto-zapis TYLKO gdy miejsce nie jest jeszcze w ZADNEJ liscie. Inaczej otwarcie arkusza
+    // (np. by zmienic liste albo usunac) NIE re-dodawaloby usunietego miejsca (bug: un-save nieskuteczny).
+    if (isSaved(place.place_name)) return;
     let alive = true;
     quickSavePlace(user.id, { ...place }, city || null, author)
       .then(({ added }) => { if (alive && added) invalidate(); })

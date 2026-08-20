@@ -161,9 +161,11 @@ export async function addPlaceToList(listId: string, place: PlaceForList): Promi
   return true;
 }
 
-// Usun miejsce z listy (po nazwie).
+// Usun miejsce z listy (po nazwie). Escape %/_ - inaczej nazwa typu "Cafe 100%" traktowana jako
+// wzorzec LIKE i moze skasowac WIECEJ pozycji (silent data loss).
 export async function removePlaceFromList(listId: string, placeName: string): Promise<void> {
-  await (supabase as any).from("discovery_items").delete().eq("collection_id", listId).ilike("place_name", placeName);
+  const safe = String(placeName ?? "").replace(/[\\%_]/g, (m) => "\\" + m);
+  await (supabase as any).from("discovery_items").delete().eq("collection_id", listId).ilike("place_name", safe);
 }
 
 // Utworz nowa liste danej kategorii z pierwszym miejscem.
@@ -232,7 +234,12 @@ export async function createListFromSavedPlaces(
     }));
   if (rows.length) {
     const { error: itemsErr } = await (supabase as any).from("discovery_items").insert(rows);
-    if (itemsErr) console.error("[placeLists] createListFromSavedPlaces items failed:", itemsErr.message);
+    if (itemsErr) {
+      // Nie zostawiaj pustej (osieroconej) listy - skasuj kolekcje i zglos blad callerowi.
+      console.error("[placeLists] createListFromSavedPlaces items failed:", itemsErr.message);
+      await (supabase as any).from("discovery_collections").delete().eq("id", listId);
+      return null;
+    }
   }
   // Publiczna -> powiadom admina do moderacji (best-effort, nie blokuj flow).
   if (isPublic) {

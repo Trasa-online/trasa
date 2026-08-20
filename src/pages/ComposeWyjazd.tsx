@@ -531,6 +531,16 @@ export default function ComposeWyjazd() {
     setCreating(false);
     if (!id) { haptics.error(); toast.error(draftId ? "Nie udało się zapisać zmian" : "Nie udało się utworzyć wyjazdu"); return; }
     haptics.success();
+    // Zaproszeni z arkusza "Nowy wyjazd" (state.inviteeIds): zastosuj SYNCHRONICZNIE tu, PRZED
+    // navigate. Efekt na draftId nie zdazy (podwojna nawigacja unmountuje ekran) - dlatego inline.
+    // inviteUsersToRoute tworzy sesje grupowa + is_shared=true. Guard ref = tylko raz.
+    if (!prefillInviteesRef.current && (nav.inviteeIds?.length)) {
+      prefillInviteesRef.current = true;
+      try {
+        const res = await inviteUsersToRoute({ id, city: city ?? null, title: name.trim() || null, group_session_id: groupSessionId }, nav.inviteeIds, user.id);
+        if (res.ok && res.sessionId) setGroupSessionId(res.sessionId);
+      } catch (e: any) { console.warn("[ComposeWyjazd] invite failed:", e?.message ?? e); }
+    }
     // Trasa jest PRYWATNYM draftem (is_shared=false) - publikuje sie dopiero przy "Zapisz trase"
     // w ReviewSummary. Odswiezamy feed profilaktycznie (np. przy edycji juz opublikowanej trasy).
     queryClient.invalidateQueries({ queryKey: ["discovery-city-routes"] });
@@ -555,8 +565,10 @@ export default function ComposeWyjazd() {
       navigate(`/review-summary?route=${id}&edit=1&step=2`);
     } else {
       clearSoft();
-      toast.success(draftId ? "Zapisano zmiany" : "Zapisano wyjazd");
-      navigate("/moj-profil?tab=wyjazdy");
+      toast.success(draftId ? "Zapisano zmiany" : "Zapisano jako roboczą");
+      // Draft (is_shared=false) NIE pokazuje sie na profilu Wyjazdy (filtr is_shared=true) - laduj
+      // w "Robocze", gdzie faktycznie jest. Grupowy draft (is_shared=true po zaproszeniach) tez tam OK.
+      navigate("/utworz/robocze");
     }
   };
 
