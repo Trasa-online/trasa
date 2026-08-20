@@ -77,6 +77,18 @@ export default function SavePlaceSheet({
     queryClient.invalidateQueries({ queryKey: ["public-profile-lists"] });
   };
 
+  // Auto-zapis miejsca do "Do zobaczenia" (luźny zapis) przy otwarciu. Dzięki temu bookmark jest
+  // wypełniony WSZĘDZIE (fetchSavedPlaceNames), nawet gdy user nie wybierze żadnej listy. Dedup.
+  useEffect(() => {
+    if (!open || !place || !user) return;
+    let alive = true;
+    quickSavePlace(user.id, { ...place }, city || null, author)
+      .then(({ added }) => { if (alive && added) invalidate(); })
+      .catch((e) => console.warn("[SavePlaceSheet] auto-save failed:", e?.message ?? e));
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, place?.place_name, user?.id]);
+
   // Prywatne (to_visit) najpierw, potem publiczne. Gdy brak prywatnej listy - wirtualny wiersz
   // "Do zobaczenia" (utworzy się przy pierwszym zapisie przez quickSavePlace).
   const toVisit = lists.filter((l) => l.list_status === "to_visit");
