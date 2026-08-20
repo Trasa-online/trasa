@@ -53,7 +53,7 @@ export function SavedPlacesGrid() {
       <div className="grid grid-cols-3 gap-1.5">
         {places.map((p) => (
           <button key={p.id} onClick={() => openDetail(p)} className="active:opacity-90 transition-opacity">
-            <PlaceTile tile={{ photo_url: p.photo_url, category: p.category, place_name: p.place_name }} />
+            <PlaceTile showCity tile={{ photo_url: p.photo_url, category: p.category, place_name: p.place_name, city: p.city }} />
           </button>
         ))}
       </div>

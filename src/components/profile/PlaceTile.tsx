@@ -7,12 +7,13 @@ import { categoryIconSrc } from "@/lib/placeCategoryIcon";
 const firstOf = (v: any): string | null =>
   Array.isArray(v) ? (v.find((x) => typeof x === "string" && x) ?? null) : null;
 
-export function PlaceTile({ tile }: { tile: any }) {
+export function PlaceTile({ tile, showCity }: { tile: any; showCity?: boolean }) {
   // Zdjecie usera: wlasne z pinu/elementu (image_url/images/user_photo_urls/photo_url), a gdy
   // brak - okladka ze zdjec userow dodanych do MIEJSCA w wizytowce (place_photos, tile._cover).
   const stored = tile.image_url || firstOf(tile.images) || firstOf(tile.user_photo_urls) || tile.photo_url;
   const url = resolveStored(stored) ?? resolveStored(tile._cover);
   const name = tile.place_name || "";
+  const city = showCity ? (tile.city || "") : "";
   return (
     <div className="relative aspect-square rounded-2xl overflow-hidden bg-[#fcede3]">
       {url ? (
@@ -25,14 +26,19 @@ export function PlaceTile({ tile }: { tile: any }) {
           <img src={categoryIconSrc(tile.category)} alt="" className="w-2/5 max-w-[52px] opacity-90" draggable={false} />
         </div>
       )}
-      {name && (
-        <span
-          className={`absolute bottom-1.5 left-2 right-2 text-xs font-semibold leading-tight line-clamp-1 ${
-            url ? "text-white drop-shadow-sm" : "text-foreground/80"
-          }`}
-        >
-          {name}
-        </span>
+      {(name || city) && (
+        <div className="absolute bottom-1.5 left-2 right-2">
+          {name && (
+            <span className={`block text-xs font-semibold leading-tight line-clamp-1 ${url ? "text-white drop-shadow-sm" : "text-foreground/80"}`}>
+              {name}
+            </span>
+          )}
+          {city && (
+            <span className={`block text-[10px] leading-tight line-clamp-1 ${url ? "text-white/85 drop-shadow-sm" : "text-foreground/50"}`}>
+              {city}
+            </span>
+          )}
+        </div>
       )}
     </div>
   );
