@@ -10,7 +10,7 @@ import { notify } from "@/lib/notify";
 import { sendClientPush, getCurrentUserName } from "@/lib/clientPush";
 import { format } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
-import { MapPin, ArrowLeft, Sparkles, ChevronRight, ChevronLeft, Bookmark, List, GalleryHorizontalEnd, Calendar as CalendarIcon, Image as ImageIcon, Maximize2, X, Building2, Pencil, Trash2, Heart, Share2, Plus } from "lucide-react";
+import { MapPin, ArrowLeft, Sparkles, ChevronRight, ChevronLeft, Bookmark, List, GalleryHorizontalEnd, Calendar as CalendarIcon, Image as ImageIcon, Maximize2, X, Building2, Pencil, Trash2, Heart, Share2, Plus, Map as MapIcon } from "lucide-react";
 import { toast } from "sonner";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { PlacePhoto } from "@/components/PlacePhoto";
@@ -451,7 +451,7 @@ export default function SharedRoute() {
   // Plaska lista miejsc (wg Figmy: bez grupowania po kategorii) - wspoldzielony RoutePlaceRow
   // (duze zdjecie 104px, chip kategorii + guzik Google). Notka autora pod wierszem gdy jest.
   const renderList = () => (
-    <div className="space-y-2.5">
+    <div>
       {pins.map((pin: any, i: number) => {
         const noteText = (noteMap[pin.place_name]?.note ?? "").trim();
         const note = noteText ? (
@@ -519,34 +519,16 @@ export default function SharedRoute() {
   return (
     <div className="min-h-[100dvh] bg-background flex flex-col max-w-lg mx-auto">
 
-      {/* Hero - nizsza okladka (zdjecie nie jest kluczowe w polecajce trasy) */}
-      <div className="relative w-full aspect-[16/10] flex-shrink-0 overflow-hidden bg-gradient-to-br from-orange-400 via-rose-400 to-purple-500">
-        <img src={heroPhoto} alt="" className="absolute inset-0 w-full h-full object-cover" />
-        <div className={`absolute inset-0 bg-gradient-to-b ${hasRealPhoto ? "from-black/40 via-transparent to-black/75" : "from-black/35 via-black/25 to-black/80"}`} />
-
-        <div className="absolute left-0 right-0 flex items-center px-4"
-          style={{ top: "max(16px, env(safe-area-inset-top, 16px))" }}>
-          <button onClick={() => { if (window.history.length > 1) navigate(-1); else navigate("/eksploruj"); }}
-            className="h-10 w-10 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center">
-            <ArrowLeft className="h-5 w-5 text-white" />
-          </button>
-          {isLocal && (
-            <span className="ml-3 text-xs font-bold text-white bg-black/45 backdrop-blur-sm rounded-full pl-1 pr-3 py-1 flex items-center gap-1.5">
-              <img src={avatarSrc(author?.avatar_url)} alt="" className="h-5 w-5 rounded-full object-cover bg-orange-100" />
-              {t("local_recommends")} · {authorName}
-            </span>
-          )}
-        </div>
-
-      </div>
-
-      {/* Content - ujednolicony z widokiem "Plan wyjazdu" (zakladka Trasy) */}
+      {/* Content - #1: BEZ okladki tla trasy (okladka zostaje TYLKO w eksploracji). */}
       <div className="flex-1 overflow-y-auto pb-44">
 
-        {/* Naglowek: badge + tytul + data + opis */}
-        <div className="px-5 pt-5">
-          {/* Autor trasy (awatar + @username) + miasto + liczba miejsc - zamiast badge "Plan wyjazdu". */}
-          <div className="flex items-center gap-2.5 flex-wrap text-sm">
+        {/* Naglowek: wstecz + autor + miasto + liczba miejsc (bez hero) + tytul + opis */}
+        <div className="px-5" style={{ paddingTop: "max(12px, env(safe-area-inset-top, 12px))" }}>
+          <div className="flex items-center gap-2 flex-wrap text-sm">
+            <button onClick={() => { if (window.history.length > 1) navigate(-1); else navigate("/eksploruj"); }} aria-label="Wróć"
+              className="h-9 w-9 -ml-2 shrink-0 rounded-full flex items-center justify-center active:scale-90 transition-transform">
+              <ArrowLeft className="h-5 w-5 text-foreground" />
+            </button>
             {!isAnon && author?.username ? (
               <button
                 onClick={() => navigate(`/profil/${author.username}`)}
@@ -620,12 +602,23 @@ export default function SharedRoute() {
           )}
         </div>
 
-        {/* Miejsca | Galeria | Mapa */}
-        <div className="px-5 pt-6">
-          <div className="flex rounded-full bg-muted p-0.5 text-sm font-bold">
-            <button onClick={() => setPlanTab("miejsca")} className={`flex-1 py-2 rounded-full transition-colors ${planTab === "miejsca" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>Miejsca</button>
-            <button onClick={() => setPlanTab("galeria")} className={`flex-1 py-2 rounded-full transition-colors ${planTab === "galeria" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>Galeria</button>
-            <button onClick={() => setPlanTab("mapa")} className={`flex-1 py-2 rounded-full transition-colors ${planTab === "mapa" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>Mapa</button>
+        {/* #2: Zakladki jak na profilu - ikony + podkreslenie aktywnej (nie pill). */}
+        <div className="px-5 pt-5">
+          <div className="flex border-b border-border/60">
+            {([
+              { k: "miejsca", Icon: MapPin, label: "Miejsca" },
+              { k: "galeria", Icon: ImageIcon, label: "Galeria" },
+              { k: "mapa", Icon: MapIcon, label: "Mapa" },
+            ] as const).map(({ k, Icon, label }) => {
+              const on = planTab === k;
+              return (
+                <button key={k} onClick={() => setPlanTab(k)} aria-label={label}
+                  className="flex-1 flex items-center justify-center py-3 relative active:opacity-70 transition-opacity">
+                  <Icon className={cn("h-5 w-5", on ? "text-foreground" : "text-muted-foreground/60")} strokeWidth={on ? 2.4 : 2} />
+                  {on && <span className="absolute -bottom-px left-1/2 -translate-x-1/2 h-0.5 w-10 bg-foreground rounded-full" />}
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -748,8 +741,8 @@ export default function SharedRoute() {
       )}
 
       {/* CTA: wlasciciel = edytuj + usun; gosc = zapisz trase */}
-      <div className="fixed bottom-0 left-0 right-0 max-w-lg mx-auto px-5 pt-3 bg-background/90 backdrop-blur-md border-t border-border/30"
-        style={{ paddingBottom: "max(20px, env(safe-area-inset-bottom, 20px))" }}>
+      <div className="fixed bottom-0 left-0 right-0 max-w-lg mx-auto px-5 pt-2 bg-background border-t border-border/30"
+        style={{ paddingBottom: "max(12px, env(safe-area-inset-bottom, 12px))" }}>
         {isOwner ? (
           <button
             onClick={() => setAddPlaceOpen(true)}

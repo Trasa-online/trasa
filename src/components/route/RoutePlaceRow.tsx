@@ -29,50 +29,47 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
   visited?: boolean;
 }) {
   return (
-    <div className={`flex flex-col rounded-2xl bg-secondary border border-border/40 shadow-sm p-2.5 ${visited ? "opacity-60" : ""}`}>
-      <div className="flex items-stretch gap-3">
-        {dragHandle}
-        <button onClick={onOpen} className="relative h-[84px] w-[84px] shrink-0 rounded-xl overflow-hidden bg-muted active:opacity-90">
-          <PlacePhoto pin={pin} className="w-full h-full object-cover" />
-          <span className="absolute top-1.5 left-1.5 h-[22px] w-[22px] rounded-full bg-[#F0A583] text-white text-[11px] font-bold flex items-center justify-center">{index + 1}</span>
-        </button>
-        <div className="flex-1 min-w-0 flex flex-col py-0.5">
-          <button onClick={onOpen} className="text-left min-w-0">
-            <p className={`text-[15px] font-bold leading-snug line-clamp-2 ${visited ? "line-through" : ""}`}>{pin.place_name}</p>
+    <div className={`flex gap-3 bg-background py-4 border-b border-border/40 last:border-b-0 ${visited ? "opacity-60" : ""}`}>
+      {dragHandle}
+      {/* Peachy kafelek ikony/zdjecia (bez numeru - wg Figmy) */}
+      <button onClick={onOpen} className="h-16 w-16 shrink-0 rounded-2xl overflow-hidden bg-[#fcede3] active:opacity-90">
+        <PlacePhoto pin={pin} className="w-full h-full object-cover" />
+      </button>
+      <div className="flex-1 min-w-0">
+        {/* Nazwa + badge kategorii (peachy pill po prawej) */}
+        <div className="flex items-start justify-between gap-2">
+          <button onClick={onOpen} className="text-left min-w-0 flex-1">
+            <p className={`text-[16px] font-bold leading-snug line-clamp-2 ${visited ? "line-through" : ""}`}>{pin.place_name}</p>
           </button>
-          <div className="mt-auto flex items-end justify-between gap-2 pt-2">
-            <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-white text-[12px] font-semibold text-foreground">{categoryLabel}</span>
-            <div className="flex items-center gap-1.5 shrink-0">
-              {onSave && (
-                <button
-                  onClick={(e) => { e.stopPropagation(); onSave(); }}
-                  aria-label={saved ? "Miejsce zapisane w liście" : "Zapisz miejsce do listy"}
-                  className={`h-9 w-9 rounded-full flex items-center justify-center shadow-sm active:scale-90 transition-transform ${saved ? "bg-orange-100" : "bg-white"}`}
-                >
-                  <Bookmark className={`h-[18px] w-[18px] ${saved ? "text-orange-600 fill-orange-600" : "text-foreground"}`} strokeWidth={2} />
-                </button>
-              )}
-              <button
-                onClick={(e) => { e.stopPropagation(); onGoogle(); }}
-                aria-label="Otwórz w Google Maps"
-                className="h-9 w-9 rounded-full bg-white flex items-center justify-center shadow-sm active:scale-90 transition-transform"
-              >
-                <GoogleGlyph className="h-[18px] w-[18px]" />
-              </button>
-            </div>
+          <span className="shrink-0 mt-0.5 inline-flex items-center px-2.5 py-1 rounded-full bg-[#fcede3] text-[12px] font-semibold text-foreground">{categoryLabel}</span>
+        </div>
+        {/* Notka autora + tresc (pod nazwa) */}
+        {note && <div className="mt-1.5">{note}</div>}
+        {/* Tagi miejsca (pins.tags) */}
+        {Array.isArray(pin.tags) && pin.tags.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mt-2">
+            {pin.tags.map((tg: string) => (
+              <span key={tg} className="inline-flex items-center px-2.5 py-1 rounded-full bg-secondary text-foreground text-[12px] font-semibold">{tg}</span>
+            ))}
           </div>
+        )}
+        {/* Zobacz w Google (lewo) + bookmark (prawo) */}
+        <div className="mt-2 flex items-center justify-between gap-2">
+          <button onClick={(e) => { e.stopPropagation(); onGoogle(); }} aria-label="Otwórz w Google Maps" className="flex items-center gap-2 active:opacity-70 transition-opacity">
+            <GoogleGlyph className="h-[18px] w-[18px]" />
+            <span className="text-sm font-medium text-foreground">Zobacz w Google</span>
+          </button>
+          {onSave && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onSave(); }}
+              aria-label={saved ? "Miejsce zapisane w liście" : "Zapisz miejsce do listy"}
+              className="h-8 w-8 rounded-full flex items-center justify-center active:scale-90 transition-transform"
+            >
+              <Bookmark className={`h-5 w-5 ${saved ? "text-[#F0A583] fill-[#F0A583]" : "text-foreground/70"}`} strokeWidth={2} />
+            </button>
+          )}
         </div>
       </div>
-      {/* Tagi miejsca (pins.tags) - listowane przy miejscu. Neutralny bialy chip (display). */}
-      {Array.isArray(pin.tags) && pin.tags.length > 0 && (
-        <div className="flex flex-wrap gap-1.5 mt-2.5">
-          {pin.tags.map((tg: string) => (
-            <span key={tg} className="inline-flex items-center px-2.5 py-1 rounded-full bg-white border border-border/60 text-foreground text-[12px] font-semibold">{tg}</span>
-          ))}
-        </div>
-      )}
-      {/* Notka (autora / usera) - linia oddzielajaca + tresc, wewnatrz kafelka (wg Figmy). */}
-      {note && <div className="mt-3 pt-3 border-t border-border/50">{note}</div>}
     </div>
   );
 }
