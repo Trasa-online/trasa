@@ -96,42 +96,20 @@ export default function SavePlaceSheet({
 
   // Prywatne (to_visit) najpierw, potem publiczne. Gdy brak prywatnej listy - wirtualny wiersz
   // "Do zobaczenia" (utworzy się przy pierwszym zapisie przez quickSavePlace).
-  const visited = lists.filter((l) => l.list_status === "visited");
-  // Prywatna wishlista "Do zobaczenia" jest PER-MIASTO w bazie, ale w drawerze pokazujemy JEDEN
-  // wiersz (kolaps) - inaczej user widzi "całą masę" tych samych list. Zapis idzie do listy
-  // biezacego miasta (quickSavePlace); "zapisane" = miejsce w KTOREJKOLWIEK z tych list.
-  const wishlistLists = lists.filter((l) => l.list_status === "to_visit");
-  const virtualWishlist: UserList = { id: WISHLIST_ID, title: "Do zobaczenia", city: null, list_status: "to_visit", count: 0, cover: null, place_names: [] };
-  const displayLists: UserList[] = [virtualWishlist, ...visited];
+  // Drawer pokazuje TYLKO kuratorskie listy usera (visited) + "dodaj nową". Wishlista "Do zobaczenia"
+  // NIE jest tu wierszem - zapis miejsca BEZ wyboru listy = auto-zapis (efekt nizej) -> trafia do
+  // Zapisane→Miejsca. Dodanie do listy jest opcjonalne.
+  const displayLists: UserList[] = lists.filter((l) => l.list_status === "visited");
 
-  const inWishlist = override.has(WISHLIST_ID) ? override.get(WISHLIST_ID)! : wishlistLists.some((l) => listHasPlace(l, place?.place_name ?? ""));
-  const isIn = (l: UserList) => l.id === WISHLIST_ID ? inWishlist : (override.has(l.id) ? override.get(l.id)! : listHasPlace(l, place?.place_name ?? ""));
+  const isIn = (l: UserList) => (override.has(l.id) ? override.get(l.id)! : listHasPlace(l, place?.place_name ?? ""));
 
   const toggle = async (l: UserList) => {
     if (!place || !user || busyId) return;
     setBusyId(l.id); haptics.medium();
     try {
-      if (l.id === WISHLIST_ID) {
-        if (inWishlist) {
-          // Usun z wishlisty - ze WSZYSTKICH miast (miejsce moglo byc zapisane w innym miescie).
-          for (const wl of wishlistLists) await removePlaceFromList(wl.id, place.place_name);
-          setOverride((prev) => new Map(prev).set(WISHLIST_ID, false));
-          toast.success(`Usunięto z „Do zobaczenia"`, {
-            action: { label: "Cofnij", onClick: async () => {
-              await quickSavePlace(user.id, { ...place }, city || null, author);
-              setOverride((prev) => new Map(prev).set(WISHLIST_ID, true));
-              invalidate();
-            } },
-          });
-        } else {
-          const { added } = await quickSavePlace(user.id, { ...place }, city || null, author);
-          setOverride((prev) => new Map(prev).set(WISHLIST_ID, true));
-          toast.success(added ? `Dodano do „Do zobaczenia"` : `Już jest w „Do zobaczenia"`);
-        }
-      } else if (isIn(l)) {
+      if (isIn(l)) {
         await removePlaceFromList(l.id, place.place_name);
         setOverride((prev) => new Map(prev).set(l.id, false));
-        // #7: ZAWSZE toast z "Cofnij" (re-dodaj do tej listy).
         toast.success(`Usunięto z „${l.title}"`, {
           action: { label: "Cofnij", onClick: async () => {
             await addPlaceToList(l.id, { ...place });
@@ -215,10 +193,11 @@ export default function SavePlaceSheet({
         </div>
 
         {/* Nagłówek: "Miejsce zapisane!" + bookmark */}
-        <div className="flex items-center justify-between px-5 pt-2 pb-1 shrink-0">
+        <div className="flex items-center justify-between px-5 pt-2 pb-0.5 shrink-0">
           <p className="text-xl font-black text-foreground">Miejsce zapisane!</p>
           <Bookmark className="h-6 w-6 text-foreground fill-foreground" />
         </div>
+        <p className="px-5 pb-1 text-sm text-muted-foreground shrink-0">{`Jest w Twoich zapisanych miejscach. Dodaj do listy (opcjonalnie):`}</p>
 
         {/* Nowa lista: input + "+" (wg Figmy) */}
         <div className="px-5 pt-2 pb-2 shrink-0">
@@ -237,9 +216,13 @@ export default function SavePlaceSheet({
         </div>
 
         <div className="flex-1 min-h-0 overflow-y-auto px-5 pt-1 pb-3" style={{ WebkitOverflowScrolling: "touch" }}>
-          <div className="divide-y divide-border/40">
-            {displayLists.map(renderRow)}
-          </div>
+          {displayLists.length === 0 ? (
+            <p className="py-8 text-center text-sm text-muted-foreground">{`Nie masz jeszcze list. Utwórz nową powyżej.`}</p>
+          ) : (
+            <div className="divide-y divide-border/40">
+              {displayLists.map(renderRow)}
+            </div>
+          )}
         </div>
 
         {/* Stopka: Udostępnij to miejsce */}
