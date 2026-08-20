@@ -615,15 +615,11 @@ export default function SharedRoute() {
   );
 
   return (
-    <div className="min-h-[100dvh] bg-background flex flex-col max-w-lg mx-auto">
+    <div className="h-[100dvh] bg-background flex flex-col max-w-lg mx-auto">
 
-      {/* Content - #1: BEZ okladki tla trasy (okladka zostaje TYLKO w eksploracji).
-          Uczestnik wspolnego wyjazdu nie ma dolnego CTA -> mniejszy padding. */}
-      <div className={cn("flex-1 overflow-y-auto", (isOwner || !isGroupMember) ? "pb-44" : "pb-8")}>
-
-        {/* Sticky TopBar: wstecz + autor + uczestnicy + miasto + liczba miejsc + serce */}
-        <div className="sticky top-0 z-30 bg-background px-5 pb-2.5 border-b border-border/40" style={{ paddingTop: "max(12px, env(safe-area-inset-top, 12px))" }}>
-          <div className="flex items-center gap-2 flex-wrap text-sm">
+      {/* Staly TopBar (naglowek nad obszarem scrolla): wstecz + autor + uczestnicy + miasto + liczba miejsc + serce */}
+      <div className="shrink-0 bg-background px-5 pb-2.5 border-b border-border/40" style={{ paddingTop: "max(12px, env(safe-area-inset-top, 12px))" }}>
+        <div className="flex items-center gap-2 flex-wrap text-sm">
             <button onClick={() => { if (window.history.length > 1) navigate(-1); else navigate("/eksploruj"); }} aria-label="Wróć"
               className="h-9 w-9 -ml-2 shrink-0 rounded-full flex items-center justify-center active:scale-90 transition-transform">
               <ArrowLeft className="h-5 w-5 text-foreground" />
@@ -661,8 +657,12 @@ export default function SharedRoute() {
               <span className="text-xs font-semibold tabular-nums text-muted-foreground">{routeLike.count}</span>
             </button>
           </div>
-        </div>
-        {/* Naglowek: tytul + opis (przewija sie pod sticky TopBarem), spacing 35px */}
+      </div>
+
+      {/* Obszar scrolla - #1: BEZ okladki tla trasy (okladka TYLKO w eksploracji).
+          Uczestnik wspolnego wyjazdu nie ma dolnego CTA -> mniejszy padding. */}
+      <div className={cn("flex-1 min-h-0 overflow-y-auto", (isOwner || !isGroupMember) ? "pb-44" : "pb-8")}>
+        {/* Naglowek: tytul + opis, spacing 35px pod TopBarem */}
         <div className="px-5 pt-[35px]">
           <div className="flex items-start gap-3">
             <h1 className="flex-1 text-2xl font-black text-foreground leading-tight">{route.title || cityLabel}</h1>
