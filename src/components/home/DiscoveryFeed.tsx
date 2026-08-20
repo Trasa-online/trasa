@@ -1737,6 +1737,8 @@ export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityCh
       });
     } else {
       await (supabase as any).from("saved_routes").insert({ user_id: user.id, route_id: routeId });
+      // Powiadom właściciela trasy o zapisie (SECURITY DEFINER, pomija self-save).
+      void (supabase as any).rpc("notify_route_used", { p_route_id: routeId });
       toast.success(t("toast.saved", "Zapisano"));
     }
     queryClient.invalidateQueries({ queryKey: ["saved-routes"] });

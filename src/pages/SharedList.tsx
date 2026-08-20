@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
-import { MapPin, ArrowLeft, Bookmark, List, GalleryHorizontalEnd, Building2, Pencil, Trash2 } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { MapPin, ArrowLeft, Bookmark, List, GalleryHorizontalEnd, Building2, Pencil, Trash2, Heart } from "lucide-react";
+import { fetchListLike, toggleListLike, type LikeState } from "@/lib/likes";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { PlacePhoto, resolveStored } from "@/components/PlacePhoto";
 import { RoutePlaceRow } from "@/components/route/RoutePlaceRow";
@@ -26,7 +28,25 @@ export default function SharedList() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const { isSaved } = useSavedPlaces();
+
+  // Polubienie listy (heart). Owner powiadamiany przez trigger notify_list_like.
+  const { data: likeData } = useQuery({
+    queryKey: ["list-like", id, user?.id],
+    enabled: !!id,
+    queryFn: () => fetchListLike(id!, user?.id),
+  });
+  const listLike: LikeState = likeData ?? { liked: false, count: 0 };
+  const toggleLike = async () => {
+    if (!id) return;
+    if (!user) { navigate("/auth"); return; }
+    const key = ["list-like", id, user.id];
+    const cur = (queryClient.getQueryData(key) as LikeState) ?? listLike;
+    queryClient.setQueryData(key, { liked: !cur.liked, count: Math.max(0, cur.count + (cur.liked ? -1 : 1)) });
+    try { await toggleListLike(id, user.id, cur.liked); }
+    finally { queryClient.invalidateQueries({ queryKey: key }); }
+  };
   const [planView, setPlanView] = useState<"list" | "cards">("list");
   // Widok listy jak trasa: Miejsca | Galeria (BEZ mapy - decyzja Nat). Galeria = zdjecia miejsc z listy.
   const [planTab, setPlanTab] = useState<"miejsca" | "galeria">("miejsca");
@@ -156,7 +176,7 @@ export default function SharedList() {
       const set = new Set<string>(JSON.parse(localStorage.getItem("trasa_saved_collections") || "[]"));
       const dates: Record<string, string> = (() => { try { return JSON.parse(localStorage.getItem("trasa_saved_collections_dates") || "{}"); } catch { return {}; } })();
       if (set.has(id)) { set.delete(id); delete dates[id]; setSaved(false); toast("Usunięto z zapisanych"); }
-      else { set.add(id); dates[id] = new Date().toISOString(); setSaved(true); toast.success("Zapisano listę"); void (supabase as any).rpc("increment_collection_saves", { p_collection_id: id }); }
+      else { set.add(id); dates[id] = new Date().toISOString(); setSaved(true); toast.success("Zapisano listę"); void (supabase as any).rpc("increment_collection_saves", { p_collection_id: id }); void (supabase as any).rpc("notify_collection_saved", { p_collection_id: id }); }
       localStorage.setItem("trasa_saved_collections", JSON.stringify([...set]));
       localStorage.setItem("trasa_saved_collections_dates", JSON.stringify(dates));
     } catch { /* localStorage niedostepny */ }
@@ -324,7 +344,13 @@ export default function SharedList() {
             {cityLabel && <span className="flex items-center gap-1 text-muted-foreground"><Building2 className="h-4 w-4" />{cityLabel}</span>}
             <span className="flex items-center gap-1 text-muted-foreground"><MapPin className="h-4 w-4" />{placesCountLabel}</span>
           </div>
-          <h1 className="text-2xl font-black text-foreground leading-tight mt-3">{col.title || cityLabel}</h1>
+          <div className="flex items-start gap-3 mt-3">
+            <h1 className="flex-1 text-2xl font-black text-foreground leading-tight">{col.title || cityLabel}</h1>
+            <button onClick={toggleLike} aria-label="Polub listę" className="shrink-0 flex flex-col items-center gap-0.5 active:scale-90 transition-transform">
+              <Heart className={cn("h-6 w-6", listLike.liked ? "fill-red-500 text-red-500" : "text-foreground")} />
+              <span className="text-xs font-semibold tabular-nums text-muted-foreground">{listLike.count}</span>
+            </button>
+          </div>
           {col.description && <p className="text-sm text-muted-foreground leading-relaxed mt-3">{col.description}</p>}
           {Array.isArray(col.tags) && col.tags.length > 0 && (
             <div className="flex flex-wrap gap-2 mt-3">

@@ -1,14 +1,16 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useParams, useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { cn } from "@/lib/utils";
+import { fetchRouteLike, toggleRouteLike, type LikeState } from "@/lib/likes";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { notify } from "@/lib/notify";
 import { sendClientPush, getCurrentUserName } from "@/lib/clientPush";
 import { format } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
-import { MapPin, ArrowLeft, Sparkles, ChevronRight, ChevronLeft, Bookmark, List, GalleryHorizontalEnd, Calendar as CalendarIcon, Image as ImageIcon, Maximize2, X, Building2, Pencil, Trash2 } from "lucide-react";
+import { MapPin, ArrowLeft, Sparkles, ChevronRight, ChevronLeft, Bookmark, List, GalleryHorizontalEnd, Calendar as CalendarIcon, Image as ImageIcon, Maximize2, X, Building2, Pencil, Trash2, Heart } from "lucide-react";
 import { toast } from "sonner";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { PlacePhoto } from "@/components/PlacePhoto";
@@ -43,7 +45,25 @@ export default function SharedRoute() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const { t } = useTranslation("sharing");
+
+  // Polubienie trasy (heart). Owner powiadamiany przez trigger notify_route_like.
+  const { data: likeData } = useQuery({
+    queryKey: ["route-like", id, user?.id],
+    enabled: !!id,
+    queryFn: () => fetchRouteLike(id!, user?.id),
+  });
+  const routeLike: LikeState = likeData ?? { liked: false, count: 0 };
+  const toggleLike = async () => {
+    if (!id) return;
+    if (!user) { navigate("/auth"); return; }
+    const key = ["route-like", id, user.id];
+    const cur = (queryClient.getQueryData(key) as LikeState) ?? routeLike;
+    queryClient.setQueryData(key, { liked: !cur.liked, count: Math.max(0, cur.count + (cur.liked ? -1 : 1)) });
+    try { await toggleRouteLike(id, user.id, cur.liked); }
+    finally { queryClient.invalidateQueries({ queryKey: key }); }
+  };
   const categoryLabel = (cat: string) => t(`categories.${cat}`, { defaultValue: t("categories.other") });
   const { isSaved } = useSavedPlaces();
   const [savePlace, setSavePlace] = useState<SavePlaceInput | null>(null);
@@ -516,7 +536,13 @@ export default function SharedRoute() {
             {cityLabel && <span className="flex items-center gap-1 text-muted-foreground"><Building2 className="h-4 w-4" />{cityLabel}</span>}
             <span className="flex items-center gap-1 text-muted-foreground"><MapPin className="h-4 w-4" />{pins.length} {pins.length === 1 ? "miejsce" : pins.length < 5 ? "miejsca" : "miejsc"}</span>
           </div>
-          <h1 className="text-2xl font-black text-foreground leading-tight mt-3">{route.title || cityLabel}</h1>
+          <div className="flex items-start gap-3 mt-3">
+            <h1 className="flex-1 text-2xl font-black text-foreground leading-tight">{route.title || cityLabel}</h1>
+            <button onClick={toggleLike} aria-label="Polub trasę" className="shrink-0 flex flex-col items-center gap-0.5 active:scale-90 transition-transform">
+              <Heart className={cn("h-6 w-6", routeLike.liked ? "fill-red-500 text-red-500" : "text-foreground")} />
+              <span className="text-xs font-semibold tabular-nums text-muted-foreground">{routeLike.count}</span>
+            </button>
+          </div>
           {dateLabel && (
             <div className="flex items-center gap-1.5 mt-2.5 text-foreground">
               <CalendarIcon className="h-5 w-5 shrink-0" />

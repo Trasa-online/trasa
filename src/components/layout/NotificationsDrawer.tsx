@@ -35,6 +35,9 @@ const TYPE_CONFIG: Record<string, { icon: React.ElementType; color: string; labe
   group_route_ready:  { icon: Route, color: "text-orange-600 bg-orange-100",  label: (u, meta) => `${u} stworzył(a) trasę${meta?.city ? ` w ${meta.city}` : ""} - sprawdź!` },
   collection_approved: { icon: CheckCircle2, color: "text-emerald-500 bg-emerald-100", label: (_u, meta) => `Twoja lista „${meta?.title ?? "lista"}" została zaakceptowana` },
   collection_rejected: { icon: XCircle,      color: "text-destructive bg-destructive/10", label: (_u, meta) => meta?.moderation_note ? `Lista „${meta?.title ?? "lista"}" odrzucona. Powód: ${meta.moderation_note}` : `Twoja lista „${meta?.title ?? "lista"}" została odrzucona` },
+  route_liked:    { icon: Heart,    color: "text-red-500 bg-red-100",        label: (u, meta) => `${u} polubił(a) Twoją trasę${meta?.city ? ` po ${meta.city}` : ""}` },
+  list_liked:     { icon: Heart,    color: "text-red-500 bg-red-100",        label: (u, meta) => `${u} polubił(a) Twoją listę${meta?.title ? ` „${meta.title}"` : ""}` },
+  list_saved:     { icon: Bookmark, color: "text-orange-600 bg-orange-100",  label: (u, meta) => `${u} zapisał(a) Twoją listę${meta?.title ? ` „${meta.title}"` : ""}` },
 };
 
 interface Props {
