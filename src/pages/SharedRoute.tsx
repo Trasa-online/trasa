@@ -47,6 +47,16 @@ import { resolveStored } from "@/components/PlacePhoto";
 import type { MockPlace } from "@/components/plan-wizard/PlaceSwiper";
 import { CategoryIcon } from "@/components/CategoryIcon";
 
+// Oficjalne logo Google (4-kolorowe "G") - guzik "Zobacz w Google".
+const GoogleGlyph = ({ className }: { className?: string }) => (
+  <svg viewBox="0 0 48 48" className={className} aria-hidden="true">
+    <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
+    <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" />
+    <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" />
+    <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
+  </svg>
+);
+
 export default function SharedRoute() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -467,41 +477,42 @@ export default function SharedRoute() {
     </div>
   );
 
+  // Kafelki (wg Figmy): poziomy scroll kart ~168px. Peachy zdjecie (badge kategorii + bookmark +
+  // nazwa), pod spodem Notka Autora + notka + "Zobacz w Google".
   const renderSwiper = () => (
-    <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory scrollbar-none -mx-5 px-5 pb-2">
-      {pins.map((pin: any, i: number) => (
-        <div key={pin.id} className="snap-center shrink-0 w-[80vw] max-w-[320px] rounded-2xl bg-secondary border border-border/40 overflow-hidden shadow-sm flex flex-col">
-          <button onClick={() => openDetail(pin)} className="block w-full text-left active:opacity-90 transition-opacity">
-            <div className="relative w-full aspect-[4/3] bg-muted">
-              <PlacePhoto pin={coverFor(pin) ? { ...pin, photo_url: coverFor(pin) } : pin} className="w-full h-full object-cover" />
-              <div className="absolute top-3 left-3 h-8 w-8 rounded-full bg-black/55 backdrop-blur text-white text-sm font-bold flex items-center justify-center">{i + 1}</div>
+    <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-none -mx-5 px-5 pb-2">
+      {pins.map((pin: any) => {
+        const noteText = (noteMap[pin.place_name]?.note ?? "").trim();
+        const pinForPhoto = coverFor(pin) ? { ...pin, photo_url: coverFor(pin) } : pin;
+        return (
+          <div key={pin.id} className="snap-start shrink-0 w-[168px] flex flex-col gap-3">
+            <div onClick={() => openDetail(pin)} role="button" className="relative aspect-square rounded-2xl overflow-hidden bg-[#fcede3] active:opacity-90 transition-opacity cursor-pointer">
+              <PlacePhoto pin={pinForPhoto} className="w-full h-full object-cover" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-transparent" />
+              <span className="absolute top-2 left-2 px-2.5 py-1 rounded-full bg-white text-[11px] font-semibold text-foreground shadow-sm">{categoryLabel(pin.category)}</span>
+              {user && (
+                <button onClick={(e) => { e.stopPropagation(); setSavePlace(pinToSave(pin)); }} aria-label="Zapisz miejsce"
+                  className="absolute top-2 right-2 h-8 w-8 rounded-full bg-white/90 flex items-center justify-center shadow-sm active:scale-90 transition-transform">
+                  <Bookmark className={cn("h-4 w-4", isSaved(pin.place_name) ? "fill-orange-600 text-orange-600" : "text-foreground")} strokeWidth={2} />
+                </button>
+              )}
+              <span className="absolute bottom-2 left-2.5 right-2.5 text-sm font-semibold text-white drop-shadow line-clamp-1">{pin.place_name}</span>
             </div>
-            <div className="px-4 pt-4">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted text-xs font-semibold text-foreground mb-2">
-                <CategoryIcon category={pin.category} className="h-3.5 w-3.5 shrink-0" />{categoryLabel(pin.category)}
-              </span>
-              <p className="text-base font-black leading-tight">{pin.place_name}</p>
-              {(() => {
-                const m = metaFor(pin);
-                const desc = pin.description || m.description;
-                return (
-                  <>
-                    {desc && <p className="text-sm text-muted-foreground leading-relaxed mt-2 line-clamp-3">{desc}</p>}
-                    {m.tags.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5 mt-2">
-                        {m.tags.slice(0, 3).map((t: string) => (
-                          <span key={t} className="text-[10px] text-muted-foreground bg-white px-2 py-0.5 rounded-full">{t}</span>
-                        ))}
-                      </div>
-                    )}
-                  </>
-                );
-              })()}
+            <div className="flex flex-col gap-2">
+              {noteText && (
+                <div>
+                  <p className="text-sm font-semibold text-foreground">Notka Autora</p>
+                  <p className="text-sm text-muted-foreground leading-relaxed line-clamp-5 mt-0.5">{noteText}</p>
+                </div>
+              )}
+              <button onClick={() => openGooglePlace(pin)} className="flex items-center gap-2 active:opacity-70 transition-opacity">
+                <span className="h-9 w-9 rounded-full bg-white shadow-sm flex items-center justify-center shrink-0"><GoogleGlyph className="h-[18px] w-[18px]" /></span>
+                <span className="text-sm font-medium text-foreground">Zobacz w Google</span>
+              </button>
             </div>
-          </button>
-          <div className="px-4 pb-4 pt-1">{renderRatingNote(pin.place_name, true)}</div>
-        </div>
-      ))}
+          </div>
+        );
+      })}
     </div>
   );
 
