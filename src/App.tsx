@@ -674,7 +674,6 @@ import NotFound from "./pages/NotFound";
 const AppLayout        = lazy(() => import("./components/layout/AppLayout"));
 const HomeSwipe        = lazy(() => import("./pages/HomeSwipe"));
 const Explore          = lazy(() => import("./pages/Explore"));
-const LikedPlaces      = lazy(() => import("./pages/LikedPlaces"));
 const CreateRanking    = lazy(() => import("./pages/CreateRanking"));
 const ComposeWyjazd    = lazy(() => import("./pages/ComposeWyjazd"));
 const CountryCityPicker = lazy(() => import("./pages/CountryCityPicker"));
@@ -688,7 +687,6 @@ const DayReview        = lazy(() => import("./pages/DayReview"));
 const SetPassword      = lazy(() => import("./pages/SetPassword"));
 const TravelerProfile  = lazy(() => import("./pages/TravelerProfile"));
 const MyTrips          = lazy(() => import("./pages/MyTrips"));
-const Journal          = lazy(() => import("./pages/Journal"));
 const EditPlan         = lazy(() => import("./pages/EditPlan"));
 const ReviewSummary    = lazy(() => import("./pages/ReviewSummary"));
 const ActiveTrip       = lazy(() => import("./pages/ActiveTrip"));
@@ -782,9 +780,10 @@ const App = () => (
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/" element={<RootPage />} />
           {/* Tryb uproszczony (PLANNING_DISABLED): "Twoje trasy" scalone w Wyjazdy (Dziennik). */}
-          <Route path="/home" element={PLANNING_DISABLED ? <Navigate to="/dziennik" replace /> : <AppLayout hideTopBar><HomeSwipe /></AppLayout>} />
+          <Route path="/home" element={PLANNING_DISABLED ? <Navigate to="/moj-profil?tab=wyjazdy" replace /> : <AppLayout hideTopBar><HomeSwipe /></AppLayout>} />
           <Route path="/eksploruj" element={<AppLayout hideTopBar><Explore /></AppLayout>} />
-          <Route path="/polubione" element={<AppLayout hideTopBar><LikedPlaces /></AppLayout>} />
+          {/* /polubione (Zapisane) przeniesione do zakładki profilu (IA 2026-08-20). Redirect dla starych linków/pushy. */}
+          <Route path="/polubione" element={<Navigate to="/moj-profil?tab=zapisane" replace />} />
           <Route path="/zestawienie/nowe" element={<RequireAuth><CreateRanking /></RequireAuth>} />
           <Route path="/zestawienie/:id/edytuj" element={<RequireAuth><CreateRanking /></RequireAuth>} />
           {/* /create (generowanie planu przez AI) - wylaczone w trybie uproszczonym na native.
@@ -796,8 +795,9 @@ const App = () => (
           <Route path="/set-password" element={<SetPassword />} />
           <Route path="/set-password-biznes" element={<SetPassword forceBusiness />} />
           {/* Panel admina przeniesiony na admin.trasa.travel (usuniety z aplikacji). */}
-          <Route path="/moje-trasy" element={PLANNING_DISABLED ? <Navigate to="/dziennik" replace /> : <AppLayout><MyTrips /></AppLayout>} />
-          <Route path="/dziennik" element={<AppLayout hideTopBar><Journal /></AppLayout>} />
+          <Route path="/moje-trasy" element={PLANNING_DISABLED ? <Navigate to="/moj-profil?tab=wyjazdy" replace /> : <AppLayout><MyTrips /></AppLayout>} />
+          {/* /dziennik (Wyjazdy/Journal) przeniesione do zakładki profilu (IA 2026-08-20). Redirect dla starych linków/pushy. */}
+          <Route path="/dziennik" element={<Navigate to="/moj-profil?tab=wyjazdy" replace />} />
           <Route path="/moj-profil" element={<AppLayout hideTopBar><TravelerProfile /></AppLayout>} />
           <Route path="/edit-plan" element={PLANNING_DISABLED ? <Navigate to="/eksploruj" replace /> : <EditPlan />} />
           <Route path="/review-summary" element={<ReviewSummary />} />
@@ -810,7 +810,7 @@ const App = () => (
           <Route path="/utworz" element={<CountryCityPicker />} />
           <Route path="/utworz/robocze" element={<CreateDrafts />} />
           <Route path="/utworz/zapisane" element={<CreateSaved />} />
-          <Route path="/wyjazd/:id" element={<Navigate to="/dziennik" replace />} />
+          <Route path="/wyjazd/:id" element={<Navigate to="/moj-profil?tab=wyjazdy" replace />} />
           {/* Planowanie tras (kreator + sesje grupowe) - wylaczone w trybie uproszczonym na native.
               Wyjatek: exploreMode ("Przegladaj") zostaje wlaczony - patrz PlanRoute. */}
           <Route path="/plan" element={<PlanRoute />} />

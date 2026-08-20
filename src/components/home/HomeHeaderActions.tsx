@@ -104,7 +104,7 @@ const HomeHeaderActions = ({
         )}
         {!isGuest && showSaved && (
           <button
-            onClick={() => navigate("/polubione")}
+            onClick={() => navigate("/moj-profil?tab=zapisane")}
             className="h-9 w-9 flex items-center justify-center rounded-full bg-muted text-foreground active:scale-90 transition-transform"
             aria-label={t("header.saved_places")}
             title={t("header.saved")}

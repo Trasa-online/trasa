@@ -222,7 +222,7 @@ export default function SharedRoute() {
         void (supabase as any).rpc("notify_route_used", { p_route_id: id });
         // Push Z KLIENTA (trigger DB dostaje z send-push 401). Odbiorca = autor oryginalnej trasy.
         const me = await getCurrentUserName();
-        void sendClientPush({ userId: route.user_id, title: t("push_used_title"), body: route.city ? t("push_used_body_city", { name: me, city: route.city }) : t("push_used_body", { name: me }), url: "/dziennik" });
+        void sendClientPush({ userId: route.user_id, title: t("push_used_title"), body: route.city ? t("push_used_body_city", { name: me, city: route.city }) : t("push_used_body", { name: me }), url: "/moj-profil?tab=wyjazdy" });
       }
       navigate(`/review-summary?route=${newRoute.id}`);
     } catch (e: any) {

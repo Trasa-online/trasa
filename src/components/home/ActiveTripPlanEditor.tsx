@@ -896,13 +896,13 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false, onDelete, deleting 
             </div>
             <div className="flex flex-col gap-2">
               <button
-                onClick={() => { togglePublic(true); setShowSharePrompt(false); notify.success(t("toast.shared_public")); navigate("/dziennik"); }}
+                onClick={() => { togglePublic(true); setShowSharePrompt(false); notify.success(t("toast.shared_public")); navigate("/moj-profil?tab=wyjazdy"); }}
                 className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-sm active:scale-[0.97] transition-transform shadow-md shadow-orange-500/20"
               >
                 {t("share.public")}
               </button>
               <button
-                onClick={() => { togglePublic(false); setShowSharePrompt(false); notify.success(t("toast.saved_private")); navigate("/dziennik"); }}
+                onClick={() => { togglePublic(false); setShowSharePrompt(false); notify.success(t("toast.saved_private")); navigate("/moj-profil?tab=wyjazdy"); }}
                 className="w-full py-3.5 rounded-full border border-border text-sm font-semibold text-foreground active:scale-[0.97] transition-transform"
               >
                 {t("share.private")}

@@ -541,7 +541,7 @@ export default function ComposeWyjazd() {
     } else {
       clearSoft();
       toast.success(draftId ? "Zapisano zmiany" : "Zapisano wyjazd");
-      navigate("/dziennik");
+      navigate("/moj-profil?tab=wyjazdy");
     }
   };
 

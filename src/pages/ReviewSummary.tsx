@@ -1076,7 +1076,7 @@ const ReviewSummary = () => {
     // zakonczony (pocztowka) dopiero PO minieciu daty. Wyjscie z edycji zapisuje i wraca do dziennika.
     if (!isMemory) {
       queryClient.invalidateQueries({ queryKey: ["journal-entries"] });
-      navigate("/dziennik");
+      navigate("/moj-profil?tab=wyjazdy");
       return;
     }
     try {
@@ -2121,10 +2121,10 @@ const ReviewSummary = () => {
           className={`absolute top-0 left-0 right-0 z-30 flex items-center justify-between px-4 pb-3 transition-colors duration-200 ${planScrolled ? "bg-[#FEFEFE]/95 backdrop-blur-md border-b border-black/[0.06]" : ""}`}
           style={{ paddingTop: "max(12px, env(safe-area-inset-top, 12px))" }}
         >
-          <button onClick={() => navigate("/dziennik")} aria-label={t("a11y.back_to_journal")} className={`h-8 w-8 rounded-full flex items-center justify-center active:scale-90 transition-transform ${planScrolled ? "bg-secondary text-foreground" : "bg-black/35 backdrop-blur-sm text-white"}`}>
+          <button onClick={() => navigate("/moj-profil?tab=wyjazdy")} aria-label={t("a11y.back_to_journal")} className={`h-8 w-8 rounded-full flex items-center justify-center active:scale-90 transition-transform ${planScrolled ? "bg-secondary text-foreground" : "bg-black/35 backdrop-blur-sm text-white"}`}>
             <ChevronLeft className="h-5 w-5" />
           </button>
-          <button onClick={() => navigate("/dziennik")} aria-label={t("a11y.back_to_journal")} className={`h-8 w-8 rounded-full flex items-center justify-center active:scale-90 transition-transform ${planScrolled ? "bg-secondary text-foreground" : "bg-white/25 backdrop-blur-sm text-white"}`}>
+          <button onClick={() => navigate("/moj-profil?tab=wyjazdy")} aria-label={t("a11y.back_to_journal")} className={`h-8 w-8 rounded-full flex items-center justify-center active:scale-90 transition-transform ${planScrolled ? "bg-secondary text-foreground" : "bg-white/25 backdrop-blur-sm text-white"}`}>
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -2657,7 +2657,7 @@ const ReviewSummary = () => {
               <ArrowLeft className="h-5 w-5 text-white" />
             </button>
           ) : !(isMemory && isOwner && !reviewed) ? (
-            <button onClick={() => navigate("/dziennik")} aria-label={t("a11y.back_to_journal")} className="h-10 w-10 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center">
+            <button onClick={() => navigate("/moj-profil?tab=wyjazdy")} aria-label={t("a11y.back_to_journal")} className="h-10 w-10 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center">
               <ArrowLeft className="h-5 w-5 text-white" />
             </button>
           ) : <span />}
@@ -3133,7 +3133,7 @@ const ReviewSummary = () => {
             {savingPlan ? t("status.saving") : t("cta.save_changes")}
           </button>
         ) : (
-          <button onClick={() => navigate("/dziennik")} className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-base active:scale-[0.98] transition-transform">
+          <button onClick={() => navigate("/moj-profil?tab=wyjazdy")} className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-base active:scale-[0.98] transition-transform">
             {t("cta.done")}
           </button>
         )}

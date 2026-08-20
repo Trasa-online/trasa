@@ -118,7 +118,7 @@ Oficjalny tagline aplikacji: **"speed dating z miastem"** (wszystkie litery mał
 3. **Tworzenie trasy** — z wybranych/dopasowanych miejsc
 4. **Podsumowanie podróży** — plan vs rzeczywistość, **notki** o miejscach (solo lub przez grupę)
    - ⛔ **ZAKAZ ocen gwiazdkowych miejsc:** Użytkownik NIE wystawia żadnych ocen (gwiazdek/punktów) miejscom. Bazujemy WYŁĄCZNIE na wartościowych **notkach** userów. Nie dodawaj inputu oceny w podsumowaniu, dzienniku, wizytówce ani nigdzie indziej. (Gwiazdki Google na kartach to zewnętrzny rating do wyświetlania — to co innego, zostaje.)
-5. **Dziennik** — zapisywanie "pocztówek" z trasy (Baloo font na nagłówkach kart)
+5. **Wyjazdy** (dawny „Dziennik") — trasy usera z „pocztówkami"/wpisami (Baloo font na nagłówkach kart). Mieszkają w zakładce **Wyjazdy** na profilu (`/moj-profil`); osobny ekran `/dziennik` USUNIĘTY 2026-08-20 (patrz sekcja „Nawigacja i architektura informacji").
 
 ### B2B (Firmy)
 
@@ -126,6 +126,31 @@ Oficjalny tagline aplikacji: **"speed dating z miastem"** (wszystkie litery mał
 2. **Feed / wydarzenia** — aktualizacje, promocje (tylko pakiet Premium)
 3. **Galeria zdjęć** — zarządzanie bazą zdjęć lokalu
 4. **Analityka** — kliknięcia w szczegóły, dodania do trasy, oceny
+
+---
+
+## Nawigacja i architektura informacji (IA) — aktualne (2026-08-20)
+
+**BottomNav (native) = 3 pozycje:** `Eksploruj` · `+` (środkowy FAB) · `Profil`. Pasek to wąski, wyśrodkowany „pill" (HUG, nie full-width) z `px-4`; każdy target `w-16` (64px) × `h-14` — reguła „fat thumb". Plik: [src/components/layout/BottomNav.tsx](src/components/layout/BottomNav.tsx).
+- **Eksploruj** → `/eksploruj` (tylko native; web/PWA to ukrywa, B2C za waitlistą).
+- **`+` (FAB)** → na native `navigate("/utworz")` (drum-scroll kraj+miasto → forma tworzenia). Na web (stary flow) otwiera menu wyboru.
+- **Profil** → `/moj-profil`.
+- Web/PWA (stary flow, `!PLANNING_DISABLED`): slot 2 to `Wyjazdy` (`/home`) zamiast Eksploruj.
+
+**Profil (`/moj-profil`, [TravelerProfile.tsx](src/pages/TravelerProfile.tsx)) = hub z 3 zakładkami** (wejście na konkretną zakładkę przez query param `?tab=listy|wyjazdy|zapisane`):
+1. **Listy** — kuratorskie **publiczne polecajki** usera (`discovery_collections`, `kind='ranking'`, `list_status='visited'`). To grupy miejsc do polecenia, NIE luźne zapisy.
+2. **Wyjazdy** (dawny Dziennik) — wszystkie trasy usera („pocztówki"/wpisy). Reuse [JournalTab](src/components/home/JournalTab.tsx).
+3. **Zapisane** — segment `[Miejsca | Listy | Trasy]`:
+   - **Miejsca** — luźno zapisane pojedyncze miejsca (prywatna wishlista `to_visit` + zapisy z eksploracji). Komponent [SavedPlacesGrid](src/components/saved/SavedPlacesGrid.tsx).
+   - **Listy | Trasy** — listy i trasy zapisane **od innych** userów (`saved_routes` + zapisane kolekcje), jeden wspólny pusty stan. Komponent [SavedListsRoutes](src/components/saved/SavedListsRoutes.tsx).
+
+**Profil publiczny (cudzy) — `/profil/:username`, [PublicProfile.tsx](src/pages/PublicProfile.tsx):** ten sam layout kart, ale **2 zakładki** (Listy · Wyjazdy), bez „Zapisane", tylko listy `visited`, **bez edycji/usuwania** (owner-only).
+
+**⛔ USUNIĘTE ekrany (2026-08-20):** `/dziennik` (Journal) i `/polubione` (LikedPlaces) — cała treść przeniesiona do zakładek profilu. `Journal.tsx` + `LikedPlaces.tsx` usunięte. **Routy zostają jako `<Navigate>` redirecty** (stare deep-linki / pushe nie ubijają apki): `/dziennik` → `/moj-profil?tab=wyjazdy`, `/polubione` → `/moj-profil?tab=zapisane`. Nowy kod nawiguj **wprost** na `/moj-profil?tab=…`, nie na `/dziennik`/`/polubione`. **`JournalTab` ZOSTAJE** (reused w [CreateDrafts](src/pages/CreateDrafts.tsx) „Robocze", route `/utworz/robocze`).
+
+**Model prywatności list (patrz też memory `project_place_lists_model`):** zapis miejsca = **prywatna** lista „Do zobaczenia" (`list_status='to_visit'`, `is_public=false`). Świadoma **publiczna** polecajka = `list_status='visited'`, `is_public=true`. Bookmark ≠ polecenie.
+
+**Polubienia + powiadomienia (2026-08-20):** tabele `likes` (trasy) i `collection_likes` (listy) + kolumny `likes_count`. Powiadomienia `route_liked` / `list_liked` (serce) i `list_saved` (bookmark) wstawiane triggerami **SECURITY DEFINER** (klient nie ma INSERT na `notifications`). Helpery: [src/lib/likes.ts](src/lib/likes.ts). Zapis cudzej trasy woła RPC `notify_route_used`, zapis listy `notify_collection_saved`.
 
 ---
 

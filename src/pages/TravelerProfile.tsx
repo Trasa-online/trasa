@@ -9,7 +9,7 @@ import { Settings, Camera, UserCircle2, ArrowRight, Bell, Share2, Search, Layout
 import TabHeader from "@/components/layout/TabHeader";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -101,7 +101,10 @@ const TravelerProfile = () => {
   const queryClient = useQueryClient();
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [followSheet, setFollowSheet] = useState<"followers" | "following" | null>(null);
-  const [tab, setTab] = useState<"listy" | "wyjazdy" | "zapisane">("listy");
+  const [searchParams] = useSearchParams();
+  // ?tab=wyjazdy|zapisane|listy - wejście z redirectów (dawne /dziennik -> wyjazdy, /polubione -> zapisane).
+  const initialTab = (() => { const p = searchParams.get("tab"); return p === "wyjazdy" || p === "zapisane" ? p : "listy"; })();
+  const [tab, setTab] = useState<"listy" | "wyjazdy" | "zapisane">(initialTab);
   const [savedTab, setSavedTab] = useState<"miejsca" | "listy_trasy">("miejsca");
   // Potwierdzenie usuniecia (lista albo wyjazd) - nieodwracalne, walidacja "czy na pewno?".
   const [confirmDelete, setConfirmDelete] = useState<{ kind: "list" | "trip"; id: string; routeIds?: string[]; title: string } | null>(null);

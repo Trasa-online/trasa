@@ -2186,7 +2186,7 @@ export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityCh
             <span className="flex-1 text-sm font-semibold">{t("current_location", "Bieżące położenie")}</span>
             <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
           </button>
-          <button onClick={() => navigate("/polubione")} className="w-full flex items-center gap-3 px-3.5 py-3 text-left active:bg-muted/50 transition-colors">
+          <button onClick={() => navigate("/moj-profil?tab=zapisane")} className="w-full flex items-center gap-3 px-3.5 py-3 text-left active:bg-muted/50 transition-colors">
             <div className="h-10 w-10 rounded-xl bg-orange-50 flex items-center justify-center shrink-0">
               <Bookmark className="h-[18px] w-[18px] text-orange-600" />
             </div>

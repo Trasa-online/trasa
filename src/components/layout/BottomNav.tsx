@@ -2,10 +2,8 @@ import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useLocation } from "react-router-dom";
 import { NavLink } from "@/components/NavLink";
-import { BookOpen, Compass, Map, X, MapPin, User, Heart, ArrowLeft, Layers, Bookmark } from "lucide-react";
+import { X, MapPin, Heart, ArrowLeft, Layers } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { getTodayLikes, type ExploreLike } from "@/lib/exploreLikes";
 import { isNative } from "@/lib/platform";
@@ -98,29 +96,6 @@ const BottomNav = () => {
     root.style.setProperty("--trasa-nav-offset", navHidden ? "env(safe-area-inset-bottom, 0px)" : "calc(5rem + env(safe-area-inset-bottom, 0px))");
     return () => { root.style.setProperty("--trasa-nav-offset", "env(safe-area-inset-bottom, 0px)"); };
   }, [navHidden]);
-
-  // Badge kropka na ikonie Dziennik gdy uzytkownik ma niewidziane trasy
-  // (routes.new_for_users zawiera user.id). Refetch przy navigation - gdy user
-  // wraca na Home, kropka znika lub pojawia sie wedlug stanu DB. Query tylko w native
-  // bo Dziennik dla web jest ukryty.
-  const { data: hasNewJournalEntries = false, refetch: refetchJournalBadge } = useQuery({
-    queryKey: ["journal-badge", user?.id],
-    queryFn: async () => {
-      if (!user?.id) return false;
-      const { count } = await (supabase as any)
-        .from("routes")
-        .select("id", { count: "exact", head: true })
-        .contains("new_for_users", [user.id]);
-      return (count ?? 0) > 0;
-    },
-    enabled: !!user?.id && isNative,
-    staleTime: 30_000,
-  });
-
-  // Refetch przy zmianie route (np. wyjscie z /dziennik - kropka mogla zostac wyczyszczona)
-  useEffect(() => {
-    if (user?.id && isNative) refetchJournalBadge();
-  }, [location.pathname, user?.id, refetchJournalBadge]);
 
   const handleSoloPlan = () => {
     setShowMenu(false);

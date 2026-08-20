@@ -234,7 +234,7 @@ export default function NotificationsDrawer({ open, onClose, userId }: Props) {
                           onClick={() => {
                             onClose();
                             // Deep-link do konkretnej trasy gdy znamy route_id, inaczej do zakladki Trasy.
-                            navigate(n.metadata?.route_id ? `/review-summary?route=${n.metadata.route_id}` : "/dziennik");
+                            navigate(n.metadata?.route_id ? `/review-summary?route=${n.metadata.route_id}` : "/moj-profil?tab=wyjazdy");
                           }}
                           className="mt-2 px-3 py-1.5 rounded-full bg-primary text-white text-xs font-semibold active:scale-95 transition-transform"
                         >

@@ -383,7 +383,7 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
             {groupOpen && visibleGroupSessions.map((s) => (
               <button
                 key={s.id}
-                onClick={() => navigate("/dziennik")}
+                onClick={() => navigate("/moj-profil?tab=wyjazdy")}
                 className="w-full text-left active:scale-[0.98] transition-transform"
               >
                 {/* Karta sesji grupowej (secondary) - spojna z pozostalymi kartami. */}
