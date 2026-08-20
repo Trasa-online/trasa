@@ -178,7 +178,7 @@ export default function SavePlaceSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="rounded-t-3xl p-0 [&>button]:hidden flex flex-col" style={{ maxHeight: "82vh" }}>
+      <SheetContent side="bottom" onOpenAutoFocus={(e) => e.preventDefault()} className="rounded-t-3xl p-0 [&>button]:hidden flex flex-col" style={{ maxHeight: "82vh" }}>
         {/* Uchwyt */}
         <div className="pt-3 pb-1 shrink-0">
           <div className="mx-auto h-1 w-10 rounded-full bg-border" />

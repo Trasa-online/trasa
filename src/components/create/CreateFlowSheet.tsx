@@ -163,7 +163,7 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
                 { key: "list", label: "Lista", icon: <FileText className="h-8 w-8 text-foreground" strokeWidth={1.7} />, go: () => setStep("listName") },
                 { key: "trip", label: "Wyjazd", icon: <img src="/spontaway-symbol.png" alt="" className="h-9 w-9 object-contain" style={{ filter: "brightness(0)" }} draggable={false} />, go: () => setStep("trip") },
               ].map((t) => (
-                <button key={t.key} onClick={() => { haptics.light(); t.go(); }} className="flex-1 flex flex-col items-center gap-3 active:scale-[0.98] transition-transform">
+                <button key={t.key} onClick={() => { haptics.light(); t.go(); }} className="flex-1 flex flex-col items-center gap-3 active:scale-[0.98] transition-transform outline-none focus:outline-none focus-visible:outline-none">
                   <span className="w-full h-[90px] rounded-2xl bg-[#efefef] flex items-center justify-center">{t.icon}</span>
                   <span className="text-sm font-medium text-foreground">{t.label}</span>
                 </button>

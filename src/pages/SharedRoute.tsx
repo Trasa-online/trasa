@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -10,7 +10,7 @@ import { notify } from "@/lib/notify";
 import { sendClientPush, getCurrentUserName } from "@/lib/clientPush";
 import { format } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
-import { MapPin, ArrowLeft, Sparkles, ChevronRight, ChevronLeft, Bookmark, List, GalleryHorizontalEnd, Calendar as CalendarIcon, Image as ImageIcon, Maximize2, X, Building2, Pencil, Trash2, Heart, Share2, Plus, Map as MapIcon } from "lucide-react";
+import { MapPin, ArrowLeft, Sparkles, ChevronRight, ChevronLeft, Bookmark, List, GalleryHorizontalEnd, Calendar as CalendarIcon, Image as ImageIcon, Maximize2, X, Building2, Pencil, Trash2, Heart, Share2, Plus, Map as MapIcon, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { PlacePhoto } from "@/components/PlacePhoto";
@@ -24,6 +24,10 @@ import type { PlaceForList } from "@/lib/placeLists";
 import { pinCoverKeys, fetchPlacePhotosForKeys, pickPlaceCover } from "@/lib/placePhotoSocial";
 import RouteMap from "@/components/RouteMap";
 import { API_BASE } from "@/lib/platform";
+import { compressImage } from "@/lib/imageCompression";
+import { isHeic, convertHeicToJpeg } from "@/lib/heicConvert";
+
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 
 // Statyczna mapa trasy (Google przez proxy) - ujednolicona z widokiem "Plan wyjazdu".
 // Pomaranczowo-peachy markery (#F0A583). Klik -> interaktywna RouteMap (pelny ekran).
@@ -100,6 +104,8 @@ export default function SharedRoute() {
   const [deleting, setDeleting] = useState(false);
   const [addPlaceOpen, setAddPlaceOpen] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [uploadingPhotos, setUploadingPhotos] = useState(false);
+  const photoInputRef = useRef<HTMLInputElement>(null);
   const share = useShare();
 
   // Otworz miejsce w Google Maps (WIZYTOWKA / place page, NIE nawigacja). query_place_id gdy
@@ -357,6 +363,31 @@ export default function SharedRoute() {
 
   const existingPinNames = new Set(pins.map((p: any) => (p.place_name || "").trim().toLowerCase()));
 
+  // #7: wlasciciel dodaje zdjecia do wyjazdu z widoku (Galeria). HEIC->JPEG + kompresja ->
+  // route-images -> dopisz do routes.review_photos -> refetch. Wzor: ReviewSummary.uploadImages.
+  const handleAddPhotos = async (files: File[]) => {
+    if (!user || !files.length) return;
+    setUploadingPhotos(true);
+    const urls: string[] = [];
+    for (const rawFile of files) {
+      try {
+        const file = isHeic(rawFile) ? await convertHeicToJpeg(rawFile) : rawFile;
+        const compressed = await compressImage(file, 1200, 1200, 0.8);
+        const path = `${user.id}/${route.id}/gal_${Date.now()}_${Math.floor(Math.random() * 10000)}.jpg`;
+        const { error } = await (supabase as any).storage.from("route-images").upload(path, compressed, { contentType: "image/jpeg", upsert: false });
+        if (error) { console.error("[SharedRoute] photo upload failed:", error.message); continue; }
+        urls.push(`${SUPABASE_URL}/storage/v1/object/public/route-images/${path}`);
+      } catch (e: any) { console.error("[SharedRoute] photo processing failed:", e?.message ?? e); }
+    }
+    if (urls.length) {
+      const merged = [...((route.review_photos ?? []) as string[]), ...urls];
+      const { error } = await (supabase as any).from("routes").update({ review_photos: merged }).eq("id", route.id);
+      if (error) { toast.error("Nie udało się zapisać zdjęć"); }
+      else { toast.success(urls.length === 1 ? "Dodano zdjęcie" : `Dodano ${urls.length} zdjęcia`); queryClient.invalidateQueries({ queryKey: ["shared-route", id] }); }
+    } else { toast.error("Nie udało się dodać zdjęć"); }
+    setUploadingPhotos(false);
+  };
+
   const handleDelete = async () => {
     if (!user) return;
     setDeleting(true);
@@ -480,7 +511,7 @@ export default function SharedRoute() {
   // Kafelki (wg Figmy): poziomy scroll kart ~168px. Peachy zdjecie (badge kategorii + bookmark +
   // nazwa), pod spodem Notka Autora + notka + "Zobacz w Google".
   const renderSwiper = () => (
-    <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-none -mx-5 px-5 pb-2">
+    <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-none -mx-5 px-4 pb-2">
       {pins.map((pin: any) => {
         const noteText = (noteMap[pin.place_name]?.note ?? "").trim();
         const pinForPhoto = coverFor(pin) ? { ...pin, photo_url: coverFor(pin) } : pin;
@@ -499,16 +530,17 @@ export default function SharedRoute() {
               <span className="absolute bottom-2 left-2.5 right-2.5 text-sm font-semibold text-white drop-shadow line-clamp-1">{pin.place_name}</span>
             </div>
             <div className="flex flex-col gap-2">
+              {/* Google bezposrednio pod miniaturka (#5), nad Notka Autora */}
+              <button onClick={() => openGooglePlace(pin)} className="flex items-center gap-2 active:opacity-70 transition-opacity">
+                <span className="h-9 w-9 rounded-full bg-white shadow-sm flex items-center justify-center shrink-0"><GoogleGlyph className="h-[18px] w-[18px]" /></span>
+                <span className="text-sm font-medium text-foreground">Zobacz w Google</span>
+              </button>
               {noteText && (
                 <div>
                   <p className="text-sm font-semibold text-foreground">Notka Autora</p>
                   <p className="text-sm text-muted-foreground leading-relaxed line-clamp-5 mt-0.5">{noteText}</p>
                 </div>
               )}
-              <button onClick={() => openGooglePlace(pin)} className="flex items-center gap-2 active:opacity-70 transition-opacity">
-                <span className="h-9 w-9 rounded-full bg-white shadow-sm flex items-center justify-center shrink-0"><GoogleGlyph className="h-[18px] w-[18px]" /></span>
-                <span className="text-sm font-medium text-foreground">Zobacz w Google</span>
-              </button>
             </div>
           </div>
         );
@@ -556,20 +588,20 @@ export default function SharedRoute() {
             )}
             {cityLabel && <span className="flex items-center gap-1 text-muted-foreground"><Building2 className="h-4 w-4" />{cityLabel}</span>}
             <span className="flex items-center gap-1 text-muted-foreground"><MapPin className="h-4 w-4" />{pins.length} {pins.length === 1 ? "miejsce" : pins.length < 5 ? "miejsca" : "miejsc"}</span>
+            {/* #4: serce polubienia calego wyjazdu w TopBarze (obok liczby miejsc) */}
+            <button onClick={toggleLike} aria-label="Polub trasę" className="ml-auto shrink-0 flex items-center gap-1 active:scale-90 transition-transform">
+              <Heart className={cn("h-5 w-5", routeLike.liked ? "fill-red-500 text-red-500" : "text-foreground/70")} />
+              <span className="text-xs font-semibold tabular-nums text-muted-foreground">{routeLike.count}</span>
+            </button>
           </div>
           <div className="flex items-start gap-3 mt-3">
             <h1 className="flex-1 text-2xl font-black text-foreground leading-tight">{route.title || cityLabel}</h1>
-            {isOwner ? (
+            {isOwner && (
               <div className="shrink-0 flex items-center gap-2">
                 <button onClick={handleShare} aria-label="Udostępnij" className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center active:scale-90 transition-transform"><Share2 className="h-4 w-4 text-foreground" /></button>
                 <button onClick={() => navigate(`/review-summary?route=${route.id}&edit=1`)} aria-label="Edytuj trasę" className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center active:scale-90 transition-transform"><Pencil className="h-4 w-4 text-foreground" /></button>
                 <button onClick={() => setAskDelete(true)} aria-label="Usuń wyjazd" className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center active:scale-90 transition-transform"><Trash2 className="h-4 w-4 text-destructive" /></button>
               </div>
-            ) : (
-              <button onClick={toggleLike} aria-label="Polub trasę" className="shrink-0 flex flex-col items-center gap-0.5 active:scale-90 transition-transform">
-                <Heart className={cn("h-6 w-6", routeLike.liked ? "fill-red-500 text-red-500" : "text-foreground")} />
-                <span className="text-xs font-semibold tabular-nums text-muted-foreground">{routeLike.count}</span>
-              </button>
             )}
           </div>
           {dateLabel && (
@@ -615,7 +647,7 @@ export default function SharedRoute() {
                 <button key={k} onClick={() => setPlanTab(k)} aria-label={label}
                   className="flex-1 flex items-center justify-center py-3 relative active:opacity-70 transition-opacity">
                   <Icon className={cn("h-5 w-5", on ? "text-foreground" : "text-muted-foreground/60")} strokeWidth={on ? 2.4 : 2} />
-                  {on && <span className="absolute -bottom-px left-1/2 -translate-x-1/2 h-0.5 w-10 bg-foreground rounded-full" />}
+                  {on && <span className="absolute -bottom-px left-0 right-0 h-0.5 bg-foreground" />}
                 </button>
               );
             })}
@@ -654,6 +686,13 @@ export default function SharedRoute() {
           <div className="px-5 pt-4">
             {galleryPhotos.length > 0 ? (
               <div className="grid grid-cols-2 gap-2">
+                {/* #7: wlasciciel - kafelek dodawania zdjecia */}
+                {isOwner && (
+                  <button onClick={() => photoInputRef.current?.click()} disabled={uploadingPhotos}
+                    className="aspect-[4/3] rounded-2xl border-2 border-dashed border-border flex flex-col items-center justify-center gap-1.5 text-muted-foreground active:scale-[0.98] transition-transform disabled:opacity-60">
+                    {uploadingPhotos ? <Loader2 className="h-6 w-6 animate-spin" /> : <><Plus className="h-6 w-6" /><span className="text-xs font-semibold">Dodaj zdjęcie</span></>}
+                  </button>
+                )}
                 {galleryPhotos.map((url, i) => (
                   <button key={i} onClick={() => setViewerIndex(i)} className="relative aspect-[4/3] rounded-2xl overflow-hidden bg-muted active:opacity-90 transition-opacity">
                     <img src={url} alt="" loading="lazy" className="w-full h-full object-cover" />
@@ -661,10 +700,20 @@ export default function SharedRoute() {
                 ))}
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center py-14 text-center gap-2">
+              <div className="flex flex-col items-center justify-center py-14 text-center gap-3">
                 <ImageIcon className="h-8 w-8 text-muted-foreground/50" />
                 <p className="text-sm text-muted-foreground">{t("gallery_empty", { defaultValue: "Brak zdjęć w tej trasie" })}</p>
+                {isOwner && (
+                  <button onClick={() => photoInputRef.current?.click()} disabled={uploadingPhotos}
+                    className="mt-1 px-4 py-2.5 rounded-full border border-border text-foreground font-bold text-sm flex items-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-60">
+                    {uploadingPhotos ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />} Dodaj zdjęcie
+                  </button>
+                )}
               </div>
+            )}
+            {isOwner && (
+              <input ref={photoInputRef} type="file" accept="image/*,.heic,.heif" multiple className="hidden"
+                onChange={(e) => { const files = Array.from(e.target.files ?? []); e.currentTarget.value = ""; if (files.length) void handleAddPhotos(files); }} />
             )}
           </div>
         )}
