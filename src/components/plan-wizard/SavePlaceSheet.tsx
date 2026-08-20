@@ -10,7 +10,7 @@ import { useShare } from "@/hooks/useShare";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { resolveStored } from "@/components/PlacePhoto";
-import { fetchUserLists, addPlaceToList, removePlaceFromList, quickSavePlace, listHasPlace, type UserList } from "@/lib/placeLists";
+import { fetchUserLists, addPlaceToList, removePlaceFromList, createListWithPlace, quickSavePlace, listHasPlace, type UserList } from "@/lib/placeLists";
 
 // "Miejsce zapisane! · dodaj do wyjazdu" - drawer zapisu miejsca (redesign 2026-08-20).
 // Nagłówek + lista LIST usera (awatar + nazwa + "+"), prywatne z eyebrow "Prywatne".
@@ -50,8 +50,9 @@ export default function SavePlaceSheet({
 
   const [busyId, setBusyId] = useState<string | null>(null);
   const [override, setOverride] = useState<Map<string, boolean>>(new Map());
+  const [newName, setNewName] = useState("");
 
-  useEffect(() => { if (open) { setBusyId(null); setOverride(new Map()); } }, [open]);
+  useEffect(() => { if (open) { setBusyId(null); setOverride(new Map()); setNewName(""); } }, [open]);
 
   const { data: author } = useQuery({
     queryKey: ["save-sheet-author", user?.id],
@@ -109,6 +110,24 @@ export default function SavePlaceSheet({
     } finally { setBusyId(null); }
   };
 
+  // Utwórz NOWĄ listę z tym miejscem. Nowa lista = publiczna polecajka (visited) - domyślnie.
+  const createNew = async () => {
+    if (!place || !user || busyId) return;
+    const name = newName.trim();
+    if (!name) return;
+    setBusyId("new"); haptics.medium();
+    try {
+      const id = await createListWithPlace(user.id, name, "visited", city || null, { ...place }, author);
+      if (!id) throw new Error("create failed");
+      setNewName("");
+      invalidate();
+      toast.success(`Utworzono listę „${name}"`);
+    } catch (e: any) {
+      console.error("[SavePlaceSheet] create list failed:", e?.message ?? e);
+      toast.error("Nie udało się utworzyć listy");
+    } finally { setBusyId(null); }
+  };
+
   const onShare = async () => {
     if (!place) return;
     const url =
@@ -157,6 +176,22 @@ export default function SavePlaceSheet({
         <div className="flex items-center justify-between px-5 pt-2 pb-1 shrink-0">
           <p className="text-xl font-black text-foreground">Miejsce zapisane!</p>
           <Bookmark className="h-6 w-6 text-foreground fill-foreground" />
+        </div>
+
+        {/* Nowa lista: input + "+" (wg Figmy) */}
+        <div className="px-5 pt-2 pb-2 shrink-0">
+          <div className="flex items-center gap-1 h-12 pl-4 pr-1.5 rounded-2xl border border-border bg-background">
+            <input
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") createNew(); }}
+              placeholder="Nazwa listy"
+              className="flex-1 min-w-0 bg-transparent text-base text-foreground placeholder:text-muted-foreground/50 focus:outline-none"
+            />
+            <button type="button" onClick={createNew} disabled={busyId === "new" || !newName.trim()} className="h-9 w-9 rounded-full bg-muted flex items-center justify-center shrink-0 text-foreground active:scale-90 transition-transform disabled:opacity-40" aria-label="Utwórz listę">
+              {busyId === "new" ? <Loader2 className="h-5 w-5 animate-spin" /> : <Plus className="h-5 w-5" />}
+            </button>
+          </div>
         </div>
 
         <div className="flex-1 min-h-0 overflow-y-auto px-5 pt-1 pb-3" style={{ WebkitOverflowScrolling: "touch" }}>
