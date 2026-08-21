@@ -393,7 +393,11 @@ Deno.serve(async (req) => {
     // KTOKOLWIEK moglby wyslac dowolny push (z dowolnym deep-link url) do dowolnego
     // usera. Dozwolone: wywolanie service-role (push-scheduler) ALBO zalogowany user.
     const authToken = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "");
-    const isService = !!authToken && authToken === serviceRoleKey;
+    // Trigger wewnetrzny notify_push (pg_net) uwierzytelnia sie sekretem x-trigger-secret z Vault
+    // - klucz service_role bywa rotowany i nie zawsze zgodny z env funkcji, wiec osobny wspolny sekret.
+    const triggerSecret = Deno.env.get("PUSH_TRIGGER_SECRET") ?? "";
+    const isTrigger = triggerSecret.length > 0 && req.headers.get("x-trigger-secret") === triggerSecret;
+    const isService = isTrigger || (!!authToken && authToken === serviceRoleKey);
     let authorized = isService;
     let senderId: string | null = null;
     if (!authorized && authToken) {
