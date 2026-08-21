@@ -65,7 +65,8 @@ export default function PublicProfile() {
         // TYLKO publiczne polecajki (visited). Prywatne wishlisty "Do zobaczenia" (to_visit) NIGDY
         // na cudzym profilu - guard nawet gdyby jakaś została jako public+approved.
         .eq("list_status", "visited")
-        .eq("is_public", true).eq("hidden_by_admin", false).eq("moderation_status", "approved")
+        // Soft-moderacja: publiczne widoczne od razu (pending + approved), tylko rejected/hidden ukryte.
+        .eq("is_public", true).eq("hidden_by_admin", false).neq("moderation_status", "rejected")
         .order("updated_at", { ascending: false });
       const rows = (cols ?? []) as any[];
       if (!rows.length) return [];

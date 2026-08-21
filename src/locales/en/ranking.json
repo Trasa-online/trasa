@@ -80,7 +80,7 @@
     "add_failed": "Could not add the place",
     "not_found": "Place not found - check the name",
     "updated": "Collection updated!",
-    "sent": "Sent! Your collection will appear after moderator approval.",
+    "sent": "List published and visible to others.",
     "save_failed": "Could not save: {{error}}"
   },
   "error_fallback": "error",

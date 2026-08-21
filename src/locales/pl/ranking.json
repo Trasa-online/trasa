@@ -80,7 +80,7 @@
     "add_failed": "Nie udało się dodać miejsca",
     "not_found": "Nie znaleziono miejsca - sprawdź nazwę",
     "updated": "Lista zaktualizowana!",
-    "sent": "Wysłane! Lista pojawi się po akceptacji moderatora.",
+    "sent": "Lista opublikowana i widoczna dla innych.",
     "save_failed": "Nie udało się zapisać: {{error}}"
   },
   "error_fallback": "błąd",
