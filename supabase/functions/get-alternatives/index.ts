@@ -75,6 +75,22 @@ serve(async (req) => {
       }
     }
 
+    // Cache miss -> platny Text Search. Quota guard (jak google-places-proxy): wspolny miesieczny
+    // budzet (fail-CLOSED) + dzienny burst limit. Chroni przed denial-of-wallet (funkcja jest
+    // osiagalna kluczem anon). Wspoldzieli licznik z google-places-proxy (te same RPC + limity).
+    const MONTHLY_LIMIT = Number(Deno.env.get("GOOGLE_TEXTSEARCH_MONTHLY_LIMIT") ?? "8000");
+    const DAILY_LIMIT = Number(Deno.env.get("GOOGLE_DAILY_CALL_LIMIT") ?? "2500");
+    const monthOk = await sb.rpc("try_consume_textsearch_month", { p_n: 1, p_limit: MONTHLY_LIMIT })
+      .then((r: any) => (r.error ? false : r.data !== false)).catch(() => false);
+    if (!monthOk) {
+      return new Response(JSON.stringify({ alternatives: [] }), { headers: { ...corsHeaders, "Content-Type": "application/json", "X-Quota": "MONTH-EXCEEDED" } });
+    }
+    const dayOk = await sb.rpc("try_consume_google_quota", { p_n: 1, p_limit: DAILY_LIMIT })
+      .then((r: any) => (r.error ? true : r.data !== false)).catch(() => true);
+    if (!dayOk) {
+      return new Response(JSON.stringify({ alternatives: [] }), { headers: { ...corsHeaders, "Content-Type": "application/json", "X-Quota": "EXCEEDED" } });
+    }
+
     const locationBias = (latitude && longitude)
       ? `&location=${latitude},${longitude}&radius=1500`
       : "";

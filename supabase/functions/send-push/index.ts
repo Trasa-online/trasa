@@ -433,6 +433,21 @@ Deno.serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
+    // [H5] Cross-user push dozwolony TYLKO dla: service_role (trigger notify_push - glowny kanal),
+    // admina (moderacja) albo do samego siebie. Zwykly user NIE moze slac dowolnej tresci do
+    // dowolnej ofiary. Legalne powiadomienia cross-user (friend_request/accept, route_used, like,
+    // save...) ida przez trigger notify_push (service_role) na tabeli notifications.
+    if (!isService && senderId && user_id !== senderId) {
+      const { data: adminRow } = await supabase
+        .from("user_roles").select("role").eq("user_id", senderId).eq("role", "admin").maybeSingle();
+      if (!adminRow) {
+        return new Response(
+          JSON.stringify({ error: "forbidden" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
     // [H4] Rate-limit nadawcy (best-effort; nie dotyczy service_role/push-scheduler).
     // Chroni przed masowym spamem push przez pojedyncze konto. Wymaga tabeli
     // fn_throttle (migracja 20260804) - jesli brak, degraduje bez blokowania.

@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
 const ALLOWED_ORIGINS = ["https://trasa.travel", "https://trasa.lovable.app", "http://localhost:8080", "http://localhost:5173", "capacitor://localhost", "https://localhost", "http://localhost"];
 
@@ -59,6 +60,32 @@ serve(async (req) => {
   }
 
   try {
+    // [sec] Wymagaj zalogowanego usera + rate-limit per user - funkcja pali AI (Lovable/Gemini)
+    // + YouTube Data API. Bez tego dowolny holder klucza anon moglby generowac nielimitowany koszt.
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const authToken = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "");
+    let userId: string | null = null;
+    if (authToken && authToken !== anonKey) {
+      try {
+        const authClient = createClient(supabaseUrl, anonKey, { global: { headers: { Authorization: `Bearer ${authToken}` } } });
+        const { data: { user } } = await authClient.auth.getUser(authToken);
+        userId = user?.id ?? null;
+      } catch (_e) { /* nieprawidlowy token */ }
+    }
+    if (!userId) {
+      return new Response(JSON.stringify({ error: "unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    const sb = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    try {
+      const since = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+      const { count } = await sb.from("fn_throttle").select("id", { count: "exact", head: true }).eq("bucket", `extract:${userId}`).gte("created_at", since);
+      if ((count ?? 0) >= 30) {
+        return new Response(JSON.stringify({ error: "rate_limited" }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      await sb.from("fn_throttle").insert({ bucket: `extract:${userId}` });
+    } catch (_e) { /* fn_throttle moze nie istniec - nie blokuj */ }
+
     const { url } = await req.json();
     if (!url) {
       return new Response(
