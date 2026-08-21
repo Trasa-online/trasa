@@ -84,7 +84,7 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
   const createList = async () => {
     if (!user) { close(); navigate("/auth"); return; }
     const places = savedPlaces.filter((p) => selected.has(p.id)).map(toPlaceForList);
-    if (!places.length) { toast.error("Zaznacz przynajmniej jedno miejsce"); return; }
+    // Pusta lista jest OK (opcja "Pomiń") - miejsca mozna dodac pozniej na widoku listy.
     setCreating(true);
     haptics.light();
     const id = await createListFromSavedPlaces(user.id, { title: listName.trim() || "Nowa lista", isPublic: listPublic, places, author });
@@ -210,7 +210,7 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
         {step === "listPick" && (
           <>
             <Header title={listName.trim() || "Nazwa listy"} onBack={() => setStep("listName")}
-              onNext={createList} nextLabel={creating ? "..." : "Dalej"} nextEnabled={selected.size > 0 && !creating} />
+              onNext={createList} nextLabel={creating ? "..." : (selected.size > 0 ? "Dalej" : "Pomiń")} nextEnabled={!creating} />
             <PeopleRow kind="listy" disabled />
             <div className="flex-1 min-h-0 overflow-y-auto px-4 pt-2 pb-[max(16px,env(safe-area-inset-bottom))]">
               {loadingSaved ? (

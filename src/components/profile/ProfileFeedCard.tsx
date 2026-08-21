@@ -41,7 +41,12 @@ export function ProfileFeedCard({
   onDelete?: () => void;
   isPrivate?: boolean;
 }) {
-  const shown = (tiles ?? []).slice(0, 6);
+  // Siatka max 6 kafli. Gdy wiecej: 5 kafli + ostatni "przygaszony +N" (reszta miejsc).
+  const tilesArr = tiles ?? [];
+  const MAX_TILES = 6;
+  const hasOverflow = tilesArr.length > MAX_TILES;
+  const shown = hasOverflow ? tilesArr.slice(0, MAX_TILES - 1) : tilesArr.slice(0, MAX_TILES);
+  const overflowCount = hasOverflow ? tilesArr.length - (MAX_TILES - 1) : 0;
   return (
     // Wrapper NIE jest <button> - stopka zawiera wlasne guziki (olowek/kosz), a button w
     // buttonie to nieprawidlowy HTML. Klikalny jest tylko obszar naglowek+kafelki.
@@ -81,6 +86,11 @@ export function ProfileFeedCard({
             {shown.map((t, i) => (
               <PlaceTile key={t.id ?? i} tile={t} />
             ))}
+            {overflowCount > 0 && (
+              <div className="aspect-square rounded-2xl bg-muted flex items-center justify-center">
+                <span className="text-lg font-bold text-muted-foreground">+{overflowCount}</span>
+              </div>
+            )}
           </div>
         )}
       </button>

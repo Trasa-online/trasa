@@ -250,7 +250,7 @@ const BottomNav = () => {
           Outer = transparentny kontener (pointer-events-none) z marginesem + safe-area;
           inner = bialy pill z cieniem (pointer-events-auto). */}
       {!navHidden && (
-      <nav className="fixed bottom-0 left-0 right-0 z-50 flex justify-center px-4 pb-[max(16px,env(safe-area-inset-bottom,0px))] pointer-events-none">
+      <nav className="fixed bottom-0 left-0 right-0 z-50 flex justify-center px-4 pb-[max(20px,env(safe-area-inset-bottom,0px))] pointer-events-none">
         {/* IA 2026-08-20: 3 pozycje. Native: Eksploruj · + · Profil. Web: Wyjazdy(/home) · + · Profil.
             Pill HUG (nie full-width) i wyśrodkowany - węższy pasek. Fat-thumb: każdy target w-16 (64px)
             × h-14 (56px), pill px-1.5. */}
