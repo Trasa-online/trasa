@@ -634,7 +634,7 @@ export default function SharedRoute() {
   // Kafelki (wg Figmy): poziomy scroll kart ~168px. Peachy zdjecie (badge kategorii + bookmark +
   // nazwa), pod spodem Notka Autora + notka + "Zobacz w Google".
   const renderSwiper = () => (
-    <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-none -mx-5 px-4 pb-2">
+    <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-none -mr-5 pr-5 pb-2">
       {pins.map((pin: any) => {
         const noteText = (noteMap[pin.place_name]?.note ?? "").trim();
         const pinForPhoto = coverFor(pin) ? { ...pin, photo_url: coverFor(pin) } : pin;
@@ -644,7 +644,7 @@ export default function SharedRoute() {
               <PlacePhoto pin={pinForPhoto} className="w-full h-full object-cover" />
               <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-transparent" />
               <span className="absolute top-2 left-2 px-2.5 py-1 rounded-full bg-white text-[11px] font-semibold text-foreground shadow-sm">{categoryLabel(pin.category)}</span>
-              {user && (
+              {!isOwner && user && (
                 <button onClick={(e) => { e.stopPropagation(); toggleSaveBookmark(pin); }} aria-label={isSaved(pin.place_name) ? "Usuń z zapisanych" : "Zapisz miejsce"}
                   className="absolute top-2 right-2 h-8 w-8 rounded-full bg-white/90 flex items-center justify-center shadow-sm active:scale-90 transition-transform">
                   <Bookmark className={cn("h-4 w-4", isSaved(pin.place_name) ? "fill-orange-600 text-orange-600" : "text-foreground")} strokeWidth={2} />
@@ -708,11 +708,13 @@ export default function SharedRoute() {
             )}
             {cityLabel && <span className="flex items-center gap-1 text-muted-foreground"><Building2 className="h-4 w-4" />{cityLabel}</span>}
             <span className="flex items-center gap-1 text-muted-foreground"><MapPin className="h-4 w-4" />{pins.length} {pins.length === 1 ? "miejsce" : pins.length < 5 ? "miejsca" : "miejsc"}</span>
-            {/* #4: serce polubienia calego wyjazdu w TopBarze (obok liczby miejsc) */}
-            <button onClick={toggleLike} aria-label="Polub trasę" className="ml-auto shrink-0 flex items-center gap-1 active:scale-90 transition-transform">
-              <Heart className={cn("h-5 w-5", routeLike.liked ? "fill-red-500 text-red-500" : "text-foreground/70")} />
-              <span className="text-xs font-semibold tabular-nums text-muted-foreground">{routeLike.count}</span>
-            </button>
+            {/* Serce polubienia wyjazdu w TopBarze - TYLKO gosc. Wlasciciel nie lajkuje wlasnej trasy. */}
+            {!isOwner && (
+              <button onClick={toggleLike} aria-label="Polub trasę" className="ml-auto shrink-0 flex items-center gap-1 active:scale-90 transition-transform">
+                <Heart className={cn("h-5 w-5", routeLike.liked ? "fill-red-500 text-red-500" : "text-foreground/70")} />
+                <span className="text-xs font-semibold tabular-nums text-muted-foreground">{routeLike.count}</span>
+              </button>
+            )}
           </div>
       </div>
 

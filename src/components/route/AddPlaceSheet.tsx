@@ -11,6 +11,14 @@ import { categoryIconSrc, categoryFromGoogleTypes } from "@/lib/placeCategoryIco
 import { fetchSavedPlaces, type SavedPlace, type PlaceForList } from "@/lib/placeLists";
 
 const NBSP = " ";
+const SCOPE_KM = 20; // wyniki wyszukiwarki tylko w obrebie ~20km od srodka trasy/miasta
+// Odleglosc haversine (km) - filtr "w obrebie miasta" (unika miejsc z innego miasta/kraju).
+const distKm = (a: { lat: number; lng: number }, b: { lat: number; lng: number }) => {
+  const R = 6371, toRad = (d: number) => (d * Math.PI) / 180;
+  const dLat = toRad(b.lat - a.lat), dLng = toRad(b.lng - a.lng);
+  const s = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(s));
+};
 const keyOf = (p: { place_name?: string | null }) => (p.place_name || "").trim().toLowerCase();
 const toPlaceForList = (p: SavedPlace): PlaceForList => ({
   place_name: p.place_name, category: p.category, address: p.address, description: p.short_desc,
@@ -42,6 +50,28 @@ export default function AddPlaceSheet({ open, onClose, city, existingPlaces, onA
   const [adding, setAdding] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // Srodek do filtra "w obrebie miasta" (~20km): centroida miejsc JUZ w trasie, a gdy brak (nowa
+  // trasa/lista) - geokod miasta (Google textsearch). Zapobiega dodaniu miejsca z innego miasta/kraju.
+  const existingCentroid = useMemo(() => {
+    const pts = (existingPlaces ?? []).filter((p) => p.latitude != null && p.longitude != null);
+    if (!pts.length) return null;
+    return {
+      lat: pts.reduce((s, p) => s + (p.latitude as number), 0) / pts.length,
+      lng: pts.reduce((s, p) => s + (p.longitude as number), 0) / pts.length,
+    };
+  }, [existingPlaces]);
+  const { data: geoCenter = null } = useQuery({
+    queryKey: ["addplace-city-center", city],
+    enabled: open && !!city && !existingCentroid,
+    staleTime: 60 * 60 * 1000,
+    queryFn: async () => {
+      const { data } = await supabase.functions.invoke("google-places-proxy", { body: { action: "textsearch", query: city } });
+      const r = ((data as any)?.results ?? [])[0];
+      return r?.latitude != null ? { lat: r.latitude as number, lng: r.longitude as number } : null;
+    },
+  });
+  const center = existingCentroid ?? geoCenter;
+
   useEffect(() => {
     if (open) { setSelected([]); setManual([]); setQuery(""); setResults([]); setBlocked(false); setAdding(false); }
   }, [open]);
@@ -64,8 +94,12 @@ export default function AddPlaceSheet({ open, onClose, city, existingPlaces, onA
         const { data } = await supabase.functions.invoke("google-places-proxy", { body: { action: "textsearch", query: `${query} ${city ?? ""}`.trim() } });
         if (!alive) return;
         setBlocked(!!(data as any)?.quota_exceeded);
-        const raw = ((data as any)?.results ?? []).slice(0, 6) as any[];
-        setResults(raw.map((r) => ({
+        const all = ((data as any)?.results ?? []) as any[];
+        // Filtr "w obrebie miasta" (~20km od srodka) - odrzuca wyniki z innych miast/krajow.
+        const scoped = center
+          ? all.filter((r) => r.latitude == null || r.longitude == null || distKm(center, { lat: r.latitude, lng: r.longitude }) <= SCOPE_KM)
+          : all;
+        setResults(scoped.slice(0, 6).map((r) => ({
           place_name: r.name, address: r.full_address ?? null, latitude: r.latitude ?? null, longitude: r.longitude ?? null,
           category: categoryFromGoogleTypes(r.types), photo_url: null, place_id: null, google_place_id: null, rating: null,
         })));
@@ -73,7 +107,7 @@ export default function AddPlaceSheet({ open, onClose, city, existingPlaces, onA
       finally { if (alive) setSearching(false); }
     }, 350);
     return () => { alive = false; clearTimeout(t); };
-  }, [query, searchMode, city]);
+  }, [query, searchMode, city, center]);
 
   const isSel = (p: PlaceForList) => selected.some((s) => keyOf(s) === keyOf(p));
   const toggle = (p: PlaceForList) => setSelected((prev) => prev.some((s) => keyOf(s) === keyOf(p)) ? prev.filter((s) => keyOf(s) !== keyOf(p)) : [...prev, p]);

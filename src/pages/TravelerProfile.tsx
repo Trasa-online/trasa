@@ -234,7 +234,7 @@ const TravelerProfile = () => {
     queryKey: ["profile-trip-feed", user?.id],
     enabled: !!user?.id,
     queryFn: async () => {
-      const sel = "id, title, city, start_date, day_number, folder_id, views, created_at, user_id, is_shared";
+      const sel = "id, title, city, start_date, day_number, folder_id, views, created_at, user_id, is_shared, trip_type";
       // Wlasne trasy (TAKZE robocze is_shared=false - badge "Robocze") + trasy grupowe, do ktorych
       // jestem zaproszony (member, is_shared=true). Koniec osobnego widoku /utworz/robocze (IA 2026-08-22).
       const [ownRes, memberRes] = await Promise.all([
@@ -447,10 +447,12 @@ const TravelerProfile = () => {
             ) : (
               tripCards.map((tr: any) => {
                 const dateLabel = tr.start_date ? format(parseISO(tr.start_date), "d LLLL yyyy", { locale: dateLocale() }) : "";
-                // Roboczy wyjazd (is_shared=false) = prywatny draft -> eyebrow "Robocze" + klik otwiera
-                // KREATOR (SharedRoute /route/:id czyta tylko is_shared=true, wiec draft by sie nie otworzyl).
-                const isDraft = tr.is_own && tr.is_shared === false;
-                const eyebrow = [isDraft ? "Robocze" : null, countryForCity(tr.city), tr.city, dateLabel].filter(Boolean).join(" · ");
+                // "Roboczy" = wyjazd w planach (trip_type='planning') - eyebrow "Robocze" + bez metryk.
+                // Otwarcie: is_shared=false (solo draft) -> KREATOR (SharedRoute czyta tylko is_shared=true);
+                // is_shared=true (grupowy plan) -> widok trasy dziala normalnie.
+                const isRoboczy = tr.trip_type === "planning";
+                const openInCreator = tr.is_own && tr.is_shared === false;
+                const eyebrow = [isRoboczy ? "Robocze" : null, countryForCity(tr.city), tr.city, dateLabel].filter(Boolean).join(" · ");
                 return (
                   <ProfileFeedCard
                     key={tr.id}
@@ -461,7 +463,8 @@ const TravelerProfile = () => {
                     title={tr.title || (tr.city ? t("feed.trip_fallback", { city: tr.city, defaultValue: `Wyjazd do ${tr.city}` }) : t("feed.trip_fallback_generic", "Wyjazd"))}
                     tiles={tr.tiles}
                     counts={{ saves: tr.saves, likes: tr.likes, views: tr.views }}
-                    onOpen={() => isDraft
+                    hideStats={isRoboczy}
+                    onOpen={() => openInCreator
                       ? navigate("/wyjazd/nowy", { state: { draftId: tr.id, city: tr.city, title: tr.title } })
                       : navigate(`/route/${tr.id}`)}
                     onEdit={tr.is_own ? () => navigate(`/review-summary?route=${tr.id}&edit=1`) : undefined}

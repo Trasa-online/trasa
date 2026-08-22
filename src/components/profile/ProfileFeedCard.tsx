@@ -28,6 +28,7 @@ export function ProfileFeedCard({
   onEdit,
   onDelete,
   isPrivate,
+  hideStats,
 }: {
   avatarUrl?: string | null;
   fallback?: string;
@@ -40,6 +41,7 @@ export function ProfileFeedCard({
   onEdit?: () => void;
   onDelete?: () => void;
   isPrivate?: boolean;
+  hideStats?: boolean; // roboczy wyjazd - bez metryk zapisow/polubien (nieopublikowany)
 }) {
   // Siatka max 6 kafli. Gdy wiecej: 5 kafli + ostatni "przygaszony +N" (reszta miejsc).
   const tilesArr = tiles ?? [];
@@ -97,7 +99,7 @@ export function ProfileFeedCard({
 
       {/* Stopka: prywatna -> kłódka; publiczna/wyjazd -> metryki. + (wlasciciel) edycja/usuniecie */}
       <div className="flex items-center gap-5 pt-3 mt-3 border-t border-border/40 text-muted-foreground">
-        {isPrivate ? (
+        {!hideStats && (isPrivate ? (
           <span className="flex items-center gap-1.5 text-sm font-medium">
             <Lock className="h-[16px] w-[16px]" /> Prywatne
           </span>
@@ -110,7 +112,7 @@ export function ProfileFeedCard({
               <Heart className="h-[18px] w-[18px]" /> {counts.likes}
             </span>
           </>
-        )}
+        ))}
         {(onEdit || onDelete) && (
           <>
             <div className="flex-1" />
