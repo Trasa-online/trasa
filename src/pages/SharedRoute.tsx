@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -10,7 +10,8 @@ import { notify } from "@/lib/notify";
 import { sendClientPush, getCurrentUserName } from "@/lib/clientPush";
 import { format } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
-import { MapPin, ArrowLeft, Sparkles, ChevronRight, ChevronLeft, Bookmark, List, GalleryHorizontalEnd, Calendar as CalendarIcon, Image as ImageIcon, Maximize2, X, Building2, Pencil, Trash2, Heart, Share2, Plus, Map as MapIcon, Loader2, Star } from "lucide-react";
+import { MapPin, ArrowLeft, Sparkles, ChevronRight, ChevronLeft, Bookmark, List, GalleryHorizontalEnd, Calendar as CalendarIcon, Image as ImageIcon, Maximize2, X, Building2, Pencil, Trash2, Heart, Share2, Plus, Map as MapIcon, Loader2, Star, GripVertical } from "lucide-react";
+import { Reorder, useDragControls } from "framer-motion";
 import { toast } from "sonner";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { PlacePhoto } from "@/components/PlacePhoto";
@@ -62,6 +63,29 @@ const GoogleGlyph = ({ className }: { className?: string }) => (
     <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
   </svg>
 );
+
+// Wiersz miejsca z uchwytem przeciagania (framer-motion Reorder) - tryb edycji wspoldzielonej
+// trasy (wlasciciel + uczestnik). Wzor 1:1 z SortablePlanRow w ReviewSummary.
+function SortableRouteRow({ value, rowPin, index, categoryLabel, onOpen, onGoogle, onDelete, note }: {
+  value: any; rowPin: any; index: number; categoryLabel: ReactNode;
+  onOpen: () => void; onGoogle: () => void; onDelete: () => void; note?: ReactNode;
+}) {
+  const controls = useDragControls();
+  const grip = (
+    <span
+      onPointerDown={(e) => controls.start(e)}
+      aria-label="Przeciągnij, by zmienić kolejność"
+      className="shrink-0 w-6 flex items-center justify-center text-muted-foreground/45 cursor-grab active:cursor-grabbing touch-none"
+    >
+      <GripVertical className="h-5 w-5" />
+    </span>
+  );
+  return (
+    <Reorder.Item as="div" value={value} dragListener={false} dragControls={controls} transition={{ duration: 0 }}>
+      <RoutePlaceRow pin={rowPin} index={index} categoryLabel={categoryLabel} onOpen={onOpen} onGoogle={onGoogle} onDelete={onDelete} dragHandle={grip} note={note} />
+    </Reorder.Item>
+  );
+}
 
 export default function SharedRoute() {
   const { id } = useParams<{ id: string }>();
@@ -363,6 +387,20 @@ export default function SharedRoute() {
   const isOwner = !!user && route.user_id === user.id;
   // Zdjecia moze dodawac wlasciciel LUB uczestnik wspolnego wyjazdu (przez RPC append_route_photos).
   const canAddPhotos = isOwner || isGroupMember;
+  // Edycja miejsc (dodaj/usun/kolejnosc): wlasciciel LUB uczestnik wspolnego wyjazdu (RLS: polityki
+  // "Group members can ... pins of shared route"). Nazwa/publikacja/usuniecie trasy zostaja owner-only.
+  const canEdit = isOwner || isGroupMember;
+
+  // Zmiana kolejnosci miejsc (drag) - optymistycznie w cache + persist pin_order (bezposredni update,
+  // RLS zezwala wlascicielowi i czlonkowi). Wzor: ReviewSummary.savePlan.
+  const persistPinOrder = async (ordered: any[]) => {
+    await Promise.all(ordered.map((p: any, idx: number) => (supabase as any).from("pins").update({ pin_order: idx }).eq("id", p.id)));
+    queryClient.invalidateQueries({ queryKey: ["shared-route-pins", id] });
+  };
+  const handleReorderPins = (newOrder: any[]) => {
+    queryClient.setQueryData(["shared-route-pins", id], newOrder);
+    void persistPinOrder(newOrder);
+  };
 
   const handleShare = () => { void share({ title: route.title || cityLabel || "Wyjazd", url: buildShareUrl(`/route/${route.id}`) }); };
 
@@ -546,33 +584,52 @@ export default function SharedRoute() {
 
   // Plaska lista miejsc (wg Figmy: bez grupowania po kategorii) - wspoldzielony RoutePlaceRow
   // (duze zdjecie 104px, chip kategorii + guzik Google). Notka autora pod wierszem gdy jest.
-  const renderList = () => (
-    <div>
-      {pins.map((pin: any, i: number) => {
-        const noteText = (noteMap[pin.place_name]?.note ?? "").trim();
-        const note = noteText ? (
-          <div>
-            <p className="text-sm font-semibold text-foreground">Notka Autora</p>
-            <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap mt-0.5">{noteText}</p>
-          </div>
-        ) : undefined;
-        return (
+  const buildNote = (pin: any): ReactNode | undefined => {
+    const noteText = (noteMap[pin.place_name]?.note ?? "").trim();
+    return noteText ? (
+      <div>
+        <p className="text-sm font-semibold text-foreground">Notka Autora</p>
+        <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap mt-0.5">{noteText}</p>
+      </div>
+    ) : undefined;
+  };
+  const rowPinFor = (pin: any) => (coverFor(pin) ? { ...pin, photo_url: coverFor(pin) } : pin);
+
+  const renderList = () =>
+    canEdit ? (
+      // Tryb edycji (wlasciciel/uczestnik): przeciaganie zmienia kolejnosc, kosz usuwa.
+      <Reorder.Group axis="y" values={pins} onReorder={handleReorderPins} as="div">
+        {pins.map((pin: any, i: number) => (
+          <SortableRouteRow
+            key={pin.id}
+            value={pin}
+            rowPin={rowPinFor(pin)}
+            index={i}
+            categoryLabel={categoryLabel(pin.category || "other")}
+            onOpen={() => openDetail(pin)}
+            onGoogle={() => openGooglePlace(pin)}
+            onDelete={() => handleDeletePin(pin)}
+            note={buildNote(pin)}
+          />
+        ))}
+      </Reorder.Group>
+    ) : (
+      <div>
+        {pins.map((pin: any, i: number) => (
           <RoutePlaceRow
             key={pin.id}
-            pin={coverFor(pin) ? { ...pin, photo_url: coverFor(pin) } : pin}
+            pin={rowPinFor(pin)}
             index={i}
             categoryLabel={categoryLabel(pin.category || "other")}
             onOpen={() => openDetail(pin)}
             onGoogle={() => openGooglePlace(pin)}
             onSave={!isOwner && user ? () => toggleSaveBookmark(pin) : undefined}
             saved={isSaved(pin.place_name)}
-            onDelete={isOwner ? () => handleDeletePin(pin) : undefined}
-            note={note}
+            note={buildNote(pin)}
           />
-        );
-      })}
-    </div>
-  );
+        ))}
+      </div>
+    );
 
   // Kafelki (wg Figmy): poziomy scroll kart ~168px. Peachy zdjecie (badge kategorii + bookmark +
   // nazwa), pod spodem Notka Autora + notka + "Zobacz w Google".
@@ -659,9 +716,8 @@ export default function SharedRoute() {
           </div>
       </div>
 
-      {/* Obszar scrolla - #1: BEZ okladki tla trasy (okladka TYLKO w eksploracji).
-          Uczestnik wspolnego wyjazdu nie ma dolnego CTA -> mniejszy padding. */}
-      <div className={cn("flex-1 min-h-0 overflow-y-auto", (isOwner || !isGroupMember) ? "pb-44" : "pb-8")}>
+      {/* Obszar scrolla - #1: BEZ okladki tla trasy (okladka TYLKO w eksploracji). */}
+      <div className="flex-1 min-h-0 overflow-y-auto pb-44">
         {/* Naglowek: tytul + opis, spacing 35px pod TopBarem */}
         <div className="px-5 pt-[35px]">
           <div className="flex items-start gap-3">
@@ -739,7 +795,7 @@ export default function SharedRoute() {
             ) : (
               <EmptyPlacesState
                 title="Trasa jest pusta"
-                hint={isOwner ? "Dodaj pierwsze miejsce klikając guzik „+ Dodaj nowe miejsce”" : "Ta trasa nie ma jeszcze żadnych miejsc."}
+                hint={canEdit ? "Dodaj pierwsze miejsce klikając guzik „+ Dodaj nowe miejsce”" : "Ta trasa nie ma jeszcze żadnych miejsc."}
               />
             )}
           </div>
@@ -828,8 +884,8 @@ export default function SharedRoute() {
         city={route.city ?? ""}
       />
 
-      {/* Wlasciciel: dodaj nowe miejsce (zapisane + wyszukiwarka Google) do tej trasy */}
-      {isOwner && (
+      {/* Editor (wlasciciel/uczestnik): dodaj nowe miejsce (zapisane + wyszukiwarka Google) do tej trasy */}
+      {canEdit && (
         <AddPlaceSheet
           open={addPlaceOpen}
           onClose={() => setAddPlaceOpen(false)}
@@ -840,7 +896,7 @@ export default function SharedRoute() {
             google_place_id: p.google_place_id ?? null, rating: p.rating ?? null,
           }))}
           onAdd={handleAddPlaces}
-          onInvitePeople={() => setInviteOpen(true)}
+          onInvitePeople={isOwner ? () => setInviteOpen(true) : undefined}
         />
       )}
       {isOwner && (
@@ -884,12 +940,10 @@ export default function SharedRoute() {
         </div>
       )}
 
-      {/* CTA: wlasciciel = "Dodaj nowe miejsce"; gosc = zapisz trase + zaplanuj wlasna.
-          Uczestnik wspolnego wyjazdu NIE widzi CTA (trasa juz jego) - caly pasek ukryty. */}
-      {(isOwner || !isGroupMember) && (
-        <div className="fixed bottom-0 left-0 right-0 max-w-lg mx-auto px-5 pt-2 bg-background border-t border-border/30"
-          style={{ paddingBottom: "max(12px, env(safe-area-inset-bottom, 12px))" }}>
-          {isOwner ? (
+      {/* CTA: editor (wlasciciel LUB uczestnik wspolnego wyjazdu) = "Dodaj nowe miejsce"; gosc = zapisz + zaplanuj. */}
+      <div className="fixed bottom-0 left-0 right-0 max-w-lg mx-auto px-5 pt-2 bg-background border-t border-border/30"
+        style={{ paddingBottom: "max(12px, env(safe-area-inset-bottom, 12px))" }}>
+        {canEdit ? (
             <button
               onClick={() => setAddPlaceOpen(true)}
               className="w-full py-3 rounded-full border border-border bg-background text-foreground font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
@@ -914,7 +968,6 @@ export default function SharedRoute() {
             </>
           )}
         </div>
-      )}
 
       {/* Sheet wyboru daty wyjazdu przy zapisie cudzej trasy do dziennika */}
       {showDateSheet && (
