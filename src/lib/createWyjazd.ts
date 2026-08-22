@@ -79,7 +79,10 @@ export async function createWyjazdFromPlaces(
   // list_cover_url NOT NULL, inaczej trasa jest niewidoczna. Zasilamy ja od razu
   // pierwszym dostepnym zdjeciem miejsca, zeby swiezo utworzona trasa trafila do
   // eksploracji bez koniecznosci recznego ustawiania okladki w ReviewSummary.
-  const firstPhoto = await pickCoverPhoto(places);
+  // WYJATEK: wyjazd PRZYSZLY (planning) = ROBOCZY - NIE ustawiamy okladki eksploracji, zeby nie
+  // wpadal do feedu (nawet grupowy z is_shared=true). Okladka pojawi sie dopiero gdy stanie sie
+  // wspomnieniem (user przejdzie przez edytor - ensureListCover / reczny wybor).
+  const firstPhoto = opts?.tripType === "planning" ? null : await pickCoverPhoto(places);
   const { data: route, error } = await (supabase as any)
     .from("routes")
     .insert({

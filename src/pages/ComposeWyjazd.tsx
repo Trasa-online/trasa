@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useLocation } from "react-router-dom";
-import { ArrowLeft, Search, Plus, X, ChevronDown, Calendar as CalendarIcon, List, GalleryHorizontalEnd, Loader2, ArrowRight, Trash2, Maximize2, GripVertical, UserPlus } from "lucide-react";
+import { ArrowLeft, Search, Plus, X, ChevronDown, Calendar as CalendarIcon, List, GalleryHorizontalEnd, Loader2, ArrowRight, Trash2, Maximize2, GripVertical, UserPlus, Check } from "lucide-react";
 import InviteFriendsSheet from "@/components/route/InviteFriendsSheet";
 import { inviteUsersToRoute } from "@/lib/groupInvite";
 import { avatarSrc } from "@/lib/avatar";
@@ -854,12 +854,16 @@ export default function ComposeWyjazd() {
         )}
       </div>
 
-      {/* Footer - ukryty gdy fokus na wyszukiwarce (wiecej miejsca na wyniki). */}
+      {/* Footer - ukryty gdy fokus na wyszukiwarce. PRZYSZŁY wyjazd (mode="future") = zapis jako
+          ROBOCZY (pomija krok notek/zdjęć/okładki, is_shared=false -> NIE trafia do eksploracji).
+          PRZESZŁY/domyślny = edytor wspomnienia (Notki -> Zdjęcia -> okładka -> publikacja). */}
       {!searchFocused && (
         <div className="shrink-0 border-t border-border/20 px-4 pt-3 pb-[max(16px,env(safe-area-inset-bottom))] bg-background flex items-center gap-2">
-          <button onClick={() => confirm(true)} disabled={creating}
+          <button onClick={() => confirm(nav.mode !== "future")} disabled={creating}
             className="flex-1 h-12 rounded-2xl bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform shadow-md shadow-orange-500/20 disabled:opacity-60">
-            {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <>Przejdź do sugestii <ArrowRight className="h-4 w-4" /></>}
+            {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : (nav.mode === "future"
+              ? <>Zapisz wyjazd <Check className="h-4 w-4" /></>
+              : <>Przejdź do sugestii <ArrowRight className="h-4 w-4" /></>)}
           </button>
         </div>
       )}
