@@ -1827,9 +1827,10 @@ export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityCh
       let q = (supabase as any)
         .from("routes")
         .select("id, title, city, ai_highlight, ai_summary, user_id, created_at, views, share_anonymous, cover_url, list_cover_url, review_photos, group_session_id, tags")
-        // Bramka "sfinalizowane": trasa pojawia sie w eksploracji dopiero gdy ma ustawiona
-        // miniature (list_cover_url) - auto-losowana ze zdjec usera przy tworzeniu/finalizacji.
-        .eq("is_shared", true).not("title", "is", null).not("list_cover_url", "is", null);
+        // Bramka "opublikowane": trasa pojawia sie w eksploracji dopiero gdy jest OPUBLIKOWANA
+        // (status='published' przez "Zapisz trase") i ma miniature (list_cover_url). status blokuje
+        // przeciek roboczych tras grupowych (is_shared=true, status='draft') z auto-okladka.
+        .eq("is_shared", true).eq("status", "published").not("title", "is", null).not("list_cover_url", "is", null);
       if (city && city !== "all") q = q.ilike("city", `${city}%`);
       const { data } = await q
         // Najnowsze trasy na gorze feedu (created_at malejaco) - nowo dodana trasa od razu na czele.
@@ -1895,6 +1896,7 @@ export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityCh
           .from("routes")
           .select("id, title, city, review_photos, cover_url, list_cover_url, ai_highlight, user_id, views")
           .eq("is_shared", true)
+          .eq("status", "published")
           .not("title", "is", null)
           .not("list_cover_url", "is", null)
           .order("views", { ascending: false, nullsFirst: false })
@@ -2044,8 +2046,8 @@ export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityCh
       }
 
       const applyRoute = (b: any) => {
-        // Bramka jak w feedzie: tylko trasy ze sfinalizowana miniatura (list_cover_url).
-        let x = b.eq("is_shared", true).not("title", "is", null).not("list_cover_url", "is", null);
+        // Bramka jak w feedzie: opublikowane (status='published') ze sfinalizowana miniatura (list_cover_url).
+        let x = b.eq("is_shared", true).eq("status", "published").not("title", "is", null).not("list_cover_url", "is", null);
         if (cities) x = x.in("city", cities);
         return x;
       };

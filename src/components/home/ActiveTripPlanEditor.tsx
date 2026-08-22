@@ -359,17 +359,13 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false, onDelete, deleting 
     ));
   }, []);
 
-  // Aktywny wpis vs wspomnienie: wspomnienie gdy minal OSTATNI dzien trasy.
-  const isMemory = useMemo(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    let lastTs = -Infinity;
-    for (const d of sortedDays) {
-      const ds = d.end_date ?? d.start_date;
-      if (ds) lastTs = Math.max(lastTs, new Date(ds).getTime());
-    }
-    return Number.isFinite(lastTs) && lastTs < today.getTime();
-  }, [sortedDays]);
+  // Aktywny wpis vs wspomnienie: wspomnienie gdy trasa ZRECENZOWANA (plan_finalized, ustawiane przez
+  // "Zapisz trase"/"Gotowe"). NIE po minieciu daty - roboczy wyjazd po dacie zostaje aktywny/edytowalny
+  // (spojne z ReviewSummary.isMemory; "przeszly" = opublikowany, nie miniety).
+  const isMemory = useMemo(
+    () => sortedDays.some((d: any) => d?.plan_finalized === true),
+    [sortedDays],
+  );
 
   // ── "Następny przystanek" (tryb w trakcie trasy) ──────────────────────────────
   // Kontekst wnioskujemy: trasa nie jest wspomnieniem (isMemory) + jestes na miejscu

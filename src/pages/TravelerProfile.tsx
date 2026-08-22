@@ -234,7 +234,7 @@ const TravelerProfile = () => {
     queryKey: ["profile-trip-feed", user?.id],
     enabled: !!user?.id,
     queryFn: async () => {
-      const sel = "id, title, city, start_date, day_number, folder_id, views, created_at, user_id, is_shared, trip_type";
+      const sel = "id, title, city, start_date, day_number, folder_id, views, created_at, user_id, is_shared, trip_type, status";
       // Wlasne trasy (TAKZE robocze is_shared=false - badge "Robocze") + trasy grupowe, do ktorych
       // jestem zaproszony (member, is_shared=true). Koniec osobnego widoku /utworz/robocze (IA 2026-08-22).
       const [ownRes, memberRes] = await Promise.all([
@@ -447,10 +447,12 @@ const TravelerProfile = () => {
             ) : (
               tripCards.map((tr: any) => {
                 const dateLabel = tr.start_date ? format(parseISO(tr.start_date), "d LLLL yyyy", { locale: dateLocale() }) : "";
-                // "Roboczy" = wyjazd w planach (trip_type='planning') - eyebrow "Robocze" + bez metryk.
+                // "Roboczy" = wyjazd NIEOPUBLIKOWANY (status != 'published') - eyebrow "Robocze" + bez
+                // metryk + poza eksploracja. Publikacja = "Zapisz trase" (finishEditing) ustawia
+                // status='published'. NIE po minieciu daty (patrz isMemory w ReviewSummary).
                 // Otwarcie: is_shared=false (solo draft) -> KREATOR (SharedRoute czyta tylko is_shared=true);
-                // is_shared=true (grupowy plan) -> widok trasy dziala normalnie.
-                const isRoboczy = tr.trip_type === "planning";
+                // is_shared=true (grupowy plan / opublikowany) -> widok trasy dziala normalnie.
+                const isRoboczy = tr.status !== "published";
                 const openInCreator = tr.is_own && tr.is_shared === false;
                 const eyebrow = [isRoboczy ? "Robocze" : null, countryForCity(tr.city), tr.city, dateLabel].filter(Boolean).join(" · ");
                 return (

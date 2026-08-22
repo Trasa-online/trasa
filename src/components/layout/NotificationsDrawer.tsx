@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { X, Bell, UserPlus, UserCheck, MapPin, Route, Bookmark, CheckCircle2, XCircle, MessageCircle, Heart } from "lucide-react";
+import { X, Bell, UserPlus, UserCheck, MapPin, Route, Bookmark, CheckCircle2, XCircle, MessageCircle, Heart, Camera } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
 import { avatarSrc } from "@/lib/avatar";
@@ -39,6 +39,7 @@ const TYPE_CONFIG: Record<string, { icon: React.ElementType; color: string; labe
   route_liked:    { icon: Heart,    color: "text-red-500 bg-red-100",        label: (u, meta) => `${u} polubił(a) Twoją trasę${meta?.city ? ` po ${meta.city}` : ""}` },
   list_liked:     { icon: Heart,    color: "text-red-500 bg-red-100",        label: (u, meta) => `${u} polubił(a) Twoją listę${meta?.title ? ` „${meta.title}"` : ""}` },
   list_saved:     { icon: Bookmark, color: "text-orange-600 bg-orange-100",  label: (u, meta) => `${u} zapisał(a) Twoją listę${meta?.title ? ` „${meta.title}"` : ""}` },
+  trip_reminder:  { icon: Camera,   color: "text-orange-600 bg-orange-100",  label: (_u, meta) => `Dokończ swój wyjazd${meta?.city ? ` po ${meta.city}` : ""}: dodaj zdjęcia i notki, żeby pojawił się w eksploracji` },
 };
 
 interface Props {
@@ -241,6 +242,20 @@ export default function NotificationsDrawer({ open, onClose, userId }: Props) {
                           className="mt-2 px-3 py-1.5 rounded-full bg-primary text-white text-xs font-semibold active:scale-95 transition-transform"
                         >
                           Zobacz trasę →
+                        </button>
+                      )}
+                      {n.type === "trip_reminder" && (
+                        <button
+                          onClick={() => {
+                            onClose();
+                            // Deep-link do steppera dokumentowania (?edit=1 = forceEdit) zeby user
+                            // od razu dodal zdjecia/notki/okladke i opublikowal ("Zapisz trase").
+                            const rid = n.route_id ?? n.metadata?.route_id;
+                            navigate(rid ? `/review-summary?route=${rid}&edit=1` : "/moj-profil?tab=wyjazdy");
+                          }}
+                          className="mt-2 px-3 py-1.5 rounded-full bg-primary text-white text-xs font-semibold active:scale-95 transition-transform"
+                        >
+                          Dokończ wyjazd →
                         </button>
                       )}
                       {(n.type === "friend_request" || n.type === "friend_accept") && (

@@ -1072,15 +1072,12 @@ const ReviewSummary = () => {
       await (supabase as any).from("routes").update({ status: "published" })
         .in("id", dayRouteIds.length ? dayRouteIds : [activeRouteId]);
     } catch (e: any) { console.error("[ReviewSummary] publish status failed:", e?.message ?? e); }
-    // Aktywny wyjazd (przyszla data, isMemory=false): NIE finalizujemy. Wpis staje sie
-    // zakonczony (pocztowka) dopiero PO minieciu daty. Wyjscie z edycji zapisuje i wraca do dziennika.
-    if (!isMemory) {
-      queryClient.invalidateQueries({ queryKey: ["journal-entries"] });
-      navigate("/moj-profil?tab=wyjazdy");
-      return;
-    }
+    // "Zapisz trase" = FINALIZACJA/PUBLIKACJA: trasa staje sie wspomnieniem (przeszla). Ustawiamy
+    // plan_finalized=true + trip_type='completed' -> isMemory=true -> PODSUMOWANIE (read-only). NIE
+    // po dacie (poprzednio: przyszla data -> publikacja bez finalizacji). Teraz stepper prowadzi
+    // wprost do gotowego, opublikowanego wpisu - user swiadomie dokonczyl (okladka + "Zapisz trase").
     try {
-      await (supabase as any).from("routes").update({ plan_finalized: true }).in("id", dayRouteIds.length ? dayRouteIds : [activeRouteId]);
+      await (supabase as any).from("routes").update({ plan_finalized: true, trip_type: "completed" }).in("id", dayRouteIds.length ? dayRouteIds : [activeRouteId]);
     } catch (e: any) { console.error("[ReviewSummary] finishEditing failed:", e?.message ?? e); }
     // Auto-miniatura eksploracji przy finalizacji (task 3) - jesli trasa ma zdjecia a brak miniatury.
     await ensureListCover(routeId);
@@ -1355,20 +1352,16 @@ const ReviewSummary = () => {
     return format(fd, "d MMMM yyyy", { locale: dateLocale() });
   }, [sortedDays, isMultiDay, route?.end_date, route?.start_date]);
 
-  // Aktywny wpis vs wspomnienie: wspomnienie gdy trasa UKOŃCZONA (trip_type=completed - user
-  // odhaczył wszystkie miejsca / zatwierdził) LUB zrecenzowana (plan_finalized) LUB minął OSTATNI
-  // dzień. trip_type ustawiane od razu przy ukończeniu, plan_finalized dopiero po stepperze.
-  const isMemory = useMemo(() => {
-    if (sortedDays.some((d: any) => d?.trip_type === "completed" || d?.plan_finalized)) return true;
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    let lastTs = -Infinity;
-    for (const d of sortedDays) {
-      const ds = d.end_date ?? d.start_date;
-      if (ds) lastTs = Math.max(lastTs, new Date(ds).getTime());
-    }
-    return Number.isFinite(lastTs) && lastTs < today.getTime();
-  }, [sortedDays]);
+  // Aktywny wpis vs wspomnienie: wspomnienie (read-only podsumowanie / stepper dokumentowania) gdy
+  // trasa OPUBLIKOWANA - trip_type=completed (utworzona jako "przeszly") LUB zrecenzowana
+  // (plan_finalized, ustawiane przez "Zapisz trase"). NIE po minieciu daty: roboczy wyjazd po dacie
+  // zostaje edytowalny, user dokumentuje go i publikuje przez stepper (pencil / ?edit=1 = forceEdit).
+  // Data nie moze byc triggerem - inaczej wyjazd "znika" bez okladki/zdjec i nie buduje bazy zdjec
+  // miejsc (fetchPlaceUserPhotos pomija piny tras status != 'published').
+  const isMemory = useMemo(
+    () => sortedDays.some((d: any) => d?.trip_type === "completed" || d?.plan_finalized),
+    [sortedDays],
+  );
 
   // Wpis zrecenzowany = user skończył stepper (plan_finalized). Wtedy pokazujemy PODSUMOWANIE
   // zamiast steppera. localReviewed = optymistyczne po "Gotowe" (przed refetchem route).

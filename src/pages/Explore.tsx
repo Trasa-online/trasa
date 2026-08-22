@@ -706,6 +706,7 @@ const Explore = () => {
         .from("routes")
         .select("city")
         .eq("is_shared", true)
+        .eq("status", "published")
         .not("title", "is", null)
         .not("list_cover_url", "is", null)
         .not("city", "is", null);
