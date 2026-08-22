@@ -154,7 +154,9 @@ export default function ComposeWyjazd() {
 
   // draftId: gdy wchodzimy z ekranu wyboru bazy w SWOJA robocza trase -> edytujemy JA
   // (update), a nie tworzymy duplikatu. Brak = tryb tworzenia nowej trasy.
-  const nav = (location.state ?? {}) as { city?: string | null; title?: string | null; places?: any[]; draftId?: string; inviteeIds?: string[] };
+  const nav = (location.state ?? {}) as { city?: string | null; title?: string | null; places?: any[]; draftId?: string; inviteeIds?: string[]; mode?: "past" | "future" };
+  // Tryb wyjazdu z arkusza tworzenia: "past" -> wspomnienie (trip_type='completed'); inaczej roboczy plan.
+  const tripType: "planning" | "completed" = nav.mode === "past" ? "completed" : "planning";
 
   // ── Soft-save (lekki zapis roboczy) ──────────────────────────────────────
   // Problem: "Przejdz do sugestii" tworzy trase i navigate'uje dalej; cofniecie (navigate(-1))
@@ -298,7 +300,7 @@ export default function ComposeWyjazd() {
         place_name: i.place_name, category: i.category, address: i.address,
         latitude: i.latitude, longitude: i.longitude, photo_url: i.photo_url, place_id: i.place_id,
       }));
-      id = await createWyjazdFromPlaces(user.id, city, name.trim() || city || "Wyjazd", places, dates);
+      id = await createWyjazdFromPlaces(user.id, city, name.trim() || city || "Wyjazd", places, dates, { tripType });
       setCreating(false);
       if (!id) { toast.error("Nie udało się utworzyć trasy"); return; }
       setDraftId(id);
@@ -527,7 +529,7 @@ export default function ComposeWyjazd() {
     // draftId -> aktualizuj istniejaca robocza (bez duplikatu). Inaczej stworz nowa.
     const id = draftId
       ? await updateWyjazdPlaces(draftId, city, name.trim() || city || "Wyjazd", places, dates)
-      : await createWyjazdFromPlaces(user.id, city, name.trim() || city || "Wyjazd", places, dates);
+      : await createWyjazdFromPlaces(user.id, city, name.trim() || city || "Wyjazd", places, dates, { tripType });
     setCreating(false);
     if (!id) { haptics.error(); toast.error(draftId ? "Nie udało się zapisać zmian" : "Nie udało się utworzyć wyjazdu"); return; }
     haptics.success();

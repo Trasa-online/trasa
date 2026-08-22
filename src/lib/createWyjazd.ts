@@ -64,7 +64,7 @@ export async function createWyjazdFromPlaces(
   title: string,
   places: WyjazdPlaceInput[],
   dates?: { start_date?: string | null; end_date?: string | null },
-  opts?: { groupSessionId?: string | null; newForUsers?: string[] },
+  opts?: { groupSessionId?: string | null; newForUsers?: string[]; tripType?: "planning" | "completed" },
 ): Promise<string | null> {
   places = dedupePlaces(places);
   // Odrzuc miejsca bez nazwy - place_name jest NOT NULL w pins, a jeden bledny rekord
@@ -86,7 +86,9 @@ export async function createWyjazdFromPlaces(
       user_id: userId,
       title: title || city || "Wyjazd",
       city: city || null,
-      trip_type: "planning",
+      // "past" wyjazd = wspomnienie (trip_type='completed' -> ReviewSummary pokazuje tryb wspomnienia:
+      // notki/oceny/zdjecia). "future"/domyslnie = 'planning' (roboczy, do zaplanowania).
+      trip_type: opts?.tripType ?? "planning",
       status: "draft",
       day_number: 1,
       // Trasa SOLO powstaje jako PRYWATNY draft (is_shared=false). Publikacja do eksploracji =

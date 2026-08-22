@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { FileText, X, Users, ChevronRight, ArrowLeft, Plus, Check } from "lucide-react";
+import { FileText, X, Users, ChevronRight, ArrowLeft, Plus, Check, CalendarPlus, History } from "lucide-react";
 import { toast } from "sonner";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useAuth } from "@/hooks/useAuth";
@@ -14,7 +14,8 @@ import AddPeoplePicker, { type PersonLite } from "@/components/create/AddPeopleP
 import { fetchSavedPlaces, createListFromSavedPlaces, type SavedPlace, type PlaceForList } from "@/lib/placeLists";
 import { citiesForCountry } from "@/lib/tripCountries";
 
-type Step = "entry" | "listName" | "listPick" | "trip" | "tripPeople";
+type Step = "entry" | "listName" | "listPick" | "tripMode" | "trip" | "tripPeople";
+type TripMode = "future" | "past";
 
 const NBSP = " ";
 // Domyslne miasto startowe wyjazdu: Gdańsk (aktualny focus contentu) jak w CountryCityPicker.
@@ -41,6 +42,7 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
   const [creating, setCreating] = useState(false);
 
   // Wyjazd
+  const [tripMode, setTripMode] = useState<TripMode>("future");
   const [tripName, setTripName] = useState("");
   const [tripCity, setTripCity] = useState(defaultCity);
   const [tripPeople, setTripPeople] = useState<PersonLite[]>([]);
@@ -49,7 +51,7 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
   useEffect(() => {
     if (open) {
       setStep("entry"); setListName(""); setListPublic(true); setSelected(new Set());
-      setTripName(""); setTripCity(defaultCity()); setTripPeople([]); setCreating(false);
+      setTripMode("future"); setTripName(""); setTripCity(defaultCity()); setTripPeople([]); setCreating(false);
     }
   }, [open]);
 
@@ -100,7 +102,8 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
     close();
     // title || undefined: ComposeWyjazd czyta nav.title przez ?? (pusty string zostalby jako pusta
     // nazwa), wiec przy braku nazwy przekazujemy undefined -> tam default "Wyjazd do {miasto}".
-    navigate("/wyjazd/nowy", { state: { city: tripCity, title: tripName.trim() || undefined, inviteeIds: tripPeople.map((p) => p.id) } });
+    // mode: "past" -> wspomnienie (trip_type='completed'); "future" -> roboczy plan.
+    navigate("/wyjazd/nowy", { state: { city: tripCity, title: tripName.trim() || undefined, inviteeIds: tripPeople.map((p) => p.id), mode: tripMode } });
   };
 
   // ── wspolny nagłowek Anuluj / tytul / Dalej ──
@@ -161,11 +164,31 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
             <div className="mt-4 flex gap-4">
               {[
                 { key: "list", label: "Lista", icon: <FileText className="h-8 w-8 text-foreground" strokeWidth={1.7} />, go: () => setStep("listName") },
-                { key: "trip", label: "Wyjazd", icon: <img src="/spontaway-symbol.png" alt="" className="h-9 w-9 object-contain" style={{ filter: "brightness(0)" }} draggable={false} />, go: () => setStep("trip") },
+                { key: "trip", label: "Wyjazd", icon: <img src="/spontaway-symbol.png" alt="" className="h-9 w-9 object-contain" style={{ filter: "brightness(0)" }} draggable={false} />, go: () => setStep("tripMode") },
               ].map((t) => (
                 <button key={t.key} onClick={() => { haptics.light(); t.go(); }} className="flex-1 flex flex-col items-center gap-3 active:scale-[0.98] transition-transform outline-none focus:outline-none focus-visible:outline-none">
                   <span className="w-full h-[90px] rounded-2xl bg-[#efefef] flex items-center justify-center">{t.icon}</span>
                   <span className="text-sm font-medium text-foreground">{t.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ── WYJAZD: wybor trybu (przyszly = zaplanuj / przeszly = wspomnienie) ── */}
+        {step === "tripMode" && (
+          <div className="pb-[max(20px,env(safe-area-inset-bottom))]">
+            <Header title="Jaki to wyjazd?" onBack={() => setStep("entry")} backLabel="Wstecz" />
+            <div className="px-5 pt-1 flex gap-4">
+              {[
+                { key: "future" as TripMode, label: "Przyszły", sub: "Zaplanuj wyjazd", icon: <CalendarPlus className="h-8 w-8 text-foreground" strokeWidth={1.7} /> },
+                { key: "past" as TripMode, label: "Przeszły", sub: "Dodaj wspomnienie", icon: <History className="h-8 w-8 text-foreground" strokeWidth={1.7} /> },
+              ].map((m) => (
+                <button key={m.key} onClick={() => { haptics.light(); setTripMode(m.key); setStep("trip"); }}
+                  className="flex-1 flex flex-col items-center gap-2 active:scale-[0.98] transition-transform outline-none focus:outline-none focus-visible:outline-none">
+                  <span className="w-full h-[90px] rounded-2xl bg-[#efefef] flex items-center justify-center">{m.icon}</span>
+                  <span className="text-sm font-medium text-foreground">{m.label}</span>
+                  <span className="text-[12px] text-muted-foreground -mt-1 text-center">{m.sub}</span>
                 </button>
               ))}
             </div>
@@ -245,7 +268,7 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
         {/* ── WYJAZD: nazwa + kraj/miasto + osoby ── */}
         {step === "trip" && (
           <>
-            <Header title="Nowy wyjazd" onBack={() => setStep("entry")} onNext={startTrip} />
+            <Header title={tripMode === "past" ? "Przeszły wyjazd" : "Zaplanuj wyjazd"} onBack={() => setStep("tripMode")} onNext={startTrip} />
             <div className="flex-1 min-h-0 overflow-y-auto pb-[max(16px,env(safe-area-inset-bottom))]">
               <div className="px-5 pt-1">
                 <div className="relative">
