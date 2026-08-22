@@ -1,6 +1,7 @@
-import { useRef, useEffect } from "react";
-import { ChevronDown } from "lucide-react";
+import { useRef, useEffect, useState } from "react";
+import { ChevronDown, Search, MapPin, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
 import { TRIP_COUNTRIES, TRIP_REGIONS, citiesForCountry, countryForCity } from "@/lib/tripCountries";
 
 // Wspolny wybor kraju (dropdown) + miasta (drum-scroll). Wydzielony z CountryCityPicker,
@@ -65,7 +66,14 @@ interface Props {
   compact?: boolean;
 }
 
+const NBSP = " ";
+// Miasto jest "z listy" gdy wystepuje w ktoryms TRIP_COUNTRIES.cities. Inaczej = wpisane recznie
+// (Google) - wtedy domyslnie tryb "Inne miasto".
+const isKnownCity = (city: string) => TRIP_COUNTRIES.some((c) => c.cities.includes(city));
+
 // Sterowany komponent: kraj wyliczany z miasta; zmiana miasta/kraju idzie przez onCityChange.
+// Dwa tryby: "Z listy" (kraj + drum) oraz "Inne miasto" (wyszukiwarka Google - dowolne miasto,
+// zeby userzy z malych miejscowosci NIE odbijali sie od apki).
 export default function CityCountryPicker({ city, onCityChange, compact = false }: Props) {
   const country = countryForCity(city);
   const cities = citiesForCountry(country);
@@ -76,29 +84,101 @@ export default function CityCountryPicker({ city, onCityChange, compact = false 
   };
   const setIndex = (i: number) => onCityChange(cities[i] ?? cities[0]);
 
+  const [mode, setMode] = useState<"list" | "search">(() => (isKnownCity(city) ? "list" : "search"));
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<{ name: string; full_address: string }[]>([]);
+  const [searching, setSearching] = useState(false);
+
+  // Wyszukiwarka miast Google (autocomplete przez google-places-proxy, debounce). Bez płatnego
+  // Text Search - action "citysearch" uzywa Places Autocomplete (tanie, cache 24h w proxy).
+  useEffect(() => {
+    if (mode !== "search") return;
+    const q = query.trim();
+    if (q.length < 2) { setResults([]); setSearching(false); return; }
+    let alive = true;
+    setSearching(true);
+    const t = setTimeout(async () => {
+      try {
+        const { data } = await supabase.functions.invoke("google-places-proxy", { body: { action: "citysearch", query: q } });
+        if (alive) setResults((((data as any)?.results ?? []) as { name: string; full_address: string }[]).slice(0, 6));
+      } catch { if (alive) setResults([]); }
+      finally { if (alive) setSearching(false); }
+    }, 350);
+    return () => { alive = false; clearTimeout(t); };
+  }, [query, mode]);
+
   return (
     <div className="flex flex-col">
-      <div>
-        <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-1.5">Kraj</p>
-        <div className="relative">
-          <select value={country} onChange={(e) => onCountry(e.target.value)}
-            className="w-full appearance-none rounded-2xl bg-secondary text-secondary-foreground border-0 px-4 py-3 text-base outline-none focus:ring-2 focus:ring-orange-500/40">
-            {TRIP_REGIONS.map((region) => (
-              <optgroup key={region} label={region}>
-                {TRIP_COUNTRIES.filter((c) => c.region === region).map((c) => (
-                  <option key={c.name} value={c.name}>{c.name}</option>
+      {/* Przelacznik trybu: gotowa lista vs wyszukiwarka dowolnego miasta */}
+      <div className="flex items-center rounded-full bg-[#ededed] p-0.5 self-start mb-3">
+        {([{ k: "list", l: `Z${NBSP}listy` }, { k: "search", l: "Inne miasto" }] as const).map((o) => (
+          <button key={o.k} type="button" onClick={() => setMode(o.k)}
+            className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-colors ${mode === o.k ? "bg-white text-foreground shadow-sm" : "text-foreground/55"}`}>
+            {o.l}
+          </button>
+        ))}
+      </div>
+
+      {mode === "list" ? (
+        <>
+          <div>
+            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-1.5">Kraj</p>
+            <div className="relative">
+              <select value={country} onChange={(e) => onCountry(e.target.value)}
+                className="w-full appearance-none rounded-2xl bg-secondary text-secondary-foreground border-0 px-4 py-3 text-base outline-none focus:ring-2 focus:ring-orange-500/40">
+                {TRIP_REGIONS.map((region) => (
+                  <optgroup key={region} label={region}>
+                    {TRIP_COUNTRIES.filter((c) => c.region === region).map((c) => (
+                      <option key={c.name} value={c.name}>{c.name}</option>
+                    ))}
+                  </optgroup>
                 ))}
-              </optgroup>
-            ))}
-          </select>
-          <ChevronDown className="h-4 w-4 text-muted-foreground absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" />
+              </select>
+              <ChevronDown className="h-4 w-4 text-muted-foreground absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" />
+            </div>
+          </div>
+          <div className="mt-2">
+            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-1 text-center">Miasto</p>
+            {/* key={country} remontuje drum z poprawna pozycja po zmianie kraju */}
+            <Drum key={country} items={cities} index={cyi} setIndex={setIndex} compact={compact} />
+          </div>
+        </>
+      ) : (
+        <div>
+          <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-1.5">Wpisz miasto</p>
+          <div className="relative">
+            <Search className="h-4 w-4 text-muted-foreground absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={`np.${NBSP}Kuusamo`} autoFocus
+              className="w-full h-12 rounded-2xl bg-secondary text-secondary-foreground border-0 pl-10 pr-4 text-base outline-none focus:ring-2 focus:ring-orange-500/40 placeholder:text-muted-foreground/60" />
+          </div>
+          {/* Aktualnie wybrane miasto (recznie wpisane) */}
+          {!isKnownCity(city) && city && query.trim().length < 2 && (
+            <p className="mt-2 px-1 text-sm text-muted-foreground">Wybrane: <span className="font-semibold text-foreground">{city}</span></p>
+          )}
+          <div className="mt-1.5 min-h-[2.5rem]">
+            {searching && (
+              <p className="flex items-center gap-2 px-1 py-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Szukam...</p>
+            )}
+            {!searching && query.trim().length >= 2 && results.length === 0 && (
+              <p className="px-1 py-2 text-sm text-muted-foreground">Brak wyników - spróbuj inną nazwę.</p>
+            )}
+            {results.map((r) => {
+              const selected = r.name === city;
+              return (
+                <button key={r.full_address} type="button"
+                  onClick={() => { onCityChange(r.name); setQuery(""); setResults([]); }}
+                  className={cn("w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-colors active:bg-muted/60", selected ? "bg-secondary" : "")}>
+                  <MapPin className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-foreground truncate">{r.name}</p>
+                    <p className="text-xs text-muted-foreground truncate">{r.full_address}</p>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
         </div>
-      </div>
-      <div className="mt-2">
-        <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-1 text-center">Miasto</p>
-        {/* key={country} remontuje drum z poprawna pozycja po zmianie kraju */}
-        <Drum key={country} items={cities} index={cyi} setIndex={setIndex} compact={compact} />
-      </div>
+      )}
     </div>
   );
 }
