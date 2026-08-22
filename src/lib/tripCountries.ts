@@ -12,7 +12,7 @@ export const TRIP_COUNTRIES: TripCountry[] = [
   // ── Europa ──────────────────────────────────────────────────────────────
   { name: "Niemcy", region: "Europa", cities: ["Berlin", "Monachium", "Hamburg", "Kolonia", "Frankfurt", "Drezno"] },
   { name: "Francja", region: "Europa", cities: ["Paryż", "Lyon", "Marsylia", "Nicea", "Bordeaux", "Strasburg"] },
-  { name: "Hiszpania", region: "Europa", cities: ["Barcelona", "Madryt", "Sewilla", "Walencja", "Malaga", "Grenada"] },
+  { name: "Hiszpania", region: "Europa", cities: ["Barcelona", "Madryt", "Sewilla", "Walencja", "Malaga", "Grenada", "Majorka", "Palma", "Ibiza", "Teneryfa", "Gran Canaria"] },
   { name: "Włochy", region: "Europa", cities: ["Rzym", "Mediolan", "Florencja", "Wenecja", "Neapol", "Bolonia"] },
   { name: "Wielka Brytania", region: "Europa", cities: ["Londyn", "Manchester", "Edynburg", "Liverpool", "Glasgow"] },
   { name: "Holandia", region: "Europa", cities: ["Amsterdam", "Rotterdam", "Haga", "Utrecht"] },
