@@ -234,11 +234,11 @@ const TravelerProfile = () => {
     queryKey: ["profile-trip-feed", user?.id],
     enabled: !!user?.id,
     queryFn: async () => {
-      const sel = "id, title, city, start_date, day_number, folder_id, views, created_at, user_id";
-      // Wlasne trasy + trasy grupowe, do ktorych jestem zaproszony (member) - zeby zaproszeni
-      // TAKZE widzieli wyjazd na swoim profilu (jak w JournalTab).
+      const sel = "id, title, city, start_date, day_number, folder_id, views, created_at, user_id, is_shared";
+      // Wlasne trasy (TAKZE robocze is_shared=false - badge "Robocze") + trasy grupowe, do ktorych
+      // jestem zaproszony (member, is_shared=true). Koniec osobnego widoku /utworz/robocze (IA 2026-08-22).
       const [ownRes, memberRes] = await Promise.all([
-        (supabase as any).from("routes").select(sel).eq("user_id", user!.id).eq("is_shared", true).order("created_at", { ascending: false }),
+        (supabase as any).from("routes").select(sel).eq("user_id", user!.id).order("created_at", { ascending: false }),
         (supabase as any).from("group_session_members").select("session_id").eq("user_id", user!.id),
       ]);
       const sessionIds = (memberRes.data ?? []).map((m: any) => m.session_id);
@@ -447,7 +447,10 @@ const TravelerProfile = () => {
             ) : (
               tripCards.map((tr: any) => {
                 const dateLabel = tr.start_date ? format(parseISO(tr.start_date), "d LLLL yyyy", { locale: dateLocale() }) : "";
-                const eyebrow = [countryForCity(tr.city), tr.city, dateLabel].filter(Boolean).join(" · ");
+                // Roboczy wyjazd (is_shared=false) = prywatny draft -> eyebrow "Robocze" + klik otwiera
+                // KREATOR (SharedRoute /route/:id czyta tylko is_shared=true, wiec draft by sie nie otworzyl).
+                const isDraft = tr.is_own && tr.is_shared === false;
+                const eyebrow = [isDraft ? "Robocze" : null, countryForCity(tr.city), tr.city, dateLabel].filter(Boolean).join(" · ");
                 return (
                   <ProfileFeedCard
                     key={tr.id}
@@ -458,7 +461,9 @@ const TravelerProfile = () => {
                     title={tr.title || (tr.city ? t("feed.trip_fallback", { city: tr.city, defaultValue: `Wyjazd do ${tr.city}` }) : t("feed.trip_fallback_generic", "Wyjazd"))}
                     tiles={tr.tiles}
                     counts={{ saves: tr.saves, likes: tr.likes, views: tr.views }}
-                    onOpen={() => navigate(`/route/${tr.id}`)}
+                    onOpen={() => isDraft
+                      ? navigate("/wyjazd/nowy", { state: { draftId: tr.id, city: tr.city, title: tr.title } })
+                      : navigate(`/route/${tr.id}`)}
                     onEdit={tr.is_own ? () => navigate(`/review-summary?route=${tr.id}&edit=1`) : undefined}
                     onDelete={tr.is_own ? () => setConfirmDelete({ kind: "trip", id: tr.id, routeIds: tr.routeIds, title: tr.title || tr.city || t("feed.trip_fallback_generic", "Wyjazd") }) : undefined}
                   />

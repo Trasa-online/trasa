@@ -677,8 +677,6 @@ const Explore          = lazy(() => import("./pages/Explore"));
 const CreateRanking    = lazy(() => import("./pages/CreateRanking"));
 const ComposeWyjazd    = lazy(() => import("./pages/ComposeWyjazd"));
 const CountryCityPicker = lazy(() => import("./pages/CountryCityPicker"));
-const CreateDrafts     = lazy(() => import("./pages/CreateDrafts"));
-const CreateSaved      = lazy(() => import("./pages/CreateSaved"));
 const StartWyjazd      = lazy(() => import("./pages/StartWyjazd"));
 const CreateRoute      = lazy(() => import("./pages/CreateRoute"));
 const Settings         = lazy(() => import("./pages/Settings"));
@@ -808,8 +806,10 @@ const App = () => (
           <Route path="/wyjazd/start" element={<StartWyjazd />} />
           <Route path="/wyjazd/nowy" element={<ComposeWyjazd />} />
           <Route path="/utworz" element={<CountryCityPicker />} />
-          <Route path="/utworz/robocze" element={<CreateDrafts />} />
-          <Route path="/utworz/zapisane" element={<CreateSaved />} />
+          {/* Widok huba Robocze/Zapisane USUNIETY (IA 2026-08-22) - robocze wyjazdy sa w profilu
+              "Wyjazdy" (badge Robocze), zapisane w profilu "Zapisane". Stare linki -> redirect. */}
+          <Route path="/utworz/robocze" element={<Navigate to="/moj-profil?tab=wyjazdy" replace />} />
+          <Route path="/utworz/zapisane" element={<Navigate to="/moj-profil?tab=zapisane" replace />} />
           <Route path="/wyjazd/:id" element={<Navigate to="/moj-profil?tab=wyjazdy" replace />} />
           {/* Planowanie tras (kreator + sesje grupowe) - wylaczone w trybie uproszczonym na native.
               Wyjatek: exploreMode ("Przegladaj") zostaje wlaczony - patrz PlanRoute. */}

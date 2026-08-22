@@ -568,9 +568,9 @@ export default function ComposeWyjazd() {
     } else {
       clearSoft();
       toast.success(draftId ? "Zapisano zmiany" : "Zapisano jako roboczą");
-      // Draft (is_shared=false) NIE pokazuje sie na profilu Wyjazdy (filtr is_shared=true) - laduj
-      // w "Robocze", gdzie faktycznie jest. Grupowy draft (is_shared=true po zaproszeniach) tez tam OK.
-      navigate("/utworz/robocze");
+      // Robocze wyjazdy (is_shared=false) pokazuja sie na profilu "Wyjazdy" z badgem "Robocze"
+      // (IA 2026-08-22, koniec osobnego widoku huba /utworz/robocze).
+      navigate("/moj-profil?tab=wyjazdy");
     }
   };
 
