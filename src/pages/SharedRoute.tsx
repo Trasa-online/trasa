@@ -185,9 +185,12 @@ export default function SharedRoute() {
       const { data: members } = await (supabase as any)
         .from("group_session_members").select("user_id").eq("session_id", (route as any).group_session_id);
       const ids = (members ?? []).map((m: any) => m.user_id).filter((id: string) => id !== route!.user_id);
-      if (!ids.length) return [] as (string | null)[];
-      const { data: profs } = await (supabase as any).from("profiles").select("id, avatar_url").in("id", ids);
-      return (profs ?? []).map((p: any) => (p.avatar_url ?? null)) as (string | null)[];
+      if (!ids.length) return [] as { id: string; username: string | null; avatar_url: string | null }[];
+      const { data: profs } = await (supabase as any).from("profiles").select("id, username, avatar_url").in("id", ids);
+      // Zachowaj kolejnosc czlonkow sesji (pierwsi uczestnicy = pelna nazwa w TopBarze).
+      const byId = new Map((profs ?? []).map((p: any) => [p.id, p]));
+      return ids.map((id: string) => byId.get(id)).filter(Boolean)
+        .map((p: any) => ({ id: p.id, username: p.username ?? null, avatar_url: p.avatar_url ?? null }));
     },
   });
 
@@ -681,30 +684,43 @@ export default function SharedRoute() {
               className="h-9 w-9 -ml-2 shrink-0 rounded-full flex items-center justify-center active:scale-90 transition-transform">
               <ArrowLeft className="h-5 w-5 text-foreground" />
             </button>
-            {/* Awatar + username (+ uczestnicy) WYSRODKOWANE (#5). Miasto/liczba miejsc -> pod tytul. */}
-            <div className="flex-1 min-w-0 flex justify-center items-center gap-2">
+            {/* Awatar + username WYSRODKOWANE (#5). Wspolny wyjazd: host + pierwsi 2 uczestnicy z
+                PELNA nazwa (awatar + @username, truncate = "jesli sie zmiesci"); reszta = same awatary. */}
+            <div className="flex-1 min-w-0 flex justify-center items-center gap-2.5">
+              {/* Uzytkownik 1 = host */}
               {!isAnon && author?.username ? (
                 <button
                   onClick={() => navigate(`/profil/${author.username}`)}
-                  className="flex items-center gap-1.5 font-semibold text-foreground active:opacity-60 transition-opacity min-w-0"
+                  className="flex items-center gap-1.5 font-semibold text-foreground active:opacity-60 transition-opacity min-w-0 shrink"
                 >
                   <img src={avatarSrc(author?.avatar_url)} alt="" className="h-6 w-6 rounded-full object-cover bg-orange-100 shrink-0" />
                   <span className="truncate">@{author.username}</span>
                 </button>
               ) : (
-                <span className="flex items-center gap-1.5 font-semibold text-foreground min-w-0">
+                <span className="flex items-center gap-1.5 font-semibold text-foreground min-w-0 shrink">
                   {!isAnon && <img src={avatarSrc(author?.avatar_url)} alt="" className="h-6 w-6 rounded-full object-cover bg-orange-100 shrink-0" />}
                   <span className="truncate">{authorName}</span>
                 </span>
               )}
-              {/* Uczestnicy trasy grupowej - nachodzacy stack awatarow obok hosta. */}
-              {groupParticipants.length > 0 && (
+              {/* Uzytkownicy 2-3 = pierwsi uczestnicy z pelna nazwa (awatar + @username). */}
+              {groupParticipants.slice(0, 2).map((p) => (
+                p.username ? (
+                  <button key={p.id} onClick={() => navigate(`/profil/${p.username}`)} className="flex items-center gap-1.5 font-semibold text-foreground active:opacity-60 transition-opacity min-w-0 shrink">
+                    <img src={avatarSrc(p.avatar_url)} alt="" className="h-6 w-6 rounded-full object-cover bg-orange-100 shrink-0" />
+                    <span className="truncate">@{p.username}</span>
+                  </button>
+                ) : (
+                  <img key={p.id} src={avatarSrc(p.avatar_url)} alt="" className="h-6 w-6 rounded-full object-cover bg-orange-100 shrink-0" />
+                )
+              ))}
+              {/* Pozostali uczestnicy (4+) = same awatary (nachodzacy stack) + "+N". */}
+              {groupParticipants.length > 2 && (
                 <span className="flex items-center -space-x-2 shrink-0">
-                  {groupParticipants.slice(0, 3).map((a, i) => (
-                    <img key={i} src={avatarSrc(a)} alt="" className="h-6 w-6 rounded-full object-cover bg-orange-100 ring-2 ring-background" />
+                  {groupParticipants.slice(2, 5).map((p) => (
+                    <img key={p.id} src={avatarSrc(p.avatar_url)} alt="" className="h-6 w-6 rounded-full object-cover bg-orange-100 ring-2 ring-background" />
                   ))}
-                  {groupParticipants.length > 3 && (
-                    <span className="h-6 w-6 rounded-full bg-muted ring-2 ring-background flex items-center justify-center text-[9px] font-bold text-foreground">+{groupParticipants.length - 3}</span>
+                  {groupParticipants.length > 5 && (
+                    <span className="h-6 w-6 rounded-full bg-muted ring-2 ring-background flex items-center justify-center text-[9px] font-bold text-foreground">+{groupParticipants.length - 5}</span>
                   )}
                 </span>
               )}
