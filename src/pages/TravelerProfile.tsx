@@ -5,7 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import { Settings, Camera, UserCircle2, ArrowRight, Bell, Share2, Search, LayoutGrid, MapPinned, Bookmark, List, ChevronDown, Check } from "lucide-react";
+import { Settings, Camera, UserCircle2, ArrowRight, Bell, Share2, Search, LayoutGrid, MapPinned, Bookmark, List, ChevronsUpDown, Check } from "lucide-react";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import TabHeader from "@/components/layout/TabHeader";
 import { toast } from "sonner";
@@ -111,14 +111,25 @@ function TabSelect({ options, value, onChange }: {
             <List className="h-5 w-5 text-foreground" />
           </span>
           <span className="flex-1 min-w-0 text-base font-bold truncate">{current}</span>
-          <ChevronDown className="h-5 w-5 text-muted-foreground shrink-0" />
+          {/* iOS: glif up/down = wskaznik menu-selektora. */}
+          <ChevronsUpDown className="h-[18px] w-[18px] text-muted-foreground shrink-0" strokeWidth={2.25} />
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-[var(--radix-dropdown-menu-trigger-width)] rounded-2xl">
+      {/* Menu w stylu iOS: matowe szklo (bg-white/80 + blur) + zaokraglenie + hairline separatory
+          miedzy pozycjami + checkmark w kolorze tint (pomaranczowy) przy aktywnej. */}
+      <DropdownMenuContent
+        align="start"
+        sideOffset={8}
+        className="w-[var(--radix-dropdown-menu-trigger-width)] min-w-[210px] overflow-hidden rounded-2xl border border-black/[0.06] bg-white/80 backdrop-blur-xl backdrop-saturate-150 p-0 shadow-[0_16px_40px_-10px_rgba(0,0,0,0.32)] divide-y divide-black/[0.06]"
+      >
         {options.map((o) => (
-          <DropdownMenuItem key={o.id} onSelect={() => onChange(o.id)} className="text-sm font-medium cursor-pointer rounded-xl py-2.5">
+          <DropdownMenuItem
+            key={o.id}
+            onSelect={() => onChange(o.id)}
+            className="h-12 px-4 text-[15px] font-medium cursor-pointer rounded-none focus:bg-black/[0.05] data-[highlighted]:bg-black/[0.05]"
+          >
             {o.label}
-            {value === o.id && <Check className="h-4 w-4 ml-auto text-primary" />}
+            {value === o.id && <Check className="h-[18px] w-[18px] ml-auto text-primary" strokeWidth={2.5} />}
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>
