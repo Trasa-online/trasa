@@ -5,7 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import { Settings, Camera, UserCircle2, ArrowRight, Bell, Share2, Search, LayoutGrid, MapPinned, Bookmark, ListFilter, ChevronDown, Check } from "lucide-react";
+import { Settings, Camera, UserCircle2, ArrowRight, Bell, Share2, Search, LayoutGrid, MapPinned, Bookmark, List, ChevronDown, Check } from "lucide-react";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import TabHeader from "@/components/layout/TabHeader";
 import { toast } from "sonner";
@@ -93,9 +93,9 @@ function FeedEmpty({ icon, title, desc, ctaLabel, onCta }: {
   );
 }
 
-// ── Podzakładki: kompaktowy dropdown z ikoną listy (zamiast pigułek) ─────────
-// Trigger = mały przycisk „[≡] aktualny wybór [⌄]"; klik rozwija menu opcji (floating,
-// nie zajmuje wysokości layoutu). Referencja UX: selektor grup w Pacer. Wybór Nat 2026-08-23.
+// ── Podzakładki: pełnoszerokościowy selektor z ikoną listy (styl Pacer) ──────
+// Wiersz na całą szerokość: ikona listy w zaokrąglonym kwadracie (lewa) + aktualny wybór +
+// chevron rozwijania (prawa). Klik rozwija menu opcji (floating). Wybór Nat 2026-08-23.
 
 function TabSelect({ options, value, onChange }: {
   options: { id: string; label: string }[];
@@ -106,15 +106,17 @@ function TabSelect({ options, value, onChange }: {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button className="inline-flex items-center gap-2 h-9 pl-3 pr-2.5 rounded-full bg-secondary text-secondary-foreground text-sm font-bold active:scale-[0.98] transition-transform">
-          <ListFilter className="h-4 w-4 shrink-0" />
-          <span className="truncate">{current}</span>
-          <ChevronDown className="h-4 w-4 opacity-60 shrink-0" />
+        <button className="w-full flex items-center gap-3 py-1.5 text-left active:opacity-80 transition-opacity">
+          <span className="h-11 w-11 rounded-xl bg-secondary flex items-center justify-center shrink-0">
+            <List className="h-5 w-5 text-foreground" />
+          </span>
+          <span className="flex-1 min-w-0 text-base font-bold truncate">{current}</span>
+          <ChevronDown className="h-5 w-5 text-muted-foreground shrink-0" />
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="min-w-[190px] rounded-2xl">
+      <DropdownMenuContent align="start" className="w-[var(--radix-dropdown-menu-trigger-width)] rounded-2xl">
         {options.map((o) => (
-          <DropdownMenuItem key={o.id} onSelect={() => onChange(o.id)} className="text-sm font-medium cursor-pointer rounded-xl">
+          <DropdownMenuItem key={o.id} onSelect={() => onChange(o.id)} className="text-sm font-medium cursor-pointer rounded-xl py-2.5">
             {o.label}
             {value === o.id && <Check className="h-4 w-4 ml-auto text-primary" />}
           </DropdownMenuItem>
