@@ -5,7 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import { Settings, Camera, UserCircle2, ArrowRight, Bell, Share2, Search, LayoutGrid, MapPinned, Bookmark, List, ChevronsUpDown, Check } from "lucide-react";
+import { Settings, Camera, UserCircle2, ArrowRight, Bell, Share2, Search, LayoutGrid, MapPinned, List, ChevronsUpDown, Check } from "lucide-react";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import TabHeader from "@/components/layout/TabHeader";
 import { toast } from "sonner";
@@ -24,7 +24,6 @@ import InviteFriendsBanner from "@/components/social/InviteFriendsBanner";
 import { Camera as CapCamera, CameraResultType, CameraSource } from "@capacitor/camera";
 import { ProfileFeedCard } from "@/components/profile/ProfileFeedCard";
 import { SpontawayTabIcon } from "@/components/profile/SpontawayTabIcon";
-import { SavedPlacesGrid } from "@/components/saved/SavedPlacesGrid";
 import { SavedRoutes, SavedCollections } from "@/components/home/DiscoveryFeed";
 import { ALL_CITIES } from "@/components/home/CitySelect";
 import { shortRelativeTime } from "@/lib/relativeTime";
@@ -148,9 +147,10 @@ const TravelerProfile = () => {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [followSheet, setFollowSheet] = useState<"followers" | "following" | null>(null);
   const [searchParams] = useSearchParams();
-  // ?tab=wyjazdy|zapisane|listy - wejście z redirectów (dawne /dziennik -> wyjazdy, /polubione -> zapisane).
-  const initialTab = (() => { const p = searchParams.get("tab"); return p === "wyjazdy" || p === "zapisane" ? p : "listy"; })();
-  const [tab, setTab] = useState<"listy" | "wyjazdy" | "zapisane">(initialTab);
+  // ?tab=wyjazdy|listy - wejście z redirectów (dawne /dziennik -> wyjazdy). Zakładka "zapisane"
+  // usunięta (2026-08-24): zapisane miejsca żyją w liście ogólnej i pojawiają się przy tworzeniu.
+  const initialTab: "listy" | "wyjazdy" = searchParams.get("tab") === "wyjazdy" ? "wyjazdy" : "listy";
+  const [tab, setTab] = useState<"listy" | "wyjazdy">(initialTab);
   // Podzakładki (pigułki) w Listy / Wyjazdy. Domyślnie: Listy->Moje, Wyjazdy->Wspomnienia
   // (opublikowane trasy = flagowa treść; robocze to work-in-progress).
   const [listyTab, setListyTab] = useState<"moje" | "zapisane">("moje");
@@ -496,18 +496,16 @@ const TravelerProfile = () => {
           </button>
         </div>
 
-        {/* Zakladki: Listy | Wyjazdy | Zapisane (ikony, underline aktywnej) */}
+        {/* Zakladki: Listy | Wyjazdy (ikony, underline aktywnej). Zapisane usunięte 2026-08-24. */}
         <div className="flex border-b border-border/40 -mx-1">
-          {(["listy", "wyjazdy", "zapisane"] as const).map((tk) => {
+          {(["listy", "wyjazdy"] as const).map((tk) => {
             const active = tab === tk;
-            const aria = tk === "listy" ? t("sections.lists", { defaultValue: "Listy" }) : tk === "wyjazdy" ? t("sections.trips", { defaultValue: "Wyjazdy" }) : t("sections.saved", { defaultValue: "Zapisane" });
+            const aria = tk === "listy" ? t("sections.lists", { defaultValue: "Listy" }) : t("sections.trips", { defaultValue: "Wyjazdy" });
             return (
               <button key={tk} onClick={() => setTab(tk)} className="relative flex-1 flex items-center justify-center py-2.5" aria-label={aria}>
                 {tk === "listy"
                   ? <LayoutGrid className="h-5 w-5" style={{ color: active ? "#0E0E0E" : "#CFCFCF" }} />
-                  : tk === "wyjazdy"
-                  ? <SpontawayTabIcon active={active} />
-                  : <Bookmark className="h-5 w-5" style={{ color: active ? "#0E0E0E" : "#CFCFCF" }} />}
+                  : <SpontawayTabIcon active={active} />}
                 {active && <span className="absolute -bottom-px left-0 right-0 h-0.5 bg-foreground rounded-full" />}
               </button>
             );
@@ -557,7 +555,7 @@ const TravelerProfile = () => {
                 <div className="pt-1"><SavedCollections /></div>
               )}
             </div>
-          ) : tab === "wyjazdy" ? (
+          ) : (
             <div className="space-y-4">
               {/* Podzakładki: Robocze (niepublikowane) | Wspomnienia (opublikowane) | Zapisane (od innych). */}
               <TabSelect
@@ -594,10 +592,6 @@ const TravelerProfile = () => {
                 )
               )}
             </div>
-          ) : (
-            /* Zakładka ZAPISANE (IA 2026-08-23): tylko zapisane MIEJSCA. Zapisane listy przeniesione
-               do Listy->Zapisane, zapisane trasy do Wyjazdy->Zapisane. */
-            <SavedPlacesGrid />
           )}
         </div>
       </div>

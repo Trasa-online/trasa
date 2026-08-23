@@ -141,7 +141,7 @@ export default function SavePlaceSheet({
       if (!id) throw new Error("create failed");
       setNewName("");
       invalidate();
-      toast.success(`Utworzono prywatną listę „${name}"`);
+      toast.success(`Utworzono listę „${name}"`);
     } catch (e: any) {
       console.error("[SavePlaceSheet] create list failed:", e?.message ?? e);
       toast.error("Nie udało się utworzyć listy");

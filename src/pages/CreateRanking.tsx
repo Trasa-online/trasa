@@ -15,6 +15,8 @@ import CreateHeader from "@/components/create/CreateHeader";
 import { expandCity, cityGenitive } from "@/lib/cities";
 import { TRIP_COUNTRIES, TRIP_REGIONS, citiesForCountry, countryForCity } from "@/lib/tripCountries";
 import { getHistoryByCity } from "@/lib/exploreLikes";
+import { useQuery } from "@tanstack/react-query";
+import { fetchSavedPlaces } from "@/lib/placeLists";
 import { forwardGeocode, reverseGeocode, forwardGeocodeWithTypes } from "@/lib/googleMaps";
 import { isRouteCollection } from "@/lib/collectionThemes";
 import { MAIN_CATEGORIES, getDbCategoriesFor, mainCategoryLabel } from "@/lib/categories";
@@ -426,23 +428,21 @@ const CreateRanking = () => {
 
   // "Twoje zapisane miejsca" (z eksploracji, per miasto) - szybka sciaga do dodania jednym tapem.
   // Zastapily "Propozycje z bazy". id = place_id (do addItem) lub null (custom); key osobny.
+  // "Twoje zapisane miejsca" = lista OGÓLNA usera (wszystkie zapisy z drawera, bez filtra miasta -
+  // decyzja 2026-08-24). Źródło = DB wishlista to_visit (fetchSavedPlaces), spójne z CreateFlowSheet.
+  const { data: savedPlaces = [] } = useQuery({
+    queryKey: ["saved-places", user?.id],
+    enabled: !!user?.id,
+    queryFn: () => fetchSavedPlaces(user!.id),
+  });
   const savedForCity = useMemo(() => {
-    const mapPlace = (p: any) => ({
+    const places = (savedPlaces as any[]).map((p) => ({
       key: p.place_id ?? p.place_name, id: p.place_id ?? null, place_name: p.place_name, category: p.category,
       address: p.address ?? null, latitude: p.latitude ?? null, longitude: p.longitude ?? null,
       rating: p.rating ?? null, photo_url: p.photo_url ?? null,
-    });
-    const groups = getHistoryByCity();
-    // Lista globalna (city="") -> wszystkie zapisane miejsca usera (bez filtra miasta).
-    if (!city) return { places: groups.flatMap((g) => g.places).map(mapPlace), fallback: false };
-    const wanted = new Set(expandCity(city).map((c) => c.toLowerCase()));
-    const forCity = groups.filter((g) => wanted.has(g.city.toLowerCase())).flatMap((g) => g.places).map(mapPlace);
-    if (forCity.length > 0) return { places: forCity, fallback: false };
-    // Fallback: user ma zapisane miejsca, ale w INNYM miescie niz domyslne (forma spada do
-    // Warszawy). Zamiast "brak" pokazujemy WSZYSTKIE zapisane (szybka sciaga i tak dziala).
-    const all = groups.flatMap((g) => g.places).map(mapPlace);
-    return { places: all, fallback: true };
-  }, [city]);
+    }));
+    return { places, fallback: false };
+  }, [savedPlaces]);
 
   // Dodaj miejsce spoza bazy (wynik Google text search). Dociagamy okladke/rating/place_id
   // przez proxy dopiero przy dodaniu (nie dla kazdego wyniku - min. kosztow Google).
