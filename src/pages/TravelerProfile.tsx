@@ -12,7 +12,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { deferDelete } from "@/lib/deferDelete";
 import { SHARE_BASE_URL } from "@/lib/shareUrl";
 import { useShare } from "@/hooks/useShare";
 import { isNative } from "@/lib/platform";
@@ -106,40 +106,59 @@ const TravelerProfile = () => {
   const initialTab = (() => { const p = searchParams.get("tab"); return p === "wyjazdy" || p === "zapisane" ? p : "listy"; })();
   const [tab, setTab] = useState<"listy" | "wyjazdy" | "zapisane">(initialTab);
   const [savedTab, setSavedTab] = useState<"miejsca" | "listy_trasy">("miejsca");
-  // Potwierdzenie usuniecia (lista albo wyjazd) - nieodwracalne, walidacja "czy na pewno?".
-  const [confirmDelete, setConfirmDelete] = useState<{ kind: "list" | "trip"; id: string; routeIds?: string[]; title: string } | null>(null);
-  const [deleting, setDeleting] = useState(false);
   const share = useShare();
   const { data: followCounts = { followers: 0, following: 0 } } = useFollowCounts(user?.id);
   const followList = useFollowList(user?.id, followSheet === "following" ? "following" : "followers");
 
-  const doDelete = async () => {
-    if (!confirmDelete || !user) return;
-    setDeleting(true);
-    try {
-      if (confirmDelete.kind === "list") {
-        await (supabase as any).from("discovery_items").delete().eq("collection_id", confirmDelete.id);
-        const { error } = await (supabase as any).from("discovery_collections").delete().eq("id", confirmDelete.id).eq("user_id", user.id);
-        if (error) throw new Error(error.message);
-        queryClient.invalidateQueries({ queryKey: ["profile-list-feed", user.id] });
-        // Odswiez listy w drawerze zapisu miejsca (inaczej usunieta lista wisi w cache).
-        queryClient.invalidateQueries({ queryKey: ["save-sheet-lists", user.id] });
-      } else {
-        const ids = confirmDelete.routeIds?.length ? confirmDelete.routeIds : [confirmDelete.id];
-        await supabase.from("pins").delete().in("route_id", ids);
-        await (supabase as any).from("chat_sessions").delete().in("route_id", ids);
-        const { error } = await supabase.from("routes").delete().in("id", ids).eq("user_id", user.id);
-        if (error) throw new Error(error.message);
-        queryClient.invalidateQueries({ queryKey: ["profile-trip-feed", user.id] });
-      }
-      toast.success(t("profile.delete_success", { defaultValue: "Usunięto." }));
-      setConfirmDelete(null);
-    } catch (e: any) {
-      toast.error(t("profile.delete_error", { defaultValue: "Nie udało się usunąć." }));
-      console.error("[TravelerProfile] delete failed:", e?.message ?? e);
-    } finally {
-      setDeleting(false);
-    }
+  // Usuwanie z oknem "Cofnij" (deferDelete): element znika od razu z listy (optymistycznie),
+  // faktyczny DB delete odroczony o 5s; klik "Cofnij" przywraca (snapshot cache). Zastepuje confirm()
+  // - nic nie ginie natychmiast, wiec nie ma dialogu "czy na pewno".
+  const handleDeleteTrip = (tr: any) => {
+    if (!user) return;
+    const ids: string[] = tr.routeIds?.length ? tr.routeIds : [tr.id];
+    const key = ["profile-trip-feed", user.id];
+    const prev = queryClient.getQueryData(key);
+    queryClient.setQueryData(key, (old: any) => (old ?? []).filter((r: any) => r.id !== tr.id));
+    deferDelete({
+      message: t("profile.trip_deleted", { defaultValue: "Wyjazd usunięty." }),
+      onUndo: () => queryClient.setQueryData(key, prev),
+      commit: async () => {
+        try {
+          await supabase.from("pins").delete().in("route_id", ids);
+          await (supabase as any).from("chat_sessions").delete().in("route_id", ids);
+          const { error } = await supabase.from("routes").delete().in("id", ids).eq("user_id", user.id);
+          if (error) throw new Error(error.message);
+          queryClient.invalidateQueries({ queryKey: ["profile-trip-feed", user.id] });
+        } catch (e: any) {
+          toast.error(t("profile.delete_error", { defaultValue: "Nie udało się usunąć." }));
+          console.error("[TravelerProfile] delete trip failed:", e?.message ?? e);
+          queryClient.invalidateQueries({ queryKey: ["profile-trip-feed", user.id] });
+        }
+      },
+    });
+  };
+  const handleDeleteList = (l: any) => {
+    if (!user) return;
+    const key = ["profile-list-feed", user.id];
+    const prev = queryClient.getQueryData(key);
+    queryClient.setQueryData(key, (old: any) => (old ?? []).filter((x: any) => x.id !== l.id));
+    deferDelete({
+      message: t("profile.list_deleted", { defaultValue: "Lista usunięta." }),
+      onUndo: () => queryClient.setQueryData(key, prev),
+      commit: async () => {
+        try {
+          await (supabase as any).from("discovery_items").delete().eq("collection_id", l.id);
+          const { error } = await (supabase as any).from("discovery_collections").delete().eq("id", l.id).eq("user_id", user.id);
+          if (error) throw new Error(error.message);
+          // Odswiez listy w drawerze zapisu miejsca (inaczej usunieta lista wisi w cache).
+          queryClient.invalidateQueries({ queryKey: ["save-sheet-lists", user.id] });
+        } catch (e: any) {
+          toast.error(t("profile.delete_error", { defaultValue: "Nie udało się usunąć." }));
+          console.error("[TravelerProfile] delete list failed:", e?.message ?? e);
+          queryClient.invalidateQueries({ queryKey: ["profile-list-feed", user.id] });
+        }
+      },
+    });
   };
 
   const handleAvatarUpload = async (file: File) => {
@@ -257,7 +276,7 @@ const TravelerProfile = () => {
       if (!rows.length) return [];
       const ids = rows.map((r) => r.id);
       const [pinsRes, savesRes, likesRes] = await Promise.all([
-        (supabase as any).from("pins").select("id, route_id, place_name, category, photo_url, image_url, images, user_photo_urls, pin_order").in("route_id", ids).order("pin_order", { ascending: true }),
+        (supabase as any).from("pins").select("id, route_id, place_name, category, photo_url, image_url, images, user_photo_urls, pin_order, latitude, longitude").in("route_id", ids).order("pin_order", { ascending: true }),
         (supabase as any).from("saved_routes").select("route_id").in("route_id", ids),
         (supabase as any).from("likes").select("route_id").in("route_id", ids),
       ]);
@@ -431,7 +450,7 @@ const TravelerProfile = () => {
                   counts={{ saves: l.saves_count ?? 0, likes: l.likes_count ?? 0, views: l.views_count ?? 0 }}
                   onOpen={() => navigate(`/lista/${l.id}`)}
                   onEdit={() => navigate(`/zestawienie/${l.id}/edytuj`)}
-                  onDelete={() => setConfirmDelete({ kind: "list", id: l.id, title: l.title || t("feed.list_fallback", "Lista miejsc") })}
+                  onDelete={() => handleDeleteList(l)}
                 />
               ))
             )
@@ -454,7 +473,8 @@ const TravelerProfile = () => {
                 // is_shared=true (grupowy plan / opublikowany) -> widok trasy dziala normalnie.
                 const isRoboczy = tr.status !== "published";
                 const openInCreator = tr.is_own && tr.is_shared === false;
-                const eyebrow = [isRoboczy ? "Robocze" : null, countryForCity(tr.city), tr.city, dateLabel].filter(Boolean).join(" · ");
+                // "Robocze" NIE w eyebrow - przeniesione do stopki (wskaznik na wysokosci edycji/usuwania).
+                const eyebrow = [countryForCity(tr.city), tr.city, dateLabel].filter(Boolean).join(" · ");
                 return (
                   <ProfileFeedCard
                     key={tr.id}
@@ -465,12 +485,13 @@ const TravelerProfile = () => {
                     title={tr.title || (tr.city ? t("feed.trip_fallback", { city: tr.city, defaultValue: `Wyjazd do ${tr.city}` }) : t("feed.trip_fallback_generic", "Wyjazd"))}
                     tiles={tr.tiles}
                     counts={{ saves: tr.saves, likes: tr.likes, views: tr.views }}
-                    hideStats={isRoboczy}
+                    isDraft={isRoboczy}
+                    mapPins={tr.tiles}
                     onOpen={() => openInCreator
                       ? navigate("/wyjazd/nowy", { state: { draftId: tr.id, city: tr.city, title: tr.title } })
                       : navigate(`/route/${tr.id}`)}
                     onEdit={tr.is_own ? () => navigate(`/review-summary?route=${tr.id}&edit=1`) : undefined}
-                    onDelete={tr.is_own ? () => setConfirmDelete({ kind: "trip", id: tr.id, routeIds: tr.routeIds, title: tr.title || tr.city || t("feed.trip_fallback_generic", "Wyjazd") }) : undefined}
+                    onDelete={tr.is_own ? () => handleDeleteTrip(tr) : undefined}
                   />
                 );
               })
@@ -539,29 +560,6 @@ const TravelerProfile = () => {
 
       {user && <NotificationsDrawer open={notificationsOpen} onClose={() => setNotificationsOpen(false)} userId={user.id} />}
 
-      {/* Potwierdzenie usuniecia (lista albo wyjazd) - nieodwracalne. */}
-      <AlertDialog open={!!confirmDelete} onOpenChange={(o) => { if (!o && !deleting) setConfirmDelete(null); }}>
-        <AlertDialogContent className="rounded-3xl">
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {confirmDelete?.kind === "list"
-                ? t("profile.delete_list_title", { defaultValue: "Na pewno chcesz usunąć tę listę?" })
-                : t("profile.delete_trip_title", { defaultValue: "Na pewno chcesz usunąć ten wyjazd?" })}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {confirmDelete?.title
-                ? t("profile.delete_desc", { title: confirmDelete.title, defaultValue: `„${confirmDelete.title}" zniknie bezpowrotnie z Twojego profilu. Nie można tego cofnąć.` })
-                : t("profile.delete_desc_generic", { defaultValue: "To zniknie bezpowrotnie z Twojego profilu. Nie można tego cofnąć." })}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleting}>{t("profile.delete_cancel", { defaultValue: "Anuluj" })}</AlertDialogCancel>
-            <AlertDialogAction onClick={(e) => { e.preventDefault(); void doDelete(); }} disabled={deleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              {deleting ? t("profile.delete_progress", { defaultValue: "Usuwanie…" }) : t("profile.delete_confirm", { defaultValue: "Usuń" })}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 };

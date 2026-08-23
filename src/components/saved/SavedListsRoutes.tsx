@@ -19,9 +19,22 @@ export function SavedListsRoutes({ city }: { city?: string }) {
     },
   });
 
-  let colCount = 0;
-  try { colCount = (JSON.parse(localStorage.getItem("trasa_saved_collections") || "[]") as string[]).length; }
-  catch { colCount = 0; }
+  // Zapisane listy (od innych) trzymane jako ID w localStorage. Liczymy TYLKO te, ktore REALNIE
+  // istnieja w DB - inaczej stare/usuniete ID (colCount>0 z localStorage) blokowaly pusty stan
+  // i widok byl calkiem pusty (bug: brak empty state na "Listy | Trasy").
+  const savedColIds = (() => {
+    try { return JSON.parse(localStorage.getItem("trasa_saved_collections") || "[]") as string[]; }
+    catch { return []; }
+  })();
+  const { data: colCount = 0 } = useQuery({
+    queryKey: ["saved-collections-existing-count", [...savedColIds].sort().join(",")],
+    enabled: savedColIds.length > 0,
+    queryFn: async () => {
+      const { count } = await (supabase as any)
+        .from("discovery_collections").select("*", { count: "exact", head: true }).in("id", savedColIds);
+      return count ?? 0;
+    },
+  });
 
   if (routeCount === 0 && colCount === 0) {
     return (

@@ -181,8 +181,8 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
             <Header title="Jaki to wyjazd?" onBack={() => setStep("entry")} backLabel="Wstecz" />
             <div className="px-5 pt-1 flex gap-4">
               {[
-                { key: "future" as TripMode, label: "Przyszły", sub: "Zaplanuj wyjazd", icon: <CalendarPlus className="h-8 w-8 text-foreground" strokeWidth={1.7} /> },
                 { key: "past" as TripMode, label: "Przeszły", sub: "Dodaj wspomnienie", icon: <History className="h-8 w-8 text-foreground" strokeWidth={1.7} /> },
+                { key: "future" as TripMode, label: "Przyszły", sub: "Zaplanuj wyjazd", icon: <CalendarPlus className="h-8 w-8 text-foreground" strokeWidth={1.7} /> },
               ].map((m) => (
                 <button key={m.key} onClick={() => { haptics.light(); setTripMode(m.key); setStep("trip"); }}
                   className="flex-1 flex flex-col items-center gap-2 active:scale-[0.98] transition-transform outline-none focus:outline-none focus-visible:outline-none">

@@ -11,6 +11,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Camera, X, Globe, Lock, Pencil, Check, Image as ImageIcon, Map as MapIcon, MapPin, ChevronUp, ChevronDown, ChevronRight, ChevronLeft, Trash2, Plus, Share, Share2, List, GalleryHorizontalEnd, Info, MoreVertical, Navigation, Maximize2, Users, Calendar as CalendarIcon, Loader2, GripVertical, Building2 } from "lucide-react";
 import { Reorder, useDragControls } from "framer-motion";
 import RouteMap from "@/components/RouteMap";
+import { buildTripStaticMapUrl } from "@/lib/staticMap";
 import SwipeToDeleteRow from "@/components/SwipeToDeleteRow";
 import { useShare } from "@/hooks/useShare";
 import { Switch } from "@/components/ui/switch";
@@ -29,7 +30,7 @@ import { compressImage } from "@/lib/imageCompression";
 import { isHeic, convertHeicToJpeg } from "@/lib/heicConvert";
 import { format, parseISO, isValid, addDays } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
-import { isNative, API_BASE } from "@/lib/platform";
+import { isNative } from "@/lib/platform";
 import { Camera as CapCamera } from "@capacitor/camera";
 import { notify } from "@/lib/notify";
 import { deferDelete } from "@/lib/deferDelete";
@@ -173,17 +174,6 @@ const rkey = (routeId: string, placeName: string) => `${routeId}::${placeName}`;
 
 // Statyczna mapka planu (proxy /api/static-map) - pomaranczowe markery miejsc, POI/transit
 // ukryte, auto-fit. null gdy brak wspolrzednych.
-function buildTripStaticMapUrl(pins: any[], size = "560x260"): string | null {
-  const pts = pins.filter((p) => p.latitude != null && p.longitude != null).slice(0, 20);
-  if (!pts.length) return null;
-  // Numerowane peachy piny (label 1-9; Google static przyjmuje 1 znak - dla 10+ bez numeru).
-  const markers = pts.map((p, i) => {
-    const label = i + 1 <= 9 ? `label:${i + 1}%7C` : "";
-    return `markers=color:0xf0a583%7C${label}${p.latitude},${p.longitude}`;
-  }).join("&");
-  return `${API_BASE}/api/static-map?size=${size}&scale=2&maptype=roadmap&${markers}&style=feature:poi%7Cvisibility:off&style=feature:transit%7Cvisibility:off`;
-}
-
 const ReviewSummary = () => {
   const { t } = useTranslation("review");
   const catLabel = (cat: string) =>

@@ -101,7 +101,7 @@ export default function PublicProfile() {
       if (!rows.length) return [];
       const ids = rows.map((r) => r.id);
       const [pinsRes, savesRes, likesRes] = await Promise.all([
-        (supabase as any).from("pins").select("id, route_id, place_name, category, photo_url, image_url, images, user_photo_urls, pin_order").in("route_id", ids).order("pin_order", { ascending: true }),
+        (supabase as any).from("pins").select("id, route_id, place_name, category, photo_url, image_url, images, user_photo_urls, pin_order, latitude, longitude").in("route_id", ids).order("pin_order", { ascending: true }),
         (supabase as any).from("saved_routes").select("route_id").in("route_id", ids),
         (supabase as any).from("likes").select("route_id").in("route_id", ids),
       ]);
@@ -252,6 +252,7 @@ export default function PublicProfile() {
                   timestamp={shortRelativeTime(tr.created_at)}
                   title={tr.title || (tr.city ? t("feed.trip_fallback", { city: tr.city, defaultValue: `Wyjazd do ${tr.city}` }) : t("feed.trip_fallback_generic", "Wyjazd"))}
                   tiles={tr.tiles}
+                  mapPins={tr.tiles}
                   counts={{ saves: tr.saves, likes: tr.likes, views: tr.views }}
                   onOpen={() => navigate(`/route/${tr.id}`)}
                 />
