@@ -137,12 +137,14 @@ Oficjalny tagline aplikacji: **"speed dating z miastem"** (wszystkie litery mał
 - **Profil** → `/moj-profil`.
 - Web/PWA (stary flow, `!PLANNING_DISABLED`): slot 2 to `Wyjazdy` (`/home`) zamiast Eksploruj.
 
-**Profil (`/moj-profil`, [TravelerProfile.tsx](src/pages/TravelerProfile.tsx)) = hub z 3 zakładkami** (wejście na konkretną zakładkę przez query param `?tab=listy|wyjazdy|zapisane`):
-1. **Listy** — kuratorskie **publiczne polecajki** usera (`discovery_collections`, `kind='ranking'`, `list_status='visited'`). To grupy miejsc do polecenia, NIE luźne zapisy.
-2. **Wyjazdy** (dawny Dziennik) — wszystkie trasy usera („pocztówki"/wpisy). Reuse [JournalTab](src/components/home/JournalTab.tsx).
-3. **Zapisane** — segment `[Miejsca | Listy | Trasy]`:
-   - **Miejsca** — luźno zapisane pojedyncze miejsca (prywatna wishlista `to_visit` + zapisy z eksploracji). Komponent [SavedPlacesGrid](src/components/saved/SavedPlacesGrid.tsx).
-   - **Listy | Trasy** — listy i trasy zapisane **od innych** userów (`saved_routes` + zapisane kolekcje), jeden wspólny pusty stan. Komponent [SavedListsRoutes](src/components/saved/SavedListsRoutes.tsx).
+**Profil (`/moj-profil`, [TravelerProfile.tsx](src/pages/TravelerProfile.tsx)) = hub z 3 zakładkami** (wejście na konkretną zakładkę przez query param `?tab=listy|wyjazdy|zapisane`). Wewnątrz Listy i Wyjazdy są **pigułki** (podzakładki, komponent lokalny `Pills`) - zmiana IA 2026-08-23: zapisane od innych rozniesione z globalnej „Zapisane" do właściwych zakładek:
+1. **Listy** — pigułki `[Moje listy | Zapisane]` (domyślnie **Moje listy**):
+   - **Moje listy** — kuratorskie **publiczne polecajki** usera (`discovery_collections`, `kind='ranking'`, `list_status='visited'`). Grupy miejsc do polecenia, NIE luźne zapisy.
+   - **Zapisane** — listy zapisane **od innych** userów. Komponent [SavedCollections](src/components/home/DiscoveryFeed.tsx) (localStorage `trasa_saved_collections`).
+2. **Wyjazdy** (dawny Dziennik) — pigułki `[Robocze | Wspomnienia | Zapisane]` (domyślnie **Wspomnienia**):
+   - **Robocze** — trasy usera `status != 'published'` (niepublikowane, badge „Robocze"). **Wspomnienia** — `status = 'published'`. Publikacja = „Zapisz trasę" (patrz model roboczy→przeszły). Karta renderowana wspólnym helperem `renderTripCard` (przekazuje `status/is_shared/trip_type` z zapytania `profile-trip-feed`).
+   - **Zapisane** — trasy zapisane **od innych** userów (`saved_routes`). Komponent [SavedRoutes](src/components/home/DiscoveryFeed.tsx) z `city="all"`.
+3. **Zapisane** (globalna zakładka) — **tylko Miejsca**: luźno zapisane pojedyncze miejsca (prywatna wishlista `to_visit` + zapisy z eksploracji). Komponent [SavedPlacesGrid](src/components/saved/SavedPlacesGrid.tsx). Segment „Listy | Trasy" i wrapper `SavedListsRoutes` już NIE używane (plik zostaje, ale rozbity na `SavedCollections`+`SavedRoutes` w zakładkach wyżej).
 
 **Profil publiczny (cudzy) — `/profil/:username`, [PublicProfile.tsx](src/pages/PublicProfile.tsx):** ten sam layout kart, ale **2 zakładki** (Listy · Wyjazdy), bez „Zapisane", tylko listy `visited`, **bez edycji/usuwania** (owner-only).
 
