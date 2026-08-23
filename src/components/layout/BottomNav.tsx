@@ -255,10 +255,10 @@ const BottomNav = () => {
             Pill HUG (nie full-width) i wyśrodkowany - węższy pasek. Fat-thumb: każdy target w-16 (64px)
             × h-14 (56px), pill px-1.5. */}
         {/* Ikony + nazwy zakladek pod spodem (orange active). */}
-        {/* Glassmorfizm (styl iOS): mocno przezroczysta tafla + blur/saturacja. Widocznosc na
-            bialym tle daje ciemna hairline (border-black) + wyrazny cien; jasny ring-inset to
-            szklany refleks nad ciemna trescia. Mniej "zabielone" niz dawne bg-white/70. */}
-        <div className="pointer-events-auto bg-white/40 backdrop-blur-2xl backdrop-saturate-150 rounded-[26px] border border-black/[0.08] ring-1 ring-inset ring-white/40 shadow-[0_12px_32px_-8px_rgba(0,0,0,0.28),0_2px_6px_-2px_rgba(0,0,0,0.10)] px-4">
+        {/* Liquid glass (styl iOS): bardzo przezroczysta tafla (bg-white/25) + mocny frost
+            (backdrop-blur-3xl) + żywa saturacja. Widocznosc na bialym tle: subtelna hairline +
+            wyrazny cien; jasny ring-inset = szklany refleks. Bez zaznaczenia aktywnej zakladki. */}
+        <div className="pointer-events-auto bg-white/25 backdrop-blur-3xl backdrop-saturate-200 rounded-[26px] border border-black/[0.06] ring-1 ring-inset ring-white/50 shadow-[0_12px_34px_-8px_rgba(0,0,0,0.30),0_2px_6px_-2px_rgba(0,0,0,0.10)] px-4">
           <div className="flex items-center gap-3 h-14">
 
           {/* Eksploruj - landing (skrajnie z lewej). Tylko w native iOS/Android.
@@ -267,8 +267,8 @@ const BottomNav = () => {
             <NavLink
               to="/eksploruj"
               end={false}
-              className="w-16 h-12 flex flex-col items-center justify-center gap-1 rounded-2xl text-muted-foreground transition-colors"
-              activeClassName="text-foreground bg-black/10"
+              className="w-16 flex flex-col items-center justify-center gap-1 text-muted-foreground transition-colors"
+              activeClassName="text-foreground"
             >
               {({ isActive }) => (
                 <>
@@ -285,8 +285,8 @@ const BottomNav = () => {
             <NavLink
               to="/home"
               end
-              className="w-16 h-12 flex flex-col items-center justify-center gap-1 rounded-2xl text-muted-foreground transition-colors"
-              activeClassName="text-foreground bg-black/10"
+              className="w-16 flex flex-col items-center justify-center gap-1 text-muted-foreground transition-colors"
+              activeClassName="text-foreground"
             >
               {({ isActive }) => (
                 <>
