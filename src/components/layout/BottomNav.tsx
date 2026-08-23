@@ -17,7 +17,7 @@ const HOME_FILTERS_KEY = "trasa_home_filters";
 // uklad wzorowany na arkuszu tworzenia z Pinteresta.
 // Ikona nawigacji z pliku SVG (public/Ikona_*.svg). Uzywa CSS mask + currentColor, wiec
 // przejmuje kolor tekstu rodzica (czarny #0E0E0E gdy aktywna, szary gdy nie) - jak ikony lucide.
-const NavIcon = ({ src, className = "h-5 w-5" }: { src: string; className?: string }) => (
+const NavIcon = ({ src, className = "h-5 w-5 drop-shadow-[0_0_2.5px_rgba(255,255,255,0.75)]" }: { src: string; className?: string }) => (
   <span
     aria-hidden
     className={className}
@@ -267,13 +267,13 @@ const BottomNav = () => {
             <NavLink
               to="/eksploruj"
               end={false}
-              className="w-16 flex flex-col items-center justify-center gap-1 text-muted-foreground transition-colors"
+              className="w-16 flex flex-col items-center justify-center gap-1 text-foreground transition-colors"
               activeClassName="text-foreground"
             >
               {({ isActive }) => (
                 <>
                   <NavIcon src="/Ikona_Eksploracja.svg" />
-                  <span className="text-[9px] font-semibold leading-tight mt-0.5">Eksploruj</span>
+                  <span className="text-[9px] font-semibold leading-tight mt-0.5 [text-shadow:0_0_3px_rgba(255,255,255,0.85)]">Eksploruj</span>
                 </>
               )}
             </NavLink>
@@ -285,13 +285,13 @@ const BottomNav = () => {
             <NavLink
               to="/home"
               end
-              className="w-16 flex flex-col items-center justify-center gap-1 text-muted-foreground transition-colors"
+              className="w-16 flex flex-col items-center justify-center gap-1 text-foreground transition-colors"
               activeClassName="text-foreground"
             >
               {({ isActive }) => (
                 <>
                   <NavIcon src="/Ikona_Trasy.svg" />
-                  <span className="text-[9px] font-semibold leading-tight mt-0.5">Wyjazdy</span>
+                  <span className="text-[9px] font-semibold leading-tight mt-0.5 [text-shadow:0_0_3px_rgba(255,255,255,0.85)]">Wyjazdy</span>
                 </>
               )}
             </NavLink>
@@ -326,13 +326,13 @@ const BottomNav = () => {
           <NavLink
             to="/moj-profil"
             end={false}
-            className="w-16 flex flex-col items-center justify-center gap-1 text-muted-foreground transition-colors"
+            className="w-16 flex flex-col items-center justify-center gap-1 text-foreground transition-colors"
             activeClassName="text-foreground"
           >
             {({ isActive }) => (
               <>
                 <NavIcon src="/Ikona_Profil.svg" />
-                <span className="text-[9px] font-semibold leading-tight mt-0.5">Profil</span>
+                <span className="text-[9px] font-semibold leading-tight mt-0.5 [text-shadow:0_0_3px_rgba(255,255,255,0.85)]">Profil</span>
               </>
             )}
           </NavLink>
