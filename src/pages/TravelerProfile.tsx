@@ -5,7 +5,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import { Settings, Camera, UserCircle2, ArrowRight, Bell, Share2, Search, LayoutGrid, MapPinned, Bookmark } from "lucide-react";
+import { Settings, Camera, UserCircle2, ArrowRight, Bell, Share2, Search, LayoutGrid, MapPinned, Bookmark, ListFilter, ChevronDown, Check } from "lucide-react";
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import TabHeader from "@/components/layout/TabHeader";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
@@ -92,26 +93,34 @@ function FeedEmpty({ icon, title, desc, ctaLabel, onCta }: {
   );
 }
 
-// ── Segmentowe pigułki (podzakładki) ────────────────────────────────────────
-// Styl 1:1 z dawnym segmentem "Zapisane" (jasny szary tor, aktywna pigułka na białym).
+// ── Podzakładki: kompaktowy dropdown z ikoną listy (zamiast pigułek) ─────────
+// Trigger = mały przycisk „[≡] aktualny wybór [⌄]"; klik rozwija menu opcji (floating,
+// nie zajmuje wysokości layoutu). Referencja UX: selektor grup w Pacer. Wybór Nat 2026-08-23.
 
-function Pills({ options, value, onChange }: {
+function TabSelect({ options, value, onChange }: {
   options: { id: string; label: string }[];
   value: string;
   onChange: (id: string) => void;
 }) {
+  const current = options.find((o) => o.id === value)?.label ?? options[0]?.label;
   return (
-    <div className="flex p-1 bg-secondary rounded-full">
-      {options.map((s) => (
-        <button
-          key={s.id}
-          onClick={() => onChange(s.id)}
-          className={`flex-1 h-9 rounded-full text-sm font-bold transition-colors active:scale-[0.98] ${value === s.id ? "bg-background text-foreground shadow-sm" : "text-secondary-foreground/70"}`}
-        >
-          {s.label}
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button className="inline-flex items-center gap-2 h-9 pl-3 pr-2.5 rounded-full bg-secondary text-secondary-foreground text-sm font-bold active:scale-[0.98] transition-transform">
+          <ListFilter className="h-4 w-4 shrink-0" />
+          <span className="truncate">{current}</span>
+          <ChevronDown className="h-4 w-4 opacity-60 shrink-0" />
         </button>
-      ))}
-    </div>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="min-w-[190px] rounded-2xl">
+        {options.map((o) => (
+          <DropdownMenuItem key={o.id} onSelect={() => onChange(o.id)} className="text-sm font-medium cursor-pointer rounded-xl">
+            {o.label}
+            {value === o.id && <Check className="h-4 w-4 ml-auto text-primary" />}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
@@ -489,7 +498,7 @@ const TravelerProfile = () => {
           {tab === "listy" ? (
             <div className="space-y-4">
               {/* Podzakładki: Moje listy (curated polecajki usera) | Zapisane (listy od innych). */}
-              <Pills
+              <TabSelect
                 value={listyTab}
                 onChange={(v) => setListyTab(v as "moje" | "zapisane")}
                 options={[{ id: "moje", label: "Moje listy" }, { id: "zapisane", label: "Zapisane" }]}
@@ -530,7 +539,7 @@ const TravelerProfile = () => {
           ) : tab === "wyjazdy" ? (
             <div className="space-y-4">
               {/* Podzakładki: Robocze (niepublikowane) | Wspomnienia (opublikowane) | Zapisane (od innych). */}
-              <Pills
+              <TabSelect
                 value={wyjazdyTab}
                 onChange={(v) => setWyjazdyTab(v as "robocze" | "wspomnienia" | "zapisane")}
                 options={[{ id: "robocze", label: "Robocze" }, { id: "wspomnienia", label: "Wspomnienia" }, { id: "zapisane", label: "Zapisane" }]}
