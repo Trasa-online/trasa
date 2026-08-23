@@ -12,6 +12,7 @@ import { ArrowLeft, Camera, X, Globe, Lock, Pencil, Check, Image as ImageIcon, M
 import { Reorder, useDragControls } from "framer-motion";
 import RouteMap from "@/components/RouteMap";
 import { buildTripStaticMapUrl } from "@/lib/staticMap";
+import { buildShareUrl } from "@/lib/shareUrl";
 import SwipeToDeleteRow from "@/components/SwipeToDeleteRow";
 import { useShare } from "@/hooks/useShare";
 import { Switch } from "@/components/ui/switch";
@@ -629,7 +630,7 @@ const ReviewSummary = () => {
   }, [existingNotes, allPins]);
 
   // Udostepnij link do publicznej trasy (/#/route/:id). HashRouter => link z #.
-  const shareUrl = routeId ? `https://trasa.travel/#/route/${routeId}` : "";
+  const shareUrl = routeId ? buildShareUrl(`/route/${routeId}`) : "";
   const shareLink = async () => {
     if (!routeId) return;
     const res = await share({ title: route?.title || route?.city || "Trasa", text: t("share.text"), url: shareUrl });
