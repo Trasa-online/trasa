@@ -255,10 +255,10 @@ const BottomNav = () => {
             Pill HUG (nie full-width) i wyśrodkowany - węższy pasek. Fat-thumb: każdy target w-16 (64px)
             × h-14 (56px), pill px-1.5. */}
         {/* Ikony + nazwy zakladek pod spodem (orange active). */}
-        {/* Liquid glass (styl iOS): bardzo przezroczysta tafla (bg-white/25) + mocny frost
-            (backdrop-blur-3xl) + żywa saturacja. Widocznosc na bialym tle: subtelna hairline +
-            wyrazny cien; jasny ring-inset = szklany refleks. Bez zaznaczenia aktywnej zakladki. */}
-        <div className="pointer-events-auto bg-white/25 backdrop-blur-3xl backdrop-saturate-200 rounded-[26px] border border-black/[0.06] ring-1 ring-inset ring-white/50 shadow-[0_12px_34px_-8px_rgba(0,0,0,0.30),0_2px_6px_-2px_rgba(0,0,0,0.10)] px-4">
+        {/* Czyste szklo (see-through): minimalne wypelnienie (bg-white/10) + tylko lekki blur-sm,
+            zeby tresc pod spodem byla WIDOCZNA (nie zmatowiona jak przy blur-3xl). Ksztalt paska na
+            bialym tle daje subtelna hairline + wyrazny cien + jasny ring-inset (szklany refleks). */}
+        <div className="pointer-events-auto bg-white/10 backdrop-blur-sm backdrop-saturate-150 rounded-[26px] border border-black/[0.06] ring-1 ring-inset ring-white/40 shadow-[0_12px_34px_-8px_rgba(0,0,0,0.30),0_2px_6px_-2px_rgba(0,0,0,0.10)] px-4">
           <div className="flex items-center gap-3 h-14">
 
           {/* Eksploruj - landing (skrajnie z lewej). Tylko w native iOS/Android.
