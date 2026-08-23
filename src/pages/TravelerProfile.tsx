@@ -14,6 +14,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { deferDelete } from "@/lib/deferDelete";
+import { PullToRefresh } from "@/components/PullToRefresh";
 import { SHARE_BASE_URL } from "@/lib/shareUrl";
 import { useShare } from "@/hooks/useShare";
 import { isNative } from "@/lib/platform";
@@ -155,6 +156,11 @@ const TravelerProfile = () => {
   const [listyTab, setListyTab] = useState<"moje" | "zapisane">("moje");
   const [wyjazdyTab, setWyjazdyTab] = useState<"robocze" | "wspomnienia" | "zapisane">("wspomnienia");
   const share = useShare();
+
+  // Pull-to-refresh: odswieza liczniki polubien/zapisow + feedy (aktywne query na tym ekranie).
+  const handleRefresh = async () => {
+    await queryClient.invalidateQueries();
+  };
   const { data: followCounts = { followers: 0, following: 0 } } = useFollowCounts(user?.id);
   const followList = useFollowList(user?.id, followSheet === "following" ? "following" : "followers");
 
@@ -429,7 +435,7 @@ const TravelerProfile = () => {
         }
       />
 
-      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
+      <PullToRefresh onRefresh={handleRefresh} className="flex-1 overflow-x-hidden">
       <div className="px-4 space-y-5 max-w-lg mx-auto pt-6 pb-[calc(7rem+env(safe-area-inset-bottom,0px))]">
 
         {/* Avatar + nazwa + bio (Figma: nazwa | separator | bio) */}
@@ -595,7 +601,7 @@ const TravelerProfile = () => {
           )}
         </div>
       </div>
-      </div>
+      </PullToRefresh>
 
       {/* Obserwujacy / Obserwowani - lista */}
       <Sheet open={followSheet !== null} onOpenChange={(v) => { if (!v) setFollowSheet(null); }}>

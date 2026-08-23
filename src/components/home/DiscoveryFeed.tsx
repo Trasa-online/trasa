@@ -1525,7 +1525,6 @@ function SavedCollectionCard({ col, savedAt, onOpen, onDelete }: { col: Discover
 
 export function SavedCollections({ hideEmptyState }: { hideEmptyState?: boolean } = {}) {
   const navigate = useNavigate();
-  const [query, setQuery] = useState("");
   const [pendingUnsave, setPendingUnsave] = useState<DiscoveryCollection | null>(null);
   const [savedIds, setSavedIds] = useState<string[]>(() => {
     try { return JSON.parse(localStorage.getItem("trasa_saved_collections") || "[]") as string[]; }
@@ -1559,44 +1558,9 @@ export function SavedCollections({ hideEmptyState }: { hideEmptyState?: boolean 
       return hydrateCollections(ordered);
     },
   });
-  const filtered = useMemo(() => {
-    const qq = query.trim().toLowerCase();
-    if (!qq) return collections;
-    return collections.filter((c) =>
-      (c.title ?? "").toLowerCase().includes(qq) ||
-      (c.author_name ?? "").toLowerCase().includes(qq) ||
-      (c.city ?? "").toLowerCase().includes(qq),
-    );
-  }, [collections, query]);
-
   return (
     <div className="flex flex-col">
-      {/* Wyszukiwarka - tylko gdy sa ZAŁADOWANE zapisane listy (nie stale localStorage id). */}
-      {collections.length > 0 && (
-        <div className="pb-3">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-            <input
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Szukaj w zapisanych zestawieniach…"
-              className="w-full h-9 pl-9 pr-9 rounded-full bg-muted/60 border border-border/40 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30"
-            />
-            {query && (
-              <button
-                onClick={() => setQuery("")}
-                className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 flex items-center justify-center rounded-full text-muted-foreground hover:bg-muted active:scale-90 transition"
-                aria-label="Wyczyść"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            )}
-          </div>
-        </div>
-      )}
-
-      {savedIds.length === 0 || (!isLoading && filtered.length === 0 && !query.trim()) ? (
+      {savedIds.length === 0 || (!isLoading && collections.length === 0) ? (
         // Pusty stan. hideEmptyState -> null (wspólny pusty stan obsługuje wrapper SavedListsRoutes).
         hideEmptyState ? null : (
         <div className="pt-20 pb-12 text-center px-8">
@@ -1611,11 +1575,9 @@ export function SavedCollections({ hideEmptyState }: { hideEmptyState?: boolean 
         <div className="space-y-3">
           {[0, 1, 2].map((i) => <div key={i} className="h-20 rounded-3xl bg-muted/40 animate-pulse" />)}
         </div>
-      ) : filtered.length === 0 ? (
-        <p className="text-center text-sm text-muted-foreground py-10">Brak wyników dla „{query.trim()}".</p>
       ) : (
         <div className="space-y-3">
-          {filtered.map((col) => (
+          {collections.map((col) => (
             <SavedCollectionCard key={col.id} col={col} savedAt={savedDates[col.id]} onOpen={(c) => navigate(`/lista/${c.id}`)} onDelete={() => setPendingUnsave(col)} />
           ))}
         </div>
