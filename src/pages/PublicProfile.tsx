@@ -241,7 +241,8 @@ export default function PublicProfile() {
     </div>
   );
 
-  const displayName = profile.username || profile.first_name || "";
+  // Imię (first_name) = nazwa wyświetlana; username = osobny @handle (nie username jako oba).
+  const displayName = profile.first_name || profile.username || "";
 
   return (
     <div className="flex flex-col h-[100dvh] bg-background">
@@ -267,7 +268,8 @@ export default function PublicProfile() {
           </Avatar>
           <div className="min-w-0 shrink-0 pt-1">
             <h2 className="text-xl font-display font-extrabold leading-tight truncate">{displayName}</h2>
-            <p className="text-sm text-muted-foreground mt-0.5 truncate">@{profile.username}</p>
+            {/* @username osobno TYLKO gdy jest imię (inaczej byłby podwójny username). */}
+            {profile.username && profile.first_name && <p className="text-sm text-muted-foreground mt-0.5 truncate">@{profile.username}</p>}
           </div>
           {profile.bio && (
             <>

@@ -361,7 +361,8 @@ const TravelerProfile = () => {
   if (loading) return null;
   if (!user || user.is_anonymous) return <GuestProfile />;
 
-  const displayName = profile?.username || profile?.first_name || "";
+  // Imię (first_name) to nazwa wyświetlana; username to osobny @handle. NIE username jako oba.
+  const displayName = profile?.first_name || profile?.username || "";
 
   // Podział wyjazdów: Robocze (niepublikowane) vs Wspomnienia (status='published').
   const draftTrips = (tripCards as any[]).filter((tr) => tr.status !== "published");
@@ -442,9 +443,10 @@ const TravelerProfile = () => {
           </div>
           <div className="min-w-0 max-w-[46%] self-center">
             <h2 className="text-xl font-display font-extrabold leading-tight truncate">
-              {profile?.username || profile?.first_name || t("profile.user_fallback")}
+              {profile?.first_name || profile?.username || t("profile.user_fallback")}
             </h2>
-            {profile?.username && <p className="text-sm text-muted-foreground mt-0.5 truncate">@{profile.username}</p>}
+            {/* @username osobno TYLKO gdy jest imię (inaczej byłby podwójny username). */}
+            {profile?.username && profile?.first_name && <p className="text-sm text-muted-foreground mt-0.5 truncate">@{profile.username}</p>}
           </div>
           {profile?.bio ? (
             <>
