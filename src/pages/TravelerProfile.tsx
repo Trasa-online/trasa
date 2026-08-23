@@ -23,7 +23,7 @@ import { Camera as CapCamera, CameraResultType, CameraSource } from "@capacitor/
 import { ProfileFeedCard } from "@/components/profile/ProfileFeedCard";
 import { SpontawayTabIcon } from "@/components/profile/SpontawayTabIcon";
 import { SavedPlacesGrid } from "@/components/saved/SavedPlacesGrid";
-import { SavedListsRoutes } from "@/components/saved/SavedListsRoutes";
+import { SavedRoutes, SavedCollections } from "@/components/home/DiscoveryFeed";
 import { ALL_CITIES } from "@/components/home/CitySelect";
 import { shortRelativeTime } from "@/lib/relativeTime";
 import { countryForCity } from "@/lib/tripCountries";
@@ -92,6 +92,29 @@ function FeedEmpty({ icon, title, desc, ctaLabel, onCta }: {
   );
 }
 
+// ── Segmentowe pigułki (podzakładki) ────────────────────────────────────────
+// Styl 1:1 z dawnym segmentem "Zapisane" (jasny szary tor, aktywna pigułka na białym).
+
+function Pills({ options, value, onChange }: {
+  options: { id: string; label: string }[];
+  value: string;
+  onChange: (id: string) => void;
+}) {
+  return (
+    <div className="flex p-1 bg-secondary rounded-full">
+      {options.map((s) => (
+        <button
+          key={s.id}
+          onClick={() => onChange(s.id)}
+          className={`flex-1 h-9 rounded-full text-sm font-bold transition-colors active:scale-[0.98] ${value === s.id ? "bg-background text-foreground shadow-sm" : "text-secondary-foreground/70"}`}
+        >
+          {s.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 // ── TravelerProfile ───────────────────────────────────────────────────────────
 
 const TravelerProfile = () => {
@@ -105,7 +128,10 @@ const TravelerProfile = () => {
   // ?tab=wyjazdy|zapisane|listy - wejście z redirectów (dawne /dziennik -> wyjazdy, /polubione -> zapisane).
   const initialTab = (() => { const p = searchParams.get("tab"); return p === "wyjazdy" || p === "zapisane" ? p : "listy"; })();
   const [tab, setTab] = useState<"listy" | "wyjazdy" | "zapisane">(initialTab);
-  const [savedTab, setSavedTab] = useState<"miejsca" | "listy_trasy">("miejsca");
+  // Podzakładki (pigułki) w Listy / Wyjazdy. Domyślnie: Listy->Moje, Wyjazdy->Wspomnienia
+  // (opublikowane trasy = flagowa treść; robocze to work-in-progress).
+  const [listyTab, setListyTab] = useState<"moje" | "zapisane">("moje");
+  const [wyjazdyTab, setWyjazdyTab] = useState<"robocze" | "wspomnienia" | "zapisane">("wspomnienia");
   const share = useShare();
   const { data: followCounts = { followers: 0, following: 0 } } = useFollowCounts(user?.id);
   const followList = useFollowList(user?.id, followSheet === "following" ? "following" : "followers");
@@ -315,6 +341,10 @@ const TravelerProfile = () => {
         title: rep.title,
         start_date: rep.start_date,
         created_at: rep.created_at,
+        // status/is_shared decyduja o Robocze vs Wspomnienia + trybie otwarcia (kreator vs widok).
+        status: rep.status,
+        is_shared: rep.is_shared,
+        trip_type: rep.trip_type,
         tiles: days.flatMap((d) => pinsByRoute[d.id] ?? []),
         saves: saveCount[rep.id] ?? 0,
         likes: likeCount[rep.id] ?? 0,
@@ -327,6 +357,40 @@ const TravelerProfile = () => {
   if (!user || user.is_anonymous) return <GuestProfile />;
 
   const displayName = profile?.username || profile?.first_name || "";
+
+  // Podział wyjazdów: Robocze (niepublikowane) vs Wspomnienia (status='published').
+  const draftTrips = (tripCards as any[]).filter((tr) => tr.status !== "published");
+  const memoryTrips = (tripCards as any[]).filter((tr) => tr.status === "published");
+
+  const renderTripCard = (tr: any) => {
+    const dateLabel = tr.start_date ? format(parseISO(tr.start_date), "d LLLL yyyy", { locale: dateLocale() }) : "";
+    // "Roboczy" = wyjazd NIEOPUBLIKOWANY (status != 'published'). Publikacja = "Zapisz trasę"
+    // (finishEditing) ustawia status='published'. NIE po minieciu daty (patrz isMemory w ReviewSummary).
+    const isRoboczy = tr.status !== "published";
+    // Otwarcie: is_shared=false (solo draft) -> KREATOR (SharedRoute czyta tylko is_shared=true);
+    // is_shared=true (grupowy plan / opublikowany) -> widok trasy dziala normalnie.
+    const openInCreator = tr.is_own && tr.is_shared === false;
+    const eyebrow = [countryForCity(tr.city), tr.city, dateLabel].filter(Boolean).join(" · ");
+    return (
+      <ProfileFeedCard
+        key={tr.id}
+        avatarUrl={profile?.avatar_url}
+        fallback={displayName}
+        eyebrow={eyebrow}
+        timestamp={shortRelativeTime(tr.created_at)}
+        title={tr.title || (tr.city ? t("feed.trip_fallback", { city: tr.city, defaultValue: `Wyjazd do ${tr.city}` }) : t("feed.trip_fallback_generic", "Wyjazd"))}
+        tiles={tr.tiles}
+        counts={{ saves: tr.saves, likes: tr.likes, views: tr.views }}
+        isDraft={isRoboczy}
+        mapPins={tr.tiles}
+        onOpen={() => openInCreator
+          ? navigate("/wyjazd/nowy", { state: { draftId: tr.id, city: tr.city, title: tr.title } })
+          : navigate(`/route/${tr.id}`)}
+        onEdit={tr.is_own ? () => navigate(`/review-summary?route=${tr.id}&edit=1`) : undefined}
+        onDelete={tr.is_own ? () => handleDeleteTrip(tr) : undefined}
+      />
+    );
+  };
 
   return (
     <div className="flex flex-col flex-1 min-h-0 bg-background">
@@ -429,7 +493,15 @@ const TravelerProfile = () => {
         {/* Feed zakladki */}
         <div className="space-y-6 pt-1">
           {tab === "listy" ? (
-            listCards.length === 0 ? (
+            <div className="space-y-4">
+              {/* Podzakładki: Moje listy (curated polecajki usera) | Zapisane (listy od innych). */}
+              <Pills
+                value={listyTab}
+                onChange={(v) => setListyTab(v as "moje" | "zapisane")}
+                options={[{ id: "moje", label: "Moje listy" }, { id: "zapisane", label: "Zapisane" }]}
+              />
+              {listyTab === "moje" ? (
+                listCards.length === 0 ? (
               // Pusty stan LIST (Figma "Mój profil - Listy - pusty stan"): peachy znak trasy (S)
               // + instrukcja uzycia "+", bez guzika CTA (tworzenie idzie przez BottomNav "+").
               <div className="pt-16 pb-12 text-center px-8">
@@ -455,70 +527,53 @@ const TravelerProfile = () => {
                   onDelete={() => handleDeleteList(l)}
                 />
               ))
-            )
-          ) : tab === "wyjazdy" ? (
-            tripCards.length === 0 ? (
-              <FeedEmpty
-                icon={<MapPinned className="h-6 w-6" />}
-                title={t("feed.trips_empty_title", "Nie masz jeszcze wyjazdów")}
-                desc={t("feed.trips_empty_desc", "Zaplanuj trasę i podziel się nią ze znajomymi.")}
-                ctaLabel={t("feed.trips_empty_cta", "Zaplanuj wyjazd")}
-                onCta={() => window.dispatchEvent(new Event("trasa:open-plan-menu"))}
-              />
-            ) : (
-              tripCards.map((tr: any) => {
-                const dateLabel = tr.start_date ? format(parseISO(tr.start_date), "d LLLL yyyy", { locale: dateLocale() }) : "";
-                // "Roboczy" = wyjazd NIEOPUBLIKOWANY (status != 'published') - eyebrow "Robocze" + bez
-                // metryk + poza eksploracja. Publikacja = "Zapisz trase" (finishEditing) ustawia
-                // status='published'. NIE po minieciu daty (patrz isMemory w ReviewSummary).
-                // Otwarcie: is_shared=false (solo draft) -> KREATOR (SharedRoute czyta tylko is_shared=true);
-                // is_shared=true (grupowy plan / opublikowany) -> widok trasy dziala normalnie.
-                const isRoboczy = tr.status !== "published";
-                const openInCreator = tr.is_own && tr.is_shared === false;
-                // "Robocze" NIE w eyebrow - przeniesione do stopki (wskaznik na wysokosci edycji/usuwania).
-                const eyebrow = [countryForCity(tr.city), tr.city, dateLabel].filter(Boolean).join(" · ");
-                return (
-                  <ProfileFeedCard
-                    key={tr.id}
-                    avatarUrl={profile?.avatar_url}
-                    fallback={displayName}
-                    eyebrow={eyebrow}
-                    timestamp={shortRelativeTime(tr.created_at)}
-                    title={tr.title || (tr.city ? t("feed.trip_fallback", { city: tr.city, defaultValue: `Wyjazd do ${tr.city}` }) : t("feed.trip_fallback_generic", "Wyjazd"))}
-                    tiles={tr.tiles}
-                    counts={{ saves: tr.saves, likes: tr.likes, views: tr.views }}
-                    isDraft={isRoboczy}
-                    mapPins={tr.tiles}
-                    onOpen={() => openInCreator
-                      ? navigate("/wyjazd/nowy", { state: { draftId: tr.id, city: tr.city, title: tr.title } })
-                      : navigate(`/route/${tr.id}`)}
-                    onEdit={tr.is_own ? () => navigate(`/review-summary?route=${tr.id}&edit=1`) : undefined}
-                    onDelete={tr.is_own ? () => handleDeleteTrip(tr) : undefined}
-                  />
-                );
-              })
-            )
-          ) : (
-            /* Zakładka ZAPISANE (IA 2026-08-20): zapisane rzeczy. Segmenty: Miejsca (siatka
-               zapisanych miejsc) + "Listy | Trasy" (zapisane listy + trasy razem, jeden feed). */
-            <div className="space-y-3">
-              <div className="flex p-1 bg-secondary rounded-full">
-                {([{ id: "miejsca", label: "Miejsca" }, { id: "listy_trasy", label: "Listy | Trasy" }] as { id: "miejsca" | "listy_trasy"; label: string }[]).map((s) => (
-                  <button
-                    key={s.id}
-                    onClick={() => setSavedTab(s.id)}
-                    className={`flex-1 h-9 rounded-full text-sm font-bold transition-colors active:scale-[0.98] ${savedTab === s.id ? "bg-background text-foreground shadow-sm" : "text-secondary-foreground/70"}`}
-                  >
-                    {s.label}
-                  </button>
-                ))}
-              </div>
-              {savedTab === "miejsca" ? (
-                <SavedPlacesGrid />
+                )
               ) : (
-                <SavedListsRoutes city={ALL_CITIES} />
+                // Zapisane listy od innych (dawny segment "Listy | Trasy", teraz tu). Własny pusty stan.
+                <div className="pt-1"><SavedCollections /></div>
               )}
             </div>
+          ) : tab === "wyjazdy" ? (
+            <div className="space-y-4">
+              {/* Podzakładki: Robocze (niepublikowane) | Wspomnienia (opublikowane) | Zapisane (od innych). */}
+              <Pills
+                value={wyjazdyTab}
+                onChange={(v) => setWyjazdyTab(v as "robocze" | "wspomnienia" | "zapisane")}
+                options={[{ id: "robocze", label: "Robocze" }, { id: "wspomnienia", label: "Wspomnienia" }, { id: "zapisane", label: "Zapisane" }]}
+              />
+              {wyjazdyTab === "zapisane" ? (
+                // Zapisane trasy od innych (dawny segment "Listy | Trasy", teraz tu). Własny pusty stan.
+                <div className="pt-1"><SavedRoutes city={ALL_CITIES} /></div>
+              ) : wyjazdyTab === "robocze" ? (
+                draftTrips.length === 0 ? (
+                  <FeedEmpty
+                    icon={<MapPinned className="h-6 w-6" />}
+                    title="Brak roboczych wyjazdów"
+                    desc={`Zaplanuj wyjazd i dokończ go, żeby zapisać wspomnienie.`}
+                    ctaLabel="Zaplanuj wyjazd"
+                    onCta={() => window.dispatchEvent(new Event("trasa:open-plan-menu"))}
+                  />
+                ) : (
+                  <div className="space-y-6">{draftTrips.map(renderTripCard)}</div>
+                )
+              ) : (
+                memoryTrips.length === 0 ? (
+                  <FeedEmpty
+                    icon={<MapPinned className="h-6 w-6" />}
+                    title="Brak wspomnień"
+                    desc="Dokończ roboczy wyjazd, żeby stał się wspomnieniem."
+                    ctaLabel="Zaplanuj wyjazd"
+                    onCta={() => window.dispatchEvent(new Event("trasa:open-plan-menu"))}
+                  />
+                ) : (
+                  <div className="space-y-6">{memoryTrips.map(renderTripCard)}</div>
+                )
+              )}
+            </div>
+          ) : (
+            /* Zakładka ZAPISANE (IA 2026-08-23): tylko zapisane MIEJSCA. Zapisane listy przeniesione
+               do Listy->Zapisane, zapisane trasy do Wyjazdy->Zapisane. */
+            <SavedPlacesGrid />
           )}
         </div>
       </div>
