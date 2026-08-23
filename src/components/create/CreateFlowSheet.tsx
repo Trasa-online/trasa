@@ -37,7 +37,6 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
 
   // Lista
   const [listName, setListName] = useState("");
-  const [listPublic, setListPublic] = useState(true);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [creating, setCreating] = useState(false);
 
@@ -59,7 +58,7 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
   // Reset przy kazdym otwarciu.
   useEffect(() => {
     if (open) {
-      setStep("entry"); setListName(""); setListPublic(true); setSelected(new Set());
+      setStep("entry"); setListName(""); setSelected(new Set());
       setTripMode("future"); setTripName(""); setTripCity(defaultCity()); setTripPeople([]); setCreating(false);
     }
   }, [open]);
@@ -89,7 +88,7 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
   const goFullEditor = () => {
     const places = savedPlaces.filter((p) => selected.has(p.id)).map(toPlaceForList);
     close();
-    navigate("/zestawienie/nowe", { state: { title: listName.trim(), city: "", places, listStatus: "visited", isPublic: listPublic } });
+    navigate("/zestawienie/nowe", { state: { title: listName.trim(), city: "", places, listStatus: "visited", isPublic: true } });
   };
 
   const createList = async () => {
@@ -98,11 +97,11 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
     // Pusta lista jest OK (opcja "Pomiń") - miejsca mozna dodac pozniej na widoku listy.
     setCreating(true);
     haptics.light();
-    const id = await createListFromSavedPlaces(user.id, { title: listName.trim() || "Nowa lista", isPublic: listPublic, places, author });
+    const id = await createListFromSavedPlaces(user.id, { title: listName.trim() || "Nowa lista", isPublic: true, places, author });
     setCreating(false);
     if (!id) { haptics.error(); toast.error("Nie udało się utworzyć listy"); return; }
     haptics.success();
-    toast.success(listPublic ? "Lista utworzona" : "Lista utworzona (prywatna)");
+    toast.success("Lista utworzona");
     close();
     navigate(`/lista/${id}`);
   };
@@ -221,19 +220,6 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
             </div>
             <div className="mt-3">
               <PeopleRow kind="listy" disabled />
-            </div>
-            <div className="flex items-center justify-between gap-3 px-5 py-2">
-              <p className="text-[15px] font-medium text-foreground">Rodzaj listy</p>
-              <div className="flex items-center rounded-full bg-[#ededed] p-0.5">
-                {[{ k: false, l: "Prywatna" }, { k: true, l: "Publiczna" }].map((o) => (
-                  // onMouseDown preventDefault: nie kradnij fokusu z inputu nazwy (inaczej klawiatura
-                  // chowa sie przy zmianie prywatnosci). onClick i tak leci.
-                  <button key={o.l} onMouseDown={(e) => e.preventDefault()} onClick={() => setListPublic(o.k)}
-                    className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-colors ${listPublic === o.k ? "bg-white text-foreground shadow-sm" : "text-foreground/55"}`}>
-                    {o.l}
-                  </button>
-                ))}
-              </div>
             </div>
           </div>
         )}

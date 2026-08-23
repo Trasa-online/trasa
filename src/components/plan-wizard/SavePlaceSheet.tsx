@@ -129,15 +129,15 @@ export default function SavePlaceSheet({
     } finally { setBusyId(null); }
   };
 
-  // Utwórz NOWĄ listę z tym miejscem. Nowa lista = PRYWATNA (visited + is_public=false) domyślnie;
-  // user może zmienić na publiczną toggle "Rodzaj listy" na widoku listy.
+  // Utwórz NOWĄ listę z tym miejscem. Kuratorska lista (visited) = ZAWSZE publiczna
+  // (decyzja 2026-08-24: brak opcji "prywatna", rozwój bazy discovery).
   const createNew = async () => {
     if (!place || !user || busyId) return;
     const name = newName.trim();
     if (!name) return;
     setBusyId("new"); haptics.medium();
     try {
-      const id = await createListWithPlace(user.id, name, "visited", city || null, { ...place }, author, false);
+      const id = await createListWithPlace(user.id, name, "visited", city || null, { ...place }, author, true);
       if (!id) throw new Error("create failed");
       setNewName("");
       invalidate();

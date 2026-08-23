@@ -67,8 +67,6 @@ export default function SharedList() {
   // Usuniecie listy (wlasciciel) - nieodwracalne, walidacja "czy na pewno?".
   const [askDelete, setAskDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  // Rodzaj listy (Prywatna|Publiczna) - lokalny override dla optymistycznej zmiany.
-  const [listPublicOverride, setListPublicOverride] = useState<boolean | null>(null);
   const [addPlaceOpen, setAddPlaceOpen] = useState(false);
   const share = useShare();
 
@@ -234,18 +232,6 @@ export default function SharedList() {
   const isOwner = !!user && col.user_id === user.id;
   const placesCountLabel = `${items.length} ${items.length === 1 ? "miejsce" : items.length < 5 ? "miejsca" : "miejsc"}`;
 
-  // Rodzaj listy: Prywatna|Publiczna (wlasciciel zmienia z widoku listy). Aktualizuje is_public.
-  const listIsPublic = listPublicOverride ?? (col.is_public ?? true);
-  const handleSetPublic = async (pub: boolean) => {
-    if (!user || pub === listIsPublic) return;
-    setListPublicOverride(pub);
-    const { error } = await (supabase as any).from("discovery_collections")
-      .update({ is_public: pub }).eq("id", col.id).eq("user_id", user.id);
-    if (error) { setListPublicOverride(!pub); toast.error("Nie udało się zmienić"); return; }
-    queryClient.invalidateQueries({ queryKey: ["shared-list", id] });
-    queryClient.invalidateQueries({ queryKey: ["profile-list-feed", user.id] });
-    toast.success(pub ? "Lista publiczna" : "Lista prywatna");
-  };
 
   const handleShare = () => { void share({ title: col.title || cityLabel || "Lista", url: buildShareUrl(`/lista/${col.id}`) }); };
 
@@ -424,18 +410,6 @@ export default function SharedList() {
               {col.tags.map((tg: string) => (
                 <span key={tg} className="inline-flex items-center px-3 py-1 rounded-full bg-white border border-border/60 text-foreground text-[13px] font-semibold">{tg}</span>
               ))}
-            </div>
-          )}
-          {/* Rodzaj listy: Prywatna|Publiczna (wlasciciel). */}
-          {isOwner && (
-            <div className="mt-4 flex items-center justify-between gap-3">
-              <p className="text-[15px] font-medium text-foreground">Rodzaj listy</p>
-              <div className="flex items-center rounded-full bg-[#ededed] p-0.5">
-                {[{ k: false, l: "Prywatna" }, { k: true, l: "Publiczna" }].map((o) => (
-                  <button key={o.l} onClick={() => handleSetPublic(o.k)}
-                    className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-colors ${listIsPublic === o.k ? "bg-white text-foreground shadow-sm" : "text-foreground/55"}`}>{o.l}</button>
-                ))}
-              </div>
             </div>
           )}
         </div>

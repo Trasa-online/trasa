@@ -176,9 +176,10 @@ export async function createListWithPlace(
   isPublicOverride?: boolean,
 ): Promise<string | null> {
   const isRecommend = listStatus === "visited";
-  // Domyslnie widocznosc z intencji (visited=publiczna), ale caller moze wymusic (np. nowa lista
-  // z drawera "Miejsce zapisane!" = PRYWATNA z toggle na widoku listy).
-  const isPublic = typeof isPublicOverride === "boolean" ? isPublicOverride : isRecommend;
+  // Kuratorska lista (visited) jest ZAWSZE publiczna (decyzja 2026-08-24: brak opcji "prywatna",
+  // rozwoj bazy discovery). to_visit (wishlista "Do zobaczenia") zostaje prywatna; isPublicOverride
+  // respektowany tylko dla to_visit (w praktyce zawsze false).
+  const isPublic = isRecommend ? true : !!isPublicOverride;
   const { data: col, error } = await (supabase as any)
     .from("discovery_collections")
     .insert({
