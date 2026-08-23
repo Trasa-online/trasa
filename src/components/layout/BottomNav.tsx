@@ -17,7 +17,7 @@ const HOME_FILTERS_KEY = "trasa_home_filters";
 // uklad wzorowany na arkuszu tworzenia z Pinteresta.
 // Ikona nawigacji z pliku SVG (public/Ikona_*.svg). Uzywa CSS mask + currentColor, wiec
 // przejmuje kolor tekstu rodzica (czarny #0E0E0E gdy aktywna, szary gdy nie) - jak ikony lucide.
-const NavIcon = ({ src, className = "h-5 w-5 drop-shadow-[0_0_2.5px_rgba(255,255,255,0.75)]" }: { src: string; className?: string }) => (
+const NavIcon = ({ src, className = "h-5 w-5" }: { src: string; className?: string }) => (
   <span
     aria-hidden
     className={className}
@@ -255,10 +255,10 @@ const BottomNav = () => {
             Pill HUG (nie full-width) i wyśrodkowany - węższy pasek. Fat-thumb: każdy target w-16 (64px)
             × h-14 (56px), pill px-1.5. */}
         {/* Ikony + nazwy zakladek pod spodem (orange active). */}
-        {/* Czyste szklo (see-through): minimalne wypelnienie (bg-white/10) + tylko lekki blur-sm,
-            zeby tresc pod spodem byla WIDOCZNA (nie zmatowiona jak przy blur-3xl). Ksztalt paska na
-            bialym tle daje subtelna hairline + wyrazny cien + jasny ring-inset (szklany refleks). */}
-        <div className="pointer-events-auto bg-white/10 backdrop-blur-sm backdrop-saturate-150 rounded-[26px] border border-black/[0.06] ring-1 ring-inset ring-white/40 shadow-[0_12px_34px_-8px_rgba(0,0,0,0.30),0_2px_6px_-2px_rgba(0,0,0,0.10)] px-4">
+        {/* Szklo z wypelnieniem (kompromis: przezroczyste + czytelne). bg-white/45 daje jasna baze
+            pod ikonami (czytelne bez halo), blur-sm zostawia tresc pod spodem widoczna. Ksztalt na
+            bialym tle: subtelna hairline + cien + jasny ring-inset (szklany refleks). */}
+        <div className="pointer-events-auto bg-white/45 backdrop-blur-sm backdrop-saturate-150 rounded-[26px] border border-black/[0.06] ring-1 ring-inset ring-white/40 shadow-[0_12px_34px_-8px_rgba(0,0,0,0.30),0_2px_6px_-2px_rgba(0,0,0,0.10)] px-4">
           <div className="flex items-center gap-3 h-14">
 
           {/* Eksploruj - landing (skrajnie z lewej). Tylko w native iOS/Android.
@@ -273,7 +273,7 @@ const BottomNav = () => {
               {({ isActive }) => (
                 <>
                   <NavIcon src="/Ikona_Eksploracja.svg" />
-                  <span className="text-[9px] font-semibold leading-tight mt-0.5 [text-shadow:0_0_3px_rgba(255,255,255,0.85)]">Eksploruj</span>
+                  <span className="text-[9px] font-semibold leading-tight mt-0.5">Eksploruj</span>
                 </>
               )}
             </NavLink>
@@ -291,7 +291,7 @@ const BottomNav = () => {
               {({ isActive }) => (
                 <>
                   <NavIcon src="/Ikona_Trasy.svg" />
-                  <span className="text-[9px] font-semibold leading-tight mt-0.5 [text-shadow:0_0_3px_rgba(255,255,255,0.85)]">Wyjazdy</span>
+                  <span className="text-[9px] font-semibold leading-tight mt-0.5">Wyjazdy</span>
                 </>
               )}
             </NavLink>
@@ -332,7 +332,7 @@ const BottomNav = () => {
             {({ isActive }) => (
               <>
                 <NavIcon src="/Ikona_Profil.svg" />
-                <span className="text-[9px] font-semibold leading-tight mt-0.5 [text-shadow:0_0_3px_rgba(255,255,255,0.85)]">Profil</span>
+                <span className="text-[9px] font-semibold leading-tight mt-0.5">Profil</span>
               </>
             )}
           </NavLink>
