@@ -781,7 +781,7 @@ const App = () => (
           <Route path="/home" element={PLANNING_DISABLED ? <Navigate to="/moj-profil?tab=wyjazdy" replace /> : <AppLayout hideTopBar><HomeSwipe /></AppLayout>} />
           <Route path="/eksploruj" element={<AppLayout hideTopBar><Explore /></AppLayout>} />
           {/* /polubione (Zapisane) przeniesione do zakładki profilu (IA 2026-08-20). Redirect dla starych linków/pushy. */}
-          <Route path="/polubione" element={<Navigate to="/moj-profil?tab=zapisane" replace />} />
+          <Route path="/polubione" element={<Navigate to="/moj-profil" replace />} />
           <Route path="/zestawienie/nowe" element={<RequireAuth><CreateRanking /></RequireAuth>} />
           <Route path="/zestawienie/:id/edytuj" element={<RequireAuth><CreateRanking /></RequireAuth>} />
           {/* /create (generowanie planu przez AI) - wylaczone w trybie uproszczonym na native.
@@ -809,7 +809,7 @@ const App = () => (
           {/* Widok huba Robocze/Zapisane USUNIETY (IA 2026-08-22) - robocze wyjazdy sa w profilu
               "Wyjazdy" (badge Robocze), zapisane w profilu "Zapisane". Stare linki -> redirect. */}
           <Route path="/utworz/robocze" element={<Navigate to="/moj-profil?tab=wyjazdy" replace />} />
-          <Route path="/utworz/zapisane" element={<Navigate to="/moj-profil?tab=zapisane" replace />} />
+          <Route path="/utworz/zapisane" element={<Navigate to="/moj-profil" replace />} />
           <Route path="/wyjazd/:id" element={<Navigate to="/moj-profil?tab=wyjazdy" replace />} />
           {/* Planowanie tras (kreator + sesje grupowe) - wylaczone w trybie uproszczonym na native.
               Wyjatek: exploreMode ("Przegladaj") zostaje wlaczony - patrz PlanRoute. */}
