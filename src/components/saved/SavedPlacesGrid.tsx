@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, MapPin, Bookmark } from "lucide-react";
+import { Loader2, Bookmark } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { PlaceTile } from "@/components/profile/PlaceTile";
@@ -67,17 +67,16 @@ export function SavedPlacesGrid() {
 
   if (isLoading) return <div className="flex justify-center py-12"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>;
 
+  // Pusty stan wg Figmy ("Mój profil - zapisane - pusty stan"): duzy peachy bookmark + copy.
   if (places.length === 0) return (
-    <div className="flex flex-col items-center text-center gap-3 px-6 py-12">
-      <div className="h-14 w-14 rounded-2xl bg-[#fcede3] flex items-center justify-center text-orange-500">
-        <MapPin className="h-6 w-6" />
-      </div>
-      <div className="space-y-1">
-        <p className="text-base font-black">Brak zapisanych miejsc</p>
-        <p className="text-sm text-muted-foreground max-w-[280px] leading-relaxed">
-          {`Zapisuj miejsca na później zakładką w eksploracji - pojawią się tutaj.`}
-        </p>
-      </div>
+    <div className="pt-16 pb-12 text-center px-8 flex flex-col items-center">
+      <span aria-hidden className="mb-5 block h-28 w-28" style={{ backgroundColor: "#ef9d78", WebkitMaskImage: "url(/Ikona_Zapisane.svg)", maskImage: "url(/Ikona_Zapisane.svg)", WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat", WebkitMaskSize: "contain", maskSize: "contain", WebkitMaskPosition: "center", maskPosition: "center" }} />
+      <p className="text-lg font-bold text-foreground">Brak zapisanych</p>
+      <p className="text-sm text-muted-foreground mt-1.5 max-w-[280px] leading-relaxed">
+        Zapisz miejsce bookmarkiem w{" "}zakładce{" "}
+        <span className="font-semibold text-foreground">Eksploruj</span>{" "}
+        lub u{" "}<span className="font-semibold text-foreground">innego użytkownika</span>
+      </p>
     </div>
   );
 

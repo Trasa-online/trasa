@@ -371,26 +371,27 @@ export default function SharedList() {
     <div className="h-[100dvh] bg-background flex flex-col max-w-lg mx-auto">
       {/* Staly TopBar (naglowek nad obszarem scrolla): wstecz + autor + miasto + liczba miejsc + serce */}
       <div className="shrink-0 bg-background px-5 pb-2.5 border-b border-border/40" style={{ paddingTop: "max(12px, env(safe-area-inset-top, 12px))" }}>
-        <div className="flex items-center gap-2 flex-wrap text-sm">
+        <div className="flex items-center gap-2 text-sm">
             <button onClick={() => { if (window.history.length > 1) navigate(-1); else navigate("/eksploruj"); }} aria-label="Wróć"
               className="h-9 w-9 -ml-2 shrink-0 rounded-full flex items-center justify-center active:scale-90 transition-transform">
               <ArrowLeft className="h-5 w-5 text-foreground" />
             </button>
-            {author?.username ? (
-              <button onClick={() => navigate(`/profil/${author.username}`)} className="flex items-center gap-1.5 font-semibold text-foreground active:opacity-60 transition-opacity">
-                <img src={avatarSrc(author?.avatar_url ?? col.author_avatar)} alt="" className="h-6 w-6 rounded-full object-cover bg-orange-100" />
-                @{author.username}
-              </button>
-            ) : (
-              <span className="flex items-center gap-1.5 font-semibold text-foreground">
-                <img src={avatarSrc(col.author_avatar ?? null)} alt="" className="h-6 w-6 rounded-full object-cover bg-orange-100" />
-                {authorName}
-              </span>
-            )}
-            {cityLabel && <span className="flex items-center gap-1 text-muted-foreground"><Building2 className="h-4 w-4" />{cityLabel}</span>}
-            <span className="flex items-center gap-1 text-muted-foreground"><MapPin className="h-4 w-4" />{placesCountLabel}</span>
-            {/* #4: serce polubienia listy w TopBarze (obok liczby miejsc) */}
-            <button onClick={toggleLike} aria-label="Polub listę" className="ml-auto shrink-0 flex items-center gap-1 active:scale-90 transition-transform">
+            {/* Awatar + username WYSRODKOWANE (#5 - przeniesione ze skraju). Miasto/liczba miejsc -> pod tytul. */}
+            <div className="flex-1 min-w-0 flex justify-center">
+              {author?.username ? (
+                <button onClick={() => navigate(`/profil/${author.username}`)} className="flex items-center gap-1.5 font-semibold text-foreground active:opacity-60 transition-opacity min-w-0">
+                  <img src={avatarSrc(author?.avatar_url ?? col.author_avatar)} alt="" className="h-6 w-6 rounded-full object-cover bg-orange-100 shrink-0" />
+                  <span className="truncate">@{author.username}</span>
+                </button>
+              ) : (
+                <span className="flex items-center gap-1.5 font-semibold text-foreground min-w-0">
+                  <img src={avatarSrc(col.author_avatar ?? null)} alt="" className="h-6 w-6 rounded-full object-cover bg-orange-100 shrink-0" />
+                  <span className="truncate">{authorName}</span>
+                </span>
+              )}
+            </div>
+            {/* Serce polubienia listy (prawy skraj) */}
+            <button onClick={toggleLike} aria-label="Polub listę" className="shrink-0 flex items-center gap-1 active:scale-90 transition-transform">
               <Heart className={cn("h-5 w-5", listLike.liked ? "fill-red-500 text-red-500" : "text-foreground/70")} />
               <span className="text-xs font-semibold tabular-nums text-muted-foreground">{listLike.count}</span>
             </button>
@@ -411,6 +412,11 @@ export default function SharedList() {
                 <button onClick={() => setAskDelete(true)} aria-label="Usuń listę" className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center active:scale-90 transition-transform"><Trash2 className="h-4 w-4 text-destructive" /></button>
               </div>
             )}
+          </div>
+          {/* #5: miasto + liczba miejsc bezposrednio pod tytulem (przeniesione z TopBara). */}
+          <div className="flex items-center gap-4 mt-2.5 text-sm text-muted-foreground">
+            {cityLabel && <span className="flex items-center gap-1.5"><Building2 className="h-4 w-4 shrink-0" />{cityLabel}</span>}
+            <span className="flex items-center gap-1.5"><MapPin className="h-4 w-4 shrink-0" />{placesCountLabel}</span>
           </div>
           {col.description && <p className="text-sm text-muted-foreground leading-relaxed mt-3">{col.description}</p>}
           {Array.isArray(col.tags) && col.tags.length > 0 && (

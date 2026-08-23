@@ -279,7 +279,9 @@ const TravelerProfile = () => {
     queryKey: ["profile-trip-feed", user?.id],
     enabled: !!user?.id,
     queryFn: async () => {
-      const sel = "id, title, city, start_date, day_number, folder_id, views, created_at, user_id, is_shared, trip_type, status";
+      // saves_count/likes_count = denormalizowane liczniki na routes (RLS na saved_routes blokuje
+      // count po stronie klienta - patrz migracja 20260828). Czytamy kolumny zamiast liczyc wiersze.
+      const sel = "id, title, city, start_date, day_number, folder_id, views, saves_count, likes_count, created_at, user_id, is_shared, trip_type, status";
       // Wlasne trasy (TAKZE robocze is_shared=false - badge "Robocze") + trasy grupowe, do ktorych
       // jestem zaproszony (member, is_shared=true). Koniec osobnego widoku /utworz/robocze (IA 2026-08-22).
       const [ownRes, memberRes] = await Promise.all([
@@ -301,11 +303,7 @@ const TravelerProfile = () => {
       ].filter((r) => { if (seen.has(r.id)) return false; seen.add(r.id); return true; });
       if (!rows.length) return [];
       const ids = rows.map((r) => r.id);
-      const [pinsRes, savesRes, likesRes] = await Promise.all([
-        (supabase as any).from("pins").select("id, route_id, place_name, category, photo_url, image_url, images, user_photo_urls, pin_order, latitude, longitude").in("route_id", ids).order("pin_order", { ascending: true }),
-        (supabase as any).from("saved_routes").select("route_id").in("route_id", ids),
-        (supabase as any).from("likes").select("route_id").in("route_id", ids),
-      ]);
+      const pinsRes = await (supabase as any).from("pins").select("id, route_id, place_name, category, photo_url, image_url, images, user_photo_urls, pin_order, latitude, longitude").in("route_id", ids).order("pin_order", { ascending: true });
       const allPins = (pinsRes.data ?? []) as any[];
       // Okladki miejsc ze zdjec userow (place_photos) - gdy pin nie ma wlasnego zdjecia.
       const keys = Array.from(new Set(allPins.flatMap((p) => pinCoverKeys(p)))).filter(Boolean);
@@ -315,10 +313,6 @@ const TravelerProfile = () => {
         const _cover = pickPlaceCover(photoMap, pinCoverKeys(p));
         (pinsByRoute[p.route_id] ??= []).push({ ...p, _cover });
       }
-      const saveCount: Record<string, number> = {};
-      for (const s of savesRes.data ?? []) saveCount[s.route_id] = (saveCount[s.route_id] ?? 0) + 1;
-      const likeCount: Record<string, number> = {};
-      for (const l of likesRes.data ?? []) likeCount[l.route_id] = (likeCount[l.route_id] ?? 0) + 1;
       // Zwin wielodniowe po folder_id (rep = najnizszy day_number).
       const folderMap = new Map<string, any[]>();
       const grouped: { rep: any; days: any[] }[] = [];
@@ -346,8 +340,8 @@ const TravelerProfile = () => {
         is_shared: rep.is_shared,
         trip_type: rep.trip_type,
         tiles: days.flatMap((d) => pinsByRoute[d.id] ?? []),
-        saves: saveCount[rep.id] ?? 0,
-        likes: likeCount[rep.id] ?? 0,
+        saves: Number(rep.saves_count ?? 0),
+        likes: Number(rep.likes_count ?? 0),
         views: Number(rep.views ?? 0),
       }));
     },

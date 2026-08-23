@@ -35,6 +35,10 @@ export function ProfileFeedCard({
   hideStats,
   mapPins,
   isDraft,
+  onLike,
+  liked,
+  onSave,
+  saved,
 }: {
   avatarUrl?: string | null;
   fallback?: string;
@@ -50,6 +54,12 @@ export function ProfileFeedCard({
   hideStats?: boolean; // ukryj metryki zapisow/polubien (bez wskaznika)
   mapPins?: any[]; // piny z lat/lng -> mapka podgladowa pod kafelkami (tylko wyjazdy)
   isDraft?: boolean; // roboczy wyjazd - stopka pokazuje wskaznik "Robocze" (zamiast metryk)
+  // Interaktywne polubienie/zapis z karty (cudzy profil). Gdy podane -> ikona = przycisk (stan
+  // liked/saved); bez nich -> statyczny licznik (wlasny profil). Wybor Nat 2026-08-23.
+  onLike?: () => void;
+  liked?: boolean;
+  onSave?: () => void;
+  saved?: boolean;
 }) {
   const [mapOpen, setMapOpen] = useState(false);
   const mapUrl = mapPins && mapPins.length ? buildTripStaticMapUrl(mapPins) : null;
@@ -133,12 +143,24 @@ export function ProfileFeedCard({
           </span>
         ) : (
           <>
-            <span className="flex items-center gap-1.5 text-sm tabular-nums">
-              <Bookmark className="h-[18px] w-[18px]" /> {counts.saves}
-            </span>
-            <span className="flex items-center gap-1.5 text-sm tabular-nums">
-              <Heart className="h-[18px] w-[18px]" /> {counts.likes}
-            </span>
+            {onSave ? (
+              <button onClick={onSave} aria-label={saved ? "Usuń z zapisanych" : "Zapisz"} className="flex items-center gap-1.5 text-sm tabular-nums active:scale-90 transition-transform">
+                <Bookmark className={`h-[18px] w-[18px] ${saved ? "fill-orange-600 text-orange-600" : ""}`} /> {counts.saves}
+              </button>
+            ) : (
+              <span className="flex items-center gap-1.5 text-sm tabular-nums">
+                <Bookmark className="h-[18px] w-[18px]" /> {counts.saves}
+              </span>
+            )}
+            {onLike ? (
+              <button onClick={onLike} aria-label={liked ? "Cofnij polubienie" : "Polub"} className="flex items-center gap-1.5 text-sm tabular-nums active:scale-90 transition-transform">
+                <Heart className={`h-[18px] w-[18px] ${liked ? "fill-red-500 text-red-500" : ""}`} /> {counts.likes}
+              </button>
+            ) : (
+              <span className="flex items-center gap-1.5 text-sm tabular-nums">
+                <Heart className="h-[18px] w-[18px]" /> {counts.likes}
+              </span>
+            )}
           </>
         ))}
         {(onEdit || onDelete) && (

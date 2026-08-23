@@ -1,12 +1,15 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useParams, useNavigate } from "react-router-dom";
 import { avatarSrc } from "@/lib/avatar";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { useAuth } from "@/hooks/useAuth";
+import { toggleRouteLike, toggleListLike } from "@/lib/likes";
 import { parseISO, format } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
-import { ArrowLeft, LayoutGrid, ListChecks, MapPinned } from "lucide-react";
+import { ArrowLeft, LayoutGrid, MapPinned } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import FollowButton from "@/components/social/FollowButton";
@@ -18,13 +21,17 @@ import { countryForCity } from "@/lib/tripCountries";
 import { pinCoverKeys, fetchPlacePhotosForKeys, pickPlaceCover } from "@/lib/placePhotoSocial";
 
 // ── Empty state feedu (cudzy profil, read-only - bez CTA tworzenia) ─────────────
-function FeedEmptyRO({ icon, title }: { icon: React.ReactNode; title: string }) {
+// Spojne wizualnie z "mój profil": peachy znak (maska SVG) LUB ikona w peachy kwadracie + opis.
+function FeedEmptyRO({ icon, maskSrc, title, desc }: { icon?: React.ReactNode; maskSrc?: string; title: string; desc?: string }) {
   return (
-    <div className="flex flex-col items-center text-center gap-3 px-6 py-12">
-      <div className="h-14 w-14 rounded-2xl bg-[#fcede3] flex items-center justify-center text-orange-500">
-        {icon}
-      </div>
-      <p className="text-base font-black">{title}</p>
+    <div className="pt-14 pb-12 text-center px-8 flex flex-col items-center">
+      {maskSrc ? (
+        <span aria-hidden className="mb-4 block h-20 w-20" style={{ backgroundColor: "#ef9d78", WebkitMaskImage: `url(${maskSrc})`, maskImage: `url(${maskSrc})`, WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat", WebkitMaskSize: "contain", maskSize: "contain", WebkitMaskPosition: "center", maskPosition: "center" }} />
+      ) : (
+        <div className="mb-3 h-14 w-14 rounded-2xl bg-[#fcede3] flex items-center justify-center text-orange-500">{icon}</div>
+      )}
+      <p className="text-base font-bold text-foreground">{title}</p>
+      {desc && <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed max-w-[280px]">{desc}</p>}
     </div>
   );
 }
@@ -33,6 +40,8 @@ export default function PublicProfile() {
   const { t } = useTranslation("profiles");
   const { username } = useParams<{ username: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [tab, setTab] = useState<"listy" | "wyjazdy">("listy");
   const [followSheet, setFollowSheet] = useState<"followers" | "following" | null>(null);
 
@@ -94,17 +103,15 @@ export default function PublicProfile() {
     enabled: !!profile?.id,
     queryFn: async () => {
       const { data: routes } = await (supabase as any)
-        .from("routes").select("id, title, city, start_date, day_number, folder_id, views, created_at")
+        .from("routes").select("id, title, city, start_date, day_number, folder_id, views, saves_count, likes_count, created_at")
         .eq("user_id", profile!.id).eq("is_shared", true)
         .order("created_at", { ascending: false });
       const rows = (routes ?? []) as any[];
       if (!rows.length) return [];
       const ids = rows.map((r) => r.id);
-      const [pinsRes, savesRes, likesRes] = await Promise.all([
-        (supabase as any).from("pins").select("id, route_id, place_name, category, photo_url, image_url, images, user_photo_urls, pin_order, latitude, longitude").in("route_id", ids).order("pin_order", { ascending: true }),
-        (supabase as any).from("saved_routes").select("route_id").in("route_id", ids),
-        (supabase as any).from("likes").select("route_id").in("route_id", ids),
-      ]);
+      // saves_count/likes_count = kolumny na routes (denormalizacja - RLS na saved_routes blokuje
+      // count po stronie klienta). Patrz migracja 20260828.
+      const pinsRes = await (supabase as any).from("pins").select("id, route_id, place_name, category, photo_url, image_url, images, user_photo_urls, pin_order, latitude, longitude").in("route_id", ids).order("pin_order", { ascending: true });
       const allPins = (pinsRes.data ?? []) as any[];
       const keys = Array.from(new Set(allPins.flatMap((p) => pinCoverKeys(p)))).filter(Boolean);
       const photoMap = keys.length ? await fetchPlacePhotosForKeys(keys) : null;
@@ -113,10 +120,6 @@ export default function PublicProfile() {
         const _cover = pickPlaceCover(photoMap, pinCoverKeys(p));
         (pinsByRoute[p.route_id] ??= []).push({ ...p, _cover });
       }
-      const saveCount: Record<string, number> = {};
-      for (const s of savesRes.data ?? []) saveCount[s.route_id] = (saveCount[s.route_id] ?? 0) + 1;
-      const likeCount: Record<string, number> = {};
-      for (const l of likesRes.data ?? []) likeCount[l.route_id] = (likeCount[l.route_id] ?? 0) + 1;
       const folderMap = new Map<string, any[]>();
       const grouped: { rep: any; days: any[] }[] = [];
       for (const r of rows) {
@@ -137,12 +140,98 @@ export default function PublicProfile() {
         start_date: rep.start_date,
         created_at: rep.created_at,
         tiles: days.flatMap((d) => pinsByRoute[d.id] ?? []),
-        saves: saveCount[rep.id] ?? 0,
-        likes: likeCount[rep.id] ?? 0,
+        saves: Number(rep.saves_count ?? 0),
+        likes: Number(rep.likes_count ?? 0),
         views: Number(rep.views ?? 0),
       }));
     },
   });
+
+  // ── Interaktywne polubienie/zapis z kart (cudzy profil, wybor Nat 2026-08-23) ──
+  // Serce/bookmark na karcie = przycisk. Wlasny publiczny profil -> licznik (nie polubisz swojego).
+  const canInteract = !!user && !!profile?.id && user.id !== profile.id;
+  const listIds = useMemo(() => (listCards as any[]).map((l) => l.id), [listCards]);
+  const tripIds = useMemo(() => (tripCards as any[]).map((tr) => tr.id), [tripCards]);
+
+  const { data: init } = useQuery({
+    queryKey: ["pp-interactions", user?.id, listIds.join(","), tripIds.join(",")],
+    enabled: canInteract && (listIds.length > 0 || tripIds.length > 0),
+    queryFn: async () => {
+      const [ll, lt, st] = await Promise.all([
+        listIds.length ? (supabase as any).from("collection_likes").select("collection_id").eq("user_id", user!.id).in("collection_id", listIds) : Promise.resolve({ data: [] }),
+        tripIds.length ? (supabase as any).from("likes").select("route_id").eq("user_id", user!.id).in("route_id", tripIds) : Promise.resolve({ data: [] }),
+        tripIds.length ? (supabase as any).from("saved_routes").select("route_id").eq("user_id", user!.id).in("route_id", tripIds) : Promise.resolve({ data: [] }),
+      ]);
+      return {
+        likedLists: new Set<string>(((ll as any).data ?? []).map((r: any) => r.collection_id)),
+        likedTrips: new Set<string>(((lt as any).data ?? []).map((r: any) => r.route_id)),
+        savedTrips: new Set<string>(((st as any).data ?? []).map((r: any) => r.route_id)),
+      };
+    },
+  });
+  const initLikedLists = init?.likedLists ?? new Set<string>();
+  const initLikedTrips = init?.likedTrips ?? new Set<string>();
+  const initSavedTrips = init?.savedTrips ?? new Set<string>();
+  // Optymistyczne override + snapshot zapisanych list (localStorage, per-urzadzenie) do delty licznika.
+  const [likeOverride, setLikeOverride] = useState<Record<string, boolean>>({});
+  const [saveOverride, setSaveOverride] = useState<Record<string, boolean>>({});
+  const [savedListIds, setSavedListIds] = useState<Set<string>>(() => {
+    try { return new Set<string>(JSON.parse(localStorage.getItem("trasa_saved_collections") || "[]")); } catch { return new Set(); }
+  });
+  const [initSavedLists] = useState<Set<string>>(() => {
+    try { return new Set<string>(JSON.parse(localStorage.getItem("trasa_saved_collections") || "[]")); } catch { return new Set(); }
+  });
+
+  const isListLiked = (id: string) => likeOverride["l:" + id] ?? initLikedLists.has(id);
+  const isTripLiked = (id: string) => likeOverride["t:" + id] ?? initLikedTrips.has(id);
+  const isTripSaved = (id: string) => saveOverride["t:" + id] ?? initSavedTrips.has(id);
+  const isListSaved = (id: string) => savedListIds.has(id);
+  // Licznik = baza (z DB) skorygowana o roznice miedzy stanem biezacym a poczatkowym.
+  const delta = (now: boolean, was: boolean) => (now ? 1 : 0) - (was ? 1 : 0);
+
+  const onTripLike = (tr: any) => {
+    if (!user) { navigate("/auth"); return; }
+    const cur = isTripLiked(tr.id);
+    setLikeOverride((m) => ({ ...m, ["t:" + tr.id]: !cur }));
+    void toggleRouteLike(tr.id, user.id, cur);
+  };
+  const onListLike = (l: any) => {
+    if (!user) { navigate("/auth"); return; }
+    const cur = isListLiked(l.id);
+    setLikeOverride((m) => ({ ...m, ["l:" + l.id]: !cur }));
+    void toggleListLike(l.id, user.id, cur);
+  };
+  const onTripSave = async (tr: any) => {
+    if (!user) { navigate("/auth"); return; }
+    const cur = isTripSaved(tr.id);
+    setSaveOverride((m) => ({ ...m, ["t:" + tr.id]: !cur }));
+    if (cur) {
+      await (supabase as any).from("saved_routes").delete().eq("user_id", user.id).eq("route_id", tr.id);
+      toast("Usunięto z zapisanych");
+    } else {
+      await (supabase as any).from("saved_routes").upsert({ user_id: user.id, route_id: tr.id }, { onConflict: "user_id,route_id", ignoreDuplicates: true });
+      void (supabase as any).rpc("notify_route_used", { p_route_id: tr.id });
+      toast.success("Zapisano wyjazd");
+    }
+    queryClient.invalidateQueries({ queryKey: ["saved-routes"] });
+  };
+  const onListSave = (l: any) => {
+    if (!user) { navigate("/auth"); return; }
+    const cur = isListSaved(l.id);
+    const next = new Set(savedListIds);
+    const dates = (() => { try { return JSON.parse(localStorage.getItem("trasa_saved_collections_dates") || "{}"); } catch { return {}; } })();
+    if (cur) { next.delete(l.id); delete dates[l.id]; toast("Usunięto z zapisanych"); }
+    else {
+      next.add(l.id); dates[l.id] = new Date().toISOString(); toast.success("Zapisano listę");
+      void (supabase as any).rpc("increment_collection_saves", { p_collection_id: l.id });
+      void (supabase as any).rpc("notify_collection_saved", { p_collection_id: l.id });
+    }
+    try {
+      localStorage.setItem("trasa_saved_collections", JSON.stringify([...next]));
+      localStorage.setItem("trasa_saved_collections_dates", JSON.stringify(dates));
+    } catch { /* localStorage niedostepny */ }
+    setSavedListIds(next);
+  };
 
   if (isLoading) return null;
   if (!profile) return (
@@ -221,7 +310,7 @@ export default function PublicProfile() {
         <div className="space-y-6 pt-1">
           {tab === "listy" ? (
             listCards.length === 0 ? (
-              <FeedEmptyRO icon={<ListChecks className="h-6 w-6" />} title={t("feed.lists_empty_public", { defaultValue: "Brak list" })} />
+              <FeedEmptyRO maskSrc="/Ikona_Trasy.svg" title="Brak list" desc={`Tu pojawią się polecajki tego użytkownika.`} />
             ) : (
               listCards.map((l: any) => (
                 <ProfileFeedCard
@@ -232,13 +321,17 @@ export default function PublicProfile() {
                   timestamp={shortRelativeTime(l.updated_at)}
                   title={l.title || t("feed.list_fallback", "Lista miejsc")}
                   tiles={l.tiles}
-                  counts={{ saves: l.saves_count ?? 0, likes: l.likes_count ?? 0, views: l.views_count ?? 0 }}
+                  counts={{ saves: (l.saves_count ?? 0) + delta(isListSaved(l.id), initSavedLists.has(l.id)), likes: (l.likes_count ?? 0) + delta(isListLiked(l.id), initLikedLists.has(l.id)), views: l.views_count ?? 0 }}
                   onOpen={() => navigate(`/lista/${l.id}`)}
+                  onLike={canInteract ? () => onListLike(l) : undefined}
+                  liked={isListLiked(l.id)}
+                  onSave={canInteract ? () => onListSave(l) : undefined}
+                  saved={isListSaved(l.id)}
                 />
               ))
             )
           ) : tripCards.length === 0 ? (
-            <FeedEmptyRO icon={<MapPinned className="h-6 w-6" />} title={t("feed.trips_empty_public", { defaultValue: "Brak wyjazdów" })} />
+            <FeedEmptyRO icon={<MapPinned className="h-6 w-6" />} title="Brak wyjazdów" desc={`Tu pojawią się wyjazdy tego użytkownika.`} />
           ) : (
             tripCards.map((tr: any) => {
               const dateLabel = tr.start_date ? format(parseISO(tr.start_date), "d LLLL yyyy", { locale: dateLocale() }) : "";
@@ -253,8 +346,12 @@ export default function PublicProfile() {
                   title={tr.title || (tr.city ? t("feed.trip_fallback", { city: tr.city, defaultValue: `Wyjazd do ${tr.city}` }) : t("feed.trip_fallback_generic", "Wyjazd"))}
                   tiles={tr.tiles}
                   mapPins={tr.tiles}
-                  counts={{ saves: tr.saves, likes: tr.likes, views: tr.views }}
+                  counts={{ saves: tr.saves + delta(isTripSaved(tr.id), initSavedTrips.has(tr.id)), likes: tr.likes + delta(isTripLiked(tr.id), initLikedTrips.has(tr.id)), views: tr.views }}
                   onOpen={() => navigate(`/route/${tr.id}`)}
+                  onLike={canInteract ? () => onTripLike(tr) : undefined}
+                  liked={isTripLiked(tr.id)}
+                  onSave={canInteract ? () => onTripSave(tr) : undefined}
+                  saved={isTripSaved(tr.id)}
                 />
               );
             })

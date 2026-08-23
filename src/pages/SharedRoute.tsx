@@ -676,44 +676,47 @@ export default function SharedRoute() {
 
       {/* Staly TopBar (naglowek nad obszarem scrolla): wstecz + autor + uczestnicy + miasto + liczba miejsc + serce */}
       <div className="shrink-0 bg-background px-5 pb-2.5 border-b border-border/40" style={{ paddingTop: "max(12px, env(safe-area-inset-top, 12px))" }}>
-        <div className="flex items-center gap-2 flex-wrap text-sm">
+        <div className="flex items-center gap-2 text-sm">
             <button onClick={() => { if (window.history.length > 1) navigate(-1); else navigate("/eksploruj"); }} aria-label="Wróć"
               className="h-9 w-9 -ml-2 shrink-0 rounded-full flex items-center justify-center active:scale-90 transition-transform">
               <ArrowLeft className="h-5 w-5 text-foreground" />
             </button>
-            {!isAnon && author?.username ? (
-              <button
-                onClick={() => navigate(`/profil/${author.username}`)}
-                className="flex items-center gap-1.5 font-semibold text-foreground active:opacity-60 transition-opacity"
-              >
-                <img src={avatarSrc(author?.avatar_url)} alt="" className="h-6 w-6 rounded-full object-cover bg-orange-100" />
-                @{author.username}
-              </button>
-            ) : (
-              <span className="flex items-center gap-1.5 font-semibold text-foreground">
-                {!isAnon && <img src={avatarSrc(author?.avatar_url)} alt="" className="h-6 w-6 rounded-full object-cover bg-orange-100" />}
-                {authorName}
-              </span>
-            )}
-            {/* Uczestnicy trasy grupowej - nachodzacy stack awatarow obok hosta. */}
-            {groupParticipants.length > 0 && (
-              <span className="flex items-center -space-x-2">
-                {groupParticipants.slice(0, 3).map((a, i) => (
-                  <img key={i} src={avatarSrc(a)} alt="" className="h-6 w-6 rounded-full object-cover bg-orange-100 ring-2 ring-background" />
-                ))}
-                {groupParticipants.length > 3 && (
-                  <span className="h-6 w-6 rounded-full bg-muted ring-2 ring-background flex items-center justify-center text-[9px] font-bold text-foreground">+{groupParticipants.length - 3}</span>
-                )}
-              </span>
-            )}
-            {cityLabel && <span className="flex items-center gap-1 text-muted-foreground"><Building2 className="h-4 w-4" />{cityLabel}</span>}
-            <span className="flex items-center gap-1 text-muted-foreground"><MapPin className="h-4 w-4" />{pins.length} {pins.length === 1 ? "miejsce" : pins.length < 5 ? "miejsca" : "miejsc"}</span>
-            {/* Serce polubienia wyjazdu w TopBarze - TYLKO gosc. Wlasciciel nie lajkuje wlasnej trasy. */}
-            {!isOwner && (
-              <button onClick={toggleLike} aria-label="Polub trasę" className="ml-auto shrink-0 flex items-center gap-1 active:scale-90 transition-transform">
+            {/* Awatar + username (+ uczestnicy) WYSRODKOWANE (#5). Miasto/liczba miejsc -> pod tytul. */}
+            <div className="flex-1 min-w-0 flex justify-center items-center gap-2">
+              {!isAnon && author?.username ? (
+                <button
+                  onClick={() => navigate(`/profil/${author.username}`)}
+                  className="flex items-center gap-1.5 font-semibold text-foreground active:opacity-60 transition-opacity min-w-0"
+                >
+                  <img src={avatarSrc(author?.avatar_url)} alt="" className="h-6 w-6 rounded-full object-cover bg-orange-100 shrink-0" />
+                  <span className="truncate">@{author.username}</span>
+                </button>
+              ) : (
+                <span className="flex items-center gap-1.5 font-semibold text-foreground min-w-0">
+                  {!isAnon && <img src={avatarSrc(author?.avatar_url)} alt="" className="h-6 w-6 rounded-full object-cover bg-orange-100 shrink-0" />}
+                  <span className="truncate">{authorName}</span>
+                </span>
+              )}
+              {/* Uczestnicy trasy grupowej - nachodzacy stack awatarow obok hosta. */}
+              {groupParticipants.length > 0 && (
+                <span className="flex items-center -space-x-2 shrink-0">
+                  {groupParticipants.slice(0, 3).map((a, i) => (
+                    <img key={i} src={avatarSrc(a)} alt="" className="h-6 w-6 rounded-full object-cover bg-orange-100 ring-2 ring-background" />
+                  ))}
+                  {groupParticipants.length > 3 && (
+                    <span className="h-6 w-6 rounded-full bg-muted ring-2 ring-background flex items-center justify-center text-[9px] font-bold text-foreground">+{groupParticipants.length - 3}</span>
+                  )}
+                </span>
+              )}
+            </div>
+            {/* Serce polubienia wyjazdu (prawy skraj) - TYLKO gosc. Wlasciciel: spacer dla symetrii. */}
+            {!isOwner ? (
+              <button onClick={toggleLike} aria-label="Polub trasę" className="shrink-0 flex items-center gap-1 active:scale-90 transition-transform">
                 <Heart className={cn("h-5 w-5", routeLike.liked ? "fill-red-500 text-red-500" : "text-foreground/70")} />
                 <span className="text-xs font-semibold tabular-nums text-muted-foreground">{routeLike.count}</span>
               </button>
+            ) : (
+              <div className="w-7 shrink-0" />
             )}
           </div>
       </div>
@@ -731,6 +734,11 @@ export default function SharedRoute() {
                 <button onClick={() => setAskDelete(true)} aria-label="Usuń wyjazd" className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center active:scale-90 transition-transform"><Trash2 className="h-4 w-4 text-destructive" /></button>
               </div>
             )}
+          </div>
+          {/* #5: miasto + liczba miejsc bezposrednio pod tytulem (przeniesione z TopBara). */}
+          <div className="flex items-center gap-4 mt-2.5 text-sm text-muted-foreground">
+            {cityLabel && <span className="flex items-center gap-1.5"><Building2 className="h-4 w-4 shrink-0" />{cityLabel}</span>}
+            <span className="flex items-center gap-1.5"><MapPin className="h-4 w-4 shrink-0" />{pins.length} {pins.length === 1 ? "miejsce" : pins.length < 5 ? "miejsca" : "miejsc"}</span>
           </div>
           {dateLabel && (
             <div className="flex items-center gap-1.5 mt-2.5 text-foreground">
