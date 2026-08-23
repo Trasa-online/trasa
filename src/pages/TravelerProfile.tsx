@@ -5,7 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import { Settings, Camera, UserCircle2, ArrowRight, Bell, Share2, Search, LayoutGrid, ListChecks, MapPinned, Bookmark } from "lucide-react";
+import { Settings, Camera, UserCircle2, ArrowRight, Bell, Share2, Search, LayoutGrid, MapPinned, Bookmark } from "lucide-react";
 import TabHeader from "@/components/layout/TabHeader";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
@@ -430,13 +430,15 @@ const TravelerProfile = () => {
         <div className="space-y-6 pt-1">
           {tab === "listy" ? (
             listCards.length === 0 ? (
-              <FeedEmpty
-                icon={<ListChecks className="h-6 w-6" />}
-                title={t("feed.lists_empty_title", "Nie masz jeszcze list")}
-                desc={t("feed.lists_empty_desc", "Grupuj miejsca w listy i polecaj je innym.")}
-                ctaLabel={t("feed.lists_empty_cta", "Nowa lista miejsc")}
-                onCta={() => navigate("/zestawienie/nowe")}
-              />
+              // Pusty stan LIST (Figma "Mój profil - Listy - pusty stan"): peachy znak trasy (S)
+              // + instrukcja uzycia "+", bez guzika CTA (tworzenie idzie przez BottomNav "+").
+              <div className="pt-16 pb-12 text-center px-8">
+                <span aria-hidden className="mx-auto mb-5 block h-24 w-24" style={{ backgroundColor: "#ef9d78", WebkitMaskImage: "url(/Ikona_Trasy.svg)", maskImage: "url(/Ikona_Trasy.svg)", WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat", WebkitMaskSize: "contain", maskSize: "contain", WebkitMaskPosition: "center", maskPosition: "center" }} />
+                <p className="text-lg font-bold text-foreground">Lista miejsc jest pusta</p>
+                <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed max-w-[300px] mx-auto">
+                  {`Dodaj pierwszą listę klikając guzik „+" i wybierz „Lista"`}
+                </p>
+              </div>
             ) : (
               listCards.map((l: any) => (
                 <ProfileFeedCard

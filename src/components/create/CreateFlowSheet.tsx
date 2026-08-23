@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { FileText, X, Users, ChevronRight, ArrowLeft, Plus, Check, CalendarPlus, History } from "lucide-react";
@@ -46,6 +46,15 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
   const [tripName, setTripName] = useState("");
   const [tripCity, setTripCity] = useState(defaultCity);
   const [tripPeople, setTripPeople] = useState<PersonLite[]>([]);
+
+  // Fokus inputu nazwy listy DOPIERO chwile po wejsciu na krok (~260ms), zeby klawiatura nie
+  // wyskakiwala gwaltownie razem z przejsciem na krok - klawiatura wstaje lagodnie, osobno.
+  const listNameRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (!open || step !== "listName") return;
+    const id = setTimeout(() => listNameRef.current?.focus(), 260);
+    return () => clearTimeout(id);
+  }, [open, step]);
 
   // Reset przy kazdym otwarciu.
   useEffect(() => {
@@ -201,7 +210,7 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
             <Header title="Nowa lista" onBack={() => setStep("entry")} onNext={() => setStep("listPick")} nextEnabled={!!listName.trim()} />
             <div className="px-5 pt-1">
               <div className="relative">
-                <input value={listName} onChange={(e) => setListName(e.target.value)} placeholder="Nazwa listy" autoFocus
+                <input ref={listNameRef} value={listName} onChange={(e) => setListName(e.target.value)} placeholder="Nazwa listy"
                   className="w-full h-12 rounded-xl bg-secondary/60 border border-border/60 pl-4 pr-11 text-base text-foreground placeholder:text-muted-foreground/70 outline-none focus:ring-2 focus:ring-orange-500/30" />
                 {listName && (
                   <button onClick={() => setListName("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 h-7 w-7 rounded-full bg-[#ebebeb]/60 flex items-center justify-center active:scale-90 transition-transform">
