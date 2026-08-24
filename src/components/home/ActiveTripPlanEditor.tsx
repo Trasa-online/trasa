@@ -136,7 +136,7 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false, onDelete, deleting 
       if (!routeId || !user) return null;
       const { data } = await (supabase as any)
         .from("routes")
-        .select("id, title, user_id, city, day_number, start_date, end_date, folder_id, plan_finalized, ai_summary, ai_highlight, is_shared, group_session_id")
+        .select("id, title, user_id, city, day_number, start_date, end_date, folder_id, status, plan_finalized, ai_summary, ai_highlight, is_shared, group_session_id")
         .eq("id", routeId)
         .single();
       return data as any;
@@ -359,13 +359,10 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false, onDelete, deleting 
     ));
   }, []);
 
-  // Aktywny wpis vs wspomnienie: wspomnienie gdy trasa ZRECENZOWANA (plan_finalized, ustawiane przez
-  // "Zapisz trase"/"Gotowe"). NIE po minieciu daty - roboczy wyjazd po dacie zostaje aktywny/edytowalny
-  // (spojne z ReviewSummary.isMemory; "przeszly" = opublikowany, nie miniety).
-  const isMemory = useMemo(
-    () => sortedDays.some((d: any) => d?.plan_finalized === true),
-    [sortedDays],
-  );
+  // WSPOMNIENIE = OPUBLIKOWANY (status='published'), ustawiane WYLACZNIE przez "Zakoncz wyjazd"
+  // (2026-08-24: spojne z ReviewSummary + profil + Dziennik). NIE plan_finalized/data: robocza
+  // trasa zostaje edytowalna (edycja/notki/zdjecia w trakcie nie robia z niej wspomnienia).
+  const isMemory = route?.status === "published";
 
   // ── "Następny przystanek" (tryb w trakcie trasy) ──────────────────────────────
   // Kontekst wnioskujemy: trasa nie jest wspomnieniem (isMemory) + jestes na miejscu
@@ -591,15 +588,15 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false, onDelete, deleting 
   // ── Wspolna karta miejsca (uzywana w karuzeli "Szczegoly" i pionowej liscie). ──
   // fullWidth=false -> karta karuzeli (w-[80vw]); true -> pelna szerokosc (lista stacked).
   const renderPlanCard = (pin: any, i: number, fullWidth: boolean, editable: boolean, withRating: boolean) => (
-    <div key={pin.id} id={`active-pin-${pin.id}`} className={`${fullWidth ? "w-full" : "snap-center shrink-0 w-[80vw] max-w-[320px]"} rounded-2xl bg-secondary border overflow-hidden shadow-sm flex flex-col transition-all ${highlightPinId === pin.id ? "border-trasa-teal-ink ring-2 ring-trasa-teal-ink/50" : "border-border/40"} ${pin.visited_at || isPastDay || skippedPinIds.has(pin.id) ? "opacity-55" : ""}`}>
+    <div key={pin.id} id={`active-pin-${pin.id}`} className={`${fullWidth ? "w-full" : "snap-center shrink-0 w-[80vw] max-w-[320px]"} rounded-2xl bg-secondary border overflow-hidden shadow-sm flex flex-col transition-all ${highlightPinId === pin.id ? "border-trasa-teal-ink ring-2 ring-trasa-teal-ink/50" : "border-border/40"} ${isPastDay ? "opacity-55" : ""}`}>
       <button onClick={() => openDetail(pin)} className="block w-full text-left active:opacity-90 transition-opacity">
         <div className="relative w-full aspect-[4/3] bg-muted">
           {/* Okladka = mapka miejsca (statyczna, tania). Fallback: zdjecie/placeholder gdy brak coords. */}
           {placeStaticMap(pin.latitude, pin.longitude) ? (
             <img src={placeStaticMap(pin.latitude, pin.longitude)!} alt="" loading="lazy"
-              className={`w-full h-full object-cover ${pin.visited_at || isPastDay || skippedPinIds.has(pin.id) ? "grayscale opacity-90" : ""}`} />
+              className={`w-full h-full object-cover ${isPastDay ? "grayscale opacity-90" : ""}`} />
           ) : (
-            <PlacePhoto pin={pin} className={`w-full h-full object-cover ${pin.visited_at || isPastDay || skippedPinIds.has(pin.id) ? "grayscale" : ""}`} emojiClass="text-4xl" />
+            <PlacePhoto pin={pin} className={`w-full h-full object-cover ${isPastDay ? "grayscale" : ""}`} emojiClass="text-4xl" />
           )}
           {/* Numer miejsca (lewy gorny) */}
           <div className="absolute top-3 left-3 h-8 w-8 rounded-full bg-black/55 backdrop-blur text-white text-sm font-bold flex items-center justify-center">{i + 1}</div>
@@ -666,7 +663,7 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false, onDelete, deleting 
   // ── Kompaktowy wiersz listy: miniaturka + nazwa + chip kategorii + akcje. ──
   // Lekka alternatywa dla dużych kart (widok "kafelki"). Tap miniatury/nazwy -> wizytówka.
   const renderPlanRow = (pin: any, i: number, editable: boolean) => {
-    const dimmed = pin.visited_at || isPastDay || skippedPinIds.has(pin.id);
+    const dimmed = isPastDay;
     return (
       <div
         key={pin.id}
@@ -674,7 +671,7 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false, onDelete, deleting 
         className={`flex items-center gap-3 rounded-2xl bg-secondary border shadow-sm p-2.5 transition-all ${highlightPinId === pin.id ? "border-trasa-teal-ink ring-2 ring-trasa-teal-ink/50" : "border-border/40"} ${dimmed ? "opacity-55" : ""}`}
       >
         <button onClick={() => openDetail(pin)} className="relative h-14 w-14 shrink-0 rounded-xl overflow-hidden bg-muted active:opacity-90">
-          <PlacePhoto pin={pin} className={`w-full h-full object-cover ${pin.visited_at ? "grayscale" : ""}`} emojiClass="text-2xl" />
+          <PlacePhoto pin={pin} className={`w-full h-full object-cover ${dimmed ? "grayscale" : ""}`} emojiClass="text-2xl" />
           <span className="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-black/55 backdrop-blur text-white text-[10px] font-bold flex items-center justify-center">{i + 1}</span>
         </button>
         <button onClick={() => openDetail(pin)} className="min-w-0 flex-1 text-left">

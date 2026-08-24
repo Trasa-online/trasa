@@ -15,8 +15,8 @@ const GoogleGlyph = ({ className }: { className?: string }) => (
 // Wspoldzielony wiersz miejsca na trasie (widok eksploracji SharedRoute + widok wlasciciela
 // ReviewSummary). Duze zdjecie 104px, numer, nazwa (2 linie), chip kategorii + guzik Google.
 // dragHandle (opcjonalny) = uchwyt przeciagania po lewej (tryb wlasciciela). note = dodatkowa
-// tresc pod wierszem (np. notka autora). visited = wyszarzenie.
-export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onSave, saved, onDelete, dragHandle, note, visited }: {
+// tresc pod wierszem (np. notka autora).
+export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onSave, saved, onDelete, dragHandle, note }: {
   pin: any;
   index: number;
   categoryLabel: ReactNode;
@@ -27,10 +27,9 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
   onDelete?: () => void; // wlasciciel: usun miejsce z trasy/listy (kosz zamiast bookmarka)
   dragHandle?: ReactNode;
   note?: ReactNode;
-  visited?: boolean;
 }) {
   return (
-    <div className={`flex gap-3 bg-background py-4 border-b border-border/40 last:border-b-0 ${visited ? "opacity-60" : ""}`}>
+    <div className="flex gap-3 bg-background py-4 border-b border-border/40 last:border-b-0">
       {dragHandle}
       {/* Peachy kafelek ikony/zdjecia (bez numeru - wg Figmy) */}
       <button onClick={onOpen} className="h-16 w-16 shrink-0 rounded-2xl overflow-hidden bg-[#fcede3] active:opacity-90">
@@ -40,7 +39,7 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
         {/* Nazwa + badge kategorii (peachy pill po prawej) */}
         <div className="flex items-start justify-between gap-2">
           <button onClick={onOpen} className="text-left min-w-0 flex-1">
-            <p className={`text-[16px] font-bold leading-snug line-clamp-2 ${visited ? "line-through" : ""}`}>{pin.place_name}</p>
+            <p className="text-[16px] font-bold leading-snug line-clamp-2">{pin.place_name}</p>
           </button>
           <span className="shrink-0 mt-0.5 inline-flex items-center px-2.5 py-1 rounded-full bg-[#fcede3] text-[12px] font-semibold text-foreground">{categoryLabel}</span>
         </div>

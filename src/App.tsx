@@ -687,7 +687,6 @@ const TravelerProfile  = lazy(() => import("./pages/TravelerProfile"));
 const MyTrips          = lazy(() => import("./pages/MyTrips"));
 const EditPlan         = lazy(() => import("./pages/EditPlan"));
 const ReviewSummary    = lazy(() => import("./pages/ReviewSummary"));
-const ActiveTrip       = lazy(() => import("./pages/ActiveTrip"));
 const AddPlaceToTrip   = lazy(() => import("./pages/AddPlaceToTrip"));
 const PlanWizard       = lazy(() => import("./pages/PlanWizard"));
 const AddFriend        = lazy(() => import("./pages/AddFriend"));
@@ -800,7 +799,8 @@ const App = () => (
           <Route path="/edit-plan" element={PLANNING_DISABLED ? <Navigate to="/eksploruj" replace /> : <EditPlan />} />
           <Route path="/review-summary" element={<ReviewSummary />} />
           <Route path="/trasa/:id/dodaj" element={<AddPlaceToTrip />} />
-          <Route path="/trasa/:id" element={<ActiveTrip />} />
+          {/* /trasa/:id (stara strona odhaczania ActiveTrip) USUNIETA 2026-08-24 - redirect na profil. */}
+          <Route path="/trasa/:id" element={<Navigate to="/moj-profil?tab=wyjazdy" replace />} />
           {/* Wyjazd (tryb uproszczony) laduje w edytorze wpisu = /review-summary (ReviewSummary). */}
           {/* Kompozycja wyjazdu z zestawienia ("Uzyj tego zestawienia") - nazwa+daty+miejsca */}
           <Route path="/wyjazd/start" element={<StartWyjazd />} />

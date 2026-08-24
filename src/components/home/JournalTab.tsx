@@ -53,7 +53,7 @@ const JournalTab = ({ userId, city: cityFilter, draftsOnly = false }: JournalTab
       // Own routes (all statuses)
       const { data: ownRoutes } = await (supabase as any)
         .from("routes")
-        .select("id, title, city, day_number, start_date, end_date, folder_id, group_session_id, ai_summary, ai_highlight, review_photos, cover_url, list_cover_url, is_shared, overall_rating, views, new_for_users, chat_status, trip_type, plan_finalized, created_at")
+        .select("id, title, city, day_number, start_date, end_date, folder_id, group_session_id, ai_summary, ai_highlight, review_photos, cover_url, list_cover_url, is_shared, status, overall_rating, views, new_for_users, chat_status, trip_type, plan_finalized, created_at")
         .eq("user_id", userId)
         // Sortuj po created_at (stabilne) - otwarcie/edycja trasy NIE zmienia jej pozycji na
         // liscie (updated_at wypychalo edytowana trase na gore, czego user nie chce).
@@ -70,7 +70,7 @@ const JournalTab = ({ userId, city: cityFilter, draftsOnly = false }: JournalTab
         const sessionIds = memberRows.map((m: any) => m.session_id);
         const { data } = await (supabase as any)
           .from("routes")
-          .select("id, title, city, day_number, start_date, end_date, folder_id, ai_summary, ai_highlight, review_photos, cover_url, new_for_users, chat_status, group_session_id, trip_type, plan_finalized, created_at")
+          .select("id, title, city, day_number, start_date, end_date, folder_id, ai_summary, ai_highlight, review_photos, cover_url, new_for_users, chat_status, group_session_id, status, trip_type, plan_finalized, created_at")
           .in("group_session_id", sessionIds)
           .neq("user_id", userId)
           .order("created_at", { ascending: false });
@@ -195,23 +195,13 @@ const JournalTab = ({ userId, city: cityFilter, draftsOnly = false }: JournalTab
       });
     }
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
     const active: any[] = [];
     const postcards: any[] = [];
     for (const e of collapsed) {
-      const lastDate = e._lastDate ? parseISO(e._lastDate) : null;
-      const isPast = lastDate && isValid(lastDate) && lastDate < today;
-      // Wspomnienie (pocztowka w Dzienniku) = trasa UKONCZONA (trip_type=completed /
-      // plan_finalized) ALBO miniona (data < dzis). Wczesniej liczyla sie TYLKO data ->
-      // trasa ukonczona DZIS znikala z aktywnych (trip_type!=planning), a do Dziennika
-      // nie trafiala (data nie minela) = "nie zapisala sie nigdzie". To byl bug.
-      const isDone = e.trip_type === "completed" || e.plan_finalized === true;
-      // Wspomnienie takze gdy trasa ma OKLADKE (zdjecie hero lub domyslny gradient) albo zdjecia
-      // galerii - "robocza" = trasa BEZ zadnej okladki/zdjec. Trasa z okladka = gotowa (#2).
-      const hasCover = !!resolveStored(e.cover_url)
-        || (Array.isArray(e.review_photos) && e.review_photos.some((u: any) => typeof u === "string" && u.trim() !== ""));
-      if (isPast || isDone || hasCover) postcards.push(e);
+      // Wspomnienie (pocztowka) = trasa OPUBLIKOWANA (status='published'), ustawiane WYLACZNIE przez
+      // "Zakoncz wyjazd" (2026-08-24: ujednolicone ze wszystkimi ekranami - wspomnienie == published).
+      // Robocza (aktywna) = status != 'published'. NIE data/trip_type/plan_finalized/okladka.
+      if (e.status === "published") postcards.push(e);
       else active.push(e);
     }
     active.sort((a, b) => {
