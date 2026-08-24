@@ -255,18 +255,19 @@ export async function createListFromSavedPlaces(
   return listId;
 }
 
-// Prywatna wishlista "Do zobaczenia" (to_visit, is_public=false) usera - PER MIASTO.
-// Per-miasto, bo podpowiedzi przy tworzeniu trasy (ComposeWyjazd #5) filtrują po mieście listy.
-// Zapisane→Miejsca agreguje je płasko, więc user i tak widzi jeden schowek "Miejsca".
-export async function ensureToVisitList(userId: string, city: string | null, author?: ListAuthor): Promise<string | null> {
-  const base = (supabase as any)
+// Lista OGÓLNA usera = JEDYNA prywatna lista (to_visit, is_public=false), JEDNA na usera
+// (decyzja 2026-08-24). Nie podlega moderacji (guard_discovery_moderation: is_public=false -> approved).
+// Każde zapisane miejsce tu trafia; widoczna jako "Ogólne" (drawer + profil, widok /zapisane).
+// GLOBALNA (city=null, bez per-miasto). Get-or-create (dawne per-miasto skonsolidowane migracją
+// 20260824b_ogolne_general_list). `city` param zachowany dla zgodności API, IGNOROWANY.
+export async function ensureToVisitList(userId: string, _city?: string | null, author?: ListAuthor): Promise<string | null> {
+  const { data } = await (supabase as any)
     .from("discovery_collections")
-    .select("id").eq("user_id", userId).eq("kind", "ranking").eq("list_status", "to_visit");
-  const scoped = city ? base.eq("city", city) : base.is("city", null);
-  const { data } = await scoped.order("created_at", { ascending: true }).limit(1).maybeSingle();
+    .select("id").eq("user_id", userId).eq("kind", "ranking").eq("list_status", "to_visit")
+    .order("created_at", { ascending: true }).limit(1).maybeSingle();
   if (data?.id) return data.id as string;
   const { data: col } = await (supabase as any).from("discovery_collections").insert({
-    user_id: userId, title: "Do zobaczenia", city: city || null, kind: "ranking",
+    user_id: userId, title: "Ogólne", city: null, kind: "ranking",
     list_status: "to_visit", is_public: false, moderation_status: "approved",
     author_name: author?.name ?? "Użytkownik", author_avatar: author?.avatar ?? null,
   }).select("id").single();

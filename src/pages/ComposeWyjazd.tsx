@@ -17,6 +17,7 @@ import { ORIGIN_COUNTRIES } from "@/lib/locations";
 import { expandCity, cityGenitive } from "@/lib/cities";
 import { subcategoryLabelLocalized } from "@/lib/categories";
 import { getHistoryByCity } from "@/lib/exploreLikes";
+import { fetchSavedPlaces } from "@/lib/placeLists";
 import { createWyjazdFromPlaces, updateWyjazdPlaces } from "@/lib/createWyjazd";
 import { haptics } from "@/hooks/useHaptics";
 import { API_BASE } from "@/lib/platform";
@@ -576,34 +577,19 @@ export default function ComposeWyjazd() {
 
   // #5: miejsca z LIST usera "do odwiedzenia" (to_visit) - glowne zrodlo "Twoich zapisanych
   // miejsc" przy tworzeniu trasy (zastapily stare exploreLikes). Filtr po miescie listy.
+  // Źródło = lista OGÓLNA usera (fetchSavedPlaces, płaska, WSZYSTKIE miasta) - decyzja 2026-08-24.
+  // Ogólne jest globalna (city=null), więc NIE filtrujemy po mieście wyjazdu (pokazujemy wszystkie).
   const [toVisitPlaces, setToVisitPlaces] = useState<any[]>([]);
   useEffect(() => {
     if (!user) { setToVisitPlaces([]); return; }
     let alive = true;
-    (async () => {
-      const cities = expandCity(city).map((c) => c.toLowerCase());
-      const { data: lists } = await (supabase as any).from("discovery_collections")
-        .select("id, city").eq("user_id", user.id).eq("kind", "ranking").eq("list_status", "to_visit");
-      const listRows = (lists ?? []) as any[];
-      if (!listRows.length) { if (alive) setToVisitPlaces([]); return; }
-      const cityByList: Record<string, string> = {};
-      for (const l of listRows) cityByList[l.id] = String(l.city ?? "").toLowerCase();
-      const { data: items } = await (supabase as any).from("discovery_items")
-        .select("collection_id, place_id, place_name, category, latitude, longitude, photo_url, address, rating")
-        .in("collection_id", listRows.map((l) => l.id));
-      const rows = (items ?? []) as any[];
-      // Pokazuj TYLKO miejsca z list pasujacych do miasta trasy. Gdy zadne nie pasuje ->
-      // pusta lista (BEZ fallbacku do miejsc z innych miast). Miasto puste -> pokaz wszystkie.
-      const hasCity = city.trim().length > 0;
-      const forCity = hasCity ? rows.filter((it) => cities.includes(cityByList[it.collection_id] ?? "")) : rows;
-      if (alive) setToVisitPlaces(forCity);
-    })();
+    fetchSavedPlaces(user.id)
+      .then((places) => { if (alive) setToVisitPlaces(places as any[]); })
+      .catch((e) => console.warn("[ComposeWyjazd] fetchSavedPlaces failed:", e?.message ?? e));
     return () => { alive = false; };
-  }, [user, city]);
+  }, [user]);
 
-  // "Twoje zapisane miejsca" - miejsca z list "do odwiedzenia" (#5) + legacy exploreLikes,
-  // WYLACZNIE dopasowane do miasta trasy. Brak dopasowania -> pusta lista (BEZ pokazywania
-  // zapisanych z innych miast). Miasto puste -> pokaz wszystkie zapisane (rozsadny default).
+  // "Twoje zapisane miejsca" = WSZYSTKIE zapisane z listy ogólnej + legacy exploreLikes (dedup po nazwie).
   const savedForCity = useMemo(() => {
     const mapPlace = (p: any) => ({
       id: p.place_id ?? p.place_name, place_id: p.place_id ?? null, place_name: p.place_name,
@@ -616,13 +602,9 @@ export default function ComposeWyjazd() {
       if (!k || seen.has(k)) return false; seen.add(k); return true;
     });
     const fromLists = toVisitPlaces.map(mapPlace);
-    const hasCity = city.trim().length > 0;
-    const wanted = new Set(expandCity(city).map((c) => c.toLowerCase()));
-    const groups = getHistoryByCity();
-    const legacyGroups = hasCity ? groups.filter((g) => wanted.has(g.city.toLowerCase())) : groups;
-    const legacy = legacyGroups.flatMap((g) => g.places).map(mapPlace);
+    const legacy = getHistoryByCity().flatMap((g) => g.places).map(mapPlace);
     return dedupe([...fromLists, ...legacy]);
-  }, [city, toVisitPlaces]);
+  }, [toVisitPlaces]);
   const isSearching = search.trim().length >= 2;
   // Ujednolicony uklad z widokiem listy (CreateRanking): wyniki wyszukiwania POD wyszukiwarka,
   // "Wybrane miejsca" (z kafelkiem "+") wyzej, "Twoje zapisane miejsca" POD spodem.
