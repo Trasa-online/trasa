@@ -6,7 +6,6 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useAuth } from "@/hooks/useAuth";
 import { haptics } from "@/hooks/useHaptics";
 import { supabase } from "@/integrations/supabase/client";
-import { PlaceTile } from "@/components/profile/PlaceTile";
 import { categoryIconSrc, categoryFromGoogleTypes } from "@/lib/placeCategoryIcon";
 import { fetchSavedPlaces, type SavedPlace, type PlaceForList } from "@/lib/placeLists";
 
@@ -149,6 +148,31 @@ export default function AddPlaceSheet({ open, onClose, city, existingPlaces, onA
     } finally { setAdding(false); }
   };
 
+  // Wiersz listy (jednolity dla wynikow wyszukiwarki i zapisanych) - "szary kafelek w formie listy":
+  // peachy ikona kategorii + nazwa + podtytul + wskaznik wyboru. Zastapil siatke kafelkow (2026-08-24).
+  const renderPlaceRow = (opts: {
+    rowKey: string; category?: string | null; title: string; subtitle?: string | null;
+    onClick?: () => void; selected?: boolean; added?: boolean;
+  }) => (
+    <button
+      key={opts.rowKey}
+      onClick={opts.onClick}
+      disabled={opts.added}
+      className="w-full flex items-center gap-3 rounded-2xl bg-secondary/60 px-3 py-2.5 text-left active:bg-secondary transition-colors disabled:opacity-100"
+    >
+      <span className="h-11 w-11 rounded-xl bg-[#fcede3] flex items-center justify-center shrink-0">
+        <img src={categoryIconSrc(opts.category)} alt="" className="w-1/2 opacity-90" draggable={false} />
+      </span>
+      <span className="flex-1 min-w-0">
+        <span className="block text-[15px] font-semibold text-foreground truncate">{opts.title}</span>
+        {opts.subtitle && <span className="block text-[13px] text-muted-foreground truncate">{opts.subtitle}</span>}
+      </span>
+      <span className={`h-6 w-6 rounded-full flex items-center justify-center shrink-0 ${opts.selected || opts.added ? "bg-[#f0a583] text-white" : "border-2 border-border"}`}>
+        {opts.selected || opts.added ? <Check className="h-3.5 w-3.5 stroke-[3]" /> : <Plus className="h-3.5 w-3.5 text-muted-foreground" />}
+      </span>
+    </button>
+  );
+
   return (
     <Sheet open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
       <SheetContent side="bottom" onOpenAutoFocus={(e) => e.preventDefault()} className="rounded-t-3xl p-0 [&>button]:hidden flex flex-col bg-[#fefefe] border-0" style={{ maxHeight: "86vh" }}>
@@ -199,63 +223,34 @@ export default function AddPlaceSheet({ open, onClose, city, existingPlaces, onA
               {!searching && !blocked && results.length === 0 && query.trim().length >= 2 && (
                 <p className="py-6 text-center text-sm text-muted-foreground">Brak wyników</p>
               )}
-              {results.map((r, i) => {
-                const on = isSel(r);
-                return (
-                  <button key={`${keyOf(r)}-${i}`} onClick={() => pickGoogle(r)}
-                    className="w-full flex items-center gap-3 px-1 py-2.5 text-left active:bg-muted/50 rounded-xl transition-colors">
-                    <span className="h-11 w-11 rounded-xl bg-[#fcede3] flex items-center justify-center shrink-0">
-                      <img src={categoryIconSrc(r.category)} alt="" className="w-1/2 opacity-90" draggable={false} />
-                    </span>
-                    <span className="flex-1 min-w-0">
-                      <span className="block text-[15px] font-semibold text-foreground truncate">{r.place_name}</span>
-                      {r.address && <span className="block text-[13px] text-muted-foreground truncate">{r.address}</span>}
-                    </span>
-                    <span className={`h-6 w-6 rounded-full flex items-center justify-center shrink-0 ${on ? "bg-[#f0a583] text-white" : "border-2 border-border"}`}>
-                      {on ? <Check className="h-3.5 w-3.5 stroke-[3]" /> : <Plus className="h-3.5 w-3.5 text-muted-foreground" />}
-                    </span>
-                  </button>
-                );
-              })}
+              <div className="space-y-1.5">
+                {results.map((r, i) => renderPlaceRow({ rowKey: `${keyOf(r)}-${i}`, category: r.category, title: r.place_name, subtitle: r.address, onClick: () => pickGoogle(r), selected: isSel(r) }))}
+              </div>
             </div>
           ) : (
-            <div className="pt-1 space-y-3">
-              {/* #5: NAJPIERW miejsca juz w tej trasie/liscie (info, zaznaczone), potem divider, potem zapisane */}
+            <div className="pt-1 space-y-4">
+              {/* #5: NAJPIERW miejsca juz w tej trasie/liscie (info, zaznaczone), potem zapisane. Lista
+                  (nie siatka kafelkow) - "szary kafelek w formie listy" (2026-08-24, prosba Nat). */}
               {existingPlaces && existingPlaces.length > 0 && (
-                <>
-                  <div>
-                    <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground mb-1.5 px-0.5">Już dodane</p>
-                    <div className="grid grid-cols-3 gap-1.5">
-                      {existingPlaces.map((p, i) => (
-                        <div key={`ex-${keyOf(p)}-${i}`} className="relative rounded-2xl opacity-95">
-                          <PlaceTile showCity tile={{ photo_url: p.photo_url, category: p.category, place_name: p.place_name, city }} />
-                          <span className="absolute top-1.5 right-1.5 h-6 w-6 rounded-full bg-[#f0a583] text-white flex items-center justify-center"><Check className="h-3.5 w-3.5 stroke-[3]" /></span>
-                        </div>
-                      ))}
-                    </div>
+                <div>
+                  <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground mb-1.5 px-0.5">Już dodane</p>
+                  <div className="space-y-1.5">
+                    {existingPlaces.map((p, i) => renderPlaceRow({ rowKey: `ex-${keyOf(p)}-${i}`, category: p.category, title: p.place_name, subtitle: city, added: true }))}
                   </div>
-                  <div className="border-t border-border/60" />
-                </>
+                </div>
               )}
               <div>
                 {existingPlaces && existingPlaces.length > 0 && <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground mb-1.5 px-0.5">Zapisane</p>}
-                <div className="grid grid-cols-3 gap-1.5">
-                  {/* Dodaj nowe miejsce -> fokus na wyszukiwarke */}
-                  <button onClick={() => inputRef.current?.focus()} className="aspect-square rounded-2xl bg-[#fcede3] flex flex-col items-center justify-center gap-1.5 active:scale-[0.97] transition-transform outline-none">
-                    <Plus className="h-6 w-6 text-[#f0a583]" strokeWidth={2.5} />
-                    <span className="text-[11px] font-semibold text-foreground/80 px-1 text-center leading-tight">Dodaj nowe miejsce</span>
+                <div className="space-y-1.5">
+                  {/* "Dodaj nowe miejsce" jako WIERSZ (nie kafelek z plusem) -> fokus na wyszukiwarke */}
+                  <button onClick={() => inputRef.current?.focus()} className="w-full flex items-center gap-3 rounded-2xl bg-secondary/60 px-3 py-2.5 text-left active:bg-secondary transition-colors">
+                    <span className="h-11 w-11 rounded-xl bg-[#fcede3] flex items-center justify-center shrink-0">
+                      <Plus className="h-5 w-5 text-[#f0a583]" strokeWidth={2.5} />
+                    </span>
+                    <span className="flex-1 min-w-0 text-[15px] font-semibold text-foreground">Dodaj nowe miejsce</span>
+                    <ChevronRight className="h-5 w-5 text-muted-foreground shrink-0" />
                   </button>
-                  {tiles.map((p, i) => {
-                    const on = isSel(p);
-                    return (
-                      <button key={`${keyOf(p)}-${i}`} onClick={() => toggle(p)} className={`relative rounded-2xl transition-all active:scale-[0.97] ${on ? "ring-2 ring-[#f0a583]" : ""}`}>
-                        <PlaceTile showCity tile={{ photo_url: p.photo_url, category: p.category, place_name: p.place_name, city }} />
-                        <span className={`absolute top-1.5 right-1.5 h-6 w-6 rounded-full flex items-center justify-center ${on ? "bg-[#f0a583] text-white" : "bg-white/85 border border-black/10"}`}>
-                          {on && <Check className="h-3.5 w-3.5 stroke-[3]" />}
-                        </span>
-                      </button>
-                    );
-                  })}
+                  {tiles.map((p, i) => renderPlaceRow({ rowKey: `${keyOf(p)}-${i}`, category: p.category, title: p.place_name, subtitle: city, onClick: () => toggle(p), selected: isSel(p) }))}
                 </div>
               </div>
             </div>
