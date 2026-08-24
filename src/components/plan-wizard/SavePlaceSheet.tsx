@@ -53,8 +53,10 @@ export default function SavePlaceSheet({
   const [busyId, setBusyId] = useState<string | null>(null);
   const [override, setOverride] = useState<Map<string, boolean>>(new Map());
   const [newName, setNewName] = useState("");
+  // Input nowej listy ukryty domyślnie; pokazuje się po kliknięciu "+" w nagłówku.
+  const [showNewList, setShowNewList] = useState(false);
 
-  useEffect(() => { if (open) { setBusyId(null); setOverride(new Map()); setNewName(""); } }, [open]);
+  useEffect(() => { if (open) { setBusyId(null); setOverride(new Map()); setNewName(""); setShowNewList(false); } }, [open]);
 
   const { data: author } = useQuery({
     queryKey: ["save-sheet-author", user?.id],
@@ -140,6 +142,7 @@ export default function SavePlaceSheet({
       const id = await createListWithPlace(user.id, name, "visited", city || null, { ...place }, author, true);
       if (!id) throw new Error("create failed");
       setNewName("");
+      setShowNewList(false);
       invalidate();
       toast.success(`Utworzono listę „${name}"`);
     } catch (e: any) {
@@ -192,37 +195,57 @@ export default function SavePlaceSheet({
           <div className="mx-auto h-1 w-10 rounded-full bg-border" />
         </div>
 
-        {/* Nagłówek: "Miejsce zapisane!" + bookmark */}
+        {/* Nagłówek: "Miejsce zapisane!" + "+" w kółku (pokazuje input nowej listy) */}
         <div className="flex items-center justify-between px-5 pt-2 pb-0.5 shrink-0">
           <p className="text-xl font-black text-foreground">Miejsce zapisane!</p>
-          <Bookmark className="h-6 w-6 text-foreground fill-foreground" />
+          <button
+            type="button"
+            onClick={() => setShowNewList((v) => !v)}
+            aria-label={showNewList ? "Ukryj" : "Nowa lista"}
+            className="h-9 w-9 rounded-full bg-muted flex items-center justify-center text-foreground active:scale-90 transition-transform"
+          >
+            <Plus className={`h-5 w-5 transition-transform ${showNewList ? "rotate-45" : ""}`} strokeWidth={2.25} />
+          </button>
         </div>
-        <p className="px-5 pb-1 text-sm text-muted-foreground shrink-0">{`Jest w Twoich zapisanych miejscach. Dodaj do listy (opcjonalnie):`}</p>
+        <p className="px-5 pb-1 text-sm text-muted-foreground shrink-0">Zapis trafia do Twojej ogólnej listy miejsc. Możesz dodać je do innej listy (opcjonalnie).</p>
 
-        {/* Nowa lista: input + "+" (wg Figmy) */}
-        <div className="px-5 pt-2 pb-2 shrink-0">
-          <div className="flex items-center gap-1 h-12 pl-4 pr-1.5 rounded-2xl border border-border bg-background">
-            <input
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter") createNew(); }}
-              placeholder="Nazwa listy"
-              className="flex-1 min-w-0 bg-transparent text-base text-foreground placeholder:text-muted-foreground/50 focus:outline-none"
-            />
-            <button type="button" onClick={createNew} disabled={busyId === "new" || !newName.trim()} className="h-9 w-9 rounded-full bg-muted flex items-center justify-center shrink-0 text-foreground active:scale-90 transition-transform disabled:opacity-40" aria-label="Utwórz listę">
-              {busyId === "new" ? <Loader2 className="h-5 w-5 animate-spin" /> : <Plus className="h-5 w-5" />}
-            </button>
+        {/* Nowa lista: input + "+" - widoczne dopiero po kliknięciu "+" w nagłówku. */}
+        {showNewList && (
+          <div className="px-5 pt-2 pb-2 shrink-0">
+            <div className="flex items-center gap-1 h-12 pl-4 pr-1.5 rounded-2xl border border-border bg-background">
+              <input
+                autoFocus
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") createNew(); }}
+                placeholder="Nazwa nowej listy"
+                className="flex-1 min-w-0 bg-transparent text-base text-foreground placeholder:text-muted-foreground/50 focus:outline-none"
+              />
+              <button type="button" onClick={createNew} disabled={busyId === "new" || !newName.trim()} className="h-9 w-9 rounded-full bg-muted flex items-center justify-center shrink-0 text-foreground active:scale-90 transition-transform disabled:opacity-40" aria-label="Utwórz listę">
+                {busyId === "new" ? <Loader2 className="h-5 w-5 animate-spin" /> : <Plus className="h-5 w-5" />}
+              </button>
+            </div>
           </div>
-        </div>
+        )}
 
         <div className="flex-1 min-h-0 overflow-y-auto px-5 pt-1 pb-3" style={{ WebkitOverflowScrolling: "touch" }}>
-          {displayLists.length === 0 ? (
-            <p className="py-8 text-center text-sm text-muted-foreground">{`Nie masz jeszcze list. Utwórz nową powyżej.`}</p>
-          ) : (
-            <div className="divide-y divide-border/40">
-              {displayLists.map(renderRow)}
+          <div className="divide-y divide-border/40">
+            {/* "Ogólne" = domyślna lista KAŻDEGO usera. ZAWSZE na górze, zawsze zaznaczona
+                (każde zapisane miejsce tam trafia). Niekliknalny wskaźnik - nie da się usunąć. */}
+            <div className="w-full flex items-center gap-3 py-2.5">
+              <div className="h-11 w-11 rounded-full overflow-hidden shrink-0 bg-[#fcede3] flex items-center justify-center">
+                <Bookmark className="h-5 w-5 text-orange-500 fill-orange-500" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-base font-bold text-foreground truncate leading-tight">Ogólne</p>
+                <p className="text-xs text-muted-foreground leading-tight">Wszystkie Twoje zapisane miejsca</p>
+              </div>
+              <span className="h-9 w-9 rounded-full flex items-center justify-center shrink-0 text-orange-500">
+                <Check className="h-5 w-5" strokeWidth={2.5} />
+              </span>
             </div>
-          )}
+            {displayLists.map(renderRow)}
+          </div>
         </div>
 
         {/* Stopka: Udostępnij to miejsce */}

@@ -5,7 +5,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import { Settings, Camera, UserCircle2, ArrowRight, Bell, Share2, Search, LayoutGrid, MapPinned, List, ChevronsUpDown, Check } from "lucide-react";
+import { Settings, Camera, UserCircle2, ArrowRight, Bell, Share2, Search, LayoutGrid, MapPinned, List, ChevronsUpDown, Check, Bookmark, ChevronRight } from "lucide-react";
+import { fetchSavedPlaces } from "@/lib/placeLists";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import TabHeader from "@/components/layout/TabHeader";
 import { toast } from "sonner";
@@ -161,6 +162,13 @@ const TravelerProfile = () => {
   const handleRefresh = async () => {
     await queryClient.invalidateQueries();
   };
+
+  // Lista OGÓLNA (wszystkie zapisane miejsca usera) - licznik do karty "Ogólne" w zakładce Listy.
+  const { data: savedPlaces = [] } = useQuery({
+    queryKey: ["saved-places", user?.id],
+    enabled: !!user?.id,
+    queryFn: () => fetchSavedPlaces(user!.id),
+  });
   const { data: followCounts = { followers: 0, following: 0 } } = useFollowCounts(user?.id);
   const followList = useFollowList(user?.id, followSheet === "following" ? "following" : "followers");
 
@@ -523,12 +531,30 @@ const TravelerProfile = () => {
                 options={[{ id: "moje", label: "Moje listy" }, { id: "zapisane", label: "Zapisane" }]}
               />
               {listyTab === "moje" ? (
-                listCards.length === 0 ? (
+                <div className="space-y-6">
+                  {/* "Ogólne" - lista OGÓLNA usera (wszystkie zapisane miejsca). ZAWSZE widoczna,
+                      domyślna lista każdego usera. Tap -> widok /zapisane (SavedPlacesGrid). */}
+                  <button
+                    onClick={() => navigate("/zapisane")}
+                    className="w-full flex items-center gap-3 rounded-2xl border border-border/50 bg-card p-3 text-left active:opacity-80 transition-opacity"
+                  >
+                    <span className="h-14 w-14 rounded-2xl bg-[#fcede3] flex items-center justify-center shrink-0">
+                      <Bookmark className="h-6 w-6 text-orange-500 fill-orange-500" />
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-base font-black text-foreground truncate">Ogólne</p>
+                      <p className="text-sm text-muted-foreground truncate">
+                        {savedPlaces.length} {savedPlaces.length === 1 ? "miejsce" : savedPlaces.length < 5 ? "miejsca" : "miejsc"} · Twoja lista ogólna
+                      </p>
+                    </div>
+                    <ChevronRight className="h-5 w-5 text-muted-foreground shrink-0" />
+                  </button>
+                {listCards.length === 0 ? (
               // Pusty stan LIST (Figma "Mój profil - Listy - pusty stan"): peachy znak trasy (S)
               // + instrukcja uzycia "+", bez guzika CTA (tworzenie idzie przez BottomNav "+").
               <div className="pt-16 pb-12 text-center px-8">
                 <span aria-hidden className="mx-auto mb-5 block h-24 w-24" style={{ backgroundColor: "#ef9d78", WebkitMaskImage: "url(/Ikona_Trasy.svg)", maskImage: "url(/Ikona_Trasy.svg)", WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat", WebkitMaskSize: "contain", maskSize: "contain", WebkitMaskPosition: "center", maskPosition: "center" }} />
-                <p className="text-lg font-bold text-foreground">Lista miejsc jest pusta</p>
+                <p className="text-lg font-bold text-foreground">Brak własnych list</p>
                 <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed max-w-[300px] mx-auto">
                   {`Dodaj pierwszą listę klikając guzik „+" i wybierz „Lista"`}
                 </p>
@@ -549,7 +575,8 @@ const TravelerProfile = () => {
                   onDelete={() => handleDeleteList(l)}
                 />
               ))
-                )
+                  )}
+                </div>
               ) : (
                 // Zapisane listy od innych (dawny segment "Listy | Trasy", teraz tu). Własny pusty stan.
                 <div className="pt-1"><SavedCollections /></div>
