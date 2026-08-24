@@ -695,7 +695,6 @@ const QuickPlanReview  = lazy(() => import("./pages/QuickPlanReview"));
 const UserSearch       = lazy(() => import("./pages/UserSearch"));
 const SharedRoute      = lazy(() => import("./pages/SharedRoute"));
 const SharedList       = lazy(() => import("./pages/SharedList"));
-const MojeZapisane     = lazy(() => import("./pages/MojeZapisane"));
 const PublicProfile    = lazy(() => import("./pages/PublicProfile"));
 const ClaimPlace       = lazy(() => import("./pages/ClaimPlace"));
 const BusinessDashboard = lazy(() => import("./pages/BusinessDashboard"));
@@ -798,7 +797,6 @@ const App = () => (
           {/* /dziennik (Wyjazdy/Journal) przeniesione do zakładki profilu (IA 2026-08-20). Redirect dla starych linków/pushy. */}
           <Route path="/dziennik" element={<Navigate to="/moj-profil?tab=wyjazdy" replace />} />
           <Route path="/moj-profil" element={<AppLayout hideTopBar><TravelerProfile /></AppLayout>} />
-          <Route path="/zapisane" element={<MojeZapisane />} />
           <Route path="/edit-plan" element={PLANNING_DISABLED ? <Navigate to="/eksploruj" replace /> : <EditPlan />} />
           <Route path="/review-summary" element={<ReviewSummary />} />
           <Route path="/trasa/:id/dodaj" element={<AddPlaceToTrip />} />
