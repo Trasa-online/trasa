@@ -514,7 +514,7 @@ const ReviewSummary = () => {
   });
 
   // Czy zalogowany user jest CZLONKIEM (nie-hostem) sesji grupowej - zeby mogl dodac wspolne zdjecia.
-  const { data: isGroupMember = false } = useQuery({
+  const { data: isGroupMember = false, isLoading: isGroupMemberLoading } = useQuery({
     queryKey: ["review-is-group-member", route?.group_session_id, user?.id],
     enabled: !!route?.group_session_id && !!user && route?.user_id !== user?.id,
     queryFn: async () => {
@@ -2562,6 +2562,11 @@ const ReviewSummary = () => {
   // propozycji (bez okladki i pill-tabow Miejsca/Galeria/Mapa). Zastapil dawny read-only podglad
   // ReviewSummary na tym etapie (prosba Nat 2026-08-25). Uczestnik widzi miejsca w trasie (read-only,
   // NIE usuwa cudzych) + dorzuca wlasne propozycje. Trasa opublikowana (wspomnienie) -> normalny widok.
+  // Zanim ustalimy czlonkostwo (query) - dla nie-wlasciciela roboczej trasy grupowej NIE renderuj
+  // starego widoku z okladka (unikamy migniecia). Krotki pusty ekran, potem fullscreen albo normalny.
+  if (!!route && !isOwner && (route as any).status !== "published" && !!(route as any).group_session_id && isGroupMemberLoading) {
+    return <div className="h-[100dvh] bg-[#fefefe]" />;
+  }
   if (!!route && !isOwner && isGroupMember && (route as any).status !== "published" && !!(route as any).group_session_id) {
     return (
       <TripProposalsSheet
