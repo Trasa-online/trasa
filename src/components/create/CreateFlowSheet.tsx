@@ -17,6 +17,7 @@ import { citiesForCountry } from "@/lib/tripCountries";
 import { usePlaceSearch } from "@/hooks/usePlaceSearch";
 import { categoryIconSrc } from "@/lib/placeCategoryIcon";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
+import SavePlaceSheet, { type SavePlaceInput } from "@/components/plan-wizard/SavePlaceSheet";
 import { GoogleGlyph } from "@/components/icons/GoogleGlyph";
 import { openExternal } from "@/lib/openExternal";
 
@@ -52,6 +53,7 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
   const [listQuery, setListQuery] = useState("");
   const [manualPlaces, setManualPlaces] = useState<PlaceForList[]>([]);
   const [detailPlace, setDetailPlace] = useState<any | null>(null);   // wizytowka miejsca (PlaceSwiperDetail)
+  const [savePlace, setSavePlace] = useState<SavePlaceInput | null>(null);   // "Zapisz to miejsce" -> SavePlaceSheet
   const listSearchRef = useRef<HTMLInputElement>(null);
   const [tripCity, setTripCity] = useState(defaultCity);   // miasto wyjazdu (wyzej: wspolny pickCity dla wyszukiwarki)
   // Aktywne miasto dla wyszukiwarki miejsc: lista (listPick) LUB wyjazd (tripPick) - ten sam UI/hook.
@@ -132,7 +134,7 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
     id: p.place_id || p.id || p.place_name,
     place_name: p.place_name,
     category: (p.category || "other"),
-    city: (p.city ?? listCity) || "",
+    city: (p.city ?? pickCity) || "",
     address: p.address || "",
     latitude: p.latitude ?? 0,
     longitude: p.longitude ?? 0,
@@ -502,7 +504,15 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
       </SheetContent>
     </Sheet>
     {/* Wizytowka miejsca (klik w wiersz). Vaul-drawer nakłada się na arkusz tworzenia. */}
-    <PlaceSwiperDetail open={!!detailPlace} onOpenChange={(o) => { if (!o) setDetailPlace(null); }} place={detailPlace} city={detailPlace?.city || listCity} />
+    <PlaceSwiperDetail open={!!detailPlace} onOpenChange={(o) => { if (!o) setDetailPlace(null); }} place={detailPlace} city={detailPlace?.city || pickCity}
+      onLike={user && detailPlace ? () => setSavePlace({
+        place_name: detailPlace.place_name, category: detailPlace.category ?? null, address: detailPlace.address || null,
+        description: detailPlace.description || null, latitude: detailPlace.latitude ?? null, longitude: detailPlace.longitude ?? null,
+        photo_url: detailPlace.photo_url || null,
+        place_id: /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(detailPlace.id ?? "")) ? detailPlace.id : null,
+      }) : undefined} />
+    {/* "Zapisz to miejsce" z wizytowki (lista + wyjazd) -> auto-zapis do Ogolne + opcjonalnie do listy. */}
+    <SavePlaceSheet open={!!savePlace} onOpenChange={(o) => { if (!o) setSavePlace(null); }} place={savePlace} city={pickCity} />
     </>
   );
 }
