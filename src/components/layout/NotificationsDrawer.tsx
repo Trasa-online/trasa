@@ -34,6 +34,7 @@ const TYPE_CONFIG: Record<string, { icon: React.ElementType; color: string; labe
   group_invite:       { icon: Route,  color: "text-orange-600 bg-orange-100",  label: (u, meta) => `${u} dodał(a) Cię do wspólnej trasy${meta?.city ? ` po ${meta.city}` : ""}` },
   route_invite:       { icon: Route,  color: "text-orange-600 bg-orange-100",  label: (u, meta) => `${u} dodał(a) Cię do wspólnego wyjazdu${meta?.city ? ` po ${meta.city}` : ""}` },
   trip_places_reminder: { icon: MapPin, color: "text-orange-600 bg-orange-100", label: (u, meta) => `${u} czeka na Twoje propozycje miejsc${meta?.city ? ` na wyjazd po ${meta.city}` : ""}` },
+  trip_message:       { icon: MessageCircle, color: "text-sky-500 bg-sky-100", label: (u, meta) => `${u} napisał(a)${meta?.title ? ` w „${meta.title}"` : meta?.city ? ` w wyjeździe po ${meta.city}` : " w wyjeździe"}` },
   group_route_ready:  { icon: Route, color: "text-orange-600 bg-orange-100",  label: (u, meta) => `${u} stworzył(a) trasę${meta?.city ? ` w ${meta.city}` : ""} - sprawdź!` },
   collection_approved: { icon: CheckCircle2, color: "text-emerald-500 bg-emerald-100", label: (_u, meta) => `Twoja lista „${meta?.title ?? "lista"}" została zaakceptowana` },
   collection_rejected: { icon: XCircle,      color: "text-destructive bg-destructive/10", label: (_u, meta) => meta?.moderation_note ? `Lista „${meta?.title ?? "lista"}" odrzucona. Powód: ${meta.moderation_note}` : `Twoja lista „${meta?.title ?? "lista"}" została odrzucona` },
@@ -232,18 +233,18 @@ export default function NotificationsDrawer({ open, onClose, userId }: Props) {
                     <div className="flex-1 min-w-0">
                       <p className="text-sm leading-snug text-foreground/80">{labelText}</p>
                       <p className="text-[11px] text-muted-foreground mt-0.5">{timeAgo}</p>
-                      {(n.type === "group_invite" || n.type === "group_route_ready" || n.type === "route_invite" || n.type === "trip_places_reminder") && (
+                      {(n.type === "group_invite" || n.type === "group_route_ready" || n.type === "route_invite" || n.type === "trip_places_reminder" || n.type === "trip_message") && (
                         <button
                           onClick={() => {
                             onClose();
                             // Deep-link do konkretnej trasy gdy znamy route_id (kolumna lub metadata), inaczej do zakladki Wyjazdy.
                             const rid = n.route_id ?? n.metadata?.route_id;
-                            // Widok wyjazdu = SharedRoute (/route/:id) - etap propozycji/w trakcie/wspomnienie.
+                            // Widok wyjazdu = SharedRoute (/route/:id) - etap propozycji/w trakcie/wspomnienie (tam dymek czatu).
                             navigate(rid ? `/route/${rid}` : "/moj-profil?tab=wyjazdy");
                           }}
                           className="mt-2 px-3 py-1.5 rounded-full bg-primary text-white text-xs font-semibold active:scale-95 transition-transform"
                         >
-                          Zobacz trasę →
+                          {n.type === "trip_message" ? "Otwórz czat →" : "Zobacz trasę →"}
                         </button>
                       )}
                       {n.type === "trip_reminder" && (

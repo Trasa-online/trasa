@@ -25,6 +25,7 @@ const TITLES: Record<string, string> = {
   route_used: "Ktoś korzysta z Twojej trasy 🧭",
   trip_reminder: "Dokończ swój wyjazd 📸",
   trip_places_reminder: "Dodaj miejsca do wyjazdu 📍",
+  trip_message: "Nowa wiadomość 💬",
   photo_like: "Ktoś polubił Twoje zdjęcie ❤️",
 };
 
@@ -54,6 +55,9 @@ export function useNotificationsLive() {
           if (!n || n.type === "group_match" || n.read === true) return;
           queryClient.invalidateQueries({ queryKey: ["notifications-unread", user.id] });
           queryClient.invalidateQueries({ queryKey: ["notifications", user.id] });
+          // Czat: nie dubluj toastem, gdy user JUZ oglada ten wyjazd (dymek czatu + licznik na nim
+          // to pokazuja). Poza tym widokiem (inny ekran w apce) toast jest przydatny -> pokazujemy.
+          if (n.type === "trip_message" && n.route_id && window.location.hash.includes(`/route/${n.route_id}`)) return;
           const title = TITLES[n.type] ?? "Masz nowe powiadomienie 🔔";
           toast(title, { action: { label: "Zobacz", onClick: () => navigate(urlFor(n)) } });
         },
