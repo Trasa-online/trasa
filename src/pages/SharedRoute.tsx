@@ -10,7 +10,7 @@ import { notify } from "@/lib/notify";
 import { sendClientPush, getCurrentUserName } from "@/lib/clientPush";
 import { format } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
-import { MapPin, ArrowLeft, Sparkles, ChevronRight, ChevronLeft, Bookmark, List, GalleryHorizontalEnd, Calendar as CalendarIcon, Image as ImageIcon, Maximize2, X, Building2, Pencil, Trash2, Heart, Share2, Plus, Map as MapIcon, Loader2, Star, GripVertical, Check, Flag, Camera, UserPlus } from "lucide-react";
+import { MapPin, ArrowLeft, Sparkles, ChevronRight, ChevronLeft, Bookmark, List, GalleryHorizontalEnd, Calendar as CalendarIcon, Image as ImageIcon, Maximize2, X, Building2, Pencil, Trash2, Heart, Share2, Plus, Map as MapIcon, Loader2, Star, GripVertical, Check, Flag, Camera, UserPlus, ThumbsUp } from "lucide-react";
 import { haptics } from "@/hooks/useHaptics";
 import { Reorder, useDragControls } from "framer-motion";
 import { toast } from "sonner";
@@ -19,6 +19,7 @@ import { PlacePhoto } from "@/components/PlacePhoto";
 import { RoutePlaceRow } from "@/components/route/RoutePlaceRow";
 import { fetchRouteNotesWithAuthors, notesByPlace, placeNoteKey } from "@/lib/placeNotes";
 import { fetchPinPhotos, addPinPhoto, deletePinPhoto, photosByPlace, pinPhotoKey, type PinPhoto } from "@/lib/pinPhotos";
+import { fetchPlaceVotes, toggleVote, placeVoteKey } from "@/lib/placeVotes";
 import PlaceNotes from "@/components/route/PlaceNotes";
 import { EmptyPlacesState } from "@/components/route/EmptyPlacesState";
 import AddPlaceSheet from "@/components/route/AddPlaceSheet";
@@ -361,6 +362,19 @@ export default function SharedRoute() {
     enabled: !!id,
   });
   const photosMap = photosByPlace(pinPhotoRows as PinPhoto[]);
+
+  // Glosowanie na miejsca (etap propozycji) - liczba glosow + czy JA glosowalem.
+  const { data: votesMap = new Map() } = useQuery({
+    queryKey: ["shared-route-votes", id, user?.id],
+    queryFn: () => fetchPlaceVotes(id!, user?.id ?? null),
+    enabled: !!id,
+  });
+  const toggleVoteHandler = async (pin: any, voted: boolean) => {
+    if (!user || !id) return;
+    haptics.light();
+    await toggleVote(id, pin.place_name, user.id, voted);
+    queryClient.invalidateQueries({ queryKey: ["shared-route-votes", id] });
+  };
 
   // Seed edytora wlasnych notek (etap w trakcie) z allNotes; klucz route_id::place_name.
   const nkeyOf = (pin: any) => `${pin.route_id}::${pin.place_name}`;
@@ -714,8 +728,20 @@ export default function SharedRoute() {
   // (duze zdjecie 104px, chip kategorii + guzik Google). Notki uczestnikow pod wierszem gdy sa.
   const buildNote = (pin: any): ReactNode | undefined => {
     const list = notesMap.get(placeNoteKey(pin.place_name)) ?? [];
-    // Etap PROPOZYCJI (planning) - bez notek/zdjec (to sugerowanie miejsc).
-    if (stage === "planning") return undefined;
+    // Etap PROPOZYCJI (planning): glosowanie na miejsce (kazdy uczestnik 1 glos; host widzi liczbe).
+    if (stage === "planning") {
+      const v = (votesMap as Map<string, { count: number; voted: boolean }>).get(placeVoteKey(pin.place_name)) ?? { count: 0, voted: false };
+      if (!user) return v.count > 0 ? (
+        <div className="mt-1.5 inline-flex items-center gap-1.5 text-[13px] font-semibold text-muted-foreground"><ThumbsUp className="h-4 w-4" /> {v.count}</div>
+      ) : undefined;
+      return (
+        <button onClick={() => toggleVoteHandler(pin, v.voted)}
+          className={`mt-1.5 inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-semibold active:scale-95 transition-transform ${v.voted ? "bg-primary/12 text-primary" : "bg-secondary text-foreground"}`}>
+          <ThumbsUp className={`h-4 w-4 ${v.voted ? "fill-primary" : ""}`} strokeWidth={2} />
+          {v.voted ? "Głos oddany" : "Zagłosuj"}{v.count > 0 ? ` · ${v.count}` : ""}
+        </button>
+      );
+    }
     // Etap W TRAKCIE (ongoing): zdjecia per-miejsce + Twoja notka (edytor) + notki innych (wszyscy).
     if (stage === "ongoing") {
       const k = nkeyOf(pin);
@@ -1000,6 +1026,10 @@ export default function SharedRoute() {
                   <button key={pin.id} onClick={() => toggleChosen(pin.id)} className="w-full flex items-center gap-3 rounded-2xl bg-secondary/60 pl-3 pr-2.5 py-2.5 text-left active:opacity-80 transition-opacity">
                     <PlacePhoto pin={pin} className="h-12 w-12 rounded-xl object-cover shrink-0" />
                     <span className="flex-1 min-w-0 text-[15px] font-semibold text-foreground truncate">{pin.place_name}</span>
+                    {/* Liczba glosow - pomaga hostowi zdecydowac */}
+                    {((votesMap as Map<string, { count: number }>).get(placeVoteKey(pin.place_name))?.count ?? 0) > 0 && (
+                      <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-white text-foreground px-2 py-0.5 text-[12px] font-bold"><ThumbsUp className="h-3.5 w-3.5" /> {(votesMap as Map<string, { count: number }>).get(placeVoteKey(pin.place_name))!.count}</span>
+                    )}
                     <span className={`h-7 w-7 rounded-full flex items-center justify-center shrink-0 transition-colors ${chosen.has(pin.id) ? "bg-primary text-primary-foreground" : "border-2 border-border"}`}>{chosen.has(pin.id) && <Check className="h-4 w-4 stroke-[3]" />}</span>
                   </button>
                 ))}
