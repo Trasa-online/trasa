@@ -229,16 +229,8 @@ export default function AddPlaceSheet({ open, onClose, city, existingPlaces, onA
             </div>
           ) : (
             <div className="pt-1 space-y-4">
-              {/* #5: NAJPIERW miejsca juz w tej trasie/liscie (info, zaznaczone), potem zapisane. Lista
-                  (nie siatka kafelkow) - "szary kafelek w formie listy" (2026-08-24, prosba Nat). */}
-              {existingPlaces && existingPlaces.length > 0 && (
-                <div>
-                  <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground mb-1.5 px-0.5">Już dodane</p>
-                  <div className="space-y-1.5">
-                    {existingPlaces.map((p, i) => renderPlaceRow({ rowKey: `ex-${keyOf(p)}-${i}`, category: p.category, title: p.place_name, subtitle: city, added: true }))}
-                  </div>
-                </div>
-              )}
+              {/* NAJPIERW "Zapisane" (do wyboru) + "Dodaj nowe miejsce", "Juz dodane" (info) na SAMYM
+                  DOLE - nie zabiera miejsca u gory (2026-08-25, prosba Nat). Lista, nie siatka kafelkow. */}
               <div>
                 {existingPlaces && existingPlaces.length > 0 && <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground mb-1.5 px-0.5">Zapisane</p>}
                 <div className="space-y-1.5">
@@ -253,6 +245,14 @@ export default function AddPlaceSheet({ open, onClose, city, existingPlaces, onA
                   {tiles.map((p, i) => renderPlaceRow({ rowKey: `${keyOf(p)}-${i}`, category: p.category, title: p.place_name, subtitle: city, onClick: () => toggle(p), selected: isSel(p) }))}
                 </div>
               </div>
+              {existingPlaces && existingPlaces.length > 0 && (
+                <div>
+                  <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground mb-1.5 px-0.5">Już dodane</p>
+                  <div className="space-y-1.5">
+                    {existingPlaces.map((p, i) => renderPlaceRow({ rowKey: `ex-${keyOf(p)}-${i}`, category: p.category, title: p.place_name, subtitle: city, added: true }))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
