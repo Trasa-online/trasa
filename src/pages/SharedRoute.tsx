@@ -12,7 +12,7 @@ import { format } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
 import { MapPin, ArrowLeft, Sparkles, ChevronRight, ChevronLeft, Bookmark, List, GalleryHorizontalEnd, Calendar as CalendarIcon, Image as ImageIcon, Maximize2, X, Building2, Pencil, Trash2, Heart, Share2, Plus, Map as MapIcon, Loader2, Star, GripVertical, Check, Flag, Camera, UserPlus, ThumbsUp, MessageCircle } from "lucide-react";
 import { haptics } from "@/hooks/useHaptics";
-import { Reorder, useDragControls } from "framer-motion";
+import { Reorder, useDragControls, motion } from "framer-motion";
 import { toast } from "sonner";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { PlacePhoto } from "@/components/PlacePhoto";
@@ -152,6 +152,7 @@ export default function SharedRoute() {
   const [uploadingPin, setUploadingPin] = useState<string | null>(null);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
+  const [chatHidden, setChatHidden] = useState(false); // dymek czatu schowany do krawedzi (swipe w bok)
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
   const photoInputRef = useRef<HTMLInputElement>(null);
   const share = useShare();
@@ -1165,11 +1166,21 @@ export default function SharedRoute() {
       {/* Dymek CZATU wyjazdu (prawa strona, nad dolnym CTA) - uczestnicy (owner/czlonek) przegaduja
           miejsca. Realtime. Ukryty w trybie wyboru miejsc. Prosba Nat 2026-08-26. */}
       {canEdit && id && !choosing && (
-        <button onClick={() => setChatOpen(true)} aria-label="Czat wyjazdu"
-          className="fixed right-4 z-40 h-14 w-14 rounded-full bg-primary text-white flex items-center justify-center active:scale-90 transition-transform"
+        // Dymek czatu - PRZESUWALNY: swipe w prawo chowa go do krawedzi (zostaje sliver), tap/przeciagniecie
+        // w lewo go wyciaga. Tap na widocznym otwiera czat. (prosba Nat 2026-08-26).
+        <motion.button aria-label={chatHidden ? "Pokaż czat" : "Czat wyjazdu"}
+          drag="x"
+          dragConstraints={{ left: 0, right: 50 }}
+          dragElastic={0.08}
+          dragMomentum={false}
+          animate={{ x: chatHidden ? 50 : 0, opacity: chatHidden ? 0.92 : 1 }}
+          transition={{ type: "spring", stiffness: 420, damping: 34 }}
+          onDragEnd={(_e, info) => { if (info.offset.x > 28) setChatHidden(true); else if (info.offset.x < -28) setChatHidden(false); }}
+          onTap={() => { if (chatHidden) setChatHidden(false); else setChatOpen(true); }}
+          className="fixed right-4 z-40 h-14 w-14 rounded-full bg-primary text-white flex items-center justify-center touch-none"
           style={{ bottom: "calc(84px + env(safe-area-inset-bottom, 0px))" }}>
           <MessageCircle className="h-6 w-6" strokeWidth={2.2} />
-        </button>
+        </motion.button>
       )}
       {canEdit && id && (
         <TripChatSheet open={chatOpen} onOpenChange={setChatOpen} routeId={id} tripTitle={route.title ?? cityLabel}
