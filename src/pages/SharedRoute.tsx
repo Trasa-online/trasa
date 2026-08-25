@@ -20,6 +20,7 @@ import { RoutePlaceRow } from "@/components/route/RoutePlaceRow";
 import { fetchRouteNotesWithAuthors, notesByPlace, placeNoteKey } from "@/lib/placeNotes";
 import { fetchPinPhotos, addPinPhoto, deletePinPhoto, photosByPlace, pinPhotoKey, type PinPhoto } from "@/lib/pinPhotos";
 import { fetchPlaceVotes, toggleVote, placeVoteKey } from "@/lib/placeVotes";
+import { fetchUnreadChatCount } from "@/lib/chatReads";
 import PlaceNotes from "@/components/route/PlaceNotes";
 import { EmptyPlacesState } from "@/components/route/EmptyPlacesState";
 import AddPlaceSheet from "@/components/route/AddPlaceSheet";
@@ -378,6 +379,25 @@ export default function SharedRoute() {
     await toggleVote(id, pin.place_name, user.id, voted);
     queryClient.invalidateQueries({ queryKey: ["shared-route-votes", id] });
   };
+
+  // Nieprzeczytane wiadomosci czatu - licznik na dymku. RLS (trip_messages/reads) = uczestnicy,
+  // wiec dla obcych zwroci 0. Odswiezany realtime'em ponizej (nowa wiadomosc) + przy oznaczeniu read.
+  const { data: unreadChat = 0 } = useQuery({
+    queryKey: ["chat-unread", id, user?.id],
+    enabled: !!id && !!user?.id,
+    queryFn: () => fetchUnreadChatCount(id!, user!.id),
+  });
+  // Realtime: nowa wiadomosc w tym wyjezdzie -> odswiez licznik + (gdy czat otwarty) liste wiadomosci.
+  useEffect(() => {
+    if (!id || !user?.id) return;
+    const ch = supabase.channel(`trip-msg-badge-${id}`)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "trip_messages", filter: `route_id=eq.${id}` }, () => {
+        queryClient.invalidateQueries({ queryKey: ["chat-unread", id, user.id] });
+        queryClient.invalidateQueries({ queryKey: ["trip-messages", id] });
+      })
+      .subscribe();
+    return () => { void supabase.removeChannel(ch); };
+  }, [id, user?.id, queryClient]);
 
   // Seed edytora wlasnych notek (etap w trakcie) z allNotes; klucz route_id::place_name.
   const nkeyOf = (pin: any) => `${pin.route_id}::${pin.place_name}`;
@@ -1180,6 +1200,10 @@ export default function SharedRoute() {
           className="fixed right-4 z-40 h-14 w-14 rounded-full bg-primary text-white flex items-center justify-center touch-none"
           style={{ bottom: "calc(84px + env(safe-area-inset-bottom, 0px))" }}>
           <MessageCircle className="h-6 w-6" strokeWidth={2.2} />
+          {/* Licznik nieprzeczytanych - top-LEFT, zeby byl widoczny tez gdy dymek schowany do krawedzi. */}
+          {unreadChat > 0 && (
+            <span className="absolute -top-1 -left-1 min-w-[20px] h-5 px-1.5 rounded-full bg-red-500 text-white text-[11px] font-bold flex items-center justify-center border-2 border-white leading-none">{unreadChat > 9 ? "9+" : unreadChat}</span>
+          )}
         </motion.button>
       )}
       {canEdit && id && (

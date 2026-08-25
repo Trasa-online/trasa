@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { haptics } from "@/hooks/useHaptics";
 import { supabase } from "@/integrations/supabase/client";
 import { avatarSrc } from "@/lib/avatar";
+import { markChatRead } from "@/lib/chatReads";
 
 interface ChatMsg { id: string; user_id: string | null; text: string; created_at: string; username: string | null; avatar_url: string | null }
 
@@ -53,6 +54,13 @@ export default function TripChatSheet({ open, onOpenChange, routeId, tripTitle, 
   useEffect(() => {
     if (open && listRef.current) listRef.current.scrollTop = listRef.current.scrollHeight;
   }, [messages.length, open]);
+
+  // Oznacz czat jako przeczytany po otwarciu + gdy user widzi nowe wiadomosci -> zeruje licznik na dymku.
+  useEffect(() => {
+    if (open && routeId && user?.id) {
+      void markChatRead(routeId, user.id).then(() => queryClient.invalidateQueries({ queryKey: ["chat-unread", routeId, user.id] }));
+    }
+  }, [open, routeId, user?.id, messages.length, queryClient]);
 
   const send = async () => {
     const t = text.trim();
