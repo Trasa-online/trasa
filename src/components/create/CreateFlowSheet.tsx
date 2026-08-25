@@ -16,7 +16,7 @@ import { citiesForCountry } from "@/lib/tripCountries";
 import { usePlaceSearch } from "@/hooks/usePlaceSearch";
 import { categoryIconSrc } from "@/lib/placeCategoryIcon";
 
-type Step = "entry" | "listName" | "listPick" | "tripMode" | "trip" | "tripPeople";
+type Step = "entry" | "listCity" | "listName" | "listPick" | "tripMode" | "trip" | "tripPeople";
 type TripMode = "future" | "past";
 
 const NBSP = " ";
@@ -39,6 +39,8 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
 
   // Lista
   const [listName, setListName] = useState("");
+  const [listNameEdited, setListNameEdited] = useState(false);   // czy user recznie zmienil nazwe (nie nadpisuj default)
+  const [listCity, setListCity] = useState(defaultCity);   // miasto listy - zawezenie wyszukiwarki Google
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [creating, setCreating] = useState(false);
   // Wyszukiwarka Google Places INLINE (zamiast nawigacji do starego edytora CreateRanking).
@@ -46,7 +48,20 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
   const [listQuery, setListQuery] = useState("");
   const [manualPlaces, setManualPlaces] = useState<PlaceForList[]>([]);
   const listSearchRef = useRef<HTMLInputElement>(null);
-  const { results: listResults, searching: listSearching, blocked: listBlocked, searchMode: listSearchMode } = usePlaceSearch(listQuery, { enabled: open && step === "listPick" });
+  // Srodek wybranego miasta (geokod) - TWARDY filtr wynikow Google w obrebie miasta (inaczej "ato
+  // ramen" dla Wroclawia zwracalo pozycje z USA). Zawezenie + dopisanie miasta do zapytania.
+  const { data: listGeoCenter = null } = useQuery({
+    queryKey: ["listcity-center", listCity],
+    enabled: open && step === "listPick" && !!listCity,
+    staleTime: 60 * 60 * 1000,
+    queryFn: async () => {
+      const { data } = await supabase.functions.invoke("google-places-proxy", { body: { action: "textsearch", query: listCity } });
+      const r = ((data as any)?.results ?? [])[0];
+      return r?.latitude != null ? { lat: r.latitude as number, lng: r.longitude as number } : null;
+    },
+  });
+  const { results: listResults, searching: listSearching, blocked: listBlocked, searchMode: listSearchMode } =
+    usePlaceSearch(listQuery, { city: listCity, center: listGeoCenter, scopeKm: 30, enabled: open && step === "listPick" });
 
   // Wyjazd
   const [tripMode, setTripMode] = useState<TripMode>("future");
@@ -69,7 +84,7 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
   // Reset przy kazdym otwarciu.
   useEffect(() => {
     if (open) {
-      setStep("entry"); setListName(""); setSelected(new Set()); setListQuery(""); setManualPlaces([]);
+      setStep("entry"); setListName(""); setListNameEdited(false); setListCity(defaultCity()); setSelected(new Set()); setListQuery(""); setManualPlaces([]);
       setTripMode("future"); setTripName(""); setTripCity(defaultCity()); setTripPeople([]); setCreating(false);
     }
   }, [open]);
@@ -113,7 +128,7 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
     // Pusta lista jest OK (opcja "Pomiń") - miejsca mozna dodac pozniej na widoku listy.
     setCreating(true);
     haptics.light();
-    const id = await createListFromSavedPlaces(user.id, { title: listName.trim() || "Nowa lista", isPublic: true, places, author });
+    const id = await createListFromSavedPlaces(user.id, { title: listName.trim() || `Lista miejsc ${listCity}`, city: listCity, isPublic: true, places, author });
     setCreating(false);
     if (!id) { haptics.error(); toast.error("Nie udało się utworzyć listy"); return; }
     haptics.success();
@@ -187,7 +202,7 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
             <h2 className="text-[20px] font-semibold text-foreground text-center">Co dzisiaj tworzymy?</h2>
             <div className="mt-4 flex gap-4">
               {[
-                { key: "list", label: "Lista", icon: <FileText className="h-8 w-8 text-foreground" strokeWidth={1.7} />, go: () => setStep("listName") },
+                { key: "list", label: "Lista", icon: <FileText className="h-8 w-8 text-foreground" strokeWidth={1.7} />, go: () => setStep("listCity") },
                 { key: "trip", label: "Wyjazd", icon: <img src="/spontaway-symbol.png" alt="" className="h-9 w-9 object-contain" style={{ filter: "brightness(0)" }} draggable={false} />, go: () => setStep("tripMode") },
               ].map((t) => (
                 <button key={t.key} onClick={() => { haptics.light(); t.go(); }} className="flex-1 flex flex-col items-center gap-3 active:scale-[0.98] transition-transform outline-none focus:outline-none focus-visible:outline-none">
@@ -219,16 +234,27 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
           </div>
         )}
 
+        {/* ── LISTA: wybor miasta (zawezenie wyszukiwarki Google + domyslna nazwa "Lista miejsc {miasto}") ── */}
+        {step === "listCity" && (
+          <div className="pb-[max(16px,env(safe-area-inset-bottom))]">
+            <Header title="Miasto listy" onBack={() => setStep("entry")}
+              onNext={() => { if (!listNameEdited) setListName(`Lista miejsc ${listCity}`); setStep("listName"); }} />
+            <div className="px-5 pt-1">
+              <CityCountryPicker city={listCity} onCityChange={setListCity} compact />
+            </div>
+          </div>
+        )}
+
         {/* ── LISTA: nazwa + prywatnosc ── */}
         {step === "listName" && (
           <div className="pb-[max(16px,env(safe-area-inset-bottom))]">
-            <Header title="Nowa lista" onBack={() => setStep("entry")} onNext={() => setStep("listPick")} nextEnabled={!!listName.trim()} />
+            <Header title="Nowa lista" onBack={() => setStep("listCity")} onNext={() => setStep("listPick")} nextEnabled={!!listName.trim()} />
             <div className="px-5 pt-1">
               <div className="relative">
-                <input ref={listNameRef} value={listName} onChange={(e) => setListName(e.target.value)} placeholder="Nazwa listy"
+                <input ref={listNameRef} value={listName} onChange={(e) => { setListName(e.target.value); setListNameEdited(true); }} placeholder="Nazwa listy"
                   className="w-full h-12 rounded-xl bg-secondary/60 border border-border/60 pl-4 pr-11 text-base text-foreground placeholder:text-muted-foreground/70 outline-none focus:ring-2 focus:ring-orange-500/30" />
                 {listName && (
-                  <button onClick={() => setListName("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 h-7 w-7 rounded-full bg-[#ebebeb]/60 flex items-center justify-center active:scale-90 transition-transform">
+                  <button onClick={() => { setListName(""); setListNameEdited(false); }} className="absolute right-2.5 top-1/2 -translate-y-1/2 h-7 w-7 rounded-full bg-[#ebebeb]/60 flex items-center justify-center active:scale-90 transition-transform">
                     <X className="h-3.5 w-3.5 text-muted-foreground" />
                   </button>
                 )}

@@ -206,15 +206,15 @@ export async function createListWithPlace(
 // Oba warianty to list_status='visited' (kuratorska lista, nie wishlista to_visit).
 export async function createListFromSavedPlaces(
   userId: string,
-  opts: { title: string; isPublic: boolean; places: PlaceForList[]; author?: ListAuthor },
+  opts: { title: string; isPublic: boolean; places: PlaceForList[]; author?: ListAuthor; city?: string | null },
 ): Promise<string | null> {
-  const { title, isPublic, places, author } = opts;
+  const { title, isPublic, places, author, city } = opts;
   const { data: col, error } = await (supabase as any)
     .from("discovery_collections")
     .insert({
       user_id: userId,
       title: title.trim() || "Nowa lista",
-      city: null,
+      city: city ?? null,
       kind: "ranking",
       list_status: "visited",
       is_public: isPublic,
