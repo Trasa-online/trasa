@@ -14,6 +14,17 @@ import { fetchSavedPlaces, createListFromSavedPlaces, type SavedPlace, type Plac
 import { citiesForCountry } from "@/lib/tripCountries";
 import { usePlaceSearch } from "@/hooks/usePlaceSearch";
 import { categoryIconSrc } from "@/lib/placeCategoryIcon";
+import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
+
+// Oficjalne logo Google ("G") - guzik "otworz miejsce w Google Maps" (wizytowka miejsca).
+const GoogleGlyph = ({ className }: { className?: string }) => (
+  <svg viewBox="0 0 48 48" className={className} aria-hidden="true">
+    <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
+    <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" />
+    <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" />
+    <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
+  </svg>
+);
 
 type Step = "entry" | "listCity" | "listName" | "listPick" | "tripMode" | "trip" | "tripPeople";
 type TripMode = "future" | "past";
@@ -46,6 +57,7 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
   // manualPlaces = miejsca dodane z wynikow Google (nie z zapisanych), zawsze doliczane do listy.
   const [listQuery, setListQuery] = useState("");
   const [manualPlaces, setManualPlaces] = useState<PlaceForList[]>([]);
+  const [detailPlace, setDetailPlace] = useState<any | null>(null);   // wizytowka miejsca (PlaceSwiperDetail)
   const listSearchRef = useRef<HTMLInputElement>(null);
   // Srodek wybranego miasta (geokod) - TWARDY filtr wynikow Google w obrebie miasta (inaczej "ato
   // ramen" dla Wroclawia zwracalo pozycje z USA). Zawezenie + dopisanie miasta do zapytania.
@@ -83,7 +95,7 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
   // Reset przy kazdym otwarciu.
   useEffect(() => {
     if (open) {
-      setStep("entry"); setListName(""); setListNameEdited(false); setListCity(defaultCity()); setSelected(new Set()); setListQuery(""); setManualPlaces([]);
+      setStep("entry"); setListName(""); setListNameEdited(false); setListCity(defaultCity()); setSelected(new Set()); setListQuery(""); setManualPlaces([]); setDetailPlace(null);
       setTripMode("future"); setTripName(""); setTripCity(defaultCity()); setTripPeople([]); setCreating(false);
     }
   }, [open]);
@@ -118,21 +130,56 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
   };
   const removeManual = (p: PlaceForList) => setManualPlaces((prev) => prev.filter((m) => keyOfPlace(m) !== keyOfPlace(p)));
 
-  // Wiersz listy (jak w AddPlaceSheet "Dodaj nowe miejsce") - wiecej pozycji sie miesci niz w siatce.
-  const renderListRow = (opts: { rowKey: string; category?: string | null; title: string; subtitle?: string | null; onClick?: () => void; selected?: boolean }) => (
-    <button key={opts.rowKey} onClick={opts.onClick}
-      className="w-full flex items-center gap-3 rounded-2xl bg-secondary/60 px-3 py-2.5 text-left active:bg-secondary transition-colors">
-      <span className="h-11 w-11 rounded-xl bg-[#fcede3] flex items-center justify-center shrink-0">
-        <img src={categoryIconSrc(opts.category)} alt="" className="w-1/2 opacity-90" draggable={false} />
-      </span>
-      <span className="flex-1 min-w-0">
-        <span className="block text-[15px] font-semibold text-foreground truncate">{opts.title}</span>
-        {opts.subtitle && <span className="block text-[13px] text-muted-foreground truncate">{opts.subtitle}</span>}
-      </span>
-      <span className={`h-6 w-6 rounded-full flex items-center justify-center shrink-0 ${opts.selected ? "bg-[#f0a583] text-white" : "border-2 border-border"}`}>
+  // Wizytowka miejsca (PlaceSwiperDetail) - mapowanie zapisanego/googlowego miejsca na MockPlace.
+  const openDetail = (p: any) => { haptics.light(); setDetailPlace({
+    id: p.place_id || p.id || p.place_name,
+    place_name: p.place_name,
+    category: (p.category || "other"),
+    city: (p.city ?? listCity) || "",
+    address: p.address || "",
+    latitude: p.latitude ?? 0,
+    longitude: p.longitude ?? 0,
+    rating: p.rating ?? 0,
+    photo_url: p.photo_url ?? "",
+    vibe_tags: [],
+    description: p.description ?? p.short_desc ?? "",
+    google_place_id: p.google_place_id ?? null,
+  }); };
+  // Otworz miejsce w Google Maps (wizytowka/place page). query_place_id gdy mamy Google Place ID
+  // (google_place_id lub place_id niebedace naszym DB uuid) - inaczej szukamy po nazwie+adresie+miescie.
+  const openGooglePlace = (p: any) => {
+    haptics.light();
+    const q = encodeURIComponent([p.place_name, p.address, p.city ?? listCity].filter(Boolean).join(", "));
+    const gpid = typeof p.google_place_id === "string" && p.google_place_id.trim() ? p.google_place_id.trim() : "";
+    const pid0 = typeof p.place_id === "string" && p.place_id.trim() ? p.place_id.trim() : "";
+    const isDbUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(pid0);
+    const gid = gpid || (isDbUuid ? "" : pid0);
+    const placeIdParam = gid ? `&query_place_id=${encodeURIComponent(gid)}` : "";
+    window.open(`https://www.google.com/maps/search/?api=1&query=${q}${placeIdParam}`, "_blank", "noopener,noreferrer");
+  };
+
+  // Wiersz listy: klik nazwy/ikony = WIZYTOWKA; ikona Google (po lewej od kolka) = Google Maps;
+  // kolko po prawej = dodaj/usun z listy. Wiecej pozycji sie miesci niz w siatce.
+  const renderListRow = (opts: { rowKey: string; place: any; subtitle?: string | null; onToggle: () => void; selected: boolean }) => (
+    <div key={opts.rowKey} className="w-full flex items-center gap-2 rounded-2xl bg-secondary/60 pl-3 pr-2.5 py-2.5">
+      <button onClick={() => openDetail(opts.place)} className="flex items-center gap-3 flex-1 min-w-0 text-left active:opacity-80 transition-opacity">
+        <span className="h-11 w-11 rounded-xl bg-[#fcede3] flex items-center justify-center shrink-0">
+          <img src={categoryIconSrc(opts.place.category)} alt="" className="w-1/2 opacity-90" draggable={false} />
+        </span>
+        <span className="flex-1 min-w-0">
+          <span className="block text-[15px] font-semibold text-foreground truncate">{opts.place.place_name}</span>
+          {opts.subtitle && <span className="block text-[13px] text-muted-foreground truncate">{opts.subtitle}</span>}
+        </span>
+      </button>
+      <button onClick={() => openGooglePlace(opts.place)} aria-label={`Otwórz ${opts.place.place_name} w Google Maps`}
+        className="h-9 w-9 flex items-center justify-center shrink-0 rounded-full active:scale-90 transition-transform">
+        <GoogleGlyph className="h-[18px] w-[18px]" />
+      </button>
+      <button onClick={opts.onToggle} aria-label={opts.selected ? "Usuń z listy" : "Dodaj do listy"}
+        className={`h-6 w-6 rounded-full flex items-center justify-center shrink-0 transition-colors ${opts.selected ? "bg-[#f0a583] text-white" : "border-2 border-border"}`}>
         {opts.selected ? <Check className="h-3.5 w-3.5 stroke-[3]" /> : <Plus className="h-3.5 w-3.5 text-muted-foreground" />}
-      </span>
-    </button>
+      </button>
+    </div>
   );
 
   const createList = async () => {
@@ -207,6 +254,7 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
   );
 
   return (
+    <>
     <Sheet open={open} onOpenChange={(o) => { if (!o) close(); }}>
       <SheetContent side="bottom" onOpenAutoFocus={(e) => e.preventDefault()} className="rounded-t-3xl p-0 [&>button]:hidden flex flex-col bg-[#fefefe] border-0" style={{ maxHeight: "88vh" }}>
         {/* grabber */}
@@ -310,8 +358,8 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
                     <p className="py-6 text-center text-sm text-muted-foreground">Brak wyników</p>
                   )}
                   {listResults.map((r, i) => renderListRow({
-                    rowKey: `${keyOfPlace(r)}-${i}`, category: r.category, title: r.place_name, subtitle: r.address,
-                    onClick: () => pickResult(r), selected: manualPlaces.some((m) => keyOfPlace(m) === keyOfPlace(r)),
+                    rowKey: `${keyOfPlace(r)}-${i}`, place: r, subtitle: r.address,
+                    onToggle: () => pickResult(r), selected: manualPlaces.some((m) => keyOfPlace(m) === keyOfPlace(r)),
                   }))}
                 </div>
               ) : loadingSaved ? (
@@ -320,15 +368,15 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
                 <div className="pt-1 space-y-1.5">
                   {/* Dodane z Google (manual) - zaznaczone, klik usuwa z listy */}
                   {manualPlaces.map((p, i) => renderListRow({
-                    rowKey: `m-${keyOfPlace(p)}-${i}`, category: p.category, title: p.place_name, subtitle: listCity,
-                    onClick: () => removeManual(p), selected: true,
+                    rowKey: `m-${keyOfPlace(p)}-${i}`, place: p, subtitle: listCity,
+                    onToggle: () => removeManual(p), selected: true,
                   }))}
                   {savedPlaces.length > 0 && (
                     <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground pt-1 px-0.5">Twoje zapisane miejsca</p>
                   )}
                   {savedPlaces.map((p) => renderListRow({
-                    rowKey: p.id, category: p.category, title: p.place_name, subtitle: p.city,
-                    onClick: () => toggleSel(p.id), selected: selected.has(p.id),
+                    rowKey: p.id, place: p, subtitle: p.city,
+                    onToggle: () => toggleSel(p.id), selected: selected.has(p.id),
                   }))}
                 </div>
               )}
@@ -380,5 +428,8 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
         )}
       </SheetContent>
     </Sheet>
+    {/* Wizytowka miejsca (klik w wiersz). Vaul-drawer nakłada się na arkusz tworzenia. */}
+    <PlaceSwiperDetail open={!!detailPlace} onOpenChange={(o) => { if (!o) setDetailPlace(null); }} place={detailPlace} city={detailPlace?.city || listCity} />
+    </>
   );
 }
