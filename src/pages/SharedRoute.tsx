@@ -574,25 +574,24 @@ export default function SharedRoute() {
     const { error } = await (supabase as any).from("pins").delete().eq("id", pin.id);
     if (error) { toast.error("Nie udało się usunąć miejsca"); return; }
     queryClient.invalidateQueries({ queryKey: ["shared-route-pins", id] });
-    // Toast z miniaturka + nazwa usunietego miejsca (prosba Nat): od lewej miniaturka, obok nazwa.
-    toast(
-      <span className="flex items-center gap-2.5 min-w-0">
-        <PlacePhoto pin={pin} className="h-9 w-9 rounded-lg object-cover shrink-0" />
-        <span className="min-w-0">
-          <span className="block text-[13.5px] font-semibold text-foreground truncate">{pin.place_name}</span>
-          <span className="block text-[11px] text-muted-foreground">{stage === "planning" ? "Usunięto z propozycji" : "Usunięto z wyjazdu"}</span>
-        </span>
-      </span>,
-      {
-        action: {
-          label: "Cofnij",
-          onClick: async () => {
+    // Toast: miniaturka (lewo, powiekszona) + nazwa + Cofnij. toast.custom = pelna kontrola (akcja
+    // + rozmiar miniatury), bo sonner action nie zawsze renderowal sie z customowa trescia.
+    toast.custom((tid) => (
+      <div className="flex items-center gap-3 w-full max-w-[360px] bg-card rounded-2xl shadow-lg border border-border/40 pl-2.5 pr-2 py-2.5">
+        <PlacePhoto pin={pin} className="h-12 w-12 rounded-xl object-cover shrink-0" />
+        <div className="min-w-0 flex-1">
+          <p className="text-[14px] font-semibold text-foreground truncate">{pin.place_name}</p>
+          <p className="text-[11.5px] text-muted-foreground">{stage === "planning" ? "Usunięto z propozycji" : "Usunięto z wyjazdu"}</p>
+        </div>
+        <button
+          onClick={async () => {
             await (supabase as any).from("pins").insert({ ...rest });
             queryClient.invalidateQueries({ queryKey: ["shared-route-pins", id] });
-          },
-        },
-      },
-    );
+            toast.dismiss(tid);
+          }}
+          className="shrink-0 text-[13px] font-bold text-primary px-3 py-2 rounded-xl active:bg-primary/10 transition-colors">Cofnij</button>
+      </div>
+    ));
   };
 
   // #3: usun zdjecie z galerii wyjazdu (review_photos). Toast + "Cofnij".
@@ -753,7 +752,7 @@ export default function SharedRoute() {
                 <div key={ph.id} className="relative w-[84px] aspect-[2/3] shrink-0 rounded-xl overflow-hidden bg-muted">
                   <img src={resolveStored(ph.url) ?? ph.url} alt="" className="w-full h-full object-cover" />
                   {/* Awatar osoby ktora dodala zdjecie (dol-lewo). */}
-                  <img src={avatarSrc(ph.avatar_url)} alt="" title={ph.username ?? undefined} className="absolute bottom-1 left-1 h-6 w-6 rounded-full object-cover border-2 border-white shadow-sm bg-secondary" />
+                  <img src={avatarSrc(ph.avatar_url)} alt="" title={ph.username ?? undefined} className="absolute bottom-1 left-1 h-7 w-7 rounded-full object-cover border-2 border-white shadow-sm bg-secondary" />
                   {/* Usun: autor zdjecia lub wlasciciel trasy. */}
                   {(ph.user_id === user?.id || isOwner) && <button onClick={() => removePlacePhoto(ph.id)} aria-label="Usuń zdjęcie" className="absolute top-1 right-1 h-5 w-5 rounded-full bg-black/55 text-white flex items-center justify-center active:scale-90"><X className="h-3 w-3" /></button>}
                 </div>

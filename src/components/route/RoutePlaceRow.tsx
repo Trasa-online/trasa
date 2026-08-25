@@ -39,7 +39,7 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
       <button onClick={onOpen} className="relative w-16 h-24 shrink-0 self-start rounded-2xl overflow-hidden bg-[#fcede3] active:opacity-90">
         <PlacePhoto pin={pin} className="w-full h-full object-cover" />
         {cornerAvatar !== undefined && (
-          <img src={avatarSrc(cornerAvatar)} alt="" className="absolute bottom-1 right-1 h-5 w-5 rounded-full object-cover border-2 border-white shadow-sm bg-secondary" />
+          <img src={avatarSrc(cornerAvatar)} alt="" className="absolute bottom-1 right-1 h-7 w-7 rounded-full object-cover border-2 border-white shadow-sm bg-secondary" />
         )}
       </button>
       <div className="flex-1 min-w-0">

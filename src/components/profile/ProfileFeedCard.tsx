@@ -39,12 +39,16 @@ export function ProfileFeedCard({
   liked,
   onSave,
   saved,
+  description,
+  tags,
 }: {
   avatarUrl?: string | null;
   fallback?: string;
   eyebrow?: string;
   timestamp?: string;
   title: string;
+  description?: string | null; // opis wyjazdu (review_narrative/ai_summary) - pod nazwa
+  tags?: string[];             // tagi wyjazdu (routes.tags) - pigulki pod opisem
   tiles: any[];
   counts: FeedCounts;
   onOpen: () => void;
@@ -101,6 +105,20 @@ export function ProfileFeedCard({
             )}
           </div>
         </div>
+
+        {/* Opis + tagi pod nazwa wyjazdu (prosba Nat 2026-08-26). */}
+        {(description || (tags && tags.length > 0)) && (
+          <div className="mt-2">
+            {description && <p className="text-[13.5px] text-muted-foreground leading-snug line-clamp-2">{description}</p>}
+            {tags && tags.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-1.5">
+                {tags.slice(0, 6).map((tg) => (
+                  <span key={tg} className="inline-flex items-center rounded-full bg-secondary text-foreground px-2.5 py-0.5 text-[11.5px] font-semibold">{tg}</span>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Siatka kafelkow miejsc (max 6) */}
         {shown.length > 0 && (

@@ -321,7 +321,7 @@ const TravelerProfile = () => {
     queryFn: async () => {
       // saves_count/likes_count = denormalizowane liczniki na routes (RLS na saved_routes blokuje
       // count po stronie klienta - patrz migracja 20260828). Czytamy kolumny zamiast liczyc wiersze.
-      const sel = "id, title, city, start_date, day_number, folder_id, views, saves_count, likes_count, created_at, user_id, is_shared, trip_type, status";
+      const sel = "id, title, city, start_date, day_number, folder_id, views, saves_count, likes_count, created_at, user_id, is_shared, trip_type, status, tags, review_narrative, ai_summary";
       // Wlasne trasy (TAKZE robocze is_shared=false - badge "Robocze") + trasy grupowe, do ktorych
       // jestem zaproszony (member, is_shared=true). Koniec osobnego widoku /utworz/robocze (IA 2026-08-22).
       const [ownRes, memberRes] = await Promise.all([
@@ -379,6 +379,10 @@ const TravelerProfile = () => {
         status: rep.status,
         is_shared: rep.is_shared,
         trip_type: rep.trip_type,
+        // Opis + tagi pod nazwa wyjazdu (na karcie profilu, prosba Nat). Opis = review_narrative (user)
+        // lub ai_summary (fallback). tags = routes.tags.
+        description: (rep.review_narrative || rep.ai_summary || "").trim() || null,
+        tags: Array.isArray(rep.tags) ? rep.tags : [],
         tiles: days.flatMap((d) => pinsByRoute[d.id] ?? []),
         saves: Number(rep.saves_count ?? 0),
         likes: Number(rep.likes_count ?? 0),
@@ -414,6 +418,8 @@ const TravelerProfile = () => {
         eyebrow={eyebrow}
         timestamp={shortRelativeTime(tr.created_at)}
         title={tr.title || (tr.city ? t("feed.trip_fallback", { city: tr.city, defaultValue: `Wyjazd do ${tr.city}` }) : t("feed.trip_fallback_generic", "Wyjazd"))}
+        description={tr.description}
+        tags={tr.tags}
         tiles={tr.tiles}
         counts={{ saves: tr.saves, likes: tr.likes, views: tr.views }}
         isDraft={isRoboczy}
