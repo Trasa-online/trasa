@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Bookmark, Trash2 } from "lucide-react";
 import { PlacePhoto } from "@/components/PlacePhoto";
+import { avatarSrc } from "@/lib/avatar";
 
 // Oficjalne logo Google (4-kolorowe "G") - guzik "otworz miejsce w Google Maps".
 const GoogleGlyph = ({ className }: { className?: string }) => (
@@ -16,7 +17,7 @@ const GoogleGlyph = ({ className }: { className?: string }) => (
 // ReviewSummary). Duze zdjecie 104px, numer, nazwa (2 linie), chip kategorii + guzik Google.
 // dragHandle (opcjonalny) = uchwyt przeciagania po lewej (tryb wlasciciela). note = dodatkowa
 // tresc pod wierszem (np. notka autora).
-export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onSave, saved, onDelete, dragHandle, note }: {
+export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onSave, saved, onDelete, dragHandle, note, cornerAvatar }: {
   pin: any;
   index: number;
   categoryLabel: ReactNode;
@@ -27,14 +28,19 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
   onDelete?: () => void; // wlasciciel: usun miejsce z trasy/listy (kosz zamiast bookmarka)
   dragHandle?: ReactNode;
   note?: ReactNode;
+  // Awatar uczestnika, ktory DODAL to miejsce (rog miniaturki). undefined = nie pokazuj (brak added_by).
+  cornerAvatar?: string | null;
 }) {
   return (
     <div className="flex gap-3 bg-background py-4 border-b border-border/40 last:border-b-0">
       {dragHandle}
       {/* Peachy kafelek ikony/zdjecia - PIONOWY prostokat 2:3 (redesign 2026-08-25, spojne z okladkami
           miniaturek/kart). self-start: przyklejony do gory wiersza. */}
-      <button onClick={onOpen} className="w-16 h-24 shrink-0 self-start rounded-2xl overflow-hidden bg-[#fcede3] active:opacity-90">
+      <button onClick={onOpen} className="relative w-16 h-24 shrink-0 self-start rounded-2xl overflow-hidden bg-[#fcede3] active:opacity-90">
         <PlacePhoto pin={pin} className="w-full h-full object-cover" />
+        {cornerAvatar !== undefined && (
+          <img src={avatarSrc(cornerAvatar)} alt="" className="absolute bottom-1 right-1 h-5 w-5 rounded-full object-cover border-2 border-white shadow-sm bg-secondary" />
+        )}
       </button>
       <div className="flex-1 min-w-0">
         {/* Nazwa + badge kategorii (peachy pill po prawej) */}

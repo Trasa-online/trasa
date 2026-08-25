@@ -70,9 +70,9 @@ const GoogleGlyph = ({ className }: { className?: string }) => (
 
 // Wiersz miejsca z uchwytem przeciagania (framer-motion Reorder) - tryb edycji wspoldzielonej
 // trasy (wlasciciel + uczestnik). Wzor 1:1 z SortablePlanRow w ReviewSummary.
-function SortableRouteRow({ value, rowPin, index, categoryLabel, onOpen, onGoogle, onDelete, note }: {
+function SortableRouteRow({ value, rowPin, index, categoryLabel, onOpen, onGoogle, onDelete, note, cornerAvatar }: {
   value: any; rowPin: any; index: number; categoryLabel: ReactNode;
-  onOpen: () => void; onGoogle: () => void; onDelete: () => void; note?: ReactNode;
+  onOpen: () => void; onGoogle: () => void; onDelete: () => void; note?: ReactNode; cornerAvatar?: string | null;
 }) {
   const controls = useDragControls();
   const grip = (
@@ -88,7 +88,7 @@ function SortableRouteRow({ value, rowPin, index, categoryLabel, onOpen, onGoogl
   );
   return (
     <Reorder.Item as="div" value={value} dragListener={false} dragControls={controls} transition={{ duration: 0 }}>
-      <RoutePlaceRow pin={rowPin} index={index} categoryLabel={categoryLabel} onOpen={onOpen} onGoogle={onGoogle} onDelete={onDelete} dragHandle={grip} note={note} />
+      <RoutePlaceRow pin={rowPin} index={index} categoryLabel={categoryLabel} onOpen={onOpen} onGoogle={onGoogle} onDelete={onDelete} dragHandle={grip} note={note} cornerAvatar={cornerAvatar} />
     </Reorder.Item>
   );
 }
@@ -325,7 +325,7 @@ export default function SharedRoute() {
     queryFn: async () => {
       const { data } = await (supabase as any)
         .from("pins")
-        .select("id, route_id, place_name, address, category, suggested_time, images, image_url, user_photo_urls, photo_url, place_id, latitude, longitude, pin_order, description, tags")
+        .select("id, route_id, place_name, address, category, suggested_time, images, image_url, user_photo_urls, photo_url, place_id, latitude, longitude, pin_order, description, tags, added_by")
         .eq("route_id", id!)
         .order("pin_order");
       return (data ?? []) as any[];
@@ -513,7 +513,7 @@ export default function SharedRoute() {
       route_id: route.id, place_name: p.place_name, address: p.address ?? null, description: p.description ?? null,
       category: p.category ?? "other", latitude: p.latitude ?? null, longitude: p.longitude ?? null,
       place_id: p.place_id ?? null, suggested_time: null, photo_url: p.photo_url ?? null,
-      pin_order: maxOrder + 1 + i, original_creator_id: user.id,
+      pin_order: maxOrder + 1 + i, original_creator_id: user.id, added_by: user.id,
     }));
     const { error } = await (supabase as any).from("pins").insert(rows);
     if (error) throw error;
@@ -554,15 +554,25 @@ export default function SharedRoute() {
     const { error } = await (supabase as any).from("pins").delete().eq("id", pin.id);
     if (error) { toast.error("Nie udało się usunąć miejsca"); return; }
     queryClient.invalidateQueries({ queryKey: ["shared-route-pins", id] });
-    toast.success("Usunięto miejsce", {
-      action: {
-        label: "Cofnij",
-        onClick: async () => {
-          await (supabase as any).from("pins").insert({ ...rest });
-          queryClient.invalidateQueries({ queryKey: ["shared-route-pins", id] });
+    // Toast z miniaturka + nazwa usunietego miejsca (prosba Nat): od lewej miniaturka, obok nazwa.
+    toast(
+      <span className="flex items-center gap-2.5 min-w-0">
+        <PlacePhoto pin={pin} className="h-9 w-9 rounded-lg object-cover shrink-0" />
+        <span className="min-w-0">
+          <span className="block text-[13.5px] font-semibold text-foreground truncate">{pin.place_name}</span>
+          <span className="block text-[11px] text-muted-foreground">{stage === "planning" ? "Usunięto z propozycji" : "Usunięto z wyjazdu"}</span>
+        </span>
+      </span>,
+      {
+        action: {
+          label: "Cofnij",
+          onClick: async () => {
+            await (supabase as any).from("pins").insert({ ...rest });
+            queryClient.invalidateQueries({ queryKey: ["shared-route-pins", id] });
+          },
         },
       },
-    });
+    );
   };
 
   // #3: usun zdjecie z galerii wyjazdu (review_photos). Toast + "Cofnij".
@@ -674,6 +684,13 @@ export default function SharedRoute() {
   // Awatar zalogowanego usera (do edytora "Twoja notka"): z listy uczestnikow lub autora (owner).
   const myAvatar = (groupParticipants as any[]).find((p) => p.id === user?.id)?.avatar_url ?? (isOwner ? (author as any)?.avatar_url : null);
 
+  // Mapa user_id -> avatar (uczestnicy + autor). "added_by" na pinie = kto DODAL miejsce -> awatar w rogu.
+  const avatarByUser = new Map<string, string | null>();
+  for (const p of (groupParticipants as any[])) avatarByUser.set(p.id, p.avatar_url ?? null);
+  if (route?.user_id && (author as any)?.avatar_url) avatarByUser.set(route.user_id, (author as any).avatar_url);
+  // undefined = brak added_by (stare piny -> bez awatara); null = jest autor ale brak awatara (default).
+  const addedByAvatar = (pin: any): string | null | undefined => (pin.added_by ? (avatarByUser.get(pin.added_by) ?? null) : undefined);
+
   // Plaska lista miejsc (wg Figmy: bez grupowania po kategorii) - wspoldzielony RoutePlaceRow
   // (duze zdjecie 104px, chip kategorii + guzik Google). Notki uczestnikow pod wierszem gdy sa.
   const buildNote = (pin: any): ReactNode | undefined => {
@@ -759,6 +776,7 @@ export default function SharedRoute() {
             onGoogle={() => openGooglePlace(pin)}
             onDelete={() => handleDeletePin(pin)}
             note={buildNote(pin)}
+            cornerAvatar={addedByAvatar(pin)}
           />
         ))}
       </Reorder.Group>
@@ -775,6 +793,7 @@ export default function SharedRoute() {
             onSave={!isOwner && user ? () => toggleSaveBookmark(pin) : undefined}
             saved={isSaved(pin.place_name)}
             note={buildNote(pin)}
+            cornerAvatar={addedByAvatar(pin)}
           />
         ))}
       </div>
