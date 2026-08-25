@@ -237,7 +237,8 @@ export default function NotificationsDrawer({ open, onClose, userId }: Props) {
                             onClose();
                             // Deep-link do konkretnej trasy gdy znamy route_id (kolumna lub metadata), inaczej do zakladki Wyjazdy.
                             const rid = n.route_id ?? n.metadata?.route_id;
-                            navigate(rid ? `/review-summary?route=${rid}` : "/moj-profil?tab=wyjazdy");
+                            // Widok wyjazdu = SharedRoute (/route/:id) - etap propozycji/w trakcie/wspomnienie.
+                            navigate(rid ? `/route/${rid}` : "/moj-profil?tab=wyjazdy");
                           }}
                           className="mt-2 px-3 py-1.5 rounded-full bg-primary text-white text-xs font-semibold active:scale-95 transition-transform"
                         >

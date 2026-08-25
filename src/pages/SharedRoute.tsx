@@ -10,7 +10,8 @@ import { notify } from "@/lib/notify";
 import { sendClientPush, getCurrentUserName } from "@/lib/clientPush";
 import { format } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
-import { MapPin, ArrowLeft, Sparkles, ChevronRight, ChevronLeft, Bookmark, List, GalleryHorizontalEnd, Calendar as CalendarIcon, Image as ImageIcon, Maximize2, X, Building2, Pencil, Trash2, Heart, Share2, Plus, Map as MapIcon, Loader2, Star, GripVertical } from "lucide-react";
+import { MapPin, ArrowLeft, Sparkles, ChevronRight, ChevronLeft, Bookmark, List, GalleryHorizontalEnd, Calendar as CalendarIcon, Image as ImageIcon, Maximize2, X, Building2, Pencil, Trash2, Heart, Share2, Plus, Map as MapIcon, Loader2, Star, GripVertical, Check, Flag } from "lucide-react";
+import { haptics } from "@/hooks/useHaptics";
 import { Reorder, useDragControls } from "framer-motion";
 import { toast } from "sonner";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -131,6 +132,11 @@ export default function SharedRoute() {
   const [askDelete, setAskDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [addPlaceOpen, setAddPlaceOpen] = useState(false);
+  // "Wybierz miejsca" (etap propozycji, host): zaznacz ktore miejsca zostaja -> reszta usunieta,
+  // trip_type='ongoing' (przejscie na "w trakcie"). Domyslnie wszystkie zaznaczone.
+  const [choosing, setChoosing] = useState(false);
+  const [chosen, setChosen] = useState<Set<string>>(new Set());
+  const [choosingBusy, setChoosingBusy] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
   const photoInputRef = useRef<HTMLInputElement>(null);
@@ -155,9 +161,11 @@ export default function SharedRoute() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("routes")
-        .select("id, title, city, user_id, day_number, folder_id, start_date, ai_summary, ai_highlight, review_photos, review_narrative, group_session_id, tags, list_cover_url")
+        // trip_type/status = etap cyklu zycia (planning=Propozycje, ongoing=W Trakcie). Bez filtra
+        // is_shared - RLS i tak wpuszcza tylko wlasciciela (wlasne robocze) lub is_shared/published.
+        // Dzieki temu SharedRoute jest WIDOKIEM WYJAZDU dla wszystkich etapow (Nat 2026-08-25).
+        .select("id, title, city, user_id, day_number, folder_id, start_date, ai_summary, ai_highlight, review_photos, review_narrative, group_session_id, tags, list_cover_url, trip_type, status")
         .eq("id", id as string)
-        .eq("is_shared", true)
         .single();
       if (error) return null;
       return data as any;
@@ -386,6 +394,26 @@ export default function SharedRoute() {
   // Edycja miejsc (dodaj/usun/kolejnosc): wlasciciel LUB uczestnik wspolnego wyjazdu (RLS: polityki
   // "Group members can ... pins of shared route"). Nazwa/publikacja/usuniecie trasy zostaja owner-only.
   const canEdit = isOwner || isGroupMember;
+
+  // Etap cyklu zycia wyjazdu (Nat 2026-08-25): planning=Propozycje, ongoing=W Trakcie, completed=Wspomnienie.
+  const stage: "planning" | "ongoing" | "completed" = ((route as any).trip_type as any) || "planning";
+  const startChoosing = () => { haptics.light(); setChosen(new Set((pins as any[]).map((p) => p.id))); setChoosing(true); };
+  const toggleChosen = (pid: string) => setChosen((prev) => { const n = new Set(prev); n.has(pid) ? n.delete(pid) : n.add(pid); return n; });
+  // "Wybierz miejsca" -> zaznaczone zostaja, reszta usunieta, trip_type='ongoing' (przejscie w trakcie).
+  const confirmChoose = async () => {
+    if (!chosen.size) { toast("Zaznacz co najmniej jedno miejsce"); return; }
+    setChoosingBusy(true); haptics.light();
+    try {
+      const removeIds = (pins as any[]).filter((p) => !chosen.has(p.id)).map((p) => p.id);
+      if (removeIds.length) await (supabase as any).from("pins").delete().in("id", removeIds);
+      await (supabase as any).from("routes").update({ trip_type: "ongoing" }).eq("id", route.id);
+      haptics.success(); toast.success("Miejsca wybrane - wyjazd w trakcie!");
+      setChoosing(false);
+      queryClient.invalidateQueries({ queryKey: ["shared-route", id] });
+      queryClient.invalidateQueries({ queryKey: ["shared-route-pins", id] });
+    } catch (e: any) { console.error("[SharedRoute] confirmChoose:", e?.message ?? e); haptics.error(); toast.error("Nie udało się przejść dalej"); }
+    finally { setChoosingBusy(false); }
+  };
 
   // Zmiana kolejnosci miejsc (drag) - optymistycznie w cache + persist pin_order (bezposredni update,
   // RLS zezwala wlascicielowi i czlonkowi). Wzor: ReviewSummary.savePlan.
@@ -784,7 +812,19 @@ export default function SharedRoute() {
 
         {planTab === "miejsca" ? (
           <div className="px-5 pt-4">
-            {pins.length > 0 ? (
+            {choosing ? (
+              /* Tryb "Wybierz miejsca": zaznacz ktore miejsca wchodza do wyjazdu (reszta usunieta). */
+              <div className="space-y-2">
+                <p className="text-[13px] text-muted-foreground pb-1">{`Zaznacz miejsca, które wchodzą do wyjazdu (reszta zostanie usunięta):`}</p>
+                {(pins as any[]).map((pin) => (
+                  <button key={pin.id} onClick={() => toggleChosen(pin.id)} className="w-full flex items-center gap-3 rounded-2xl bg-secondary/60 pl-3 pr-2.5 py-2.5 text-left active:opacity-80 transition-opacity">
+                    <PlacePhoto pin={pin} className="h-12 w-12 rounded-xl object-cover shrink-0" />
+                    <span className="flex-1 min-w-0 text-[15px] font-semibold text-foreground truncate">{pin.place_name}</span>
+                    <span className={`h-7 w-7 rounded-full flex items-center justify-center shrink-0 transition-colors ${chosen.has(pin.id) ? "bg-primary text-primary-foreground" : "border-2 border-border"}`}>{chosen.has(pin.id) && <Check className="h-4 w-4 stroke-[3]" />}</span>
+                  </button>
+                ))}
+              </div>
+            ) : pins.length > 0 ? (
               <>
                 <div className="flex items-center justify-end pb-3">
                   <div className="flex rounded-full bg-muted p-0.5">
@@ -946,12 +986,39 @@ export default function SharedRoute() {
       <div className="fixed bottom-0 left-0 right-0 max-w-lg mx-auto px-5 pt-2 bg-background border-t border-border/30"
         style={{ paddingBottom: "max(12px, env(safe-area-inset-bottom, 12px))" }}>
         {canEdit ? (
-            <button
-              onClick={() => setAddPlaceOpen(true)}
-              className="w-full py-3 rounded-full border border-border bg-background text-foreground font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
-            >
-              <Plus className="h-4 w-4" /> Dodaj nowe miejsce
-            </button>
+            choosing ? (
+              /* Tryb wyboru miejsc (host) - potwierdzenie przejscia na "w trakcie". */
+              <div className="flex items-center gap-2">
+                <button onClick={() => setChoosing(false)} className="px-4 py-3 rounded-full bg-secondary text-secondary-foreground font-bold text-sm active:scale-[0.98] transition-transform">Anuluj</button>
+                <button onClick={confirmChoose} disabled={choosingBusy || chosen.size === 0}
+                  className={`flex-1 py-3 rounded-full font-bold text-sm flex items-center justify-center gap-2 transition-transform ${choosingBusy || chosen.size === 0 ? "bg-primary/40 text-white/80" : "bg-primary text-white active:scale-[0.98]"}`}>
+                  {choosingBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4 stroke-[3]" />} Zatwierdź{chosen.size ? ` (${chosen.size})` : ""}
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setAddPlaceOpen(true)}
+                  className="flex-1 py-3 rounded-full border border-border bg-background text-foreground font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
+                >
+                  <Plus className="h-4 w-4" /> Dodaj nowe miejsce
+                </button>
+                {/* Etap PROPOZYCJI (host): wybierz miejsca -> w trakcie. */}
+                {isOwner && stage === "planning" && pins.length > 0 && (
+                  <button onClick={startChoosing}
+                    className="flex-1 py-3 rounded-full bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform">
+                    <Check className="h-4 w-4 stroke-[3]" /> Wybierz miejsca
+                  </button>
+                )}
+                {/* Etap W TRAKCIE (host): podsumuj -> stepper (notki/tagi/okladka) -> opublikuj. */}
+                {isOwner && stage === "ongoing" && (
+                  <button onClick={() => navigate(`/review-summary?route=${route.id}&edit=1`)}
+                    className="flex-1 py-3 rounded-full bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform">
+                    <Flag className="h-4 w-4" /> Podsumuj wyjazd
+                  </button>
+                )}
+              </div>
+            )
           ) : (
             <>
               <button

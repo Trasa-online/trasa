@@ -5,7 +5,7 @@ import { ROUTE_TAGS, ROUTE_TAGS_VISIBLE, placeTagsForCategory } from "@/lib/rout
 import { fetchRouteNotesWithAuthors, notesByPlace, placeNoteKey } from "@/lib/placeNotes";
 import PlaceNotes from "@/components/route/PlaceNotes";
 import { haptics } from "@/hooks/useHaptics";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams, Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { placeKeyOf, fetchPlacePhotosForKeys, pickPlaceCover, fetchPhotoHashes, sha256OfFile, upsertPhotoHash } from "@/lib/placePhotoSocial";
 import { supabase } from "@/integrations/supabase/client";
@@ -2591,36 +2591,12 @@ const ReviewSummary = () => {
     );
   }
 
-  // ETAP PROPOZYCJI (trip_type='planning'): WSPOLNY pelnoekranowy ekran propozycji dla HOSTA i
-  // uczestnikow (Miejsca=propozycje + Mapa, bez okladki/galerii, tytul "Propozycje miejsc dla {X}").
-  // Host ma guzik "Wybierz miejsca" (-> pins + trip_type='ongoing'). Redesign 2026-08-25 (Nat, 9 krokow).
-  // Opublikowany / ongoing / completed -> normalny widok ponizej.
+  // WIDOK WYJAZDU przeniesiony na SharedRoute (/route/:id) = widok "Wyjazd do Pragi" (Nat 2026-08-25).
+  // Etap propozycji ('planning') i "w trakcie" zyja tam. ReviewSummary zostaje TYLKO jako STEPPER
+  // podsumowania (?edit=1). Robocze/planning bez edit -> przekieruj na SharedRoute (stale linki).
   const isPlanningStage = !!route && (route as any).trip_type === "planning" && (route as any).status !== "published";
-  // Zanim ustalimy czlonkostwo (query) dla nie-wlasciciela - nie renderuj starego widoku (bez migniecia).
-  if (isPlanningStage && !isOwner && !isGroupMember && isGroupMemberLoading) {
-    return <div className="h-[100dvh] bg-[#fefefe]" />;
-  }
-  if (isPlanningStage && (isOwner || isGroupMember)) {
-    return (
-      <TripProposalsSheet
-        fullscreen
-        proposalsStage
-        open
-        onOpenChange={() => {}}
-        routeId={routeId}
-        city={route?.city ?? null}
-        isOwner={isOwner}
-        pins={currentPins}
-        tripTitle={(route as any)?.title ?? route?.city ?? "Wyjazd"}
-        onBack={() => navigate(-1)}
-        onChanged={() => { queryClient.invalidateQueries({ queryKey: ["review-all-pins"] }); }}
-        onPlacesChosen={() => {
-          // "Wybierz miejsca" -> pins + trip_type='ongoing'; odswiez route (spadnie do widoku "w trakcie").
-          queryClient.invalidateQueries({ queryKey: ["review-summary-route", routeId] });
-          queryClient.invalidateQueries({ queryKey: ["review-all-pins"] });
-        }}
-      />
-    );
+  if (isPlanningStage && !forceEdit && routeId) {
+    return <Navigate to={`/route/${routeId}`} replace />;
   }
 
   return (

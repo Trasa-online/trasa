@@ -229,8 +229,8 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
     haptics.success();
     queryClient.invalidateQueries({ queryKey: ["profile-trip-feed", user.id] });
     close();
-    // Wejscie do widoku wyjazdu = etap PROPOZYCJI (ReviewSummary dispatch po trip_type='planning').
-    navigate(`/review-summary?route=${id}`);
+    // Wejscie do WIDOKU WYJAZDU (SharedRoute = widok "Wyjazd do Pragi") - etap propozycji przez trip_type.
+    navigate(`/route/${id}`);
   };
 
   // Tworzenie PRZESZLEGO wyjazdu (wspomnienie) z wybranymi miejscami - stary flow (tripPick).
