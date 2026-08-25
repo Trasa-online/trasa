@@ -7,7 +7,6 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useAuth } from "@/hooks/useAuth";
 import { haptics } from "@/hooks/useHaptics";
 import { supabase } from "@/integrations/supabase/client";
-import { PlaceTile } from "@/components/profile/PlaceTile";
 import { avatarSrc } from "@/lib/avatar";
 import CityCountryPicker, { defaultCityIndex } from "@/components/create/CityDrum";
 import AddPeoplePicker, { type PersonLite } from "@/components/create/AddPeoplePicker";
@@ -118,6 +117,23 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
     setListQuery("");
   };
   const removeManual = (p: PlaceForList) => setManualPlaces((prev) => prev.filter((m) => keyOfPlace(m) !== keyOfPlace(p)));
+
+  // Wiersz listy (jak w AddPlaceSheet "Dodaj nowe miejsce") - wiecej pozycji sie miesci niz w siatce.
+  const renderListRow = (opts: { rowKey: string; category?: string | null; title: string; subtitle?: string | null; onClick?: () => void; selected?: boolean }) => (
+    <button key={opts.rowKey} onClick={opts.onClick}
+      className="w-full flex items-center gap-3 rounded-2xl bg-secondary/60 px-3 py-2.5 text-left active:bg-secondary transition-colors">
+      <span className="h-11 w-11 rounded-xl bg-[#fcede3] flex items-center justify-center shrink-0">
+        <img src={categoryIconSrc(opts.category)} alt="" className="w-1/2 opacity-90" draggable={false} />
+      </span>
+      <span className="flex-1 min-w-0">
+        <span className="block text-[15px] font-semibold text-foreground truncate">{opts.title}</span>
+        {opts.subtitle && <span className="block text-[13px] text-muted-foreground truncate">{opts.subtitle}</span>}
+      </span>
+      <span className={`h-6 w-6 rounded-full flex items-center justify-center shrink-0 ${opts.selected ? "bg-[#f0a583] text-white" : "border-2 border-border"}`}>
+        {opts.selected ? <Check className="h-3.5 w-3.5 stroke-[3]" /> : <Plus className="h-3.5 w-3.5 text-muted-foreground" />}
+      </span>
+    </button>
+  );
 
   const createList = async () => {
     if (!user) { close(); navigate("/auth"); return; }
@@ -293,47 +309,24 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
                   {!listSearching && !listBlocked && listResults.length === 0 && (
                     <p className="py-6 text-center text-sm text-muted-foreground">Brak wyników</p>
                   )}
-                  {listResults.map((r, i) => {
-                    const on = manualPlaces.some((m) => keyOfPlace(m) === keyOfPlace(r));
-                    return (
-                      <button key={`${keyOfPlace(r)}-${i}`} onClick={() => pickResult(r)}
-                        className="w-full flex items-center gap-3 rounded-2xl bg-secondary/60 px-3 py-2.5 text-left active:bg-secondary transition-colors">
-                        <span className="h-11 w-11 rounded-xl bg-[#fcede3] flex items-center justify-center shrink-0">
-                          <img src={categoryIconSrc(r.category)} alt="" className="w-1/2 opacity-90" draggable={false} />
-                        </span>
-                        <span className="flex-1 min-w-0">
-                          <span className="block text-[15px] font-semibold text-foreground truncate">{r.place_name}</span>
-                          {r.address && <span className="block text-[13px] text-muted-foreground truncate">{r.address}</span>}
-                        </span>
-                        <span className={`h-6 w-6 rounded-full flex items-center justify-center shrink-0 ${on ? "bg-[#f0a583] text-white" : "border-2 border-border"}`}>
-                          {on ? <Check className="h-3.5 w-3.5 stroke-[3]" /> : <Plus className="h-3.5 w-3.5 text-muted-foreground" />}
-                        </span>
-                      </button>
-                    );
-                  })}
+                  {listResults.map((r, i) => renderListRow({
+                    rowKey: `${keyOfPlace(r)}-${i}`, category: r.category, title: r.place_name, subtitle: r.address,
+                    onClick: () => pickResult(r), selected: manualPlaces.some((m) => keyOfPlace(m) === keyOfPlace(r)),
+                  }))}
                 </div>
               ) : loadingSaved ? (
                 <div className="py-10 text-center text-sm text-muted-foreground">Ładowanie...</div>
               ) : (
-                <div className="pt-1 grid grid-cols-3 gap-1.5">
+                <div className="pt-1 space-y-1.5">
                   {/* Dodane z Google (manual) - zaznaczone, klik usuwa z listy */}
-                  {manualPlaces.map((p, i) => (
-                    <button key={`m-${keyOfPlace(p)}-${i}`} onClick={() => removeManual(p)} className="relative rounded-2xl transition-all active:scale-[0.97] ring-2 ring-[#f0a583]">
-                      <PlaceTile showCity tile={{ photo_url: p.photo_url, category: p.category, place_name: p.place_name, city: null }} />
-                      <span className="absolute top-1.5 right-1.5 h-6 w-6 rounded-full bg-[#f0a583] text-white flex items-center justify-center"><Check className="h-3.5 w-3.5 stroke-[3]" /></span>
-                    </button>
-                  ))}
-                  {savedPlaces.map((p) => {
-                    const on = selected.has(p.id);
-                    return (
-                      <button key={p.id} onClick={() => toggleSel(p.id)} className={`relative rounded-2xl transition-all active:scale-[0.97] ${on ? "ring-2 ring-[#f0a583]" : ""}`}>
-                        <PlaceTile showCity tile={{ photo_url: p.photo_url, category: p.category, place_name: p.place_name, city: p.city }} />
-                        <span className={`absolute top-1.5 right-1.5 h-6 w-6 rounded-full flex items-center justify-center transition-colors ${on ? "bg-[#f0a583] text-white" : "bg-white/85 border border-black/10"}`}>
-                          {on && <Check className="h-3.5 w-3.5 stroke-[3]" />}
-                        </span>
-                      </button>
-                    );
-                  })}
+                  {manualPlaces.map((p, i) => renderListRow({
+                    rowKey: `m-${keyOfPlace(p)}-${i}`, category: p.category, title: p.place_name, subtitle: listCity,
+                    onClick: () => removeManual(p), selected: true,
+                  }))}
+                  {savedPlaces.map((p) => renderListRow({
+                    rowKey: p.id, category: p.category, title: p.place_name, subtitle: p.city,
+                    onClick: () => toggleSel(p.id), selected: selected.has(p.id),
+                  }))}
                 </div>
               )}
               {!listSearchMode && !loadingSaved && savedPlaces.length === 0 && manualPlaces.length === 0 && (
