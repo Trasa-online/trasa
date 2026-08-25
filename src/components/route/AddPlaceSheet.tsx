@@ -8,6 +8,9 @@ import { haptics } from "@/hooks/useHaptics";
 import { supabase } from "@/integrations/supabase/client";
 import { categoryIconSrc, categoryFromGoogleTypes } from "@/lib/placeCategoryIcon";
 import { fetchSavedPlaces, type SavedPlace, type PlaceForList } from "@/lib/placeLists";
+import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
+import { GoogleGlyph } from "@/components/icons/GoogleGlyph";
+import { openExternal } from "@/lib/openExternal";
 
 const NBSP = " ";
 const SCOPE_KM = 20; // wyniki wyszukiwarki tylko w obrebie ~20km od srodka trasy/miasta
@@ -47,6 +50,7 @@ export default function AddPlaceSheet({ open, onClose, city, existingPlaces, onA
   const [searching, setSearching] = useState(false);
   const [blocked, setBlocked] = useState(false);
   const [adding, setAdding] = useState(false);
+  const [detailPlace, setDetailPlace] = useState<any | null>(null);   // wizytowka miejsca (PlaceSwiperDetail)
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Srodek do filtra "w obrebie miasta" (~20km): centroida miejsc JUZ w trasie, a gdy brak (nowa
@@ -72,7 +76,7 @@ export default function AddPlaceSheet({ open, onClose, city, existingPlaces, onA
   const center = existingCentroid ?? geoCenter;
 
   useEffect(() => {
-    if (open) { setSelected([]); setManual([]); setQuery(""); setResults([]); setBlocked(false); setAdding(false); }
+    if (open) { setSelected([]); setManual([]); setQuery(""); setResults([]); setBlocked(false); setAdding(false); setDetailPlace(null); }
   }, [open]);
 
   const { data: savedPlaces = [] } = useQuery({
@@ -148,32 +152,66 @@ export default function AddPlaceSheet({ open, onClose, city, existingPlaces, onA
     } finally { setAdding(false); }
   };
 
-  // Wiersz listy (jednolity dla wynikow wyszukiwarki i zapisanych) - "szary kafelek w formie listy":
-  // peachy ikona kategorii + nazwa + podtytul + wskaznik wyboru. Zastapil siatke kafelkow (2026-08-24).
+  // Wizytowka miejsca (PlaceSwiperDetail) - mapowanie miejsca (zapisane/google/juz-w-trasie) na MockPlace.
+  const openDetail = (p: any) => { haptics.light(); setDetailPlace({
+    id: p.place_id || p.place_name,
+    place_name: p.place_name,
+    category: (p.category || "other"),
+    city: (p.city ?? city) || "",
+    address: p.address || "",
+    latitude: p.latitude ?? 0,
+    longitude: p.longitude ?? 0,
+    rating: p.rating ?? 0,
+    photo_url: p.photo_url ?? "",
+    vibe_tags: [],
+    description: p.description ?? "",
+    google_place_id: p.google_place_id ?? null,
+  }); };
+  // Otworz miejsce w Google Maps (in-app Safari na native -> mozliwy powrot do apki). query_place_id
+  // gdy mamy Google Place ID (google_place_id / place_id niebedace naszym DB uuid).
+  const openGoogle = (p: any) => {
+    haptics.light();
+    const q = encodeURIComponent([p.place_name, p.address, city].filter(Boolean).join(", "));
+    const gpid = typeof p.google_place_id === "string" && p.google_place_id.trim() ? p.google_place_id.trim() : "";
+    const pid0 = typeof p.place_id === "string" && p.place_id.trim() ? p.place_id.trim() : "";
+    const isDbUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(pid0);
+    const gid = gpid || (isDbUuid ? "" : pid0);
+    const placeIdParam = gid ? `&query_place_id=${encodeURIComponent(gid)}` : "";
+    void openExternal(`https://www.google.com/maps/search/?api=1&query=${q}${placeIdParam}`);
+  };
+
+  // Wiersz listy: klik nazwy/ikony = WIZYTOWKA; ikona Google w bialym kolku = Google Maps; kolko po
+  // prawej = dodaj/usun (lub statyczny check gdy juz w trasie). "szary kafelek w formie listy".
   const renderPlaceRow = (opts: {
-    rowKey: string; category?: string | null; title: string; subtitle?: string | null;
-    onClick?: () => void; selected?: boolean; added?: boolean;
+    rowKey: string; place: any; subtitle?: string | null; onToggle?: () => void; selected?: boolean; added?: boolean;
   }) => (
-    <button
-      key={opts.rowKey}
-      onClick={opts.onClick}
-      disabled={opts.added}
-      className="w-full flex items-center gap-3 rounded-2xl bg-secondary/60 px-3 py-2.5 text-left active:bg-secondary transition-colors disabled:opacity-100"
-    >
-      <span className="h-11 w-11 rounded-xl bg-[#fcede3] flex items-center justify-center shrink-0">
-        <img src={categoryIconSrc(opts.category)} alt="" className="w-1/2 opacity-90" draggable={false} />
-      </span>
-      <span className="flex-1 min-w-0">
-        <span className="block text-[15px] font-semibold text-foreground truncate">{opts.title}</span>
-        {opts.subtitle && <span className="block text-[13px] text-muted-foreground truncate">{opts.subtitle}</span>}
-      </span>
-      <span className={`h-6 w-6 rounded-full flex items-center justify-center shrink-0 ${opts.selected || opts.added ? "bg-[#f0a583] text-white" : "border-2 border-border"}`}>
-        {opts.selected || opts.added ? <Check className="h-3.5 w-3.5 stroke-[3]" /> : <Plus className="h-3.5 w-3.5 text-muted-foreground" />}
-      </span>
-    </button>
+    <div key={opts.rowKey} className="w-full flex items-center gap-2 rounded-2xl bg-secondary/60 pl-3 pr-2.5 py-2.5">
+      <button onClick={() => openDetail(opts.place)} className="flex items-center gap-3 flex-1 min-w-0 text-left active:opacity-80 transition-opacity">
+        <span className="h-11 w-11 rounded-xl bg-[#fcede3] flex items-center justify-center shrink-0">
+          <img src={categoryIconSrc(opts.place.category)} alt="" className="w-1/2 opacity-90" draggable={false} />
+        </span>
+        <span className="flex-1 min-w-0">
+          <span className="block text-[15px] font-semibold text-foreground truncate">{opts.place.place_name}</span>
+          {opts.subtitle && <span className="block text-[13px] text-muted-foreground truncate">{opts.subtitle}</span>}
+        </span>
+      </button>
+      <button onClick={() => openGoogle(opts.place)} aria-label={`Otwórz ${opts.place.place_name} w Google Maps`}
+        className="h-9 w-9 flex items-center justify-center shrink-0 rounded-full bg-white shadow-sm border border-black/[0.04] active:scale-90 transition-transform">
+        <GoogleGlyph className="h-[18px] w-[18px]" />
+      </button>
+      {opts.added ? (
+        <span className="h-6 w-6 rounded-full flex items-center justify-center shrink-0 bg-[#f0a583] text-white"><Check className="h-3.5 w-3.5 stroke-[3]" /></span>
+      ) : (
+        <button onClick={opts.onToggle} aria-label={opts.selected ? "Usuń z trasy" : "Dodaj do trasy"}
+          className={`h-6 w-6 rounded-full flex items-center justify-center shrink-0 transition-colors ${opts.selected ? "bg-[#f0a583] text-white" : "border-2 border-border"}`}>
+          {opts.selected ? <Check className="h-3.5 w-3.5 stroke-[3]" /> : <Plus className="h-3.5 w-3.5 text-muted-foreground" />}
+        </button>
+      )}
+    </div>
   );
 
   return (
+    <>
     <Sheet open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
       <SheetContent side="bottom" onOpenAutoFocus={(e) => e.preventDefault()} className="rounded-t-3xl p-0 [&>button]:hidden flex flex-col bg-[#fefefe] border-0" style={{ maxHeight: "86vh" }}>
         <div className="pt-3 pb-1 shrink-0"><div className="mx-auto h-1 w-10 rounded-full bg-[#d9d9d9]" /></div>
@@ -224,7 +262,7 @@ export default function AddPlaceSheet({ open, onClose, city, existingPlaces, onA
                 <p className="py-6 text-center text-sm text-muted-foreground">Brak wyników</p>
               )}
               <div className="space-y-1.5">
-                {results.map((r, i) => renderPlaceRow({ rowKey: `${keyOf(r)}-${i}`, category: r.category, title: r.place_name, subtitle: r.address, onClick: () => pickGoogle(r), selected: isSel(r) }))}
+                {results.map((r, i) => renderPlaceRow({ rowKey: `${keyOf(r)}-${i}`, place: r, subtitle: r.address, onToggle: () => pickGoogle(r), selected: isSel(r) }))}
               </div>
             </div>
           ) : (
@@ -242,14 +280,14 @@ export default function AddPlaceSheet({ open, onClose, city, existingPlaces, onA
                     <span className="flex-1 min-w-0 text-[15px] font-semibold text-foreground">Dodaj nowe miejsce</span>
                     <ChevronRight className="h-5 w-5 text-muted-foreground shrink-0" />
                   </button>
-                  {tiles.map((p, i) => renderPlaceRow({ rowKey: `${keyOf(p)}-${i}`, category: p.category, title: p.place_name, subtitle: city, onClick: () => toggle(p), selected: isSel(p) }))}
+                  {tiles.map((p, i) => renderPlaceRow({ rowKey: `${keyOf(p)}-${i}`, place: p, subtitle: city, onToggle: () => toggle(p), selected: isSel(p) }))}
                 </div>
               </div>
               {existingPlaces && existingPlaces.length > 0 && (
                 <div>
                   <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground mb-1.5 px-0.5">Już dodane</p>
                   <div className="space-y-1.5">
-                    {existingPlaces.map((p, i) => renderPlaceRow({ rowKey: `ex-${keyOf(p)}-${i}`, category: p.category, title: p.place_name, subtitle: city, added: true }))}
+                    {existingPlaces.map((p, i) => renderPlaceRow({ rowKey: `ex-${keyOf(p)}-${i}`, place: p, subtitle: city, added: true }))}
                   </div>
                 </div>
               )}
@@ -258,5 +296,8 @@ export default function AddPlaceSheet({ open, onClose, city, existingPlaces, onA
         </div>
       </SheetContent>
     </Sheet>
+    {/* Wizytowka miejsca (klik w wiersz). Vaul-drawer nakłada się na arkusz dodawania. */}
+    <PlaceSwiperDetail open={!!detailPlace} onOpenChange={(o) => { if (!o) setDetailPlace(null); }} place={detailPlace} city={detailPlace?.city || city || undefined} />
+    </>
   );
 }
