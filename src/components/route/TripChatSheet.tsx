@@ -70,7 +70,10 @@ export default function TripChatSheet({ open, onOpenChange, routeId, tripTitle }
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" onOpenAutoFocus={(e) => e.preventDefault()} className="rounded-t-3xl p-0 [&>button]:hidden flex flex-col bg-[#fefefe] border-0" style={{ height: "88dvh" }}>
+      {/* Wysokosc przez top/bottom (inset), NIE dvh: przy klawiaturze (resize:native) WebView zmienia
+          rozmiar plynnie, a jednostka dvh skacze skokowo -> caly arkusz migal (fix Nat 2026-08-26).
+          bottom:0 (Radix) trzyma input tuz nad klawiatura; top = staly odstep od gory. */}
+      <SheetContent side="bottom" onOpenAutoFocus={(e) => e.preventDefault()} className="rounded-t-3xl p-0 [&>button]:hidden flex flex-col bg-[#fefefe] border-0" style={{ top: "max(48px, calc(env(safe-area-inset-top, 0px) + 40px))", height: "auto" }}>
         {/* Naglowek */}
         <div className="flex items-center justify-between gap-2 px-5 pt-3 pb-2 shrink-0 border-b border-border/40">
           <div className="min-w-0">
