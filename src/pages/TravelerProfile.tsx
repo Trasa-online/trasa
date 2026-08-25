@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { avatarSrc } from "@/lib/avatar";
 import { useAuth } from "@/hooks/useAuth";
@@ -156,6 +156,16 @@ const TravelerProfile = () => {
   // (opublikowane trasy = flagowa treść; robocze to work-in-progress).
   const [listyTab, setListyTab] = useState<"moje" | "ogolne" | "zapisane">("moje");
   const [wyjazdyTab, setWyjazdyTab] = useState<"robocze" | "wspomnienia" | "zapisane">("wspomnienia");
+  // Synchronizacja zakladek z URL (?tab=&sub=). useState czyta URL tylko przy pierwszym mount, a
+  // wejscie z "+" gdy juz jestesmy na /moj-profil to nawigacja na TEN SAM route (bez remountu) - bez
+  // tego efektu nowo utworzona robocza trasa lądowała na Wspomnieniach (user jej nie widzial).
+  useEffect(() => {
+    const tp = searchParams.get("tab");
+    if (tp === "wyjazdy") setTab("wyjazdy");
+    else if (tp === "listy") setTab("listy");
+    const sub = searchParams.get("sub");
+    if (sub === "robocze" || sub === "wspomnienia" || sub === "zapisane") setWyjazdyTab(sub);
+  }, [searchParams]);
   const share = useShare();
 
   // Pull-to-refresh: odswieza liczniki polubien/zapisow + feedy (aktywne query na tym ekranie).

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { FileText, X, Users, ChevronRight, ArrowLeft, Plus, Check, CalendarPlus, History, Search, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
@@ -43,6 +43,7 @@ const toPlaceForList = (p: SavedPlace): PlaceForList => ({
 export default function CreateFlowSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [step, setStep] = useState<Step>("entry");
 
   // Lista
@@ -204,6 +205,8 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
     if (!id) { haptics.error(); toast.error("Nie udało się utworzyć listy"); return; }
     haptics.success();
     toast.success("Lista utworzona");
+    queryClient.invalidateQueries({ queryKey: ["profile-list-feed", user.id] });
+    queryClient.invalidateQueries({ queryKey: ["save-sheet-lists", user.id] });
     close();
     navigate(`/lista/${id}`);
   };
@@ -231,10 +234,14 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
     }
     setCreating(false);
     haptics.success();
+    // Odswiez feed wyjazdow na profilu - bez tego nowa robocza trasa NIE pojawia sie od razu
+    // (nawigacja na ten sam route /moj-profil nie remountuje profilu, query zostaje w cache).
+    queryClient.invalidateQueries({ queryKey: ["profile-trip-feed", user.id] });
     close();
-    // past -> edytor wspomnienia (Notki/Zdjecia/okladka); future -> robocza na profilu.
+    // past -> edytor wspomnienia (Notki/Zdjecia/okladka); future -> robocza na profilu (podzakladka
+    // Robocze, inaczej domyslnie ląduje na Wspomnienia i user nie widzi swiezej roboczej).
     if (tripMode === "past") { navigate(`/review-summary?route=${id}&edit=1&step=2`); }
-    else { toast.success("Zapisano jako roboczą"); navigate("/moj-profil?tab=wyjazdy"); }
+    else { toast.success("Zapisano jako roboczą"); navigate("/moj-profil?tab=wyjazdy&sub=robocze"); }
   };
 
   // ── wspolny nagłowek Anuluj / tytul / Dalej ──
