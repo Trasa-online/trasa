@@ -7,7 +7,9 @@ import { categoryIconSrc } from "@/lib/placeCategoryIcon";
 const firstOf = (v: any): string | null =>
   Array.isArray(v) ? (v.find((x) => typeof x === "string" && x) ?? null) : null;
 
-export function PlaceTile({ tile, showCity }: { tile: any; showCity?: boolean }) {
+// aspect: klasa proporcji kafelka. Domyslnie PIONOWY prostokat 2:3 (redesign 2026-08-25). Kontekst,
+// ktory chce inny ksztalt (np. Eksploruj - gesta siatka), moze nadpisac (aspect="aspect-square").
+export function PlaceTile({ tile, showCity, aspect = "aspect-[2/3]" }: { tile: any; showCity?: boolean; aspect?: string }) {
   // Zdjecie usera: wlasne z pinu/elementu (image_url/images/user_photo_urls/photo_url), a gdy
   // brak - okladka ze zdjec userow dodanych do MIEJSCA w wizytowce (place_photos, tile._cover).
   const stored = tile.image_url || firstOf(tile.images) || firstOf(tile.user_photo_urls) || tile.photo_url;
@@ -15,7 +17,7 @@ export function PlaceTile({ tile, showCity }: { tile: any; showCity?: boolean })
   const name = tile.place_name || "";
   const city = showCity ? (tile.city || "") : "";
   return (
-    <div className="relative aspect-square rounded-2xl overflow-hidden bg-[#fcede3]">
+    <div className={`relative ${aspect} rounded-2xl overflow-hidden bg-[#fcede3]`}>
       {url ? (
         <>
           <img src={url} alt="" className="w-full h-full object-cover" loading="lazy" />

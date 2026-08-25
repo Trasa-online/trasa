@@ -610,7 +610,7 @@ export const MyCollections = ({ showCreate = true }: { showCreate?: boolean } = 
                 </div>
                 {col.items.length > 0 && (
                   <div className="grid grid-cols-3 gap-1.5 mt-2.5">
-                    {col.items.slice(0, 6).map((it: any, i: number) => <PlaceTile key={it.id ?? i} tile={it} />)}
+                    {col.items.slice(0, 6).map((it: any, i: number) => <PlaceTile key={it.id ?? i} tile={it} aspect="aspect-square" />)}
                   </div>
                 )}
                 {/* Status moderacji: "pending" NIE pokazywany userowi (straszy). Tylko rejected. */}

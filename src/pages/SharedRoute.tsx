@@ -643,7 +643,7 @@ export default function SharedRoute() {
         const pinForPhoto = coverFor(pin) ? { ...pin, photo_url: coverFor(pin) } : pin;
         return (
           <div key={pin.id} className="snap-start shrink-0 w-[168px] flex flex-col gap-3">
-            <div onClick={() => openDetail(pin)} role="button" className="relative aspect-square rounded-2xl overflow-hidden bg-[#fcede3] active:opacity-90 transition-opacity cursor-pointer">
+            <div onClick={() => openDetail(pin)} role="button" className="relative aspect-[2/3] rounded-2xl overflow-hidden bg-[#fcede3] active:opacity-90 transition-opacity cursor-pointer">
               <PlacePhoto pin={pinForPhoto} className="w-full h-full object-cover" />
               <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-transparent" />
               <span className="absolute top-2 left-2 px-2.5 py-1 rounded-full bg-white text-[11px] font-semibold text-foreground shadow-sm">{categoryLabel(pin.category)}</span>

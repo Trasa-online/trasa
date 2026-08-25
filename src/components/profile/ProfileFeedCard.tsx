@@ -65,7 +65,7 @@ export function ProfileFeedCard({
   const mapUrl = mapPins && mapPins.length ? buildTripStaticMapUrl(mapPins) : null;
   // Siatka max 6 kafli. Gdy wiecej: 5 kafli + ostatni "przygaszony +N" (reszta miejsc).
   const tilesArr = tiles ?? [];
-  const MAX_TILES = 6;
+  const MAX_TILES = 3;   // jeden rzad pionowych kafelkow (2:3) - redesign 2026-08-25
   const hasOverflow = tilesArr.length > MAX_TILES;
   const shown = hasOverflow ? tilesArr.slice(0, MAX_TILES - 1) : tilesArr.slice(0, MAX_TILES);
   const overflowCount = hasOverflow ? tilesArr.length - (MAX_TILES - 1) : 0;
@@ -109,7 +109,7 @@ export function ProfileFeedCard({
               <PlaceTile key={t.id ?? i} tile={t} />
             ))}
             {overflowCount > 0 && (
-              <div className="aspect-square rounded-2xl bg-muted flex items-center justify-center">
+              <div className="aspect-[2/3] rounded-2xl bg-muted flex items-center justify-center">
                 <span className="text-lg font-bold text-muted-foreground">+{overflowCount}</span>
               </div>
             )}
