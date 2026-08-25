@@ -323,6 +323,9 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
                     rowKey: `m-${keyOfPlace(p)}-${i}`, category: p.category, title: p.place_name, subtitle: listCity,
                     onClick: () => removeManual(p), selected: true,
                   }))}
+                  {savedPlaces.length > 0 && (
+                    <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground pt-1 px-0.5">Twoje zapisane miejsca</p>
+                  )}
                   {savedPlaces.map((p) => renderListRow({
                     rowKey: p.id, category: p.category, title: p.place_name, subtitle: p.city,
                     onClick: () => toggleSel(p.id), selected: selected.has(p.id),
