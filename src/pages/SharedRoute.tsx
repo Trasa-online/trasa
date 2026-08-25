@@ -10,7 +10,7 @@ import { notify } from "@/lib/notify";
 import { sendClientPush, getCurrentUserName } from "@/lib/clientPush";
 import { format } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
-import { MapPin, ArrowLeft, Sparkles, ChevronRight, ChevronLeft, Bookmark, List, GalleryHorizontalEnd, Calendar as CalendarIcon, Image as ImageIcon, Maximize2, X, Building2, Pencil, Trash2, Heart, Share2, Plus, Map as MapIcon, Loader2, Star, GripVertical, Check, Flag } from "lucide-react";
+import { MapPin, ArrowLeft, Sparkles, ChevronRight, ChevronLeft, Bookmark, List, GalleryHorizontalEnd, Calendar as CalendarIcon, Image as ImageIcon, Maximize2, X, Building2, Pencil, Trash2, Heart, Share2, Plus, Map as MapIcon, Loader2, Star, GripVertical, Check, Flag, Camera } from "lucide-react";
 import { haptics } from "@/hooks/useHaptics";
 import { Reorder, useDragControls } from "framer-motion";
 import { toast } from "sonner";
@@ -26,7 +26,7 @@ import { inviteUsersToRoute } from "@/lib/groupInvite";
 import { useShare } from "@/hooks/useShare";
 import { useUnsavePlace } from "@/hooks/useUnsavePlace";
 import { buildShareUrl } from "@/lib/shareUrl";
-import type { PlaceForList } from "@/lib/placeLists";
+import { quickSavePlace, type PlaceForList } from "@/lib/placeLists";
 import { pinCoverKeys, fetchPlacePhotosForKeys, pickPlaceCover } from "@/lib/placePhotoSocial";
 import RouteMap from "@/components/RouteMap";
 import { API_BASE } from "@/lib/platform";
@@ -137,6 +137,11 @@ export default function SharedRoute() {
   const [choosing, setChoosing] = useState(false);
   const [chosen, setChosen] = useState<Set<string>>(new Set());
   const [choosingBusy, setChoosingBusy] = useState(false);
+  // Etap W TRAKCIE: wlasna notka (edytor) + zdjecia per-miejsce (wszyscy uczestnicy).
+  const [notes, setNotes] = useState<Record<string, string>>({});
+  const [noteSaved, setNoteSaved] = useState<Record<string, boolean>>({});
+  const noteTimer = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const [uploadingPin, setUploadingPin] = useState<string | null>(null);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
   const photoInputRef = useRef<HTMLInputElement>(null);
@@ -343,6 +348,52 @@ export default function SharedRoute() {
   });
   const notesMap = notesByPlace(allNotes);
 
+  // Seed edytora wlasnych notek (etap w trakcie) z allNotes; klucz route_id::place_name.
+  const nkeyOf = (pin: any) => `${pin.route_id}::${pin.place_name}`;
+  useEffect(() => {
+    if (!user) return;
+    const own: Record<string, string> = {};
+    for (const n of allNotes) if (n.user_id === user.id && n.note) own[`${n.route_id}::${n.place_name}`] = n.note;
+    setNotes(own);
+  }, [allNotes, user?.id]);
+  const handleNoteChange = (pin: any, value: string) => {
+    if (!user) return;
+    const k = nkeyOf(pin);
+    setNotes((prev) => ({ ...prev, [k]: value }));
+    if (noteTimer.current[k]) clearTimeout(noteTimer.current[k]);
+    noteTimer.current[k] = setTimeout(async () => {
+      await (supabase as any).from("pin_ratings").upsert({ route_id: pin.route_id, user_id: user.id, place_name: pin.place_name, note: value || null }, { onConflict: "route_id,user_id,place_name" });
+      setNoteSaved((prev) => ({ ...prev, [k]: true }));
+      setTimeout(() => setNoteSaved((prev) => ({ ...prev, [k]: false })), 2000);
+      queryClient.invalidateQueries({ queryKey: ["shared-route-notes", id] });
+    }, 800);
+  };
+  // Zdjecia per-miejsce (pins.images) - wszyscy uczestnicy widza wszystkie, kazdy dodaje/usuwa (member RLS).
+  const addPlacePhotos = async (pin: any, files: FileList | null) => {
+    if (!user || !files || !files.length) return;
+    setUploadingPin(pin.id);
+    try {
+      const urls: string[] = [];
+      for (const file of Array.from(files)) {
+        const path = `${user.id}/${pin.route_id}/pin_${pin.id}_${Math.random().toString(36).slice(2)}.jpg`;
+        const { error } = await supabase.storage.from("route-images").upload(path, file, { upsert: true, contentType: file.type || "image/jpeg" });
+        if (error) { console.error("[SharedRoute] photo upload:", error.message); continue; }
+        const { data } = supabase.storage.from("route-images").getPublicUrl(path);
+        if (data?.publicUrl) urls.push(data.publicUrl);
+      }
+      if (urls.length) {
+        const cur = Array.isArray(pin.images) ? pin.images : [];
+        await (supabase as any).from("pins").update({ images: [...cur, ...urls] }).eq("id", pin.id);
+        queryClient.invalidateQueries({ queryKey: ["shared-route-pins", id] });
+      }
+    } finally { setUploadingPin(null); }
+  };
+  const removePlacePhoto = async (pin: any, url: string) => {
+    const cur = Array.isArray(pin.images) ? pin.images : [];
+    await (supabase as any).from("pins").update({ images: cur.filter((u: string) => u !== url) }).eq("id", pin.id);
+    queryClient.invalidateQueries({ queryKey: ["shared-route-pins", id] });
+  };
+
   // Opis + tagi z tabeli places (wizytowka miejsca). Piny nie maja vibe_tags.
   const { data: placeMeta = {} } = useQuery({
     queryKey: ["shared-place-meta", route?.city, id],
@@ -404,7 +455,21 @@ export default function SharedRoute() {
     if (!chosen.size) { toast("Zaznacz co najmniej jedno miejsce"); return; }
     setChoosingBusy(true); haptics.light();
     try {
-      const removeIds = (pins as any[]).filter((p) => !chosen.has(p.id)).map((p) => p.id);
+      const leftover = (pins as any[]).filter((p) => !chosen.has(p.id));
+      // Nie gub miejsc: niezaznaczone -> lista "Ogólne" (na razie hosta; docelowo wszystkich
+      // uczestnikow przez definer-RPC). Zeby sugestie nie przepadly.
+      if (leftover.length && user) {
+        for (const p of leftover) {
+          try {
+            await quickSavePlace(user.id, {
+              place_name: p.place_name, category: p.category ?? null, address: p.address ?? null,
+              description: p.description ?? null, latitude: p.latitude ?? null, longitude: p.longitude ?? null,
+              photo_url: p.photo_url ?? null, place_id: p.place_id ?? null, google_place_id: p.google_place_id ?? null, rating: p.rating ?? null,
+            } as PlaceForList, null);
+          } catch (e: any) { console.warn("[SharedRoute] save leftover:", e?.message ?? e); }
+        }
+      }
+      const removeIds = leftover.map((p) => p.id);
       if (removeIds.length) await (supabase as any).from("pins").delete().in("id", removeIds);
       await (supabase as any).from("routes").update({ trip_type: "ongoing" }).eq("id", route.id);
       haptics.success(); toast.success("Miejsca wybrane - wyjazd w trakcie!");
@@ -598,6 +663,51 @@ export default function SharedRoute() {
   // (duze zdjecie 104px, chip kategorii + guzik Google). Notki uczestnikow pod wierszem gdy sa.
   const buildNote = (pin: any): ReactNode | undefined => {
     const list = notesMap.get(placeNoteKey(pin.place_name)) ?? [];
+    // Etap PROPOZYCJI (planning) - bez notek/zdjec (to sugerowanie miejsc).
+    if (stage === "planning") return undefined;
+    // Etap W TRAKCIE (ongoing): zdjecia per-miejsce + Twoja notka (edytor) + notki innych (wszyscy).
+    if (stage === "ongoing") {
+      const k = nkeyOf(pin);
+      const imgs: string[] = Array.isArray(pin.images) ? pin.images : [];
+      const busy = uploadingPin === pin.id;
+      return (
+        <div className="space-y-3 mt-1">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">Zdjęcia miejsca</p>
+            <div className="flex flex-wrap gap-2">
+              {imgs.map((url) => (
+                <div key={url} className="relative h-20 w-20 shrink-0 rounded-xl overflow-hidden bg-muted">
+                  <img src={resolveStored(url) ?? url} alt="" className="w-full h-full object-cover" />
+                  {canEdit && <button onClick={() => removePlacePhoto(pin, url)} aria-label="Usuń zdjęcie" className="absolute top-1 right-1 h-5 w-5 rounded-full bg-black/55 text-white flex items-center justify-center active:scale-90"><X className="h-3 w-3" /></button>}
+                </div>
+              ))}
+              {canEdit && (
+                <label className={`h-20 w-20 shrink-0 rounded-xl border-2 border-dashed border-border/50 flex flex-col items-center justify-center gap-1 text-muted-foreground cursor-pointer active:scale-95 transition-transform ${busy ? "opacity-60 pointer-events-none" : ""}`}>
+                  {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <Camera className="h-5 w-5" />}
+                  <span className="text-[10px] font-semibold">{busy ? "..." : "Dodaj"}</span>
+                  <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => { addPlacePhotos(pin, e.target.files); e.currentTarget.value = ""; }} />
+                </label>
+              )}
+            </div>
+          </div>
+          {canEdit && (
+            <div className="relative">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">Twoja notka</p>
+              <textarea value={notes[k] ?? ""} onChange={(e) => handleNoteChange(pin, e.target.value)} placeholder="Dodaj notkę o tym miejscu..." rows={2}
+                className="w-full bg-muted/50 rounded-xl px-3 py-2.5 text-sm text-foreground resize-none focus:outline-none border border-border/30 placeholder:text-muted-foreground/55" />
+              {noteSaved[k] && <span className="absolute bottom-2 right-2.5 text-[10px] text-green-600 font-medium">Zapisano</span>}
+            </div>
+          )}
+          {list.some((n) => n.user_id !== user?.id) && (
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">Notki uczestników</p>
+              <PlaceNotes notes={list} excludeUserId={user?.id} />
+            </div>
+          )}
+        </div>
+      );
+    }
+    // Wspomnienie (completed / published): notki wszystkich, read-only.
     if (!list.length) return undefined;
     return (
       <div>
@@ -793,11 +903,13 @@ export default function SharedRoute() {
         {/* #2: Zakladki jak na profilu - ikony + podkreslenie aktywnej, FULL WIDTH (bez px). */}
         <div className="pt-5">
           <div className="flex border-b border-border/60">
+            {/* Etap PROPOZYCJI (planning) = tylko Miejsca + Mapa (galeria bez sensu przy sugerowaniu).
+                Galeria pojawia sie od "w trakcie" (ongoing) - prosba Nat 2026-08-25. */}
             {([
-              { k: "miejsca", Icon: MapPin, label: "Miejsca" },
-              { k: "galeria", Icon: ImageIcon, label: "Galeria" },
-              { k: "mapa", Icon: MapIcon, label: "Mapa" },
-            ] as const).map(({ k, Icon, label }) => {
+              { k: "miejsca" as const, Icon: MapPin, label: "Miejsca" },
+              ...(stage !== "planning" ? [{ k: "galeria" as const, Icon: ImageIcon, label: "Galeria" }] : []),
+              { k: "mapa" as const, Icon: MapIcon, label: "Mapa" },
+            ]).map(({ k, Icon, label }) => {
               const on = planTab === k;
               return (
                 <button key={k} onClick={() => setPlanTab(k)} aria-label={label}
@@ -1001,7 +1113,7 @@ export default function SharedRoute() {
                   onClick={() => setAddPlaceOpen(true)}
                   className="flex-1 py-3 rounded-full border border-border bg-background text-foreground font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
                 >
-                  <Plus className="h-4 w-4" /> Dodaj nowe miejsce
+                  <Plus className="h-4 w-4" /> {pins.length > 0 ? "Dodaj miejsce" : "Dodaj nowe miejsce"}
                 </button>
                 {/* Etap PROPOZYCJI (host): wybierz miejsca -> w trakcie. */}
                 {isOwner && stage === "planning" && pins.length > 0 && (
