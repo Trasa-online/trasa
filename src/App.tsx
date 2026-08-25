@@ -9,6 +9,7 @@ import { AuthDrawerProvider } from "@/hooks/useAuthDrawer";
 import { useNativePush } from "@/hooks/useNativePush";
 import { useNetworkReconnect } from "@/hooks/useNetworkReconnect";
 import { useAppResume } from "@/hooks/useAppResume";
+import { useNotificationsLive } from "@/hooks/useNotificationsLive";
 import AuthDrawer from "@/components/auth/AuthDrawer";
 import { businessPanelPath } from "@/lib/businessRedirect";
 import { TrasaLogo } from "@/components/TrasaLogo";
@@ -736,6 +737,9 @@ function AuthDrawerProviderWrapper({ children }: { children: React.ReactNode }) 
   // Native iOS APNs registration - tylko gdy user logged in + isNative.
   // Web/PWA uzywa osobnego usePushNotifications (Service Worker + VAPID).
   useNativePush();
+  // GLOBALNE powiadomienia in-app (toast + badge) na wszystkich ekranach - dziala gdy user w apce
+  // (nawet tam gdzie nie ma TopBara, np. /moj-profil, /route). Realtime na tabeli notifications.
+  useNotificationsLive();
   // Native network reconnect detection - invalidateQueries gdy connection wraca.
   // No-op na webie (refetchOnReconnect: "always" w queryClient zalatwia sprawe).
   useNetworkReconnect();

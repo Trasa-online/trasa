@@ -272,6 +272,20 @@ const TravelerProfile = () => {
     enabled: !!user,
   });
 
+  // Licznik nieprzeczytanych powiadomien - kropka na dzwonku (profil ma hideTopBar, wiec wlasne
+  // zapytanie; odswiezane przez useNotificationsLive (realtime) + refetchInterval jako fallback).
+  const { data: unreadNotifs = 0 } = useQuery({
+    queryKey: ["notifications-unread", user?.id],
+    enabled: !!user?.id,
+    refetchInterval: 30_000,
+    queryFn: async () => {
+      if (!user) return 0;
+      const { count } = await supabase.from("notifications").select("id", { count: "exact", head: true })
+        .eq("user_id", user.id).eq("read", false).neq("type", "group_match");
+      return count ?? 0;
+    },
+  });
+
   const handleShareProfile = async () => {
     if (!profile?.username) { toast.error(t("profile.share_no_username", { defaultValue: "Uzupełnij nazwę użytkownika, aby udostępnić profil." })); return; }
     const url = `${SHARE_BASE_URL}/#/profil/${profile.username}`;
@@ -445,6 +459,9 @@ const TravelerProfile = () => {
             </button>
             <button onClick={() => setNotificationsOpen(true)} className="relative h-9 w-9 flex items-center justify-center rounded-full bg-muted text-foreground active:scale-90 transition-transform" aria-label={t("profile.notifications_aria")}>
               <Bell className="h-5 w-5" />
+              {unreadNotifs > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center leading-none">{unreadNotifs > 9 ? "9+" : unreadNotifs}</span>
+              )}
             </button>
             <button onClick={() => navigate("/settings")} className="h-9 w-9 flex items-center justify-center rounded-full bg-muted text-foreground active:scale-90 transition-transform" aria-label={t("profile.settings_aria")}>
               <Settings className="h-5 w-5" />
