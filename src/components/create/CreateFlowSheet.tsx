@@ -54,13 +54,16 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
   const [tripCity, setTripCity] = useState(defaultCity);
   const [tripPeople, setTripPeople] = useState<PersonLite[]>([]);
 
-  // Fokus inputu nazwy listy DOPIERO chwile po wejsciu na krok (~260ms), zeby klawiatura nie
-  // wyskakiwala gwaltownie razem z przejsciem na krok - klawiatura wstaje lagodnie, osobno.
+  // Fokus (klawiatura) RAZEM z pojawieniem kroku "Nowa lista" - drawer wyjezdza wraz z klawiatura,
+  // jedna plynna animacja. Fokus na NASTEPNEJ klatce po wyrenderowaniu inputu (double rAF), zamiast
+  // ~260ms opoznienia (dawalo blysk: drawer stal chwile, potem WebView z resize:native migotal pod
+  // klawiatura). NIE setTimeout - klawiatura ma wstac od razu z krokiem, nie osobno.
   const listNameRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
     if (!open || step !== "listName") return;
-    const id = setTimeout(() => listNameRef.current?.focus(), 260);
-    return () => clearTimeout(id);
+    let raf2 = 0;
+    const raf1 = requestAnimationFrame(() => { raf2 = requestAnimationFrame(() => listNameRef.current?.focus()); });
+    return () => { cancelAnimationFrame(raf1); cancelAnimationFrame(raf2); };
   }, [open, step]);
 
   // Reset przy kazdym otwarciu.
@@ -174,7 +177,7 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
 
   return (
     <Sheet open={open} onOpenChange={(o) => { if (!o) close(); }}>
-      <SheetContent side="bottom" className="rounded-t-3xl p-0 [&>button]:hidden flex flex-col bg-[#fefefe] border-0" style={{ maxHeight: "88vh" }}>
+      <SheetContent side="bottom" onOpenAutoFocus={(e) => e.preventDefault()} className="rounded-t-3xl p-0 [&>button]:hidden flex flex-col bg-[#fefefe] border-0" style={{ maxHeight: "88vh" }}>
         {/* grabber */}
         <div className="pt-3 pb-1 shrink-0"><div className="mx-auto h-1 w-10 rounded-full bg-[#d9d9d9]" /></div>
 
