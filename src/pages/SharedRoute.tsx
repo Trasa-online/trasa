@@ -78,7 +78,9 @@ function SortableRouteRow({ value, rowPin, index, categoryLabel, onOpen, onGoogl
     <span
       onPointerDown={(e) => controls.start(e)}
       aria-label="Przeciągnij, by zmienić kolejność"
-      className="shrink-0 w-6 flex items-center justify-center text-muted-foreground/45 cursor-grab active:cursor-grabbing touch-none"
+      // self-start + pt: uchwyt na wysokosci NAZWY miejsca (gora wiersza), nie wysrodkowany w calym
+      // wysokim wierszu (notki/zdjecia) gdzie byl niewidoczny (prosba Nat).
+      className="shrink-0 self-start pt-4 w-6 flex items-center justify-center text-muted-foreground/45 cursor-grab active:cursor-grabbing touch-none"
     >
       <GripVertical className="h-5 w-5" />
     </span>
@@ -322,7 +324,7 @@ export default function SharedRoute() {
     queryFn: async () => {
       const { data } = await (supabase as any)
         .from("pins")
-        .select("id, place_name, address, category, suggested_time, images, image_url, user_photo_urls, photo_url, place_id, latitude, longitude, pin_order, description, tags")
+        .select("id, route_id, place_name, address, category, suggested_time, images, image_url, user_photo_urls, photo_url, place_id, latitude, longitude, pin_order, description, tags")
         .eq("route_id", id!)
         .order("pin_order");
       return (data ?? []) as any[];
@@ -352,9 +354,14 @@ export default function SharedRoute() {
   const nkeyOf = (pin: any) => `${pin.route_id}::${pin.place_name}`;
   useEffect(() => {
     if (!user) return;
-    const own: Record<string, string> = {};
-    for (const n of allNotes) if (n.user_id === user.id && n.note) own[`${n.route_id}::${n.place_name}`] = n.note;
-    setNotes(own);
+    // Seeduj TYLKO klucze jeszcze nieobecne lokalnie - nie nadpisuj notki, ktora user wlasnie pisze.
+    setNotes((prev) => {
+      const next = { ...prev };
+      for (const n of allNotes) {
+        if (n.user_id === user.id && n.note) { const k = `${n.route_id}::${n.place_name}`; if (!(k in prev)) next[k] = n.note; }
+      }
+      return next;
+    });
   }, [allNotes, user?.id]);
   const handleNoteChange = (pin: any, value: string) => {
     if (!user) return;
@@ -659,6 +666,9 @@ export default function SharedRoute() {
     description: metaFor(pin).description || pin.description || "",
   } satisfies MockPlace);
 
+  // Awatar zalogowanego usera (do edytora "Twoja notka"): z listy uczestnikow lub autora (owner).
+  const myAvatar = (groupParticipants as any[]).find((p) => p.id === user?.id)?.avatar_url ?? (isOwner ? (author as any)?.avatar_url : null);
+
   // Plaska lista miejsc (wg Figmy: bez grupowania po kategorii) - wspoldzielony RoutePlaceRow
   // (duze zdjecie 104px, chip kategorii + guzik Google). Notki uczestnikow pod wierszem gdy sa.
   const buildNote = (pin: any): ReactNode | undefined => {
@@ -672,17 +682,39 @@ export default function SharedRoute() {
       const busy = uploadingPin === pin.id;
       return (
         <div className="space-y-3 mt-1">
+          {/* Twoja notka (edytor) + Twoj awatar obok */}
+          {canEdit && (
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">Twoja notka</p>
+              <div className="flex items-start gap-2">
+                <img src={avatarSrc(myAvatar)} alt="" className="h-8 w-8 rounded-full object-cover bg-secondary shrink-0 mt-0.5" />
+                <div className="relative flex-1 min-w-0">
+                  <textarea value={notes[k] ?? ""} onChange={(e) => handleNoteChange(pin, e.target.value)} placeholder="Dodaj notkę o tym miejscu..." rows={2}
+                    className="w-full bg-muted/50 rounded-xl px-3 py-2.5 text-sm text-foreground resize-none focus:outline-none border border-border/30 placeholder:text-muted-foreground/55" />
+                  {noteSaved[k] && <span className="absolute bottom-2 right-2.5 text-[10px] text-green-600 font-medium">Zapisano</span>}
+                </div>
+              </div>
+            </div>
+          )}
+          {/* Notki innych uczestnikow (awatar + tresc) */}
+          {list.some((n) => n.user_id !== user?.id) && (
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">Notki uczestników</p>
+              <PlaceNotes notes={list} excludeUserId={user?.id} />
+            </div>
+          )}
+          {/* Zdjecia miejsca (2:3) - POD notka */}
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">Zdjęcia miejsca</p>
             <div className="flex flex-wrap gap-2">
               {imgs.map((url) => (
-                <div key={url} className="relative h-20 w-20 shrink-0 rounded-xl overflow-hidden bg-muted">
+                <div key={url} className="relative w-[84px] aspect-[2/3] shrink-0 rounded-xl overflow-hidden bg-muted">
                   <img src={resolveStored(url) ?? url} alt="" className="w-full h-full object-cover" />
                   {canEdit && <button onClick={() => removePlacePhoto(pin, url)} aria-label="Usuń zdjęcie" className="absolute top-1 right-1 h-5 w-5 rounded-full bg-black/55 text-white flex items-center justify-center active:scale-90"><X className="h-3 w-3" /></button>}
                 </div>
               ))}
               {canEdit && (
-                <label className={`h-20 w-20 shrink-0 rounded-xl border-2 border-dashed border-border/50 flex flex-col items-center justify-center gap-1 text-muted-foreground cursor-pointer active:scale-95 transition-transform ${busy ? "opacity-60 pointer-events-none" : ""}`}>
+                <label className={`w-[84px] aspect-[2/3] shrink-0 rounded-xl border-2 border-dashed border-border/50 flex flex-col items-center justify-center gap-1 text-muted-foreground cursor-pointer active:scale-95 transition-transform ${busy ? "opacity-60 pointer-events-none" : ""}`}>
                   {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <Camera className="h-5 w-5" />}
                   <span className="text-[10px] font-semibold">{busy ? "..." : "Dodaj"}</span>
                   <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => { addPlacePhotos(pin, e.target.files); e.currentTarget.value = ""; }} />
@@ -690,20 +722,6 @@ export default function SharedRoute() {
               )}
             </div>
           </div>
-          {canEdit && (
-            <div className="relative">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">Twoja notka</p>
-              <textarea value={notes[k] ?? ""} onChange={(e) => handleNoteChange(pin, e.target.value)} placeholder="Dodaj notkę o tym miejscu..." rows={2}
-                className="w-full bg-muted/50 rounded-xl px-3 py-2.5 text-sm text-foreground resize-none focus:outline-none border border-border/30 placeholder:text-muted-foreground/55" />
-              {noteSaved[k] && <span className="absolute bottom-2 right-2.5 text-[10px] text-green-600 font-medium">Zapisano</span>}
-            </div>
-          )}
-          {list.some((n) => n.user_id !== user?.id) && (
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">Notki uczestników</p>
-              <PlaceNotes notes={list} excludeUserId={user?.id} />
-            </div>
-          )}
         </div>
       );
     }
@@ -927,7 +945,7 @@ export default function SharedRoute() {
             {choosing ? (
               /* Tryb "Wybierz miejsca": zaznacz ktore miejsca wchodza do wyjazdu (reszta usunieta). */
               <div className="space-y-2">
-                <p className="text-[13px] text-muted-foreground pb-1">{`Zaznacz miejsca, które wchodzą do wyjazdu (reszta zostanie usunięta):`}</p>
+                <p className="text-[13px] text-muted-foreground pb-1">Zaznacz miejsca, które wchodzą do wyjazdu.</p>
                 {(pins as any[]).map((pin) => (
                   <button key={pin.id} onClick={() => toggleChosen(pin.id)} className="w-full flex items-center gap-3 rounded-2xl bg-secondary/60 pl-3 pr-2.5 py-2.5 text-left active:opacity-80 transition-opacity">
                     <PlacePhoto pin={pin} className="h-12 w-12 rounded-xl object-cover shrink-0" />
@@ -1126,7 +1144,7 @@ export default function SharedRoute() {
                 {isOwner && stage === "ongoing" && (
                   <button onClick={() => navigate(`/review-summary?route=${route.id}&edit=1`)}
                     className="flex-1 py-3 rounded-full bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform">
-                    <Flag className="h-4 w-4" /> Podsumuj wyjazd
+                    Podsumuj wyjazd
                   </button>
                 )}
               </div>
