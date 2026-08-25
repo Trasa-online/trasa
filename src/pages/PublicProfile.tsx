@@ -103,7 +103,7 @@ export default function PublicProfile() {
     enabled: !!profile?.id,
     queryFn: async () => {
       const { data: routes } = await (supabase as any)
-        .from("routes").select("id, title, city, start_date, day_number, folder_id, views, saves_count, likes_count, created_at")
+        .from("routes").select("id, title, city, start_date, day_number, folder_id, views, saves_count, likes_count, created_at, tags, review_narrative, ai_summary")
         .eq("user_id", profile!.id).eq("is_shared", true)
         .order("created_at", { ascending: false });
       const rows = (routes ?? []) as any[];
@@ -139,6 +139,8 @@ export default function PublicProfile() {
         title: rep.title,
         start_date: rep.start_date,
         created_at: rep.created_at,
+        description: (rep.review_narrative || rep.ai_summary || "").trim() || null,
+        tags: Array.isArray(rep.tags) ? rep.tags : [],
         tiles: days.flatMap((d) => pinsByRoute[d.id] ?? []),
         saves: Number(rep.saves_count ?? 0),
         likes: Number(rep.likes_count ?? 0),
@@ -348,6 +350,8 @@ export default function PublicProfile() {
                   eyebrow={eyebrow}
                   timestamp={shortRelativeTime(tr.created_at)}
                   title={tr.title || (tr.city ? t("feed.trip_fallback", { city: tr.city, defaultValue: `Wyjazd do ${tr.city}` }) : t("feed.trip_fallback_generic", "Wyjazd"))}
+                  description={tr.description}
+                  tags={tr.tags}
                   tiles={tr.tiles}
                   mapPins={tr.tiles}
                   counts={{ saves: tr.saves + delta(isTripSaved(tr.id), initSavedTrips.has(tr.id)), likes: tr.likes + delta(isTripLiked(tr.id), initLikedTrips.has(tr.id)), views: tr.views }}
