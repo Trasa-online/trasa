@@ -87,6 +87,11 @@ function buildStaticMapUrl(pts: { latitude: number; longitude: number }[]): stri
   return `${API_BASE}/api/static-map?size=560x260&scale=2&maptype=roadmap&${markers}&style=feature:poi%7Cvisibility:off&style=feature:transit%7Cvisibility:off`;
 }
 
+// Normalizacja nazwy miasta do porownan (lower, bez diakrytyk: NFD + ł->l) - filtr "zapisanych" po
+// miescie wyjazdu (adres zawiera miasto). Odporne na "Wroclaw" vs "Wrocław".
+const normCityName = (s: unknown) =>
+  String(s ?? "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/ł/g, "l").trim();
+
 // Wiersz listy wybranych miejsc z DRAG & DROP (framer-motion Reorder). Przeciaganie
 // uchwytem (GripVertical) - reszta wiersza nadal tapowalna (otwiera wizytowke).
 function SortableComposeRow({ it, idx, onOpen, onRemove }: {
@@ -578,7 +583,7 @@ export default function ComposeWyjazd() {
   // #5: miejsca z LIST usera "do odwiedzenia" (to_visit) - glowne zrodlo "Twoich zapisanych
   // miejsc" przy tworzeniu trasy (zastapily stare exploreLikes). Filtr po miescie listy.
   // Źródło = lista OGÓLNA usera (fetchSavedPlaces, płaska, WSZYSTKIE miasta) - decyzja 2026-08-24.
-  // Ogólne jest globalna (city=null), więc NIE filtrujemy po mieście wyjazdu (pokazujemy wszystkie).
+  // Ogólne jest globalna (city=null); filtr po MIEŚCIE wyjazdu robi savedForCity (po adresie miejsca).
   const [toVisitPlaces, setToVisitPlaces] = useState<any[]>([]);
   useEffect(() => {
     if (!user) { setToVisitPlaces([]); return; }
@@ -589,13 +594,17 @@ export default function ComposeWyjazd() {
     return () => { alive = false; };
   }, [user]);
 
-  // "Twoje zapisane miejsca" = WSZYSTKIE zapisane z listy ogólnej + legacy exploreLikes (dedup po nazwie).
+  // "Twoje zapisane miejsca" = zapisane z listy ogólnej + legacy exploreLikes, ale TYLKO z MIASTA
+  // wyjazdu (adres zawiera miasto LUB city==miasto). Ogólne jest globalna (city=null) → głównym
+  // sygnałem jest adres miejsca. Gdy nic nie pasuje → pusto (sekcja się nie wyświetla). Nat 2026-08-25.
   const savedForCity = useMemo(() => {
     const mapPlace = (p: any) => ({
       id: p.place_id ?? p.place_name, place_id: p.place_id ?? null, place_name: p.place_name,
       category: p.category, latitude: p.latitude ?? null, longitude: p.longitude ?? null,
-      photo_url: p.photo_url ?? null, address: p.address ?? null, rating: p.rating ?? null,
+      photo_url: p.photo_url ?? null, address: p.address ?? null, rating: p.rating ?? null, city: p.city ?? null,
     });
+    const cityN = normCityName(city);
+    const matchesCity = (p: any) => !cityN || normCityName(p.city) === cityN || normCityName(p.address).includes(cityN);
     const seen = new Set<string>();
     const dedupe = (arr: any[]) => arr.filter((p) => {
       const k = String(p.place_name ?? "").toLowerCase().trim();
@@ -603,8 +612,8 @@ export default function ComposeWyjazd() {
     });
     const fromLists = toVisitPlaces.map(mapPlace);
     const legacy = getHistoryByCity().flatMap((g) => g.places).map(mapPlace);
-    return dedupe([...fromLists, ...legacy]);
-  }, [toVisitPlaces]);
+    return dedupe([...fromLists, ...legacy]).filter(matchesCity);
+  }, [toVisitPlaces, city]);
   const isSearching = search.trim().length >= 2;
   // Ujednolicony uklad z widokiem listy (CreateRanking): wyniki wyszukiwania POD wyszukiwarka,
   // "Wybrane miejsca" (z kafelkiem "+") wyzej, "Twoje zapisane miejsca" POD spodem.
