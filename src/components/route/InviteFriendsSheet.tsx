@@ -39,7 +39,15 @@ export default function InviteFriendsSheet({ open, onOpenChange, route, onInvite
         .neq("id", user?.id ?? "")
         .not("username", "is", null)
         .limit(20);
-      setResults(data ?? []);
+      let rows = (data ?? []) as Profile[];
+      // Odfiltruj konta BIZNESOWE - biznes nie jest uzytkownikiem apki (prosba Nat 2026-08-26).
+      // Biznes = profil bedacy owner_user_id w business_profiles.
+      if (rows.length) {
+        const { data: biz } = await (supabase as any).from("business_profiles").select("owner_user_id").in("owner_user_id", rows.map((r) => r.id));
+        const bizIds = new Set((biz ?? []).map((b: any) => b.owner_user_id));
+        rows = rows.filter((r) => !bizIds.has(r.id));
+      }
+      setResults(rows);
       setLoading(false);
     }, 300);
     return () => clearTimeout(timer);
