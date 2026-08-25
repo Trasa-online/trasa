@@ -1,7 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useFriends } from "@/hooks/useFriends";
+import { useFollowList } from "@/hooks/useFollow";
 import { avatarSrc } from "@/lib/avatar";
 import { Search, Check, X, Loader2, UserPlus } from "lucide-react";
 import { toast } from "sonner";
@@ -27,7 +30,29 @@ export default function InviteFriendsSheet({ open, onOpenChange, route, onInvite
 
   useEffect(() => { if (!open) { setQ(""); setResults([]); setSelected({}); } }, [open]);
 
-  // Szukanie po username (ilike, debounce). Wzorzec z UserSearchDrawer.
+  // Konta BIZNESOWE (owner_user_id) - do odfiltrowania (biznes != user apki). Jedno zapytanie.
+  const { data: bizIds = new Set<string>() } = useQuery({
+    queryKey: ["business-owner-ids"],
+    enabled: open,
+    staleTime: 5 * 60 * 1000,
+    queryFn: async () => new Set<string>((((await (supabase as any).from("business_profiles").select("owner_user_id")).data ?? []) as any[]).map((b) => b.owner_user_id).filter(Boolean)),
+  });
+
+  // Domyslna lista (puste pole): znajomi + obserwowani (dedup, bez siebie i biznesow) - zeby nie bylo
+  // pusto (prosba Nat 2026-08-26).
+  const { data: friends = [] } = useFriends(user?.id);
+  const { data: following = [] } = useFollowList(user?.id, "following");
+  const myPeople = useMemo<Profile[]>(() => {
+    const map = new Map<string, Profile>();
+    for (const p of [...(friends as any[]), ...(following as any[])]) {
+      if (p?.id && p.id !== user?.id && !map.has(p.id) && !(bizIds as Set<string>).has(p.id)) {
+        map.set(p.id, { id: p.id, username: p.username ?? null, first_name: p.first_name ?? null, avatar_url: p.avatar_url ?? null });
+      }
+    }
+    return [...map.values()];
+  }, [friends, following, user?.id, bizIds]);
+
+  // Szukanie po username (ilike, debounce) - z odfiltrowaniem biznesow.
   useEffect(() => {
     const t = q.trim();
     if (t.length < 2) { setResults([]); setLoading(false); return; }
@@ -39,19 +64,11 @@ export default function InviteFriendsSheet({ open, onOpenChange, route, onInvite
         .neq("id", user?.id ?? "")
         .not("username", "is", null)
         .limit(20);
-      let rows = (data ?? []) as Profile[];
-      // Odfiltruj konta BIZNESOWE - biznes nie jest uzytkownikiem apki (prosba Nat 2026-08-26).
-      // Biznes = profil bedacy owner_user_id w business_profiles.
-      if (rows.length) {
-        const { data: biz } = await (supabase as any).from("business_profiles").select("owner_user_id").in("owner_user_id", rows.map((r) => r.id));
-        const bizIds = new Set((biz ?? []).map((b: any) => b.owner_user_id));
-        rows = rows.filter((r) => !bizIds.has(r.id));
-      }
-      setResults(rows);
+      setResults(((data ?? []) as Profile[]).filter((r) => !(bizIds as Set<string>).has(r.id)));
       setLoading(false);
     }, 300);
     return () => clearTimeout(timer);
-  }, [q, user]);
+  }, [q, user, bizIds]);
 
   const toggle = (p: Profile) => setSelected((prev) => {
     const n = { ...prev };
@@ -59,6 +76,8 @@ export default function InviteFriendsSheet({ open, onOpenChange, route, onInvite
     return n;
   });
   const selectedList = Object.values(selected);
+  const searching = q.trim().length >= 2;
+  const displayed = searching ? results : myPeople;   // puste pole -> znajomi/obserwowani
 
   const confirm = async () => {
     if (!user || !selectedList.length || sending) return;
@@ -97,13 +116,16 @@ export default function InviteFriendsSheet({ open, onOpenChange, route, onInvite
         </div>
 
         <div className="flex-1 min-h-0 overflow-y-auto px-5 py-3">
-          {q.trim().length < 2 ? (
-            <p className="text-sm text-muted-foreground text-center py-8">Wpisz nazwę użytkownika, żeby znaleźć znajomych.</p>
-          ) : results.length === 0 && !loading ? (
-            <p className="text-sm text-muted-foreground text-center py-8">Brak wyników.</p>
+          {displayed.length === 0 && !loading ? (
+            <p className="text-sm text-muted-foreground text-center py-8">
+              {searching ? "Brak wyników." : `Nie obserwujesz jeszcze nikogo. Wpisz nazwę użytkownika, żeby wyszukać.`}
+            </p>
           ) : (
             <div className="flex flex-col gap-1">
-              {results.map((p) => {
+              {!searching && displayed.length > 0 && (
+                <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground px-2 pb-1">Obserwowani i znajomi</p>
+              )}
+              {displayed.map((p) => {
                 const on = !!selected[p.id];
                 return (
                   <button key={p.id} onClick={() => toggle(p)} className="flex items-center gap-3 px-2 py-2 rounded-2xl active:bg-muted/50 transition-colors text-left">
