@@ -1517,13 +1517,21 @@ const ReviewSummary = () => {
   const renderRatingNote = (placeName: string, centered = false, readOnly = false) => {
     const k = rkey(activeRouteId!, placeName);
     const val = notes[k] ?? "";
-    // Read-only (podsumowanie): pokaz notke jako tekst; ukryj gdy pusta.
+    // Notki INNYCH uczestnikow (multi-user) - pokazywane obok wlasnej w obu trybach.
+    const others = notesMap.get(placeNoteKey(placeName)) ?? [];
+    const hasOthers = others.some((n) => n.user_id !== user?.id);
+    // Read-only (podsumowanie): pokaz notke jako tekst; ukryj gdy nic (wlasnej ani cudzych).
     if (readOnly) {
-      if (!val.trim()) return null;
+      if (!val.trim() && !hasOthers) return null;
       return (
         <div className={`mt-2 ${centered ? "text-center" : ""}`}>
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">{t("note.label")}</p>
-          <p className="text-sm text-foreground/80 leading-relaxed whitespace-pre-wrap">{val}</p>
+          {val.trim() && (
+            <>
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">{t("note.label")}</p>
+              <p className="text-sm text-foreground/80 leading-relaxed whitespace-pre-wrap">{val}</p>
+            </>
+          )}
+          {hasOthers && <div className={`text-left ${val.trim() ? "mt-2.5" : ""}`}><PlaceNotes notes={others} excludeUserId={user?.id} /></div>}
         </div>
       );
     }
@@ -1544,6 +1552,12 @@ const ReviewSummary = () => {
             <span className="absolute bottom-2 right-2.5 text-[10px] text-green-600 font-medium">{t("note.saved")}</span>
           )}
         </div>
+        {hasOthers && (
+          <div className="mt-2.5 text-left">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">Notki uczestników</p>
+            <PlaceNotes notes={others} excludeUserId={user?.id} />
+          </div>
+        )}
       </div>
     );
   };
@@ -1646,7 +1660,8 @@ const ReviewSummary = () => {
           </div>
         </button>
       </div>
-      {withRating && renderRatingNote(pin.place_name, false, true)}
+      {/* Notki ZAWSZE (own + uczestnikow) - multi-user; renderRatingNote zwraca null gdy brak. */}
+      {renderRatingNote(pin.place_name, false, true)}
     </div>
   );
 
