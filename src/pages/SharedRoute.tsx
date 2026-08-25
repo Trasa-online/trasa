@@ -140,6 +140,9 @@ export default function SharedRoute() {
   const [choosing, setChoosing] = useState(false);
   const [chosen, setChosen] = useState<Set<string>>(new Set());
   const [choosingBusy, setChoosingBusy] = useState(false);
+  // "Wybierz miejsca": jesli ktorys uczestnik nie dodal jeszcze miejsc -> dialog (przypomnienie / mimo to).
+  const [missingParticipants, setMissingParticipants] = useState<{ id: string; username: string | null; avatar_url: string | null }[] | null>(null);
+  const [reminderBusy, setReminderBusy] = useState(false);
   // Etap W TRAKCIE: wlasna notka (edytor) + zdjecia per-miejsce (wszyscy uczestnicy).
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [noteSaved, setNoteSaved] = useState<Record<string, boolean>>({});
@@ -460,7 +463,24 @@ export default function SharedRoute() {
 
   // Etap cyklu zycia wyjazdu (Nat 2026-08-25): planning=Propozycje, ongoing=W Trakcie, completed=Wspomnienie.
   const stage: "planning" | "ongoing" | "completed" = ((route as any).trip_type as any) || "planning";
-  const startChoosing = () => { haptics.light(); setChosen(new Set((pins as any[]).map((p) => p.id))); setChoosing(true); };
+  const proceedToChoosing = () => { setMissingParticipants(null); haptics.light(); setChosen(new Set((pins as any[]).map((p) => p.id))); setChoosing(true); };
+  const startChoosing = () => {
+    // Sprawdz czy KAZDY uczestnik (poza hostem) dodal >=1 miejsce (pins.added_by). Jesli nie -> dialog.
+    const contributors = new Set((pins as any[]).map((p) => p.added_by).filter(Boolean));
+    const missing = (groupParticipants as any[]).filter((p) => !contributors.has(p.id));
+    if (missing.length > 0) { haptics.light(); setMissingParticipants(missing); return; }
+    proceedToChoosing();
+  };
+  // Wyslij przypomnienie ("dodaj miejsca") uczestnikom, ktorzy jeszcze nic nie dodali (RPC host-only + push).
+  const sendReminders = async () => {
+    if (!missingParticipants || !id) return;
+    setReminderBusy(true);
+    try {
+      for (const m of missingParticipants) { await (supabase as any).rpc("notify_trip_places_reminder", { p_route_id: id, p_user_id: m.id }); }
+      haptics.success(); toast.success(missingParticipants.length === 1 ? "Wysłano przypomnienie" : "Wysłano przypomnienia");
+    } catch (e: any) { console.warn("[SharedRoute] reminder:", e?.message ?? e); haptics.error(); }
+    finally { setReminderBusy(false); setMissingParticipants(null); }
+  };
   const toggleChosen = (pid: string) => setChosen((prev) => { const n = new Set(prev); n.has(pid) ? n.delete(pid) : n.add(pid); return n; });
   // "Wybierz miejsca" -> zaznaczone zostaja, reszta usunieta, trip_type='ongoing' (przejscie w trakcie).
   const confirmChoose = async () => {
@@ -1240,6 +1260,29 @@ export default function SharedRoute() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Dialog: uczestnicy bez dodanych miejsc -> przypomnienie (push) lub "wybierz mimo to" (prosba Nat). */}
+      {missingParticipants && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/50 backdrop-blur-sm p-6" onClick={() => setMissingParticipants(null)}>
+          <div className="w-full max-w-sm bg-card rounded-3xl p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <p className="text-lg font-bold text-foreground">Nie wszyscy dodali miejsca</p>
+            <div className="flex flex-wrap items-center gap-2 mt-3">
+              {missingParticipants.map((m) => (
+                <span key={m.id} className="inline-flex items-center gap-1.5 rounded-full bg-secondary pl-1 pr-3 py-1">
+                  <img src={avatarSrc(m.avatar_url)} alt="" className="h-6 w-6 rounded-full object-cover bg-white" />
+                  <span className="text-[13px] font-semibold text-foreground">{m.username || "Uczestnik"}</span>
+                </span>
+              ))}
+            </div>
+            <p className="text-sm text-muted-foreground mt-3">{`${missingParticipants.length === 1 ? "Ta osoba nie dodała" : "Te osoby nie dodały"} jeszcze żadnego miejsca. Wysłać przypomnienie, czy wybrać mimo to?`}</p>
+            <div className="mt-4 flex flex-col gap-2">
+              <button onClick={sendReminders} disabled={reminderBusy} className="w-full py-3 rounded-2xl bg-primary text-white font-bold text-sm active:scale-[0.98] transition-transform disabled:opacity-60">{reminderBusy ? "Wysyłam..." : "Wyślij przypomnienie"}</button>
+              <button onClick={proceedToChoosing} className="w-full py-3 rounded-2xl bg-secondary text-secondary-foreground font-bold text-sm active:scale-[0.98] transition-transform">Wybierz mimo to</button>
+              <button onClick={() => setMissingParticipants(null)} className="w-full py-2 text-sm font-medium text-muted-foreground">Anuluj</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
