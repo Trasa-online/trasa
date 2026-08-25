@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Search, Plus, Check, X, RefreshCw, Loader2, Trash2 } from "lucide-react";
+import { Search, Plus, Check, X, RefreshCw, Loader2, Trash2, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useAuth } from "@/hooks/useAuth";
@@ -32,6 +32,7 @@ const keyOf = (p: { place_id?: string | null; place_name?: string | null }) =>
 // autor moze wycofac swoja. Wyszukiwarka Google + "Twoje zapisane" (z miasta wyjazdu) + wizytowka.
 export default function TripProposalsSheet({
   open, onOpenChange, routeId, city, isOwner, onChanged,
+  fullscreen = false, pins, tripTitle, onBack,
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
@@ -39,6 +40,13 @@ export default function TripProposalsSheet({
   city: string | null;
   isOwner: boolean;
   onChanged?: () => void;
+  // fullscreen = pelnoekranowy widok uczestnika (wejscie z zaproszenia do roboczej trasy grupowej),
+  // zamiast bottom-sheet. pins = miejsca juz w trasie (read-only, uczestnik NIE usuwa cudzych). onBack
+  // = powrot (nawigacja). tripTitle = tytul w naglowku.
+  fullscreen?: boolean;
+  pins?: any[];
+  tripTitle?: string | null;
+  onBack?: () => void;
 }) {
   const { user } = useAuth();
   const [query, setQuery] = useState("");
@@ -46,7 +54,7 @@ export default function TripProposalsSheet({
   const [savePlace, setSavePlace] = useState<SavePlaceInput | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null); // id propozycji w trakcie akcji (spinner)
 
-  const enabled = open && !!routeId;
+  const enabled = (fullscreen || open) && !!routeId;
 
   // Srodek miasta (geokod) - twardy filtr wynikow Google w obrebie miasta wyjazdu.
   const { data: geoCenter = null } = useQuery({
@@ -218,80 +226,136 @@ export default function TripProposalsSheet({
     );
   };
 
-  return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" onOpenAutoFocus={(e) => e.preventDefault()} className="rounded-t-3xl p-0 [&>button]:hidden flex flex-col bg-[#fefefe] border-0" style={{ height: "92dvh" }}>
-        {/* Naglowek: tytul + odswiez + zamknij */}
-        <div className="flex items-center justify-between gap-2 px-5 pt-3 pb-2 shrink-0">
-          <button onClick={() => { haptics.light(); refetchProposals(); refetchPins(); }} aria-label="Odśwież propozycje"
+  // ── wiersz MIEJSCA W TRASIE (read-only): uczestnik widzi co host juz dodal, ale NIE moze usuwac ──
+  const renderPinRow = (p: any, i: number) => (
+    <div key={`pin-${p.id ?? p.place_id ?? i}`} className="w-full flex items-center gap-2 rounded-2xl bg-secondary/60 pl-3 pr-2.5 py-2.5">
+      <button onClick={() => openDetail(p)} className="flex items-center gap-3 flex-1 min-w-0 text-left active:opacity-80 transition-opacity">
+        <span className="h-11 w-11 rounded-xl bg-[#fcede3] flex items-center justify-center shrink-0">
+          <img src={categoryIconSrc(p.category)} alt="" className="w-1/2 opacity-90" draggable={false} />
+        </span>
+        <span className="flex-1 min-w-0">
+          <span className="block text-[15px] font-semibold text-foreground truncate">{p.place_name}</span>
+          {(p.address || city) && <span className="block text-[13px] text-muted-foreground truncate">{p.address || city}</span>}
+        </span>
+      </button>
+      <button onClick={() => openGooglePlace(p)} aria-label={`Otwórz ${p.place_name} w Google Maps`}
+        className="h-9 w-9 flex items-center justify-center shrink-0 rounded-full bg-white shadow-sm border border-black/[0.04] active:scale-90 transition-transform">
+        <GoogleGlyph className="h-[18px] w-[18px]" />
+      </button>
+    </div>
+  );
+
+  // Odswiez (wspolny dla obu wariantow naglowka).
+  const refreshBtn = (
+    <button onClick={() => { haptics.light(); refetchProposals(); refetchPins(); }} aria-label="Odśwież propozycje"
+      className="h-9 w-9 rounded-full border border-black/15 bg-white flex items-center justify-center active:opacity-60 transition-opacity shrink-0">
+      <RefreshCw className={`h-4 w-4 text-foreground ${isRefetching ? "animate-spin" : ""}`} />
+    </button>
+  );
+
+  const bodyContent = (
+    <>
+      {/* Naglowek: fullscreen -> [wstecz | tytul | odswiez]; sheet -> [odswiez | tytul | zamknij] */}
+      <div className="flex items-center justify-between gap-2 px-5 pt-3 pb-2 shrink-0">
+        {fullscreen ? (
+          <button onClick={onBack} aria-label="Wróć"
             className="h-9 w-9 rounded-full border border-black/15 bg-white flex items-center justify-center active:opacity-60 transition-opacity shrink-0">
-            <RefreshCw className={`h-4 w-4 text-foreground ${isRefetching ? "animate-spin" : ""}`} />
+            <ArrowLeft className="h-4 w-4 text-foreground" />
           </button>
-          <h2 className="text-[18px] font-semibold text-foreground truncate">Propozycje miejsc</h2>
+        ) : refreshBtn}
+        <h2 className="text-[18px] font-semibold text-foreground truncate">{fullscreen ? (tripTitle || "Propozycje miejsc") : "Propozycje miejsc"}</h2>
+        {fullscreen ? refreshBtn : (
           <button onClick={() => onOpenChange(false)} aria-label="Zamknij"
             className="h-9 w-9 rounded-full border border-black/15 bg-white flex items-center justify-center active:opacity-60 transition-opacity shrink-0">
             <X className="h-4 w-4 text-foreground" />
           </button>
-        </div>
+        )}
+      </div>
 
-        {/* Wyszukiwarka Google Places (zawezona do miasta wyjazdu) */}
-        <div className="px-5 pb-2 shrink-0">
-          <div className="flex items-center gap-2 rounded-2xl bg-secondary px-3.5 h-11">
-            <Search className="h-[18px] w-[18px] text-muted-foreground shrink-0" />
-            <input
-              value={query} onChange={(e) => setQuery(e.target.value)}
-              placeholder={city ? `Szukaj miejsca w${NBSP}${city}` : "Szukaj miejsca"}
-              className="flex-1 bg-transparent text-[15px] text-foreground placeholder:text-muted-foreground outline-none"
-            />
-            {query && <button onClick={() => setQuery("")} aria-label="Wyczyść"><X className="h-4 w-4 text-muted-foreground" /></button>}
+      {/* Wyszukiwarka Google Places (zawezona do miasta wyjazdu) */}
+      <div className="px-5 pb-2 shrink-0">
+        <div className="flex items-center gap-2 rounded-2xl bg-secondary px-3.5 h-11">
+          <Search className="h-[18px] w-[18px] text-muted-foreground shrink-0" />
+          <input
+            value={query} onChange={(e) => setQuery(e.target.value)}
+            placeholder={city ? `Szukaj miejsca w${NBSP}${city}` : "Szukaj miejsca"}
+            className="flex-1 bg-transparent text-[15px] text-foreground placeholder:text-muted-foreground outline-none"
+          />
+          {query && <button onClick={() => setQuery("")} aria-label="Wyczyść"><X className="h-4 w-4 text-muted-foreground" /></button>}
+        </div>
+      </div>
+
+      <div className="flex-1 min-h-0 overflow-y-auto px-5 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))]">
+        {searchMode ? (
+          /* Tryb wyszukiwania: wyniki Google */
+          <div className="pt-1 space-y-1.5">
+            {searching ? (
+              <div className="py-8 text-center text-sm text-muted-foreground flex items-center justify-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Szukam...</div>
+            ) : blocked ? (
+              <p className="py-8 text-center text-sm text-muted-foreground">{`Wyszukiwarka chwilowo niedostępna. Dodaj z${NBSP}zapisanych poniżej.`}</p>
+            ) : results.length === 0 ? (
+              <p className="py-8 text-center text-sm text-muted-foreground">Brak wyników.</p>
+            ) : (
+              results.map((r, i) => renderAddRow({ rowKey: `s-${r.place_id ?? r.place_name}-${i}`, place: r, subtitle: r.address }))
+            )}
           </div>
-        </div>
-
-        <div className="flex-1 min-h-0 overflow-y-auto px-5 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))]">
-          {searchMode ? (
-            /* Tryb wyszukiwania: wyniki Google */
-            <div className="pt-1 space-y-1.5">
-              {searching ? (
-                <div className="py-8 text-center text-sm text-muted-foreground flex items-center justify-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Szukam...</div>
-              ) : blocked ? (
-                <p className="py-8 text-center text-sm text-muted-foreground">{`Wyszukiwarka chwilowo niedostępna. Dodaj z${NBSP}zapisanych poniżej.`}</p>
-              ) : results.length === 0 ? (
-                <p className="py-8 text-center text-sm text-muted-foreground">Brak wyników.</p>
-              ) : (
-                results.map((r, i) => renderAddRow({ rowKey: `s-${r.place_id ?? r.place_name}-${i}`, place: r, subtitle: r.address }))
-              )}
-            </div>
-          ) : (
-            <div className="pt-1 space-y-4">
-              {/* PULA PROPOZYCJI */}
+        ) : (
+          <div className="pt-1 space-y-4">
+            {/* MIEJSCA W TRASIE (read-only) - tylko widok uczestnika (fullscreen), co host juz dodal */}
+            {fullscreen && pins && pins.length > 0 && (
               <div className="space-y-1.5">
-                <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground px-0.5">
-                  {`Propozycje uczestników${proposals.length ? ` (${proposals.length})` : ""}`}
-                </p>
-                {loadingProposals ? (
-                  <div className="py-6 text-center text-sm text-muted-foreground">Ładowanie...</div>
-                ) : proposals.length === 0 ? (
-                  <p className="py-6 px-2 text-center text-sm text-muted-foreground">
-                    {isOwner
-                      ? `Brak propozycji. Dorzuć miejsca wyszukiwarką lub poczekaj, aż uczestnicy dodadzą swoje.`
-                      : `Brak propozycji. Dorzuć miejsca, które chcesz zwiedzić - host wybierze, co wejdzie do${NBSP}trasy.`}
-                  </p>
-                ) : (
-                  (proposals as RouteProposal[]).map(renderProposalRow)
-                )}
+                <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground px-0.5">Miejsca w trasie</p>
+                {pins.map(renderPinRow)}
               </div>
+            )}
 
-              {/* TWOJE ZAPISANE (z miasta wyjazdu) */}
-              {savedInCity.length > 0 && (
-                <div className="space-y-1.5">
-                  <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground px-0.5">Twoje zapisane miejsca</p>
-                  {savedInCity.map((p) => renderAddRow({ rowKey: `sv-${p.id}`, place: p, subtitle: p.city || city }))}
-                </div>
+            {/* PULA PROPOZYCJI */}
+            <div className="space-y-1.5">
+              <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground px-0.5">
+                {`Propozycje uczestników${proposals.length ? ` (${proposals.length})` : ""}`}
+              </p>
+              {loadingProposals ? (
+                <div className="py-6 text-center text-sm text-muted-foreground">Ładowanie...</div>
+              ) : proposals.length === 0 ? (
+                <p className="py-6 px-2 text-center text-sm text-muted-foreground">
+                  {isOwner
+                    ? `Brak propozycji. Dorzuć miejsca wyszukiwarką lub poczekaj, aż uczestnicy dodadzą swoje.`
+                    : `Brak propozycji. Dorzuć miejsca, które chcesz zwiedzić - host wybierze, co wejdzie do${NBSP}trasy.`}
+                </p>
+              ) : (
+                (proposals as RouteProposal[]).map(renderProposalRow)
               )}
             </div>
-          )}
+
+            {/* TWOJE ZAPISANE (z miasta wyjazdu) */}
+            {savedInCity.length > 0 && (
+              <div className="space-y-1.5">
+                <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground px-0.5">Twoje zapisane miejsca</p>
+                {savedInCity.map((p) => renderAddRow({ rowKey: `sv-${p.id}`, place: p, subtitle: p.city || city }))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </>
+  );
+
+  return (
+    <>
+      {fullscreen ? (
+        // Widok uczestnika = pelnoekranowy (bez okladki, bez pill-tabow) - zamiast ReviewSummary.
+        // In-flow h-[100dvh] (NIE fixed/z-high): wizytowka i SavePlaceSheet (Vaul z-50) otwieraja sie
+        // NAD nim naturalnie. /review-summary to top-level route (bez BottomNava) - nie ma czego zaslaniac.
+        <div className="h-[100dvh] bg-[#fefefe] flex flex-col" style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}>
+          {bodyContent}
         </div>
-      </SheetContent>
+      ) : (
+        <Sheet open={open} onOpenChange={onOpenChange}>
+          <SheetContent side="bottom" onOpenAutoFocus={(e) => e.preventDefault()} className="rounded-t-3xl p-0 [&>button]:hidden flex flex-col bg-[#fefefe] border-0" style={{ height: "92dvh" }}>
+            {bodyContent}
+          </SheetContent>
+        </Sheet>
+      )}
 
       {/* Wizytowka miejsca + "Zapisz to miejsce" (nie gub miejsc) */}
       <PlaceSwiperDetail open={!!detailPlace} onOpenChange={(o) => { if (!o) setDetailPlace(null); }} place={detailPlace} city={detailPlace?.city || city || ""}
@@ -302,6 +366,6 @@ export default function TripProposalsSheet({
           place_id: UUID_RE.test(String(detailPlace.id ?? "")) ? detailPlace.id : null,
         }) : undefined} />
       <SavePlaceSheet open={!!savePlace} onOpenChange={(o) => { if (!o) setSavePlace(null); }} place={savePlace} city={city || ""} />
-    </Sheet>
+    </>
   );
 }

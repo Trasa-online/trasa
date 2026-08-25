@@ -2216,15 +2216,15 @@ const ReviewSummary = () => {
                 onInvited={() => { queryClient.invalidateQueries({ queryKey: ["review-summary-route", routeId] }); }}
               />
             )}
-            {/* Wspolna pula propozycji miejsc (host promuje do trasy, uczestnicy dorzucaja). Wspoldzielony
-                arkusz - owner (przeglada+dodaje) i czlonek (dorzuca), rola przez isOwner. */}
-            {routeId && (isOwner || isGroupMember) && (route as any)?.group_session_id && (
+            {/* Host (wlasciciel) otwiera pule propozycji jako ARKUSZ i promuje wybrane do trasy.
+                Uczestnik ma osobny pelnoekranowy widok (early-return wyzej), NIE ten arkusz. */}
+            {routeId && isOwner && (route as any)?.group_session_id && (
               <TripProposalsSheet
                 open={proposalsOpen}
                 onOpenChange={setProposalsOpen}
                 routeId={routeId}
                 city={route?.city ?? null}
-                isOwner={isOwner}
+                isOwner={true}
                 onChanged={() => { queryClient.invalidateQueries({ queryKey: ["review-all-pins"] }); }}
               />
             )}
@@ -2256,15 +2256,8 @@ const ReviewSummary = () => {
           ) : !isOwner ? (
             /* UCZESTNIK: read-only podglad miejsc (Lista/Karty) - bez reorder, kosza, checklisty. */
             <div className="pt-1">
-              {/* Czlonek grupy: dorzuca propozycje miejsc do wspolnej puli (host wybiera, co wejdzie). */}
-              {isGroupMember && (route as any)?.group_session_id && (
-                <button
-                  onClick={() => { haptics.light(); setProposalsOpen(true); }}
-                  className="w-full mb-3 py-3 rounded-2xl bg-primary text-primary-foreground font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
-                >
-                  <Plus className="h-4 w-4" strokeWidth={2.5} /> Zaproponuj miejsca
-                </button>
-              )}
+              {/* Uczestnik ROBOCZEJ trasy grupowej dostaje pelnoekranowy widok propozycji (early-return
+                  wyzej), wiec ta galaz to juz tylko OPUBLIKOWANY grupowy wyjazd / gosc - bez "Zaproponuj". */}
               <div className="flex items-center justify-end pb-3">
                 <div className="flex rounded-full bg-muted p-0.5">
                   <button onClick={() => setPlanView("list")} aria-label={t("a11y.list_view")} className={`px-2.5 py-1.5 rounded-full transition-colors ${planView === "list" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
@@ -2562,6 +2555,27 @@ const ReviewSummary = () => {
           </div>
         )}
       </div>
+    );
+  }
+
+  // WIDOK UCZESTNIKA (czlonek, nie-wlasciciel) ROBOCZEJ trasy grupowej = PELNOEKRANOWY ekran
+  // propozycji (bez okladki i pill-tabow Miejsca/Galeria/Mapa). Zastapil dawny read-only podglad
+  // ReviewSummary na tym etapie (prosba Nat 2026-08-25). Uczestnik widzi miejsca w trasie (read-only,
+  // NIE usuwa cudzych) + dorzuca wlasne propozycje. Trasa opublikowana (wspomnienie) -> normalny widok.
+  if (!!route && !isOwner && isGroupMember && (route as any).status !== "published" && !!(route as any).group_session_id) {
+    return (
+      <TripProposalsSheet
+        fullscreen
+        open
+        onOpenChange={() => {}}
+        routeId={routeId}
+        city={route?.city ?? null}
+        isOwner={false}
+        pins={currentPins}
+        tripTitle={(route as any)?.title ?? route?.city ?? "Wyjazd"}
+        onBack={() => navigate(-1)}
+        onChanged={() => { queryClient.invalidateQueries({ queryKey: ["review-all-pins"] }); }}
+      />
     );
   }
 
