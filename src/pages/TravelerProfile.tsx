@@ -155,7 +155,7 @@ const TravelerProfile = () => {
   // Podzakładki (pigułki) w Listy / Wyjazdy. Domyślnie: Listy->Moje, Wyjazdy->Wspomnienia
   // (opublikowane trasy = flagowa treść; robocze to work-in-progress).
   const [listyTab, setListyTab] = useState<"moje" | "ogolne" | "zapisane">("moje");
-  const [wyjazdyTab, setWyjazdyTab] = useState<"robocze" | "wspomnienia" | "zapisane">("wspomnienia");
+  const [wyjazdyTab, setWyjazdyTab] = useState<"robocze" | "wspomnienia" | "zapisane">("robocze");
   // Synchronizacja zakladek z URL (?tab=&sub=). useState czyta URL tylko przy pierwszym mount, a
   // wejscie z "+" gdy juz jestesmy na /moj-profil to nawigacja na TEN SAM route (bez remountu) - bez
   // tego efektu nowo utworzona robocza trasa lądowała na Wspomnieniach (user jej nie widzial).
@@ -537,7 +537,7 @@ const TravelerProfile = () => {
             const active = tab === tk;
             const label = tk === "listy" ? t("sections.lists", { defaultValue: "Listy" }) : t("sections.trips", { defaultValue: "Wyjazdy" });
             return (
-              <button key={tk} onClick={() => setTab(tk)} className="relative flex-1 flex items-center justify-center gap-2 py-2.5" aria-label={label}>
+              <button key={tk} onClick={() => { setTab(tk); if (tk === "wyjazdy") setWyjazdyTab("robocze"); }} className="relative flex-1 flex items-center justify-center gap-2 py-2.5" aria-label={label}>
                 {tk === "listy"
                   ? <LayoutGrid className="h-5 w-5" style={{ color: active ? "#0E0E0E" : "#CFCFCF" }} />
                   : <SpontawayTabIcon active={active} />}

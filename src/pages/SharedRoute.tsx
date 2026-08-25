@@ -10,7 +10,7 @@ import { notify } from "@/lib/notify";
 import { sendClientPush, getCurrentUserName } from "@/lib/clientPush";
 import { format } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
-import { MapPin, ArrowLeft, Sparkles, ChevronRight, ChevronLeft, Bookmark, List, GalleryHorizontalEnd, Calendar as CalendarIcon, Image as ImageIcon, Maximize2, X, Building2, Pencil, Trash2, Heart, Share2, Plus, Map as MapIcon, Loader2, Star, GripVertical, Check, Flag, Camera } from "lucide-react";
+import { MapPin, ArrowLeft, Sparkles, ChevronRight, ChevronLeft, Bookmark, List, GalleryHorizontalEnd, Calendar as CalendarIcon, Image as ImageIcon, Maximize2, X, Building2, Pencil, Trash2, Heart, Share2, Plus, Map as MapIcon, Loader2, Star, GripVertical, Check, Flag, Camera, UserPlus } from "lucide-react";
 import { haptics } from "@/hooks/useHaptics";
 import { Reorder, useDragControls } from "framer-motion";
 import { toast } from "sonner";
@@ -923,6 +923,10 @@ export default function SharedRoute() {
             <h1 className="flex-1 text-2xl font-black text-foreground leading-tight">{route.title || cityLabel}</h1>
             {isOwner && (
               <div className="shrink-0 flex items-center gap-2">
+                {/* Dodaj uczestnikow do wyjazdu (arkusz z wyszukiwarka userow) - etap planowania/w trakcie. */}
+                {(stage === "planning" || stage === "ongoing") && (
+                  <button onClick={() => setInviteOpen(true)} aria-label="Dodaj uczestników" className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center active:scale-90 transition-transform"><UserPlus className="h-4 w-4 text-foreground" /></button>
+                )}
                 <button onClick={handleShare} aria-label="Udostępnij" className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center active:scale-90 transition-transform"><Share2 className="h-4 w-4 text-foreground" /></button>
                 <button onClick={() => navigate(`/review-summary?route=${route.id}&edit=1`)} aria-label="Edytuj trasę" className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center active:scale-90 transition-transform"><Pencil className="h-4 w-4 text-foreground" /></button>
                 <button onClick={() => setAskDelete(true)} aria-label="Usuń wyjazd" className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center active:scale-90 transition-transform"><Trash2 className="h-4 w-4 text-destructive" /></button>
