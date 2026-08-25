@@ -10,7 +10,7 @@ import { notify } from "@/lib/notify";
 import { sendClientPush, getCurrentUserName } from "@/lib/clientPush";
 import { format } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
-import { MapPin, ArrowLeft, Sparkles, ChevronRight, ChevronLeft, Bookmark, List, GalleryHorizontalEnd, Calendar as CalendarIcon, Image as ImageIcon, Maximize2, X, Building2, Pencil, Trash2, Heart, Share2, Plus, Map as MapIcon, Loader2, Star, GripVertical, Check, Flag, Camera, UserPlus, ThumbsUp } from "lucide-react";
+import { MapPin, ArrowLeft, Sparkles, ChevronRight, ChevronLeft, Bookmark, List, GalleryHorizontalEnd, Calendar as CalendarIcon, Image as ImageIcon, Maximize2, X, Building2, Pencil, Trash2, Heart, Share2, Plus, Map as MapIcon, Loader2, Star, GripVertical, Check, Flag, Camera, UserPlus, ThumbsUp, MessageCircle } from "lucide-react";
 import { haptics } from "@/hooks/useHaptics";
 import { Reorder, useDragControls } from "framer-motion";
 import { toast } from "sonner";
@@ -24,6 +24,7 @@ import PlaceNotes from "@/components/route/PlaceNotes";
 import { EmptyPlacesState } from "@/components/route/EmptyPlacesState";
 import AddPlaceSheet from "@/components/route/AddPlaceSheet";
 import InviteFriendsSheet from "@/components/route/InviteFriendsSheet";
+import TripChatSheet from "@/components/route/TripChatSheet";
 import { inviteUsersToRoute } from "@/lib/groupInvite";
 import { useShare } from "@/hooks/useShare";
 import { useUnsavePlace } from "@/hooks/useUnsavePlace";
@@ -150,6 +151,7 @@ export default function SharedRoute() {
   const noteTimer = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const [uploadingPin, setUploadingPin] = useState<string | null>(null);
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
   const photoInputRef = useRef<HTMLInputElement>(null);
   const share = useShare();
@@ -1157,6 +1159,19 @@ export default function SharedRoute() {
           onOpenChange={setInviteOpen}
           route={{ id: route.id, city: route.city ?? null, title: route.title ?? null, group_session_id: (route as any).group_session_id ?? null }}
         />
+      )}
+
+      {/* Dymek CZATU wyjazdu (prawa strona, nad dolnym CTA) - uczestnicy (owner/czlonek) przegaduja
+          miejsca. Realtime. Ukryty w trybie wyboru miejsc. Prosba Nat 2026-08-26. */}
+      {canEdit && routeId && !choosing && (
+        <button onClick={() => setChatOpen(true)} aria-label="Czat wyjazdu"
+          className="fixed right-4 z-40 h-14 w-14 rounded-full bg-primary text-white shadow-xl shadow-primary/30 flex items-center justify-center active:scale-90 transition-transform"
+          style={{ bottom: "calc(84px + env(safe-area-inset-bottom, 0px))" }}>
+          <MessageCircle className="h-6 w-6" strokeWidth={2.2} />
+        </button>
+      )}
+      {canEdit && routeId && (
+        <TripChatSheet open={chatOpen} onOpenChange={setChatOpen} routeId={routeId} tripTitle={route.title ?? cityLabel} />
       )}
 
       {/* Rozwinięta interaktywna mapa (zoom) - jak w widoku "Plan wyjazdu" */}
