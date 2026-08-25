@@ -11,6 +11,8 @@ import { avatarSrc } from "@/lib/avatar";
 import CityCountryPicker, { defaultCityIndex } from "@/components/create/CityDrum";
 import AddPeoplePicker, { type PersonLite } from "@/components/create/AddPeoplePicker";
 import { fetchSavedPlaces, createListFromSavedPlaces, type SavedPlace, type PlaceForList } from "@/lib/placeLists";
+import { createWyjazdFromPlaces } from "@/lib/createWyjazd";
+import { inviteUsersToRoute } from "@/lib/groupInvite";
 import { citiesForCountry } from "@/lib/tripCountries";
 import { usePlaceSearch } from "@/hooks/usePlaceSearch";
 import { categoryIconSrc } from "@/lib/placeCategoryIcon";
@@ -18,7 +20,7 @@ import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import { GoogleGlyph } from "@/components/icons/GoogleGlyph";
 import { openExternal } from "@/lib/openExternal";
 
-type Step = "entry" | "listCity" | "listName" | "listPick" | "tripMode" | "trip" | "tripPeople";
+type Step = "entry" | "listCity" | "listName" | "listPick" | "tripMode" | "trip" | "tripPeople" | "tripPick";
 type TripMode = "future" | "past";
 
 const NBSP = " ";
@@ -51,25 +53,28 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
   const [manualPlaces, setManualPlaces] = useState<PlaceForList[]>([]);
   const [detailPlace, setDetailPlace] = useState<any | null>(null);   // wizytowka miejsca (PlaceSwiperDetail)
   const listSearchRef = useRef<HTMLInputElement>(null);
+  const [tripCity, setTripCity] = useState(defaultCity);   // miasto wyjazdu (wyzej: wspolny pickCity dla wyszukiwarki)
+  // Aktywne miasto dla wyszukiwarki miejsc: lista (listPick) LUB wyjazd (tripPick) - ten sam UI/hook.
+  const pickCity = step === "tripPick" ? tripCity : listCity;
+  const pickActive = open && (step === "listPick" || step === "tripPick");
   // Srodek wybranego miasta (geokod) - TWARDY filtr wynikow Google w obrebie miasta (inaczej "ato
   // ramen" dla Wroclawia zwracalo pozycje z USA). Zawezenie + dopisanie miasta do zapytania.
   const { data: listGeoCenter = null } = useQuery({
-    queryKey: ["listcity-center", listCity],
-    enabled: open && step === "listPick" && !!listCity,
+    queryKey: ["pickcity-center", pickCity],
+    enabled: pickActive && !!pickCity,
     staleTime: 60 * 60 * 1000,
     queryFn: async () => {
-      const { data } = await supabase.functions.invoke("google-places-proxy", { body: { action: "textsearch", query: listCity } });
+      const { data } = await supabase.functions.invoke("google-places-proxy", { body: { action: "textsearch", query: pickCity } });
       const r = ((data as any)?.results ?? [])[0];
       return r?.latitude != null ? { lat: r.latitude as number, lng: r.longitude as number } : null;
     },
   });
   const { results: listResults, searching: listSearching, blocked: listBlocked, searchMode: listSearchMode } =
-    usePlaceSearch(listQuery, { city: listCity, center: listGeoCenter, scopeKm: 30, enabled: open && step === "listPick" });
+    usePlaceSearch(listQuery, { city: pickCity, center: listGeoCenter, scopeKm: 30, enabled: pickActive });
 
   // Wyjazd
   const [tripMode, setTripMode] = useState<TripMode>("future");
   const [tripName, setTripName] = useState("");
-  const [tripCity, setTripCity] = useState(defaultCity);
   const [tripPeople, setTripPeople] = useState<PersonLite[]>([]);
 
   // Fokus (klawiatura) RAZEM z pojawieniem kroku "Nowa lista" - drawer wyjezdza wraz z klawiatura,
@@ -192,12 +197,33 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
     navigate(`/lista/${id}`);
   };
 
-  const startTrip = () => {
+  // Tworzenie wyjazdu W ARKUSZU (jak listy) - NIE nawigujemy do pelnoekranowego ComposeWyjazd.
+  // Miejsca = zaznaczone zapisane + dodane z Google (manual). Zaproszeni -> sesja grupowa.
+  const createTrip = async () => {
+    if (!user) { close(); navigate("/auth"); return; }
+    const savedSel = savedPlaces.filter((p) => selected.has(p.id)).map(toPlaceForList);
+    const seen = new Set<string>();
+    const picked = [...manualPlaces, ...savedSel].filter((p) => { const k = keyOfPlace(p); if (!k || seen.has(k)) return false; seen.add(k); return true; });
+    const tripType: "planning" | "completed" = tripMode === "past" ? "completed" : "planning";
+    setCreating(true);
+    haptics.light();
+    const places = picked.map((p) => ({
+      place_name: p.place_name, category: p.category, address: p.address,
+      latitude: p.latitude, longitude: p.longitude, photo_url: p.photo_url, place_id: p.place_id,
+    }));
+    const id = await createWyjazdFromPlaces(user.id, tripCity, tripName.trim() || `Wyjazd do ${tripCity}`, places, undefined, { tripType });
+    if (!id) { setCreating(false); haptics.error(); toast.error("Nie udało się utworzyć wyjazdu"); return; }
+    // Zaproszeni z "Dodaj osoby" -> inviteUsersToRoute (sesja grupowa + is_shared=true + notyf).
+    if (tripPeople.length) {
+      try { await inviteUsersToRoute({ id, city: tripCity ?? null, title: tripName.trim() || null, group_session_id: null }, tripPeople.map((p) => p.id), user.id); }
+      catch (e: any) { console.warn("[CreateFlowSheet] invite failed:", e?.message ?? e); }
+    }
+    setCreating(false);
+    haptics.success();
     close();
-    // title || undefined: ComposeWyjazd czyta nav.title przez ?? (pusty string zostalby jako pusta
-    // nazwa), wiec przy braku nazwy przekazujemy undefined -> tam default "Wyjazd do {miasto}".
-    // mode: "past" -> wspomnienie (trip_type='completed'); "future" -> roboczy plan.
-    navigate("/wyjazd/nowy", { state: { city: tripCity, title: tripName.trim() || undefined, inviteeIds: tripPeople.map((p) => p.id), mode: tripMode } });
+    // past -> edytor wspomnienia (Notki/Zdjecia/okladka); future -> robocza na profilu.
+    if (tripMode === "past") { navigate(`/review-summary?route=${id}&edit=1&step=2`); }
+    else { toast.success("Zapisano jako roboczą"); navigate("/moj-profil?tab=wyjazdy"); }
   };
 
   // ── wspolny nagłowek Anuluj / tytul / Dalej ──
@@ -382,7 +408,7 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
         {/* ── WYJAZD: nazwa + kraj/miasto + osoby ── */}
         {step === "trip" && (
           <>
-            <Header title={tripMode === "past" ? "Przeszły wyjazd" : "Zaplanuj wyjazd"} onBack={() => setStep("tripMode")} onNext={startTrip} />
+            <Header title={tripMode === "past" ? "Przeszły wyjazd" : "Zaplanuj wyjazd"} onBack={() => setStep("tripMode")} onNext={() => setStep("tripPick")} />
             <div className="flex-1 min-h-0 overflow-y-auto pb-[max(16px,env(safe-area-inset-bottom))]">
               <div className="px-5 pt-1">
                 <div className="relative">
@@ -401,6 +427,61 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
               <div className="mt-2 border-t border-border/50">
                 <PeopleRow kind="wyjazdu" people={tripPeople} onClick={() => setStep("tripPeople")} />
               </div>
+            </div>
+          </>
+        )}
+
+        {/* ── WYJAZD: wyszukiwarka Google + wybor miejsc (jak przy tworzeniu listy; w ARKUSZU, bez ComposeWyjazd) ── */}
+        {step === "tripPick" && (
+          <>
+            <Header title={tripName.trim() || `Wyjazd do ${tripCity}`} onBack={() => setStep("trip")}
+              onNext={createTrip} nextLabel={creating ? "..." : "Zapisz wyjazd"} nextEnabled={!creating && (selected.size > 0 || manualPlaces.length > 0)} />
+            <PeopleRow kind="wyjazdu" people={tripPeople} onClick={() => setStep("tripPeople")} />
+            <div className="px-5 pt-1 pb-2 shrink-0">
+              <div className="relative">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <input ref={listSearchRef} value={listQuery} onChange={(e) => setListQuery(e.target.value)} placeholder="Szukaj miejsca"
+                  className="w-full h-12 rounded-xl bg-secondary/60 border border-border/60 pl-10 pr-11 text-base text-foreground placeholder:text-muted-foreground/70 outline-none focus:ring-2 focus:ring-orange-500/30" />
+                {listQuery && (
+                  <button onClick={() => setListQuery("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 h-7 w-7 rounded-full bg-[#ebebeb]/60 flex items-center justify-center active:scale-90 transition-transform">
+                    <X className="h-3.5 w-3.5 text-muted-foreground" />
+                  </button>
+                )}
+              </div>
+            </div>
+            <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-[max(16px,env(safe-area-inset-bottom))]">
+              {listSearchMode ? (
+                <div className="pt-1 space-y-1.5">
+                  {listSearching && <div className="py-6 text-center text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin inline" /></div>}
+                  {listBlocked && <p className="py-6 text-center text-sm text-muted-foreground">{`Wyszukiwarka chwilowo niedostępna. Wybierz z${NBSP}zapisanych.`}</p>}
+                  {!listSearching && !listBlocked && listResults.length === 0 && (
+                    <p className="py-6 text-center text-sm text-muted-foreground">Brak wyników</p>
+                  )}
+                  {listResults.map((r, i) => renderListRow({
+                    rowKey: `${keyOfPlace(r)}-${i}`, place: r, subtitle: r.address,
+                    onToggle: () => pickResult(r), selected: manualPlaces.some((m) => keyOfPlace(m) === keyOfPlace(r)),
+                  }))}
+                </div>
+              ) : loadingSaved ? (
+                <div className="py-10 text-center text-sm text-muted-foreground">Ładowanie...</div>
+              ) : (
+                <div className="pt-1 space-y-1.5">
+                  {manualPlaces.map((p, i) => renderListRow({
+                    rowKey: `m-${keyOfPlace(p)}-${i}`, place: p, subtitle: tripCity,
+                    onToggle: () => removeManual(p), selected: true,
+                  }))}
+                  {savedPlaces.length > 0 && (
+                    <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground pt-1 px-0.5">Twoje zapisane miejsca</p>
+                  )}
+                  {savedPlaces.map((p) => renderListRow({
+                    rowKey: p.id, place: p, subtitle: p.city,
+                    onToggle: () => toggleSel(p.id), selected: selected.has(p.id),
+                  }))}
+                </div>
+              )}
+              {!listSearchMode && !loadingSaved && savedPlaces.length === 0 && manualPlaces.length === 0 && (
+                <p className="mt-4 px-2 text-center text-sm text-muted-foreground">{`Nie masz jeszcze zapisanych miejsc. Wyszukaj miejsce powyżej albo zapisuj je w${NBSP}eksploracji.`}</p>
+              )}
             </div>
           </>
         )}
