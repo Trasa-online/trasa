@@ -27,6 +27,9 @@ type TripMode = "future" | "past";
 const NBSP = " ";
 // Domyslne miasto startowe wyjazdu: Gdańsk (aktualny focus contentu) jak w CountryCityPicker.
 const defaultCity = () => { const cs = citiesForCountry("Polska"); return cs[defaultCityIndex(cs)] ?? cs[0]; };
+// Normalizacja miasta do porownan (lower, bez diakrytyk: NFD + ł->l) - filtr zapisanych po miescie wyjazdu.
+const normCityName = (s: unknown) =>
+  String(s ?? "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/ł/g, "l").trim();
 
 const toPlaceForList = (p: SavedPlace): PlaceForList => ({
   place_name: p.place_name, category: p.category, address: p.address, description: p.short_desc,
@@ -113,6 +116,12 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
     queryKey: ["saved-places", user?.id],
     enabled: !!user?.id && open,
     queryFn: () => fetchSavedPlaces(user!.id),
+  });
+  // Zapisane miejsca dopasowane do MIASTA wyjazdu (adres zawiera miasto LUB p.city == miasto).
+  // Wyjazd = tylko to konkretne miasto; gdy nic nie pasuje -> sekcja sie nie pokazuje (patrz tripPick).
+  const tripSaved = (savedPlaces as SavedPlace[]).filter((p) => {
+    const c = normCityName(tripCity);
+    return !c || normCityName(p.city) === c || normCityName(p.address).includes(c);
   });
 
   const close = () => onClose();
@@ -472,17 +481,17 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
                     rowKey: `m-${keyOfPlace(p)}-${i}`, place: p, subtitle: tripCity,
                     onToggle: () => removeManual(p), selected: true,
                   }))}
-                  {savedPlaces.length > 0 && (
-                    <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground pt-1 px-0.5">Twoje zapisane miejsca</p>
+                  {/* Zapisane TYLKO z miasta wyjazdu; gdy nic nie pasuje - sekcja sie nie pokazuje (prosba Nat). */}
+                  {tripSaved.length > 0 && (
+                    <>
+                      <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground pt-1 px-0.5">Twoje zapisane miejsca</p>
+                      {tripSaved.map((p) => renderListRow({
+                        rowKey: p.id, place: p, subtitle: p.city || tripCity,
+                        onToggle: () => toggleSel(p.id), selected: selected.has(p.id),
+                      }))}
+                    </>
                   )}
-                  {savedPlaces.map((p) => renderListRow({
-                    rowKey: p.id, place: p, subtitle: p.city,
-                    onToggle: () => toggleSel(p.id), selected: selected.has(p.id),
-                  }))}
                 </div>
-              )}
-              {!listSearchMode && !loadingSaved && savedPlaces.length === 0 && manualPlaces.length === 0 && (
-                <p className="mt-4 px-2 text-center text-sm text-muted-foreground">{`Nie masz jeszcze zapisanych miejsc. Wyszukaj miejsce powyżej albo zapisuj je w${NBSP}eksploracji.`}</p>
               )}
             </div>
           </>
