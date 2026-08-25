@@ -293,15 +293,17 @@ export default function PublicProfile() {
           <FollowButton targetUserId={profile.id} className="h-9 px-4 text-sm" />
         </div>
 
-        {/* Zakladki: Listy | Wyjazdy (ikony, underline aktywnej) */}
+        {/* Zakladki: Listy | Wyjazdy (ikona + labelka obok, underline aktywnej) */}
         <div className="flex border-b border-border/40 -mx-1">
           {(["listy", "wyjazdy"] as const).map((tk) => {
             const active = tab === tk;
+            const label = tk === "listy" ? t("sections.lists", { defaultValue: "Listy" }) : t("sections.trips", { defaultValue: "Wyjazdy" });
             return (
-              <button key={tk} onClick={() => setTab(tk)} className="relative flex-1 flex items-center justify-center py-2.5" aria-label={tk === "listy" ? t("sections.lists", { defaultValue: "Listy" }) : t("sections.trips", { defaultValue: "Wyjazdy" })}>
+              <button key={tk} onClick={() => setTab(tk)} className="relative flex-1 flex items-center justify-center gap-2 py-2.5" aria-label={label}>
                 {tk === "listy"
                   ? <LayoutGrid className="h-5 w-5" style={{ color: active ? "#0E0E0E" : "#CFCFCF" }} />
                   : <SpontawayTabIcon active={active} />}
+                <span className="text-sm font-semibold" style={{ color: active ? "#0E0E0E" : "#CFCFCF" }}>{label}</span>
                 {active && <span className="absolute -bottom-px left-0 right-0 h-0.5 bg-foreground rounded-full" />}
               </button>
             );
