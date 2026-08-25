@@ -17,7 +17,8 @@ import { ORIGIN_COUNTRIES } from "@/lib/locations";
 import { expandCity, cityGenitive } from "@/lib/cities";
 import { subcategoryLabelLocalized } from "@/lib/categories";
 import { getHistoryByCity } from "@/lib/exploreLikes";
-import { fetchSavedPlaces } from "@/lib/placeLists";
+import { fetchSavedPlaces, ensureToVisitList, addPlaceToList, createListWithPlace, fetchSavedPlaceNames, type PlaceForList } from "@/lib/placeLists";
+import SavePlaceSheet, { type SavePlaceInput } from "@/components/plan-wizard/SavePlaceSheet";
 import { createWyjazdFromPlaces, updateWyjazdPlaces } from "@/lib/createWyjazd";
 import { haptics } from "@/hooks/useHaptics";
 import { API_BASE } from "@/lib/platform";
@@ -78,6 +79,19 @@ const toMockPlace = (p: any, city: string): MockPlace => ({
   description: "",
 });
 
+// ComposeItem -> PlaceForList (zapis do listy Ogolne/nowej). google_place_id/description = null.
+const itemToPlaceForList = (i: ComposeItem): PlaceForList => ({
+  place_name: i.place_name, category: i.category, address: i.address, description: null,
+  latitude: i.latitude, longitude: i.longitude, photo_url: i.photo_url,
+  place_id: i.place_id, google_place_id: null, rating: i.rating ?? null,
+});
+// MockPlace (wizytowka) -> SavePlaceInput. place_id tylko gdy DB uuid (inaczej null).
+const mockToSaveInput = (mp: any): SavePlaceInput => ({
+  place_name: mp.place_name, category: mp.category ?? null, address: mp.address || null,
+  description: mp.description || null, latitude: mp.latitude ?? null, longitude: mp.longitude ?? null,
+  photo_url: mp.photo_url || null, place_id: UUID_RE.test(String(mp.id ?? "")) ? mp.id : null,
+});
+
 // Statyczna mapka (proxy /api/static-map) - pomaranczowe markery, POI/transit ukryte.
 // Auto-fit do markerow (bez center/zoom). null gdy brak wspolrzednych.
 function buildStaticMapUrl(pts: { latitude: number; longitude: number }[]): string | null {
@@ -94,8 +108,8 @@ const normCityName = (s: unknown) =>
 
 // Wiersz listy wybranych miejsc z DRAG & DROP (framer-motion Reorder). Przeciaganie
 // uchwytem (GripVertical) - reszta wiersza nadal tapowalna (otwiera wizytowke).
-function SortableComposeRow({ it, idx, onOpen, onRemove }: {
-  it: ComposeItem; idx: number; onOpen: () => void; onRemove: () => void;
+function SortableComposeRow({ it, idx, onOpen, onRemove, selected, onToggle }: {
+  it: ComposeItem; idx: number; onOpen: () => void; onRemove: () => void; selected: boolean; onToggle: () => void;
 }) {
   const controls = useDragControls();
   return (
@@ -107,7 +121,7 @@ function SortableComposeRow({ it, idx, onOpen, onRemove }: {
       // zmiany natychmiastowe (duration 0). Drag & drop nadal dziala (dragControls), a
       // przestawianie w trakcie przeciagania jest natychmiastowe zamiast springowac.
       transition={{ duration: 0 }}
-      className="w-full flex items-center gap-2.5 rounded-2xl bg-secondary p-2.5 select-none"
+      className={`w-full flex items-center gap-2.5 rounded-2xl bg-secondary p-2.5 select-none transition-opacity ${selected ? "" : "opacity-55"}`}
     >
       {/* Uchwyt przeciagania - z LEWEJ, tuz przy okladce (daleko od kosza po prawej, zeby nie mylic). */}
       <span
@@ -133,6 +147,14 @@ function SortableComposeRow({ it, idx, onOpen, onRemove }: {
             {it.category && <span className="text-[11px] text-muted-foreground truncate">{subcategoryLabelLocalized(it.category)}</span>}
           </div>
         </div>
+      </button>
+      {/* Toggle "w trasie": zaznaczone = wejdzie do trasy; odznaczone = kandydat (popup zaproponuje zapis). */}
+      <button
+        onClick={onToggle}
+        aria-label={selected ? "Wyłącz z trasy" : "Dodaj do trasy"}
+        className={`h-7 w-7 rounded-full flex items-center justify-center shrink-0 transition-colors ${selected ? "bg-primary text-white" : "border-2 border-border text-transparent"}`}
+      >
+        <Check className="h-4 w-4" strokeWidth={3} />
       </button>
       <button
         onClick={onRemove}
@@ -205,6 +227,8 @@ export default function ComposeWyjazd() {
   }, [city, nameDirty, isEn]);
   const [items, setItems] = useState<ComposeItem[]>(() =>
     soft?.items ?? (nav.places ?? []).map((p: any, idx: number) => toItem({ ...p, key: p.place_id ?? p.id ?? `${p.place_name}:${idx}` })));
+  // Kandydaci "w trasie" (domyslnie wszyscy). Odznaczeni NIE ida do pinow (popup "nie gub miejsc").
+  const [deselectedKeys, setDeselectedKeys] = useState<Set<string>>(() => new Set<string>((soft as any)?.deselected ?? []));
   const [placeView, setPlaceView] = useState<"detail" | "list">("list");
 
   // Daty wyjazdu (start + liczba dni z FullCalendarPicker).
@@ -215,12 +239,12 @@ export default function ComposeWyjazd() {
   // Persystencja roboczego stanu przy kazdej zmianie (miasto/nazwa/miejsca/daty/draftId).
   useEffect(() => {
     const payload = JSON.stringify({
-      draftId, city, name, items,
+      draftId, city, name, items, deselected: [...deselectedKeys],
       tripDate: tripDate ? { start: tripDate.start.toISOString(), numDays: tripDate.numDays } : null,
       ts: Date.now(),
     });
     try { sessionStorage.setItem(softKey, payload); } catch { /* sessionStorage unavailable */ }
-  }, [softKey, draftId, city, name, items, tripDate]);
+  }, [softKey, draftId, city, name, items, tripDate, deselectedKeys]);
 
   const clearSoft = () => {
     try { sessionStorage.removeItem(softKey); } catch { /* unavailable */ }
@@ -320,6 +344,14 @@ export default function ComposeWyjazd() {
 
   // Wizytowka miejsca (tap w karte) + rozwinieta mapa.
   const [detailPlace, setDetailPlace] = useState<MockPlace | null>(null);
+  // Kandydaci "w trasie" - isInTrip/toggleInTrip operuja na deselectedKeys (zadeklarowane przy items).
+  const isInTrip = (key: string) => !deselectedKeys.has(key);
+  const toggleInTrip = (key: string) => { haptics.light(); setDeselectedKeys((prev) => { const n = new Set(prev); n.has(key) ? n.delete(key) : n.add(key); return n; }); };
+  // Wizytowka "Zapisz to miejsce" (SavePlaceSheet) + popup "nie gub miejsc" (odznaczeni kandydaci).
+  const [savePlace, setSavePlace] = useState<SavePlaceInput | null>(null);
+  const [leftover, setLeftover] = useState<{ savePlaces: PlaceForList[]; openEditor: boolean; routeId: string; tripPlaces: any[] } | null>(null);
+  const [leftoverBusy, setLeftoverBusy] = useState(false);
+  const [leftoverNewList, setLeftoverNewList] = useState<string | null>(null); // null=ukryty; ""=input widoczny
   const [mapExpanded, setMapExpanded] = useState(false);
   // Popup przy cofaniu z niezapisana trasa (zapis do roboczych albo wyjscie bez zapisu).
   const [showBackConfirm, setShowBackConfirm] = useState(false);
@@ -423,7 +455,13 @@ export default function ComposeWyjazd() {
 
   // Dodanie miejsca: dorzuca do trasy i CZYSCI pole wyszukiwania (by od razu szukac kolejnego).
   const addPlace = (p: any) => {
-    if (!isAdded(p)) { setItems((prev) => [...prev, toItem(p)]); haptics.light(); }
+    if (!isAdded(p)) {
+      const it = toItem(p);
+      setItems((prev) => [...prev, it]);
+      // Nowo dodany kandydat jest "w trasie" (usun z odznaczonych, gdyby zostal po wczesniejszym cyklu).
+      setDeselectedKeys((prev) => { if (!prev.has(it.key)) return prev; const n = new Set(prev); n.delete(it.key); return n; });
+      haptics.light();
+    }
     setSearch("");
     setResults([]);
   };
@@ -515,7 +553,8 @@ export default function ComposeWyjazd() {
   // i laduje w liscie Wyjazdow z toastem.
   const confirm = async (openEditor: boolean) => {
     if (!user) { openAuthDrawer({ mode: "register", hint: "save_route" }); return; }
-    if (!items.length) { toast.error("Dodaj przynajmniej jedno miejsce"); return; }
+    // Do trasy ida TYLKO kandydaci zaznaczeni "w trasie". Odznaczeni -> popup "nie gub miejsc".
+    if (!selectedItems.length) { toast.error("Zaznacz przynajmniej jedno miejsce do trasy"); return; }
     setCreating(true);
     const dates = tripDate
       ? {
@@ -523,7 +562,7 @@ export default function ComposeWyjazd() {
           end_date: format(addDays(tripDate.start, tripDate.numDays - 1), "yyyy-MM-dd"),
         }
       : undefined;
-    const places = items.map((i) => ({
+    const places = selectedItems.map((i) => ({
       place_name: i.place_name,
       category: i.category,
       address: i.address,
@@ -540,8 +579,7 @@ export default function ComposeWyjazd() {
     if (!id) { haptics.error(); toast.error(draftId ? "Nie udało się zapisać zmian" : "Nie udało się utworzyć wyjazdu"); return; }
     haptics.success();
     // Zaproszeni z arkusza "Nowy wyjazd" (state.inviteeIds): zastosuj SYNCHRONICZNIE tu, PRZED
-    // navigate. Efekt na draftId nie zdazy (podwojna nawigacja unmountuje ekran) - dlatego inline.
-    // inviteUsersToRoute tworzy sesje grupowa + is_shared=true. Guard ref = tylko raz.
+    // navigate. inviteUsersToRoute tworzy sesje grupowa + is_shared=true. Guard ref = tylko raz.
     if (!prefillInviteesRef.current && (nav.inviteeIds?.length)) {
       prefillInviteesRef.current = true;
       try {
@@ -549,23 +587,35 @@ export default function ComposeWyjazd() {
         if (res.ok && res.sessionId) setGroupSessionId(res.sessionId);
       } catch (e: any) { console.warn("[ComposeWyjazd] invite failed:", e?.message ?? e); }
     }
-    // Trasa jest PRYWATNYM draftem (is_shared=false) - publikuje sie dopiero przy "Zapisz trase"
-    // w ReviewSummary. Odswiezamy feed profilaktycznie (np. przy edycji juz opublikowanej trasy).
+    // "Miejsca nie przepadaja": odznaczeni kandydaci (poza trasa) NIE bedacy juz w zapisanych usera
+    // -> popup zaproponuje zapis do Ogolne / nowej listy. Popup dopina navigate (finishNavigation).
+    const dropped = items.filter((i) => !isInTrip(i.key));
+    if (dropped.length) {
+      let savedNames = new Set<string>();
+      try { savedNames = await fetchSavedPlaceNames(user.id); } catch { /* ignore */ }
+      const unsaved = dropped.filter((i) => !savedNames.has(String(i.place_name ?? "").trim().toLowerCase()));
+      if (unsaved.length) {
+        setLeftover({ savePlaces: unsaved.map(itemToPlaceForList), openEditor, routeId: id, tripPlaces: places });
+        return; // navigate DOPIERO po decyzji w popupie
+      }
+    }
+    finishNavigation(openEditor, id, places);
+  };
+
+  // Nawigacja po finalizacji - wspolna dla sciezki bez popupu i po popupie "nie gub miejsc".
+  const finishNavigation = (openEditor: boolean, id: string, places: any[]) => {
+    setLeftover(null); setLeftoverNewList(null);
+    // Trasa jest PRYWATNYM draftem (is_shared=false) - publikuje sie dopiero przy "Zakoncz wyjazd".
     queryClient.invalidateQueries({ queryKey: ["discovery-city-routes"] });
     queryClient.invalidateQueries({ queryKey: ["discovery-polecane"] });
-    // openEditor -> review-summary od razu na kroku SUGESTII (step 2), bo plan miejsc user juz
-    // ulozyl tutaj w kompozycji. Guzik "Przejdz do sugestii".
     if (openEditor) {
-      // Zapamietaj draftId w soft-save SYNCHRONICZNIE (przed navigate/unmount), zeby powrot
-      // z sugestii przywrocil miejsca i traktowal ta trase jako edytowana (bez duplikatu).
+      // Zapamietaj draftId SYNCHRONICZNIE (soft-save + history state) - powrot z sugestii aktualizuje
+      // te trase (updateWyjazdPlaces) zamiast tworzyc nowa (iOS WebView gubi sessionStorage).
       setDraftId(id);
       try {
         const cur = JSON.parse(sessionStorage.getItem(softKey) || "{}");
         sessionStorage.setItem(softKey, JSON.stringify({ ...cur, draftId: id }));
       } catch { /* unavailable */ }
-      // Utrwal draftId TAKZE w stanie historii ComposeWyjazd (replace) - niezaleznie od
-      // sessionStorage (bywa gubione w iOS WebView). Dzieki temu powrot z sugestii lapie
-      // draftId i AKTUALIZUJE trase (updateWyjazdPlaces) zamiast tworzyc NOWA za kazdym razem.
       navigate(`${location.pathname}${location.search}`, {
         replace: true,
         state: { ...(location.state as any || {}), draftId: id, city, title: name, places },
@@ -574,9 +624,31 @@ export default function ComposeWyjazd() {
     } else {
       clearSoft();
       toast.success(draftId ? "Zapisano zmiany" : "Zapisano jako roboczą");
-      // Robocze wyjazdy (is_shared=false) pokazuja sie na profilu "Wyjazdy" z badgem "Robocze"
-      // (IA 2026-08-22, koniec osobnego widoku huba /utworz/robocze).
       navigate("/moj-profil?tab=wyjazdy");
+    }
+  };
+
+  // Zapis odznaczonych kandydatow z popupu "nie gub miejsc" do Ogolne / nowej (prywatnej) listy.
+  const saveLeftover = async (mode: "ogolne" | "newlist") => {
+    if (!leftover || !user) return;
+    setLeftoverBusy(true);
+    try {
+      if (mode === "newlist") {
+        const title = (leftoverNewList ?? "").trim() || `Miejsca ${city}`;
+        const listId = await createListWithPlace(user.id, title, "to_visit", city, leftover.savePlaces[0], undefined, false);
+        if (listId) { for (const p of leftover.savePlaces.slice(1)) await addPlaceToList(listId, p); }
+      } else {
+        const listId = await ensureToVisitList(user.id, city);
+        if (listId) { for (const p of leftover.savePlaces) await addPlaceToList(listId, p); }
+      }
+      haptics.success();
+      toast.success(leftover.savePlaces.length === 1 ? "Zapisano miejsce" : `Zapisano ${leftover.savePlaces.length} miejsc`);
+    } catch (e: any) {
+      console.error("[ComposeWyjazd] saveLeftover failed:", e?.message ?? e);
+      toast.error("Nie udało się zapisać miejsc");
+    } finally {
+      setLeftoverBusy(false);
+      finishNavigation(leftover.openEditor, leftover.routeId, leftover.tripPlaces);
     }
   };
 
@@ -619,6 +691,8 @@ export default function ComposeWyjazd() {
   // "Wybrane miejsca" (z kafelkiem "+") wyzej, "Twoje zapisane miejsca" POD spodem.
   const searchProposals = results.filter((p) => !isAdded(p));
   const savedProposals = savedForCity.filter((p) => !isAdded(p));
+  const selectedItems = items.filter((i) => isInTrip(i.key));   // kandydaci zaznaczeni "w trasie" -> piny
+  const inTripCount = selectedItems.length;
 
   return (
     <div className="flex flex-col h-[100dvh] bg-background max-w-lg mx-auto">
@@ -726,7 +800,7 @@ export default function ComposeWyjazd() {
         {/* WYBRANE MIEJSCA (N) + toggle lista/karty. Tap -> wizytowka. */}
         <div className="px-4 pt-5">
           <div className="flex items-center justify-between mb-2.5">
-            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Wybrane miejsca ({items.length})</p>
+            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">{`Propozycje (${items.length})`}{items.length > 0 ? `${" "}·${" "}${inTripCount} w${" "}trasie` : ""}</p>
             {items.length > 0 && (
               <div className="flex rounded-full bg-secondary p-0.5">
                 <button type="button" onClick={() => setPlaceView("list")} aria-label="Widok listy" className={`px-2.5 py-1 rounded-full transition-colors ${placeView === "list" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground"}`}>
@@ -750,13 +824,18 @@ export default function ComposeWyjazd() {
           ) : placeView === "detail" ? (
             <div className="flex gap-3 overflow-x-auto scrollbar-none snap-x snap-mandatory -mr-4 pr-4 pb-1">
               {items.map((it) => (
-                <button key={it.key} onClick={() => openDetail(it)} className="shrink-0 w-[220px] snap-start rounded-2xl bg-secondary border border-border/40 overflow-hidden shadow-sm text-left active:opacity-90 transition-opacity">
+                <button key={it.key} onClick={() => openDetail(it)} className={`shrink-0 w-[220px] snap-start rounded-2xl bg-secondary border border-border/40 overflow-hidden shadow-sm text-left active:opacity-90 transition-opacity ${isInTrip(it.key) ? "" : "opacity-55"}`}>
                   <div className="relative aspect-[4/3] bg-muted">
                     {it.photo_url ? (
                       <img src={it.photo_url} alt={it.place_name} loading="lazy" className="w-full h-full object-cover" />
                     ) : (
                       <div className="w-full h-full bg-[#fcede3] flex items-center justify-center"><img src={categoryIconSrc(it.category)} alt="" className="w-1/5 max-w-[40px] opacity-90" draggable={false} /></div>
                     )}
+                    {/* Toggle "w trasie" (lewy-gorny), kosz (prawy-gorny). */}
+                    <span role="button" tabIndex={0} onClick={(e) => { e.stopPropagation(); toggleInTrip(it.key); }} aria-label={isInTrip(it.key) ? "Wyłącz z trasy" : "Dodaj do trasy"}
+                      className={`absolute top-2 left-2 h-8 w-8 rounded-full flex items-center justify-center active:scale-90 transition-transform ${isInTrip(it.key) ? "bg-primary text-white" : "bg-white/85 border border-black/10 text-transparent"}`}>
+                      <Check className="h-4 w-4" strokeWidth={3} />
+                    </span>
                     <span role="button" tabIndex={0} onClick={(e) => { e.stopPropagation(); setConfirmRemove({ key: it.key, name: it.place_name }); }} aria-label="Usuń miejsce"
                       className="absolute top-2 right-2 h-8 w-8 rounded-full bg-black/45 backdrop-blur text-white flex items-center justify-center active:scale-90 transition-transform">
                       <X className="h-4 w-4" />
@@ -783,6 +862,8 @@ export default function ComposeWyjazd() {
                   idx={idx}
                   onOpen={() => openDetail(it)}
                   onRemove={() => setConfirmRemove({ key: it.key, name: it.place_name })}
+                  selected={isInTrip(it.key)}
+                  onToggle={() => toggleInTrip(it.key)}
                 />
               ))}
             </Reorder.Group>
@@ -861,7 +942,38 @@ export default function ComposeWyjazd() {
 
       {/* Wizytowka miejsca (tap w karte) */}
       <PlaceSwiperDetail open={!!detailPlace} onOpenChange={(o) => { if (!o) setDetailPlace(null); }} place={detailPlace} city={city}
+        onLike={user && detailPlace ? () => setSavePlace(mockToSaveInput(detailPlace)) : undefined}
         onPhotoAdded={(url, placeKey) => applyPlacePhotoCover(placeKey, url, detailPlace?.place_name)} />
+      {/* "Zapisz to miejsce" (wizytowka) -> auto-zapis do Ogolne + opcjonalnie do listy/nowej. */}
+      <SavePlaceSheet open={!!savePlace} onOpenChange={(o) => { if (!o) setSavePlace(null); }} place={savePlace} city={city} />
+
+      {/* Popup "nie gub miejsc": odznaczeni kandydaci (poza trasa) -> Ogolne / nowa lista / pomin. */}
+      {leftover && (
+        <div className="fixed inset-0 z-[75] flex items-end justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200"
+          onClick={() => { if (!leftoverBusy) finishNavigation(leftover.openEditor, leftover.routeId, leftover.tripPlaces); }}>
+          <div className="w-full max-w-md bg-card rounded-t-3xl px-5 pt-6 pb-[max(20px,env(safe-area-inset-bottom))] shadow-2xl animate-in slide-in-from-bottom-4 duration-300"
+            onClick={(e) => e.stopPropagation()}>
+            <p className="text-lg font-black leading-tight">{leftover.savePlaces.length === 1 ? "Nie zgub tego miejsca" : `Nie zgub ${leftover.savePlaces.length} miejsc`}</p>
+            <p className="text-sm text-muted-foreground leading-snug mt-1.5">{`Miejsca poza trasą możesz zapisać, żeby wrócić do nich później.`}</p>
+            {leftoverNewList !== null ? (
+              <div className="mt-4">
+                <input value={leftoverNewList} onChange={(e) => setLeftoverNewList(e.target.value)} placeholder={`Nazwa listy (np. Miejsca ${city})`} autoFocus
+                  className="w-full h-12 rounded-xl bg-secondary/60 border border-border/60 px-4 text-base text-foreground placeholder:text-muted-foreground/70 outline-none focus:ring-2 focus:ring-orange-500/30" />
+                <div className="flex gap-2 mt-3">
+                  <button onClick={() => setLeftoverNewList(null)} disabled={leftoverBusy} className="flex-1 h-12 rounded-2xl bg-secondary text-secondary-foreground font-bold text-sm active:scale-[0.98] transition-transform disabled:opacity-40">Wstecz</button>
+                  <button onClick={() => saveLeftover("newlist")} disabled={leftoverBusy} className="flex-1 h-12 rounded-2xl bg-primary text-white font-bold text-sm active:scale-[0.98] transition-transform disabled:opacity-40">{leftoverBusy ? "..." : "Stwórz i zapisz"}</button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-2 mt-4">
+                <button onClick={() => saveLeftover("ogolne")} disabled={leftoverBusy} className="w-full h-12 rounded-2xl bg-primary text-white font-bold text-sm active:scale-[0.98] transition-transform disabled:opacity-40">{leftoverBusy ? "..." : "Tak, zapisz w Ogólne"}</button>
+                <button onClick={() => setLeftoverNewList("")} disabled={leftoverBusy} className="w-full h-12 rounded-2xl bg-secondary text-secondary-foreground font-bold text-sm active:scale-[0.98] transition-transform disabled:opacity-40">Stwórz nową listę</button>
+                <button onClick={() => finishNavigation(leftover.openEditor, leftover.routeId, leftover.tripPlaces)} disabled={leftoverBusy} className="w-full h-11 rounded-2xl text-muted-foreground font-semibold text-sm active:scale-[0.98] transition-transform disabled:opacity-40">Nie, pomiń</button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Rozwinięta interaktywna mapa (zoom) */}
       <Sheet open={mapExpanded} onOpenChange={setMapExpanded}>
