@@ -734,13 +734,12 @@ export default function SharedRoute() {
     if (stage === "planning") {
       const v = (votesMap as Map<string, { count: number; voted: boolean }>).get(placeVoteKey(pin.place_name)) ?? { count: 0, voted: false };
       if (!user) return v.count > 0 ? (
-        <div className="mt-1.5 inline-flex items-center gap-1.5 text-[13px] font-semibold text-muted-foreground"><ThumbsUp className="h-4 w-4" /> {v.count}</div>
+        <div className="mt-1.5 inline-flex items-center rounded-full bg-secondary px-3 py-1.5 text-[13px] font-bold text-muted-foreground">{v.count}</div>
       ) : undefined;
       return (
         <button onClick={() => toggleVoteHandler(pin, v.voted)}
-          className={`mt-1.5 inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-semibold active:scale-95 transition-transform ${v.voted ? "bg-primary/12 text-primary" : "bg-secondary text-foreground"}`}>
-          <ThumbsUp className={`h-4 w-4 ${v.voted ? "fill-primary" : ""}`} strokeWidth={2} />
-          {v.voted ? "Głos oddany" : "Zagłosuj"}{v.count > 0 ? ` · ${v.count}` : ""}
+          className={`mt-1.5 inline-flex items-center gap-1 rounded-full px-3.5 py-1.5 text-[13px] font-bold active:scale-95 transition-transform ${v.voted ? "bg-primary text-white" : "bg-secondary text-foreground"}`}>
+          +1{v.count > 0 ? ` · ${v.count}` : ""}
         </button>
       );
     }
@@ -1029,9 +1028,11 @@ export default function SharedRoute() {
                     <PlacePhoto pin={pin} className="h-12 w-12 rounded-xl object-cover shrink-0" />
                     <span className="flex-1 min-w-0 text-[15px] font-semibold text-foreground truncate">{pin.place_name}</span>
                     {/* Liczba glosow - pomaga hostowi zdecydowac */}
-                    {((votesMap as Map<string, { count: number }>).get(placeVoteKey(pin.place_name))?.count ?? 0) > 0 && (
-                      <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-white text-foreground px-2 py-0.5 text-[12px] font-bold"><ThumbsUp className="h-3.5 w-3.5" /> {(votesMap as Map<string, { count: number }>).get(placeVoteKey(pin.place_name))!.count}</span>
-                    )}
+                    {(() => {
+                      const c = (votesMap as Map<string, { count: number }>).get(placeVoteKey(pin.place_name))?.count ?? 0;
+                      if (c === 0) return null;
+                      return <span className="shrink-0 inline-flex items-center rounded-full bg-white text-foreground px-2.5 py-0.5 text-[12px] font-bold">{c} {c === 1 ? "głos" : c < 5 ? "głosy" : "głosów"}</span>;
+                    })()}
                     <span className={`h-7 w-7 rounded-full flex items-center justify-center shrink-0 transition-colors ${chosen.has(pin.id) ? "bg-primary text-primary-foreground" : "border-2 border-border"}`}>{chosen.has(pin.id) && <Check className="h-4 w-4 stroke-[3]" />}</span>
                   </button>
                 ))}
@@ -1165,13 +1166,17 @@ export default function SharedRoute() {
           miejsca. Realtime. Ukryty w trybie wyboru miejsc. Prosba Nat 2026-08-26. */}
       {canEdit && id && !choosing && (
         <button onClick={() => setChatOpen(true)} aria-label="Czat wyjazdu"
-          className="fixed right-4 z-40 h-14 w-14 rounded-full bg-primary text-white shadow-xl shadow-primary/30 flex items-center justify-center active:scale-90 transition-transform"
+          className="fixed right-4 z-40 h-14 w-14 rounded-full bg-primary text-white flex items-center justify-center active:scale-90 transition-transform"
           style={{ bottom: "calc(84px + env(safe-area-inset-bottom, 0px))" }}>
           <MessageCircle className="h-6 w-6" strokeWidth={2.2} />
         </button>
       )}
       {canEdit && id && (
-        <TripChatSheet open={chatOpen} onOpenChange={setChatOpen} routeId={id} tripTitle={route.title ?? cityLabel} />
+        <TripChatSheet open={chatOpen} onOpenChange={setChatOpen} routeId={id} tripTitle={route.title ?? cityLabel}
+          participants={[
+            { id: route.user_id, username: (author as any)?.username ?? null, avatar_url: (author as any)?.avatar_url ?? null },
+            ...(groupParticipants as any[]),
+          ]} />
       )}
 
       {/* Rozwinięta interaktywna mapa (zoom) - jak w widoku "Plan wyjazdu" */}

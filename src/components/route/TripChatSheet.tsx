@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Send, X } from "lucide-react";
+import { Send, X, Trash2 } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useAuth } from "@/hooks/useAuth";
 import { haptics } from "@/hooks/useHaptics";
@@ -11,8 +11,9 @@ interface ChatMsg { id: string; user_id: string | null; text: string; created_at
 
 // Czat wyjazdu (2026-08-26): uczestnicy przegaduja miejsca. Realtime (tabela trip_messages).
 // Otwierany dymkiem na widoku wyjazdu (SharedRoute). RLS: tylko uczestnicy (owner/is_shared).
-export default function TripChatSheet({ open, onOpenChange, routeId, tripTitle }: {
+export default function TripChatSheet({ open, onOpenChange, routeId, tripTitle, participants = [] }: {
   open: boolean; onOpenChange: (o: boolean) => void; routeId: string | null; tripTitle?: string | null;
+  participants?: { id: string; username: string | null; avatar_url: string | null }[];
 }) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -66,7 +67,16 @@ export default function TripChatSheet({ open, onOpenChange, routeId, tripTitle }
     inputRef.current?.focus();
   };
 
+  const deleteMessage = async (mid: string) => {
+    haptics.light();
+    const { error } = await (supabase as any).from("trip_messages").delete().eq("id", mid);
+    if (!error) queryClient.invalidateQueries({ queryKey: ["trip-messages", routeId] });
+  };
+
   const timeOf = (iso: string) => { try { const d = new Date(iso); return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`; } catch { return ""; } };
+
+  // Uczestnicy rozmowy (dedup po id) - awatary na gorze czatu.
+  const uniqueParticipants = Array.from(new Map(participants.filter((p) => p.id).map((p) => [p.id, p])).values());
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -75,10 +85,20 @@ export default function TripChatSheet({ open, onOpenChange, routeId, tripTitle }
           bottom:0 (Radix) trzyma input tuz nad klawiatura; top = staly odstep od gory. */}
       <SheetContent side="bottom" onOpenAutoFocus={(e) => e.preventDefault()} className="rounded-t-3xl p-0 [&>button]:hidden flex flex-col bg-[#fefefe] border-0" style={{ top: "max(48px, calc(env(safe-area-inset-top, 0px) + 40px))", height: "auto" }}>
         {/* Naglowek */}
-        <div className="flex items-center justify-between gap-2 px-5 pt-3 pb-2 shrink-0 border-b border-border/40">
-          <div className="min-w-0">
-            <h2 className="text-[17px] font-semibold text-foreground leading-tight">Czat wyjazdu</h2>
-            {tripTitle && <p className="text-[12px] text-muted-foreground truncate">{tripTitle}</p>}
+        <div className="flex items-center justify-between gap-2 px-5 pt-3 pb-2.5 shrink-0 border-b border-border/40">
+          <div className="min-w-0 flex-1">
+            <h2 className="text-[17px] font-semibold text-foreground leading-tight truncate">{tripTitle ? `Czat: ${tripTitle}` : "Czat wyjazdu"}</h2>
+            {/* Awatary uczestnikow rozmowy (kto bierze udzial) */}
+            {uniqueParticipants.length > 0 && (
+              <div className="flex items-center mt-1.5">
+                <div className="flex items-center -space-x-2">
+                  {uniqueParticipants.slice(0, 10).map((p) => (
+                    <img key={p.id} src={avatarSrc(p.avatar_url)} alt={p.username ?? ""} title={p.username ?? undefined} className="h-6 w-6 rounded-full object-cover border-2 border-white bg-secondary" />
+                  ))}
+                </div>
+                {uniqueParticipants.length > 10 && <span className="ml-2 text-[11px] font-semibold text-muted-foreground">+{uniqueParticipants.length - 10}</span>}
+              </div>
+            )}
           </div>
           <button onClick={() => onOpenChange(false)} aria-label="Zamknij" className="h-9 w-9 rounded-full border border-black/15 bg-white flex items-center justify-center active:opacity-60 transition-opacity shrink-0">
             <X className="h-4 w-4 text-foreground" />
@@ -93,14 +113,22 @@ export default function TripChatSheet({ open, onOpenChange, routeId, tripTitle }
             const mine = m.user_id === user?.id;
             return (
               <div key={m.id} className={`flex items-end gap-2 ${mine ? "flex-row-reverse" : ""}`}>
-                {!mine && <img src={avatarSrc(m.avatar_url)} alt="" className="h-7 w-7 rounded-full object-cover bg-secondary shrink-0" />}
-                <div className={`max-w-[76%] min-w-0`}>
+                {/* Awatar autora - przy KAZDEJ wiadomosci (tez wlasnej). */}
+                <img src={avatarSrc(m.avatar_url)} alt="" className="h-7 w-7 rounded-full object-cover bg-secondary shrink-0" />
+                <div className="max-w-[70%] min-w-0">
                   {!mine && <p className="text-[11px] font-semibold text-muted-foreground mb-0.5 px-1">{m.username || "Uczestnik"}</p>}
                   <div className={`rounded-2xl px-3.5 py-2 ${mine ? "bg-primary text-white rounded-br-md" : "bg-secondary text-foreground rounded-bl-md"}`}>
                     <p className="text-[14px] leading-snug whitespace-pre-wrap break-words">{m.text}</p>
                   </div>
                   <p className={`text-[10px] text-muted-foreground mt-0.5 px-1 ${mine ? "text-right" : ""}`}>{timeOf(m.created_at)}</p>
                 </div>
+                {/* Usuwanie WLASNEJ wiadomosci (RLS: delete own). */}
+                {mine && (
+                  <button onClick={() => deleteMessage(m.id)} aria-label="Usuń wiadomość"
+                    className="shrink-0 h-7 w-7 flex items-center justify-center text-muted-foreground/40 active:text-destructive active:scale-90 transition-all">
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                )}
               </div>
             );
           })}
