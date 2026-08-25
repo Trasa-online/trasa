@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { FileText, X, Users, ChevronRight, ArrowLeft, Plus, Check, CalendarPlus, History } from "lucide-react";
+import { FileText, X, Users, ChevronRight, ArrowLeft, Plus, Check, CalendarPlus, History, Search, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useAuth } from "@/hooks/useAuth";
@@ -13,6 +13,8 @@ import CityCountryPicker, { defaultCityIndex } from "@/components/create/CityDru
 import AddPeoplePicker, { type PersonLite } from "@/components/create/AddPeoplePicker";
 import { fetchSavedPlaces, createListFromSavedPlaces, type SavedPlace, type PlaceForList } from "@/lib/placeLists";
 import { citiesForCountry } from "@/lib/tripCountries";
+import { usePlaceSearch } from "@/hooks/usePlaceSearch";
+import { categoryIconSrc } from "@/lib/placeCategoryIcon";
 
 type Step = "entry" | "listName" | "listPick" | "tripMode" | "trip" | "tripPeople";
 type TripMode = "future" | "past";
@@ -39,6 +41,12 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
   const [listName, setListName] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [creating, setCreating] = useState(false);
+  // Wyszukiwarka Google Places INLINE (zamiast nawigacji do starego edytora CreateRanking).
+  // manualPlaces = miejsca dodane z wynikow Google (nie z zapisanych), zawsze doliczane do listy.
+  const [listQuery, setListQuery] = useState("");
+  const [manualPlaces, setManualPlaces] = useState<PlaceForList[]>([]);
+  const listSearchRef = useRef<HTMLInputElement>(null);
+  const { results: listResults, searching: listSearching, blocked: listBlocked, searchMode: listSearchMode } = usePlaceSearch(listQuery, { enabled: open && step === "listPick" });
 
   // Wyjazd
   const [tripMode, setTripMode] = useState<TripMode>("future");
@@ -58,7 +66,7 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
   // Reset przy kazdym otwarciu.
   useEffect(() => {
     if (open) {
-      setStep("entry"); setListName(""); setSelected(new Set());
+      setStep("entry"); setListName(""); setSelected(new Set()); setListQuery(""); setManualPlaces([]);
       setTripMode("future"); setTripName(""); setTripCity(defaultCity()); setTripPeople([]); setCreating(false);
     }
   }, [open]);
@@ -84,16 +92,21 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
   const togglePerson = (p: PersonLite) => setTripPeople((prev) => prev.some((x) => x.id === p.id) ? prev.filter((x) => x.id !== p.id) : [...prev, p]);
   const tripPeopleIds = new Set(tripPeople.map((p) => p.id));
 
-  // "Dodaj nowe" -> pelny edytor listy (CreateRanking) z wyszukiwarka; przenosimy nazwe/prywatnosc/zaznaczone.
-  const goFullEditor = () => {
-    const places = savedPlaces.filter((p) => selected.has(p.id)).map(toPlaceForList);
-    close();
-    navigate("/zestawienie/nowe", { state: { title: listName.trim(), city: "", places, listStatus: "visited", isPublic: true } });
+  const keyOfPlace = (p: { place_name?: string | null }) => (p.place_name || "").trim().toLowerCase();
+  // Klik wyniku Google -> dodaj do manualPlaces (dedup po nazwie) i wroc do listy (wyczysc fraze).
+  const pickResult = (r: PlaceForList) => {
+    haptics.light();
+    setManualPlaces((prev) => prev.some((m) => keyOfPlace(m) === keyOfPlace(r)) ? prev : [r, ...prev]);
+    setListQuery("");
   };
+  const removeManual = (p: PlaceForList) => setManualPlaces((prev) => prev.filter((m) => keyOfPlace(m) !== keyOfPlace(p)));
 
   const createList = async () => {
     if (!user) { close(); navigate("/auth"); return; }
-    const places = savedPlaces.filter((p) => selected.has(p.id)).map(toPlaceForList);
+    // Miejsca listy = zaznaczone zapisane + dodane z Google (manual), dedup po nazwie.
+    const savedSel = savedPlaces.filter((p) => selected.has(p.id)).map(toPlaceForList);
+    const seen = new Set<string>();
+    const places = [...manualPlaces, ...savedSel].filter((p) => { const k = keyOfPlace(p); if (!k || seen.has(k)) return false; seen.add(k); return true; });
     // Pusta lista jest OK (opcja "Pomiń") - miejsca mozna dodac pozniej na widoku listy.
     setCreating(true);
     haptics.light();
@@ -224,22 +237,63 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
           </div>
         )}
 
-        {/* ── LISTA: wybor zapisanych ── */}
+        {/* ── LISTA: wyszukiwarka Google (inline) + wybor zapisanych ── */}
         {step === "listPick" && (
           <>
             <Header title={listName.trim() || "Nazwa listy"} onBack={() => setStep("listName")}
-              onNext={createList} nextLabel={creating ? "..." : (selected.size > 0 ? "Dalej" : "Pomiń")} nextEnabled={!creating} />
+              onNext={createList} nextLabel={creating ? "..." : ((selected.size > 0 || manualPlaces.length > 0) ? "Dalej" : "Pomiń")} nextEnabled={!creating} />
             <PeopleRow kind="listy" disabled />
-            <div className="flex-1 min-h-0 overflow-y-auto px-4 pt-2 pb-[max(16px,env(safe-area-inset-bottom))]">
-              {loadingSaved ? (
+            {/* Wyszukiwarka Google Places INLINE - klik = wyniki tutaj (a NIE nawigacja do starego edytora). */}
+            <div className="px-5 pt-1 pb-2 shrink-0">
+              <div className="relative">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <input ref={listSearchRef} value={listQuery} onChange={(e) => setListQuery(e.target.value)} placeholder="Szukaj miejsca"
+                  className="w-full h-12 rounded-xl bg-secondary/60 border border-border/60 pl-10 pr-11 text-base text-foreground placeholder:text-muted-foreground/70 outline-none focus:ring-2 focus:ring-orange-500/30" />
+                {listQuery && (
+                  <button onClick={() => setListQuery("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 h-7 w-7 rounded-full bg-[#ebebeb]/60 flex items-center justify-center active:scale-90 transition-transform">
+                    <X className="h-3.5 w-3.5 text-muted-foreground" />
+                  </button>
+                )}
+              </div>
+            </div>
+            <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-[max(16px,env(safe-area-inset-bottom))]">
+              {listSearchMode ? (
+                <div className="pt-1 space-y-1.5">
+                  {listSearching && <div className="py-6 text-center text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin inline" /></div>}
+                  {listBlocked && <p className="py-6 text-center text-sm text-muted-foreground">{`Wyszukiwarka chwilowo niedostępna. Wybierz z${NBSP}zapisanych.`}</p>}
+                  {!listSearching && !listBlocked && listResults.length === 0 && (
+                    <p className="py-6 text-center text-sm text-muted-foreground">Brak wyników</p>
+                  )}
+                  {listResults.map((r, i) => {
+                    const on = manualPlaces.some((m) => keyOfPlace(m) === keyOfPlace(r));
+                    return (
+                      <button key={`${keyOfPlace(r)}-${i}`} onClick={() => pickResult(r)}
+                        className="w-full flex items-center gap-3 rounded-2xl bg-secondary/60 px-3 py-2.5 text-left active:bg-secondary transition-colors">
+                        <span className="h-11 w-11 rounded-xl bg-[#fcede3] flex items-center justify-center shrink-0">
+                          <img src={categoryIconSrc(r.category)} alt="" className="w-1/2 opacity-90" draggable={false} />
+                        </span>
+                        <span className="flex-1 min-w-0">
+                          <span className="block text-[15px] font-semibold text-foreground truncate">{r.place_name}</span>
+                          {r.address && <span className="block text-[13px] text-muted-foreground truncate">{r.address}</span>}
+                        </span>
+                        <span className={`h-6 w-6 rounded-full flex items-center justify-center shrink-0 ${on ? "bg-[#f0a583] text-white" : "border-2 border-border"}`}>
+                          {on ? <Check className="h-3.5 w-3.5 stroke-[3]" /> : <Plus className="h-3.5 w-3.5 text-muted-foreground" />}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : loadingSaved ? (
                 <div className="py-10 text-center text-sm text-muted-foreground">Ładowanie...</div>
               ) : (
-                <div className="grid grid-cols-3 gap-1.5">
-                  {/* "Dodaj nowe" */}
-                  <button onClick={goFullEditor} className="aspect-square rounded-2xl bg-secondary/70 border-2 border-dashed border-border flex flex-col items-center justify-center gap-1.5 active:scale-[0.97] transition-transform">
-                    <Plus className="h-6 w-6 text-muted-foreground" />
-                    <span className="text-[11px] font-semibold text-muted-foreground">Dodaj nowe</span>
-                  </button>
+                <div className="pt-1 grid grid-cols-3 gap-1.5">
+                  {/* Dodane z Google (manual) - zaznaczone, klik usuwa z listy */}
+                  {manualPlaces.map((p, i) => (
+                    <button key={`m-${keyOfPlace(p)}-${i}`} onClick={() => removeManual(p)} className="relative rounded-2xl transition-all active:scale-[0.97] ring-2 ring-[#f0a583]">
+                      <PlaceTile showCity tile={{ photo_url: p.photo_url, category: p.category, place_name: p.place_name, city: null }} />
+                      <span className="absolute top-1.5 right-1.5 h-6 w-6 rounded-full bg-[#f0a583] text-white flex items-center justify-center"><Check className="h-3.5 w-3.5 stroke-[3]" /></span>
+                    </button>
+                  ))}
                   {savedPlaces.map((p) => {
                     const on = selected.has(p.id);
                     return (
@@ -253,8 +307,8 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
                   })}
                 </div>
               )}
-              {!loadingSaved && savedPlaces.length === 0 && (
-                <p className="mt-4 px-2 text-center text-sm text-muted-foreground">{`Nie masz jeszcze zapisanych miejsc. Dodaj nowe albo zapisuj miejsca w${NBSP}eksploracji.`}</p>
+              {!listSearchMode && !loadingSaved && savedPlaces.length === 0 && manualPlaces.length === 0 && (
+                <p className="mt-4 px-2 text-center text-sm text-muted-foreground">{`Nie masz jeszcze zapisanych miejsc. Wyszukaj miejsce powyżej albo zapisuj je w${NBSP}eksploracji.`}</p>
               )}
             </div>
           </>
