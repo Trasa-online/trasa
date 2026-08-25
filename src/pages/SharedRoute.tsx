@@ -16,6 +16,8 @@ import { toast } from "sonner";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { PlacePhoto } from "@/components/PlacePhoto";
 import { RoutePlaceRow } from "@/components/route/RoutePlaceRow";
+import { fetchRouteNotesWithAuthors, notesByPlace, placeNoteKey } from "@/lib/placeNotes";
+import PlaceNotes from "@/components/route/PlaceNotes";
 import { EmptyPlacesState } from "@/components/route/EmptyPlacesState";
 import AddPlaceSheet from "@/components/route/AddPlaceSheet";
 import InviteFriendsSheet from "@/components/route/InviteFriendsSheet";
@@ -324,23 +326,14 @@ export default function SharedRoute() {
     queryFn: () => fetchPlacePhotosForKeys(routePinKeys),
   });
 
-  // Notki autora trasy (pin_ratings SELECT jest publiczny).
-  const { data: authorNotes = [] } = useQuery({
-    queryKey: ["shared-route-notes", id, route?.user_id],
-    queryFn: async () => {
-      if (!route?.user_id) return [];
-      const { data } = await (supabase as any)
-        .from("pin_ratings")
-        .select("place_name, note")
-        .eq("route_id", id!)
-        .eq("user_id", route.user_id);
-      return (data ?? []) as any[];
-    },
-    enabled: !!id && !!route?.user_id,
+  // Notki WSZYSTKICH uczestnikow trasy (pin_ratings SELECT publiczny dla is_shared). Eksploracja
+  // pokazuje notki calej grupy (awatar + imie + tresc), nie tylko autora (prosba Nat 2026-08-25).
+  const { data: allNotes = [] } = useQuery({
+    queryKey: ["shared-route-notes", id],
+    queryFn: () => fetchRouteNotesWithAuthors(id ? [id] : []),
+    enabled: !!id,
   });
-
-  const noteMap: Record<string, { note: string | null }> = {};
-  for (const r of authorNotes) noteMap[r.place_name] = { note: r.note };
+  const notesMap = notesByPlace(allNotes);
 
   // Opis + tagi z tabeli places (wizytowka miejsca). Piny nie maja vibe_tags.
   const { data: placeMeta = {} } = useQuery({
@@ -573,28 +566,17 @@ export default function SharedRoute() {
     description: metaFor(pin).description || pin.description || "",
   } satisfies MockPlace);
 
-  // Read-only notka autora pod miejscem.
-  const renderRatingNote = (placeName: string, centered = false) => {
-    const r = noteMap[placeName];
-    if (!r || !r.note) return null;
+  // Plaska lista miejsc (wg Figmy: bez grupowania po kategorii) - wspoldzielony RoutePlaceRow
+  // (duze zdjecie 104px, chip kategorii + guzik Google). Notki uczestnikow pod wierszem gdy sa.
+  const buildNote = (pin: any): ReactNode | undefined => {
+    const list = notesMap.get(placeNoteKey(pin.place_name)) ?? [];
+    if (!list.length) return undefined;
     return (
-      <div className={`mt-3 pt-3 border-t border-border/40 ${centered ? "text-center" : ""}`}>
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">{t("author_note")}</p>
-        <p className="text-sm text-foreground/80 leading-relaxed text-left whitespace-pre-wrap">{r.note}</p>
+      <div>
+        <p className="text-sm font-semibold text-foreground">{list.length > 1 ? "Notki uczestników" : "Notka"}</p>
+        <PlaceNotes notes={list} className="mt-1.5" />
       </div>
     );
-  };
-
-  // Plaska lista miejsc (wg Figmy: bez grupowania po kategorii) - wspoldzielony RoutePlaceRow
-  // (duze zdjecie 104px, chip kategorii + guzik Google). Notka autora pod wierszem gdy jest.
-  const buildNote = (pin: any): ReactNode | undefined => {
-    const noteText = (noteMap[pin.place_name]?.note ?? "").trim();
-    return noteText ? (
-      <div>
-        <p className="text-sm font-semibold text-foreground">Notka Autora</p>
-        <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap mt-0.5">{noteText}</p>
-      </div>
-    ) : undefined;
   };
   const rowPinFor = (pin: any) => (coverFor(pin) ? { ...pin, photo_url: coverFor(pin) } : pin);
 
@@ -639,7 +621,6 @@ export default function SharedRoute() {
   const renderSwiper = () => (
     <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-none -mr-5 pr-5 pb-2">
       {pins.map((pin: any) => {
-        const noteText = (noteMap[pin.place_name]?.note ?? "").trim();
         const pinForPhoto = coverFor(pin) ? { ...pin, photo_url: coverFor(pin) } : pin;
         return (
           <div key={pin.id} className="snap-start shrink-0 w-[168px] flex flex-col gap-3">
@@ -661,12 +642,7 @@ export default function SharedRoute() {
                 <span className="h-9 w-9 rounded-full bg-white shadow-sm flex items-center justify-center shrink-0"><GoogleGlyph className="h-[18px] w-[18px]" /></span>
                 <span className="text-sm font-medium text-foreground">Zobacz w Google</span>
               </button>
-              {noteText && (
-                <div>
-                  <p className="text-sm font-semibold text-foreground">Notka Autora</p>
-                  <p className="text-sm text-muted-foreground leading-relaxed line-clamp-5 mt-0.5">{noteText}</p>
-                </div>
-              )}
+              {buildNote(pin)}
             </div>
           </div>
         );

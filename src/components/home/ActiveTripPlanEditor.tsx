@@ -12,7 +12,9 @@ import { notify } from "@/lib/notify";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { useDistanceReference, tryResolveOnSite } from "@/lib/distanceReference";
 import { haversineKm, formatDistance } from "@/lib/distance";
-import { Navigation, GripVertical, CalendarDays, Loader2 } from "lucide-react";
+import { Navigation, GripVertical, CalendarDays, Loader2, Camera, X } from "lucide-react";
+import { fetchRouteNotesWithAuthors, notesByPlace, placeNoteKey } from "@/lib/placeNotes";
+import PlaceNotes from "@/components/route/PlaceNotes";
 import { Reorder, useDragControls } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { API_BASE } from "@/lib/platform";
@@ -249,6 +251,44 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false, onDelete, deleting 
       setNotes(nmap);
     }
   }, [existingRatings]);
+
+  // NOTKI MULTI-USER (2026-08-25): wszystkie notki uczestnikow (nie tylko wlasne) + profil autora
+  // (awatar). Kazdy uczestnik widzi notki wszystkich. RLS pin_ratings pozwala czytac gdy is_shared.
+  const { data: allPlaceNotes = [] } = useQuery({
+    queryKey: ["active-plan-all-notes", idsKey],
+    enabled: dayRouteIds.length > 0,
+    queryFn: () => fetchRouteNotesWithAuthors(dayRouteIds),
+  });
+  const notesMap = useMemo(() => notesByPlace(allPlaceNotes), [allPlaceNotes]);
+
+  // ZDJECIA per-miejsce (pins.images): kazdy uczestnik dodaje zdjecia do miejsca (member-write RLS
+  // na pins). Wszyscy widza wszystkie. Upload -> bucket route-images, append do pins.images.
+  const [uploadingPin, setUploadingPin] = useState<string | null>(null);
+  const addPlacePhotos = async (pin: any, files: FileList | null) => {
+    if (!user || !files || !files.length) return;
+    setUploadingPin(pin.id);
+    try {
+      const urls: string[] = [];
+      for (const file of Array.from(files)) {
+        const path = `${user.id}/${pin.route_id}/pin_${pin.id}_${Math.random().toString(36).slice(2)}.jpg`;
+        const { error } = await supabase.storage.from("route-images").upload(path, file, { upsert: true, contentType: file.type || "image/jpeg" });
+        if (error) { console.error("[activeTrip] photo upload failed:", error.message); continue; }
+        const { data } = supabase.storage.from("route-images").getPublicUrl(path);
+        if (data?.publicUrl) urls.push(data.publicUrl);
+      }
+      if (urls.length) {
+        const cur = Array.isArray(pin.images) ? pin.images : [];
+        const { error: updErr } = await (supabase as any).from("pins").update({ images: [...cur, ...urls] }).eq("id", pin.id);
+        if (updErr) notify.error("Nie udało się dodać zdjęcia");
+        else queryClient.invalidateQueries({ queryKey: ["active-plan-all-pins", idsKey] });
+      }
+    } finally { setUploadingPin(null); }
+  };
+  const removePlacePhoto = async (pin: any, url: string) => {
+    const cur = Array.isArray(pin.images) ? pin.images : [];
+    await (supabase as any).from("pins").update({ images: cur.filter((u: string) => u !== url) }).eq("id", pin.id);
+    queryClient.invalidateQueries({ queryKey: ["active-plan-all-pins", idsKey] });
+  };
 
   const togglePublic = async (val: boolean) => {
     await supabase.from("routes").update({ is_shared: val } as any).eq("id", routeId);
@@ -585,6 +625,43 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false, onDelete, deleting 
     );
   };
 
+  // ── Blok "W Trakcie" pod miejscem: zdjecia (wszyscy uczestnicy) + Twoja notka + notki innych. ──
+  const renderPlaceNotesPhotos = (pin: any) => {
+    const others = notesMap.get(placeNoteKey(pin.place_name)) ?? [];
+    const imgs: string[] = Array.isArray(pin.images) ? pin.images : [];
+    const busy = uploadingPin === pin.id;
+    return (
+      <div className="px-4 pb-4 pt-3 border-t border-border/30 space-y-3 text-left">
+        {/* Zdjecia miejsca - wszyscy uczestnicy widza wszystkie, kazdy dodaje */}
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">{t("editor.photos_label", { defaultValue: "Zdjęcia miejsca" })}</p>
+          <div className="flex flex-wrap gap-2">
+            {imgs.map((url) => (
+              <div key={url} className="relative h-20 w-20 shrink-0 rounded-xl overflow-hidden bg-muted">
+                <img src={resolveStored(url) ?? url} alt="" className="w-full h-full object-cover" />
+                <button onClick={() => removePlacePhoto(pin, url)} aria-label="Usuń zdjęcie" className="absolute top-1 right-1 h-5 w-5 rounded-full bg-black/55 text-white flex items-center justify-center active:scale-90"><X className="h-3 w-3" /></button>
+              </div>
+            ))}
+            <label className={`h-20 w-20 shrink-0 rounded-xl border-2 border-dashed border-border/50 flex flex-col items-center justify-center gap-1 text-muted-foreground cursor-pointer active:scale-95 transition-transform ${busy ? "opacity-60 pointer-events-none" : ""}`}>
+              {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <Camera className="h-5 w-5" />}
+              <span className="text-[10px] font-semibold">{busy ? "..." : t("editor.add_photo", { defaultValue: "Dodaj" })}</span>
+              <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => { addPlacePhotos(pin, e.target.files); e.currentTarget.value = ""; }} />
+            </label>
+          </div>
+        </div>
+        {/* Twoja notka (edytor) */}
+        {renderRatingNote(pin.place_name)}
+        {/* Notki innych uczestnikow (awatar + tresc) */}
+        {others.some((n) => n.user_id !== user?.id) && (
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">{t("editor.others_notes", { defaultValue: "Notki uczestników" })}</p>
+            <PlaceNotes notes={others} excludeUserId={user?.id} />
+          </div>
+        )}
+      </div>
+    );
+  };
+
   // ── Wspolna karta miejsca (uzywana w karuzeli "Szczegoly" i pionowej liscie). ──
   // fullWidth=false -> karta karuzeli (w-[80vw]); true -> pelna szerokosc (lista stacked).
   const renderPlanCard = (pin: any, i: number, fullWidth: boolean, editable: boolean, withRating: boolean) => (
@@ -648,8 +725,8 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false, onDelete, deleting 
           </button>
         </div>
       )}
-      {/* Notatka USUNIETA z home (redukcja przeciazenia) - notki uzupelnia sie w Dzienniku. */}
-      {void withRating}
+      {/* Notki + zdjecia miejsca (W Trakcie, multi-user) - gdy withRating (aktywny wyjazd). */}
+      {withRating && renderPlaceNotesPhotos(pin)}
     </div>
   );
 

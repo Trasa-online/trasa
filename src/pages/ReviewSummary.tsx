@@ -2,6 +2,8 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { avatarSrc } from "@/lib/avatar";
 import { ROUTE_TAGS, ROUTE_TAGS_VISIBLE, placeTagsForCategory } from "@/lib/routeTags";
+import { fetchRouteNotesWithAuthors, notesByPlace, placeNoteKey } from "@/lib/placeNotes";
+import PlaceNotes from "@/components/route/PlaceNotes";
 import { haptics } from "@/hooks/useHaptics";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -550,6 +552,15 @@ const ReviewSummary = () => {
     },
     enabled: dayRouteIds.length > 0 && !!user,
   });
+
+  // NOTKI MULTI-USER: notki WSZYSTKICH uczestnikow (nie tylko wlasne) + profil autora (awatar).
+  // Pokazywane pod miejscem obok wlasnej. RLS pin_ratings czyta wszystkie gdy routes.is_shared.
+  const { data: allPlaceNotes = [] } = useQuery({
+    queryKey: ["pin-notes-all", idsKey],
+    queryFn: () => fetchRouteNotesWithAuthors(dayRouteIds),
+    enabled: dayRouteIds.length > 0,
+  });
+  const notesMap = useMemo(() => notesByPlace(allPlaceNotes), [allPlaceNotes]);
 
   useEffect(() => {
     if (route?.review_photos?.length) setPhotos(route.review_photos);
@@ -2339,10 +2350,17 @@ const ReviewSummary = () => {
               <Reorder.Group axis="y" values={workingPins} onReorder={setWorking} className="flex flex-col gap-2.5">
                 {workingPins.map((pin: any, i: number) => {
                   const noteText = (notes[rkey(activeRouteId!, pin.place_name)] ?? "").trim();
-                  const note = noteText ? (
-                    <div>
-                      <p className="text-sm font-semibold text-foreground">Twoja Notka</p>
-                      <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap mt-0.5">{noteText}</p>
+                  const otherNotes = notesMap.get(placeNoteKey(pin.place_name)) ?? [];
+                  const hasOthers = otherNotes.some((n) => n.user_id !== user?.id);
+                  const note = (noteText || hasOthers) ? (
+                    <div className="space-y-2.5">
+                      {noteText && (
+                        <div>
+                          <p className="text-sm font-semibold text-foreground">Twoja Notka</p>
+                          <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap mt-0.5">{noteText}</p>
+                        </div>
+                      )}
+                      {hasOthers && <PlaceNotes notes={otherNotes} excludeUserId={user?.id} />}
                     </div>
                   ) : undefined;
                   return (
