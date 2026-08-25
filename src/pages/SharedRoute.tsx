@@ -1163,15 +1163,15 @@ export default function SharedRoute() {
 
       {/* Dymek CZATU wyjazdu (prawa strona, nad dolnym CTA) - uczestnicy (owner/czlonek) przegaduja
           miejsca. Realtime. Ukryty w trybie wyboru miejsc. Prosba Nat 2026-08-26. */}
-      {canEdit && routeId && !choosing && (
+      {canEdit && id && !choosing && (
         <button onClick={() => setChatOpen(true)} aria-label="Czat wyjazdu"
           className="fixed right-4 z-40 h-14 w-14 rounded-full bg-primary text-white shadow-xl shadow-primary/30 flex items-center justify-center active:scale-90 transition-transform"
           style={{ bottom: "calc(84px + env(safe-area-inset-bottom, 0px))" }}>
           <MessageCircle className="h-6 w-6" strokeWidth={2.2} />
         </button>
       )}
-      {canEdit && routeId && (
-        <TripChatSheet open={chatOpen} onOpenChange={setChatOpen} routeId={routeId} tripTitle={route.title ?? cityLabel} />
+      {canEdit && id && (
+        <TripChatSheet open={chatOpen} onOpenChange={setChatOpen} routeId={id} tripTitle={route.title ?? cityLabel} />
       )}
 
       {/* Rozwinięta interaktywna mapa (zoom) - jak w widoku "Plan wyjazdu" */}
