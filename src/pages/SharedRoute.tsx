@@ -18,6 +18,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { PlacePhoto } from "@/components/PlacePhoto";
 import { RoutePlaceRow } from "@/components/route/RoutePlaceRow";
 import { fetchRouteNotesWithAuthors, notesByPlace, placeNoteKey } from "@/lib/placeNotes";
+import { fetchPinPhotos, addPinPhoto, deletePinPhoto, photosByPlace, pinPhotoKey, type PinPhoto } from "@/lib/pinPhotos";
 import PlaceNotes from "@/components/route/PlaceNotes";
 import { EmptyPlacesState } from "@/components/route/EmptyPlacesState";
 import AddPlaceSheet from "@/components/route/AddPlaceSheet";
@@ -350,6 +351,14 @@ export default function SharedRoute() {
   });
   const notesMap = notesByPlace(allNotes);
 
+  // Zdjecia per-miejsce z autorem (pin_photos) - etap "w trakcie".
+  const { data: pinPhotoRows = [] } = useQuery({
+    queryKey: ["shared-route-pin-photos", id],
+    queryFn: () => fetchPinPhotos(id!),
+    enabled: !!id,
+  });
+  const photosMap = photosByPlace(pinPhotoRows as PinPhoto[]);
+
   // Seed edytora wlasnych notek (etap w trakcie) z allNotes; klucz route_id::place_name.
   const nkeyOf = (pin: any) => `${pin.route_id}::${pin.place_name}`;
   useEffect(() => {
@@ -376,29 +385,25 @@ export default function SharedRoute() {
     }, 800);
   };
   // Zdjecia per-miejsce (pins.images) - wszyscy uczestnicy widza wszystkie, kazdy dodaje/usuwa (member RLS).
+  // Upload zdjecia -> bucket route-images -> pin_photos (route_id, place_name, user_id, url). Kazdy
+  // uczestnik dodaje; przy zdjeciu awatar autora. (pins.images zostaje zrodlem okladek osobno.)
   const addPlacePhotos = async (pin: any, files: FileList | null) => {
-    if (!user || !files || !files.length) return;
+    if (!user || !files || !files.length || !id) return;
     setUploadingPin(pin.id);
     try {
-      const urls: string[] = [];
       for (const file of Array.from(files)) {
-        const path = `${user.id}/${pin.route_id}/pin_${pin.id}_${Math.random().toString(36).slice(2)}.jpg`;
+        const path = `${user.id}/${id}/pin_${pin.id}_${Math.random().toString(36).slice(2)}.jpg`;
         const { error } = await supabase.storage.from("route-images").upload(path, file, { upsert: true, contentType: file.type || "image/jpeg" });
         if (error) { console.error("[SharedRoute] photo upload:", error.message); continue; }
         const { data } = supabase.storage.from("route-images").getPublicUrl(path);
-        if (data?.publicUrl) urls.push(data.publicUrl);
+        if (data?.publicUrl) await addPinPhoto(id, pin.place_name, user.id, data.publicUrl);
       }
-      if (urls.length) {
-        const cur = Array.isArray(pin.images) ? pin.images : [];
-        await (supabase as any).from("pins").update({ images: [...cur, ...urls] }).eq("id", pin.id);
-        queryClient.invalidateQueries({ queryKey: ["shared-route-pins", id] });
-      }
+      queryClient.invalidateQueries({ queryKey: ["shared-route-pin-photos", id] });
     } finally { setUploadingPin(null); }
   };
-  const removePlacePhoto = async (pin: any, url: string) => {
-    const cur = Array.isArray(pin.images) ? pin.images : [];
-    await (supabase as any).from("pins").update({ images: cur.filter((u: string) => u !== url) }).eq("id", pin.id);
-    queryClient.invalidateQueries({ queryKey: ["shared-route-pins", id] });
+  const removePlacePhoto = async (photoId: string) => {
+    await deletePinPhoto(photoId);
+    queryClient.invalidateQueries({ queryKey: ["shared-route-pin-photos", id] });
   };
 
   // Opis + tagi z tabeli places (wizytowka miejsca). Piny nie maja vibe_tags.
@@ -678,7 +683,7 @@ export default function SharedRoute() {
     // Etap W TRAKCIE (ongoing): zdjecia per-miejsce + Twoja notka (edytor) + notki innych (wszyscy).
     if (stage === "ongoing") {
       const k = nkeyOf(pin);
-      const imgs: string[] = Array.isArray(pin.images) ? pin.images : [];
+      const placePhotos = photosMap.get(pinPhotoKey(pin.place_name)) ?? [];
       const busy = uploadingPin === pin.id;
       return (
         <div className="space-y-3 mt-1">
@@ -707,10 +712,13 @@ export default function SharedRoute() {
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">Zdjęcia miejsca</p>
             <div className="flex flex-wrap gap-2">
-              {imgs.map((url) => (
-                <div key={url} className="relative w-[84px] aspect-[2/3] shrink-0 rounded-xl overflow-hidden bg-muted">
-                  <img src={resolveStored(url) ?? url} alt="" className="w-full h-full object-cover" />
-                  {canEdit && <button onClick={() => removePlacePhoto(pin, url)} aria-label="Usuń zdjęcie" className="absolute top-1 right-1 h-5 w-5 rounded-full bg-black/55 text-white flex items-center justify-center active:scale-90"><X className="h-3 w-3" /></button>}
+              {placePhotos.map((ph) => (
+                <div key={ph.id} className="relative w-[84px] aspect-[2/3] shrink-0 rounded-xl overflow-hidden bg-muted">
+                  <img src={resolveStored(ph.url) ?? ph.url} alt="" className="w-full h-full object-cover" />
+                  {/* Awatar osoby ktora dodala zdjecie (dol-lewo). */}
+                  <img src={avatarSrc(ph.avatar_url)} alt="" title={ph.username ?? undefined} className="absolute bottom-1 left-1 h-6 w-6 rounded-full object-cover border-2 border-white shadow-sm bg-secondary" />
+                  {/* Usun: autor zdjecia lub wlasciciel trasy. */}
+                  {(ph.user_id === user?.id || isOwner) && <button onClick={() => removePlacePhoto(ph.id)} aria-label="Usuń zdjęcie" className="absolute top-1 right-1 h-5 w-5 rounded-full bg-black/55 text-white flex items-center justify-center active:scale-90"><X className="h-3 w-3" /></button>}
                 </div>
               ))}
               {canEdit && (
