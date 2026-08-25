@@ -2591,28 +2591,34 @@ const ReviewSummary = () => {
     );
   }
 
-  // WIDOK UCZESTNIKA (czlonek, nie-wlasciciel) ROBOCZEJ trasy grupowej = PELNOEKRANOWY ekran
-  // propozycji (bez okladki i pill-tabow Miejsca/Galeria/Mapa). Zastapil dawny read-only podglad
-  // ReviewSummary na tym etapie (prosba Nat 2026-08-25). Uczestnik widzi miejsca w trasie (read-only,
-  // NIE usuwa cudzych) + dorzuca wlasne propozycje. Trasa opublikowana (wspomnienie) -> normalny widok.
-  // Zanim ustalimy czlonkostwo (query) - dla nie-wlasciciela roboczej trasy grupowej NIE renderuj
-  // starego widoku z okladka (unikamy migniecia). Krotki pusty ekran, potem fullscreen albo normalny.
-  if (!!route && !isOwner && (route as any).status !== "published" && !!(route as any).group_session_id && isGroupMemberLoading) {
+  // ETAP PROPOZYCJI (trip_type='planning'): WSPOLNY pelnoekranowy ekran propozycji dla HOSTA i
+  // uczestnikow (Miejsca=propozycje + Mapa, bez okladki/galerii, tytul "Propozycje miejsc dla {X}").
+  // Host ma guzik "Wybierz miejsca" (-> pins + trip_type='ongoing'). Redesign 2026-08-25 (Nat, 9 krokow).
+  // Opublikowany / ongoing / completed -> normalny widok ponizej.
+  const isPlanningStage = !!route && (route as any).trip_type === "planning" && (route as any).status !== "published";
+  // Zanim ustalimy czlonkostwo (query) dla nie-wlasciciela - nie renderuj starego widoku (bez migniecia).
+  if (isPlanningStage && !isOwner && !isGroupMember && isGroupMemberLoading) {
     return <div className="h-[100dvh] bg-[#fefefe]" />;
   }
-  if (!!route && !isOwner && isGroupMember && (route as any).status !== "published" && !!(route as any).group_session_id) {
+  if (isPlanningStage && (isOwner || isGroupMember)) {
     return (
       <TripProposalsSheet
         fullscreen
+        proposalsStage
         open
         onOpenChange={() => {}}
         routeId={routeId}
         city={route?.city ?? null}
-        isOwner={false}
+        isOwner={isOwner}
         pins={currentPins}
         tripTitle={(route as any)?.title ?? route?.city ?? "Wyjazd"}
         onBack={() => navigate(-1)}
         onChanged={() => { queryClient.invalidateQueries({ queryKey: ["review-all-pins"] }); }}
+        onPlacesChosen={() => {
+          // "Wybierz miejsca" -> pins + trip_type='ongoing'; odswiez route (spadnie do widoku "w trakcie").
+          queryClient.invalidateQueries({ queryKey: ["review-summary-route", routeId] });
+          queryClient.invalidateQueries({ queryKey: ["review-all-pins"] });
+        }}
       />
     );
   }

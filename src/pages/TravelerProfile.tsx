@@ -418,8 +418,10 @@ const TravelerProfile = () => {
         counts={{ saves: tr.saves, likes: tr.likes, views: tr.views }}
         isDraft={isRoboczy}
         mapPins={tr.tiles}
-        onOpen={() => openInCreator
-          ? navigate("/wyjazd/nowy", { state: { draftId: tr.id, city: tr.city, title: tr.title } })
+        onOpen={() => isRoboczy
+          // Robocze -> stage-aware /review-summary: trip_type='planning' -> Propozycje (fullscreen),
+          // 'ongoing' -> W Trakcie. (ReviewSummary czyta wlasne + is_shared; dziala solo i grupowo.)
+          ? navigate(`/review-summary?route=${tr.id}`)
           : navigate(`/route/${tr.id}`)}
         onEdit={tr.is_own ? () => navigate(`/review-summary?route=${tr.id}&edit=1`) : undefined}
         onDelete={tr.is_own ? () => handleDeleteTrip(tr) : undefined}

@@ -32,7 +32,7 @@ const keyOf = (p: { place_id?: string | null; place_name?: string | null }) =>
 // autor moze wycofac swoja. Wyszukiwarka Google + "Twoje zapisane" (z miasta wyjazdu) + wizytowka.
 export default function TripProposalsSheet({
   open, onOpenChange, routeId, city, isOwner, onChanged,
-  fullscreen = false, pins, tripTitle, onBack,
+  fullscreen = false, pins, tripTitle, onBack, proposalsStage = false, onPlacesChosen,
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
@@ -47,12 +47,19 @@ export default function TripProposalsSheet({
   pins?: any[];
   tripTitle?: string | null;
   onBack?: () => void;
+  // proposalsStage = ETAP PROPOZYCJI (trip_type='planning'): tytul "Propozycje miejsc dla {X}", host
+  // ma guzik "Wybierz miejsca" (-> pins + ongoing). onPlacesChosen = po przejsciu w trakcie.
+  proposalsStage?: boolean;
+  onPlacesChosen?: () => void;
 }) {
   const { user } = useAuth();
   const [query, setQuery] = useState("");
   const [detailPlace, setDetailPlace] = useState<any | null>(null);
   const [savePlace, setSavePlace] = useState<SavePlaceInput | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null); // id propozycji w trakcie akcji (spinner)
+  const [choosing, setChoosing] = useState(false);          // tryb "Wybierz miejsca" (host zaznacza)
+  const [chosen, setChosen] = useState<Set<string>>(new Set());
+  const [choosingBusy, setChoosingBusy] = useState(false);
 
   const enabled = (fullscreen || open) && !!routeId;
 
@@ -151,6 +158,20 @@ export default function TripProposalsSheet({
     await refetchProposals();
   };
 
+  // "Wybierz miejsca" (host): zaznaczone propozycje -> pins + trip_type='ongoing' (etap "w trakcie").
+  const toggleChosen = (id: string) => setChosen((prev) => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const confirmChoose = async () => {
+    if (!user || !routeId) return;
+    const picks = (proposals as RouteProposal[]).filter((p) => chosen.has(p.id));
+    if (!picks.length) { toast("Zaznacz co najmniej jedno miejsce"); return; }
+    setChoosingBusy(true); haptics.light();
+    for (const p of picks) { await promoteProposalToPin(routeId, user.id, p); }
+    await (supabase as any).from("routes").update({ trip_type: "ongoing" }).eq("id", routeId);
+    setChoosingBusy(false); setChoosing(false); haptics.success();
+    toast.success("Miejsca wybrane - wyjazd w trakcie!");
+    onPlacesChosen?.();
+  };
+
   // ── wiersz wyszukiwarki / zapisanych: klik = wizytowka, Google w kolku, + = dodaj do puli ──
   const renderAddRow = (opts: { rowKey: string; place: any; subtitle?: string | null }) => {
     const added = proposedKeys.has(keyOf(opts.place));
@@ -201,7 +222,13 @@ export default function TripProposalsSheet({
           className="h-9 w-9 flex items-center justify-center shrink-0 rounded-full bg-white shadow-sm border border-black/[0.04] active:scale-90 transition-transform">
           <GoogleGlyph className="h-[18px] w-[18px]" />
         </button>
-        {busy ? (
+        {choosing ? (
+          // Tryb "Wybierz miejsca": checkbox zaznaczenia (host wybiera co wejdzie do trasy).
+          <button onClick={() => toggleChosen(prop.id)} aria-label={chosen.has(prop.id) ? "Odznacz" : "Zaznacz"}
+            className={`h-7 w-7 rounded-full flex items-center justify-center shrink-0 transition-colors ${chosen.has(prop.id) ? "bg-primary text-primary-foreground" : "border-2 border-border"}`}>
+            {chosen.has(prop.id) && <Check className="h-4 w-4 stroke-[3]" />}
+          </button>
+        ) : busy ? (
           <span className="h-8 w-8 flex items-center justify-center shrink-0"><Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /></span>
         ) : inTrip ? (
           // Miejsce jest juz w trasie - info + (host) mozliwosc uprzatniecia duplikatu propozycji.
@@ -263,7 +290,10 @@ export default function TripProposalsSheet({
             <ArrowLeft className="h-4 w-4 text-foreground" />
           </button>
         ) : refreshBtn}
-        <h2 className="text-[18px] font-semibold text-foreground truncate">{fullscreen ? (tripTitle || "Propozycje miejsc") : "Propozycje miejsc"}</h2>
+        <div className="min-w-0 flex-1 text-center px-1">
+          <h2 className="text-[16px] font-semibold text-foreground truncate leading-tight">{proposalsStage ? "Propozycje miejsc" : (fullscreen ? (tripTitle || "Propozycje miejsc") : "Propozycje miejsc")}</h2>
+          {proposalsStage && tripTitle && <p className="text-[12px] text-muted-foreground truncate leading-tight">{`dla ${tripTitle}`}</p>}
+        </div>
         {fullscreen ? refreshBtn : (
           <button onClick={() => onOpenChange(false)} aria-label="Zamknij"
             className="h-9 w-9 rounded-full border border-black/15 bg-white flex items-center justify-center active:opacity-60 transition-opacity shrink-0">
@@ -337,6 +367,27 @@ export default function TripProposalsSheet({
           </div>
         )}
       </div>
+
+      {/* Etap propozycji (HOST): guzik "Wybierz miejsca" -> tryb zaznaczania -> pins + trip_type='ongoing'.
+          (Wyszukiwarka u gory = "Dodaj nowe miejsce"; osobny guzik + Mapa dojda w kolejnej fazie.) */}
+      {fullscreen && proposalsStage && isOwner && (
+        <div className="shrink-0 px-5 pt-2 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] border-t border-border/40 bg-[#fefefe]">
+          {choosing ? (
+            <div className="flex items-center gap-2">
+              <button onClick={() => { setChoosing(false); setChosen(new Set()); }} className="px-4 h-12 rounded-2xl bg-secondary text-secondary-foreground font-bold text-sm active:scale-[0.98] transition-transform">Anuluj</button>
+              <button onClick={confirmChoose} disabled={choosingBusy || chosen.size === 0}
+                className={`flex-1 h-12 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition-transform ${choosingBusy || chosen.size === 0 ? "bg-primary/40 text-white/80" : "bg-primary text-primary-foreground active:scale-[0.98]"}`}>
+                {choosingBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4 stroke-[3]" />} Zatwierdź{chosen.size ? ` (${chosen.size})` : ""}
+              </button>
+            </div>
+          ) : (
+            <button onClick={() => { if (!proposals.length) { toast("Najpierw dodaj miejsca do propozycji"); return; } haptics.light(); setChoosing(true); }}
+              className="w-full h-12 rounded-2xl bg-primary text-primary-foreground font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform">
+              <Check className="h-4 w-4 stroke-[3]" /> Wybierz miejsca
+            </button>
+          )}
+        </div>
+      )}
     </>
   );
 

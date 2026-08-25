@@ -11,7 +11,7 @@ import { avatarSrc } from "@/lib/avatar";
 import CityCountryPicker, { defaultCityIndex } from "@/components/create/CityDrum";
 import AddPeoplePicker, { type PersonLite } from "@/components/create/AddPeoplePicker";
 import { fetchSavedPlaces, createListFromSavedPlaces, type SavedPlace, type PlaceForList } from "@/lib/placeLists";
-import { createWyjazdFromPlaces } from "@/lib/createWyjazd";
+import { createWyjazdFromPlaces, createEmptyWyjazd } from "@/lib/createWyjazd";
 import { inviteUsersToRoute } from "@/lib/groupInvite";
 import { citiesForCountry } from "@/lib/tripCountries";
 import { usePlaceSearch } from "@/hooks/usePlaceSearch";
@@ -211,8 +211,29 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
     navigate(`/lista/${id}`);
   };
 
-  // Tworzenie wyjazdu W ARKUSZU (jak listy) - NIE nawigujemy do pelnoekranowego ComposeWyjazd.
-  // Miejsca = zaznaczone zapisane + dodane z Google (manual). Zaproszeni -> sesja grupowa.
+  // Trip step "Dalej": PRZYSZLY wyjazd = tworzymy PUSTY wyjazd (etap propozycji) i wchodzimy do
+  // widoku wyjazdu (miejsca dodaje sie tam jako propozycje). PRZESZLY = stary flow z wyborem miejsc
+  // (tripPick -> edytor wspomnienia). Redesign 2026-08-25 (Nat): tworzenie = tylko meta.
+  const proceedTrip = async () => {
+    if (tripMode === "past") { setStep("tripPick"); return; }
+    if (!user) { close(); navigate("/auth"); return; }
+    setCreating(true);
+    haptics.light();
+    const id = await createEmptyWyjazd(user.id, tripCity, tripName.trim() || `Wyjazd do ${tripCity}`, {});
+    if (!id) { setCreating(false); haptics.error(); toast.error("Nie udało się utworzyć wyjazdu"); return; }
+    if (tripPeople.length) {
+      try { await inviteUsersToRoute({ id, city: tripCity ?? null, title: tripName.trim() || null, group_session_id: null }, tripPeople.map((p) => p.id), user.id); }
+      catch (e: any) { console.warn("[CreateFlowSheet] invite failed:", e?.message ?? e); }
+    }
+    setCreating(false);
+    haptics.success();
+    queryClient.invalidateQueries({ queryKey: ["profile-trip-feed", user.id] });
+    close();
+    // Wejscie do widoku wyjazdu = etap PROPOZYCJI (ReviewSummary dispatch po trip_type='planning').
+    navigate(`/review-summary?route=${id}`);
+  };
+
+  // Tworzenie PRZESZLEGO wyjazdu (wspomnienie) z wybranymi miejscami - stary flow (tripPick).
   const createTrip = async () => {
     if (!user) { close(); navigate("/auth"); return; }
     const savedSel = savedPlaces.filter((p) => selected.has(p.id)).map(toPlaceForList);
@@ -426,7 +447,7 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
         {/* ── WYJAZD: nazwa + kraj/miasto + osoby ── */}
         {step === "trip" && (
           <>
-            <Header title={tripMode === "past" ? "Przeszły wyjazd" : "Zaplanuj wyjazd"} onBack={() => setStep("tripMode")} onNext={() => setStep("tripPick")} />
+            <Header title={tripMode === "past" ? "Przeszły wyjazd" : "Zaplanuj wyjazd"} onBack={() => setStep("tripMode")} onNext={proceedTrip} nextLabel={creating ? "..." : (tripMode === "past" ? "Dalej" : "Utwórz")} nextEnabled={!creating} />
             <div className="flex-1 min-h-0 overflow-y-auto pb-[max(16px,env(safe-area-inset-bottom))]">
               <div className="px-5 pt-1">
                 <div className="relative">

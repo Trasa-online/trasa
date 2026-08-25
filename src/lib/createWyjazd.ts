@@ -58,6 +58,38 @@ async function pickCoverPhoto(places: WyjazdPlaceInput[]): Promise<string | null
   return null;
 }
 
+// PUSTY wyjazd (etap PROPOZYCJI, redesign 2026-08-25): bez pinow. Draft/planning; grupowy gdy
+// groupSessionId. Miejsca dodaje sie potem jako propozycje (route_proposals) w widoku wyjazdu, a
+// "Wybierz miejsca" promuje wybrane do pins + trip_type='ongoing'. Zwraca id albo null.
+export async function createEmptyWyjazd(
+  userId: string,
+  city: string | null,
+  title: string,
+  opts?: { groupSessionId?: string | null },
+): Promise<string | null> {
+  const { data: route, error } = await (supabase as any)
+    .from("routes")
+    .insert({
+      user_id: userId,
+      title: title || city || "Wyjazd",
+      city: city || null,
+      trip_type: "planning",
+      status: "draft",
+      day_number: 1,
+      // Grupowy zostaje is_shared=true (RLS czlonkostwa); solo pusty draft = prywatny.
+      is_shared: !!opts?.groupSessionId,
+      list_cover_url: null,
+      group_session_id: opts?.groupSessionId ?? null,
+    })
+    .select("id")
+    .single();
+  if (error || !route) {
+    console.error("[createWyjazd] empty route insert failed:", error?.message ?? error);
+    return null;
+  }
+  return route.id as string;
+}
+
 export async function createWyjazdFromPlaces(
   userId: string,
   city: string | null,
