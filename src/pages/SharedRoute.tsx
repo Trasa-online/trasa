@@ -577,7 +577,7 @@ export default function SharedRoute() {
     // Toast: miniaturka (lewo, powiekszona) + nazwa + Cofnij. toast.custom = pelna kontrola (akcja
     // + rozmiar miniatury), bo sonner action nie zawsze renderowal sie z customowa trescia.
     toast.custom((tid) => (
-      <div className="flex items-center gap-3 w-full max-w-[360px] bg-card rounded-2xl shadow-lg border border-border/40 pl-2.5 pr-2 py-2.5">
+      <div className="flex items-center gap-3 w-full max-w-[360px] bg-white rounded-2xl shadow-lg pl-2.5 pr-2 py-2.5">
         <PlacePhoto pin={pin} className="h-12 w-12 rounded-xl object-cover shrink-0" />
         <div className="min-w-0 flex-1">
           <p className="text-[14px] font-semibold text-foreground truncate">{pin.place_name}</p>
@@ -591,7 +591,7 @@ export default function SharedRoute() {
           }}
           className="shrink-0 text-[13px] font-bold text-primary px-3 py-2 rounded-xl active:bg-primary/10 transition-colors">Cofnij</button>
       </div>
-    ));
+    ), { unstyled: true });
   };
 
   // #3: usun zdjecie z galerii wyjazdu (review_photos). Toast + "Cofnij".
