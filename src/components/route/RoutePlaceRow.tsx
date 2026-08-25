@@ -31,8 +31,9 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
   return (
     <div className="flex gap-3 bg-background py-4 border-b border-border/40 last:border-b-0">
       {dragHandle}
-      {/* Peachy kafelek ikony/zdjecia (bez numeru - wg Figmy) */}
-      <button onClick={onOpen} className="h-16 w-16 shrink-0 rounded-2xl overflow-hidden bg-[#fcede3] active:opacity-90">
+      {/* Peachy kafelek ikony/zdjecia - PIONOWY prostokat 2:3 (redesign 2026-08-25, spojne z okladkami
+          miniaturek/kart). self-start: przyklejony do gory wiersza. */}
+      <button onClick={onOpen} className="w-16 h-24 shrink-0 self-start rounded-2xl overflow-hidden bg-[#fcede3] active:opacity-90">
         <PlacePhoto pin={pin} className="w-full h-full object-cover" />
       </button>
       <div className="flex-1 min-w-0">
