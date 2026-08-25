@@ -310,8 +310,8 @@ export default function SharedList() {
   const renderCards = () => (
     <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory scrollbar-none -mx-5 px-5 pb-2">
       {items.map((pin: any, i: number) => (
-        <div key={pin.id} className="snap-center shrink-0 w-[80vw] max-w-[320px] rounded-2xl bg-secondary border border-border/40 overflow-hidden shadow-sm flex flex-col">
-          <div className="relative w-full aspect-[4/3] bg-muted">
+        <div key={pin.id} className="snap-center shrink-0 w-[70vw] max-w-[280px] rounded-2xl bg-secondary border border-border/40 overflow-hidden shadow-sm flex flex-col">
+          <div className="relative w-full aspect-[2/3] bg-muted">
             <button onClick={() => openDetail(pin)} className="block w-full h-full text-left active:opacity-90 transition-opacity">
               <PlacePhoto pin={{ ...pin, category: catOf(pin), photo_url: pinCover(pin) }} className="w-full h-full object-cover" />
             </button>
