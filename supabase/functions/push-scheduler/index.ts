@@ -19,10 +19,14 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // Guard: tylko service_role (cron). verify_jwt=false -> sprawdzamy sami, inaczej
-  // ktokolwiek moglby odpalic broadcast push do userow.
+  // Guard: cron (x-trigger-secret z Vault, jak send-push) LUB service_role. verify_jwt=false ->
+  // sprawdzamy sami, inaczej ktokolwiek moglby odpalic broadcast push do userow.
+  // (2026-08-26: cron pg_net nie mial naglowka auth -> 401; teraz wysyla x-trigger-secret.)
+  const triggerSecret = Deno.env.get("PUSH_TRIGGER_SECRET") ?? "";
+  const isTrigger = triggerSecret.length > 0 && req.headers.get("x-trigger-secret") === triggerSecret;
   const _auth = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "");
-  if (_auth !== Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")) {
+  const isService = _auth === Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!isTrigger && !isService) {
     return new Response(JSON.stringify({ error: "unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 
