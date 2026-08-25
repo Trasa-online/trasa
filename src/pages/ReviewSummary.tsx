@@ -28,6 +28,7 @@ import { RoutePlaceRow } from "@/components/route/RoutePlaceRow";
 import SavePlaceSheet, { type SavePlaceInput } from "@/components/plan-wizard/SavePlaceSheet";
 import { useSavedPlaces } from "@/hooks/useSavedPlaces";
 import InviteFriendsSheet from "@/components/route/InviteFriendsSheet";
+import TripProposalsSheet from "@/components/route/TripProposalsSheet";
 import { compressImage } from "@/lib/imageCompression";
 import { isHeic, convertHeicToJpeg } from "@/lib/heicConvert";
 import { format, parseISO, isValid, addDays } from "date-fns";
@@ -224,6 +225,7 @@ const ReviewSummary = () => {
   const [planTab, setPlanTab] = useState<"miejsca" | "galeria" | "mapa">("miejsca");
   const [editingStepper, setEditingStepper] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [proposalsOpen, setProposalsOpen] = useState(false);
   // Fokus w polu notki -> chowamy dolny pasek CTA (klawiatura zabiera miejsce, guziki przeszkadzaja).
   const [noteFocused, setNoteFocused] = useState(false);
   const [localReviewed, setLocalReviewed] = useState(false);
@@ -519,6 +521,18 @@ const ReviewSummary = () => {
       const { data } = await (supabase as any).from("group_session_members")
         .select("user_id").eq("session_id", route!.group_session_id).eq("user_id", user!.id).maybeSingle();
       return !!data;
+    },
+  });
+
+  // Liczba propozycji miejsc w puli wyjazdu (route_proposals) - badge na guziku hosta. Odswiezane
+  // przy otwarciu/zamknieciu arkusza propozycji (proposalsOpen w queryKey).
+  const { data: proposalsCount = 0 } = useQuery({
+    queryKey: ["route-proposals-count", routeId, proposalsOpen],
+    enabled: !!routeId && !!(route as any)?.group_session_id,
+    queryFn: async () => {
+      const { count } = await (supabase as any).from("route_proposals")
+        .select("id", { count: "exact", head: true }).eq("route_id", routeId);
+      return count ?? 0;
     },
   });
 
@@ -2182,6 +2196,16 @@ const ReviewSummary = () => {
                 >
                   <Users className="h-4 w-4" /> Zaproś znajomych
                 </button>
+                {/* Propozycje uczestnikow - host przeglada wspolna pule i dodaje wybrane do trasy.
+                    Tylko wyjazd grupowy (ma group_session_id po zaproszeniu znajomych). */}
+                {(route as any)?.group_session_id && (
+                  <button
+                    onClick={() => { haptics.light(); setProposalsOpen(true); }}
+                    className="w-full py-3 rounded-2xl bg-secondary text-secondary-foreground font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
+                  >
+                    <MapPin className="h-4 w-4" /> Propozycje uczestników{proposalsCount ? ` (${proposalsCount})` : ""}
+                  </button>
+                )}
               </div>
             )}
             {isOwner && routeId && (
@@ -2190,6 +2214,18 @@ const ReviewSummary = () => {
                 onOpenChange={setInviteOpen}
                 route={{ id: routeId, city: route?.city ?? null, title: (route as any)?.title ?? null, group_session_id: (route as any)?.group_session_id ?? null }}
                 onInvited={() => { queryClient.invalidateQueries({ queryKey: ["review-summary-route", routeId] }); }}
+              />
+            )}
+            {/* Wspolna pula propozycji miejsc (host promuje do trasy, uczestnicy dorzucaja). Wspoldzielony
+                arkusz - owner (przeglada+dodaje) i czlonek (dorzuca), rola przez isOwner. */}
+            {routeId && (isOwner || isGroupMember) && (route as any)?.group_session_id && (
+              <TripProposalsSheet
+                open={proposalsOpen}
+                onOpenChange={setProposalsOpen}
+                routeId={routeId}
+                city={route?.city ?? null}
+                isOwner={isOwner}
+                onChanged={() => { queryClient.invalidateQueries({ queryKey: ["review-all-pins"] }); }}
               />
             )}
             {/* Wiersz "Widoczność" usuniety (2026-07-30): wszystkie trasy sa publiczne by default. */}
@@ -2220,6 +2256,15 @@ const ReviewSummary = () => {
           ) : !isOwner ? (
             /* UCZESTNIK: read-only podglad miejsc (Lista/Karty) - bez reorder, kosza, checklisty. */
             <div className="pt-1">
+              {/* Czlonek grupy: dorzuca propozycje miejsc do wspolnej puli (host wybiera, co wejdzie). */}
+              {isGroupMember && (route as any)?.group_session_id && (
+                <button
+                  onClick={() => { haptics.light(); setProposalsOpen(true); }}
+                  className="w-full mb-3 py-3 rounded-2xl bg-primary text-primary-foreground font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
+                >
+                  <Plus className="h-4 w-4" strokeWidth={2.5} /> Zaproponuj miejsca
+                </button>
+              )}
               <div className="flex items-center justify-end pb-3">
                 <div className="flex rounded-full bg-muted p-0.5">
                   <button onClick={() => setPlanView("list")} aria-label={t("a11y.list_view")} className={`px-2.5 py-1.5 rounded-full transition-colors ${planView === "list" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
