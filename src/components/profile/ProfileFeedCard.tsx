@@ -41,6 +41,7 @@ export function ProfileFeedCard({
   saved,
   description,
   tags,
+  badge,
 }: {
   avatarUrl?: string | null;
   fallback?: string;
@@ -64,6 +65,7 @@ export function ProfileFeedCard({
   liked?: boolean;
   onSave?: () => void;
   saved?: boolean;
+  badge?: React.ReactNode; // chip przy tytule (np. "Nowe miejsce!" na zapisanej liscie)
 }) {
   const [mapOpen, setMapOpen] = useState(false);
   const mapUrl = mapPins && mapPins.length ? buildTripStaticMapUrl(mapPins) : null;
@@ -103,6 +105,7 @@ export function ProfileFeedCard({
                 {timestamp && <span className="shrink-0 pt-1 text-[11px] text-muted-foreground">{timestamp}</span>}
               </div>
             )}
+            {badge && <div className="mt-1.5">{badge}</div>}
           </div>
         </div>
 

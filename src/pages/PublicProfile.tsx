@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { toggleRouteLike, toggleListLike } from "@/lib/likes";
+import { saveCollectionDb, unsaveCollectionDb } from "@/lib/savedCollections";
 import { parseISO, format } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
 import { ArrowLeft, LayoutGrid, MapPinned } from "lucide-react";
@@ -69,7 +70,7 @@ export default function PublicProfile() {
     queryFn: async () => {
       const { data: cols } = await (supabase as any)
         .from("discovery_collections")
-        .select("id, title, city, list_status, views_count, saves_count, likes_count, updated_at")
+        .select("id, title, city, list_status, description, tags, views_count, saves_count, likes_count, updated_at")
         .eq("user_id", profile!.id).eq("kind", "ranking")
         // TYLKO publiczne polecajki (visited). Prywatne wishlisty "Do zobaczenia" (to_visit) NIGDY
         // na cudzym profilu - guard nawet gdyby jakaś została jako public+approved.
@@ -222,11 +223,12 @@ export default function PublicProfile() {
     const cur = isListSaved(l.id);
     const next = new Set(savedListIds);
     const dates = (() => { try { return JSON.parse(localStorage.getItem("trasa_saved_collections_dates") || "{}"); } catch { return {}; } })();
-    if (cur) { next.delete(l.id); delete dates[l.id]; toast("Usunięto z zapisanych"); }
+    if (cur) { next.delete(l.id); delete dates[l.id]; toast("Usunięto z zapisanych"); void unsaveCollectionDb(user.id, l.id); }
     else {
       next.add(l.id); dates[l.id] = new Date().toISOString(); toast.success("Zapisano listę");
       void (supabase as any).rpc("increment_collection_saves", { p_collection_id: l.id });
       void (supabase as any).rpc("notify_collection_saved", { p_collection_id: l.id });
+      void saveCollectionDb(user.id, l.id);
     }
     try {
       localStorage.setItem("trasa_saved_collections", JSON.stringify([...next]));
@@ -326,6 +328,8 @@ export default function PublicProfile() {
                   eyebrow=""
                   timestamp={shortRelativeTime(l.updated_at)}
                   title={l.title || t("feed.list_fallback", "Lista miejsc")}
+                  description={l.description}
+                  tags={Array.isArray(l.tags) ? l.tags : []}
                   tiles={l.tiles}
                   counts={{ saves: (l.saves_count ?? 0) + delta(isListSaved(l.id), initSavedLists.has(l.id)), likes: (l.likes_count ?? 0) + delta(isListLiked(l.id), initLikedLists.has(l.id)), views: l.views_count ?? 0 }}
                   onOpen={() => navigate(`/lista/${l.id}`)}

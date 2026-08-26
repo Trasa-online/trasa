@@ -12,6 +12,7 @@ import { MapPin, X, Globe, Sparkles, Pencil, Trash2, ChevronRight, ChevronUp, Ar
 import { API_BASE } from "@/lib/platform";
 import { useDebounce } from "@/hooks/useDebounce";
 import { expandCity } from "@/lib/cities";
+import { saveCollectionDb, unsaveCollectionDb } from "@/lib/savedCollections";
 import { MAIN_CATEGORIES, getDbCategoriesFor } from "@/lib/categories";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import FullCalendarPicker from "@/components/plan-wizard/FullCalendarPicker";
@@ -1717,11 +1718,13 @@ export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityCh
       const dates: Record<string, string> = (() => { try { return JSON.parse(localStorage.getItem("trasa_saved_collections_dates") || "{}"); } catch { return {}; } })();
       if (set.has(colId)) {
         set.delete(colId); delete dates[colId];
+        if (user) void unsaveCollectionDb(user.id, colId);
         toast(t("toast.removed_saved", "Usunięto z zapisanych"), {
           action: { label: t("undo", "Cofnij"), onClick: () => toggleSaveCol(colId) },
         });
       } else {
         set.add(colId); dates[colId] = new Date().toISOString();
+        if (user) { void saveCollectionDb(user.id, colId); void (supabase as any).rpc("increment_collection_saves", { p_collection_id: colId }); void (supabase as any).rpc("notify_collection_saved", { p_collection_id: colId }); }
         toast.success(t("toast.saved"));
       }
       localStorage.setItem("trasa_saved_collections", JSON.stringify([...set]));

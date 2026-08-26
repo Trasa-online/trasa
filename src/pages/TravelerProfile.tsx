@@ -5,7 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import { Settings, Camera, UserCircle2, ArrowRight, Bell, Share2, Search, LayoutGrid, MapPinned } from "lucide-react";
+import { Settings, Camera, UserCircle2, ArrowRight, Bell, Share2, Search, LayoutGrid, MapPinned, Bookmark } from "lucide-react";
 import { SavedPlacesGrid } from "@/components/saved/SavedPlacesGrid";
 import TabHeader from "@/components/layout/TabHeader";
 import { toast } from "sonner";
@@ -24,10 +24,9 @@ import InviteFriendsBanner from "@/components/social/InviteFriendsBanner";
 import { Camera as CapCamera, CameraResultType, CameraSource } from "@capacitor/camera";
 import { ProfileFeedCard } from "@/components/profile/ProfileFeedCard";
 import { SpontawayTabIcon } from "@/components/profile/SpontawayTabIcon";
-import { SavedRoutes, SavedCollections } from "@/components/home/DiscoveryFeed";
-import { ALL_CITIES } from "@/components/home/CitySelect";
 import { shortRelativeTime } from "@/lib/relativeTime";
 import { countryForCity } from "@/lib/tripCountries";
+import { unsaveCollectionDb, migrateLocalSavedCollections } from "@/lib/savedCollections";
 import { parseISO, format } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
 import { pinCoverKeys, fetchPlacePhotosForKeys, pickPlaceCover } from "@/lib/placePhotoSocial";
@@ -389,6 +388,89 @@ const TravelerProfile = () => {
     },
   });
 
+  // Feed ZAPISANYCH LIST (od innych) - ten sam UI co wlasne listy (ProfileFeedCard) + chip
+  // "Nowe miejsce!" gdy autor dodal miejsca po ostatnim obejrzeniu (seen_item_count). DB source.
+  const { data: savedListCards = [] } = useQuery({
+    queryKey: ["profile-saved-list-feed", user?.id],
+    enabled: !!user?.id,
+    queryFn: async () => {
+      await migrateLocalSavedCollections(user!.id); // jednorazowo: stare zapisy z localStorage -> DB
+      const { data: saved } = await (supabase as any).from("saved_collections")
+        .select("collection_id, created_at, seen_item_count").eq("user_id", user!.id).order("created_at", { ascending: false });
+      const rows0 = (saved ?? []) as any[];
+      const ids = rows0.map((r) => r.collection_id).filter(Boolean);
+      if (!ids.length) return [];
+      const { data: cols } = await (supabase as any).from("discovery_collections")
+        .select("id, title, city, description, tags, author_name, author_avatar, user_id, saves_count, likes_count, views_count, updated_at").in("id", ids);
+      const colRows = (cols ?? []) as any[];
+      const { data: items } = await (supabase as any).from("discovery_items")
+        .select("id, collection_id, place_name, category, google_place_id, photo_url, order_index").in("collection_id", ids).order("order_index", { ascending: true });
+      const allItems = (items ?? []) as any[];
+      const keys = Array.from(new Set(allItems.flatMap((it) => pinCoverKeys(it)))).filter(Boolean);
+      const photoMap = keys.length ? await fetchPlacePhotosForKeys(keys) : null;
+      const byCol: Record<string, any[]> = {};
+      for (const it of allItems) { const _cover = pickPlaceCover(photoMap, pinCoverKeys(it)); (byCol[it.collection_id] ??= []).push({ ...it, _cover }); }
+      const seenMap: Record<string, number> = {}; rows0.forEach((r) => { seenMap[r.collection_id] = r.seen_item_count ?? 0; });
+      // Zachowaj kolejnosc zapisu (najnowsze u gory).
+      return ids.map((cid) => colRows.find((c) => c.id === cid)).filter(Boolean).map((c: any) => {
+        const tiles = byCol[c.id] ?? [];
+        return { ...c, tiles, isNew: tiles.length > (seenMap[c.id] ?? 0) };
+      });
+    },
+  });
+
+  // Feed ZAPISANYCH WYJAZDOW (od innych) - ten sam UI co Wspomnienia (ProfileFeedCard), z autorem trasy.
+  const { data: savedTripCards = [] } = useQuery({
+    queryKey: ["profile-saved-trip-feed", user?.id],
+    enabled: !!user?.id,
+    queryFn: async () => {
+      const { data: saved } = await (supabase as any).from("saved_routes")
+        .select("route_id, created_at").eq("user_id", user!.id).order("created_at", { ascending: false });
+      const ids = ((saved ?? []) as any[]).map((r) => r.route_id).filter(Boolean);
+      if (!ids.length) return [];
+      const sel = "id, title, city, start_date, views, saves_count, likes_count, created_at, user_id, is_shared, trip_type, status, tags, review_narrative, ai_summary";
+      const { data: rows } = await (supabase as any).from("routes").select(sel).in("id", ids);
+      const rowRows = (rows ?? []) as any[];
+      if (!rowRows.length) return [];
+      const pinsRes = await (supabase as any).from("pins").select("id, route_id, place_name, category, photo_url, image_url, images, user_photo_urls, pin_order, latitude, longitude").in("route_id", ids).order("pin_order", { ascending: true });
+      const allPins = (pinsRes.data ?? []) as any[];
+      const keys = Array.from(new Set(allPins.flatMap((p) => pinCoverKeys(p)))).filter(Boolean);
+      const photoMap = keys.length ? await fetchPlacePhotosForKeys(keys) : null;
+      const pinsByRoute: Record<string, any[]> = {};
+      for (const p of allPins) { const _cover = pickPlaceCover(photoMap, pinCoverKeys(p)); (pinsByRoute[p.route_id] ??= []).push({ ...p, _cover }); }
+      // Autorzy tras (awatar + imie) - zapisane sa cudze, wiec pokazujemy autora, nie siebie.
+      const authorIds = Array.from(new Set(rowRows.map((r) => r.user_id).filter(Boolean)));
+      const { data: authors } = authorIds.length
+        ? await supabase.from("profiles").select("id, username, first_name, avatar_url").in("id", authorIds)
+        : { data: [] as any[] };
+      const authorById = new Map((authors ?? []).map((a: any) => [a.id, a]));
+      return ids.map((rid) => rowRows.find((r) => r.id === rid)).filter(Boolean).map((rep: any) => {
+        const a = authorById.get(rep.user_id);
+        return {
+          id: rep.id, city: rep.city, title: rep.title, start_date: rep.start_date, created_at: rep.created_at,
+          description: (rep.review_narrative || rep.ai_summary || "").trim() || null,
+          tags: Array.isArray(rep.tags) ? rep.tags : [],
+          tiles: pinsByRoute[rep.id] ?? [], saves: Number(rep.saves_count ?? 0), likes: Number(rep.likes_count ?? 0), views: Number(rep.views ?? 0),
+          author_avatar: a?.avatar_url ?? null, author_name: a?.first_name || a?.username || "Podróżnik",
+        };
+      });
+    },
+  });
+
+  const handleUnsaveList = async (colId: string) => {
+    if (!user) return;
+    await unsaveCollectionDb(user.id, colId);
+    try { const set = new Set<string>(JSON.parse(localStorage.getItem("trasa_saved_collections") || "[]")); set.delete(colId); localStorage.setItem("trasa_saved_collections", JSON.stringify([...set])); } catch { /* brak localStorage */ }
+    queryClient.invalidateQueries({ queryKey: ["profile-saved-list-feed", user.id] });
+    toast("Usunięto z zapisanych");
+  };
+  const handleUnsaveTrip = async (routeId: string) => {
+    if (!user) return;
+    await (supabase as any).from("saved_routes").delete().eq("user_id", user.id).eq("route_id", routeId);
+    queryClient.invalidateQueries({ queryKey: ["profile-saved-trip-feed", user.id] });
+    toast("Usunięto z zapisanych");
+  };
+
   if (loading) return null;
   if (!user || user.is_anonymous) return <GuestProfile />;
 
@@ -430,6 +512,50 @@ const TravelerProfile = () => {
       />
     );
   };
+
+  // Zapisany (cudzy) wyjazd - ten sam UI co Wspomnienia, ale autor = tworca trasy, akcja = odpiecie.
+  const renderSavedTripCard = (tr: any) => {
+    const dateLabel = tr.start_date ? format(parseISO(tr.start_date), "d LLLL yyyy", { locale: dateLocale() }) : "";
+    const eyebrow = [countryForCity(tr.city), tr.city, dateLabel].filter(Boolean).join(" · ");
+    return (
+      <ProfileFeedCard
+        key={tr.id}
+        avatarUrl={tr.author_avatar}
+        fallback={tr.author_name}
+        eyebrow={eyebrow}
+        timestamp={shortRelativeTime(tr.created_at)}
+        title={tr.title || (tr.city ? t("feed.trip_fallback", { city: tr.city, defaultValue: `Wyjazd do ${tr.city}` }) : t("feed.trip_fallback_generic", "Wyjazd"))}
+        description={tr.description}
+        tags={tr.tags}
+        tiles={tr.tiles}
+        counts={{ saves: tr.saves, likes: tr.likes, views: tr.views }}
+        mapPins={tr.tiles}
+        onOpen={() => navigate(`/route/${tr.id}`)}
+        onSave={() => handleUnsaveTrip(tr.id)}
+        saved
+      />
+    );
+  };
+
+  // Zapisana (cudza) lista - ten sam UI co wlasne listy, autor = tworca, chip "Nowe miejsce!", odpiecie.
+  const renderSavedListCard = (l: any) => (
+    <ProfileFeedCard
+      key={l.id}
+      avatarUrl={l.author_avatar}
+      fallback={l.author_name || "?"}
+      eyebrow=""
+      timestamp={shortRelativeTime(l.updated_at)}
+      title={l.title || t("feed.list_fallback", "Lista miejsc")}
+      description={l.description}
+      tags={Array.isArray(l.tags) ? l.tags : []}
+      tiles={l.tiles}
+      counts={{ saves: l.saves_count ?? 0, likes: l.likes_count ?? 0, views: l.views_count ?? 0 }}
+      badge={l.isNew ? <span className="inline-flex items-center rounded-full bg-primary text-white px-2.5 py-1 text-[11.5px] font-bold">Nowe miejsce!</span> : undefined}
+      onOpen={() => navigate(`/lista/${l.id}`)}
+      onSave={() => handleUnsaveList(l.id)}
+      saved
+    />
+  );
 
   return (
     <div className="flex flex-col flex-1 min-h-0 bg-background">
@@ -576,8 +702,16 @@ const TravelerProfile = () => {
                 // "Ogólne" - lista OGÓLNA usera (wszystkie zapisane miejsca), dostępna z dropdownu list.
                 <div className="pt-1"><SavedPlacesGrid /></div>
               ) : (
-                // Zapisane listy od innych (dawny segment "Listy | Trasy", teraz tu). Własny pusty stan.
-                <div className="pt-1"><SavedCollections /></div>
+                // Zapisane listy od innych - ten sam UI co wlasne listy (ProfileFeedCard) + chip "Nowe miejsce!".
+                savedListCards.length === 0 ? (
+                  <FeedEmpty
+                    icon={<Bookmark className="h-6 w-6" />}
+                    title="Brak zapisanych list"
+                    desc={`Zapisz cudzą listę bookmarkiem, żeby zobaczyć ją tutaj.`}
+                  />
+                ) : (
+                  <div className="space-y-6 pt-1">{(savedListCards as any[]).map(renderSavedListCard)}</div>
+                )
               )}
             </div>
           ) : (
@@ -589,8 +723,16 @@ const TravelerProfile = () => {
                 options={[{ id: "robocze", label: "Robocze" }, { id: "wspomnienia", label: "Wspomnienia" }, { id: "zapisane", label: "Zapisane" }]}
               />
               {wyjazdyTab === "zapisane" ? (
-                // Zapisane trasy od innych (dawny segment "Listy | Trasy", teraz tu). Własny pusty stan.
-                <div className="pt-1"><SavedRoutes city={ALL_CITIES} /></div>
+                // Zapisane wyjazdy od innych - ten sam UI co Wspomnienia (ProfileFeedCard).
+                savedTripCards.length === 0 ? (
+                  <FeedEmpty
+                    icon={<Bookmark className="h-6 w-6" />}
+                    title="Brak zapisanych wyjazdów"
+                    desc={`Zapisz cudzy wyjazd bookmarkiem, żeby zobaczyć go tutaj.`}
+                  />
+                ) : (
+                  <div className="space-y-6 pt-1">{(savedTripCards as any[]).map(renderSavedTripCard)}</div>
+                )
               ) : wyjazdyTab === "robocze" ? (
                 draftTrips.length === 0 ? (
                   <FeedEmpty

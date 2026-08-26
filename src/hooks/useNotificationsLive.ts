@@ -22,6 +22,7 @@ const TITLES: Record<string, string> = {
   route_liked: "Ktoś polubił Twoją trasę ❤️",
   list_liked: "Ktoś polubił Twoją listę ❤️",
   list_saved: "Ktoś zapisał Twoją listę 🔖",
+  list_updated: "Nowe miejsce na liście 📍",
   route_used: "Ktoś korzysta z Twojej trasy 🧭",
   trip_reminder: "Dokończ swój wyjazd 📸",
   trip_places_reminder: "Dodaj miejsca do wyjazdu 📍",
@@ -32,7 +33,7 @@ const TITLES: Record<string, string> = {
 const urlFor = (n: any): string => {
   if (n?.type === "trip_reminder") return `/review-summary?route=${n.route_id}&edit=1`;
   if (n?.type === "group_invite") return `/sesja/${n?.metadata?.join_code ?? ""}`;
-  if (n?.type === "list_liked" || n?.type === "list_saved") return `/lista/${n?.metadata?.collection_id ?? ""}`;
+  if (n?.type === "list_liked" || n?.type === "list_saved" || n?.type === "list_updated") return `/lista/${n?.metadata?.collection_id ?? ""}`;
   if (n?.route_id) return `/route/${n.route_id}`;
   return "/moj-profil";
 };

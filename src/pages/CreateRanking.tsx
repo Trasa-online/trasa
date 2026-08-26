@@ -7,10 +7,6 @@ import { haptics } from "@/hooks/useHaptics";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
-import { isNative } from "@/lib/platform";
-import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
-import { uploadCoverImage, pickNativeCoverFiles } from "@/lib/coverUpload";
-import CoverPickerSheet, { type CoverOption } from "@/components/create/CoverPickerSheet";
 import CreateHeader from "@/components/create/CreateHeader";
 import { expandCity, cityGenitive } from "@/lib/cities";
 import { TRIP_COUNTRIES, TRIP_REGIONS, citiesForCountry, countryForCity } from "@/lib/tripCountries";
@@ -25,9 +21,6 @@ import { categoryFromGoogleTypes, inferCategoryFromName } from "@/lib/placeCateg
 import { placeTagsForCategory } from "@/lib/routeTags";
 import { pinCoverKeys, fetchPlacePhotosForKeys, pickPlaceCover } from "@/lib/placePhotoSocial";
 
-// Domyslne tlo listy = gradient zolto-zloty (#FDF184 -> #FDCD84) jako data-URI SVG (renderuje sie
-// jak zwykle zdjecie; resolveStored przepuszcza data:). Spojne z domyslnym tlem trasy.
-const GRADIENT_COVER = "data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='16'%20height='16'%20preserveAspectRatio='none'%3E%3Cdefs%3E%3ClinearGradient%20id='g'%20x1='0'%20y1='0'%20x2='1'%20y2='1'%3E%3Cstop%20offset='0'%20stop-color='%23FDF184'/%3E%3Cstop%20offset='1'%20stop-color='%23FDCD84'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect%20width='16'%20height='16'%20fill='url(%23g)'/%3E%3C/svg%3E";
 import { cacheListItemPhoto } from "@/lib/placePhotos";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import { type MockPlace } from "@/components/plan-wizard/PlaceSwiper";
@@ -227,8 +220,6 @@ const CreateRanking = () => {
   const [asAnon, setAsAnon] = useState(false);
   // Okladki listy (1:1 z modelem tras): cover_url = hero na /lista/:id, list_cover_url =
   // miniatura na karcie w eksploracji. NULL = fallback do zdjecia pierwszego miejsca.
-  const [coverUrl, setCoverUrl] = useState<string | null>(null);
-  const [listCoverUrl, setListCoverUrl] = useState<string | null>(null);
   // Status listy (discovery_collections.list_status): "visited" | "to_visit".
   // Nowa lista: user WYBIERA (toggle) czy juz odwiedzil te miejsca czy dopiero chce - domyslnie
   // "do odwiedzenia". Edycja: ladowane z col. Listy "do odwiedzenia" maja uproszczony krok 2.
@@ -238,10 +229,6 @@ const CreateRanking = () => {
   // Dane B2B (premium) wybranych miejsc - do pokazania na karcie pelnego adresu, tagow i
   // kategorii glownej+drugiej. Klucz = place_id (UUID). Tylko miejsca z business_profiles.
   const [bizMap, setBizMap] = useState<Record<string, any>>({});
-  // Ktory picker otwarty: hero (cover) | miniatura (list) | zamkniety.
-  const [pickerTarget, setPickerTarget] = useState<null | "hero" | "list">(null);
-  const [uploadingCover, setUploadingCover] = useState(false);
-  const coverFileInputRef = useRef<HTMLInputElement>(null);
 
   // Wyszukiwarka + propozycje miejsc (bez zargonu "baza/spoza bazy").
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -590,12 +577,11 @@ const CreateRanking = () => {
       const authorName = asAnon ? "Anonim" : author.name;
       const authorAvatar = asAnon ? null : author.avatar;
       const desc = description.trim() || null;
-      // Okladki: hero (cover_url) + miniatura eksploracji (list_cover_url). Gdy user nic nie
-      // wybral, zapisujemy zdjecie pierwszego miejsca jako sensowny default (fallback UI i tak
-      // to robi, ale utrwalenie daje spojnosc w feedzie/edycji).
+      // Listy nie trafiaja do eksploracji -> nie maja pickera okladki (prosba Nat 2026-08-26).
+      // Okladka = AUTO: zdjecie pierwszego miejsca (hero na /lista/:id). Bez ustawiania przez usera.
       const firstItemPhoto = items.find((it) => it.photo_url)?.photo_url ?? null;
-      const coverToSave = coverUrl ?? firstItemPhoto;
-      const listCoverToSave = listCoverUrl ?? firstItemPhoto;
+      const coverToSave = firstItemPhoto;
+      const listCoverToSave = firstItemPhoto;
       const tagsToSave = tags.map((x) => x.trim()).filter(Boolean).slice(0, 20);
       // Miasto opcjonalne: "" (Wszedzie) -> null (lista globalna, karta pokaze tylko liczbe miejsc).
       const cityToSave = city.trim() || null;
@@ -637,33 +623,6 @@ const CreateRanking = () => {
     }
   };
 
-  // ── Okladki (hero + miniatura) - opcje = zdjecia miejsc listy + upload nowego ──
-  const firstItemPhoto = items.find((i) => i.photo_url)?.photo_url ?? null;
-  const heroCover = coverUrl ?? firstItemPhoto ?? getRandomPinPlaceholder(editId ?? title);
-  const listCover = listCoverUrl ?? firstItemPhoto ?? heroCover;
-  // Pierwsza opcja: domyslne tlo (gradient zolto-zloty), potem zdjecia miejsc listy.
-  const coverOptions: CoverOption[] = [
-    { id: "__gradient__", name: "Domyślne tło", url: GRADIENT_COVER },
-    ...items.filter((i) => i.photo_url).map((i) => ({ id: i.key, name: i.place_name, url: i.photo_url as string })),
-  ];
-  const applyCover = (url: string) => {
-    if (pickerTarget === "hero") setCoverUrl(url);
-    else if (pickerTarget === "list") setListCoverUrl(url);
-    setPickerTarget(null);
-  };
-  const handleCoverFiles = async (files: File[]) => {
-    if (!user || !files.length || uploadingCover) return;
-    setUploadingCover(true);
-    const url = await uploadCoverImage(files[0], user.id);
-    setUploadingCover(false);
-    if (url) applyCover(url);
-    else toast.error(t("cover.upload_error", "Nie udało się wgrać zdjęcia"));
-  };
-  const triggerCoverUpload = async () => {
-    if (uploadingCover) return;
-    if (isNative) { try { const f = await pickNativeCoverFiles(1); await handleCoverFiles(f); } catch { /* cancel */ } }
-    else coverFileInputRef.current?.click();
-  };
 
   const mapPins = items.filter((i) => i.latitude != null && i.longitude != null)
     .map((i) => ({ latitude: i.latitude!, longitude: i.longitude!, place_name: i.place_name }));
@@ -1089,22 +1048,6 @@ const CreateRanking = () => {
         <PlaceSwiperDetail open={!!detailPlace} onOpenChange={(o) => { if (!o) setDetailPlace(null); }} place={detailPlace} city={city} skipGoogleFetch={detailSkip} />
       )}
 
-      {/* Picker okladki (hero lub miniatura wg pickerTarget) + web file input */}
-      <CoverPickerSheet
-        open={pickerTarget !== null}
-        onClose={() => setPickerTarget(null)}
-        title={pickerTarget === "list" ? t("cover.thumb_title", "Miniatura w eksploracji") : t("cover.hero_title", "Okładka listy")}
-        subtitle={pickerTarget === "list"
-          ? t("cover.thumb_subtitle", "Zdjęcie na karcie listy w eksploracji - wgraj nowe albo wybierz z miejsc listy.")
-          : t("cover.hero_subtitle", "Zdjęcie w widoku listy - wgraj nowe albo wybierz z miejsc listy.")}
-        options={coverOptions}
-        currentUrl={pickerTarget === "list" ? listCover : heroCover}
-        onPick={applyCover}
-        onUploadNew={triggerCoverUpload}
-        uploading={uploadingCover}
-      />
-      <input ref={coverFileInputRef} type="file" accept="image/*,.heic,.heif" className="hidden"
-        onChange={(e) => { const f = Array.from(e.target.files ?? []); if (coverFileInputRef.current) coverFileInputRef.current.value = ""; void handleCoverFiles(f); }} />
       {/* Podglad miejsca spoza bazy - TYLKO okladka (bez godzin/recenzji, min. kosztow Google) */}
       {customPreview && (
         <div className="fixed inset-0 z-[80] flex flex-col justify-end bg-black/40" onClick={() => setCustomPreview(null)}>

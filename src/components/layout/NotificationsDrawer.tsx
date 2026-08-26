@@ -41,6 +41,7 @@ const TYPE_CONFIG: Record<string, { icon: React.ElementType; color: string; labe
   route_liked:    { icon: Heart,    color: "text-red-500 bg-red-100",        label: (u, meta) => `${u} polubił(a) Twoją trasę${meta?.city ? ` po ${meta.city}` : ""}` },
   list_liked:     { icon: Heart,    color: "text-red-500 bg-red-100",        label: (u, meta) => `${u} polubił(a) Twoją listę${meta?.title ? ` „${meta.title}"` : ""}` },
   list_saved:     { icon: Bookmark, color: "text-orange-600 bg-orange-100",  label: (u, meta) => `${u} zapisał(a) Twoją listę${meta?.title ? ` „${meta.title}"` : ""}` },
+  list_updated:   { icon: MapPin,   color: "text-orange-600 bg-orange-100",  label: (u, meta) => `${u} dodał(a) nowe miejsce do listy${meta?.title ? ` „${meta.title}"` : ""}` },
   trip_reminder:  { icon: Camera,   color: "text-orange-600 bg-orange-100",  label: (_u, meta) => `Dokończ swój wyjazd${meta?.city ? ` po ${meta.city}` : ""}: dodaj zdjęcia i notki, żeby pojawił się w eksploracji` },
 };
 
@@ -267,6 +268,14 @@ export default function NotificationsDrawer({ open, onClose, userId }: Props) {
                           className="mt-2 px-3 py-1.5 rounded-full bg-primary text-white text-xs font-semibold active:scale-95 transition-transform"
                         >
                           {n.type === "friend_request" ? "Zobacz zaproszenie →" : "Zobacz znajomych →"}
+                        </button>
+                      )}
+                      {n.type === "list_updated" && (
+                        <button
+                          onClick={() => { onClose(); navigate(`/lista/${n.metadata?.collection_id ?? ""}`); }}
+                          className="mt-2 px-3 py-1.5 rounded-full bg-primary text-white text-xs font-semibold active:scale-95 transition-transform"
+                        >
+                          Zobacz listę →
                         </button>
                       )}
                       {(n.type === "collection_approved" || n.type === "collection_rejected") && (

@@ -17,6 +17,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { PlacePhoto, resolveStored } from "@/components/PlacePhoto";
 import { RoutePlaceRow } from "@/components/route/RoutePlaceRow";
 import PlaceNoteEditor from "@/components/route/PlaceNoteEditor";
+import { saveCollectionDb, unsaveCollectionDb, markCollectionSeenDb } from "@/lib/savedCollections";
 import { EmptyPlacesState } from "@/components/route/EmptyPlacesState";
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { avatarSrc } from "@/lib/avatar";
@@ -193,6 +194,14 @@ export default function SharedList() {
     void (supabase as any).rpc("increment_collection_views", { p_collection_id: col.id });
   }, [col?.id]);
 
+  // Zapisujacy (nie autor) obejrzal liste -> "widzial" wszystkie aktualne miejsca (kasuje chip
+  // "Nowe miejsce!" na profilu). markCollectionSeenDb aktualizuje TYLKO jesli lista zapisana (no-op inaczej).
+  useEffect(() => {
+    if (!user || !id || !col || col.user_id === user.id) return;
+    void markCollectionSeenDb(user.id, id, items.length);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, id, col?.user_id, items.length]);
+
   const categoryLabel = (cat: string | null) => (cat ? subcategoryLabelLocalized(cat) : "Miejsce");
   // Kategoria: zapisana -> wywnioskowana z nazwy (miejsca z Google bywaja bez kategorii,
   // inaczej ikona=Landmark, chip="Miejsce").
@@ -224,8 +233,8 @@ export default function SharedList() {
     try {
       const set = new Set<string>(JSON.parse(localStorage.getItem("trasa_saved_collections") || "[]"));
       const dates: Record<string, string> = (() => { try { return JSON.parse(localStorage.getItem("trasa_saved_collections_dates") || "{}"); } catch { return {}; } })();
-      if (set.has(id)) { set.delete(id); delete dates[id]; setSaved(false); toast("Usunięto z zapisanych"); }
-      else { set.add(id); dates[id] = new Date().toISOString(); setSaved(true); toast.success("Zapisano listę"); void (supabase as any).rpc("increment_collection_saves", { p_collection_id: id }); void (supabase as any).rpc("notify_collection_saved", { p_collection_id: id }); }
+      if (set.has(id)) { set.delete(id); delete dates[id]; setSaved(false); toast("Usunięto z zapisanych"); if (user) void unsaveCollectionDb(user.id, id); }
+      else { set.add(id); dates[id] = new Date().toISOString(); setSaved(true); toast.success("Zapisano listę"); void (supabase as any).rpc("increment_collection_saves", { p_collection_id: id }); void (supabase as any).rpc("notify_collection_saved", { p_collection_id: id }); if (user) void saveCollectionDb(user.id, id, items.length); }
       localStorage.setItem("trasa_saved_collections", JSON.stringify([...set]));
       localStorage.setItem("trasa_saved_collections_dates", JSON.stringify(dates));
     } catch { /* localStorage niedostepny */ }
@@ -277,6 +286,8 @@ export default function SharedList() {
     for (const p of places) await addPlaceToList(col.id, p);
     queryClient.invalidateQueries({ queryKey: ["shared-list-items", id] });
     toast.success("Zaktualizowano listę");
+    // Autor dodal miejsca -> powiadom (in-app) wszystkich, ktorzy zapisali te liste ("Nowe miejsce!").
+    if (isOwner && places.length) void (supabase as any).rpc("notify_collection_updated", { p_collection_id: col.id, p_added: places.length });
   };
 
   // Usun miejsce z listy (wlasciciel, kosz w wierszu). Toast + "Cofnij".
