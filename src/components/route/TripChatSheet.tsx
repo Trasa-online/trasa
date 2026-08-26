@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Send, X, Trash2 } from "lucide-react";
+import { Send, X } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useAuth } from "@/hooks/useAuth";
 import { haptics } from "@/hooks/useHaptics";
@@ -75,12 +75,6 @@ export default function TripChatSheet({ open, onOpenChange, routeId, tripTitle, 
     inputRef.current?.focus();
   };
 
-  const deleteMessage = async (mid: string) => {
-    haptics.light();
-    const { error } = await (supabase as any).from("trip_messages").delete().eq("id", mid);
-    if (!error) queryClient.invalidateQueries({ queryKey: ["trip-messages", routeId] });
-  };
-
   const timeOf = (iso: string) => { try { const d = new Date(iso); return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`; } catch { return ""; } };
 
   // Uczestnicy rozmowy (dedup po id) - awatary na gorze czatu.
@@ -130,13 +124,6 @@ export default function TripChatSheet({ open, onOpenChange, routeId, tripTitle, 
                   </div>
                   <p className={`text-[10px] text-muted-foreground mt-0.5 px-1 ${mine ? "text-right" : ""}`}>{timeOf(m.created_at)}</p>
                 </div>
-                {/* Usuwanie WLASNEJ wiadomosci (RLS: delete own). */}
-                {mine && (
-                  <button onClick={() => deleteMessage(m.id)} aria-label="Usuń wiadomość"
-                    className="shrink-0 h-7 w-7 flex items-center justify-center text-muted-foreground/40 active:text-destructive active:scale-90 transition-all">
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                )}
               </div>
             );
           })}

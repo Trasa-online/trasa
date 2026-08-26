@@ -15,11 +15,12 @@ interface Profile { id: string; username: string | null; first_name: string | nu
 
 // Reużywalny sheet "Zaproś znajomych": szukanie po username + multi-select + zaproszenie.
 // Dziala na istniejacej trasie (podpina do sesji grupowej jesli trzeba) - patrz inviteUsersToRoute.
-export default function InviteFriendsSheet({ open, onOpenChange, route, onInvited }: {
+export default function InviteFriendsSheet({ open, onOpenChange, route, onInvited, existingMemberIds = [] }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   route: InviteRoute;
   onInvited?: (sessionId: string | undefined, invited: { id: string; avatar_url: string | null }[]) => void;
+  existingMemberIds?: string[];
 }) {
   const { user } = useAuth();
   const [q, setQ] = useState("");
@@ -70,11 +71,16 @@ export default function InviteFriendsSheet({ open, onOpenChange, route, onInvite
     return () => clearTimeout(timer);
   }, [q, user, bizIds]);
 
-  const toggle = (p: Profile) => setSelected((prev) => {
-    const n = { ...prev };
-    if (n[p.id]) delete n[p.id]; else n[p.id] = p;
-    return n;
-  });
+  // Userzy JUZ w wyjezdzie (host + czlonkowie) - oznaczeni "Dodano", nie da sie ich wybrac (bez dublowania).
+  const existing = useMemo(() => new Set(existingMemberIds), [existingMemberIds]);
+  const toggle = (p: Profile) => {
+    if (existing.has(p.id)) return;
+    setSelected((prev) => {
+      const n = { ...prev };
+      if (n[p.id]) delete n[p.id]; else n[p.id] = p;
+      return n;
+    });
+  };
   const selectedList = Object.values(selected);
   const searching = q.trim().length >= 2;
   const displayed = searching ? results : myPeople;   // puste pole -> znajomi/obserwowani
@@ -126,17 +132,24 @@ export default function InviteFriendsSheet({ open, onOpenChange, route, onInvite
                 <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground px-2 pb-1">Obserwowani i znajomi</p>
               )}
               {displayed.map((p) => {
+                const already = existing.has(p.id);
                 const on = !!selected[p.id];
                 return (
-                  <button key={p.id} onClick={() => toggle(p)} className="flex items-center gap-3 px-2 py-2 rounded-2xl active:bg-muted/50 transition-colors text-left">
+                  <button key={p.id} onClick={() => toggle(p)} disabled={already} className={cn("flex items-center gap-3 px-2 py-2 rounded-2xl transition-colors text-left", already ? "opacity-55" : "active:bg-muted/50")}>
                     <img src={avatarSrc(p.avatar_url)} alt="" className="h-10 w-10 rounded-full object-cover shrink-0" />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-bold truncate">@{p.username}</p>
                       {p.first_name && <p className="text-xs text-muted-foreground truncate">{p.first_name}</p>}
                     </div>
-                    <span className={cn("h-6 w-6 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors", on ? "bg-orange-600 border-orange-600" : "border-muted-foreground/30")}>
-                      {on && <Check className="h-4 w-4 text-white" strokeWidth={3} />}
-                    </span>
+                    {already ? (
+                      <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-secondary px-2.5 py-1 text-[11px] font-bold text-muted-foreground">
+                        <Check className="h-3.5 w-3.5" strokeWidth={3} /> Dodano
+                      </span>
+                    ) : (
+                      <span className={cn("h-6 w-6 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors", on ? "bg-orange-600 border-orange-600" : "border-muted-foreground/30")}>
+                        {on && <Check className="h-4 w-4 text-white" strokeWidth={3} />}
+                      </span>
+                    )}
                   </button>
                 );
               })}

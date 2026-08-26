@@ -5,7 +5,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { MapPin, ArrowLeft, Bookmark, List, GalleryHorizontalEnd, Building2, Pencil, Trash2, Heart, Image as ImageIcon, Share2, Plus } from "lucide-react";
+import { MapPin, ArrowLeft, Bookmark, List, GalleryHorizontalEnd, Building2, Pencil, Trash2, Heart, Image as ImageIcon, Share2, Plus, Camera, Loader2, X } from "lucide-react";
+import { compressImage } from "@/lib/imageCompression";
 import { fetchListLike, toggleListLike, type LikeState } from "@/lib/likes";
 import AddPlaceSheet from "@/components/route/AddPlaceSheet";
 import { addPlaceToList, type PlaceForList } from "@/lib/placeLists";
@@ -69,6 +70,48 @@ export default function SharedList() {
   const [deleting, setDeleting] = useState(false);
   const [addPlaceOpen, setAddPlaceOpen] = useState(false);
   const share = useShare();
+  // Notki + zdjecia usera na miejscach listy (prosba Nat 2026-08-26). Wlasciciel edytuje
+  // discovery_items.short_desc (notka) i discovery_items.images (zdjecia w route-images).
+  const [noteEditing, setNoteEditing] = useState<Record<string, boolean>>({});
+  const [noteDrafts, setNoteDrafts] = useState<Record<string, string>>({});
+  const [savingNote, setSavingNote] = useState<Record<string, boolean>>({});
+  const [uploadingItem, setUploadingItem] = useState<string | null>(null);
+
+  const saveNote = async (item: any) => {
+    const val = (noteDrafts[item.id] ?? "").trim();
+    setSavingNote((p) => ({ ...p, [item.id]: true }));
+    const { error } = await (supabase as any).from("discovery_items").update({ short_desc: val || null }).eq("id", item.id);
+    setSavingNote((p) => ({ ...p, [item.id]: false }));
+    if (error) { toast.error("Nie udało się zapisać notki"); return; }
+    setNoteEditing((p) => ({ ...p, [item.id]: false }));
+    queryClient.invalidateQueries({ queryKey: ["shared-list-items", id] });
+  };
+
+  const addItemPhotos = async (item: any, files: FileList | null) => {
+    if (!user || !files || !files.length) return;
+    setUploadingItem(item.id);
+    try {
+      const urls: string[] = [...(Array.isArray(item.images) ? item.images : [])];
+      for (const file of Array.from(files)) {
+        const compressed = await compressImage(file, 1200, 1200, 0.8);
+        const path = `${user.id}/list_${id}/item_${item.id}_${Math.random().toString(36).slice(2)}.jpg`;
+        const { error } = await supabase.storage.from("route-images").upload(path, compressed, { contentType: "image/jpeg", upsert: false });
+        if (error) { console.error("[SharedList] photo upload:", error.message); continue; }
+        const { data } = supabase.storage.from("route-images").getPublicUrl(path);
+        if (data?.publicUrl) urls.push(data.publicUrl);
+      }
+      const { error: upErr } = await (supabase as any).from("discovery_items").update({ images: urls }).eq("id", item.id);
+      if (upErr) { toast.error("Nie udało się dodać zdjęcia"); return; }
+      queryClient.invalidateQueries({ queryKey: ["shared-list-items", id] });
+    } finally { setUploadingItem(null); }
+  };
+
+  const removeItemPhoto = async (item: any, url: string) => {
+    const urls = (Array.isArray(item.images) ? item.images : []).filter((u: string) => u !== url);
+    const { error } = await (supabase as any).from("discovery_items").update({ images: urls }).eq("id", item.id);
+    if (error) { toast.error("Nie udało się usunąć zdjęcia"); return; }
+    queryClient.invalidateQueries({ queryKey: ["shared-list-items", id] });
+  };
 
   const handleDelete = async () => {
     if (!user || !id) return;
@@ -109,7 +152,7 @@ export default function SharedList() {
     queryFn: async () => {
       const { data } = await (supabase as any)
         .from("discovery_items")
-        .select("id, place_id, place_name, category, address, latitude, longitude, rating, google_place_id, photo_url, short_desc, tags, order_index")
+        .select("id, place_id, place_name, category, address, latitude, longitude, rating, google_place_id, photo_url, short_desc, images, tags, order_index")
         .eq("collection_id", id as string)
         .order("order_index", { ascending: true });
       return (data ?? []) as any[];
@@ -283,10 +326,62 @@ export default function SharedList() {
     <div>
       {items.map((pin: any, i: number) => {
         const noteText = (pin.short_desc ?? "").trim();
-        const note = noteText ? (
-          <div>
-            <p className="text-sm font-semibold text-foreground">Notka autora</p>
-            <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap mt-0.5">{noteText}</p>
+        const photos: string[] = Array.isArray(pin.images) ? pin.images : [];
+        const editing = !!noteEditing[pin.id];
+        const busy = uploadingItem === pin.id;
+        // Notka autora + zdjecia miejsca. Wlasciciel: edytuje (textarea + "Dodaj notke"/"Zdjecie").
+        // Widz: read-only. Slot renderowany tylko gdy jest tresc lub jestem wlascicielem.
+        const hasContent = !!noteText || photos.length > 0 || isOwner;
+        const note = hasContent ? (
+          <div className="space-y-2.5 mt-0.5">
+            {editing ? (
+              <div>
+                <textarea
+                  value={noteDrafts[pin.id] ?? noteText}
+                  onChange={(e) => setNoteDrafts((p) => ({ ...p, [pin.id]: e.target.value }))}
+                  placeholder="Napisz notkę o tym miejscu..."
+                  rows={2}
+                  className="w-full bg-muted/50 rounded-xl px-3 py-2.5 text-sm text-foreground resize-none focus:outline-none border border-border/30 placeholder:text-muted-foreground/55"
+                />
+                <div className="flex items-center gap-2 mt-1.5">
+                  <button onClick={() => saveNote(pin)} disabled={savingNote[pin.id]} className="rounded-full bg-primary text-white px-3.5 py-1.5 text-xs font-bold active:scale-95 transition-transform disabled:opacity-50">Zapisz</button>
+                  <button onClick={() => setNoteEditing((p) => ({ ...p, [pin.id]: false }))} className="rounded-full bg-secondary text-foreground px-3.5 py-1.5 text-xs font-bold active:scale-95 transition-transform">Anuluj</button>
+                </div>
+              </div>
+            ) : noteText ? (
+              <div>
+                <p className="text-sm font-semibold text-foreground">Notka autora</p>
+                <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap mt-0.5">{noteText}</p>
+              </div>
+            ) : null}
+            {/* Zdjecia miejsca (2:3) - dodane przez wlasciciela listy. */}
+            {photos.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {photos.map((url) => (
+                  <div key={url} className="relative w-[76px] aspect-[2/3] shrink-0 rounded-xl overflow-hidden bg-muted">
+                    <img src={resolveStored(url) ?? url} alt="" className="w-full h-full object-cover" />
+                    {isOwner && <button onClick={() => removeItemPhoto(pin, url)} aria-label="Usuń zdjęcie" className="absolute top-1 right-1 h-5 w-5 rounded-full bg-black/55 text-white flex items-center justify-center active:scale-90"><X className="h-3 w-3" /></button>}
+                  </div>
+                ))}
+              </div>
+            )}
+            {/* Akcje wlasciciela: "+ Dodaj notke" + obok guzik dodania zdjecia. */}
+            {isOwner && !editing && (
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => { setNoteDrafts((p) => ({ ...p, [pin.id]: noteText })); setNoteEditing((p) => ({ ...p, [pin.id]: true })); }}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-3 py-1.5 text-xs font-bold text-foreground active:scale-95 transition-transform"
+                >
+                  {noteText ? <Pencil className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
+                  {noteText ? "Edytuj notkę" : "Dodaj notkę"}
+                </button>
+                <label className={`inline-flex items-center gap-1.5 rounded-full bg-secondary px-3 py-1.5 text-xs font-bold text-foreground cursor-pointer active:scale-95 transition-transform ${busy ? "opacity-60 pointer-events-none" : ""}`}>
+                  {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Camera className="h-3.5 w-3.5" />}
+                  {busy ? "Dodawanie..." : "Zdjęcie"}
+                  <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => { addItemPhotos(pin, e.target.files); e.currentTarget.value = ""; }} />
+                </label>
+              </div>
+            )}
           </div>
         ) : undefined;
         return (

@@ -754,13 +754,16 @@ export default function SharedRoute() {
     // Etap PROPOZYCJI (planning): glosowanie na miejsce (kazdy uczestnik 1 glos; host widzi liczbe).
     if (stage === "planning") {
       const v = (votesMap as Map<string, { count: number; voted: boolean }>).get(placeVoteKey(pin.place_name)) ?? { count: 0, voted: false };
+      // Etykieta = laczna liczba glosow: "+1" domyslnie (zacheta), "+2" gdy dwoje zaglosowalo itd.
+      // Pomaranczowy = JA zaglosowalem. (prosba Nat 2026-08-26)
+      const voteLabel = `+${Math.max(1, v.count)}`;
       if (!user) return v.count > 0 ? (
-        <div className="mt-1.5 inline-flex items-center rounded-full bg-secondary px-3 py-1.5 text-[13px] font-bold text-muted-foreground">{v.count}</div>
+        <div className="mt-1.5 inline-flex items-center rounded-full bg-secondary px-3 py-1.5 text-[13px] font-bold text-muted-foreground">{voteLabel}</div>
       ) : undefined;
       return (
         <button onClick={() => toggleVoteHandler(pin, v.voted)}
           className={`mt-1.5 inline-flex items-center gap-1 rounded-full px-3.5 py-1.5 text-[13px] font-bold active:scale-95 transition-transform ${v.voted ? "bg-primary text-white" : "bg-secondary text-foreground"}`}>
-          +1{v.count > 0 ? ` · ${v.count}` : ""}
+          {voteLabel}
         </button>
       );
     }
@@ -1180,6 +1183,12 @@ export default function SharedRoute() {
           open={inviteOpen}
           onOpenChange={setInviteOpen}
           route={{ id: route.id, city: route.city ?? null, title: route.title ?? null, group_session_id: (route as any).group_session_id ?? null }}
+          existingMemberIds={[route.user_id, ...(groupParticipants as any[]).map((p) => p.id)]}
+          onInvited={() => {
+            // Odswiez uczestnikow + trase (moglo powstac group_session_id) -> zaproszeni od razu "Dodano".
+            queryClient.invalidateQueries({ queryKey: ["shared-route", id] });
+            queryClient.invalidateQueries({ queryKey: ["shared-route-participants"] });
+          }}
         />
       )}
 

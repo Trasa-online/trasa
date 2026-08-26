@@ -5,9 +5,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import { Settings, Camera, UserCircle2, ArrowRight, Bell, Share2, Search, LayoutGrid, MapPinned, List, ChevronsUpDown, Check } from "lucide-react";
+import { Settings, Camera, UserCircle2, ArrowRight, Bell, Share2, Search, LayoutGrid, MapPinned } from "lucide-react";
 import { SavedPlacesGrid } from "@/components/saved/SavedPlacesGrid";
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import TabHeader from "@/components/layout/TabHeader";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
@@ -103,38 +102,23 @@ function TabSelect({ options, value, onChange }: {
   value: string;
   onChange: (id: string) => void;
 }) {
-  const current = options.find((o) => o.id === value)?.label ?? options[0]?.label;
+  // Chipy kategorii (styl Spotify/Messenger) zamiast dropdownu (prosba Nat 2026-08-26): poziomy,
+  // przewijalny rzad pigulek. Aktywna = pomaranczowa, reszta = szara.
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <button className="w-full flex items-center gap-3 py-1.5 text-left active:opacity-80 transition-opacity">
-          <span className="h-11 w-11 rounded-xl bg-secondary flex items-center justify-center shrink-0">
-            <List className="h-5 w-5 text-foreground" />
-          </span>
-          <span className="flex-1 min-w-0 text-base font-bold truncate">{current}</span>
-          {/* iOS: glif up/down = wskaznik menu-selektora. */}
-          <ChevronsUpDown className="h-[18px] w-[18px] text-muted-foreground shrink-0" strokeWidth={2.25} />
-        </button>
-      </DropdownMenuTrigger>
-      {/* Menu w stylu iOS: matowe szklo (bg-white/80 + blur) + zaokraglenie + hairline separatory
-          miedzy pozycjami + checkmark w kolorze tint (pomaranczowy) przy aktywnej. */}
-      <DropdownMenuContent
-        align="start"
-        sideOffset={8}
-        className="w-[var(--radix-dropdown-menu-trigger-width)] min-w-[210px] overflow-hidden rounded-2xl border border-black/[0.06] bg-white/80 backdrop-blur-xl backdrop-saturate-150 p-0 shadow-[0_16px_40px_-10px_rgba(0,0,0,0.32)] divide-y divide-black/[0.06]"
-      >
-        {options.map((o) => (
-          <DropdownMenuItem
+    <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-0.5">
+      {options.map((o) => {
+        const active = o.id === value;
+        return (
+          <button
             key={o.id}
-            onSelect={() => onChange(o.id)}
-            className="h-12 px-4 text-[15px] font-medium cursor-pointer rounded-none focus:bg-black/[0.05] data-[highlighted]:bg-black/[0.05]"
+            onClick={() => onChange(o.id)}
+            className={`shrink-0 rounded-full px-4 py-2 text-sm font-bold whitespace-nowrap active:scale-95 transition-all ${active ? "bg-primary text-white" : "bg-secondary text-foreground"}`}
           >
             {o.label}
-            {value === o.id && <Check className="h-[18px] w-[18px] ml-auto text-primary" strokeWidth={2.5} />}
-          </DropdownMenuItem>
-        ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
+          </button>
+        );
+      })}
+    </div>
   );
 }
 
