@@ -10,7 +10,8 @@ import { notify } from "@/lib/notify";
 import { sendClientPush, getCurrentUserName } from "@/lib/clientPush";
 import { format } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
-import { MapPin, ArrowLeft, Sparkles, ChevronRight, ChevronLeft, Bookmark, List, GalleryHorizontalEnd, Calendar as CalendarIcon, Image as ImageIcon, Maximize2, X, Building2, Pencil, Trash2, Heart, Share2, Plus, Map as MapIcon, Loader2, Star, GripVertical, Check, Flag, Camera, UserPlus, ThumbsUp, MessageCircle } from "lucide-react";
+import { MapPin, ArrowLeft, Sparkles, ChevronRight, ChevronLeft, ChevronDown, Bookmark, List, GalleryHorizontalEnd, Calendar as CalendarIcon, Image as ImageIcon, Maximize2, X, Building2, Pencil, Trash2, Heart, Share2, Plus, Map as MapIcon, Loader2, Star, GripVertical, Check, Flag, Camera, UserPlus, ThumbsUp, MessageCircle } from "lucide-react";
+import { MAIN_CATEGORIES, subcategoryPluralLabel } from "@/lib/categories";
 import { haptics } from "@/hooks/useHaptics";
 import { Reorder, useDragControls, motion } from "framer-motion";
 import { toast } from "sonner";
@@ -39,6 +40,10 @@ import { compressImage } from "@/lib/imageCompression";
 import { isHeic, convertHeicToJpeg } from "@/lib/heicConvert";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
+
+// Kolejnosc grup kategorii na widoku wyjazdu = kolejnosc podkategorii w MAIN_CATEGORIES
+// (Jedzenie -> Kultura -> ...). Nieznane kategorie ida na koniec. Prosba Nat 2026-08-27 (Figma).
+const SUBCAT_ORDER: string[] = MAIN_CATEGORIES.flatMap((c) => c.subcategories.map((s) => s.id));
 
 // Statyczna mapa trasy (Google przez proxy) - ujednolicona z widokiem "Plan wyjazdu".
 // Pomaranczowo-peachy markery (#F0A583). Klik -> interaktywna RouteMap (pelny ekran).
@@ -153,6 +158,7 @@ export default function SharedRoute() {
   const [inviteOpen, setInviteOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const [chatHidden, setChatHidden] = useState(false); // dymek czatu schowany do krawedzi (swipe w bok)
+  const [collapsedCats, setCollapsedCats] = useState<Set<string>>(new Set()); // zwiniete grupy kategorii
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
   const photoInputRef = useRef<HTMLInputElement>(null);
   const share = useShare();
@@ -793,43 +799,76 @@ export default function SharedRoute() {
   };
   const rowPinFor = (pin: any) => (coverFor(pin) ? { ...pin, photo_url: coverFor(pin) } : pin);
 
-  const renderList = () =>
-    canEdit ? (
-      // Tryb edycji (wlasciciel/uczestnik): przeciaganie zmienia kolejnosc, kosz usuwa.
-      <Reorder.Group axis="y" values={pins} onReorder={handleReorderPins} as="div">
-        {pins.map((pin: any, i: number) => (
-          <SortableRouteRow
-            key={pin.id}
-            value={pin}
-            rowPin={rowPinFor(pin)}
-            index={i}
-            categoryLabel={categoryLabel(pin.category || "other")}
-            onOpen={() => openDetail(pin)}
-            onGoogle={() => openGooglePlace(pin)}
-            onDelete={() => handleDeletePin(pin)}
-            note={buildNote(pin)}
-            cornerAvatar={addedByAvatar(pin)}
-          />
-        ))}
-      </Reorder.Group>
-    ) : (
-      <div>
-        {pins.map((pin: any, i: number) => (
-          <RoutePlaceRow
-            key={pin.id}
-            pin={rowPinFor(pin)}
-            index={i}
-            categoryLabel={categoryLabel(pin.category || "other")}
-            onOpen={() => openDetail(pin)}
-            onGoogle={() => openGooglePlace(pin)}
-            onSave={!isOwner && user ? () => toggleSaveBookmark(pin) : undefined}
-            saved={isSaved(pin.place_name)}
-            note={buildNote(pin)}
-            cornerAvatar={addedByAvatar(pin)}
-          />
-        ))}
+  // Grupowanie miejsc po kategorii (subcat). Naglowki: nazwa (plural) + liczba "Propozycje" na etapie
+  // planning; same nazwy pozniej (ongoing/wspomnienie). Kolejnosc grup wg SUBCAT_ORDER. (Figma 2026-08-27)
+  const groupedPins: [string, any[]][] = (() => {
+    const map = new Map<string, any[]>();
+    for (const pin of pins as any[]) {
+      const key = pin.category || "other";
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(pin);
+    }
+    const rank = (cat: string) => { const i = SUBCAT_ORDER.indexOf(cat); return i === -1 ? 999 : i; };
+    return Array.from(map.entries()).sort((a, b) => rank(a[0]) - rank(b[0]) || a[0].localeCompare(b[0]));
+  })();
+  const groupHeaderLabel = (cat: string) => (cat === "other" ? "Inne" : subcategoryPluralLabel(cat));
+  const proposalWord = (n: number) => {
+    if (n === 1) return "Propozycja";
+    const u = n % 10, h = n % 100;
+    return u >= 2 && u <= 4 && !(h >= 12 && h <= 14) ? "Propozycje" : "Propozycji";
+  };
+  const toggleCat = (cat: string) => setCollapsedCats((prev) => { const n = new Set(prev); if (n.has(cat)) n.delete(cat); else n.add(cat); return n; });
+  // Reorder w obrebie grupy -> odbuduj pelna liste (grupy w kolejnosci wyswietlania) i persist pin_order.
+  const handleReorderGroup = (cat: string, newGroupOrder: any[]) => {
+    handleReorderPins(groupedPins.flatMap(([c, ps]) => (c === cat ? newGroupOrder : ps)));
+  };
+  const renderCatHeader = (cat: string, count: number, collapsed: boolean) => (
+    <button onClick={() => toggleCat(cat)} className="w-full flex items-center gap-2 pt-4 pb-2 text-left active:opacity-70 transition-opacity">
+      <div className="flex-1 min-w-0">
+        <p className="text-xl font-bold text-foreground leading-tight">{groupHeaderLabel(cat)}</p>
+        {stage === "planning" && <p className="text-[13px] text-muted-foreground mt-0.5">{count} {proposalWord(count)}</p>}
       </div>
-    );
+      <ChevronDown className={`h-5 w-5 text-muted-foreground shrink-0 transition-transform ${collapsed ? "-rotate-90" : ""}`} strokeWidth={2.25} />
+    </button>
+  );
+
+  const renderList = () => (
+    <div>
+      {groupedPins.map(([cat, groupPins]) => {
+        const collapsed = collapsedCats.has(cat);
+        return (
+          <div key={cat}>
+            {renderCatHeader(cat, groupPins.length, collapsed)}
+            {!collapsed && (canEdit ? (
+              // Tryb edycji: drag zmienia kolejnosc W OBREBIE kategorii, kosz usuwa.
+              <Reorder.Group axis="y" values={groupPins} onReorder={(no: any[]) => handleReorderGroup(cat, no)} as="div">
+                {groupPins.map((pin: any, i: number) => (
+                  <SortableRouteRow
+                    key={pin.id} value={pin} rowPin={rowPinFor(pin)} index={i}
+                    categoryLabel={categoryLabel(pin.category || "other")}
+                    onOpen={() => openDetail(pin)} onGoogle={() => openGooglePlace(pin)} onDelete={() => handleDeletePin(pin)}
+                    note={buildNote(pin)} cornerAvatar={addedByAvatar(pin)}
+                  />
+                ))}
+              </Reorder.Group>
+            ) : (
+              <div>
+                {groupPins.map((pin: any, i: number) => (
+                  <RoutePlaceRow
+                    key={pin.id} pin={rowPinFor(pin)} index={i}
+                    categoryLabel={categoryLabel(pin.category || "other")}
+                    onOpen={() => openDetail(pin)} onGoogle={() => openGooglePlace(pin)}
+                    onSave={!isOwner && user ? () => toggleSaveBookmark(pin) : undefined} saved={isSaved(pin.place_name)}
+                    note={buildNote(pin)} cornerAvatar={addedByAvatar(pin)}
+                  />
+                ))}
+              </div>
+            ))}
+          </div>
+        );
+      })}
+    </div>
+  );
 
   // Kafelki (wg Figmy): poziomy scroll kart ~168px. Peachy zdjecie (badge kategorii + bookmark +
   // nazwa), pod spodem Notka Autora + notka + "Zobacz w Google".

@@ -131,6 +131,19 @@ export const subcategoryLabelLocalized = (subcategoryId: string): string => {
   return i18n.t(`sub.${subcategoryId}`, { ns: "categories", defaultValue: raw });
 };
 
+// Liczba mnoga podkategorii (PL) - naglowki grup kategorii na widoku wyjazdu (np. "Restauracje",
+// "Kawiarnie"). UI jest polskie, wiec plurale sa zaszyte; fallback = etykieta pojedyncza.
+const SUBCATEGORY_PLURAL_PL: Record<string, string> = {
+  restaurant: 'Restauracje', cafe: 'Kawiarnie', bar: 'Bary',
+  museum: 'Muzea', monument: 'Zabytki', gallery: 'Galerie',
+  experience: 'Doświadczenia', market: 'Targi', club: 'Kluby',
+  park: 'Parki', viewpoint: 'Punkty widokowe',
+  store: 'Sklepy', boutique: 'Butiki', concept_store: 'Concept store', wine_shop: 'Sklepy z winami', bookshop: 'Księgarnie',
+  theater: 'Teatry', live_music: 'Live music', cinema: 'Kina', nightclub: 'Kluby nocne',
+};
+export const subcategoryPluralLabel = (subcategoryId: string): string =>
+  SUBCATEGORY_PLURAL_PL[subcategoryId] ?? subcategoryLabelLocalized(subcategoryId);
+
 // DB ma historycznie kilka wartosci `places.category` dla tego samego konceptu
 // (np. "club" z AddCustomPlacePanel vs "nightlife" z AI generation). Mapowanie
 // 1:N - subcategory ID z UI -> wszystkie wartosci DB ktore znacza to samo.
