@@ -616,7 +616,7 @@ const CreateRanking = () => {
         collection_id: collectionId, order_index: idx, place_id: it.place_id, place_name: it.place_name,
         category: it.category, address: it.address, latitude: it.latitude, longitude: it.longitude,
         rating: it.rating, google_place_id: it.google_place_id, photo_url: it.photo_url, short_desc: it.short_desc.trim() || null,
-        tags: (it.tags ?? []).slice(0, 8),
+        tags: (it.tags ?? []).slice(0, 8), added_by: user.id, // atrybucja (hak pod wspoltworzenie list)
       }));
       const { error: itemsErr } = await (supabase as any).from("discovery_items").insert(rows);
       if (itemsErr) throw new Error(itemsErr.message);

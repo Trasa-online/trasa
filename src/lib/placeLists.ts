@@ -142,6 +142,10 @@ export async function addPlaceToList(listId: string, place: PlaceForList): Promi
   const rows = (existing ?? []) as any[];
   if (rows.some((r) => skey(r.place_name) === skey(place.place_name))) return false;
   const maxOrder = rows.reduce((m: number, r: any) => Math.max(m, r.order_index ?? -1), -1);
+  // Atrybucja: kto dodal miejsce (dzis wlasciciel; hak pod wspoltworzenie list - patrz memory
+  // project_list_cocreation_architecture). getSession = lokalny odczyt, bez zapytania sieciowego.
+  const { data: sess } = await (supabase as any).auth.getSession();
+  const addedBy = sess?.session?.user?.id ?? null;
   const { error } = await (supabase as any).from("discovery_items").insert({
     collection_id: listId,
     place_name: place.place_name,
@@ -154,6 +158,7 @@ export async function addPlaceToList(listId: string, place: PlaceForList): Promi
     google_place_id: place.google_place_id ?? null,
     rating: place.rating ?? null,
     photo_url: place.photo_url,
+    added_by: addedBy,
     order_index: maxOrder + 1,
   });
   if (error) throw error;
@@ -235,7 +240,8 @@ export async function createListFromSavedPlaces(
     .map((p, i) => ({
       collection_id: listId, place_name: p.place_name, category: p.category, address: p.address,
       short_desc: p.description ?? "", latitude: p.latitude, longitude: p.longitude, place_id: p.place_id,
-      google_place_id: p.google_place_id ?? null, rating: p.rating ?? null, photo_url: p.photo_url, order_index: i,
+      google_place_id: p.google_place_id ?? null, rating: p.rating ?? null, photo_url: p.photo_url,
+      added_by: userId, order_index: i,
     }));
   if (rows.length) {
     const { error: itemsErr } = await (supabase as any).from("discovery_items").insert(rows);

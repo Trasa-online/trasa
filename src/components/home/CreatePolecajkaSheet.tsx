@@ -89,6 +89,7 @@ export default function CreatePolecajkaSheet({ open, onClose, onPublished, city,
         photo_url: pin.images?.[0] ?? pin.image_url ?? null,
         latitude: null,
         longitude: null,
+        added_by: userId, // atrybucja (hak pod wspoltworzenie list)
       }));
 
       const { error: itemsErr } = await (supabase as any).from("discovery_items").insert(items);
