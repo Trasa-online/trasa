@@ -32,58 +32,62 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
   cornerAvatar?: string | null;
 }) {
   return (
-    <div className="flex gap-3 bg-background py-4 border-b border-border/40 last:border-b-0">
-      {dragHandle}
-      {/* Peachy kafelek ikony/zdjecia - PIONOWY prostokat 2:3 (redesign 2026-08-25, spojne z okladkami
-          miniaturek/kart). self-start: przyklejony do gory wiersza. */}
-      <button onClick={onOpen} className="relative w-16 h-24 shrink-0 self-start rounded-2xl overflow-hidden bg-[#fcede3] active:opacity-90">
-        <PlacePhoto pin={pin} className="w-full h-full object-cover" />
-        {cornerAvatar !== undefined && (
-          <img src={avatarSrc(cornerAvatar)} alt="" className="absolute bottom-1 right-1 h-7 w-7 rounded-full object-cover border-2 border-white shadow-sm bg-secondary" />
-        )}
-      </button>
-      <div className="flex-1 min-w-0">
-        {/* Nazwa + badge kategorii (peachy pill po prawej) */}
-        <div className="flex items-start justify-between gap-2">
-          <button onClick={onOpen} className="text-left min-w-0 flex-1">
-            <p className="text-[16px] font-bold leading-snug line-clamp-2">{pin.place_name}</p>
-          </button>
-          <span className="shrink-0 mt-0.5 inline-flex items-center px-2.5 py-1 rounded-full bg-[#fcede3] text-[12px] font-semibold text-foreground">{categoryLabel}</span>
-        </div>
-        {/* Notka autora + tresc (pod nazwa) */}
-        {note && <div className="mt-1.5">{note}</div>}
-        {/* Tagi miejsca (pins.tags) */}
-        {Array.isArray(pin.tags) && pin.tags.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 mt-2">
-            {pin.tags.map((tg: string) => (
-              <span key={tg} className="inline-flex items-center px-2.5 py-1 rounded-full bg-secondary text-foreground text-[12px] font-semibold">{tg}</span>
-            ))}
+    <div className="bg-background py-4 border-b border-border/70 last:border-b-0">
+      {/* Zdjecie + tresc (nazwa, notki, tagi) */}
+      <div className="flex gap-3">
+        {dragHandle}
+        {/* Peachy kafelek ikony/zdjecia - PIONOWY prostokat 2:3 (redesign 2026-08-25, spojne z okladkami
+            miniaturek/kart). self-start: przyklejony do gory wiersza. */}
+        <button onClick={onOpen} className="relative w-16 h-24 shrink-0 self-start rounded-2xl overflow-hidden bg-[#fcede3] active:opacity-90">
+          <PlacePhoto pin={pin} className="w-full h-full object-cover" />
+          {cornerAvatar !== undefined && (
+            <img src={avatarSrc(cornerAvatar)} alt="" className="absolute bottom-1 right-1 h-7 w-7 rounded-full object-cover border-2 border-white shadow-sm bg-secondary" />
+          )}
+        </button>
+        <div className="flex-1 min-w-0">
+          {/* Nazwa + badge kategorii (peachy pill po prawej) */}
+          <div className="flex items-start justify-between gap-2">
+            <button onClick={onOpen} className="text-left min-w-0 flex-1">
+              <p className="text-[16px] font-bold leading-snug line-clamp-2">{pin.place_name}</p>
+            </button>
+            <span className="shrink-0 mt-0.5 inline-flex items-center px-2.5 py-1 rounded-full bg-[#fcede3] text-[12px] font-semibold text-foreground">{categoryLabel}</span>
           </div>
-        )}
-        {/* Zobacz w Google (lewo) + akcja (prawo): wlasciciel = kosz (usun), inaczej bookmark (zapisz) */}
-        <div className="mt-2 flex items-center justify-between gap-2">
-          <button onClick={(e) => { e.stopPropagation(); onGoogle(); }} aria-label="Otwórz w Google Maps" className="flex items-center gap-2 active:opacity-70 transition-opacity">
-            <GoogleGlyph className="h-[18px] w-[18px]" />
-            <span className="text-sm font-medium text-foreground">Zobacz w Google</span>
-          </button>
-          {onDelete ? (
-            <button
-              onClick={(e) => { e.stopPropagation(); onDelete(); }}
-              aria-label="Usuń miejsce z trasy"
-              className="h-8 w-8 rounded-full flex items-center justify-center text-destructive active:scale-90 transition-transform"
-            >
-              <Trash2 className="h-5 w-5" strokeWidth={2} />
-            </button>
-          ) : onSave ? (
-            <button
-              onClick={(e) => { e.stopPropagation(); onSave(); }}
-              aria-label={saved ? "Miejsce zapisane w liście" : "Zapisz miejsce do listy"}
-              className="h-8 w-8 rounded-full flex items-center justify-center active:scale-90 transition-transform"
-            >
-              <Bookmark className={`h-5 w-5 ${saved ? "text-[#F0A583] fill-[#F0A583]" : "text-foreground/70"}`} strokeWidth={2} />
-            </button>
-          ) : null}
+          {/* Notka autora + tresc (pod nazwa) */}
+          {note && <div className="mt-2">{note}</div>}
+          {/* Tagi miejsca (pins.tags) */}
+          {Array.isArray(pin.tags) && pin.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mt-2">
+              {pin.tags.map((tg: string) => (
+                <span key={tg} className="inline-flex items-center px-2.5 py-1 rounded-full bg-secondary text-foreground text-[12px] font-semibold">{tg}</span>
+              ))}
+            </div>
+          )}
         </div>
+      </div>
+      {/* Zobacz w Google (lewo) + akcja (prawo) - PELNA SZEROKOSC pod miejscem (redesign 2026-08-27,
+          Figma): wlasciciel = kosz (usun), inaczej bookmark (zapisz). */}
+      <div className="mt-3 flex items-center justify-between gap-2">
+        <button onClick={(e) => { e.stopPropagation(); onGoogle(); }} aria-label="Otwórz w Google Maps" className="flex items-center gap-2 active:opacity-70 transition-opacity">
+          <GoogleGlyph className="h-[18px] w-[18px]" />
+          <span className="text-sm font-medium text-foreground">Zobacz w Google</span>
+        </button>
+        {onDelete ? (
+          <button
+            onClick={(e) => { e.stopPropagation(); onDelete(); }}
+            aria-label="Usuń miejsce z trasy"
+            className="h-8 w-8 rounded-full flex items-center justify-center text-destructive active:scale-90 transition-transform"
+          >
+            <Trash2 className="h-5 w-5" strokeWidth={2} />
+          </button>
+        ) : onSave ? (
+          <button
+            onClick={(e) => { e.stopPropagation(); onSave(); }}
+            aria-label={saved ? "Miejsce zapisane w liście" : "Zapisz miejsce do listy"}
+            className="h-8 w-8 rounded-full flex items-center justify-center active:scale-90 transition-transform"
+          >
+            <Bookmark className={`h-5 w-5 ${saved ? "text-[#F0A583] fill-[#F0A583]" : "text-foreground/70"}`} strokeWidth={2} />
+          </button>
+        ) : null}
       </div>
     </div>
   );
