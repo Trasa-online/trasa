@@ -5,7 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import { Settings, Camera, UserCircle2, ArrowRight, Bell, Share2, Search, LayoutGrid, MapPinned, Bookmark } from "lucide-react";
+import { Settings, Camera, UserCircle2, ArrowRight, Bell, Share2, Search, LayoutGrid, MapPinned } from "lucide-react";
 import { SavedPlacesGrid } from "@/components/saved/SavedPlacesGrid";
 import TabHeader from "@/components/layout/TabHeader";
 import { toast } from "sonner";
@@ -704,11 +704,13 @@ const TravelerProfile = () => {
               ) : (
                 // Zapisane listy od innych - ten sam UI co wlasne listy (ProfileFeedCard) + chip "Nowe miejsce!".
                 savedListCards.length === 0 ? (
-                  <FeedEmpty
-                    icon={<Bookmark className="h-6 w-6" />}
-                    title="Brak zapisanych list"
-                    desc={`Zapisz cudzą listę bookmarkiem, żeby zobaczyć ją tutaj.`}
-                  />
+                  <div className="pt-16 pb-12 text-center px-8">
+                    <span aria-hidden className="mx-auto mb-5 block h-24 w-24" style={{ backgroundColor: "#ef9d78", WebkitMaskImage: "url(/Ikona_Trasy.svg)", maskImage: "url(/Ikona_Trasy.svg)", WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat", WebkitMaskSize: "contain", maskSize: "contain", WebkitMaskPosition: "center", maskPosition: "center" }} />
+                    <p className="text-lg font-bold text-foreground">Lista zapisanych miejsc jest pusta</p>
+                    <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed max-w-[300px] mx-auto">
+                      Zapisz cudzą listę <strong className="font-semibold text-foreground/80">bookmarkiem</strong>, żeby zobaczyć ją tutaj
+                    </p>
+                  </div>
                 ) : (
                   <div className="space-y-6 pt-1">{(savedListCards as any[]).map(renderSavedListCard)}</div>
                 )
@@ -725,11 +727,13 @@ const TravelerProfile = () => {
               {wyjazdyTab === "zapisane" ? (
                 // Zapisane wyjazdy od innych - ten sam UI co Wspomnienia (ProfileFeedCard).
                 savedTripCards.length === 0 ? (
-                  <FeedEmpty
-                    icon={<Bookmark className="h-6 w-6" />}
-                    title="Brak zapisanych wyjazdów"
-                    desc={`Zapisz cudzy wyjazd bookmarkiem, żeby zobaczyć go tutaj.`}
-                  />
+                  <div className="pt-16 pb-12 text-center px-8">
+                    <span aria-hidden className="mx-auto mb-5 block h-24 w-24" style={{ backgroundColor: "#ef9d78", WebkitMaskImage: "url(/Ikona_Zapisane.svg)", maskImage: "url(/Ikona_Zapisane.svg)", WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat", WebkitMaskSize: "contain", maskSize: "contain", WebkitMaskPosition: "center", maskPosition: "center" }} />
+                    <p className="text-lg font-bold text-foreground">Brak zapisanych wyjazdów</p>
+                    <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed max-w-[300px] mx-auto">
+                      Zapisz cudzy wyjazd <strong className="font-semibold text-foreground/80">bookmarkiem</strong>, żeby zobaczyć go tutaj
+                    </p>
+                  </div>
                 ) : (
                   <div className="space-y-6 pt-1">{(savedTripCards as any[]).map(renderSavedTripCard)}</div>
                 )
