@@ -1724,7 +1724,7 @@ export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityCh
         });
       } else {
         set.add(colId); dates[colId] = new Date().toISOString();
-        if (user) { void saveCollectionDb(user.id, colId); void (supabase as any).rpc("increment_collection_saves", { p_collection_id: colId }); void (supabase as any).rpc("notify_collection_saved", { p_collection_id: colId }); }
+        if (user) { void saveCollectionDb(user.id, colId); void (supabase as any).rpc("notify_collection_saved", { p_collection_id: colId }); }
         toast.success(t("toast.saved"));
       }
       localStorage.setItem("trasa_saved_collections", JSON.stringify([...set]));

@@ -234,18 +234,20 @@ export default function SharedList() {
       const set = new Set<string>(JSON.parse(localStorage.getItem("trasa_saved_collections") || "[]"));
       const dates: Record<string, string> = (() => { try { return JSON.parse(localStorage.getItem("trasa_saved_collections_dates") || "{}"); } catch { return {}; } })();
       if (set.has(id)) { set.delete(id); delete dates[id]; setSaved(false); toast("Usunięto z zapisanych"); if (user) void unsaveCollectionDb(user.id, id); }
-      else { set.add(id); dates[id] = new Date().toISOString(); setSaved(true); toast.success("Zapisano listę"); void (supabase as any).rpc("increment_collection_saves", { p_collection_id: id }); void (supabase as any).rpc("notify_collection_saved", { p_collection_id: id }); if (user) void saveCollectionDb(user.id, id, items.length); }
+      else { set.add(id); dates[id] = new Date().toISOString(); setSaved(true); toast.success("Zapisano listę"); void (supabase as any).rpc("notify_collection_saved", { p_collection_id: id }); if (user) void saveCollectionDb(user.id, id, items.length); }
       localStorage.setItem("trasa_saved_collections", JSON.stringify([...set]));
       localStorage.setItem("trasa_saved_collections_dates", JSON.stringify(dates));
     } catch { /* localStorage niedostepny */ }
   };
 
   // Otwórz sheet zapisu pojedynczego miejsca do listy usera (bookmark per-miejsce).
+  // description = null: zapisujemy CZYSTĄ kartę - notka autora listy NIE jest kopiowana do mojego
+  // zapisu (to była notka innego usera; moją dodaję sam). (fix Nat 2026-08-27)
   const itemToPlace = (pin: any) => ({
     place_name: pin.place_name,
     category: catOf(pin),
     address: pin.address ?? null,
-    description: pin.short_desc ?? null,
+    description: null,
     latitude: pin.latitude ?? null,
     longitude: pin.longitude ?? null,
     photo_url: pin.photo_url ?? null,

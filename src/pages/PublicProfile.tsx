@@ -226,7 +226,6 @@ export default function PublicProfile() {
     if (cur) { next.delete(l.id); delete dates[l.id]; toast("Usunięto z zapisanych"); void unsaveCollectionDb(user.id, l.id); }
     else {
       next.add(l.id); dates[l.id] = new Date().toISOString(); toast.success("Zapisano listę");
-      void (supabase as any).rpc("increment_collection_saves", { p_collection_id: l.id });
       void (supabase as any).rpc("notify_collection_saved", { p_collection_id: l.id });
       void saveCollectionDb(user.id, l.id);
     }
@@ -331,7 +330,7 @@ export default function PublicProfile() {
                   description={l.description}
                   tags={Array.isArray(l.tags) ? l.tags : []}
                   tiles={l.tiles}
-                  counts={{ saves: (l.saves_count ?? 0) + delta(isListSaved(l.id), initSavedLists.has(l.id)), likes: (l.likes_count ?? 0) + delta(isListLiked(l.id), initLikedLists.has(l.id)), views: l.views_count ?? 0 }}
+                  counts={{ saves: Math.max(0, (l.saves_count ?? 0) + delta(isListSaved(l.id), initSavedLists.has(l.id))), likes: Math.max(0, (l.likes_count ?? 0) + delta(isListLiked(l.id), initLikedLists.has(l.id))), views: l.views_count ?? 0 }}
                   onOpen={() => navigate(`/lista/${l.id}`)}
                   onLike={canInteract ? () => onListLike(l) : undefined}
                   liked={isListLiked(l.id)}
@@ -358,7 +357,7 @@ export default function PublicProfile() {
                   tags={tr.tags}
                   tiles={tr.tiles}
                   mapPins={tr.tiles}
-                  counts={{ saves: tr.saves + delta(isTripSaved(tr.id), initSavedTrips.has(tr.id)), likes: tr.likes + delta(isTripLiked(tr.id), initLikedTrips.has(tr.id)), views: tr.views }}
+                  counts={{ saves: Math.max(0, tr.saves + delta(isTripSaved(tr.id), initSavedTrips.has(tr.id))), likes: Math.max(0, tr.likes + delta(isTripLiked(tr.id), initLikedTrips.has(tr.id))), views: tr.views }}
                   onOpen={() => navigate(`/route/${tr.id}`)}
                   onLike={canInteract ? () => onTripLike(tr) : undefined}
                   liked={isTripLiked(tr.id)}
