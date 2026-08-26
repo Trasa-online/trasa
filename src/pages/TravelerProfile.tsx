@@ -284,7 +284,7 @@ const TravelerProfile = () => {
     queryFn: async () => {
       const { data: cols } = await (supabase as any)
         .from("discovery_collections")
-        .select("id, title, city, list_status, views_count, saves_count, likes_count, updated_at")
+        .select("id, title, city, list_status, description, tags, views_count, saves_count, likes_count, updated_at")
         .eq("user_id", user!.id).eq("kind", "ranking")
         // Zakładka Listy = moje CURATED listy (grupy). Publiczne polecajki (visited). Luźno
         // zapisane miejsca (auto-lista "Do zobaczenia", to_visit) to NIE lista - pokazują się
@@ -562,6 +562,8 @@ const TravelerProfile = () => {
                   eyebrow=""
                   timestamp={shortRelativeTime(l.updated_at)}
                   title={l.title || t("feed.list_fallback", "Lista miejsc")}
+                  description={l.description}
+                  tags={Array.isArray(l.tags) ? l.tags : []}
                   tiles={l.tiles}
                   counts={{ saves: l.saves_count ?? 0, likes: l.likes_count ?? 0, views: l.views_count ?? 0 }}
                   onOpen={() => navigate(`/lista/${l.id}`)}

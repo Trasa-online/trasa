@@ -22,6 +22,7 @@ import { fetchPinPhotos, addPinPhoto, deletePinPhoto, photosByPlace, pinPhotoKey
 import { fetchPlaceVotes, toggleVote, placeVoteKey } from "@/lib/placeVotes";
 import { fetchUnreadChatCount } from "@/lib/chatReads";
 import PlaceNotes from "@/components/route/PlaceNotes";
+import PlaceNoteEditor from "@/components/route/PlaceNoteEditor";
 import { EmptyPlacesState } from "@/components/route/EmptyPlacesState";
 import AddPlaceSheet from "@/components/route/AddPlaceSheet";
 import InviteFriendsSheet from "@/components/route/InviteFriendsSheet";
@@ -146,10 +147,8 @@ export default function SharedRoute() {
   // "Wybierz miejsca": jesli ktorys uczestnik nie dodal jeszcze miejsc -> dialog (przypomnienie / mimo to).
   const [missingParticipants, setMissingParticipants] = useState<{ id: string; username: string | null; avatar_url: string | null }[] | null>(null);
   const [reminderBusy, setReminderBusy] = useState(false);
-  // Etap W TRAKCIE: wlasna notka (edytor) + zdjecia per-miejsce (wszyscy uczestnicy).
-  const [notes, setNotes] = useState<Record<string, string>>({});
-  const [noteSaved, setNoteSaved] = useState<Record<string, boolean>>({});
-  const noteTimer = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  // Etap W TRAKCIE: zdjecia per-miejsce (wszyscy uczestnicy). Wlasna notka -> PlaceNoteEditor
+  // (sam trzyma draft + debounce), zapis przez saveMyNote.
   const [uploadingPin, setUploadingPin] = useState<string | null>(null);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
@@ -399,30 +398,12 @@ export default function SharedRoute() {
     return () => { void supabase.removeChannel(ch); };
   }, [id, user?.id, queryClient]);
 
-  // Seed edytora wlasnych notek (etap w trakcie) z allNotes; klucz route_id::place_name.
-  const nkeyOf = (pin: any) => `${pin.route_id}::${pin.place_name}`;
-  useEffect(() => {
+  // Etap W TRAKCIE: zapis wlasnej notki (pin_ratings). PlaceNoteEditor sam debounce'uje -> zapis
+  // natychmiastowy. Po zapisie invalidacja notek (inni uczestnicy widza + moj edytor sie synchronizuje).
+  const saveMyNote = async (pin: any, value: string) => {
     if (!user) return;
-    // Seeduj TYLKO klucze jeszcze nieobecne lokalnie - nie nadpisuj notki, ktora user wlasnie pisze.
-    setNotes((prev) => {
-      const next = { ...prev };
-      for (const n of allNotes) {
-        if (n.user_id === user.id && n.note) { const k = `${n.route_id}::${n.place_name}`; if (!(k in prev)) next[k] = n.note; }
-      }
-      return next;
-    });
-  }, [allNotes, user?.id]);
-  const handleNoteChange = (pin: any, value: string) => {
-    if (!user) return;
-    const k = nkeyOf(pin);
-    setNotes((prev) => ({ ...prev, [k]: value }));
-    if (noteTimer.current[k]) clearTimeout(noteTimer.current[k]);
-    noteTimer.current[k] = setTimeout(async () => {
-      await (supabase as any).from("pin_ratings").upsert({ route_id: pin.route_id, user_id: user.id, place_name: pin.place_name, note: value || null }, { onConflict: "route_id,user_id,place_name" });
-      setNoteSaved((prev) => ({ ...prev, [k]: true }));
-      setTimeout(() => setNoteSaved((prev) => ({ ...prev, [k]: false })), 2000);
-      queryClient.invalidateQueries({ queryKey: ["shared-route-notes", id] });
-    }, 800);
+    await (supabase as any).from("pin_ratings").upsert({ route_id: pin.route_id, user_id: user.id, place_name: pin.place_name, note: value || null }, { onConflict: "route_id,user_id,place_name" });
+    queryClient.invalidateQueries({ queryKey: ["shared-route-notes", id] });
   };
   // Zdjecia per-miejsce (pins.images) - wszyscy uczestnicy widza wszystkie, kazdy dodaje/usuwa (member RLS).
   // Upload zdjecia -> bucket route-images -> pin_photos (route_id, place_name, user_id, url). Kazdy
@@ -767,67 +748,46 @@ export default function SharedRoute() {
         </button>
       );
     }
-    // Etap W TRAKCIE (ongoing): zdjecia per-miejsce + Twoja notka (edytor) + notki innych (wszyscy).
+    // Etap W TRAKCIE (ongoing): notki innych (awatar + tresc, BEZ headera) + moja notka (kompaktowo,
+    // auto-zapis) + guzik "Zdjęcie" obok + zdjecia per-miejsce (awatar autora). Uklad wspolny z listami.
     if (stage === "ongoing") {
-      const k = nkeyOf(pin);
       const placePhotos = photosMap.get(pinPhotoKey(pin.place_name)) ?? [];
       const busy = uploadingPin === pin.id;
+      const myNote = ((list.find((n) => n.user_id === user?.id)?.note) ?? "").trim();
+      const photoSlot = canEdit ? (
+        <label className={`inline-flex items-center gap-1.5 rounded-full bg-secondary px-3 py-1.5 text-xs font-bold text-foreground cursor-pointer active:scale-95 transition-transform ${busy ? "opacity-60 pointer-events-none" : ""}`}>
+          {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Camera className="h-3.5 w-3.5" />}
+          {busy ? "Dodawanie..." : "Zdjęcie"}
+          <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => { addPlacePhotos(pin, e.target.files); e.currentTarget.value = ""; }} />
+        </label>
+      ) : null;
       return (
         <div className="space-y-3 mt-1">
-          {/* Twoja notka (edytor) + Twoj awatar obok */}
+          {/* Moja notka: kompaktowo (+ Dodaj notkę / Edytuj) + guzik zdjecia obok. Auto-zapis. */}
           {canEdit && (
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">Twoja notka</p>
-              <div className="flex items-start gap-2">
-                <img src={avatarSrc(myAvatar)} alt="" className="h-8 w-8 rounded-full object-cover bg-secondary shrink-0 mt-0.5" />
-                <div className="relative flex-1 min-w-0">
-                  <textarea value={notes[k] ?? ""} onChange={(e) => handleNoteChange(pin, e.target.value)} placeholder="Dodaj notkę o tym miejscu..." rows={2}
-                    className="w-full bg-muted/50 rounded-xl px-3 py-2.5 text-sm text-foreground resize-none focus:outline-none border border-border/30 placeholder:text-muted-foreground/55" />
-                  {noteSaved[k] && <span className="absolute bottom-2 right-2.5 text-[10px] text-green-600 font-medium">Zapisano</span>}
-                </div>
-              </div>
-            </div>
+            <PlaceNoteEditor note={myNote} showAvatar avatarUrl={myAvatar} onSave={(v) => saveMyNote(pin, v)} photoSlot={photoSlot} />
           )}
-          {/* Notki innych uczestnikow (awatar + tresc) */}
-          {list.some((n) => n.user_id !== user?.id) && (
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">Notki uczestników</p>
-              <PlaceNotes notes={list} excludeUserId={user?.id} />
-            </div>
-          )}
-          {/* Zdjecia miejsca (2:3) - POD notka */}
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">Zdjęcia miejsca</p>
+          {/* Notki innych uczestnikow - awatar + tresc, BEZ headera (task 6). */}
+          <PlaceNotes notes={list} excludeUserId={user?.id} />
+          {/* Zdjecia miejsca (2:3) - awatar autora (dol-lewo) + usun (autor lub wlasciciel). */}
+          {placePhotos.length > 0 && (
             <div className="flex flex-wrap gap-2">
               {placePhotos.map((ph) => (
                 <div key={ph.id} className="relative w-[84px] aspect-[2/3] shrink-0 rounded-xl overflow-hidden bg-muted">
                   <img src={resolveStored(ph.url) ?? ph.url} alt="" className="w-full h-full object-cover" />
-                  {/* Awatar osoby ktora dodala zdjecie (dol-lewo). */}
                   <img src={avatarSrc(ph.avatar_url)} alt="" title={ph.username ?? undefined} className="absolute bottom-1 left-1 h-7 w-7 rounded-full object-cover border-2 border-white shadow-sm bg-secondary" />
-                  {/* Usun: autor zdjecia lub wlasciciel trasy. */}
                   {(ph.user_id === user?.id || isOwner) && <button onClick={() => removePlacePhoto(ph.id)} aria-label="Usuń zdjęcie" className="absolute top-1 right-1 h-5 w-5 rounded-full bg-black/55 text-white flex items-center justify-center active:scale-90"><X className="h-3 w-3" /></button>}
                 </div>
               ))}
-              {canEdit && (
-                <label className={`w-[84px] aspect-[2/3] shrink-0 rounded-xl border-2 border-dashed border-border/50 flex flex-col items-center justify-center gap-1 text-muted-foreground cursor-pointer active:scale-95 transition-transform ${busy ? "opacity-60 pointer-events-none" : ""}`}>
-                  {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <Camera className="h-5 w-5" />}
-                  <span className="text-[10px] font-semibold">{busy ? "..." : "Dodaj"}</span>
-                  <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => { addPlacePhotos(pin, e.target.files); e.currentTarget.value = ""; }} />
-                </label>
-              )}
             </div>
-          </div>
+          )}
         </div>
       );
     }
-    // Wspomnienie (completed / published): notki wszystkich, read-only.
+    // Wspomnienie (completed / published): notki wszystkich, read-only. BEZ headera - sam awatar
+    // + notka danego usera (task 6, prosba Nat 2026-08-26).
     if (!list.length) return undefined;
-    return (
-      <div>
-        <p className="text-sm font-semibold text-foreground">{list.length > 1 ? "Notki uczestników" : "Notka"}</p>
-        <PlaceNotes notes={list} className="mt-1.5" />
-      </div>
-    );
+    return <PlaceNotes notes={list} />;
   };
   const rowPinFor = (pin: any) => (coverFor(pin) ? { ...pin, photo_url: coverFor(pin) } : pin);
 

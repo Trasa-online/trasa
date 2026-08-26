@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams, useSearchParams, useLocation } from "react-router-dom";
-import { ArrowLeft, Search, Plus, X, Loader2, ChevronRight, ChevronDown, List, GalleryHorizontalEnd, GripVertical, Image as ImageIcon } from "lucide-react";
+import { ArrowLeft, Search, Plus, X, Loader2, ChevronRight, ChevronDown, List, GalleryHorizontalEnd, GripVertical } from "lucide-react";
 import { Reorder, useDragControls } from "framer-motion";
 import { haptics } from "@/hooks/useHaptics";
 import { supabase } from "@/integrations/supabase/client";
@@ -963,24 +963,22 @@ const CreateRanking = () => {
       {/* ══ KROK 2: glowna notka + notki do miejsc + mapa + anonimowo ══ */}
       {step === 2 && (
         <div className="flex-1 overflow-y-auto px-4 py-5">
-          {/* Okladki listy: hero (cover_url) + miniatura eksploracji (list_cover_url) - 1:1
-              z modelem tras. Tap w kafel = picker (zdjecia miejsc / wgraj nowe). */}
+          {/* Opis calej listy (discovery_collections.description) - do uzupelnienia przez autora
+              (prosba Nat 2026-08-26, zastapil picker okladki). Okladka listy auto = pierwsze zdjecie
+              miejsca (coverToSave = coverUrl ?? firstItemPhoto). */}
           <div>
-            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2 block">{`Okładka`}</label>
-            <div className="relative w-full aspect-[16/10] rounded-2xl overflow-hidden bg-gradient-to-br from-orange-400 via-rose-400 to-purple-500">
-              <img src={heroCover} alt="" className="absolute inset-0 w-full h-full object-cover" />
-              <div className="absolute inset-0 bg-gradient-to-b from-black/15 via-transparent to-black/55" />
-              {/* Hero = okladka listy (lewy-dolny rog) */}
-              <button
-                type="button"
-                onClick={() => setPickerTarget("hero")}
-                aria-label={t("cover.change_hero_aria", "Zmień okładkę listy")}
-                className="absolute bottom-3 left-3 z-20 inline-flex items-center gap-1.5 h-10 pl-3 pr-3.5 rounded-full bg-black/45 backdrop-blur-sm text-white text-xs font-bold active:scale-95 transition-transform"
-              >
-                <ImageIcon className="h-[18px] w-[18px]" /> {t("cover.hero_label", "Okładka")}
-              </button>
-            </div>
-            <p className="text-[11px] text-muted-foreground mt-2 leading-snug">{`Okładka to zdjęcie w widoku listy.`}</p>
+            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-1.5 block">
+              {`Opis listy`} <span className="normal-case font-medium text-muted-foreground/50">{t("notes.optional")}</span>
+            </label>
+            <p className="text-[12px] text-muted-foreground leading-snug mb-2.5">{`Napisz, o czym jest ta lista, żeby innym łatwiej było zdecydować.`}</p>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              maxLength={500}
+              rows={3}
+              placeholder={`Np. Moje ulubione miejsca na dobrą kawę i pracę z laptopem...`}
+              className="w-full rounded-2xl bg-secondary text-secondary-foreground border-0 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-orange-500/40 placeholder:text-muted-foreground/50 resize-none"
+            />
           </div>
 
           {/* Tagi listy (zamiast glownej notki) - chip-cloud (wszystkie widoczne) + wlasne usera. */}
