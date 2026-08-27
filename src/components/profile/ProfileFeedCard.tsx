@@ -49,7 +49,10 @@ export function ProfileFeedCard({
   timestamp?: string;
   title: string;
   description?: string | null; // opis wyjazdu (review_narrative/ai_summary) - pod nazwa
-  tags?: string[];             // tagi wyjazdu (routes.tags) - pigulki pod opisem
+  // Tagi (routes.tags / discovery_collections.tags) - pigulki pod opisem. Na WLASNYM profilu
+  // ich nie przekazujemy (decyzja Nat 2026-08-28: na karcie zostaje sam opis); zostaja na
+  // profilu publicznym, gdzie pomagaja rozpoznac czym jest cudza lista/wyjazd.
+  tags?: string[];
   tiles: any[];
   counts: FeedCounts;
   onOpen: () => void;

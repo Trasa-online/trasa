@@ -507,7 +507,6 @@ const TravelerProfile = () => {
         timestamp={shortRelativeTime(tr.created_at)}
         title={tr.title || (tr.city ? t("feed.trip_fallback", { city: tr.city, defaultValue: `Wyjazd do ${tr.city}` }) : t("feed.trip_fallback_generic", "Wyjazd"))}
         description={tr.description}
-        tags={tr.tags}
         tiles={tr.tiles}
         counts={{ saves: tr.saves, likes: tr.likes, views: tr.views }}
         isDraft={isRoboczy}
@@ -534,7 +533,6 @@ const TravelerProfile = () => {
         timestamp={shortRelativeTime(tr.created_at)}
         title={tr.title || (tr.city ? t("feed.trip_fallback", { city: tr.city, defaultValue: `Wyjazd do ${tr.city}` }) : t("feed.trip_fallback_generic", "Wyjazd"))}
         description={tr.description}
-        tags={tr.tags}
         tiles={tr.tiles}
         counts={{ saves: tr.saves, likes: tr.likes, views: tr.views }}
         mapPins={tr.tiles}
@@ -555,7 +553,6 @@ const TravelerProfile = () => {
       timestamp={shortRelativeTime(l.updated_at)}
       title={l.title || t("feed.list_fallback", "Lista miejsc")}
       description={l.description}
-      tags={Array.isArray(l.tags) ? l.tags : []}
       tiles={l.tiles}
       counts={{ saves: l.saves_count ?? 0, likes: l.likes_count ?? 0, views: l.views_count ?? 0 }}
       badge={l.isNew ? <span className="inline-flex items-center rounded-full bg-primary text-white px-2.5 py-1 text-[11.5px] font-bold">Nowe miejsce!</span> : undefined}
@@ -697,7 +694,6 @@ const TravelerProfile = () => {
                   timestamp={shortRelativeTime(l.updated_at)}
                   title={l.title || t("feed.list_fallback", "Lista miejsc")}
                   description={l.description}
-                  tags={Array.isArray(l.tags) ? l.tags : []}
                   tiles={l.tiles}
                   counts={{ saves: l.saves_count ?? 0, likes: l.likes_count ?? 0, views: l.views_count ?? 0 }}
                   onOpen={() => navigate(`/lista/${l.id}`)}
