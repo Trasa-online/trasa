@@ -39,6 +39,40 @@ export interface ListAuthor { name: string; avatar: string | null }
 const skey = (s: string) => String(s ?? "").trim().toLowerCase();
 
 // Wszystkie listy usera (obie kategorie) + liczba pozycji + okladka + nazwy miejsc.
+// Kuratorskie listy usera ("Moje listy", list_status='visited') RAZEM z miejscami - zrodlo
+// wyboru przy dodawaniu miejsc do wyjazdu/listy (obok prywatnych "Ogolnych"). Puste listy pomijamy.
+export interface UserListWithPlaces {
+  id: string;
+  title: string;
+  city: string | null;
+  places: PlaceForList[];
+}
+export async function fetchListsWithPlaces(userId: string): Promise<UserListWithPlaces[]> {
+  const { data: cols } = await (supabase as any)
+    .from("discovery_collections")
+    .select("id, title, city")
+    .eq("user_id", userId).eq("kind", "ranking").eq("list_status", "visited")
+    .order("updated_at", { ascending: false });
+  const rows = (cols ?? []) as any[];
+  if (!rows.length) return [];
+  const { data: items } = await (supabase as any)
+    .from("discovery_items")
+    .select("collection_id, place_name, category, address, city, latitude, longitude, place_id, google_place_id, rating, photo_url, order_index")
+    .in("collection_id", rows.map((r) => r.id))
+    .order("order_index", { ascending: true });
+  const byList: Record<string, PlaceForList[]> = {};
+  for (const it of (items ?? []) as any[]) {
+    (byList[it.collection_id] ??= []).push({
+      place_name: it.place_name, category: it.category, address: it.address,
+      city: it.city ?? null, latitude: it.latitude, longitude: it.longitude,
+      photo_url: it.photo_url, place_id: it.place_id, google_place_id: it.google_place_id, rating: it.rating,
+    });
+  }
+  return rows
+    .map((r) => ({ id: r.id, title: r.title, city: r.city ?? null, places: (byList[r.id] ?? []).map((p) => ({ ...p, city: p.city ?? r.city ?? null })) }))
+    .filter((l) => l.places.length > 0);
+}
+
 export async function fetchUserLists(userId: string): Promise<UserList[]> {
   const { data: cols } = await (supabase as any)
     .from("discovery_collections")

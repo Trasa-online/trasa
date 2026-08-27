@@ -23,6 +23,9 @@ export interface SavePlaceInput {
   place_name: string;
   category: string | null;
   address: string | null;
+  /** WLASNE miasto miejsca. Gdy brak - spada na miasto kontekstu (miasto wyjazdu/eksploracji).
+   *  Bez tego kazde zapisane miejsce dostawalo miasto wyjazdu, ktory akurat planujesz. */
+  city?: string | null;
   latitude: number | null;
   longitude: number | null;
   photo_url: string | null;
@@ -89,7 +92,7 @@ export default function SavePlaceSheet({
     // (np. by zmienic liste albo usunac) NIE re-dodawaloby usunietego miejsca (bug: un-save nieskuteczny).
     if (isSaved(place.place_name)) return;
     let alive = true;
-    quickSavePlace(user.id, { ...place }, city || null, author)
+    quickSavePlace(user.id, { ...place, city: place.city ?? city ?? null }, city || null, author)
       .then(({ added }) => { if (alive && added) invalidate(); })
       .catch((e) => console.warn("[SavePlaceSheet] auto-save failed:", e?.message ?? e));
     return () => { alive = false; };
@@ -114,13 +117,13 @@ export default function SavePlaceSheet({
         setOverride((prev) => new Map(prev).set(l.id, false));
         toast.success(`Usunięto z „${l.title}"`, {
           action: { label: "Cofnij", onClick: async () => {
-            await addPlaceToList(l.id, { ...place });
+            await addPlaceToList(l.id, { ...place, city: place.city ?? l.city ?? city ?? null });
             setOverride((prev) => new Map(prev).set(l.id, true));
             invalidate();
           } },
         });
       } else {
-        await addPlaceToList(l.id, { ...place });
+        await addPlaceToList(l.id, { ...place, city: place.city ?? l.city ?? city ?? null });
         setOverride((prev) => new Map(prev).set(l.id, true));
         toast.success(`Dodano do „${l.title}"`);
       }
@@ -139,7 +142,7 @@ export default function SavePlaceSheet({
     if (!name) return;
     setBusyId("new"); haptics.medium();
     try {
-      const id = await createListWithPlace(user.id, name, "visited", city || null, { ...place }, author, true);
+      const id = await createListWithPlace(user.id, name, "visited", city || null, { ...place, city: place.city ?? city ?? null }, author, true);
       if (!id) throw new Error("create failed");
       setNewName("");
       setShowNewList(false);

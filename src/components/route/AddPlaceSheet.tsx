@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { X, Plus, Check, Users, ChevronRight, Search, Loader2 } from "lucide-react";
+import { X, Plus, Check, Users, ChevronRight, ChevronDown, Search, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useAuth } from "@/hooks/useAuth";
 import { haptics } from "@/hooks/useHaptics";
 import { supabase } from "@/integrations/supabase/client";
 import { categoryIconSrc, categoryFromGoogleTypes } from "@/lib/placeCategoryIcon";
-import { fetchSavedPlaces, type SavedPlace, type PlaceForList } from "@/lib/placeLists";
+import { fetchSavedPlaces, fetchListsWithPlaces, type SavedPlace, type PlaceForList } from "@/lib/placeLists";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import { GoogleGlyph } from "@/components/icons/GoogleGlyph";
 import { openExternal } from "@/lib/openExternal";
@@ -23,10 +23,13 @@ const distKm = (a: { lat: number; lng: number }, b: { lat: number; lng: number }
 };
 const keyOf = (p: { place_name?: string | null }) => (p.place_name || "").trim().toLowerCase();
 const toPlaceForList = (p: SavedPlace): PlaceForList => ({
-  place_name: p.place_name, category: p.category, address: p.address,
+  place_name: p.place_name, category: p.category, address: p.address, city: p.city,
   latitude: p.latitude, longitude: p.longitude, photo_url: p.photo_url, place_id: p.place_id,
   google_place_id: p.google_place_id, rating: p.rating,
 });
+// Podpis wiersza = WLASNE miasto miejsca (albo adres). NIE miasto wyjazdu - inaczej kazde
+// zapisane miejsce wygladalo jakby lezalo w miescie, do ktorego akurat planujesz wyjazd.
+const placeSubtitle = (p: { city?: string | null; address?: string | null }) => p.city || p.address || null;
 
 interface Props {
   open: boolean;
@@ -76,13 +79,24 @@ export default function AddPlaceSheet({ open, onClose, city, existingPlaces, onA
   const center = existingCentroid ?? geoCenter;
 
   useEffect(() => {
-    if (open) { setSelected([]); setManual([]); setQuery(""); setResults([]); setBlocked(false); setAdding(false); setDetailPlace(null); }
+    if (open) { setSelected([]); setManual([]); setQuery(""); setResults([]); setBlocked(false); setAdding(false); setDetailPlace(null); setOpenLists(new Set()); }
   }, [open]);
 
   const { data: savedPlaces = [] } = useQuery({
     queryKey: ["saved-places", user?.id],
     enabled: !!user?.id && open,
     queryFn: () => fetchSavedPlaces(user!.id),
+  });
+
+  // Miejsca z LIST usera (kuratorskie "Moje listy") - drugie zrodlo wyboru obok "Ogolnych".
+  const { data: userLists = [] } = useQuery({
+    queryKey: ["lists-with-places", user?.id],
+    enabled: !!user?.id && open,
+    queryFn: () => fetchListsWithPlaces(user!.id),
+  });
+  const [openLists, setOpenLists] = useState<Set<string>>(new Set());
+  const toggleList = (id: string) => setOpenLists((prev) => {
+    const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n;
   });
 
   const searchMode = query.trim().length >= 2;
@@ -270,7 +284,9 @@ export default function AddPlaceSheet({ open, onClose, city, existingPlaces, onA
               {/* NAJPIERW "Zapisane" (do wyboru) + "Dodaj nowe miejsce", "Juz dodane" (info) na SAMYM
                   DOLE - nie zabiera miejsca u gory (2026-08-25, prosba Nat). Lista, nie siatka kafelkow. */}
               <div>
-                {existingPlaces && existingPlaces.length > 0 && <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground mb-1.5 px-0.5">Zapisane</p>}
+                {((existingPlaces && existingPlaces.length > 0) || userLists.length > 0) && (
+                  <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground mb-1.5 px-0.5">Zapisane</p>
+                )}
                 <div className="space-y-1.5">
                   {/* "Dodaj nowe miejsce" jako WIERSZ (nie kafelek z plusem) -> fokus na wyszukiwarke */}
                   <button onClick={() => inputRef.current?.focus()} className="w-full flex items-center gap-3 rounded-2xl bg-secondary/60 px-3 py-2.5 text-left active:bg-secondary transition-colors">
@@ -280,14 +296,40 @@ export default function AddPlaceSheet({ open, onClose, city, existingPlaces, onA
                     <span className="flex-1 min-w-0 text-[15px] font-semibold text-foreground">Dodaj nowe miejsce</span>
                     <ChevronRight className="h-5 w-5 text-muted-foreground shrink-0" />
                   </button>
-                  {tiles.map((p, i) => renderPlaceRow({ rowKey: `${keyOf(p)}-${i}`, place: p, subtitle: city, onToggle: () => toggle(p), selected: isSel(p) }))}
+                  {tiles.map((p, i) => renderPlaceRow({ rowKey: `${keyOf(p)}-${i}`, place: p, subtitle: placeSubtitle(p), onToggle: () => toggle(p), selected: isSel(p) }))}
                 </div>
               </div>
+              {/* Miejsca z Twoich LIST - kazda lista jako zwijana sekcja (domyslnie zwinieta,
+                  zeby nie zasypywac widoku). Miejsca juz w trasie sa odfiltrowane. */}
+              {userLists.map((l) => {
+                const available = l.places.filter((p) => !existingNameSet.has(keyOf(p)));
+                if (!available.length) return null;
+                const isOpen = openLists.has(l.id);
+                return (
+                  <div key={l.id}>
+                    <button onClick={() => { haptics.light(); toggleList(l.id); }}
+                      className="w-full flex items-center gap-2 mb-1.5 px-0.5 text-left active:opacity-70 transition-opacity">
+                      <span className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground truncate">{l.title}</span>
+                      <span className="text-[11px] font-semibold text-muted-foreground/70 shrink-0">{available.length}</span>
+                      <span className="flex-1" />
+                      <ChevronDown className={`h-4 w-4 text-muted-foreground shrink-0 transition-transform ${isOpen ? "" : "-rotate-90"}`} />
+                    </button>
+                    {isOpen && (
+                      <div className="space-y-1.5">
+                        {available.map((p, i) => renderPlaceRow({
+                          rowKey: `l-${l.id}-${keyOf(p)}-${i}`, place: p, subtitle: placeSubtitle(p),
+                          onToggle: () => toggle(p), selected: isSel(p),
+                        }))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
               {existingPlaces && existingPlaces.length > 0 && (
                 <div>
                   <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground mb-1.5 px-0.5">Już dodane</p>
                   <div className="space-y-1.5">
-                    {existingPlaces.map((p, i) => renderPlaceRow({ rowKey: `ex-${keyOf(p)}-${i}`, place: p, subtitle: city, added: true }))}
+                    {existingPlaces.map((p, i) => renderPlaceRow({ rowKey: `ex-${keyOf(p)}-${i}`, place: p, subtitle: placeSubtitle(p) ?? city, added: true }))}
                   </div>
                 </div>
               )}

@@ -1525,6 +1525,9 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
         place_name: place.place_name,
         category: place.category ?? null,
         address: place.address ?? null,
+        // Miasto SAMEGO miejsca (nie kontekstu przegladania) - inaczej zapis stempluje je
+        // miastem, po ktorym akurat sie rozgladasz.
+        city: place.city ?? null,
         latitude: place.latitude ?? null,
         longitude: place.longitude ?? null,
         photo_url: photoUrlOverrides.current[place.id] ?? place.photo_url ?? null,

@@ -546,6 +546,7 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
     <PlaceSwiperDetail open={!!detailPlace} onOpenChange={(o) => { if (!o) setDetailPlace(null); }} place={detailPlace} city={detailPlace?.city || pickCity}
       onLike={user && detailPlace ? () => setSavePlace({
         place_name: detailPlace.place_name, category: detailPlace.category ?? null, address: detailPlace.address || null,
+        city: detailPlace.city ?? null,
         latitude: detailPlace.latitude ?? null, longitude: detailPlace.longitude ?? null,
         photo_url: detailPlace.photo_url || null,
         place_id: /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(detailPlace.id ?? "")) ? detailPlace.id : null,

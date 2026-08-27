@@ -132,6 +132,8 @@ export default function SharedRoute() {
   const [savePlace, setSavePlace] = useState<SavePlaceInput | null>(null);
   const pinToSave = (pin: any): SavePlaceInput => ({
     place_name: pin.place_name, category: pin.category ?? null, address: pin.address ?? null,
+    // Pin lezy w miescie SWOJEJ trasy - to jest wlasne miasto miejsca, nie przypadkowy kontekst.
+    city: pin.city ?? (route as any)?.city ?? null,
     latitude: pin.latitude ?? null, longitude: pin.longitude ?? null,
     photo_url: pin.photo_url ?? null, place_id: pin.place_id ?? null,
   });
@@ -855,7 +857,39 @@ export default function SharedRoute() {
     </button>
   );
 
+  // Wiersze miejsc w podanej kolejnosci (edycja = drag, inaczej zwykla lista).
+  const renderRows = (list: any[], onReorder: (next: any[]) => void) => (
+    canEdit ? (
+      <Reorder.Group axis="y" values={list} onReorder={onReorder} as="div">
+        {list.map((pin: any, i: number) => (
+          <SortableRouteRow
+            key={pin.id} value={pin} rowPin={rowPinFor(pin)} index={i}
+            categoryLabel={categoryLabel(pin.category || "other")}
+            onOpen={() => openDetail(pin)} onGoogle={() => openGooglePlace(pin)} onDelete={() => handleDeletePin(pin)}
+            note={buildNote(pin)} cornerAvatar={addedByAvatar(pin)}
+          />
+        ))}
+      </Reorder.Group>
+    ) : (
+      <div>
+        {list.map((pin: any, i: number) => (
+          <RoutePlaceRow
+            key={pin.id} pin={rowPinFor(pin)} index={i}
+            categoryLabel={categoryLabel(pin.category || "other")}
+            onOpen={() => openDetail(pin)} onGoogle={() => openGooglePlace(pin)}
+            onSave={!isOwner && user ? () => toggleSaveBookmark(pin) : undefined} saved={isSaved(pin.place_name)}
+            note={buildNote(pin)} cornerAvatar={addedByAvatar(pin)}
+          />
+        ))}
+      </div>
+    )
+  );
+
   const renderList = () => (
+    // Kategorie grupuja miejsca TYLKO na etapie propozycji (tam sluza do przegladania sugestii).
+    // W trakcie wyjazdu i we wspomnieniu liczy sie KOLEJNOSC ustawiona przez usera (od punktu do
+    // punktu), wiec lista jest plaska - bez naglowkow kategorii (decyzja Nat 2026-08-28).
+    stage !== "planning" ? renderRows(pins as any[], handleReorderPins) :
     <div>
       {groupedPins.map(([cat, groupPins]) => {
         const collapsed = collapsedCats.has(cat);

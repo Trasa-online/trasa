@@ -24,7 +24,7 @@ import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { avatarSrc } from "@/lib/avatar";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import SavePlaceSheet, { type SavePlaceInput } from "@/components/plan-wizard/SavePlaceSheet";
-import { placeKeyOf, fetchPlacePhotosForKeys, pickPlaceCover } from "@/lib/placePhotoSocial";
+import { placeKeyOf, fetchPlacePhotosForKeys, pickPlaceCover, linkPhotoToPlace, unlinkPhotoFromPlace } from "@/lib/placePhotoSocial";
 import { useSavedPlaces } from "@/hooks/useSavedPlaces";
 import { CategoryIcon } from "@/components/CategoryIcon";
 import { subcategoryLabelLocalized } from "@/lib/categories";
@@ -103,6 +103,13 @@ export default function SharedList() {
       }
       const { error: upErr } = await (supabase as any).from("discovery_items").update({ images: urls }).eq("id", item.id);
       if (upErr) { toast.error("Nie udało się dodać zdjęcia"); return; }
+      // Zdjecie zyje tez w galerii MIEJSCA (place_photos) - inaczej widac je tylko na tej liscie,
+      // a wizytowka miejsca i okladki w innych widokach o nim nie wiedza (zgloszenie Nat 2026-08-28).
+      const placeKey = placeKeyOf({ googlePlaceId: item.google_place_id ?? null, placeName: item.place_name });
+      const added = urls.filter((u) => !(Array.isArray(item.images) ? item.images : []).includes(u));
+      await Promise.all(added.map((photoUrl) => linkPhotoToPlace({
+        userId: user.id, placeKey, placeName: item.place_name, city: item.city ?? col?.city ?? null, photoUrl,
+      })));
       queryClient.invalidateQueries({ queryKey: ["shared-list-items", id] });
     } finally { setUploadingItem(null); }
   };
@@ -111,6 +118,12 @@ export default function SharedList() {
     const urls = (Array.isArray(item.images) ? item.images : []).filter((u: string) => u !== url);
     const { error } = await (supabase as any).from("discovery_items").update({ images: urls }).eq("id", item.id);
     if (error) { toast.error("Nie udało się usunąć zdjęcia"); return; }
+    // Zdejmij tez z galerii miejsca (tylko wlasny wiersz - cudze zdjecia miejsca zostaja).
+    if (user) {
+      await unlinkPhotoFromPlace({
+        userId: user.id, placeKey: placeKeyOf({ googlePlaceId: item.google_place_id ?? null, placeName: item.place_name }), photoUrl: url,
+      });
+    }
     queryClient.invalidateQueries({ queryKey: ["shared-list-items", id] });
   };
 
@@ -153,7 +166,7 @@ export default function SharedList() {
     queryFn: async () => {
       const { data } = await (supabase as any)
         .from("discovery_items")
-        .select("id, place_id, place_name, category, address, latitude, longitude, rating, google_place_id, photo_url, short_desc, images, added_by, tags, order_index")
+        .select("id, place_id, place_name, category, address, city, latitude, longitude, rating, google_place_id, photo_url, short_desc, images, added_by, tags, order_index")
         .eq("collection_id", id as string)
         .order("order_index", { ascending: true });
       return (data ?? []) as any[];
@@ -254,6 +267,7 @@ export default function SharedList() {
     place_name: pin.place_name,
     category: catOf(pin),
     address: pin.address ?? null,
+    city: pin.city ?? col?.city ?? null,
     latitude: pin.latitude ?? null,
     longitude: pin.longitude ?? null,
     photo_url: pin.photo_url ?? null,
@@ -291,7 +305,8 @@ export default function SharedList() {
 
   // Wlasciciel dodaje miejsca do listy (drawer jak w wyjazdach): batch insert do discovery_items.
   const handleAddPlacesToList = async (places: PlaceForList[]) => {
-    for (const p of places) await addPlaceToList(col.id, p);
+    // Miasto: wlasne miasto miejsca, a gdy nieznane - miasto listy.
+    for (const p of places) await addPlaceToList(col.id, { ...p, city: p.city ?? col.city ?? null });
     queryClient.invalidateQueries({ queryKey: ["shared-list-items", id] });
     toast.success("Zaktualizowano listę");
     // Autor dodal miejsca -> powiadom (in-app) wszystkich, ktorzy zapisali te liste ("Nowe miejsce!").
@@ -563,7 +578,8 @@ export default function SharedList() {
           onClose={() => setAddPlaceOpen(false)}
           city={col.city ?? null}
           existingPlaces={items.map((it: any) => ({
-            place_name: it.place_name, category: it.category ?? null, address: it.address ?? null, description: it.short_desc ?? null,
+            place_name: it.place_name, category: it.category ?? null, address: it.address ?? null,
+            city: it.city ?? col.city ?? null,
             latitude: it.latitude ?? null, longitude: it.longitude ?? null, photo_url: it.photo_url ?? null, place_id: it.place_id ?? null,
             google_place_id: it.google_place_id ?? null, rating: it.rating ?? null,
           }))}

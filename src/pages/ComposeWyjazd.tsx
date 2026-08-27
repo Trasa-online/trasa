@@ -89,6 +89,7 @@ const itemToPlaceForList = (i: ComposeItem): PlaceForList => ({
 // MockPlace (wizytowka) -> SavePlaceInput. place_id tylko gdy DB uuid (inaczej null).
 const mockToSaveInput = (mp: any): SavePlaceInput => ({
   place_name: mp.place_name, category: mp.category ?? null, address: mp.address || null,
+  city: mp.city ?? null,
   latitude: mp.latitude ?? null, longitude: mp.longitude ?? null,
   photo_url: mp.photo_url || null, place_id: UUID_RE.test(String(mp.id ?? "")) ? mp.id : null,
 });

@@ -412,6 +412,7 @@ export default function TripProposalsSheet({
       <PlaceSwiperDetail open={!!detailPlace} onOpenChange={(o) => { if (!o) setDetailPlace(null); }} place={detailPlace} city={detailPlace?.city || city || ""}
         onLike={user && detailPlace ? () => setSavePlace({
           place_name: detailPlace.place_name, category: detailPlace.category ?? null, address: detailPlace.address || null,
+          city: detailPlace.city ?? null,
           latitude: detailPlace.latitude ?? null, longitude: detailPlace.longitude ?? null,
           photo_url: detailPlace.photo_url || null,
           place_id: UUID_RE.test(String(detailPlace.id ?? "")) ? detailPlace.id : null,

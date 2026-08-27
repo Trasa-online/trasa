@@ -142,6 +142,40 @@ export async function uploadPlacePhoto(
   }
 }
 
+// Podepnij ISTNIEJACE zdjecie (juz w Storage, np. wgrane do pozycji listy w buckecie route-images)
+// do galerii MIEJSCA. Dzieki temu zdjecie dodane przy miejscu na liscie widac tez w jego wizytowce
+// i na okladkach (place_photos to jedyne zrodlo "zdjec userow" dla miejsca).
+// Idempotentne: ten sam URL nie zostanie dopisany drugi raz.
+export async function linkPhotoToPlace(opts: {
+  userId: string; placeKey: string; placeName: string; city?: string | null; photoUrl: string;
+}): Promise<void> {
+  if (!opts.placeKey || !opts.photoUrl) return;
+  try {
+    const { data: existing } = await (supabase as any)
+      .from("place_photos").select("id").eq("place_key", opts.placeKey).eq("photo_url", opts.photoUrl).maybeSingle();
+    if (existing?.id) return;
+    const { error } = await (supabase as any).from("place_photos").insert({
+      place_key: opts.placeKey, place_name: opts.placeName, city: opts.city ?? null,
+      user_id: opts.userId, photo_url: opts.photoUrl,
+    });
+    if (error) console.warn("[placePhotoSocial] linkPhotoToPlace:", error.message);
+  } catch (e) {
+    console.warn("[placePhotoSocial] linkPhotoToPlace exception:", e instanceof Error ? e.message : e);
+  }
+}
+
+// Odepnij zdjecie od miejsca po URL (usuniecie zdjecia z pozycji listy). Kasuje TYLKO wiersz
+// wskazanego usera - cudze zdjecia miejsca zostaja nietkniete.
+export async function unlinkPhotoFromPlace(opts: { userId: string; placeKey: string; photoUrl: string }): Promise<void> {
+  if (!opts.placeKey || !opts.photoUrl) return;
+  try {
+    await (supabase as any).from("place_photos").delete()
+      .eq("place_key", opts.placeKey).eq("photo_url", opts.photoUrl).eq("user_id", opts.userId);
+  } catch (e) {
+    console.warn("[placePhotoSocial] unlinkPhotoFromPlace:", e instanceof Error ? e.message : e);
+  }
+}
+
 export async function deletePlacePhoto(id: string): Promise<boolean> {
   const { error } = await (supabase as any).from("place_photos").delete().eq("id", id);
   if (error) { console.warn("[placePhotoSocial] delete:", error.message); return false; }
