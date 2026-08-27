@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { useDragToDismiss } from "@/hooks/useDragToDismiss";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
@@ -66,6 +67,8 @@ const RouteSummaryDialog = ({
   const { t } = useTranslation("route");
   const [saving, setSaving] = useState(false);
   const [showGuestAuth, setShowGuestAuth] = useState(false);
+  // Gest natywny: przeciagniecie panelu w dol zamyka arkusz.
+  const guestDrag = useDragToDismiss({ onDismiss: () => setShowGuestAuth(false) });
   const { user, isAnonymous } = useAuth();
   const { open: openAuthDrawer } = useAuthDrawer();
   const navigate = useNavigate();
@@ -405,7 +408,7 @@ const RouteSummaryDialog = ({
         {/* Guest auth upsell */}
         {showGuestAuth && (
           <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm">
-            <div className="w-full max-w-sm bg-card rounded-t-3xl px-6 pt-8 pb-[max(24px,env(safe-area-inset-bottom))] flex flex-col gap-5 shadow-2xl animate-in slide-in-from-bottom-4 duration-300">
+            <div {...guestDrag.dragProps} className="w-full max-w-sm bg-card rounded-t-3xl px-6 pt-8 pb-[max(24px,env(safe-area-inset-bottom))] flex flex-col gap-5 shadow-2xl animate-in slide-in-from-bottom-4 duration-300">
               <div className="text-center space-y-1">
                 <p className="text-2xl font-black">{t("summary.guest_title")}</p>
                 <p className="text-sm text-muted-foreground">{t("summary.guest_desc")}</p>

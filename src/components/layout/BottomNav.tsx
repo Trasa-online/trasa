@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useDragToDismiss } from "@/hooks/useDragToDismiss";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useLocation } from "react-router-dom";
 import { NavLink } from "@/components/NavLink";
@@ -64,6 +65,9 @@ const BottomNav = () => {
   // Nowy arkusz tworzenia (sheet-first, native). "+" -> "Co dzisiaj tworzymy?" [Lista|Wyjazd].
   const [showCreate, setShowCreate] = useState(false);
   const [reusePrompt, setReusePrompt] = useState<{ city: string; likes: ExploreLike[] } | null>(null);
+  // Gest natywny: przeciagniecie panelu w dol zamyka arkusz (menu "+" i prompt ponownego uzycia).
+  const menuDrag = useDragToDismiss({ onDismiss: () => setShowMenu(false) });
+  const reuseDrag = useDragToDismiss({ onDismiss: () => setReusePrompt(null) });
   // Menu "+": tworzenie wyjazdu SOLO / zestawienia. Trasy grupowe powstaja jako wyjazd solo,
   // a potem zapraszasz znajomych z widoku trasy (InviteFriendsSheet) - bez osobnej "sesji".
   // planStep uzywany tylko w legacy (nie-uproszczonym) trybie planowania.
@@ -157,6 +161,7 @@ const BottomNav = () => {
           onClick={() => setShowMenu(false)}
         >
           <div
+            {...menuDrag.dragProps}
             className="w-full max-w-sm bg-card rounded-t-3xl px-6 pt-5 pb-[max(28px,env(safe-area-inset-bottom))] flex flex-col gap-6 shadow-2xl animate-sheet-up"
             onClick={(e) => e.stopPropagation()}
           >
@@ -206,6 +211,7 @@ const BottomNav = () => {
           onClick={() => setReusePrompt(null)}
         >
           <div
+            {...reuseDrag.dragProps}
             className="w-full max-w-sm bg-card rounded-t-3xl px-6 pt-7 pb-[max(24px,env(safe-area-inset-bottom))] flex flex-col gap-5 shadow-2xl animate-in slide-in-from-bottom-4 duration-300"
             onClick={(e) => e.stopPropagation()}
           >

@@ -17,6 +17,7 @@
 import { type ReactNode, useRef, useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { haptics } from "@/hooks/useHaptics";
+import { useSwipeNav } from "@/hooks/useSwipeNav";
 import { createPortal } from "react-dom";
 import { mainCategoryLabel, subcategoryLabelLocalized, parentMainOfSub } from "@/lib/categories";
 import { CategoryIcon } from "@/components/CategoryIcon";
@@ -340,26 +341,24 @@ interface HeroPhotoCarouselProps {
 function HeroPhotoCarousel({ photos, placeName, category, onExpand, onClose, loading, topLeftSlot, bottomLeftSlot, onSave, saved }: HeroPhotoCarouselProps) {
   const { t } = useTranslation("wizytowka");
   const [activeIdx, setActiveIdx] = useState(0);
-  const swipeStartX = useRef<number | null>(null);
   const hasPhoto = photos.length > 0;
   // Zmiana zdjecia (swipe/strzalki) z delikatna haptyka - tylko gdy indeks faktycznie sie zmienia.
   const changePhoto = (idx: number) => {
     const clamped = Math.max(0, Math.min(photos.length - 1, idx));
     if (clamped !== activeIdx) { haptics.light(); setActiveIdx(clamped); }
   };
+  // Wspolny gest (odrzuca ruch pionowy = scroll wizytowki). Haptyka jest w changePhoto.
+  const swipePhotos = useSwipeNav({
+    onLeft: () => changePhoto(activeIdx + 1),
+    onRight: () => changePhoto(activeIdx - 1),
+    enabled: photos.length > 1,
+    haptic: false,
+  });
 
   return (
     <div
       className="relative shrink-0 bg-muted overflow-hidden w-full aspect-[4/3] rounded-t-3xl"
-      onTouchStart={(e) => { swipeStartX.current = e.touches[0].clientX; }}
-      onTouchEnd={(e) => {
-        if (swipeStartX.current === null) return;
-        const dx = e.changedTouches[0].clientX - swipeStartX.current;
-        swipeStartX.current = null;
-        if (Math.abs(dx) > 40 && photos.length > 1) {
-          changePhoto(dx < 0 ? activeIdx + 1 : activeIdx - 1);
-        }
-      }}
+      {...swipePhotos}
     >
       <div className="absolute top-0 left-0 right-0 h-7 flex items-center justify-center z-30 pointer-events-none">
         <div className="w-10 h-[5px] rounded-full bg-white/60" />
@@ -551,7 +550,8 @@ function EventsSection({ data, referenceDate, routeAvatars }: SectionProps & { r
   const [expanded, setExpanded] = useState(false);
   // Reset na wybrany miesiac gdy dane sie doczytaja (np. enrich profilu biznesu po otwarciu).
   useEffect(() => { setMonthDate(startOfMonth(parseISO(`${defaultKey}-01`))); setExpanded(false); }, [defaultKey]);
-  const swipeX = useRef<number | null>(null);
+  // Swipe w bok = poprzedni/nastepny miesiac wydarzen (wspolny gest, odporny na scroll pionowy).
+  const swipeMonths = useSwipeNav({ onLeft: () => go(1), onRight: () => go(-1) });
 
   if (events.length === 0) return null;
 
@@ -624,16 +624,7 @@ function EventsSection({ data, referenceDate, routeAvatars }: SectionProps & { r
       </div>
 
       {/* Wydarzenia w wybranym miesiacu (swipe w bok = zmiana miesiaca) */}
-      <div
-        className="space-y-2"
-        onTouchStart={(e) => { swipeX.current = e.touches[0].clientX; }}
-        onTouchEnd={(e) => {
-          if (swipeX.current === null) return;
-          const dx = e.changedTouches[0].clientX - swipeX.current;
-          swipeX.current = null;
-          if (Math.abs(dx) > 50) go(dx < 0 ? 1 : -1);
-        }}
-      >
+      <div className="space-y-2" {...swipeMonths}>
         {monthEvents.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-6 rounded-3xl bg-secondary">{t("events_month_empty")}</p>
         ) : (

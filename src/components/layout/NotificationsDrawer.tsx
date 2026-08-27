@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { X, Bell, UserPlus, UserCheck, MapPin, Route, Bookmark, CheckCircle2, XCircle, MessageCircle, Heart, Camera } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
@@ -147,16 +148,16 @@ export default function NotificationsDrawer({ open, onClose, userId }: Props) {
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
-  if (!open) return null;
-
+  // Arkusz zamiast recznego overlaya: dostaje animacje wysuniecia z dolu (Radix data-state)
+  // oraz wspolny gest "przeciagnij w dol, zeby zamknac" z <SheetContent side="bottom">.
   return (
-    <div className="fixed inset-0 z-50 flex flex-col">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-
-      <div
-        className="relative mt-auto w-full bg-background rounded-t-3xl flex flex-col overflow-hidden"
+    <Sheet open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
+      <SheetContent
+        side="bottom"
+        className="p-0 rounded-t-3xl border-0 bg-background flex flex-col overflow-hidden [&>button:last-child]:hidden"
         style={{ height: "85dvh" }}
       >
+        <SheetTitle className="sr-only">Powiadomienia</SheetTitle>
         {/* Drag handle */}
         <div className="flex justify-center pt-3 pb-1">
           <div className="h-1 w-10 rounded-full bg-border" />
@@ -211,6 +212,12 @@ export default function NotificationsDrawer({ open, onClose, userId }: Props) {
                 };
                 const Icon = cfg.icon;
                 const username = n.actor?.username ?? "Ktoś";
+                // Tap w awatar / tresc -> profil publiczny osoby, ktora wywolala powiadomienie.
+                // Systemowe (bez autora, np. przypomnienie o wyjezdzie) zostaja nieklikalne.
+                const actorUsername = n.actor?.username ?? null;
+                const openActor = actorUsername
+                  ? () => { onClose(); navigate(`/profil/${actorUsername}`); }
+                  : undefined;
                 const timeAgo = formatDistanceToNow(new Date(n.created_at), { addSuffix: true, locale: dateLocale() });
                 const labelText = cfg.label(username, n.metadata);
 
@@ -219,8 +226,13 @@ export default function NotificationsDrawer({ open, onClose, userId }: Props) {
                     key={n.id}
                     className={`flex items-start gap-3 px-4 py-3.5 transition-colors ${!n.read ? "bg-primary/5" : ""}`}
                   >
-                    {/* Awatar usera + maly badge typu powiadomienia w rogu */}
-                    <div className="relative flex-shrink-0">
+                    {/* Awatar usera + maly badge typu powiadomienia w rogu. Tap -> profil. */}
+                    <div
+                      className={`relative flex-shrink-0 ${openActor ? "active:opacity-70 transition-opacity" : ""}`}
+                      onClick={openActor}
+                      role={openActor ? "button" : undefined}
+                      aria-label={openActor ? `Profil ${username}` : undefined}
+                    >
                       <img
                         src={avatarSrc(n.actor?.avatar_url)}
                         alt={username}
@@ -232,7 +244,13 @@ export default function NotificationsDrawer({ open, onClose, userId }: Props) {
                       </div>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm leading-snug text-foreground/80">{labelText}</p>
+                      <p
+                        className={`text-sm leading-snug text-foreground/80 ${openActor ? "active:opacity-70 transition-opacity" : ""}`}
+                        onClick={openActor}
+                        role={openActor ? "button" : undefined}
+                      >
+                        {labelText}
+                      </p>
                       <p className="text-[11px] text-muted-foreground mt-0.5">{timeAgo}</p>
                       {(n.type === "group_invite" || n.type === "group_route_ready" || n.type === "route_invite" || n.type === "trip_places_reminder" || n.type === "trip_message") && (
                         <button
@@ -304,7 +322,7 @@ export default function NotificationsDrawer({ open, onClose, userId }: Props) {
             </div>
           )}
         </div>
-      </div>
-    </div>
+      </SheetContent>
+    </Sheet>
   );
 }

@@ -286,6 +286,10 @@ const RouteMap = memo(function RouteMap({
 
   return (
     <div
+      // Gesty: przesuwanie mapy palcem nie moze zamykac arkusza (drag w dol) ani przelaczac
+      // zakladek (swipe w bok) - mapa przejmuje gest dla siebie.
+      data-no-drag
+      data-no-swipe
       className={`relative rounded-lg overflow-hidden border border-border ${className} ${onClick ? 'cursor-pointer' : ''}`}
       onClick={onClick}
     >

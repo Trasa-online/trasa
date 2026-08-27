@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useDragToDismiss } from "@/hooks/useDragToDismiss";
 import { createPortal } from "react-dom";
 import { Flag, X, Check, Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -26,6 +27,8 @@ export default function ReportPlaceLink({ placeId, placeName }: { placeId: strin
   const [note, setNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
+  // Gest natywny: przeciagniecie panelu w dol zamyka arkusz (blokada w trakcie wysylki).
+  const { dragProps } = useDragToDismiss({ onDismiss: () => setOpen(false), enabled: !submitting });
 
   const startReport = () => {
     if (!user || isAnonymous) { openAuthDrawer({ mode: "register", hint: "report_place" }); return; }
@@ -63,7 +66,7 @@ export default function ReportPlaceLink({ placeId, placeName }: { placeId: strin
       {open && createPortal(
         <div className="fixed inset-0 z-[95] flex items-end justify-center" onClick={() => !submitting && setOpen(false)}>
           <div className="absolute inset-0 bg-black/50 animate-in fade-in duration-200" />
-          <div onClick={(e) => e.stopPropagation()} className="relative w-full max-w-lg bg-card rounded-t-3xl px-5 pt-3 pb-[max(20px,env(safe-area-inset-bottom))] shadow-2xl animate-in slide-in-from-bottom-4 duration-300" style={{ maxHeight: "88dvh" }}>
+          <div {...dragProps} onClick={(e) => e.stopPropagation()} className="relative w-full max-w-lg bg-card rounded-t-3xl px-5 pt-3 pb-[max(20px,env(safe-area-inset-bottom))] shadow-2xl animate-in slide-in-from-bottom-4 duration-300" style={{ ...dragProps.style, maxHeight: "88dvh" }}>
             <div className="mx-auto h-1 w-10 rounded-full bg-muted-foreground/25 mb-4" />
             <button onClick={() => setOpen(false)} aria-label="Zamknij" className="absolute right-4 top-4 h-8 w-8 rounded-full bg-muted flex items-center justify-center active:scale-90 transition-transform">
               <X className="h-4 w-4" />

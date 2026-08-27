@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from "react";
+import { useDragToDismiss } from "@/hooks/useDragToDismiss";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams, useSearchParams, useLocation } from "react-router-dom";
 import { ArrowLeft, Search, Plus, X, Loader2, ChevronRight, ChevronDown, List, GalleryHorizontalEnd, GripVertical } from "lucide-react";
@@ -252,6 +253,8 @@ const CreateRanking = () => {
   const [placeView, setPlaceView] = useState<"detail" | "list">("detail");
   // Podglad miejsca spoza bazy PRZED dodaniem (TYLKO okladka - min. kosztow Google).
   const [customPreview, setCustomPreview] = useState<Omit<RankingItem, "key" | "short_desc"> | null>(null);
+  // Gest natywny: przeciagniecie panelu w dol zamyka arkusz.
+  const previewDrag = useDragToDismiss({ onDismiss: () => setCustomPreview(null) });
   const [author, setAuthor] = useState<{ name: string; avatar: string | null }>({ name: "Użytkownik", avatar: null });
 
 
@@ -1051,7 +1054,7 @@ const CreateRanking = () => {
       {/* Podglad miejsca spoza bazy - TYLKO okladka (bez godzin/recenzji, min. kosztow Google) */}
       {customPreview && (
         <div className="fixed inset-0 z-[80] flex flex-col justify-end bg-black/40" onClick={() => setCustomPreview(null)}>
-          <div className="bg-background rounded-t-3xl max-h-[88dvh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+          <div {...previewDrag.dragProps} className="bg-background rounded-t-3xl max-h-[88dvh] flex flex-col" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between px-5 pt-4 pb-2 shrink-0">
               <p className="text-lg font-black">{t("custom_preview.title")}</p>
               <button onClick={() => setCustomPreview(null)} aria-label={t("custom_preview.close")} className="h-9 w-9 rounded-full bg-muted flex items-center justify-center active:bg-muted/70"><X className="h-4 w-4" /></button>

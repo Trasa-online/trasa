@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from "react";
+import { useDragToDismiss } from "@/hooks/useDragToDismiss";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -413,6 +414,9 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false, onDelete, deleting 
   const [skippedPinIds, setSkippedPinIds] = useState<Set<string>>(new Set());
   // Pin o ktory pytamy "Czy byles tutaj?" (double-check przy przejsciu do kolejnego bez odhaczenia).
   const [skipPromptPin, setSkipPromptPin] = useState<any | null>(null);
+  // Gest natywny: przeciagniecie panelu w dol zamyka arkusz.
+  const skipDrag = useDragToDismiss({ onDismiss: () => setSkipPromptPin(null) });
+  const shareDrag = useDragToDismiss({ onDismiss: () => setShowSharePrompt(false) });
 
   // Na wejsciu w aktywna trase: jednorazowy odczyt GPS (cache, bez promptu) zeby wykryc
   // czy user jest w miescie trasy -> ustawia distanceRef. Tylko gdy trasa NIE jest miniona.
@@ -901,6 +905,7 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false, onDelete, deleting 
           onClick={() => setSkipPromptPin(null)}
         >
           <div
+            {...skipDrag.dragProps}
             className="w-full max-w-md bg-card rounded-t-3xl px-6 pt-7 pb-[max(24px,env(safe-area-inset-bottom))] flex flex-col gap-5 shadow-2xl animate-in slide-in-from-bottom-4 duration-300"
             onClick={(e) => e.stopPropagation()}
           >
@@ -950,6 +955,7 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false, onDelete, deleting 
           onClick={() => setShowSharePrompt(false)}
         >
           <div
+            {...shareDrag.dragProps}
             className="w-full max-w-md bg-card rounded-t-3xl px-6 pt-7 pb-[max(24px,env(safe-area-inset-bottom))] flex flex-col gap-5 shadow-2xl animate-in slide-in-from-bottom-4 duration-300"
             onClick={(e) => e.stopPropagation()}
           >

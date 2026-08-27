@@ -13,6 +13,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { useSwipeNav } from "@/hooks/useSwipeNav";
 import { deferDelete } from "@/lib/deferDelete";
 import { PullToRefresh } from "@/components/PullToRefresh";
 import { SHARE_BASE_URL } from "@/lib/shareUrl";
@@ -155,6 +156,13 @@ const TravelerProfile = () => {
   const handleRefresh = async () => {
     await queryClient.invalidateQueries();
   };
+
+  // Gest natywny: przeciagniecie w lewo/prawo przelacza zakladke Listy <-> Wyjazdy.
+  // Wejscie w "Wyjazdy" resetuje podzakladke tak samo jak tap w pigulke.
+  const swipeTabs = useSwipeNav({
+    onLeft: () => { if (tab === "listy") { setTab("wyjazdy"); setWyjazdyTab("robocze"); } },
+    onRight: () => { if (tab === "wyjazdy") setTab("listy"); },
+  });
 
   const { data: followCounts = { followers: 0, following: 0 } } = useFollowCounts(user?.id);
   const followList = useFollowList(user?.id, followSheet === "following" ? "following" : "followers");
@@ -658,8 +666,8 @@ const TravelerProfile = () => {
           })}
         </div>
 
-        {/* Feed zakladki */}
-        <div className="space-y-6 pt-1">
+        {/* Feed zakladki (gest: swipe w bok = zmiana zakladki) */}
+        <div className="space-y-6 pt-1" {...swipeTabs}>
           {tab === "listy" ? (
             <div className="space-y-4">
               {/* Podzakładki (dropdown): Moje listy (curated) | Ogólne (lista ogólna) | Zapisane (od innych). */}
@@ -771,6 +779,8 @@ const TravelerProfile = () => {
       {/* Obserwujacy / Obserwowani - lista */}
       <Sheet open={followSheet !== null} onOpenChange={(v) => { if (!v) setFollowSheet(null); }}>
         <SheetContent side="bottom" className="h-[72dvh] flex flex-col rounded-t-2xl">
+          {/* Uchwyt: sygnal, ze arkusz zamyka sie przeciagnieciem w dol. */}
+          <div className="mx-auto h-1 w-10 rounded-full bg-muted-foreground/25 -mt-2 mb-1 shrink-0" />
           <SheetHeader className="pb-3 border-b border-border/20">
             <SheetTitle>{followSheet === "following" ? t("profile.following") : t("profile.followers")}</SheetTitle>
           </SheetHeader>

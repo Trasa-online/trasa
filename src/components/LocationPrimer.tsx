@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useDragToDismiss } from "@/hooks/useDragToDismiss";
 import { MapPin, Navigation, Map as MapIcon, Loader2, AlertTriangle } from "lucide-react";
 import {
   setStartReference,
@@ -31,6 +32,7 @@ const LocationPrimer = ({ open, city, onClose }: LocationPrimerProps) => {
   if (!open) return null;
 
   const cityLabel = city || "tym mieście";
+  // Gest natywny: przeciagniecie panelu w dol = to samo co "pomin".
 
   // "Tak, jestem w {city}" -> pobierz GPS i ZWALIDUJ dystans do miasta docelowego.
   // Blisko -> ustawiamy "od Ciebie". Daleko -> double-check zamiast slepego ustawienia
@@ -56,6 +58,7 @@ const LocationPrimer = ({ open, city, onClose }: LocationPrimerProps) => {
     setView("ask");
     onClose();
   };
+  const { dragProps } = useDragToDismiss({ onDismiss: skip });
 
   // Wybor punktu startu na mapie miasta docelowego (planuje z wyprzedzeniem).
   if (view === "map") {
@@ -83,6 +86,7 @@ const LocationPrimer = ({ open, city, onClose }: LocationPrimerProps) => {
         onClick={skip}
       >
         <div
+          {...dragProps}
           className="w-full max-w-md bg-card rounded-t-3xl px-6 pt-7 pb-[max(24px,env(safe-area-inset-bottom))] flex flex-col gap-5 shadow-2xl animate-in slide-in-from-bottom-4 duration-300"
           onClick={(e) => e.stopPropagation()}
         >
@@ -133,6 +137,7 @@ const LocationPrimer = ({ open, city, onClose }: LocationPrimerProps) => {
       onClick={skip}
     >
       <div
+        {...dragProps}
         className="w-full max-w-md bg-card rounded-t-3xl px-6 pt-7 pb-[max(24px,env(safe-area-inset-bottom))] flex flex-col gap-5 shadow-2xl animate-in slide-in-from-bottom-4 duration-300"
         onClick={(e) => e.stopPropagation()}
       >

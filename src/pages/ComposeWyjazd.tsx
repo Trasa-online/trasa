@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react";
+import { useDragToDismiss } from "@/hooks/useDragToDismiss";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -357,6 +358,13 @@ export default function ComposeWyjazd() {
   const [showBackConfirm, setShowBackConfirm] = useState(false);
   // Potwierdzenie usuniecia miejsca z trasy ("czy na pewno") - trzyma klucz+nazwe usuwanego.
   const [confirmRemove, setConfirmRemove] = useState<{ key: string; name: string } | null>(null);
+  // Gest natywny: przeciagniecie panelu w dol zamyka arkusz. Panel "nie zgub miejsc" zamyka sie
+  // tak samo jak tap w tlo - dokancza nawigacje bez zapisywania odznaczonych miejsc.
+  const leftoverDrag = useDragToDismiss({
+    onDismiss: () => { if (leftover && !leftoverBusy) finishNavigation(leftover.openEditor, leftover.routeId, leftover.tripPlaces); },
+  });
+  const removeDrag = useDragToDismiss({ onDismiss: () => setConfirmRemove(null) });
+  const backDrag = useDragToDismiss({ onDismiss: () => setShowBackConfirm(false) });
 
   // Cofniecie: gdy sa juz miejsca w trasie -> zapytaj czy zapisac do roboczych. Inaczej wyjdz.
   // Wyjscie z tworzenia do ekranu glownego. Historia jest plytka (nawigacje wewnatrz
@@ -951,7 +959,7 @@ export default function ComposeWyjazd() {
       {leftover && (
         <div className="fixed inset-0 z-[75] flex items-end justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200"
           onClick={() => { if (!leftoverBusy) finishNavigation(leftover.openEditor, leftover.routeId, leftover.tripPlaces); }}>
-          <div className="w-full max-w-md bg-card rounded-t-3xl px-5 pt-6 pb-[max(20px,env(safe-area-inset-bottom))] shadow-2xl animate-in slide-in-from-bottom-4 duration-300"
+          <div {...leftoverDrag.dragProps} className="w-full max-w-md bg-card rounded-t-3xl px-5 pt-6 pb-[max(20px,env(safe-area-inset-bottom))] shadow-2xl animate-in slide-in-from-bottom-4 duration-300"
             onClick={(e) => e.stopPropagation()}>
             <p className="text-lg font-black leading-tight">{leftover.savePlaces.length === 1 ? "Nie zgub tego miejsca" : `Nie zgub ${leftover.savePlaces.length} miejsc`}</p>
             <p className="text-sm text-muted-foreground leading-snug mt-1.5">{`Miejsca poza trasą możesz zapisać, żeby wrócić do nich później.`}</p>
@@ -1005,6 +1013,7 @@ export default function ComposeWyjazd() {
           onClick={() => setConfirmRemove(null)}
         >
           <div
+            {...removeDrag.dragProps}
             className="w-full max-w-md bg-card rounded-t-3xl px-5 pt-6 pb-[max(20px,env(safe-area-inset-bottom))] shadow-2xl animate-in slide-in-from-bottom-4 duration-300"
             onClick={(e) => e.stopPropagation()}
           >
@@ -1037,6 +1046,7 @@ export default function ComposeWyjazd() {
           onClick={() => setShowBackConfirm(false)}
         >
           <div
+            {...backDrag.dragProps}
             className="w-full max-w-md bg-card rounded-t-3xl px-5 pt-6 pb-[max(20px,env(safe-area-inset-bottom))] shadow-2xl animate-in slide-in-from-bottom-4 duration-300"
             onClick={(e) => e.stopPropagation()}
           >

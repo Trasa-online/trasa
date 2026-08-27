@@ -15,6 +15,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import FollowButton from "@/components/social/FollowButton";
 import { useFollowCounts, useFollowList } from "@/hooks/useFollow";
+import { useSwipeNav } from "@/hooks/useSwipeNav";
 import { ProfileFeedCard } from "@/components/profile/ProfileFeedCard";
 import { SpontawayTabIcon } from "@/components/profile/SpontawayTabIcon";
 import { shortRelativeTime } from "@/lib/relativeTime";
@@ -44,6 +45,11 @@ export default function PublicProfile() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [tab, setTab] = useState<"listy" | "wyjazdy">("listy");
+  // Gest natywny: swipe w bok przelacza Listy <-> Wyjazdy (jak na wlasnym profilu).
+  const swipeTabs = useSwipeNav({
+    onLeft: () => setTab("wyjazdy"),
+    onRight: () => setTab("listy"),
+  });
   const [followSheet, setFollowSheet] = useState<"followers" | "following" | null>(null);
 
   const { data: profile, isLoading } = useQuery({
@@ -313,8 +319,8 @@ export default function PublicProfile() {
           })}
         </div>
 
-        {/* Feed zakladki */}
-        <div className="space-y-6 pt-1">
+        {/* Feed zakladki (gest: swipe w bok = zmiana zakladki) */}
+        <div className="space-y-6 pt-1" {...swipeTabs}>
           {tab === "listy" ? (
             listCards.length === 0 ? (
               <FeedEmptyRO maskSrc="/Ikona_Trasy.svg" title="Brak list" desc={`Tu pojawią się polecajki tego użytkownika.`} />
@@ -374,6 +380,8 @@ export default function PublicProfile() {
       {/* Obserwujacy / Obserwowani - lista (klik -> profil danej osoby) */}
       <Sheet open={followSheet !== null} onOpenChange={(v) => { if (!v) setFollowSheet(null); }}>
         <SheetContent side="bottom" className="h-[72dvh] flex flex-col rounded-t-2xl">
+          {/* Uchwyt: sygnal, ze arkusz zamyka sie przeciagnieciem w dol. */}
+          <div className="mx-auto h-1 w-10 rounded-full bg-muted-foreground/25 -mt-2 mb-1 shrink-0" />
           <SheetHeader className="pb-3 border-b border-border/20">
             <SheetTitle>{followSheet === "following" ? t("profile.following") : t("profile.followers")}</SheetTitle>
           </SheetHeader>

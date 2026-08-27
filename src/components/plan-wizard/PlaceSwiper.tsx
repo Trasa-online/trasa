@@ -142,9 +142,11 @@ const MatchModal = ({ likedPlaces, onConfirm, onDismiss }: {
   const { t } = useTranslation("plan");
   const orbs = likedPlaces.slice(0, 3);
   const extra = likedPlaces.length - 3;
+  // Gest natywny: przeciagniecie panelu w dol zamyka arkusz.
+  const { dragProps } = useDragToDismiss({ onDismiss });
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="w-full max-w-sm bg-card rounded-t-3xl px-6 pt-8 pb-safe-6 pb-6 flex flex-col items-center gap-6 shadow-2xl animate-in slide-in-from-bottom-4 duration-300">
+      <div {...dragProps} className="w-full max-w-sm bg-card rounded-t-3xl px-6 pt-8 pb-safe-6 pb-6 flex flex-col items-center gap-6 shadow-2xl animate-in slide-in-from-bottom-4 duration-300">
         <div className="flex items-center justify-center gap-3">
           {orbs.map((p) => (
             <div key={p.id} className="flex flex-col items-center gap-2">
@@ -200,9 +202,11 @@ const UPSELL_BENEFITS = [
 
 const GuestUpsellModal = ({ onSignUp, onDismiss }: { onSignUp: () => void; onDismiss: () => void }) => {
   const { t } = useTranslation("plan");
+  // Gest natywny: przeciagniecie panelu w dol zamyka arkusz.
+  const { dragProps } = useDragToDismiss({ onDismiss });
   return (
   <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-    <div className="w-full max-w-sm bg-card rounded-t-3xl px-6 pt-8 pb-[max(24px,env(safe-area-inset-bottom))] flex flex-col gap-6 shadow-2xl animate-in slide-in-from-bottom-4 duration-300">
+    <div {...dragProps} className="w-full max-w-sm bg-card rounded-t-3xl px-6 pt-8 pb-[max(24px,env(safe-area-inset-bottom))] flex flex-col gap-6 shadow-2xl animate-in slide-in-from-bottom-4 duration-300">
       <div className="text-center space-y-1">
         <p className="text-2xl font-black text-foreground">{t("upsell.title")}</p>
         <p className="text-sm text-muted-foreground">{t("upsell.subtitle")}</p>

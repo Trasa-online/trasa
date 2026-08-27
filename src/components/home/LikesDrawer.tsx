@@ -2,6 +2,7 @@ import { useState, useRef, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useDragToDismiss } from "@/hooks/useDragToDismiss";
 import { X, Heart, ThumbsDown, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CategoryIcon } from "@/components/CategoryIcon";
@@ -188,6 +189,9 @@ export default function LikesDrawer({ open, onClose, userId }: LikesDrawerProps)
   const likedCount = reactions.filter(r => r.reaction === "liked").length;
   const skippedCount = reactions.filter(r => r.reaction === "skipped").length;
 
+  // Gest natywny: przeciagniecie panelu w dol zamyka arkusz.
+  const { dragProps } = useDragToDismiss({ onDismiss: onClose });
+
   if (!open) return null;
 
   return (
@@ -195,10 +199,11 @@ export default function LikesDrawer({ open, onClose, userId }: LikesDrawerProps)
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
 
-      {/* Panel */}
+      {/* Panel (gest: przeciagnij w dol, zeby zamknac) */}
       <div
+        {...dragProps}
         className="relative mt-auto w-full bg-background rounded-t-3xl flex flex-col overflow-hidden"
-        style={{ height: "88dvh" }}
+        style={{ ...dragProps.style, height: "88dvh" }}
       >
         {/* Drag handle */}
         <div className="flex justify-center pt-3 pb-1">

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useSwipeNav } from "@/hooks/useSwipeNav";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -60,6 +61,11 @@ export default function SharedList() {
   const [planView, setPlanView] = useState<"list" | "cards">("list");
   // Widok listy jak trasa: Miejsca | Galeria (BEZ mapy - decyzja Nat). Galeria = zdjecia miejsc z listy.
   const [planTab, setPlanTab] = useState<"miejsca" | "galeria">("miejsca");
+  // Gest natywny: swipe w bok przelacza Miejsca <-> Galeria (kolejnosc jak ikony nad trescia).
+  const swipeTabs = useSwipeNav({
+    onLeft: () => setPlanTab("galeria"),
+    onRight: () => setPlanTab("miejsca"),
+  });
   const [detailPin, setDetailPin] = useState<any | null>(null);
   // Zapis pojedynczego miejsca z listy (bookmark per-miejsce -> SavePlaceSheet). Zapis CAŁEJ listy
   // (przycisk na dole) to osobna akcja (localStorage trasa_saved_collections) - oba zostają.
@@ -505,6 +511,8 @@ export default function SharedList() {
           </div>
         </div>
 
+        {/* Tresc zakladek - swipe w bok przelacza Miejsca / Galeria. */}
+        <div {...swipeTabs}>
         {planTab === "miejsca" ? (
           <div className="px-5 pt-4">
             {items.length > 0 ? (
@@ -529,6 +537,7 @@ export default function SharedList() {
             {renderGallery()}
           </div>
         )}
+        </div>
       </div>
 
       <PlaceSwiperDetail open={!!detailPin} onOpenChange={(o) => !o && setDetailPin(null)} place={detailPin} city={col.city} />

@@ -13,6 +13,8 @@ import { dateLocale } from "@/lib/dateLocale";
 import { MapPin, ArrowLeft, Sparkles, ChevronRight, ChevronLeft, ChevronDown, Bookmark, List, GalleryHorizontalEnd, Calendar as CalendarIcon, Image as ImageIcon, Maximize2, X, Building2, Pencil, Trash2, Heart, Share2, Plus, Map as MapIcon, Loader2, Star, GripVertical, Check, Flag, Camera, UserPlus, ThumbsUp, MessageCircle } from "lucide-react";
 import { MAIN_CATEGORIES, subcategoryPluralLabel } from "@/lib/categories";
 import { haptics } from "@/hooks/useHaptics";
+import { useSwipeNav } from "@/hooks/useSwipeNav";
+import { useDragToDismiss } from "@/hooks/useDragToDismiss";
 import { Reorder, useDragControls, motion } from "framer-motion";
 import { toast } from "sonner";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -138,8 +140,25 @@ export default function SharedRoute() {
   const [detailPin, setDetailPin] = useState<any | null>(null);
   const [saving, setSaving] = useState(false);
   const [showDateSheet, setShowDateSheet] = useState(false);
+  // Gest natywny: przeciagniecie panelu w dol zamyka arkusz.
+  const dateDrag = useDragToDismiss({ onDismiss: () => setShowDateSheet(false) });
   const [planMapOpen, setPlanMapOpen] = useState(false);
   const [viewerIndex, setViewerIndex] = useState<number | null>(null); // fullscreen podglad zdjecia galerii
+  const galleryPhotosCount = useRef(0);
+  // Gest natywny: swipe w bok przelacza zakladki (kolejnosc = kolejnosc ikon nad trescia).
+  // Etap czytamy leniwie z route: w propozycjach nie ma Galerii (tylko Miejsca | Mapa).
+  const goTab = (dir: 1 | -1) => {
+    const planning = (((route as any)?.trip_type as string) || "planning") === "planning";
+    const tabs: Array<"miejsca" | "galeria" | "mapa"> = planning ? ["miejsca", "mapa"] : ["miejsca", "galeria", "mapa"];
+    const next = tabs[tabs.indexOf(planTab) + dir];
+    if (next) setPlanTab(next);
+  };
+  const swipeTabs = useSwipeNav({ onLeft: () => goTab(1), onRight: () => goTab(-1) });
+  // Galeria fullscreen: swipe w bok = poprzednie/nastepne zdjecie (zamiast tylko strzalek).
+  const swipeViewer = useSwipeNav({
+    onLeft: () => setViewerIndex((i) => (i === null ? i : (i + 1) % Math.max(1, galleryPhotosCount.current))),
+    onRight: () => setViewerIndex((i) => (i === null ? i : (i - 1 + galleryPhotosCount.current) % Math.max(1, galleryPhotosCount.current))),
+  });
   // Usuniecie wyjazdu (wlasciciel) - nieodwracalne, walidacja "czy na pewno?".
   const [askDelete, setAskDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -701,6 +720,9 @@ export default function SharedRoute() {
   const galleryPhotos: string[] = ((route.review_photos ?? []) as any[])
     .map((u) => (typeof u === "string" ? resolveStored(u) : null))
     .filter((u): u is string => !!u);
+  // Handler swipe w galerii fullscreen jest zadeklarowany wyzej (przed early returnami),
+  // wiec liczbe zdjec podajemy mu przez ref.
+  galleryPhotosCount.current = galleryPhotos.length;
   const dateLabel = route.start_date ? format(new Date(route.start_date), "d MMMM yyyy", { locale: dateLocale() }) : "";
   const cityLabel = route.city || t("trip_default");
   // Tryb anonimowy: autor ukryty (bez profilu/awatara/lokalsa).
@@ -1042,6 +1064,8 @@ export default function SharedRoute() {
           </div>
         </div>
 
+        {/* Tresc zakladek - swipe w bok przelacza Miejsca / Galeria / Mapa. */}
+        <div {...swipeTabs}>
         {planTab === "miejsca" ? (
           <div className="px-5 pt-4">
             {choosing ? (
@@ -1083,7 +1107,7 @@ export default function SharedRoute() {
           /* Mapa w wlasnej zakladce (obok Galeria) - statyczna Google + rozwiniecie do interaktywnej. */
           <div className="px-5 pt-4">
             {navMapPins.length > 0 && staticMapUrl ? (
-              <button onClick={() => setPlanMapOpen(true)} className="relative block w-full h-64 rounded-2xl overflow-hidden border border-border/40 bg-muted active:opacity-95 transition-opacity">
+              <button data-no-swipe onClick={() => setPlanMapOpen(true)} className="relative block w-full h-64 rounded-2xl overflow-hidden border border-border/40 bg-muted active:opacity-95 transition-opacity">
                 <img src={staticMapUrl} alt={t("route_map")} className="w-full h-full object-cover" />
                 <span className="absolute bottom-3 right-3 h-10 w-10 rounded-full bg-card shadow-md flex items-center justify-center">
                   <Maximize2 className="h-[18px] w-[18px] text-foreground" strokeWidth={2.2} />
@@ -1144,6 +1168,7 @@ export default function SharedRoute() {
             )}
           </div>
         )}
+        </div>
 
       </div>
 
@@ -1238,7 +1263,7 @@ export default function SharedRoute() {
 
       {/* Fullscreen podglad zdjecia galerii (object-contain, strzalki + licznik). */}
       {viewerIndex !== null && galleryPhotos[viewerIndex] && (
-        <div className="fixed inset-0 z-[95] bg-black flex items-center justify-center animate-in fade-in duration-200" onClick={() => setViewerIndex(null)}>
+        <div {...swipeViewer} className="fixed inset-0 z-[95] bg-black flex items-center justify-center animate-in fade-in duration-200" onClick={() => setViewerIndex(null)}>
           <img src={galleryPhotos[viewerIndex]} alt="" className="max-w-full max-h-full object-contain" onClick={(e) => e.stopPropagation()} />
           <button onClick={() => setViewerIndex(null)} aria-label={t("close", { defaultValue: "Zamknij" })} className="absolute right-3 z-10 h-10 w-10 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center active:scale-90 transition-transform" style={{ top: "max(0.75rem, env(safe-area-inset-top))" }}>
             <X className="h-5 w-5 text-white" />
@@ -1320,6 +1345,7 @@ export default function SharedRoute() {
           onClick={() => setShowDateSheet(false)}
         >
           <div
+            {...dateDrag.dragProps}
             className="w-full max-w-md bg-card rounded-t-3xl flex flex-col max-h-[88dvh] shadow-2xl animate-in slide-in-from-bottom-4 duration-300"
             onClick={(e) => e.stopPropagation()}
           >

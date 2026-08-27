@@ -4,6 +4,7 @@ import { avatarSrc } from "@/lib/avatar";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useDragToDismiss } from "@/hooks/useDragToDismiss";
 import { useAuth } from "@/hooks/useAuth";
 import { X, Search } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -64,13 +65,16 @@ export default function UserSearchDrawer({ open, onClose }: Props) {
     navigate(`/profil/${username}`);
   };
 
+  // Gest natywny: przeciagniecie panelu w dol zamyka arkusz.
+  const { dragProps } = useDragToDismiss({ onDismiss: onClose });
+
   if (!open) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
 
-      <div className="relative mt-auto w-full bg-background rounded-t-3xl flex flex-col overflow-hidden" style={{ height: "88dvh" }}>
+      <div {...dragProps} className="relative mt-auto w-full bg-background rounded-t-3xl flex flex-col overflow-hidden" style={{ ...dragProps.style, height: "88dvh" }}>
         {/* Handle */}
         <div className="flex justify-center pt-3 pb-1">
           <div className="h-1 w-10 rounded-full bg-border" />

@@ -5,6 +5,8 @@ import { ROUTE_TAGS, ROUTE_TAGS_VISIBLE, placeTagsForCategory } from "@/lib/rout
 import { fetchRouteNotesWithAuthors, notesByPlace, placeNoteKey } from "@/lib/placeNotes";
 import PlaceNotes from "@/components/route/PlaceNotes";
 import { haptics } from "@/hooks/useHaptics";
+import { useSwipeNav } from "@/hooks/useSwipeNav";
+import { useDragToDismiss } from "@/hooks/useDragToDismiss";
 import { useNavigate, useSearchParams, Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { placeKeyOf, fetchPlacePhotosForKeys, pickPlaceCover, fetchPhotoHashes, sha256OfFile, upsertPhotoHash } from "@/lib/placePhotoSocial";
@@ -225,6 +227,13 @@ const ReviewSummary = () => {
   const [summaryTab, setSummaryTab] = useState<"plan" | "galeria">("plan");
   // Widok "Plan wyjazdu" (aktywny): top-toggle Miejsca | Galeria (komplet: plan+mapa albo zdjęcia).
   const [planTab, setPlanTab] = useState<"miejsca" | "galeria" | "mapa">("miejsca");
+  // Gest natywny: swipe w bok przelacza zakladki planu (kolejnosc jak pigulki nad trescia).
+  const goPlanTab = (dir: 1 | -1) => {
+    const tabs: Array<"miejsca" | "galeria" | "mapa"> = ["miejsca", "galeria", "mapa"];
+    const next = tabs[tabs.indexOf(planTab) + dir];
+    if (next) setPlanTab(next);
+  };
+  const swipePlanTabs = useSwipeNav({ onLeft: () => goPlanTab(1), onRight: () => goPlanTab(-1) });
   const [editingStepper, setEditingStepper] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [proposalsOpen, setProposalsOpen] = useState(false);
@@ -235,6 +244,21 @@ const ReviewSummary = () => {
   const [selectedDayId, setSelectedDayId] = useState<string | null>(null);
   // Fullscreen podglad zdjecia z galerii.
   const [viewerUrl, setViewerUrl] = useState<string | null>(null);
+  // Galeria fullscreen: swipe w bok = poprzednie/nastepne zdjecie. Lista zdjec liczy sie
+  // ponizej (po wczesnych returnach), wiec handler dostaje ja przez ref.
+  const galleryUrlsRef = useRef<string[]>([]);
+  const stepPhoto = (dir: 1 | -1) => {
+    const urls = galleryUrlsRef.current;
+    if (urls.length < 2) return;
+    setViewerUrl((cur) => {
+      if (!cur) return cur;
+      const i = urls.indexOf(cur);
+      if (i === -1) return cur;
+      setViewerMenuOpen(false);
+      return urls[(i + dir + urls.length) % urls.length];
+    });
+  };
+  const swipeViewer = useSwipeNav({ onLeft: () => stepPhoto(1), onRight: () => stepPhoto(-1) });
   const [viewerMenuOpen, setViewerMenuOpen] = useState(false);
   // Podglad wizytowki miejsca po kliknieciu w pin.
   const [detailPin, setDetailPin] = useState<any | null>(null);
@@ -281,6 +305,14 @@ const ReviewSummary = () => {
   const [openNotes, setOpenNotes] = useState<Set<string>>(new Set());
   // Arkusz "Dodaj zdjęcia do miejsca": wybór ze zdjęć galerii wyjazdu (przypisanie) albo nowe. Trzyma pin.id.
   const [pinPickerId, setPinPickerId] = useState<string | null>(null);
+  // Gest natywny: przeciagniecie panelu w dol zamyka arkusz (wszystkie arkusze tego widoku).
+  const pinPickerDrag = useDragToDismiss({ onDismiss: () => setPinPickerId(null) });
+  const coverDrag = useDragToDismiss({ onDismiss: () => setCoverPickerOpen(false) });
+  const listCoverDrag = useDragToDismiss({ onDismiss: () => setListCoverPickerOpen(false) });
+  const dateDrag = useDragToDismiss({ onDismiss: () => setDatePickerOpen(false) });
+  const qrDrag = useDragToDismiss({ onDismiss: () => setQrShareOpen(false) });
+  const shareSheetDrag = useDragToDismiss({ onDismiss: () => setShareSheetOpen(false) });
+  const sharePromptDrag = useDragToDismiss({ onDismiss: () => setShowSharePrompt(false) });
   // "Twoja sugestia dla innych podroznych" (poziom trasy) - review_narrative. Autosave debounce.
   const [suggestion, setSuggestion] = useState("");
   const [suggestionSaved, setSuggestionSaved] = useState(false);
@@ -1083,7 +1115,9 @@ const ReviewSummary = () => {
   // + trip_type='completed' (opuszcza dashboard aktywnych). Wymaga >=1 miejsca; okladke domyka
   // ensureListCover (gdy brak zdjec -> komunikat).
   const [confirmFinishOpen, setConfirmFinishOpen] = useState(false);
+  // Potwierdzenie zakonczenia wyjazdu: gest w dol = anulowanie (blokada w trakcie zapisu).
   const [finishing, setFinishing] = useState(false);
+  const finishDrag = useDragToDismiss({ onDismiss: () => setConfirmFinishOpen(false), enabled: !finishing });
   const handleFinishTrip = async () => {
     if (!activeRouteId) return;
     const finRids = (dayRouteIds.length ? dayRouteIds : [activeRouteId]).filter(Boolean);
@@ -1126,7 +1160,7 @@ const ReviewSummary = () => {
     if (!confirmFinishOpen) return null;
     return (
       <div className="fixed inset-0 z-[96] flex items-end justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => { if (!finishing) setConfirmFinishOpen(false); }}>
-        <div onClick={(e) => e.stopPropagation()} className="w-full max-w-lg bg-card rounded-t-3xl px-5 pt-5 pb-[max(20px,env(safe-area-inset-bottom))] shadow-2xl animate-in slide-in-from-bottom-4 duration-300">
+        <div {...finishDrag.dragProps} onClick={(e) => e.stopPropagation()} className="w-full max-w-lg bg-card rounded-t-3xl px-5 pt-5 pb-[max(20px,env(safe-area-inset-bottom))] shadow-2xl animate-in slide-in-from-bottom-4 duration-300">
           <p className="text-lg font-black text-foreground">Zakończyć wyjazd?</p>
           <p className="text-sm text-muted-foreground leading-relaxed mt-1.5">
             {`Wyjazd trafi do Twoich wspomnień i do eksploracji. Do tego momentu możesz go swobodnie edytować.`}
@@ -1471,6 +1505,8 @@ const ReviewSummary = () => {
     }
     return result;
   })();
+  // Kolejnosc zdjec dla gestu w podgladzie fullscreen (handler zadeklarowany przed early returnami).
+  galleryUrlsRef.current = galleryPhotos.map((g) => g.url);
 
   // Usuwanie wspolnego zdjecia grupowego (wlasne - RLS gtp_delete_own).
   const removeGroupPhoto = async (url: string) => {
@@ -1709,7 +1745,7 @@ const ReviewSummary = () => {
     const assigned: string[] = Array.isArray(pickerPin.images) ? pickerPin.images : [];
     return (
       <div className="fixed inset-0 z-[95] flex items-end justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setPinPickerId(null)}>
-        <div onClick={(e) => e.stopPropagation()} className="relative w-full max-w-lg bg-card rounded-t-3xl px-4 pt-3 pb-[max(16px,env(safe-area-inset-bottom))] shadow-2xl animate-in slide-in-from-bottom-4 duration-300 flex flex-col" style={{ maxHeight: "82dvh" }}>
+        <div {...pinPickerDrag.dragProps} onClick={(e) => e.stopPropagation()} className="relative w-full max-w-lg bg-card rounded-t-3xl px-4 pt-3 pb-[max(16px,env(safe-area-inset-bottom))] shadow-2xl animate-in slide-in-from-bottom-4 duration-300 flex flex-col" style={{ ...pinPickerDrag.dragProps.style, maxHeight: "82dvh" }}>
           <div className="mx-auto h-1 w-10 rounded-full bg-muted-foreground/25 mb-3 shrink-0" />
           <p className="font-display text-lg font-bold text-foreground px-1 shrink-0">Zdjęcia do miejsca</p>
           <p className="text-[13px] text-muted-foreground px-1 mt-0.5 mb-3 shrink-0 truncate">{pickerPin.place_name}</p>
@@ -1752,8 +1788,21 @@ const ReviewSummary = () => {
   const renderPhotoViewer = () => {
     if (!viewerUrl) return null;
     return (
-      <div className="fixed inset-0 z-[90] bg-black flex items-center justify-center" onClick={() => { setViewerUrl(null); setViewerMenuOpen(false); }}>
+      <div {...swipeViewer} className="fixed inset-0 z-[90] bg-black flex items-center justify-center" onClick={() => { setViewerUrl(null); setViewerMenuOpen(false); }}>
         <img src={viewerUrl} alt="" className="max-w-full max-h-full object-contain" />
+        {/* Strzalki jako alternatywa dla gestu (i licznik) - tylko gdy jest wiecej niz jedno zdjecie. */}
+        {galleryUrlsRef.current.length > 1 && (
+          <>
+            <button onClick={(e) => { e.stopPropagation(); stepPhoto(-1); }} aria-label={t("a11y.prev", { defaultValue: "Poprzednie" })}
+              className="absolute left-2 top-1/2 -translate-y-1/2 h-11 w-11 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center active:scale-90 transition-transform">
+              <ChevronLeft className="h-6 w-6 text-white" />
+            </button>
+            <button onClick={(e) => { e.stopPropagation(); stepPhoto(1); }} aria-label={t("a11y.next", { defaultValue: "Następne" })}
+              className="absolute right-2 top-1/2 -translate-y-1/2 h-11 w-11 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center active:scale-90 transition-transform">
+              <ChevronRight className="h-6 w-6 text-white" />
+            </button>
+          </>
+        )}
         <div className="absolute flex items-center gap-2" style={{ top: "max(16px, env(safe-area-inset-top, 16px))", right: "16px" }} onClick={(e) => e.stopPropagation()}>
           <div className="relative">
             <button onClick={() => setViewerMenuOpen((o) => !o)} aria-label={t("a11y.more_options")} className="h-10 w-10 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center active:scale-95 transition-transform">
@@ -2265,11 +2314,13 @@ const ReviewSummary = () => {
           </div>
 
           {/* Galeria / Mapa / Miejsca (mapa przeniesiona do wlasnej zakladki obok Galeria).
-              Galeria editable: wlasciciel zawsze, uczestnik-czlonek moze dodawac wlasne zdjecia. */}
+              Galeria editable: wlasciciel zawsze, uczestnik-czlonek moze dodawac wlasne zdjecia.
+              Kontener lapie swipe w bok = zmiana zakladki. */}
+          <div {...swipePlanTabs}>
           {planTab === "galeria" ? renderGallery(isOwner || isGroupMember) : planTab === "mapa" ? (
             <div className="pt-1">
               {bigMapUrl ? (
-                <button onClick={() => setPlanMapOpen(true)} className="relative block w-full h-64 rounded-2xl overflow-hidden border border-border/40 bg-muted active:opacity-95 transition-opacity">
+                <button data-no-swipe onClick={() => setPlanMapOpen(true)} className="relative block w-full h-64 rounded-2xl overflow-hidden border border-border/40 bg-muted active:opacity-95 transition-opacity">
                   <img src={bigMapUrl} alt="Mapa planu" className="w-full h-full object-cover" />
                   <span className="absolute bottom-3 right-3 h-10 w-10 rounded-full bg-card shadow-md flex items-center justify-center">
                     <Maximize2 className="h-[18px] w-[18px] text-foreground" strokeWidth={2.2} />
@@ -2401,6 +2452,7 @@ const ReviewSummary = () => {
           </>
           )}
           </div>
+          </div>
         </div>
 
         {/* Footer "Nawiguj do..." usuniety - nawigacja jest per-miejsce (guziki Google w wierszach). */}
@@ -2422,7 +2474,7 @@ const ReviewSummary = () => {
         {coverPickerOpen && (
           <div className="fixed inset-0 z-[95] flex items-end justify-center" onClick={() => setCoverPickerOpen(false)}>
             <div className="absolute inset-0 bg-black/50 animate-in fade-in duration-200" />
-            <div onClick={(e) => e.stopPropagation()} className="relative w-full max-w-lg bg-card rounded-t-3xl px-5 pt-3 pb-[max(20px,env(safe-area-inset-bottom))] shadow-2xl animate-in slide-in-from-bottom-4 duration-300" style={{ maxHeight: "82dvh" }}>
+            <div {...coverDrag.dragProps} onClick={(e) => e.stopPropagation()} className="relative w-full max-w-lg bg-card rounded-t-3xl px-5 pt-3 pb-[max(20px,env(safe-area-inset-bottom))] shadow-2xl animate-in slide-in-from-bottom-4 duration-300" style={{ ...coverDrag.dragProps.style, maxHeight: "82dvh" }}>
               <div className="mx-auto h-1 w-10 rounded-full bg-muted-foreground/25 mb-4" />
               <button onClick={() => setCoverPickerOpen(false)} aria-label={t("close", { defaultValue: "Zamknij" })} className="absolute right-4 top-4 h-8 w-8 rounded-full bg-muted flex items-center justify-center active:scale-90 transition-transform">
                 <X className="h-4 w-4" />
@@ -2482,7 +2534,7 @@ const ReviewSummary = () => {
         {listCoverPickerOpen && (
           <div className="fixed inset-0 z-[95] flex items-end justify-center" onClick={() => setListCoverPickerOpen(false)}>
             <div className="absolute inset-0 bg-black/50 animate-in fade-in duration-200" />
-            <div onClick={(e) => e.stopPropagation()} className="relative w-full max-w-lg bg-card rounded-t-3xl px-5 pt-3 pb-[max(20px,env(safe-area-inset-bottom))] shadow-2xl animate-in slide-in-from-bottom-4 duration-300" style={{ maxHeight: "82dvh" }}>
+            <div {...listCoverDrag.dragProps} onClick={(e) => e.stopPropagation()} className="relative w-full max-w-lg bg-card rounded-t-3xl px-5 pt-3 pb-[max(20px,env(safe-area-inset-bottom))] shadow-2xl animate-in slide-in-from-bottom-4 duration-300" style={{ ...listCoverDrag.dragProps.style, maxHeight: "82dvh" }}>
               <div className="mx-auto h-1 w-10 rounded-full bg-muted-foreground/25 mb-4" />
               <button onClick={() => setListCoverPickerOpen(false)} aria-label={t("close", { defaultValue: "Zamknij" })} className="absolute right-4 top-4 h-8 w-8 rounded-full bg-muted flex items-center justify-center active:scale-90 transition-transform">
                 <X className="h-4 w-4" />
@@ -2528,7 +2580,7 @@ const ReviewSummary = () => {
         {datePickerOpen && (
           <div className="fixed inset-0 z-[95] flex items-end justify-center" onClick={() => setDatePickerOpen(false)}>
             <div className="absolute inset-0 bg-black/50 animate-in fade-in duration-200" />
-            <div onClick={(e) => e.stopPropagation()} className="relative w-full max-w-lg bg-card rounded-t-3xl px-2 pt-3 pb-[max(12px,env(safe-area-inset-bottom))] shadow-2xl animate-in slide-in-from-bottom-4 duration-300" style={{ maxHeight: "88dvh" }}>
+            <div {...dateDrag.dragProps} onClick={(e) => e.stopPropagation()} className="relative w-full max-w-lg bg-card rounded-t-3xl px-2 pt-3 pb-[max(12px,env(safe-area-inset-bottom))] shadow-2xl animate-in slide-in-from-bottom-4 duration-300" style={{ ...dateDrag.dragProps.style, maxHeight: "88dvh" }}>
               <div className="mx-auto h-1 w-10 rounded-full bg-muted-foreground/25 mb-3" />
               <div className="px-3 pb-1 text-center">
                 <p className="text-base font-bold leading-tight">Wybierz daty dla trasy <span className="font-normal text-muted-foreground">(opcjonalnie)</span></p>
@@ -2560,7 +2612,7 @@ const ReviewSummary = () => {
         {qrShareOpen && (
           <div className="fixed inset-0 z-[95] flex items-end justify-center" onClick={() => setQrShareOpen(false)}>
             <div className="absolute inset-0 bg-black/50 animate-in fade-in duration-200" />
-            <div onClick={(e) => e.stopPropagation()} className="relative w-full max-w-lg bg-card rounded-t-3xl px-5 pt-3 pb-[max(20px,env(safe-area-inset-bottom))] shadow-2xl animate-in slide-in-from-bottom-4 duration-300">
+            <div {...qrDrag.dragProps} onClick={(e) => e.stopPropagation()} className="relative w-full max-w-lg bg-card rounded-t-3xl px-5 pt-3 pb-[max(20px,env(safe-area-inset-bottom))] shadow-2xl animate-in slide-in-from-bottom-4 duration-300">
               <div className="mx-auto h-1 w-10 rounded-full bg-muted-foreground/25 mb-4" />
               <button onClick={() => setQrShareOpen(false)} aria-label="Zamknij" className="absolute right-4 top-4 h-8 w-8 rounded-full bg-muted flex items-center justify-center active:scale-90 transition-transform">
                 <X className="h-4 w-4" />
@@ -2994,6 +3046,7 @@ const ReviewSummary = () => {
           onClick={() => setShowSharePrompt(false)}
         >
           <div
+            {...sharePromptDrag.dragProps}
             className="w-full max-w-md bg-card rounded-t-3xl px-6 pt-7 pb-[max(24px,env(safe-area-inset-bottom))] flex flex-col gap-5 shadow-2xl animate-in slide-in-from-bottom-4 duration-300"
             onClick={(e) => e.stopPropagation()}
           >
@@ -3029,7 +3082,7 @@ const ReviewSummary = () => {
       {/* ── Arkusz udostepniania (skrot obok edycji): widocznosc + podpis + osoby ── */}
       {shareSheetOpen && (
         <div className="fixed inset-0 z-[80] flex flex-col justify-end bg-black/40" onClick={() => setShareSheetOpen(false)}>
-          <div className="bg-background rounded-t-3xl max-h-[88dvh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+          <div {...shareSheetDrag.dragProps} className="bg-background rounded-t-3xl max-h-[88dvh] flex flex-col" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between px-5 pt-4 pb-2 shrink-0">
               <p className="text-lg font-black">{t("share_sheet.title")}</p>
               <button onClick={() => setShareSheetOpen(false)} aria-label={t("a11y.close")} className="h-9 w-9 rounded-full bg-muted flex items-center justify-center active:bg-muted/70"><X className="h-4 w-4" /></button>

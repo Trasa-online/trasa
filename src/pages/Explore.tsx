@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect } from "react";
+import { useDragToDismiss } from "@/hooks/useDragToDismiss";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useLocation } from "react-router-dom";
 import { PullToRefresh } from "@/components/PullToRefresh";
@@ -483,6 +484,8 @@ export const MyCollections = ({ showCreate = true }: { showCreate?: boolean } = 
   const queryClient = useQueryClient();
   // Potwierdzenie usuniecia zestawienia (nieodwracalne -> walidacja "czy na pewno?").
   const [confirmDelete, setConfirmDelete] = useState<{ id: string; title: string } | null>(null);
+  // Gest natywny: przeciagniecie panelu w dol zamyka arkusz.
+  const confirmDrag = useDragToDismiss({ onDismiss: () => setConfirmDelete(null) });
   const [deleting, setDeleting] = useState(false);
   // Accordion: ktora lista jest rozwinieta (podglad miejsc). Null = wszystkie zwiniete.
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -647,6 +650,7 @@ export const MyCollections = ({ showCreate = true }: { showCreate?: boolean } = 
           onClick={() => !deleting && setConfirmDelete(null)}
         >
           <div
+            {...confirmDrag.dragProps}
             className="w-full max-w-sm bg-card rounded-t-3xl px-6 pt-6 pb-[max(24px,env(safe-area-inset-bottom))] flex flex-col gap-4 shadow-2xl animate-in slide-in-from-bottom-4 duration-300"
             onClick={(e) => e.stopPropagation()}
           >

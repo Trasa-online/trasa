@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react";
+import { useDragToDismiss } from "@/hooks/useDragToDismiss";
 import { useTranslation } from "react-i18next";
 import i18n from "@/i18n";
 import { avatarSrc } from "@/lib/avatar";
@@ -1636,6 +1637,8 @@ export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityCh
   // pyta o date, a potem laduje w PlanWizard (swiper) z miejscami w Dopasowaniach.
   // (Karty tras z tabeli routes maja wlasny podglad SharedRoute i swoj przycisk.)
   const [planPrompt, setPlanPrompt] = useState<{ city: string | null; names: string[] } | null>(null);
+  // Gest natywny: przeciagniecie panelu w dol zamyka arkusz.
+  const planPromptDrag = useDragToDismiss({ onDismiss: () => setPlanPrompt(null) });
   // Podglad miejsca z wyszukiwarki (pelna wizytowka). Bazowy MockPlace od razu, potem doczytujemy
   // profil biznesu (menu/eventy) po UUID - jak w "Zapisane".
   const [placeDetail, setPlaceDetail] = useState<MockPlace | null>(null);
@@ -2387,6 +2390,7 @@ export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityCh
           onClick={() => setPlanPrompt(null)}
         >
           <div
+            {...planPromptDrag.dragProps}
             className="w-full max-w-md bg-card rounded-t-3xl flex flex-col max-h-[88dvh] shadow-2xl animate-in slide-in-from-bottom-4 duration-300"
             onClick={(e) => e.stopPropagation()}
           >

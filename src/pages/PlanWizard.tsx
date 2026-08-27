@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from "react";
+import { useDragToDismiss } from "@/hooks/useDragToDismiss";
 import { createWyjazdFromPlaces } from "@/lib/createWyjazd";
 import { useNavigate, useLocation } from "react-router-dom";
 import { ArrowLeft, X, Plus, Filter, Check, MapPin, ArrowRight, ChevronDown, Layers, Compass, SlidersHorizontal } from "lucide-react";
@@ -136,6 +137,8 @@ const PlanWizard = () => {
   const [showAddPlace, setShowAddPlace] = useState(false);
   // Istniejaca aktywna trasa dla wybranego miasta+daty (hybryda: pytamy kontynuuj/nowa).
   const [dupTrip, setDupTrip] = useState<{ id: string; city: string; start_date: string } | null>(null);
+  // Gest natywny: przeciagniecie panelu w dol zamyka arkusz.
+  const dupDrag = useDragToDismiss({ onDismiss: () => setDupTrip(null) });
   // Edycja daty z poziomu swipera (klik w "miasto · DD MMM") - sheet z kalendarzem.
   const [editDateOpen, setEditDateOpen] = useState(false);
 
@@ -808,6 +811,7 @@ const PlanWizard = () => {
           onClick={() => setDupTrip(null)}
         >
           <div
+            {...dupDrag.dragProps}
             className="w-full max-w-md bg-card rounded-t-3xl px-6 pt-7 pb-[max(24px,env(safe-area-inset-bottom))] flex flex-col gap-5 shadow-2xl animate-in slide-in-from-bottom-4 duration-300"
             onClick={(e) => e.stopPropagation()}
           >

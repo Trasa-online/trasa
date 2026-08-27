@@ -283,6 +283,27 @@ Dwa konteksty, dwie proporcje:
 
 ---
 
+## Gesty natywne (2026-08-28)
+
+Apka ma zachowywać się jak natywna, więc gesty dotykowe są **wspólnymi prymitywami**, nie kopiowanym kodem per ekran. Dwa hooki:
+
+- **[src/hooks/useDragToDismiss.ts](src/hooks/useDragToDismiss.ts)** - „przeciągnij w dół, żeby zamknąć" dla arkuszy/drawerów.
+- **[src/hooks/useSwipeNav.ts](src/hooks/useSwipeNav.ts)** - „przeciągnij w bok", żeby zmienić zakładkę / krok / zdjęcie.
+
+**Arkusze na `<SheetContent side="bottom">` mają gest w dół WBUDOWANY** ([src/components/ui/sheet.tsx](src/components/ui/sheet.tsx)) - nie dodawaj tam nic ręcznie. Zamknięcie idzie przez ukryty `SheetPrimitive.Close`, więc działa z każdym `open/onOpenChange`. Wyjątek awaryjny: prop `disableDragToDismiss`. Panel składany ręcznie (fixed overlay + `rounded-t-3xl`) podpinasz sam: `const { dragProps } = useDragToDismiss({ onDismiss })` i `<div {...dragProps} style={{ ...dragProps.style, maxHeight: "82dvh" }}>`.
+
+**Nowy bottom sheet buduj na `Sheet`, nie na własnym `fixed inset-0`** - dostajesz animację wejścia/wyjścia i gest za darmo (tak przepisany został `NotificationsDrawer`).
+
+**Zasady kolizji (ważne):**
+- Gest w dół startuje tylko gdy najbliższy scrollowany rodzic jest na górze (`scrollTop <= 0`); ruch w bok albo w górę oddaje gest treści.
+- Gest w bok wymaga przewagi poziomu nad pionem i odpada w kontenerze scrollowanym poziomo (pigułki, karuzele).
+- **`data-no-drag`** wyłącza zamykanie przeciągnięciem w swoim poddrzewie, **`data-no-swipe`** wyłącza zmianę zakładki. Mapy ([RouteMap](src/components/RouteMap.tsx), mapa w `RouteMapSheet`) mają oba - pan po mapie nie może zamykać arkusza ani przeskakiwać zakładek. Dodawaj je do każdego nowego elementu z własnym gestem (mapa, slider, canvas).
+- Podczas gestu i domykania hook wyłącza animacje CSS (`animation: none`) - inaczej `animate-in/animate-out` nadpisuje transform i panel „nie klei się" do palca.
+
+**Gdzie gesty już są:** zakładki profilu (Listy ↔ Wyjazdy, własny i publiczny), zakładki wyjazdu (Miejsca/Galeria/Mapa w `SharedRoute` i `ReviewSummary`), zakładki listy (Miejsca/Galeria), galeria fullscreen wyjazdu, hero wizytówki i karuzela wydarzeń, wszystkie bottom sheety + ręczne drawery.
+
+---
+
 ## Dual-platform conventions (iOS native vs Web/PWA)
 
 Trasa działa równolegle jako natywna aplikacja iOS (Capacitor 8, WebView) i web/PWA (Vercel). Jeden codebase, dwa cele wdrożenia. Niektóre zachowania powinny się różnić - poniżej obowiązujący wzorzec.
