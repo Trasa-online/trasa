@@ -14,7 +14,8 @@ const GoogleGlyph = ({ className }: { className?: string }) => (
 );
 
 // Wspoldzielony wiersz miejsca na trasie (widok eksploracji SharedRoute + widok wlasciciela
-// ReviewSummary). Duze zdjecie 104px, numer, nazwa (2 linie), chip kategorii + guzik Google.
+// ReviewSummary + listy SharedList). Miniaturka 2:3, nazwa (2 linie), chip kategorii, notki,
+// a pod spodem akcje po prawej: Google (biale kolko z cieniem) + zapis/kosz.
 // dragHandle (opcjonalny) = uchwyt przeciagania po lewej (tryb wlasciciela). note = dodatkowa
 // tresc pod wierszem (np. notka autora).
 export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onSave, saved, onDelete, dragHandle, note, cornerAvatar }: {
@@ -64,18 +65,22 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
           )}
         </div>
       </div>
-      {/* Zobacz w Google (lewo) + akcja (prawo) - PELNA SZEROKOSC pod miejscem (redesign 2026-08-27,
-          Figma): wlasciciel = kosz (usun), inaczej bookmark (zapisz). */}
-      <div className="mt-3 flex items-center justify-between gap-2">
-        <button onClick={(e) => { e.stopPropagation(); onGoogle(); }} aria-label="Otwórz w Google Maps" className="flex items-center gap-2 active:opacity-70 transition-opacity">
+      {/* Akcje miejsca - PRAWA strona wiersza (redesign 2026-08-28): Google bezposrednio po lewej
+          od zapisu/kosza. Guzik Google = samo logo w BIALYM kolku z delikatnym cieniem (bez podpisu)
+          - cien niesie afordancje "to sie klika", spojnie z kartami i arkuszem dodawania miejsca. */}
+      <div className="mt-3 flex items-center justify-end gap-2">
+        <button
+          onClick={(e) => { e.stopPropagation(); onGoogle(); }}
+          aria-label="Otwórz w Google Maps"
+          className="h-9 w-9 rounded-full bg-white border border-black/[0.04] shadow-[0_1px_5px_rgba(0,0,0,0.12)] flex items-center justify-center shrink-0 active:scale-90 transition-transform"
+        >
           <GoogleGlyph className="h-[18px] w-[18px]" />
-          <span className="text-sm font-medium text-foreground">Zobacz w Google</span>
         </button>
         {onDelete ? (
           <button
             onClick={(e) => { e.stopPropagation(); onDelete(); }}
             aria-label="Usuń miejsce z trasy"
-            className="h-8 w-8 rounded-full flex items-center justify-center text-destructive active:scale-90 transition-transform"
+            className="h-9 w-9 rounded-full flex items-center justify-center text-destructive active:scale-90 transition-transform"
           >
             <Trash2 className="h-5 w-5" strokeWidth={2} />
           </button>
@@ -83,7 +88,7 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
           <button
             onClick={(e) => { e.stopPropagation(); onSave(); }}
             aria-label={saved ? "Miejsce zapisane w liście" : "Zapisz miejsce do listy"}
-            className="h-8 w-8 rounded-full flex items-center justify-center active:scale-90 transition-transform"
+            className="h-9 w-9 rounded-full flex items-center justify-center active:scale-90 transition-transform"
           >
             <Bookmark className={`h-5 w-5 ${saved ? "text-[#F0A583] fill-[#F0A583]" : "text-foreground/70"}`} strokeWidth={2} />
           </button>
