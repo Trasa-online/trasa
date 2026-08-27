@@ -113,7 +113,8 @@ export default function TripProposalsSheet({
       place_name: p.place_name, category: p.category || "other", city: (p.city ?? city) || "",
       address: p.address || "", latitude: p.latitude ?? 0, longitude: p.longitude ?? 0,
       rating: p.rating ?? 0, photo_url: p.photo_url ?? "", vibe_tags: [],
-      description: p.description ?? p.short_desc ?? "", google_place_id: p.google_place_id ?? null,
+      // p.description = opis miejsca (places.description); short_desc to NOTKA usera - nie tutaj.
+      description: p.description ?? "", google_place_id: p.google_place_id ?? null,
     });
   };
   const openGooglePlace = (p: any) => {

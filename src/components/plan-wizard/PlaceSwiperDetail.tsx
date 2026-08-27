@@ -20,6 +20,7 @@ import { toast } from "sonner";
 import { getPhotoUrl, ensurePhotoCached } from "@/lib/placePhotos";
 import { fetchPlaceUserPhotos } from "@/lib/placeUserPhotos";
 import { placeKeyOf, fetchPlacePhotos, uploadPlacePhoto, fetchPhotoLikes, togglePhotoLike, type LikeState } from "@/lib/placePhotoSocial";
+import { fetchPlaceNotes, type PlaceUserNote } from "@/lib/placeNotes";
 import { GOOGLE_PLACE_DETAILS_DISABLED } from "@/lib/appMode";
 import { type MockPlace, fetchEnrichedPlace } from "./PlaceSwiper";
 import posthog from "posthog-js";
@@ -91,6 +92,8 @@ const PlaceSwiperDetail = ({
   // #3e: zdjecia userow dodane bezposrednio do miejsca (galeria wspoldzielona, place_photos).
   const [userPlacePhotos, setUserPlacePhotos] = useState<string[]>([]);
   const [addingPhoto, setAddingPhoto] = useState(false);
+  // Notki userow o miejscu (sekcja "Od użytkowników"). Osobna tresc - NIE opis miejsca.
+  const [userNotes, setUserNotes] = useState<PlaceUserNote[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   // #6: lajki zdjec w galerii (ref = URL zdjecia -> stabilny dla Storage/B2B/user).
   const [photoLikes, setPhotoLikes] = useState<Map<string, LikeState>>(new Map());
@@ -108,6 +111,7 @@ const PlaceSwiperDetail = ({
       setFreshPlace(null);
       setUserPlacePhotos([]);
       setPhotoLikes(new Map());
+      setUserNotes([]);
       return;
     }
 
@@ -248,6 +252,14 @@ const PlaceSwiperDetail = ({
       : [...ownCover, ...userPhotos, ...contributed, ...ownGallery],
   )).slice(0, 10);
 
+  // Notki userow o tym miejscu - z OPUBLIKOWANYCH tras i PUBLICZNYCH list (best-effort).
+  useEffect(() => {
+    if (!open || !ep?.place_name) { return; }
+    let alive = true;
+    fetchPlaceNotes(ep.place_name).then((rows) => { if (alive) setUserNotes(rows); }).catch(() => {});
+    return () => { alive = false; };
+  }, [open, ep?.place_name]);
+
   // #3e: pobierz zdjecia userow przypisane do tego miejsca (galeria wspoldzielona).
   useEffect(() => {
     if (!open || !placeKey) { return; }
@@ -361,6 +373,7 @@ const PlaceSwiperDetail = ({
             photoLikes={photoLikes}
             onToggleLike={handleToggleLike}
             onAddPhoto={undefined /* #3 (Nat): usunięte "Dodaj swoje zdjęcie" z wizytówki */}
+            userNotes={userNotes}
             addingPhoto={addingPhoto}
             startingLocation={distanceRef ? { name: distanceRef.label, latitude: distanceRef.coords.lat, longitude: distanceRef.coords.lng } : undefined}
           />

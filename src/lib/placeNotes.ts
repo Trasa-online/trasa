@@ -48,3 +48,79 @@ export function notesByPlace(notes: PlaceNote[]): Map<string, PlaceNote[]> {
 }
 
 export { nkey as placeNoteKey };
+
+// ─── Notki o MIEJSCU (wizytowka, sekcja "Od użytkowników") ────────────────────
+// Zbiera notki userow o danym miejscu z DWOCH publicznych zrodel:
+//   1) pin_ratings.note z tras OPUBLIKOWANYCH (status='published'),
+//   2) discovery_items.short_desc z list PUBLICZNYCH i zaakceptowanych (moderation).
+// Prywatne wyjazdy (robocze, grupowe przed publikacja) i prywatna lista "Ogolne" NIE trafiaja
+// tutaj - notka staje sie widoczna dopiero, gdy user swiadomie opublikuje trase/liste.
+// Dopasowanie po NAZWIE miejsca (tak samo jak notesByPlace) - place_name jest w obu tabelach.
+export interface PlaceUserNote {
+  key: string;
+  note: string;
+  username: string | null;
+  avatar_url: string | null;
+  source: "trip" | "list";
+}
+
+// Escape %/_ - inaczej nazwa typu "Cafe 100%" dziala jak wzorzec LIKE i dociaga cudze miejsca.
+const likeSafe = (s: string) => String(s ?? "").replace(/[\\%_]/g, (m) => "\\" + m);
+
+export async function fetchPlaceNotes(placeName: string): Promise<PlaceUserNote[]> {
+  const name = String(placeName ?? "").trim();
+  if (!name) return [];
+  const safe = likeSafe(name);
+
+  const [trips, lists] = await Promise.all([
+    (supabase as any)
+      .from("pin_ratings")
+      .select("note, user_id, created_at, routes!inner(status)")
+      .eq("routes.status", "published")
+      .ilike("place_name", safe)
+      .not("note", "is", null)
+      .limit(30)
+      .then(({ data, error }: any) => { if (error) { console.warn("[placeNotes] trips:", error.message); return []; } return (data ?? []) as any[]; }),
+    (supabase as any)
+      .from("discovery_items")
+      .select("short_desc, discovery_collections!inner(user_id, is_public, moderation_status, author_name, author_avatar)")
+      .eq("discovery_collections.is_public", true)
+      .eq("discovery_collections.moderation_status", "approved")
+      .ilike("place_name", safe)
+      .not("short_desc", "is", null)
+      .limit(30)
+      .then(({ data, error }: any) => { if (error) { console.warn("[placeNotes] lists:", error.message); return []; } return (data ?? []) as any[]; }),
+  ]);
+
+  // Autorzy notek z tras - profil (username/avatar) doczytany jednym zapytaniem.
+  const uids = Array.from(new Set(trips.map((r: any) => r.user_id).filter(Boolean)));
+  const byId = new Map<string, { username: string | null; avatar_url: string | null }>();
+  if (uids.length) {
+    const { data: profs } = await (supabase as any).from("profiles").select("id, username, avatar_url").in("id", uids);
+    for (const p of (profs ?? []) as any[]) byId.set(p.id, { username: p.username, avatar_url: p.avatar_url });
+  }
+
+  const out: PlaceUserNote[] = [];
+  const seen = new Set<string>();
+  const push = (n: PlaceUserNote) => {
+    const dedup = `${n.username ?? ""}|${n.note.trim().toLowerCase()}`;
+    if (!n.note.trim() || seen.has(dedup)) return;
+    seen.add(dedup);
+    out.push(n);
+  };
+  for (const r of trips as any[]) {
+    push({
+      key: `t-${r.user_id}-${out.length}`, note: String(r.note),
+      username: byId.get(r.user_id)?.username ?? null, avatar_url: byId.get(r.user_id)?.avatar_url ?? null,
+      source: "trip",
+    });
+  }
+  for (const r of lists as any[]) {
+    const c = r.discovery_collections ?? {};
+    push({
+      key: `l-${c.user_id ?? "x"}-${out.length}`, note: String(r.short_desc),
+      username: c.author_name ?? null, avatar_url: c.author_avatar ?? null, source: "list",
+    });
+  }
+  return out.slice(0, 12);
+}

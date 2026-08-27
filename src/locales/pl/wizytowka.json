@@ -39,6 +39,7 @@
   },
   "events_title": "Nadchodzące Wydarzenia",
   "description_title": "Opis miejsca",
+  "user_notes_title": "Od użytkowników",
   "events_added_to_route_one": "{{count}} osoba ma to w planach",
   "events_added_to_route_few": "{{count}} osoby mają to w planach",
   "events_added_to_route_many": "{{count}} osób ma to w planach",

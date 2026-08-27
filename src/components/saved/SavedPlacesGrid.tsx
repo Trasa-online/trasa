@@ -65,7 +65,9 @@ export function SavedPlacesGrid() {
       id: p.place_id ?? p.google_place_id ?? p.place_name,
       place_name: p.place_name, category: (p.category ?? inferCategoryFromName(p.place_name) ?? "other") as any,
       city: p.city ?? "", address: p.address ?? "", latitude: p.latitude ?? 0, longitude: p.longitude ?? 0,
-      rating: p.rating ?? 0, photo_url: resolveStored(p.photo_url) ?? "", vibe_tags: [], description: p.short_desc || "",
+      // Opis miejsca = TYLKO opis z bazy. Notka usera (short_desc) ma wlasna sekcje
+      // "Od użytkowników" w wizytowce - nie udaje opisu miejsca (zgloszenie Nat 2026-08-28).
+      rating: p.rating ?? 0, photo_url: resolveStored(p.photo_url) ?? "", vibe_tags: [], description: "",
     } as MockPlace,
   });
 

@@ -22,6 +22,7 @@ import { createPortal } from "react-dom";
 import { mainCategoryLabel, subcategoryLabelLocalized, parentMainOfSub } from "@/lib/categories";
 import { CategoryIcon } from "@/components/CategoryIcon";
 import { cn } from "@/lib/utils";
+import type { PlaceUserNote } from "@/lib/placeNotes";
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { API_BASE } from "@/lib/platform";
 import { Clock, ChevronRight, ChevronLeft, ChevronDown, X, Maximize2, Phone, Globe, FileText, Instagram, Facebook, MapPin, Bookmark, Heart, ImagePlus } from "lucide-react";
@@ -1050,6 +1051,9 @@ export interface PremiumBusinessCardProps {
   // #3e dodawanie zdjecia do miejsca (galeria wizytowki). Gdy brak -> przycisk ukryty.
   onAddPhoto?: () => void;
   addingPhoto?: boolean;
+  // Notki userow o TYM miejscu (z opublikowanych tras i publicznych list) - sekcja
+  // "Od użytkowników". Notka NIGDY nie jest opisem miejsca (data.description) - to osobne tresci.
+  userNotes?: PlaceUserNote[];
 }
 
 const PremiumBusinessCard = ({
@@ -1075,6 +1079,7 @@ const PremiumBusinessCard = ({
   onToggleLike,
   onAddPhoto,
   addingPhoto = false,
+  userNotes,
 }: PremiumBusinessCardProps) => {
   const { t } = useTranslation("wizytowka");
   const [fullscreen, setFullscreen] = useState<{ photos: string[]; idx: number } | null>(null);
@@ -1162,6 +1167,25 @@ const PremiumBusinessCard = ({
                   </div>
                 )}
                 <TagsSection data={data} />
+              </div>
+            )}
+
+            {/* Notki userow o miejscu - OSOBNA sekcja, nigdy nie mieszana z opisem miejsca.
+                Zrodlo: opublikowane wyjazdy + publiczne listy (patrz lib/placeNotes). */}
+            {userNotes && userNotes.length > 0 && (
+              <div className="space-y-3">
+                <h3 className="text-lg font-semibold tracking-tight">{t("user_notes_title", "Od użytkowników")}</h3>
+                <div className="space-y-3">
+                  {userNotes.map((n) => (
+                    <div key={n.key} className="bg-muted/50 rounded-2xl px-3.5 py-3">
+                      <p className="text-[13.5px] text-foreground/85 leading-snug whitespace-pre-wrap break-words">{n.note}</p>
+                      <div className="flex items-center gap-2 mt-2">
+                        <img src={avatarSrc(n.avatar_url)} alt="" className="h-5 w-5 rounded-full object-cover bg-secondary" />
+                        <span className="text-[12px] font-semibold text-muted-foreground truncate">{n.username ?? "Użytkownik"}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
 

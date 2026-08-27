@@ -243,7 +243,8 @@ export default function SharedList() {
     longitude: pin.longitude ?? 0,
     rating: pin.rating ?? 0,
     photo_url: resolveStored(pin.photo_url) ?? "",
-    description: pin.short_desc || "",
+    // Notka autora listy NIE jest opisem miejsca - ma wlasna sekcje "Od użytkowników".
+    description: "",
   });
 
   // Zapisz liste (bookmark) - localStorage, 1:1 z toggleSaveCollection (feed/Zapisane).

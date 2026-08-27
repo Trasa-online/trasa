@@ -547,7 +547,7 @@ export const MyCollections = ({ showCreate = true }: { showCreate?: boolean } = 
       id: pin.place_id ?? pin.google_place_id ?? pin.place_name,
       place_name: pin.place_name, category: (pin.category ?? inferCategoryFromName(pin.place_name) ?? "other") as any,
       city: city ?? "", address: pin.address ?? "", latitude: pin.latitude ?? 0, longitude: pin.longitude ?? 0,
-      rating: pin.rating ?? 0, photo_url: resolveStored(pin.photo_url) ?? "", vibe_tags: [], description: pin.short_desc || "",
+      rating: pin.rating ?? 0, photo_url: resolveStored(pin.photo_url) ?? "", vibe_tags: [], description: "",
     } as MockPlace,
   });
   const openGoogle = (pin: any, city: string | null) => {

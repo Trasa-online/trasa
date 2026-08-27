@@ -43,7 +43,7 @@ export function SavedPlaces({ city }: { city?: string }) {
       id: p.place_id ?? p.google_place_id ?? p.place_name,
       place_name: p.place_name, category: (p.category ?? inferCategoryFromName(p.place_name) ?? "other") as any,
       city: p.city ?? "", address: p.address ?? "", latitude: p.latitude ?? 0, longitude: p.longitude ?? 0,
-      rating: p.rating ?? 0, photo_url: resolveStored(p.photo_url) ?? "", vibe_tags: [], description: p.short_desc || "",
+      rating: p.rating ?? 0, photo_url: resolveStored(p.photo_url) ?? "", vibe_tags: [], description: "",
     } as MockPlace,
   });
 
