@@ -3,8 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { MapPin, ArrowRight, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, RotateCcw, CheckCircle2, Navigation, X, CalendarDays, Plus, Check, Bookmark } from "lucide-react";
 import AddCustomPlacePanel from "./AddCustomPlacePanel";
 import { haversineKm as haversineKmDist, formatDistance } from "@/lib/distance";
-import { useDistanceReference, getReference, ensureCityContext, wasAskedForCity, markAskedForCity, tryResolveOnSite } from "@/lib/distanceReference";
-import LocationPrimer from "@/components/LocationPrimer";
+import { useDistanceReference, getReference, ensureCityContext, tryResolveOnSite, setGpsReference } from "@/lib/distanceReference";
 import { cn } from "@/lib/utils";
 import posthog from "posthog-js";
 import { format } from "date-fns";
@@ -19,6 +18,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import { useOnboarding } from "@/components/OnboardingGuide";
 import { useHaptics } from "@/hooks/useHaptics";
+import { useDragToDismiss } from "@/hooks/useDragToDismiss";
 import { useSavedPlaces } from "@/hooks/useSavedPlaces";
 import { getSubcategoryIds, getMainCategoryFor, getDbCategoriesFor, MAIN_CATEGORIES, mainCategoryLabel } from "@/lib/categories";
 import { addLike as saveExploreLike, clearGroup as clearExploreGroup, removeLikeFromCity } from "@/lib/exploreLikes";
@@ -1205,29 +1205,32 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
   const [bannerDismissCount, setBannerDismissCount] = useState(0);
   // Track consecutive likes per category group
   const [recentLikedGroups, setRecentLikedGroups] = useState<(Set<string> | null)[]>([]);
-  // Wybor punktu odniesienia ("Jestes juz w miescie?") - pokazany raz na miasto po
-  // zaladowaniu miejsc, jesli nie pytalismy i nie ma jeszcze punktu odniesienia.
+  // Punkt odniesienia dystansu. NIE pytamy o niego zadnym arkuszem (usuniete 2026-08-28,
+  // pytanie "Jestes juz w X?" bylo niezrozumiale, a przy city="all" wrecz bledne). Ustawia sie
+  // sam z GPS gdy user ma juz zgode, albo recznie chipem "Pokaz dystans" na karcie.
   const distanceRef = useDistanceReference();
-  const [locationPrimerOpen, setLocationPrimerOpen] = useState(false);
-  const [onSiteConfirm, setOnSiteConfirm] = useState(false); // baner "Jestes w X · Zmien"
   const showAddPlace = showAddPlaceProp;
   const setShowAddPlace = (v: boolean) => { if (!v) onAddPlaceClose?.(); };
 
   // Inne miasto = inny punkt odniesienia: czysci ref przy zmianie miasta.
   useEffect(() => { ensureCityContext(city); }, [city]);
 
-  // Lokalizacja: po zaladowaniu miejsc, raz na miasto, jesli brak ref. Najpierw auto-detect
-  // przez GPS (gdy mamy zgode): on-site -> "od Ciebie" + baner potwierdzenia; inaczej jawny
-  // sheet "Jestes juz w miescie?".
+  // Chip "Pokaz dystans" na karcie: od razu systemowa zgoda na lokalizacje (bez posrednich
+  // pytan). Gdy user odmowi - krotki komunikat, chip zostaje na kolejna probe.
+  const enableDistance = async () => {
+    const ok = await setGpsReference();
+    if (!ok) toast(t("distance_denied", { defaultValue: "Włącz lokalizację w ustawieniach, żeby zobaczyć dystans" }));
+  };
+
+  // Lokalizacja: CICHY auto-detect przez GPS (tylko gdy user juz dal zgode - tryResolveOnSite
+  // nie promptuje). Jestes w miescie -> chip "od Ciebie" pojawia sie sam. Nie ma zadnego
+  // pytania do usera; gdy nie wyjdzie, na karcie zostaje chip "Pokaz dystans".
   useEffect(() => {
-    if (loading || distanceRef || wasAskedForCity(city)) return;
+    if (loading || distanceRef) return;
     let cancelled = false;
     (async () => {
-      const res = await tryResolveOnSite(city);
+      await tryResolveOnSite(city);
       if (cancelled) return;
-      markAskedForCity(city);
-      if (res === "onsite") setOnSiteConfirm(true);
-      else setLocationPrimerOpen(true);
     })();
     return () => { cancelled = true; };
   }, [loading, distanceRef, city]);
@@ -1500,7 +1503,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
       setSavedIds((prev) => { const n = new Set(prev); n.delete(place.id); return n; });
       void unsave({
         place_name: place.place_name, category: place.category ?? null, address: place.address ?? null,
-        description: place.description ?? null, latitude: place.latitude ?? null, longitude: place.longitude ?? null,
+        latitude: place.latitude ?? null, longitude: place.longitude ?? null,
         photo_url: photoUrlOverrides.current[place.id] ?? place.photo_url ?? null, place_id: isUuid ? place.id : null,
       });
       return;
@@ -1522,7 +1525,6 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
         place_name: place.place_name,
         category: place.category ?? null,
         address: place.address ?? null,
-        description: place.description ?? null,
         latitude: place.latitude ?? null,
         longitude: place.longitude ?? null,
         photo_url: photoUrlOverrides.current[place.id] ?? place.photo_url ?? null,
@@ -1834,27 +1836,6 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
     // env(safe-area) + chrome height jawnie.
     <div className="flex flex-col flex-1 min-h-0 relative">
 
-      {/* Zgoda na lokalizacje "w kontekscie" (chip dystansu) */}
-      <LocationPrimer open={locationPrimerOpen} city={city} onClose={() => setLocationPrimerOpen(false)} />
-
-      {/* Baner potwierdzenia on-site (auto-detect GPS): dystans liczymy od Ciebie, "Zmien"
-          pozwala wskazac punkt startu (gdy planujesz mimo ze jestes w miescie). */}
-      {onSiteConfirm && (
-        <div className="absolute top-2 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 max-w-[92%] bg-foreground text-background rounded-full pl-3.5 pr-2 py-1.5 shadow-lg animate-in fade-in slide-in-from-top-2 duration-300">
-          <Navigation className="h-3.5 w-3.5 shrink-0" />
-          <span className="text-xs font-medium truncate">{t("onsite_banner")}</span>
-          <button
-            onClick={() => { setOnSiteConfirm(false); setLocationPrimerOpen(true); }}
-            className="shrink-0 text-xs font-bold px-2 py-0.5 rounded-full bg-background/15 active:scale-95 transition-transform"
-          >
-            {t("change")}
-          </button>
-          <button onClick={() => setOnSiteConfirm(false)} aria-label={t("close")} className="shrink-0 h-5 w-5 flex items-center justify-center rounded-full active:bg-background/15">
-            <X className="h-3.5 w-3.5" />
-          </button>
-        </div>
-      )}
-
       {/* Bingo banner */}
       {showBanner && (
         <MatchModal
@@ -2018,7 +1999,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
                   onPhotoFetched={(id, url) => { photoUrlOverrides.current[id] = url; }}
                   isTop={isActive}
                   offset={0}
-                  onEnableDistance={() => setLocationPrimerOpen(true)}
+                  onEnableDistance={enableDistance}
                 />
               </div>
             </div>
@@ -2071,7 +2052,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
                       onPhotoFetched={(id, url) => { photoUrlOverrides.current[id] = url; }}
                       isTop={offset === 0}
                       offset={offset}
-                      onEnableDistance={() => setLocationPrimerOpen(true)}
+                      onEnableDistance={enableDistance}
                     />
                   );
                 });

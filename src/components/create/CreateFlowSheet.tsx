@@ -32,7 +32,7 @@ const normCityName = (s: unknown) =>
   String(s ?? "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/ł/g, "l").trim();
 
 const toPlaceForList = (p: SavedPlace): PlaceForList => ({
-  place_name: p.place_name, category: p.category, address: p.address, description: p.short_desc,
+  place_name: p.place_name, category: p.category, address: p.address,
   latitude: p.latitude, longitude: p.longitude, photo_url: p.photo_url, place_id: p.place_id,
   google_place_id: p.google_place_id, rating: p.rating,
 });
@@ -151,7 +151,9 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
     rating: p.rating ?? 0,
     photo_url: p.photo_url ?? "",
     vibe_tags: [],
-    description: p.description ?? p.short_desc ?? "",
+    // NIE pokazujemy short_desc jako opisu miejsca - to notka usera (jego wlasna albo, dla
+    // starych wpisow, skopiowana od autora listy), a nie opis lokalu.
+    description: p.description ?? "",
     google_place_id: p.google_place_id ?? null,
   }); };
   // Otworz miejsce w Google Maps (wizytowka/place page). query_place_id gdy mamy Google Place ID
@@ -544,7 +546,7 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
     <PlaceSwiperDetail open={!!detailPlace} onOpenChange={(o) => { if (!o) setDetailPlace(null); }} place={detailPlace} city={detailPlace?.city || pickCity}
       onLike={user && detailPlace ? () => setSavePlace({
         place_name: detailPlace.place_name, category: detailPlace.category ?? null, address: detailPlace.address || null,
-        description: detailPlace.description || null, latitude: detailPlace.latitude ?? null, longitude: detailPlace.longitude ?? null,
+        latitude: detailPlace.latitude ?? null, longitude: detailPlace.longitude ?? null,
         photo_url: detailPlace.photo_url || null,
         place_id: /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(detailPlace.id ?? "")) ? detailPlace.id : null,
       }) : undefined} />

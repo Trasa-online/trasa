@@ -58,11 +58,12 @@ export function SavedPlaces({ city }: { city?: string }) {
           label: "Cofnij",
           onClick: async () => {
             try {
+              // Cofnij usuniecie = przywracamy WLASNY wpis, wiec notka wraca razem z nim.
               await addPlaceToList(p.collection_id, {
-                place_name: p.place_name, category: p.category, address: p.address, description: p.short_desc,
+                place_name: p.place_name, category: p.category, address: p.address,
                 latitude: p.latitude, longitude: p.longitude, place_id: p.place_id,
                 google_place_id: p.google_place_id, rating: p.rating, photo_url: p.photo_url,
-              });
+              }, { note: p.short_desc });
               invalidate();
             } catch (e: any) {
               console.error("[SavedPlaces] undo remove failed:", e?.message ?? e);
@@ -216,7 +217,6 @@ function AddPlaceSheet({ open, onOpenChange, city, onAdded }: {
         place_name: r.name,
         category: categoryFromGoogleTypes(r.types),
         address: r.full_address ?? null,
-        description: null,
         latitude: r.latitude ?? null,
         longitude: r.longitude ?? null,
         photo_url: null,

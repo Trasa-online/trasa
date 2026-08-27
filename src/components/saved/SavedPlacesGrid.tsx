@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Bookmark } from "lucide-react";
+import { Loader2, Bookmark, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { PlaceTile } from "@/components/profile/PlaceTile";
@@ -9,6 +9,7 @@ import { type MockPlace } from "@/components/plan-wizard/PlaceSwiper";
 import { resolveStored } from "@/components/PlacePhoto";
 import { inferCategoryFromName, categoryIconSrc } from "@/lib/placeCategoryIcon";
 import { fetchSavedPlaces, removeSavedPlaceById, addPlaceToList, type SavedPlace } from "@/lib/placeLists";
+import AddSavedPlaceSheet from "@/components/saved/AddSavedPlaceSheet";
 
 // Segment "Miejsca" w zakładce Zapisane (profil): siatka 3-kol zapisanych miejsc usera
 // (agregat pozycji z prywatnych list "do zobaczenia"). Tap kafelka -> wizytówka.
@@ -16,6 +17,8 @@ export function SavedPlacesGrid() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [detailPin, setDetailPin] = useState<{ place: MockPlace; city: string; skip: boolean } | null>(null);
+  // Arkusz "Dodaj nowe miejsce" (kraj + miasto + nazwa) - wejscie z pierwszego kafelka siatki.
+  const [addOpen, setAddOpen] = useState(false);
 
   const invalidateSaved = () => {
     queryClient.invalidateQueries({ queryKey: ["saved-places", user?.id] });
@@ -37,8 +40,9 @@ export function SavedPlacesGrid() {
       action: {
         label: "Cofnij",
         onClick: async () => {
+          // Cofnij usuniecie = przywracamy WLASNY wpis, wiec notka wraca razem z nim.
           await addPlaceToList(p.collection_id, {
-            place_name: p.place_name, category: p.category, address: p.address, description: p.short_desc,
+            place_name: p.place_name, category: p.category, address: p.address,
             latitude: p.latitude, longitude: p.longitude, photo_url: p.photo_url, place_id: p.place_id,
             google_place_id: p.google_place_id, rating: p.rating,
           });
@@ -77,12 +81,25 @@ export function SavedPlacesGrid() {
         <span className="font-semibold text-foreground">Eksploruj</span>{" "}
         lub u{" "}<span className="font-semibold text-foreground">innego użytkownika</span>
       </p>
+      <button onClick={() => setAddOpen(true)}
+        className="mt-6 h-11 px-5 rounded-2xl bg-primary text-white font-bold text-sm flex items-center gap-2 active:scale-[0.97] transition-transform">
+        <Plus className="h-4 w-4" strokeWidth={2.5} /> Dodaj nowe miejsce
+      </button>
+      <AddSavedPlaceSheet open={addOpen} onOpenChange={setAddOpen} onAdded={invalidateSaved} />
     </div>
   );
 
   return (
     <>
       <div className="grid grid-cols-3 gap-1.5">
+        {/* Pierwszy kafelek = dodanie miejsca spoza aplikacji (kraj + miasto + nazwa). */}
+        <button onClick={() => setAddOpen(true)}
+          className="relative aspect-[2/3] rounded-2xl bg-[#fcede3] border border-dashed border-[#ef9d78]/70 flex flex-col items-center justify-center gap-2 active:scale-[0.98] transition-transform">
+          <span className="h-10 w-10 rounded-full bg-white/70 flex items-center justify-center">
+            <Plus className="h-5 w-5 text-[#ef9d78]" strokeWidth={2.5} />
+          </span>
+          <span className="text-[11px] font-bold text-foreground/70 leading-tight px-2 text-center">Dodaj nowe miejsce</span>
+        </button>
         {places.map((p) => (
           <div key={p.id} className="relative">
             <button onClick={() => openDetail(p)} className="w-full active:opacity-90 transition-opacity">
@@ -96,6 +113,7 @@ export function SavedPlacesGrid() {
           </div>
         ))}
       </div>
+      <AddSavedPlaceSheet open={addOpen} onOpenChange={setAddOpen} onAdded={invalidateSaved} />
       <PlaceSwiperDetail
         open={!!detailPin}
         onOpenChange={(o) => { if (!o) setDetailPin(null); }}

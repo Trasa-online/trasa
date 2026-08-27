@@ -132,7 +132,7 @@ export default function SharedRoute() {
   const [savePlace, setSavePlace] = useState<SavePlaceInput | null>(null);
   const pinToSave = (pin: any): SavePlaceInput => ({
     place_name: pin.place_name, category: pin.category ?? null, address: pin.address ?? null,
-    description: pin.description ?? null, latitude: pin.latitude ?? null, longitude: pin.longitude ?? null,
+    latitude: pin.latitude ?? null, longitude: pin.longitude ?? null,
     photo_url: pin.photo_url ?? null, place_id: pin.place_id ?? null,
   });
   const [planView, setPlanView] = useState<"list" | "cards">("list");
@@ -573,7 +573,8 @@ export default function SharedRoute() {
     if (!user) return;
     const maxOrder = pins.reduce((m: number, p: any) => Math.max(m, p.pin_order ?? -1), -1);
     const rows = places.map((p, i) => ({
-      route_id: route.id, place_name: p.place_name, address: p.address ?? null, description: p.description ?? null,
+      // description = notka pina: pusta, notke pisze kazdy uczestnik sam (PlaceNotes).
+      route_id: route.id, place_name: p.place_name, address: p.address ?? null, description: null,
       category: p.category ?? "other", latitude: p.latitude ?? null, longitude: p.longitude ?? null,
       place_id: p.place_id ?? null, suggested_time: null, photo_url: p.photo_url ?? null,
       pin_order: maxOrder + 1 + i, original_creator_id: user.id, added_by: user.id,

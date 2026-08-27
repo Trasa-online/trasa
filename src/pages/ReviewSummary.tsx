@@ -622,7 +622,7 @@ const ReviewSummary = () => {
   const [savePlace, setSavePlace] = useState<SavePlaceInput | null>(null);
   const pinToSave = (pin: any): SavePlaceInput => ({
     place_name: pin.place_name, category: pin.category ?? null, address: pin.address ?? null,
-    description: pin.description ?? null, latitude: pin.latitude ?? null, longitude: pin.longitude ?? null,
+    latitude: pin.latitude ?? null, longitude: pin.longitude ?? null,
     photo_url: pin.photo_url ?? null, place_id: pin.place_id ?? null,
   });
 

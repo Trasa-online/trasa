@@ -247,13 +247,13 @@ export default function SharedList() {
   };
 
   // Otwórz sheet zapisu pojedynczego miejsca do listy usera (bookmark per-miejsce).
-  // description = null: zapisujemy CZYSTĄ kartę - notka autora listy NIE jest kopiowana do mojego
-  // zapisu (to była notka innego usera; moją dodaję sam). (fix Nat 2026-08-27)
+  // Zapisujemy CZYSTĄ kartę - notka autora listy NIE jedzie do mojego zapisu (to była notka
+  // innego usera; swoją dodaję sam). Od 2026-08-28 pilnuje tego sam typ PlaceForList
+  // (nie ma juz pola na notke) - patrz lib/placeLists.ts.
   const itemToPlace = (pin: any) => ({
     place_name: pin.place_name,
     category: catOf(pin),
     address: pin.address ?? null,
-    description: null,
     latitude: pin.latitude ?? null,
     longitude: pin.longitude ?? null,
     photo_url: pin.photo_url ?? null,

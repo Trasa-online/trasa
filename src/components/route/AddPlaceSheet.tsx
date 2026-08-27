@@ -23,7 +23,7 @@ const distKm = (a: { lat: number; lng: number }, b: { lat: number; lng: number }
 };
 const keyOf = (p: { place_name?: string | null }) => (p.place_name || "").trim().toLowerCase();
 const toPlaceForList = (p: SavedPlace): PlaceForList => ({
-  place_name: p.place_name, category: p.category, address: p.address, description: p.short_desc,
+  place_name: p.place_name, category: p.category, address: p.address,
   latitude: p.latitude, longitude: p.longitude, photo_url: p.photo_url, place_id: p.place_id,
   google_place_id: p.google_place_id, rating: p.rating,
 });

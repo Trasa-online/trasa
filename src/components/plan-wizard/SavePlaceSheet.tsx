@@ -18,11 +18,11 @@ import { fetchUserLists, addPlaceToList, removePlaceFromList, createListWithPlac
 // Tap "+" dodaje miejsce do listy; przy prywatnej "Do zobaczenia" (auto-lista) tworzy ją gdy brak.
 // Awatary obok nazwy = placeholder (ikona) - docelowo user wybierze awatar listy.
 
+// Bez pola `description` - notka nie podroznuje razem z miejscem (kazdy user pisze wlasna).
 export interface SavePlaceInput {
   place_name: string;
   category: string | null;
   address: string | null;
-  description: string | null;
   latitude: number | null;
   longitude: number | null;
   photo_url: string | null;

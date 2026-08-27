@@ -80,16 +80,16 @@ const toMockPlace = (p: any, city: string): MockPlace => ({
   description: "",
 });
 
-// ComposeItem -> PlaceForList (zapis do listy Ogolne/nowej). google_place_id/description = null.
+// ComposeItem -> PlaceForList (zapis do listy Ogolne/nowej). google_place_id = null.
 const itemToPlaceForList = (i: ComposeItem): PlaceForList => ({
-  place_name: i.place_name, category: i.category, address: i.address, description: null,
+  place_name: i.place_name, category: i.category, address: i.address,
   latitude: i.latitude, longitude: i.longitude, photo_url: i.photo_url,
   place_id: i.place_id, google_place_id: null, rating: i.rating ?? null,
 });
 // MockPlace (wizytowka) -> SavePlaceInput. place_id tylko gdy DB uuid (inaczej null).
 const mockToSaveInput = (mp: any): SavePlaceInput => ({
   place_name: mp.place_name, category: mp.category ?? null, address: mp.address || null,
-  description: mp.description || null, latitude: mp.latitude ?? null, longitude: mp.longitude ?? null,
+  latitude: mp.latitude ?? null, longitude: mp.longitude ?? null,
   photo_url: mp.photo_url || null, place_id: UUID_RE.test(String(mp.id ?? "")) ? mp.id : null,
 });
 

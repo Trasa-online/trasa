@@ -6,9 +6,9 @@ import type { LatLng } from "@/lib/distance";
 // na web). Wynik trzymany w module-level cache i wspoldzielony przez wszystkie komponenty
 // (jedno zapytanie na sesje). NIC nie zapisujemy na serwer - lokalizacja zyje tylko w pamieci.
 //
-// Zgoda w kontekscie: najpierw pokazujemy LocationPrimer ("po co"), dopiero potem wolamy
-// requestLocation() ktore odpala systemowy prompt. Flaga `trasa_geo_primed_v1` zapobiega
-// ponownemu pytaniu.
+// Zgoda w kontekscie: o lokalizacje prosimy dopiero przy akcji, ktora jej potrzebuje (chip
+// "Pokaz dystans", checklist odwiedzonych) - wtedy requestLocation() odpala systemowy prompt.
+// Flaga `trasa_geo_primed_v1` zapobiega ponownemu pytaniu.
 
 export type GeoStatus = "idle" | "requesting" | "granted" | "denied" | "unavailable";
 

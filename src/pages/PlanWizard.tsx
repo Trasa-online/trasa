@@ -25,7 +25,6 @@ import { MAIN_CATEGORIES, getSubcategoryLabel, subcategoryLabelLocalized } from 
 import { setStartReference, markAskedForCity, tryResolveOnSite, useDistanceReference } from "@/lib/distanceReference";
 import { getTodayLikes } from "@/lib/exploreLikes";
 import { saveDraft, removeDraft } from "@/lib/draftRoutes";
-import LocationPrimer from "@/components/LocationPrimer";
 import { CategoryIcon } from "@/components/CategoryIcon";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -78,7 +77,7 @@ const PlanWizard = () => {
   const [startingLocation, setStartingLocation] = useState<string | { name: string; latitude: number; longitude: number }>(returnState?.startingLocation ?? "");
   // Step 3: auto-detect on-site. "resolving" -> loader, "map" -> mapa punktu startu (planujesz),
   // "sheet" -> jawne pytanie "Jestes juz w miescie?" (brak zgody GPS).
-  const [step3Mode, setStep3Mode] = useState<"resolving" | "map" | "sheet">("resolving");
+  const [step3Mode, setStep3Mode] = useState<"resolving" | "map">("resolving");
 
   // Multi-select kategorii (puste = wszystkie)
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -87,8 +86,8 @@ const PlanWizard = () => {
   const [sortMode, setSortMode] = useState<"default" | "nearest">("default");
   // Punkt odniesienia do sortowania "od najbliższego". To samo źródło prawdy którego
   // używa swiper (getReference). Ustawiany przez OBIE ścieżki kroku 3: StartingLocationPicker
-  // (mapa) ORAZ LocationPrimer (sheet bez GPS). startingLocation (lokalny stan) ustawia tylko
-  // ta pierwsza, więc gate'owanie przycisku na nim psuło sort w ścieżce LocationPrimer.
+  // (mapa). startingLocation (lokalny stan) ustawia tylko ta ścieżka, więc gate'owanie
+  // przycisku na nim psuło sort, gdy punkt odniesienia przyszedł z GPS.
   const distanceRef = useDistanceReference();
   const hasStartRef = !!distanceRef;
   // Filtr diety - multi-select: vegan, vegetarian, gluten_free, lactose_free
@@ -453,9 +452,6 @@ const PlanWizard = () => {
               setStep(4);
             }}
           />
-        )}
-        {step === 3 && step3Mode === "sheet" && (
-          <LocationPrimer open city={city} onClose={() => setStep(4)} />
         )}
         {step === 4 && date && (
           <>

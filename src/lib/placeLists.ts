@@ -6,11 +6,16 @@ import { supabase } from "@/integrations/supabase/client";
 
 export type ListStatus = "visited" | "to_visit";
 
+// UWAGA: BEZ pola `description`/notki. Notka o miejscu jest WLASNA dla kazdego usera i
+// powstaje dopiero w jego liscie (discovery_items.short_desc, edytor PlaceNoteEditor).
+// Zapisujac cudze miejsce NIE kopiujemy notki autora - patrz addPlaceToList nizej.
 export interface PlaceForList {
   place_name: string;
   category: string | null;
   address: string | null;
-  description?: string | null;
+  /** Miasto miejsca (discovery_items.city). Lista "Ogolne" jest globalna (city=NULL na kolekcji),
+   *  wiec miasto trzymamy przy POZYCJI - inaczej kafelek na profilu nie wie, gdzie to miejsce jest. */
+  city?: string | null;
   latitude: number | null;
   longitude: number | null;
   photo_url: string | null;
@@ -111,7 +116,7 @@ export async function fetchSavedPlaces(userId: string): Promise<SavedPlace[]> {
   for (const c of rows) cityByList[c.id] = c.city ?? null;
   const { data: items } = await (supabase as any)
     .from("discovery_items")
-    .select("id, collection_id, place_name, category, address, latitude, longitude, place_id, google_place_id, rating, photo_url, short_desc, order_index")
+    .select("id, collection_id, place_name, category, address, city, latitude, longitude, place_id, google_place_id, rating, photo_url, short_desc, order_index")
     .in("collection_id", rows.map((r) => r.id))
     .order("order_index", { ascending: false });
   const seen = new Set<string>();
@@ -124,7 +129,7 @@ export async function fetchSavedPlaces(userId: string): Promise<SavedPlace[]> {
       id: it.id, collection_id: it.collection_id, place_name: it.place_name, category: it.category,
       address: it.address, latitude: it.latitude, longitude: it.longitude, place_id: it.place_id,
       google_place_id: it.google_place_id, rating: it.rating, photo_url: it.photo_url,
-      short_desc: it.short_desc, city: cityByList[it.collection_id] ?? null,
+      short_desc: it.short_desc, city: it.city ?? cityByList[it.collection_id] ?? null,
     });
   }
   return out;
@@ -136,7 +141,9 @@ export async function removeSavedPlaceById(itemId: string): Promise<void> {
 }
 
 // Dodaj miejsce do listy (discovery_items). Dedup po nazwie. Zwraca false gdy juz bylo.
-export async function addPlaceToList(listId: string, place: PlaceForList): Promise<boolean> {
+// `opts.note` uzywaj WYLACZNIE do przywracania WLASNEGO wpisu (cofnij usuniecie) - normalny
+// zapis miejsca zawsze startuje z pusta notka.
+export async function addPlaceToList(listId: string, place: PlaceForList, opts?: { note?: string | null }): Promise<boolean> {
   const { data: existing } = await (supabase as any)
     .from("discovery_items").select("order_index, place_name").eq("collection_id", listId);
   const rows = (existing ?? []) as any[];
@@ -151,7 +158,11 @@ export async function addPlaceToList(listId: string, place: PlaceForList): Promi
     place_name: place.place_name,
     category: place.category,
     address: place.address,
-    short_desc: place.description ?? "",
+    // Notka domyslnie PUSTA: kazdy user pisze wlasna w swojej liscie. Kopiowanie notki
+    // autora (z cudzej listy albo z pina cudzej trasy) bylo mylace - wygladalo jakby
+    // to byla Twoja notatka o miejscu. Wyjatek: przywracanie wlasnego wpisu (opts.note).
+    short_desc: opts?.note ?? "",
+    city: place.city ?? null,
     latitude: place.latitude,
     longitude: place.longitude,
     place_id: place.place_id,
@@ -201,7 +212,7 @@ export async function createListWithPlace(
     .select("id")
     .single();
   if (error || !col) { console.error("[placeLists] create list failed:", error?.message ?? error); return null; }
-  await addPlaceToList(col.id, place);
+  await addPlaceToList(col.id, { ...place, city: place.city ?? city });
   return col.id as string;
 }
 
@@ -239,7 +250,7 @@ export async function createListFromSavedPlaces(
     .filter((p) => { const k = skey(p.place_name); if (!k || seen.has(k)) return false; seen.add(k); return true; })
     .map((p, i) => ({
       collection_id: listId, place_name: p.place_name, category: p.category, address: p.address,
-      short_desc: p.description ?? "", latitude: p.latitude, longitude: p.longitude, place_id: p.place_id,
+      short_desc: "", city: p.city ?? opts.city ?? null, latitude: p.latitude, longitude: p.longitude, place_id: p.place_id,
       google_place_id: p.google_place_id ?? null, rating: p.rating ?? null, photo_url: p.photo_url,
       added_by: userId, order_index: i,
     }));
@@ -287,7 +298,8 @@ export async function quickSavePlace(
 ): Promise<{ listId: string | null; added: boolean }> {
   const listId = await ensureToVisitList(userId, city, author);
   if (!listId) return { listId: null, added: false };
-  const added = await addPlaceToList(listId, place);
+  // Lista "Ogolne" nie ma miasta, wiec zapisujemy je przy miejscu (kontekst zapisu).
+  const added = await addPlaceToList(listId, { ...place, city: place.city ?? city });
   return { listId, added };
 }
 
