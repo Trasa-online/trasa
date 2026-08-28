@@ -6,7 +6,7 @@ import { useSwipeNav } from "@/hooks/useSwipeNav";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { MapPin, ArrowLeft, Bookmark, List, GalleryHorizontalEnd, Building2, Pencil, Trash2, Heart, Image as ImageIcon, Share2, Plus, Camera, Loader2, X } from "lucide-react";
+import { MapPin, ArrowLeft, Bookmark, Building2, Pencil, Trash2, Heart, Image as ImageIcon, Share2, Plus, Camera, Loader2, X } from "lucide-react";
 import { compressImage } from "@/lib/imageCompression";
 import { fetchListLike, toggleListLike, type LikeState } from "@/lib/likes";
 import AddPlaceSheet from "@/components/route/AddPlaceSheet";
@@ -18,6 +18,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { PlacePhoto, resolveStored } from "@/components/PlacePhoto";
 import { RoutePlaceRow } from "@/components/route/RoutePlaceRow";
 import PlaceNoteEditor from "@/components/route/PlaceNoteEditor";
+import PhotoViewer from "@/components/route/PhotoViewer";
 import { saveCollectionDb, unsaveCollectionDb, markCollectionSeenDb } from "@/lib/savedCollections";
 import { EmptyPlacesState } from "@/components/route/EmptyPlacesState";
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
@@ -58,7 +59,6 @@ export default function SharedList() {
     try { await toggleListLike(id, user.id, cur.liked); }
     finally { queryClient.invalidateQueries({ queryKey: key }); }
   };
-  const [planView, setPlanView] = useState<"list" | "cards">("list");
   // Widok listy jak trasa: Miejsca | Galeria (BEZ mapy - decyzja Nat). Galeria = zdjecia miejsc z listy.
   const [planTab, setPlanTab] = useState<"miejsca" | "galeria">("miejsca");
   // Gest natywny: swipe w bok przelacza Miejsca <-> Galeria (kolejnosc jak ikony nad trescia).
@@ -68,6 +68,8 @@ export default function SharedList() {
   });
   const [detailPin, setDetailPin] = useState<any | null>(null);
   const [detailRaw, setDetailRaw] = useState<any | null>(null);
+  // Podglad zdjec dodanych do miejsca na liscie (klik w miniaturke).
+  const [photoViewer, setPhotoViewer] = useState<{ urls: string[]; idx: number } | null>(null);
   // Zapis pojedynczego miejsca z listy (bookmark per-miejsce -> SavePlaceSheet). Zapis CAŁEJ listy
   // (przycisk na dole) to osobna akcja (localStorage trasa_saved_collections) - oba zostają.
   const [savePlace, setSavePlace] = useState<SavePlaceInput | null>(null);
@@ -378,7 +380,12 @@ export default function SharedList() {
               <div className="flex flex-wrap gap-2">
                 {photos.map((url) => (
                   <div key={url} className="relative w-[76px] aspect-[2/3] shrink-0 rounded-xl overflow-hidden bg-muted">
-                    <img src={resolveStored(url) ?? url} alt="" className="w-full h-full object-cover" />
+                    {/* Klik w zdjecie = pelnoekranowy podglad. */}
+                    <img
+                      src={resolveStored(url) ?? url} alt="" role="button"
+                      onClick={() => setPhotoViewer({ urls: photos.map((u: string) => resolveStored(u) ?? u), idx: photos.indexOf(url) })}
+                      className="w-full h-full object-cover active:opacity-90 transition-opacity"
+                    />
                     {isOwner && <button onClick={() => removeItemPhoto(pin, url)} aria-label="Usuń zdjęcie" className="absolute top-1 right-1 h-5 w-5 rounded-full bg-black/55 text-white flex items-center justify-center active:scale-90"><X className="h-3 w-3" /></button>}
                   </div>
                 ))}
@@ -401,37 +408,6 @@ export default function SharedList() {
           />
         );
       })}
-    </div>
-  );
-
-  const renderCards = () => (
-    <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory scrollbar-none -mx-5 px-5 pb-2">
-      {items.map((pin: any, i: number) => (
-        <div key={pin.id} className="snap-center shrink-0 w-[70vw] max-w-[280px] rounded-2xl bg-secondary border border-border/40 overflow-hidden shadow-sm flex flex-col">
-          <div className="relative w-full aspect-[2/3] bg-muted">
-            <button onClick={() => openDetail(pin)} className="block w-full h-full text-left active:opacity-90 transition-opacity">
-              <PlacePhoto pin={{ ...pin, category: catOf(pin), photo_url: pinCover(pin) }} className="w-full h-full object-cover" />
-            </button>
-            <div className="absolute top-3 left-3 h-8 w-8 rounded-full bg-black/55 backdrop-blur text-white text-sm font-bold flex items-center justify-center">{i + 1}</div>
-            <button
-              onClick={(e) => { e.stopPropagation(); toggleSaveBookmark(pin); }}
-              aria-label={isSaved(pin.place_name) ? "Usuń z zapisanych" : "Zapisz miejsce do listy"}
-              className={`absolute top-3 right-3 h-9 w-9 rounded-full flex items-center justify-center shadow-sm active:scale-90 transition-transform ${isSaved(pin.place_name) ? "bg-orange-100" : "bg-white/90 backdrop-blur-sm"}`}
-            >
-              <Bookmark className={`h-[18px] w-[18px] ${isSaved(pin.place_name) ? "text-orange-600 fill-orange-600" : "text-foreground"}`} strokeWidth={2} />
-            </button>
-          </div>
-          <button onClick={() => openDetail(pin)} className="block w-full text-left active:opacity-90 transition-opacity">
-            <div className="px-4 pt-4 pb-4">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted text-xs font-semibold text-foreground mb-2">
-                <CategoryIcon category={catOf(pin)} className="h-3.5 w-3.5 shrink-0" />{categoryLabel(catOf(pin))}
-              </span>
-              <p className="text-[15px] font-bold leading-snug">{pin.place_name}</p>
-              {pin.short_desc && <p className="text-sm text-muted-foreground leading-relaxed mt-2 line-clamp-3">{pin.short_desc}</p>}
-            </div>
-          </button>
-        </div>
-      ))}
     </div>
   );
 
@@ -535,15 +511,8 @@ export default function SharedList() {
         {planTab === "miejsca" ? (
           <div className="px-5 pt-4">
             {items.length > 0 ? (
-              <>
-                <div className="flex items-center justify-end pb-3">
-                  <div className="flex rounded-full bg-muted p-0.5">
-                    <button onClick={() => setPlanView("list")} aria-label="Lista" className={`px-2.5 py-1.5 rounded-full transition-colors ${planView === "list" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}><List className="h-4 w-4" /></button>
-                    <button onClick={() => setPlanView("cards")} aria-label="Karty" className={`px-2.5 py-1.5 rounded-full transition-colors ${planView === "cards" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}><GalleryHorizontalEnd className="h-4 w-4" /></button>
-                  </div>
-                </div>
-                {planView === "list" ? renderList() : renderCards()}
-              </>
+              /* Jeden widok miejsc (lista) - przelacznik "karty" usuniety 2026-08-29. */
+              renderList()
             ) : (
               <EmptyPlacesState
                 title="Lista jest pusta"
@@ -560,6 +529,9 @@ export default function SharedList() {
       </div>
 
       {/* Wizytowka miejsca z listy - z guzikiem zapisu (bookmark na hero + CTA na dole). */}
+      {photoViewer && (
+        <PhotoViewer urls={photoViewer.urls} startIndex={photoViewer.idx} onClose={() => setPhotoViewer(null)} />
+      )}
       <PlaceSwiperDetail
         open={!!detailPin} onOpenChange={(o) => !o && setDetailPin(null)} place={detailPin} city={col.city}
         onLike={user && detailRaw ? () => setSavePlace(itemToPlace(detailRaw) as SavePlaceInput) : undefined}

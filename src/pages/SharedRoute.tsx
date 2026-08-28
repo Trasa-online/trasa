@@ -10,7 +10,7 @@ import { notify } from "@/lib/notify";
 import { sendClientPush, getCurrentUserName } from "@/lib/clientPush";
 import { format } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
-import { MapPin, ArrowLeft, Sparkles, ChevronRight, ChevronLeft, ChevronDown, Bookmark, List, GalleryHorizontalEnd, Calendar as CalendarIcon, Image as ImageIcon, Maximize2, X, Building2, Pencil, Trash2, Heart, Share2, Plus, Map as MapIcon, Loader2, Star, GripVertical, Check, Flag, Camera, UserPlus, ThumbsUp, MessageCircle } from "lucide-react";
+import { MapPin, ArrowLeft, Sparkles, ChevronRight, ChevronLeft, ChevronDown, Bookmark, Calendar as CalendarIcon, Image as ImageIcon, Maximize2, X, Building2, Pencil, Trash2, Heart, Share2, Plus, Map as MapIcon, Loader2, Star, GripVertical, Check, Flag, Camera, UserPlus, ThumbsUp, MessageCircle } from "lucide-react";
 import { MAIN_CATEGORIES, subcategoryPluralLabel } from "@/lib/categories";
 import { haptics } from "@/hooks/useHaptics";
 import { useSwipeNav } from "@/hooks/useSwipeNav";
@@ -25,6 +25,7 @@ import { fetchPinPhotos, addPinPhoto, deletePinPhoto, photosByPlace, pinPhotoKey
 import { fetchPlaceVotes, toggleVote, placeVoteKey } from "@/lib/placeVotes";
 import { fetchUnreadChatCount } from "@/lib/chatReads";
 import PlaceNotes from "@/components/route/PlaceNotes";
+import PhotoViewer from "@/components/route/PhotoViewer";
 import PlaceNoteEditor from "@/components/route/PlaceNoteEditor";
 import { EmptyPlacesState } from "@/components/route/EmptyPlacesState";
 import AddPlaceSheet from "@/components/route/AddPlaceSheet";
@@ -81,9 +82,10 @@ const GoogleGlyph = ({ className }: { className?: string }) => (
 
 // Wiersz miejsca z uchwytem przeciagania (framer-motion Reorder) - tryb edycji wspoldzielonej
 // trasy (wlasciciel + uczestnik). Wzor 1:1 z SortablePlanRow w ReviewSummary.
-function SortableRouteRow({ value, rowPin, index, categoryLabel, onOpen, onGoogle, onDelete, note, cornerAvatar }: {
+function SortableRouteRow({ value, rowPin, index, categoryLabel, onOpen, onGoogle, onDelete, onSave, saved, note, cornerAvatar }: {
   value: any; rowPin: any; index: number; categoryLabel: ReactNode;
-  onOpen: () => void; onGoogle: () => void; onDelete: () => void; note?: ReactNode; cornerAvatar?: string | null;
+  onOpen: () => void; onGoogle: () => void; onDelete: () => void;
+  onSave?: () => void; saved?: boolean; note?: ReactNode; cornerAvatar?: string | null;
 }) {
   const controls = useDragControls();
   const grip = (
@@ -99,7 +101,7 @@ function SortableRouteRow({ value, rowPin, index, categoryLabel, onOpen, onGoogl
   );
   return (
     <Reorder.Item as="div" value={value} dragListener={false} dragControls={controls} transition={{ duration: 0 }}>
-      <RoutePlaceRow pin={rowPin} index={index} categoryLabel={categoryLabel} onOpen={onOpen} onGoogle={onGoogle} onDelete={onDelete} dragHandle={grip} note={note} cornerAvatar={cornerAvatar} />
+      <RoutePlaceRow pin={rowPin} index={index} categoryLabel={categoryLabel} onOpen={onOpen} onGoogle={onGoogle} onDelete={onDelete} onSave={onSave} saved={saved} dragHandle={grip} note={note} cornerAvatar={cornerAvatar} />
     </Reorder.Item>
   );
 }
@@ -137,7 +139,6 @@ export default function SharedRoute() {
     latitude: pin.latitude ?? null, longitude: pin.longitude ?? null,
     photo_url: pin.photo_url ?? null, place_id: pin.place_id ?? null,
   });
-  const [planView, setPlanView] = useState<"list" | "cards">("list");
   const [planTab, setPlanTab] = useState<"miejsca" | "galeria" | "mapa">("miejsca");
   const [detailPin, setDetailPin] = useState<any | null>(null);
   const [saving, setSaving] = useState(false);
@@ -146,6 +147,8 @@ export default function SharedRoute() {
   const dateDrag = useDragToDismiss({ onDismiss: () => setShowDateSheet(false) });
   const [planMapOpen, setPlanMapOpen] = useState(false);
   const [viewerIndex, setViewerIndex] = useState<number | null>(null); // fullscreen podglad zdjecia galerii
+  // Podglad zdjec DODANYCH DO MIEJSCA (klik w miniaturke w wierszu) - osobny od galerii wyjazdu.
+  const [pinPhotoViewer, setPinPhotoViewer] = useState<{ urls: string[]; idx: number } | null>(null);
   const galleryPhotosCount = useRef(0);
   // Gest natywny: swipe w bok przelacza zakladki (kolejnosc = kolejnosc ikon nad trescia).
   // Etap czytamy leniwie z route: w propozycjach nie ma Galerii (tylko Miejsca | Mapa).
@@ -807,7 +810,16 @@ export default function SharedRoute() {
             <div className="flex flex-wrap gap-2">
               {placePhotos.map((ph) => (
                 <div key={ph.id} className="relative w-[84px] aspect-[2/3] shrink-0 rounded-xl overflow-hidden bg-muted">
-                  <img src={resolveStored(ph.url) ?? ph.url} alt="" className="w-full h-full object-cover" />
+                  {/* Klik w zdjecie = pelnoekranowy podglad (zgloszenie Nat 2026-08-29). */}
+                  <img
+                    src={resolveStored(ph.url) ?? ph.url} alt=""
+                    role="button"
+                    onClick={() => setPinPhotoViewer({
+                      urls: placePhotos.map((x) => resolveStored(x.url) ?? x.url),
+                      idx: placePhotos.findIndex((x) => x.id === ph.id),
+                    })}
+                    className="w-full h-full object-cover active:opacity-90 transition-opacity"
+                  />
                   <img src={avatarSrc(ph.avatar_url)} alt="" title={ph.username ?? undefined} className="absolute bottom-1 left-1 h-7 w-7 rounded-full object-cover border-2 border-white shadow-sm bg-secondary" />
                   {(ph.user_id === user?.id || isOwner) && <button onClick={() => removePlacePhoto(ph.id)} aria-label="Usuń zdjęcie" className="absolute top-1 right-1 h-5 w-5 rounded-full bg-black/55 text-white flex items-center justify-center active:scale-90"><X className="h-3 w-3" /></button>}
                 </div>
@@ -866,6 +878,7 @@ export default function SharedRoute() {
             key={pin.id} value={pin} rowPin={rowPinFor(pin)} index={i}
             categoryLabel={categoryLabel(pin.category || "other")}
             onOpen={() => openDetail(pin)} onGoogle={() => openGooglePlace(pin)} onDelete={() => handleDeletePin(pin)}
+            onSave={user ? () => toggleSaveBookmark(pin) : undefined} saved={isSaved(pin.place_name)}
             note={buildNote(pin)} cornerAvatar={addedByAvatar(pin)}
           />
         ))}
@@ -877,7 +890,7 @@ export default function SharedRoute() {
             key={pin.id} pin={rowPinFor(pin)} index={i}
             categoryLabel={categoryLabel(pin.category || "other")}
             onOpen={() => openDetail(pin)} onGoogle={() => openGooglePlace(pin)}
-            onSave={!isOwner && user ? () => toggleSaveBookmark(pin) : undefined} saved={isSaved(pin.place_name)}
+            onSave={user ? () => toggleSaveBookmark(pin) : undefined} saved={isSaved(pin.place_name)}
             note={buildNote(pin)} cornerAvatar={addedByAvatar(pin)}
           />
         ))}
@@ -904,6 +917,7 @@ export default function SharedRoute() {
                     key={pin.id} value={pin} rowPin={rowPinFor(pin)} index={i}
                     categoryLabel={categoryLabel(pin.category || "other")}
                     onOpen={() => openDetail(pin)} onGoogle={() => openGooglePlace(pin)} onDelete={() => handleDeletePin(pin)}
+                    onSave={user ? () => toggleSaveBookmark(pin) : undefined} saved={isSaved(pin.place_name)}
                     note={buildNote(pin)} cornerAvatar={addedByAvatar(pin)}
                   />
                 ))}
@@ -915,46 +929,12 @@ export default function SharedRoute() {
                     key={pin.id} pin={rowPinFor(pin)} index={i}
                     categoryLabel={categoryLabel(pin.category || "other")}
                     onOpen={() => openDetail(pin)} onGoogle={() => openGooglePlace(pin)}
-                    onSave={!isOwner && user ? () => toggleSaveBookmark(pin) : undefined} saved={isSaved(pin.place_name)}
+                    onSave={user ? () => toggleSaveBookmark(pin) : undefined} saved={isSaved(pin.place_name)}
                     note={buildNote(pin)} cornerAvatar={addedByAvatar(pin)}
                   />
                 ))}
               </div>
             ))}
-          </div>
-        );
-      })}
-    </div>
-  );
-
-  // Kafelki (wg Figmy): poziomy scroll kart ~168px. Peachy zdjecie (badge kategorii + bookmark +
-  // nazwa), pod spodem Notka Autora + notka + "Zobacz w Google".
-  const renderSwiper = () => (
-    <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-none -mr-5 pr-5 pb-2">
-      {pins.map((pin: any) => {
-        const pinForPhoto = coverFor(pin) ? { ...pin, photo_url: coverFor(pin) } : pin;
-        return (
-          <div key={pin.id} className="snap-start shrink-0 w-[168px] flex flex-col gap-3">
-            <div onClick={() => openDetail(pin)} role="button" className="relative aspect-[2/3] rounded-2xl overflow-hidden bg-[#fcede3] active:opacity-90 transition-opacity cursor-pointer">
-              <PlacePhoto pin={pinForPhoto} className="w-full h-full object-cover" />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-transparent" />
-              <span className="absolute top-2 left-2 px-2.5 py-1 rounded-full bg-white text-[11px] font-semibold text-foreground shadow-sm">{categoryLabel(pin.category)}</span>
-              {!isOwner && user && (
-                <button onClick={(e) => { e.stopPropagation(); toggleSaveBookmark(pin); }} aria-label={isSaved(pin.place_name) ? "Usuń z zapisanych" : "Zapisz miejsce"}
-                  className="absolute top-2 right-2 h-8 w-8 rounded-full bg-white/90 flex items-center justify-center shadow-sm active:scale-90 transition-transform">
-                  <Bookmark className={cn("h-4 w-4", isSaved(pin.place_name) ? "fill-orange-600 text-orange-600" : "text-foreground")} strokeWidth={2} />
-                </button>
-              )}
-              <span className="absolute bottom-2 left-2.5 right-2.5 text-sm font-semibold text-white drop-shadow line-clamp-1">{pin.place_name}</span>
-            </div>
-            <div className="flex flex-col gap-2">
-              {/* Google bezposrednio pod miniaturka (#5), nad Notka Autora */}
-              <button onClick={() => openGooglePlace(pin)} className="flex items-center gap-2 active:opacity-70 transition-opacity">
-                <span className="h-9 w-9 rounded-full bg-white shadow-sm flex items-center justify-center shrink-0"><GoogleGlyph className="h-[18px] w-[18px]" /></span>
-                <span className="text-sm font-medium text-foreground">Zobacz w Google</span>
-              </button>
-              {buildNote(pin)}
-            </div>
           </div>
         );
       })}
@@ -1122,15 +1102,9 @@ export default function SharedRoute() {
                 ))}
               </div>
             ) : pins.length > 0 ? (
-              <>
-                <div className="flex items-center justify-end pb-3">
-                  <div className="flex rounded-full bg-muted p-0.5">
-                    <button onClick={() => setPlanView("list")} aria-label={t("view_list")} className={`px-2.5 py-1.5 rounded-full transition-colors ${planView === "list" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}><List className="h-4 w-4" /></button>
-                    <button onClick={() => setPlanView("cards")} aria-label={t("view_cards")} className={`px-2.5 py-1.5 rounded-full transition-colors ${planView === "cards" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}><GalleryHorizontalEnd className="h-4 w-4" /></button>
-                  </div>
-                </div>
-                {planView === "list" ? renderList() : renderSwiper()}
-              </>
+              /* Jeden widok miejsc (lista). Przelacznik "karty" usuniety 2026-08-29 - duze
+                 karty duplikowaly liste i rozbijaly kolejnosc od-do. */
+              renderList()
             ) : (
               <EmptyPlacesState
                 title="Trasa jest pusta"
@@ -1294,6 +1268,11 @@ export default function SharedRoute() {
             </button>
           </div>
         </div>
+      )}
+
+      {/* Podglad zdjec dodanych do MIEJSCA (miniaturki w wierszu). */}
+      {pinPhotoViewer && (
+        <PhotoViewer urls={pinPhotoViewer.urls} startIndex={pinPhotoViewer.idx} onClose={() => setPinPhotoViewer(null)} />
       )}
 
       {/* Fullscreen podglad zdjecia galerii (object-contain, strzalki + licznik). */}

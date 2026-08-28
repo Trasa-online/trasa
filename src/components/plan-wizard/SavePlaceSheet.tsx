@@ -93,7 +93,9 @@ export default function SavePlaceSheet({
     if (isSaved(place.place_name)) return;
     let alive = true;
     quickSavePlace(user.id, { ...place, city: place.city ?? city ?? null }, city || null, author)
-      .then(({ added }) => { if (alive && added) invalidate(); })
+      // Haptyka POTWIERDZENIA zapisu - user ma czuc, ze miejsce wpadlo do listy, a nie tylko
+      // czytac toast (zgloszenie Nat 2026-08-29).
+      .then(({ added }) => { if (alive && added) { haptics.success(); invalidate(); } })
       .catch((e) => console.warn("[SavePlaceSheet] auto-save failed:", e?.message ?? e));
     return () => { alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -125,6 +127,7 @@ export default function SavePlaceSheet({
       } else {
         await addPlaceToList(l.id, { ...place, city: place.city ?? l.city ?? city ?? null });
         setOverride((prev) => new Map(prev).set(l.id, true));
+        haptics.success();
         toast.success(`Dodano do „${l.title}"`);
       }
       invalidate();

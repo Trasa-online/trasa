@@ -73,12 +73,23 @@ export default function PlaceNoteEditor({
 
   return (
     <div className="space-y-2">
-      {/* Notka (bez headera) - awatar + tekst gdy multi-user, sam tekst na liscie. */}
+      {/* Notka w trybie podgladu. W kontekscie multi-user (wyjazd) wyglada DOKLADNIE tak samo jak
+          notki innych uczestnikow ([PlaceNotes]): szary dymek + awatar w prawym-dolnym rogu.
+          Wczesniej wlasna notka byla "goly" tekst z awatarem po lewej i lamala spojnosc watku
+          (zgloszenie Nat 2026-08-29). Na listach (bez awatara) zostaje sam tekst. */}
       {noteText && (
-        <div className="flex items-start gap-2">
-          {showAvatar && <img src={avatarSrc(avatarUrl)} alt="" className="h-7 w-7 rounded-full object-cover bg-secondary shrink-0 mt-0.5" />}
-          <p className="flex-1 min-w-0 text-sm text-foreground/90 leading-snug whitespace-pre-wrap break-words">{noteText}</p>
-        </div>
+        showAvatar ? (
+          <div className="relative bg-muted/50 rounded-2xl px-3.5 py-2.5 mb-1.5">
+            <p className="text-[13.5px] text-foreground/85 leading-snug whitespace-pre-wrap break-words">{noteText}</p>
+            <img
+              src={avatarSrc(avatarUrl)}
+              alt=""
+              className="absolute -bottom-1.5 -right-1.5 h-6 w-6 rounded-full object-cover border-2 border-white shadow-sm bg-secondary"
+            />
+          </div>
+        ) : (
+          <p className="text-sm text-foreground/90 leading-snug whitespace-pre-wrap break-words">{noteText}</p>
+        )
       )}
       {editable && (
         <div className="flex items-center gap-2">

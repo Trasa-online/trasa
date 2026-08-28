@@ -1,6 +1,5 @@
 import { useState } from "react";
-import { useDragToDismiss } from "@/hooks/useDragToDismiss";
-import { createPortal } from "react-dom";
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Flag, X, Check, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -27,8 +26,6 @@ export default function ReportPlaceLink({ placeId, placeName }: { placeId: strin
   const [note, setNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
-  // Gest natywny: przeciagniecie panelu w dol zamyka arkusz (blokada w trakcie wysylki).
-  const { dragProps } = useDragToDismiss({ onDismiss: () => setOpen(false), enabled: !submitting });
 
   const startReport = () => {
     if (!user || isAnonymous) { openAuthDrawer({ mode: "register", hint: "report_place" }); return; }
@@ -63,10 +60,20 @@ export default function ReportPlaceLink({ placeId, placeName }: { placeId: strin
         <span>Coś nie tak z tym miejscem? <span className="font-semibold underline underline-offset-2">Zgłoś</span></span>
       </button>
 
-      {open && createPortal(
-        <div className="fixed inset-0 z-[95] flex items-end justify-center" onClick={() => !submitting && setOpen(false)}>
-          <div className="absolute inset-0 bg-black/50 animate-in fade-in duration-200" />
-          <div {...dragProps} onClick={(e) => e.stopPropagation()} className="relative w-full max-w-lg bg-card rounded-t-3xl px-5 pt-3 pb-[max(20px,env(safe-area-inset-bottom))] shadow-2xl animate-in slide-in-from-bottom-4 duration-300" style={{ ...dragProps.style, maxHeight: "88dvh" }}>
+      {/* KRYTYCZNE: arkusz MUSI byc <Sheet> (Radix), a nie recznym portalem do document.body.
+          Wizytowka to drawer (vaul/Radix) w trybie modalnym, ktory ustawia `pointer-events: none`
+          na <body> i wlacza je z powrotem TYLKO na swojej warstwie. Reczny portal ladowal poza ta
+          warstwa -> caly ekran przestawal reagowac (nie dalo sie nawet zamknac; trzeba bylo ubic
+          apke). Radix zarzadza zagniezdzonymi warstwami sam. (zgloszenie Nat 2026-08-29) */}
+      <Sheet open={open} onOpenChange={(v) => { if (!v && !submitting) setOpen(false); }}>
+        <SheetContent
+          side="bottom"
+          className="rounded-t-3xl border-0 bg-card px-5 pt-3 pb-[max(20px,env(safe-area-inset-bottom))] [&>button:last-child]:hidden overflow-y-auto"
+          style={{ maxHeight: "88dvh" }}
+          disableDragToDismiss={submitting}
+        >
+          <SheetTitle className="sr-only">Zgłoś problem</SheetTitle>
+          <div>
             <div className="mx-auto h-1 w-10 rounded-full bg-muted-foreground/25 mb-4" />
             <button onClick={() => setOpen(false)} aria-label="Zamknij" className="absolute right-4 top-4 h-8 w-8 rounded-full bg-muted flex items-center justify-center active:scale-90 transition-transform">
               <X className="h-4 w-4" />
@@ -102,9 +109,8 @@ export default function ReportPlaceLink({ placeId, placeName }: { placeId: strin
               {done ? <Check className="h-5 w-5" strokeWidth={3} /> : submitting ? <Loader2 className="h-5 w-5 animate-spin" /> : "Wyślij zgłoszenie"}
             </button>
           </div>
-        </div>,
-        document.body,
-      )}
+        </SheetContent>
+      </Sheet>
     </>
   );
 }

@@ -76,15 +76,10 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
         >
           <GoogleGlyph className="h-[18px] w-[18px]" />
         </button>
-        {onDelete ? (
-          <button
-            onClick={(e) => { e.stopPropagation(); onDelete(); }}
-            aria-label="Usuń miejsce z trasy"
-            className="h-9 w-9 rounded-full flex items-center justify-center text-destructive active:scale-90 transition-transform"
-          >
-            <Trash2 className="h-5 w-5" strokeWidth={2} />
-          </button>
-        ) : onSave ? (
+        {/* Zapis miejsca dostepny ZAWSZE gdy podany onSave - takze dla wlasciciela obok kosza
+            (wczesniej kosz go wypieral, wiec we wlasnym wyjezdzie nie dalo sie zapisac miejsca
+            do swoich list - zgloszenie Nat 2026-08-29). */}
+        {onSave && (
           <button
             onClick={(e) => { e.stopPropagation(); onSave(); }}
             aria-label={saved ? "Miejsce zapisane w liście" : "Zapisz miejsce do listy"}
@@ -92,7 +87,16 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
           >
             <Bookmark className={`h-5 w-5 ${saved ? "text-[#F0A583] fill-[#F0A583]" : "text-foreground/70"}`} strokeWidth={2} />
           </button>
-        ) : null}
+        )}
+        {onDelete && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onDelete(); }}
+            aria-label="Usuń miejsce z trasy"
+            className="h-9 w-9 rounded-full flex items-center justify-center text-destructive active:scale-90 transition-transform"
+          >
+            <Trash2 className="h-5 w-5" strokeWidth={2} />
+          </button>
+        )}
       </div>
     </div>
   );

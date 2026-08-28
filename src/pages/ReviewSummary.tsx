@@ -12,7 +12,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { placeKeyOf, fetchPlacePhotosForKeys, pickPlaceCover, fetchPhotoHashes, sha256OfFile, upsertPhotoHash } from "@/lib/placePhotoSocial";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Camera, X, Globe, Lock, Pencil, Check, Image as ImageIcon, Map as MapIcon, MapPin, ChevronUp, ChevronDown, ChevronRight, ChevronLeft, Trash2, Plus, Share, Share2, List, GalleryHorizontalEnd, Info, MoreVertical, Navigation, Maximize2, Users, Calendar as CalendarIcon, Loader2, GripVertical, Building2, Flag } from "lucide-react";
+import { ArrowLeft, Camera, X, Globe, Lock, Pencil, Check, Image as ImageIcon, Map as MapIcon, MapPin, ChevronUp, ChevronDown, ChevronRight, ChevronLeft, Trash2, Plus, Share, Share2, Info, MoreVertical, Navigation, Maximize2, Users, Calendar as CalendarIcon, Loader2, GripVertical, Building2, Flag } from "lucide-react";
 import { Reorder, useDragControls } from "framer-motion";
 import RouteMap from "@/components/RouteMap";
 import { buildTripStaticMapUrl } from "@/lib/staticMap";
@@ -198,7 +198,6 @@ const ReviewSummary = () => {
   const [editingName, setEditingName] = useState(false);
   const [nameVal, setNameVal] = useState("");
   const [savingName, setSavingName] = useState(false);
-  const [planView, setPlanView] = useState<"list" | "cards">("list");
   const [planMapOpen, setPlanMapOpen] = useState(false);
   // Okladka planu wyjazdu: zdjecie (false) lub mapka (true) - toggle klikiem w miniaturke.
   const [heroShowMap, setHeroShowMap] = useState(false);
@@ -1715,11 +1714,6 @@ const ReviewSummary = () => {
   // ── Szczegoly: poziomy swiper kart (jak kreator trasy). editable => move/usun,
   // withRating => Ocena + Notka pod karta. Klik w karte => wizytowka. ──
   // Szczegoly: poziomy swiper kart.
-  const renderSwiper = (editable: boolean, withRating: boolean) => (
-    <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory scrollbar-none -mx-5 px-5 pb-2">
-      {workingPins.map((pin: any, i: number) => renderPlanCard(pin, i, false, editable, withRating))}
-    </div>
-  );
 
   // Lista (edytowalna): kompaktowe wiersze (miniatura + nazwa + chip + reorder/usuń).
   const renderEditablePlan = (_withRating: boolean) => (
@@ -2034,16 +2028,6 @@ const ReviewSummary = () => {
     <>
       <div className="flex items-center justify-between mb-3">
         <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t("plan.your_plan")}</p>
-        {showViewToggle && (
-          <div className="flex rounded-full bg-muted p-0.5">
-            <button onClick={() => setPlanView("list")} aria-label={t("a11y.list_view")} className={`px-2.5 py-1.5 rounded-full transition-colors ${planView === "list" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
-              <List className="h-4 w-4" />
-            </button>
-            <button onClick={() => setPlanView("cards")} aria-label={t("a11y.cards_view")} className={`px-2.5 py-1.5 rounded-full transition-colors ${planView === "cards" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
-              <GalleryHorizontalEnd className="h-4 w-4" />
-            </button>
-          </div>
-        )}
       </div>
       {isMultiDay && (
         <div className="flex gap-2 overflow-x-auto scrollbar-none mb-3 -mx-1 px-1">
@@ -2339,30 +2323,14 @@ const ReviewSummary = () => {
               {/* Uczestnik ROBOCZEJ trasy grupowej dostaje pelnoekranowy widok propozycji (early-return
                   wyzej), wiec ta galaz to juz tylko OPUBLIKOWANY grupowy wyjazd / gosc - bez "Zaproponuj". */}
               <div className="flex items-center justify-end pb-3">
-                <div className="flex rounded-full bg-muted p-0.5">
-                  <button onClick={() => setPlanView("list")} aria-label={t("a11y.list_view")} className={`px-2.5 py-1.5 rounded-full transition-colors ${planView === "list" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
-                    <List className="h-4 w-4" />
-                  </button>
-                  <button onClick={() => setPlanView("cards")} aria-label={t("a11y.cards_view")} className={`px-2.5 py-1.5 rounded-full transition-colors ${planView === "cards" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
-                    <GalleryHorizontalEnd className="h-4 w-4" />
-                  </button>
-                </div>
               </div>
-              {planView === "list" ? renderListReadonly(false) : renderSwiper(false, false)}
+              {renderListReadonly(false)}
             </div>
           ) : (
           <>
           {/* Sub-toggle podglądu miejsc (Lista/Karty) - tylko dla aktywnego (nieukończonego) wyjazdu. */}
           {!tripCompleted && (
             <div className="flex items-center justify-end pb-3">
-              <div className="flex rounded-full bg-muted p-0.5">
-                <button onClick={() => setPlanView("list")} aria-label={t("a11y.list_view")} className={`px-2.5 py-1.5 rounded-full transition-colors ${planView === "list" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
-                  <List className="h-4 w-4" />
-                </button>
-                <button onClick={() => setPlanView("cards")} aria-label={t("a11y.cards_view")} className={`px-2.5 py-1.5 rounded-full transition-colors ${planView === "cards" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
-                  <GalleryHorizontalEnd className="h-4 w-4" />
-                </button>
-              </div>
             </div>
           )}
 
@@ -2384,34 +2352,6 @@ const ReviewSummary = () => {
                   <div className="pt-2">{renderRatingNote(pin.place_name)}</div>
                 </div>
               ))}
-            </div>
-          ) : planView === "cards" ? (
-            /* Aktywny + Karty -> poziome karty z koszem. */
-            <div className="flex gap-3 overflow-x-auto scrollbar-none snap-x snap-mandatory -mr-4 pr-4 pb-1">
-              {workingPins.map((pin: any, i: number) => {
-                return (
-                  <button key={pin.id} onClick={() => openDetail(pin)} className="shrink-0 w-[210px] snap-start rounded-2xl bg-secondary border border-border/40 overflow-hidden shadow-sm text-left active:opacity-90 transition-opacity">
-                    <div className="relative aspect-[4/3] bg-muted">
-                      <PlacePhoto pin={pin} className="w-full h-full object-cover" emojiClass="text-3xl" />
-                      <span className="absolute top-2 left-2 h-5 w-5 rounded-full bg-black/50 text-white text-[10px] font-bold flex items-center justify-center">{i + 1}</span>
-                      <span role="button" tabIndex={0} onClick={(e) => { e.stopPropagation(); removePlaceFromPlan(pin); }} aria-label={t("a11y.remove_place")}
-                        className="absolute top-2 right-2 h-8 w-8 rounded-full bg-black/45 backdrop-blur text-white flex items-center justify-center active:scale-90 transition-transform">
-                        <Trash2 className="h-4 w-4" />
-                      </span>
-                      <span role="button" tabIndex={0} onClick={(e) => { e.stopPropagation(); openGooglePlace(pin); }} aria-label={`Otwórz ${pin.place_name} w Google Maps`}
-                        className="absolute bottom-2 right-2 h-9 w-9 rounded-full bg-white flex items-center justify-center active:scale-90 transition-transform shadow-md">
-                        <GoogleGlyph className="h-[18px] w-[18px]" />
-                      </span>
-                    </div>
-                    <div className="px-3 py-2.5">
-                      {pin.category && <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-card text-[11px] font-semibold text-foreground mb-1">{catLabel(pin.category)}</span>}
-                      <p className="text-sm font-black leading-tight line-clamp-1">{pin.place_name}</p>
-                    </div>
-                  </button>
-                );
-              })}
-              {/* "Dodaj miejsce" usuniete z widoku wyswietlania (2026-08-04) - dodawanie miejsc
-                  jest w edytorze pod guzikiem "Edytuj trase". */}
             </div>
           ) : (
             /* Aktywny + Lista -> duze wiersze (RoutePlaceRow) z uchwytem DRAG + swipe-to-delete. */
@@ -2836,15 +2776,11 @@ const ReviewSummary = () => {
                   {/* Miejsca + toggle Lista/Karty */}
                   <div className="flex items-center justify-between mb-3">
                     <p className="font-display text-xl font-bold text-foreground tracking-tight">Miejsca</p>
-                    <div className="flex rounded-full bg-muted p-0.5">
-                      <button onClick={() => setPlanView("list")} aria-label={t("a11y.list_view")} className={`px-2.5 py-1.5 rounded-full transition-colors ${planView === "list" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}><List className="h-4 w-4" /></button>
-                      <button onClick={() => setPlanView("cards")} aria-label={t("a11y.cards_view")} className={`px-2.5 py-1.5 rounded-full transition-colors ${planView === "cards" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}><GalleryHorizontalEnd className="h-4 w-4" /></button>
-                    </div>
                   </div>
 
                   {currentPins.length === 0 ? (
                     <p className="text-center text-sm text-muted-foreground py-8">{t("empty.no_places_note")}</p>
-                  ) : planView === "list" ? (
+                  ) : (
                     /* Notki per-miejsce usuniete (2026-07-29): obnizamy friction, skupiamy sie na
                        zdjeciach do miejsc. Zostaje tylko ogolna sugestia do calej trasy (wyzej).
                        Kolejnosc miejsc = DRAG & DROP (uchwyt z lewej) + kosz z potwierdzeniem. */
@@ -2871,8 +2807,6 @@ const ReviewSummary = () => {
                         );
                       })}
                     </Reorder.Group>
-                  ) : (
-                    renderSwiper(true, true)
                   )}
                 </div>
               )}
@@ -2935,7 +2869,7 @@ const ReviewSummary = () => {
                         </div>
                       )}
                       {renderPlanHeader(true)}
-                      {planView === "list" ? renderListReadonly(true) : renderSwiper(false, true)}
+                      {renderListReadonly(true)}
                     </>
                   )}
                 </div>
@@ -2953,7 +2887,7 @@ const ReviewSummary = () => {
               {currentPins.length > 0 && (
                 <div className="px-5 pt-2">
                   {renderPlanHeader(true)}
-                  {planView === "list" ? renderListReadonly(true) : renderSwiper(false, true)}
+                  {renderListReadonly(true)}
                 </div>
               )}
               {/* Mapa trasy (statyczna) - tap otwiera Google Maps z trasą */}
@@ -2988,8 +2922,8 @@ const ReviewSummary = () => {
                 {renderPlanHeader(true)}
                 {/* Wlasciciel: edytowalny plan (reorder/kosz). Uczestnik: read-only podglad. */}
                 {isOwner
-                  ? (planView === "list" ? renderEditablePlan(false) : renderSwiper(true, false))
-                  : (planView === "list" ? renderListReadonly(false) : renderSwiper(false, false))}
+                  ? renderEditablePlan(false)
+                  : renderListReadonly(false)}
               </div>
             )}
 

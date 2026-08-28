@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronUp, ChevronDown, ChevronRight, ChevronLeft, Trash2, Plus, Globe, List, GalleryHorizontalEnd, Map as MapIcon, Info, Check, Pencil, RotateCcw } from "lucide-react";
+import { ChevronUp, ChevronDown, ChevronRight, ChevronLeft, Trash2, Plus, Globe, List, Map as MapIcon, Info, Check, Pencil, RotateCcw } from "lucide-react";
 import RouteMap from "@/components/RouteMap";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import SavePlaceSheet, { type SavePlaceInput } from "@/components/plan-wizard/SavePlaceSheet";
@@ -118,7 +118,7 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false, onDelete, deleting 
       ? formatDistance(haversineKm(distanceRef.coords, { lat: pin.latitude, lng: pin.longitude }))
       : null;
 
-  const [planView, setPlanView] = useState<"list" | "cards" | "map">("cards");
+  const [planView, setPlanView] = useState<"list" | "map">("list");
   // Tryb edycji planu (za ikona olowka). Default OFF: karty pokazuja tylko odhacz/nawiguj +
   // tap w wizytowke. ON: reorder (wczesniej/pozniej), usuwanie i "Dodaj miejsce".
   const [editMode, setEditMode] = useState(false);
@@ -585,7 +585,7 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false, onDelete, deleting 
   // Klik "Nastepny przystanek" -> POKAZ karte miejsca na homepage (przewin + podswietl),
   // NIE otwieraj szczegolow (wizytowki). Szczegoly otwiera dopiero tap w sama karte.
   const showCard = (pin: any) => {
-    if (planView === "map") setPlanView("cards");
+    if (planView === "map") setPlanView("list");
     setHighlightPinId(pin.id);
     setTimeout(() => setHighlightPinId((cur) => (cur === pin.id ? null : cur)), 1800);
     setTimeout(() => {
@@ -738,11 +738,6 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false, onDelete, deleting 
   );
 
   // ── Szczegoly: poziomy swiper kart. ──
-  const renderSwiper = (editable: boolean, withRating: boolean) => (
-    <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory scrollbar-none -mx-5 px-5 pb-2">
-      {workingPins.map((pin: any, i: number) => renderPlanCard(pin, i, false, editable, withRating))}
-    </div>
-  );
 
   // ── Kompaktowy wiersz listy: miniaturka + nazwa + chip kategorii + akcje. ──
   // Lekka alternatywa dla dużych kart (widok "kafelki"). Tap miniatury/nazwy -> wizytówka.
@@ -836,9 +831,6 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false, onDelete, deleting 
             <button onClick={() => setPlanView("list")} aria-label={t("editor.view_list")} className={`px-2.5 py-1.5 rounded-full transition-colors ${planView === "list" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
               <List className="h-4 w-4" />
             </button>
-            <button onClick={() => setPlanView("cards")} aria-label={t("editor.view_cards")} className={`px-2.5 py-1.5 rounded-full transition-colors ${planView === "cards" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
-              <GalleryHorizontalEnd className="h-4 w-4" />
-            </button>
             <button onClick={() => setPlanView("map")} aria-label={t("editor.view_map")} className={`px-2.5 py-1.5 rounded-full transition-colors ${planView === "map" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
               <MapIcon className="h-4 w-4" />
             </button>
@@ -888,13 +880,12 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false, onDelete, deleting 
         </>
       ) : (
         <>
-          {planView === "list" ? (
-            renderEditablePlan(true)
-          ) : planView === "map" ? (
+          {planView === "map" ? (
             // Mapa aktywnego dnia (currentPins) - przelacznik dni w naglowku zmienia dzien.
             <RouteMap pins={currentPins as any} className="h-72 rounded-2xl border border-border/40" />
           ) : (
-            renderSwiper(editMode, true)
+            /* Widok kart usuniety 2026-08-29 - zostaje lista (kolejnosc od-do) i mapa. */
+            renderEditablePlan(true)
           )}
           {editMode && renderAddPlaceButton()}
         </>

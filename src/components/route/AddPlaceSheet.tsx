@@ -258,7 +258,7 @@ export default function AddPlaceSheet({ open, onClose, city, existingPlaces, onA
         <div className="px-5 pt-1 pb-2 shrink-0">
           <div className="relative">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <input ref={inputRef} value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Nazwa miejsca"
+            <input ref={inputRef} value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Dodaj nowe miejsce…"
               className="w-full h-12 rounded-xl bg-secondary/60 border border-border/60 pl-10 pr-11 text-base text-foreground placeholder:text-muted-foreground/70 outline-none focus:ring-2 focus:ring-orange-500/30" />
             {query && (
               <button onClick={() => setQuery("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 h-7 w-7 rounded-full bg-[#ebebeb]/60 flex items-center justify-center active:scale-90 transition-transform">

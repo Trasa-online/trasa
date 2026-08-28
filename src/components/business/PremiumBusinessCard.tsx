@@ -404,7 +404,7 @@ function HeroPhotoCarousel({ photos, placeName, category, onExpand, onClose, loa
           {/* Zapis miejsca (zakladka, pomaranczowa wg Figmy) zamiast ikony powiekszenia. */}
           {onSave && (
             <button
-              onClick={(e) => { e.stopPropagation(); onSave(); }}
+              onClick={(e) => { e.stopPropagation(); haptics.light(); onSave(); }}
               className="absolute bottom-3 right-3 z-30 h-10 w-10 rounded-full bg-white border border-black/[0.04] shadow-[0_1px_5px_rgba(0,0,0,0.18)] flex items-center justify-center active:scale-90 transition-transform"
               aria-label={t("add")}
             >
@@ -915,6 +915,10 @@ function MapSection({ data, startingLocation }: SectionProps & { startingLocatio
         <div
           data-vaul-no-drag
           className="fixed inset-0 z-[120] bg-background flex flex-col animate-in fade-in duration-200"
+          // pointerEvents: drawer wizytowki (modal) ustawia `pointer-events: none` na <body>,
+          // wiec portal poza jego warstwa bylby martwy (jak arkusz zgloszenia - patrz
+          // ReportPlaceLink). Fullscreen viewer zdjec ma to samo zabezpieczenie.
+          style={{ pointerEvents: "auto" }}
           onPointerDown={(e) => e.stopPropagation()}
           onPointerMove={(e) => e.stopPropagation()}
           onTouchStart={(e) => e.stopPropagation()}

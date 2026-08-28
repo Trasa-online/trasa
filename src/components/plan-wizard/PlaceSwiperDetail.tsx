@@ -21,6 +21,7 @@ import { getPhotoUrl, ensurePhotoCached } from "@/lib/placePhotos";
 import { fetchPlaceUserPhotos } from "@/lib/placeUserPhotos";
 import { placeKeyOf, fetchPlacePhotos, uploadPlacePhoto, fetchPhotoLikes, togglePhotoLike, type LikeState } from "@/lib/placePhotoSocial";
 import { fetchPlaceNotes, type PlaceUserNote } from "@/lib/placeNotes";
+import { useSavedPlaces } from "@/hooks/useSavedPlaces";
 import { GOOGLE_PLACE_DETAILS_DISABLED } from "@/lib/appMode";
 import { type MockPlace, fetchEnrichedPlace } from "./PlaceSwiper";
 import posthog from "posthog-js";
@@ -99,6 +100,10 @@ const PlaceSwiperDetail = ({
   const [photoLikes, setPhotoLikes] = useState<Map<string, LikeState>>(new Map());
   const distanceRef = useDistanceReference();
   const { user } = useAuth();
+  // Stan zakladki "zapisane" na hero. Gdy rodzic nie poda `saved`, czytamy go z globalnego
+  // stanu zapisanych miejsc - dzieki temu ikona przelacza sie od razu po zapisie, niezaleznie
+  // od tego, z ktorej sciezki wizytowka zostala otwarta (zgloszenie Nat 2026-08-29).
+  const { isSaved } = useSavedPlaces();
   const { t } = useTranslation("wizytowka");
   const ep = freshPlace ?? place;
   const placeKey = ep ? placeKeyOf({ googlePlaceId: (ep as any).google_place_id ?? null, placeName: ep.place_name, city: ep.city ?? city ?? null }) : "";
@@ -229,6 +234,7 @@ const PlaceSwiperDetail = ({
   }, [open, place, city, skipGoogleFetch, referenceDate]);
 
   const handleLike = () => { onLike?.(); onOpenChange(false); };
+  const savedEffective = saved ?? (ep?.place_name ? isSaved(ep.place_name) : false);
   const handleSkip = () => { onSkip?.(); onOpenChange(false); };
   // Zapis z zakladki na hero - zapisuje BEZ zamykania wizytowki (stan zakladki sie aktualizuje).
   const handleSaveFromHero = onLike ? () => { onLike(); } : undefined;
@@ -368,7 +374,7 @@ const PlaceSwiperDetail = ({
             onClose={() => onOpenChange(false)}
             header={headerSlot}
             onSave={handleSaveFromHero}
-            saved={saved}
+            saved={savedEffective}
             hideReviews
             photoLikes={photoLikes}
             onToggleLike={handleToggleLike}
