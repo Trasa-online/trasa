@@ -21,6 +21,7 @@ import DiscoveryFeed from "@/components/home/DiscoveryFeed";
 import HomeHeaderActions from "@/components/home/HomeHeaderActions";
 import ExploreTopBar from "@/components/home/ExploreTopBar";
 import TabTopBar from "@/components/layout/TabTopBar";
+import ActiveTripBanner from "@/components/home/ActiveTripBanner";
 import ExploreSwiper from "@/components/home/ExploreSwiper";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { UNLOCKED_CITIES } from "@/components/plan-wizard/CityPicker";
@@ -858,6 +859,11 @@ const Explore = () => {
         </PullToRefresh>
       ) : (
         <>
+          {/* Skrot do wyjazdu "w trakcie" / roboczego - TYLKO w widoku feedu. W trybie kart miejsc
+              (swiper) NIE renderujemy go: wysokosc karty 9:16 jest wyliczana ze stalego chrome i
+              dolozenie paska rozjechaloby zamrozony layout (CLAUDE.md - PlaceSwiper sizing). */}
+          {view === "feed" && <ActiveTripBanner />}
+
           {/* Feed - zawsze zamontowany; ukryty gdy swiper (seamless toggle). */}
           <div className={cn("flex-1 min-h-0 flex flex-col", view !== "feed" && "hidden")}>
             {/* Snap tylko w trybie przegladania feedu. Przy wyszukiwaniu WYLACZAMY snap, zeby
