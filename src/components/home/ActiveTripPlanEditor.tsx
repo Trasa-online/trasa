@@ -7,6 +7,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronUp, ChevronDown, ChevronRight, ChevronLeft, Trash2, Plus, Globe, List, GalleryHorizontalEnd, Map as MapIcon, Info, Check, Pencil, RotateCcw } from "lucide-react";
 import RouteMap from "@/components/RouteMap";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
+import SavePlaceSheet, { type SavePlaceInput } from "@/components/plan-wizard/SavePlaceSheet";
 import type { MockPlace } from "@/components/plan-wizard/PlaceSwiper";
 import { PlacePhoto, resolveStored } from "@/components/PlacePhoto";
 import { notify } from "@/lib/notify";
@@ -414,6 +415,8 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false, onDelete, deleting 
   const [skippedPinIds, setSkippedPinIds] = useState<Set<string>>(new Set());
   // Pin o ktory pytamy "Czy byles tutaj?" (double-check przy przejsciu do kolejnego bez odhaczenia).
   const [skipPromptPin, setSkipPromptPin] = useState<any | null>(null);
+  // Zapis miejsca z wizytowki (bookmark na hero + CTA) - dziala tez w trakcie wyjazdu.
+  const [savePlace, setSavePlace] = useState<SavePlaceInput | null>(null);
   // Gest natywny: przeciagniecie panelu w dol zamyka arkusz.
   const skipDrag = useDragToDismiss({ onDismiss: () => setSkipPromptPin(null) });
   const shareDrag = useDragToDismiss({ onDismiss: () => setShowSharePrompt(false) });
@@ -946,7 +949,13 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false, onDelete, deleting 
         onOpenChange={(o) => !o && setDetailPin(null)}
         place={detailPin}
         city={route?.city}
+        onLike={detailPin ? () => setSavePlace({
+          place_name: detailPin.place_name, category: detailPin.category ?? null, address: detailPin.address || null,
+          city: detailPin.city || route?.city || null, latitude: detailPin.latitude ?? null, longitude: detailPin.longitude ?? null,
+          photo_url: detailPin.photo_url || null, place_id: null,
+        }) : undefined}
       />
+      <SavePlaceSheet open={!!savePlace} onOpenChange={(o) => { if (!o) setSavePlace(null); }} place={savePlace} city={route?.city ?? ""} />
 
       {/* ── Popup: udostepnic trase w Eksploruj? (po zatwierdzeniu planu) ──── */}
       {showSharePrompt && (

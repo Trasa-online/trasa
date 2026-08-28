@@ -23,6 +23,7 @@ import { mainCategoryLabel, subcategoryLabelLocalized, parentMainOfSub } from "@
 import { CategoryIcon } from "@/components/CategoryIcon";
 import { cn } from "@/lib/utils";
 import type { PlaceUserNote } from "@/lib/placeNotes";
+import { GoogleGlyph } from "@/components/icons/GoogleGlyph";
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { API_BASE } from "@/lib/platform";
 import { Clock, ChevronRight, ChevronLeft, ChevronDown, X, Maximize2, Phone, Globe, FileText, Instagram, Facebook, MapPin, Bookmark, Heart, ImagePlus } from "lucide-react";
@@ -404,10 +405,10 @@ function HeroPhotoCarousel({ photos, placeName, category, onExpand, onClose, loa
           {onSave && (
             <button
               onClick={(e) => { e.stopPropagation(); onSave(); }}
-              className="absolute bottom-3 right-3 z-30 h-10 w-10 rounded-full bg-gradient-to-br from-[#F4A259] to-[#F9662B] shadow-md shadow-orange-500/25 flex items-center justify-center active:scale-90 transition-transform"
+              className="absolute bottom-3 right-3 z-30 h-10 w-10 rounded-full bg-white border border-black/[0.04] shadow-[0_1px_5px_rgba(0,0,0,0.18)] flex items-center justify-center active:scale-90 transition-transform"
               aria-label={t("add")}
             >
-              <Bookmark className={cn("h-[18px] w-[18px] text-white", saved && "fill-white")} strokeWidth={2} />
+              <Bookmark className={cn("h-[19px] w-[19px] text-[#F0A583]", saved && "fill-[#F0A583]")} strokeWidth={2.2} />
             </button>
           )}
           {photos.length > 1 && (
@@ -892,7 +893,7 @@ function MapSection({ data, startingLocation }: SectionProps & { startingLocatio
           rel="noopener noreferrer"
           className="inline-flex items-center gap-1.5 rounded-full bg-secondary text-secondary-foreground px-3 py-1.5 text-xs font-semibold active:scale-95 transition-transform shrink-0"
         >
-          <MapPin className="h-3.5 w-3.5" /> {t("open_in_google_maps", "Zobacz w Google Maps")}
+          <GoogleGlyph className="h-4 w-4" /> {t("open_in_google_maps", "Zobacz w Google Maps")}
         </a>
       </div>
       {/* Statyczny punkt + ikona otwarcia mapy na pelen ekran (interaktywna mapa w overlayu). */}

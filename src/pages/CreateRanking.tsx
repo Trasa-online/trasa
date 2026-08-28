@@ -24,6 +24,7 @@ import { pinCoverKeys, fetchPlacePhotosForKeys, pickPlaceCover } from "@/lib/pla
 
 import { cacheListItemPhoto } from "@/lib/placePhotos";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
+import SavePlaceSheet, { type SavePlaceInput } from "@/components/plan-wizard/SavePlaceSheet";
 import { type MockPlace } from "@/components/plan-wizard/PlaceSwiper";
 import RouteMap from "@/components/RouteMap";
 
@@ -253,6 +254,8 @@ const CreateRanking = () => {
   const [placeView, setPlaceView] = useState<"detail" | "list">("detail");
   // Podglad miejsca spoza bazy PRZED dodaniem (TYLKO okladka - min. kosztow Google).
   const [customPreview, setCustomPreview] = useState<Omit<RankingItem, "key" | "short_desc"> | null>(null);
+  // Zapis miejsca z wizytowki do WLASNYCH list (niezalezne od budowanej wlasnie listy).
+  const [savePlace, setSavePlace] = useState<SavePlaceInput | null>(null);
   // Gest natywny: przeciagniecie panelu w dol zamyka arkusz.
   const previewDrag = useDragToDismiss({ onDismiss: () => setCustomPreview(null) });
   const [author, setAuthor] = useState<{ name: string; avatar: string | null }>({ name: "Użytkownik", avatar: null });
@@ -320,7 +323,10 @@ const CreateRanking = () => {
           setTitle(col.title ?? ""); setTitleDirty(true); if (col.city) { setCity(col.city); setCountry(countryForCity(col.city)); } setCategory(col.category ?? null);
           setDescription(col.description ?? "");
           setAsAnon(col.author_name === "Anonim" && !col.author_avatar);
-          setCoverUrl(col.cover_url ?? null); setListCoverUrl(col.list_cover_url ?? null);
+          // Okladki sa automatyczne (pierwsze zdjecie z listy) - nie ma juz stanu recznego.
+          // UWAGA: wolanie tu nieistniejacych setCoverUrl/setListCoverUrl wywalalo CALY efekt
+          // (ReferenceError), przez co ponizsze setItems nigdy sie nie wykonywalo i edycja
+          // pokazywala "0 miejsc" (zgloszenie Nat 2026-08-28).
           setTags(Array.isArray(col.tags) ? col.tags : []);
           setListStatus(col.list_status ?? null);
         }
@@ -1048,8 +1054,17 @@ const CreateRanking = () => {
       )}
 
       {detailPlace && (
-        <PlaceSwiperDetail open={!!detailPlace} onOpenChange={(o) => { if (!o) setDetailPlace(null); }} place={detailPlace} city={city} skipGoogleFetch={detailSkip} />
+        <PlaceSwiperDetail
+          open={!!detailPlace} onOpenChange={(o) => { if (!o) setDetailPlace(null); }} place={detailPlace}
+          city={city} skipGoogleFetch={detailSkip}
+          onLike={() => setSavePlace({
+            place_name: detailPlace.place_name, category: detailPlace.category ?? null, address: detailPlace.address || null,
+            city: detailPlace.city || city || null, latitude: detailPlace.latitude ?? null, longitude: detailPlace.longitude ?? null,
+            photo_url: detailPlace.photo_url || null, place_id: null,
+          })}
+        />
       )}
+      <SavePlaceSheet open={!!savePlace} onOpenChange={(o) => { if (!o) setSavePlace(null); }} place={savePlace} city={city || ""} />
 
       {/* Podglad miejsca spoza bazy - TYLKO okladka (bez godzin/recenzji, min. kosztow Google) */}
       {customPreview && (

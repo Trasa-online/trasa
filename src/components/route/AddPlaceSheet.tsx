@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { categoryIconSrc, categoryFromGoogleTypes } from "@/lib/placeCategoryIcon";
 import { fetchSavedPlaces, fetchListsWithPlaces, type SavedPlace, type PlaceForList } from "@/lib/placeLists";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
+import SavePlaceSheet, { type SavePlaceInput } from "@/components/plan-wizard/SavePlaceSheet";
 import { GoogleGlyph } from "@/components/icons/GoogleGlyph";
 import { openExternal } from "@/lib/openExternal";
 
@@ -54,6 +55,7 @@ export default function AddPlaceSheet({ open, onClose, city, existingPlaces, onA
   const [blocked, setBlocked] = useState(false);
   const [adding, setAdding] = useState(false);
   const [detailPlace, setDetailPlace] = useState<any | null>(null);   // wizytowka miejsca (PlaceSwiperDetail)
+  const [savePlace, setSavePlace] = useState<SavePlaceInput | null>(null); // zapis miejsca do wlasnych list
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Srodek do filtra "w obrebie miasta" (~20km): centroida miejsc JUZ w trasie, a gdy brak (nowa
@@ -236,7 +238,7 @@ export default function AddPlaceSheet({ open, onClose, city, existingPlaces, onA
           <h2 className="text-[18px] font-semibold text-foreground truncate">Dodaj nowe miejsce</h2>
           <button onClick={doAdd} disabled={!selected.length || adding}
             className={`text-sm font-medium rounded-full border bg-white px-3.5 py-1.5 shrink-0 ${selected.length && !adding ? "text-[#181818] border-black/15 active:opacity-60" : "text-[#bcbcbc] border-black/[0.07]"}`}>
-            {adding ? "..." : "Dalej"}
+            {adding ? "..." : "Dodaj"}
           </button>
         </div>
 
@@ -281,38 +283,35 @@ export default function AddPlaceSheet({ open, onClose, city, existingPlaces, onA
             </div>
           ) : (
             <div className="pt-1 space-y-4">
-              {/* NAJPIERW "Zapisane" (do wyboru) + "Dodaj nowe miejsce", "Juz dodane" (info) na SAMYM
-                  DOLE - nie zabiera miejsca u gory (2026-08-25, prosba Nat). Lista, nie siatka kafelkow. */}
-              <div>
-                {((existingPlaces && existingPlaces.length > 0) || userLists.length > 0) && (
-                  <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground mb-1.5 px-0.5">Zapisane</p>
-                )}
-                <div className="space-y-1.5">
-                  {/* "Dodaj nowe miejsce" jako WIERSZ (nie kafelek z plusem) -> fokus na wyszukiwarke */}
-                  <button onClick={() => inputRef.current?.focus()} className="w-full flex items-center gap-3 rounded-2xl bg-secondary/60 px-3 py-2.5 text-left active:bg-secondary transition-colors">
-                    <span className="h-11 w-11 rounded-xl bg-[#fcede3] flex items-center justify-center shrink-0">
-                      <Plus className="h-5 w-5 text-[#f0a583]" strokeWidth={2.5} />
-                    </span>
-                    <span className="flex-1 min-w-0 text-[15px] font-semibold text-foreground">Dodaj nowe miejsce</span>
-                    <ChevronRight className="h-5 w-5 text-muted-foreground shrink-0" />
-                  </button>
-                  {tiles.map((p, i) => renderPlaceRow({ rowKey: `${keyOf(p)}-${i}`, place: p, subtitle: placeSubtitle(p), onToggle: () => toggle(p), selected: isSel(p) }))}
-                </div>
-              </div>
-              {/* Miejsca z Twoich LIST - kazda lista jako zwijana sekcja (domyslnie zwinieta,
-                  zeby nie zasypywac widoku). Miejsca juz w trasie sa odfiltrowane. */}
+              {/* Kolejnosc sekcji (2026-08-28): akcja "Dodaj nowe miejsce" -> TWOJE LISTY -> "Zapisane"
+                  (lista ogolna) -> "Juz dodane" (info, na samym dole). */}
+              <button onClick={() => inputRef.current?.focus()} className="w-full flex items-center gap-3 rounded-2xl bg-secondary/60 px-3 py-2.5 text-left active:bg-secondary transition-colors">
+                <span className="h-11 w-11 rounded-xl bg-[#fcede3] flex items-center justify-center shrink-0">
+                  <Plus className="h-5 w-5 text-[#f0a583]" strokeWidth={2.5} />
+                </span>
+                <span className="flex-1 min-w-0 text-[15px] font-semibold text-foreground">Dodaj nowe miejsce</span>
+                <ChevronRight className="h-5 w-5 text-muted-foreground shrink-0" />
+              </button>
+
+              {/* TWOJE LISTY (wlasne + zapisane od innych) NAD "Zapisanymi" - to z nich najczesciej
+                  buduje sie wyjazd. Kazda lista = zwijana sekcja z wiekszym naglowkiem, oddzielona
+                  linia (prosba Nat 2026-08-28). */}
               {userLists.map((l) => {
                 const available = l.places.filter((p) => !existingNameSet.has(keyOf(p)));
                 if (!available.length) return null;
                 const isOpen = openLists.has(l.id);
                 return (
-                  <div key={l.id}>
+                  <div key={l.id} className="border-t border-border/60 pt-4">
                     <button onClick={() => { haptics.light(); toggleList(l.id); }}
-                      className="w-full flex items-center gap-2 mb-1.5 px-0.5 text-left active:opacity-70 transition-opacity">
-                      <span className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground truncate">{l.title}</span>
-                      <span className="text-[11px] font-semibold text-muted-foreground/70 shrink-0">{available.length}</span>
+                      className="w-full flex items-center gap-2 mb-2 px-0.5 text-left active:opacity-70 transition-opacity">
+                      <span className="min-w-0">
+                        <span className="block text-[17px] font-bold text-foreground truncate leading-tight">{l.title}</span>
+                        <span className="block text-[12px] text-muted-foreground mt-0.5">
+                          {l.saved ? "Zapisana lista · " : ""}{available.length} {available.length === 1 ? "miejsce" : available.length < 5 ? "miejsca" : "miejsc"}
+                        </span>
+                      </span>
                       <span className="flex-1" />
-                      <ChevronDown className={`h-4 w-4 text-muted-foreground shrink-0 transition-transform ${isOpen ? "" : "-rotate-90"}`} />
+                      <ChevronDown className={`h-5 w-5 text-muted-foreground shrink-0 transition-transform ${isOpen ? "" : "-rotate-90"}`} />
                     </button>
                     {isOpen && (
                       <div className="space-y-1.5">
@@ -325,9 +324,16 @@ export default function AddPlaceSheet({ open, onClose, city, existingPlaces, onA
                   </div>
                 );
               })}
+
+              <div className={userLists.length > 0 ? "pt-1" : ""}>
+                <p className="text-[17px] font-bold text-foreground mb-2 px-0.5">Zapisane</p>
+                <div className="space-y-1.5">
+                  {tiles.map((p, i) => renderPlaceRow({ rowKey: `${keyOf(p)}-${i}`, place: p, subtitle: placeSubtitle(p), onToggle: () => toggle(p), selected: isSel(p) }))}
+                </div>
+              </div>
               {existingPlaces && existingPlaces.length > 0 && (
-                <div>
-                  <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground mb-1.5 px-0.5">Już dodane</p>
+                <div className="border-t border-border/60 pt-4">
+                  <p className="text-[17px] font-bold text-foreground mb-2 px-0.5">Już dodane</p>
                   <div className="space-y-1.5">
                     {existingPlaces.map((p, i) => renderPlaceRow({ rowKey: `ex-${keyOf(p)}-${i}`, place: p, subtitle: placeSubtitle(p) ?? city, added: true }))}
                   </div>
@@ -339,7 +345,16 @@ export default function AddPlaceSheet({ open, onClose, city, existingPlaces, onA
       </SheetContent>
     </Sheet>
     {/* Wizytowka miejsca (klik w wiersz). Vaul-drawer nakłada się na arkusz dodawania. */}
-    <PlaceSwiperDetail open={!!detailPlace} onOpenChange={(o) => { if (!o) setDetailPlace(null); }} place={detailPlace} city={detailPlace?.city || city || undefined} />
+    <PlaceSwiperDetail
+      open={!!detailPlace} onOpenChange={(o) => { if (!o) setDetailPlace(null); }} place={detailPlace}
+      city={detailPlace?.city || city || undefined}
+      onLike={detailPlace ? () => setSavePlace({
+        place_name: detailPlace.place_name, category: detailPlace.category ?? null, address: detailPlace.address || null,
+        city: detailPlace.city || city || null, latitude: detailPlace.latitude ?? null, longitude: detailPlace.longitude ?? null,
+        photo_url: detailPlace.photo_url || null, place_id: null,
+      }) : undefined}
+    />
+    <SavePlaceSheet open={!!savePlace} onOpenChange={(o) => { if (!o) setSavePlace(null); }} place={savePlace} city={city ?? ""} />
     </>
   );
 }

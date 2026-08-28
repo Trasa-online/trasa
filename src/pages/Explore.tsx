@@ -6,6 +6,7 @@ import { PullToRefresh } from "@/components/PullToRefresh";
 import { MapPin, Heart, Trash2, ArrowRight, ArrowLeft, Pencil, ListChecks, ChevronDown, ChevronRight, Check, Search, X, Layers, Compass, Bookmark, Plus } from "lucide-react";
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
+import SavePlaceSheet, { type SavePlaceInput } from "@/components/plan-wizard/SavePlaceSheet";
 import { fetchEnrichedPlace, type MockPlace } from "@/components/plan-wizard/PlaceSwiper";
 import { RoutePlaceRow } from "@/components/route/RoutePlaceRow";
 import { resolveStored } from "@/components/PlacePhoto";
@@ -129,6 +130,7 @@ export const LikedTab = ({ selectMode = false, onExitSelection, city: controlled
   // wydarzenia. Bazowy MockPlace budujemy od razu (szybkie otwarcie), a gdy miejsce ma UUID -
   // doczytujemy pelny profil biznesu (menu/galeria/eventy) i podmieniamy.
   const [detailPlace, setDetailPlace] = useState<MockPlace | null>(null);
+  const [savePlace, setSavePlace] = useState<SavePlaceInput | null>(null);
   const todayStr = new Date().toISOString().slice(0, 10);
   const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   const openDetail = (p: any) => {
@@ -447,14 +449,20 @@ export const LikedTab = ({ selectMode = false, onExitSelection, city: controlled
         })}
       </div>
 
-      {/* Szczegol miejsca - pelna wizytowka (jak w swiperze). Bez CTA Like/Skip (brak onLike/onSkip). */}
+      {/* Szczegol miejsca - pelna wizytowka (jak w swiperze), z zapisem miejsca do listy. */}
       <PlaceSwiperDetail
         open={!!detailPlace}
         place={detailPlace}
         city={detailPlace?.city}
         referenceDate={todayStr}
         onOpenChange={(open) => !open && setDetailPlace(null)}
+        onLike={detailPlace ? () => setSavePlace({
+          place_name: detailPlace.place_name, category: detailPlace.category ?? null, address: detailPlace.address || null,
+          city: detailPlace.city || null, latitude: detailPlace.latitude ?? null, longitude: detailPlace.longitude ?? null,
+          photo_url: detailPlace.photo_url || null, place_id: null,
+        }) : undefined}
       />
+      <SavePlaceSheet open={!!savePlace} onOpenChange={(o) => { if (!o) setSavePlace(null); }} place={savePlace} city={savePlace?.city ?? ""} />
 
       {/* Pasek akcji trybu zaznaczania - utworz trase z wybranych (jedno miasto) */}
       {selectMode && selectedNames.size > 0 && (
@@ -491,6 +499,8 @@ export const MyCollections = ({ showCreate = true }: { showCreate?: boolean } = 
   const [expanded, setExpanded] = useState<string | null>(null);
   // Wizytowka miejsca z podgladu (tap w wiersz) - jak w SharedList.
   const [detailPin, setDetailPin] = useState<{ place: MockPlace; city: string | null; skip: boolean } | null>(null);
+  // Zapis miejsca z wizytowki do wlasnych list (bookmark na hero + CTA na dole).
+  const [savePlace, setSavePlace] = useState<SavePlaceInput | null>(null);
 
   const handleDelete = async () => {
     if (!confirmDelete || !user) return;
@@ -641,7 +651,14 @@ export const MyCollections = ({ showCreate = true }: { showCreate?: boolean } = 
         place={detailPin?.place ?? null}
         city={detailPin?.city ?? ""}
         skipGoogleFetch={detailPin?.skip ?? false}
+        onLike={detailPin?.place ? () => setSavePlace({
+          place_name: detailPin.place.place_name, category: detailPin.place.category ?? null,
+          address: detailPin.place.address || null, city: detailPin.city || null,
+          latitude: detailPin.place.latitude ?? null, longitude: detailPin.place.longitude ?? null,
+          photo_url: detailPin.place.photo_url || null, place_id: null,
+        }) : undefined}
       />
+      <SavePlaceSheet open={!!savePlace} onOpenChange={(o) => { if (!o) setSavePlace(null); }} place={savePlace} city={savePlace?.city ?? ""} />
 
       {/* Potwierdzenie usuniecia (nieodwracalne) */}
       {confirmDelete && (

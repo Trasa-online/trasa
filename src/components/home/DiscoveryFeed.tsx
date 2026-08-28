@@ -16,6 +16,7 @@ import { expandCity } from "@/lib/cities";
 import { saveCollectionDb, unsaveCollectionDb } from "@/lib/savedCollections";
 import { MAIN_CATEGORIES, getDbCategoriesFor } from "@/lib/categories";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
+import SavePlaceSheet, { type SavePlaceInput } from "@/components/plan-wizard/SavePlaceSheet";
 import FullCalendarPicker from "@/components/plan-wizard/FullCalendarPicker";
 import RouteMap from "@/components/RouteMap";
 import { type MockPlace, fetchEnrichedPlace } from "@/components/plan-wizard/PlaceSwiper";
@@ -209,6 +210,7 @@ export function CollectionDetail({ col, onClose, onAdopt }: { col: DiscoveryColl
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [detailPlace, setDetailPlace] = useState<MockPlace | null>(null);
+  const [savePlace, setSavePlace] = useState<SavePlaceInput | null>(null);
   const [deleting, setDeleting] = useState(false);
   // Widok miejsc: lista (domyslnie, jak w widoku trasy) lub karty (poziomy swiper).
   const [placeView, setPlaceView] = useState<"list" | "cards">("list");
@@ -566,8 +568,17 @@ export function CollectionDetail({ col, onClose, onAdopt }: { col: DiscoveryColl
       </div>
 
       {detailPlace && (
-        <PlaceSwiperDetail open={!!detailPlace} onOpenChange={(o) => { if (!o) setDetailPlace(null); }} place={detailPlace} city={col.city ?? undefined} skipGoogleFetch={false} />
+        <PlaceSwiperDetail
+          open={!!detailPlace} onOpenChange={(o) => { if (!o) setDetailPlace(null); }} place={detailPlace}
+          city={col.city ?? undefined} skipGoogleFetch={false}
+          onLike={() => setSavePlace({
+            place_name: detailPlace.place_name, category: detailPlace.category ?? null, address: detailPlace.address || null,
+            city: detailPlace.city || col.city || null, latitude: detailPlace.latitude ?? null, longitude: detailPlace.longitude ?? null,
+            photo_url: detailPlace.photo_url || null, place_id: null,
+          })}
+        />
       )}
+      <SavePlaceSheet open={!!savePlace} onOpenChange={(o) => { if (!o) setSavePlace(null); }} place={savePlace} city={col.city ?? ""} />
     </div>
   );
 }
@@ -1642,6 +1653,7 @@ export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityCh
   // Podglad miejsca z wyszukiwarki (pelna wizytowka). Bazowy MockPlace od razu, potem doczytujemy
   // profil biznesu (menu/eventy) po UUID - jak w "Zapisane".
   const [placeDetail, setPlaceDetail] = useState<MockPlace | null>(null);
+  const [feedSavePlace, setFeedSavePlace] = useState<SavePlaceInput | null>(null);
   const openPlaceDetail = (p: any) => {
     const base = {
       id: p.id,
@@ -2355,7 +2367,13 @@ export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityCh
         place={placeDetail}
         city={placeDetail?.city}
         onOpenChange={(open) => { if (!open) setPlaceDetail(null); }}
+        onLike={placeDetail ? () => setFeedSavePlace({
+          place_name: placeDetail.place_name, category: placeDetail.category ?? null, address: placeDetail.address || null,
+          city: placeDetail.city || null, latitude: placeDetail.latitude ?? null, longitude: placeDetail.longitude ?? null,
+          photo_url: placeDetail.photo_url || null, place_id: null,
+        }) : undefined}
       />
+      <SavePlaceSheet open={!!feedSavePlace} onOpenChange={(o) => { if (!o) setFeedSavePlace(null); }} place={feedSavePlace} city={feedSavePlace?.city ?? ""} />
 
       <Sheet open={!!activeCol} onOpenChange={(open) => { if (!open) setActiveCol(null); }}>
         <SheetContent

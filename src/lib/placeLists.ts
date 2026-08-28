@@ -45,15 +45,28 @@ export interface UserListWithPlaces {
   id: string;
   title: string;
   city: string | null;
+  /** true = lista ZAPISANA od kogos innego (nie moja kuratorska). */
+  saved?: boolean;
   places: PlaceForList[];
 }
 export async function fetchListsWithPlaces(userId: string): Promise<UserListWithPlaces[]> {
-  const { data: cols } = await (supabase as any)
-    .from("discovery_collections")
-    .select("id, title, city")
-    .eq("user_id", userId).eq("kind", "ranking").eq("list_status", "visited")
-    .order("updated_at", { ascending: false });
-  const rows = (cols ?? []) as any[];
+  // Moje listy kuratorskie + listy ZAPISANE od innych (saved_collections) - oba zrodla sa
+  // rownoprawnym miejscem, z ktorego user wybiera miejsca do wyjazdu/listy.
+  const [{ data: mine }, { data: savedRows }] = await Promise.all([
+    (supabase as any)
+      .from("discovery_collections").select("id, title, city")
+      .eq("user_id", userId).eq("kind", "ranking").eq("list_status", "visited")
+      .order("updated_at", { ascending: false }),
+    (supabase as any).from("saved_collections").select("collection_id").eq("user_id", userId),
+  ]);
+  const savedIds = ((savedRows ?? []) as any[]).map((r) => r.collection_id).filter(Boolean);
+  let savedCols: any[] = [];
+  if (savedIds.length) {
+    const { data } = await (supabase as any)
+      .from("discovery_collections").select("id, title, city").in("id", savedIds);
+    savedCols = ((data ?? []) as any[]).map((c) => ({ ...c, saved: true }));
+  }
+  const rows = [...((mine ?? []) as any[]), ...savedCols];
   if (!rows.length) return [];
   const { data: items } = await (supabase as any)
     .from("discovery_items")
@@ -69,7 +82,10 @@ export async function fetchListsWithPlaces(userId: string): Promise<UserListWith
     });
   }
   return rows
-    .map((r) => ({ id: r.id, title: r.title, city: r.city ?? null, places: (byList[r.id] ?? []).map((p) => ({ ...p, city: p.city ?? r.city ?? null })) }))
+    .map((r) => ({
+      id: r.id, title: r.title, city: r.city ?? null, saved: !!r.saved,
+      places: (byList[r.id] ?? []).map((p) => ({ ...p, city: p.city ?? r.city ?? null })),
+    }))
     .filter((l) => l.places.length > 0);
 }
 

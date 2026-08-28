@@ -67,6 +67,7 @@ export default function SharedList() {
     onRight: () => setPlanTab("miejsca"),
   });
   const [detailPin, setDetailPin] = useState<any | null>(null);
+  const [detailRaw, setDetailRaw] = useState<any | null>(null);
   // Zapis pojedynczego miejsca z listy (bookmark per-miejsce -> SavePlaceSheet). Zapis CAŁEJ listy
   // (przycisk na dole) to osobna akcja (localStorage trasa_saved_collections) - oba zostają.
   const [savePlace, setSavePlace] = useState<SavePlaceInput | null>(null);
@@ -233,7 +234,9 @@ export default function SharedList() {
     window.open(`https://www.google.com/maps/search/?api=1&query=${q}${placeIdParam}`, "_blank", "noopener,noreferrer");
   };
 
-  const openDetail = (pin: any) => setDetailPin({
+  // Raw pozycja listy dla wizytowki (zapis miejsca potrzebuje place_id/google_place_id,
+  // ktorych MockPlace nie niesie).
+  const openDetail = (pin: any) => { setDetailRaw(pin); setDetailPin({
     id: pin.place_id || pin.id || pin.place_name,
     place_name: pin.place_name,
     category: (catOf(pin) || "other") as any,
@@ -245,7 +248,7 @@ export default function SharedList() {
     photo_url: resolveStored(pin.photo_url) ?? "",
     // Notka autora listy NIE jest opisem miejsca - ma wlasna sekcje "Od użytkowników".
     description: "",
-  });
+  }); };
 
   // Zapisz liste (bookmark) - localStorage, 1:1 z toggleSaveCollection (feed/Zapisane).
   const toggleSave = () => {
@@ -556,7 +559,12 @@ export default function SharedList() {
         </div>
       </div>
 
-      <PlaceSwiperDetail open={!!detailPin} onOpenChange={(o) => !o && setDetailPin(null)} place={detailPin} city={col.city} />
+      {/* Wizytowka miejsca z listy - z guzikiem zapisu (bookmark na hero + CTA na dole). */}
+      <PlaceSwiperDetail
+        open={!!detailPin} onOpenChange={(o) => !o && setDetailPin(null)} place={detailPin} city={col.city}
+        onLike={user && detailRaw ? () => setSavePlace(itemToPlace(detailRaw) as SavePlaceInput) : undefined}
+        saved={detailPin ? isSaved(detailPin.place_name) : false}
+      />
 
       {/* CTA - zapis CAŁEJ listy (driver engagementu). TYLKO cudza lista - nie zapisujesz wlasnej (#4).
           Zapis pojedynczych miejsc = bookmark przy każdym miejscu (SavePlaceSheet). */}

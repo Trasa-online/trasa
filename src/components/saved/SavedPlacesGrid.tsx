@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { PlaceTile } from "@/components/profile/PlaceTile";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
+import SavePlaceSheet, { type SavePlaceInput } from "@/components/plan-wizard/SavePlaceSheet";
 import { type MockPlace } from "@/components/plan-wizard/PlaceSwiper";
 import { resolveStored } from "@/components/PlacePhoto";
 import { inferCategoryFromName, categoryIconSrc } from "@/lib/placeCategoryIcon";
@@ -19,6 +20,9 @@ export function SavedPlacesGrid() {
   const [detailPin, setDetailPin] = useState<{ place: MockPlace; city: string; skip: boolean } | null>(null);
   // Arkusz "Dodaj nowe miejsce" (kraj + miasto + nazwa) - wejscie z pierwszego kafelka siatki.
   const [addOpen, setAddOpen] = useState(false);
+  // Zapis miejsca z wizytowki (dolozenie do kuratorskiej listy) - bookmark na hero + CTA na dole.
+  const [savePlace, setSavePlace] = useState<SavePlaceInput | null>(null);
+  const [detailRaw, setDetailRaw] = useState<SavedPlace | null>(null);
 
   const invalidateSaved = () => {
     queryClient.invalidateQueries({ queryKey: ["saved-places", user?.id] });
@@ -58,7 +62,7 @@ export function SavedPlacesGrid() {
     queryFn: () => fetchSavedPlaces(user!.id),
   });
 
-  const openDetail = (p: SavedPlace) => setDetailPin({
+  const openDetail = (p: SavedPlace) => { setDetailRaw(p); setDetailPin({
     skip: !p.place_id,
     city: p.city ?? "",
     place: {
@@ -69,7 +73,7 @@ export function SavedPlacesGrid() {
       // "Od użytkowników" w wizytowce - nie udaje opisu miejsca (zgloszenie Nat 2026-08-28).
       rating: p.rating ?? 0, photo_url: resolveStored(p.photo_url) ?? "", vibe_tags: [], description: "",
     } as MockPlace,
-  });
+  }); };
 
   if (isLoading) return <div className="flex justify-center py-12"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>;
 
@@ -122,7 +126,14 @@ export function SavedPlacesGrid() {
         place={detailPin?.place ?? null}
         city={detailPin?.city ?? ""}
         skipGoogleFetch={detailPin?.skip ?? false}
+        onLike={user && detailRaw ? () => setSavePlace({
+          place_name: detailRaw.place_name, category: detailRaw.category, address: detailRaw.address,
+          city: detailRaw.city, latitude: detailRaw.latitude, longitude: detailRaw.longitude,
+          photo_url: detailRaw.photo_url, place_id: detailRaw.place_id,
+        }) : undefined}
+        saved
       />
+      <SavePlaceSheet open={!!savePlace} onOpenChange={(o) => { if (!o) setSavePlace(null); }} place={savePlace} city={detailRaw?.city ?? ""} />
     </>
   );
 }
