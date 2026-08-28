@@ -272,6 +272,10 @@ const BottomNav = () => {
           {isNative && (
             <NavLink
               to="/eksploruj"
+            // replace: zakladki dolnego paska NIE odkladaja historii (zachowanie jak w natywnym
+            // tab barze). Bez tego kazde przelaczenie Eksploruj/Profil dokladalo wpis i "wstecz"
+            // krecil sie po zakladkach zamiast wracac do poprzedniego ekranu (zgloszenie Nat).
+            replace
               end={false}
               className="w-16 flex flex-col items-center justify-center gap-1 text-foreground transition-colors"
               activeClassName="text-foreground"
@@ -290,6 +294,10 @@ const BottomNav = () => {
           {!PLANNING_DISABLED && (
             <NavLink
               to="/home"
+            // replace: zakladki dolnego paska NIE odkladaja historii (zachowanie jak w natywnym
+            // tab barze). Bez tego kazde przelaczenie Eksploruj/Profil dokladalo wpis i "wstecz"
+            // krecil sie po zakladkach zamiast wracac do poprzedniego ekranu (zgloszenie Nat).
+            replace
               end
               className="w-16 flex flex-col items-center justify-center gap-1 text-foreground transition-colors"
               activeClassName="text-foreground"
@@ -331,6 +339,10 @@ const BottomNav = () => {
           {/* Profil */}
           <NavLink
             to="/moj-profil"
+          // replace: zakladki dolnego paska NIE odkladaja historii (zachowanie jak w natywnym
+          // tab barze). Bez tego kazde przelaczenie Eksploruj/Profil dokladalo wpis i "wstecz"
+          // krecil sie po zakladkach zamiast wracac do poprzedniego ekranu (zgloszenie Nat).
+          replace
             end={false}
             className="w-16 flex flex-col items-center justify-center gap-1 text-foreground transition-colors"
             activeClassName="text-foreground"

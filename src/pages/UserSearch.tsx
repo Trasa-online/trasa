@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { avatarSrc } from "@/lib/avatar";
 import { useNavigate } from "react-router-dom";
+import { goBackOr } from "@/hooks/useGoBack";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -62,7 +63,7 @@ export default function UserSearch() {
       {/* Header */}
       <div className="flex items-center gap-3 px-4 pt-safe-4 pb-3 border-b border-border/40 sticky top-0 bg-background z-10">
         <button
-          onClick={() => navigate(-1)}
+          onClick={() => goBackOr(navigate, "/moj-profil")}
           className="h-9 w-9 flex items-center justify-center rounded-2xl text-foreground"
         >
           <ArrowLeft className="h-5 w-5" />

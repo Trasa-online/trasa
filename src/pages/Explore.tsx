@@ -2,6 +2,7 @@ import { useMemo, useState, useEffect } from "react";
 import { useDragToDismiss } from "@/hooks/useDragToDismiss";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useLocation } from "react-router-dom";
+import { goBackOr } from "@/hooks/useGoBack";
 import { PullToRefresh } from "@/components/PullToRefresh";
 import { MapPin, Heart, Trash2, ArrowRight, ArrowLeft, Pencil, ListChecks, ChevronDown, ChevronRight, Check, Search, X, Layers, Compass, Bookmark, Plus } from "lucide-react";
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
@@ -826,7 +827,7 @@ const Explore = () => {
         ) : myCollections ? (
           <>
             <button
-              onClick={() => { if (window.history.state?.idx > 0) navigate(-1); else navigate("/moj-profil"); }}
+              onClick={() => goBackOr(navigate, "/moj-profil")}
               className="h-9 w-9 -ml-1 flex items-center justify-center text-foreground shrink-0"
               aria-label={t("explore.back_aria")}
             >

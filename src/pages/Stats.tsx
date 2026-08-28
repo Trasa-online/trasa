@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import { goBackOr } from "@/hooks/useGoBack";
 import { ArrowLeft, Bookmark, Eye } from "lucide-react";
 import type { ReactNode } from "react";
 import { useMyRouteStats } from "@/hooks/useRouteStats";
@@ -26,7 +27,7 @@ export default function Stats() {
     <div className="min-h-[100dvh] bg-background max-w-lg mx-auto flex flex-col">
       {/* Naglowek z cofnieciem */}
       <div className="flex items-center gap-3 px-4 pt-safe-4 pb-3 border-b border-border/20 shrink-0">
-        <button onClick={() => navigate(-1)} aria-label="Wróć" className="h-9 w-9 -ml-1 flex items-center justify-center rounded-full text-foreground active:scale-90 transition-transform">
+        <button onClick={() => goBackOr(navigate, "/moj-profil")} aria-label="Wróć" className="h-9 w-9 -ml-1 flex items-center justify-center rounded-full text-foreground active:scale-90 transition-transform">
           <ArrowLeft className="h-5 w-5" />
         </button>
         <h1 className="text-lg font-bold">Statystyki</h1>

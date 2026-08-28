@@ -3,6 +3,7 @@ import { useDragToDismiss } from "@/hooks/useDragToDismiss";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useLocation } from "react-router-dom";
+import { goBackOr } from "@/hooks/useGoBack";
 import { ArrowLeft, Search, Plus, X, ChevronDown, Calendar as CalendarIcon, List, GalleryHorizontalEnd, Loader2, ArrowRight, Trash2, Maximize2, GripVertical, UserPlus, Check } from "lucide-react";
 import InviteFriendsSheet from "@/components/route/InviteFriendsSheet";
 import { inviteUsersToRoute } from "@/lib/groupInvite";
@@ -370,7 +371,7 @@ export default function ComposeWyjazd() {
   // Cofniecie: gdy sa juz miejsca w trasie -> zapytaj czy zapisac do roboczych. Inaczej wyjdz.
   // Wyjscie z tworzenia do ekranu glownego. Historia jest plytka (nawigacje wewnatrz
   // tworzenia = replace), wiec navigate(-1) wraca do eksploracji; fallback gdyby brak historii.
-  const exitCreate = () => { clearSoft(); if (window.history.length > 1) navigate(-1); else navigate("/eksploruj"); };
+  const exitCreate = () => { clearSoft(); goBackOr(navigate, "/eksploruj"); };
   const handleBack = () => {
     if (items.length > 0 && !creating) setShowBackConfirm(true);
     else exitCreate();

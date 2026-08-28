@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { goBackOr } from "@/hooks/useGoBack";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -146,7 +147,7 @@ export default function StartWyjazd() {
     <div className="flex flex-col h-[100dvh] bg-background max-w-lg mx-auto">
       {/* Header */}
       <div className="flex items-center gap-2 px-4 pt-safe-4 pb-3 shrink-0">
-        <button onClick={() => navigate(-1)} aria-label="Wróć" className="h-9 w-9 flex items-center justify-center -ml-1 shrink-0 text-foreground active:scale-90 transition-transform">
+        <button onClick={() => goBackOr(navigate, "/eksploruj")} aria-label="Wróć" className="h-9 w-9 flex items-center justify-center -ml-1 shrink-0 text-foreground active:scale-90 transition-transform">
           <ArrowLeft className="h-5 w-5" />
         </button>
         <span className="flex-1 font-bold text-base">Nowy wyjazd</span>

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { avatarSrc } from "@/lib/avatar";
 import { useNavigate, Link } from "react-router-dom";
+import { goBackOr } from "@/hooks/useGoBack";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { getConsent, grantConsent, denyConsent } from "@/lib/consent";
@@ -655,7 +656,7 @@ const Settings = () => {
     <div className="pb-[calc(3rem+env(safe-area-inset-bottom,0px))]">
       <div className="flex items-center gap-2 px-2 pt-2 pb-1">
         <button
-          onClick={() => navigate(-1)}
+          onClick={() => goBackOr(navigate, "/moj-profil")}
           className="h-9 w-9 flex items-center justify-center rounded-full text-muted-foreground active:bg-muted transition-colors"
         >
           <ArrowLeft className="h-5 w-5" />

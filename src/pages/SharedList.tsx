@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { goBackOr } from "@/hooks/useGoBack";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useSwipeNav } from "@/hooks/useSwipeNav";
@@ -142,7 +143,7 @@ export default function SharedList() {
       queryClient.invalidateQueries({ queryKey: ["profile-list-feed", user.id] });
       toast.success("Usunięto listę.");
       setAskDelete(false);
-      if (window.history.length > 1) navigate(-1); else navigate("/moj-profil");
+      goBackOr(navigate, "/moj-profil");
     } catch (e: any) {
       toast.error("Nie udało się usunąć listy.");
       console.error("[SharedList] delete failed:", e?.message ?? e);
@@ -431,7 +432,7 @@ export default function SharedList() {
       {/* Staly TopBar (naglowek nad obszarem scrolla): wstecz + autor + miasto + liczba miejsc + serce */}
       <div className="shrink-0 bg-background px-5 pb-2.5 border-b border-border/40" style={{ paddingTop: "max(12px, env(safe-area-inset-top, 12px))" }}>
         <div className="flex items-center gap-2 text-sm">
-            <button onClick={() => { if (window.history.length > 1) navigate(-1); else navigate("/eksploruj"); }} aria-label="Wróć"
+            <button onClick={() => goBackOr(navigate, "/eksploruj")} aria-label="Wróć"
               className="h-9 w-9 -ml-2 shrink-0 rounded-full flex items-center justify-center active:scale-90 transition-transform">
               <ArrowLeft className="h-5 w-5 text-foreground" />
             </button>

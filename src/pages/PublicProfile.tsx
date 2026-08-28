@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useParams, useNavigate } from "react-router-dom";
+import { goBackOr } from "@/hooks/useGoBack";
 import { avatarSrc } from "@/lib/avatar";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -246,7 +247,7 @@ export default function PublicProfile() {
   if (!profile) return (
     <div className="flex flex-col items-center justify-center h-[100dvh] gap-3">
       <p className="text-muted-foreground">{t("public.not_found")}</p>
-      <button onClick={() => window.history.state?.idx > 0 ? navigate(-1) : navigate("/")} className="text-orange-600 font-semibold text-sm">{t("public.back")}</button>
+      <button onClick={() => goBackOr(navigate, "/eksploruj")} className="text-orange-600 font-semibold text-sm">{t("public.back")}</button>
     </div>
   );
 
@@ -257,7 +258,7 @@ export default function PublicProfile() {
     <div className="flex flex-col h-[100dvh] bg-background">
       {/* Header: powrot + @username */}
       <div className="flex items-center gap-3 px-4 pt-safe-4 pb-3 border-b border-border/40">
-        <button onClick={() => window.history.state?.idx > 0 ? navigate(-1) : navigate("/")} className="h-9 w-9 flex items-center justify-center text-foreground active:scale-90 transition-transform">
+        <button onClick={() => goBackOr(navigate, "/eksploruj")} className="h-9 w-9 flex items-center justify-center text-foreground active:scale-90 transition-transform">
           <ArrowLeft className="h-5 w-5" />
         </button>
         <h1 className="flex-1 text-base font-bold text-center truncate">@{profile.username}</h1>

@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { goBackOr } from "@/hooks/useGoBack";
 import { useTranslation } from "react-i18next";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Search, Compass, Heart, Loader2, Check, MapPin, ChevronLeft } from "lucide-react";
@@ -225,7 +226,7 @@ const AddPlaceToTripInner = () => {
       notify.success(
         rows.length === 1 ? t("add_place.added_one") : t("add_place.added_many", { count: rows.length }),
       );
-      navigate(-1);
+      goBackOr(navigate, "/moj-profil?tab=wyjazdy");
     } catch (e: any) {
       console.error("[AddPlaceToTrip] add selected failed:", e?.message ?? e);
       notify.error(t("add_place.add_error"));
@@ -238,7 +239,7 @@ const AddPlaceToTripInner = () => {
   const back = () => {
     if (step === "category" && subCategoryId) { setSubCategoryId(null); setMainCategoryId(null); return; }
     if (step !== "choose") { setStep("choose"); setQuery(""); setSearchResults([]); return; }
-    navigate(-1);
+    goBackOr(navigate, "/moj-profil?tab=wyjazdy");
   };
 
   // ── Sticky CTA "Dodaj wybrane (N)" ──

@@ -1,5 +1,6 @@
 import { useRef, useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { goBackOr } from "@/hooks/useGoBack";
 import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import CreateHeader from "@/components/create/CreateHeader";
@@ -70,7 +71,7 @@ export default function CountryCityPicker() {
   const onCountry = (c: string) => { setCountry(c); setCyi(defaultCityIndex(citiesForCountry(c))); };
   const city = cities[cyi] ?? cities[0];
 
-  const back = () => { if (window.history.length > 1) navigate(-1); else navigate("/eksploruj"); };
+  const back = () => goBackOr(navigate, "/eksploruj");
   // Tryb docelowy: domyslnie trasa (toggle Trasy|Listy na formie). Gdy wejscie z guzika
   // "Nowa lista" (profil) -> state.mode="listy" -> picker prowadzi wprost na forme listy.
   const mode = (location.state as any)?.mode === "listy" ? "listy" : "trasy";

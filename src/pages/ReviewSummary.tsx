@@ -8,6 +8,7 @@ import { haptics } from "@/hooks/useHaptics";
 import { useSwipeNav } from "@/hooks/useSwipeNav";
 import { useDragToDismiss } from "@/hooks/useDragToDismiss";
 import { useNavigate, useSearchParams, Navigate } from "react-router-dom";
+import { goBackOr } from "@/hooks/useGoBack";
 import { useAuth } from "@/hooks/useAuth";
 import { placeKeyOf, fetchPlacePhotosForKeys, pickPlaceCover, fetchPhotoHashes, sha256OfFile, upsertPhotoHash } from "@/lib/placePhotoSocial";
 import { supabase } from "@/integrations/supabase/client";
@@ -2606,7 +2607,7 @@ const ReviewSummary = () => {
               haptics.light();
               if (step === 3) { setStep(2); return; }
               if (editingStepper) { setEditingStepper(false); setSummaryTab("plan"); return; }
-              navigate(-1);
+              goBackOr(navigate, "/moj-profil?tab=wyjazdy");
             }}
             aria-label={t("cta.back")}
             className="h-10 w-10 rounded-2xl bg-secondary flex items-center justify-center active:scale-95 transition-transform"
@@ -3070,7 +3071,7 @@ const ReviewSummary = () => {
                 haptics.light();
                 if (step === 3) { setStep(2); return; }
                 if (editingStepper) { setEditingStepper(false); setSummaryTab("plan"); return; }
-                navigate(-1);
+                goBackOr(navigate, "/moj-profil?tab=wyjazdy");
               }}
               className="px-5 py-3.5 rounded-2xl border border-border text-sm font-semibold text-foreground active:scale-[0.98] transition-transform shrink-0"
             >

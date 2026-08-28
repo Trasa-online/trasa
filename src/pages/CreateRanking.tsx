@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { useDragToDismiss } from "@/hooks/useDragToDismiss";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams, useSearchParams, useLocation } from "react-router-dom";
+import { goBackOr } from "@/hooks/useGoBack";
 import { ArrowLeft, Search, Plus, X, Loader2, ChevronRight, ChevronDown, List, GalleryHorizontalEnd, GripVertical } from "lucide-react";
 import { Reorder, useDragControls } from "framer-motion";
 import { haptics } from "@/hooks/useHaptics";
@@ -659,11 +660,11 @@ const CreateRanking = () => {
               replace: true,
             });
           }}
-          onBack={() => (window.history.length > 1 ? navigate(-1) : navigate("/eksploruj"))}
+          onBack={() => goBackOr(navigate, "/eksploruj")}
         />
       ) : (
         <div className="flex items-center gap-2 px-4 pt-safe-4 pb-3 border-b border-border/20 shrink-0">
-          <button onClick={() => (step === 2 ? setStep(1) : (window.history.length > 1 ? navigate(-1) : navigate("/eksploruj")))} aria-label={t("header.back")} className="h-9 w-9 flex items-center justify-center -ml-1 shrink-0 text-foreground">
+          <button onClick={() => (step === 2 ? setStep(1) : goBackOr(navigate, "/eksploruj"))} aria-label={t("header.back")} className="h-9 w-9 flex items-center justify-center -ml-1 shrink-0 text-foreground">
             <ArrowLeft className="h-5 w-5" />
           </button>
           <span className="flex-1 font-bold text-base truncate">{step === 2 ? t("header.notes_and_map") : editId ? t("header.edit_collection") : t("header.new_collection")}</span>

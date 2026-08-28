@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link, useSearchParams } from "react-router-dom";
+import { goBackOr } from "@/hooks/useGoBack";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -497,8 +498,7 @@ const Auth = () => {
   if (businessMode) {
     const goBack = () => {
       setBizDone(false);
-      if (window.history.length > 1) navigate(-1);
-      else navigate("/dla-firm");
+      goBackOr(navigate, "/dla-firm");
     };
     const inputCls = "bg-white border-slate-200 text-slate-900 placeholder:text-slate-400 focus-visible:ring-blue-500";
     return (

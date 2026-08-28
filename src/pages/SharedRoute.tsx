@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { useParams, useNavigate } from "react-router-dom";
+import { goBackOr } from "@/hooks/useGoBack";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { fetchRouteLike, toggleRouteLike, type LikeState } from "@/lib/likes";
@@ -149,6 +150,8 @@ export default function SharedRoute() {
   const [viewerIndex, setViewerIndex] = useState<number | null>(null); // fullscreen podglad zdjecia galerii
   // Podglad zdjec DODANYCH DO MIEJSCA (klik w miniaturke w wierszu) - osobny od galerii wyjazdu.
   const [pinPhotoViewer, setPinPhotoViewer] = useState<{ urls: string[]; idx: number } | null>(null);
+  // Miejsce czekajace na potwierdzenie usuniecia (etap "w trakcie" / wspomnienie).
+  const [confirmDeletePin, setConfirmDeletePin] = useState<any | null>(null);
   const galleryPhotosCount = useRef(0);
   // Gest natywny: swipe w bok przelacza zakladki (kolejnosc = kolejnosc ikon nad trescia).
   // Etap czytamy leniwie z route: w propozycjach nie ma Galerii (tylko Miejsca | Mapa).
@@ -618,7 +621,14 @@ export default function SharedRoute() {
   };
 
   // #4: wlasciciel usuwa miejsce z trasy (kosz w wierszu). Toast + "Cofnij" (re-insert).
+  // Usuniecie miejsca: w PROPOZYCJACH tanie (toast + Cofnij), ale od etapu "w trakcie" miejsce
+  // niesie juz notki i zdjecia uczestnikow - tam pytamy o potwierdzenie (zgloszenie Nat 2026-08-29).
   const handleDeletePin = async (pin: any) => {
+    if (stage !== "planning") { haptics.warning(); setConfirmDeletePin(pin); return; }
+    await deletePinNow(pin);
+  };
+
+  const deletePinNow = async (pin: any) => {
     const { id: _id, created_at, updated_at, ...rest } = pin;
     const { error } = await (supabase as any).from("pins").delete().eq("id", pin.id);
     if (error) { toast.error("Nie udało się usunąć miejsca"); return; }
@@ -689,7 +699,7 @@ export default function SharedRoute() {
       if (error) throw new Error(error.message);
       toast.success("Usunięto wyjazd.");
       setAskDelete(false);
-      if (window.history.length > 1) navigate(-1); else navigate("/moj-profil");
+      goBackOr(navigate, "/moj-profil");
     } catch (e: any) {
       toast.error("Nie udało się usunąć wyjazdu.");
       console.error("[SharedRoute] delete failed:", e?.message ?? e);
@@ -947,7 +957,7 @@ export default function SharedRoute() {
       {/* Staly TopBar (naglowek nad obszarem scrolla): wstecz + autor + uczestnicy + miasto + liczba miejsc + serce */}
       <div className="shrink-0 bg-background px-5 pb-2.5 border-b border-border/40" style={{ paddingTop: "max(12px, env(safe-area-inset-top, 12px))" }}>
         <div className="flex items-center gap-2 text-sm">
-            <button onClick={() => { if (window.history.length > 1) navigate(-1); else navigate("/eksploruj"); }} aria-label="Wróć"
+            <button onClick={() => goBackOr(navigate, "/eksploruj")} aria-label="Wróć"
               className="h-9 w-9 -ml-2 shrink-0 rounded-full flex items-center justify-center active:scale-90 transition-transform">
               <ArrowLeft className="h-5 w-5 text-foreground" />
             </button>
@@ -1382,6 +1392,36 @@ export default function SharedRoute() {
       )}
 
       {/* Potwierdzenie usuniecia wyjazdu - nieodwracalne. */}
+      {/* Potwierdzenie usuniecia MIEJSCA (od etapu "w trakcie") - pokazuje, ile tresci przepadnie. */}
+      <AlertDialog open={!!confirmDeletePin} onOpenChange={(o) => { if (!o) setConfirmDeletePin(null); }}>
+        <AlertDialogContent className="rounded-3xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>{`Usunąć „${confirmDeletePin?.place_name ?? "to miejsce"}" z wyjazdu?`}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {(() => {
+                const notes = (notesMap.get(placeNoteKey(confirmDeletePin?.place_name ?? "")) ?? []).length;
+                const photos = (photosMap.get(pinPhotoKey(confirmDeletePin?.place_name ?? "")) ?? []).length;
+                const parts: string[] = [];
+                if (notes) parts.push(`${notes} ${notes === 1 ? "notkę" : notes < 5 ? "notki" : "notek"}`);
+                if (photos) parts.push(`${photos} ${photos === 1 ? "zdjęcie" : photos < 5 ? "zdjęcia" : "zdjęć"}`);
+                return parts.length
+                  ? `Razem z miejscem znikną ${parts.join(" i ")} dodane przez uczestników. Tego nie da się cofnąć.`
+                  : "Miejsce zniknie z wyjazdu u wszystkich uczestników.";
+              })()}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Anuluj</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => { const pin = confirmDeletePin; setConfirmDeletePin(null); if (pin) void deletePinNow(pin); }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Usuń miejsce
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <AlertDialog open={askDelete} onOpenChange={(o) => { if (!o && !deleting) setAskDelete(false); }}>
         <AlertDialogContent className="rounded-3xl">
           <AlertDialogHeader>

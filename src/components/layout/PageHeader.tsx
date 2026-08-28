@@ -1,5 +1,6 @@
 import { ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
+import { goBackOr } from "@/hooks/useGoBack";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -8,6 +9,8 @@ interface PageHeaderProps {
   showBack?: boolean;
   rightAction?: ReactNode;
   onBackClick?: () => void;
+  /** Ekran zapasowy, gdy nie ma dokad wracac (wejscie z deep-linka / powiadomienia). */
+  backFallback?: string;
 }
 
 export const PageHeader = ({
@@ -15,20 +18,13 @@ export const PageHeader = ({
   showBack = false,
   rightAction,
   onBackClick,
+  backFallback = "/eksploruj",
 }: PageHeaderProps) => {
   const navigate = useNavigate();
 
   const handleBack = () => {
-    if (onBackClick) {
-      onBackClick();
-    } else {
-      const historyIdx = window.history.state?.idx;
-      if (typeof historyIdx === "number" && historyIdx > 0) {
-        navigate(-1);
-      } else {
-        navigate("/", { replace: true });
-      }
-    }
+    if (onBackClick) onBackClick();
+    else goBackOr(navigate, backFallback);
   };
 
   return (
