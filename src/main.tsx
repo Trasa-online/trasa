@@ -2,30 +2,36 @@ import { StrictMode, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
-import { isWeb } from "@/lib/platform";
+import { isWeb, isNative } from "@/lib/platform";
 import App from "./App.tsx";
 import "./index.css";
 import "./i18n";
-import { getConsent } from "@/lib/consent";
+import { initClarityOnBoot } from "@/lib/consent";
 
-// Fire Clarity immediately for users who already granted consent
-if (getConsent() === "granted" && typeof (window as any)._clarityInit === "function") {
-  (window as any)._clarityInit();
-}
+// Clarity dla userow, ktorzy juz wczesniej wyrazili zgode. Przez initClarityOnBoot, bo
+// bezposrednie wywolanie _clarityInit() omijalo DWIE reguly: wykluczenie kont wewnetrznych
+// oraz brak nagrywania w aplikacji natywnej (bateria).
+void initClarityOnBoot();
 
 // ─── Sentry error tracking (lazy-loaded to keep main bundle slim) ─────────────
 if (import.meta.env.PROD) {
   import("@sentry/react").then((Sentry) => {
+    // BATERIA: Session Replay (rrweb) przy replaysOnErrorSampleRate > 0 nagrywa CIAGLE do bufora
+    // przez cala sesje, zeby miec co wyslac przy bledzie - w natywce to godziny obserwowania DOM.
+    // Na native zostawiamy same bledy (to po nie tu jestesmy) i mniej probek tracingu; replay i
+    // pelny tracing tylko na webie, gdzie sesje sa krotkie i urzadzenie jest podlaczone do pradu.
     Sentry.init({
       dsn: "https://043934f5cfe39c7f2ea9fd2da11be1ad@o4511209012264960.ingest.de.sentry.io/4511209017704528",
       environment: import.meta.env.MODE,
-      integrations: [
-        Sentry.browserTracingIntegration(),
-        Sentry.replayIntegration({ maskAllText: false, blockAllMedia: false }),
-      ],
-      tracesSampleRate: 0.1,
+      integrations: isNative
+        ? []
+        : [
+            Sentry.browserTracingIntegration(),
+            Sentry.replayIntegration({ maskAllText: false, blockAllMedia: false }),
+          ],
+      tracesSampleRate: isNative ? 0 : 0.1,
       replaysSessionSampleRate: 0,
-      replaysOnErrorSampleRate: 0.1,
+      replaysOnErrorSampleRate: isNative ? 0 : 0.1,
     });
   });
 }

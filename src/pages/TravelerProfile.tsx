@@ -268,7 +268,8 @@ const TravelerProfile = () => {
   const { data: unreadNotifs = 0 } = useQuery({
     queryKey: ["notifications-unread", user?.id],
     enabled: !!user?.id,
-    refetchInterval: 30_000,
+    // BATERIA: realtime + resume wystarcza, poll to tylko rzadki fallback (patrz TopBar).
+    refetchInterval: 300_000,
     queryFn: async () => {
       if (!user) return 0;
       const { count } = await supabase.from("notifications").select("id", { count: "exact", head: true })

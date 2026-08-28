@@ -85,13 +85,17 @@ export default function NotificationsDrawer({ open, onClose, userId }: Props) {
         actor: profileMap[n.actor_id] ?? null,
       })) as Notification[];
     },
-    enabled: !!userId,
-    refetchInterval: 30_000,
+    // BATERIA: drawer jest zamontowany na wiekszosci ekranow (TopBar/HomeHeaderActions/profil),
+    // a zapytanie pobiera 50 powiadomien + profile autorow. Wczesniej chodzilo co 30s NAWET gdy
+    // arkusz byl zamkniety (nikt tego nie widzial) - kilkaset zbednych zapytan na godzine.
+    // Teraz: dane tylko gdy arkusz otwarty; licznik na dzwonku ma wlasne (tanie) zapytanie.
+    enabled: !!userId && open,
   });
 
-  // Realtime: refetch instantly when new notification arrives
+  // Realtime: refetch instantly when new notification arrives. Tylko przy otwartym arkuszu -
+  // licznik nieprzeczytanych ma wlasna subskrypcje (TopBar / HomeHeaderActions).
   useEffect(() => {
-    if (!userId) return;
+    if (!userId || !open) return;
     const channel = supabase
       .channel(`notif-drawer-${userId}`)
       .on("postgres_changes", {
@@ -105,7 +109,7 @@ export default function NotificationsDrawer({ open, onClose, userId }: Props) {
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [userId]);
+  }, [userId, open]);
 
   const deleteOneMutation = useMutation({
     mutationFn: async (id: string) => {

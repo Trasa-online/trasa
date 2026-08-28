@@ -28,7 +28,10 @@ const TopBar = (_props: { onOrbClick?: () => void }) => {
       return count ?? 0;
     },
     enabled: !!user,
-    refetchInterval: 30_000,
+    // BATERIA: licznik odswieza realtime (kanal ponizej) + resume aplikacji. Poll co 30s byl
+    // czystym marnotrawstwem radia (2 komponenty x 120 zapytan/h); zostaje rzadki fallback
+    // na wypadek zerwanej subskrypcji realtime.
+    refetchInterval: 300_000,
   });
 
   // Realtime: instant badge update on new notification
