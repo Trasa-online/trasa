@@ -11,7 +11,7 @@ import { notify } from "@/lib/notify";
 import { sendClientPush, getCurrentUserName } from "@/lib/clientPush";
 import { format } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
-import { MapPin, ArrowLeft, Sparkles, ChevronRight, ChevronLeft, ChevronDown, Bookmark, Calendar as CalendarIcon, Image as ImageIcon, Maximize2, X, Building2, Pencil, Trash2, Heart, Share2, Plus, Map as MapIcon, Loader2, Star, GripVertical, Check, Flag, Camera, UserPlus, ThumbsUp, MessageCircle } from "lucide-react";
+import { MapPin, ArrowLeft, Sparkles, ChevronRight, ChevronLeft, ChevronDown, Bookmark, Calendar as CalendarIcon, Image as ImageIcon, Maximize2, X, Building2, Pencil, Trash2, Heart, Share2, Plus, Map as MapIcon, Loader2, Star, GripVertical, Check, Flag, Camera, ThumbsUp, MessageCircle } from "lucide-react";
 import { MAIN_CATEGORIES, subcategoryPluralLabel } from "@/lib/categories";
 import { ROUTE_TAGS, ROUTE_TAGS_VISIBLE, PLACE_VERDICT_TAGS } from "@/lib/routeTags";
 import { publishTrip } from "@/lib/publishTrip";
@@ -33,9 +33,7 @@ import PhotoViewer from "@/components/route/PhotoViewer";
 import PlaceNoteEditor from "@/components/route/PlaceNoteEditor";
 import { EmptyPlacesState } from "@/components/route/EmptyPlacesState";
 import AddPlaceSheet from "@/components/route/AddPlaceSheet";
-import InviteFriendsSheet from "@/components/route/InviteFriendsSheet";
 import TripChatSheet from "@/components/route/TripChatSheet";
-import { inviteUsersToRoute } from "@/lib/groupInvite";
 import { useShare } from "@/hooks/useShare";
 import { useUnsavePlace } from "@/hooks/useUnsavePlace";
 import { buildShareUrl } from "@/lib/shareUrl";
@@ -187,7 +185,6 @@ export default function SharedRoute() {
   // Etap W TRAKCIE: zdjecia per-miejsce (wszyscy uczestnicy). Wlasna notka -> PlaceNoteEditor
   // (sam trzyma draft + debounce), zapis przez saveMyNote.
   const [uploadingPin, setUploadingPin] = useState<string | null>(null);
-  const [inviteOpen, setInviteOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   // User pisze notke -> chowamy czat i dolne CTA (zaslanialy pole i klawiature).
   const [noteEditing, setNoteEditing] = useState(false);
@@ -1143,10 +1140,9 @@ export default function SharedRoute() {
             <h1 className="flex-1 text-2xl font-black text-foreground leading-tight">{route.title || cityLabel}</h1>
             {isOwner && (
               <div className="shrink-0 flex items-center gap-2">
-                {/* Dodaj uczestnikow do wyjazdu (arkusz z wyszukiwarka userow) - etap planowania/w trakcie. */}
-                {(stage === "planning" || stage === "ongoing") && (
-                  <button onClick={() => setInviteOpen(true)} aria-label="Dodaj uczestników" className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center active:scale-90 transition-transform"><UserPlus className="h-4 w-4 text-foreground" /></button>
-                )}
+                {/* Zapraszanie uczestnikow USUNIETE z widoku wyjazdu (decyzja Nat 2026-08-30):
+                    osoby wybiera sie WYLACZNIE przy tworzeniu wyjazdu. Skladu nie zmienia sie
+                    ani w trakcie, ani po publikacji. */}
                 <button onClick={handleShare} aria-label="Udostępnij" className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center active:scale-90 transition-transform"><Share2 className="h-4 w-4 text-foreground" /></button>
                 {/* Olowek TYLKO dla opublikowanego wspomnienia. W propozycjach i "w trakcie" caly
                     ten widok JEST edycja (miejsca, notki, zdjecia, opis, tagi) - osobny tryb
@@ -1415,20 +1411,6 @@ export default function SharedRoute() {
             google_place_id: p.google_place_id ?? null, rating: p.rating ?? null,
           }))}
           onAdd={handleAddPlaces}
-          onInvitePeople={isOwner ? () => setInviteOpen(true) : undefined}
-        />
-      )}
-      {isOwner && (
-        <InviteFriendsSheet
-          open={inviteOpen}
-          onOpenChange={setInviteOpen}
-          route={{ id: route.id, city: route.city ?? null, title: route.title ?? null, group_session_id: (route as any).group_session_id ?? null }}
-          existingMemberIds={[route.user_id, ...(groupParticipants as any[]).map((p) => p.id)]}
-          onInvited={() => {
-            // Odswiez uczestnikow + trase (moglo powstac group_session_id) -> zaproszeni od razu "Dodano".
-            queryClient.invalidateQueries({ queryKey: ["shared-route", id] });
-            queryClient.invalidateQueries({ queryKey: ["shared-route-participants"] });
-          }}
         />
       )}
 

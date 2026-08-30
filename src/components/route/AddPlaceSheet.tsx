@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { X, Plus, Check, Users, ChevronRight, ChevronDown, Search, Loader2 } from "lucide-react";
+import { X, Plus, Check, ChevronRight, ChevronDown, Search, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useAuth } from "@/hooks/useAuth";
@@ -38,14 +38,13 @@ interface Props {
   city?: string | null;                 // kontekst miasta do wyszukiwarki Google
   existingPlaces?: PlaceForList[];      // miejsca JUŻ w tej trasie/liście - pokazane u góry (info)
   onAdd: (places: PlaceForList[]) => Promise<void> | void;   // zapis (pins.insert / addPlaceToList)
-  onInvitePeople?: () => void;          // trasa: otwiera zaproszenia; brak = ukryty wiersz (listy)
 }
 
 // Drawer "Dodaj nowe miejsce" (redesign 2026-08-21). Dodaje miejsca do ISTNIEJACEJ trasy/listy.
 // Domyslnie: siatka Twoich zapisanych + kafelek "Dodaj nowe miejsce" (fokus na wyszukiwarke).
 // Wpisanie frazy (>=2 znaki) -> Google Places (proxy) -> klik wyniku = nowy zaznaczony kafelek +
 // odblokowanie "Dalej". "Dalej" zapisuje wybrane miejsca (onAdd).
-export default function AddPlaceSheet({ open, onClose, city, existingPlaces, onAdd, onInvitePeople }: Props) {
+export default function AddPlaceSheet({ open, onClose, city, existingPlaces, onAdd }: Props) {
   const { user } = useAuth();
   const [selected, setSelected] = useState<PlaceForList[]>([]);
   const [manual, setManual] = useState<PlaceForList[]>([]);   // dodane z Google (poza zapisanymi)
@@ -242,17 +241,8 @@ export default function AddPlaceSheet({ open, onClose, city, existingPlaces, onA
           </button>
         </div>
 
-        {/* Dodaj osoby (trasa) */}
-        {onInvitePeople && (
-          <button onClick={onInvitePeople} className="shrink-0 w-full flex items-center gap-4 px-5 py-3 text-left active:bg-muted/50 transition-colors">
-            <Users className="h-6 w-6 text-foreground shrink-0" strokeWidth={1.8} />
-            <div className="flex-1 min-w-0">
-              <p className="text-[15px] font-medium text-foreground">{`Dodaj osoby do${NBSP}tego wyjazdu`}</p>
-              <p className="text-[13px] text-muted-foreground">{`Twórz wyjazdy razem z${NBSP}innymi`}</p>
-            </div>
-            <ChevronRight className="h-5 w-5 text-muted-foreground shrink-0" />
-          </button>
-        )}
+        {/* Wiersz "Dodaj osoby do tego wyjazdu" USUNIETY 2026-08-30 (decyzja Nat): sklad
+            uczestnikow ustala sie WYLACZNIE przy tworzeniu wyjazdu. */}
 
         {/* Wyszukiwarka */}
         <div className="px-5 pt-1 pb-2 shrink-0">
