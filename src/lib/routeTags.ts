@@ -66,3 +66,13 @@ export function placeTagsForCategory(category?: string | null): string[] {
 // Ile tagów pokazać przed rozwinięciem "Pokaż więcej".
 export const ROUTE_TAGS_VISIBLE = 6;
 export const PLACE_TAGS_VISIBLE = 5;
+
+// Werdykt o miejscu - 4 tagi "czy warto", wybierane JEDNYM tapnieciem pod notkami w widoku
+// wyjazdu "w trakcie" (prosba Nat 2026-08-30). Trafiaja do pins.tags, tak jak reszta tagow
+// miejsca, wiec widac je pozniej we wspomnieniu i w eksploracji.
+export const PLACE_VERDICT_TAGS = [
+  "Musisz odwiedzić!",
+  "Warto odwiedzić",
+  "Nie warto odwiedzać",
+  "Przy okazji",
+] as const;

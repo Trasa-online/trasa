@@ -1149,8 +1149,9 @@ const ReviewSummary = () => {
     // Koniec steppera = koniec dokumentowania. Wyjazd JUZ opublikowany (edycja wspomnienia) ->
     // wracamy do jego docelowego widoku. Roboczy -> pytamy o publikacje i to ona konczy flow;
     // nie ma juz posredniego "podsumowania z okladka" (zgloszenie Nat 2026-08-30).
-    if (isMemory) { navigate(`/route/${routeId}`, { replace: true }); return; }
-    setConfirmFinishOpen(true);
+    // Publikacja mieszka teraz w widoku wyjazdu ("Opublikuj" w /route/:id) - stepper tylko
+    // zapisuje i tam odsyla (2026-08-30).
+    navigate(`/route/${routeId}`, { replace: true });
   };
 
   // "Zakoncz wyjazd" = SWIADOMA PUBLIKACJA (jedyne miejsce ustawiajace status='published').
@@ -3050,7 +3051,11 @@ const ReviewSummary = () => {
       {/* ── Fixed bottom CTA ────────────────────────────────────────────── */}
       {/* W PODSUMOWANIU (wpis zrecenzowany) nie ma dolnego CTA - wyjscie przez strzalke cofania.
           Uczestnik (non-owner) nie ma zadnego CTA edycji/Gotowe - wychodzi strzalka w hero. */}
-      {isOwner && !noteFocused && !((isMemory || forceEdit) && isOwner && reviewed && !editingStepper) && (
+      {/* Dolny pasek CTA. Ukrywamy go TYLKO dla opublikowanego wspomnienia w trybie odczytu.
+          Wczesniej warunek lapal tez `forceEdit` (?edit=1) - po zakonczeniu steppera roboczy
+          wyjazd zostawal BEZ guzika publikacji i nie dalo sie go opublikowac (zgloszenie Nat
+          2026-08-30: "wyjazd sie nie publikuje"). */}
+      {isOwner && !noteFocused && !(isMemory && isOwner && reviewed && !editingStepper) && (
       <div className="fixed bottom-0 left-0 right-0 px-5 pt-3 bg-background/80 backdrop-blur-md border-t border-border/30"
         style={{ paddingBottom: "max(20px, env(safe-area-inset-bottom, 20px))" }}>
         {(isMemory || forceEdit) && isOwner && (!reviewed || editingStepper) ? (

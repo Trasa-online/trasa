@@ -13,6 +13,9 @@ import { format } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
 import { MapPin, ArrowLeft, Sparkles, ChevronRight, ChevronLeft, ChevronDown, Bookmark, Calendar as CalendarIcon, Image as ImageIcon, Maximize2, X, Building2, Pencil, Trash2, Heart, Share2, Plus, Map as MapIcon, Loader2, Star, GripVertical, Check, Flag, Camera, UserPlus, ThumbsUp, MessageCircle } from "lucide-react";
 import { MAIN_CATEGORIES, subcategoryPluralLabel } from "@/lib/categories";
+import { ROUTE_TAGS, ROUTE_TAGS_VISIBLE, PLACE_VERDICT_TAGS } from "@/lib/routeTags";
+import { publishTrip } from "@/lib/publishTrip";
+import { ensureListCover } from "@/lib/ensureListCover";
 import { haptics } from "@/hooks/useHaptics";
 import { useSwipeNav } from "@/hooks/useSwipeNav";
 import { useDragToDismiss } from "@/hooks/useDragToDismiss";
@@ -153,6 +156,8 @@ export default function SharedRoute() {
   // Miejsce czekajace na potwierdzenie usuniecia (etap "w trakcie" / wspomnienie).
   const [confirmDeletePin, setConfirmDeletePin] = useState<any | null>(null);
   const galleryPhotosCount = useRef(0);
+  // Zdjecia galerii wyjazdu dla handlerow zadeklarowanych PRZED ich wyliczeniem (publikacja).
+  const galleryPhotosRef = useRef<string[]>([]);
   // Gest natywny: swipe w bok przelacza zakladki (kolejnosc = kolejnosc ikon nad trescia).
   // Etap czytamy leniwie z route: w propozycjach nie ma Galerii (tylko Miejsca | Mapa).
   const goTab = (dir: 1 | -1) => {
@@ -186,6 +191,17 @@ export default function SharedRoute() {
   const [chatOpen, setChatOpen] = useState(false);
   // User pisze notke -> chowamy czat i dolne CTA (zaslanialy pole i klawiature).
   const [noteEditing, setNoteEditing] = useState(false);
+  // Etap W TRAKCIE = miejsce, w ktorym powstaje CALE wspomnienie: opis wyjazdu, tagi trasy i tagi
+  // miejsc. Stepper "podsumowania" zostal usuniety z flow (prosba Nat 2026-08-30) - publikacja to
+  // jeden guzik "Opublikuj" na dole.
+  const [tripDesc, setTripDesc] = useState("");
+  const [descSaved, setDescSaved] = useState(false);
+  const descTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [routeTags, setRouteTags] = useState<string[]>([]);
+  const [showAllRouteTags, setShowAllRouteTags] = useState(false);
+  const [customRouteTag, setCustomRouteTag] = useState("");
+  const [pinTags, setPinTags] = useState<Record<string, string[]>>({});
+  const [publishing, setPublishing] = useState(false);
   const [chatHidden, setChatHidden] = useState(false); // dymek czatu schowany do krawedzi (swipe w bok)
   const [collapsedCats, setCollapsedCats] = useState<Set<string>>(new Set()); // zwiniete grupy kategorii
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
@@ -432,6 +448,91 @@ export default function SharedRoute() {
       .subscribe();
     return () => { void supabase.removeChannel(ch); };
   }, [id, user?.id, queryClient]);
+
+  // Init opisu/tagow z trasy (po zaladowaniu). Nie nadpisujemy, gdy user wlasnie pisze.
+  useEffect(() => {
+    if (!route) return;
+    setTripDesc((prev) => (prev ? prev : ((route as any).review_narrative ?? "")));
+    setRouteTags(Array.isArray((route as any).tags) ? (route as any).tags : []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [route?.id]);
+
+  // Tagi miejsc (pins.tags) - lokalny stan do optymistycznego przelaczania werdyktow.
+  useEffect(() => {
+    const map: Record<string, string[]> = {};
+    for (const p of (pins as any[])) map[p.id] = Array.isArray(p.tags) ? p.tags : [];
+    setPinTags(map);
+  }, [pins]);
+
+  // Opis wyjazdu (routes.review_narrative) - autosave z debounce, jak notki.
+  const saveTripDesc = (v: string) => {
+    setTripDesc(v);
+    if (descTimer.current) clearTimeout(descTimer.current);
+    descTimer.current = setTimeout(async () => {
+      if (!id) return;
+      await (supabase as any).from("routes").update({ review_narrative: v.trim() || null }).eq("id", id);
+      setDescSaved(true);
+      setTimeout(() => setDescSaved(false), 1500);
+    }, 700);
+  };
+
+  // Tag CALEJ TRASY (routes.tags) - pula ROUTE_TAGS + wlasne.
+  const toggleRouteTag = async (tag: string) => {
+    if (!id) return;
+    haptics.selection();
+    const next = routeTags.includes(tag) ? routeTags.filter((t) => t !== tag) : [...routeTags, tag];
+    setRouteTags(next);
+    await (supabase as any).from("routes").update({ tags: next }).eq("id", id);
+  };
+
+  // Werdykt o miejscu (pins.tags) - jeden tap pod notkami.
+  const togglePinTag = async (pinId: string, tag: string) => {
+    haptics.selection();
+    const cur = pinTags[pinId] ?? [];
+    const next = cur.includes(tag) ? cur.filter((t) => t !== tag) : [...cur, tag];
+    setPinTags((prev) => ({ ...prev, [pinId]: next }));
+    await (supabase as any).from("pins").update({ tags: next }).eq("id", pinId);
+  };
+
+  // PUBLIKACJA wyjazdu - jeden guzik zamiast steppera "podsumowania" (prosba Nat 2026-08-30).
+  // status='published' + trip_type='completed' => wspomnienie w profilu i wpis w eksploracji.
+  // Miniature eksploracji domykamy automatycznie (losowe zdjecie usera), bo bramka feedu jej
+  // wymaga - user nie musi juz niczego wybierac. Toast z "Cofnij" (publikacja jest odwracalna
+  // przez 6 s, potem juz nie - dlatego bez dodatkowego dialogu).
+  const handlePublish = async () => {
+    if (!id || publishing) return;
+    if (!(pins as any[]).length) { toast.error("Wyjazd musi mieć co najmniej jedno miejsce"); return; }
+    setPublishing(true);
+    try {
+      const pool = [
+        ...galleryPhotosRef.current,
+        ...Array.from(photosMap.values()).flat().map((ph: any) => resolveStored(ph.url) ?? ph.url),
+      ].filter(Boolean) as string[];
+      await publishTrip([id]);
+      const cover = await ensureListCover(id, pool);
+      haptics.success();
+      queryClient.invalidateQueries({ queryKey: ["shared-route", id] });
+      queryClient.invalidateQueries({ queryKey: ["profile-trip-feed"] });
+      queryClient.invalidateQueries({ queryKey: ["discovery-city-routes"] });
+      queryClient.invalidateQueries({ queryKey: ["discovery-polecane"] });
+      queryClient.invalidateQueries({ queryKey: ["trip-shortcut"] });
+      toast.success(cover ? "Wyjazd opublikowany - jest już w eksploracji" : "Wyjazd opublikowany. Dodaj zdjęcie, żeby pojawił się w eksploracji", {
+        action: {
+          label: "Cofnij",
+          onClick: async () => {
+            await (supabase as any).from("routes").update({ status: "draft", trip_type: "ongoing" }).eq("id", id);
+            queryClient.invalidateQueries({ queryKey: ["shared-route", id] });
+            queryClient.invalidateQueries({ queryKey: ["profile-trip-feed"] });
+          },
+        },
+        duration: 6000,
+      });
+    } catch (e) {
+      console.error("[SharedRoute] publish failed:", e instanceof Error ? e.message : e);
+      haptics.error();
+      toast.error("Nie udało się opublikować wyjazdu");
+    } finally { setPublishing(false); }
+  };
 
   // Etap W TRAKCIE: zapis wlasnej notki (pin_ratings). PlaceNoteEditor sam debounce'uje -> zapis
   // natychmiastowy. Po zapisie invalidacja notek (inni uczestnicy widza + moj edytor sie synchronizuje).
@@ -741,6 +842,7 @@ export default function SharedRoute() {
   // Handler swipe w galerii fullscreen jest zadeklarowany wyzej (przed early returnami),
   // wiec liczbe zdjec podajemy mu przez ref.
   galleryPhotosCount.current = galleryPhotos.length;
+  galleryPhotosRef.current = galleryPhotos;
   const dateLabel = route.start_date ? format(new Date(route.start_date), "d MMMM yyyy", { locale: dateLocale() }) : "";
   const cityLabel = route.city || t("trip_default");
   // Tryb anonimowy: autor ukryty (bez profilu/awatara/lokalsa).
@@ -819,6 +921,21 @@ export default function SharedRoute() {
           )}
           {/* Notki innych uczestnikow - awatar + tresc, BEZ headera (task 6). */}
           <PlaceNotes notes={list} excludeUserId={user?.id} />
+          {/* Werdykt o miejscu - jeden tap zamiast pisania (prosba Nat 2026-08-30). pins.tags,
+              wiec trafia tez do wspomnienia i eksploracji. */}
+          {canEdit && (
+            <div className="flex flex-wrap gap-1.5">
+              {PLACE_VERDICT_TAGS.map((tg) => {
+                const on = (pinTags[pin.id] ?? []).includes(tg);
+                return (
+                  <button key={tg} type="button" onClick={() => togglePinTag(pin.id, tg)}
+                    className={`px-2.5 py-1.5 rounded-full text-[12.5px] font-semibold border transition-colors active:scale-[0.97] ${on ? "bg-[#FDF184] border-[#FDCD84] text-foreground" : "bg-white text-foreground border-border/60"}`}>
+                    {tg}
+                  </button>
+                );
+              })}
+            </div>
+          )}
           {/* Zdjecia miejsca (2:3) - awatar autora (dol-lewo) + usun (autor lub wlasciciel). */}
           {placePhotos.length > 0 && (
             <div className="flex flex-wrap gap-2">
@@ -1097,6 +1214,72 @@ export default function SharedRoute() {
         <div {...swipeTabs}>
         {planTab === "miejsca" ? (
           <div className="px-5 pt-4">
+            {/* OPIS + TAGI CALEJ TRASY - przeniesione tu ze steppera "podsumowania" (prosba Nat
+                2026-08-30): wspomnienie powstaje w trakcie wyjazdu, a publikacja to jeden guzik. */}
+            {canEdit && stage === "ongoing" && !choosing && (
+              <div className="mb-5 space-y-4">
+                <div>
+                  <p className="text-[13px] font-bold text-foreground mb-1.5">Opis wyjazdu</p>
+                  <div className="relative">
+                    <textarea
+                      value={tripDesc}
+                      onChange={(e) => saveTripDesc(e.target.value)}
+                      onFocus={() => setNoteEditing(true)}
+                      onBlur={() => setNoteEditing(false)}
+                      placeholder="Dla kogo jest ten wyjazd, na jaką okazję, co warto zobaczyć..."
+                      rows={3}
+                      className="w-full bg-muted/50 rounded-2xl px-3.5 py-3 text-sm text-foreground resize-none focus:outline-none border border-border/40 focus:border-orange-400/60 placeholder:text-muted-foreground/55"
+                    />
+                    {descSaved && <span className="absolute bottom-2.5 right-3 text-[10px] font-medium text-green-600">Zapisano</span>}
+                  </div>
+                </div>
+                <div>
+                  <p className="text-[13px] font-bold text-foreground mb-1.5">Tagi wyjazdu</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {(showAllRouteTags ? ROUTE_TAGS : ROUTE_TAGS.slice(0, ROUTE_TAGS_VISIBLE)).map((tg) => {
+                      const on = routeTags.includes(tg);
+                      return (
+                        <button key={tg} type="button" onClick={() => toggleRouteTag(tg)}
+                          className={`px-2.5 py-1.5 rounded-full text-[12.5px] font-semibold border transition-colors active:scale-[0.97] ${on ? "bg-[#FDF184] border-[#FDCD84] text-foreground" : "bg-white text-foreground border-border/60"}`}>
+                          {tg}
+                        </button>
+                      );
+                    })}
+                    {/* Wlasne tagi (spoza puli) - zawsze widoczne, zeby dalo sie je zdjac. */}
+                    {routeTags.filter((t) => !ROUTE_TAGS.includes(t)).map((tg) => (
+                      <button key={tg} type="button" onClick={() => toggleRouteTag(tg)}
+                        className="px-2.5 py-1.5 rounded-full text-[12.5px] font-semibold border bg-[#FDF184] border-[#FDCD84] text-foreground active:scale-[0.97] transition-colors">
+                        {tg}
+                      </button>
+                    ))}
+                    {ROUTE_TAGS.length > ROUTE_TAGS_VISIBLE && (
+                      <button type="button" onClick={() => setShowAllRouteTags((o) => !o)}
+                        className="px-2.5 py-1.5 rounded-full text-[12.5px] font-semibold bg-secondary text-secondary-foreground active:scale-[0.97] transition-transform">
+                        {showAllRouteTags ? "Zwiń" : "Pokaż więcej"}
+                      </button>
+                    )}
+                  </div>
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      const v = customRouteTag.trim();
+                      if (!v || routeTags.some((t) => t.toLowerCase() === v.toLowerCase())) { setCustomRouteTag(""); return; }
+                      void toggleRouteTag(v);
+                      setCustomRouteTag("");
+                    }}
+                    className="mt-2 flex items-center gap-2"
+                  >
+                    <input value={customRouteTag} onChange={(e) => setCustomRouteTag(e.target.value.slice(0, 24))}
+                      placeholder="Własny tag..."
+                      className="flex-1 min-w-0 h-9 rounded-full bg-white border border-border/60 px-3.5 text-[13px] text-foreground outline-none focus:border-orange-400/60 placeholder:text-muted-foreground/55" />
+                    <button type="submit" disabled={!customRouteTag.trim()}
+                      className="h-9 px-3.5 rounded-full bg-secondary text-secondary-foreground text-[13px] font-bold active:scale-95 transition-transform disabled:opacity-40">
+                      Dodaj
+                    </button>
+                  </form>
+                </div>
+              </div>
+            )}
             {choosing ? (
               /* Tryb "Wybierz miejsca": zaznacz ktore miejsca wchodza do wyjazdu (reszta usunieta). */
               <div className="space-y-2">
@@ -1340,11 +1523,13 @@ export default function SharedRoute() {
                     <Check className="h-4 w-4 stroke-[3]" /> Wybierz miejsca
                   </button>
                 )}
-                {/* Etap W TRAKCIE (host): podsumuj -> stepper (notki/tagi/okladka) -> opublikuj. */}
+                {/* Etap W TRAKCIE (host): PUBLIKACJA jednym guzikiem. Opis, tagi i zdjecia
+                    powstaja juz w tym widoku - stepper "podsumowania" zostal usuniety z flow. */}
                 {isOwner && stage === "ongoing" && (
-                  <button onClick={() => navigate(`/review-summary?route=${route.id}&edit=1`)}
-                    className="flex-1 py-3 rounded-full bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform">
-                    Podsumuj wyjazd
+                  <button onClick={handlePublish} disabled={publishing}
+                    className="flex-1 py-3 rounded-full bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-50">
+                    {publishing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Flag className="h-4 w-4" />}
+                    {publishing ? "Publikuję..." : "Opublikuj"}
                   </button>
                 )}
               </div>

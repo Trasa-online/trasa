@@ -283,14 +283,10 @@ export default function NotificationsDrawer({ open, onClose, userId }: Props) {
                         <button
                           onClick={() => {
                             onClose();
-                            // W TRAKCIE -> widok wyjazdu (tam dodaje sie zdjecia i notki przy
-                            // miejscach). ROBOCZY po dacie -> stepper dokumentowania (?edit=1),
-                            // ktory konczy sie publikacja ("Zapisz trase").
+                            // Zawsze widok wyjazdu: tam dodaje sie zdjecia, notki, opis i tagi,
+                            // i stamtad publikuje sie wyjazd (stepper zniknal z flow 2026-08-30).
                             const rid = n.route_id ?? n.metadata?.route_id;
-                            const ongoing = n.metadata?.stage === "ongoing";
-                            navigate(rid
-                              ? (ongoing ? `/route/${rid}` : `/review-summary?route=${rid}&edit=1`)
-                              : "/moj-profil?tab=wyjazdy");
+                            navigate(rid ? `/route/${rid}` : "/moj-profil?tab=wyjazdy");
                           }}
                           className="mt-2 px-3 py-1.5 rounded-full bg-primary text-white text-xs font-semibold active:scale-95 transition-transform"
                         >
