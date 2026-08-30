@@ -774,13 +774,15 @@ const TravelerProfile = () => {
                 )
               ) : wyjazdyTab === "robocze" ? (
                 draftTrips.length === 0 ? (
-                  <FeedEmpty
-                    icon={<MapPinned className="h-6 w-6" />}
-                    title="Brak roboczych wyjazdów"
-                    desc={`Zaplanuj wyjazd i dokończ go, żeby zapisać wspomnienie.`}
-                    ctaLabel="Zaplanuj wyjazd"
-                    onCta={() => window.dispatchEvent(new Event("trasa:open-plan-menu"))}
-                  />
+                  /* Pusty stan wg makiety Nat (2026-08-30): brandowa ikona trasy (maska #ef9d78),
+                     tytul + dwie linie copy, BEZ guzika CTA - tworzenie jest pod "+" w dolnym pasku. */
+                  <div className="pt-16 pb-12 text-center px-8">
+                    <span aria-hidden className="mx-auto mb-5 block h-28 w-28" style={{ backgroundColor: "#ef9d78", WebkitMaskImage: "url(/Ikona_Trasy.svg)", maskImage: "url(/Ikona_Trasy.svg)", WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat", WebkitMaskSize: "contain", maskSize: "contain", WebkitMaskPosition: "center", maskPosition: "center" }} />
+                    <p className="text-lg font-bold text-foreground">Brak roboczych wyjazdów</p>
+                    <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed max-w-[240px] mx-auto">
+                      {`Stwórz nowy wyjazd, żeby zobaczyć go tutaj`}
+                    </p>
+                  </div>
                 ) : (
                   <div className="space-y-6">{draftTrips.map(renderTripCard)}</div>
                 )
