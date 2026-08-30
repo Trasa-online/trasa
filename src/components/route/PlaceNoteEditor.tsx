@@ -16,6 +16,7 @@ export default function PlaceNoteEditor({
   avatarUrl,
   photoSlot,
   placeholder = "Dodaj notkę o tym miejscu...",
+  onEditingChange,
 }: {
   note: string;
   onSave: (value: string) => Promise<void> | void;
@@ -24,6 +25,8 @@ export default function PlaceNoteEditor({
   avatarUrl?: string | null;
   photoSlot?: React.ReactNode;
   placeholder?: string;
+  /** Informuje rodzica, ze user WLASNIE pisze notke - ekran chowa wtedy czat i dolne CTA. */
+  onEditingChange?: (editing: boolean) => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(note ?? "");
@@ -32,6 +35,9 @@ export default function PlaceNoteEditor({
 
   // Gdy notka z DB sie zmieni a nie edytujemy - zsynchronizuj draft (np. po refetchu).
   useEffect(() => { if (!editing) setDraft(note ?? ""); }, [note, editing]);
+  // Rodzic (widok wyjazdu) chowa czat i dolne guziki na czas pisania - nie zaslaniaja klawiatury
+  // ani pola notki (zgloszenie Nat 2026-08-30).
+  useEffect(() => { onEditingChange?.(editing); }, [editing, onEditingChange]);
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
 
   const noteText = (note ?? "").trim();
@@ -52,8 +58,9 @@ export default function PlaceNoteEditor({
   if (editing) {
     return (
       <div>
+        {/* W trakcie PISANIA nie pokazujemy awatara - autor jest oczywisty, a awatar zabieral
+            szerokosc pola i sugerowal, ze notka jest juz opublikowana. */}
         <div className="flex items-start gap-2">
-          {showAvatar && <img src={avatarSrc(avatarUrl)} alt="" className="h-7 w-7 rounded-full object-cover bg-secondary shrink-0 mt-0.5" />}
           <div className="relative flex-1 min-w-0">
             <textarea
               value={draft}

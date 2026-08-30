@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { avatarSrc } from "@/lib/avatar";
 import { ROUTE_TAGS, ROUTE_TAGS_VISIBLE, placeTagsForCategory } from "@/lib/routeTags";
 import { fetchRouteNotesWithAuthors, notesByPlace, placeNoteKey } from "@/lib/placeNotes";
+import { fetchPinPhotos, deletePinPhoto, photosByPlace, pinPhotoKey } from "@/lib/pinPhotos";
 import PlaceNotes from "@/components/route/PlaceNotes";
 import { haptics } from "@/hooks/useHaptics";
 import { useSwipeNav } from "@/hooks/useSwipeNav";
@@ -73,6 +74,8 @@ function SortableReviewRow({ pin, idx, categoryLabel, onOpen, onRemove, noteValu
   tags: string[]; onToggleTag: (tag: string) => void;
 }) {
   const controls = useDragControls();
+  // Pole na WLASNY tag miejsca (pula nie pokrywa wszystkiego).
+  const [customTag, setCustomTag] = useState("");
   return (
     <Reorder.Item
       value={pin}
@@ -117,8 +120,9 @@ function SortableReviewRow({ pin, idx, categoryLabel, onOpen, onRemove, noteValu
           <div className="mt-3">
             <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">Tagi miejsca <span className="normal-case font-medium text-muted-foreground/50">(zamiast notki)</span></p>
             <div className="flex flex-wrap gap-1.5">
-              {/* #5: tagi zalezne od kategorii miejsca (zabytek != kawiarnia). #6: wybrany = zolty fill. */}
-              {placeTagsForCategory(pin.category).map((tg) => {
+              {/* #5: tagi zalezne od kategorii miejsca (zabytek != kawiarnia). #6: wybrany = zolty fill.
+                  Tagi spoza puli (wpisane recznie) doklejamy na koncu, zeby user je widzial i mogl zdjac. */}
+              {[...placeTagsForCategory(pin.category), ...tags.filter((t) => !placeTagsForCategory(pin.category).includes(t))].map((tg) => {
                 const on = tags.includes(tg);
                 return (
                   <button key={tg} type="button" onClick={() => onToggleTag(tg)}
@@ -128,6 +132,24 @@ function SortableReviewRow({ pin, idx, categoryLabel, onOpen, onRemove, noteValu
                 );
               })}
             </div>
+            {/* WLASNY tag - pula nie pokryje wszystkiego (prosba Nat 2026-08-30). Enter dodaje. */}
+            <form
+              onSubmit={(e) => { e.preventDefault(); const v = customTag.trim(); if (!v) return; onToggleTag(v); setCustomTag(""); }}
+              className="mt-2 flex items-center gap-2"
+            >
+              <input
+                value={customTag}
+                onChange={(e) => setCustomTag(e.target.value.slice(0, 24))}
+                onFocus={() => onNoteFocusChange?.(true)}
+                onBlur={() => onNoteFocusChange?.(false)}
+                placeholder="Własny tag..."
+                className="flex-1 min-w-0 h-9 rounded-full bg-white border border-border/60 px-3.5 text-[13px] text-foreground outline-none focus:border-orange-400/60 placeholder:text-muted-foreground/55"
+              />
+              <button type="submit" disabled={!customTag.trim()}
+                className="h-9 px-3.5 rounded-full bg-secondary text-secondary-foreground text-[13px] font-bold active:scale-95 transition-transform disabled:opacity-40">
+                Dodaj
+              </button>
+            </form>
           </div>
           <div className="flex items-center justify-between mt-2">
             <button onClick={onToggleNote} className="px-4 py-2 rounded-full bg-muted text-sm font-semibold text-foreground active:scale-95 transition-transform">Zwiń</button>
@@ -205,7 +227,6 @@ const ReviewSummary = () => {
   // Czy plan wyjazdu jest przewiniety (okladka zjechala) -> sticky pasek back+X dostaje tlo.
   const [planScrolled, setPlanScrolled] = useState(false);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
-  const [coverPickerOpen, setCoverPickerOpen] = useState(false);
   // Miniatura eksploracji = OSOBNA okladka (routes.list_cover_url), niezalezna od okladki trasy.
   const [listCoverPickerOpen, setListCoverPickerOpen] = useState(false);
   // Podglad "jak okladka wyglada w eksploracji" (fullscreen mock karty trasy).
@@ -307,7 +328,6 @@ const ReviewSummary = () => {
   const [pinPickerId, setPinPickerId] = useState<string | null>(null);
   // Gest natywny: przeciagniecie panelu w dol zamyka arkusz (wszystkie arkusze tego widoku).
   const pinPickerDrag = useDragToDismiss({ onDismiss: () => setPinPickerId(null) });
-  const coverDrag = useDragToDismiss({ onDismiss: () => setCoverPickerOpen(false) });
   const listCoverDrag = useDragToDismiss({ onDismiss: () => setListCoverPickerOpen(false) });
   const dateDrag = useDragToDismiss({ onDismiss: () => setDatePickerOpen(false) });
   const qrDrag = useDragToDismiss({ onDismiss: () => setQrShareOpen(false) });
@@ -634,6 +654,19 @@ const ReviewSummary = () => {
     for (const p of allPins) if (Array.isArray((p as any).tags)) m[p.id] = (p as any).tags;
     setPinTags(m);
   }, [allPins]);
+  // Zdjecia dodane do miejsc W TRAKCIE wyjazdu (tabela pin_photos, z autorem). W podsumowaniu
+  // maja byc JUZ WIDOCZNE - user uzupelnia tylko opis i tagi, nie wgrywa zdjec drugi raz
+  // (zgloszenie Nat 2026-08-30).
+  const { data: livePinPhotos = [] } = useQuery({
+    queryKey: ["review-live-pin-photos", idsKey],
+    enabled: dayRouteIds.length > 0,
+    queryFn: async () => {
+      const all = await Promise.all(dayRouteIds.filter(Boolean).map((rid: string) => fetchPinPhotos(rid)));
+      return all.flat();
+    },
+  });
+  const livePhotosByPlace = photosByPlace(livePinPhotos as any[]);
+
   const togglePinTag = async (pinId: string, tag: string) => {
     const cur = pinTags[pinId] ?? [];
     const next = cur.includes(tag) ? cur.filter((x) => x !== tag) : [...cur, tag];
@@ -869,6 +902,14 @@ const ReviewSummary = () => {
 
   const removePinPhoto = async (pin: any, url: string) => {
     haptics.light();
+    // Zdjecie moze pochodzic z dwoch kanalow: pin_photos (dodane W TRAKCIE, z autorem) albo
+    // pins.images (starszy kanal). Kasujemy z tego, w ktorym faktycznie jest.
+    const live = (livePhotosByPlace.get(pinPhotoKey(pin.place_name)) ?? []).find((ph: any) => ph.url === url);
+    if (live?.id) {
+      await deletePinPhoto(live.id);
+      queryClient.invalidateQueries({ queryKey: ["review-live-pin-photos", idsKey] });
+      return;
+    }
     const cur = Array.isArray(pin.images) ? pin.images : [];
     await commitPinImages(pin, cur.filter((u: string) => u !== url));
   };
@@ -967,7 +1008,7 @@ const ReviewSummary = () => {
     setUploading(true);
     const urls = await uploadImages(files.slice(0, 1));
     setUploading(false);
-    if (urls[0]) { setCoverPickerOpen(false); await setCover(urls[0]); }
+    if (urls[0]) { await setCover(urls[0]); }
   };
   const triggerCoverPhotoPick = async () => {
     if (uploading) return;
@@ -982,7 +1023,6 @@ const ReviewSummary = () => {
   // Recznie wybrana okladka wyjazdu = zdjecie jednego z miejsc trasy. Zapis do routes.cover_url.
   const setPlanCover = async (url: string) => {
     if (!routeId) return;
-    setCoverPickerOpen(false);
     // Okladka wyjazdu (tlo hero) = OSOBNA od miniatury eksploracji (list_cover_url) - patrz setCover.
     const { error } = await (supabase as any).from("routes").update({ cover_url: url }).eq("id", routeId);
     if (error) { notify.error(t("toast.cover_set_error", { defaultValue: "Nie udało się ustawić okładki" })); return; }
@@ -1106,8 +1146,11 @@ const ReviewSummary = () => {
     queryClient.invalidateQueries({ queryKey: ["review-summary-route", routeId] });
     queryClient.invalidateQueries({ queryKey: ["review-trip-days", folderId, routeId] });
     queryClient.invalidateQueries({ queryKey: ["journal-entries"] });
-    // Wyjscie do PODSUMOWANIA na czystym URL (bez edit=1) - tam wlasciciel ma guzik "Zakoncz wyjazd".
-    navigate(`/review-summary?route=${routeId}`, { replace: true });
+    // Koniec steppera = koniec dokumentowania. Wyjazd JUZ opublikowany (edycja wspomnienia) ->
+    // wracamy do jego docelowego widoku. Roboczy -> pytamy o publikacje i to ona konczy flow;
+    // nie ma juz posredniego "podsumowania z okladka" (zgloszenie Nat 2026-08-30).
+    if (isMemory) { navigate(`/route/${routeId}`, { replace: true }); return; }
+    setConfirmFinishOpen(true);
   };
 
   // "Zakoncz wyjazd" = SWIADOMA PUBLIKACJA (jedyne miejsce ustawiajace status='published').
@@ -1146,7 +1189,7 @@ const ReviewSummary = () => {
       queryClient.invalidateQueries({ queryKey: ["discovery-city-routes"] });
       queryClient.invalidateQueries({ queryKey: ["discovery-polecane"] });
       setConfirmFinishOpen(false);
-      navigate("/moj-profil?tab=wyjazdy");
+      navigate(`/route/${routeId}`, { replace: true });
     } catch (e: any) {
       console.error("[ReviewSummary] handleFinishTrip failed:", e?.message ?? e);
       notify.error(t("toast.generic_error", { defaultValue: "Coś poszło nie tak" }));
@@ -1410,6 +1453,16 @@ const ReviewSummary = () => {
   // Wpis zrecenzowany = user przeszedl stepper (plan_finalized). Wtedy PODSUMOWANIE zamiast steppera.
   // localReviewed = optymistyczne po "Zapisz" (przed refetchem route). To NIE publikacja (patrz isMemory).
   const reviewed = localReviewed || sortedDays.some((d: any) => d?.plan_finalized);
+
+  // Opublikowany wyjazd ma JEDEN docelowy widok: /route/:id (ten sam, ktory widza inni w
+  // eksploracji). Stare "podsumowanie z okladka" zostaje wylacznie jako STEPPER dokumentowania
+  // (?edit=1) - poza nim przekierowujemy (zgloszenie Nat 2026-08-30).
+  useEffect(() => {
+    if (route?.status === "published" && !forceEdit && !editingStepper && routeId) {
+      navigate(`/route/${routeId}`, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [route?.status, forceEdit, editingStepper, routeId]);
 
   if (authLoading) return null;
   if (!user) { navigate("/auth"); return null; }
@@ -1897,10 +1950,15 @@ const ReviewSummary = () => {
     return (
       <div className="px-5 pt-7">
         <p className="font-display text-xl font-bold text-foreground tracking-tight">Zdjęcia do miejsc</p>
-        <p className="text-[13px] text-muted-foreground mt-1 mb-4 leading-relaxed">Dołącz zdjęcia do konkretnych punktów trasy.</p>
+        <p className="text-[13px] text-muted-foreground mt-1 mb-4 leading-relaxed">Zdjęcia dodane w{"\u00a0"}trakcie wyjazdu są już tutaj - możesz dołożyć kolejne.</p>
         <div className="space-y-3">
           {workingPins.map((pin: any, i: number) => {
-            const imgs: string[] = Array.isArray(pin.images) ? pin.images : [];
+            // Zdjecia miejsca = te z etapu "w trakcie" (pin_photos) + starsze z pins.images.
+            const liveUrls = (livePhotosByPlace.get(pinPhotoKey(pin.place_name)) ?? []).map((ph: any) => ph.url);
+            const imgs: string[] = Array.from(new Set([
+              ...liveUrls,
+              ...(Array.isArray(pin.images) ? pin.images : []),
+            ]));
             // Pasek zarzadzania zdjeciami (Dodaj + dodane) - renderowany POD wizytowka miejsca.
             const photosRow = (
               <div className="flex gap-2 overflow-x-auto pb-1 -mx-0.5 px-0.5">
@@ -2107,15 +2165,9 @@ const ReviewSummary = () => {
             {/* Edycja okladki (zmiana zdjecia + miniatura eksploracji) - tylko wlasciciel. */}
             {isOwner && (
               <>
-                {/* Ikona galerii = ZMIANA zdjecia okladkowego (dodaj nowe / wybierz z galerii / z miejsc).
-                    Lewy-dolny rog. Osobna funkcja od podgladu na eksploracji (prawy-dolny). */}
-                <button
-                  onClick={() => setCoverPickerOpen(true)}
-                  aria-label="Zmień okładkę wyjazdu"
-                  className="absolute bottom-3 left-3 z-20 h-10 w-10 rounded-full bg-black/45 backdrop-blur-sm text-white flex items-center justify-center active:scale-90 transition-transform"
-                >
-                  <ImageIcon className="h-[18px] w-[18px]" />
-                </button>
+                {/* Okladka CALEGO wyjazdu usunieta 2026-08-30 (prosba Nat): opublikowany wyjazd
+                    ma jeden, czysty widok (/route/:id) bez hero-okladki. Zostaje wylacznie wybor
+                    MINIATURY EKSPLORACJI (list_cover_url) - ponizej. */}
                 {/* Miniatura eksploracji - OSOBNA okladka (list_cover_url), klik = zmiana zdjecia
                     (dodaj nowe / wybierz z galerii/miejsc trasy). Prawy-dolny rog. Ikona = edytowalna. */}
                 <button
@@ -2414,65 +2466,6 @@ const ReviewSummary = () => {
           <AddPinSheet open={addingPlace} onOpenChange={(o) => !o && setAddingPlace(false)} onPinAdd={handleAddPin} cityContext={route?.city ?? ""} existingPinNames={currentPins.map((p: any) => p.place_name)} />
         )}
 
-        {/* Arkusz wyboru okladki wyjazdu (zdjecia miejsc trasy) */}
-        {coverPickerOpen && (
-          <div className="fixed inset-0 z-[95] flex items-end justify-center" onClick={() => setCoverPickerOpen(false)}>
-            <div className="absolute inset-0 bg-black/50 animate-in fade-in duration-200" />
-            <div {...coverDrag.dragProps} onClick={(e) => e.stopPropagation()} className="relative w-full max-w-lg bg-card rounded-t-3xl px-5 pt-3 pb-[max(20px,env(safe-area-inset-bottom))] shadow-2xl animate-in slide-in-from-bottom-4 duration-300" style={{ ...coverDrag.dragProps.style, maxHeight: "82dvh" }}>
-              <div className="mx-auto h-1 w-10 rounded-full bg-muted-foreground/25 mb-4" />
-              <button onClick={() => setCoverPickerOpen(false)} aria-label={t("close", { defaultValue: "Zamknij" })} className="absolute right-4 top-4 h-8 w-8 rounded-full bg-muted flex items-center justify-center active:scale-90 transition-transform">
-                <X className="h-4 w-4" />
-              </button>
-              <p className="text-lg font-bold pr-8">Okładka wyjazdu</p>
-              <p className="text-sm text-muted-foreground mt-1 mb-4">Wybierz zdjęcie na okładkę - dodaj nowe, z galerii albo z miejsc trasy.</p>
-              <div className="overflow-y-auto -mx-1 px-1" style={{ maxHeight: "62dvh" }}>
-                <div className="grid grid-cols-3 gap-2 pb-1">
-                  {/* Nowe zdjecie z telefonu -> od razu okladka (jak przy dodawaniu zdjec do miejsc). */}
-                  <button
-                    onClick={triggerCoverPhotoPick}
-                    disabled={uploading}
-                    className="relative aspect-square rounded-2xl border-2 border-dashed border-border/70 flex flex-col items-center justify-center gap-1.5 text-muted-foreground active:scale-95 transition-transform disabled:opacity-50"
-                  >
-                    {uploading ? <Loader2 className="h-6 w-6 animate-spin" /> : <Plus className="h-6 w-6" />}
-                    <span className="text-[11px] font-semibold leading-tight text-center px-1">Nowe zdjęcie</span>
-                  </button>
-                  {/* #2: domyslne tlo (gradient zolto-zloty) - bez zdjecia, ale trasa liczy sie jako gotowa. */}
-                  <button
-                    onClick={() => setPlanCover(GRADIENT_COVER)}
-                    className={`relative aspect-square rounded-2xl overflow-hidden active:scale-95 transition-transform ${heroPhoto === GRADIENT_COVER ? "ring-2 ring-primary ring-offset-2 ring-offset-card" : ""}`}
-                    style={{ backgroundImage: "linear-gradient(135deg, #FDF184, #FDCD84)" }}
-                  >
-                    <span className="absolute bottom-1.5 left-1.5 right-1.5 text-[10px] font-semibold text-foreground/80 leading-tight [text-shadow:_0_1px_1px_rgb(255_255_255/40%)]">{`Domyślne tło`}</span>
-                    {heroPhoto === GRADIENT_COVER && (
-                      <span className="absolute top-1.5 right-1.5 h-5 w-5 rounded-full bg-primary text-white flex items-center justify-center shadow-md">
-                        <Check className="h-3 w-3" strokeWidth={3} />
-                      </span>
-                    )}
-                  </button>
-                  {coverPickerOptions.map((opt) => {
-                    const isCurrent = heroPhoto === opt.url;
-                    return (
-                      <button
-                        key={opt.id}
-                        onClick={() => setPlanCover(opt.url)}
-                        className={`relative aspect-square rounded-2xl overflow-hidden bg-muted active:scale-95 transition-transform ${isCurrent ? "ring-2 ring-primary ring-offset-2 ring-offset-card" : ""}`}
-                      >
-                        <img src={opt.url} alt={opt.name} loading="lazy" className="w-full h-full object-cover" />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-transparent to-transparent" />
-                        <span className="absolute bottom-1.5 left-1.5 right-1.5 text-[10px] font-semibold text-white leading-tight line-clamp-2 [text-shadow:_0_1px_2px_rgb(0_0_0/60%)]">{opt.name}</span>
-                        {isCurrent && (
-                          <span className="absolute top-1.5 right-1.5 h-5 w-5 rounded-full bg-primary text-white flex items-center justify-center shadow-md">
-                            <Check className="h-3 w-3" strokeWidth={3} />
-                          </span>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Arkusz wyboru MINIATURY w eksploracji (list_cover_url) - osobny od okladki wyjazdu. */}
         {listCoverPickerOpen && (

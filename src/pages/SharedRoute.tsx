@@ -184,6 +184,8 @@ export default function SharedRoute() {
   const [uploadingPin, setUploadingPin] = useState<string | null>(null);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
+  // User pisze notke -> chowamy czat i dolne CTA (zaslanialy pole i klawiature).
+  const [noteEditing, setNoteEditing] = useState(false);
   const [chatHidden, setChatHidden] = useState(false); // dymek czatu schowany do krawedzi (swipe w bok)
   const [collapsedCats, setCollapsedCats] = useState<Set<string>>(new Set()); // zwiniete grupy kategorii
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
@@ -810,8 +812,10 @@ export default function SharedRoute() {
       return (
         <div className="space-y-3 mt-1">
           {/* Moja notka: kompaktowo (+ Dodaj notkę / Edytuj) + guzik zdjecia obok. Auto-zapis. */}
+          {/* Awatar przy WLASNEJ notce dopiero we wspomnieniu (po publikacji) - w trakcie wyjazdu
+              autor jest oczywisty, a awatar dokladal szumu przy pisaniu (prosba Nat 2026-08-30). */}
           {canEdit && (
-            <PlaceNoteEditor note={myNote} showAvatar avatarUrl={myAvatar} onSave={(v) => saveMyNote(pin, v)} photoSlot={photoSlot} />
+            <PlaceNoteEditor note={myNote} avatarUrl={myAvatar} onSave={(v) => saveMyNote(pin, v)} photoSlot={photoSlot} onEditingChange={setNoteEditing} />
           )}
           {/* Notki innych uczestnikow - awatar + tresc, BEZ headera (task 6). */}
           <PlaceNotes notes={list} excludeUserId={user?.id} />
@@ -1239,7 +1243,7 @@ export default function SharedRoute() {
 
       {/* Dymek CZATU wyjazdu (prawa strona, nad dolnym CTA) - uczestnicy (owner/czlonek) przegaduja
           miejsca. Realtime. Ukryty w trybie wyboru miejsc. Prosba Nat 2026-08-26. */}
-      {canEdit && id && !choosing && (
+      {canEdit && id && !choosing && !noteEditing && (
         // Dymek czatu - PRZESUWALNY: swipe w prawo chowa go do krawedzi (zostaje sliver), tap/przeciagniecie
         // w lewo go wyciaga. Tap na widocznym otwiera czat. (prosba Nat 2026-08-26).
         <motion.button aria-label={chatHidden ? "Pokaż czat" : "Czat wyjazdu"}
@@ -1306,7 +1310,9 @@ export default function SharedRoute() {
         </div>
       )}
 
-      {/* CTA: editor (wlasciciel LUB uczestnik wspolnego wyjazdu) = "Dodaj nowe miejsce"; gosc = zapisz + zaplanuj. */}
+      {/* CTA: editor (wlasciciel LUB uczestnik wspolnego wyjazdu) = "Dodaj nowe miejsce"; gosc = zapisz + zaplanuj.
+          Ukryte na czas pisania notki - inaczej pasek siedzi nad klawiatura i zaslania pole. */}
+      {!noteEditing && (
       <div className="fixed bottom-0 left-0 right-0 max-w-lg mx-auto px-5 pt-2 bg-background border-t border-border/30"
         style={{ paddingBottom: "max(12px, env(safe-area-inset-bottom, 12px))" }}>
         {canEdit ? (
@@ -1361,6 +1367,7 @@ export default function SharedRoute() {
             </>
           )}
         </div>
+      )}
 
       {/* Sheet wyboru daty wyjazdu przy zapisie cudzej trasy do dziennika */}
       {showDateSheet && (
