@@ -43,7 +43,16 @@ const TYPE_CONFIG: Record<string, { icon: React.ElementType; color: string; labe
   list_liked:     { icon: Heart,    color: "text-red-500 bg-red-100",        label: (u, meta) => `${u} polubił(a) Twoją listę${meta?.title ? ` „${meta.title}"` : ""}` },
   list_saved:     { icon: Bookmark, color: "text-orange-600 bg-orange-100",  label: (u, meta) => `${u} zapisał(a) Twoją listę${meta?.title ? ` „${meta.title}"` : ""}` },
   list_updated:   { icon: MapPin,   color: "text-orange-600 bg-orange-100",  label: (u, meta) => `${u} dodał(a) nowe miejsce do listy${meta?.title ? ` „${meta.title}"` : ""}` },
-  trip_reminder:  { icon: Camera,   color: "text-orange-600 bg-orange-100",  label: (_u, meta) => `Dokończ swój wyjazd${meta?.city ? ` po ${meta.city}` : ""}: dodaj zdjęcia i notki, żeby pojawił się w eksploracji` },
+  // Tresc liczona z metadanych kompletnosci (enqueue_trip_reminders): ZDJECIA maja priorytet,
+  // potem notki, a na koncu zacheta do publikacji.
+  trip_reminder:  { icon: Camera,   color: "text-orange-600 bg-orange-100",  label: (_u, meta) => {
+    const city = meta?.city ? ` po ${meta.city}` : "";
+    const photos = Number(meta?.missing_photos ?? 0);
+    const notes = Number(meta?.missing_notes ?? 0);
+    if (photos > 0) return `Wyjazd${city} czeka na\u00a0zdjęcia: ${photos} ${photos === 1 ? "miejsce jest" : photos < 5 ? "miejsca są" : "miejsc jest"} bez zdjęcia`;
+    if (notes > 0) return `Zdjęcia masz komplet - ${notes === 1 ? "została notka do\u00a0jednego miejsca" : `zostały notki do\u00a0${notes} miejsc`}${city}`;
+    return `Wyjazd${city} jest gotowy - opublikuj go, żeby pojawił się w\u00a0eksploracji`;
+  } },
 };
 
 interface Props {
@@ -274,14 +283,18 @@ export default function NotificationsDrawer({ open, onClose, userId }: Props) {
                         <button
                           onClick={() => {
                             onClose();
-                            // Deep-link do steppera dokumentowania (?edit=1 = forceEdit) zeby user
-                            // od razu dodal zdjecia/notki/okladke i opublikowal ("Zapisz trase").
+                            // W TRAKCIE -> widok wyjazdu (tam dodaje sie zdjecia i notki przy
+                            // miejscach). ROBOCZY po dacie -> stepper dokumentowania (?edit=1),
+                            // ktory konczy sie publikacja ("Zapisz trase").
                             const rid = n.route_id ?? n.metadata?.route_id;
-                            navigate(rid ? `/review-summary?route=${rid}&edit=1` : "/moj-profil?tab=wyjazdy");
+                            const ongoing = n.metadata?.stage === "ongoing";
+                            navigate(rid
+                              ? (ongoing ? `/route/${rid}` : `/review-summary?route=${rid}&edit=1`)
+                              : "/moj-profil?tab=wyjazdy");
                           }}
                           className="mt-2 px-3 py-1.5 rounded-full bg-primary text-white text-xs font-semibold active:scale-95 transition-transform"
                         >
-                          Dokończ wyjazd →
+                          {n.metadata?.missing_photos && Number(n.metadata.missing_photos) > 0 ? "Dodaj zdjęcia →" : "Dokończ wyjazd →"}
                         </button>
                       )}
                       {(n.type === "friend_request" || n.type === "friend_accept") && (

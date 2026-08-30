@@ -31,7 +31,12 @@ const TITLES: Record<string, string> = {
 };
 
 const urlFor = (n: any): string => {
-  if (n?.type === "trip_reminder") return `/review-summary?route=${n.route_id}&edit=1`;
+  // W trakcie -> widok wyjazdu (zdjecia/notki przy miejscach); roboczy -> stepper publikacji.
+  if (n?.type === "trip_reminder") {
+    return n?.metadata?.stage === "ongoing"
+      ? `/route/${n.route_id}`
+      : `/review-summary?route=${n.route_id}&edit=1`;
+  }
   if (n?.type === "group_invite") return `/sesja/${n?.metadata?.join_code ?? ""}`;
   if (n?.type === "list_liked" || n?.type === "list_saved" || n?.type === "list_updated") return `/lista/${n?.metadata?.collection_id ?? ""}`;
   if (n?.route_id) return `/route/${n.route_id}`;
