@@ -45,11 +45,12 @@ export default function PublicProfile() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const [tab, setTab] = useState<"listy" | "wyjazdy">("listy");
-  // Gest natywny: swipe w bok przelacza Listy <-> Wyjazdy (jak na wlasnym profilu).
+  // Kolejnosc i domyslna zakladka 1:1 z wlasnym profilem: Wyjazdy | Listy (2026-08-30).
+  const [tab, setTab] = useState<"listy" | "wyjazdy">("wyjazdy");
+  // Gest natywny: swipe w LEWO idzie Wyjazdy -> Listy (zgodnie z kolejnoscia pigulek).
   const swipeTabs = useSwipeNav({
-    onLeft: () => setTab("wyjazdy"),
-    onRight: () => setTab("listy"),
+    onLeft: () => setTab("listy"),
+    onRight: () => setTab("wyjazdy"),
   });
   const [followSheet, setFollowSheet] = useState<"followers" | "following" | null>(null);
 
@@ -305,7 +306,8 @@ export default function PublicProfile() {
 
         {/* Zakladki: Listy | Wyjazdy (ikona + labelka obok, underline aktywnej) */}
         <div className="flex border-b border-border/40 -mx-1">
-          {(["listy", "wyjazdy"] as const).map((tk) => {
+          {/* Kolejnosc: Wyjazdy | Listy - ta sama co na wlasnym profilu. */}
+          {(["wyjazdy", "listy"] as const).map((tk) => {
             const active = tab === tk;
             const label = tk === "listy" ? t("sections.lists", { defaultValue: "Listy" }) : t("sections.trips", { defaultValue: "Wyjazdy" });
             return (
