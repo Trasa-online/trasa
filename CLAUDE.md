@@ -137,7 +137,7 @@ Oficjalny tagline aplikacji: **"speed dating z miastem"** (wszystkie litery mał
 - **Profil** → `/moj-profil`.
 - Web/PWA (stary flow, `!PLANNING_DISABLED`): slot 2 to `Wyjazdy` (`/home`) zamiast Eksploruj.
 
-**Profil (`/moj-profil`, [TravelerProfile.tsx](src/pages/TravelerProfile.tsx)) = hub z 2 zakładkami** (`?tab=listy|wyjazdy`). **Zakładka „Zapisane" USUNIĘTA 2026-08-24** - zapisane miejsca żyją w LIŚCIE OGÓLNEJ (wishlista `to_visit`, patrz niżej), niewidocznej jako tab; pojawiają się przy tworzeniu listy/wyjazdu. Wewnątrz Listy i Wyjazdy są **podzakładki** (dropdown w stylu iOS, komponent lokalny `TabSelect`):
+**Profil (`/moj-profil`, [TravelerProfile.tsx](src/pages/TravelerProfile.tsx)) = hub z 2 zakładkami** (`?tab=listy|wyjazdy`). **Kolejność pigułek: Wyjazdy | Listy**, domyślnie otwiera się **Wyjazdy** (zmiana 2026-08-30). Profil publiczny ma nadal kolejność Listy | Wyjazdy. **Zakładka „Zapisane" USUNIĘTA 2026-08-24** - zapisane miejsca żyją w LIŚCIE OGÓLNEJ (wishlista `to_visit`, patrz niżej), niewidocznej jako tab; pojawiają się przy tworzeniu listy/wyjazdu. Wewnątrz Listy i Wyjazdy są **podzakładki** (dropdown w stylu iOS, komponent lokalny `TabSelect`):
 1. **Listy** — pigułki `[Moje listy | Zapisane]` (domyślnie **Moje listy**):
    - **Moje listy** — kuratorskie **publiczne polecajki** usera (`discovery_collections`, `kind='ranking'`, `list_status='visited'`). Grupy miejsc do polecenia, NIE luźne zapisy.
    - **Zapisane** — listy zapisane **od innych** userów. Komponent [SavedCollections](src/components/home/DiscoveryFeed.tsx) (localStorage `trasa_saved_collections`).

@@ -134,7 +134,9 @@ const TravelerProfile = () => {
   const [searchParams] = useSearchParams();
   // ?tab=wyjazdy|listy - wejście z redirectów (dawne /dziennik -> wyjazdy). Zakładka "zapisane"
   // usunięta (2026-08-24): zapisane miejsca żyją w liście ogólnej i pojawiają się przy tworzeniu.
-  const initialTab: "listy" | "wyjazdy" = searchParams.get("tab") === "wyjazdy" ? "wyjazdy" : "listy";
+  // Domyślnie PIERWSZA zakładka = Wyjazdy (kolejność zmieniona 2026-08-30) - inaczej wchodząc na
+  // profil widać zaznaczoną drugą pigułkę, co wygląda jak błąd.
+  const initialTab: "listy" | "wyjazdy" = searchParams.get("tab") === "listy" ? "listy" : "wyjazdy";
   const [tab, setTab] = useState<"listy" | "wyjazdy">(initialTab);
   // Podzakładki (pigułki) w Listy / Wyjazdy. Domyślnie: Listy->Moje, Wyjazdy->Wspomnienia
   // (opublikowane trasy = flagowa treść; robocze to work-in-progress).
@@ -160,8 +162,9 @@ const TravelerProfile = () => {
   // Gest natywny: przeciagniecie w lewo/prawo przelacza zakladke Listy <-> Wyjazdy.
   // Wejscie w "Wyjazdy" resetuje podzakladke tak samo jak tap w pigulke.
   const swipeTabs = useSwipeNav({
-    onLeft: () => { if (tab === "listy") { setTab("wyjazdy"); setWyjazdyTab("robocze"); } },
-    onRight: () => { if (tab === "wyjazdy") setTab("listy"); },
+    // Kolejnosc pigulek: Wyjazdy | Listy, wiec swipe w LEWO idzie Wyjazdy -> Listy.
+    onLeft: () => { if (tab === "wyjazdy") setTab("listy"); },
+    onRight: () => { if (tab === "listy") { setTab("wyjazdy"); setWyjazdyTab("robocze"); } },
   });
 
   const { data: followCounts = { followers: 0, following: 0 } } = useFollowCounts(user?.id);
@@ -675,7 +678,8 @@ const TravelerProfile = () => {
 
         {/* Zakladki: Listy | Wyjazdy (ikona + labelka obok, underline aktywnej). Zapisane usunięte 2026-08-24. */}
         <div className="flex border-b border-border/40 -mx-1">
-          {(["listy", "wyjazdy"] as const).map((tk) => {
+          {/* Kolejnosc: Wyjazdy | Listy (prosba Nat 2026-08-30) - wyjazdy sa flagowa trescia profilu. */}
+          {(["wyjazdy", "listy"] as const).map((tk) => {
             const active = tab === tk;
             const label = tk === "listy" ? t("sections.lists", { defaultValue: "Listy" }) : t("sections.trips", { defaultValue: "Wyjazdy" });
             return (
