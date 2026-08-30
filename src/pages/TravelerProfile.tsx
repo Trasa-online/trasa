@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { avatarSrc } from "@/lib/avatar";
 import { useAuth } from "@/hooks/useAuth";
@@ -26,11 +26,11 @@ import { Camera as CapCamera, CameraResultType, CameraSource } from "@capacitor/
 import { ProfileFeedCard } from "@/components/profile/ProfileFeedCard";
 import { SpontawayTabIcon } from "@/components/profile/SpontawayTabIcon";
 import { shortRelativeTime } from "@/lib/relativeTime";
-import { countryForCity } from "@/lib/tripCountries";
 import { unsaveCollectionDb, migrateLocalSavedCollections } from "@/lib/savedCollections";
-import { parseISO, format } from "date-fns";
-import { dateLocale } from "@/lib/dateLocale";
 import { pinCoverKeys, fetchPlacePhotosForKeys, pickPlaceCover } from "@/lib/placePhotoSocial";
+// Karta wyjazdu = ta sama co na eksploracji (okladka + zapis), na profilu BEZ mapki.
+import TrasaBigCard from "@/components/home/TrasaBigCard";
+import { resolveStored } from "@/components/PlacePhoto";
 
 // ── Guest empty state (same visual rytm jak Journal dla goscia) ──────────────
 
@@ -142,6 +142,8 @@ const TravelerProfile = () => {
   // (opublikowane trasy = flagowa treść; robocze to work-in-progress).
   const [listyTab, setListyTab] = useState<"moje" | "ogolne" | "zapisane">("moje");
   const [wyjazdyTab, setWyjazdyTab] = useState<"robocze" | "wspomnienia" | "zapisane">("robocze");
+  // Podzakladka wybrana swiadomie (tap w pigulke / ?sub=) - wtedy nie podmieniamy jej automatycznie.
+  const subChosen = useRef(false);
   // Synchronizacja zakladek z URL (?tab=&sub=). useState czyta URL tylko przy pierwszym mount, a
   // wejscie z "+" gdy juz jestesmy na /moj-profil to nawigacja na TEN SAM route (bez remountu) - bez
   // tego efektu nowo utworzona robocza trasa lądowała na Wspomnieniach (user jej nie widzial).
@@ -150,7 +152,7 @@ const TravelerProfile = () => {
     if (tp === "wyjazdy") setTab("wyjazdy");
     else if (tp === "listy") setTab("listy");
     const sub = searchParams.get("sub");
-    if (sub === "robocze" || sub === "wspomnienia" || sub === "zapisane") setWyjazdyTab(sub);
+    if (sub === "robocze" || sub === "wspomnienia" || sub === "zapisane") { subChosen.current = true; setWyjazdyTab(sub); }
   }, [searchParams]);
   const share = useShare();
 
@@ -330,7 +332,7 @@ const TravelerProfile = () => {
     queryFn: async () => {
       // saves_count/likes_count = denormalizowane liczniki na routes (RLS na saved_routes blokuje
       // count po stronie klienta - patrz migracja 20260828). Czytamy kolumny zamiast liczyc wiersze.
-      const sel = "id, title, city, start_date, day_number, folder_id, views, saves_count, likes_count, created_at, user_id, is_shared, trip_type, status, tags, review_narrative, ai_summary";
+      const sel = "id, title, city, start_date, day_number, folder_id, views, saves_count, likes_count, created_at, user_id, is_shared, trip_type, status, tags, review_narrative, ai_summary, cover_url, list_cover_url";
       // Wlasne trasy (TAKZE robocze is_shared=false - badge "Robocze") + trasy grupowe, do ktorych
       // jestem zaproszony (member, is_shared=true). Koniec osobnego widoku /utworz/robocze (IA 2026-08-22).
       const [ownRes, memberRes] = await Promise.all([
@@ -392,6 +394,8 @@ const TravelerProfile = () => {
         // lub ai_summary (fallback). tags = routes.tags.
         description: (rep.review_narrative || rep.ai_summary || "").trim() || null,
         tags: Array.isArray(rep.tags) ? rep.tags : [],
+        // Okladka karty: miniatura eksploracji > okladka wyjazdu (patrz project_route_cover_model).
+        cover: rep.list_cover_url ?? rep.cover_url ?? null,
         tiles: days.flatMap((d) => pinsByRoute[d.id] ?? []),
         saves: Number(rep.saves_count ?? 0),
         likes: Number(rep.likes_count ?? 0),
@@ -432,6 +436,19 @@ const TravelerProfile = () => {
   });
 
   // Feed ZAPISANYCH WYJAZDOW (od innych) - ten sam UI co Wspomnienia (ProfileFeedCard), z autorem trasy.
+  // Wyjazdy otwieraja sie na "Robocze", ale uczestnik cudzego wyjazdu ma u siebie TYLKO
+  // opublikowane wspomnienie - zakladka wygladala u niego na pusta (zgloszenie Nat 2026-08-30).
+  // Gdy nie ma zadnego roboczego, a sa wspomnienia, przelaczamy sie na nie (chyba ze user
+  // wybral podzakladke sam).
+  useEffect(() => {
+    if (subChosen.current) return;
+    const rows = tripCards as any[];
+    if (!rows.length) return;
+    const hasDrafts = rows.some((tr) => tr.status !== "published");
+    const hasMemories = rows.some((tr) => tr.status === "published");
+    if (!hasDrafts && hasMemories) setWyjazdyTab("wspomnienia");
+  }, [tripCards]);
+
   const { data: savedTripCards = [] } = useQuery({
     queryKey: ["profile-saved-trip-feed", user?.id],
     enabled: !!user?.id,
@@ -440,7 +457,7 @@ const TravelerProfile = () => {
         .select("route_id, created_at").eq("user_id", user!.id).order("created_at", { ascending: false });
       const ids = ((saved ?? []) as any[]).map((r) => r.route_id).filter(Boolean);
       if (!ids.length) return [];
-      const sel = "id, title, city, start_date, views, saves_count, likes_count, created_at, user_id, is_shared, trip_type, status, tags, review_narrative, ai_summary";
+      const sel = "id, title, city, start_date, views, saves_count, likes_count, created_at, user_id, is_shared, trip_type, status, tags, review_narrative, ai_summary, cover_url, list_cover_url";
       const { data: rows } = await (supabase as any).from("routes").select(sel).in("id", ids);
       const rowRows = (rows ?? []) as any[];
       if (!rowRows.length) return [];
@@ -462,6 +479,7 @@ const TravelerProfile = () => {
           id: rep.id, city: rep.city, title: rep.title, start_date: rep.start_date, created_at: rep.created_at,
           description: (rep.review_narrative || rep.ai_summary || "").trim() || null,
           tags: Array.isArray(rep.tags) ? rep.tags : [],
+          cover: rep.list_cover_url ?? rep.cover_url ?? null,
           tiles: pinsByRoute[rep.id] ?? [], saves: Number(rep.saves_count ?? 0), likes: Number(rep.likes_count ?? 0), views: Number(rep.views ?? 0),
           author_avatar: a?.avatar_url ?? null, author_name: a?.first_name || a?.username || "Podróżnik",
         };
@@ -519,30 +537,38 @@ const TravelerProfile = () => {
   const draftTrips = (tripCards as any[]).filter((tr) => tr.status !== "published");
   const memoryTrips = (tripCards as any[]).filter((tr) => tr.status === "published");
 
+  // Okladka karty wyjazdu: wybrana miniatura > pierwsze zdjecie miejsca z wyjazdu.
+  const tripCover = (tr: any): string | null => {
+    const own = resolveStored(tr.cover);
+    if (own) return own;
+    for (const tile of (tr.tiles ?? []) as any[]) {
+      const first = (v: any) => (Array.isArray(v) ? v.find((x) => typeof x === "string" && x) : null);
+      const url = resolveStored(tile.image_url || first(tile.images) || first(tile.user_photo_urls) || tile.photo_url) ?? resolveStored(tile._cover);
+      if (url) return url;
+    }
+    return null;
+  };
+
   const renderTripCard = (tr: any) => {
-    const dateLabel = tr.start_date ? format(parseISO(tr.start_date), "d LLLL yyyy", { locale: dateLocale() }) : "";
-    // "Roboczy" = wyjazd NIEOPUBLIKOWANY (status != 'published'). Publikacja = "Zapisz trasę"
-    // (finishEditing) ustawia status='published'. NIE po minieciu daty (patrz isMemory w ReviewSummary).
+    // Karta 1:1 z eksploracja (TrasaBigCard): okladka na cala kafle, meta + tytul na dole,
+    // prawy stack akcji. Na profilu BEZ mapki (prosba Nat 2026-08-30) i nizsza (3:4).
     const isRoboczy = tr.status !== "published";
-    // Otwarcie: is_shared=false (solo draft) -> KREATOR (SharedRoute czyta tylko is_shared=true);
-    // is_shared=true (grupowy plan / opublikowany) -> widok trasy dziala normalnie.
-    const openInCreator = tr.is_own && tr.is_shared === false;
-    const eyebrow = [countryForCity(tr.city), tr.city, dateLabel].filter(Boolean).join(" · ");
     return (
-      <ProfileFeedCard
+      <TrasaBigCard
         key={tr.id}
-        avatarUrl={profile?.avatar_url}
-        fallback={displayName}
-        eyebrow={eyebrow}
-        timestamp={shortRelativeTime(tr.created_at)}
+        id={tr.id}
+        photo={tripCover(tr)}
+        city={tr.city}
+        placeCount={(tr.tiles ?? []).length}
         title={tr.title || (tr.city ? t("feed.trip_fallback", { city: tr.city, defaultValue: `Wyjazd do ${tr.city}` }) : t("feed.trip_fallback_generic", "Wyjazd"))}
         description={tr.description}
-        tiles={tr.tiles}
-        counts={{ saves: tr.saves, likes: tr.likes, views: tr.views }}
+        authorName={displayName}
+        authorAvatar={profile?.avatar_url}
         isDraft={isRoboczy}
-        mapPins={tr.tiles}
+        showMap={false}
+        snap={false}
+        heightClass="aspect-[3/4]"
         // Widok wyjazdu = SharedRoute (/route/:id) dla WSZYSTKICH etapow (Propozycje/W Trakcie/Wspomnienie).
-        // SharedRoute czyta wlasne robocze (RLS) + is_shared. Stage-aware guziki wg trip_type.
         onOpen={() => navigate(`/route/${tr.id}`)}
         onEdit={tr.is_own ? () => navigate(`/review-summary?route=${tr.id}&edit=1`) : undefined}
         onDelete={tr.is_own ? () => handleDeleteTrip(tr) : undefined}
@@ -550,28 +576,27 @@ const TravelerProfile = () => {
     );
   };
 
-  // Zapisany (cudzy) wyjazd - ten sam UI co Wspomnienia, ale autor = tworca trasy, akcja = odpiecie.
-  const renderSavedTripCard = (tr: any) => {
-    const dateLabel = tr.start_date ? format(parseISO(tr.start_date), "d LLLL yyyy", { locale: dateLocale() }) : "";
-    const eyebrow = [countryForCity(tr.city), tr.city, dateLabel].filter(Boolean).join(" · ");
-    return (
-      <ProfileFeedCard
-        key={tr.id}
-        avatarUrl={tr.author_avatar}
-        fallback={tr.author_name}
-        eyebrow={eyebrow}
-        timestamp={shortRelativeTime(tr.created_at)}
-        title={tr.title || (tr.city ? t("feed.trip_fallback", { city: tr.city, defaultValue: `Wyjazd do ${tr.city}` }) : t("feed.trip_fallback_generic", "Wyjazd"))}
-        description={tr.description}
-        tiles={tr.tiles}
-        counts={{ saves: tr.saves, likes: tr.likes, views: tr.views }}
-        mapPins={tr.tiles}
-        onOpen={() => navigate(`/route/${tr.id}`)}
-        onSave={() => handleUnsaveTrip(tr.id)}
-        saved
-      />
-    );
-  };
+  // Zapisany (cudzy) wyjazd - ta sama karta co Wspomnienia, ale autor = tworca trasy, akcja = odpiecie.
+  const renderSavedTripCard = (tr: any) => (
+    <TrasaBigCard
+      key={tr.id}
+      id={tr.id}
+      photo={tripCover(tr)}
+      city={tr.city}
+      placeCount={(tr.tiles ?? []).length}
+      title={tr.title || (tr.city ? t("feed.trip_fallback", { city: tr.city, defaultValue: `Wyjazd do ${tr.city}` }) : t("feed.trip_fallback_generic", "Wyjazd"))}
+      description={tr.description}
+      tags={tr.tags}
+      authorName={tr.author_name}
+      authorAvatar={tr.author_avatar}
+      showMap={false}
+      snap={false}
+      heightClass="aspect-[3/4]"
+      onOpen={() => navigate(`/route/${tr.id}`)}
+      onToggleSave={() => handleUnsaveTrip(tr.id)}
+      saved
+    />
+  );
 
   // Zapisana (cudza) lista - ten sam UI co wlasne listy, autor = tworca, chip "Nowe miejsce!", odpiecie.
   const renderSavedListCard = (l: any) => (
@@ -756,7 +781,7 @@ const TravelerProfile = () => {
               {/* Podzakładki: Robocze (niepublikowane) | Wspomnienia (opublikowane) | Zapisane (od innych). */}
               <TabSelect
                 value={wyjazdyTab}
-                onChange={(v) => setWyjazdyTab(v as "robocze" | "wspomnienia" | "zapisane")}
+                onChange={(v) => { subChosen.current = true; setWyjazdyTab(v as "robocze" | "wspomnienia" | "zapisane"); }}
                 options={[{ id: "robocze", label: "Robocze" }, { id: "wspomnienia", label: "Wspomnienia" }, { id: "zapisane", label: "Zapisane" }]}
               />
               {wyjazdyTab === "zapisane" ? (

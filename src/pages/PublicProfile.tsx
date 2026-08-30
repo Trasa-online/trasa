@@ -9,8 +9,6 @@ import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { toggleRouteLike, toggleListLike } from "@/lib/likes";
 import { saveCollectionDb, unsaveCollectionDb } from "@/lib/savedCollections";
-import { parseISO, format } from "date-fns";
-import { dateLocale } from "@/lib/dateLocale";
 import { ArrowLeft, LayoutGrid } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -18,9 +16,11 @@ import FollowButton from "@/components/social/FollowButton";
 import { useFollowCounts, useFollowList } from "@/hooks/useFollow";
 import { useSwipeNav } from "@/hooks/useSwipeNav";
 import { ProfileFeedCard } from "@/components/profile/ProfileFeedCard";
+// Karta wyjazdu 1:1 z eksploracja (na profilu bez mapki) - prosba Nat 2026-08-30.
+import TrasaBigCard from "@/components/home/TrasaBigCard";
+import { resolveStored } from "@/components/PlacePhoto";
 import { SpontawayTabIcon } from "@/components/profile/SpontawayTabIcon";
 import { shortRelativeTime } from "@/lib/relativeTime";
-import { countryForCity } from "@/lib/tripCountries";
 import { pinCoverKeys, fetchPlacePhotosForKeys, pickPlaceCover } from "@/lib/placePhotoSocial";
 
 // ── Empty state feedu (cudzy profil, read-only - bez CTA tworzenia) ─────────────
@@ -38,6 +38,18 @@ function FeedEmptyRO({ icon, maskSrc, title, desc }: { icon?: React.ReactNode; m
     </div>
   );
 }
+
+// Okladka karty wyjazdu: wybrana miniatura eksploracji > okladka wyjazdu > pierwsze zdjecie miejsca.
+const tripCover = (tr: any): string | null => {
+  const own = resolveStored(tr.cover);
+  if (own) return own;
+  for (const tile of (tr.tiles ?? []) as any[]) {
+    const first = (v: any) => (Array.isArray(v) ? v.find((x: any) => typeof x === "string" && x) : null);
+    const url = resolveStored(tile.image_url || first(tile.images) || first(tile.user_photo_urls) || tile.photo_url) ?? resolveStored(tile._cover);
+    if (url) return url;
+  }
+  return null;
+};
 
 export default function PublicProfile() {
   const { t } = useTranslation("profiles");
@@ -112,7 +124,7 @@ export default function PublicProfile() {
     enabled: !!profile?.id,
     queryFn: async () => {
       const { data: routes } = await (supabase as any)
-        .from("routes").select("id, title, city, start_date, day_number, folder_id, views, saves_count, likes_count, created_at, tags, review_narrative, ai_summary")
+        .from("routes").select("id, title, city, start_date, day_number, folder_id, views, saves_count, likes_count, created_at, tags, review_narrative, ai_summary, cover_url, list_cover_url")
         .eq("user_id", profile!.id).eq("is_shared", true)
         .order("created_at", { ascending: false });
       const rows = (routes ?? []) as any[];
@@ -150,6 +162,7 @@ export default function PublicProfile() {
         created_at: rep.created_at,
         description: (rep.review_narrative || rep.ai_summary || "").trim() || null,
         tags: Array.isArray(rep.tags) ? rep.tags : [],
+        cover: rep.list_cover_url ?? rep.cover_url ?? null,
         tiles: days.flatMap((d) => pinsByRoute[d.id] ?? []),
         saves: Number(rep.saves_count ?? 0),
         likes: Number(rep.likes_count ?? 0),
@@ -351,30 +364,28 @@ export default function PublicProfile() {
           ) : tripCards.length === 0 ? (
             <FeedEmptyRO maskSrc="/Ikona_Trasy.svg" title="Brak wyjazdów" desc={`Tu pojawią się wyjazdy tego użytkownika.`} />
           ) : (
-            tripCards.map((tr: any) => {
-              const dateLabel = tr.start_date ? format(parseISO(tr.start_date), "d LLLL yyyy", { locale: dateLocale() }) : "";
-              const eyebrow = [countryForCity(tr.city), tr.city, dateLabel].filter(Boolean).join(" · ");
-              return (
-                <ProfileFeedCard
-                  key={tr.id}
-                  avatarUrl={profile.avatar_url}
-                  fallback={displayName}
-                  eyebrow={eyebrow}
-                  timestamp={shortRelativeTime(tr.created_at)}
-                  title={tr.title || (tr.city ? t("feed.trip_fallback", { city: tr.city, defaultValue: `Wyjazd do ${tr.city}` }) : t("feed.trip_fallback_generic", "Wyjazd"))}
-                  description={tr.description}
-                  tags={tr.tags}
-                  tiles={tr.tiles}
-                  mapPins={tr.tiles}
-                  counts={{ saves: Math.max(0, tr.saves + delta(isTripSaved(tr.id), initSavedTrips.has(tr.id))), likes: Math.max(0, tr.likes + delta(isTripLiked(tr.id), initLikedTrips.has(tr.id))), views: tr.views }}
-                  onOpen={() => navigate(`/route/${tr.id}`)}
-                  onLike={canInteract ? () => onTripLike(tr) : undefined}
-                  liked={isTripLiked(tr.id)}
-                  onSave={canInteract ? () => onTripSave(tr) : undefined}
-                  saved={isTripSaved(tr.id)}
-                />
-              );
-            })
+            tripCards.map((tr: any) => (
+              <TrasaBigCard
+                key={tr.id}
+                id={tr.id}
+                photo={tripCover(tr)}
+                city={tr.city}
+                placeCount={(tr.tiles ?? []).length}
+                title={tr.title || (tr.city ? t("feed.trip_fallback", { city: tr.city, defaultValue: `Wyjazd do ${tr.city}` }) : t("feed.trip_fallback_generic", "Wyjazd"))}
+                description={tr.description}
+                tags={tr.tags}
+                authorName={displayName}
+                authorAvatar={profile.avatar_url}
+                showMap={false}
+                snap={false}
+                heightClass="aspect-[3/4]"
+                onOpen={() => navigate(`/route/${tr.id}`)}
+                onLike={canInteract ? () => onTripLike(tr) : undefined}
+                liked={isTripLiked(tr.id)}
+                onToggleSave={canInteract ? () => onTripSave(tr) : undefined}
+                saved={isTripSaved(tr.id)}
+              />
+            ))
           )}
         </div>
       </div>
