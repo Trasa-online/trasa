@@ -10,6 +10,7 @@ import { useNativePush } from "@/hooks/useNativePush";
 import { useNetworkReconnect } from "@/hooks/useNetworkReconnect";
 import { useAppResume } from "@/hooks/useAppResume";
 import { useNotificationsLive } from "@/hooks/useNotificationsLive";
+import { useEdgeSwipeBack } from "@/hooks/useEdgeSwipeBack";
 import AuthDrawer from "@/components/auth/AuthDrawer";
 import { businessPanelPath } from "@/lib/businessRedirect";
 import { TrasaLogo } from "@/components/TrasaLogo";
@@ -745,6 +746,8 @@ function AuthDrawerProviderWrapper({ children }: { children: React.ReactNode }) 
   useNetworkReconnect();
   // Odswiezenie danych po powrocie appki na wierzch (m.in. swieze profile biznesow po edycji).
   useAppResume();
+  // Gest natywny: przeciagniecie od lewej krawedzi = cofniecie (WKWebView nie ma systemowego).
+  useEdgeSwipeBack();
   return (
     <AuthDrawerProvider user={user} loading={loading}>
       {children}

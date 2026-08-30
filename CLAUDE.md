@@ -300,6 +300,8 @@ Apka ma zachowywać się jak natywna, więc gesty dotykowe są **wspólnymi prym
 - **`data-no-drag`** wyłącza zamykanie przeciągnięciem w swoim poddrzewie, **`data-no-swipe`** wyłącza zmianę zakładki. Mapy ([RouteMap](src/components/RouteMap.tsx), mapa w `RouteMapSheet`) mają oba - pan po mapie nie może zamykać arkusza ani przeskakiwać zakładek. Dodawaj je do każdego nowego elementu z własnym gestem (mapa, slider, canvas).
 - Podczas gestu i domykania hook wyłącza animacje CSS (`animation: none`) - inaczej `animate-in/animate-out` nadpisuje transform i panel „nie klei się" do palca.
 
+**Cofanie gestem od krawędzi** ([useEdgeSwipeBack](src/hooks/useEdgeSwipeBack.ts), montowany raz w `App.tsx`): przeciągnięcie od **lewej krawędzi** (strefa 24px) w prawo = `navigate(-1)`, jak w natywnym iOS - WKWebView nie daje tego dla tras SPA. Gest jest ignorowany, gdy otwarty jest modal (tam zamyka się gestem w dół), gdy start jest dalej niż 24px od krawędzi (żeby nie gryzł się z gestami treści) oraz gdy nie ma historii w aplikacji (`history.state.idx === 0`) - wtedy NIC się nie dzieje, bez skoku na ekran zapasowy.
+
 **Gdzie gesty już są:** zakładki profilu (Listy ↔ Wyjazdy, własny i publiczny), zakładki wyjazdu (Miejsca/Galeria/Mapa w `SharedRoute` i `ReviewSummary`), zakładki listy (Miejsca/Galeria), galeria fullscreen wyjazdu, hero wizytówki i karuzela wydarzeń, wszystkie bottom sheety + ręczne drawery.
 
 ---
