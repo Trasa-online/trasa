@@ -84,6 +84,35 @@ const GoogleGlyph = ({ className }: { className?: string }) => (
 
 // Wiersz miejsca z uchwytem przeciagania (framer-motion Reorder) - tryb edycji wspoldzielonej
 // trasy (wlasciciel + uczestnik). Wzor 1:1 z SortablePlanRow w ReviewSummary.
+// Wiersz w TRYBIE ZMIANY KOLEJNOSCI: sam uchwyt + miniaturka + nazwa. Bez notek, zdjec i akcji -
+// krotki wiersz mniej skacze pod palcem i widac kilka miejsc naraz (prosba Nat 2026-08-30).
+function CompactSortableRow({ value, rowPin, index, categoryLabel }: {
+  value: any; rowPin: any; index: number; categoryLabel: ReactNode;
+}) {
+  const controls = useDragControls();
+  return (
+    <Reorder.Item as="div" value={value} dragListener={false} dragControls={controls} transition={{ duration: 0 }}>
+      <div className="flex items-center gap-3 py-2 border-b border-border/50 last:border-b-0 bg-background">
+        <span
+          onPointerDown={(e) => controls.start(e)}
+          aria-label="Przeciągnij, by zmienić kolejność"
+          className="shrink-0 w-6 flex items-center justify-center text-muted-foreground/60 cursor-grab active:cursor-grabbing touch-none"
+        >
+          <GripVertical className="h-5 w-5" />
+        </span>
+        <span className="relative w-12 h-12 shrink-0 rounded-xl overflow-hidden bg-[#fcede3]">
+          <PlacePhoto pin={rowPin} className="w-full h-full object-cover" />
+          <span className="absolute top-0.5 left-0.5 h-4 min-w-4 px-1 rounded-full bg-black/55 text-white text-[10px] font-bold flex items-center justify-center">{index + 1}</span>
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-[15px] font-semibold text-foreground truncate">{rowPin.place_name}</span>
+          <span className="block text-[12px] text-muted-foreground truncate">{categoryLabel}</span>
+        </span>
+      </div>
+    </Reorder.Item>
+  );
+}
+
 function SortableRouteRow({ value, rowPin, index, categoryLabel, onOpen, onGoogle, onDelete, onSave, saved, note, cornerAvatar }: {
   value: any; rowPin: any; index: number; categoryLabel: ReactNode;
   onOpen: () => void; onGoogle: () => void; onDelete: () => void;
@@ -199,6 +228,9 @@ export default function SharedRoute() {
   const [customRouteTag, setCustomRouteTag] = useState("");
   const [pinTags, setPinTags] = useState<Record<string, string[]>>({});
   const [publishing, setPublishing] = useState(false);
+  // Tryb "Zmień kolejność miejsc" - dopiero on pokazuje uchwyty drag&drop i skraca wiersze
+  // do miniaturek (prosba Nat 2026-08-30).
+  const [reorderMode, setReorderMode] = useState(false);
   const [chatHidden, setChatHidden] = useState(false); // dymek czatu schowany do krawedzi (swipe w bok)
   const [collapsedCats, setCollapsedCats] = useState<Set<string>>(new Set()); // zwiniete grupy kategorii
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
@@ -998,16 +1030,15 @@ export default function SharedRoute() {
   );
 
   // Wiersze miejsc w podanej kolejnosci (edycja = drag, inaczej zwykla lista).
+  // Wiersze miejsc. Uchwyty przeciagania POKAZUJEMY WYLACZNIE w trybie "Zmień kolejność miejsc"
+  // (prosba Nat 2026-08-30) - domyslny widok jest do czytania i uzupelniania, nie do sortowania.
   const renderRows = (list: any[], onReorder: (next: any[]) => void) => (
-    canEdit ? (
+    canEdit && reorderMode ? (
       <Reorder.Group axis="y" values={list} onReorder={onReorder} as="div">
         {list.map((pin: any, i: number) => (
-          <SortableRouteRow
+          <CompactSortableRow
             key={pin.id} value={pin} rowPin={rowPinFor(pin)} index={i}
             categoryLabel={categoryLabel(pin.category || "other")}
-            onOpen={() => openDetail(pin)} onGoogle={() => openGooglePlace(pin)} onDelete={() => handleDeletePin(pin)}
-            onSave={user ? () => toggleSaveBookmark(pin) : undefined} saved={isSaved(pin.place_name)}
-            note={buildNote(pin)} cornerAvatar={addedByAvatar(pin)}
           />
         ))}
       </Reorder.Group>
@@ -1018,6 +1049,7 @@ export default function SharedRoute() {
             key={pin.id} pin={rowPinFor(pin)} index={i}
             categoryLabel={categoryLabel(pin.category || "other")}
             onOpen={() => openDetail(pin)} onGoogle={() => openGooglePlace(pin)}
+            onDelete={canEdit ? () => handleDeletePin(pin) : undefined}
             onSave={user ? () => toggleSaveBookmark(pin) : undefined} saved={isSaved(pin.place_name)}
             note={buildNote(pin)} cornerAvatar={addedByAvatar(pin)}
           />
@@ -1037,32 +1069,9 @@ export default function SharedRoute() {
         return (
           <div key={cat}>
             {renderCatHeader(cat, groupPins.length, collapsed)}
-            {!collapsed && (canEdit ? (
-              // Tryb edycji: drag zmienia kolejnosc W OBREBIE kategorii, kosz usuwa.
-              <Reorder.Group axis="y" values={groupPins} onReorder={(no: any[]) => handleReorderGroup(cat, no)} as="div">
-                {groupPins.map((pin: any, i: number) => (
-                  <SortableRouteRow
-                    key={pin.id} value={pin} rowPin={rowPinFor(pin)} index={i}
-                    categoryLabel={categoryLabel(pin.category || "other")}
-                    onOpen={() => openDetail(pin)} onGoogle={() => openGooglePlace(pin)} onDelete={() => handleDeletePin(pin)}
-                    onSave={user ? () => toggleSaveBookmark(pin) : undefined} saved={isSaved(pin.place_name)}
-                    note={buildNote(pin)} cornerAvatar={addedByAvatar(pin)}
-                  />
-                ))}
-              </Reorder.Group>
-            ) : (
-              <div>
-                {groupPins.map((pin: any, i: number) => (
-                  <RoutePlaceRow
-                    key={pin.id} pin={rowPinFor(pin)} index={i}
-                    categoryLabel={categoryLabel(pin.category || "other")}
-                    onOpen={() => openDetail(pin)} onGoogle={() => openGooglePlace(pin)}
-                    onSave={user ? () => toggleSaveBookmark(pin) : undefined} saved={isSaved(pin.place_name)}
-                    note={buildNote(pin)} cornerAvatar={addedByAvatar(pin)}
-                  />
-                ))}
-              </div>
-            ))}
+            {/* Drag TYLKO w trybie "Zmień kolejność miejsc" - wtedy kolejnosc zmienia sie W OBREBIE
+                kategorii. Domyslnie zwykle wiersze (notki, zdjecia, akcje). */}
+            {!collapsed && renderRows(groupPins, (no: any[]) => handleReorderGroup(cat, no))}
           </div>
         );
       })}
@@ -1306,7 +1315,7 @@ export default function SharedRoute() {
             ) : (
               <EmptyPlacesState
                 title="Trasa jest pusta"
-                hint={canEdit ? "Dodaj pierwsze miejsce klikając guzik „+ Dodaj nowe miejsce”" : "Ta trasa nie ma jeszcze żadnych miejsc."}
+                hint={canEdit ? "Dodaj pierwsze miejsce guzikiem „+” po prawej stronie" : "Ta trasa nie ma jeszcze żadnych miejsc."}
               />
             )}
           </div>
@@ -1429,7 +1438,7 @@ export default function SharedRoute() {
           onDragEnd={(_e, info) => { if (info.offset.x > 28) setChatHidden(true); else if (info.offset.x < -28) setChatHidden(false); }}
           onTap={() => { if (chatHidden) setChatHidden(false); else setChatOpen(true); }}
           className="fixed right-4 z-40 h-14 w-14 rounded-full bg-primary text-white flex items-center justify-center touch-none"
-          style={{ bottom: "calc(84px + env(safe-area-inset-bottom, 0px))" }}>
+          style={{ bottom: "calc(152px + env(safe-area-inset-bottom, 0px))" }}>
           <MessageCircle className="h-6 w-6" strokeWidth={2.2} />
           {/* Licznik nieprzeczytanych - top-LEFT, zeby byl widoczny tez gdy dymek schowany do krawedzi. */}
           {unreadChat > 0 && (
@@ -1437,6 +1446,19 @@ export default function SharedRoute() {
           )}
         </motion.button>
       )}
+      {/* "Dodaj miejsce" jako plywajacy guzik BEZPOSREDNIO POD czatem (prosba Nat 2026-08-30).
+          Chowamy przy pisaniu notki i w trybie zmiany kolejnosci - wtedy nic nie ma zaslaniac listy. */}
+      {canEdit && !choosing && !noteEditing && !reorderMode && (
+        <button
+          onClick={() => { haptics.light(); setAddPlaceOpen(true); }}
+          aria-label="Dodaj miejsce"
+          className="fixed right-4 z-40 h-14 w-14 rounded-full bg-background border border-border shadow-lg shadow-black/10 flex items-center justify-center active:scale-90 transition-transform"
+          style={{ bottom: "calc(84px + env(safe-area-inset-bottom, 0px))" }}
+        >
+          <Plus className="h-6 w-6 text-foreground" strokeWidth={2.4} />
+        </button>
+      )}
+
       {canEdit && id && (
         <TripChatSheet open={chatOpen} onOpenChange={setChatOpen} routeId={id} tripTitle={route.title ?? cityLabel}
           participants={[
@@ -1499,13 +1521,23 @@ export default function SharedRoute() {
                 </button>
               </div>
             ) : (
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setAddPlaceOpen(true)}
-                  className="flex-1 py-3 rounded-full border border-border bg-background text-foreground font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
-                >
-                  <Plus className="h-4 w-4" /> {pins.length > 0 ? "Dodaj miejsce" : "Dodaj nowe miejsce"}
+              /* Tryb zmiany kolejnosci ma WLASNY, jednoguzikowy pasek - reszta akcji tylko
+                 rozpraszalaby przy przeciaganiu. */
+              reorderMode ? (
+                <button onClick={() => { haptics.success(); setReorderMode(false); }}
+                  className="w-full py-3 rounded-full bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform">
+                  <Check className="h-4 w-4 stroke-[3]" /> Gotowe
                 </button>
+              ) : (
+              <div className="flex items-center gap-2">
+                {/* "Dodaj miejsce" przeniesione do plywajacego guzika pod czatem (prosba Nat
+                    2026-08-30) - dolny pasek zostaje dla akcji etapu. */}
+                {pins.length > 1 && (
+                  <button onClick={() => { haptics.light(); setReorderMode(true); }}
+                    className="flex-1 py-3 rounded-full border border-border bg-background text-foreground font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform">
+                    <GripVertical className="h-4 w-4" /> Zmień kolejność
+                  </button>
+                )}
                 {/* Etap PROPOZYCJI (host): wybierz miejsca -> w trakcie. */}
                 {isOwner && stage === "planning" && pins.length > 0 && (
                   <button onClick={startChoosing}
@@ -1523,6 +1555,7 @@ export default function SharedRoute() {
                   </button>
                 )}
               </div>
+              )
             )
           ) : (
             <>
