@@ -412,14 +412,15 @@ export default function SharedList() {
     </div>
   );
 
-  // Galeria zdjec miejsc z listy (grid 3-kol jak instagram). Tap -> wizytowka miejsca.
+  // Galeria zdjec miejsc z listy (kafelki 4:3, 2 kolumny). Tap -> wizytowka miejsca.
   const renderGallery = () => (
     galleryItems.length === 0 ? (
       <p className="text-center text-sm text-muted-foreground py-10">{`Brak zdjęć w tej liście.`}</p>
     ) : (
-      <div className="grid grid-cols-3 gap-1.5">
+      /* Kafelki galerii 4:3 (spojnie z galeria wyjazdu). */
+      <div className="grid grid-cols-2 gap-1.5">
         {galleryItems.map((g, i) => (
-          <button key={i} onClick={() => openDetail(g.pin)} className="relative aspect-square rounded-xl overflow-hidden bg-muted active:opacity-90 transition-opacity">
+          <button key={i} onClick={() => openDetail(g.pin)} className="relative aspect-[4/3] rounded-xl overflow-hidden bg-muted active:opacity-90 transition-opacity">
             <img src={g.url as string} alt={g.pin.place_name} className="w-full h-full object-cover" loading="lazy" />
           </button>
         ))}

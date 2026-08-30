@@ -466,18 +466,44 @@ const TravelerProfile = () => {
     },
   });
 
-  const handleUnsaveList = async (colId: string) => {
+  // Odpiecie ZAPISANEJ listy - z oknem "Cofnij" (jak usuwanie wlasnych). Element znika od razu,
+  // faktyczny delete jest odroczony o 5 s (prosba Nat 2026-08-30: undo na WSZYSTKICH zakladkach).
+  const handleUnsaveList = (colId: string) => {
     if (!user) return;
-    await unsaveCollectionDb(user.id, colId);
-    try { const set = new Set<string>(JSON.parse(localStorage.getItem("trasa_saved_collections") || "[]")); set.delete(colId); localStorage.setItem("trasa_saved_collections", JSON.stringify([...set])); } catch { /* brak localStorage */ }
-    queryClient.invalidateQueries({ queryKey: ["profile-saved-list-feed", user.id] });
-    toast("Usunięto z zapisanych");
+    const key = ["profile-saved-list-feed", user.id];
+    const prev = queryClient.getQueryData(key);
+    queryClient.setQueryData(key, (old: any) => (old ?? []).filter((x: any) => x.id !== colId));
+    const setLocal = (has: boolean) => {
+      try {
+        const set = new Set<string>(JSON.parse(localStorage.getItem("trasa_saved_collections") || "[]"));
+        if (has) set.add(colId); else set.delete(colId);
+        localStorage.setItem("trasa_saved_collections", JSON.stringify([...set]));
+      } catch { /* brak localStorage */ }
+    };
+    setLocal(false);
+    deferDelete({
+      message: "Usunięto z zapisanych",
+      onUndo: () => { setLocal(true); queryClient.setQueryData(key, prev); },
+      commit: async () => {
+        await unsaveCollectionDb(user.id, colId);
+        queryClient.invalidateQueries({ queryKey: key });
+      },
+    });
   };
-  const handleUnsaveTrip = async (routeId: string) => {
+  // Odpiecie ZAPISANEGO wyjazdu - to samo okno "Cofnij".
+  const handleUnsaveTrip = (routeId: string) => {
     if (!user) return;
-    await (supabase as any).from("saved_routes").delete().eq("user_id", user.id).eq("route_id", routeId);
-    queryClient.invalidateQueries({ queryKey: ["profile-saved-trip-feed", user.id] });
-    toast("Usunięto z zapisanych");
+    const key = ["profile-saved-trip-feed", user.id];
+    const prev = queryClient.getQueryData(key);
+    queryClient.setQueryData(key, (old: any) => (old ?? []).filter((x: any) => x.id !== routeId));
+    deferDelete({
+      message: "Usunięto z zapisanych",
+      onUndo: () => queryClient.setQueryData(key, prev),
+      commit: async () => {
+        await (supabase as any).from("saved_routes").delete().eq("user_id", user.id).eq("route_id", routeId);
+        queryClient.invalidateQueries({ queryKey: key });
+      },
+    });
   };
 
   if (loading) return null;

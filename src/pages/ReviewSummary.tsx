@@ -1899,17 +1899,18 @@ const ReviewSummary = () => {
           </div>
         </div>
       )}
-      <div className="grid grid-cols-3 gap-0.5">
+      {/* Kafelki galerii 4:3 (spojnie z galeria wyjazdu) - prosba Nat 2026-08-30. */}
+      <div className="grid grid-cols-2 gap-1.5">
         {editable && photos.length < MAX_PHOTOS && (
           <button onClick={triggerPhotoPick} disabled={uploading}
-            className="aspect-square flex flex-col items-center justify-center gap-1 bg-muted/40 text-muted-foreground active:bg-muted/60 transition-colors">
+            className="aspect-[4/3] rounded-xl flex flex-col items-center justify-center gap-1 bg-muted/40 text-muted-foreground active:bg-muted/60 transition-colors">
             <Camera className="h-6 w-6" />
             <span className="text-[10px] font-medium">{uploading ? "…" : t("gallery.add")}</span>
           </button>
         )}
         {galleryPhotos.map((item, idx) => (
           <button key={`${item.url}-${idx}`} onClick={() => { setViewerUrl(item.url); setViewerMenuOpen(false); }}
-            className="relative aspect-square overflow-hidden bg-muted active:opacity-90">
+            className="relative aspect-[4/3] rounded-xl overflow-hidden bg-muted active:opacity-90">
             <img src={item.url} alt="" className="w-full h-full object-cover" />
             {/* #1: nazwa miejsca (gdy przypisane) + awatar/username uploadera (gdy nie moje) - oba naraz. */}
             <div className="absolute inset-x-1 bottom-1 flex flex-col items-start gap-1">

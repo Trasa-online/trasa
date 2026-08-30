@@ -1148,7 +1148,12 @@ export default function SharedRoute() {
                   <button onClick={() => setInviteOpen(true)} aria-label="Dodaj uczestników" className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center active:scale-90 transition-transform"><UserPlus className="h-4 w-4 text-foreground" /></button>
                 )}
                 <button onClick={handleShare} aria-label="Udostępnij" className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center active:scale-90 transition-transform"><Share2 className="h-4 w-4 text-foreground" /></button>
-                <button onClick={() => navigate(`/review-summary?route=${route.id}&edit=1`)} aria-label="Edytuj trasę" className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center active:scale-90 transition-transform"><Pencil className="h-4 w-4 text-foreground" /></button>
+                {/* Olowek TYLKO dla opublikowanego wspomnienia. W propozycjach i "w trakcie" caly
+                    ten widok JEST edycja (miejsca, notki, zdjecia, opis, tagi) - osobny tryb
+                    edycji tylko mylil (prosba Nat 2026-08-30). */}
+                {stage === "completed" && (
+                  <button onClick={() => navigate(`/review-summary?route=${route.id}&edit=1`)} aria-label="Edytuj trasę" className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center active:scale-90 transition-transform"><Pencil className="h-4 w-4 text-foreground" /></button>
+                )}
                 <button onClick={() => setAskDelete(true)} aria-label="Usuń wyjazd" className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center active:scale-90 transition-transform"><Trash2 className="h-4 w-4 text-destructive" /></button>
               </div>
             )}
@@ -1335,22 +1340,25 @@ export default function SharedRoute() {
                   </button>
                 )}
                 {galleryPhotos.map((url, i) => (
-                  <div key={i} onClick={() => setViewerIndex(i)} role="button" className="relative aspect-[4/3] rounded-2xl overflow-hidden bg-muted active:opacity-90 transition-opacity cursor-pointer">
+                  <div key={i} onClick={() => setViewerIndex(i)} role="button"
+                    className={`relative aspect-[4/3] rounded-2xl overflow-hidden bg-muted active:opacity-90 transition-opacity cursor-pointer ${(route as any).list_cover_url === url ? "ring-2 ring-primary ring-offset-2 ring-offset-background" : ""}`}>
                     <img src={url} alt="" loading="lazy" className="w-full h-full object-cover" />
                     {/* #c: ustaw okladke eksploracji (gwiazdka) + #3: usun zdjecie (kosz) - wlasciciel */}
                     {isOwner && (
                       <>
-                        <button onClick={(e) => { e.stopPropagation(); void handleSetCover(url); }} aria-label="Ustaw jako okładkę eksploracji"
-                          className="absolute top-1.5 left-1.5 h-7 w-7 rounded-full bg-black/45 backdrop-blur-sm flex items-center justify-center active:scale-90 transition-transform">
-                          <Star className={`h-3.5 w-3.5 ${(route as any).list_cover_url === url ? "fill-yellow-400 text-yellow-400" : "text-white"}`} />
+                        {/* Wybor okladki EKSPLORACJI - czytelna pigulka zamiast malej gwiazdki:
+                            wybrana = pomaranczowa "Okładka", pozostale = "Ustaw okładkę" (prosba
+                            Nat 2026-08-30). Sama kafelka wybranej dostaje pomaranczowy ring nizej. */}
+                        <button onClick={(e) => { e.stopPropagation(); void handleSetCover(url); }}
+                          aria-label={(route as any).list_cover_url === url ? "To jest okładka w eksploracji" : "Ustaw jako okładkę w eksploracji"}
+                          className={`absolute bottom-1.5 left-1.5 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold shadow-sm active:scale-95 transition-transform ${(route as any).list_cover_url === url ? "bg-primary text-white" : "bg-white/90 text-foreground"}`}>
+                          <Star className={`h-3 w-3 ${(route as any).list_cover_url === url ? "fill-white text-white" : "text-[#F0A583]"}`} />
+                          {(route as any).list_cover_url === url ? "Okładka" : "Ustaw okładkę"}
                         </button>
                         <button onClick={(e) => { e.stopPropagation(); void handleDeletePhoto(url); }} aria-label="Usuń zdjęcie"
                           className="absolute top-1.5 right-1.5 h-7 w-7 rounded-full bg-black/45 backdrop-blur-sm flex items-center justify-center active:scale-90 transition-transform">
                           <Trash2 className="h-3.5 w-3.5 text-white" />
                         </button>
-                        {(route as any).list_cover_url === url && (
-                          <span className="absolute bottom-1.5 left-1.5 text-[10px] font-bold text-white bg-black/55 backdrop-blur-sm rounded-full px-2 py-0.5">Okładka</span>
-                        )}
                       </>
                     )}
                   </div>
