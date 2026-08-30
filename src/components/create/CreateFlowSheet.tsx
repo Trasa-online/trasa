@@ -202,7 +202,10 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
     // Pusta lista jest OK (opcja "Pomiń") - miejsca mozna dodac pozniej na widoku listy.
     setCreating(true);
     haptics.light();
-    const id = await createListFromSavedPlaces(user.id, { title: listName.trim() || `Lista miejsc ${listCity}`, city: listCity, isPublic: true, places, author });
+    const id = await createListFromSavedPlaces(user.id, {
+      title: listName.trim() || (listCity ? `Lista miejsc ${listCity}` : "Lista miejsc"),
+      city: listCity || null, isPublic: true, places, author,
+    });
     setCreating(false);
     if (!id) { haptics.error(); toast.error("Nie udało się utworzyć listy"); return; }
     haptics.success();
@@ -364,6 +367,15 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
               onNext={() => { if (!listNameEdited) setListName(`Lista miejsc ${listCity}`); setStep("listName"); }} />
             <div className="px-5 pt-1">
               <CityCountryPicker city={listCity} onCityChange={setListCity} compact />
+              {/* Miasto jest OPCJONALNE - lista moze zbierac miejsca z calego swiata (prosba Nat
+                  2026-08-30). "Pomiń" czysci miasto i idzie dalej z generyczna nazwa. */}
+              <button
+                type="button"
+                onClick={() => { setListCity(""); if (!listNameEdited) setListName("Lista miejsc"); setStep("listName"); }}
+                className="mt-3 w-full py-2.5 text-sm font-semibold text-muted-foreground active:text-foreground transition-colors"
+              >
+                Pomiń - lista bez miasta
+              </button>
             </div>
           </div>
         )}

@@ -13,9 +13,8 @@ import { format } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
 import { MapPin, ArrowLeft, Sparkles, ChevronRight, ChevronLeft, ChevronDown, Bookmark, Calendar as CalendarIcon, Image as ImageIcon, Maximize2, X, Building2, Pencil, Trash2, Heart, Share2, Plus, Map as MapIcon, Loader2, Star, GripVertical, Check, Flag, Camera, ThumbsUp, MessageCircle } from "lucide-react";
 import { MAIN_CATEGORIES, subcategoryPluralLabel } from "@/lib/categories";
-import { ROUTE_TAGS, ROUTE_TAGS_VISIBLE, PLACE_VERDICT_TAGS } from "@/lib/routeTags";
+import { PLACE_VERDICT_TAGS } from "@/lib/routeTags";
 import { publishTrip } from "@/lib/publishTrip";
-import { ensureListCover } from "@/lib/ensureListCover";
 import { haptics } from "@/hooks/useHaptics";
 import { useSwipeNav } from "@/hooks/useSwipeNav";
 import { useDragToDismiss } from "@/hooks/useDragToDismiss";
@@ -223,9 +222,6 @@ export default function SharedRoute() {
   const [tripDesc, setTripDesc] = useState("");
   const [descSaved, setDescSaved] = useState(false);
   const descTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [routeTags, setRouteTags] = useState<string[]>([]);
-  const [showAllRouteTags, setShowAllRouteTags] = useState(false);
-  const [customRouteTag, setCustomRouteTag] = useState("");
   const [pinTags, setPinTags] = useState<Record<string, string[]>>({});
   const [publishing, setPublishing] = useState(false);
   // Tryb "Zmień kolejność miejsc" - dopiero on pokazuje uchwyty drag&drop i skraca wiersze
@@ -482,7 +478,6 @@ export default function SharedRoute() {
   useEffect(() => {
     if (!route) return;
     setTripDesc((prev) => (prev ? prev : ((route as any).review_narrative ?? "")));
-    setRouteTags(Array.isArray((route as any).tags) ? (route as any).tags : []);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [route?.id]);
 
@@ -505,14 +500,6 @@ export default function SharedRoute() {
     }, 700);
   };
 
-  // Tag CALEJ TRASY (routes.tags) - pula ROUTE_TAGS + wlasne.
-  const toggleRouteTag = async (tag: string) => {
-    if (!id) return;
-    haptics.selection();
-    const next = routeTags.includes(tag) ? routeTags.filter((t) => t !== tag) : [...routeTags, tag];
-    setRouteTags(next);
-    await (supabase as any).from("routes").update({ tags: next }).eq("id", id);
-  };
 
   // Werdykt o miejscu (pins.tags) - jeden tap pod notkami.
   const togglePinTag = async (pinId: string, tag: string) => {
@@ -531,19 +518,25 @@ export default function SharedRoute() {
   const handlePublish = async () => {
     if (!id || publishing) return;
     if (!(pins as any[]).length) { toast.error("Wyjazd musi mieć co najmniej jedno miejsce"); return; }
+    // Okladka eksploracji jest teraz WARUNKIEM publikacji (prosba Nat 2026-08-30) - wczesniej
+    // losowalismy ja po cichu, wiec wyjazd trafial do feedu z przypadkowym zdjeciem.
+    if (!(route as any)?.list_cover_url) {
+      haptics.warning();
+      toast.error("Wybierz okładkę wyjazdu", {
+        description: "W zakładce Galeria zaznacz zdjęcie, które ma reprezentować wyjazd w eksploracji.",
+        action: { label: "Galeria", onClick: () => setPlanTab("galeria") },
+      });
+      return;
+    }
     setPublishing(true);
     try {
-      const pool = [
-        ...galleryPhotosRef.current,
-        ...Array.from(photosMap.values()).flat().map((ph: any) => resolveStored(ph.url) ?? ph.url),
-      ].filter(Boolean) as string[];
       await publishTrip([id]);
       // Zdjecia dodane przy miejscach (pin_photos) staja sie czescia galerii MIEJSC dopiero teraz -
       // publikacja jest momentem, w ktorym tresc wyjazdu staje sie publiczna (RPC security definer,
       // bo przenosi tez zdjecia innych uczestnikow; zgloszenie Nat 2026-08-30).
       const { data: synced } = await (supabase as any).rpc("sync_route_place_photos", { p_route_id: id });
       if (typeof synced === "number" && synced > 0) console.info(`[SharedRoute] zdjęcia miejsc: ${synced}`);
-      const cover = await ensureListCover(id, pool);
+      const cover = (route as any)?.list_cover_url as string | null;
       haptics.success();
       queryClient.invalidateQueries({ queryKey: ["shared-route", id] });
       queryClient.invalidateQueries({ queryKey: ["profile-trip-feed"] });
@@ -713,6 +706,7 @@ export default function SharedRoute() {
     queryClient.invalidateQueries({ queryKey: ["shared-route-pins", id] });
   };
   const handleReorderPins = (newOrder: any[]) => {
+    reorderTick(newOrder, (pins as any[]) ?? []);
     queryClient.setQueryData(["shared-route-pins", id], newOrder);
     void persistPinOrder(newOrder);
   };
@@ -1027,6 +1021,15 @@ export default function SharedRoute() {
   };
   const toggleCat = (cat: string) => setCollapsedCats((prev) => { const n = new Set(prev); if (n.has(cat)) n.delete(cat); else n.add(cat); return n; });
   // Reorder w obrebie grupy -> odbuduj pelna liste (grupy w kolejnosci wyswietlania) i persist pin_order.
+  // Haptyczny "tick" przy KAZDEJ zamianie miejsc - wiadomo, ze element wskoczyl na nowa pozycje
+  // (prosba Nat 2026-08-30). Wolane z obu sciezek reorderu (plaska lista + grupy kategorii).
+  const reorderTick = (next: any[], prev: any[]) => {
+    if (next.length !== prev.length) return;
+    for (let i = 0; i < next.length; i++) {
+      if (next[i]?.id !== prev[i]?.id) { haptics.selection(); return; }
+    }
+  };
+
   const handleReorderGroup = (cat: string, newGroupOrder: any[]) => {
     handleReorderPins(groupedPins.flatMap(([c, ps]) => (c === cat ? newGroupOrder : ps)));
   };
@@ -1254,51 +1257,6 @@ export default function SharedRoute() {
                     {descSaved && <span className="absolute bottom-2.5 right-3 text-[10px] font-medium text-green-600">Zapisano</span>}
                   </div>
                 </div>
-                <div>
-                  <p className="text-[13px] font-bold text-foreground mb-1.5">Tagi wyjazdu</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {(showAllRouteTags ? ROUTE_TAGS : ROUTE_TAGS.slice(0, ROUTE_TAGS_VISIBLE)).map((tg) => {
-                      const on = routeTags.includes(tg);
-                      return (
-                        <button key={tg} type="button" onClick={() => toggleRouteTag(tg)}
-                          className={`px-2.5 py-1.5 rounded-full text-[12.5px] font-semibold border transition-colors active:scale-[0.97] ${on ? "bg-[#FDF184] border-[#FDCD84] text-foreground" : "bg-white text-foreground border-border/60"}`}>
-                          {tg}
-                        </button>
-                      );
-                    })}
-                    {/* Wlasne tagi (spoza puli) - zawsze widoczne, zeby dalo sie je zdjac. */}
-                    {routeTags.filter((t) => !ROUTE_TAGS.includes(t)).map((tg) => (
-                      <button key={tg} type="button" onClick={() => toggleRouteTag(tg)}
-                        className="px-2.5 py-1.5 rounded-full text-[12.5px] font-semibold border bg-[#FDF184] border-[#FDCD84] text-foreground active:scale-[0.97] transition-colors">
-                        {tg}
-                      </button>
-                    ))}
-                    {ROUTE_TAGS.length > ROUTE_TAGS_VISIBLE && (
-                      <button type="button" onClick={() => setShowAllRouteTags((o) => !o)}
-                        className="px-2.5 py-1.5 rounded-full text-[12.5px] font-semibold bg-secondary text-secondary-foreground active:scale-[0.97] transition-transform">
-                        {showAllRouteTags ? "Zwiń" : "Pokaż więcej"}
-                      </button>
-                    )}
-                  </div>
-                  <form
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      const v = customRouteTag.trim();
-                      if (!v || routeTags.some((t) => t.toLowerCase() === v.toLowerCase())) { setCustomRouteTag(""); return; }
-                      void toggleRouteTag(v);
-                      setCustomRouteTag("");
-                    }}
-                    className="mt-2 flex items-center gap-2"
-                  >
-                    <input value={customRouteTag} onChange={(e) => setCustomRouteTag(e.target.value.slice(0, 24))}
-                      placeholder="Własny tag..."
-                      className="flex-1 min-w-0 h-9 rounded-full bg-white border border-border/60 px-3.5 text-[13px] text-foreground outline-none focus:border-orange-400/60 placeholder:text-muted-foreground/55" />
-                    <button type="submit" disabled={!customRouteTag.trim()}
-                      className="h-9 px-3.5 rounded-full bg-secondary text-secondary-foreground text-[13px] font-bold active:scale-95 transition-transform disabled:opacity-40">
-                      Dodaj
-                    </button>
-                  </form>
-                </div>
               </div>
             )}
             {choosing ? (
@@ -1347,38 +1305,32 @@ export default function SharedRoute() {
         ) : (
           <div className="px-5 pt-4">
             {galleryPhotos.length > 0 ? (
-              <div className="grid grid-cols-2 gap-2">
-                {/* #7: wlasciciel LUB uczestnik wspolnego wyjazdu - kafelek dodawania zdjecia */}
+              /* Uklad masonry (jak Pinterest, prosba Nat 2026-08-30): zdjecia w NATURALNYCH
+                 proporcjach, dwie kolumny CSS, bez podpisow. Na kafelku tylko ikona wyboru
+                 okladki; usuwanie przeniesione do podgladu pelnoekranowego. */
+              <div className="columns-2 gap-2 [&>*]:mb-2">
                 {canAddPhotos && (
                   <button onClick={() => photoInputRef.current?.click()} disabled={uploadingPhotos}
-                    className="aspect-[4/3] rounded-2xl border-2 border-dashed border-border flex flex-col items-center justify-center gap-1.5 text-muted-foreground active:scale-[0.98] transition-transform disabled:opacity-60">
-                    {uploadingPhotos ? <Loader2 className="h-6 w-6 animate-spin" /> : <><Plus className="h-6 w-6" /><span className="text-xs font-semibold">Dodaj zdjęcie</span></>}
+                    className="block w-full break-inside-avoid aspect-[4/3] rounded-2xl border-2 border-dashed border-border flex-col items-center justify-center gap-1.5 text-muted-foreground active:scale-[0.98] transition-transform disabled:opacity-60">
+                    {uploadingPhotos ? <Loader2 className="h-6 w-6 animate-spin mx-auto" /> : <><Plus className="h-6 w-6 mx-auto" /><span className="block text-xs font-semibold mt-1">Dodaj zdjęcie</span></>}
                   </button>
                 )}
-                {galleryPhotos.map((url, i) => (
-                  <div key={i} onClick={() => setViewerIndex(i)} role="button"
-                    className={`relative aspect-[4/3] rounded-2xl overflow-hidden bg-muted active:opacity-90 transition-opacity cursor-pointer ${(route as any).list_cover_url === url ? "ring-2 ring-primary ring-offset-2 ring-offset-background" : ""}`}>
-                    <img src={url} alt="" loading="lazy" className="w-full h-full object-cover" />
-                    {/* #c: ustaw okladke eksploracji (gwiazdka) + #3: usun zdjecie (kosz) - wlasciciel */}
-                    {isOwner && (
-                      <>
-                        {/* Wybor okladki EKSPLORACJI - czytelna pigulka zamiast malej gwiazdki:
-                            wybrana = pomaranczowa "Okładka", pozostale = "Ustaw okładkę" (prosba
-                            Nat 2026-08-30). Sama kafelka wybranej dostaje pomaranczowy ring nizej. */}
+                {galleryPhotos.map((url, i) => {
+                  const isCover = (route as any).list_cover_url === url;
+                  return (
+                    <div key={i} onClick={() => setViewerIndex(i)} role="button"
+                      className={`relative break-inside-avoid rounded-2xl overflow-hidden bg-muted active:opacity-90 transition-opacity cursor-pointer ${isCover ? "ring-2 ring-primary ring-offset-2 ring-offset-background" : ""}`}>
+                      <img src={url} alt="" loading="lazy" className="w-full h-auto block" />
+                      {isOwner && (
                         <button onClick={(e) => { e.stopPropagation(); void handleSetCover(url); }}
-                          aria-label={(route as any).list_cover_url === url ? "To jest okładka w eksploracji" : "Ustaw jako okładkę w eksploracji"}
-                          className={`absolute bottom-1.5 left-1.5 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold shadow-sm active:scale-95 transition-transform ${(route as any).list_cover_url === url ? "bg-primary text-white" : "bg-white/90 text-foreground"}`}>
-                          <Star className={`h-3 w-3 ${(route as any).list_cover_url === url ? "fill-white text-white" : "text-[#F0A583]"}`} />
-                          {(route as any).list_cover_url === url ? "Okładka" : "Ustaw okładkę"}
+                          aria-label={isCover ? "To jest okładka w eksploracji" : "Ustaw jako okładkę w eksploracji"}
+                          className={`absolute top-1.5 right-1.5 h-8 w-8 rounded-full flex items-center justify-center shadow-sm active:scale-90 transition-transform ${isCover ? "bg-primary" : "bg-white/90"}`}>
+                          <Star className={`h-4 w-4 ${isCover ? "fill-white text-white" : "text-[#F0A583]"}`} />
                         </button>
-                        <button onClick={(e) => { e.stopPropagation(); void handleDeletePhoto(url); }} aria-label="Usuń zdjęcie"
-                          className="absolute top-1.5 right-1.5 h-7 w-7 rounded-full bg-black/45 backdrop-blur-sm flex items-center justify-center active:scale-90 transition-transform">
-                          <Trash2 className="h-3.5 w-3.5 text-white" />
-                        </button>
-                      </>
-                    )}
-                  </div>
-                ))}
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center py-14 text-center gap-3">
@@ -1502,6 +1454,16 @@ export default function SharedRoute() {
           <button onClick={() => setViewerIndex(null)} aria-label={t("close", { defaultValue: "Zamknij" })} className="absolute right-3 z-10 h-10 w-10 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center active:scale-90 transition-transform" style={{ top: "max(0.75rem, env(safe-area-inset-top))" }}>
             <X className="h-5 w-5 text-white" />
           </button>
+          {/* Usuwanie zdjecia zeszlo z kafelka do podgladu - siatka ma byc czysta (bez podpisow
+              i dodatkowych ikon), zostaje na niej tylko wybor okladki. */}
+          {isOwner && (
+            <button onClick={(e) => { e.stopPropagation(); void handleDeletePhoto(galleryPhotos[viewerIndex]); setViewerIndex(null); }}
+              aria-label="Usuń zdjęcie"
+              className="absolute left-3 z-10 h-10 w-10 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center active:scale-90 transition-transform"
+              style={{ top: "max(0.75rem, env(safe-area-inset-top))" }}>
+              <Trash2 className="h-5 w-5 text-white" />
+            </button>
+          )}
           {galleryPhotos.length > 1 && (
             <>
               <button onClick={(e) => { e.stopPropagation(); setViewerIndex((viewerIndex - 1 + galleryPhotos.length) % galleryPhotos.length); }} aria-label="Poprzednie" className="absolute left-2 top-1/2 -translate-y-1/2 h-11 w-11 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center active:scale-90 transition-transform">
@@ -1561,7 +1523,7 @@ export default function SharedRoute() {
                 {isOwner && stage === "ongoing" && (
                   <button onClick={handlePublish} disabled={publishing}
                     className="flex-1 py-3 rounded-full bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-50">
-                    {publishing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Flag className="h-4 w-4" />}
+                    {publishing && <Loader2 className="h-4 w-4 animate-spin" />}
                     {publishing ? "Publikuję..." : "Opublikuj"}
                   </button>
                 )}

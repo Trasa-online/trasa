@@ -11,7 +11,7 @@ import { toggleRouteLike, toggleListLike } from "@/lib/likes";
 import { saveCollectionDb, unsaveCollectionDb } from "@/lib/savedCollections";
 import { parseISO, format } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
-import { ArrowLeft, LayoutGrid, MapPinned } from "lucide-react";
+import { ArrowLeft, LayoutGrid } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import FollowButton from "@/components/social/FollowButton";
@@ -349,7 +349,7 @@ export default function PublicProfile() {
               ))
             )
           ) : tripCards.length === 0 ? (
-            <FeedEmptyRO icon={<MapPinned className="h-6 w-6" />} title="Brak wyjazdów" desc={`Tu pojawią się wyjazdy tego użytkownika.`} />
+            <FeedEmptyRO maskSrc="/Ikona_Trasy.svg" title="Brak wyjazdów" desc={`Tu pojawią się wyjazdy tego użytkownika.`} />
           ) : (
             tripCards.map((tr: any) => {
               const dateLabel = tr.start_date ? format(parseISO(tr.start_date), "d LLLL yyyy", { locale: dateLocale() }) : "";

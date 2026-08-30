@@ -5,7 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import { Settings, Camera, UserCircle2, ArrowRight, Bell, Share2, Search, LayoutGrid, MapPinned } from "lucide-react";
+import { Settings, Camera, UserCircle2, ArrowRight, Bell, Share2, Search, LayoutGrid } from "lucide-react";
 import { SavedPlacesGrid } from "@/components/saved/SavedPlacesGrid";
 import TabHeader from "@/components/layout/TabHeader";
 import { toast } from "sonner";
@@ -788,13 +788,14 @@ const TravelerProfile = () => {
                 )
               ) : (
                 memoryTrips.length === 0 ? (
-                  <FeedEmpty
-                    icon={<MapPinned className="h-6 w-6" />}
-                    title="Brak wspomnień"
-                    desc="Dokończ roboczy wyjazd, żeby stał się wspomnieniem."
-                    ctaLabel="Zaplanuj wyjazd"
-                    onCta={() => window.dispatchEvent(new Event("trasa:open-plan-menu"))}
-                  />
+                  /* Ten sam uklad co "Robocze" i "Zapisane" - brandowa ikona + copy, bez CTA. */
+                  <div className="pt-16 pb-12 text-center px-8">
+                    <span aria-hidden className="mx-auto mb-5 block h-28 w-28" style={{ backgroundColor: "#ef9d78", WebkitMaskImage: "url(/Ikona_Trasy.svg)", maskImage: "url(/Ikona_Trasy.svg)", WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat", WebkitMaskSize: "contain", maskSize: "contain", WebkitMaskPosition: "center", maskPosition: "center" }} />
+                    <p className="text-lg font-bold text-foreground">Brak wspomnień</p>
+                    <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed max-w-[240px] mx-auto">
+                      {`Opublikuj wyjazd, żeby zobaczyć go tutaj`}
+                    </p>
+                  </div>
                 ) : (
                   <div className="space-y-6">{memoryTrips.map(renderTripCard)}</div>
                 )
