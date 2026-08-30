@@ -12,6 +12,7 @@ import { inferCategoryFromName, categoryIconSrc } from "@/lib/placeCategoryIcon"
 import { fetchSavedPlaces, removeSavedPlaceById, addPlaceToList, type SavedPlace } from "@/lib/placeLists";
 import AddSavedPlaceSheet from "@/components/saved/AddSavedPlaceSheet";
 import { countryForCity } from "@/lib/tripCountries";
+import { pinCoverKeys, fetchPlacePhotosForKeys, pickPlaceCover } from "@/lib/placePhotoSocial";
 
 // Segment "Miejsca" w zakładce Zapisane (profil): siatka 3-kol zapisanych miejsc usera
 // (agregat pozycji z prywatnych list "do zobaczenia"). Tap kafelka -> wizytówka.
@@ -67,6 +68,21 @@ export function SavedPlacesGrid() {
     queryFn: () => fetchSavedPlaces(user!.id),
   });
 
+  // Okladki miejsc ze zdjec userow (place_photos) - zapisane miejsce czesto nie ma wlasnego
+  // photo_url, a zdjecia dodane do miejsca w wyjezdzie/liscie zyja wlasnie tam. Bez tego kafelek
+  // pokazywal sama ikone kategorii (zgloszenie Nat 2026-08-30).
+  const coverKeys = useMemo(
+    () => Array.from(new Set((places as SavedPlace[]).flatMap((p) => pinCoverKeys(p)))).filter(Boolean),
+    [places],
+  );
+  const { data: coverMap } = useQuery({
+    queryKey: ["saved-places-covers", coverKeys.length, coverKeys[0] ?? ""],
+    enabled: coverKeys.length > 0,
+    staleTime: 5 * 60 * 1000,
+    queryFn: () => fetchPlacePhotosForKeys(coverKeys),
+  });
+  const coverFor = (p: SavedPlace) => pickPlaceCover(coverMap, pinCoverKeys(p));
+
   // Kraje/miasta WYSTEPUJACE w zapisanych (nie cala pula) - filtr pokazuje tylko to, co user ma.
   const countries = useMemo(() => {
     const set = new Set<string>();
@@ -97,7 +113,7 @@ export function SavedPlacesGrid() {
       city: p.city ?? "", address: p.address ?? "", latitude: p.latitude ?? 0, longitude: p.longitude ?? 0,
       // Opis miejsca = TYLKO opis z bazy. Notka usera (short_desc) ma wlasna sekcje
       // "Od użytkowników" w wizytowce - nie udaje opisu miejsca (zgloszenie Nat 2026-08-28).
-      rating: p.rating ?? 0, photo_url: resolveStored(p.photo_url) ?? "", vibe_tags: [], description: "",
+      rating: p.rating ?? 0, photo_url: resolveStored(p.photo_url) ?? resolveStored(coverFor(p)) ?? "", vibe_tags: [], description: "",
     } as MockPlace,
   }); };
 
@@ -168,7 +184,7 @@ export function SavedPlacesGrid() {
         {filtered.map((p) => (
           <div key={p.id} className="relative">
             <button onClick={() => openDetail(p)} className="w-full active:opacity-90 transition-opacity">
-              <PlaceTile showCity tile={{ photo_url: p.photo_url, category: p.category, place_name: p.place_name, city: p.city }} />
+              <PlaceTile showCity tile={{ photo_url: p.photo_url, _cover: coverFor(p), category: p.category, place_name: p.place_name, city: p.city }} />
             </button>
             {/* #7: bookmark (wypelniony) - odklik = usun z zapisanych + toast z cofnij */}
             <button onClick={(e) => { e.stopPropagation(); void handleUnsave(p); }} aria-label="Usuń z zapisanych"

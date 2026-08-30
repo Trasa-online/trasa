@@ -19,7 +19,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { getPhotoUrl, ensurePhotoCached } from "@/lib/placePhotos";
 import { fetchPlaceUserPhotos } from "@/lib/placeUserPhotos";
-import { placeKeyOf, fetchPlacePhotos, uploadPlacePhoto, fetchPhotoLikes, togglePhotoLike, type LikeState } from "@/lib/placePhotoSocial";
+import { placeKeyOf, pinCoverKeys, fetchPlacePhotosForKeys, uploadPlacePhoto, fetchPhotoLikes, togglePhotoLike, type LikeState } from "@/lib/placePhotoSocial";
 import { fetchPlaceNotes, type PlaceUserNote } from "@/lib/placeNotes";
 import { useSavedPlaces } from "@/hooks/useSavedPlaces";
 import { GOOGLE_PLACE_DETAILS_DISABLED } from "@/lib/appMode";
@@ -270,7 +270,16 @@ const PlaceSwiperDetail = ({
   useEffect(() => {
     if (!open || !placeKey) { return; }
     let alive = true;
-    fetchPlacePhotos(placeKey).then((rows) => { if (alive) setUserPlacePhotos(rows.map((r) => r.photo_url)); });
+    // Zdjecia miejsca moga siedziec pod DWOMA kluczami: "gpid:<google_place_id>" (dodane z
+    // wizytowki miejsca z bazy) albo "nm:<nazwa>" (dodane przy miejscu w wyjezdzie - piny nie
+    // maja google_place_id). Czytamy OBA, inaczej polowa zdjec nie dociagala sie do galerii
+    // (zgloszenie Nat 2026-08-30 - "Talerzyki").
+    const keys = pinCoverKeys({ google_place_id: (ep as any)?.google_place_id ?? null, place_name: ep?.place_name });
+    fetchPlacePhotosForKeys(keys).then((map) => {
+      if (!alive) return;
+      const urls = keys.flatMap((k) => map.get(k) ?? []);
+      setUserPlacePhotos(Array.from(new Set(urls)));
+    });
     return () => { alive = false; };
   }, [open, placeKey]);
 

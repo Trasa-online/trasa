@@ -538,6 +538,11 @@ export default function SharedRoute() {
         ...Array.from(photosMap.values()).flat().map((ph: any) => resolveStored(ph.url) ?? ph.url),
       ].filter(Boolean) as string[];
       await publishTrip([id]);
+      // Zdjecia dodane przy miejscach (pin_photos) staja sie czescia galerii MIEJSC dopiero teraz -
+      // publikacja jest momentem, w ktorym tresc wyjazdu staje sie publiczna (RPC security definer,
+      // bo przenosi tez zdjecia innych uczestnikow; zgloszenie Nat 2026-08-30).
+      const { data: synced } = await (supabase as any).rpc("sync_route_place_photos", { p_route_id: id });
+      if (typeof synced === "number" && synced > 0) console.info(`[SharedRoute] zdjęcia miejsc: ${synced}`);
       const cover = await ensureListCover(id, pool);
       haptics.success();
       queryClient.invalidateQueries({ queryKey: ["shared-route", id] });
@@ -583,6 +588,12 @@ export default function SharedRoute() {
         if (error) { console.error("[SharedRoute] photo upload:", error.message); continue; }
         const { data } = supabase.storage.from("route-images").getPublicUrl(path);
         if (data?.publicUrl) await addPinPhoto(id, pin.place_name, user.id, data.publicUrl);
+      }
+      // Opublikowany wyjazd zasila galerie MIEJSCA od razu (place_photos). Dla roboczego nie -
+      // zdjecia trafia tam dopiero przy publikacji (patrz handlePublish).
+      if ((route as any)?.status === "published") {
+        await (supabase as any).rpc("sync_route_place_photos", { p_route_id: id });
+        queryClient.invalidateQueries({ queryKey: ["place-photos"] });
       }
       queryClient.invalidateQueries({ queryKey: ["shared-route-pin-photos", id] });
     } finally { setUploadingPin(null); }
