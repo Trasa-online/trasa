@@ -1444,7 +1444,7 @@ export function SavedRoutes({ city, hideEmptyState }: { city?: string; hideEmpty
       if (!ids.length) return { list: [] as PolecaneRoute[], dates };
       const { data: rows } = await (supabase as any)
         .from("routes")
-        .select("id, title, city, ai_highlight, ai_summary, user_id, created_at, views, share_anonymous, cover_url, list_cover_url, review_photos, group_session_id, tags")
+        .select("id, title, city, ai_highlight, ai_summary, user_id, created_at, published_at, views, share_anonymous, cover_url, list_cover_url, review_photos, group_session_id, tags")
         .in("id", ids);
       const list = await enrichRouteRows(rows ?? []);
       return { list, dates };
@@ -1806,14 +1806,17 @@ export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityCh
       // city === "all" (ALL_CITIES) -> feed agreguje Trasy ze wszystkich miast (bez filtra).
       let q = (supabase as any)
         .from("routes")
-        .select("id, title, city, ai_highlight, ai_summary, user_id, created_at, views, share_anonymous, cover_url, list_cover_url, review_photos, group_session_id, tags")
+        .select("id, title, city, ai_highlight, ai_summary, user_id, created_at, published_at, views, share_anonymous, cover_url, list_cover_url, review_photos, group_session_id, tags")
         // Bramka "opublikowane": trasa pojawia sie w eksploracji dopiero gdy jest OPUBLIKOWANA
         // (status='published' przez "Zapisz trase") i ma miniature (list_cover_url). status blokuje
         // przeciek roboczych tras grupowych (is_shared=true, status='draft') z auto-okladka.
         .eq("is_shared", true).eq("status", "published").not("title", "is", null).not("list_cover_url", "is", null);
       if (city && city !== "all") q = q.ilike("city", `${city}%`);
       const { data } = await q
-        // Najnowsze trasy na gorze feedu (created_at malejaco) - nowo dodana trasa od razu na czele.
+        // Najnowsze trasy na gorze feedu wg daty PUBLIKACJI (published_at), nie zalozenia trasy.
+        // created_at to moment rozpoczecia planowania - wyjazd planowany od tygodnia i opublikowany
+        // dzisiaj ladowal przez to ponizej starszych publikacji.
+        .order("published_at", { ascending: false, nullsFirst: false })
         .order("created_at", { ascending: false, nullsFirst: false })
         .limit(30);
       return enrichRouteRows(data ?? []);

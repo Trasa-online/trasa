@@ -11,7 +11,7 @@ import { notify } from "@/lib/notify";
 import { sendClientPush, getCurrentUserName } from "@/lib/clientPush";
 import { format } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
-import { MapPin, ArrowLeft, Sparkles, ChevronRight, ChevronLeft, ChevronDown, Bookmark, Calendar as CalendarIcon, Image as ImageIcon, Maximize2, X, Building2, Pencil, Trash2, Heart, Share2, Plus, Map as MapIcon, Loader2, Star, GripVertical, Check, Flag, Camera, ThumbsUp, MessageCircle } from "lucide-react";
+import { MapPin, ArrowLeft, Sparkles, ChevronDown, Bookmark, Calendar as CalendarIcon, Image as ImageIcon, Maximize2, X, Building2, Pencil, Trash2, Heart, Share2, Plus, Map as MapIcon, Loader2, Star, GripVertical, Check, Flag, Camera, ThumbsUp, MessageCircle } from "lucide-react";
 import { MAIN_CATEGORIES, subcategoryPluralLabel } from "@/lib/categories";
 import { PLACE_VERDICT_TAGS } from "@/lib/routeTags";
 import { publishTrip } from "@/lib/publishTrip";
@@ -38,6 +38,8 @@ import { useUnsavePlace } from "@/hooks/useUnsavePlace";
 import { buildShareUrl } from "@/lib/shareUrl";
 import { quickSavePlace, type PlaceForList } from "@/lib/placeLists";
 import { pinCoverKeys, fetchPlacePhotosForKeys, pickPlaceCover } from "@/lib/placePhotoSocial";
+import { fetchPhotoLikes, togglePhotoLike, type LikeState as PhotoLikeState } from "@/lib/placePhotoSocial";
+import PhotoPagination from "@/components/route/PhotoPagination";
 import RouteMap from "@/components/RouteMap";
 import { API_BASE } from "@/lib/platform";
 import { compressImage } from "@/lib/imageCompression";
@@ -473,6 +475,28 @@ export default function SharedRoute() {
       .subscribe();
     return () => { void supabase.removeChannel(ch); };
   }, [id, user?.id, queryClient]);
+
+  // Lajki zdjec galerii wyjazdu (prosba Nat 2026-08-30). photo_ref = URL zdjecia; liczniki
+  // + "czy ja polubilem" leca jednym zapytaniem dla calej galerii. Liste URL-i bierzemy z refa,
+  // bo galeria wyliczana jest ponizej early returnow.
+  const { data: photoLikes } = useQuery({
+    queryKey: ["route-photo-likes", id, user?.id, ((route as any)?.review_photos ?? []).length],
+    enabled: !!route,
+    queryFn: () => fetchPhotoLikes(galleryPhotosRef.current, user?.id ?? null),
+    staleTime: 60_000,
+  });
+  const [likeOverrides, setLikeOverrides] = useState<Record<string, PhotoLikeState>>({});
+  const likeStateOf = (url: string): PhotoLikeState =>
+    likeOverrides[url] ?? photoLikes?.get(url) ?? { count: 0, liked: false };
+  const togglePhotoLikeUi = async (url: string) => {
+    if (!user?.id) { toast.error("Zaloguj się, żeby polubić zdjęcie"); return; }
+    const cur = likeStateOf(url);
+    const next: PhotoLikeState = { liked: !cur.liked, count: Math.max(0, cur.count + (cur.liked ? -1 : 1)) };
+    setLikeOverrides((o) => ({ ...o, [url]: next }));
+    haptics.light();
+    const liked = await togglePhotoLike(url, user.id, cur.liked);
+    if (liked !== next.liked) setLikeOverrides((o) => ({ ...o, [url]: cur }));
+  };
 
   // Init opisu/tagow z trasy (po zaladowaniu). Nie nadpisujemy, gdy user wlasnie pisze.
   useEffect(() => {
@@ -1321,6 +1345,13 @@ export default function SharedRoute() {
                     <div key={i} onClick={() => setViewerIndex(i)} role="button"
                       className={`relative break-inside-avoid rounded-2xl overflow-hidden bg-muted active:opacity-90 transition-opacity cursor-pointer ${isCover ? "ring-2 ring-primary ring-offset-2 ring-offset-background" : ""}`}>
                       <img src={url} alt="" loading="lazy" className="w-full h-auto block" />
+                      {/* Licznik polubien (gdy sa) - siatka zostaje czysta, lajkuje sie w podgladzie. */}
+                      {likeStateOf(url).count > 0 && (
+                        <span className="absolute bottom-1.5 left-1.5 flex items-center gap-1 rounded-full bg-black/45 backdrop-blur-sm px-2 py-0.5 text-[11px] font-semibold text-white">
+                          <Heart className={`h-3 w-3 ${likeStateOf(url).liked ? "fill-red-500 text-red-500" : "text-white"}`} />
+                          {likeStateOf(url).count}
+                        </span>
+                      )}
                       {isOwner && (
                         <button onClick={(e) => { e.stopPropagation(); void handleSetCover(url); }}
                           aria-label={isCover ? "To jest okładka w eksploracji" : "Ustaw jako okładkę w eksploracji"}
@@ -1400,7 +1431,7 @@ export default function SharedRoute() {
           transition={{ type: "spring", stiffness: 420, damping: 34 }}
           onDragEnd={(_e, info) => { if (info.offset.x > 28) setChatHidden(true); else if (info.offset.x < -28) setChatHidden(false); }}
           onTap={() => { if (chatHidden) setChatHidden(false); else setChatOpen(true); }}
-          className="fixed right-4 z-40 h-14 w-14 rounded-full bg-primary text-white flex items-center justify-center touch-none"
+          className="fixed right-4 z-40 h-14 w-14 rounded-full bg-background text-foreground border border-border shadow-lg shadow-black/10 flex items-center justify-center touch-none"
           style={{ bottom: "calc(152px + env(safe-area-inset-bottom, 0px))" }}>
           <MessageCircle className="h-6 w-6" strokeWidth={2.2} />
           {/* Licznik nieprzeczytanych - top-LEFT, zeby byl widoczny tez gdy dymek schowany do krawedzi. */}
@@ -1410,8 +1441,9 @@ export default function SharedRoute() {
         </motion.button>
       )}
       {/* "Dodaj miejsce" jako plywajacy guzik BEZPOSREDNIO POD czatem (prosba Nat 2026-08-30).
-          Chowamy przy pisaniu notki i w trybie zmiany kolejnosci - wtedy nic nie ma zaslaniac listy. */}
-      {canEdit && !choosing && !noteEditing && !reorderMode && (
+          Dostepny takze w trybie zmiany kolejnosci (prosba Nat 2026-08-30) - chowamy tylko przy
+          pisaniu notki i przy wyborze miejsc. */}
+      {canEdit && !choosing && !noteEditing && (
         <button
           onClick={() => { haptics.light(); setAddPlaceOpen(true); }}
           aria-label="Dodaj miejsce"
@@ -1447,7 +1479,7 @@ export default function SharedRoute() {
         <PhotoViewer urls={pinPhotoViewer.urls} startIndex={pinPhotoViewer.idx} onClose={() => setPinPhotoViewer(null)} />
       )}
 
-      {/* Fullscreen podglad zdjecia galerii (object-contain, strzalki + licznik). */}
+      {/* Fullscreen podglad zdjecia galerii (object-contain, kropki paginacji + polubienie). */}
       {viewerIndex !== null && galleryPhotos[viewerIndex] && (
         <div {...swipeViewer} className="fixed inset-0 z-[95] bg-black flex items-center justify-center animate-in fade-in duration-200" onClick={() => setViewerIndex(null)}>
           <img src={galleryPhotos[viewerIndex]} alt="" className="max-w-full max-h-full object-contain" onClick={(e) => e.stopPropagation()} />
@@ -1464,17 +1496,22 @@ export default function SharedRoute() {
               <Trash2 className="h-5 w-5 text-white" />
             </button>
           )}
-          {galleryPhotos.length > 1 && (
-            <>
-              <button onClick={(e) => { e.stopPropagation(); setViewerIndex((viewerIndex - 1 + galleryPhotos.length) % galleryPhotos.length); }} aria-label="Poprzednie" className="absolute left-2 top-1/2 -translate-y-1/2 h-11 w-11 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center active:scale-90 transition-transform">
-                <ChevronLeft className="h-6 w-6 text-white" />
+          {/* Polubienie zdjecia - lewy dolny rog, nad kropkami paginacji. */}
+          {(() => {
+            const url = galleryPhotos[viewerIndex];
+            const st = likeStateOf(url);
+            return (
+              <button onClick={(e) => { e.stopPropagation(); void togglePhotoLikeUi(url); }}
+                aria-label={st.liked ? "Cofnij polubienie" : "Polub zdjęcie"}
+                className="absolute left-3 z-10 h-10 px-3 rounded-full bg-white/15 backdrop-blur-sm flex items-center gap-1.5 active:scale-90 transition-transform"
+                style={{ bottom: "max(20px, calc(env(safe-area-inset-bottom, 0px) + 12px))" }}>
+                <Heart className={`h-5 w-5 ${st.liked ? "fill-red-500 text-red-500" : "text-white"}`} />
+                {st.count > 0 && <span className="text-white text-sm font-semibold">{st.count}</span>}
               </button>
-              <button onClick={(e) => { e.stopPropagation(); setViewerIndex((viewerIndex + 1) % galleryPhotos.length); }} aria-label="Następne" className="absolute right-2 top-1/2 -translate-y-1/2 h-11 w-11 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center active:scale-90 transition-transform">
-                <ChevronRight className="h-6 w-6 text-white" />
-              </button>
-              <span className="absolute bottom-[max(24px,env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 text-white/85 text-sm font-medium">{viewerIndex + 1} / {galleryPhotos.length}</span>
-            </>
-          )}
+            );
+          })()}
+          {/* Kropki zamiast strzalek - sugeruja przewijanie gestem (prosba Nat 2026-08-30). */}
+          <PhotoPagination count={galleryPhotos.length} index={viewerIndex} />
         </div>
       )}
 

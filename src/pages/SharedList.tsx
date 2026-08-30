@@ -375,7 +375,10 @@ export default function SharedList() {
         ) : null;
         const note = hasContent ? (
           <div className="space-y-2.5 mt-0.5">
-            <PlaceNoteEditor note={noteText} editable={isOwner} onSave={(v) => saveItemNote(pin, v)} photoSlot={photoSlot} />
+            {/* Notka wyglada TAK SAMO jak na wyjezdzie: szary dymek + awatar autora w prawym-dolnym
+                rogu (prosba Nat 2026-08-30). Autor = wlasciciel listy. */}
+            <PlaceNoteEditor note={noteText} editable={isOwner} showAvatar avatarUrl={author?.avatar_url ?? col.author_avatar}
+              onSave={(v) => saveItemNote(pin, v)} photoSlot={photoSlot} />
             {/* Zdjecia miejsca (2:3) - dodane przez wlasciciela listy. */}
             {photos.length > 0 && (
               <div className="flex flex-wrap gap-2">

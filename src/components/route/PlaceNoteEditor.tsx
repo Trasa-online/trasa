@@ -7,7 +7,8 @@ import { avatarSrc } from "@/lib/avatar";
 //  - brak notki, nie edytuje: guzik "+ Dodaj notke" (+ opcjonalny guzik zdjecia obok w photoSlot)
 //  - edycja: textarea z AUTO-ZAPISEM (debounce) + "Zapisano" + "Gotowe" (zwija)
 //  - notka jest, nie edytuje: sam tekst notki (BEZ headera "Notka") + [Edytuj notke] + photoSlot
-// showAvatar/avatarUrl: multi-user (wyjazdy) pokazuja awatar autora obok notki; listy = bez awatara.
+// showAvatar/avatarUrl: notka w podgladzie to szary dymek z awatarem autora (prawy-dolny rog) -
+// tak samo w wyjazdach i na listach (prosba Nat 2026-08-30). Bez showAvatar zostaje sam tekst.
 export default function PlaceNoteEditor({
   note,
   onSave,
@@ -83,7 +84,7 @@ export default function PlaceNoteEditor({
       {/* Notka w trybie podgladu. W kontekscie multi-user (wyjazd) wyglada DOKLADNIE tak samo jak
           notki innych uczestnikow ([PlaceNotes]): szary dymek + awatar w prawym-dolnym rogu.
           Wczesniej wlasna notka byla "goly" tekst z awatarem po lewej i lamala spojnosc watku
-          (zgloszenie Nat 2026-08-29). Na listach (bez awatara) zostaje sam tekst. */}
+          (zgloszenie Nat 2026-08-29). */}
       {noteText && (
         showAvatar ? (
           <div className="relative bg-muted/50 rounded-2xl px-3.5 py-2.5 mb-1.5">
