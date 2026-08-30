@@ -190,6 +190,18 @@ export async function removeSavedPlaceById(itemId: string): Promise<void> {
   await (supabase as any).from("discovery_items").delete().eq("id", itemId);
 }
 
+// Miasto z adresu w formacie Google ("ulica, KOD MIASTO, Kraj") - PRZEDOSTATNI segment bez kodu
+// pocztowego. Fallback, gdy zrodlo nie poda miasta wprost (wyniki wyszukiwarki Google go nie maja),
+// zeby filtr kraj/miasto na liscie "Ogolne" mial czym filtrowac. Krotsze adresy pomijamy - przy
+// dwoch segmentach ostatnim bywa KRAJ i wpisalibysmy "Polska" jako miasto.
+export function cityFromAddress(address?: string | null): string | null {
+  const parts = String(address ?? "").split(",").map((x) => x.trim()).filter(Boolean);
+  if (parts.length < 3) return null;
+  const raw = parts[parts.length - 2];
+  const city = raw.replace(/^[0-9][0-9A-Za-z\- ]{2,9}\s+/, "").trim();
+  return city || null;
+}
+
 // Dodaj miejsce do listy (discovery_items). Dedup po nazwie. Zwraca false gdy juz bylo.
 // `opts.note` uzywaj WYLACZNIE do przywracania WLASNEGO wpisu (cofnij usuniecie) - normalny
 // zapis miejsca zawsze startuje z pusta notka.
@@ -212,7 +224,7 @@ export async function addPlaceToList(listId: string, place: PlaceForList, opts?:
     // autora (z cudzej listy albo z pina cudzej trasy) bylo mylace - wygladalo jakby
     // to byla Twoja notatka o miejscu. Wyjatek: przywracanie wlasnego wpisu (opts.note).
     short_desc: opts?.note ?? "",
-    city: place.city ?? null,
+    city: place.city ?? cityFromAddress(place.address),
     latitude: place.latitude,
     longitude: place.longitude,
     place_id: place.place_id,

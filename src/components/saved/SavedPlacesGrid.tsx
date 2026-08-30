@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Bookmark, Plus } from "lucide-react";
 import { toast } from "sonner";
@@ -11,6 +11,7 @@ import { resolveStored } from "@/components/PlacePhoto";
 import { inferCategoryFromName, categoryIconSrc } from "@/lib/placeCategoryIcon";
 import { fetchSavedPlaces, removeSavedPlaceById, addPlaceToList, type SavedPlace } from "@/lib/placeLists";
 import AddSavedPlaceSheet from "@/components/saved/AddSavedPlaceSheet";
+import { countryForCity } from "@/lib/tripCountries";
 
 // Segment "Miejsca" w zakładce Zapisane (profil): siatka 3-kol zapisanych miejsc usera
 // (agregat pozycji z prywatnych list "do zobaczenia"). Tap kafelka -> wizytówka.
@@ -23,6 +24,10 @@ export function SavedPlacesGrid() {
   // Zapis miejsca z wizytowki (dolozenie do kuratorskiej listy) - bookmark na hero + CTA na dole.
   const [savePlace, setSavePlace] = useState<SavePlaceInput | null>(null);
   const [detailRaw, setDetailRaw] = useState<SavedPlace | null>(null);
+  // Filtry listy ogolnej: kraj -> miasto ("" = wszystkie). Miasto miejsca zapisujemy przy POZYCJI
+  // (discovery_items.city), a kraj wyliczamy z miasta (prosba Nat 2026-08-30).
+  const [fCountry, setFCountry] = useState("");
+  const [fCity, setFCity] = useState("");
 
   const invalidateSaved = () => {
     queryClient.invalidateQueries({ queryKey: ["saved-places", user?.id] });
@@ -62,6 +67,27 @@ export function SavedPlacesGrid() {
     queryFn: () => fetchSavedPlaces(user!.id),
   });
 
+  // Kraje/miasta WYSTEPUJACE w zapisanych (nie cala pula) - filtr pokazuje tylko to, co user ma.
+  const countries = useMemo(() => {
+    const set = new Set<string>();
+    for (const p of places as SavedPlace[]) if (p.city) set.add(countryForCity(p.city));
+    return [...set].sort((a, b) => a.localeCompare(b, "pl"));
+  }, [places]);
+  const cities = useMemo(() => {
+    const set = new Set<string>();
+    for (const p of places as SavedPlace[]) {
+      if (!p.city) continue;
+      if (fCountry && countryForCity(p.city) !== fCountry) continue;
+      set.add(p.city);
+    }
+    return [...set].sort((a, b) => a.localeCompare(b, "pl"));
+  }, [places, fCountry]);
+  const filtered = useMemo(() => (places as SavedPlace[]).filter((p) => {
+    if (fCity) return p.city === fCity;
+    if (fCountry) return !!p.city && countryForCity(p.city) === fCountry;
+    return true;
+  }), [places, fCountry, fCity]);
+
   const openDetail = (p: SavedPlace) => { setDetailRaw(p); setDetailPin({
     skip: !p.place_id,
     city: p.city ?? "",
@@ -97,6 +123,39 @@ export function SavedPlacesGrid() {
 
   return (
     <>
+      {/* FILTRY listy ogolnej: kraj -> miasto. Natywne <select> = kolo wyboru iOS, zero customu.
+          Pokazujemy tylko wtedy, gdy jest co filtrowac (>1 kraj / >1 miasto). */}
+      {(countries.length > 1 || cities.length > 1) && (
+        <div className="flex items-center gap-2 mb-2.5">
+          {countries.length > 1 && (
+            <select
+              value={fCountry}
+              onChange={(e) => { setFCountry(e.target.value); setFCity(""); }}
+              className="flex-1 min-w-0 h-9 rounded-full bg-secondary text-secondary-foreground border-0 px-3.5 text-[13px] font-semibold outline-none focus:ring-2 focus:ring-orange-500/30"
+            >
+              <option value="">Wszystkie kraje</option>
+              {countries.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+          )}
+          {cities.length > 1 && (
+            <select
+              value={fCity}
+              onChange={(e) => setFCity(e.target.value)}
+              className="flex-1 min-w-0 h-9 rounded-full bg-secondary text-secondary-foreground border-0 px-3.5 text-[13px] font-semibold outline-none focus:ring-2 focus:ring-orange-500/30"
+            >
+              <option value="">Wszystkie miasta</option>
+              {cities.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+          )}
+          {(fCountry || fCity) && (
+            <button onClick={() => { setFCountry(""); setFCity(""); }}
+              className="shrink-0 h-9 px-3 rounded-full bg-muted text-[13px] font-bold text-muted-foreground active:scale-95 transition-transform">
+              Wyczyść
+            </button>
+          )}
+        </div>
+      )}
+
       <div className="grid grid-cols-3 gap-1.5">
         {/* Pierwszy kafelek = dodanie miejsca spoza aplikacji (kraj + miasto + nazwa). */}
         <button onClick={() => setAddOpen(true)}
@@ -106,7 +165,7 @@ export function SavedPlacesGrid() {
           </span>
           <span className="text-[11px] font-bold text-foreground/70 leading-tight px-2 text-center">Dodaj nowe miejsce</span>
         </button>
-        {places.map((p) => (
+        {filtered.map((p) => (
           <div key={p.id} className="relative">
             <button onClick={() => openDetail(p)} className="w-full active:opacity-90 transition-opacity">
               <PlaceTile showCity tile={{ photo_url: p.photo_url, category: p.category, place_name: p.place_name, city: p.city }} />
@@ -119,6 +178,11 @@ export function SavedPlacesGrid() {
           </div>
         ))}
       </div>
+      {filtered.length === 0 && (
+        <p className="text-center text-sm text-muted-foreground py-8">
+          Brak zapisanych miejsc{fCity ? ` w ${fCity}` : fCountry ? ` w kraju ${fCountry}` : ""}.
+        </p>
+      )}
       <AddSavedPlaceSheet open={addOpen} onOpenChange={setAddOpen} onAdded={invalidateSaved} />
       <PlaceSwiperDetail
         open={!!detailPin}
