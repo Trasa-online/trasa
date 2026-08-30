@@ -33,7 +33,6 @@ import { PlacePhoto, resolveStored } from "@/components/PlacePhoto";
 import { RoutePlaceRow } from "@/components/route/RoutePlaceRow";
 import SavePlaceSheet, { type SavePlaceInput } from "@/components/plan-wizard/SavePlaceSheet";
 import { useSavedPlaces } from "@/hooks/useSavedPlaces";
-import InviteFriendsSheet from "@/components/route/InviteFriendsSheet";
 import TripProposalsSheet from "@/components/route/TripProposalsSheet";
 import { compressImage } from "@/lib/imageCompression";
 import { isHeic, convertHeicToJpeg } from "@/lib/heicConvert";
@@ -256,7 +255,6 @@ const ReviewSummary = () => {
   };
   const swipePlanTabs = useSwipeNav({ onLeft: () => goPlanTab(1), onRight: () => goPlanTab(-1) });
   const [editingStepper, setEditingStepper] = useState(false);
-  const [inviteOpen, setInviteOpen] = useState(false);
   const [proposalsOpen, setProposalsOpen] = useState(false);
   // Fokus w polu notki -> chowamy dolny pasek CTA (klawiatura zabiera miejsce, guziki przeszkadzaja).
   const [noteFocused, setNoteFocused] = useState(false);
@@ -2306,13 +2304,8 @@ const ReviewSummary = () => {
                 >
                   <Pencil className="h-4 w-4" /> Edytuj trasę
                 </button>
-                {/* Zapros znajomych (solo -> grupowy): podpina trase do sesji + dodaje uczestnikow po username. */}
-                <button
-                  onClick={() => { haptics.light(); setInviteOpen(true); }}
-                  className="w-full py-3 rounded-2xl bg-secondary text-secondary-foreground font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
-                >
-                  <Users className="h-4 w-4" /> Zaproś znajomych
-                </button>
+                {/* "Zaproś znajomych" USUNIETE 2026-08-30 (decyzja Nat): sklad uczestnikow
+                    ustala sie wylacznie przy TWORZENIU wyjazdu, wspomnienie jest zamkniete. */}
                 {/* Propozycje uczestnikow - host przeglada wspolna pule i dodaje wybrane do trasy.
                     Tylko wyjazd grupowy (ma group_session_id po zaproszeniu znajomych). */}
                 {(route as any)?.group_session_id && (
@@ -2324,14 +2317,6 @@ const ReviewSummary = () => {
                   </button>
                 )}
               </div>
-            )}
-            {isOwner && routeId && (
-              <InviteFriendsSheet
-                open={inviteOpen}
-                onOpenChange={setInviteOpen}
-                route={{ id: routeId, city: route?.city ?? null, title: (route as any)?.title ?? null, group_session_id: (route as any)?.group_session_id ?? null }}
-                onInvited={() => { queryClient.invalidateQueries({ queryKey: ["review-summary-route", routeId] }); }}
-              />
             )}
             {/* Host (wlasciciel) otwiera pule propozycji jako ARKUSZ i promuje wybrane do trasy.
                 Uczestnik ma osobny pelnoekranowy widok (early-return wyzej), NIE ten arkusz. */}
