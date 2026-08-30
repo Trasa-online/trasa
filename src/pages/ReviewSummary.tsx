@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { avatarSrc } from "@/lib/avatar";
-import { ROUTE_TAGS, ROUTE_TAGS_VISIBLE, placeTagsForCategory } from "@/lib/routeTags";
+import { placeTagsForCategory } from "@/lib/routeTags";
 import { fetchRouteNotesWithAuthors, notesByPlace, placeNoteKey } from "@/lib/placeNotes";
 import { fetchPinPhotos, deletePinPhoto, photosByPlace, pinPhotoKey } from "@/lib/pinPhotos";
 import PlaceNotes from "@/components/route/PlaceNotes";
@@ -302,11 +302,6 @@ const ReviewSummary = () => {
   const [photos, setPhotos] = useState<string[]>([]);
   const [isPublic, setIsPublic] = useState(true);
   const [shareAnonymous, setShareAnonymous] = useState(false);
-  // Tagi CALEJ TRASY (predefiniowana pula, ROUTE_TAGS). Zapis natychmiast do routes.tags.
-  const [routeTags, setRouteTags] = useState<string[]>([]);
-  const [routeTagsExpanded, setRouteTagsExpanded] = useState(false);
-  // Wlasny tag trasy (spoza ROUTE_TAGS) - dodawany inputem, dedupe case-insensitive.
-  const [customRouteTag, setCustomRouteTag] = useState("");
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [notes, setNotes] = useState<Record<string, string>>({});
@@ -615,25 +610,8 @@ const ReviewSummary = () => {
   useEffect(() => {
     if (route?.review_photos?.length) setPhotos(route.review_photos);
     if (route?.is_shared != null) setIsPublic(route.is_shared);
-    if (Array.isArray((route as any)?.tags)) setRouteTags((route as any).tags);
-  }, [route?.review_photos, route?.is_shared, (route as any)?.tags]);
+  }, [route?.review_photos, route?.is_shared]);
 
-  // Toggle tagu trasy - zapis natychmiast do routes.tags (widoczne na karcie eksploracji).
-  const toggleRouteTag = async (tag: string) => {
-    const next = routeTags.includes(tag) ? routeTags.filter((x) => x !== tag) : [...routeTags, tag];
-    setRouteTags(next);
-    if (!routeId) return;
-    await (supabase as any).from("routes").update({ tags: next }).eq("id", routeId);
-    queryClient.invalidateQueries({ queryKey: ["discovery-city-routes"] });
-    queryClient.invalidateQueries({ queryKey: ["review-summary-route", routeId] });
-  };
-  // Dodanie wlasnego tagu (spoza ROUTE_TAGS) - dedupe case-insensitive, trafia do routes.tags.
-  const addCustomRouteTag = () => {
-    const v = customRouteTag.trim();
-    if (!v) return;
-    if (!routeTags.some((x) => x.toLowerCase() === v.toLowerCase())) toggleRouteTag(v);
-    setCustomRouteTag("");
-  };
 
   // Zapis miejsca do listy (odwiedzone / do odwiedzenia) - bookmark przy wierszu miejsca.
   const { isSaved } = useSavedPlaces();
@@ -2257,14 +2235,8 @@ const ReviewSummary = () => {
             {(suggestion?.trim() || route?.ai_summary) && (
               <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">{suggestion?.trim() || route?.ai_summary}</p>
             )}
-            {/* Tagi trasy (routes.tags) - READ-ONLY, widoczne dla wlasciciela i uczestnika. */}
-            {routeTags.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {routeTags.map((tg) => (
-                  <span key={tg} className="bg-white border border-border/60 text-foreground rounded-full px-3 py-1 text-[13px] font-semibold">{tg}</span>
-                ))}
-              </div>
-            )}
+            {/* Tagi CALEJ TRASY usuniete (prosba Nat 2026-08-31) - zostaja tylko werdykty
+                przy konkretnych miejscach (pins.tags). */}
             {/* "Edytuj trase" -> edytor ComposeWyjazd (ten sam co przy tworzeniu): wyszukiwarka
                 miejsc + dodaj/usun/kolejnosc + nazwa. Zaladowany ta trasa (draftId), wiec zapis
                 AKTUALIZUJE ja (bez duplikatu). Opis + notki edytuje sie dalej w "Przejdz do sugestii". */}
@@ -2706,51 +2678,6 @@ const ReviewSummary = () => {
                         className="w-full bg-secondary/60 rounded-2xl px-4 py-3 text-sm text-foreground resize-none focus:outline-none border border-border/30 placeholder:text-muted-foreground/55"
                       />
                       {suggestionSaved && <span className="absolute bottom-2.5 right-3 text-[10px] text-green-600 font-medium">Zapisano</span>}
-                    </div>
-                  </div>
-
-                  {/* Tagi CALEJ TRASY (predefiniowana pula) - widoczne na karcie w eksploracji. */}
-                  <div className="pb-6">
-                    <h2 className="font-display text-xl font-bold text-foreground tracking-tight mb-1">Tagi trasy</h2>
-                    <p className="text-[13px] text-muted-foreground mb-3">Dodaj tagi, żeby inni łatwiej trafili na Twoją trasę</p>
-                    <div className="flex flex-wrap gap-2">
-                      {(routeTagsExpanded ? ROUTE_TAGS : ROUTE_TAGS.slice(0, ROUTE_TAGS_VISIBLE)).map((tg) => {
-                        const on = routeTags.includes(tg);
-                        return (
-                          <button key={tg} type="button" onClick={() => toggleRouteTag(tg)}
-                            className={`flex items-center gap-1 px-3.5 py-2 rounded-full text-sm font-semibold transition-colors active:scale-[0.97] border ${on ? "bg-[#FDF184] border-[#FDCD84] text-foreground" : "bg-white text-foreground border-border/60"}`}>
-                            {tg}{on ? <Check className="h-3.5 w-3.5 text-foreground" /> : <Plus className="h-3.5 w-3.5 text-muted-foreground/50" />}
-                          </button>
-                        );
-                      })}
-                      {ROUTE_TAGS.length > ROUTE_TAGS_VISIBLE && (
-                        <button type="button" onClick={() => setRouteTagsExpanded((v) => !v)}
-                          className="px-3.5 py-2 rounded-full text-sm font-semibold bg-secondary text-secondary-foreground active:scale-[0.97] transition-transform">
-                          {routeTagsExpanded ? "Mniej" : "Pokaż więcej"}
-                        </button>
-                      )}
-                      {/* Wlasne tagi usera (spoza puli ROUTE_TAGS) - zawsze zaznaczone, z X do usuniecia. */}
-                      {routeTags.filter((tg) => !ROUTE_TAGS.includes(tg)).map((tg) => (
-                        <button key={tg} type="button" onClick={() => toggleRouteTag(tg)}
-                          className="flex items-center gap-1 px-3.5 py-2 rounded-full text-sm font-semibold transition-colors active:scale-[0.97] border bg-[#FDF184] border-[#FDCD84] text-foreground">
-                          {tg}<X className="h-3.5 w-3.5 text-foreground" />
-                        </button>
-                      ))}
-                    </div>
-                    {/* Wlasny tag - input + guzik Dodaj (Enter tez dodaje). */}
-                    <div className="flex items-center gap-2 mt-3">
-                      <input
-                        value={customRouteTag}
-                        onChange={(e) => setCustomRouteTag(e.target.value)}
-                        onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCustomRouteTag(); } }}
-                        maxLength={30}
-                        placeholder="Dodaj własny tag"
-                        className="flex-1 min-w-0 rounded-full bg-secondary text-secondary-foreground border-0 px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-500/40 placeholder:text-muted-foreground/50"
-                      />
-                      <button type="button" onClick={addCustomRouteTag} disabled={!customRouteTag.trim()}
-                        className="shrink-0 px-4 py-2 rounded-full text-sm font-semibold bg-orange-600 text-white active:scale-[0.97] transition-transform disabled:opacity-40">
-                        Dodaj
-                      </button>
                     </div>
                   </div>
 

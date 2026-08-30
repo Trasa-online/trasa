@@ -2172,7 +2172,8 @@ export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityCh
                 placeCount={r.placeCount ?? 0}
                 title={r.title}
                 description={r.summary || r.ai_highlight}
-                tags={r.routeTags?.length ? r.routeTags : (r.categories ?? []).map((c) => CAT_LABEL[c] ?? c)}
+                // Tagi CALEJ TRASY wycofane (prosba Nat 2026-08-31) - chipy to kategorie miejsc.
+                tags={(r.categories ?? []).map((c) => CAT_LABEL[c] ?? c)}
                 pins={r.pins ?? []}
                 saved={savedRouteIds.has(r.id)}
                 onToggleSave={() => toggleSaveRoute(r.id)}

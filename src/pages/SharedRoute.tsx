@@ -218,7 +218,7 @@ export default function SharedRoute() {
   const [chatOpen, setChatOpen] = useState(false);
   // User pisze notke -> chowamy czat i dolne CTA (zaslanialy pole i klawiature).
   const [noteEditing, setNoteEditing] = useState(false);
-  // Etap W TRAKCIE = miejsce, w ktorym powstaje CALE wspomnienie: opis wyjazdu, tagi trasy i tagi
+  // Etap W TRAKCIE = miejsce, w ktorym powstaje CALE wspomnienie: opis wyjazdu i tagi
   // miejsc. Stepper "podsumowania" zostal usuniety z flow (prosba Nat 2026-08-30) - publikacja to
   // jeden guzik "Opublikuj" na dole.
   const [tripDesc, setTripDesc] = useState("");
@@ -1218,14 +1218,8 @@ export default function SharedRoute() {
           {routeDescription && (
             <p className="text-sm text-muted-foreground leading-relaxed mt-3">{routeDescription}</p>
           )}
-          {/* Tagi CALEJ TRASY (routes.tags) - neutralny bialy chip. */}
-          {Array.isArray((route as any).tags) && (route as any).tags.length > 0 && (
-            <div className="flex flex-wrap gap-2 mt-3">
-              {(route as any).tags.map((tg: string) => (
-                <span key={tg} className="inline-flex items-center rounded-full bg-white border border-border/60 text-foreground px-3 py-1 text-[13px] font-semibold">{tg}</span>
-              ))}
-            </div>
-          )}
+          {/* Tagi CALEJ TRASY usuniete (prosba Nat 2026-08-31) - widok wyjazdu ma byc czysty.
+              Zostaja tylko werdykty przy KONKRETNYCH miejscach (pins.tags). */}
           {(shareMeta?.tagged_members?.length ?? 0) > 0 && (
             <div className="flex flex-wrap items-center gap-1.5 mt-3">
               <span className="text-xs text-muted-foreground">{t("with_prefix")}</span>

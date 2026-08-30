@@ -1,23 +1,11 @@
 // Predefiniowane pule tagów dla TRAS i MIEJSC (sugestie-chipy, klik = dodaj).
 // EDYTUJ TU, żeby zmienić dostępne tagi - to jedyne źródło prawdy.
-// Zapisywane: tagi trasy -> routes.tags; tagi miejsca -> pins.tags.
+// Zapisywane: tagi miejsca -> pins.tags (tagi całej trasy wycofane 2026-08-31).
 // Reguła: predefiniowana pula (bez wolnego tekstu usera), spójna i filtrowalna.
 
-// Tagi CAŁEJ TRASY - opisują charakter całego wyjazdu. Widoczne na karcie w eksploracji.
-export const ROUTE_TAGS = [
-  "Weekend",
-  "Na jeden dzień",
-  "Romantycznie",
-  "Z dziećmi",
-  "Budżetowo",
-  "Kultura i sztuka",
-  "Dla foodie",
-  "Nocne życie",
-  "Natura i spacery",
-  "Instagramowe",
-  "Mniej znane miejsca",
-  "Dla znajomych",
-];
+// Tagi CAŁEJ TRASY WYCOFANE (2026-08-31, decyzja Nat: widok wyjazdu ma być czysty).
+// Pula ROUTE_TAGS + edytor w podsumowaniu usunięte; kolumna routes.tags zostaje w bazie,
+// ale nic jej już nie zapisuje ani nie wyświetla. Zostają tagi POJEDYNCZYCH MIEJSC (pins.tags).
 
 // Tagi POJEDYNCZEGO MIEJSCA (przystanku) - alternatywa dla pisania notki.
 // Uwaga: to pula GENERYCZNA (fallback). Preferuj `placeTagsForCategory(category)` (#5) - tagi
@@ -64,7 +52,6 @@ export function placeTagsForCategory(category?: string | null): string[] {
 }
 
 // Ile tagów pokazać przed rozwinięciem "Pokaż więcej".
-export const ROUTE_TAGS_VISIBLE = 6;
 export const PLACE_TAGS_VISIBLE = 5;
 
 // Werdykt o miejscu - 4 tagi "czy warto", wybierane JEDNYM tapnieciem pod notkami w widoku

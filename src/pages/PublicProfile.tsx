@@ -373,7 +373,6 @@ export default function PublicProfile() {
                 placeCount={(tr.tiles ?? []).length}
                 title={tr.title || (tr.city ? t("feed.trip_fallback", { city: tr.city, defaultValue: `Wyjazd do ${tr.city}` }) : t("feed.trip_fallback_generic", "Wyjazd"))}
                 description={tr.description}
-                tags={tr.tags}
                 authorName={displayName}
                 authorAvatar={profile.avatar_url}
                 showMap={false}
