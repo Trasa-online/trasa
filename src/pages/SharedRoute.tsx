@@ -16,6 +16,7 @@ import { MAIN_CATEGORIES, subcategoryPluralLabel } from "@/lib/categories";
 import { PLACE_VERDICT_TAGS } from "@/lib/routeTags";
 import { publishTrip } from "@/lib/publishTrip";
 import { haptics } from "@/hooks/useHaptics";
+import { track } from "@/lib/analytics";
 import { useSwipeNav } from "@/hooks/useSwipeNav";
 import { useDragToDismiss } from "@/hooks/useDragToDismiss";
 import { Reorder, useDragControls, motion } from "framer-motion";
@@ -562,6 +563,7 @@ export default function SharedRoute() {
       const { data: synced } = await (supabase as any).rpc("sync_route_place_photos", { p_route_id: id });
       if (typeof synced === "number" && synced > 0) console.info(`[SharedRoute] zdjęcia miejsc: ${synced}`);
       const cover = (route as any)?.list_cover_url as string | null;
+      track("trip_published", { route_id: id, places: (pins as any[]).length, has_cover: !!cover });
       haptics.success();
       queryClient.invalidateQueries({ queryKey: ["shared-route", id] });
       queryClient.invalidateQueries({ queryKey: ["profile-trip-feed"] });
@@ -745,6 +747,7 @@ export default function SharedRoute() {
     }));
     const { error } = await (supabase as any).from("pins").insert(rows);
     if (error) throw error;
+    track("trip_place_added", { route_id: id, count: rows.length });
     queryClient.invalidateQueries({ queryKey: ["shared-route-pins", id] });
   };
 

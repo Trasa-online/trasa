@@ -75,7 +75,7 @@ export default function CreatePolecajkaSheet({ open, onClose, onPublished, city,
           kind: "ranking",
           list_status: "visited",
           is_public: true,
-          moderation_status: "pending",
+          moderation_status: "approved", // bez kolejki moderacyjnej (2026-08-31)
         })
         .select("id")
         .single();

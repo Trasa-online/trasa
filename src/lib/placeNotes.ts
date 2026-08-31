@@ -85,7 +85,7 @@ export async function fetchPlaceNotes(placeName: string): Promise<PlaceUserNote[
       .from("discovery_items")
       .select("short_desc, discovery_collections!inner(user_id, is_public, moderation_status, author_name, author_avatar)")
       .eq("discovery_collections.is_public", true)
-      .eq("discovery_collections.moderation_status", "approved")
+      .neq("discovery_collections.moderation_status", "rejected") // soft-moderacja: liczy sie tylko odrzucenie
       .ilike("place_name", safe)
       .not("short_desc", "is", null)
       .limit(30)

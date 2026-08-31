@@ -9,6 +9,7 @@ import { haptics } from "@/hooks/useHaptics";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+import { track } from "@/lib/analytics";
 import CreateHeader from "@/components/create/CreateHeader";
 import { expandCity, cityGenitive } from "@/lib/cities";
 import { TRIP_COUNTRIES, TRIP_REGIONS, citiesForCountry, countryForCity } from "@/lib/tripCountries";
@@ -583,7 +584,8 @@ const CreateRanking = () => {
       // Wszystkie kuratorskie listy (visited) sa PUBLICZNE (decyzja 2026-08-24: rozwoj bazy
       // discovery, brak opcji "prywatna"). Prywatna zostaje tylko wishlista to_visit.
       const isPublic = listStatusToSave === "visited";
-      const moderationStatus = isPublic ? "pending" : "approved";
+      // Bez bramki moderacyjnej: lista jest widoczna od razu (ukrywanie reaktywne przez admina).
+      const moderationStatus = "approved";
       const authorName = asAnon ? "Anonim" : author.name;
       const authorAvatar = asAnon ? null : author.avatar;
       const desc = description.trim() || null;
@@ -622,6 +624,7 @@ const CreateRanking = () => {
           body: { type: "ranking", title: collectionTitle, city, collection_id: collectionId, author: author.name },
         }).catch((e) => console.warn("[CreateRanking] notify-admin-content failed:", e));
       }
+      track("list_published", { list_id: editId ?? null, is_public: isPublic, places: items.length, source: "create_ranking" });
       toast.success(editId ? t("toast.updated") : t("toast.sent"));
       // Listy widoczne w profilu (zakładka Listy). Kieruj na profil zamiast na pusty feed -
       // inaczej user ma wrazenie, ze nic sie nie zapisalo. (Osobny widok "Twoje listy" usuniety, IA 2026-08-20.)

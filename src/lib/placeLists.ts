@@ -1,3 +1,4 @@
+import { track } from "@/lib/analytics";
 import { supabase } from "@/integrations/supabase/client";
 
 // Operacje na LISTACH MIEJSC usera (discovery_collections, kind='ranking').
@@ -236,6 +237,7 @@ export async function addPlaceToList(listId: string, place: PlaceForList, opts?:
   });
   if (error) throw error;
   await (supabase as any).from("discovery_collections").update({ updated_at: new Date().toISOString() }).eq("id", listId);
+  track("list_place_added", { list_id: listId, has_note: !!opts?.note });
   return true;
 }
 
@@ -267,7 +269,7 @@ export async function createListWithPlace(
       kind: "ranking",
       list_status: listStatus,
       is_public: isPublic,
-      moderation_status: isPublic ? "pending" : "approved",
+      moderation_status: "approved", // bez kolejki moderacyjnej - ukrywanie reaktywne (hidden_by_admin)
       author_name: author?.name ?? "Użytkownik",
       author_avatar: author?.avatar ?? null,
     })
@@ -296,7 +298,7 @@ export async function createListFromSavedPlaces(
       kind: "ranking",
       list_status: "visited",
       is_public: isPublic,
-      moderation_status: isPublic ? "pending" : "approved",
+      moderation_status: "approved", // bez kolejki moderacyjnej - ukrywanie reaktywne (hidden_by_admin)
       author_name: author?.name ?? "Użytkownik",
       author_avatar: author?.avatar ?? null,
       cover_url: null,
@@ -325,7 +327,8 @@ export async function createListFromSavedPlaces(
       return null;
     }
   }
-  // Publiczna -> powiadom admina do moderacji (best-effort, nie blokuj flow).
+  if (isPublic) track("list_published", { list_id: listId, places: places.length, source: "create_flow" });
+  // Publiczna -> powiadom admina (best-effort, nie blokuj flow). Lista jest widoczna od razu.
   if (isPublic) {
     supabase.functions.invoke("notify-admin-content", {
       body: { type: "ranking", title: title.trim(), city: null, collection_id: listId, author: author?.name ?? "Użytkownik" },
@@ -362,6 +365,7 @@ export async function quickSavePlace(
   if (!listId) return { listId: null, added: false };
   // Lista "Ogolne" nie ma miasta, wiec zapisujemy je przy miejscu (kontekst zapisu).
   const added = await addPlaceToList(listId, { ...place, city: place.city ?? city });
+  if (added) track("place_saved", { place_name: place.place_name, city: place.city ?? city ?? null });
   return { listId, added };
 }
 

@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useAuth } from "@/hooks/useAuth";
 import { haptics } from "@/hooks/useHaptics";
+import { track } from "@/lib/analytics";
 import { supabase } from "@/integrations/supabase/client";
 import { avatarSrc } from "@/lib/avatar";
 import CityCountryPicker, { defaultCityIndex } from "@/components/create/CityDrum";
@@ -328,8 +329,8 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
             <h2 className="text-[20px] font-semibold text-foreground text-center">Co dzisiaj tworzymy?</h2>
             <div className="mt-4 flex gap-4">
               {[
-                { key: "list", label: "Lista", icon: <FileText className="h-8 w-8 text-foreground" strokeWidth={1.7} />, go: () => setStep("listCity") },
-                { key: "trip", label: "Wyjazd", icon: <img src="/spontaway-symbol.png" alt="" className="h-9 w-9 object-contain" style={{ filter: "brightness(0)" }} draggable={false} />, go: () => setStep("tripMode") },
+                { key: "list", label: "Lista", icon: <FileText className="h-8 w-8 text-foreground" strokeWidth={1.7} />, go: () => { track("list_create_opened"); setStep("listCity"); } },
+                { key: "trip", label: "Wyjazd", icon: <img src="/spontaway-symbol.png" alt="" className="h-9 w-9 object-contain" style={{ filter: "brightness(0)" }} draggable={false} />, go: () => { track("trip_create_opened"); setStep("tripMode"); } },
               ].map((t) => (
                 <button key={t.key} onClick={() => { haptics.light(); t.go(); }} className="flex-1 flex flex-col items-center gap-3 active:scale-[0.98] transition-transform outline-none focus:outline-none focus-visible:outline-none">
                   <span className="w-full h-[90px] rounded-2xl bg-[#efefef] flex items-center justify-center">{t.icon}</span>

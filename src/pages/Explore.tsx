@@ -5,6 +5,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { goBackOr } from "@/hooks/useGoBack";
 import { PullToRefresh } from "@/components/PullToRefresh";
 import { haptics } from "@/hooks/useHaptics";
+import { track } from "@/lib/analytics";
 import { MapPin, Heart, Trash2, ArrowRight, ArrowLeft, Pencil, ListChecks, ChevronDown, ChevronRight, Check, Search, X, Layers, Compass, Bookmark, Plus, ChevronLeft, Folder, FileText } from "lucide-react";
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
@@ -827,6 +828,8 @@ const Explore = () => {
   // "Biezace polozenie" (DiscoveryFeed) -> przejdz na widok Miejsc posortowany od najblizszego.
   // Nonce rosnie z kazdym klikiem, zeby ExploreSwiper reagowal takze na ponowne klikniecie.
   const [nearbyNonce, setNearbyNonce] = useState(0);
+  // Lejek eksploracji - wejscie na ekran (raz na mount).
+  useEffect(() => { track("explore_opened"); }, []);
   useEffect(() => {
     const h = () => { setSearchOpen(false); setFeedSearch(""); setView("browse"); setNearbyNonce((n) => n + 1); };
     window.addEventListener("trasa:explore-nearby", h);
