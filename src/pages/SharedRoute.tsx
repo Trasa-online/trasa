@@ -74,6 +74,7 @@ import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import SavePlaceSheet, { type SavePlaceInput } from "@/components/plan-wizard/SavePlaceSheet";
 import { useSavedPlaces } from "@/hooks/useSavedPlaces";
 import FullCalendarPicker from "@/components/plan-wizard/FullCalendarPicker";
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { resolveStored } from "@/components/PlacePhoto";
 import type { MockPlace } from "@/components/plan-wizard/PlaceSwiper";
 import { CategoryIcon } from "@/components/CategoryIcon";
@@ -180,6 +181,7 @@ export default function SharedRoute() {
   const [detailPin, setDetailPin] = useState<any | null>(null);
   const [saving, setSaving] = useState(false);
   const [showDateSheet, setShowDateSheet] = useState(false);
+  const [datesSheetOpen, setDatesSheetOpen] = useState(false);   // wlasciciel: zakres dat wyjazdu
   // Gest natywny: przeciagniecie panelu w dol zamyka arkusz.
   const dateDrag = useDragToDismiss({ onDismiss: () => setShowDateSheet(false) });
   const [planMapOpen, setPlanMapOpen] = useState(false);
@@ -262,7 +264,7 @@ export default function SharedRoute() {
         // trip_type/status = etap cyklu zycia (planning=Propozycje, ongoing=W Trakcie). Bez filtra
         // is_shared - RLS i tak wpuszcza tylko wlasciciela (wlasne robocze) lub is_shared/published.
         // Dzieki temu SharedRoute jest WIDOKIEM WYJAZDU dla wszystkich etapow (Nat 2026-08-25).
-        .select("id, title, city, user_id, day_number, folder_id, start_date, ai_summary, ai_highlight, review_photos, review_narrative, group_session_id, tags, list_cover_url, trip_type, status")
+        .select("id, title, city, user_id, day_number, folder_id, start_date, end_date, ai_summary, ai_highlight, review_photos, review_narrative, group_session_id, tags, list_cover_url, trip_type, status")
         .eq("id", id as string)
         .single();
       if (error) return null;
@@ -415,7 +417,7 @@ export default function SharedRoute() {
     queryFn: async () => {
       const { data } = await (supabase as any)
         .from("pins")
-        .select("id, route_id, place_name, address, category, suggested_time, images, image_url, user_photo_urls, photo_url, place_id, latitude, longitude, pin_order, description, tags, added_by")
+        .select("id, route_id, place_name, address, category, suggested_time, images, image_url, user_photo_urls, photo_url, place_id, latitude, longitude, pin_order, day_index, description, tags, added_by")
         .eq("route_id", id!)
         .order("pin_order");
       return (data ?? []) as any[];
@@ -767,13 +769,40 @@ export default function SharedRoute() {
   // Zmiana kolejnosci miejsc (drag) - optymistycznie w cache + persist pin_order (bezposredni update,
   // RLS zezwala wlascicielowi i czlonkowi). Wzor: ReviewSummary.savePlan.
   const persistPinOrder = async (ordered: any[]) => {
-    await Promise.all(ordered.map((p: any, idx: number) => (supabase as any).from("pins").update({ pin_order: idx }).eq("id", p.id)));
+    // Zapisujemy kolejnosc ORAZ dzien - przy wyjezdzie wielodniowym przeciagniecie miejsca pod
+    // inny naglowek zmienia jego day_index (pole pomijamy, gdy wyjazd nie ma podzialu na dni).
+    await Promise.all(ordered.map((p: any, idx: number) => {
+      const patch: Record<string, unknown> = { pin_order: idx };
+      if (p.day_index != null) patch.day_index = p.day_index;
+      return (supabase as any).from("pins").update(patch).eq("id", p.id);
+    }));
     queryClient.invalidateQueries({ queryKey: ["shared-route-pins", id] });
   };
   const handleReorderPins = (newOrder: any[]) => {
     reorderTick(newOrder, (pins as any[]) ?? []);
     queryClient.setQueryData(["shared-route-pins", id], newOrder);
     void persistPinOrder(newOrder);
+  };
+
+  // Wlasciciel ustawia ZAKRES dat wyjazdu. FullCalendarPicker zwraca (start, liczba dni),
+  // wiec end_date liczymy z liczby dni. Zakres > 1 dnia wlacza podzial miejsc na dni.
+  const saveTripDates = async (start: Date, numDays: number) => {
+    if (!id) return;
+    const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    const end = new Date(start.getTime() + (Math.max(1, numDays) - 1) * 86400000);
+    const { error } = await (supabase as any).from("routes")
+      .update({ start_date: iso(start), end_date: iso(end) }).eq("id", id);
+    if (error) { toast.error("Nie udało się zapisać dat"); return; }
+    setDatesSheetOpen(false);
+    haptics.success();
+    queryClient.invalidateQueries({ queryKey: ["shared-route", id] });
+    toast.success(numDays > 1 ? `Wyjazd na ${numDays} dni - miejsca możesz rozłożyć na dni` : "Zapisano datę wyjazdu");
+  };
+  const clearTripDates = async () => {
+    if (!id) return;
+    await (supabase as any).from("routes").update({ start_date: null, end_date: null }).eq("id", id);
+    setDatesSheetOpen(false);
+    queryClient.invalidateQueries({ queryKey: ["shared-route", id] });
   };
 
   const handleShare = () => { void share({ title: route.title || cityLabel || "Wyjazd", url: buildShareUrl(`/route/${route.id}`) }); };
@@ -958,7 +987,26 @@ export default function SharedRoute() {
   // wiec liczbe zdjec podajemy mu przez ref.
   galleryPhotosCount.current = galleryPhotos.length;
   galleryPhotosRef.current = galleryPhotos;
-  const dateLabel = route.start_date ? format(new Date(route.start_date), "d MMMM yyyy", { locale: dateLocale() }) : "";
+  // ── DNI WEWNATRZ WYJAZDU ────────────────────────────────────────────────────
+  // Data wybrana + zakres wielodniowy -> miejsca dzielimy na "Dzien 1..N" (pins.day_index,
+  // przypisanie RECZNE przez drag). Brak daty albo jeden dzien -> plaska lista jak dotad.
+  const tripStart = route.start_date ? new Date(route.start_date) : null;
+  const tripEnd = (route as any).end_date ? new Date((route as any).end_date) : null;
+  const dayCount = tripStart && tripEnd
+    ? Math.max(1, Math.round((tripEnd.getTime() - tripStart.getTime()) / 86400000) + 1)
+    : 1;
+  const hasDays = !!tripStart && dayCount > 1;
+  const dayDate = (day: number) => (tripStart ? new Date(tripStart.getTime() + (day - 1) * 86400000) : null);
+  const dayLabel = (day: number) => {
+    const d = dayDate(day);
+    return d ? `Dzień ${day} · ${format(d, "EEEE d.MM", { locale: dateLocale() })}` : `Dzień ${day}`;
+  };
+  const pinDay = (pin: any) => Math.min(Math.max(Number(pin?.day_index) || 1, 1), dayCount);
+  const dateLabel = tripStart
+    ? (tripEnd && dayCount > 1
+        ? `${format(tripStart, "d MMM", { locale: dateLocale() })} - ${format(tripEnd, "d MMMM yyyy", { locale: dateLocale() })}`
+        : format(tripStart, "d MMMM yyyy", { locale: dateLocale() }))
+    : "";
   const cityLabel = route.city || t("trip_default");
   // Tryb anonimowy: autor ukryty (bez profilu/awatara/lokalsa).
   const isAnon = shareMeta?.share_anonymous === true;
@@ -1127,8 +1175,48 @@ export default function SharedRoute() {
   // Wiersze miejsc w podanej kolejnosci (edycja = drag, inaczej zwykla lista).
   // Wiersze miejsc. Uchwyty przeciagania POKAZUJEMY WYLACZNIE w trybie "Zmień kolejność miejsc"
   // (prosba Nat 2026-08-30) - domyslny widok jest do czytania i uzupelniania, nie do sortowania.
+  // Wyjazd wielodniowy: naglowki "Dzien N" sa CZESCIA listy przeciagania (jako nieprzesuwalne
+  // znaczniki), wiec miejsce przeciagniete pod inny naglowek zmienia dzien. Po kazdym reorderze
+  // przeliczamy day_index z pozycji wzgledem naglowkow.
+  const withDayMarkers = (list: any[]) => {
+    const out: any[] = [];
+    for (let d = 1; d <= dayCount; d++) {
+      out.push({ id: `__day_${d}`, __day: d });
+      out.push(...list.filter((p) => pinDay(p) === d));
+    }
+    return out;
+  };
+  const onReorderWithDays = (next: any[], persist: (pins: any[]) => void) => {
+    let current = 1;
+    const pinsOnly: any[] = [];
+    for (const item of next) {
+      if (item.__day) { current = item.__day; continue; }
+      pinsOnly.push({ ...item, day_index: current });
+    }
+    persist(pinsOnly);
+  };
+
   const renderRows = (list: any[], onReorder: (next: any[]) => void) => (
     canEdit && reorderMode ? (
+      hasDays ? (
+        <Reorder.Group axis="y" values={withDayMarkers(list)} onReorder={(next: any[]) => onReorderWithDays(next, onReorder)} as="div">
+          {withDayMarkers(list).map((item: any, i: number) =>
+            item.__day ? (
+              <Reorder.Item as="div" key={item.id} value={item} dragListener={false} drag={false} transition={{ duration: 0 }}>
+                <div className="pt-4 pb-2 flex items-center gap-2">
+                  <p className="text-[15px] font-bold text-foreground">{dayLabel(item.__day)}</p>
+                  <div className="flex-1 h-px bg-border/60" />
+                </div>
+              </Reorder.Item>
+            ) : (
+              <CompactSortableRow
+                key={item.id} value={item} rowPin={rowPinFor(item)} index={i}
+                categoryLabel={categoryLabel(item.category || "other")}
+              />
+            )
+          )}
+        </Reorder.Group>
+      ) : (
       <Reorder.Group axis="y" values={list} onReorder={onReorder} as="div">
         {list.map((pin: any, i: number) => (
           <CompactSortableRow
@@ -1137,6 +1225,34 @@ export default function SharedRoute() {
           />
         ))}
       </Reorder.Group>
+      )
+    ) : hasDays ? (
+      // Widok zwykly: te same miejsca, ale pogrupowane naglowkami dni.
+      <div>
+        {Array.from({ length: dayCount }, (_, i) => i + 1).map((day) => {
+          const dayPins = list.filter((p) => pinDay(p) === day);
+          return (
+            <div key={day}>
+              <div className="pt-4 pb-2 flex items-center gap-2">
+                <p className="text-[15px] font-bold text-foreground">{dayLabel(day)}</p>
+                <div className="flex-1 h-px bg-border/60" />
+              </div>
+              {dayPins.length === 0 ? (
+                <p className="text-[13px] text-muted-foreground py-2">{canEdit ? `Brak miejsc - dodaj je albo przenieś tu w „Zmień kolejność"` : "Brak miejsc tego dnia"}</p>
+              ) : dayPins.map((pin: any, i: number) => (
+                <RoutePlaceRow
+                  key={pin.id} pin={rowPinFor(pin)} index={i}
+                  categoryLabel={categoryLabel(pin.category || "other")}
+                  onOpen={() => openDetail(pin)} onGoogle={() => openGooglePlace(pin)}
+                  onDelete={canEdit ? () => handleDeletePin(pin) : undefined}
+                  onSave={user ? () => toggleSaveBookmark(pin) : undefined} saved={isSaved(pin.place_name)}
+                  note={buildNote(pin)} cornerAvatar={addedByAvatar(pin)}
+                />
+              ))}
+            </div>
+          );
+        })}
+      </div>
     ) : (
       <div>
         {list.map((pin: any, i: number) => (
@@ -1263,12 +1379,26 @@ export default function SharedRoute() {
             {cityLabel && <span className="flex items-center gap-1.5"><Building2 className="h-4 w-4 shrink-0" />{cityLabel}</span>}
             <span className="flex items-center gap-1.5"><MapPin className="h-4 w-4 shrink-0" />{pins.length} {pins.length === 1 ? "miejsce" : pins.length < 5 ? "miejsca" : "miejsc"}</span>
           </div>
-          {dateLabel && (
-            <div className="flex items-center gap-1.5 mt-2.5 text-foreground">
+          {/* Daty wyjazdu: wlasciciel moze je ustawic/zmienic (zakres wlacza podzial na dni). */}
+          {dateLabel ? (
+            isOwner ? (
+              <button onClick={() => setDatesSheetOpen(true)} className="flex items-center gap-1.5 mt-2.5 text-foreground active:opacity-60 transition-opacity">
+                <CalendarIcon className="h-5 w-5 shrink-0" />
+                <span className="text-base">{dateLabel}</span>
+                <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+              </button>
+            ) : (
+              <div className="flex items-center gap-1.5 mt-2.5 text-foreground">
+                <CalendarIcon className="h-5 w-5 shrink-0" />
+                <span className="text-base">{dateLabel}</span>
+              </div>
+            )
+          ) : isOwner ? (
+            <button onClick={() => setDatesSheetOpen(true)} className="flex items-center gap-1.5 mt-2.5 text-muted-foreground active:opacity-60 transition-opacity">
               <CalendarIcon className="h-5 w-5 shrink-0" />
-              <span className="text-base">{dateLabel}</span>
-            </div>
-          )}
+              <span className="text-base">{`Dodaj daty wyjazdu`}</span>
+            </button>
+          ) : null}
           {route.ai_highlight && (
             <p className="text-[17px] font-bold leading-snug text-foreground mt-3">„{route.ai_highlight}"</p>
           )}
@@ -1657,6 +1787,18 @@ export default function SharedRoute() {
       )}
 
       {/* Sheet wyboru daty wyjazdu przy zapisie cudzej trasy do dziennika */}
+      {/* Wlasciciel: zakres dat wyjazdu. Zakres wielodniowy wlacza podzial miejsc na dni. */}
+      <Sheet open={datesSheetOpen} onOpenChange={setDatesSheetOpen}>
+        <SheetContent side="bottom" className="rounded-t-3xl px-0 pb-[max(16px,env(safe-area-inset-bottom))] pt-5 max-h-[88dvh] overflow-y-auto">
+          <SheetTitle className="sr-only">Daty wyjazdu</SheetTitle>
+          <div className="px-5 pb-1 text-center">
+            <p className="text-lg font-black leading-tight">{`Kiedy jedziecie?`}</p>
+            <p className="text-xs text-muted-foreground mt-1">{`Wybierz jeden dzień albo zakres - przy kilku dniach rozłożysz miejsca na dni`}</p>
+          </div>
+          <FullCalendarPicker onConfirm={(d, numDays) => void saveTripDates(d, numDays)} allowPast onClear={route.start_date ? () => void clearTripDates() : undefined} />
+        </SheetContent>
+      </Sheet>
+
       {showDateSheet && (
         <div
           className="fixed inset-0 z-[70] flex items-end justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200"
