@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { TrasaLogo } from "@/components/TrasaLogo";
 import { OpsLogo } from "@/admin/OpsLogo";
+import { AdminMfaGate } from "@/admin/AdminMfaGate";
 import { toast } from "sonner";
 
 export type AdminTier = "super_admin" | "operator";
@@ -58,9 +59,11 @@ export function RequireAdmin({ children }: { children: ReactNode }) {
   const isSuperAdmin = (roles ?? []).includes("super_admin");
   const tier: AdminTier = isSuperAdmin ? "super_admin" : "operator";
 
+  // Po przejsciu bramki roli - wymuszamy 2FA (TOTP). Panel (children) renderuje sie
+  // dopiero gdy sesja osiagnie aal2 (kod z aplikacji potwierdzony).
   return (
     <AdminContext.Provider value={{ email: user.email ?? "", roles: roles ?? [], tier, isSuperAdmin }}>
-      {children}
+      <AdminMfaGate>{children}</AdminMfaGate>
     </AdminContext.Provider>
   );
 }
