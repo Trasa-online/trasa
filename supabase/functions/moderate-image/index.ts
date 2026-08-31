@@ -42,7 +42,7 @@ Deno.serve(async (req) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return json({ error: "unauthorized" }, 401);
 
-    const { url } = await req.json().catch(() => ({ url: null }));
+    const { url, context, debugForceReject } = await req.json().catch(() => ({ url: null, context: null, debugForceReject: false }));
     if (!url || typeof url !== "string" || !/^https?:\/\//.test(url)) {
       return json({ enabled: true, verdict: "skipped", reason: "bad url" });
     }
@@ -73,14 +73,54 @@ Deno.serve(async (req) => {
     const ann = data?.responses?.[0]?.safeSearchAnnotation;
     if (!ann) return json({ enabled: true, verdict: "skipped", reason: "no annotation" });
 
-    const rejected =
+    // Tryb testowy: pozwala sprawdzic caly tor odrzucenia (kwarantanna + log) bez wgrywania
+    // nieodpowiedniej tresci. Dziala TYLKO dla admina - dla zwyklego usera flaga jest ignorowana.
+    let forceReject = false;
+    if (debugForceReject) {
+      const { data: role } = await supabase.from("user_roles").select("role").eq("user_id", user.id).eq("role", "admin").maybeSingle();
+      forceReject = !!role;
+    }
+
+    const rejected = forceReject ||
       atLeast(ann.adult, "LIKELY") ||
       atLeast(ann.violence, "LIKELY") ||
       atLeast(ann.racy, "VERY_LIKELY");
 
+    // SLAD PO ODRZUCENIU: kopia pliku do PRYWATNEGO bucketa kwarantanny + wpis w
+    // image_moderation_log (service role - klient nie moze tego pominac ani podrobic).
+    // Best-effort: blad zapisu nie zmienia werdyktu, zeby awaria logu nie przepuscila zdjecia.
+    let quarantinePath: string | null = null;
+    if (rejected) {
+      try {
+        const admin = createClient(
+          Deno.env.get("SUPABASE_URL") ?? "",
+          Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+        );
+        const bin = await fetch(url).then((r) => (r.ok ? r.arrayBuffer() : null)).catch(() => null);
+        if (bin) {
+          const ext = (url.split("?")[0].split(".").pop() || "jpg").slice(0, 5);
+          quarantinePath = `${user.id}/${crypto.randomUUID()}.${ext}`;
+          const up = await admin.storage.from("moderation-quarantine")
+            .upload(quarantinePath, new Uint8Array(bin), { contentType: "image/jpeg", upsert: false });
+          if (up.error) { console.warn("[moderate-image] quarantine upload:", up.error.message); quarantinePath = null; }
+        }
+        await admin.from("image_moderation_log").insert({
+          user_id: user.id,
+          context: typeof context === "string" ? context.slice(0, 40) : null,
+          source_url: url,
+          quarantine_path: quarantinePath,
+          verdict: "rejected",
+          scores: ann,
+        });
+      } catch (e) {
+        console.warn("[moderate-image] log failed:", e instanceof Error ? e.message : e);
+      }
+    }
+
     return json({
       enabled: true,
       verdict: rejected ? "rejected" : "ok",
+      logged: rejected ? { quarantined: !!quarantinePath, forced: forceReject } : undefined,
       scores: { adult: ann.adult, violence: ann.violence, racy: ann.racy, medical: ann.medical, spoof: ann.spoof },
     });
   } catch (e) {
