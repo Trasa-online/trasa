@@ -18,6 +18,7 @@ import { useSwipeNav } from "@/hooks/useSwipeNav";
 import { ProfileFeedCard } from "@/components/profile/ProfileFeedCard";
 // Karta wyjazdu 1:1 z eksploracja (na profilu bez mapki) - prosba Nat 2026-08-30.
 import TrasaBigCard from "@/components/home/TrasaBigCard";
+import ScreenSkeleton from "@/components/layout/ScreenSkeleton";
 import { resolveStored } from "@/components/PlacePhoto";
 import { SpontawayTabIcon } from "@/components/profile/SpontawayTabIcon";
 import { shortRelativeTime } from "@/lib/relativeTime";
@@ -257,7 +258,7 @@ export default function PublicProfile() {
     setSavedListIds(next);
   };
 
-  if (isLoading) return null;
+  if (isLoading) return <ScreenSkeleton variant="profile" />;
   if (!profile) return (
     <div className="flex flex-col items-center justify-center h-[100dvh] gap-3">
       <p className="text-muted-foreground">{t("public.not_found")}</p>

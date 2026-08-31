@@ -638,6 +638,7 @@ function BusinessGuard() {
   return null;
 }
 import CookieBanner from "./components/CookieBanner";
+import ScreenSkeleton, { variantForPath } from "./components/layout/ScreenSkeleton";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { isHardcodedAdmin } from "@/lib/admins";
 
@@ -774,7 +775,10 @@ const App = () => (
         <MaintenanceGate>
         <WebWaitlistGate>
         <AuthGate>
-        <Suspense fallback={<div className="h-screen flex items-center justify-center"><div className="h-8 w-8 rounded-full border-2 border-orange-500 border-t-transparent animate-spin" /></div>}>
+        {/* Przejscie miedzy ekranami: szkielet ukladu docelowego zamiast pustego ekranu ze
+            spinnerem (prosba Nat 2026-08-31). Wariant zgadujemy z adresu - w tym momencie
+            komponent ekranu jeszcze sie nie zaladowal. */}
+        <Suspense fallback={<ScreenSkeleton variant={variantForPath(window.location.hash)} />}>
         <Routes>
           <Route path="/auth" element={<Auth />} />
           <Route path="/waitlist" element={<WaitlistPage />} />

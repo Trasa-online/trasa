@@ -8,6 +8,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Settings, Camera, UserCircle2, ArrowRight, Bell, Share2, Search, LayoutGrid } from "lucide-react";
 import { SavedPlacesGrid } from "@/components/saved/SavedPlacesGrid";
 import TabHeader from "@/components/layout/TabHeader";
+import ScreenSkeleton from "@/components/layout/ScreenSkeleton";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -527,7 +528,7 @@ const TravelerProfile = () => {
     });
   };
 
-  if (loading) return null;
+  if (loading) return <ScreenSkeleton variant="profile" />;
   if (!user || user.is_anonymous) return <GuestProfile />;
 
   // Imię (first_name) to nazwa wyświetlana; username to osobny @handle. NIE username jako oba.

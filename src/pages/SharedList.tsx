@@ -19,6 +19,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { PlacePhoto, resolveStored } from "@/components/PlacePhoto";
 import { RoutePlaceRow } from "@/components/route/RoutePlaceRow";
 import PlaceNoteEditor from "@/components/route/PlaceNoteEditor";
+import ScreenSkeleton from "@/components/layout/ScreenSkeleton";
 import PhotoViewer from "@/components/route/PhotoViewer";
 import { saveCollectionDb, unsaveCollectionDb, markCollectionSeenDb } from "@/lib/savedCollections";
 import { EmptyPlacesState } from "@/components/route/EmptyPlacesState";
@@ -284,13 +285,12 @@ export default function SharedList() {
   // Tap bookmarka: zapisane -> odzapisz (toast+cofnij); niezapisane -> otworz drawer zapisu.
   const toggleSaveBookmark = (pin: any) => { if (isSaved(pin.place_name)) void unsave(itemToPlace(pin) as any); else openSavePlace(pin); };
 
-  if (isLoading) {
-    return <div className="min-h-[100dvh] bg-background flex items-center justify-center"><div className="text-muted-foreground text-sm animate-pulse">Ładowanie...</div></div>;
-  }
+  if (isLoading) return <ScreenSkeleton variant="list" />;
   if (!col) {
     return (
       <div className="min-h-[100dvh] bg-background flex flex-col items-center justify-center px-6 text-center gap-4">
-        <p className="text-4xl">📋</p>
+        {/* Brandowa ikona zamiast emoji (regula z CLAUDE.md). */}
+        <span aria-hidden className="h-20 w-20 block" style={{ backgroundColor: "#ef9d78", WebkitMaskImage: "url(/Ikona_Trasy.svg)", maskImage: "url(/Ikona_Trasy.svg)", WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat", WebkitMaskSize: "contain", maskSize: "contain", WebkitMaskPosition: "center", maskPosition: "center" }} />
         <p className="text-lg font-bold">Lista niedostępna</p>
         <p className="text-sm text-muted-foreground">Mogła zostać usunięta lub nie jest jeszcze opublikowana.</p>
         <button onClick={() => navigate("/eksploruj")} className="mt-2 px-5 py-2.5 rounded-full bg-foreground text-background text-sm font-semibold">Wróć do eksploracji</button>

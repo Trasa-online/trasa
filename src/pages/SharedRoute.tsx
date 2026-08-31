@@ -30,6 +30,7 @@ import { fetchUnreadChatCount } from "@/lib/chatReads";
 import PlaceNotes from "@/components/route/PlaceNotes";
 import PhotoViewer from "@/components/route/PhotoViewer";
 import PlaceNoteEditor from "@/components/route/PlaceNoteEditor";
+import ScreenSkeleton from "@/components/layout/ScreenSkeleton";
 import { EmptyPlacesState } from "@/components/route/EmptyPlacesState";
 import AddPlaceSheet from "@/components/route/AddPlaceSheet";
 import TripChatSheet from "@/components/route/TripChatSheet";
@@ -644,13 +645,7 @@ export default function SharedRoute() {
   });
   const metaFor = (pin: any) => (placeMeta as Record<string, any>)[String(pin?.place_name ?? "").toLowerCase()] ?? { description: null, tags: [] };
 
-  if (routeLoading) {
-    return (
-      <div className="min-h-[100dvh] bg-background flex items-center justify-center">
-        <div className="text-muted-foreground text-sm animate-pulse">{t("loading")}</div>
-      </div>
-    );
-  }
+  if (routeLoading) return <ScreenSkeleton variant="trip" />;
 
   if (!route) {
     return (
