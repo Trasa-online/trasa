@@ -511,7 +511,7 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
                 moze najpierw wybrac daty, a dopiero potem kliknac "Utwórz". Bez dat = wyjazd
                 bez dat (mozna je dodac pozniej w widoku wyjazdu). */}
             <Header
-              title="Wybierz daty wyjazdu"
+              title="Wybierz datę"
               onBack={() => setStep("trip")}
               backLabel="Wstecz"
               onNext={() => afterDates()}
