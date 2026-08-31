@@ -223,23 +223,26 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
   };
 
   // Daty z kreatora -> ISO (YYYY-MM-DD). Pominiecie kroku = brak dat (wyjazd bez podzialu na dni).
-  const tripDatesForSave = () => {
-    if (!tripStart) return { startDate: null as string | null, endDate: null as string | null };
+  const tripDatesForSave = (start: Date | null = tripStart, days: number = tripDays) => {
+    if (!start) return { startDate: null as string | null, endDate: null as string | null };
     const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-    const end = new Date(tripStart.getTime() + (Math.max(1, tripDays) - 1) * 86400000);
-    return { startDate: iso(tripStart), endDate: iso(end) };
+    const end = new Date(start.getTime() + (Math.max(1, days) - 1) * 86400000);
+    return { startDate: iso(start), endDate: iso(end) };
   };
   // Krok dat -> dalej wg trybu: przyszly wyjazd tworzymy od razu, przeszly idzie po miejsca.
-  const afterDates = () => { if (tripMode === "past") setStep("tripPick"); else void proceedTrip(); };
+  const afterDates = (start: Date | null = tripStart, days: number = tripDays) => {
+    if (tripMode === "past") setStep("tripPick");
+    else void proceedTrip(start, days);
+  };
 
   // Trip step "Dalej": PRZYSZLY wyjazd = tworzymy PUSTY wyjazd (etap propozycji) i wchodzimy do
   // widoku wyjazdu (miejsca dodaje sie tam jako propozycje). PRZESZLY = stary flow z wyborem miejsc
   // (tripPick -> edytor wspomnienia). Redesign 2026-08-25 (Nat): tworzenie = tylko meta.
-  const proceedTrip = async () => {
+  const proceedTrip = async (startArg: Date | null = tripStart, daysArg: number = tripDays) => {
     if (!user) { close(); navigate("/auth"); return; }
     setCreating(true);
     haptics.light();
-    const id = await createEmptyWyjazd(user.id, tripCity, tripName.trim() || `Wyjazd do ${tripCity}`, tripDatesForSave());
+    const id = await createEmptyWyjazd(user.id, tripCity, tripName.trim() || `Wyjazd do ${tripCity}`, tripDatesForSave(startArg, daysArg));
     if (!id) { setCreating(false); haptics.error(); toast.error("Nie udało się utworzyć wyjazdu"); return; }
     if (tripPeople.length) {
       try { await inviteUsersToRoute({ id, city: tripCity ?? null, title: tripName.trim() || null, group_session_id: null }, tripPeople.map((p) => p.id), user.id); }
@@ -504,23 +507,32 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
         {/* ── WYJAZD: DATY (krok opcjonalny) ── */}
         {step === "tripDates" && (
           <>
-            {/* Bez guzika w naglowku - z tego kroku wychodzi sie kalendarzem ("Dalej") albo
-                "Pomiń". Dwa wyjscia o roznym efekcie w jednym widoku myliy: guzik w naglowku
-                nie zna zakresu zaznaczonego w kalendarzu. */}
-            <Header title="Kiedy jedziecie?" onBack={() => setStep("trip")} backLabel="Wstecz" />
-            <div className="flex-1 min-h-0 overflow-y-auto pb-[max(16px,env(safe-area-inset-bottom))]">
-              <p className="px-5 text-[13px] text-muted-foreground leading-relaxed">
+                        {/* Guzik w naglowku dziala na ZAZNACZENIU z kalendarza (onRangeChange), wiec user
+                moze najpierw wybrac daty, a dopiero potem kliknac "Utwórz". Bez dat = wyjazd
+                bez dat (mozna je dodac pozniej w widoku wyjazdu). */}
+            <Header
+              title="Wybierz daty wyjazdu"
+              onBack={() => setStep("trip")}
+              backLabel="Wstecz"
+              onNext={() => afterDates()}
+              nextLabel={creating ? "..." : (tripMode === "past" ? "Dalej" : "Utwórz")}
+              nextEnabled={!creating}
+            />
+            <div className="flex-1 min-h-0 overflow-y-auto pb-[max(32px,calc(env(safe-area-inset-bottom,0px)+24px))]">
+              {/* -4px: Header ma pb-3 (12px), a odstep naglowek -> hint ma byc 8px. */}
+              <p className="px-5 -mt-1 text-[13px] text-muted-foreground leading-relaxed">
                 {`Wybierz jeden dzień albo zakres. Przy kilku dniach rozłożysz miejsca na dni już w wyjeździe.`}
               </p>
               <FullCalendarPicker
                 maxDays={14}
                 allowPast={tripMode === "past"}
-                onConfirm={(d, numDays) => { setTripStart(d); setTripDays(numDays); afterDates(); }}
+                onRangeChange={(d, numDays) => { setTripStart(d); setTripDays(Math.max(1, numDays)); }}
+                onConfirm={(d, numDays) => { setTripStart(d); setTripDays(numDays); afterDates(d, numDays); }}
                 onClear={tripStart ? () => { setTripStart(null); setTripDays(1); } : undefined}
               />
-              <div className="px-5 pt-1">
+              <div className="px-5 pt-2">
                 <button
-                  onClick={() => { setTripStart(null); setTripDays(1); afterDates(); }}
+                  onClick={() => { setTripStart(null); setTripDays(1); afterDates(null, 1); }}
                   disabled={creating}
                   className="w-full py-3 text-sm font-medium text-muted-foreground active:text-foreground transition-colors disabled:opacity-50"
                 >

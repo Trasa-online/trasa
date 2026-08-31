@@ -10,6 +10,9 @@ interface FullCalendarPickerProps {
   onConfirm: (date: Date, numDays: number) => void;
   /** Maksymalna dlugosc zakresu w dniach (domyslnie 3). */
   maxDays?: number;
+  /** Zaznaczenie na biezaco - rodzic moze miec wlasny guzik zatwierdzajacy (np. "Utwórz"
+   *  w naglowku arkusza). Bez tego taki guzik nie wiedzialby, co user kliknal w kalendarzu. */
+  onRangeChange?: (start: Date | null, numDays: number) => void;
   // allowPast: pozwala wybierac daty historyczne (np. zapis odbytego wyjazdu). Domyslnie
   // false = tylko dzis i przyszlosc (planowanie).
   allowPast?: boolean;
@@ -21,20 +24,28 @@ interface FullCalendarPickerProps {
 // wyjazdu i widok wyjazdu podnosza go propem (podzial miejsc na dni).
 const DEFAULT_MAX_DAYS = 3;
 
-const FullCalendarPicker = ({ onConfirm, allowPast = false, onClear, maxDays = DEFAULT_MAX_DAYS }: FullCalendarPickerProps) => {
+const FullCalendarPicker = ({ onConfirm, allowPast = false, onClear, maxDays = DEFAULT_MAX_DAYS, onRangeChange }: FullCalendarPickerProps) => {
   const [range, setRange] = useState<DateRange | undefined>();
   const [month, setMonth] = useState(new Date());
   const [showYearPicker, setShowYearPicker] = useState(false);
 
+  const report = (r: DateRange | undefined) => {
+    const from = r?.from ?? null;
+    const days = from ? (r?.to ? differenceInCalendarDays(r.to, from) + 1 : 1) : 0;
+    onRangeChange?.(from, days);
+  };
   const handleSelect = (newRange: DateRange | undefined) => {
     if (newRange?.from && newRange?.to) {
       const days = differenceInCalendarDays(newRange.to, newRange.from) + 1;
       if (days > maxDays) {
-        setRange({ from: newRange.from, to: addDays(newRange.from, maxDays - 1) });
+        const clamped = { from: newRange.from, to: addDays(newRange.from, maxDays - 1) };
+        setRange(clamped);
+        report(clamped);
         return;
       }
     }
     setRange(newRange);
+    report(newRange);
   };
 
   const today = new Date();
