@@ -255,8 +255,9 @@ const PlaceSwiperDetail = ({
   // do galerii lokalu - lokal odpowiada za swoj wizerunek, a spolecznosc ma osobna sekcje
   // "Od użytkowników" pod cennikiem/menu (prosba Nat 2026-08-31). Konto nie-premium i wizytowka
   // "zero" (bez konta biznesowego) mieszaja je z reszta galerii jak dotad.
-  // Sekcja tylko dla REALNIE premium kont (business_profiles.is_premium), nie dla kazdej
-  // wizytowki biznesowej - prosba Nat 2026-08-31.
+  // Sekcja dla kont z funkcjami premium (business_profiles.is_premium). Flaga jest wyliczana
+  // automatycznie w bazie - dostaje ja kazdy, kto zalozyl konto biznesowe i ma aktywna
+  // wizytowke; zaseedowana wizytowka "do przejecia" (bez wlasciciela) jej nie ma.
   const isPremiumBusiness = isBusiness && (ep as any)?.businessIsPremium === true;
   const communityPhotos = isPremiumBusiness ? contributed : [];
   // Cap podniesiony 4 -> 10, zeby zdjecia dodane przez userow (#3e) sie zmiescily.

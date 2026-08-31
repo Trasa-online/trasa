@@ -47,9 +47,10 @@ export interface MockPlace {
   opening_hours?: { weekday_text?: string[] | null; periods?: unknown[] | null } | null;
   // Business profile fields (optional)
   businessPlan?: 'zero' | 'basic' | 'premium';
-  /** business_profiles.is_premium - REALNY status platnego konta (nie wyglad wizytowki).
-   *  Wizytowka wyglada premium dla kazdego lokalu (decyzja produktowa), ale funkcje
-   *  zarezerwowane dla platnych (np. sekcja "Od użytkowników") pytaja o TE flage. */
+  /** business_profiles.is_premium - flaga funkcji premium, WYLICZANA AUTOMATYCZNIE przez
+   *  trigger w bazie (migracja 20260831d): zywe konto biznesowe = owner_user_id + is_active
+   *  + nie szkic. Zaden przelacznik do klikania. Gdy wejdzie billing, zmienia sie TYLKO
+   *  warunek w triggerze ("ma aktywna subskrypcje") - front zostaje bez zmian. */
   businessIsPremium?: boolean;
   businessLogoUrl?: string;
   businessEventTitle?: string;
