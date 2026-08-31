@@ -342,7 +342,9 @@ Jeśli zmiana dotyczy obu platform, przetestuj na obu **zanim** wypchniesz.
 
 **Zmienne środowiskowe są per projekt** - nowy projekt nie dziedziczy nic po `trasa`. Klucz Maps jest referrer-restricted: każdą nową domenę trzeba dopisać w GCP.
 
-**Gdzie commitować:** zmiana natywna → `main`; konsola admina (`src/admin/**`, `admin.html`, `vite.config.admin.ts`) → `admin`; dashboard B2B → `biznes` (po wydzieleniu). **Przed commitem sprawdź `git branch --show-current`** - katalog roboczy bywa przełączony przez równoległą sesję.
+**Gdzie commitować:** **aplikacja natywna ZAWSZE na `main`** - nawet gdy katalog roboczy stoi na innej gałęzi. Na `admin` idą **wyłącznie** pliki panelu administracyjnego (`src/admin/**`, `admin.html`, `vite.config.admin.ts`); dashboard B2B → `biznes` (po wydzieleniu).
+
+**Przed commitem sprawdź `git branch --show-current`** - katalog roboczy bywa przełączony przez równoległą sesję. Gdy stoi na cudzej gałęzi, NIE przełączaj go; zrób `git worktree add --detach <tmp> origin/main`, tam pracuj i wypchnij przez `git push origin HEAD:main`.
 
 ---
 
