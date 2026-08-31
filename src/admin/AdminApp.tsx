@@ -7,7 +7,7 @@ import { UsersPage } from "./modules/users/UsersPage";
 import { OpsPage } from "./modules/ops/OpsPage";
 import { CostsPage } from "./modules/costs/CostsPage";
 import { SettingsPage } from "./modules/settings/SettingsPage";
-import { RankingsPage } from "./modules/rankings/RankingsPage";
+import { LeadsPage } from "./modules/leads/LeadsPage";
 import { PlacesPage } from "./modules/places/PlacesPage";
 import { PlaceFlagsPage } from "./modules/flags/PlaceFlagsPage";
 import { AuditPage } from "./modules/audit/AuditPage";
@@ -21,7 +21,7 @@ export default function AdminApp() {
         <Routes>
           <Route path="/" element={<Navigate to="/moderacja" replace />} />
           <Route path="/moderacja" element={<ModerationHub />} />
-          <Route path="/zestawienia" element={<RankingsPage />} />
+          <Route path="/zestawienia" element={<LeadsPage />} />
           <Route path="/users" element={<UsersPage />} />
           <Route path="/analityka" element={<AnalyticsPage />} />
           <Route path="/miejsca" element={<PlacesPage />} />
