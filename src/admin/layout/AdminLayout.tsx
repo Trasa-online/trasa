@@ -3,9 +3,11 @@ import { NavLink } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { OpsLogo } from "@/admin/OpsLogo";
 import { useAdmin } from "../RequireAdmin";
-import { ShieldCheck, Users, BarChart3, Bug, Settings, ListChecks, MapPin, ScrollText, Menu, X, Flag, DollarSign } from "lucide-react";
+import { ShieldCheck, Users, BarChart3, Bug, Settings, ListChecks, MapPin, ScrollText, Menu, X, Flag, DollarSign, LayoutDashboard } from "lucide-react";
+import { useAdminPending } from "../modules/home/useAdminHome";
 
 const NAV = [
+  { to: "/", label: "Dziś", icon: LayoutDashboard },
   { to: "/moderacja", label: "Moderacja", icon: ShieldCheck },
   { to: "/zestawienia", label: "Zestawienia", icon: ListChecks },
   { to: "/users", label: "Użytkownicy", icon: Users },
@@ -19,14 +21,21 @@ const NAV = [
 ];
 
 function NavItems({ onNavigate }: { onNavigate?: () => void }) {
+  const { data: pending } = useAdminPending();
+  // Badge per route: liczba spraw czekajacych. "Dzis" pokazuje sume.
+  const badge: Record<string, number> = pending
+    ? { "/": pending.total, "/zestawienia": pending.collections, "/moderacja": pending.business, "/flagi": pending.flags, "/ops": pending.bugs }
+    : {};
   return (
     <>
       {NAV.map((n) => {
         const Icon = n.icon;
+        const n_ = badge[n.to] ?? 0;
         return (
           <NavLink
             key={n.to}
             to={n.to}
+            end={n.to === "/"}
             onClick={onNavigate}
             className={({ isActive }) =>
               `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-colors ${
@@ -34,8 +43,13 @@ function NavItems({ onNavigate }: { onNavigate?: () => void }) {
               }`
             }
           >
-            <Icon className="h-4 w-4" />
-            {n.label}
+            <Icon className="h-4 w-4 shrink-0" />
+            <span className="flex-1">{n.label}</span>
+            {n_ > 0 && (
+              <span className="shrink-0 min-w-[20px] h-5 px-1.5 rounded-full bg-orange-500 text-white text-[11px] font-bold flex items-center justify-center">
+                {n_ > 99 ? "99+" : n_}
+              </span>
+            )}
           </NavLink>
         );
       })}

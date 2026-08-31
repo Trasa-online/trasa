@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import { RequireAdmin } from "./RequireAdmin";
 import { AdminLayout } from "./layout/AdminLayout";
+import { TodayPage } from "./modules/home/TodayPage";
 import { ModerationPage } from "./modules/moderation/ModerationPage";
 import { AnalyticsPage } from "./modules/analytics/AnalyticsPage";
 import { UsersPage } from "./modules/users/UsersPage";
@@ -19,7 +20,7 @@ export default function AdminApp() {
     <RequireAdmin>
       <AdminLayout>
         <Routes>
-          <Route path="/" element={<Navigate to="/moderacja" replace />} />
+          <Route path="/" element={<TodayPage />} />
           <Route path="/moderacja" element={<ModerationPage />} />
           <Route path="/zestawienia" element={<RankingsPage />} />
           <Route path="/users" element={<UsersPage />} />
@@ -30,7 +31,7 @@ export default function AdminApp() {
           <Route path="/koszty" element={<CostsPage />} />
           <Route path="/audyt" element={<AuditPage />} />
           <Route path="/ustawienia" element={<SettingsPage />} />
-          <Route path="*" element={<Navigate to="/moderacja" replace />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AdminLayout>
     </RequireAdmin>

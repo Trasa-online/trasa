@@ -1,18 +1,17 @@
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Loader2, Check, RotateCcw, MapPin, ImageIcon } from "lucide-react";
+import { Loader2, Check, RotateCcw, ImageIcon } from "lucide-react";
 import { format } from "date-fns";
-import { useBugReports, useResolveBug, useCityDemand, type BugReport } from "./useOps";
+import { useBugReports, useResolveBug, type BugReport } from "./useOps";
 
 export function OpsPage() {
   return (
     <div className="max-w-3xl">
       <div className="mb-6">
-        <h1 className="text-2xl font-black text-slate-900">Zgłoszenia i miasta</h1>
-        <p className="text-sm text-slate-500 mt-1">Zgłoszenia od użytkowników i biznesów oraz zapotrzebowanie na nowe miasta.</p>
+        <h1 className="text-2xl font-black text-slate-900">Zgłoszenia</h1>
+        <p className="text-sm text-slate-500 mt-1">Zgłoszenia błędów od użytkowników i biznesów.</p>
       </div>
       <BugsSection />
-      <CitiesSection />
     </div>
   );
 }
@@ -94,31 +93,6 @@ function BugRow({ bug }: { bug: BugReport }) {
         </button>
       </div>
     </div>
-  );
-}
-
-function CitiesSection() {
-  const { data, isLoading } = useCityDemand();
-  const max = Math.max(1, data?.[0]?.count ?? 1);
-  return (
-    <section>
-      <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-3">Zapotrzebowanie na miasta</h2>
-      {isLoading ? <Spin /> : !data || data.length === 0 ? <p className="text-sm text-slate-400 py-8 text-center">Brak próśb o miasta.</p> : (
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 space-y-2.5">
-          {data.map((c) => (
-            <div key={c.city}>
-              <div className="flex justify-between text-sm mb-1">
-                <span className="inline-flex items-center gap-1.5 text-slate-700 font-medium"><MapPin className="h-3.5 w-3.5 text-slate-400" />{c.city}</span>
-                <span className="text-slate-500 font-semibold">{c.count}</span>
-              </div>
-              <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                <div className="h-full bg-slate-900" style={{ width: `${Math.max(6, Math.round((c.count / max) * 100))}%` }} />
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </section>
   );
 }
 

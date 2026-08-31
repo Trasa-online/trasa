@@ -12,11 +12,6 @@ export interface BugReport {
   reporter?: { username: string | null; first_name: string | null } | null;
 }
 
-export interface CityDemand {
-  city: string;
-  count: number;
-}
-
 // Bug reports od userow + nazwa zglaszajacego (osobny fetch profiles).
 export function useBugReports() {
   return useQuery<BugReport[]>({
@@ -44,23 +39,5 @@ export function useResolveBug() {
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["bug-reports"] }),
-  });
-}
-
-// Zapotrzebowanie na miasta (agregacja city_requests po nazwie, malejaco).
-export function useCityDemand() {
-  return useQuery<CityDemand[]>({
-    queryKey: ["city-demand"],
-    queryFn: async () => {
-      const { data, error } = await (supabase as any)
-        .from("city_requests").select("city_name");
-      if (error) throw error;
-      const counts: Record<string, number> = {};
-      for (const r of data ?? []) {
-        const c = (r.city_name ?? "").trim();
-        if (c) counts[c] = (counts[c] ?? 0) + 1;
-      }
-      return Object.entries(counts).map(([city, count]) => ({ city, count })).sort((a, b) => b.count - a.count);
-    },
   });
 }
