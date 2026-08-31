@@ -13,6 +13,8 @@ async function headCount(table: string, apply?: (q: any) => any): Promise<number
 export interface AdminPending {
   collections: number; // listy UGC do moderacji (discovery_collections pending)
   business: number;    // wizytowki do moderacji
+  quarantine: number;  // zdjecia w kwarantannie (auto-moderacja NSFW, nie sprawdzone)
+  reports: number;     // zgloszenia tresci (content_reports otwarte)
   flags: number;       // flagi miejsc (pending/reviewing)
   bugs: number;        // zgloszenia bledow (nierozwiazane)
   total: number;
@@ -22,6 +24,8 @@ export interface AdminPending {
 export const PENDING_ROUTE: Record<keyof Omit<AdminPending, "total">, string> = {
   collections: "/moderacja/b2c",
   business: "/moderacja/b2b",
+  quarantine: "/moderacja/b2c",
+  reports: "/moderacja/b2c",
   flags: "/flagi",
   bugs: "/ops",
 };
@@ -31,13 +35,15 @@ export function useAdminPending() {
     queryKey: ["admin-pending"],
     refetchInterval: 60_000,
     queryFn: async () => {
-      const [collections, business, flags, bugs] = await Promise.all([
+      const [collections, business, quarantine, reports, flags, bugs] = await Promise.all([
         headCount("discovery_collections", (q) => q.eq("moderation_status", "pending")),
         headCount("business_profiles", (q) => q.eq("moderation_status", "pending").eq("is_draft", false)),
+        headCount("image_moderation_log", (q) => q.is("reviewed_at", null)),
+        headCount("content_reports", (q) => q.eq("status", "open")),
         headCount("place_flags", (q) => q.in("status", ["pending", "reviewing"])),
         headCount("bug_reports", (q) => q.or("status.is.null,status.neq.resolved")),
       ]);
-      return { collections, business, flags, bugs, total: collections + business + flags + bugs };
+      return { collections, business, quarantine, reports, flags, bugs, total: collections + business + quarantine + reports + flags + bugs };
     },
   });
 }

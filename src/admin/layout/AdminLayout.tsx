@@ -24,7 +24,7 @@ function NavItems({ onNavigate }: { onNavigate?: () => void }) {
   const { data: pending } = useAdminPending();
   // Badge per route: liczba spraw czekajacych. "Dzis" pokazuje sume.
   const badge: Record<string, number> = pending
-    ? { "/moderacja/b2c": pending.collections, "/moderacja/b2b": pending.business, "/flagi": pending.flags, "/ops": pending.bugs }
+    ? { "/moderacja/b2c": pending.collections + pending.quarantine + pending.reports, "/moderacja/b2b": pending.business, "/flagi": pending.flags, "/ops": pending.bugs }
     : {};
   return (
     <>

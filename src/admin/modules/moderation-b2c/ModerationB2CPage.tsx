@@ -9,6 +9,8 @@ import {
 import { useTrips, useToggleTripHidden, fetchTripDetail, type TripCol, type TripPlace } from "./useTrips";
 import { PhotoModerationModal } from "./PhotoModerationModal";
 import { TodoOverview } from "../moderation/TodoOverview";
+import { QuarantinePanel, ReportsPanel } from "./ReportPanels";
+import { useAdminPending } from "../home/useAdminHome";
 
 // Klik w zdjecie -> modal moderacji (Ukryj/Usun). openPhoto(oryginalny URL z DB).
 const PhotoCtx = createContext<(url: string) => void>(() => {});
@@ -29,8 +31,9 @@ function groupByUser<T extends { user_id: string | null; username: string | null
 }
 
 export function ModerationB2CPage() {
-  const [seg, setSeg] = useState<"wyjazdy" | "listy">("wyjazdy");
+  const [seg, setSeg] = useState<"kwarantanna" | "zgloszenia" | "wyjazdy" | "listy">("kwarantanna");
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const { data: pending } = useAdminPending();
   const trips = useTrips();
   const lists = useRankings();
 
@@ -50,11 +53,15 @@ export function ModerationB2CPage() {
       <TodoOverview />
 
       <div className="flex gap-1.5 rounded-2xl bg-slate-100 p-1 mb-4">
+        <Seg active={seg === "kwarantanna"} onClick={() => setSeg("kwarantanna")} label="Kwarantanna" n={pending?.quarantine ?? 0} accent />
+        <Seg active={seg === "zgloszenia"} onClick={() => setSeg("zgloszenia")} label="Zgłoszenia" n={pending?.reports ?? 0} accent />
         <Seg active={seg === "wyjazdy"} onClick={() => setSeg("wyjazdy")} label="Wyjazdy" n={trips.data?.length ?? 0} />
         <Seg active={seg === "listy"} onClick={() => setSeg("listy")} label="Listy" n={listsPending} accent />
       </div>
 
-      {seg === "wyjazdy"
+      {seg === "kwarantanna" ? <QuarantinePanel />
+        : seg === "zgloszenia" ? <ReportsPanel />
+        : seg === "wyjazdy"
         ? trips.isLoading ? <Spin /> : trips.isError ? <ErrMsg /> : tripGroups.length === 0
           ? <Empty text="Brak opublikowanych wyjazdów." />
           : tripGroups.map((g) => (

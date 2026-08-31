@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { ListChecks, ShieldCheck, Flag, Bug, ArrowRight, CheckCircle2 } from "lucide-react";
+import { ListChecks, ShieldCheck, Flag, Bug, ArrowRight, CheckCircle2, ShieldAlert, MessageSquareWarning } from "lucide-react";
 import { useAdminPending } from "../home/useAdminHome";
 
 // Podsumowanie "Do zrobienia" (dawna zakladka Dzis): karty pending -> klik do wlasciwej
@@ -7,6 +7,8 @@ import { useAdminPending } from "../home/useAdminHome";
 export function TodoOverview() {
   const { data: p } = useAdminPending();
   const cards = [
+    { key: "quarantine", label: "Zdjęcia w kwarantannie", icon: ShieldAlert, n: p?.quarantine ?? 0, to: "/moderacja/b2c" },
+    { key: "reports", label: "Zgłoszenia treści", icon: MessageSquareWarning, n: p?.reports ?? 0, to: "/moderacja/b2c" },
     { key: "collections", label: "Listy do moderacji", icon: ListChecks, n: p?.collections ?? 0, to: "/moderacja/b2c" },
     { key: "business", label: "Wizytówki do moderacji", icon: ShieldCheck, n: p?.business ?? 0, to: "/moderacja/b2b" },
     { key: "flags", label: "Zgłoszone miejsca", icon: Flag, n: p?.flags ?? 0, to: "/flagi" },
