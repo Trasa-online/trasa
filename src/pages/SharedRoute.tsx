@@ -11,7 +11,7 @@ import { notify } from "@/lib/notify";
 import { sendClientPush, getCurrentUserName } from "@/lib/clientPush";
 import { format } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
-import { MapPin, ArrowLeft, Sparkles, ChevronDown, Bookmark, Calendar as CalendarIcon, Image as ImageIcon, Maximize2, X, Building2, Pencil, Trash2, Heart, Share2, Plus, Map as MapIcon, Loader2, Star, GripVertical, Check, Flag, Camera, ThumbsUp, MessageCircle } from "lucide-react";
+import { MapPin, ArrowLeft, Sparkles, ChevronDown, UserRound, Bookmark, Calendar as CalendarIcon, Image as ImageIcon, Maximize2, X, Building2, Pencil, Trash2, Heart, Share2, Plus, Map as MapIcon, Loader2, Star, GripVertical, Check, Flag, Camera, ThumbsUp, MessageCircle } from "lucide-react";
 import { MAIN_CATEGORIES, subcategoryPluralLabel } from "@/lib/categories";
 import { PLACE_VERDICT_TAGS } from "@/lib/routeTags";
 import { publishTrip } from "@/lib/publishTrip";
@@ -33,6 +33,7 @@ import PhotoViewer from "@/components/route/PhotoViewer";
 import PlaceNoteEditor from "@/components/route/PlaceNoteEditor";
 import ScreenSkeleton from "@/components/layout/ScreenSkeleton";
 import ReportContentSheet from "@/components/moderation/ReportContentSheet";
+import { fetchRouteCoversFor, setMyRouteCover, clearMyRouteCover } from "@/lib/routeMemberCover";
 import { moderateImageUrl, MODERATION_REJECTED_MESSAGE } from "@/lib/imageModeration";
 import { EmptyPlacesState } from "@/components/route/EmptyPlacesState";
 import AddPlaceSheet from "@/components/route/AddPlaceSheet";
@@ -502,6 +503,33 @@ export default function SharedRoute() {
     if (liked !== next.liked) setLikeOverrides((o) => ({ ...o, [url]: cur }));
   };
 
+  // Wlasna okladka wyjazdu (route_member_covers) - kazdy uczestnik widzi swoja, wybor jednej
+  // osoby nie zmienia widoku pozostalych. Okladka hosta (list_cover_url) zostaje ta, ktora
+  // reprezentuje wyjazd w EKSPLORACJI (prosba Nat 2026-08-31).
+  const { data: myCoverMap } = useQuery({
+    queryKey: ["route-member-cover", id, user?.id],
+    enabled: !!id && !!user?.id,
+    queryFn: () => fetchRouteCoversFor(user!.id, [id!]),
+    staleTime: 60_000,
+  });
+  const myCover = id ? (myCoverMap?.get(id) ?? null) : null;
+  const setMyCover = async (url: string) => {
+    if (!user?.id || !id) return;
+    const ok = await setMyRouteCover(id, user.id, url);
+    if (!ok) { toast.error("Nie udało się ustawić Twojej okładki"); return; }
+    haptics.success();
+    queryClient.invalidateQueries({ queryKey: ["route-member-cover", id, user.id] });
+    queryClient.invalidateQueries({ queryKey: ["profile-trip-feed"] });
+    toast.success("Ustawiono Twoją okładkę tego wyjazdu");
+  };
+  const resetMyCover = async () => {
+    if (!user?.id || !id) return;
+    await clearMyRouteCover(id, user.id);
+    queryClient.invalidateQueries({ queryKey: ["route-member-cover", id, user.id] });
+    queryClient.invalidateQueries({ queryKey: ["profile-trip-feed"] });
+    toast.success("Wróciła okładka wyjazdu");
+  };
+
   // Init opisu/tagow z trasy (po zaladowaniu). Nie nadpisujemy, gdy user wlasnie pisze.
   useEffect(() => {
     if (!route) return;
@@ -915,7 +943,8 @@ export default function SharedRoute() {
     .filter((p) => p.latitude != null && p.longitude != null)
     .map((p) => ({ latitude: p.latitude as number, longitude: p.longitude as number, place_name: p.place_name as string }));
   const staticMapUrl = buildStaticRouteMap(navMapPins);
-  const cover = userCover ?? placeCover;
+  // Priorytet hero: MOJA okladka (jesli wybralem) -> okladka autora -> zdjecie miejsca.
+  const cover = resolveStored(myCover) ?? userCover ?? placeCover;
   const hasRealPhoto = !!cover;
   const heroPhoto = cover ?? getRandomPinPlaceholder(route.id);
   // Opis trasy (pod tytulem) = podsumowanie AI albo podpis autora.
@@ -1374,6 +1403,8 @@ export default function SharedRoute() {
                           {likeStateOf(url).count}
                         </span>
                       )}
+                      {/* Gwiazdka = okladka w EKSPLORACJI (tylko host). Ikona osoby = MOJA okladka
+                          tego wyjazdu - kazdy uczestnik ma wlasna, nie rusza cudzych. */}
                       {isOwner && (
                         <button onClick={(e) => { e.stopPropagation(); void handleSetCover(url); }}
                           aria-label={isCover ? "To jest okładka w eksploracji" : "Ustaw jako okładkę w eksploracji"}
@@ -1381,6 +1412,16 @@ export default function SharedRoute() {
                           <Star className={`h-4 w-4 ${isCover ? "fill-white text-white" : "text-[#F0A583]"}`} />
                         </button>
                       )}
+                      {canEdit && (() => {
+                        const isMine = !!myCover && resolveStored(myCover) === url;
+                        return (
+                          <button onClick={(e) => { e.stopPropagation(); void (isMine ? resetMyCover() : setMyCover(url)); }}
+                            aria-label={isMine ? "To Twoja okładka - kliknij, żeby wrócić do okładki wyjazdu" : "Ustaw jako Twoją okładkę"}
+                            className={`absolute top-1.5 ${isOwner ? "right-11" : "right-1.5"} h-8 w-8 rounded-full flex items-center justify-center shadow-sm active:scale-90 transition-transform ${isMine ? "bg-foreground" : "bg-white/90"}`}>
+                            <UserRound className={`h-4 w-4 ${isMine ? "text-white" : "text-foreground/70"}`} strokeWidth={2.2} />
+                          </button>
+                        );
+                      })()}
                     </div>
                   );
                 })}

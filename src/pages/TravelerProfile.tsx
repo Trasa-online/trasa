@@ -31,6 +31,7 @@ import { unsaveCollectionDb, migrateLocalSavedCollections } from "@/lib/savedCol
 import { pinCoverKeys, fetchPlacePhotosForKeys, pickPlaceCover } from "@/lib/placePhotoSocial";
 // Karta wyjazdu = ta sama co na eksploracji (okladka + zapis), na profilu BEZ mapki.
 import TrasaBigCard from "@/components/home/TrasaBigCard";
+import { fetchRouteCoversFor } from "@/lib/routeMemberCover";
 import { resolveStored } from "@/components/PlacePhoto";
 
 // ── Guest empty state (same visual rytm jak Journal dla goscia) ──────────────
@@ -357,6 +358,8 @@ const TravelerProfile = () => {
       const ids = rows.map((r) => r.id);
       const pinsRes = await (supabase as any).from("pins").select("id, route_id, place_name, category, photo_url, image_url, images, user_photo_urls, pin_order, latitude, longitude").in("route_id", ids).order("pin_order", { ascending: true });
       const allPins = (pinsRes.data ?? []) as any[];
+      // MOJA okladka wyjazdu (route_member_covers) - kazdy uczestnik widzi u siebie swoja.
+      const myCovers = await fetchRouteCoversFor(user!.id, ids);
       // Okladki miejsc ze zdjec userow (place_photos) - gdy pin nie ma wlasnego zdjecia.
       const keys = Array.from(new Set(allPins.flatMap((p) => pinCoverKeys(p)))).filter(Boolean);
       const photoMap = keys.length ? await fetchPlacePhotosForKeys(keys) : null;
@@ -395,8 +398,8 @@ const TravelerProfile = () => {
         // lub ai_summary (fallback). tags = routes.tags.
         description: (rep.review_narrative || rep.ai_summary || "").trim() || null,
         tags: Array.isArray(rep.tags) ? rep.tags : [],
-        // Okladka karty: miniatura eksploracji > okladka wyjazdu (patrz project_route_cover_model).
-        cover: rep.list_cover_url ?? rep.cover_url ?? null,
+        // Okladka karty: MOJA okladka (jesli wybralem) > miniatura eksploracji > okladka wyjazdu.
+        cover: myCovers.get(rep.id) ?? rep.list_cover_url ?? rep.cover_url ?? null,
         tiles: days.flatMap((d) => pinsByRoute[d.id] ?? []),
         saves: Number(rep.saves_count ?? 0),
         likes: Number(rep.likes_count ?? 0),

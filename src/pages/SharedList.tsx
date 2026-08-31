@@ -87,6 +87,9 @@ export default function SharedList() {
   // Notki + zdjecia usera na miejscach listy (prosba Nat 2026-08-26). Wlasciciel edytuje
   // discovery_items.short_desc (notka, AUTO-ZAPIS przez PlaceNoteEditor) i images (route-images).
   const [uploadingItem, setUploadingItem] = useState<string | null>(null);
+  // Pisanie notki chowa dolny pasek - guzik "Dodaj nowe miejsce" zaslanial pole i klawiature
+  // (zgloszenie Nat 2026-08-31). Ten sam wzorzec co w widoku wyjazdu (SharedRoute).
+  const [noteEditing, setNoteEditing] = useState(false);
 
   const saveItemNote = async (item: any, value: string) => {
     const { error } = await (supabase as any).from("discovery_items").update({ short_desc: value || null }).eq("id", item.id);
@@ -379,7 +382,7 @@ export default function SharedList() {
             {/* Notka wyglada TAK SAMO jak na wyjezdzie: szary dymek + awatar autora w prawym-dolnym
                 rogu (prosba Nat 2026-08-30). Autor = wlasciciel listy. */}
             <PlaceNoteEditor note={noteText} editable={isOwner} showAvatar avatarUrl={author?.avatar_url ?? col.author_avatar}
-              onSave={(v) => saveItemNote(pin, v)} photoSlot={photoSlot} />
+              onSave={(v) => saveItemNote(pin, v)} photoSlot={photoSlot} onEditingChange={setNoteEditing} />
             {/* Zdjecia miejsca (2:3) - dodane przez wlasciciela listy. */}
             {photos.length > 0 && (
               <div className="flex flex-wrap gap-2">
@@ -553,6 +556,7 @@ export default function SharedList() {
       {/* CTA - zapis CAŁEJ listy (driver engagementu). TYLKO cudza lista - nie zapisujesz wlasnej (#4).
           Zapis pojedynczych miejsc = bookmark przy każdym miejscu (SavePlaceSheet). */}
       {/* b) Dolny CTA: wlasciciel = "Dodaj nowe miejsce" (drawer jak w wyjazdach); gosc = zapisz liste. */}
+      {!noteEditing && (
       <div className="fixed bottom-0 left-0 right-0 max-w-lg mx-auto px-5 pt-2 bg-background border-t border-border/30" style={{ paddingBottom: "max(12px, env(safe-area-inset-bottom, 12px))" }}>
         {isOwner ? (
           <button onClick={() => setAddPlaceOpen(true)} className="w-full py-3 rounded-full border border-border bg-background text-foreground font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform">
@@ -564,6 +568,7 @@ export default function SharedList() {
           </button>
         )}
       </div>
+      )}
 
       {isOwner && (
         <AddPlaceSheet

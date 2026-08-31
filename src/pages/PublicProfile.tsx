@@ -127,11 +127,29 @@ export default function PublicProfile() {
     queryKey: ["public-trip-feed", profile?.id],
     enabled: !!profile?.id,
     queryFn: async () => {
+      const cols = "id, title, city, start_date, day_number, folder_id, views, saves_count, likes_count, created_at, user_id, tags, review_narrative, ai_summary, cover_url, list_cover_url";
+      // WLASNE wyjazdy usera...
       const { data: routes } = await (supabase as any)
-        .from("routes").select("id, title, city, start_date, day_number, folder_id, views, saves_count, likes_count, created_at, tags, review_narrative, ai_summary, cover_url, list_cover_url")
+        .from("routes").select(cols)
         .eq("user_id", profile!.id).eq("is_shared", true).eq("hidden_by_admin", false)
         .order("created_at", { ascending: false });
-      const rows = (routes ?? []) as any[];
+      // ...ORAZ wyjazdy GRUPOWE, w ktorych bral udzial (nie jest hostem). Wczesniej na cudzym
+      // profilu widac bylo tylko to, co sam zalozyl - wspolny wyjazd znikal wszystkim poza
+      // hostem (zgloszenie Nat 2026-08-31). Tylko OPUBLIKOWANE - robocze zostaja prywatne.
+      const { data: memberSessions } = await (supabase as any)
+        .from("group_session_members").select("session_id").eq("user_id", profile!.id);
+      const sessionIds = (memberSessions ?? []).map((m: any) => m.session_id).filter(Boolean);
+      let groupRows: any[] = [];
+      if (sessionIds.length) {
+        const { data } = await (supabase as any).from("routes").select(cols)
+          .in("group_session_id", sessionIds).neq("user_id", profile!.id)
+          .eq("is_shared", true).eq("status", "published").eq("hidden_by_admin", false)
+          .order("created_at", { ascending: false });
+        groupRows = data ?? [];
+      }
+      const seenRoute = new Set<string>();
+      const rows = [...((routes ?? []) as any[]), ...groupRows]
+        .filter((r) => { if (seenRoute.has(r.id)) return false; seenRoute.add(r.id); return true; });
       if (!rows.length) return [];
       const ids = rows.map((r) => r.id);
       // saves_count/likes_count = kolumny na routes (denormalizacja - RLS na saved_routes blokuje
@@ -158,6 +176,13 @@ export default function PublicProfile() {
         grouped.push({ rep: sorted[0], days: sorted });
       }
       grouped.sort((a, b) => new Date(b.rep.created_at ?? 0).getTime() - new Date(a.rep.created_at ?? 0).getTime());
+      // Hostowie wyjazdow grupowych - na karcie ma byc autor wyjazdu, nie wlasciciel profilu.
+      const hostIds = [...new Set(grouped.map(({ rep }) => rep.user_id).filter((u) => u && u !== profile!.id))];
+      const hostById = new Map<string, { username: string | null; first_name: string | null; avatar_url: string | null }>();
+      if (hostIds.length) {
+        const { data: hosts } = await (supabase as any).from("profiles").select("id, username, first_name, avatar_url").in("id", hostIds);
+        for (const h of hosts ?? []) hostById.set(h.id, h);
+      }
       return grouped.map(({ rep, days }) => ({
         id: rep.id,
         city: rep.city,
@@ -167,6 +192,9 @@ export default function PublicProfile() {
         description: (rep.review_narrative || rep.ai_summary || "").trim() || null,
         tags: Array.isArray(rep.tags) ? rep.tags : [],
         cover: rep.list_cover_url ?? rep.cover_url ?? null,
+        is_host: rep.user_id === profile!.id,
+        host_name: rep.user_id === profile!.id ? null : (hostById.get(rep.user_id)?.first_name || hostById.get(rep.user_id)?.username || null),
+        host_avatar: rep.user_id === profile!.id ? null : (hostById.get(rep.user_id)?.avatar_url ?? null),
         tiles: days.flatMap((d) => pinsByRoute[d.id] ?? []),
         saves: Number(rep.saves_count ?? 0),
         likes: Number(rep.likes_count ?? 0),
@@ -434,8 +462,8 @@ export default function PublicProfile() {
                 placeCount={(tr.tiles ?? []).length}
                 title={tr.title || (tr.city ? t("feed.trip_fallback", { city: tr.city, defaultValue: `Wyjazd do ${tr.city}` }) : t("feed.trip_fallback_generic", "Wyjazd"))}
                 description={tr.description}
-                authorName={displayName}
-                authorAvatar={profile.avatar_url}
+                authorName={tr.is_host ? displayName : (tr.host_name ?? displayName)}
+                authorAvatar={tr.is_host ? profile.avatar_url : (tr.host_avatar ?? profile.avatar_url)}
                 showMap={false}
                 snap={false}
                 heightClass="aspect-[3/4]"
