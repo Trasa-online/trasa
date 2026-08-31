@@ -3,11 +3,12 @@ import { NavLink } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { OpsLogo } from "@/admin/OpsLogo";
 import { useAdmin } from "../RequireAdmin";
-import { ShieldCheck, Users, BarChart3, Bug, Settings, ListChecks, MapPin, ScrollText, Menu, X, Flag, DollarSign } from "lucide-react";
+import { ShieldCheck, Users, BarChart3, Bug, Settings, ListChecks, MapPin, ScrollText, Menu, X, Flag, DollarSign, Building2 } from "lucide-react";
 import { useAdminPending } from "../modules/home/useAdminHome";
 
 const NAV = [
-  { to: "/moderacja", label: "Moderacja", icon: ShieldCheck },
+  { to: "/moderacja/b2c", label: "Moderacja B2C", icon: ShieldCheck },
+  { to: "/moderacja/b2b", label: "Moderacja B2B", icon: Building2 },
   { to: "/zestawienia", label: "Leady", icon: ListChecks },
   { to: "/users", label: "Użytkownicy", icon: Users },
   { to: "/analityka", label: "Analityka", icon: BarChart3 },
@@ -23,7 +24,7 @@ function NavItems({ onNavigate }: { onNavigate?: () => void }) {
   const { data: pending } = useAdminPending();
   // Badge per route: liczba spraw czekajacych. "Dzis" pokazuje sume.
   const badge: Record<string, number> = pending
-    ? { "/moderacja": pending.collections + pending.business, "/flagi": pending.flags, "/ops": pending.bugs }
+    ? { "/moderacja/b2c": pending.collections, "/moderacja/b2b": pending.business, "/flagi": pending.flags, "/ops": pending.bugs }
     : {};
   return (
     <>

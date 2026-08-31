@@ -8,6 +8,7 @@ import {
 } from "../rankings/useRankings";
 import { useTrips, useToggleTripHidden, fetchTripDetail, type TripCol, type TripPlace } from "./useTrips";
 import { PhotoModerationModal } from "./PhotoModerationModal";
+import { TodoOverview } from "../moderation/TodoOverview";
 
 // Klik w zdjecie -> modal moderacji (Ukryj/Usun). openPhoto(oryginalny URL z DB).
 const PhotoCtx = createContext<(url: string) => void>(() => {});
@@ -40,7 +41,14 @@ export function ModerationB2CPage() {
 
   return (
     <PhotoCtx.Provider value={setPhotoUrl}>
-    <div>
+    <div className="max-w-3xl">
+      <div className="mb-5">
+        <h1 className="text-2xl font-black text-slate-900">Moderacja B2C</h1>
+        <p className="text-sm text-slate-500 mt-1">Weryfikacja treści od użytkowników: zdjęcia, notki, cała zawartość i autor.</p>
+      </div>
+
+      <TodoOverview />
+
       <div className="flex gap-1.5 rounded-2xl bg-slate-100 p-1 mb-4">
         <Seg active={seg === "wyjazdy"} onClick={() => setSeg("wyjazdy")} label="Wyjazdy" n={trips.data?.length ?? 0} />
         <Seg active={seg === "listy"} onClick={() => setSeg("listy")} label="Listy" n={listsPending} accent />

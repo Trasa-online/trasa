@@ -1,7 +1,8 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import { RequireAdmin } from "./RequireAdmin";
 import { AdminLayout } from "./layout/AdminLayout";
-import { ModerationHub } from "./modules/moderation/ModerationHub";
+import { ModerationB2CPage } from "./modules/moderation-b2c/ModerationB2CPage";
+import { ModerationPage } from "./modules/moderation/ModerationPage";
 import { AnalyticsPage } from "./modules/analytics/AnalyticsPage";
 import { UsersPage } from "./modules/users/UsersPage";
 import { OpsPage } from "./modules/ops/OpsPage";
@@ -19,8 +20,10 @@ export default function AdminApp() {
     <RequireAdmin>
       <AdminLayout>
         <Routes>
-          <Route path="/" element={<Navigate to="/moderacja" replace />} />
-          <Route path="/moderacja" element={<ModerationHub />} />
+          <Route path="/" element={<Navigate to="/moderacja/b2c" replace />} />
+          <Route path="/moderacja" element={<Navigate to="/moderacja/b2c" replace />} />
+          <Route path="/moderacja/b2c" element={<ModerationB2CPage />} />
+          <Route path="/moderacja/b2b" element={<ModerationPage />} />
           <Route path="/zestawienia" element={<LeadsPage />} />
           <Route path="/users" element={<UsersPage />} />
           <Route path="/analityka" element={<AnalyticsPage />} />

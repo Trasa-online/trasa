@@ -20,8 +20,8 @@ export interface AdminPending {
 
 // Route docelowe per typ pending (badge w NAV + klik z karty "Do zrobienia").
 export const PENDING_ROUTE: Record<keyof Omit<AdminPending, "total">, string> = {
-  collections: "/moderacja",
-  business: "/moderacja",
+  collections: "/moderacja/b2c",
+  business: "/moderacja/b2b",
   flags: "/flagi",
   bugs: "/ops",
 };
