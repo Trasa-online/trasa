@@ -147,7 +147,7 @@ function AdminLogin() {
                 )}
 
                 <button type="submit" disabled={loading}
-                  className="w-full py-3 rounded-full bg-slate-900 hover:opacity-95 text-white font-bold text-sm shadow-lg shadow-slate-900/25 active:scale-[0.98] transition-all disabled:opacity-60">
+                  className="w-full py-3 rounded-[4px] bg-slate-900 hover:opacity-95 text-white font-bold text-sm active:scale-[0.98] transition-all disabled:opacity-60">
                   {loading ? (usePassword ? "Logowanie…" : "Wysyłam…") : (usePassword ? "Zaloguj się" : "Wyślij link do logowania")}
                 </button>
               </form>

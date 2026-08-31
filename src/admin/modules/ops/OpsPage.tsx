@@ -89,7 +89,7 @@ function BugRow({ bug }: { bug: BugReport }) {
       </div>
       <div className="flex justify-end mt-3">
         <button onClick={toggle} disabled={resolve.isPending}
-          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold disabled:opacity-60 ${isResolved ? "bg-slate-100 hover:bg-slate-200 text-slate-600" : "bg-emerald-600 hover:bg-emerald-700 text-white"}`}>
+          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[4px] text-sm font-semibold disabled:opacity-60 ${isResolved ? "bg-slate-100 hover:bg-slate-200 text-slate-600" : "bg-emerald-600 hover:bg-emerald-700 text-white"}`}>
           {isResolved ? <><RotateCcw className="h-3.5 w-3.5" />Otwórz ponownie</> : <><Check className="h-4 w-4" />Rozwiązane</>}
         </button>
       </div>
@@ -124,7 +124,7 @@ function CitiesSection() {
 
 function TabBtn({ active, onClick, label, n }: { active: boolean; onClick: () => void; label: string; n: number }) {
   return (
-    <button onClick={onClick} className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${active ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-800"}`}>
+    <button onClick={onClick} className={`px-3 py-1 rounded-[4px] text-xs font-semibold transition-colors ${active ? "bg-white text-slate-900" : "text-slate-500 hover:text-slate-800"}`}>
       {label} <span className="text-[10px]">{n}</span>
     </button>
   );

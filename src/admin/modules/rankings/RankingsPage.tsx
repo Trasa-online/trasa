@@ -97,21 +97,21 @@ function RankingCard({ col }: { col: RankingCol }) {
           <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} autoFocus placeholder="Powód odrzucenia (widoczny dla autora)…"
             className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-red-400 resize-none" />
           <div className="flex gap-2">
-            <button onClick={doReject} disabled={busy} className="flex-1 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm font-bold disabled:opacity-60">{busy ? "…" : "Potwierdź odrzucenie"}</button>
-            <button onClick={() => { setRejecting(false); setNote(""); }} className="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 text-sm font-semibold">Anuluj</button>
+            <button onClick={doReject} disabled={busy} className="flex-1 py-2 rounded-[4px] bg-red-600 hover:bg-red-700 text-white text-sm font-bold disabled:opacity-60">{busy ? "…" : "Potwierdź odrzucenie"}</button>
+            <button onClick={() => { setRejecting(false); setNote(""); }} className="px-4 py-2 rounded-[4px] bg-slate-100 text-slate-700 text-sm font-semibold">Anuluj</button>
           </div>
         </div>
       ) : (
         <div className="flex gap-2 mt-3">
           {col.moderation_status !== "approved" && (
-            <button onClick={approve} disabled={busy} className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold disabled:opacity-60"><Check className="h-4 w-4" />Akceptuj</button>
+            <button onClick={approve} disabled={busy} className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 rounded-[4px] bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold disabled:opacity-60"><Check className="h-4 w-4" />Akceptuj</button>
           )}
           {col.moderation_status !== "rejected" && (
-            <button onClick={() => setRejecting(true)} disabled={busy} className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-sm font-semibold disabled:opacity-60"><X className="h-4 w-4" />Odrzuć</button>
+            <button onClick={() => setRejecting(true)} disabled={busy} className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 rounded-[4px] bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-sm font-semibold disabled:opacity-60"><X className="h-4 w-4" />Odrzuć</button>
           )}
           <button onClick={() => toggleHidden.mutate({ id: col.id, hidden: !col.hidden_by_admin })} disabled={busy}
             title={col.hidden_by_admin ? "Przywróć" : "Ukryj"}
-            className="px-3 py-2 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 disabled:opacity-60">
+            className="px-3 py-2 rounded-[4px] bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 disabled:opacity-60">
             {col.hidden_by_admin ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
           </button>
         </div>
@@ -141,7 +141,7 @@ function LeadCard({ lead }: { lead: Lead }) {
         </div>
       </div>
       <button onClick={go} disabled={promote.isPending}
-        className="shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-sm font-bold disabled:opacity-60">
+        className="shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-[4px] bg-slate-900 hover:bg-slate-800 text-white text-sm font-bold disabled:opacity-60">
         {promote.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}Dodaj
       </button>
     </div>
@@ -150,7 +150,7 @@ function LeadCard({ lead }: { lead: Lead }) {
 
 function Tab({ active, onClick, label, n, accent }: { active: boolean; onClick: () => void; label: string; n: number; accent?: boolean }) {
   return (
-    <button onClick={onClick} className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold transition-colors ${active ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-800"}`}>
+    <button onClick={onClick} className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-[4px] text-xs font-semibold transition-colors ${active ? "bg-white text-slate-900" : "text-slate-500 hover:text-slate-800"}`}>
       {label}{n > 0 && <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${accent ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-500"}`}>{n}</span>}
     </button>
   );

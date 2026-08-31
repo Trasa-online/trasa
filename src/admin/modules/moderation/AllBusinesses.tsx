@@ -64,8 +64,8 @@ function BizCard({ biz }: { biz: BizRow }) {
             <Field label="Miasto" value={form.city} onChange={(v) => setForm((f) => ({ ...f, city: v }))} />
           </div>
           <div className="flex gap-2 pt-1">
-            <button onClick={save} disabled={busy} className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-sm font-bold disabled:opacity-60"><Check className="h-4 w-4" />Zapisz</button>
-            <button onClick={() => setEditing(false)} className="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 text-sm font-semibold">Anuluj</button>
+            <button onClick={save} disabled={busy} className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 rounded-[4px] bg-slate-900 hover:bg-slate-800 text-white text-sm font-bold disabled:opacity-60"><Check className="h-4 w-4" />Zapisz</button>
+            <button onClick={() => setEditing(false)} className="px-4 py-2 rounded-[4px] bg-slate-100 text-slate-700 text-sm font-semibold">Anuluj</button>
           </div>
         </div>
       ) : (
@@ -85,12 +85,12 @@ function BizCard({ biz }: { biz: BizRow }) {
             </div>
           </div>
           <div className="flex gap-2 mt-3">
-            <button onClick={() => setEditing(true)} disabled={busy} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-sm font-semibold disabled:opacity-60"><Pencil className="h-3.5 w-3.5" />Edytuj</button>
-            <button onClick={togglePublish} disabled={busy} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-sm font-semibold disabled:opacity-60">
+            <button onClick={() => setEditing(true)} disabled={busy} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[4px] bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-sm font-semibold disabled:opacity-60"><Pencil className="h-3.5 w-3.5" />Edytuj</button>
+            <button onClick={togglePublish} disabled={busy} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[4px] bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-sm font-semibold disabled:opacity-60">
               {biz.is_active ? <><EyeOff className="h-3.5 w-3.5" />Ukryj</> : <><Eye className="h-3.5 w-3.5" />Publikuj</>}
             </button>
             <RequireTier tier="super_admin">
-              <button onClick={() => setConfirmDel((v) => !v)} disabled={busy} className="ml-auto p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50" title="Usuń"><Trash2 className="h-4 w-4" /></button>
+              <button onClick={() => setConfirmDel((v) => !v)} disabled={busy} className="ml-auto p-1.5 rounded-[4px] text-slate-400 hover:text-red-600 hover:bg-red-50" title="Usuń"><Trash2 className="h-4 w-4" /></button>
             </RequireTier>
           </div>
           {confirmDel && (
@@ -98,8 +98,8 @@ function BizCard({ biz }: { biz: BizRow }) {
               <input value={reason} onChange={(e) => setReason(e.target.value)} autoFocus placeholder="Powód usunięcia (audyt)…"
                 className="flex-1 rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-red-400" />
               <div className="flex gap-2">
-                <button onClick={doDelete} disabled={busy} className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm font-bold disabled:opacity-60">{busy ? "…" : "Usuń"}</button>
-                <button onClick={() => { setConfirmDel(false); setReason(""); }} className="px-3 py-2 rounded-xl bg-slate-100 text-slate-700 text-sm font-semibold">Anuluj</button>
+                <button onClick={doDelete} disabled={busy} className="px-4 py-2 rounded-[4px] bg-red-600 hover:bg-red-700 text-white text-sm font-bold disabled:opacity-60">{busy ? "…" : "Usuń"}</button>
+                <button onClick={() => { setConfirmDel(false); setReason(""); }} className="px-3 py-2 rounded-[4px] bg-slate-100 text-slate-700 text-sm font-semibold">Anuluj</button>
               </div>
             </div>
           )}

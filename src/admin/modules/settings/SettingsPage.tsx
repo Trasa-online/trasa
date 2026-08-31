@@ -64,7 +64,7 @@ export function SettingsPage() {
               className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-400" />
           </div>
           <button type="submit" disabled={loading}
-            className="w-full py-3 rounded-full bg-slate-900 hover:opacity-95 text-white font-bold text-sm shadow-lg shadow-slate-900/25 active:scale-[0.98] transition-all disabled:opacity-60">
+            className="w-full py-3 rounded-[4px] bg-slate-900 hover:opacity-95 text-white font-bold text-sm active:scale-[0.98] transition-all disabled:opacity-60">
             {loading ? "Zapisuję…" : "Ustaw hasło"}
           </button>
         </form>

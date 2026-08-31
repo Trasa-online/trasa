@@ -59,7 +59,7 @@ export function AnalyticsPage() {
           <div className="flex gap-1 bg-slate-100 rounded-full p-0.5">
             {RANGES.map((d) => (
               <button key={d} onClick={() => setRange(d)}
-                className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${range === d ? "bg-slate-900 text-white" : "text-slate-500 hover:text-slate-800"}`}>
+                className={`px-3 py-1 rounded-[4px] text-xs font-semibold transition-colors ${range === d ? "bg-slate-900 text-white" : "text-slate-500 hover:text-slate-800"}`}>
                 {d} dni
               </button>
             ))}

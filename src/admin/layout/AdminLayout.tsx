@@ -53,7 +53,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
       {/* Topbar */}
       <header className="sticky top-0 z-30 flex items-center justify-between px-4 sm:px-5 h-14 border-b border-slate-200 bg-white/80 backdrop-blur">
         <div className="flex items-center gap-2">
-          <button onClick={() => setMenuOpen(true)} className="md:hidden -ml-1 p-1.5 rounded-lg text-slate-600 hover:bg-slate-100" aria-label="Menu">
+          <button onClick={() => setMenuOpen(true)} className="md:hidden -ml-1 p-1.5 rounded-[4px] text-slate-600 hover:bg-slate-100" aria-label="Menu">
             <Menu className="h-5 w-5" />
           </button>
           <TrasaLogo size={30} />
@@ -75,7 +75,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
           <div className="absolute left-0 top-0 bottom-0 w-64 bg-white border-r border-slate-200 p-3 flex flex-col gap-1 shadow-xl">
             <div className="flex items-center justify-between px-2 h-11 mb-1">
               <span className="text-sm font-black text-slate-800">trasa<span className="text-slate-700"> ops</span></span>
-              <button onClick={() => setMenuOpen(false)} className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100" aria-label="Zamknij"><X className="h-5 w-5" /></button>
+              <button onClick={() => setMenuOpen(false)} className="p-1.5 rounded-[4px] text-slate-500 hover:bg-slate-100" aria-label="Zamknij"><X className="h-5 w-5" /></button>
             </div>
             <NavItems onNavigate={() => setMenuOpen(false)} />
           </div>

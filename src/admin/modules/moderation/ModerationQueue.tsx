@@ -102,11 +102,11 @@ function QueueCard({ item }: { item: QueueItem }) {
           />
           <div className="flex gap-2">
             <button onClick={doReject} disabled={busy}
-              className="flex-1 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm font-bold disabled:opacity-60">
+              className="flex-1 py-2 rounded-[4px] bg-red-600 hover:bg-red-700 text-white text-sm font-bold disabled:opacity-60">
               {busy ? "…" : "Potwierdź odrzucenie"}
             </button>
             <button onClick={() => { setRejecting(false); setReason(""); }} disabled={busy}
-              className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold">
+              className="px-4 py-2 rounded-[4px] bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold">
               Anuluj
             </button>
           </div>
@@ -114,11 +114,11 @@ function QueueCard({ item }: { item: QueueItem }) {
       ) : (
         <div className="flex gap-2 mt-3">
           <button onClick={approve} disabled={busy}
-            className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold disabled:opacity-60">
+            className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 rounded-[4px] bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold disabled:opacity-60">
             <Check className="h-4 w-4" />Akceptuj
           </button>
           <button onClick={() => setRejecting(true)} disabled={busy}
-            className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-sm font-semibold disabled:opacity-60">
+            className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 rounded-[4px] bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-sm font-semibold disabled:opacity-60">
             <X className="h-4 w-4" />Odrzuć
           </button>
         </div>

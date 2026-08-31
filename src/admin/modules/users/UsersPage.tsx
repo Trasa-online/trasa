@@ -42,7 +42,7 @@ export function UsersPage() {
           { id: "consumer", label: "Użytkownicy", n: counts.consumer },
         ] as const).map((f) => (
           <button key={f.id} onClick={() => setFilter(f.id)}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold transition-colors ${filter === f.id ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-800"}`}>
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-[4px] text-xs font-semibold transition-colors ${filter === f.id ? "bg-white text-slate-900" : "text-slate-500 hover:text-slate-800"}`}>
             {f.label}<span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${filter === f.id ? "bg-slate-100" : "bg-white/70"}`}>{f.n}</span>
           </button>
         ))}
@@ -96,7 +96,7 @@ function UserRow({ user }: { user: AdminUser }) {
         {!user.deleted && (
           <RequireTier tier="super_admin">
             <button onClick={() => setConfirming((v) => !v)} title="Usuń konto"
-              className="shrink-0 p-2 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors">
+              className="shrink-0 p-2 rounded-[4px] text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors">
               <Trash2 className="h-4 w-4" />
             </button>
           </RequireTier>
@@ -109,11 +109,11 @@ function UserRow({ user }: { user: AdminUser }) {
             className="flex-1 rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-red-400" />
           <div className="flex gap-2">
             <button onClick={doDelete} disabled={del.isPending}
-              className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm font-bold disabled:opacity-60">
+              className="px-4 py-2 rounded-[4px] bg-red-600 hover:bg-red-700 text-white text-sm font-bold disabled:opacity-60">
               {del.isPending ? "…" : "Usuń"}
             </button>
             <button onClick={() => { setConfirming(false); setReason(""); }} disabled={del.isPending}
-              className="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold">Anuluj</button>
+              className="px-3 py-2 rounded-[4px] bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold">Anuluj</button>
           </div>
         </div>
       )}

@@ -43,14 +43,14 @@ export function PlaceFlagsPage() {
                 </div>
                 <div className="flex gap-2 mt-3 flex-wrap">
                   {f.reason === "bad_photo" && (
-                    <button disabled={busy} onClick={() => clearPhoto.mutate(f)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 text-white text-xs font-semibold hover:bg-slate-700 disabled:opacity-50 transition-colors">
+                    <button disabled={busy} onClick={() => clearPhoto.mutate(f)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-[4px] bg-slate-900 text-white text-xs font-semibold hover:bg-slate-700 disabled:opacity-50 transition-colors">
                       {clearPhoto.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />} Wyczyść zdjęcie + re-fetch
                     </button>
                   )}
-                  <button disabled={busy} onClick={() => resolve.mutate({ id: f.id, status: "resolved" })} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold hover:bg-emerald-100 disabled:opacity-50 transition-colors">
+                  <button disabled={busy} onClick={() => resolve.mutate({ id: f.id, status: "resolved" })} className="flex items-center gap-1.5 px-3 py-1.5 rounded-[4px] bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold hover:bg-emerald-100 disabled:opacity-50 transition-colors">
                     <Check className="h-3.5 w-3.5" /> Rozwiązane
                   </button>
-                  <button disabled={busy} onClick={() => resolve.mutate({ id: f.id, status: "dismissed" })} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-slate-600 text-xs font-semibold hover:bg-slate-100 disabled:opacity-50 transition-colors">
+                  <button disabled={busy} onClick={() => resolve.mutate({ id: f.id, status: "dismissed" })} className="flex items-center gap-1.5 px-3 py-1.5 rounded-[4px] bg-slate-50 border border-slate-200 text-slate-600 text-xs font-semibold hover:bg-slate-100 disabled:opacity-50 transition-colors">
                     <X className="h-3.5 w-3.5" /> Odrzuć
                   </button>
                 </div>
