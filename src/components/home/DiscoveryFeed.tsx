@@ -1483,7 +1483,7 @@ export function SavedCollections({ hideEmptyState }: { hideEmptyState?: boolean 
   );
 }
 
-export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityChange, active = true, searchQuery = "", searchOpen = false }: { city?: string; cities?: string[]; onCityChange?: (city: string) => void; active?: boolean; searchQuery?: string; searchOpen?: boolean } = {}) {
+export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityChange, active = true, searchQuery = "", searchOpen = false, searchCategory = "all" }: { city?: string; cities?: string[]; onCityChange?: (city: string) => void; active?: boolean; searchQuery?: string; searchOpen?: boolean; searchCategory?: "all" | "lists" | "trips" | "places" } = {}) {
   const { t } = useTranslation("homefeed");
   const { user } = useAuth();
   const { open: openAuthDrawer } = useAuthDrawer();
@@ -1618,11 +1618,14 @@ export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityCh
   const [contentType, setContentType] = useState<"all" | "routes" | "lists">("all");
   const [filtersOpen, setFiltersOpen] = useState(false);
   // Zakladka wynikow wyszukiwania: najlepsze (wszystko) / miejsca / zestawienia.
-  const [searchTab, setSearchTab] = useState<"best" | "places" | "collections">("best");
+  // Kategoria (Wszystko|Listy|Wyjazdy|Miejsca) przychodzi z gornego chrome (Explore).
+  const cat = searchCategory;
   const q = debouncedQuery.length >= 2 ? debouncedQuery : "";
-  const isSearchActive = !!q || cityFilter.length > 0 || themeFilter.length > 0 || categoryFilter.length > 0;
+  // Wybrana kategoria (inna niz "Wszystko") wlacza widok wynikow TAKZE bez frazy - wtedy
+  // pokazujemy zawartosc kategorii (tryb przegladania, decyzja Nat 2026-08-31).
+  const isSearchActive = !!q || cityFilter.length > 0 || themeFilter.length > 0 || categoryFilter.length > 0 || (searchOpen && cat !== "all");
   // Reset zakladki wynikow gdy wychodzimy z wyszukiwania.
-  useEffect(() => { if (!isSearchActive) setSearchTab("best"); }, [isSearchActive]);
+
   // Miasto z gornej belki zeszlo do sheetu (parent `city`) - liczymy je do badge filtra,
   // ale trzymamy osobno od cityFilter[] (ten zostaje dla filtra wynikow wyszukiwania).
   const cityActive = !!city && city !== "all";
@@ -1870,7 +1873,7 @@ export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityCh
 
   // Wyszukiwarka: trasy (tytul / autor) + zestawienia (tytul / autor), z filtrami.
   const { data: results, isLoading: searchLoading } = useQuery({
-    queryKey: ["explore-search", q, cityFilter, themeFilter, categoryFilter],
+    queryKey: ["explore-search", q, cityFilter, themeFilter, categoryFilter, cat],
     enabled: isSearchActive,
     staleTime: 30_000,
     queryFn: async () => {
@@ -1926,20 +1929,23 @@ export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityCh
             .order("views", { ascending: false, nullsFirst: false }).limit(30);
           for (const r of byAuthor ?? []) if (!routeMap.has(r.id)) routeMap.set(r.id, r);
         }
-      } else if (cities || categoryFilter.length) {
-        // Same filtry (bez slowa) - i tak pokazujemy pasujace trasy.
+      } else if (cities || categoryFilter.length || cat === "trips") {
+        // Bez frazy: same filtry ALBO kategoria "Wyjazdy" (przegladanie) - najnowsze publikacje.
         const { data: all } = await applyRoute((supabase as any).from("routes").select(routeCols))
-          .order("views", { ascending: false, nullsFirst: false }).limit(40);
+          .eq("status", "published")
+          .order("published_at", { ascending: false, nullsFirst: false })
+          .order("created_at", { ascending: false, nullsFirst: false })
+          .limit(40);
         for (const r of all ?? []) if (!routeMap.has(r.id)) routeMap.set(r.id, r);
       }
-      let routeRows = [...routeMap.values()];
+      let routeRows = (cat === "all" || cat === "trips") ? [...routeMap.values()] : [];
       if (allow) routeRows = routeRows.filter((r) => allow!.has(r.id));
       const routes = await enrichRouteRows(routeRows);
 
       // Zestawienia (listy) - pomijamy gdy aktywny filtr kategorii miejsc (to pojecie tras)
       // ORAZ gdy listy sa wylaczone w eksploracji (SHOW_ZESTAWIENIA=false - widoczne tylko w profilu).
       let collections: DiscoveryCollection[] = [];
-      if (!categoryFilter.length && SHOW_ZESTAWIENIA) {
+      if (!categoryFilter.length && (cat === "all" || cat === "lists") && (SHOW_ZESTAWIENIA || cat === "lists" || !!q)) {
         let colQ = (supabase as any).from("discovery_collections")
           .select("id, title, city, description, category, author_name, author_avatar, user_id, views_count, saves_count, plan_adds_count, cover_url, list_cover_url")
           .eq("is_public", true).eq("kind", "ranking").eq("list_status", "visited").eq("hidden_by_admin", false).neq("moderation_status", "rejected"); // soft-moderacja: pending widoczne
@@ -1953,11 +1959,11 @@ export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityCh
       // Miejsca (places) - szukanie po nazwie, ze WSZYSTKICH miast (albo wybranych w filtrze
       // miast/kategorii). Tap otwiera pelna wizytowke. Tylko gdy user wpisal fraze (>=2 znaki).
       let places: any[] = [];
-      if (q) {
+      if (q || cat === "places") {
         let pq = (supabase as any)
           .from("places")
-          .select("id, place_name, city, category, address, latitude, longitude, rating, photo_url")
-          .ilike("place_name", like);
+          .select("id, place_name, city, category, address, latitude, longitude, rating, photo_url");
+        if (q) pq = pq.ilike("place_name", like);
         if (cities) pq = pq.in("city", cities);
         if (categoryFilter.length) {
           const dbCats = [...new Set(categoryFilter.flatMap(getDbCategoriesFor))];
@@ -2056,18 +2062,9 @@ export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityCh
           </div>
         ) : (results && (results.routes.length > 0 || results.collections.length > 0 || (results.places?.length ?? 0) > 0)) ? (
           <div className="space-y-5">
-            {/* Badge'e filtrow wynikow: Najlepsze dopasowanie / Miejsca / Zestawienia (jesli w kolekcji) */}
-            <div className="flex gap-2 overflow-x-auto scrollbar-none -mx-1 px-1">
-              <button onClick={() => setSearchTab("best")} className={`shrink-0 px-3.5 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-colors ${searchTab === "best" ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground"}`}>{t("best_match", "Najlepsze dopasowanie")}</button>
-              {(results.places?.length ?? 0) > 0 && (
-                <button onClick={() => setSearchTab("places")} className={`shrink-0 px-3.5 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-colors ${searchTab === "places" ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground"}`}>{t("places")}</button>
-              )}
-              {results.collections.length > 0 && (
-                <button onClick={() => setSearchTab("collections")} className={`shrink-0 px-3.5 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-colors ${searchTab === "collections" ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground"}`}>{t("collections")}</button>
-              )}
-            </div>
+            {/* Filtr wynikow = karty kategorii w naglowku wyszukiwarki (Explore), nie pigulki. */}
             <div className="space-y-7">
-            {(searchTab === "best" || searchTab === "places") && (results.places?.length ?? 0) > 0 && (
+            {(cat === "all" || cat === "places") && (results.places?.length ?? 0) > 0 && (
               <div>
                 <p className="text-sm font-black uppercase tracking-wide mb-3 px-1">{t("places_heading")}</p>
                 <div className="space-y-2">
@@ -2095,7 +2092,7 @@ export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityCh
                 </div>
               </div>
             )}
-            {(searchTab === "best" || searchTab === "collections") && results.collections.length > 0 && (
+            {(cat === "all" || cat === "lists") && results.collections.length > 0 && (
               <div>
                 <p className="text-sm font-black uppercase tracking-wide mb-3 px-1">{t("collections")}</p>
                 <div className="space-y-6">
@@ -2105,7 +2102,7 @@ export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityCh
                 </div>
               </div>
             )}
-            {searchTab === "best" && results.routes.length > 0 && (
+            {(cat === "all" || cat === "trips") && results.routes.length > 0 && (
               <div>
                 <p className="text-sm font-black uppercase tracking-wide mb-3 px-1">{t("routes_heading")}{cityFilter.length === 1 ? ` ${t("in_city", { city: cityFilter[0] })}` : ""}</p>
                 <div className="space-y-6">
