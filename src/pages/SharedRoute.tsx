@@ -604,20 +604,27 @@ export default function SharedRoute() {
     if (!user || !files || !files.length || !id) return;
     setUploadingPin(pin.id);
     try {
+      const uploaded: { path: string; url: string }[] = [];
       for (const file of Array.from(files)) {
         const path = `${user.id}/${id}/pin_${pin.id}_${Math.random().toString(36).slice(2)}.jpg`;
         const { error } = await supabase.storage.from("route-images").upload(path, file, { upsert: true, contentType: file.type || "image/jpeg" });
         if (error) { console.error("[SharedRoute] photo upload:", error.message); continue; }
         const { data } = supabase.storage.from("route-images").getPublicUrl(path);
-        if (!data?.publicUrl) continue;
-        // SafeSearch (Vision) - odrzucone zdjecie znika ze Storage i nie trafia do galerii.
-        if (await moderateImageUrl(data.publicUrl) === "rejected") {
-          await supabase.storage.from("route-images").remove([path]);
-          toast.error(MODERATION_REJECTED_MESSAGE);
+        if (data?.publicUrl) uploaded.push({ path, url: data.publicUrl });
+      }
+      // SafeSearch (Vision) RÓWNOLEGLE - jedno zdjecie to ~2-4s, wiec seryjnie 5 zdjec
+      // kazalo czekac ponad minute. Odrzucone znika ze Storage i nie trafia do galerii.
+      const verdicts = await Promise.all(uploaded.map((u) => moderateImageUrl(u.url)));
+      let rejectedCount = 0;
+      for (let i = 0; i < uploaded.length; i++) {
+        if (verdicts[i] === "rejected") {
+          rejectedCount += 1;
+          await supabase.storage.from("route-images").remove([uploaded[i].path]);
           continue;
         }
-        await addPinPhoto(id, pin.place_name, user.id, data.publicUrl);
+        await addPinPhoto(id, pin.place_name, user.id, uploaded[i].url);
       }
+      if (rejectedCount) toast.error(rejectedCount === 1 ? MODERATION_REJECTED_MESSAGE : `${rejectedCount} zdjęcia nie przeszły moderacji`);
       // Opublikowany wyjazd zasila galerie MIEJSCA od razu (place_photos). Dla roboczego nie -
       // zdjecia trafia tam dopiero przy publikacji (patrz handlePublish).
       if ((route as any)?.status === "published") {
@@ -767,7 +774,7 @@ export default function SharedRoute() {
   const handleAddPhotos = async (files: File[]) => {
     if (!user || !files.length) return;
     setUploadingPhotos(true);
-    const urls: string[] = [];
+    let urls: string[] = [];
     let rejected = 0;   // zdjecia odrzucone przez SafeSearch
     for (const rawFile of files) {
       try {
@@ -776,15 +783,20 @@ export default function SharedRoute() {
         const path = `${user.id}/${route.id}/gal_${Date.now()}_${Math.floor(Math.random() * 10000)}.jpg`;
         const { error } = await (supabase as any).storage.from("route-images").upload(path, compressed, { contentType: "image/jpeg", upsert: false });
         if (error) { console.error("[SharedRoute] photo upload failed:", error.message); continue; }
-        const publicUrl = `${SUPABASE_URL}/storage/v1/object/public/route-images/${path}`;
-        // SafeSearch (Vision) - odrzucone zdjecie kasujemy ze Storage i nie dodajemy do galerii.
-        if (await moderateImageUrl(publicUrl) === "rejected") {
-          await (supabase as any).storage.from("route-images").remove([path]);
-          rejected += 1;
-          continue;
-        }
-        urls.push(publicUrl);
+        urls.push(`${SUPABASE_URL}/storage/v1/object/public/route-images/${path}`);
       } catch (e: any) { console.error("[SharedRoute] photo processing failed:", e?.message ?? e); }
+    }
+    // SafeSearch (Vision) RÓWNOLEGLE dla calej paczki - seryjnie kazde zdjecie kosztowaloby
+    // ~2-4s. Odrzucone kasujemy ze Storage i nie dodajemy do galerii.
+    if (urls.length) {
+      const verdicts = await Promise.all(urls.map((u) => moderateImageUrl(u)));
+      const bad = urls.filter((_, i) => verdicts[i] === "rejected");
+      rejected = bad.length;
+      if (bad.length) {
+        const prefix = `${SUPABASE_URL}/storage/v1/object/public/route-images/`;
+        await (supabase as any).storage.from("route-images").remove(bad.map((u) => u.replace(prefix, "")));
+      }
+      urls = urls.filter((_, i) => verdicts[i] !== "rejected");
     }
     if (urls.length) {
       // RPC (SECURITY DEFINER) - dziala dla wlasciciela ORAZ uczestnika wspolnego wyjazdu
