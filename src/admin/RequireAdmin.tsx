@@ -75,25 +75,37 @@ const LOGIN_IMAGE = "https://images.unsplash.com/photo-1488646953014-85cb44e2582
 function AdminLogin() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
   const [usePassword, setUsePassword] = useState(false);
 
-  // Magic-link: zespol loguje sie linkiem z maila (bez hasel). shouldCreateUser=false
-  // -> tylko istniejace konta. Redirect wraca na ten sam origin (admin.trasa.travel).
-  const sendMagicLink = async (e: React.FormEvent) => {
+  // Logowanie KODEM (6-cyfrowy OTP z maila), NIE linkiem. Powod: magic-linki + PKCE
+  // psuly sie przez prefetch skanera Gmaila (jednorazowy token konsumowany przed klikiem)
+  // -> petla powrotu na login. Kod wpisywany recznie omija prefetch, redirect i PKCE.
+  // shouldCreateUser=false -> tylko istniejace konta.
+  const sendCode = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim()) return;
     setLoading(true);
     const { error } = await supabase.auth.signInWithOtp({
       email: email.trim(),
-      // origin + "/" -> pewny match z allowlista Supabase w formacie ".../**".
-      // Bez wpisu admina na allowliscie Supabase odbija na Site URL (glowna apka/waitlista).
-      options: { emailRedirectTo: window.location.origin + "/", shouldCreateUser: false },
+      options: { shouldCreateUser: false },
     });
     setLoading(false);
-    if (error) toast.error(error.message || "Nie udało się wysłać linku");
-    else setSent(true);
+    if (error) toast.error(error.message || "Nie udało się wysłać kodu");
+    else { setCode(""); setSent(true); }
+  };
+
+  // Weryfikacja 6-cyfrowego kodu -> sesja (bez PKCE/redirectu). onAuthStateChange
+  // (useAuth) wychwyci SIGNED_IN i RequireAdmin przepusci dalej (na krok 2FA).
+  const verifyCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (code.trim().length < 6) return;
+    setLoading(true);
+    const { error } = await supabase.auth.verifyOtp({ email: email.trim(), token: code.trim(), type: "email" });
+    setLoading(false);
+    if (error) toast.error(error.message || "Nieprawidłowy lub wygasły kod");
   };
 
   const loginPassword = async (e: React.FormEvent) => {
@@ -113,16 +125,26 @@ function AdminLogin() {
           <OpsLogo tile={44} />
           <div className="flex-1 flex flex-col justify-center w-full max-w-sm mx-auto py-10">
           {sent ? (
-            <div className="text-center space-y-3 py-4">
-              <p className="text-4xl">📬</p>
-              <h1 className="text-xl font-black text-slate-900">Sprawdź skrzynkę</h1>
-              <p className="text-sm text-slate-500 leading-relaxed">
-                Wysłaliśmy link do logowania na <strong className="text-slate-700">{email}</strong>. Kliknij go, żeby wejść do panelu.
-              </p>
-              <button onClick={() => setSent(false)} className="text-sm text-slate-700 font-medium underline pt-2">
-                Użyj innego adresu
+            <>
+              <div className="text-center mb-6">
+                <h1 className="text-2xl font-black text-slate-900">Wpisz kod z maila</h1>
+                <p className="text-sm text-slate-500 mt-1 leading-relaxed">
+                  Wysłaliśmy 6-cyfrowy kod na <strong className="text-slate-700">{email}</strong>.
+                </p>
+              </div>
+              <form onSubmit={verifyCode} className="space-y-4">
+                <input inputMode="numeric" autoComplete="one-time-code" maxLength={6} autoFocus value={code}
+                  onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))} placeholder="000000"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-center text-lg tracking-[0.4em] font-semibold text-slate-900 placeholder:tracking-normal placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-400" />
+                <button type="submit" disabled={loading || code.length < 6}
+                  className="w-full py-3 rounded-[4px] bg-slate-900 hover:opacity-95 text-white font-bold text-sm active:scale-[0.98] transition-all disabled:opacity-60">
+                  {loading ? "Sprawdzam…" : "Zaloguj się"}
+                </button>
+              </form>
+              <button onClick={() => { setSent(false); setCode(""); }} className="w-full mt-4 text-xs text-slate-400 hover:text-slate-600 font-medium">
+                ← Użyj innego adresu
               </button>
-            </div>
+            </>
           ) : (
             <>
               <div className="text-center mb-6">
@@ -130,7 +152,7 @@ function AdminLogin() {
                 <p className="text-sm text-slate-500 mt-1">Zaloguj się kontem zespołu.</p>
               </div>
 
-              <form onSubmit={usePassword ? loginPassword : sendMagicLink} className="space-y-4">
+              <form onSubmit={usePassword ? loginPassword : sendCode} className="space-y-4">
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium text-slate-700">Email</label>
                   <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
@@ -149,7 +171,7 @@ function AdminLogin() {
 
                 <button type="submit" disabled={loading}
                   className="w-full py-3 rounded-[4px] bg-slate-900 hover:opacity-95 text-white font-bold text-sm active:scale-[0.98] transition-all disabled:opacity-60">
-                  {loading ? (usePassword ? "Logowanie…" : "Wysyłam…") : (usePassword ? "Zaloguj się" : "Wyślij link do logowania")}
+                  {loading ? (usePassword ? "Logowanie…" : "Wysyłam…") : (usePassword ? "Zaloguj się" : "Wyślij kod logowania")}
                 </button>
               </form>
 
@@ -157,7 +179,7 @@ function AdminLogin() {
                 onClick={() => setUsePassword((v) => !v)}
                 className="w-full mt-4 text-xs text-slate-400 hover:text-slate-600 font-medium"
               >
-                {usePassword ? "← Wróć do logowania linkiem" : "Wolisz zalogować się hasłem?"}
+                {usePassword ? "← Wróć do logowania kodem" : "Wolisz zalogować się hasłem?"}
               </button>
             </>
           )}
