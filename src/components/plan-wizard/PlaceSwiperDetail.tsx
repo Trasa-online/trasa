@@ -249,13 +249,18 @@ const PlaceSwiperDetail = ({
   const isBusiness = ep?.businessLogoUrl !== undefined;
   const ownCover = validUrl(ep?.photo_url) ? [ep!.photo_url!] : [];
   const ownGallery = (ep?.galleryPhotos ?? []).filter(validUrl);
-  const userPhotos = photos.filter(validUrl);
+  const fetchedPhotos = photos.filter(validUrl);
   const contributed = userPlacePhotos.filter(validUrl); // #3e - zdjecia userow dodane do miejsca
+  // Zdjecia WGRANE PRZEZ USEROW (place_photos) w wizytowce z kontem biznesowym NIE wchodza do
+  // galerii lokalu - lokal odpowiada za swoj wizerunek, a spolecznosc ma osobna sekcje
+  // "Od użytkowników" pod cennikiem/menu (prosba Nat 2026-08-31). Wizytowka "zero" (bez konta
+  // biznesowego) miesza je z reszta galerii jak dotad.
+  const communityPhotos = isBusiness ? contributed : [];
   // Cap podniesiony 4 -> 10, zeby zdjecia dodane przez userow (#3e) sie zmiescily.
   const displayPhotos = Array.from(new Set(
     isBusiness
-      ? [...userPhotos, ...contributed, ...ownCover, ...ownGallery]
-      : [...ownCover, ...userPhotos, ...contributed, ...ownGallery],
+      ? [...fetchedPhotos, ...ownCover, ...ownGallery]
+      : [...ownCover, ...fetchedPhotos, ...contributed, ...ownGallery],
   )).slice(0, 10);
 
   // Notki userow o tym miejscu - z OPUBLIKOWANYCH tras i PUBLICZNYCH list (best-effort).
@@ -284,11 +289,12 @@ const PlaceSwiperDetail = ({
   }, [open, placeKey]);
 
   // #6: pobierz stan lajkow dla zdjec aktualnie w galerii.
-  const photoRefsKey = displayPhotos.join("|");
+  const likeablePhotos = [...displayPhotos, ...communityPhotos];
+  const photoRefsKey = likeablePhotos.join("|");
   useEffect(() => {
-    if (!open || displayPhotos.length === 0) { return; }
+    if (!open || likeablePhotos.length === 0) { return; }
     let alive = true;
-    fetchPhotoLikes(displayPhotos, user?.id ?? null).then((m) => { if (alive) setPhotoLikes(m); });
+    fetchPhotoLikes(likeablePhotos, user?.id ?? null).then((m) => { if (alive) setPhotoLikes(m); });
     return () => { alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, photoRefsKey, user?.id]);
@@ -389,6 +395,7 @@ const PlaceSwiperDetail = ({
             onToggleLike={handleToggleLike}
             onAddPhoto={undefined /* #3 (Nat): usunięte "Dodaj swoje zdjęcie" z wizytówki */}
             userNotes={userNotes}
+            userPhotos={communityPhotos.length > 0 ? communityPhotos : undefined}
             addingPhoto={addingPhoto}
             startingLocation={distanceRef ? { name: distanceRef.label, latitude: distanceRef.coords.lat, longitude: distanceRef.coords.lng } : undefined}
           />

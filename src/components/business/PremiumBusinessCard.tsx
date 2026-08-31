@@ -1059,6 +1059,11 @@ export interface PremiumBusinessCardProps {
   // Notki userow o TYM miejscu (z opublikowanych tras i publicznych list) - sekcja
   // "Od użytkowników". Notka NIGDY nie jest opisem miejsca (data.description) - to osobne tresci.
   userNotes?: PlaceUserNote[];
+  // Zdjecia wgrane przez USEROW do tego miejsca (place_photos). Podajemy je TYLKO dla wizytowki
+  // z kontem biznesowym - wtedy nie mieszaja sie z galeria lokalu, lecz siedza jako osobny byt
+  // w sekcji "Od użytkowników" pod cennikiem/menu (prosba Nat 2026-08-31). Wizytowka "zero"
+  // (bez konta biznesowego) NIE podaje tej propsy - tam zdjecia userow sa po prostu w galerii.
+  userPhotos?: string[];
 }
 
 const PremiumBusinessCard = ({
@@ -1085,6 +1090,7 @@ const PremiumBusinessCard = ({
   onAddPhoto,
   addingPhoto = false,
   userNotes,
+  userPhotos,
 }: PremiumBusinessCardProps) => {
   const { t } = useTranslation("wizytowka");
   const [fullscreen, setFullscreen] = useState<{ photos: string[]; idx: number } | null>(null);
@@ -1175,28 +1181,46 @@ const PremiumBusinessCard = ({
               </div>
             )}
 
-            {/* Notki userow o miejscu - OSOBNA sekcja, nigdy nie mieszana z opisem miejsca.
-                Zrodlo: opublikowane wyjazdy + publiczne listy (patrz lib/placeNotes). */}
-            {userNotes && userNotes.length > 0 && (
-              <div className="space-y-3">
-                <h3 className="text-lg font-semibold tracking-tight">{t("user_notes_title", "Od użytkowników")}</h3>
-                <div className="space-y-3">
-                  {userNotes.map((n) => (
-                    <div key={n.key} className="bg-muted/50 rounded-2xl px-3.5 py-3">
-                      <p className="text-[13.5px] text-foreground/85 leading-snug whitespace-pre-wrap break-words">{n.note}</p>
-                      <div className="flex items-center gap-2 mt-2">
-                        <img src={avatarSrc(n.avatar_url)} alt="" className="h-5 w-5 rounded-full object-cover bg-secondary" />
-                        <span className="text-[12px] font-semibold text-muted-foreground truncate">{n.username ?? "Użytkownik"}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
             {/* Sekcje z naglowkami - osobne 'common regions' oddzielone duzym spacingiem */}
             {!hidePosts && <PostsSection data={data} onPhotoExpand={handleExpand} />}
             {!hideMenu && <MenuSection data={data} onPhotoExpand={handleExpand} />}
+
+            {/* "Od użytkowników" - tresci od spolecznosci, POD cennikiem/menu (prosba Nat 2026-08-31):
+                miniatury zdjec wgranych do miejsca (tylko wizytowka z kontem biznesowym - w wizytowce
+                "zero" te zdjecia sa po prostu w galerii) + notki z opublikowanych tras i publicznych list.
+                Zdjecia 4:3 jak reszta zdjec w wizytowce (regula z CLAUDE.md). */}
+            {((userPhotos?.length ?? 0) > 0 || (userNotes?.length ?? 0) > 0) && (
+              <div className="space-y-3">
+                <h3 className="text-lg font-semibold tracking-tight">{t("user_notes_title", "Od użytkowników")}</h3>
+                {userPhotos && userPhotos.length > 0 && (
+                  <div className="grid grid-cols-2 gap-2">
+                    {userPhotos.map((url, idx) => (
+                      <button
+                        key={url}
+                        type="button"
+                        onClick={() => handleExpand(userPhotos, idx)}
+                        className="relative aspect-[4/3] rounded-2xl overflow-hidden bg-muted active:opacity-90 transition-opacity"
+                      >
+                        <img src={url} alt="" loading="lazy" className="w-full h-full object-cover" />
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {userNotes && userNotes.length > 0 && (
+                  <div className="space-y-3">
+                    {userNotes.map((n) => (
+                      <div key={n.key} className="bg-muted/50 rounded-2xl px-3.5 py-3">
+                        <p className="text-[13.5px] text-foreground/85 leading-snug whitespace-pre-wrap break-words">{n.note}</p>
+                        <div className="flex items-center gap-2 mt-2">
+                          <img src={avatarSrc(n.avatar_url)} alt="" className="h-5 w-5 rounded-full object-cover bg-secondary" />
+                          <span className="text-[12px] font-semibold text-muted-foreground truncate">{n.username ?? "Użytkownik"}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
             <MapSection data={data} startingLocation={startingLocation} />
             {/* Wydarzenia POD mapa (wg Figmy: "Nadchodzace Wydarzenia"). Stan zero = brak eventow. */}
             {!hideEventBanner && <EventsSection data={data} referenceDate={referenceDate} routeAvatars={routeAvatars} />}
