@@ -65,7 +65,7 @@ export async function createEmptyWyjazd(
   userId: string,
   city: string | null,
   title: string,
-  opts?: { groupSessionId?: string | null },
+  opts?: { groupSessionId?: string | null; startDate?: string | null; endDate?: string | null },
 ): Promise<string | null> {
   const { data: route, error } = await (supabase as any)
     .from("routes")
@@ -76,6 +76,10 @@ export async function createEmptyWyjazd(
       trip_type: "planning",
       status: "draft",
       day_number: 1,
+      // Daty z kreatora (krok "Kiedy jedziecie?"); zakres wielodniowy wlacza podzial na dni
+      // w widoku wyjazdu (pins.day_index).
+      start_date: opts?.startDate ?? null,
+      end_date: opts?.endDate ?? null,
       // Grupowy zostaje is_shared=true (RLS czlonkostwa); solo pusty draft = prywatny.
       is_shared: !!opts?.groupSessionId,
       list_cover_url: null,

@@ -8,6 +8,8 @@ import type { DateRange } from "react-day-picker";
 
 interface FullCalendarPickerProps {
   onConfirm: (date: Date, numDays: number) => void;
+  /** Maksymalna dlugosc zakresu w dniach (domyslnie 3). */
+  maxDays?: number;
   // allowPast: pozwala wybierac daty historyczne (np. zapis odbytego wyjazdu). Domyslnie
   // false = tylko dzis i przyszlosc (planowanie).
   allowPast?: boolean;
@@ -15,9 +17,11 @@ interface FullCalendarPickerProps {
   onClear?: () => void;
 }
 
-const MAX_DAYS = 3;
+// Limit dlugosci zakresu. Domyslne 3 dni zostaja dla starego flow planowania; kreator
+// wyjazdu i widok wyjazdu podnosza go propem (podzial miejsc na dni).
+const DEFAULT_MAX_DAYS = 3;
 
-const FullCalendarPicker = ({ onConfirm, allowPast = false, onClear }: FullCalendarPickerProps) => {
+const FullCalendarPicker = ({ onConfirm, allowPast = false, onClear, maxDays = DEFAULT_MAX_DAYS }: FullCalendarPickerProps) => {
   const [range, setRange] = useState<DateRange | undefined>();
   const [month, setMonth] = useState(new Date());
   const [showYearPicker, setShowYearPicker] = useState(false);
@@ -25,8 +29,8 @@ const FullCalendarPicker = ({ onConfirm, allowPast = false, onClear }: FullCalen
   const handleSelect = (newRange: DateRange | undefined) => {
     if (newRange?.from && newRange?.to) {
       const days = differenceInCalendarDays(newRange.to, newRange.from) + 1;
-      if (days > MAX_DAYS) {
-        setRange({ from: newRange.from, to: addDays(newRange.from, MAX_DAYS - 1) });
+      if (days > maxDays) {
+        setRange({ from: newRange.from, to: addDays(newRange.from, maxDays - 1) });
         return;
       }
     }
@@ -167,7 +171,7 @@ const FullCalendarPicker = ({ onConfirm, allowPast = false, onClear }: FullCalen
           </div>
         ) : (
           <div className="mb-3 text-center">
-            <p className="text-sm text-muted-foreground">Wybierz dzień wyjazdu (max. {MAX_DAYS} dni)</p>
+            <p className="text-sm text-muted-foreground">Wybierz dzień wyjazdu (max. {maxDays} dni)</p>
           </div>
         )}
 

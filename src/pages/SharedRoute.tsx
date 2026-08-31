@@ -1795,7 +1795,7 @@ export default function SharedRoute() {
             <p className="text-lg font-black leading-tight">{`Kiedy jedziecie?`}</p>
             <p className="text-xs text-muted-foreground mt-1">{`Wybierz jeden dzień albo zakres - przy kilku dniach rozłożysz miejsca na dni`}</p>
           </div>
-          <FullCalendarPicker onConfirm={(d, numDays) => void saveTripDates(d, numDays)} allowPast onClear={route.start_date ? () => void clearTripDates() : undefined} />
+          <FullCalendarPicker maxDays={14} onConfirm={(d, numDays) => void saveTripDates(d, numDays)} allowPast onClear={route.start_date ? () => void clearTripDates() : undefined} />
         </SheetContent>
       </Sheet>
 

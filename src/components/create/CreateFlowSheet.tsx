@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useAuth } from "@/hooks/useAuth";
 import { haptics } from "@/hooks/useHaptics";
+import FullCalendarPicker from "@/components/plan-wizard/FullCalendarPicker";
 import { track } from "@/lib/analytics";
 import { supabase } from "@/integrations/supabase/client";
 import { avatarSrc } from "@/lib/avatar";
@@ -22,7 +23,7 @@ import SavePlaceSheet, { type SavePlaceInput } from "@/components/plan-wizard/Sa
 import { GoogleGlyph } from "@/components/icons/GoogleGlyph";
 import { openExternal } from "@/lib/openExternal";
 
-type Step = "entry" | "listCity" | "listName" | "listPick" | "tripMode" | "trip" | "tripPeople" | "tripPick";
+type Step = "entry" | "listCity" | "listName" | "listPick" | "tripMode" | "trip" | "tripDates" | "tripPeople" | "tripPick";
 type TripMode = "future" | "past";
 
 const NBSP = " ";
@@ -82,6 +83,10 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
   // Wyjazd
   const [tripMode, setTripMode] = useState<TripMode>("future");
   const [tripName, setTripName] = useState("");
+  // Daty wyjazdu z kreatora - krok opcjonalny ("Pomiń"). Zakres wielodniowy wlacza pozniej
+  // podzial miejsc na dni w widoku wyjazdu (routes.end_date + pins.day_index).
+  const [tripStart, setTripStart] = useState<Date | null>(null);
+  const [tripDays, setTripDays] = useState(1);
   const [tripPeople, setTripPeople] = useState<PersonLite[]>([]);
 
   // Fokus (klawiatura) RAZEM z pojawieniem kroku "Nowa lista" - drawer wyjezdza wraz z klawiatura,
@@ -99,7 +104,7 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
   // Reset przy kazdym otwarciu.
   useEffect(() => {
     if (open) {
-      setStep("entry"); setListName(""); setListNameEdited(false); setListCity(defaultCity()); setSelected(new Set()); setListQuery(""); setManualPlaces([]); setDetailPlace(null);
+      setStep("entry"); setListName(""); setListNameEdited(false); setListCity(defaultCity()); setSelected(new Set()); setListQuery(""); setManualPlaces([]); setDetailPlace(null); setTripStart(null); setTripDays(1);
       setTripMode("future"); setTripName(""); setTripCity(defaultCity()); setTripPeople([]); setCreating(false);
     }
   }, [open]);
@@ -217,15 +222,24 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
     navigate(`/lista/${id}`);
   };
 
+  // Daty z kreatora -> ISO (YYYY-MM-DD). Pominiecie kroku = brak dat (wyjazd bez podzialu na dni).
+  const tripDatesForSave = () => {
+    if (!tripStart) return { startDate: null as string | null, endDate: null as string | null };
+    const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    const end = new Date(tripStart.getTime() + (Math.max(1, tripDays) - 1) * 86400000);
+    return { startDate: iso(tripStart), endDate: iso(end) };
+  };
+  // Krok dat -> dalej wg trybu: przyszly wyjazd tworzymy od razu, przeszly idzie po miejsca.
+  const afterDates = () => { if (tripMode === "past") setStep("tripPick"); else void proceedTrip(); };
+
   // Trip step "Dalej": PRZYSZLY wyjazd = tworzymy PUSTY wyjazd (etap propozycji) i wchodzimy do
   // widoku wyjazdu (miejsca dodaje sie tam jako propozycje). PRZESZLY = stary flow z wyborem miejsc
   // (tripPick -> edytor wspomnienia). Redesign 2026-08-25 (Nat): tworzenie = tylko meta.
   const proceedTrip = async () => {
-    if (tripMode === "past") { setStep("tripPick"); return; }
     if (!user) { close(); navigate("/auth"); return; }
     setCreating(true);
     haptics.light();
-    const id = await createEmptyWyjazd(user.id, tripCity, tripName.trim() || `Wyjazd do ${tripCity}`, {});
+    const id = await createEmptyWyjazd(user.id, tripCity, tripName.trim() || `Wyjazd do ${tripCity}`, tripDatesForSave());
     if (!id) { setCreating(false); haptics.error(); toast.error("Nie udało się utworzyć wyjazdu"); return; }
     if (tripPeople.length) {
       try { await inviteUsersToRoute({ id, city: tripCity ?? null, title: tripName.trim() || null, group_session_id: null }, tripPeople.map((p) => p.id), user.id); }
@@ -252,7 +266,9 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
       place_name: p.place_name, category: p.category, address: p.address,
       latitude: p.latitude, longitude: p.longitude, photo_url: p.photo_url, place_id: p.place_id,
     }));
-    const id = await createWyjazdFromPlaces(user.id, tripCity, tripName.trim() || `Wyjazd do ${tripCity}`, places, undefined, { tripType });
+    const d = tripDatesForSave();
+    const id = await createWyjazdFromPlaces(user.id, tripCity, tripName.trim() || `Wyjazd do ${tripCity}`, places,
+      { start_date: d.startDate, end_date: d.endDate }, { tripType });
     if (!id) { setCreating(false); haptics.error(); toast.error("Nie udało się utworzyć wyjazdu"); return; }
     // Zaproszeni z "Dodaj osoby" -> inviteUsersToRoute (sesja grupowa + is_shared=true + notyf).
     if (tripPeople.length) {
@@ -462,7 +478,7 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
         {/* ── WYJAZD: nazwa + kraj/miasto + osoby ── */}
         {step === "trip" && (
           <>
-            <Header title={tripMode === "past" ? "Przeszły wyjazd" : "Zaplanuj wyjazd"} onBack={() => setStep("tripMode")} onNext={proceedTrip} nextLabel={creating ? "..." : (tripMode === "past" ? "Dalej" : "Utwórz")} nextEnabled={!creating} />
+            <Header title={tripMode === "past" ? "Przeszły wyjazd" : "Zaplanuj wyjazd"} onBack={() => setStep("tripMode")} onNext={() => setStep("tripDates")} nextLabel="Dalej" nextEnabled={!creating} />
             <div className="flex-1 min-h-0 overflow-y-auto pb-[max(16px,env(safe-area-inset-bottom))]">
               <div className="px-5 pt-1">
                 <div className="relative">
@@ -480,6 +496,36 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
               </div>
               <div className="mt-2 border-t border-border/50">
                 <PeopleRow kind="wyjazdu" people={tripPeople} onClick={() => setStep("tripPeople")} />
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* ── WYJAZD: DATY (krok opcjonalny) ── */}
+        {step === "tripDates" && (
+          <>
+            {/* Bez guzika w naglowku - z tego kroku wychodzi sie kalendarzem ("Dalej") albo
+                "Pomiń". Dwa wyjscia o roznym efekcie w jednym widoku myliy: guzik w naglowku
+                nie zna zakresu zaznaczonego w kalendarzu. */}
+            <Header title="Kiedy jedziecie?" onBack={() => setStep("trip")} backLabel="Wstecz" />
+            <div className="flex-1 min-h-0 overflow-y-auto pb-[max(16px,env(safe-area-inset-bottom))]">
+              <p className="px-5 text-[13px] text-muted-foreground leading-relaxed">
+                {`Wybierz jeden dzień albo zakres. Przy kilku dniach rozłożysz miejsca na dni już w wyjeździe.`}
+              </p>
+              <FullCalendarPicker
+                maxDays={14}
+                allowPast={tripMode === "past"}
+                onConfirm={(d, numDays) => { setTripStart(d); setTripDays(numDays); afterDates(); }}
+                onClear={tripStart ? () => { setTripStart(null); setTripDays(1); } : undefined}
+              />
+              <div className="px-5 pt-1">
+                <button
+                  onClick={() => { setTripStart(null); setTripDays(1); afterDates(); }}
+                  disabled={creating}
+                  className="w-full py-3 text-sm font-medium text-muted-foreground active:text-foreground transition-colors disabled:opacity-50"
+                >
+                  {`Pomiń - dodam daty później`}
+                </button>
               </div>
             </div>
           </>
