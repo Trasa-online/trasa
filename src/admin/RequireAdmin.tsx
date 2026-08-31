@@ -101,7 +101,7 @@ function AdminLogin() {
   // (useAuth) wychwyci SIGNED_IN i RequireAdmin przepusci dalej (na krok 2FA).
   const verifyCode = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (code.trim().length < 6) return;
+    if (code.trim().length < 8) return;
     setLoading(true);
     const { error } = await supabase.auth.verifyOtp({ email: email.trim(), token: code.trim(), type: "email" });
     setLoading(false);
@@ -129,14 +129,14 @@ function AdminLogin() {
               <div className="text-center mb-6">
                 <h1 className="text-2xl font-black text-slate-900">Wpisz kod z maila</h1>
                 <p className="text-sm text-slate-500 mt-1 leading-relaxed">
-                  Wysłaliśmy 6-cyfrowy kod na <strong className="text-slate-700">{email}</strong>.
+                  Wysłaliśmy 8-cyfrowy kod na <strong className="text-slate-700">{email}</strong>.
                 </p>
               </div>
               <form onSubmit={verifyCode} className="space-y-4">
-                <input inputMode="numeric" autoComplete="one-time-code" maxLength={6} autoFocus value={code}
-                  onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))} placeholder="000000"
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-center text-lg tracking-[0.4em] font-semibold text-slate-900 placeholder:tracking-normal placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-400" />
-                <button type="submit" disabled={loading || code.length < 6}
+                <input inputMode="numeric" autoComplete="one-time-code" maxLength={8} autoFocus value={code}
+                  onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))} placeholder="00000000"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-center text-lg tracking-[0.3em] font-semibold text-slate-900 placeholder:tracking-normal placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-400" />
+                <button type="submit" disabled={loading || code.length < 8}
                   className="w-full py-3 rounded-[4px] bg-slate-900 hover:opacity-95 text-white font-bold text-sm active:scale-[0.98] transition-all disabled:opacity-60">
                   {loading ? "Sprawdzam…" : "Zaloguj się"}
                 </button>
