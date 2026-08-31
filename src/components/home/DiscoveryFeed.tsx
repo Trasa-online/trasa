@@ -27,6 +27,8 @@ import { dateLocale } from "@/lib/dateLocale";
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 // Karta trasy w feedzie + helper mapki: wspoldzielone z profilem (zakladka Wyjazdy).
 import TrasaBigCard, { buildMiniMapUrl, TRASA_CARD_H, type LatLng } from "@/components/home/TrasaBigCard";
+import { ProfileFeedCard } from "@/components/profile/ProfileFeedCard";
+import { shortRelativeTime } from "@/lib/relativeTime";
 import { resolveStored } from "@/components/PlacePhoto";
 import { COLLECTION_THEMES, getTheme, collectionKind } from "@/lib/collectionThemes";
 import { getHistoryByCity } from "@/lib/exploreLikes";
@@ -67,6 +69,8 @@ export type DiscoveryCollection = {
   saves_count?: number | null;
   plan_adds_count?: number | null;
   gallery_urls?: string[] | null;     // zdjecia wgrane przez autora (galeria zestawienia)
+  likes_count?: number | null;
+  updated_at?: string | null;         // "14m" na karcie listy w wyszukiwarce
   cover_url?: string | null;          // okladka listy (hero w /lista/:id) - reczny wybor autora
   list_cover_url?: string | null;     // miniatura na karcie w eksploracji (feed)
 };
@@ -1623,7 +1627,9 @@ export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityCh
   const q = debouncedQuery.length >= 2 ? debouncedQuery : "";
   // Wybrana kategoria (inna niz "Wszystko") wlacza widok wynikow TAKZE bez frazy - wtedy
   // pokazujemy zawartosc kategorii (tryb przegladania, decyzja Nat 2026-08-31).
-  const isSearchActive = !!q || cityFilter.length > 0 || themeFilter.length > 0 || categoryFilter.length > 0 || (searchOpen && cat !== "all");
+  // Wyszukiwarka pokazuje tresc od momentu OTWARCIA (bez frazy): "Wszystko" = podglad
+  // 5 wyjazdow + 5 list + 5 miejsc ze zdjeciami, kategoria = przegladanie tej kategorii.
+  const isSearchActive = !!q || cityFilter.length > 0 || themeFilter.length > 0 || categoryFilter.length > 0 || searchOpen;
   // Reset zakladki wynikow gdy wychodzimy z wyszukiwania.
 
   // Miasto z gornej belki zeszlo do sheetu (parent `city`) - liczymy je do badge filtra,
@@ -1894,6 +1900,50 @@ export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityCh
         if (allow.size === 0) allow = new Set(["__none__"]);
       }
 
+      // Miejsca z OKLADKAMI (zdjecia userow z place_photos) - do przegladania bez frazy.
+      // "Rozne miasta": przy podgladzie bierzemy max jedno miejsce na miasto, kolejnosc losowa.
+      const coverByName = new Map<string, string>();
+      const fetchCoveredPlaces = async (limitN: number, oneCityEach: boolean) => {
+        const { data: photoRows } = await (supabase as any)
+          .from("place_photos").select("place_name, photo_url, created_at")
+          .order("created_at", { ascending: false }).limit(240);
+        for (const r of photoRows ?? []) {
+          const k = String(r.place_name ?? "").toLowerCase();
+          if (k && !coverByName.has(k)) coverByName.set(k, r.photo_url);
+        }
+        const names = [...new Set((photoRows ?? []).map((r: any) => r.place_name).filter(Boolean))].slice(0, 150);
+        if (!names.length) return [] as any[];
+        let pq2 = (supabase as any).from("places")
+          .select("id, place_name, city, category, address, latitude, longitude, rating, photo_url, google_place_id")
+          .in("place_name", names);
+        if (cities) pq2 = pq2.in("city", cities);
+        const { data: rows } = await pq2.limit(150);
+        const pool = (rows ?? []).map((p: any) => ({ ...p, _cover: resolveStored(coverByName.get(String(p.place_name).toLowerCase())) ?? null }))
+          .filter((p: any) => !!p._cover);
+        // Losowa kolejnosc (Fisher-Yates) - podglad ma byc za kazdym razem inny.
+        for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]]; }
+        const seenCity = new Set<string>();
+        const out: any[] = [];
+        for (const p of pool) {
+          const ck = String(p.city ?? "").toLowerCase();
+          if (oneCityEach && ck && seenCity.has(ck)) continue;
+          if (ck) seenCity.add(ck);
+          out.push(p);
+          if (out.length >= limitN) break;
+        }
+        return out;
+      };
+      // Doklej okladki (place_photos) do miejsc znalezionych po frazie - inaczej lista wynikow
+      // pokazuje same ikony kategorii na peachy tle.
+      const attachCovers = async (rows: any[]) => {
+        if (!rows.length) return rows;
+        const names = [...new Set(rows.map((r) => r.place_name).filter(Boolean))];
+        const { data: ph } = await (supabase as any).from("place_photos").select("place_name, photo_url").in("place_name", names);
+        const m = new Map<string, string>();
+        for (const r of ph ?? []) { const k = String(r.place_name ?? "").toLowerCase(); if (k && !m.has(k)) m.set(k, r.photo_url); }
+        return rows.map((r) => ({ ...r, _cover: resolveStored(m.get(String(r.place_name).toLowerCase())) ?? r.photo_url ?? null }));
+      };
+
       const applyRoute = (b: any) => {
         // Bramka jak w feedzie: opublikowane (status='published') ze sfinalizowana miniatura (list_cover_url).
         let x = b.eq("is_shared", true).eq("status", "published").not("title", "is", null).not("list_cover_url", "is", null);
@@ -1929,13 +1979,13 @@ export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityCh
             .order("views", { ascending: false, nullsFirst: false }).limit(30);
           for (const r of byAuthor ?? []) if (!routeMap.has(r.id)) routeMap.set(r.id, r);
         }
-      } else if (cities || categoryFilter.length || cat === "trips") {
+      } else if (cities || categoryFilter.length || cat === "trips" || cat === "all") {
         // Bez frazy: same filtry ALBO kategoria "Wyjazdy" (przegladanie) - najnowsze publikacje.
         const { data: all } = await applyRoute((supabase as any).from("routes").select(routeCols))
           .eq("status", "published")
           .order("published_at", { ascending: false, nullsFirst: false })
           .order("created_at", { ascending: false, nullsFirst: false })
-          .limit(40);
+          .limit(cat === "all" ? 5 : 40);
         for (const r of all ?? []) if (!routeMap.has(r.id)) routeMap.set(r.id, r);
       }
       let routeRows = (cat === "all" || cat === "trips") ? [...routeMap.values()] : [];
@@ -1945,32 +1995,53 @@ export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityCh
       // Zestawienia (listy) - pomijamy gdy aktywny filtr kategorii miejsc (to pojecie tras)
       // ORAZ gdy listy sa wylaczone w eksploracji (SHOW_ZESTAWIENIA=false - widoczne tylko w profilu).
       let collections: DiscoveryCollection[] = [];
-      if (!categoryFilter.length && (cat === "all" || cat === "lists") && (SHOW_ZESTAWIENIA || cat === "lists" || !!q)) {
+      // SHOW_ZESTAWIENIA chowa listy z PASYWNEGO feedu eksploracji, ale WYSZUKIWARKA ma je
+      // pokazywac zawsze - "Wszystko" ma w podgladzie 5 najnowszych list (prosba Nat 2026-08-31).
+      if (!categoryFilter.length && (cat === "all" || cat === "lists")) {
         let colQ = (supabase as any).from("discovery_collections")
-          .select("id, title, city, description, category, author_name, author_avatar, user_id, views_count, saves_count, plan_adds_count, cover_url, list_cover_url")
+          .select("id, title, city, description, category, author_name, author_avatar, user_id, views_count, saves_count, likes_count, updated_at, plan_adds_count, cover_url, list_cover_url")
           .eq("is_public", true).eq("kind", "ranking").eq("list_status", "visited").eq("hidden_by_admin", false).neq("moderation_status", "rejected"); // soft-moderacja: pending widoczne
         if (q) colQ = colQ.or(`title.ilike.${like},author_name.ilike.${like}`);
         if (themeFilter.length) colQ = colQ.in("category", themeFilter);
         if (cities) colQ = colQ.in("city", cities);
-        const { data: cols } = await colQ.order("updated_at", { ascending: false }).limit(20);
+        const { data: cols } = await colQ.order("updated_at", { ascending: false }).limit(cat === "all" ? 5 : 20);
         collections = await hydrateCollections(cols ?? []);
       }
 
       // Miejsca (places) - szukanie po nazwie, ze WSZYSTKICH miast (albo wybranych w filtrze
       // miast/kategorii). Tap otwiera pelna wizytowke. Tylko gdy user wpisal fraze (>=2 znaki).
       let places: any[] = [];
-      if (q || cat === "places") {
+      if (q) {
+        // Szukanie po nazwie + doklejone okladki ze zdjec userow.
         let pq = (supabase as any)
           .from("places")
-          .select("id, place_name, city, category, address, latitude, longitude, rating, photo_url");
-        if (q) pq = pq.ilike("place_name", like);
+          .select("id, place_name, city, category, address, latitude, longitude, rating, photo_url, google_place_id")
+          .ilike("place_name", like);
         if (cities) pq = pq.in("city", cities);
         if (categoryFilter.length) {
           const dbCats = [...new Set(categoryFilter.flatMap(getDbCategoriesFor))];
           pq = pq.in("category", dbCats);
         }
         const { data: placeRows } = await pq.order("rating", { ascending: false, nullsFirst: false }).limit(24);
-        places = placeRows ?? [];
+        places = await attachCovers(placeRows ?? []);
+      } else if (cat === "all") {
+        // Podglad: 5 miejsc ZE ZDJECIAMI, kazde z innego miasta (prosba Nat 2026-08-31).
+        places = await fetchCoveredPlaces(5, true);
+      } else if (cat === "places") {
+        // Zakladka Miejsca: najpierw losowe miejsca Z OKLADKAMI, potem dopiero te z ikona
+        // kategorii na peachy tle (fallback).
+        const covered = await fetchCoveredPlaces(24, false);
+        const usedIds = new Set(covered.map((p: any) => p.id));
+        let pq = (supabase as any)
+          .from("places")
+          .select("id, place_name, city, category, address, latitude, longitude, rating, photo_url, google_place_id");
+        if (cities) pq = pq.in("city", cities);
+        if (categoryFilter.length) {
+          const dbCats = [...new Set(categoryFilter.flatMap(getDbCategoriesFor))];
+          pq = pq.in("category", dbCats);
+        }
+        const { data: rest } = await pq.order("rating", { ascending: false, nullsFirst: false }).limit(40);
+        places = [...covered, ...(rest ?? []).filter((p: any) => !usedIds.has(p.id)).map((p: any) => ({ ...p, _cover: null }))];
       }
 
       return { routes, collections, places };
@@ -2064,6 +2135,57 @@ export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityCh
           <div className="space-y-5">
             {/* Filtr wynikow = karty kategorii w naglowku wyszukiwarki (Explore), nie pigulki. */}
             <div className="space-y-7">
+            {/* WYJAZDY - te same duze karty co w eksploracji (prosba Nat 2026-08-31). */}
+            {(cat === "all" || cat === "trips") && results.routes.length > 0 && (
+              <div>
+                <p className="text-sm font-black uppercase tracking-wide mb-3 px-1">{t("routes_heading")}{cityFilter.length === 1 ? ` ${t("in_city", { city: cityFilter[0] })}` : ""}</p>
+                <div className="space-y-4">
+                  {results.routes.map((r) => (
+                    <TrasaBigCard
+                      key={r.id}
+                      id={r.id}
+                      photo={r.photo}
+                      city={r.city}
+                      placeCount={r.placeCount ?? 0}
+                      title={r.title}
+                      description={r.summary || r.ai_highlight}
+                      tags={(r.categories ?? []).map((c) => CAT_LABEL[c] ?? c)}
+                      pins={r.pins ?? []}
+                      saved={savedRouteIds.has(r.id)}
+                      onToggleSave={() => toggleSaveRoute(r.id)}
+                      onOpen={() => navigate(`/route/${r.id}`)}
+                      authorName={r.author_username ? `@${r.author_username}` : r.author_name}
+                      authorAvatar={r.author_avatar}
+                      participants={r.participants ?? []}
+                      snap={false}
+                      heightClass="aspect-[3/4]"
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+            {/* LISTY - uklad karty z profilu (awatar + tytul + miniatury miejsc). */}
+            {(cat === "all" || cat === "lists") && results.collections.length > 0 && (
+              <div>
+                <p className="text-sm font-black uppercase tracking-wide mb-3 px-1">{t("collections")}</p>
+                <div className="space-y-6">
+                  {results.collections.map((col) => (
+                    <ProfileFeedCard
+                      key={col.id}
+                      avatarUrl={col.author_avatar}
+                      fallback={col.author_name}
+                      eyebrow=""
+                      timestamp={col.updated_at ? shortRelativeTime(col.updated_at) : undefined}
+                      title={col.title}
+                      description={col.description}
+                      tiles={col.items}
+                      counts={{ saves: col.saves_count ?? 0, likes: col.likes_count ?? 0, views: col.views_count ?? 0 }}
+                      onOpen={() => navigate(`/lista/${col.id}`)}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
             {(cat === "all" || cat === "places") && (results.places?.length ?? 0) > 0 && (
               <div>
                 <p className="text-sm font-black uppercase tracking-wide mb-3 px-1">{t("places_heading")}</p>
@@ -2074,7 +2196,7 @@ export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityCh
                       onClick={() => openPlaceDetail(p)}
                       className="w-full flex items-center gap-3 rounded-2xl border border-border/40 bg-secondary p-3 text-left active:scale-[0.98] transition-transform"
                     >
-                      <PlaceThumb url={p.photo_url} category={p.category} name={p.place_name} />
+                      <PlaceThumb url={p._cover ?? p.photo_url} category={p.category} name={p.place_name} />
                       <div className="flex-1 min-w-0">
                         <p className="font-semibold text-sm leading-tight truncate">{p.place_name}</p>
                         <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
@@ -2088,26 +2210,6 @@ export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityCh
                       </div>
                       <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
                     </button>
-                  ))}
-                </div>
-              </div>
-            )}
-            {(cat === "all" || cat === "lists") && results.collections.length > 0 && (
-              <div>
-                <p className="text-sm font-black uppercase tracking-wide mb-3 px-1">{t("collections")}</p>
-                <div className="space-y-6">
-                  {results.collections.map((col) => (
-                    <CollectionBigCard key={col.id} col={col} onOpen={setActiveCol} />
-                  ))}
-                </div>
-              </div>
-            )}
-            {(cat === "all" || cat === "trips") && results.routes.length > 0 && (
-              <div>
-                <p className="text-sm font-black uppercase tracking-wide mb-3 px-1">{t("routes_heading")}{cityFilter.length === 1 ? ` ${t("in_city", { city: cityFilter[0] })}` : ""}</p>
-                <div className="space-y-6">
-                  {results.routes.map((r) => (
-                    <RouteBigCard key={r.id} route={r} onClick={() => navigate(`/route/${r.id}`)} />
                   ))}
                 </div>
               </div>
