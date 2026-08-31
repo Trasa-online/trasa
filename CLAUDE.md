@@ -334,9 +334,11 @@ Jeśli zmiana dotyczy obu platform, przetestuj na obu **zanim** wypchniesz.
 
 **⛔ `main` MUSI być stale deployowany.** Katalog `api/` (`place-photo.ts`, `static-map.ts`) jedzie w buildzie `main`, a natywka woła go po sztywno na `https://trasa.travel/api/...` (`API_BASE` w [platform.ts](src/lib/platform.ts)). Wyłączenie deployu `main` = brak zdjęć miejsc i mini-mapek w aplikacji na telefonie.
 
-**Blokada deployów z innych branchy** (ustawiane w panelu projektu, NIE w `vercel.json` - ten plik jest wspólny dla wszystkich branchy i merge'e będą się o niego biły):
-- Settings → Git → Production Branch = branch tego projektu,
-- Settings → Git → Deployment Branches = „Only the Production Branch" (gdy dostępne), albo Ignored Build Step: `[ "$VERCEL_GIT_COMMIT_REF" != "<branch>" ]` (uwaga na odwrotną semantykę: **exit 0 = pomiń build**, exit 1 = buduj).
+**Blokada deployów z innych branchy** (ustawiane w panelu projektu, NIE w `vercel.json` - ten plik jest wspólny dla wszystkich branchy i merge'e będą się o niego biły). W aktualnym UI Vercela:
+- **Settings → Environments → Production → Branch Tracking** = branch tego projektu (tu, nie w zakładce Git - ta ma tylko połączenie z repo),
+- **Settings → Environments → Preview → Branch Tracking**: domyślnie „All unassigned git branches", czyli KAŻDY inny branch robi preview. Zawęź do własnych branchy albo wyłącz,
+- dodatkowy bezpiecznik: **Ignored Build Step** (Settings → Build and Deployment) = `[ "$VERCEL_GIT_COMMIT_REF" != "<branch>" ]` - uwaga na odwrotną semantykę: **exit 0 = pomiń build**, exit 1 = buduj.
+- „Custom Environments" (płatny dodatek Pro) NIE są do tego potrzebne - wystarczy Production + Preview.
 
 **Zmienne środowiskowe są per projekt** - nowy projekt nie dziedziczy nic po `trasa`. Klucz Maps jest referrer-restricted: każdą nową domenę trzeba dopisać w GCP.
 
