@@ -163,11 +163,8 @@
   "distance_start": "startu",
   "city_picker": {
     "not_your_city": "Nie widzisz swojego miasta?",
-    "city_placeholder": "Wpisz nazwę miasta",
     "send": "Wyślij",
     "notify_hint": "Damy Ci znać, gdy Twoje miasto pojawi się w aplikacji.",
-    "send_error": "Nie udało się wysłać zgłoszenia",
-    "notify_success": "Dzięki! Gdy {{city}} będzie dostępne, damy Ci znać.",
     "next": "Dalej",
     "coming_soon_cta": "Wkrótce dostępne 🔒",
     "coming_soon_badge": "Wkrótce"

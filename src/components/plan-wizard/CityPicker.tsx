@@ -2,10 +2,7 @@ import { useRef, useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { toast } from "sonner";
 import { ChevronDown, Check, Search } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
 import { useTranslation } from "react-i18next";
 import i18n from "@/i18n";
 
@@ -111,10 +108,8 @@ const CityPicker = ({ onConfirm }: CityPickerProps) => {
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const [notifyCity, setNotifyCity] = useState("");
   const [search, setSearch] = useState("");
   const [scrolled, setScrolled] = useState(false);
-  const { user } = useAuth();
   const scrollTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Lista miast po filtrze wyszukiwarki (po polskiej i angielskiej nazwie).
@@ -171,14 +166,6 @@ const CityPicker = ({ onConfirm }: CityPickerProps) => {
 
   const selectedCity = displayCities[selectedIndex];
   const isComingSoon = !!selectedCity?.comingSoon;
-
-  const handleNotify = async () => {
-    if (!notifyCity.trim()) { toast.error(t("city_picker.city_placeholder")); return; }
-    const { error } = await (supabase as any).from("city_requests").insert({ user_id: user?.id ?? null, city_name: notifyCity.trim() });
-    if (error) { toast.error(t("city_picker.send_error")); return; }
-    toast.success(t("city_picker.notify_success", { city: notifyCity }));
-    setNotifyCity("");
-  };
 
   return (
     <div className="flex flex-col h-full">
