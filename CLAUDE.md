@@ -336,8 +336,8 @@ Jeśli zmiana dotyczy obu platform, przetestuj na obu **zanim** wypchniesz.
 
 **Blokada deployów z innych branchy** (ustawiane w panelu projektu, NIE w `vercel.json` - ten plik jest wspólny dla wszystkich branchy i merge'e będą się o niego biły). W aktualnym UI Vercela:
 - **Settings → Environments → Production → Branch Tracking** = branch tego projektu (tu, nie w zakładce Git - ta ma tylko połączenie z repo),
-- **Settings → Environments → Preview → Branch Tracking**: domyślnie „All unassigned git branches", czyli KAŻDY inny branch robi preview. Zawęź do własnych branchy albo wyłącz,
-- dodatkowy bezpiecznik: **Ignored Build Step** (Settings → Build and Deployment) = `[ "$VERCEL_GIT_COMMIT_REF" != "<branch>" ]` - uwaga na odwrotną semantykę: **exit 0 = pomiń build**, exit 1 = buduj.
+- **Settings → Environments → Preview → Branch Tracking**: domyślnie „All unassigned git branches", czyli KAŻDY inny branch robi preview. Na planie **Hobby** dopasowanie po nazwie brancha jest zablokowane (Pro), ale **sam przełącznik Branch Tracking da się wyłączyć** - i to wystarcza: git przestaje robić preview, deploy z CLI/API nadal działa,
+- dodatkowy bezpiecznik: **Ignored Build Step** (Settings → Build and Deployment → Ignored Build Step → „Project Settings") = `[ "$VERCEL_GIT_COMMIT_REF" != "<branch>" ]` - uwaga na odwrotną semantykę: **exit 0 = pomiń build**, exit 1 = buduj. Da się wycofać: wyczyść pole i Save. ⚠️ Działa też na PRODUKCJĘ - po zmianie nazwy brancha deploye przestaną wychodzić po cichu (w liście widać „Skipped", nie błąd).
 - „Custom Environments" (płatny dodatek Pro) NIE są do tego potrzebne - wystarczy Production + Preview.
 
 **Zmienne środowiskowe są per projekt** - nowy projekt nie dziedziczy nic po `trasa`. Klucz Maps jest referrer-restricted: każdą nową domenę trzeba dopisać w GCP.
