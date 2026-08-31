@@ -20,8 +20,8 @@ export interface AdminPending {
 
 // Route docelowe per typ pending (badge w NAV + klik z karty "Do zrobienia").
 export const PENDING_ROUTE: Record<keyof Omit<AdminPending, "total">, string> = {
-  collections: "/zestawienia",
-  business: "/moderacja",
+  collections: "/moderacja",
+  business: "/moderacja-b2b",
   flags: "/flagi",
   bugs: "/ops",
 };
@@ -76,7 +76,7 @@ export function useAdminActivity() {
         items.push({
           id: `list-${l.id}`, kind: "list", title: l.title || "Lista bez nazwy",
           subtitle: `${author[l.user_id] ?? "użytkownik"}${l.city ? ` · ${l.city}` : ""}`,
-          date: l.updated_at, to: "/zestawienia", pending: l.moderation_status === "pending",
+          date: l.updated_at, to: "/moderacja", pending: l.moderation_status === "pending",
         });
       }
 

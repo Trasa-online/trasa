@@ -85,7 +85,7 @@ export function useToggleHidden() {
 export async function fetchCollectionItems(collectionId: string) {
   const { data } = await (supabase as any)
     .from("discovery_items")
-    .select("id, place_name, address, rating, place_id, order_index")
+    .select("id, place_name, address, rating, place_id, order_index, photo_url, short_desc")
     .eq("collection_id", collectionId)
     .order("order_index", { ascending: true });
   return (data ?? []) as any[];

@@ -13,8 +13,8 @@ export function TodayPage() {
   const { data: activity, isLoading } = useAdminActivity();
 
   const cards = [
-    { key: "collections", label: "Listy do moderacji", to: "/zestawienia", icon: ListChecks, n: pending?.collections ?? 0 },
-    { key: "business", label: "Wizytówki do moderacji", to: "/moderacja", icon: ShieldCheck, n: pending?.business ?? 0 },
+    { key: "collections", label: "Listy do moderacji", to: "/moderacja", icon: ListChecks, n: pending?.collections ?? 0 },
+    { key: "business", label: "Wizytówki do moderacji", to: "/moderacja-b2b", icon: ShieldCheck, n: pending?.business ?? 0 },
     { key: "flags", label: "Zgłoszone miejsca", to: "/flagi", icon: Flag, n: pending?.flags ?? 0 },
     { key: "bugs", label: "Zgłoszenia błędów", to: "/ops", icon: Bug, n: pending?.bugs ?? 0 },
   ].filter((c) => c.n > 0);
