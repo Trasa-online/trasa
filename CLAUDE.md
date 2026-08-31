@@ -321,6 +321,29 @@ Jeśli zmiana dotyczy obu platform, przetestuj na obu **zanim** wypchniesz.
 
 ---
 
+## Branche i deploy (Vercel) - mapa
+
+**Zasada: jeden branch = jeden projekt w Vercelu = jedna domena = jeden build.** Push na branch deployuje TYLKO jego projekt; żaden projekt nie buduje się z cudzego brancha.
+
+| Branch | Projekt Vercel | Domena | Build / Output | Co to jest |
+|---|---|---|---|---|
+| `main` | `trasa` | trasa.travel + spontaway.com | `npm run build` → `dist` | **Aplikacja natywna iOS** (Capacitor) **+ Edge Functions `api/`** |
+| `admin` | `trasa-admin` | admin.trasa.travel | `npm run build:admin` → `dist-admin` | Konsola operacyjna founderów (entry `admin.html`) |
+| `biznes` | `trasa-biznes` (do założenia) | biznes.trasa.travel | `npm run build` → `dist` | Dashboard B2B - dziś trasa `/biznes/:id` w głównym buildzie, nie osobny entry |
+| `web` | brak (uśpiony) | - | `npm run build` → `dist` | Web/PWA + fake door; ostatni commit 2026-08-03 |
+
+**⛔ `main` MUSI być stale deployowany.** Katalog `api/` (`place-photo.ts`, `static-map.ts`) jedzie w buildzie `main`, a natywka woła go po sztywno na `https://trasa.travel/api/...` (`API_BASE` w [platform.ts](src/lib/platform.ts)). Wyłączenie deployu `main` = brak zdjęć miejsc i mini-mapek w aplikacji na telefonie.
+
+**Blokada deployów z innych branchy** (ustawiane w panelu projektu, NIE w `vercel.json` - ten plik jest wspólny dla wszystkich branchy i merge'e będą się o niego biły):
+- Settings → Git → Production Branch = branch tego projektu,
+- Settings → Git → Deployment Branches = „Only the Production Branch" (gdy dostępne), albo Ignored Build Step: `[ "$VERCEL_GIT_COMMIT_REF" != "<branch>" ]` (uwaga na odwrotną semantykę: **exit 0 = pomiń build**, exit 1 = buduj).
+
+**Zmienne środowiskowe są per projekt** - nowy projekt nie dziedziczy nic po `trasa`. Klucz Maps jest referrer-restricted: każdą nową domenę trzeba dopisać w GCP.
+
+**Gdzie commitować:** zmiana natywna → `main`; konsola admina (`src/admin/**`, `admin.html`, `vite.config.admin.ts`) → `admin`; dashboard B2B → `biznes` (po wydzieleniu). **Przed commitem sprawdź `git branch --show-current`** - katalog roboczy bywa przełączony przez równoległą sesję.
+
+---
+
 ## Znane problemy do naprawy
 
 - [ ] `photo_url` w tabeli `places` jest null dla większości wpisów → potrzebne ręczne uzupełnienie lub skrypt migracyjny
