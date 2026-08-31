@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { NavLink } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { TrasaLogo } from "@/components/TrasaLogo";
+import { OpsLogo } from "@/admin/OpsLogo";
 import { useAdmin } from "../RequireAdmin";
 import { ShieldCheck, Users, BarChart3, Bug, Settings, ListChecks, MapPin, ScrollText, Menu, X, Flag, DollarSign } from "lucide-react";
 
@@ -56,8 +56,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
           <button onClick={() => setMenuOpen(true)} className="md:hidden -ml-1 p-1.5 rounded-[4px] text-slate-600 hover:bg-slate-100" aria-label="Menu">
             <Menu className="h-5 w-5" />
           </button>
-          <TrasaLogo size={30} />
-          <span className="text-sm font-black text-slate-800">trasa<span className="text-slate-700"> ops</span></span>
+          <OpsLogo tile={34} />
         </div>
         <div className="flex items-center gap-2 sm:gap-3">
           <span className="hidden sm:inline text-xs text-slate-500">{email}</span>
@@ -74,7 +73,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
           <div className="absolute inset-0 bg-black/40" onClick={() => setMenuOpen(false)} />
           <div className="absolute left-0 top-0 bottom-0 w-64 bg-white border-r border-slate-200 p-3 flex flex-col gap-1 shadow-xl">
             <div className="flex items-center justify-between px-2 h-11 mb-1">
-              <span className="text-sm font-black text-slate-800">trasa<span className="text-slate-700"> ops</span></span>
+              <OpsLogo tile={30} />
               <button onClick={() => setMenuOpen(false)} className="p-1.5 rounded-[4px] text-slate-500 hover:bg-slate-100" aria-label="Zamknij"><X className="h-5 w-5" /></button>
             </div>
             <NavItems onNavigate={() => setMenuOpen(false)} />

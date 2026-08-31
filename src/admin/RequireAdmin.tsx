@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { TrasaLogo } from "@/components/TrasaLogo";
+import { OpsLogo } from "@/admin/OpsLogo";
 import { toast } from "sonner";
 
 export type AdminTier = "super_admin" | "operator";
@@ -106,10 +107,7 @@ function AdminLogin() {
       <div className="w-full max-w-5xl grid lg:grid-cols-2 bg-white rounded-[2px] overflow-hidden shadow-2xl shadow-slate-900/10 border border-slate-200 min-h-[600px]">
         {/* LEWA: logowanie */}
         <div className="flex flex-col p-8 sm:p-12">
-          <div className="flex items-center gap-2">
-            <TrasaLogo size={32} />
-            <span className="text-sm font-black text-slate-800">trasa<span className="text-slate-700"> ops</span></span>
-          </div>
+          <OpsLogo tile={44} />
           <div className="flex-1 flex flex-col justify-center w-full max-w-sm mx-auto py-10">
           {sent ? (
             <div className="text-center space-y-3 py-4">
