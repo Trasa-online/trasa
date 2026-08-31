@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { OpsLogo } from "@/admin/OpsLogo";
 
@@ -41,35 +41,52 @@ async function verifyCode(factorId: string, code: string) {
   if (v.error) throw v.error;
 }
 
+// Usun NIEDOKONCZONE (unverified) czynniki TOTP - inaczej enroll rzuca
+// "A factor ... already exists". Uzywane tylko przed pierwszym enrollem.
+async function cleanupUnverifiedTotp() {
+  try {
+    const { data: list } = await supabase.auth.mfa.listFactors();
+    const stale = (((list as any)?.all ?? list?.totp) ?? []).filter(
+      (f: any) => f.factor_type === "totp" && f.status !== "verified",
+    );
+    for (const f of stale) { try { await supabase.auth.mfa.unenroll({ factorId: f.id }); } catch { /* ignore */ } }
+  } catch { /* best-effort */ }
+}
+
+async function enrollTotp() {
+  await cleanupUnverifiedTotp();
+  let res = await supabase.auth.mfa.enroll({ factorType: "totp", friendlyName: "spontaway ops" });
+  // Kolizja nazwy (zostal orphan, ktorego listFactors nie zwrocil) -> sprzataj i sprobuj raz jeszcze.
+  if (res.error && /already exists/i.test(res.error.message)) {
+    await cleanupUnverifiedTotp();
+    res = await supabase.auth.mfa.enroll({ factorType: "totp", friendlyName: "spontaway ops" });
+  }
+  return res;
+}
+
+// Cache enrollu na poziomie MODULU - przezywa remonty MfaEnroll w tej samej sesji karty.
+// KRYTYCZNE: RequireAdmin przelacza `checking` przy zmianach sesji i remontuje poddrzewo;
+// bez cache kazdy remount robilby nowy enroll (kasujac poprzedni czynnik) -> "Factor not found"
+// przy verify na starym id. Z cache czynnik + QR sa STABILNE do momentu weryfikacji.
+let enrollCache: { factorId: string; qr: string; secret: string } | null = null;
+
 function MfaEnroll({ onDone }: { onDone: () => void }) {
-  const [qr, setQr] = useState<string | null>(null);
-  const [secret, setSecret] = useState("");
-  const [factorId, setFactorId] = useState("");
+  // Init ze stabilnego cache (odporne na remont) - jesli enroll juz byl, ten sam QR/factor.
+  const [qr, setQr] = useState<string | null>(enrollCache?.qr ?? null);
+  const [secret, setSecret] = useState(enrollCache?.secret ?? "");
+  const [factorId, setFactorId] = useState(enrollCache?.factorId ?? "");
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
-  // Guard: enroll ma sie odpalic RAZ (React 18 StrictMode w dev montuje efekt 2x -
-  // bez guardu powstalyby 2 czynniki i kolizja nazwy przy verify).
-  const startedRef = useRef(false);
   useEffect(() => {
-    if (startedRef.current) return;
-    startedRef.current = true;
+    if (enrollCache) return; // enroll juz wykonany - reuse (remont NIE tworzy nowego czynnika)
     let cancelled = false;
     (async () => {
-      // Sprzataj NIEDOKONCZONE czynniki TOTP (unverified) - inaczej ponowny enroll
-      // rzuca "A factor with the friendly name ... already exists" i QR sie nie generuje.
-      // Jestesmy tu tylko gdy brak ZWERYFIKOWANEGO czynnika, wiec czyscimy bezpiecznie.
-      try {
-        const { data: list } = await supabase.auth.mfa.listFactors();
-        const stale = ((list as any)?.all ?? list?.totp ?? []).filter(
-          (f: any) => f.factor_type === "totp" && f.status !== "verified",
-        );
-        for (const f of stale) { await supabase.auth.mfa.unenroll({ factorId: f.id }); }
-      } catch { /* best-effort */ }
-      const { data, error } = await supabase.auth.mfa.enroll({ factorType: "totp", friendlyName: "spontaway ops" });
+      const { data, error } = await enrollTotp();
       if (cancelled) return;
-      if (error) { setErr(error.message); return; }
+      if (error || !data) { setErr(error?.message || "Nie udało się przygotować 2FA."); return; }
+      enrollCache = { factorId: data.id, qr: data.totp.qr_code, secret: data.totp.secret };
       setFactorId(data.id); setQr(data.totp.qr_code); setSecret(data.totp.secret);
     })();
     return () => { cancelled = true; };
@@ -78,8 +95,11 @@ function MfaEnroll({ onDone }: { onDone: () => void }) {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true); setErr(null);
-    try { await verifyCode(factorId, code.trim()); onDone(); }
-    catch (e2: any) { setErr(e2?.message || "Nieprawidłowy kod. Spróbuj ponownie."); }
+    try {
+      await verifyCode(factorId, code.trim());
+      enrollCache = null; // sukces - czynnik zweryfikowany, cache juz niepotrzebny
+      onDone();
+    } catch (e2: any) { setErr(e2?.message || "Nieprawidłowy kod. Spróbuj ponownie."); }
     finally { setBusy(false); }
   };
 
