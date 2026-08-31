@@ -1,6 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { resolveStored } from "@/components/PlacePhoto";
 
 // ── Moderacja B2C: WYJAZDY (opublikowane trasy) ──────────────────────────────
 export interface TripCol {
@@ -40,8 +39,9 @@ export function useTrips() {
         for (const p of pins ?? []) {
           counts[p.route_id] = (counts[p.route_id] ?? 0) + 1;
           if ((thumbs[p.route_id]?.length ?? 0) < 6) {
-            const u = resolveStored((Array.isArray(p.images) && p.images[0]) || (Array.isArray(p.user_photo_urls) && p.user_photo_urls[0]) || p.photo_url || p.image_url);
-            if (u) (thumbs[p.route_id] ??= []).push(u);
+            // ORYGINALNY url (nie resolveStored) - potrzebny do moderacji (RPC dopasowuje po wartosci w DB).
+            const raw = (Array.isArray(p.images) && p.images[0]) || (Array.isArray(p.user_photo_urls) && p.user_photo_urls[0]) || p.photo_url || p.image_url;
+            if (raw) (thumbs[p.route_id] ??= []).push(raw);
           }
         }
       }
@@ -97,11 +97,12 @@ export async function fetchTripDetail(routeId: string): Promise<TripPlace[]> {
     (notesByPlace[k] ??= []).push({ text: r.note.trim(), author: authors[r.user_id] ?? null });
   }
   return (pins ?? []).map((p: any) => {
+    // ORYGINALNE url-e (bez resolveStored) - modal moderacji dziala na wartosci z DB.
     const photos = [
       ...(Array.isArray(p.images) ? p.images : []),
       ...(Array.isArray(p.user_photo_urls) ? p.user_photo_urls : []),
       p.photo_url, p.image_url,
-    ].filter(Boolean).map((u: string) => resolveStored(u)).filter(Boolean) as string[];
+    ].filter(Boolean) as string[];
     const notes = [...(notesByPlace[(p.place_name || "").toLowerCase()] ?? [])];
     if (p.description?.trim()) notes.unshift({ text: p.description.trim(), author: null });
     return { place_name: p.place_name, photos: [...new Set(photos)].slice(0, 6), notes };

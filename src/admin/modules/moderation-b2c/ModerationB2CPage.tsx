@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { Loader2, Check, X, Eye, EyeOff, ChevronDown, ImageOff } from "lucide-react";
 import { avatarSrc } from "@/lib/avatar";
@@ -7,6 +7,10 @@ import {
   useRankings, useModerateRanking, useToggleHidden, fetchCollectionItems, type RankingCol,
 } from "../rankings/useRankings";
 import { useTrips, useToggleTripHidden, fetchTripDetail, type TripCol, type TripPlace } from "./useTrips";
+import { PhotoModerationModal } from "./PhotoModerationModal";
+
+// Klik w zdjecie -> modal moderacji (Ukryj/Usun). openPhoto(oryginalny URL z DB).
+const PhotoCtx = createContext<(url: string) => void>(() => {});
 
 // Moderacja B2C: weryfikacja tresci UGC (wyjazdy + listy). Zgrupowane PO UZYTKOWNIKU
 // (awatar + @username), z miniaturkami okladek miejsc. "Ogolne" (prywatne wishlisty) ukryte.
@@ -25,6 +29,7 @@ function groupByUser<T extends { user_id: string | null; username: string | null
 
 export function ModerationB2CPage() {
   const [seg, setSeg] = useState<"wyjazdy" | "listy">("wyjazdy");
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const trips = useTrips();
   const lists = useRankings();
 
@@ -34,6 +39,7 @@ export function ModerationB2CPage() {
   const listsPending = listRows.filter((r) => r.moderation_status === "pending").length;
 
   return (
+    <PhotoCtx.Provider value={setPhotoUrl}>
     <div className="max-w-3xl">
       <div className="mb-5">
         <h1 className="text-2xl font-black text-slate-900">Moderacja B2C</h1>
@@ -61,6 +67,8 @@ export function ModerationB2CPage() {
               </UserSection>
             ))}
     </div>
+    <PhotoModerationModal url={photoUrl} onClose={() => setPhotoUrl(null)} />
+    </PhotoCtx.Provider>
   );
 }
 
@@ -86,16 +94,17 @@ function UserSection<T>({ group, children, noun, nounPl, nounGen }: { group: Use
 
 // ── Pasek miniaturek okladek miejsc ─────────────────────────────────────────
 function Thumbs({ urls }: { urls: string[] }) {
-  const resolved = urls.map((u) => resolveStored(u)).filter(Boolean) as string[];
-  if (resolved.length === 0) {
+  const openPhoto = useContext(PhotoCtx);
+  const items = urls.filter(Boolean);
+  if (items.length === 0) {
     return <div className="flex items-center gap-1.5 text-[11px] text-slate-400 mb-2.5"><ImageOff className="h-3.5 w-3.5" />brak zdjęć</div>;
   }
   return (
     <div className="flex gap-1.5 mb-2.5 overflow-x-auto scrollbar-none">
-      {resolved.map((u, i) => (
-        <a key={i} href={u} target="_blank" rel="noreferrer" className="h-14 w-14 rounded-lg overflow-hidden bg-slate-100 shrink-0">
-          <img src={u} alt="" className="h-full w-full object-cover" loading="lazy" />
-        </a>
+      {items.map((u, i) => (
+        <button key={i} type="button" onClick={() => openPhoto(u)} className="h-14 w-14 rounded-lg overflow-hidden bg-slate-100 shrink-0 active:scale-95 transition-transform">
+          <img src={resolveStored(u) || u} alt="" className="h-full w-full object-cover" loading="lazy" />
+        </button>
       ))}
     </div>
   );
@@ -227,6 +236,7 @@ function ListCard({ col }: { col: RankingCol }) {
 
 // Podglad miejsc (rozwiniecie): zdjecia + notki z autorem. Bez ikon pinow.
 function PlacesPreview({ places }: { places: TripPlace[] }) {
+  const openPhoto = useContext(PhotoCtx);
   if (places.length === 0) return <div className="mt-3 rounded-xl bg-slate-50 p-3"><p className="text-xs text-slate-400">Brak miejsc.</p></div>;
   return (
     <div className="mt-3 rounded-xl bg-slate-50 p-3 space-y-3">
@@ -236,9 +246,9 @@ function PlacesPreview({ places }: { places: TripPlace[] }) {
           {p.photos.length > 0 && (
             <div className="flex gap-1.5 mt-2 overflow-x-auto scrollbar-none">
               {p.photos.map((u, j) => (
-                <a key={j} href={resolveStored(u) || u} target="_blank" rel="noreferrer" className="h-16 w-16 rounded-lg overflow-hidden bg-slate-200 shrink-0">
+                <button key={j} type="button" onClick={() => openPhoto(u)} className="h-16 w-16 rounded-lg overflow-hidden bg-slate-200 shrink-0 active:scale-95 transition-transform">
                   <img src={resolveStored(u) || u} alt="" className="h-full w-full object-cover" loading="lazy" />
-                </a>
+                </button>
               ))}
             </div>
           )}
