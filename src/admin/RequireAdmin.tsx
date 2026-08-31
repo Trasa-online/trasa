@@ -64,6 +64,10 @@ export function RequireAdmin({ children }: { children: ReactNode }) {
   );
 }
 
+// Losowe zdjecie podrozy (ludzie) - Unsplash, wolna licencja, hotlink OK.
+// Prawa polowa ekranu logowania. Zmien URL, zeby podmienic zdjecie.
+const LOGIN_IMAGE = "https://images.unsplash.com/photo-1488646953014-85cb44e25828?auto=format&fit=crop&w=1400&q=80";
+
 function AdminLogin() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -97,15 +101,16 @@ function AdminLogin() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50">
-      <div className="flex items-center px-6 h-16">
-        <div className="flex items-center gap-2">
-          <TrasaLogo size={34} />
-          <span className="text-sm font-black text-slate-800">trasa<span className="text-slate-700"> ops</span></span>
-        </div>
-      </div>
-      <div className="flex-1 flex items-center justify-center px-5 pb-10">
-        <div className="w-full max-w-sm bg-white rounded-3xl shadow-xl shadow-slate-900/[0.06] border border-slate-100 p-8">
+    <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4 sm:p-6">
+      {/* Modal 50/50: lewa = logowanie, prawa = zdjecie. Radius 2px (ostre rogi). */}
+      <div className="w-full max-w-5xl grid lg:grid-cols-2 bg-white rounded-[2px] overflow-hidden shadow-2xl shadow-slate-900/10 border border-slate-200 min-h-[600px]">
+        {/* LEWA: logowanie */}
+        <div className="flex flex-col p-8 sm:p-12">
+          <div className="flex items-center gap-2">
+            <TrasaLogo size={32} />
+            <span className="text-sm font-black text-slate-800">trasa<span className="text-slate-700"> ops</span></span>
+          </div>
+          <div className="flex-1 flex flex-col justify-center w-full max-w-sm mx-auto py-10">
           {sent ? (
             <div className="text-center space-y-3 py-4">
               <p className="text-4xl">📬</p>
@@ -155,6 +160,12 @@ function AdminLogin() {
               </button>
             </>
           )}
+          </div>
+        </div>
+        {/* PRAWA: losowe zdjecie podrozy (Unsplash) - ukryte na malych ekranach. */}
+        <div className="relative hidden lg:block bg-slate-100">
+          <img src={LOGIN_IMAGE} alt="" className="absolute inset-0 h-full w-full object-cover" />
+          <div className="absolute inset-0 bg-gradient-to-tr from-slate-900/25 via-transparent to-transparent" />
         </div>
       </div>
     </div>
