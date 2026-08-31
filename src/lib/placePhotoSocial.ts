@@ -2,6 +2,7 @@
 // place_photos: zdjecia usera przypisane do miejsca (place_key = stabilna tozsamosc).
 // photo_likes: lajki dowolnego zdjecia w galerii (photo_ref = stabilny klucz).
 import { supabase } from "@/integrations/supabase/client";
+import { moderateImageUrl } from "@/lib/imageModeration";
 
 const BUCKET = "place-photos";
 
@@ -129,6 +130,12 @@ export async function uploadPlacePhoto(
     if (up.error) { console.warn("[placePhotoSocial] upload:", up.error.message); return null; }
     const { data: pub } = supabase.storage.from(BUCKET).getPublicUrl(path);
     const photo_url = pub.publicUrl;
+    // SafeSearch (Vision) PRZED wpisem do galerii - odrzucone zdjecie kasujemy ze Storage,
+    // zeby nie zostal osierocony plik. Brak klucza / blad = przepuszczamy (fail-open).
+    if (await moderateImageUrl(photo_url) === "rejected") {
+      await supabase.storage.from(BUCKET).remove([path]).catch(() => {});
+      throw new Error("MODERATION_REJECTED");
+    }
     const { data, error } = await (supabase as any)
       .from("place_photos")
       .insert({ place_key: opts.placeKey, place_name: opts.placeName, city: opts.city ?? null, user_id: uid, photo_url })
@@ -137,6 +144,7 @@ export async function uploadPlacePhoto(
     if (error) { console.warn("[placePhotoSocial] insert:", error.message); return null; }
     return data as PlacePhotoRow;
   } catch (e: any) {
+    if (e?.message === "MODERATION_REJECTED") throw e;   // rozroznialny blad -> wlasciwy komunikat
     console.warn("[placePhotoSocial] uploadPlacePhoto exception:", e?.message ?? e);
     return null;
   }

@@ -33,6 +33,7 @@ import PhotoViewer from "@/components/route/PhotoViewer";
 import PlaceNoteEditor from "@/components/route/PlaceNoteEditor";
 import ScreenSkeleton from "@/components/layout/ScreenSkeleton";
 import ReportContentSheet from "@/components/moderation/ReportContentSheet";
+import { moderateImageUrl, MODERATION_REJECTED_MESSAGE } from "@/lib/imageModeration";
 import { EmptyPlacesState } from "@/components/route/EmptyPlacesState";
 import AddPlaceSheet from "@/components/route/AddPlaceSheet";
 import TripChatSheet from "@/components/route/TripChatSheet";
@@ -608,7 +609,14 @@ export default function SharedRoute() {
         const { error } = await supabase.storage.from("route-images").upload(path, file, { upsert: true, contentType: file.type || "image/jpeg" });
         if (error) { console.error("[SharedRoute] photo upload:", error.message); continue; }
         const { data } = supabase.storage.from("route-images").getPublicUrl(path);
-        if (data?.publicUrl) await addPinPhoto(id, pin.place_name, user.id, data.publicUrl);
+        if (!data?.publicUrl) continue;
+        // SafeSearch (Vision) - odrzucone zdjecie znika ze Storage i nie trafia do galerii.
+        if (await moderateImageUrl(data.publicUrl) === "rejected") {
+          await supabase.storage.from("route-images").remove([path]);
+          toast.error(MODERATION_REJECTED_MESSAGE);
+          continue;
+        }
+        await addPinPhoto(id, pin.place_name, user.id, data.publicUrl);
       }
       // Opublikowany wyjazd zasila galerie MIEJSCA od razu (place_photos). Dla roboczego nie -
       // zdjecia trafia tam dopiero przy publikacji (patrz handlePublish).
@@ -760,6 +768,7 @@ export default function SharedRoute() {
     if (!user || !files.length) return;
     setUploadingPhotos(true);
     const urls: string[] = [];
+    let rejected = 0;   // zdjecia odrzucone przez SafeSearch
     for (const rawFile of files) {
       try {
         const file = isHeic(rawFile) ? await convertHeicToJpeg(rawFile) : rawFile;
@@ -767,7 +776,14 @@ export default function SharedRoute() {
         const path = `${user.id}/${route.id}/gal_${Date.now()}_${Math.floor(Math.random() * 10000)}.jpg`;
         const { error } = await (supabase as any).storage.from("route-images").upload(path, compressed, { contentType: "image/jpeg", upsert: false });
         if (error) { console.error("[SharedRoute] photo upload failed:", error.message); continue; }
-        urls.push(`${SUPABASE_URL}/storage/v1/object/public/route-images/${path}`);
+        const publicUrl = `${SUPABASE_URL}/storage/v1/object/public/route-images/${path}`;
+        // SafeSearch (Vision) - odrzucone zdjecie kasujemy ze Storage i nie dodajemy do galerii.
+        if (await moderateImageUrl(publicUrl) === "rejected") {
+          await (supabase as any).storage.from("route-images").remove([path]);
+          rejected += 1;
+          continue;
+        }
+        urls.push(publicUrl);
       } catch (e: any) { console.error("[SharedRoute] photo processing failed:", e?.message ?? e); }
     }
     if (urls.length) {
@@ -776,7 +792,8 @@ export default function SharedRoute() {
       const { error } = await (supabase as any).rpc("append_route_photos", { p_route_id: route.id, p_urls: urls });
       if (error) { toast.error("Nie udało się zapisać zdjęć"); }
       else { toast.success(urls.length === 1 ? "Dodano zdjęcie" : `Dodano ${urls.length} zdjęcia`); queryClient.invalidateQueries({ queryKey: ["shared-route", id] }); }
-    } else { toast.error("Nie udało się dodać zdjęć"); }
+    } else if (!rejected) { toast.error("Nie udało się dodać zdjęć"); }
+    if (rejected) toast.error(rejected === 1 ? MODERATION_REJECTED_MESSAGE : `${rejected} zdjęcia nie przeszły moderacji`);
     setUploadingPhotos(false);
   };
 

@@ -129,7 +129,7 @@ export default function PublicProfile() {
     queryFn: async () => {
       const { data: routes } = await (supabase as any)
         .from("routes").select("id, title, city, start_date, day_number, folder_id, views, saves_count, likes_count, created_at, tags, review_narrative, ai_summary, cover_url, list_cover_url")
-        .eq("user_id", profile!.id).eq("is_shared", true)
+        .eq("user_id", profile!.id).eq("is_shared", true).eq("hidden_by_admin", false)
         .order("created_at", { ascending: false });
       const rows = (routes ?? []) as any[];
       if (!rows.length) return [];

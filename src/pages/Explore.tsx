@@ -776,6 +776,7 @@ const Explore = () => {
         .select("city")
         .eq("is_shared", true)
         .eq("status", "published")
+        .eq("hidden_by_admin", false)
         .not("title", "is", null)
         .not("list_cover_url", "is", null)
         .not("city", "is", null);

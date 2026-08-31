@@ -1693,7 +1693,7 @@ export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityCh
         // Bramka "opublikowane": trasa pojawia sie w eksploracji dopiero gdy jest OPUBLIKOWANA
         // (status='published' przez "Zapisz trase") i ma miniature (list_cover_url). status blokuje
         // przeciek roboczych tras grupowych (is_shared=true, status='draft') z auto-okladka.
-        .eq("is_shared", true).eq("status", "published").not("title", "is", null).not("list_cover_url", "is", null);
+        .eq("is_shared", true).eq("status", "published").eq("hidden_by_admin", false).not("title", "is", null).not("list_cover_url", "is", null);
       if (city && city !== "all") q = q.ilike("city", `${city}%`);
       const { data } = await q
         // Najnowsze trasy na gorze feedu wg daty PUBLIKACJI (published_at), nie zalozenia trasy.
@@ -1763,6 +1763,7 @@ export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityCh
           .select("id, title, city, review_photos, cover_url, list_cover_url, ai_highlight, user_id, views")
           .eq("is_shared", true)
           .eq("status", "published")
+          .eq("hidden_by_admin", false)
           .not("title", "is", null)
           .not("list_cover_url", "is", null)
           .order("views", { ascending: false, nullsFirst: false })
@@ -1957,7 +1958,7 @@ export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityCh
 
       const applyRoute = (b: any) => {
         // Bramka jak w feedzie: opublikowane (status='published') ze sfinalizowana miniatura (list_cover_url).
-        let x = b.eq("is_shared", true).eq("status", "published").not("title", "is", null).not("list_cover_url", "is", null);
+        let x = b.eq("is_shared", true).eq("status", "published").eq("hidden_by_admin", false).not("title", "is", null).not("list_cover_url", "is", null);
         if (cities) x = x.in("city", cities);
         return x;
       };

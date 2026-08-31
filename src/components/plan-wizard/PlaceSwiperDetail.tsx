@@ -21,6 +21,7 @@ import { getPhotoUrl, ensurePhotoCached } from "@/lib/placePhotos";
 import { fetchPlaceUserPhotos } from "@/lib/placeUserPhotos";
 import { placeKeyOf, pinCoverKeys, fetchPlacePhotosForKeys, uploadPlacePhoto, fetchPhotoLikes, togglePhotoLike, type LikeState } from "@/lib/placePhotoSocial";
 import { fetchPlaceNotes, type PlaceUserNote } from "@/lib/placeNotes";
+import { MODERATION_REJECTED_MESSAGE } from "@/lib/imageModeration";
 import { useSavedPlaces } from "@/hooks/useSavedPlaces";
 import { GOOGLE_PLACE_DETAILS_DISABLED } from "@/lib/appMode";
 import { type MockPlace, fetchEnrichedPlace } from "./PlaceSwiper";
@@ -334,7 +335,14 @@ const PlaceSwiperDetail = ({
     if (!file || !user || !ep || !placeKey) return;
     if (!file.type.startsWith("image/")) { toast.error("Wybierz plik graficzny"); return; }
     setAddingPhoto(true);
-    const row = await uploadPlacePhoto(file, { userId: user.id, placeKey, placeName: ep.place_name, city: ep.city ?? city ?? null });
+    let row = null;
+    try {
+      row = await uploadPlacePhoto(file, { userId: user.id, placeKey, placeName: ep.place_name, city: ep.city ?? city ?? null });
+    } catch (e: any) {
+      setAddingPhoto(false);
+      toast.error(e?.message === "MODERATION_REJECTED" ? MODERATION_REJECTED_MESSAGE : "Nie udało się dodać zdjęcia");
+      return;
+    }
     setAddingPhoto(false);
     if (row) { setUserPlacePhotos((prev) => [row.photo_url, ...prev]); onPhotoAdded?.(row.photo_url, placeKey); toast.success("Dodano Twoje zdjęcie"); }
     else toast.error("Nie udało się dodać zdjęcia");
