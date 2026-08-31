@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { OpsLogo } from "@/admin/OpsLogo";
 
@@ -49,10 +49,25 @@ function MfaEnroll({ onDone }: { onDone: () => void }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
+  // Guard: enroll ma sie odpalic RAZ (React 18 StrictMode w dev montuje efekt 2x -
+  // bez guardu powstalyby 2 czynniki i kolizja nazwy przy verify).
+  const startedRef = useRef(false);
   useEffect(() => {
+    if (startedRef.current) return;
+    startedRef.current = true;
     let cancelled = false;
     (async () => {
-      const { data, error } = await supabase.auth.mfa.enroll({ factorType: "totp" });
+      // Sprzataj NIEDOKONCZONE czynniki TOTP (unverified) - inaczej ponowny enroll
+      // rzuca "A factor with the friendly name ... already exists" i QR sie nie generuje.
+      // Jestesmy tu tylko gdy brak ZWERYFIKOWANEGO czynnika, wiec czyscimy bezpiecznie.
+      try {
+        const { data: list } = await supabase.auth.mfa.listFactors();
+        const stale = ((list as any)?.all ?? list?.totp ?? []).filter(
+          (f: any) => f.factor_type === "totp" && f.status !== "verified",
+        );
+        for (const f of stale) { await supabase.auth.mfa.unenroll({ factorId: f.id }); }
+      } catch { /* best-effort */ }
+      const { data, error } = await supabase.auth.mfa.enroll({ factorType: "totp", friendlyName: "spontaway ops" });
       if (cancelled) return;
       if (error) { setErr(error.message); return; }
       setFactorId(data.id); setQr(data.totp.qr_code); setSecret(data.totp.secret);
