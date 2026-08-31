@@ -47,6 +47,10 @@ export interface MockPlace {
   opening_hours?: { weekday_text?: string[] | null; periods?: unknown[] | null } | null;
   // Business profile fields (optional)
   businessPlan?: 'zero' | 'basic' | 'premium';
+  /** business_profiles.is_premium - REALNY status platnego konta (nie wyglad wizytowki).
+   *  Wizytowka wyglada premium dla kazdego lokalu (decyzja produktowa), ale funkcje
+   *  zarezerwowane dla platnych (np. sekcja "Od użytkowników") pytaja o TE flage. */
+  businessIsPremium?: boolean;
   businessLogoUrl?: string;
   businessEventTitle?: string;
   businessPhone?: string | null;
@@ -1025,7 +1029,7 @@ function pickEventPillTitle(bp: any, refDate?: string): string | undefined {
 // Select `places` + zagniezdzony business_profiles (+ business_events) - jedno zrodlo prawdy
 // dla wizytowki (swiper i "Zapisane"). Zmiana tu propaguje do wszystkich call sites.
 export const PLACE_BUSINESS_SELECT =
-  "*, business_profiles(plan, logo_url, cover_image_url, cover_video_url, event_title, event_title_en, event_description, gallery_urls, phone, website, social_links, main_category, secondary_category, subcategories, tags, description, is_verified, color_badge, color_card_bg, color_button, color_promo, menu_image_urls, opening_hours, latitude, longitude, street, postal_code, address, business_events(id, title, title_en, starts_at, ends_at, start_time, end_time, description, is_draft))";
+  "*, business_profiles(plan, is_premium, logo_url, cover_image_url, cover_video_url, event_title, event_title_en, event_description, gallery_urls, phone, website, social_links, main_category, secondary_category, subcategories, tags, description, is_verified, color_badge, color_card_bg, color_button, color_promo, menu_image_urls, opening_hours, latitude, longitude, street, postal_code, address, business_events(id, title, title_en, starts_at, ends_at, start_time, end_time, description, is_draft))";
 
 // Doczytuje pojedyncze miejsce po places.id (UUID) i wzbogaca profilem biznesowym -
 // uzywane przez "Zapisane" zeby tap w kafelek otwieral pelna wizytowke (jak w swiperze).
@@ -1059,10 +1063,11 @@ export function enrichWithBusinessProfile(p: any, refDate?: string): MockPlace {
       : undefined;
     return { ...p, photo_url: curated, galleryPhotos: curated ? [curated] : [] } as MockPlace;
   }
-  // Per decyzja produktowa (CLAUDE.md): wszystkie aktywne biznesy traktujemy jak
-  // premium - logo, eventy, cover image, dane kontaktowe widoczne dla kazdego
-  // powiazanego biz profile. DB column `plan` jest legacy z czasow planow zero/basic/premium
-  // i jest ignorowane na froncie. Wszystkim wyswietlamy pelna premium wizytowke.
+  // Per decyzja produktowa (CLAUDE.md): WYGLAD wizytowki (logo, eventy, cover, kontakt) jest
+  // premium dla kazdego aktywnego biznesu - kolumna `plan` (legacy zero/basic/premium) jest tu
+  // ignorowana, bo przy rejestracji zawsze ustawia sie 'zero'.
+  // UWAGA: to NIE znaczy "kazdy jest platny". Realny status konta = business_profiles.is_premium
+  // (businessIsPremium ponizej) i to o niego pytaja funkcje premium-only.
   const plan: 'zero' | 'basic' | 'premium' = 'premium';
   const bizGallery: string[] = Array.isArray(bp.gallery_urls) ? bp.gallery_urls.filter(Boolean) : [];
   // Logika galerii: jesli biznes wgral wlasne zdjecia (cover_image, cover_video, gallery_urls)
@@ -1084,6 +1089,8 @@ export function enrichWithBusinessProfile(p: any, refDate?: string): MockPlace {
   return {
     ...p,
     businessPlan: plan,
+    // Realny status platnego konta - zrodlo prawdy dla funkcji premium-only (2026-08-31).
+    businessIsPremium: bp.is_premium === true,
     // Override pozycji pinu geokodowanym adresem biznesu (gdy ustawiony) - inaczej pin
     // na mapie trasy bralby stare/NULL places.latitude/longitude i ladowal w zlym miejscu.
     latitude: bp.latitude ?? p.latitude,

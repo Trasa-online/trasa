@@ -251,16 +251,21 @@ const PlaceSwiperDetail = ({
   const ownGallery = (ep?.galleryPhotos ?? []).filter(validUrl);
   const fetchedPhotos = photos.filter(validUrl);
   const contributed = userPlacePhotos.filter(validUrl); // #3e - zdjecia userow dodane do miejsca
-  // Zdjecia WGRANE PRZEZ USEROW (place_photos) w wizytowce z kontem biznesowym NIE wchodza do
-  // galerii lokalu - lokal odpowiada za swoj wizerunek, a spolecznosc ma osobna sekcje
-  // "Od użytkowników" pod cennikiem/menu (prosba Nat 2026-08-31). Wizytowka "zero" (bez konta
-  // biznesowego) miesza je z reszta galerii jak dotad.
-  const communityPhotos = isBusiness ? contributed : [];
+  // Zdjecia WGRANE PRZEZ USEROW (place_photos) w wizytowce PREMIUM (platne konto) NIE wchodza
+  // do galerii lokalu - lokal odpowiada za swoj wizerunek, a spolecznosc ma osobna sekcje
+  // "Od użytkowników" pod cennikiem/menu (prosba Nat 2026-08-31). Konto nie-premium i wizytowka
+  // "zero" (bez konta biznesowego) mieszaja je z reszta galerii jak dotad.
+  // Sekcja tylko dla REALNIE premium kont (business_profiles.is_premium), nie dla kazdej
+  // wizytowki biznesowej - prosba Nat 2026-08-31.
+  const isPremiumBusiness = isBusiness && (ep as any)?.businessIsPremium === true;
+  const communityPhotos = isPremiumBusiness ? contributed : [];
   // Cap podniesiony 4 -> 10, zeby zdjecia dodane przez userow (#3e) sie zmiescily.
   const displayPhotos = Array.from(new Set(
-    isBusiness
+    isPremiumBusiness
       ? [...fetchedPhotos, ...ownCover, ...ownGallery]
-      : [...ownCover, ...fetchedPhotos, ...contributed, ...ownGallery],
+      : isBusiness
+        ? [...fetchedPhotos, ...contributed, ...ownCover, ...ownGallery]
+        : [...ownCover, ...fetchedPhotos, ...contributed, ...ownGallery],
   )).slice(0, 10);
 
   // Notki userow o tym miejscu - z OPUBLIKOWANYCH tras i PUBLICZNYCH list (best-effort).
