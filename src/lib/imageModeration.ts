@@ -10,10 +10,19 @@ export type ModerationVerdict = "ok" | "rejected" | "skipped";
 
 export type ModerationContext = "place_photo" | "pin_photo" | "trip_gallery" | "list_item";
 
-export async function moderateImageUrl(url: string, context?: ModerationContext): Promise<ModerationVerdict> {
+/** Namiary obiektu, do ktorego zdjecie nalezalo - pozwalaja adminowi PRZYWROCIC referencje,
+ *  gdy odrzucenie bylo falszywym alarmem (patrz edge function admin-restore-photo). */
+export type ModerationTarget = {
+  place_key?: string;
+  place_name?: string;
+  city?: string | null;
+  route_id?: string;
+};
+
+export async function moderateImageUrl(url: string, context?: ModerationContext, target?: ModerationTarget): Promise<ModerationVerdict> {
   if (!url) return "skipped";
   try {
-    const { data, error } = await supabase.functions.invoke("moderate-image", { body: { url, context } });
+    const { data, error } = await supabase.functions.invoke("moderate-image", { body: { url, context, target } });
     if (error) { console.warn("[imageModeration]", error.message); return "skipped"; }
     const verdict = (data as any)?.verdict;
     return verdict === "rejected" ? "rejected" : verdict === "ok" ? "ok" : "skipped";

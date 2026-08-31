@@ -132,7 +132,7 @@ export async function uploadPlacePhoto(
     const photo_url = pub.publicUrl;
     // SafeSearch (Vision) PRZED wpisem do galerii - odrzucone zdjecie kasujemy ze Storage,
     // zeby nie zostal osierocony plik. Brak klucza / blad = przepuszczamy (fail-open).
-    if (await moderateImageUrl(photo_url, "place_photo") === "rejected") {
+    if (await moderateImageUrl(photo_url, "place_photo", { place_key: opts.placeKey, place_name: opts.placeName, city: opts.city ?? null }) === "rejected") {
       await supabase.storage.from(BUCKET).remove([path]).catch(() => {});
       throw new Error("MODERATION_REJECTED");
     }

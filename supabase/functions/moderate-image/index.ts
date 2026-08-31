@@ -42,7 +42,7 @@ Deno.serve(async (req) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return json({ error: "unauthorized" }, 401);
 
-    const { url, context, debugForceReject } = await req.json().catch(() => ({ url: null, context: null, debugForceReject: false }));
+    const { url, context, target, debugForceReject } = await req.json().catch(() => ({ url: null, context: null, target: null, debugForceReject: false }));
     if (!url || typeof url !== "string" || !/^https?:\/\//.test(url)) {
       return json({ enabled: true, verdict: "skipped", reason: "bad url" });
     }
@@ -107,6 +107,7 @@ Deno.serve(async (req) => {
         await admin.from("image_moderation_log").insert({
           user_id: user.id,
           context: typeof context === "string" ? context.slice(0, 40) : null,
+          target: target && typeof target === "object" ? target : null,
           source_url: url,
           quarantine_path: quarantinePath,
           verdict: "rejected",

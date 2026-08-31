@@ -614,7 +614,7 @@ export default function SharedRoute() {
       }
       // SafeSearch (Vision) RÓWNOLEGLE - jedno zdjecie to ~2-4s, wiec seryjnie 5 zdjec
       // kazalo czekac ponad minute. Odrzucone znika ze Storage i nie trafia do galerii.
-      const verdicts = await Promise.all(uploaded.map((u) => moderateImageUrl(u.url, "pin_photo")));
+      const verdicts = await Promise.all(uploaded.map((u) => moderateImageUrl(u.url, "pin_photo", { route_id: id, place_name: pin.place_name })));
       let rejectedCount = 0;
       for (let i = 0; i < uploaded.length; i++) {
         if (verdicts[i] === "rejected") {
@@ -789,7 +789,7 @@ export default function SharedRoute() {
     // SafeSearch (Vision) RÓWNOLEGLE dla calej paczki - seryjnie kazde zdjecie kosztowaloby
     // ~2-4s. Odrzucone kasujemy ze Storage i nie dodajemy do galerii.
     if (urls.length) {
-      const verdicts = await Promise.all(urls.map((u) => moderateImageUrl(u, "trip_gallery")));
+      const verdicts = await Promise.all(urls.map((u) => moderateImageUrl(u, "trip_gallery", { route_id: route.id })));
       const bad = urls.filter((_, i) => verdicts[i] === "rejected");
       rejected = bad.length;
       if (bad.length) {
