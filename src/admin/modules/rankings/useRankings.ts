@@ -13,7 +13,10 @@ export interface RankingCol {
   moderation_status: string;
   updated_at: string | null;
   item_count: number;
-  author: string | null;
+  author: string | null;      // first_name||username (compat: RankingsPage)
+  username: string | null;    // @handle
+  avatar: string | null;      // avatar_url
+  thumbs: string[];           // miniaturki okladek miejsc (photo_url itemow)
 }
 
 export function useRankings() {
@@ -31,19 +34,34 @@ export function useRankings() {
       const cols = (data ?? []) as any[];
       const ids = cols.map((c) => c.id);
       const counts: Record<string, number> = {};
+      const thumbs: Record<string, string[]> = {};
       const authors: Record<string, string | null> = {};
+      const usernames: Record<string, string | null> = {};
+      const avatars: Record<string, string | null> = {};
       if (ids.length) {
-        const { data: items } = await (supabase as any).from("discovery_items").select("collection_id").in("collection_id", ids);
-        (items ?? []).forEach((it: any) => { counts[it.collection_id] = (counts[it.collection_id] ?? 0) + 1; });
+        const { data: items } = await (supabase as any)
+          .from("discovery_items").select("collection_id, photo_url, order_index").in("collection_id", ids)
+          .order("order_index", { ascending: true });
+        (items ?? []).forEach((it: any) => {
+          counts[it.collection_id] = (counts[it.collection_id] ?? 0) + 1;
+          if (it.photo_url && (thumbs[it.collection_id]?.length ?? 0) < 6) (thumbs[it.collection_id] ??= []).push(it.photo_url);
+        });
         const uids = [...new Set(cols.map((c) => c.user_id).filter(Boolean))];
         if (uids.length) {
-          const { data: profs } = await (supabase as any).from("profiles").select("id, username, first_name").in("id", uids);
-          (profs ?? []).forEach((p: any) => { authors[p.id] = p.first_name || p.username || null; });
+          const { data: profs } = await (supabase as any).from("profiles").select("id, username, first_name, avatar_url").in("id", uids);
+          (profs ?? []).forEach((p: any) => {
+            authors[p.id] = p.first_name || p.username || null;
+            usernames[p.id] = p.username || null;
+            avatars[p.id] = p.avatar_url || null;
+          });
         }
       }
       const rank = (s: string) => (s === "pending" ? 0 : s === "approved" ? 1 : 2);
       return cols
-        .map((c: any) => ({ ...c, item_count: counts[c.id] ?? 0, author: authors[c.user_id] ?? null }))
+        .map((c: any) => ({
+          ...c, item_count: counts[c.id] ?? 0, author: authors[c.user_id] ?? null,
+          username: usernames[c.user_id] ?? null, avatar: avatars[c.user_id] ?? null, thumbs: thumbs[c.id] ?? [],
+        }))
         .sort((a: any, b: any) => rank(a.moderation_status) - rank(b.moderation_status));
     },
   });
