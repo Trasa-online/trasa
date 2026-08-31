@@ -237,7 +237,7 @@ export async function addPlaceToList(listId: string, place: PlaceForList, opts?:
   });
   if (error) throw error;
   await (supabase as any).from("discovery_collections").update({ updated_at: new Date().toISOString() }).eq("id", listId);
-  track("list_place_added", { list_id: listId, has_note: !!opts?.note });
+  track("list_place_added", { target: "list", collection_id: listId, has_note: !!opts?.note });
   return true;
 }
 
@@ -327,7 +327,7 @@ export async function createListFromSavedPlaces(
       return null;
     }
   }
-  if (isPublic) track("list_published", { list_id: listId, places: places.length, source: "create_flow" });
+  if (isPublic) track("list_published", { collection_id: listId, city: city ?? null, place_count: places.length, source: "create_flow" });
   // Publiczna -> powiadom admina (best-effort, nie blokuj flow). Lista jest widoczna od razu.
   if (isPublic) {
     supabase.functions.invoke("notify-admin-content", {
@@ -365,7 +365,11 @@ export async function quickSavePlace(
   if (!listId) return { listId: null, added: false };
   // Lista "Ogolne" nie ma miasta, wiec zapisujemy je przy miejscu (kontekst zapisu).
   const added = await addPlaceToList(listId, { ...place, city: place.city ?? city });
-  if (added) track("place_saved", { place_name: place.place_name, city: place.city ?? city ?? null });
+  if (added) track("place_saved", {
+    place_id: place.place_id ?? (place as { google_place_id?: string }).google_place_id ?? null,
+    place_name: place.place_name,
+    city: place.city ?? city ?? null,
+  });
   return { listId, added };
 }
 

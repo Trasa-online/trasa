@@ -1,5 +1,6 @@
 import { useState, useEffect, useContext, createContext, ReactNode, useRef } from "react";
 import { User, Session } from "@supabase/supabase-js";
+import posthog from "posthog-js";
 import { supabase } from "@/integrations/supabase/client";
 
 interface AuthContextValue {
@@ -48,11 +49,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }).catch((err) => console.warn("[useAuth] ensure_current_user_profile threw:", err));
     };
 
+    // PostHog: przypisanie zdarzen do usera. Robimy to CENTRALNIE (nie w Auth.tsx), zeby
+    // objac WSZYSTKIE sciezki: email, OAuth (Apple/Google), magic link i wznowienie sesji po
+    // restarcie apki. Bez identify lejki licza anonimowe distinct_id zamiast userow.
+    // Anonimowych (guest mode) NIE identyfikujemy - to nie sa konta.
+    const identifiedUserId = { current: null as string | null };
+    const identifyIfNeeded = (session: Session | null) => {
+      const u = session?.user;
+      if (!u || (u as any).is_anonymous) return;
+      if (identifiedUserId.current === u.id) return;
+      identifiedUserId.current = u.id;
+      try { posthog.identify(u.id, { email: u.email }); }
+      catch (e) { console.warn("[useAuth] posthog.identify:", e instanceof Error ? e.message : e); }
+    };
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
+        identifyIfNeeded(session);
         if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED" || event === "USER_UPDATED") {
           ensureProfileIfNeeded(session);
         }
@@ -64,6 +80,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
+        identifyIfNeeded(session);
         ensureProfileIfNeeded(session);
       })
       .catch(() => setLoading(false));

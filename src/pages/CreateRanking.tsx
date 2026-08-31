@@ -624,7 +624,7 @@ const CreateRanking = () => {
           body: { type: "ranking", title: collectionTitle, city, collection_id: collectionId, author: author.name },
         }).catch((e) => console.warn("[CreateRanking] notify-admin-content failed:", e));
       }
-      track("list_published", { list_id: editId ?? null, is_public: isPublic, places: items.length, source: "create_ranking" });
+      track("list_published", { collection_id: collectionId ?? null, city: cityToSave, is_public: isPublic, place_count: items.length, source: "create_ranking" });
       toast.success(editId ? t("toast.updated") : t("toast.sent"));
       // Listy widoczne w profilu (zakładka Listy). Kieruj na profil zamiast na pusty feed -
       // inaczej user ma wrazenie, ze nic sie nie zapisalo. (Osobny widok "Twoje listy" usuniety, IA 2026-08-20.)

@@ -565,7 +565,7 @@ export default function SharedRoute() {
       const { data: synced } = await (supabase as any).rpc("sync_route_place_photos", { p_route_id: id });
       if (typeof synced === "number" && synced > 0) console.info(`[SharedRoute] zdjęcia miejsc: ${synced}`);
       const cover = (route as any)?.list_cover_url as string | null;
-      track("trip_published", { route_id: id, places: (pins as any[]).length, has_cover: !!cover });
+      track("trip_published", { route_id: id, city: route.city ?? null, place_count: (pins as any[]).length, has_cover: !!cover });
       haptics.success();
       queryClient.invalidateQueries({ queryKey: ["shared-route", id] });
       queryClient.invalidateQueries({ queryKey: ["profile-trip-feed"] });
@@ -763,7 +763,7 @@ export default function SharedRoute() {
     }));
     const { error } = await (supabase as any).from("pins").insert(rows);
     if (error) throw error;
-    track("trip_place_added", { route_id: id, count: rows.length });
+    track("trip_place_added", { target: "trip", route_id: id, city: route.city ?? null, count: rows.length });
     queryClient.invalidateQueries({ queryKey: ["shared-route-pins", id] });
   };
 

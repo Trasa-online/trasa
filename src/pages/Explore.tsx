@@ -830,7 +830,7 @@ const Explore = () => {
   // Nonce rosnie z kazdym klikiem, zeby ExploreSwiper reagowal takze na ponowne klikniecie.
   const [nearbyNonce, setNearbyNonce] = useState(0);
   // Lejek eksploracji - wejscie na ekran (raz na mount).
-  useEffect(() => { track("explore_opened"); }, []);
+  useEffect(() => { track("explore_opened", { city: exploreCity, mode: view }); }, []);   // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     const h = () => { setSearchOpen(false); setFeedSearch(""); setView("browse"); setNearbyNonce((n) => n + 1); };
     window.addEventListener("trasa:explore-nearby", h);
