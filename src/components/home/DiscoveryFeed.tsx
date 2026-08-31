@@ -6,6 +6,7 @@ import { avatarSrc } from "@/lib/avatar";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { fetchBlockedIds } from "@/lib/blockedUsers";
 import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import { haptics } from "@/hooks/useHaptics";
 import { supabase } from "@/integrations/supabase/client";
@@ -92,6 +93,7 @@ type PolecaneRoute = {
   avgRating?: number;                  // srednia ocena Google z pinow (0 = brak)
   pins?: LatLng[];                     // wspolrzedne pinow do mini-mapy na okladce
   participants?: (string | null)[];   // awatary uczestnikow trasy grupowej (bez hosta)
+  user_id?: string | null;             // autor - do filtra zablokowanych userow
 };
 
 const CAT_LABEL: Record<string, string> = {
@@ -963,6 +965,7 @@ async function enrichRouteRows(routes: any[]): Promise<PolecaneRoute[]> {
     const prof = profileMap.get(r.user_id);
     const anon = r.share_anonymous === true;
     return {
+      user_id: r.user_id ?? null,
       kind: "route", id: r.id, title: r.title, city: r.city,
       // Miniatura eksploracji = OSOBNA okladka (list_cover_url), niezalezna od okladki trasy
       // (cover_url). Kolejnosc: miniatura -> okladka trasy -> zdjecie usera (review_photos[0]) ->
@@ -1490,6 +1493,14 @@ export function SavedCollections({ hideEmptyState }: { hideEmptyState?: boolean 
 export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityChange, active = true, searchQuery = "", searchOpen = false, searchCategory = "all" }: { city?: string; cities?: string[]; onCityChange?: (city: string) => void; active?: boolean; searchQuery?: string; searchOpen?: boolean; searchCategory?: "all" | "lists" | "trips" | "places" } = {}) {
   const { t } = useTranslation("homefeed");
   const { user } = useAuth();
+  // Zablokowani userzy (App Store 1.2): ich trasy i listy znikaja z feedu i wyszukiwarki.
+  const { data: blockedIds } = useQuery({
+    queryKey: ["blocked-ids", user?.id],
+    enabled: !!user?.id,
+    queryFn: () => fetchBlockedIds(user?.id),
+    staleTime: 5 * 60 * 1000,
+  });
+  const notBlocked = (uid?: string | null) => !uid || !blockedIds?.has(uid);
   const { open: openAuthDrawer } = useAuthDrawer();
   const queryClient = useQueryClient();
   // Liczba zapisanych miejsc (do wiersza "Zapisane miejsca" pod wyszukiwarka).
@@ -2140,7 +2151,7 @@ export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityCh
               <div>
                 <p className="text-sm font-black uppercase tracking-wide mb-3 px-1">{t("routes_heading")}{cityFilter.length === 1 ? ` ${t("in_city", { city: cityFilter[0] })}` : ""}</p>
                 <div className="space-y-4">
-                  {results.routes.map((r) => (
+                  {results.routes.filter((r) => notBlocked(r.user_id)).map((r) => (
                     <TrasaBigCard
                       key={r.id}
                       id={r.id}
@@ -2169,7 +2180,7 @@ export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityCh
               <div>
                 <p className="text-sm font-black uppercase tracking-wide mb-3 px-1">{t("collections")}</p>
                 <div className="space-y-6">
-                  {results.collections.map((col) => (
+                  {results.collections.filter((col) => notBlocked(col.user_id)).map((col) => (
                     <ProfileFeedCard
                       key={col.id}
                       avatarUrl={col.author_avatar}
@@ -2262,7 +2273,7 @@ export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityCh
           {(() => {
             // Wspolny feed: trasy + listy PRZEPLECIONE (trasa, lista, trasa, lista...), z filtrem typu.
             // Karta identyczna (TrasaBigCard); rozni sie tylko onOpen (trasa -> /route, lista -> /lista).
-            const routeCards = (contentType === "lists" ? [] : warszawa).map((r) => (
+            const routeCards = (contentType === "lists" ? [] : warszawa).filter((r) => notBlocked(r.user_id)).map((r) => (
               <TrasaBigCard
                 key={`route-${r.id}`}
                 id={r.id}
@@ -2282,7 +2293,7 @@ export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityCh
                 participants={r.participants ?? []}
               />
             ));
-            const listCards = (contentType === "routes" ? [] : userPolecajki).map((col) => {
+            const listCards = (contentType === "routes" ? [] : userPolecajki).filter((col) => notBlocked(col.user_id)).map((col) => {
               const ph = col.items.find((i) => i.photo_url)?.photo_url ?? col.gallery_urls?.[0] ?? null;
               const catTags = [...new Set(col.items.map((i) => i.category).filter(Boolean).map((c) => String(c).toLowerCase()))]
                 .map((c) => CAT_LABEL[c] ?? c);

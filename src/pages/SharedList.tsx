@@ -19,6 +19,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { PlacePhoto, resolveStored } from "@/components/PlacePhoto";
 import { RoutePlaceRow } from "@/components/route/RoutePlaceRow";
 import PlaceNoteEditor from "@/components/route/PlaceNoteEditor";
+import ReportContentSheet from "@/components/moderation/ReportContentSheet";
 import ScreenSkeleton from "@/components/layout/ScreenSkeleton";
 import PhotoViewer from "@/components/route/PhotoViewer";
 import { saveCollectionDb, unsaveCollectionDb, markCollectionSeenDb } from "@/lib/savedCollections";
@@ -528,6 +529,12 @@ export default function SharedList() {
         ) : (
           <div className="px-5 pt-4">
             {renderGallery()}
+          </div>
+        )}
+        {/* Zgloszenie tresci - wymog App Store (Guideline 1.2). Autor nie zglasza siebie. */}
+        {!isOwner && (
+          <div className="px-5 pt-6 pb-2 flex justify-center">
+            <ReportContentSheet targetType="collection" targetId={col.id} />
           </div>
         )}
         </div>

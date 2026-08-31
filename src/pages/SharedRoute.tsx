@@ -32,6 +32,7 @@ import PlaceNotes from "@/components/route/PlaceNotes";
 import PhotoViewer from "@/components/route/PhotoViewer";
 import PlaceNoteEditor from "@/components/route/PlaceNoteEditor";
 import ScreenSkeleton from "@/components/layout/ScreenSkeleton";
+import ReportContentSheet from "@/components/moderation/ReportContentSheet";
 import { EmptyPlacesState } from "@/components/route/EmptyPlacesState";
 import AddPlaceSheet from "@/components/route/AddPlaceSheet";
 import TripChatSheet from "@/components/route/TripChatSheet";
@@ -1375,6 +1376,12 @@ export default function SharedRoute() {
         )}
         </div>
 
+        {/* Zgloszenie tresci - wymog App Store (Guideline 1.2). Autor/uczestnik nie zglasza siebie. */}
+        {!canEdit && (
+          <div className="px-5 pt-6 pb-2 flex justify-center">
+            <ReportContentSheet targetType="route" targetId={route.id} />
+          </div>
+        )}
       </div>
 
       {/* Podglad wizytowki miejsca */}

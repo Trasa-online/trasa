@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { avatarSrc } from "@/lib/avatar";
 import { ArrowLeft, Check, Plus, Loader2 } from "lucide-react";
+import { Link } from "react-router-dom";
 import { Camera as CapCamera, CameraResultType, CameraSource } from "@capacitor/camera";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -208,7 +209,7 @@ const OnboardingFlow = ({ onDone }: Props) => {
         source, goals,
       });
     } catch { /* ignore */ }
-    await supabase.from("profiles").update({ onboarding_completed: true } as any).eq("id", user.id);
+    await supabase.from("profiles").update({ onboarding_completed: true, terms_accepted_at: new Date().toISOString() } as any).eq("id", user.id);
     // Sygnal dla Czesci B (coach-marki): flaga + event, ktory OnboardingProvider lapie.
     try { localStorage.setItem(COACH_PENDING_KEY, "1"); } catch { /* unavailable */ }
     onDone();
@@ -243,9 +244,13 @@ const OnboardingFlow = ({ onDone }: Props) => {
     finish();
   };
 
+  // Akceptacja regulaminu (EULA) - wymog App Store dla aplikacji z trescia od uzytkownikow.
+  // Bez zaznaczenia nie da sie przejsc dalej; date zapisujemy w profiles.terms_accepted_at.
+  const [termsAccepted, setTermsAccepted] = useState(false);
+
   // CTA per krok
   const canNext =
-    stepName === "welcome" ? true :
+    stepName === "welcome" ? termsAccepted :
     stepName === "source" ? (!!source && (source !== "other" || sourceOther.trim().length > 0)) :
     stepName === "goals" ? (goals.length > 0 && (!goals.includes("other") || goalsOther.trim().length > 0)) :
     stepName === "username" ? (uStatus === "ok" && firstName.trim().length >= 2 && !savingU) :
@@ -309,6 +314,23 @@ const OnboardingFlow = ({ onDone }: Props) => {
             <p className="text-[15px] text-muted-foreground leading-relaxed max-w-xs">
               {nbsp("speed dating z miastem. Odkrywaj trasy po mieście stworzone przez innych, zapisuj te które Cię inspirują i twórz własne. Pokażemy Ci to w kilka sekund.")}
             </p>
+            {/* Akceptacja regulaminu - wymog App Store (Guideline 1.2) przy tresciach userow. */}
+            <button
+              type="button"
+              onClick={() => setTermsAccepted((v) => !v)}
+              className="mt-8 flex items-start gap-3 text-left max-w-xs active:opacity-70 transition-opacity"
+            >
+              <span className={`mt-0.5 h-5 w-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors ${termsAccepted ? "bg-orange-600 border-orange-600" : "border-border bg-background"}`}>
+                {termsAccepted && <Check className="h-3.5 w-3.5 text-white" strokeWidth={3} />}
+              </span>
+              <span className="text-[13px] text-muted-foreground leading-relaxed">
+                {`Akceptuję `}
+                <Link to="/terms" onClick={(e) => e.stopPropagation()} className="font-semibold text-foreground underline">regulamin</Link>
+                {` i `}
+                <Link to="/privacy" onClick={(e) => e.stopPropagation()} className="font-semibold text-foreground underline">politykę prywatności</Link>
+                {`. Zobowiązuję się nie publikować treści obraźliwych ani naruszających prawa innych osób.`}
+              </span>
+            </button>
           </div>
         )}
 

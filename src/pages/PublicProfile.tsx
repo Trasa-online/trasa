@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useParams, useNavigate } from "react-router-dom";
 import { goBackOr } from "@/hooks/useGoBack";
@@ -13,6 +13,9 @@ import { ArrowLeft, LayoutGrid } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import FollowButton from "@/components/social/FollowButton";
+import ReportContentSheet from "@/components/moderation/ReportContentSheet";
+import { blockUser, unblockUser, isUserBlocked } from "@/lib/blockedUsers";
+import { MoreVertical, Ban, Flag as FlagIcon } from "lucide-react";
 import { useFollowCounts, useFollowList } from "@/hooks/useFollow";
 import { useSwipeNav } from "@/hooks/useSwipeNav";
 import { ProfileFeedCard } from "@/components/profile/ProfileFeedCard";
@@ -175,6 +178,26 @@ export default function PublicProfile() {
   // ── Interaktywne polubienie/zapis z kart (cudzy profil, wybor Nat 2026-08-23) ──
   // Serce/bookmark na karcie = przycisk. Wlasny publiczny profil -> licznik (nie polubisz swojego).
   const canInteract = !!user && !!profile?.id && user.id !== profile.id;
+  // Moderacja (wymog App Store 1.2): menu "..." z blokowaniem i zgloszeniem profilu.
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [blocked, setBlocked] = useState(false);
+  useEffect(() => {
+    if (!user?.id || !profile?.id || user.id === profile.id) return;
+    isUserBlocked(user.id, profile.id).then(setBlocked).catch(() => {});
+  }, [user?.id, profile?.id]);
+  const toggleBlock = async () => {
+    if (!user?.id || !profile?.id) return;
+    setMenuOpen(false);
+    if (blocked) {
+      if (await unblockUser(user.id, profile.id)) { setBlocked(false); toast.success("Odblokowano"); }
+      return;
+    }
+    if (await blockUser(user.id, profile.id)) {
+      setBlocked(true);
+      toast.success("Zablokowano - nie zobaczysz już treści tej osoby");
+      queryClient.invalidateQueries();
+    }
+  };
   const listIds = useMemo(() => (listCards as any[]).map((l) => l.id), [listCards]);
   const tripIds = useMemo(() => (tripCards as any[]).map((tr) => tr.id), [tripCards]);
 
@@ -316,6 +339,32 @@ export default function PublicProfile() {
           </button>
           <div className="flex-1" />
           <FollowButton targetUserId={profile.id} className="h-9 px-4 text-sm" />
+          {canInteract && (
+            <div className="relative">
+              <button onClick={() => setMenuOpen((o) => !o)} aria-label="Więcej" className="h-9 w-9 flex items-center justify-center rounded-full active:bg-muted transition-colors">
+                <MoreVertical className="h-5 w-5 text-foreground" />
+              </button>
+              {menuOpen && (
+                <>
+                  <div className="fixed inset-0 z-30" onClick={() => setMenuOpen(false)} />
+                  <div className="absolute right-0 top-11 z-40 w-56 rounded-2xl bg-card border border-border/50 shadow-xl overflow-hidden py-1">
+                    <ReportContentSheet
+                      targetType="user"
+                      targetId={profile.id}
+                      trigger={(open) => (
+                        <button onClick={() => { setMenuOpen(false); open(); }} className="w-full px-4 py-3 text-left text-sm font-medium text-foreground flex items-center gap-2.5 active:bg-muted">
+                          <FlagIcon className="h-4 w-4 shrink-0" /> Zgłoś profil
+                        </button>
+                      )}
+                    />
+                    <button onClick={toggleBlock} className="w-full px-4 py-3 text-left text-sm font-medium text-destructive flex items-center gap-2.5 active:bg-muted border-t border-border/40">
+                      <Ban className="h-4 w-4 shrink-0" /> {blocked ? "Odblokuj użytkownika" : "Zablokuj użytkownika"}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Zakladki: Listy | Wyjazdy (ikona + labelka obok, underline aktywnej) */}
@@ -338,7 +387,18 @@ export default function PublicProfile() {
 
         {/* Feed zakladki (gest: swipe w bok = zmiana zakladki) */}
         <div className="space-y-6 pt-1" {...swipeTabs}>
-          {tab === "listy" ? (
+          {/* Po zablokowaniu nie pokazujemy tresci tej osoby (App Store 1.2). */}
+          {blocked ? (
+            <div className="pt-14 pb-12 text-center px-8 flex flex-col items-center">
+              <div className="mb-4 h-14 w-14 rounded-2xl bg-[#fcede3] flex items-center justify-center">
+                <Ban className="h-6 w-6 text-[#ef9d78]" />
+              </div>
+              <p className="text-base font-bold text-foreground">{`Ten profil jest zablokowany`}</p>
+              <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed max-w-[280px]">
+                {`Nie widzisz treści tej osoby w eksploracji ani w wyszukiwarce. Możesz to cofnąć w menu obok.`}
+              </p>
+            </div>
+          ) : tab === "listy" ? (
             listCards.length === 0 ? (
               <FeedEmptyRO maskSrc="/Ikona_Trasy.svg" title="Brak list" desc={`Tu pojawią się polecajki tego użytkownika.`} />
             ) : (
