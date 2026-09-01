@@ -41,7 +41,7 @@ const CTA_LABEL = "Pobierz w App Store";
 const BADGE = `${SITE}/Pobierz-z-App-Store.png`;
 const ctaTop = () => CTA_READY
   ? `<a class="badge" href="${esc(APP_STORE_URL!)}"><img src="${BADGE}" alt="${CTA_LABEL}"></a>`
-  : `<span class="badge off" title="Dostępne wkrótce"><img src="${BADGE}" alt="${CTA_LABEL}"><i>wkrótce</i></span>`;
+  : `<span class="badge off" title="Dostępne wkrótce"><img src="${BADGE}" alt="${CTA_LABEL}"></span>`;
 const ctaBig = () => CTA_READY
   ? `<a class="badge big" href="${esc(APP_STORE_URL!)}"><img src="${BADGE}" alt="${CTA_LABEL}"></a>`
   : `<span class="badge big off"><img src="${BADGE}" alt="${CTA_LABEL}"></span><p class="soon">Dostępne wkrótce</p>`;
@@ -120,12 +120,15 @@ body{margin:0;background:#FEFEFE;color:#0E0E0E;font:16px/1.45 Inter,-apple-syste
 .wrap{max-width:560px;margin:0 auto;padding:0 20px 96px}
 .bar{position:sticky;top:0;z-index:10;background:rgba(254,254,254,.94);backdrop-filter:blur(12px);border-bottom:1px solid #eee}
 .bar .in{max-width:560px;margin:0 auto;padding:10px 20px;display:flex;align-items:center;gap:10px}
-.mark{width:28px;height:28px;flex:none;border-radius:7px;display:block}
+.mark{width:34px;height:34px;flex:none;border-radius:8px;display:block}
 .brand{font-weight:800;letter-spacing:-.01em}
-.badge{margin-left:auto;display:flex;flex-direction:column;align-items:center;gap:3px;text-decoration:none}
+/* Plakietka w pasku stoi w JEDNYM rzedzie ze znakiem i ma te sama wysokosc (34 px), wiec obie
+   rzeczy leza na wspolnej osi. Dopisek "wkrotce" byl wczesniej POD plakietka i to on rozpychal
+   pasek w pionie - plakietka wjezdzala wtedy wyzej niz logo. Informacja o premierze zostaje
+   w stopce, przy duzej plakietce. */
+.badge{margin-left:auto;display:flex;align-items:center;text-decoration:none;line-height:0}
 .badge img{height:34px;width:auto;display:block}
 .badge.off img{filter:grayscale(1);opacity:.4}
-.badge.off i{font-size:9px;font-style:normal;letter-spacing:.06em;text-transform:uppercase;color:#9A9A9A}
 .badge.big{margin:0}
 .badge.big img{height:50px}
 .eyebrow{margin:28px 0 6px;font-size:12px;font-weight:800;letter-spacing:.08em;color:#C58A66}
