@@ -7,6 +7,7 @@ import { X, Bell, UserPlus, UserCheck, MapPin, Route, Bookmark, CheckCircle2, XC
 import { formatDistanceToNow } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
 import { avatarSrc } from "@/lib/avatar";
+import SheetSkeleton from "@/components/layout/SheetSkeleton";
 
 interface Notification {
   id: string;
@@ -206,9 +207,7 @@ export default function NotificationsDrawer({ open, onClose, userId }: Props) {
         {/* Content */}
         <div className="flex-1 overflow-y-auto pb-8">
           {isLoading ? (
-            <div className="flex items-center justify-center py-16 text-muted-foreground text-sm">
-              Ładowanie...
-            </div>
+            <SheetSkeleton variant="notifications" rows={5} className="px-4 pt-2" />
           ) : notifications.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 px-6 text-center gap-3">
               <Bell className="h-10 w-10 text-muted-foreground/30" />

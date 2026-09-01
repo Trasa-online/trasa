@@ -22,6 +22,7 @@ import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import SavePlaceSheet, { type SavePlaceInput } from "@/components/plan-wizard/SavePlaceSheet";
 import { GoogleGlyph } from "@/components/icons/GoogleGlyph";
 import { openExternal } from "@/lib/openExternal";
+import SheetSkeleton from "@/components/layout/SheetSkeleton";
 
 type Step = "entry" | "listCity" | "listName" | "listPick" | "tripMode" | "trip" | "tripDates" | "tripPeople" | "tripPick";
 type TripMode = "future" | "past";
@@ -454,7 +455,7 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
                   }))}
                 </div>
               ) : loadingSaved ? (
-                <div className="py-10 text-center text-sm text-muted-foreground">Ładowanie...</div>
+                <SheetSkeleton variant="places" rows={3} className="pt-1" />
               ) : (
                 <div className="pt-1 space-y-1.5">
                   {/* Dodane z Google (manual) - zaznaczone, klik usuwa z listy */}
@@ -575,7 +576,7 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
                   }))}
                 </div>
               ) : loadingSaved ? (
-                <div className="py-10 text-center text-sm text-muted-foreground">Ładowanie...</div>
+                <SheetSkeleton variant="places" rows={3} className="pt-1" />
               ) : (
                 <div className="pt-1 space-y-1.5">
                   {manualPlaces.map((p, i) => renderListRow({

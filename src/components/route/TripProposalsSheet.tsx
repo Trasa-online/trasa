@@ -14,6 +14,7 @@ import { openExternal } from "@/lib/openExternal";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import SavePlaceSheet, { type SavePlaceInput } from "@/components/plan-wizard/SavePlaceSheet";
 import { fetchSavedPlaces, type SavedPlace } from "@/lib/placeLists";
+import SheetSkeleton from "@/components/layout/SheetSkeleton";
 import {
   fetchRouteProposals, addRouteProposal, deleteRouteProposal, promoteProposalToPin,
   type RouteProposal, type ProposalInput,
@@ -346,7 +347,7 @@ export default function TripProposalsSheet({
                 {`Propozycje uczestników${proposals.length ? ` (${proposals.length})` : ""}`}
               </p>
               {loadingProposals ? (
-                <div className="py-6 text-center text-sm text-muted-foreground">Ładowanie...</div>
+                <SheetSkeleton variant="places" rows={3} />
               ) : proposals.length === 0 ? (
                 <p className="py-6 px-2 text-center text-sm text-muted-foreground">
                   {isOwner

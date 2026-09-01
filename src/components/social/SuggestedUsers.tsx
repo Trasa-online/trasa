@@ -4,6 +4,7 @@ import { avatarSrc } from "@/lib/avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import FollowButton from "./FollowButton";
+import SheetSkeleton from "@/components/layout/SheetSkeleton";
 
 interface SuggestedUsersProps {
   currentUserId: string;
@@ -31,7 +32,7 @@ export default function SuggestedUsers({ currentUserId, onProfileTap }: Suggeste
   });
 
   if (isLoading) return (
-    <p className="text-xs text-muted-foreground text-center py-4">{t("suggested.loading")}</p>
+    <SheetSkeleton variant="people" rows={2} />
   );
 
   if (suggestions.length === 0) return null;

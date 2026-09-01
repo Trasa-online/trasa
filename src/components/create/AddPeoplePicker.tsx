@@ -3,6 +3,7 @@ import { Check } from "lucide-react";
 import { useFriends } from "@/hooks/useFriends";
 import { useFollowList } from "@/hooks/useFollow";
 import { avatarSrc } from "@/lib/avatar";
+import SheetSkeleton from "@/components/layout/SheetSkeleton";
 
 export interface PersonLite { id: string; username: string | null; first_name: string | null; avatar_url: string | null }
 
@@ -23,7 +24,7 @@ export default function AddPeoplePicker({
   const loading = lf || lg;
 
   if (loading) {
-    return <div className="py-10 text-center text-sm text-muted-foreground">Ładowanie znajomych...</div>;
+    return <SheetSkeleton variant="people" rows={4} />;
   }
   if (!people.length) {
     return (

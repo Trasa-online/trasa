@@ -6,6 +6,7 @@ import { useDragToDismiss } from "@/hooks/useDragToDismiss";
 import { X, Heart, ThumbsDown, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CategoryIcon } from "@/components/CategoryIcon";
+import SheetSkeleton from "@/components/layout/SheetSkeleton";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -264,9 +265,7 @@ export default function LikesDrawer({ open, onClose, userId }: LikesDrawerProps)
         {/* Content */}
         <div className="flex-1 overflow-y-auto pb-8">
           {isLoading ? (
-            <div className="flex items-center justify-center py-16 text-muted-foreground text-sm">
-              {t("likes.loading")}
-            </div>
+            <SheetSkeleton variant="people" rows={5} className="px-4 pt-2" />
           ) : filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 px-6 text-center gap-2">
               {tab === "liked" ? (

@@ -15,6 +15,7 @@ import { API_BASE } from "@/lib/platform";
 import { avatarSrc } from "@/lib/avatar";
 import { haptics } from "@/hooks/useHaptics";
 import { cn } from "@/lib/utils";
+import SheetSkeleton from "@/components/layout/SheetSkeleton";
 
 interface JournalTabProps {
   userId: string;
@@ -412,9 +413,7 @@ const JournalTab = ({ userId, city: cityFilter, draftsOnly = false }: JournalTab
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-16 text-muted-foreground text-sm">
-        {t("journal.loading")}
-      </div>
+      <SheetSkeleton variant="places" rows={3} className="px-4 pt-4" />
     );
   }
 
