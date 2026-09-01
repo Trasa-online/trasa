@@ -1046,6 +1046,11 @@ export default function SharedRoute() {
     .filter((p) => p.latitude != null && p.longitude != null)
     .map((p) => ({ latitude: p.latitude as number, longitude: p.longitude as number, place_name: p.place_name as string }));
   const staticMapUrl = buildStaticRouteMap(navMapPins);
+  // Miejsca do wizytowek nad mapa: numer = pozycja w wyjezdzie (liczona PRZED odsianiem tych bez
+  // wspolrzednych, zeby numeracja zgadzala sie z lista miejsc).
+  const mapPlaces = (pins as any[])
+    .map((p, i) => ({ ...p, __no: i + 1 }))
+    .filter((p) => p.latitude != null && p.longitude != null);
   // Priorytet hero: MOJA okladka (jesli wybralem) -> okladka autora -> zdjecie miejsca.
   const cover = resolveStored(myCover) ?? userCover ?? placeCover;
   const hasRealPhoto = !!cover;
@@ -1717,7 +1722,13 @@ export default function SharedRoute() {
           /* Mapa w wlasnej zakladce (obok Galeria) - statyczna Google + rozwiniecie do interaktywnej. */
           <div className="px-5 pt-4">
             {navMapPins.length > 0 && staticMapUrl ? (
-              <button data-no-swipe onClick={() => setPlanMapOpen(true)} className="relative block w-full h-64 rounded-2xl overflow-hidden border border-border/40 bg-muted active:opacity-95 transition-opacity">
+              /* Mapa wypelnia CALA pozostala wysokosc zakladki (prosba Nat 2026-09-01) - wczesniej
+                 byl kadr 256 px, w ktorym przy kilkunastu miejscach nie dalo sie niczego odczytac.
+                 Wysokosc liczona z dvh minus chrome (naglowek + zakladki + dolny pasek), bo
+                 wysokosc procentowa nie dziala w tym drzewie flexow w iOS WebView. */
+              <button data-no-swipe onClick={() => setPlanMapOpen(true)}
+                className="relative block w-full rounded-2xl overflow-hidden border border-border/40 bg-muted active:opacity-95 transition-opacity"
+                style={{ height: "calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 250px)", minHeight: "300px" }}>
                 <img src={staticMapUrl} alt={t("route_map")} className="w-full h-full object-cover" />
                 <span className="absolute bottom-3 right-3 h-10 w-10 rounded-full bg-card shadow-md flex items-center justify-center">
                   <Maximize2 className="h-[18px] w-[18px] text-foreground" strokeWidth={2.2} />
@@ -1907,6 +1918,31 @@ export default function SharedRoute() {
             <button onClick={() => setPlanMapOpen(false)} aria-label={t("close", { defaultValue: "Zamknij" })} className="absolute right-3 z-10 h-10 w-10 rounded-full bg-card shadow-md flex items-center justify-center active:scale-90 transition-transform" style={{ top: "max(0.75rem, env(safe-area-inset-top))" }}>
               <X className="h-5 w-5 text-foreground" />
             </button>
+            {/* WIZYTOWKI MIEJSC nad mapa (prosba Nat 2026-09-01): miniaturka z okladka (albo ikona
+                kategorii na peachy tle), numer miejsca w wyjezdzie i awatar tego, kto je dodal.
+                Przewijane w bok; tapniecie otwiera pelna wizytowke. */}
+            {mapPlaces.length > 0 && (
+              <div className="absolute left-0 right-0 z-10" style={{ bottom: "max(12px, env(safe-area-inset-bottom, 12px))" }}>
+                <div className="flex gap-2.5 overflow-x-auto px-4 pb-1 no-scrollbar">
+                  {mapPlaces.map((p: any) => (
+                    <button key={p.id} onClick={() => { setPlanMapOpen(false); openDetail(p); }}
+                      className="shrink-0 w-[184px] rounded-2xl bg-card shadow-lg shadow-black/15 p-2.5 flex items-center gap-2.5 text-left active:scale-[0.98] transition-transform">
+                      <div className="relative h-14 w-14 rounded-xl overflow-hidden bg-[#fcede3] shrink-0">
+                        <PlacePhoto pin={rowPinFor(p)} className="w-full h-full object-cover" />
+                        <span className="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-primary text-white text-[10px] font-bold flex items-center justify-center">{p.__no}</span>
+                        {addedByAvatar(p) !== undefined && (
+                          <img src={avatarSrc(addedByAvatar(p))} alt="" className="absolute bottom-0.5 right-0.5 h-5 w-5 rounded-full object-cover border-2 border-white bg-secondary" />
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[13px] font-semibold leading-snug line-clamp-2 text-foreground">{p.place_name}</p>
+                        <p className="text-[11px] text-muted-foreground mt-0.5">{categoryLabel(p.category || "other")}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
