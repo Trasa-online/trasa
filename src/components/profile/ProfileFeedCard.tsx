@@ -28,6 +28,7 @@ export function ProfileFeedCard({
   timestamp,
   title,
   tiles,
+  highlightTileIds,
   counts,
   onOpen,
   onEdit,
@@ -55,6 +56,8 @@ export function ProfileFeedCard({
   // profilu publicznym, gdzie pomagaja rozpoznac czym jest cudza lista/wyjazd.
   tags?: string[];
   tiles: any[];
+  /** Id kafelkow, ktore doszly od ostatniej wizyty - dostaja pomaranczowa obwodke. */
+  highlightTileIds?: string[];
   counts: FeedCounts;
   onOpen: () => void;
   onEdit?: () => void;
@@ -130,9 +133,14 @@ export function ProfileFeedCard({
         {/* Siatka kafelkow miejsc (max 6) */}
         {shown.length > 0 && (
           <div className="grid grid-cols-3 gap-1.5 mt-3">
-            {shown.map((t, i) => (
-              <PlaceTile key={t.id ?? i} tile={t} />
-            ))}
+            {shown.map((t, i) => {
+              const isNew = !!t.id && (highlightTileIds ?? []).includes(t.id);
+              return (
+                <div key={t.id ?? i} className={isNew ? "rounded-2xl ring-2 ring-primary ring-offset-2 ring-offset-background" : undefined}>
+                  <PlaceTile tile={t} />
+                </div>
+              );
+            })}
             {overflowCount > 0 && (
               <div className="aspect-[2/3] rounded-2xl bg-muted flex items-center justify-center">
                 <span className="text-lg font-bold text-muted-foreground">+{overflowCount}</span>

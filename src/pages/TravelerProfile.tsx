@@ -434,7 +434,20 @@ const TravelerProfile = () => {
       // Zachowaj kolejnosc zapisu (najnowsze u gory).
       return ids.map((cid) => colRows.find((c) => c.id === cid)).filter(Boolean).map((c: any) => {
         const tiles = byCol[c.id] ?? [];
-        return { ...c, tiles, isNew: tiles.length > (seenMap[c.id] ?? 0) };
+        // Ile miejsc doszlo od mojej ostatniej wizyty. KTORE to sa, poznajemy po order_index:
+        // dodawanie dopisuje na koniec listy, wiec nowe to ostatnie `newCount` pozycji.
+        // (discovery_items nie ma created_at; gdyby autor przestawil kolejnosc, podswietlimy
+        // niewlasciwe kafelki - liczba nadal bedzie poprawna.)
+        const newCount = Math.max(0, tiles.length - (seenMap[c.id] ?? 0));
+        const newTiles = newCount ? tiles.slice(-newCount) : [];
+        // Nowe kafelki na POCZATEK: karta pokazuje tylko 3 pierwsze, wiec inaczej nowosc
+        // chowalaby sie pod "+N" i cala plakietka nie mialaby czego udowodnic.
+        const ordered = newCount ? [...newTiles, ...tiles.slice(0, tiles.length - newCount)] : tiles;
+        return {
+          ...c, tiles: ordered, isNew: newCount > 0, newCount,
+          newNames: newTiles.map((t: any) => t.place_name).filter(Boolean),
+          newIds: newTiles.map((t: any) => t.id).filter(Boolean),
+        };
       });
     },
   });
@@ -614,7 +627,18 @@ const TravelerProfile = () => {
       description={l.description}
       tiles={l.tiles}
       counts={{ saves: l.saves_count ?? 0, views: l.views_count ?? 0 }}
-      badge={l.isNew ? <span className="inline-flex items-center rounded-full bg-primary text-white px-2.5 py-1 text-[11.5px] font-bold">Nowe miejsce!</span> : undefined}
+      highlightTileIds={l.newIds}
+      // Plakietka mowi KTO, ILE i CO dodal - sama informacja "cos doszlo" nie dawala powodu,
+      // zeby wejsc (eksploracja UX w Figmie, sekcja "Zapisana lista: ktos dodal nowe miejsce").
+      badge={l.isNew ? (
+        <div className="flex items-start gap-2 rounded-2xl bg-[#FCEDE3] px-2.5 py-2">
+          <img src={avatarSrc(l.author_avatar ?? null)} alt="" className="h-5 w-5 rounded-full object-cover bg-orange-100 shrink-0 mt-0.5" />
+          <p className="text-[12.5px] font-semibold text-foreground leading-snug">
+            {`${l.author_name || "Autor"} ${l.newCount === 1 ? "dodał(a) miejsce" : `dodał(a) ${l.newCount} ${l.newCount < 5 ? "miejsca" : "miejsc"}`}`}
+            {l.newNames?.length ? <span className="font-normal">{`: ${l.newNames.slice(0, 2).join(", ")}${l.newNames.length > 2 ? ` i ${l.newNames.length - 2} więcej` : ""}`}</span> : null}
+          </p>
+        </div>
+      ) : undefined}
       onOpen={() => navigate(`/lista/${l.id}`)}
       onSave={() => handleUnsaveList(l.id)}
       saved

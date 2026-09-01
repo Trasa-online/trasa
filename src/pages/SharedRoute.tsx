@@ -1363,35 +1363,12 @@ export default function SharedRoute() {
           </div>
         );
       })()
-    ) : hasDays ? (
-      // "Wszystkie": caly wyjazd z naglowkami dni. Tu widac calosc i tu przenosi sie miejsca
-      // miedzy dniami (tryb "Zmień kolejność" zawsze wraca do tego widoku).
-      <div>
-        {Array.from({ length: dayCount }, (_, i) => i + 1).map((day) => {
-          const dayPins = list.filter((p) => pinDay(p) === day);
-          return (
-            <div key={day}>
-              <div className="pt-4 pb-2 flex items-center gap-2">
-                <p className="text-[15px] font-bold text-foreground">{dayLabel(day)}</p>
-                <div className="flex-1 h-px bg-border/60" />
-              </div>
-              {dayPins.length === 0 ? (
-                <p className="text-[13px] text-muted-foreground py-2">{canEdit ? `Brak miejsc - dodaj je albo przenieś tu w „Zmień kolejność"` : "Brak miejsc tego dnia"}</p>
-              ) : dayPins.map((pin: any, i: number) => (
-                <RoutePlaceRow
-                  key={pin.id} pin={rowPinFor(pin)} index={i}
-                  categoryLabel={categoryLabel(pin.category || "other")}
-                  onOpen={() => openDetail(pin)} onGoogle={() => openGooglePlace(pin)}
-                  onDelete={canEdit ? () => handleDeletePin(pin) : undefined}
-                  onSave={user ? () => toggleSaveBookmark(pin) : undefined} saved={isSaved(pin.place_name)}
-                  note={buildNote(pin)} cornerAvatar={addedByAvatar(pin)}
-                />
-              ))}
-            </div>
-          );
-        })}
-      </div>
     ) : (
+      // "Wszystkie" = po prostu wszystkie miejsca: w propozycjach pogrupowane po KATEGORIACH
+      // (grupuje renderList), pozniej plaska lista w kolejnosci trasy. BEZ naglowkow dni i dat
+      // (prosba Nat 2026-09-01) - dni sa w chipach, a nagle daty w srodku listy tylko szumia.
+      // Przypisywanie do dni odbywa sie w trybie "Zmień kolejność", ktory naglowki dni ma.
+
       <div>
         {list.map((pin: any, i: number) => (
           <RoutePlaceRow
@@ -1612,7 +1589,9 @@ export default function SharedRoute() {
                 2026-09-01). Notki pozostalych ida pod nia, tym samym szarym dymkiem z awatarem
                 co notki przy miejscach. Nie mylic z "Opis wyjazdu" - tamten pisze host i idzie
                 z wyjazdem do eksploracji. */}
-            {(canEdit || (memberNotes as any[]).length > 0) && !choosing && (
+            {/* Na etapie PROPOZYCJI notki nie ma - wyjazd dopiero powstaje, nie ma jeszcze o czym
+                pisac (prosba Nat 2026-09-01). Wchodzi od "w trakcie". */}
+            {stage !== "planning" && (canEdit || (memberNotes as any[]).length > 0) && !choosing && (
               <div className="mb-5">
                 {canEdit && (
                   <PlaceNoteEditor

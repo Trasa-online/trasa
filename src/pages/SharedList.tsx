@@ -205,6 +205,22 @@ export default function SharedList() {
     void (supabase as any).rpc("increment_collection_views", { p_collection_id: col.id });
   }, [col?.id]);
 
+  // Ile miejsc widzialem przy poprzedniej wizycie. Czytamy RAZ (staleTime: Infinity) i trzymamy,
+  // bo zaraz potem efekt ponizej podbija seen_item_count - bez zamrozenia tej wartosci separator
+  // "Nowe od Twojej ostatniej wizyty" zniknalby w tej samej sekundzie, w ktorej sie pojawil.
+  const { data: seenAtEntry } = useQuery({
+    queryKey: ["list-seen-at-entry", id, user?.id],
+    enabled: !!id && !!user?.id,
+    staleTime: Infinity,
+    gcTime: Infinity,
+    refetchOnMount: false,
+    queryFn: async () => {
+      const { data } = await (supabase as any).from("saved_collections")
+        .select("seen_item_count").eq("user_id", user!.id).eq("collection_id", id!).maybeSingle();
+      return data ? (data.seen_item_count ?? 0) : null;   // null = lista nie jest zapisana
+    },
+  });
+
   // Zapisujacy (nie autor) obejrzal liste -> "widzial" wszystkie aktualne miejsca (kasuje chip
   // "Nowe miejsce!" na profilu). markCollectionSeenDb aktualizuje TYLKO jesli lista zapisana (no-op inaczej).
   useEffect(() => {
@@ -344,9 +360,41 @@ export default function SharedList() {
   }
   const galleryItems = Array.from(galleryMap.entries()).map(([url, pin]) => ({ url, pin }));
 
+  // NOWE OD OSTATNIEJ WIZYTY (wariant D z Figmy, sekcja "Zapisana lista: ktos dodal nowe miejsce").
+  // Ile: aktualna liczba miejsc minus stan z poprzedniej wizyty. Ktore: ostatnie pozycje wg
+  // order_index (dodawanie dopisuje na koniec). Nowe ladują NAD separatorem, zeby po wejsciu
+  // z powiadomienia nie trzeba bylo ich szukac w liscie kilkunastu miejsc.
+  const newCount = seenAtEntry == null ? 0 : Math.max(0, (items as any[]).length - seenAtEntry);
+  const newItems = newCount ? (items as any[]).slice(-newCount) : [];
+  const oldItems = newCount ? (items as any[]).slice(0, (items as any[]).length - newCount) : (items as any[]);
+  const authorLabel = col?.author_name || "Autor";
+
+  const sectionHeader = (label: string, strong: boolean) => (
+    <div className="pt-4 pb-2 flex items-center gap-2">
+      <p className={`text-[12.5px] ${strong ? "font-bold text-primary" : "font-semibold text-muted-foreground"}`}>{label}</p>
+      <div className={`flex-1 h-px ${strong ? "bg-[#F4C9AE]" : "bg-border/60"}`} />
+    </div>
+  );
+
   const renderList = () => (
     <div>
-      {items.map((pin: any, i: number) => {
+      {newCount > 0 && (
+        <>
+          {sectionHeader(`Nowe od Twojej ostatniej wizyty · ${newCount}`, true)}
+          <div className="-mx-5 px-5 bg-[#FFF8F3] rounded-2xl">
+            {renderRows(newItems, 0, true)}
+          </div>
+          {sectionHeader("Wcześniej", false)}
+        </>
+      )}
+      {renderRows(oldItems, newCount, false)}
+    </div>
+  );
+
+  const renderRows = (rows: any[], offset: number, isNew: boolean) => (
+    <div>
+      {rows.map((pin: any, idx: number) => {
+        const i = offset + idx;
         const noteText = (pin.short_desc ?? "").trim();
         const photos: string[] = Array.isArray(pin.images) ? pin.images : [];
         const busy = uploadingItem === pin.id;
@@ -395,7 +443,15 @@ export default function SharedList() {
             onSave={!isOwner ? () => toggleSaveBookmark(pin) : undefined}
             saved={isSaved(pin.place_name)}
             onDelete={isOwner ? () => handleDeleteItem(pin) : undefined}
-            note={note}
+            note={isNew ? (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <img src={avatarSrc(col?.author_avatar ?? null)} alt="" className="h-5 w-5 rounded-full object-cover bg-orange-100" />
+                  <span className="text-[11.5px] font-semibold text-[#8A6A57]">{`dodał ${authorLabel}`}</span>
+                </div>
+                {note}
+              </div>
+            ) : note}
           />
         );
       })}
