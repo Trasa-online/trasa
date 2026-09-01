@@ -19,7 +19,10 @@ const SUPA = process.env.VITE_SUPABASE_URL || "https://api.trasa.travel";
 const ANON = process.env.VITE_SUPABASE_ANON_KEY
   || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoeHBoZmNwZWh4c2h2aWpxdGxmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMyOTA5MzAsImV4cCI6MjA3ODg2NjkzMH0.NqtDrpd-lKHh11bxtjshs2o6eHl5sDdVImnsW8t1OhU";
 const SITE = "https://spontaway.com";
-const BRAND_IMG = `${SITE}/baner-ios.png`;
+// Znak marki = ikona aplikacji (zlotawy gradient + pomaranczowe "S"), ta sama, ktora user widzi
+// na ekranie telefonu. public/spontaway-logo.png to kopia mastera "App icon IOS.png" pod nazwa
+// bez spacji (spacje w URL-u to proszenie sie o klopoty w robotach komunikatorow).
+const BRAND_IMG = `${SITE}/spontaway-logo.png`;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // CTA na gorze i na dole strony. DOPOKI aplikacji nie ma w App Store, prowadzi na zapisy na
@@ -31,12 +34,17 @@ const CTA_LABEL = "Pobierz w App Store";
 // (decyzja Nat 2026-09-01). Obiecuje to, co bedzie, zamiast prowadzic na zapisy - odbiorca linku
 // widzi konkret ("bede mogl to pobrac"), a nie kolejny formularz. Po wydaniu wystarczy wpisac
 // adres w APP_STORE_URL: guzik sam staje sie aktywnym, pomaranczowym linkiem.
+// OFICJALNA plakietka Apple (public/Pobierz-z-App-Store.png, wersja polska) - wytyczne Apple nie
+// pozwalaja rysowac wlasnego guzika "App Store". Do czasu premiery jest wygaszona (odbarwiona +
+// polprzezroczysta) i nieklikalna, z dopiskiem "wkrotce"; po wpisaniu APP_STORE_URL wraca do
+// pelnego koloru i staje sie linkiem, czyli do postaci zgodnej z wytycznymi.
+const BADGE = `${SITE}/Pobierz-z-App-Store.png`;
 const ctaTop = () => CTA_READY
-  ? `<a class="cta" href="${esc(APP_STORE_URL!)}">${CTA_LABEL}</a>`
-  : `<span class="cta off"><b>${CTA_LABEL}</b><i>wkrótce</i></span>`;
+  ? `<a class="badge" href="${esc(APP_STORE_URL!)}"><img src="${BADGE}" alt="${CTA_LABEL}"></a>`
+  : `<span class="badge off" title="Dostępne wkrótce"><img src="${BADGE}" alt="${CTA_LABEL}"><i>wkrótce</i></span>`;
 const ctaBig = () => CTA_READY
-  ? `<a href="${esc(APP_STORE_URL!)}">${CTA_LABEL}</a>`
-  : `<span class="big off">${CTA_LABEL}</span><p class="soon">Dostępne wkrótce</p>`;
+  ? `<a class="badge big" href="${esc(APP_STORE_URL!)}"><img src="${BADGE}" alt="${CTA_LABEL}"></a>`
+  : `<span class="badge big off"><img src="${BADGE}" alt="${CTA_LABEL}"></span><p class="soon">Dostępne wkrótce</p>`;
 
 const esc = (s: string) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
@@ -112,12 +120,14 @@ body{margin:0;background:#FEFEFE;color:#0E0E0E;font:16px/1.45 Inter,-apple-syste
 .wrap{max-width:560px;margin:0 auto;padding:0 20px 96px}
 .bar{position:sticky;top:0;z-index:10;background:rgba(254,254,254,.94);backdrop-filter:blur(12px);border-bottom:1px solid #eee}
 .bar .in{max-width:560px;margin:0 auto;padding:10px 20px;display:flex;align-items:center;gap:10px}
-.mark{width:26px;height:26px;flex:none;background:#F75708;-webkit-mask:url(/Ikona_Trasy.svg) center/contain no-repeat;mask:url(/Ikona_Trasy.svg) center/contain no-repeat}
+.mark{width:28px;height:28px;flex:none;border-radius:7px;display:block}
 .brand{font-weight:800;letter-spacing:-.01em}
-.cta{margin-left:auto;background:#ea580c;color:#fff;text-decoration:none;font-weight:700;font-size:14px;padding:9px 16px;border-radius:16px;white-space:nowrap}
-.cta.off{background:#EDEDED;color:#9A9A9A;display:flex;flex-direction:column;align-items:center;line-height:1.15;padding:7px 14px}
-.cta.off b{font-size:13px;font-weight:700}
-.cta.off i{font-size:10px;font-style:normal;letter-spacing:.04em;text-transform:uppercase}
+.badge{margin-left:auto;display:flex;flex-direction:column;align-items:center;gap:3px;text-decoration:none}
+.badge img{height:34px;width:auto;display:block}
+.badge.off img{filter:grayscale(1);opacity:.4}
+.badge.off i{font-size:9px;font-style:normal;letter-spacing:.06em;text-transform:uppercase;color:#9A9A9A}
+.badge.big{margin:0}
+.badge.big img{height:50px}
 .eyebrow{margin:28px 0 6px;font-size:12px;font-weight:800;letter-spacing:.08em;color:#C58A66}
 h1{margin:0;font-size:30px;line-height:1.1;font-weight:900;letter-spacing:-.02em;text-wrap:balance}
 .meta{margin:10px 0 0;color:#979797;font-size:14px}
@@ -138,11 +148,10 @@ li:last-child{border-bottom:0}
 .note{margin:6px 0 0;font-size:14px;color:#4b4b4b;background:#f6f6f6;border-radius:14px;padding:8px 11px}
 .foot{margin:36px 0 0;background:#FCEDE3;border-radius:24px;padding:24px;text-align:center}
 .foot p{margin:0 0 16px;font-size:15px;color:#5C4136}
-.foot a,.foot .big{display:inline-block;background:#ea580c;color:#fff;text-decoration:none;font-weight:800;padding:14px 26px;border-radius:18px}
-.foot .big.off{background:#EDEDED;color:#9A9A9A}
+.foot .badge{display:inline-flex}
 .foot .soon{margin:10px 0 0;font-size:13px;color:#9A8578}
 .empty{padding:80px 0;text-align:center}
-.empty .mark{width:72px;height:72px;background:#EF9D78;margin:0 auto 18px}
+.empty .mark{width:76px;height:76px;border-radius:18px;margin:0 auto 18px}
 `;
 
 function shell(o: { title: string; desc: string; image: string; url: string; body: string; noun?: string }) {
@@ -160,7 +169,7 @@ function shell(o: { title: string; desc: string; image: string; url: string; bod
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
 <style>${CSS}</style></head><body>
-<div class="bar"><div class="in"><span class="mark"></span><span class="brand">spontaway</span>
+<div class="bar"><div class="in"><img class="mark" src="${BRAND_IMG}" alt=""><span class="brand">spontaway</span>
 ${ctaTop()}</div></div>
 <div class="wrap">${o.body}
 <div class="foot"><p>${o.noun === "route" ? "Ten wyjazd powstał w spontaway" : o.noun === "list" ? "Ta lista powstała w spontaway" : "spontaway to aplikacja"} - do odkrywania miejsc i planowania wyjazdów ze znajomymi.</p>
@@ -184,7 +193,7 @@ export default async function handler(req: Request): Promise<Response> {
 
   const missing = () => new Response(shell({
     title: "Treść niedostępna", desc: "Ta treść mogła zostać usunięta lub jest prywatna.", image: BRAND_IMG, url,
-    body: `<div class="empty"><span class="mark"></span><h1>Treść niedostępna</h1>
+    body: `<div class="empty"><img class="mark" src="${BRAND_IMG}" alt=""><h1>Treść niedostępna</h1>
 <p class="meta">Mogła zostać usunięta albo jest prywatna.</p></div>`,
   }), { status: 404, headers: { "Content-Type": "text/html; charset=utf-8" } });
 
