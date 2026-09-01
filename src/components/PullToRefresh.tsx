@@ -12,10 +12,13 @@ export function PullToRefresh({
   onRefresh,
   className,
   children,
+  onScroll,
 }: {
   onRefresh: () => Promise<void> | void;
   className?: string;
   children: ReactNode;
+  /** Pozycja scrolla wewnetrznego kontenera (scroller jest tutaj, nie u rodzica). */
+  onScroll?: (scrollTop: number) => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const startY = useRef<number | null>(null);
@@ -79,6 +82,7 @@ export function PullToRefresh({
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
+      onScroll={onScroll ? (e) => onScroll((e.target as HTMLDivElement).scrollTop) : undefined}
     >
       <div
         className="flex items-end justify-center overflow-hidden shrink-0"

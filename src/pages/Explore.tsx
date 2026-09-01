@@ -851,6 +851,10 @@ const Explore = () => {
   // Przy wyjsciu z Eksploracji zawsze przywroc BottomNav.
   useEffect(() => () => { window.dispatchEvent(new CustomEvent("trasa:hide-bottomnav", { detail: false })); }, []);
 
+  // Czy feed jest odscrollowany od gory - od tego zalezy widocznosc banera wyjazdu.
+  // Prog 8 px, zeby baner nie migal przy mikroruchach palca.
+  const [feedScrolled, setFeedScrolled] = useState(false);
+
   const handleRefresh = async () => {
     await queryClient.invalidateQueries();
   };
@@ -927,19 +931,26 @@ const Explore = () => {
               (swiper) NIE renderujemy go: wysokosc karty 9:16 jest wyliczana ze stalego chrome i
               dolozenie paska rozjechaloby zamrozony layout (CLAUDE.md - PlaceSwiper sizing). */}
           {/* Feed - zawsze zamontowany; ukryty gdy swiper (seamless toggle). */}
-          <div className={cn("flex-1 min-h-0 flex flex-col", view !== "feed" && "hidden")}>
+          <div className={cn("relative flex-1 min-h-0 flex flex-col", view !== "feed" && "hidden")}>
+            {/* Skrot do wyjazdu "w trakcie" / roboczego - NAKLADKA przyklejona pod gorna belka.
+                Chowa sie po scrollu w dol, wraca na samej gorze (prosba Nat 2026-09-01).
+                Dlaczego nakladka, a nie element ukladu - dwa poprzednie podejscia sie wylozyly:
+                  1) nad scrollerem, chowany zwijaniem wysokosci -> gorna krawedz listy jechala w
+                     gore W TRAKCIE gestu i snap przeliczal sie od nowa: karty skakaly;
+                  2) w srodku scrollera -> nie skakal, ale spychal pierwsza karte o swoja wysokosc,
+                     wiec jej dol wchodzil pod plywajacy BottomNav.
+                Nakladka nie zajmuje miejsca w ukladzie, wiec karta ma pelna wysokosc i wlasciwa
+                pozycje, a pojawianie sie i znikanie banera nie rusza NICZEGO pod spodem - nie ma
+                czym skoczyc. Wezszy o mapke w prawym gornym rogu karty, zeby jej nie zaslaniac.
+                W trybie kart miejsc (swiper) banera nie ma: wysokosc karty 9:16 liczy sie ze
+                stalego chrome (CLAUDE.md - zamrozony layout PlaceSwiper). */}
+            <div className={cn("absolute inset-x-0 top-0 z-30 transition-all duration-200 ease-out",
+              feedScrolled ? "-translate-y-[130%] opacity-0 pointer-events-none" : "translate-y-0 opacity-100")}>
+              <ActiveTripBanner floating />
+            </div>
             {/* Snap tylko w trybie przegladania feedu. Przy wyszukiwaniu WYLACZAMY snap, zeby
                 skroty/wyniki na gorze byly widoczne, a wizytowki zostawaly przewijalne pod spodem. */}
-            <PullToRefresh onRefresh={handleRefresh} className={cn("flex-1 min-h-0 flex flex-col pt-3 pb-[calc(6rem+env(safe-area-inset-bottom,0px))]", !searchOpen && "snap-y snap-mandatory scroll-pt-3")}>
-              {/* Skrot do wyjazdu "w trakcie" / roboczego - WEWNATRZ scrollera, jako pierwszy punkt
-                  snapowania. Chowa sie przy scrollu w dol i wraca przy scrollu w gore sam z siebie,
-                  bo po prostu odjezdza z trescia (prosba Nat 2026-09-01).
-                  Poprzednio baner byl SIOSTRA scrollera i zwijalismy mu wysokosc na scrollu - przez
-                  to gorna krawedz listy jechala w gore w trakcie przewijania, a snap przeliczal sie
-                  od nowa: karty skakaly. Elementu, ktory jest w srodku, nie da sie tak rozjechac.
-                  W trybie kart miejsc (swiper) banera nie ma - wysokosc karty 9:16 liczy sie ze
-                  stalego chrome i dodatkowy pasek rozjechalby zamrozony layout (CLAUDE.md). */}
-              {view === "feed" && <div className="snap-start snap-always shrink-0"><ActiveTripBanner /></div>}
+            <PullToRefresh onRefresh={handleRefresh} onScroll={(top) => setFeedScrolled(top > 8)} className={cn("flex-1 min-h-0 flex flex-col pt-3 pb-[calc(6rem+env(safe-area-inset-bottom,0px))]", !searchOpen && "snap-y snap-mandatory scroll-pt-3")}>
               <div className="flex-1 px-4"><DiscoveryFeed city={exploreCity} cities={routeCities} onCityChange={setExploreCity} active={view === "feed"} searchQuery={feedSearch} searchOpen={searchOpen} searchCategory={searchCat} /></div>
             </PullToRefresh>
           </div>

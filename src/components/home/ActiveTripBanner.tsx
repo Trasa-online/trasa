@@ -8,7 +8,12 @@ import { useTripShortcut } from "@/hooks/useTripShortcut";
 // Mini baner-skrot pod belka eksploracji: wraca jednym tapnieciem do wyjazdu W TRAKCIE, a gdy
 // takiego nie ma - do najswiezszego ROBOCZEGO (prosba Nat 2026-08-29). Gdy user nie ma zadnego
 // aktywnego wyjazdu, baner sie nie renderuje (zero pustego miejsca w widoku).
-export default function ActiveTripBanner() {
+export default function ActiveTripBanner({ floating = false }: {
+  /** Wariant NAKLADKI nad feedem eksploracji: przyklejony pod gorna belka, nie zajmuje miejsca
+      w ukladzie (patrz komentarz przy uzyciu w Explore). Wezszy, zeby nie zaslonic mapki w
+      prawym gornym rogu karty, i nieprzezroczysty, bo lezy na zdjeciu. */
+  floating?: boolean;
+} = {}) {
   const { user, isAnonymous } = useAuth();
   const navigate = useNavigate();
   const { data: trip } = useTripShortcut(!isAnonymous ? user?.id : null);
@@ -19,10 +24,11 @@ export default function ActiveTripBanner() {
   const title = trip.title || (trip.city ? `Wyjazd do ${trip.city}` : "Twój wyjazd");
 
   return (
-    <div className="px-4 pt-2 shrink-0">
+    <div className={floating ? "pl-4 pr-28 pt-1.5" : "px-4 pt-2 shrink-0"}>
       <button
         onClick={() => { haptics.light(); navigate(`/route/${trip.id}`); }}
-        className="w-full flex items-center gap-3 rounded-2xl bg-secondary/70 border border-border/50 pl-2 pr-3 py-2 text-left active:scale-[0.99] transition-transform"
+        className={`w-full flex items-center gap-3 rounded-2xl border pl-2 pr-3 py-2 text-left active:scale-[0.99] transition-transform ${
+          floating ? "bg-card border-border/60 shadow-md shadow-black/10" : "bg-secondary/70 border-border/50"}`}
       >
         <span className="h-10 w-10 rounded-xl overflow-hidden bg-[#fcede3] flex items-center justify-center shrink-0">
           {cover ? (
