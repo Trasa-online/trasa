@@ -740,7 +740,10 @@ const TravelerProfile = () => {
         </div>
 
         {/* Zakladki: Listy | Wyjazdy (ikona + labelka obok, underline aktywnej). Zapisane usunięte 2026-08-24. */}
-        <div className="flex border-b border-border/40 -mx-1">
+        {/* Sticky: przy przewijaniu profilu zakladki zostaja na gorze (prosba Nat 2026-09-01).
+            -mx-4 px-4 + tlo, zeby przyklejony pasek zakrywal tresc na CALEJ szerokosci - inaczej
+            kafelki przejezdzalyby pod nim po bokach. */}
+        <div className="sticky top-0 z-30 bg-background -mx-4 px-4 flex border-b border-border/40">
           {/* Kolejnosc: Wyjazdy | Listy (prosba Nat 2026-08-30) - wyjazdy sa flagowa trescia profilu. */}
           {(["wyjazdy", "listy"] as const).map((tk) => {
             const active = tab === tk;

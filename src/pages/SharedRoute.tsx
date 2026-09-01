@@ -1923,10 +1923,10 @@ export default function SharedRoute() {
         <button
           onClick={() => { haptics.light(); setAddPlaceOpen(true); }}
           aria-label="Dodaj miejsce"
-          className="fixed right-4 z-40 h-14 w-14 rounded-full bg-background border border-border shadow-lg shadow-black/10 flex items-center justify-center active:scale-90 transition-transform"
+          className="fixed right-4 z-40 h-14 w-14 rounded-full bg-primary shadow-lg shadow-black/15 flex items-center justify-center active:scale-90 transition-transform"
           style={{ bottom: "calc(84px + env(safe-area-inset-bottom, 0px))" }}
         >
-          <Plus className="h-6 w-6 text-foreground" strokeWidth={2.4} />
+          <Plus className="h-6 w-6 text-white" strokeWidth={2.4} />
         </button>
       )}
 
@@ -2045,7 +2045,7 @@ export default function SharedRoute() {
                     2026-08-30) - dolny pasek zostaje dla akcji etapu. */}
                 {pins.length > 1 && (
                   <button onClick={() => { haptics.light(); pickDay(null); setReorderMode(true); }}
-                    className="flex-1 py-3 rounded-full border border-border bg-background text-foreground font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform">
+                    className="flex-1 py-3 rounded-full bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform">
                     <GripVertical className="h-4 w-4" /> Zmień kolejność
                   </button>
                 )}
