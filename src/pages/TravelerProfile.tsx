@@ -33,6 +33,7 @@ import { pinCoverKeys, fetchPlacePhotosForKeys, pickPlaceCover } from "@/lib/pla
 import TrasaBigCard from "@/components/home/TrasaBigCard";
 import { fetchRouteCoversFor } from "@/lib/routeMemberCover";
 import { resolveStored } from "@/components/PlacePhoto";
+import { subcategoryLabelLocalized } from "@/lib/categories";
 
 // ── Guest empty state (same visual rytm jak Journal dla goscia) ──────────────
 
@@ -100,7 +101,8 @@ function FeedEmpty({ icon, title, desc, ctaLabel, onCta }: {
 // chevron rozwijania (prawa). Klik rozwija menu opcji (floating). Wybór Nat 2026-08-23.
 
 function TabSelect({ options, value, onChange }: {
-  options: { id: string; label: string }[];
+  /** dot: pomaranczowa kropka na chipie - sygnal "jest tu cos nowego" (np. nowe miejsce w zapisanej liscie). */
+  options: { id: string; label: string; dot?: boolean }[];
   value: string;
   onChange: (id: string) => void;
 }) {
@@ -114,9 +116,12 @@ function TabSelect({ options, value, onChange }: {
           <button
             key={o.id}
             onClick={() => onChange(o.id)}
-            className={`shrink-0 rounded-full px-4 py-2 text-sm font-bold whitespace-nowrap active:scale-95 transition-all ${active ? "bg-primary text-white" : "bg-secondary text-foreground"}`}
+            className={`relative shrink-0 rounded-full px-4 py-2 text-sm font-bold whitespace-nowrap active:scale-95 transition-all ${active ? "bg-primary text-white" : "bg-secondary text-foreground"}`}
           >
             {o.label}
+            {o.dot && (
+              <span aria-label="Nowa zawartość" className={`absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 ${active ? "bg-white border-primary" : "bg-primary border-background"}`} />
+            )}
           </button>
         );
       })}
@@ -447,6 +452,7 @@ const TravelerProfile = () => {
           ...c, tiles: ordered, isNew: newCount > 0, newCount,
           newNames: newTiles.map((t: any) => t.place_name).filter(Boolean),
           newIds: newTiles.map((t: any) => t.id).filter(Boolean),
+          newCats: newTiles.map((t: any) => (t.category ? subcategoryLabelLocalized(t.category) : null)).filter(Boolean),
         };
       });
     },
@@ -627,15 +633,16 @@ const TravelerProfile = () => {
       description={l.description}
       tiles={l.tiles}
       counts={{ saves: l.saves_count ?? 0, views: l.views_count ?? 0 }}
-      highlightTileIds={l.newIds}
       // Plakietka mowi KTO, ILE i CO dodal - sama informacja "cos doszlo" nie dawala powodu,
       // zeby wejsc (eksploracja UX w Figmie, sekcja "Zapisana lista: ktos dodal nowe miejsce").
       badge={l.isNew ? (
-        <div className="flex items-start gap-2 rounded-2xl bg-[#FCEDE3] px-2.5 py-2">
-          <img src={avatarSrc(l.author_avatar ?? null)} alt="" className="h-5 w-5 rounded-full object-cover bg-orange-100 shrink-0 mt-0.5" />
+        <div className="flex items-center gap-2 rounded-2xl bg-[#FCEDE3] px-2.5 py-2">
+          <img src={avatarSrc(l.author_avatar ?? null)} alt="" className="h-5 w-5 rounded-full object-cover bg-orange-100 shrink-0" />
           <p className="text-[12.5px] font-semibold text-foreground leading-snug">
             {`${l.author_name || "Autor"} ${l.newCount === 1 ? "dodał(a) miejsce" : `dodał(a) ${l.newCount} ${l.newCount < 5 ? "miejsca" : "miejsc"}`}`}
             {l.newNames?.length ? <span className="font-normal">{`: ${l.newNames.slice(0, 2).join(", ")}${l.newNames.length > 2 ? ` i ${l.newNames.length - 2} więcej` : ""}`}</span> : null}
+            {/* Kategoria dodanego miejsca - mowi CO to jest, zanim user w ogole otworzy liste. */}
+            {l.newCount === 1 && l.newCats?.[0] ? <span className="font-normal text-[#8A6A57]">{` · ${l.newCats[0]}`}</span> : null}
           </p>
         </div>
       ) : undefined}
@@ -755,7 +762,13 @@ const TravelerProfile = () => {
               <TabSelect
                 value={listyTab}
                 onChange={(v) => setListyTab(v as "moje" | "ogolne" | "zapisane")}
-                options={[{ id: "moje", label: "Moje listy" }, { id: "ogolne", label: "Ogólne" }, { id: "zapisane", label: "Zapisane" }]}
+                options={[
+                  { id: "moje", label: "Moje listy" },
+                  { id: "ogolne", label: "Ogólne" },
+                  // Kropka = w ktorejs zapisanej liscie autor dodal miejsce, ktorego jeszcze nie
+                  // widzialem. Na profilu to jedyny sygnal dla kogos, kto nie scrolluje zapisanych.
+                  { id: "zapisane", label: "Zapisane", dot: (savedListCards as any[]).some((l) => l.isNew) },
+                ]}
               />
               {listyTab === "moje" ? (
                 listCards.length === 0 ? (
