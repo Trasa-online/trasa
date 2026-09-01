@@ -6,9 +6,15 @@
 //  - brak sekretu GOOGLE_VISION_API_KEY  -> { enabled:false, verdict:"skipped" }  (fail-open:
 //    dopoki klucz nie jest ustawiony, wgrywanie dziala normalnie - nie blokujemy aplikacji),
 //  - blad Vision / timeout                -> { verdict:"skipped" } (nie karzemy usera za nasza awarie),
-//  - adult|violence >= LIKELY albo racy = VERY_LIKELY -> "rejected".
-// Progi swiadomie asymetryczne: "racy" bywa czule na zdjecia z plazy/basenu, wiec odrzucamy
-// dopiero przy VERY_LIKELY.
+//  - adult|violence >= LIKELY -> "rejected" (zdjecie znika, kopia do kwarantanny, wpis w logu),
+//  - racy = VERY_LIKELY i nic powyzej -> "ok" + wpis "flagged" (zdjecie ZOSTAJE, ladunek trafia
+//    tylko do przegladu w panelu).
+//
+// Dlaczego racy nie kasuje (zmiana 2026-09-01): "racy" u Vision znaczy "sugestywne" - strzela na
+// odslonietych rekach i nogach, plaze, basen, blizsze kadry ludzi. W aplikacji podrozniczej to
+// NORMALNA tresc, nie naruszenie. Na 3 odrzucenia w calej historii bazy WSZYSTKIE wywolalo samo
+// racy przy adult=POSSIBLE/UNLIKELY - czyli 100% auto-kasowania to byly falszywe alarmy (m.in.
+// osoba z psem na fotelu). Sygnalem o tresci jawnie nieodpowiedniej jest "adult", i to on kasuje.
 //
 // Uwierzytelnienie: wymagany JWT uzytkownika (jak w pozostalych funkcjach klienckich) -
 // funkcja nie moze byc otwartym proxy do platnego API.
@@ -81,16 +87,21 @@ Deno.serve(async (req) => {
       forceReject = !!role;
     }
 
+    // TWARDE odrzucenie - tylko sygnaly o wysokiej precyzji. Zdjecie znika uzytkownikowi.
     const rejected = forceReject ||
       atLeast(ann.adult, "LIKELY") ||
-      atLeast(ann.violence, "LIKELY") ||
-      atLeast(ann.racy, "VERY_LIKELY");
+      atLeast(ann.violence, "LIKELY");
+    // MIEKKIE oznaczenie - zdjecie zostaje, ale ladunek idzie do przegladu w panelu. Tak lapiemy
+    // tresc "na granicy" bez kasowania komus wakacyjnego zdjecia z basenu.
+    const flagged = !rejected && atLeast(ann.racy, "VERY_LIKELY");
 
-    // SLAD PO ODRZUCENIU: kopia pliku do PRYWATNEGO bucketa kwarantanny + wpis w
-    // image_moderation_log (service role - klient nie moze tego pominac ani podrobic).
+    // SLAD: kopia pliku do PRYWATNEGO bucketa kwarantanny + wpis w image_moderation_log
+    // (service role - klient nie moze tego pominac ani podrobic). Robimy go dla OBU werdyktow:
+    // przy "rejected" to jedyny slad po skasowanym zdjeciu, przy "flagged" - podglad dla panelu
+    // (zdjecie zyje dalej u usera, wiec kopia sluzy tylko przegladowi; cron czysci ja po 90 dniach).
     // Best-effort: blad zapisu nie zmienia werdyktu, zeby awaria logu nie przepuscila zdjecia.
     let quarantinePath: string | null = null;
-    if (rejected) {
+    if (rejected || flagged) {
       try {
         const admin = createClient(
           Deno.env.get("SUPABASE_URL") ?? "",
@@ -110,7 +121,7 @@ Deno.serve(async (req) => {
           target: target && typeof target === "object" ? target : null,
           source_url: url,
           quarantine_path: quarantinePath,
-          verdict: "rejected",
+          verdict: rejected ? "rejected" : "flagged",
           scores: ann,
         });
       } catch (e) {
@@ -120,8 +131,10 @@ Deno.serve(async (req) => {
 
     return json({
       enabled: true,
+      // "flagged" wraca do klienta jako "ok" - zdjecie ma zostac na miejscu.
       verdict: rejected ? "rejected" : "ok",
-      logged: rejected ? { quarantined: !!quarantinePath, forced: forceReject } : undefined,
+      flagged: flagged || undefined,
+      logged: (rejected || flagged) ? { quarantined: !!quarantinePath, forced: forceReject } : undefined,
       scores: { adult: ann.adult, violence: ann.violence, racy: ann.racy, medical: ann.medical, spoof: ann.spoof },
     });
   } catch (e) {
