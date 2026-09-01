@@ -25,8 +25,18 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 // CTA na gorze i na dole strony. DOPOKI aplikacji nie ma w App Store, prowadzi na zapisy na
 // premiere. Po wydaniu wystarczy wpisac tu adres z App Store - reszta strony sie nie zmienia.
 const APP_STORE_URL: string | null = null;
-const CTA_HREF = APP_STORE_URL ?? `${SITE}/#/waitlist`;
-const CTA_LABEL = APP_STORE_URL ? "Pobierz spontaway" : "Chcę taką aplikację";
+const CTA_READY = !!APP_STORE_URL;
+const CTA_LABEL = "Pobierz w App Store";
+// Dopoki aplikacji nie ma w sklepie, guzik jest WYSZARZONY i nieklikalny, z dopiskiem "wkrotce"
+// (decyzja Nat 2026-09-01). Obiecuje to, co bedzie, zamiast prowadzic na zapisy - odbiorca linku
+// widzi konkret ("bede mogl to pobrac"), a nie kolejny formularz. Po wydaniu wystarczy wpisac
+// adres w APP_STORE_URL: guzik sam staje sie aktywnym, pomaranczowym linkiem.
+const ctaTop = () => CTA_READY
+  ? `<a class="cta" href="${esc(APP_STORE_URL!)}">${CTA_LABEL}</a>`
+  : `<span class="cta off"><b>${CTA_LABEL}</b><i>wkrótce</i></span>`;
+const ctaBig = () => CTA_READY
+  ? `<a href="${esc(APP_STORE_URL!)}">${CTA_LABEL}</a>`
+  : `<span class="big off">${CTA_LABEL}</span><p class="soon">Dostępne wkrótce</p>`;
 
 const esc = (s: string) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
@@ -105,6 +115,9 @@ body{margin:0;background:#FEFEFE;color:#0E0E0E;font:16px/1.45 Inter,-apple-syste
 .mark{width:26px;height:26px;flex:none;background:#F75708;-webkit-mask:url(/Ikona_Trasy.svg) center/contain no-repeat;mask:url(/Ikona_Trasy.svg) center/contain no-repeat}
 .brand{font-weight:800;letter-spacing:-.01em}
 .cta{margin-left:auto;background:#ea580c;color:#fff;text-decoration:none;font-weight:700;font-size:14px;padding:9px 16px;border-radius:16px;white-space:nowrap}
+.cta.off{background:#EDEDED;color:#9A9A9A;display:flex;flex-direction:column;align-items:center;line-height:1.15;padding:7px 14px}
+.cta.off b{font-size:13px;font-weight:700}
+.cta.off i{font-size:10px;font-style:normal;letter-spacing:.04em;text-transform:uppercase}
 .eyebrow{margin:28px 0 6px;font-size:12px;font-weight:800;letter-spacing:.08em;color:#C58A66}
 h1{margin:0;font-size:30px;line-height:1.1;font-weight:900;letter-spacing:-.02em;text-wrap:balance}
 .meta{margin:10px 0 0;color:#979797;font-size:14px}
@@ -125,7 +138,9 @@ li:last-child{border-bottom:0}
 .note{margin:6px 0 0;font-size:14px;color:#4b4b4b;background:#f6f6f6;border-radius:14px;padding:8px 11px}
 .foot{margin:36px 0 0;background:#FCEDE3;border-radius:24px;padding:24px;text-align:center}
 .foot p{margin:0 0 16px;font-size:15px;color:#5C4136}
-.foot a{display:inline-block;background:#ea580c;color:#fff;text-decoration:none;font-weight:800;padding:14px 26px;border-radius:18px}
+.foot a,.foot .big{display:inline-block;background:#ea580c;color:#fff;text-decoration:none;font-weight:800;padding:14px 26px;border-radius:18px}
+.foot .big.off{background:#EDEDED;color:#9A9A9A}
+.foot .soon{margin:10px 0 0;font-size:13px;color:#9A8578}
 .empty{padding:80px 0;text-align:center}
 .empty .mark{width:72px;height:72px;background:#EF9D78;margin:0 auto 18px}
 `;
@@ -146,10 +161,10 @@ function shell(o: { title: string; desc: string; image: string; url: string; bod
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
 <style>${CSS}</style></head><body>
 <div class="bar"><div class="in"><span class="mark"></span><span class="brand">spontaway</span>
-<a class="cta" href="${esc(CTA_HREF)}">${esc(CTA_LABEL)}</a></div></div>
+${ctaTop()}</div></div>
 <div class="wrap">${o.body}
 <div class="foot"><p>${o.noun === "route" ? "Ten wyjazd powstał w spontaway" : o.noun === "list" ? "Ta lista powstała w spontaway" : "spontaway to aplikacja"} - do odkrywania miejsc i planowania wyjazdów ze znajomymi.</p>
-<a href="${esc(CTA_HREF)}">${esc(CTA_LABEL)}</a></div></div>
+${ctaBig()}</div></div>
 </body></html>`;
 }
 
@@ -193,7 +208,7 @@ ${col.description ? `<p class="desc">${esc(col.description)}</p>` : ""}
     })).join("")}</ul>`;
     // Obrazek podgladu dla LISTY zostaje markowy - patrz decyzja przy udostepnianiu.
     return new Response(shell({ title, desc, image: BRAND_IMG, url, body, noun: "list" }), {
-      headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "public, s-maxage=300, stale-while-revalidate=86400" },
+      headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "public, s-maxage=60, stale-while-revalidate=600" },
     });
   }
 
@@ -215,6 +230,6 @@ ${route.description ? `<p class="desc">${esc(route.description)}</p>` : ""}
     icon: iconFor(p.category), name: p.place_name || "", cat: catLabel(p.category), num: i + 1,
   })).join("")}</ul>`;
   return new Response(shell({ title, desc, image: cover ?? BRAND_IMG, url, body, noun: "route" }), {
-    headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "public, s-maxage=300, stale-while-revalidate=86400" },
+    headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "public, s-maxage=60, stale-while-revalidate=600" },
   });
 }
