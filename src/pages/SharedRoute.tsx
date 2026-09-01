@@ -1507,8 +1507,10 @@ export default function SharedRoute() {
         <div className="px-5 pt-[35px]">
           <div className="flex items-start gap-3">
             <h1 className="flex-1 text-2xl font-black text-foreground leading-tight">{route.title || cityLabel}</h1>
-            {(isOwner || canEdit) && (
-              <div className="shrink-0 flex items-center gap-2">
+            {/* Grupa ikon. Udostepnianie widzi KAZDY (spojnie z listami, prosba Nat 2026-09-01) -
+                gosc ogladajacy cudzy wyjazd tez ma go czym poslac dalej. Reszta zostaje przy
+                wlascicielu / uczestniku. */}
+            <div className="shrink-0 flex items-center gap-2">
                 {/* WLASNA OKLADKA wyjazdu - jeden guzik dla KAZDEGO uczestnika (prosba Nat 2026-09-01).
                     Wybrane zdjecie widzi tylko ten, kto je wybral: na swojej karcie wyjazdu w profilu
                     i w hero tego widoku. Okladka hosta (eksploracja) zostaje nietknieta. */}
@@ -1522,13 +1524,12 @@ export default function SharedRoute() {
                 {/* Zapraszanie uczestnikow USUNIETE z widoku wyjazdu (decyzja Nat 2026-08-30):
                     osoby wybiera sie WYLACZNIE przy tworzeniu wyjazdu. Skladu nie zmienia sie
                     ani w trakcie, ani po publikacji. */}
-                {isOwner && <button onClick={handleShare} onContextMenu={(e) => { e.preventDefault(); handleShareLink(); }} aria-label="Udostępnij" className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center active:scale-90 transition-transform"><Share2 className="h-4 w-4 text-foreground" /></button>}
+                <button onClick={handleShare} onContextMenu={(e) => { e.preventDefault(); handleShareLink(); }} aria-label="Udostępnij" className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center active:scale-90 transition-transform"><Share2 className="h-4 w-4 text-foreground" /></button>
                 {/* Olowek usuniety (prosba Nat 2026-09-01) - ten widok JEST edycja: miejsca, notki,
                     zdjecia, opis i tagi zmienia sie na miejscu, wiec osobne wejscie w stepper
                     tylko mnozylo sciezki. */}
                 {isOwner && <button onClick={() => setAskDelete(true)} aria-label="Usuń wyjazd" className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center active:scale-90 transition-transform"><Trash2 className="h-4 w-4 text-destructive" /></button>}
-              </div>
-            )}
+            </div>
           </div>
           {/* #5: miasto + liczba miejsc bezposrednio pod tytulem (przeniesione z TopBara). */}
           <div className="flex items-center gap-4 mt-2.5 text-sm text-muted-foreground">
@@ -1880,6 +1881,7 @@ export default function SharedRoute() {
           avatars={[(author as any)?.avatar_url ?? null, ...(groupParticipants as any[]).map((p) => p.avatar_url ?? null)]}
           cover={(route as any).list_cover_url ?? heroPhoto}
           onClose={() => setShareCardOpen(false)}
+          onShare={handleShareLink}
         />
       )}
 

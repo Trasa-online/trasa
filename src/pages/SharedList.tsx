@@ -502,14 +502,19 @@ export default function SharedList() {
         <div className="px-5 pt-[35px]">
           <div className="flex items-start gap-3">
             <h1 className="flex-1 text-2xl font-black text-foreground leading-tight">{col.title || cityLabel}</h1>
-            {/* a) Ikony jak na wyjazdach: udostepnij / edytuj / usun */}
-            {isOwner && (
-              <div className="shrink-0 flex items-center gap-2">
-                <button onClick={handleShare} onContextMenu={(e) => { e.preventDefault(); handleShareLink(); }} aria-label="Udostępnij" className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center active:scale-90 transition-transform"><Share2 className="h-4 w-4 text-foreground" /></button>
-                <button onClick={() => navigate(`/zestawienie/${col.id}/edytuj`)} aria-label="Edytuj listę" className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center active:scale-90 transition-transform"><Pencil className="h-4 w-4 text-foreground" /></button>
-                <button onClick={() => setAskDelete(true)} aria-label="Usuń listę" className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center active:scale-90 transition-transform"><Trash2 className="h-4 w-4 text-destructive" /></button>
-              </div>
-            )}
+            {/* a) Ikony jak na wyjazdach: udostepnij / edytuj / usun.
+                UDOSTEPNIANIE WIDZI KAZDY, takze na cudzej liscie (prosba Nat 2026-09-01) - polecenie
+                dalej cudzej listy to sedno tego widoku, a link i tak jest publiczny. Edycja i
+                usuwanie zostaja przy wlascicielu. */}
+            <div className="shrink-0 flex items-center gap-2">
+              <button onClick={handleShare} onContextMenu={(e) => { e.preventDefault(); handleShareLink(); }} aria-label="Udostępnij" className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center active:scale-90 transition-transform"><Share2 className="h-4 w-4 text-foreground" /></button>
+              {isOwner && (
+                <>
+                  <button onClick={() => navigate(`/zestawienie/${col.id}/edytuj`)} aria-label="Edytuj listę" className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center active:scale-90 transition-transform"><Pencil className="h-4 w-4 text-foreground" /></button>
+                  <button onClick={() => setAskDelete(true)} aria-label="Usuń listę" className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center active:scale-90 transition-transform"><Trash2 className="h-4 w-4 text-destructive" /></button>
+                </>
+              )}
+            </div>
           </div>
           {/* #5: miasto + liczba miejsc bezposrednio pod tytulem (przeniesione z TopBara). */}
           <div className="flex items-center gap-4 mt-2.5 text-sm text-muted-foreground">
@@ -547,6 +552,7 @@ export default function SharedList() {
           author={col.author_name ? `@${col.author_name}` : "spontaway"}
           avatar={col.author_avatar ?? null}
           onClose={() => setShareCardOpen(false)}
+          onShare={handleShareLink}
         />
       )}
 

@@ -1,4 +1,4 @@
-import { X } from "lucide-react";
+import { Share, X } from "lucide-react";
 import { PlaceTile } from "@/components/profile/PlaceTile";
 import { avatarSrc } from "@/lib/avatar";
 import { resolveStored } from "@/components/PlacePhoto";
@@ -19,7 +19,12 @@ import { thumbUrl } from "@/lib/imageUrl";
 // Karta zajmuje CALY ekran (prosba Nat 2026-09-01) - to ona ma byc zrzutem, wiec nie moze byc
 // kartka na przyciemnionym tle: zrzut zlapalby ramke i ciemna otoczke. Guzik zamkniecia i podpowiedz
 // leza NAD karta i sa jedynymi elementami, ktore wejda w kadr - swiadomie male i przy krawedziach.
-function Shell({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
+function Shell({ children, onClose, onShare }: {
+  children: React.ReactNode;
+  onClose: () => void;
+  /** Otwiera SYSTEMOWY arkusz udostepniania iOS (Wiadomosci, WhatsApp, Instagram, kopiuj link). */
+  onShare?: () => void;
+}) {
   return (
     <div className="fixed inset-0 z-[95] animate-in fade-in duration-200">
       {children}
@@ -28,6 +33,18 @@ function Shell({ children, onClose }: { children: React.ReactNode; onClose: () =
         style={{ top: "max(0.75rem, env(safe-area-inset-top))" }}>
         <X className="h-4 w-4 text-white" />
       </button>
+      {/* Wyslanie DALEJ, obok zrzutu ekranu (prosba Nat 2026-09-01). Zrzut jest dobry na Stories,
+          ale do wyslania jednej osobie potrzebny jest link - a link otwiera te sama liste/wyjazd
+          w aplikacji. Guzik oddaje to systemowemu arkuszowi iOS, wiec user wybiera kanal, ktorego
+          i tak uzywa. Siedzi POD stopka karty, dlatego stopka ma podniesiony offset. */}
+      {onShare && (
+        <button onClick={onShare}
+          className="absolute left-1/2 -translate-x-1/2 h-12 pl-5 pr-6 rounded-full bg-primary text-white font-bold text-[15px] flex items-center gap-2 shadow-lg shadow-primary/25 active:scale-[0.97] transition-transform"
+          style={{ bottom: "max(20px, calc(env(safe-area-inset-bottom) + 8px))" }}>
+          <Share className="h-[18px] w-[18px]" strokeWidth={2.5} />
+          Udostępnij
+        </button>
+      )}
     </div>
   );
 }
@@ -40,7 +57,7 @@ function Footer({ avatars, label, sub, tone }: {
   return (
     <div
       className={`absolute left-5 right-5 h-[74px] rounded-2xl flex items-center gap-3 px-4 ${tone === "light" ? "bg-white" : "bg-[#FCEDE3]"}`}
-      style={{ bottom: "max(24px, calc(env(safe-area-inset-bottom) + 12px))" }}
+      style={{ bottom: "max(88px, calc(env(safe-area-inset-bottom) + 76px))" }}
     >
       <div className="flex -space-x-2 shrink-0">
         {avatars.slice(0, 3).map((a, i) => (
@@ -63,19 +80,20 @@ function Footer({ avatars, label, sub, tone }: {
 }
 
 /** Karta LISTY: siatka miejsc + licznik "ile jeszcze". */
-export function ShareCardList({ title, city, items, author, avatar, onClose }: {
+export function ShareCardList({ title, city, items, author, avatar, onClose, onShare }: {
   title: string;
   city?: string | null;
   items: any[];
   author: string;
   avatar?: string | null;
   onClose: () => void;
+  onShare?: () => void;
 }) {
   const shown = items.slice(0, 5);
   const rest = Math.max(0, items.length - shown.length);
   const word = items.length === 1 ? "miejsce" : items.length < 5 ? "miejsca" : "miejsc";
   return (
-    <Shell onClose={onClose}>
+    <Shell onClose={onClose} onShare={onShare}>
       <div className="relative h-full w-full overflow-hidden bg-[#FCEDE3]">
         <div className="px-6" style={{ paddingTop: "max(64px, calc(env(safe-area-inset-top) + 44px))" }}>
           <p className="text-[12px] font-bold tracking-wide text-[#C58A66]">LISTA MIEJSC</p>
@@ -108,7 +126,7 @@ export function ShareCardList({ title, city, items, author, avatar, onClose }: {
 }
 
 /** Karta WYJAZDU: okladka + ponumerowane przystanki + uczestnicy. */
-export function ShareCardTrip({ title, city, dateLabel, pins, author, avatars, cover, onClose }: {
+export function ShareCardTrip({ title, city, dateLabel, pins, author, avatars, cover, onClose, onShare }: {
   title: string;
   city?: string | null;
   dateLabel?: string | null;
@@ -117,13 +135,14 @@ export function ShareCardTrip({ title, city, dateLabel, pins, author, avatars, c
   avatars: (string | null)[];
   cover?: string | null;
   onClose: () => void;
+  onShare?: () => void;
 }) {
   const stops = pins.slice(0, 4);
   const rest = Math.max(0, pins.length - stops.length);
   const word = pins.length === 1 ? "miejsce" : pins.length < 5 ? "miejsca" : "miejsc";
   const coverUrl = thumbUrl(resolveStored(cover ?? null), 360);
   return (
-    <Shell onClose={onClose}>
+    <Shell onClose={onClose} onShare={onShare}>
       <div className="relative h-full w-full overflow-hidden bg-[#FEFEFE]">
         {/* Okladka. Bez zdjecia (wyjazd roboczy) - peachowe tlo ze znakiem, jak karta na profilu. */}
         <div className="relative h-[52%] bg-[#fcede3]">
