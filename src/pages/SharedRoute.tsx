@@ -11,7 +11,7 @@ import { notify } from "@/lib/notify";
 import { sendClientPush, getCurrentUserName } from "@/lib/clientPush";
 import { format } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
-import { MapPin, ArrowLeft, Sparkles, ChevronDown, Bookmark, Calendar as CalendarIcon, Image as ImageIcon, Maximize2, X, Building2, Pencil, Trash2, Heart, Share2, Plus, Map as MapIcon, Loader2, Star, GripVertical, Check, Flag, Camera, ThumbsUp, MessageCircle, Images } from "lucide-react";
+import { MapPin, ArrowLeft, Sparkles, ChevronDown, Bookmark, Calendar as CalendarIcon, Image as ImageIcon, Maximize2, X, Building2, Pencil, Trash2, Heart, Share2, Plus, Map as MapIcon, Loader2, GripVertical, Check, Flag, Camera, ThumbsUp, MessageCircle, Images } from "lucide-react";
 import { MAIN_CATEGORIES, subcategoryPluralLabel } from "@/lib/categories";
 import { PLACE_VERDICT_TAGS, verdictOf, localizeTag } from "@/lib/routeTags";
 import { publishTrip } from "@/lib/publishTrip";
@@ -1447,8 +1447,8 @@ export default function SharedRoute() {
     <div className="h-[100dvh] bg-background flex flex-col max-w-lg mx-auto">
 
       {/* Staly TopBar (naglowek nad obszarem scrolla): wstecz + autor + uczestnicy + miasto + liczba miejsc + serce */}
-      <div className="shrink-0 bg-background px-5 pb-2.5 border-b border-border/40" style={{ paddingTop: "max(12px, env(safe-area-inset-top, 12px))" }}>
-        <div className="flex items-center gap-2 text-sm">
+      <div className="shrink-0 bg-background" style={{ paddingTop: "max(12px, env(safe-area-inset-top, 12px))" }}>
+        <div className="flex items-center gap-2 text-sm px-5 pb-2.5">
             <button onClick={() => goBackOr(navigate, "/eksploruj")} aria-label="Wróć"
               className="h-9 w-9 -ml-2 shrink-0 rounded-full flex items-center justify-center active:scale-90 transition-transform">
               <ArrowLeft className="h-5 w-5 text-foreground" />
@@ -1504,6 +1504,29 @@ export default function SharedRoute() {
               <div className="w-7 shrink-0" />
             )}
           </div>
+        {/* Zakladki PRZYPIETE razem z guzikiem wstecz i awatarami (prosba Nat 2026-09-01) -
+            siedza w stalym naglowku, poza obszarem scrolla, wiec zostaja na ekranie przy
+            przewijaniu. Tytul, daty i opis wyjazdu przewijaja sie pod nimi. */}
+        <div>
+          <div className="flex border-b border-border/60">
+            {/* Etap PROPOZYCJI (planning) = tylko Miejsca + Mapa (galeria bez sensu przy sugerowaniu).
+                Galeria pojawia sie od "w trakcie" (ongoing) - prosba Nat 2026-08-25. */}
+            {([
+              { k: "miejsca" as const, Icon: MapPin, label: "Miejsca" },
+              ...(stage !== "planning" ? [{ k: "galeria" as const, Icon: ImageIcon, label: "Galeria" }] : []),
+              { k: "mapa" as const, Icon: MapIcon, label: "Mapa" },
+            ]).map(({ k, Icon, label }) => {
+              const on = planTab === k;
+              return (
+                <button key={k} onClick={() => setPlanTab(k)} aria-label={label}
+                  className="flex-1 flex items-center justify-center py-3 relative active:opacity-70 transition-opacity">
+                  <Icon className={cn("h-5 w-5", on ? "text-foreground" : "text-muted-foreground/60")} strokeWidth={on ? 2.4 : 2} />
+                  {on && <span className="absolute -bottom-px left-0 right-0 h-0.5 bg-foreground" />}
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </div>
 
       {/* Obszar scrolla - #1: BEZ okladki tla trasy (okladka TYLKO w eksploracji). */}
@@ -1579,28 +1602,6 @@ export default function SharedRoute() {
               ))}
             </div>
           )}
-        </div>
-
-        {/* #2: Zakladki jak na profilu - ikony + podkreslenie aktywnej, FULL WIDTH (bez px). */}
-        <div className="pt-5">
-          <div className="flex border-b border-border/60">
-            {/* Etap PROPOZYCJI (planning) = tylko Miejsca + Mapa (galeria bez sensu przy sugerowaniu).
-                Galeria pojawia sie od "w trakcie" (ongoing) - prosba Nat 2026-08-25. */}
-            {([
-              { k: "miejsca" as const, Icon: MapPin, label: "Miejsca" },
-              ...(stage !== "planning" ? [{ k: "galeria" as const, Icon: ImageIcon, label: "Galeria" }] : []),
-              { k: "mapa" as const, Icon: MapIcon, label: "Mapa" },
-            ]).map(({ k, Icon, label }) => {
-              const on = planTab === k;
-              return (
-                <button key={k} onClick={() => setPlanTab(k)} aria-label={label}
-                  className="flex-1 flex items-center justify-center py-3 relative active:opacity-70 transition-opacity">
-                  <Icon className={cn("h-5 w-5", on ? "text-foreground" : "text-muted-foreground/60")} strokeWidth={on ? 2.4 : 2} />
-                  {on && <span className="absolute -bottom-px left-0 right-0 h-0.5 bg-foreground" />}
-                </button>
-              );
-            })}
-          </div>
         </div>
 
         {/* Tresc zakladek - swipe w bok przelacza Miejsca / Galeria / Mapa. */}
@@ -1779,7 +1780,11 @@ export default function SharedRoute() {
                         <button onClick={(e) => { e.stopPropagation(); void handleSetCover(url); }}
                           aria-label={isCover ? "To jest okładka w eksploracji" : "Ustaw jako okładkę w eksploracji"}
                           className={`absolute top-1.5 right-1.5 h-8 w-8 rounded-full flex items-center justify-center shadow-sm active:scale-90 transition-transform ${isCover ? "bg-primary" : "bg-white/90"}`}>
-                          <Star className={`h-4 w-4 ${isCover ? "fill-white text-white" : "text-[#F0A583]"}`} />
+                          {/* Ikona EKSPLORACJI (ta sama co w nawigacji) - mowi wprost, do czego sluzy
+                              to zdjecie: reprezentuje wyjazd w eksploracji. Aktywna = biala na
+                              pomaranczu (filtr, bo to zwykly SVG bez currentColor). */}
+                          <img src="/Ikona_Eksploracja.svg" alt="" className="h-4 w-4"
+                            style={isCover ? { filter: "brightness(0) invert(1)" } : undefined} />
                         </button>
                       )}
                       {/* Wybor WLASNEJ okladki przeniesiony do jednego guzika w naglowku
