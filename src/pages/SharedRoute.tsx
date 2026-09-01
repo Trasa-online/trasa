@@ -1882,6 +1882,7 @@ export default function SharedRoute() {
           cover={(route as any).list_cover_url ?? heroPhoto}
           onClose={() => setShareCardOpen(false)}
           onShare={handleShareLink}
+          shareUrl={buildShareUrl(`/route/${route.id}`)}
         />
       )}
 

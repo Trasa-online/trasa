@@ -553,6 +553,7 @@ export default function SharedList() {
           avatar={col.author_avatar ?? null}
           onClose={() => setShareCardOpen(false)}
           onShare={handleShareLink}
+          shareUrl={buildShareUrl(`/lista/${col.id}`)}
         />
       )}
 

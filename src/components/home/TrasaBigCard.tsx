@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { Bookmark, ChevronUp, Pencil, Trash2, CircleDashed, Heart } from "lucide-react";
+import { Bookmark, ChevronUp, Pencil, Trash2, CircleDashed, Heart, Minimize2 } from "lucide-react";
 import { API_BASE } from "@/lib/platform";
 import { avatarSrc } from "@/lib/avatar";
 import { haptics } from "@/hooks/useHaptics";
+import RouteMap from "@/components/RouteMap";
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 
 export type LatLng = { latitude?: number | null; longitude?: number | null };
@@ -64,7 +65,6 @@ export default function TrasaBigCard({
   liked?: boolean;
 }) {
   const miniMap = showMap ? buildMiniMapUrl(pins) : null;
-  const bigMap = showMap ? buildMiniMapUrl(pins, "440x560") : null;
   const [mapExpanded, setMapExpanded] = useState(false);
   const countLabel = placeCount > 0
     ? `${placeCount} ${placeCount === 1 ? "miejsce" : placeCount < 5 ? "miejsca" : "miejsc"}`
@@ -105,17 +105,36 @@ export default function TrasaBigCard({
           Maly kwadrat w prawym-gornym rogu -> po kliknieciu rosnie do duzego prostokata
           (od gory do tekstu z nazwa miasta + liczba miejsc); ponowny klik chowa do malego. */}
       {miniMap && (
-        <button
-          onClick={(e) => { e.stopPropagation(); haptics.selection(); setMapExpanded((v) => !v); }}
-          aria-label={mapExpanded ? "Zwiń mapę" : "Pokaż mapę trasy"}
-          className={`absolute z-20 rounded-2xl overflow-hidden ring-2 ring-white/85 shadow-lg bg-muted active:scale-[0.99] transition-all duration-300 ease-out ${mapExpanded ? "top-3 left-3 right-3 h-[62%]" : "top-3 right-3 h-24 w-24"}`}
+        <div
+          data-no-swipe
+          className={`absolute z-20 rounded-2xl overflow-hidden ring-2 ring-white/85 shadow-lg bg-muted transition-all duration-300 ease-out ${mapExpanded ? "top-3 left-3 right-3 h-[62%]" : "top-3 right-3 h-24 w-24"}`}
         >
-          <img
-            src={mapExpanded && bigMap ? bigMap : miniMap} alt="" aria-hidden loading="lazy"
-            className="w-full h-full object-cover"
-            onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = "none"; }}
-          />
-        </button>
+          {/* ROZWINIETA mapka = ten sam RouteMap co w wyjezdzie (prosba Nat 2026-09-01), wiec
+              markery sa identyczne: okregi z numerami zamiast kropek Static Maps. Zywa mapa
+              montuje sie DOPIERO po rozwinieciu - w feedzie sa dziesiatki kart, a kazda mapa
+              Google to osobna instancja; zamknieta karta zostaje tanim obrazkiem. */}
+          {mapExpanded ? (
+            <>
+              <div className="absolute inset-0 pointer-events-none">
+                <RouteMap pins={pins as any} className="w-full h-full" showRoute={false} />
+              </div>
+              <button onClick={(e) => { e.stopPropagation(); haptics.selection(); setMapExpanded(false); }}
+                aria-label="Zwiń mapę" className="absolute inset-0 active:opacity-95 transition-opacity" />
+              <span className="absolute top-2.5 right-2.5 h-9 w-9 rounded-full bg-card shadow-md flex items-center justify-center pointer-events-none">
+                <Minimize2 className="h-4 w-4 text-foreground" strokeWidth={2.2} />
+              </span>
+            </>
+          ) : (
+            <button onClick={(e) => { e.stopPropagation(); haptics.selection(); setMapExpanded(true); }}
+              aria-label="Pokaż mapę trasy" className="absolute inset-0 active:scale-[0.99] transition-transform">
+              <img
+                src={miniMap} alt="" aria-hidden loading="lazy"
+                className="w-full h-full object-cover"
+                onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = "none"; }}
+              />
+            </button>
+          )}
+        </div>
       )}
 
       {/* Prawy dolny stack: bookmark / akcje wlasciciela + rozwin (12px od prawej, 16px od dolu) */}

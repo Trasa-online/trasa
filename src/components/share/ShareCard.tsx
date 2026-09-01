@@ -1,10 +1,19 @@
-import { Share, X } from "lucide-react";
+import { useLayoutEffect, useRef, useState } from "react";
+import { Maximize2, X } from "lucide-react";
+import { toast } from "sonner";
 import { PlaceTile } from "@/components/profile/PlaceTile";
 import { avatarSrc } from "@/lib/avatar";
 import { resolveStored } from "@/components/PlacePhoto";
 import { thumbUrl } from "@/lib/imageUrl";
+import { buildShareTargets, ShareTargetButton } from "@/components/share/shareTargets";
 
-// KARTA DO UDOSTEPNIENIA - format 9:16, do zrzutu ekranu i wrzucenia na Stories.
+// UDOSTEPNIANIE LISTY / WYJAZDU - arkusz z podgladem i kanalami (wzor: Pinterest, prosba Nat
+// 2026-09-01). Otwiera sie z guzika udostepniania ORAZ automatycznie po zrzucie ekranu.
+//
+// Uklad ma trzy warstwy, kazda po cos innego:
+//  1. PODGLAD - pomniejszona, wierna kopia karty. Pokazuje, co dokladnie pojdzie dalej.
+//  2. KANALY - skroty do aplikacji, w ktorych ludzie faktycznie wysylaja linki.
+//  3. PELNY EKRAN - dotkniecie podgladu rozwija karte na caly ekran, do zrzutu na Stories.
 //
 // DWA SZABLONY, nie jeden (eksploracja w Figmie, sekcja "Udostępnianie: lista vs wyjazd").
 // Lista i wyjazd sprzedaja sie czym INNYM, wiec kazdy dowodzi czego innego:
@@ -12,42 +21,10 @@ import { thumbUrl } from "@/lib/imageUrl";
 //  - WYJAZD to historia: licza sie TRASA i ludzie -> okladka, ponumerowane przystanki, awatary.
 // Jeden uniwersalny szablon obslugiwalby oba gorzej.
 //
-// Karta renderuje sie jako zwykly widok (nie obrazek) - user robi zrzut ekranu, tak jak na
-// Pintereście. Eksport do pliku i kanaly (Instagram, zapis do rolki) to osobny ekran, jeszcze
-// nie zbudowany - dlatego tutaj zostaje tylko podglad i wyjscie.
-
-// Karta zajmuje CALY ekran (prosba Nat 2026-09-01) - to ona ma byc zrzutem, wiec nie moze byc
-// kartka na przyciemnionym tle: zrzut zlapalby ramke i ciemna otoczke. Guzik zamkniecia i podpowiedz
-// leza NAD karta i sa jedynymi elementami, ktore wejda w kadr - swiadomie male i przy krawedziach.
-function Shell({ children, onClose, onShare }: {
-  children: React.ReactNode;
-  onClose: () => void;
-  /** Otwiera SYSTEMOWY arkusz udostepniania iOS (Wiadomosci, WhatsApp, Instagram, kopiuj link). */
-  onShare?: () => void;
-}) {
-  return (
-    <div className="fixed inset-0 z-[95] animate-in fade-in duration-200">
-      {children}
-      <button onClick={onClose} aria-label="Zamknij"
-        className="absolute right-3 h-9 w-9 rounded-full bg-black/25 backdrop-blur-sm flex items-center justify-center active:scale-90 transition-transform"
-        style={{ top: "max(0.75rem, env(safe-area-inset-top))" }}>
-        <X className="h-4 w-4 text-white" />
-      </button>
-      {/* Wyslanie DALEJ, obok zrzutu ekranu (prosba Nat 2026-09-01). Zrzut jest dobry na Stories,
-          ale do wyslania jednej osobie potrzebny jest link - a link otwiera te sama liste/wyjazd
-          w aplikacji. Guzik oddaje to systemowemu arkuszowi iOS, wiec user wybiera kanal, ktorego
-          i tak uzywa. Siedzi POD stopka karty, dlatego stopka ma podniesiony offset. */}
-      {onShare && (
-        <button onClick={onShare}
-          className="absolute left-1/2 -translate-x-1/2 h-12 pl-5 pr-6 rounded-full bg-primary text-white font-bold text-[15px] flex items-center gap-2 shadow-lg shadow-primary/25 active:scale-[0.97] transition-transform"
-          style={{ bottom: "max(20px, calc(env(safe-area-inset-bottom) + 8px))" }}>
-          <Share className="h-[18px] w-[18px]" strokeWidth={2.5} />
-          Udostępnij
-        </button>
-      )}
-    </div>
-  );
-}
+// Czego tu NIE ma: wyslania karty jako OBRAZKA. iOS nie da podac systemowi zrzutu, ktorego user
+// jeszcze nie zrobil, a renderowanie DOM-u do PNG wymaga biblioteki i CORS-u na wszystkich
+// zdjeciach. Dlatego kanaly nios LINK (otwiera te sama liste/wyjazd w aplikacji), a obrazek
+// powstaje ze zrzutu pelnego ekranu.
 
 // Stopka karty: kto to zrobil + znak marki. Wspolna dla obu szablonow, zeby karta
 // zawsze konczyla sie tak samo i dalo sie ja rozpoznac po jednym elemencie.
@@ -57,7 +34,7 @@ function Footer({ avatars, label, sub, tone }: {
   return (
     <div
       className={`absolute left-5 right-5 h-[74px] rounded-2xl flex items-center gap-3 px-4 ${tone === "light" ? "bg-white" : "bg-[#FCEDE3]"}`}
-      style={{ bottom: "max(88px, calc(env(safe-area-inset-bottom) + 76px))" }}
+      style={{ bottom: "max(24px, calc(env(safe-area-inset-bottom) + 12px))" }}
     >
       <div className="flex -space-x-2 shrink-0">
         {avatars.slice(0, 3).map((a, i) => (
@@ -79,8 +56,94 @@ function Footer({ avatars, label, sub, tone }: {
   );
 }
 
+// Arkusz: naglowek + podglad + kanaly. Karta (children) jest zaprojektowana na CALY ekran, wiec
+// w podgladzie skalujemy ja transformem - dzieki temu miniatura jest co do piksela tym samym, co
+// user zobaczy po rozwinieciu, bez drugiego zestawu rozmiarow do utrzymania.
+function ShareSheet({ children, onClose, onShare, shareUrl, shareTitle }: {
+  children: React.ReactNode;
+  onClose: () => void;
+  onShare?: () => void;
+  shareUrl?: string;
+  shareTitle: string;
+}) {
+  const slotRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(0);
+  const [full, setFull] = useState(false);
+
+  useLayoutEffect(() => {
+    const measure = () => {
+      const el = slotRef.current;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      setScale(Math.min(r.width / window.innerWidth, r.height / window.innerHeight));
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, []);
+
+  // Pelny ekran = sama karta, bez zadnego chrome poza krzyzykiem. To jest kadr do zrzutu.
+  if (full) {
+    return (
+      <div className="fixed inset-0 z-[96] animate-in fade-in duration-200">
+        {children}
+        <button onClick={() => setFull(false)} aria-label="Zamknij"
+          className="absolute right-3 h-9 w-9 rounded-full bg-black/25 backdrop-blur-sm flex items-center justify-center active:scale-90 transition-transform"
+          style={{ top: "max(0.75rem, env(safe-area-inset-top))" }}>
+          <X className="h-4 w-4 text-white" />
+        </button>
+      </div>
+    );
+  }
+
+  const targets = shareUrl
+    ? buildShareTargets({
+        url: shareUrl,
+        title: shareTitle,
+        onSystemShare: () => onShare?.(),
+        onCopied: () => toast.success("Skopiowano link"),
+      })
+    : [];
+
+  return (
+    <div className="fixed inset-0 z-[95] bg-background flex flex-col animate-in fade-in duration-200">
+      <div className="flex items-center gap-2 px-4 pt-[max(12px,env(safe-area-inset-top))] pb-2">
+        <button onClick={onClose} aria-label="Zamknij"
+          className="h-9 w-9 rounded-full flex items-center justify-center active:scale-90 transition-transform">
+          <X className="h-5 w-5 text-foreground" />
+        </button>
+        <p className="flex-1 text-center text-[15px] font-bold text-foreground pr-9">Udostępnij</p>
+      </div>
+
+      <div ref={slotRef} className="flex-1 min-h-0 flex items-center justify-center px-8 py-2">
+        {scale > 0 && (
+          <button onClick={() => setFull(true)} aria-label="Otwórz na pełnym ekranie"
+            className="relative rounded-3xl overflow-hidden shadow-xl ring-1 ring-black/5 active:scale-[0.98] transition-transform"
+            style={{ width: window.innerWidth * scale, height: window.innerHeight * scale }}>
+            <div className="pointer-events-none origin-top-left"
+              style={{ width: window.innerWidth, height: window.innerHeight, transform: `scale(${scale})` }}>
+              {children}
+            </div>
+            <span className="absolute bottom-2.5 right-2.5 h-8 w-8 rounded-full bg-black/35 backdrop-blur-sm flex items-center justify-center">
+              <Maximize2 className="h-4 w-4 text-white" strokeWidth={2.2} />
+            </span>
+          </button>
+        )}
+      </div>
+
+      {targets.length > 0 && (
+        <div className="px-5 pt-3 pb-[max(20px,env(safe-area-inset-bottom))] border-t border-border/40">
+          <div className="grid grid-cols-4 gap-x-2 gap-y-4">
+            {targets.map((tg) => <ShareTargetButton key={tg.key} target={tg} />)}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /** Karta LISTY: siatka miejsc + licznik "ile jeszcze". */
-export function ShareCardList({ title, city, items, author, avatar, onClose, onShare }: {
+export function ShareCardList({ title, city, items, author, avatar, onClose, onShare, shareUrl }: {
   title: string;
   city?: string | null;
   items: any[];
@@ -88,45 +151,46 @@ export function ShareCardList({ title, city, items, author, avatar, onClose, onS
   avatar?: string | null;
   onClose: () => void;
   onShare?: () => void;
+  shareUrl?: string;
 }) {
   const shown = items.slice(0, 5);
   const rest = Math.max(0, items.length - shown.length);
   const word = items.length === 1 ? "miejsce" : items.length < 5 ? "miejsca" : "miejsc";
   return (
-    <Shell onClose={onClose} onShare={onShare}>
-      <div className="relative h-full w-full overflow-hidden bg-[#FCEDE3]">
-        <div className="px-6" style={{ paddingTop: "max(64px, calc(env(safe-area-inset-top) + 44px))" }}>
-          <p className="text-[12px] font-bold tracking-wide text-[#C58A66]">LISTA MIEJSC</p>
-          <p className="text-[34px] font-black leading-[1.06] text-foreground mt-2 line-clamp-3">{title}</p>
-          <p className="text-[15px] font-semibold text-[#8A6A57] mt-2.5">
-            {[city, `${items.length} ${word}`].filter(Boolean).join(" · ")}
-          </p>
-        </div>
-        {/* Kafelki = dowod, ze lista ma tresc. Nazwa pod kazdym, zeby dalo sie ja czytac
-            takze bez zdjec (miejsce bez zdjecia dostaje ikone kategorii na peachy tle). */}
-        <div className="grid grid-cols-3 gap-2.5 px-6 mt-7">
-          {shown.map((it, i) => (
-            <div key={it.id ?? i}>
-              <div className="rounded-xl overflow-hidden bg-white">
-                <PlaceTile tile={it} aspect="aspect-square" />
-              </div>
-              <p className="text-[11.5px] font-semibold text-[#5C4136] mt-1.5 leading-tight line-clamp-1">{it.place_name}</p>
+    <ShareSheet onClose={onClose} onShare={onShare} shareUrl={shareUrl} shareTitle={title}>
+          <div className="relative h-full w-full overflow-hidden bg-[#FCEDE3]">
+            <div className="px-6" style={{ paddingTop: "max(64px, calc(env(safe-area-inset-top) + 44px))" }}>
+              <p className="text-[12px] font-bold tracking-wide text-[#C58A66]">LISTA MIEJSC</p>
+              <p className="text-[34px] font-black leading-[1.06] text-foreground mt-2 line-clamp-3">{title}</p>
+              <p className="text-[15px] font-semibold text-[#8A6A57] mt-2.5">
+                {[city, `${items.length} ${word}`].filter(Boolean).join(" · ")}
+              </p>
             </div>
-          ))}
-          {rest > 0 && (
-            <div className="aspect-square rounded-xl bg-[#F6D9C6] flex items-center justify-center">
-              <span className="text-[28px] text-[#F75708]" style={{ fontFamily: "Sigmar, system-ui, sans-serif" }}>+{rest}</span>
+            {/* Kafelki = dowod, ze lista ma tresc. Nazwa pod kazdym, zeby dalo sie ja czytac
+                takze bez zdjec (miejsce bez zdjecia dostaje ikone kategorii na peachy tle). */}
+            <div className="grid grid-cols-3 gap-2.5 px-6 mt-7">
+              {shown.map((it, i) => (
+                <div key={it.id ?? i}>
+                  <div className="rounded-xl overflow-hidden bg-white">
+                    <PlaceTile tile={it} aspect="aspect-square" />
+                  </div>
+                  <p className="text-[11.5px] font-semibold text-[#5C4136] mt-1.5 leading-tight line-clamp-1">{it.place_name}</p>
+                </div>
+              ))}
+              {rest > 0 && (
+                <div className="aspect-square rounded-xl bg-[#F6D9C6] flex items-center justify-center">
+                  <span className="text-[28px] text-[#F75708]" style={{ fontFamily: "Sigmar, system-ui, sans-serif" }}>+{rest}</span>
+                </div>
+              )}
             </div>
-          )}
-        </div>
-        <Footer avatars={[avatar ?? null]} label={author} sub="zapisz tę listę w spontaway" tone="light" />
-      </div>
-    </Shell>
+            <Footer avatars={[avatar ?? null]} label={author} sub="zapisz tę listę w spontaway" tone="light" />
+          </div>
+    </ShareSheet>
   );
 }
 
 /** Karta WYJAZDU: okladka + ponumerowane przystanki + uczestnicy. */
-export function ShareCardTrip({ title, city, dateLabel, pins, author, avatars, cover, onClose, onShare }: {
+export function ShareCardTrip({ title, city, dateLabel, pins, author, avatars, cover, onClose, onShare, shareUrl }: {
   title: string;
   city?: string | null;
   dateLabel?: string | null;
@@ -136,50 +200,51 @@ export function ShareCardTrip({ title, city, dateLabel, pins, author, avatars, c
   cover?: string | null;
   onClose: () => void;
   onShare?: () => void;
+  shareUrl?: string;
 }) {
   const stops = pins.slice(0, 4);
   const rest = Math.max(0, pins.length - stops.length);
   const word = pins.length === 1 ? "miejsce" : pins.length < 5 ? "miejsca" : "miejsc";
   const coverUrl = thumbUrl(resolveStored(cover ?? null), 360);
   return (
-    <Shell onClose={onClose} onShare={onShare}>
-      <div className="relative h-full w-full overflow-hidden bg-[#FEFEFE]">
-        {/* Okladka. Bez zdjecia (wyjazd roboczy) - peachowe tlo ze znakiem, jak karta na profilu. */}
-        <div className="relative h-[52%] bg-[#fcede3]">
-          {coverUrl ? (
-            <img src={coverUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
-          ) : (
-            <span aria-hidden className="absolute left-1/2 top-1/2 h-16 w-16 -translate-x-1/2 -translate-y-1/2 block" style={{
-              backgroundColor: "#EF9D78",
-              WebkitMaskImage: "url(/Ikona_Trasy.svg)", maskImage: "url(/Ikona_Trasy.svg)",
-              WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat",
-              WebkitMaskSize: "contain", maskSize: "contain",
-              WebkitMaskPosition: "center", maskPosition: "center",
-            }} />
-          )}
-          <div className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-black/70 to-transparent" />
-          <div className="absolute left-5 right-5 bottom-4">
-            <p className="text-[12px] font-bold tracking-wide text-white/90">
-              {["WYJAZD", dateLabel?.toUpperCase()].filter(Boolean).join(" · ")}
-            </p>
-            <p className="text-[34px] font-black leading-[1.06] text-white mt-1.5 line-clamp-2">{title}</p>
-            <p className="text-[15px] font-semibold text-white/90 mt-1.5">
-              {[city, `${pins.length} ${word}`].filter(Boolean).join(" · ")}
-            </p>
-          </div>
-        </div>
-        {/* Ponumerowane przystanki = dowod, ze to TRASA, a nie luzny zbior. */}
-        <div className="px-6 pt-6 space-y-4">
-          {stops.map((p, i) => (
-            <div key={p.id ?? i} className="flex items-center gap-2.5">
-              <span className="h-8 w-8 shrink-0 rounded-full bg-primary text-white text-[13px] font-bold flex items-center justify-center">{i + 1}</span>
-              <p className="text-[16px] font-semibold text-foreground truncate">{p.place_name}</p>
+    <ShareSheet onClose={onClose} onShare={onShare} shareUrl={shareUrl} shareTitle={title}>
+          <div className="relative h-full w-full overflow-hidden bg-[#FEFEFE]">
+            {/* Okladka. Bez zdjecia (wyjazd roboczy) - peachowe tlo ze znakiem, jak karta na profilu. */}
+            <div className="relative h-[52%] bg-[#fcede3]">
+              {coverUrl ? (
+                <img src={coverUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
+              ) : (
+                <span aria-hidden className="absolute left-1/2 top-1/2 h-16 w-16 -translate-x-1/2 -translate-y-1/2 block" style={{
+                  backgroundColor: "#EF9D78",
+                  WebkitMaskImage: "url(/Ikona_Trasy.svg)", maskImage: "url(/Ikona_Trasy.svg)",
+                  WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat",
+                  WebkitMaskSize: "contain", maskSize: "contain",
+                  WebkitMaskPosition: "center", maskPosition: "center",
+                }} />
+              )}
+              <div className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-black/70 to-transparent" />
+              <div className="absolute left-5 right-5 bottom-4">
+                <p className="text-[12px] font-bold tracking-wide text-white/90">
+                  {["WYJAZD", dateLabel?.toUpperCase()].filter(Boolean).join(" · ")}
+                </p>
+                <p className="text-[34px] font-black leading-[1.06] text-white mt-1.5 line-clamp-2">{title}</p>
+                <p className="text-[15px] font-semibold text-white/90 mt-1.5">
+                  {[city, `${pins.length} ${word}`].filter(Boolean).join(" · ")}
+                </p>
+              </div>
             </div>
-          ))}
-          {rest > 0 && <p className="text-[13px] text-muted-foreground pl-[42px]">{`…i ${rest} ${rest < 5 ? "miejsca" : "miejsc"} więcej`}</p>}
-        </div>
-        <Footer avatars={avatars.length ? avatars : [null]} label={author} tone="peach" />
-      </div>
-    </Shell>
+            {/* Ponumerowane przystanki = dowod, ze to TRASA, a nie luzny zbior. */}
+            <div className="px-6 pt-6 space-y-4">
+              {stops.map((p, i) => (
+                <div key={p.id ?? i} className="flex items-center gap-2.5">
+                  <span className="h-8 w-8 shrink-0 rounded-full bg-primary text-white text-[13px] font-bold flex items-center justify-center">{i + 1}</span>
+                  <p className="text-[16px] font-semibold text-foreground truncate">{p.place_name}</p>
+                </div>
+              ))}
+              {rest > 0 && <p className="text-[13px] text-muted-foreground pl-[42px]">{`…i ${rest} ${rest < 5 ? "miejsca" : "miejsc"} więcej`}</p>}
+            </div>
+            <Footer avatars={avatars.length ? avatars : [null]} label={author} tone="peach" />
+          </div>
+    </ShareSheet>
   );
 }

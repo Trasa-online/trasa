@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { useDragToDismiss } from "@/hooks/useDragToDismiss";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -851,6 +851,18 @@ const Explore = () => {
   // Przy wyjsciu z Eksploracji zawsze przywroc BottomNav.
   useEffect(() => () => { window.dispatchEvent(new CustomEvent("trasa:hide-bottomnav", { detail: false })); }, []);
 
+  // Baner wyjazdu chowa sie przy scrollu W DOL, wraca przy scrollu W GORE (wzorzec paska
+  // nawigacji iOS). Histereza 8 px, zeby drobne drgniecia palca nim nie migaly, i prog 24 px
+  // od gory - inaczej baner znikalby juz przy pierwszym pikselu scrolla.
+  const [bannerHidden, setBannerHidden] = useState(false);
+  const lastScrollTop = useRef(0);
+  const handleFeedScroll = (top: number) => {
+    const prev = lastScrollTop.current;
+    if (Math.abs(top - prev) < 8) return;
+    lastScrollTop.current = top;
+    setBannerHidden(top > prev && top > 24);
+  };
+
   const handleRefresh = async () => {
     await queryClient.invalidateQueries();
   };
@@ -926,13 +938,22 @@ const Explore = () => {
           {/* Skrot do wyjazdu "w trakcie" / roboczego - TYLKO w widoku feedu. W trybie kart miejsc
               (swiper) NIE renderujemy go: wysokosc karty 9:16 jest wyliczana ze stalego chrome i
               dolozenie paska rozjechaloby zamrozony layout (CLAUDE.md - PlaceSwiper sizing). */}
-          {view === "feed" && <ActiveTripBanner />}
+          {view === "feed" && (
+            /* Baner chowa sie przy scrollu w dol (prosba Nat 2026-09-01): w feedzie karta zajmuje
+               caly ekran, wiec staly pasek na gorze zjadal jej wysokosc na kazdym miejscu listy.
+               Wraca, gdy user wraca na gore - czyli tam, gdzie skrot do wlasnego wyjazdu ma sens.
+               Chowamy wysokoscia (nie `hidden`), zeby karty plynnie doszly do gory. */
+            <div className={cn("shrink-0 overflow-hidden transition-all duration-300 ease-out",
+              bannerHidden ? "max-h-0 opacity-0 -translate-y-2" : "max-h-40 opacity-100 translate-y-0")}>
+              <ActiveTripBanner />
+            </div>
+          )}
 
           {/* Feed - zawsze zamontowany; ukryty gdy swiper (seamless toggle). */}
           <div className={cn("flex-1 min-h-0 flex flex-col", view !== "feed" && "hidden")}>
             {/* Snap tylko w trybie przegladania feedu. Przy wyszukiwaniu WYLACZAMY snap, zeby
                 skroty/wyniki na gorze byly widoczne, a wizytowki zostawaly przewijalne pod spodem. */}
-            <PullToRefresh onRefresh={handleRefresh} className={cn("flex-1 min-h-0 flex flex-col pt-3 pb-[calc(6rem+env(safe-area-inset-bottom,0px))]", !searchOpen && "snap-y snap-mandatory scroll-pt-3")}>
+            <PullToRefresh onRefresh={handleRefresh} onScroll={handleFeedScroll} className={cn("flex-1 min-h-0 flex flex-col pt-3 pb-[calc(6rem+env(safe-area-inset-bottom,0px))]", !searchOpen && "snap-y snap-mandatory scroll-pt-3")}>
               <div className="flex-1 px-4"><DiscoveryFeed city={exploreCity} cities={routeCities} onCityChange={setExploreCity} active={view === "feed"} searchQuery={feedSearch} searchOpen={searchOpen} searchCategory={searchCat} /></div>
             </PullToRefresh>
           </div>
