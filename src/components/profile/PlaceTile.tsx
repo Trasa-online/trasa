@@ -12,9 +12,11 @@ const firstOf = (v: any): string | null =>
 // ktory chce inny ksztalt (np. Eksploruj - gesta siatka), moze nadpisac (aspect="aspect-square").
 export function PlaceTile({ tile, showCity, aspect = "aspect-[2/3]", tone = "peach" }: {
   tile: any; showCity?: boolean; aspect?: string;
-  /** Tlo kafelka BEZ zdjecia. "peach" (#fcede3) na bialym tle aplikacji; "contrast" (ciemniejszy)
+  /** Tlo kafelka BEZ zdjecia. "peach" (#fcede3) na bialym tle aplikacji; "contrast" (#F6D9C6)
       tam, gdzie kafelek lezy na peachowym tle i inaczej by sie z nim zlal - np. karta
-      udostepnienia listy (prosba Nat 2026-09-01). */
+      udostepnienia listy. To DOKLADNIE ten sam kolor co kafelek z licznikiem "+N" na tej karcie
+      (prosba Nat 2026-09-01): oba sa "pustymi" polami tej samej siatki, wiec maja wygladac
+      identycznie. Zmieniasz jeden - zmien drugi (ShareCard, kafelek "+N"). */
   tone?: "peach" | "contrast";
 }) {
   // Zdjecie usera: wlasne z pinu/elementu (image_url/images/user_photo_urls/photo_url), a gdy
@@ -25,7 +27,7 @@ export function PlaceTile({ tile, showCity, aspect = "aspect-[2/3]", tone = "pea
   const name = tile.place_name || "";
   const city = showCity ? (tile.city || "") : "";
   return (
-    <div className={`relative ${aspect} rounded-2xl overflow-hidden ${tone === "contrast" ? "bg-[#EDBE9E]" : "bg-[#fcede3]"}`}>
+    <div className={`relative ${aspect} rounded-2xl overflow-hidden ${tone === "contrast" ? "bg-[#F6D9C6]" : "bg-[#fcede3]"}`}>
       {url ? (
         <>
           <img src={url} alt="" className="w-full h-full object-cover" loading="lazy" />
