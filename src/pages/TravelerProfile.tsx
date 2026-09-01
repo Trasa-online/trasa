@@ -116,11 +116,14 @@ function TabSelect({ options, value, onChange }: {
           <button
             key={o.id}
             onClick={() => onChange(o.id)}
-            className={`relative shrink-0 rounded-full px-4 py-2 text-sm font-bold whitespace-nowrap active:scale-95 transition-all ${active ? "bg-primary text-white" : "bg-secondary text-foreground"}`}
+            className={`relative shrink-0 rounded-full py-2 text-sm font-bold whitespace-nowrap active:scale-95 transition-all ${o.dot ? "pl-4 pr-6" : "px-4"} ${active ? "bg-primary text-white" : "bg-secondary text-foreground"}`}
           >
             {o.label}
             {o.dot && (
-              <span aria-label="Nowa zawartość" className={`absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 ${active ? "bg-white border-primary" : "bg-primary border-background"}`} />
+              /* Kropka WEWNATRZ chipa: pasek ma overflow-x-auto, wiec cokolwiek wystaje poza
+                 obrys (ujemne offsety) zostaje ucinane przy przewijaniu (zgloszenie Nat
+                 2026-09-01: "kropka ucina sie w polowie"). */
+              <span aria-label="Nowa zawartość" className={`absolute top-1.5 right-1.5 h-2 w-2 rounded-full ${active ? "bg-white" : "bg-primary"}`} />
             )}
           </button>
         );

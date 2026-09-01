@@ -3,11 +3,10 @@ import { useParams, useNavigate } from "react-router-dom";
 import { goBackOr } from "@/hooks/useGoBack";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useSwipeNav } from "@/hooks/useSwipeNav";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { MapPin, ArrowLeft, Bookmark, Building2, Pencil, Trash2, Image as ImageIcon, Share2, Plus, Camera, Loader2, X } from "lucide-react";
+import { MapPin, ArrowLeft, Bookmark, Building2, Pencil, Trash2, Share2, Plus, Camera, Loader2, X } from "lucide-react";
 import { compressImage } from "@/lib/imageCompression";
 import AddPlaceSheet from "@/components/route/AddPlaceSheet";
 import { addPlaceToList, type PlaceForList } from "@/lib/placeLists";
@@ -32,6 +31,7 @@ import { useSavedPlaces } from "@/hooks/useSavedPlaces";
 import { CategoryIcon } from "@/components/CategoryIcon";
 import { subcategoryLabelLocalized } from "@/lib/categories";
 import { thumbUrl } from "@/lib/imageUrl";
+import { ShareCardList } from "@/components/share/ShareCard";
 import { resolvePlaceDbId } from "@/lib/placeLists";
 import { fetchEnrichedPlace } from "@/components/plan-wizard/PlaceSwiper";
 import { inferCategoryFromName } from "@/lib/placeCategoryIcon";
@@ -49,12 +49,8 @@ export default function SharedList() {
   const unsave = useUnsavePlace();
 
   // Widok listy jak trasa: Miejsca | Galeria (BEZ mapy - decyzja Nat). Galeria = zdjecia miejsc z listy.
-  const [planTab, setPlanTab] = useState<"miejsca" | "galeria">("miejsca");
-  // Gest natywny: swipe w bok przelacza Miejsca <-> Galeria (kolejnosc jak ikony nad trescia).
-  const swipeTabs = useSwipeNav({
-    onLeft: () => setPlanTab("galeria"),
-    onRight: () => setPlanTab("miejsca"),
-  });
+  // Zakladka Galeria USUNIETA (decyzja Nat 2026-09-01) - lista to zbior MIEJSC, a osobna siatka
+  // zdjec dublowala to, co widac przy kazdym wierszu. Zostaje jeden widok.
   const [detailPin, setDetailPin] = useState<any | null>(null);
   const [detailRaw, setDetailRaw] = useState<any | null>(null);
   // Podglad zdjec dodanych do miejsca na liscie (klik w miniaturke).
@@ -325,7 +321,11 @@ export default function SharedList() {
   const placesCountLabel = `${items.length} ${items.length === 1 ? "miejsce" : items.length < 5 ? "miejsca" : "miejsc"}`;
 
 
-  const handleShare = () => { void share({ title: col.title || cityLabel || "Lista", url: buildShareUrl(`/lista/${col.id}`) }); };
+  // Guzik "Udostepnij" pokazuje KARTE do zrzutu ekranu (szablon listy). Wysylka linku zostaje
+  // pod dlugim przytrzymaniem - ekran z kanalami i eksportem obrazu to osobny temat.
+  const [shareCardOpen, setShareCardOpen] = useState(false);
+  const handleShare = () => setShareCardOpen(true);
+  const handleShareLink = () => { void share({ title: col.title || cityLabel || "Lista", url: buildShareUrl(`/lista/${col.id}`) }); };
 
   // Wlasciciel dodaje miejsca do listy (drawer jak w wyjazdach): batch insert do discovery_items.
   const handleAddPlacesToList = async (places: PlaceForList[]) => {
@@ -361,31 +361,6 @@ export default function SharedList() {
 
   // #3: Galeria listy = okladki miejsc + WSZYSTKIE zdjecia userow dodane do tych miejsc (place_photos).
   // Kazde zdjecie zmapowane na miejsce (tap -> wizytowka). Dedup po URL.
-  // Dedup po TOZSAMOSCI pliku, nie po napisie URL: ten sam kadr potrafi przyjsc raz jako plik
-  // z cache (hash_/gpid_), raz przez proxy Google (?ref=). Rozne napisy = zdjecie lecialo dwa razy.
-  const photoIdentity = (u: string): string => {
-    try {
-      const ref = u.match(/[?&]ref=([^&]+)/)?.[1];
-      if (ref) return `ref:${decodeURIComponent(ref)}`;
-      const file = u.split("?")[0].split("/").pop() ?? u;
-      const cached = file.match(/^((?:gpid|hash)_[A-Za-z0-9_-]+?)_\d+\.(?:jpe?g|png|webp)$/i)?.[1];
-      return cached ? `cache:${cached}` : u.split("?")[0];
-    } catch { return u; }
-  };
-  const galleryMap = new Map<string, { url: string; pin: any }>();
-  const addPhoto = (u: string | null, pin: any) => {
-    if (!u) return;
-    const k = photoIdentity(u);
-    if (!galleryMap.has(k)) galleryMap.set(k, { url: u, pin });
-  };
-  for (const pin of items as any[]) addPhoto(pinCover(pin), pin);
-  if (placePhotoMap) {
-    for (const pin of items as any[]) {
-      for (const u of itemCoverKeys(pin).flatMap((k) => placePhotoMap.get(k) ?? [])) addPhoto(u, pin);
-    }
-  }
-  const galleryItems = Array.from(galleryMap.values());
-
   // NOWE OD OSTATNIEJ WIZYTY (wariant D z Figmy, sekcja "Zapisana lista: ktos dodal nowe miejsce").
   // Ile: aktualna liczba miejsc minus stan z poprzedniej wizyty. Ktore: ostatnie pozycje wg
   // order_index (dodawanie dopisuje na koniec). Nowe ladują NAD separatorem, zeby po wejsciu
@@ -393,7 +368,6 @@ export default function SharedList() {
   const newCount = seenAtEntry == null ? 0 : Math.max(0, (items as any[]).length - seenAtEntry);
   const newItems = newCount ? (items as any[]).slice(-newCount) : [];
   const oldItems = newCount ? (items as any[]).slice(0, (items as any[]).length - newCount) : (items as any[]);
-  const authorLabel = col?.author_name || "Autor";
 
   const sectionHeader = (label: string, strong: boolean) => (
     <div className="pt-4 pb-2 flex items-center gap-2">
@@ -410,7 +384,6 @@ export default function SharedList() {
           <div className="-mx-5 px-5 bg-[#FFF8F3] rounded-2xl">
             {renderRows(newItems, 0, true)}
           </div>
-          {sectionHeader("Wcześniej", false)}
         </>
       )}
       {renderRows(oldItems, newCount, false)}
@@ -471,9 +444,11 @@ export default function SharedList() {
             onDelete={isOwner ? () => handleDeleteItem(pin) : undefined}
             note={isNew ? (
               <div className="space-y-2">
+                {/* Awatar autora listy + samo "nowe miejsce" (decyzja Nat 2026-09-01). Imie bylo
+                    zbedne - awatar juz mowi, kto dodal, a liczy sie sama informacja o nowosci. */}
                 <div className="flex items-center gap-2">
                   <img src={avatarSrc(col?.author_avatar ?? null)} alt="" className="h-5 w-5 rounded-full object-cover bg-orange-100" />
-                  <span className="text-[11.5px] font-semibold text-[#8A6A57]">{`dodał ${authorLabel}`}</span>
+                  <span className="text-[11.5px] font-semibold text-[#8A6A57]">nowe miejsce</span>
                 </div>
                 {note}
               </div>
@@ -485,23 +460,6 @@ export default function SharedList() {
   );
 
   // Galeria zdjec miejsc z listy (kafelki 4:3, 2 kolumny). Tap -> wizytowka miejsca.
-  const renderGallery = () => (
-    galleryItems.length === 0 ? (
-      <p className="text-center text-sm text-muted-foreground py-10">{`Brak zdjęć w tej liście.`}</p>
-    ) : (
-      <div className="columns-2 gap-2 [&>*]:mb-2">
-        {galleryItems.map((g, i) => (
-          /* Masonry jak w galerii wyjazdu (prosba Nat 2026-09-01): zdjecia w NATURALNYCH
-             proporcjach, dwie kolumny CSS. Sztywne 4:3 przycinalo kadry i lista wygladala
-             inaczej niz reszta aplikacji. */
-          <button key={i} onClick={() => openDetail(g.pin)} className="relative block w-full break-inside-avoid rounded-2xl overflow-hidden bg-muted active:opacity-90 transition-opacity">
-            <img src={thumbUrl(g.url as string, 200) ?? (g.url as string)} alt={g.pin.place_name} className="w-full h-auto block" loading="lazy" />
-          </button>
-        ))}
-      </div>
-    )
-  );
-
   return (
     <div className="h-[100dvh] bg-background flex flex-col max-w-lg mx-auto">
       {/* Staly TopBar (naglowek nad obszarem scrolla): wstecz + autor + miasto + liczba miejsc + serce */}
@@ -539,7 +497,7 @@ export default function SharedList() {
             {/* a) Ikony jak na wyjazdach: udostepnij / edytuj / usun */}
             {isOwner && (
               <div className="shrink-0 flex items-center gap-2">
-                <button onClick={handleShare} aria-label="Udostępnij" className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center active:scale-90 transition-transform"><Share2 className="h-4 w-4 text-foreground" /></button>
+                <button onClick={handleShare} onContextMenu={(e) => { e.preventDefault(); handleShareLink(); }} aria-label="Udostępnij" className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center active:scale-90 transition-transform"><Share2 className="h-4 w-4 text-foreground" /></button>
                 <button onClick={() => navigate(`/zestawienie/${col.id}/edytuj`)} aria-label="Edytuj listę" className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center active:scale-90 transition-transform"><Pencil className="h-4 w-4 text-foreground" /></button>
                 <button onClick={() => setAskDelete(true)} aria-label="Usuń listę" className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center active:scale-90 transition-transform"><Trash2 className="h-4 w-4 text-destructive" /></button>
               </div>
@@ -560,28 +518,8 @@ export default function SharedList() {
           )}
         </div>
 
-        {/* #3: Zakladki jak na profilu/trasie - ikony + podkreslenie (nie pill), FULL WIDTH. BEZ mapy. */}
-        <div className="pt-5">
-          <div className="flex border-b border-border/60">
-            {([
-              { k: "miejsca", Icon: MapPin, label: "Miejsca" },
-              { k: "galeria", Icon: ImageIcon, label: "Galeria" },
-            ] as const).map(({ k, Icon, label }) => {
-              const on = planTab === k;
-              return (
-                <button key={k} onClick={() => setPlanTab(k)} aria-label={label}
-                  className="flex-1 flex items-center justify-center py-3 relative active:opacity-70 transition-opacity">
-                  <Icon className={cn("h-5 w-5", on ? "text-foreground" : "text-muted-foreground/60")} strokeWidth={on ? 2.4 : 2} />
-                  {on && <span className="absolute -bottom-px left-0 right-0 h-0.5 bg-foreground" />}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Tresc zakladek - swipe w bok przelacza Miejsca / Galeria. */}
-        <div {...swipeTabs}>
-        {planTab === "miejsca" ? (
+        {/* Jeden widok: miejsca. Zakladka Galeria usunieta (decyzja Nat 2026-09-01). */}
+        <div>
           <div className="px-5 pt-4">
             {items.length > 0 ? (
               /* Jeden widok miejsc (lista) - przelacznik "karty" usuniety 2026-08-29. */
@@ -593,12 +531,18 @@ export default function SharedList() {
               />
             )}
           </div>
-        ) : (
-          <div className="px-5 pt-4">
-            {renderGallery()}
-          </div>
-        )}
-        {/* Zgloszenie tresci - wymog App Store (Guideline 1.2). Autor nie zglasza siebie. */}
+        {shareCardOpen && (
+        <ShareCardList
+          title={col.title || "Lista miejsc"}
+          city={col.city}
+          items={(items as any[]).map((it) => ({ ...it, photo_url: pinCover(it) ?? it.photo_url }))}
+          author={col.author_name ? `@${col.author_name}` : "spontaway"}
+          avatar={col.author_avatar ?? null}
+          onClose={() => setShareCardOpen(false)}
+        />
+      )}
+
+      {/* Zgloszenie tresci - wymog App Store (Guideline 1.2). Autor nie zglasza siebie. */}
         {!isOwner && (
           <div className="px-5 pt-6 pb-2 flex justify-center">
             <ReportContentSheet targetType="collection" targetId={col.id} />

@@ -32,6 +32,7 @@ import PlaceNotes from "@/components/route/PlaceNotes";
 import PhotoViewer from "@/components/route/PhotoViewer";
 import PlaceNoteEditor from "@/components/route/PlaceNoteEditor";
 import CoverPickerSheet from "@/components/create/CoverPickerSheet";
+import { ShareCardTrip } from "@/components/share/ShareCard";
 import ScreenSkeleton from "@/components/layout/ScreenSkeleton";
 import ReportContentSheet from "@/components/moderation/ReportContentSheet";
 import { fetchRouteCoversFor, setMyRouteCover, clearMyRouteCover, setMyRouteNote, fetchRouteMemberNotes } from "@/lib/routeMemberCover";
@@ -230,6 +231,7 @@ export default function SharedRoute() {
   // Wlasna okladka wyjazdu: JEDEN guzik w naglowku -> arkusz wyboru ze zdjec galerii (prosba Nat
   // 2026-09-01). Kazdy uczestnik ma swoja - u pozostalych nic sie nie zmienia.
   const [coverPickerOpen, setCoverPickerOpen] = useState(false);
+  const [shareCardOpen, setShareCardOpen] = useState(false);
   const [uploadingCover, setUploadingCover] = useState(false);
   // Wyjazd wielodniowy: ktory dzien jest na ekranie. null = "Wszystkie" (cala lista z naglowkami
   // dni - tak jak przed 2026-09-01). Domyslnie pokazujemy JEDEN dzien, zeby ekran nie byl
@@ -860,7 +862,9 @@ export default function SharedRoute() {
     queryClient.invalidateQueries({ queryKey: ["shared-route", id] });
   };
 
-  const handleShare = () => { void share({ title: route.title || cityLabel || "Wyjazd", url: buildShareUrl(`/route/${route.id}`) }); };
+  // Jak w liscie: guzik pokazuje KARTE wyjazdu do zrzutu; dlugie przytrzymanie wysyla sam link.
+  const handleShare = () => setShareCardOpen(true);
+  const handleShareLink = () => { void share({ title: route.title || cityLabel || "Wyjazd", url: buildShareUrl(`/route/${route.id}`) }); };
 
   // Wlasciciel dodaje miejsca do ISTNIEJACEJ trasy: append do pins (jak AddPlaceToTrip), potem refetch.
   const handleAddPlaces = async (places: PlaceForList[]) => {
@@ -1513,7 +1517,7 @@ export default function SharedRoute() {
                 {/* Zapraszanie uczestnikow USUNIETE z widoku wyjazdu (decyzja Nat 2026-08-30):
                     osoby wybiera sie WYLACZNIE przy tworzeniu wyjazdu. Skladu nie zmienia sie
                     ani w trakcie, ani po publikacji. */}
-                {isOwner && <button onClick={handleShare} aria-label="Udostępnij" className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center active:scale-90 transition-transform"><Share2 className="h-4 w-4 text-foreground" /></button>}
+                {isOwner && <button onClick={handleShare} onContextMenu={(e) => { e.preventDefault(); handleShareLink(); }} aria-label="Udostępnij" className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center active:scale-90 transition-transform"><Share2 className="h-4 w-4 text-foreground" /></button>}
                 {/* Olowek usuniety (prosba Nat 2026-09-01) - ten widok JEST edycja: miejsca, notki,
                     zdjecia, opis i tagi zmienia sie na miejscu, wiec osobne wejscie w stepper
                     tylko mnozylo sciezki. */}
@@ -1858,6 +1862,19 @@ export default function SharedRoute() {
             google_place_id: p.google_place_id ?? null, rating: p.rating ?? null,
           }))}
           onAdd={handleAddPlaces}
+        />
+      )}
+
+      {shareCardOpen && (
+        <ShareCardTrip
+          title={route.title || cityLabel}
+          city={route.city}
+          dateLabel={dateLabel || null}
+          pins={pins as any[]}
+          author={author?.username ? `@${author.username}` : "spontaway"}
+          avatars={[(author as any)?.avatar_url ?? null, ...(groupParticipants as any[]).map((p) => p.avatar_url ?? null)]}
+          cover={(route as any).list_cover_url ?? heroPhoto}
+          onClose={() => setShareCardOpen(false)}
         />
       )}
 
