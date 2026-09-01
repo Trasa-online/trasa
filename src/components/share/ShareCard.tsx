@@ -172,7 +172,9 @@ export function ShareCardList({ title, city, items, author, avatar, onClose, onS
               {shown.map((it, i) => (
                 <div key={it.id ?? i}>
                   <div className="rounded-xl overflow-hidden bg-white">
-                    <PlaceTile tile={it} aspect="aspect-square" />
+                    {/* tone="contrast": kafelek bez zdjecia lezy tu na peachowym tle karty, wiec
+                        domyslny peachy zlewalby sie z nim w jedna plame. */}
+                    <PlaceTile tile={it} aspect="aspect-square" tone="contrast" />
                   </div>
                   <p className="text-[11.5px] font-semibold text-[#5C4136] mt-1.5 leading-tight line-clamp-1">{it.place_name}</p>
                 </div>

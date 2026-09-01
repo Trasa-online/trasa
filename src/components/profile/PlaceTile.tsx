@@ -10,7 +10,13 @@ const firstOf = (v: any): string | null =>
 
 // aspect: klasa proporcji kafelka. Domyslnie PIONOWY prostokat 2:3 (redesign 2026-08-25). Kontekst,
 // ktory chce inny ksztalt (np. Eksploruj - gesta siatka), moze nadpisac (aspect="aspect-square").
-export function PlaceTile({ tile, showCity, aspect = "aspect-[2/3]" }: { tile: any; showCity?: boolean; aspect?: string }) {
+export function PlaceTile({ tile, showCity, aspect = "aspect-[2/3]", tone = "peach" }: {
+  tile: any; showCity?: boolean; aspect?: string;
+  /** Tlo kafelka BEZ zdjecia. "peach" (#fcede3) na bialym tle aplikacji; "contrast" (ciemniejszy)
+      tam, gdzie kafelek lezy na peachowym tle i inaczej by sie z nim zlal - np. karta
+      udostepnienia listy (prosba Nat 2026-09-01). */
+  tone?: "peach" | "contrast";
+}) {
   // Zdjecie usera: wlasne z pinu/elementu (image_url/images/user_photo_urls/photo_url), a gdy
   // brak - okladka ze zdjec userow dodanych do MIEJSCA w wizytowce (place_photos, tile._cover).
   const stored = tile.image_url || firstOf(tile.images) || firstOf(tile.user_photo_urls) || tile.photo_url;
@@ -19,7 +25,7 @@ export function PlaceTile({ tile, showCity, aspect = "aspect-[2/3]" }: { tile: a
   const name = tile.place_name || "";
   const city = showCity ? (tile.city || "") : "";
   return (
-    <div className={`relative ${aspect} rounded-2xl overflow-hidden bg-[#fcede3]`}>
+    <div className={`relative ${aspect} rounded-2xl overflow-hidden ${tone === "contrast" ? "bg-[#EDBE9E]" : "bg-[#fcede3]"}`}>
       {url ? (
         <>
           <img src={url} alt="" className="w-full h-full object-cover" loading="lazy" />

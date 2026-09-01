@@ -88,10 +88,14 @@ export default async function handler(req: Request): Promise<Response> {
       if (col) {
         // Dla LISTY najwazniejsza jest NAZWA - to ona sprzedaje klikniecie ("Gdzie na wege Warszawa").
         title = col.title || "Lista miejsc";
-        const items = await rest(`discovery_items?collection_id=eq.${id}&select=photo_url&order=order_index.asc&limit=12`);
+        const items = await rest(`discovery_items?collection_id=eq.${id}&select=id&order=order_index.asc&limit=12`);
         const n = items.length;
         desc = col.description || [col.city, n ? `${n} ${plural(n)}` : null].filter(Boolean).join(" · ") || "Lista miejsc w spontaway";
-        image = absImage(col.list_cover_url || col.cover_url || items.find((i) => i.photo_url)?.photo_url);
+        // Obrazek zostaje MARKOWY (decyzja Nat 2026-09-01). Lista to zbior wielu miejsc - jedno
+        // wyrwane zdjecie zapowiada cos innego, niz user dostanie po klikinieciu, a czesto jest
+        // to zdjecie przypadkowego lokalu. Nazwa niesie tu cala tresc, wiec obrazek ma tylko
+        // powiedziec "to jest spontaway". Wyjazd zostaje przy wlasnej okladce - tam obrazek JEST
+        // trescia (jedno miejsce, jedna pocztowka).
       }
     } else {
       const [route] = await rest(`routes?id=eq.${id}&select=title,city,description,cover_url,list_cover_url&limit=1`);

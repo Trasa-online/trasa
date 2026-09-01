@@ -144,23 +144,6 @@ function SortableRankingRow({ it, onOpen, onRemove }: { it: RankingItem; onOpen:
   );
 }
 
-// Predefiniowane tagi list (krok 2, zamiast glownej notki). Wszystkie chipy widoczne od razu
-// (styl chip-cloud). Moze tez dodac wlasny tag. Zapisywane w discovery_collections.tags.
-const PREDEFINED_TAGS = [
-  "Przyjazne dla psów",
-  "Miejsca z vibem",
-  "Dobre na randkę",
-  "Na rodzinny wypad",
-  "Klimatyczne wnętrza",
-  "Dobra kawa",
-  "Na wieczór",
-  "Tanio zjesz",
-  "Instagramowe",
-  "Cicho i spokojnie",
-  "Dla znajomych",
-  "Roślinne / wege",
-];
-
 const CreateRanking = () => {
   const { t } = useTranslation("ranking");
   const navigate = useNavigate();
@@ -211,15 +194,10 @@ const CreateRanking = () => {
   // Glowna notka do calego zestawienia (krok 2).
   const [description, setDescription] = useState("");
   // Tagi listy (krok 2) - zastapily glowna notke. Predefiniowane + wlasne usera.
+  // Tagi list (stara pula chipow) - UI USUNIETY (prosba Nat 2026-09-01). Stan zostaje, bo przy
+  // edycji starej listy wciagamy jej tagi z bazy i zapisujemy z powrotem NIEZMIENIONE: nowego
+  // nie da sie juz dodac, a istniejacych nie kasujemy userowi po cichu przy pierwszej edycji.
   const [tags, setTags] = useState<string[]>([]);
-  const [customTag, setCustomTag] = useState("");
-  const toggleTag = (tag: string) => setTags((prev) => prev.includes(tag) ? prev.filter((x) => x !== tag) : [...prev, tag]);
-  const addCustomTag = () => {
-    const v = customTag.trim();
-    if (!v) return;
-    if (!tags.some((x) => x.toLowerCase() === v.toLowerCase())) setTags((prev) => [...prev, v]);
-    setCustomTag("");
-  };
   // Tozsamosc autora: domyslnie z profilem; checkbox "anonimowo" na koncu (krok 2).
   const [asAnon, setAsAnon] = useState(false);
   // Okladki listy (1:1 z modelem tras): cover_url = hero na /lista/:id, list_cover_url =
@@ -951,44 +929,6 @@ const CreateRanking = () => {
               placeholder={`Np. Moje ulubione miejsca na dobrą kawę i pracę z laptopem...`}
               className="w-full rounded-2xl bg-secondary text-secondary-foreground border-0 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-orange-500/40 placeholder:text-muted-foreground/50 resize-none"
             />
-          </div>
-
-          {/* Tagi listy (zamiast glownej notki) - chip-cloud (wszystkie widoczne) + wlasne usera. */}
-          <div className="pt-6">
-            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-1.5 block">
-              {t("tags.label", "Tagi")} <span className="normal-case font-medium text-muted-foreground/50">{t("notes.optional")}</span>
-            </label>
-            <p className="text-[12px] text-muted-foreground leading-snug mb-2.5">{t("tags.hint", "Dodaj tagi, żeby inni łatwiej trafili na Twoją listę.")}</p>
-            <div className="flex flex-wrap gap-2">
-              {/* Wlasne tagi usera (spoza predefiniowanych) - zawsze widoczne, zaznaczone */}
-              {tags.filter((tg) => !PREDEFINED_TAGS.includes(tg)).map((tg) => (
-                <button key={tg} type="button" onClick={() => toggleTag(tg)}
-                  className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-[#FDF184] border border-[#FDCD84] text-foreground text-sm font-semibold active:scale-95 transition-transform">
-                  {tg} <X className="h-3.5 w-3.5" />
-                </button>
-              ))}
-              {/* Chip-cloud: wszystkie predefiniowane tagi widoczne od razu (wybrany = zolty fill #6) */}
-              {PREDEFINED_TAGS.map((tg) => {
-                const on = tags.includes(tg);
-                return (
-                  <button key={tg} type="button" onClick={() => toggleTag(tg)}
-                    className={`px-4 py-2.5 rounded-full text-sm font-semibold active:scale-95 transition-transform border ${on ? "bg-[#FDF184] border-[#FDCD84] text-foreground" : "bg-secondary border-transparent text-secondary-foreground"}`}>
-                    {tg}
-                  </button>
-                );
-              })}
-            </div>
-            {/* Wlasny tag */}
-            <div className="flex gap-2 mt-2.5">
-              <input value={customTag} onChange={(e) => setCustomTag(e.target.value)} maxLength={30}
-                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCustomTag(); } }}
-                placeholder={t("tags.custom_placeholder", "Dodaj własny tag")}
-                className="flex-1 min-w-0 rounded-2xl bg-secondary text-secondary-foreground border-0 px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-orange-500/40 placeholder:text-muted-foreground/50" />
-              <button type="button" onClick={addCustomTag} disabled={!customTag.trim()}
-                className="shrink-0 px-4 rounded-2xl bg-secondary text-secondary-foreground text-sm font-bold active:scale-95 transition-transform disabled:opacity-40">
-                {t("tags.add", "Dodaj")}
-              </button>
-            </div>
           </div>
 
           {/* Notki do poszczegolnych miejsc. */}

@@ -7,7 +7,7 @@ import { useScreenshot } from "@/hooks/useScreenshot";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { MapPin, ArrowLeft, Bookmark, Building2, Pencil, Trash2, Share2, Plus, Camera, Loader2, X } from "lucide-react";
+import { MapPin, ArrowLeft, Bookmark, Building2, Trash2, Share2, Plus, Camera, Loader2, X } from "lucide-react";
 import { compressImage } from "@/lib/imageCompression";
 import AddPlaceSheet from "@/components/route/AddPlaceSheet";
 import { addPlaceToList, type PlaceForList } from "@/lib/placeLists";
@@ -502,7 +502,9 @@ export default function SharedList() {
         <div className="px-5 pt-[35px]">
           <div className="flex items-start gap-3">
             <h1 className="flex-1 text-2xl font-black text-foreground leading-tight">{col.title || cityLabel}</h1>
-            {/* a) Ikony jak na wyjazdach: udostepnij / edytuj / usun.
+            {/* a) Ikony jak na wyjazdach: udostepnij / usun. Olowek usuniety (prosba Nat 2026-09-01,
+                tak samo jak wczesniej na wyjezdzie) - ten widok JEST edycja: miejsca, notki i
+                zdjecia zmienia sie na miejscu, wiec osobne wejscie w stepper mnozylo sciezki.
                 UDOSTEPNIANIE WIDZI KAZDY, takze na cudzej liscie (prosba Nat 2026-09-01) - polecenie
                 dalej cudzej listy to sedno tego widoku, a link i tak jest publiczny. Edycja i
                 usuwanie zostaja przy wlascicielu. */}
@@ -510,7 +512,6 @@ export default function SharedList() {
               <button onClick={handleShare} onContextMenu={(e) => { e.preventDefault(); handleShareLink(); }} aria-label="Udostępnij" className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center active:scale-90 transition-transform"><Share2 className="h-4 w-4 text-foreground" /></button>
               {isOwner && (
                 <>
-                  <button onClick={() => navigate(`/zestawienie/${col.id}/edytuj`)} aria-label="Edytuj listę" className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center active:scale-90 transition-transform"><Pencil className="h-4 w-4 text-foreground" /></button>
                   <button onClick={() => setAskDelete(true)} aria-label="Usuń listę" className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center active:scale-90 transition-transform"><Trash2 className="h-4 w-4 text-destructive" /></button>
                 </>
               )}
@@ -522,13 +523,6 @@ export default function SharedList() {
             <span className="flex items-center gap-1.5"><MapPin className="h-4 w-4 shrink-0" />{placesCountLabel}</span>
           </div>
           {col.description && <p className="text-sm text-muted-foreground leading-relaxed mt-3">{col.description}</p>}
-          {Array.isArray(col.tags) && col.tags.length > 0 && (
-            <div className="flex flex-wrap gap-2 mt-3">
-              {col.tags.map((tg: string) => (
-                <span key={tg} className="inline-flex items-center px-3 py-1 rounded-full bg-white border border-border/60 text-foreground text-[13px] font-semibold">{tg}</span>
-              ))}
-            </div>
-          )}
         </div>
 
         {/* Jeden widok: miejsca. Zakladka Galeria usunieta (decyzja Nat 2026-09-01). */}
