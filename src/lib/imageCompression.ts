@@ -132,3 +132,66 @@ export const compressDataUrl = async (
     img.src = dataUrl;
   });
 };
+
+/**
+ * Przygotowanie zdjecia do wgrania: zmniejszenie do maxSide + JPEG.
+ *
+ * Dlaczego osobno od compressImage (2026-09-01): tamta wersja dekoduje przez `new Image()` +
+ * object URL, czyli na glownym watku i ZAWSZE w pelnej rozdzielczosci. Przy paczce zdjec z
+ * iPhone'a (12 Mpx kazde) WKWebView potrafi sie tym zadlawic - `canvas.toBlob` oddaje wtedy
+ * null, compressImage rzuca, a wolajacy po cichu POMIJAL zdjecie. Objaw: "wgrywanie trwa
+ * wieki i finalnie nic sie nie dodaje".
+ *
+ * Kolejnosc prob:
+ *  1. createImageBitmap - dekoduje poza glownym watkiem, wiec UI nie zamarza,
+ *  2. compressImage - stara sciezka przez <img> (gdy bitmap niedostepny),
+ *  3. ORYGINALNY plik - lepiej wgrac ciezsze zdjecie niz zgubic je po cichu.
+ */
+export async function prepareImageForUpload(file: File, maxSide = 1600, quality = 0.8): Promise<Blob> {
+  try {
+    if (typeof createImageBitmap === "function") {
+      const bitmap = await createImageBitmap(file);
+      const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height));
+      const w = Math.max(1, Math.round(bitmap.width * scale));
+      const h = Math.max(1, Math.round(bitmap.height * scale));
+      const canvas = document.createElement("canvas");
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = "high";
+        ctx.drawImage(bitmap, 0, 0, w, h);
+        bitmap.close?.();
+        const blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/jpeg", quality));
+        // Zwolnij pamiec od razu - przy paczce zdjec to roznica miedzy plynnie a zabiciem WebView.
+        canvas.width = 0; canvas.height = 0;
+        if (blob && blob.size > 0) return blob;
+      } else {
+        bitmap.close?.();
+      }
+    }
+  } catch (e) {
+    console.warn("[prepareImageForUpload] createImageBitmap:", e instanceof Error ? e.message : e);
+  }
+  try {
+    return await compressImage(file, maxSide, maxSide, quality);
+  } catch (e) {
+    console.warn("[prepareImageForUpload] compressImage padl, wgrywam oryginal:", e instanceof Error ? e.message : e);
+    return file;
+  }
+}
+
+/** Uruchamia zadania z ograniczona rownoleglascia (domyslnie 3) - zachowuje kolejnosc wynikow. */
+export async function mapWithLimit<T, R>(items: T[], limit: number, fn: (item: T, index: number) => Promise<R>): Promise<R[]> {
+  const out = new Array<R>(items.length);
+  let next = 0;
+  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (true) {
+      const i = next++;
+      if (i >= items.length) return;
+      out[i] = await fn(items[i], i);
+    }
+  });
+  await Promise.all(workers);
+  return out;
+}

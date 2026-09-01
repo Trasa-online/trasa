@@ -47,7 +47,7 @@ import { fetchPhotoLikes, togglePhotoLike, type LikeState as PhotoLikeState } fr
 import PhotoPagination from "@/components/route/PhotoPagination";
 import RouteMap from "@/components/RouteMap";
 import { API_BASE } from "@/lib/platform";
-import { compressImage } from "@/lib/imageCompression";
+import { prepareImageForUpload, mapWithLimit } from "@/lib/imageCompression";
 import { isHeic, convertHeicToJpeg } from "@/lib/heicConvert";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
@@ -640,14 +640,23 @@ export default function SharedRoute() {
     if (!user || !files || !files.length || !id) return;
     setUploadingPin(pin.id);
     try {
-      const uploaded: { path: string; url: string }[] = [];
-      for (const file of Array.from(files)) {
-        const path = `${user.id}/${id}/pin_${pin.id}_${Math.random().toString(36).slice(2)}.jpg`;
-        const { error } = await supabase.storage.from("route-images").upload(path, file, { upsert: true, contentType: file.type || "image/jpeg" });
-        if (error) { console.error("[SharedRoute] photo upload:", error.message); continue; }
-        const { data } = supabase.storage.from("route-images").getPublicUrl(path);
-        if (data?.publicUrl) uploaded.push({ path, url: data.publicUrl });
-      }
+      // Jak w galerii: HEIC -> JPEG, zmniejszenie i wgrywanie po 3 naraz. Wczesniej szedl tu
+      // ORYGINALNY plik z iPhone'a (kilka MB, czasem HEIC) - stad dlugie czekanie, a na
+      // urzadzeniach nie-Apple takie zdjecie i tak sie nie wyswietlalo.
+      const prepared = await mapWithLimit(Array.from(files), 3, async (rawFile, i) => {
+        try {
+          const file = isHeic(rawFile) ? await convertHeicToJpeg(rawFile) : rawFile;
+          const blob = await prepareImageForUpload(file, 1600, 0.8);
+          const path = `${user.id}/${id}/pin_${pin.id}_${i}_${Math.random().toString(36).slice(2)}.jpg`;
+          const { error } = await supabase.storage.from("route-images").upload(path, blob, { upsert: true, contentType: "image/jpeg" });
+          if (error) { console.error("[SharedRoute] photo upload:", error.message); return null; }
+          const { data } = supabase.storage.from("route-images").getPublicUrl(path);
+          return data?.publicUrl ? { path, url: data.publicUrl } : null;
+        } catch (e: any) { console.error("[SharedRoute] photo processing failed:", e?.message ?? e); return null; }
+      });
+      const uploaded = prepared.filter((u): u is { path: string; url: string } => !!u);
+      const failedPin = Array.from(files).length - uploaded.length;
+      if (failedPin) toast.error(failedPin === 1 ? "Jednego zdjęcia nie udało się wgrać" : `${failedPin} zdjęć nie udało się wgrać`);
       // SafeSearch (Vision) RÓWNOLEGLE - jedno zdjecie to ~2-4s, wiec seryjnie 5 zdjec
       // kazalo czekac ponad minute. Odrzucone znika ze Storage i nie trafia do galerii.
       const verdicts = await Promise.all(uploaded.map((u) => moderateImageUrl(u.url, "pin_photo", { route_id: id, place_name: pin.place_name })));
@@ -840,18 +849,22 @@ export default function SharedRoute() {
   const handleAddPhotos = async (files: File[]) => {
     if (!user || !files.length) return;
     setUploadingPhotos(true);
-    let urls: string[] = [];
     let rejected = 0;   // zdjecia odrzucone przez SafeSearch
-    for (const rawFile of files) {
+    // Przygotowanie + wgranie RÓWNOLEGLE, po 3 naraz. Seryjna petla przy paczce zdjec z iPhone'a
+    // (12 Mpx kazde) potrafila trwac minute, a gdy ktores zdjecie sie nie przetworzylo, znikalo
+    // bez sladu w UI - stad "trwa wieki i finalnie nic sie nie dodaje" (zgloszenie Nat 2026-09-01).
+    const uploaded = await mapWithLimit(files, 3, async (rawFile, i) => {
       try {
         const file = isHeic(rawFile) ? await convertHeicToJpeg(rawFile) : rawFile;
-        const compressed = await compressImage(file, 1200, 1200, 0.8);
-        const path = `${user.id}/${route.id}/gal_${Date.now()}_${Math.floor(Math.random() * 10000)}.jpg`;
-        const { error } = await (supabase as any).storage.from("route-images").upload(path, compressed, { contentType: "image/jpeg", upsert: false });
-        if (error) { console.error("[SharedRoute] photo upload failed:", error.message); continue; }
-        urls.push(`${SUPABASE_URL}/storage/v1/object/public/route-images/${path}`);
-      } catch (e: any) { console.error("[SharedRoute] photo processing failed:", e?.message ?? e); }
-    }
+        const prepared = await prepareImageForUpload(file, 1600, 0.8);
+        const path = `${user.id}/${route.id}/gal_${Date.now()}_${i}_${Math.floor(Math.random() * 1e6)}.jpg`;
+        const { error } = await (supabase as any).storage.from("route-images").upload(path, prepared, { contentType: "image/jpeg", upsert: false });
+        if (error) { console.error("[SharedRoute] photo upload failed:", error.message); return null; }
+        return `${SUPABASE_URL}/storage/v1/object/public/route-images/${path}`;
+      } catch (e: any) { console.error("[SharedRoute] photo processing failed:", e?.message ?? e); return null; }
+    });
+    let urls: string[] = uploaded.filter((u): u is string => !!u);
+    const failed = files.length - urls.length;
     // SafeSearch (Vision) RÓWNOLEGLE dla calej paczki - seryjnie kazde zdjecie kosztowaloby
     // ~2-4s. Odrzucone kasujemy ze Storage i nie dodajemy do galerii.
     if (urls.length) {
@@ -870,8 +883,10 @@ export default function SharedRoute() {
       const { error } = await (supabase as any).rpc("append_route_photos", { p_route_id: route.id, p_urls: urls });
       if (error) { toast.error("Nie udało się zapisać zdjęć"); }
       else { toast.success(urls.length === 1 ? "Dodano zdjęcie" : `Dodano ${urls.length} zdjęcia`); queryClient.invalidateQueries({ queryKey: ["shared-route", id] }); }
-    } else if (!rejected) { toast.error("Nie udało się dodać zdjęć"); }
+    } else if (!rejected && !failed) { toast.error("Nie udało się dodać zdjęć"); }
     if (rejected) toast.error(rejected === 1 ? MODERATION_REJECTED_MESSAGE : `${rejected} zdjęcia nie przeszły moderacji`);
+    // Zdjecia zgubione po drodze mowia o tym wprost - wczesniej znikaly po cichu.
+    if (failed) toast.error(failed === 1 ? "Jednego zdjęcia nie udało się wgrać" : `${failed} zdjęć nie udało się wgrać`);
     setUploadingPhotos(false);
   };
 
