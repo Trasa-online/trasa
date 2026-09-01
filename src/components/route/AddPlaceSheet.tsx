@@ -57,15 +57,25 @@ export default function AddPlaceSheet({ open, onClose, city, existingPlaces, onA
   const [savePlace, setSavePlace] = useState<SavePlaceInput | null>(null); // zapis miejsca do wlasnych list
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Srodek do filtra "w obrebie miasta" (~20km): centroida miejsc JUZ w trasie, a gdy brak (nowa
-  // trasa/lista) - geokod miasta (Google textsearch). Zapobiega dodaniu miejsca z innego miasta/kraju.
+  // Srodek do sortowania "najblizej najpierw": centroida miejsc JUZ w trasie, a gdy brak (nowa
+  // trasa/lista) - geokod miasta (Google textsearch).
+  //
+  // UWAGA (blad zgloszony przez testerke 2026-09-01: "wyszukiwarka nic nie znajduje"): centroide
+  // wolno liczyc TYLKO gdy miejsca sa SKUPIONE. Lista wielomiastowa - a taka jest kazda "Ogolne"
+  // (prywatna wishlista, globalna z zalozenia) i kazda lista po kilku miastach - ma centroide w
+  // szczerym polu miedzy miastami. W bazie: lista z 7 miastami ma centroide 472 km od wlasnych
+  // miejsc, wiec filtr ~20 km wycinal WSZYSTKIE wyniki Google. Wyszukiwarka byla martwa na amen.
+  // Gdy miejsca sa rozrzucone, centroida nic nie znaczy - lepiej jej nie miec (padniemy na geokod
+  // miasta albo na brak sortowania).
   const existingCentroid = useMemo(() => {
     const pts = (existingPlaces ?? []).filter((p) => p.latitude != null && p.longitude != null);
     if (!pts.length) return null;
-    return {
+    const c = {
       lat: pts.reduce((s, p) => s + (p.latitude as number), 0) / pts.length,
       lng: pts.reduce((s, p) => s + (p.longitude as number), 0) / pts.length,
     };
+    const spreadKm = Math.max(...pts.map((p) => distKm(c, { lat: p.latitude as number, lng: p.longitude as number })));
+    return spreadKm <= SCOPE_KM ? c : null;
   }, [existingPlaces]);
   const { data: geoCenter = null } = useQuery({
     queryKey: ["addplace-city-center", city],
@@ -113,11 +123,15 @@ export default function AddPlaceSheet({ open, onClose, city, existingPlaces, onA
         if (!alive) return;
         setBlocked(!!(data as any)?.quota_exceeded);
         const all = ((data as any)?.results ?? []) as any[];
-        // Filtr "w obrebie miasta" (~20km od srodka) - odrzuca wyniki z innych miast/krajow.
-        const scoped = center
-          ? all.filter((r) => r.latitude == null || r.longitude == null || distKm(center, { lat: r.latitude, lng: r.longitude }) <= SCOPE_KM)
-          : all;
-        setResults(scoped.slice(0, 6).map((r) => ({
+        // "W obrebie miasta" (~20km od srodka) = KOLEJNOSC, nie odsiew. Wczesniej bylo twarde
+        // `.filter()` i kazdy przypadek, w ktorym srodek byl zly albo nieznany, konczyl sie pusta
+        // lista - user widzial "brak wynikow" dla miejsca, ktore Google normalnie zwraca.
+        // Teraz bliskie ida na gore, dalekie na dol: ranking dalej chroni przed "Loving Hut" z
+        // drugiego konca swiata, ale wyszukiwarka NIGDY nie oddaje pustki, gdy Google cos znalazl.
+        const near = (r: any) => !center || r.latitude == null || r.longitude == null
+          || distKm(center, { lat: r.latitude, lng: r.longitude }) <= SCOPE_KM;
+        const ordered = [...all.filter(near), ...all.filter((r) => !near(r))];
+        setResults(ordered.slice(0, 6).map((r) => ({
           place_name: r.name, address: r.full_address ?? null, latitude: r.latitude ?? null, longitude: r.longitude ?? null,
           category: categoryFromGoogleTypes(r.types), photo_url: null, place_id: null,
           // google_place_id niesiemy dalej - przy zapisie po nim znajdujemy nasz rekord `places`
