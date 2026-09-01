@@ -136,8 +136,11 @@ export function ProfileFeedCard({
               <PlaceTile key={t.id ?? i} tile={t} />
             ))}
             {overflowCount > 0 && (
-              <div className="aspect-[2/3] rounded-2xl bg-muted flex items-center justify-center">
-                <span className="text-lg font-bold text-muted-foreground">+{overflowCount}</span>
+              /* Kafelek "ile jeszcze" - zolty #FDF184 z pomaranczowa liczba w Sigmarze (prosba Nat
+                 2026-09-01). Zolty to jedyny akcent poza pomaranczem, wiec licznik czyta sie od razu
+                 jako "jest tu tego wiecej", a nie jako kolejne szare zdjecie. */
+              <div className="aspect-[2/3] rounded-2xl bg-[#FDF184] flex items-center justify-center">
+                <span className="text-2xl text-[#F75708]" style={{ fontFamily: "Sigmar, system-ui, sans-serif" }}>+{overflowCount}</span>
               </div>
             )}
           </div>

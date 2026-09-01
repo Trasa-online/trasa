@@ -63,7 +63,6 @@ export default function TrasaBigCard({
   onLike?: () => void;
   liked?: boolean;
 }) {
-  const cover = photo ?? getRandomPinPlaceholder(id);
   const miniMap = showMap ? buildMiniMapUrl(pins) : null;
   const bigMap = showMap ? buildMiniMapUrl(pins, "440x560") : null;
   const [mapExpanded, setMapExpanded] = useState(false);
@@ -72,14 +71,26 @@ export default function TrasaBigCard({
     : null;
   return (
     <div className={`relative w-full shrink-0 rounded-3xl overflow-hidden bg-muted shadow-sm min-h-[420px] ${snap ? "snap-start snap-always" : ""} ${heightClass}`}>
-      <img
-        src={cover}
-        alt={title}
-        loading="lazy"
-        className="absolute inset-0 w-full h-full object-cover"
-        onError={(e) => { (e.target as HTMLImageElement).src = getRandomPinPlaceholder(id + "_fb"); }}
-      />
-      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-black/25 pointer-events-none" />
+      {photo ? (
+        <img
+          src={photo}
+          alt={title}
+          loading="lazy"
+          className="absolute inset-0 w-full h-full object-cover"
+          onError={(e) => { (e.target as HTMLImageElement).src = getRandomPinPlaceholder(id + "_fb"); }}
+        />
+      ) : (
+        /* Brak okladki (praktycznie zawsze wyjazd ROBOCZY - opublikowany jej wymaga): peachy tlo
+           ze znakiem spontaway w #EF9D78, jak puste stany (prosba Nat 2026-09-01). Wczesniej
+           wchodzilo tu LOSOWE zdjecie z puli, przez co roboczy wyjazd udawal, ze ma tresc,
+           ktorej nie ma. */
+        <div className="absolute inset-0 bg-[#fcede3] flex items-center justify-center">
+          <span aria-hidden className="block h-28 w-28" style={{ backgroundColor: "#EF9D78", WebkitMaskImage: "url(/Ikona_Trasy.svg)", maskImage: "url(/Ikona_Trasy.svg)", WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat", WebkitMaskSize: "contain", maskSize: "contain", WebkitMaskPosition: "center", maskPosition: "center" }} />
+        </div>
+      )}
+      {/* Przyciemnienie pod tekstem. Na peachowym zastepniku slabsze i tylko przy dole - inaczej
+          ciemny welon zjadalby cale tlo i znak przestawalby byc widoczny. */}
+      <div className={`absolute inset-0 pointer-events-none ${photo ? "bg-gradient-to-t from-black/80 via-black/10 to-black/25" : "bg-gradient-to-t from-black/55 via-transparent to-transparent"}`} />
       {/* Tap na kafle = otworz wizytowke trasy/zestawienia */}
       <button onClick={onOpen} aria-label={title} className="absolute inset-0" />
 

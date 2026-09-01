@@ -47,7 +47,6 @@ import { pinCoverKeys, fetchPlacePhotosForKeys, pickPlaceCover } from "@/lib/pla
 import { fetchPhotoLikes, togglePhotoLike, type LikeState as PhotoLikeState } from "@/lib/placePhotoSocial";
 import PhotoPagination from "@/components/route/PhotoPagination";
 import RouteMap from "@/components/RouteMap";
-import { API_BASE } from "@/lib/platform";
 import { prepareImageForUpload, mapWithLimit } from "@/lib/imageCompression";
 import { isHeic, convertHeicToJpeg } from "@/lib/heicConvert";
 
@@ -57,22 +56,6 @@ const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 // (Jedzenie -> Kultura -> ...). Nieznane kategorie ida na koniec. Prosba Nat 2026-08-27 (Figma).
 const SUBCAT_ORDER: string[] = MAIN_CATEGORIES.flatMap((c) => c.subcategories.map((s) => s.id));
 
-// Statyczna mapa trasy (Google przez proxy) - ujednolicona z widokiem "Plan wyjazdu".
-// Pomaranczowo-peachy markery (#F0A583). Klik -> interaktywna RouteMap (pelny ekran).
-// size: kadr MUSI miec proporcje zblizone do kontenera. Wczesniej bylo 560x300 (panorama)
-// rozciagane object-cover na wysoki kontener - Google rysuje piny w stalym rozmiarze, wiec przy
-// takim powiekszeniu robily sie ogromne (zgloszenie Nat 2026-09-01). Portretowy kadr = piny
-// w naturalnej wielkosci i ostrzejsza mapa.
-function buildStaticRouteMap(pins: { latitude: number; longitude: number }[], size = "420x640"): string | null {
-  const pts = pins.filter((p) => p.latitude != null && p.longitude != null).slice(0, 20);
-  if (!pts.length) return null;
-  // Numerowane peachy piny (label 1-9; Google static przyjmuje 1 znak - dla 10+ bez numeru).
-  const markers = pts.map((p, i) => {
-    const label = i + 1 <= 9 ? `label:${i + 1}%7C` : "";
-    return `markers=color:0xf0a583%7C${label}${p.latitude},${p.longitude}`;
-  }).join("&");
-  return `${API_BASE}/api/static-map?size=${size}&scale=2&maptype=roadmap&${markers}&style=feature:poi%7Cvisibility:off&style=feature:transit%7Cvisibility:off`;
-}
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { avatarSrc } from "@/lib/avatar";
 import { thumbUrl } from "@/lib/imageUrl";
@@ -1046,13 +1029,9 @@ export default function SharedRoute() {
   // place_photo) -> ilustracja placeholder.
   const userCover = (route.review_photos ?? []).find((u: any) => typeof u === "string" && u.trim() !== "") ?? null;
   const placeCover = resolveStored(pins[0]?.photo_url || pins[0]?.image_url) ?? (pins[0] ? coverFor(pins[0]) : null);
-  // Piny do mapy (ujednolicone z widokiem Trasy - RouteMap oczekuje latitude/longitude/place_name).
-  const navMapPins = (pins as any[])
-    .filter((p) => p.latitude != null && p.longitude != null)
-    .map((p) => ({ latitude: p.latitude as number, longitude: p.longitude as number, place_name: p.place_name as string }));
-  const staticMapUrl = buildStaticRouteMap(navMapPins);
-  // Miejsca do wizytowek nad mapa: numer = pozycja w wyjezdzie (liczona PRZED odsianiem tych bez
-  // wspolrzednych, zeby numeracja zgadzala sie z lista miejsc).
+  // JEDNA lista dla mapy: kafelek w zakladce, pelny ekran i wizytowki pod mapa dostaja te same
+  // piny, wiec numeracja wszedzie sie zgadza. `__no` = pozycja w wyjezdzie liczona PRZED odsianiem
+  // miejsc bez wspolrzednych (inaczej miejsce bez lokalizacji przesuwaloby numery reszcie).
   const mapPlaces = (pins as any[])
     .map((p, i) => ({ ...p, __no: i + 1 }))
     .filter((p) => p.latitude != null && p.longitude != null);
@@ -1515,12 +1494,9 @@ export default function SharedRoute() {
                     osoby wybiera sie WYLACZNIE przy tworzeniu wyjazdu. Skladu nie zmienia sie
                     ani w trakcie, ani po publikacji. */}
                 {isOwner && <button onClick={handleShare} aria-label="Udostępnij" className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center active:scale-90 transition-transform"><Share2 className="h-4 w-4 text-foreground" /></button>}
-                {/* Olowek TYLKO dla opublikowanego wspomnienia. W propozycjach i "w trakcie" caly
-                    ten widok JEST edycja (miejsca, notki, zdjecia, opis, tagi) - osobny tryb
-                    edycji tylko mylil (prosba Nat 2026-08-30). */}
-                {isOwner && stage === "completed" && (
-                  <button onClick={() => navigate(`/review-summary?route=${route.id}&edit=1`)} aria-label="Edytuj trasę" className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center active:scale-90 transition-transform"><Pencil className="h-4 w-4 text-foreground" /></button>
-                )}
+                {/* Olowek usuniety (prosba Nat 2026-09-01) - ten widok JEST edycja: miejsca, notki,
+                    zdjecia, opis i tagi zmienia sie na miejscu, wiec osobne wejscie w stepper
+                    tylko mnozylo sciezki. */}
                 {isOwner && <button onClick={() => setAskDelete(true)} aria-label="Usuń wyjazd" className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center active:scale-90 transition-transform"><Trash2 className="h-4 w-4 text-destructive" /></button>}
               </div>
             )}
@@ -1727,19 +1703,26 @@ export default function SharedRoute() {
         ) : planTab === "mapa" ? (
           /* Mapa w wlasnej zakladce (obok Galeria) - statyczna Google + rozwiniecie do interaktywnej. */
           <div className="px-5 pt-4">
-            {navMapPins.length > 0 && staticMapUrl ? (
+            {mapPlaces.length > 0 ? (
               /* Mapa wypelnia CALA pozostala wysokosc zakladki (prosba Nat 2026-09-01) - wczesniej
                  byl kadr 256 px, w ktorym przy kilkunastu miejscach nie dalo sie niczego odczytac.
                  Wysokosc liczona z dvh minus chrome (naglowek + zakladki + dolny pasek), bo
                  wysokosc procentowa nie dziala w tym drzewie flexow w iOS WebView. */
-              <button data-no-swipe onClick={() => setPlanMapOpen(true)}
-                className="relative block w-full rounded-2xl overflow-hidden border border-border/40 bg-muted active:opacity-95 transition-opacity"
+              /* JEDNA mapa w calej aplikacji: ten sam RouteMap co po rozwinieciu, wiec markery sa
+                 identyczne - peachowe OKREGI Z NUMERAMI zamiast kropelek Google (prosba Nat
+                 2026-09-01). Wczesniej byl tu obrazek ze Static Maps, ktory rysowal wlasne piny
+                 i widok "przed" nie zgadzal sie z widokiem "po". Mapa jest nieklikalna
+                 (pointer-events-none), a tap w nakladke rozwija ja na pelny ekran. */
+              <div data-no-swipe className="relative w-full rounded-2xl overflow-hidden border border-border/40 bg-muted"
                 style={{ height: "calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 250px)", minHeight: "300px" }}>
-                <img src={staticMapUrl} alt={t("route_map")} className="w-full h-full object-cover" />
-                <span className="absolute top-3 right-3 h-10 w-10 rounded-full bg-card shadow-md flex items-center justify-center">
+                <div className="absolute inset-0 pointer-events-none">
+                  <RouteMap pins={mapPlaces as any} className="w-full h-full" showRoute={false} />
+                </div>
+                <button onClick={() => setPlanMapOpen(true)} aria-label="Rozwiń mapę" className="absolute inset-0 active:opacity-95 transition-opacity" />
+                <span className="absolute top-3 right-3 h-10 w-10 rounded-full bg-card shadow-md flex items-center justify-center pointer-events-none">
                   <Maximize2 className="h-[18px] w-[18px] text-foreground" strokeWidth={2.2} />
                 </span>
-              </button>
+              </div>
             ) : (
               <p className="text-center text-sm text-muted-foreground py-10">Brak lokalizacji miejsc na mapie.</p>
             )}
@@ -1922,7 +1905,7 @@ export default function SharedRoute() {
       {planMapOpen && (
         <div className="fixed inset-0 z-[90] bg-background flex flex-col animate-in fade-in duration-200">
           <div className="relative flex-1 min-h-0">
-            <RouteMap pins={navMapPins as any} className="w-full h-full" showRoute={false} />
+            <RouteMap pins={mapPlaces as any} className="w-full h-full" showRoute={false} />
             <button onClick={() => setPlanMapOpen(false)} aria-label={t("close", { defaultValue: "Zamknij" })} className="absolute right-3 z-10 h-10 w-10 rounded-full bg-card shadow-md flex items-center justify-center active:scale-90 transition-transform" style={{ top: "max(0.75rem, env(safe-area-inset-top))" }}>
               <X className="h-5 w-5 text-foreground" />
             </button>
