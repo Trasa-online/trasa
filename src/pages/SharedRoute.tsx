@@ -18,6 +18,7 @@ import { publishTrip } from "@/lib/publishTrip";
 import { haptics } from "@/hooks/useHaptics";
 import { track } from "@/lib/analytics";
 import { useSwipeNav } from "@/hooks/useSwipeNav";
+import { useScreenshot } from "@/hooks/useScreenshot";
 import { useDragToDismiss } from "@/hooks/useDragToDismiss";
 import { Reorder, useDragControls, motion } from "framer-motion";
 import { toast } from "sonner";
@@ -232,6 +233,10 @@ export default function SharedRoute() {
   // 2026-09-01). Kazdy uczestnik ma swoja - u pozostalych nic sie nie zmienia.
   const [coverPickerOpen, setCoverPickerOpen] = useState(false);
   const [shareCardOpen, setShareCardOpen] = useState(false);
+  // Zrzut ekranu = intencja "chce to pokazac". Zamiast szukac guzika, user dostaje gotowy
+  // kadr od razu po zrzucie (logika jak na Pintereście). iOS nie pozwala podmienic juz
+  // zrobionego zdjecia, wiec karta pojawia sie PO nim i user robi drugi zrzut - z karta.
+  useScreenshot(() => setShareCardOpen(true), !shareCardOpen);
   const [uploadingCover, setUploadingCover] = useState(false);
   // Wyjazd wielodniowy: ktory dzien jest na ekranie. null = "Wszystkie" (cala lista z naglowkami
   // dni - tak jak przed 2026-09-01). Domyslnie pokazujemy JEDEN dzien, zeby ekran nie byl

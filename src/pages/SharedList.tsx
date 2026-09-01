@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { goBackOr } from "@/hooks/useGoBack";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useScreenshot } from "@/hooks/useScreenshot";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -72,6 +73,14 @@ export default function SharedList() {
   // Pisanie notki chowa dolny pasek - guzik "Dodaj nowe miejsce" zaslanial pole i klawiature
   // (zgloszenie Nat 2026-08-31). Ten sam wzorzec co w widoku wyjazdu (SharedRoute).
   const [noteEditing, setNoteEditing] = useState(false);
+  // UWAGA: ten stan (jak KAZDY hook w tym pliku) musi byc PRZED `if (isLoading) return ...`.
+  // Postawiony nizej dawal React error #310 - przy pierwszym renderze hookow bylo mniej niz przy
+  // kolejnym i lista przestawala sie otwierac (zgloszenie Nat 2026-09-01).
+  const [shareCardOpen, setShareCardOpen] = useState(false);
+  // Zrzut ekranu = intencja "chce to pokazac". Zamiast szukac guzika, user dostaje gotowy
+  // kadr od razu po zrzucie (logika jak na Pintereście). iOS nie pozwala podmienic juz
+  // zrobionego zdjecia, wiec karta pojawia sie PO nim i user robi drugi zrzut - z karta.
+  useScreenshot(() => setShareCardOpen(true), !shareCardOpen);
 
   const saveItemNote = async (item: any, value: string) => {
     const { error } = await (supabase as any).from("discovery_items").update({ short_desc: value || null }).eq("id", item.id);
@@ -323,7 +332,6 @@ export default function SharedList() {
 
   // Guzik "Udostepnij" pokazuje KARTE do zrzutu ekranu (szablon listy). Wysylka linku zostaje
   // pod dlugim przytrzymaniem - ekran z kanalami i eksportem obrazu to osobny temat.
-  const [shareCardOpen, setShareCardOpen] = useState(false);
   const handleShare = () => setShareCardOpen(true);
   const handleShareLink = () => { void share({ title: col.title || cityLabel || "Lista", url: buildShareUrl(`/lista/${col.id}`) }); };
 

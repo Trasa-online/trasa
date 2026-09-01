@@ -26,10 +26,19 @@ const TopBar = () => (
 function FeedSkeleton() {
   return (
     <>
-      <TopBar />
+      {/* Pasek eksploracji: pigulka przelacznika po lewej + dwa okragle guziki po prawej -
+          ten sam uklad co ExploreTopBar, zeby po zaladowaniu nic nie przeskakiwalo. */}
+      <div className="flex items-center gap-2 px-4 pt-[max(16px,env(safe-area-inset-top,0px))] pb-3">
+        <Block className="h-9 w-[104px] rounded-full" />
+        <div className="flex-1" />
+        <Block className="h-9 w-9 rounded-full" />
+        <Block className="h-9 w-9 rounded-full" />
+      </div>
       <div className="px-4">
-        {/* Pelnoekranowa karta trasy (TrasaBigCard) - jeden ekran = jedna karta. */}
-        <div className="w-full aspect-[3/4] rounded-3xl bg-muted overflow-hidden relative">
+        {/* Karta feedu ma DOKLADNIE te sama wysokosc co TrasaBigCard (TRASA_CARD_H). Wczesniej
+            szkielet byl w proporcji 3:4, czyli znacznie nizszy - po zaladowaniu tresc skakala
+            (zgloszenie Nat 2026-09-01). Wysokosc liczona z dvh minus chrome, jak w karcie. */}
+        <div className="w-full rounded-3xl bg-muted overflow-hidden relative h-[calc(100dvh-150px-env(safe-area-inset-top,0px)-max(16px,env(safe-area-inset-bottom,0px)))]">
           <div className="absolute left-5 right-5 bottom-6 space-y-2.5">
             <div className="h-4 w-40 rounded-full bg-background/40" />
             <div className="h-7 w-56 rounded-full bg-background/40" />
