@@ -80,7 +80,7 @@ function PlanReorderRow({ pin, isFirst, isLast, onTap, onUp, onDown, onRemove, d
           <GripVertical className="h-4 w-4" />
         </div>
         <button onClick={onTap} className="flex items-center gap-2 min-w-0 flex-1 text-left active:opacity-70 transition-opacity">
-          <PlacePhoto pin={pin} className="h-12 w-12 rounded-xl object-cover shrink-0" emojiClass="text-lg" />
+          <PlacePhoto pin={pin} width={56} className="h-12 w-12 rounded-xl object-cover shrink-0" emojiClass="text-lg" />
           <div className="min-w-0 flex-1">
             <p className="text-sm font-bold leading-tight truncate">{pin.place_name}</p>
             <div className="flex items-center gap-1.5 mt-0.5">

@@ -162,7 +162,13 @@ export async function prepareImageForUpload(file: File, maxSide = 1600, quality 
         ctx.imageSmoothingQuality = "high";
         ctx.drawImage(bitmap, 0, 0, w, h);
         bitmap.close?.();
-        const blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/jpeg", quality));
+        // WebP: przy tej samej jakosci ~30% lzejszy od JPEG. Safari umie go kodowac dopiero od
+        // 16.4 - starsze zwracaja PNG (czyli CIEZSZY plik), wiec sprawdzamy typ wyniku i przy
+        // braku wsparcia wracamy do JPEG.
+        let blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/webp", quality));
+        if (!blob || blob.type !== "image/webp") {
+          blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/jpeg", quality));
+        }
         // Zwolnij pamiec od razu - przy paczce zdjec to roznica miedzy plynnie a zabiciem WebView.
         canvas.width = 0; canvas.height = 0;
         if (blob && blob.size > 0) return blob;

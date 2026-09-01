@@ -1,5 +1,6 @@
 import { resolveStored } from "@/components/PlacePhoto";
 import { categoryIconSrc } from "@/lib/placeCategoryIcon";
+import { thumbUrl } from "@/lib/imageUrl";
 
 // Kafelek miejsca w karcie feedu profilu / widoku "Twoje listy" (redesign 07/08).
 // Zdjecie usera (jesli jest) w object-cover; inaczej ikona kategorii na peachy #fcede3
@@ -13,7 +14,8 @@ export function PlaceTile({ tile, showCity, aspect = "aspect-[2/3]" }: { tile: a
   // Zdjecie usera: wlasne z pinu/elementu (image_url/images/user_photo_urls/photo_url), a gdy
   // brak - okladka ze zdjec userow dodanych do MIEJSCA w wizytowce (place_photos, tile._cover).
   const stored = tile.image_url || firstOf(tile.images) || firstOf(tile.user_photo_urls) || tile.photo_url;
-  const url = resolveStored(stored) ?? resolveStored(tile._cover);
+  // Kafelek ma ~110 px szerokosci - oryginal (srednio 2,4 MB) bylby tu marnotrawstwem.
+  const url = thumbUrl(resolveStored(stored) ?? resolveStored(tile._cover), 120);
   const name = tile.place_name || "";
   const city = showCity ? (tile.city || "") : "";
   return (

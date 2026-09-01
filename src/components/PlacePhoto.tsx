@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { getPhotoUrl } from "@/lib/placePhotos";
 import { categoryIconSrc } from "@/lib/placeCategoryIcon";
+import { thumbUrl } from "@/lib/imageUrl";
 
 // Pelny URL (cache/storage/http) uzywamy bezposrednio; surowy photo_reference
 // przepuszczamy przez proxy getPhotoUrl.
@@ -13,13 +14,17 @@ export const resolveStored = (img: string | null | undefined): string | null => 
 // ikona kategorii na peachy tle #fcede3 (spojne z reszta aplikacji). ZERO emoji, ZERO
 // Google (zdjecia miejsc pochodza ze zdjec userow z tras). Prop `emojiClass` zostaje w
 // sygnaturze dla kompatybilnosci call-site'ow, ale nie jest juz uzywany.
-export function PlacePhoto({ pin, className }: { pin: any; className?: string; emojiClass?: string }) {
+export function PlacePhoto({ pin, className, width }: { pin: any; className?: string; emojiClass?: string;
+  /** Docelowa szerokosc w px - zdjecie leci wtedy przez transformacje Storage zamiast oryginalu.
+      Bez tego (np. podglad pelnoekranowy) pobieramy plik w pelnej rozdzielczosci. */
+  width?: number }) {
   // Zdjecia usera z miejsca (obojetnie ktorym kanalem dodane): pins.images (edytor trasy)
   // + pins.user_photo_urls (aktywny wyjazd). Zdjecie usera ZAWSZE przed placeholderem;
   // ikona+peachy tlo dopiero gdy BRAK jakiegokolwiek zdjecia.
   const firstOf = (v: any): string | null => (Array.isArray(v) ? (v.find((x) => typeof x === "string" && x) ?? null) : null);
   const stored = pin.image_url || firstOf(pin.images) || firstOf(pin.user_photo_urls) || pin.photo_url;
-  const url = resolveStored(stored);
+  const full = resolveStored(stored);
+  const url = width ? thumbUrl(full, width) : full;
   const [failed, setFailed] = useState(false);
 
   if (url && !failed) {

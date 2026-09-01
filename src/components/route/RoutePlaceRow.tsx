@@ -41,7 +41,7 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
         {/* Peachy kafelek ikony/zdjecia - PIONOWY prostokat 2:3 (redesign 2026-08-25, spojne z okladkami
             miniaturek/kart). self-start: przyklejony do gory wiersza. */}
         <button onClick={onOpen} className="relative w-16 h-24 shrink-0 self-start rounded-2xl overflow-hidden bg-[#fcede3] active:opacity-90">
-          <PlacePhoto pin={pin} className="w-full h-full object-cover" />
+          <PlacePhoto pin={pin} width={80} className="w-full h-full object-cover" />
           {cornerAvatar !== undefined && (
             <img src={avatarSrc(cornerAvatar)} alt="" className="absolute bottom-1 right-1 h-7 w-7 rounded-full object-cover border-2 border-white shadow-sm bg-secondary" />
           )}

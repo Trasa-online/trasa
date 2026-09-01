@@ -59,7 +59,11 @@ const SUBCAT_ORDER: string[] = MAIN_CATEGORIES.flatMap((c) => c.subcategories.ma
 
 // Statyczna mapa trasy (Google przez proxy) - ujednolicona z widokiem "Plan wyjazdu".
 // Pomaranczowo-peachy markery (#F0A583). Klik -> interaktywna RouteMap (pelny ekran).
-function buildStaticRouteMap(pins: { latitude: number; longitude: number }[], size = "560x300"): string | null {
+// size: kadr MUSI miec proporcje zblizone do kontenera. Wczesniej bylo 560x300 (panorama)
+// rozciagane object-cover na wysoki kontener - Google rysuje piny w stalym rozmiarze, wiec przy
+// takim powiekszeniu robily sie ogromne (zgloszenie Nat 2026-09-01). Portretowy kadr = piny
+// w naturalnej wielkosci i ostrzejsza mapa.
+function buildStaticRouteMap(pins: { latitude: number; longitude: number }[], size = "420x640"): string | null {
   const pts = pins.filter((p) => p.latitude != null && p.longitude != null).slice(0, 20);
   if (!pts.length) return null;
   // Numerowane peachy piny (label 1-9; Google static przyjmuje 1 znak - dla 10+ bez numeru).
@@ -71,6 +75,7 @@ function buildStaticRouteMap(pins: { latitude: number; longitude: number }[], si
 }
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { avatarSrc } from "@/lib/avatar";
+import { thumbUrl } from "@/lib/imageUrl";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import SavePlaceSheet, { type SavePlaceInput } from "@/components/plan-wizard/SavePlaceSheet";
 import { useSavedPlaces } from "@/hooks/useSavedPlaces";
@@ -109,7 +114,7 @@ function CompactSortableRow({ value, rowPin, index, categoryLabel }: {
           <GripVertical className="h-5 w-5" />
         </span>
         <span className="relative w-12 h-12 shrink-0 rounded-xl overflow-hidden bg-[#fcede3]">
-          <PlacePhoto pin={rowPin} className="w-full h-full object-cover" />
+          <PlacePhoto pin={rowPin} width={80} className="w-full h-full object-cover" />
           <span className="absolute top-0.5 left-0.5 h-4 min-w-4 px-1 rounded-full bg-black/55 text-white text-[10px] font-bold flex items-center justify-center">{index + 1}</span>
         </span>
         <span className="min-w-0 flex-1">
@@ -698,7 +703,7 @@ export default function SharedRoute() {
           const file = isHeic(rawFile) ? await convertHeicToJpeg(rawFile) : rawFile;
           const blob = await prepareImageForUpload(file, 1600, 0.8);
           const path = `${user.id}/${id}/pin_${pin.id}_${i}_${Math.random().toString(36).slice(2)}.jpg`;
-          const { error } = await supabase.storage.from("route-images").upload(path, blob, { upsert: true, contentType: "image/jpeg" });
+          const { error } = await supabase.storage.from("route-images").upload(path, blob, { upsert: true, contentType: blob.type || "image/jpeg" });
           if (error) { console.error("[SharedRoute] photo upload:", error.message); return null; }
           const { data } = supabase.storage.from("route-images").getPublicUrl(path);
           return data?.publicUrl ? { path, url: data.publicUrl } : null;
@@ -908,7 +913,7 @@ export default function SharedRoute() {
         const file = isHeic(rawFile) ? await convertHeicToJpeg(rawFile) : rawFile;
         const prepared = await prepareImageForUpload(file, 1600, 0.8);
         const path = `${user.id}/${route.id}/gal_${Date.now()}_${i}_${Math.floor(Math.random() * 1e6)}.jpg`;
-        const { error } = await (supabase as any).storage.from("route-images").upload(path, prepared, { contentType: "image/jpeg", upsert: false });
+        const { error } = await (supabase as any).storage.from("route-images").upload(path, prepared, { contentType: prepared.type || "image/jpeg", upsert: false });
         if (error) { console.error("[SharedRoute] photo upload failed:", error.message); return null; }
         return `${SUPABASE_URL}/storage/v1/object/public/route-images/${path}`;
       } catch (e: any) { console.error("[SharedRoute] photo processing failed:", e?.message ?? e); return null; }
@@ -957,7 +962,7 @@ export default function SharedRoute() {
     // + rozmiar miniatury), bo sonner action nie zawsze renderowal sie z customowa trescia.
     toast.custom((tid) => (
       <div className="flex items-center gap-3 w-full bg-white rounded-2xl shadow-lg shadow-black/10 pl-2.5 pr-2 py-2.5">
-        <PlacePhoto pin={pin} className="h-12 w-12 rounded-xl object-cover shrink-0" />
+        <PlacePhoto pin={pin} width={56} className="h-12 w-12 rounded-xl object-cover shrink-0" />
         <div className="min-w-0 flex-1">
           <p className="text-[14px] font-semibold text-foreground truncate">{pin.place_name}</p>
           <p className="text-[11.5px] text-muted-foreground">{stage === "planning" ? "Usunięto z propozycji" : "Usunięto z wyjazdu"}</p>
@@ -1486,29 +1491,6 @@ export default function SharedRoute() {
               <div className="w-7 shrink-0" />
             )}
           </div>
-        {/* Zakladki PRZYPIETE razem z guzikiem wstecz i awatarami (prosba Nat 2026-09-01) -
-            siedza w stalym naglowku, poza obszarem scrolla, wiec zostaja na ekranie przy
-            przewijaniu. Tytul, daty i opis wyjazdu przewijaja sie pod nimi. */}
-        <div>
-          <div className="flex border-b border-border/60">
-            {/* Etap PROPOZYCJI (planning) = tylko Miejsca + Mapa (galeria bez sensu przy sugerowaniu).
-                Galeria pojawia sie od "w trakcie" (ongoing) - prosba Nat 2026-08-25. */}
-            {([
-              { k: "miejsca" as const, Icon: MapPin, label: "Miejsca" },
-              ...(stage !== "planning" ? [{ k: "galeria" as const, Icon: ImageIcon, label: "Galeria" }] : []),
-              { k: "mapa" as const, Icon: MapIcon, label: "Mapa" },
-            ]).map(({ k, Icon, label }) => {
-              const on = planTab === k;
-              return (
-                <button key={k} onClick={() => setPlanTab(k)} aria-label={label}
-                  className="flex-1 flex items-center justify-center py-3 relative active:opacity-70 transition-opacity">
-                  <Icon className={cn("h-5 w-5", on ? "text-foreground" : "text-muted-foreground/60")} strokeWidth={on ? 2.4 : 2} />
-                  {on && <span className="absolute -bottom-px left-0 right-0 h-0.5 bg-foreground" />}
-                </button>
-              );
-            })}
-          </div>
-        </div>
       </div>
 
       {/* Obszar scrolla - #1: BEZ okladki tla trasy (okladka TYLKO w eksploracji). */}
@@ -1586,6 +1568,30 @@ export default function SharedRoute() {
           )}
         </div>
 
+        {/* Zakladki wracaja POD opis wyjazdu - dzialaja tam jak divider miedzy naglowkiem
+            a trescia (prosba Nat 2026-09-01). Zeby nie uciekaly przy przewijaniu, sa sticky
+            do gornej krawedzi obszaru scrolla. Chipy dni przyklejaja sie tuz pod nimi. */}
+        <div className="sticky top-0 z-30 bg-background pt-5">
+          <div className="flex border-b border-border/60">
+            {/* Etap PROPOZYCJI (planning) = tylko Miejsca + Mapa (galeria bez sensu przy sugerowaniu).
+                Galeria pojawia sie od "w trakcie" (ongoing) - prosba Nat 2026-08-25. */}
+            {([
+              { k: "miejsca" as const, Icon: MapPin, label: "Miejsca" },
+              ...(stage !== "planning" ? [{ k: "galeria" as const, Icon: ImageIcon, label: "Galeria" }] : []),
+              { k: "mapa" as const, Icon: MapIcon, label: "Mapa" },
+            ]).map(({ k, Icon, label }) => {
+              const on = planTab === k;
+              return (
+                <button key={k} onClick={() => setPlanTab(k)} aria-label={label}
+                  className="flex-1 flex items-center justify-center py-3 relative active:opacity-70 transition-opacity">
+                  <Icon className={cn("h-5 w-5", on ? "text-foreground" : "text-muted-foreground/60")} strokeWidth={on ? 2.4 : 2} />
+                  {on && <span className="absolute -bottom-px left-0 right-0 h-0.5 bg-foreground" />}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         {/* Tresc zakladek - swipe w bok przelacza Miejsca / Galeria / Mapa. */}
         <div {...swipeTabs}>
         {planTab === "miejsca" ? (
@@ -1629,7 +1635,7 @@ export default function SharedRoute() {
             {/* W trybie "Zmień kolejność" chipow NIE ma: tam widac caly wyjazd, bo o to chodzi -
                 przeciagniecie miejsca pod naglowek innego dnia zmienia mu dzien. */}
             {daysUsable && !choosing && !reorderMode && (
-              <div className="sticky top-0 z-30 -mx-5 bg-background border-b border-border/50">
+              <div className="sticky top-[45px] z-20 -mx-5 bg-background border-b border-border/50">
                 <div className="flex gap-2 overflow-x-auto px-5 py-3 no-scrollbar">
                   {[null, ...Array.from({ length: dayCount }, (_, i) => i + 1)].map((d) => {
                     const on = activeDay === d;
@@ -1695,7 +1701,7 @@ export default function SharedRoute() {
                 <p className="text-[13px] text-muted-foreground pb-1">Zaznacz miejsca, które wchodzą do wyjazdu.</p>
                 {(pins as any[]).map((pin) => (
                   <button key={pin.id} onClick={() => toggleChosen(pin.id)} className="w-full flex items-center gap-3 rounded-2xl bg-secondary/60 pl-3 pr-2.5 py-2.5 text-left active:opacity-80 transition-opacity">
-                    <PlacePhoto pin={pin} className="h-12 w-12 rounded-xl object-cover shrink-0" />
+                    <PlacePhoto pin={pin} width={56} className="h-12 w-12 rounded-xl object-cover shrink-0" />
                     <span className="flex-1 min-w-0 text-[15px] font-semibold text-foreground truncate">{pin.place_name}</span>
                     {/* Liczba glosow - pomaga hostowi zdecydowac */}
                     {(() => {
@@ -1730,7 +1736,7 @@ export default function SharedRoute() {
                 className="relative block w-full rounded-2xl overflow-hidden border border-border/40 bg-muted active:opacity-95 transition-opacity"
                 style={{ height: "calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 250px)", minHeight: "300px" }}>
                 <img src={staticMapUrl} alt={t("route_map")} className="w-full h-full object-cover" />
-                <span className="absolute bottom-3 right-3 h-10 w-10 rounded-full bg-card shadow-md flex items-center justify-center">
+                <span className="absolute top-3 right-3 h-10 w-10 rounded-full bg-card shadow-md flex items-center justify-center">
                   <Maximize2 className="h-[18px] w-[18px] text-foreground" strokeWidth={2.2} />
                 </span>
               </button>
@@ -1756,7 +1762,9 @@ export default function SharedRoute() {
                   return (
                     <div key={i} onClick={() => setViewerIndex(i)} role="button"
                       className={`relative break-inside-avoid rounded-2xl overflow-hidden bg-muted active:opacity-90 transition-opacity cursor-pointer ${isCover ? "ring-2 ring-primary ring-offset-2 ring-offset-background" : ""}`}>
-                      <img src={url} alt="" loading="lazy" className="w-full h-auto block" />
+                      {/* Siatka masonry ma ~180 px na kolumne - pobieramy miniature, nie oryginal.
+                          Podglad pelnoekranowy nizej zostaje przy pelnej rozdzielczosci. */}
+                      <img src={thumbUrl(url, 200) ?? url} alt="" loading="lazy" className="w-full h-auto block" />
                       {/* Licznik polubien (gdy sa) - siatka zostaje czysta, lajkuje sie w podgladzie. */}
                       {likeStateOf(url).count > 0 && (
                         <span className="absolute bottom-1.5 left-1.5 flex items-center gap-1 rounded-full bg-black/45 backdrop-blur-sm px-2 py-0.5 text-[11px] font-semibold text-white">
@@ -1928,7 +1936,7 @@ export default function SharedRoute() {
                     <button key={p.id} onClick={() => { setPlanMapOpen(false); openDetail(p); }}
                       className="shrink-0 w-[184px] rounded-2xl bg-card shadow-lg shadow-black/15 p-2.5 flex items-center gap-2.5 text-left active:scale-[0.98] transition-transform">
                       <div className="relative h-14 w-14 rounded-xl overflow-hidden bg-[#fcede3] shrink-0">
-                        <PlacePhoto pin={rowPinFor(p)} className="w-full h-full object-cover" />
+                        <PlacePhoto pin={rowPinFor(p)} width={56} className="w-full h-full object-cover" />
                         <span className="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-primary text-white text-[10px] font-bold flex items-center justify-center">{p.__no}</span>
                         {addedByAvatar(p) !== undefined && (
                           <img src={avatarSrc(addedByAvatar(p))} alt="" className="absolute bottom-0.5 right-0.5 h-5 w-5 rounded-full object-cover border-2 border-white bg-secondary" />

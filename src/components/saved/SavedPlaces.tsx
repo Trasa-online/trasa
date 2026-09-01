@@ -101,7 +101,7 @@ export function SavedPlaces({ city }: { city?: string }) {
     <div key={p.id} className="flex items-center gap-3 py-2.5">
       <button onClick={() => openDetail(p)} className="flex items-center gap-3 flex-1 min-w-0 text-left active:opacity-80">
         <div className="h-14 w-14 rounded-xl overflow-hidden shrink-0 bg-muted">
-          <PlacePhoto pin={{ photo_url: p.photo_url, category: p.category }} className="h-full w-full object-cover" />
+          <PlacePhoto pin={{ photo_url: p.photo_url, category: p.category }} width={160} className="h-full w-full object-cover" />
         </div>
         <div className="min-w-0 flex-1">
           <p className="text-sm font-bold text-foreground truncate">{p.place_name}</p>

@@ -213,7 +213,10 @@ const MapContent = ({ validPins, onPinClick, startingLocation, singlePlace = fal
               boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
               cursor: 'pointer',
             }}>
-              {singlePlace || !showRoute ? '' : label}
+              {/* Numer miejsca pokazujemy ZAWSZE poza trybem jednego miejsca. Wczesniej gasil go
+                  tez showRoute={false}, wiec widok wyjazdu i listy dostawal same kropki - a
+                  showRoute steruje LINIA laczaca, nie numeracja (zgloszenie Nat 2026-09-01). */}
+              {singlePlace ? '' : label}
             </div>
           </AdvancedMarker>
         );
