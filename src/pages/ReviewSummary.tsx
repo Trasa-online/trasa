@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { avatarSrc } from "@/lib/avatar";
-import { placeTagsForCategory } from "@/lib/routeTags";
+import { placeTagsForCategory, localizeTag } from "@/lib/routeTags";
 import { fetchRouteNotesWithAuthors, notesByPlace, placeNoteKey } from "@/lib/placeNotes";
 import { fetchPinPhotos, deletePinPhoto, photosByPlace, pinPhotoKey } from "@/lib/pinPhotos";
 import PlaceNotes from "@/components/route/PlaceNotes";
@@ -126,7 +126,7 @@ function SortableReviewRow({ pin, idx, categoryLabel, onOpen, onRemove, noteValu
                 return (
                   <button key={tg} type="button" onClick={() => onToggleTag(tg)}
                     className={`flex items-center gap-1 px-2.5 py-1.5 rounded-full text-[13px] font-semibold transition-colors active:scale-[0.97] border ${on ? "bg-[#FDF184] border-[#FDCD84] text-foreground" : "bg-white text-foreground border-border/60"}`}>
-                    {tg}{on ? <Check className="h-3 w-3 text-foreground" /> : <Plus className="h-3 w-3 text-muted-foreground/50" />}
+                    {localizeTag(tg)}{on ? <Check className="h-3 w-3 text-foreground" /> : <Plus className="h-3 w-3 text-muted-foreground/50" />}
                   </button>
                 );
               })}

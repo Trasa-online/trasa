@@ -13,7 +13,7 @@ import { format } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
 import { MapPin, ArrowLeft, Sparkles, ChevronDown, UserRound, Bookmark, Calendar as CalendarIcon, Image as ImageIcon, Maximize2, X, Building2, Pencil, Trash2, Heart, Share2, Plus, Map as MapIcon, Loader2, Star, GripVertical, Check, Flag, Camera, ThumbsUp, MessageCircle } from "lucide-react";
 import { MAIN_CATEGORIES, subcategoryPluralLabel } from "@/lib/categories";
-import { PLACE_VERDICT_TAGS } from "@/lib/routeTags";
+import { PLACE_VERDICT_TAGS, verdictOf, localizeTag } from "@/lib/routeTags";
 import { publishTrip } from "@/lib/publishTrip";
 import { haptics } from "@/hooks/useHaptics";
 import { track } from "@/lib/analytics";
@@ -149,7 +149,7 @@ export default function SharedRoute() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const { t } = useTranslation("sharing");
+  const { t, i18n } = useTranslation("sharing");
 
   // Polubienie trasy (heart). Owner powiadamiany przez trigger notify_route_like.
   const { data: likeData } = useQuery({
@@ -566,10 +566,13 @@ export default function SharedRoute() {
 
 
   // Werdykt o miejscu (pins.tags) - jeden tap pod notkami.
-  const togglePinTag = async (pinId: string, tag: string) => {
+  const togglePinTag = async (pinId: string, tagId: string) => {
     haptics.selection();
     const cur = pinTags[pinId] ?? [];
-    const next = cur.includes(tag) ? cur.filter((t) => t !== tag) : [...cur, tag];
+    // Odznaczanie po ID: usuwamy zarowno nowe id, jak i stara polska etykiete tego samego werdyktu
+    // (inaczej tag zapisany poprzednim buildem zostawalby na miejscu mimo odklikniecia).
+    const isSame = (t: string) => t === tagId || verdictOf(t)?.id === tagId;
+    const next = cur.some(isSame) ? cur.filter((t) => !isSame(t)) : [...cur, tagId];
     setPinTags((prev) => ({ ...prev, [pinId]: next }));
     await (supabase as any).from("pins").update({ tags: next }).eq("id", pinId);
   };
@@ -1153,12 +1156,14 @@ export default function SharedRoute() {
               wiec trafia tez do wspomnienia i eksploracji. */}
           {canEdit && (
             <div className="flex flex-wrap gap-1.5">
-              {PLACE_VERDICT_TAGS.map((tg) => {
-                const on = (pinTags[pin.id] ?? []).includes(tg);
+              {PLACE_VERDICT_TAGS.map((v) => {
+                // Zaznaczenie po ID, nie po napisie - inaczej werdykt zapisany starym buildem
+                // (polska etykieta w pins.tags) nie podswietlalby sie na tym chipie.
+                const on = (pinTags[pin.id] ?? []).some((t) => verdictOf(t)?.id === v.id);
                 return (
-                  <button key={tg} type="button" onClick={() => togglePinTag(pin.id, tg)}
+                  <button key={v.id} type="button" onClick={() => togglePinTag(pin.id, v.id)}
                     className={`px-2.5 py-1.5 rounded-full text-[12.5px] font-semibold border transition-colors active:scale-[0.97] ${on ? "bg-[#FDF184] border-[#FDCD84] text-foreground" : "bg-white text-foreground border-border/60"}`}>
-                    {tg}
+                    {localizeTag(v.id, i18n.language)}
                   </button>
                 );
               })}

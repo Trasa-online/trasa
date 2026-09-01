@@ -1,3 +1,4 @@
+import i18n from "@/i18n";
 // Predefiniowane pule tagów dla TRAS i MIEJSC (sugestie-chipy, klik = dodaj).
 // EDYTUJ TU, żeby zmienić dostępne tagi - to jedyne źródło prawdy.
 // Zapisywane: tagi miejsca -> pins.tags (tagi całej trasy wycofane 2026-08-31).
@@ -54,12 +55,50 @@ export function placeTagsForCategory(category?: string | null): string[] {
 // Ile tagów pokazać przed rozwinięciem "Pokaż więcej".
 export const PLACE_TAGS_VISIBLE = 5;
 
-// Werdykt o miejscu - 4 tagi "czy warto", wybierane JEDNYM tapnieciem pod notkami w widoku
-// wyjazdu "w trakcie" (prosba Nat 2026-08-30). Trafiaja do pins.tags, tak jak reszta tagow
-// miejsca, wiec widac je pozniej we wspomnieniu i w eksploracji.
-export const PLACE_VERDICT_TAGS = [
-  "Musisz odwiedzić!",
-  "Warto odwiedzić",
-  "Nie warto odwiedzać",
-  "Przy okazji",
-] as const;
+// Werdykt o miejscu - tagi "czy warto", wybierane JEDNYM tapnieciem pod notkami w widoku wyjazdu
+// (prosba Nat 2026-08-30). Trafiaja do pins.tags, tak jak reszta tagow miejsca, wiec widac je
+// pozniej we wspomnieniu i w eksploracji.
+//
+// UWAGA (2026-09-01): w pins.tags zapisujemy teraz `id`, a NIE polska etykiete. Dzieki temu ten
+// sam werdykt czyta sie po polsku i po angielsku - wczesniej tag zapisany przez polskiego usera
+// zostawal polski na zawsze, takze dla anglojezycznego ogladajacego.
+export type VerdictTag = { id: string; pl: string; en: string };
+
+export const PLACE_VERDICT_TAGS: VerdictTag[] = [
+  { id: "must_visit",   pl: "Musisz odwiedzić!", en: "Must visit!" },
+  { id: "worth_seeing", pl: "Przy okazji",       en: "Worth seeing" },
+  { id: "stop_by",      pl: "Warto wpaść",       en: "stop by" },
+];
+
+// Werdykty zapisane ZANIM tagi dostaly stabilne id (do 2026-09-01) - w bazie siedza jako polskie
+// napisy. Mapujemy je, zeby stare wyjazdy nadal czytalo sie poprawnie w obu jezykach. Dwa ostatnie
+// zostaly wycofane z puli: nie da sie ich juz wybrac, ale tam gdzie sa - zostaja czytelne.
+const LEGACY_VERDICTS: Record<string, VerdictTag> = {
+  "Musisz odwiedzić!":   PLACE_VERDICT_TAGS[0],
+  "Przy okazji":         PLACE_VERDICT_TAGS[1],
+  "Warto wpaść":         PLACE_VERDICT_TAGS[2],
+  "Warto odwiedzić":     { id: "worth_visiting", pl: "Warto odwiedzić",     en: "Worth visiting" },
+  "Nie warto odwiedzać": { id: "not_worth",      pl: "Nie warto odwiedzać", en: "Not worth it" },
+};
+
+const VERDICT_BY_ID: Record<string, VerdictTag> = Object.fromEntries(
+  [...PLACE_VERDICT_TAGS, ...Object.values(LEGACY_VERDICTS)].map((v) => [v.id, v]),
+);
+
+/** Werdykt dla wartosci z pins.tags - przyjmuje i nowe id, i stara polska etykiete. */
+export function verdictOf(tag: string): VerdictTag | null {
+  return VERDICT_BY_ID[tag] ?? LEGACY_VERDICTS[tag] ?? null;
+}
+
+/**
+ * Etykieta taga do wyswietlenia. Werdykty tlumaczymy, pozostale tagi (pule tematyczne) oddajemy
+ * bez zmian - to wolny tekst z puli, ktory na razie istnieje tylko po polsku.
+ * Bez podanego `lang` bierzemy jezyk z instancji i18n, zeby miejsca renderujace tagi nie musialy
+ * go przekazywac (i nie musialy siegac po hook `t`, ktory bywa juz zajety lokalna zmienna).
+ */
+export function localizeTag(tag: string, lang?: string): string {
+  const v = verdictOf(tag);
+  if (!v) return tag;
+  const l = lang ?? i18n.language ?? "pl";
+  return String(l).toLowerCase().startsWith("en") ? v.en : v.pl;
+}

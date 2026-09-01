@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback } from "react";
 import { useTranslation } from "react-i18next";
+import { localizeTag } from "@/lib/routeTags";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -554,7 +555,7 @@ const DraggablePinList = ({
                     <div className="flex flex-wrap gap-1">
                       {pin.tags.slice(0, compact ? 3 : 4).map((tag, i) => (
                         <Badge key={i} variant="secondary" className="text-[9px] px-1 py-0 h-4">
-                          {tag}
+                          {localizeTag(tag)}
                         </Badge>
                       ))}
                       {pin.tags.length > (compact ? 3 : 4) && (

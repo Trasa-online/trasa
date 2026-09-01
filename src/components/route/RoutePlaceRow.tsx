@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { localizeTag } from "@/lib/routeTags";
 import { Bookmark, Trash2 } from "lucide-react";
 import { PlacePhoto } from "@/components/PlacePhoto";
 import { avatarSrc } from "@/lib/avatar";
@@ -59,7 +60,7 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
           {Array.isArray(pin.tags) && pin.tags.length > 0 && (
             <div className="flex flex-wrap gap-1.5 mt-2">
               {pin.tags.map((tg: string) => (
-                <span key={tg} className="inline-flex items-center px-2.5 py-1 rounded-full bg-secondary text-foreground text-[12px] font-semibold">{tg}</span>
+                <span key={tg} className="inline-flex items-center px-2.5 py-1 rounded-full bg-secondary text-foreground text-[12px] font-semibold">{localizeTag(tg)}</span>
               ))}
             </div>
           )}
