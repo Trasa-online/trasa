@@ -1061,10 +1061,16 @@ export default function SharedRoute() {
         </button>
       );
     }
-    // Etap W TRAKCIE (ongoing): notki innych (awatar + tresc, BEZ headera) + moja notka (kompaktowo,
-    // auto-zapis) + guzik "Zdjęcie" obok + zdjecia per-miejsce (awatar autora). Uklad wspolny z listami.
-    if (stage === "ongoing") {
+    // Etap W TRAKCIE (ongoing) i WSPOMNIENIE (completed): notki innych (awatar + tresc, BEZ headera)
+    // + moja notka (kompaktowo, auto-zapis) + guzik "Zdjęcie" obok + zdjecia per-miejsce (awatar
+    // autora). Uklad wspolny z listami.
+    // Dopisywanie dziala TAKZE PO PUBLIKACJI (prosba Nat 2026-09-01): wspomnienie dojrzewa po
+    // powrocie - kazdy uczestnik moze dorzucic swoja notke i zdjecia do miejsca. RLS na
+    // pin_ratings/pin_photos tego nie blokuje (warunkiem jest czlonkostwo, nie status trasy).
+    if (stage === "ongoing" || stage === "completed") {
       const placePhotos = photosMap.get(pinPhotoKey(pin.place_name)) ?? [];
+      // Widz spoza wyjazdu przy pustym miejscu: nic nie renderujemy (bez pustego odstepu pod wierszem).
+      if (!canEdit && !list.length && !placePhotos.length) return undefined;
       const busy = uploadingPin === pin.id;
       const myNote = ((list.find((n) => n.user_id === user?.id)?.note) ?? "").trim();
       const photoSlot = canEdit ? (
@@ -1082,8 +1088,9 @@ export default function SharedRoute() {
           {canEdit && (
             <PlaceNoteEditor note={myNote} avatarUrl={myAvatar} onSave={(v) => saveMyNote(pin, v)} photoSlot={photoSlot} onEditingChange={setNoteEditing} />
           )}
-          {/* Notki innych uczestnikow - awatar + tresc, BEZ headera (task 6). */}
-          <PlaceNotes notes={list} excludeUserId={user?.id} />
+          {/* Notki innych uczestnikow - awatar + tresc, BEZ headera (task 6). Widz spoza wyjazdu
+              nie ma edytora, wiec jego notki nie ma czego wykluczac - pokazujemy wszystkie. */}
+          <PlaceNotes notes={list} excludeUserId={canEdit ? user?.id : undefined} />
           {/* Werdykt o miejscu - jeden tap zamiast pisania (prosba Nat 2026-08-30). pins.tags,
               wiec trafia tez do wspomnienia i eksploracji. */}
           {canEdit && (
@@ -1123,10 +1130,7 @@ export default function SharedRoute() {
         </div>
       );
     }
-    // Wspomnienie (completed / published): notki wszystkich, read-only. BEZ headera - sam awatar
-    // + notka danego usera (task 6, prosba Nat 2026-08-26).
-    if (!list.length) return undefined;
-    return <PlaceNotes notes={list} />;
+    return undefined;
   };
   const rowPinFor = (pin: any) => (coverFor(pin) ? { ...pin, photo_url: coverFor(pin) } : pin);
 
@@ -1516,8 +1520,8 @@ export default function SharedRoute() {
               <div className="columns-2 gap-2 [&>*]:mb-2">
                 {canAddPhotos && (
                   <button onClick={() => photoInputRef.current?.click()} disabled={uploadingPhotos}
-                    className="block w-full break-inside-avoid aspect-[4/3] rounded-2xl border-2 border-dashed border-border flex-col items-center justify-center gap-1.5 text-muted-foreground active:scale-[0.98] transition-transform disabled:opacity-60">
-                    {uploadingPhotos ? <Loader2 className="h-6 w-6 animate-spin mx-auto" /> : <><Plus className="h-6 w-6 mx-auto" /><span className="block text-xs font-semibold mt-1">Dodaj zdjęcie</span></>}
+                    className="flex w-full break-inside-avoid aspect-[4/3] rounded-2xl border-2 border-dashed border-border flex-col items-center justify-center gap-1.5 text-muted-foreground active:scale-[0.98] transition-transform disabled:opacity-60">
+                    {uploadingPhotos ? <Loader2 className="h-6 w-6 animate-spin" /> : <><Plus className="h-6 w-6" /><span className="text-xs font-semibold">Dodaj zdjęcie</span></>}
                   </button>
                 )}
                 {galleryPhotos.map((url, i) => {
