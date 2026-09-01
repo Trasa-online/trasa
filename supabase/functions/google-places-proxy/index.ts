@@ -111,6 +111,10 @@ Deno.serve(async (req) => {
         latitude: r.geometry?.location?.lat,
         longitude: r.geometry?.location?.lng,
         types: r.types ?? [],
+        // Identyfikator Google. Bez niego dodane miejsce nie da sie polaczyc z naszym rekordem
+        // w `places` ani z wizytowka biznesowa - lokal z kontem dostawal wizytowke "zero"
+        // (zgloszenie Nat 2026-09-01: Wanderlust). Klucz, nie zdjecie: nic nie kosztuje.
+        place_id: r.place_id ?? null,
       }));
       textsearchCache.set(body.query, { results, ts: Date.now() });
       return new Response(JSON.stringify({ results }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });

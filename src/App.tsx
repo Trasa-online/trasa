@@ -494,10 +494,22 @@ function SplashController() {
 
   const [visible, setVisible] = useState(!skipSplash);
   const [replayKey, setReplayKey] = useState(0);
+  // Wariant C z eksploracji: znak rysuje sie przy PIERWSZYM zimnym starcie w ciagu doby, a przy
+  // kolejnych od razu widac szkielet ekranu, na ktory user wchodzi. Marka dostaje swoja chwile
+  // raz dziennie; poza tym liczy sie najkrotszy odbierany czas, a nie kolejna animacja.
+  const [branded] = useState(() => {
+    try {
+      const last = Number(localStorage.getItem("spontaway_splash_seen") || 0);
+      const fresh = Date.now() - last > 12 * 60 * 60 * 1000;
+      if (fresh) localStorage.setItem("spontaway_splash_seen", String(Date.now()));
+      return fresh;
+    } catch { return true; }   // brak localStorage (prywatne okno) - pokaz znak
+  });
+  const [forceBranded, setForceBranded] = useState(false);
   // Podglad dla testera (Ustawienia -> "Pokaż ekran startowy", admin): odtwarza animacje bez
   // ubijania aplikacji. Zwykly user trafia na ten ekran wylacznie przy zimnym starcie.
   useEffect(() => {
-    const replay = () => { setReplayKey((k) => k + 1); setVisible(true); setBootDone(true); setMinElapsed(true); };
+    const replay = () => { setForceBranded(true); setReplayKey((k) => k + 1); setVisible(true); setBootDone(true); setMinElapsed(true); };
     window.addEventListener("spontaway:replay-splash", replay);
     return () => window.removeEventListener("spontaway:replay-splash", replay);
   }, []);
@@ -568,6 +580,15 @@ function SplashController() {
   }, [done]);
 
   if (!visible) return null;
+  // Kolejny start tego samego dnia: zamiast znaku od razu szkielet ekranu docelowego, wiec uklad
+  // nie skacze po zaladowaniu (podglad admina zawsze pokazuje wersje ze znakiem).
+  if (!branded && !forceBranded) {
+    return (
+      <div className="fixed inset-0 z-[9999] bg-background">
+        <ScreenSkeleton variant={variantForPath(window.location.hash)} />
+      </div>
+    );
+  }
   // key: przy ponownym odpaleniu (podglad admina) komponent montuje sie od zera, wiec animacja
   // rysowania startuje od poczatku zamiast zostac na koncowej klatce.
   return <SplashDraw key={replayKey} done={done} onHidden={() => setVisible(false)} />;

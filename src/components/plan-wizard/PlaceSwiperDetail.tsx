@@ -261,14 +261,38 @@ const PlaceSwiperDetail = ({
   // wizytowke; zaseedowana wizytowka "do przejecia" (bez wlasciciela) jej nie ma.
   const isPremiumBusiness = isBusiness && (ep as any)?.businessIsPremium === true;
   const communityPhotos = isPremiumBusiness ? contributed : [];
+  // DEDUP PO TOZSAMOSCI PLIKU, nie po napisie URL (zgloszenie Nat 2026-09-01: "na wizytowkach
+  // zaciagaja sie podwojnie te same zdjecia"). Ten sam obraz potrafi przyjsc dwoma droramai:
+  //  - jako plik z cache: .../place-photos-cache/hash_<sha nazwy|miasta>_800.jpg (albo gpid_<id>),
+  //  - jako zdjecie Google przez proxy: /api/place-photo?ref=<REF>&w=800.
+  // To rozne napisy, wiec `new Set` ich nie sklejal i zdjecie wyswietlalo sie dwa razy. Klucz
+  // tozsamosci sprowadza oba ksztalty do wspolnego mianownika: ref dla proxy, nazwa pliku bez
+  // sufiksu rozmiaru dla cache, sciezka bez query dla reszty.
+  const photoIdentity = (u: string): string => {
+    try {
+      const ref = u.match(/[?&]ref=([^&]+)/)?.[1];
+      if (ref) return `ref:${decodeURIComponent(ref)}`;
+      const file = u.split("?")[0].split("/").pop() ?? u;
+      const cached = file.match(/^((?:gpid|hash)_[A-Za-z0-9_-]+?)_\d+\.(?:jpe?g|png|webp)$/i)?.[1];
+      return cached ? `cache:${cached}` : u.split("?")[0];
+    } catch { return u; }
+  };
+  const dedupByIdentity = (urls: string[]): string[] => {
+    const seen = new Set<string>();
+    return urls.filter((u) => { const k = photoIdentity(u); if (seen.has(k)) return false; seen.add(k); return true; });
+  };
   // Cap podniesiony 4 -> 10, zeby zdjecia dodane przez userow (#3e) sie zmiescily.
-  const displayPhotos = Array.from(new Set(
-    isPremiumBusiness
-      ? [...fetchedPhotos, ...ownCover, ...ownGallery]
-      : isBusiness
-        ? [...fetchedPhotos, ...contributed, ...ownCover, ...ownGallery]
-        : [...ownCover, ...fetchedPhotos, ...contributed, ...ownGallery],
-  )).slice(0, 10);
+  const orderedPhotos = isPremiumBusiness
+    ? [...fetchedPhotos, ...ownCover, ...ownGallery]
+    : isBusiness
+      ? [...fetchedPhotos, ...contributed, ...ownCover, ...ownGallery]
+      : [...ownCover, ...fetchedPhotos, ...contributed, ...ownGallery];
+  // Zdjecie z cache to KOPIA pierwszego zdjecia Google tego miejsca (klucz cache liczony
+  // z nazwy i miasta, nie z tresci), wiec gdy mamy oba - pierwsze z Google jest tym samym
+  // kadrem i leci na smietnik. Kolejne zdjecia Google zostaja, bo cache trzyma tylko jedno.
+  const hasCached = orderedPhotos.some((u) => /\/(?:gpid|hash)_[A-Za-z0-9_-]+_\d+\./.test(u));
+  const firstProxy = hasCached ? orderedPhotos.find((u) => /[?&]ref=/.test(u)) : undefined;
+  const displayPhotos = dedupByIdentity(orderedPhotos.filter((u) => u !== firstProxy)).slice(0, 10);
 
   // Notki userow o tym miejscu - z OPUBLIKOWANYCH tras i PUBLICZNYCH list (best-effort).
   useEffect(() => {

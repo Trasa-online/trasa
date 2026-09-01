@@ -61,6 +61,8 @@ import { avatarSrc } from "@/lib/avatar";
 import { thumbUrl } from "@/lib/imageUrl";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import SavePlaceSheet, { type SavePlaceInput } from "@/components/plan-wizard/SavePlaceSheet";
+import { resolvePlaceDbId } from "@/lib/placeLists";
+import { fetchEnrichedPlace } from "@/components/plan-wizard/PlaceSwiper";
 import { useSavedPlaces } from "@/hooks/useSavedPlaces";
 import FullCalendarPicker from "@/components/plan-wizard/FullCalendarPicker";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
@@ -864,11 +866,15 @@ export default function SharedRoute() {
   const handleAddPlaces = async (places: PlaceForList[]) => {
     if (!user) return;
     const maxOrder = pins.reduce((m: number, p: any) => Math.max(m, p.pin_order ?? -1), -1);
+    // Dowiazanie do NASZEGO rekordu `places` - dzieki temu lokal z kontem biznesowym otwiera sie
+    // jako pelna wizytowka, a nie "zero" (zgloszenie Nat 2026-09-01).
+    const dbIds = await Promise.all(places.map((p) =>
+      p.place_id ? Promise.resolve(p.place_id) : resolvePlaceDbId(p.google_place_id, p.place_name, route.city)));
     const rows = places.map((p, i) => ({
       // description = notka pina: pusta, notke pisze kazdy uczestnik sam (PlaceNotes).
       route_id: route.id, place_name: p.place_name, address: p.address ?? null, description: null,
       category: p.category ?? "other", latitude: p.latitude ?? null, longitude: p.longitude ?? null,
-      place_id: p.place_id ?? null, suggested_time: null, photo_url: p.photo_url ?? null,
+      place_id: dbIds[i] ?? p.place_id ?? null, suggested_time: null, photo_url: p.photo_url ?? null,
       pin_order: maxOrder + 1 + i, original_creator_id: user.id, added_by: user.id,
       // Miejsce dodane przy WYBRANYM dniu ląduje w tym dniu. Bez tego wpadalo do dnia 1 i
       // znikalo z ekranu (przelacznik dni pokazuje jeden dzien naraz).
@@ -1112,7 +1118,21 @@ export default function SharedRoute() {
   const isLocal = !isAnon && !!author?.home_city && !!route.city &&
     author.home_city.trim().toLowerCase() === route.city.trim().toLowerCase();
 
-  const openDetail = (pin: any) => setDetailPin({
+  // Po otwarciu karty doczytujemy PELNA wizytowke z bazy (places + business_profiles), gdy pin
+  // wskazuje na nasz rekord. Bez tego lokal z kontem biznesowym pokazywal sie jako wizytowka
+  // "zero" - karta budowana z samego wiersza pinu nie ma skad wziac profilu, godzin ani menu
+  // (zgloszenie Nat 2026-09-01). Budujemy szybka wersje od razu, a bogatsza podmieniamy, gdy
+  // przyjdzie - dzieki temu arkusz otwiera sie natychmiast.
+  const upgradeDetail = async (pin: any) => {
+    const dbId = typeof pin.place_id === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(pin.place_id)
+      ? pin.place_id
+      : await resolvePlaceDbId(pin.google_place_id, pin.place_name, route.city);
+    if (!dbId) return;
+    const full = await fetchEnrichedPlace(dbId);
+    if (full) setDetailPin((cur) => (cur && cur.place_name === pin.place_name ? full : cur));
+  };
+
+  const openDetail = (pin: any) => { void upgradeDetail(pin); return setDetailPin({
     id: pin.place_id || pin.id || pin.place_name,
     place_name: pin.place_name,
     category: (pin.category || "other") as any,
@@ -1126,7 +1146,7 @@ export default function SharedRoute() {
     // Zrodlo prawdy = opis miejsca z bazy (places.description, jak w swiperze).
     // pin.description (generowany AI per-trasa) tylko jako fallback dla custom pinow.
     description: metaFor(pin).description || pin.description || "",
-  } satisfies MockPlace);
+  } satisfies MockPlace); };
 
   // Awatar zalogowanego usera (do edytora "Twoja notka"): z listy uczestnikow lub autora (owner).
   const myAvatar = (groupParticipants as any[]).find((p) => p.id === user?.id)?.avatar_url ?? (isOwner ? (author as any)?.avatar_url : null);

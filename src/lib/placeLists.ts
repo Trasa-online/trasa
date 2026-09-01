@@ -377,3 +377,32 @@ export async function quickSavePlace(
 // -> Odwiedzone. Po rozdzieleniu intencji visited=publiczna polecajka, prywatna wishlista NIE
 // może auto-trafiać do publicznej listy. Odwiedzenie miejsca != chęć polecenia. Polecanie =
 // świadomy bookmark "Dodaj do polecajki" w SavePlaceSheet.)
+
+/**
+ * Nasz rekord `places` dla miejsca dodanego z wyszukiwarki Google. Bez tego polaczenia lokal
+ * z kontem biznesowym dostaje wizytowke "zero" - karta budowana z samego wiersza listy nie ma
+ * skad wziac profilu (zgloszenie Nat 2026-09-01: Wanderlust Speciality Coffee).
+ * Kolejnosc prob: google_place_id (pewny klucz) -> nazwa + miasto (gdy Google nie oddalo id).
+ */
+export async function resolvePlaceDbId(
+  googlePlaceId?: string | null,
+  placeName?: string | null,
+  city?: string | null,
+): Promise<string | null> {
+  try {
+    if (googlePlaceId) {
+      const { data } = await (supabase as any)
+        .from("places").select("id").eq("google_place_id", googlePlaceId).maybeSingle();
+      if (data?.id) return data.id as string;
+    }
+    const name = String(placeName ?? "").trim();
+    if (!name) return null;
+    let q = (supabase as any).from("places").select("id, city").ilike("place_name", name);
+    const { data: rows } = await q.limit(5);
+    const list = (rows ?? []) as any[];
+    if (!list.length) return null;
+    const c = String(city ?? "").trim().toLowerCase();
+    const hit = c ? list.find((r) => String(r.city ?? "").trim().toLowerCase() === c) : null;
+    return (hit ?? list[0]).id as string;
+  } catch { return null; }
+}

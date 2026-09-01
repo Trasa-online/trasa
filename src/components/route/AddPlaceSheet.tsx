@@ -119,7 +119,10 @@ export default function AddPlaceSheet({ open, onClose, city, existingPlaces, onA
           : all;
         setResults(scoped.slice(0, 6).map((r) => ({
           place_name: r.name, address: r.full_address ?? null, latitude: r.latitude ?? null, longitude: r.longitude ?? null,
-          category: categoryFromGoogleTypes(r.types), photo_url: null, place_id: null, google_place_id: null, rating: null,
+          category: categoryFromGoogleTypes(r.types), photo_url: null, place_id: null,
+          // google_place_id niesiemy dalej - przy zapisie po nim znajdujemy nasz rekord `places`
+          // (a z nim wizytowke biznesowa lokalu).
+          google_place_id: r.place_id ?? null, rating: null,
         })));
       } catch { if (alive) setResults([]); }
       finally { if (alive) setSearching(false); }

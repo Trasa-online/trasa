@@ -31,6 +31,9 @@ import { placeKeyOf, fetchPlacePhotosForKeys, pickPlaceCover, linkPhotoToPlace, 
 import { useSavedPlaces } from "@/hooks/useSavedPlaces";
 import { CategoryIcon } from "@/components/CategoryIcon";
 import { subcategoryLabelLocalized } from "@/lib/categories";
+import { thumbUrl } from "@/lib/imageUrl";
+import { resolvePlaceDbId } from "@/lib/placeLists";
+import { fetchEnrichedPlace } from "@/components/plan-wizard/PlaceSwiper";
 import { inferCategoryFromName } from "@/lib/placeCategoryIcon";
 
 // Widok LISTY miejsc (polecajki) - UI/UX 1:1 z widokiem trasy (SharedRoute), ale zasilany z
@@ -243,7 +246,18 @@ export default function SharedList() {
 
   // Raw pozycja listy dla wizytowki (zapis miejsca potrzebuje place_id/google_place_id,
   // ktorych MockPlace nie niesie).
-  const openDetail = (pin: any) => { setDetailRaw(pin); setDetailPin({
+  // Jak w widoku wyjazdu: karta otwiera sie natychmiast z danych wiersza, a gdy miejsce wskazuje
+  // na nasz rekord `places`, podmieniamy ja na PELNA wizytowke (z profilem biznesowym lokalu).
+  const upgradeDetail = async (pin: any) => {
+    const dbId = typeof pin.place_id === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(pin.place_id)
+      ? pin.place_id
+      : await resolvePlaceDbId(pin.google_place_id, pin.place_name, col?.city);
+    if (!dbId) return;
+    const full = await fetchEnrichedPlace(dbId);
+    if (full) setDetailPin((cur) => (cur && cur.place_name === pin.place_name ? full : cur));
+  };
+
+  const openDetail = (pin: any) => { void upgradeDetail(pin); setDetailRaw(pin); setDetailPin({
     id: pin.place_id || pin.id || pin.place_name,
     place_name: pin.place_name,
     category: (catOf(pin) || "other") as any,
@@ -347,18 +361,30 @@ export default function SharedList() {
 
   // #3: Galeria listy = okladki miejsc + WSZYSTKIE zdjecia userow dodane do tych miejsc (place_photos).
   // Kazde zdjecie zmapowane na miejsce (tap -> wizytowka). Dedup po URL.
-  const galleryMap = new Map<string, any>();
-  for (const pin of items as any[]) {
-    const c = pinCover(pin);
-    if (c && !galleryMap.has(c)) galleryMap.set(c, pin);
-  }
+  // Dedup po TOZSAMOSCI pliku, nie po napisie URL: ten sam kadr potrafi przyjsc raz jako plik
+  // z cache (hash_/gpid_), raz przez proxy Google (?ref=). Rozne napisy = zdjecie lecialo dwa razy.
+  const photoIdentity = (u: string): string => {
+    try {
+      const ref = u.match(/[?&]ref=([^&]+)/)?.[1];
+      if (ref) return `ref:${decodeURIComponent(ref)}`;
+      const file = u.split("?")[0].split("/").pop() ?? u;
+      const cached = file.match(/^((?:gpid|hash)_[A-Za-z0-9_-]+?)_\d+\.(?:jpe?g|png|webp)$/i)?.[1];
+      return cached ? `cache:${cached}` : u.split("?")[0];
+    } catch { return u; }
+  };
+  const galleryMap = new Map<string, { url: string; pin: any }>();
+  const addPhoto = (u: string | null, pin: any) => {
+    if (!u) return;
+    const k = photoIdentity(u);
+    if (!galleryMap.has(k)) galleryMap.set(k, { url: u, pin });
+  };
+  for (const pin of items as any[]) addPhoto(pinCover(pin), pin);
   if (placePhotoMap) {
     for (const pin of items as any[]) {
-      const urls = itemCoverKeys(pin).flatMap((k) => placePhotoMap.get(k) ?? []);
-      for (const u of urls) if (u && !galleryMap.has(u)) galleryMap.set(u, pin);
+      for (const u of itemCoverKeys(pin).flatMap((k) => placePhotoMap.get(k) ?? [])) addPhoto(u, pin);
     }
   }
-  const galleryItems = Array.from(galleryMap.entries()).map(([url, pin]) => ({ url, pin }));
+  const galleryItems = Array.from(galleryMap.values());
 
   // NOWE OD OSTATNIEJ WIZYTY (wariant D z Figmy, sekcja "Zapisana lista: ktos dodal nowe miejsce").
   // Ile: aktualna liczba miejsc minus stan z poprzedniej wizyty. Ktore: ostatnie pozycje wg
@@ -463,11 +489,13 @@ export default function SharedList() {
     galleryItems.length === 0 ? (
       <p className="text-center text-sm text-muted-foreground py-10">{`Brak zdjęć w tej liście.`}</p>
     ) : (
-      /* Kafelki galerii 4:3 (spojnie z galeria wyjazdu). */
-      <div className="grid grid-cols-2 gap-1.5">
+      <div className="columns-2 gap-2 [&>*]:mb-2">
         {galleryItems.map((g, i) => (
-          <button key={i} onClick={() => openDetail(g.pin)} className="relative aspect-[4/3] rounded-xl overflow-hidden bg-muted active:opacity-90 transition-opacity">
-            <img src={g.url as string} alt={g.pin.place_name} className="w-full h-full object-cover" loading="lazy" />
+          /* Masonry jak w galerii wyjazdu (prosba Nat 2026-09-01): zdjecia w NATURALNYCH
+             proporcjach, dwie kolumny CSS. Sztywne 4:3 przycinalo kadry i lista wygladala
+             inaczej niz reszta aplikacji. */
+          <button key={i} onClick={() => openDetail(g.pin)} className="relative block w-full break-inside-avoid rounded-2xl overflow-hidden bg-muted active:opacity-90 transition-opacity">
+            <img src={thumbUrl(g.url as string, 200) ?? (g.url as string)} alt={g.pin.place_name} className="w-full h-auto block" loading="lazy" />
           </button>
         ))}
       </div>
