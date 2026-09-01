@@ -1033,18 +1033,27 @@ export default function SharedRoute() {
   };
   // Dzien domyslny: ten, ktory trwa DZIS (gdy wyjazd wlasnie sie dzieje), inaczej pierwszy.
   // Liczony z samych dat (bez godzin), zeby strefa czasowa nie przesuwala doby.
+  // Poza zakresem wyjazdu (przyszly albo dawno miniony) otwieramy DZIEN 1 - tam domyslnie leza
+  // wszystkie nieprzypisane miejsca. Wczesniej wartosc byla clampowana do ostatniego dnia, wiec
+  // wyjazd z przeszlosci otwieral sie na pustym dniu i wygladalo to, jakby miejsca zniknely.
   const dayOfToday = (() => {
     if (!tripStart) return 1;
     const midnight = (d: Date) => Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
     const diff = Math.round((midnight(new Date()) - midnight(tripStart)) / 86400000) + 1;
-    return Math.min(Math.max(diff, 1), dayCount);
+    return diff >= 1 && diff <= dayCount ? diff : 1;
   })();
   // Dopoki user sam nie tknal przelacznika, pokazujemy dzien domyslny. Po tknieciu rzadzi jego
   // wybor - w tym "Wszystkie" (null), ktorego nie da sie odroznic od "jeszcze nie wybral".
-  // Na etapie PROPOZYCJI dni nie ma sensu dzielic - miejsca sa dopiero zbierane i nikt nie
-  // przypisal ich do dnia. Przelacznik wchodzi od "w trakcie".
-  const daysUsable = hasDays && stage !== "planning";
+  // Przelacznik dni pokazujemy na KAZDYM etapie (propozycje, w trakcie, wspomnienie), gdy tylko
+  // wyjazd ma zakres dat i pierwsze miejsce (prosba Nat 2026-09-01): cala grupa ma od razu widziec,
+  // ze wyjazd ma podzialke na dni - takze wtedy, gdy dni sa jeszcze puste. Nowe miejsca trafiaja
+  // domyslnie do dnia 1, a przypisac je do wlasciwego dnia mozna w kazdej chwili - w wersji
+  // roboczej, w trakcie wyjazdu i po nim (gdyby cos poszlo nie tak).
+  const daysUsable = hasDays && (pins as any[]).length > 0;
   const activeDay: number | null = daysUsable ? (dayTouched ? selectedDay : dayOfToday) : null;
+  // Miejsca widoczne na ekranie = te z wybranego dnia. Filtrujemy RAZ, przed grupowaniem po
+  // kategoriach - inaczej puste kategorie zostawialyby po sobie same naglowki.
+  const visiblePins: any[] = activeDay === null ? (pins as any[]) : (pins as any[]).filter((p) => pinDay(p) === activeDay);
   const pickDay = (day: number | null) => { haptics.selection(); setDayTouched(true); setSelectedDay(day); };
   const placeWord = (n: number) => {
     if (n === 1) return "miejsce";
@@ -1187,7 +1196,7 @@ export default function SharedRoute() {
   // planning; same nazwy pozniej (ongoing/wspomnienie). Kolejnosc grup wg SUBCAT_ORDER. (Figma 2026-08-27)
   const groupedPins: [string, any[]][] = (() => {
     const map = new Map<string, any[]>();
-    for (const pin of pins as any[]) {
+    for (const pin of visiblePins) {
       const key = pin.category || "other";
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(pin);
@@ -1281,19 +1290,13 @@ export default function SharedRoute() {
       )
     ) : hasDays && activeDay !== null ? (
       // JEDEN DZIEN NARAZ (wariant A z Figmy). Bez naglowka "Dzien N" - chip nad lista juz to mowi,
-      // a naglowek nad jedna lista byl tylko powtorzeniem.
+      // a naglowek nad jedna lista bylby tylko powtorzeniem. `list` przychodzi juz przefiltrowana
+      // po dniu (visiblePins), wiec tu tylko renderujemy - pusty dzien obsluguje renderList raz dla
+      // calego dnia, zamiast wypisywac ten sam komunikat pod kazda kategoria.
       (() => {
-        const dayPins = list.filter((p) => pinDay(p) === activeDay);
-        if (!dayPins.length) {
-          return (
-            <p className="text-[13px] text-muted-foreground py-6 text-center">
-              {canEdit ? "Brak miejsc tego dnia. Dodaj je albo przenieś tu inne w „Zmień kolejność”." : "Brak miejsc tego dnia"}
-            </p>
-          );
-        }
         return (
           <div>
-            {dayPins.map((pin: any, i: number) => (
+            {list.map((pin: any, i: number) => (
               <RoutePlaceRow
                 key={pin.id} pin={rowPinFor(pin)} index={i}
                 categoryLabel={categoryLabel(pin.category || "other")}
@@ -1350,11 +1353,26 @@ export default function SharedRoute() {
     )
   );
 
-  const renderList = () => (
+  const renderList = () => {
+    // Pusty DZIEN: miejsca w wyjezdzie sa, tylko nie w tym dniu. Jeden komunikat na cala liste
+    // (nie pod kazda kategoria) - i od razu mowi, jak to naprawic.
+    if (activeDay !== null && !visiblePins.length) {
+      return (
+        <p className="text-[13px] text-muted-foreground py-6 text-center px-4 leading-relaxed">
+          {canEdit
+            ? "Ten dzień jest jeszcze pusty. Przenieś tu miejsca w „Zmień kolejność” albo dodaj nowe."
+            : "Brak miejsc tego dnia"}
+        </p>
+      );
+    }
     // Kategorie grupuja miejsca TYLKO na etapie propozycji (tam sluza do przegladania sugestii).
     // W trakcie wyjazdu i we wspomnieniu liczy sie KOLEJNOSC ustawiona przez usera (od punktu do
     // punktu), wiec lista jest plaska - bez naglowkow kategorii (decyzja Nat 2026-08-28).
-    stage !== "planning" ? renderRows(pins as any[], handleReorderPins) :
+    // Wyjatek: tryb "Zmień kolejność" przy wyjezdzie z dniami jest ZAWSZE plaski (z naglowkami
+    // dni), tez w propozycjach - inaczej naglowki dni powtarzalyby sie w kazdej kategorii i nie
+    // dalo by sie przeciagnac miejsca do innego dnia.
+    if (stage !== "planning" || (reorderMode && hasDays)) return renderRows(visiblePins, handleReorderPins);
+    return (
     <div>
       {groupedPins.map(([cat, groupPins]) => {
         const collapsed = collapsedCats.has(cat);
@@ -1368,7 +1386,8 @@ export default function SharedRoute() {
         );
       })}
     </div>
-  );
+    );
+  };
 
   return (
     <div className="h-[100dvh] bg-background flex flex-col max-w-lg mx-auto">
