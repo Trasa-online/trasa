@@ -236,6 +236,12 @@ export default function SharedRoute() {
   // Tryb "Zmień kolejność miejsc" - dopiero on pokazuje uchwyty drag&drop i skraca wiersze
   // do miniaturek (prosba Nat 2026-08-30).
   const [reorderMode, setReorderMode] = useState(false);
+  // Wyjazd wielodniowy: ktory dzien jest na ekranie. null = "Wszystkie" (cala lista z naglowkami
+  // dni - tak jak przed 2026-09-01). Domyslnie pokazujemy JEDEN dzien, zeby ekran nie byl
+  // niekonczacym sie scrollem (wariant A z Figmy, sekcja "Wyjazd wielodniowy").
+  const [selectedDay, setSelectedDay] = useState<number | null>(null);
+  // Czy uzytkownik sam wybral dzien - blokuje pozniejsze auto-ustawienie dnia domyslnego.
+  const [dayTouched, setDayTouched] = useState(false);
   const [chatHidden, setChatHidden] = useState(false); // dymek czatu schowany do krawedzi (swipe w bok)
   const [collapsedCats, setCollapsedCats] = useState<Set<string>>(new Set()); // zwiniete grupy kategorii
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
@@ -817,6 +823,9 @@ export default function SharedRoute() {
       category: p.category ?? "other", latitude: p.latitude ?? null, longitude: p.longitude ?? null,
       place_id: p.place_id ?? null, suggested_time: null, photo_url: p.photo_url ?? null,
       pin_order: maxOrder + 1 + i, original_creator_id: user.id, added_by: user.id,
+      // Miejsce dodane przy WYBRANYM dniu ląduje w tym dniu. Bez tego wpadalo do dnia 1 i
+      // znikalo z ekranu (przelacznik dni pokazuje jeden dzien naraz).
+      day_index: activeDay,
     }));
     const { error } = await (supabase as any).from("pins").insert(rows);
     if (error) throw error;
@@ -1002,6 +1011,31 @@ export default function SharedRoute() {
     return d ? `Dzień ${day} · ${format(d, "EEEE d.MM", { locale: dateLocale() })}` : `Dzień ${day}`;
   };
   const pinDay = (pin: any) => Math.min(Math.max(Number(pin?.day_index) || 1, 1), dayCount);
+  // Krotka data pod nazwa dnia w chipie: "pt 12.09". Daje kontekst bez otwierania kalendarza.
+  const dayChipDate = (day: number) => {
+    const d = dayDate(day);
+    return d ? format(d, "EEEEEE d.MM", { locale: dateLocale() }) : "";
+  };
+  // Dzien domyslny: ten, ktory trwa DZIS (gdy wyjazd wlasnie sie dzieje), inaczej pierwszy.
+  // Liczony z samych dat (bez godzin), zeby strefa czasowa nie przesuwala doby.
+  const dayOfToday = (() => {
+    if (!tripStart) return 1;
+    const midnight = (d: Date) => Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
+    const diff = Math.round((midnight(new Date()) - midnight(tripStart)) / 86400000) + 1;
+    return Math.min(Math.max(diff, 1), dayCount);
+  })();
+  // Dopoki user sam nie tknal przelacznika, pokazujemy dzien domyslny. Po tknieciu rzadzi jego
+  // wybor - w tym "Wszystkie" (null), ktorego nie da sie odroznic od "jeszcze nie wybral".
+  // Na etapie PROPOZYCJI dni nie ma sensu dzielic - miejsca sa dopiero zbierane i nikt nie
+  // przypisal ich do dnia. Przelacznik wchodzi od "w trakcie".
+  const daysUsable = hasDays && stage !== "planning";
+  const activeDay: number | null = daysUsable ? (dayTouched ? selectedDay : dayOfToday) : null;
+  const pickDay = (day: number | null) => { haptics.selection(); setDayTouched(true); setSelectedDay(day); };
+  const placeWord = (n: number) => {
+    if (n === 1) return "miejsce";
+    const u = n % 10, h = n % 100;
+    return u >= 2 && u <= 4 && !(h >= 12 && h <= 14) ? "miejsca" : "miejsc";
+  };
   const dateLabel = tripStart
     ? (tripEnd && dayCount > 1
         ? `${format(tripStart, "d MMM", { locale: dateLocale() })} - ${format(tripEnd, "d MMMM yyyy", { locale: dateLocale() })}`
@@ -1230,8 +1264,36 @@ export default function SharedRoute() {
         ))}
       </Reorder.Group>
       )
+    ) : hasDays && activeDay !== null ? (
+      // JEDEN DZIEN NARAZ (wariant A z Figmy). Bez naglowka "Dzien N" - chip nad lista juz to mowi,
+      // a naglowek nad jedna lista byl tylko powtorzeniem.
+      (() => {
+        const dayPins = list.filter((p) => pinDay(p) === activeDay);
+        if (!dayPins.length) {
+          return (
+            <p className="text-[13px] text-muted-foreground py-6 text-center">
+              {canEdit ? "Brak miejsc tego dnia. Dodaj je albo przenieś tu inne w „Zmień kolejność”." : "Brak miejsc tego dnia"}
+            </p>
+          );
+        }
+        return (
+          <div>
+            {dayPins.map((pin: any, i: number) => (
+              <RoutePlaceRow
+                key={pin.id} pin={rowPinFor(pin)} index={i}
+                categoryLabel={categoryLabel(pin.category || "other")}
+                onOpen={() => openDetail(pin)} onGoogle={() => openGooglePlace(pin)}
+                onDelete={canEdit ? () => handleDeletePin(pin) : undefined}
+                onSave={user ? () => toggleSaveBookmark(pin) : undefined} saved={isSaved(pin.place_name)}
+                note={buildNote(pin)} cornerAvatar={addedByAvatar(pin)}
+              />
+            ))}
+          </div>
+        );
+      })()
     ) : hasDays ? (
-      // Widok zwykly: te same miejsca, ale pogrupowane naglowkami dni.
+      // "Wszystkie": caly wyjazd z naglowkami dni. Tu widac calosc i tu przenosi sie miejsca
+      // miedzy dniami (tryb "Zmień kolejność" zawsze wraca do tego widoku).
       <div>
         {Array.from({ length: dayCount }, (_, i) => i + 1).map((day) => {
           const dayPins = list.filter((p) => pinDay(p) === day);
@@ -1447,6 +1509,53 @@ export default function SharedRoute() {
         <div {...swipeTabs}>
         {planTab === "miejsca" ? (
           <div className="px-5 pt-4">
+            {/* PRZELACZNIK DNI (wariant A z Figmy, sekcja "Wyjazd wielodniowy" 2026-09-01).
+                Przypiety pasek chipow: jeden dzien naraz zamiast wszystkich dni w jednym,
+                niekonczacym sie scrollu. Chip "Wszystkie" wraca do pelnej listy z naglowkami dni -
+                i to tam przenosi sie miejsca miedzy dniami. Data pod nazwa daje kontekst bez
+                otwierania kalendarza; pasek przewija sie w bok, wiec skaluje sie do kilkunastu dni. */}
+            {/* W trybie "Zmień kolejność" chipow NIE ma: tam widac caly wyjazd, bo o to chodzi -
+                przeciagniecie miejsca pod naglowek innego dnia zmienia mu dzien. */}
+            {daysUsable && !choosing && !reorderMode && (
+              <div className="sticky top-0 z-30 -mx-5 bg-background border-b border-border/50">
+                <div className="flex gap-2 overflow-x-auto px-5 py-3 no-scrollbar">
+                  {[null, ...Array.from({ length: dayCount }, (_, i) => i + 1)].map((d) => {
+                    const on = activeDay === d;
+                    const count = d === null ? pins.length : (pins as any[]).filter((p) => pinDay(p) === d).length;
+                    return (
+                      <button
+                        key={d ?? "all"}
+                        onClick={() => pickDay(d)}
+                        className={`shrink-0 rounded-full px-3.5 py-2 flex flex-col items-center leading-tight transition-colors active:scale-95 ${on ? "bg-primary text-white" : "bg-secondary text-foreground"}`}
+                      >
+                        <span className="text-sm font-semibold">{d === null ? "Wszystkie" : `Dzień ${d}`}</span>
+                        <span className={`text-[11px] ${on ? "text-white/85" : "text-muted-foreground"}`}>
+                          {d === null ? `${count} ${placeWord(count)}` : dayChipDate(d)}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+                {activeDay !== null && (
+                  <div className="flex items-center gap-3 px-5 pb-2.5">
+                    <p className="flex-1 min-w-0 text-[13px] text-muted-foreground">
+                      {(() => {
+                        const n = (pins as any[]).filter((p) => pinDay(p) === activeDay).length;
+                        return `${n} ${placeWord(n)} w tym dniu`;
+                      })()}
+                    </p>
+                    {canEdit && pins.length > 1 && (
+                      <button
+                        onClick={() => { haptics.light(); pickDay(null); setReorderMode(true); }}
+                        className="shrink-0 text-[13px] font-semibold text-primary active:opacity-60 transition-opacity"
+                      >
+                        Zmień kolejność
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
             {/* OPIS + TAGI CALEJ TRASY - przeniesione tu ze steppera "podsumowania" (prosba Nat
                 2026-08-30): wspomnienie powstaje w trakcie wyjazdu, a publikacja to jeden guzik. */}
             {canEdit && stage === "ongoing" && !choosing && (
@@ -1746,7 +1855,7 @@ export default function SharedRoute() {
                 {/* "Dodaj miejsce" przeniesione do plywajacego guzika pod czatem (prosba Nat
                     2026-08-30) - dolny pasek zostaje dla akcji etapu. */}
                 {pins.length > 1 && (
-                  <button onClick={() => { haptics.light(); setReorderMode(true); }}
+                  <button onClick={() => { haptics.light(); pickDay(null); setReorderMode(true); }}
                     className="flex-1 py-3 rounded-full border border-border bg-background text-foreground font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform">
                     <GripVertical className="h-4 w-4" /> Zmień kolejność
                   </button>
