@@ -136,10 +136,11 @@ export function ProfileFeedCard({
               <PlaceTile key={t.id ?? i} tile={t} />
             ))}
             {overflowCount > 0 && (
-              /* Kafelek "ile jeszcze" - zolty #FDF184 z pomaranczowa liczba w Sigmarze (prosba Nat
-                 2026-09-01). Zolty to jedyny akcent poza pomaranczem, wiec licznik czyta sie od razu
-                 jako "jest tu tego wiecej", a nie jako kolejne szare zdjecie. */
-              <div className="aspect-[2/3] rounded-2xl bg-[#FDF184] flex items-center justify-center">
+              /* Kafelek "ile jeszcze" - peachowe tlo #FCEDE3 z pomaranczowa liczba w Sigmarze.
+                 Peachy zamiast zoltego (decyzja Nat 2026-09-01): siedzi w tej samej rodzinie co
+                 zastepniki zdjec i kafelki kategorii, wiec licznik czyta sie jako czesc karty,
+                 a nie jako obcy akcent. */
+              <div className="aspect-[2/3] rounded-2xl bg-[#FCEDE3] flex items-center justify-center">
                 <span className="text-2xl text-[#F75708]" style={{ fontFamily: "Sigmar, system-ui, sans-serif" }}>+{overflowCount}</span>
               </div>
             )}

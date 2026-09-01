@@ -793,6 +793,15 @@ const Settings = () => {
               <RotateCcw className="h-4 w-4 text-orange-600 flex-shrink-0" />
               <span className="text-sm font-medium flex-1">Pokaż onboarding ponownie <span className="text-muted-foreground font-normal">(admin)</span></span>
             </button>
+            {/* Ekran startowy widac normalnie tylko przy ZIMNYM starcie, wiec zeby dalo sie go
+                obejrzec bez ubijania aplikacji - podglad na zadanie (prosba Nat 2026-09-01). */}
+            <button
+              onClick={() => window.dispatchEvent(new Event("spontaway:replay-splash"))}
+              className="w-full flex items-center gap-3 px-4 py-3.5 bg-card rounded-2xl border border-border/40 hover:bg-muted transition-colors text-left"
+            >
+              <RotateCcw className="h-4 w-4 text-orange-600 flex-shrink-0" />
+              <span className="text-sm font-medium flex-1">Pokaż ekran startowy <span className="text-muted-foreground font-normal">(admin)</span></span>
+            </button>
           </div>
         )}
 

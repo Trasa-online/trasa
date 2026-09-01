@@ -12,10 +12,13 @@ const config: CapacitorConfig = {
       launchAutoHide: false,
       // Smooth fade-out
       launchFadeOutDuration: 300,
-      // Splash = gradient żółto-złoty (#FDF184 -> #FDCD84) + POMARAŃCZOWY symbol spontaway,
-      // spójny z nową ikoną aplikacji (decyzja Nat 2026-08-12, zastąpiło białe tło #FEFEFE).
-      // backgroundColor = mid gradientu, żeby ewentualny margines wokół obrazka splash zlał się.
-      backgroundColor: '#FDDF84',
+      // Splash = JEDNOLITE tło #FEFEFE, BEZ znaku (zmiana 2026-09-01, zastąpiło żółto-złoty
+      // gradient z 2026-08-12). Znak rysuje teraz React (SplashDraw: symbol wjeżdża od lewej
+      // i kończy na pinezce), więc natywny ekran ma tylko utrzymać kolor, zanim WebView odmaluje
+      // pierwszą klatkę. Gdyby niósł statyczne logo, w momencie podmiany widać by było skok
+      // rozmiaru albo dwa loga naraz - dokładnie ten problem, przez który React splash był
+      // wcześniej wyłączony na natywnym.
+      backgroundColor: '#FEFEFE',
       // No spinner — splash image only
       showSpinner: false,
       androidScaleType: 'CENTER_CROP',

@@ -465,30 +465,10 @@ function RouteTracker() {
 // OUTSIDE the WebView — we only need to call SplashScreen.hide() when ready.
 // This React component is the web/PWA fallback (no native splash there).
 
-// Animowany splash (logo "mryga" - pulsuje). Renderowany w WebView na natywnym i
-// web; natywny statyczny splash chowamy zaraz po starcie (oba tla #FEFEFE).
-function SplashScreen({ done }: { done: boolean }) {
-  const [hidden, setHidden] = useState(false);
-
-  useEffect(() => {
-    if (!done) return;
-    const t = setTimeout(() => setHidden(true), 450);
-    return () => clearTimeout(t);
-  }, [done]);
-
-  if (hidden) return null;
-
-  return (
-    <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center"
-      style={{ transition: "opacity 0.4s", opacity: done ? 0 : 1, background: "linear-gradient(to bottom right, #FDF184, #FDCD84)" }}
-    >
-      {/* Loading = POMARAŃCZOWY symbol spontaway na gradiencie żółto-złotym (#FDF184 -> #FDCD84),
-          1:1 z natywnym splashem, żeby przejście native->React było bezszwowe (bez skoku koloru). */}
-      <TrasaLogo size={64} />
-    </div>
-  );
-}
+// Ekran startowy przeniesiony do SplashDraw (znak rysuje sie od lewej). Renderujemy go
+// TAKZE na natywnym: natywny splash jest teraz JEDNOLITYM tlem #FEFEFE bez znaku, wiec nie
+// ma juz problemu "dwoch log" - to React rysuje znak, a natywny ekran tylko trzyma kolor,
+// zanim WebView zdazy odmalowac pierwsza klatke.
 
 // Czy aktualny URL to flow resetu hasla (recovery)? Wtedy guardy biznesowe NIE moga
 // redirectowac usera do panelu - SetPassword ma pokazac formularz nowego hasla.
@@ -513,6 +493,14 @@ function SplashController() {
     location.pathname.startsWith("/set-password");
 
   const [visible, setVisible] = useState(!skipSplash);
+  const [replayKey, setReplayKey] = useState(0);
+  // Podglad dla testera (Ustawienia -> "Pokaż ekran startowy", admin): odtwarza animacje bez
+  // ubijania aplikacji. Zwykly user trafia na ten ekran wylacznie przy zimnym starcie.
+  useEffect(() => {
+    const replay = () => { setReplayKey((k) => k + 1); setVisible(true); setBootDone(true); setMinElapsed(true); };
+    window.addEventListener("spontaway:replay-splash", replay);
+    return () => window.removeEventListener("spontaway:replay-splash", replay);
+  }, []);
   const [bootDone, setBootDone] = useState(false);
   const [minElapsed, setMinElapsed] = useState(false);
   // Splash znika gdy boot gotowy ORAZ minal krotki min. czas (zeby statyczny
@@ -529,15 +517,18 @@ function SplashController() {
   // zeby nie bylo DWOCH log: wczesniejsze wczesne hide + React splash dawalo natywne logo
   // (scaleAspectFill ~185pt) NALOZONE na React (88pt) = dwa koncentryczne loga trasy.
   // Na trasach skipSplash (biznes/auth/...) chowamy od razu (te ekrany maja wlasne UI).
+  // Natywny splash chowamy OD RAZU po zamontowaniu Reacta - to on ma zaraz narysowac znak.
+  // Wczesniej czekalismy na koniec bootu, bo natywny splash niosl logo i React nie mogl
+  // pokazac drugiego. Teraz natywny ekran to samo tlo #FEFEFE (identyczne z SplashDraw),
+  // wiec podmiana jest niewidoczna, a animacja startuje natychmiast.
   useEffect(() => {
     if (!isNative) return;
-    if (!skipSplash && !done) return;
     let cancelled = false;
     import("@capacitor/splash-screen").then(({ SplashScreen: NativeSplash }) => {
-      if (!cancelled) NativeSplash.hide({ fadeOutDuration: skipSplash ? 0 : 300 }).catch(() => {});
+      if (!cancelled) NativeSplash.hide({ fadeOutDuration: 0 }).catch(() => {});
     });
     return () => { cancelled = true; };
-  }, [done, skipSplash]);
+  }, []);
 
   useEffect(() => {
     if (!visible || loading || booted.current) return;
@@ -577,10 +568,9 @@ function SplashController() {
   }, [done]);
 
   if (!visible) return null;
-  // Native: natywny splash (poza WebView) jest jedynym splashem - React nie renderuje
-  // drugiego loga. Web/PWA: React SplashScreen z logo (tam nie ma natywnego splasha).
-  if (isNative) return null;
-  return <SplashScreen done={done} />;
+  // key: przy ponownym odpaleniu (podglad admina) komponent montuje sie od zera, wiec animacja
+  // rysowania startuje od poczatku zamiast zostac na koncowej klatce.
+  return <SplashDraw key={replayKey} done={done} onHidden={() => setVisible(false)} />;
 }
 
 // Blocks unauthenticated access to app routes - redirects to /auth with optional hint.
@@ -639,6 +629,7 @@ function BusinessGuard() {
 }
 import CookieBanner from "./components/CookieBanner";
 import ScreenSkeleton, { variantForPath } from "./components/layout/ScreenSkeleton";
+import SplashDraw from "./components/layout/SplashDraw";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { isHardcodedAdmin } from "@/lib/admins";
 

@@ -195,3 +195,10 @@ input, textarea, [contenteditable="true"], [contenteditable=""] {
   -webkit-user-select: text;
   user-select: text;
 }
+
+/* Ekran startowy: znak spontaway "rysuje sie" od lewej (SplashDraw). Maska przycina ten
+   pomaranczowy prostokat do ksztaltu znaku, wiec kolor wchodzi w litere jak pociagniecie. */
+@keyframes splash-draw {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
