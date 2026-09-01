@@ -10,6 +10,8 @@ export interface PlaceNote {
   user_id: string;
   place_name: string;
   note: string;
+  /** Werdykt autora o miejscu (id z PLACE_VERDICT_TAGS) - pokazywany przy jego notce. */
+  verdict?: string | null;
   username: string | null;
   avatar_url: string | null;
 }
@@ -21,9 +23,10 @@ export async function fetchRouteNotesWithAuthors(routeIds: string[]): Promise<Pl
   const ids = Array.from(new Set(routeIds.filter(Boolean)));
   if (!ids.length) return [];
   const { data, error } = await (supabase as any)
-    .from("pin_ratings").select("route_id, user_id, place_name, note").in("route_id", ids).not("note", "is", null);
+    .from("pin_ratings").select("route_id, user_id, place_name, note, verdict").in("route_id", ids);
   if (error) { console.error("[placeNotes] fetch failed:", error.message); return []; }
-  const rows = ((data ?? []) as any[]).filter((r) => r.note && String(r.note).trim());
+  // Wiersz liczy sie, gdy niesie notke ALBO werdykt - samo klikniecie chipa tez jest wypowiedzia.
+  const rows = ((data ?? []) as any[]).filter((r) => (r.note && String(r.note).trim()) || r.verdict);
   const uids = Array.from(new Set(rows.map((r) => r.user_id).filter(Boolean)));
   const byId = new Map<string, { username: string | null; avatar_url: string | null }>();
   if (uids.length) {
@@ -31,7 +34,7 @@ export async function fetchRouteNotesWithAuthors(routeIds: string[]): Promise<Pl
     for (const p of (profs ?? []) as any[]) byId.set(p.id, { username: p.username, avatar_url: p.avatar_url });
   }
   return rows.map((r) => ({
-    route_id: r.route_id, user_id: r.user_id, place_name: r.place_name, note: r.note,
+    route_id: r.route_id, user_id: r.user_id, place_name: r.place_name, note: r.note ?? "", verdict: r.verdict ?? null,
     username: byId.get(r.user_id)?.username ?? null, avatar_url: byId.get(r.user_id)?.avatar_url ?? null,
   }));
 }

@@ -6,7 +6,7 @@ export type CoverOption = { id: string; name: string; url: string };
 // Arkusz wyboru okladki (hero lub miniatura) - 1:1 z pickerem w ReviewSummary. Grid 3-kol:
 // pierwszy kafel = "Nowe zdjecie" (upload), reszta = zdjecia miejsc listy. Zaznaczony = ring.
 export default function CoverPickerSheet({
-  open, onClose, title, subtitle, options, currentUrl, onPick, onUploadNew, uploading,
+  open, onClose, title, subtitle, options, currentUrl, onPick, onUploadNew, uploading, onReset, resetLabel,
 }: {
   open: boolean;
   onClose: () => void;
@@ -17,6 +17,9 @@ export default function CoverPickerSheet({
   onPick: (url: string) => void;
   onUploadNew: () => void;
   uploading: boolean;
+  /** Powrot do okladki domyslnej (np. tej ustawionej przez hosta). Bez tego przycisk sie nie pokazuje. */
+  onReset?: () => void;
+  resetLabel?: string;
 }) {
   // Gest natywny: przeciagniecie panelu w dol zamyka arkusz.
   const { dragProps } = useDragToDismiss({ onDismiss: onClose });
@@ -61,6 +64,12 @@ export default function CoverPickerSheet({
               );
             })}
           </div>
+          {onReset && (
+            <button onClick={onReset}
+              className="w-full mt-3 py-2.5 rounded-2xl bg-secondary text-secondary-foreground text-sm font-bold active:scale-[0.98] transition-transform">
+              {resetLabel ?? "Wróć do domyślnej okładki"}
+            </button>
+          )}
           {options.length === 0 && (
             <p className="text-xs text-muted-foreground text-center px-4 pt-2 pb-3 leading-relaxed">
               Dodaj miejsca do listy albo wgraj własne zdjęcie, żeby ustawić okładkę.
