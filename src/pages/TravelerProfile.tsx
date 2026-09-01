@@ -613,7 +613,7 @@ const TravelerProfile = () => {
       title={l.title || t("feed.list_fallback", "Lista miejsc")}
       description={l.description}
       tiles={l.tiles}
-      counts={{ saves: l.saves_count ?? 0, likes: l.likes_count ?? 0, views: l.views_count ?? 0 }}
+      counts={{ saves: l.saves_count ?? 0, views: l.views_count ?? 0 }}
       badge={l.isNew ? <span className="inline-flex items-center rounded-full bg-primary text-white px-2.5 py-1 text-[11.5px] font-bold">Nowe miejsce!</span> : undefined}
       onOpen={() => navigate(`/lista/${l.id}`)}
       onSave={() => handleUnsaveList(l.id)}
@@ -755,7 +755,7 @@ const TravelerProfile = () => {
                   title={l.title || t("feed.list_fallback", "Lista miejsc")}
                   description={l.description}
                   tiles={l.tiles}
-                  counts={{ saves: l.saves_count ?? 0, likes: l.likes_count ?? 0, views: l.views_count ?? 0 }}
+                  counts={{ saves: l.saves_count ?? 0, views: l.views_count ?? 0 }}
                   onOpen={() => navigate(`/lista/${l.id}`)}
                   onEdit={() => navigate(`/zestawienie/${l.id}/edytuj`)}
                   onDelete={() => handleDeleteList(l)}

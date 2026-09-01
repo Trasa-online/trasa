@@ -7,7 +7,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
-import { toggleRouteLike, toggleListLike } from "@/lib/likes";
+import { toggleRouteLike } from "@/lib/likes";
 import { saveCollectionDb, unsaveCollectionDb } from "@/lib/savedCollections";
 import { ArrowLeft, LayoutGrid } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -233,19 +233,17 @@ export default function PublicProfile() {
     queryKey: ["pp-interactions", user?.id, listIds.join(","), tripIds.join(",")],
     enabled: canInteract && (listIds.length > 0 || tripIds.length > 0),
     queryFn: async () => {
-      const [ll, lt, st] = await Promise.all([
-        listIds.length ? (supabase as any).from("collection_likes").select("collection_id").eq("user_id", user!.id).in("collection_id", listIds) : Promise.resolve({ data: [] }),
+      // Listy nie maja juz polubien (decyzja Nat 2026-09-01) - pytamy tylko o trasy.
+      const [lt, st] = await Promise.all([
         tripIds.length ? (supabase as any).from("likes").select("route_id").eq("user_id", user!.id).in("route_id", tripIds) : Promise.resolve({ data: [] }),
         tripIds.length ? (supabase as any).from("saved_routes").select("route_id").eq("user_id", user!.id).in("route_id", tripIds) : Promise.resolve({ data: [] }),
       ]);
       return {
-        likedLists: new Set<string>(((ll as any).data ?? []).map((r: any) => r.collection_id)),
         likedTrips: new Set<string>(((lt as any).data ?? []).map((r: any) => r.route_id)),
         savedTrips: new Set<string>(((st as any).data ?? []).map((r: any) => r.route_id)),
       };
     },
   });
-  const initLikedLists = init?.likedLists ?? new Set<string>();
   const initLikedTrips = init?.likedTrips ?? new Set<string>();
   const initSavedTrips = init?.savedTrips ?? new Set<string>();
   // Optymistyczne override + snapshot zapisanych list (localStorage, per-urzadzenie) do delty licznika.
@@ -258,7 +256,6 @@ export default function PublicProfile() {
     try { return new Set<string>(JSON.parse(localStorage.getItem("trasa_saved_collections") || "[]")); } catch { return new Set(); }
   });
 
-  const isListLiked = (id: string) => likeOverride["l:" + id] ?? initLikedLists.has(id);
   const isTripLiked = (id: string) => likeOverride["t:" + id] ?? initLikedTrips.has(id);
   const isTripSaved = (id: string) => saveOverride["t:" + id] ?? initSavedTrips.has(id);
   const isListSaved = (id: string) => savedListIds.has(id);
@@ -270,12 +267,6 @@ export default function PublicProfile() {
     const cur = isTripLiked(tr.id);
     setLikeOverride((m) => ({ ...m, ["t:" + tr.id]: !cur }));
     void toggleRouteLike(tr.id, user.id, cur);
-  };
-  const onListLike = (l: any) => {
-    if (!user) { navigate("/auth"); return; }
-    const cur = isListLiked(l.id);
-    setLikeOverride((m) => ({ ...m, ["l:" + l.id]: !cur }));
-    void toggleListLike(l.id, user.id, cur);
   };
   const onTripSave = async (tr: any) => {
     if (!user) { navigate("/auth"); return; }
@@ -441,10 +432,8 @@ export default function PublicProfile() {
                   description={l.description}
                   tags={Array.isArray(l.tags) ? l.tags : []}
                   tiles={l.tiles}
-                  counts={{ saves: Math.max(0, (l.saves_count ?? 0) + delta(isListSaved(l.id), initSavedLists.has(l.id))), likes: Math.max(0, (l.likes_count ?? 0) + delta(isListLiked(l.id), initLikedLists.has(l.id))), views: l.views_count ?? 0 }}
+                  counts={{ saves: Math.max(0, (l.saves_count ?? 0) + delta(isListSaved(l.id), initSavedLists.has(l.id))), views: l.views_count ?? 0 }}
                   onOpen={() => navigate(`/lista/${l.id}`)}
-                  onLike={canInteract ? () => onListLike(l) : undefined}
-                  liked={isListLiked(l.id)}
                   onSave={canInteract ? () => onListSave(l) : undefined}
                   saved={isListSaved(l.id)}
                 />

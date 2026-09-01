@@ -2191,7 +2191,7 @@ export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityCh
                       title={col.title}
                       description={col.description}
                       tiles={col.items}
-                      counts={{ saves: col.saves_count ?? 0, likes: col.likes_count ?? 0, views: col.views_count ?? 0 }}
+                      counts={{ saves: col.saves_count ?? 0, views: col.views_count ?? 0 }}
                       onOpen={() => navigate(`/lista/${col.id}`)}
                     />
                   ))}

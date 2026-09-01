@@ -7,9 +7,8 @@ import { useSwipeNav } from "@/hooks/useSwipeNav";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { MapPin, ArrowLeft, Bookmark, Building2, Pencil, Trash2, Heart, Image as ImageIcon, Share2, Plus, Camera, Loader2, X } from "lucide-react";
+import { MapPin, ArrowLeft, Bookmark, Building2, Pencil, Trash2, Image as ImageIcon, Share2, Plus, Camera, Loader2, X } from "lucide-react";
 import { compressImage } from "@/lib/imageCompression";
-import { fetchListLike, toggleListLike, type LikeState } from "@/lib/likes";
 import AddPlaceSheet from "@/components/route/AddPlaceSheet";
 import { addPlaceToList, type PlaceForList } from "@/lib/placeLists";
 import { useShare } from "@/hooks/useShare";
@@ -46,22 +45,6 @@ export default function SharedList() {
   const { isSaved } = useSavedPlaces();
   const unsave = useUnsavePlace();
 
-  // Polubienie listy (heart). Owner powiadamiany przez trigger notify_list_like.
-  const { data: likeData } = useQuery({
-    queryKey: ["list-like", id, user?.id],
-    enabled: !!id,
-    queryFn: () => fetchListLike(id!, user?.id),
-  });
-  const listLike: LikeState = likeData ?? { liked: false, count: 0 };
-  const toggleLike = async () => {
-    if (!id) return;
-    if (!user) { navigate("/auth"); return; }
-    const key = ["list-like", id, user.id];
-    const cur = (queryClient.getQueryData(key) as LikeState) ?? listLike;
-    queryClient.setQueryData(key, { liked: !cur.liked, count: Math.max(0, cur.count + (cur.liked ? -1 : 1)) });
-    try { await toggleListLike(id, user.id, cur.liked); }
-    finally { queryClient.invalidateQueries({ queryKey: key }); }
-  };
   // Widok listy jak trasa: Miejsca | Galeria (BEZ mapy - decyzja Nat). Galeria = zdjecia miejsc z listy.
   const [planTab, setPlanTab] = useState<"miejsca" | "galeria">("miejsca");
   // Gest natywny: swipe w bok przelacza Miejsca <-> Galeria (kolejnosc jak ikony nad trescia).
@@ -458,11 +441,8 @@ export default function SharedList() {
                 </span>
               )}
             </div>
-            {/* Serce polubienia listy (prawy skraj) */}
-            <button onClick={toggleLike} aria-label="Polub listę" className="shrink-0 flex items-center gap-1 active:scale-90 transition-transform">
-              <Heart className={cn("h-5 w-5", listLike.liked ? "fill-red-500 text-red-500" : "text-foreground/70")} />
-              <span className="text-xs font-semibold tabular-nums text-muted-foreground">{listLike.count}</span>
-            </button>
+            {/* Polubien list NIE MA (decyzja Nat 2026-09-01) - zostaje sam zapis listy, ktory
+                niesie realna intencje i buduje powiadomienia o nowych miejscach. */}
           </div>
       </div>
 

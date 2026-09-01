@@ -8,8 +8,9 @@ import RouteMap from "@/components/RouteMap";
 
 export interface FeedCounts {
   saves: number;
-  likes: number;
-  views: number;
+  /** Bez tego pola serce w ogole sie nie renderuje - listy miejsc nie maja polubien. */
+  likes?: number;
+  views?: number;
 }
 
 // Karta feedu profilu (redesign 07/08, IA 2026-08-20): avatar + (opcjonalny eyebrow) + timestamp
@@ -176,7 +177,9 @@ export function ProfileFeedCard({
                 <Bookmark className="h-[18px] w-[18px]" /> {counts.saves}
               </span>
             )}
-            {onLike ? (
+            {/* Serce pokazujemy TYLKO gdy licznik polubien w ogole podano. Listy miejsc go nie maja
+                (decyzja Nat 2026-09-01) - u nich zostaje sam zapis. */}
+            {counts.likes !== undefined && (onLike ? (
               <button onClick={onLike} aria-label={liked ? "Cofnij polubienie" : "Polub"} className="flex items-center gap-1.5 text-sm tabular-nums active:scale-90 transition-transform">
                 <Heart className={`h-[18px] w-[18px] ${liked ? "fill-red-500 text-red-500" : ""}`} /> {counts.likes}
               </button>
@@ -184,7 +187,7 @@ export function ProfileFeedCard({
               <span className="flex items-center gap-1.5 text-sm tabular-nums">
                 <Heart className="h-[18px] w-[18px]" /> {counts.likes}
               </span>
-            )}
+            ))}
           </>
         ))}
         {(onEdit || onDelete) && (
