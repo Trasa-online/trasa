@@ -1,121 +1,220 @@
 export const config = { runtime: "edge" };
 
-// PODGLAD LINKU (Open Graph) dla wyjazdu i listy - to, co widac po wklejeniu linku w Messengerze,
-// iMessage czy na Instagramie (prosba Nat 2026-09-01, ze screenem z Pinteresta).
+// PUBLICZNA STRONA WYJAZDU / LISTY - to, co widzi osoba, ktora dostala link i NIE MA aplikacji.
 //
-// Dlaczego to musi byc funkcja serwerowa: aplikacja chodzi na trasach z hashem
-// (spontaway.com/#/route/<id>), a wszystko po "#" NIGDY nie trafia na serwer. Robot Facebooka
-// dostawal wiec goly index.html i pokazywal ten sam ogolny baner marki dla kazdego linku.
-// Ten endpoint zwraca HTML z tagami OG danego wyjazdu/listy i dopiero potem przerzuca
-// czlowieka do aplikacji. Robot czyta tagi i nie wykonuje przekierowania - dostaje wiec
-// okladke i tytul, a user i tak lada w apce.
+// Skad sie wziela: adres z hashem (spontaway.com/#/route/<id>) nigdy nie dociera na serwer, wiec
+// robot komunikatora dostawal goly index.html (ten sam baner marki dla kazdego linku), a czlowiek
+// - bramke waitlisty, czyli nic. Link byl bezuzyteczny w obie strony.
 //
-// Adresy: /r/<id> (wyjazd) i /l/<id> (lista) - przepisane na ten endpoint w vercel.json.
+// Ten endpoint obsluguje krotkie adresy /r/<id> (wyjazd) i /l/<id> (lista) i robi dwie rzeczy:
+//  1. TAGI OG - podglad w Messengerze, iMessage, na Instagramie.
+//  2. STRONE - wyrenderowana lista miejsc / plan wyjazdu, czytelna bez aplikacji, z CTA na gorze.
+// Zadnego przekierowania: to jest docelowa strona linku. Wczesniej byl tu redirect do apki, ale
+// bez universal links i tak nikogo do niej nie wprowadzal - tylko wyrzucal na waitliste.
+//
+// Widoczne jest WYLACZNIE to, co przepuszcza RLS dla klucza anonimowego (lista publiczna i
+// zatwierdzona, opublikowana trasa). Lista prywatna ("Ogolne") zwraca pusto -> strona "niedostepna".
 
 const SUPA = process.env.VITE_SUPABASE_URL || "https://api.trasa.travel";
 const ANON = process.env.VITE_SUPABASE_ANON_KEY
   || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoeHBoZmNwZWh4c2h2aWpxdGxmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMyOTA5MzAsImV4cCI6MjA3ODg2NjkzMH0.NqtDrpd-lKHh11bxtjshs2o6eHl5sDdVImnsW8t1OhU";
 const SITE = "https://spontaway.com";
-const FALLBACK_IMG = `${SITE}/baner-ios.png`;
+const BRAND_IMG = `${SITE}/baner-ios.png`;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+// CTA na gorze i na dole strony. DOPOKI aplikacji nie ma w App Store, prowadzi na zapisy na
+// premiere. Po wydaniu wystarczy wpisac tu adres z App Store - reszta strony sie nie zmienia.
+const APP_STORE_URL: string | null = null;
+const CTA_HREF = APP_STORE_URL ?? `${SITE}/#/waitlist`;
+const CTA_LABEL = APP_STORE_URL ? "Pobierz spontaway" : "Chcę taką aplikację";
+
+const esc = (s: string) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
 async function rest(path: string): Promise<any[]> {
   try {
-    const r = await fetch(`${SUPA}/rest/v1/${path}`, {
-      headers: { apikey: ANON, Authorization: `Bearer ${ANON}` },
-    });
+    const r = await fetch(`${SUPA}/rest/v1/${path}`, { headers: { apikey: ANON, Authorization: `Bearer ${ANON}` } });
     if (!r.ok) return [];
     return (await r.json()) as any[];
   } catch { return []; }
 }
 
-// Zdjecie do podgladu MUSI byc bezwzglednym adresem https - robot nie ma kontekstu strony.
-// Sciezki wzgledne dostaja domene, referencja Google idzie przez nasze proxy zdjec, a Storage
-// dostaje transformacje do 1200x630 (proporcja podgladu w komunikatorach).
-function absImage(raw: string | null | undefined): string {
-  if (!raw) return FALLBACK_IMG;
+const first = (v: any): string | null => (Array.isArray(v) ? (v.find((x) => typeof x === "string" && x) ?? null) : null);
+
+// Zdjecia musza byc bezwzglednymi adresami https (robot nie ma kontekstu strony). Storage dostaje
+// transformacje do zadanej szerokosci - miniatura 160 px zamiast oryginalu ~2,4 MB.
+function img(raw: string | null | undefined, w: number, h?: number): string | null {
+  if (!raw) return null;
   if (raw.startsWith("/")) return SITE + raw;
-  if (!/^https?:/i.test(raw)) return `${SITE}/api/place-photo?ref=${encodeURIComponent(raw)}&w=1200`;
+  if (!/^https?:/i.test(raw)) return `${SITE}/api/place-photo?ref=${encodeURIComponent(raw)}&w=${w}`;
   if (raw.includes("/storage/v1/object/public/")) {
     const t = raw.replace("/storage/v1/object/public/", "/storage/v1/render/image/public/");
-    return `${t}${t.includes("?") ? "&" : "?"}width=1200&height=630&resize=cover&quality=80`;
+    const size = h ? `width=${w}&height=${h}&resize=cover` : `width=${w}`;
+    return `${t}${t.includes("?") ? "&" : "?"}${size}&quality=75`;
   }
   return raw;
 }
 
+// Ikona kategorii - ten sam zestaw plikow co w aplikacji (public/Ikona__*.svg, kolor #ef9d78).
+// Skrocona mapa: tylko kategorie, ktore realnie wystepuja w danych; reszta dostaje sam kolor tla.
+const CATEGORY_ICON: Record<string, string> = {
+  restaurant: "Restauracja-18", cafe: "Kawiarnia", bar: "Bar", club: "Bar", nightclub: "Bar",
+  bakery: "Piekarnia", pastry: "Cukiernia", dessert: "Cukiernia",
+  museum: "Landmark", monument: "Landmark", church: "Landmark", landmark: "Landmark",
+  gallery: "Sztuka", art: "Sztuka", theater: "Sztuka", cinema: "Sztuka",
+  park: "Natura", garden: "Natura", nature: "Natura", walk: "Natura",
+  shop: "Zakupy", store: "Zakupy", shopping: "Zakupy",
+};
+const iconFor = (c: string | null | undefined) => {
+  const f = c ? CATEGORY_ICON[c.toLowerCase()] : null;
+  return f ? `${SITE}/Ikona__${f}.svg` : null;
+};
+
+// Klucz zdjec spolecznosci (place_photos) - format 1:1 z aplikacja (placeKeyOf).
+const placeKey = (gpid: string | null | undefined, name: string | null | undefined) =>
+  gpid ? `gpid:${gpid}` : `nm:${(name ?? "").trim().toLowerCase()}`;
+
+// Zdjecia miejsc dodane przez userow. W aplikacji kafelek bez wlasnego zdjecia siega wlasnie tu,
+// wiec strona publiczna robi to samo - inaczej lista wygladalaby na pusta, choc zdjecia sa.
+async function communityPhotos(keys: string[]): Promise<Map<string, string>> {
+  const map = new Map<string, string>();
+  const uniq = [...new Set(keys.filter(Boolean))].slice(0, 60);
+  if (!uniq.length) return map;
+  const inList = uniq.map((k) => `"${k.replace(/"/g, '')}"`).join(",");
+  const rows = await rest(`place_photos?place_key=in.(${encodeURIComponent(inList)})&select=place_key,photo_url`);
+  for (const r of rows) if (r.photo_url && !map.has(r.place_key)) map.set(r.place_key, r.photo_url);
+  return map;
+}
+
 const plural = (n: number) => (n === 1 ? "miejsce" : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? "miejsca" : "miejsc");
 
-function page(o: { title: string; desc: string; image: string; url: string; target: string }) {
+const CATEGORY_PL: Record<string, string> = {
+  cafe: "Kawiarnia", restaurant: "Restauracja", bar: "Bar", pub: "Pub", bakery: "Piekarnia",
+  landmark: "Zabytek", museum: "Muzeum", park: "Park", gallery: "Galeria", shop: "Sklep",
+  store: "Sklep", hotel: "Nocleg", beach: "Plaża", viewpoint: "Punkt widokowy", club: "Klub",
+};
+const catLabel = (c: string | null | undefined) =>
+  !c ? "" : CATEGORY_PL[c.toLowerCase()] ?? c.charAt(0).toUpperCase() + c.slice(1);
+
+const CSS = `
+:root{color-scheme:light}
+*{box-sizing:border-box}
+body{margin:0;background:#FEFEFE;color:#0E0E0E;font:16px/1.45 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
+.wrap{max-width:560px;margin:0 auto;padding:0 20px 96px}
+.bar{position:sticky;top:0;z-index:10;background:rgba(254,254,254,.94);backdrop-filter:blur(12px);border-bottom:1px solid #eee}
+.bar .in{max-width:560px;margin:0 auto;padding:10px 20px;display:flex;align-items:center;gap:10px}
+.mark{width:26px;height:26px;flex:none;background:#F75708;-webkit-mask:url(/Ikona_Trasy.svg) center/contain no-repeat;mask:url(/Ikona_Trasy.svg) center/contain no-repeat}
+.brand{font-weight:800;letter-spacing:-.01em}
+.cta{margin-left:auto;background:#ea580c;color:#fff;text-decoration:none;font-weight:700;font-size:14px;padding:9px 16px;border-radius:16px;white-space:nowrap}
+.eyebrow{margin:28px 0 6px;font-size:12px;font-weight:800;letter-spacing:.08em;color:#C58A66}
+h1{margin:0;font-size:30px;line-height:1.1;font-weight:900;letter-spacing:-.02em;text-wrap:balance}
+.meta{margin:10px 0 0;color:#979797;font-size:14px}
+.author{display:flex;align-items:center;gap:8px;margin:14px 0 0}
+.author img{width:28px;height:28px;border-radius:50%;object-fit:cover;background:#fcede3}
+.author span{font-size:14px;font-weight:600}
+.cover{margin:20px 0 0;width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:20px;background:#fcede3;display:block}
+.desc{margin:16px 0 0;color:#4b4b4b;font-size:15px}
+ul{list-style:none;margin:26px 0 0;padding:0}
+li{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid #f1f1f1;align-items:flex-start}
+li:last-child{border-bottom:0}
+.thumb{width:64px;height:64px;flex:none;border-radius:16px;object-fit:cover;background:#F6D9C6}
+.ph{width:64px;height:64px;flex:none;border-radius:16px;background:#F6D9C6;display:flex;align-items:center;justify-content:center}
+.ph img{width:28px;height:28px;opacity:.9}
+.num{width:26px;height:26px;flex:none;border-radius:50%;background:#ea580c;color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;margin-top:19px}
+.nm{font-weight:700;font-size:16px;line-height:1.25}
+.ct{color:#979797;font-size:13px;margin-top:2px}
+.note{margin:6px 0 0;font-size:14px;color:#4b4b4b;background:#f6f6f6;border-radius:14px;padding:8px 11px}
+.foot{margin:36px 0 0;background:#FCEDE3;border-radius:24px;padding:24px;text-align:center}
+.foot p{margin:0 0 16px;font-size:15px;color:#5C4136}
+.foot a{display:inline-block;background:#ea580c;color:#fff;text-decoration:none;font-weight:800;padding:14px 26px;border-radius:18px}
+.empty{padding:80px 0;text-align:center}
+.empty .mark{width:72px;height:72px;background:#EF9D78;margin:0 auto 18px}
+`;
+
+function shell(o: { title: string; desc: string; image: string; url: string; body: string; noun?: string }) {
   return `<!doctype html><html lang="pl"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${esc(o.title)}</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>${esc(o.title)} · spontaway</title>
 <meta name="description" content="${esc(o.desc)}">
-<meta property="og:site_name" content="spontaway">
-<meta property="og:type" content="article">
-<meta property="og:title" content="${esc(o.title)}">
-<meta property="og:description" content="${esc(o.desc)}">
-<meta property="og:image" content="${esc(o.image)}">
-<meta property="og:url" content="${esc(o.url)}">
+<meta name="robots" content="noindex">
+<meta property="og:site_name" content="spontaway"><meta property="og:type" content="article">
+<meta property="og:title" content="${esc(o.title)}"><meta property="og:description" content="${esc(o.desc)}">
+<meta property="og:image" content="${esc(o.image)}"><meta property="og:url" content="${esc(o.url)}">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="${esc(o.title)}">
-<meta name="twitter:description" content="${esc(o.desc)}">
+<meta name="twitter:title" content="${esc(o.title)}"><meta name="twitter:description" content="${esc(o.desc)}">
 <meta name="twitter:image" content="${esc(o.image)}">
-<meta http-equiv="refresh" content="0; url=${esc(o.target)}">
-</head><body style="font-family:-apple-system,sans-serif;background:#FEFEFE;color:#0E0E0E;padding:32px">
-<p>Otwieram w spontaway…</p>
-<p><a href="${esc(o.target)}">Przejdź dalej</a></p>
-<script>location.replace(${JSON.stringify(o.target)});</script>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>${CSS}</style></head><body>
+<div class="bar"><div class="in"><span class="mark"></span><span class="brand">spontaway</span>
+<a class="cta" href="${esc(CTA_HREF)}">${esc(CTA_LABEL)}</a></div></div>
+<div class="wrap">${o.body}
+<div class="foot"><p>${o.noun === "route" ? "Ten wyjazd powstał w spontaway" : o.noun === "list" ? "Ta lista powstała w spontaway" : "spontaway to aplikacja"} - do odkrywania miejsc i planowania wyjazdów ze znajomymi.</p>
+<a href="${esc(CTA_HREF)}">${esc(CTA_LABEL)}</a></div></div>
 </body></html>`;
+}
+
+function row(o: { photo: string | null; icon?: string | null; name: string; cat: string; note?: string | null; num?: number }) {
+  return `<li>${o.num ? `<span class="num">${o.num}</span>` : ""}
+${o.photo ? `<img class="thumb" src="${esc(o.photo)}" alt="" loading="lazy">`
+    : o.icon ? `<span class="ph"><img src="${esc(o.icon)}" alt="" loading="lazy"></span>` : `<span class="ph"></span>`}
+<div><div class="nm">${esc(o.name)}</div>${o.cat ? `<div class="ct">${esc(o.cat)}</div>` : ""}
+${o.note ? `<p class="note">${esc(o.note)}</p>` : ""}</div></li>`;
 }
 
 export default async function handler(req: Request): Promise<Response> {
   const { searchParams } = new URL(req.url);
-  const kind = searchParams.get("t");
+  const isList = searchParams.get("t") === "list";
   const id = searchParams.get("id") ?? "";
-
-  const isList = kind === "list";
-  const target = `${SITE}/#/${isList ? "lista" : "route"}/${id}`;
   const url = `${SITE}/${isList ? "l" : "r"}/${id}`;
-  let title = "spontaway - odkrywaj miejsca, planuj podróże";
-  let desc = "Przeglądaj miejsca, twórz trasy i planuj wyjazdy ze znajomymi.";
-  let image = FALLBACK_IMG;
 
-  if (UUID.test(id)) {
-    if (isList) {
-      const [col] = await rest(`discovery_collections?id=eq.${id}&select=title,city,description,cover_url,list_cover_url&limit=1`);
-      if (col) {
-        // Dla LISTY najwazniejsza jest NAZWA - to ona sprzedaje klikniecie ("Gdzie na wege Warszawa").
-        title = col.title || "Lista miejsc";
-        const items = await rest(`discovery_items?collection_id=eq.${id}&select=id&order=order_index.asc&limit=12`);
-        const n = items.length;
-        desc = col.description || [col.city, n ? `${n} ${plural(n)}` : null].filter(Boolean).join(" · ") || "Lista miejsc w spontaway";
-        // Obrazek zostaje MARKOWY (decyzja Nat 2026-09-01). Lista to zbior wielu miejsc - jedno
-        // wyrwane zdjecie zapowiada cos innego, niz user dostanie po klikinieciu, a czesto jest
-        // to zdjecie przypadkowego lokalu. Nazwa niesie tu cala tresc, wiec obrazek ma tylko
-        // powiedziec "to jest spontaway". Wyjazd zostaje przy wlasnej okladce - tam obrazek JEST
-        // trescia (jedno miejsce, jedna pocztowka).
-      }
-    } else {
-      const [route] = await rest(`routes?id=eq.${id}&select=title,city,description,cover_url,list_cover_url&limit=1`);
-      if (route) {
-        // Dla WYJAZDU najwazniejsza jest OKLADKA - podglad ma wygladac jak pocztowka.
-        title = route.title || (route.city ? `Wyjazd do ${route.city}` : "Wyjazd");
-        const pins = await rest(`pins?route_id=eq.${id}&select=user_photo_urls&limit=30`);
-        const n = pins.length;
-        desc = route.description || [route.city, n ? `${n} ${plural(n)}` : null].filter(Boolean).join(" · ") || "Wyjazd w spontaway";
-        image = absImage(route.list_cover_url || route.cover_url);
-      }
-    }
+  const missing = () => new Response(shell({
+    title: "Treść niedostępna", desc: "Ta treść mogła zostać usunięta lub jest prywatna.", image: BRAND_IMG, url,
+    body: `<div class="empty"><span class="mark"></span><h1>Treść niedostępna</h1>
+<p class="meta">Mogła zostać usunięta albo jest prywatna.</p></div>`,
+  }), { status: 404, headers: { "Content-Type": "text/html; charset=utf-8" } });
+
+  if (!UUID.test(id)) return missing();
+
+  if (isList) {
+    const [col] = await rest(`discovery_collections?id=eq.${id}&select=title,city,description,user_id&limit=1`);
+    if (!col) return missing();
+    const items = await rest(`discovery_items?collection_id=eq.${id}&select=place_name,category,short_desc,photo_url,images,google_place_id&order=order_index.asc&limit=60`);
+    const photos = await communityPhotos(items.map((it) => placeKey(it.google_place_id, it.place_name)));
+    const [author] = col.user_id ? await rest(`profiles?id=eq.${col.user_id}&select=username,avatar_url&limit=1`) : [];
+    const title = col.title || "Lista miejsc";
+    const desc = col.description || [col.city, items.length ? `${items.length} ${plural(items.length)}` : null].filter(Boolean).join(" · ");
+    const body = `<p class="eyebrow">LISTA MIEJSC</p><h1>${esc(title)}</h1>
+<p class="meta">${esc([col.city, `${items.length} ${plural(items.length)}`].filter(Boolean).join(" · "))}</p>
+${author?.username ? `<div class="author"><img src="${esc(img(author.avatar_url, 64, 64) ?? "")}" alt=""><span>@${esc(author.username)}</span></div>` : ""}
+${col.description ? `<p class="desc">${esc(col.description)}</p>` : ""}
+<ul>${items.map((it) => row({
+      photo: img(it.photo_url || first(it.images) || photos.get(placeKey(it.google_place_id, it.place_name)), 160, 160),
+      icon: iconFor(it.category), name: it.place_name || "", cat: catLabel(it.category), note: it.short_desc,
+    })).join("")}</ul>`;
+    // Obrazek podgladu dla LISTY zostaje markowy - patrz decyzja przy udostepnianiu.
+    return new Response(shell({ title, desc, image: BRAND_IMG, url, body, noun: "list" }), {
+      headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "public, s-maxage=300, stale-while-revalidate=86400" },
+    });
   }
 
-  return new Response(page({ title, desc, image, url, target }), {
-    headers: {
-      "Content-Type": "text/html; charset=utf-8",
-      // Podglady sa cache'owane po stronie komunikatorow; my trzymamy krotki cache brzegowy,
-      // zeby zmiana okladki byla widoczna bez czekania na wygasniecie.
-      "Cache-Control": "public, s-maxage=600, stale-while-revalidate=86400",
-    },
+  const [route] = await rest(`routes?id=eq.${id}&select=title,city,description,cover_url,list_cover_url,user_id&limit=1`);
+  if (!route) return missing();
+  const pins = await rest(`pins?route_id=eq.${id}&select=place_name,category,images,user_photo_urls,image_url,photo_url,pin_order,place_id&order=pin_order.asc&limit=80`);
+  const pinPhotos = await communityPhotos(pins.map((p) => placeKey(null, p.place_name)));
+  const [author] = route.user_id ? await rest(`profiles?id=eq.${route.user_id}&select=username,avatar_url&limit=1`) : [];
+  const title = route.title || (route.city ? `Wyjazd do ${route.city}` : "Wyjazd");
+  const desc = route.description || [route.city, pins.length ? `${pins.length} ${plural(pins.length)}` : null].filter(Boolean).join(" · ");
+  const cover = img(route.list_cover_url || route.cover_url, 1200, 630);
+  const body = `<p class="eyebrow">WYJAZD</p><h1>${esc(title)}</h1>
+<p class="meta">${esc([route.city, `${pins.length} ${plural(pins.length)}`].filter(Boolean).join(" · "))}</p>
+${author?.username ? `<div class="author"><img src="${esc(img(author.avatar_url, 64, 64) ?? "")}" alt=""><span>@${esc(author.username)}</span></div>` : ""}
+${cover ? `<img class="cover" src="${esc(cover)}" alt="" loading="lazy">` : ""}
+${route.description ? `<p class="desc">${esc(route.description)}</p>` : ""}
+<ul>${pins.map((p, i) => row({
+    photo: img(p.image_url || first(p.images) || first(p.user_photo_urls) || p.photo_url || pinPhotos.get(placeKey(null, p.place_name)), 160, 160),
+    icon: iconFor(p.category), name: p.place_name || "", cat: catLabel(p.category), num: i + 1,
+  })).join("")}</ul>`;
+  return new Response(shell({ title, desc, image: cover ?? BRAND_IMG, url, body, noun: "route" }), {
+    headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "public, s-maxage=300, stale-while-revalidate=86400" },
   });
 }
