@@ -106,9 +106,14 @@ const EVENT_PL: Record<string, string> = {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
-  // Guard: tylko service_role (cron). verify_jwt=false -> sprawdzamy sami.
+  // Guard: cron (x-trigger-secret z Vault, jak send-push/push-scheduler) LUB service_role.
+  // verify_jwt=false -> sprawdzamy sami. Sam service_role nie wystarcza: klucz bywa rotowany i
+  // nie zawsze zgadza sie z env funkcji, a cron budowal naglowek z pustego ustawienia bazy
+  // (`app.settings.service_role_key`) -> lecialo "Bearer null" i 401 (naprawione 2026-09-01).
+  const triggerSecret = Deno.env.get("PUSH_TRIGGER_SECRET") ?? "";
+  const isTrigger = triggerSecret.length > 0 && req.headers.get("x-trigger-secret") === triggerSecret;
   const _auth = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "");
-  if (_auth !== Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")) return jsonResponse({ error: "unauthorized" }, 401);
+  if (!isTrigger && _auth !== Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")) return jsonResponse({ error: "unauthorized" }, 401);
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
