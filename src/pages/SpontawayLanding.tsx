@@ -4,7 +4,7 @@ import { QRCodeSVG } from "qrcode.react";
 import posthog from "posthog-js";
 
 /* ─────────────────────────────────────────────────────────────────────────────
-   Landing B2C (spontaway) - web-only, route /waitlist.
+   Landing B2C (spontaway) - web-only, stoi pod "/" (spontaway.com).
    Figma: [NEW] Ekrany > Landing (web) > "Landing B2C (web) / (mobile) - strona (high-fi copy)"
    Desktop = kanwa 1440 (wartosci 1:1 z Figmy), mobile = kanwa 320 (iPhone SE)
    przeskalowana w gore do realnych telefonow (decyzja Nat, 2026-09-02).
