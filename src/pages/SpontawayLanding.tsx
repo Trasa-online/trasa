@@ -11,10 +11,10 @@ import posthog from "posthog-js";
    ────────────────────────────────────────────────────────────────────────── */
 
 // Premiera: dopoki APP_LIVE=false plakietki sklepowe sa WYGASZONE, a kazde CTA
-// otwiera modal "wkrotce". W dniu premiery: APP_LIVE=true + realne ID z App Store
-// Connect w APP_STORE_URL. To jedyne dwie linie do zmiany.
+// otwiera modal "wkrotce". W dniu premiery zmieniasz JEDNA linie ponizej na true -
+// link do App Store jest juz realny (Apple ID 6777705751, bundle travel.trasa.app).
 const APP_LIVE = false;
-const APP_STORE_URL = "https://apps.apple.com/pl/app/spontaway/idAPPLE_ID";
+const APP_STORE_URL = "https://apps.apple.com/pl/app/spontaway/id6777705751";
 const PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=travel.trasa.app";
 
 // ─── Polskie sieroty ──────────────────────────────────────────────────────────
