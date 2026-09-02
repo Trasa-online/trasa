@@ -27,7 +27,7 @@ import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { avatarSrc } from "@/lib/avatar";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import SavePlaceSheet, { type SavePlaceInput } from "@/components/plan-wizard/SavePlaceSheet";
-import { placeKeyOf, fetchPlacePhotosForKeys, pickPlaceCover, linkPhotoToPlace, unlinkPhotoFromPlace } from "@/lib/placePhotoSocial";
+import { placeKeyOf, fetchPlacePhotosForKeys, pickPlaceCover, linkPhotoToPlace, unlinkPhotoFromPlace, detachPlacePhotos, restorePlacePhotos } from "@/lib/placePhotoSocial";
 import { useSavedPlaces } from "@/hooks/useSavedPlaces";
 import { CategoryIcon } from "@/components/CategoryIcon";
 import { subcategoryLabelLocalized } from "@/lib/categories";
@@ -349,12 +349,22 @@ export default function SharedList() {
   const handleDeleteItem = async (item: any) => {
     const { error } = await (supabase as any).from("discovery_items").delete().eq("id", item.id);
     if (error) { toast.error("Nie udało się usunąć miejsca"); return; }
+    // Zdjecia dodane do TEGO miejsca znikaja razem z nim takze z galerii miejsca (place_photos) -
+    // zgloszenie Nat 2026-09-01. Kasujemy wylacznie te konkretne adresy, wiec zdjecia tego samego
+    // lokalu dodane w innej liscie albo w wyjezdzie zostaja.
+    const gone = await detachPlacePhotos(itemCoverKeys(item), [
+      ...((item.images ?? []) as string[]),
+      ...(typeof item.photo_url === "string" ? [item.photo_url] : []),
+    ]);
     queryClient.invalidateQueries({ queryKey: ["shared-list-items", id] });
+    queryClient.invalidateQueries({ queryKey: ["place-photos"] });
     const { id: _id, ...rest } = item;
     toast.success("Usunięto miejsce", {
       action: { label: "Cofnij", onClick: async () => {
         await (supabase as any).from("discovery_items").insert({ ...rest });
+        await restorePlacePhotos(gone);
         queryClient.invalidateQueries({ queryKey: ["shared-list-items", id] });
+        queryClient.invalidateQueries({ queryKey: ["place-photos"] });
       } },
     });
   };

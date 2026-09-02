@@ -26,7 +26,8 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { PlacePhoto } from "@/components/PlacePhoto";
 import { RoutePlaceRow } from "@/components/route/RoutePlaceRow";
 import { fetchRouteNotesWithAuthors, notesByPlace, placeNoteKey } from "@/lib/placeNotes";
-import { fetchPinPhotos, addPinPhoto, deletePinPhoto, photosByPlace, pinPhotoKey, type PinPhoto } from "@/lib/pinPhotos";
+import { detachPlacePhotos, restorePlacePhotos } from "@/lib/placePhotoSocial";
+import { fetchPinPhotos, addPinPhoto, deletePinPhoto, deletePinPhotosForPlace, restorePinPhotos, photosByPlace, pinPhotoKey, type PinPhoto } from "@/lib/pinPhotos";
 import { fetchPlaceVotes, toggleVote, placeVoteKey } from "@/lib/placeVotes";
 import { fetchUnreadChatCount } from "@/lib/chatReads";
 import PlaceNotes from "@/components/route/PlaceNotes";
@@ -818,7 +819,17 @@ export default function SharedRoute() {
         }
       }
       const removeIds = leftover.map((p) => p.id);
-      if (removeIds.length) await (supabase as any).from("pins").delete().in("id", removeIds);
+      if (removeIds.length) {
+        // Odrzucone propozycje tez zabieraja swoje zdjecia - inaczej zostawalyby w galerii
+        // wyjazdu, mimo ze miejsca juz w nim nie ma.
+        const removed = (pins as any[]).filter((p) => removeIds.includes(p.id));
+        await (supabase as any).from("pins").delete().in("id", removeIds);
+        for (const p of removed) {
+          const rows = await deletePinPhotosForPlace(id!, p.place_name);
+          await detachPlacePhotos([`nm:${String(p.place_name ?? "").toLowerCase().trim()}`],
+            [...rows.map((r: any) => r.url), ...((p.images ?? []) as string[]), ...((p.user_photo_urls ?? []) as string[])]);
+        }
+      }
       await (supabase as any).from("routes").update({ trip_type: "ongoing" }).eq("id", route.id);
       haptics.success(); toast.success("Miejsca wybrane - wyjazd w trakcie!");
       setChoosing(false);
@@ -955,7 +966,16 @@ export default function SharedRoute() {
     const { id: _id, created_at, updated_at, ...rest } = pin;
     const { error } = await (supabase as any).from("pins").delete().eq("id", pin.id);
     if (error) { toast.error("Nie udało się usunąć miejsca"); return; }
+    // Zdjecia ida ZA miejscem (zgloszenie Nat 2026-09-01). Wczesniej znikal sam pin, a zdjecia
+    // zostawaly: w galerii wyjazdu (pin_photos, kluczowane nazwa miejsca) i w galerii miejsca
+    // (place_photos, dosypywane przez sync_route_place_photos). Efekt: miejsca usuniete z wyjazdu
+    // nadal mialy w aplikacji swoje zdjecia, a po ponownym dodaniu robily sie duble.
+    const goneRows = await deletePinPhotosForPlace(id!, pin.place_name);
+    const gonePlace = await detachPlacePhotos([`nm:${String(pin.place_name ?? "").toLowerCase().trim()}`],
+      [...goneRows.map((r: any) => r.url), ...((pin.images ?? []) as string[]), ...((pin.user_photo_urls ?? []) as string[])]);
     queryClient.invalidateQueries({ queryKey: ["shared-route-pins", id] });
+    queryClient.invalidateQueries({ queryKey: ["shared-route-pin-photos", id] });
+    queryClient.invalidateQueries({ queryKey: ["place-photos"] });
     // Toast: miniaturka (lewo, powiekszona) + nazwa + Cofnij. toast.custom = pelna kontrola (akcja
     // + rozmiar miniatury), bo sonner action nie zawsze renderowal sie z customowa trescia.
     toast.custom((tid) => (
@@ -967,8 +987,13 @@ export default function SharedRoute() {
         </div>
         <button
           onClick={async () => {
+            // Cofnij przywraca komplet: miejsce + jego zdjecia w obu galeriach.
             await (supabase as any).from("pins").insert({ ...rest });
+            await restorePinPhotos(goneRows);
+            await restorePlacePhotos(gonePlace);
             queryClient.invalidateQueries({ queryKey: ["shared-route-pins", id] });
+            queryClient.invalidateQueries({ queryKey: ["shared-route-pin-photos", id] });
+            queryClient.invalidateQueries({ queryKey: ["place-photos"] });
             toast.dismiss(tid);
           }}
           className="shrink-0 text-[13px] font-bold text-primary px-3 py-2 rounded-xl active:bg-primary/10 transition-colors">Cofnij</button>
@@ -998,11 +1023,25 @@ export default function SharedRoute() {
 
   // #c: ustaw zdjecie jako OKLADKE EKSPLORACJI (list_cover_url). Tylko wlasne zdjecia (galeria) -
   // zgodne z regula "okladka listy/trasy nigdy z Google".
-  const handleSetCover = async (url: string) => {
+  // Wybor okladki z GALERII (ikona eksploracji przy zdjeciu). Ustawia MOJA okladke - te, ktora
+  // widze na swojej karcie wyjazdu w profilu i w hero tego widoku. Gdy robi to wlasciciel,
+  // ustawiamy przy okazji okladke eksploracji (routes.list_cover_url): dla niego to jedna decyzja,
+  // a bramka publikacji wymaga tej kolumny (patrz reference_content_ops_scripts).
+  const setCoverFromGallery = async (url: string) => {
+    if (!user?.id || !id) return;
+    const ok = await setMyRouteCover(id, user.id, url);
+    if (!ok) { toast.error("Nie udało się ustawić okładki"); return; }
+    queryClient.invalidateQueries({ queryKey: ["route-member-cover", id, user.id] });
+    queryClient.invalidateQueries({ queryKey: ["profile-trip-feed"] });
+    if (isOwner) await handleSetCover(url, true);
+    else toast.success("Ustawiono Twoją okładkę");
+  };
+
+  const handleSetCover = async (url: string, silent = false) => {
     const { error } = await (supabase as any).from("routes").update({ list_cover_url: url }).eq("id", route.id);
     if (error) { toast.error("Nie udało się ustawić okładki"); return; }
     queryClient.invalidateQueries({ queryKey: ["shared-route", id] });
-    toast.success("Ustawiono okładkę eksploracji");
+    toast.success(silent ? "Ustawiono okładkę wyjazdu" : "Ustawiono okładkę eksploracji");
   };
 
   const handleDelete = async () => {
@@ -1771,7 +1810,9 @@ export default function SharedRoute() {
                   </button>
                 )}
                 {galleryPhotos.map((url, i) => {
-                  const isCover = (route as any).list_cover_url === url;
+                  // Zaznaczone = MOJA okladka (to nia steruje ikona). U hosta pokrywa sie z okladka
+                  // eksploracji, bo jeden gest ustawia obie.
+                  const isCover = (resolveStored(myCover) ?? null) === url || (isOwner && !myCover && (route as any).list_cover_url === url);
                   return (
                     <div key={i} onClick={() => setViewerIndex(i)} role="button"
                       className={`relative break-inside-avoid rounded-2xl overflow-hidden bg-muted active:opacity-90 transition-opacity cursor-pointer ${isCover ? "ring-2 ring-primary ring-offset-2 ring-offset-background" : ""}`}>
@@ -1785,11 +1826,15 @@ export default function SharedRoute() {
                           {likeStateOf(url).count}
                         </span>
                       )}
-                      {/* Gwiazdka = okladka w EKSPLORACJI (tylko host). Ikona osoby = MOJA okladka
-                          tego wyjazdu - kazdy uczestnik ma wlasna, nie rusza cudzych. */}
-                      {isOwner && (
-                        <button onClick={(e) => { e.stopPropagation(); void handleSetCover(url); }}
-                          aria-label={isCover ? "To jest okładka w eksploracji" : "Ustaw jako okładkę w eksploracji"}
+                      {/* Ikona eksploracji = "to jest okladka TEGO wyjazdu u mnie". Widzi ja KAZDY
+                          uczestnik, nie tylko host (zgloszenie Nat 2026-09-01) - wczesniej byla
+                          za `isOwner`, wiec uczestnik nie mial jak wybrac okladki swojej karty
+                          wyjazdu na profilu. Kazdy ustawia WLASNA (route_member_covers), nie rusza
+                          cudzych; u hosta ten sam gest ustawia dodatkowo okladke w eksploracji,
+                          bo jego wybor jest twarza wyjazdu na zewnatrz. */}
+                      {canEdit && (
+                        <button onClick={(e) => { e.stopPropagation(); void setCoverFromGallery(url); }}
+                          aria-label={isCover ? "To jest Twoja okładka wyjazdu" : "Ustaw jako swoją okładkę wyjazdu"}
                           className={`absolute top-1.5 right-1.5 h-8 w-8 rounded-full flex items-center justify-center shadow-sm active:scale-90 transition-transform ${isCover ? "bg-primary" : "bg-white/90"}`}>
                           {/* Ikona EKSPLORACJI (ta sama co w nawigacji) - mowi wprost, do czego sluzy
                               to zdjecie: reprezentuje wyjazd w eksploracji. Aktywna = biala na

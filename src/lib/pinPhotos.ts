@@ -47,6 +47,28 @@ export async function deletePinPhoto(id: string): Promise<boolean> {
   return true;
 }
 
+// Zdjecia miejsca USUNIETEGO z wyjazdu. Wiersze pin_photos sa kluczowane nazwa miejsca, NIE id
+// pinu, wiec skasowanie pinu ich nie ruszalo: zdjecia zostawaly w galerii wyjazdu i - przez
+// sync_route_place_photos - wciaz plynely do galerii MIEJSCA (zgloszenie Nat 2026-09-01).
+// Zwracamy skasowane wiersze, zeby "Cofnij" mogl je przywrocic razem z miejscem.
+export async function deletePinPhotosForPlace(routeId: string, placeName: string): Promise<any[]> {
+  const key = nkey(placeName);
+  if (!key) return [];
+  const { data } = await (supabase as any)
+    .from("pin_photos").select("*").eq("route_id", routeId);
+  const mine = ((data ?? []) as any[]).filter((r) => nkey(r.place_name) === key);
+  if (!mine.length) return [];
+  const { error } = await (supabase as any).from("pin_photos").delete().in("id", mine.map((r) => r.id));
+  if (error) { console.error("[pinPhotos] deleteForPlace:", error.message); return []; }
+  return mine;
+}
+
+export async function restorePinPhotos(rows: any[]): Promise<void> {
+  if (!rows.length) return;
+  const { error } = await (supabase as any).from("pin_photos").insert(rows);
+  if (error) console.error("[pinPhotos] restore:", error.message);
+}
+
 export function photosByPlace(photos: PinPhoto[]): Map<string, PinPhoto[]> {
   const m = new Map<string, PinPhoto[]>();
   for (const p of photos) { const k = nkey(p.place_name); const a = m.get(k); if (a) a.push(p); else m.set(k, [p]); }

@@ -169,7 +169,11 @@ export default function ScreenSkeleton({ variant = "generic", className = "" }: 
 // fallbacku (tam nie znamy jeszcze komponentu ekranu). HashRouter: sciezka po "#".
 export function variantForPath(hash: string): SkeletonVariant {
   const path = (hash.split("?")[0] || "").replace(/^#/, "");
-  if (path.startsWith("/eksploruj") || path.startsWith("/home") || path === "/" || path.startsWith("/plan")) return "feed";
+  // PUSTY hash = zimny start, ZANIM HashRouter zdazy wpisac "#/" (zgloszenie Nat 2026-09-01:
+  // "pokazuja sie dwa szkielety, mniejszy i potem wlasciwy"). Wczesniej spadal tu do "generic",
+  // czyli innego ukladu niz ten, ktory ulamek sekundy pozniej rysowal Suspense dla realnej trasy -
+  // i user widzial DWA rozne szkielety pod rzad. Pusty adres znaczy to samo co "/": ekran startowy.
+  if (path === "" || path === "/" || path.startsWith("/eksploruj") || path.startsWith("/home") || path.startsWith("/plan")) return "feed";
   if (path.startsWith("/moj-profil") || path.startsWith("/profil")) return "profile";
   if (path.startsWith("/route") || path.startsWith("/review-summary") || path.startsWith("/wyjazd")) return "trip";
   if (path.startsWith("/lista") || path.startsWith("/utworz") || path.startsWith("/zapisane")) return "list";

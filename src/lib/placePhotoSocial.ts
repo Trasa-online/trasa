@@ -111,6 +111,30 @@ export async function fetchPlacePhotosForKeys(keys: string[]): Promise<Map<strin
   return map;
 }
 
+// Odpiecie zdjec od galerii MIEJSCA. Wolane, gdy user usuwa miejsce z listy albo z wyjazdu:
+// zdjecie bylo dodane W KONTEKSCIE tego miejsca, wiec razem z nim ma zniknac (prosba Nat
+// 2026-09-01). Kasujemy tylko wiersze o DOKLADNIE tych adresach - zdjecia tego samego miejsca
+// dodane gdzie indziej (inna lista, inny wyjazd) zostaja nietkniete.
+// Zwraca skasowane wiersze, zeby "Cofnij" przywrocil komplet.
+export async function detachPlacePhotos(keys: string[], urls: string[]): Promise<any[]> {
+  const k = [...new Set(keys.filter(Boolean))];
+  const u = [...new Set(urls.filter(Boolean))];
+  if (!k.length || !u.length) return [];
+  const { data } = await (supabase as any)
+    .from("place_photos").select("*").in("place_key", k).in("photo_url", u);
+  const rows = (data ?? []) as any[];
+  if (!rows.length) return [];
+  const { error } = await (supabase as any).from("place_photos").delete().in("id", rows.map((r) => r.id));
+  if (error) { console.error("[placePhotoSocial] detach:", error.message); return []; }
+  return rows;
+}
+
+export async function restorePlacePhotos(rows: any[]): Promise<void> {
+  if (!rows.length) return;
+  const { error } = await (supabase as any).from("place_photos").insert(rows);
+  if (error) console.error("[placePhotoSocial] restore:", error.message);
+}
+
 // Upload zdjecia usera do miejsca: plik -> Storage (folder = uid) -> wiersz place_photos.
 export async function uploadPlacePhoto(
   file: File,
