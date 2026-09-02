@@ -54,7 +54,7 @@ Deno.serve(async (req) => {
     if (!RESEND_API_KEY) throw new Error("RESEND_API_KEY not set");
 
     const safeFirstName = (first_name ?? "").toString().slice(0, 80);
-    const appUrl = "https://trasa.travel/#/home";
+    const appUrl = "https://spontaway.com/#/home";
     const html = buildB2cWelcomeHtml({ firstName: safeFirstName, appUrl });
     const text = buildB2cWelcomeText({ firstName: safeFirstName, appUrl });
 
@@ -65,7 +65,7 @@ Deno.serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: "spontaway <hello@trasa.travel>",
+        from: "spontaway <hello@spontaway.com>",
         to: [email],
         subject: safeFirstName ? `Cześć, ${safeFirstName}! Witamy w spontaway` : "Witamy Cię w spontaway",
         html,

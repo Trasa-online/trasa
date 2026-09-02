@@ -448,7 +448,7 @@ const LandingV2 = () => {
         <div className="mx-auto max-w-6xl flex flex-col sm:flex-row items-center justify-between gap-5">
           <div className="flex items-center gap-2">
             <TrasaLogo size={30} />
-            <span className="font-display font-extrabold text-foreground">trasa.travel</span>
+            <span className="font-display font-extrabold text-foreground">spontaway.com</span>
           </div>
           <p className="text-xs text-muted-foreground">© {new Date().getFullYear()} spontaway · Stworzone z&nbsp;❤ w&nbsp;Polsce</p>
           <div className="flex items-center gap-5">

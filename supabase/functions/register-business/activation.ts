@@ -42,8 +42,8 @@ export function buildActivationHtml({ businessName, activationUrl }: { businessN
     </p>
     <div style="margin-top:48px;padding-top:24px;border-top:1px solid #E5E5E5;">
       <p style="font-size:11px;color:#979797;margin:0;line-height:1.5;">
-        Dostałeś tego maila, ponieważ rozpocząłeś rejestrację lokalu na&#160;<a href="https://trasa.travel" style="color:#1d4ed8;text-decoration:none;">trasa.travel</a>.<br/>
-        Kontakt: <a href="mailto:hello@trasa.travel" style="color:#1d4ed8;text-decoration:none;">hello@trasa.travel</a>
+        Dostałeś tego maila, ponieważ rozpocząłeś rejestrację lokalu na&#160;<a href="https://spontaway.com" style="color:#1d4ed8;text-decoration:none;">spontaway.com</a>.<br/>
+        Kontakt: <a href="mailto:hello@spontaway.com" style="color:#1d4ed8;text-decoration:none;">hello@spontaway.com</a>
       </p>
     </div>
   </div>
@@ -65,6 +65,6 @@ Jeśli to nie Ty zakładałeś konto, zignoruj tego maila.
 Zespół spontaway
 
 ---
-Dostałeś tego maila, ponieważ rozpocząłeś rejestrację lokalu na trasa.travel.
-Kontakt: hello@trasa.travel`;
+Dostałeś tego maila, ponieważ rozpocząłeś rejestrację lokalu na spontaway.com.
+Kontakt: hello@spontaway.com`;
 }

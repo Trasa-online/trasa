@@ -54,7 +54,7 @@ export function buildB2cWelcomeHtml({ firstName, appUrl }: { firstName: string; 
     <div style="margin-top:48px;padding-top:24px;border-top:1px solid #E5E5E5;">
       <p style="font-size:11px;color:#979797;margin:0 0 8px;font-style:italic;">speed dating z&#160;miastem</p>
       <p style="font-size:11px;color:#979797;margin:0;line-height:1.5;">
-        Dostałeś tego maila, ponieważ założyłeś konto na&#160;<a href="https://trasa.travel" style="color:#F9662B;text-decoration:none;">trasa.travel</a>. Kontakt: <a href="mailto:hello@trasa.travel" style="color:#F9662B;text-decoration:none;">hello@trasa.travel</a>
+        Dostałeś tego maila, ponieważ założyłeś konto na&#160;<a href="https://spontaway.com" style="color:#F9662B;text-decoration:none;">spontaway.com</a>. Kontakt: <a href="mailto:hello@spontaway.com" style="color:#F9662B;text-decoration:none;">hello@spontaway.com</a>
       </p>
     </div>
   </div>
@@ -84,6 +84,6 @@ Nat & Bart
 
 ---
 speed dating z miastem
-Dostałeś tego maila, ponieważ założyłeś konto na trasa.travel.
-Kontakt: hello@trasa.travel`;
+Dostałeś tego maila, ponieważ założyłeś konto na spontaway.com.
+Kontakt: hello@spontaway.com`;
 }

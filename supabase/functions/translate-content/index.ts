@@ -7,7 +7,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 // dowolnego pola i przyszlej kolejki wydarzen. Silnik: Claude Haiku przez Lovable AI Gateway
 // (ta sama infra co translate-place, LOVABLE_API_KEY juz skonfigurowany).
 
-const ALLOWED_ORIGINS = ["https://trasa.travel", "https://trasa.lovable.app", "http://localhost:8080", "http://localhost:5173", "capacitor://localhost", "https://localhost", "http://localhost"];
+const ALLOWED_ORIGINS = ["https://spontaway.com", "https://spontaway.com", "https://trasa.lovable.app", "http://localhost:8080", "http://localhost:5173", "capacitor://localhost", "https://localhost", "http://localhost"];
 
 // Model przez Lovable AI Gateway. google/gemini-2.5-flash jest sprawdzony (uzywa go
 // translate-place). Claude przez gateway bywa niedostepny -> "nie udalo sie przetlumaczyc".

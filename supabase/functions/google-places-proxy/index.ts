@@ -1,7 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
 const BASE = "https://maps.googleapis.com/maps/api";
-const REFERER = "https://trasa.travel/";
+const REFERER = "https://spontaway.com/";
 const CACHE_TTL_HOURS = 168; // 7 days
 
 // Dzienny limit wywolan platnego Google API (bezpiecznik kosztowy). Env-configurable.

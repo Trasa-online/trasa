@@ -154,8 +154,9 @@ function avgRatingOf(ratings: (number | null | undefined)[]): number {
 // ── Sub-components ─────────────────────────────────────────────────────────────
 
 function AuthorChip({ name, avatar }: { name: string; avatar: string | null }) {
-  // Oficjalne trasy ("trasa") - realne logo Trasy zamiast placeholdera awatara.
-  const isTrasa = ["trasa", "trasa.travel", "@trasa"].includes(name.trim().toLowerCase());
+  // Trasy oficjalne - realne logo marki zamiast placeholdera awatara. Stare nazwy
+  // zostaja, bo takie wartosci siedza juz w bazie.
+  const isTrasa = ["spontaway", "spontaway.com", "@spontaway", "trasa", "trasa.travel", "@trasa"].includes(name.trim().toLowerCase());
   return (
     <div className="flex items-center gap-1.5">
       {isTrasa ? (

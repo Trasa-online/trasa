@@ -183,7 +183,7 @@ const Auth = () => {
         if (error) throw error;
       } else {
         const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-          redirectTo: "https://trasa.travel/?recovery=1",
+          redirectTo: "https://spontaway.com/?recovery=1",
         });
         if (error) throw error;
       }

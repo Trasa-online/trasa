@@ -193,7 +193,7 @@ function DashboardMockup() {
             <div className="h-2.5 w-2.5 rounded-full bg-green-400" />
           </div>
           <div className="flex-1 bg-white rounded-md px-3 py-1 text-xs text-slate-400 font-mono">
-            trasa.travel/biznes
+            spontaway.com/biznes
           </div>
         </div>
 
@@ -740,7 +740,7 @@ export default function ForBusinessPage() {
         <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <div className="h-6 w-6 rounded-full shrink-0" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
-            <span className="font-black text-white">trasa.travel</span>
+            <span className="font-black text-white">spontaway.com</span>
           </div>
           <p className="text-xs text-white/40 text-center">© {new Date().getFullYear()} spontaway · Stworzone z ❤ w Polsce</p>
           <div className="flex items-center gap-4">
