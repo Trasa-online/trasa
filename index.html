@@ -17,6 +17,12 @@
     <meta name="apple-mobile-web-app-title" content="spontaway" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 
+    <!-- Smart App Banner (Safari na iOS). Renderuje sie dopiero gdy aplikacja jest
+         opublikowana w App Store, wiec przed premiera po prostu nic nie pokazuje.
+         Wlasny baner instalacyjny na landingu chowa sie na iOS Safari po premierze,
+         zeby nie bylo dwoch paskow naraz - patrz InstallBanner w SpontawayLanding. -->
+    <meta name="apple-itunes-app" content="app-id=6777705751" />
+
     <meta property="og:title" content="spontaway — odkrywaj miejsca, planuj podróże" />
     <meta property="og:description" content="Przeglądaj miejsca, twórz trasy i planuj wyjazdy ze znajomymi. Aplikacja dla tych, którzy chcą więcej z każdego miasta." />
     <meta property="og:type" content="website" />
@@ -35,8 +41,8 @@
     <!-- Font preconnect & preload — Baloo 2 used in LCP heading -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
-    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Caveat:wght@400;600&family=Sigmar&display=swap" />
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Caveat:wght@400;600&family=Sigmar&display=swap" />
+    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Caveat:wght@400;600&family=Inter:wght@400;500;700;800&family=Sigmar&display=swap" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Caveat:wght@400;600&family=Inter:wght@400;500;700;800&family=Sigmar&display=swap" />
 
     <!-- Google Analytics GA4 with Consent Mode -->
     <script>

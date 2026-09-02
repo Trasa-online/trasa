@@ -66,8 +66,7 @@ function MaintenanceGate({ children }: { children: React.ReactNode }) {
   if (unlocked) return <>{children}</>;
   const isPublicRoute =
     location.pathname === "/auth" ||
-    location.pathname === "/waitlist" ||
-    location.pathname === "/landing" ||
+    location.pathname === "/" ||
     location.pathname === "/landing-v2" ||
     location.pathname.startsWith("/set-password") ||
     location.pathname.startsWith("/biznes/") ||
@@ -80,9 +79,9 @@ function MaintenanceGate({ children }: { children: React.ReactNode }) {
 // do: marketingu (landing / waitlist / legal), B2B (auth biznesowy, set-password, dashboard
 // /biznes, /dla-firm, claim lokalu /lokal) + callbackow auth (?code=/?token_hash=).
 // Native (iOS/Capacitor) = pelna apka, bez redirectu. Cala reszta (rdzen B2C: eksploruj,
-// wyjazdy, trasy, sesje grupowe, planer, linki share /route//profil, /demo) -> /waitlist.
+// wyjazdy, trasy, sesje grupowe, planer, linki share /route//profil, /demo) -> "/".
 //
-// Pre-launch: docelowo /waitlist (lapie odwiedzajacego). Po wejsciu do App Store podmienic
+// Pre-launch: docelowo "/" = landing spontaway (lapie odwiedzajacego). Po wejsciu do App Store podmienic
 // redirect na dedykowany ekran "Pobierz z App Store" (komponent NativeGate).
 function WebWaitlistGate({ children }: { children: React.ReactNode }) {
   const location = useLocation();
@@ -91,12 +90,12 @@ function WebWaitlistGate({ children }: { children: React.ReactNode }) {
   const p = location.pathname;
   const allowed =
     // Marketing / legal (B2C web presence)
-    p === "/waitlist" || p === "/landing" || p === "/landing-v2" ||
+    p === "/" || p === "/landing-v2" ||
     p === "/terms" || p === "/privacy" ||
     // B2B: auth biznesowy, ustawianie hasla, dashboard, landing dla firm, claim lokalu
     p === "/auth" || p.startsWith("/set-password") || p.startsWith("/biznes") ||
     p.startsWith("/dla-firm") || p.startsWith("/lokal/");
-  if (!allowed && !hasAuthParams) return <Navigate to="/waitlist" replace />;
+  if (!allowed && !hasAuthParams) return <Navigate to="/" replace />;
   return <>{children}</>;
 }
 
@@ -316,6 +315,15 @@ function NativeDeepLinkHandler() {
     return () => { handlerPromise.then((h) => h.remove()).catch(() => {}); };
   }, []);
   return null;
+}
+
+// Root strony. Na webie spontaway.com ma pokazywac landing B2C, ale Supabase wraca
+// z linkow aktywacyjnych/OAuth wlasnie na root (?code=, ?token_hash=, #access_token=),
+// wiec przy takim URL-u nadal musi zadzialac RootPage z wymiana kodu na sesje.
+function WebRoot() {
+  const hasAuthParams = /[?&#](code|token_hash|error|access_token)=/.test(window.location.href);
+  if (isNative || hasAuthParams) return <RootPage />;
+  return <SpontawayLanding />;
 }
 
 function RootPage() {
@@ -677,8 +685,7 @@ function lazy(factory: Parameters<typeof reactLazy>[0]) {
 }
 
 // Lazy-loaded public pages - one chunk each, fetched on demand
-const WaitlistPage = lazy(() => import("./pages/WaitlistPage"));
-const LandingPage = lazy(() => import("./pages/LandingPage"));
+const SpontawayLanding = lazy(() => import("./pages/SpontawayLanding"));
 const LandingV2 = lazy(() => import("./pages/LandingV2"));
 import ForBusinessPage from "./pages/ForBusinessPage";
 import Auth from "./pages/Auth";
@@ -793,12 +800,12 @@ const App = () => (
         <Suspense fallback={<ScreenSkeleton variant={variantForPath(window.location.hash)} />}>
         <Routes>
           <Route path="/auth" element={<Auth />} />
-          <Route path="/waitlist" element={<WaitlistPage />} />
-          <Route path="/landing" element={<LandingPage />} />
+          {/* Landing B2C (spontaway) stoi pod "/" (patrz WebRoot). /landing i /waitlist
+              ubite 2026-09-02 - stare linki lapie WebWaitlistGate i odsyla na root. */}
           <Route path="/landing-v2" element={<LandingV2 />} />
           <Route path="/terms" element={<Terms />} />
           <Route path="/privacy" element={<Privacy />} />
-          <Route path="/" element={<RootPage />} />
+          <Route path="/" element={<WebRoot />} />
           {/* Tryb uproszczony (PLANNING_DISABLED): "Twoje trasy" scalone w Wyjazdy (Dziennik). */}
           <Route path="/home" element={PLANNING_DISABLED ? <Navigate to="/moj-profil?tab=wyjazdy" replace /> : <AppLayout hideTopBar><HomeSwipe /></AppLayout>} />
           <Route path="/eksploruj" element={<AppLayout hideTopBar><Explore /></AppLayout>} />
