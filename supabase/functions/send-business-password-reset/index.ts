@@ -28,7 +28,7 @@ function buildHtml(link: string): string {
 <html lang="pl"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/><meta name="color-scheme" content="light"/></head>
 <body style="margin:0;padding:0;background:#F4F4F5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;color:#0E0E0E;">
   <div style="max-width:480px;margin:0 auto;padding:48px 32px;text-align:center;">
-    <img src="https://trasa.travel/icon-192.png" alt="Trasa" width="64" height="64" style="display:block;width:64px;height:64px;border-radius:50%;margin:0 auto 20px;" />
+    <img src="https://trasa.travel/icon-192.png" alt="spontaway" width="64" height="64" style="display:block;width:64px;height:64px;border-radius:50%;margin:0 auto 20px;" />
     <p style="font-size:13px;font-weight:800;letter-spacing:0.04em;color:#2563EB;margin:0 0 20px;">TRASA BIZNES</p>
     <h1 style="font-size:26px;font-weight:900;letter-spacing:-0.02em;margin:0 0 16px;color:#0E0E0E;line-height:1.25;">Zmiana hasła</h1>
     <p style="font-size:16px;line-height:1.6;color:#525252;margin:0 0 12px;">Dostaliśmy prośbę o&#160;zmianę hasła do&#160;Twojego konta biznesowego.</p>
@@ -38,7 +38,7 @@ function buildHtml(link: string): string {
       <p style="font-size:13px;line-height:1.6;color:#1E40AF;margin:0;"><strong>Nie&#160;prosiłeś o&#160;reset?</strong> Zignoruj tego maila - Twoje hasło zostanie bez&#160;zmian. Nie&#160;udostępniaj tego linku nikomu.</p>
     </div>
     <p style="font-size:13px;color:#979797;margin:0 0 8px;">Masz problem? Napisz na&#160;<a href="mailto:hello@trasa.travel" style="color:#2563EB;text-decoration:none;">hello@trasa.travel</a></p>
-    <p style="font-size:13px;color:#979797;margin:24px 0 0;"><strong style="color:#0E0E0E;">Zespół Trasy</strong></p>
+    <p style="font-size:13px;color:#979797;margin:24px 0 0;"><strong style="color:#0E0E0E;">Zespół spontaway</strong></p>
   </div>
 </body></html>`;
 }
@@ -94,11 +94,11 @@ Deno.serve(async (req) => {
       method: "POST",
       headers: { "Authorization": `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        from: "Trasa Biznes <hello@trasa.travel>",
+        from: "spontaway biznes <hello@trasa.travel>",
         to: [email],
-        subject: "Zmiana hasła - Trasa Biznes",
+        subject: "Zmiana hasła - spontaway biznes",
         html: buildHtml(link),
-        text: `Zmiana hasła do konta biznesowego Trasa. Ustaw nowe hasło (link ważny 60 min): ${link}`,
+        text: `Zmiana hasła do konta biznesowego spontaway. Ustaw nowe hasło (link ważny 60 min): ${link}`,
       }),
     });
     if (!res.ok) {

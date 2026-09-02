@@ -1,4 +1,4 @@
-// Wspolny interfejs dla wizytowki biznesowej w aplikacji Trasa.
+// Wspolny interfejs dla wizytowki biznesowej w aplikacji spontaway.
 // Refactor: wczesniej 5 miejsc (PlaceSwiperDetail, BusinessCardPreview, AppLikePreviewModal,
 // PlaceDetailSheet, SwipeCard) mialo wlasne logiki renderowania z innymi zrodlami danych.
 // Teraz: <PremiumBusinessCard data={PremiumBusinessData} mode='detail|card|preview|swipe'/>.

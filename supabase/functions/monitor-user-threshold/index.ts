@@ -41,7 +41,7 @@ async function sendEmail(args: {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      from: "Trasa <noreply@trasa.travel>",
+      from: "spontaway <noreply@trasa.travel>",
       to: [ALERT_EMAIL],
       subject: args.subject,
       html: args.html,
@@ -63,9 +63,9 @@ function emailBody(args: {
   const pct = Math.round((userCount / 1001) * 100);
 
   const subjectMap: Record<string, string> = {
-    heads_up: `Trasa: zbliżamy się do limitu cache zdjec (${userCount}/1001)`,
-    warning: `Trasa: UWAGA - ${userCount}/1001 uzytkownikow, zaplanuj ewakuacje`,
-    alarm: `Trasa: ALARM - ${userCount}/1001 uzytkownikow, wylacz cache w ciagu tygodnia`,
+    heads_up: `spontaway: zbliżamy się do limitu cache zdjec (${userCount}/1001)`,
+    warning: `spontaway: UWAGA - ${userCount}/1001 uzytkownikow, zaplanuj ewakuacje`,
+    alarm: `spontaway: ALARM - ${userCount}/1001 uzytkownikow, wylacz cache w ciagu tygodnia`,
   };
 
   const actionMap: Record<string, string> = {
@@ -78,7 +78,7 @@ function emailBody(args: {
   };
 
   return {
-    subject: subjectMap[severity] ?? `Trasa: prog ${threshold} przekroczony`,
+    subject: subjectMap[severity] ?? `spontaway: prog ${threshold} przekroczony`,
     html: `
       <div style="font-family: system-ui, sans-serif; max-width: 560px; margin: 0 auto;">
         <h2 style="color: ${severity === "alarm" ? "#dc2626" : severity === "warning" ? "#f59e0b" : "#0e0e0e"};">

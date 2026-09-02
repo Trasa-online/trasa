@@ -239,7 +239,7 @@ function GlobalAuthCallback() {
         } catch (e) {
           console.warn("[GlobalAuthCallback] welcome mail check failed:", e);
         }
-        toast.success("Witamy w Trasie 🧡");
+        toast.success("Witamy w spontaway 🧡");
         // Web OAuth wraca na origin/ i tracimy kontekst route. Jesli przed logowaniem
         // zapisalismy docelowa sciezke (np. /sesja/KOD - dolaczanie do sesji grupowej),
         // wracamy do niej zamiast na /eksploruj (= waitlista na web).

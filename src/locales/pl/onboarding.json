@@ -2,8 +2,8 @@
   "intro": {
     "step0": {
       "title": "Cześć!",
-      "subtitle": "Jestem Trasa, Twój osobisty przewodnik po polskich miastach.",
-      "speech": "Cześć! Jestem Trasa, Twój osobisty przewodnik po polskich miastach."
+      "subtitle": "Jestem spontaway, Twój osobisty przewodnik po polskich miastach.",
+      "speech": "Cześć! Jestem spontaway, Twój osobisty przewodnik po polskich miastach."
     },
     "step1": {
       "title": "Odkryj to, co Cię kręci",
@@ -11,7 +11,7 @@
       "speech": "Przeglądaj miejsca i lajkuj to, co Cię kręci. AI ułoży z tego idealną trasę."
     },
     "step2": {
-      "title": "Trasa planuje i zapamiętuje",
+      "title": "spontaway planuje i zapamiętuje",
       "subtitle": "AI buduje plan w kilka sekund. Po każdym dniu rozmawiamy, a z czasem rekomendacje trafiają coraz celniej.",
       "speech": "AI układa plan, a po każdej podróży uczy się Twoich gustów. Z czasem rekomendacje trafiają coraz celniej."
     }

@@ -445,7 +445,7 @@ const Auth = () => {
                   {`Twój profil jest prawie gotowy!`}
                 </h1>
                 <p className="text-sm text-blue-300/70 mt-2 leading-relaxed">
-                  {`Podaj email i hasło, żeby na stałe zapisać Twój lokal w Trasie.`}
+                  {`Podaj email i hasło, żeby na stałe zapisać Twój lokal w spontaway.`}
                 </p>
               </div>
               <form onSubmit={handleDraftUpgrade} className="w-full space-y-3">
@@ -524,7 +524,7 @@ const Auth = () => {
               <p className="text-sm text-slate-500 mt-1.5 leading-relaxed">
                 {bizMode === "login"
                   ? "Wejdź na konto powiązane z Twoim lokalem."
-                  : "Załóż konto i zarządzaj wizytówką lokalu na Trasie."}
+                  : "Załóż konto i zarządzaj wizytówką lokalu w spontaway."}
               </p>
             </div>
 

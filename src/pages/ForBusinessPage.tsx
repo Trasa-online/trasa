@@ -596,7 +596,7 @@ export default function ForBusinessPage() {
             </span>
           </h1>
           <p className="text-lg text-muted-foreground mb-10 leading-relaxed max-w-[52ch] mx-auto">
-            Trasa, to aplikacja, w której turyści poznają się z miastem, a Twój lokal może pojawić się już dzisiaj w ich planach!
+            spontaway to aplikacja, w której turyści poznają się z miastem, a Twój lokal może pojawić się już dzisiaj w ich planach!
           </p>
           <a
             href="/auth?business=true"
@@ -656,7 +656,7 @@ export default function ForBusinessPage() {
               className="text-3xl sm:text-4xl font-black text-foreground"
               style={{ textWrap: "balance" } as React.CSSProperties}
             >
-              Sprawdź pełne możliwości Trasy
+              Sprawdź pełne możliwości spontaway
             </h2>
           </FadeIn>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5 items-stretch max-w-3xl mx-auto">
@@ -724,7 +724,7 @@ export default function ForBusinessPage() {
             Daj się odkryć turystom
           </h2>
           <p className="text-base text-muted-foreground mb-8 max-w-[40ch] mx-auto">
-            Dołącz teraz i bądź jednym z pierwszych miejsc na Trasie.
+            Dołącz teraz i bądź jednym z pierwszych miejsc w spontaway.
           </p>
           <a
             href="/auth?business=true"
@@ -742,7 +742,7 @@ export default function ForBusinessPage() {
             <div className="h-6 w-6 rounded-full shrink-0" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
             <span className="font-black text-white">trasa.travel</span>
           </div>
-          <p className="text-xs text-white/40 text-center">© {new Date().getFullYear()} Trasa · Stworzone z ❤ w Polsce</p>
+          <p className="text-xs text-white/40 text-center">© {new Date().getFullYear()} spontaway · Stworzone z ❤ w Polsce</p>
           <div className="flex items-center gap-4">
             <a href="https://instagram.com/trasa.travel" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs text-white/50 hover:text-white/80 transition-colors">
               <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">

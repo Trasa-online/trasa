@@ -16,7 +16,7 @@ export function buildActivationHtml({ businessName, activationUrl }: { businessN
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="color-scheme" content="light" />
   <meta name="supported-color-schemes" content="light" />
-  <title>Aktywuj konto biznesowe na Trasie</title>
+  <title>Aktywuj konto biznesowe w spontaway</title>
 </head>
 <body style="margin:0;padding:0;background:#FEFEFE;font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;color:#0E0E0E;">
   <div style="height:8px;background:#1d4ed8;line-height:8px;font-size:0;">&nbsp;</div>
@@ -26,7 +26,7 @@ export function buildActivationHtml({ businessName, activationUrl }: { businessN
       Aktywuj konto biznesowe
     </h1>
     <p style="font-size:16px;line-height:1.6;color:#525252;margin:0 0 12px;">
-      Zakładasz konto dla <strong style="color:#0E0E0E;">${name}</strong> na&#160;Trasie.
+      Zakładasz konto dla <strong style="color:#0E0E0E;">${name}</strong> na&#160;spontaway.
     </p>
     <p style="font-size:16px;line-height:1.6;color:#525252;margin:0 0 32px;">
       Kliknij poniżej, żeby ustawić hasło i&#160;wejść do&#160;panelu biznesowego. Link jest ważny przez&#160;24&#160;godziny.
@@ -38,7 +38,7 @@ export function buildActivationHtml({ businessName, activationUrl }: { businessN
       Jeśli to nie&#160;Ty zakładałeś konto, zignoruj tego maila.
     </p>
     <p style="font-size:13px;color:#979797;margin:24px 0 0;">
-      <strong style="color:#0E0E0E;">Zespół Trasy</strong>
+      <strong style="color:#0E0E0E;">Zespół spontaway</strong>
     </p>
     <div style="margin-top:48px;padding-top:24px;border-top:1px solid #E5E5E5;">
       <p style="font-size:11px;color:#979797;margin:0;line-height:1.5;">
@@ -54,7 +54,7 @@ export function buildActivationHtml({ businessName, activationUrl }: { businessN
 export function buildActivationText({ businessName, activationUrl }: { businessName: string; activationUrl: string }): string {
   return `Aktywuj konto biznesowe
 
-Zakładasz konto dla ${businessName} na Trasie.
+Zakładasz konto dla ${businessName} w spontaway.
 
 Kliknij poniższy link, żeby ustawić hasło i wejść do panelu biznesowego. Link jest ważny przez 24 godziny.
 
@@ -62,7 +62,7 @@ ${activationUrl}
 
 Jeśli to nie Ty zakładałeś konto, zignoruj tego maila.
 
-Zespół Trasy
+Zespół spontaway
 
 ---
 Dostałeś tego maila, ponieważ rozpocząłeś rejestrację lokalu na trasa.travel.

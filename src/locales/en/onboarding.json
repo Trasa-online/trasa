@@ -2,8 +2,8 @@
   "intro": {
     "step0": {
       "title": "Hello!",
-      "subtitle": "I'm Trasa, your personal guide for exploring Polish cities.",
-      "speech": "Hello! I'm Trasa, your personal guide for exploring Polish cities."
+      "subtitle": "I'm spontaway, your personal guide for exploring Polish cities.",
+      "speech": "Hello! I'm spontaway, your personal guide for exploring Polish cities."
     },
     "step1": {
       "title": "Discover what excites you",
@@ -11,7 +11,7 @@
       "speech": "Browse places and like what catches your eye. AI will build your route from it."
     },
     "step2": {
-      "title": "Trasa plans and remembers",
+      "title": "spontaway plans and remembers",
       "subtitle": "AI builds your plan in seconds. After every day we debrief, and recommendations get sharper every trip.",
       "speech": "AI builds your plan, and after each trip it learns your taste. Recommendations get sharper every time."
     }

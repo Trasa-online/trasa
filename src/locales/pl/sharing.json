@@ -2,7 +2,7 @@
   "loading": "Ładowanie...",
   "route_unavailable_title": "Trasa niedostępna",
   "route_unavailable_desc": "Ten link mógł wygasnąć lub trasa nie jest publiczna.",
-  "back_to_trasa": "Wróć do Trasa",
+  "back_to_trasa": "Wróć do spontaway",
   "toast_saved": "Trasa zapisana w Twoim dzienniku",
   "toast_save_error": "Nie udało się zapisać trasy",
   "push_used_title": "Ktoś korzysta z Twojej trasy 🧭",
@@ -71,7 +71,7 @@
     "privacy_policy": "Polityka prywatności"
   },
   "index": {
-    "title": "Witaj w Trasa.travel",
+    "title": "Witaj w spontaway",
     "subtitle": "Zacznij planować swoją podróż!"
   },
   "not_found": {

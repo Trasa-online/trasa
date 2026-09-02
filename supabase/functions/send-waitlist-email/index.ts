@@ -60,9 +60,9 @@ Deno.serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: "Trasa <hello@trasa.travel>",
+        from: "spontaway <hello@trasa.travel>",
         to: [email],
-        subject: "Cześć! Dzięki, że dołączasz do Trasy 🧡",
+        subject: "Cześć! Dzięki, że dołączasz do spontaway 🧡",
         html: welcomeHtml,
       }),
     });

@@ -86,7 +86,7 @@ const SetPassword = ({ forceBusiness }: { forceBusiness?: boolean } = {}) => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
         console.log("[SetPassword] no recovery signal, navigating /home");
-        toast.success("Witamy w Trasie 🧡");
+        toast.success("Witamy w spontaway 🧡");
         navigate("/home");
         return;
       }
@@ -229,7 +229,7 @@ const SetPassword = ({ forceBusiness }: { forceBusiness?: boolean } = {}) => {
           return;
         } catch {}
       }
-      toast.success("Witamy w Trasie 🧡");
+      toast.success("Witamy w spontaway 🧡");
       navigate("/home");
     } catch (error: any) {
       toast.error(error.message || "Nie udało się ustawić hasła.");

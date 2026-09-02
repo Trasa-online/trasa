@@ -176,9 +176,9 @@ Deno.serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: "Trasa <hello@trasa.travel>",
+        from: "spontaway <hello@trasa.travel>",
         to: [email],
-        subject: "Aktywuj konto biznesowe na Trasie",
+        subject: "Aktywuj konto biznesowe w spontaway",
         html: buildActivationHtml({ businessName: safeName, activationUrl }),
         text: buildActivationText({ businessName: safeName, activationUrl }),
       }),

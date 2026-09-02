@@ -63,7 +63,7 @@ const AuthDrawer = () => {
       } catch { /* sessionStorage unavailable */ }
       // Zawsze signInWithOAuth (jak Auth.tsx). Wczesniej dla anonimowych uzywalismy
       // linkIdentity zeby zachowac anon data (sesje grupowe, polubione miejsca),
-      // ale to silently failuje gdy Google email juz ma konto w Trasie - user wraca
+      // ale to silently failuje gdy Google email juz ma konto w spontaway - user wraca
       // jako gosc bez widocznego bledu. Tradeoff: anon data nie przenosi sie przy
       // OAuth, ale flow dziala niezawodnie dla wszystkich przypadkow.
       // Cel powrotu doklejamy TEZ jako ?next= - przezywa round-trip OAuth gdy

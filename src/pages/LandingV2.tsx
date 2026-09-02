@@ -169,7 +169,7 @@ function Faq({ items }: { items: { q: string; a: string }[] }) {
 const STEPS = [
   { num: "01", kicker: "Krok pierwszy", title: "Wybierz miasto", desc: "Na start Warszawa i Trójmiasto (Gdańsk, Sopot, Gdynia). Kolejne miasta dodajemy na bieżąco.", img: "/landing/flow-city.png" },
   { num: "02", kicker: "Krok drugi", title: "Przeglądaj lokalne miejsca", desc: "Kawiarnie, muzea, bary, widoki. Dodawaj to co Cię kręci: sam albo ze znajomymi.", img: "/landing/flow-browse.jpg" },
-  { num: "03", kicker: "Krok trzeci", title: "Trasa gotowa w minutę", desc: "Trasa układa gotowy plan dnia z kolejnością, mapą i godzinami. Ty tylko ruszasz w miasto.", img: "/landing/flow-route.jpg" },
+  { num: "03", kicker: "Krok trzeci", title: "Trasa gotowa w minutę", desc: "spontaway układa gotowy plan dnia z kolejnością, mapą i godzinami. Ty tylko ruszasz w miasto.", img: "/landing/flow-route.jpg" },
 ];
 
 function HowItWorks() {
@@ -260,7 +260,7 @@ const LandingV2 = () => {
       {/* ── Nav ── */}
       <nav className="fixed top-5 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-3xl">
         <div className="flex items-center gap-3 rounded-full bg-[#0E0E0E]/95 backdrop-blur-xl px-4 h-14 ring-1 ring-white/10 shadow-[0_14px_44px_-12px_rgba(0,0,0,0.5)]">
-          <button onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} className="flex items-center pl-1" aria-label="Trasa">
+          <button onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} className="flex items-center pl-1" aria-label="spontaway">
             <TrasaLogo size={34} />
           </button>
           <div className="hidden sm:flex items-center gap-1 ml-1">
@@ -355,7 +355,7 @@ const LandingV2 = () => {
         <div className="mx-auto max-w-6xl">
           <Reveal className="text-center mb-16 flex flex-col items-center gap-4">
             <Eyebrow>Dla kogo</Eyebrow>
-            <h2 className="font-display font-extrabold text-foreground text-[clamp(2rem,5vw,3.25rem)] tracking-[-0.02em] leading-tight max-w-[18ch]">Trasa działa dla&nbsp;każdego tripu</h2>
+            <h2 className="font-display font-extrabold text-foreground text-[clamp(2rem,5vw,3.25rem)] tracking-[-0.02em] leading-tight max-w-[18ch]">spontaway działa dla&nbsp;każdego tripu</h2>
           </Reveal>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             {/* Featured - solo */}
@@ -412,10 +412,10 @@ const LandingV2 = () => {
           <Reveal delay={80}>
             <Faq items={[
               { q: "Czy trasa jest darmowa?", a: "Tak, konto jest darmowe. Podstawowe planowanie - solo i w grupie - zawsze będzie bezpłatne. Płatne funkcje mogą pojawić się w przyszłości, ale z wyprzedzeniem damy Ci znać." },
-              { q: "Do czego służy trasa?", a: "Trasa pomaga odkrywać lokalne miejsca w Twoim mieście - kawiarnie, muzea, bary, parki, widoki - i układa z nich gotową trasę zwiedzania z kolejnością, mapą i godzinami. Sam albo ze znajomymi." },
+              { q: "Do czego służy spontaway?", a: "spontaway pomaga odkrywać lokalne miejsca w Twoim mieście - kawiarnie, muzea, bary, parki, widoki - i układa z nich gotową trasę zwiedzania z kolejnością, mapą i godzinami. Sam albo ze znajomymi." },
               { q: "W jakich miastach działa trasa?", a: "Aktualnie działamy w Warszawie i Trójmieście (Gdańsk, Sopot, Gdynia). Kolejne miasta dodajemy sukcesywnie - jeśli nie widzisz swojego, daj nam znać." },
-              { q: "Czy mogę planować solo, bez grupy?", a: "Tak! Trasa działa świetnie zarówno solo jak i w grupie. Przeglądaj miejsca samodzielnie i buduj własny plan dnia we własnym tempie." },
-              { q: "Jak wygląda planowanie ze znajomymi?", a: "Tworzysz sesję i zapraszasz znajomych jednym linkiem. Każdy przegląda miejsca osobno na swoim telefonie. Trasa zbiera wasze wybory i pokazuje miejsca które spodobały się wszystkim - na tej podstawie układa gotową trasę." },
+              { q: "Czy mogę planować solo, bez grupy?", a: "Tak! spontaway działa świetnie zarówno solo jak i w grupie. Przeglądaj miejsca samodzielnie i buduj własny plan dnia we własnym tempie." },
+              { q: "Jak wygląda planowanie ze znajomymi?", a: "Tworzysz sesję i zapraszasz znajomych jednym linkiem. Każdy przegląda miejsca osobno na swoim telefonie. spontaway zbiera wasze wybory i pokazuje miejsca które spodobały się wszystkim - na tej podstawie układa gotową trasę." },
             ]} />
           </Reveal>
         </div>
@@ -450,7 +450,7 @@ const LandingV2 = () => {
             <TrasaLogo size={30} />
             <span className="font-display font-extrabold text-foreground">trasa.travel</span>
           </div>
-          <p className="text-xs text-muted-foreground">© {new Date().getFullYear()} Trasa · Stworzone z&nbsp;❤ w&nbsp;Polsce</p>
+          <p className="text-xs text-muted-foreground">© {new Date().getFullYear()} spontaway · Stworzone z&nbsp;❤ w&nbsp;Polsce</p>
           <div className="flex items-center gap-5">
             <a href="https://instagram.com/trasa.travel" target="_blank" rel="noopener noreferrer" className="text-xs text-muted-foreground hover:text-foreground transition-colors">@trasa.travel</a>
             <button onClick={() => navigate("/terms")} className="text-xs text-muted-foreground hover:text-foreground transition-colors">Regulamin</button>

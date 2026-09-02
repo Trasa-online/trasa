@@ -2,7 +2,7 @@
   "loading": "Loading...",
   "route_unavailable_title": "Route unavailable",
   "route_unavailable_desc": "This link may have expired or the route is not public.",
-  "back_to_trasa": "Back to Trasa",
+  "back_to_trasa": "Back to spontaway",
   "toast_saved": "Route saved to your journal",
   "toast_save_error": "Couldn't save the route",
   "push_used_title": "Someone is using your route 🧭",
@@ -71,7 +71,7 @@
     "privacy_policy": "Privacy policy"
   },
   "index": {
-    "title": "Welcome to Trasa.travel",
+    "title": "Welcome to spontaway.travel",
     "subtitle": "Start planning your trip!"
   },
   "not_found": {

@@ -11,7 +11,7 @@
   },
   "preview": {
     "close_aria": "Zamknij podgląd",
-    "draft_cta_text": "Podoba Ci się? Zapisz profil i wejdź do Trasy.",
+    "draft_cta_text": "Podoba Ci się? Zapisz profil i wejdź do spontaway.",
     "wait": "Chwile...",
     "draft_convert_btn": "Zakladam konto i zapisuje profil"
   },
@@ -19,7 +19,7 @@
     "error": "Nie udało się usunąć konta. Spróbuj ponownie.",
     "button": "Usuń konto biznesowe",
     "confirm_title": "Usunąć konto na stałe?",
-    "confirm_desc": "Czy na pewno chcesz usunąć konto? Utracisz swoją wizytówkę w Trasie - wizytówka, posty i galeria zostaną trwale usunięte. Miejsce pozostanie w aplikacji jako niezarządzane. Tej operacji nie można cofnąć.",
+    "confirm_desc": "Czy na pewno chcesz usunąć konto? Utracisz swoją wizytówkę w spontaway - wizytówka, posty i galeria zostaną trwale usunięte. Miejsce pozostanie w aplikacji jako niezarządzane. Tej operacji nie można cofnąć.",
     "cancel": "Anuluj",
     "deleting": "Usuwanie...",
     "confirm_button": "Usuń konto"
@@ -160,7 +160,7 @@
     "msg": "Aby zobaczyć podgląd, uzupełnij: {{fields}}."
   },
   "preview_mode": {
-    "banner": "To jest podgląd Twojego panelu w Trasie. Edycja wymagana logowania.",
+    "banner": "To jest podgląd Twojego panelu w spontaway. Edycja wymagana logowania.",
     "claim": "Przejmij konto"
   },
   "sidebar": {
@@ -201,7 +201,7 @@
   "welcome": {
     "title": "Witaj w Panelu Biznesowym trasy!",
     "thanks_prefix": "Dziękujemy, że lokal",
-    "body_mid": " dołączył do Trasy - od teraz budujemy razem coś wielkiego. Wypełnij wizytówkę i poczekaj na weryfikację. Masz sugestię albo widzisz błąd? Napisz do nas przez ",
+    "body_mid": " dołączył do spontaway - od teraz budujemy razem coś wielkiego. Wypełnij wizytówkę i poczekaj na weryfikację. Masz sugestię albo widzisz błąd? Napisz do nas przez ",
     "support_quote": "„Zgłoś problem”"
   },
   "verified": {
@@ -240,7 +240,7 @@
     "range": "Zakres",
     "locked_desc": "Odblokuj szczegółowe statystyki kliknięć, wyświetleń i aktywności.",
     "learn_more": "Dowiedz się więcej →",
-    "draft_title": "Tak mogą wyglądać Twoje statystyki z Trasy",
+    "draft_title": "Tak mogą wyglądać Twoje statystyki z spontaway",
     "draft_desc": "Poniżej przykładowe dane - po uruchomieniu profilu zobaczysz tu prawdziwe liczby.",
     "stat_views": "Wyświetlenia",
     "views_desc": "zobaczenie wizytówki",

@@ -3,14 +3,14 @@ export const welcomeHtml = `<!DOCTYPE html>
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Cześć! Dzięki, że dołączasz do Trasy</title>
+  <title>Cześć! Dzięki, że dołączasz do spontaway</title>
 </head>
 <body style="margin:0;padding:0;background:#FEFEFE;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#0E0E0E;">
   <div style="max-width:480px;margin:0 auto;padding:48px 32px;text-align:center;">
     <div style="width:64px;height:64px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#fb923c,#ea580c 60%,#c2410c);margin:0 auto 24px;"></div>
     <h1 style="font-size:32px;font-weight:900;letter-spacing:-0.02em;margin:0 0 16px;color:#0E0E0E;">Cześć!</h1>
     <p style="font-size:16px;line-height:1.6;color:#525252;margin:0 0 12px;">
-      Dzięki, że dołączasz do <strong style="color:#0E0E0E;">Trasy</strong>.
+      Dzięki, że dołączasz do <strong style="color:#0E0E0E;">spontaway</strong>.
     </p>
     <p style="font-size:16px;line-height:1.6;color:#525252;margin:0 0 32px;">
       Już niedługo aplikacja będzie dostępna na iOS i Androida. Damy Ci znać jako jedna z pierwszych osób, gdy nadejdzie ten moment.
@@ -26,7 +26,7 @@ export const welcomeHtml = `<!DOCTYPE html>
       Odpowiedz na tego maila - czytamy każdą wiadomość.
     </p>
     <p style="font-size:13px;color:#979797;margin:0;">
-      Do zobaczenia w Trasie,<br/>
+      Do zobaczenia w spontaway,<br/>
       <strong style="color:#0E0E0E;">Nat &amp; Bart</strong>
     </p>
     <div style="margin-top:48px;padding-top:24px;border-top:1px solid #E5E5E5;">

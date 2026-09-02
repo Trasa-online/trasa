@@ -67,20 +67,20 @@
     "available_cities": "AVAILABLE CITIES",
     "cities_tail": "and more Polish cities, with all of Europe coming soon 🇪🇺",
     "intro": {
-      "title": "Welcome to Trasa!",
-      "desc": "Trasa is speed dating with the city. In a few minutes you'll build a day plan: browse places, add the ones that intrigue you and get a ready-made route."
+      "title": "Welcome to spontaway!",
+      "desc": "spontaway is speed dating with the city. In a few minutes you'll build a day plan: browse places, add the ones that intrigue you and get a ready-made route."
     },
     "cities": {
       "title": "To start: Polish cities",
-      "desc": "We're starting with Warsaw and Gdańsk, and new cities keep arriving. Trasa keeps growing - soon you'll plan trips across all of Europe."
+      "desc": "We're starting with Warsaw and Gdańsk, and new cities keep arriving. spontaway keeps growing - soon you'll plan trips across all of Europe."
     },
     "plan": {
       "title": "Plan solo or with a group",
-      "desc": "Tap + on the bar and choose: plan solo, invite a group with a code or join friends. You browse places, and Trasa gathers your picks."
+      "desc": "Tap + on the bar and choose: plan solo, invite a group with a code or join friends. You browse places, and spontaway gathers your picks."
     },
     "route": {
       "title": "Your route on the map",
-      "desc": "From your picks Trasa builds a day plan in the right order and shows it on the map. You can refine the plan and save it to your memories.",
+      "desc": "From your picks spontaway builds a day plan in the right order and shows it on the map. You can refine the plan and save it to your memories.",
       "highlight": "You navigate point to point via Google Maps."
     }
   }

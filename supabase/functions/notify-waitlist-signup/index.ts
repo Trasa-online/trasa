@@ -61,7 +61,7 @@ Deno.serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: "Trasa <noreply@trasa.travel>",
+        from: "spontaway <noreply@trasa.travel>",
         to: ADMIN_EMAILS,
         subject: `🎉 Nowy zapis na waitlistę: ${email}`,
         html: `

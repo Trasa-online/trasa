@@ -11,7 +11,7 @@
   },
   "preview": {
     "close_aria": "Close preview",
-    "draft_cta_text": "Like it? Save your profile and step into Trasa.",
+    "draft_cta_text": "Like it? Save your profile and step into spontaway.",
     "wait": "One moment...",
     "draft_convert_btn": "Create my account and save the profile"
   },
@@ -19,7 +19,7 @@
     "error": "Could not delete the account. Please try again.",
     "button": "Delete business account",
     "confirm_title": "Delete account permanently?",
-    "confirm_desc": "Are you sure you want to delete your account? You'll lose your listing in Trasa - your card, posts and gallery will be permanently deleted. The place stays in the app as unmanaged. This action cannot be undone.",
+    "confirm_desc": "Are you sure you want to delete your account? You'll lose your listing in spontaway - your card, posts and gallery will be permanently deleted. The place stays in the app as unmanaged. This action cannot be undone.",
     "cancel": "Cancel",
     "deleting": "Deleting...",
     "confirm_button": "Delete account"
@@ -160,7 +160,7 @@
     "msg": "To see the preview, add: {{fields}}."
   },
   "preview_mode": {
-    "banner": "This is a preview of your panel in Trasa. Editing requires signing in.",
+    "banner": "This is a preview of your panel in spontaway. Editing requires signing in.",
     "claim": "Claim account"
   },
   "sidebar": {
@@ -201,7 +201,7 @@
   "welcome": {
     "title": "Welcome to the trasa Business Panel!",
     "thanks_prefix": "Thank you for letting",
-    "body_mid": " join Trasa - from now on we're building something great together. Fill in your card and wait for verification. Have a suggestion or spotted a bug? Write to us via ",
+    "body_mid": " join spontaway - from now on we're building something great together. Fill in your card and wait for verification. Have a suggestion or spotted a bug? Write to us via ",
     "support_quote": "“Report a problem”"
   },
   "verified": {
@@ -240,7 +240,7 @@
     "range": "Range",
     "locked_desc": "Unlock detailed statistics of clicks, views and activity.",
     "learn_more": "Learn more →",
-    "draft_title": "This is what your Trasa statistics could look like",
+    "draft_title": "This is what your spontaway statistics could look like",
     "draft_desc": "Below is sample data - once your profile is live you'll see real numbers here.",
     "stat_views": "Views",
     "views_desc": "card views",

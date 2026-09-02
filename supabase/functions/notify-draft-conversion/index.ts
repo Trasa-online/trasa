@@ -21,11 +21,11 @@ Deno.serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: "Trasa <noreply@trasa.travel>",
+        from: "spontaway <noreply@trasa.travel>",
         to: ["nat.maz98@gmail.com"],
         subject: `Nowy Founding Partner: ${business_name || "lokal bez nazwy"}`,
         html: `
-          <h2>Nowy lokal chce dołączyć do Trasy!</h2>
+          <h2>Nowy lokal chce dołączyć do spontaway!</h2>
           <p><strong>Nazwa:</strong> ${business_name || "(nie podano)"}</p>
           <p><strong>ID profilu:</strong> ${profile_id}</p>
           <p><strong>Czas:</strong> ${new Date().toLocaleString("pl-PL", { timeZone: "Europe/Warsaw" })}</p>

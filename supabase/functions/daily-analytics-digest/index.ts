@@ -61,7 +61,7 @@ async function sendEmail(args: { resendKey: string; subject: string; html: strin
     method: "POST",
     headers: { Authorization: `Bearer ${args.resendKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      from: "Trasa <noreply@trasa.travel>",
+      from: "spontaway <noreply@trasa.travel>",
       to: [ALERT_EMAIL],
       subject: args.subject,
       html: args.html,
@@ -156,7 +156,7 @@ Deno.serve(async (req) => {
     ]);
 
     const dateLabel = new Date(now).toLocaleDateString("pl-PL", { day: "2-digit", month: "2-digit", timeZone: "Europe/Warsaw" });
-    const subject = `Trasa - raport ${dateLabel}: +${newAccounts} kont, +${newRoutes} tras`;
+    const subject = `spontaway - raport ${dateLabel}: +${newAccounts} kont, +${newRoutes} tras`;
 
     const ACCENT = "#F9662B";
     const card = (label: string, value: string, sub = "") => `
@@ -181,7 +181,7 @@ Deno.serve(async (req) => {
 
     const html = `
       <div style="font-family:system-ui,-apple-system,sans-serif;max-width:600px;margin:0 auto;background:#FEFEFE;padding:8px;">
-        <h1 style="font-size:20px;color:${ACCENT};margin:8px 4px 2px;">Trasa - dzienny raport</h1>
+        <h1 style="font-size:20px;color:${ACCENT};margin:8px 4px 2px;">spontaway - dzienny raport</h1>
         <p style="font-size:13px;color:#979797;margin:0 4px 16px;">Dane z ostatnich 24h. Wygenerowano ${new Date(now).toLocaleString("pl-PL", { timeZone: "Europe/Warsaw" })} (Europe/Warsaw).</p>
 
         <h2 style="font-size:14px;color:#0E0E0E;margin:18px 4px 8px;">Konta</h2>

@@ -65,9 +65,9 @@ Deno.serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: "Trasa <hello@trasa.travel>",
+        from: "spontaway <hello@trasa.travel>",
         to: [email],
-        subject: safeFirstName ? `Cześć, ${safeFirstName}! Witamy w Trasie` : "Witamy Cię w Trasie",
+        subject: safeFirstName ? `Cześć, ${safeFirstName}! Witamy w spontaway` : "Witamy Cię w spontaway",
         html,
         text,
       }),

@@ -226,7 +226,7 @@ const LandingPage = () => {
   const STEPS = [
     { num: "01", title: "Wybierz miasto", desc: "Kraków, Gdańsk, Warszawa i więcej. Zacznij od miejsca, w które się wybierasz.", img: "/landing/step-city.png", ar: "430 / 872" },
     { num: "02", title: "Przeglądaj lokalne miejsca", desc: "Kawiarnie, muzea, bary, widoki. Dodawaj to co Cię kręci - sam albo ze znajomymi.", img: "/landing/step-browse-swipe.png", ar: "608 / 1340" },
-    { num: "03", title: "Trasa gotowa w minutę", desc: "Trasa układa gotowy plan dnia z kolejnością, mapą i godzinami. Ty tylko ruszasz w miasto.", img: "/landing/step-route.png", ar: "430 / 872" },
+    { num: "03", title: "Trasa gotowa w minutę", desc: "spontaway układa gotowy plan dnia z kolejnością, mapą i godzinami. Ty tylko ruszasz w miasto.", img: "/landing/step-route.png", ar: "430 / 872" },
   ];
 
   const FOR_WHOM = [
@@ -244,7 +244,7 @@ const LandingPage = () => {
         <div className="bg-white/80 backdrop-blur-xl border border-black/5 rounded-full px-5 h-14 flex items-center gap-3 shadow-lg shadow-orange-900/5">
           {/* Left: logo + section links */}
           <div className="flex items-center gap-4 shrink-0">
-            <button onClick={() => { window.scrollTo({ top: 0, behavior: "smooth" }); setMenuOpen(false); }} className="flex items-center" aria-label="Trasa">
+            <button onClick={() => { window.scrollTo({ top: 0, behavior: "smooth" }); setMenuOpen(false); }} className="flex items-center" aria-label="spontaway">
               <Logo size={34} />
             </button>
             <button onClick={() => document.getElementById("how-it-works")?.scrollIntoView({ behavior: "smooth" })} className="hidden sm:block text-sm text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap">
@@ -388,7 +388,7 @@ const LandingPage = () => {
               className="font-display text-3xl sm:text-4xl font-extrabold text-foreground"
               style={{ textWrap: "balance" } as React.CSSProperties}
             >
-              Trasa działa dla każdego tripu
+              spontaway działa dla każdego tripu
             </h2>
           </FadeIn>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -445,7 +445,7 @@ const LandingPage = () => {
               <div className="shrink-0">
                 <img
                   src="/founders.jpg"
-                  alt="Bart i Nat - twórcy Trasy"
+                  alt="Bart i Nat - twórcy spontaway"
                   className="w-48 h-64 object-cover rounded-2xl shadow-md"
                   style={{ objectPosition: "center top" }}
                 />
@@ -481,7 +481,7 @@ const LandingPage = () => {
               },
               {
                 q: "Do czego służy trasa?",
-                a: "Trasa pomaga odkrywać lokalne miejsca w Twoim mieście - kawiarnie, muzea, bary, parki, widoki - i układa z nich gotową trasę zwiedzania z kolejnością, mapą i godzinami. Sam albo ze znajomymi.",
+                a: "spontaway pomaga odkrywać lokalne miejsca w Twoim mieście - kawiarnie, muzea, bary, parki, widoki - i układa z nich gotową trasę zwiedzania z kolejnością, mapą i godzinami. Sam albo ze znajomymi.",
               },
               {
                 q: "W jakich miastach działa trasa?",
@@ -534,7 +534,7 @@ const LandingPage = () => {
             <Logo size={30} />
             <span className="font-black text-foreground">trasa.travel</span>
           </div>
-          <p className="text-xs text-muted-foreground text-center">© {new Date().getFullYear()} Trasa · Stworzone z&nbsp;❤ w&nbsp;Polsce</p>
+          <p className="text-xs text-muted-foreground text-center">© {new Date().getFullYear()} spontaway · Stworzone z&nbsp;❤ w&nbsp;Polsce</p>
           <div className="flex items-center gap-4">
             <a href="https://instagram.com/trasa.travel" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors">
               <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
