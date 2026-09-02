@@ -36,6 +36,19 @@ W Tailwind odpowiedniki klas:
 - Tekst główny = `text-foreground` (mapuje na #0E0E0E)
 - Tekst secondary = `text-muted-foreground`
 
+**Paleta landingu spontaway (web, 2026-09-02).** Marketingowa strona B2C ma własną,
+węższą paletę (Figma "Landing B2C ... high-fi copy"), w Tailwindzie jako `spontaway.*`:
+
+```
+Primary (marka):   #EE5307  bg-spontaway-orange   (znak, guziki, duże nagłówki)
+Secondary (tło):   #FDF184  bg-spontaway-yellow   (karty hero/CTA, pasek statystyk)
+Accent 1 (tekst):  #5B2C06  text-spontaway-brown  (tekst na żółtym + guzik secondary)
+```
+
+**Brązowy `#5B2C06` to nowy kolor marki** (nie mieszać z `text-foreground` w apce). Pomarańcz
+na żółtym ma kontrast 3.08:1, więc tej pary używaj **tylko do dużych nagłówków**, nigdy do
+zwykłego tekstu; treść na żółtym pisz brązowym (10:1).
+
 ### ⛔ Zakaz ciemnych teł na stronach publicznych
 
 **NIGDY nie używaj czarnego ani ciemnoszarego tła (`#0E0E0E`, `bg-slate-900`, `bg-black`, dark mode)** na stronach widocznych dla użytkowników (landing, waitlist, one-pager, itp.). Zawsze tło = `#FEFEFE` (złamana biel) lub bardzo jasny odcień (np. `bg-slate-50`). Ciemne tła są zarezerwowane wyłącznie dla nakładek wideo/overlay wewnątrz komponentów (np. phone mockup).
@@ -65,7 +78,10 @@ Oficjalny tagline aplikacji: **"speed dating z miastem"** (wszystkie litery mał
 ### Typografia
 
 - **Główna:** Inter (wszystkie wagi)
-- **Akcenty nagłówkowe** (np. nagłówki sekcji w dzienniku, karty tras): Baloo, Regular
+- **Nagłówki marki / marketing (landing spontaway):** **Sigmar** (`font-brand`) - zastąpił
+  Baloo 2 w warstwie marketingowej (decyzja Nat 2026-09-02). Sigmar ma jedną wagę i pełne
+  polskie znaki (subset latin-ext). Ten sam font jest już w apce na liczniku „+N".
+- **Akcenty nagłówkowe w apce** (nagłówki sekcji w dzienniku, karty tras): Baloo 2 (`font-display`)
 - NIE używaj innych fontów bez wyraźnej prośby
 
 ### Przyciski

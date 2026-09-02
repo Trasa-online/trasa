@@ -66,7 +66,6 @@ function MaintenanceGate({ children }: { children: React.ReactNode }) {
   const isPublicRoute =
     location.pathname === "/auth" ||
     location.pathname === "/waitlist" ||
-    location.pathname === "/landing" ||
     location.pathname === "/landing-v2" ||
     location.pathname.startsWith("/set-password") ||
     location.pathname.startsWith("/biznes/") ||
@@ -90,7 +89,7 @@ function WebWaitlistGate({ children }: { children: React.ReactNode }) {
   const p = location.pathname;
   const allowed =
     // Marketing / legal (B2C web presence)
-    p === "/waitlist" || p === "/landing" || p === "/landing-v2" ||
+    p === "/waitlist" || p === "/landing-v2" ||
     p === "/terms" || p === "/privacy" ||
     // B2B: auth biznesowy, ustawianie hasla, dashboard, landing dla firm, claim lokalu
     p === "/auth" || p.startsWith("/set-password") || p.startsWith("/biznes") ||
@@ -636,8 +635,7 @@ function lazy(factory: Parameters<typeof reactLazy>[0]) {
 }
 
 // Lazy-loaded public pages - one chunk each, fetched on demand
-const WaitlistPage = lazy(() => import("./pages/WaitlistPage"));
-const LandingPage = lazy(() => import("./pages/LandingPage"));
+const SpontawayLanding = lazy(() => import("./pages/SpontawayLanding"));
 const LandingV2 = lazy(() => import("./pages/LandingV2"));
 const DemoSession = lazy(() => import("./pages/DemoSession"));
 import ForBusinessPage from "./pages/ForBusinessPage";
@@ -753,8 +751,9 @@ const App = () => {
         <Suspense fallback={<div className="h-screen flex items-center justify-center"><div className="h-8 w-8 rounded-full border-2 border-orange-500 border-t-transparent animate-spin" /></div>}>
         <Routes>
           <Route path="/auth" element={<Auth />} />
-          <Route path="/waitlist" element={<WaitlistPage />} />
-          <Route path="/landing" element={<LandingPage />} />
+          {/* Landing B2C (spontaway). /landing ubity 2026-09-02 - stare linki
+              lapie WebWaitlistGate i przekierowuje tutaj. */}
+          <Route path="/waitlist" element={<SpontawayLanding />} />
           <Route path="/landing-v2" element={<LandingV2 />} />
           <Route path="/terms" element={<Terms />} />
           <Route path="/privacy" element={<Privacy />} />

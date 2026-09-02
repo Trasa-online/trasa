@@ -64,10 +64,24 @@ export default {
           cream: { DEFAULT: "#DDD6C8", ink: "#8A7E63" },
           teal: { DEFAULT: "#BFE6DE", ink: "#0F766E" },
         },
+        // ── Paleta landingu spontaway (Figma "Landing B2C ... (high-fi copy)").
+        // orange = Primary (znak marki, guziki), yellow = Secondary (tla sekcji),
+        // brown = Accent 1 (tekst na zoltym + guzik secondary). Kontrast pomaranczu
+        // na zoltym to 3.08:1, wiec ten zestaw tylko do duzych naglowkow.
+        spontaway: {
+          orange: "#EE5307",
+          yellow: "#FDF184",
+          brown: "#5B2C06",
+        },
       },
       fontFamily: {
-        // Naglowki B2C - Baloo 2 (zaokraglony, brandowy). Body zostaje systemowy (Inter fallback).
+        // Naglowki B2C w apce - Baloo 2 (zaokraglony, brandowy).
         display: ['"Baloo 2"', "system-ui", "sans-serif"],
+        // Naglowki marki (landing spontaway) - Sigmar. Zastapil Baloo 2 w warstwie
+        // marketingowej (decyzja Nat 2026-09-02); w apce Baloo 2 zostaje.
+        brand: ["Sigmar", '"Baloo 2"', "system-ui", "sans-serif"],
+        // Body landingu - Inter 1:1 z Figma (w apce body zostaje systemowe).
+        body: ["Inter", "system-ui", "sans-serif"],
       },
       borderRadius: {
         lg: "var(--radius)",
