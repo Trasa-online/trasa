@@ -2,6 +2,7 @@
 // place_photos: zdjecia usera przypisane do miejsca (place_key = stabilna tozsamosc).
 // photo_likes: lajki dowolnego zdjecia w galerii (photo_ref = stabilny klucz).
 import { supabase } from "@/integrations/supabase/client";
+import { sha256Hex } from "@/lib/imageCompression";
 import { moderateImageUrl } from "@/lib/imageModeration";
 
 const BUCKET = "place-photos";
@@ -142,14 +143,17 @@ export async function uploadPlacePhoto(
 ): Promise<PlacePhotoRow | null> {
   try {
     const ext = (file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
-    // Nazwa unikalna bez Date.now()/random (deterministyczna z tresci nie jest wymagana) -
-    // uzywamy crypto.randomUUID (dostepne w WebView/przegladarce).
+    // Nazwa pliku liczona Z TRESCI (SHA-256), nie losowa: to samo zdjecie wgrane drugi raz trafia
+    // pod te sama sciezke, wiec ma ten sam URL i nie robi sie z niego drugi kafelek w galerii
+    // (prosba Nat 2026-09-01). Gdy hash niedostepny - stara, losowa nazwa.
+    const hash = await sha256Hex(file);
     const uid = opts.userId;
-    const path = `${uid}/${crypto.randomUUID()}.${ext}`;
+    const path = `${uid}/${hash ?? crypto.randomUUID()}.${ext}`;
     const up = await supabase.storage.from(BUCKET).upload(path, file, {
       cacheControl: "31536000",
       contentType: file.type || "image/jpeg",
-      upsert: false,
+      // upsert przy nazwie z tresci jest bezpieczny: nadpisujemy plik IDENTYCZNYMI bajtami.
+      upsert: !!hash,
     });
     if (up.error) { console.warn("[placePhotoSocial] upload:", up.error.message); return null; }
     const { data: pub } = supabase.storage.from(BUCKET).getPublicUrl(path);
@@ -162,10 +166,27 @@ export async function uploadPlacePhoto(
     }
     const { data, error } = await (supabase as any)
       .from("place_photos")
-      .insert({ place_key: opts.placeKey, place_name: opts.placeName, city: opts.city ?? null, user_id: uid, photo_url })
+      .insert({ place_key: opts.placeKey, place_name: opts.placeName, city: opts.city ?? null, user_id: uid, photo_url, photo_hash: hash })
       .select("id, photo_url, user_id, created_at")
       .single();
-    if (error) { console.warn("[placePhotoSocial] insert:", error.message); return null; }
+    // 23505 = zdjecie JUZ jest w galerii tego miejsca (ten sam adres albo ta sama tresc). To nie
+    // jest blad do pokazania userowi - oddajemy istniejacy wiersz, wiec ekran zachowuje sie tak,
+    // jakby dodanie sie udalo, tylko galeria zostaje bez duplikatu.
+    if (error) {
+      if ((error as any)?.code === "23505") {
+        const { data: byUrl } = await (supabase as any)
+          .from("place_photos").select("id, photo_url, user_id, created_at")
+          .eq("place_key", opts.placeKey).eq("photo_url", photo_url).maybeSingle();
+        if (byUrl) return byUrl as PlacePhotoRow;
+        if (hash) {
+          const { data: byHash } = await (supabase as any)
+            .from("place_photos").select("id, photo_url, user_id, created_at")
+            .eq("place_key", opts.placeKey).eq("photo_hash", hash).maybeSingle();
+          if (byHash) return byHash as PlacePhotoRow;
+        }
+      }
+      console.warn("[placePhotoSocial] insert:", error.message); return null;
+    }
     return data as PlacePhotoRow;
   } catch (e: any) {
     if (e?.message === "MODERATION_REJECTED") throw e;   // rozroznialny blad -> wlasciwy komunikat

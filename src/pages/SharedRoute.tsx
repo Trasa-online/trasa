@@ -50,7 +50,7 @@ import { pinCoverKeys, fetchPlacePhotosForKeys, pickPlaceCover } from "@/lib/pla
 import { fetchPhotoLikes, togglePhotoLike, type LikeState as PhotoLikeState } from "@/lib/placePhotoSocial";
 import PhotoPagination from "@/components/route/PhotoPagination";
 import RouteMap from "@/components/RouteMap";
-import { prepareImageForUpload, mapWithLimit } from "@/lib/imageCompression";
+import { prepareImageForUpload, mapWithLimit, sha256Hex } from "@/lib/imageCompression";
 import { isHeic, convertHeicToJpeg } from "@/lib/heicConvert";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
@@ -695,7 +695,10 @@ export default function SharedRoute() {
         try {
           const file = isHeic(rawFile) ? await convertHeicToJpeg(rawFile) : rawFile;
           const blob = await prepareImageForUpload(file, 1600, 0.8);
-          const path = `${user.id}/${id}/pin_${pin.id}_${i}_${Math.random().toString(36).slice(2)}.jpg`;
+          // Nazwa z TRESCI pliku: to samo zdjecie wgrane drugi raz (tez przez inna osobe w tym
+          // samym wyjezdzie) trafia pod ta sama sciezke, wiec galeria miejsca nie dostaje dubla.
+          const sha = await sha256Hex(blob);
+          const path = `${user.id}/${id}/pin_${sha ?? `${pin.id}_${i}_${Math.random().toString(36).slice(2)}`}.jpg`;
           const { error } = await supabase.storage.from("route-images").upload(path, blob, { upsert: true, contentType: blob.type || "image/jpeg" });
           if (error) { console.error("[SharedRoute] photo upload:", error.message); return null; }
           const { data } = supabase.storage.from("route-images").getPublicUrl(path);

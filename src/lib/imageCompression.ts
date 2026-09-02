@@ -201,3 +201,23 @@ export async function mapWithLimit<T, R>(items: T[], limit: number, fn: (item: T
   await Promise.all(workers);
   return out;
 }
+
+
+// Odcisk TRESCI pliku (SHA-256, hex). Uzywany do dwoch rzeczy naraz:
+//  1. nazwa obiektu w Storage - identyczne bajty daja identyczna sciezke, wiec i identyczny URL;
+//  2. kolumna place_photos.photo_hash - baza nie wpusci drugiego takiego samego zdjecia do tego
+//     samego miejsca, nawet gdy wgrywaja je dwie rozne osoby (kazda ma wlasny folder w Storage,
+//     wiec same URL-e by sie roznily).
+// crypto.subtle jest dostepne w WebView iOS i w przegladarce po HTTPS. Gdyby go zabraklo,
+// zwracamy null i wracamy do starego zachowania (losowa nazwa) - dedup zostaje wtedy na URL-u.
+export async function sha256Hex(blob: Blob): Promise<string | null> {
+  try {
+    if (!crypto?.subtle) return null;
+    const buf = await blob.arrayBuffer();
+    const digest = await crypto.subtle.digest("SHA-256", buf);
+    return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, "0")).join("");
+  } catch (e) {
+    console.warn("[imageCompression] sha256Hex:", (e as Error)?.message ?? e);
+    return null;
+  }
+}
