@@ -41,7 +41,7 @@ async function sendEmail(args: {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      from: "spontaway <noreply@trasa.travel>",
+      from: "spontaway <noreply@spontaway.com>",
       to: [ALERT_EMAIL],
       subject: args.subject,
       html: args.html,

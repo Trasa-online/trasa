@@ -67,7 +67,7 @@ Deno.serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: "spontaway <noreply@trasa.travel>",
+        from: "spontaway <noreply@spontaway.com>",
         to,
         subject: `Do moderacji: nowe zestawienie "${(col.title || "bez tytulu").slice(0, 120)}"`,
         html: `

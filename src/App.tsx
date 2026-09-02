@@ -331,7 +331,7 @@ function RootPage() {
   const [exchangingCode, setExchangingCode] = useState(false);
   const [codeChecked, setCodeChecked] = useState(false);
 
-  // Po kliknieciu linka aktywacyjnego Supabase redirectuje na trasa.travel z
+  // Po kliknieciu linka aktywacyjnego Supabase redirectuje na spontaway.com z
   // jednym z kilku formatow:
   // - PKCE flow: ?code=XYZ
   // - Token hash flow: ?token_hash=XYZ&type=signup (nowsze Supabase)
@@ -821,7 +821,7 @@ const App = () => (
           <Route path="/day-review" element={<DayReview />} />
           <Route path="/set-password" element={<SetPassword />} />
           <Route path="/set-password-biznes" element={<SetPassword forceBusiness />} />
-          {/* Panel admina przeniesiony na admin.trasa.travel (usuniety z aplikacji). */}
+          {/* Panel admina przeniesiony na admin.spontaway.com (usuniety z aplikacji). */}
           <Route path="/moje-trasy" element={PLANNING_DISABLED ? <Navigate to="/moj-profil?tab=wyjazdy" replace /> : <AppLayout><MyTrips /></AppLayout>} />
           {/* /dziennik (Wyjazdy/Journal) przeniesione do zakładki profilu (IA 2026-08-20). Redirect dla starych linków/pushy. */}
           <Route path="/dziennik" element={<Navigate to="/moj-profil?tab=wyjazdy" replace />} />

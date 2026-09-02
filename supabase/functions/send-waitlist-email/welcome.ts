@@ -31,7 +31,7 @@ export const welcomeHtml = `<!DOCTYPE html>
     </p>
     <div style="margin-top:48px;padding-top:24px;border-top:1px solid #E5E5E5;">
       <p style="font-size:11px;color:#979797;margin:0;">
-        Dostałeś tego maila ponieważ zapisałeś się na waitlistę na <a href="https://trasa.travel" style="color:#F9662B;text-decoration:none;">trasa.travel</a>.
+        Dostałeś tego maila ponieważ zapisałeś się na waitlistę na <a href="https://spontaway.com" style="color:#F9662B;text-decoration:none;">spontaway.com</a>.
       </p>
     </div>
   </div>

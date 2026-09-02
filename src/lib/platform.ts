@@ -6,8 +6,8 @@ export const platform = Capacitor.getPlatform() as "ios" | "android" | "web";
 
 // Na native (Capacitor) relative URLs resolwuja sie do capacitor://localhost,
 // gdzie nasze Vercel Edge Functions nie istnieja. Trzeba uzyc absolute URL.
-// Na web "" oznacza same-origin (np. https://trasa.travel/api/... = relative).
-export const API_BASE = isNative ? "https://trasa.travel" : "";
+// Na web "" oznacza same-origin (np. https://spontaway.com/api/... = relative).
+export const API_BASE = isNative ? "https://spontaway.com" : "";
 
 // Czy przegladarka wyrenderuje natywny Smart App Banner Apple (meta apple-itunes-app
 // w index.html). Pokazuje go WYLACZNIE Safari na iOS/iPadOS - nie Chrome/Firefox na iOS,
