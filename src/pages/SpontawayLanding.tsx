@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { QRCodeSVG } from "qrcode.react";
 import posthog from "posthog-js";
+import { capabilities } from "@/lib/platform";
 
 /* ─────────────────────────────────────────────────────────────────────────────
    Landing B2C (spontaway) - web-only, stoi pod "/" (spontaway.com).
@@ -233,10 +234,14 @@ function DownloadModal({ c, onClose }: { c: Copy; onClose: () => void }) {
 }
 
 // ─── Baner instalacyjny (tylko mobile) ────────────────────────────────────────
+// Po premierze Safari na iOS pokazuje wlasny Smart App Banner Apple (meta
+// apple-itunes-app w index.html), wiec tam chowamy nasz - dwa paski jeden pod drugim
+// to szum. Przed premiera baner Apple sie nie renderuje (apki nie ma jeszcze w sklepie),
+// wiec nasz zostaje wszedzie.
 
 function InstallBanner({ c, onDownload }: { c: Copy; onDownload: () => void }) {
   const [hidden, setHidden] = useState(() => sessionStorage.getItem("spontaway_install_banner_dismissed") === "1");
-  if (hidden) return null;
+  if (hidden || (APP_LIVE && capabilities.appleSmartBanner)) return null;
   return (
     <div className="flex items-center gap-3 border-b border-spontaway-yellow bg-[#F9F9F9] px-4 py-2.5 lg:hidden">
       <button
