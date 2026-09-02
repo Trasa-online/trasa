@@ -74,10 +74,10 @@ Deno.serve(async (req) => {
 
     // HashRouter (jeden build web+native): redirect MUSI miec '#/' inaczej trafia na
     // RootPage (route '/') zamiast na SetPassword -> user laduje na /home zamiast biznes.
-    // 1:1 z dzialajacym resetem hasla (Auth.tsx: "https://trasa.travel/#/set-password").
+    // 1:1 z dzialajacym resetem hasla (Auth.tsx: "https://spontaway.com/#/set-password").
     const redirectTo = isBusiness
-      ? "https://trasa.travel/#/set-password-biznes"
-      : "https://trasa.travel/#/set-password";
+      ? "https://spontaway.com/#/set-password-biznes"
+      : "https://spontaway.com/#/set-password";
 
     let hashedToken: string | undefined;
     let linkType: "invite" | "recovery" | "magiclink" | undefined;
@@ -139,7 +139,7 @@ Deno.serve(async (req) => {
     // confirm-signup). token_hash w realnym query (przed #) zeby SetPassword je odczytal
     // z window.location.search; hash route po # zeby HashRouter trafil na wlasciwa strone.
     const appPath = isBusiness ? "set-password-biznes" : "set-password";
-    const inviteLink = `https://trasa.travel/?token_hash=${hashedToken}&type=${linkType}#/${appPath}`;
+    const inviteLink = `https://spontaway.com/?token_hash=${hashedToken}&type=${linkType}#/${appPath}`;
 
     // Create profile only for new users
     if (!isExistingUser && invitedUserId) {

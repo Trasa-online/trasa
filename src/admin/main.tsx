@@ -8,7 +8,7 @@ import AdminApp from "./AdminApp";
 import "@/index.css";
 import "./admin.css";
 
-// Panel operacyjny (admin.trasa.travel) - osobny web-only entry.
+// Panel operacyjny (admin.spontaway.com) - osobny web-only entry.
 // BrowserRouter (nie HashRouter): admin jest tylko web na czystej domenie z
 // SPA-rewrite Vercela, wiec czyste URL-e (/moderacja, /users) bez '#'.
 const queryClient = new QueryClient({

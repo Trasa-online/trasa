@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
-const ALLOWED_ORIGINS = ["https://trasa.travel", "https://trasa.lovable.app", "http://localhost:8080", "http://localhost:5173", "capacitor://localhost", "https://localhost", "http://localhost"];
+const ALLOWED_ORIGINS = ["https://spontaway.com", "https://spontaway.com", "https://trasa.lovable.app", "http://localhost:8080", "http://localhost:5173", "capacitor://localhost", "https://localhost", "http://localhost"];
 
 interface OEmbedData {
   title?: string;

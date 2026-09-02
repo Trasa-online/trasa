@@ -356,7 +356,7 @@ const SetPassword = ({ forceBusiness }: { forceBusiness?: boolean } = {}) => {
 
             <p className="text-xs text-center text-slate-400 mt-6">
               Problem z linkiem?{" "}
-              <a href="mailto:kontakt@trasa.travel" className="text-blue-600 font-medium underline">
+              <a href="mailto:hello@spontaway.com" className="text-blue-600 font-medium underline">
                 Napisz do nas
               </a>
             </p>

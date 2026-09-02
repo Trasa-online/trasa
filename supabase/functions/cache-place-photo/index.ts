@@ -16,7 +16,7 @@ import { Image } from "https://deno.land/x/imagescript@1.2.17/mod.ts";
 
 const GOOGLE_BASE = "https://maps.googleapis.com/maps/api";
 const GOOGLE_NEW_API = "https://places.googleapis.com/v1";
-const REFERER = "https://trasa.travel/";
+const REFERER = "https://spontaway.com/";
 const BUCKET = "place-photos-cache";
 
 // Dzienny limit wywolan platnego Google API (bezpiecznik kosztowy). Env-configurable.

@@ -61,7 +61,7 @@ Deno.serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: "spontaway <noreply@trasa.travel>",
+        from: "spontaway <noreply@spontaway.com>",
         to: ADMIN_EMAILS,
         subject: `🎉 Nowy zapis na waitlistę: ${email}`,
         html: `
@@ -71,7 +71,7 @@ Deno.serve(async (req) => {
           ${count !== undefined ? `<p style="margin:8px 0;"><strong>Łącznie zapisanych:</strong> ${count}</p>` : ""}
           <hr style="border:none;border-top:1px solid #e5e5e5;margin:16px 0;">
           <p style="margin:8px 0;font-size:12px;color:#666;">
-            Sprawdź listę: <a href="https://trasa.travel/admin">trasa.travel/admin</a>
+            Sprawdź listę: <a href="https://admin.spontaway.com">admin.spontaway.com</a>
           </p>
         `,
       }),

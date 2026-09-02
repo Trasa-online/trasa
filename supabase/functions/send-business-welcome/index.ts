@@ -55,7 +55,7 @@ Deno.serve(async (req) => {
     if (!RESEND_API_KEY) throw new Error("RESEND_API_KEY not set");
 
     const safeName = (business_name || "Twój lokal").toString().slice(0, 120);
-    const panelUrl = `https://trasa.travel/biznes/${encodeURIComponent(place_id)}`;
+    const panelUrl = `https://spontaway.com/biznes/${encodeURIComponent(place_id)}`;
     const html = buildBusinessWelcomeHtml({ businessName: safeName, panelUrl });
     const text = buildBusinessWelcomeText({ businessName: safeName, panelUrl });
 
@@ -66,7 +66,7 @@ Deno.serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: "spontaway <hello@trasa.travel>",
+        from: "spontaway <hello@spontaway.com>",
         to: [email],
         subject: "Twoja wizytówka w spontaway jest gotowa",
         html,

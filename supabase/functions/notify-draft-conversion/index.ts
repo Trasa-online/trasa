@@ -21,7 +21,7 @@ Deno.serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: "spontaway <noreply@trasa.travel>",
+        from: "spontaway <noreply@spontaway.com>",
         to: ["nat.maz98@gmail.com"],
         subject: `Nowy Founding Partner: ${business_name || "lokal bez nazwy"}`,
         html: `

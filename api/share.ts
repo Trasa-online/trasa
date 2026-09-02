@@ -15,7 +15,7 @@ export const config = { runtime: "edge" };
 // Widoczne jest WYLACZNIE to, co przepuszcza RLS dla klucza anonimowego (lista publiczna i
 // zatwierdzona, opublikowana trasa). Lista prywatna ("Ogolne") zwraca pusto -> strona "niedostepna".
 
-const SUPA = process.env.VITE_SUPABASE_URL || "https://api.trasa.travel";
+const SUPA = process.env.VITE_SUPABASE_URL || "https://api.spontaway.com";
 const ANON = process.env.VITE_SUPABASE_ANON_KEY
   || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoeHBoZmNwZWh4c2h2aWpxdGxmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMyOTA5MzAsImV4cCI6MjA3ODg2NjkzMH0.NqtDrpd-lKHh11bxtjshs2o6eHl5sDdVImnsW8t1OhU";
 const SITE = "https://spontaway.com";
