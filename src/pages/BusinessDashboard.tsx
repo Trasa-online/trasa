@@ -29,6 +29,7 @@ import PremiumBusinessCard from "@/components/business/PremiumBusinessCard";
 import { fromDashboardState } from "@/components/business/premiumBusinessAdapters";
 import { ImageCropModal } from "@/components/business/ImageCropModal";
 import { TrasaLogo } from "@/components/TrasaLogo";
+import { uploadThumb } from "@/lib/imageThumbs";
 
 interface BusinessPost {
   id: string;
@@ -925,6 +926,9 @@ const BusinessDashboard = () => {
     const path = `${folder_key}/${folder}/${Date.now()}.${ext}`;
     const { data, error } = await supabase.storage.from("business-photos").upload(path, body, { upsert: true, contentType: isPdf ? "application/pdf" : undefined });
     if (error) throw new Error(error.message);
+    // Miniatura obok pliku - kafelki w apce ciagnely wczesniej oryginal (w tym buckecie
+    // srednio 3 MB). PDF-y menu pomijamy, nie ma z czego zrobic podgladu.
+    if (!isPdf) await uploadThumb("business-photos", path, body);
     return supabase.storage.from("business-photos").getPublicUrl(data.path).data.publicUrl;
   };
 

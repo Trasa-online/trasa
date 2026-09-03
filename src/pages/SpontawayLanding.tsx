@@ -50,6 +50,14 @@ const COPY = {
       { title: "Dziel się wrażeniami\nz przeżytych podróży", body: "Planuj i twórz podsumowania wyjazdów, pomagając innym użytkownikom w ich podróżach.", cta: "Dodaj pierwszy wyjazd", img: "/mockup_dziel_sie.png", alt: "Planowanie wyjazdu i podsumowanie podróży w aplikacji Spontaway" },
     ],
     stats: { heading: "SPONTAWAY TO", countries: "Krajów", cities: "Miast", possibilities: "Możliwości" },
+    business: {
+      navLink: "Dla firm",
+      eyebrow: "Dla firm",
+      title: "Prowadzisz lokal?",
+      body: "Dodaj swoją wizytówkę i pokaż się osobom, które właśnie planują, gdzie pójść. Wizytówka jest za darmo.",
+      cta: "Sprawdź, jak to działa",
+      login: "Zaloguj się do panelu",
+    },
     footerCta: { title: "Odkrywaj, planuj, dziel się!", sub: "Pobierz Spontaway i zacznij zabawę", note: "Za darmo na iOS... i wkrótce na Android!" },
     footer: { rights: "© 2026 Spontaway · Stworzone z", inPoland: "w Polsce", terms: "Regulamin", privacy: "Prywatność" },
     modal: {
@@ -83,6 +91,14 @@ const COPY = {
       { title: "Share what you brought\nback from a trip", body: "Plan your trips and turn them into recaps that help other travellers.", cta: "Add your first trip", img: "/mockup_dziel_sie.png", alt: "Trip planning and trip recap in the Spontaway app" },
     ],
     stats: { heading: "SPONTAWAY IS", countries: "Countries", cities: "Cities", possibilities: "Possibilities" },
+    business: {
+      navLink: "For business",
+      eyebrow: "For business",
+      title: "Running a place?",
+      body: "Add your listing and show up for people who are deciding where to go right now. Listings are free.",
+      cta: "See how it works",
+      login: "Log in to the panel",
+    },
     footerCta: { title: "Discover, plan, share!", sub: "Get Spontaway and start the fun", note: "Free on iOS... and soon on Android!" },
     footer: { rights: "© 2026 Spontaway · Made with", inPoland: "in Poland", terms: "Terms", privacy: "Privacy" },
     modal: {
@@ -283,11 +299,22 @@ function Nav({ c, onDownload }: { c: Copy; onDownload: () => void }) {
       <div className="mx-auto flex h-[56px] max-w-[1440px] items-center justify-between px-5 lg:h-[80px] lg:px-[120px]">
         <Wordmark className="h-[17px] w-auto shrink-0 sm:h-[19px] lg:h-[33px]" />
         <div className="flex items-center gap-2 lg:gap-3">
+          {/* Wejscie dla lokali. Tekstowy link, nie guzik - to sciezka poboczna wobec
+              glownego CTA konsumenckiego, a kolor marki B2B (niebieski) zostaje w samej
+              sekcji nizej, zeby nie rozbijac pomaranczowego naglowka. */}
+          <Link
+            to="/dla-firm"
+            onClick={() => posthog.capture("landing_business_click", { placement: "nav" })}
+            className="whitespace-nowrap px-1 text-[10px] font-semibold text-spontaway-brown underline-offset-2 hover:underline sm:text-[11px] lg:px-2 lg:text-[15px]"
+          >
+            {c.business.navLink}
+          </Link>
           <Pill tone="brown" onClick={onDownload} className="hidden h-[47px] text-[15px] lg:inline-flex">
             {c.nav.login}
           </Pill>
           <Pill tone="orange" onClick={onDownload} className="h-[36px] whitespace-nowrap px-3 text-[10px] sm:px-4 sm:text-[11px] lg:h-[47px] lg:px-6 lg:text-[15px]">
-            <span className="lg:hidden">{c.nav.loginLong}</span>
+            <span className="sm:hidden">{c.nav.login}</span>
+            <span className="hidden sm:inline lg:hidden">{c.nav.loginLong}</span>
             <span className="hidden lg:inline">{c.nav.download}</span>
           </Pill>
         </div>
@@ -414,6 +441,48 @@ function Stats({ c }: { c: Copy }) {
   );
 }
 
+// ─── Dla firm (wersja robocza) ────────────────────────────────────────────────
+// Wejscie dla lokali. Akcent NIEBIESKI, bo caly kontekst B2B ma w marce wlasna
+// identyfikacje (CLAUDE.md) - pomarancz zostaje dla konsumenta. Tresc jest tymczasowa,
+// docelowo zastapi ja pelna sekcja marketingowa.
+
+function BusinessStrip({ c }: { c: Copy }) {
+  const track = (placement: string) => posthog.capture("landing_business_click", { placement });
+  return (
+    <section className="mx-auto max-w-[1440px] px-4 pb-4 lg:px-[50px]">
+      <div className="flex flex-col items-center gap-6 rounded-[28px] border border-slate-200 bg-[#F8FAFC] px-6 py-10 text-center lg:flex-row lg:justify-between lg:gap-10 lg:rounded-[36px] lg:px-[70px] lg:py-[56px] lg:text-left">
+        <div>
+          <p className="text-[12px] font-extrabold uppercase tracking-[1.4px] text-blue-600 lg:text-[13px]">
+            {c.business.eyebrow}
+          </p>
+          <h2 className="mt-2 font-brand text-[24px] leading-[1.2] text-spontaway-brown sm:text-[26px] lg:text-[36px]">
+            {nb(c.business.title)}
+          </h2>
+          <p className="mx-auto mt-3 max-w-[520px] text-[15px] leading-[1.4] text-slate-600 lg:mx-0 lg:text-[17px]">
+            {nb(c.business.body)}
+          </p>
+        </div>
+        <div className="flex w-full shrink-0 flex-col items-center gap-3 sm:w-auto sm:flex-row lg:flex-col lg:items-end">
+          <Link
+            to="/dla-firm"
+            onClick={() => track("section_cta")}
+            className="inline-flex h-[44px] w-full items-center justify-center whitespace-nowrap rounded-full bg-blue-600 px-6 text-[14px] font-extrabold text-white transition-colors hover:bg-blue-700 active:scale-[0.98] sm:w-auto lg:h-[47px] lg:text-[15px]"
+          >
+            {c.business.cta}
+          </Link>
+          <Link
+            to="/auth?business=true"
+            onClick={() => track("section_login")}
+            className="whitespace-nowrap text-[14px] font-semibold text-blue-600 underline-offset-2 hover:underline"
+          >
+            {c.business.login}
+          </Link>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 // ─── CTA na koncu strony ──────────────────────────────────────────────────────
 
 function FooterCta({ c, onDownload }: { c: Copy; onDownload: () => void }) {
@@ -499,6 +568,7 @@ export default function SpontawayLanding() {
           />
         ))}
         <Stats c={c} />
+        <BusinessStrip c={c} />
         <FooterCta c={c} onDownload={() => openDownload("footer_cta")} />
       </main>
       <FooterBar c={c} />
