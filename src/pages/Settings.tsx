@@ -611,6 +611,7 @@ const Settings = () => {
     const { error: uploadError } = await supabase.storage
       .from("avatars")
       .upload(fileName, file, { upsert: true, contentType: file.type });
+    await uploadThumb("avatars", fileName, file);
     if (uploadError) { toast.error(t("toast_avatar_error")); return; }
     const { data: { publicUrl } } = supabase.storage.from("avatars").getPublicUrl(fileName);
     setAvatarUrl(`${publicUrl}?v=${Date.now()}`);
@@ -824,6 +825,7 @@ const Settings = () => {
 };
 
 import { Component, ErrorInfo, ReactNode } from "react";
+import { uploadThumb } from "@/lib/imageThumbs";
 
 class SettingsErrorBoundary extends Component<
   { children: ReactNode },

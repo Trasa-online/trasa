@@ -4,6 +4,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { sha256Hex } from "@/lib/imageCompression";
 import { moderateImageUrl } from "@/lib/imageModeration";
+import { uploadThumb } from "@/lib/imageThumbs";
 
 const BUCKET = "place-photos";
 
@@ -156,6 +157,7 @@ export async function uploadPlacePhoto(
       upsert: !!hash,
     });
     if (up.error) { console.warn("[placePhotoSocial] upload:", up.error.message); return null; }
+    await uploadThumb(BUCKET, path, file);
     const { data: pub } = supabase.storage.from(BUCKET).getPublicUrl(path);
     const photo_url = pub.publicUrl;
     // SafeSearch (Vision) PRZED wpisem do galerii - odrzucone zdjecie kasujemy ze Storage,

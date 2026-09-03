@@ -13,6 +13,7 @@ import { grantConsent, denyConsent } from "@/lib/consent";
 import TrasaLogo from "@/components/TrasaLogo";
 import { CategoryIcon } from "@/components/CategoryIcon";
 import { cn } from "@/lib/utils";
+import { uploadThumb } from "@/lib/imageThumbs";
 
 // Limit slow (np. dla pola "Inne").
 const capWords = (v: string, n = 10) => {
@@ -157,6 +158,7 @@ const OnboardingFlow = ({ onDone }: Props) => {
     try {
       const fileName = `${user.id}/avatar.${ext}`;
       const { error: upErr } = await supabase.storage.from("avatars").upload(fileName, blob, { upsert: true, contentType });
+      await uploadThumb("avatars", fileName, blob);
       if (upErr) { toast.error("Nie udało się wgrać zdjęcia."); return; }
       const { data: { publicUrl } } = supabase.storage.from("avatars").getPublicUrl(fileName);
       const busted = `${publicUrl}?t=${Date.now()}`;

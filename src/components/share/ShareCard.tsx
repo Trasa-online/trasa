@@ -207,14 +207,16 @@ export function ShareCardTrip({ title, city, dateLabel, pins, author, avatars, c
   const stops = pins.slice(0, 4);
   const rest = Math.max(0, pins.length - stops.length);
   const word = pins.length === 1 ? "miejsce" : pins.length < 5 ? "miejsca" : "miejsc";
-  const coverUrl = thumbUrl(resolveStored(cover ?? null), 360);
+  const coverFull = resolveStored(cover ?? null);
+  const coverUrl = thumbUrl(coverFull, 360);
   return (
     <ShareSheet onClose={onClose} onShare={onShare} shareUrl={shareUrl} shareTitle={title}>
           <div className="relative h-full w-full overflow-hidden bg-[#FEFEFE]">
             {/* Okladka. Bez zdjecia (wyjazd roboczy) - peachowe tlo ze znakiem, jak karta na profilu. */}
             <div className="relative h-[52%] bg-[#fcede3]">
               {coverUrl ? (
-                <img src={coverUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
+                <img src={coverUrl} alt="" className="absolute inset-0 h-full w-full object-cover"
+                     onError={(e) => { const img = e.currentTarget; if (img.src !== coverFull!) img.src = coverFull!; }} />
               ) : (
                 <span aria-hidden className="absolute left-1/2 top-1/2 h-16 w-16 -translate-x-1/2 -translate-y-1/2 block" style={{
                   backgroundColor: "#EF9D78",

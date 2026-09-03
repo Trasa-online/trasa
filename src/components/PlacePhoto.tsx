@@ -1,7 +1,6 @@
-import { useState } from "react";
 import { getPhotoUrl } from "@/lib/placePhotos";
 import { categoryIconSrc } from "@/lib/placeCategoryIcon";
-import { thumbUrl } from "@/lib/imageUrl";
+import { useImageWithFallback } from "@/hooks/useImageWithFallback";
 
 // Pelny URL (cache/storage/http) uzywamy bezposrednio; surowy photo_reference
 // przepuszczamy przez proxy getPhotoUrl.
@@ -24,11 +23,12 @@ export function PlacePhoto({ pin, className, width }: { pin: any; className?: st
   const firstOf = (v: any): string | null => (Array.isArray(v) ? (v.find((x) => typeof x === "string" && x) ?? null) : null);
   const stored = pin.image_url || firstOf(pin.images) || firstOf(pin.user_photo_urls) || pin.photo_url;
   const full = resolveStored(stored);
-  const url = width ? thumbUrl(full, width) : full;
-  const [failed, setFailed] = useState(false);
+  // width podane = kafelek/lista, wiec najpierw miniatura. Bez width (podglad pelnoekranowy)
+  // od razu oryginal.
+  const { src, failed, onError } = useImageWithFallback(full, width ?? Number.MAX_SAFE_INTEGER);
 
-  if (url && !failed) {
-    return <img src={url} alt="" className={className} onError={() => setFailed(true)} />;
+  if (src && !failed) {
+    return <img src={src} alt="" className={className} onError={onError} />;
   }
   return (
     <div className={`${className ?? ""} flex items-center justify-center bg-[#fcede3]`}>

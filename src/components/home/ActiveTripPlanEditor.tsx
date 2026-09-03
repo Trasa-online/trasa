@@ -21,6 +21,7 @@ import { Reorder, useDragControls } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { API_BASE } from "@/lib/platform";
 import { CategoryIcon } from "@/components/CategoryIcon";
+import { uploadThumb } from "@/lib/imageThumbs";
 
 // Statyczna mapka pojedynczego miejsca (okladka karty planu). Tania (Maps Static + 24h CDN),
 // pomaranczowy pin, POI/transit ukryte. null gdy brak wspolrzednych.
@@ -274,6 +275,7 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false, onDelete, deleting 
       for (const file of Array.from(files)) {
         const path = `${user.id}/${pin.route_id}/pin_${pin.id}_${Math.random().toString(36).slice(2)}.jpg`;
         const { error } = await supabase.storage.from("route-images").upload(path, file, { upsert: true, contentType: file.type || "image/jpeg" });
+        await uploadThumb("route-images", path, file);
         if (error) { console.error("[activeTrip] photo upload failed:", error.message); continue; }
         const { data } = supabase.storage.from("route-images").getPublicUrl(path);
         if (data?.publicUrl) urls.push(data.publicUrl);

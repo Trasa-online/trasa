@@ -43,6 +43,7 @@ import { Camera as CapCamera } from "@capacitor/camera";
 import { notify } from "@/lib/notify";
 import { deferDelete } from "@/lib/deferDelete";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { uploadThumb } from "@/lib/imageThumbs";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 
@@ -746,6 +747,7 @@ const ReviewSummary = () => {
         const { error } = await supabase.storage
           .from("route-images")
           .upload(path, compressed, { contentType: "image/jpeg", upsert: false });
+        await uploadThumb("route-images", path, compressed);
         if (error) { failed++; console.error("[ReviewSummary] photo upload failed:", error.message); continue; }
         const uploadedUrl = `${SUPABASE_URL}/storage/v1/object/public/route-images/${path}`;
         newUrls.push(uploadedUrl);
@@ -829,6 +831,7 @@ const ReviewSummary = () => {
         const compressed = await compressImage(file, 1200, 1200, 0.8);
         const path = `${user.id}/${routeId}/pin_${Date.now()}_${Math.floor(Math.random() * 10000)}.jpg`;
         const { error } = await supabase.storage.from("route-images").upload(path, compressed, { contentType: "image/jpeg", upsert: false });
+        await uploadThumb("route-images", path, compressed);
         if (error) { failed++; console.error("[ReviewSummary] pin photo upload failed:", error.message); continue; }
         const uploadedUrl = `${SUPABASE_URL}/storage/v1/object/public/route-images/${path}`;
         urls.push(uploadedUrl);

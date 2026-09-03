@@ -1,6 +1,6 @@
 import { resolveStored } from "@/components/PlacePhoto";
 import { categoryIconSrc } from "@/lib/placeCategoryIcon";
-import { thumbUrl } from "@/lib/imageUrl";
+import { useImageWithFallback } from "@/hooks/useImageWithFallback";
 
 // Kafelek miejsca w karcie feedu profilu / widoku "Twoje listy" (redesign 07/08).
 // Zdjecie usera (jesli jest) w object-cover; inaczej ikona kategorii na peachy #fcede3
@@ -23,14 +23,14 @@ export function PlaceTile({ tile, showCity, aspect = "aspect-[2/3]", tone = "pea
   // brak - okladka ze zdjec userow dodanych do MIEJSCA w wizytowce (place_photos, tile._cover).
   const stored = tile.image_url || firstOf(tile.images) || firstOf(tile.user_photo_urls) || tile.photo_url;
   // Kafelek ma ~110 px szerokosci - oryginal (srednio 2,4 MB) bylby tu marnotrawstwem.
-  const url = thumbUrl(resolveStored(stored) ?? resolveStored(tile._cover), 120);
+  const { src: url, onError: onImgError } = useImageWithFallback(resolveStored(stored) ?? resolveStored(tile._cover), 120);
   const name = tile.place_name || "";
   const city = showCity ? (tile.city || "") : "";
   return (
     <div className={`relative ${aspect} rounded-2xl overflow-hidden ${tone === "contrast" ? "bg-[#F6D9C6]" : "bg-[#fcede3]"}`}>
       {url ? (
         <>
-          <img src={url} alt="" className="w-full h-full object-cover" loading="lazy" />
+          <img src={url} alt="" className="w-full h-full object-cover" loading="lazy" onError={onImgError} />
           <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-transparent" />
         </>
       ) : (

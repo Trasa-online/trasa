@@ -10,6 +10,7 @@ import { isNative } from "@/lib/platform";
 import { requestAndRegisterNativePush } from "@/hooks/useNativePush";
 import { requestLocation } from "@/hooks/useGeolocation";
 import { ORIGIN_COUNTRIES, citiesForCountry } from "@/lib/locations";
+import { uploadThumb } from "@/lib/imageThumbs";
 
 // Polskie sieroty: po pojedynczych literach (a i o u w z) twarda spacja.
 const nbsp = (s: string) => s.replace(/ ([aiouwzAIOUWZ]) /g, (_m, l) => " " + l + String.fromCharCode(160));
@@ -145,6 +146,7 @@ const ProfileSetup = ({ onDone }: ProfileSetupProps) => {
     try {
       const fileName = `${user.id}/avatar.${ext}`;
       const { error: upErr } = await supabase.storage.from("avatars").upload(fileName, blob, { upsert: true, contentType });
+      await uploadThumb("avatars", fileName, blob);
       if (upErr) { toast.error(t("profile.error_upload_photo")); return; }
       const { data: { publicUrl } } = supabase.storage.from("avatars").getPublicUrl(fileName);
       const busted = `${publicUrl}?t=${Date.now()}`;

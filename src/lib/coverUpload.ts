@@ -5,6 +5,7 @@ import { compressImage } from "@/lib/imageCompression";
 import { isHeic, convertHeicToJpeg } from "@/lib/heicConvert";
 import { supabase } from "@/integrations/supabase/client";
 import { Camera as CapCamera } from "@capacitor/camera";
+import { uploadThumb } from "@/lib/imageThumbs";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 
@@ -15,6 +16,7 @@ export async function uploadCoverImage(rawFile: File, userId: string, folder = "
     const compressed = await compressImage(file, 1200, 1200, 0.8);
     const path = `${userId}/${folder}/cover_${Date.now()}_${Math.floor(Math.random() * 10000)}.jpg`;
     const { error } = await supabase.storage.from("route-images").upload(path, compressed, { contentType: "image/jpeg", upsert: false });
+    await uploadThumb("route-images", path, compressed);
     if (error) { console.error("[coverUpload] upload failed:", error.message); return null; }
     return `${SUPABASE_URL}/storage/v1/object/public/route-images/${path}`;
   } catch (err: any) {

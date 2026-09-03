@@ -34,6 +34,7 @@ import TrasaBigCard from "@/components/home/TrasaBigCard";
 import { fetchRouteCoversFor } from "@/lib/routeMemberCover";
 import { resolveStored } from "@/components/PlacePhoto";
 import { subcategoryLabelLocalized } from "@/lib/categories";
+import { uploadThumb } from "@/lib/imageThumbs";
 
 // ── Guest empty state (same visual rytm jak Journal dla goscia) ──────────────
 
@@ -241,6 +242,7 @@ const TravelerProfile = () => {
     if (file.size > 5 * 1024 * 1024) { toast.error(t("profile.avatar_size_error")); return; }
     const fileName = `${user.id}/avatar.${ext}`;
     const { error: uploadError } = await supabase.storage.from("avatars").upload(fileName, file, { upsert: true, contentType: file.type });
+    await uploadThumb("avatars", fileName, file);
     if (uploadError) { toast.error(t("profile.avatar_upload_error")); return; }
     const { data: { publicUrl } } = supabase.storage.from("avatars").getPublicUrl(fileName);
     const bustedUrl = `${publicUrl}?v=${Date.now()}`;

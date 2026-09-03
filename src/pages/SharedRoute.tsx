@@ -72,6 +72,7 @@ import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { resolveStored } from "@/components/PlacePhoto";
 import type { MockPlace } from "@/components/plan-wizard/PlaceSwiper";
 import { CategoryIcon } from "@/components/CategoryIcon";
+import { uploadThumb } from "@/lib/imageThumbs";
 
 // Oficjalne logo Google (4-kolorowe "G") - guzik "Zobacz w Google".
 const GoogleGlyph = ({ className }: { className?: string }) => (
@@ -700,6 +701,7 @@ export default function SharedRoute() {
           const sha = await sha256Hex(blob);
           const path = `${user.id}/${id}/pin_${sha ?? `${pin.id}_${i}_${Math.random().toString(36).slice(2)}`}.jpg`;
           const { error } = await supabase.storage.from("route-images").upload(path, blob, { upsert: true, contentType: blob.type || "image/jpeg" });
+          await uploadThumb("route-images", path, blob);
           if (error) { console.error("[SharedRoute] photo upload:", error.message); return null; }
           const { data } = supabase.storage.from("route-images").getPublicUrl(path);
           return data?.publicUrl ? { path, url: data.publicUrl } : null;
@@ -926,6 +928,7 @@ export default function SharedRoute() {
         const prepared = await prepareImageForUpload(file, 1600, 0.8);
         const path = `${user.id}/${route.id}/gal_${Date.now()}_${i}_${Math.floor(Math.random() * 1e6)}.jpg`;
         const { error } = await (supabase as any).storage.from("route-images").upload(path, prepared, { contentType: prepared.type || "image/jpeg", upsert: false });
+        await uploadThumb("route-images", path, prepared);
         if (error) { console.error("[SharedRoute] photo upload failed:", error.message); return null; }
         return `${SUPABASE_URL}/storage/v1/object/public/route-images/${path}`;
       } catch (e: any) { console.error("[SharedRoute] photo processing failed:", e?.message ?? e); return null; }
@@ -1821,7 +1824,8 @@ export default function SharedRoute() {
                       className={`relative break-inside-avoid rounded-2xl overflow-hidden bg-muted active:opacity-90 transition-opacity cursor-pointer ${isCover ? "ring-2 ring-primary ring-offset-2 ring-offset-background" : ""}`}>
                       {/* Siatka masonry ma ~180 px na kolumne - pobieramy miniature, nie oryginal.
                           Podglad pelnoekranowy nizej zostaje przy pelnej rozdzielczosci. */}
-                      <img src={thumbUrl(url, 200) ?? url} alt="" loading="lazy" className="w-full h-auto block" />
+                      <img src={thumbUrl(url, 200) ?? url} alt="" loading="lazy" className="w-full h-auto block"
+                        onError={(e) => { const img = e.currentTarget; if (img.src !== url) img.src = url; }} />
                       {/* Licznik polubien (gdy sa) - siatka zostaje czysta, lajkuje sie w podgladzie. */}
                       {likeStateOf(url).count > 0 && (
                         <span className="absolute bottom-1.5 left-1.5 flex items-center gap-1 rounded-full bg-black/45 backdrop-blur-sm px-2 py-0.5 text-[11px] font-semibold text-white">

@@ -31,11 +31,11 @@ import { placeKeyOf, fetchPlacePhotosForKeys, pickPlaceCover, linkPhotoToPlace, 
 import { useSavedPlaces } from "@/hooks/useSavedPlaces";
 import { CategoryIcon } from "@/components/CategoryIcon";
 import { subcategoryLabelLocalized } from "@/lib/categories";
-import { thumbUrl } from "@/lib/imageUrl";
 import { ShareCardList } from "@/components/share/ShareCard";
 import { resolvePlaceDbId } from "@/lib/placeLists";
 import { fetchEnrichedPlace } from "@/components/plan-wizard/PlaceSwiper";
 import { inferCategoryFromName } from "@/lib/placeCategoryIcon";
+import { uploadThumb } from "@/lib/imageThumbs";
 
 // Widok LISTY miejsc (polecajki) - UI/UX 1:1 z widokiem trasy (SharedRoute), ale zasilany z
 // discovery_collections/discovery_items. Lista NIE jest trasa (brak kolejnosci-planu), ale
@@ -97,6 +97,7 @@ export default function SharedList() {
         const compressed = await compressImage(file, 1200, 1200, 0.8);
         const path = `${user.id}/list_${id}/item_${item.id}_${Math.random().toString(36).slice(2)}.jpg`;
         const { error } = await supabase.storage.from("route-images").upload(path, compressed, { contentType: "image/jpeg", upsert: false });
+        await uploadThumb("route-images", path, compressed);
         if (error) { console.error("[SharedList] photo upload:", error.message); continue; }
         const { data } = supabase.storage.from("route-images").getPublicUrl(path);
         if (data?.publicUrl) urls.push(data.publicUrl);
