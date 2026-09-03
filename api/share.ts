@@ -58,16 +58,23 @@ async function rest(path: string): Promise<any[]> {
 
 const first = (v: any): string | null => (Array.isArray(v) ? (v.find((x) => typeof x === "string" && x) ?? null) : null);
 
-// Zdjecia musza byc bezwzglednymi adresami https (robot nie ma kontekstu strony). Storage dostaje
-// transformacje do zadanej szerokosci - miniatura 160 px zamiast oryginalu ~2,4 MB.
-function img(raw: string | null | undefined, w: number, h?: number): string | null {
+// Zdjecia musza byc bezwzglednymi adresami https (robot nie ma kontekstu strony).
+//
+// Male kadry (awatar, kafelek miejsca) biora MINIATURE zapisana obok pliku przy wgrywaniu -
+// `<sciezka>.thumb`, 800 px, 1:1 z src/lib/imageThumbs.ts. Wczesniej szly przez transformacje
+// w locie (/storage/v1/render/image/), ale to platna funkcja liczona od obrazow zrodlowych,
+// ktora Supabase blokuje po przekroczeniu limitu - wtedy podglad linku zostawal bez zdjec.
+// Duze kadry (okladka 1200 px) biora oryginal, bo miniatura bylaby tam rozmyta.
+const THUMB_SUFFIX = ".thumb";
+const THUMB_MAX_W = 400;
+
+function img(raw: string | null | undefined, w: number, _h?: number): string | null {
   if (!raw) return null;
   if (raw.startsWith("/")) return SITE + raw;
   if (!/^https?:/i.test(raw)) return `${SITE}/api/place-photo?ref=${encodeURIComponent(raw)}&w=${w}`;
-  if (raw.includes("/storage/v1/object/public/")) {
-    const t = raw.replace("/storage/v1/object/public/", "/storage/v1/render/image/public/");
-    const size = h ? `width=${w}&height=${h}&resize=cover` : `width=${w}`;
-    return `${t}${t.includes("?") ? "&" : "?"}${size}&quality=75`;
+  if (raw.includes("/storage/v1/object/public/") && w <= THUMB_MAX_W) {
+    const [base, query] = raw.split("?");
+    return query ? `${base}${THUMB_SUFFIX}?${query}` : `${base}${THUMB_SUFFIX}`;
   }
   return raw;
 }
