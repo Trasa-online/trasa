@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { QRCodeSVG } from "qrcode.react";
 import posthog from "posthog-js";
+import { supabase } from "@/integrations/supabase/client";
 import { capabilities } from "@/lib/platform";
 
 /* ─────────────────────────────────────────────────────────────────────────────
@@ -63,11 +64,17 @@ const COPY = {
     modal: {
       titleSoon: "Premiera już wkrótce",
       titleLive: "Pobierz Spontaway",
-      bodySoon: "Spontaway pojawia się w App Store lada moment. Zajrzyj tu za chwilę - albo od razu weź telefon do ręki, żeby nic nie przegapić.",
+      bodySoon: "Spontaway pojawi się w App Store lada moment. Zostaw swojego maila, a powiadomimy Cię o starcie:",
       bodyLive: "Zeskanuj kod telefonem albo pobierz aplikację prosto ze sklepu.",
-      badge: "Za darmo · bez zobowiązań",
       qrHint: "Zeskanuj kod telefonem",
       close: "Zamknij",
+      emailPlaceholder: "twoj@email.pl",
+      submit: "Powiadom mnie",
+      sending: "Zapisuję...",
+      done: "Dzięki! Napiszemy, jak tylko Spontaway będzie do pobrania.",
+      error: "Nie udało się zapisać. Spróbuj jeszcze raz.",
+      consentPre: "Zapisując się, zgadzasz się na przetwarzanie adresu e-mail w celu powiadomienia o premierze. Szczegóły w ",
+      consentLink: "polityce prywatności",
     },
   },
   en: {
@@ -104,11 +111,17 @@ const COPY = {
     modal: {
       titleSoon: "Launching very soon",
       titleLive: "Get Spontaway",
-      bodySoon: "Spontaway lands in the App Store any moment now. Come back shortly, or grab your phone so you do not miss it.",
+      bodySoon: "Spontaway hits the App Store any moment now. Leave your email and we will tell you when it is live:",
       bodyLive: "Scan the code with your phone, or download the app straight from the store.",
-      badge: "Free · no strings attached",
       qrHint: "Scan the code with your phone",
       close: "Close",
+      emailPlaceholder: "you@email.com",
+      submit: "Notify me",
+      sending: "Saving...",
+      done: "Thanks! We will write as soon as Spontaway is downloadable.",
+      error: "Could not save that. Please try again.",
+      consentPre: "By signing up you agree to your email being used to notify you about the launch. Details in the ",
+      consentLink: "privacy policy",
     },
   },
 } as const;
@@ -186,6 +199,64 @@ function Pill({
 
 // ─── Modal pobrania ───────────────────────────────────────────────────────────
 
+// Zapis na powiadomienie o premierze. Trafia do tabeli `waitlist` (RLS: "Anyone can join"),
+// z oznaczeniem zrodla, zeby dalo sie odroznic te zapisy od starej strony zapisow.
+function LaunchNotifyForm({ c }: { c: Copy }) {
+  const [email, setEmail] = useState("");
+  const [state, setState] = useState<"idle" | "sending" | "done" | "error">("idle");
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const value = email.trim().toLowerCase();
+    if (!value || state === "sending") return;
+    setState("sending");
+    const { error } = await (supabase as any).from("waitlist").insert({ email: value, source: "landing_modal" });
+    // Duplikat maila to dla usera sukces, nie blad - juz jest zapisany.
+    if (error && !String(error.code) .startsWith("23")) {
+      setState("error");
+      return;
+    }
+    supabase.functions.invoke("send-waitlist-email", { body: { email: value } });
+    posthog.capture("landing_waitlist_signup", { source: "download_modal" });
+    setState("done");
+  };
+
+  if (state === "done") {
+    return (
+      <p className="rounded-2xl bg-white/70 px-4 py-3 text-center text-[14px] font-semibold text-spontaway-brown">
+        {nb(c.modal.done)}
+      </p>
+    );
+  }
+
+  return (
+    <form onSubmit={submit} className="flex w-full flex-col gap-2">
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <input
+          type="email"
+          required
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder={c.modal.emailPlaceholder}
+          className="h-[44px] w-full rounded-full border border-black/10 bg-white px-4 text-[14px] text-spontaway-brown outline-none placeholder:text-black/35 focus:border-spontaway-orange"
+        />
+        <button
+          type="submit"
+          disabled={state === "sending"}
+          className="h-[44px] shrink-0 rounded-full bg-spontaway-orange px-5 text-[14px] font-extrabold text-white transition-colors hover:bg-[#d94a05] active:scale-[0.98] disabled:opacity-60"
+        >
+          {state === "sending" ? c.modal.sending : c.modal.submit}
+        </button>
+      </div>
+      {state === "error" && <p className="text-center text-[12px] font-semibold text-red-600">{nb(c.modal.error)}</p>}
+      <p className="px-1 text-center text-[11px] leading-snug text-spontaway-brown/70">
+        {nb(c.modal.consentPre)}
+        <Link to="/privacy" className="underline">{c.modal.consentLink}</Link>.
+      </p>
+    </form>
+  );
+}
+
 function DownloadModal({ c, onClose }: { c: Copy; onClose: () => void }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
@@ -218,18 +289,21 @@ function DownloadModal({ c, onClose }: { c: Copy; onClose: () => void }) {
         </button>
 
         <div className="flex flex-col items-center bg-spontaway-yellow px-6 pb-7 pt-9 text-center">
-          <div className="flex h-[64px] w-[64px] items-center justify-center rounded-[18px] bg-white">
-            <img src="/logo.svg" alt="" width={37} height={33} className="w-[34px]" />
-          </div>
+          {/* Sam znak marki, bez bialego kafelka - na zoltym tle ramka tylko dzielila kompozycje. */}
+          <img src="/logo.svg" alt="" width={37} height={33} className="w-[52px]" />
           <h2 className="mt-4 font-brand text-[26px] leading-[1.15] text-spontaway-orange">
             {APP_LIVE ? c.modal.titleLive : c.modal.titleSoon}
           </h2>
           <p className="mt-2 text-[14px] leading-[1.45] text-spontaway-brown">
             {nb(APP_LIVE ? c.modal.bodyLive : c.modal.bodySoon)}
           </p>
-          <span className="mt-4 rounded-full bg-white/70 px-3 py-1 text-[12px] font-bold text-spontaway-orange">
-            {nb(c.modal.badge)}
-          </span>
+          {/* Przed premiera modal zbiera zapisy na powiadomienie - to jedyne miejsce, gdzie
+              mierzymy realne zainteresowanie, skoro apki nie da sie jeszcze pobrac. */}
+          {!APP_LIVE && (
+            <div className="mt-4 w-full">
+              <LaunchNotifyForm c={c} />
+            </div>
+          )}
         </div>
 
         <div className="flex flex-col items-center gap-4 px-6 py-7">
@@ -328,9 +402,9 @@ function Nav({ c, onDownload }: { c: Copy; onDownload: () => void }) {
 function Hero({ c, onDownload }: { c: Copy; onDownload: () => void }) {
   return (
     <section className="px-4 pt-6 lg:px-[50px] lg:pt-[53px]">
-      <div className="mx-auto flex max-w-[1340px] flex-col items-center rounded-[28px] bg-spontaway-yellow px-6 py-10 text-center lg:h-[644px] lg:flex-row lg:items-center lg:justify-between lg:rounded-[36px] lg:px-[70px] lg:py-0 lg:text-left">
+      <div className="mx-auto flex max-w-[1340px] flex-col items-center rounded-[28px] bg-spontaway-yellow px-6 py-10 text-center lg:h-[644px] lg:flex-row lg:items-center lg:justify-between lg:rounded-[36px] lg:px-[48px] lg:py-0 lg:text-left">
         {/* Kolumna z tekstem */}
-        <div className="order-1 w-full lg:w-[686px] lg:shrink-0">
+        <div className="order-1 w-full lg:w-[680px] lg:shrink-0">
           <h1 className="font-brand text-[32px] leading-[1.15] text-spontaway-orange lg:text-[48px] lg:leading-[1.2]">
             {nb(c.hero.titleA)}
             <br className="hidden lg:block" />{" "}
@@ -350,11 +424,7 @@ function Hero({ c, onDownload }: { c: Copy; onDownload: () => void }) {
           </div>
 
           <div className="hidden lg:block">
-            <div className="mt-[29px] flex items-center gap-[10px]">
-              <Pill tone="orange" onClick={onDownload} className="h-[47px] w-[215px] text-[16px]">{c.hero.ctaPrimary}</Pill>
-              <Pill tone="brown" onClick={onDownload} className="h-[47px] text-[16px]">{c.hero.ctaSecondary}</Pill>
-            </div>
-            <StoreBadges onDownload={onDownload} className="mt-[123px]" height={54} />
+            <StoreBadges onDownload={onDownload} className="mt-[44px]" height={54} />
             <p className="mt-[19px] text-[17px] leading-[1.5] text-spontaway-brown">{nb(c.hero.storeNote)}</p>
           </div>
         </div>
@@ -365,14 +435,9 @@ function Hero({ c, onDownload }: { c: Copy; onDownload: () => void }) {
           alt="Aplikacja Spontaway: trasa po Łodzi i profil z wyjazdem do Gdańska"
           width={722}
           height={774}
-          className="order-2 mt-6 w-full max-w-[320px] lg:mt-0 lg:w-[455px] lg:max-w-none"
+          className="order-2 mt-6 w-full max-w-[320px] lg:mt-0 lg:w-[540px] lg:max-w-none"
         />
 
-        {/* Mobile: guziki na koncu karty */}
-        <div className="order-3 mt-6 flex w-full flex-col items-center gap-3 lg:hidden">
-          <Pill tone="orange" onClick={onDownload} className="h-[44px] w-full max-w-[264px] text-[14px]">{c.hero.ctaPrimary}</Pill>
-          <Pill tone="brown" onClick={onDownload} className="h-[44px] w-full max-w-[264px] text-[14px]">{c.hero.ctaSecondary}</Pill>
-        </div>
       </div>
     </section>
   );
@@ -401,12 +466,12 @@ function Feature({
   return (
     <section className="mx-auto max-w-[1440px] px-4 py-12 lg:px-[160px] lg:py-[88px]">
       <div className={`flex flex-col items-center gap-8 lg:flex-row lg:justify-between lg:gap-[60px] ${side === "left" ? "lg:flex-row-reverse" : ""}`}>
-        <div className="w-full text-center lg:w-[460px] lg:shrink-0 lg:text-left">
+        <div className="order-2 w-full text-center lg:order-none lg:w-[460px] lg:shrink-0 lg:text-left">
           <h2 className="whitespace-normal font-brand text-[24px] leading-[1.2] text-spontaway-orange sm:text-[26px] lg:whitespace-pre-line lg:text-[36px]">{nb(title)}</h2>
           <p style={{ ["--bw" as string]: `${bodyWidth}px` }} className="mx-auto mt-3 whitespace-normal text-[15px] leading-[1.35] text-spontaway-brown lg:mx-0 lg:max-w-[var(--bw)] lg:whitespace-pre-line lg:text-[18px]">{nb(body)}</p>
           <Pill tone="orange" onClick={onDownload} className="mt-6 h-[44px] px-6 text-[14px] lg:mt-[64px] lg:h-[44px] lg:text-[15px]">{cta}</Pill>
         </div>
-        <img src={img} alt={alt} width={imgWidth} height={imgHeight} className={imgClass} loading="lazy" />
+        <img src={img} alt={alt} width={imgWidth} height={imgHeight} className={`order-1 lg:order-none ${imgClass}`} loading="lazy" />
       </div>
     </section>
   );
@@ -541,9 +606,9 @@ export default function SpontawayLanding() {
 
   const features = c.features;
   const imgMeta = [
-    { w: 1038, h: 616, cls: "w-full max-w-[340px] lg:w-[676px] lg:max-w-none", body: 399 },
+    { w: 1038, h: 616, cls: "w-full max-w-[430px] lg:w-[676px] lg:max-w-none", body: 399 },
     { w: 900, h: 792, cls: "w-full max-w-[340px] lg:w-[574px] lg:max-w-none", body: 382 },
-    { w: 834, h: 733, cls: "w-full max-w-[340px] lg:w-[556px] lg:max-w-none", body: 460 },
+    { w: 834, h: 733, cls: "w-full max-w-[430px] lg:w-[600px] lg:max-w-none", body: 460 },
   ];
 
   return (
