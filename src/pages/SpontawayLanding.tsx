@@ -402,8 +402,8 @@ function Hero({ c, onDownload }: { c: Copy; onDownload: () => void }) {
     <section className="px-4 pt-6 lg:px-[50px] lg:pt-[53px]">
       <div className="mx-auto flex max-w-[1340px] flex-col items-center rounded-[28px] bg-spontaway-yellow px-6 py-10 text-center lg:h-[644px] lg:flex-row lg:items-center lg:justify-between lg:rounded-[36px] lg:px-[48px] lg:py-0 lg:text-left">
         {/* Kolumna z tekstem */}
-        <div className="order-1 w-full lg:w-[680px] lg:shrink-0">
-          <h1 className="font-brand text-[32px] leading-[1.15] text-spontaway-orange lg:text-[48px] lg:leading-[1.2]">
+        <div className="order-1 w-full lg:w-[600px] lg:shrink-0">
+          <h1 className="font-brand text-[32px] leading-[1.15] text-spontaway-orange lg:text-[42px] lg:leading-[1.2]">
             {nb(c.hero.titleA)}
             <br className="hidden lg:block" />{" "}
             {nb(c.hero.titleB)}
@@ -433,7 +433,7 @@ function Hero({ c, onDownload }: { c: Copy; onDownload: () => void }) {
           alt="Aplikacja Spontaway: trasa po Łodzi i profil z wyjazdem do Gdańska"
           width={722}
           height={774}
-          className="order-2 mt-6 w-full max-w-[320px] lg:mt-0 lg:w-[540px] lg:max-w-none"
+          className="order-2 mt-6 w-full max-w-[320px] lg:mt-0 lg:w-[600px] lg:max-w-none"
         />
 
       </div>
@@ -522,7 +522,7 @@ function BusinessStrip({ c }: { c: Copy }) {
             {nb(c.business.body)}
           </p>
         </div>
-        <div className="flex w-full shrink-0 flex-col items-center gap-3 sm:w-auto sm:flex-row lg:flex-col lg:items-end">
+        <div className="flex w-full shrink-0 flex-col items-center gap-3 sm:w-auto sm:flex-row lg:flex-col lg:items-center">
           <Link
             to="/dla-firm"
             onClick={() => track("section_cta")}
@@ -550,7 +550,7 @@ function FooterCta({ c, onDownload }: { c: Copy; onDownload: () => void }) {
     <section className="px-4 py-12 lg:px-[50px] lg:py-[125px]">
       <div className="mx-auto flex max-w-[1340px] flex-col items-center rounded-[28px] bg-spontaway-yellow px-6 py-10 text-center lg:h-[480px] lg:justify-center lg:rounded-[36px] lg:py-0">
         <Wordmark className="h-[32px] w-auto lg:h-[43px]" />
-        <h2 className="mt-6 font-brand text-[30px] leading-[1.14] text-spontaway-orange lg:mt-[43px] lg:text-[64px]">
+        <h2 className="mt-6 font-brand text-[30px] leading-[1.14] text-spontaway-orange lg:mt-[43px] lg:text-[52px]">
           {nb(c.footerCta.title)}
         </h2>
         <p className="mt-5 text-[14px] leading-[1.5] text-spontaway-brown lg:mt-[42px] lg:text-[17px]">{nb(c.footerCta.sub)}</p>
