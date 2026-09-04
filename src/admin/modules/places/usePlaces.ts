@@ -2,11 +2,11 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 // Foto na subdomenie admina: pelny URL / storage -> bezposrednio; goly ref
-// Google -> proxy na GLOWNEJ domenie (admin.trasa.travel nie ma /api/place-photo).
+// Google -> proxy na GLOWNEJ domenie (admin.spontaway.com nie ma /api/place-photo).
 export function adminPhotoUrl(photoUrl: string | null | undefined, w = 400): string | null {
   if (!photoUrl) return null;
   if (/^https?:\/\//.test(photoUrl) || photoUrl.startsWith("/storage/")) return photoUrl;
-  return `https://trasa.travel/api/place-photo?ref=${encodeURIComponent(photoUrl)}&w=${w}`;
+  return `https://spontaway.com/api/place-photo?ref=${encodeURIComponent(photoUrl)}&w=${w}`;
 }
 
 export interface PlaceRow {

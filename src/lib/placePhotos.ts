@@ -3,7 +3,7 @@ import { isNative } from "@/lib/platform";
 
 // On native (Capacitor), relative URLs resolve to capacitor://localhost which
 // doesn't have our Vercel Edge Functions. Use absolute production URL.
-const API_BASE = isNative ? "https://trasa.travel" : "";
+const API_BASE = isNative ? "https://spontaway.com" : "";
 
 // =====================================================================
 // Legacy proxy URL (fallback dla miejsc bez scache'owanego zdjęcia)

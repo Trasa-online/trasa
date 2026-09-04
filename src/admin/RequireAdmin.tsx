@@ -157,7 +157,7 @@ function AdminLogin() {
                   <label className="text-sm font-medium text-slate-700">Email</label>
                   <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
                     className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-400"
-                    placeholder="ty@trasa.travel" />
+                    placeholder="ty@spontaway.com" />
                 </div>
 
                 {usePassword && (
