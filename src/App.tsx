@@ -596,6 +596,11 @@ function SplashController() {
   }, [done]);
 
   if (!visible) return null;
+  // Uzytkownik NIEZALOGOWANY idzie na ekran logowania, a nie do ukladu aplikacji - szkielet
+  // listy czy profilu obiecywalby mu wtedy cos, czego zaraz nie zobaczy. Gdy sesji nie ma,
+  // chowamy splash od razu (zgloszenie Nat 2026-09-04: "przed widokiem logowania pokazuje
+  // sie szkielet"). Dopoki `loading` trwa, jeszcze nie wiemy - wtedy splash zostaje.
+  if (!loading && !user && !forceBranded) return null;
   // Kolejny start tego samego dnia: zamiast znaku od razu szkielet ekranu docelowego, wiec uklad
   // nie skacze po zaladowaniu (podglad admina zawsze pokazuje wersje ze znakiem).
   if (!branded && !forceBranded) {
