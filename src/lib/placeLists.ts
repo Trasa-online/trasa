@@ -1,5 +1,6 @@
 import { track } from "@/lib/analytics";
 import { supabase } from "@/integrations/supabase/client";
+import { photoUrlForStorage } from "@/lib/placePhotos";
 
 // Operacje na LISTACH MIEJSC usera (discovery_collections, kind='ranking').
 // Kazda lista ma kategorie list_status: 'visited' (odwiedzone) | 'to_visit' (do odwiedzenia).
@@ -254,7 +255,7 @@ export async function addPlaceToList(listId: string, place: PlaceForList, opts?:
     place_id: dbPlaceId,
     google_place_id: place.google_place_id ?? null,
     rating: place.rating ?? null,
-    photo_url: place.photo_url,
+    photo_url: photoUrlForStorage(place.photo_url),
     added_by: addedBy,
     order_index: maxOrder + 1,
   });
@@ -338,7 +339,7 @@ export async function createListFromSavedPlaces(
     .map((p, i) => ({
       collection_id: listId, place_name: p.place_name, category: p.category, address: p.address,
       short_desc: "", city: p.city ?? opts.city ?? null, latitude: p.latitude, longitude: p.longitude, place_id: p.place_id,
-      google_place_id: p.google_place_id ?? null, rating: p.rating ?? null, photo_url: p.photo_url,
+      google_place_id: p.google_place_id ?? null, rating: p.rating ?? null, photo_url: photoUrlForStorage(p.photo_url),
       added_by: userId, order_index: i,
     }));
   if (rows.length) {

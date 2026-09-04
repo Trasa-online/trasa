@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { photoUrlForStorage } from "@/lib/placePhotos";
 
 // Wspolna PULA PROPOZYCJI miejsc do wyjazdu (tabela route_proposals, migracja 20260825).
 // Host tworzy wyjazd + swoje piny; zaproszeni uczestnicy dorzucaja propozycje tutaj (async);
@@ -35,7 +36,7 @@ export async function addRouteProposal(routeId: string, userId: string, place: P
     address: place.address ?? null,
     latitude: place.latitude ?? null,
     longitude: place.longitude ?? null,
-    photo_url: place.photo_url ?? null,
+    photo_url: photoUrlForStorage(place.photo_url),
     place_id: place.place_id ?? null,
     google_place_id: place.google_place_id ?? null,
     description: place.description ?? null,

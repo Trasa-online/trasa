@@ -148,3 +148,19 @@ export async function ensurePhotoCached(
     return currentPhotoUrl ?? null;
   }
 }
+
+// Czy ten adres nadaje sie do ZAPISANIA w bazie.
+//
+// Zdjecia z Google chodza przez proxy `/api/place-photo?ref=...`, a referencja w tym adresie
+// WYGASA - zmierzone 2026-09-04: z 74 zapisanych adresow 25 juz nie dzialalo, w tym WSZYSTKIE
+// 23 pozycje na listach. Zapisany adres jest wiec z definicji tymczasowy: po jakims czasie
+// zostawia po sobie nieudane zadanie do Google przy kazdym renderze i dopiero potem ikone.
+//
+// Nie cache'ujemy zdjec Google (decyzja Nat: nieprzewidywalne koszty), wiec nie ma czego
+// utrwalac - takie adresy po prostu nie ida do bazy. Miejsce bez zdjecia uzytkownika pokazuje
+// ikone kategorii na peachowym tle, czyli nasz docelowy fallback. Zdjecie Google nadal
+// wyswietla sie NA ZYWO tam, gdzie mamy swieza referencje z biezacej odpowiedzi wyszukiwarki.
+export function photoUrlForStorage(url: string | null | undefined): string | null {
+  if (!url) return null;
+  return url.includes("/api/place-photo") ? null : url;
+}

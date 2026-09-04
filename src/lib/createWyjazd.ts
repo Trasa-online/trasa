@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { photoUrlForStorage } from "@/lib/placePhotos";
 
 // Dedup miejsc po znormalizowanym kluczu (place_id albo place_name). Zabezpiecza przed
 // duplikatami pinow w trasie niezaleznie od tego, ile razy user wraca do etapu dodawania.
@@ -163,7 +164,7 @@ export async function createWyjazdFromPlaces(
     longitude: p.longitude ?? null,
     place_id: p.place_id ?? null,
     suggested_time: null,
-    photo_url: p.photo_url ?? null,
+    photo_url: photoUrlForStorage(p.photo_url),
     pin_order: idx,
     original_creator_id: userId,
   }));
@@ -261,7 +262,7 @@ export async function updateWyjazdPlaces(
       place_id: p.place_id ?? null,
       suggested_time: null,
       pin_order: idx,
-      photo_url: p.photo_url ?? old?.photo_url ?? null,
+      photo_url: photoUrlForStorage(p.photo_url) ?? old?.photo_url ?? null,
       images: old?.images ?? [],                // NOT NULL (default [])
       user_photo_urls: old?.user_photo_urls ?? [], // NOT NULL (default [])
       image_url: old?.image_url ?? null,
