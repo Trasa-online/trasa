@@ -1,15 +1,25 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Mail } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
-// Podglad zapisow na powiadomienie o premierze - licznik w gornym pasku, a po najechaniu
+// Podglad zapisow na powiadomienie o premierze - licznik w gornym pasku, a po kliknieciu
 // lista ostatnich adresow. Zrodlo: tabela `waitlist` (RLS: odczyt tylko dla adminow).
 //
 // Skad sie biora te wpisy: modal "Premiera juz wkrotce" na spontaway.com. Kazde CTA na
 // landingu go otwiera, bo apki nie da sie jeszcze pobrac - to jedyne miejsce, w ktorym
 // mierzymy realne zainteresowanie przed startem. Zapisy z landingu maja source
 // "landing_modal"; starsze, z nieistniejacej juz strony zapisow, maja inne zrodlo.
+//
+// Dwie pulapki mobilne, naprawione 2026-09-04:
+// 1. POJEDYNCZE tapniecie nie dzialalo. Panel otwieral sie na `onMouseEnter`, a Safari
+//    syntezuje `mouseenter` TUZ PRZED `click` - wiec dotyk otwieral panel, po czym `click`
+//    natychmiast go zamykal. Stad hover tylko dla myszy (`pointerType === "mouse"`),
+//    a zamykanie przez klik poza panelem / Escape, bo na dotyku nie ma `mouseleave`.
+// 2. Panel wychodzil POZA LEWA krawedz ekranu. Byl kotwiczony `absolute right-0` do guzika,
+//    ktory na waskim ekranie stoi blisko srodka, wiec 300 px szerokosci nie miescilo sie
+//    w lewo. Na mobile panel jest wiec `fixed` i przyklejony do prawej krawedzi z szerokoscia
+//    ograniczona do widoku; od `sm` wraca kotwiczenie pod guzikiem.
 
 type Row = { email: string; created_at: string; source: string | null };
 
@@ -29,6 +39,7 @@ function whenLabel(iso: string) {
 
 export function WaitlistPeek() {
   const [open, setOpen] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ["admin-waitlist-peek"],
@@ -45,12 +56,38 @@ export function WaitlistPeek() {
 
   const count = data?.count ?? 0;
 
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: PointerEvent) => {
+      if (!wrapRef.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("pointerdown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
   return (
-    <div className="relative" onMouseEnter={() => setOpen(true)} onMouseLeave={() => setOpen(false)}>
+    <div
+      ref={wrapRef}
+      className="relative"
+      onPointerEnter={(e) => {
+        if (e.pointerType === "mouse") setOpen(true);
+      }}
+      onPointerLeave={(e) => {
+        if (e.pointerType === "mouse") setOpen(false);
+      }}
+    >
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-bold text-slate-700 transition-colors hover:bg-slate-50"
+        aria-expanded={open}
+        className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2.5 py-1.5 text-[11px] font-bold text-slate-700 transition-colors hover:bg-slate-50"
         title="Zapisy na powiadomienie o premierze"
       >
         <Mail className="h-3.5 w-3.5 text-slate-400" />
@@ -59,14 +96,14 @@ export function WaitlistPeek() {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full z-40 mt-2 w-[300px] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl shadow-slate-900/10">
+        <div className="fixed right-3 top-[3.75rem] z-50 w-[min(320px,calc(100vw-1.5rem))] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl shadow-slate-900/10 sm:absolute sm:right-0 sm:top-full sm:mt-2 sm:w-[300px]">
           <div className="flex items-baseline justify-between border-b border-slate-100 px-3 py-2">
             <span className="text-xs font-bold text-slate-700">Zapisy na premierę</span>
             <span className="text-[11px] text-slate-400">{count} łącznie</span>
           </div>
 
           {data?.rows.length ? (
-            <ul className="max-h-[320px] divide-y divide-slate-50 overflow-y-auto">
+            <ul className="max-h-[min(60vh,320px)] divide-y divide-slate-50 overflow-y-auto">
               {data.rows.map((r) => (
                 <li key={`${r.email}-${r.created_at}`} className="px-3 py-2">
                   <p className="truncate text-[12px] font-medium text-slate-800" title={r.email}>{r.email}</p>

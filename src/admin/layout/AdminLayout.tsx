@@ -45,8 +45,7 @@ function NavItems({ onNavigate }: { onNavigate?: () => void }) {
 }
 
 export function AdminLayout({ children }: { children: ReactNode }) {
-  const { email, tier } = useAdmin();
-  const isSuper = tier === "super_admin";
+  const { email } = useAdmin();
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
@@ -63,9 +62,6 @@ export function AdminLayout({ children }: { children: ReactNode }) {
         <div className="flex items-center gap-2 sm:gap-3">
           <WaitlistPeek />
           <span className="hidden sm:inline text-xs text-slate-500">{email}</span>
-          <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold ${isSuper ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600"}`}>
-            {isSuper ? "super-admin" : "operator"}
-          </span>
           <button onClick={() => supabase.auth.signOut()} className="text-xs text-slate-500 hover:text-slate-800 font-medium">Wyloguj</button>
         </div>
       </header>
