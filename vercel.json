@@ -9,26 +9,8 @@
       "destination": "/api/share?t=list&id=:id"
     },
     {
-      "source": "/",
-      "missing": [
-        {
-          "type": "query",
-          "key": "code"
-        },
-        {
-          "type": "query",
-          "key": "token_hash"
-        },
-        {
-          "type": "query",
-          "key": "error"
-        }
-      ],
-      "destination": "/landing.html"
-    },
-    {
       "source": "/(.*)",
-      "destination": "/index.html"
+      "destination": "/app.html"
     }
   ],
   "headers": [
