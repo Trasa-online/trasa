@@ -57,6 +57,5 @@
         }
       ]
     }
-  ],
-  "buildCommand": "export PLAYWRIGHT_BROWSERS_PATH=0 && (npx playwright install chromium || true) && npm run build"
+  ]
 }

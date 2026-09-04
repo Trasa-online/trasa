@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "dev:admin": "vite --config vite.config.admin.ts",
-    "build": "vite build && node scripts/prerender-landing.mjs",
+    "build": "vite build && node scripts/inject-landing-snapshot.mjs",
     "build:admin": "vite build --config vite.config.admin.ts && mv dist-admin/admin.html dist-admin/index.html",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
@@ -19,7 +19,7 @@
     "poc:dishes": "npx tsx scripts/poc-popular-dishes.ts",
     "check:both": "npm run build && npx cap sync ios",
     "check:native": "npm run build && npx cap sync ios && npx cap sync android",
-    "prerender": "node scripts/prerender-landing.mjs"
+    "prerender:snapshot": "node scripts/prerender-landing.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.3.1",
