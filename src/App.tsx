@@ -17,7 +17,7 @@ import { businessPanelPath } from "@/lib/businessRedirect";
 import { TrasaLogo } from "@/components/TrasaLogo";
 import { OnboardingProvider } from "@/components/OnboardingGuide";
 import { supabase } from "@/integrations/supabase/client";
-import { isNative } from "@/lib/platform";
+import { isNative, isWeb } from "@/lib/platform";
 import { PLANNING_DISABLED } from "@/lib/appMode";
 import { App as CapApp } from "@capacitor/app";
 import { Browser } from "@capacitor/browser";
@@ -495,7 +495,14 @@ function SplashController() {
   const location = useLocation();
   const booted = useRef(false);
 
+  // Splash to afordancja ZIMNEGO STARTU APLIKACJI NATYWNEJ. Na webie nie ma czego
+  // przykrywac: aplikacja konsumencka jest tam zablokowana, wiec zostaja strony
+  // marketingowe i legal - a na nich ten ekran tylko zaslania tresc. Na landingu bylo to
+  // szczegolnie kosztowne: przy kolejnym wejsciu tego samego dnia splash rysuje pelnoekranowy
+  // ScreenSkeleton na z-[9999], wiec przykrywal prerenderowana strone i to WLASNIE jego
+  // widac bylo jako "miganie szkieletu", mimo ze HTML przychodzil juz z trescia.
   const skipSplash =
+    isWeb ||
     location.pathname.startsWith("/biznes") ||
     location.pathname.startsWith("/dla-firm") ||
     location.pathname === "/auth" ||
