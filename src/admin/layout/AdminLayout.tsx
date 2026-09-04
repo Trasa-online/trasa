@@ -3,6 +3,7 @@ import { NavLink } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { OpsLogo } from "@/admin/OpsLogo";
 import { useAdmin } from "../RequireAdmin";
+import { WaitlistPeek } from "./WaitlistPeek";
 import { ShieldCheck, Users, BarChart3, Bug, Settings, ListChecks, MapPin, ScrollText, Menu, X, Flag, DollarSign, Building2 } from "lucide-react";
 import { useAdminPending } from "../modules/home/useAdminHome";
 
@@ -73,6 +74,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
           <OpsLogo tile={34} />
         </div>
         <div className="flex items-center gap-2 sm:gap-3">
+          <WaitlistPeek />
           <span className="hidden sm:inline text-xs text-slate-500">{email}</span>
           <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold ${isSuper ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600"}`}>
             {isSuper ? "super-admin" : "operator"}
