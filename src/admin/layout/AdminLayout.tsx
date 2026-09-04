@@ -3,6 +3,7 @@ import { NavLink } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { TrasaLogo } from "@/components/TrasaLogo";
 import { useAdmin } from "../RequireAdmin";
+import { WaitlistPeek } from "./WaitlistPeek";
 import { ShieldCheck, Users, BarChart3, Bug, Settings, ListChecks, MapPin, ScrollText, Menu, X, Flag, DollarSign } from "lucide-react";
 
 const NAV = [
@@ -60,6 +61,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
           <span className="text-sm font-black text-slate-800">trasa<span className="text-slate-700"> ops</span></span>
         </div>
         <div className="flex items-center gap-2 sm:gap-3">
+          <WaitlistPeek />
           <span className="hidden sm:inline text-xs text-slate-500">{email}</span>
           <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold ${isSuper ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600"}`}>
             {isSuper ? "super-admin" : "operator"}

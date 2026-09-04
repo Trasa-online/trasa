@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, lazy as reactLazy, Suspense } from "react";
+import SpontawayLanding from "./pages/SpontawayLanding";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -685,7 +686,6 @@ function lazy(factory: Parameters<typeof reactLazy>[0]) {
 }
 
 // Lazy-loaded public pages - one chunk each, fetched on demand
-const SpontawayLanding = lazy(() => import("./pages/SpontawayLanding"));
 const LandingV2 = lazy(() => import("./pages/LandingV2"));
 import ForBusinessPage from "./pages/ForBusinessPage";
 import Auth from "./pages/Auth";

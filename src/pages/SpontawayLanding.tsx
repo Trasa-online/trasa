@@ -314,7 +314,6 @@ function DownloadModal({ c, onClose }: { c: Copy; onClose: () => void }) {
             </div>
           )}
           <StoreBadges onDownload={() => {}} height={44} />
-          <p className="text-center text-[12px] font-medium text-spontaway-brown/70">{nb(c.footerCta.note)}</p>
         </div>
       </div>
     </div>
@@ -400,10 +399,10 @@ function Nav({ c, onDownload }: { c: Copy; onDownload: () => void }) {
 function Hero({ c, onDownload }: { c: Copy; onDownload: () => void }) {
   return (
     <section className="px-4 pt-6 lg:px-[50px] lg:pt-[53px]">
-      <div className="mx-auto flex max-w-[1340px] flex-col items-center rounded-[28px] bg-spontaway-yellow px-6 py-10 text-center lg:h-[644px] lg:flex-row lg:items-center lg:justify-between lg:rounded-[36px] lg:px-[48px] lg:py-0 lg:text-left">
+      <div className="mx-auto flex max-w-[1340px] flex-col items-center rounded-[28px] bg-spontaway-yellow px-5 py-10 text-center lg:h-[644px] lg:flex-row lg:items-center lg:justify-between lg:rounded-[36px] lg:px-[40px] lg:py-0 lg:text-left">
         {/* Kolumna z tekstem */}
-        <div className="order-1 w-full lg:w-[600px] lg:shrink-0">
-          <h1 className="font-brand text-[32px] leading-[1.15] text-spontaway-orange lg:text-[42px] lg:leading-[1.2]">
+        <div className="order-1 w-full lg:w-[560px] lg:shrink-0">
+          <h1 className="font-brand text-[32px] leading-[1.15] text-spontaway-orange lg:text-[40px] lg:leading-[1.2]">
             {nb(c.hero.titleA)}
             <br className="hidden lg:block" />{" "}
             {nb(c.hero.titleB)}
@@ -433,7 +432,7 @@ function Hero({ c, onDownload }: { c: Copy; onDownload: () => void }) {
           alt="Aplikacja Spontaway: trasa po Łodzi i profil z wyjazdem do Gdańska"
           width={722}
           height={774}
-          className="order-2 mt-6 w-full max-w-[320px] lg:mt-0 lg:w-[600px] lg:max-w-none"
+          className="order-2 mt-6 w-full max-w-[420px] lg:mt-0 lg:w-[680px] lg:max-w-none"
         />
 
       </div>
