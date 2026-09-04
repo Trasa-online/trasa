@@ -398,7 +398,7 @@ function Nav({ c, onDownload }: { c: Copy; onDownload: () => void }) {
 
 function Hero({ c, onDownload }: { c: Copy; onDownload: () => void }) {
   return (
-    <section className="px-4 pt-6 lg:px-[50px] lg:pt-[53px]">
+    <section className="px-4 pb-12 pt-6 lg:px-[50px] lg:pb-[80px] lg:pt-[53px]">
       <div className="mx-auto flex max-w-[1340px] flex-col items-center rounded-[28px] bg-spontaway-yellow px-5 py-10 text-center lg:h-[644px] lg:flex-row lg:items-center lg:justify-between lg:rounded-[36px] lg:px-[40px] lg:py-0 lg:text-left">
         {/* Kolumna z tekstem */}
         <div className="order-1 w-full lg:w-[560px] lg:shrink-0">
@@ -432,7 +432,7 @@ function Hero({ c, onDownload }: { c: Copy; onDownload: () => void }) {
           alt="Aplikacja Spontaway: trasa po Łodzi i profil z wyjazdem do Gdańska"
           width={722}
           height={774}
-          className="order-2 mt-6 w-full max-w-[420px] lg:mt-0 lg:w-[680px] lg:max-w-none"
+          className="order-2 -mx-5 mt-6 w-[calc(100%+40px)] max-w-none lg:mx-0 lg:mt-0 lg:w-[680px]"
         />
 
       </div>
@@ -466,7 +466,7 @@ function Feature({
         <div className="order-2 w-full text-center lg:order-none lg:w-[460px] lg:shrink-0 lg:text-left">
           <h2 className="whitespace-normal font-brand text-[24px] leading-[1.2] text-spontaway-orange sm:text-[26px] lg:whitespace-pre-line lg:text-[36px]">{nb(title)}</h2>
           <p style={{ ["--bw" as string]: `${bodyWidth}px` }} className="mx-auto mt-3 whitespace-normal text-[15px] leading-[1.35] text-spontaway-brown lg:mx-0 lg:max-w-[var(--bw)] lg:whitespace-pre-line lg:text-[18px]">{nb(body)}</p>
-          <Pill tone="orange" onClick={onDownload} className="mt-6 h-[44px] px-6 text-[14px] lg:mt-[64px] lg:h-[44px] lg:text-[15px]">{cta}</Pill>
+          <Pill tone="orange" onClick={onDownload} className="mt-6 h-[44px] w-[216px] px-6 text-[14px] lg:mt-[64px] lg:h-[44px] lg:w-auto lg:text-[15px]">{cta}</Pill>
         </div>
         <img src={img} alt={alt} width={imgWidth} height={imgHeight} className={`order-1 lg:order-none ${imgClass}`} loading="lazy" />
       </div>
