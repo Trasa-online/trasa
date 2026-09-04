@@ -206,6 +206,26 @@ export function cityFromAddress(address?: string | null): string | null {
 // Dodaj miejsce do listy (discovery_items). Dedup po nazwie. Zwraca false gdy juz bylo.
 // `opts.note` uzywaj WYLACZNIE do przywracania WLASNEGO wpisu (cofnij usuniecie) - normalny
 // zapis miejsca zawsze startuje z pusta notka.
+// Miejsce wybrane z wyszukiwarki Google nie niesie UUID-a z naszej bazy - ma tylko
+// google_place_id. A wizytowka dociaga profil biznesowy WYLACZNIE po `places.id`
+// (fetchEnrichedPlace), wiec bez tego powiazania lokal z wykupiona wizytowka wyswietlal sie
+// jako zwykle miejsce z danymi Google (zgloszenie Nat 2026-09-04: Wanderlust). Dopinamy wiec
+// UUID, jesli takie miejsce juz u nas jest.
+//
+// Dopasowanie po google_place_id jest bezpieczne: to identyfikator Google, nie nazwa, wiec
+// nie zlaczy dwoch roznych lokali. 5 z 6 aktywnych profili biznesowych ma go wypelnionego.
+async function resolveDbPlaceId(googlePlaceId?: string | null): Promise<string | null> {
+  const gp = (googlePlaceId ?? "").trim();
+  if (!gp) return null;
+  try {
+    const { data } = await (supabase as any)
+      .from("places").select("id").eq("google_place_id", gp).limit(1).maybeSingle();
+    return data?.id ?? null;
+  } catch {
+    return null;   // brak dopasowania nie moze blokowac dodania miejsca
+  }
+}
+
 export async function addPlaceToList(listId: string, place: PlaceForList, opts?: { note?: string | null }): Promise<boolean> {
   const { data: existing } = await (supabase as any)
     .from("discovery_items").select("order_index, place_name").eq("collection_id", listId);
@@ -216,6 +236,9 @@ export async function addPlaceToList(listId: string, place: PlaceForList, opts?:
   // project_list_cocreation_architecture). getSession = lokalny odczyt, bez zapytania sieciowego.
   const { data: sess } = await (supabase as any).auth.getSession();
   const addedBy = sess?.session?.user?.id ?? null;
+  // Bez tego lokal z wizytowka biznesowa dodany z wyszukiwarki otwieral sie jako zwykle
+  // miejsce z danymi Google - patrz resolveDbPlaceId.
+  const dbPlaceId = place.place_id ?? (await resolveDbPlaceId(place.google_place_id));
   const { error } = await (supabase as any).from("discovery_items").insert({
     collection_id: listId,
     place_name: place.place_name,
@@ -228,7 +251,7 @@ export async function addPlaceToList(listId: string, place: PlaceForList, opts?:
     city: place.city ?? cityFromAddress(place.address),
     latitude: place.latitude,
     longitude: place.longitude,
-    place_id: place.place_id,
+    place_id: dbPlaceId,
     google_place_id: place.google_place_id ?? null,
     rating: place.rating ?? null,
     photo_url: place.photo_url,

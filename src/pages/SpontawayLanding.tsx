@@ -54,8 +54,9 @@ const COPY = {
     business: {
       navLink: "Dla firm",
       title: "Prowadzisz lokal?",
-      body: "Dodaj swoją wizytówkę i pokaż się osobom, które właśnie planują, gdzie pójść. Wizytówka jest za darmo.",
-      cta: "Sprawdź, jak to działa",
+      body: "Dodaj swoją wizytówkę i pokaż się podróżującym, którzy właśnie planują, gdzie i co odwiedzić!",
+      free: "Założenie konta nic nie kosztuje.",
+      cta: "Załóż konto",
       login: "Zaloguj się do panelu",
     },
     footerCta: { title: "Odkrywaj, planuj, dziel się!", sub: "Pobierz Spontaway i zacznij zabawę", note: "Za darmo na iOS... i wkrótce na Android!" },
@@ -100,8 +101,9 @@ const COPY = {
     business: {
       navLink: "For business",
       title: "Running a place?",
-      body: "Add your listing and show up for people who are deciding where to go right now. Listings are free.",
-      cta: "See how it works",
+      body: "Add your listing and show up for travellers who are deciding right now where to go and what to see!",
+      free: "Creating an account is free.",
+      cta: "Create an account",
       login: "Log in to the panel",
     },
     footerCta: { title: "Discover, plan, share!", sub: "Get Spontaway and start the fun", note: "Free on iOS... and soon on Android!" },
@@ -512,27 +514,32 @@ function BusinessStrip({ c }: { c: Copy }) {
   const track = (placement: string) => posthog.capture("landing_business_click", { placement });
   return (
     <section className="mx-auto max-w-[1440px] px-4 pb-4 pt-12 lg:px-[50px] lg:pt-[88px]">
-      <div className="flex flex-col items-center gap-6 rounded-[28px] border border-slate-200 bg-[#F8FAFC] px-6 py-10 text-center lg:flex-row lg:justify-between lg:gap-10 lg:rounded-[36px] lg:px-[70px] lg:py-[56px] lg:text-left">
-        <div>
-          <h2 className="font-brand text-[24px] leading-[1.2] text-spontaway-brown sm:text-[26px] lg:text-[36px]">
-            {nb(c.business.title)}
-          </h2>
-          <p className="mx-auto mt-3 max-w-[520px] text-[15px] leading-[1.4] text-slate-600 lg:mx-0 lg:text-[17px]">
-            {nb(c.business.body)}
-          </p>
-        </div>
-        <div className="flex w-full shrink-0 flex-col items-center gap-3 sm:w-auto sm:flex-row lg:flex-col lg:items-center">
+      {/* Niebieski kafelek, bo caly kontekst B2B ma w marce wlasna identyfikacje (CLAUDE.md) -
+          pomarancz zostaje dla konsumenta. Granat sluzy za kolor tekstu i guzikow: na tym
+          niebieskim daje kontrast 8:1, wiec czyta sie tez przy slabym swietle. */}
+      <div className="mx-auto flex max-w-[1340px] flex-col items-center rounded-[28px] bg-[#7B9CF5] px-6 py-12 text-center lg:rounded-[36px] lg:px-[70px] lg:py-[64px]">
+        <h2 className="max-w-[16ch] font-brand text-[28px] leading-[1.15] text-white sm:text-[32px] lg:text-[40px]">
+          {nb(c.business.title)}
+        </h2>
+        <p className="mt-5 max-w-[42ch] text-[15px] leading-[1.5] text-[#1B2559] lg:text-[17px]">
+          {nb(c.business.body)}
+        </p>
+        <p className="mt-4 max-w-[42ch] text-[15px] font-semibold leading-[1.5] text-[#1B2559] lg:text-[17px]">
+          {nb(c.business.free)}
+        </p>
+
+        <div className="mt-8 flex w-full flex-col items-center gap-3 sm:flex-row sm:justify-center">
           <Link
-            to="/dla-firm"
+            to="/biznes/start"
             onClick={() => track("section_cta")}
-            className="inline-flex h-[44px] w-full items-center justify-center whitespace-nowrap rounded-full bg-blue-600 px-6 text-[14px] font-extrabold text-white transition-colors hover:bg-blue-700 active:scale-[0.98] sm:w-auto lg:h-[47px] lg:text-[15px]"
+            className="inline-flex h-[48px] w-full max-w-[300px] items-center justify-center rounded-full bg-[#1B2559] px-6 text-[15px] font-extrabold text-white transition-opacity hover:opacity-90 active:scale-[0.98] sm:w-auto sm:min-w-[220px]"
           >
             {c.business.cta}
           </Link>
           <Link
             to="/auth?business=true"
             onClick={() => track("section_login")}
-            className="whitespace-nowrap text-[14px] font-semibold text-blue-600 underline-offset-2 hover:underline"
+            className="inline-flex h-[48px] w-full max-w-[300px] items-center justify-center rounded-full border-2 border-[#1B2559] px-6 text-[15px] font-extrabold text-[#1B2559] transition-colors hover:bg-[#1B2559]/10 active:scale-[0.98] sm:w-auto sm:min-w-[220px]"
           >
             {c.business.login}
           </Link>

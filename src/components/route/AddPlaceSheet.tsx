@@ -156,11 +156,13 @@ export default function AddPlaceSheet({ open, onClose, city, existingPlaces, onA
   // Siatka: dodane z Google (manual) + zapisane, dedup po nazwie, bez tych juz w trasie.
   const existingNameSet = useMemo(() => new Set((existingPlaces ?? []).map(keyOf).filter(Boolean)), [existingPlaces]);
 
-  // Zapisane (do wyboru) = dodane z Google + zapisane, dedup, BEZ tych juz w trasie/liscie.
+  // Sekcja "Zapisane" = TYLKO zapisane miejsca, bez tych juz w trasie/liscie.
+  // Miejsca wybrane wlasnie z wyszukiwarki (`manual`) maja wlasny blok na GORZE arkusza -
+  // trzymanie ich takze tutaj dublowaloby ten sam kafelek w dwoch miejscach.
   const tiles = useMemo(() => {
-    const seen = new Set<string>();
+    const seen = new Set(manual.map(keyOf).filter(Boolean));
     const out: PlaceForList[] = [];
-    for (const p of [...manual, ...savedPlaces.map(toPlaceForList)]) {
+    for (const p of savedPlaces.map(toPlaceForList)) {
       const k = keyOf(p);
       if (!k || seen.has(k)) continue;
       if (existingNameSet.has(k)) continue;
@@ -290,6 +292,22 @@ export default function AddPlaceSheet({ open, onClose, city, existingPlaces, onA
             </div>
           ) : (
             <div className="pt-1 space-y-4">
+              {/* Miejsca WLASNIE wybrane z wyszukiwarki. Trafiaja tez do `tiles`, ale tam ladowaly
+                  w sekcji "Zapisane" - czyli pod listami, na samym dole arkusza. Po powrocie
+                  z wyszukiwarki wygladalo to, jakby wybor przepadl (zgloszenie Nat 2026-09-04).
+                  Pokazujemy je wiec od razu pod wyszukiwarka, nad akcja "Dodaj nowe miejsce". */}
+              {manual.length > 0 && (
+                <div className="space-y-1.5">
+                  {manual.map((m, i) => renderPlaceRow({
+                    rowKey: `manual-${keyOf(m)}-${i}`,
+                    place: m,
+                    subtitle: m.address,
+                    onToggle: () => toggle(m),
+                    selected: isSel(m),
+                  }))}
+                </div>
+              )}
+
               {/* Kolejnosc sekcji (2026-08-28): akcja "Dodaj nowe miejsce" -> TWOJE LISTY -> "Zapisane"
                   (lista ogolna) -> "Juz dodane" (info, na samym dole). */}
               <button onClick={() => inputRef.current?.focus()} className="w-full flex items-center gap-3 rounded-2xl bg-secondary/60 px-3 py-2.5 text-left active:bg-secondary transition-colors">
