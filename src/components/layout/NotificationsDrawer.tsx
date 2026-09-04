@@ -8,6 +8,7 @@ import { formatDistanceToNow } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
 import { avatarSrc } from "@/lib/avatar";
 import SheetSkeleton from "@/components/layout/SheetSkeleton";
+import { track } from "@/lib/analytics";
 
 interface Notification {
   id: string;
@@ -227,8 +228,10 @@ export default function NotificationsDrawer({ open, onClose, userId }: Props) {
                 // Tap w awatar / tresc -> profil publiczny osoby, ktora wywolala powiadomienie.
                 // Systemowe (bez autora, np. przypomnienie o wyjezdzie) zostaja nieklikalne.
                 const actorUsername = n.actor?.username ?? null;
+                // Powrot do apki z powiadomienia - domykamy petle spoleczna w analityce.
+                // Typ mowi, ktore powiadomienia realnie sprowadzaja ludzi z powrotem.
                 const openActor = actorUsername
-                  ? () => { onClose(); navigate(`/profil/${actorUsername}`); }
+                  ? () => { track("notification_opened", { type: n.type }); onClose(); navigate(`/profil/${actorUsername}`); }
                   : undefined;
                 const timeAgo = formatDistanceToNow(new Date(n.created_at), { addSuffix: true, locale: dateLocale() });
                 const labelText = cfg.label(username, n.metadata);
@@ -294,7 +297,7 @@ export default function NotificationsDrawer({ open, onClose, userId }: Props) {
                       )}
                       {(n.type === "friend_request" || n.type === "friend_accept") && (
                         <button
-                          onClick={() => { onClose(); navigate("/moj-profil"); }}
+                          onClick={() => { track("notification_opened", { type: n.type }); onClose(); navigate("/moj-profil"); }}
                           className="mt-2 px-3 py-1.5 rounded-full bg-primary text-white text-xs font-semibold active:scale-95 transition-transform"
                         >
                           {n.type === "friend_request" ? "Zobacz zaproszenie →" : "Zobacz znajomych →"}
@@ -302,7 +305,7 @@ export default function NotificationsDrawer({ open, onClose, userId }: Props) {
                       )}
                       {n.type === "list_updated" && (
                         <button
-                          onClick={() => { onClose(); navigate(`/lista/${n.metadata?.collection_id ?? ""}`); }}
+                          onClick={() => { track("notification_opened", { type: n.type }); onClose(); navigate(`/lista/${n.metadata?.collection_id ?? ""}`); }}
                           className="mt-2 px-3 py-1.5 rounded-full bg-primary text-white text-xs font-semibold active:scale-95 transition-transform"
                         >
                           Zobacz listę →
@@ -310,7 +313,7 @@ export default function NotificationsDrawer({ open, onClose, userId }: Props) {
                       )}
                       {(n.type === "collection_approved" || n.type === "collection_rejected") && (
                         <button
-                          onClick={() => { onClose(); navigate("/moj-profil"); }}
+                          onClick={() => { track("notification_opened", { type: n.type }); onClose(); navigate("/moj-profil"); }}
                           className="mt-2 px-3 py-1.5 rounded-full bg-primary text-white text-xs font-semibold active:scale-95 transition-transform"
                         >
                           {n.type === "collection_rejected" ? "Zobacz szczegóły →" : "Zobacz listy →"}

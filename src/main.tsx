@@ -51,7 +51,11 @@ function PostHogBoot({ children }: { children: React.ReactNode }) {
       posthog.init(import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN, {
         api_host: import.meta.env.VITE_PUBLIC_POSTHOG_HOST,
         defaults: "2026-01-30",
-        autocapture: true,
+        // autocapture WYLACZONE (2026-09-04): lapalo kazde klikniecie w DOM i robilo 70%
+        // calego wolumenu zdarzen (11,7 tys. na 17 tys. w 30 dni), zjadajac limit planu i
+        // topiac nazwane zdarzenia produktowe w szumie. Bylo tez jednym z podejrzanych
+        // w audycie baterii. Mierzymy wylacznie zdarzenia nazwane - patrz lib/analytics.ts.
+        autocapture: false,
         // capture_pageview: false - apka na HashRouter, automatyczny $pageview (History API)
         // nie lapie zmian route (tylko pierwszy load). Pageviews capturuje recznie RouteTracker
         // (App.tsx) przy kazdej zmianie lokalizacji - dziala tak samo na native i web.

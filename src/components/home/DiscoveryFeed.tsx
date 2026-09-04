@@ -40,6 +40,7 @@ import { toast } from "sonner";
 import { PLANNING_DISABLED } from "@/lib/appMode";
 import { createWyjazdFromPlaces } from "@/lib/createWyjazd";
 import { setGpsReference } from "@/lib/distanceReference";
+import { track } from "@/lib/analytics";
 
 type DiscoveryItem = {
   id: string;
@@ -1619,6 +1620,7 @@ export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityCh
       } else {
         set.add(colId); dates[colId] = new Date().toISOString();
         if (user) { void saveCollectionDb(user.id, colId); void (supabase as any).rpc("notify_collection_saved", { p_collection_id: colId }); }
+        track("list_saved", { collection_id: colId });
         toast.success(t("toast.saved"));
       }
       localStorage.setItem("trasa_saved_collections", JSON.stringify([...set]));

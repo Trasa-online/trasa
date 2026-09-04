@@ -53,7 +53,6 @@ const COPY = {
     stats: { heading: "SPONTAWAY TO", countries: "Krajów", cities: "Miast", possibilities: "Możliwości" },
     business: {
       navLink: "Dla firm",
-      eyebrow: "Dla firm",
       title: "Prowadzisz lokal?",
       body: "Dodaj swoją wizytówkę i pokaż się osobom, które właśnie planują, gdzie pójść. Wizytówka jest za darmo.",
       cta: "Sprawdź, jak to działa",
@@ -100,7 +99,6 @@ const COPY = {
     stats: { heading: "SPONTAWAY IS", countries: "Countries", cities: "Cities", possibilities: "Possibilities" },
     business: {
       navLink: "For business",
-      eyebrow: "For business",
       title: "Running a place?",
       body: "Add your listing and show up for people who are deciding where to go right now. Listings are free.",
       cta: "See how it works",
@@ -514,13 +512,10 @@ function Stats({ c }: { c: Copy }) {
 function BusinessStrip({ c }: { c: Copy }) {
   const track = (placement: string) => posthog.capture("landing_business_click", { placement });
   return (
-    <section className="mx-auto max-w-[1440px] px-4 pb-4 lg:px-[50px]">
+    <section className="mx-auto max-w-[1440px] px-4 pb-4 pt-12 lg:px-[50px] lg:pt-[88px]">
       <div className="flex flex-col items-center gap-6 rounded-[28px] border border-slate-200 bg-[#F8FAFC] px-6 py-10 text-center lg:flex-row lg:justify-between lg:gap-10 lg:rounded-[36px] lg:px-[70px] lg:py-[56px] lg:text-left">
         <div>
-          <p className="text-[12px] font-extrabold uppercase tracking-[1.4px] text-blue-600 lg:text-[13px]">
-            {c.business.eyebrow}
-          </p>
-          <h2 className="mt-2 font-brand text-[24px] leading-[1.2] text-spontaway-brown sm:text-[26px] lg:text-[36px]">
+          <h2 className="font-brand text-[24px] leading-[1.2] text-spontaway-brown sm:text-[26px] lg:text-[36px]">
             {nb(c.business.title)}
           </h2>
           <p className="mx-auto mt-3 max-w-[520px] text-[15px] leading-[1.4] text-slate-600 lg:mx-0 lg:text-[17px]">

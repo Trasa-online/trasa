@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { track } from "@/lib/analytics";
 
 // Polubienia TRAS (tabela likes). Powiadomienie ownera leci przez SECURITY DEFINER trigger
 // (notify_route_like) - nic z klienta.
@@ -20,6 +21,7 @@ export async function fetchRouteLike(routeId: string, userId?: string | null): P
 }
 
 export async function toggleRouteLike(routeId: string, userId: string, currentlyLiked: boolean): Promise<boolean> {
+  if (!currentlyLiked) track("route_liked", { route_id: routeId });
   if (currentlyLiked) {
     const { error } = await (supabase as any).from("likes").delete().eq("route_id", routeId).eq("user_id", userId);
     if (error) { console.warn("[likes] unlike route:", error.message); return currentlyLiked; }
