@@ -24,7 +24,7 @@ import { GoogleGlyph } from "@/components/icons/GoogleGlyph";
 import { openExternal } from "@/lib/openExternal";
 import SheetSkeleton from "@/components/layout/SheetSkeleton";
 
-type Step = "entry" | "listCity" | "listName" | "listPick" | "tripMode" | "trip" | "tripDates" | "tripPeople" | "tripPick";
+type Step = "entry" | "listCity" | "listName" | "listPick" | "tripMode" | "trip" | "tripDates" | "tripPeople";
 type TripMode = "future" | "past";
 
 const NBSP = " ";
@@ -63,9 +63,10 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
   const [savePlace, setSavePlace] = useState<SavePlaceInput | null>(null);   // "Zapisz to miejsce" -> SavePlaceSheet
   const listSearchRef = useRef<HTMLInputElement>(null);
   const [tripCity, setTripCity] = useState(defaultCity);   // miasto wyjazdu (wyzej: wspolny pickCity dla wyszukiwarki)
-  // Aktywne miasto dla wyszukiwarki miejsc: lista (listPick) LUB wyjazd (tripPick) - ten sam UI/hook.
-  const pickCity = step === "tripPick" ? tripCity : listCity;
-  const pickActive = open && (step === "listPick" || step === "tripPick");
+  // Miasto dla wyszukiwarki miejsc. Kiedys dzielil ja krok wyboru miejsc do wyjazdu; dzis
+  // miejsca do wyjazdu dodaje sie juz w widoku wyjazdu, wiec zostaje sama lista.
+  const pickCity = listCity;
+  const pickActive = open && step === "listPick";
   // Srodek wybranego miasta (geokod) - TWARDY filtr wynikow Google w obrebie miasta (inaczej "ato
   // ramen" dla Wroclawia zwracalo pozycje z USA). Zawezenie + dopisanie miasta do zapytania.
   const { data: listGeoCenter = null } = useQuery({
@@ -124,12 +125,6 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
     queryKey: ["saved-places", user?.id],
     enabled: !!user?.id && open,
     queryFn: () => fetchSavedPlaces(user!.id),
-  });
-  // Zapisane miejsca dopasowane do MIASTA wyjazdu (adres zawiera miasto LUB p.city == miasto).
-  // Wyjazd = tylko to konkretne miasto; gdy nic nie pasuje -> sekcja sie nie pokazuje (patrz tripPick).
-  const tripSaved = (savedPlaces as SavedPlace[]).filter((p) => {
-    const c = normCityName(tripCity);
-    return !c || normCityName(p.city) === c || normCityName(p.address).includes(c);
   });
 
   const close = () => onClose();
@@ -230,20 +225,22 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
     const end = new Date(start.getTime() + (Math.max(1, days) - 1) * 86400000);
     return { startDate: iso(start), endDate: iso(end) };
   };
-  // Krok dat -> dalej wg trybu: przyszly wyjazd tworzymy od razu, przeszly idzie po miejsca.
+  // Krok dat -> od razu tworzymy wyjazd, TAK SAMO dla przyszlego i przeszlego.
+  // Wczesniej przeszly szedl jeszcze przez wybor miejsc w kreatorze; teraz miejsca dodaje
+  // sie dopiero w widoku wyjazdu, jak w wyjezdzie przyszlym (decyzja Nat 2026-09-05).
   const afterDates = (start: Date | null = tripStart, days: number = tripDays) => {
-    if (tripMode === "past") setStep("tripPick");
-    else void proceedTrip(start, days);
+    void proceedTrip(start, days);
   };
 
-  // Trip step "Dalej": PRZYSZLY wyjazd = tworzymy PUSTY wyjazd (etap propozycji) i wchodzimy do
-  // widoku wyjazdu (miejsca dodaje sie tam jako propozycje). PRZESZLY = stary flow z wyborem miejsc
-  // (tripPick -> edytor wspomnienia). Redesign 2026-08-25 (Nat): tworzenie = tylko meta.
+  // Kreator tworzy PUSTY szkic wyjazdu i wpuszcza od razu do widoku wyjazdu - tam dodaje sie
+  // miejsca. Etap zalezy od trybu: przyszly = "planning" (propozycje), przeszly = "completed"
+  // (wspomnienie). Kreator ustala wylacznie meta: nazwe, miasto, daty, osoby.
   const proceedTrip = async (startArg: Date | null = tripStart, daysArg: number = tripDays) => {
     if (!user) { close(); navigate("/auth"); return; }
     setCreating(true);
     haptics.light();
-    const id = await createEmptyWyjazd(user.id, tripCity, tripName.trim() || `Wyjazd do ${tripCity}`, tripDatesForSave(startArg, daysArg));
+    const id = await createEmptyWyjazd(user.id, tripCity, tripName.trim() || `Wyjazd do ${tripCity}`,
+      { ...tripDatesForSave(startArg, daysArg), tripType: tripMode === "past" ? "completed" : "planning" });
     if (!id) { setCreating(false); haptics.error(); toast.error("Nie udało się utworzyć wyjazdu"); return; }
     if (tripPeople.length) {
       try { await inviteUsersToRoute({ id, city: tripCity ?? null, title: tripName.trim() || null, group_session_id: null }, tripPeople.map((p) => p.id), user.id); }
@@ -253,42 +250,9 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
     haptics.success();
     queryClient.invalidateQueries({ queryKey: ["profile-trip-feed", user.id] });
     close();
-    // Wejscie do WIDOKU WYJAZDU (SharedRoute = widok "Wyjazd do Pragi") - etap propozycji przez trip_type.
+    // Wejscie do WIDOKU WYJAZDU (SharedRoute) - swiezy szkic, miejsca dodaje sie guzikiem "+".
+    // Etap (propozycje / wspomnienie) rozstrzyga trip_type ustawiony wyzej.
     navigate(`/route/${id}`);
-  };
-
-  // Tworzenie PRZESZLEGO wyjazdu (wspomnienie) z wybranymi miejscami - stary flow (tripPick).
-  const createTrip = async () => {
-    if (!user) { close(); navigate("/auth"); return; }
-    const savedSel = savedPlaces.filter((p) => selected.has(p.id)).map(toPlaceForList);
-    const seen = new Set<string>();
-    const picked = [...manualPlaces, ...savedSel].filter((p) => { const k = keyOfPlace(p); if (!k || seen.has(k)) return false; seen.add(k); return true; });
-    const tripType: "planning" | "completed" = tripMode === "past" ? "completed" : "planning";
-    setCreating(true);
-    haptics.light();
-    const places = picked.map((p) => ({
-      place_name: p.place_name, category: p.category, address: p.address,
-      latitude: p.latitude, longitude: p.longitude, photo_url: p.photo_url, place_id: p.place_id,
-    }));
-    const d = tripDatesForSave();
-    const id = await createWyjazdFromPlaces(user.id, tripCity, tripName.trim() || `Wyjazd do ${tripCity}`, places,
-      { start_date: d.startDate, end_date: d.endDate }, { tripType });
-    if (!id) { setCreating(false); haptics.error(); toast.error("Nie udało się utworzyć wyjazdu"); return; }
-    // Zaproszeni z "Dodaj osoby" -> inviteUsersToRoute (sesja grupowa + is_shared=true + notyf).
-    if (tripPeople.length) {
-      try { await inviteUsersToRoute({ id, city: tripCity ?? null, title: tripName.trim() || null, group_session_id: null }, tripPeople.map((p) => p.id), user.id); }
-      catch (e: any) { console.warn("[CreateFlowSheet] invite failed:", e?.message ?? e); }
-    }
-    setCreating(false);
-    haptics.success();
-    // Odswiez feed wyjazdow na profilu - bez tego nowa robocza trasa NIE pojawia sie od razu
-    // (nawigacja na ten sam route /moj-profil nie remountuje profilu, query zostaje w cache).
-    queryClient.invalidateQueries({ queryKey: ["profile-trip-feed", user.id] });
-    close();
-    // past -> edytor wspomnienia (Notki/Zdjecia/okladka); future -> robocza na profilu (podzakladka
-    // Robocze, inaczej domyslnie ląduje na Wspomnienia i user nie widzi swiezej roboczej).
-    if (tripMode === "past") { navigate(`/review-summary?route=${id}&edit=1&step=2`); }
-    else { toast.success("Zapisano jako roboczą"); navigate("/moj-profil?tab=wyjazdy&sub=robocze"); }
   };
 
   // ── wspolny nagłowek Anuluj / tytul / Dalej ──
@@ -516,7 +480,7 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
               onBack={() => setStep("trip")}
               backLabel="Wstecz"
               onNext={() => afterDates()}
-              nextLabel={creating ? "..." : (tripMode === "past" ? "Dalej" : "Utwórz")}
+              nextLabel={creating ? "..." : "Utwórz"}
               nextEnabled={!creating}
             />
             <div className="flex-1 min-h-0 overflow-y-auto pb-[max(32px,calc(env(safe-area-inset-bottom,0px)+24px))]">
@@ -540,61 +504,6 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
                   {`Pomiń - dodam daty później`}
                 </button>
               </div>
-            </div>
-          </>
-        )}
-
-        {/* ── WYJAZD: wyszukiwarka Google + wybor miejsc (jak przy tworzeniu listy; w ARKUSZU, bez ComposeWyjazd) ── */}
-        {step === "tripPick" && (
-          <>
-            <Header title={tripName.trim() || `Wyjazd do ${tripCity}`} onBack={() => setStep("trip")}
-              onNext={createTrip} nextLabel={creating ? "..." : "Zapisz wyjazd"} nextEnabled={!creating && (selected.size > 0 || manualPlaces.length > 0)} />
-            <PeopleRow kind="wyjazdu" people={tripPeople} onClick={() => setStep("tripPeople")} />
-            <div className="px-5 pt-1 pb-2 shrink-0">
-              <div className="relative">
-                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <input ref={listSearchRef} value={listQuery} onChange={(e) => setListQuery(e.target.value)} placeholder="Szukaj miejsca"
-                  className="w-full h-12 rounded-xl bg-secondary/60 border border-border/60 pl-10 pr-11 text-base text-foreground placeholder:text-muted-foreground/70 outline-none focus:ring-2 focus:ring-orange-500/30" />
-                {listQuery && (
-                  <button onClick={() => setListQuery("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 h-7 w-7 rounded-full bg-[#ebebeb]/60 flex items-center justify-center active:scale-90 transition-transform">
-                    <X className="h-3.5 w-3.5 text-muted-foreground" />
-                  </button>
-                )}
-              </div>
-            </div>
-            <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-[max(16px,env(safe-area-inset-bottom))]">
-              {listSearchMode ? (
-                <div className="pt-1 space-y-1.5">
-                  {listSearching && <div className="py-6 text-center text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin inline" /></div>}
-                  {listBlocked && <p className="py-6 text-center text-sm text-muted-foreground">{`Wyszukiwarka chwilowo niedostępna. Wybierz z${NBSP}zapisanych.`}</p>}
-                  {!listSearching && !listBlocked && listResults.length === 0 && (
-                    <p className="py-6 text-center text-sm text-muted-foreground">Brak wyników</p>
-                  )}
-                  {listResults.map((r, i) => renderListRow({
-                    rowKey: `${keyOfPlace(r)}-${i}`, place: r, subtitle: r.address,
-                    onToggle: () => pickResult(r), selected: manualPlaces.some((m) => keyOfPlace(m) === keyOfPlace(r)),
-                  }))}
-                </div>
-              ) : loadingSaved ? (
-                <SheetSkeleton variant="places" rows={3} className="pt-1" />
-              ) : (
-                <div className="pt-1 space-y-1.5">
-                  {manualPlaces.map((p, i) => renderListRow({
-                    rowKey: `m-${keyOfPlace(p)}-${i}`, place: p, subtitle: tripCity,
-                    onToggle: () => removeManual(p), selected: true,
-                  }))}
-                  {/* Zapisane TYLKO z miasta wyjazdu; gdy nic nie pasuje - sekcja sie nie pokazuje (prosba Nat). */}
-                  {tripSaved.length > 0 && (
-                    <>
-                      <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground pt-1 px-0.5">Twoje zapisane miejsca</p>
-                      {tripSaved.map((p) => renderListRow({
-                        rowKey: p.id, place: p, subtitle: p.city || tripCity,
-                        onToggle: () => toggleSel(p.id), selected: selected.has(p.id),
-                      }))}
-                    </>
-                  )}
-                </div>
-              )}
             </div>
           </>
         )}
