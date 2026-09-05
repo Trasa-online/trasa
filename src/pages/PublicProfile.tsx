@@ -133,20 +133,17 @@ export default function PublicProfile() {
         .from("routes").select(cols)
         .eq("user_id", profile!.id).eq("is_shared", true).eq("hidden_by_admin", false)
         .order("created_at", { ascending: false });
-      // ...ORAZ wyjazdy GRUPOWE, w ktorych bral udzial (nie jest hostem). Wczesniej na cudzym
-      // profilu widac bylo tylko to, co sam zalozyl - wspolny wyjazd znikal wszystkim poza
-      // hostem (zgloszenie Nat 2026-08-31). Tylko OPUBLIKOWANE - robocze zostaja prywatne.
-      const { data: memberSessions } = await (supabase as any)
-        .from("group_session_members").select("session_id").eq("user_id", profile!.id);
-      const sessionIds = (memberSessions ?? []).map((m: any) => m.session_id).filter(Boolean);
-      let groupRows: any[] = [];
-      if (sessionIds.length) {
-        const { data } = await (supabase as any).from("routes").select(cols)
-          .in("group_session_id", sessionIds).neq("user_id", profile!.id)
-          .eq("is_shared", true).eq("status", "published").eq("hidden_by_admin", false)
-          .order("created_at", { ascending: false });
-        groupRows = data ?? [];
-      }
+      // ...ORAZ wyjazdy GRUPOWE, w ktorych bral udzial (nie jest hostem) - przez RPC.
+      //
+      // NIE pytaj o to klientem. Poprzednia wersja szukala sesji usera w group_session_members,
+      // ale polityka SELECT na tej tabeli przepuszcza tylko sesje, w ktorych TY jestes czlonkiem.
+      // Widz spoza grupy dostawal wiec pusta liste - bez bledu, po cichu - i wspolny wyjazd
+      // znikal z profilu uczestnika, choc na profilu hosta byl widoczny (zgloszenia Nat
+      // 2026-08-31 i 2026-09-05). Funkcja oddaje wylacznie wyjazdy juz publiczne, wiec nic
+      // nowego nie ujawnia: migracja 20260905_public_group_routes_for_user.sql.
+      const { data: groupData } = await (supabase as any)
+        .rpc("public_group_routes_for_user", { p_user: profile!.id });
+      const groupRows = (groupData ?? []) as any[];
       const seenRoute = new Set<string>();
       const rows = [...((routes ?? []) as any[]), ...groupRows]
         .filter((r) => { if (seenRoute.has(r.id)) return false; seenRoute.add(r.id); return true; });
