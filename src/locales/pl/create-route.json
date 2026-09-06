@@ -1,5 +1,5 @@
 {
-  "title": "Zaplanuj podróż",
+  "title": "Co dzisiaj tworzymy?",
   "planning_title": "Planowanie trasy",
   "date_label": "Wybierz datę",
   "date_placeholder": "Wybierz datę",
@@ -11,5 +11,50 @@
   "next": "Dalej",
   "must_visit_label": "Chcę odwiedzić",
   "must_visit_placeholder": "Szukaj miejsca...",
-  "must_visit_hint": "Np. konkretna restauracja, muzeum albo zabytek. AI uwzględni je w planie."
+  "must_visit_hint": "Np. konkretna restauracja, muzeum albo zabytek. AI uwzględni je w planie.",
+  "pick_date_desc": "Wybierz jeden dzień albo zakres. Przy kilku dniach rozłożysz miejsca na dni już w wyjeździe.",
+  "no_saved_places": "Nie masz jeszcze zapisanych miejsc. Wyszukaj miejsce powyżej albo zapisuj je w eksploracji.",
+  "search_unavailable": "Wyszukiwarka chwilowo niedostępna. Wybierz z zapisanych.",
+  "toast": {
+    "trip_failed": "Nie udało się utworzyć wyjazdu",
+    "list_failed": "Nie udało się utworzyć listy",
+    "list_created": "Lista utworzona"
+  },
+  "invite": {
+    "trip_desc": "Twórz wyjazdy razem z innymi",
+    "list_desc": "Twórz listy razem z innymi",
+    "to_trip": "Dodaj osoby do wyjazdu",
+    "to_list": "Dodaj osoby do listy",
+    "cta": "Dodaj osoby"
+  },
+  "skip_dates": "Pomiń - dodam daty później",
+  "skip_city": "Pomiń - lista bez miasta",
+  "your_saved_places": "Twoje zapisane miejsca",
+  "trip_kind": {
+    "past_desc": "Dodaj wspomnienie",
+    "title": "Jaki to wyjazd?",
+    "future_desc": "Zaplanuj wyjazd",
+    "past": "Przeszły",
+    "future": "Przyszły"
+  },
+  "past_trip": "Przeszły wyjazd",
+  "aria": {
+    "add_to_list": "Dodaj do listy",
+    "remove_from_list": "Usuń z listy",
+    "open_in_maps": "Otwórz {{place}} w Google Maps"
+  },
+  "search_place": "Szukaj miejsca",
+  "list_name_default": "Lista miejsc",
+  "list_city": "Miasto listy",
+  "pick_date": "Wybierz datę",
+  "no_results": "Brak wyników",
+  "list_name_label": "Nazwa listy",
+  "trip_name_label": "Nazwa trasy",
+  "user_fallback": "Użytkownik",
+  "new_list": "Nowa lista",
+  "soon": "Wkrótce",
+  "create": "Utwórz",
+  "skip": "Pomiń",
+  "list_name_city": "Lista miejsc {{city}}",
+  "trip_name_city": "Wyjazd do {{city}}"
 }

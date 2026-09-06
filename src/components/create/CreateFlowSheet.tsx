@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { FileText, X, Users, ChevronRight, ArrowLeft, Plus, Check, CalendarPlus, History, Search, Loader2 } from "lucide-react";
@@ -27,7 +28,6 @@ import SheetSkeleton from "@/components/layout/SheetSkeleton";
 type Step = "entry" | "listCity" | "listName" | "listPick" | "tripMode" | "trip" | "tripDates" | "tripPeople";
 type TripMode = "future" | "past";
 
-const NBSP = " ";
 // Domyslne miasto startowe wyjazdu: Gdańsk (aktualny focus contentu) jak w CountryCityPicker.
 const defaultCity = () => { const cs = citiesForCountry("Polska"); return cs[defaultCityIndex(cs)] ?? cs[0]; };
 // Normalizacja miasta do porownan (lower, bez diakrytyk: NFD + ł->l) - filtr zapisanych po miescie wyjazdu.
@@ -40,10 +40,11 @@ const toPlaceForList = (p: SavedPlace): PlaceForList => ({
   google_place_id: p.google_place_id, rating: p.rating,
 });
 
-// Arkusz tworzenia (sheet-first, redesign 2026-08-20). "+" -> "Co dzisiaj tworzymy?" [Lista|Wyjazd].
+// Arkusz tworzenia (sheet-first, redesign 2026-08-20). "+" -> t("title") [Lista|Wyjazd].
 // Lista: nazwa + prywatnosc + wybor z zapisanych (lub "Dodaj nowe" -> pelny edytor CreateRanking).
-// Wyjazd: nazwa + kraj/miasto (drum w drawerze) + "Dodaj osoby" (realne zaproszenia) -> ComposeWyjazd.
+// Wyjazd: nazwa + kraj/miasto (drum w drawerze) + t("invite.cta") (realne zaproszenia) -> ComposeWyjazd.
 export default function CreateFlowSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const { t } = useTranslation("create-route");
   const navigate = useNavigate();
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -85,13 +86,13 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
   // Wyjazd
   const [tripMode, setTripMode] = useState<TripMode>("future");
   const [tripName, setTripName] = useState("");
-  // Daty wyjazdu z kreatora - krok opcjonalny ("Pomiń"). Zakres wielodniowy wlacza pozniej
+  // Daty wyjazdu z kreatora - krok opcjonalny (t("skip")). Zakres wielodniowy wlacza pozniej
   // podzial miejsc na dni w widoku wyjazdu (routes.end_date + pins.day_index).
   const [tripStart, setTripStart] = useState<Date | null>(null);
   const [tripDays, setTripDays] = useState(1);
   const [tripPeople, setTripPeople] = useState<PersonLite[]>([]);
 
-  // Fokus (klawiatura) RAZEM z pojawieniem kroku "Nowa lista" - drawer wyjezdza wraz z klawiatura,
+  // Fokus (klawiatura) RAZEM z pojawieniem kroku t("new_list") - drawer wyjezdza wraz z klawiatura,
   // jedna plynna animacja. Fokus na NASTEPNEJ klatce po wyrenderowaniu inputu (double rAF), zamiast
   // ~260ms opoznienia (dawalo blysk: drawer stal chwile, potem WebView z resize:native migotal pod
   // klawiatura). NIE setTimeout - klawiatura ma wstac od razu z krokiem, nie osobno.
@@ -119,7 +120,7 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
       return data as { username: string | null; first_name: string | null; avatar_url: string | null } | null;
     },
   });
-  const author = { name: profile?.username || profile?.first_name || "Użytkownik", avatar: profile?.avatar_url ?? null };
+  const author = { name: profile?.username || profile?.first_name || t("user_fallback"), avatar: profile?.avatar_url ?? null };
 
   const { data: savedPlaces = [], isLoading: loadingSaved } = useQuery({
     queryKey: ["saved-places", user?.id],
@@ -184,11 +185,11 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
           {opts.subtitle && <span className="block text-[13px] text-muted-foreground truncate">{opts.subtitle}</span>}
         </span>
       </button>
-      <button onClick={() => openGooglePlace(opts.place)} aria-label={`Otwórz ${opts.place.place_name} w Google Maps`}
+      <button onClick={() => openGooglePlace(opts.place)} aria-label={t("aria.open_in_maps", { place: opts.place.place_name })}
         className="h-9 w-9 flex items-center justify-center shrink-0 rounded-full bg-white shadow-sm border border-black/[0.04] active:scale-90 transition-transform">
         <GoogleGlyph className="h-[18px] w-[18px]" />
       </button>
-      <button onClick={opts.onToggle} aria-label={opts.selected ? "Usuń z listy" : "Dodaj do listy"}
+      <button onClick={opts.onToggle} aria-label={opts.selected ? t("aria.remove_from_list") : t("aria.add_to_list")}
         className={`h-6 w-6 rounded-full flex items-center justify-center shrink-0 transition-colors ${opts.selected ? "bg-[#f0a583] text-white" : "border-2 border-border"}`}>
         {opts.selected ? <Check className="h-3.5 w-3.5 stroke-[3]" /> : <Plus className="h-3.5 w-3.5 text-muted-foreground" />}
       </button>
@@ -201,17 +202,17 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
     const savedSel = savedPlaces.filter((p) => selected.has(p.id)).map(toPlaceForList);
     const seen = new Set<string>();
     const places = [...manualPlaces, ...savedSel].filter((p) => { const k = keyOfPlace(p); if (!k || seen.has(k)) return false; seen.add(k); return true; });
-    // Pusta lista jest OK (opcja "Pomiń") - miejsca mozna dodac pozniej na widoku listy.
+    // Pusta lista jest OK (opcja t("skip")) - miejsca mozna dodac pozniej na widoku listy.
     setCreating(true);
     haptics.light();
     const id = await createListFromSavedPlaces(user.id, {
-      title: listName.trim() || (listCity ? `Lista miejsc ${listCity}` : "Lista miejsc"),
+      title: listName.trim() || (listCity ? t("list_name_city", { city: listCity }) : t("list_name_default")),
       city: listCity || null, isPublic: true, places, author,
     });
     setCreating(false);
-    if (!id) { haptics.error(); toast.error("Nie udało się utworzyć listy"); return; }
+    if (!id) { haptics.error(); toast.error(t("toast.list_failed")); return; }
     haptics.success();
-    toast.success("Lista utworzona");
+    toast.success(t("toast.list_created"));
     queryClient.invalidateQueries({ queryKey: ["profile-list-feed", user.id] });
     queryClient.invalidateQueries({ queryKey: ["save-sheet-lists", user.id] });
     close();
@@ -239,9 +240,9 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
     if (!user) { close(); navigate("/auth"); return; }
     setCreating(true);
     haptics.light();
-    const id = await createEmptyWyjazd(user.id, tripCity, tripName.trim() || `Wyjazd do ${tripCity}`,
+    const id = await createEmptyWyjazd(user.id, tripCity, tripName.trim() || t("trip_name_city", { city: tripCity }),
       { ...tripDatesForSave(startArg, daysArg), tripType: tripMode === "past" ? "completed" : "planning" });
-    if (!id) { setCreating(false); haptics.error(); toast.error("Nie udało się utworzyć wyjazdu"); return; }
+    if (!id) { setCreating(false); haptics.error(); toast.error(t("toast.trip_failed")); return; }
     if (tripPeople.length) {
       try { await inviteUsersToRoute({ id, city: tripCity ?? null, title: tripName.trim() || null, group_session_id: null }, tripPeople.map((p) => p.id), user.id); }
       catch (e: any) { console.warn("[CreateFlowSheet] invite failed:", e?.message ?? e); }
@@ -271,17 +272,17 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
     </div>
   );
 
-  // ── wiersz "Dodaj osoby" ──
+  // ── wiersz t("invite.cta") ──
   const PeopleRow = ({ kind, disabled, people, onClick }: { kind: "listy" | "wyjazdu"; disabled?: boolean; people?: PersonLite[]; onClick?: () => void }) => (
     <button onClick={disabled ? undefined : onClick} disabled={disabled}
       className={`w-full flex items-center gap-4 px-5 py-3 text-left ${disabled ? "opacity-45" : "active:bg-muted/50"} transition-colors`}>
       <Users className="h-6 w-6 text-foreground shrink-0" strokeWidth={1.8} />
       <div className="flex-1 min-w-0">
-        <p className="text-[15px] font-medium text-foreground">{kind === "listy" ? `Dodaj osoby do${NBSP}listy` : `Dodaj osoby do${NBSP}wyjazdu`}</p>
-        <p className="text-[13px] text-muted-foreground">{kind === "listy" ? `Twórz listy razem z${NBSP}innymi` : `Twórz wyjazdy razem z${NBSP}innymi`}</p>
+        <p className="text-[15px] font-medium text-foreground">{kind === "listy" ? t("invite.to_list") : t("invite.to_trip")}</p>
+        <p className="text-[13px] text-muted-foreground">{kind === "listy" ? t("invite.list_desc") : t("invite.trip_desc")}</p>
       </div>
       {disabled ? (
-        <span className="shrink-0 text-[11px] font-bold text-muted-foreground bg-secondary rounded-full px-2 py-0.5">Wkrótce</span>
+        <span className="shrink-0 text-[11px] font-bold text-muted-foreground bg-secondary rounded-full px-2 py-0.5">{t("soon")}</span>
       ) : (
         <span className="shrink-0 flex items-center gap-2">
           {people && people.length > 0 && (
@@ -310,7 +311,7 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
         {/* ── ENTRY ── */}
         {step === "entry" && (
           <div className="px-5 pt-1 pb-[max(20px,env(safe-area-inset-bottom))]">
-            <h2 className="text-[20px] font-semibold text-foreground text-center">Co dzisiaj tworzymy?</h2>
+            <h2 className="text-[20px] font-semibold text-foreground text-center">{t("title")}</h2>
             <div className="mt-4 flex gap-4">
               {[
                 { key: "list", label: "Lista", icon: <FileText className="h-8 w-8 text-foreground" strokeWidth={1.7} />, go: () => { track("list_create_opened"); setStep("listCity"); } },
@@ -328,11 +329,11 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
         {/* ── WYJAZD: wybor trybu (przyszly = zaplanuj / przeszly = wspomnienie) ── */}
         {step === "tripMode" && (
           <div className="pb-[max(20px,env(safe-area-inset-bottom))]">
-            <Header title="Jaki to wyjazd?" onBack={() => setStep("entry")} backLabel="Wstecz" />
+            <Header title={t("trip_kind.title")} onBack={() => setStep("entry")} backLabel="Wstecz" />
             <div className="px-5 pt-1 flex gap-4">
               {[
-                { key: "past" as TripMode, label: "Przeszły", sub: "Dodaj wspomnienie", icon: <History className="h-8 w-8 text-foreground" strokeWidth={1.7} /> },
-                { key: "future" as TripMode, label: "Przyszły", sub: "Zaplanuj wyjazd", icon: <CalendarPlus className="h-8 w-8 text-foreground" strokeWidth={1.7} /> },
+                { key: "past" as TripMode, label: t("trip_kind.past"), sub: t("trip_kind.past_desc"), icon: <History className="h-8 w-8 text-foreground" strokeWidth={1.7} /> },
+                { key: "future" as TripMode, label: t("trip_kind.future"), sub: t("trip_kind.future_desc"), icon: <CalendarPlus className="h-8 w-8 text-foreground" strokeWidth={1.7} /> },
               ].map((m) => (
                 <button key={m.key} onClick={() => { haptics.light(); setTripMode(m.key); setStep("trip"); }}
                   className="flex-1 flex flex-col items-center gap-2 active:scale-[0.98] transition-transform outline-none focus:outline-none focus-visible:outline-none">
@@ -348,19 +349,17 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
         {/* ── LISTA: wybor miasta (zawezenie wyszukiwarki Google + domyslna nazwa "Lista miejsc {miasto}") ── */}
         {step === "listCity" && (
           <div className="pb-[max(16px,env(safe-area-inset-bottom))]">
-            <Header title="Miasto listy" onBack={() => setStep("entry")}
-              onNext={() => { if (!listNameEdited) setListName(`Lista miejsc ${listCity}`); setStep("listName"); }} />
+            <Header title={t("list_city")} onBack={() => setStep("entry")}
+              onNext={() => { if (!listNameEdited) setListName(t("list_name_city", { city: listCity })); setStep("listName"); }} />
             <div className="px-5 pt-1">
               <CityCountryPicker city={listCity} onCityChange={setListCity} compact />
               {/* Miasto jest OPCJONALNE - lista moze zbierac miejsca z calego swiata (prosba Nat
-                  2026-08-30). "Pomiń" czysci miasto i idzie dalej z generyczna nazwa. */}
+                  2026-08-30). t("skip") czysci miasto i idzie dalej z generyczna nazwa. */}
               <button
                 type="button"
-                onClick={() => { setListCity(""); if (!listNameEdited) setListName("Lista miejsc"); setStep("listName"); }}
+                onClick={() => { setListCity(""); if (!listNameEdited) setListName(t("list_name_default")); setStep("listName"); }}
                 className="mt-3 w-full py-2.5 text-sm font-semibold text-muted-foreground active:text-foreground transition-colors"
-              >
-                Pomiń - lista bez miasta
-              </button>
+              >{t("skip_city")}</button>
             </div>
           </div>
         )}
@@ -368,10 +367,10 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
         {/* ── LISTA: nazwa + prywatnosc ── */}
         {step === "listName" && (
           <div className="pb-[max(16px,env(safe-area-inset-bottom))]">
-            <Header title="Nowa lista" onBack={() => setStep("listCity")} onNext={() => setStep("listPick")} nextEnabled={!!listName.trim()} />
+            <Header title={t("new_list")} onBack={() => setStep("listCity")} onNext={() => setStep("listPick")} nextEnabled={!!listName.trim()} />
             <div className="px-5 pt-1">
               <div className="relative">
-                <input ref={listNameRef} value={listName} onChange={(e) => { setListName(e.target.value); setListNameEdited(true); }} placeholder="Nazwa listy"
+                <input ref={listNameRef} value={listName} onChange={(e) => { setListName(e.target.value); setListNameEdited(true); }} placeholder={t("list_name_label")}
                   className="w-full h-12 rounded-xl bg-secondary/60 border border-border/60 pl-4 pr-11 text-base text-foreground placeholder:text-muted-foreground/70 outline-none focus:ring-2 focus:ring-orange-500/30" />
                 {listName && (
                   <button onClick={() => { setListName(""); setListNameEdited(false); }} className="absolute right-2.5 top-1/2 -translate-y-1/2 h-7 w-7 rounded-full bg-[#ebebeb]/60 flex items-center justify-center active:scale-90 transition-transform">
@@ -389,14 +388,14 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
         {/* ── LISTA: wyszukiwarka Google (inline) + wybor zapisanych ── */}
         {step === "listPick" && (
           <>
-            <Header title={listName.trim() || "Nazwa listy"} onBack={() => setStep("listName")}
-              onNext={createList} nextLabel={creating ? "..." : ((selected.size > 0 || manualPlaces.length > 0) ? "Dalej" : "Pomiń")} nextEnabled={!creating} />
+            <Header title={listName.trim() || t("list_name_label")} onBack={() => setStep("listName")}
+              onNext={createList} nextLabel={creating ? "..." : ((selected.size > 0 || manualPlaces.length > 0) ? "Dalej" : t("skip"))} nextEnabled={!creating} />
             <PeopleRow kind="listy" disabled />
             {/* Wyszukiwarka Google Places INLINE - klik = wyniki tutaj (a NIE nawigacja do starego edytora). */}
             <div className="px-5 pt-1 pb-2 shrink-0">
               <div className="relative">
                 <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <input ref={listSearchRef} value={listQuery} onChange={(e) => setListQuery(e.target.value)} placeholder="Szukaj miejsca"
+                <input ref={listSearchRef} value={listQuery} onChange={(e) => setListQuery(e.target.value)} placeholder={t("search_place")}
                   className="w-full h-12 rounded-xl bg-secondary/60 border border-border/60 pl-10 pr-11 text-base text-foreground placeholder:text-muted-foreground/70 outline-none focus:ring-2 focus:ring-orange-500/30" />
                 {listQuery && (
                   <button onClick={() => setListQuery("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 h-7 w-7 rounded-full bg-[#ebebeb]/60 flex items-center justify-center active:scale-90 transition-transform">
@@ -409,9 +408,9 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
               {listSearchMode ? (
                 <div className="pt-1 space-y-1.5">
                   {listSearching && <div className="py-6 text-center text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin inline" /></div>}
-                  {listBlocked && <p className="py-6 text-center text-sm text-muted-foreground">{`Wyszukiwarka chwilowo niedostępna. Wybierz z${NBSP}zapisanych.`}</p>}
+                  {listBlocked && <p className="py-6 text-center text-sm text-muted-foreground">{t("search_unavailable")}</p>}
                   {!listSearching && !listBlocked && listResults.length === 0 && (
-                    <p className="py-6 text-center text-sm text-muted-foreground">Brak wyników</p>
+                    <p className="py-6 text-center text-sm text-muted-foreground">{t("no_results")}</p>
                   )}
                   {listResults.map((r, i) => renderListRow({
                     rowKey: `${keyOfPlace(r)}-${i}`, place: r, subtitle: r.address,
@@ -428,7 +427,7 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
                     onToggle: () => removeManual(p), selected: true,
                   }))}
                   {savedPlaces.length > 0 && (
-                    <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground pt-1 px-0.5">Twoje zapisane miejsca</p>
+                    <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground pt-1 px-0.5">{t("your_saved_places")}</p>
                   )}
                   {savedPlaces.map((p) => renderListRow({
                     rowKey: p.id, place: p, subtitle: p.city,
@@ -437,7 +436,7 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
                 </div>
               )}
               {!listSearchMode && !loadingSaved && savedPlaces.length === 0 && manualPlaces.length === 0 && (
-                <p className="mt-4 px-2 text-center text-sm text-muted-foreground">{`Nie masz jeszcze zapisanych miejsc. Wyszukaj miejsce powyżej albo zapisuj je w${NBSP}eksploracji.`}</p>
+                <p className="mt-4 px-2 text-center text-sm text-muted-foreground">{t("no_saved_places")}</p>
               )}
             </div>
           </>
@@ -446,11 +445,11 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
         {/* ── WYJAZD: nazwa + kraj/miasto + osoby ── */}
         {step === "trip" && (
           <>
-            <Header title={tripMode === "past" ? "Przeszły wyjazd" : "Zaplanuj wyjazd"} onBack={() => setStep("tripMode")} onNext={() => setStep("tripDates")} nextLabel="Dalej" nextEnabled={!creating} />
+            <Header title={tripMode === "past" ? t("past_trip") : t("trip_kind.future_desc")} onBack={() => setStep("tripMode")} onNext={() => setStep("tripDates")} nextLabel="Dalej" nextEnabled={!creating} />
             <div className="flex-1 min-h-0 overflow-y-auto pb-[max(16px,env(safe-area-inset-bottom))]">
               <div className="px-5 pt-1">
                 <div className="relative">
-                  <input value={tripName} onChange={(e) => setTripName(e.target.value)} placeholder="Nazwa trasy"
+                  <input value={tripName} onChange={(e) => setTripName(e.target.value)} placeholder={t("trip_name_label")}
                     className="w-full h-12 rounded-xl bg-secondary/60 border border-border/60 pl-4 pr-11 text-base text-foreground placeholder:text-muted-foreground/70 outline-none focus:ring-2 focus:ring-orange-500/30" />
                   {tripName && (
                     <button onClick={() => setTripName("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 h-7 w-7 rounded-full bg-[#ebebeb]/60 flex items-center justify-center active:scale-90 transition-transform">
@@ -473,20 +472,20 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
         {step === "tripDates" && (
           <>
                         {/* Guzik w naglowku dziala na ZAZNACZENIU z kalendarza (onRangeChange), wiec user
-                moze najpierw wybrac daty, a dopiero potem kliknac "Utwórz". Bez dat = wyjazd
+                moze najpierw wybrac daty, a dopiero potem kliknac t("create"). Bez dat = wyjazd
                 bez dat (mozna je dodac pozniej w widoku wyjazdu). */}
             <Header
-              title="Wybierz datę"
+              title={t("pick_date")}
               onBack={() => setStep("trip")}
               backLabel="Wstecz"
               onNext={() => afterDates()}
-              nextLabel={creating ? "..." : "Utwórz"}
+              nextLabel={creating ? "..." : t("create")}
               nextEnabled={!creating}
             />
             <div className="flex-1 min-h-0 overflow-y-auto pb-[max(32px,calc(env(safe-area-inset-bottom,0px)+24px))]">
               {/* -4px: Header ma pb-3 (12px), a odstep naglowek -> hint ma byc 8px. */}
               <p className="px-5 -mt-1 text-[13px] text-muted-foreground leading-relaxed">
-                {`Wybierz jeden dzień albo zakres. Przy kilku dniach rozłożysz miejsca na dni już w wyjeździe.`}
+                {t("pick_date_desc")}
               </p>
               <FullCalendarPicker
                 maxDays={14}
@@ -501,7 +500,7 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
                   disabled={creating}
                   className="w-full py-3 text-sm font-medium text-muted-foreground active:text-foreground transition-colors disabled:opacity-50"
                 >
-                  {`Pomiń - dodam daty później`}
+                  {t("skip_dates")}
                 </button>
               </div>
             </div>
@@ -513,7 +512,7 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
           <>
             <div className="flex items-center justify-between gap-2 px-5 pt-1 pb-3">
               <button onClick={() => setStep("trip")} className="h-8 w-8 -ml-1 flex items-center justify-center rounded-full active:bg-muted transition-colors"><ArrowLeft className="h-5 w-5" /></button>
-              <h2 className="text-[20px] font-semibold text-foreground">Dodaj osoby</h2>
+              <h2 className="text-[20px] font-semibold text-foreground">{t("invite.cta")}</h2>
               <button onClick={() => setStep("trip")} className="text-sm font-medium text-[#181818] rounded-full border border-black/15 bg-white px-3.5 py-1.5 active:opacity-60 shrink-0">Gotowe</button>
             </div>
             <div className="flex-1 min-h-0 overflow-y-auto px-5 pb-[max(16px,env(safe-area-inset-bottom))]">

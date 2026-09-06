@@ -1,5 +1,5 @@
 {
-  "title": "Plan a trip",
+  "title": "What are we creating today?",
   "planning_title": "Planning route",
   "date_label": "Choose a date",
   "date_placeholder": "Choose a date",
@@ -11,5 +11,50 @@
   "must_visit_hint": "E.g. a specific restaurant, museum or landmark. AI will include them in the plan.",
   "next": "Next",
   "ideal_day_label": "What does your ideal day look like?",
-  "ideal_day_placeholder": "E.g. I start slow, I like a morning coffee, I walk everywhere, I prefer places with character over tourist crowds..."
+  "ideal_day_placeholder": "E.g. I start slow, I like a morning coffee, I walk everywhere, I prefer places with character over tourist crowds...",
+  "pick_date_desc": "Pick a single day or a range. With several days you can spread the places across them inside the trip.",
+  "no_saved_places": "You have no saved places yet. Search above, or save them while exploring.",
+  "search_unavailable": "Search is temporarily unavailable. Pick from your saved places.",
+  "toast": {
+    "trip_failed": "We could not create the trip",
+    "list_failed": "We could not create the list",
+    "list_created": "List created"
+  },
+  "invite": {
+    "trip_desc": "Plan trips together with others",
+    "list_desc": "Build lists together with others",
+    "to_trip": "Add people to the trip",
+    "to_list": "Add people to the list",
+    "cta": "Add people"
+  },
+  "skip_dates": "Skip - I will add dates later",
+  "skip_city": "Skip - list without a city",
+  "your_saved_places": "Your saved places",
+  "trip_kind": {
+    "past_desc": "Add a memory",
+    "title": "What kind of trip is it?",
+    "future_desc": "Plan a trip",
+    "past": "Past",
+    "future": "Upcoming"
+  },
+  "past_trip": "Past trip",
+  "aria": {
+    "add_to_list": "Add to list",
+    "remove_from_list": "Remove from list",
+    "open_in_maps": "Open {{place}} in Google Maps"
+  },
+  "search_place": "Search for a place",
+  "list_name_default": "Place list",
+  "list_city": "List city",
+  "pick_date": "Pick a date",
+  "no_results": "No results",
+  "list_name_label": "List name",
+  "trip_name_label": "Trip name",
+  "user_fallback": "User",
+  "new_list": "New list",
+  "soon": "Soon",
+  "create": "Create",
+  "skip": "Skip",
+  "list_name_city": "Places in {{city}}",
+  "trip_name_city": "Trip to {{city}}"
 }

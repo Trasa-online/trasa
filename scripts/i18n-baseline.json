@@ -34,7 +34,6 @@
     "src/components/create/AddPeoplePicker.tsx",
     "src/components/create/CityDrum.tsx",
     "src/components/create/CoverPickerSheet.tsx",
-    "src/components/create/CreateFlowSheet.tsx",
     "src/components/create/CreateHeader.tsx",
     "src/components/home/ActiveTripBanner.tsx",
     "src/components/home/ActiveTripPlanEditor.tsx",
