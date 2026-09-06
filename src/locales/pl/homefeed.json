@@ -1,6 +1,7 @@
 {
   "toast": {
-    "saved": "Zapisano"
+    "saved": "Zapisano",
+    "removed_saved": "Usunięto z zapisanych"
   },
   "confirm": {
     "delete_collection": "Usunąć tę trasę?"

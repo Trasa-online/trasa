@@ -1246,7 +1246,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
   // pytan). Gdy user odmowi - krotki komunikat, chip zostaje na kolejna probe.
   const enableDistance = async () => {
     const ok = await setGpsReference();
-    if (!ok) toast(t("distance_denied", { defaultValue: "Włącz lokalizację w ustawieniach, żeby zobaczyć dystans" }));
+    if (!ok) toast(t("distance_denied"));
   };
 
   // Lokalizacja: CICHY auto-detect przez GPS (tylko gdy user juz dal zgode - tryResolveOnSite

@@ -77,5 +77,6 @@
   "not_found": {
     "title": "Ups! Nie znaleziono strony",
     "home_link": "Wróć na stronę główną"
-  }
+  },
+  "gallery_empty": "Brak zdjęć w tej trasie"
 }

@@ -8,8 +8,6 @@
     "empty_desc": "Head back to the home screen and browse places. The ones you save will show up here.",
     "browse": "Browse places",
     "saved_place_one": "saved place",
-    "saved_place_few": "saved places",
-    "saved_place_many": "saved places",
     "confirm_clear_city": "Remove all saved places from {{city}}?",
     "remove_group_aria": "Remove group",
     "remove_aria": "Remove",
@@ -23,7 +21,9 @@
     "one_city_hint": "A route is built from places in one city",
     "other_city_locked": "Pick places only from: {{city}}",
     "search_placeholder": "Search saved places",
-    "search_clear": "Clear"
+    "search_clear": "Clear",
+    "saved_place_other": "saved places",
+    "removed": "Removed from saved"
   },
   "collections": {
     "toast_deleted": "Collection deleted",
@@ -34,8 +34,6 @@
     "create": "Create collection",
     "untitled": "Untitled",
     "place_one": "place",
-    "place_few": "places",
-    "place_many": "places",
     "private": "private",
     "pending": "awaiting approval",
     "rejected": "rejected",
@@ -47,7 +45,8 @@
     "cancel": "Cancel",
     "deleting": "Deleting…",
     "delete": "Delete",
-    "create_new": "New place list"
+    "create_new": "New place list",
+    "place_other": "places"
   },
   "explore": {
     "back_aria": "Back to explore",

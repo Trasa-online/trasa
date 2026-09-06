@@ -20,8 +20,6 @@
   "filters": "Filters",
   "filters_selected": "Selected",
   "filters_count_one": "{{count}} filter",
-  "filters_count_few": "{{count}} filters",
-  "filters_count_many": "{{count}} filters",
   "filters_subtitle": "By default we show all places. You can narrow the selection.",
   "filters_clear_all": "Clear all",
   "categories_label": "Categories",
@@ -48,7 +46,6 @@
   "dup_continue": "Continue existing",
   "dup_create": "Create separate",
   "cta_plan_route_one": "Plan route · {{count}} place",
-  "cta_plan_route_many": "Plan route · {{count}} places",
   "go_to_matches": "Go to saved",
   "selected_count": "{{count}} selected",
   "round_progress": "Place {{current}}/{{total}}",
@@ -187,5 +184,8 @@
     "removed_from": "Removed from: {{name}}",
     "remove_error": "Couldn't remove the place",
     "remove_aria": "Remove from trip"
-  }
+  },
+  "filters_count_other": "{{count}} filters",
+  "cta_plan_route_other": "Plan route · {{count}} places",
+  "distance_denied": "Turn on location in settings to see the distance"
 }

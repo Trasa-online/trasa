@@ -1005,7 +1005,7 @@ const ReviewSummary = () => {
     if (!routeId) return;
     // Okladka wyjazdu (tlo hero) = OSOBNA od miniatury eksploracji (list_cover_url) - patrz setCover.
     const { error } = await (supabase as any).from("routes").update({ cover_url: url }).eq("id", routeId);
-    if (error) { notify.error(t("toast.cover_set_error", { defaultValue: "Nie udało się ustawić okładki" })); return; }
+    if (error) { notify.error(t("toast.cover_set_error")); return; }
     queryClient.setQueryData(["review-summary-route", routeId], (old: any) => old ? { ...old, cover_url: url } : old);
     queryClient.invalidateQueries({ queryKey: ["review-trip-days", folderId, routeId] });
     if (user) queryClient.invalidateQueries({ queryKey: ["journal-entries", user.id] });
@@ -1018,7 +1018,7 @@ const ReviewSummary = () => {
     if (!routeId) return;
     setListCoverPickerOpen(false);
     const { error } = await (supabase as any).from("routes").update({ list_cover_url: url }).eq("id", routeId);
-    if (error) { notify.error(t("toast.cover_set_error", { defaultValue: "Nie udało się ustawić okładki" })); return; }
+    if (error) { notify.error(t("toast.cover_set_error")); return; }
     queryClient.setQueryData(["review-summary-route", routeId], (old: any) => old ? { ...old, list_cover_url: url } : old);
     queryClient.invalidateQueries({ queryKey: ["discovery-city-routes"] });
     queryClient.invalidateQueries({ queryKey: ["discovery-polecane"] });
@@ -1116,7 +1116,7 @@ const ReviewSummary = () => {
     const { count: finPinCount } = await (supabase as any).from("pins")
       .select("id", { count: "exact", head: true }).in("route_id", finRids);
     if (!finPinCount) {
-      notify.error(t("toast.route_needs_place", { defaultValue: "Trasa musi mieć co najmniej jedno miejsce" }));
+      notify.error(t("toast.route_needs_place"));
       return;
     }
     try {
@@ -1149,7 +1149,7 @@ const ReviewSummary = () => {
     const { count: finPinCount } = await (supabase as any).from("pins")
       .select("id", { count: "exact", head: true }).in("route_id", finRids);
     if (!finPinCount) {
-      notify.error(t("toast.route_needs_place", { defaultValue: "Trasa musi mieć co najmniej jedno miejsce" }));
+      notify.error(t("toast.route_needs_place"));
       return;
     }
     setFinishing(true);
@@ -1173,7 +1173,7 @@ const ReviewSummary = () => {
       navigate(`/route/${routeId}`, { replace: true });
     } catch (e: any) {
       console.error("[ReviewSummary] handleFinishTrip failed:", e?.message ?? e);
-      notify.error(t("toast.generic_error", { defaultValue: "Coś poszło nie tak" }));
+      notify.error(t("toast.generic_error"));
     } finally {
       setFinishing(false);
     }
@@ -1276,7 +1276,7 @@ const ReviewSummary = () => {
     // SAFETY: nie pozwol wykasowac WSZYSTKICH miejsc do zera (race/blad stanu prowadzil do
     // pustej opublikowanej trasy, bug 2026-08-10). Trasa musi miec >=1 miejsce.
     if (workingPins.length === 0 && currentPins.length > 0) {
-      notify.error(t("toast.route_needs_place", { defaultValue: "Trasa musi mieć co najmniej jedno miejsce" }));
+      notify.error(t("toast.route_needs_place"));
       return;
     }
     setSavingPlan(true);
@@ -1829,7 +1829,7 @@ const ReviewSummary = () => {
               className="absolute left-2 top-1/2 -translate-y-1/2 h-11 w-11 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center active:scale-90 transition-transform">
               <ChevronLeft className="h-6 w-6 text-white" />
             </button>
-            <button onClick={(e) => { e.stopPropagation(); stepPhoto(1); }} aria-label={t("a11y.next", { defaultValue: "Następne" })}
+            <button onClick={(e) => { e.stopPropagation(); stepPhoto(1); }} aria-label={t("a11y.next")}
               className="absolute right-2 top-1/2 -translate-y-1/2 h-11 w-11 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center active:scale-90 transition-transform">
               <ChevronRight className="h-6 w-6 text-white" />
             </button>
@@ -2199,7 +2199,7 @@ const ReviewSummary = () => {
                 </button>
               </div>
             ) : (
-              <button onClick={() => { setNameVal(customName); setEditingName(true); }} aria-label={t("a11y.edit_name", { defaultValue: "Edytuj nazwę" })} className="flex items-center justify-between gap-2 text-left active:opacity-70">
+              <button onClick={() => { setNameVal(customName); setEditingName(true); }} aria-label={t("a11y.edit_name")} className="flex items-center justify-between gap-2 text-left active:opacity-70">
                 <p className="flex-1 min-w-0 text-2xl font-black text-foreground leading-tight truncate">{displayName || cityLabel}</p>
                 <ChevronRight className="h-5 w-5 text-muted-foreground shrink-0" />
               </button>

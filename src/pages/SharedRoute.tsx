@@ -1862,7 +1862,7 @@ export default function SharedRoute() {
             ) : (
               <div className="flex flex-col items-center justify-center py-14 text-center gap-3">
                 <ImageIcon className="h-8 w-8 text-muted-foreground/50" />
-                <p className="text-sm text-muted-foreground">{t("gallery_empty", { defaultValue: "Brak zdjęć w tej trasie" })}</p>
+                <p className="text-sm text-muted-foreground">{t("gallery_empty")}</p>
                 {canAddPhotos && (
                   <button onClick={() => photoInputRef.current?.click()} disabled={uploadingPhotos}
                     className="mt-1 px-4 py-2.5 rounded-full border border-border text-foreground font-bold text-sm flex items-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-60">

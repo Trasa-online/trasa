@@ -67,7 +67,8 @@
     "publish": "Save my list",
     "need_city": "Pick a city first",
     "need_title": "Add a list name",
-    "need_two": "Add at least 2 places to create a list"
+    "need_place": "Add at least one place",
+    "need_two_places": "Add at least 2 places to create a list"
   },
   "custom_preview": {
     "title": "Add this place?",

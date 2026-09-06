@@ -2,7 +2,8 @@
   "card": {
     "day_one": "dzień",
     "day_many": "dni",
-    "personalize": "Personalizuj plan →"
+    "personalize": "Personalizuj plan →",
+    "day_few": "dni"
   },
   "sheet": {
     "day_one": "dzień",
@@ -21,7 +22,9 @@
       "gallery": "Galeria",
       "monument": "Zabytek",
       "nightlife": "Nocne życie"
-    }
+    },
+    "day_few": "dni",
+    "place_few": "miejsca"
   },
   "polecajka": {
     "default_title": "Moje top miejsca w {{city}}",

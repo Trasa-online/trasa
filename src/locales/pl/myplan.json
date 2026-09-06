@@ -38,7 +38,8 @@
     "added_one": "Dodano miejsce",
     "added_many": "Dodano {{count}} miejsc",
     "add_error": "Nie udało się dodać miejsc",
-    "place_fallback": "Miejsce"
+    "place_fallback": "Miejsce",
+    "added_few": "Dodano {{count}} miejsca"
   },
   "liked": {
     "back": "Wstecz",

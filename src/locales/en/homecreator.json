@@ -1,14 +1,12 @@
 {
   "card": {
     "day_one": "day",
-    "day_many": "days",
-    "personalize": "Personalize plan →"
+    "personalize": "Personalize plan →",
+    "day_other": "days"
   },
   "sheet": {
     "day_one": "day",
-    "day_many": "days",
     "place_one": "place",
-    "place_many": "places",
     "personalize": "Personalize this plan →",
     "categories": {
       "bar": "Bar",
@@ -21,7 +19,9 @@
       "gallery": "Gallery",
       "monument": "Monument",
       "nightlife": "Nightlife"
-    }
+    },
+    "day_other": "days",
+    "place_other": "places"
   },
   "polecajka": {
     "default_title": "My top places in {{city}}",

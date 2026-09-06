@@ -644,7 +644,7 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false, onDelete, deleting 
       <div className="px-4 pb-4 pt-3 border-t border-border/30 space-y-3 text-left">
         {/* Zdjecia miejsca - wszyscy uczestnicy widza wszystkie, kazdy dodaje */}
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">{t("editor.photos_label", { defaultValue: "Zdjęcia miejsca" })}</p>
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">{t("editor.photos_label")}</p>
           <div className="flex flex-wrap gap-2">
             {imgs.map((url) => (
               <div key={url} className="relative h-20 w-20 shrink-0 rounded-xl overflow-hidden bg-muted">
@@ -665,7 +665,7 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false, onDelete, deleting 
         {/* Notki innych uczestnikow (awatar + tresc) */}
         {others.some((n) => n.user_id !== user?.id) && (
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">{t("editor.others_notes", { defaultValue: "Notki uczestników" })}</p>
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">{t("editor.others_notes")}</p>
             <PlaceNotes notes={others} excludeUserId={user?.id} />
           </div>
         )}

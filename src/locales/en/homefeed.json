@@ -1,6 +1,7 @@
 {
   "toast": {
-    "saved": "Saved"
+    "saved": "Saved",
+    "removed_saved": "Removed from saved"
   },
   "confirm": {
     "delete_collection": "Delete this collection?"

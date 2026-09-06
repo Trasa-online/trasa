@@ -77,5 +77,6 @@
   "not_found": {
     "title": "Oops! Page not found",
     "home_link": "Return to home"
-  }
+  },
+  "gallery_empty": "No photos in this trip"
 }

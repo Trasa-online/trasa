@@ -23,7 +23,8 @@
     "one_city_hint": "Trasę tworzysz z miejsc jednego miasta",
     "other_city_locked": "Wybierz miejsca tylko z: {{city}}",
     "search_placeholder": "Szukaj w zapisanych",
-    "search_clear": "Wyczyść"
+    "search_clear": "Wyczyść",
+    "removed": "Usunięto z zapisanych"
   },
   "collections": {
     "toast_deleted": "Lista usunięta",

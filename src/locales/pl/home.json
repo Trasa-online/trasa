@@ -70,5 +70,6 @@
     "shopping": "Zakupy",
     "local_vibes": "Klimaty",
     "photography": "Foto"
-  }
+  },
+  "days_until_few": "Za {{count}} dni"
 }

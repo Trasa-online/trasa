@@ -437,6 +437,11 @@ Poniższe elementy wyglądają na pozostałości po poprzednich pivotach:
   - **Dotyczy:** wszystkie teksty UI w aplikacji i na stronach marketingowych (nagłówki, opisy, etykiety, placeholdery, treści maili, modale, toasty).
   - **W JSX:** używaj template literal z escape, np. `` {`treść z przyjaciółmi i grupą`} ``, albo inline `{" "}` w miejscach z elementami HTML w środku.
   - **Jak rozpoznać:** czytaj zdanie i znajduj pojedyncze litery przed spacją - tam wstaw NBSP. Przykład: `"z miastem"` → `"z miastem"`, `"i wam"` → `"i wam"`.
+- **🌍 DWA JĘZYKI OD RAZU (2026-09-06, OBOWIĄZKOWE):** Idziemy z apką globalnie, więc **każdy nowy widok powstaje po polsku I po angielsku w tym samym commicie**. Napisy żyją w `src/locales/pl/*.json` + `src/locales/en/*.json` i lecą przez `t()`. ⛔ **ZAKAZ** polskiego tekstu wprost w JSX oraz zapasowego polskiego w wywołaniu (`t("klucz", "Polski")` / `defaultValue: "Polski"`) - to działa po polsku, a po angielsku pokazuje polski, bo `fallbackLng` to `pl`. Bramka: `npm run i18n:check` (wpięta w `check:both`) pilnuje parzystości kluczy, form liczby mnogiej i braku polskiego na sztywno. Pliki z długiem sprzed bramki są w `scripts/i18n-baseline.json` - **ta lista może tylko maleć**, dopisanie nowego pliku to błąd.
+  - **Liczba mnoga:** polski ma `_one` / `_few` / `_many`, angielski `_one` / `_other`. Nie kopiuj polskich sufiksów do `en/*.json` - `_few` i `_many` nigdy się po angielsku nie dopasują.
+  - **Twarde spacje (sieroty) to reguła POLSKA** - tekstów EN nie NBSP-ujemy.
+  - **Treści użytkowników** (nazwy tras, notki, tytuły list) NIE są tłumaczone - to co człowiek napisał, zostaje jak napisał.
+  - **Panel ops (`src/admin/**`) zostaje po polsku** - widzą go tylko founderzy (decyzja Nat 2026-09-06).
 - **Toast:** Sonner (`import { toast } from "sonner"`)
 - **Formularze:** React Hook Form + Zod gdy złożone; prosty `useState` gdy 1-2 pola
 - **Data fetching:** Supabase client direct lub `useQuery` z TanStack Query

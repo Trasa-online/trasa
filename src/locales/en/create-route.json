@@ -9,5 +9,7 @@
   "must_visit_label": "I'd like to visit",
   "must_visit_placeholder": "Search for a place...",
   "must_visit_hint": "E.g. a specific restaurant, museum or landmark. AI will include them in the plan.",
-  "next": "Next"
+  "next": "Next",
+  "ideal_day_label": "What does your ideal day look like?",
+  "ideal_day_placeholder": "E.g. I start slow, I like a morning coffee, I walk everywhere, I prefer places with character over tourist crowds..."
 }

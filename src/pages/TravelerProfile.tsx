@@ -211,7 +211,7 @@ const TravelerProfile = () => {
     const prev = queryClient.getQueryData(key);
     queryClient.setQueryData(key, (old: any) => (old ?? []).filter((r: any) => r.id !== tr.id));
     deferDelete({
-      message: t("profile.trip_deleted", { defaultValue: "Wyjazd usunięty." }),
+      message: t("profile.trip_deleted"),
       onUndo: () => queryClient.setQueryData(key, prev),
       commit: async () => {
         try {
@@ -221,7 +221,7 @@ const TravelerProfile = () => {
           if (error) throw new Error(error.message);
           queryClient.invalidateQueries({ queryKey: ["profile-trip-feed", user.id] });
         } catch (e: any) {
-          toast.error(t("profile.delete_error", { defaultValue: "Nie udało się usunąć." }));
+          toast.error(t("profile.delete_error"));
           console.error("[TravelerProfile] delete trip failed:", e?.message ?? e);
           queryClient.invalidateQueries({ queryKey: ["profile-trip-feed", user.id] });
         }
@@ -234,7 +234,7 @@ const TravelerProfile = () => {
     const prev = queryClient.getQueryData(key);
     queryClient.setQueryData(key, (old: any) => (old ?? []).filter((x: any) => x.id !== l.id));
     deferDelete({
-      message: t("profile.list_deleted", { defaultValue: "Lista usunięta." }),
+      message: t("profile.list_deleted"),
       onUndo: () => queryClient.setQueryData(key, prev),
       commit: async () => {
         try {
@@ -244,7 +244,7 @@ const TravelerProfile = () => {
           // Odswiez listy w drawerze zapisu miejsca (inaczej usunieta lista wisi w cache).
           queryClient.invalidateQueries({ queryKey: ["save-sheet-lists", user.id] });
         } catch (e: any) {
-          toast.error(t("profile.delete_error", { defaultValue: "Nie udało się usunąć." }));
+          toast.error(t("profile.delete_error"));
           console.error("[TravelerProfile] delete list failed:", e?.message ?? e);
           queryClient.invalidateQueries({ queryKey: ["profile-list-feed", user.id] });
         }
@@ -314,7 +314,7 @@ const TravelerProfile = () => {
   });
 
   const handleShareProfile = async () => {
-    if (!profile?.username) { toast.error(t("profile.share_no_username", { defaultValue: "Uzupełnij nazwę użytkownika, aby udostępnić profil." })); return; }
+    if (!profile?.username) { toast.error(t("profile.share_no_username")); return; }
     const url = `${SHARE_BASE_URL}/#/profil/${profile.username}`;
     const res = await share({ title: `@${profile.username}`, url });
     if (res.ok && res.method === "clipboard") toast.success(t("invite.link_copied"));
@@ -786,7 +786,7 @@ const TravelerProfile = () => {
               onClick={() => navigate("/settings")}
               className="flex-1 min-w-0 self-center text-left text-[13px] text-muted-foreground/60 leading-snug"
             >
-              {t("profile.add_bio", "Dodaj krótki opis o sobie")}
+              {t("profile.add_bio")}
             </button>
           )}
         </div>
@@ -960,7 +960,7 @@ const TravelerProfile = () => {
             ) : (followList.data ?? []).length === 0 ? (
               <div className="px-1 space-y-4 pt-2">
                 <p className="text-sm text-muted-foreground text-center">
-                  {followSheet === "following" ? t("profile.no_following", "Nie obserwujesz jeszcze nikogo.") : t("profile.no_followers", "Nikt Cię jeszcze nie obserwuje.")}
+                  {followSheet === "following" ? t("profile.no_following", "Nie obserwujesz jeszcze nikogo.") : t("profile.no_followers")}
                 </p>
                 <InviteFriendsBanner />
                 <button onClick={() => { setFollowSheet(null); navigate("/search"); }} className="w-full py-3 rounded-full bg-secondary text-secondary-foreground font-bold text-sm active:scale-[0.97] transition-transform">

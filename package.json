@@ -17,8 +17,9 @@
     "poc:menu": "npx tsx scripts/poc-menu-classifier.ts",
     "poc:menu-web": "npx tsx scripts/poc-menu-from-website.ts",
     "poc:dishes": "npx tsx scripts/poc-popular-dishes.ts",
-    "check:both": "npm run build && npx cap sync ios",
-    "check:native": "npm run build && npx cap sync ios && npx cap sync android",
+    "i18n:check": "node scripts/i18n-check.mjs",
+    "check:both": "npm run i18n:check && npm run build && npx cap sync ios",
+    "check:native": "npm run i18n:check && npm run build && npx cap sync ios && npx cap sync android",
     "prerender:snapshot": "node scripts/prerender-landing.mjs"
   },
   "dependencies": {

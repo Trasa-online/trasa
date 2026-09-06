@@ -67,7 +67,8 @@
     "publish": "Zapisz moją listę",
     "need_city": "Najpierw wybierz miasto",
     "need_title": "Dodaj nazwę listy",
-    "need_two": "Dodaj co najmniej 2 miejsca, żeby stworzyć listę"
+    "need_place": "Dodaj co najmniej jedno miejsce",
+    "need_two_places": "Dodaj co najmniej 2 miejsca, żeby stworzyć listę"
   },
   "custom_preview": {
     "title": "Dodać to miejsce?",

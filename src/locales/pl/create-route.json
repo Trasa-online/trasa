@@ -8,5 +8,8 @@
   "city_placeholder": "Wpisz miasto...",
   "ideal_day_label": "Jak wygląda Twój idealny dzień?",
   "ideal_day_placeholder": "Np. zaczynam powoli, lubię kawę rano, chodzę pieszo, wolę klimatyczne miejsca niż turystyczne tłumy...",
-  "next": "Dalej"
+  "next": "Dalej",
+  "must_visit_label": "Chcę odwiedzić",
+  "must_visit_placeholder": "Szukaj miejsca...",
+  "must_visit_hint": "Np. konkretna restauracja, muzeum albo zabytek. AI uwzględni je w planie."
 }

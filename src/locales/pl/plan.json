@@ -187,5 +187,7 @@
     "removed_from": "Usunięto z: {{name}}",
     "remove_error": "Nie udało się usunąć miejsca",
     "remove_aria": "Usuń z wyjazdu"
-  }
+  },
+  "cta_plan_route_few": "Zaplanuj trasę · {{count}} miejsca",
+  "distance_denied": "Włącz lokalizację w ustawieniach, żeby zobaczyć dystans"
 }

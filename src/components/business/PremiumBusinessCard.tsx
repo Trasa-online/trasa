@@ -1191,7 +1191,7 @@ const PremiumBusinessCard = ({
                 Zdjecia 4:3 jak reszta zdjec w wizytowce (regula z CLAUDE.md). */}
             {((userPhotos?.length ?? 0) > 0 || (userNotes?.length ?? 0) > 0) && (
               <div className="space-y-3">
-                <h3 className="text-lg font-semibold tracking-tight">{t("user_notes_title", "Od użytkowników")}</h3>
+                <h3 className="text-lg font-semibold tracking-tight">{t("user_notes_title")}</h3>
                 {userPhotos && userPhotos.length > 0 && (
                   <div className="grid grid-cols-2 gap-2">
                     {userPhotos.map((url, idx) => (

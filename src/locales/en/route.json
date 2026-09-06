@@ -11,14 +11,12 @@
   },
   "notes": {
     "on_route_one": "{{count}} note on the route",
-    "on_route_few": "{{count}} notes on the route",
-    "on_route_many": "{{count}} notes on the route",
     "collapse": "Collapse notes",
     "add_fact": "Add a note ({{count}}/{{max}})",
     "add_on_route": "Add a note on the route",
     "count_one": "{{count}} note",
-    "count_few": "{{count}} notes",
-    "count_many": "{{count}} notes"
+    "on_route_other": "{{count}} notes on the route",
+    "count_other": "{{count}} notes"
   },
   "add_pin": {
     "title": "Add point",

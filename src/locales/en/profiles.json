@@ -58,7 +58,12 @@
     "find_users_aria": "Find people",
     "notifications_aria": "Notifications",
     "share_profile_aria": "Share profile",
-    "add_bio": "Add a short bio about yourself"
+    "add_bio": "Add a short bio about yourself",
+    "no_followers": "No one follows you yet.",
+    "trip_deleted": "Trip deleted.",
+    "delete_error": "We couldn't delete it.",
+    "list_deleted": "List deleted.",
+    "share_no_username": "Add a username to share your profile."
   },
   "guest": {
     "title": "Your traveler profile",

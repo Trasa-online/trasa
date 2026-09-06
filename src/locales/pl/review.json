@@ -126,7 +126,10 @@
     "route_public": "Trasa widoczna w Eksploruj",
     "route_hidden": "Trasa ukryta z Eksploruj",
     "photo_upload_error": "Nie udało się dodać zdjęć. Spróbuj ponownie.",
-    "photo_upload_partial": "Część zdjęć się nie dodała."
+    "photo_upload_partial": "Część zdjęć się nie dodała.",
+    "cover_set_error": "Nie udało się ustawić okładki",
+    "route_needs_place": "Trasa musi mieć co najmniej jedno miejsce",
+    "generic_error": "Coś poszło nie tak"
   },
   "share": {
     "text": "Zobacz moją trasę w spontaway"
@@ -142,6 +145,8 @@
     "save_name": "Zapisz nazwę",
     "edit_entry": "Edytuj wpis",
     "close": "Zamknij",
-    "more_options": "Więcej opcji"
+    "more_options": "Więcej opcji",
+    "next": "Następne",
+    "edit_name": "Edytuj nazwę"
   }
 }

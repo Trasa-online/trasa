@@ -400,8 +400,8 @@ export function CollectionDetail({ col, onClose, onAdopt }: { col: DiscoveryColl
           <div className="h-12 w-12 rounded-2xl bg-muted flex items-center justify-center">
             <Images className="h-6 w-6 text-muted-foreground" />
           </div>
-          <p className="text-sm font-bold">{t("gallery_empty_title", "Brak zdjęć w galerii")}</p>
-          <p className="text-xs text-muted-foreground max-w-[250px] leading-relaxed">{t("gallery_empty_desc", "Autor nie dodał jeszcze zdjęć do tego zestawienia.")}</p>
+          <p className="text-sm font-bold">{t("gallery_empty_title")}</p>
+          <p className="text-xs text-muted-foreground max-w-[250px] leading-relaxed">{t("gallery_empty_desc")}</p>
         </div>
       );
     }
@@ -553,7 +553,7 @@ export function CollectionDetail({ col, onClose, onAdopt }: { col: DiscoveryColl
           onClick={adoptRoute}
           className="flex-1 h-12 rounded-2xl bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform shadow-md shadow-orange-500/20"
         >
-          {t("use_collection", "Użyj tego zestawienia")} <ArrowRight className="h-4 w-4" />
+          {t("use_collection")} <ArrowRight className="h-4 w-4" />
         </button>
         <button
           onClick={toggleSaveCollection}
@@ -1332,7 +1332,7 @@ export function SavedRoutes({ city, hideEmptyState }: { city?: string; hideEmpty
     if (!user) return;
     await (supabase as any).from("saved_routes").delete().eq("user_id", user.id).eq("route_id", id);
     queryClient.invalidateQueries({ queryKey: ["saved-routes"] });
-    toast(i18n.t("toast.removed_saved", { ns: "homefeed", defaultValue: "Usunięto z zapisanych" }));
+    toast(i18n.t("toast.removed_saved", { ns: "homefeed" }));
   };
 
 
@@ -1594,7 +1594,7 @@ export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityCh
     haptics.light();
     if (has) {
       await (supabase as any).from("saved_routes").delete().eq("user_id", user.id).eq("route_id", routeId);
-      toast(t("toast.removed_saved", "Usunięto z zapisanych"), {
+      toast(t("toast.removed_saved"), {
         action: { label: t("undo", "Cofnij"), onClick: () => toggleSaveRoute(routeId) },
       });
     } else {
@@ -1618,7 +1618,7 @@ export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityCh
       if (set.has(colId)) {
         set.delete(colId); delete dates[colId];
         if (user) void unsaveCollectionDb(user.id, colId);
-        toast(t("toast.removed_saved", "Usunięto z zapisanych"), {
+        toast(t("toast.removed_saved"), {
           action: { label: t("undo", "Cofnij"), onClick: () => toggleSaveCol(colId) },
         });
       } else {
@@ -2153,7 +2153,7 @@ export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityCh
             <div className="h-10 w-10 rounded-xl bg-orange-50 flex items-center justify-center shrink-0">
               {nearbyLoading ? <Loader2 className="h-[18px] w-[18px] text-orange-600 animate-spin" /> : <Navigation className="h-[18px] w-[18px] text-orange-600" />}
             </div>
-            <span className="flex-1 text-sm font-semibold">{t("current_location", "Bieżące położenie")}</span>
+            <span className="flex-1 text-sm font-semibold">{t("current_location")}</span>
             <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
           </button>
           <button onClick={() => navigate("/moj-profil?tab=zapisane")} className="w-full flex items-center gap-3 px-3.5 py-3 text-left active:bg-muted/50 transition-colors">

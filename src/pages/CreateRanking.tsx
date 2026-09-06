@@ -543,8 +543,8 @@ const CreateRanking = () => {
   const canPublish = canGoNext && !publishing;
   // Przejscie do kroku 2 - gdy warunki niespelnione, TOAST z powodem (guzik nie jest disabled).
   const goNext = () => {
-    if (title.trim().length === 0) { toast(t("cta.need_title", "Dodaj nazwę listy")); return; }
-    if (items.length < 1) { toast(t("cta.need_one", "Dodaj co najmniej jedno miejsce")); return; }
+    if (title.trim().length === 0) { toast(t("cta.need_title")); return; }
+    if (items.length < 1) { toast(t("cta.need_place")); return; }
     setStep(2);
   };
 
@@ -991,7 +991,7 @@ const CreateRanking = () => {
           ) : (
             <button onClick={publish} disabled={!canPublish}
               className="w-full py-3.5 rounded-2xl bg-primary text-white font-bold text-sm shadow-md shadow-orange-500/20 active:scale-[0.98] transition-transform disabled:opacity-50">
-              {publishing ? <Loader2 className="h-5 w-5 animate-spin mx-auto" /> : (editId ? t("cta.save") : t("cta.publish", "Zapisz moją listę"))}
+              {publishing ? <Loader2 className="h-5 w-5 animate-spin mx-auto" /> : (editId ? t("cta.save") : t("cta.publish"))}
             </button>
           )}
         </div>

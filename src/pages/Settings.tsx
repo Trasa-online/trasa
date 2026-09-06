@@ -733,7 +733,7 @@ const Settings = () => {
               onChange={(e) => setBio(e.target.value.slice(0, 80))}
               maxLength={80}
               rows={2}
-              placeholder={t("bio_placeholder", "Krótko o sobie, np. Uwielbiam city breaki!")}
+              placeholder={t("bio_placeholder")}
               className="w-full bg-background rounded-2xl px-3 py-2.5 text-sm resize-none focus:outline-none border border-border/40 placeholder:text-muted-foreground/60 leading-relaxed"
             />
           </div>

@@ -1,6 +1,6 @@
 {
   "stop_one": "przystanek",
-  "stop_many": "przystanki",
+  "stop_many": "przystanków",
   "collapse": "Zwiń",
   "show_more_count": "Pokaż +{{count}} więcej",
   "show_more": "Pokaż więcej",
@@ -21,5 +21,6 @@
     "must_see": "Punkt obowiązkowy",
     "nice_addition": "Fajny dodatek",
     "skippable": "Można pominąć"
-  }
+  },
+  "stop_few": "przystanki"
 }

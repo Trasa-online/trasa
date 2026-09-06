@@ -54,7 +54,9 @@
     "remove_this_place": "to miejsce",
     "saving": "Zapisywanie…",
     "confirm_route": "Zatwierdź tę trasę",
-    "save_changes": "Zapisz zmiany"
+    "save_changes": "Zapisz zmiany",
+    "photos_label": "Zdjęcia miejsca",
+    "others_notes": "Notki uczestników"
   },
   "status": {
     "day_finished_label": "Dzień zakończony",
@@ -131,5 +133,6 @@
     "toast_added": "Dodano „{{name}}\"",
     "empty": "Brak miejsc - dodaj pierwsze!",
     "tell_about_day": "Opowiedz o dniu"
-  }
+  },
+  "points_few": "punkty"
 }

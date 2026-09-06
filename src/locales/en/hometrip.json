@@ -20,13 +20,8 @@
     "other": "Place"
   },
   "places_one": "place",
-  "places_few": "places",
-  "places_many": "places",
   "people_one": "person",
-  "people_few": "people",
-  "people_many": "people",
   "points_one": "point",
-  "points_many": "points",
   "editor": {
     "reorder_aria": "Drag to reorder",
     "move_up": "Move up",
@@ -54,7 +49,9 @@
     "remove_this_place": "this place",
     "saving": "Saving…",
     "confirm_route": "Confirm this trip",
-    "save_changes": "Save changes"
+    "save_changes": "Save changes",
+    "photos_label": "Place photos",
+    "others_notes": "Notes from others"
   },
   "status": {
     "day_finished_label": "Day finished",
@@ -131,5 +128,8 @@
     "toast_added": "Added \"{{name}}\"",
     "empty": "No places - add your first one!",
     "tell_about_day": "Tell about the day"
-  }
+  },
+  "places_other": "places",
+  "people_other": "people",
+  "points_other": "points"
 }

@@ -36,9 +36,9 @@
     "browse_categories": "Browse categories",
     "add_selected": "Add selected ({{count}})",
     "added_one": "Place added",
-    "added_many": "Added {{count}} places",
     "add_error": "Couldn't add places",
-    "place_fallback": "Place"
+    "place_fallback": "Place",
+    "added_other": "Added {{count}} places"
   },
   "liked": {
     "back": "Back",

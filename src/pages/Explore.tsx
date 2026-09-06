@@ -228,7 +228,7 @@ export const LikedTab = ({ selectMode = false, onExitSelection, city: controlled
     removeLikeFromCity(p.city, p.place_name);
     refresh();
     deferDelete({
-      message: t("liked.removed", { defaultValue: "Usunięto z zapisanych" }),
+      message: t("liked.removed"),
       onUndo: () => {
         addLike(p.city, {
           place_name: p.place_name, category: p.category, place_id: p.place_id ?? null,

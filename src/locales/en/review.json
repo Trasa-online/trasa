@@ -126,7 +126,10 @@
     "route_public": "Route visible in Explore",
     "route_hidden": "Route hidden from Explore",
     "photo_upload_error": "Couldn't add photos. Please try again.",
-    "photo_upload_partial": "Some photos couldn't be added."
+    "photo_upload_partial": "Some photos couldn't be added.",
+    "cover_set_error": "We couldn't set the cover",
+    "route_needs_place": "A route needs at least one place",
+    "generic_error": "Something went wrong"
   },
   "share": {
     "text": "Check out my route on spontaway"
@@ -142,6 +145,8 @@
     "save_name": "Save name",
     "edit_entry": "Edit entry",
     "close": "Close",
-    "more_options": "More options"
+    "more_options": "More options",
+    "next": "Next",
+    "edit_name": "Edit name"
   }
 }

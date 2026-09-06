@@ -1,6 +1,5 @@
 {
   "stop_one": "stop",
-  "stop_many": "stops",
   "collapse": "Collapse",
   "show_more_count": "Show +{{count}} more",
   "show_more": "Show more",
@@ -21,5 +20,6 @@
     "must_see": "Must-see",
     "nice_addition": "Nice addition",
     "skippable": "Skippable"
-  }
+  },
+  "stop_other": "stops"
 }

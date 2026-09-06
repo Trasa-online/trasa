@@ -36,7 +36,6 @@
   "empty_upcoming": "No upcoming trips",
   "empty_upcoming_cta": "Plan your next adventure!",
   "days_until_one": "In {{count}} day",
-  "days_until_many": "In {{count}} days",
   "day_label": "Day {{number}}",
   "plan_label": "Plan",
   "delete_trip_title": "Delete trip?",
@@ -70,5 +69,6 @@
     "shopping": "Shopping",
     "local_vibes": "Vibes",
     "photography": "Photo"
-  }
+  },
+  "days_until_other": "In {{count}} days"
 }

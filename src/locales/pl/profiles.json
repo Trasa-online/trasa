@@ -59,7 +59,12 @@
     "find_users_aria": "Szukaj osób",
     "notifications_aria": "Powiadomienia",
     "share_profile_aria": "Udostępnij profil",
-    "add_bio": "Dodaj krótki opis o sobie"
+    "add_bio": "Dodaj krótki opis o sobie",
+    "no_followers": "Nikt Cię jeszcze nie obserwuje.",
+    "trip_deleted": "Wyjazd usunięty.",
+    "delete_error": "Nie udało się usunąć.",
+    "list_deleted": "Lista usunięta.",
+    "share_no_username": "Uzupełnij nazwę użytkownika, aby udostępnić profil."
   },
   "guest": {
     "title": "Twój profil podróżnika",

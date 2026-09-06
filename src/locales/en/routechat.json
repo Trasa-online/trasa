@@ -3,7 +3,6 @@
   "loading_subtitle": "Sit back and relax!",
   "day_label": "Day {{n}}",
   "days_one": "1 day",
-  "days_many": "{{count}} days",
   "assistant": {
     "plan_ready": "Here's your plan for **{{city}}** 🗺️\n\nI can tailor it to your needs - tell me what to change!",
     "continuation_intro": "Great! I'm adding your new likes to the plan 🗺️",
@@ -66,5 +65,6 @@
   "back_to_matches": "Back to selection",
   "map_button": "Map",
   "confirm_readonly": "Back to home",
-  "confirm_plan": "I'll take this plan!"
+  "confirm_plan": "I'll take this plan!",
+  "days_other": "{{count}} days"
 }
