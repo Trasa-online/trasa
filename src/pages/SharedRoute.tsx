@@ -2109,14 +2109,21 @@ export default function SharedRoute() {
               <div className="flex items-center gap-2">
                 {/* t("add_place") przeniesione do plywajacego guzika pod czatem (prosba Nat
                     2026-08-30) - dolny pasek zostaje dla akcji etapu. */}
-                {/* Gdy obok stoi t("publish_trip"), zmiana kolejnosci schodzi na drugi plan
-                    (szary fill) - dwa pomaranczowe guziki obok siebie nie mowia, ktory jest
-                    wazniejszy, a publikacja jest tu akcja glowna. */}
+                {/* Obok publikacji zmiana kolejnosci jest akcja drugoplanowa (szary fill wg
+                    CLAUDE.md), ale MUSI byc widoczna: samo #EDEDED na bialym pasku znikalo
+                    i user zglosil, ze guzik "sie zgubil" - stad obwodka.
+                    Szerokosc: zmiana kolejnosci sciesnia sie do tresci (shrink-0), a cala
+                    reszte paska zabiera publikacja. Dwa guziki na flex-1 z nielamanym tekstem
+                    nie mialy sie jak zmiescic na wezszych telefonach. */}
                 {pins.length > 1 && (
                   <button onClick={() => { haptics.light(); pickDay(null); setReorderMode(true); }}
-                    className={`flex-1 py-3 rounded-full font-bold text-sm flex items-center justify-center gap-2 whitespace-nowrap active:scale-[0.98] transition-transform ${
-                      canPublish ? "bg-secondary text-secondary-foreground" : "bg-primary text-white"}`}>
-                    <GripVertical className="h-4 w-4 shrink-0" />{t("reorder")}</button>
+                    className={`px-4 py-3 rounded-full font-bold text-sm flex items-center justify-center gap-2 whitespace-nowrap active:scale-[0.98] transition-transform ${
+                      canPublish
+                        ? "min-w-0 bg-secondary text-secondary-foreground border border-border"
+                        : "flex-1 bg-primary text-white"}`}>
+                    <GripVertical className="h-4 w-4 shrink-0" />
+                    <span className="truncate">{t("reorder")}</span>
+                  </button>
                 )}
                 {/* Etap PROPOZYCJI (host): wybierz miejsca -> w trakcie. */}
                 {isOwner && stage === "planning" && pins.length > 0 && (
