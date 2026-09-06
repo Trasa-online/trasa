@@ -92,5 +92,24 @@
     "less": "Zwiń",
     "custom_placeholder": "Dodaj własny tag",
     "add": "Dodaj"
-  }
+  },
+  "intro": "Lista to zbiór Twoich ulubionych miejsc bez ustalonej kolejności - np. Twoje ukochane kawiarnie w mieście.",
+  "saved": {
+    "empty": "Nie masz jeszcze zapisanych miejsc. Polub miejsca w eksploracji, żeby dodać je tu jednym tapem.",
+    "other_cities": "Twoje zapisane miejsca (z innych miast)"
+  },
+  "city": {
+    "optional": "Miasto jest opcjonalne - możesz dodać miejsca z różnych miast do tej samej listy.",
+    "anywhere_world": "Wszędzie (cały świat)",
+    "anywhere": "Wszędzie"
+  },
+  "desc": {
+    "hint": "Napisz, o czym jest ta lista, żeby innym łatwiej było zdecydować.",
+    "placeholder": "Np. Moje ulubione miejsca na dobrą kawę i pracę z laptopem..."
+  },
+  "reorder_hint": "Przeciągnij, by zmienić kolejność",
+  "aria": {
+    "delete_place": "Usuń miejsce"
+  },
+  "user_fallback": "Użytkownik"
 }

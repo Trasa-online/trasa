@@ -113,6 +113,7 @@ async function fetchGooglePlace(opts: { name?: string; address?: string; lat?: n
 // Wiersz wybranego miejsca (widok listy) z DRAG & DROP (framer-motion Reorder) - 1:1 z
 // SortableComposeRow w tworzeniu trasy. Uchwyt GripVertical po lewej; reszta wiersza tapowalna.
 function SortableRankingRow({ it, onOpen, onRemove }: { it: RankingItem; onOpen: () => void; onRemove: () => void }) {
+  const { t } = useTranslation("ranking");
   const controls = useDragControls();
   const cat = categoryBadge(it.category);
   return (
@@ -125,7 +126,7 @@ function SortableRankingRow({ it, onOpen, onRemove }: { it: RankingItem; onOpen:
     >
       <span
         onPointerDown={(e) => { haptics.light(); controls.start(e); }}
-        aria-label="Przeciągnij, by zmienić kolejność"
+        aria-label={t("reorder_hint")}
         className="shrink-0 h-9 w-5 flex items-center justify-center text-muted-foreground/50 cursor-grab active:cursor-grabbing touch-none"
       >
         <GripVertical className="h-5 w-5" />
@@ -139,7 +140,7 @@ function SortableRankingRow({ it, onOpen, onRemove }: { it: RankingItem; onOpen:
           {cat && <p className="text-[11px] text-muted-foreground truncate flex items-center gap-1 mt-0.5"><CategoryIcon category={it.category} className="h-3 w-3 shrink-0" />{cat.label}</p>}
         </div>
       </button>
-      <button onClick={onRemove} aria-label="Usuń miejsce" className="h-7 w-7 flex items-center justify-center rounded-full text-destructive active:bg-destructive/10 shrink-0"><X className="h-4 w-4" /></button>
+      <button onClick={onRemove} aria-label={t("aria.delete_place")} className="h-7 w-7 flex items-center justify-center rounded-full text-destructive active:bg-destructive/10 shrink-0"><X className="h-4 w-4" /></button>
     </Reorder.Item>
   );
 }
@@ -160,7 +161,7 @@ const CreateRanking = () => {
   // NIE w query param. Bez czytania state forma spadala do "Warszawa" i "Twoje zapisane miejsca"
   // nie pasowaly do miasta wybranego przez usera (bug 2026-08).
   const nav = (location.state ?? {}) as { city?: string | null; title?: string | null; places?: any[]; listStatus?: string | null; isPublic?: boolean };
-  // "" = "Wszędzie" (lista globalna). Miasto NIE jest obowiazkowe przy tworzeniu listy -
+  // "" = t("city.anywhere") (lista globalna). Miasto NIE jest obowiazkowe przy tworzeniu listy -
   // user moze zrobic liste z miejsc z calego swiata. Selektor miasta = OPCJONALNY filtr wyszukiwarki.
   const initCity = nav.city || params.get("city") || "";
   const [city, setCity] = useState(initCity);
@@ -238,7 +239,7 @@ const CreateRanking = () => {
   const [savePlace, setSavePlace] = useState<SavePlaceInput | null>(null);
   // Gest natywny: przeciagniecie panelu w dol zamyka arkusz.
   const previewDrag = useDragToDismiss({ onDismiss: () => setCustomPreview(null) });
-  const [author, setAuthor] = useState<{ name: string; avatar: string | null }>({ name: "Użytkownik", avatar: null });
+  const [author, setAuthor] = useState<{ name: string; avatar: string | null }>({ name: t("user_fallback"), avatar: null });
 
 
   // Dociagnij dane B2B dla wybranych miejsc (po place_id) - pelny adres, tagi, kategorie.
@@ -292,7 +293,7 @@ const CreateRanking = () => {
   useEffect(() => {
     if (!user) return;
     supabase.from("profiles").select("username, first_name, avatar_url").eq("id", user.id).maybeSingle()
-      .then(({ data }) => { if (data) setAuthor({ name: (data as any).first_name || (data as any).username || "Użytkownik", avatar: (data as any).avatar_url ?? null }); });
+      .then(({ data }) => { if (data) setAuthor({ name: (data as any).first_name || (data as any).username || t("user_fallback"), avatar: (data as any).avatar_url ?? null }); });
   }, [user]);
 
   useEffect(() => {
@@ -658,7 +659,7 @@ const CreateRanking = () => {
           {/* Hint: jedno zdanie czym jest lista */}
           <div className="px-4 pt-4">
             <p className="text-sm text-muted-foreground leading-snug">
-              {`Lista to zbiór Twoich ulubionych miejsc bez ustalonej kolejności - np. Twoje ukochane kawiarnie w mieście.`}
+              {t("intro")}
             </p>
           </div>
           {/* Nazwa listy (generyczna domyslna, edytowalna) */}
@@ -676,7 +677,7 @@ const CreateRanking = () => {
             <button type="button" onClick={() => setCityPickerOpen((o) => !o)}
               className="w-full flex items-center gap-2 rounded-2xl bg-secondary text-secondary-foreground px-4 py-3 active:opacity-80 transition-opacity">
               <span className="text-sm text-muted-foreground shrink-0">{`Szukasz w:`}</span>
-              <span className="flex-1 text-left text-sm font-bold text-foreground truncate">{city || "Wszędzie"}</span>
+              <span className="flex-1 text-left text-sm font-bold text-foreground truncate">{city || t("city.anywhere")}</span>
               <ChevronDown className={`h-4 w-4 text-muted-foreground shrink-0 transition-transform ${cityPickerOpen ? "rotate-180" : ""}`} />
             </button>
             {cityPickerOpen && (
@@ -686,7 +687,7 @@ const CreateRanking = () => {
                       kraju zawezaja do jego pierwszego miasta; wybor "Wszedzie" -> globalnie (city=""). */}
                   <select value={city ? country : ""} onChange={(e) => { const v = e.target.value; if (!v) setCity(""); else onCountryChange(v); }}
                     className="w-full appearance-none rounded-2xl bg-secondary text-secondary-foreground border-0 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-orange-500/40">
-                    <option value="">Wszędzie</option>
+                    <option value="">{t("city.anywhere")}</option>
                     {TRIP_REGIONS.map((region) => (
                       <optgroup key={region} label={region}>
                         {TRIP_COUNTRIES.filter((c) => c.region === region).map((c) => (
@@ -700,7 +701,7 @@ const CreateRanking = () => {
                 <div className="relative">
                   <select value={city} onChange={(e) => setCity(e.target.value)}
                     className="w-full appearance-none rounded-2xl bg-secondary text-secondary-foreground border-0 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-orange-500/40">
-                    <option value="">Wszędzie (cały świat)</option>
+                    <option value="">{t("city.anywhere_world")}</option>
                     {cities.map((c) => <option key={c} value={c}>{c}</option>)}
                   </select>
                   <ChevronDown className="h-4 w-4 text-muted-foreground absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -709,7 +710,7 @@ const CreateRanking = () => {
             )}
             {items.length > 0 && (
               <p className="text-[11px] text-muted-foreground mt-2 leading-snug">
-                {`Miasto jest opcjonalne - możesz dodać miejsca z różnych miast do tej samej listy.`}
+                {t("city.optional")}
               </p>
             )}
           </div>
@@ -885,7 +886,7 @@ const CreateRanking = () => {
             return (
               <div className="px-4 pb-4">
                 <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide mb-2">
-                  {savedForCity.fallback && saved.length > 0 ? "Twoje zapisane miejsca (z innych miast)" : "Twoje zapisane miejsca"}
+                  {savedForCity.fallback && saved.length > 0 ? t("saved.other_cities") : "Twoje zapisane miejsca"}
                 </p>
                 {saved.length > 0 ? (
                   <div className="flex gap-2.5 overflow-x-auto scrollbar-none snap-x snap-mandatory -mr-4 pr-4 pb-1">
@@ -902,7 +903,7 @@ const CreateRanking = () => {
                     <div className="shrink-0 w-1" />
                   </div>
                 ) : (
-                  <p className="text-sm text-muted-foreground leading-snug">{`Nie masz jeszcze zapisanych miejsc. Polub miejsca w eksploracji, żeby dodać je tu jednym tapem.`}</p>
+                  <p className="text-sm text-muted-foreground leading-snug">{t("saved.empty")}</p>
                 )}
               </div>
             );
@@ -920,13 +921,13 @@ const CreateRanking = () => {
             <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-1.5 block">
               {`Opis listy`} <span className="normal-case font-medium text-muted-foreground/50">{t("notes.optional")}</span>
             </label>
-            <p className="text-[12px] text-muted-foreground leading-snug mb-2.5">{`Napisz, o czym jest ta lista, żeby innym łatwiej było zdecydować.`}</p>
+            <p className="text-[12px] text-muted-foreground leading-snug mb-2.5">{t("desc.hint")}</p>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               maxLength={500}
               rows={3}
-              placeholder={`Np. Moje ulubione miejsca na dobrą kawę i pracę z laptopem...`}
+              placeholder={t("desc.placeholder")}
               className="w-full rounded-2xl bg-secondary text-secondary-foreground border-0 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-orange-500/40 placeholder:text-muted-foreground/50 resize-none"
             />
           </div>

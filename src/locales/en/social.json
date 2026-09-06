@@ -122,5 +122,26 @@
     "trip_message": "New message 💬",
     "route_ready": "Trip is ready 🗺️",
     "group_invite": "Session invite 🗺️"
-  }
+  },
+  "done_desc": "We will review this within 24 hours. If it breaks the rules we will remove it and act on the author.",
+  "pick_reason": "Pick a reason. We review reports within 24 hours.",
+  "reason": {
+    "abusive": "Abusive or inappropriate content",
+    "spam": "Spam or advertising",
+    "false_info": "False information",
+    "privacy": "Someone else's personal data or likeness",
+    "copyright": "Copyright infringement",
+    "other": "Other"
+  },
+  "details_placeholder": "Briefly describe the problem (optional)",
+  "toast": {
+    "failed": "We could not send the report"
+  },
+  "done_title": "Thanks for the report",
+  "title": {
+    "trip": "Report trip",
+    "profile": "Report profile",
+    "list": "Report list"
+  },
+  "submit": "Report"
 }

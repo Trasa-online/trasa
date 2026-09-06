@@ -24,5 +24,18 @@
   "errors": {
     "generic": "Coś poszło nie tak"
   },
-  "other": "Inne..."
+  "other": "Inne...",
+  "orb": {
+    "no_place_detected": "Nie wykryto miejsca. Spróbuj zdjęcia budynku, zabytku lub atrakcji.",
+    "prompt_parks": "Pokaż mi 3 najpiękniejsze parki i miejsca na spacer",
+    "error": "Przepraszam, coś poszło nie tak. Spróbuj ponownie.",
+    "no_route": "Brak aktywnej trasy. Stwórz plan podróży.",
+    "identify_failed": "Nie udało się rozpoznać miejsca.",
+    "prompt_landmarks": "Pokaż mi 3 najciekawsze zabytki",
+    "prompt_museums": "Pokaż mi 3 interesujące muzea",
+    "add_failed": "Nie udało się dodać miejsca.",
+    "what_interests": "Co Cię interesuje?"
+  },
+  "back_arrow": "← Wróć",
+  "back": "Wróć"
 }

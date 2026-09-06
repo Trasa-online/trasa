@@ -121,7 +121,7 @@ const OrbOverlay = ({ onClose, isSpeaking = false, activeRoutes = [], userIntere
       }
     } catch (err) {
       console.error("orb-chat error:", err);
-      setChatMessages(prev => [...prev, { role: "assistant", content: "Przepraszam, coś poszło nie tak. Spróbuj ponownie." }]);
+      setChatMessages(prev => [...prev, { role: "assistant", content: t("orb.error") }]);
     } finally {
       setChatLoading(false);
     }
@@ -133,7 +133,7 @@ const OrbOverlay = ({ onClose, isSpeaking = false, activeRoutes = [], userIntere
   const handleAddPlace = async (place: PlaceCard) => {
     const activeRoute = activeRoutes[0];
     if (!activeRoute) {
-      toast.error("Brak aktywnej trasy. Stwórz plan podróży.");
+      toast.error(t("orb.no_route"));
       return;
     }
 
@@ -162,7 +162,7 @@ const OrbOverlay = ({ onClose, isSpeaking = false, activeRoutes = [], userIntere
       toast.success(`${place.name} dodano do trasy!`);
     } catch (err) {
       console.error("Add place error:", err);
-      toast.error("Nie udało się dodać miejsca.");
+      toast.error(t("orb.add_failed"));
     }
   };
 
@@ -223,7 +223,7 @@ const OrbOverlay = ({ onClose, isSpeaking = false, activeRoutes = [], userIntere
     } catch {
       setPlaceResult({
         name: i18n.language === "en" ? "Unknown place" : "Nieznane miejsce",
-        description: i18n.language === "en" ? "Could not identify the place." : "Nie udało się rozpoznać miejsca.",
+        description: i18n.language === "en" ? "Could not identify the place." : t("orb.identify_failed"),
         tip: "",
       });
     } finally {
@@ -264,9 +264,9 @@ const OrbOverlay = ({ onClose, isSpeaking = false, activeRoutes = [], userIntere
         { label: "Cafés", id: "cafe", query: "Recommend 3 cafés" },
       ]
     : [
-        { label: "Zabytki", id: "monument", query: "Pokaż mi 3 najciekawsze zabytki" },
-        { label: "Muzea", id: "museum", query: "Pokaż mi 3 interesujące muzea" },
-        { label: "Parki", id: "park", query: "Pokaż mi 3 najpiękniejsze parki i miejsca na spacer" },
+        { label: "Zabytki", id: "monument", query: t("orb.prompt_landmarks") },
+        { label: "Muzea", id: "museum", query: t("orb.prompt_museums") },
+        { label: "Parki", id: "park", query: t("orb.prompt_parks") },
         { label: "Restauracje", id: "restaurant", query: "Polecisz mi 3 restauracje?" },
         { label: "Kawiarnie", id: "cafe", query: "Polecisz mi 3 kawiarnie?" },
       ];
@@ -392,9 +392,7 @@ const OrbOverlay = ({ onClose, isSpeaking = false, activeRoutes = [], userIntere
                 <button
                   onClick={() => { setChatMessages([]); setChatPlaces([]); setAddedPlaces(new Set()); }}
                   className="text-xs text-muted-foreground/60 hover:text-muted-foreground transition-colors self-center"
-                >
-                  ← Wróć
-                </button>
+                >{t("back_arrow")}</button>
               )}
             </div>
           ) : (
@@ -407,7 +405,7 @@ const OrbOverlay = ({ onClose, isSpeaking = false, activeRoutes = [], userIntere
               {showSightseeingCategories ? (
                 <div className="flex flex-col gap-2 w-full items-center">
                   <p className="text-xs text-muted-foreground text-center">
-                    {i18n.language === "en" ? "What are you looking for?" : "Co Cię interesuje?"}
+                    {i18n.language === "en" ? "What are you looking for?" : t("orb.what_interests")}
                   </p>
                   <div className="flex gap-2 flex-wrap justify-center">
                     {sightseeingCategories.map((cat) => (
@@ -425,7 +423,7 @@ const OrbOverlay = ({ onClose, isSpeaking = false, activeRoutes = [], userIntere
                       onClick={() => setShowSightseeingCategories(false)}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs text-muted-foreground hover:text-foreground active:scale-95 transition-transform"
                     >
-                      ← {i18n.language === "en" ? "Back" : "Wróć"}
+                      ← {i18n.language === "en" ? "Back" : t("back")}
                     </button>
                   </div>
                 </div>
@@ -461,7 +459,7 @@ const OrbOverlay = ({ onClose, isSpeaking = false, activeRoutes = [], userIntere
                     <p className="text-sm text-muted-foreground text-center">
                       {i18n.language === "en"
                         ? "No place detected. Try a photo of a building, monument, or landmark."
-                        : "Nie wykryto miejsca. Spróbuj zdjęcia budynku, zabytku lub atrakcji."}
+                        : t("orb.no_place_detected")}
                     </p>
                   ) : (
                     <>

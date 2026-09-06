@@ -66,7 +66,7 @@ export default function SavePlaceSheet({
     enabled: !!user && open,
     queryFn: async () => {
       const { data } = await supabase.from("profiles").select("username, first_name, avatar_url").eq("id", user!.id).maybeSingle();
-      return { name: (data as any)?.first_name || (data as any)?.username || "Użytkownik", avatar: (data as any)?.avatar_url ?? null };
+      return { name: (data as any)?.first_name || (data as any)?.username || t("save_sheet.user_fallback"), avatar: (data as any)?.avatar_url ?? null };
     },
   });
 
@@ -117,7 +117,7 @@ export default function SavePlaceSheet({
       if (isIn(l)) {
         await removePlaceFromList(l.id, place.place_name);
         setOverride((prev) => new Map(prev).set(l.id, false));
-        toast.success(`Usunięto z „${l.title}"`, {
+        toast.success(t("save_sheet.removed_from", { title: l.title }), {
           action: { label: "Cofnij", onClick: async () => {
             await addPlaceToList(l.id, { ...place, city: place.city ?? l.city ?? city ?? null });
             setOverride((prev) => new Map(prev).set(l.id, true));
@@ -133,7 +133,7 @@ export default function SavePlaceSheet({
       invalidate();
     } catch (e: any) {
       console.error("[SavePlaceSheet] toggle failed:", e?.message ?? e);
-      toast.error("Nie udało się zapisać zmiany");
+      toast.error(t("save_sheet.save_failed"));
     } finally { setBusyId(null); }
   };
 
@@ -150,10 +150,10 @@ export default function SavePlaceSheet({
       setNewName("");
       setShowNewList(false);
       invalidate();
-      toast.success(`Utworzono listę „${name}"`);
+      toast.success(t("save_sheet.list_created", { name }));
     } catch (e: any) {
       console.error("[SavePlaceSheet] create list failed:", e?.message ?? e);
-      toast.error("Nie udało się utworzyć listy");
+      toast.error(t("save_sheet.list_failed"));
     } finally { setBusyId(null); }
   };
 
@@ -213,7 +213,7 @@ export default function SavePlaceSheet({
             <Plus className={`h-5 w-5 transition-transform ${showNewList ? "rotate-45" : ""}`} strokeWidth={2.25} />
           </button>
         </div>
-        <p className="px-5 pb-1 text-sm text-muted-foreground shrink-0">Zapis trafia do Twojej ogólnej listy miejsc. Możesz dodać je do innej listy (opcjonalnie).</p>
+        <p className="px-5 pb-1 text-sm text-muted-foreground shrink-0">{t("save_sheet.desc")}</p>
 
         {/* Nowa lista: input + "+" - widoczne dopiero po kliknięciu "+" w nagłówku. */}
         {showNewList && (
@@ -227,7 +227,7 @@ export default function SavePlaceSheet({
                 placeholder="Nazwa nowej listy"
                 className="flex-1 min-w-0 bg-transparent text-base text-foreground placeholder:text-muted-foreground/50 focus:outline-none"
               />
-              <button type="button" onClick={createNew} disabled={busyId === "new" || !newName.trim()} className="h-9 w-9 rounded-full bg-muted flex items-center justify-center shrink-0 text-foreground active:scale-90 transition-transform disabled:opacity-40" aria-label="Utwórz listę">
+              <button type="button" onClick={createNew} disabled={busyId === "new" || !newName.trim()} className="h-9 w-9 rounded-full bg-muted flex items-center justify-center shrink-0 text-foreground active:scale-90 transition-transform disabled:opacity-40" aria-label={t("save_sheet.create_list")}>
                 {busyId === "new" ? <Loader2 className="h-5 w-5 animate-spin" /> : <Plus className="h-5 w-5" />}
               </button>
             </div>
@@ -236,14 +236,14 @@ export default function SavePlaceSheet({
 
         <div className="flex-1 min-h-0 overflow-y-auto px-5 pt-1 pb-3" style={{ WebkitOverflowScrolling: "touch" }}>
           <div className="divide-y divide-border/40">
-            {/* "Ogólne" = domyślna lista KAŻDEGO usera. ZAWSZE na górze, zawsze zaznaczona
+            {/* t("save_sheet.general") = domyślna lista KAŻDEGO usera. ZAWSZE na górze, zawsze zaznaczona
                 (każde zapisane miejsce tam trafia). Niekliknalny wskaźnik - nie da się usunąć. */}
             <div className="w-full flex items-center gap-3 py-2.5">
               <div className="h-11 w-11 rounded-full overflow-hidden shrink-0 bg-[#fcede3] flex items-center justify-center">
                 <Bookmark className="h-5 w-5 text-orange-500 fill-orange-500" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-base font-bold text-foreground truncate leading-tight">Ogólne</p>
+                <p className="text-base font-bold text-foreground truncate leading-tight">{t("save_sheet.general")}</p>
                 <p className="text-xs text-muted-foreground leading-tight">Wszystkie Twoje zapisane miejsca</p>
               </div>
               <span className="h-9 w-9 rounded-full flex items-center justify-center shrink-0 text-orange-500">
@@ -257,8 +257,7 @@ export default function SavePlaceSheet({
         {/* Stopka: Udostępnij to miejsce */}
         <div className="shrink-0 px-5 pt-2 pb-safe-4">
           <button type="button" onClick={onShare} className="w-full h-12 rounded-2xl bg-orange-100 text-foreground font-semibold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform">
-            <Share2 className="h-4 w-4" /> Udostępnij to miejsce
-          </button>
+            <Share2 className="h-4 w-4" />{t("save_sheet.share")}</button>
         </div>
       </SheetContent>
     </Sheet>

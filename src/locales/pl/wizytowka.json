@@ -49,5 +49,23 @@
   "events_month_empty": "Brak wydarzeń w tym miesiącu",
   "events_show_all": "Wszystkie ({{count}})",
   "events_collapse": "Zwiń",
-  "open_in_google_maps": "Zobacz w Google Maps"
+  "open_in_google_maps": "Zobacz w Google Maps",
+  "toast": {
+    "already": "Już zgłosiłeś to miejsce - dzięki!",
+    "failed": "Nie udało się wysłać zgłoszenia",
+    "sent": "Dzięki, sprawdzimy to 🙌"
+  },
+  "details_placeholder": "Dodaj szczegóły (opcjonalnie)",
+  "reason": {
+    "data": "Błędne dane (adres, godziny)",
+    "photo": "Złe / nieaktualne zdjęcie",
+    "closed": "Zamknięte / nie istnieje",
+    "content": "Treść niezgodna",
+    "category": "Zła kategoria",
+    "other": "Inne"
+  },
+  "title": "Coś nie tak z tym miejscem?",
+  "submit": "Wyślij zgłoszenie",
+  "report_problem": "Zgłoś problem",
+  "report": "Zgłoś"
 }

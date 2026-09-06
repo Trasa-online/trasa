@@ -24,5 +24,18 @@
   "errors": {
     "generic": "Something went wrong"
   },
-  "other": "Other..."
+  "other": "Other...",
+  "orb": {
+    "no_place_detected": "No place detected. Try a photo of a building, landmark or attraction.",
+    "prompt_parks": "Show me 3 of the nicest parks and places to walk",
+    "error": "Sorry, something went wrong. Try again.",
+    "no_route": "No active trip. Create a plan first.",
+    "identify_failed": "We could not recognise the place.",
+    "prompt_landmarks": "Show me 3 of the most interesting landmarks",
+    "prompt_museums": "Show me 3 interesting museums",
+    "add_failed": "We could not add the place.",
+    "what_interests": "What are you after?"
+  },
+  "back_arrow": "← Back",
+  "back": "Back"
 }

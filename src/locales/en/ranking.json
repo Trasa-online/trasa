@@ -92,5 +92,24 @@
     "less": "Show less",
     "custom_placeholder": "Add your own tag",
     "add": "Add"
-  }
+  },
+  "intro": "A list is a set of your favourite places in no particular order - like the cafes you love in your city.",
+  "saved": {
+    "empty": "You have no saved places yet. Like places while exploring to add them here in one tap.",
+    "other_cities": "Your saved places (from other cities)"
+  },
+  "city": {
+    "optional": "The city is optional - you can put places from different cities on one list.",
+    "anywhere_world": "Anywhere (worldwide)",
+    "anywhere": "Anywhere"
+  },
+  "desc": {
+    "hint": "Say what this list is about, so others can decide faster.",
+    "placeholder": "E.g. My favourite spots for good coffee and laptop work..."
+  },
+  "reorder_hint": "Drag to reorder",
+  "aria": {
+    "delete_place": "Delete place"
+  },
+  "user_fallback": "User"
 }

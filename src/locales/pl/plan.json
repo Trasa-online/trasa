@@ -176,7 +176,7 @@
     "create_aria": "Utwórz wyjazd",
     "add_aria": "Dodaj do wyjazdu",
     "empty_hint": "Nie masz jeszcze wyjazdów - nazwij nowy powyżej.",
-    "share": "Udostępnij",
+    "share": "Udostępnij to miejsce",
     "done": "Gotowe",
     "added_to": "Dodano do: {{name}}",
     "created": "Utworzono wyjazd: {{name}}",
@@ -185,9 +185,16 @@
     "shared": "Udostępniono",
     "link_copied": "Skopiowano link",
     "loading": "Ładuję wyjazdy...",
-    "removed_from": "Usunięto z: {{name}}",
+    "removed_from": "Usunięto z „{{title}}”",
     "remove_error": "Nie udało się usunąć miejsca",
-    "remove_aria": "Usuń z wyjazdu"
+    "remove_aria": "Usuń z wyjazdu",
+    "desc": "Zapis trafia do Twojej ogólnej listy miejsc. Możesz dodać je do innej listy (opcjonalnie).",
+    "save_failed": "Nie udało się zapisać zmiany",
+    "list_failed": "Nie udało się utworzyć listy",
+    "create_list": "Utwórz listę",
+    "user_fallback": "Użytkownik",
+    "general": "Ogólne",
+    "list_created": "Utworzono listę „{{name}}”"
   },
   "cta_plan_route_few": "Zaplanuj trasę · {{count}} miejsca",
   "distance_denied": "Włącz lokalizację w ustawieniach, żeby zobaczyć dystans"

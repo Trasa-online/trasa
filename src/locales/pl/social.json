@@ -124,5 +124,26 @@
     "trip_message": "Nowa wiadomość 💬",
     "route_ready": "Trasa gotowa 🗺️",
     "group_invite": "Zaproszenie do sesji 🗺️"
-  }
+  },
+  "done_desc": "Sprawdzimy tę treść w ciągu 24 godzin. Jeśli łamie zasady, usuniemy ją i zareagujemy wobec autora.",
+  "pick_reason": "Wybierz powód. Zgłoszenia rozpatrujemy w ciągu 24 godzin.",
+  "reason": {
+    "abusive": "Treść obraźliwa lub nieodpowiednia",
+    "spam": "Spam albo reklama",
+    "false_info": "Nieprawdziwe informacje",
+    "privacy": "Cudze dane osobowe lub wizerunek",
+    "copyright": "Naruszenie praw autorskich",
+    "other": "Inne"
+  },
+  "details_placeholder": "Opisz krótko problem (opcjonalnie)",
+  "toast": {
+    "failed": "Nie udało się wysłać zgłoszenia"
+  },
+  "done_title": "Dziękujemy za zgłoszenie",
+  "title": {
+    "trip": "Zgłoś wyjazd",
+    "profile": "Zgłoś profil",
+    "list": "Zgłoś listę"
+  },
+  "submit": "Zgłoś"
 }
