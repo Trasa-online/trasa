@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { MapPin, ArrowRight, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, RotateCcw, CheckCircle2, Navigation, X, CalendarDays, Plus, Check, Bookmark } from "lucide-react";
 import AddCustomPlacePanel from "./AddCustomPlacePanel";
 import { haversineKm as haversineKmDist, formatDistance } from "@/lib/distance";
+import { pinCoverKeys, fetchPlaceKeysWithPhotos } from "@/lib/placePhotoSocial";
 import { useDistanceReference, getReference, ensureCityContext, tryResolveOnSite, setGpsReference } from "@/lib/distanceReference";
 import { cn } from "@/lib/utils";
 import posthog from "posthog-js";
@@ -985,29 +986,30 @@ function hasOwnCover(p: MockPlace): boolean {
   return !!(p.photo_url || (p.galleryPhotos ?? [])[0] || (p as any).coverVideoUrl);
 }
 
-// Kolejnosc kart w swiperze (zmiana 2026-09-06 po testach z userami): najpierw wizytowki
-// biznesowe ZE ZDJECIEM, potem zwykle miejsca ze zdjeciem, a dopiero na koncu karty bez
-// wlasnej okladki (ikona kategorii na peachy tle) - najpierw biznesy, potem reszta.
-// Priorytet B2B zostaje, ale nie kosztem pustej wizualnie gory eksploracji.
+// Kolejnosc kart w swiperze (schemat Nat 2026-09-06):
+//   1) WIZYTOWKI BIZNESOWE (w srodku: najpierw te z wlasnym zdjeciem),
+//   2) miejsca ZE ZDJECIAMI OD USEROW - wizytowki "zero", czyli bez konta biznesowego,
+//   3) miejsca BEZ zadnego zdjecia - karta z ikona kategorii na peachy tle.
+// Sedno zmiany: tier 2 rozpoznajemy TAKZE po zdjeciach userow (place_photos), a nie tylko po
+// okladce zapisanej w `places`. Miejsce zalozone zdjeciem usera ma `photo_url` NULL, wiec
+// wczesniej ladowalo na samym koncu kolejki mimo posiadanego zdjecia.
 // W obrebie KAZDEGO tieru przeplot kategorii + ranking wazony zamiast czystego shuffle.
-// Wykrywanie biznesu po `businessPlan`, ktore enrichWithBusinessProfile ustawia tylko gdy
+// Biznes rozpoznajemy po `businessPlan`, ktore enrichWithBusinessProfile ustawia tylko gdy
 // nested business_profiles istnieje.
-function partitionBusinessFirst(places: MockPlace[]): MockPlace[] {
+function partitionBusinessFirst(places: MockPlace[], keysWithUserPhotos?: Set<string>): MockPlace[] {
   const bizPhoto: MockPlace[] = [];
   const bizNoPhoto: MockPlace[] = [];
-  const restPhoto: MockPlace[] = [];
-  const restNoPhoto: MockPlace[] = [];
+  const withPhoto: MockPlace[] = [];
+  const noPhoto: MockPlace[] = [];
+  const hasUserPhoto = (p: MockPlace) =>
+    !!keysWithUserPhotos?.size && pinCoverKeys(p as any).some((k) => keysWithUserPhotos.has(k));
   for (const p of places) {
-    const isBiz = !!(p as any).businessPlan;
-    const withCover = hasOwnCover(p);
-    if (isBiz && withCover) bizPhoto.push(p);
-    else if (isBiz) bizNoPhoto.push(p);
-    else if (withCover) restPhoto.push(p);
-    else restNoPhoto.push(p);
+    if ((p as any).businessPlan) { (hasOwnCover(p) ? bizPhoto : bizNoPhoto).push(p); continue; }
+    (hasOwnCover(p) || hasUserPhoto(p) ? withPhoto : noPhoto).push(p);
   }
   const lastCat = (arr: MockPlace[], prev: string | null) => (arr.length ? (arr[arr.length - 1].category || "_") : prev);
   // Przeplot liczymy kaskadowo, zeby kategoria nie powtorzyla sie na styku dwoch tierow.
-  const tiers = [bizPhoto, restPhoto, bizNoPhoto, restNoPhoto];
+  const tiers = [bizPhoto, bizNoPhoto, withPhoto, noPhoto];
   const out: MockPlace[] = [];
   let prevCat: string | null = null;
   for (const tier of tiers) {
@@ -1337,6 +1339,12 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
         });
       };
 
+      // Ktore miejsca maja juz zdjecia od userow - decyduje o tierze 2 kolejki (patrz
+      // partitionBusinessFirst). Best-effort: blad = kolejka jak dawniej, bez wywalania ekranu.
+      const photoKeys = await fetchPlaceKeysWithPhotos(
+        remaining.flatMap((p) => pinCoverKeys(p as any)),
+      ).catch(() => new Set<string>());
+
       setAllPlaces(enriched);
       if (liked.length) setLikedPlaces(liked);
       if (skipped.length) setSkippedPlaces(skipped);
@@ -1370,11 +1378,11 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
           return false;
         });
         // Feed Miejsc = CALA baza (renderowanie ograniczone infinite-scrollem, nie tu).
-        const pool = applyNearestSort(partitionBusinessFirst(filtered));
+        const pool = applyNearestSort(partitionBusinessFirst(filtered, photoKeys));
         console.log("[PlaceSwiper] batch pool:", { categoryFilters, standardSubIds: [...standardSubIds], dbCategorySet: [...dbCategorySet], customSubIds: [...customSubIds], poolSize: pool.length, remainingTotal: remaining.length });
         setQueue(pool);
       } else {
-        setQueue(applyNearestSort(partitionBusinessFirst(remaining)));
+        setQueue(applyNearestSort(partitionBusinessFirst(remaining, photoKeys)));
       }
       setLoading(false);
       } catch (err) {

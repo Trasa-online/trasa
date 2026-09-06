@@ -113,6 +113,28 @@ export async function fetchPlacePhotosForKeys(keys: string[]): Promise<Map<strin
   return map;
 }
 
+// Ktore z podanych kluczy miejsc MAJA juz zdjecia userow. Lekka wersja
+// fetchPlacePhotosForKeys - ciagnie sama kolumne klucza, bo pytanie brzmi "czy sa zdjecia",
+// nie "jakie". Uzywane przy ustawianiu kolejki swipera (miejsca ze zdjeciami przed pustymi).
+// Klucze ida paczkami, zeby nie zrobic z tego jednego gigantycznego URL-a.
+export async function fetchPlaceKeysWithPhotos(keys: string[]): Promise<Set<string>> {
+  const uniq = Array.from(new Set(keys.filter(Boolean)));
+  const out = new Set<string>();
+  if (!uniq.length) return out;
+  const CHUNK = 300;
+  const chunks: string[][] = [];
+  for (let i = 0; i < uniq.length; i += CHUNK) chunks.push(uniq.slice(i, i + CHUNK));
+  const results = await Promise.all(chunks.map((c) =>
+    (supabase as any).from("place_photos").select("place_key").in("place_key", c)
+      .then(({ data, error }: any) => {
+        if (error) { console.warn("[placePhotoSocial] keysWithPhotos:", error.message); return []; }
+        return (data ?? []) as { place_key: string }[];
+      })
+  ));
+  for (const rows of results) for (const r of rows) out.add(r.place_key);
+  return out;
+}
+
 // Odpiecie zdjec od galerii MIEJSCA. Wolane, gdy user usuwa miejsce z listy albo z wyjazdu:
 // zdjecie bylo dodane W KONTEKSCIE tego miejsca, wiec razem z nim ma zniknac (prosba Nat
 // 2026-09-01). Kasujemy tylko wiersze o DOKLADNIE tych adresach - zdjecia tego samego miejsca
