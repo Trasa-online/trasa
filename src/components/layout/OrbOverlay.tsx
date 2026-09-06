@@ -222,7 +222,7 @@ const OrbOverlay = ({ onClose, isSpeaking = false, activeRoutes = [], userIntere
       setPlaceResult(data as PlaceResult);
     } catch {
       setPlaceResult({
-        name: i18n.language === "en" ? "Unknown place" : "Nieznane miejsce",
+        name: i18n.t("fallback.unknown_place", { ns: "common" }),
         description: i18n.language === "en" ? "Could not identify the place." : t("orb.identify_failed"),
         tip: "",
       });

@@ -125,7 +125,7 @@ const AuthDrawer = () => {
           <button
             onClick={close}
             className="h-9 w-9 -mr-1 flex items-center justify-center text-muted-foreground active:text-foreground"
-            aria-label="Zamknij"
+            aria-label={t("common:buttons.close")}
           >
             <X className="h-5 w-5" />
           </button>

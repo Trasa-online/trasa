@@ -24,7 +24,7 @@ const PL_DIA = /[ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]/;
 // jest slownik slow, ktore po angielsku nie wystepuja. Krotkie zbieznosci (to, i, a, list)
 // celowo pominiete - falszywy alarm w bramce jest gorszy niz jeden przeoczony napis.
 const PL_WORDS = /(?:^|[^\p{L}])(?:jest|nie|sie|się|tego|tej|tym|ten|ta|twoj|twój|twoja|twoje|masz|dodaj|usun|usuń|zapisz|wybierz|brak|pokaz|pokaż|wiecej|więcej|jeszcze|tutaj|teraz|gdzie|kiedy|zeby|żeby|przez|bez|juz|już|tylko|wszystko|miejsce|miejsca|miejsc|wyjazd|wyjazdy|wyjazdu|trasa|trasy|lista|listy|zdjecie|zdjęcie|zdjecia|zdjęcia|uzytkownik|użytkownik|profil|wroc|wróć|dalej|gotowe|anuluj|zamknij|edytuj|szukaj|nowy|nowa|nowe|moje|jako|albo|oraz|czy|jak|co)(?:[^\p{L}]|$)/iu;
-const looksPolish = (s) => PL_DIA.test(s) || (s.includes(" ") && PL_WORDS.test(s));
+const looksPolish = (s) => PL_DIA.test(s) || PL_WORDS.test(s);
 const PLURAL = /_(zero|one|two|few|many|other)$/;
 const errors = [];
 const warn = [];
@@ -137,14 +137,23 @@ function literals(src) {
 
 const baseline = fs.existsSync(BASELINE) ? new Set(JSON.parse(fs.readFileSync(BASELINE, "utf8")).files) : new Set();
 const seenBaseline = new Set();
-const JSX_TEXT = />\s*([^<>{}\n]{4,140}?)\s*</g;
+const JSX_TEXT = />\s*([^<>{}]{4,140}?)\s*</g;
 // Nazwy wlasne (miasta, dzielnice) to DANE, nie copy - zostaja jak sa w obu jezykach.
 // Klasy CSS z interpolacja tez nie sa tekstem dla uzytkownika.
 // Klasy CSS z interpolacja to nie copy. Wzorzec dopuszcza tez cudzyslowy i znak zapytania,
 // bo szablon typu `${x === "a" ? "klasa-1" : "klasa-2"}` trafia tu jako jeden literal.
-const NOT_COPY = /^(?:[a-z0-9_.-]+|[-a-z0-9_:/[\]\s${}.%,=!'"?]+)$/i;
+// Identyfikator: same male litery (klucz, nazwa pola) albo STALA. Pojedyncze slowo
+// z wielka litera to zwykle copy ("Dalej", "Gotowe"), wiec tu nie wpada.
+const IDENT = /^[@a-z0-9_.-]+$/;
+// Klasy Tailwinda i szablony klas. Sam zestaw dozwolonych znakow nie wystarcza jako warunek -
+// "Bez dat" czy "Zapisz miejsce do listy" tez sa z samych liter i spacji, wiec caly slownikowy
+// wykrywacz polskiego bez ogonkow byl przez to martwy. Napis uznajemy za klase dopiero, gdy
+// NIESIE ZNAK, ktorego copy nie ma: myslnik, dwukropek, nawias, interpolacje, procent.
+const CLASSY = /^[-a-z0-9_:/()#@[\]\s${}.%,=!'"?]+$/i;
+const NOT_COPY = (s) => IDENT.test(s) || (CLASSY.test(s) && /[-:/[\]${}.%]/.test(s));
+// Prefiks [module-name] to konwencja logow z CLAUDE.md - konsola nie jest interfejsem.
 const isCopy = (s) => s.length >= 4 && s.length <= 140 && !s.includes("\n") && !s.includes("//")
-  && !s.startsWith("/") && !NOT_COPY.test(s) && looksPolish(s);
+  && !s.startsWith("/") && !s.startsWith("[") && !NOT_COPY(s) && looksPolish(s);
 
 for (const file of walk(path.join(ROOT, "src"))) {
   const rel = path.relative(ROOT, file);

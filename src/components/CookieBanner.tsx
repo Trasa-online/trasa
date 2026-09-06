@@ -56,7 +56,7 @@ const CookieBanner = () => {
       <div className="relative bg-[#0E0E0E] rounded-2xl shadow-2xl px-4 py-3 flex flex-col gap-3 max-w-md w-full">
         <button
           onClick={handleDismiss}
-          aria-label="Zamknij"
+          aria-label={t("common:buttons.close")}
           className="absolute top-2 right-2 h-7 w-7 flex items-center justify-center text-white/60 hover:text-white transition-colors"
         >
           <X className="h-4 w-4" />

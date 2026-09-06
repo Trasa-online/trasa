@@ -194,5 +194,9 @@
   "target": {
     "more_apps": "More apps",
     "messages": "Messages"
+  },
+  "card": {
+    "trip_label": "TRIP",
+    "list_label": "PLACE LIST"
   }
 }

@@ -288,7 +288,7 @@ const JournalTab = ({ userId, city: cityFilter, draftsOnly = false }: JournalTab
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel className="rounded-full">Anuluj</AlertDialogCancel>
+          <AlertDialogCancel className="rounded-full">{t("common:buttons.cancel")}</AlertDialogCancel>
           <AlertDialogAction
             onClick={() => { const e = pendingDelete; setPendingDelete(null); if (e) void doDelete(e); }}
             className="rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90"

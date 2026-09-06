@@ -180,7 +180,7 @@ export default function AddPlaceSheet({ open, onClose, city, existingPlaces, onA
     try {
       await onAdd(selected);
       haptics.success();
-      toast.success(selected.length === 1 ? "Dodano miejsce" : `Dodano ${selected.length} miejsca`);
+      toast.success(t("add_place.added", { count: selected.length }));
       onClose();
     } catch (e: any) {
       haptics.error();
@@ -238,7 +238,7 @@ export default function AddPlaceSheet({ open, onClose, city, existingPlaces, onA
       {opts.added ? (
         <span className="h-6 w-6 rounded-full flex items-center justify-center shrink-0 bg-[#f0a583] text-white"><Check className="h-3.5 w-3.5 stroke-[3]" /></span>
       ) : (
-        <button onClick={opts.onToggle} aria-label={opts.selected ? t("add_place.remove") : "Dodaj do trasy"}
+        <button onClick={opts.onToggle} aria-label={opts.selected ? t("add_place.remove") : t("add_place.add_to_route")}
           className={`h-6 w-6 rounded-full flex items-center justify-center shrink-0 transition-colors ${opts.selected ? "bg-[#f0a583] text-white" : "border-2 border-border"}`}>
           {opts.selected ? <Check className="h-3.5 w-3.5 stroke-[3]" /> : <Plus className="h-3.5 w-3.5 text-muted-foreground" />}
         </button>
@@ -254,11 +254,11 @@ export default function AddPlaceSheet({ open, onClose, city, existingPlaces, onA
 
         {/* Naglowek */}
         <div className="flex items-center justify-between gap-2 px-5 pt-1 pb-3 shrink-0">
-          <button onClick={onClose} className="text-sm font-medium text-[#181818] rounded-full border border-black/15 bg-white px-3.5 py-1.5 active:opacity-60 shrink-0">Anuluj</button>
-          <h2 className="text-[18px] font-semibold text-foreground truncate">Dodaj nowe miejsce</h2>
+          <button onClick={onClose} className="text-sm font-medium text-[#181818] rounded-full border border-black/15 bg-white px-3.5 py-1.5 active:opacity-60 shrink-0">{t("common:buttons.cancel")}</button>
+          <h2 className="text-[18px] font-semibold text-foreground truncate">{t("add_place.title")}</h2>
           <button onClick={doAdd} disabled={!selected.length || adding}
             className={`text-sm font-medium rounded-full border bg-white px-3.5 py-1.5 shrink-0 ${selected.length && !adding ? "text-[#181818] border-black/15 active:opacity-60" : "text-[#bcbcbc] border-black/[0.07]"}`}>
-            {adding ? "..." : "Dodaj"}
+            {adding ? "..." : t("common:buttons.add")}
           </button>
         </div>
 
@@ -316,7 +316,7 @@ export default function AddPlaceSheet({ open, onClose, city, existingPlaces, onA
                 <span className="h-11 w-11 rounded-xl bg-[#fcede3] flex items-center justify-center shrink-0">
                   <Plus className="h-5 w-5 text-[#f0a583]" strokeWidth={2.5} />
                 </span>
-                <span className="flex-1 min-w-0 text-[15px] font-semibold text-foreground">Dodaj nowe miejsce</span>
+                <span className="flex-1 min-w-0 text-[15px] font-semibold text-foreground">{t("add_place.title")}</span>
                 <ChevronRight className="h-5 w-5 text-muted-foreground shrink-0" />
               </button>
 

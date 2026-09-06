@@ -892,7 +892,7 @@ export default function SharedRoute() {
 
   // Jak w liscie: guzik pokazuje KARTE wyjazdu do zrzutu; dlugie przytrzymanie wysyla sam link.
   const handleShare = () => setShareCardOpen(true);
-  const handleShareLink = () => { void share({ title: route.title || cityLabel || "Wyjazd", url: buildShareUrl(`/route/${route.id}`) }); };
+  const handleShareLink = () => { void share({ title: route.title || cityLabel || t("common:fallback.trip"), url: buildShareUrl(`/route/${route.id}`) }); };
 
   // Wlasciciel dodaje miejsca do ISTNIEJACEJ trasy: append do pins (jak AddPlaceToTrip), potem refetch.
   const handleAddPlaces = async (places: PlaceForList[]) => {
@@ -2091,7 +2091,7 @@ export default function SharedRoute() {
             choosing ? (
               /* Tryb wyboru miejsc (host) - potwierdzenie przejscia na "w trakcie". */
               <div className="flex items-center gap-2">
-                <button onClick={() => setChoosing(false)} className="px-4 py-3 rounded-full bg-secondary text-secondary-foreground font-bold text-sm active:scale-[0.98] transition-transform">Anuluj</button>
+                <button onClick={() => setChoosing(false)} className="px-4 py-3 rounded-full bg-secondary text-secondary-foreground font-bold text-sm active:scale-[0.98] transition-transform">{t("common:buttons.cancel")}</button>
                 <button onClick={confirmChoose} disabled={choosingBusy || chosen.size === 0}
                   className={`flex-1 py-3 rounded-full font-bold text-sm flex items-center justify-center gap-2 transition-transform ${choosingBusy || chosen.size === 0 ? "bg-primary/40 text-white/80" : "bg-primary text-white active:scale-[0.98]"}`}>
                   {choosingBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4 stroke-[3]" />} Zatwierdź{chosen.size ? ` (${chosen.size})` : ""}
@@ -2103,8 +2103,7 @@ export default function SharedRoute() {
               reorderMode ? (
                 <button onClick={() => { haptics.success(); setReorderMode(false); }}
                   className="w-full py-3 rounded-full bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform">
-                  <Check className="h-4 w-4 stroke-[3]" /> Gotowe
-                </button>
+                  <Check className="h-4 w-4 stroke-[3]" />{t("common:buttons.done")}</button>
               ) : (
               <div className="flex items-center gap-2">
                 {/* t("add_place") przeniesione do plywajacego guzika pod czatem (prosba Nat
@@ -2228,7 +2227,7 @@ export default function SharedRoute() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Anuluj</AlertDialogCancel>
+            <AlertDialogCancel>{t("common:buttons.cancel")}</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => { const pin = confirmDeletePin; setConfirmDeletePin(null); if (pin) void deletePinNow(pin); }}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
@@ -2246,7 +2245,7 @@ export default function SharedRoute() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleting}>Anuluj</AlertDialogCancel>
+            <AlertDialogCancel disabled={deleting}>{t("common:buttons.cancel")}</AlertDialogCancel>
             <AlertDialogAction onClick={(e) => { e.preventDefault(); void handleDelete(); }} disabled={deleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               {deleting ? t("deleting") : t("delete")}
             </AlertDialogAction>
@@ -2271,7 +2270,7 @@ export default function SharedRoute() {
             <div className="mt-4 flex flex-col gap-2">
               <button onClick={sendReminders} disabled={reminderBusy} className="w-full py-3 rounded-2xl bg-primary text-white font-bold text-sm active:scale-[0.98] transition-transform disabled:opacity-60">{reminderBusy ? t("sending") : t("send_reminder")}</button>
               <button onClick={proceedToChoosing} className="w-full py-3 rounded-2xl bg-secondary text-secondary-foreground font-bold text-sm active:scale-[0.98] transition-transform">{t("confirm.choose_anyway")}</button>
-              <button onClick={() => setMissingParticipants(null)} className="w-full py-2 text-sm font-medium text-muted-foreground">Anuluj</button>
+              <button onClick={() => setMissingParticipants(null)} className="w-full py-2 text-sm font-medium text-muted-foreground">{t("common:buttons.cancel")}</button>
             </div>
           </div>
         </div>

@@ -144,7 +144,7 @@ export default function TrasaBigCard({
         {onToggleSave && (
           <button
             onClick={(e) => { e.stopPropagation(); onToggleSave(); }}
-            aria-label="Zapisz"
+            aria-label={t("common:buttons.save")}
             className="h-12 w-12 rounded-full bg-white flex items-center justify-center shadow-lg active:scale-90 transition-transform"
           >
             <Bookmark className={`h-5 w-5 text-foreground ${saved ? "fill-current" : ""}`} strokeWidth={2} />
@@ -162,7 +162,7 @@ export default function TrasaBigCard({
         {onEdit && (
           <button
             onClick={(e) => { e.stopPropagation(); onEdit(); }}
-            aria-label="Edytuj"
+            aria-label={t("common:buttons.edit")}
             className="h-12 w-12 rounded-full bg-white flex items-center justify-center shadow-lg active:scale-90 transition-transform"
           >
             <Pencil className="h-5 w-5 text-foreground" strokeWidth={2} />

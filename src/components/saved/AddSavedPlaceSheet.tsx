@@ -91,17 +91,17 @@ export default function AddSavedPlaceSheet({ open, onOpenChange, onAdded }: {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="bottom" className="rounded-t-3xl p-0 [&>button]:hidden flex flex-col bg-background" style={{ maxHeight: "88dvh" }}>
-        <SheetTitle className="sr-only">Dodaj nowe miejsce</SheetTitle>
+        <SheetTitle className="sr-only">{t("saved.add_new_place")}</SheetTitle>
         <div className="relative pt-3 pb-1 shrink-0">
           <div className="mx-auto h-1 w-10 rounded-full bg-border" />
-          <button type="button" onClick={() => onOpenChange(false)} aria-label="Zamknij"
+          <button type="button" onClick={() => onOpenChange(false)} aria-label={t("common:buttons.close")}
             className="absolute top-2 right-3 h-8 w-8 rounded-full bg-muted/60 flex items-center justify-center active:scale-95 transition-transform">
             <X className="h-4 w-4 text-foreground" />
           </button>
         </div>
 
         <div className="px-5 pt-1 pb-2 shrink-0">
-          <p className="text-xl font-black text-foreground">Dodaj nowe miejsce</p>
+          <p className="text-xl font-black text-foreground">{t("saved.add_new_place")}</p>
           <p className="text-sm text-muted-foreground mt-0.5">{t("add_saved.goes_to_general")}</p>
 
           {/* Kraj + miasto: zwinięte do jednego wiersza, tap rozwija drum (jak przy wyjeździe). */}
@@ -110,7 +110,7 @@ export default function AddSavedPlaceSheet({ open, onOpenChange, onAdded }: {
             <MapPin className="h-4 w-4 text-muted-foreground shrink-0" />
             <span className="flex-1 min-w-0 truncate text-base font-semibold text-foreground">{city}</span>
             <span className="text-xs font-semibold text-muted-foreground shrink-0">{country}</span>
-            <span className="text-xs font-bold text-orange-600 shrink-0">{pickerOpen ? "Gotowe" : t("add_saved.change")}</span>
+            <span className="text-xs font-bold text-orange-600 shrink-0">{pickerOpen ? t("common:buttons.done") : t("add_saved.change")}</span>
           </button>
           {pickerOpen && (
             <div className="pt-3">

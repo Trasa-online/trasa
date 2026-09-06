@@ -70,7 +70,6 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
 
 interface StepCfg {
   icon: typeof Compass;
-  label: string;
   titleKey: string;
   bodyKey: string;
   target: string | null;   // selektor data-ob elementu do podswietlenia
@@ -80,26 +79,25 @@ interface StepCfg {
 
 const STEPS: StepCfg[] = [
   {
-    icon: Compass, label: "TRASY", target: '[data-ob="toggle-trasy"]', view: "feed",
+    icon: Compass, target: '[data-ob="toggle-trasy"]', view: "feed",
     titleKey: "guide.trips_title",
     bodyKey: "guide.trips_desc",
     ctaKey: "guide.next",
   },
   {
-    icon: Layers, label: "MIEJSCA", target: '[data-ob="toggle-miejsca"]', view: "browse",
+    icon: Layers, target: '[data-ob="toggle-miejsca"]', view: "browse",
     titleKey: "guide.places_title",
     bodyKey: "guide.places_desc",
     ctaKey: "guide.next",
   },
   {
-    icon: Bookmark, label: "ZAPISYWANIE", target: null,
+    icon: Bookmark, target: null,
     titleKey: "guide.save_title",
     bodyKey: "guide.save_desc",
     ctaKey: "guide.next",
   },
   {
     icon: Plus,
-    label: "TWÓRZ",   // i18n-ignore: etykieta kroku, ta sama w obu jezykach
     target: '[data-ob="nav-fab"]',
     titleKey: "guide.create_title",
     bodyKey: "guide.create_desc",

@@ -156,7 +156,7 @@ export function ProfileFeedCard({
           aria-label={t("card.show_trip_map")}
           className="relative mt-3 w-full aspect-[16/9] rounded-2xl overflow-hidden bg-muted active:opacity-95 transition-opacity"
         >
-          <img src={mapUrl} alt="Mapa wyjazdu" className="h-full w-full object-cover" loading="lazy" />
+          <img src={mapUrl} alt={t("card.map_alt")} className="h-full w-full object-cover" loading="lazy" />
           <span className="absolute top-2 right-2 h-8 w-8 rounded-full bg-background/80 backdrop-blur flex items-center justify-center">
             <Maximize2 className="h-4 w-4 text-foreground" />
           </span>
@@ -176,7 +176,7 @@ export function ProfileFeedCard({
         ) : (
           <>
             {onSave ? (
-              <button onClick={onSave} aria-label={saved ? t("card.remove_saved") : "Zapisz"} className="flex items-center gap-1.5 text-sm tabular-nums active:scale-90 transition-transform">
+              <button onClick={onSave} aria-label={saved ? t("card.remove_saved") : t("common:buttons.save")} className="flex items-center gap-1.5 text-sm tabular-nums active:scale-90 transition-transform">
                 <Bookmark className={`h-[18px] w-[18px] ${saved ? "fill-orange-600 text-orange-600" : ""}`} /> {counts.saves}
               </button>
             ) : (
@@ -201,7 +201,7 @@ export function ProfileFeedCard({
           <>
             <div className="flex-1" />
             {onEdit && (
-              <button onClick={onEdit} aria-label="Edytuj" className="h-8 w-8 flex items-center justify-center rounded-full active:bg-muted/60 transition-colors">
+              <button onClick={onEdit} aria-label={t("common:buttons.edit")} className="h-8 w-8 flex items-center justify-center rounded-full active:bg-muted/60 transition-colors">
                 <Pencil className="h-[17px] w-[17px]" />
               </button>
             )}

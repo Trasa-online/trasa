@@ -31,7 +31,7 @@ export default function AddPeoplePicker({
   if (!people.length) {
     return (
       <div className="py-10 px-6 text-center">
-        <p className="text-sm font-semibold text-foreground">Nie masz jeszcze znajomych</p>
+        <p className="text-sm font-semibold text-foreground">{t("friends.none_yet")}</p>
         <p className="mt-1 text-sm text-muted-foreground">{t("people.desc")}</p>
       </div>
     );

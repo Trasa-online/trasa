@@ -131,7 +131,13 @@
     "delete_place": "Usuń miejsce",
     "removed": "Usunięto „{{name}}”",
     "already": "„{{name}}” już jest zapisane",
-    "removed_toast": "Usunięto z zapisanych"
+    "removed_toast": "Usunięto z zapisanych",
+    "search_place": "Szukaj miejsca",
+    "empty_places": "Brak zapisanych miejsc",
+    "empty_short": "Brak zapisanych",
+    "add_new_place": "Dodaj nowe miejsce",
+    "add_place": "Dodaj miejsce",
+    "no_city": "Bez miasta"
   },
   "add_saved": {
     "goes_to_general": "Trafi do Twojej listy Ogólne.",
@@ -158,6 +164,7 @@
     "show_trip_map": "Pokaż mapę wyjazdu",
     "remove_saved": "Usuń z zapisanych",
     "close_map": "Zamknij mapę",
-    "delete": "Usuń"
+    "delete": "Usuń",
+    "map_alt": "Mapa wyjazdu"
   }
 }

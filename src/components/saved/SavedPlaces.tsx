@@ -82,7 +82,7 @@ export function SavedPlaces({ city }: { city?: string }) {
 
   const catLabel = (p: SavedPlace) => {
     const cat = p.category ?? inferCategoryFromName(p.place_name);
-    return cat ? subcategoryLabelLocalized(cat) : "Miejsce";
+    return cat ? subcategoryLabelLocalized(cat) : t("common:fallback.place");
   };
 
   // #2: grupowanie po mieście (nagłówek "Kraj · Miasto"), żeby wszystko nie wpadało do jednego wora.
@@ -97,7 +97,7 @@ export function SavedPlaces({ city }: { city?: string }) {
     if (!a) return 1; if (!b) return -1;
     return a.localeCompare(b, "pl");
   });
-  const groupLabel = (city: string) => city ? [countryForCity(city), city].filter(Boolean).join(" · ") : "Bez miasta";
+  const groupLabel = (city: string) => city ? [countryForCity(city), city].filter(Boolean).join(" · ") : t("saved.no_city");
 
   const renderRow = (p: SavedPlace) => (
     <div key={p.id} className="flex items-center gap-3 py-2.5">
@@ -131,7 +131,7 @@ export function SavedPlaces({ city }: { city?: string }) {
           onClick={() => setAddOpen(true)}
           className="flex items-center gap-1.5 h-9 pl-2.5 pr-3.5 rounded-full bg-secondary text-secondary-foreground text-sm font-bold shrink-0 active:scale-95 transition-transform"
         >
-          <Plus className="h-4 w-4" strokeWidth={2.5} /> Dodaj miejsce
+          <Plus className="h-4 w-4" strokeWidth={2.5} /> {t("saved.add_place")}
         </button>
       </div>
 
@@ -143,7 +143,7 @@ export function SavedPlaces({ city }: { city?: string }) {
             <MapPin className="h-6 w-6" />
           </div>
           <div className="space-y-1">
-            <p className="text-base font-black">Brak zapisanych miejsc</p>
+            <p className="text-base font-black">{t("saved.empty_places")}</p>
             <p className="text-sm text-muted-foreground max-w-[280px] leading-relaxed">
               {t("saved.empty")}
             </p>
@@ -240,19 +240,19 @@ function AddPlaceSheet({ open, onOpenChange, city, onAdded }: {
       <SheetContent side="bottom" className="rounded-t-3xl p-0 [&>button]:hidden flex flex-col" style={{ maxHeight: "82vh" }}>
         <div className="relative pt-3 pb-1 shrink-0">
           <div className="mx-auto h-1 w-10 rounded-full bg-border" />
-          <button type="button" onClick={() => onOpenChange(false)} className="absolute top-2 right-3 h-8 w-8 rounded-full bg-muted/60 flex items-center justify-center active:scale-95 transition-transform" aria-label="Zamknij">
+          <button type="button" onClick={() => onOpenChange(false)} className="absolute top-2 right-3 h-8 w-8 rounded-full bg-muted/60 flex items-center justify-center active:scale-95 transition-transform" aria-label={t("common:buttons.close")}>
             <X className="h-4 w-4 text-foreground" />
           </button>
         </div>
         <div className="px-5 pt-1 pb-2 shrink-0">
-          <p className="text-xl font-black text-foreground mb-3">Dodaj miejsce</p>
+          <p className="text-xl font-black text-foreground mb-3">{t("saved.add_place")}</p>
           <div className="flex items-center gap-2 h-12 px-3.5 rounded-2xl border border-border bg-background">
             <Search className="h-4 w-4 text-muted-foreground shrink-0" />
             <input
               value={q}
               onChange={(e) => setQ(e.target.value)}
               autoFocus
-              placeholder={city ? `Szukaj miejsca w ${city}` : "Szukaj miejsca"}
+              placeholder={city ? `Szukaj miejsca w ${city}` : t("saved.search_place")}
               className="flex-1 min-w-0 bg-transparent text-base text-foreground placeholder:text-muted-foreground/50 focus:outline-none"
             />
             {searching && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground shrink-0" />}

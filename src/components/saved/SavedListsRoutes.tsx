@@ -42,7 +42,7 @@ export function SavedListsRoutes({ city }: { city?: string }) {
     return (
       <div className="pt-20 pb-12 text-center px-8">
         <span aria-hidden className="mx-auto mb-4 h-20 w-20" style={{ display: "block", backgroundColor: "#ef9d78", WebkitMaskImage: "url(/Ikona_Zapisane.svg)", maskImage: "url(/Ikona_Zapisane.svg)", WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat", WebkitMaskSize: "contain", maskSize: "contain", WebkitMaskPosition: "center", maskPosition: "center" }} />
-        <p className="text-base font-bold">Brak zapisanych list i tras</p>
+        <p className="text-base font-bold">{t("saved.empty_lists_routes")}</p>
         <p className="text-sm text-muted-foreground mt-1 leading-relaxed max-w-[280px] mx-auto">
           {t("empty.saved_any")}
         </p>

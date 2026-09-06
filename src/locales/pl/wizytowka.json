@@ -72,6 +72,7 @@
     "login_like": "Zaloguj się, aby polubić zdjęcie",
     "login_add": "Zaloguj się, aby dodać zdjęcie",
     "add_failed": "Nie udało się dodać zdjęcia",
-    "added": "Dodano Twoje zdjęcie"
+    "added": "Dodano Twoje zdjęcie",
+    "pick_image": "Wybierz plik graficzny"
   }
 }

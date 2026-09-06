@@ -191,9 +191,7 @@ const FullCalendarPicker = ({ onConfirm, allowPast = false, onClear, maxDays = D
           disabled={!startDate}
           size="lg"
           className="w-full rounded-2xl text-base font-semibold bg-primary hover:bg-primary/90 text-white border-0 shadow-lg shadow-primary/20 disabled:opacity-40"
-        >
-          Dalej
-        </Button>
+        >{t("common:buttons.next")}</Button>
 
         {/* Wyczyść daty: jesli jest zaznaczenie -> resetuje je; inaczej (onClear) usuwa daty wyjazdu. */}
         {(range?.from || onClear) && (
@@ -201,7 +199,7 @@ const FullCalendarPicker = ({ onConfirm, allowPast = false, onClear, maxDays = D
             onClick={() => { if (range?.from) setRange(undefined); else onClear?.(); }}
             className="w-full mt-2 py-2.5 text-sm font-semibold text-muted-foreground active:text-foreground transition-colors"
           >
-            {range?.from ? t("calendar.clear") : "Bez dat"}
+            {range?.from ? t("calendar.clear") : t("calendar.no_dates")}
           </button>
         )}
       </div>

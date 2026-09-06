@@ -153,7 +153,7 @@ export default function StartWyjazd() {
         <button onClick={() => goBackOr(navigate, "/eksploruj")} aria-label={t("back")} className="h-9 w-9 flex items-center justify-center -ml-1 shrink-0 text-foreground active:scale-90 transition-transform">
           <ArrowLeft className="h-5 w-5" />
         </button>
-        <span className="flex-1 font-bold text-base">Nowy wyjazd</span>
+        <span className="flex-1 font-bold text-base">{t("start.new_trip")}</span>
       </div>
 
       {/* Toggle Robocze | Zapisane - cala szerokosc */}
@@ -199,7 +199,7 @@ export default function StartWyjazd() {
         ) : shown.length === 0 ? (
           <div className="py-14 text-center px-8">
             <span aria-hidden className="mx-auto mb-4 h-20 w-20" style={{ display: "block", backgroundColor: "#ef9d78", WebkitMaskImage: tab === "robocze" ? "url(/Ikona_Trasy.svg)" : "url(/Ikona_Zapisane.svg)", maskImage: tab === "robocze" ? "url(/Ikona_Trasy.svg)" : "url(/Ikona_Zapisane.svg)", WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat", WebkitMaskSize: "contain", maskSize: "contain", WebkitMaskPosition: "center", maskPosition: "center" }} />
-            <p className="text-base font-bold">{tab === "robocze" ? "Robocze trasy" : "Brak zapisanych tras"}</p>
+            <p className="text-base font-bold">{tab === "robocze" ? t("start.empty_drafts") : t("start.empty_saved")}</p>
             <p className="text-sm text-muted-foreground mt-1 leading-relaxed max-w-[260px] mx-auto">
               {tab === "robocze" ? t("drafts.empty") : t("drafts.empty_hint")}
             </p>
@@ -220,7 +220,7 @@ export default function StartWyjazd() {
                   )}
                 </div>
                 <div className="flex-1 min-w-0 flex flex-col py-0.5">
-                  <p className="text-lg font-bold leading-tight line-clamp-2 text-foreground">{r.title || r.city || "Trasa"}</p>
+                  <p className="text-lg font-bold leading-tight line-clamp-2 text-foreground">{r.title || r.city || t("common:fallback.route")}</p>
                   <div className="mt-auto flex items-center gap-2 pt-2">
                     {r.city && <span className="inline-flex items-center rounded-full bg-secondary px-2.5 py-1 text-[11px] font-medium text-muted-foreground">{r.city}</span>}
                     <span className="text-sm text-muted-foreground">{placesLabel(r.count)}</span>
@@ -248,7 +248,7 @@ export default function StartWyjazd() {
           className="w-full h-12 rounded-2xl bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform shadow-md shadow-orange-500/20"
         >
           <Plus className="h-4 w-4" strokeWidth={2.5} />
-          Zacznij od nowa
+          {t("start.start_fresh")}
           <ArrowRight className="h-4 w-4" />
         </button>
       </div>

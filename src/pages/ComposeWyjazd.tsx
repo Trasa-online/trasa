@@ -155,7 +155,7 @@ function SortableComposeRow({ it, idx, onOpen, onRemove, selected, onToggle }: {
       {/* Toggle "w trasie": zaznaczone = wejdzie do trasy; odznaczone = kandydat (popup zaproponuje zapis). */}
       <button
         onClick={onToggle}
-        aria-label={selected ? t("aria.exclude") : "Dodaj do trasy"}
+        aria-label={selected ? t("aria.exclude") : t("aria.add_to_route")}
         className={`h-7 w-7 rounded-full flex items-center justify-center shrink-0 transition-colors ${selected ? "bg-primary text-white" : "border-2 border-border text-transparent"}`}
       >
         <Check className="h-4 w-4" strokeWidth={3} />
@@ -324,7 +324,7 @@ export default function ComposeWyjazd() {
   // szkic (draft) zeby miec routeId, potem otwieramy sheet (podpina zaproszonych do tej trasy).
   const handleOpenInvite = async () => {
     if (!user) return;
-    if (!items.length) { toast("Najpierw dodaj miejsca do trasy"); return; }
+    if (!items.length) { toast(t("compose.empty_first")); return; }
     let id = draftId;
     if (!id) {
       setCreating(true);
@@ -335,7 +335,7 @@ export default function ComposeWyjazd() {
         place_name: i.place_name, category: i.category, address: i.address,
         latitude: i.latitude, longitude: i.longitude, photo_url: i.photo_url, place_id: i.place_id,
       }));
-      id = await createWyjazdFromPlaces(user.id, city, name.trim() || city || "Wyjazd", places, dates, { tripType });
+      id = await createWyjazdFromPlaces(user.id, city, name.trim() || city || t("common:fallback.trip"), places, dates, { tripType });
       setCreating(false);
       if (!id) { toast.error(t("toast.route_failed")); return; }
       setDraftId(id);
@@ -566,7 +566,7 @@ export default function ComposeWyjazd() {
   const confirm = async (openEditor: boolean) => {
     if (!user) { openAuthDrawer({ mode: "register", hint: "save_route" }); return; }
     // Do trasy ida TYLKO kandydaci zaznaczeni "w trasie". Odznaczeni -> popup "nie gub miejsc".
-    if (!selectedItems.length) { toast.error("Zaznacz przynajmniej jedno miejsce do trasy"); return; }
+    if (!selectedItems.length) { toast.error(t("compose.pick_min")); return; }
     setCreating(true);
     const dates = tripDate
       ? {
@@ -585,8 +585,8 @@ export default function ComposeWyjazd() {
     }));
     // draftId -> aktualizuj istniejaca robocza (bez duplikatu). Inaczej stworz nowa.
     const id = draftId
-      ? await updateWyjazdPlaces(draftId, city, name.trim() || city || "Wyjazd", places, dates)
-      : await createWyjazdFromPlaces(user.id, city, name.trim() || city || "Wyjazd", places, dates, { tripType });
+      ? await updateWyjazdPlaces(draftId, city, name.trim() || city || t("common:fallback.trip"), places, dates)
+      : await createWyjazdFromPlaces(user.id, city, name.trim() || city || t("common:fallback.trip"), places, dates, { tripType });
     setCreating(false);
     if (!id) { haptics.error(); toast.error(draftId ? t("toast.save_failed") : t("toast.trip_failed")); return; }
     haptics.success();
@@ -654,7 +654,7 @@ export default function ComposeWyjazd() {
         if (listId) { for (const p of leftover.savePlaces) await addPlaceToList(listId, p); }
       }
       haptics.success();
-      toast.success(leftover.savePlaces.length === 1 ? "Zapisano miejsce" : `Zapisano ${leftover.savePlaces.length} miejsc`);
+      toast.success(t("compose.saved", { count: leftover.savePlaces.length }));
     } catch (e: any) {
       console.error("[ComposeWyjazd] saveLeftover failed:", e?.message ?? e);
       toast.error(t("toast.places_failed"));
@@ -714,7 +714,7 @@ export default function ComposeWyjazd() {
         <button onClick={handleBack} aria-label={t("back")} className="h-9 w-9 flex items-center justify-center -ml-1 shrink-0 text-foreground active:scale-90 transition-transform">
           <ArrowLeft className="h-5 w-5" />
         </button>
-        <h1 className="flex-1 text-center text-base font-bold text-foreground pr-9">Nowy wyjazd</h1>
+        <h1 className="flex-1 text-center text-base font-bold text-foreground pr-9">{t("compose.new_trip")}</h1>
       </div>
       {draftId && (
         <InviteFriendsSheet
@@ -742,7 +742,7 @@ export default function ComposeWyjazd() {
         {/* Kraj + miasto wybrane wczesniej drum-scrollem (/utworz) - tu bez selektora.
             Nazwa + data */}
         <div className="px-4 pt-3 flex items-center gap-2">
-          <input value={name} onChange={(e) => { setName(e.target.value); setNameDirty(true); }} placeholder={isEn ? "Your trip name" : "Twoja nazwa"}
+          <input value={name} onChange={(e) => { setName(e.target.value); setNameDirty(true); }} placeholder={t("compose.name_placeholder")}
             className="flex-1 min-w-0 rounded-2xl bg-secondary text-secondary-foreground border-0 px-4 py-3 text-base outline-none focus:ring-2 focus:ring-orange-500/40 placeholder:text-muted-foreground/60" />
           <button onClick={() => setDateSheet(true)}
             className={`shrink-0 h-[50px] rounded-2xl bg-secondary flex items-center gap-2 px-3.5 active:scale-95 transition-transform ${dateLabel ? "text-foreground font-semibold" : "text-muted-foreground"}`}>
@@ -794,7 +794,7 @@ export default function ComposeWyjazd() {
                         ) : (
                           <div className="w-full h-full bg-[#fcede3] flex items-center justify-center"><img src={categoryIconSrc(p.category)} alt="" className="w-1/5 max-w-[32px] opacity-90" draggable={false} /></div>
                         )}
-                        <span role="button" tabIndex={0} onClick={(e) => { e.stopPropagation(); addPlace(p); }} aria-label="Dodaj miejsce"
+                        <span role="button" tabIndex={0} onClick={(e) => { e.stopPropagation(); addPlace(p); }} aria-label={t("compose.add_place")}
                           className="absolute top-2 right-2 h-8 w-8 rounded-full bg-primary text-white flex items-center justify-center shadow-md active:scale-90 transition-transform">
                           <Plus className="h-5 w-5" strokeWidth={2.5} />
                         </span>
@@ -815,7 +815,7 @@ export default function ComposeWyjazd() {
             <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">{`Propozycje (${items.length})`}{items.length > 0 ? `${" "}·${" "}${inTripCount} w${" "}trasie` : ""}</p>
             {items.length > 0 && (
               <div className="flex rounded-full bg-secondary p-0.5">
-                <button type="button" onClick={() => setPlaceView("list")} aria-label="Widok listy" className={`px-2.5 py-1 rounded-full transition-colors ${placeView === "list" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground"}`}>
+                <button type="button" onClick={() => setPlaceView("list")} aria-label={t("compose.list_view")} className={`px-2.5 py-1 rounded-full transition-colors ${placeView === "list" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground"}`}>
                   <List className="h-4 w-4" />
                 </button>
                 <button type="button" onClick={() => setPlaceView("detail")} aria-label="Widok kart" className={`px-2.5 py-1 rounded-full transition-colors ${placeView === "detail" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground"}`}>
@@ -830,7 +830,7 @@ export default function ComposeWyjazd() {
             <button type="button" onClick={() => searchRef.current?.focus()}
               className="w-full rounded-2xl border-2 border-dashed border-border/70 bg-secondary/40 flex flex-col items-center justify-center gap-2 py-8 text-muted-foreground active:scale-[0.99] transition-transform">
               <span className="h-11 w-11 rounded-full bg-secondary flex items-center justify-center"><Plus className="h-5 w-5 text-orange-600" /></span>
-              <span className="text-sm font-bold text-foreground">Dodaj miejsce</span>
+              <span className="text-sm font-bold text-foreground">{t("compose.add_place_tile")}</span>
               <span className="text-[12px] text-center">{t("search.hint")}</span>
             </button>
           ) : placeView === "detail" ? (
@@ -844,7 +844,7 @@ export default function ComposeWyjazd() {
                       <div className="w-full h-full bg-[#fcede3] flex items-center justify-center"><img src={categoryIconSrc(it.category)} alt="" className="w-1/5 max-w-[40px] opacity-90" draggable={false} /></div>
                     )}
                     {/* Toggle "w trasie" (lewy-gorny), kosz (prawy-gorny). */}
-                    <span role="button" tabIndex={0} onClick={(e) => { e.stopPropagation(); toggleInTrip(it.key); }} aria-label={isInTrip(it.key) ? t("aria.exclude") : "Dodaj do trasy"}
+                    <span role="button" tabIndex={0} onClick={(e) => { e.stopPropagation(); toggleInTrip(it.key); }} aria-label={isInTrip(it.key) ? t("aria.exclude") : t("aria.add_to_route")}
                       className={`absolute top-2 left-2 h-8 w-8 rounded-full flex items-center justify-center active:scale-90 transition-transform ${isInTrip(it.key) ? "bg-primary text-white" : "bg-white/85 border border-black/10 text-transparent"}`}>
                       <Check className="h-4 w-4" strokeWidth={3} />
                     </span>
@@ -885,7 +885,7 @@ export default function ComposeWyjazd() {
           {items.length > 0 && (
             <button type="button" onClick={() => searchRef.current?.focus()}
               className="mt-2.5 w-full rounded-2xl border-2 border-dashed border-border/70 bg-secondary/40 flex items-center justify-center gap-2 py-3.5 text-muted-foreground active:scale-[0.99] transition-transform">
-              <Plus className="h-4 w-4 text-orange-600" /><span className="text-sm font-bold text-foreground">Dodaj miejsce</span>
+              <Plus className="h-4 w-4 text-orange-600" /><span className="text-sm font-bold text-foreground">{t("compose.add_place_tile")}</span>
             </button>
           )}
         </div>
@@ -895,7 +895,7 @@ export default function ComposeWyjazd() {
         {!isSearching && savedProposals.length > 0 && (
           <div className="px-4 pt-5">
             <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2.5">
-              Twoje zapisane miejsca
+              {t("compose.your_saved")}
             </p>
             {savedProposals.length === 0 ? (
               <p className="text-sm text-muted-foreground leading-snug">{t("empty.saved")}</p>
@@ -909,7 +909,7 @@ export default function ComposeWyjazd() {
                       ) : (
                         <div className="w-full h-full bg-[#fcede3] flex items-center justify-center"><img src={categoryIconSrc(p.category)} alt="" className="w-1/5 max-w-[32px] opacity-90" draggable={false} /></div>
                       )}
-                      <span role="button" tabIndex={0} onClick={(e) => { e.stopPropagation(); addPlace(p); }} aria-label="Dodaj miejsce"
+                      <span role="button" tabIndex={0} onClick={(e) => { e.stopPropagation(); addPlace(p); }} aria-label={t("compose.add_place")}
                         className="absolute top-2 right-2 h-8 w-8 rounded-full bg-primary text-white flex items-center justify-center shadow-md active:scale-90 transition-transform">
                         <Plus className="h-5 w-5" strokeWidth={2.5} />
                       </span>
@@ -928,7 +928,7 @@ export default function ComposeWyjazd() {
           <div className="px-4 pt-6">
             <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2.5">Mapa</p>
             <div className="relative h-52 rounded-2xl overflow-hidden border border-border/40 bg-muted">
-              <img src={staticMapUrl} alt="Mapa miejsc" className="w-full h-full object-cover" />
+              <img src={staticMapUrl} alt={t("compose.map_alt")} className="w-full h-full object-cover" />
               <button onClick={() => setMapExpanded(true)} aria-label={t("map.expand")}
                 className="absolute bottom-3 right-3 h-10 w-10 rounded-full bg-card shadow-md flex items-center justify-center active:scale-90 transition-transform">
                 <Maximize2 className="h-[18px] w-[18px] text-foreground" strokeWidth={2.2} />
@@ -946,7 +946,7 @@ export default function ComposeWyjazd() {
           <button onClick={() => confirm(nav.mode !== "future")} disabled={creating}
             className="flex-1 h-12 rounded-2xl bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform shadow-md shadow-orange-500/20 disabled:opacity-60">
             {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : (nav.mode === "future"
-              ? <>Zapisz wyjazd <Check className="h-4 w-4" /></>
+              ? <>{t("compose.save_trip")} <Check className="h-4 w-4" /></>
               : <>{t("go_suggestions")}<ArrowRight className="h-4 w-4" /></>)}
           </button>
         </div>
@@ -965,7 +965,7 @@ export default function ComposeWyjazd() {
           onClick={() => { if (!leftoverBusy) finishNavigation(leftover.openEditor, leftover.routeId, leftover.tripPlaces); }}>
           <div {...leftoverDrag.dragProps} className="w-full max-w-md bg-card rounded-t-3xl px-5 pt-6 pb-[max(20px,env(safe-area-inset-bottom))] shadow-2xl animate-in slide-in-from-bottom-4 duration-300"
             onClick={(e) => e.stopPropagation()}>
-            <p className="text-lg font-black leading-tight">{leftover.savePlaces.length === 1 ? "Nie zgub tego miejsca" : `Nie zgub ${leftover.savePlaces.length} miejsc`}</p>
+            <p className="text-lg font-black leading-tight">{t("compose.keep", { count: leftover.savePlaces.length })}</p>
             <p className="text-sm text-muted-foreground leading-snug mt-1.5">{t("save_aside")}</p>
             {leftoverNewList !== null ? (
               <div className="mt-4">
@@ -1004,7 +1004,7 @@ export default function ComposeWyjazd() {
       <Sheet open={dateSheet} onOpenChange={setDateSheet}>
         <SheetContent side="bottom" className="rounded-t-2xl p-0 [&>button:last-child]:hidden" style={{ maxHeight: "88vh" }}>
           <div className="px-5 pt-5 pb-1 text-center">
-            <p className="text-base font-bold leading-tight">Wybierz daty dla trasy <span className="font-normal text-muted-foreground">(opcjonalnie)</span></p>
+            <p className="text-base font-bold leading-tight">{t("compose.pick_dates")} <span className="font-normal text-muted-foreground">(opcjonalnie)</span></p>
           </div>
           <FullCalendarPicker allowPast onConfirm={(d, n) => { setTripDate({ start: d, numDays: n }); setDateSheet(false); }} onClear={() => { setTripDate(null); setDateSheet(false); }} />
         </SheetContent>
@@ -1033,9 +1033,7 @@ export default function ComposeWyjazd() {
               <button
                 onClick={() => setConfirmRemove(null)}
                 className="w-full h-12 rounded-2xl bg-secondary text-secondary-foreground font-bold text-sm flex items-center justify-center active:scale-95 transition-transform"
-              >
-                Anuluj
-              </button>
+              >{t("common:buttons.cancel")}</button>
             </div>
           </div>
         </div>
@@ -1064,7 +1062,7 @@ export default function ComposeWyjazd() {
                 disabled={creating}
                 className="w-full h-12 rounded-2xl bg-primary text-white font-bold text-sm flex items-center justify-center active:scale-[0.98] transition-transform disabled:opacity-60"
               >
-                {draftId ? "Zapisz zmiany" : t("confirm.save_draft")}
+                {draftId ? t("compose.save_changes") : t("confirm.save_draft")}
               </button>
               <button
                 onClick={() => { setShowBackConfirm(false); exitCreate(); }}
@@ -1073,9 +1071,7 @@ export default function ComposeWyjazd() {
               <button
                 onClick={() => setShowBackConfirm(false)}
                 className="w-full py-2 text-sm font-medium text-muted-foreground active:text-foreground transition-colors"
-              >
-                Anuluj
-              </button>
+              >{t("common:buttons.cancel")}</button>
             </div>
           </div>
         </div>

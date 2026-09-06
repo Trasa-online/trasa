@@ -31,7 +31,7 @@ export default function CoverPickerSheet({
       <div className="absolute inset-0 bg-black/50 animate-in fade-in duration-200" />
       <div {...dragProps} onClick={(e) => e.stopPropagation()} className="relative w-full max-w-lg bg-card rounded-t-3xl px-5 pt-3 pb-[max(20px,env(safe-area-inset-bottom))] shadow-2xl animate-in slide-in-from-bottom-4 duration-300" style={{ ...dragProps.style, maxHeight: "82dvh" }}>
         <div className="mx-auto h-1 w-10 rounded-full bg-muted-foreground/25 mb-4" />
-        <button onClick={onClose} aria-label="Zamknij" className="absolute right-4 top-4 h-8 w-8 rounded-full bg-muted flex items-center justify-center active:scale-90 transition-transform">
+        <button onClick={onClose} aria-label={t("common:buttons.close")} className="absolute right-4 top-4 h-8 w-8 rounded-full bg-muted flex items-center justify-center active:scale-90 transition-transform">
           <X className="h-4 w-4" />
         </button>
         <p className="text-lg font-bold pr-8">{title}</p>

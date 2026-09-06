@@ -72,9 +72,17 @@
   },
   "search": {
     "placeholder_all": "Szukaj tras, miejsc, osób...",
-    "by_category": "Szukaj według kategorii"
+    "by_category": "Szukaj według kategorii",
+    "close": "Zamknij wyszukiwanie"
   },
   "city": {
     "change": "Zmień miasto"
+  },
+  "region": {
+    "pick_city": "Wybierz miasto",
+    "all": "Wszystkie"
+  },
+  "map": {
+    "mark_place": "Zaznacz miejsce"
   }
 }

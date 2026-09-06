@@ -33,7 +33,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import FollowButton from "@/components/social/FollowButton";
 import { shortRelativeTime } from "@/lib/relativeTime";
 import { resolveStored } from "@/components/PlacePhoto";
-import { COLLECTION_THEMES, getTheme, collectionKind } from "@/lib/collectionThemes";
+import { COLLECTION_THEMES, getTheme, collectionKind, themeLabel } from "@/lib/collectionThemes";
 import { getHistoryByCity } from "@/lib/exploreLikes";
 import { TrasaLogo } from "@/components/TrasaLogo";
 import { CategoryIcon } from "@/components/CategoryIcon";
@@ -99,12 +99,6 @@ type PolecaneRoute = {
   user_id?: string | null;             // autor - do filtra zablokowanych userow
 };
 
-const CAT_LABEL: Record<string, string> = {
-  restaurant: "Restauracja", cafe: "Kawiarnia", museum: "Muzeum", park: "Park",
-  bar: "Bar", club: "Klub", monument: "Zabytek", gallery: "Galeria",
-  market: "Targ", viewpoint: "Punkt widokowy", shopping: "Zakupy", experience: "Atrakcja",
-  walk: "Spacer", other: "Miejsce",
-};
 
 // Miniaturka miejsca z placeholderem: brak zdjecia LUB blad ladowania (np. miejsce
 // spoza bazy z wygaslym refem Google) -> ikona kategorii w szarym kwadracie (jak w
@@ -341,7 +335,7 @@ export function CollectionDetail({ col, onClose, onAdopt }: { col: DiscoveryColl
             </div>
             <div className="px-4 pt-4 pb-4 flex-1">
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted text-xs font-semibold text-foreground mb-2">
-                <CategoryIcon category={cat} className="h-4 w-4 shrink-0" />{t(`cat.${cat}`, CAT_LABEL[cat] ?? t("cat.other"))}
+                <CategoryIcon category={cat} className="h-4 w-4 shrink-0" />{t(`cat.${cat}`, { defaultValue: t("cat.other") })}
               </span>
               <p className="text-base font-black leading-tight">{item.place_name}</p>
               {item.address && <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-1">{item.address}</p>}
@@ -379,7 +373,7 @@ export function CollectionDetail({ col, onClose, onAdopt }: { col: DiscoveryColl
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-bold leading-tight line-clamp-1">{item.place_name}</p>
                 <span className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-card text-[11px] font-semibold text-foreground">
-                  {t(`cat.${cat}`, CAT_LABEL[cat] ?? t("cat.other"))}
+                  {t(`cat.${cat}`, { defaultValue: t("cat.other") })}
                 </span>
               </div>
               {tappable && <ChevronRight className="h-4 w-4 text-muted-foreground/40 shrink-0" />}
@@ -745,7 +739,7 @@ function UserPolecajkiRow({
               onClick={() => setThemeFilter((prev) => (prev === t.id ? null : t.id))}
               className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-bold transition-colors whitespace-nowrap ${themeFilter === t.id ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground"}`}
             >
-              {t.emoji} {t.label}
+              {t.emoji} {themeLabel(t.id)}
             </button>
           ))}
         </div>
@@ -782,7 +776,7 @@ function UserPolecajkiRow({
                 {/* Badge motywu (kolor wg motywu) + miasto po prawej, na tej samej wysokosci */}
                 <div className="flex items-center justify-between gap-2">
                   {theme ? (
-                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold ${theme.badge}`}>{theme.emoji} {theme.label}</span>
+                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold ${theme.badge}`}>{theme.emoji} {themeLabel(theme.id)}</span>
                   ) : <span />}
                   {col.city && (
                     <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground shrink-0">
@@ -1047,7 +1041,7 @@ function RouteCardV({ route, onClick }: { route: PolecaneRoute; onClick: () => v
           <div className="flex flex-wrap gap-1.5 mt-2">
             {route.categories.slice(0, 3).map((c) => (
               <span key={c} className="text-[10px] font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
-                {t(`cat.${c}`, CAT_LABEL[c] ?? c)}
+                {t(`cat.${c}`, { defaultValue: c })}
               </span>
             ))}
           </div>
@@ -1188,7 +1182,7 @@ function RouteBigCard({ route, onClick }: { route: PolecaneRoute; onClick: () =>
       id={route.id}
       photo={route.photo}
       categoryKey={cat ?? undefined}
-      categoryLabel={cat ? t(`cat.${cat}`, CAT_LABEL[cat] ?? cat) : undefined}
+      categoryLabel={cat ? t(`cat.${cat}`, { defaultValue: cat }) : undefined}
       city={route.city}
       avgRating={route.avgRating ?? 0}
       placeCount={route.placeCount ?? 0}
@@ -1398,7 +1392,7 @@ function SavedCollectionCard({ col, savedAt, onOpen, onDelete }: { col: Discover
           </div>
         )}
         <div className="flex-1 min-w-0">
-          <p className="font-bold text-sm leading-tight truncate">{col.title || "Lista"}</p>
+          <p className="font-bold text-sm leading-tight truncate">{col.title || t("common:fallback.list")}</p>
           {/* Bez miasta - zostaje liczba miejsc + autor */}
           <p className="text-xs text-muted-foreground mt-0.5 truncate">
             {[`${count} ${countLabel}`, col.author_name].filter(Boolean).join(" · ")}
@@ -1480,7 +1474,7 @@ export function SavedCollections({ hideEmptyState }: { hideEmptyState?: boolean 
             <AlertDialogDescription>{t("confirm.unsave_desc")}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="rounded-full">Anuluj</AlertDialogCancel>
+            <AlertDialogCancel className="rounded-full">{t("common:buttons.cancel")}</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => { const c = pendingUnsave; setPendingUnsave(null); if (c) unsave(c.id); }}
               className="rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90"
@@ -2223,7 +2217,7 @@ export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityCh
                       placeCount={r.placeCount ?? 0}
                       title={r.title}
                       description={r.summary || r.ai_highlight}
-                      tags={(r.categories ?? []).map((c) => CAT_LABEL[c] ?? c)}
+                      tags={(r.categories ?? []).map((c) => t(`cat.${c}`, { defaultValue: c }))}
                       pins={r.pins ?? []}
                       saved={savedRouteIds.has(r.id)}
                       onToggleSave={() => toggleSaveRoute(r.id)}
@@ -2348,7 +2342,7 @@ export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityCh
                 title={r.title}
                 description={r.summary || r.ai_highlight}
                 // Tagi CALEJ TRASY wycofane (prosba Nat 2026-08-31) - chipy to kategorie miejsc.
-                tags={(r.categories ?? []).map((c) => CAT_LABEL[c] ?? c)}
+                tags={(r.categories ?? []).map((c) => t(`cat.${c}`, { defaultValue: c }))}
                 pins={r.pins ?? []}
                 saved={savedRouteIds.has(r.id)}
                 onToggleSave={() => toggleSaveRoute(r.id)}
@@ -2361,7 +2355,7 @@ export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityCh
             const listCards = (contentType === "routes" ? [] : userPolecajki).filter((col) => notBlocked(col.user_id)).map((col) => {
               const ph = col.items.find((i) => i.photo_url)?.photo_url ?? col.gallery_urls?.[0] ?? null;
               const catTags = [...new Set(col.items.map((i) => i.category).filter(Boolean).map((c) => String(c).toLowerCase()))]
-                .map((c) => CAT_LABEL[c] ?? c);
+                .map((c) => t(`cat.${c}`, { defaultValue: c }));
               return (
                 <TrasaBigCard
                   key={`col-${col.id}`}
@@ -2487,9 +2481,9 @@ export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityCh
                 <p className="text-sm font-bold text-foreground mb-2">{t("filters.show_label")}</p>
                 <div className="flex gap-2 mb-5">
                   {([
-                    { id: "all", label: "Wszystko" },
-                    { id: "routes", label: "Trasy" },
-                    { id: "lists", label: "Listy" },
+                    { id: "all", label: t("common:filters.all") },
+                    { id: "routes", label: t("common:filters.routes") },
+                    { id: "lists", label: t("common:filters.lists") },
                   ] as { id: "all" | "routes" | "lists"; label: string }[]).map((s) => (
                     <button
                       key={s.id}

@@ -110,8 +110,16 @@
   "back": "Wróć",
   "proposals": {
     "added": "Dodano „{{place}}” do trasy",
-    "title": "Propozycje uczestników",
-    "title_count": "Propozycje uczestników ({{count}})"
+    "title": "Propozycje miejsc",
+    "title_count": "Propozycje uczestników ({{count}})",
+    "add": "Dodaj do propozycji",
+    "search": "Szukaj miejsca",
+    "empty_first": "Najpierw dodaj miejsca do propozycji",
+    "in_route": "Miejsca w trasie",
+    "your_saved": "Twoje zapisane miejsca",
+    "pick_min": "Zaznacz co najmniej jedno miejsce",
+    "choose": "Wybierz miejsca",
+    "to_route": "Do trasy"
   },
   "add_place": {
     "search_unavailable": "Wyszukiwarka chwilowo niedostępna. Wybierz z zapisanych.",
@@ -124,17 +132,25 @@
     "open_in_maps": "Otwórz {{place}} w Google Maps",
     "places_count_one": "{{count}} miejsce",
     "places_count_few": "{{count}} miejsca",
-    "places_count_many": "{{count}} miejsc"
+    "places_count_many": "{{count}} miejsc",
+    "added_one": "Dodano miejsce",
+    "add_to_route": "Dodaj do trasy",
+    "added_few": "Dodano {{count}} miejsca",
+    "added_many": "Dodano {{count}} miejsc",
+    "title": "Dodaj nowe miejsce"
   },
   "chat": {
     "empty": "Brak wiadomości. Napisz pierwszą, żeby omówić miejsca z uczestnikami.",
     "placeholder": "Napisz wiadomość...",
-    "send": "Wyślij"
+    "send": "Wyślij",
+    "title": "Czat wyjazdu",
+    "title_named": "Czat: {{title}}"
   },
   "row": {
     "saved_in_list": "Miejsce zapisane w liście",
     "open_in_maps": "Otwórz w Google Maps",
-    "remove": "Usuń miejsce z trasy"
+    "remove": "Usuń miejsce z trasy",
+    "save_to_list": "Zapisz miejsce do listy"
   },
   "note": {
     "placeholder": "Dodaj notkę o tym miejscu...",

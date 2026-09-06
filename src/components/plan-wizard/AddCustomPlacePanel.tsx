@@ -211,7 +211,7 @@ const Inner = ({ city, onAdd, onCancel }: AddCustomPlacePanelProps) => {
   return (
     <div className="flex flex-col h-full px-4 py-4 gap-4">
       <div className="flex items-center justify-between">
-        <p className="text-base font-semibold">Dodaj swoje miejsce</p>
+        <p className="text-base font-semibold">{t("custom.title")}</p>
         <button onClick={onCancel} className="h-8 w-8 flex items-center justify-center rounded-full bg-muted text-muted-foreground active:opacity-60">
           <X className="h-4 w-4" />
         </button>
@@ -303,14 +303,14 @@ const Inner = ({ city, onAdd, onCancel }: AddCustomPlacePanelProps) => {
             className="w-full h-12 rounded-full bg-primary text-white text-base font-semibold shadow-lg shadow-primary/20 active:opacity-80 transition-opacity flex items-center justify-center gap-2"
           >
             <Plus className="h-4 w-4" />
-            Dodaj do trasy
+            {t("custom.add_to_route")}
           </button>
 
           <button
             onClick={() => { setPreview(null); setStatus("idle"); setQuery(""); setMode("text"); }}
             className="text-sm text-muted-foreground text-center active:opacity-60"
           >
-            Szukaj innego miejsca
+            {t("custom.search_another")}
           </button>
         </div>
       )}

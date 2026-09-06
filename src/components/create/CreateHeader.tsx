@@ -32,7 +32,7 @@ export default function CreateHeader({ mode, onMode, onBack, showMode = true }: 
                 mode === m ? "bg-background text-foreground shadow-sm" : "text-secondary-foreground/70",
               )}
             >
-              {m === "trasy" ? "Trasy" : "Listy"}
+              {m === "trasy" ? t("common:filters.routes") : t("common:filters.lists")}
             </button>
           ))}
         </div>

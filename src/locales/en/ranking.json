@@ -8,7 +8,9 @@
   },
   "form": {
     "list": "List",
-    "route": "Plan"
+    "route": "Plan",
+    "description_label": "List description",
+    "place_tags_label": "Place tags"
   },
   "form_picker": {
     "title": "What are you creating?",
@@ -96,7 +98,8 @@
   "intro": "A list is a set of your favourite places in no particular order - like the cafes you love in your city.",
   "saved": {
     "empty": "You have no saved places yet. Like places while exploring to add them here in one tap.",
-    "other_cities": "Your saved places (from other cities)"
+    "other_cities": "Your saved places (from other cities)",
+    "your_saved": "Your saved places"
   },
   "city": {
     "optional": "The city is optional - you can put places from different cities on one list.",
@@ -111,5 +114,49 @@
   "aria": {
     "delete_place": "Delete place"
   },
-  "user_fallback": "User"
+  "user_fallback": "User",
+  "themes": {
+    "perfect-day": {
+      "label": "The perfect day",
+      "hint": "Your ideal plan for a whole day"
+    },
+    "date": {
+      "label": "Date night",
+      "hint": "A plan for a romantic outing"
+    },
+    "friends": {
+      "label": "With friends",
+      "hint": "A night out with your crew"
+    },
+    "family": {
+      "label": "With kids",
+      "hint": "A family day, kid-friendly"
+    },
+    "rainy": {
+      "label": "For a rainy day",
+      "hint": "When it pours and you do not want to stay in"
+    },
+    "foodie": {
+      "label": "Local flavours",
+      "hint": "Where to eat like a local"
+    },
+    "nightlife": {
+      "label": "Nightlife",
+      "hint": "Bars, clubs, after dark"
+    },
+    "culture": {
+      "label": "Culture and art",
+      "hint": "Museums, galleries, landmarks"
+    },
+    "budget": {
+      "label": "On a budget",
+      "hint": "Good and cheap"
+    },
+    "outdoor": {
+      "label": "Outdoors",
+      "hint": "Out in the fresh air"
+    }
+  },
+  "default_name_city": "Places in {{city}}",
+  "default_name": "New list"
 }

@@ -117,7 +117,8 @@
   "go_suggestions": "Go to suggestions",
   "aria": {
     "exclude": "Remove from the trip",
-    "delete_place": "Delete place"
+    "delete_place": "Delete place",
+    "add_to_route": "Add to route"
   },
   "map": {
     "close": "Close map",
@@ -134,5 +135,29 @@
     "deleted": "Deleted"
   },
   "places_count_one": "{{count}} place",
-  "places_count_other": "{{count}} places"
+  "places_count_other": "{{count}} places",
+  "start": {
+    "empty_drafts": "Draft routes",
+    "empty_saved": "No saved routes yet",
+    "new_trip": "New trip",
+    "start_fresh": "Start from scratch"
+  },
+  "compose": {
+    "empty_first": "Add some places to the route first",
+    "saved_one": "Place saved",
+    "name_placeholder": "Your trip name",
+    "add_place": "Add place",
+    "list_view": "List view",
+    "map_alt": "Map of places",
+    "keep_one": "Don't lose this place",
+    "save_changes": "Save changes",
+    "save_trip": "Save trip",
+    "pick_dates": "Pick dates for the route",
+    "pick_min": "Select at least one place for the route",
+    "saved_other": "{{count}} places saved",
+    "keep_other": "Don't lose these {{count}} places",
+    "new_trip": "New trip",
+    "add_place_tile": "Add place",
+    "your_saved": "Your saved places"
+  }
 }

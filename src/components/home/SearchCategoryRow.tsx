@@ -1,4 +1,5 @@
 import { Folder, FileText, MapPin, Users } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { haptics } from "@/hooks/useHaptics";
 
 // Wiersz kategorii wyszukiwarki (redesign wg Figmy "NEW - Eksploracja — wyszukiwarka").
@@ -7,15 +8,18 @@ import { haptics } from "@/hooks/useHaptics";
 // Wspoldzielone przez Eksploracje i profil - wyszukiwarka wyglada tak samo w obu miejscach.
 export type SearchCat = "all" | "lists" | "trips" | "places" | "people";
 
-const SEARCH_CATS: { id: SearchCat; label: string; icon: "folder" | "file" | "brand" | "pin" | "people" }[] = [
-  { id: "all", label: "Wszystko", icon: "folder" },
-  { id: "lists", label: "Listy", icon: "file" },
-  { id: "trips", label: "Wyjazdy", icon: "brand" },
-  { id: "places", label: "Miejsca", icon: "pin" },
-  { id: "people", label: "Ludzie", icon: "people" },
+// Stala stoi POZA komponentem, wiec trzyma KLUCZ tlumaczenia, a nie gotowa etykiete -
+// inaczej po zmianie jezyka wiersz zostalby przy napisach z pierwszego renderu.
+const SEARCH_CATS: { id: SearchCat; labelKey: string; icon: "folder" | "file" | "brand" | "pin" | "people" }[] = [
+  { id: "all", labelKey: "filters.all", icon: "folder" },
+  { id: "lists", labelKey: "filters.lists", icon: "file" },
+  { id: "trips", labelKey: "filters.trips", icon: "brand" },
+  { id: "places", labelKey: "filters.places", icon: "pin" },
+  { id: "people", labelKey: "filters.people", icon: "people" },
 ];
 
 export default function SearchCategoryRow({ value, onChange }: { value: SearchCat; onChange: (c: SearchCat) => void }) {
+  const { t } = useTranslation("common");
   return (
     <div className="flex items-center gap-2.5 px-4 pt-3 pb-1 shrink-0">
       {SEARCH_CATS.map((c) => {
@@ -42,7 +46,7 @@ export default function SearchCategoryRow({ value, onChange }: { value: SearchCa
                 <MapPin className="h-6 w-6 text-foreground" strokeWidth={1.8} />
               )}
             </span>
-            <span className="text-xs font-medium text-foreground leading-4 truncate">{c.label}</span>
+            <span className="text-xs font-medium text-foreground leading-4 truncate">{t(c.labelKey)}</span>
           </button>
         );
       })}

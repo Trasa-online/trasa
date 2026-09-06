@@ -1,3 +1,4 @@
+import i18n from "@/i18n";
 import { track } from "@/lib/analytics";
 import { supabase } from "@/integrations/supabase/client";
 import { photoUrlForStorage } from "@/lib/placePhotos";
@@ -288,7 +289,7 @@ export async function createListWithPlace(
     .from("discovery_collections")
     .insert({
       user_id: userId,
-      title: title || (isRecommend ? "Odwiedzone miejsca" : "Do zobaczenia"),
+      title: title || i18n.t(isRecommend ? "list.default_visited" : "list.default_to_visit", { ns: "plan" }),
       city: city || null,
       kind: "ranking",
       list_status: listStatus,
@@ -317,7 +318,7 @@ export async function createListFromSavedPlaces(
     .from("discovery_collections")
     .insert({
       user_id: userId,
-      title: title.trim() || "Nowa lista",
+      title: title.trim() || i18n.t("save.new_list", { ns: "plan" }),
       city: city ?? null,
       kind: "ranking",
       list_status: "visited",

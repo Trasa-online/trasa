@@ -85,7 +85,7 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
         {onSave && (
           <button
             onClick={(e) => { e.stopPropagation(); onSave(); }}
-            aria-label={saved ? t("row.saved_in_list") : "Zapisz miejsce do listy"}
+            aria-label={saved ? t("row.saved_in_list") : t("row.save_to_list")}
             className="h-9 w-9 rounded-full flex items-center justify-center active:scale-90 transition-transform"
           >
             <Bookmark className={`h-5 w-5 ${saved ? "text-[#F0A583] fill-[#F0A583]" : "text-foreground/70"}`} strokeWidth={2} />

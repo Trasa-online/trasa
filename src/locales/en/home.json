@@ -76,5 +76,6 @@
     "add_plus": "+ Add trip",
     "add": "Add trip",
     "deleted": "Trip “{{city}}” deleted"
-  }
+  },
+  "my_routes": "My routes"
 }

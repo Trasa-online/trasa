@@ -129,7 +129,13 @@
     "delete_place": "Delete place",
     "removed": "Removed “{{name}}”",
     "already": "“{{name}}” is already saved",
-    "removed_toast": "Removed from saved"
+    "removed_toast": "Removed from saved",
+    "search_place": "Search for a place",
+    "empty_places": "No saved places yet",
+    "empty_short": "Nothing saved yet",
+    "add_new_place": "Add a new place",
+    "add_place": "Add place",
+    "no_city": "No city"
   },
   "add_saved": {
     "goes_to_general": "It goes to your General list.",
@@ -156,6 +162,7 @@
     "show_trip_map": "Show the trip map",
     "remove_saved": "Remove from saved",
     "close_map": "Close map",
-    "delete": "Delete"
+    "delete": "Delete",
+    "map_alt": "Trip map"
   }
 }

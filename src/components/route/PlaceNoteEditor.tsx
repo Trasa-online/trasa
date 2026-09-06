@@ -78,7 +78,7 @@ export default function PlaceNoteEditor({
             {savedFlash && <span className="absolute bottom-2 right-2.5 text-[10px] text-green-600 font-medium">Zapisano</span>}
           </div>
         </div>
-        <button onClick={finish} className="mt-1.5 rounded-full bg-secondary text-foreground px-3.5 py-1.5 text-xs font-bold active:scale-95 transition-transform">Gotowe</button>
+        <button onClick={finish} className="mt-1.5 rounded-full bg-secondary text-foreground px-3.5 py-1.5 text-xs font-bold active:scale-95 transition-transform">{t("common:buttons.done")}</button>
       </div>
     );
   }

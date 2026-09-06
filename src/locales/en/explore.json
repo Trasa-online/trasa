@@ -70,9 +70,17 @@
   },
   "search": {
     "placeholder_all": "Search trips, places, people...",
-    "by_category": "Search by category"
+    "by_category": "Search by category",
+    "close": "Close search"
   },
   "city": {
     "change": "Change city"
+  },
+  "region": {
+    "pick_city": "Choose a city",
+    "all": "All"
+  },
+  "map": {
+    "mark_place": "Mark a place"
   }
 }

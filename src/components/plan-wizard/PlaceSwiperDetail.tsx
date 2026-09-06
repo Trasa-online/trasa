@@ -357,7 +357,7 @@ const PlaceSwiperDetail = ({
     const file = e.target.files?.[0];
     e.target.value = ""; // reset, zeby ten sam plik dalo sie wybrac ponownie
     if (!file || !user || !ep || !placeKey) return;
-    if (!file.type.startsWith("image/")) { toast.error("Wybierz plik graficzny"); return; }
+    if (!file.type.startsWith("image/")) { toast.error(t("photo.pick_image")); return; }
     setAddingPhoto(true);
     let row = null;
     try {

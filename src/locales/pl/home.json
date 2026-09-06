@@ -77,5 +77,6 @@
     "add_plus": "+ Dodaj trasę",
     "add": "Dodaj trasę",
     "deleted": "Usunięto trasę „{{city}}”"
-  }
+  },
+  "my_routes": "Moje trasy"
 }

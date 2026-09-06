@@ -89,9 +89,7 @@ export default function ReportContentSheet({ targetType, targetId, trigger, clas
               <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed max-w-[300px] mx-auto">
                 {t("done_desc")}
               </p>
-              <button onClick={close} className="mt-5 w-full py-3 rounded-2xl bg-secondary text-secondary-foreground font-bold text-sm active:scale-[0.98] transition-transform">
-                Zamknij
-              </button>
+              <button onClick={close} className="mt-5 w-full py-3 rounded-2xl bg-secondary text-secondary-foreground font-bold text-sm active:scale-[0.98] transition-transform">{t("common:buttons.close")}</button>
             </div>
           ) : (
             <>

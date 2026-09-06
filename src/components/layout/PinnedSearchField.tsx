@@ -25,10 +25,12 @@ type Props = {
 };
 
 const PinnedSearchField = forwardRef<HTMLInputElement, Props>(function PinnedSearchField(
-  { value = "", onChange, onFocus, placeholder = "Szukaj", autoFocus, readOnly, onClick, ...rest },
+  { value = "", onChange, onFocus, placeholder, autoFocus, readOnly, onClick, ...rest },
   ref,
 ) {
   const { t } = useTranslation("common");
+  // Domyslka nie moze stac w liscie parametrow - hook nie istnieje jeszcze w tym miejscu.
+  const ph = placeholder ?? t("buttons.search");
   const shell =
     "flex-1 min-w-0 flex items-center gap-2 px-3 h-9 rounded-full bg-muted/70 border border-border/50 transition-colors";
 
@@ -37,11 +39,11 @@ const PinnedSearchField = forwardRef<HTMLInputElement, Props>(function PinnedSea
       <button
         type="button"
         onClick={onClick}
-        aria-label={rest["aria-label"] ?? placeholder}
+        aria-label={rest["aria-label"] ?? ph}
         className={`${shell} text-left active:scale-[0.98] active:bg-muted`}
       >
         <Search className="h-4 w-4 text-muted-foreground shrink-0" />
-        <span className="flex-1 min-w-0 truncate text-[15px] text-muted-foreground/70">{placeholder}</span>
+        <span className="flex-1 min-w-0 truncate text-[15px] text-muted-foreground/70">{ph}</span>
       </button>
     );
   }
@@ -54,13 +56,13 @@ const PinnedSearchField = forwardRef<HTMLInputElement, Props>(function PinnedSea
         value={value}
         onChange={(e) => onChange?.(e.target.value)}
         onFocus={onFocus}
-        placeholder={placeholder}
+        placeholder={ph}
         autoFocus={autoFocus}
         autoComplete="off"
         autoCorrect="off"
         autoCapitalize="off"
         spellCheck={false}
-        aria-label={rest["aria-label"] ?? placeholder}
+        aria-label={rest["aria-label"] ?? ph}
         className="flex-1 min-w-0 bg-transparent text-[15px] outline-none placeholder:text-muted-foreground/70"
       />
       {value && (

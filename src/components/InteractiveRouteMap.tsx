@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Plus, Loader2 } from 'lucide-react';
 import { APIProvider, Map, AdvancedMarker, InfoWindow, useMap } from '@vis.gl/react-google-maps';
 import { Button } from '@/components/ui/button';
@@ -37,6 +38,7 @@ const MapContent = ({ pins, onPinAdd, onMapClick }: {
   onPinAdd: (pinData: NewPinData) => void;
   onMapClick?: (e: any) => void;
 }) => {
+  const { t } = useTranslation('plan');
   const map = useMap();
   const [isLoading, setIsLoading] = useState(false);
   const [pendingPin, setPendingPin] = useState<PendingPin | null>(null);
@@ -93,7 +95,7 @@ const MapContent = ({ pins, onPinAdd, onMapClick }: {
     setPendingPin({
       latitude: lat,
       longitude: lng,
-      place_name: 'Nowe miejsce',
+      place_name: t('map.new_place'),
       address: `${lat.toFixed(6)}, ${lng.toFixed(6)}`,
     });
     setIsLoading(true);
@@ -229,7 +231,7 @@ const MapContent = ({ pins, onPinAdd, onMapClick }: {
                   size="sm"
                   className="w-full"
                 >
-                  Dodaj pin
+                  {t('map.add_pin')}
                 </Button>
               </div>
             </InfoWindow>

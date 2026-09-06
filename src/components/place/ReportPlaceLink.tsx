@@ -78,7 +78,7 @@ export default function ReportPlaceLink({ placeId, placeName }: { placeId: strin
           <SheetTitle className="sr-only">{t("report_problem")}</SheetTitle>
           <div>
             <div className="mx-auto h-1 w-10 rounded-full bg-muted-foreground/25 mb-4" />
-            <button onClick={() => setOpen(false)} aria-label="Zamknij" className="absolute right-4 top-4 h-8 w-8 rounded-full bg-muted flex items-center justify-center active:scale-90 transition-transform">
+            <button onClick={() => setOpen(false)} aria-label={t("common:buttons.close")} className="absolute right-4 top-4 h-8 w-8 rounded-full bg-muted flex items-center justify-center active:scale-90 transition-transform">
               <X className="h-4 w-4" />
             </button>
             <p className="text-lg font-bold pr-8">{t("report_problem")}</p>

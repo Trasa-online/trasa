@@ -12,6 +12,7 @@ export interface MainCategory {
   subcategories: Subcategory[];
 }
 
+// i18n-ignore-start: kanoniczne etykiety PL to FALLBACK dla i18n - patrz mainCategoryLabel / subcategoryLabelLocalized
 export const MAIN_CATEGORIES: MainCategory[] = [
   {
     id: 'food',
@@ -81,6 +82,7 @@ export const MAIN_CATEGORIES: MainCategory[] = [
       { id: 'nightclub',  label: 'Klub nocny', emoji: '🪩' },
     ],
   },
+// i18n-ignore-end
 ];
 
 export const getSubcategoryIds = (mainCategoryId: string): string[] => {
@@ -131,18 +133,12 @@ export const subcategoryLabelLocalized = (subcategoryId: string): string => {
   return i18n.t(`sub.${subcategoryId}`, { ns: "categories", defaultValue: raw });
 };
 
-// Liczba mnoga podkategorii (PL) - naglowki grup kategorii na widoku wyjazdu (np. "Restauracje",
-// "Kawiarnie"). UI jest polskie, wiec plurale sa zaszyte; fallback = etykieta pojedyncza.
-const SUBCATEGORY_PLURAL_PL: Record<string, string> = {
-  restaurant: 'Restauracje', cafe: 'Kawiarnie', bar: 'Bary',
-  museum: 'Muzea', monument: 'Zabytki', gallery: 'Galerie',
-  experience: 'Doświadczenia', market: 'Targi', club: 'Kluby',
-  park: 'Parki', viewpoint: 'Punkty widokowe',
-  store: 'Sklepy', boutique: 'Butiki', concept_store: 'Concept store', wine_shop: 'Sklepy z winami', bookshop: 'Księgarnie',
-  theater: 'Teatry', live_music: 'Live music', cinema: 'Kina', nightclub: 'Kluby nocne',
-};
+// Liczba mnoga podkategorii - naglowki grup na widoku wyjazdu ("Restauracje", "Kawiarnie").
+// Do 2026-09-06 byly zaszyte po polsku z komentarzem "UI jest polskie". UI juz polskie nie jest,
+// wiec formy mieszkaja w plikach tlumaczen (ns `categories`, klucz `plural.<id>`), a fallbackiem
+// zostaje etykieta pojedyncza.
 export const subcategoryPluralLabel = (subcategoryId: string): string =>
-  SUBCATEGORY_PLURAL_PL[subcategoryId] ?? subcategoryLabelLocalized(subcategoryId);
+  i18n.t(`plural.${subcategoryId}`, { ns: "categories", defaultValue: subcategoryLabelLocalized(subcategoryId) });
 
 // DB ma historycznie kilka wartosci `places.category` dla tego samego konceptu
 // (np. "club" z AddCustomPlacePanel vs "nightlife" z AI generation). Mapowanie

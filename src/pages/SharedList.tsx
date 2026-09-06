@@ -241,7 +241,7 @@ export default function SharedList() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, id, col?.user_id, items.length]);
 
-  const categoryLabel = (cat: string | null) => (cat ? subcategoryLabelLocalized(cat) : "Miejsce");
+  const categoryLabel = (cat: string | null) => (cat ? subcategoryLabelLocalized(cat) : t("common:fallback.place"));
   // Kategoria: zapisana -> wywnioskowana z nazwy (miejsca z Google bywaja bez kategorii,
   // inaczej ikona=Landmark, chip="Miejsce").
   const catOf = (pin: any): string | null => pin.category ?? inferCategoryFromName(pin.place_name);
@@ -337,7 +337,7 @@ export default function SharedList() {
   // Guzik "Udostepnij" pokazuje KARTE do zrzutu ekranu (szablon listy). Wysylka linku zostaje
   // pod dlugim przytrzymaniem - ekran z kanalami i eksportem obrazu to osobny temat.
   const handleShare = () => setShareCardOpen(true);
-  const handleShareLink = () => { void share({ title: col.title || cityLabel || "Lista", url: buildShareUrl(`/lista/${col.id}`) }); };
+  const handleShareLink = () => { void share({ title: col.title || cityLabel || t("common:fallback.list"), url: buildShareUrl(`/lista/${col.id}`) }); };
 
   // Wlasciciel dodaje miejsca do listy (drawer jak w wyjazdach): batch insert do discovery_items.
   const handleAddPlacesToList = async (places: PlaceForList[]) => {
@@ -628,7 +628,7 @@ export default function SharedList() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleting}>Anuluj</AlertDialogCancel>
+            <AlertDialogCancel disabled={deleting}>{t("common:buttons.cancel")}</AlertDialogCancel>
             <AlertDialogAction onClick={(e) => { e.preventDefault(); void handleDelete(); }} disabled={deleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               {deleting ? "Usuwanie…" : t("delete")}
             </AlertDialogAction>

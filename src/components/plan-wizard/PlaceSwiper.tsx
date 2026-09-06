@@ -919,8 +919,10 @@ function haversineKm(a: { lat: number; lng: number }, b: { lat: number; lng: num
 const DIET_KEYWORDS: Record<string, string[]> = {
   vegan: ["vegan", "wegan", "wegań", "wegańsk", "weganski", "weganskie"],   // i18n-ignore: slowa kluczowe dopasowania, nie copy
   vegetarian: ["vegetarian", "wegetar", "weget", "jarski", "jarskie", "jarska", "wegetarianskie", "wegetariańsk"],   // i18n-ignore: slowa kluczowe dopasowania
+  // i18n-ignore-start: slowa kluczowe dopasowywane do OPISU miejsca (oba jezyki naraz), nie copy
   gluten_free: ["gluten free", "gluten-free", "bez glutenu", "bezglutenowe", "glutenfree", "gluten_free"],
   lactose_free: ["lactose free", "lactose-free", "bez laktozy", "bezlaktozowe", "laktozy", "lactose_free"],
+  // i18n-ignore-end
 };
 
 function matchesDiet(place: MockPlace, diets: string[]): boolean {

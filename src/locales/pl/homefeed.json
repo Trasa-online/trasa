@@ -127,5 +127,8 @@
     "places_count_one": "{{count}} miejsce",
     "places_count_few": "{{count}} miejsca",
     "places_count_many": "{{count}} miejsc"
+  },
+  "saved": {
+    "empty_lists_routes": "Brak zapisanych list i tras"
   }
 }

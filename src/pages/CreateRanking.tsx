@@ -170,7 +170,7 @@ const CreateRanking = () => {
   const onCountryChange = (c: string) => { setCountry(c); setCity(citiesForCountry(c)[0]); };
   // Nazwa listy - generyczna domyslna (jak "Wyjazd do X" w trasie); titleDirty blokuje auto-update
   // po recznej edycji, a zmiana miasta aktualizuje domyslna nazwe.
-  const defaultListName = (c: string) => (c ? `Lista miejsc - ${c}` : "Nowa lista");
+  const defaultListName = (c: string) => (c ? t("default_name_city", { city: c }) : t("default_name"));
   const [title, setTitle] = useState(() => nav.title || defaultListName(initCity));
   const [titleDirty, setTitleDirty] = useState(!!nav.title);
   // Inline selektor miasta wyszukiwania (multi-miasto): pozwala zmienic miasto w trakcie
@@ -538,7 +538,7 @@ const CreateRanking = () => {
     return () => { alive = false; };
   }, [city, category]);
 
-  const collectionTitle = title.trim() || "Lista";
+  const collectionTitle = title.trim() || t("common:fallback.list");
   const isRoute = isRouteCollection(category); // stare trasy (edycja) -> mozna ustawiac kolejnosc
   const canGoNext = items.length >= 1 && title.trim().length > 0; // krok 1 -> 2 (min. 1 miejsce, miasto opcjonalne)
   const canPublish = canGoNext && !publishing;
@@ -886,7 +886,7 @@ const CreateRanking = () => {
             return (
               <div className="px-4 pb-4">
                 <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide mb-2">
-                  {savedForCity.fallback && saved.length > 0 ? t("saved.other_cities") : "Twoje zapisane miejsca"}
+                  {savedForCity.fallback && saved.length > 0 ? t("saved.other_cities") : t("saved.your_saved")}
                 </p>
                 {saved.length > 0 ? (
                   <div className="flex gap-2.5 overflow-x-auto scrollbar-none snap-x snap-mandatory -mr-4 pr-4 pb-1">
@@ -919,7 +919,7 @@ const CreateRanking = () => {
               miejsca (coverToSave = coverUrl ?? firstItemPhoto). */}
           <div>
             <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-1.5 block">
-              {`Opis listy`} <span className="normal-case font-medium text-muted-foreground/50">{t("notes.optional")}</span>
+              {t("form.description_label")} <span className="normal-case font-medium text-muted-foreground/50">{t("notes.optional")}</span>
             </label>
             <p className="text-[12px] text-muted-foreground leading-snug mb-2.5">{t("desc.hint")}</p>
             <textarea
@@ -948,7 +948,7 @@ const CreateRanking = () => {
                     placeholder={t("notes.place_placeholder")}
                     className="mt-2 w-full rounded-lg bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-500/40 placeholder:text-muted-foreground/50" />
                   {/* Tagi miejsca (alternatywa dla notki) - pula zalezna od kategorii, wybrany = zolty fill */}
-                  <p className="text-[11px] text-muted-foreground mt-2 mb-1.5">{`Tagi miejsca`}</p>
+                  <p className="text-[11px] text-muted-foreground mt-2 mb-1.5">{t("form.place_tags_label")}</p>
                   <div className="flex flex-wrap gap-1.5">
                     {placeTagsForCategory(it.category).map((tg) => {
                       const on = (it.tags ?? []).includes(tg);

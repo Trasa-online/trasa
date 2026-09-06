@@ -410,7 +410,7 @@ export const LikedTab = ({ selectMode = false, onExitSelection, city: controlled
                 // dopiero tap w checkbox zaznacza (stopPropagation).
                 <button
                   onClick={(e) => { e.stopPropagation(); toggleSelect(p); }}
-                  aria-label="Zaznacz miejsce"
+                  aria-label={t("map.mark_place")}
                   className="absolute top-0 left-0 p-2.5 z-10"
                 >
                   <span className={cn(

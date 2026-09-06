@@ -209,7 +209,10 @@
     "bad_link": "Nieprawidłowy link.",
     "reading_link": "Analizuję link…",
     "searching": "Szukam miejsca…",
-    "found_not_located": "Znalazłam nazwę „{{name}}”, ale nie udało się jej zlokalizować. Popraw nazwę ręcznie."
+    "found_not_located": "Znalazłam nazwę „{{name}}”, ale nie udało się jej zlokalizować. Popraw nazwę ręcznie.",
+    "title": "Dodaj swoje miejsce",
+    "add_to_route": "Dodaj do trasy",
+    "search_another": "Szukaj innego miejsca"
   },
   "start": {
     "location_failed": "Nie udało się pobrać Twojej lokalizacji.",
@@ -218,17 +221,35 @@
     "skip": "Pomiń",
     "outside_pick": "To miejsce jest poza {{city}}. Wybierz coś w obrębie miasta.",
     "outside_mark": "To miejsce jest poza {{city}}. Zaznacz punkt w obrębie miasta.",
-    "you_outside": "Jesteś poza {{city}}. Wskaż punkt startu w obrębie miasta."
+    "you_outside": "Jesteś poza {{city}}. Wskaż punkt startu w obrębie miasta.",
+    "your_location": "Twoja lokalizacja"
   },
   "calendar": {
     "hint_range": "Kliknij drugi dzień, żeby wybrać zakres",
     "clear": "Wyczyść zaznaczenie",
     "prev": "Poprzedni miesiąc",
-    "next": "Następny miesiąc"
+    "next": "Następny miesiąc",
+    "no_dates": "Bez dat"
   },
   "template": {
     "failed": "Nie udało się utworzyć trasy. Spróbuj ponownie.",
-    "from_scratch": "Zaplanuj trasę od zera"
+    "from_scratch": "Zaplanuj trasę od zera",
+    "map_alt": "Mapa trasy"
   },
-  "create_trip": "Stwórz wyjazd"
+  "create_trip": "Stwórz wyjazd",
+  "map": {
+    "new_place": "Nowe miejsce",
+    "add_pin": "Dodaj pin"
+  },
+  "save": {
+    "hide": "Ukryj",
+    "new_list": "Nowa lista",
+    "new_list_name": "Nazwa nowej listy",
+    "all_saved_hint": "Wszystkie Twoje zapisane miejsca",
+    "saved_title": "Miejsce zapisane!"
+  },
+  "list": {
+    "default_visited": "Odwiedzone miejsca",
+    "default_to_visit": "Do zobaczenia"
+  }
 }

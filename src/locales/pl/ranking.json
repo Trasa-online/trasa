@@ -8,7 +8,9 @@
   },
   "form": {
     "list": "Lista",
-    "route": "Plan"
+    "route": "Plan",
+    "description_label": "Opis listy",
+    "place_tags_label": "Tagi miejsca"
   },
   "form_picker": {
     "title": "Co tworzysz?",
@@ -96,7 +98,8 @@
   "intro": "Lista to zbiór Twoich ulubionych miejsc bez ustalonej kolejności - np. Twoje ukochane kawiarnie w mieście.",
   "saved": {
     "empty": "Nie masz jeszcze zapisanych miejsc. Polub miejsca w eksploracji, żeby dodać je tu jednym tapem.",
-    "other_cities": "Twoje zapisane miejsca (z innych miast)"
+    "other_cities": "Twoje zapisane miejsca (z innych miast)",
+    "your_saved": "Twoje zapisane miejsca"
   },
   "city": {
     "optional": "Miasto jest opcjonalne - możesz dodać miejsca z różnych miast do tej samej listy.",
@@ -111,5 +114,49 @@
   "aria": {
     "delete_place": "Usuń miejsce"
   },
-  "user_fallback": "Użytkownik"
+  "user_fallback": "Użytkownik",
+  "themes": {
+    "perfect-day": {
+      "label": "Perfekcyjny dzień",
+      "hint": "Twój idealny plan na cały dzień"
+    },
+    "date": {
+      "label": "Randka",
+      "hint": "Plan na romantyczne wyjście"
+    },
+    "friends": {
+      "label": "Ze znajomymi",
+      "hint": "Wspólne wyjście z ekipą"
+    },
+    "family": {
+      "label": "Z dzieckiem",
+      "hint": "Rodzinny dzień, przyjaźnie dzieciom"
+    },
+    "rainy": {
+      "label": "Na deszczowy dzień",
+      "hint": "Gdy pada, a nie chcesz siedzieć w domu"
+    },
+    "foodie": {
+      "label": "Lokalne smaki",
+      "hint": "Gdzie zjeść jak lokals"
+    },
+    "nightlife": {
+      "label": "Nocne życie",
+      "hint": "Bary, kluby, po zmroku"
+    },
+    "culture": {
+      "label": "Kultura i sztuka",
+      "hint": "Muzea, galerie, zabytki"
+    },
+    "budget": {
+      "label": "Budżetowo",
+      "hint": "Fajnie i tanio"
+    },
+    "outdoor": {
+      "label": "Aktywnie",
+      "hint": "Na świeżym powietrzu"
+    }
+  },
+  "default_name_city": "Lista miejsc - {{city}}",
+  "default_name": "Nowa lista"
 }

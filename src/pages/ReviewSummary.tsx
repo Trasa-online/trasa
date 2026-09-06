@@ -148,9 +148,7 @@ function SortableReviewRow({ pin, idx, categoryLabel, onOpen, onRemove, noteValu
                 className="flex-1 min-w-0 h-9 rounded-full bg-white border border-border/60 px-3.5 text-[13px] text-foreground outline-none focus:border-orange-400/60 placeholder:text-muted-foreground/55"
               />
               <button type="submit" disabled={!customTag.trim()}
-                className="h-9 px-3.5 rounded-full bg-secondary text-secondary-foreground text-[13px] font-bold active:scale-95 transition-transform disabled:opacity-40">
-                Dodaj
-              </button>
+                className="h-9 px-3.5 rounded-full bg-secondary text-secondary-foreground text-[13px] font-bold active:scale-95 transition-transform disabled:opacity-40">{t("common:buttons.add")}</button>
             </form>
           </div>
           <div className="flex items-center justify-between mt-2">
@@ -194,12 +192,6 @@ function SortablePlanRow({ pin, index, categoryLabel, onOpen, onGoogle, onDelete
   );
 }
 
-const CATEGORY_LABEL: Record<string, string> = {
-  restaurant: "Restauracja", cafe: "Kawiarnia", museum: "Muzeum", park: "Park",
-  bar: "Bar", club: "Klub", monument: "Zabytek", gallery: "Galeria",
-  market: "Targ", viewpoint: "Punkt widokowy", shopping: "Zakupy", experience: "Atrakcja",
-  walk: "Spacer", other: "Miejsce",
-};
 
 // Klucz kompozytowy ocena/notka per miejsce w danym dniu (route_id + place_name),
 // zeby to samo miejsce w roznych dniach trasy wielodniowej bylo niezalezne.
@@ -210,7 +202,7 @@ const rkey = (routeId: string, placeName: string) => `${routeId}::${placeName}`;
 const ReviewSummary = () => {
   const { t } = useTranslation("review");
   const catLabel = (cat: string) =>
-    t(`categories.${cat}`, { defaultValue: CATEGORY_LABEL[cat] ?? CATEGORY_LABEL.other });
+    t(`categories.${cat}`, { defaultValue: t("categories.other") });
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -705,7 +697,7 @@ const ReviewSummary = () => {
   const shareUrl = routeId ? buildShareUrl(`/route/${routeId}`) : "";
   const shareLink = async () => {
     if (!routeId) return;
-    const res = await share({ title: route?.title || route?.city || "Trasa", text: t("share.text"), url: shareUrl });
+    const res = await share({ title: route?.title || route?.city || t("common:fallback.route"), text: t("share.text"), url: shareUrl });
     if (res.ok && res.method === "clipboard") notify.success(t("toast.link_copied"));
   };
   // Kopiowanie linku do schowka (arkusz QR).
@@ -1811,7 +1803,7 @@ const ReviewSummary = () => {
               </div>
             )}
           </div>
-          <button onClick={() => setPinPickerId(null)} className="shrink-0 w-full py-3 rounded-2xl bg-primary text-white font-bold text-sm mt-3 active:scale-[0.98] transition-transform">Gotowe</button>
+          <button onClick={() => setPinPickerId(null)} className="shrink-0 w-full py-3 rounded-2xl bg-primary text-white font-bold text-sm mt-3 active:scale-[0.98] transition-transform">{t("common:buttons.done")}</button>
         </div>
       </div>
     );
@@ -1950,7 +1942,7 @@ const ReviewSummary = () => {
                   disabled={pinUploadingId === pin.id}
                   className="shrink-0 h-20 w-20 rounded-xl bg-muted/50 border border-dashed border-border flex flex-col items-center justify-center gap-1 text-muted-foreground active:bg-muted/70 transition-colors"
                 >
-                  {pinUploadingId === pin.id ? <Loader2 className="h-5 w-5 animate-spin" /> : <><Camera className="h-5 w-5" /><span className="text-[10px] font-medium">Dodaj</span></>}
+                  {pinUploadingId === pin.id ? <Loader2 className="h-5 w-5 animate-spin" /> : <><Camera className="h-5 w-5" /><span className="text-[10px] font-medium">{t("common:buttons.add")}</span></>}
                 </button>
                 {imgs.map((url, idx) => {
                   const src = resolveStored(url) ?? url;
@@ -2310,7 +2302,7 @@ const ReviewSummary = () => {
 
           {/* Top-toggle Miejsca | Galeria | Mapa */}
           <div className="flex rounded-full bg-muted p-0.5 mt-8 mb-4 text-sm font-bold">
-            <button onClick={() => { haptics.selection(); setPlanTab("miejsca"); }} className={`flex-1 py-2 rounded-full transition-colors ${planTab === "miejsca" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>Miejsca</button>
+            <button onClick={() => { haptics.selection(); setPlanTab("miejsca"); }} className={`flex-1 py-2 rounded-full transition-colors ${planTab === "miejsca" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>{t("common:filters.places")}</button>
             <button onClick={() => { haptics.selection(); setPlanTab("galeria"); }} className={`flex-1 py-2 rounded-full transition-colors ${planTab === "galeria" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>Galeria</button>
             <button onClick={() => { haptics.selection(); setPlanTab("mapa"); }} className={`flex-1 py-2 rounded-full transition-colors ${planTab === "mapa" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>Mapa</button>
           </div>
@@ -2513,7 +2505,7 @@ const ReviewSummary = () => {
             <div className="absolute inset-0 bg-black/50 animate-in fade-in duration-200" />
             <div {...qrDrag.dragProps} onClick={(e) => e.stopPropagation()} className="relative w-full max-w-lg bg-card rounded-t-3xl px-5 pt-3 pb-[max(20px,env(safe-area-inset-bottom))] shadow-2xl animate-in slide-in-from-bottom-4 duration-300">
               <div className="mx-auto h-1 w-10 rounded-full bg-muted-foreground/25 mb-4" />
-              <button onClick={() => setQrShareOpen(false)} aria-label="Zamknij" className="absolute right-4 top-4 h-8 w-8 rounded-full bg-muted flex items-center justify-center active:scale-90 transition-transform">
+              <button onClick={() => setQrShareOpen(false)} aria-label={t("common:buttons.close")} className="absolute right-4 top-4 h-8 w-8 rounded-full bg-muted flex items-center justify-center active:scale-90 transition-transform">
                 <X className="h-4 w-4" />
               </button>
               <p className="text-lg font-bold mb-4 pr-8">{t("share.qr")}</p>
@@ -2684,7 +2676,7 @@ const ReviewSummary = () => {
 
                   {/* Miejsca + toggle Lista/Karty */}
                   <div className="flex items-center justify-between mb-3">
-                    <p className="font-display text-xl font-bold text-foreground tracking-tight">Miejsca</p>
+                    <p className="font-display text-xl font-bold text-foreground tracking-tight">{t("common:filters.places")}</p>
                   </div>
 
                   {currentPins.length === 0 ? (
@@ -2999,7 +2991,7 @@ const ReviewSummary = () => {
                 disabled={savingPlan}
                 className="flex-1 py-3.5 rounded-2xl bg-primary text-white font-bold text-base active:scale-[0.98] transition-transform disabled:opacity-40"
               >
-                {savingPlan ? t("status.saving") : "Zapisz"}
+                {savingPlan ? t("status.saving") : t("common:buttons.save")}
               </button>
             )}
           </div>

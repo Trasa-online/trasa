@@ -30,5 +30,27 @@
     "nightclub": "Klub nocny",
     "store": "Sklep"
   },
-  "other": "Miejsce"
+  "other": "Miejsce",
+  "plural": {
+    "restaurant": "Restauracje",
+    "cafe": "Kawiarnie",
+    "bar": "Bary",
+    "museum": "Muzea",
+    "monument": "Zabytki",
+    "gallery": "Galerie",
+    "experience": "Doświadczenia",
+    "market": "Targi",
+    "club": "Kluby",
+    "park": "Parki",
+    "viewpoint": "Punkty widokowe",
+    "store": "Sklepy",
+    "boutique": "Butiki",
+    "concept_store": "Concept store",
+    "wine_shop": "Sklepy z winami",
+    "bookshop": "Księgarnie",
+    "theater": "Teatry",
+    "live_music": "Live music",
+    "cinema": "Kina",
+    "nightclub": "Kluby nocne"
+  }
 }

@@ -203,11 +203,11 @@ export default function SavePlaceSheet({
 
         {/* Nagłówek: "Miejsce zapisane!" + "+" w kółku (pokazuje input nowej listy) */}
         <div className="flex items-center justify-between px-5 pt-2 pb-0.5 shrink-0">
-          <p className="text-xl font-black text-foreground">Miejsce zapisane!</p>
+          <p className="text-xl font-black text-foreground">{t("save.saved_title")}</p>
           <button
             type="button"
             onClick={() => setShowNewList((v) => !v)}
-            aria-label={showNewList ? "Ukryj" : "Nowa lista"}
+            aria-label={showNewList ? t("save.hide") : t("save.new_list")}
             className="h-9 w-9 rounded-full bg-muted flex items-center justify-center text-foreground active:scale-90 transition-transform"
           >
             <Plus className={`h-5 w-5 transition-transform ${showNewList ? "rotate-45" : ""}`} strokeWidth={2.25} />
@@ -224,7 +224,7 @@ export default function SavePlaceSheet({
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter") createNew(); }}
-                placeholder="Nazwa nowej listy"
+                placeholder={t("save.new_list_name")}
                 className="flex-1 min-w-0 bg-transparent text-base text-foreground placeholder:text-muted-foreground/50 focus:outline-none"
               />
               <button type="button" onClick={createNew} disabled={busyId === "new" || !newName.trim()} className="h-9 w-9 rounded-full bg-muted flex items-center justify-center shrink-0 text-foreground active:scale-90 transition-transform disabled:opacity-40" aria-label={t("save_sheet.create_list")}>
@@ -244,7 +244,7 @@ export default function SavePlaceSheet({
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-base font-bold text-foreground truncate leading-tight">{t("save_sheet.general")}</p>
-                <p className="text-xs text-muted-foreground leading-tight">Wszystkie Twoje zapisane miejsca</p>
+                <p className="text-xs text-muted-foreground leading-tight">{t("save.all_saved_hint")}</p>
               </div>
               <span className="h-9 w-9 rounded-full flex items-center justify-center shrink-0 text-orange-500">
                 <Check className="h-5 w-5" strokeWidth={2.5} />

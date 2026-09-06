@@ -70,6 +70,7 @@
     "login_like": "Sign in to like a photo",
     "login_add": "Sign in to add a photo",
     "add_failed": "We could not add the photo",
-    "added": "Your photo was added"
+    "added": "Your photo was added",
+    "pick_image": "Choose an image file"
   }
 }

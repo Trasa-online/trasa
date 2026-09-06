@@ -158,7 +158,8 @@
     "request_body": "{{name}} wants to add you as a friend",
     "accept_title": "You have a new friend 🎉",
     "accept_body": "{{name}} accepted your request",
-    "link_body": "{{name}} joined you through a link"
+    "link_body": "{{name}} joined you through a link",
+    "none_yet": "You have no friends yet"
   },
   "people": {
     "desc": "Add people to build trips together.",

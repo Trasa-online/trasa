@@ -19,7 +19,9 @@
     "confirm": "Potwierdź",
     "back": "Wróć",
     "start_recording": "Nagraj głos",
-    "stop_recording": "Zatrzymaj nagrywanie"
+    "stop_recording": "Zatrzymaj nagrywanie",
+    "done": "Gotowe",
+    "search": "Szukaj"
   },
   "errors": {
     "generic": "Coś poszło nie tak"
@@ -62,5 +64,20 @@
   },
   "loading": "Ładowanie",
   "clear": "Wyczyść",
-  "offline": "Jesteś offline"
+  "offline": "Jesteś offline",
+  "filters": {
+    "all": "Wszystko",
+    "lists": "Listy",
+    "trips": "Wyjazdy",
+    "places": "Miejsca",
+    "routes": "Trasy",
+    "people": "Ludzie"
+  },
+  "fallback": {
+    "trip": "Wyjazd",
+    "list": "Lista",
+    "route": "Trasa",
+    "place": "Miejsce",
+    "unknown_place": "Nieznane miejsce"
+  }
 }

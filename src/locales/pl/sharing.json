@@ -200,5 +200,9 @@
   "target": {
     "more_apps": "Więcej aplikacji",
     "messages": "Wiadomości"
+  },
+  "card": {
+    "trip_label": "WYJAZD",
+    "list_label": "LISTA MIEJSC"
   }
 }

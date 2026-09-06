@@ -1,4 +1,5 @@
 import { useRef, useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate, useLocation } from "react-router-dom";
 import { goBackOr } from "@/hooks/useGoBack";
 import { ChevronDown } from "lucide-react";
@@ -54,6 +55,7 @@ function Drum({ items, index, setIndex }: { items: string[]; index: number; setI
 }
 
 export default function CountryCityPicker() {
+  const { t } = useTranslation("create-route");
   const navigate = useNavigate();
   const location = useLocation();
   const initCity = (location.state as any)?.city as string | undefined;
@@ -83,7 +85,7 @@ export default function CountryCityPicker() {
 
       {/* Kraj - SELEKTOR (dropdown), grupowany po regionie */}
       <div className="px-4 pt-4 shrink-0">
-        <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-1.5">Kraj</p>
+        <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-1.5">{t("picker.country")}</p>
         <div className="relative">
           <select value={country} onChange={(e) => onCountry(e.target.value)}
             className="w-full appearance-none rounded-2xl bg-secondary text-secondary-foreground border-0 px-4 py-3 text-base outline-none focus:ring-2 focus:ring-orange-500/40">
@@ -101,14 +103,12 @@ export default function CountryCityPicker() {
 
       {/* Miasto - DRUM-SCROLL, wypelnia reszte, wysrodkowany */}
       <div className="flex-1 min-h-0 flex flex-col justify-center px-0">
-        <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-1.5 text-center">Miasto</p>
+        <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-1.5 text-center">{t("picker.city")}</p>
         <Drum key={country} items={cities} index={cyi} setIndex={setCyi} />
       </div>
 
       <div className="px-4 pt-3 pb-[calc(14px+env(safe-area-inset-bottom,0px))] shrink-0">
-        <button onClick={next} className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-base active:scale-[0.98] transition-transform shadow-lg shadow-primary/25">
-          Dalej
-        </button>
+        <button onClick={next} className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-base active:scale-[0.98] transition-transform shadow-lg shadow-primary/25">{t("common:buttons.next")}</button>
       </div>
     </div>
   );

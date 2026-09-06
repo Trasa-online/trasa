@@ -167,7 +167,7 @@ export default function TripProposalsSheet({
   const confirmChoose = async () => {
     if (!user || !routeId) return;
     const picks = (proposals as RouteProposal[]).filter((p) => chosen.has(p.id));
-    if (!picks.length) { toast("Zaznacz co najmniej jedno miejsce"); return; }
+    if (!picks.length) { toast(t("proposals.pick_min")); return; }
     setChoosingBusy(true); haptics.light();
     for (const p of picks) { await promoteProposalToPin(routeId, user.id, p); }
     await (supabase as any).from("routes").update({ trip_type: "ongoing" }).eq("id", routeId);
@@ -194,7 +194,7 @@ export default function TripProposalsSheet({
           className="h-9 w-9 flex items-center justify-center shrink-0 rounded-full bg-white shadow-sm border border-black/[0.04] active:scale-90 transition-transform">
           <GoogleGlyph className="h-[18px] w-[18px]" />
         </button>
-        <button onClick={() => addToPool(opts.place)} disabled={added} aria-label={added ? t("already_badge") : "Dodaj do propozycji"}
+        <button onClick={() => addToPool(opts.place)} disabled={added} aria-label={added ? t("already_badge") : t("proposals.add")}
           className={`h-6 w-6 rounded-full flex items-center justify-center shrink-0 transition-colors ${added ? "bg-[#f0a583] text-white" : "border-2 border-border"}`}>
           {added ? <Check className="h-3.5 w-3.5 stroke-[3]" /> : <Plus className="h-3.5 w-3.5 text-muted-foreground" />}
         </button>
@@ -242,7 +242,7 @@ export default function TripProposalsSheet({
         ) : isOwner ? (
           <span className="flex items-center gap-1.5 shrink-0">
             <button onClick={() => promote(prop)} className="h-8 rounded-full bg-primary text-primary-foreground text-[13px] font-bold px-3 flex items-center gap-1 active:scale-95 transition-transform">
-              <Plus className="h-3.5 w-3.5 stroke-[3]" /> Do trasy
+              <Plus className="h-3.5 w-3.5 stroke-[3]" /> {t("proposals.to_route")}
             </button>
             <button onClick={() => remove(prop)} aria-label={t("aria.reject")} className="h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground active:scale-90 transition-transform">
               <X className="h-4 w-4" strokeWidth={2.4} />
@@ -295,11 +295,11 @@ export default function TripProposalsSheet({
           </button>
         ) : refreshBtn}
         <div className="min-w-0 flex-1 text-center px-1">
-          <h2 className="text-[16px] font-semibold text-foreground truncate leading-tight">{proposalsStage ? "Propozycje miejsc" : (fullscreen ? (tripTitle || "Propozycje miejsc") : "Propozycje miejsc")}</h2>
+          <h2 className="text-[16px] font-semibold text-foreground truncate leading-tight">{proposalsStage ? t("proposals.title") : (fullscreen ? (tripTitle || t("proposals.title")) : t("proposals.title"))}</h2>
           {proposalsStage && tripTitle && <p className="text-[12px] text-muted-foreground truncate leading-tight">{`dla ${tripTitle}`}</p>}
         </div>
         {fullscreen ? refreshBtn : (
-          <button onClick={() => onOpenChange(false)} aria-label="Zamknij"
+          <button onClick={() => onOpenChange(false)} aria-label={t("common:buttons.close")}
             className="h-9 w-9 rounded-full border border-black/15 bg-white flex items-center justify-center active:opacity-60 transition-opacity shrink-0">
             <X className="h-4 w-4 text-foreground" />
           </button>
@@ -312,7 +312,7 @@ export default function TripProposalsSheet({
           <Search className="h-[18px] w-[18px] text-muted-foreground shrink-0" />
           <input
             value={query} onChange={(e) => setQuery(e.target.value)}
-            placeholder={city ? `Szukaj miejsca w${NBSP}${city}` : "Szukaj miejsca"}
+            placeholder={city ? `Szukaj miejsca w${NBSP}${city}` : t("proposals.search")}
             className="flex-1 bg-transparent text-[15px] text-foreground placeholder:text-muted-foreground outline-none"
           />
           {query && <button onClick={() => setQuery("")} aria-label={t("clear")}><X className="h-4 w-4 text-muted-foreground" /></button>}
@@ -338,7 +338,7 @@ export default function TripProposalsSheet({
             {/* MIEJSCA W TRASIE (read-only) - tylko widok uczestnika (fullscreen), co host juz dodal */}
             {fullscreen && pins && pins.length > 0 && (
               <div className="space-y-1.5">
-                <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground px-0.5">Miejsca w trasie</p>
+                <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground px-0.5">{t("proposals.in_route")}</p>
                 {pins.map(renderPinRow)}
               </div>
             )}
@@ -364,7 +364,7 @@ export default function TripProposalsSheet({
             {/* TWOJE ZAPISANE (z miasta wyjazdu) */}
             {savedInCity.length > 0 && (
               <div className="space-y-1.5">
-                <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground px-0.5">Twoje zapisane miejsca</p>
+                <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground px-0.5">{t("proposals.your_saved")}</p>
                 {savedInCity.map((p) => renderAddRow({ rowKey: `sv-${p.id}`, place: p, subtitle: p.city || city }))}
               </div>
             )}
@@ -378,16 +378,16 @@ export default function TripProposalsSheet({
         <div className="shrink-0 px-5 pt-2 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] border-t border-border/40 bg-[#fefefe]">
           {choosing ? (
             <div className="flex items-center gap-2">
-              <button onClick={() => { setChoosing(false); setChosen(new Set()); }} className="px-4 h-12 rounded-2xl bg-secondary text-secondary-foreground font-bold text-sm active:scale-[0.98] transition-transform">Anuluj</button>
+              <button onClick={() => { setChoosing(false); setChosen(new Set()); }} className="px-4 h-12 rounded-2xl bg-secondary text-secondary-foreground font-bold text-sm active:scale-[0.98] transition-transform">{t("common:buttons.cancel")}</button>
               <button onClick={confirmChoose} disabled={choosingBusy || chosen.size === 0}
                 className={`flex-1 h-12 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition-transform ${choosingBusy || chosen.size === 0 ? "bg-primary/40 text-white/80" : "bg-primary text-primary-foreground active:scale-[0.98]"}`}>
                 {choosingBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4 stroke-[3]" />} Zatwierdź{chosen.size ? ` (${chosen.size})` : ""}
               </button>
             </div>
           ) : (
-            <button onClick={() => { if (!proposals.length) { toast("Najpierw dodaj miejsca do propozycji"); return; } haptics.light(); setChoosing(true); }}
+            <button onClick={() => { if (!proposals.length) { toast(t("proposals.empty_first")); return; } haptics.light(); setChoosing(true); }}
               className="w-full h-12 rounded-2xl bg-primary text-primary-foreground font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform">
-              <Check className="h-4 w-4 stroke-[3]" /> Wybierz miejsca
+              <Check className="h-4 w-4 stroke-[3]" /> {t("proposals.choose")}
             </button>
           )}
         </div>

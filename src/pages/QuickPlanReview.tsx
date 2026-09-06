@@ -101,7 +101,7 @@ const QuickPlanReview = () => {
           .select("id")
           .single();
 
-        if (routeError || !route) throw routeError ?? new Error("Brak ID trasy");
+        if (routeError || !route) throw routeError ?? new Error("missing route id");
 
         await supabase.from("pins").insert(
           pins.map((pin, idx) => ({

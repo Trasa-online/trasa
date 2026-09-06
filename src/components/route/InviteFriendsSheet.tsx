@@ -103,7 +103,7 @@ export default function InviteFriendsSheet({ open, onOpenChange, route, onInvite
       <SheetContent side="bottom" className="rounded-t-3xl p-0 [&>button]:hidden flex flex-col" style={{ height: "80dvh", maxHeight: "80dvh" }}>
         <div className="flex items-center justify-between px-5 pt-5 pb-3 shrink-0">
           <p className="text-lg font-black">{t("invite.title")}</p>
-          <button onClick={() => onOpenChange(false)} aria-label="Zamknij" className="h-9 w-9 rounded-full bg-muted flex items-center justify-center active:bg-muted/70"><X className="h-4 w-4" /></button>
+          <button onClick={() => onOpenChange(false)} aria-label={t("common:buttons.close")} className="h-9 w-9 rounded-full bg-muted flex items-center justify-center active:bg-muted/70"><X className="h-4 w-4" /></button>
         </div>
 
         <div className="px-5 shrink-0">

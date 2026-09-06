@@ -19,7 +19,9 @@
     "confirm": "Confirm",
     "back": "Back",
     "start_recording": "Record voice",
-    "stop_recording": "Stop recording"
+    "stop_recording": "Stop recording",
+    "done": "Done",
+    "search": "Search"
   },
   "errors": {
     "generic": "Something went wrong"
@@ -62,5 +64,20 @@
   },
   "loading": "Loading",
   "clear": "Clear",
-  "offline": "You are offline"
+  "offline": "You are offline",
+  "filters": {
+    "all": "All",
+    "lists": "Lists",
+    "trips": "Trips",
+    "places": "Places",
+    "routes": "Routes",
+    "people": "People"
+  },
+  "fallback": {
+    "trip": "Trip",
+    "list": "List",
+    "route": "Route",
+    "place": "Place",
+    "unknown_place": "Unknown place"
+  }
 }

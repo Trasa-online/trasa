@@ -84,6 +84,7 @@ const Avatar = ({ color, initials }: { color: string; initials: string }) => (
 );
 
 const MapCell = ({ url }: { url: string | null }) => {
+  const { t } = useTranslation("plan");
   const [failed, setFailed] = useState(false);
   if (!url || failed)
     return (
@@ -91,7 +92,7 @@ const MapCell = ({ url }: { url: string | null }) => {
         <Map className="h-8 w-8 text-muted-foreground/30" />
       </div>
     );
-  return <img src={url} alt="Mapa trasy" className="w-full h-full object-cover" onError={() => setFailed(true)} />;
+  return <img src={url} alt={t("template.map_alt")} className="w-full h-full object-cover" onError={() => setFailed(true)} />;
 };
 
 const Photo = ({ src, index }: { src: string; index: number }) => {
@@ -278,7 +279,7 @@ const TemplateSelection = ({ city, date }: TemplateSelectionProps) => {
           size="lg"
           className="w-full rounded-full text-base font-semibold bg-primary hover:bg-primary/90 text-white border-0 shadow-lg shadow-primary/20 disabled:opacity-40"
         >
-          {forking ? <Loader2 className="h-5 w-5 animate-spin" /> : "Dalej"}
+          {forking ? <Loader2 className="h-5 w-5 animate-spin" /> : t("common:buttons.next")}
         </Button>
         <button
           onClick={() => navigate("/create", { state: { city, date: date.toISOString() } })}

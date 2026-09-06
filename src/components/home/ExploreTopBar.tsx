@@ -81,7 +81,7 @@ export default function ExploreTopBar({
       {showSearch && searchOpen && (
         <button
           onClick={onCloseSearch}
-          aria-label="Zamknij wyszukiwanie"
+          aria-label={t("search.close")}
           className="shrink-0 -ml-1 h-9 w-9 flex items-center justify-center text-foreground active:scale-90 transition-transform"
         >
           <ChevronLeft className="h-6 w-6" strokeWidth={2.2} />
@@ -94,7 +94,7 @@ export default function ExploreTopBar({
           W trybie wynikow chowamy go razem z etykietami - wraca po zamknieciu szukania. */}
       <div className={`shrink-0 items-center rounded-full bg-secondary p-0.5 ${hideModeToggle || (showSearch && searchOpen) ? "hidden" : "flex"}`}>
         {mode === "explore" ? (
-          <span data-ob="toggle-trasy" className="h-8 w-8 flex items-center justify-center rounded-full bg-gradient-to-br from-[#F4A259] to-[#F9662B] text-white shadow-sm" aria-current="true" title="Trasy">
+          <span data-ob="toggle-trasy" className="h-8 w-8 flex items-center justify-center rounded-full bg-gradient-to-br from-[#F4A259] to-[#F9662B] text-white shadow-sm" aria-current="true" title={t("common:filters.routes")}>
             <Compass className="h-4 w-4" />
           </span>
         ) : (
@@ -102,14 +102,12 @@ export default function ExploreTopBar({
             data-ob="toggle-trasy"
             onClick={goExplore}
             className="h-8 px-3 flex items-center gap-1.5 rounded-full text-secondary-foreground/70 text-xs font-bold active:scale-95 transition-transform whitespace-nowrap"
-            title="Trasy"
+            title={t("common:filters.routes")}
           >
-            <Compass className="h-4 w-4" />
-            Trasy
-          </button>
+            <Compass className="h-4 w-4" />{t("common:filters.routes")}</button>
         )}
         {mode === "browse" ? (
-          <span data-ob="toggle-miejsca" className="h-8 w-8 flex items-center justify-center rounded-full bg-gradient-to-br from-[#F4A259] to-[#F9662B] text-white shadow-sm" aria-current="true" title="Miejsca">
+          <span data-ob="toggle-miejsca" className="h-8 w-8 flex items-center justify-center rounded-full bg-gradient-to-br from-[#F4A259] to-[#F9662B] text-white shadow-sm" aria-current="true" title={t("common:filters.places")}>
             <Layers className="h-4 w-4" />
           </span>
         ) : (
@@ -117,11 +115,9 @@ export default function ExploreTopBar({
             data-ob="toggle-miejsca"
             onClick={goBrowse}
             className="h-8 px-3 flex items-center gap-1.5 rounded-full text-secondary-foreground/70 text-xs font-bold active:scale-95 transition-transform whitespace-nowrap"
-            title="Miejsca"
+            title={t("common:filters.places")}
           >
-            <Layers className="h-4 w-4" />
-            Miejsca
-          </button>
+            <Layers className="h-4 w-4" />{t("common:filters.places")}</button>
         )}
       </div>
 
@@ -133,8 +129,8 @@ export default function ExploreTopBar({
           value={searchValue ?? ""}
           onChange={onSearchChange}
           onFocus={onOpenSearch}
-          placeholder={searchOpen ? t("search.placeholder_all") : "Szukaj"}
-          aria-label="Szukaj"
+          placeholder={searchOpen ? t("search.placeholder_all") : t("common:buttons.search")}
+          aria-label={t("common:buttons.search")}
         />
       ) : (
         /* Bez selektora (Eksploracja): spacer po toggle -> filtry na prawo.

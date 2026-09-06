@@ -118,7 +118,8 @@
   "go_suggestions": "Przejdź do sugestii",
   "aria": {
     "exclude": "Wyłącz z trasy",
-    "delete_place": "Usuń miejsce"
+    "delete_place": "Usuń miejsce",
+    "add_to_route": "Dodaj do trasy"
   },
   "map": {
     "close": "Zamknij mapę",
@@ -136,5 +137,31 @@
   },
   "places_count_one": "{{count}} miejsce",
   "places_count_few": "{{count}} miejsca",
-  "places_count_many": "{{count}} miejsc"
+  "places_count_many": "{{count}} miejsc",
+  "start": {
+    "empty_drafts": "Robocze trasy",
+    "empty_saved": "Brak zapisanych tras",
+    "new_trip": "Nowy wyjazd",
+    "start_fresh": "Zacznij od nowa"
+  },
+  "compose": {
+    "empty_first": "Najpierw dodaj miejsca do trasy",
+    "saved_one": "Zapisano miejsce",
+    "name_placeholder": "Twoja nazwa",
+    "add_place": "Dodaj miejsce",
+    "list_view": "Widok listy",
+    "map_alt": "Mapa miejsc",
+    "keep_one": "Nie zgub tego miejsca",
+    "save_changes": "Zapisz zmiany",
+    "save_trip": "Zapisz wyjazd",
+    "pick_dates": "Wybierz daty dla trasy",
+    "pick_min": "Zaznacz przynajmniej jedno miejsce do trasy",
+    "saved_few": "Zapisano {{count}} miejsca",
+    "saved_many": "Zapisano {{count}} miejsc",
+    "keep_few": "Nie zgub {{count}} miejsc",
+    "keep_many": "Nie zgub {{count}} miejsc",
+    "new_trip": "Nowy wyjazd",
+    "add_place_tile": "Dodaj miejsce",
+    "your_saved": "Twoje zapisane miejsca"
+  }
 }

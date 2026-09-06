@@ -90,7 +90,7 @@ export default function TripChatSheet({ open, onOpenChange, routeId, tripTitle, 
         {/* Naglowek */}
         <div className="flex items-center justify-between gap-2 px-5 pt-3 pb-2.5 shrink-0 border-b border-border/40">
           <div className="min-w-0 flex-1">
-            <h2 className="text-[17px] font-semibold text-foreground leading-tight truncate">{tripTitle ? `Czat: ${tripTitle}` : "Czat wyjazdu"}</h2>
+            <h2 className="text-[17px] font-semibold text-foreground leading-tight truncate">{tripTitle ? t("chat.title_named", { title: tripTitle }) : t("chat.title")}</h2>
             {/* Awatary uczestnikow rozmowy (kto bierze udzial) */}
             {uniqueParticipants.length > 0 && (
               <div className="flex items-center mt-1.5">
@@ -103,7 +103,7 @@ export default function TripChatSheet({ open, onOpenChange, routeId, tripTitle, 
               </div>
             )}
           </div>
-          <button onClick={() => onOpenChange(false)} aria-label="Zamknij" className="h-9 w-9 rounded-full border border-black/15 bg-white flex items-center justify-center active:opacity-60 transition-opacity shrink-0">
+          <button onClick={() => onOpenChange(false)} aria-label={t("common:buttons.close")} className="h-9 w-9 rounded-full border border-black/15 bg-white flex items-center justify-center active:opacity-60 transition-opacity shrink-0">
             <X className="h-4 w-4 text-foreground" />
           </button>
         </div>

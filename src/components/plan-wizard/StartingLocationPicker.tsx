@@ -210,8 +210,8 @@ const MapWithSearch = ({ city, onConfirm, onSkip }: StartingLocationPickerProps)
     setLocationError(null);
     setMarkerPos(pos);
     // Od razu enable "Dalej" (fallback name); reverseGeocode dopisze nazwe ulicy gdy gotowy.
-    setQuery("Twoja lokalizacja");
-    setSelected({ name: "Twoja lokalizacja", lat: pos.lat, lng: pos.lng });
+    setQuery(t("start.your_location"));
+    setSelected({ name: t("start.your_location"), lat: pos.lat, lng: pos.lng });
     reverseGeocode(pos);
   }, [isWithinCity, reverseGeocode, city]);
 
@@ -328,9 +328,7 @@ const MapWithSearch = ({ city, onConfirm, onSkip }: StartingLocationPickerProps)
           disabled={!selected}
           onClick={() => selected && onConfirm({ name: selected.name, latitude: selected.lat, longitude: selected.lng })}
           className="w-full rounded-full text-base font-semibold bg-primary hover:bg-primary/90 text-white border-0 shadow-lg shadow-primary/20 disabled:opacity-40"
-        >
-          Dalej
-        </Button>
+        >{t("common:buttons.next")}</Button>
         <button
           onClick={onSkip}
           className="w-full text-sm text-muted-foreground py-2 active:opacity-60 transition-opacity"

@@ -182,7 +182,7 @@ const BottomNav = () => {
                 {planStep ? <ArrowLeft className="h-5 w-5" /> : <X className="h-5 w-5" />}
               </button>
               <h2 className="text-base font-black text-foreground">
-                {planStep ? (PLANNING_DISABLED ? "Nowy wyjazd" : t("menu_plan_title")) : t("menu_title")}
+                {planStep ? (PLANNING_DISABLED ? t("new_trip") : t("menu_plan_title")) : t("menu_title")}
               </h2>
               <div className="w-9" />
             </div>
@@ -312,7 +312,7 @@ const BottomNav = () => {
               {({ isActive }) => (
                 <>
                   <NavIcon src="/Ikona_Trasy.svg" />
-                  <span className="text-[9px] font-semibold leading-tight mt-0.5">Wyjazdy</span>
+                  <span className="text-[9px] font-semibold leading-tight mt-0.5">{t("common:filters.trips")}</span>
                 </>
               )}
             </NavLink>
@@ -357,7 +357,7 @@ const BottomNav = () => {
             {({ isActive }) => (
               <>
                 <NavIcon src="/Ikona_Profil.svg" />
-                <span className="text-[9px] font-semibold leading-tight mt-0.5">Profil</span>
+                <span className="text-[9px] font-semibold leading-tight mt-0.5">{t("common:nav.profile")}</span>
               </>
             )}
           </NavLink>

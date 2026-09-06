@@ -207,7 +207,10 @@
     "bad_link": "That link is not valid.",
     "reading_link": "Reading the link…",
     "searching": "Looking for the place…",
-    "found_not_located": "I found the name “{{name}}” but could not locate it. Please correct the name."
+    "found_not_located": "I found the name “{{name}}” but could not locate it. Please correct the name.",
+    "title": "Add your own place",
+    "add_to_route": "Add to route",
+    "search_another": "Search for another place"
   },
   "start": {
     "location_failed": "We could not get your location.",
@@ -216,17 +219,35 @@
     "skip": "Skip",
     "outside_pick": "That place is outside {{city}}. Pick something within the city.",
     "outside_mark": "That place is outside {{city}}. Mark a point within the city.",
-    "you_outside": "You are outside {{city}}. Pick a starting point within the city."
+    "you_outside": "You are outside {{city}}. Pick a starting point within the city.",
+    "your_location": "Your location"
   },
   "calendar": {
     "hint_range": "Tap a second day to pick a range",
     "clear": "Clear selection",
     "prev": "Previous month",
-    "next": "Next month"
+    "next": "Next month",
+    "no_dates": "No dates"
   },
   "template": {
     "failed": "We could not create the trip. Try again.",
-    "from_scratch": "Plan a trip from scratch"
+    "from_scratch": "Plan a trip from scratch",
+    "map_alt": "Route map"
   },
-  "create_trip": "Create a trip"
+  "create_trip": "Create a trip",
+  "map": {
+    "new_place": "New place",
+    "add_pin": "Add pin"
+  },
+  "save": {
+    "hide": "Hide",
+    "new_list": "New list",
+    "new_list_name": "New list name",
+    "all_saved_hint": "All your saved places",
+    "saved_title": "Place saved!"
+  },
+  "list": {
+    "default_visited": "Places visited",
+    "default_to_visit": "To visit"
+  }
 }

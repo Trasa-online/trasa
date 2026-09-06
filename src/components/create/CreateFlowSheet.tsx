@@ -257,16 +257,17 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
   };
 
   // ── wspolny nagłowek Anuluj / tytul / Dalej ──
-  const Header = ({ title, onBack, onNext, nextLabel = "Dalej", nextEnabled = true, backLabel = "Anuluj" }: {
+  // Domyslki etykiet licza sie w ciele, nie w liscie parametrow - tam hook `t` jeszcze nie istnieje.
+  const Header = ({ title, onBack, onNext, nextLabel, nextEnabled = true, backLabel }: {
     title: string; onBack: () => void; onNext?: () => void; nextLabel?: string; nextEnabled?: boolean; backLabel?: string;
   }) => (
     <div className="flex items-center justify-between gap-2 px-5 pt-1 pb-3">
-      <button onClick={onBack} className="text-sm font-medium text-[#181818] rounded-full border border-black/15 bg-white px-3.5 py-1.5 active:opacity-60 transition-opacity shrink-0">{backLabel}</button>
+      <button onClick={onBack} className="text-sm font-medium text-[#181818] rounded-full border border-black/15 bg-white px-3.5 py-1.5 active:opacity-60 transition-opacity shrink-0">{backLabel ?? t("common:buttons.cancel")}</button>
       <h2 className="text-[20px] font-semibold text-foreground truncate">{title}</h2>
       {onNext ? (
         <button onClick={onNext} disabled={!nextEnabled}
           className={`text-sm font-medium rounded-full border bg-white px-3.5 py-1.5 shrink-0 transition-opacity ${nextEnabled ? "text-[#181818] border-black/15 active:opacity-60" : "text-[#bcbcbc] border-black/[0.07]"}`}>
-          {nextLabel}
+          {nextLabel ?? t("common:buttons.next")}
         </button>
       ) : <span className="w-[68px] shrink-0" />}
     </div>
@@ -314,8 +315,8 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
             <h2 className="text-[20px] font-semibold text-foreground text-center">{t("title")}</h2>
             <div className="mt-4 flex gap-4">
               {[
-                { key: "list", label: "Lista", icon: <FileText className="h-8 w-8 text-foreground" strokeWidth={1.7} />, go: () => { track("list_create_opened"); setStep("listCity"); } },
-                { key: "trip", label: "Wyjazd", icon: <img src="/spontaway-symbol.png" alt="" className="h-9 w-9 object-contain" style={{ filter: "brightness(0)" }} draggable={false} />, go: () => { track("trip_create_opened"); setStep("tripMode"); } },
+                { key: "list", label: t("kind.list"), icon: <FileText className="h-8 w-8 text-foreground" strokeWidth={1.7} />, go: () => { track("list_create_opened"); setStep("listCity"); } },
+                { key: "trip", label: t("kind.trip"), icon: <img src="/spontaway-symbol.png" alt="" className="h-9 w-9 object-contain" style={{ filter: "brightness(0)" }} draggable={false} />, go: () => { track("trip_create_opened"); setStep("tripMode"); } },
               ].map((t) => (
                 <button key={t.key} onClick={() => { haptics.light(); t.go(); }} className="flex-1 flex flex-col items-center gap-3 active:scale-[0.98] transition-transform outline-none focus:outline-none focus-visible:outline-none">
                   <span className="w-full h-[90px] rounded-2xl bg-[#efefef] flex items-center justify-center">{t.icon}</span>
@@ -329,7 +330,7 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
         {/* ── WYJAZD: wybor trybu (przyszly = zaplanuj / przeszly = wspomnienie) ── */}
         {step === "tripMode" && (
           <div className="pb-[max(20px,env(safe-area-inset-bottom))]">
-            <Header title={t("trip_kind.title")} onBack={() => setStep("entry")} backLabel="Wstecz" />
+            <Header title={t("trip_kind.title")} onBack={() => setStep("entry")} backLabel={t("common:buttons.back")} />
             <div className="px-5 pt-1 flex gap-4">
               {[
                 { key: "past" as TripMode, label: t("trip_kind.past"), sub: t("trip_kind.past_desc"), icon: <History className="h-8 w-8 text-foreground" strokeWidth={1.7} /> },
@@ -389,7 +390,7 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
         {step === "listPick" && (
           <>
             <Header title={listName.trim() || t("list_name_label")} onBack={() => setStep("listName")}
-              onNext={createList} nextLabel={creating ? "..." : ((selected.size > 0 || manualPlaces.length > 0) ? "Dalej" : t("skip"))} nextEnabled={!creating} />
+              onNext={createList} nextLabel={creating ? "..." : ((selected.size > 0 || manualPlaces.length > 0) ? t("common:buttons.next") : t("skip"))} nextEnabled={!creating} />
             <PeopleRow kind="listy" disabled />
             {/* Wyszukiwarka Google Places INLINE - klik = wyniki tutaj (a NIE nawigacja do starego edytora). */}
             <div className="px-5 pt-1 pb-2 shrink-0">
@@ -445,7 +446,7 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
         {/* ── WYJAZD: nazwa + kraj/miasto + osoby ── */}
         {step === "trip" && (
           <>
-            <Header title={tripMode === "past" ? t("past_trip") : t("trip_kind.future_desc")} onBack={() => setStep("tripMode")} onNext={() => setStep("tripDates")} nextLabel="Dalej" nextEnabled={!creating} />
+            <Header title={tripMode === "past" ? t("past_trip") : t("trip_kind.future_desc")} onBack={() => setStep("tripMode")} onNext={() => setStep("tripDates")} nextLabel={t("common:buttons.next")} nextEnabled={!creating} />
             <div className="flex-1 min-h-0 overflow-y-auto pb-[max(16px,env(safe-area-inset-bottom))]">
               <div className="px-5 pt-1">
                 <div className="relative">
@@ -477,7 +478,7 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
             <Header
               title={t("pick_date")}
               onBack={() => setStep("trip")}
-              backLabel="Wstecz"
+              backLabel={t("common:buttons.back")}
               onNext={() => afterDates()}
               nextLabel={creating ? "..." : t("create")}
               nextEnabled={!creating}
@@ -513,7 +514,7 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
             <div className="flex items-center justify-between gap-2 px-5 pt-1 pb-3">
               <button onClick={() => setStep("trip")} className="h-8 w-8 -ml-1 flex items-center justify-center rounded-full active:bg-muted transition-colors"><ArrowLeft className="h-5 w-5" /></button>
               <h2 className="text-[20px] font-semibold text-foreground">{t("invite.cta")}</h2>
-              <button onClick={() => setStep("trip")} className="text-sm font-medium text-[#181818] rounded-full border border-black/15 bg-white px-3.5 py-1.5 active:opacity-60 shrink-0">Gotowe</button>
+              <button onClick={() => setStep("trip")} className="text-sm font-medium text-[#181818] rounded-full border border-black/15 bg-white px-3.5 py-1.5 active:opacity-60 shrink-0">{t("common:buttons.done")}</button>
             </div>
             <div className="flex-1 min-h-0 overflow-y-auto px-5 pb-[max(16px,env(safe-area-inset-bottom))]">
               {user && <AddPeoplePicker userId={user.id} selected={tripPeopleIds} onToggle={togglePerson} />}

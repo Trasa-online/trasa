@@ -124,5 +124,8 @@
     "delete": "Delete",
     "places_count_one": "{{count}} place",
     "places_count_other": "{{count}} places"
+  },
+  "saved": {
+    "empty_lists_routes": "No saved lists or routes yet"
   }
 }

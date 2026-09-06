@@ -89,7 +89,7 @@ function ShareSheet({ children, onClose, onShare, shareUrl, shareTitle }: {
     return (
       <div className="fixed inset-0 z-[96] animate-in fade-in duration-200">
         {children}
-        <button onClick={() => setFull(false)} aria-label="Zamknij"
+        <button onClick={() => setFull(false)} aria-label={t("common:buttons.close")}
           className="absolute right-3 h-9 w-9 rounded-full bg-black/25 backdrop-blur-sm flex items-center justify-center active:scale-90 transition-transform"
           style={{ top: "max(0.75rem, env(safe-area-inset-top))" }}>
           <X className="h-4 w-4 text-white" />
@@ -110,7 +110,7 @@ function ShareSheet({ children, onClose, onShare, shareUrl, shareTitle }: {
   return (
     <div className="fixed inset-0 z-[95] bg-background flex flex-col animate-in fade-in duration-200">
       <div className="flex items-center gap-2 px-4 pt-[max(12px,env(safe-area-inset-top))] pb-2">
-        <button onClick={onClose} aria-label="Zamknij"
+        <button onClick={onClose} aria-label={t("common:buttons.close")}
           className="h-9 w-9 rounded-full flex items-center justify-center active:scale-90 transition-transform">
           <X className="h-5 w-5 text-foreground" />
         </button>
@@ -163,7 +163,7 @@ export function ShareCardList({ title, city, items, author, avatar, onClose, onS
     <ShareSheet onClose={onClose} onShare={onShare} shareUrl={shareUrl} shareTitle={title}>
           <div className="relative h-full w-full overflow-hidden bg-[#FCEDE3]">
             <div className="px-6" style={{ paddingTop: "max(64px, calc(env(safe-area-inset-top) + 44px))" }}>
-              <p className="text-[12px] font-bold tracking-wide text-[#C58A66]">LISTA MIEJSC</p>
+              <p className="text-[12px] font-bold tracking-wide text-[#C58A66]">{t("card.list_label")}</p>
               <p className="text-[34px] font-black leading-[1.06] text-foreground mt-2 line-clamp-3">{title}</p>
               <p className="text-[15px] font-semibold text-[#8A6A57] mt-2.5">
                 {[city, `${items.length} ${word}`].filter(Boolean).join(" · ")}
@@ -233,7 +233,7 @@ export function ShareCardTrip({ title, city, dateLabel, pins, author, avatars, c
               <div className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-black/70 to-transparent" />
               <div className="absolute left-5 right-5 bottom-4">
                 <p className="text-[12px] font-bold tracking-wide text-white/90">
-                  {["WYJAZD", dateLabel?.toUpperCase()].filter(Boolean).join(" · ")}
+                  {[t("card.trip_label"), dateLabel?.toUpperCase()].filter(Boolean).join(" · ")}
                 </p>
                 <p className="text-[34px] font-black leading-[1.06] text-white mt-1.5 line-clamp-2">{title}</p>
                 <p className="text-[15px] font-semibold text-white/90 mt-1.5">

@@ -382,7 +382,7 @@ const SetPassword = ({ forceBusiness }: { forceBusiness?: boolean } = {}) => {
               className="w-14 h-14 rounded-full mb-3 shadow-lg shadow-primary/25"
               style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }}
             />
-            <h1 className="text-3xl font-black tracking-tight">TRASA</h1>
+            <h1 className="text-3xl font-black tracking-tight">TRASA</h1>   {/* i18n-ignore: nazwa marki */}
             <p className="text-muted-foreground text-center text-sm mt-1 leading-relaxed">{t("desc.b2c")}</p>
           </div>
 

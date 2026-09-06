@@ -125,7 +125,7 @@ export function SavedPlacesGrid() {
   if (places.length === 0) return (
     <div className="pt-16 pb-12 text-center px-8 flex flex-col items-center">
       <span aria-hidden className="mb-5 block h-28 w-28" style={{ backgroundColor: "#ef9d78", WebkitMaskImage: "url(/Ikona_Zapisane.svg)", maskImage: "url(/Ikona_Zapisane.svg)", WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat", WebkitMaskSize: "contain", maskSize: "contain", WebkitMaskPosition: "center", maskPosition: "center" }} />
-      <p className="text-lg font-bold text-foreground">Brak zapisanych</p>
+      <p className="text-lg font-bold text-foreground">{t("saved.empty_short")}</p>
       <p className="text-sm text-muted-foreground mt-1.5 max-w-[280px] leading-relaxed">
         Zapisz miejsce bookmarkiem w{" "}zakładce{" "}
         <span className="font-semibold text-foreground">Eksploruj</span>{" "}
@@ -133,7 +133,7 @@ export function SavedPlacesGrid() {
       </p>
       <button onClick={() => setAddOpen(true)}
         className="mt-6 h-11 px-5 rounded-2xl bg-primary text-white font-bold text-sm flex items-center gap-2 active:scale-[0.97] transition-transform">
-        <Plus className="h-4 w-4" strokeWidth={2.5} /> Dodaj nowe miejsce
+        <Plus className="h-4 w-4" strokeWidth={2.5} /> {t("saved.add_new_place")}
       </button>
       <AddSavedPlaceSheet open={addOpen} onOpenChange={setAddOpen} onAdded={invalidateSaved} />
     </div>
@@ -179,7 +179,7 @@ export function SavedPlacesGrid() {
           <span className="h-10 w-10 rounded-full bg-white/70 flex items-center justify-center">
             <Plus className="h-5 w-5 text-[#ef9d78]" strokeWidth={2.5} />
           </span>
-          <span className="text-[11px] font-bold text-foreground/70 leading-tight px-2 text-center">Dodaj nowe miejsce</span>
+          <span className="text-[11px] font-bold text-foreground/70 leading-tight px-2 text-center">{t("saved.add_new_place")}</span>
         </button>
         {filtered.map((p) => (
           <div key={p.id} className="relative">

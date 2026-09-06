@@ -65,5 +65,13 @@
   "back": "Wróć",
   "drum": {
     "no_results": "Brak wyników - spróbuj inną nazwę."
+  },
+  "picker": {
+    "country": "Kraj",
+    "city": "Miasto"
+  },
+  "kind": {
+    "list": "Lista",
+    "trip": "Wyjazd"
   }
 }

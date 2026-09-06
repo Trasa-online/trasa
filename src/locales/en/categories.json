@@ -30,5 +30,27 @@
     "nightclub": "Nightclub",
     "store": "Shop"
   },
-  "other": "Place"
+  "other": "Place",
+  "plural": {
+    "restaurant": "Restaurants",
+    "cafe": "Cafes",
+    "bar": "Bars",
+    "museum": "Museums",
+    "monument": "Landmarks",
+    "gallery": "Galleries",
+    "experience": "Experiences",
+    "market": "Markets",
+    "club": "Clubs",
+    "park": "Parks",
+    "viewpoint": "Viewpoints",
+    "store": "Shops",
+    "boutique": "Boutiques",
+    "concept_store": "Concept stores",
+    "wine_shop": "Wine shops",
+    "bookshop": "Bookshops",
+    "theater": "Theatres",
+    "live_music": "Live music",
+    "cinema": "Cinemas",
+    "nightclub": "Night clubs"
+  }
 }

@@ -1,3 +1,4 @@
+import i18n from "@/i18n";
 import { supabase } from "@/integrations/supabase/client";
 import { photoUrlForStorage } from "@/lib/placePhotos";
 
@@ -75,7 +76,7 @@ export async function createEmptyWyjazd(
     .from("routes")
     .insert({
       user_id: userId,
-      title: title || city || "Wyjazd",
+      title: title || city || i18n.t("fallback.trip", { ns: "common" }),
       city: city || null,
       trip_type: opts?.tripType ?? "planning",
       status: "draft",
@@ -127,7 +128,7 @@ export async function createWyjazdFromPlaces(
     .from("routes")
     .insert({
       user_id: userId,
-      title: title || city || "Wyjazd",
+      title: title || city || i18n.t("fallback.trip", { ns: "common" }),
       city: city || null,
       // "past" wyjazd = wspomnienie (trip_type='completed' -> ReviewSummary pokazuje tryb wspomnienia:
       // notki/oceny/zdjecia). "future"/domyslnie = 'planning' (roboczy, do zaplanowania).
@@ -201,7 +202,7 @@ export async function updateWyjazdPlaces(
   if (!places.length) {
     console.warn("[updateWyjazd] pusta lista miejsc - pomijam podmiane pinow (ochrona przed pusta trasa)");   // i18n-ignore: log deweloperski
     await (supabase as any).from("routes").update({
-      title: title || city || "Wyjazd",
+      title: title || city || i18n.t("fallback.trip", { ns: "common" }),
       city: city || null,
       start_date: dates?.start_date ?? null,
       end_date: dates?.end_date ?? null,
@@ -211,7 +212,7 @@ export async function updateWyjazdPlaces(
   const { error: updErr } = await (supabase as any)
     .from("routes")
     .update({
-      title: title || city || "Wyjazd",
+      title: title || city || i18n.t("fallback.trip", { ns: "common" }),
       city: city || null,
       start_date: dates?.start_date ?? null,
       end_date: dates?.end_date ?? null,

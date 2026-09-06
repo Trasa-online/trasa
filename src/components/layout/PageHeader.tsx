@@ -45,8 +45,8 @@ export const PageHeader = ({
             </Button>
           )}
           <h1
-            className={`text-xl font-bold ${title === "TRASA" ? "cursor-pointer" : ""}`}
-            onClick={title === "TRASA" ? () => navigate("/") : undefined}
+            className={`text-xl font-bold ${title === "TRASA" ? "cursor-pointer" : ""}`}   // i18n-ignore: "TRASA" to nazwa marki, nie copy
+            onClick={title === "TRASA" ? () => navigate("/") : undefined}   // i18n-ignore: nazwa marki
           >
             {title}
           </h1>

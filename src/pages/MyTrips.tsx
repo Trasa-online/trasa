@@ -80,7 +80,7 @@ const MyTrips = () => {
     if (!activeRoutes) return [];
     return (activeRoutes as any[]).map(route => ({
       id: route.id,
-      city: route.city || "Trasa",
+      city: route.city || t("common:fallback.route"),
       startDate: route.start_date || null,
       endDate: route.start_date || null,
       priorities: route.priorities || [],
@@ -157,7 +157,7 @@ const MyTrips = () => {
         {/* Header */}
         <div className="px-5 pt-2 pb-0 max-w-lg mx-auto">
           <div className="flex items-center justify-between pt-3 pb-2">
-            <h1 className="text-xl font-black tracking-tight">Moje trasy</h1>
+            <h1 className="text-xl font-black tracking-tight">{t("my_routes")}</h1>
             <button onClick={() => navigate("/plan")} className="text-sm font-semibold text-orange-600">{t("trips.add_plus")}</button>
           </div>
 
