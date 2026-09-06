@@ -205,7 +205,8 @@
   },
   "tags": {
     "custom_placeholder": "Your own tag...",
-    "place_title": "Place tags"
+    "place_title": "Place tags",
+    "instead_of_note": "(instead of a note)"
   },
   "aria": {
     "delete_place": "Delete place"

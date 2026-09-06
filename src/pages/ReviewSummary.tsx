@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { avatarSrc } from "@/lib/avatar";
-import { placeTagsForCategory, localizeTag } from "@/lib/routeTags";
+import { placeTagsForCategory, localizeTag, tagId } from "@/lib/routeTags";
 import { fetchRouteNotesWithAuthors, notesByPlace, placeNoteKey } from "@/lib/placeNotes";
 import { fetchPinPhotos, deletePinPhoto, photosByPlace, pinPhotoKey } from "@/lib/pinPhotos";
 import PlaceNotes from "@/components/route/PlaceNotes";
@@ -120,12 +120,14 @@ function SortableReviewRow({ pin, idx, categoryLabel, onOpen, onRemove, noteValu
           />
           {/* Tagi miejsca (predefiniowana pula) - alternatywa dla pisania notki. Klik = dodaj. */}
           <div className="mt-3">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">{t("tags.place_title")}<span className="normal-case font-medium text-muted-foreground/50">(zamiast notki)</span></p>
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">{t("tags.place_title")}<span className="normal-case font-medium text-muted-foreground/50">{t("tags.instead_of_note")}</span></p>
             <div className="flex flex-wrap gap-1.5">
               {/* #5: tagi zalezne od kategorii miejsca (zabytek != kawiarnia). #6: wybrany = zolty fill.
                   Tagi spoza puli (wpisane recznie) doklejamy na koncu, zeby user je widzial i mogl zdjac. */}
-              {[...placeTagsForCategory(pin.category), ...tags.filter((t) => !placeTagsForCategory(pin.category).includes(t))].map((tg) => {
-                const on = tags.includes(tg);
+              {[...placeTagsForCategory(pin.category), ...tags.filter((t) => !placeTagsForCategory(pin.category).includes(tagId(t)))].map((tg) => {
+                // Porownanie po id, nie po napisie: wyjazd sprzed migracji ma w pins.tags polska
+                // etykiete, a pula podaje juz id - inaczej ten sam tag pokazalby sie dwa razy.
+                const on = tags.some((x) => tagId(x) === tagId(tg));
                 return (
                   <button key={tg} type="button" onClick={() => onToggleTag(tg)}
                     className={`flex items-center gap-1 px-2.5 py-1.5 rounded-full text-[13px] font-semibold transition-colors active:scale-[0.97] border ${on ? "bg-[#FDF184] border-[#FDCD84] text-foreground" : "bg-white text-foreground border-border/60"}`}>
@@ -641,7 +643,8 @@ const ReviewSummary = () => {
 
   const togglePinTag = async (pinId: string, tag: string) => {
     const cur = pinTags[pinId] ?? [];
-    const next = cur.includes(tag) ? cur.filter((x) => x !== tag) : [...cur, tag];
+    // Zdejmujemy po id, zeby tag zapisany kiedys po polsku dalo sie odkliknac nowym chipem.
+    const next = cur.some((x) => tagId(x) === tagId(tag)) ? cur.filter((x) => tagId(x) !== tagId(tag)) : [...cur, tag];
     setPinTags((prev) => ({ ...prev, [pinId]: next }));
     await (supabase as any).from("pins").update({ tags: next }).eq("id", pinId);
   };

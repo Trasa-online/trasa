@@ -205,7 +205,8 @@
   },
   "tags": {
     "custom_placeholder": "Własny tag...",
-    "place_title": "Tagi miejsca"
+    "place_title": "Tagi miejsca",
+    "instead_of_note": "(zamiast notki)"
   },
   "aria": {
     "delete_place": "Usuń miejsce"

@@ -21,7 +21,7 @@ import { isRouteCollection } from "@/lib/collectionThemes";
 import { MAIN_CATEGORIES, getDbCategoriesFor, mainCategoryLabel } from "@/lib/categories";
 import { CategoryIcon } from "@/components/CategoryIcon";
 import { categoryFromGoogleTypes, inferCategoryFromName } from "@/lib/placeCategoryIcon";
-import { placeTagsForCategory } from "@/lib/routeTags";
+import { placeTagsForCategory, localizeTag, tagId } from "@/lib/routeTags";
 import { pinCoverKeys, fetchPlacePhotosForKeys, pickPlaceCover } from "@/lib/placePhotoSocial";
 
 import { cacheListItemPhoto } from "@/lib/placePhotos";
@@ -378,7 +378,8 @@ const CreateRanking = () => {
   const toggleItemTag = (key: string, tag: string) => setItems((prev) => prev.map((x) => {
     if (x.key !== key) return x;
     const cur = x.tags ?? [];
-    return { ...x, tags: cur.includes(tag) ? cur.filter((tg) => tg !== tag) : [...cur, tag] };
+    // Po id, nie po napisie - lista sprzed migracji trzyma polskie etykiety (patrz routeTags).
+    return { ...x, tags: cur.some((tg) => tagId(tg) === tagId(tag)) ? cur.filter((tg) => tagId(tg) !== tagId(tag)) : [...cur, tag] };
   }));
   // Kolejnosc zmienia drag & drop (Reorder) w widoku listy; order_index z pozycji w tablicy.
 
@@ -951,11 +952,11 @@ const CreateRanking = () => {
                   <p className="text-[11px] text-muted-foreground mt-2 mb-1.5">{t("form.place_tags_label")}</p>
                   <div className="flex flex-wrap gap-1.5">
                     {placeTagsForCategory(it.category).map((tg) => {
-                      const on = (it.tags ?? []).includes(tg);
+                      const on = (it.tags ?? []).some((x) => tagId(x) === tagId(tg));
                       return (
                         <button key={tg} type="button" onClick={() => toggleItemTag(it.key, tg)}
                           className={`px-3 py-1.5 rounded-full text-xs font-semibold active:scale-95 transition-transform border ${on ? "bg-[#FDF184] border-[#FDCD84] text-foreground" : "bg-background border-transparent text-muted-foreground"}`}>
-                          {tg}
+                          {localizeTag(tg)}
                         </button>
                       );
                     })}
