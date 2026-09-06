@@ -22,8 +22,11 @@
   "note": {
     "label": "Notka",
     "label_own": "Notka od Ciebie",
-    "placeholder": "Twoja rada lub notka o tym miejscu…",
-    "saved": "Zapisano ✓"
+    "placeholder": "Podziel się wrażeniami o tym miejscu...",
+    "saved": "Zapisano ✓",
+    "share_cta": "Podziel się wrażeniami",
+    "your_title": "Twoje wrażenia",
+    "yours": "Twoja Notka"
   },
   "categories": {
     "restaurant": "Restauracja",
@@ -57,8 +60,12 @@
   "gallery": {
     "add": "Dodaj",
     "tap_hint": "Dotknij zdjęcia, żeby zobaczyć je w pełni i ustawić okładkę wpisu.",
-    "empty": "Brak zdjęć z tej podróży.",
-    "empty_editable": "Brak zdjęć z tej podróży. Dodaj pierwsze wspomnienia."
+    "empty": "Brak zdjęć w galerii wyjazdu. Dodaj je najpierw w sekcji „Zdjęcia z wyjazdu\" albo dodaj nowe powyżej.",
+    "empty_editable": "Brak zdjęć z tej podróży. Dodaj pierwsze wspomnienia.",
+    "hint": "Dodaj zdjęcia z całej podróży",
+    "go": "Przejdź do Galerii",
+    "title": "Zdjęcia z wyjazdu",
+    "already_here": "Zdjęcia dodane w trakcie wyjazdu są już tutaj - możesz dołożyć kolejne."
   },
   "tabs": {
     "places": "Miejsca",
@@ -103,7 +110,9 @@
   },
   "confirm": {
     "remove_place": "Czy na pewno chcesz usunąć {{name}} z planu dnia?",
-    "place_this": "to miejsce"
+    "place_this": "to miejsce",
+    "finish_desc": "Wyjazd trafi do Twoich wspomnień i do eksploracji. Do tego momentu możesz go swobodnie edytować.",
+    "finish_title": "Zakończyć wyjazd?"
   },
   "cta": {
     "back": "Wstecz",
@@ -111,7 +120,9 @@
     "done": "Gotowe",
     "save_changes": "Zapisz zmiany",
     "close_edit_mode": "Zamknij tryb edycji",
-    "cancel": "Anuluj"
+    "cancel": "Anuluj",
+    "finish_trip": "Zakończ wyjazd",
+    "edit_trip": "Edytuj trasę"
   },
   "toast": {
     "link_copied": "Link skopiowany",
@@ -131,10 +142,18 @@
     "photo_upload_partial": "Część zdjęć się nie dodała.",
     "cover_set_error": "Nie udało się ustawić okładki",
     "route_needs_place": "Trasa musi mieć co najmniej jedno miejsce",
-    "generic_error": "Coś poszło nie tak"
+    "generic_error": "Coś poszło nie tak",
+    "finished_no_cover": "Wyjazd zapisany we wspomnieniach. Dodaj zdjęcia lub okładkę, żeby pojawił się w eksploracji.",
+    "finished": "Wyjazd zakończony i zapisany we wspomnieniach",
+    "date_saved": "Zapisano datę",
+    "dates_removed": "Usunięto daty",
+    "place_removed": "Usunięto miejsce"
   },
   "share": {
-    "text": "Zobacz moją trasę w spontaway"
+    "text": "Zobacz moją trasę w spontaway",
+    "qr": "Udostępnij wyjazd kodem QR",
+    "invite": "Zaproś znajomych do trasy",
+    "link": "Udostępnij link"
   },
   "a11y": {
     "remove_place": "Usuń miejsce",
@@ -152,5 +171,44 @@
     "edit_name": "Edytuj nazwę",
     "prev": "Poprzednie"
   },
-  "close": "Zamknij"
+  "close": "Zamknij",
+  "cover": {
+    "desc": "Zdjęcie widoczne na karcie trasy w eksploracji - dodaj nowe albo wybierz z galerii lub miejsc trasy.",
+    "needed_desc": "Bez okładki trasa nie pojawia się w eksploracji.",
+    "needed_title": "Dodaj okładkę, żeby trasa była widoczna",
+    "change": "Zmień miniaturę w eksploracji"
+  },
+  "description": {
+    "hint": "Ogólny opis Twojej trasy: dla kogo, na jaką okazję, co ją wyróżnia",
+    "placeholder": "Opisz swoją trasę: dla kogo, na jaką okazję, co warto zobaczyć...",
+    "title": "Opis trasy"
+  },
+  "reorder_hint": "Przeciągnij, by zmienić kolejność",
+  "map": {
+    "no_locations": "Brak lokalizacji miejsc na mapie."
+  },
+  "dates": {
+    "title": "Wybierz daty dla trasy",
+    "add": "Dodaj datę"
+  },
+  "photo": {
+    "for_place": "Zdjęcia do miejsca",
+    "add_new": "Dodaj nowe zdjęcie",
+    "from_gallery": "Z galerii wyjazdu",
+    "for_places": "Zdjęcia do miejsc",
+    "yours": "Twoje zdjęcie",
+    "new": "Nowe zdjęcie",
+    "your_place_photos": "Twoje zdjęcia miejsc"
+  },
+  "notes": {
+    "participants": "Notki uczestników"
+  },
+  "tags": {
+    "custom_placeholder": "Własny tag...",
+    "place_title": "Tagi miejsca"
+  },
+  "aria": {
+    "delete_place": "Usuń miejsce"
+  },
+  "collapse": "Zwiń"
 }

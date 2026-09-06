@@ -126,7 +126,9 @@ const seenBaseline = new Set();
 const JSX_TEXT = />\s*([^<>{}\n]{4,140}?)\s*</g;
 // Nazwy wlasne (miasta, dzielnice) to DANE, nie copy - zostaja jak sa w obu jezykach.
 // Klasy CSS z interpolacja tez nie sa tekstem dla uzytkownika.
-const NOT_COPY = /^(?:[a-z0-9_.-]+|[-a-z0-9_:/[\]\s${}.%,]+)$/i;
+// Klasy CSS z interpolacja to nie copy. Wzorzec dopuszcza tez cudzyslowy i znak zapytania,
+// bo szablon typu `${x === "a" ? "klasa-1" : "klasa-2"}` trafia tu jako jeden literal.
+const NOT_COPY = /^(?:[a-z0-9_.-]+|[-a-z0-9_:/[\]\s${}.%,=!'"?]+)$/i;
 const isCopy = (s) => s.length >= 4 && s.length <= 140 && !s.includes("\n") && !s.includes("//")
   && !s.startsWith("/") && !NOT_COPY.test(s) && looksPolish(s);
 

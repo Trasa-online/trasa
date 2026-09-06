@@ -22,5 +22,50 @@
     "nice_addition": "Fajny dodatek",
     "skippable": "Można pominąć"
   },
-  "stop_few": "przystanki"
+  "stop_few": "przystanki",
+  "empty": {
+    "desc_owner": "Dodaj pierwsze miejsce klikając guzik „+ Dodaj nowe miejsce”",
+    "desc_visitor": "Ta lista nie ma jeszcze żadnych miejsc.",
+    "title": "Lista jest pusta"
+  },
+  "missing": {
+    "desc": "Mogła zostać usunięta lub nie jest jeszcze opublikowana.",
+    "back": "Wróć do eksploracji",
+    "title": "Lista niedostępna"
+  },
+  "confirm": {
+    "delete_title": "Na pewno chcesz usunąć tę listę?",
+    "delete_desc": "„{{title}}” zniknie bezpowrotnie z Twojego profilu. Nie można tego cofnąć."
+  },
+  "toast": {
+    "photo_delete_failed": "Nie udało się usunąć zdjęcia",
+    "place_delete_failed": "Nie udało się usunąć miejsca",
+    "note_failed": "Nie udało się zapisać notki",
+    "photo_add_failed": "Nie udało się dodać zdjęcia",
+    "list_delete_failed": "Nie udało się usunąć listy.",
+    "removed_saved": "Usunięto z zapisanych",
+    "list_updated": "Zaktualizowano listę",
+    "place_deleted": "Usunięto miejsce",
+    "list_deleted": "Usunięto listę.",
+    "list_saved": "Zapisano listę"
+  },
+  "cta": {
+    "add_place": "Dodaj nowe miejsce",
+    "save_list": "Zapisz tę listę"
+  },
+  "aria": {
+    "delete_photo": "Usuń zdjęcie",
+    "share": "Udostępnij",
+    "delete_list": "Usuń listę"
+  },
+  "fallback_title": "Lista miejsc",
+  "photo": "Zdjęcie",
+  "someone": "Ktoś",
+  "back": "Wróć",
+  "delete": "Usuń",
+  "places_count_one": "{{count}} miejsce",
+  "places_count_few": "{{count}} miejsca",
+  "places_count_many": "{{count}} miejsc",
+  "new_since_visit": "Nowe od Twojej ostatniej wizyty · {{count}}",
+  "new_place_badge": "nowe miejsce"
 }

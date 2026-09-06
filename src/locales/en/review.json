@@ -22,8 +22,11 @@
   "note": {
     "label": "Note",
     "label_own": "Your note",
-    "placeholder": "Your tip or note about this place…",
-    "saved": "Saved ✓"
+    "placeholder": "Share what you thought of this place...",
+    "saved": "Saved ✓",
+    "share_cta": "Share your take",
+    "your_title": "Your take",
+    "yours": "Your note"
   },
   "categories": {
     "restaurant": "Restaurant",
@@ -57,8 +60,12 @@
   "gallery": {
     "add": "Add",
     "tap_hint": "Tap a photo to see it in full and set it as the entry cover.",
-    "empty": "No photos from this trip.",
-    "empty_editable": "No photos from this trip. Add your first memories."
+    "empty": "No photos in the trip gallery yet. Add them in the “Photos from the trip” section, or add new ones above.",
+    "empty_editable": "No photos from this trip. Add your first memories.",
+    "hint": "Add photos from the whole trip",
+    "go": "Go to Gallery",
+    "title": "Photos from the trip",
+    "already_here": "Photos added during the trip are already here - you can add more."
   },
   "tabs": {
     "places": "Places",
@@ -103,7 +110,9 @@
   },
   "confirm": {
     "remove_place": "Are you sure you want to remove {{name}} from the day's plan?",
-    "place_this": "this place"
+    "place_this": "this place",
+    "finish_desc": "The trip goes to your memories and to Explore. Until then you can edit it freely.",
+    "finish_title": "Finish this trip?"
   },
   "cta": {
     "back": "Back",
@@ -111,7 +120,9 @@
     "done": "Done",
     "save_changes": "Save changes",
     "close_edit_mode": "Close edit mode",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "finish_trip": "Finish trip",
+    "edit_trip": "Edit trip"
   },
   "toast": {
     "link_copied": "Link copied",
@@ -131,10 +142,18 @@
     "photo_upload_partial": "Some photos couldn't be added.",
     "cover_set_error": "We couldn't set the cover",
     "route_needs_place": "A route needs at least one place",
-    "generic_error": "Something went wrong"
+    "generic_error": "Something went wrong",
+    "finished_no_cover": "Trip saved to your memories. Add photos or a cover so it shows up in Explore.",
+    "finished": "Trip finished and saved to your memories",
+    "date_saved": "Date saved",
+    "dates_removed": "Dates removed",
+    "place_removed": "Place removed"
   },
   "share": {
-    "text": "Check out my route on spontaway"
+    "text": "Check out my route on spontaway",
+    "qr": "Share the trip with a QR code",
+    "invite": "Invite friends to the trip",
+    "link": "Share link"
   },
   "a11y": {
     "remove_place": "Remove place",
@@ -152,5 +171,44 @@
     "edit_name": "Edit name",
     "prev": "Previous"
   },
-  "close": "Close"
+  "close": "Close",
+  "cover": {
+    "desc": "The photo shown on the trip card in Explore - add a new one or pick from the gallery or the places on the trip.",
+    "needed_desc": "Without a cover the trip does not show up in Explore.",
+    "needed_title": "Add a cover so the trip is visible",
+    "change": "Change the Explore thumbnail"
+  },
+  "description": {
+    "hint": "A general description of your trip: who it is for, what occasion, what makes it stand out",
+    "placeholder": "Describe your trip: who it is for, what occasion, what is worth seeing...",
+    "title": "Trip description"
+  },
+  "reorder_hint": "Drag to reorder",
+  "map": {
+    "no_locations": "No place locations to show on the map."
+  },
+  "dates": {
+    "title": "Pick dates for the trip",
+    "add": "Add a date"
+  },
+  "photo": {
+    "for_place": "Photos for this place",
+    "add_new": "Add a new photo",
+    "from_gallery": "From the trip gallery",
+    "for_places": "Photos for places",
+    "yours": "Your photo",
+    "new": "New photo",
+    "your_place_photos": "Your place photos"
+  },
+  "notes": {
+    "participants": "Notes from participants"
+  },
+  "tags": {
+    "custom_placeholder": "Your own tag...",
+    "place_title": "Place tags"
+  },
+  "aria": {
+    "delete_place": "Delete place"
+  },
+  "collapse": "Collapse"
 }

@@ -51,7 +51,7 @@ function literals(src) {
 const PL_WORDS = /(?:^|[^\p{L}])(?:jest|nie|sie|się|tego|tej|tym|ten|ta|twoj|twój|twoja|twoje|masz|dodaj|usun|usuń|zapisz|wybierz|brak|pokaz|pokaż|wiecej|więcej|jeszcze|tutaj|teraz|gdzie|kiedy|zeby|żeby|przez|bez|juz|już|tylko|wszystko|miejsce|miejsca|miejsc|wyjazd|wyjazdy|wyjazdu|trasa|trasy|lista|listy|zdjecie|zdjęcie|zdjecia|zdjęcia|uzytkownik|użytkownik|profil|wroc|wróć|dalej|gotowe|anuluj|zamknij|edytuj|szukaj|nowy|nowa|nowe|moje|jako|albo|oraz|czy|jak|co)(?:[^\p{L}]|$)/iu;
 const looksPolish = (s) => PL_DIA.test(s) || (s.includes(" ") && PL_WORDS.test(s));
 const isCopy = (s) => s.length >= 4 && s.length <= 140 && !s.includes("\n") && !s.includes("//")
-  && !/^[a-z0-9_.-]+$/.test(s) && !s.startsWith("/") && looksPolish(s);
+  && !/^(?:[a-z0-9_.-]+|[-a-z0-9_:/[\]\s${}.%,=!'"?]+)$/i.test(s) && !s.startsWith("/") && looksPolish(s);
 
 if (process.argv[2] === "list") {
   const file = process.argv[3];

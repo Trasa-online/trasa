@@ -21,5 +21,49 @@
     "nice_addition": "Nice addition",
     "skippable": "Skippable"
   },
-  "stop_other": "stops"
+  "stop_other": "stops",
+  "empty": {
+    "desc_owner": "Add your first place with the + Add new place button",
+    "desc_visitor": "This list has no places yet.",
+    "title": "This list is empty"
+  },
+  "missing": {
+    "desc": "It may have been deleted, or it is not published yet.",
+    "back": "Back to Explore",
+    "title": "List unavailable"
+  },
+  "confirm": {
+    "delete_title": "Delete this list?",
+    "delete_desc": "“{{title}}” will be gone from your profile for good. This cannot be undone."
+  },
+  "toast": {
+    "photo_delete_failed": "We could not delete the photo",
+    "place_delete_failed": "We could not remove the place",
+    "note_failed": "We could not save the note",
+    "photo_add_failed": "We could not add the photo",
+    "list_delete_failed": "We could not delete the list.",
+    "removed_saved": "Removed from saved",
+    "list_updated": "List updated",
+    "place_deleted": "Place removed",
+    "list_deleted": "List deleted.",
+    "list_saved": "List saved"
+  },
+  "cta": {
+    "add_place": "Add new place",
+    "save_list": "Save this list"
+  },
+  "aria": {
+    "delete_photo": "Delete photo",
+    "share": "Share",
+    "delete_list": "Delete list"
+  },
+  "fallback_title": "Place list",
+  "photo": "Photo",
+  "someone": "Someone",
+  "back": "Back",
+  "delete": "Delete",
+  "places_count_one": "{{count}} place",
+  "places_count_other": "{{count}} places",
+  "new_since_visit": "New since your last visit · {{count}}",
+  "new_place_badge": "new place"
 }

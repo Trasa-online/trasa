@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { useParams, useNavigate } from "react-router-dom";
 import { goBackOr } from "@/hooks/useGoBack";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -43,6 +44,7 @@ import { uploadThumb } from "@/lib/imageThumbs";
 // prezentacyjnie ma wygladac tak samo. RLS: publiczny odczyt wymaga approved; wlasciciel widzi
 // swoja tez pending.
 export default function SharedList() {
+  const { t } = useTranslation("routelist");
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -71,7 +73,7 @@ export default function SharedList() {
   // Notki + zdjecia usera na miejscach listy (prosba Nat 2026-08-26). Wlasciciel edytuje
   // discovery_items.short_desc (notka, AUTO-ZAPIS przez PlaceNoteEditor) i images (route-images).
   const [uploadingItem, setUploadingItem] = useState<string | null>(null);
-  // Pisanie notki chowa dolny pasek - guzik "Dodaj nowe miejsce" zaslanial pole i klawiature
+  // Pisanie notki chowa dolny pasek - guzik t("cta.add_place") zaslanial pole i klawiature
   // (zgloszenie Nat 2026-08-31). Ten sam wzorzec co w widoku wyjazdu (SharedRoute).
   const [noteEditing, setNoteEditing] = useState(false);
   // UWAGA: ten stan (jak KAZDY hook w tym pliku) musi byc PRZED `if (isLoading) return ...`.
@@ -85,7 +87,7 @@ export default function SharedList() {
 
   const saveItemNote = async (item: any, value: string) => {
     const { error } = await (supabase as any).from("discovery_items").update({ short_desc: value || null }).eq("id", item.id);
-    if (error) { toast.error("Nie udało się zapisać notki"); return; }
+    if (error) { toast.error(t("toast.note_failed")); return; }
     queryClient.invalidateQueries({ queryKey: ["shared-list-items", id] });
   };
 
@@ -104,7 +106,7 @@ export default function SharedList() {
         if (data?.publicUrl) urls.push(data.publicUrl);
       }
       const { error: upErr } = await (supabase as any).from("discovery_items").update({ images: urls }).eq("id", item.id);
-      if (upErr) { toast.error("Nie udało się dodać zdjęcia"); return; }
+      if (upErr) { toast.error(t("toast.photo_add_failed")); return; }
       // Zdjecie zyje tez w galerii MIEJSCA (place_photos) - inaczej widac je tylko na tej liscie,
       // a wizytowka miejsca i okladki w innych widokach o nim nie wiedza (zgloszenie Nat 2026-08-28).
       const placeKey = placeKeyOf({ googlePlaceId: item.google_place_id ?? null, placeName: item.place_name });
@@ -119,7 +121,7 @@ export default function SharedList() {
   const removeItemPhoto = async (item: any, url: string) => {
     const urls = (Array.isArray(item.images) ? item.images : []).filter((u: string) => u !== url);
     const { error } = await (supabase as any).from("discovery_items").update({ images: urls }).eq("id", item.id);
-    if (error) { toast.error("Nie udało się usunąć zdjęcia"); return; }
+    if (error) { toast.error(t("toast.photo_delete_failed")); return; }
     // Zdejmij tez z galerii miejsca (tylko wlasny wiersz - cudze zdjecia miejsca zostaja).
     if (user) {
       await unlinkPhotoFromPlace({
@@ -139,11 +141,11 @@ export default function SharedList() {
       // Odswiez listy w drawerze zapisu + na profilu (inaczej usunieta lista wisi w cache).
       queryClient.invalidateQueries({ queryKey: ["save-sheet-lists", user.id] });
       queryClient.invalidateQueries({ queryKey: ["profile-list-feed", user.id] });
-      toast.success("Usunięto listę.");
+      toast.success(t("toast.list_deleted"));
       setAskDelete(false);
       goBackOr(navigate, "/moj-profil");
     } catch (e: any) {
-      toast.error("Nie udało się usunąć listy.");
+      toast.error(t("toast.list_delete_failed"));
       console.error("[SharedList] delete failed:", e?.message ?? e);
       setDeleting(false);
     }
@@ -284,8 +286,8 @@ export default function SharedList() {
     try {
       const set = new Set<string>(JSON.parse(localStorage.getItem("trasa_saved_collections") || "[]"));
       const dates: Record<string, string> = (() => { try { return JSON.parse(localStorage.getItem("trasa_saved_collections_dates") || "{}"); } catch { return {}; } })();
-      if (set.has(id)) { set.delete(id); delete dates[id]; setSaved(false); toast("Usunięto z zapisanych"); if (user) void unsaveCollectionDb(user.id, id); }
-      else { set.add(id); dates[id] = new Date().toISOString(); setSaved(true); toast.success("Zapisano listę"); void (supabase as any).rpc("notify_collection_saved", { p_collection_id: id }); if (user) void saveCollectionDb(user.id, id, items.length); }
+      if (set.has(id)) { set.delete(id); delete dates[id]; setSaved(false); toast(t("toast.removed_saved")); if (user) void unsaveCollectionDb(user.id, id); }
+      else { set.add(id); dates[id] = new Date().toISOString(); setSaved(true); toast.success(t("toast.list_saved")); void (supabase as any).rpc("notify_collection_saved", { p_collection_id: id }); if (user) void saveCollectionDb(user.id, id, items.length); }
       localStorage.setItem("trasa_saved_collections", JSON.stringify([...set]));
       localStorage.setItem("trasa_saved_collections_dates", JSON.stringify(dates));
     } catch { /* localStorage niedostepny */ }
@@ -315,9 +317,9 @@ export default function SharedList() {
       <div className="min-h-[100dvh] bg-background flex flex-col items-center justify-center px-6 text-center gap-4">
         {/* Brandowa ikona zamiast emoji (regula z CLAUDE.md). */}
         <span aria-hidden className="h-20 w-20 block" style={{ backgroundColor: "#ef9d78", WebkitMaskImage: "url(/Ikona_Trasy.svg)", maskImage: "url(/Ikona_Trasy.svg)", WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat", WebkitMaskSize: "contain", maskSize: "contain", WebkitMaskPosition: "center", maskPosition: "center" }} />
-        <p className="text-lg font-bold">Lista niedostępna</p>
-        <p className="text-sm text-muted-foreground">Mogła zostać usunięta lub nie jest jeszcze opublikowana.</p>
-        <button onClick={() => navigate("/eksploruj")} className="mt-2 px-5 py-2.5 rounded-full bg-foreground text-background text-sm font-semibold">Wróć do eksploracji</button>
+        <p className="text-lg font-bold">{t("missing.title")}</p>
+        <p className="text-sm text-muted-foreground">{t("missing.desc")}</p>
+        <button onClick={() => navigate("/eksploruj")} className="mt-2 px-5 py-2.5 rounded-full bg-foreground text-background text-sm font-semibold">{t("missing.back")}</button>
       </div>
     );
   }
@@ -327,9 +329,9 @@ export default function SharedList() {
   const hasRealPhoto = !!cover;
   const heroPhoto = cover ?? getRandomPinPlaceholder(col.id);
   const cityLabel = col.city || "";
-  const authorName = author?.first_name || author?.username || col.author_name || "Ktoś";
+  const authorName = author?.first_name || author?.username || col.author_name || t("someone");
   const isOwner = !!user && col.user_id === user.id;
-  const placesCountLabel = `${items.length} ${items.length === 1 ? "miejsce" : items.length < 5 ? "miejsca" : "miejsc"}`;
+  const placesCountLabel = t("places_count", { count: items.length });
 
 
   // Guzik "Udostepnij" pokazuje KARTE do zrzutu ekranu (szablon listy). Wysylka linku zostaje
@@ -342,7 +344,7 @@ export default function SharedList() {
     // Miasto: wlasne miasto miejsca, a gdy nieznane - miasto listy.
     for (const p of places) await addPlaceToList(col.id, { ...p, city: p.city ?? col.city ?? null });
     queryClient.invalidateQueries({ queryKey: ["shared-list-items", id] });
-    toast.success("Zaktualizowano listę");
+    toast.success(t("toast.list_updated"));
     // Autor dodal miejsca -> powiadom (in-app) wszystkich, ktorzy zapisali te liste ("Nowe miejsce!").
     if (isOwner && places.length) void (supabase as any).rpc("notify_collection_updated", { p_collection_id: col.id, p_added: places.length });
   };
@@ -350,7 +352,7 @@ export default function SharedList() {
   // Usun miejsce z listy (wlasciciel, kosz w wierszu). Toast + "Cofnij".
   const handleDeleteItem = async (item: any) => {
     const { error } = await (supabase as any).from("discovery_items").delete().eq("id", item.id);
-    if (error) { toast.error("Nie udało się usunąć miejsca"); return; }
+    if (error) { toast.error(t("toast.place_delete_failed")); return; }
     // Zdjecia dodane do TEGO miejsca znikaja razem z nim takze z galerii miejsca (place_photos) -
     // zgloszenie Nat 2026-09-01. Kasujemy wylacznie te konkretne adresy, wiec zdjecia tego samego
     // lokalu dodane w innej liscie albo w wyjezdzie zostaja.
@@ -361,7 +363,7 @@ export default function SharedList() {
     queryClient.invalidateQueries({ queryKey: ["shared-list-items", id] });
     queryClient.invalidateQueries({ queryKey: ["place-photos"] });
     const { id: _id, ...rest } = item;
-    toast.success("Usunięto miejsce", {
+    toast.success(t("toast.place_deleted"), {
       action: { label: "Cofnij", onClick: async () => {
         await (supabase as any).from("discovery_items").insert({ ...rest });
         await restorePlacePhotos(gone);
@@ -400,7 +402,7 @@ export default function SharedList() {
     <div>
       {newCount > 0 && (
         <>
-          {sectionHeader(`Nowe od Twojej ostatniej wizyty · ${newCount}`, true)}
+          {sectionHeader(t("new_since_visit", { count: newCount }), true)}
           <div className="-mx-5 px-5 bg-[#FFF8F3] rounded-2xl">
             {renderRows(newItems, 0, true)}
           </div>
@@ -423,7 +425,7 @@ export default function SharedList() {
         const photoSlot = isOwner ? (
           <label className={`inline-flex items-center gap-1.5 rounded-full bg-secondary px-3 py-1.5 text-xs font-bold text-foreground cursor-pointer active:scale-95 transition-transform ${busy ? "opacity-60 pointer-events-none" : ""}`}>
             {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Camera className="h-3.5 w-3.5" />}
-            {busy ? "Dodawanie..." : "Zdjęcie"}
+            {busy ? "Dodawanie..." : t("photo")}
             <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => { addItemPhotos(pin, e.target.files); e.currentTarget.value = ""; }} />
           </label>
         ) : null;
@@ -445,7 +447,7 @@ export default function SharedList() {
                       onClick={() => setPhotoViewer({ urls: photos.map((u: string) => resolveStored(u) ?? u), idx: photos.indexOf(url) })}
                       className="w-full h-full object-cover active:opacity-90 transition-opacity"
                     />
-                    {isOwner && <button onClick={() => removeItemPhoto(pin, url)} aria-label="Usuń zdjęcie" className="absolute top-1 right-1 h-5 w-5 rounded-full bg-black/55 text-white flex items-center justify-center active:scale-90"><X className="h-3 w-3" /></button>}
+                    {isOwner && <button onClick={() => removeItemPhoto(pin, url)} aria-label={t("aria.delete_photo")} className="absolute top-1 right-1 h-5 w-5 rounded-full bg-black/55 text-white flex items-center justify-center active:scale-90"><X className="h-3 w-3" /></button>}
                   </div>
                 ))}
               </div>
@@ -469,7 +471,7 @@ export default function SharedList() {
                     zbedne - awatar juz mowi, kto dodal, a liczy sie sama informacja o nowosci. */}
                 <div className="flex items-center gap-2">
                   <img src={avatarSrc(col?.author_avatar ?? null)} alt="" className="h-5 w-5 rounded-full object-cover bg-orange-100" />
-                  <span className="text-[11.5px] font-semibold text-[#8A6A57]">nowe miejsce</span>
+                  <span className="text-[11.5px] font-semibold text-[#8A6A57]">{t("new_place_badge")}</span>
                 </div>
                 {note}
               </div>
@@ -486,7 +488,7 @@ export default function SharedList() {
       {/* Staly TopBar (naglowek nad obszarem scrolla): wstecz + autor + miasto + liczba miejsc + serce */}
       <div className="shrink-0 bg-background px-5 pb-2.5 border-b border-border/40" style={{ paddingTop: "max(12px, env(safe-area-inset-top, 12px))" }}>
         <div className="flex items-center gap-2 text-sm">
-            <button onClick={() => goBackOr(navigate, "/eksploruj")} aria-label="Wróć"
+            <button onClick={() => goBackOr(navigate, "/eksploruj")} aria-label={t("back")}
               className="h-9 w-9 -ml-2 shrink-0 rounded-full flex items-center justify-center active:scale-90 transition-transform">
               <ArrowLeft className="h-5 w-5 text-foreground" />
             </button>
@@ -522,10 +524,10 @@ export default function SharedList() {
                 dalej cudzej listy to sedno tego widoku, a link i tak jest publiczny. Edycja i
                 usuwanie zostaja przy wlascicielu. */}
             <div className="shrink-0 flex items-center gap-2">
-              <button onClick={handleShare} onContextMenu={(e) => { e.preventDefault(); handleShareLink(); }} aria-label="Udostępnij" className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center active:scale-90 transition-transform"><Share2 className="h-4 w-4 text-foreground" /></button>
+              <button onClick={handleShare} onContextMenu={(e) => { e.preventDefault(); handleShareLink(); }} aria-label={t("aria.share")} className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center active:scale-90 transition-transform"><Share2 className="h-4 w-4 text-foreground" /></button>
               {isOwner && (
                 <>
-                  <button onClick={() => setAskDelete(true)} aria-label="Usuń listę" className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center active:scale-90 transition-transform"><Trash2 className="h-4 w-4 text-destructive" /></button>
+                  <button onClick={() => setAskDelete(true)} aria-label={t("aria.delete_list")} className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center active:scale-90 transition-transform"><Trash2 className="h-4 w-4 text-destructive" /></button>
                 </>
               )}
             </div>
@@ -546,14 +548,14 @@ export default function SharedList() {
               renderList()
             ) : (
               <EmptyPlacesState
-                title="Lista jest pusta"
-                hint={isOwner ? "Dodaj pierwsze miejsce klikając guzik „+ Dodaj nowe miejsce”" : "Ta lista nie ma jeszcze żadnych miejsc."}
+                title={t("empty.title")}
+                hint={isOwner ? t("empty.desc_owner") : t("empty.desc_visitor")}
               />
             )}
           </div>
         {shareCardOpen && (
         <ShareCardList
-          title={col.title || "Lista miejsc"}
+          title={col.title || t("fallback_title")}
           city={col.city}
           items={(items as any[]).map((it) => ({ ...it, photo_url: pinCover(it) ?? it.photo_url }))}
           author={col.author_name ? `@${col.author_name}` : "spontaway"}
@@ -585,16 +587,15 @@ export default function SharedList() {
 
       {/* CTA - zapis CAŁEJ listy (driver engagementu). TYLKO cudza lista - nie zapisujesz wlasnej (#4).
           Zapis pojedynczych miejsc = bookmark przy każdym miejscu (SavePlaceSheet). */}
-      {/* b) Dolny CTA: wlasciciel = "Dodaj nowe miejsce" (drawer jak w wyjazdach); gosc = zapisz liste. */}
+      {/* b) Dolny CTA: wlasciciel = t("cta.add_place") (drawer jak w wyjazdach); gosc = zapisz liste. */}
       {!noteEditing && (
       <div className="fixed bottom-0 left-0 right-0 max-w-lg mx-auto px-5 pt-2 bg-background border-t border-border/30" style={{ paddingBottom: "max(12px, env(safe-area-inset-bottom, 12px))" }}>
         {isOwner ? (
           <button onClick={() => setAddPlaceOpen(true)} className="w-full py-3 rounded-full border border-border bg-background text-foreground font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform">
-            <Plus className="h-4 w-4" /> Dodaj nowe miejsce
-          </button>
+            <Plus className="h-4 w-4" />{t("cta.add_place")}</button>
         ) : (
           <button onClick={toggleSave} className="w-full py-3 rounded-full bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform shadow-lg shadow-primary/25">
-            <Bookmark className={`h-4 w-4 ${saved ? "fill-current" : ""}`} />{saved ? "Zapisano listę" : "Zapisz tę listę"}
+            <Bookmark className={`h-4 w-4 ${saved ? "fill-current" : ""}`} />{saved ? t("toast.list_saved") : t("cta.save_list")}
           </button>
         )}
       </div>
@@ -621,15 +622,15 @@ export default function SharedList() {
       <AlertDialog open={askDelete} onOpenChange={(o) => { if (!o && !deleting) setAskDelete(false); }}>
         <AlertDialogContent className="rounded-3xl">
           <AlertDialogHeader>
-            <AlertDialogTitle>Na pewno chcesz usunąć tę listę?</AlertDialogTitle>
+            <AlertDialogTitle>{t("confirm.delete_title")}</AlertDialogTitle>
             <AlertDialogDescription>
-              {`„${col.title}" zniknie bezpowrotnie z Twojego profilu. Nie można tego cofnąć.`}
+              {t("confirm.delete_desc", { title: col.title })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deleting}>Anuluj</AlertDialogCancel>
             <AlertDialogAction onClick={(e) => { e.preventDefault(); void handleDelete(); }} disabled={deleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              {deleting ? "Usuwanie…" : "Usuń"}
+              {deleting ? "Usuwanie…" : t("delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -74,6 +74,7 @@ function SortableReviewRow({ pin, idx, categoryLabel, onOpen, onRemove, noteValu
   onNoteFocusChange?: (focused: boolean) => void;
   tags: string[]; onToggleTag: (tag: string) => void;
 }) {
+  const { t } = useTranslation("review");
   const controls = useDragControls();
   // Pole na WLASNY tag miejsca (pula nie pokrywa wszystkiego).
   const [customTag, setCustomTag] = useState("");
@@ -89,7 +90,7 @@ function SortableReviewRow({ pin, idx, categoryLabel, onOpen, onRemove, noteValu
         {/* Uchwyt przeciagania - z LEWEJ, obok okladki (daleko od kosza po prawej). */}
         <span
           onPointerDown={(e) => { haptics.light(); controls.start(e); }}
-          aria-label="Przeciągnij, by zmienić kolejność"
+          aria-label={t("reorder_hint")}
           className="shrink-0 h-9 w-6 flex items-center justify-center text-muted-foreground/50 cursor-grab active:cursor-grabbing touch-none"
         >
           <GripVertical className="h-5 w-5" />
@@ -102,7 +103,7 @@ function SortableReviewRow({ pin, idx, categoryLabel, onOpen, onRemove, noteValu
           <p className="text-sm font-bold leading-tight truncate">{pin.place_name}</p>
           <span className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white text-[11px] font-semibold text-foreground">{categoryLabel}</span>
         </button>
-        <button onClick={onRemove} aria-label="Usuń miejsce" className="h-9 w-9 rounded-full flex items-center justify-center text-muted-foreground/60 active:scale-90 shrink-0"><Trash2 className="h-4 w-4" /></button>
+        <button onClick={onRemove} aria-label={t("aria.delete_place")} className="h-9 w-9 rounded-full flex items-center justify-center text-muted-foreground/60 active:scale-90 shrink-0"><Trash2 className="h-4 w-4" /></button>
       </div>
 
       {/* "+ Podziel sie wrazeniami" - zwijana notka usera o tym miejscu (opt-in, domyslnie zwinieta). */}
@@ -113,13 +114,13 @@ function SortableReviewRow({ pin, idx, categoryLabel, onOpen, onRemove, noteValu
             onChange={(e) => onNoteChange(e.target.value)}
             onFocus={() => onNoteFocusChange?.(true)}
             onBlur={() => onNoteFocusChange?.(false)}
-            placeholder="Podziel się wrażeniami o tym miejscu..."
+            placeholder={t("note.placeholder")}
             rows={3}
             className="w-full bg-white rounded-xl px-3.5 py-3 text-sm text-foreground resize-none focus:outline-none border border-border/50 focus:border-orange-400/60 placeholder:text-muted-foreground/55"
           />
           {/* Tagi miejsca (predefiniowana pula) - alternatywa dla pisania notki. Klik = dodaj. */}
           <div className="mt-3">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">Tagi miejsca <span className="normal-case font-medium text-muted-foreground/50">(zamiast notki)</span></p>
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">{t("tags.place_title")}<span className="normal-case font-medium text-muted-foreground/50">(zamiast notki)</span></p>
             <div className="flex flex-wrap gap-1.5">
               {/* #5: tagi zalezne od kategorii miejsca (zabytek != kawiarnia). #6: wybrany = zolty fill.
                   Tagi spoza puli (wpisane recznie) doklejamy na koncu, zeby user je widzial i mogl zdjac. */}
@@ -143,7 +144,7 @@ function SortableReviewRow({ pin, idx, categoryLabel, onOpen, onRemove, noteValu
                 onChange={(e) => setCustomTag(e.target.value.slice(0, 24))}
                 onFocus={() => onNoteFocusChange?.(true)}
                 onBlur={() => onNoteFocusChange?.(false)}
-                placeholder="Własny tag..."
+                placeholder={t("tags.custom_placeholder")}
                 className="flex-1 min-w-0 h-9 rounded-full bg-white border border-border/60 px-3.5 text-[13px] text-foreground outline-none focus:border-orange-400/60 placeholder:text-muted-foreground/55"
               />
               <button type="submit" disabled={!customTag.trim()}
@@ -153,14 +154,14 @@ function SortableReviewRow({ pin, idx, categoryLabel, onOpen, onRemove, noteValu
             </form>
           </div>
           <div className="flex items-center justify-between mt-2">
-            <button onClick={onToggleNote} className="px-4 py-2 rounded-full bg-muted text-sm font-semibold text-foreground active:scale-95 transition-transform">Zwiń</button>
+            <button onClick={onToggleNote} className="px-4 py-2 rounded-full bg-muted text-sm font-semibold text-foreground active:scale-95 transition-transform">{t("collapse")}</button>
             {noteSaved && <span className="text-xs text-green-600 font-medium">Zapisano</span>}
           </div>
         </div>
       ) : (
         <button onClick={onToggleNote} className="mt-4 mb-1 ml-8 self-start inline-flex items-center gap-2 py-1.5 text-sm font-bold text-foreground active:opacity-60">
           <span className="h-6 w-6 rounded-full bg-muted flex items-center justify-center"><Plus className="h-4 w-4" strokeWidth={2.6} /></span>
-          {noteValue.trim() ? "Twoje wrażenia" : "Podziel się wrażeniami"}
+          {noteValue.trim() ? t("note.your_title") : t("note.share_cta")}
         </button>
       )}
     </Reorder.Item>
@@ -173,11 +174,12 @@ function SortablePlanRow({ pin, index, categoryLabel, onOpen, onGoogle, onDelete
   pin: any; index: number; categoryLabel: React.ReactNode;
   onOpen: () => void; onGoogle: () => void; onDelete: () => void; onSave?: () => void; saved?: boolean; note?: React.ReactNode;
 }) {
+  const { t } = useTranslation("review");
   const controls = useDragControls();
   const grip = (
     <span
       onPointerDown={(e) => { haptics.light(); controls.start(e); }}
-      aria-label="Przeciągnij, by zmienić kolejność"
+      aria-label={t("reorder_hint")}
       className="shrink-0 w-6 flex items-center justify-center text-muted-foreground/45 cursor-grab active:cursor-grabbing touch-none"
     >
       <GripVertical className="h-5 w-5" />
@@ -957,7 +959,7 @@ const ReviewSummary = () => {
   // Opcje okladki wyjazdu: NAJPIERW Twoje zdjecia z galerii (z etykieta miejsca gdy przypisane),
   // potem zdjecia miejsc trasy (bez duplikatow). Uzywane w arkuszu wyboru okladki.
   const coverPickerOptions = useMemo(() => {
-    const gallery = myPhotos.map(({ url }) => ({ id: `g:${url}`, name: photoPlaceLabel.get(url) ?? "Twoje zdjęcie", url: resolveStored(url) ?? url }));
+    const gallery = myPhotos.map(({ url }) => ({ id: `g:${url}`, name: photoPlaceLabel.get(url) ?? t("photo.yours"), url: resolveStored(url) ?? url }));
     const seen = new Set(gallery.map((o) => o.url));
     const places = coverOptions.filter((o) => !seen.has(o.url));
     return [...gallery, ...places];
@@ -1159,9 +1161,9 @@ const ReviewSummary = () => {
       await ensureListCover(routeId);
       const { data: covRow } = await (supabase as any).from("routes").select("list_cover_url").eq("id", routeId).maybeSingle();
       if (!covRow?.list_cover_url) {
-        notify.error("Wyjazd zapisany we wspomnieniach. Dodaj zdjęcia lub okładkę, żeby pojawił się w eksploracji.");
+        notify.error(t("toast.finished_no_cover"));
       } else {
-        notify.success("Wyjazd zakończony i zapisany we wspomnieniach");
+        notify.success(t("toast.finished"));
       }
       queryClient.invalidateQueries({ queryKey: ["review-summary-route", routeId] });
       queryClient.invalidateQueries({ queryKey: ["review-trip-days", folderId, routeId] });
@@ -1186,9 +1188,9 @@ const ReviewSummary = () => {
     return (
       <div className="fixed inset-0 z-[96] flex items-end justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => { if (!finishing) setConfirmFinishOpen(false); }}>
         <div {...finishDrag.dragProps} onClick={(e) => e.stopPropagation()} className="w-full max-w-lg bg-card rounded-t-3xl px-5 pt-5 pb-[max(20px,env(safe-area-inset-bottom))] shadow-2xl animate-in slide-in-from-bottom-4 duration-300">
-          <p className="text-lg font-black text-foreground">Zakończyć wyjazd?</p>
+          <p className="text-lg font-black text-foreground">{t("confirm.finish_title")}</p>
           <p className="text-sm text-muted-foreground leading-relaxed mt-1.5">
-            {`Wyjazd trafi do Twoich wspomnień i do eksploracji. Do tego momentu możesz go swobodnie edytować.`}
+            {t("confirm.finish_desc")}
           </p>
           <div className="flex gap-2 mt-5">
             <button
@@ -1203,7 +1205,7 @@ const ReviewSummary = () => {
               disabled={finishing}
               className="flex-1 py-3.5 rounded-2xl bg-primary text-white font-bold text-sm active:scale-[0.98] transition-transform disabled:opacity-40"
             >
-              {finishing ? t("status.saving") : "Zakończ wyjazd"}
+              {finishing ? t("status.saving") : t("cta.finish_trip")}
             </button>
           </div>
         </div>
@@ -1392,7 +1394,7 @@ const ReviewSummary = () => {
     queryClient.setQueryData(["review-summary-route", routeId], (old: any) => old ? { ...old, start_date: startStr, end_date: endStr } : old);
     queryClient.invalidateQueries({ queryKey: ["review-trip-days", folderId, routeId] });
     if (user) queryClient.invalidateQueries({ queryKey: ["journal-entries", user.id] });
-    notify.success("Zapisano datę");
+    notify.success(t("toast.date_saved"));
   };
 
   // Wyczyść daty wyjazdu (usun start/end).
@@ -1404,7 +1406,7 @@ const ReviewSummary = () => {
     queryClient.setQueryData(["review-summary-route", routeId], (old: any) => old ? { ...old, start_date: null, end_date: null } : old);
     queryClient.invalidateQueries({ queryKey: ["review-trip-days", folderId, routeId] });
     if (user) queryClient.invalidateQueries({ queryKey: ["journal-entries", user.id] });
-    notify.success("Usunięto daty");
+    notify.success(t("toast.dates_removed"));
   };
 
   // Zakres dat: trasa wielodniowa => "12 - 14 maja 2026", jednodniowa => "12 maja 2026".
@@ -1627,7 +1629,7 @@ const ReviewSummary = () => {
         </div>
         {hasOthers && (
           <div className="mt-2.5 text-left">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">Notki uczestników</p>
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">{t("notes.participants")}</p>
             <PlaceNotes notes={others} excludeUserId={user?.id} />
           </div>
         )}
@@ -1769,7 +1771,7 @@ const ReviewSummary = () => {
   );
 
   // ── Galeria zdjęć (grid 3-kol, jak instagram). editable -> przycisk dodawania. ──
-  // ── Arkusz "Zdjęcia do miejsca" (przypisanie z galerii / nowe) - reużywany w widoku planu i kroku Galeria. ──
+  // ── Arkusz t("photo.for_place") (przypisanie z galerii / nowe) - reużywany w widoku planu i kroku Galeria. ──
   const renderPinPickerSheet = () => {
     if (!pinPickerId) return null;
     const pickerPin = currentPins.find((p: any) => p.id === pinPickerId);
@@ -1779,18 +1781,17 @@ const ReviewSummary = () => {
       <div className="fixed inset-0 z-[95] flex items-end justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setPinPickerId(null)}>
         <div {...pinPickerDrag.dragProps} onClick={(e) => e.stopPropagation()} className="relative w-full max-w-lg bg-card rounded-t-3xl px-4 pt-3 pb-[max(16px,env(safe-area-inset-bottom))] shadow-2xl animate-in slide-in-from-bottom-4 duration-300 flex flex-col" style={{ ...pinPickerDrag.dragProps.style, maxHeight: "82dvh" }}>
           <div className="mx-auto h-1 w-10 rounded-full bg-muted-foreground/25 mb-3 shrink-0" />
-          <p className="font-display text-lg font-bold text-foreground px-1 shrink-0">Zdjęcia do miejsca</p>
+          <p className="font-display text-lg font-bold text-foreground px-1 shrink-0">{t("photo.for_place")}</p>
           <p className="text-[13px] text-muted-foreground px-1 mt-0.5 mb-3 shrink-0 truncate">{pickerPin.place_name}</p>
           <button
             onClick={() => { const p = pickerPin; setPinPickerId(null); triggerPinPhotoPick(p); }}
             className="shrink-0 w-full flex items-center justify-center gap-2 rounded-2xl bg-secondary text-secondary-foreground py-3 mb-3 text-sm font-semibold active:scale-[0.98] transition-transform"
           >
-            <Camera className="h-4 w-4" /> Dodaj nowe zdjęcie
-          </button>
-          <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide px-1 mb-2 shrink-0">Z galerii wyjazdu</p>
+            <Camera className="h-4 w-4" />{t("photo.add_new")}</button>
+          <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide px-1 mb-2 shrink-0">{t("photo.from_gallery")}</p>
           <div className="overflow-y-auto min-h-0 flex-1">
             {myPhotos.length === 0 ? (
-              <p className="text-center text-sm text-muted-foreground py-10 px-6">Brak zdjęć w galerii wyjazdu. Dodaj je najpierw w sekcji „Zdjęcia z wyjazdu" albo dodaj nowe powyżej.</p>
+              <p className="text-center text-sm text-muted-foreground py-10 px-6">{t("gallery.empty")}</p>
             ) : (
               <div className="grid grid-cols-3 gap-1.5 pb-1">
                 {myPhotos.map(({ url }) => {
@@ -1868,7 +1869,7 @@ const ReviewSummary = () => {
       {/* #3e: zdjecia dodane w wizytowkach miejsc (place_photos) - read-only strip, potwierdzenie. */}
       {myPlacePhotos.length > 0 && (
         <div className="mb-3 px-1">
-          <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2">{`Twoje zdjęcia miejsc`}</p>
+          <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2">{t("photo.your_place_photos")}</p>
           <div className="flex gap-2 overflow-x-auto scrollbar-none pb-1">
             {myPlacePhotos.map((url: string, i: number) => (
               <button key={`${url}-${i}`} onClick={() => { setViewerUrl(url); setViewerMenuOpen(false); }}
@@ -1931,8 +1932,8 @@ const ReviewSummary = () => {
     if (!workingPins.length) return null;
     return (
       <div className="px-5 pt-7">
-        <p className="font-display text-xl font-bold text-foreground tracking-tight">Zdjęcia do miejsc</p>
-        <p className="text-[13px] text-muted-foreground mt-1 mb-4 leading-relaxed">Zdjęcia dodane w{"\u00a0"}trakcie wyjazdu są już tutaj - możesz dołożyć kolejne.</p>
+        <p className="font-display text-xl font-bold text-foreground tracking-tight">{t("photo.for_places")}</p>
+        <p className="text-[13px] text-muted-foreground mt-1 mb-4 leading-relaxed">{t("gallery.already_here")}</p>
         <div className="space-y-3">
           {workingPins.map((pin: any, i: number) => {
             // Zdjecia miejsca = te z etapu "w trakcie" (pin_photos) + starsze z pins.images.
@@ -2108,7 +2109,7 @@ const ReviewSummary = () => {
     const removePlaceFromPlan = (pin: any) => {
       const prev = workingPins;
       setWorking(workingPins.filter((p: any) => p.id !== pin.id));
-      deferDelete({ message: "Usunięto miejsce", onUndo: () => setWorking(prev), commit: () => { /* DB przez autosave */ } });
+      deferDelete({ message: t("toast.place_removed"), onUndo: () => setWorking(prev), commit: () => { /* DB przez autosave */ } });
     };
     const navMapPins = currentPins
       .filter((p: any) => p.latitude != null && p.longitude != null)
@@ -2154,7 +2155,7 @@ const ReviewSummary = () => {
                     (dodaj nowe / wybierz z galerii/miejsc trasy). Prawy-dolny rog. Ikona = edytowalna. */}
                 <button
                   onClick={() => setListCoverPickerOpen(true)}
-                  aria-label="Zmień miniaturę w eksploracji"
+                  aria-label={t("cover.change")}
                   className="absolute bottom-3 right-3 z-20 w-20 rounded-2xl overflow-hidden border-[3px] border-white shadow-xl bg-muted active:scale-95 transition-transform"
                 >
                   <div className="relative w-full aspect-[9/16]">
@@ -2216,7 +2217,7 @@ const ReviewSummary = () => {
               <button onClick={() => setDatePickerOpen(true)} className="flex items-center justify-between gap-2 active:opacity-70">
                 <span className="flex items-center gap-1.5 min-w-0">
                   <CalendarIcon className="h-5 w-5 text-foreground shrink-0" />
-                  <span className="text-base text-foreground truncate">{dateLabel || "Dodaj datę"}</span>
+                  <span className="text-base text-foreground truncate">{dateLabel || t("dates.add")}</span>
                 </span>
                 <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
               </button>
@@ -2229,8 +2230,8 @@ const ReviewSummary = () => {
                 className="flex items-center rounded-2xl bg-[#FDF184] border border-[#FDCD84] px-4 py-3 text-left active:scale-[0.99] transition-transform"
               >
                 <span className="flex-1 min-w-0">
-                  <span className="block text-sm font-bold text-foreground">Dodaj okładkę, żeby trasa była widoczna</span>
-                  <span className="block text-xs text-foreground/60 mt-0.5">Bez okładki trasa nie pojawia się w eksploracji.</span>
+                  <span className="block text-sm font-bold text-foreground">{t("cover.needed_title")}</span>
+                  <span className="block text-xs text-foreground/60 mt-0.5">{t("cover.needed_desc")}</span>
                 </span>
               </button>
             )}
@@ -2253,8 +2254,7 @@ const ReviewSummary = () => {
                     onClick={() => { haptics.light(); setConfirmFinishOpen(true); }}
                     className="w-full py-3 rounded-2xl bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
                   >
-                    <Flag className="h-4 w-4" /> Zakończ wyjazd
-                  </button>
+                    <Flag className="h-4 w-4" />{t("cta.finish_trip")}</button>
                 )}
                 <button
                   onClick={() => {
@@ -2278,8 +2278,7 @@ const ReviewSummary = () => {
                   }}
                   className="w-full py-3 rounded-2xl bg-secondary text-secondary-foreground font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
                 >
-                  <Pencil className="h-4 w-4" /> Edytuj trasę
-                </button>
+                  <Pencil className="h-4 w-4" />{t("cta.edit_trip")}</button>
                 {/* "Zaproś znajomych" USUNIETE 2026-08-30 (decyzja Nat): sklad uczestnikow
                     ustala sie wylacznie przy TWORZENIU wyjazdu, wspomnienie jest zamkniete. */}
                 {/* Propozycje uczestnikow - host przeglada wspolna pule i dodaje wybrane do trasy.
@@ -2330,7 +2329,7 @@ const ReviewSummary = () => {
                   </span>
                 </button>
               ) : (
-                <p className="text-center text-sm text-muted-foreground py-10">Brak lokalizacji miejsc na mapie.</p>
+                <p className="text-center text-sm text-muted-foreground py-10">{t("map.no_locations")}</p>
               )}
             </div>
           ) : !isOwner ? (
@@ -2381,7 +2380,7 @@ const ReviewSummary = () => {
                     <div className="space-y-2.5">
                       {noteText && (
                         <div>
-                          <p className="text-sm font-semibold text-foreground">Twoja Notka</p>
+                          <p className="text-sm font-semibold text-foreground">{t("note.yours")}</p>
                           <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap mt-0.5">{noteText}</p>
                         </div>
                       )}
@@ -2440,7 +2439,7 @@ const ReviewSummary = () => {
                 <X className="h-4 w-4" />
               </button>
               <p className="text-lg font-bold pr-8">Miniatura w eksploracji</p>
-              <p className="text-sm text-muted-foreground mt-1 mb-4">Zdjęcie widoczne na karcie trasy w eksploracji - dodaj nowe albo wybierz z galerii lub miejsc trasy.</p>
+              <p className="text-sm text-muted-foreground mt-1 mb-4">{t("cover.desc")}</p>
               <div className="overflow-y-auto -mx-1 px-1" style={{ maxHeight: "62dvh" }}>
                 <div className="grid grid-cols-3 gap-2 pb-1">
                   <button
@@ -2449,7 +2448,7 @@ const ReviewSummary = () => {
                     className="relative aspect-square rounded-2xl border-2 border-dashed border-border/70 flex flex-col items-center justify-center gap-1.5 text-muted-foreground active:scale-95 transition-transform disabled:opacity-50"
                   >
                     {uploading ? <Loader2 className="h-6 w-6 animate-spin" /> : <Plus className="h-6 w-6" />}
-                    <span className="text-[11px] font-semibold leading-tight text-center px-1">Nowe zdjęcie</span>
+                    <span className="text-[11px] font-semibold leading-tight text-center px-1">{t("photo.new")}</span>
                   </button>
                   {coverPickerOptions.map((opt) => {
                     const isCurrent = listCoverPhoto === opt.url;
@@ -2483,7 +2482,7 @@ const ReviewSummary = () => {
             <div {...dateDrag.dragProps} onClick={(e) => e.stopPropagation()} className="relative w-full max-w-lg bg-card rounded-t-3xl px-2 pt-3 pb-[max(12px,env(safe-area-inset-bottom))] shadow-2xl animate-in slide-in-from-bottom-4 duration-300" style={{ ...dateDrag.dragProps.style, maxHeight: "88dvh" }}>
               <div className="mx-auto h-1 w-10 rounded-full bg-muted-foreground/25 mb-3" />
               <div className="px-3 pb-1 text-center">
-                <p className="text-base font-bold leading-tight">Wybierz daty dla trasy <span className="font-normal text-muted-foreground">(opcjonalnie)</span></p>
+                <p className="text-base font-bold leading-tight">{t("dates.title")}<span className="font-normal text-muted-foreground">(opcjonalnie)</span></p>
               </div>
               <FullCalendarPicker onConfirm={saveDate} allowPast onClear={clearDate} />
             </div>
@@ -2517,7 +2516,7 @@ const ReviewSummary = () => {
               <button onClick={() => setQrShareOpen(false)} aria-label="Zamknij" className="absolute right-4 top-4 h-8 w-8 rounded-full bg-muted flex items-center justify-center active:scale-90 transition-transform">
                 <X className="h-4 w-4" />
               </button>
-              <p className="text-lg font-bold mb-4 pr-8">Udostępnij wyjazd kodem QR</p>
+              <p className="text-lg font-bold mb-4 pr-8">{t("share.qr")}</p>
               <div className="flex items-center gap-4 pb-4 border-b border-border/30">
                 <div className="shrink-0 rounded-2xl bg-white p-2.5 border border-border/40">
                   <QRCodeSVG value={shareUrl} size={104} bgColor="#ffffff" fgColor="#0E0E0E" level="M" />
@@ -2527,15 +2526,13 @@ const ReviewSummary = () => {
                   {dateLabel && <p className="text-sm text-muted-foreground mt-1"><span className="font-semibold text-foreground">Data:</span> {dateLabel}</p>}
                   <div className="mt-3 flex items-center justify-between gap-2">
                     <button onClick={copyShareLink} className="text-sm font-semibold text-foreground active:opacity-70">Skopiuj link</button>
-                    <button onClick={shareLink} aria-label="Udostępnij link" className="h-9 w-9 rounded-full bg-muted flex items-center justify-center active:scale-90 transition-transform">
+                    <button onClick={shareLink} aria-label={t("share.link")} className="h-9 w-9 rounded-full bg-muted flex items-center justify-center active:scale-90 transition-transform">
                       <Share2 className="h-4 w-4 text-foreground" />
                     </button>
                   </div>
                 </div>
               </div>
-              <button onClick={shareLink} className="w-full h-12 rounded-2xl bg-orange-100 text-foreground font-semibold text-sm mt-4 active:scale-[0.98] transition-transform">
-                Zaproś znajomych do trasy
-              </button>
+              <button onClick={shareLink} className="w-full h-12 rounded-2xl bg-orange-100 text-foreground font-semibold text-sm mt-4 active:scale-[0.98] transition-transform">{t("share.invite")}</button>
             </div>
           </div>
         )}
@@ -2669,15 +2666,15 @@ const ReviewSummary = () => {
                 <div className="px-5 pb-5">
                   {/* Opis ogolny trasy (review_narrative, autosave) */}
                   <div className="pb-6">
-                    <h2 className="font-display text-xl font-bold text-foreground tracking-tight mb-1">Opis trasy</h2>
-                    <p className="text-[13px] text-muted-foreground mb-3">Ogólny opis Twojej trasy: dla kogo, na jaką okazję, co ją wyróżnia</p>
+                    <h2 className="font-display text-xl font-bold text-foreground tracking-tight mb-1">{t("description.title")}</h2>
+                    <p className="text-[13px] text-muted-foreground mb-3">{t("description.hint")}</p>
                     <div className="relative">
                       <textarea
                         value={suggestion}
                         onChange={(e) => { setSuggestion(e.target.value); saveSuggestion(e.target.value); }}
                         onFocus={() => setNoteFocused(true)}
                         onBlur={() => setNoteFocused(false)}
-                        placeholder="Opisz swoją trasę: dla kogo, na jaką okazję, co warto zobaczyć..."
+                        placeholder={t("description.placeholder")}
                         rows={5}
                         className="w-full bg-secondary/60 rounded-2xl px-4 py-3 text-sm text-foreground resize-none focus:outline-none border border-border/30 placeholder:text-muted-foreground/55"
                       />
@@ -2725,8 +2722,8 @@ const ReviewSummary = () => {
 
               {step === 3 && (
                 <div className="pb-5">
-                  <p className="px-5 font-display text-xl font-bold text-foreground tracking-tight mb-1">Zdjęcia z wyjazdu</p>
-                  <p className="px-5 text-[13px] text-muted-foreground mb-3 leading-relaxed">Dodaj zdjęcia z całej podróży</p>
+                  <p className="px-5 font-display text-xl font-bold text-foreground tracking-tight mb-1">{t("gallery.title")}</p>
+                  <p className="px-5 text-[13px] text-muted-foreground mb-3 leading-relaxed">{t("gallery.hint")}</p>
                   {renderGallery(true)}
                   {renderPinPhotoSection()}
                   {/* Sekcja "Podziel sie trasa" usunieta (2026-07-29): trasy sa domyslnie publiczne,
@@ -2770,13 +2767,12 @@ const ReviewSummary = () => {
                           onClick={() => { setEditingStepper(true); setStep(2); }}
                           className="w-full mb-4 py-3 rounded-2xl bg-secondary text-secondary-foreground font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
                         >
-                          <Pencil className="h-4 w-4" /> Edytuj trasę
-                        </button>
+                          <Pencil className="h-4 w-4" />{t("cta.edit_trip")}</button>
                       )}
                       {/* Opis trasy (read) */}
                       {suggestion?.trim() && (
                         <div className="mb-5">
-                          <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">Opis trasy</p>
+                          <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">{t("description.title")}</p>
                           <p className="text-sm text-foreground/80 leading-relaxed whitespace-pre-wrap">{suggestion}</p>
                         </div>
                       )}
@@ -2960,7 +2956,7 @@ const ReviewSummary = () => {
         </div>
       )}
 
-      {/* Arkusz "Zdjęcia do miejsca" + fullscreen viewer (wspólne dla widoku planu i kroku Galeria). */}
+      {/* Arkusz t("photo.for_place") + fullscreen viewer (wspólne dla widoku planu i kroku Galeria). */}
       {renderPinPickerSheet()}
       {renderPhotoViewer()}
       {renderFinishConfirm()}
@@ -2996,9 +2992,7 @@ const ReviewSummary = () => {
               <button
                 onClick={() => { haptics.light(); setStep(3); }}
                 className="flex-1 py-3.5 rounded-2xl bg-primary text-white font-bold text-base active:scale-[0.98] transition-transform"
-              >
-                Przejdź do Galerii
-              </button>
+              >{t("gallery.go")}</button>
             ) : (
               <button
                 onClick={finishEditing}
@@ -3018,10 +3012,9 @@ const ReviewSummary = () => {
             {savingPlan ? t("status.saving") : t("cta.save_changes")}
           </button>
         ) : !isMemory ? (
-          /* Robocza trasa (podsumowanie) -> SWIADOMA publikacja "Zakończ wyjazd". */
+          /* Robocza trasa (podsumowanie) -> SWIADOMA publikacja t("cta.finish_trip"). */
           <button onClick={() => { haptics.light(); setConfirmFinishOpen(true); }} disabled={finishing} className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-base flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-40">
-            <Flag className="h-4 w-4" /> Zakończ wyjazd
-          </button>
+            <Flag className="h-4 w-4" />{t("cta.finish_trip")}</button>
         ) : (
           <button onClick={() => navigate("/moj-profil?tab=wyjazdy")} className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-base active:scale-[0.98] transition-transform">
             {t("cta.done")}
