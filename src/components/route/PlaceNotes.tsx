@@ -16,25 +16,45 @@ export default function PlaceNotes({ notes, excludeUserId, className }: {
   if (!shown.length) return null;
   return (
     <div className={`space-y-3 ${className ?? ""}`}>
-      {shown.map((n) => (
-        <div key={`${n.user_id}-${n.place_name}`} className="relative bg-muted/50 rounded-2xl px-3.5 py-2.5">
-          {/* Werdykt autora ("Musisz odwiedzić!" itd.) - kazdy uczestnik ma swoj, wiec stoi przy
-              JEGO notce, a nie przy miejscu. Sam werdykt, bez notki, tez jest wypowiedzia. */}
-          {n.verdict && (
-            <span className="inline-flex items-center rounded-full bg-[#FDF184] border border-[#FDCD84] px-2.5 py-1 text-[12px] font-semibold text-foreground mb-1.5">
-              {localizeTag(n.verdict)}
-            </span>
-          )}
-          {n.note && <p className="text-[13.5px] text-foreground/85 leading-snug whitespace-pre-wrap break-words">{n.note}</p>}
-          {/* Awatar autora w prawym-dolnym rogu dymka (biala obwodka = odklejony od tla). */}
+      {shown.map((n) => {
+        // Sam werdykt, bez napisanej notki, NIE jest notka - wiec nie dostaje szarego dymka
+        // (prosba Nat 2026-09-06). Zostaje sama pigulka z awatarem obok, wiec od razu widac,
+        // ze ktos kliknal ocene, a nie ze napisal pusta wiadomosc.
+        const verdictOnly = !!n.verdict && !n.note;
+        const avatar = (
           <img
             src={avatarSrc(n.avatar_url)}
             alt={n.username ?? ""}
             title={n.username ?? undefined}
-            className="absolute -bottom-1.5 -right-1.5 h-6 w-6 rounded-full object-cover border-2 border-white shadow-sm bg-secondary"
+            className={verdictOnly
+              ? "h-6 w-6 rounded-full object-cover border-2 border-white shadow-sm bg-secondary shrink-0"
+              : "absolute -bottom-1.5 -right-1.5 h-6 w-6 rounded-full object-cover border-2 border-white shadow-sm bg-secondary"}
           />
-        </div>
-      ))}
+        );
+        const verdictPill = n.verdict && (
+          <span className="inline-flex items-center rounded-full bg-[#FDF184] border border-[#FDCD84] px-2.5 py-1 text-[12px] font-semibold text-foreground">
+            {localizeTag(n.verdict)}
+          </span>
+        );
+        if (verdictOnly) {
+          return (
+            <div key={`${n.user_id}-${n.place_name}`} className="flex items-center gap-2">
+              {verdictPill}
+              {avatar}
+            </div>
+          );
+        }
+        return (
+          <div key={`${n.user_id}-${n.place_name}`} className="relative bg-muted/50 rounded-2xl px-3.5 py-2.5">
+            {/* Werdykt autora ("Musisz odwiedzic!" itd.) - kazdy uczestnik ma swoj, wiec stoi przy
+                JEGO notce, a nie przy miejscu. */}
+            {n.verdict && <div className="mb-1.5">{verdictPill}</div>}
+            {n.note && <p className="text-[13.5px] text-foreground/85 leading-snug whitespace-pre-wrap break-words">{n.note}</p>}
+            {/* Awatar autora w prawym-dolnym rogu dymka (biala obwodka = odklejony od tla). */}
+            {avatar}
+          </div>
+        );
+      })}
     </div>
   );
 }

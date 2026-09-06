@@ -68,7 +68,13 @@
   },
   "city": {
     "desc": "Tell us your city - we will suggest trips close to you.",
-    "title": "Where do you live?"
+    "title": "Where do you live?",
+    "country_label": "Country",
+    "city_label": "City",
+    "country_placeholder": "Pick a country",
+    "city_hint": "Pick a country to see its cities",
+    "city_manual_placeholder": "Type a city",
+    "not_listed": "City not on the list? Type it below."
   },
   "photo": {
     "desc": "Optional - but trips with a photo feel more trustworthy.",
@@ -117,7 +123,8 @@
     "skip": "Skip"
   },
   "welcome": {
-    "title": "Hi! This is spontaway"
+    "title": "Hi! This is spontaway",
+    "body": "The best memories start with a recommendation. Discover trips created by other people, save the ones that inspire you and build your own. We will show you around in a few seconds."
   },
   "terms": {
     "consent": "I accept the <terms>terms of service</terms> and the <privacy>privacy policy</privacy>. I will not post content that is abusive or violates other people's rights."

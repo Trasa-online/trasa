@@ -11,6 +11,7 @@ import { isNative } from "@/lib/platform";
 import { requestAndRegisterNativePush } from "@/hooks/useNativePush";
 import { requestLocation } from "@/hooks/useGeolocation";
 import { grantConsent, denyConsent } from "@/lib/consent";
+import { TRIP_COUNTRIES, citiesForCountry, countryForCity } from "@/lib/tripCountries";
 import TrasaLogo from "@/components/TrasaLogo";
 import { CategoryIcon } from "@/components/CategoryIcon";
 import { cn } from "@/lib/utils";
@@ -87,6 +88,7 @@ const OnboardingFlow = ({ onDone }: Props) => {
   // Profil
   const [firstName, setFirstName] = useState("");
   const [homeCity, setHomeCity] = useState("");
+  const [homeCountry, setHomeCountry] = useState("");
   const [username, setUsername] = useState("");
   const [uStatus, setUStatus] = useState<UStatus>("idle");
   const [savingU, setSavingU] = useState(false);
@@ -95,7 +97,10 @@ const OnboardingFlow = ({ onDone }: Props) => {
   const [finishing, setFinishing] = useState(false);
   const [permBusy, setPermBusy] = useState(false);
   // Gdy pole "Inne" (input) jest w fokusie -> chowamy guzik t("cta.next") (nie zaslania klawiatury).
-  const [otherFocused, setOtherFocused] = useState(false);
+  // Guzik CTA chowamy, gdy kursor stoi w JAKIMKOLWIEK polu tekstowym - klawiatura podnosi
+  // uklad i guzik ladowal na polu, ktore user wlasnie wypelnia (zgloszenie Nat 2026-09-06).
+  const [inputFocused, setInputFocused] = useState(false);
+  const focusProps = { onFocus: () => setInputFocused(true), onBlur: () => setInputFocused(false) };
   const fileRef = useRef<HTMLInputElement>(null);
 
   // Prefill z profilu (OAuth nadaje wstepny username/avatar/first_name).
@@ -105,13 +110,21 @@ const OnboardingFlow = ({ onDone }: Props) => {
     supabase.from("profiles").select("username, avatar_url, first_name").eq("id", user.id).maybeSingle()
       .then(({ data }) => {
         if (cancelled || !data) return;
-        if ((data as any).username) setUsername(sanitizeUsername((data as any).username));
+        // Nazwy uzytkownika CELOWO nie podstawiamy z profilu (prosba Nat 2026-09-06):
+        // OAuth wstawia tam automat typu "user_3f2a1b" albo adres maila, a user i tak
+        // musi ja swiadomie wybrac - pole ma byc puste, nie do wyczyszczenia.
         if ((data as any).avatar_url) setAvatarUrl((data as any).avatar_url);
         if ((data as any).first_name) setFirstName((data as any).first_name);
       });
     // home_city osobno (best-effort - kolumna moze wymagac migracji, nie psuj prefilla).
     (supabase as any).from("profiles").select("home_city").eq("id", user.id).maybeSingle()
-      .then(({ data }: any) => { if (!cancelled && data?.home_city) setHomeCity(data.home_city); })
+      .then(({ data }: any) => {
+        if (cancelled || !data?.home_city) return;
+        setHomeCity(data.home_city);
+        // Kraj wyliczamy z miasta, inaczej lista miast bylaby pusta mimo wypelnionego profilu.
+        const c = countryForCity(data.home_city);
+        if (c) setHomeCountry(c);
+      })
       .catch(() => {});
     return () => { cancelled = true; };
   }, [user]);
@@ -319,7 +332,7 @@ const OnboardingFlow = ({ onDone }: Props) => {
             <TrasaLogo size={84} className="mb-6" />
             <h2 className="text-2xl font-black mb-3 leading-tight">{nbsp(t("welcome.title"))}</h2>
             <p className="text-[15px] text-muted-foreground leading-relaxed max-w-xs">
-              {nbsp("speed dating z miastem. Odkrywaj trasy po mieście stworzone przez innych, zapisuj te które Cię inspirują i twórz własne. Pokażemy Ci to w kilka sekund.")}
+              {nbsp(t("welcome.body"))}
             </p>
             {/* Akceptacja regulaminu - wymog App Store (Guideline 1.2) przy tresciach userow. */}
             <button
@@ -363,8 +376,7 @@ const OnboardingFlow = ({ onDone }: Props) => {
                         autoFocus
                         value={sourceOther}
                         onChange={(e) => setSourceOther(capWords(e.target.value, 10))}
-                        onFocus={() => setOtherFocused(true)}
-                        onBlur={() => setOtherFocused(false)}
+                        {...focusProps}
                         placeholder={t("source.other_placeholder")}
                         className="flex-1 bg-transparent text-[15px] font-semibold outline-none placeholder:font-normal placeholder:text-muted-foreground/50"
                       />
@@ -405,8 +417,7 @@ const OnboardingFlow = ({ onDone }: Props) => {
                         autoFocus
                         value={goalsOther}
                         onChange={(e) => setGoalsOther(capWords(e.target.value, 10))}
-                        onFocus={() => setOtherFocused(true)}
-                        onBlur={() => setOtherFocused(false)}
+                        {...focusProps}
                         placeholder={t("goals.other_placeholder")}
                         className="flex-1 bg-transparent text-[15px] font-semibold outline-none placeholder:font-normal placeholder:text-muted-foreground/50"
                       />
@@ -443,6 +454,7 @@ const OnboardingFlow = ({ onDone }: Props) => {
                 <div className="rounded-2xl border border-border bg-white px-4 focus-within:ring-2 focus-within:ring-orange-500/60 transition-shadow">
                   <input
                     value={firstName}
+                    {...focusProps}
                     onChange={(e) => setFirstName(e.target.value.slice(0, 40))}
                     autoCapitalize="words"
                     autoCorrect="off"
@@ -460,6 +472,7 @@ const OnboardingFlow = ({ onDone }: Props) => {
                   <span className="text-muted-foreground text-lg select-none">@</span>
                   <input
                     value={username}
+                    {...focusProps}
                     onChange={(e) => setUsername(sanitizeUsername(e.target.value))}
                     autoCapitalize="none"
                     autoCorrect="off"
@@ -507,17 +520,62 @@ const OnboardingFlow = ({ onDone }: Props) => {
               <h2 className="text-2xl font-black mb-2 leading-tight">{nbsp(t("city.title"))}</h2>
               <p className="text-[15px] text-muted-foreground leading-relaxed">{nbsp(t("city.desc"))}</p>
             </div>
-            <div className="mt-8">
-              <label className="block text-sm font-semibold mb-2 px-1">Miasto</label>
-              <div className="rounded-2xl border border-border bg-white px-4 focus-within:ring-2 focus-within:ring-orange-500/60 transition-shadow">
-                <input
-                  value={homeCity}
-                  onChange={(e) => setHomeCity(e.target.value.slice(0, 60))}
-                  autoCapitalize="words"
-                  autoCorrect="off"
-                  placeholder="np. Warszawa"
-                  className="w-full bg-transparent py-3.5 px-1 text-lg outline-none text-foreground placeholder:text-muted-foreground/50"
-                />
+            {/* Kraj -> miasta z listy (prosba Nat 2026-09-06). Wolne pole zostawialo literowki
+                i warianty ("wawa", "Warszawa "), przez ktore podpowiadanie tras po miescie
+                nie mialo sie z czym zgodzic. Lista miast jest skrocona, wiec zostaje tez
+                mozliwosc wpisania recznie. */}
+            <div className="mt-8 space-y-5">
+              <div>
+                <label className="block text-sm font-semibold mb-2 px-1">{t("city.country_label")}</label>
+                <div className="rounded-2xl border border-border bg-white px-4 focus-within:ring-2 focus-within:ring-orange-500/60 transition-shadow">
+                  <select
+                    value={homeCountry}
+                    onChange={(e) => { setHomeCountry(e.target.value); setHomeCity(""); }}
+                    className="w-full bg-transparent py-3.5 px-1 text-lg outline-none text-foreground appearance-none"
+                  >
+                    <option value="">{t("city.country_placeholder")}</option>
+                    {TRIP_COUNTRIES.map((c) => (
+                      <option key={c.name} value={c.name}>{c.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold mb-2 px-1">{t("city.city_label")}</label>
+                {!homeCountry ? (
+                  <p className="px-1 text-sm text-muted-foreground">{t("city.city_hint")}</p>
+                ) : (
+                  <>
+                    <div className="flex flex-wrap gap-2">
+                      {citiesForCountry(homeCountry).map((c) => {
+                        const on = homeCity === c;
+                        return (
+                          <button
+                            key={c}
+                            type="button"
+                            onClick={() => setHomeCity(on ? "" : c)}
+                            className={`px-3.5 py-2 rounded-full text-sm font-semibold border transition-colors active:scale-[0.97] ${
+                              on ? "bg-orange-50 border-orange-300 text-orange-700" : "bg-white text-foreground border-border"}`}
+                          >
+                            {c}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <p className="mt-4 px-1 text-xs text-muted-foreground">{t("city.not_listed")}</p>
+                    <div className="mt-2 rounded-2xl border border-border bg-white px-4 focus-within:ring-2 focus-within:ring-orange-500/60 transition-shadow">
+                      <input
+                        value={citiesForCountry(homeCountry).includes(homeCity) ? "" : homeCity}
+                        {...focusProps}
+                        onChange={(e) => setHomeCity(e.target.value.slice(0, 60))}
+                        autoCapitalize="words"
+                        autoCorrect="off"
+                        placeholder={t("city.city_manual_placeholder")}
+                        className="w-full bg-transparent py-3.5 px-1 text-lg outline-none text-foreground placeholder:text-muted-foreground/50"
+                      />
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           </>
@@ -572,7 +630,7 @@ const OnboardingFlow = ({ onDone }: Props) => {
       </div>
 
       {/* CTA - solidny pomaranczowy guzik (bez gradientu). Chowany gdy input "Inne" w fokusie. */}
-      {!otherFocused && (
+      {!inputFocused && (
       <div className="px-6 pt-4" style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 1.5rem)" }}>
         <button
           onClick={onPrimary}

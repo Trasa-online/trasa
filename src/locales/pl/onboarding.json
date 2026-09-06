@@ -68,7 +68,13 @@
   },
   "city": {
     "desc": "Podaj swoje miasto - pomoże nam podpowiadać trasy blisko Ciebie.",
-    "title": "Gdzie mieszkasz?"
+    "title": "Gdzie mieszkasz?",
+    "country_label": "Kraj",
+    "city_label": "Miasto",
+    "country_placeholder": "Wybierz kraj",
+    "city_hint": "Wybierz kraj, żeby zobaczyć miasta",
+    "city_manual_placeholder": "Wpisz miasto",
+    "not_listed": "Innego miasta nie ma na liście? Wpisz je poniżej."
   },
   "photo": {
     "desc": "Nieobowiązkowe - ale trasy z awatarem budzą więcej zaufania.",
@@ -117,7 +123,8 @@
     "skip": "Pomiń"
   },
   "welcome": {
-    "title": "Cześć! Tu spontaway"
+    "title": "Cześć! Tu spontaway",
+    "body": "Najlepsze wspomnienia zaczynają się od polecenia. Odkrywaj trasy po mieście stworzone przez innych, zapisuj te które Cię inspirują i twórz własne. Pokażemy Ci to w kilka sekund."
   },
   "terms": {
     "consent": "Akceptuję <terms>regulamin</terms> i <privacy>politykę prywatności</privacy>. Zobowiązuję się nie publikować treści obraźliwych ani naruszających prawa innych osób."
