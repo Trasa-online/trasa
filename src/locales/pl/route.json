@@ -144,7 +144,8 @@
     "placeholder": "Napisz wiadomość...",
     "send": "Wyślij",
     "title": "Czat wyjazdu",
-    "title_named": "Czat: {{title}}"
+    "title_named": "Czat: {{title}}",
+    "participant": "Uczestnik"
   },
   "row": {
     "saved_in_list": "Miejsce zapisane w liście",

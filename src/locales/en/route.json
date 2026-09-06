@@ -140,7 +140,8 @@
     "placeholder": "Write a message...",
     "send": "Send",
     "title": "Trip chat",
-    "title_named": "Chat: {{title}}"
+    "title_named": "Chat: {{title}}",
+    "participant": "Participant"
   },
   "row": {
     "saved_in_list": "Place saved in a list",

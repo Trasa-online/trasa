@@ -114,14 +114,13 @@ export default function TripChatSheet({ open, onOpenChange, routeId, tripTitle, 
           {messages.length === 0 ? (
             <p className="text-center text-sm text-muted-foreground py-10">{t("chat.empty")}</p>
           ) : messages.map((m) => {
-  const { t } = useTranslation("route");
             const mine = m.user_id === user?.id;
             return (
               <div key={m.id} className={`flex items-end gap-2 ${mine ? "flex-row-reverse" : ""}`}>
                 {/* Awatar autora - przy KAZDEJ wiadomosci (tez wlasnej). */}
                 <img src={avatarSrc(m.avatar_url)} alt="" className="h-7 w-7 rounded-full object-cover bg-secondary shrink-0" />
                 <div className="max-w-[70%] min-w-0">
-                  {!mine && <p className="text-[11px] font-semibold text-muted-foreground mb-0.5 px-1">{m.username || "Uczestnik"}</p>}
+                  {!mine && <p className="text-[11px] font-semibold text-muted-foreground mb-0.5 px-1">{m.username || t("chat.participant")}</p>}
                   <div className={`rounded-2xl px-3.5 py-2 ${mine ? "bg-primary text-white rounded-br-md" : "bg-secondary text-foreground rounded-bl-md"}`}>
                     <p className="text-[14px] leading-snug whitespace-pre-wrap break-words">{m.text}</p>
                   </div>

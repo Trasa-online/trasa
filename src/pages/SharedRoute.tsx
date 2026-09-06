@@ -247,7 +247,6 @@ export default function SharedRoute() {
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
   // Czy uzytkownik sam wybral dzien - blokuje pozniejsze auto-ustawienie dnia domyslnego.
   const [dayTouched, setDayTouched] = useState(false);
-  const [chatHidden, setChatHidden] = useState(false); // dymek czatu schowany do krawedzi (swipe w bok)
   const [collapsedCats, setCollapsedCats] = useState<Set<string>>(new Set()); // zwiniete grupy kategorii
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
   const photoInputRef = useRef<HTMLInputElement>(null);
@@ -1925,25 +1924,18 @@ export default function SharedRoute() {
       {/* Dymek CZATU wyjazdu (prawa strona, nad dolnym CTA) - uczestnicy (owner/czlonek) przegaduja
           miejsca. Realtime. Ukryty w trybie wyboru miejsc. Prosba Nat 2026-08-26. */}
       {canEdit && id && !choosing && !noteEditing && (
-        // Dymek czatu - PRZESUWALNY: swipe w prawo chowa go do krawedzi (zostaje sliver), tap/przeciagniecie
-        // w lewo go wyciaga. Tap na widocznym otwiera czat. (prosba Nat 2026-08-26).
-        <motion.button aria-label={chatHidden ? t("aria.show_chat") : t("chat.title")}
-          drag="x"
-          dragConstraints={{ left: 0, right: 50 }}
-          dragElastic={0.08}
-          dragMomentum={false}
-          animate={{ x: chatHidden ? 50 : 0, opacity: chatHidden ? 0.92 : 1 }}
-          transition={{ type: "spring", stiffness: 420, damping: 34 }}
-          onDragEnd={(_e, info) => { if (info.offset.x > 28) setChatHidden(true); else if (info.offset.x < -28) setChatHidden(false); }}
-          onTap={() => { if (chatHidden) setChatHidden(false); else setChatOpen(true); }}
-          className="fixed right-4 z-40 h-14 w-14 rounded-full bg-background text-foreground border border-border shadow-lg shadow-black/10 flex items-center justify-center touch-none"
+        // Dymek czatu stoi w miejscu. Chowanie go swipem do krawedzi USUNIETE (prosba Nat
+        // 2026-09-07, cofa 2026-08-26): dawalo sie schowac przypadkiem przy scrollu i potem
+        // nie bylo wiadomo, gdzie sie podzial czat - a to jedyne wejscie do rozmowy.
+        <button aria-label={t("chat.title")}
+          onClick={() => setChatOpen(true)}
+          className="fixed right-4 z-40 h-14 w-14 rounded-full bg-background text-foreground border border-border shadow-lg shadow-black/10 flex items-center justify-center active:scale-90 transition-transform"
           style={{ bottom: "calc(152px + env(safe-area-inset-bottom, 0px))" }}>
           <MessageCircle className="h-6 w-6" strokeWidth={2.2} />
-          {/* Licznik nieprzeczytanych - top-LEFT, zeby byl widoczny tez gdy dymek schowany do krawedzi. */}
           {unreadChat > 0 && (
             <span className="absolute -top-1 -left-1 min-w-[20px] h-5 px-1.5 rounded-full bg-red-500 text-white text-[11px] font-bold flex items-center justify-center border-2 border-white leading-none">{unreadChat > 9 ? "9+" : unreadChat}</span>
           )}
-        </motion.button>
+        </button>
       )}
       {/* t("add_place") jako plywajacy guzik BEZPOSREDNIO POD czatem (prosba Nat 2026-08-30).
           Dostepny takze w trybie zmiany kolejnosci (prosba Nat 2026-08-30) - chowamy tylko przy

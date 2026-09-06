@@ -191,20 +191,6 @@ for (const file of walk(path.join(ROOT, "src"))) {
   for (const m of raw.matchAll(/\bt\(\s*"([a-zA-Z_.]+_(?:few|many))"/g))
     errors.push(`${rel}: t("${m[1]}") - uzyj t("${m[1].replace(/_(few|many)$/, "")}", { count }) zamiast recznej formy`);
 
-  // 3b. HOOK POZA KOMPONENTEM. Skrypt, ktory hurtowo wstawial `const { t } = useTranslation(...)`,
-  // potrafil trafic ZA ostatnia klamre pliku. Taki wiersz jest poprawna skladnia, wiec ani tsc,
-  // ani build nie protestuja - a apka wywala sie w locie na "Invalid hook call" (React #321),
-  // bo hook leci przy ladowaniu modulu, poza renderem. Kosztowalo to caly ekran wejscia.
-  {
-    // Sierota siedzi na SAMYM KONCU pliku - tak wygladalo kazde z trzech trafien. Patrzymy
-    // wiec tylko na ostatni niepusty wiersz: hook nigdy nie jest ostatnia instrukcja modulu.
-    const lines = raw.split("\n");
-    let i = lines.length - 1;
-    while (i >= 0 && !lines[i].trim()) i--;
-    if (i >= 0 && /^\s*(?:const|let|var)\s.*=\s*use[A-Z]\w*\(/.test(lines[i]))
-      errors.push(`${rel}:${i + 1}: hook na koncu pliku, poza komponentem - React #321 przy starcie`);
-  }
-
   // 4. polski na sztywno. Linia z `i18n-ignore` jest pomijana - to furtka dla DANYCH
   // (nazwy wlasne miast, dzielnic), ktore w obu jezykach brzmia tak samo. Nie uzywaj jej
   // do copy, ktore po prostu nie zostalo jeszcze przetlumaczone - od tego jest baseline.

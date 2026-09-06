@@ -58,7 +58,6 @@ const GuestWelcomeSheet = () => {
   };
 
   const handleSignUp = () => {
-  const { t } = useTranslation("auth");
     persistDismiss();
     setOpen(false);
     openAuthDrawer({ mode: "register" });

@@ -113,7 +113,7 @@ export default function StartWyjazd() {
     : list;
 
   // Wybor bazy: dociagnij miejsca tej trasy -> ComposeWyjazd z prefill.
-  const useAsBase = async (route: ChooserRoute) => {
+  const startFromRoute = async (route: ChooserRoute) => {
     if (loadingId) return;
     haptics.light();
     setLoadingId(route.id);
@@ -207,7 +207,7 @@ export default function StartWyjazd() {
         ) : (
           shown.map((r) => (
             <div key={r.id} className="relative w-full flex gap-3.5 p-2.5 rounded-3xl bg-card border border-border/50">
-              <button onClick={() => useAsBase(r)} className="flex gap-3.5 flex-1 min-w-0 text-left active:opacity-90 transition-opacity">
+              <button onClick={() => startFromRoute(r)} className="flex gap-3.5 flex-1 min-w-0 text-left active:opacity-90 transition-opacity">
                 <div className="relative w-[104px] aspect-[9/16] shrink-0 rounded-2xl overflow-hidden bg-muted">
                   <img
                     src={r.cover ?? getRandomPinPlaceholder(r.id)}
