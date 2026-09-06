@@ -9,6 +9,14 @@
       "destination": "/api/share?t=list&id=:id"
     },
     {
+      "source": "/en",
+      "destination": "/en.html"
+    },
+    {
+      "source": "/en/",
+      "destination": "/en.html"
+    },
+    {
       "source": "/(.*)",
       "destination": "/app.html"
     }

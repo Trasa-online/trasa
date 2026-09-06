@@ -629,11 +629,30 @@ function FooterBar({ c, lang, onSwitchLang }: { c: Copy; lang: Lang; onSwitchLan
 //   2. wybor zapamietany w tej przegladarce (przelacznik w stopce),
 //   3. jezyk przegladarki - bez tego kazdy odwiedzajacy z zagranicy widzial polska strone.
 const LANG_KEY = "spontaway_landing_lang";
+// Sciezka /en to OSOBNY adres dla Google (wlasna migawka + hreflang, patrz
+// scripts/inject-landing-snapshot.mjs). Aplikacja stoi na HashRouterze, wiec pathname
+// jest wolny i mozemy go uzyc jako sygnalu jezyka bez kolizji z routingiem.
+const EN_PATH = "/en";
+const pathLang = (): Lang | null =>
+  (typeof window !== "undefined" && window.location.pathname.replace(/\/+$/, "") === EN_PATH) ? "en" : null;
+
+// UWAGA: aplikacja stoi na HashRouterze, wiec useSearchParams czyta query string Z HASHA,
+// a nie z prawdziwego adresu. Link z kampanii ma postac spontaway.com/?lang=en, wiec musimy
+// zajrzec takze do window.location.search - inaczej parametr jest po cichu ignorowany.
+const queryLang = (): Lang | null => {
+  if (typeof window === "undefined") return null;
+  const v = new URLSearchParams(window.location.search).get("lang");
+  return v === "en" || v === "pl" ? v : null;
+};
+
 function detectLang(param: string | null): Lang {
-  if (param === "en" || param === "pl") return param;
+  const explicit = param === "en" || param === "pl" ? param : queryLang();
+  if (explicit) return explicit;                        // ?lang= - jawny wybor z linku
+  const fromPath = pathLang();
+  if (fromPath) return fromPath;                        // /en - wejscie z wynikow wyszukiwania
   try {
     const saved = localStorage.getItem(LANG_KEY);
-    if (saved === "en" || saved === "pl") return saved;
+    if (saved === "en" || saved === "pl") return saved; // wybor zapamietany w przegladarce
   } catch { /* prywatne okno */ }
   const nav = typeof navigator !== "undefined" ? (navigator.language || "") : "";
   return nav.toLowerCase().startsWith("pl") ? "pl" : "en";
@@ -647,6 +666,12 @@ export default function SpontawayLanding() {
   const switchLang = useCallback((next: Lang) => {
     setLang(next);
     try { localStorage.setItem(LANG_KEY, next); } catch { /* prywatne okno */ }
+    // Adres ma zgadzac sie z tresci: skopiowany link musi otworzyc ten sam jezyk, a Google
+    // ma dwa osobne adresy do zaindeksowania. replaceState, bo HashRouter nie patrzy na
+    // pathname - nie ma tu czego przeladowywac.
+    try {
+      window.history.replaceState(null, "", (next === "en" ? EN_PATH : "/") + window.location.hash);
+    } catch { /* srodowisko bez History API */ }
     posthog.capture("landing_language_switched", { lang: next });
   }, []);
   const [modalOpen, setModalOpen] = useState(false);

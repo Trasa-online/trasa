@@ -29,8 +29,11 @@ const ROOT = process.cwd();
 // do app.html, na ktora przepisujemy cala reszte tras.
 const INDEX = resolve(ROOT, "dist/index.html");
 const SHELL = resolve(ROOT, "dist/app.html");
+const EN = resolve(ROOT, "dist/en.html");
 const SNAP_HTML = resolve(ROOT, "prerender/landing.snapshot.html");
 const SNAP_META = resolve(ROOT, "prerender/landing.snapshot.json");
+const SNAP_HTML_EN = resolve(ROOT, "prerender/landing.en.snapshot.html");
+const SNAP_META_EN = resolve(ROOT, "prerender/landing.en.snapshot.json");
 const SOURCE = resolve(ROOT, "src/pages/SpontawayLanding.tsx");
 
 function fallback(reason) {
@@ -46,14 +49,24 @@ if (!existsSync(SNAP_HTML)) fallback("brak prerender/landing.snapshot.html");
 
 const markup = readFileSync(SNAP_HTML, "utf8");
 const meta = existsSync(SNAP_META) ? JSON.parse(readFileSync(SNAP_META, "utf8")) : {};
+// Migawka EN jest opcjonalna: gdy jej nie ma (stare prerender/), "/" dziala jak dotad,
+// a /en po prostu nie powstaje. Wdrozenie nie moze sie o to wywrocic.
+const hasEn = existsSync(SNAP_HTML_EN);
+const markupEn = hasEn ? readFileSync(SNAP_HTML_EN, "utf8") : null;
+const metaEn = hasEn && existsSync(SNAP_META_EN) ? JSON.parse(readFileSync(SNAP_META_EN, "utf8")) : {};
 
 // Migawka jest zdjeciem z momentu jej wygenerowania. Gdy landing sie zmienil, a nikt jej nie
 // odswiezyl, robot dostawalby STARA tresc - wiec krzyczymy glosno, ale nie blokujemy builda.
 if (meta.sourceHash && existsSync(SOURCE)) {
   const current = createHash("sha256").update(readFileSync(SOURCE)).digest("hex").slice(0, 16);
-  if (current !== meta.sourceHash) {
+  const stale = [
+    current !== meta.sourceHash ? "PL" : null,
+    hasEn && current !== metaEn.sourceHash ? "EN" : null,
+    !hasEn ? "EN (brak migawki)" : null,
+  ].filter(Boolean);
+  if (stale.length) {
     console.warn("┌────────────────────────────────────────────────────────────────┐");
-    console.warn("│ UWAGA: landing zmienil sie od czasu wygenerowania migawki.      │");
+    console.warn(`│ UWAGA: migawka nieaktualna (${stale.join(", ").padEnd(33)})│`);
     console.warn("│ Robot dostanie STARA tresc. Odswiez ja przez:                   │");
     console.warn("│   npm run build && npm run prerender:snapshot                   │");
     console.warn("│ i zacommituj katalog prerender/.                                │");
@@ -61,18 +74,42 @@ if (meta.sourceHash && existsSync(SOURCE)) {
   }
 }
 
-let html = readFileSync(INDEX, "utf8");
-const rootTag = html.match(/<div id="root">\s*<\/div>/);
+const base = readFileSync(INDEX, "utf8");
+const rootTag = base.match(/<div id="root">\s*<\/div>/);
 if (!rootTag) fallback("nie znalazlem pustego <div id=\"root\"> w index.html");
 
-// Powloka aplikacji (bez prerenderu) ida pod app.html - tam kieruje przepisanie
-// wszystkich tras poza "/".
+// Powloka aplikacji (bez prerenderu) idzie pod app.html - tam kieruje przepisanie
+// wszystkich tras poza "/" i "/en".
 copyFileSync(INDEX, SHELL);
 
-html = html.replace(rootTag[0], `<div id="root">${markup}</div>`);
-// Tytul landingu jest inny niz tytul powloki aplikacji - podmieniamy go tylko tutaj.
-if (meta.title) html = html.replace(/<title>[\s\S]*?<\/title>/, `<title>${meta.title}</title>`);
+// Google musi wiedziec, ze to sa dwie wersje jezykowe TEJ SAMEJ strony, a nie duplikaty -
+// bez hreflang wybralby jedna i drugiej nie pokazywal.
+const ALTERNATES = [
+  '<link rel="alternate" hreflang="pl" href="https://spontaway.com/" />',
+  '<link rel="alternate" hreflang="en" href="https://spontaway.com/en" />',
+  '<link rel="x-default" hreflang="x-default" href="https://spontaway.com/" />',
+].join("\n    ");
 
-writeFileSync(INDEX, html, "utf8");
-const text = markup.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
-console.log(`[landing] dist/index.html = landing, dist/app.html = powloka aplikacji - ${(html.length / 1024).toFixed(1)} kB, ${text.length} znakow tresci dla robota`);
+function render(markupFor, metaFor, lang, canonical) {
+  let html = base.replace(rootTag[0], `<div id="root">${markupFor}</div>`);
+  if (metaFor.title) html = html.replace(/<title>[\s\S]*?<\/title>/, `<title>${metaFor.title}</title>`);
+  html = html.replace(/<html([^>]*)\slang="[^"]*"/, "<html$1").replace(/<html/, `<html lang="${lang}"`);
+  html = html.replace("</head>", `  <link rel="canonical" href="${canonical}" />\n    ${ALTERNATES}\n  </head>`);
+  return html;
+}
+
+const htmlPl = render(markup, meta, "pl", "https://spontaway.com/");
+writeFileSync(INDEX, htmlPl, "utf8");
+const textPl = markup.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+console.log(`[landing] dist/index.html = landing PL - ${(htmlPl.length / 1024).toFixed(1)} kB, ${textPl.length} znakow tresci dla robota`);
+
+if (markupEn) {
+  const htmlEn = render(markupEn, metaEn, "en", "https://spontaway.com/en");
+  writeFileSync(EN, htmlEn, "utf8");
+  const textEn = markupEn.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+  console.log(`[landing] dist/en.html = landing EN - ${(htmlEn.length / 1024).toFixed(1)} kB, ${textEn.length} znakow tresci dla robota`);
+} else {
+  console.warn("[landing] brak migawki EN - /en dostanie powloke aplikacji (odpal prerender:snapshot)");
+  copyFileSync(SHELL, EN);
+}
+console.log("[landing] dist/app.html = powloka aplikacji");
