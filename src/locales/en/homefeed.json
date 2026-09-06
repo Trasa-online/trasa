@@ -115,5 +115,13 @@
   "filters": {
     "show_label": "Show"
   },
-  "undo": "Undo"
+  "undo": "Undo",
+  "card": {
+    "show_map": "Show the trip map",
+    "collapse_map": "Collapse map",
+    "expand": "Expand",
+    "delete": "Delete",
+    "places_count_one": "{{count}} place",
+    "places_count_other": "{{count}} places"
+  }
 }

@@ -210,5 +210,16 @@
   "aria": {
     "delete_place": "Usuń miejsce"
   },
-  "collapse": "Zwiń"
+  "collapse": "Zwiń",
+  "expectation": {
+    "met": "Spełniło oczekiwania",
+    "below": "Poniżej oczekiwań",
+    "mixed": "Średnio"
+  },
+  "role": {
+    "must": "Punkt obowiązkowy",
+    "skippable": "Można pominąć",
+    "nice": "Fajny dodatek"
+  },
+  "just_now": "przed chwilą"
 }

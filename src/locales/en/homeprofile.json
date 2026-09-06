@@ -129,5 +129,14 @@
     "delete_place": "Delete place",
     "removed": "Removed “{{name}}”",
     "already": "“{{name}}” is already saved"
+  },
+  "add_saved": {
+    "goes_to_general": "It goes to your General list.",
+    "failed": "We could not add the place",
+    "clear": "Clear",
+    "change": "Change",
+    "already": "“{{name}}” is already on the list",
+    "add_term": "Add “{{term}}”",
+    "custom_in": "Your own entry in {{city}}"
   }
 }

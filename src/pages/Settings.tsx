@@ -18,6 +18,8 @@ import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
+// ErrorBoundary to komponent KLASOWY - hooki tam nie dzialaja, wiec siegamy po i18n wprost.
+import i18n from "@/i18n";
 import { isNative } from "@/lib/platform";
 import { Camera as CapCamera, CameraResultType, CameraSource } from "@capacitor/camera";
 
@@ -362,14 +364,15 @@ async function openExternal(url: string) {
 }
 
 function SocialContactSection() {
+  const { t } = useTranslation("settings");
   const rows = [
     { icon: Instagram, label: "Instagram", sub: "@spontaway", onClick: () => openExternal("https://instagram.com/spontaway") },
-    { icon: MessagesSquare, label: "Discord", sub: "Dołącz do serwera", onClick: () => openExternal("https://discord.gg/6nY6bYdYX") },
+    { icon: MessagesSquare, label: "Discord", sub: t("community.join"), onClick: () => openExternal("https://discord.gg/6nY6bYdYX") },
     { icon: Mail, label: "Napisz do nas", sub: "trasa.app@gmail.com", onClick: () => { window.location.href = "mailto:trasa.app@gmail.com"; } },
   ];
   return (
     <div className="space-y-2">
-      <h3 className="text-xs uppercase tracking-wide text-muted-foreground px-1 mb-1">Społeczność i kontakt</h3>
+      <h3 className="text-xs uppercase tracking-wide text-muted-foreground px-1 mb-1">{t("community.title")}</h3>
       {rows.map((r) => (
         <button
           key={r.label}
@@ -792,7 +795,7 @@ const Settings = () => {
               className="w-full flex items-center gap-3 px-4 py-3.5 bg-card rounded-2xl border border-border/40 hover:bg-muted transition-colors text-left"
             >
               <RotateCcw className="h-4 w-4 text-orange-600 flex-shrink-0" />
-              <span className="text-sm font-medium flex-1">Pokaż onboarding ponownie <span className="text-muted-foreground font-normal">(admin)</span></span>
+              <span className="text-sm font-medium flex-1">{t("show_onboarding")}<span className="text-muted-foreground font-normal">(admin)</span></span>
             </button>
             {/* Ekran startowy widac normalnie tylko przy ZIMNYM starcie, wiec zeby dalo sie go
                 obejrzec bez ubijania aplikacji - podglad na zadanie (prosba Nat 2026-09-01). */}
@@ -801,7 +804,7 @@ const Settings = () => {
               className="w-full flex items-center gap-3 px-4 py-3.5 bg-card rounded-2xl border border-border/40 hover:bg-muted transition-colors text-left"
             >
               <RotateCcw className="h-4 w-4 text-orange-600 flex-shrink-0" />
-              <span className="text-sm font-medium flex-1">Pokaż ekran startowy <span className="text-muted-foreground font-normal">(admin)</span></span>
+              <span className="text-sm font-medium flex-1">{t("show_splash")}<span className="text-muted-foreground font-normal">(admin)</span></span>
             </button>
           </div>
         )}
@@ -840,7 +843,7 @@ class SettingsErrorBoundary extends Component<
     if (this.state.error) {
       return (
         <div className="p-6 text-sm text-red-600 bg-red-50 m-4 rounded-2xl border border-red-200">
-          <p className="font-bold mb-2">Błąd renderowania Settings:</p>
+          <p className="font-bold mb-2">{i18n.t("render_error", { ns: "settings" })}</p>
           <pre className="whitespace-pre-wrap text-xs">{String(this.state.error)}</pre>
         </div>
       );

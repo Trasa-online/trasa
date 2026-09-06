@@ -155,5 +155,12 @@
     "profile": "Zgłoś profil",
     "list": "Zgłoś listę"
   },
-  "submit": "Zgłoś"
+  "submit": "Zgłoś",
+  "friends": {
+    "request_title": "Nowe zaproszenie do znajomych 👋",
+    "request_body": "{{name}} chce dodać Cię do znajomych",
+    "accept_title": "Masz nowego znajomego 🎉",
+    "accept_body": "{{name}} przyjął(a) Twoje zaproszenie",
+    "link_body": "{{name}} dołączył(a) do Ciebie przez link"
+  }
 }

@@ -152,5 +152,12 @@
     "profile": "Report profile",
     "list": "Report list"
   },
-  "submit": "Report"
+  "submit": "Report",
+  "friends": {
+    "request_title": "New friend request 👋",
+    "request_body": "{{name}} wants to add you as a friend",
+    "accept_title": "You have a new friend 🎉",
+    "accept_body": "{{name}} accepted your request",
+    "link_body": "{{name}} joined you through a link"
+  }
 }

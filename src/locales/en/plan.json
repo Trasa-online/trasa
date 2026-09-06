@@ -208,5 +208,14 @@
     "reading_link": "Reading the link…",
     "searching": "Looking for the place…",
     "found_not_located": "I found the name “{{name}}” but could not locate it. Please correct the name."
+  },
+  "start": {
+    "location_failed": "We could not get your location.",
+    "use_my_location": "Use my location",
+    "title": "Where do you want to start?",
+    "skip": "Skip",
+    "outside_pick": "That place is outside {{city}}. Pick something within the city.",
+    "outside_mark": "That place is outside {{city}}. Mark a point within the city.",
+    "you_outside": "You are outside {{city}}. Pick a starting point within the city."
   }
 }

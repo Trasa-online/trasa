@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Bookmark, ChevronUp, Pencil, Trash2, CircleDashed, Heart, Minimize2 } from "lucide-react";
 import { API_BASE } from "@/lib/platform";
 import { avatarSrc } from "@/lib/avatar";
@@ -64,10 +65,11 @@ export default function TrasaBigCard({
   onLike?: () => void;
   liked?: boolean;
 }) {
+  const { t } = useTranslation("homefeed");
   const miniMap = showMap ? buildMiniMapUrl(pins) : null;
   const [mapExpanded, setMapExpanded] = useState(false);
   const countLabel = placeCount > 0
-    ? `${placeCount} ${placeCount === 1 ? "miejsce" : placeCount < 5 ? "miejsca" : "miejsc"}`
+    ? t("card.places_count", { count: placeCount })
     : null;
   return (
     <div className={`relative w-full shrink-0 rounded-3xl overflow-hidden bg-muted shadow-sm min-h-[420px] ${snap ? "snap-start snap-always" : ""} ${heightClass}`}>
@@ -119,14 +121,14 @@ export default function TrasaBigCard({
                 <RouteMap pins={pins as any} className="w-full h-full" showRoute={false} />
               </div>
               <button onClick={(e) => { e.stopPropagation(); haptics.selection(); setMapExpanded(false); }}
-                aria-label="Zwiń mapę" className="absolute inset-0 active:opacity-95 transition-opacity" />
+                aria-label={t("card.collapse_map")} className="absolute inset-0 active:opacity-95 transition-opacity" />
               <span className="absolute top-2.5 right-2.5 h-9 w-9 rounded-full bg-card shadow-md flex items-center justify-center pointer-events-none">
                 <Minimize2 className="h-4 w-4 text-foreground" strokeWidth={2.2} />
               </span>
             </>
           ) : (
             <button onClick={(e) => { e.stopPropagation(); haptics.selection(); setMapExpanded(true); }}
-              aria-label="Pokaż mapę trasy" className="absolute inset-0 active:scale-[0.99] transition-transform">
+              aria-label={t("card.show_map")} className="absolute inset-0 active:scale-[0.99] transition-transform">
               <img
                 src={miniMap} alt="" aria-hidden loading="lazy"
                 className="w-full h-full object-cover"
@@ -169,7 +171,7 @@ export default function TrasaBigCard({
         {onDelete && (
           <button
             onClick={(e) => { e.stopPropagation(); onDelete(); }}
-            aria-label="Usuń"
+            aria-label={t("card.delete")}
             className="h-12 w-12 rounded-full bg-white flex items-center justify-center shadow-lg active:scale-90 transition-transform"
           >
             <Trash2 className="h-5 w-5 text-destructive" strokeWidth={2} />
@@ -177,7 +179,7 @@ export default function TrasaBigCard({
         )}
         <button
           onClick={onOpen}
-          aria-label="Rozwiń"
+          aria-label={t("card.expand")}
           className="h-12 w-12 rounded-full bg-white flex items-center justify-center shadow-lg active:scale-90 transition-transform"
         >
           <ChevronUp className="h-5 w-5 text-foreground" strokeWidth={2.5} />

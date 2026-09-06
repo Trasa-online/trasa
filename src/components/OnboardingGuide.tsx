@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import type { ReactNode, CSSProperties } from "react";
 import { useNavigate } from "react-router-dom";
 import { Compass, Layers, Bookmark, Plus } from "lucide-react";
@@ -70,41 +71,44 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
 interface StepCfg {
   icon: typeof Compass;
   label: string;
-  title: string;
-  body: string;
+  titleKey: string;
+  bodyKey: string;
   target: string | null;   // selektor data-ob elementu do podswietlenia
-  cta: string;
+  ctaKey: string;
   view?: "feed" | "browse"; // przelacz widok eksploracji, zeby user widzial zmiane zakladki pod spodem
 }
 
 const STEPS: StepCfg[] = [
   {
     icon: Compass, label: "TRASY", target: '[data-ob="toggle-trasy"]', view: "feed",
-    title: "Zakładka Trasy",
-    body: "Tu przeglądasz gotowe trasy stworzone przez innych. Wejdź w trasę, żeby zobaczyć miejsca i zainspirować się do własnej.",
-    cta: "Dalej",
+    titleKey: "guide.trips_title",
+    bodyKey: "guide.trips_desc",
+    ctaKey: "guide.next",
   },
   {
     icon: Layers, label: "MIEJSCA", target: '[data-ob="toggle-miejsca"]', view: "browse",
-    title: "Zakładka Miejsca",
-    body: "Tu przeglądasz pojedyncze miejsca w Twoim mieście, jedno po drugim: kawiarnie, restauracje, bary, miejsca kultury i natury.",
-    cta: "Dalej",
+    titleKey: "guide.places_title",
+    bodyKey: "guide.places_desc",
+    ctaKey: "guide.next",
   },
   {
     icon: Bookmark, label: "ZAPISYWANIE", target: null,
-    title: "Zapisuj ulubione",
-    body: "Miejsca i trasy, które Ci się podobają, zapisujesz jednym tapnięciem. Wracasz do nich w zakładce Zapisane.",
-    cta: "Dalej",
+    titleKey: "guide.save_title",
+    bodyKey: "guide.save_desc",
+    ctaKey: "guide.next",
   },
   {
-    icon: Plus, label: "TWÓRZ", target: '[data-ob="nav-fab"]',
-    title: "Twórz własne trasy",
-    body: "Guzikiem „+” tworzysz własną trasę z ulubionych miejsc. Twoja trasa trafia do eksploracji, żeby inni mogli się nią zainspirować.",
-    cta: "Gotowe",
+    icon: Plus,
+    label: "TWÓRZ",   // i18n-ignore: etykieta kroku, ta sama w obu jezykach
+    target: '[data-ob="nav-fab"]',
+    titleKey: "guide.create_title",
+    bodyKey: "guide.create_desc",
+    ctaKey: "guide.done",
   },
 ];
 
 function OnboardingCoach({ finish }: { finish: () => void }) {
+  const { t } = useTranslation("onboarding");
   const navigate = useNavigate();
   const [idx, setIdx] = useState(0);
   const [rect, setRect] = useState<DOMRect | null>(null);
@@ -174,8 +178,8 @@ function OnboardingCoach({ finish }: { finish: () => void }) {
       {/* Baner: czarny naglowek + body, stepper na dole nad guzikiem (16px radius). Bez ikon. */}
       <div style={{ position: "fixed", left: 0, right: 0, top: bannerTop, zIndex: 57 } as CSSProperties} className="px-4">
         <div className="max-w-md mx-auto rounded-3xl bg-card border border-border/60 shadow-xl shadow-black/20 p-5">
-          <p className="text-lg font-black leading-tight text-foreground">{cfg.title}</p>
-          <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed">{cfg.body}</p>
+          <p className="text-lg font-black leading-tight text-foreground">{t(cfg.titleKey)}</p>
+          <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed">{t(cfg.bodyKey)}</p>
 
           <div className="flex items-center justify-center gap-1.5 mt-4">
             {STEPS.map((_, i) => (
@@ -187,12 +191,10 @@ function OnboardingCoach({ finish }: { finish: () => void }) {
             onClick={next}
             className="w-full mt-4 py-3.5 rounded-2xl bg-primary text-white font-bold text-sm active:scale-[0.98] transition-transform"
           >
-            {cfg.cta}
+            {t(cfg.ctaKey)}
           </button>
           {!isLast && (
-            <button onClick={finish} className="w-full py-2.5 mt-1 text-xs font-semibold text-muted-foreground active:opacity-60">
-              Pomiń
-            </button>
+            <button onClick={finish} className="w-full py-2.5 mt-1 text-xs font-semibold text-muted-foreground active:opacity-60">{t("guide.skip")}</button>
           )}
         </div>
       </div>

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Loader2, MapPin, Plus, Search, X } from "lucide-react";
 import { toast } from "sonner";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
@@ -27,6 +28,7 @@ export default function AddSavedPlaceSheet({ open, onOpenChange, onAdded }: {
   onOpenChange: (v: boolean) => void;
   onAdded?: () => void;
 }) {
+  const { t } = useTranslation("homeprofile");
   const { user } = useAuth();
   const [city, setCity] = useState<string>(readLastCity);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -76,11 +78,11 @@ export default function AddSavedPlaceSheet({ open, onOpenChange, onAdded }: {
       try { localStorage.setItem(CITY_KEY, city); } catch { /* noop */ }
       onAdded?.();
       haptics.success();
-      toast.success(added ? `Dodano „${place.place_name}"` : `„${place.place_name}" już jest na liście`);
+      toast.success(added ? `Dodano „${place.place_name}"` : t("add_saved.already", { name: place.place_name }));
       onOpenChange(false);
     } catch (e) {
       console.error("[AddSavedPlaceSheet] save failed:", e instanceof Error ? e.message : e);
-      toast.error("Nie udało się dodać miejsca");
+      toast.error(t("add_saved.failed"));
     } finally { setAdding(null); }
   };
 
@@ -100,7 +102,7 @@ export default function AddSavedPlaceSheet({ open, onOpenChange, onAdded }: {
 
         <div className="px-5 pt-1 pb-2 shrink-0">
           <p className="text-xl font-black text-foreground">Dodaj nowe miejsce</p>
-          <p className="text-sm text-muted-foreground mt-0.5">Trafi do Twojej listy Ogólne.</p>
+          <p className="text-sm text-muted-foreground mt-0.5">{t("add_saved.goes_to_general")}</p>
 
           {/* Kraj + miasto: zwinięte do jednego wiersza, tap rozwija drum (jak przy wyjeździe). */}
           <button type="button" onClick={() => { haptics.light(); setPickerOpen((o) => !o); }}
@@ -108,7 +110,7 @@ export default function AddSavedPlaceSheet({ open, onOpenChange, onAdded }: {
             <MapPin className="h-4 w-4 text-muted-foreground shrink-0" />
             <span className="flex-1 min-w-0 truncate text-base font-semibold text-foreground">{city}</span>
             <span className="text-xs font-semibold text-muted-foreground shrink-0">{country}</span>
-            <span className="text-xs font-bold text-orange-600 shrink-0">{pickerOpen ? "Gotowe" : "Zmień"}</span>
+            <span className="text-xs font-bold text-orange-600 shrink-0">{pickerOpen ? "Gotowe" : t("add_saved.change")}</span>
           </button>
           {pickerOpen && (
             <div className="pt-3">
@@ -127,7 +129,7 @@ export default function AddSavedPlaceSheet({ open, onOpenChange, onAdded }: {
               />
               {searching && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground shrink-0" />}
               {!searching && q && (
-                <button type="button" onClick={() => setQ("")} aria-label="Wyczyść"
+                <button type="button" onClick={() => setQ("")} aria-label={t("add_saved.clear")}
                   className="h-7 w-7 rounded-full bg-[#ebebeb]/70 flex items-center justify-center active:scale-90 transition-transform shrink-0">
                   <X className="h-3.5 w-3.5 text-muted-foreground" />
                 </button>
@@ -175,8 +177,8 @@ export default function AddSavedPlaceSheet({ open, onOpenChange, onAdded }: {
                   <Plus className="h-5 w-5 text-foreground" />
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block text-sm font-bold text-foreground truncate">{`Dodaj „${term}"`}</span>
-                  <span className="block text-xs text-muted-foreground truncate">{`Własny wpis w ${city}`}</span>
+                  <span className="block text-sm font-bold text-foreground truncate">{t("add_saved.add_term", { term })}</span>
+                  <span className="block text-xs text-muted-foreground truncate">{t("add_saved.custom_in", { city })}</span>
                 </span>
                 {adding === term && <Loader2 className="h-5 w-5 animate-spin text-muted-foreground shrink-0" />}
               </button>

@@ -64,5 +64,12 @@
   "bug_submitting": "Wysyłam…",
   "bug_error": "Błąd: {{message}}",
   "bio": "O mnie",
-  "bio_placeholder": "Krótko o sobie, np. Uwielbiam city breaki!"
+  "bio_placeholder": "Krótko o sobie, np. Uwielbiam city breaki!",
+  "show_onboarding": "Pokaż onboarding ponownie",
+  "community": {
+    "title": "Społeczność i kontakt",
+    "join": "Dołącz do serwera"
+  },
+  "show_splash": "Pokaż ekran startowy",
+  "render_error": "Błąd renderowania Ustawień:"
 }

@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Search, X, Plus, Minus, LocateFixed, Loader2 } from "lucide-react";
 import { APIProvider, Map, AdvancedMarker, useMapsLibrary, useMap } from "@vis.gl/react-google-maps";
@@ -69,6 +70,7 @@ const MapPanner = ({ pos }: { pos: { lat: number; lng: number } | null }) => {
 };
 
 const MapWithSearch = ({ city, onConfirm, onSkip }: StartingLocationPickerProps) => {
+  const { t } = useTranslation("plan");
   const center = getCityCenter(city) ?? { lat: 52.2297, lng: 21.0122 };
 
   const [query, setQuery] = useState("");
@@ -161,7 +163,7 @@ const MapWithSearch = ({ city, onConfirm, onSkip }: StartingLocationPickerProps)
           const pos = { lat: loc.lat(), lng: loc.lng() };
           if (!isWithinCity(pos)) {
             setQuery("");
-            setLocationError(`To miejsce jest poza ${city}. Wybierz coś w obrębie miasta.`);
+            setLocationError(t("start.outside_pick", { city }));
             return;
           }
           setMarkerPos(pos);
@@ -191,7 +193,7 @@ const MapWithSearch = ({ city, onConfirm, onSkip }: StartingLocationPickerProps)
     const pos = { lat, lng };
     setLocationError(null);
     if (!isWithinCity(pos)) {
-      setLocationError(`To miejsce jest poza ${city}. Zaznacz punkt w obrębie miasta.`);
+      setLocationError(t("start.outside_mark", { city }));
       return;
     }
     setMarkerPos(pos);
@@ -202,7 +204,7 @@ const MapWithSearch = ({ city, onConfirm, onSkip }: StartingLocationPickerProps)
   // zamiast wymagac od usera recznego wskazania punktu na mapie.
   const applyGpsPos = useCallback((pos: { lat: number; lng: number }, silent: boolean) => {
     if (!isWithinCity(pos)) {
-      if (!silent) setLocationError(`Jesteś poza ${city}. Wskaż punkt startu w obrębie miasta.`);
+      if (!silent) setLocationError(t("start.you_outside", { city }));
       return;
     }
     setLocationError(null);
@@ -228,7 +230,7 @@ const MapWithSearch = ({ city, onConfirm, onSkip }: StartingLocationPickerProps)
     const coords = getCachedCoords() ?? (await requestLocation(true));
     setLocating(false);
     if (!coords) {
-      setLocationError("Nie udało się pobrać Twojej lokalizacji.");
+      setLocationError(t("start.location_failed"));
       return;
     }
     applyGpsPos({ lat: coords.lat, lng: coords.lng }, false);
@@ -238,7 +240,7 @@ const MapWithSearch = ({ city, onConfirm, onSkip }: StartingLocationPickerProps)
     <div className="flex flex-col h-full min-h-0">
       {/* Header kompaktowy (1 linia) - zeby mapa dostala jak najwiecej wysokosci. Spojne w kazdym miescie. */}
       <div className="px-5 pt-[calc(env(safe-area-inset-top,0px)+0.75rem)] pb-3 space-y-0.5 shrink-0">
-        <p className="text-2xl font-black leading-tight">Skąd chcesz zacząć?</p>
+        <p className="text-2xl font-black leading-tight">{t("start.title")}</p>
         <p className="text-sm text-muted-foreground">
           Dobierzemy miejsca blisko Twojej okolicy.
         </p>
@@ -269,7 +271,7 @@ const MapWithSearch = ({ city, onConfirm, onSkip }: StartingLocationPickerProps)
           onClick={locateMe}
           disabled={locating}
           className="absolute bottom-4 left-3 z-10 h-11 pl-3 pr-4 bg-white rounded-full shadow-md flex items-center gap-2 text-sm font-semibold text-foreground active:scale-95 transition-transform disabled:opacity-60"
-          aria-label="Użyj mojej lokalizacji"
+          aria-label={t("start.use_my_location")}
         >
           {locating ? <Loader2 className="h-4 w-4 animate-spin text-orange-600" /> : <LocateFixed className="h-4 w-4 text-orange-600" />}
           Moja lokalizacja
@@ -332,9 +334,7 @@ const MapWithSearch = ({ city, onConfirm, onSkip }: StartingLocationPickerProps)
         <button
           onClick={onSkip}
           className="w-full text-sm text-muted-foreground py-2 active:opacity-60 transition-opacity"
-        >
-          Pomiń
-        </button>
+        >{t("start.skip")}</button>
       </div>
     </div>
   );

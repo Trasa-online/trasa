@@ -64,5 +64,12 @@
   "bug_submitting": "Sending…",
   "bug_error": "Error: {{message}}",
   "bio": "About me",
-  "bio_placeholder": "A short line about you, e.g. I love city breaks!"
+  "bio_placeholder": "A short line about you, e.g. I love city breaks!",
+  "show_onboarding": "Show the onboarding again",
+  "community": {
+    "title": "Community and contact",
+    "join": "Join the server"
+  },
+  "show_splash": "Show the welcome screen",
+  "render_error": "Settings failed to render:"
 }

@@ -117,5 +117,14 @@
   "filters": {
     "show_label": "Pokaż"
   },
-  "undo": "Cofnij"
+  "undo": "Cofnij",
+  "card": {
+    "show_map": "Pokaż mapę trasy",
+    "collapse_map": "Zwiń mapę",
+    "expand": "Rozwiń",
+    "delete": "Usuń",
+    "places_count_one": "{{count}} miejsce",
+    "places_count_few": "{{count}} miejsca",
+    "places_count_many": "{{count}} miejsc"
+  }
 }

@@ -210,5 +210,16 @@
   "aria": {
     "delete_place": "Delete place"
   },
-  "collapse": "Collapse"
+  "collapse": "Collapse",
+  "expectation": {
+    "met": "Lived up to it",
+    "below": "Fell short",
+    "mixed": "So-so"
+  },
+  "role": {
+    "must": "A must-see",
+    "skippable": "Can be skipped",
+    "nice": "Nice addition"
+  },
+  "just_now": "just now"
 }

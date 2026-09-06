@@ -131,5 +131,14 @@
     "delete_place": "Usuń miejsce",
     "removed": "Usunięto „{{name}}”",
     "already": "„{{name}}” już jest zapisane"
+  },
+  "add_saved": {
+    "goes_to_general": "Trafi do Twojej listy Ogólne.",
+    "failed": "Nie udało się dodać miejsca",
+    "clear": "Wyczyść",
+    "change": "Zmień",
+    "already": "„{{name}}” już jest na liście",
+    "add_term": "Dodaj „{{term}}”",
+    "custom_in": "Własny wpis w {{city}}"
   }
 }

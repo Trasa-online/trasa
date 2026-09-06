@@ -210,5 +210,14 @@
     "reading_link": "Analizuję link…",
     "searching": "Szukam miejsca…",
     "found_not_located": "Znalazłam nazwę „{{name}}”, ale nie udało się jej zlokalizować. Popraw nazwę ręcznie."
+  },
+  "start": {
+    "location_failed": "Nie udało się pobrać Twojej lokalizacji.",
+    "use_my_location": "Użyj mojej lokalizacji",
+    "title": "Skąd chcesz zacząć?",
+    "skip": "Pomiń",
+    "outside_pick": "To miejsce jest poza {{city}}. Wybierz coś w obrębie miasta.",
+    "outside_mark": "To miejsce jest poza {{city}}. Zaznacz punkt w obrębie miasta.",
+    "you_outside": "Jesteś poza {{city}}. Wskaż punkt startu w obrębie miasta."
   }
 }
