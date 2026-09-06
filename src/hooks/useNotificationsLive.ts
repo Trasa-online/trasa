@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,23 +12,24 @@ import { useAuth } from "@/hooks/useAuth";
 // AuthDrawerProviderWrapper (App.tsx), wiec dziala na WSZYSTKICH ekranach (tez /moj-profil, /route).
 // (Push APNs to osobny kanal - trigger notify_push -> send-push; ten hook = in-app.)
 
-// Tytuly in-app spojne z push (notify_push v_title). Klucz = notification_type.
+// Tytuly in-app spojne z push (notify_push v_title). Klucz mapy = notification_type,
+// wartosc = KLUCZ TLUMACZENIA (mapa zyje poza hookiem, wiec nie ma tu jeszcze t()).
 const TITLES: Record<string, string> = {
-  friend_request: "Nowe zaproszenie do znajomych 👋",
-  friend_accept: "Masz nowego znajomego 🎉",
-  follower: "Masz nowego obserwującego 👀",
-  route_invite: "Nowy wspólny wyjazd 🗺️",
-  group_invite: "Zaproszenie do sesji 🗺️",
-  group_route_ready: "Trasa gotowa 🗺️",
-  route_liked: "Ktoś polubił Twoją trasę ❤️",
-  list_liked: "Ktoś polubił Twoją listę ❤️",
-  list_saved: "Ktoś zapisał Twoją listę 🔖",
-  list_updated: "Nowe miejsce na liście 📍",
-  route_used: "Ktoś korzysta z Twojej trasy 🧭",
-  trip_reminder: "Dokończ swój wyjazd 📸",
-  trip_places_reminder: "Dodaj miejsca do wyjazdu 📍",
-  trip_message: "Nowa wiadomość 💬",
-  photo_like: "Ktoś polubił Twoje zdjęcie ❤️",
+  friend_request: "live.friend_request",
+  friend_accept: "live.friend_accept",
+  follower: "live.follower",
+  route_invite: "live.route_invite",
+  group_invite: "live.group_invite",
+  group_route_ready: "live.route_ready",
+  route_liked: "live.route_liked",
+  list_liked: "live.list_liked",
+  list_saved: "live.list_saved",
+  list_updated: "live.list_updated",
+  route_used: "live.route_used",
+  trip_reminder: "live.trip_reminder",
+  trip_places_reminder: "live.trip_places",
+  trip_message: "live.trip_message",
+  photo_like: "live.photo_like",
 };
 
 const urlFor = (n: any): string => {
@@ -40,6 +42,7 @@ const urlFor = (n: any): string => {
 };
 
 export function useNotificationsLive() {
+  const { t } = useTranslation("social");
   const { user } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -60,7 +63,7 @@ export function useNotificationsLive() {
           // Czat: nie dubluj toastem, gdy user JUZ oglada ten wyjazd (dymek czatu + licznik na nim
           // to pokazuja). Poza tym widokiem (inny ekran w apce) toast jest przydatny -> pokazujemy.
           if (n.type === "trip_message" && n.route_id && window.location.hash.includes(`/route/${n.route_id}`)) return;
-          const title = TITLES[n.type] ?? "Masz nowe powiadomienie 🔔";
+          const title = t(TITLES[n.type] ?? "live.generic");
           toast(title, { action: { label: "Zobacz", onClick: () => navigate(urlFor(n)) } });
         },
       )

@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { X, Bell, UserPlus, UserCheck, MapPin, Route, Bookmark, CheckCircle2, XCircle, MessageCircle, Heart, Camera } from "lucide-react";
@@ -23,37 +24,42 @@ interface Notification {
 
 // Tylko typy AKTUALNIE uzywane w aplikacji. Like/comment/mention usuniete (tych funkcji juz
 // nie ma). Zapytanie ponizej dodatkowo odfiltrowuje je z feedu na wypadek starych rekordow.
-const TYPE_CONFIG: Record<string, { icon: React.ElementType; color: string; label: (username: string, metadata?: Record<string, string> | null) => string }> = {
-  follower:       { icon: UserPlus,      color: "text-violet-500 bg-violet-100",  label: u => `${u} zaczął(a) Cię obserwować` },
-  new_route:      { icon: Route,         color: "text-emerald-500 bg-emerald-100",label: u => `${u} dodał(a) nową trasę` },
-  route_updated:  { icon: Route,         color: "text-amber-500 bg-amber-100",    label: u => `${u} zaktualizował(a) trasę` },
-  route_used:     { icon: Bookmark,      color: "text-orange-600 bg-orange-100",  label: (u, meta) => `${u} zapisał(a) Twoją trasę${meta?.city ? ` po ${meta.city}` : ""}` },
-  pin_visit:      { icon: MapPin,        color: "text-teal-500 bg-teal-100",      label: u => `${u} odwiedził(a) Twoje miejsce` },
-  friend_request: { icon: UserPlus,      color: "text-violet-500 bg-violet-100",  label: u => `${u} chce dodać Cię do znajomych` },
-  friend_accept:  { icon: UserCheck,     color: "text-emerald-500 bg-emerald-100",label: u => `${u} przyjął(a) Twoje zaproszenie do znajomych` },
-  visit_comment:  { icon: MessageCircle, color: "text-sky-500 bg-sky-100",         label: (u, meta) => `${u} skomentował(a) Twój wpis${meta?.place_name ? ` o ${meta.place_name}` : ""}` },
-  photo_like:     { icon: Heart,         color: "text-orange-600 bg-orange-100",  label: (u, meta) => `${u} polubił(a) Twoje zdjęcie${meta?.place_name ? ` (${meta.place_name})` : ""}` },
-  discovery_used: { icon: Bookmark,      color: "text-orange-600 bg-orange-100",  label: (u, meta) => `${u} skorzystał(a) z Twojego planu${meta?.city ? ` po ${meta.city}` : ""}` },
-  group_invite:       { icon: Route,  color: "text-orange-600 bg-orange-100",  label: (u, meta) => `${u} dodał(a) Cię do wspólnej trasy${meta?.city ? ` po ${meta.city}` : ""}` },
-  route_invite:       { icon: Route,  color: "text-orange-600 bg-orange-100",  label: (u, meta) => `${u} dodał(a) Cię do wspólnego wyjazdu${meta?.city ? ` po ${meta.city}` : ""}` },
-  trip_places_reminder: { icon: MapPin, color: "text-orange-600 bg-orange-100", label: (u, meta) => `${u} czeka na Twoje propozycje miejsc${meta?.city ? ` na wyjazd po ${meta.city}` : ""}` },
-  trip_message:       { icon: MessageCircle, color: "text-sky-500 bg-sky-100", label: (u, meta) => `${u} napisał(a)${meta?.title ? ` w „${meta.title}"` : meta?.city ? ` w wyjeździe po ${meta.city}` : " w wyjeździe"}` },
-  group_route_ready:  { icon: Route, color: "text-orange-600 bg-orange-100",  label: (u, meta) => `${u} stworzył(a) trasę${meta?.city ? ` w ${meta.city}` : ""} - sprawdź!` },
-  collection_approved: { icon: CheckCircle2, color: "text-emerald-500 bg-emerald-100", label: (_u, meta) => `Twoja lista „${meta?.title ?? "lista"}" została zaakceptowana` },
-  collection_rejected: { icon: XCircle,      color: "text-destructive bg-destructive/10", label: (_u, meta) => meta?.moderation_note ? `Lista „${meta?.title ?? "lista"}" odrzucona. Powód: ${meta.moderation_note}` : `Twoja lista „${meta?.title ?? "lista"}" została odrzucona` },
-  route_liked:    { icon: Heart,    color: "text-red-500 bg-red-100",        label: (u, meta) => `${u} polubił(a) Twoją trasę${meta?.city ? ` po ${meta.city}` : ""}` },
-  list_liked:     { icon: Heart,    color: "text-red-500 bg-red-100",        label: (u, meta) => `${u} polubił(a) Twoją listę${meta?.title ? ` „${meta.title}"` : ""}` },
-  list_saved:     { icon: Bookmark, color: "text-orange-600 bg-orange-100",  label: (u, meta) => `${u} zapisał(a) Twoją listę${meta?.title ? ` „${meta.title}"` : ""}` },
-  list_updated:   { icon: MapPin,   color: "text-orange-600 bg-orange-100",  label: (u, meta) => `${u} dodał(a) nowe miejsce do listy${meta?.title ? ` „${meta.title}"` : ""}` },
+// Etykiety powiadomien jako KLUCZE (2026-09-06). Mapa zyje poza komponentem, wiec `label`
+// dostaje `t` jako pierwszy argument zamiast sklejac zdanie po polsku. Warianty "z miastem" /
+// "z tytulem" sa OSOBNYMI kluczami, nie doklejanym ogonkiem - po angielsku dopisek stoi
+// w innym miejscu zdania, wiec sklejanie dawaloby belkot.
+type NotifT = (key: string, opts?: Record<string, unknown>) => string;
+const TYPE_CONFIG: Record<string, { icon: React.ElementType; color: string; label: (t: NotifT, username: string, metadata?: Record<string, string> | null) => string }> = {
+  follower:       { icon: UserPlus,      color: "text-violet-500 bg-violet-100",  label: (t, u) => t("notif.follower", { user: u }) },
+  new_route:      { icon: Route,         color: "text-emerald-500 bg-emerald-100",label: (t, u) => t("notif.new_route", { user: u }) },
+  route_updated:  { icon: Route,         color: "text-amber-500 bg-amber-100",    label: (t, u) => t("notif.route_updated", { user: u }) },
+  route_used:     { icon: Bookmark,      color: "text-orange-600 bg-orange-100",  label: (t, u, m) => t(m?.city ? "notif.route_used_city" : "notif.route_used", { user: u, city: m?.city }) },
+  pin_visit:      { icon: MapPin,        color: "text-teal-500 bg-teal-100",      label: (t, u) => t("notif.pin_visit", { user: u }) },
+  friend_request: { icon: UserPlus,      color: "text-violet-500 bg-violet-100",  label: (t, u) => t("notif.friend_request", { user: u }) },
+  friend_accept:  { icon: UserCheck,     color: "text-emerald-500 bg-emerald-100",label: (t, u) => t("notif.friend_accept", { user: u }) },
+  visit_comment:  { icon: MessageCircle, color: "text-sky-500 bg-sky-100",        label: (t, u, m) => t(m?.place_name ? "notif.visit_comment_place" : "notif.visit_comment", { user: u, place: m?.place_name }) },
+  photo_like:     { icon: Heart,         color: "text-orange-600 bg-orange-100",  label: (t, u, m) => t(m?.place_name ? "notif.photo_like_place" : "notif.photo_like", { user: u, place: m?.place_name }) },
+  discovery_used: { icon: Bookmark,      color: "text-orange-600 bg-orange-100",  label: (t, u, m) => t(m?.city ? "notif.discovery_used_city" : "notif.discovery_used", { user: u, city: m?.city }) },
+  group_invite:       { icon: Route,  color: "text-orange-600 bg-orange-100",  label: (t, u, m) => t(m?.city ? "notif.group_invite_city" : "notif.group_invite", { user: u, city: m?.city }) },
+  route_invite:       { icon: Route,  color: "text-orange-600 bg-orange-100",  label: (t, u, m) => t(m?.city ? "notif.route_invite_city" : "notif.route_invite", { user: u, city: m?.city }) },
+  trip_places_reminder: { icon: MapPin, color: "text-orange-600 bg-orange-100", label: (t, u, m) => t(m?.city ? "notif.trip_places_reminder_city" : "notif.trip_places_reminder", { user: u, city: m?.city }) },
+  trip_message:       { icon: MessageCircle, color: "text-sky-500 bg-sky-100", label: (t, u, m) => t(m?.title ? "notif.trip_message_title" : m?.city ? "notif.trip_message_city" : "notif.trip_message", { user: u, title: m?.title, city: m?.city }) },
+  group_route_ready:  { icon: Route, color: "text-orange-600 bg-orange-100",  label: (t, u, m) => t(m?.city ? "notif.group_route_ready_city" : "notif.group_route_ready", { user: u, city: m?.city }) },
+  collection_approved: { icon: CheckCircle2, color: "text-emerald-500 bg-emerald-100", label: (t, _u, m) => t("notif.collection_approved", { title: m?.title ?? t("notif.list_fallback") }) },
+  collection_rejected: { icon: XCircle,      color: "text-destructive bg-destructive/10", label: (t, _u, m) => t(m?.moderation_note ? "notif.collection_rejected_reason" : "notif.collection_rejected", { title: m?.title ?? t("notif.list_fallback"), reason: m?.moderation_note }) },
+  route_liked:    { icon: Heart,    color: "text-red-500 bg-red-100",        label: (t, u, m) => t(m?.city ? "notif.route_liked_city" : "notif.route_liked", { user: u, city: m?.city }) },
+  list_liked:     { icon: Heart,    color: "text-red-500 bg-red-100",        label: (t, u, m) => t(m?.title ? "notif.list_liked_title" : "notif.list_liked", { user: u, title: m?.title }) },
+  list_saved:     { icon: Bookmark, color: "text-orange-600 bg-orange-100",  label: (t, u, m) => t(m?.title ? "notif.list_saved_title" : "notif.list_saved", { user: u, title: m?.title }) },
+  list_updated:   { icon: MapPin,   color: "text-orange-600 bg-orange-100",  label: (t, u, m) => t(m?.title ? "notif.list_updated_title" : "notif.list_updated", { user: u, title: m?.title }) },
   // Tresc liczona z metadanych kompletnosci (enqueue_trip_reminders): ZDJECIA maja priorytet,
   // potem notki, a na koncu zacheta do publikacji.
-  trip_reminder:  { icon: Camera,   color: "text-orange-600 bg-orange-100",  label: (_u, meta) => {
-    const city = meta?.city ? ` po ${meta.city}` : "";
-    const photos = Number(meta?.missing_photos ?? 0);
-    const notes = Number(meta?.missing_notes ?? 0);
-    if (photos > 0) return `Wyjazd${city} czeka na\u00a0zdjęcia: ${photos} ${photos === 1 ? "miejsce jest" : photos < 5 ? "miejsca są" : "miejsc jest"} bez zdjęcia`;
-    if (notes > 0) return `Zdjęcia masz komplet - ${notes === 1 ? "została notka do\u00a0jednego miejsca" : `zostały notki do\u00a0${notes} miejsc`}${city}`;
-    return `Wyjazd${city} jest gotowy - opublikuj go, żeby pojawił się w\u00a0eksploracji`;
+  trip_reminder:  { icon: Camera,   color: "text-orange-600 bg-orange-100",  label: (t, _u, m) => {
+    const city = m?.city ? t("notif.city_suffix", { city: m.city }) : "";
+    const photos = Number(m?.missing_photos ?? 0);
+    const notes = Number(m?.missing_notes ?? 0);
+    if (photos > 0) return t("notif.reminder_photos", { count: photos, city });
+    if (notes > 0) return t("notif.reminder_notes", { count: notes, city });
+    return t("notif.reminder_publish", { city });
   } },
 };
 
@@ -64,6 +70,7 @@ interface Props {
 }
 
 export default function NotificationsDrawer({ open, onClose, userId }: Props) {
+  const { t } = useTranslation("social");
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
@@ -194,7 +201,7 @@ export default function NotificationsDrawer({ open, onClose, userId }: Props) {
               disabled={clearAllMutation.isPending}
               className="text-xs text-muted-foreground font-medium mr-2 active:opacity-60"
             >
-              Wyczyść
+              {t("notif.clear")}
             </button>
           )}
           <button
@@ -212,8 +219,8 @@ export default function NotificationsDrawer({ open, onClose, userId }: Props) {
           ) : notifications.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 px-6 text-center gap-3">
               <Bell className="h-10 w-10 text-muted-foreground/30" />
-              <p className="text-sm font-medium text-foreground/70">Brak powiadomień</p>
-              <p className="text-xs text-muted-foreground">Tutaj pojawią się wszystkie Twoje powiadomienia - zaproszenia, obserwacje, statystyki z&nbsp;Twoich tras.</p>
+              <p className="text-sm font-medium text-foreground/70">{t("notif.empty_title")}</p>
+              <p className="text-xs text-muted-foreground">{t("notif.empty_desc")}</p>
             </div>
           ) : (
             <div className="mx-4 rounded-2xl bg-card border border-border/50 overflow-hidden divide-y divide-border/20">
@@ -221,10 +228,10 @@ export default function NotificationsDrawer({ open, onClose, userId }: Props) {
                 const cfg = TYPE_CONFIG[n.type] ?? {
                   icon: Bell,
                   color: "text-muted-foreground bg-muted",
-                  label: (u: string) => `${u} wykonał(a) akcję`,
+                  label: (tt: NotifT, u: string) => tt("notif.fallback", { user: u }),
                 };
                 const Icon = cfg.icon;
-                const username = n.actor?.username ?? "Ktoś";
+                const username = n.actor?.username ?? t("notif.someone");
                 // Tap w awatar / tresc -> profil publiczny osoby, ktora wywolala powiadomienie.
                 // Systemowe (bez autora, np. przypomnienie o wyjezdzie) zostaja nieklikalne.
                 const actorUsername = n.actor?.username ?? null;
@@ -234,7 +241,7 @@ export default function NotificationsDrawer({ open, onClose, userId }: Props) {
                   ? () => { track("notification_opened", { type: n.type }); onClose(); navigate(`/profil/${actorUsername}`); }
                   : undefined;
                 const timeAgo = formatDistanceToNow(new Date(n.created_at), { addSuffix: true, locale: dateLocale() });
-                const labelText = cfg.label(username, n.metadata);
+                const labelText = cfg.label(t, username, n.metadata);
 
                 return (
                   <div
@@ -246,7 +253,7 @@ export default function NotificationsDrawer({ open, onClose, userId }: Props) {
                       className={`relative flex-shrink-0 ${openActor ? "active:opacity-70 transition-opacity" : ""}`}
                       onClick={openActor}
                       role={openActor ? "button" : undefined}
-                      aria-label={openActor ? `Profil ${username}` : undefined}
+                      aria-label={openActor ? t("notif.profile_of", { username }) : undefined}
                     >
                       <img
                         src={avatarSrc(n.actor?.avatar_url)}
@@ -278,7 +285,7 @@ export default function NotificationsDrawer({ open, onClose, userId }: Props) {
                           }}
                           className="mt-2 px-3 py-1.5 rounded-full bg-primary text-white text-xs font-semibold active:scale-95 transition-transform"
                         >
-                          {n.type === "trip_message" ? "Otwórz czat →" : "Zobacz trasę →"}
+                          {n.type === "trip_message" ? t("notif.open_chat") : t("notif.see_route")}
                         </button>
                       )}
                       {n.type === "trip_reminder" && (
@@ -292,7 +299,7 @@ export default function NotificationsDrawer({ open, onClose, userId }: Props) {
                           }}
                           className="mt-2 px-3 py-1.5 rounded-full bg-primary text-white text-xs font-semibold active:scale-95 transition-transform"
                         >
-                          {n.metadata?.missing_photos && Number(n.metadata.missing_photos) > 0 ? "Dodaj zdjęcia →" : "Dokończ wyjazd →"}
+                          {n.metadata?.missing_photos && Number(n.metadata.missing_photos) > 0 ? t("notif.add_photos") : t("notif.finish_trip")}
                         </button>
                       )}
                       {(n.type === "friend_request" || n.type === "friend_accept") && (
@@ -308,7 +315,7 @@ export default function NotificationsDrawer({ open, onClose, userId }: Props) {
                           onClick={() => { track("notification_opened", { type: n.type }); onClose(); navigate(`/lista/${n.metadata?.collection_id ?? ""}`); }}
                           className="mt-2 px-3 py-1.5 rounded-full bg-primary text-white text-xs font-semibold active:scale-95 transition-transform"
                         >
-                          Zobacz listę →
+                          {t("notif.see_list")}
                         </button>
                       )}
                       {(n.type === "collection_approved" || n.type === "collection_rejected") && (
@@ -316,7 +323,7 @@ export default function NotificationsDrawer({ open, onClose, userId }: Props) {
                           onClick={() => { track("notification_opened", { type: n.type }); onClose(); navigate("/moj-profil"); }}
                           className="mt-2 px-3 py-1.5 rounded-full bg-primary text-white text-xs font-semibold active:scale-95 transition-transform"
                         >
-                          {n.type === "collection_rejected" ? "Zobacz szczegóły →" : "Zobacz listy →"}
+                          {n.type === "collection_rejected" ? t("notif.see_details") : t("notif.see_lists")}
                         </button>
                       )}
                     </div>
