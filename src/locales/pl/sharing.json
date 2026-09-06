@@ -156,7 +156,6 @@
   "reorder_hint": "Przeciągnij, by zmienić kolejność",
   "map_no_locations": "Brak lokalizacji miejsc na mapie.",
   "aria": {
-    "pick_own_cover": "Wybierz swoją okładkę wyjazdu",
     "add_dates": "Dodaj daty wyjazdu",
     "unlike_photo": "Cofnij polubienie",
     "like_photo": "Polub zdjęcie",
@@ -165,7 +164,11 @@
     "like_trip": "Polub trasę",
     "delete_trip": "Usuń wyjazd",
     "show_chat": "Pokaż czat",
-    "share": "Udostępnij"
+    "share": "Udostępnij",
+    "invite_people": "Zaproś do wyjazdu",
+    "expand_map": "Rozwiń mapę",
+    "is_my_cover": "To jest Twoja okładka wyjazdu",
+    "set_my_cover": "Ustaw jako swoją okładkę wyjazdu"
   },
   "send_reminder": "Wyślij przypomnienie",
   "publish_trip": "Opublikuj wyjazd",
@@ -204,5 +207,29 @@
   "card": {
     "trip_label": "WYJAZD",
     "list_label": "LISTA MIEJSC"
+  },
+  "note": {
+    "placeholder": "Twoja notka o tym wyjeździe..."
+  },
+  "days": {
+    "all": "Wszystkie",
+    "nth": "Dzień {{n}}"
+  },
+  "desc": {
+    "placeholder": "Dla kogo jest ten wyjazd, na jaką okazję, co warto zobaczyć..."
+  },
+  "votes_one": "{{count}} głos",
+  "votes_few": "{{count}} głosy",
+  "votes_many": "{{count}} głosów",
+  "empty": {
+    "title": "Trasa jest pusta",
+    "hint_owner": "Dodaj pierwsze miejsce guzikiem „+” po prawej stronie",
+    "hint_guest": "Ta trasa nie ma jeszcze żadnych miejsc."
+  },
+  "add_photo_cta": "Dodaj zdjęcie",
+  "tabs": {
+    "places": "Miejsca",
+    "gallery": "Galeria",
+    "map": "Mapa"
   }
 }

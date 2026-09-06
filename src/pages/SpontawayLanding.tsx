@@ -38,6 +38,9 @@ const useNb = () => useContext(NbContext);
 
 type Lang = "pl" | "en";
 
+// i18n-ignore-start: landing ma WLASNY, kompletny slownik dwujezyczny (COPY.pl / COPY.en
+// przelaczany przez ?lang=en) - nie idzie przez ns i18next, wiec polski w galezi `pl`
+// to nie jest brak tlumaczenia. Zmieniajac cokolwiek tutaj, zmien to w OBU galeziach.
 const COPY = {
   pl: {
     htmlTitle: "spontaway - odkrywaj, planuj, dziel się!",
@@ -53,6 +56,7 @@ const COPY = {
       ctaPrimary: "Zacznij odkrywać",
       ctaSecondary: "Pobierz aplikację",
       storeNote: "Aplikacja dostępna wkrótce również w Google Play!",
+      heroAlt: "Aplikacja Spontaway: trasa po Łodzi i profil z wyjazdem do Gdańska",
     },
     features: [
       { title: "Odkrywaj najlepsze\nmiejsca i wydarzenia", body: "Zobacz gdzie i jak najlepiej spędzić czas.", cta: "Zacznij odkrywać", img: "/mockup_odkrywaj.png", alt: "Karty miejsc i wydarzeń w aplikacji Spontaway" },
@@ -100,6 +104,7 @@ const COPY = {
       ctaPrimary: "Start exploring",
       ctaSecondary: "Get the app",
       storeNote: "Coming soon to Google Play as well!",
+      heroAlt: "The Spontaway app: a route around Lodz and a profile with a trip to Gdansk",
     },
     features: [
       { title: "Discover the best\nplaces and events", body: "See where and how to spend your time best.", cta: "Start exploring", img: "/mockup_odkrywaj.png", alt: "Place and event cards in the Spontaway app" },
@@ -134,6 +139,7 @@ const COPY = {
     },
   },
 } as const;
+// i18n-ignore-end
 
 type Copy = (typeof COPY)["pl"];
 
@@ -446,7 +452,7 @@ function Hero({ c, onDownload }: { c: Copy; onDownload: () => void }) {
         {/* Telefony z aplikacja */}
         <img
           src="/hero_mockup.png"
-          alt="Aplikacja Spontaway: trasa po Łodzi i profil z wyjazdem do Gdańska"
+          alt={c.hero.heroAlt}
           width={722}
           height={774}
           className="order-2 -mx-5 mt-6 w-[calc(100%+40px)] max-w-none lg:mx-0 lg:mt-0 lg:w-[680px]"

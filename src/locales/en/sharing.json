@@ -151,7 +151,6 @@
   "reorder_hint": "Drag to reorder",
   "map_no_locations": "No place locations to show on the map.",
   "aria": {
-    "pick_own_cover": "Pick your own trip cover",
     "add_dates": "Add trip dates",
     "unlike_photo": "Unlike",
     "like_photo": "Like photo",
@@ -160,7 +159,11 @@
     "like_trip": "Like trip",
     "delete_trip": "Delete trip",
     "show_chat": "Show chat",
-    "share": "Share"
+    "share": "Share",
+    "invite_people": "Invite people to this trip",
+    "expand_map": "Expand map",
+    "is_my_cover": "This is your trip cover",
+    "set_my_cover": "Set as your trip cover"
   },
   "send_reminder": "Send reminder",
   "publish_trip": "Publish trip",
@@ -198,5 +201,28 @@
   "card": {
     "trip_label": "TRIP",
     "list_label": "PLACE LIST"
+  },
+  "note": {
+    "placeholder": "Your note about this trip..."
+  },
+  "days": {
+    "all": "All",
+    "nth": "Day {{n}}"
+  },
+  "desc": {
+    "placeholder": "Who is this trip for, what occasion, what is worth seeing..."
+  },
+  "votes_one": "{{count}} vote",
+  "votes_other": "{{count}} votes",
+  "empty": {
+    "title": "This route is empty",
+    "hint_owner": "Add the first place with the “+” button on the right",
+    "hint_guest": "This route has no places yet."
+  },
+  "add_photo_cta": "Add photo",
+  "tabs": {
+    "places": "Places",
+    "gallery": "Gallery",
+    "map": "Map"
   }
 }

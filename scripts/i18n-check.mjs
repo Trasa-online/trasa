@@ -94,12 +94,26 @@ function maskIgnored(raw) {
 
 function stripComments(src) {
   let out = "", i = 0, mode = null, prev = "";
+  // Czy napis otwarty tym cudzyslowem konczy sie w TEJ SAMEJ linii? Napisy w " i ' nie
+  // przechodza do nastepnej linii, wiec niesparowany cudzyslow w tekscie JSX (polskie
+  // „cytat") to zwykly znak, a nie poczatek napisu. Bez tego sprawdzenia maszyna stanow
+  // gubila synchronizacje i pochlaniala reszte pliku razem z komentarzami.
+  const closesOnLine = (q, from) => {
+    for (let j = from; j < src.length; j++) {
+      if (src[j] === "\\") { j++; continue; }
+      if (src[j] === "\n") return false;
+      if (src[j] === q) return true;
+    }
+    return false;
+  };
   while (i < src.length) {
     const c = src[i], n = src[i + 1];
     if (mode === null) {
       if (c === "/" && n === "/") { mode = "line"; i += 2; continue; }
       if (c === "/" && n === "*") { mode = "block"; i += 2; continue; }
-      if (c === '"' || c === "`" || (c === "'" && OPENS_STRING.has(prev))) { mode = c; out += c; prev = c; i++; continue; }
+      if (c === "`" || ((c === '"' || (c === "'" && OPENS_STRING.has(prev))) && closesOnLine(c, i + 1))) {
+        mode = c; out += c; prev = c; i++; continue;
+      }
       out += c; if (c.trim() || c === " " || c === "\n") prev = c; i++; continue;
     }
     if (mode === "line") { if (c === "\n") { mode = null; out += c; prev = c; } i++; continue; }
@@ -124,8 +138,13 @@ function literals(src) {
       while (j < src.length) {
         if (src[j] === "\\") { buf += src.slice(j, j + 2); j += 2; continue; }
         if (src[j] === c) break;
+        // Napis w apostrofach/cudzyslowie NIE przechodzi do nastepnej linii. Bez tego jeden
+        // niesparowany cudzyslow w tekscie JSX (np. polskie „cytat") odwraca parzystosc i
+        // reszta pliku znika ze skanu.
+        if (c !== "`" && src[j] === "\n") { j = -1; break; }
         buf += src[j]; j++;
       }
+      if (j === -1 || j >= src.length) { prev = c; i++; continue; }
       found.push(buf);
       prev = c; i = j + 1; continue;
     }

@@ -11,7 +11,7 @@ import { notify } from "@/lib/notify";
 import { sendClientPush, getCurrentUserName } from "@/lib/clientPush";
 import { format } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
-import { MapPin, ArrowLeft, Sparkles, ChevronDown, Bookmark, Calendar as CalendarIcon, Image as ImageIcon, Maximize2, X, Building2, Pencil, Trash2, Heart, Share2, Plus, Map as MapIcon, Loader2, GripVertical, Check, Flag, Camera, ThumbsUp, MessageCircle, Images } from "lucide-react";
+import { MapPin, ArrowLeft, Sparkles, ChevronDown, Bookmark, Calendar as CalendarIcon, Image as ImageIcon, Maximize2, X, Building2, Pencil, Trash2, Heart, Share2, Plus, Map as MapIcon, Loader2, GripVertical, Check, Flag, Camera, ThumbsUp, MessageCircle, UserPlus } from "lucide-react";
 import { MAIN_CATEGORIES, subcategoryPluralLabel } from "@/lib/categories";
 import { PLACE_VERDICT_TAGS, verdictOf, localizeTag } from "@/lib/routeTags";
 import { publishTrip } from "@/lib/publishTrip";
@@ -28,17 +28,17 @@ import { RoutePlaceRow } from "@/components/route/RoutePlaceRow";
 import { fetchRouteNotesWithAuthors, notesByPlace, placeNoteKey } from "@/lib/placeNotes";
 import { detachPlacePhotos, restorePlacePhotos } from "@/lib/placePhotoSocial";
 import StoredImage from "@/components/StoredImage";
+import InviteFriendsSheet from "@/components/route/InviteFriendsSheet";
 import { fetchPinPhotos, addPinPhoto, deletePinPhoto, deletePinPhotosForPlace, restorePinPhotos, photosByPlace, pinPhotoKey, type PinPhoto } from "@/lib/pinPhotos";
 import { fetchPlaceVotes, toggleVote, placeVoteKey } from "@/lib/placeVotes";
 import { fetchUnreadChatCount } from "@/lib/chatReads";
 import PlaceNotes from "@/components/route/PlaceNotes";
 import PhotoViewer from "@/components/route/PhotoViewer";
 import PlaceNoteEditor from "@/components/route/PlaceNoteEditor";
-import CoverPickerSheet from "@/components/create/CoverPickerSheet";
 import { ShareCardTrip } from "@/components/share/ShareCard";
 import ScreenSkeleton from "@/components/layout/ScreenSkeleton";
 import ReportContentSheet from "@/components/moderation/ReportContentSheet";
-import { fetchRouteCoversFor, setMyRouteCover, clearMyRouteCover, setMyRouteNote, fetchRouteMemberNotes } from "@/lib/routeMemberCover";
+import { fetchRouteCoversFor, setMyRouteCover, setMyRouteNote, fetchRouteMemberNotes } from "@/lib/routeMemberCover";
 import { moderateImageUrl, MODERATION_REJECTED_MESSAGE } from "@/lib/imageModeration";
 import { EmptyPlacesState } from "@/components/route/EmptyPlacesState";
 import AddPlaceSheet from "@/components/route/AddPlaceSheet";
@@ -235,13 +235,12 @@ export default function SharedRoute() {
   const [reorderMode, setReorderMode] = useState(false);
   // Wlasna okladka wyjazdu: JEDEN guzik w naglowku -> arkusz wyboru ze zdjec galerii (prosba Nat
   // 2026-09-01). Kazdy uczestnik ma swoja - u pozostalych nic sie nie zmienia.
-  const [coverPickerOpen, setCoverPickerOpen] = useState(false);
+  const [inviteOpen, setInviteOpen] = useState(false);
   const [shareCardOpen, setShareCardOpen] = useState(false);
   // Zrzut ekranu = intencja "chce to pokazac". Zamiast szukac guzika, user dostaje gotowy
   // kadr od razu po zrzucie (logika jak na Pintereście). iOS nie pozwala podmienic juz
   // zrobionego zdjecia, wiec karta pojawia sie PO nim i user robi drugi zrzut - z karta.
   useScreenshot(() => setShareCardOpen(true), !shareCardOpen);
-  const [uploadingCover, setUploadingCover] = useState(false);
   // Wyjazd wielodniowy: ktory dzien jest na ekranie. null = "Wszystkie" (cala lista z naglowkami
   // dni - tak jak przed 2026-09-01). Domyslnie pokazujemy JEDEN dzien, zeby ekran nie byl
   // niekonczacym sie scrollem (wariant A z Figmy, sekcja "Wyjazd wielodniowy").
@@ -252,7 +251,6 @@ export default function SharedRoute() {
   const [collapsedCats, setCollapsedCats] = useState<Set<string>>(new Set()); // zwiniete grupy kategorii
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
   const photoInputRef = useRef<HTMLInputElement>(null);
-  const coverInputRef = useRef<HTMLInputElement>(null);
   const share = useShare();
   const unsave = useUnsavePlace();
   // Tap bookmarka: zapisane -> odzapisz (toast+cofnij); niezapisane -> otworz drawer zapisu.
@@ -528,15 +526,6 @@ export default function SharedRoute() {
     staleTime: 60_000,
   });
   const myCover = id ? (myCoverMap?.get(id) ?? null) : null;
-  const setMyCover = async (url: string) => {
-    if (!user?.id || !id) return;
-    const ok = await setMyRouteCover(id, user.id, url);
-    if (!ok) { toast.error(t("toast.own_cover_failed")); return; }
-    haptics.success();
-    queryClient.invalidateQueries({ queryKey: ["route-member-cover", id, user.id] });
-    queryClient.invalidateQueries({ queryKey: ["profile-trip-feed"] });
-    toast.success(t("toast.own_cover_set_trip"));
-  };
   // NOTKI UCZESTNIKOW O CALYM WYJEZDZIE (route_member_covers.note). Kazdy pisze swoja; wlasna
   // ladnie na gorze, cudze pod nia. Osobny byt od routes.description (opis hosta dla eksploracji).
   const { data: memberNotes = [] } = useQuery({
@@ -551,28 +540,6 @@ export default function SharedRoute() {
     queryClient.invalidateQueries({ queryKey: ["route-member-notes", id] });
   };
 
-  // Nowe zdjecie prosto na wlasna okladke: wgrywamy do galerii wyjazdu (zeby nie bylo sierot
-  // w Storage) i od razu ustawiamy jako MOJA okladke.
-  const uploadCoverPhoto = async (files: FileList | null) => {
-    const file = files?.[0];
-    if (!file || !user || !id) return;
-    setUploadingCover(true);
-    try {
-      await handleAddPhotos([file]);
-      const { data: fresh } = await (supabase as any).from("routes").select("review_photos").eq("id", id).maybeSingle();
-      const last = ((fresh?.review_photos ?? []) as any[]).filter((u) => typeof u === "string").pop();
-      if (last) await setMyCover(resolveStored(last) ?? last);
-      setCoverPickerOpen(false);
-    } finally { setUploadingCover(false); }
-  };
-
-  const resetMyCover = async () => {
-    if (!user?.id || !id) return;
-    await clearMyRouteCover(id, user.id);
-    queryClient.invalidateQueries({ queryKey: ["route-member-cover", id, user.id] });
-    queryClient.invalidateQueries({ queryKey: ["profile-trip-feed"] });
-    toast.success(t("toast.cover_restored"));
-  };
 
   // Init opisu/tagow z trasy (po zaladowaniu). Nie nadpisujemy, gdy user wlasnie pisze.
   useEffect(() => {
@@ -1565,19 +1532,18 @@ export default function SharedRoute() {
                 gosc ogladajacy cudzy wyjazd tez ma go czym poslac dalej. Reszta zostaje przy
                 wlascicielu / uczestniku. */}
             <div className="shrink-0 flex items-center gap-2">
-                {/* WLASNA OKLADKA wyjazdu - jeden guzik dla KAZDEGO uczestnika (prosba Nat 2026-09-01).
-                    Wybrane zdjecie widzi tylko ten, kto je wybral: na swojej karcie wyjazdu w profilu
-                    i w hero tego widoku. Okladka hosta (eksploracja) zostaje nietknieta. */}
-                {canEdit && (
-                  <button onClick={() => { haptics.light(); setCoverPickerOpen(true); }}
-                    aria-label={t("aria.pick_own_cover")}
-                    className={`h-9 w-9 rounded-full flex items-center justify-center active:scale-90 transition-transform ${myCover ? "bg-[#FCEDE3]" : "bg-secondary"}`}>
-                    <Images className={`h-4 w-4 ${myCover ? "text-[#F75708]" : "text-foreground"}`} />
+                {/* Zapraszanie uczestnikow PRZYWROCONE (prosba Nat 2026-09-06, cofa decyzje z 2026-08-30):
+                    sklad da sie uzupelnic takze PO fakcie, czyli na juz opublikowanym wyjezdzie.
+                    Guzik zajal miejsce wyboru wlasnej okladki - to byla rzadsza akcja, a wiersz ikon
+                    nie moze rosnac w nieskonczonosc. Tylko HOST: inviteUsersToRoute idzie przez
+                    host-only RPC add_member_to_session. */}
+                {isOwner && (
+                  <button onClick={() => { haptics.light(); setInviteOpen(true); }}
+                    aria-label={t("aria.invite_people")}
+                    className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center active:scale-90 transition-transform">
+                    <UserPlus className="h-4 w-4 text-foreground" />
                   </button>
                 )}
-                {/* Zapraszanie uczestnikow USUNIETE z widoku wyjazdu (decyzja Nat 2026-08-30):
-                    osoby wybiera sie WYLACZNIE przy tworzeniu wyjazdu. Skladu nie zmienia sie
-                    ani w trakcie, ani po publikacji. */}
                 <button onClick={handleShare} onContextMenu={(e) => { e.preventDefault(); handleShareLink(); }} aria-label={t("aria.share")} className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center active:scale-90 transition-transform"><Share2 className="h-4 w-4 text-foreground" /></button>
                 {/* Olowek usuniety (prosba Nat 2026-09-01) - ten widok JEST edycja: miejsca, notki,
                     zdjecia, opis i tagi zmienia sie na miejscu, wiec osobne wejscie w stepper
@@ -1636,9 +1602,9 @@ export default function SharedRoute() {
             {/* Etap PROPOZYCJI (planning) = tylko Miejsca + Mapa (galeria bez sensu przy sugerowaniu).
                 Galeria pojawia sie od "w trakcie" (ongoing) - prosba Nat 2026-08-25. */}
             {([
-              { k: "miejsca" as const, Icon: MapPin, label: "Miejsca" },
-              ...(stage !== "planning" ? [{ k: "galeria" as const, Icon: ImageIcon, label: "Galeria" }] : []),
-              { k: "mapa" as const, Icon: MapIcon, label: "Mapa" },
+              { k: "miejsca" as const, Icon: MapPin, label: t("tabs.places") },
+              ...(stage !== "planning" ? [{ k: "galeria" as const, Icon: ImageIcon, label: t("tabs.gallery") }] : []),
+              { k: "mapa" as const, Icon: MapIcon, label: t("tabs.map") },
             ]).map(({ k, Icon, label }) => {
               const on = planTab === k;
               return (
@@ -1669,7 +1635,7 @@ export default function SharedRoute() {
                     note={myTripNote}
                     showAvatar
                     avatarUrl={myAvatar}
-                    placeholder="Twoja notka o tym wyjeździe..."
+                    placeholder={t("note.placeholder")}
                     onSave={saveMyTripNote}
                     onEditingChange={setNoteEditing}
                   />
@@ -1706,7 +1672,7 @@ export default function SharedRoute() {
                         onClick={() => pickDay(d)}
                         className={`shrink-0 rounded-full px-3.5 py-2 flex flex-col items-center leading-tight transition-colors active:scale-95 ${on ? "bg-primary text-white" : "bg-secondary text-foreground"}`}
                       >
-                        <span className="text-sm font-semibold">{d === null ? "Wszystkie" : `Dzień ${d}`}</span>
+                        <span className="text-sm font-semibold">{d === null ? t("days.all") : t("days.nth", { n: d })}</span>
                         <span className={`text-[11px] ${on ? "text-white/85" : "text-muted-foreground"}`}>
                           {d === null ? `${count} ${placeWord(count)}` : dayChipDate(d)}
                         </span>
@@ -1744,7 +1710,7 @@ export default function SharedRoute() {
                       onChange={(e) => saveTripDesc(e.target.value)}
                       onFocus={() => setNoteEditing(true)}
                       onBlur={() => setNoteEditing(false)}
-                      placeholder="Dla kogo jest ten wyjazd, na jaką okazję, co warto zobaczyć..."
+                      placeholder={t("desc.placeholder")}
                       rows={3}
                       className="w-full bg-muted/50 rounded-2xl px-3.5 py-3 text-sm text-foreground resize-none focus:outline-none border border-border/40 focus:border-orange-400/60 placeholder:text-muted-foreground/55"
                     />
@@ -1765,7 +1731,7 @@ export default function SharedRoute() {
                     {(() => {
                       const c = (votesMap as Map<string, { count: number }>).get(placeVoteKey(pin.place_name))?.count ?? 0;
                       if (c === 0) return null;
-                      return <span className="shrink-0 inline-flex items-center rounded-full bg-white text-foreground px-2.5 py-0.5 text-[12px] font-bold">{c} {c === 1 ? "głos" : c < 5 ? "głosy" : "głosów"}</span>;
+                      return <span className="shrink-0 inline-flex items-center rounded-full bg-white text-foreground px-2.5 py-0.5 text-[12px] font-bold">{t("votes", { count: c })}</span>;
                     })()}
                     <span className={`h-7 w-7 rounded-full flex items-center justify-center shrink-0 transition-colors ${chosen.has(pin.id) ? "bg-primary text-primary-foreground" : "border-2 border-border"}`}>{chosen.has(pin.id) && <Check className="h-4 w-4 stroke-[3]" />}</span>
                   </button>
@@ -1777,8 +1743,8 @@ export default function SharedRoute() {
               renderList()
             ) : (
               <EmptyPlacesState
-                title="Trasa jest pusta"
-                hint={canEdit ? "Dodaj pierwsze miejsce guzikiem „+” po prawej stronie" : "Ta trasa nie ma jeszcze żadnych miejsc."}
+                title={t("empty.title")}
+                hint={canEdit ? t("empty.hint_owner") : t("empty.hint_guest")}
               />
             )}
           </div>
@@ -1800,7 +1766,7 @@ export default function SharedRoute() {
                 <div className="absolute inset-0 pointer-events-none">
                   <RouteMap pins={mapPlaces as any} className="w-full h-full" showRoute={false} />
                 </div>
-                <button onClick={() => setPlanMapOpen(true)} aria-label="Rozwiń mapę" className="absolute inset-0 active:opacity-95 transition-opacity" />
+                <button onClick={() => setPlanMapOpen(true)} aria-label={t("aria.expand_map")} className="absolute inset-0 active:opacity-95 transition-opacity" />
                 <span className="absolute top-3 right-3 h-10 w-10 rounded-full bg-card shadow-md flex items-center justify-center pointer-events-none">
                   <Maximize2 className="h-[18px] w-[18px] text-foreground" strokeWidth={2.2} />
                 </span>
@@ -1847,7 +1813,7 @@ export default function SharedRoute() {
                           bo jego wybor jest twarza wyjazdu na zewnatrz. */}
                       {canEdit && (
                         <button onClick={(e) => { e.stopPropagation(); void setCoverFromGallery(url); }}
-                          aria-label={isCover ? "To jest Twoja okładka wyjazdu" : "Ustaw jako swoją okładkę wyjazdu"}
+                          aria-label={isCover ? t("aria.is_my_cover") : t("aria.set_my_cover")}
                           className={`absolute top-1.5 right-1.5 h-8 w-8 rounded-full flex items-center justify-center shadow-sm active:scale-90 transition-transform ${isCover ? "bg-primary" : "bg-white/90"}`}>
                           {/* Ikona EKSPLORACJI (ta sama co w nawigacji) - mowi wprost, do czego sluzy
                               to zdjecie: reprezentuje wyjazd w eksploracji. Aktywna = biala na
@@ -1871,7 +1837,7 @@ export default function SharedRoute() {
                 {canAddPhotos && (
                   <button onClick={() => photoInputRef.current?.click()} disabled={uploadingPhotos}
                     className="mt-1 px-4 py-2.5 rounded-full border border-border text-foreground font-bold text-sm flex items-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-60">
-                    {uploadingPhotos ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />} Dodaj zdjęcie
+                    {uploadingPhotos ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />} {t("add_photo_cta")}
                   </button>
                 )}
               </div>
@@ -1880,9 +1846,6 @@ export default function SharedRoute() {
               <>
                 <input ref={photoInputRef} type="file" accept="image/*,.heic,.heif" multiple className="hidden"
                   onChange={(e) => { const files = Array.from(e.target.files ?? []); e.currentTarget.value = ""; if (files.length) void handleAddPhotos(files); }} />
-                {/* Osobny input dla okladki: jeden plik, po wgraniu od razu staje sie MOJA okladka. */}
-                <input ref={coverInputRef} type="file" accept="image/*,.heic,.heif" className="hidden"
-                  onChange={(e) => { const f = e.target.files; e.currentTarget.value = ""; void uploadCoverPhoto(f); }} />
               </>
             )}
           </div>
@@ -1944,20 +1907,20 @@ export default function SharedRoute() {
         />
       )}
 
-      {/* Arkusz wyboru WLASNEJ okladki wyjazdu - zdjecia z galerii wyjazdu + wgranie nowego. */}
-      <CoverPickerSheet
-        open={coverPickerOpen}
-        onClose={() => setCoverPickerOpen(false)}
-        title={t("own_cover.title")}
-        subtitle={t("own_cover.desc")}
-        options={galleryPhotos.map((u, i) => ({ id: `${i}`, name: "", url: u }))}
-        currentUrl={resolveStored(myCover) ?? null}
-        onPick={(url) => { void setMyCover(url); setCoverPickerOpen(false); }}
-        onUploadNew={() => coverInputRef.current?.click()}
-        uploading={uploadingCover || uploadingPhotos}
-        onReset={myCover ? () => { void resetMyCover(); setCoverPickerOpen(false); } : undefined}
-        resetLabel={t("own_cover.reset")}
-      />
+      {/* Zaproszenie kolejnych uczestnikow - takze do wyjazdu juz opublikowanego. Po dodaniu
+          odswiezamy skald grupy, zeby awatary w naglowku od razu sie zgadzaly. */}
+      {isOwner && (
+        <InviteFriendsSheet
+          open={inviteOpen}
+          onOpenChange={setInviteOpen}
+          route={{ id: route.id, city: route.city ?? null, title: route.title ?? null, group_session_id: (route as any).group_session_id ?? null }}
+          existingMemberIds={(groupParticipants as any[]).map((p) => p.id)}
+          onInvited={() => {
+            void queryClient.invalidateQueries({ queryKey: ["shared-route-participants"] });
+            void queryClient.invalidateQueries({ queryKey: ["shared-route", id] });
+          }}
+        />
+      )}
 
       {/* Dymek CZATU wyjazdu (prawa strona, nad dolnym CTA) - uczestnicy (owner/czlonek) przegaduja
           miejsca. Realtime. Ukryty w trybie wyboru miejsc. Prosba Nat 2026-08-26. */}
