@@ -114,6 +114,7 @@ const normCityName = (s: unknown) =>
 function SortableComposeRow({ it, idx, onOpen, onRemove, selected, onToggle }: {
   it: ComposeItem; idx: number; onOpen: () => void; onRemove: () => void; selected: boolean; onToggle: () => void;
 }) {
+  const { t } = useTranslation("myplan");
   const controls = useDragControls();
   return (
     <Reorder.Item
@@ -129,7 +130,7 @@ function SortableComposeRow({ it, idx, onOpen, onRemove, selected, onToggle }: {
       {/* Uchwyt przeciagania - z LEWEJ, tuz przy okladce (daleko od kosza po prawej, zeby nie mylic). */}
       <span
         onPointerDown={(e) => { haptics.light(); controls.start(e); }}
-        aria-label="Przeciągnij, by zmienić kolejność"
+        aria-label={t("reorder_hint")}
         className="shrink-0 h-9 w-6 flex items-center justify-center text-muted-foreground/50 cursor-grab active:cursor-grabbing touch-none"
       >
         <GripVertical className="h-5 w-5" />
@@ -154,14 +155,14 @@ function SortableComposeRow({ it, idx, onOpen, onRemove, selected, onToggle }: {
       {/* Toggle "w trasie": zaznaczone = wejdzie do trasy; odznaczone = kandydat (popup zaproponuje zapis). */}
       <button
         onClick={onToggle}
-        aria-label={selected ? "Wyłącz z trasy" : "Dodaj do trasy"}
+        aria-label={selected ? t("aria.exclude") : "Dodaj do trasy"}
         className={`h-7 w-7 rounded-full flex items-center justify-center shrink-0 transition-colors ${selected ? "bg-primary text-white" : "border-2 border-border text-transparent"}`}
       >
         <Check className="h-4 w-4" strokeWidth={3} />
       </button>
       <button
         onClick={onRemove}
-        aria-label="Usuń miejsce"
+        aria-label={t("aria.delete_place")}
         className="h-8 w-8 rounded-full bg-background flex items-center justify-center text-muted-foreground active:scale-90 transition-transform shrink-0"
       >
         <Trash2 className="h-4 w-4" />
@@ -174,6 +175,7 @@ function SortableComposeRow({ it, idx, onOpen, onRemove, selected, onToggle }: {
 // nazwa + daty + miasto + wybrane miejsca (prefill z zestawienia) + szukanie (Google) /
 // propozycje z bazy (na fokusie) + statyczna mapa. Potwierdzenie tworzy wyjazd (routes).
 export default function ComposeWyjazd() {
+  const { t } = useTranslation("myplan");
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const location = useLocation();
@@ -219,7 +221,7 @@ export default function ComposeWyjazd() {
   const cities = citiesForCountry(country);
   const onCountryChange = (c: string) => { setCountry(c); setCity(citiesForCountry(c)[0]); };
   // Domyslna nazwa: PL z dopelniaczem miasta ("Wyjazd do Warszawy/Berlina/Krakowa"), EN "Trip to X".
-  const defaultTripName = (c: string) => (isEn ? `Trip to ${c}` : `Wyjazd do ${cityGenitive(c)}`);
+  const defaultTripName = (c: string) => (isEn ? `Trip to ${c}` : t("trip_name_city", { city: cityGenitive(c) }));
   const [name, setName] = useState<string>(
     soft?.name ?? nav.title ?? defaultTripName(soft?.city ?? nav.city ?? "Warszawa"));
   // Nazwa uzupelniona z gory (edytowalna). Dopoki user nie edytowal recznie, synchronizuje sie
@@ -335,7 +337,7 @@ export default function ComposeWyjazd() {
       }));
       id = await createWyjazdFromPlaces(user.id, city, name.trim() || city || "Wyjazd", places, dates, { tripType });
       setCreating(false);
-      if (!id) { toast.error("Nie udało się utworzyć trasy"); return; }
+      if (!id) { toast.error(t("toast.route_failed")); return; }
       setDraftId(id);
       try {
         const cur = JSON.parse(sessionStorage.getItem(softKey) || "{}");
@@ -586,7 +588,7 @@ export default function ComposeWyjazd() {
       ? await updateWyjazdPlaces(draftId, city, name.trim() || city || "Wyjazd", places, dates)
       : await createWyjazdFromPlaces(user.id, city, name.trim() || city || "Wyjazd", places, dates, { tripType });
     setCreating(false);
-    if (!id) { haptics.error(); toast.error(draftId ? "Nie udało się zapisać zmian" : "Nie udało się utworzyć wyjazdu"); return; }
+    if (!id) { haptics.error(); toast.error(draftId ? t("toast.save_failed") : t("toast.trip_failed")); return; }
     haptics.success();
     // Zaproszeni z arkusza "Nowy wyjazd" (state.inviteeIds): zastosuj SYNCHRONICZNIE tu, PRZED
     // navigate. inviteUsersToRoute tworzy sesje grupowa + is_shared=true. Guard ref = tylko raz.
@@ -633,7 +635,7 @@ export default function ComposeWyjazd() {
       navigate(`/review-summary?route=${id}&edit=1&step=2`);
     } else {
       clearSoft();
-      toast.success(draftId ? "Zapisano zmiany" : "Zapisano jako roboczą");
+      toast.success(draftId ? "Zapisano zmiany" : t("toast.saved_draft"));
       navigate("/moj-profil?tab=wyjazdy");
     }
   };
@@ -655,7 +657,7 @@ export default function ComposeWyjazd() {
       toast.success(leftover.savePlaces.length === 1 ? "Zapisano miejsce" : `Zapisano ${leftover.savePlaces.length} miejsc`);
     } catch (e: any) {
       console.error("[ComposeWyjazd] saveLeftover failed:", e?.message ?? e);
-      toast.error("Nie udało się zapisać miejsc");
+      toast.error(t("toast.places_failed"));
     } finally {
       setLeftoverBusy(false);
       finishNavigation(leftover.openEditor, leftover.routeId, leftover.tripPlaces);
@@ -709,7 +711,7 @@ export default function ComposeWyjazd() {
       {/* Naglowek: prosty (wejscie z arkusza "Co dzisiaj tworzymy?"). Bez zakladek huba
           (Twórz|Robocze|Zapisane) i toggle Trasy|Listy - wybor typu jest juz w arkuszu. */}
       <div className="flex items-center gap-2 px-4 pt-safe-4 pb-3 border-b border-border/20 shrink-0">
-        <button onClick={handleBack} aria-label="Wróć" className="h-9 w-9 flex items-center justify-center -ml-1 shrink-0 text-foreground active:scale-90 transition-transform">
+        <button onClick={handleBack} aria-label={t("back")} className="h-9 w-9 flex items-center justify-center -ml-1 shrink-0 text-foreground active:scale-90 transition-transform">
           <ArrowLeft className="h-5 w-5" />
         </button>
         <h1 className="flex-1 text-center text-base font-bold text-foreground pr-9">Nowy wyjazd</h1>
@@ -734,7 +736,7 @@ export default function ComposeWyjazd() {
         {/* Hint: jedno zdanie czym jest trasa */}
         <div className="px-4 pt-4">
           <p className="text-sm text-muted-foreground leading-snug">
-            {`Trasa to Twój plan wyjazdu: miejsca w kolejności, które zostały odwiedzone.`}
+            {t("intro")}
           </p>
         </div>
         {/* Kraj + miasto wybrane wczesniej drum-scrollem (/utworz) - tu bez selektora.
@@ -762,7 +764,7 @@ export default function ComposeWyjazd() {
               placeholder={`Szukaj miejsca w ${city}...`}
               className="w-full rounded-2xl bg-secondary text-secondary-foreground border border-border/40 pl-10 pr-9 py-3 text-base outline-none focus:ring-2 focus:ring-orange-500/40 focus:border-orange-400/50 placeholder:text-muted-foreground/60" />
             {search && (
-              <button onClick={() => { setSearch(""); searchRef.current?.blur(); }} aria-label="Wyczyść" className="absolute right-3 top-1/2 -translate-y-1/2 h-6 w-6 flex items-center justify-center rounded-full text-muted-foreground active:bg-muted">
+              <button onClick={() => { setSearch(""); searchRef.current?.blur(); }} aria-label={t("clear")} className="absolute right-3 top-1/2 -translate-y-1/2 h-6 w-6 flex items-center justify-center rounded-full text-muted-foreground active:bg-muted">
                 <X className="h-4 w-4" />
               </button>
             )}
@@ -776,9 +778,9 @@ export default function ComposeWyjazd() {
             {loading ? (
               <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
             ) : searchBlocked && searchProposals.length === 0 ? (
-              <p className="px-4 text-sm text-muted-foreground pb-2 leading-relaxed">Wyszukiwarka miejsc jest chwilowo niedostępna. Spróbuj później.</p>
+              <p className="px-4 text-sm text-muted-foreground pb-2 leading-relaxed">{t("search.unavailable")}</p>
             ) : searchProposals.length === 0 ? (
-              <p className="px-4 text-sm text-muted-foreground pb-2 leading-snug">Brak wyników dla tej frazy.</p>
+              <p className="px-4 text-sm text-muted-foreground pb-2 leading-snug">{t("search.no_results")}</p>
             ) : (
               // Scroll owiniety w NIE-scrollowy div z px-4: padding na normalnym bloku dziala
               // niezawodnie w iOS WKWebView (w przeciwienstwie do padding na overflow-x kontenerze).
@@ -829,7 +831,7 @@ export default function ComposeWyjazd() {
               className="w-full rounded-2xl border-2 border-dashed border-border/70 bg-secondary/40 flex flex-col items-center justify-center gap-2 py-8 text-muted-foreground active:scale-[0.99] transition-transform">
               <span className="h-11 w-11 rounded-full bg-secondary flex items-center justify-center"><Plus className="h-5 w-5 text-orange-600" /></span>
               <span className="text-sm font-bold text-foreground">Dodaj miejsce</span>
-              <span className="text-[12px] text-center">Wyszukaj lub wybierz z zapisanych poniżej</span>
+              <span className="text-[12px] text-center">{t("search.hint")}</span>
             </button>
           ) : placeView === "detail" ? (
             <div className="flex gap-3 overflow-x-auto scrollbar-none snap-x snap-mandatory -mr-4 pr-4 pb-1">
@@ -842,11 +844,11 @@ export default function ComposeWyjazd() {
                       <div className="w-full h-full bg-[#fcede3] flex items-center justify-center"><img src={categoryIconSrc(it.category)} alt="" className="w-1/5 max-w-[40px] opacity-90" draggable={false} /></div>
                     )}
                     {/* Toggle "w trasie" (lewy-gorny), kosz (prawy-gorny). */}
-                    <span role="button" tabIndex={0} onClick={(e) => { e.stopPropagation(); toggleInTrip(it.key); }} aria-label={isInTrip(it.key) ? "Wyłącz z trasy" : "Dodaj do trasy"}
+                    <span role="button" tabIndex={0} onClick={(e) => { e.stopPropagation(); toggleInTrip(it.key); }} aria-label={isInTrip(it.key) ? t("aria.exclude") : "Dodaj do trasy"}
                       className={`absolute top-2 left-2 h-8 w-8 rounded-full flex items-center justify-center active:scale-90 transition-transform ${isInTrip(it.key) ? "bg-primary text-white" : "bg-white/85 border border-black/10 text-transparent"}`}>
                       <Check className="h-4 w-4" strokeWidth={3} />
                     </span>
-                    <span role="button" tabIndex={0} onClick={(e) => { e.stopPropagation(); setConfirmRemove({ key: it.key, name: it.place_name }); }} aria-label="Usuń miejsce"
+                    <span role="button" tabIndex={0} onClick={(e) => { e.stopPropagation(); setConfirmRemove({ key: it.key, name: it.place_name }); }} aria-label={t("aria.delete_place")}
                       className="absolute top-2 right-2 h-8 w-8 rounded-full bg-black/45 backdrop-blur text-white flex items-center justify-center active:scale-90 transition-transform">
                       <X className="h-4 w-4" />
                     </span>
@@ -896,7 +898,7 @@ export default function ComposeWyjazd() {
               Twoje zapisane miejsca
             </p>
             {savedProposals.length === 0 ? (
-              <p className="text-sm text-muted-foreground leading-snug">{`Nie masz jeszcze zapisanych miejsc. Polub miejsca w eksploracji, żeby dodać je tu jednym tapem.`}</p>
+              <p className="text-sm text-muted-foreground leading-snug">{t("empty.saved")}</p>
             ) : (
               <div className="flex gap-3 overflow-x-auto scrollbar-none snap-x snap-mandatory -mr-4 pr-4 pb-1">
                 {savedProposals.slice(0, 15).map((p: any) => (
@@ -927,7 +929,7 @@ export default function ComposeWyjazd() {
             <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2.5">Mapa</p>
             <div className="relative h-52 rounded-2xl overflow-hidden border border-border/40 bg-muted">
               <img src={staticMapUrl} alt="Mapa miejsc" className="w-full h-full object-cover" />
-              <button onClick={() => setMapExpanded(true)} aria-label="Rozwiń mapę"
+              <button onClick={() => setMapExpanded(true)} aria-label={t("map.expand")}
                 className="absolute bottom-3 right-3 h-10 w-10 rounded-full bg-card shadow-md flex items-center justify-center active:scale-90 transition-transform">
                 <Maximize2 className="h-[18px] w-[18px] text-foreground" strokeWidth={2.2} />
               </button>
@@ -945,7 +947,7 @@ export default function ComposeWyjazd() {
             className="flex-1 h-12 rounded-2xl bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform shadow-md shadow-orange-500/20 disabled:opacity-60">
             {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : (nav.mode === "future"
               ? <>Zapisz wyjazd <Check className="h-4 w-4" /></>
-              : <>Przejdź do sugestii <ArrowRight className="h-4 w-4" /></>)}
+              : <>{t("go_suggestions")}<ArrowRight className="h-4 w-4" /></>)}
           </button>
         </div>
       )}
@@ -964,21 +966,21 @@ export default function ComposeWyjazd() {
           <div {...leftoverDrag.dragProps} className="w-full max-w-md bg-card rounded-t-3xl px-5 pt-6 pb-[max(20px,env(safe-area-inset-bottom))] shadow-2xl animate-in slide-in-from-bottom-4 duration-300"
             onClick={(e) => e.stopPropagation()}>
             <p className="text-lg font-black leading-tight">{leftover.savePlaces.length === 1 ? "Nie zgub tego miejsca" : `Nie zgub ${leftover.savePlaces.length} miejsc`}</p>
-            <p className="text-sm text-muted-foreground leading-snug mt-1.5">{`Miejsca poza trasą możesz zapisać, żeby wrócić do nich później.`}</p>
+            <p className="text-sm text-muted-foreground leading-snug mt-1.5">{t("save_aside")}</p>
             {leftoverNewList !== null ? (
               <div className="mt-4">
-                <input value={leftoverNewList} onChange={(e) => setLeftoverNewList(e.target.value)} placeholder={`Nazwa listy (np. Miejsca ${city})`} autoFocus
+                <input value={leftoverNewList} onChange={(e) => setLeftoverNewList(e.target.value)} placeholder={t("list.name_placeholder", { city })} autoFocus
                   className="w-full h-12 rounded-xl bg-secondary/60 border border-border/60 px-4 text-base text-foreground placeholder:text-muted-foreground/70 outline-none focus:ring-2 focus:ring-orange-500/30" />
                 <div className="flex gap-2 mt-3">
                   <button onClick={() => setLeftoverNewList(null)} disabled={leftoverBusy} className="flex-1 h-12 rounded-2xl bg-secondary text-secondary-foreground font-bold text-sm active:scale-[0.98] transition-transform disabled:opacity-40">Wstecz</button>
-                  <button onClick={() => saveLeftover("newlist")} disabled={leftoverBusy} className="flex-1 h-12 rounded-2xl bg-primary text-white font-bold text-sm active:scale-[0.98] transition-transform disabled:opacity-40">{leftoverBusy ? "..." : "Stwórz i zapisz"}</button>
+                  <button onClick={() => saveLeftover("newlist")} disabled={leftoverBusy} className="flex-1 h-12 rounded-2xl bg-primary text-white font-bold text-sm active:scale-[0.98] transition-transform disabled:opacity-40">{leftoverBusy ? "..." : t("list.create_and_save")}</button>
                 </div>
               </div>
             ) : (
               <div className="flex flex-col gap-2 mt-4">
-                <button onClick={() => saveLeftover("ogolne")} disabled={leftoverBusy} className="w-full h-12 rounded-2xl bg-primary text-white font-bold text-sm active:scale-[0.98] transition-transform disabled:opacity-40">{leftoverBusy ? "..." : "Tak, zapisz w Ogólne"}</button>
-                <button onClick={() => setLeftoverNewList("")} disabled={leftoverBusy} className="w-full h-12 rounded-2xl bg-secondary text-secondary-foreground font-bold text-sm active:scale-[0.98] transition-transform disabled:opacity-40">Stwórz nową listę</button>
-                <button onClick={() => finishNavigation(leftover.openEditor, leftover.routeId, leftover.tripPlaces)} disabled={leftoverBusy} className="w-full h-11 rounded-2xl text-muted-foreground font-semibold text-sm active:scale-[0.98] transition-transform disabled:opacity-40">Nie, pomiń</button>
+                <button onClick={() => saveLeftover("ogolne")} disabled={leftoverBusy} className="w-full h-12 rounded-2xl bg-primary text-white font-bold text-sm active:scale-[0.98] transition-transform disabled:opacity-40">{leftoverBusy ? "..." : t("list.save_to_general")}</button>
+                <button onClick={() => setLeftoverNewList("")} disabled={leftoverBusy} className="w-full h-12 rounded-2xl bg-secondary text-secondary-foreground font-bold text-sm active:scale-[0.98] transition-transform disabled:opacity-40">{t("list.create_new")}</button>
+                <button onClick={() => finishNavigation(leftover.openEditor, leftover.routeId, leftover.tripPlaces)} disabled={leftoverBusy} className="w-full h-11 rounded-2xl text-muted-foreground font-semibold text-sm active:scale-[0.98] transition-transform disabled:opacity-40">{t("confirm.skip")}</button>
               </div>
             )}
           </div>
@@ -990,7 +992,7 @@ export default function ComposeWyjazd() {
         <SheetContent side="bottom" className="p-0 [&>button:last-child]:hidden" style={{ height: "92dvh" }}>
           <div className="relative w-full h-full">
             <RouteMap pins={mapPins as any} className="w-full h-full" showRoute={false} />
-            <button onClick={() => setMapExpanded(false)} aria-label="Zamknij mapę"
+            <button onClick={() => setMapExpanded(false)} aria-label={t("map.close")}
               className="absolute top-3 right-3 z-10 h-10 w-10 rounded-full bg-card shadow-md flex items-center justify-center active:scale-90 transition-transform" style={{ top: "max(0.75rem, env(safe-area-inset-top))" }}>
               <X className="h-5 w-5 text-foreground" />
             </button>
@@ -1019,17 +1021,15 @@ export default function ComposeWyjazd() {
             className="w-full max-w-md bg-card rounded-t-3xl px-5 pt-6 pb-[max(20px,env(safe-area-inset-bottom))] shadow-2xl animate-in slide-in-from-bottom-4 duration-300"
             onClick={(e) => e.stopPropagation()}
           >
-            <p className="text-lg font-black leading-tight">Usunąć miejsce z trasy?</p>
+            <p className="text-lg font-black leading-tight">{t("confirm.remove_place_title")}</p>
             <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed">
-              {confirmRemove.name ? `„${confirmRemove.name}" zniknie z tej trasy.` : "To miejsce zniknie z tej trasy."}
+              {confirmRemove.name ? t("confirm.remove_place_desc", { name: confirmRemove.name }) : t("confirm.remove_place_generic")}
             </p>
             <div className="mt-5 flex flex-col gap-2">
               <button
                 onClick={() => { removePlace(confirmRemove.key); setConfirmRemove(null); }}
                 className="w-full h-12 rounded-2xl bg-destructive text-white font-bold text-sm flex items-center justify-center active:scale-[0.98] transition-transform"
-              >
-                Usuń miejsce
-              </button>
+              >{t("aria.delete_place")}</button>
               <button
                 onClick={() => setConfirmRemove(null)}
                 className="w-full h-12 rounded-2xl bg-secondary text-secondary-foreground font-bold text-sm flex items-center justify-center active:scale-95 transition-transform"
@@ -1052,10 +1052,10 @@ export default function ComposeWyjazd() {
             className="w-full max-w-md bg-card rounded-t-3xl px-5 pt-6 pb-[max(20px,env(safe-area-inset-bottom))] shadow-2xl animate-in slide-in-from-bottom-4 duration-300"
             onClick={(e) => e.stopPropagation()}
           >
-            <p className="text-lg font-black leading-tight">{draftId ? "Zapisać zmiany?" : "Zapisać trasę do roboczych?"}</p>
+            <p className="text-lg font-black leading-tight">{draftId ? t("confirm.save_title") : t("confirm.draft_title")}</p>
             <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed">
               {draftId
-                ? "Masz niezapisane zmiany w tej roboczej trasie. Zapisać je?"
+                ? t("confirm.draft_desc")
                 : `Masz ${items.length} ${items.length === 1 ? "miejsce" : items.length < 5 ? "miejsca" : "miejsc"} w trasie. Zapisz ją jako roboczą, żeby wrócić do niej później.`}
             </p>
             <div className="mt-5 flex flex-col gap-2">
@@ -1064,14 +1064,12 @@ export default function ComposeWyjazd() {
                 disabled={creating}
                 className="w-full h-12 rounded-2xl bg-primary text-white font-bold text-sm flex items-center justify-center active:scale-[0.98] transition-transform disabled:opacity-60"
               >
-                {draftId ? "Zapisz zmiany" : "Zapisz jako roboczą"}
+                {draftId ? "Zapisz zmiany" : t("confirm.save_draft")}
               </button>
               <button
                 onClick={() => { setShowBackConfirm(false); exitCreate(); }}
                 className="w-full h-12 rounded-2xl bg-secondary text-secondary-foreground font-bold text-sm flex items-center justify-center active:scale-95 transition-transform"
-              >
-                Nie zapisuj, wyjdź
-              </button>
+              >{t("confirm.discard")}</button>
               <button
                 onClick={() => setShowBackConfirm(false)}
                 className="w-full py-2 text-sm font-medium text-muted-foreground active:text-foreground transition-colors"

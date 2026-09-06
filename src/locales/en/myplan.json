@@ -78,5 +78,52 @@
     "nightlife": "Nightlife",
     "church": "Church",
     "place": "Place"
-  }
+  },
+  "empty": {
+    "saved": "You have no saved places yet. Like places while exploring to add them here in one tap."
+  },
+  "intro": "A trip is your plan: the places you visited, in order.",
+  "save_aside": "Places outside the trip can be saved for later.",
+  "search": {
+    "unavailable": "Place search is temporarily unavailable. Try again later.",
+    "hint": "Search, or pick from your saved places below",
+    "no_results": "No results for that search."
+  },
+  "confirm": {
+    "draft_desc": "You have unsaved changes in this draft. Save them?",
+    "draft_title": "Save the trip as a draft?",
+    "remove_place_title": "Remove this place from the trip?",
+    "save_draft": "Save as draft",
+    "discard": "Do not save, leave",
+    "save_title": "Save changes?",
+    "skip": "No, skip",
+    "remove_place_desc": "“{{name}}” will disappear from this trip.",
+    "remove_place_generic": "This place will disappear from this trip."
+  },
+  "reorder_hint": "Drag to reorder",
+  "toast": {
+    "trip_failed": "We could not create the trip",
+    "route_failed": "We could not create the trip",
+    "places_failed": "We could not save the places",
+    "save_failed": "We could not save your changes",
+    "saved_draft": "Saved as a draft"
+  },
+  "list": {
+    "save_to_general": "Yes, save to General",
+    "create_new": "Create a new list",
+    "create_and_save": "Create and save",
+    "name_placeholder": "List name (e.g. Places in {{city}})"
+  },
+  "go_suggestions": "Go to suggestions",
+  "aria": {
+    "exclude": "Remove from the trip",
+    "delete_place": "Delete place"
+  },
+  "map": {
+    "close": "Close map",
+    "expand": "Expand map"
+  },
+  "clear": "Clear",
+  "back": "Back",
+  "trip_name_city": "Trip to {{city}}"
 }

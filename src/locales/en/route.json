@@ -82,5 +82,33 @@
     "drag_reorder": "Drag to reorder",
     "heading_multi": "Day {{day}} of {{total}}",
     "heading_single": "Day plan"
+  },
+  "empty": {
+    "participant": "No proposals yet. Add the places you want to see - the host picks what makes it into the trip.",
+    "host": "No proposals yet. Add places with the search, or wait for participants to add theirs."
+  },
+  "search": {
+    "unavailable": "Search is temporarily unavailable. Add from your saved places below.",
+    "no_results": "No results."
+  },
+  "toast": {
+    "already": "That place is already in the proposals",
+    "remove_failed": "We could not remove the proposal",
+    "add_failed": "We could not add the proposal",
+    "accept_failed": "We could not add it to the trip"
+  },
+  "already_badge": "Already proposed",
+  "aria": {
+    "withdraw": "Withdraw proposal",
+    "refresh": "Refresh proposals",
+    "reject": "Reject proposal",
+    "open_in_maps": "Open {{place}} in Google Maps"
+  },
+  "clear": "Clear",
+  "back": "Back",
+  "proposals": {
+    "added": "“{{place}}” added to the trip",
+    "title": "Proposals from participants",
+    "title_count": "Proposals from participants ({{count}})"
   }
 }

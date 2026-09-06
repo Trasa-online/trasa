@@ -79,5 +79,52 @@
     "nightlife": "Nocne życie",
     "church": "Kościół",
     "place": "Miejsce"
-  }
+  },
+  "empty": {
+    "saved": "Nie masz jeszcze zapisanych miejsc. Polub miejsca w eksploracji, żeby dodać je tu jednym tapem."
+  },
+  "intro": "Trasa to Twój plan wyjazdu: miejsca w kolejności, które zostały odwiedzone.",
+  "save_aside": "Miejsca poza trasą możesz zapisać, żeby wrócić do nich później.",
+  "search": {
+    "unavailable": "Wyszukiwarka miejsc jest chwilowo niedostępna. Spróbuj później.",
+    "hint": "Wyszukaj lub wybierz z zapisanych poniżej",
+    "no_results": "Brak wyników dla tej frazy."
+  },
+  "confirm": {
+    "draft_desc": "Masz niezapisane zmiany w tej roboczej trasie. Zapisać je?",
+    "draft_title": "Zapisać trasę do roboczych?",
+    "remove_place_title": "Usunąć miejsce z trasy?",
+    "save_draft": "Zapisz jako roboczą",
+    "discard": "Nie zapisuj, wyjdź",
+    "save_title": "Zapisać zmiany?",
+    "skip": "Nie, pomiń",
+    "remove_place_desc": "„{{name}}” zniknie z tej trasy.",
+    "remove_place_generic": "To miejsce zniknie z tej trasy."
+  },
+  "reorder_hint": "Przeciągnij, by zmienić kolejność",
+  "toast": {
+    "trip_failed": "Nie udało się utworzyć wyjazdu",
+    "route_failed": "Nie udało się utworzyć trasy",
+    "places_failed": "Nie udało się zapisać miejsc",
+    "save_failed": "Nie udało się zapisać zmian",
+    "saved_draft": "Zapisano jako roboczą"
+  },
+  "list": {
+    "save_to_general": "Tak, zapisz w Ogólne",
+    "create_new": "Stwórz nową listę",
+    "create_and_save": "Stwórz i zapisz",
+    "name_placeholder": "Nazwa listy (np. Miejsca {{city}})"
+  },
+  "go_suggestions": "Przejdź do sugestii",
+  "aria": {
+    "exclude": "Wyłącz z trasy",
+    "delete_place": "Usuń miejsce"
+  },
+  "map": {
+    "close": "Zamknij mapę",
+    "expand": "Rozwiń mapę"
+  },
+  "clear": "Wyczyść",
+  "back": "Wróć",
+  "trip_name_city": "Wyjazd do {{city}}"
 }

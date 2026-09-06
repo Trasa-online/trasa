@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
@@ -12,6 +13,7 @@ import { cn } from "@/lib/utils";
 import posthog from "posthog-js";
 
 const SetPassword = ({ forceBusiness }: { forceBusiness?: boolean } = {}) => {
+  const { t } = useTranslation("auth");
   const navigate = useNavigate();
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -114,7 +116,7 @@ const SetPassword = ({ forceBusiness }: { forceBusiness?: boolean } = {}) => {
         const { error } = await supabase.auth.exchangeCodeForSession(code);
         if (error && !(await hasRealSession())) {
           console.error("[SetPassword] Code exchange failed:", error);
-          toast.error("Weryfikacja nie powiodła się. Spróbuj ponownie.");
+          toast.error(t("error.verify"));
           navigate(isBusiness ? "/auth?business=true" : "/auth");
           return;
         }
@@ -127,7 +129,7 @@ const SetPassword = ({ forceBusiness }: { forceBusiness?: boolean } = {}) => {
         const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type: callbackType as any });
         if (error && !(await hasRealSession())) {
           console.error("[SetPassword] verifyOtp failed:", error);
-          toast.error("Weryfikacja nie powiodła się. Spróbuj ponownie.");
+          toast.error(t("error.verify"));
           navigate(isBusiness ? "/auth?business=true" : "/auth");
           return;
         }
@@ -166,11 +168,11 @@ const SetPassword = ({ forceBusiness }: { forceBusiness?: boolean } = {}) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (password.length < 6) {
-      toast.error("Hasło musi mieć co najmniej 6 znaków.");
+      toast.error(t("error.too_short"));
       return;
     }
     if (password !== confirm) {
-      toast.error("Hasła nie są identyczne.");
+      toast.error(t("error.mismatch"));
       return;
     }
     setLoading(true);
@@ -180,8 +182,8 @@ const SetPassword = ({ forceBusiness }: { forceBusiness?: boolean } = {}) => {
       const { data: { user: preUser } } = await supabase.auth.getUser();
       if (!preUser || preUser.is_anonymous) {
         toast.error(isReset
-          ? "Link do resetu hasła wygasł lub jest nieprawidłowy. Poproś o nowy link."
-          : "Link aktywacyjny wygasł lub jest nieprawidłowy. Poproś o nowe zaproszenie.");
+          ? t("error.reset_expired")
+          : t("error.invite_expired"));
         return;
       }
 
@@ -224,7 +226,7 @@ const SetPassword = ({ forceBusiness }: { forceBusiness?: boolean } = {}) => {
         try {
           const demo = JSON.parse(demoRaw);
           localStorage.removeItem("trasa_demo_liked");
-          toast.success("Hasło ustawione! Twoja trasa z demo jest gotowa.");
+          toast.success(t("toast.done_demo"));
           navigate("/create", { state: { city: demo.city, likedPlacesData: demo.places } });
           return;
         } catch {}
@@ -232,7 +234,7 @@ const SetPassword = ({ forceBusiness }: { forceBusiness?: boolean } = {}) => {
       toast.success("Witamy w spontaway 🧡");
       navigate("/home");
     } catch (error: any) {
-      toast.error(error.message || "Nie udało się ustawić hasła.");
+      toast.error(error.message || t("error.failed"));
     } finally {
       setLoading(false);
     }
@@ -276,18 +278,18 @@ const SetPassword = ({ forceBusiness }: { forceBusiness?: boolean } = {}) => {
           <div className="w-full max-w-md bg-white rounded-3xl shadow-xl shadow-slate-900/[0.06] border border-slate-100 p-7 sm:p-9">
             {/* Heading */}
             <div className="text-center mb-6">
-              <h1 className="text-2xl font-black text-slate-900 leading-tight">{isReset ? "Ustaw nowe hasło" : "Ustaw hasło"}</h1>
+              <h1 className="text-2xl font-black text-slate-900 leading-tight">{isReset ? t("title.reset") : t("title.set")}</h1>
               <p className="text-sm text-slate-500 mt-1.5 leading-relaxed">
                 {isReset
-                  ? "Wpisz nowe hasło do swojego konta biznesowego."
-                  : "To ostatni krok. Po ustawieniu hasła uzyskasz dostęp do panelu biznesowego."}
+                  ? t("desc.reset")
+                  : t("desc.invite")}
               </p>
             </div>
 
             {/* Form */}
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-1.5">
-                <Label htmlFor="new-password" className="text-slate-700 font-semibold text-sm">Hasło</Label>
+                <Label htmlFor="new-password" className="text-slate-700 font-semibold text-sm">{t("label.password")}</Label>
                 <div className="relative">
                   <Input
                     id="new-password"
@@ -295,7 +297,7 @@ const SetPassword = ({ forceBusiness }: { forceBusiness?: boolean } = {}) => {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
-                    placeholder="Min. 6 znaków"
+                    placeholder={t("placeholder.min")}
                     minLength={6}
                     className="bg-white border-slate-200 pr-10 focus-visible:ring-blue-500"
                   />
@@ -310,7 +312,7 @@ const SetPassword = ({ forceBusiness }: { forceBusiness?: boolean } = {}) => {
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="confirm-password" className="text-slate-700 font-semibold text-sm">Potwierdź hasło</Label>
+                <Label htmlFor="confirm-password" className="text-slate-700 font-semibold text-sm">{t("label.confirm")}</Label>
                 <div className="relative">
                   <Input
                     id="confirm-password"
@@ -318,7 +320,7 @@ const SetPassword = ({ forceBusiness }: { forceBusiness?: boolean } = {}) => {
                     value={confirm}
                     onChange={(e) => setConfirm(e.target.value)}
                     required
-                    placeholder="Powtórz hasło"
+                    placeholder={t("placeholder.repeat")}
                     className="bg-white border-slate-200 pr-10 focus-visible:ring-blue-500"
                   />
                   <button
@@ -350,7 +352,7 @@ const SetPassword = ({ forceBusiness }: { forceBusiness?: boolean } = {}) => {
                 disabled={loading}
                 className="w-full py-3.5 rounded-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-base shadow-lg shadow-blue-600/25 active:scale-[0.98] transition-all disabled:opacity-60 disabled:scale-100 mt-2"
               >
-                {loading ? "Zapisuję…" : (isReset ? "Zapisz nowe hasło" : "Aktywuj konto biznesowe")}
+                {loading ? t("saving") : (isReset ? t("cta.save") : "Aktywuj konto biznesowe")}
               </button>
             </form>
 
@@ -381,15 +383,13 @@ const SetPassword = ({ forceBusiness }: { forceBusiness?: boolean } = {}) => {
               style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }}
             />
             <h1 className="text-3xl font-black tracking-tight">TRASA</h1>
-            <p className="text-muted-foreground text-center text-sm mt-1 leading-relaxed">
-              Ustaw hasło i zacznij odkrywać miasta.
-            </p>
+            <p className="text-muted-foreground text-center text-sm mt-1 leading-relaxed">{t("desc.b2c")}</p>
           </div>
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-1.5">
-              <Label htmlFor="new-password">Hasło</Label>
+              <Label htmlFor="new-password">{t("label.password")}</Label>
               <div className="relative">
                 <Input
                   id="new-password"
@@ -397,7 +397,7 @@ const SetPassword = ({ forceBusiness }: { forceBusiness?: boolean } = {}) => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  placeholder="Min. 6 znaków"
+                  placeholder={t("placeholder.min")}
                   minLength={6}
                   className="bg-card pr-10"
                 />
@@ -412,7 +412,7 @@ const SetPassword = ({ forceBusiness }: { forceBusiness?: boolean } = {}) => {
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="confirm-password">Potwierdź hasło</Label>
+              <Label htmlFor="confirm-password">{t("label.confirm")}</Label>
               <div className="relative">
                 <Input
                   id="confirm-password"
@@ -420,7 +420,7 @@ const SetPassword = ({ forceBusiness }: { forceBusiness?: boolean } = {}) => {
                   value={confirm}
                   onChange={(e) => setConfirm(e.target.value)}
                   required
-                  placeholder="Powtórz hasło"
+                  placeholder={t("placeholder.repeat")}
                   className="bg-card pr-10"
                 />
                 <button
@@ -452,7 +452,7 @@ const SetPassword = ({ forceBusiness }: { forceBusiness?: boolean } = {}) => {
               disabled={loading}
               className="w-full py-3.5 rounded-full bg-primary hover:bg-primary/90 text-white font-bold text-base shadow-lg shadow-primary/20 active:scale-[0.98] transition-all disabled:opacity-60 disabled:scale-100 mt-2"
             >
-              {loading ? "Zapisuję…" : "Ustaw hasło i wejdź"}
+              {loading ? t("saving") : t("cta.set_and_enter")}
             </button>
           </form>
         </div>

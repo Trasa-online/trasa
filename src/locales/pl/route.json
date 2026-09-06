@@ -84,5 +84,33 @@
     "drag_reorder": "Przeciągnij, aby zmienić kolejność",
     "heading_multi": "Dzień {{day}} z {{total}}",
     "heading_single": "Plan dnia"
+  },
+  "empty": {
+    "participant": "Brak propozycji. Dorzuć miejsca, które chcesz zwiedzić - host wybierze, co wejdzie do trasy.",
+    "host": "Brak propozycji. Dorzuć miejsca wyszukiwarką lub poczekaj, aż uczestnicy dodadzą swoje."
+  },
+  "search": {
+    "unavailable": "Wyszukiwarka chwilowo niedostępna. Dodaj z zapisanych poniżej.",
+    "no_results": "Brak wyników."
+  },
+  "toast": {
+    "already": "To miejsce jest już w propozycjach",
+    "remove_failed": "Nie udało się usunąć propozycji",
+    "add_failed": "Nie udało się dodać propozycji",
+    "accept_failed": "Nie udało się dodać do trasy"
+  },
+  "already_badge": "Już w propozycjach",
+  "aria": {
+    "withdraw": "Wycofaj propozycję",
+    "refresh": "Odśwież propozycje",
+    "reject": "Odrzuć propozycję",
+    "open_in_maps": "Otwórz {{place}} w Google Maps"
+  },
+  "clear": "Wyczyść",
+  "back": "Wróć",
+  "proposals": {
+    "added": "Dodano „{{place}}” do trasy",
+    "title": "Propozycje uczestników",
+    "title_count": "Propozycje uczestników ({{count}})"
   }
 }

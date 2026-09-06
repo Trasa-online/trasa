@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import { Search, Plus, Check, X, RefreshCw, Loader2, Trash2, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
@@ -53,6 +54,7 @@ export default function TripProposalsSheet({
   proposalsStage?: boolean;
   onPlacesChosen?: () => void;
 }) {
+  const { t } = useTranslation("route");
   const { user } = useAuth();
   const [query, setQuery] = useState("");
   const [detailPlace, setDetailPlace] = useState<any | null>(null);
@@ -131,10 +133,10 @@ export default function TripProposalsSheet({
   // Dodaj miejsce do PULI propozycji (z wynikow Google lub zapisanych).
   const addToPool = async (p: ProposalInput) => {
     if (!user || !routeId) return;
-    if (proposedKeys.has(keyOf(p))) { toast("To miejsce jest już w propozycjach"); return; }
+    if (proposedKeys.has(keyOf(p))) { toast(t("toast.already")); return; }
     haptics.light();
     const ok = await addRouteProposal(routeId, user.id, p);
-    if (!ok) { haptics.error(); toast.error("Nie udało się dodać propozycji"); return; }
+    if (!ok) { haptics.error(); toast.error(t("toast.add_failed")); return; }
     haptics.success();
     await refetchProposals();
   };
@@ -145,8 +147,8 @@ export default function TripProposalsSheet({
     setBusyId(prop.id); haptics.light();
     const ok = await promoteProposalToPin(routeId, user.id, prop);
     setBusyId(null);
-    if (!ok) { haptics.error(); toast.error("Nie udało się dodać do trasy"); return; }
-    haptics.success(); toast.success(`Dodano „${prop.place_name}" do trasy`);
+    if (!ok) { haptics.error(); toast.error(t("toast.accept_failed")); return; }
+    haptics.success(); toast.success(t("proposals.added", { place: prop.place_name }));
     await Promise.all([refetchProposals(), refetchPins()]);
     onChanged?.();
   };
@@ -156,7 +158,7 @@ export default function TripProposalsSheet({
     setBusyId(prop.id); haptics.light();
     const ok = await deleteRouteProposal(prop.id);
     setBusyId(null);
-    if (!ok) { haptics.error(); toast.error("Nie udało się usunąć propozycji"); return; }
+    if (!ok) { haptics.error(); toast.error(t("toast.remove_failed")); return; }
     await refetchProposals();
   };
 
@@ -188,11 +190,11 @@ export default function TripProposalsSheet({
             {opts.subtitle && <span className="block text-[13px] text-muted-foreground truncate">{opts.subtitle}</span>}
           </span>
         </button>
-        <button onClick={() => openGooglePlace(opts.place)} aria-label={`Otwórz ${opts.place.place_name} w Google Maps`}
+        <button onClick={() => openGooglePlace(opts.place)} aria-label={t("aria.open_in_maps", { place: opts.place.place_name })}
           className="h-9 w-9 flex items-center justify-center shrink-0 rounded-full bg-white shadow-sm border border-black/[0.04] active:scale-90 transition-transform">
           <GoogleGlyph className="h-[18px] w-[18px]" />
         </button>
-        <button onClick={() => addToPool(opts.place)} disabled={added} aria-label={added ? "Już w propozycjach" : "Dodaj do propozycji"}
+        <button onClick={() => addToPool(opts.place)} disabled={added} aria-label={added ? t("already_badge") : "Dodaj do propozycji"}
           className={`h-6 w-6 rounded-full flex items-center justify-center shrink-0 transition-colors ${added ? "bg-[#f0a583] text-white" : "border-2 border-border"}`}>
           {added ? <Check className="h-3.5 w-3.5 stroke-[3]" /> : <Plus className="h-3.5 w-3.5 text-muted-foreground" />}
         </button>
@@ -220,7 +222,7 @@ export default function TripProposalsSheet({
             </span>
           </span>
         </button>
-        <button onClick={() => openGooglePlace(prop)} aria-label={`Otwórz ${prop.place_name} w Google Maps`}
+        <button onClick={() => openGooglePlace(prop)} aria-label={t("aria.open_in_maps", { place: prop.place_name })}
           className="h-9 w-9 flex items-center justify-center shrink-0 rounded-full bg-white shadow-sm border border-black/[0.04] active:scale-90 transition-transform">
           <GoogleGlyph className="h-[18px] w-[18px]" />
         </button>
@@ -242,12 +244,12 @@ export default function TripProposalsSheet({
             <button onClick={() => promote(prop)} className="h-8 rounded-full bg-primary text-primary-foreground text-[13px] font-bold px-3 flex items-center gap-1 active:scale-95 transition-transform">
               <Plus className="h-3.5 w-3.5 stroke-[3]" /> Do trasy
             </button>
-            <button onClick={() => remove(prop)} aria-label="Odrzuć propozycję" className="h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground active:scale-90 transition-transform">
+            <button onClick={() => remove(prop)} aria-label={t("aria.reject")} className="h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground active:scale-90 transition-transform">
               <X className="h-4 w-4" strokeWidth={2.4} />
             </button>
           </span>
         ) : mine ? (
-          <button onClick={() => remove(prop)} aria-label="Wycofaj propozycję" className="h-8 w-8 rounded-full flex items-center justify-center text-destructive active:scale-90 transition-transform shrink-0">
+          <button onClick={() => remove(prop)} aria-label={t("aria.withdraw")} className="h-8 w-8 rounded-full flex items-center justify-center text-destructive active:scale-90 transition-transform shrink-0">
             <Trash2 className="h-4 w-4" strokeWidth={2} />
           </button>
         ) : <span className="w-8 shrink-0" />}
@@ -267,7 +269,7 @@ export default function TripProposalsSheet({
           {(p.address || city) && <span className="block text-[13px] text-muted-foreground truncate">{p.address || city}</span>}
         </span>
       </button>
-      <button onClick={() => openGooglePlace(p)} aria-label={`Otwórz ${p.place_name} w Google Maps`}
+      <button onClick={() => openGooglePlace(p)} aria-label={t("aria.open_in_maps", { place: p.place_name })}
         className="h-9 w-9 flex items-center justify-center shrink-0 rounded-full bg-white shadow-sm border border-black/[0.04] active:scale-90 transition-transform">
         <GoogleGlyph className="h-[18px] w-[18px]" />
       </button>
@@ -276,7 +278,7 @@ export default function TripProposalsSheet({
 
   // Odswiez (wspolny dla obu wariantow naglowka).
   const refreshBtn = (
-    <button onClick={() => { haptics.light(); refetchProposals(); refetchPins(); }} aria-label="Odśwież propozycje"
+    <button onClick={() => { haptics.light(); refetchProposals(); refetchPins(); }} aria-label={t("aria.refresh")}
       className="h-9 w-9 rounded-full border border-black/15 bg-white flex items-center justify-center active:opacity-60 transition-opacity shrink-0">
       <RefreshCw className={`h-4 w-4 text-foreground ${isRefetching ? "animate-spin" : ""}`} />
     </button>
@@ -287,7 +289,7 @@ export default function TripProposalsSheet({
       {/* Naglowek: fullscreen -> [wstecz | tytul | odswiez]; sheet -> [odswiez | tytul | zamknij] */}
       <div className="flex items-center justify-between gap-2 px-5 pt-3 pb-2 shrink-0">
         {fullscreen ? (
-          <button onClick={onBack} aria-label="Wróć"
+          <button onClick={onBack} aria-label={t("back")}
             className="h-9 w-9 rounded-full border border-black/15 bg-white flex items-center justify-center active:opacity-60 transition-opacity shrink-0">
             <ArrowLeft className="h-4 w-4 text-foreground" />
           </button>
@@ -313,7 +315,7 @@ export default function TripProposalsSheet({
             placeholder={city ? `Szukaj miejsca w${NBSP}${city}` : "Szukaj miejsca"}
             className="flex-1 bg-transparent text-[15px] text-foreground placeholder:text-muted-foreground outline-none"
           />
-          {query && <button onClick={() => setQuery("")} aria-label="Wyczyść"><X className="h-4 w-4 text-muted-foreground" /></button>}
+          {query && <button onClick={() => setQuery("")} aria-label={t("clear")}><X className="h-4 w-4 text-muted-foreground" /></button>}
         </div>
       </div>
 
@@ -324,9 +326,9 @@ export default function TripProposalsSheet({
             {searching ? (
               <div className="py-8 text-center text-sm text-muted-foreground flex items-center justify-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Szukam...</div>
             ) : blocked ? (
-              <p className="py-8 text-center text-sm text-muted-foreground">{`Wyszukiwarka chwilowo niedostępna. Dodaj z${NBSP}zapisanych poniżej.`}</p>
+              <p className="py-8 text-center text-sm text-muted-foreground">{t("search.unavailable")}</p>
             ) : results.length === 0 ? (
-              <p className="py-8 text-center text-sm text-muted-foreground">Brak wyników.</p>
+              <p className="py-8 text-center text-sm text-muted-foreground">{t("search.no_results")}</p>
             ) : (
               results.map((r, i) => renderAddRow({ rowKey: `s-${r.place_id ?? r.place_name}-${i}`, place: r, subtitle: r.address }))
             )}
@@ -344,15 +346,15 @@ export default function TripProposalsSheet({
             {/* PULA PROPOZYCJI */}
             <div className="space-y-1.5">
               <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground px-0.5">
-                {`Propozycje uczestników${proposals.length ? ` (${proposals.length})` : ""}`}
+                {proposals.length ? t("proposals.title_count", { count: proposals.length }) : t("proposals.title")}
               </p>
               {loadingProposals ? (
                 <SheetSkeleton variant="places" rows={3} />
               ) : proposals.length === 0 ? (
                 <p className="py-6 px-2 text-center text-sm text-muted-foreground">
                   {isOwner
-                    ? `Brak propozycji. Dorzuć miejsca wyszukiwarką lub poczekaj, aż uczestnicy dodadzą swoje.`
-                    : `Brak propozycji. Dorzuć miejsca, które chcesz zwiedzić - host wybierze, co wejdzie do${NBSP}trasy.`}
+                    ? t("empty.host")
+                    : t("empty.participant")}
                 </p>
               ) : (
                 (proposals as RouteProposal[]).map(renderProposalRow)
