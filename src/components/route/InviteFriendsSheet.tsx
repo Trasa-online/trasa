@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { supabase } from "@/integrations/supabase/client";
@@ -13,7 +14,7 @@ import { cn } from "@/lib/utils";
 
 interface Profile { id: string; username: string | null; first_name: string | null; avatar_url: string | null; }
 
-// Reużywalny sheet "Zaproś znajomych": szukanie po username + multi-select + zaproszenie.
+// Reużywalny sheet t("invite.title"): szukanie po username + multi-select + zaproszenie.
 // Dziala na istniejacej trasie (podpina do sesji grupowej jesli trzeba) - patrz inviteUsersToRoute.
 export default function InviteFriendsSheet({ open, onOpenChange, route, onInvited, existingMemberIds = [] }: {
   open: boolean;
@@ -22,6 +23,7 @@ export default function InviteFriendsSheet({ open, onOpenChange, route, onInvite
   onInvited?: (sessionId: string | undefined, invited: { id: string; avatar_url: string | null }[]) => void;
   existingMemberIds?: string[];
 }) {
+  const { t } = useTranslation("social");
   const { user } = useAuth();
   const [q, setQ] = useState("");
   const [results, setResults] = useState<Profile[]>([]);
@@ -90,8 +92,8 @@ export default function InviteFriendsSheet({ open, onOpenChange, route, onInvite
     setSending(true);
     const res = await inviteUsersToRoute(route, selectedList.map((p) => p.id), user.id);
     setSending(false);
-    if (!res.ok) { toast.error("Nie udało się zaprosić. Spróbuj ponownie."); return; }
-    toast.success(selectedList.length === 1 ? "Zaproszono" : `Zaproszono ${selectedList.length} osób`);
+    if (!res.ok) { toast.error(t("invite.failed")); return; }
+    toast.success(selectedList.length === 1 ? "Zaproszono" : t("invite.sent", { count: selectedList.length }));
     onInvited?.(res.sessionId, selectedList.map((p) => ({ id: p.id, avatar_url: p.avatar_url })));
     onOpenChange(false);
   };
@@ -100,7 +102,7 @@ export default function InviteFriendsSheet({ open, onOpenChange, route, onInvite
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="bottom" className="rounded-t-3xl p-0 [&>button]:hidden flex flex-col" style={{ height: "80dvh", maxHeight: "80dvh" }}>
         <div className="flex items-center justify-between px-5 pt-5 pb-3 shrink-0">
-          <p className="text-lg font-black">Zaproś znajomych</p>
+          <p className="text-lg font-black">{t("invite.title")}</p>
           <button onClick={() => onOpenChange(false)} aria-label="Zamknij" className="h-9 w-9 rounded-full bg-muted flex items-center justify-center active:bg-muted/70"><X className="h-4 w-4" /></button>
         </div>
 
@@ -111,7 +113,7 @@ export default function InviteFriendsSheet({ open, onOpenChange, route, onInvite
               autoFocus
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder="Szukaj po nazwie użytkownika"
+              placeholder={t("invite.search_placeholder")}
               autoCapitalize="none"
               autoCorrect="off"
               spellCheck={false}
@@ -124,7 +126,7 @@ export default function InviteFriendsSheet({ open, onOpenChange, route, onInvite
         <div className="flex-1 min-h-0 overflow-y-auto px-5 py-3">
           {displayed.length === 0 && !loading ? (
             <p className="text-sm text-muted-foreground text-center py-8">
-              {searching ? "Brak wyników." : `Nie obserwujesz jeszcze nikogo. Wpisz nazwę użytkownika, żeby wyszukać.`}
+              {searching ? t("invite.no_results") : t("invite.empty")}
             </p>
           ) : (
             <div className="flex flex-col gap-1">
@@ -163,7 +165,7 @@ export default function InviteFriendsSheet({ open, onOpenChange, route, onInvite
             disabled={!selectedList.length || sending}
             className="w-full py-3.5 rounded-2xl bg-orange-600 text-white font-bold text-sm active:scale-[0.98] transition-transform disabled:opacity-50 flex items-center justify-center gap-2"
           >
-            {sending ? <Loader2 className="h-5 w-5 animate-spin" /> : <><UserPlus className="h-4 w-4" /> {selectedList.length ? `Zaproś (${selectedList.length})` : "Zaproś"}</>}
+            {sending ? <Loader2 className="h-5 w-5 animate-spin" /> : <><UserPlus className="h-4 w-4" /> {selectedList.length ? t("invite.cta_count", { count: selectedList.length }) : t("invite.cta")}</>}
           </button>
         </div>
       </SheetContent>

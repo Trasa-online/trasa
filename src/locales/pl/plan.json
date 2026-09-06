@@ -197,5 +197,18 @@
     "list_created": "Utworzono listę „{{name}}”"
   },
   "cta_plan_route_few": "Zaplanuj trasę · {{count}} miejsca",
-  "distance_denied": "Włącz lokalizację w ustawieniach, żeby zobaczyć dystans"
+  "distance_denied": "Włącz lokalizację w ustawieniach, żeby zobaczyć dystans",
+  "custom": {
+    "link_failed": "Nie udało się odczytać miejsca z tego linku. Spróbuj wpisać nazwę ręcznie.",
+    "maps_link_failed": "Nie udało się odczytać miejsca z tego linku Google Maps.",
+    "link_no_match": "Nie udało się dopasować miejsca z tego linku.",
+    "error": "Wystąpił błąd. Spróbuj wpisać nazwę ręcznie.",
+    "hint": "Wpisz nazwę miejsca, hotelu lub ulicy",
+    "not_found": "Nie udało się znaleźć tego miejsca.",
+    "placeholder": "Nazwa miejsca lub wklej link…",
+    "bad_link": "Nieprawidłowy link.",
+    "reading_link": "Analizuję link…",
+    "searching": "Szukam miejsca…",
+    "found_not_located": "Znalazłam nazwę „{{name}}”, ale nie udało się jej zlokalizować. Popraw nazwę ręcznie."
+  }
 }

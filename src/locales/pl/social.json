@@ -4,7 +4,17 @@
     "share_text": "Planujmy razem trasy po mieście! Dołącz do mnie w spontaway:",
     "link_copied": "Link skopiowany - wyślij go znajomym!",
     "heading": "Zaproś znajomych do trasy!",
-    "subtitle": "Wyślij link - po dołączeniu od razu jesteście znajomymi."
+    "subtitle": "Wyślij link - po dołączeniu od razu jesteście znajomymi.",
+    "empty": "Nie obserwujesz jeszcze nikogo. Wpisz nazwę użytkownika, żeby wyszukać.",
+    "failed": "Nie udało się zaprosić. Spróbuj ponownie.",
+    "search_placeholder": "Szukaj po nazwie użytkownika",
+    "title": "Zaproś znajomych",
+    "no_results": "Brak wyników.",
+    "cta": "Zaproś",
+    "sent_one": "Zaproszono {{count}} osobę",
+    "sent_few": "Zaproszono {{count}} osoby",
+    "sent_many": "Zaproszono {{count}} osób",
+    "cta_count": "Zaproś ({{count}})"
   },
   "friend": {
     "error_generic": "Coś poszło nie tak",

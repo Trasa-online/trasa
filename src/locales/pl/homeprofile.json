@@ -120,5 +120,16 @@
     "no_memories": "Brak wspomnień",
     "no_trips": "Twoje wyjazdy"
   },
-  "today": "Dziś"
+  "today": "Dziś",
+  "saved": {
+    "empty": "Zapisuj miejsca na później zakładką w eksploracji albo dodaj je tutaj.",
+    "desc": "Twoja prywatna lista miejsc na później.",
+    "no_results": "Brak wyników. Spróbuj innej nazwy.",
+    "add_failed": "Nie udało się dodać miejsca",
+    "undo_failed": "Nie udało się cofnąć",
+    "delete_failed": "Nie udało się usunąć",
+    "delete_place": "Usuń miejsce",
+    "removed": "Usunięto „{{name}}”",
+    "already": "„{{name}}” już jest zapisane"
+  }
 }

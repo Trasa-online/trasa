@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { X, Search, Link, MapPin, Loader2, Plus } from "lucide-react";
 import { APIProvider, useMapsLibrary } from "@vis.gl/react-google-maps";
 import { GOOGLE_MAPS_API_KEY } from "@/lib/googleMaps";
@@ -46,6 +47,7 @@ const detectCategory = (types: string[]): PlaceCategory => {
 // ─── Inner (needs Maps context) ───────────────────────────────────────────────
 
 const Inner = ({ city, onAdd, onCancel }: AddCustomPlacePanelProps) => {
+  const { t } = useTranslation("plan");
   const [query, setQuery] = useState("");
   const [mode, setMode] = useState<"text" | "googlemaps" | "social">("text");
   const [status, setStatus] = useState<"idle" | "loading" | "preview" | "error">("idle");
@@ -88,7 +90,7 @@ const Inner = ({ city, onAdd, onCancel }: AddCustomPlacePanelProps) => {
     setStatus("loading");
     setShowSuggestions(false);
     geocoderRef.current.geocode({ placeId, language: "pl" }, (results: any[], s: string) => {
-      if (s !== "OK" || !results?.[0]) { setStatus("error"); setErrorMsg("Nie udało się znaleźć tego miejsca."); return; }
+      if (s !== "OK" || !results?.[0]) { setStatus("error"); setErrorMsg(t("custom.not_found")); return; }
       const r = results[0];
       const loc = r.geometry.location;
       const types: string[] = r.types ?? [];
@@ -147,17 +149,17 @@ const Inner = ({ city, onAdd, onCancel }: AddCustomPlacePanelProps) => {
                 resolveByPlaceId(p.place_id, p.structured_formatting?.main_text);
               } else {
                 setStatus("error");
-                setErrorMsg("Nie udało się dopasować miejsca z tego linku.");
+                setErrorMsg(t("custom.link_no_match"));
               }
             }
           );
         } else {
           setStatus("error");
-          setErrorMsg("Nie udało się odczytać miejsca z tego linku Google Maps.");
+          setErrorMsg(t("custom.maps_link_failed"));
         }
       } catch {
         setStatus("error");
-        setErrorMsg("Nieprawidłowy link.");
+        setErrorMsg(t("custom.bad_link"));
       }
       return;
     }
@@ -169,7 +171,7 @@ const Inner = ({ city, onAdd, onCancel }: AddCustomPlacePanelProps) => {
         });
         if (error || !data?.places?.length) {
           setStatus("error");
-          setErrorMsg("Nie udało się odczytać miejsca z tego linku. Spróbuj wpisać nazwę ręcznie.");
+          setErrorMsg(t("custom.link_failed"));
           return;
         }
         const extracted = data.places[0] as { place_name: string };
@@ -186,14 +188,14 @@ const Inner = ({ city, onAdd, onCancel }: AddCustomPlacePanelProps) => {
                 setShowSuggestions(true);
               } else {
                 setStatus("error");
-                setErrorMsg(`Znalazłam nazwę „${extracted.place_name}", ale nie udało się jej zlokalizować. Popraw nazwę ręcznie.`);
+                setErrorMsg(t("custom.found_not_located", { name: extracted.place_name }));
               }
             }
           );
         }
       } catch {
         setStatus("error");
-        setErrorMsg("Wystąpił błąd. Spróbuj wpisać nazwę ręcznie.");
+        setErrorMsg(t("custom.error"));
       }
     }
   };
@@ -225,7 +227,7 @@ const Inner = ({ city, onAdd, onCancel }: AddCustomPlacePanelProps) => {
             type="text"
             value={query}
             onChange={handleTextChange}
-            placeholder="Nazwa miejsca lub wklej link…"
+            placeholder={t("custom.placeholder")}
             className="flex-1 text-base bg-transparent outline-none placeholder:text-muted-foreground"
             style={{ fontSize: "16px" }}
           />
@@ -270,7 +272,7 @@ const Inner = ({ city, onAdd, onCancel }: AddCustomPlacePanelProps) => {
       {status === "loading" && (
         <div className="flex-1 flex flex-col items-center justify-center gap-3 text-muted-foreground">
           <Loader2 className="h-6 w-6 animate-spin" />
-          <p className="text-sm">{mode === "social" ? "Analizuję link…" : "Szukam miejsca…"}</p>
+          <p className="text-sm">{mode === "social" ? t("custom.reading_link") : t("custom.searching")}</p>
         </div>
       )}
 
@@ -317,7 +319,7 @@ const Inner = ({ city, onAdd, onCancel }: AddCustomPlacePanelProps) => {
       {status === "idle" && !query && (
         <div className="flex-1 flex flex-col justify-center gap-3">
           {[
-            { icon: "🔍", text: "Wpisz nazwę miejsca, hotelu lub ulicy" },
+            { icon: "🔍", text: t("custom.hint") },
             { icon: "📍", text: "Wklej link Google Maps" },
             { icon: "📱", text: "Wklej link z Instagrama lub TikToka" },
           ].map(({ icon, text }) => (

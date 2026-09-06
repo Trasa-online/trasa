@@ -125,5 +125,14 @@
   },
   "clear": "Clear",
   "back": "Back",
-  "trip_name_city": "Trip to {{city}}"
+  "trip_name_city": "Trip to {{city}}",
+  "drafts": {
+    "empty_hint": "Save someone else's trip in Explore and you can use it here as a starting point.",
+    "empty": "You have no saved drafts right now.",
+    "confirm_delete": "Delete this draft?",
+    "delete_aria": "Delete draft",
+    "deleted": "Deleted"
+  },
+  "places_count_one": "{{count}} place",
+  "places_count_other": "{{count}} places"
 }

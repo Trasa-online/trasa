@@ -126,5 +126,15 @@
   },
   "clear": "Wyczyść",
   "back": "Wróć",
-  "trip_name_city": "Wyjazd do {{city}}"
+  "trip_name_city": "Wyjazd do {{city}}",
+  "drafts": {
+    "empty_hint": "Zapisz trasę innego użytkownika w Eksploruj, a użyjesz jej tutaj jako bazy.",
+    "empty": "Nie masz obecnie żadnych zapisanych roboczych tras.",
+    "confirm_delete": "Usunąć tę roboczą trasę?",
+    "delete_aria": "Usuń roboczą trasę",
+    "deleted": "Usunięto"
+  },
+  "places_count_one": "{{count}} miejsce",
+  "places_count_few": "{{count}} miejsca",
+  "places_count_many": "{{count}} miejsc"
 }

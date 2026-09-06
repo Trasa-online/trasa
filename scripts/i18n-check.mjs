@@ -78,6 +78,20 @@ const walk = (dir, acc = []) => {
 // gubi synchronizacje i pochlania caly dalszy plik razem z polskimi napisami, ktore mial
 // znalezc. Napis moze zaczac sie tylko tam, gdzie w skladni ma prawo stac.
 const OPENS_STRING = new Set(["(", "=", ",", ":", "[", "{", "+", "?", "|", "&", ";", "!", "<", ">", " ", "\t", "\n", "\r", ""]);
+// Wyjatki dla DANYCH (nazwy wlasne miast, krajow, tagi), ktore w obu jezykach brzmia tak samo:
+//   `// i18n-ignore` na koncu linii  - pomija te jedna linie,
+//   `// i18n-ignore-start` ... `// i18n-ignore-end` - pomija caly blok (dlugie slowniki).
+// To furtka dla danych, NIE dla copy, ktore po prostu nie zostalo jeszcze przetlumaczone -
+// od tego jest baseline.
+function maskIgnored(raw) {
+  let skipping = false;
+  return raw.split("\n").map((l) => {
+    if (l.includes("i18n-ignore-start")) { skipping = true; return ""; }
+    if (l.includes("i18n-ignore-end")) { skipping = false; return ""; }
+    return skipping || l.includes("i18n-ignore") ? "" : l;
+  }).join("\n");
+}
+
 function stripComments(src) {
   let out = "", i = 0, mode = null, prev = "";
   while (i < src.length) {
@@ -152,7 +166,7 @@ for (const file of walk(path.join(ROOT, "src"))) {
   // 4. polski na sztywno. Linia z `i18n-ignore` jest pomijana - to furtka dla DANYCH
   // (nazwy wlasne miast, dzielnic), ktore w obu jezykach brzmia tak samo. Nie uzywaj jej
   // do copy, ktore po prostu nie zostalo jeszcze przetlumaczone - od tego jest baseline.
-  const src = stripComments(raw.split("\n").map((l) => (l.includes("i18n-ignore") ? "" : l)).join("\n"));
+  const src = stripComments(maskIgnored(raw));
   const hits = new Set();
   for (const lit of literals(src)) if (isCopy(lit.trim())) hits.add(lit.trim());
   for (const m of src.matchAll(JSX_TEXT)) if (isCopy(m[1].trim())) hits.add(m[1].trim());

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { goBackOr } from "@/hooks/useGoBack";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -23,7 +24,6 @@ type ChooserRoute = {
   own: boolean;
 };
 
-const placesLabel = (n: number) => `${n} ${n === 1 ? "miejsce" : n < 5 ? "miejsca" : "miejsc"}`;
 
 // Wspolne: dociagnij okladke (pierwsze zdjecie pinu) + liczbe miejsc dla listy tras.
 async function enrichRoutes(rows: any[]): Promise<ChooserRoute[]> {
@@ -54,6 +54,9 @@ async function enrichRoutes(rows: any[]): Promise<ChooserRoute[]> {
 }
 
 export default function StartWyjazd() {
+  const { t } = useTranslation("myplan");
+  // Helper musi siedziec W komponencie - poza nim nie ma dostepu do hooka t().
+  const placesLabel = (n: number) => t("places_count", { count: n });
   const navigate = useNavigate();
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -135,19 +138,19 @@ export default function StartWyjazd() {
   };
 
   const deleteDraft = async (id: string) => {
-    if (!confirm("Usunąć tę roboczą trasę?")) return;
+    if (!confirm(t("drafts.confirm_delete"))) return;
     haptics.warning();
     await (supabase as any).from("pins").delete().eq("route_id", id);
     await (supabase as any).from("routes").delete().eq("id", id);
     queryClient.invalidateQueries({ queryKey: ["start-robocze"] });
-    toast.success("Usunięto");
+    toast.success(t("drafts.deleted"));
   };
 
   return (
     <div className="flex flex-col h-[100dvh] bg-background max-w-lg mx-auto">
       {/* Header */}
       <div className="flex items-center gap-2 px-4 pt-safe-4 pb-3 shrink-0">
-        <button onClick={() => goBackOr(navigate, "/eksploruj")} aria-label="Wróć" className="h-9 w-9 flex items-center justify-center -ml-1 shrink-0 text-foreground active:scale-90 transition-transform">
+        <button onClick={() => goBackOr(navigate, "/eksploruj")} aria-label={t("back")} className="h-9 w-9 flex items-center justify-center -ml-1 shrink-0 text-foreground active:scale-90 transition-transform">
           <ArrowLeft className="h-5 w-5" />
         </button>
         <span className="flex-1 font-bold text-base">Nowy wyjazd</span>
@@ -182,7 +185,7 @@ export default function StartWyjazd() {
             className="w-full rounded-full bg-secondary text-secondary-foreground border border-border/40 pl-10 pr-9 py-3 text-base outline-none focus:ring-2 focus:ring-orange-500/40 placeholder:text-muted-foreground/60"
           />
           {query && (
-            <button onClick={() => setQuery("")} aria-label="Wyczyść" className="absolute right-3 top-1/2 -translate-y-1/2 h-6 w-6 flex items-center justify-center rounded-full text-muted-foreground active:bg-muted">
+            <button onClick={() => setQuery("")} aria-label={t("clear")} className="absolute right-3 top-1/2 -translate-y-1/2 h-6 w-6 flex items-center justify-center rounded-full text-muted-foreground active:bg-muted">
               <X className="h-4 w-4" />
             </button>
           )}
@@ -198,7 +201,7 @@ export default function StartWyjazd() {
             <span aria-hidden className="mx-auto mb-4 h-20 w-20" style={{ display: "block", backgroundColor: "#ef9d78", WebkitMaskImage: tab === "robocze" ? "url(/Ikona_Trasy.svg)" : "url(/Ikona_Zapisane.svg)", maskImage: tab === "robocze" ? "url(/Ikona_Trasy.svg)" : "url(/Ikona_Zapisane.svg)", WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat", WebkitMaskSize: "contain", maskSize: "contain", WebkitMaskPosition: "center", maskPosition: "center" }} />
             <p className="text-base font-bold">{tab === "robocze" ? "Robocze trasy" : "Brak zapisanych tras"}</p>
             <p className="text-sm text-muted-foreground mt-1 leading-relaxed max-w-[260px] mx-auto">
-              {tab === "robocze" ? "Nie masz obecnie żadnych zapisanych roboczych tras." : "Zapisz trasę innego użytkownika w Eksploruj, a użyjesz jej tutaj jako bazy."}
+              {tab === "robocze" ? t("drafts.empty") : t("drafts.empty_hint")}
             </p>
           </div>
         ) : (
@@ -227,7 +230,7 @@ export default function StartWyjazd() {
               {r.own && (
                 <button
                   onClick={() => deleteDraft(r.id)}
-                  aria-label="Usuń roboczą trasę"
+                  aria-label={t("drafts.delete_aria")}
                   className="absolute top-3 right-3 h-7 w-7 flex items-center justify-center rounded-full text-muted-foreground/50 hover:text-destructive active:scale-90 transition-colors"
                 >
                   <Trash2 className="h-4 w-4" />

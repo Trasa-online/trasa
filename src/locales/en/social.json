@@ -4,7 +4,16 @@
     "share_text": "Let's plan city routes together! Join me on spontaway:",
     "link_copied": "Link copied - send it to your friends!",
     "heading": "Invite friends to your route!",
-    "subtitle": "Send the link - once they join, you're friends right away."
+    "subtitle": "Send the link - once they join, you're friends right away.",
+    "empty": "You do not follow anyone yet. Type a username to search.",
+    "failed": "We could not send the invitation. Try again.",
+    "search_placeholder": "Search by username",
+    "title": "Invite friends",
+    "no_results": "No results.",
+    "cta": "Invite",
+    "sent_one": "{{count}} person invited",
+    "sent_other": "{{count}} people invited",
+    "cta_count": "Invite ({{count}})"
   },
   "friend": {
     "error_generic": "Something went wrong",

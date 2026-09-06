@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, Trash2, Search, X, Loader2, MapPin } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
@@ -17,6 +18,7 @@ import { fetchSavedPlaces, removeSavedPlaceById, addPlaceToList, quickSavePlace,
 // pozycji ze wszystkich list to_visit). User może dodać miejsce BEZPOŚREDNIO ("Dodaj miejsce")
 // oraz usunąć. Tap w miejsce -> wizytówka (PlaceSwiperDetail).
 export function SavedPlaces({ city }: { city?: string }) {
+  const { t } = useTranslation("homeprofile");
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [detailPin, setDetailPin] = useState<{ place: MockPlace; city: string; skip: boolean } | null>(null);
@@ -52,7 +54,7 @@ export function SavedPlaces({ city }: { city?: string }) {
       await removeSavedPlaceById(p.id);
       invalidate();
       // Toast z opcją "Cofnij" (5s) - re-insert do tej samej listy.
-      toast.success(`Usunięto „${p.place_name}"`, {
+      toast.success(t("saved.removed", { name: p.place_name }), {
         duration: 5000,
         action: {
           label: "Cofnij",
@@ -67,14 +69,14 @@ export function SavedPlaces({ city }: { city?: string }) {
               invalidate();
             } catch (e: any) {
               console.error("[SavedPlaces] undo remove failed:", e?.message ?? e);
-              toast.error("Nie udało się cofnąć");
+              toast.error(t("saved.undo_failed"));
             }
           },
         },
       });
     } catch (e: any) {
       console.error("[SavedPlaces] remove failed:", e?.message ?? e);
-      toast.error("Nie udało się usunąć");
+      toast.error(t("saved.delete_failed"));
     }
   };
 
@@ -110,7 +112,7 @@ export function SavedPlaces({ city }: { city?: string }) {
       </button>
       <button
         onClick={() => remove(p)}
-        aria-label="Usuń miejsce"
+        aria-label={t("saved.delete_place")}
         className="h-9 w-9 shrink-0 flex items-center justify-center rounded-full text-destructive active:bg-destructive/10 transition-colors"
       >
         <Trash2 className="h-[18px] w-[18px]" />
@@ -123,7 +125,7 @@ export function SavedPlaces({ city }: { city?: string }) {
       {/* Naglowek: dodaj miejsce bezposrednio do prywatnej wishlisty */}
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
-          {`Twoja prywatna lista miejsc na później.`}
+          {t("saved.desc")}
         </p>
         <button
           onClick={() => setAddOpen(true)}
@@ -143,7 +145,7 @@ export function SavedPlaces({ city }: { city?: string }) {
           <div className="space-y-1">
             <p className="text-base font-black">Brak zapisanych miejsc</p>
             <p className="text-sm text-muted-foreground max-w-[280px] leading-relaxed">
-              {`Zapisuj miejsca na później zakładką w eksploracji albo dodaj je tutaj.`}
+              {t("saved.empty")}
             </p>
           </div>
         </div>
@@ -185,6 +187,7 @@ function AddPlaceSheet({ open, onOpenChange, city, onAdded }: {
   city: string;
   onAdded: () => void;
 }) {
+  const { t } = useTranslation("homeprofile");
   const { user } = useAuth();
   const [q, setQ] = useState("");
   const [results, setResults] = useState<{ name: string; full_address: string; latitude: number; longitude: number; types: string[] }[]>([]);
@@ -224,11 +227,11 @@ function AddPlaceSheet({ open, onOpenChange, city, onAdded }: {
         google_place_id: null,
       }, city || null);
       onAdded();
-      toast.success(added ? `Dodano „${r.name}"` : `„${r.name}" już jest zapisane`);
+      toast.success(added ? `Dodano „${r.name}"` : t("saved.already", { name: r.name }));
       onOpenChange(false);
     } catch (e: any) {
       console.error("[AddPlaceSheet] add failed:", e?.message ?? e);
-      toast.error("Nie udało się dodać miejsca");
+      toast.error(t("saved.add_failed"));
     } finally { setAddingName(null); }
   };
 
@@ -274,7 +277,7 @@ function AddPlaceSheet({ open, onOpenChange, city, onAdded }: {
             </button>
           ))}
           {!searching && q.trim().length >= 2 && results.length === 0 && (
-            <p className="text-sm text-muted-foreground text-center py-8">Brak wyników. Spróbuj innej nazwy.</p>
+            <p className="text-sm text-muted-foreground text-center py-8">{t("saved.no_results")}</p>
           )}
         </div>
       </SheetContent>

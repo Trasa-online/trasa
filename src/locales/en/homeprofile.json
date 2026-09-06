@@ -118,5 +118,16 @@
     "no_memories": "No memories yet",
     "no_trips": "Your trips"
   },
-  "today": "Today"
+  "today": "Today",
+  "saved": {
+    "empty": "Bookmark places while exploring, or add them here.",
+    "desc": "Your private list of places for later.",
+    "no_results": "No results. Try a different name.",
+    "add_failed": "We could not add the place",
+    "undo_failed": "We could not undo that",
+    "delete_failed": "We could not delete it",
+    "delete_place": "Delete place",
+    "removed": "Removed “{{name}}”",
+    "already": "“{{name}}” is already saved"
+  }
 }

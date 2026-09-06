@@ -112,5 +112,18 @@
     "added": "Dodano „{{place}}” do trasy",
     "title": "Propozycje uczestników",
     "title_count": "Propozycje uczestników ({{count}})"
+  },
+  "add_place": {
+    "search_unavailable": "Wyszukiwarka chwilowo niedostępna. Wybierz z zapisanych.",
+    "failed": "Nie udało się dodać miejsca",
+    "placeholder": "Dodaj nowe miejsce…",
+    "saved_list": "Zapisana lista ·",
+    "remove": "Usuń z trasy",
+    "no_results": "Brak wyników",
+    "already": "Już dodane",
+    "open_in_maps": "Otwórz {{place}} w Google Maps",
+    "places_count_one": "{{count}} miejsce",
+    "places_count_few": "{{count}} miejsca",
+    "places_count_many": "{{count}} miejsc"
   }
 }

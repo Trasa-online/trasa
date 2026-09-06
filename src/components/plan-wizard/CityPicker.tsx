@@ -8,6 +8,8 @@ import i18n from "@/i18n";
 
 // EN display names for cities/countries. Canonical PL `name` in COUNTRIES stays
 // intact (used for DB queries / expandCity) - these maps are display-only.
+// i18n-ignore-start: nazwy wlasne miast i krajow razem z mapa PL->EN. To DANE - po
+// angielsku uzywamy CITY_EN / COUNTRY_EN, a nie plikow tlumaczen.
 const CITY_EN: Record<string, string> = {
   "Warszawa": "Warsaw", "Gdańsk": "Gdansk", "Sopot": "Sopot", "Gdynia": "Gdynia",
   "Trójmiasto": "Tricity", "Kraków": "Krakow", "Łódź": "Lodz", "Poznań": "Poznan",
@@ -75,6 +77,8 @@ export const COUNTRIES: Country[] = [
     cities: [{ name: "Rzym", comingSoon: true }],
   },
 ];
+// i18n-ignore-end
+
 
 // Odblokowane miasta PL (bez comingSoon) - zrodlo prawdy dla dropdownu miast w exploreMode.
 export const UNLOCKED_CITIES: string[] = (COUNTRIES.find((c) => c.code === "PL")?.cities ?? [])

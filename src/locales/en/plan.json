@@ -195,5 +195,18 @@
   },
   "filters_count_other": "{{count}} filters",
   "cta_plan_route_other": "Plan route · {{count}} places",
-  "distance_denied": "Turn on location in settings to see the distance"
+  "distance_denied": "Turn on location in settings to see the distance",
+  "custom": {
+    "link_failed": "We could not read a place from that link. Try typing the name instead.",
+    "maps_link_failed": "We could not read a place from that Google Maps link.",
+    "link_no_match": "We could not match a place from that link.",
+    "error": "Something went wrong. Try typing the name instead.",
+    "hint": "Type the name of a place, hotel or street",
+    "not_found": "We could not find that place.",
+    "placeholder": "Place name, or paste a link…",
+    "bad_link": "That link is not valid.",
+    "reading_link": "Reading the link…",
+    "searching": "Looking for the place…",
+    "found_not_located": "I found the name “{{name}}” but could not locate it. Please correct the name."
+  }
 }

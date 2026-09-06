@@ -110,5 +110,17 @@
     "added": "“{{place}}” added to the trip",
     "title": "Proposals from participants",
     "title_count": "Proposals from participants ({{count}})"
+  },
+  "add_place": {
+    "search_unavailable": "Search is temporarily unavailable. Pick from your saved places.",
+    "failed": "We could not add the place",
+    "placeholder": "Add a new place…",
+    "saved_list": "Saved list ·",
+    "remove": "Remove from the trip",
+    "no_results": "No results",
+    "already": "Already added",
+    "open_in_maps": "Open {{place}} in Google Maps",
+    "places_count_one": "{{count}} place",
+    "places_count_other": "{{count}} places"
   }
 }

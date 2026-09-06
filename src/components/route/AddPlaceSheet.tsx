@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import { X, Plus, Check, ChevronRight, ChevronDown, Search, Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -45,6 +46,7 @@ interface Props {
 // Wpisanie frazy (>=2 znaki) -> Google Places (proxy) -> klik wyniku = nowy zaznaczony kafelek +
 // odblokowanie "Dalej". "Dalej" zapisuje wybrane miejsca (onAdd).
 export default function AddPlaceSheet({ open, onClose, city, existingPlaces, onAdd }: Props) {
+  const { t } = useTranslation("route");
   const { user } = useAuth();
   const [selected, setSelected] = useState<PlaceForList[]>([]);
   const [manual, setManual] = useState<PlaceForList[]>([]);   // dodane z Google (poza zapisanymi)
@@ -182,7 +184,7 @@ export default function AddPlaceSheet({ open, onClose, city, existingPlaces, onA
       onClose();
     } catch (e: any) {
       haptics.error();
-      toast.error("Nie udało się dodać miejsca");
+      toast.error(t("add_place.failed"));
     } finally { setAdding(false); }
   };
 
@@ -229,14 +231,14 @@ export default function AddPlaceSheet({ open, onClose, city, existingPlaces, onA
           {opts.subtitle && <span className="block text-[13px] text-muted-foreground truncate">{opts.subtitle}</span>}
         </span>
       </button>
-      <button onClick={() => openGoogle(opts.place)} aria-label={`Otwórz ${opts.place.place_name} w Google Maps`}
+      <button onClick={() => openGoogle(opts.place)} aria-label={t("add_place.open_in_maps", { place: opts.place.place_name })}
         className="h-9 w-9 flex items-center justify-center shrink-0 rounded-full bg-white shadow-sm border border-black/[0.04] active:scale-90 transition-transform">
         <GoogleGlyph className="h-[18px] w-[18px]" />
       </button>
       {opts.added ? (
         <span className="h-6 w-6 rounded-full flex items-center justify-center shrink-0 bg-[#f0a583] text-white"><Check className="h-3.5 w-3.5 stroke-[3]" /></span>
       ) : (
-        <button onClick={opts.onToggle} aria-label={opts.selected ? "Usuń z trasy" : "Dodaj do trasy"}
+        <button onClick={opts.onToggle} aria-label={opts.selected ? t("add_place.remove") : "Dodaj do trasy"}
           className={`h-6 w-6 rounded-full flex items-center justify-center shrink-0 transition-colors ${opts.selected ? "bg-[#f0a583] text-white" : "border-2 border-border"}`}>
           {opts.selected ? <Check className="h-3.5 w-3.5 stroke-[3]" /> : <Plus className="h-3.5 w-3.5 text-muted-foreground" />}
         </button>
@@ -267,7 +269,7 @@ export default function AddPlaceSheet({ open, onClose, city, existingPlaces, onA
         <div className="px-5 pt-1 pb-2 shrink-0">
           <div className="relative">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <input ref={inputRef} value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Dodaj nowe miejsce…"
+            <input ref={inputRef} value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t("add_place.placeholder")}
               className="w-full h-12 rounded-xl bg-secondary/60 border border-border/60 pl-10 pr-11 text-base text-foreground placeholder:text-muted-foreground/70 outline-none focus:ring-2 focus:ring-orange-500/30" />
             {query && (
               <button onClick={() => setQuery("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 h-7 w-7 rounded-full bg-[#ebebeb]/60 flex items-center justify-center active:scale-90 transition-transform">
@@ -282,9 +284,9 @@ export default function AddPlaceSheet({ open, onClose, city, existingPlaces, onA
           {searchMode ? (
             <div className="pt-1">
               {searching && <div className="py-6 text-center text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin inline" /></div>}
-              {blocked && <p className="py-6 text-center text-sm text-muted-foreground">{`Wyszukiwarka chwilowo niedostępna. Wybierz z${NBSP}zapisanych.`}</p>}
+              {blocked && <p className="py-6 text-center text-sm text-muted-foreground">{t("add_place.search_unavailable")}</p>}
               {!searching && !blocked && results.length === 0 && query.trim().length >= 2 && (
-                <p className="py-6 text-center text-sm text-muted-foreground">Brak wyników</p>
+                <p className="py-6 text-center text-sm text-muted-foreground">{t("add_place.no_results")}</p>
               )}
               <div className="space-y-1.5">
                 {results.map((r, i) => renderPlaceRow({ rowKey: `${keyOf(r)}-${i}`, place: r, subtitle: r.address, onToggle: () => pickGoogle(r), selected: isSel(r) }))}
@@ -332,7 +334,7 @@ export default function AddPlaceSheet({ open, onClose, city, existingPlaces, onA
                       <span className="min-w-0">
                         <span className="block text-[17px] font-bold text-foreground truncate leading-tight">{l.title}</span>
                         <span className="block text-[12px] text-muted-foreground mt-0.5">
-                          {l.saved ? "Zapisana lista · " : ""}{available.length} {available.length === 1 ? "miejsce" : available.length < 5 ? "miejsca" : "miejsc"}
+                          {l.saved ? `${t("add_place.saved_list")} ` : ""}{t("add_place.places_count", { count: available.length })}
                         </span>
                       </span>
                       <span className="flex-1" />
@@ -358,7 +360,7 @@ export default function AddPlaceSheet({ open, onClose, city, existingPlaces, onA
               </div>
               {existingPlaces && existingPlaces.length > 0 && (
                 <div className="border-t border-border/60 pt-4">
-                  <p className="text-[17px] font-bold text-foreground mb-2 px-0.5">Już dodane</p>
+                  <p className="text-[17px] font-bold text-foreground mb-2 px-0.5">{t("add_place.already")}</p>
                   <div className="space-y-1.5">
                     {existingPlaces.map((p, i) => renderPlaceRow({ rowKey: `ex-${keyOf(p)}-${i}`, place: p, subtitle: placeSubtitle(p) ?? city, added: true }))}
                   </div>
