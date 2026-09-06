@@ -785,6 +785,11 @@ export default function SharedRoute() {
 
   // Etap cyklu zycia wyjazdu (Nat 2026-08-25): planning=Propozycje, ongoing=W Trakcie, completed=Wspomnienie.
   const stage: "planning" | "ongoing" | "completed" = ((route as any).trip_type as any) || "planning";
+  // Opublikowany = jest juz w eksploracji i na profilu jako wspomnienie.
+  const isPublished = ((route as any).status as string) === "published";
+  // Wlasciciel moze opublikowac kazdy nieopublikowany wyjazd poza etapem propozycji
+  // (tam najpierw wybiera sie miejsca).
+  const canPublish = isOwner && stage !== "planning" && !isPublished;
   const proceedToChoosing = () => { setMissingParticipants(null); haptics.light(); setChosen(new Set((pins as any[]).map((p) => p.id))); setChoosing(true); };
   const startChoosing = () => {
     // Sprawdz czy KAZDY uczestnik (poza hostem) dodal >=1 miejsce (pins.added_by). Jesli nie -> dialog.
@@ -2104,10 +2109,14 @@ export default function SharedRoute() {
               <div className="flex items-center gap-2">
                 {/* "Dodaj miejsce" przeniesione do plywajacego guzika pod czatem (prosba Nat
                     2026-08-30) - dolny pasek zostaje dla akcji etapu. */}
+                {/* Gdy obok stoi "Opublikuj wyjazd", zmiana kolejnosci schodzi na drugi plan
+                    (szary fill) - dwa pomaranczowe guziki obok siebie nie mowia, ktory jest
+                    wazniejszy, a publikacja jest tu akcja glowna. */}
                 {pins.length > 1 && (
                   <button onClick={() => { haptics.light(); pickDay(null); setReorderMode(true); }}
-                    className="flex-1 py-3 rounded-full bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform">
-                    <GripVertical className="h-4 w-4" /> Zmień kolejność
+                    className={`flex-1 py-3 rounded-full font-bold text-sm flex items-center justify-center gap-2 whitespace-nowrap active:scale-[0.98] transition-transform ${
+                      canPublish ? "bg-secondary text-secondary-foreground" : "bg-primary text-white"}`}>
+                    <GripVertical className="h-4 w-4 shrink-0" /> Zmień kolejność
                   </button>
                 )}
                 {/* Etap PROPOZYCJI (host): wybierz miejsca -> w trakcie. */}
@@ -2117,13 +2126,17 @@ export default function SharedRoute() {
                     <Check className="h-4 w-4 stroke-[3]" /> Wybierz miejsca
                   </button>
                 )}
-                {/* Etap W TRAKCIE (host): PUBLIKACJA jednym guzikiem. Opis, tagi i zdjecia
-                    powstaja juz w tym widoku - stepper "podsumowania" zostal usuniety z flow. */}
-                {isOwner && stage === "ongoing" && (
+                {/* PUBLIKACJA jednym guzikiem. Opis, tagi i zdjecia powstaja juz w tym widoku -
+                    stepper "podsumowania" zostal usuniety z flow.
+                    Warunek to NIEOPUBLIKOWANY wyjazd, a nie sam etap "w trakcie": przeszly wyjazd
+                    dostaje trip_type='completed' od razu przy zakladaniu, wiec z etapem "ongoing"
+                    w warunku guzik w ogole sie nie pokazywal i roboczego wspomnienia nie dalo sie
+                    opublikowac (zgloszenie usera 2026-09-06). */}
+                {canPublish && (
                   <button onClick={handlePublish} disabled={publishing}
-                    className="flex-1 py-3 rounded-full bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-50">
-                    {publishing && <Loader2 className="h-4 w-4 animate-spin" />}
-                    {publishing ? "Publikuję..." : "Opublikuj"}
+                    className="flex-1 py-3 rounded-full bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 whitespace-nowrap active:scale-[0.98] transition-transform disabled:opacity-50">
+                    {publishing && <Loader2 className="h-4 w-4 animate-spin shrink-0" />}
+                    {publishing ? "Publikuję..." : "Opublikuj wyjazd"}
                   </button>
                 )}
               </div>
