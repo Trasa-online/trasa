@@ -1,5 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { welcomeHtml } from "./welcome.ts";
+import { buildWaitlistWelcomeHtml, waitlistSubject, type MailLang } from "./welcome.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -31,7 +31,9 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { email: rawEmail } = await req.json();
+    const { email: rawEmail, lang: rawLang } = await req.json();
+    // Jezyk landingu w momencie zapisu. Nieznany -> polski (jak wszedzie indziej).
+    const lang: MailLang = rawLang === "en" ? "en" : "pl";
     if (!rawEmail || typeof rawEmail !== "string") throw new Error("email required");
     const email = rawEmail.trim().slice(0, 254);
     if (!EMAIL_RE.test(email)) throw new Error("invalid email format");
@@ -62,8 +64,8 @@ Deno.serve(async (req) => {
       body: JSON.stringify({
         from: "spontaway <hello@spontaway.com>",
         to: [email],
-        subject: "Cześć! Dzięki, że dołączasz do spontaway 🧡",
-        html: welcomeHtml,
+        subject: waitlistSubject(lang),
+        html: buildWaitlistWelcomeHtml(lang),
       }),
     });
 

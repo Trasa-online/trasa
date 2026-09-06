@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { QRCodeSVG } from "qrcode.react";
 import posthog from "posthog-js";
@@ -23,7 +23,16 @@ const PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=travel.tra
 // Pojedyncze litery (a i o u w z) i krotkie przyimki nie moga konczyc linii.
 // Regex leci dwa razy, bo sasiadujace trafienia zjadaja wspolna spacje ("i o tym").
 const ORPHANS = /(^|[\s("„])([aiouwz]|do|na|po|za|ze|od|we)\s+/gi;
-const nb = (s: string) => s.replace(ORPHANS, "$1$2\u00A0").replace(ORPHANS, "$1$2\u00A0");
+// Twarde spacje po jednoliterowych spojnikach to regula POLSKA. Po angielsku ten sam wzorzec
+// zlapalby "a", "I", "we", "do" i sklejal je z nastepnym slowem, psujac lamanie wierszy -
+// dlatego `nb` dostaje jezyk i po angielsku oddaje tekst bez zmian.
+const nbFor = (lang: Lang) => (s: string) =>
+  lang === "en" ? s : s.replace(ORPHANS, "$1$2\u00A0").replace(ORPHANS, "$1$2\u00A0");
+
+// Helper podajemy kontekstem, a nie propsem przez osiem komponentow - i tak zalezy tylko
+// od jezyka strony, ktory jest jeden na cala stronę.
+const NbContext = createContext<(s: string) => string>((s) => s);
+const useNb = () => useContext(NbContext);
 
 // ─── Copy (bramka jezykowa: ?lang=en; domyslnie PL) ───────────────────────────
 
@@ -201,7 +210,8 @@ function Pill({
 
 // Zapis na powiadomienie o premierze. Trafia do tabeli `waitlist` (RLS: "Anyone can join"),
 // z oznaczeniem zrodla, zeby dalo sie odroznic te zapisy od starej strony zapisow.
-function LaunchNotifyForm({ c }: { c: Copy }) {
+function LaunchNotifyForm({ c, lang }: { c: Copy; lang: Lang }) {
+  const nb = useNb();
   const [email, setEmail] = useState("");
   const [state, setState] = useState<"idle" | "sending" | "done" | "error">("idle");
 
@@ -210,14 +220,16 @@ function LaunchNotifyForm({ c }: { c: Copy }) {
     const value = email.trim().toLowerCase();
     if (!value || state === "sending") return;
     setState("sending");
-    const { error } = await (supabase as any).from("waitlist").insert({ email: value, source: "landing_modal" });
+    // Jezyk zapisujemy przy wierszu, nie tylko w wywolaniu maila: kolejne wysylki
+    // (zaproszenie na premiere) maja isc w tym samym jezyku, w ktorym user sie zapisal.
+    const { error } = await (supabase as any).from("waitlist").insert({ email: value, source: "landing_modal", language: lang });
     // Duplikat maila to dla usera sukces, nie blad - juz jest zapisany.
     if (error && !String(error.code) .startsWith("23")) {
       setState("error");
       return;
     }
-    supabase.functions.invoke("send-waitlist-email", { body: { email: value } });
-    posthog.capture("landing_waitlist_signup", { source: "download_modal" });
+    supabase.functions.invoke("send-waitlist-email", { body: { email: value, lang } });
+    posthog.capture("landing_waitlist_signup", { source: "download_modal", lang });
     setState("done");
   };
 
@@ -257,7 +269,8 @@ function LaunchNotifyForm({ c }: { c: Copy }) {
   );
 }
 
-function DownloadModal({ c, onClose }: { c: Copy; onClose: () => void }) {
+function DownloadModal({ c, lang, onClose }: { c: Copy; lang: Lang; onClose: () => void }) {
+  const nb = useNb();
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
     document.addEventListener("keydown", onKey);
@@ -301,7 +314,7 @@ function DownloadModal({ c, onClose }: { c: Copy; onClose: () => void }) {
               mierzymy realne zainteresowanie, skoro apki nie da sie jeszcze pobrac. */}
           {!APP_LIVE && (
             <div className="mt-4 w-full">
-              <LaunchNotifyForm c={c} />
+              <LaunchNotifyForm c={c} lang={lang} />
             </div>
           )}
         </div>
@@ -329,6 +342,7 @@ function DownloadModal({ c, onClose }: { c: Copy; onClose: () => void }) {
 // wiec nasz zostaje wszedzie.
 
 function InstallBanner({ c, onDownload }: { c: Copy; onDownload: () => void }) {
+  const nb = useNb();
   const [hidden, setHidden] = useState(() => sessionStorage.getItem("spontaway_install_banner_dismissed") === "1");
   if (hidden || (APP_LIVE && capabilities.appleSmartBanner)) return null;
   return (
@@ -399,6 +413,7 @@ function Nav({ c, onDownload }: { c: Copy; onDownload: () => void }) {
 // ─── Hero ─────────────────────────────────────────────────────────────────────
 
 function Hero({ c, onDownload }: { c: Copy; onDownload: () => void }) {
+  const nb = useNb();
   return (
     <section className="px-4 pb-12 pt-6 lg:px-[50px] lg:pb-[80px] lg:pt-[53px]">
       <div className="mx-auto flex max-w-[1340px] flex-col items-center rounded-[28px] bg-spontaway-yellow px-5 py-10 text-center lg:h-[644px] lg:flex-row lg:items-center lg:justify-between lg:rounded-[36px] lg:px-[40px] lg:py-0 lg:text-left">
@@ -462,6 +477,7 @@ function Feature({
   side: "left" | "right";
   onDownload: () => void;
 }) {
+  const nb = useNb();
   return (
     <section className="mx-auto max-w-[1440px] px-4 py-12 lg:px-[160px] lg:py-[88px]">
       <div className={`flex flex-col items-center gap-8 lg:flex-row lg:justify-between lg:gap-[60px] ${side === "left" ? "lg:flex-row-reverse" : ""}`}>
@@ -511,6 +527,7 @@ function Stats({ c }: { c: Copy }) {
 // docelowo zastapi ja pelna sekcja marketingowa.
 
 function BusinessStrip({ c }: { c: Copy }) {
+  const nb = useNb();
   const track = (placement: string) => posthog.capture("landing_business_click", { placement });
   return (
     <section className="mx-auto max-w-[1440px] px-4 pb-4 pt-12 lg:px-[50px] lg:pt-[88px]">
@@ -552,6 +569,7 @@ function BusinessStrip({ c }: { c: Copy }) {
 // ─── CTA na koncu strony ──────────────────────────────────────────────────────
 
 function FooterCta({ c, onDownload }: { c: Copy; onDownload: () => void }) {
+  const nb = useNb();
   return (
     <section className="px-4 py-12 lg:px-[50px] lg:py-[125px]">
       <div className="mx-auto flex max-w-[1340px] flex-col items-center rounded-[28px] bg-spontaway-yellow px-6 py-10 text-center lg:h-[480px] lg:justify-center lg:rounded-[36px] lg:py-0">
@@ -569,7 +587,8 @@ function FooterCta({ c, onDownload }: { c: Copy; onDownload: () => void }) {
 
 // ─── Stopka ───────────────────────────────────────────────────────────────────
 
-function FooterBar({ c }: { c: Copy }) {
+function FooterBar({ c, lang, onSwitchLang }: { c: Copy; lang: Lang; onSwitchLang: (l: Lang) => void }) {
+  const nb = useNb();
   return (
     <footer className="relative mx-auto flex max-w-[1440px] flex-col items-center gap-3 px-5 pb-8 text-[13px] text-[#6B6B75] lg:h-[96px] lg:flex-row lg:justify-center lg:gap-0 lg:px-[120px] lg:pb-0 lg:text-[14px]">
       <p className="flex items-center gap-1 lg:absolute lg:left-1/2 lg:-translate-x-1/2">
@@ -579,9 +598,25 @@ function FooterBar({ c }: { c: Copy }) {
         </svg>
         {nb(c.footer.inPoland)}
       </p>
-      <div className="flex gap-6 lg:ml-auto">
+      <div className="flex items-center gap-6 lg:ml-auto">
         <Link to="/terms" className="hover:text-spontaway-brown">{c.footer.terms}</Link>
         <Link to="/privacy" className="hover:text-spontaway-brown">{c.footer.privacy}</Link>
+        {/* Przelacznik jezyka: wykrywanie z przegladarki bywa mylne (Polak z angielskim
+            systemem), wiec musi byc czym je nadpisac. Wybor pamietamy w tej przegladarce. */}
+        <div className="flex items-center gap-1" role="group" aria-label="Language">
+          {(["pl", "en"] as const).map((code) => (
+            <button
+              key={code}
+              type="button"
+              onClick={() => onSwitchLang(code)}
+              aria-pressed={lang === code}
+              className={`rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase transition-colors ${
+                lang === code ? "bg-spontaway-orange text-white" : "text-spontaway-brown/60 hover:text-spontaway-brown"}`}
+            >
+              {code}
+            </button>
+          ))}
+        </div>
       </div>
     </footer>
   );
@@ -589,10 +624,31 @@ function FooterBar({ c }: { c: Copy }) {
 
 // ─── Strona ───────────────────────────────────────────────────────────────────
 
+// Jezyk landingu. Kolejnosc ma znaczenie:
+//   1. ?lang= w adresie - jawny wybor, wygrywa zawsze (dziala tez w linkach z kampanii),
+//   2. wybor zapamietany w tej przegladarce (przelacznik w stopce),
+//   3. jezyk przegladarki - bez tego kazdy odwiedzajacy z zagranicy widzial polska strone.
+const LANG_KEY = "spontaway_landing_lang";
+function detectLang(param: string | null): Lang {
+  if (param === "en" || param === "pl") return param;
+  try {
+    const saved = localStorage.getItem(LANG_KEY);
+    if (saved === "en" || saved === "pl") return saved;
+  } catch { /* prywatne okno */ }
+  const nav = typeof navigator !== "undefined" ? (navigator.language || "") : "";
+  return nav.toLowerCase().startsWith("pl") ? "pl" : "en";
+}
+
 export default function SpontawayLanding() {
   const [params] = useSearchParams();
-  const lang: Lang = params.get("lang") === "en" ? "en" : "pl";
+  const [lang, setLang] = useState<Lang>(() => detectLang(params.get("lang")));
   const c = COPY[lang] as Copy;
+  const nb = useMemo(() => nbFor(lang), [lang]);
+  const switchLang = useCallback((next: Lang) => {
+    setLang(next);
+    try { localStorage.setItem(LANG_KEY, next); } catch { /* prywatne okno */ }
+    posthog.capture("landing_language_switched", { lang: next });
+  }, []);
   const [modalOpen, setModalOpen] = useState(false);
 
   const openDownload = useCallback((placement: string) => {
@@ -613,6 +669,7 @@ export default function SpontawayLanding() {
   ];
 
   return (
+    <NbContext.Provider value={nb}>
     <div className="min-h-dvh bg-[#FEFEFE] font-body">
       <Nav c={c} onDownload={() => openDownload("nav")} />
       <main>
@@ -637,8 +694,9 @@ export default function SpontawayLanding() {
         <BusinessStrip c={c} />
         <FooterCta c={c} onDownload={() => openDownload("footer_cta")} />
       </main>
-      <FooterBar c={c} />
-      {modalOpen && <DownloadModal c={c} onClose={() => setModalOpen(false)} />}
+      <FooterBar c={c} lang={lang} onSwitchLang={switchLang} />
+      {modalOpen && <DownloadModal c={c} lang={lang} onClose={() => setModalOpen(false)} />}
     </div>
+    </NbContext.Provider>
   );
 }
