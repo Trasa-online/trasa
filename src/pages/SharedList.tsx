@@ -16,6 +16,7 @@ import { useUnsavePlace } from "@/hooks/useUnsavePlace";
 import { buildShareUrl } from "@/lib/shareUrl";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { PlacePhoto, resolveStored } from "@/components/PlacePhoto";
+import StoredImage from "@/components/StoredImage";
 import { RoutePlaceRow } from "@/components/route/RoutePlaceRow";
 import PlaceNoteEditor from "@/components/route/PlaceNoteEditor";
 import ReportContentSheet from "@/components/moderation/ReportContentSheet";
@@ -438,8 +439,9 @@ export default function SharedList() {
                 {photos.map((url) => (
                   <div key={url} className="relative w-[76px] aspect-[2/3] shrink-0 rounded-xl overflow-hidden bg-muted">
                     {/* Klik w zdjecie = pelnoekranowy podglad. */}
-                    <img
-                      src={resolveStored(url) ?? url} alt="" role="button"
+                    {/* Kafelek 76 px -> miniatura; podglad pelnoekranowy bierze oryginal. */}
+                    <StoredImage
+                      url={url} size={76} role="button"
                       onClick={() => setPhotoViewer({ urls: photos.map((u: string) => resolveStored(u) ?? u), idx: photos.indexOf(url) })}
                       className="w-full h-full object-cover active:opacity-90 transition-opacity"
                     />

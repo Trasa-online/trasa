@@ -27,6 +27,7 @@ import { PlacePhoto } from "@/components/PlacePhoto";
 import { RoutePlaceRow } from "@/components/route/RoutePlaceRow";
 import { fetchRouteNotesWithAuthors, notesByPlace, placeNoteKey } from "@/lib/placeNotes";
 import { detachPlacePhotos, restorePlacePhotos } from "@/lib/placePhotoSocial";
+import StoredImage from "@/components/StoredImage";
 import { fetchPinPhotos, addPinPhoto, deletePinPhoto, deletePinPhotosForPlace, restorePinPhotos, photosByPlace, pinPhotoKey, type PinPhoto } from "@/lib/pinPhotos";
 import { fetchPlaceVotes, toggleVote, placeVoteKey } from "@/lib/placeVotes";
 import { fetchUnreadChatCount } from "@/lib/chatReads";
@@ -61,7 +62,6 @@ const SUBCAT_ORDER: string[] = MAIN_CATEGORIES.flatMap((c) => c.subcategories.ma
 
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { avatarSrc } from "@/lib/avatar";
-import { thumbUrl } from "@/lib/imageUrl";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import SavePlaceSheet, { type SavePlaceInput } from "@/components/plan-wizard/SavePlaceSheet";
 import { resolvePlaceDbId } from "@/lib/placeLists";
@@ -1287,8 +1287,10 @@ export default function SharedRoute() {
               {placePhotos.map((ph) => (
                 <div key={ph.id} className="relative w-[84px] aspect-[2/3] shrink-0 rounded-xl overflow-hidden bg-muted">
                   {/* Klik w zdjecie = pelnoekranowy podglad (zgloszenie Nat 2026-08-29). */}
-                  <img
-                    src={resolveStored(ph.url) ?? ph.url} alt=""
+                  {/* Kafelek 84 px -> miniatura, nie oryginal (1-3 MB na sztuke zabijalo
+                      ladowanie zdjec przy miejscu). Podglad ponizej dalej bierze pelny plik. */}
+                  <StoredImage
+                    url={ph.url} size={84}
                     role="button"
                     onClick={() => setPinPhotoViewer({
                       urls: placePhotos.map((x) => resolveStored(x.url) ?? x.url),
@@ -1824,8 +1826,7 @@ export default function SharedRoute() {
                       className={`relative break-inside-avoid rounded-2xl overflow-hidden bg-muted active:opacity-90 transition-opacity cursor-pointer ${isCover ? "ring-2 ring-primary ring-offset-2 ring-offset-background" : ""}`}>
                       {/* Siatka masonry ma ~180 px na kolumne - pobieramy miniature, nie oryginal.
                           Podglad pelnoekranowy nizej zostaje przy pelnej rozdzielczosci. */}
-                      <img src={thumbUrl(url, 200) ?? url} alt="" loading="lazy" className="w-full h-auto block"
-                        onError={(e) => { const img = e.currentTarget; if (img.src !== url) img.src = url; }} />
+                      <StoredImage url={url} size={200} className="w-full h-auto block" />
                       {/* Licznik polubien (gdy sa) - siatka zostaje czysta, lajkuje sie w podgladzie. */}
                       {likeStateOf(url).count > 0 && (
                         <span className="absolute bottom-1.5 left-1.5 flex items-center gap-1 rounded-full bg-black/45 backdrop-blur-sm px-2 py-0.5 text-[11px] font-semibold text-white">

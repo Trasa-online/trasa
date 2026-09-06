@@ -30,6 +30,7 @@ import type { MockPlace } from "@/components/plan-wizard/PlaceSwiper";
 import { QRCodeSVG } from "qrcode.react";
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { PlacePhoto, resolveStored } from "@/components/PlacePhoto";
+import StoredImage from "@/components/StoredImage";
 import { RoutePlaceRow } from "@/components/route/RoutePlaceRow";
 import SavePlaceSheet, { type SavePlaceInput } from "@/components/plan-wizard/SavePlaceSheet";
 import { useSavedPlaces } from "@/hooks/useSavedPlaces";
@@ -1797,7 +1798,7 @@ const ReviewSummary = () => {
                   const isOn = assigned.includes(url);
                   return (
                     <button key={url} onClick={() => toggleAssignPinPhoto(pickerPin, url)} className="relative aspect-square rounded-xl overflow-hidden bg-muted active:opacity-90">
-                      <img src={src} alt="" className="w-full h-full object-cover" />
+                      <StoredImage url={src} size={110} className="w-full h-full object-cover" />
                       {isOn && (
                         <span className="absolute inset-0 bg-primary/40 flex items-center justify-center">
                           <span className="h-7 w-7 rounded-full bg-primary text-white flex items-center justify-center"><Check className="h-4 w-4" strokeWidth={3} /></span>
@@ -1872,7 +1873,7 @@ const ReviewSummary = () => {
             {myPlacePhotos.map((url: string, i: number) => (
               <button key={`${url}-${i}`} onClick={() => { setViewerUrl(url); setViewerMenuOpen(false); }}
                 className="shrink-0 h-20 w-20 rounded-xl overflow-hidden bg-muted active:opacity-90">
-                <img src={url} alt="" className="w-full h-full object-cover" loading="lazy" />
+                <StoredImage url={url} size={80} className="w-full h-full object-cover" />
               </button>
             ))}
           </div>
@@ -1890,7 +1891,7 @@ const ReviewSummary = () => {
         {galleryPhotos.map((item, idx) => (
           <button key={`${item.url}-${idx}`} onClick={() => { setViewerUrl(item.url); setViewerMenuOpen(false); }}
             className="relative aspect-[4/3] rounded-xl overflow-hidden bg-muted active:opacity-90">
-            <img src={item.url} alt="" className="w-full h-full object-cover" />
+            <StoredImage url={item.url} size={180} className="w-full h-full object-cover" />
             {/* #1: nazwa miejsca (gdy przypisane) + awatar/username uploadera (gdy nie moje) - oba naraz. */}
             <div className="absolute inset-x-1 bottom-1 flex flex-col items-start gap-1">
               {item.placeLabel && (
@@ -1958,7 +1959,7 @@ const ReviewSummary = () => {
                       onClick={() => { setViewerUrl(src); setViewerMenuOpen(false); }}
                       className="relative shrink-0 h-20 w-20 rounded-xl overflow-hidden bg-muted active:opacity-90"
                     >
-                      <img src={src} alt="" className="w-full h-full object-cover" />
+                      <StoredImage url={src} size={80} className="w-full h-full object-cover" />
                       <span
                         role="button"
                         aria-label={t("a11y.remove_photo")}
@@ -2458,7 +2459,7 @@ const ReviewSummary = () => {
                         onClick={() => setPlanListCover(opt.url)}
                         className={`relative aspect-square rounded-2xl overflow-hidden bg-muted active:scale-95 transition-transform ${isCurrent ? "ring-2 ring-primary ring-offset-2 ring-offset-card" : ""}`}
                       >
-                        <img src={opt.url} alt={opt.name} loading="lazy" className="w-full h-full object-cover" />
+                        <StoredImage url={opt.url} size={110} alt={opt.name} className="w-full h-full object-cover" />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-transparent to-transparent" />
                         <span className="absolute bottom-1.5 left-1.5 right-1.5 text-[10px] font-semibold text-white leading-tight line-clamp-2 [text-shadow:_0_1px_2px_rgb(0_0_0/60%)]">{opt.name}</span>
                         {isCurrent && (

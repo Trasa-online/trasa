@@ -4,9 +4,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useLocation } from "react-router-dom";
 import { goBackOr } from "@/hooks/useGoBack";
 import { PullToRefresh } from "@/components/PullToRefresh";
-import { haptics } from "@/hooks/useHaptics";
 import { track } from "@/lib/analytics";
-import { MapPin, Heart, Trash2, ArrowRight, ArrowLeft, Pencil, ListChecks, ChevronDown, ChevronRight, Check, Search, X, Layers, Compass, Bookmark, Plus, Folder, FileText, Users } from "lucide-react";
+import { Heart, Trash2, ArrowRight, ArrowLeft, Pencil, ListChecks, ChevronDown, ChevronRight, Check, Search, X, Layers, Compass, Bookmark, Plus } from "lucide-react";
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import SavePlaceSheet, { type SavePlaceInput } from "@/components/plan-wizard/SavePlaceSheet";
@@ -24,6 +23,7 @@ import HomeHeaderActions from "@/components/home/HomeHeaderActions";
 import ExploreTopBar from "@/components/home/ExploreTopBar";
 import TabTopBar from "@/components/layout/TabTopBar";
 import ActiveTripBanner from "@/components/home/ActiveTripBanner";
+import SearchCategoryRow, { type SearchCat } from "@/components/home/SearchCategoryRow";
 import ExploreSwiper from "@/components/home/ExploreSwiper";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { UNLOCKED_CITIES } from "@/components/plan-wizard/CityPicker";
@@ -710,52 +710,7 @@ export const MyCollections = ({ showCreate = true }: { showCreate?: boolean } = 
 };
 
 // Polubione przeniesione na /home (ikona serca). Eksploruj = sam feed polecanych.
-// ── Wyszukiwarka: kategorie (redesign wg Figmy "NEW - Eksploracja — wyszukiwarka") ──────
-// Cztery karty 90px nad polem wyszukiwania. Aktywna: peachy tlo + pomaranczowa obwodka.
-// "Wyjazdy" ma znak marki (spontaway), reszta ikony Lucide (regula z CLAUDE.md: tylko Lucide).
-export type SearchCat = "all" | "lists" | "trips" | "places" | "people";
-
-const SEARCH_CATS: { id: SearchCat; label: string; icon: "folder" | "file" | "brand" | "pin" | "people" }[] = [
-  { id: "all", label: "Wszystko", icon: "folder" },
-  { id: "lists", label: "Listy", icon: "file" },
-  { id: "trips", label: "Wyjazdy", icon: "brand" },
-  { id: "places", label: "Miejsca", icon: "pin" },
-  { id: "people", label: "Ludzie", icon: "people" },
-];
-
-function SearchCategoryRow({ value, onChange }: { value: SearchCat; onChange: (c: SearchCat) => void }) {
-  return (
-    <div className="flex items-center gap-2.5 px-4 pt-3 pb-1 shrink-0">
-      {SEARCH_CATS.map((c) => {
-        const on = value === c.id;
-        return (
-          <button
-            key={c.id}
-            type="button"
-            onClick={() => { haptics.selection(); onChange(c.id); }}
-            aria-pressed={on}
-            className="flex-1 min-w-0 flex flex-col items-center gap-1 active:scale-[0.97] transition-transform"
-          >
-            <span className={`w-full h-[76px] rounded-[10px] border flex items-center justify-center transition-colors ${on ? "border-[#F0A583] bg-orange-100/30" : "border-border bg-transparent"}`}>
-              {c.icon === "brand" ? (
-                <img src="/spontaway-symbol.png" alt="" className="h-6 w-[27px] object-contain" />
-              ) : c.icon === "folder" ? (
-                <Folder className={`h-6 w-6 ${on ? "text-[#F0A583]" : "text-foreground"}`} strokeWidth={1.8} />
-              ) : c.icon === "file" ? (
-                <FileText className="h-6 w-6 text-foreground" strokeWidth={1.8} />
-              ) : c.icon === "people" ? (
-                <Users className="h-6 w-6 text-foreground" strokeWidth={1.8} />
-              ) : (
-                <MapPin className="h-6 w-6 text-foreground" fill="currentColor" strokeWidth={0} />
-              )}
-            </span>
-            <span className="text-xs font-medium text-foreground leading-4 truncate">{c.label}</span>
-          </button>
-        );
-      })}
-    </div>
-  );
-}
+// Wiersz kategorii wyszukiwarki mieszka w SearchCategoryRow (wspolny z profilem).
 
 const Explore = () => {
   const { t } = useTranslation("explore");
@@ -953,8 +908,10 @@ const Explore = () => {
                 czym skoczyc. Wezszy o mapke w prawym gornym rogu karty, zeby jej nie zaslaniac.
                 W trybie kart miejsc (swiper) banera nie ma: wysokosc karty 9:16 liczy sie ze
                 stalego chrome (CLAUDE.md - zamrozony layout PlaceSwiper). */}
+            {/* Przy otwartej wyszukiwarce baner znika razem z feedem - ekran wynikow ma byc
+                czysty (prosba Nat 2026-09-06). */}
             <div className={cn("absolute inset-x-0 top-0 z-30 transition-all duration-200 ease-out",
-              feedScrolled ? "-translate-y-[130%] opacity-0 pointer-events-none" : "translate-y-0 opacity-100")}>
+              feedScrolled || searchOpen ? "-translate-y-[130%] opacity-0 pointer-events-none" : "translate-y-0 opacity-100")}>
               <ActiveTripBanner floating />
             </div>
             {/* Snap tylko w trybie przegladania feedu. Przy wyszukiwaniu WYLACZAMY snap, zeby

@@ -1494,7 +1494,9 @@ export function SavedCollections({ hideEmptyState }: { hideEmptyState?: boolean 
   );
 }
 
-export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityChange, active = true, searchQuery = "", searchOpen = false, searchCategory = "all" }: { city?: string; cities?: string[]; onCityChange?: (city: string) => void; active?: boolean; searchQuery?: string; searchOpen?: boolean; searchCategory?: "all" | "lists" | "trips" | "places" | "people" } = {}) {
+// searchOnly: komponent zamontowany WYLACZNIE po wyniki wyszukiwania (profil) - pasywny
+// feed eksploracji sie nie renderuje i jego zapytania nie strzelaja do bazy.
+export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityChange, active = true, searchQuery = "", searchOpen = false, searchCategory = "all", searchOnly = false }: { city?: string; cities?: string[]; onCityChange?: (city: string) => void; active?: boolean; searchQuery?: string; searchOpen?: boolean; searchCategory?: "all" | "lists" | "trips" | "places" | "people"; searchOnly?: boolean } = {}) {
   const { t } = useTranslation("homefeed");
   const { user } = useAuth();
   // Zablokowani userzy (App Store 1.2): ich trasy i listy znikaja z feedu i wyszukiwarki.
@@ -1690,6 +1692,7 @@ export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityCh
   // Trasy w Warszawie (lista pionowa).
   const { data: warszawa = [], isLoading: wawaLoading } = useQuery({
     queryKey: ["discovery-city-routes", city],
+    enabled: !searchOnly,
     queryFn: async () => {
       // city === "all" (ALL_CITIES) -> feed agreguje Trasy ze wszystkich miast (bez filtra).
       let q = (supabase as any)
@@ -2299,8 +2302,10 @@ export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityCh
         </div>
       )}
 
-      {/* Feed Tras - ZAWSZE widoczny pod skrotami/wynikami (nie znika przy wyszukiwaniu). */}
-      {isLoading ? (
+      {/* Feed Tras. Przy OTWARTEJ wyszukiwarce znika (prosba Nat 2026-09-06 po testach):
+          wczesniej pod wynikami leciala pasywna lista wyjazdow, wiec np. kategoria "Ludzie"
+          konczyla sie kartami tras, a "Wszystko" dublowalo podglad wyjazdow. */}
+      {searchOpen || searchOnly ? null : isLoading ? (
         // Skeleton pelnoekranowej karty feedu (1:1 z TrasaBigCard) - immersyjny, nie stary kompaktowy.
         <div className="space-y-4">
           {Array.from({ length: 2 }).map((_, i) => (

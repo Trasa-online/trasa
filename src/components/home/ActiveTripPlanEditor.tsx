@@ -10,6 +10,7 @@ import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import SavePlaceSheet, { type SavePlaceInput } from "@/components/plan-wizard/SavePlaceSheet";
 import type { MockPlace } from "@/components/plan-wizard/PlaceSwiper";
 import { PlacePhoto, resolveStored } from "@/components/PlacePhoto";
+import StoredImage from "@/components/StoredImage";
 import { notify } from "@/lib/notify";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { useDistanceReference, tryResolveOnSite } from "@/lib/distanceReference";
@@ -647,7 +648,8 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false, onDelete, deleting 
           <div className="flex flex-wrap gap-2">
             {imgs.map((url) => (
               <div key={url} className="relative h-20 w-20 shrink-0 rounded-xl overflow-hidden bg-muted">
-                <img src={resolveStored(url) ?? url} alt="" className="w-full h-full object-cover" />
+                {/* Kafelek 80 px -> miniatura zamiast oryginalu (2026-09-06). */}
+                <StoredImage url={url} size={80} className="w-full h-full object-cover" />
                 <button onClick={() => removePlacePhoto(pin, url)} aria-label="Usuń zdjęcie" className="absolute top-1 right-1 h-5 w-5 rounded-full bg-black/55 text-white flex items-center justify-center active:scale-90"><X className="h-3 w-3" /></button>
               </div>
             ))}

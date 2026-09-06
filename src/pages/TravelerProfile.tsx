@@ -5,11 +5,14 @@ import { useAuth } from "@/hooks/useAuth";
 import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import { Settings, Camera, UserCircle2, ArrowRight, Bell, Share2, Search, LayoutGrid } from "lucide-react";
+import { Settings, Camera, UserCircle2, ArrowRight, Bell, Share2, Search, LayoutGrid, ChevronLeft } from "lucide-react";
 import { SavedPlacesGrid } from "@/components/saved/SavedPlacesGrid";
 import TabHeader from "@/components/layout/TabHeader";
 import PinnedSearchField from "@/components/layout/PinnedSearchField";
+import SearchCategoryRow, { type SearchCat } from "@/components/home/SearchCategoryRow";
+import DiscoveryFeed from "@/components/home/DiscoveryFeed";
 import ScreenSkeleton from "@/components/layout/ScreenSkeleton";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -143,6 +146,20 @@ const TravelerProfile = () => {
   const queryClient = useQueryClient();
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [followSheet, setFollowSheet] = useState<"followers" | "following" | null>(null);
+  // Wyszukiwarka przypieta w naglowku - dziala W MIEJSCU, dokladnie jak w Eksploracji
+  // (prosba Nat 2026-09-06): foldery kategorii chowaja sie po wpisaniu frazy, a wyniki
+  // renderuje wspoldzielony DiscoveryFeed w trybie searchOnly (jedna logika wynikow).
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchCat, setSearchCat] = useState<SearchCat>("all");
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const closeSearch = () => { setSearchOpen(false); setSearchQuery(""); setSearchCat("all"); searchInputRef.current?.blur(); };
+  const foldersVisible = searchOpen && searchQuery.trim().length === 0;
+  // Wyniki na pelny ekran - dolny pasek chowamy tak samo jak w Eksploracji.
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent("trasa:hide-bottomnav", { detail: searchOpen }));
+  }, [searchOpen]);
+  useEffect(() => () => { window.dispatchEvent(new CustomEvent("trasa:hide-bottomnav", { detail: false })); }, []);
   const [searchParams] = useSearchParams();
   // ?tab=wyjazdy|listy - wejście z redirectów (dawne /dziennik -> wyjazdy). Zakładka "zapisane"
   // usunięta (2026-08-24): zapisane miejsca żyją w liście ogólnej i pojawiają się przy tworzeniu.
@@ -680,17 +697,56 @@ const TravelerProfile = () => {
           </>
         }
         below={
-          // Przypieta wyszukiwarka (2026-09-06): pole jest tylko "wejsciem" - wyniki
-          // i cala logika zostaja w Eksploracji, zeby nie mnozyc drugiej wyszukiwarki.
-          <PinnedSearchField
-            readOnly
-            placeholder={`Szukaj tras, miejsc, osób...`}
-            onClick={() => navigate("/eksploruj", { state: { openSearch: true } })}
-          />
+          <>
+            {searchOpen && (
+              <button
+                onClick={closeSearch}
+                aria-label={`Zamknij wyszukiwanie`}
+                className="shrink-0 -ml-1 h-9 w-9 flex items-center justify-center text-foreground active:scale-90 transition-transform"
+              >
+                <ChevronLeft className="h-6 w-6" strokeWidth={2.2} />
+              </button>
+            )}
+            <PinnedSearchField
+              ref={searchInputRef}
+              value={searchQuery}
+              onChange={setSearchQuery}
+              onFocus={() => setSearchOpen(true)}
+              placeholder={`Szukaj tras, miejsc, osób...`}
+            />
+          </>
         }
       />
 
-      <PullToRefresh onRefresh={handleRefresh} className="flex-1 overflow-x-hidden">
+      {/* Foldery kategorii - jak w Eksploracji: widoczne dopoki fraza jest pusta. */}
+      {searchOpen && (
+        <div
+          className={cn(
+            "shrink-0 overflow-hidden border-b border-border/40 transition-all duration-200 ease-out",
+            foldersVisible ? "max-h-[160px] opacity-100" : "max-h-0 opacity-0 border-b-0",
+          )}
+        >
+          <p className="px-4 pt-3 text-sm font-bold text-foreground">{`Szukaj według kategorii`}</p>
+          <SearchCategoryRow value={searchCat} onChange={setSearchCat} />
+          <div className="h-3" />
+        </div>
+      )}
+
+      {/* Wyniki zamiast tresci profilu - ten sam komponent co w Eksploracji. */}
+      {searchOpen && (
+        <div className="flex-1 min-h-0 overflow-y-auto px-4 pt-4 pb-[calc(7rem+env(safe-area-inset-bottom,0px))]" style={{ WebkitOverflowScrolling: "touch" }}>
+          <DiscoveryFeed
+            searchOnly
+            active={false}
+            city="all"
+            searchOpen
+            searchQuery={searchQuery}
+            searchCategory={searchCat}
+          />
+        </div>
+      )}
+
+      <PullToRefresh onRefresh={handleRefresh} className={cn("flex-1 overflow-x-hidden", searchOpen && "hidden")}>
       <div className="px-4 space-y-5 max-w-lg mx-auto pt-6 pb-[calc(7rem+env(safe-area-inset-bottom,0px))]">
 
         {/* Avatar + nazwa + bio (Figma: nazwa | separator | bio) */}
