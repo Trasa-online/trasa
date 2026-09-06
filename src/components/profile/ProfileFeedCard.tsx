@@ -50,9 +50,9 @@ export function ProfileFeedCard({
   timestamp?: string;
   title: string;
   description?: string | null; // opis wyjazdu (review_narrative/ai_summary) - pod nazwa
-  // Tagi (routes.tags / discovery_collections.tags) - pigulki pod opisem. Na WLASNYM profilu
-  // ich nie przekazujemy (decyzja Nat 2026-08-28: na karcie zostaje sam opis); zostaja na
-  // profilu publicznym, gdzie pomagaja rozpoznac czym jest cudza lista/wyjazd.
+  // Tagi (routes.tags / discovery_collections.tags) - pigulki pod opisem. NIE przekazujemy
+  // ich ani na wlasnym profilu (decyzja Nat 2026-08-28), ani na publicznym (2026-09-06 po
+  // testach z userami: na karcie zostaje sam opis). Prop zostaje dla innych powierzchni.
   tags?: string[];
   tiles: any[];
   counts: FeedCounts;

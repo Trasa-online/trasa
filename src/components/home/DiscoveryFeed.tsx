@@ -29,6 +29,8 @@ import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 // Karta trasy w feedzie + helper mapki: wspoldzielone z profilem (zakladka Wyjazdy).
 import TrasaBigCard, { buildMiniMapUrl, TRASA_CARD_H, type LatLng } from "@/components/home/TrasaBigCard";
 import { ProfileFeedCard } from "@/components/profile/ProfileFeedCard";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import FollowButton from "@/components/social/FollowButton";
 import { shortRelativeTime } from "@/lib/relativeTime";
 import { resolveStored } from "@/components/PlacePhoto";
 import { COLLECTION_THEMES, getTheme, collectionKind } from "@/lib/collectionThemes";
@@ -1492,7 +1494,7 @@ export function SavedCollections({ hideEmptyState }: { hideEmptyState?: boolean 
   );
 }
 
-export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityChange, active = true, searchQuery = "", searchOpen = false, searchCategory = "all" }: { city?: string; cities?: string[]; onCityChange?: (city: string) => void; active?: boolean; searchQuery?: string; searchOpen?: boolean; searchCategory?: "all" | "lists" | "trips" | "places" } = {}) {
+export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityChange, active = true, searchQuery = "", searchOpen = false, searchCategory = "all" }: { city?: string; cities?: string[]; onCityChange?: (city: string) => void; active?: boolean; searchQuery?: string; searchOpen?: boolean; searchCategory?: "all" | "lists" | "trips" | "places" | "people" } = {}) {
   const { t } = useTranslation("homefeed");
   const { user } = useAuth();
   // Zablokowani userzy (App Store 1.2): ich trasy i listy znikaja z feedu i wyszukiwarki.
@@ -1894,7 +1896,7 @@ export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityCh
 
   // Wyszukiwarka: trasy (tytul / autor) + zestawienia (tytul / autor), z filtrami.
   const { data: results, isLoading: searchLoading } = useQuery({
-    queryKey: ["explore-search", q, cityFilter, themeFilter, categoryFilter, cat],
+    queryKey: ["explore-search", q, cityFilter, themeFilter, categoryFilter, cat, user?.id],
     enabled: isSearchActive,
     staleTime: 30_000,
     queryFn: async () => {
@@ -2026,7 +2028,8 @@ export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityCh
       // Miejsca (places) - szukanie po nazwie, ze WSZYSTKICH miast (albo wybranych w filtrze
       // miast/kategorii). Tap otwiera pelna wizytowke. Tylko gdy user wpisal fraze (>=2 znaki).
       let places: any[] = [];
-      if (q) {
+      const wantsPlaces = cat === "all" || cat === "places";
+      if (q && wantsPlaces) {
         // Szukanie po nazwie + doklejone okladki ze zdjec userow.
         let pq = (supabase as any)
           .from("places")
@@ -2039,10 +2042,10 @@ export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityCh
         }
         const { data: placeRows } = await pq.order("rating", { ascending: false, nullsFirst: false }).limit(24);
         places = await attachCovers(placeRows ?? []);
-      } else if (cat === "all") {
+      } else if (!q && cat === "all") {
         // Podglad: 5 miejsc ZE ZDJECIAMI, kazde z innego miasta (prosba Nat 2026-08-31).
         places = await fetchCoveredPlaces(5, true);
-      } else if (cat === "places") {
+      } else if (!q && cat === "places") {
         // Zakladka Miejsca: najpierw losowe miejsca Z OKLADKAMI, potem dopiero te z ikona
         // kategorii na peachy tle (fallback).
         const covered = await fetchCoveredPlaces(24, false);
@@ -2059,7 +2062,31 @@ export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityCh
         places = [...covered, ...(rest ?? []).filter((p: any) => !usedIds.has(p.id)).map((p: any) => ({ ...p, _cover: null }))];
       }
 
-      return { routes, collections, places };
+      // LUDZIE - wyszukiwanie po samym username (prosba Nat 2026-09-06 po testach).
+      // Ta sama higiena co /search: bez kont biznesowych, bez kont-gosci (user_xxxxxxxx)
+      // i bez siebie. Bez frazy (folder "Ludzie") = podpowiedzi alfabetycznie.
+      let people: any[] = [];
+      // W "Wszystko" ludzie pojawiaja sie DOPIERO po wpisaniu frazy (bez niej podglad
+      // mialby 30 przypadkowych profili); folder "Ludzie" przeglada sie takze bez frazy.
+      if (cat === "people" || (cat === "all" && !!q)) {
+        let pf = (supabase as any).from("profiles")
+          .select("id, username, first_name, avatar_url")
+          .not("username", "is", null);
+        if (user?.id) pf = pf.neq("id", user.id);
+        // "po samym username" - imie celowo pomijamy, zeby wpisany nick trafial w jedna osobe.
+        if (q) pf = pf.ilike("username", `%${escapeLike(q)}%`);
+        const { data: profs } = await pf.order("username").limit(q ? 20 : 30);
+        const rows = (profs ?? []) as any[];
+        if (rows.length) {
+          const { data: bizOwners } = await (supabase as any)
+            .from("business_profiles_public").select("owner_user_id");
+          const bizSet = new Set((bizOwners ?? []).map((b: any) => b.owner_user_id).filter(Boolean));
+          const isGuestUsername = (u: string | null) => !!u && /^user_[0-9a-f]{8}$/.test(u);
+          people = rows.filter((r) => !bizSet.has(r.id) && !isGuestUsername(r.username));
+        }
+      }
+
+      return { routes, collections, places, people };
     },
   });
 
@@ -2146,10 +2173,39 @@ export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityCh
           <div className="space-y-5">
             {Array.from({ length: 3 }).map((_, i) => <RouteCardVSkeleton key={i} />)}
           </div>
-        ) : (results && (results.routes.length > 0 || results.collections.length > 0 || (results.places?.length ?? 0) > 0)) ? (
+        ) : (results && (results.routes.length > 0 || results.collections.length > 0 || (results.places?.length ?? 0) > 0 || (results.people?.length ?? 0) > 0)) ? (
           <div className="space-y-5">
             {/* Filtr wynikow = karty kategorii w naglowku wyszukiwarki (Explore), nie pigulki. */}
             <div className="space-y-7">
+            {/* LUDZIE - wyszukiwanie po username. Sekcja idzie PIERWSZA: wpisany nick to
+                zapytanie o konkretna osobe, nie o tresc (2026-09-06). */}
+            {(cat === "all" || cat === "people") && (results.people?.length ?? 0) > 0 && (
+              <div>
+                <p className="text-sm font-black uppercase tracking-wide mb-3 px-1">{t("people_heading", "Ludzie")}</p>
+                <div className="rounded-2xl border border-border/40 bg-secondary overflow-hidden divide-y divide-border/30">
+                  {results.people.filter((pr: any) => notBlocked(pr.id)).map((pr: any) => {
+                    const name = pr.first_name || pr.username;
+                    return (
+                      <div key={pr.id} className="flex items-center gap-3 px-3.5 py-3">
+                        <button onClick={() => navigate(`/profil/${pr.username}`)} className="shrink-0 active:scale-95 transition-transform" aria-label={`@${pr.username}`}>
+                          <Avatar className="h-11 w-11">
+                            <AvatarImage src={avatarSrc(pr.avatar_url)} className="object-cover bg-orange-100" />
+                            <AvatarFallback className="bg-orange-100 text-orange-600 font-bold text-sm">
+                              {name?.charAt(0)?.toUpperCase() || "?"}
+                            </AvatarFallback>
+                          </Avatar>
+                        </button>
+                        <button onClick={() => navigate(`/profil/${pr.username}`)} className="flex-1 min-w-0 text-left">
+                          <p className="text-sm font-semibold leading-tight truncate">{name}</p>
+                          <p className="text-xs text-muted-foreground truncate">@{pr.username}</p>
+                        </button>
+                        <FollowButton targetUserId={pr.id} />
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
             {/* WYJAZDY - te same duze karty co w eksploracji (prosba Nat 2026-08-31). */}
             {(cat === "all" || cat === "trips") && results.routes.length > 0 && (
               <div>

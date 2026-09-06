@@ -427,7 +427,6 @@ export default function PublicProfile() {
                   timestamp={shortRelativeTime(l.updated_at)}
                   title={l.title || t("feed.list_fallback", "Lista miejsc")}
                   description={l.description}
-                  tags={Array.isArray(l.tags) ? l.tags : []}
                   tiles={l.tiles}
                   counts={{ saves: Math.max(0, (l.saves_count ?? 0) + delta(isListSaved(l.id), initSavedLists.has(l.id))), views: l.views_count ?? 0 }}
                   onOpen={() => navigate(`/lista/${l.id}`)}

@@ -8,6 +8,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Settings, Camera, UserCircle2, ArrowRight, Bell, Share2, Search, LayoutGrid } from "lucide-react";
 import { SavedPlacesGrid } from "@/components/saved/SavedPlacesGrid";
 import TabHeader from "@/components/layout/TabHeader";
+import PinnedSearchField from "@/components/layout/PinnedSearchField";
 import ScreenSkeleton from "@/components/layout/ScreenSkeleton";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
@@ -677,6 +678,15 @@ const TravelerProfile = () => {
               <Settings className="h-5 w-5" />
             </button>
           </>
+        }
+        below={
+          // Przypieta wyszukiwarka (2026-09-06): pole jest tylko "wejsciem" - wyniki
+          // i cala logika zostaja w Eksploracji, zeby nie mnozyc drugiej wyszukiwarki.
+          <PinnedSearchField
+            readOnly
+            placeholder={`Szukaj tras, miejsc, osób...`}
+            onClick={() => navigate("/eksploruj", { state: { openSearch: true } })}
+          />
         }
       />
 

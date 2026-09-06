@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { useDragToDismiss } from "@/hooks/useDragToDismiss";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -6,7 +6,7 @@ import { goBackOr } from "@/hooks/useGoBack";
 import { PullToRefresh } from "@/components/PullToRefresh";
 import { haptics } from "@/hooks/useHaptics";
 import { track } from "@/lib/analytics";
-import { MapPin, Heart, Trash2, ArrowRight, ArrowLeft, Pencil, ListChecks, ChevronDown, ChevronRight, Check, Search, X, Layers, Compass, Bookmark, Plus, ChevronLeft, Folder, FileText } from "lucide-react";
+import { MapPin, Heart, Trash2, ArrowRight, ArrowLeft, Pencil, ListChecks, ChevronDown, ChevronRight, Check, Search, X, Layers, Compass, Bookmark, Plus, Folder, FileText, Users } from "lucide-react";
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import SavePlaceSheet, { type SavePlaceInput } from "@/components/plan-wizard/SavePlaceSheet";
@@ -713,18 +713,19 @@ export const MyCollections = ({ showCreate = true }: { showCreate?: boolean } = 
 // ── Wyszukiwarka: kategorie (redesign wg Figmy "NEW - Eksploracja — wyszukiwarka") ──────
 // Cztery karty 90px nad polem wyszukiwania. Aktywna: peachy tlo + pomaranczowa obwodka.
 // "Wyjazdy" ma znak marki (spontaway), reszta ikony Lucide (regula z CLAUDE.md: tylko Lucide).
-export type SearchCat = "all" | "lists" | "trips" | "places";
+export type SearchCat = "all" | "lists" | "trips" | "places" | "people";
 
-const SEARCH_CATS: { id: SearchCat; label: string; icon: "folder" | "file" | "brand" | "pin" }[] = [
+const SEARCH_CATS: { id: SearchCat; label: string; icon: "folder" | "file" | "brand" | "pin" | "people" }[] = [
   { id: "all", label: "Wszystko", icon: "folder" },
   { id: "lists", label: "Listy", icon: "file" },
   { id: "trips", label: "Wyjazdy", icon: "brand" },
   { id: "places", label: "Miejsca", icon: "pin" },
+  { id: "people", label: "Ludzie", icon: "people" },
 ];
 
 function SearchCategoryRow({ value, onChange }: { value: SearchCat; onChange: (c: SearchCat) => void }) {
   return (
-    <div className="flex items-center gap-4 px-4 pt-3 pb-1 shrink-0">
+    <div className="flex items-center gap-2.5 px-4 pt-3 pb-1 shrink-0">
       {SEARCH_CATS.map((c) => {
         const on = value === c.id;
         return (
@@ -735,18 +736,20 @@ function SearchCategoryRow({ value, onChange }: { value: SearchCat; onChange: (c
             aria-pressed={on}
             className="flex-1 min-w-0 flex flex-col items-center gap-1 active:scale-[0.97] transition-transform"
           >
-            <span className={`w-full h-[90px] rounded-[10px] border flex items-center justify-center transition-colors ${on ? "border-[#F0A583] bg-orange-100/30" : "border-border bg-transparent"}`}>
+            <span className={`w-full h-[76px] rounded-[10px] border flex items-center justify-center transition-colors ${on ? "border-[#F0A583] bg-orange-100/30" : "border-border bg-transparent"}`}>
               {c.icon === "brand" ? (
                 <img src="/spontaway-symbol.png" alt="" className="h-6 w-[27px] object-contain" />
               ) : c.icon === "folder" ? (
                 <Folder className={`h-6 w-6 ${on ? "text-[#F0A583]" : "text-foreground"}`} strokeWidth={1.8} />
               ) : c.icon === "file" ? (
                 <FileText className="h-6 w-6 text-foreground" strokeWidth={1.8} />
+              ) : c.icon === "people" ? (
+                <Users className="h-6 w-6 text-foreground" strokeWidth={1.8} />
               ) : (
                 <MapPin className="h-6 w-6 text-foreground" fill="currentColor" strokeWidth={0} />
               )}
             </span>
-            <span className="text-sm font-medium text-foreground leading-5 truncate">{c.label}</span>
+            <span className="text-xs font-medium text-foreground leading-4 truncate">{c.label}</span>
           </button>
         );
       })}
@@ -818,14 +821,26 @@ const Explore = () => {
   // Wyszukiwarka w gornej belce: domyslnie zwinieta (lupa). Klik lupy -> pelna szerokosc.
   // Klik "x" -> powrot do domyslnej belki + wyczyszczenie zapytania. Stan trzymamy tu
   // (o poziom wyzej niz DiscoveryFeed), bo input renderuje sie w belce a wyniki w feedzie.
-  const [searchOpen, setSearchOpen] = useState(false);
+  // Pole wyszukiwania jest PRZYPIETE w belce (2026-09-06) - `searchOpen` znaczy juz tylko
+  // "pokazuj wyniki zamiast feedu", a nie "rozwin pole".
+  const [searchOpen, setSearchOpen] = useState((location.state as any)?.openSearch === true);
   const [feedSearch, setFeedSearch] = useState("");
+  const searchInputRef = useRef<HTMLInputElement>(null);
   // Kategoria wyszukiwania (redesign 2026-08-31, Figma "NEW - Eksploracja — wyszukiwarka"):
   // Wszystko | Listy | Wyjazdy | Miejsca. Wybor kategorii dziala tez BEZ frazy - wtedy
   // pokazujemy zawartosc tej kategorii (tryb przegladania, decyzja Nat).
   const [searchCat, setSearchCat] = useState<SearchCat>("all");
   const openSearch = () => { setView("feed"); setSearchOpen(true); };
-  const closeSearch = () => { setSearchOpen(false); setFeedSearch(""); setSearchCat("all"); };
+  const closeSearch = () => { setSearchOpen(false); setFeedSearch(""); setSearchCat("all"); searchInputRef.current?.blur(); };
+  // Wejscie z profilu (przypiete pole w naglowku profilu) - ustaw kursor w polu od razu.
+  useEffect(() => {
+    if ((location.state as any)?.openSearch !== true) return;
+    const id = window.setTimeout(() => searchInputRef.current?.focus(), 120);
+    return () => window.clearTimeout(id);
+  }, []);   // eslint-disable-line react-hooks/exhaustive-deps
+  // Foldery kategorii chowaja sie po wpisaniu frazy (prosba Nat 2026-09-06 po testach):
+  // pusta fraza = przegladanie po kategoriach, wpisana = same wyniki.
+  const foldersVisible = searchOpen && !myCollections && feedSearch.trim().length === 0;
   // "Biezace polozenie" (DiscoveryFeed) -> przejdz na widok Miejsc posortowany od najblizszego.
   // Nonce rosnie z kazdym klikiem, zeby ExploreSwiper reagowal takze na ponowne klikniecie.
   const [nearbyNonce, setNearbyNonce] = useState(0);
@@ -861,38 +876,12 @@ const Explore = () => {
 
   return (
     <div className="flex-1 flex flex-col min-h-0">
-      {/* Wspoldzielona belka (TabTopBar) - identyczna wysokosc 1:1 z Wyjazdy/Zapisane. */}
-      {/* Wyszukiwarka (redesign 2026-08-31): wlasny chrome zamiast belki - naglowek
-          "Szukaj według kategorii", wiersz kategorii i dopiero pod nimi pole. */}
-      {searchOpen && !myCollections && (
-        <div className="shrink-0 border-b border-border/40">
-          <div className="flex items-center gap-3 px-4 h-[45px]">
-            <button onClick={closeSearch} aria-label="Zamknij wyszukiwanie" className="-ml-1 h-9 w-9 flex items-center justify-center text-foreground active:scale-90 transition-transform">
-              <ChevronLeft className="h-6 w-6" strokeWidth={2.2} />
-            </button>
-            <h1 className="text-xl font-bold text-foreground truncate">{`Szukaj według kategorii`}</h1>
-          </div>
-          <SearchCategoryRow value={searchCat} onChange={setSearchCat} />
-          <div className="px-4 pt-2 pb-3">
-            <div className="flex items-center gap-2.5 px-4 h-10 rounded-full bg-muted/70 border border-border/50 min-w-0 focus-within:border-orange-400/60 focus-within:bg-background transition-colors">
-              <Search className="h-[18px] w-[18px] text-muted-foreground shrink-0" />
-              <input
-                autoFocus
-                value={feedSearch}
-                onChange={(e) => setFeedSearch(e.target.value)}
-                placeholder="Szukaj tras, miejsc na trasie..."
-                className="flex-1 min-w-0 bg-transparent text-[15px] outline-none placeholder:text-muted-foreground/70"
-              />
-              {feedSearch && (
-                <button onClick={() => setFeedSearch("")} aria-label="Wyczyść" className="shrink-0 h-6 w-6 flex items-center justify-center rounded-full text-muted-foreground active:bg-muted active:scale-90 transition">
-                  <X className="h-4 w-4" />
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-      <TabTopBar hidden={searchOpen && !myCollections}>
+      {/* Wspoldzielona belka (TabTopBar) - identyczna wysokosc 1:1 z Wyjazdy/Zapisane.
+          Wyszukiwarka jest PRZYPIETA w tej belce (2026-09-06, po testach z userami):
+          pole stoi na stale obok toggle'a, a nie chowa sie pod lupa. Belka NIE znika przy
+          szukaniu - zmienia sie tylko jej zawartosc (toggle -> strzalka powrotu), wiec
+          wysokosc chrome zostaje stala (wazne dla karty 9:16 w swiperze - CLAUDE.md). */}
+      <TabTopBar>
         {myCollections ? (
           <>
             <button
@@ -916,10 +905,30 @@ const Explore = () => {
             onModeChange={(m) => setView(m === "browse" ? "browse" : "feed")}
             onOpenFilters={() => window.dispatchEvent(new CustomEvent("trasa:explore-open-filters"))}
             onOpenSearch={openSearch}
+            onCloseSearch={closeSearch}
+            searchOpen={searchOpen}
+            searchValue={feedSearch}
+            onSearchChange={setFeedSearch}
+            searchInputRef={searchInputRef}
             activeFilterCount={filterCount}
           />
         )}
       </TabTopBar>
+
+      {/* Foldery kategorii - pod przypieta belka. Widoczne dopoki fraza jest pusta;
+          po wpisaniu zwijaja sie animacja i zostaja same wyniki (2026-09-06). */}
+      {searchOpen && !myCollections && (
+        <div
+          className={cn(
+            "shrink-0 overflow-hidden border-b border-border/40 transition-all duration-200 ease-out",
+            foldersVisible ? "max-h-[160px] opacity-100" : "max-h-0 opacity-0 border-b-0",
+          )}
+        >
+          <p className="px-4 pt-3 text-sm font-bold text-foreground">{`Szukaj według kategorii`}</p>
+          <SearchCategoryRow value={searchCat} onChange={setSearchCat} />
+          <div className="h-3" />
+        </div>
+      )}
 
       {myCollections ? (
         <PullToRefresh onRefresh={handleRefresh} className="flex-1 min-h-0 flex flex-col pt-3 pb-[calc(5rem+env(safe-area-inset-bottom,0px))]">

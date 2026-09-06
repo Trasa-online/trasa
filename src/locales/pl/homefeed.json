@@ -54,6 +54,7 @@
   "search_placeholder": "Szukaj tras, autorów…",
   "routes_heading": "Wyjazdy",
   "places_heading": "Miejsca",
+  "people_heading": "Ludzie",
   "in_city": "w {{city}}",
   "no_results": "Brak wyników",
   "no_results_hint": "Spróbuj innego słowa lub zmień filtry.",

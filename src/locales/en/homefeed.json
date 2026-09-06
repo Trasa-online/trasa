@@ -52,6 +52,7 @@
   "search_placeholder": "Search routes, authors, collections…",
   "routes_heading": "Trips",
   "places_heading": "Places",
+  "people_heading": "People",
   "in_city": "in {{city}}",
   "no_results": "No results",
   "no_results_hint": "Try another word or change the filters.",

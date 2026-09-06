@@ -978,27 +978,44 @@ function interleaveByCategory(places: MockPlace[], prevCat: string | null = null
   return result;
 }
 
-// Biznesy z wizytowka (business_profiles) zawsze pierwsze w kolejce swipera (priorytet B2B),
-// a w obrebie KAZDEJ grupy (biznesy / reszta) przeplot kategorii + ranking wazony zamiast
-// czystego shuffle. Wykrywanie po `businessPlan` ktore enrichWithBusinessProfile ustawia
-// tylko gdy nested bp istnieje.
+// Czy karta miejsca ma czym sie pokazac BEZ doczytywania (okladka biznesu / skurowana
+// okladka / pierwsze zdjecie galerii / wideo okladkowe). Zdjecia userow (place_photos)
+// swiper dociaga dopiero dla wierzchniej karty, wiec tu ich nie widzimy.
+function hasOwnCover(p: MockPlace): boolean {
+  return !!(p.photo_url || (p.galleryPhotos ?? [])[0] || (p as any).coverVideoUrl);
+}
+
+// Kolejnosc kart w swiperze (zmiana 2026-09-06 po testach z userami): najpierw wizytowki
+// biznesowe ZE ZDJECIEM, potem zwykle miejsca ze zdjeciem, a dopiero na koncu karty bez
+// wlasnej okladki (ikona kategorii na peachy tle) - najpierw biznesy, potem reszta.
+// Priorytet B2B zostaje, ale nie kosztem pustej wizualnie gory eksploracji.
+// W obrebie KAZDEGO tieru przeplot kategorii + ranking wazony zamiast czystego shuffle.
+// Wykrywanie biznesu po `businessPlan`, ktore enrichWithBusinessProfile ustawia tylko gdy
+// nested business_profiles istnieje.
 function partitionBusinessFirst(places: MockPlace[]): MockPlace[] {
-  const biz: MockPlace[] = [];
+  const bizPhoto: MockPlace[] = [];
+  const bizNoPhoto: MockPlace[] = [];
   const restPhoto: MockPlace[] = [];
   const restNoPhoto: MockPlace[] = [];
-  // Priorytet kolejki: 1) biznesy (wizytowka), 2) zwykle miejsca ZE zdjeciem (skurowana
-  // okladka - eksploracja nie wyglada wtedy pusto/ikonowo), 3) reszta (ikona kategorii).
-  // W obrebie kazdego tieru przeplot kategorii. `hasCover` = curated cover z enrich.
   for (const p of places) {
-    if ((p as any).businessPlan) biz.push(p);
-    else if (p.photo_url || (p.galleryPhotos ?? [])[0]) restPhoto.push(p);
+    const isBiz = !!(p as any).businessPlan;
+    const withCover = hasOwnCover(p);
+    if (isBiz && withCover) bizPhoto.push(p);
+    else if (isBiz) bizNoPhoto.push(p);
+    else if (withCover) restPhoto.push(p);
     else restNoPhoto.push(p);
   }
   const lastCat = (arr: MockPlace[], prev: string | null) => (arr.length ? (arr[arr.length - 1].category || "_") : prev);
-  const bizOrdered = interleaveByCategory(biz);
-  const photoOrdered = interleaveByCategory(restPhoto, lastCat(bizOrdered, null));
-  const noPhotoOrdered = interleaveByCategory(restNoPhoto, lastCat(photoOrdered, lastCat(bizOrdered, null)));
-  return [...bizOrdered, ...photoOrdered, ...noPhotoOrdered];
+  // Przeplot liczymy kaskadowo, zeby kategoria nie powtorzyla sie na styku dwoch tierow.
+  const tiers = [bizPhoto, restPhoto, bizNoPhoto, restNoPhoto];
+  const out: MockPlace[] = [];
+  let prevCat: string | null = null;
+  for (const tier of tiers) {
+    const ordered = interleaveByCategory(tier, prevCat);
+    prevCat = lastCat(ordered, prevCat);
+    out.push(...ordered);
+  }
+  return out;
 }
 
 // Wybor pill wydarzenia dla wizytowki wg priorytetu (wzgledem daty wyjazdu `refDate`,
