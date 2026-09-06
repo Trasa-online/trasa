@@ -91,13 +91,14 @@ const GoogleGlyph = ({ className }: { className?: string }) => (
 function CompactSortableRow({ value, rowPin, index, categoryLabel }: {
   value: any; rowPin: any; index: number; categoryLabel: ReactNode;
 }) {
+  const { t } = useTranslation("sharing");
   const controls = useDragControls();
   return (
     <Reorder.Item as="div" value={value} dragListener={false} dragControls={controls} transition={{ duration: 0 }}>
       <div className="flex items-center gap-3 py-2 border-b border-border/50 last:border-b-0 bg-background">
         <span
           onPointerDown={(e) => controls.start(e)}
-          aria-label="Przeciągnij, by zmienić kolejność"
+          aria-label={t("reorder_hint")}
           className="shrink-0 w-6 flex items-center justify-center text-muted-foreground/60 cursor-grab active:cursor-grabbing touch-none"
         >
           <GripVertical className="h-5 w-5" />
@@ -120,11 +121,12 @@ function SortableRouteRow({ value, rowPin, index, categoryLabel, onOpen, onGoogl
   onOpen: () => void; onGoogle: () => void; onDelete: () => void;
   onSave?: () => void; saved?: boolean; note?: ReactNode; cornerAvatar?: string | null;
 }) {
+  const { t } = useTranslation("sharing");
   const controls = useDragControls();
   const grip = (
     <span
       onPointerDown={(e) => controls.start(e)}
-      aria-label="Przeciągnij, by zmienić kolejność"
+      aria-label={t("reorder_hint")}
       // self-start + pt: uchwyt na wysokosci NAZWY miejsca (gora wiersza), nie wysrodkowany w calym
       // wysokim wierszu (notki/zdjecia) gdzie byl niewidoczny (prosba Nat).
       className="shrink-0 self-start pt-4 w-6 flex items-center justify-center text-muted-foreground/45 cursor-grab active:cursor-grabbing touch-none"
@@ -206,12 +208,12 @@ export default function SharedRoute() {
   const [askDelete, setAskDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [addPlaceOpen, setAddPlaceOpen] = useState(false);
-  // "Wybierz miejsca" (etap propozycji, host): zaznacz ktore miejsca zostaja -> reszta usunieta,
+  // t("choose_places") (etap propozycji, host): zaznacz ktore miejsca zostaja -> reszta usunieta,
   // trip_type='ongoing' (przejscie na "w trakcie"). Domyslnie wszystkie zaznaczone.
   const [choosing, setChoosing] = useState(false);
   const [chosen, setChosen] = useState<Set<string>>(new Set());
   const [choosingBusy, setChoosingBusy] = useState(false);
-  // "Wybierz miejsca": jesli ktorys uczestnik nie dodal jeszcze miejsc -> dialog (przypomnienie / mimo to).
+  // t("choose_places"): jesli ktorys uczestnik nie dodal jeszcze miejsc -> dialog (przypomnienie / mimo to).
   const [missingParticipants, setMissingParticipants] = useState<{ id: string; username: string | null; avatar_url: string | null }[] | null>(null);
   const [reminderBusy, setReminderBusy] = useState(false);
   // Etap W TRAKCIE: zdjecia per-miejsce (wszyscy uczestnicy). Wlasna notka -> PlaceNoteEditor
@@ -507,7 +509,7 @@ export default function SharedRoute() {
   const likeStateOf = (url: string): PhotoLikeState =>
     likeOverrides[url] ?? photoLikes?.get(url) ?? { count: 0, liked: false };
   const togglePhotoLikeUi = async (url: string) => {
-    if (!user?.id) { toast.error("Zaloguj się, żeby polubić zdjęcie"); return; }
+    if (!user?.id) { toast.error(t("toast.login_to_like")); return; }
     const cur = likeStateOf(url);
     const next: PhotoLikeState = { liked: !cur.liked, count: Math.max(0, cur.count + (cur.liked ? -1 : 1)) };
     setLikeOverrides((o) => ({ ...o, [url]: next }));
@@ -529,11 +531,11 @@ export default function SharedRoute() {
   const setMyCover = async (url: string) => {
     if (!user?.id || !id) return;
     const ok = await setMyRouteCover(id, user.id, url);
-    if (!ok) { toast.error("Nie udało się ustawić Twojej okładki"); return; }
+    if (!ok) { toast.error(t("toast.own_cover_failed")); return; }
     haptics.success();
     queryClient.invalidateQueries({ queryKey: ["route-member-cover", id, user.id] });
     queryClient.invalidateQueries({ queryKey: ["profile-trip-feed"] });
-    toast.success("Ustawiono Twoją okładkę tego wyjazdu");
+    toast.success(t("toast.own_cover_set_trip"));
   };
   // NOTKI UCZESTNIKOW O CALYM WYJEZDZIE (route_member_covers.note). Kazdy pisze swoja; wlasna
   // ladnie na gorze, cudze pod nia. Osobny byt od routes.description (opis hosta dla eksploracji).
@@ -569,7 +571,7 @@ export default function SharedRoute() {
     await clearMyRouteCover(id, user.id);
     queryClient.invalidateQueries({ queryKey: ["route-member-cover", id, user.id] });
     queryClient.invalidateQueries({ queryKey: ["profile-trip-feed"] });
-    toast.success("Wróciła okładka wyjazdu");
+    toast.success(t("toast.cover_restored"));
   };
 
   // Init opisu/tagow z trasy (po zaladowaniu). Nie nadpisujemy, gdy user wlasnie pisze.
@@ -618,13 +620,13 @@ export default function SharedRoute() {
   // przez 6 s, potem juz nie - dlatego bez dodatkowego dialogu).
   const handlePublish = async () => {
     if (!id || publishing) return;
-    if (!(pins as any[]).length) { toast.error("Wyjazd musi mieć co najmniej jedno miejsce"); return; }
+    if (!(pins as any[]).length) { toast.error(t("toast.need_place")); return; }
     // Okladka eksploracji jest teraz WARUNKIEM publikacji (prosba Nat 2026-08-30) - wczesniej
     // losowalismy ja po cichu, wiec wyjazd trafial do feedu z przypadkowym zdjeciem.
     if (!(route as any)?.list_cover_url) {
       haptics.warning();
-      toast.error("Wybierz okładkę wyjazdu", {
-        description: "W zakładce Galeria zaznacz zdjęcie, które ma reprezentować wyjazd w eksploracji.",
+      toast.error(t("toast.pick_cover"), {
+        description: t("toast.pick_cover_desc"),
         action: { label: "Galeria", onClick: () => setPlanTab("galeria") },
       });
       return;
@@ -636,7 +638,7 @@ export default function SharedRoute() {
       // publikacja jest momentem, w ktorym tresc wyjazdu staje sie publiczna (RPC security definer,
       // bo przenosi tez zdjecia innych uczestnikow; zgloszenie Nat 2026-08-30).
       const { data: synced } = await (supabase as any).rpc("sync_route_place_photos", { p_route_id: id });
-      if (typeof synced === "number" && synced > 0) console.info(`[SharedRoute] zdjęcia miejsc: ${synced}`);
+      if (typeof synced === "number" && synced > 0) console.info(`[SharedRoute] place photos synced: ${synced}`);
       const cover = (route as any)?.list_cover_url as string | null;
       track("trip_published", { route_id: id, city: route.city ?? null, place_count: (pins as any[]).length, has_cover: !!cover });
       haptics.success();
@@ -645,7 +647,7 @@ export default function SharedRoute() {
       queryClient.invalidateQueries({ queryKey: ["discovery-city-routes"] });
       queryClient.invalidateQueries({ queryKey: ["discovery-polecane"] });
       queryClient.invalidateQueries({ queryKey: ["trip-shortcut"] });
-      toast.success(cover ? "Wyjazd opublikowany - jest już w eksploracji" : "Wyjazd opublikowany. Dodaj zdjęcie, żeby pojawił się w eksploracji", {
+      toast.success(cover ? t("toast.published_with_cover") : t("toast.published_no_cover"), {
         action: {
           label: "Cofnij",
           onClick: async () => {
@@ -659,7 +661,7 @@ export default function SharedRoute() {
     } catch (e) {
       console.error("[SharedRoute] publish failed:", e instanceof Error ? e.message : e);
       haptics.error();
-      toast.error("Nie udało się opublikować wyjazdu");
+      toast.error(t("toast.publish_failed"));
     } finally { setPublishing(false); }
   };
 
@@ -709,7 +711,7 @@ export default function SharedRoute() {
       });
       const uploaded = prepared.filter((u): u is { path: string; url: string } => !!u);
       const failedPin = Array.from(files).length - uploaded.length;
-      if (failedPin) toast.error(failedPin === 1 ? "Jednego zdjęcia nie udało się wgrać" : `${failedPin} zdjęć nie udało się wgrać`);
+      if (failedPin) toast.error(t("toast.photos_failed", { count: failedPin }));
       // SafeSearch (Vision) RÓWNOLEGLE - jedno zdjecie to ~2-4s, wiec seryjnie 5 zdjec
       // kazalo czekac ponad minute. Odrzucone znika ze Storage i nie trafia do galerii.
       const verdicts = await Promise.all(uploaded.map((u) => moderateImageUrl(u.url, "pin_photo", { route_id: id, place_name: pin.place_name })));
@@ -722,7 +724,7 @@ export default function SharedRoute() {
         }
         await addPinPhoto(id, pin.place_name, user.id, uploaded[i].url);
       }
-      if (rejectedCount) toast.error(rejectedCount === 1 ? MODERATION_REJECTED_MESSAGE : `${rejectedCount} zdjęcia nie przeszły moderacji`);
+      if (rejectedCount) toast.error(rejectedCount === 1 ? MODERATION_REJECTED_MESSAGE : t("toast.photos_rejected", { count: rejectedCount }));
       // Opublikowany wyjazd zasila galerie MIEJSCA od razu (place_photos). Dla roboczego nie -
       // zdjecia trafia tam dopiero przy publikacji (patrz handlePublish).
       if ((route as any)?.status === "published") {
@@ -804,14 +806,14 @@ export default function SharedRoute() {
     setReminderBusy(true);
     try {
       for (const m of missingParticipants) { await (supabase as any).rpc("notify_trip_places_reminder", { p_route_id: id, p_user_id: m.id }); }
-      haptics.success(); toast.success(missingParticipants.length === 1 ? "Wysłano przypomnienie" : "Wysłano przypomnienia");
+      haptics.success(); toast.success(missingParticipants.length === 1 ? t("toast.reminder_sent") : t("toast.reminders_sent"));
     } catch (e: any) { console.warn("[SharedRoute] reminder:", e?.message ?? e); haptics.error(); }
     finally { setReminderBusy(false); setMissingParticipants(null); }
   };
   const toggleChosen = (pid: string) => setChosen((prev) => { const n = new Set(prev); n.has(pid) ? n.delete(pid) : n.add(pid); return n; });
-  // "Wybierz miejsca" -> zaznaczone zostaja, reszta usunieta, trip_type='ongoing' (przejscie w trakcie).
+  // t("choose_places") -> zaznaczone zostaja, reszta usunieta, trip_type='ongoing' (przejscie w trakcie).
   const confirmChoose = async () => {
-    if (!chosen.size) { toast("Zaznacz co najmniej jedno miejsce"); return; }
+    if (!chosen.size) { toast(t("toast.select_one_place")); return; }
     setChoosingBusy(true); haptics.light();
     try {
       const leftover = (pins as any[]).filter((p) => !chosen.has(p.id));
@@ -841,11 +843,11 @@ export default function SharedRoute() {
         }
       }
       await (supabase as any).from("routes").update({ trip_type: "ongoing" }).eq("id", route.id);
-      haptics.success(); toast.success("Miejsca wybrane - wyjazd w trakcie!");
+      haptics.success(); toast.success(t("toast.places_chosen"));
       setChoosing(false);
       queryClient.invalidateQueries({ queryKey: ["shared-route", id] });
       queryClient.invalidateQueries({ queryKey: ["shared-route-pins", id] });
-    } catch (e: any) { console.error("[SharedRoute] confirmChoose:", e?.message ?? e); haptics.error(); toast.error("Nie udało się przejść dalej"); }
+    } catch (e: any) { console.error("[SharedRoute] confirmChoose:", e?.message ?? e); haptics.error(); toast.error(t("toast.next_failed")); }
     finally { setChoosingBusy(false); }
   };
 
@@ -875,11 +877,11 @@ export default function SharedRoute() {
     const end = new Date(start.getTime() + (Math.max(1, numDays) - 1) * 86400000);
     const { error } = await (supabase as any).from("routes")
       .update({ start_date: iso(start), end_date: iso(end) }).eq("id", id);
-    if (error) { toast.error("Nie udało się zapisać dat"); return; }
+    if (error) { toast.error(t("toast.dates_failed")); return; }
     setDatesSheetOpen(false);
     haptics.success();
     queryClient.invalidateQueries({ queryKey: ["shared-route", id] });
-    toast.success(numDays > 1 ? `Wyjazd na ${numDays} dni - miejsca możesz rozłożyć na dni` : "Zapisano datę wyjazdu");
+    toast.success(numDays > 1 ? t("toast.dates_saved_multi", { count: numDays }) : t("toast.date_saved"));
   };
   const clearTripDates = async () => {
     if (!id) return;
@@ -956,12 +958,12 @@ export default function SharedRoute() {
       // RPC (SECURITY DEFINER) - dziala dla wlasciciela ORAZ uczestnika wspolnego wyjazdu
       // (routes UPDATE RLS = tylko owner; czlonek dopisuje zdjecia przez append_route_photos).
       const { error } = await (supabase as any).rpc("append_route_photos", { p_route_id: route.id, p_urls: urls });
-      if (error) { toast.error("Nie udało się zapisać zdjęć"); }
-      else { toast.success(urls.length === 1 ? "Dodano zdjęcie" : `Dodano ${urls.length} zdjęcia`); queryClient.invalidateQueries({ queryKey: ["shared-route", id] }); }
-    } else if (!rejected && !failed) { toast.error("Nie udało się dodać zdjęć"); }
-    if (rejected) toast.error(rejected === 1 ? MODERATION_REJECTED_MESSAGE : `${rejected} zdjęcia nie przeszły moderacji`);
+      if (error) { toast.error(t("toast.photos_save_failed")); }
+      else { toast.success(t("toast.photos_added", { count: urls.length })); queryClient.invalidateQueries({ queryKey: ["shared-route", id] }); }
+    } else if (!rejected && !failed) { toast.error(t("toast.photos_add_failed")); }
+    if (rejected) toast.error(rejected === 1 ? MODERATION_REJECTED_MESSAGE : t("toast.photos_rejected", { count: rejected }));
     // Zdjecia zgubione po drodze mowia o tym wprost - wczesniej znikaly po cichu.
-    if (failed) toast.error(failed === 1 ? "Jednego zdjęcia nie udało się wgrać" : `${failed} zdjęć nie udało się wgrać`);
+    if (failed) toast.error(t("toast.photos_failed", { count: failed }));
     setUploadingPhotos(false);
   };
 
@@ -976,7 +978,7 @@ export default function SharedRoute() {
   const deletePinNow = async (pin: any) => {
     const { id: _id, created_at, updated_at, ...rest } = pin;
     const { error } = await (supabase as any).from("pins").delete().eq("id", pin.id);
-    if (error) { toast.error("Nie udało się usunąć miejsca"); return; }
+    if (error) { toast.error(t("toast.place_delete_failed")); return; }
     // Zdjecia ida ZA miejscem (zgloszenie Nat 2026-09-01). Wczesniej znikal sam pin, a zdjecia
     // zostawaly: w galerii wyjazdu (pin_photos, kluczowane nazwa miejsca) i w galerii miejsca
     // (place_photos, dosypywane przez sync_route_place_photos). Efekt: miejsca usuniete z wyjazdu
@@ -994,7 +996,7 @@ export default function SharedRoute() {
         <PlacePhoto pin={pin} width={56} className="h-12 w-12 rounded-xl object-cover shrink-0" />
         <div className="min-w-0 flex-1">
           <p className="text-[14px] font-semibold text-foreground truncate">{pin.place_name}</p>
-          <p className="text-[11.5px] text-muted-foreground">{stage === "planning" ? "Usunięto z propozycji" : "Usunięto z wyjazdu"}</p>
+          <p className="text-[11.5px] text-muted-foreground">{stage === "planning" ? t("toast.removed_from_proposals") : t("toast.removed_from_trip")}</p>
         </div>
         <button
           onClick={async () => {
@@ -1019,9 +1021,9 @@ export default function SharedRoute() {
     const before = ((route.review_photos ?? []) as string[]);
     const merged = before.filter((u) => u !== url);
     const { error } = await (supabase as any).from("routes").update({ review_photos: merged }).eq("id", route.id);
-    if (error) { toast.error("Nie udało się usunąć zdjęcia"); return; }
+    if (error) { toast.error(t("toast.photo_delete_failed")); return; }
     queryClient.invalidateQueries({ queryKey: ["shared-route", id] });
-    toast.success("Usunięto zdjęcie", {
+    toast.success(t("toast.photo_deleted"), {
       action: {
         label: "Cofnij",
         onClick: async () => {
@@ -1041,18 +1043,18 @@ export default function SharedRoute() {
   const setCoverFromGallery = async (url: string) => {
     if (!user?.id || !id) return;
     const ok = await setMyRouteCover(id, user.id, url);
-    if (!ok) { toast.error("Nie udało się ustawić okładki"); return; }
+    if (!ok) { toast.error(t("toast.cover_failed")); return; }
     queryClient.invalidateQueries({ queryKey: ["route-member-cover", id, user.id] });
     queryClient.invalidateQueries({ queryKey: ["profile-trip-feed"] });
     if (isOwner) await handleSetCover(url, true);
-    else toast.success("Ustawiono Twoją okładkę");
+    else toast.success(t("toast.own_cover_set"));
   };
 
   const handleSetCover = async (url: string, silent = false) => {
     const { error } = await (supabase as any).from("routes").update({ list_cover_url: url }).eq("id", route.id);
-    if (error) { toast.error("Nie udało się ustawić okładki"); return; }
+    if (error) { toast.error(t("toast.cover_failed")); return; }
     queryClient.invalidateQueries({ queryKey: ["shared-route", id] });
-    toast.success(silent ? "Ustawiono okładkę wyjazdu" : "Ustawiono okładkę eksploracji");
+    toast.success(silent ? t("toast.trip_cover_set") : t("toast.explore_cover_set"));
   };
 
   const handleDelete = async () => {
@@ -1070,11 +1072,11 @@ export default function SharedRoute() {
       await (supabase as any).from("chat_sessions").delete().in("route_id", ids);
       const { error } = await supabase.from("routes").delete().in("id", ids).eq("user_id", user.id);
       if (error) throw new Error(error.message);
-      toast.success("Usunięto wyjazd.");
+      toast.success(t("toast.trip_deleted"));
       setAskDelete(false);
       goBackOr(navigate, "/moj-profil");
     } catch (e: any) {
-      toast.error("Nie udało się usunąć wyjazdu.");
+      toast.error(t("toast.trip_delete_failed"));
       console.error("[SharedRoute] delete failed:", e?.message ?? e);
       setDeleting(false);
     }
@@ -1127,7 +1129,7 @@ export default function SharedRoute() {
   const dayDate = (day: number) => (tripStart ? new Date(tripStart.getTime() + (day - 1) * 86400000) : null);
   const dayLabel = (day: number) => {
     const d = dayDate(day);
-    return d ? `Dzień ${day} · ${format(d, "EEEE d.MM", { locale: dateLocale() })}` : `Dzień ${day}`;
+    return d ? t("day.label_with_date", { day, date: format(d, "EEEE d.MM", { locale: dateLocale() }) }) : t("day.label", { day });
   };
   const pinDay = (pin: any) => Math.min(Math.max(Number(pin?.day_index) || 1, 1), dayCount);
   // Krotka data pod nazwa dnia w chipie: "pt 12.09". Daje kontekst bez otwierania kalendarza.
@@ -1253,7 +1255,7 @@ export default function SharedRoute() {
       const photoSlot = canEdit ? (
         <label className={`inline-flex items-center gap-1.5 rounded-full bg-secondary px-3 py-1.5 text-xs font-bold text-foreground cursor-pointer active:scale-95 transition-transform ${busy ? "opacity-60 pointer-events-none" : ""}`}>
           {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Camera className="h-3.5 w-3.5" />}
-          {busy ? "Dodawanie..." : "Zdjęcie"}
+          {busy ? t("adding") : t("photo")}
           <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => { addPlacePhotos(pin, e.target.files); e.currentTarget.value = ""; }} />
         </label>
       ) : null;
@@ -1304,7 +1306,7 @@ export default function SharedRoute() {
                     className="w-full h-full object-cover active:opacity-90 transition-opacity"
                   />
                   <img src={avatarSrc(ph.avatar_url)} alt="" title={ph.username ?? undefined} className="absolute bottom-1 left-1 h-7 w-7 rounded-full object-cover border-2 border-white shadow-sm bg-secondary" />
-                  {(ph.user_id === user?.id || isOwner) && <button onClick={() => removePlacePhoto(ph.id)} aria-label="Usuń zdjęcie" className="absolute top-1 right-1 h-5 w-5 rounded-full bg-black/55 text-white flex items-center justify-center active:scale-90"><X className="h-3 w-3" /></button>}
+                  {(ph.user_id === user?.id || isOwner) && <button onClick={() => removePlacePhoto(ph.id)} aria-label={t("aria.delete_photo")} className="absolute top-1 right-1 h-5 w-5 rounded-full bg-black/55 text-white flex items-center justify-center active:scale-90"><X className="h-3 w-3" /></button>}
                 </div>
               ))}
             </div>
@@ -1437,7 +1439,7 @@ export default function SharedRoute() {
       // "Wszystkie" = po prostu wszystkie miejsca: w propozycjach pogrupowane po KATEGORIACH
       // (grupuje renderList), pozniej plaska lista w kolejnosci trasy. BEZ naglowkow dni i dat
       // (prosba Nat 2026-09-01) - dni sa w chipach, a nagle daty w srodku listy tylko szumia.
-      // Przypisywanie do dni odbywa sie w trybie "Zmień kolejność", ktory naglowki dni ma.
+      // Przypisywanie do dni odbywa sie w trybie t("reorder"), ktory naglowki dni ma.
 
       <div>
         {list.map((pin: any, i: number) => (
@@ -1461,15 +1463,15 @@ export default function SharedRoute() {
       return (
         <p className="text-[13px] text-muted-foreground py-6 text-center px-4 leading-relaxed">
           {canEdit
-            ? "Ten dzień jest jeszcze pusty. Przenieś tu miejsca w „Zmień kolejność” albo dodaj nowe."
-            : "Brak miejsc tego dnia"}
+            ? t("day.empty")
+            : t("day.no_places")}
         </p>
       );
     }
     // Kategorie grupuja miejsca TYLKO na etapie propozycji (tam sluza do przegladania sugestii).
     // W trakcie wyjazdu i we wspomnieniu liczy sie KOLEJNOSC ustawiona przez usera (od punktu do
     // punktu), wiec lista jest plaska - bez naglowkow kategorii (decyzja Nat 2026-08-28).
-    // Wyjatek: tryb "Zmień kolejność" przy wyjezdzie z dniami jest ZAWSZE plaski (z naglowkami
+    // Wyjatek: tryb t("reorder") przy wyjezdzie z dniami jest ZAWSZE plaski (z naglowkami
     // dni), tez w propozycjach - inaczej naglowki dni powtarzalyby sie w kazdej kategorii i nie
     // dalo by sie przeciagnac miejsca do innego dnia.
     if (stage !== "planning" || (reorderMode && hasDays)) return renderRows(visiblePins, handleReorderPins);
@@ -1496,7 +1498,7 @@ export default function SharedRoute() {
       {/* Staly TopBar (naglowek nad obszarem scrolla): wstecz + autor + uczestnicy + miasto + liczba miejsc + serce */}
       <div className="shrink-0 bg-background" style={{ paddingTop: "max(12px, env(safe-area-inset-top, 12px))" }}>
         <div className="flex items-center gap-2 text-sm px-5 pb-2.5">
-            <button onClick={() => goBackOr(navigate, "/eksploruj")} aria-label="Wróć"
+            <button onClick={() => goBackOr(navigate, "/eksploruj")} aria-label={t("back")}
               className="h-9 w-9 -ml-2 shrink-0 rounded-full flex items-center justify-center active:scale-90 transition-transform">
               <ArrowLeft className="h-5 w-5 text-foreground" />
             </button>
@@ -1543,7 +1545,7 @@ export default function SharedRoute() {
             </div>
             {/* Serce polubienia wyjazdu (prawy skraj) - TYLKO gosc. Wlasciciel: spacer dla symetrii. */}
             {!isOwner ? (
-              <button onClick={toggleLike} aria-label="Polub trasę" className="shrink-0 flex items-center gap-1 active:scale-90 transition-transform">
+              <button onClick={toggleLike} aria-label={t("aria.like_trip")} className="shrink-0 flex items-center gap-1 active:scale-90 transition-transform">
                 <Heart className={cn("h-5 w-5", routeLike.liked ? "fill-red-500 text-red-500" : "text-foreground/70")} />
                 <span className="text-xs font-semibold tabular-nums text-muted-foreground">{routeLike.count}</span>
               </button>
@@ -1568,7 +1570,7 @@ export default function SharedRoute() {
                     i w hero tego widoku. Okladka hosta (eksploracja) zostaje nietknieta. */}
                 {canEdit && (
                   <button onClick={() => { haptics.light(); setCoverPickerOpen(true); }}
-                    aria-label="Wybierz swoją okładkę wyjazdu"
+                    aria-label={t("aria.pick_own_cover")}
                     className={`h-9 w-9 rounded-full flex items-center justify-center active:scale-90 transition-transform ${myCover ? "bg-[#FCEDE3]" : "bg-secondary"}`}>
                     <Images className={`h-4 w-4 ${myCover ? "text-[#F75708]" : "text-foreground"}`} />
                   </button>
@@ -1576,11 +1578,11 @@ export default function SharedRoute() {
                 {/* Zapraszanie uczestnikow USUNIETE z widoku wyjazdu (decyzja Nat 2026-08-30):
                     osoby wybiera sie WYLACZNIE przy tworzeniu wyjazdu. Skladu nie zmienia sie
                     ani w trakcie, ani po publikacji. */}
-                <button onClick={handleShare} onContextMenu={(e) => { e.preventDefault(); handleShareLink(); }} aria-label="Udostępnij" className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center active:scale-90 transition-transform"><Share2 className="h-4 w-4 text-foreground" /></button>
+                <button onClick={handleShare} onContextMenu={(e) => { e.preventDefault(); handleShareLink(); }} aria-label={t("aria.share")} className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center active:scale-90 transition-transform"><Share2 className="h-4 w-4 text-foreground" /></button>
                 {/* Olowek usuniety (prosba Nat 2026-09-01) - ten widok JEST edycja: miejsca, notki,
                     zdjecia, opis i tagi zmienia sie na miejscu, wiec osobne wejscie w stepper
                     tylko mnozylo sciezki. */}
-                {isOwner && <button onClick={() => setAskDelete(true)} aria-label="Usuń wyjazd" className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center active:scale-90 transition-transform"><Trash2 className="h-4 w-4 text-destructive" /></button>}
+                {isOwner && <button onClick={() => setAskDelete(true)} aria-label={t("aria.delete_trip")} className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center active:scale-90 transition-transform"><Trash2 className="h-4 w-4 text-destructive" /></button>}
             </div>
           </div>
           {/* #5: miasto + liczba miejsc bezposrednio pod tytulem (przeniesione z TopBara). */}
@@ -1605,7 +1607,7 @@ export default function SharedRoute() {
           ) : isOwner ? (
             <button onClick={() => setDatesSheetOpen(true)} className="flex items-center gap-1.5 mt-2.5 text-muted-foreground active:opacity-60 transition-opacity">
               <CalendarIcon className="h-5 w-5 shrink-0" />
-              <span className="text-base">{`Dodaj daty wyjazdu`}</span>
+              <span className="text-base">{t("aria.add_dates")}</span>
             </button>
           ) : null}
           {route.ai_highlight && (
@@ -1656,7 +1658,7 @@ export default function SharedRoute() {
           <div className="px-5 pt-4">
             {/* MOJA NOTKA O WYJEZDZIE - kazdy uczestnik ma swoja, u siebie na gorze (prosba Nat
                 2026-09-01). Notki pozostalych ida pod nia, tym samym szarym dymkiem z awatarem
-                co notki przy miejscach. Nie mylic z "Opis wyjazdu" - tamten pisze host i idzie
+                co notki przy miejscach. Nie mylic z t("trip_description") - tamten pisze host i idzie
                 z wyjazdem do eksploracji. */}
             {/* Na etapie PROPOZYCJI notki nie ma - wyjazd dopiero powstaje, nie ma jeszcze o czym
                 pisac (prosba Nat 2026-09-01). Wchodzi od "w trakcie". */}
@@ -1690,7 +1692,7 @@ export default function SharedRoute() {
                 niekonczacym sie scrollu. Chip "Wszystkie" wraca do pelnej listy z naglowkami dni -
                 i to tam przenosi sie miejsca miedzy dniami. Data pod nazwa daje kontekst bez
                 otwierania kalendarza; pasek przewija sie w bok, wiec skaluje sie do kilkunastu dni. */}
-            {/* W trybie "Zmień kolejność" chipow NIE ma: tam widac caly wyjazd, bo o to chodzi -
+            {/* W trybie t("reorder") chipow NIE ma: tam widac caly wyjazd, bo o to chodzi -
                 przeciagniecie miejsca pod naglowek innego dnia zmienia mu dzien. */}
             {daysUsable && !choosing && !reorderMode && (
               <div className="sticky top-[45px] z-20 -mx-5 bg-background border-b border-border/50">
@@ -1724,9 +1726,7 @@ export default function SharedRoute() {
                       <button
                         onClick={() => { haptics.light(); pickDay(null); setReorderMode(true); }}
                         className="shrink-0 text-[13px] font-semibold text-primary active:opacity-60 transition-opacity"
-                      >
-                        Zmień kolejność
-                      </button>
+                      >{t("reorder")}</button>
                     )}
                   </div>
                 )}
@@ -1737,7 +1737,7 @@ export default function SharedRoute() {
             {canEdit && stage === "ongoing" && !choosing && (
               <div className="mb-5 space-y-4">
                 <div>
-                  <p className="text-[13px] font-bold text-foreground mb-1.5">Opis wyjazdu</p>
+                  <p className="text-[13px] font-bold text-foreground mb-1.5">{t("trip_description")}</p>
                   <div className="relative">
                     <textarea
                       value={tripDesc}
@@ -1754,9 +1754,9 @@ export default function SharedRoute() {
               </div>
             )}
             {choosing ? (
-              /* Tryb "Wybierz miejsca": zaznacz ktore miejsca wchodza do wyjazdu (reszta usunieta). */
+              /* Tryb t("choose_places"): zaznacz ktore miejsca wchodza do wyjazdu (reszta usunieta). */
               <div className="space-y-2">
-                <p className="text-[13px] text-muted-foreground pb-1">Zaznacz miejsca, które wchodzą do wyjazdu.</p>
+                <p className="text-[13px] text-muted-foreground pb-1">{t("choose_places_desc")}</p>
                 {(pins as any[]).map((pin) => (
                   <button key={pin.id} onClick={() => toggleChosen(pin.id)} className="w-full flex items-center gap-3 rounded-2xl bg-secondary/60 pl-3 pr-2.5 py-2.5 text-left active:opacity-80 transition-opacity">
                     <PlacePhoto pin={pin} width={56} className="h-12 w-12 rounded-xl object-cover shrink-0" />
@@ -1793,7 +1793,7 @@ export default function SharedRoute() {
               /* JEDNA mapa w calej aplikacji: ten sam RouteMap co po rozwinieciu, wiec markery sa
                  identyczne - peachowe OKREGI Z NUMERAMI zamiast kropelek Google (prosba Nat
                  2026-09-01). Wczesniej byl tu obrazek ze Static Maps, ktory rysowal wlasne piny
-                 i widok "przed" nie zgadzal sie z widokiem "po". Mapa jest nieklikalna
+                 i widok PRZED nie zgadzal sie z widokiem PO. Mapa jest nieklikalna
                  (pointer-events-none), a tap w nakladke rozwija ja na pelny ekran. */
               <div data-no-swipe className="relative w-full rounded-2xl overflow-hidden border border-border/40 bg-muted"
                 style={{ height: "calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 250px)", minHeight: "300px" }}>
@@ -1806,7 +1806,7 @@ export default function SharedRoute() {
                 </span>
               </div>
             ) : (
-              <p className="text-center text-sm text-muted-foreground py-10">Brak lokalizacji miejsc na mapie.</p>
+              <p className="text-center text-sm text-muted-foreground py-10">{t("map_no_locations")}</p>
             )}
           </div>
         ) : (
@@ -1819,7 +1819,7 @@ export default function SharedRoute() {
                 {canAddPhotos && (
                   <button onClick={() => photoInputRef.current?.click()} disabled={uploadingPhotos}
                     className="flex w-full break-inside-avoid aspect-[4/3] rounded-2xl border-2 border-dashed border-border flex-col items-center justify-center gap-1.5 text-muted-foreground active:scale-[0.98] transition-transform disabled:opacity-60">
-                    {uploadingPhotos ? <Loader2 className="h-6 w-6 animate-spin" /> : <><Plus className="h-6 w-6" /><span className="text-xs font-semibold">Dodaj zdjęcie</span></>}
+                    {uploadingPhotos ? <Loader2 className="h-6 w-6 animate-spin" /> : <><Plus className="h-6 w-6" /><span className="text-xs font-semibold">{t("add_photo")}</span></>}
                   </button>
                 )}
                 {galleryPhotos.map((url, i) => {
@@ -1948,15 +1948,15 @@ export default function SharedRoute() {
       <CoverPickerSheet
         open={coverPickerOpen}
         onClose={() => setCoverPickerOpen(false)}
-        title="Twoja okładka wyjazdu"
-        subtitle="Widzisz ją tylko Ty - na swojej karcie wyjazdu i tutaj. Pozostałym nic się nie zmienia."
+        title={t("own_cover.title")}
+        subtitle={t("own_cover.desc")}
         options={galleryPhotos.map((u, i) => ({ id: `${i}`, name: "", url: u }))}
         currentUrl={resolveStored(myCover) ?? null}
         onPick={(url) => { void setMyCover(url); setCoverPickerOpen(false); }}
         onUploadNew={() => coverInputRef.current?.click()}
         uploading={uploadingCover || uploadingPhotos}
         onReset={myCover ? () => { void resetMyCover(); setCoverPickerOpen(false); } : undefined}
-        resetLabel="Wróć do okładki wyjazdu"
+        resetLabel={t("own_cover.reset")}
       />
 
       {/* Dymek CZATU wyjazdu (prawa strona, nad dolnym CTA) - uczestnicy (owner/czlonek) przegaduja
@@ -1964,7 +1964,7 @@ export default function SharedRoute() {
       {canEdit && id && !choosing && !noteEditing && (
         // Dymek czatu - PRZESUWALNY: swipe w prawo chowa go do krawedzi (zostaje sliver), tap/przeciagniecie
         // w lewo go wyciaga. Tap na widocznym otwiera czat. (prosba Nat 2026-08-26).
-        <motion.button aria-label={chatHidden ? "Pokaż czat" : "Czat wyjazdu"}
+        <motion.button aria-label={chatHidden ? t("aria.show_chat") : t("chat.title")}
           drag="x"
           dragConstraints={{ left: 0, right: 50 }}
           dragElastic={0.08}
@@ -1982,13 +1982,13 @@ export default function SharedRoute() {
           )}
         </motion.button>
       )}
-      {/* "Dodaj miejsce" jako plywajacy guzik BEZPOSREDNIO POD czatem (prosba Nat 2026-08-30).
+      {/* t("add_place") jako plywajacy guzik BEZPOSREDNIO POD czatem (prosba Nat 2026-08-30).
           Dostepny takze w trybie zmiany kolejnosci (prosba Nat 2026-08-30) - chowamy tylko przy
           pisaniu notki i przy wyborze miejsc. */}
       {canEdit && !choosing && !noteEditing && (
         <button
           onClick={() => { haptics.light(); setAddPlaceOpen(true); }}
-          aria-label="Dodaj miejsce"
+          aria-label={t("add_place")}
           className="fixed right-4 z-40 h-14 w-14 rounded-full bg-primary shadow-lg shadow-black/15 flex items-center justify-center active:scale-90 transition-transform"
           style={{ bottom: "calc(84px + env(safe-area-inset-bottom, 0px))" }}
         >
@@ -2057,7 +2057,7 @@ export default function SharedRoute() {
               i dodatkowych ikon), zostaje na niej tylko wybor okladki. */}
           {isOwner && (
             <button onClick={(e) => { e.stopPropagation(); void handleDeletePhoto(galleryPhotos[viewerIndex]); setViewerIndex(null); }}
-              aria-label="Usuń zdjęcie"
+              aria-label={t("aria.delete_photo")}
               className="absolute left-3 z-10 h-10 w-10 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center active:scale-90 transition-transform"
               style={{ top: "max(0.75rem, env(safe-area-inset-top))" }}>
               <Trash2 className="h-5 w-5 text-white" />
@@ -2069,7 +2069,7 @@ export default function SharedRoute() {
             const st = likeStateOf(url);
             return (
               <button onClick={(e) => { e.stopPropagation(); void togglePhotoLikeUi(url); }}
-                aria-label={st.liked ? "Cofnij polubienie" : "Polub zdjęcie"}
+                aria-label={st.liked ? t("aria.unlike_photo") : t("aria.like_photo")}
                 className="absolute left-3 z-10 h-10 px-3 rounded-full bg-white/15 backdrop-blur-sm flex items-center gap-1.5 active:scale-90 transition-transform"
                 style={{ bottom: "max(20px, calc(env(safe-area-inset-bottom, 0px) + 12px))" }}>
                 <Heart className={`h-5 w-5 ${st.liked ? "fill-red-500 text-red-500" : "text-white"}`} />
@@ -2107,24 +2107,22 @@ export default function SharedRoute() {
                 </button>
               ) : (
               <div className="flex items-center gap-2">
-                {/* "Dodaj miejsce" przeniesione do plywajacego guzika pod czatem (prosba Nat
+                {/* t("add_place") przeniesione do plywajacego guzika pod czatem (prosba Nat
                     2026-08-30) - dolny pasek zostaje dla akcji etapu. */}
-                {/* Gdy obok stoi "Opublikuj wyjazd", zmiana kolejnosci schodzi na drugi plan
+                {/* Gdy obok stoi t("publish_trip"), zmiana kolejnosci schodzi na drugi plan
                     (szary fill) - dwa pomaranczowe guziki obok siebie nie mowia, ktory jest
                     wazniejszy, a publikacja jest tu akcja glowna. */}
                 {pins.length > 1 && (
                   <button onClick={() => { haptics.light(); pickDay(null); setReorderMode(true); }}
                     className={`flex-1 py-3 rounded-full font-bold text-sm flex items-center justify-center gap-2 whitespace-nowrap active:scale-[0.98] transition-transform ${
                       canPublish ? "bg-secondary text-secondary-foreground" : "bg-primary text-white"}`}>
-                    <GripVertical className="h-4 w-4 shrink-0" /> Zmień kolejność
-                  </button>
+                    <GripVertical className="h-4 w-4 shrink-0" />{t("reorder")}</button>
                 )}
                 {/* Etap PROPOZYCJI (host): wybierz miejsca -> w trakcie. */}
                 {isOwner && stage === "planning" && pins.length > 0 && (
                   <button onClick={startChoosing}
                     className="flex-1 py-3 rounded-full bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform">
-                    <Check className="h-4 w-4 stroke-[3]" /> Wybierz miejsca
-                  </button>
+                    <Check className="h-4 w-4 stroke-[3]" />{t("choose_places")}</button>
                 )}
                 {/* PUBLIKACJA jednym guzikiem. Opis, tagi i zdjecia powstaja juz w tym widoku -
                     stepper "podsumowania" zostal usuniety z flow.
@@ -2136,7 +2134,7 @@ export default function SharedRoute() {
                   <button onClick={handlePublish} disabled={publishing}
                     className="flex-1 py-3 rounded-full bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 whitespace-nowrap active:scale-[0.98] transition-transform disabled:opacity-50">
                     {publishing && <Loader2 className="h-4 w-4 animate-spin shrink-0" />}
-                    {publishing ? "Publikuję..." : "Opublikuj wyjazd"}
+                    {publishing ? t("publishing") : t("publish_trip")}
                   </button>
                 )}
               </div>
@@ -2149,7 +2147,7 @@ export default function SharedRoute() {
                 disabled={saving}
                 className="w-full py-3 rounded-full bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform shadow-lg shadow-primary/25 disabled:opacity-50"
               >
-                <Bookmark className="h-4 w-4" />{saving ? t("saving") : "Zapisz tą trasę"}
+                <Bookmark className="h-4 w-4" />{saving ? t("saving") : t("save_trip")}
               </button>
               <button
                 onClick={() => navigate(`/plan?city=${encodeURIComponent(cityLabel)}`)}
@@ -2166,10 +2164,10 @@ export default function SharedRoute() {
       {/* Wlasciciel: zakres dat wyjazdu. Zakres wielodniowy wlacza podzial miejsc na dni. */}
       <Sheet open={datesSheetOpen} onOpenChange={setDatesSheetOpen}>
         <SheetContent side="bottom" className="rounded-t-3xl px-0 pb-[max(16px,env(safe-area-inset-bottom))] pt-5 max-h-[88dvh] overflow-y-auto">
-          <SheetTitle className="sr-only">Daty wyjazdu</SheetTitle>
+          <SheetTitle className="sr-only">{t("trip_dates")}</SheetTitle>
           <div className="px-5 pb-1 text-center">
-            <p className="text-lg font-black leading-tight">{`Wybierz datę`}</p>
-            <p className="text-xs text-muted-foreground mt-1">{`Wybierz jeden dzień albo zakres - przy kilku dniach rozłożysz miejsca na dni`}</p>
+            <p className="text-lg font-black leading-tight">{t("pick_date")}</p>
+            <p className="text-xs text-muted-foreground mt-1">{t("pick_date_desc")}</p>
           </div>
           <FullCalendarPicker maxDays={14} onConfirm={(d, numDays) => void saveTripDates(d, numDays)} allowPast onClear={route.start_date ? () => void clearTripDates() : undefined} />
         </SheetContent>
@@ -2208,17 +2206,17 @@ export default function SharedRoute() {
       <AlertDialog open={!!confirmDeletePin} onOpenChange={(o) => { if (!o) setConfirmDeletePin(null); }}>
         <AlertDialogContent className="rounded-3xl">
           <AlertDialogHeader>
-            <AlertDialogTitle>{`Usunąć „${confirmDeletePin?.place_name ?? "to miejsce"}" z wyjazdu?`}</AlertDialogTitle>
+            <AlertDialogTitle>{t("confirm.delete_place_title", { place: confirmDeletePin?.place_name ?? t("confirm.this_place") })}</AlertDialogTitle>
             <AlertDialogDescription>
               {(() => {
                 const notes = (notesMap.get(placeNoteKey(confirmDeletePin?.place_name ?? "")) ?? []).length;
                 const photos = (photosMap.get(pinPhotoKey(confirmDeletePin?.place_name ?? "")) ?? []).length;
                 const parts: string[] = [];
-                if (notes) parts.push(`${notes} ${notes === 1 ? "notkę" : notes < 5 ? "notki" : "notek"}`);
-                if (photos) parts.push(`${photos} ${photos === 1 ? "zdjęcie" : photos < 5 ? "zdjęcia" : "zdjęć"}`);
+                if (notes) parts.push(t("confirm.notes", { count: notes }));
+                if (photos) parts.push(t("confirm.photos", { count: photos }));
                 return parts.length
-                  ? `Razem z miejscem znikną ${parts.join(" i ")} dodane przez uczestników. Tego nie da się cofnąć.`
-                  : "Miejsce zniknie z wyjazdu u wszystkich uczestników.";
+                  ? t("confirm.place_gone_with", { parts: parts.join(t("confirm.and")) })
+                  : t("confirm.place_gone_all");
               })()}
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -2227,9 +2225,7 @@ export default function SharedRoute() {
             <AlertDialogAction
               onClick={() => { const pin = confirmDeletePin; setConfirmDeletePin(null); if (pin) void deletePinNow(pin); }}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Usuń miejsce
-            </AlertDialogAction>
+            >{t("aria.delete_place")}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -2237,15 +2233,15 @@ export default function SharedRoute() {
       <AlertDialog open={askDelete} onOpenChange={(o) => { if (!o && !deleting) setAskDelete(false); }}>
         <AlertDialogContent className="rounded-3xl">
           <AlertDialogHeader>
-            <AlertDialogTitle>Na pewno chcesz usunąć ten wyjazd?</AlertDialogTitle>
+            <AlertDialogTitle>{t("confirm.delete_trip")}</AlertDialogTitle>
             <AlertDialogDescription>
-              {`„${route.title || route.city || "Wyjazd"}" zniknie bezpowrotnie z Twojego profilu. Nie można tego cofnąć.`}
+              {t("confirm.delete_trip_desc", { title: route.title || route.city || t("trip_fallback") })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deleting}>Anuluj</AlertDialogCancel>
             <AlertDialogAction onClick={(e) => { e.preventDefault(); void handleDelete(); }} disabled={deleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              {deleting ? "Usuwanie…" : "Usuń"}
+              {deleting ? t("deleting") : t("delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -2255,7 +2251,7 @@ export default function SharedRoute() {
       {missingParticipants && (
         <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/50 backdrop-blur-sm p-6" onClick={() => setMissingParticipants(null)}>
           <div className="w-full max-w-sm bg-card rounded-3xl p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <p className="text-lg font-bold text-foreground">Nie wszyscy dodali miejsca</p>
+            <p className="text-lg font-bold text-foreground">{t("confirm.not_everyone")}</p>
             <div className="flex flex-wrap items-center gap-2 mt-3">
               {missingParticipants.map((m) => (
                 <span key={m.id} className="inline-flex items-center gap-1.5 rounded-full bg-secondary pl-1 pr-3 py-1">
@@ -2266,8 +2262,8 @@ export default function SharedRoute() {
             </div>
             <p className="text-sm text-muted-foreground mt-3">{`${missingParticipants.length === 1 ? "Ta osoba nie dodała" : "Te osoby nie dodały"} jeszcze żadnego miejsca. Wysłać przypomnienie, czy wybrać mimo to?`}</p>
             <div className="mt-4 flex flex-col gap-2">
-              <button onClick={sendReminders} disabled={reminderBusy} className="w-full py-3 rounded-2xl bg-primary text-white font-bold text-sm active:scale-[0.98] transition-transform disabled:opacity-60">{reminderBusy ? "Wysyłam..." : "Wyślij przypomnienie"}</button>
-              <button onClick={proceedToChoosing} className="w-full py-3 rounded-2xl bg-secondary text-secondary-foreground font-bold text-sm active:scale-[0.98] transition-transform">Wybierz mimo to</button>
+              <button onClick={sendReminders} disabled={reminderBusy} className="w-full py-3 rounded-2xl bg-primary text-white font-bold text-sm active:scale-[0.98] transition-transform disabled:opacity-60">{reminderBusy ? t("sending") : t("send_reminder")}</button>
+              <button onClick={proceedToChoosing} className="w-full py-3 rounded-2xl bg-secondary text-secondary-foreground font-bold text-sm active:scale-[0.98] transition-transform">{t("confirm.choose_anyway")}</button>
               <button onClick={() => setMissingParticipants(null)} className="w-full py-2 text-sm font-medium text-muted-foreground">Anuluj</button>
             </div>
           </div>

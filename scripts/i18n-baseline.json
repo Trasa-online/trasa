@@ -112,7 +112,6 @@
     "src/pages/SetPassword.tsx",
     "src/pages/Settings.tsx",
     "src/pages/SharedList.tsx",
-    "src/pages/SharedRoute.tsx",
     "src/pages/StartWyjazd.tsx",
     "src/pages/Stats.tsx",
     "src/pages/Terms.tsx",
