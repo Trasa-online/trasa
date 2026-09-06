@@ -235,6 +235,19 @@ Dwa konteksty, dwie proporcje:
 - Lokalizacja: `api/` (root), NIE `src/api/`
 - Sekretne zmienne: Vercel Dashboard → Environment Variables (bez VITE_ prefix)
 
+### Logowanie przez Apple - trzy miejsca, ktore trzeba trzymac razem
+
+Sign in with Apple psuje sie samo, bo **sekret klienta wygasa maksymalnie po 6 miesiacach**
+(Apple odrzuca dluzszy `exp`). Nie ma po tym zadnego alertu - po prostu przestaje dzialac.
+
+- **Sekret generujesz sam:** `node scripts/apple-client-secret.mjs --p8 <klucz.p8> --key-id <10 zn.> --team-id J33M8H3SGZ --client-id travel.trasa.signin`. Wynik wklejasz w Supabase (Authentication → Providers → Apple → Secret Key). Skrypt wypisuje date waznosci - **wpisz ja w kalendarz**.
+- **Trzy identyfikatory, ktore latwo pomylic:** `travel.trasa.app` to bundle id aplikacji, `travel.trasa.signin` to **Services ID** (i to jego uzywa `external_apple_client_id` w Supabase), a `J33M8H3SGZ` to Team ID.
+- **Adres powrotu zalezy od custom domain Supabase**, nie od domeny strony: Supabase wysyla do Apple `redirect_uri = https://api.spontaway.com/auth/v1/callback`. Musi byc wpisany w Services ID → Configure → Return URLs.
+- **Weryfikacja domeny wymaga dzialajacego `/.well-known/`.** Regula `"/(.*)"` w `vercel.json` przepisuje WSZYSTKO na powloke aplikacji, wiec `spontaway.com/.well-known/cokolwiek` zwraca HTML landingu zamiast pliku. Plik weryfikacyjny Apple kladziemy w `public/.well-known/` - Vite kopiuje kropkowane katalogi, a Vercel serwuje istniejacy plik ZANIM zadzialaja przepisania. Ta sama luka blokuje universal links (`apple-app-site-association`).
+- **Diagnoza bez urzadzenia:** `GET <supabase>/auth/v1/authorize?provider=apple&redirect_to=...` i odczytaj naglowek `Location` - widzisz dokladnie `client_id` i `redirect_uri`, ktore leca do Apple. Logi auth (`analytics/endpoints/logs.all`, tabela `auth_logs`) pokazuja, czy callback w ogole wrocil: same wpisy `/authorize` bez `/callback` znacza, ze flow umarl po stronie Apple, nie u nas.
+
+---
+
 ### ⛔ ForBusinessPage — ZAMROŻONA, nie ruszać (src/pages/ForBusinessPage.tsx)
 
 **NIE edytuj tego pliku.** Strona `/dla-firm` jest zachowana do późniejszego wykorzystania. Nie przepisuj, nie refaktoruj, nie usuwaj. Nowy one-pager dla firm to osobny plik `src/pages/BusinessLanding.tsx` pod routem `/dla-firm/landing`.
