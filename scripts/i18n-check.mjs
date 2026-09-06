@@ -68,29 +68,55 @@ const walk = (dir, acc = []) => {
 
 // Zdejmuje komentarze, zeby polskie objasnienia w kodzie (a jest ich duzo) nie zglaszaly sie
 // jako napisy do przetlumaczenia. Sledzi stan stringow, wiec "https://" nie znika.
+// Apostrof w tekscie JSX ("toggle'a", "don't") NIE otwiera napisu - inaczej maszyna stanow
+// gubi synchronizacje i pochlania caly dalszy plik razem z polskimi napisami, ktore mial
+// znalezc. Napis moze zaczac sie tylko tam, gdzie w skladni ma prawo stac.
+const OPENS_STRING = new Set(["(", "=", ",", ":", "[", "{", "+", "?", "|", "&", ";", "!", "<", ">", " ", "\t", "\n", "\r", ""]);
 function stripComments(src) {
-  let out = "", i = 0, mode = null;
+  let out = "", i = 0, mode = null, prev = "";
   while (i < src.length) {
     const c = src[i], n = src[i + 1];
     if (mode === null) {
       if (c === "/" && n === "/") { mode = "line"; i += 2; continue; }
       if (c === "/" && n === "*") { mode = "block"; i += 2; continue; }
-      if (c === "'" || c === '"' || c === "`") { mode = c; out += c; i++; continue; }
-      out += c; i++; continue;
+      if (c === '"' || c === "`" || (c === "'" && OPENS_STRING.has(prev))) { mode = c; out += c; prev = c; i++; continue; }
+      out += c; if (c.trim() || c === " " || c === "\n") prev = c; i++; continue;
     }
-    if (mode === "line") { if (c === "\n") { mode = null; out += c; } i++; continue; }
+    if (mode === "line") { if (c === "\n") { mode = null; out += c; prev = c; } i++; continue; }
     if (mode === "block") { if (c === "*" && n === "/") { mode = null; i += 2; continue; } i++; continue; }
     if (c === "\\") { out += src.slice(i, i + 2); i += 2; continue; }
     out += c;
-    if (c === mode) mode = null;
+    if (c === mode) { mode = null; prev = c; }
     i++;
   }
   return out;
 }
 
+// Ten sam warunek przy wyszukiwaniu literalow - regex bez tego zaczyna napis na apostrofie
+// w srodku slowa i zwraca smieci albo nie zwraca nic.
+function literals(src) {
+  const found = [];
+  let i = 0, prev = "";
+  while (i < src.length) {
+    const c = src[i];
+    if (c === '"' || c === "`" || (c === "'" && OPENS_STRING.has(prev))) {
+      let j = i + 1, buf = "";
+      while (j < src.length) {
+        if (src[j] === "\\") { buf += src.slice(j, j + 2); j += 2; continue; }
+        if (src[j] === c) break;
+        buf += src[j]; j++;
+      }
+      found.push(buf);
+      prev = c; i = j + 1; continue;
+    }
+    if (c.trim() || c === " " || c === "\n") prev = c;
+    i++;
+  }
+  return found;
+}
+
 const baseline = fs.existsSync(BASELINE) ? new Set(JSON.parse(fs.readFileSync(BASELINE, "utf8")).files) : new Set();
 const seenBaseline = new Set();
-const LITERAL = /(['"`])((?:\\.|(?!\1)[^\\])+?)\1/gs;
 const JSX_TEXT = />\s*([^<>{}\n]{4,140}?)\s*</g;
 const isCopy = (s) => s.length >= 4 && s.length <= 140 && !s.includes("\n") && !s.includes("//") && PL_DIA.test(s);
 
@@ -107,7 +133,7 @@ for (const file of walk(path.join(ROOT, "src"))) {
   // 4. polski na sztywno
   const src = stripComments(raw);
   const hits = new Set();
-  for (const m of src.matchAll(LITERAL)) if (isCopy(m[2].trim())) hits.add(m[2].trim());
+  for (const lit of literals(src)) if (isCopy(lit.trim())) hits.add(lit.trim());
   for (const m of src.matchAll(JSX_TEXT)) if (isCopy(m[1].trim())) hits.add(m[1].trim());
   if (!hits.size) continue;
   if (baseline.has(rel)) { seenBaseline.add(rel); continue; }
