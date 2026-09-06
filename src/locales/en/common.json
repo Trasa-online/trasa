@@ -47,9 +47,33 @@
     "enter": "Enter"
   },
   "error": {
-    "desc": "The app hit an error. Try going back to the home screen.",
     "title": "Something went wrong",
-    "back_home": "Back to home"
+    "desc": "The app hit an error. Try going back to the home screen.",
+    "back_home": "Back to home",
+    "kind": {
+      "offline": "No connection",
+      "server": "Server problem",
+      "update": "New app version",
+      "technical": "Technical error"
+    },
+    "headline": {
+      "offline": "You are offline",
+      "server": "We cannot reach the server",
+      "update": "The app has been updated",
+      "technical": "Something broke on our side"
+    },
+    "body": {
+      "offline": "Your phone has no signal or Wi-Fi. Your data is safe and will be back once you reconnect.",
+      "server": "Your internet works, but our server is not responding. This usually passes in a moment.",
+      "update": "A new version shipped and this screen is from the old one. A refresh is all it takes.",
+      "technical": "This is a bug in the app, not something you did. Nothing is lost - everything you saved is still there."
+    },
+    "retry": "Try again",
+    "reload": "Reload the app",
+    "details_show": "Technical details",
+    "details_hide": "Hide details",
+    "copy": "Copy details",
+    "copied": "Copied"
   },
   "cookies": {
     "essential": "Essential only",

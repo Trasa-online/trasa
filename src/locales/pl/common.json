@@ -47,9 +47,33 @@
     "enter": "Wejdź"
   },
   "error": {
-    "desc": "Aplikacja napotkała błąd. Spróbuj wrócić do strony głównej.",
     "title": "Coś poszło nie tak",
-    "back_home": "Wróć do głównej"
+    "desc": "Aplikacja napotkała błąd. Spróbuj wrócić do strony głównej.",
+    "back_home": "Wróć do głównej",
+    "kind": {
+      "offline": "Brak połączenia",
+      "server": "Problem z serwerem",
+      "update": "Nowa wersja aplikacji",
+      "technical": "Błąd techniczny"
+    },
+    "headline": {
+      "offline": "Nie ma połączenia z internetem",
+      "server": "Nie możemy się teraz połączyć",
+      "update": "Aplikacja się zaktualizowała",
+      "technical": "Coś się zacięło po naszej stronie"
+    },
+    "body": {
+      "offline": "Telefon nie ma zasięgu ani Wi-Fi. Twoje dane są bezpieczne - wrócą, gdy połączenie wróci.",
+      "server": "Internet działa, ale nasz serwer nie odpowiada. To zwykle mija po chwili.",
+      "update": "Wyszła nowa wersja, a ten ekran został z poprzedniej. Wystarczy odświeżyć.",
+      "technical": "To błąd w samej aplikacji, nie u Ciebie. Nic nie straciłaś - zapisane rzeczy zostają na miejscu."
+    },
+    "retry": "Spróbuj ponownie",
+    "reload": "Odśwież aplikację",
+    "details_show": "Szczegóły techniczne",
+    "details_hide": "Ukryj szczegóły",
+    "copy": "Skopiuj szczegóły",
+    "copied": "Skopiowano"
   },
   "cookies": {
     "essential": "Tylko niezbędne",
