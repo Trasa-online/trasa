@@ -1,10 +1,14 @@
 {
   "toast": {
     "saved": "Zapisano",
-    "removed_saved": "Usunięto z zapisanych"
+    "removed_saved": "Usunięto z zapisanych",
+    "location_failed": "Nie udało się pobrać lokalizacji"
   },
   "confirm": {
-    "delete_collection": "Usunąć tę trasę?"
+    "delete_collection": "Usunąć tę trasę?",
+    "unsave_desc": "Zniknie ono z Twoich zapisanych zestawień. Zawsze możesz zapisać je ponownie z eksploracji.",
+    "unsave_title": "Na pewno chcesz usunąć to zestawienie z zapisanych?",
+    "delete_action": "Usuń"
   },
   "aria": {
     "already_saved": "Już zapisane",
@@ -16,7 +20,10 @@
     "clear": "Wyczyść",
     "filters": "Filtry",
     "close": "Zamknij",
-    "save_collection": "Zapisz trasę"
+    "save_collection": "Zapisz zestawienie",
+    "remove_saved": "Usuń z zapisanych",
+    "show_photo": "Pokaż zdjęcie",
+    "show_map": "Pokaż mapę"
   },
   "nearby_heading": "Najbliżej Ciebie",
   "nearby_empty": "Brak miejsc w pobliżu.",
@@ -100,5 +107,14 @@
     "soon_title": "Już niedługo!",
     "soon_desc": "Pracujemy nad funkcją odkrywania miejsc polecanych przez twórców. Będzie dostępna w jednej z najbliższych aktualizacji - stay tuned! 🚀"
   },
-  "onboarding_next": "Dalej"
+  "onboarding_next": "Dalej",
+  "empty": {
+    "no_saved_routes_desc": "Zapisz trasę bookmarkiem w zakładce Eksploruj, żeby zobaczyć je tutaj.",
+    "no_saved_lists_desc": "Zapisz listę zakładką podczas przeglądania, żeby pojawiła się tutaj.",
+    "no_saved_routes": "Brak zapisanych tras",
+    "no_saved_lists": "Brak zapisanych list"
+  },
+  "filters": {
+    "show_label": "Pokaż"
+  }
 }

@@ -279,12 +279,12 @@ const JournalTab = ({ userId, city: cityFilter, draftsOnly = false }: JournalTab
       <AlertDialogContent className="rounded-3xl max-w-[340px]">
         <AlertDialogHeader>
           <AlertDialogTitle>
-            {pendingDelete?.is_own ? "Na pewno chcesz usunąć ten wyjazd?" : "Na pewno chcesz opuścić ten wyjazd?"}
+            {pendingDelete?.is_own ? t("confirm.delete_trip_title") : t("confirm.leave_trip_title")}
           </AlertDialogTitle>
           <AlertDialogDescription>
             {pendingDelete?.is_own
-              ? "Jeżeli usuniesz ten wyjazd, zniknie on bezpowrotnie z Twojego profilu. Nie można tego cofnąć."
-              : "Przestaniesz być uczestnikiem tego wyjazdu i zniknie on z Twojego profilu. Nie można tego cofnąć."}
+              ? t("confirm.delete_trip_desc")
+              : t("confirm.leave_trip_desc")}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
@@ -293,7 +293,7 @@ const JournalTab = ({ userId, city: cityFilter, draftsOnly = false }: JournalTab
             onClick={() => { const e = pendingDelete; setPendingDelete(null); if (e) void doDelete(e); }}
             className="rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >
-            {pendingDelete?.is_own ? "Usuń" : "Opuść"}
+            {pendingDelete?.is_own ? t("confirm.delete_action") : t("confirm.leave_action")}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
@@ -337,7 +337,7 @@ const JournalTab = ({ userId, city: cityFilter, draftsOnly = false }: JournalTab
     // Odliczanie "Za X dni" dla nadchodzacych wyjazdow (start w przyszlosci).
     const daysUntil = _d && isValid(_d) ? differenceInCalendarDays(_d, new Date()) : null;
     const countdown = daysUntil != null && daysUntil >= 0
-      ? (daysUntil === 0 ? "Dziś" : daysUntil === 1 ? "Jutro" : `Za ${daysUntil} dni`)
+      ? (daysUntil === 0 ? t("today") : daysUntil === 1 ? "Jutro" : `Za ${daysUntil} dni`)
       : null;
 
     return (
@@ -433,9 +433,9 @@ const JournalTab = ({ userId, city: cityFilter, draftsOnly = false }: JournalTab
             </div>
           )}
           <div className="space-y-2">
-            <p className="text-xl font-bold tracking-tight">{PLANNING_DISABLED ? "Twoje wyjazdy" : t("journal.empty_title")}</p>
+            <p className="text-xl font-bold tracking-tight">{PLANNING_DISABLED ? t("empty.no_trips") : t("journal.empty_title")}</p>
             <p className="text-sm text-muted-foreground leading-relaxed max-w-[260px] mx-auto">
-              {PLANNING_DISABLED ? "Stwórz wyjazd klikając guzik „+”, aby zobaczyć je tutaj." : t("journal.empty_desc")}
+              {PLANNING_DISABLED ? t("empty.no_trips_desc") : t("journal.empty_desc")}
             </p>
           </div>
           {!PLANNING_DISABLED && (
@@ -521,8 +521,8 @@ const JournalTab = ({ userId, city: cityFilter, draftsOnly = false }: JournalTab
 
         {shown.length === 0 ? (
           effTab === "robocze"
-            ? emptyBox(draftIcon, "Brak roboczych tras", "Trasy w toku - te które tworzysz i planujesz - pojawią się tutaj.")
-            : emptyBox(memoryIcon, "Brak wspomnień", "Minione wyjazdy wylądują tutaj jako wspomnienia.")
+            ? emptyBox(draftIcon, t("empty.no_drafts"), t("empty.no_drafts_desc"))
+            : emptyBox(memoryIcon, t("empty.no_memories"), t("empty.no_memories_desc"))
         ) : (
           <div className="divide-y divide-border/50">
             {/* Hub "Robocze" (draftsOnly): klik -> widok tworzenia (ComposeWyjazd z miejscami).

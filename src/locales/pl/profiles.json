@@ -3,7 +3,10 @@
     "placeholder": "Szukaj @username...",
     "suggested": "Osoby, które możesz znać",
     "loading": "Ładowanie...",
-    "no_results": "Brak wyników"
+    "no_results": "Brak wyników",
+    "pinned_placeholder": "Szukaj tras, miejsc, osób...",
+    "by_category": "Szukaj według kategorii",
+    "close_aria": "Zamknij wyszukiwanie"
   },
   "sections": {
     "routes": "Trasy",
@@ -27,7 +30,23 @@
     "days_count": "{{n}} dni",
     "places_count_one": "{{count}} miejsce",
     "places_count_few": "{{count}} miejsca",
-    "places_count_many": "{{count}} miejsc"
+    "places_count_many": "{{count}} miejsc",
+    "blocked_desc": "Nie widzisz treści tej osoby w eksploracji ani w wyszukiwarce. Możesz to cofnąć w menu obok.",
+    "blocked_toast": "Zablokowano - nie zobaczysz już treści tej osoby",
+    "no_lists_desc": "Tu pojawią się polecajki tego użytkownika.",
+    "no_trips_desc": "Tu pojawią się wyjazdy tego użytkownika.",
+    "blocked_title": "Ten profil jest zablokowany",
+    "removed_saved": "Usunięto z zapisanych",
+    "unblock": "Odblokuj użytkownika",
+    "block": "Zablokuj użytkownika",
+    "list_saved": "Zapisano listę",
+    "no_trips": "Brak wyjazdów",
+    "report": "Zgłoś profil",
+    "no_lists": "Brak list",
+    "more": "Więcej",
+    "trip_saved": "Zapisano wyjazd",
+    "no_following": "{{name}} nikogo jeszcze nie obserwuje.",
+    "no_followers": "Nikt jeszcze nie obserwuje {{name}}."
   },
   "profile": {
     "header_fallback": "profil",
@@ -64,7 +83,12 @@
     "trip_deleted": "Wyjazd usunięty.",
     "delete_error": "Nie udało się usunąć.",
     "list_deleted": "Lista usunięta.",
-    "share_no_username": "Uzupełnij nazwę użytkownika, aby udostępnić profil."
+    "share_no_username": "Uzupełnij nazwę użytkownika, aby udostępnić profil.",
+    "no_following": "Nie obserwujesz jeszcze nikogo.",
+    "removed_saved": "Usunięto z zapisanych",
+    "new_content_aria": "Nowa zawartość",
+    "list_fallback_title": "Lista miejsc",
+    "traveler_fallback": "Podróżnik"
   },
   "guest": {
     "title": "Twój profil podróżnika",
@@ -107,6 +131,26 @@
     "lists_empty_cta": "Nowa lista miejsc",
     "trips_empty_title": "Nie masz jeszcze wyjazdów",
     "trips_empty_desc": "Zaplanuj trasę i podziel się nią ze znajomymi.",
-    "trips_empty_cta": "Zaplanuj wyjazd"
+    "trips_empty_cta": "Zaplanuj wyjazd",
+    "added_place_one": "{{author}} dodał(a) miejsce",
+    "added_place_few": "{{author}} dodał(a) {{count}} miejsca",
+    "added_place_many": "{{author}} dodał(a) {{count}} miejsc",
+    "author_fallback": "Autor"
+  },
+  "empty": {
+    "first_list_desc": "Dodaj pierwszą listę klikając guzik „+\" i wybierz „Lista\"",
+    "drafts_desc": "Stwórz nowy wyjazd, żeby zobaczyć go tutaj",
+    "memories_desc": "Opublikuj wyjazd, żeby zobaczyć go tutaj",
+    "saved_lists_title": "Lista zapisanych miejsc jest pusta",
+    "no_saved_trips": "Brak zapisanych wyjazdów",
+    "no_drafts": "Brak roboczych wyjazdów",
+    "no_own_lists": "Brak własnych list",
+    "no_memories": "Brak wspomnień",
+    "saved_lists_desc": "Zapisz cudzą listę <b>bookmarkiem</b>, żeby zobaczyć ją tutaj",
+    "saved_trips_desc": "Zapisz cudzy wyjazd <b>bookmarkiem</b>, żeby zobaczyć go tutaj"
+  },
+  "tabs": {
+    "my_lists": "Moje listy",
+    "general": "Ogólne"
   }
 }

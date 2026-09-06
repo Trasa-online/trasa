@@ -465,7 +465,7 @@ export function CollectionDetail({ col, onClose, onAdopt }: { col: DiscoveryColl
             <button
               type="button"
               onClick={() => { haptics.selection(); setHeroMode((m) => (m === "photo" ? "map" : "photo")); }}
-              aria-label={mapOnHero ? "Pokaż zdjęcie" : "Pokaż mapę"}
+              aria-label={mapOnHero ? t("aria.show_photo") : t("aria.show_map")}
               className="absolute bottom-3 right-3 h-14 w-14 rounded-xl overflow-hidden ring-2 ring-white/80 shadow-md bg-muted active:scale-95 transition-transform"
             >
               {mapOnHero ? (
@@ -557,7 +557,7 @@ export function CollectionDetail({ col, onClose, onAdopt }: { col: DiscoveryColl
         </button>
         <button
           onClick={toggleSaveCollection}
-          aria-label={t("aria.save_collection", "Zapisz zestawienie")}
+          aria-label={t("aria.save_collection", t("aria.save_collection"))}
           className="h-12 w-12 shrink-0 rounded-2xl bg-muted flex items-center justify-center active:scale-95 transition-transform"
         >
           <Bookmark className={`h-5 w-5 ${savedCol ? "fill-primary text-primary" : "text-foreground"}`} />
@@ -1209,7 +1209,7 @@ function RouteBigCard({ route, onClick }: { route: PolecaneRoute; onClick: () =>
 
 // Sekcja "Zestawienia miejsc" w Eksploruj - AKTYWNA (launch feature).
 // Aktywne miasta (z CityPicker) - filtr miasta na eksploracji.
-const ACTIVE_CITIES = ["Warszawa", "Gdańsk", "Sopot", "Gdynia", "Trójmiasto"];
+const ACTIVE_CITIES = ["Warszawa", "Gdańsk", "Sopot", "Gdynia", "Trójmiasto"];   // i18n-ignore: nazwy wlasne, te same w obu jezykach
 // Escape znakow specjalnych ilike (%,_,\) - bezpieczne wyszukiwanie.
 const escapeLike = (v: string) => v.replace(/[%_\\]/g, "\\$&");
 
@@ -1242,7 +1242,7 @@ async function hydrateCollections(cols: any[]): Promise<DiscoveryCollection[]> {
 // i segment typu (Wszystko|Trasy|Listy). Ustaw true, by wrocic listy do eksploracji.
 const SHOW_ZESTAWIENIA = false;
 
-// Szybkie skroty w wyszukiwarce ("Biezace polozenie" + "Zapisane miejsca") - WYLACZONE
+// Szybkie skroty w wyszukiwarce ("Biezace polozenie" + t("saved_places")) - WYLACZONE
 // (2026-07-27): dopoki scroller nie ma miejsc, nie maja sensu. Ustaw true, by przywrocic.
 const SHOW_SEARCH_SHORTCUTS = false;
 
@@ -1252,10 +1252,11 @@ function SavedTile({ id, photo, title, city, placeCount, pins, onOpen, onUnsave 
   id: string; photo: string | null; title: string; city?: string | null;
   placeCount: number; pins: LatLng[]; onOpen: () => void; onUnsave: () => void;
 }) {
+  const { t } = useTranslation("homefeed");
   const cover = photo ?? getRandomPinPlaceholder(id);
   const miniMap = buildMiniMapUrl(pins);
   const countLabel = placeCount > 0
-    ? `${placeCount} ${placeCount === 1 ? "miejsce" : placeCount < 5 ? "miejsca" : "miejsc"}`
+    ? t("places_count", { count: placeCount })
     : null;
   return (
     <div
@@ -1277,7 +1278,7 @@ function SavedTile({ id, photo, title, city, placeCount, pins, onOpen, onUnsave 
           <p className="flex-1 min-w-0 text-lg font-bold leading-tight text-foreground line-clamp-2">{title}</p>
           <button
             onClick={(e) => { e.stopPropagation(); onUnsave(); }}
-            aria-label="Usuń z zapisanych"
+            aria-label={t("aria.remove_saved")}
             className="shrink-0 -mr-0.5 -mt-0.5 h-8 w-8 flex items-center justify-center rounded-full text-primary active:scale-90 transition-transform"
           >
             <Bookmark className="h-5 w-5 fill-primary text-primary" strokeWidth={2} />
@@ -1299,6 +1300,7 @@ function SavedTile({ id, photo, title, city, placeCount, pins, onOpen, onUnsave 
 // pokazywane jako KAFELKI. Zakladka "Zapisane" (bottom nav). Tap otwiera trase
 // (/route/:id) lub wizytowke zestawienia, bookmark usuwa z zapisanych.
 export function SavedRoutes({ city, hideEmptyState }: { city?: string; hideEmptyState?: boolean }) {
+  const { t } = useTranslation("homefeed");
   const { user } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -1362,8 +1364,8 @@ export function SavedRoutes({ city, hideEmptyState }: { city?: string; hideEmpty
     return (
       <div className="pt-20 pb-12 text-center px-8">
         <span aria-hidden className="mx-auto mb-4 h-20 w-20" style={{ display: "block", backgroundColor: "#ef9d78", WebkitMaskImage: "url(/Ikona_Zapisane.svg)", maskImage: "url(/Ikona_Zapisane.svg)", WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat", WebkitMaskSize: "contain", maskSize: "contain", WebkitMaskPosition: "center", maskPosition: "center" }} />
-        <p className="text-base font-bold">Brak zapisanych tras</p>
-        <p className="text-sm text-muted-foreground mt-1 leading-relaxed max-w-[260px] mx-auto">Zapisz trasę bookmarkiem w zakładce Eksploruj, żeby zobaczyć je tutaj.</p>
+        <p className="text-base font-bold">{t("empty.no_saved_routes")}</p>
+        <p className="text-sm text-muted-foreground mt-1 leading-relaxed max-w-[260px] mx-auto">{t("empty.no_saved_routes_desc")}</p>
       </div>
     );
   }
@@ -1378,6 +1380,7 @@ export function SavedRoutes({ city, hideEmptyState }: { city?: string; hideEmpty
 // profilu, karta "Zestawienia" -> MyCollections). Wyszukiwarka jak w zakladce Miejsca.
 // Tap otwiera pelna wizytowke zestawienia (CollectionDetail).
 function SavedCollectionCard({ col, savedAt, onOpen, onDelete }: { col: DiscoveryCollection; savedAt?: string | null; onOpen: (c: DiscoveryCollection) => void; onDelete: () => void }) {
+  const { t } = useTranslation("homefeed");
   const coverItem = col.items?.find((i) => i.photo_url);
   const cover = resolveStored(col.list_cover_url) ?? (coverItem?.photo_url ? resolveStored(coverItem.photo_url) : (col.gallery_urls?.[0] ? resolveStored(col.gallery_urls[0]) : null));
   const count = col.items?.length ?? 0;
@@ -1403,7 +1406,7 @@ function SavedCollectionCard({ col, savedAt, onOpen, onDelete }: { col: Discover
           {savedLabel && <p className="text-[11px] text-muted-foreground/70 mt-1">Zapisano {savedLabel}</p>}
         </div>
       </button>
-      <button onClick={onDelete} aria-label="Usuń z zapisanych" className="h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10 active:scale-90 transition-colors shrink-0">
+      <button onClick={onDelete} aria-label={t("aria.remove_saved")} className="h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10 active:scale-90 transition-colors shrink-0">
         <Trash2 className="h-4 w-4" />
       </button>
     </div>
@@ -1411,6 +1414,7 @@ function SavedCollectionCard({ col, savedAt, onOpen, onDelete }: { col: Discover
 }
 
 export function SavedCollections({ hideEmptyState }: { hideEmptyState?: boolean } = {}) {
+  const { t } = useTranslation("homefeed");
   const navigate = useNavigate();
   const [pendingUnsave, setPendingUnsave] = useState<DiscoveryCollection | null>(null);
   const [savedIds, setSavedIds] = useState<string[]>(() => {
@@ -1452,10 +1456,8 @@ export function SavedCollections({ hideEmptyState }: { hideEmptyState?: boolean 
         hideEmptyState ? null : (
         <div className="pt-20 pb-12 text-center px-8">
           <span aria-hidden className="mx-auto mb-4 h-20 w-20" style={{ display: "block", backgroundColor: "#ef9d78", WebkitMaskImage: "url(/Ikona_Zapisane.svg)", maskImage: "url(/Ikona_Zapisane.svg)", WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat", WebkitMaskSize: "contain", maskSize: "contain", WebkitMaskPosition: "center", maskPosition: "center" }} />
-          <p className="text-base font-bold">Brak zapisanych list</p>
-          <p className="text-sm text-muted-foreground mt-1 leading-relaxed max-w-[280px] mx-auto">
-            Zapisz listę zakładką podczas przeglądania, żeby pojawiła się tutaj.
-          </p>
+          <p className="text-base font-bold">{t("empty.no_saved_lists")}</p>
+          <p className="text-sm text-muted-foreground mt-1 leading-relaxed max-w-[280px] mx-auto">{t("empty.no_saved_lists_desc")}</p>
         </div>
         )
       ) : isLoading ? (
@@ -1474,10 +1476,8 @@ export function SavedCollections({ hideEmptyState }: { hideEmptyState?: boolean 
       <AlertDialog open={!!pendingUnsave} onOpenChange={(o) => { if (!o) setPendingUnsave(null); }}>
         <AlertDialogContent className="rounded-3xl max-w-[340px]">
           <AlertDialogHeader>
-            <AlertDialogTitle>Na pewno chcesz usunąć to zestawienie z zapisanych?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Zniknie ono z Twoich zapisanych zestawień. Zawsze możesz zapisać je ponownie z eksploracji.
-            </AlertDialogDescription>
+            <AlertDialogTitle>{t("confirm.unsave_title")}</AlertDialogTitle>
+            <AlertDialogDescription>{t("confirm.unsave_desc")}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel className="rounded-full">Anuluj</AlertDialogCancel>
@@ -1485,7 +1485,7 @@ export function SavedCollections({ hideEmptyState }: { hideEmptyState?: boolean 
               onClick={() => { const c = pendingUnsave; setPendingUnsave(null); if (c) unsave(c.id); }}
               className="rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Usuń
+              {t("confirm.delete_action")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -1509,7 +1509,7 @@ export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityCh
   const notBlocked = (uid?: string | null) => !uid || !blockedIds?.has(uid);
   const { open: openAuthDrawer } = useAuthDrawer();
   const queryClient = useQueryClient();
-  // Liczba zapisanych miejsc (do wiersza "Zapisane miejsca" pod wyszukiwarka).
+  // Liczba zapisanych miejsc (do wiersza t("saved_places") pod wyszukiwarka).
   const savedCount = useMemo(() => getHistoryByCity().reduce((n, g) => n + g.places.length, 0), []);
   // Szybkie skroty widoczne po otwarciu wyszukiwarki (pusta). "Biezace polozenie" ->
   // najblizsze miejsca z bazy (geo + sort po dystansie), "Zapisane" -> zakladka Zapisane.
@@ -1523,7 +1523,7 @@ export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityCh
     setNearbyLoading(true);
     const ok = await setGpsReference();
     setNearbyLoading(false);
-    if (!ok) { toast.error("Nie udało się pobrać lokalizacji"); return; }
+    if (!ok) { toast.error(t("toast.location_failed")); return; }
     window.dispatchEvent(new CustomEvent("trasa:explore-nearby"));
   };
   const [activeCol, setActiveCol] = useState<DiscoveryCollection | null>(null);
@@ -2161,7 +2161,7 @@ export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityCh
               <Bookmark className="h-[18px] w-[18px] text-orange-600" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold leading-tight">{t("saved_places", "Zapisane miejsca")}</p>
+              <p className="text-sm font-semibold leading-tight">{t("saved_places", t("saved_places"))}</p>
               <p className="text-xs text-muted-foreground leading-tight mt-0.5">{t("places_count", { count: savedCount })}</p>
             </div>
             <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
@@ -2484,7 +2484,7 @@ export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityCh
                 Wylaczone -> feed ma same trasy, segment bezuzyteczny. */}
             {SHOW_ZESTAWIENIA && (
               <>
-                <p className="text-sm font-bold text-foreground mb-2">Pokaż</p>
+                <p className="text-sm font-bold text-foreground mb-2">{t("filters.show_label")}</p>
                 <div className="flex gap-2 mb-5">
                   {([
                     { id: "all", label: "Wszystko" },

@@ -219,7 +219,7 @@ export default function PublicProfile() {
     }
     if (await blockUser(user.id, profile.id)) {
       setBlocked(true);
-      toast.success("Zablokowano - nie zobaczysz już treści tej osoby");
+      toast.success(t("public.blocked_toast"));
       queryClient.invalidateQueries();
     }
   };
@@ -271,11 +271,11 @@ export default function PublicProfile() {
     setSaveOverride((m) => ({ ...m, ["t:" + tr.id]: !cur }));
     if (cur) {
       await (supabase as any).from("saved_routes").delete().eq("user_id", user.id).eq("route_id", tr.id);
-      toast("Usunięto z zapisanych");
+      toast(t("public.removed_saved"));
     } else {
       await (supabase as any).from("saved_routes").upsert({ user_id: user.id, route_id: tr.id }, { onConflict: "user_id,route_id", ignoreDuplicates: true });
       void (supabase as any).rpc("notify_route_used", { p_route_id: tr.id });
-      toast.success("Zapisano wyjazd");
+      toast.success(t("public.trip_saved"));
     }
     queryClient.invalidateQueries({ queryKey: ["saved-routes"] });
   };
@@ -284,9 +284,9 @@ export default function PublicProfile() {
     const cur = isListSaved(l.id);
     const next = new Set(savedListIds);
     const dates = (() => { try { return JSON.parse(localStorage.getItem("trasa_saved_collections_dates") || "{}"); } catch { return {}; } })();
-    if (cur) { next.delete(l.id); delete dates[l.id]; toast("Usunięto z zapisanych"); void unsaveCollectionDb(user.id, l.id); }
+    if (cur) { next.delete(l.id); delete dates[l.id]; toast(t("public.removed_saved")); void unsaveCollectionDb(user.id, l.id); }
     else {
-      next.add(l.id); dates[l.id] = new Date().toISOString(); toast.success("Zapisano listę");
+      next.add(l.id); dates[l.id] = new Date().toISOString(); toast.success(t("public.list_saved"));
       void (supabase as any).rpc("notify_collection_saved", { p_collection_id: l.id });
       void saveCollectionDb(user.id, l.id);
     }
@@ -357,7 +357,7 @@ export default function PublicProfile() {
           <FollowButton targetUserId={profile.id} className="h-9 px-4 text-sm" />
           {canInteract && (
             <div className="relative">
-              <button onClick={() => setMenuOpen((o) => !o)} aria-label="Więcej" className="h-9 w-9 flex items-center justify-center rounded-full active:bg-muted transition-colors">
+              <button onClick={() => setMenuOpen((o) => !o)} aria-label={t("public.more")} className="h-9 w-9 flex items-center justify-center rounded-full active:bg-muted transition-colors">
                 <MoreVertical className="h-5 w-5 text-foreground" />
               </button>
               {menuOpen && (
@@ -369,12 +369,11 @@ export default function PublicProfile() {
                       targetId={profile.id}
                       trigger={(open) => (
                         <button onClick={() => { setMenuOpen(false); open(); }} className="w-full px-4 py-3 text-left text-sm font-medium text-foreground flex items-center gap-2.5 active:bg-muted">
-                          <FlagIcon className="h-4 w-4 shrink-0" /> Zgłoś profil
-                        </button>
+                          <FlagIcon className="h-4 w-4 shrink-0" />{t("public.report")}</button>
                       )}
                     />
                     <button onClick={toggleBlock} className="w-full px-4 py-3 text-left text-sm font-medium text-destructive flex items-center gap-2.5 active:bg-muted border-t border-border/40">
-                      <Ban className="h-4 w-4 shrink-0" /> {blocked ? "Odblokuj użytkownika" : "Zablokuj użytkownika"}
+                      <Ban className="h-4 w-4 shrink-0" /> {blocked ? t("public.unblock") : t("public.block")}
                     </button>
                   </div>
                 </>
@@ -409,14 +408,14 @@ export default function PublicProfile() {
               <div className="mb-4 h-14 w-14 rounded-2xl bg-[#fcede3] flex items-center justify-center">
                 <Ban className="h-6 w-6 text-[#ef9d78]" />
               </div>
-              <p className="text-base font-bold text-foreground">{`Ten profil jest zablokowany`}</p>
+              <p className="text-base font-bold text-foreground">{t("public.blocked_title")}</p>
               <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed max-w-[280px]">
-                {`Nie widzisz treści tej osoby w eksploracji ani w wyszukiwarce. Możesz to cofnąć w menu obok.`}
+                {t("public.blocked_desc")}
               </p>
             </div>
           ) : tab === "listy" ? (
             listCards.length === 0 ? (
-              <FeedEmptyRO maskSrc="/Ikona_Trasy.svg" title="Brak list" desc={`Tu pojawią się polecajki tego użytkownika.`} />
+              <FeedEmptyRO maskSrc="/Ikona_Trasy.svg" title={t("public.no_lists")} desc={t("public.no_lists_desc")} />
             ) : (
               listCards.map((l: any) => (
                 <ProfileFeedCard
@@ -425,7 +424,7 @@ export default function PublicProfile() {
                   fallback={displayName}
                   eyebrow=""
                   timestamp={shortRelativeTime(l.updated_at)}
-                  title={l.title || t("feed.list_fallback", "Lista miejsc")}
+                  title={l.title || t("feed.list_fallback")}
                   description={l.description}
                   tiles={l.tiles}
                   counts={{ saves: Math.max(0, (l.saves_count ?? 0) + delta(isListSaved(l.id), initSavedLists.has(l.id))), views: l.views_count ?? 0 }}
@@ -436,7 +435,7 @@ export default function PublicProfile() {
               ))
             )
           ) : tripCards.length === 0 ? (
-            <FeedEmptyRO maskSrc="/Ikona_Trasy.svg" title="Brak wyjazdów" desc={`Tu pojawią się wyjazdy tego użytkownika.`} />
+            <FeedEmptyRO maskSrc="/Ikona_Trasy.svg" title={t("public.no_trips")} desc={t("public.no_trips_desc")} />
           ) : (
             tripCards.map((tr: any) => (
               <TrasaBigCard
@@ -445,7 +444,7 @@ export default function PublicProfile() {
                 photo={tripCover(tr)}
                 city={tr.city}
                 placeCount={(tr.tiles ?? []).length}
-                title={tr.title || (tr.city ? t("feed.trip_fallback", { city: tr.city, defaultValue: `Wyjazd do ${tr.city}` }) : t("feed.trip_fallback_generic", "Wyjazd"))}
+                title={tr.title || (tr.city ? t("feed.trip_fallback", { city: tr.city }) : t("feed.trip_fallback_generic"))}
                 description={tr.description}
                 authorName={tr.is_host ? displayName : (tr.host_name ?? displayName)}
                 authorAvatar={tr.is_host ? profile.avatar_url : (tr.host_avatar ?? profile.avatar_url)}
@@ -478,8 +477,8 @@ export default function PublicProfile() {
             ) : (followList.data ?? []).length === 0 ? (
               <p className="text-sm text-muted-foreground text-center pt-6">
                 {followSheet === "following"
-                  ? t("public.no_following", { name: displayName, defaultValue: `${displayName} nikogo jeszcze nie obserwuje.` })
-                  : t("public.no_followers", { name: displayName, defaultValue: `Nikt jeszcze nie obserwuje ${displayName}.` })}
+                  ? t("public.no_following", { name: displayName })
+                  : t("public.no_followers", { name: displayName })}
               </p>
             ) : (
               <div className="space-y-1">

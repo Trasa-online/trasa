@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useTranslation } from "react-i18next";
+import { useTranslation, Trans } from "react-i18next";
 import { avatarSrc } from "@/lib/avatar";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthDrawer } from "@/hooks/useAuthDrawer";
@@ -105,7 +105,9 @@ function FeedEmpty({ icon, title, desc, ctaLabel, onCta }: {
 // Wiersz na całą szerokość: ikona listy w zaokrąglonym kwadracie (lewa) + aktualny wybór +
 // chevron rozwijania (prawa). Klik rozwija menu opcji (floating). Wybór Nat 2026-08-23.
 
-function TabSelect({ options, value, onChange }: {
+function TabSelect({ options, value, onChange, dotLabel }: {
+  /** Etykieta kropki "nowa zawartosc" - tlumaczenie przychodzi z rodzica (tu nie ma hooka). */
+  dotLabel?: string;
   /** dot: pomaranczowa kropka na chipie - sygnal "jest tu cos nowego" (np. nowe miejsce w zapisanej liscie). */
   options: { id: string; label: string; dot?: boolean }[];
   value: string;
@@ -128,7 +130,7 @@ function TabSelect({ options, value, onChange }: {
               /* Kropka WEWNATRZ chipa: pasek ma overflow-x-auto, wiec cokolwiek wystaje poza
                  obrys (ujemne offsety) zostaje ucinane przy przewijaniu (zgloszenie Nat
                  2026-09-01: "kropka ucina sie w polowie"). */
-              <span aria-label="Nowa zawartość" className={`absolute top-1.5 right-1.5 h-2 w-2 rounded-full ${active ? "bg-white" : "bg-primary"}`} />
+              <span aria-label={dotLabel} className={`absolute top-1.5 right-1.5 h-2 w-2 rounded-full ${active ? "bg-white" : "bg-primary"}`} />
             )}
           </button>
         );
@@ -527,7 +529,7 @@ const TravelerProfile = () => {
           tags: Array.isArray(rep.tags) ? rep.tags : [],
           cover: rep.list_cover_url ?? rep.cover_url ?? null,
           tiles: pinsByRoute[rep.id] ?? [], saves: Number(rep.saves_count ?? 0), likes: Number(rep.likes_count ?? 0), views: Number(rep.views ?? 0),
-          author_avatar: a?.avatar_url ?? null, author_name: a?.first_name || a?.username || "Podróżnik",
+          author_avatar: a?.avatar_url ?? null, author_name: a?.first_name || a?.username || t("profile.traveler_fallback"),
         };
       });
     },
@@ -549,7 +551,7 @@ const TravelerProfile = () => {
     };
     setLocal(false);
     deferDelete({
-      message: "Usunięto z zapisanych",
+      message: t("profile.removed_saved"),
       onUndo: () => { setLocal(true); queryClient.setQueryData(key, prev); },
       commit: async () => {
         await unsaveCollectionDb(user.id, colId);
@@ -564,7 +566,7 @@ const TravelerProfile = () => {
     const prev = queryClient.getQueryData(key);
     queryClient.setQueryData(key, (old: any) => (old ?? []).filter((x: any) => x.id !== routeId));
     deferDelete({
-      message: "Usunięto z zapisanych",
+      message: t("profile.removed_saved"),
       onUndo: () => queryClient.setQueryData(key, prev),
       commit: async () => {
         await (supabase as any).from("saved_routes").delete().eq("user_id", user.id).eq("route_id", routeId);
@@ -606,7 +608,7 @@ const TravelerProfile = () => {
         photo={tripCover(tr)}
         city={tr.city}
         placeCount={(tr.tiles ?? []).length}
-        title={tr.title || (tr.city ? t("feed.trip_fallback", { city: tr.city, defaultValue: `Wyjazd do ${tr.city}` }) : t("feed.trip_fallback_generic", "Wyjazd"))}
+        title={tr.title || (tr.city ? t("feed.trip_fallback", { city: tr.city }) : t("feed.trip_fallback_generic"))}
         description={tr.description}
         authorName={displayName}
         authorAvatar={profile?.avatar_url}
@@ -630,7 +632,7 @@ const TravelerProfile = () => {
       photo={tripCover(tr)}
       city={tr.city}
       placeCount={(tr.tiles ?? []).length}
-      title={tr.title || (tr.city ? t("feed.trip_fallback", { city: tr.city, defaultValue: `Wyjazd do ${tr.city}` }) : t("feed.trip_fallback_generic", "Wyjazd"))}
+      title={tr.title || (tr.city ? t("feed.trip_fallback", { city: tr.city }) : t("feed.trip_fallback_generic"))}
       description={tr.description}
       tags={tr.tags}
       authorName={tr.author_name}
@@ -652,7 +654,7 @@ const TravelerProfile = () => {
       fallback={l.author_name || "?"}
       eyebrow=""
       timestamp={shortRelativeTime(l.updated_at)}
-      title={l.title || t("feed.list_fallback", "Lista miejsc")}
+      title={l.title || t("feed.list_fallback", t("profile.list_fallback_title"))}
       description={l.description}
       tiles={l.tiles}
       counts={{ saves: l.saves_count ?? 0, views: l.views_count ?? 0 }}
@@ -662,7 +664,7 @@ const TravelerProfile = () => {
         <div className="flex items-center gap-2 rounded-2xl bg-[#FCEDE3] px-2.5 py-2">
           <img src={avatarSrc(l.author_avatar ?? null)} alt="" className="h-5 w-5 rounded-full object-cover bg-orange-100 shrink-0" />
           <p className="text-[12.5px] font-semibold text-foreground leading-snug">
-            {`${l.author_name || "Autor"} ${l.newCount === 1 ? "dodał(a) miejsce" : `dodał(a) ${l.newCount} ${l.newCount < 5 ? "miejsca" : "miejsc"}`}`}
+            {t("feed.added_place", { count: l.newCount, author: l.author_name || t("feed.author_fallback") })}
             {l.newNames?.length ? <span className="font-normal">{`: ${l.newNames.slice(0, 2).join(", ")}${l.newNames.length > 2 ? ` i ${l.newNames.length - 2} więcej` : ""}`}</span> : null}
             {/* Kategoria dodanego miejsca - mowi CO to jest, zanim user w ogole otworzy liste. */}
             {l.newCount === 1 && l.newCats?.[0] ? <span className="font-normal text-[#8A6A57]">{` · ${l.newCats[0]}`}</span> : null}
@@ -701,7 +703,7 @@ const TravelerProfile = () => {
             {searchOpen && (
               <button
                 onClick={closeSearch}
-                aria-label={`Zamknij wyszukiwanie`}
+                aria-label={t("search.close_aria")}
                 className="shrink-0 -ml-1 h-9 w-9 flex items-center justify-center text-foreground active:scale-90 transition-transform"
               >
                 <ChevronLeft className="h-6 w-6" strokeWidth={2.2} />
@@ -712,7 +714,7 @@ const TravelerProfile = () => {
               value={searchQuery}
               onChange={setSearchQuery}
               onFocus={() => setSearchOpen(true)}
-              placeholder={`Szukaj tras, miejsc, osób...`}
+              placeholder={t("search.pinned_placeholder")}
             />
           </>
         }
@@ -726,7 +728,7 @@ const TravelerProfile = () => {
             foldersVisible ? "max-h-[160px] opacity-100" : "max-h-0 opacity-0 border-b-0",
           )}
         >
-          <p className="px-4 pt-3 text-sm font-bold text-foreground">{`Szukaj według kategorii`}</p>
+          <p className="px-4 pt-3 text-sm font-bold text-foreground">{t("search.by_category")}</p>
           <SearchCategoryRow value={searchCat} onChange={setSearchCat} />
           <div className="h-3" />
         </div>
@@ -834,11 +836,12 @@ const TravelerProfile = () => {
             <div className="space-y-4">
               {/* Podzakładki (dropdown): Moje listy (curated) | Ogólne (lista ogólna) | Zapisane (od innych). */}
               <TabSelect
+                dotLabel={t("profile.new_content_aria")}
                 value={listyTab}
                 onChange={(v) => setListyTab(v as "moje" | "ogolne" | "zapisane")}
                 options={[
-                  { id: "moje", label: "Moje listy" },
-                  { id: "ogolne", label: "Ogólne" },
+                  { id: "moje", label: t("tabs.my_lists") },
+                  { id: "ogolne", label: t("tabs.general") },
                   // Kropka = w ktorejs zapisanej liscie autor dodal miejsce, ktorego jeszcze nie
                   // widzialem. Na profilu to jedyny sygnal dla kogos, kto nie scrolluje zapisanych.
                   { id: "zapisane", label: "Zapisane", dot: (savedListCards as any[]).some((l) => l.isNew) },
@@ -850,9 +853,9 @@ const TravelerProfile = () => {
               // + instrukcja uzycia "+", bez guzika CTA (tworzenie idzie przez BottomNav "+").
               <div className="pt-16 pb-12 text-center px-8">
                 <span aria-hidden className="mx-auto mb-5 block h-24 w-24" style={{ backgroundColor: "#ef9d78", WebkitMaskImage: "url(/Ikona_Trasy.svg)", maskImage: "url(/Ikona_Trasy.svg)", WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat", WebkitMaskSize: "contain", maskSize: "contain", WebkitMaskPosition: "center", maskPosition: "center" }} />
-                <p className="text-lg font-bold text-foreground">Brak własnych list</p>
+                <p className="text-lg font-bold text-foreground">{t("empty.no_own_lists")}</p>
                 <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed max-w-[300px] mx-auto">
-                  {`Dodaj pierwszą listę klikając guzik „+" i wybierz „Lista"`}
+                  {t("empty.first_list_desc")}
                 </p>
               </div>
             ) : (
@@ -863,7 +866,7 @@ const TravelerProfile = () => {
                   fallback={displayName}
                   eyebrow=""
                   timestamp={shortRelativeTime(l.updated_at)}
-                  title={l.title || t("feed.list_fallback", "Lista miejsc")}
+                  title={l.title || t("feed.list_fallback", t("profile.list_fallback_title"))}
                   description={l.description}
                   tiles={l.tiles}
                   counts={{ saves: l.saves_count ?? 0, views: l.views_count ?? 0 }}
@@ -874,16 +877,16 @@ const TravelerProfile = () => {
               ))
                 )
               ) : listyTab === "ogolne" ? (
-                // "Ogólne" - lista OGÓLNA usera (wszystkie zapisane miejsca), dostępna z dropdownu list.
+                // t("tabs.general") - lista OGÓLNA usera (wszystkie zapisane miejsca), dostępna z dropdownu list.
                 <div className="pt-1"><SavedPlacesGrid /></div>
               ) : (
                 // Zapisane listy od innych - ten sam UI co wlasne listy (ProfileFeedCard) + chip "Nowe miejsce!".
                 savedListCards.length === 0 ? (
                   <div className="pt-16 pb-12 text-center px-8">
                     <span aria-hidden className="mx-auto mb-5 block h-24 w-24" style={{ backgroundColor: "#ef9d78", WebkitMaskImage: "url(/Ikona_Trasy.svg)", maskImage: "url(/Ikona_Trasy.svg)", WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat", WebkitMaskSize: "contain", maskSize: "contain", WebkitMaskPosition: "center", maskPosition: "center" }} />
-                    <p className="text-lg font-bold text-foreground">Lista zapisanych miejsc jest pusta</p>
+                    <p className="text-lg font-bold text-foreground">{t("empty.saved_lists_title")}</p>
                     <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed max-w-[300px] mx-auto">
-                      Zapisz cudzą listę <strong className="font-semibold text-foreground/80">bookmarkiem</strong>, żeby zobaczyć ją tutaj
+                      <Trans i18nKey="empty.saved_lists_desc" ns="profiles" components={{ b: <strong className="font-semibold text-foreground/80" /> }} />
                     </p>
                   </div>
                 ) : (
@@ -895,6 +898,7 @@ const TravelerProfile = () => {
             <div className="space-y-4">
               {/* Podzakładki: Robocze (niepublikowane) | Wspomnienia (opublikowane) | Zapisane (od innych). */}
               <TabSelect
+                dotLabel={t("profile.new_content_aria")}
                 value={wyjazdyTab}
                 onChange={(v) => { subChosen.current = true; setWyjazdyTab(v as "robocze" | "wspomnienia" | "zapisane"); }}
                 options={[{ id: "robocze", label: "Robocze" }, { id: "wspomnienia", label: "Wspomnienia" }, { id: "zapisane", label: "Zapisane" }]}
@@ -904,9 +908,9 @@ const TravelerProfile = () => {
                 savedTripCards.length === 0 ? (
                   <div className="pt-16 pb-12 text-center px-8">
                     <span aria-hidden className="mx-auto mb-5 block h-24 w-24" style={{ backgroundColor: "#ef9d78", WebkitMaskImage: "url(/Ikona_Zapisane.svg)", maskImage: "url(/Ikona_Zapisane.svg)", WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat", WebkitMaskSize: "contain", maskSize: "contain", WebkitMaskPosition: "center", maskPosition: "center" }} />
-                    <p className="text-lg font-bold text-foreground">Brak zapisanych wyjazdów</p>
+                    <p className="text-lg font-bold text-foreground">{t("empty.no_saved_trips")}</p>
                     <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed max-w-[300px] mx-auto">
-                      Zapisz cudzy wyjazd <strong className="font-semibold text-foreground/80">bookmarkiem</strong>, żeby zobaczyć go tutaj
+                      <Trans i18nKey="empty.saved_trips_desc" ns="profiles" components={{ b: <strong className="font-semibold text-foreground/80" /> }} />
                     </p>
                   </div>
                 ) : (
@@ -918,9 +922,9 @@ const TravelerProfile = () => {
                      tytul + dwie linie copy, BEZ guzika CTA - tworzenie jest pod "+" w dolnym pasku. */
                   <div className="pt-16 pb-12 text-center px-8">
                     <span aria-hidden className="mx-auto mb-5 block h-28 w-28" style={{ backgroundColor: "#ef9d78", WebkitMaskImage: "url(/Ikona_Trasy.svg)", maskImage: "url(/Ikona_Trasy.svg)", WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat", WebkitMaskSize: "contain", maskSize: "contain", WebkitMaskPosition: "center", maskPosition: "center" }} />
-                    <p className="text-lg font-bold text-foreground">Brak roboczych wyjazdów</p>
+                    <p className="text-lg font-bold text-foreground">{t("empty.no_drafts")}</p>
                     <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed max-w-[240px] mx-auto">
-                      {`Stwórz nowy wyjazd, żeby zobaczyć go tutaj`}
+                      {t("empty.drafts_desc")}
                     </p>
                   </div>
                 ) : (
@@ -931,9 +935,9 @@ const TravelerProfile = () => {
                   /* Ten sam uklad co "Robocze" i "Zapisane" - brandowa ikona + copy, bez CTA. */
                   <div className="pt-16 pb-12 text-center px-8">
                     <span aria-hidden className="mx-auto mb-5 block h-28 w-28" style={{ backgroundColor: "#ef9d78", WebkitMaskImage: "url(/Ikona_Trasy.svg)", maskImage: "url(/Ikona_Trasy.svg)", WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat", WebkitMaskSize: "contain", maskSize: "contain", WebkitMaskPosition: "center", maskPosition: "center" }} />
-                    <p className="text-lg font-bold text-foreground">Brak wspomnień</p>
+                    <p className="text-lg font-bold text-foreground">{t("empty.no_memories")}</p>
                     <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed max-w-[240px] mx-auto">
-                      {`Opublikuj wyjazd, żeby zobaczyć go tutaj`}
+                      {t("empty.memories_desc")}
                     </p>
                   </div>
                 ) : (
@@ -960,7 +964,7 @@ const TravelerProfile = () => {
             ) : (followList.data ?? []).length === 0 ? (
               <div className="px-1 space-y-4 pt-2">
                 <p className="text-sm text-muted-foreground text-center">
-                  {followSheet === "following" ? t("profile.no_following", "Nie obserwujesz jeszcze nikogo.") : t("profile.no_followers")}
+                  {followSheet === "following" ? t("profile.no_following", t("profile.no_following")) : t("profile.no_followers")}
                 </p>
                 <InviteFriendsBanner />
                 <button onClick={() => { setFollowSheet(null); navigate("/search"); }} className="w-full py-3 rounded-full bg-secondary text-secondary-foreground font-bold text-sm active:scale-[0.97] transition-transform">

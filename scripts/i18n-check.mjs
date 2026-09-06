@@ -19,6 +19,12 @@ const ROOT = process.cwd();
 const LOC = path.join(ROOT, "src/locales");
 const BASELINE = path.join(ROOT, "scripts/i18n-baseline.json");
 const PL_DIA = /[ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]/;
+// Duzo polskiego copy nie ma ani jednego znaku diakrytycznego ("Ten profil jest zablokowany",
+// "Brak wyjazdow", "Dodaj miejsce"). Sam ogonek nie wystarczy jako sygnal, wiec drugim testem
+// jest slownik slow, ktore po angielsku nie wystepuja. Krotkie zbieznosci (to, i, a, list)
+// celowo pominiete - falszywy alarm w bramce jest gorszy niz jeden przeoczony napis.
+const PL_WORDS = /(?:^|[^\p{L}])(?:jest|nie|sie|się|tego|tej|tym|ten|ta|twoj|twój|twoja|twoje|masz|dodaj|usun|usuń|zapisz|wybierz|brak|pokaz|pokaż|wiecej|więcej|jeszcze|tutaj|teraz|gdzie|kiedy|zeby|żeby|przez|bez|juz|już|tylko|wszystko|miejsce|miejsca|miejsc|wyjazd|wyjazdy|wyjazdu|trasa|trasy|lista|listy|zdjecie|zdjęcie|zdjecia|zdjęcia|uzytkownik|użytkownik|profil|wroc|wróć|dalej|gotowe|anuluj|zamknij|edytuj|szukaj|nowy|nowa|nowe|moje|jako|albo|oraz|czy|jak|co)(?:[^\p{L}]|$)/iu;
+const looksPolish = (s) => PL_DIA.test(s) || (s.includes(" ") && PL_WORDS.test(s));
 const PLURAL = /_(zero|one|two|few|many|other)$/;
 const errors = [];
 const warn = [];
@@ -118,7 +124,11 @@ function literals(src) {
 const baseline = fs.existsSync(BASELINE) ? new Set(JSON.parse(fs.readFileSync(BASELINE, "utf8")).files) : new Set();
 const seenBaseline = new Set();
 const JSX_TEXT = />\s*([^<>{}\n]{4,140}?)\s*</g;
-const isCopy = (s) => s.length >= 4 && s.length <= 140 && !s.includes("\n") && !s.includes("//") && PL_DIA.test(s);
+// Nazwy wlasne (miasta, dzielnice) to DANE, nie copy - zostaja jak sa w obu jezykach.
+// Klasy CSS z interpolacja tez nie sa tekstem dla uzytkownika.
+const NOT_COPY = /^(?:[a-z0-9_.-]+|[-a-z0-9_:/[\]\s${}.%,]+)$/i;
+const isCopy = (s) => s.length >= 4 && s.length <= 140 && !s.includes("\n") && !s.includes("//")
+  && !s.startsWith("/") && !NOT_COPY.test(s) && looksPolish(s);
 
 for (const file of walk(path.join(ROOT, "src"))) {
   const rel = path.relative(ROOT, file);
@@ -130,8 +140,10 @@ for (const file of walk(path.join(ROOT, "src"))) {
   for (const m of raw.matchAll(/\bt\(\s*"[^"]+"\s*,\s*\{[^{}]*defaultValue:\s*"((?:[^"\\]|\\.)+)"/g))
     if (PL_DIA.test(m[1])) errors.push(`${rel}: polski defaultValue w t(): "${m[1]}"`);
 
-  // 4. polski na sztywno
-  const src = stripComments(raw);
+  // 4. polski na sztywno. Linia z `i18n-ignore` jest pomijana - to furtka dla DANYCH
+  // (nazwy wlasne miast, dzielnic), ktore w obu jezykach brzmia tak samo. Nie uzywaj jej
+  // do copy, ktore po prostu nie zostalo jeszcze przetlumaczone - od tego jest baseline.
+  const src = stripComments(raw.split("\n").map((l) => (l.includes("i18n-ignore") ? "" : l)).join("\n"));
   const hits = new Set();
   for (const lit of literals(src)) if (isCopy(lit.trim())) hits.add(lit.trim());
   for (const m of src.matchAll(JSX_TEXT)) if (isCopy(m[1].trim())) hits.add(m[1].trim());

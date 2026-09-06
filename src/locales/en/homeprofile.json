@@ -101,5 +101,22 @@
     "places_one": "{{num}} place",
     "views_other": "{{num}} people viewed the route",
     "places_other": "{{num}} places"
-  }
+  },
+  "confirm": {
+    "leave_trip_desc": "You will stop being a participant and the trip will disappear from your profile. This cannot be undone.",
+    "delete_trip_desc": "This trip will be gone from your profile for good. This cannot be undone.",
+    "leave_trip_title": "Leave this trip?",
+    "delete_trip_title": "Delete this trip?",
+    "leave_action": "Leave",
+    "delete_action": "Delete"
+  },
+  "empty": {
+    "no_drafts_desc": "Trips you are creating and planning will show up here.",
+    "no_trips_desc": "Create a trip with the + button to see it here.",
+    "no_memories_desc": "Past trips will land here as memories.",
+    "no_drafts": "Nothing in progress",
+    "no_memories": "No memories yet",
+    "no_trips": "Your trips"
+  },
+  "today": "Today"
 }

@@ -103,5 +103,22 @@
     "places_one": "{{num}} miejsce",
     "places_few": "{{num}} miejsca",
     "places_many": "{{num}} miejsc"
-  }
+  },
+  "confirm": {
+    "leave_trip_desc": "Przestaniesz być uczestnikiem tego wyjazdu i zniknie on z Twojego profilu. Nie można tego cofnąć.",
+    "delete_trip_desc": "Jeżeli usuniesz ten wyjazd, zniknie on bezpowrotnie z Twojego profilu. Nie można tego cofnąć.",
+    "leave_trip_title": "Na pewno chcesz opuścić ten wyjazd?",
+    "delete_trip_title": "Na pewno chcesz usunąć ten wyjazd?",
+    "leave_action": "Opuść",
+    "delete_action": "Usuń"
+  },
+  "empty": {
+    "no_drafts_desc": "Trasy w toku - te które tworzysz i planujesz - pojawią się tutaj.",
+    "no_trips_desc": "Stwórz wyjazd klikając guzik „+”, aby zobaczyć je tutaj.",
+    "no_memories_desc": "Minione wyjazdy wylądują tutaj jako wspomnienia.",
+    "no_drafts": "Brak roboczych tras",
+    "no_memories": "Brak wspomnień",
+    "no_trips": "Twoje wyjazdy"
+  },
+  "today": "Dziś"
 }

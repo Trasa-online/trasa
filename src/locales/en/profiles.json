@@ -3,7 +3,10 @@
     "placeholder": "Search @username...",
     "suggested": "People you may know",
     "loading": "Loading...",
-    "no_results": "No results"
+    "no_results": "No results",
+    "pinned_placeholder": "Search trips, places, people...",
+    "by_category": "Search by category",
+    "close_aria": "Close search"
   },
   "sections": {
     "routes": "Routes",
@@ -26,7 +29,23 @@
     "trip_fallback": "Trip",
     "days_count": "{{n}} days",
     "places_count_one": "{{count}} place",
-    "places_count_other": "{{count}} places"
+    "places_count_other": "{{count}} places",
+    "blocked_desc": "You will not see this person in Explore or in search. You can undo it from the menu.",
+    "blocked_toast": "Blocked - you will not see this person's content",
+    "no_lists_desc": "This person's recommendations will show up here.",
+    "no_trips_desc": "This person's trips will show up here.",
+    "blocked_title": "This profile is blocked",
+    "removed_saved": "Removed from saved",
+    "unblock": "Unblock user",
+    "block": "Block user",
+    "list_saved": "List saved",
+    "no_trips": "No trips",
+    "report": "Report profile",
+    "no_lists": "No lists",
+    "more": "More",
+    "trip_saved": "Trip saved",
+    "no_following": "{{name}} does not follow anyone yet.",
+    "no_followers": "No one follows {{name}} yet."
   },
   "profile": {
     "header_fallback": "profile",
@@ -63,7 +82,12 @@
     "trip_deleted": "Trip deleted.",
     "delete_error": "We couldn't delete it.",
     "list_deleted": "List deleted.",
-    "share_no_username": "Add a username to share your profile."
+    "share_no_username": "Add a username to share your profile.",
+    "no_following": "You do not follow anyone yet.",
+    "removed_saved": "Removed from saved",
+    "new_content_aria": "New content",
+    "list_fallback_title": "Place list",
+    "traveler_fallback": "Traveler"
   },
   "guest": {
     "title": "Your traveler profile",
@@ -106,6 +130,25 @@
     "lists_empty_cta": "New place list",
     "trips_empty_title": "No trips yet",
     "trips_empty_desc": "Plan a route and share it with friends.",
-    "trips_empty_cta": "Plan a trip"
+    "trips_empty_cta": "Plan a trip",
+    "added_place_one": "{{author}} added a place",
+    "added_place_other": "{{author}} added {{count}} places",
+    "author_fallback": "Author"
+  },
+  "empty": {
+    "first_list_desc": "Add your first list with the + button and pick List",
+    "drafts_desc": "Create a new trip to see it here",
+    "memories_desc": "Publish a trip to see it here",
+    "saved_lists_title": "No saved lists yet",
+    "no_saved_trips": "No saved trips",
+    "no_drafts": "Nothing in progress",
+    "no_own_lists": "No lists of your own",
+    "no_memories": "No memories yet",
+    "saved_lists_desc": "Bookmark someone else's list <b>to see it here</b>",
+    "saved_trips_desc": "Bookmark someone else's trip <b>to see it here</b>"
+  },
+  "tabs": {
+    "my_lists": "My lists",
+    "general": "General"
   }
 }

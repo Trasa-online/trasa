@@ -1,10 +1,14 @@
 {
   "toast": {
     "saved": "Saved",
-    "removed_saved": "Removed from saved"
+    "removed_saved": "Removed from saved",
+    "location_failed": "We could not get your location"
   },
   "confirm": {
-    "delete_collection": "Delete this collection?"
+    "delete_collection": "Delete this collection?",
+    "unsave_desc": "It will disappear from your saved lists. You can always save it again from Explore.",
+    "unsave_title": "Remove this list from saved?",
+    "delete_action": "Delete"
   },
   "aria": {
     "already_saved": "Already saved",
@@ -16,7 +20,10 @@
     "clear": "Clear",
     "filters": "Filters",
     "close": "Close",
-    "save_collection": "Save collection"
+    "save_collection": "Save list",
+    "remove_saved": "Remove from saved",
+    "show_photo": "Show photo",
+    "show_map": "Show map"
   },
   "nearby_heading": "Nearest to you",
   "nearby_empty": "No places nearby.",
@@ -98,5 +105,14 @@
     "soon_title": "Coming soon!",
     "soon_desc": "We're working on discovering places recommended by creators. It'll arrive in one of the next updates - stay tuned! 🚀"
   },
-  "onboarding_next": "Next"
+  "onboarding_next": "Next",
+  "empty": {
+    "no_saved_routes_desc": "Bookmark a trip in Explore to see it here.",
+    "no_saved_lists_desc": "Bookmark a list while browsing to see it here.",
+    "no_saved_routes": "No saved trips",
+    "no_saved_lists": "No saved lists"
+  },
+  "filters": {
+    "show_label": "Show"
+  }
 }
