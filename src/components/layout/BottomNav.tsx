@@ -56,6 +56,13 @@ function getActiveHomeCity(): string {
   return "Warszawa";
 }
 
+// Zaznaczenie AKTYWNEJ zakladki (prosba Nat 2026-09-06): delikatny fill z przyciemnieniem
+// pod ikona + pelna czern napisu; nieaktywna wyciszona. Wczesniej obie zakladki wygladaly
+// identycznie, wiec z paska nie dalo sie odczytac, gdzie sie jest.
+const NAV_ITEM = "w-16 h-[46px] rounded-2xl flex flex-col items-center justify-center gap-1 transition-colors";
+const NAV_ITEM_IDLE = "text-foreground/40";
+const NAV_ITEM_ACTIVE = "bg-black/[0.07] text-foreground";
+
 const BottomNav = () => {
   const { t } = useTranslation("nav");
   const navigate = useNavigate();
@@ -277,8 +284,8 @@ const BottomNav = () => {
             // krecil sie po zakladkach zamiast wracac do poprzedniego ekranu (zgloszenie Nat).
             replace
               end={false}
-              className="w-16 flex flex-col items-center justify-center gap-1 text-foreground transition-colors"
-              activeClassName="text-foreground"
+              className={`${NAV_ITEM} ${NAV_ITEM_IDLE}`}
+              activeClassName={NAV_ITEM_ACTIVE}
             >
               {({ isActive }) => (
                 <>
@@ -299,8 +306,8 @@ const BottomNav = () => {
             // krecil sie po zakladkach zamiast wracac do poprzedniego ekranu (zgloszenie Nat).
             replace
               end
-              className="w-16 flex flex-col items-center justify-center gap-1 text-foreground transition-colors"
-              activeClassName="text-foreground"
+              className={`${NAV_ITEM} ${NAV_ITEM_IDLE}`}
+              activeClassName={NAV_ITEM_ACTIVE}
             >
               {({ isActive }) => (
                 <>
@@ -344,8 +351,8 @@ const BottomNav = () => {
           // krecil sie po zakladkach zamiast wracac do poprzedniego ekranu (zgloszenie Nat).
           replace
             end={false}
-            className="w-16 flex flex-col items-center justify-center gap-1 text-foreground transition-colors"
-            activeClassName="text-foreground"
+            className={`${NAV_ITEM} ${NAV_ITEM_IDLE}`}
+            activeClassName={NAV_ITEM_ACTIVE}
           >
             {({ isActive }) => (
               <>

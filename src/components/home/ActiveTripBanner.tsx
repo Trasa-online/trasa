@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useRef, useState, type TouchEvent as ReactTouchEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, X } from "lucide-react";
 import { resolveStored } from "@/components/PlacePhoto";
 import { useAuth } from "@/hooks/useAuth";
 import { haptics } from "@/hooks/useHaptics";
@@ -113,6 +113,7 @@ export default function ActiveTripBanner({ floating = false }: {
         transition: dragging ? "none" : "transform 200ms ease-out, opacity 200ms ease-out",
       } : undefined}
     >
+      <div className="relative">
       <button
         onClick={() => {
           // Po przeciagnieciu nie nawigujemy - palec chcial schowac baner, nie go otworzyc.
@@ -152,6 +153,18 @@ export default function ActiveTripBanner({ floating = false }: {
         </span>
         <ChevronRight className="h-5 w-5 text-muted-foreground shrink-0" />
       </button>
+      {/* Guzik "x" - druga droga do schowania, dla kogos kto nie zna gestu. Rodzenstwo
+          guzika karty (nie dziecko): guzik w guziku to nieprawidlowy HTML. */}
+      {floating && (
+        <button
+          onClick={dismiss}
+          aria-label={`Schowaj skrót do wyjazdu`}
+          className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-foreground/85 text-background flex items-center justify-center shadow-md active:scale-90 transition-transform"
+        >
+          <X className="h-3.5 w-3.5" strokeWidth={2.5} />
+        </button>
+      )}
+      </div>
     </div>
   );
 }
