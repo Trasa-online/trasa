@@ -1,5 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { buildB2cWelcomeHtml, buildB2cWelcomeText } from "./welcome.ts";
+import { buildB2cWelcomeHtml, buildB2cWelcomeText, type MailLang } from "./welcome.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -31,7 +31,9 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { email: rawEmail, first_name } = await req.json();
+    const { email: rawEmail, first_name, lang: rawLang } = await req.json();
+    // Jezyk maila = jezyk interfejsu (profiles.language). Nieznany -> polski, tak samo jak push.
+    const lang: MailLang = rawLang === "en" ? "en" : "pl";
     if (!rawEmail || typeof rawEmail !== "string") throw new Error("email required");
     const email = rawEmail.trim().slice(0, 254);
     if (!EMAIL_RE.test(email)) throw new Error("invalid email format");
@@ -55,8 +57,8 @@ Deno.serve(async (req) => {
 
     const safeFirstName = (first_name ?? "").toString().slice(0, 80);
     const appUrl = "https://spontaway.com/#/home";
-    const html = buildB2cWelcomeHtml({ firstName: safeFirstName, appUrl });
-    const text = buildB2cWelcomeText({ firstName: safeFirstName, appUrl });
+    const html = buildB2cWelcomeHtml({ firstName: safeFirstName, appUrl, lang });
+    const text = buildB2cWelcomeText({ firstName: safeFirstName, appUrl, lang });
 
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -67,7 +69,9 @@ Deno.serve(async (req) => {
       body: JSON.stringify({
         from: "spontaway <hello@spontaway.com>",
         to: [email],
-        subject: safeFirstName ? `Cześć, ${safeFirstName}! Witamy w spontaway` : "Witamy Cię w spontaway",
+        subject: lang === "en"
+          ? (safeFirstName ? `Hi ${safeFirstName}! Welcome to spontaway` : "Welcome to spontaway")
+          : (safeFirstName ? `Cześć, ${safeFirstName}! Witamy w spontaway` : "Witamy Cię w spontaway"),
         html,
         text,
       }),

@@ -11,6 +11,8 @@ import { useNativePush } from "@/hooks/useNativePush";
 import { useNetworkReconnect } from "@/hooks/useNetworkReconnect";
 import { useAppResume } from "@/hooks/useAppResume";
 import { useNotificationsLive } from "@/hooks/useNotificationsLive";
+import { useLanguageSync } from "@/hooks/useLanguageSync";
+import i18n from "@/i18n";
 import { useEdgeSwipeBack } from "@/hooks/useEdgeSwipeBack";
 import AuthDrawer from "@/components/auth/AuthDrawer";
 import { businessPanelPath } from "@/lib/businessRedirect";
@@ -232,7 +234,13 @@ function GlobalAuthCallback() {
             if (ageMs < 60_000 && user.email) {
               console.log("[GlobalAuthCallback] new OAuth user detected, sending welcome");
               supabase.functions.invoke("send-b2c-welcome", {
-                body: { email: user.email, first_name: profile.first_name ?? user.user_metadata?.full_name?.split(" ")[0] ?? "" },
+                body: {
+                  email: user.email,
+                  first_name: profile.first_name ?? user.user_metadata?.full_name?.split(" ")[0] ?? "",
+                  // Konto ma sekunde, wiec profiles.language jeszcze nie zdazylo sie zapisac -
+                  // bierzemy jezyk wprost z interfejsu.
+                  lang: (i18n.language || "").toLowerCase().startsWith("en") ? "en" : "pl",
+                },
               }).catch((err) => console.warn("[send-b2c-welcome] failed:", err));
             }
           }
@@ -773,6 +781,8 @@ function AuthDrawerProviderWrapper({ children }: { children: React.ReactNode }) 
   // GLOBALNE powiadomienia in-app (toast + badge) na wszystkich ekranach - dziala gdy user w apce
   // (nawet tam gdzie nie ma TopBara, np. /moj-profil, /route). Realtime na tabeli notifications.
   useNotificationsLive();
+  // Jezyk interfejsu -> profiles.language: bez tego pushe (budowane w bazie) ida po polsku.
+  useLanguageSync();
   // Native network reconnect detection - invalidateQueries gdy connection wraca.
   // No-op na webie (refetchOnReconnect: "always" w queryClient zalatwia sprawe).
   useNetworkReconnect();
