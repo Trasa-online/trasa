@@ -221,5 +221,9 @@
     "skippable": "Można pominąć",
     "nice": "Fajny dodatek"
   },
-  "just_now": "przed chwilą"
+  "just_now": "przed chwilą",
+  "note_type": {
+    "experience": "Doświadczenie",
+    "warning": "Ostrzeżenie"
+  }
 }

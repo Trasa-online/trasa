@@ -1,4 +1,5 @@
 import { ChevronDown, Check } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { UNLOCKED_CITIES } from "@/components/plan-wizard/CityPicker";
 import { cn } from "@/lib/utils";
@@ -19,6 +20,7 @@ export default function CitySelect({
   allowAll?: boolean;
   allLabel?: string;
 }) {
+  const { t } = useTranslation("explore");
   const cur = city || (allowAll ? ALL_CITIES : "Warszawa");
   const label = cur === ALL_CITIES ? allLabel : cur;
   return (
@@ -26,7 +28,7 @@ export default function CitySelect({
       <DropdownMenuTrigger asChild>
         <button
           className="shrink-0 flex items-center gap-1 px-3 h-8 rounded-full bg-card border border-border/60 active:scale-[0.97] transition-transform max-w-[180px]"
-          aria-label="Zmień miasto"
+          aria-label={t("city.change")}
         >
           <span className="text-sm font-bold text-foreground truncate">{label}</span>
           <ChevronDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" />

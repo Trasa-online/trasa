@@ -193,7 +193,7 @@ const BottomNav = () => {
                 // Tryb uproszczony: [Stworz wyjazd (solo) | Stworz zestawienie]. Grupowa trasa =
                 // wyjazd solo + zaproszenie znajomych z widoku trasy (bez osobnej sesji).
                 <>
-                  <ActionTile icon={MapPin} label="Stwórz wyjazd" onClick={handleCreateWyjazd} />
+                  <ActionTile icon={MapPin} label={t("create_trip")} onClick={handleCreateWyjazd} />
                   <ActionTile icon={Layers} label={t("create_collection")} onClick={handleCreateCollection} />
                 </>
               ) : !planStep ? (

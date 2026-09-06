@@ -190,5 +190,9 @@
     "share": "Share",
     "and_more_one": "…and 1 more place",
     "and_more_other": "…and {{count}} more places"
+  },
+  "target": {
+    "more_apps": "More apps",
+    "messages": "Messages"
   }
 }

@@ -294,7 +294,7 @@ export async function createListWithPlace(
       list_status: listStatus,
       is_public: isPublic,
       moderation_status: "approved", // bez kolejki moderacyjnej - ukrywanie reaktywne (hidden_by_admin)
-      author_name: author?.name ?? "Użytkownik",
+      author_name: author?.name ?? "Użytkownik",   // i18n-ignore: nazwa listy ogolnej w bazie + fallback autora - DANE
       author_avatar: author?.avatar ?? null,
     })
     .select("id")
@@ -323,7 +323,7 @@ export async function createListFromSavedPlaces(
       list_status: "visited",
       is_public: isPublic,
       moderation_status: "approved", // bez kolejki moderacyjnej - ukrywanie reaktywne (hidden_by_admin)
-      author_name: author?.name ?? "Użytkownik",
+      author_name: author?.name ?? "Użytkownik",   // i18n-ignore: nazwa listy ogolnej w bazie + fallback autora - DANE
       author_avatar: author?.avatar ?? null,
       cover_url: null,
       list_cover_url: null,
@@ -355,7 +355,7 @@ export async function createListFromSavedPlaces(
   // Publiczna -> powiadom admina (best-effort, nie blokuj flow). Lista jest widoczna od razu.
   if (isPublic) {
     supabase.functions.invoke("notify-admin-content", {
-      body: { type: "ranking", title: title.trim(), city: null, collection_id: listId, author: author?.name ?? "Użytkownik" },
+      body: { type: "ranking", title: title.trim(), city: null, collection_id: listId, author: author?.name ?? "Użytkownik" },   // i18n-ignore: nazwa listy ogolnej w bazie + fallback autora - DANE
     }).catch((e) => console.warn("[placeLists] notify-admin-content failed:", e));
   }
   return listId;
@@ -363,7 +363,7 @@ export async function createListFromSavedPlaces(
 
 // Lista OGÓLNA usera = JEDYNA prywatna lista (to_visit, is_public=false), JEDNA na usera
 // (decyzja 2026-08-24). Nie podlega moderacji (guard_discovery_moderation: is_public=false -> approved).
-// Każde zapisane miejsce tu trafia; widoczna jako "Ogólne" (drawer + profil, widok /zapisane).
+// Każde zapisane miejsce tu trafia; widoczna jako "Ogólne" (drawer + profil, widok /zapisane).   // i18n-ignore: nazwa listy ogolnej w bazie + fallback autora - DANE
 // GLOBALNA (city=null, bez per-miasto). Get-or-create (dawne per-miasto skonsolidowane migracją
 // 20260824b_ogolne_general_list). `city` param zachowany dla zgodności API, IGNOROWANY.
 export async function ensureToVisitList(userId: string, _city?: string | null, author?: ListAuthor): Promise<string | null> {
@@ -373,9 +373,9 @@ export async function ensureToVisitList(userId: string, _city?: string | null, a
     .order("created_at", { ascending: true }).limit(1).maybeSingle();
   if (data?.id) return data.id as string;
   const { data: col } = await (supabase as any).from("discovery_collections").insert({
-    user_id: userId, title: "Ogólne", city: null, kind: "ranking",
+    user_id: userId, title: "Ogólne", city: null, kind: "ranking",   // i18n-ignore: nazwa listy ogolnej w bazie + fallback autora - DANE
     list_status: "to_visit", is_public: false, moderation_status: "approved",
-    author_name: author?.name ?? "Użytkownik", author_avatar: author?.avatar ?? null,
+    author_name: author?.name ?? "Użytkownik", author_avatar: author?.avatar ?? null,   // i18n-ignore: nazwa listy ogolnej w bazie + fallback autora - DANE
   }).select("id").single();
   return col?.id ?? null;
 }

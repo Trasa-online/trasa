@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useRef, useState, type TouchEvent as ReactTouchEvent } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { ChevronRight, X } from "lucide-react";
 import { resolveStored } from "@/components/PlacePhoto";
@@ -43,6 +44,7 @@ export default function ActiveTripBanner({ floating = false }: {
       prawym gornym rogu karty, i nieprzezroczysty, bo lezy na zdjeciu. */
   floating?: boolean;
 } = {}) {
+  const { t } = useTranslation("hometrip");
   const { user, isAnonymous } = useAuth();
   const navigate = useNavigate();
   const { data: trip } = useTripShortcut(!isAnonymous ? user?.id : null);
@@ -98,7 +100,7 @@ export default function ActiveTripBanner({ floating = false }: {
 
   const ongoing = trip.stage === "ongoing";
   const cover = resolveStored(trip.cover);
-  const title = trip.title || (trip.city ? `Wyjazd do ${trip.city}` : "Twój wyjazd");
+  const title = trip.title || (trip.city ? `Wyjazd do ${trip.city}` : t("shortcut.fallback"));
 
   return (
     <div
@@ -158,7 +160,7 @@ export default function ActiveTripBanner({ floating = false }: {
       {floating && (
         <button
           onClick={dismiss}
-          aria-label={`Schowaj skrót do wyjazdu`}
+          aria-label={t("shortcut.hide")}
           className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-foreground/85 text-background flex items-center justify-center shadow-md active:scale-90 transition-transform"
         >
           <X className="h-3.5 w-3.5" strokeWidth={2.5} />

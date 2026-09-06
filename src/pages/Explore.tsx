@@ -879,7 +879,7 @@ const Explore = () => {
             foldersVisible ? "max-h-[160px] opacity-100" : "max-h-0 opacity-0 border-b-0",
           )}
         >
-          <p className="px-4 pt-3 text-sm font-bold text-foreground">{`Szukaj według kategorii`}</p>
+          <p className="px-4 pt-3 text-sm font-bold text-foreground">{t("search.by_category")}</p>
           <SearchCategoryRow value={searchCat} onChange={setSearchCat} />
           <div className="h-3" />
         </div>

@@ -1,4 +1,5 @@
 import { ArrowLeft } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 
 // Naglowek widokow tworzenia. Piguly hubu Twórz|Robocze|Zapisane USUNIETE (2026-08-22, IA):
@@ -11,10 +12,11 @@ export default function CreateHeader({ mode, onMode, onBack, showMode = true }: 
   onBack: () => void;
   showMode?: boolean;
 }) {
+  const { t } = useTranslation("create-route");
   return (
     <div className="px-4 pt-safe-4 pb-3 border-b border-border/20 shrink-0 space-y-2.5">
       <div className="flex items-center gap-2">
-        <button onClick={onBack} aria-label="Wróć" className="h-9 w-9 flex items-center justify-center -ml-1 shrink-0 text-foreground active:scale-90 transition-transform">
+        <button onClick={onBack} aria-label={t("back")} className="h-9 w-9 flex items-center justify-center -ml-1 shrink-0 text-foreground active:scale-90 transition-transform">
           <ArrowLeft className="h-5 w-5" />
         </button>
       </div>

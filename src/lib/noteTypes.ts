@@ -1,4 +1,6 @@
 import { Sparkles, Heart, Lightbulb, AlertTriangle, LucideIcon } from "lucide-react";
+// zwykly modul bez Reacta, wiec siegamy po i18n bezposrednio.
+import i18n from "@/i18n";
 
 export const NOTE_TYPES = {
   fact: {
@@ -14,7 +16,7 @@ export const NOTE_TYPES = {
     activeBorder: 'border-amber-400 dark:border-amber-600',
   },
   experience: {
-    label: 'Doświadczenie',
+    label: i18n.t("note_type.experience", { ns: "review" }),
     icon: Heart,
     bgColor: 'bg-rose-50 dark:bg-rose-950/30',
     borderColor: 'border-rose-200 dark:border-rose-800',
@@ -38,7 +40,7 @@ export const NOTE_TYPES = {
     activeBorder: 'border-blue-400 dark:border-blue-600',
   },
   warning: {
-    label: 'Ostrzeżenie',
+    label: i18n.t("note_type.warning", { ns: "review" }),
     icon: AlertTriangle,
     bgColor: 'bg-orange-50 dark:bg-orange-950/30',
     borderColor: 'border-orange-200 dark:border-orange-800',

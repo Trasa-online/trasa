@@ -134,7 +134,7 @@ const RouteSummaryDialog = ({
 
         const routePayload = {
           title: days.length > 1
-            ? `${plan.city} - Dzień ${day.day_number}`
+            ? t("day_label", { city: plan.city, day: day.day_number })
             : `${plan.city}`,
           city: plan.city,
           status: "draft",

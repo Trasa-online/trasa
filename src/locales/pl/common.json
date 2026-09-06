@@ -43,5 +43,24 @@
     "wrong": "Nieprawidłowe hasło",
     "password": "Hasło dostępu",
     "enter": "Wejdź"
-  }
+  },
+  "error": {
+    "desc": "Aplikacja napotkała błąd. Spróbuj wrócić do strony głównej.",
+    "title": "Coś poszło nie tak",
+    "back_home": "Wróć do głównej"
+  },
+  "cookies": {
+    "essential": "Tylko niezbędne",
+    "accept": "Akceptuję",
+    "more": "Więcej"
+  },
+  "moderation": {
+    "rejected": "To zdjęcie nie przeszło moderacji i nie zostało dodane"
+  },
+  "heic": {
+    "failed": "Nie udało się przetworzyć zdjęcia HEIC. Spróbuj wgrać JPG lub PNG."
+  },
+  "loading": "Ładowanie",
+  "clear": "Wyczyść",
+  "offline": "Jesteś offline"
 }

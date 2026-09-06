@@ -1,4 +1,6 @@
 import { Component, type ReactNode } from "react";
+// komponent KLASOWY - hooki tam nie dzialaja, wiec siegamy po i18n bezposrednio.
+import i18n from "@/i18n";
 
 interface Props {
   children: ReactNode;
@@ -41,10 +43,8 @@ export class ErrorBoundary extends Component<Props, State> {
     if (!this.state.hasError) return this.props.children;
     return (
       <div style={{ padding: 24, fontFamily: "-apple-system, sans-serif", background: "#FEFEFE", minHeight: "100dvh" }}>
-        <h1 style={{ fontSize: 20, fontWeight: 900, color: "#0E0E0E", marginBottom: 12 }}>Coś poszło nie tak</h1>
-        <p style={{ fontSize: 13, color: "#979797", marginBottom: 20 }}>
-          Aplikacja napotkała błąd. Spróbuj wrócić do strony głównej.
-        </p>
+        <h1 style={{ fontSize: 20, fontWeight: 900, color: "#0E0E0E", marginBottom: 12 }}>{i18n.t("error.title", { ns: "common" })}</h1>
+        <p style={{ fontSize: 13, color: "#979797", marginBottom: 20 }}>{i18n.t("error.desc", { ns: "common" })}</p>
         <pre style={{ fontSize: 11, background: "#fef2f2", color: "#991b1b", padding: 12, borderRadius: 8, overflow: "auto", maxHeight: 200, marginBottom: 16 }}>
           {this.state.error?.message ?? String(this.state.error)}
         </pre>
@@ -56,9 +56,7 @@ export class ErrorBoundary extends Component<Props, State> {
         <button
           onClick={() => { window.location.hash = "#/home"; window.location.reload(); }}
           style={{ width: "100%", padding: "12px 14px", borderRadius: 14, border: "none", background: "linear-gradient(90deg,#F4A259,#F9662B)", color: "#fff", fontWeight: 700, fontSize: 14 }}
-        >
-          Wróć do głównej
-        </button>
+        >{i18n.t("error.back_home", { ns: "common" })}</button>
       </div>
     );
   }

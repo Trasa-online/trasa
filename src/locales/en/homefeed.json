@@ -110,7 +110,8 @@
     "no_saved_routes_desc": "Bookmark a trip in Explore to see it here.",
     "no_saved_lists_desc": "Bookmark a list while browsing to see it here.",
     "no_saved_routes": "No saved trips",
-    "no_saved_lists": "No saved lists"
+    "no_saved_lists": "No saved lists",
+    "saved_any": "Bookmark a list or a trip while browsing to see it here."
   },
   "filters": {
     "show_label": "Show"

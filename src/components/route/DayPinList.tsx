@@ -53,9 +53,9 @@ const categoryLabels: Record<string, string> = {
   park: "Park",
   viewpoint: "Widok",
   shopping: "Zakupy",
-  nightlife: "Nocne życie",
+  nightlife: "Nocne życie",   // i18n-ignore: etykiety kategorii z bazy (tlumaczy je ns categories)
   monument: "Zabytek",
-  church: "Kościół",
+  church: "Kościół",   // i18n-ignore: etykiety kategorii z bazy (tlumaczy je ns categories)
   market: "Targ",
   bar: "Bar",
   gallery: "Galeria",

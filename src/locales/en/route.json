@@ -132,5 +132,11 @@
     "saved_in_list": "Place saved in a list",
     "open_in_maps": "Open in Google Maps",
     "remove": "Remove the place from the trip"
-  }
+  },
+  "note": {
+    "placeholder": "Add a note about this place...",
+    "edit": "Edit note",
+    "add": "Add note"
+  },
+  "day_label": "{{city}} - Day {{day}}"
 }

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { avatarSrc } from "@/lib/avatar";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -10,6 +11,7 @@ import NotificationsDrawer from "./NotificationsDrawer";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const TopBar = (_props: { onOrbClick?: () => void }) => {
+  const { t } = useTranslation("nav");
   const navigate = useNavigate();
   const { user } = useAuth();
   const [notifOpen, setNotifOpen] = useState(false);
@@ -100,7 +102,7 @@ const TopBar = (_props: { onOrbClick?: () => void }) => {
         <button
           onClick={() => navigate("/moj-profil")}
           className="flex items-center justify-center"
-          aria-label="Mój profil"
+          aria-label={t("my_profile")}
         >
           <Avatar className="h-8 w-8">
             <AvatarImage src={avatarSrc(profile?.avatar_url)} className="object-cover bg-orange-100" />

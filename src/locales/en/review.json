@@ -221,5 +221,9 @@
     "skippable": "Can be skipped",
     "nice": "Nice addition"
   },
-  "just_now": "just now"
+  "just_now": "just now",
+  "note_type": {
+    "experience": "Experience",
+    "warning": "Warning"
+  }
 }

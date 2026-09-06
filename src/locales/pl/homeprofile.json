@@ -130,7 +130,8 @@
     "delete_failed": "Nie udało się usunąć",
     "delete_place": "Usuń miejsce",
     "removed": "Usunięto „{{name}}”",
-    "already": "„{{name}}” już jest zapisane"
+    "already": "„{{name}}” już jest zapisane",
+    "removed_toast": "Usunięto z zapisanych"
   },
   "add_saved": {
     "goes_to_general": "Trafi do Twojej listy Ogólne.",

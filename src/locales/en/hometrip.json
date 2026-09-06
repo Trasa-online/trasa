@@ -53,7 +53,9 @@
     "photos_label": "Place photos",
     "others_notes": "Notes from others",
     "add_photo": "Add",
-    "open_place": "View place"
+    "open_place": "View place",
+    "photo_failed": "We could not add the photo",
+    "delete_photo": "Delete photo"
   },
   "status": {
     "day_finished_label": "Day finished",
@@ -133,5 +135,9 @@
   },
   "places_other": "places",
   "people_other": "people",
-  "points_other": "points"
+  "points_other": "points",
+  "shortcut": {
+    "hide": "Hide the trip shortcut",
+    "fallback": "Your trip"
+  }
 }

@@ -56,5 +56,14 @@
   "create": "Create",
   "skip": "Skip",
   "list_name_city": "Places in {{city}}",
-  "trip_name_city": "Trip to {{city}}"
+  "trip_name_city": "Trip to {{city}}",
+  "cover": {
+    "empty": "Add places to the list or upload your own photo to set a cover.",
+    "reset": "Back to the default cover",
+    "new_photo": "New photo"
+  },
+  "back": "Back",
+  "drum": {
+    "no_results": "No results - try a different name."
+  }
 }

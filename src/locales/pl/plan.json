@@ -225,5 +225,10 @@
     "clear": "Wyczyść zaznaczenie",
     "prev": "Poprzedni miesiąc",
     "next": "Następny miesiąc"
-  }
+  },
+  "template": {
+    "failed": "Nie udało się utworzyć trasy. Spróbuj ponownie.",
+    "from_scratch": "Zaplanuj trasę od zera"
+  },
+  "create_trip": "Stwórz wyjazd"
 }

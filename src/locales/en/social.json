@@ -159,5 +159,10 @@
     "accept_title": "You have a new friend 🎉",
     "accept_body": "{{name}} accepted your request",
     "link_body": "{{name}} joined you through a link"
-  }
+  },
+  "people": {
+    "desc": "Add people to build trips together.",
+    "user_fallback": "User"
+  },
+  "someone": "Someone"
 }

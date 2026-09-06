@@ -1,4 +1,5 @@
 import type { RefObject } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { Layers, Compass, SlidersHorizontal, ChevronLeft } from "lucide-react";
 import RegionSelect from "@/components/home/RegionSelect";
@@ -60,6 +61,7 @@ export default function ExploreTopBar({
   // do swipera z belki, feed Tras zostaje jedynym widokiem.
   hideModeToggle?: boolean;
 }) {
+  const { t } = useTranslation("explore");
   const navigate = useNavigate();
   const cur = city || "all";
   const showRegion = !!onCityChange;
@@ -131,7 +133,7 @@ export default function ExploreTopBar({
           value={searchValue ?? ""}
           onChange={onSearchChange}
           onFocus={onOpenSearch}
-          placeholder={searchOpen ? "Szukaj tras, miejsc, osób..." : "Szukaj"}
+          placeholder={searchOpen ? t("search.placeholder_all") : "Szukaj"}
           aria-label="Szukaj"
         />
       ) : (

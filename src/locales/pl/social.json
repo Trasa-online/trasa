@@ -162,5 +162,10 @@
     "accept_title": "Masz nowego znajomego 🎉",
     "accept_body": "{{name}} przyjął(a) Twoje zaproszenie",
     "link_body": "{{name}} dołączył(a) do Ciebie przez link"
-  }
+  },
+  "people": {
+    "desc": "Dodaj osoby, żeby tworzyć wyjazdy razem z nimi.",
+    "user_fallback": "Użytkownik"
+  },
+  "someone": "Ktoś"
 }

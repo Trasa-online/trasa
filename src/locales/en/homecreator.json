@@ -83,5 +83,6 @@
       "desc": "From your picks spontaway builds a day plan in the right order and shows it on the map. You can refine the plan and save it to your memories.",
       "highlight": "You navigate point to point via Google Maps."
     }
-  }
+  },
+  "save_error": "Could not save"
 }

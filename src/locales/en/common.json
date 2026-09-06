@@ -43,5 +43,24 @@
     "wrong": "Wrong password",
     "password": "Access password",
     "enter": "Enter"
-  }
+  },
+  "error": {
+    "desc": "The app hit an error. Try going back to the home screen.",
+    "title": "Something went wrong",
+    "back_home": "Back to home"
+  },
+  "cookies": {
+    "essential": "Essential only",
+    "accept": "Accept",
+    "more": "More"
+  },
+  "moderation": {
+    "rejected": "That photo did not pass moderation and was not added"
+  },
+  "heic": {
+    "failed": "We could not process that HEIC photo. Try a JPG or PNG."
+  },
+  "loading": "Loading",
+  "clear": "Clear",
+  "offline": "You are offline"
 }

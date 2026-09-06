@@ -128,7 +128,8 @@
     "delete_failed": "We could not delete it",
     "delete_place": "Delete place",
     "removed": "Removed “{{name}}”",
-    "already": "“{{name}}” is already saved"
+    "already": "“{{name}}” is already saved",
+    "removed_toast": "Removed from saved"
   },
   "add_saved": {
     "goes_to_general": "It goes to your General list.",

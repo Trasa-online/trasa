@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { Check } from "lucide-react";
 import { useFriends } from "@/hooks/useFriends";
 import { useFollowList } from "@/hooks/useFollow";
@@ -12,6 +13,7 @@ export interface PersonLite { id: string; username: string | null; first_name: s
 export default function AddPeoplePicker({
   userId, selected, onToggle,
 }: { userId: string; selected: Set<string>; onToggle: (person: PersonLite) => void }) {
+  const { t } = useTranslation("social");
   const { data: friends = [], isLoading: lf } = useFriends(userId);
   const { data: following = [], isLoading: lg } = useFollowList(userId, "following");
 
@@ -30,7 +32,7 @@ export default function AddPeoplePicker({
     return (
       <div className="py-10 px-6 text-center">
         <p className="text-sm font-semibold text-foreground">Nie masz jeszcze znajomych</p>
-        <p className="mt-1 text-sm text-muted-foreground">{`Dodaj osoby, żeby tworzyć wyjazdy razem z nimi.`}</p>
+        <p className="mt-1 text-sm text-muted-foreground">{t("people.desc")}</p>
       </div>
     );
   }
@@ -38,7 +40,7 @@ export default function AddPeoplePicker({
   return (
     <div className="flex flex-col">
       {people.map((p) => {
-        const name = p.username || p.first_name || "Użytkownik";
+        const name = p.username || p.first_name || t("people.user_fallback");
         const on = selected.has(p.id);
         return (
           <button key={p.id} onClick={() => onToggle(p)}

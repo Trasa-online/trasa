@@ -135,5 +135,11 @@
     "saved_in_list": "Miejsce zapisane w liście",
     "open_in_maps": "Otwórz w Google Maps",
     "remove": "Usuń miejsce z trasy"
-  }
+  },
+  "note": {
+    "placeholder": "Dodaj notkę o tym miejscu...",
+    "edit": "Edytuj notkę",
+    "add": "Dodaj notkę"
+  },
+  "day_label": "{{city}} - Dzień {{day}}"
 }

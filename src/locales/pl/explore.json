@@ -65,5 +65,16 @@
     "visited": "Odwiedzone miejsca",
     "to_visit": "Do odwiedzenia miejsca",
     "recommend": "Odwiedzone"
+  },
+  "country": {
+    "change": "Zmień kraj",
+    "soon": "wkrótce"
+  },
+  "search": {
+    "placeholder_all": "Szukaj tras, miejsc, osób...",
+    "by_category": "Szukaj według kategorii"
+  },
+  "city": {
+    "change": "Zmień miasto"
   }
 }

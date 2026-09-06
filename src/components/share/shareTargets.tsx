@@ -1,4 +1,6 @@
 import { Link2, MessageCircle, MoreHorizontal } from "lucide-react";
+// zwykly modul bez Reacta, wiec siegamy po i18n bezposrednio.
+import i18n from "@/i18n";
 import { isNative } from "@/lib/platform";
 
 // KANALY UDOSTEPNIANIA - dolny rzad arkusza (wzor: Pinterest, prosba Nat 2026-09-01).
@@ -52,7 +54,7 @@ export function buildShareTargets({ url, title, onSystemShare, onCopied }: {
   const enc = encodeURIComponent(text);
   return [
     {
-      key: "sms", label: "Wiadomości", tone: "bg-[#34C759] text-white",
+      key: "sms", label: i18n.t("target.messages", { ns: "sharing" }), tone: "bg-[#34C759] text-white",
       node: <MessageCircle className="h-6 w-6" strokeWidth={2.2} />,
       // iOS: `sms:&body=` (pusty numer + tresc) otwiera Wiadomosci z gotowym tekstem.
       onPress: () => openScheme(`sms:&body=${enc}`),
@@ -73,7 +75,7 @@ export function buildShareTargets({ url, title, onSystemShare, onCopied }: {
       onPress: () => { void navigator.clipboard?.writeText(url).then(onCopied).catch(() => onSystemShare()); },
     },
     {
-      key: "more", label: "Więcej aplikacji", tone: "bg-secondary text-foreground",
+      key: "more", label: i18n.t("target.more_apps", { ns: "sharing" }), tone: "bg-secondary text-foreground",
       node: <MoreHorizontal className="h-6 w-6" strokeWidth={2.2} />,
       onPress: onSystemShare,
     },

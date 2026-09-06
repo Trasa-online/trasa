@@ -196,5 +196,9 @@
     "and_more_few": "…i {{count}} miejsca więcej",
     "and_more_many": "…i {{count}} miejsc więcej",
     "and_more_one": "…i jeszcze jedno miejsce"
+  },
+  "target": {
+    "more_apps": "Więcej aplikacji",
+    "messages": "Wiadomości"
   }
 }

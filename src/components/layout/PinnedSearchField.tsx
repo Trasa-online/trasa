@@ -1,4 +1,5 @@
 import { forwardRef } from "react";
+import { useTranslation } from "react-i18next";
 import { Search, X } from "lucide-react";
 
 // Przypięte pole wyszukiwania w górnej belce (2026-09-06, po testach z userami).
@@ -27,6 +28,7 @@ const PinnedSearchField = forwardRef<HTMLInputElement, Props>(function PinnedSea
   { value = "", onChange, onFocus, placeholder = "Szukaj", autoFocus, readOnly, onClick, ...rest },
   ref,
 ) {
+  const { t } = useTranslation("common");
   const shell =
     "flex-1 min-w-0 flex items-center gap-2 px-3 h-9 rounded-full bg-muted/70 border border-border/50 transition-colors";
 
@@ -65,7 +67,7 @@ const PinnedSearchField = forwardRef<HTMLInputElement, Props>(function PinnedSea
         <button
           type="button"
           onClick={() => onChange?.("")}
-          aria-label="Wyczyść"
+          aria-label={t("clear")}
           className="shrink-0 h-6 w-6 flex items-center justify-center rounded-full text-muted-foreground active:bg-muted active:scale-90 transition"
         >
           <X className="h-4 w-4" />

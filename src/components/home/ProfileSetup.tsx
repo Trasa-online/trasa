@@ -135,7 +135,7 @@ const ProfileSetup = ({ onDone }: ProfileSetupProps) => {
       .update({ home_country: homeCountry || null, home_city: homeCity || null }).eq("id", user.id);
     setSavingOrigin(false);
     // Best-effort: gdyby kolumny jeszcze nie bylo (przed migracja), nie blokuj usera.
-    if (error) console.warn("[ProfileSetup] zapis 'skąd jesteś' nieudany (uruchom migracje?):", error.message);
+    if (error) console.warn("[ProfileSetup] zapis 'skąd jesteś' nieudany (uruchom migracje?):", error.message);   // i18n-ignore: log deweloperski
     goNext();
   };
 

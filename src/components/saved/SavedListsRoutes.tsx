@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { SavedRoutes, SavedCollections } from "@/components/home/DiscoveryFeed";
@@ -7,6 +8,7 @@ import { SavedRoutes, SavedCollections } from "@/components/home/DiscoveryFeed";
 // JEDEN wspólny pusty stan (zamiast osobnych dla tras i list). Wyszukiwarka (w SavedCollections)
 // pokazuje się tylko gdy są załadowane zapisane listy.
 export function SavedListsRoutes({ city }: { city?: string }) {
+  const { t } = useTranslation("homefeed");
   const { user } = useAuth();
 
   const { data: routeCount = 0 } = useQuery({
@@ -42,7 +44,7 @@ export function SavedListsRoutes({ city }: { city?: string }) {
         <span aria-hidden className="mx-auto mb-4 h-20 w-20" style={{ display: "block", backgroundColor: "#ef9d78", WebkitMaskImage: "url(/Ikona_Zapisane.svg)", maskImage: "url(/Ikona_Zapisane.svg)", WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat", WebkitMaskSize: "contain", maskSize: "contain", WebkitMaskPosition: "center", maskPosition: "center" }} />
         <p className="text-base font-bold">Brak zapisanych list i tras</p>
         <p className="text-sm text-muted-foreground mt-1 leading-relaxed max-w-[280px] mx-auto">
-          {`Zapisz listę lub trasę bookmarkiem podczas przeglądania, żeby pojawiły się tutaj.`}
+          {t("empty.saved_any")}
         </p>
       </div>
     );

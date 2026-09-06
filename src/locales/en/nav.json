@@ -20,5 +20,7 @@
   "cancel": "Cancel",
   "join_submit": "Join",
   "fab_aria": "Add route",
-  "reuse_place_other": "liked places"
+  "reuse_place_other": "liked places",
+  "my_profile": "My profile",
+  "create_trip": "Create a trip"
 }

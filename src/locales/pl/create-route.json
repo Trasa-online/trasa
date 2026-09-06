@@ -56,5 +56,14 @@
   "create": "Utwórz",
   "skip": "Pomiń",
   "list_name_city": "Lista miejsc {{city}}",
-  "trip_name_city": "Wyjazd do {{city}}"
+  "trip_name_city": "Wyjazd do {{city}}",
+  "cover": {
+    "empty": "Dodaj miejsca do listy albo wgraj własne zdjęcie, żeby ustawić okładkę.",
+    "reset": "Wróć do domyślnej okładki",
+    "new_photo": "Nowe zdjęcie"
+  },
+  "back": "Wróć",
+  "drum": {
+    "no_results": "Brak wyników - spróbuj inną nazwę."
+  }
 }

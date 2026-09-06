@@ -1,4 +1,5 @@
 import { useRef, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { ChevronDown, Search, MapPin, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -54,9 +55,9 @@ function Drum({ items, index, setIndex, compact = false }: { items: string[]; in
   );
 }
 
-// Domyslne miasto na srodku drumu: "Gdańsk" (aktualny focus contentu) -> pierwsze miasto.
+// Domyslne miasto na srodku drumu: "Gdańsk" (aktualny focus contentu) -> pierwsze miasto.   // i18n-ignore: nazwa wlasna miasta
 export function defaultCityIndex(cities: string[]): number {
-  const g = cities.indexOf("Gdańsk");
+  const g = cities.indexOf("Gdańsk");   // i18n-ignore: nazwa wlasna miasta
   return g >= 0 ? g : 0;
 }
 
@@ -75,6 +76,7 @@ const isKnownCity = (city: string) => TRIP_COUNTRIES.some((c) => c.cities.includ
 // Dwa tryby: "Z listy" (kraj + drum) oraz "Inne miasto" (wyszukiwarka Google - dowolne miasto,
 // zeby userzy z malych miejscowosci NIE odbijali sie od apki).
 export default function CityCountryPicker({ city, onCityChange, compact = false }: Props) {
+  const { t } = useTranslation("create-route");
   const country = countryForCity(city);
   const cities = citiesForCountry(country);
   const cyi = Math.max(0, cities.indexOf(city));
@@ -160,7 +162,7 @@ export default function CityCountryPicker({ city, onCityChange, compact = false 
               <p className="flex items-center gap-2 px-1 py-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Szukam...</p>
             )}
             {!searching && query.trim().length >= 2 && results.length === 0 && (
-              <p className="px-1 py-2 text-sm text-muted-foreground">Brak wyników - spróbuj inną nazwę.</p>
+              <p className="px-1 py-2 text-sm text-muted-foreground">{t("drum.no_results")}</p>
             )}
             {results.map((r) => {
               const selected = r.name === city;

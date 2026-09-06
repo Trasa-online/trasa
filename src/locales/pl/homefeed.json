@@ -112,7 +112,8 @@
     "no_saved_routes_desc": "Zapisz trasę bookmarkiem w zakładce Eksploruj, żeby zobaczyć je tutaj.",
     "no_saved_lists_desc": "Zapisz listę zakładką podczas przeglądania, żeby pojawiła się tutaj.",
     "no_saved_routes": "Brak zapisanych tras",
-    "no_saved_lists": "Brak zapisanych list"
+    "no_saved_lists": "Brak zapisanych list",
+    "saved_any": "Zapisz listę lub trasę bookmarkiem podczas przeglądania, żeby pojawiły się tutaj."
   },
   "filters": {
     "show_label": "Pokaż"

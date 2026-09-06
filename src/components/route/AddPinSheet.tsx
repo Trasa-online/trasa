@@ -51,7 +51,7 @@ const CATEGORY_LABELS: Record<string, string> = {
   park: "Park", bar: "Bar", club: "Klub", monument: "Zabytek",
   gallery: "Galeria", market: "Targ", viewpoint: "Widok",
   shopping: "Zakupy", experience: "Rozrywka", walk: "Spacer",
-  nightlife: "Nocne życie", church: "Kościół",
+  nightlife: "Nocne życie", church: "Kościół",   // i18n-ignore: etykiety kategorii z bazy (tlumaczy je ns categories)
 };
 
 const MANUAL_CATEGORIES = [

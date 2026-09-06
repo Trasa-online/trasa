@@ -1,4 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
+// zwykly modul bez Reacta, wiec siegamy po i18n bezposrednio.
+import i18n from "@/i18n";
 
 // SafeSearch dla zdjec od uzytkownikow (App Store 1.2 - filtrowanie tresci nieodpowiednich).
 // Wolane PO wgraniu pliku: gdy Vision odrzuci zdjecie, kasujemy je z galerii i ze Storage.
@@ -37,4 +39,4 @@ export async function isImageAllowed(url: string, context?: ModerationContext): 
   return (await moderateImageUrl(url, context)) !== "rejected";
 }
 
-export const MODERATION_REJECTED_MESSAGE = "To zdjęcie nie przeszło moderacji i nie zostało dodane";
+export const MODERATION_REJECTED_MESSAGE = i18n.t("moderation.rejected", { ns: "common" });

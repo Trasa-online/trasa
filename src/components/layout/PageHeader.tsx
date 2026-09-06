@@ -1,4 +1,5 @@
 import { ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { goBackOr } from "@/hooks/useGoBack";
 import { ArrowLeft } from "lucide-react";
@@ -20,6 +21,7 @@ export const PageHeader = ({
   onBackClick,
   backFallback = "/eksploruj",
 }: PageHeaderProps) => {
+  const { t } = useTranslation("common");
   const navigate = useNavigate();
 
   const handleBack = () => {
@@ -37,7 +39,7 @@ export const PageHeader = ({
               size="icon"
               onClick={handleBack}
               className="h-9 w-9"
-              aria-label="Wróć"
+              aria-label={t("back")}
             >
               <ArrowLeft className="h-5 w-5" />
             </Button>

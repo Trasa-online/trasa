@@ -1,8 +1,10 @@
 import { useOfflineStatus } from "@/hooks/useOfflineStatus";
+import { useTranslation } from "react-i18next";
 
 // Globalny wskaznik trybu offline - plywajaca pigulka nad BottomNavem, widoczna na wszystkich
 // zakladkach (montowana w AppLayout). Ikona: public/Ikona_Offline.svg. Znika gdy wraca siec.
 export default function OfflineBanner() {
+  const { t } = useTranslation("common");
   const offline = useOfflineStatus();
   if (!offline) return null;
   return (
@@ -13,7 +15,7 @@ export default function OfflineBanner() {
       aria-live="polite"
     >
       <img src="/Ikona_Offline.svg" alt="" className="h-4 w-4 shrink-0" draggable={false} />
-      <span className="text-xs font-bold text-orange-900">Jesteś offline</span>
+      <span className="text-xs font-bold text-orange-900">{t("offline")}</span>
     </div>
   );
 }

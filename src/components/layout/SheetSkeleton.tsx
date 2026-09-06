@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 // Szkielet ladowania W ARKUSZU / SZUFLADZIE - odpowiednik ScreenSkeleton dla tresci, ktora
 // laduje sie w bottom sheecie (zapraszanie znajomych, propozycje, powiadomienia, tworzenie).
 //
@@ -40,10 +41,11 @@ export default function SheetSkeleton({ variant = "people", rows = 4, className 
   rows?: number;
   className?: string;
 }) {
+  const { t } = useTranslation("common");
   const round = variant !== "places";
   const action = variant === "people";
   return (
-    <div className={`animate-pulse ${className ?? ""}`} aria-busy="true" aria-label="Ładowanie">
+    <div className={`animate-pulse ${className ?? ""}`} aria-busy="true" aria-label={t("loading")}>
       {Array.from({ length: rows }, (_, i) => (
         <Row key={i} round={round} action={action} />
       ))}

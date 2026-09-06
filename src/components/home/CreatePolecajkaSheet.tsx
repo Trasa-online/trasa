@@ -79,7 +79,7 @@ export default function CreatePolecajkaSheet({ open, onClose, onPublished, city,
         })
         .select("id")
         .single();
-      if (colErr || !col) throw colErr ?? new Error("Błąd zapisu");
+      if (colErr || !col) throw colErr ?? new Error(t("save_error"));
 
       const items = selectedPins.map((pin, idx) => ({
         collection_id: col.id,

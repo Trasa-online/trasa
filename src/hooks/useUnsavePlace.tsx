@@ -1,4 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { fetchUserLists, addPlaceToList, removePlaceFromList, listHasPlace, type PlaceForList } from "@/lib/placeLists";
@@ -9,6 +10,7 @@ import { categoryIconSrc } from "@/lib/placeCategoryIcon";
 // usera zawierajacych to miejsce. ZAWSZE toast: miniaturka + pelna nazwa + "Cofnij" (re-dodaj).
 // Wspoldzielone przez eksploracje, wizytowke i widoki trasy/listy.
 export function useUnsavePlace() {
+  const { t } = useTranslation("homeprofile");
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
@@ -34,7 +36,7 @@ export function useUnsavePlace() {
     invalidate();
     toast.success(place.place_name, {
       icon: thumb(place),
-      description: "Usunięto z zapisanych",
+      description: t("saved.removed_toast"),
       action: {
         label: "Cofnij",
         onClick: async () => {

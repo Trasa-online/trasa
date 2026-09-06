@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -113,6 +114,7 @@ interface TemplateSelectionProps {
 }
 
 const TemplateSelection = ({ city, date }: TemplateSelectionProps) => {
+  const { t } = useTranslation("plan");
   const { user } = useAuth();
   const navigate = useNavigate();
   const [templates, setTemplates] = useState<RouteTemplate[]>([]);
@@ -173,7 +175,7 @@ const TemplateSelection = ({ city, date }: TemplateSelectionProps) => {
       });
     } catch (err) {
       console.error("Fork error:", err);
-      toast.error("Nie udało się utworzyć trasy. Spróbuj ponownie.");
+      toast.error(t("template.failed"));
       setForking(false);
     }
   };
@@ -281,9 +283,7 @@ const TemplateSelection = ({ city, date }: TemplateSelectionProps) => {
         <button
           onClick={() => navigate("/create", { state: { city, date: date.toISOString() } })}
           className="w-full flex items-center justify-center gap-1 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-        >
-          Zaplanuj trasę od zera
-          <ArrowRight className="h-3.5 w-3.5" />
+        >{t("template.from_scratch")}<ArrowRight className="h-3.5 w-3.5" />
         </button>
       </div>
     </div>

@@ -223,5 +223,10 @@
     "clear": "Clear selection",
     "prev": "Previous month",
     "next": "Next month"
-  }
+  },
+  "template": {
+    "failed": "We could not create the trip. Try again.",
+    "from_scratch": "Plan a trip from scratch"
+  },
+  "create_trip": "Create a trip"
 }

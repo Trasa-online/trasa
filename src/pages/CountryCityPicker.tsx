@@ -59,10 +59,10 @@ export default function CountryCityPicker() {
   const initCity = (location.state as any)?.city as string | undefined;
   const [country, setCountry] = useState<string>(() => countryForCity(initCity));
   const cities = citiesForCountry(country);
-  // Domyslne miasto na srodku drumu: wybrane (initCity) -> "Gdańsk" (aktualny focus contentu) ->
-  // pierwsze. Dla innych krajow "Gdańsk" nie istnieje -> pierwsze miasto.
+  // Domyslne miasto na srodku drumu: wybrane (initCity) -> "Gdańsk" (aktualny focus contentu) ->   // i18n-ignore: nazwa wlasna miasta
+  // pierwsze. Dla innych krajow "Gdańsk" nie istnieje -> pierwsze miasto.   // i18n-ignore: nazwa wlasna miasta
   const defaultCityIndex = (cs: string[]) => {
-    const g = cs.indexOf("Gdańsk");
+    const g = cs.indexOf("Gdańsk");   // i18n-ignore: nazwa wlasna miasta
     return g >= 0 ? g : 0;
   };
   const [cyi, setCyi] = useState(() => (initCity ? Math.max(0, cities.indexOf(initCity)) : defaultCityIndex(cities)));

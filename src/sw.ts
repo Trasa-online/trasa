@@ -41,7 +41,7 @@ self.addEventListener("push", (event: PushEvent) => {
     // ignore parse errors
   }
 
-  const title = data.title ?? "📍 TRASA";
+  const title = data.title ?? "📍 TRASA";   // i18n-ignore: tresc powiadomienia w service workerze (poza drzewem apki, brak i18n)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const options: any = {
     body: data.body ?? "",
@@ -49,7 +49,7 @@ self.addEventListener("push", (event: PushEvent) => {
     badge: "/icon-192.png",
     vibrate: [100, 50, 100],
     data: { url: data.url ?? "/" },
-    actions: [{ action: "open", title: "Otwórz" }],
+    actions: [{ action: "open", title: "Otwórz" }],   // i18n-ignore: tresc powiadomienia w service workerze (poza drzewem apki, brak i18n)
   };
 
   event.waitUntil(self.registration.showNotification(title, options));

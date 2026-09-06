@@ -112,7 +112,7 @@ export async function createWyjazdFromPlaces(
   // zly rekord niz stworzyc pusta trase.
   places = places.filter((p) => p.place_name && String(p.place_name).trim());
   if (!places.length) {
-    console.error("[createWyjazd] brak poprawnych miejsc (place_name) - nie tworze pustej trasy");
+    console.error("[createWyjazd] brak poprawnych miejsc (place_name) - nie tworze pustej trasy");   // i18n-ignore: log deweloperski
     return null;
   }
   // list_cover_url = miniatura w eksploracji. Feed (DiscoveryFeed) wymaga
@@ -199,7 +199,7 @@ export async function updateWyjazdPlaces(
   // NIE kasuj wszystkich pinow do zera (delete+reinsert ponizej) - to prowadzilo do pustej
   // trasy. Aktualizuj tylko meta i zwroc bez ruszania pinow.
   if (!places.length) {
-    console.warn("[updateWyjazd] pusta lista miejsc - pomijam podmiane pinow (ochrona przed pusta trasa)");
+    console.warn("[updateWyjazd] pusta lista miejsc - pomijam podmiane pinow (ochrona przed pusta trasa)");   // i18n-ignore: log deweloperski
     await (supabase as any).from("routes").update({
       title: title || city || "Wyjazd",
       city: city || null,

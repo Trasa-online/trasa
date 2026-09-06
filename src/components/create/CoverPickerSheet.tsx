@@ -1,4 +1,5 @@
 import { X, Plus, Check, Loader2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { useDragToDismiss } from "@/hooks/useDragToDismiss";
 
 export type CoverOption = { id: string; name: string; url: string };
@@ -21,6 +22,7 @@ export default function CoverPickerSheet({
   onReset?: () => void;
   resetLabel?: string;
 }) {
+  const { t } = useTranslation("create-route");
   // Gest natywny: przeciagniecie panelu w dol zamyka arkusz.
   const { dragProps } = useDragToDismiss({ onDismiss: onClose });
   if (!open) return null;
@@ -42,7 +44,7 @@ export default function CoverPickerSheet({
               className="relative aspect-square rounded-2xl border-2 border-dashed border-border/70 flex flex-col items-center justify-center gap-1.5 text-muted-foreground active:scale-95 transition-transform disabled:opacity-50"
             >
               {uploading ? <Loader2 className="h-6 w-6 animate-spin" /> : <Plus className="h-6 w-6" />}
-              <span className="text-[11px] font-semibold leading-tight text-center px-1">Nowe zdjęcie</span>
+              <span className="text-[11px] font-semibold leading-tight text-center px-1">{t("cover.new_photo")}</span>
             </button>
             {options.map((opt) => {
               const isCurrent = currentUrl === opt.url;
@@ -67,13 +69,11 @@ export default function CoverPickerSheet({
           {onReset && (
             <button onClick={onReset}
               className="w-full mt-3 py-2.5 rounded-2xl bg-secondary text-secondary-foreground text-sm font-bold active:scale-[0.98] transition-transform">
-              {resetLabel ?? "Wróć do domyślnej okładki"}
+              {resetLabel ?? t("cover.reset")}
             </button>
           )}
           {options.length === 0 && (
-            <p className="text-xs text-muted-foreground text-center px-4 pt-2 pb-3 leading-relaxed">
-              Dodaj miejsca do listy albo wgraj własne zdjęcie, żeby ustawić okładkę.
-            </p>
+            <p className="text-xs text-muted-foreground text-center px-4 pt-2 pb-3 leading-relaxed">{t("cover.empty")}</p>
           )}
         </div>
       </div>

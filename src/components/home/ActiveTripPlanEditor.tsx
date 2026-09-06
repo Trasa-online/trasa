@@ -284,7 +284,7 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false, onDelete, deleting 
       if (urls.length) {
         const cur = Array.isArray(pin.images) ? pin.images : [];
         const { error: updErr } = await (supabase as any).from("pins").update({ images: [...cur, ...urls] }).eq("id", pin.id);
-        if (updErr) notify.error("Nie udało się dodać zdjęcia");
+        if (updErr) notify.error(t("editor.photo_failed"));
         else queryClient.invalidateQueries({ queryKey: ["active-plan-all-pins", idsKey] });
       }
     } finally { setUploadingPin(null); }
@@ -650,7 +650,7 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false, onDelete, deleting 
               <div key={url} className="relative h-20 w-20 shrink-0 rounded-xl overflow-hidden bg-muted">
                 {/* Kafelek 80 px -> miniatura zamiast oryginalu (2026-09-06). */}
                 <StoredImage url={url} size={80} className="w-full h-full object-cover" />
-                <button onClick={() => removePlacePhoto(pin, url)} aria-label="Usuń zdjęcie" className="absolute top-1 right-1 h-5 w-5 rounded-full bg-black/55 text-white flex items-center justify-center active:scale-90"><X className="h-3 w-3" /></button>
+                <button onClick={() => removePlacePhoto(pin, url)} aria-label={t("editor.delete_photo")} className="absolute top-1 right-1 h-5 w-5 rounded-full bg-black/55 text-white flex items-center justify-center active:scale-90"><X className="h-3 w-3" /></button>
               </div>
             ))}
             <label className={`h-20 w-20 shrink-0 rounded-xl border-2 border-dashed border-border/50 flex flex-col items-center justify-center gap-1 text-muted-foreground cursor-pointer active:scale-95 transition-transform ${busy ? "opacity-60 pointer-events-none" : ""}`}>

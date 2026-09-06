@@ -58,7 +58,9 @@
     "photos_label": "Zdjęcia miejsca",
     "others_notes": "Notki uczestników",
     "add_photo": "Dodaj",
-    "open_place": "Zobacz miejsce"
+    "open_place": "Zobacz miejsce",
+    "photo_failed": "Nie udało się dodać zdjęcia",
+    "delete_photo": "Usuń zdjęcie"
   },
   "status": {
     "day_finished_label": "Dzień zakończony",
@@ -136,5 +138,9 @@
     "empty": "Brak miejsc - dodaj pierwsze!",
     "tell_about_day": "Opowiedz o dniu"
   },
-  "points_few": "punkty"
+  "points_few": "punkty",
+  "shortcut": {
+    "hide": "Schowaj skrót do wyjazdu",
+    "fallback": "Twój wyjazd"
+  }
 }

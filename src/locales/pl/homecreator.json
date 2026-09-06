@@ -86,5 +86,6 @@
       "desc": "Z dopasowań spontaway układa plan dnia w dobrej kolejności i pokazuje go na mapie. Plan dopracujesz i zapiszesz we wspomnieniach.",
       "highlight": "Nawigujesz od punktu do punktu przez Google Maps."
     }
-  }
+  },
+  "save_error": "Błąd zapisu"
 }

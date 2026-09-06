@@ -69,7 +69,7 @@ const CATEGORY_ICON_MAP: Record<string, string> = {
   // Polskie ETYKIETY kategorii (uzywane m.in. w GroupSession, danych z labelami PL).
   kawiarnia: "/Ikona__Kawiarnia.svg",
   restauracja: "/Ikona__Restauracja-18.svg",
-  "śniadania": "/Ikona__Kawiarnia.svg",
+  "śniadania": "/Ikona__Kawiarnia.svg",   // i18n-ignore: klucz dopasowania kategorii, nie copy
   muzeum: "/Ikona__Landmark.svg",
   zabytek: "/Ikona__Landmark.svg",
   galeria: "/Ikona__Sztuka.svg",

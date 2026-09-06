@@ -63,5 +63,16 @@
     "visited": "Visited places",
     "to_visit": "Places to visit",
     "recommend": "Visited"
+  },
+  "country": {
+    "change": "Change country",
+    "soon": "soon"
+  },
+  "search": {
+    "placeholder_all": "Search trips, places, people...",
+    "by_category": "Search by category"
+  },
+  "city": {
+    "change": "Change city"
   }
 }

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Plus, Pencil } from "lucide-react";
 import { avatarSrc } from "@/lib/avatar";
 
@@ -16,7 +17,7 @@ export default function PlaceNoteEditor({
   showAvatar = false,
   avatarUrl,
   photoSlot,
-  placeholder = "Dodaj notkę o tym miejscu...",
+  placeholder,
   onEditingChange,
 }: {
   note: string;
@@ -29,6 +30,9 @@ export default function PlaceNoteEditor({
   /** Informuje rodzica, ze user WLASNIE pisze notke - ekran chowa wtedy czat i dolne CTA. */
   onEditingChange?: (editing: boolean) => void;
 }) {
+  const { t } = useTranslation("route");
+  // Domyslka nie moze stac w liscie parametrow - hook nie istnieje jeszcze w tym miejscu.
+  const placeholderText = placeholder ?? t("note.placeholder");
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(note ?? "");
   const [savedFlash, setSavedFlash] = useState(false);
@@ -66,7 +70,7 @@ export default function PlaceNoteEditor({
             <textarea
               value={draft}
               onChange={(e) => scheduleSave(e.target.value)}
-              placeholder={placeholder}
+              placeholder={placeholderText}
               rows={2}
               autoFocus
               className="w-full bg-muted/50 rounded-xl px-3 py-2.5 text-sm text-foreground resize-none focus:outline-none border border-border/30 placeholder:text-muted-foreground/55"
@@ -106,7 +110,7 @@ export default function PlaceNoteEditor({
             className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-3 py-1.5 text-xs font-bold text-foreground active:scale-95 transition-transform"
           >
             {noteText ? <Pencil className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
-            {noteText ? "Edytuj notkę" : "Dodaj notkę"}
+            {noteText ? t("note.edit") : t("note.add")}
           </button>
           {photoSlot}
         </div>
