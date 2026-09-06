@@ -37,5 +37,11 @@
     "what_interests": "What are you after?"
   },
   "back_arrow": "← Back",
-  "back": "Back"
+  "back": "Back",
+  "maintenance": {
+    "desc": "We are building something good. Check back soon.",
+    "wrong": "Wrong password",
+    "password": "Access password",
+    "enter": "Enter"
+  }
 }

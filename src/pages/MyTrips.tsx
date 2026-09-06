@@ -116,14 +116,14 @@ const MyTrips = () => {
       (old ?? []).filter(r => !trip.routes.some((tr: any) => tr.id === r.id))
     );
     let undone = false;
-    toast.success(`Usunięto trasę „${trip.city}"`, {
+    toast.success(t("trips.deleted", { city: trip.city }), {
       duration: 5000,
       action: {
         label: "Cofnij",
         onClick: () => {
           undone = true;
           queryClient.setQueryData(["active-routes", user?.id], previousRoutes);
-          toast.success("Trasa przywrócona");
+          toast.success(t("trips.restored"));
         },
       },
     });
@@ -158,9 +158,7 @@ const MyTrips = () => {
         <div className="px-5 pt-2 pb-0 max-w-lg mx-auto">
           <div className="flex items-center justify-between pt-3 pb-2">
             <h1 className="text-xl font-black tracking-tight">Moje trasy</h1>
-            <button onClick={() => navigate("/plan")} className="text-sm font-semibold text-orange-600">
-              + Dodaj trasę
-            </button>
+            <button onClick={() => navigate("/plan")} className="text-sm font-semibold text-orange-600">{t("trips.add_plus")}</button>
           </div>
 
           {/* Tabs */}
@@ -264,7 +262,7 @@ const MyTrips = () => {
               ) : (
                 <div className="flex flex-col items-center py-8 text-center">
                   <p className="text-muted-foreground text-sm">{t("empty_active")}</p>
-                  <button onClick={() => navigate("/plan")} className="mt-3 px-5 py-2.5 rounded-full bg-primary text-white text-sm font-semibold active:scale-95 transition-transform">Dodaj trasę</button>
+                  <button onClick={() => navigate("/plan")} className="mt-3 px-5 py-2.5 rounded-full bg-primary text-white text-sm font-semibold active:scale-95 transition-transform">{t("trips.add")}</button>
                 </div>
               )}
             </section>

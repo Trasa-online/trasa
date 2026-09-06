@@ -98,7 +98,7 @@ const CATEGORY_LABELS: Record<PlaceCategory, string> = {
   museum:     "Muzeum",
   monument:   "Zabytek",
   gallery:    "Galeria",
-  experience: "Doświadczenie",
+  experience: "Doświadczenie",   // i18n-ignore: etykieta kategorii z bazy (categories ns tlumaczy osobno)
   market:     "Targ",
   shopping:   "Sklep",
   park:       "Park",
@@ -917,8 +917,8 @@ function haversineKm(a: { lat: number; lng: number }, b: { lat: number; lng: num
 // Slowa kluczowe dla filtrow diety - sprawdzane w vibe_tags (places) i business_profiles.tags.
 // Case-insensitive substring match - lapie '"wegańska kuchnia"', '"vegan"', '"weganskie dania"' itp.
 const DIET_KEYWORDS: Record<string, string[]> = {
-  vegan: ["vegan", "wegan", "wegań", "wegańsk", "weganski", "weganskie"],
-  vegetarian: ["vegetarian", "wegetar", "weget", "jarski", "jarskie", "jarska", "wegetarianskie", "wegetariańsk"],
+  vegan: ["vegan", "wegan", "wegań", "wegańsk", "weganski", "weganskie"],   // i18n-ignore: slowa kluczowe dopasowania, nie copy
+  vegetarian: ["vegetarian", "wegetar", "weget", "jarski", "jarskie", "jarska", "wegetarianskie", "wegetariańsk"],   // i18n-ignore: slowa kluczowe dopasowania
   gluten_free: ["gluten free", "gluten-free", "bez glutenu", "bezglutenowe", "glutenfree", "gluten_free"],
   lactose_free: ["lactose free", "lactose-free", "bez laktozy", "bezlaktozowe", "laktozy", "lactose_free"],
 };

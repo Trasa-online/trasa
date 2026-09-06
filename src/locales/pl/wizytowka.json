@@ -67,5 +67,11 @@
   "title": "Coś nie tak z tym miejscem?",
   "submit": "Wyślij zgłoszenie",
   "report_problem": "Zgłoś problem",
-  "report": "Zgłoś"
+  "report": "Zgłoś",
+  "photo": {
+    "login_like": "Zaloguj się, aby polubić zdjęcie",
+    "login_add": "Zaloguj się, aby dodać zdjęcie",
+    "add_failed": "Nie udało się dodać zdjęcia",
+    "added": "Dodano Twoje zdjęcie"
+  }
 }

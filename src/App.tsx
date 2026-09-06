@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, lazy as reactLazy, Suspense } from "react";
+import { useTranslation } from "react-i18next";
 import SpontawayLanding from "./pages/SpontawayLanding";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -28,6 +29,7 @@ import { toast } from "sonner";
 const MAINTENANCE_MODE = false;
 
 function MaintenanceScreen({ onUnlock }: { onUnlock: () => void }) {
+  const { t } = useTranslation("common");
   const [pwd, setPwd] = useState("");
   const [err, setErr] = useState(false);
   const submit = () => {
@@ -38,23 +40,21 @@ function MaintenanceScreen({ onUnlock }: { onUnlock: () => void }) {
     <div style={{ minHeight: "100dvh", background: "#FEFEFE", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 20, fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", padding: 24 }}>
       <div style={{ width: 64, height: 64, borderRadius: "50%", background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
       <h1 style={{ fontSize: "2rem", fontWeight: 900, color: "#0E0E0E", letterSpacing: "-0.02em", margin: 0 }}>trasa</h1>
-      <p style={{ fontSize: "1rem", color: "#979797", textAlign: "center", maxWidth: "28ch", lineHeight: 1.5, margin: 0 }}>Pracujemy nad czymś fajnym. Wróć wkrótce.</p>
+      <p style={{ fontSize: "1rem", color: "#979797", textAlign: "center", maxWidth: "28ch", lineHeight: 1.5, margin: 0 }}>{t("maintenance.desc")}</p>
       <div style={{ display: "flex", flexDirection: "column", gap: 8, width: "100%", maxWidth: 280, marginTop: 8 }}>
         <input
           type="password"
           value={pwd}
           onChange={e => { setPwd(e.target.value); setErr(false); }}
           onKeyDown={e => e.key === "Enter" && submit()}
-          placeholder="Hasło dostępu"
+          placeholder={t("maintenance.password")}
           style={{ width: "100%", padding: "12px 14px", borderRadius: 14, border: "1px solid #e2e8f0", background: "#fff", fontSize: 16, outline: "none", textAlign: "center" }}
         />
-        {err && <p style={{ fontSize: 12, color: "#ef4444", textAlign: "center", margin: 0 }}>Nieprawidłowe hasło</p>}
+        {err && <p style={{ fontSize: 12, color: "#ef4444", textAlign: "center", margin: 0 }}>{t("maintenance.wrong")}</p>}
         <button
           onClick={submit}
           style={{ width: "100%", padding: "12px 14px", borderRadius: 14, border: "none", background: "linear-gradient(90deg,#F4A259,#F9662B)", color: "#fff", fontWeight: 700, fontSize: 16, cursor: "pointer" }}
-        >
-          Wejdź
-        </button>
+        >{t("maintenance.enter")}</button>
       </div>
     </div>
   );

@@ -188,5 +188,13 @@
   "delete": "Usuń",
   "deleting": "Usuwanie…",
   "trip_fallback": "Wyjazd",
-  "close": "Zamknij"
+  "close": "Zamknij",
+  "share": {
+    "save_in_app": "zapisz tę listę w spontaway",
+    "open_fullscreen": "Otwórz na pełnym ekranie",
+    "share": "Udostępnij",
+    "and_more_few": "…i {{count}} miejsca więcej",
+    "and_more_many": "…i {{count}} miejsc więcej",
+    "and_more_one": "…i jeszcze jedno miejsce"
+  }
 }

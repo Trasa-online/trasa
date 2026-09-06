@@ -332,7 +332,7 @@ const PlaceSwiperDetail = ({
 
   // #6: przelacz lajk zdjecia (optymistycznie + persist). Wymaga logowania.
   const handleToggleLike = (ref: string) => {
-    if (!user) { toast("Zaloguj się, aby polubić zdjęcie"); return; }
+    if (!user) { toast(t("photo.login_like")); return; }
     const cur = photoLikes.get(ref) ?? { count: 0, liked: false };
     const nextLiked = !cur.liked;
     setPhotoLikes((prev) => {
@@ -350,7 +350,7 @@ const PlaceSwiperDetail = ({
 
   // #3e: dodaj wlasne zdjecie do miejsca - wybor pliku -> upload -> odswiez galerie.
   const handleAddPhoto = () => {
-    if (!user) { toast("Zaloguj się, aby dodać zdjęcie"); return; }
+    if (!user) { toast(t("photo.login_add")); return; }
     fileInputRef.current?.click();
   };
   const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
@@ -364,12 +364,12 @@ const PlaceSwiperDetail = ({
       row = await uploadPlacePhoto(file, { userId: user.id, placeKey, placeName: ep.place_name, city: ep.city ?? city ?? null });
     } catch (e: any) {
       setAddingPhoto(false);
-      toast.error(e?.message === "MODERATION_REJECTED" ? MODERATION_REJECTED_MESSAGE : "Nie udało się dodać zdjęcia");
+      toast.error(e?.message === "MODERATION_REJECTED" ? MODERATION_REJECTED_MESSAGE : t("photo.add_failed"));
       return;
     }
     setAddingPhoto(false);
-    if (row) { setUserPlacePhotos((prev) => [row.photo_url, ...prev]); onPhotoAdded?.(row.photo_url, placeKey); toast.success("Dodano Twoje zdjęcie"); }
-    else toast.error("Nie udało się dodać zdjęcia");
+    if (row) { setUserPlacePhotos((prev) => [row.photo_url, ...prev]); onPhotoAdded?.(row.photo_url, placeKey); toast.success(t("photo.added")); }
+    else toast.error(t("photo.add_failed"));
   };
 
   // Maps button - renderowany w header slot PremiumBusinessCard (Maps button obok nazwy)

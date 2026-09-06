@@ -65,5 +65,11 @@
   "title": "Something wrong with this place?",
   "submit": "Send report",
   "report_problem": "Report a problem",
-  "report": "Report"
+  "report": "Report",
+  "photo": {
+    "login_like": "Sign in to like a photo",
+    "login_add": "Sign in to add a photo",
+    "add_failed": "We could not add the photo",
+    "added": "Your photo was added"
+  }
 }

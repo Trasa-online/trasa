@@ -183,5 +183,12 @@
   "delete": "Delete",
   "deleting": "Deleting…",
   "trip_fallback": "Trip",
-  "close": "Close"
+  "close": "Close",
+  "share": {
+    "save_in_app": "save this list in spontaway",
+    "open_fullscreen": "Open full screen",
+    "share": "Share",
+    "and_more_one": "…and 1 more place",
+    "and_more_other": "…and {{count}} more places"
+  }
 }

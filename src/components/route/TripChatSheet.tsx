@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Send, X } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
@@ -110,8 +111,9 @@ export default function TripChatSheet({ open, onOpenChange, routeId, tripTitle, 
         {/* Lista wiadomosci */}
         <div ref={listRef} className="flex-1 min-h-0 overflow-y-auto px-4 py-3 space-y-2.5">
           {messages.length === 0 ? (
-            <p className="text-center text-sm text-muted-foreground py-10">{`Brak wiadomości. Napisz pierwszą, żeby omówić miejsca z uczestnikami.`}</p>
+            <p className="text-center text-sm text-muted-foreground py-10">{t("chat.empty")}</p>
           ) : messages.map((m) => {
+  const { t } = useTranslation("route");
             const mine = m.user_id === user?.id;
             return (
               <div key={m.id} className={`flex items-end gap-2 ${mine ? "flex-row-reverse" : ""}`}>
@@ -136,10 +138,10 @@ export default function TripChatSheet({ open, onOpenChange, routeId, tripTitle, 
             value={text}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void send(); } }}
-            placeholder="Napisz wiadomość..."
+            placeholder={t("chat.placeholder")}
             className="flex-1 min-w-0 bg-secondary rounded-2xl px-4 h-11 text-[15px] text-foreground placeholder:text-muted-foreground outline-none"
           />
-          <button onClick={send} disabled={!text.trim() || sending} aria-label="Wyślij"
+          <button onClick={send} disabled={!text.trim() || sending} aria-label={t("chat.send")}
             className={`h-11 w-11 rounded-2xl flex items-center justify-center shrink-0 transition-transform ${text.trim() && !sending ? "bg-primary text-white active:scale-90" : "bg-secondary text-muted-foreground"}`}>
             <Send className="h-5 w-5" />
           </button>
@@ -148,3 +150,5 @@ export default function TripChatSheet({ open, onOpenChange, routeId, tripTitle, 
     </Sheet>
   );
 }
+
+  const { t } = useTranslation("route");

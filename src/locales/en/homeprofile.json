@@ -138,5 +138,23 @@
     "already": "“{{name}}” is already on the list",
     "add_term": "Add “{{term}}”",
     "custom_in": "Your own entry in {{city}}"
+  },
+  "stats": {
+    "desc": "See how other people use the trips you created.",
+    "total_all": "across all your trips",
+    "views": "Views",
+    "back": "Back"
+  },
+  "grid": {
+    "removed": "Removed from saved",
+    "other_user": "another user",
+    "remove": "Remove from saved",
+    "clear": "Clear"
+  },
+  "card": {
+    "show_trip_map": "Show the trip map",
+    "remove_saved": "Remove from saved",
+    "close_map": "Close map",
+    "delete": "Delete"
   }
 }

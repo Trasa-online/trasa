@@ -125,5 +125,15 @@
     "places_count_one": "{{count}} miejsce",
     "places_count_few": "{{count}} miejsca",
     "places_count_many": "{{count}} miejsc"
+  },
+  "chat": {
+    "empty": "Brak wiadomości. Napisz pierwszą, żeby omówić miejsca z uczestnikami.",
+    "placeholder": "Napisz wiadomość...",
+    "send": "Wyślij"
+  },
+  "row": {
+    "saved_in_list": "Miejsce zapisane w liście",
+    "open_in_maps": "Otwórz w Google Maps",
+    "remove": "Usuń miejsce z trasy"
   }
 }

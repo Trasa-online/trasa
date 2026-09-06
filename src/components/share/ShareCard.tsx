@@ -1,4 +1,5 @@
 import { useLayoutEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Maximize2, X } from "lucide-react";
 import { toast } from "sonner";
 import { PlaceTile } from "@/components/profile/PlaceTile";
@@ -66,6 +67,7 @@ function ShareSheet({ children, onClose, onShare, shareUrl, shareTitle }: {
   shareUrl?: string;
   shareTitle: string;
 }) {
+  const { t } = useTranslation("sharing");
   const slotRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(0);
   const [full, setFull] = useState(false);
@@ -112,12 +114,12 @@ function ShareSheet({ children, onClose, onShare, shareUrl, shareTitle }: {
           className="h-9 w-9 rounded-full flex items-center justify-center active:scale-90 transition-transform">
           <X className="h-5 w-5 text-foreground" />
         </button>
-        <p className="flex-1 text-center text-[15px] font-bold text-foreground pr-9">Udostępnij</p>
+        <p className="flex-1 text-center text-[15px] font-bold text-foreground pr-9">{t("share.share")}</p>
       </div>
 
       <div ref={slotRef} className="flex-1 min-h-0 flex items-center justify-center px-8 py-2">
         {scale > 0 && (
-          <button onClick={() => setFull(true)} aria-label="Otwórz na pełnym ekranie"
+          <button onClick={() => setFull(true)} aria-label={t("share.open_fullscreen")}
             className="relative rounded-3xl overflow-hidden shadow-xl ring-1 ring-black/5 active:scale-[0.98] transition-transform"
             style={{ width: window.innerWidth * scale, height: window.innerHeight * scale }}>
             <div className="pointer-events-none origin-top-left"
@@ -153,6 +155,7 @@ export function ShareCardList({ title, city, items, author, avatar, onClose, onS
   onShare?: () => void;
   shareUrl?: string;
 }) {
+  const { t } = useTranslation("sharing");
   const shown = items.slice(0, 5);
   const rest = Math.max(0, items.length - shown.length);
   const word = items.length === 1 ? "miejsce" : items.length < 5 ? "miejsca" : "miejsc";
@@ -185,7 +188,7 @@ export function ShareCardList({ title, city, items, author, avatar, onClose, onS
                 </div>
               )}
             </div>
-            <Footer avatars={[avatar ?? null]} label={author} sub="zapisz tę listę w spontaway" tone="light" />
+            <Footer avatars={[avatar ?? null]} label={author} sub={t("share.save_in_app")} tone="light" />
           </div>
     </ShareSheet>
   );
@@ -204,6 +207,7 @@ export function ShareCardTrip({ title, city, dateLabel, pins, author, avatars, c
   onShare?: () => void;
   shareUrl?: string;
 }) {
+  const { t } = useTranslation("sharing");
   const stops = pins.slice(0, 4);
   const rest = Math.max(0, pins.length - stops.length);
   const word = pins.length === 1 ? "miejsce" : pins.length < 5 ? "miejsca" : "miejsc";
@@ -245,7 +249,7 @@ export function ShareCardTrip({ title, city, dateLabel, pins, author, avatars, c
                   <p className="text-[16px] font-semibold text-foreground truncate">{p.place_name}</p>
                 </div>
               ))}
-              {rest > 0 && <p className="text-[13px] text-muted-foreground pl-[42px]">{`…i ${rest} ${rest < 5 ? "miejsca" : "miejsc"} więcej`}</p>}
+              {rest > 0 && <p className="text-[13px] text-muted-foreground pl-[42px]">{t("share.and_more", { count: rest })}</p>}
             </div>
             <Footer avatars={avatars.length ? avatars : [null]} label={author} tone="peach" />
           </div>

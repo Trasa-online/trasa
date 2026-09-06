@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
 import { format, differenceInCalendarDays, addDays, addMonths, subMonths } from "date-fns";
@@ -25,6 +26,7 @@ interface FullCalendarPickerProps {
 const DEFAULT_MAX_DAYS = 3;
 
 const FullCalendarPicker = ({ onConfirm, allowPast = false, onClear, maxDays = DEFAULT_MAX_DAYS, onRangeChange }: FullCalendarPickerProps) => {
+  const { t } = useTranslation("plan");
   const [range, setRange] = useState<DateRange | undefined>();
   const [month, setMonth] = useState(new Date());
   const [showYearPicker, setShowYearPicker] = useState(false);
@@ -84,7 +86,7 @@ const FullCalendarPicker = ({ onConfirm, allowPast = false, onClear, maxDays = D
         <button
           onClick={() => { if (canGoPrev) setMonth(subMonths(month, 1)); }}
           disabled={!canGoPrev}
-          aria-label="Poprzedni miesiąc"
+          aria-label={t("calendar.prev")}
           className="h-9 w-9 flex items-center justify-center rounded-full text-foreground disabled:opacity-20 active:scale-90 transition-transform"
         >
           <ChevronLeft className="h-5 w-5" />
@@ -98,7 +100,7 @@ const FullCalendarPicker = ({ onConfirm, allowPast = false, onClear, maxDays = D
         </button>
         <button
           onClick={() => setMonth(addMonths(month, 1))}
-          aria-label="Następny miesiąc"
+          aria-label={t("calendar.next")}
           className="h-9 w-9 flex items-center justify-center rounded-full text-foreground active:scale-90 transition-transform"
         >
           <ChevronRight className="h-5 w-5" />
@@ -174,9 +176,7 @@ const FullCalendarPicker = ({ onConfirm, allowPast = false, onClear, maxDays = D
                 <p className="text-base font-semibold text-foreground">
                   {format(startDate, "d MMMM yyyy", { locale: dateLocale() })}
                 </p>
-                <p className="text-sm text-muted-foreground mt-0.5">
-                  Kliknij drugi dzień, żeby wybrać zakres
-                </p>
+                <p className="text-sm text-muted-foreground mt-0.5">{t("calendar.hint_range")}</p>
               </>
             )}
           </div>
@@ -201,7 +201,7 @@ const FullCalendarPicker = ({ onConfirm, allowPast = false, onClear, maxDays = D
             onClick={() => { if (range?.from) setRange(undefined); else onClear?.(); }}
             className="w-full mt-2 py-2.5 text-sm font-semibold text-muted-foreground active:text-foreground transition-colors"
           >
-            {range?.from ? "Wyczyść zaznaczenie" : "Bez dat"}
+            {range?.from ? t("calendar.clear") : "Bez dat"}
           </button>
         )}
       </div>

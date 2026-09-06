@@ -70,5 +70,11 @@
     "local_vibes": "Vibes",
     "photography": "Photo"
   },
-  "days_until_other": "In {{count}} days"
+  "days_until_other": "In {{count}} days",
+  "trips": {
+    "restored": "Trip restored",
+    "add_plus": "+ Add trip",
+    "add": "Add trip",
+    "deleted": "Trip “{{city}}” deleted"
+  }
 }

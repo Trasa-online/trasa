@@ -71,5 +71,11 @@
     "local_vibes": "Klimaty",
     "photography": "Foto"
   },
-  "days_until_few": "Za {{count}} dni"
+  "days_until_few": "Za {{count}} dni",
+  "trips": {
+    "restored": "Trasa przywrócona",
+    "add_plus": "+ Dodaj trasę",
+    "add": "Dodaj trasę",
+    "deleted": "Usunięto trasę „{{city}}”"
+  }
 }

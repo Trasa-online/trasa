@@ -217,5 +217,11 @@
     "outside_pick": "That place is outside {{city}}. Pick something within the city.",
     "outside_mark": "That place is outside {{city}}. Mark a point within the city.",
     "you_outside": "You are outside {{city}}. Pick a starting point within the city."
+  },
+  "calendar": {
+    "hint_range": "Tap a second day to pick a range",
+    "clear": "Clear selection",
+    "prev": "Previous month",
+    "next": "Next month"
   }
 }

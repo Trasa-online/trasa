@@ -122,5 +122,15 @@
     "open_in_maps": "Open {{place}} in Google Maps",
     "places_count_one": "{{count}} place",
     "places_count_other": "{{count}} places"
+  },
+  "chat": {
+    "empty": "No messages yet. Write the first one to discuss places with the others.",
+    "placeholder": "Write a message...",
+    "send": "Send"
+  },
+  "row": {
+    "saved_in_list": "Place saved in a list",
+    "open_in_maps": "Open in Google Maps",
+    "remove": "Remove the place from the trip"
   }
 }

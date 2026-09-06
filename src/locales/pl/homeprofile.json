@@ -140,5 +140,23 @@
     "already": "„{{name}}” już jest na liście",
     "add_term": "Dodaj „{{term}}”",
     "custom_in": "Własny wpis w {{city}}"
+  },
+  "stats": {
+    "desc": "Zobacz, jak inni korzystają z tras, które stworzyłaś.",
+    "total_all": "łącznie wszystkich tras",
+    "views": "Wyświetlenia",
+    "back": "Wróć"
+  },
+  "grid": {
+    "removed": "Usunięto z zapisanych",
+    "other_user": "innego użytkownika",
+    "remove": "Usuń z zapisanych",
+    "clear": "Wyczyść"
+  },
+  "card": {
+    "show_trip_map": "Pokaż mapę wyjazdu",
+    "remove_saved": "Usuń z zapisanych",
+    "close_map": "Zamknij mapę",
+    "delete": "Usuń"
   }
 }

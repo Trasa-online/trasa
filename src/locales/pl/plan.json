@@ -219,5 +219,11 @@
     "outside_pick": "To miejsce jest poza {{city}}. Wybierz coś w obrębie miasta.",
     "outside_mark": "To miejsce jest poza {{city}}. Zaznacz punkt w obrębie miasta.",
     "you_outside": "Jesteś poza {{city}}. Wskaż punkt startu w obrębie miasta."
+  },
+  "calendar": {
+    "hint_range": "Kliknij drugi dzień, żeby wybrać zakres",
+    "clear": "Wyczyść zaznaczenie",
+    "prev": "Poprzedni miesiąc",
+    "next": "Następny miesiąc"
   }
 }

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Bookmark, Heart, Pencil, Trash2, Lock, CircleDashed, Maximize2, X } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { avatarSrc } from "@/lib/avatar";
@@ -152,7 +153,7 @@ export function ProfileFeedCard({
       {mapUrl && (
         <button
           onClick={() => setMapOpen(true)}
-          aria-label="Pokaż mapę wyjazdu"
+          aria-label={t("card.show_trip_map")}
           className="relative mt-3 w-full aspect-[16/9] rounded-2xl overflow-hidden bg-muted active:opacity-95 transition-opacity"
         >
           <img src={mapUrl} alt="Mapa wyjazdu" className="h-full w-full object-cover" loading="lazy" />
@@ -175,7 +176,7 @@ export function ProfileFeedCard({
         ) : (
           <>
             {onSave ? (
-              <button onClick={onSave} aria-label={saved ? "Usuń z zapisanych" : "Zapisz"} className="flex items-center gap-1.5 text-sm tabular-nums active:scale-90 transition-transform">
+              <button onClick={onSave} aria-label={saved ? t("card.remove_saved") : "Zapisz"} className="flex items-center gap-1.5 text-sm tabular-nums active:scale-90 transition-transform">
                 <Bookmark className={`h-[18px] w-[18px] ${saved ? "fill-orange-600 text-orange-600" : ""}`} /> {counts.saves}
               </button>
             ) : (
@@ -205,7 +206,7 @@ export function ProfileFeedCard({
               </button>
             )}
             {onDelete && (
-              <button onClick={onDelete} aria-label="Usuń" className="h-8 w-8 flex items-center justify-center rounded-full text-destructive active:bg-destructive/10 transition-colors">
+              <button onClick={onDelete} aria-label={t("card.delete")} className="h-8 w-8 flex items-center justify-center rounded-full text-destructive active:bg-destructive/10 transition-colors">
                 <Trash2 className="h-[17px] w-[17px]" />
               </button>
             )}
@@ -218,7 +219,7 @@ export function ProfileFeedCard({
         <div className="fixed inset-0 z-[60] bg-background flex flex-col">
           <div className="flex items-center justify-between gap-3 px-4 pt-[max(16px,env(safe-area-inset-top))] pb-3 shrink-0 border-b border-border/40">
             <p className="text-base font-bold truncate">{title}</p>
-            <button onClick={() => setMapOpen(false)} aria-label="Zamknij mapę" className="h-9 w-9 rounded-full bg-muted flex items-center justify-center shrink-0">
+            <button onClick={() => setMapOpen(false)} aria-label={t("card.close_map")} className="h-9 w-9 rounded-full bg-muted flex items-center justify-center shrink-0">
               <X className="h-5 w-5" />
             </button>
           </div>
@@ -230,3 +231,5 @@ export function ProfileFeedCard({
     </div>
   );
 }
+
+  const { t } = useTranslation("homeprofile");

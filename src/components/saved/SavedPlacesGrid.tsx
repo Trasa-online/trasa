@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Bookmark, Plus } from "lucide-react";
 import { toast } from "sonner";
@@ -17,6 +18,7 @@ import { pinCoverKeys, fetchPlacePhotosForKeys, pickPlaceCover } from "@/lib/pla
 // Segment "Miejsca" w zakładce Zapisane (profil): siatka 3-kol zapisanych miejsc usera
 // (agregat pozycji z prywatnych list "do zobaczenia"). Tap kafelka -> wizytówka.
 export function SavedPlacesGrid() {
+  const { t } = useTranslation("homeprofile");
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [detailPin, setDetailPin] = useState<{ place: MockPlace; city: string; skip: boolean } | null>(null);
@@ -46,7 +48,7 @@ export function SavedPlacesGrid() {
       : <span className="h-9 w-9 rounded-lg bg-[#fcede3] flex items-center justify-center shrink-0"><img src={categoryIconSrc(p.category)} alt="" className="w-1/2" /></span>;
     toast.success(p.place_name, {
       icon: thumb,
-      description: "Usunięto z zapisanych",
+      description: t("grid.removed"),
       action: {
         label: "Cofnij",
         onClick: async () => {
@@ -127,7 +129,7 @@ export function SavedPlacesGrid() {
       <p className="text-sm text-muted-foreground mt-1.5 max-w-[280px] leading-relaxed">
         Zapisz miejsce bookmarkiem w{" "}zakładce{" "}
         <span className="font-semibold text-foreground">Eksploruj</span>{" "}
-        lub u{" "}<span className="font-semibold text-foreground">innego użytkownika</span>
+        lub u{" "}<span className="font-semibold text-foreground">{t("grid.other_user")}</span>
       </p>
       <button onClick={() => setAddOpen(true)}
         className="mt-6 h-11 px-5 rounded-2xl bg-primary text-white font-bold text-sm flex items-center gap-2 active:scale-[0.97] transition-transform">
@@ -165,9 +167,7 @@ export function SavedPlacesGrid() {
           )}
           {(fCountry || fCity) && (
             <button onClick={() => { setFCountry(""); setFCity(""); }}
-              className="shrink-0 h-9 px-3 rounded-full bg-muted text-[13px] font-bold text-muted-foreground active:scale-95 transition-transform">
-              Wyczyść
-            </button>
+              className="shrink-0 h-9 px-3 rounded-full bg-muted text-[13px] font-bold text-muted-foreground active:scale-95 transition-transform">{t("grid.clear")}</button>
           )}
         </div>
       )}
@@ -187,7 +187,7 @@ export function SavedPlacesGrid() {
               <PlaceTile showCity tile={{ photo_url: p.photo_url, _cover: coverFor(p), category: p.category, place_name: p.place_name, city: p.city }} />
             </button>
             {/* #7: bookmark (wypelniony) - odklik = usun z zapisanych + toast z cofnij */}
-            <button onClick={(e) => { e.stopPropagation(); void handleUnsave(p); }} aria-label="Usuń z zapisanych"
+            <button onClick={(e) => { e.stopPropagation(); void handleUnsave(p); }} aria-label={t("grid.remove")}
               className="absolute top-1.5 right-1.5 h-7 w-7 rounded-full bg-white/90 flex items-center justify-center shadow-sm active:scale-90 transition-transform">
               <Bookmark className="h-4 w-4 fill-[#F0A583] text-[#F0A583]" strokeWidth={2} />
             </button>

@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import { localizeTag } from "@/lib/routeTags";
 import { Bookmark, Trash2 } from "lucide-react";
 import { PlacePhoto } from "@/components/PlacePhoto";
@@ -33,6 +34,7 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
   // Awatar uczestnika, ktory DODAL to miejsce (rog miniaturki). undefined = nie pokazuj (brak added_by).
   cornerAvatar?: string | null;
 }) {
+  const { t } = useTranslation("route");
   return (
     <div className="bg-background py-4 border-b border-border/70 last:border-b-0">
       {/* Zdjecie + tresc (nazwa, notki, tagi) */}
@@ -72,7 +74,7 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
       <div className="mt-3 flex items-center justify-end gap-2">
         <button
           onClick={(e) => { e.stopPropagation(); onGoogle(); }}
-          aria-label="Otwórz w Google Maps"
+          aria-label={t("row.open_in_maps")}
           className="h-9 w-9 rounded-full bg-white border border-black/[0.04] shadow-[0_1px_5px_rgba(0,0,0,0.12)] flex items-center justify-center shrink-0 active:scale-90 transition-transform"
         >
           <GoogleGlyph className="h-[18px] w-[18px]" />
@@ -83,7 +85,7 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
         {onSave && (
           <button
             onClick={(e) => { e.stopPropagation(); onSave(); }}
-            aria-label={saved ? "Miejsce zapisane w liście" : "Zapisz miejsce do listy"}
+            aria-label={saved ? t("row.saved_in_list") : "Zapisz miejsce do listy"}
             className="h-9 w-9 rounded-full flex items-center justify-center active:scale-90 transition-transform"
           >
             <Bookmark className={`h-5 w-5 ${saved ? "text-[#F0A583] fill-[#F0A583]" : "text-foreground/70"}`} strokeWidth={2} />
@@ -92,7 +94,7 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
         {onDelete && (
           <button
             onClick={(e) => { e.stopPropagation(); onDelete(); }}
-            aria-label="Usuń miejsce z trasy"
+            aria-label={t("row.remove")}
             className="h-9 w-9 rounded-full flex items-center justify-center text-destructive active:scale-90 transition-transform"
           >
             <Trash2 className="h-5 w-5" strokeWidth={2} />
