@@ -56,7 +56,8 @@ const isCopy = (s) => s.length >= 4 && s.length <= 140 && !s.includes("\n") && !
 if (process.argv[2] === "list") {
   const file = process.argv[3];
   const raw = fs.readFileSync(file, "utf8");
-  const src = stripComments(raw);
+  // linia z `i18n-ignore` = swiadomie zostawione DANE, nie copy do przetlumaczenia
+  const src = stripComments(raw.split("\n").map((l) => (l.includes("i18n-ignore") ? "" : l)).join("\n"));
   const ns = raw.match(/useTranslation\(\s*"([^"]+)"/);
   const seen = new Set();
   const out = [];

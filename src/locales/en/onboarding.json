@@ -57,5 +57,77 @@
       "budget": "Budget",
       "luxury": "Luxury"
     }
+  },
+  "notify": {
+    "desc": "Turn on notifications to hear about new trips and important updates. You can always turn them off in settings.",
+    "title": "Stay in the loop"
+  },
+  "location": {
+    "desc": "Allow location access to sort places by distance from you. Optional.",
+    "title": "Places near you"
+  },
+  "city": {
+    "desc": "Tell us your city - we will suggest trips close to you.",
+    "title": "Where do you live?"
+  },
+  "photo": {
+    "desc": "Optional - but trips with a photo feel more trustworthy.",
+    "title": "Add your photo",
+    "pick": "Choose a photo"
+  },
+  "source": {
+    "desc": "Pick one - it helps us reach more people.",
+    "other_placeholder": "Tell us how you found spontaway",
+    "title": "How did you hear about spontaway?"
+  },
+  "name": {
+    "desc": "Your username will show next to your trips.",
+    "username_taken": "That username is taken",
+    "title": "What is your name?",
+    "username_label": "Username",
+    "username_free": "Username available",
+    "first_placeholder": "Your first name",
+    "first_label": "First name"
+  },
+  "toast": {
+    "name_failed": "We could not save your name. Try again.",
+    "photo_failed": "We could not upload the photo."
+  },
+  "goals": {
+    "title": "What do you want to use spontaway for?",
+    "discover": "Discover new places in the city",
+    "inspiration": "Find inspiration for going out",
+    "plan_trips": "Plan trips and weekends",
+    "save_places": "Save favourite places",
+    "with_friends": "Travel with friends",
+    "desc": "You can pick several.",
+    "other_placeholder": "Tell us your goal",
+    "other": "Other"
+  },
+  "tracking": {
+    "title": "Help us make spontaway better"
+  },
+  "cta": {
+    "enable_notifications": "Turn on notifications",
+    "enable_location": "Turn on location",
+    "agree": "I agree",
+    "start": "Let us go",
+    "not_now": "Not now",
+    "next": "Next",
+    "skip": "Skip"
+  },
+  "welcome": {
+    "title": "Hi! This is spontaway"
+  },
+  "terms": {
+    "consent": "I accept the <terms>terms of service</terms> and the <privacy>privacy policy</privacy>. I will not post content that is abusive or violates other people's rights."
+  },
+  "sources": {
+    "instagram": "Instagram",
+    "tiktok": "TikTok",
+    "friends": "From friends",
+    "newonce": "newonce (radio/podcast)",
+    "appstore": "App Store",
+    "other": "Other"
   }
 }

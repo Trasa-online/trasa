@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { useTranslation } from "react-i18next";
+import { useTranslation, Trans } from "react-i18next";
 import { usePostHog } from "@posthog/react";
 import { isHardcodedAdmin } from "@/lib/admins";
 import { isNative } from "@/lib/platform";
@@ -20,13 +20,16 @@ type BizMode = "login" | "register";
 
 // USP aplikacji na ekranie logowania (auto-rotujaca karuzela). NBSP ( ) po
 // pojedynczych literach - regula polskich sierot.
+// Etykiety jako KLUCZE - stala zyje poza komponentem, wiec nie ma tu hooka t();
+// tlumaczenie dokleja sie przy renderze karuzeli.
 const AUTH_USP = [
-  { title: "Odkrywaj trasy po mieście", desc: "Sprawdzone miejsca i gotowe trasy, polecane przez innych użytkowników." },
-  { title: "Twórz własne trasy", desc: "Zapisz miejsca, w których byłeś, i ułóż z nich swoją trasę." },
-  { title: "Zapisuj na później", desc: "Odkładaj ciekawe trasy innych i wracaj do nich, kiedy chcesz." },
+  { titleKey: "intro.discover_title", descKey: "intro.discover_desc" },
+  { titleKey: "intro.create_title", descKey: "intro.create_desc" },
+  { titleKey: "intro.save_title", descKey: "intro.save_desc" },
 ] as const;
 
 function AuthUspCarousel() {
+  const { t } = useTranslation("auth");
   const [i, setI] = useState(0);
   useEffect(() => {
     const id = setInterval(() => setI((p) => (p + 1) % AUTH_USP.length), 3800);
@@ -35,8 +38,8 @@ function AuthUspCarousel() {
   const cur = AUTH_USP[i];
   return (
     <div key={i} className="animate-auth-fade w-full max-w-sm mx-auto text-center px-2">
-      <p className="font-display text-2xl font-extrabold leading-tight text-foreground">{cur.title}</p>
-      <p className="mt-2.5 text-sm leading-relaxed text-muted-foreground max-w-[300px] mx-auto">{cur.desc}</p>
+      <p className="font-display text-2xl font-extrabold leading-tight text-foreground">{t(cur.titleKey)}</p>
+      <p className="mt-2.5 text-sm leading-relaxed text-muted-foreground max-w-[300px] mx-auto">{t(cur.descKey)}</p>
     </div>
   );
 }
@@ -72,9 +75,9 @@ const Auth = () => {
   // Hint shown when user is sent here from a guest-blocked route
   const hint = searchParams.get("hint");
   const hintMessage = hint === "journal"
-    ? "Załóż konto, żeby mieć dziennik podróży i zapisywać wspomnienia."
+    ? t("hint.journal")
     : hint === "settings"
-      ? "Zaloguj się, żeby zmieniać ustawienia konta."
+      ? t("hint.settings")
       : null;
 
   // Post-login redirect. Reaguje na user state change (kluczowe dla native: po
@@ -106,7 +109,7 @@ const Auth = () => {
         // Draft owner -> panel draft; brak wizytowki -> zostan na logowaniu z komunikatem.
         if (businessMode) {
           if (bp?.id) { navigate(await businessPanelPath(user.id, bp)); return; }
-          toast.error("To konto nie jest jeszcze powiązane z wizytówką biznesową.");
+          toast.error(t("biz.no_profile"));
           return;
         }
       }
@@ -139,7 +142,7 @@ const Auth = () => {
 
   const handleBizRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!bizPlace.trim()) { toast.error("Podaj nazwę lokalu"); return; }
+    if (!bizPlace.trim()) { toast.error(t("biz.need_name")); return; }
     if (!email.trim()) { toast.error("Podaj adres email"); return; }
     setLoading(true);
     try {
@@ -161,14 +164,14 @@ const Auth = () => {
       setBizDone(true);
     } catch (err: any) {
       posthog.captureException(err);
-      toast.error(err.message || "Błąd rejestracji");
+      toast.error(err.message || t("error.signup"));
     } finally {
       setLoading(false);
     }
   };
 
   const handleForgotPassword = async () => {
-    if (!email.trim()) { toast.error("Podaj najpierw swój adres email"); return; }
+    if (!email.trim()) { toast.error(t("error.need_email")); return; }
     // Osobny resetLoading zeby button 'Zaloguj' nie pokazywal 'Logowanie...'.
     setResetLoading(true);
     try {
@@ -187,9 +190,9 @@ const Auth = () => {
         });
         if (error) throw error;
       }
-      toast.success("Link do resetowania hasła wysłany na " + email);
+      toast.success(t("toast.reset_sent_to", { email }));
     } catch (err: any) {
-      toast.error(err.message || "Błąd wysyłania emaila");
+      toast.error(err.message || t("error.email_send"));
     } finally {
       setResetLoading(false);
     }
@@ -221,7 +224,7 @@ const Auth = () => {
         return;
       }
       if (businessMode) {
-        toast.error("Nie znaleziono panelu biznesowego dla tego konta.");
+        toast.error(t("biz.no_dashboard"));
         return;
       }
 
@@ -263,14 +266,14 @@ const Auth = () => {
   const handleDraftUpgrade = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim() || !password) return;
-    if (password.length < 6) { toast.error("Hasło musi mieć co najmniej 6 znaków"); return; }
+    if (password.length < 6) { toast.error(t("error.password_short")); return; }
     setLoading(true);
     try {
       // Wymus odswiezenie sesji + jawnie pass auth header (supabase.functions.invoke
       // czasem gubi header dla anon sesji w niektorych browserach).
       const { data: { session: freshSession } } = await supabase.auth.getSession();
       if (!freshSession?.access_token) {
-        toast.error("Sesja wygasła. Odśwież stronę i spróbuj ponownie.");
+        toast.error(t("error.session_expired"));
         setLoading(false);
         return;
       }
@@ -287,13 +290,13 @@ const Auth = () => {
       );
       if (upgradeError) {
         console.error("[handleDraftUpgrade] function invoke failed", upgradeError);
-        toast.error("Nie udało się połączyć z serwerem. Sprawdź internet i spróbuj ponownie.");
+        toast.error(t("error.network"));
         setLoading(false);
         return;
       }
       if (!upgradeData?.ok) {
         console.error("[handleDraftUpgrade] upgrade rejected", upgradeData);
-        toast.error(upgradeData?.message ?? "Nie udało się utworzyć konta.");
+        toast.error(upgradeData?.message ?? t("error.account_create"));
         setLoading(false);
         return;
       }
@@ -327,7 +330,7 @@ const Auth = () => {
       // Navigate to their dashboard after short delay
       setTimeout(() => navigate(`/biznes/${draftProfileId}`), 1500);
     } catch (err: any) {
-      toast.error(err.message || "Błąd zakładania konta");
+      toast.error(err.message || t("error.account_create_title"));
     } finally {
       setLoading(false);
     }
@@ -362,9 +365,9 @@ const Auth = () => {
       posthog.captureException(err);
       const msg = err?.message?.toLowerCase() || "";
       if (msg.includes("provider is not enabled") || msg.includes("unsupported")) {
-        toast.error(`Logowanie przez ${provider === "apple" ? "Apple" : "Google"} nie jest jeszcze skonfigurowane.`);
+        toast.error(t("error.provider_not_configured", { provider: provider === "apple" ? "Apple" : "Google" }));
       } else {
-        toast.error(err.message || "Błąd logowania");
+        toast.error(err.message || t("error.signin"));
       }
       setLoading(false);
     }
@@ -383,11 +386,11 @@ const Auth = () => {
       return;
     }
     if (firstName.trim().length < 1) {
-      toast.error("Podaj swoje imię");
+      toast.error(t("error.need_first_name"));
       return;
     }
     if (password.length < 6) {
-      toast.error("Hasło musi mieć co najmniej 6 znaków");
+      toast.error(t("error.password_short"));
       return;
     }
     setLoading(true);
@@ -408,7 +411,7 @@ const Auth = () => {
         if (msg.includes("already registered") || msg.includes("user already")) {
           toast.error(t("errors.email_duplicate"));
         } else if (msg.includes("password")) {
-          toast.error("Hasło jest za słabe. Użyj co najmniej 6 znaków.");
+          toast.error(t("error.password_weak"));
         } else {
           throw error;
         }
@@ -432,8 +435,8 @@ const Auth = () => {
           {draftUpgradeDone ? (
             <div className="text-center space-y-2">
               <p className="text-2xl">🎉</p>
-              <h1 className="text-xl font-black text-white">Konto założone!</h1>
-              <p className="text-sm text-blue-300/70">{`Zaraz wrócimy do Twojego profilu...`}</p>
+              <h1 className="text-xl font-black text-white">{t("biz.account_created")}</h1>
+              <p className="text-sm text-blue-300/70">{t("claim.returning")}</p>
             </div>
           ) : (
             <>
@@ -442,10 +445,10 @@ const Auth = () => {
                   Panel Biznesowy
                 </span>
                 <h1 className="text-2xl font-black text-white leading-tight">
-                  {`Twój profil jest prawie gotowy!`}
+                  {t("claim.almost_ready")}
                 </h1>
                 <p className="text-sm text-blue-300/70 mt-2 leading-relaxed">
-                  {`Podaj email i hasło, żeby na stałe zapisać Twój lokal w spontaway.`}
+                  {t("claim.desc")}
                 </p>
               </div>
               <form onSubmit={handleDraftUpgrade} className="w-full space-y-3">
@@ -461,7 +464,7 @@ const Auth = () => {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="block text-sm font-semibold text-blue-200">Hasło (min. 6 znaków)</label>
+                  <label className="block text-sm font-semibold text-blue-200">{t("password_placeholder")}</label>
                   <input
                     type="password"
                     required
@@ -476,15 +479,13 @@ const Auth = () => {
                   disabled={loading}
                   className="w-full py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm active:scale-[0.98] transition-transform shadow-lg shadow-blue-900/40 disabled:opacity-60"
                 >
-                  {loading ? "Zakładam konto..." : "Zapisz profil i załóż konto →"}
+                  {loading ? t("claim.creating") : t("claim.submit")}
                 </button>
               </form>
               <button
                 onClick={() => navigate(`/biznes/${draftProfileId}`)}
                 className="text-sm text-blue-300/70 active:opacity-60"
-              >
-                Wróć do edycji
-              </button>
+              >{t("back_to_edit")}</button>
             </>
           )}
         </div>
@@ -508,7 +509,7 @@ const Auth = () => {
       >
         {/* Top bar: samo logo (lewy-gora) */}
         <div className="flex items-center px-5 sm:px-8 h-16 shrink-0">
-          <button onClick={goBack} className="flex items-center gap-2 active:opacity-70" aria-label="Wróć">
+          <button onClick={goBack} className="flex items-center gap-2 active:opacity-70" aria-label={t("back")}>
             <TrasaLogo size={34} />
             <span className="text-sm font-black text-slate-800">trasa<span className="text-blue-600"> biznes</span></span>
           </button>
@@ -519,12 +520,12 @@ const Auth = () => {
           <div className="w-full max-w-md bg-white rounded-3xl shadow-xl shadow-slate-900/[0.06] border border-slate-100 p-7 sm:p-9">
             <div className="text-center mb-6">
               <h1 className="text-2xl font-black text-slate-900 leading-tight">
-                {bizMode === "login" ? "Zaloguj się do panelu" : "Zarejestruj swój lokal"}
+                {bizMode === "login" ? t("biz.signin_title") : t("biz.signup_title")}
               </h1>
               <p className="text-sm text-slate-500 mt-1.5 leading-relaxed">
                 {bizMode === "login"
-                  ? "Wejdź na konto powiązane z Twoim lokalem."
-                  : "Załóż konto i zarządzaj wizytówką lokalu w spontaway."}
+                  ? t("biz.signin_desc")
+                  : t("biz.signup_desc")}
               </p>
             </div>
 
@@ -533,9 +534,7 @@ const Auth = () => {
               <button
                 onClick={() => setBizMode("login")}
                 className={`flex-1 py-2 text-sm font-semibold rounded-2xl transition-all ${bizMode === "login" ? "bg-blue-600 text-white shadow-sm" : "text-slate-500 hover:text-slate-800"}`}
-              >
-                Zaloguj się
-              </button>
+              >{t("signin")}</button>
               <button
                 onClick={() => { setBizDone(false); setBizMode("register"); }}
                 className={`flex-1 py-2 text-sm font-semibold rounded-2xl transition-all ${bizMode === "register" ? "bg-blue-600 text-white shadow-sm" : "text-slate-500 hover:text-slate-800"}`}
@@ -555,31 +554,31 @@ const Auth = () => {
                   <Input id="biz-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required placeholder={t("fields.password_placeholder")} className={inputCls} />
                 </div>
                 <button type="button" onClick={handleForgotPassword} disabled={resetLoading} className="text-xs text-blue-600 font-medium hover:underline disabled:opacity-60">
-                  {resetLoading ? "Wysyłam..." : "Nie pamiętasz hasła?"}
+                  {resetLoading ? t("sending") : t("forgot_password")}
                 </button>
                 <Button type="submit" className="w-full rounded-2xl py-6 bg-blue-600 hover:bg-blue-700 text-white font-bold text-base border-0" disabled={loading}>
-                  {loading ? t("logging_in") : "Zaloguj się do panelu"}
+                  {loading ? t("logging_in") : t("biz.signin_title")}
                 </Button>
               </form>
             ) : bizDone ? (
               <div className="text-center py-6 space-y-3">
                 <p className="text-4xl">📬</p>
-                <p className="text-slate-900 font-bold text-lg">Sprawdź skrzynkę mailową</p>
+                <p className="text-slate-900 font-bold text-lg">{t("check_inbox")}</p>
                 <p className="text-slate-500 text-sm leading-relaxed">
-                  {`Wysłaliśmy link aktywacyjny na `}<strong className="text-slate-700">{email}</strong>{`. Kliknij go, ustaw hasło i wejdź do panelu swojego lokalu.`}
+                  {/* Adres maila w srodku zdania - <Trans>, bo po angielsku stoi w innym miejscu. */}
+                  <Trans i18nKey="biz.activation_sent_full" ns="auth" values={{ email }}
+                    components={{ b: <strong className="text-slate-700" /> }} />
                 </p>
                 <p className="text-slate-400 text-xs leading-relaxed">
-                  {`Nie widzisz maila? Sprawdź folder spam. Link jest ważny przez 24 godziny.`}
+                  {t("biz.activation_hint")}
                 </p>
-                <button onClick={() => { setBizDone(false); setBizMode("login"); }} className="text-sm text-blue-600 font-medium underline pt-2">
-                  Wróć do logowania
-                </button>
+                <button onClick={() => { setBizDone(false); setBizMode("login"); }} className="text-sm text-blue-600 font-medium underline pt-2">{t("back_to_signin")}</button>
               </div>
             ) : (
               <form onSubmit={handleBizRegister} className="space-y-3">
                 <div className="space-y-1.5">
                   <Label htmlFor="biz-place" className="text-slate-700">Nazwa lokalu</Label>
-                  <Input id="biz-place" type="text" value={bizPlace} onChange={(e) => setBizPlace(e.target.value)} required placeholder="np. Kawiarnia Stara Kamienica, Kraków" className={inputCls} />
+                  <Input id="biz-place" type="text" value={bizPlace} onChange={(e) => setBizPlace(e.target.value)} required placeholder={t("biz.venue_placeholder")} className={inputCls} />
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="biz-reg-email" className="text-slate-700">{t("fields.email")}</Label>
@@ -590,15 +589,15 @@ const Auth = () => {
                   <Input id="biz-phone" type="tel" value={bizPhone} onChange={(e) => setBizPhone(e.target.value)} placeholder="+48 600 000 000" className={inputCls} />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="biz-message" className="text-slate-700">Wiadomość <span className="text-slate-400 font-normal">(opcjonalnie)</span></Label>
-                  <textarea id="biz-message" value={bizMessage} onChange={(e) => setBizMessage(e.target.value)} placeholder="Coś jeszcze, co chcesz nam powiedzieć..." rows={2}
+                  <Label htmlFor="biz-message" className="text-slate-700">{t("message_label")}<span className="text-slate-400 font-normal">(opcjonalnie)</span></Label>
+                  <textarea id="biz-message" value={bizMessage} onChange={(e) => setBizMessage(e.target.value)} placeholder={t("biz.message_placeholder")} rows={2}
                     className="w-full rounded-2xl px-3 py-2 text-sm bg-white border border-slate-200 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none" />
                 </div>
                 <Button type="submit" className="w-full rounded-2xl py-6 bg-blue-600 hover:bg-blue-700 text-white font-bold text-base border-0" disabled={loading}>
-                  {loading ? "Zakładam konto..." : "Załóż konto biznesowe"}
+                  {loading ? t("claim.creating") : t("biz.create_account")}
                 </Button>
                 <p className="text-xs text-slate-400 text-center leading-relaxed">
-                  {`Wyślemy link aktywacyjny na Twój email. Konto założysz od razu, bez czekania na akceptację.`}
+                  {t("biz.create_desc")}
                 </p>
               </form>
             )}
@@ -607,7 +606,7 @@ const Auth = () => {
               {bizMode === "login" ? (
                 <>Nie masz jeszcze konta?{" "}<button onClick={() => setBizMode("register")} className="text-blue-600 font-semibold hover:underline">Zarejestruj lokal</button></>
               ) : (
-                <>Masz już konto?{" "}<button onClick={() => { setBizDone(false); setBizMode("login"); }} className="text-blue-600 font-semibold hover:underline">Zaloguj się</button></>
+                <>Masz już konto?{" "}<button onClick={() => { setBizDone(false); setBizMode("login"); }} className="text-blue-600 font-semibold hover:underline">{t("signin")}</button></>
               )}
             </p>
           </div>
@@ -690,9 +689,7 @@ const Auth = () => {
               <button
                 onClick={() => setBusinessMode(true)}
                 className="underline text-foreground font-medium"
-              >
-                Zaloguj się do panelu
-              </button>
+              >{t("biz.signin_title")}</button>
             </p>
           )}
 

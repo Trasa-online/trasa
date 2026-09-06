@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { avatarSrc } from "@/lib/avatar";
 import { ArrowLeft, Check, Plus, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useTranslation, Trans } from "react-i18next";
 import { Camera as CapCamera, CameraResultType, CameraSource } from "@capacitor/camera";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -24,9 +25,9 @@ const capWords = (v: string, n = 10) => {
 // Przykladowe miejsca (ilustracja na ekranie lokalizacji - UI listy miejsc z aplikacji).
 // Realne warszawskie lokale (z bazy places) - dla autentycznosci podgladu.
 const SAMPLE_NEARBY = [
-  { name: "Prodiż Warszawski", cat: "restaurant", catLabel: "Restauracja", dist: "0,4 km" },
-  { name: "5 ciastek", cat: "cafe", catLabel: "Kawiarnia", dist: "0,8 km" },
-  { name: "Same Krafty", cat: "bar", catLabel: "Bar", dist: "1,2 km" },
+  { name: "Prodiż Warszawski", cat: "restaurant", dist: "0,4 km" },   // i18n-ignore: nazwa wlasna lokalu
+  { name: "5 ciastek", cat: "cafe", dist: "0,8 km" },                 // i18n-ignore: nazwa wlasna lokalu
+  { name: "Same Krafty", cat: "bar", dist: "1,2 km" },                // i18n-ignore: nazwa wlasna lokalu
 ];
 
 // Onboarding Czesc A (po pierwszym logowaniu, real user): welcome -> 2 pytania ankietowe
@@ -44,22 +45,24 @@ const escapeLike = (v: string) => v.replace(/[%_\\]/g, "\\$&");
 // Sygnal dla Czesci B (coach-marki): OnboardingProvider startuje tour gdy widzi ten klucz.
 export const COACH_PENDING_KEY = "spontaway_coach_pending";
 
+// Etykiety trzymamy jako KLUCZE, nie gotowy tekst - te stale zyja poza komponentem,
+// wiec nie ma tu hooka t(); tlumaczenie dokleja sie przy renderze.
 const SOURCE_OPTS = [
-  { id: "instagram", label: "Instagram" },
-  { id: "tiktok", label: "TikTok" },
-  { id: "znajomi", label: "Od znajomych" },
-  { id: "newonce", label: "newonce (radio/podcast)" },
-  { id: "appstore", label: "App Store" },
-  { id: "other", label: "Inne" },
+  { id: "instagram", labelKey: "sources.instagram" },
+  { id: "tiktok", labelKey: "sources.tiktok" },
+  { id: "znajomi", labelKey: "sources.friends" },
+  { id: "newonce", labelKey: "sources.newonce" },
+  { id: "appstore", labelKey: "sources.appstore" },
+  { id: "other", labelKey: "sources.other" },
 ];
 
 const GOAL_OPTS = [
-  { id: "odkrywanie", label: "Odkrywać nowe miejsca w mieście" },
-  { id: "wyjazdy", label: "Planować wyjazdy i weekendy" },
-  { id: "inspiracja", label: "Szukać inspiracji na wyjścia" },
-  { id: "znajomi", label: "Podróżować ze znajomymi" },
-  { id: "zapisywanie", label: "Zapisywać ulubione miejsca" },
-  { id: "other", label: "Inne" },
+  { id: "odkrywanie", labelKey: "goals.discover" },
+  { id: "wyjazdy", labelKey: "goals.plan_trips" },
+  { id: "inspiracja", labelKey: "goals.inspiration" },
+  { id: "znajomi", labelKey: "goals.with_friends" },
+  { id: "zapisywanie", labelKey: "goals.save_places" },
+  { id: "other", labelKey: "goals.other" },
 ];
 
 const STEPS = ["welcome", "source", "goals", "username", "avatar", "home", "notify", "location", "tracking"] as const;
@@ -69,6 +72,8 @@ type UStatus = "idle" | "short" | "checking" | "ok" | "taken";
 interface Props { onDone: () => void; }
 
 const OnboardingFlow = ({ onDone }: Props) => {
+  const { t } = useTranslation("onboarding");
+  const { t: tCat } = useTranslation("categories");
   const { user } = useAuth();
   const [step, setStep] = useState(0);
   const stepName: Step = STEPS[step];
@@ -89,7 +94,7 @@ const OnboardingFlow = ({ onDone }: Props) => {
   const [uploading, setUploading] = useState(false);
   const [finishing, setFinishing] = useState(false);
   const [permBusy, setPermBusy] = useState(false);
-  // Gdy pole "Inne" (input) jest w fokusie -> chowamy guzik "Dalej" (nie zaslania klawiatury).
+  // Gdy pole "Inne" (input) jest w fokusie -> chowamy guzik t("cta.next") (nie zaslania klawiatury).
   const [otherFocused, setOtherFocused] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -145,7 +150,7 @@ const OnboardingFlow = ({ onDone }: Props) => {
     setSavingU(false);
     if (error) {
       if ((error as any).code === "23505") { setUStatus("taken"); return; }
-      toast.error("Nie udało się zapisać nazwy. Spróbuj ponownie.");
+      toast.error(t("toast.name_failed"));
       return;
     }
     goNext();
@@ -159,7 +164,7 @@ const OnboardingFlow = ({ onDone }: Props) => {
       const fileName = `${user.id}/avatar.${ext}`;
       const { error: upErr } = await supabase.storage.from("avatars").upload(fileName, blob, { upsert: true, contentType });
       await uploadThumb("avatars", fileName, blob);
-      if (upErr) { toast.error("Nie udało się wgrać zdjęcia."); return; }
+      if (upErr) { toast.error(t("toast.photo_failed")); return; }
       const { data: { publicUrl } } = supabase.storage.from("avatars").getPublicUrl(fileName);
       const busted = `${publicUrl}?t=${Date.now()}`;
       await supabase.from("profiles").update({ avatar_url: busted } as any).eq("id", user.id);
@@ -277,11 +282,11 @@ const OnboardingFlow = ({ onDone }: Props) => {
   };
 
   const primaryLabel =
-    stepName === "welcome" ? "Zaczynamy" :
-    stepName === "notify" ? "Włącz powiadomienia" :
-    stepName === "location" ? "Włącz lokalizację" :
-    stepName === "tracking" ? "Zgadzam się" :
-    "Dalej";
+    stepName === "welcome" ? t("cta.start") :
+    stepName === "notify" ? t("cta.enable_notifications") :
+    stepName === "location" ? t("cta.enable_location") :
+    stepName === "tracking" ? t("cta.agree") :
+    t("cta.next");
 
   return (
     <div className="fixed inset-0 z-[71] bg-[#FEFEFE] flex flex-col">
@@ -312,7 +317,7 @@ const OnboardingFlow = ({ onDone }: Props) => {
         {stepName === "welcome" && (
           <div className="flex-1 flex flex-col items-center justify-center text-center">
             <TrasaLogo size={84} className="mb-6" />
-            <h2 className="text-2xl font-black mb-3 leading-tight">{nbsp("Cześć! Tu spontaway")}</h2>
+            <h2 className="text-2xl font-black mb-3 leading-tight">{nbsp(t("welcome.title"))}</h2>
             <p className="text-[15px] text-muted-foreground leading-relaxed max-w-xs">
               {nbsp("speed dating z miastem. Odkrywaj trasy po mieście stworzone przez innych, zapisuj te które Cię inspirują i twórz własne. Pokażemy Ci to w kilka sekund.")}
             </p>
@@ -326,11 +331,17 @@ const OnboardingFlow = ({ onDone }: Props) => {
                 {termsAccepted && <Check className="h-3.5 w-3.5 text-white" strokeWidth={3} />}
               </span>
               <span className="text-[13px] text-muted-foreground leading-relaxed">
-                {`Akceptuję `}
-                <Link to="/terms" onClick={(e) => e.stopPropagation()} className="font-semibold text-foreground underline">regulamin</Link>
-                {` i `}
-                <Link to="/privacy" onClick={(e) => e.stopPropagation()} className="font-semibold text-foreground underline">politykę prywatności</Link>
-                {`. Zobowiązuję się nie publikować treści obraźliwych ani naruszających prawa innych osób.`}
+                {/* Zdanie z DWOMA linkami w srodku - <Trans>, bo szyk zdania i miejsce linkow
+                    rozni sie miedzy jezykami; sklejanie kawalkow po polsku dawaloby po
+                    angielsku bezsens. */}
+                <Trans
+                  i18nKey="terms.consent"
+                  ns="onboarding"
+                  components={{
+                    terms: <Link to="/terms" onClick={(e) => e.stopPropagation()} className="font-semibold text-foreground underline" />,
+                    privacy: <Link to="/privacy" onClick={(e) => e.stopPropagation()} className="font-semibold text-foreground underline" />,
+                  }}
+                />
               </span>
             </button>
           </div>
@@ -339,8 +350,8 @@ const OnboardingFlow = ({ onDone }: Props) => {
         {stepName === "source" && (
           <>
             <div className="pt-6">
-              <h2 className="text-2xl font-black mb-2 leading-tight">{nbsp("Skąd znasz spontaway?")}</h2>
-              <p className="text-[15px] text-muted-foreground leading-relaxed">{nbsp("Wybierz jedno - pomoże nam docierać do kolejnych osób.")}</p>
+              <h2 className="text-2xl font-black mb-2 leading-tight">{nbsp(t("source.title"))}</h2>
+              <p className="text-[15px] text-muted-foreground leading-relaxed">{nbsp(t("source.desc"))}</p>
             </div>
             <div className="mt-6 flex flex-col gap-2.5">
               {SOURCE_OPTS.map((o) => {
@@ -354,7 +365,7 @@ const OnboardingFlow = ({ onDone }: Props) => {
                         onChange={(e) => setSourceOther(capWords(e.target.value, 10))}
                         onFocus={() => setOtherFocused(true)}
                         onBlur={() => setOtherFocused(false)}
-                        placeholder="Wpisz, skąd znasz spontaway"
+                        placeholder={t("source.other_placeholder")}
                         className="flex-1 bg-transparent text-[15px] font-semibold outline-none placeholder:font-normal placeholder:text-muted-foreground/50"
                       />
                       <span className="h-6 w-6 rounded-full bg-orange-600 flex items-center justify-center shrink-0"><Check className="h-4 w-4 text-white" strokeWidth={3} /></span>
@@ -367,7 +378,7 @@ const OnboardingFlow = ({ onDone }: Props) => {
                     onClick={() => setSource(o.id)}
                     className="w-full text-left px-4 py-3.5 rounded-2xl border border-border bg-white text-foreground text-[15px] font-semibold flex items-center justify-between active:scale-[0.99] transition-transform"
                   >
-                    <span>{o.label}</span>
+                    <span>{t(o.labelKey)}</span>
                     <span className={cn("h-6 w-6 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors", active ? "bg-orange-600 border-orange-600" : "border-muted-foreground/30")}>
                       {active && <Check className="h-4 w-4 text-white" strokeWidth={3} />}
                     </span>
@@ -381,8 +392,8 @@ const OnboardingFlow = ({ onDone }: Props) => {
         {stepName === "goals" && (
           <>
             <div className="pt-6">
-              <h2 className="text-2xl font-black mb-2 leading-tight">{nbsp("W jakim celu chcesz używać spontaway?")}</h2>
-              <p className="text-[15px] text-muted-foreground leading-relaxed">{nbsp("Możesz zaznaczyć kilka.")}</p>
+              <h2 className="text-2xl font-black mb-2 leading-tight">{nbsp(t("goals.title"))}</h2>
+              <p className="text-[15px] text-muted-foreground leading-relaxed">{nbsp(t("goals.desc"))}</p>
             </div>
             <div className="mt-6 flex flex-col gap-2.5">
               {GOAL_OPTS.map((o) => {
@@ -396,7 +407,7 @@ const OnboardingFlow = ({ onDone }: Props) => {
                         onChange={(e) => setGoalsOther(capWords(e.target.value, 10))}
                         onFocus={() => setOtherFocused(true)}
                         onBlur={() => setOtherFocused(false)}
-                        placeholder="Wpisz swój cel"
+                        placeholder={t("goals.other_placeholder")}
                         className="flex-1 bg-transparent text-[15px] font-semibold outline-none placeholder:font-normal placeholder:text-muted-foreground/50"
                       />
                       <button onClick={() => toggleGoal(o.id)} aria-label="Odznacz" className="h-6 w-6 rounded-md bg-orange-600 flex items-center justify-center shrink-0"><Check className="h-4 w-4 text-white" strokeWidth={3} /></button>
@@ -409,7 +420,7 @@ const OnboardingFlow = ({ onDone }: Props) => {
                     onClick={() => toggleGoal(o.id)}
                     className="w-full text-left px-4 py-3.5 rounded-2xl border border-border bg-white text-foreground text-[15px] font-semibold flex items-center justify-between active:scale-[0.99] transition-transform"
                   >
-                    <span>{o.label}</span>
+                    <span>{t(o.labelKey)}</span>
                     <span className={cn("h-6 w-6 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors", active ? "bg-orange-600 border-orange-600" : "border-muted-foreground/30")}>
                       {active && <Check className="h-4 w-4 text-white" strokeWidth={3} />}
                     </span>
@@ -423,26 +434,26 @@ const OnboardingFlow = ({ onDone }: Props) => {
         {stepName === "username" && (
           <>
             <div className="pt-6 text-center">
-              <h2 className="text-2xl font-black mb-2 leading-tight">{nbsp("Jak się nazywasz?")}</h2>
-              <p className="text-[15px] text-muted-foreground leading-relaxed">{nbsp("Nazwa użytkownika będzie widoczna przy Twoich trasach.")}</p>
+              <h2 className="text-2xl font-black mb-2 leading-tight">{nbsp(t("name.title"))}</h2>
+              <p className="text-[15px] text-muted-foreground leading-relaxed">{nbsp(t("name.desc"))}</p>
             </div>
             <div className="mt-8 space-y-5">
               <div>
-                <label className="block text-sm font-semibold mb-2 px-1">Imię</label>
+                <label className="block text-sm font-semibold mb-2 px-1">{t("name.first_label")}</label>
                 <div className="rounded-2xl border border-border bg-white px-4 focus-within:ring-2 focus-within:ring-orange-500/60 transition-shadow">
                   <input
                     value={firstName}
                     onChange={(e) => setFirstName(e.target.value.slice(0, 40))}
                     autoCapitalize="words"
                     autoCorrect="off"
-                    placeholder="Twoje imię"
+                    placeholder={t("name.first_placeholder")}
                     className="w-full bg-transparent py-3.5 px-1 text-lg outline-none text-foreground placeholder:text-muted-foreground/50"
                   />
                 </div>
               </div>
               <div>
                 <div className="flex items-center justify-between mb-2 px-1">
-                  <label className="block text-sm font-semibold">Nazwa użytkownika</label>
+                  <label className="block text-sm font-semibold">{t("name.username_label")}</label>
                   <span className="text-xs text-muted-foreground">{username.length}/{USERNAME_MAX}</span>
                 </div>
                 <div className="flex items-center rounded-2xl border border-border bg-white px-4 focus-within:ring-2 focus-within:ring-orange-500/60 transition-shadow">
@@ -461,8 +472,8 @@ const OnboardingFlow = ({ onDone }: Props) => {
                   {uStatus === "ok" && <Check className="h-5 w-5 text-green-600" />}
                 </div>
                 <div className="h-6 mt-2 px-1 text-sm">
-                  {uStatus === "ok" && <span className="text-green-600 font-medium">Nazwa dostępna</span>}
-                  {uStatus === "taken" && <span className="text-red-600 font-medium">Ta nazwa jest już zajęta</span>}
+                  {uStatus === "ok" && <span className="text-green-600 font-medium">{t("name.username_free")}</span>}
+                  {uStatus === "taken" && <span className="text-red-600 font-medium">{t("name.username_taken")}</span>}
                   {uStatus === "short" && <span className="text-muted-foreground">Minimum 2 znaki</span>}
                 </div>
               </div>
@@ -473,11 +484,11 @@ const OnboardingFlow = ({ onDone }: Props) => {
         {stepName === "avatar" && (
           <>
             <div className="pt-6 text-center">
-              <h2 className="text-2xl font-black mb-2 leading-tight">{nbsp("Dodaj swoje zdjęcie")}</h2>
-              <p className="text-[15px] text-muted-foreground leading-relaxed">{nbsp("Nieobowiązkowe - ale trasy z awatarem budzą więcej zaufania.")}</p>
+              <h2 className="text-2xl font-black mb-2 leading-tight">{nbsp(t("photo.title"))}</h2>
+              <p className="text-[15px] text-muted-foreground leading-relaxed">{nbsp(t("photo.desc"))}</p>
             </div>
             <div className="flex-1 flex items-center justify-center">
-              <button onClick={pickAvatar} className="relative active:scale-[0.98] transition-transform" aria-label="Wybierz zdjęcie">
+              <button onClick={pickAvatar} className="relative active:scale-[0.98] transition-transform" aria-label={t("photo.pick")}>
                 <div className="h-40 w-40 rounded-full overflow-hidden flex items-center justify-center bg-orange-100">
                   <img src={avatarSrc(avatarUrl)} alt="" className="h-full w-full object-cover" />
                 </div>
@@ -493,8 +504,8 @@ const OnboardingFlow = ({ onDone }: Props) => {
         {stepName === "home" && (
           <>
             <div className="pt-6 text-center">
-              <h2 className="text-2xl font-black mb-2 leading-tight">{nbsp("Gdzie mieszkasz?")}</h2>
-              <p className="text-[15px] text-muted-foreground leading-relaxed">{nbsp("Podaj swoje miasto - pomoże nam podpowiadać trasy blisko Ciebie.")}</p>
+              <h2 className="text-2xl font-black mb-2 leading-tight">{nbsp(t("city.title"))}</h2>
+              <p className="text-[15px] text-muted-foreground leading-relaxed">{nbsp(t("city.desc"))}</p>
             </div>
             <div className="mt-8">
               <label className="block text-sm font-semibold mb-2 px-1">Miasto</label>
@@ -514,16 +525,16 @@ const OnboardingFlow = ({ onDone }: Props) => {
 
         {stepName === "notify" && (
           <div className="flex-1 flex flex-col items-center justify-center text-center">
-            <h2 className="text-2xl font-black mb-3 leading-tight">{nbsp("Bądź na bieżąco")}</h2>
-            <p className="text-[15px] text-muted-foreground leading-relaxed max-w-xs">{nbsp("Włącz powiadomienia, żeby wiedzieć o nowych trasach i ważnych aktualizacjach. Zawsze możesz to wyłączyć w ustawieniach.")}</p>
+            <h2 className="text-2xl font-black mb-3 leading-tight">{nbsp(t("notify.title"))}</h2>
+            <p className="text-[15px] text-muted-foreground leading-relaxed max-w-xs">{nbsp(t("notify.desc"))}</p>
           </div>
         )}
 
         {stepName === "location" && (
           <>
             <div className="pt-6 text-center">
-              <h2 className="text-2xl font-black mb-2 leading-tight">{nbsp("Miejsca blisko Ciebie")}</h2>
-              <p className="text-[15px] text-muted-foreground leading-relaxed">{nbsp("Pozwól na dostęp do lokalizacji, żeby sortować miejsca według odległości od Ciebie. Nieobowiązkowe.")}</p>
+              <h2 className="text-2xl font-black mb-2 leading-tight">{nbsp(t("location.title"))}</h2>
+              <p className="text-[15px] text-muted-foreground leading-relaxed">{nbsp(t("location.desc"))}</p>
             </div>
             {/* Podglad listy miejsc (UI listy z aplikacji) - ilustracja "posortowane po odleglosci". */}
             <div className="mt-6 flex flex-col gap-2.5">
@@ -534,7 +545,7 @@ const OnboardingFlow = ({ onDone }: Props) => {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-bold text-foreground truncate">{p.name}</p>
-                    <p className="text-xs text-muted-foreground">{p.catLabel}</p>
+                    <p className="text-xs text-muted-foreground">{tCat(`sub.${p.cat}`)}</p>
                   </div>
                   <span className="text-xs font-semibold text-muted-foreground shrink-0">{p.dist}</span>
                 </div>
@@ -547,7 +558,7 @@ const OnboardingFlow = ({ onDone }: Props) => {
         {stepName === "tracking" && (
           <>
             <div className="pt-6 text-center">
-              <h2 className="text-2xl font-black mb-2 leading-tight">{nbsp("Pomóż nam ulepszać spontaway")}</h2>
+              <h2 className="text-2xl font-black mb-2 leading-tight">{nbsp(t("tracking.title"))}</h2>
               <p className="text-[15px] text-muted-foreground leading-relaxed">{nbsp("Zbieramy anonimowe dane o tym, jak korzystasz z aplikacji (np. które ekrany odwiedzasz), żeby ją rozwijać. Nie sprzedajemy Twoich danych. Zgodę zmienisz w każdej chwili w ustawieniach.")}</p>
             </div>
             {/* Placeholder ikony - nat doda custom ikone do tego widoku. */}
@@ -573,13 +584,13 @@ const OnboardingFlow = ({ onDone }: Props) => {
             : primaryLabel}
         </button>
         {stepName === "avatar" && (
-          <button onClick={goNext} className="w-full py-3 mt-1 text-sm font-medium text-muted-foreground">Pomiń</button>
+          <button onClick={goNext} className="w-full py-3 mt-1 text-sm font-medium text-muted-foreground">{t("cta.skip")}</button>
         )}
         {(stepName === "notify" || stepName === "location") && (
-          <button onClick={goNext} disabled={permBusy} className="w-full py-3 mt-1 text-sm font-medium text-muted-foreground">Nie teraz</button>
+          <button onClick={goNext} disabled={permBusy} className="w-full py-3 mt-1 text-sm font-medium text-muted-foreground">{t("cta.not_now")}</button>
         )}
         {stepName === "tracking" && (
-          <button onClick={declineTracking} disabled={finishing} className="w-full py-3 mt-1 text-sm font-medium text-muted-foreground">Nie teraz</button>
+          <button onClick={declineTracking} disabled={finishing} className="w-full py-3 mt-1 text-sm font-medium text-muted-foreground">{t("cta.not_now")}</button>
         )}
       </div>
       )}

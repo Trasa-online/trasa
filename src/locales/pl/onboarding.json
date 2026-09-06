@@ -57,5 +57,77 @@
       "budget": "Budżetowo",
       "luxury": "Luksusowo"
     }
+  },
+  "notify": {
+    "desc": "Włącz powiadomienia, żeby wiedzieć o nowych trasach i ważnych aktualizacjach. Zawsze możesz to wyłączyć w ustawieniach.",
+    "title": "Bądź na bieżąco"
+  },
+  "location": {
+    "desc": "Pozwól na dostęp do lokalizacji, żeby sortować miejsca według odległości od Ciebie. Nieobowiązkowe.",
+    "title": "Miejsca blisko Ciebie"
+  },
+  "city": {
+    "desc": "Podaj swoje miasto - pomoże nam podpowiadać trasy blisko Ciebie.",
+    "title": "Gdzie mieszkasz?"
+  },
+  "photo": {
+    "desc": "Nieobowiązkowe - ale trasy z awatarem budzą więcej zaufania.",
+    "title": "Dodaj swoje zdjęcie",
+    "pick": "Wybierz zdjęcie"
+  },
+  "source": {
+    "desc": "Wybierz jedno - pomoże nam docierać do kolejnych osób.",
+    "other_placeholder": "Wpisz, skąd znasz spontaway",
+    "title": "Skąd znasz spontaway?"
+  },
+  "name": {
+    "desc": "Nazwa użytkownika będzie widoczna przy Twoich trasach.",
+    "username_taken": "Ta nazwa jest już zajęta",
+    "title": "Jak się nazywasz?",
+    "username_label": "Nazwa użytkownika",
+    "username_free": "Nazwa dostępna",
+    "first_placeholder": "Twoje imię",
+    "first_label": "Imię"
+  },
+  "toast": {
+    "name_failed": "Nie udało się zapisać nazwy. Spróbuj ponownie.",
+    "photo_failed": "Nie udało się wgrać zdjęcia."
+  },
+  "goals": {
+    "title": "W jakim celu chcesz używać spontaway?",
+    "discover": "Odkrywać nowe miejsca w mieście",
+    "inspiration": "Szukać inspiracji na wyjścia",
+    "plan_trips": "Planować wyjazdy i weekendy",
+    "save_places": "Zapisywać ulubione miejsca",
+    "with_friends": "Podróżować ze znajomymi",
+    "desc": "Możesz zaznaczyć kilka.",
+    "other_placeholder": "Wpisz swój cel",
+    "other": "Inne"
+  },
+  "tracking": {
+    "title": "Pomóż nam ulepszać spontaway"
+  },
+  "cta": {
+    "enable_notifications": "Włącz powiadomienia",
+    "enable_location": "Włącz lokalizację",
+    "agree": "Zgadzam się",
+    "start": "Zaczynamy",
+    "not_now": "Nie teraz",
+    "next": "Dalej",
+    "skip": "Pomiń"
+  },
+  "welcome": {
+    "title": "Cześć! Tu spontaway"
+  },
+  "terms": {
+    "consent": "Akceptuję <terms>regulamin</terms> i <privacy>politykę prywatności</privacy>. Zobowiązuję się nie publikować treści obraźliwych ani naruszających prawa innych osób."
+  },
+  "sources": {
+    "instagram": "Instagram",
+    "tiktok": "TikTok",
+    "friends": "Od znajomych",
+    "newonce": "newonce (radio/podcast)",
+    "appstore": "App Store",
+    "other": "Inne"
   }
 }
