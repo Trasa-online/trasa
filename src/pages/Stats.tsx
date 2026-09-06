@@ -21,6 +21,7 @@ function StatBox({ icon, value, label, sub }: { icon: ReactNode; value: ReactNod
 }
 
 export default function Stats() {
+  const { t } = useTranslation("homeprofile");
   const navigate = useNavigate();
   const { data: stats, isLoading } = useMyRouteStats();
 
@@ -42,12 +43,10 @@ export default function Stats() {
 
         {/* Metryki: na razie tylko Zapisania i Wyswietlenia */}
         <div className="grid grid-cols-2 gap-3">
-          <StatBox icon={<Bookmark className="h-5 w-5" />} value={isLoading ? "–" : (stats?.uses ?? 0)} label="Zapisania" sub={t("stats.total_all")} />
-          <StatBox icon={<Eye className="h-5 w-5" />} value={isLoading ? "–" : (stats?.views ?? 0)} label={t("stats.views")} sub="Twoich tras" />
+          <StatBox icon={<Bookmark className="h-5 w-5" />} value={isLoading ? "–" : (stats?.uses ?? 0)} label={t("stats.saves")} sub={t("stats.total_all")} />
+          <StatBox icon={<Eye className="h-5 w-5" />} value={isLoading ? "–" : (stats?.views ?? 0)} label={t("stats.views")} sub={t("stats.of_your_routes")} />
         </div>
       </div>
     </div>
   );
 }
-
-  const { t } = useTranslation("homeprofile");

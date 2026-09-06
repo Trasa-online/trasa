@@ -152,7 +152,9 @@
     "desc": "Zobacz, jak inni korzystają z tras, które stworzyłaś.",
     "total_all": "łącznie wszystkich tras",
     "views": "Wyświetlenia",
-    "back": "Wróć"
+    "back": "Wróć",
+    "saves": "Zapisania",
+    "of_your_routes": "Twoich tras"
   },
   "grid": {
     "removed": "Usunięto z zapisanych",

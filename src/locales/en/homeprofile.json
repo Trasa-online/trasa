@@ -150,7 +150,9 @@
     "desc": "See how other people use the trips you created.",
     "total_all": "across all your trips",
     "views": "Views",
-    "back": "Back"
+    "back": "Back",
+    "saves": "Saves",
+    "of_your_routes": "of your routes"
   },
   "grid": {
     "removed": "Removed from saved",

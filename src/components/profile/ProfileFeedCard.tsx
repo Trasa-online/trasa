@@ -72,6 +72,7 @@ export function ProfileFeedCard({
   saved?: boolean;
   badge?: React.ReactNode; // chip przy tytule (np. "Nowe miejsce!" na zapisanej liscie)
 }) {
+  const { t } = useTranslation("homeprofile");
   const [mapOpen, setMapOpen] = useState(false);
   const mapUrl = mapPins && mapPins.length ? buildTripStaticMapUrl(mapPins) : null;
   // Siatka max 6 kafli. Gdy wiecej: 5 kafli + ostatni "przygaszony +N" (reszta miejsc).
@@ -231,5 +232,3 @@ export function ProfileFeedCard({
     </div>
   );
 }
-
-  const { t } = useTranslation("homeprofile");

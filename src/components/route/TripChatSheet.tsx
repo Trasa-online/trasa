@@ -17,6 +17,7 @@ export default function TripChatSheet({ open, onOpenChange, routeId, tripTitle, 
   open: boolean; onOpenChange: (o: boolean) => void; routeId: string | null; tripTitle?: string | null;
   participants?: { id: string; username: string | null; avatar_url: string | null }[];
 }) {
+  const { t } = useTranslation("route");
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [text, setText] = useState("");
@@ -150,5 +151,3 @@ export default function TripChatSheet({ open, onOpenChange, routeId, tripTitle, 
     </Sheet>
   );
 }
-
-  const { t } = useTranslation("route");
