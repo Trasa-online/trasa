@@ -224,7 +224,7 @@ const AddPlaceToTripInner = () => {
       // Dziennik/ReviewSummary uzywa innego klucza pinow - odswiez tez jego.
       await queryClient.invalidateQueries({ queryKey: ["review-all-pins"] });
       notify.success(
-        rows.length === 1 ? t("add_place.added_one") : t("add_place.added_many", { count: rows.length }),
+        t("add_place.added", { count: rows.length }),
       );
       goBackOr(navigate, "/moj-profil?tab=wyjazdy");
     } catch (e: any) {

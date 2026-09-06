@@ -16,7 +16,8 @@
     "collections": "Collections",
     "collections_sub_public": "place collections",
     "collections_sub_own": "Your place collections",
-    "trips": "Trips"
+    "trips": "Trips",
+    "lists": "Lists"
   },
   "public": {
     "not_found": "User not found",

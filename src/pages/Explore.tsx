@@ -570,7 +570,7 @@ export const MyCollections = ({ showCreate = true }: { showCreate?: boolean } = 
     window.open(`https://www.google.com/maps/search/?api=1&query=${q}${pid}`, "_blank", "noopener,noreferrer");
   };
 
-  const countLabel = (n: number) => `${n} ${n === 1 ? t("collections.place_one") : n < 5 ? t("collections.place_few") : t("collections.place_many")}`;
+  const countLabel = (n: number) => `${n} ${t("collections.place", { count: n })}`;
 
   return (
     <div className="space-y-3">
@@ -581,7 +581,7 @@ export const MyCollections = ({ showCreate = true }: { showCreate?: boolean } = 
           onClick={() => { trackCollectionCreate("my_collections_header"); navigate("/zestawienie/nowe"); }}
           className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-primary text-white text-sm font-bold active:scale-[0.98] transition-transform shadow-md shadow-orange-500/20"
         >
-          <Plus className="h-4 w-4" strokeWidth={2.5} /> {t("collections.create_new", "Nowa lista miejsc")}
+          <Plus className="h-4 w-4" strokeWidth={2.5} /> {t("collections.create_new")}
         </button>
       )}
 
@@ -607,7 +607,7 @@ export const MyCollections = ({ showCreate = true }: { showCreate?: boolean } = 
         // Tap w blok -> pelny widok listy (/lista/:id). Kosz (usuwanie) w rogu.
         const renderCol = (col: any) => {
           const title = col.title || t("collections.untitled");
-          const eyebrow = t("feed.recommend", "Odwiedzone");
+          const eyebrow = t("feed.recommend");
           const initial = (col.author_name || title || "?").charAt(0).toUpperCase();
           return (
             <div key={col.id} className="relative">
@@ -851,7 +851,7 @@ const Explore = () => {
               onClick={() => { trackCollectionCreate("twoje_listy_header"); navigate("/zestawienie/nowe"); }}
               className="shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-full border border-primary/70 text-primary text-sm font-bold active:scale-[0.97] transition-transform"
             >
-              <Plus className="h-4 w-4" strokeWidth={2.5} /> {t("collections.create_new", "Nowa lista miejsc")}
+              <Plus className="h-4 w-4" strokeWidth={2.5} /> {t("collections.create_new")}
             </button>
           </>
         ) : (

@@ -114,5 +114,6 @@
   },
   "filters": {
     "show_label": "Show"
-  }
+  },
+  "undo": "Undo"
 }

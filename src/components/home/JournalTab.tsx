@@ -302,13 +302,9 @@ const JournalTab = ({ userId, city: cityFilter, draftsOnly = false }: JournalTab
 
   // Sheet tworzenia nowego wyjazdu (tryb uproszczony) - wspoldzielony miedzy stanami.
 
-  // Polska liczba mnoga miejsc: 1 miejsce / 2-4 miejsca / 5+ miejsc.
-  const placesCountLabel = (n: number): string => {
-    if (n === 1) return t("journal.places_one", { num: n });
-    const last = n % 10, last2 = n % 100;
-    if (last >= 2 && last <= 4 && (last2 < 10 || last2 >= 20)) return t("journal.places_few", { num: n });
-    return t("journal.places_many", { num: n });
-  };
+  // Odmiane liczy i18next (polski: one/few/many, angielski: one/other). Recznie wybierana
+  // forma dzialala TYLKO po polsku - po angielsku wolala klucz, ktorego tam nie ma.
+  const placesCountLabel = (n: number): string => t("journal.places", { count: n, num: n });
 
   // Karta wyjazdu (redesign): uklad poziomy - okladka po lewej (zamek + mini-mapa w rogach),
   // po prawej tytul, miasto + data, liczba miejsc i awatary uczestnikow (dla grup).

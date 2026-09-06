@@ -222,7 +222,7 @@ const CityPicker = ({ onConfirm }: CityPickerProps) => {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder={t("city_picker.search_placeholder", { defaultValue: "Szukaj miasta..." })}
+            placeholder={t("city_picker.search_placeholder")}
             className="w-full h-10 pl-9 pr-3 rounded-full bg-muted/50 border border-border/50 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30"
           />
         </div>

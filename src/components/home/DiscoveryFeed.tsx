@@ -455,7 +455,7 @@ export function CollectionDetail({ col, onClose, onAdopt }: { col: DiscoveryColl
           </div>
           {/* Galeria pill (lewy dol) - przelacza na widok galerii. Ukryta gdy galeria off. */}
           {GALLERY_ENABLED && col.items.some((i) => i.photo_url) && (
-            <button onClick={() => setContentView("gallery")} aria-label={t("gallery", "Galeria")}
+            <button onClick={() => setContentView("gallery")} aria-label={t("gallery")}
               className="absolute bottom-3 left-3 h-8 px-3.5 flex items-center gap-1.5 rounded-full bg-black/35 backdrop-blur text-white text-xs font-semibold active:scale-95 transition-transform">
               <Images className="h-4 w-4" />
             </button>
@@ -505,7 +505,7 @@ export function CollectionDetail({ col, onClose, onAdopt }: { col: DiscoveryColl
                 </button>
                 <button onClick={() => setContentView("gallery")}
                   className={`flex-1 flex items-center justify-center gap-1.5 h-9 rounded-full text-sm font-medium transition-colors ${contentView === "gallery" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
-                  <Images className="h-4 w-4" />{t("gallery", "Galeria")}
+                  <Images className="h-4 w-4" />{t("gallery")}
                 </button>
               </div>
             </div>
@@ -536,7 +536,7 @@ export function CollectionDetail({ col, onClose, onAdopt }: { col: DiscoveryColl
 
               {mapPins.length > 0 && (
                 <div className="mt-6">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">{t("map_heading", "Mapa")}</p>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">{t("map_heading")}</p>
                   <div className="relative h-52 rounded-2xl overflow-hidden border border-border/40">
                     <RouteMap pins={mapPins as any} className="w-full h-full" showRoute={isRoute} />
                   </div>
@@ -1595,13 +1595,13 @@ export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityCh
     if (has) {
       await (supabase as any).from("saved_routes").delete().eq("user_id", user.id).eq("route_id", routeId);
       toast(t("toast.removed_saved"), {
-        action: { label: t("undo", "Cofnij"), onClick: () => toggleSaveRoute(routeId) },
+        action: { label: t("undo"), onClick: () => toggleSaveRoute(routeId) },
       });
     } else {
       await (supabase as any).from("saved_routes").insert({ user_id: user.id, route_id: routeId });
       // Powiadom właściciela trasy o zapisie (SECURITY DEFINER, pomija self-save).
       void (supabase as any).rpc("notify_route_used", { p_route_id: routeId });
-      toast.success(t("toast.saved", "Zapisano"));
+      toast.success(t("toast.saved"));
     }
     queryClient.invalidateQueries({ queryKey: ["saved-routes"] });
   };
@@ -1619,7 +1619,7 @@ export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityCh
         set.delete(colId); delete dates[colId];
         if (user) void unsaveCollectionDb(user.id, colId);
         toast(t("toast.removed_saved"), {
-          action: { label: t("undo", "Cofnij"), onClick: () => toggleSaveCol(colId) },
+          action: { label: t("undo"), onClick: () => toggleSaveCol(colId) },
         });
       } else {
         set.add(colId); dates[colId] = new Date().toISOString();
@@ -2184,7 +2184,7 @@ export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityCh
                 zapytanie o konkretna osobe, nie o tresc (2026-09-06). */}
             {(cat === "all" || cat === "people") && (results.people?.length ?? 0) > 0 && (
               <div>
-                <p className="text-sm font-black uppercase tracking-wide mb-3 px-1">{t("people_heading", "Ludzie")}</p>
+                <p className="text-sm font-black uppercase tracking-wide mb-3 px-1">{t("people_heading")}</p>
                 <div className="rounded-2xl border border-border/40 bg-secondary overflow-hidden divide-y divide-border/30">
                   {results.people.filter((pr: any) => notBlocked(pr.id)).map((pr: any) => {
                     const name = pr.first_name || pr.username;

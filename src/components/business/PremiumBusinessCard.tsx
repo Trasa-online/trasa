@@ -742,7 +742,7 @@ function OpeningHoursSection({ data }: SectionProps) {
         aria-expanded={expanded}
       >
         <Clock className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-        <span>{t("opening_hours_label", "Godziny otwarcia")}</span>
+        <span>{t("opening_hours_label")}</span>
         <span className={cn("font-bold", openNow ? "text-green-600" : "text-red-500")}>
           {openNow ? t("open_now") : t("closed")}
         </span>
@@ -893,7 +893,7 @@ function MapSection({ data, startingLocation }: SectionProps & { startingLocatio
           rel="noopener noreferrer"
           className="inline-flex items-center gap-1.5 rounded-full bg-secondary text-secondary-foreground px-3 py-1.5 text-xs font-semibold active:scale-95 transition-transform shrink-0"
         >
-          <GoogleGlyph className="h-4 w-4" /> {t("open_in_google_maps", "Zobacz w Google Maps")}
+          <GoogleGlyph className="h-4 w-4" /> {t("open_in_google_maps")}
         </a>
       </div>
       {/* Statyczny punkt + ikona otwarcia mapy na pelen ekran (interaktywna mapa w overlayu). */}
@@ -1173,7 +1173,7 @@ const PremiumBusinessCard = ({
               <div className="space-y-3">
                 {data.description && (
                   <div className="space-y-2">
-                    <h3 className="text-lg font-semibold tracking-tight">{t("description_title", "Opis miejsca")}</h3>
+                    <h3 className="text-lg font-semibold tracking-tight">{t("description_title")}</h3>
                     <DescriptionSection data={data} />
                   </div>
                 )}

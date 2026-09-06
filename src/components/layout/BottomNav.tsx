@@ -232,7 +232,7 @@ const BottomNav = () => {
                 </p>
                 <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
                   {t("reuse_have")} <strong>{reusePrompt.likes.length}</strong>{" "}
-                  {reusePrompt.likes.length === 1 ? t("reuse_place_one") : reusePrompt.likes.length < 5 ? t("reuse_place_few") : t("reuse_place_many")}{" "}
+                  {t("reuse_place", { count: reusePrompt.likes.length })}{" "}
                   {t("reuse_from", { city: reusePrompt.city })}
                 </p>
               </div>

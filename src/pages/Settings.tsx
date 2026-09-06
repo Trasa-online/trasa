@@ -724,7 +724,7 @@ const Settings = () => {
           </div>
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
-              <Label htmlFor="bio">{t("bio", "O mnie")}</Label>
+              <Label htmlFor="bio">{t("bio")}</Label>
               <span className="text-xs text-muted-foreground/70 tabular-nums">{bio.length}/80</span>
             </div>
             <textarea

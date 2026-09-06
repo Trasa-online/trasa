@@ -56,7 +56,9 @@
     "confirm_route": "Zatwierdź tę trasę",
     "save_changes": "Zapisz zmiany",
     "photos_label": "Zdjęcia miejsca",
-    "others_notes": "Notki uczestników"
+    "others_notes": "Notki uczestników",
+    "add_photo": "Dodaj",
+    "open_place": "Zobacz miejsce"
   },
   "status": {
     "day_finished_label": "Dzień zakończony",

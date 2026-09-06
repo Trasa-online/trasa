@@ -164,7 +164,8 @@
     "notify_hint": "We'll let you know when your city is available in the app.",
     "next": "Next",
     "coming_soon_cta": "Coming soon 🔒",
-    "coming_soon_badge": "Soon"
+    "coming_soon_badge": "Soon",
+    "search_placeholder": "Search for a city..."
   },
   "save_sheet": {
     "title": "Place saved!",

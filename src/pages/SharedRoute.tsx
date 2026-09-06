@@ -2009,7 +2009,7 @@ export default function SharedRoute() {
         <div className="fixed inset-0 z-[90] bg-background flex flex-col animate-in fade-in duration-200">
           <div className="relative flex-1 min-h-0">
             <RouteMap pins={mapPlaces as any} className="w-full h-full" showRoute={false} />
-            <button onClick={() => setPlanMapOpen(false)} aria-label={t("close", { defaultValue: "Zamknij" })} className="absolute right-3 z-10 h-10 w-10 rounded-full bg-card shadow-md flex items-center justify-center active:scale-90 transition-transform" style={{ top: "max(0.75rem, env(safe-area-inset-top))" }}>
+            <button onClick={() => setPlanMapOpen(false)} aria-label={t("close")} className="absolute right-3 z-10 h-10 w-10 rounded-full bg-card shadow-md flex items-center justify-center active:scale-90 transition-transform" style={{ top: "max(0.75rem, env(safe-area-inset-top))" }}>
               <X className="h-5 w-5 text-foreground" />
             </button>
             {/* WIZYTOWKI MIEJSC nad mapa (prosba Nat 2026-09-01): miniaturka z okladka (albo ikona
@@ -2050,7 +2050,7 @@ export default function SharedRoute() {
       {viewerIndex !== null && galleryPhotos[viewerIndex] && (
         <div {...swipeViewer} className="fixed inset-0 z-[95] bg-black flex items-center justify-center animate-in fade-in duration-200" onClick={() => setViewerIndex(null)}>
           <img src={galleryPhotos[viewerIndex]} alt="" className="max-w-full max-h-full object-contain" onClick={(e) => e.stopPropagation()} />
-          <button onClick={() => setViewerIndex(null)} aria-label={t("close", { defaultValue: "Zamknij" })} className="absolute right-3 z-10 h-10 w-10 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center active:scale-90 transition-transform" style={{ top: "max(0.75rem, env(safe-area-inset-top))" }}>
+          <button onClick={() => setViewerIndex(null)} aria-label={t("close")} className="absolute right-3 z-10 h-10 w-10 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center active:scale-90 transition-transform" style={{ top: "max(0.75rem, env(safe-area-inset-top))" }}>
             <X className="h-5 w-5 text-white" />
           </button>
           {/* Usuwanie zdjecia zeszlo z kafelka do podgladu - siatka ma byc czysta (bez podpisow

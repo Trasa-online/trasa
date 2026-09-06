@@ -404,7 +404,7 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
                   const shown = avs.slice(0, 3);
                   const extra = avs.length - shown.length;
                   const n = avs.length;
-                  const label = n === 1 ? t("people_one") : n < 5 ? t("people_few") : t("people_many");
+                  const label = t("people", { count: n });
                   return (
                     <div className="flex items-center gap-2.5">
                       <div className="flex -space-x-2.5 shrink-0">
@@ -438,7 +438,7 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
             {drafts.map((d) => {
               const dateLabel = d.date && isValid(parseISO(d.date)) ? format(parseISO(d.date), "d MMM", { locale: dateLocale() }) : null;
               const n = d.likedPlaceNames.length;
-              const placesLabel = `${n} ${n === 1 ? t("places_one") : n < 5 ? t("places_few") : t("places_many")}`;
+              const placesLabel = `${n} ${t("places", { count: n })}`;
               return (
                 <button
                   key={d.city}

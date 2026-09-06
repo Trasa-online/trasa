@@ -182,5 +182,6 @@
   "back": "Back",
   "delete": "Delete",
   "deleting": "Deleting…",
-  "trip_fallback": "Trip"
+  "trip_fallback": "Trip",
+  "close": "Close"
 }

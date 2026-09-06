@@ -755,7 +755,7 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, likedPlaces
     }
     const initialize = async () => {
       const nDays = preferences.numDays;
-      const daysLabel = nDays === 1 ? t("days_one") : t("days_many", { count: nDays });
+      const daysLabel = t("days", { count: nDays });
       const fallbackIntro = t("assistant.fallback_intro", { days: daysLabel, city: preferences.city });
 
       // Day 2+: send empty messages so server generates personalized greeting

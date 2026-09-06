@@ -63,6 +63,7 @@
   },
   "feed": {
     "visited": "Odwiedzone miejsca",
-    "to_visit": "Do odwiedzenia miejsca"
+    "to_visit": "Do odwiedzenia miejsca",
+    "recommend": "Odwiedzone"
   }
 }

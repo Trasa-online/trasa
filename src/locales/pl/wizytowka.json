@@ -48,5 +48,6 @@
   "events_next_month": "Następny miesiąc",
   "events_month_empty": "Brak wydarzeń w tym miesiącu",
   "events_show_all": "Wszystkie ({{count}})",
-  "events_collapse": "Zwiń"
+  "events_collapse": "Zwiń",
+  "open_in_google_maps": "Zobacz w Google Maps"
 }

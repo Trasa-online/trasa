@@ -46,5 +46,6 @@
   "events_next_month": "Next month",
   "events_month_empty": "No events this month",
   "events_show_all": "All ({{count}})",
-  "events_collapse": "Collapse"
+  "events_collapse": "Collapse",
+  "open_in_google_maps": "View on Google Maps"
 }

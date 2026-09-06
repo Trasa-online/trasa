@@ -16,7 +16,8 @@
     "collections": "Listy",
     "collections_sub_public": "kolekcje miejsc",
     "collections_sub_own": "Twoje kolekcje miejsc",
-    "trips": "Wyjazdy"
+    "trips": "Wyjazdy",
+    "lists": "Listy"
   },
   "public": {
     "not_found": "Nie znaleziono użytkownika",

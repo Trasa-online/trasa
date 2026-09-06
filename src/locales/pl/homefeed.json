@@ -116,5 +116,6 @@
   },
   "filters": {
     "show_label": "Pokaż"
-  }
+  },
+  "undo": "Cofnij"
 }

@@ -46,7 +46,7 @@ const RouteItem = ({ route, onDelete }: RouteItemProps) => {
           {sortedPins.length > 0 && (
             <div className="flex items-center gap-1.5">
               <MapPin className="h-3.5 w-3.5" />
-              <span>{sortedPins.length} {sortedPins.length === 1 ? t("stop_one") : t("stop_many")}</span>
+              <span>{sortedPins.length} {t("stop", { count: sortedPins.length })}</span>
             </div>
           )}
         </div>

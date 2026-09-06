@@ -46,7 +46,8 @@
     "day": "Dzień {{number}}",
     "earlier": "Wcześniej",
     "later": "Później",
-    "add_place": "Dodaj miejsce"
+    "add_place": "Dodaj miejsce",
+    "map": "Mapa trasy"
   },
   "empty": {
     "no_places": "Brak miejsc w planie.",
@@ -109,7 +110,8 @@
     "next": "Dalej",
     "done": "Gotowe",
     "save_changes": "Zapisz zmiany",
-    "close_edit_mode": "Zamknij tryb edycji"
+    "close_edit_mode": "Zamknij tryb edycji",
+    "cancel": "Anuluj"
   },
   "toast": {
     "link_copied": "Link skopiowany",
@@ -147,6 +149,8 @@
     "close": "Zamknij",
     "more_options": "Więcej opcji",
     "next": "Następne",
-    "edit_name": "Edytuj nazwę"
-  }
+    "edit_name": "Edytuj nazwę",
+    "prev": "Poprzednie"
+  },
+  "close": "Zamknij"
 }

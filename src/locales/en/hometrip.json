@@ -51,7 +51,9 @@
     "confirm_route": "Confirm this trip",
     "save_changes": "Save changes",
     "photos_label": "Place photos",
-    "others_notes": "Notes from others"
+    "others_notes": "Notes from others",
+    "add_photo": "Add",
+    "open_place": "View place"
   },
   "status": {
     "day_finished_label": "Day finished",

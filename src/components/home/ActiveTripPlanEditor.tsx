@@ -655,7 +655,7 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false, onDelete, deleting 
             ))}
             <label className={`h-20 w-20 shrink-0 rounded-xl border-2 border-dashed border-border/50 flex flex-col items-center justify-center gap-1 text-muted-foreground cursor-pointer active:scale-95 transition-transform ${busy ? "opacity-60 pointer-events-none" : ""}`}>
               {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <Camera className="h-5 w-5" />}
-              <span className="text-[10px] font-semibold">{busy ? "..." : t("editor.add_photo", { defaultValue: "Dodaj" })}</span>
+              <span className="text-[10px] font-semibold">{busy ? "..." : t("editor.add_photo")}</span>
               <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => { addPlacePhotos(pin, e.target.files); e.currentTarget.value = ""; }} />
             </label>
           </div>
@@ -708,7 +708,7 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false, onDelete, deleting 
               role="button"
               tabIndex={0}
               onClick={(e) => { e.stopPropagation(); openDetail(pin); }}
-              aria-label={t("editor.open_place", "Zobacz miejsce")}
+              aria-label={t("editor.open_place")}
               className="absolute top-3 right-3 h-10 w-10 rounded-full bg-white flex items-center justify-center shadow-lg shadow-black/20 active:scale-90"
             >
               <GoogleG className="h-5 w-5" />
@@ -771,7 +771,7 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false, onDelete, deleting 
             </div>
           )}
           {/* Guzik Google -> wizytowka miejsca (zamiast odhaczania) */}
-          <button onClick={() => openDetail(pin)} aria-label={t("editor.open_place", "Zobacz miejsce")} className="h-9 w-9 rounded-full bg-white border border-border/50 shadow-sm flex items-center justify-center active:scale-90"><GoogleG className="h-4 w-4" /></button>
+          <button onClick={() => openDetail(pin)} aria-label={t("editor.open_place")} className="h-9 w-9 rounded-full bg-white border border-border/50 shadow-sm flex items-center justify-center active:scale-90"><GoogleG className="h-4 w-4" /></button>
           {editable && (
             <button onClick={() => removeWorkingPin(pin.id)} aria-label={t("editor.remove_place")} className="h-9 w-9 rounded-full flex items-center justify-center text-muted-foreground/60 active:scale-90"><Trash2 className="h-4 w-4" /></button>
           )}

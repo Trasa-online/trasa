@@ -134,11 +134,18 @@ for (const file of walk(path.join(ROOT, "src"))) {
   const rel = path.relative(ROOT, file);
   const raw = fs.readFileSync(file, "utf8");
 
-  // 3. polski tekst zapasowy w t() - blad ZAWSZE, tez w plikach z baseline
+  // 3. Tekst zapasowy w t() - blad ZAWSZE, tez w plikach z baseline. Sprawdzamy KAZDY, nie
+  // tylko z polskimi ogonkami: "Cofnij", "Listy" czy "Anuluj" tez sa polskie, a wygladaja
+  // niewinnie. Klucz ma zyc w plikach obu jezykow, nie w wywolaniu.
   for (const m of raw.matchAll(/\bt\(\s*"[^"]+"\s*,\s*"((?:[^"\\]|\\.)+)"\s*\)/g))
-    if (PL_DIA.test(m[1])) errors.push(`${rel}: polski tekst zapasowy w t(): "${m[1]}"`);
+    if (/[A-Za-z]/.test(m[1])) errors.push(`${rel}: tekst zapasowy w t(): "${m[1]}" - dopisz klucz do pl i en`);
   for (const m of raw.matchAll(/\bt\(\s*"[^"]+"\s*,\s*\{[^{}]*defaultValue:\s*"((?:[^"\\]|\\.)+)"/g))
-    if (PL_DIA.test(m[1])) errors.push(`${rel}: polski defaultValue w t(): "${m[1]}"`);
+    errors.push(`${rel}: defaultValue w t(): "${m[1]}" - dopisz klucz do pl i en`);
+
+  // Recznie wybierana forma odmiany: t("x_few") dziala TYLKO po polsku - angielski ma
+  // one/other, wiec taki klucz spada na fallbackLng i pokazuje polski tekst.
+  for (const m of raw.matchAll(/\bt\(\s*"([a-zA-Z_.]+_(?:few|many))"/g))
+    errors.push(`${rel}: t("${m[1]}") - uzyj t("${m[1].replace(/_(few|many)$/, "")}", { count }) zamiast recznej formy`);
 
   // 4. polski na sztywno. Linia z `i18n-ignore` jest pomijana - to furtka dla DANYCH
   // (nazwy wlasne miast, dzielnic), ktore w obu jezykach brzmia tak samo. Nie uzywaj jej

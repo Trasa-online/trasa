@@ -817,7 +817,7 @@ const TravelerProfile = () => {
           {/* Kolejnosc: Wyjazdy | Listy (prosba Nat 2026-08-30) - wyjazdy sa flagowa trescia profilu. */}
           {(["wyjazdy", "listy"] as const).map((tk) => {
             const active = tab === tk;
-            const label = tk === "listy" ? t("sections.lists", { defaultValue: "Listy" }) : t("sections.trips", { defaultValue: "Wyjazdy" });
+            const label = tk === "listy" ? t("sections.lists") : t("sections.trips");
             return (
               <button key={tk} onClick={() => { setTab(tk); if (tk === "wyjazdy") setWyjazdyTab("robocze"); }} className="relative flex-1 flex items-center justify-center gap-2 py-2.5" aria-label={label}>
                 {tk === "listy"

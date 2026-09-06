@@ -462,7 +462,7 @@ const PlaceSwiperDetail = ({
                   onClick={handleLike}
                   className="flex-1 h-11 rounded-full bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 shadow-xl shadow-primary/30 active:scale-[0.97] transition-transform"
                 >
-                  {t("save_place", "Zapisz to miejsce")}
+                  {t("save_place")}
                   <Bookmark className="h-4 w-4" strokeWidth={2.2} />
                 </button>
               )}

@@ -665,7 +665,7 @@ const CreateRanking = () => {
           <div className="px-4 pt-3">
             <input value={title} onChange={(e) => { setTitle(e.target.value); setTitleDirty(true); }} maxLength={80}
               onFocus={() => setTitleFocused(true)} onBlur={() => setTitleFocused(false)}
-              placeholder={t("name_placeholder", "Nazwa listy")}
+              placeholder={t("name_placeholder")}
               className="w-full rounded-2xl bg-secondary text-secondary-foreground border-0 px-4 py-3 text-base outline-none focus:ring-2 focus:ring-orange-500/40 placeholder:text-muted-foreground/50" />
           </div>
 

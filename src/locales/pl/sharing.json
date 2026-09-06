@@ -187,5 +187,6 @@
   "back": "Wróć",
   "delete": "Usuń",
   "deleting": "Usuwanie…",
-  "trip_fallback": "Wyjazd"
+  "trip_fallback": "Wyjazd",
+  "close": "Zamknij"
 }

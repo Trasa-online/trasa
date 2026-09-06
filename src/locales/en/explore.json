@@ -61,6 +61,7 @@
   },
   "feed": {
     "visited": "Visited places",
-    "to_visit": "Places to visit"
+    "to_visit": "Places to visit",
+    "recommend": "Visited"
   }
 }

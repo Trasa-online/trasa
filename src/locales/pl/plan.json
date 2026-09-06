@@ -167,7 +167,8 @@
     "notify_hint": "Damy Ci znać, gdy Twoje miasto pojawi się w aplikacji.",
     "next": "Dalej",
     "coming_soon_cta": "Wkrótce dostępne 🔒",
-    "coming_soon_badge": "Wkrótce"
+    "coming_soon_badge": "Wkrótce",
+    "search_placeholder": "Szukaj miasta..."
   },
   "save_sheet": {
     "title": "Miejsce zapisane!",

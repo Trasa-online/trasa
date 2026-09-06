@@ -1196,7 +1196,7 @@ const ReviewSummary = () => {
               disabled={finishing}
               className="flex-1 py-3.5 rounded-2xl bg-secondary text-secondary-foreground font-bold text-sm active:scale-[0.98] transition-transform disabled:opacity-40"
             >
-              {t("cta.cancel", { defaultValue: "Anuluj" })}
+              {t("cta.cancel")}
             </button>
             <button
               onClick={handleFinishTrip}
@@ -1825,7 +1825,7 @@ const ReviewSummary = () => {
         {/* Strzalki jako alternatywa dla gestu (i licznik) - tylko gdy jest wiecej niz jedno zdjecie. */}
         {galleryUrlsRef.current.length > 1 && (
           <>
-            <button onClick={(e) => { e.stopPropagation(); stepPhoto(-1); }} aria-label={t("a11y.prev", { defaultValue: "Poprzednie" })}
+            <button onClick={(e) => { e.stopPropagation(); stepPhoto(-1); }} aria-label={t("a11y.prev")}
               className="absolute left-2 top-1/2 -translate-y-1/2 h-11 w-11 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center active:scale-90 transition-transform">
               <ChevronLeft className="h-6 w-6 text-white" />
             </button>
@@ -2176,7 +2176,7 @@ const ReviewSummary = () => {
             <div className="flex items-center gap-2.5 flex-wrap text-sm">
               <span className="flex items-center gap-1.5 font-semibold text-foreground">
                 <img src={avatarSrc(routeAuthor?.avatar_url)} alt="" className="h-6 w-6 rounded-full object-cover bg-orange-100" />
-                {routeAuthor?.username ? `@${routeAuthor.username}` : (routeAuthor?.first_name || t("labels.you", { defaultValue: "Ty" }))}
+                {routeAuthor?.username ? `@${routeAuthor.username}` : (routeAuthor?.first_name || t("labels.you"))}
               </span>
               {cityLabel && <span className="flex items-center gap-1 text-muted-foreground"><Building2 className="h-4 w-4" />{cityLabel}</span>}
               <span className="flex items-center gap-1 text-muted-foreground"><MapPin className="h-4 w-4" />{currentPins.length} {currentPins.length === 1 ? "miejsce" : currentPins.length < 5 ? "miejsca" : "miejsc"}</span>
@@ -2436,7 +2436,7 @@ const ReviewSummary = () => {
             <div className="absolute inset-0 bg-black/50 animate-in fade-in duration-200" />
             <div {...listCoverDrag.dragProps} onClick={(e) => e.stopPropagation()} className="relative w-full max-w-lg bg-card rounded-t-3xl px-5 pt-3 pb-[max(20px,env(safe-area-inset-bottom))] shadow-2xl animate-in slide-in-from-bottom-4 duration-300" style={{ ...listCoverDrag.dragProps.style, maxHeight: "82dvh" }}>
               <div className="mx-auto h-1 w-10 rounded-full bg-muted-foreground/25 mb-4" />
-              <button onClick={() => setListCoverPickerOpen(false)} aria-label={t("close", { defaultValue: "Zamknij" })} className="absolute right-4 top-4 h-8 w-8 rounded-full bg-muted flex items-center justify-center active:scale-90 transition-transform">
+              <button onClick={() => setListCoverPickerOpen(false)} aria-label={t("close")} className="absolute right-4 top-4 h-8 w-8 rounded-full bg-muted flex items-center justify-center active:scale-90 transition-transform">
                 <X className="h-4 w-4" />
               </button>
               <p className="text-lg font-bold pr-8">Miniatura w eksploracji</p>
@@ -2501,7 +2501,7 @@ const ReviewSummary = () => {
           <div className="fixed inset-0 z-[90] bg-background flex flex-col animate-in fade-in duration-200">
             <div className="relative flex-1 min-h-0">
               <RouteMap pins={navMapPins as any} className="w-full h-full" showRoute={false} />
-              <button onClick={() => setPlanMapOpen(false)} aria-label={t("close", { defaultValue: "Zamknij" })} className="absolute right-3 z-10 h-10 w-10 rounded-full bg-card shadow-md flex items-center justify-center active:scale-90 transition-transform" style={{ top: "max(0.75rem, env(safe-area-inset-top))" }}>
+              <button onClick={() => setPlanMapOpen(false)} aria-label={t("close")} className="absolute right-3 z-10 h-10 w-10 rounded-full bg-card shadow-md flex items-center justify-center active:scale-90 transition-transform" style={{ top: "max(0.75rem, env(safe-area-inset-top))" }}>
                 <X className="h-5 w-5 text-foreground" />
               </button>
             </div>
@@ -2815,7 +2815,7 @@ const ReviewSummary = () => {
                 };
                 return (
                   <div className="px-5 mt-6">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">{t("plan.map", { defaultValue: "Mapa trasy" })}</p>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">{t("plan.map")}</p>
                     <button onClick={openMap} className="block w-full rounded-2xl overflow-hidden border border-border/30 bg-muted active:opacity-95 transition-opacity">
                       <img src={mapUrl} alt="" className="w-full aspect-[16/9] object-cover" />
                     </button>

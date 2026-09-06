@@ -46,7 +46,8 @@
     "day": "Day {{number}}",
     "earlier": "Earlier",
     "later": "Later",
-    "add_place": "Add a place"
+    "add_place": "Add a place",
+    "map": "Trip map"
   },
   "empty": {
     "no_places": "No places in the plan.",
@@ -109,7 +110,8 @@
     "next": "Next",
     "done": "Done",
     "save_changes": "Save changes",
-    "close_edit_mode": "Close edit mode"
+    "close_edit_mode": "Close edit mode",
+    "cancel": "Cancel"
   },
   "toast": {
     "link_copied": "Link copied",
@@ -147,6 +149,8 @@
     "close": "Close",
     "more_options": "More options",
     "next": "Next",
-    "edit_name": "Edit name"
-  }
+    "edit_name": "Edit name",
+    "prev": "Previous"
+  },
+  "close": "Close"
 }

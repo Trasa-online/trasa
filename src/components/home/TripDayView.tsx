@@ -79,7 +79,7 @@ const TripDayView = ({ pins, dayLabel, dateLabel, date, onStartReview }: TripDay
             className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-background/60 border border-border/60 text-sm text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors"
           >
             <Map className="h-3.5 w-3.5" />
-            {t("day_view.open_maps", { count: pinsWithCoords.length, unit: pinsWithCoords.length === 1 ? t("points_one") : t("points_many") })}
+            {t("day_view.open_maps", { count: pinsWithCoords.length, unit: t("points", { count: pinsWithCoords.length }) })}
           </a>
         </div>
       )}
