@@ -594,7 +594,9 @@ const Settings = () => {
     mutationFn: async () => {
       const { error } = await supabase
         .from("profiles")
-        .update({ first_name: firstName, username, avatar_url: avatarUrl, bio: bio.trim() || null } as any)
+        // trim OBOWIAZKOWY: bez niego "dagusiia " wchodzilo do bazy razem ze spacja, a profil
+        // publiczny (szukany po dokladnym username z adresu) przestawal sie otwierac.
+        .update({ first_name: firstName.trim(), username: username.trim(), avatar_url: avatarUrl, bio: bio.trim() || null } as any)
         .eq("id", user?.id);
       if (error) throw error;
     },

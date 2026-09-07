@@ -55,6 +55,9 @@ const tripCover = (tr: any): string | null => {
   return null;
 };
 
+// "%" i "_" maja w LIKE znaczenie specjalne - w nazwie uzytkownika to zwykle znaki.
+const escapeLike = (v: string) => v.replace(/[%_\\]/g, "\\$&");
+
 export default function PublicProfile() {
   const { t } = useTranslation("profiles");
   const { username } = useParams<{ username: string }>();
@@ -73,10 +76,13 @@ export default function PublicProfile() {
   const { data: profile, isLoading } = useQuery({
     queryKey: ["public-profile", username],
     queryFn: async () => {
+      // ilike zamiast eq: nazwy w bazie potrafia miec inna wielkosc liter albo (historycznie)
+      // spacje na brzegach - a link jest jeden. Dokladne dopasowanie zostaje, bo w ilike nie ma
+      // znakow wieloznacznych; escapeLike chroni przed "%" i "_" wpisanym w nazwe.
       const { data } = await supabase
         .from("profiles")
         .select("id, username, first_name, avatar_url, bio")
-        .eq("username", username!)
+        .ilike("username", escapeLike((username ?? "").trim()))
         .maybeSingle();
       return data as { id: string; username: string; first_name: string | null; avatar_url: string | null; bio: string | null } | null;
     },
