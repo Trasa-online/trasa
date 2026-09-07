@@ -71,5 +71,19 @@
     "join": "Join the server"
   },
   "show_splash": "Show the welcome screen",
-  "render_error": "Settings failed to render:"
+  "render_error": "Settings failed to render:",
+  "username_taken": "That name is already taken",
+  "username_banned": "That name is not allowed",
+  "toast_save_error": "Could not save your changes",
+  "username_status": {
+    "checking": "Checking availability...",
+    "ok": "That name is free",
+    "taken": "That name is already taken",
+    "empty": "Enter a username",
+    "short": "The name needs at least 2 characters",
+    "long": "The name can have at most 20 characters",
+    "chars": "Letters, digits and . _ - only (no spaces)",
+    "banned": "That name is not allowed",
+    "reserved": "That name is reserved"
+  }
 }

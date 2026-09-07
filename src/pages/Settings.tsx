@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { checkUsername, cleanUsername, escapeLike, usernameKey, type UsernameProblem } from "@/lib/usernameRules";
 import { avatarSrc } from "@/lib/avatar";
 import { useNavigate, Link } from "react-router-dom";
 import { goBackOr } from "@/hooks/useGoBack";
@@ -590,19 +591,50 @@ const Settings = () => {
     }
   }, [profile]);
 
+  // Sprawdzanie nazwy NA BIEZACO. Do 2026-09-07 ten ekran nie sprawdzal niczego: zapisywal
+  // wprost do bazy, a UNIQUE porownuje bajt w bajt, wiec "berd " przechodzilo obok istniejacego
+  // "berd" i pozwalalo podszyc sie pod admina. Bledu nawet nie bylo widac, bo mutacja nie miala
+  // obslugi bledu. Twarde bariery sa w bazie (migracja 20260907b) - to jest szybka informacja
+  // zwrotna dla usera.
+  const [uStatus, setUStatus] = useState<"idle" | "checking" | "ok" | "taken" | UsernameProblem>("idle");
+  const originalUsername = (profile as any)?.username ?? "";
+  useEffect(() => {
+    const value = cleanUsername(username);
+    if (usernameKey(value) === usernameKey(originalUsername)) { setUStatus("idle"); return; }
+    const problem = checkUsername(value);
+    if (problem) { setUStatus(problem); return; }
+    setUStatus("checking");
+    const tmr = setTimeout(async () => {
+      const { data, error } = await supabase.from("profiles").select("id")
+        .ilike("username", escapeLike(value)).neq("id", user?.id ?? "").limit(1);
+      // Blad zapytania nie moze blokowac zapisu - ostatnie slowo i tak ma baza.
+      if (error) { setUStatus("ok"); return; }
+      setUStatus(data && data.length > 0 ? "taken" : "ok");
+    }, 400);
+    return () => clearTimeout(tmr);
+  }, [username, originalUsername, user?.id]);
+  const usernameBlocked = uStatus !== "idle" && uStatus !== "ok";
+
   const updateProfileMutation = useMutation({
     mutationFn: async () => {
       const { error } = await supabase
         .from("profiles")
         // trim OBOWIAZKOWY: bez niego "dagusiia " wchodzilo do bazy razem ze spacja, a profil
         // publiczny (szukany po dokladnym username z adresu) przestawal sie otwierac.
-        .update({ first_name: firstName.trim(), username: username.trim(), avatar_url: avatarUrl, bio: bio.trim() || null } as any)
+        .update({ first_name: firstName.trim(), username: cleanUsername(username), avatar_url: avatarUrl, bio: bio.trim() || null } as any)
         .eq("id", user?.id);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["profile"] });
       toast.success(t("toast_saved"));
+    },
+    // Bez tego zapis odrzucony przez baze (zajeta nazwa, zakazane slowo) konczyl sie CISZA -
+    // user byl przekonany, ze zmiana weszla.
+    onError: (err: any) => {
+      if (err?.code === "23505") { setUStatus("taken"); toast.error(t("username_taken")); return; }
+      if (String(err?.message ?? "").includes("username_not_allowed")) { setUStatus("banned"); toast.error(t("username_banned")); return; }
+      toast.error(t("toast_save_error"));
     },
   });
 
@@ -724,8 +756,16 @@ const Settings = () => {
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               placeholder={t("username_placeholder")}
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
               className="bg-background"
             />
+            {uStatus !== "idle" && (
+              <p className={`text-xs leading-snug ${uStatus === "ok" ? "text-green-600" : uStatus === "checking" ? "text-muted-foreground" : "text-destructive"}`}>
+                {t(`username_status.${uStatus}`)}
+              </p>
+            )}
           </div>
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
@@ -744,7 +784,7 @@ const Settings = () => {
           </div>
           <button
             onClick={() => updateProfileMutation.mutate()}
-            disabled={updateProfileMutation.isPending}
+            disabled={updateProfileMutation.isPending || usernameBlocked}
             className="w-full py-3 rounded-2xl bg-primary hover:bg-primary/90 text-white font-semibold text-sm transition-colors disabled:opacity-50"
           >
             {updateProfileMutation.isPending ? t("saving") : t("save_changes")}

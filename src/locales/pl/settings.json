@@ -71,5 +71,19 @@
     "join": "Dołącz do serwera"
   },
   "show_splash": "Pokaż ekran startowy",
-  "render_error": "Błąd renderowania Ustawień:"
+  "render_error": "Błąd renderowania Ustawień:",
+  "username_taken": "Ta nazwa jest już zajęta",
+  "username_banned": "Ta nazwa jest niedozwolona",
+  "toast_save_error": "Nie udało się zapisać zmian",
+  "username_status": {
+    "checking": "Sprawdzam dostępność...",
+    "ok": "Nazwa jest wolna",
+    "taken": "Ta nazwa jest już zajęta",
+    "empty": "Wpisz nazwę użytkownika",
+    "short": "Nazwa musi mieć co najmniej 2 znaki",
+    "long": "Nazwa może mieć najwyżej 20 znaków",
+    "chars": "Dozwolone są litery, cyfry oraz . _ -   (bez spacji)",
+    "banned": "Ta nazwa jest niedozwolona",
+    "reserved": "Ta nazwa jest zarezerwowana"
+  }
 }

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { checkUsername, cleanUsername, escapeLike, type UsernameProblem } from "@/lib/usernameRules";
 import { avatarSrc } from "@/lib/avatar";
 import { ArrowLeft, Check, Plus, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -41,7 +42,6 @@ const nbsp = (s: string) => s.replace(/ ([aiouwzAIOUWZ]) /g, (_m, l) => " " + l 
 
 const USERNAME_MAX = 20;
 const sanitizeUsername = (v: string) => v.toLowerCase().replace(/[^a-z0-9._]/g, "").slice(0, USERNAME_MAX);
-const escapeLike = (v: string) => v.replace(/[%_\\]/g, "\\$&");
 
 // Sygnal dla Czesci B (coach-marki): OnboardingProvider startuje tour gdy widzi ten klucz.
 export const COACH_PENDING_KEY = "spontaway_coach_pending";
@@ -68,7 +68,7 @@ const GOAL_OPTS = [
 
 const STEPS = ["welcome", "source", "goals", "username", "avatar", "home", "notify", "location", "tracking"] as const;
 type Step = typeof STEPS[number];
-type UStatus = "idle" | "short" | "checking" | "ok" | "taken";
+type UStatus = "idle" | "checking" | "ok" | "taken" | UsernameProblem;
 
 interface Props { onDone: () => void; }
 
@@ -132,9 +132,11 @@ const OnboardingFlow = ({ onDone }: Props) => {
   // Dostepnosc username (debounce). Wlasny username nie liczy sie jako zajety.
   useEffect(() => {
     if (stepName !== "username") return;
-    const v = username.trim();
+    const v = cleanUsername(username);
     if (v.length === 0) { setUStatus("idle"); return; }
-    if (v.length < 2) { setUStatus("short"); return; }
+    // Format, wulgaryzmy i nazwy zastrzezone - wspolne reguly z Ustawieniami (usernameRules).
+    const problem = checkUsername(v);
+    if (problem) { setUStatus(problem); return; }
     setUStatus("checking");
     const tmr = setTimeout(async () => {
       try {
@@ -158,7 +160,7 @@ const OnboardingFlow = ({ onDone }: Props) => {
     if (!user || uStatus !== "ok" || savingU) return;
     setSavingU(true);
     const { error } = await supabase.from("profiles")
-      .update({ username: username.trim(), first_name: firstName.trim() || null } as any)
+      .update({ username: cleanUsername(username), first_name: firstName.trim() || null } as any)
       .eq("id", user.id);
     setSavingU(false);
     if (error) {
@@ -486,8 +488,9 @@ const OnboardingFlow = ({ onDone }: Props) => {
                 </div>
                 <div className="h-6 mt-2 px-1 text-sm">
                   {uStatus === "ok" && <span className="text-green-600 font-medium">{t("name.username_free")}</span>}
-                  {uStatus === "taken" && <span className="text-red-600 font-medium">{t("name.username_taken")}</span>}
-                  {uStatus === "short" && <span className="text-muted-foreground">Minimum 2 znaki</span>}
+                  {uStatus !== "ok" && uStatus !== "idle" && uStatus !== "checking" && (
+                    <span className={uStatus === "taken" ? "text-red-600 font-medium" : "text-red-600"}>{t(`name.username_status.${uStatus}`)}</span>
+                  )}
                 </div>
               </div>
             </div>

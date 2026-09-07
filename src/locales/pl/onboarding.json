@@ -93,7 +93,17 @@
     "username_label": "Nazwa użytkownika",
     "username_free": "Nazwa dostępna",
     "first_placeholder": "Twoje imię",
-    "first_label": "Imię"
+    "first_label": "Imię",
+    "username_status": {
+      "checking": "Sprawdzam dostępność...",
+      "taken": "Ta nazwa jest już zajęta",
+      "empty": "Wpisz nazwę użytkownika",
+      "short": "Minimum 2 znaki",
+      "long": "Nazwa może mieć najwyżej 20 znaków",
+      "chars": "Dozwolone są litery, cyfry oraz . _ -   (bez spacji)",
+      "banned": "Ta nazwa jest niedozwolona",
+      "reserved": "Ta nazwa jest zarezerwowana"
+    }
   },
   "toast": {
     "name_failed": "Nie udało się zapisać nazwy. Spróbuj ponownie.",

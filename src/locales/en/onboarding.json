@@ -93,7 +93,17 @@
     "username_label": "Username",
     "username_free": "Username available",
     "first_placeholder": "Your first name",
-    "first_label": "First name"
+    "first_label": "First name",
+    "username_status": {
+      "checking": "Checking availability...",
+      "taken": "That name is already taken",
+      "empty": "Enter a username",
+      "short": "At least 2 characters",
+      "long": "The name can have at most 20 characters",
+      "chars": "Letters, digits and . _ - only (no spaces)",
+      "banned": "That name is not allowed",
+      "reserved": "That name is reserved"
+    }
   },
   "toast": {
     "name_failed": "We could not save your name. Try again.",
