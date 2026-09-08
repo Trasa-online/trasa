@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { avatarSrc } from "@/lib/avatar";
 import { placeTagsForCategory, localizeTag, tagId } from "@/lib/routeTags";
@@ -14,7 +14,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { placeKeyOf, fetchPlacePhotosForKeys, pickPlaceCover, fetchPhotoHashes, sha256OfFile, upsertPhotoHash } from "@/lib/placePhotoSocial";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Camera, X, Globe, Lock, Pencil, Check, Image as ImageIcon, Map as MapIcon, MapPin, ChevronUp, ChevronDown, ChevronRight, ChevronLeft, Trash2, Plus, Share, Share2, Info, MoreVertical, Navigation, Maximize2, Users, Calendar as CalendarIcon, Loader2, GripVertical, Building2, Flag } from "lucide-react";
+import { ArrowLeft, Camera, X, Globe, Lock, Pencil, Check, Image as ImageIcon, Map as MapIcon, ChevronUp, ChevronDown, ChevronRight, ChevronLeft, Trash2, Plus, Share, Share2, Info, MoreVertical, Loader2, GripVertical, Flag } from "lucide-react";
 import { Reorder, useDragControls } from "framer-motion";
 import RouteMap from "@/components/RouteMap";
 import { buildTripStaticMapUrl } from "@/lib/staticMap";
@@ -27,7 +27,7 @@ import AddPinSheet from "@/components/route/AddPinSheet";
 import FullCalendarPicker from "@/components/plan-wizard/FullCalendarPicker";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import type { MockPlace } from "@/components/plan-wizard/PlaceSwiper";
-import { QRCodeSVG } from "qrcode.react";
+
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { PlacePhoto, resolveStored } from "@/components/PlacePhoto";
 import StoredImage from "@/components/StoredImage";
@@ -37,7 +37,7 @@ import { useSavedPlaces } from "@/hooks/useSavedPlaces";
 import TripProposalsSheet from "@/components/route/TripProposalsSheet";
 import { compressImage } from "@/lib/imageCompression";
 import { isHeic, convertHeicToJpeg } from "@/lib/heicConvert";
-import { format, parseISO, isValid, addDays } from "date-fns";
+import { format, addDays } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
 import { isNative } from "@/lib/platform";
 import { Camera as CapCamera } from "@capacitor/camera";
@@ -1432,16 +1432,6 @@ const ReviewSummary = () => {
   // localReviewed = optymistyczne po "Zapisz" (przed refetchem route). To NIE publikacja (patrz isMemory).
   const reviewed = localReviewed || sortedDays.some((d: any) => d?.plan_finalized);
 
-  // Opublikowany wyjazd ma JEDEN docelowy widok: /route/:id (ten sam, ktory widza inni w
-  // eksploracji). Stare "podsumowanie z okladka" zostaje wylacznie jako STEPPER dokumentowania
-  // (?edit=1) - poza nim przekierowujemy (zgloszenie Nat 2026-08-30).
-  useEffect(() => {
-    if (route?.status === "published" && !forceEdit && !editingStepper && routeId) {
-      navigate(`/route/${routeId}`, { replace: true });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [route?.status, forceEdit, editingStepper, routeId]);
-
   if (authLoading) return null;
   if (!user) { navigate("/auth"); return null; }
 
@@ -2082,464 +2072,17 @@ const ReviewSummary = () => {
     </>
   );
 
-  // ── Widok "Plan wyjazdu" (aktywny / najblizszy wyjazd wlasciciela) wg Figmy ──
-  // Hero + info (avatar/nazwa/data) + widocznosc + lista miejsc (numer/kategoria/odhaczanie/
-  // reorder) + statyczna mapa (rozwijalna) + footer "Nawiguj do...". Wspomnienia (isMemory)
-  // i gosc ida dalej do klasycznego podsumowania/steppera.
-  // forceEdit (?edit=1, np. "Przejdz do sugestii" z ComposeWyjazd) MUSI pominac ten widok i
-  // trafic do steppera (Trasa -> Sugestie -> Galeria) - inaczej user laduje w widoku planu
-  // z nawigacja do Dziennika zamiast na kroku sugestii.
-  // Widok "Plan wyjazdu" (pills Miejsca|Galeria|Mapa) dla WLASCICIELA (pelna edycja) oraz
-  // UCZESTNIKA trasy wspolnej (read-only + dodawanie wlasnych zdjec). Uczestnik NIGDY nie dostaje
-  // kontrolek reorder/kosz/checklisty/Gotowe - te sa gejtowane przez isOwner ponizej.
-  if (!editingStepper && !forceEdit && sortedDays.length <= 1) {
-    const heroMapThumb = buildTripStaticMapUrl(currentPins, "160x160");
-    const bigMapUrl = buildTripStaticMapUrl(currentPins, "560x300");
-    const heroMapCover = buildTripStaticMapUrl(currentPins, "560x350"); // 16:10, pod okladke hero
-    // Ukonczony wyjazd = OPUBLIKOWANY (isMemory = status='published'). Wtedy sekcja miejsc pokazuje
-    // Notki/Galerie (wspomnienie). Robocza trasa (edytowalna) pokazuje plan.
-    const tripCompleted = isMemory;
-    // Usuniecie miejsca z planu (swipe/kosz) z oknem "Cofnij". Zmiana draftu; autosave
-    // (on unmount) utrwala usuniecie w DB. Cofniecie przywraca poprzednia liste.
-    const removePlaceFromPlan = (pin: any) => {
-      const prev = workingPins;
-      setWorking(workingPins.filter((p: any) => p.id !== pin.id));
-      deferDelete({ message: t("toast.place_removed"), onUndo: () => setWorking(prev), commit: () => { /* DB przez autosave */ } });
-    };
-    const navMapPins = currentPins
-      .filter((p: any) => p.latitude != null && p.longitude != null)
-      .map((p: any) => ({ latitude: p.latitude, longitude: p.longitude, place_name: p.place_name }));
-    const navigateTo = (p: any) => {
-      if (!p) return;
-      const dest = (typeof p.latitude === "number" && typeof p.longitude === "number")
-        ? `${p.latitude},${p.longitude}`
-        : encodeURIComponent([p.place_name, p.address, route?.city].filter(Boolean).join(" "));
-      window.open(`https://www.google.com/maps/dir/?api=1&destination=${dest}`, "_blank", "noopener,noreferrer");
-    };
-    const sectionHeadingCls = "font-display text-xl font-bold text-foreground tracking-tight";
-
-    return (
-      <div className="relative h-[100dvh] bg-background flex flex-col max-w-lg mx-auto">
-        {/* Sticky pasek back + X - NAD scrollem. Przezroczysty nad okladka, tlo gdy przewiniete.
-            Okladka (zdjecie) NIE jest sticky - przewija sie razem z trescia (wg Figmy). */}
-        <div
-          className={`absolute top-0 left-0 right-0 z-30 flex items-center justify-between px-4 pb-3 transition-colors duration-200 ${planScrolled ? "bg-[#FEFEFE]/95 backdrop-blur-md border-b border-black/[0.06]" : ""}`}
-          style={{ paddingTop: "max(12px, env(safe-area-inset-top, 12px))" }}
-        >
-          <button onClick={() => navigate("/moj-profil?tab=wyjazdy")} aria-label={t("a11y.back_to_journal")} className={`h-8 w-8 rounded-full flex items-center justify-center active:scale-90 transition-transform ${planScrolled ? "bg-secondary text-foreground" : "bg-black/35 backdrop-blur-sm text-white"}`}>
-            <ChevronLeft className="h-5 w-5" />
-          </button>
-          <button onClick={() => navigate("/moj-profil?tab=wyjazdy")} aria-label={t("a11y.back_to_journal")} className={`h-8 w-8 rounded-full flex items-center justify-center active:scale-90 transition-transform ${planScrolled ? "bg-secondary text-foreground" : "bg-white/25 backdrop-blur-sm text-white"}`}>
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-
-        <div onScroll={(e) => setPlanScrolled(e.currentTarget.scrollTop > 170)} className="flex-1 min-h-0 overflow-y-auto pb-5">
-          {/* Okladka - w scrollu, przewija sie (NIE sticky), bez zaokraglen na dole.
-              Uczestnik (non-owner) dostaje nizsza okladke (podglad), wlasciciel pelna 16:10. */}
-          <div className={`relative w-full ${isOwner ? "aspect-[16/10]" : "h-40"} overflow-hidden bg-gradient-to-br from-orange-400 via-rose-400 to-purple-500`}>
-            <img src={heroPhoto} alt="" className="absolute inset-0 w-full h-full object-cover" />
-            <div className="absolute inset-0 bg-gradient-to-b from-black/15 via-transparent to-black/55" />
-            {/* Edycja okladki (zmiana zdjecia + miniatura eksploracji) - tylko wlasciciel. */}
-            {isOwner && (
-              <>
-                {/* Okladka CALEGO wyjazdu usunieta 2026-08-30 (prosba Nat): opublikowany wyjazd
-                    ma jeden, czysty widok (/route/:id) bez hero-okladki. Zostaje wylacznie wybor
-                    MINIATURY EKSPLORACJI (list_cover_url) - ponizej. */}
-                {/* Miniatura eksploracji - OSOBNA okladka (list_cover_url), klik = zmiana zdjecia
-                    (dodaj nowe / wybierz z galerii/miejsc trasy). Prawy-dolny rog. Ikona = edytowalna. */}
-                <button
-                  onClick={() => setListCoverPickerOpen(true)}
-                  aria-label={t("cover.change")}
-                  className="absolute bottom-3 right-3 z-20 w-20 rounded-2xl overflow-hidden border-[3px] border-white shadow-xl bg-muted active:scale-95 transition-transform"
-                >
-                  <div className="relative w-full aspect-[9/16]">
-                    <img src={listCoverPhoto} alt="" className="w-full h-full object-cover" />
-                    <span className="absolute top-1 right-1 h-5 w-5 rounded-full bg-black/45 backdrop-blur-sm text-white flex items-center justify-center">
-                      <ImageIcon className="h-3 w-3" />
-                    </span>
-                  </div>
-                </button>
-              </>
-            )}
-          </div>
-
-          {/* Tresc planu */}
-          <div className="px-4 pt-5">
-          {/* Badge "Plan wyjazdu" + nazwa (edytowalna) + data (edytowalna) + widocznosc */}
-          <div className="flex flex-col gap-4">
-            {/* Autor trasy (awatar + @username) + miasto + liczba miejsc - zamiast badge "Plan wyjazdu". */}
-            <div className="flex items-center gap-2.5 flex-wrap text-sm">
-              <span className="flex items-center gap-1.5 font-semibold text-foreground">
-                <img src={avatarSrc(routeAuthor?.avatar_url)} alt="" className="h-6 w-6 rounded-full object-cover bg-orange-100" />
-                {routeAuthor?.username ? `@${routeAuthor.username}` : (routeAuthor?.first_name || t("labels.you"))}
-              </span>
-              {cityLabel && <span className="flex items-center gap-1 text-muted-foreground"><Building2 className="h-4 w-4" />{cityLabel}</span>}
-              <span className="flex items-center gap-1 text-muted-foreground"><MapPin className="h-4 w-4" />{currentPins.length} {currentPins.length === 1 ? "miejsce" : currentPins.length < 5 ? "miejsca" : "miejsc"}</span>
-            </div>
-            {/* Nazwa wyjazdu - edytowalna inline (wlasciciel); uczestnik widzi tylko tekst. */}
-            {!isOwner ? (
-              <p className="text-2xl font-black text-foreground leading-tight">{displayName || cityLabel}</p>
-            ) : editingName ? (
-              <div className="flex items-center gap-2">
-                <input
-                  value={nameVal}
-                  onChange={(e) => setNameVal(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter") saveName(); if (e.key === "Escape") setEditingName(false); }}
-                  autoFocus maxLength={60} placeholder={t("entry.name_placeholder")}
-                  className="flex-1 min-w-0 rounded-xl border border-border bg-background px-3 py-2 text-lg font-bold text-foreground outline-none focus:ring-2 focus:ring-orange-500/40"
-                  style={{ fontSize: "16px" }}
-                />
-                <button onClick={saveName} disabled={savingName} aria-label={t("a11y.save_name")} className="h-9 w-9 shrink-0 rounded-xl bg-primary text-white flex items-center justify-center active:scale-95 transition-transform disabled:opacity-50">
-                  <Check className="h-4 w-4" strokeWidth={3} />
-                </button>
-              </div>
-            ) : (
-              <button onClick={() => { setNameVal(customName); setEditingName(true); }} aria-label={t("a11y.edit_name")} className="flex items-center justify-between gap-2 text-left active:opacity-70">
-                <p className="flex-1 min-w-0 text-2xl font-black text-foreground leading-tight truncate">{displayName || cityLabel}</p>
-                <ChevronRight className="h-5 w-5 text-muted-foreground shrink-0" />
-              </button>
-            )}
-            {/* Data - wiersz (ikona + zakres); klik otwiera kalendarz (wlasciciel). Uczestnik: read-only. */}
-            {!isOwner ? (
-              dateLabel ? (
-                <div className="flex items-center gap-1.5 min-w-0">
-                  <CalendarIcon className="h-5 w-5 text-foreground shrink-0" />
-                  <span className="text-base text-foreground truncate">{dateLabel}</span>
-                </div>
-              ) : null
-            ) : (
-              <button onClick={() => setDatePickerOpen(true)} className="flex items-center justify-between gap-2 active:opacity-70">
-                <span className="flex items-center gap-1.5 min-w-0">
-                  <CalendarIcon className="h-5 w-5 text-foreground shrink-0" />
-                  <span className="text-base text-foreground truncate">{dateLabel || t("dates.add")}</span>
-                </span>
-                <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
-              </button>
-            )}
-            {/* Feedback okladki: trasa POJAWIA SIE w eksploracji tylko z okladka (list_cover_url).
-                Gdy publiczna (is_shared) ale bez okladki -> baner z CTA do dodania (picker miniatury). */}
-            {isOwner && !!route?.is_shared && !(route as any)?.list_cover_url && (
-              <button
-                onClick={() => setListCoverPickerOpen(true)}
-                className="flex items-center rounded-2xl bg-[#FDF184] border border-[#FDCD84] px-4 py-3 text-left active:scale-[0.99] transition-transform"
-              >
-                <span className="flex-1 min-w-0">
-                  <span className="block text-sm font-bold text-foreground">{t("cover.needed_title")}</span>
-                  <span className="block text-xs text-foreground/60 mt-0.5">{t("cover.needed_desc")}</span>
-                </span>
-              </button>
-            )}
-            {/* Opis ogolny trasy - READ-ONLY tutaj (review_narrative). Edycja tylko pod guzikiem
-                "Edytuj trase" (tryb edycji). Fallback: ai_summary. */}
-            {(suggestion?.trim() || route?.ai_summary) && (
-              <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">{suggestion?.trim() || route?.ai_summary}</p>
-            )}
-            {/* Tagi CALEJ TRASY usuniete (prosba Nat 2026-08-31) - zostaja tylko werdykty
-                przy konkretnych miejscach (pins.tags). */}
-            {/* "Edytuj trase" -> edytor ComposeWyjazd (ten sam co przy tworzeniu): wyszukiwarka
-                miejsc + dodaj/usun/kolejnosc + nazwa. Zaladowany ta trasa (draftId), wiec zapis
-                AKTUALIZUJE ja (bez duplikatu). Opis + notki edytuje sie dalej w "Przejdz do sugestii". */}
-            {/* Akcje wlasciciela w jednym kontenerze gap-2 (8px miedzy guzikami; parent ma gap-4). */}
-            {isOwner && (
-              <div className="flex flex-col gap-2">
-                {/* "Zakoncz wyjazd" = SWIADOMA PUBLIKACJA (draft -> wspomnienie). Tylko dla roboczej. */}
-                {!isMemory && (
-                  <button
-                    onClick={() => { haptics.light(); setConfirmFinishOpen(true); }}
-                    className="w-full py-3 rounded-2xl bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
-                  >
-                    <Flag className="h-4 w-4" />{t("cta.finish_trip")}</button>
-                )}
-                <button
-                  onClick={() => {
-                    haptics.light();
-                    navigate("/wyjazd/nowy", {
-                      state: {
-                        draftId: routeId,
-                        city: route?.city ?? null,
-                        title: displayName || (route as any)?.title || null,
-                        places: currentPins.map((p: any) => ({
-                          place_id: p.place_id ?? null,
-                          place_name: p.place_name,
-                          category: p.category,
-                          address: p.address,
-                          latitude: p.latitude,
-                          longitude: p.longitude,
-                          photo_url: p.photo_url,
-                        })),
-                      },
-                    });
-                  }}
-                  className="w-full py-3 rounded-2xl bg-secondary text-secondary-foreground font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
-                >
-                  <Pencil className="h-4 w-4" />{t("cta.edit_trip")}</button>
-                {/* "Zaproś znajomych" USUNIETE 2026-08-30 (decyzja Nat): sklad uczestnikow
-                    ustala sie wylacznie przy TWORZENIU wyjazdu, wspomnienie jest zamkniete. */}
-                {/* Propozycje uczestnikow - host przeglada wspolna pule i dodaje wybrane do trasy.
-                    Tylko wyjazd grupowy (ma group_session_id po zaproszeniu znajomych). */}
-                {(route as any)?.group_session_id && (
-                  <button
-                    onClick={() => { haptics.light(); setProposalsOpen(true); }}
-                    className="w-full py-3 rounded-2xl bg-secondary text-secondary-foreground font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
-                  >
-                    <MapPin className="h-4 w-4" /> Propozycje uczestników{proposalsCount ? ` (${proposalsCount})` : ""}
-                  </button>
-                )}
-              </div>
-            )}
-            {/* Host (wlasciciel) otwiera pule propozycji jako ARKUSZ i promuje wybrane do trasy.
-                Uczestnik ma osobny pelnoekranowy widok (early-return wyzej), NIE ten arkusz. */}
-            {routeId && isOwner && (route as any)?.group_session_id && (
-              <TripProposalsSheet
-                open={proposalsOpen}
-                onOpenChange={setProposalsOpen}
-                routeId={routeId}
-                city={route?.city ?? null}
-                isOwner={true}
-                onChanged={() => { queryClient.invalidateQueries({ queryKey: ["review-all-pins"] }); }}
-              />
-            )}
-            {/* Wiersz "Widoczność" usuniety (2026-07-30): wszystkie trasy sa publiczne by default. */}
-          </div>
-
-          {/* Top-toggle Miejsca | Galeria | Mapa */}
-          <div className="flex rounded-full bg-muted p-0.5 mt-8 mb-4 text-sm font-bold">
-            <button onClick={() => { haptics.selection(); setPlanTab("miejsca"); }} className={`flex-1 py-2 rounded-full transition-colors ${planTab === "miejsca" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>{t("common:filters.places")}</button>
-            <button onClick={() => { haptics.selection(); setPlanTab("galeria"); }} className={`flex-1 py-2 rounded-full transition-colors ${planTab === "galeria" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>Galeria</button>
-            <button onClick={() => { haptics.selection(); setPlanTab("mapa"); }} className={`flex-1 py-2 rounded-full transition-colors ${planTab === "mapa" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>Mapa</button>
-          </div>
-
-          {/* Galeria / Mapa / Miejsca (mapa przeniesiona do wlasnej zakladki obok Galeria).
-              Galeria editable: wlasciciel zawsze, uczestnik-czlonek moze dodawac wlasne zdjecia.
-              Kontener lapie swipe w bok = zmiana zakladki. */}
-          <div {...swipePlanTabs}>
-          {planTab === "galeria" ? renderGallery(isOwner || isGroupMember) : planTab === "mapa" ? (
-            <div className="pt-1">
-              {bigMapUrl ? (
-                <button data-no-swipe onClick={() => setPlanMapOpen(true)} className="relative block w-full h-64 rounded-2xl overflow-hidden border border-border/40 bg-muted active:opacity-95 transition-opacity">
-                  <img src={bigMapUrl} alt="Mapa planu" className="w-full h-full object-cover" />
-                  <span className="absolute bottom-3 right-3 h-10 w-10 rounded-full bg-card shadow-md flex items-center justify-center">
-                    <Maximize2 className="h-[18px] w-[18px] text-foreground" strokeWidth={2.2} />
-                  </span>
-                </button>
-              ) : (
-                <p className="text-center text-sm text-muted-foreground py-10">{t("map.no_locations")}</p>
-              )}
-            </div>
-          ) : !isOwner ? (
-            /* UCZESTNIK: read-only podglad miejsc (Lista/Karty) - bez reorder, kosza, checklisty. */
-            <div className="pt-1">
-              {/* Uczestnik ROBOCZEJ trasy grupowej dostaje pelnoekranowy widok propozycji (early-return
-                  wyzej), wiec ta galaz to juz tylko OPUBLIKOWANY grupowy wyjazd / gosc - bez "Zaproponuj". */}
-              <div className="flex items-center justify-end pb-3">
-              </div>
-              {renderListReadonly(false)}
-            </div>
-          ) : (
-          <>
-          {/* Sub-toggle podglądu miejsc (Lista/Karty) - tylko dla aktywnego (nieukończonego) wyjazdu. */}
-          {!tripCompleted && (
-            <div className="flex items-center justify-end pb-3">
-            </div>
-          )}
-
-          {tripCompleted ? (
-            /* Ukonczony + Notki -> kazde miejsce z polem notatki usera. */
-            <div className="flex flex-col gap-3">
-              {workingPins.map((pin: any, i: number) => (
-                <div key={pin.id} className="rounded-2xl bg-secondary border border-border/40 p-2.5">
-                  <button onClick={() => openDetail(pin)} className="w-full flex items-center gap-3 text-left active:opacity-90 transition-opacity">
-                    <div className="relative h-14 w-14 rounded-xl overflow-hidden shrink-0 bg-muted">
-                      <PlacePhoto pin={pin} className="h-full w-full object-cover" emojiClass="text-2xl" />
-                      <span className="absolute top-1 left-1 h-4 w-4 rounded-full bg-[#9a9a9a] text-white text-[8px] font-bold flex items-center justify-center">{i + 1}</span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold leading-tight truncate">{pin.place_name}</p>
-                      {pin.category && <span className="inline-flex items-center mt-1 px-2 py-0.5 rounded-full bg-card text-[11px] font-semibold text-foreground">{catLabel(pin.category)}</span>}
-                    </div>
-                  </button>
-                  <div className="pt-2">{renderRatingNote(pin.place_name)}</div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            /* Aktywny + Lista -> duze wiersze (RoutePlaceRow) z uchwytem DRAG + swipe-to-delete. */
-            <div className="flex flex-col gap-2.5">
-              <Reorder.Group axis="y" values={workingPins} onReorder={setWorking} className="flex flex-col gap-2.5">
-                {workingPins.map((pin: any, i: number) => {
-                  const noteText = (notes[rkey(activeRouteId!, pin.place_name)] ?? "").trim();
-                  const otherNotes = notesMap.get(placeNoteKey(pin.place_name)) ?? [];
-                  const hasOthers = otherNotes.some((n) => n.user_id !== user?.id);
-                  const note = (noteText || hasOthers) ? (
-                    <div className="space-y-2.5">
-                      {noteText && (
-                        <div>
-                          <p className="text-sm font-semibold text-foreground">{t("note.yours")}</p>
-                          <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap mt-0.5">{noteText}</p>
-                        </div>
-                      )}
-                      {hasOthers && <PlaceNotes notes={otherNotes} excludeUserId={user?.id} />}
-                    </div>
-                  ) : undefined;
-                  return (
-                    <SortablePlanRow
-                      key={pin.id}
-                      pin={pin}
-                      index={i}
-                      categoryLabel={catLabel(pin.category)}
-                      onOpen={() => openDetail(pin)}
-                      onGoogle={() => openGooglePlace(pin)}
-                      onDelete={() => removePlaceFromPlan(pin)}
-                      onSave={user ? () => setSavePlace(pinToSave(pin)) : undefined}
-                      saved={isSaved(pin.place_name)}
-                      note={note}
-                    />
-                  );
-                })}
-              </Reorder.Group>
-              {/* "Dodaj miejsce" usuniete z widoku wyswietlania - dodawanie w edytorze ("Edytuj trase"). */}
-            </div>
-          )}
-          {/* MAPA przeniesiona do wlasnej zakladki "Mapa" (obok Galeria) - patrz wyzej. */}
-          </>
-          )}
-          </div>
-          </div>
-        </div>
-
-        {/* Footer "Nawiguj do..." usuniety - nawigacja jest per-miejsce (guziki Google w wierszach). */}
-
-        {/* Wizytowka miejsca */}
-        <PlaceSwiperDetail open={!!detailPin} onOpenChange={(o) => !o && setDetailPin(null)} place={detailPin} city={route?.city} onLike={user && detailPin ? () => setSavePlace(pinToSave(detailPin)) : undefined} />
-        <SavePlaceSheet open={!!savePlace} onOpenChange={(o) => { if (!o) setSavePlace(null); }} place={savePlace} city={route?.city ?? ""} />
-
-        {/* Fullscreen podgląd zdjęcia (tap w galerię) - ustawienie okładki / usuniecie. */}
-        {renderPhotoViewer()}
-        {renderFinishConfirm()}
-
-        {/* Dodawanie miejsca */}
-        {addingPlace && (
-          <AddPinSheet open={addingPlace} onOpenChange={(o) => !o && setAddingPlace(false)} onPinAdd={handleAddPin} cityContext={route?.city ?? ""} existingPinNames={currentPins.map((p: any) => p.place_name)} />
-        )}
-
-
-        {/* Arkusz wyboru MINIATURY w eksploracji (list_cover_url) - osobny od okladki wyjazdu. */}
-        {listCoverPickerOpen && (
-          <div className="fixed inset-0 z-[95] flex items-end justify-center" onClick={() => setListCoverPickerOpen(false)}>
-            <div className="absolute inset-0 bg-black/50 animate-in fade-in duration-200" />
-            <div {...listCoverDrag.dragProps} onClick={(e) => e.stopPropagation()} className="relative w-full max-w-lg bg-card rounded-t-3xl px-5 pt-3 pb-[max(20px,env(safe-area-inset-bottom))] shadow-2xl animate-in slide-in-from-bottom-4 duration-300" style={{ ...listCoverDrag.dragProps.style, maxHeight: "82dvh" }}>
-              <div className="mx-auto h-1 w-10 rounded-full bg-muted-foreground/25 mb-4" />
-              <button onClick={() => setListCoverPickerOpen(false)} aria-label={t("close")} className="absolute right-4 top-4 h-8 w-8 rounded-full bg-muted flex items-center justify-center active:scale-90 transition-transform">
-                <X className="h-4 w-4" />
-              </button>
-              <p className="text-lg font-bold pr-8">Miniatura w eksploracji</p>
-              <p className="text-sm text-muted-foreground mt-1 mb-4">{t("cover.desc")}</p>
-              <div className="overflow-y-auto -mx-1 px-1" style={{ maxHeight: "62dvh" }}>
-                <div className="grid grid-cols-3 gap-2 pb-1">
-                  <button
-                    onClick={triggerListCoverPhotoPick}
-                    disabled={uploading}
-                    className="relative aspect-square rounded-2xl border-2 border-dashed border-border/70 flex flex-col items-center justify-center gap-1.5 text-muted-foreground active:scale-95 transition-transform disabled:opacity-50"
-                  >
-                    {uploading ? <Loader2 className="h-6 w-6 animate-spin" /> : <Plus className="h-6 w-6" />}
-                    <span className="text-[11px] font-semibold leading-tight text-center px-1">{t("photo.new")}</span>
-                  </button>
-                  {coverPickerOptions.map((opt) => {
-                    const isCurrent = listCoverPhoto === opt.url;
-                    return (
-                      <button
-                        key={opt.id}
-                        onClick={() => setPlanListCover(opt.url)}
-                        className={`relative aspect-square rounded-2xl overflow-hidden bg-muted active:scale-95 transition-transform ${isCurrent ? "ring-2 ring-primary ring-offset-2 ring-offset-card" : ""}`}
-                      >
-                        <StoredImage url={opt.url} size={110} alt={opt.name} className="w-full h-full object-cover" />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-transparent to-transparent" />
-                        <span className="absolute bottom-1.5 left-1.5 right-1.5 text-[10px] font-semibold text-white leading-tight line-clamp-2 [text-shadow:_0_1px_2px_rgb(0_0_0/60%)]">{opt.name}</span>
-                        {isCurrent && (
-                          <span className="absolute top-1.5 right-1.5 h-5 w-5 rounded-full bg-primary text-white flex items-center justify-center shadow-md">
-                            <Check className="h-3 w-3" strokeWidth={3} />
-                          </span>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Arkusz edycji daty wyjazdu (kalendarz) */}
-        {datePickerOpen && (
-          <div className="fixed inset-0 z-[95] flex items-end justify-center" onClick={() => setDatePickerOpen(false)}>
-            <div className="absolute inset-0 bg-black/50 animate-in fade-in duration-200" />
-            <div {...dateDrag.dragProps} onClick={(e) => e.stopPropagation()} className="relative w-full max-w-lg bg-card rounded-t-3xl px-2 pt-3 pb-[max(12px,env(safe-area-inset-bottom))] shadow-2xl animate-in slide-in-from-bottom-4 duration-300" style={{ ...dateDrag.dragProps.style, maxHeight: "88dvh" }}>
-              <div className="mx-auto h-1 w-10 rounded-full bg-muted-foreground/25 mb-3" />
-              <div className="px-3 pb-1 text-center">
-                <p className="text-base font-bold leading-tight">{t("dates.title")}<span className="font-normal text-muted-foreground">(opcjonalnie)</span></p>
-              </div>
-              <FullCalendarPicker onConfirm={saveDate} allowPast onClear={clearDate} />
-            </div>
-          </div>
-        )}
-
-        {/* Input zdjec (galeria na web; native uzywa CapCamera) */}
-        <input ref={fileInputRef} type="file" accept="image/*,.heic,.heif" multiple className="hidden" onChange={handlePhotoUpload} />
-        <input ref={pinFileInputRef} type="file" accept="image/*,.heic,.heif" multiple className="hidden" onChange={handlePinFileInput} />
-        <input ref={coverFileInputRef} type="file" accept="image/*,.heic,.heif" className="hidden" onChange={handleCoverFileInput} />
-        <input ref={listCoverFileInputRef} type="file" accept="image/*,.heic,.heif" className="hidden" onChange={handleListCoverFileInput} />
-
-        {/* Rozwinięta interaktywna mapa (zoom) */}
-        {planMapOpen && (
-          <div className="fixed inset-0 z-[90] bg-background flex flex-col animate-in fade-in duration-200">
-            <div className="relative flex-1 min-h-0">
-              <RouteMap pins={navMapPins as any} className="w-full h-full" showRoute={false} />
-              <button onClick={() => setPlanMapOpen(false)} aria-label={t("close")} className="absolute right-3 z-10 h-10 w-10 rounded-full bg-card shadow-md flex items-center justify-center active:scale-90 transition-transform" style={{ top: "max(0.75rem, env(safe-area-inset-top))" }}>
-                <X className="h-5 w-5 text-foreground" />
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Arkusz QR: udostepnij wyjazd kodem QR + link. */}
-        {qrShareOpen && (
-          <div className="fixed inset-0 z-[95] flex items-end justify-center" onClick={() => setQrShareOpen(false)}>
-            <div className="absolute inset-0 bg-black/50 animate-in fade-in duration-200" />
-            <div {...qrDrag.dragProps} onClick={(e) => e.stopPropagation()} className="relative w-full max-w-lg bg-card rounded-t-3xl px-5 pt-3 pb-[max(20px,env(safe-area-inset-bottom))] shadow-2xl animate-in slide-in-from-bottom-4 duration-300">
-              <div className="mx-auto h-1 w-10 rounded-full bg-muted-foreground/25 mb-4" />
-              <button onClick={() => setQrShareOpen(false)} aria-label={t("common:buttons.close")} className="absolute right-4 top-4 h-8 w-8 rounded-full bg-muted flex items-center justify-center active:scale-90 transition-transform">
-                <X className="h-4 w-4" />
-              </button>
-              <p className="text-lg font-bold mb-4 pr-8">{t("share.qr")}</p>
-              <div className="flex items-center gap-4 pb-4 border-b border-border/30">
-                <div className="shrink-0 rounded-2xl bg-white p-2.5 border border-border/40">
-                  <QRCodeSVG value={shareUrl} size={104} bgColor="#ffffff" fgColor="#0E0E0E" level="M" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-base font-bold leading-tight truncate">{displayName || cityLabel}</p>
-                  {dateLabel && <p className="text-sm text-muted-foreground mt-1"><span className="font-semibold text-foreground">Data:</span> {dateLabel}</p>}
-                  <div className="mt-3 flex items-center justify-between gap-2">
-                    <button onClick={copyShareLink} className="text-sm font-semibold text-foreground active:opacity-70">Skopiuj link</button>
-                    <button onClick={shareLink} aria-label={t("share.link")} className="h-9 w-9 rounded-full bg-muted flex items-center justify-center active:scale-90 transition-transform">
-                      <Share2 className="h-4 w-4 text-foreground" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-              <button onClick={shareLink} className="w-full h-12 rounded-2xl bg-orange-100 text-foreground font-semibold text-sm mt-4 active:scale-[0.98] transition-transform">{t("share.invite")}</button>
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  // WIDOK WYJAZDU przeniesiony na SharedRoute (/route/:id) = widok "Wyjazd do Pragi" (Nat 2026-08-25).
-  // Etap propozycji ('planning') i "w trakcie" zyja tam. ReviewSummary zostaje TYLKO jako STEPPER
-  // podsumowania (?edit=1). Robocze/planning bez edit -> przekieruj na SharedRoute (stale linki).
-  const isPlanningStage = !!route && (route as any).trip_type === "planning" && (route as any).status !== "published";
-  if (isPlanningStage && !forceEdit && routeId) {
+  // WIDOK WYJAZDU zyje WYLACZNIE w SharedRoute (/route/:id) - "Wyjazd do Pragi"
+  // (pivot 2026-08-25). ReviewSummary zostaje juz tylko jako STEPPER dokumentowania (?edit=1).
+  //
+  // Dlaczego stary ekran mimo to wracal (zgloszenie Nat 2026-09-08 "tego widoku nie ma juz
+  // nigdzie"): byly DWA przekierowania i zadne nie obejmowalo tego przypadku. Jedno siedzialo
+  // w useEffect i dotyczylo tylko tras OPUBLIKOWANYCH - a przy okazji odpalalo sie dopiero PO
+  // renderze, wiec stary widok i tak zdazyl mrugnac. Drugie stalo NIZEJ niz galaz "Plan wyjazdu",
+  // ktora zwracala wczesniej dla kazdego wyjazdu jednodniowego - czyli bylo nieosiagalne.
+  // Cala ta galaz (~440 linii) jest tu usunieta, a bramka stoi przed renderem i obejmuje
+  // KAZDE wejscie bez ?edit=1, niezaleznie od statusu i liczby dni.
+  if (!forceEdit && !editingStepper && routeId) {
     return <Navigate to={`/route/${routeId}`} replace />;
   }
 
