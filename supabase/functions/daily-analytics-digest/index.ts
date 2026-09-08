@@ -1,7 +1,7 @@
 // =====================================================================
 // daily-analytics-digest — Edge Function
 // =====================================================================
-// Codziennie wysyła jeden zbiorczy raport na nat.maz98@gmail.com:
+// Codziennie wysyła jeden zbiorczy raport do zespołu (lista ALERT_EMAILS):
 //   - Konta: nowe (24h) + łącznie (Supabase = źródło prawdy)
 //   - Trasy: nowe (24h, w tym ukończone) + łącznie + aktywacja (% userów z ≥1 trasą)
 //   - Zaangażowanie/retencja: DAU / WAU / MAU (PostHog, distinct person_id)
@@ -14,7 +14,14 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
-const ALERT_EMAIL = "nat.maz98@gmail.com";
+// Odbiorcy raportu dziennego. Jedna lista - dopisanie kogos to jedna linijka i redeploy funkcji.
+// hello@ trzymamy jako adres firmowy (archiwum raportow poza prywatnymi skrzynkami).
+const ALERT_EMAILS = [
+  "nat.maz98@gmail.com",
+  "hello@spontaway.com",
+  "tomalab97@gmail.com",
+  "maciej.meszynski123@gmail.com",
+];
 const POSTHOG_HOST = "https://eu.posthog.com";
 const PRIVATE_KEY = Deno.env.get("POSTHOG_PRIVATE_KEY") ?? "";
 const PROJECT_ID = Deno.env.get("POSTHOG_PROJECT_ID") ?? "";
@@ -62,7 +69,7 @@ async function sendEmail(args: { resendKey: string; subject: string; html: strin
     headers: { Authorization: `Bearer ${args.resendKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({
       from: "spontaway <noreply@spontaway.com>",
-      to: [ALERT_EMAIL],
+      to: ALERT_EMAILS,
       subject: args.subject,
       html: args.html,
     }),
@@ -217,7 +224,7 @@ Deno.serve(async (req) => {
 
     return jsonResponse({
       sent: true,
-      to: ALERT_EMAIL,
+      to: ALERT_EMAILS,
       summary: { newAccounts, totalAccounts, newRoutes, totalRoutes, newCompleted, activationPct, dau, wau, mau, topEvents: (topEvents ?? []).length },
     });
   } catch (err) {
