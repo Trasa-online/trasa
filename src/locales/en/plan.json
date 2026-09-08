@@ -191,7 +191,9 @@
     "create_list": "Create list",
     "user_fallback": "User",
     "general": "General",
-    "list_created": "List “{{name}}” created"
+    "list_created": "List “{{name}}” created",
+    "open_list": "Open list {{title}}",
+    "private": "Private"
   },
   "filters_count_other": "{{count}} filters",
   "cta_plan_route_other": "Plan route · {{count}} places",

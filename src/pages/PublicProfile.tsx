@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { goBackOr } from "@/hooks/useGoBack";
 import { avatarSrc } from "@/lib/avatar";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -65,11 +65,25 @@ export default function PublicProfile() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   // Kolejnosc i domyslna zakladka 1:1 z wlasnym profilem: Wyjazdy | Listy (2026-08-30).
-  const [tab, setTab] = useState<"listy" | "wyjazdy">("wyjazdy");
+  // Zakladka w ADRESIE, nie tylko w stanie - inaczej powrot z listy remontuje profil
+  // i laduje na domyslnych Wyjazdach (zgloszenie Nat 2026-09-08). `replace`, bo przelaczenie
+  // zakladki to nie krok nawigacji.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [tab, setTab] = useState<"listy" | "wyjazdy">(searchParams.get("tab") === "listy" ? "listy" : "wyjazdy");
+  useEffect(() => {
+    const tp = searchParams.get("tab");
+    if (tp === "listy" || tp === "wyjazdy") setTab(tp);
+  }, [searchParams]);
+  const goTab = (t: "listy" | "wyjazdy") => {
+    setTab(t);
+    const next = new URLSearchParams(searchParams);
+    next.set("tab", t);
+    setSearchParams(next, { replace: true });
+  };
   // Gest natywny: swipe w LEWO idzie Wyjazdy -> Listy (zgodnie z kolejnoscia pigulek).
   const swipeTabs = useSwipeNav({
-    onLeft: () => setTab("listy"),
-    onRight: () => setTab("wyjazdy"),
+    onLeft: () => goTab("listy"),
+    onRight: () => goTab("wyjazdy"),
   });
   const [followSheet, setFollowSheet] = useState<"followers" | "following" | null>(null);
 
@@ -395,7 +409,7 @@ export default function PublicProfile() {
             const active = tab === tk;
             const label = tk === "listy" ? t("sections.lists") : t("sections.trips");
             return (
-              <button key={tk} onClick={() => setTab(tk)} className="relative flex-1 flex items-center justify-center gap-2 py-2.5" aria-label={label}>
+              <button key={tk} onClick={() => goTab(tk)} className="relative flex-1 flex items-center justify-center gap-2 py-2.5" aria-label={label}>
                 {tk === "listy"
                   ? <LayoutGrid className="h-5 w-5" style={{ color: active ? "#0E0E0E" : "#CFCFCF" }} />
                   : <SpontawayTabIcon active={active} />}

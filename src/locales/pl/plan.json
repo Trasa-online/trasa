@@ -194,7 +194,9 @@
     "create_list": "Utwórz listę",
     "user_fallback": "Użytkownik",
     "general": "Ogólne",
-    "list_created": "Utworzono listę „{{name}}”"
+    "list_created": "Utworzono listę „{{name}}”",
+    "open_list": "Otwórz listę {{title}}",
+    "private": "Prywatne"
   },
   "cta_plan_route_few": "Zaplanuj trasę · {{count}} miejsca",
   "distance_denied": "Włącz lokalizację w ustawieniach, żeby zobaczyć dystans",

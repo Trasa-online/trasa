@@ -1,5 +1,6 @@
-import type { ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
+import { AnimatePresence, motion } from "framer-motion";
 import { localizeTag } from "@/lib/routeTags";
 import { Bookmark, Check, Star, Trash2 } from "lucide-react";
 import { PlacePhoto } from "@/components/PlacePhoto";
@@ -43,8 +44,35 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
   onToggleTop?: () => void;
 }) {
   const { t } = useTranslation("route");
+  // Gwiazdka LECI z guzika na miejsce przy nazwie (prosba Nat 2026-09-08). Animacja gra tylko
+  // przy DODANIU do topki - przy zdejmowaniu byloby to mylace, bo ruch sugeruje "dodalem".
+  const rowRef = useRef<HTMLDivElement>(null);
+  const titleRef = useRef<HTMLParagraphElement>(null);
+  const starBtnRef = useRef<HTMLButtonElement>(null);
+  const [flight, setFlight] = useState<{ from: { x: number; y: number }; to: { x: number; y: number } } | null>(null);
+  const flying = !!flight;
+  const wasTop = useRef(!!isTop);
+  useEffect(() => {
+    if (isTop && !wasTop.current) {
+      wasTop.current = true;
+      // Pozycje MIERZONE, nie stale: wiersz bywa wysoki na 100 px albo na 400 (notka + zdjecia),
+      // wiec staly tor trafialby w powietrze. Gdy czegos brakuje, po prostu nie animujemy.
+      const row = rowRef.current?.getBoundingClientRect();
+      const btn = starBtnRef.current?.getBoundingClientRect();
+      const title = titleRef.current?.getBoundingClientRect();
+      if (row && btn && title) {
+        setFlight({
+          from: { x: btn.left - row.left + btn.width / 2, y: btn.top - row.top + btn.height / 2 },
+          to: { x: title.left - row.left + 8, y: title.top - row.top + 10 },
+        });
+        const id = setTimeout(() => setFlight(null), 620);
+        return () => clearTimeout(id);
+      }
+    }
+    wasTop.current = !!isTop;
+  }, [isTop]);
   return (
-    <div className="bg-background py-4 border-b border-border/70 last:border-b-0">
+    <div ref={rowRef} className="relative bg-background py-4 border-b border-border/70 last:border-b-0">
       {/* Zdjecie + tresc (nazwa, notki, tagi) */}
       <div className="flex gap-3">
         {dragHandle}
@@ -60,10 +88,19 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
           {/* Nazwa + badge kategorii (peachy pill po prawej) */}
           <div className="flex items-start justify-between gap-2">
             <button onClick={onOpen} className="text-left min-w-0 flex-1">
-              <p className="text-[16px] font-bold leading-snug line-clamp-2">
+              <p ref={titleRef} className="text-[16px] font-bold leading-snug line-clamp-2">
                 {/* Gwiazdka PRZED nazwa, w jednym ciagu tekstu - inaczej przy nazwie lamiacej
                     sie na dwie linie odjezdzalaby od niej i wygladala jak osobna kontrolka. */}
-                {isTop && <Star className="inline-block h-4 w-4 -mt-0.5 mr-1 text-primary fill-primary" aria-label={t("row.top_place")} />}
+                {isTop && (
+                  <motion.span
+                    className="inline-block align-baseline"
+                    initial={flying ? { scale: 0, rotate: -180 } : false}
+                    animate={{ scale: 1, rotate: 0 }}
+                    transition={flying ? { type: "spring", stiffness: 500, damping: 18, delay: 0.34 } : { duration: 0 }}
+                  >
+                    <Star className="inline-block h-4 w-4 -mt-0.5 mr-1 text-primary fill-primary" aria-label={t("row.top_place")} />
+                  </motion.span>
+                )}
                 {pin.place_name}
               </p>
             </button>
@@ -123,6 +160,7 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
             do swoich list - zgloszenie Nat 2026-08-29). */}
         {onToggleTop && (
           <button
+            ref={starBtnRef}
             onClick={(e) => { e.stopPropagation(); onToggleTop(); }}
             aria-label={isTop ? t("row.unset_top") : t("row.set_top")}
             aria-pressed={!!isTop}
@@ -150,6 +188,22 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
           </button>
         )}
       </div>
+
+      {/* Gwiazdka LECI z guzika do nazwy. pointer-events-none, zeby nie lapala tapniec w locie. */}
+      <AnimatePresence>
+        {flight && (
+          <motion.span
+            aria-hidden
+            className="pointer-events-none absolute z-20"
+            initial={{ x: flight.from.x, y: flight.from.y, scale: 1, opacity: 1 }}
+            animate={{ x: flight.to.x, y: flight.to.y, scale: 0.55, opacity: 0 }}
+            transition={{ duration: 0.42, ease: [0.22, 1, 0.36, 1] }}
+            style={{ left: -10, top: -10 }}
+          >
+            <Star className="h-5 w-5 text-primary fill-primary drop-shadow" />
+          </motion.span>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

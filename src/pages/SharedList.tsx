@@ -503,6 +503,8 @@ export default function SharedList() {
             )}
           </div>
         ) : undefined;
+        // Odhaczanie "Odwiedzone" tylko na WLASNEJ liscie (decyzja Nat 2026-09-08). Na cudzej
+        // liscie jestem gosciem: przegladam czyjas polecajke, a nie prowadze tam wlasnego rejestru.
         return (
           <RoutePlaceRow
             key={pin.id}
@@ -514,8 +516,8 @@ export default function SharedList() {
             onSave={!isOwner ? () => toggleSaveBookmark(pin) : undefined}
             saved={isSaved(pin.place_name)}
             onDelete={isOwner ? () => handleDeleteItem(pin) : undefined}
-            visited={visitedKeys.has(visitKeyOf(pin))}
-            onToggleVisited={user ? () => handleToggleVisited(pin) : undefined}
+            onToggleVisited={isOwner && user ? () => handleToggleVisited(pin) : undefined}
+            visited={isOwner ? visitedKeys.has(visitKeyOf(pin)) : false}
             note={isNew ? (
               <div className="space-y-2">
                 {/* Awatar autora listy + samo "nowe miejsce" (decyzja Nat 2026-09-01). Imie bylo

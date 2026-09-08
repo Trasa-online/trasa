@@ -162,7 +162,7 @@ const TravelerProfile = () => {
     window.dispatchEvent(new CustomEvent("trasa:hide-bottomnav", { detail: searchOpen }));
   }, [searchOpen]);
   useEffect(() => () => { window.dispatchEvent(new CustomEvent("trasa:hide-bottomnav", { detail: false })); }, []);
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   // ?tab=wyjazdy|listy - wejście z redirectów (dawne /dziennik -> wyjazdy). Zakładka "zapisane"
   // usunięta (2026-08-24): zapisane miejsca żyją w liście ogólnej i pojawiają się przy tworzeniu.
   // Domyślnie PIERWSZA zakładka = Wyjazdy (kolejność zmieniona 2026-08-30) - inaczej wchodząc na
@@ -183,8 +183,28 @@ const TravelerProfile = () => {
     if (tp === "wyjazdy") setTab("wyjazdy");
     else if (tp === "listy") setTab("listy");
     const sub = searchParams.get("sub");
-    if (sub === "robocze" || sub === "wspomnienia" || sub === "zapisane") { subChosen.current = true; setWyjazdyTab(sub); }
+    if (sub === "robocze" || sub === "wspomnienia" || sub === "zapisane") { subChosen.current = true; setWyjazdyTab(sub as any); }
+    if (sub === "moje" || sub === "ogolne" || sub === "zapisane") setListyTab(sub as any);
   }, [searchParams]);
+
+  // Zakladka MUSI siedziec w adresie, nie tylko w stanie (zgloszenie Nat 2026-09-08:
+  // profil -> Listy -> lista -> wstecz laduje na Wyjazdach). Powrot remontuje profil, wiec
+  // stan Reacta przepada i zostaje wartosc domyslna. `replace` - przelaczenie zakladki to nie
+  // jest krok nawigacji, wiec nie moze zasmiecac historii ani wymagac drugiego cofniecia.
+  const goTab = (t: "listy" | "wyjazdy", sub?: string) => {
+    setTab(t);
+    if (t === "wyjazdy" && !sub) { setWyjazdyTab("robocze"); sub = "robocze"; }
+    const next = new URLSearchParams(searchParams);
+    next.set("tab", t);
+    if (sub) next.set("sub", sub); else next.delete("sub");
+    setSearchParams(next, { replace: true });
+  };
+  const goSub = (sub: string) => {
+    const next = new URLSearchParams(searchParams);
+    next.set("tab", tab);
+    next.set("sub", sub);
+    setSearchParams(next, { replace: true });
+  };
   const share = useShare();
 
   // Pull-to-refresh: odswieza liczniki polubien/zapisow + feedy (aktywne query na tym ekranie).
@@ -196,8 +216,8 @@ const TravelerProfile = () => {
   // Wejscie w "Wyjazdy" resetuje podzakladke tak samo jak tap w pigulke.
   const swipeTabs = useSwipeNav({
     // Kolejnosc pigulek: Wyjazdy | Listy, wiec swipe w LEWO idzie Wyjazdy -> Listy.
-    onLeft: () => { if (tab === "wyjazdy") setTab("listy"); },
-    onRight: () => { if (tab === "listy") { setTab("wyjazdy"); setWyjazdyTab("robocze"); } },
+    onLeft: () => { if (tab === "wyjazdy") goTab("listy"); },
+    onRight: () => { if (tab === "listy") goTab("wyjazdy"); },
   });
 
   const { data: followCounts = { followers: 0, following: 0 } } = useFollowCounts(user?.id);
@@ -827,7 +847,7 @@ const TravelerProfile = () => {
             const active = tab === tk;
             const label = tk === "listy" ? t("sections.lists") : t("sections.trips");
             return (
-              <button key={tk} onClick={() => { setTab(tk); if (tk === "wyjazdy") setWyjazdyTab("robocze"); }} className="relative flex-1 flex items-center justify-center gap-2 py-2.5" aria-label={label}>
+              <button key={tk} onClick={() => goTab(tk)} className="relative flex-1 flex items-center justify-center gap-2 py-2.5" aria-label={label}>
                 {tk === "listy"
                   ? <LayoutGrid className="h-5 w-5" style={{ color: active ? "#0E0E0E" : "#CFCFCF" }} />
                   : <SpontawayTabIcon active={active} />}
@@ -846,7 +866,7 @@ const TravelerProfile = () => {
               <TabSelect
                 dotLabel={t("profile.new_content_aria")}
                 value={listyTab}
-                onChange={(v) => setListyTab(v as "moje" | "ogolne" | "zapisane")}
+                onChange={(v) => { setListyTab(v as "moje" | "ogolne" | "zapisane"); goSub(v); }}
                 options={[
                   { id: "moje", label: t("tabs.my_lists") },
                   { id: "ogolne", label: t("tabs.general") },
@@ -908,7 +928,7 @@ const TravelerProfile = () => {
               <TabSelect
                 dotLabel={t("profile.new_content_aria")}
                 value={wyjazdyTab}
-                onChange={(v) => { subChosen.current = true; setWyjazdyTab(v as "robocze" | "wspomnienia" | "zapisane"); }}
+                onChange={(v) => { subChosen.current = true; setWyjazdyTab(v as "robocze" | "wspomnienia" | "zapisane"); goSub(v); }}
                 options={[{ id: "robocze", label: "Robocze" }, { id: "wspomnienia", label: "Wspomnienia" }, { id: "zapisane", label: "Zapisane" }]}
               />
               {wyjazdyTab === "zapisane" ? (

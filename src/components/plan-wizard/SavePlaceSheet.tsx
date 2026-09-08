@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, Check, Loader2, Share2, Bookmark, ListChecks } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
@@ -52,6 +53,7 @@ export default function SavePlaceSheet({
   const queryClient = useQueryClient();
   const haptics = useHaptics();
   const share = useShare();
+  const navigate = useNavigate();
 
   const [busyId, setBusyId] = useState<string | null>(null);
   const [override, setOverride] = useState<Map<string, boolean>>(new Map());
@@ -167,29 +169,45 @@ export default function SavePlaceSheet({
     if (res.ok) toast.success(res.method === "clipboard" ? t("save_sheet.link_copied") : t("save_sheet.shared"));
   };
 
+  // Miniatura listy prowadzi do samej listy - arkusz zamykamy, zeby po powrocie nie wisial
+  // nad ekranem listy.
+  const openList = (l: UserList) => {
+    haptics.light();
+    onOpenChange(false);
+    navigate(`/lista/${l.id}`);
+  };
+
   const renderRow = (l: UserList) => {
     const inList = isIn(l);
     const cover = resolveStored(l.cover);
     return (
-      <button
-        key={l.id}
-        type="button"
-        onClick={() => toggle(l)}
-        disabled={busyId === l.id}
-        className="w-full flex items-center gap-3 py-2.5 text-left active:opacity-80"
-      >
-        {/* Awatar listy (placeholder: okładka albo peachy koło z ikoną - docelowo wybór awatara) */}
-        <div className="h-11 w-11 rounded-full overflow-hidden shrink-0 bg-[#fcede3] flex items-center justify-center">
+      /* Wiersz ma DWIE osobne akcje, wiec nie moze byc jednym guzikiem (zagniezdzone <button>
+         to nieprawidlowy HTML): miniatura OTWIERA liste, reszta wiersza dodaje/usuwa miejsce
+         (prosba Nat 2026-09-08). */
+      <div key={l.id} className="w-full flex items-center gap-3 py-2.5">
+        <button
+          type="button"
+          onClick={() => openList(l)}
+          aria-label={t("save_sheet.open_list", { title: l.title })}
+          className="h-11 w-11 rounded-full overflow-hidden shrink-0 bg-[#fcede3] flex items-center justify-center active:scale-90 transition-transform"
+        >
           {cover ? <img src={cover} alt="" className="h-full w-full object-cover" /> : <ListChecks className="h-5 w-5 text-orange-400" />}
-        </div>
-        <div className="flex-1 min-w-0">
-          {l.list_status === "to_visit" && <p className="text-xs text-muted-foreground leading-tight">Prywatne</p>}
-          <p className="text-base font-bold text-foreground truncate leading-tight">{l.title}</p>
-        </div>
-        <span className={cn("h-9 w-9 rounded-full flex items-center justify-center shrink-0", inList ? "text-orange-500" : "text-foreground")}>
-          {busyId === l.id ? <Loader2 className="h-5 w-5 animate-spin" /> : inList ? <Check className="h-5 w-5" strokeWidth={2.5} /> : <Plus className="h-6 w-6" strokeWidth={2} />}
-        </span>
-      </button>
+        </button>
+        <button
+          type="button"
+          onClick={() => toggle(l)}
+          disabled={busyId === l.id}
+          className="flex-1 min-w-0 flex items-center gap-3 text-left active:opacity-80"
+        >
+          <span className="flex-1 min-w-0 block">
+            {l.list_status === "to_visit" && <span className="block text-xs text-muted-foreground leading-tight">{t("save_sheet.private")}</span>}
+            <span className="block text-base font-bold text-foreground truncate leading-tight">{l.title}</span>
+          </span>
+          <span className={cn("h-9 w-9 rounded-full flex items-center justify-center shrink-0", inList ? "text-orange-500" : "text-foreground")}>
+            {busyId === l.id ? <Loader2 className="h-5 w-5 animate-spin" /> : inList ? <Check className="h-5 w-5" strokeWidth={2.5} /> : <Plus className="h-6 w-6" strokeWidth={2} />}
+          </span>
+        </button>
+      </div>
     );
   };
 
