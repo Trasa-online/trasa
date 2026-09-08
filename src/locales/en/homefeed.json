@@ -123,7 +123,9 @@
     "expand": "Expand",
     "delete": "Delete",
     "places_count_one": "{{count}} place",
-    "places_count_other": "{{count}} places"
+    "places_count_other": "{{count}} places",
+    "draft": "Draft",
+    "add_cover": "Add a photo to be seen"
   },
   "saved": {
     "empty_lists_routes": "No saved lists or routes yet"

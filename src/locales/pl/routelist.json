@@ -47,7 +47,10 @@
     "list_updated": "Zaktualizowano listę",
     "place_deleted": "Usunięto miejsce",
     "list_deleted": "Usunięto listę.",
-    "list_saved": "Zapisano listę"
+    "list_saved": "Zapisano listę",
+    "photos_rejected_one": "Jedno zdjęcie nie przeszło moderacji",
+    "photos_rejected_few": "{{count}} zdjęcia nie przeszły moderacji",
+    "photos_rejected_many": "{{count}} zdjęć nie przeszło moderacji"
   },
   "cta": {
     "add_place": "Dodaj nowe miejsce",

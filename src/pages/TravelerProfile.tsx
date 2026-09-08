@@ -613,6 +613,9 @@ const TravelerProfile = () => {
         authorName={displayName}
         authorAvatar={profile?.avatar_url}
         isDraft={isRoboczy}
+        // Opublikowany bez okladki listy = nie przechodzi bramki eksploracji, czyli nikt go
+        // nie znajdzie. Autor dowiadywal sie o tym tylko ze znikajacego toastu przy publikacji.
+        hiddenFromExplore={!isRoboczy && !tr.list_cover_url}
         showMap={false}
         snap={false}
         heightClass="aspect-[3/4]"

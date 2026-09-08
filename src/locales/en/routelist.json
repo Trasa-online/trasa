@@ -46,7 +46,9 @@
     "list_updated": "List updated",
     "place_deleted": "Place removed",
     "list_deleted": "List deleted.",
-    "list_saved": "List saved"
+    "list_saved": "List saved",
+    "photos_rejected_one": "One photo did not pass moderation",
+    "photos_rejected_other": "{{count}} photos did not pass moderation"
   },
   "cta": {
     "add_place": "Add new place",

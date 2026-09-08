@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Bookmark, ChevronUp, Pencil, Trash2, CircleDashed, Heart, Minimize2 } from "lucide-react";
+import { Bookmark, ChevronUp, Pencil, Trash2, CircleDashed, Heart, Minimize2, EyeOff } from "lucide-react";
 import { API_BASE } from "@/lib/platform";
 import { avatarSrc } from "@/lib/avatar";
 import { haptics } from "@/hooks/useHaptics";
@@ -34,7 +34,7 @@ export const TRASA_CARD_H = "h-[calc(100dvh-150px-env(safe-area-inset-top,0px)-m
 export default function TrasaBigCard({
   id, photo, city, placeCount = 0, title, description, tags = [], pins = [],
   saved, onToggleSave, onOpen, authorName, authorAvatar, participants = [],
-  showMap = true, heightClass = TRASA_CARD_H, snap = true, isDraft = false, onEdit, onDelete,
+  showMap = true, heightClass = TRASA_CARD_H, snap = true, isDraft = false, hiddenFromExplore = false, onEdit, onDelete,
   onLike, liked,
 }: {
   id: string;
@@ -59,6 +59,11 @@ export default function TrasaBigCard({
   snap?: boolean;
   /** Roboczy (nieopublikowany) wyjazd - plakietka na okladce. */
   isDraft?: boolean;
+  /** Opublikowany, ale BEZ okladki listy - czyli niewidoczny w eksploracji (2026-09-08).
+   *  Komunikat przy publikacji byl znikajacym toastem, wiec po jego zniknieciu nic juz nie
+   *  mowilo, ze wyjazd nigdzie nie trafil. W bazie 10 z 19 opublikowanych tras wisialo tak
+   *  bez sladu dla autora. */
+  hiddenFromExplore?: boolean;
   onEdit?: () => void;
   onDelete?: () => void;
   /** Polubienie (profil publiczny). Bez tej propsy karta nie pokazuje serca. */
@@ -99,7 +104,14 @@ export default function TrasaBigCard({
       {/* Plakietka "Robocze" (profil) - lewy gorny rog, zamiast stopki starej karty. */}
       {isDraft && (
         <span className="absolute top-3 left-3 z-20 inline-flex items-center gap-1.5 rounded-full bg-black/55 backdrop-blur-sm px-2.5 py-1 text-[11px] font-bold text-white shadow-sm">
-          <CircleDashed className="h-3.5 w-3.5" /> Robocze
+          <CircleDashed className="h-3.5 w-3.5" /> {t("card.draft")}
+        </span>
+      )}
+      {/* Opublikowany, ale niewidoczny w eksploracji. Plakietka mowi OD RAZU, co zrobic -
+          samo "niewidoczny" zostawialoby autora z problemem bez rozwiazania. */}
+      {!isDraft && hiddenFromExplore && (
+        <span className="absolute top-3 left-3 z-20 inline-flex items-center gap-1.5 rounded-full bg-black/55 backdrop-blur-sm px-2.5 py-1 text-[11px] font-bold text-white shadow-sm">
+          <EyeOff className="h-3.5 w-3.5" /> {t("card.add_cover")}
         </span>
       )}
 

@@ -126,7 +126,9 @@
     "delete": "Usuń",
     "places_count_one": "{{count}} miejsce",
     "places_count_few": "{{count}} miejsca",
-    "places_count_many": "{{count}} miejsc"
+    "places_count_many": "{{count}} miejsc",
+    "draft": "Robocze",
+    "add_cover": "Dodaj zdjęcie, żeby było widać"
   },
   "saved": {
     "empty_lists_routes": "Brak zapisanych list i tras"

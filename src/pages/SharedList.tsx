@@ -40,6 +40,7 @@ import { inferCategoryFromName } from "@/lib/placeCategoryIcon";
 import { uploadWithThumb } from "@/lib/imageThumbs";
 import { fetchVisitedKeys, toggleVisited } from "@/lib/placeVisits";
 import { haptics } from "@/hooks/useHaptics";
+import { moderateImageUrl, MODERATION_REJECTED_MESSAGE } from "@/lib/imageModeration";
 
 // Widok LISTY miejsc (polecajki) - UI/UX 1:1 z widokiem trasy (SharedRoute), ale zasilany z
 // discovery_collections/discovery_items. Lista NIE jest trasa (brak kolejnosci-planu), ale
@@ -115,7 +116,26 @@ export default function SharedList() {
       // Zdjecie zyje tez w galerii MIEJSCA (place_photos) - inaczej widac je tylko na tej liscie,
       // a wizytowka miejsca i okladki w innych widokach o nim nie wiedza (zgloszenie Nat 2026-08-28).
       const placeKey = placeKeyOf({ googlePlaceId: item.google_place_id ?? null, placeName: item.place_name });
-      const fresh = added.filter((u): u is string => !!u);
+      let fresh = added.filter((u): u is string => !!u);
+      // SafeSearch (Vision) - zdjecie z listy trafia do PUBLICZNEJ galerii miejsca dokladnie
+      // tak samo, jak zdjecie z wyjazdu, ale ta sciezka jako jedyna go nie sprawdzala
+      // (znalezione w audycie sciezki uzytkownika 2026-09-08). Rownolegle, bo seryjnie
+      // kazde zdjecie kosztuje ~2-4 s.
+      if (fresh.length) {
+        const verdicts = await Promise.all(fresh.map((u) => moderateImageUrl(u, "list_item", { place_name: item.place_name })));
+        const rejected = fresh.filter((_, i) => verdicts[i] === "rejected");
+        if (rejected.length) {
+          fresh = fresh.filter((_, i) => verdicts[i] !== "rejected");
+          const paths = rejected.map((u) => u.split("/route-images/")[1]).filter(Boolean);
+          if (paths.length) await supabase.storage.from("route-images").remove(paths);
+          // Odrzucone nie moga zostac w liscie - urls poszlo juz do discovery_items nizej.
+          for (const u of rejected) {
+            const at = urls.indexOf(u);
+            if (at >= 0) urls.splice(at, 1);
+          }
+          toast.error(rejected.length === 1 ? MODERATION_REJECTED_MESSAGE : t("toast.photos_rejected", { count: rejected.length }));
+        }
+      }
       await Promise.all(fresh.map((photoUrl) => linkPhotoToPlace({
         userId: user.id, placeKey, placeName: item.place_name, city: item.city ?? col?.city ?? null, photoUrl,
       })));
