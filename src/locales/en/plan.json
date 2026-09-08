@@ -227,7 +227,9 @@
     "clear": "Clear selection",
     "prev": "Previous month",
     "next": "Next month",
-    "no_dates": "No dates"
+    "no_dates": "No dates",
+    "pick_day_one": "Pick your trip day (max {{count}} day)",
+    "pick_day_other": "Pick your trip day (max {{count}} days)"
   },
   "template": {
     "failed": "We could not create the trip. Try again.",
@@ -249,5 +251,8 @@
   "list": {
     "default_visited": "Places visited",
     "default_to_visit": "To visit"
+  },
+  "templates": {
+    "none_for_city": "No ready-made planners for {{city}} yet - we are working on it!"
   }
 }

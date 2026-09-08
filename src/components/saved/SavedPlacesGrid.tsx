@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useTranslation } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Bookmark, Plus } from "lucide-react";
 import { toast } from "sonner";
@@ -127,9 +127,12 @@ export function SavedPlacesGrid() {
       <span aria-hidden className="mb-5 block h-28 w-28" style={{ backgroundColor: "#ef9d78", WebkitMaskImage: "url(/Ikona_Zapisane.svg)", maskImage: "url(/Ikona_Zapisane.svg)", WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat", WebkitMaskSize: "contain", maskSize: "contain", WebkitMaskPosition: "center", maskPosition: "center" }} />
       <p className="text-lg font-bold text-foreground">{t("saved.empty_short")}</p>
       <p className="text-sm text-muted-foreground mt-1.5 max-w-[280px] leading-relaxed">
-        Zapisz miejsce bookmarkiem w{" "}zakładce{" "}
-        <span className="font-semibold text-foreground">Eksploruj</span>{" "}
-        lub u{" "}<span className="font-semibold text-foreground">{t("grid.other_user")}</span>
+        <Trans
+          i18nKey="saved.empty_hint"
+          ns="homeprofile"
+          values={{ tab: t("saved.tab_explore"), other: t("grid.other_user") }}
+          components={{ b: <span className="font-semibold text-foreground" /> }}
+        />
       </p>
       <button onClick={() => setAddOpen(true)}
         className="mt-6 h-11 px-5 rounded-2xl bg-primary text-white font-bold text-sm flex items-center gap-2 active:scale-[0.97] transition-transform">
@@ -196,7 +199,9 @@ export function SavedPlacesGrid() {
       </div>
       {filtered.length === 0 && (
         <p className="text-center text-sm text-muted-foreground py-8">
-          Brak zapisanych miejsc{fCity ? ` w ${fCity}` : fCountry ? ` w kraju ${fCountry}` : ""}.
+          {fCity ? t("saved.none_in_city", { city: fCity })
+            : fCountry ? t("saved.none_in_country", { country: fCountry })
+            : t("saved.none")}
         </p>
       )}
       <AddSavedPlaceSheet open={addOpen} onOpenChange={setAddOpen} onAdded={invalidateSaved} />

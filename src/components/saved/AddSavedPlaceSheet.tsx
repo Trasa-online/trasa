@@ -186,7 +186,7 @@ export default function AddSavedPlaceSheet({ open, onOpenChange, onAdded }: {
 
             {term.length < 2 && (
               <p className="text-sm text-muted-foreground text-center py-10 px-6 leading-relaxed">
-                Wpisz nazwę miejsca, żeby poszukać go w{" "}{city}. Jeśli go nie{" "}znajdziesz, dopiszesz je ręcznie.
+                {t("add_place.search_hint", { city })}
               </p>
             )}
           </div>

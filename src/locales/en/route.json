@@ -169,5 +169,8 @@
     "nearby": "At this spot",
     "empty": "Nothing found here. Move the map a little.",
     "locate": "My location"
+  },
+  "map": {
+    "day": "Day {{number}}"
   }
 }

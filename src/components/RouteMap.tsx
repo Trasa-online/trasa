@@ -2,6 +2,7 @@ import { memo, useMemo, useState, useEffect, useRef } from 'react';
 import { Maximize2 } from 'lucide-react';
 import { APIProvider, Map as GoogleMap, AdvancedMarker, InfoWindow, useMap } from '@vis.gl/react-google-maps';
 import { GOOGLE_MAPS_API_KEY } from '@/lib/googleMaps';
+import { useTranslation } from "react-i18next";
 
 // Colors per day (day 1 = orange, day 2 = blue, day 3 = green, day 4+ = purple)
 const DAY_COLORS = ['#ea580c', '#2563eb', '#16a34a', '#7c3aed', '#d97706'];
@@ -97,6 +98,7 @@ function DayPolylines({ validPins }: { validPins: Pin[] }) {
 }
 
 const MapContent = ({ validPins, onPinClick, startingLocation, singlePlace = false, showRoute = true }: { validPins: Pin[]; onPinClick?: (pin: Pin) => void; startingLocation?: { name: string; latitude: number; longitude: number }; singlePlace?: boolean; showRoute?: boolean }) => {
+  const { t } = useTranslation("route");
   const map = useMap();
   const [selectedPin, setSelectedPin] = useState<number | null>(null);
   const [startSelected, setStartSelected] = useState(false);
@@ -236,7 +238,7 @@ const MapContent = ({ validPins, onPinClick, startingLocation, singlePlace = fal
              `Punkt ${(validPins[selectedPin].pin_order !== undefined ? validPins[selectedPin].pin_order! + 1 : selectedPin + 1)}`}
             {(validPins[selectedPin].day_number ?? 1) > 1 && (
               <span style={{ color: dayColor(validPins[selectedPin].day_number!), marginLeft: 6, fontSize: 11 }}>
-                Dzień {validPins[selectedPin].day_number}
+                {t("map.day", { number: validPins[selectedPin].day_number })}
               </span>
             )}
           </p>
@@ -256,6 +258,7 @@ const RouteMap = memo(function RouteMap({
   singlePlace = false,
   showRoute = true,
 }: RouteMapProps) {
+  const { t } = useTranslation("route");
   const validPins = useMemo(() =>
     pins.filter(pin => pin.latitude && pin.longitude),
     [pins]
@@ -320,7 +323,7 @@ const RouteMap = memo(function RouteMap({
               className="flex items-center gap-1.5 bg-background/90 backdrop-blur-sm rounded-full px-2 py-0.5 text-[10px] font-semibold border border-border/50"
             >
               <div className="h-2 w-2 rounded-full" style={{ background: dayColor(d) }} />
-              Dzień {d}
+              {t("map.day", { number: d })}
             </div>
           ))}
         </div>

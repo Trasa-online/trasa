@@ -78,7 +78,8 @@
   "cookies": {
     "essential": "Tylko niezbędne",
     "accept": "Akceptuję",
-    "more": "Więcej"
+    "more": "Więcej",
+    "intro": "Używamy plików cookie do analityki i personalizacji."
   },
   "moderation": {
     "rejected": "To zdjęcie nie przeszło moderacji i nie zostało dodane"

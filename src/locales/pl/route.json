@@ -174,5 +174,8 @@
     "nearby": "W tym miejscu",
     "empty": "Nic tu nie znaleźliśmy. Przesuń mapę kawałek dalej.",
     "locate": "Moja lokalizacja"
+  },
+  "map": {
+    "day": "Dzień {{number}}"
   }
 }

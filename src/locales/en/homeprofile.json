@@ -135,7 +135,12 @@
     "empty_short": "Nothing saved yet",
     "add_new_place": "Add a new place",
     "add_place": "Add place",
-    "no_city": "No city"
+    "no_city": "No city",
+    "empty_hint": "Save a place with the bookmark in the <b>{{tab}}</b> tab or on <b>{{other}}</b>",
+    "tab_explore": "Explore",
+    "none": "No saved places.",
+    "none_in_city": "No saved places in {{city}}.",
+    "none_in_country": "No saved places in {{country}}."
   },
   "add_saved": {
     "goes_to_general": "It goes to your General list.",
@@ -166,5 +171,8 @@
     "close_map": "Close map",
     "delete": "Delete",
     "map_alt": "Trip map"
+  },
+  "add_place": {
+    "search_hint": "Type a place name to look for it in {{city}}. If you cannot find it, you can add it by hand."
   }
 }

@@ -137,7 +137,12 @@
     "empty_short": "Brak zapisanych",
     "add_new_place": "Dodaj nowe miejsce",
     "add_place": "Dodaj miejsce",
-    "no_city": "Bez miasta"
+    "no_city": "Bez miasta",
+    "empty_hint": "Zapisz miejsce bookmarkiem w zakładce <b>{{tab}}</b> lub u <b>{{other}}</b>",
+    "tab_explore": "Eksploruj",
+    "none": "Brak zapisanych miejsc.",
+    "none_in_city": "Brak zapisanych miejsc w {{city}}.",
+    "none_in_country": "Brak zapisanych miejsc w kraju {{country}}."
   },
   "add_saved": {
     "goes_to_general": "Trafi do Twojej listy Ogólne.",
@@ -168,5 +173,8 @@
     "close_map": "Zamknij mapę",
     "delete": "Usuń",
     "map_alt": "Mapa wyjazdu"
+  },
+  "add_place": {
+    "search_hint": "Wpisz nazwę miejsca, żeby poszukać go w {{city}}. Jeśli go nie znajdziesz, dopiszesz je ręcznie."
   }
 }

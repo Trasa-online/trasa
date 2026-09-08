@@ -585,7 +585,7 @@ const Auth = () => {
                   <Input id="biz-reg-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder={t("fields.email_placeholder")} className={inputCls} />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="biz-phone" className="text-slate-700">Telefon kontaktowy <span className="text-slate-400 font-normal">(opcjonalnie)</span></Label>
+                  <Label htmlFor="biz-phone" className="text-slate-700">{t("biz.phone")} <span className="text-slate-400 font-normal">{t("biz.optional")}</span></Label>
                   <Input id="biz-phone" type="tel" value={bizPhone} onChange={(e) => setBizPhone(e.target.value)} placeholder="+48 600 000 000" className={inputCls} />
                 </div>
                 <div className="space-y-1.5">
@@ -604,9 +604,9 @@ const Auth = () => {
 
             <p className="text-center text-xs text-slate-400 mt-6">
               {bizMode === "login" ? (
-                <>Nie masz jeszcze konta?{" "}<button onClick={() => setBizMode("register")} className="text-blue-600 font-semibold hover:underline">Zarejestruj lokal</button></>
+                <>{t("biz.no_account")}{" "}<button onClick={() => setBizMode("register")} className="text-blue-600 font-semibold hover:underline">{t("biz.register_place")}</button></>
               ) : (
-                <>Masz już konto?{" "}<button onClick={() => { setBizDone(false); setBizMode("login"); }} className="text-blue-600 font-semibold hover:underline">{t("signin")}</button></>
+                <>{t("biz.have_account")}{" "}<button onClick={() => { setBizDone(false); setBizMode("login"); }} className="text-blue-600 font-semibold hover:underline">{t("signin")}</button></>
               )}
             </p>
           </div>
@@ -685,7 +685,7 @@ const Auth = () => {
           {/* Business link - tylko web (na natywnej apce panel biznesowy nie ma sensu) */}
           {!isNative && (
             <p className="text-xs text-muted-foreground text-center mt-4">
-              Jesteś właścicielem lokalu?{" "}
+              {t("biz.are_you_owner")}{" "}
               <button
                 onClick={() => setBusinessMode(true)}
                 className="underline text-foreground font-medium"

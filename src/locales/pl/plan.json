@@ -229,7 +229,10 @@
     "clear": "Wyczyść zaznaczenie",
     "prev": "Poprzedni miesiąc",
     "next": "Następny miesiąc",
-    "no_dates": "Bez dat"
+    "no_dates": "Bez dat",
+    "pick_day_one": "Wybierz dzień wyjazdu (max. {{count}} dzień)",
+    "pick_day_few": "Wybierz dzień wyjazdu (max. {{count}} dni)",
+    "pick_day_many": "Wybierz dzień wyjazdu (max. {{count}} dni)"
   },
   "template": {
     "failed": "Nie udało się utworzyć trasy. Spróbuj ponownie.",
@@ -251,5 +254,8 @@
   "list": {
     "default_visited": "Odwiedzone miejsca",
     "default_to_visit": "Do zobaczenia"
+  },
+  "templates": {
+    "none_for_city": "Brak gotowych plannerów dla {{city}} - pracujemy nad tym!"
   }
 }

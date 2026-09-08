@@ -51,10 +51,10 @@ BEGIN
                    THEN 'One published trip has no photo, so nobody can find it in Explore. Add one and it shows up.'
                    ELSE v_added || ' published trips have no photo, so nobody can find them in Explore. Add one and they show up.' END;
     ELSE
-      v_title := 'Twoich wyjazdow jeszcze nie widac';
+      v_title := 'Twoich wyjazdów jeszcze nie widać';
       v_body  := CASE WHEN v_added = 1
-                   THEN 'Jeden opublikowany wyjazd nie ma zdjecia, wiec nikt go nie znajdzie w eksploracji. Dodaj jedno i sie pojawi.'
-                   ELSE v_added || ' opublikowane wyjazdy nie maja zdjecia, wiec nikt ich nie znajdzie w eksploracji. Dodaj po jednym i sie pojawia.' END;
+                   THEN 'Jeden opublikowany wyjazd nie ma zdjęcia, więc nikt go nie znajdzie w eksploracji. Dodaj jedno i się pojawi.'
+                   ELSE v_added || ' opublikowane wyjazdy nie mają zdjęcia, więc nikt ich nie znajdzie w eksploracji. Dodaj po jednym i się pojawią.' END;
     END IF;
     v_url   := '/moj-profil?tab=wyjazdy';
 

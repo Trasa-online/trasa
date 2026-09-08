@@ -78,7 +78,8 @@
   "cookies": {
     "essential": "Essential only",
     "accept": "Accept",
-    "more": "More"
+    "more": "More",
+    "intro": "We use cookies for analytics and personalisation."
   },
   "moderation": {
     "rejected": "That photo did not pass moderation and was not added"

@@ -62,7 +62,7 @@ const CookieBanner = () => {
           <X className="h-4 w-4" />
         </button>
         <p className="text-xs text-white/85 leading-relaxed pr-7">
-          Używamy plików cookie do analityki i personalizacji.{" "}
+          {t("cookies.intro")}{" "}
           <Link to="/terms" className="text-white underline hover:text-white/80 transition-colors">{t("cookies.more")}</Link>
         </p>
         <div className="flex gap-2">

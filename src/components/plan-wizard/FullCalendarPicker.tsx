@@ -182,7 +182,7 @@ const FullCalendarPicker = ({ onConfirm, allowPast = false, onClear, maxDays = D
           </div>
         ) : (
           <div className="mb-3 text-center">
-            <p className="text-sm text-muted-foreground">Wybierz dzień wyjazdu (max. {maxDays} dni)</p>
+            <p className="text-sm text-muted-foreground">{t("calendar.pick_day", { count: maxDays })}</p>
           </div>
         )}
 

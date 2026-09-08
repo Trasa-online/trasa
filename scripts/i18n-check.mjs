@@ -156,7 +156,12 @@ function literals(src) {
 
 const baseline = fs.existsSync(BASELINE) ? new Set(JSON.parse(fs.readFileSync(BASELINE, "utf8")).files) : new Set();
 const seenBaseline = new Set();
-const JSX_TEXT = />\s*([^<>{}]{4,140}?)\s*</g;
+// Tekst JSX konczy sie tagiem ALBO wyrazeniem: `<>Masz juz konto?{" "}<button>` mial
+// polski tuz przed `{`, wiec stara wersja (tylko `<` jako koniec) go NIE widziala -
+// Auth.tsx przechodzil bramke z polskim na sztywno, mimo ze nie jest w baseline.
+// `(?<!=)` odsiewa strzalki: `() => navigate(`/trasa/${id}`)` tez ma `>` ... `{`,
+// wiec bez tego bramka czytala kod jako tekst JSX.
+const JSX_TEXT = /(?<![=|&])>\s*([^<>{}]{4,140}?)\s*[<{]/g;
 // Nazwy wlasne (miasta, dzielnice) to DANE, nie copy - zostaja jak sa w obu jezykach.
 // Klasy CSS z interpolacja tez nie sa tekstem dla uzytkownika.
 // Klasy CSS z interpolacja to nie copy. Wzorzec dopuszcza tez cudzyslowy i znak zapytania,
@@ -197,7 +202,15 @@ for (const file of walk(path.join(ROOT, "src"))) {
   const src = stripComments(maskIgnored(raw));
   const hits = new Set();
   for (const lit of literals(src)) if (isCopy(lit.trim())) hits.add(lit.trim());
-  for (const m of src.matchAll(JSX_TEXT)) if (isCopy(m[1].trim())) hits.add(m[1].trim());
+  // Domykajacy `>` generyka TypeScriptu (`Record<string, string>`) tez pasuje do JSX_TEXT,
+  // wiec odsiewamy fragmenty, ktore wygladaja na KOD, a nie na zdanie: nawias z cudzyslowem,
+  // przypisanie, srednik albo odwrotny apostrof w tekscie UI po prostu nie wystepuja.
+  const LOOKS_LIKE_CODE = /\("|[=;`]|\)\s*$/;
+  for (const m of src.matchAll(JSX_TEXT)) {
+    const txt = m[1].trim();
+    if (LOOKS_LIKE_CODE.test(txt)) continue;
+    if (isCopy(txt)) hits.add(txt);
+  }
   if (!hits.size) continue;
   if (baseline.has(rel)) { seenBaseline.add(rel); continue; }
   errors.push(`${rel}: ${hits.size} polskich napisow na sztywno (pierwszy: "${[...hits][0]}")`);
