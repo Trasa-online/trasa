@@ -75,6 +75,8 @@ import { CategoryIcon } from "@/components/CategoryIcon";
 import PreReleaseBanner from "@/components/share/PreReleaseBanner";
 import { renderForUpload, uploadPair, uploadWithThumb } from "@/lib/imageThumbs";
 import { TOP_LIMIT } from "@/lib/topPlaces";
+import { isWeb } from "@/lib/platform";
+import { thumbUrl } from "@/lib/imageUrl";
 
 // Oficjalne logo Google (4-kolorowe "G") - guzik "Zobacz w Google".
 const GoogleGlyph = ({ className }: { className?: string }) => (
@@ -177,6 +179,11 @@ export default function SharedRoute() {
     photo_url: pin.photo_url ?? null, place_id: pin.place_id ?? null,
   });
   const [planTab, setPlanTab] = useState<"miejsca" | "galeria" | "mapa">("miejsca");
+  // Widok ODBIORCY linku na webie (Figma "[NEW] Ekrany" -> "Udostępnianie wyjazdów oraz list"
+  // -> "Widok wyświetlania wyjazdu"). Zamiast pelnego ekranu wyjazdu - zapowiedz: okladka,
+  // pierwsze przystanki i jedno wyjscie dalej. Osoba, ktora dostala link, zwykle nie ma jeszcze
+  // aplikacji, wiec pelny ekran roboczy (zakladki, edycja, czat) jest dla niej szumem.
+  const [previewOpened, setPreviewOpened] = useState(false);
   const [detailPin, setDetailPin] = useState<any | null>(null);
   const [saving, setSaving] = useState(false);
   const [showDateSheet, setShowDateSheet] = useState(false);
@@ -1282,7 +1289,7 @@ export default function SharedRoute() {
       if (!user) return v.count > 0 ? (
         <div className="mt-1.5 inline-flex items-center rounded-full bg-secondary px-3 py-1.5 text-[13px] font-bold text-muted-foreground">{voteLabel}</div>
       ) : undefined;
-      return (
+  return (
         <button onClick={() => toggleVoteHandler(pin, v.voted)}
           className={`mt-1.5 inline-flex items-center gap-1 rounded-full px-3.5 py-1.5 text-[13px] font-bold active:scale-95 transition-transform ${v.voted ? "bg-primary text-white" : "bg-secondary text-foreground"}`}>
           {voteLabel}
@@ -1559,6 +1566,83 @@ export default function SharedRoute() {
     </div>
     );
   };
+
+  // Odbiorca na WEBIE dostaje najpierw zapowiedz. "Zobacz wyjazd" odslania pelny widok - nie
+  // wypycha do sklepu, bo tresc, po ktora przyszedl, jest tuz obok. Do sklepu prowadzi pasek
+  // na gorze i to jest jego jedyne zadanie.
+  if (isWeb && !previewOpened) {
+    const strip = (pins as any[]).slice(0, 8);
+    return (
+      <div className="min-h-[100dvh] bg-spontaway-yellow flex flex-col max-w-lg mx-auto">
+        <PreReleaseBanner />
+        <div className="flex-1 flex flex-col items-center px-5 pt-6 pb-8">
+          {/* Karta wyjazdu - ten sam kadr 9:16 co na karcie udostepniania. */}
+          <div className="relative w-full max-w-[330px] aspect-[9/16] overflow-hidden rounded-[28px] bg-[#fcede3] shadow-[0_4px_14px_rgba(0,0,0,0.15)]">
+            {cover ? (
+              <img src={thumbUrl(cover, 660) ?? cover} alt="" className="absolute inset-0 h-full w-full object-cover" />
+            ) : (
+              <span aria-hidden className="absolute left-1/2 top-1/2 h-16 w-16 -translate-x-1/2 -translate-y-1/2 block" style={{
+                backgroundColor: "#EF9D78",
+                WebkitMaskImage: "url(/Ikona_Trasy.svg)", maskImage: "url(/Ikona_Trasy.svg)",
+                WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat",
+                WebkitMaskSize: "contain", maskSize: "contain",
+                WebkitMaskPosition: "center", maskPosition: "center",
+              }} />
+            )}
+            <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-black/75 to-transparent" />
+            <div className="absolute inset-x-4 bottom-4">
+              <div className="flex items-center gap-2 text-[12px] font-semibold text-white/90">
+                {!isAnon && <img src={avatarSrc(author?.avatar_url)} alt="" className="h-6 w-6 rounded-full object-cover bg-orange-100" />}
+                <span className="truncate">{author?.username ? `@${author.username}` : authorName}</span>
+                <span aria-hidden>·</span>
+                <span className="truncate">{cityLabel}</span>
+                <span aria-hidden>·</span>
+                <span className="shrink-0">{`${(pins as any[]).length} ${placeWord((pins as any[]).length)}`}</span>
+              </div>
+              <p className="mt-1.5 text-[26px] font-black leading-tight text-white line-clamp-2">{route.title || cityLabel}</p>
+            </div>
+          </div>
+
+          {/* Pierwsze przystanki - to one mowia, co jest w srodku. */}
+          {strip.length > 0 && (
+            <div className="mt-6 w-full">
+              <div className="flex items-center gap-2 pb-2">
+                <span className="h-4 w-[3px] rounded-full bg-spontaway-orange" />
+                <p className="font-brand text-[15px] leading-none text-spontaway-orange">{t("share.first_day")}</p>
+              </div>
+              <div className="flex gap-3 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                {strip.map((pin: any, i: number) => (
+                  <div key={pin.id} className="flex w-[264px] shrink-0 items-center gap-3 rounded-3xl bg-white px-3 py-3">
+                    <div className="relative h-[80px] w-[54px] shrink-0 overflow-hidden rounded-xl bg-[#fcede3]">
+                      <PlacePhoto pin={rowPinFor(pin)} width={110} className="h-full w-full object-cover" />
+                      <span className="absolute left-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-[10px] bg-spontaway-orange px-1 text-[10px] font-black leading-none text-white">{i + 1}</span>
+                    </div>
+                    <div className="flex h-[80px] min-w-0 flex-1 flex-col justify-between py-0.5">
+                      <p className="line-clamp-2 text-[14px] font-bold leading-[1.19] text-black">{pin.place_name}</p>
+                      <div className="flex items-center justify-between gap-2">
+                        {(() => {
+                          const v = (Array.isArray(pin.tags) ? pin.tags : []).find((tg: string) => verdictOf(tg));
+                          return v ? <span className="truncate rounded-full bg-spontaway-yellow px-2.5 py-1 text-[11px] font-medium text-spontaway-brown">{localizeTag(v)}</span> : <span />;
+                        })()}
+                        <span className="shrink-0 text-[11px] font-medium text-[#666]">{categoryLabel(pin.category || "other")}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <button
+            onClick={() => setPreviewOpened(true)}
+            className="mt-8 w-full max-w-[420px] rounded-full bg-spontaway-orange py-4 text-[17px] font-extrabold text-white active:scale-[0.98] transition-transform"
+          >
+            {t("preview.open_trip")}
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-[100dvh] bg-background flex flex-col max-w-lg mx-auto">

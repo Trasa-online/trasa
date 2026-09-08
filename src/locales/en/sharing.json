@@ -244,5 +244,8 @@
   "prerelease": {
     "tagline": "Discover, plan, share!",
     "cta": "Join the early access"
+  },
+  "preview": {
+    "open_trip": "See the trip"
   }
 }

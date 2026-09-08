@@ -251,5 +251,8 @@
   "prerelease": {
     "tagline": "Odkrywaj, planuj, dziel się!",
     "cta": "Dołącz przedpremierowo"
+  },
+  "preview": {
+    "open_trip": "Zobacz wyjazd"
   }
 }

@@ -27,14 +27,14 @@ export default function PreReleaseBanner() {
         </span>
         <span className="min-w-0">
           <span className="block truncate text-[15px] font-bold text-spontaway-brown">Spontaway</span>
-          <span className="block truncate text-[12px] text-spontaway-brown/85">{t("prerelease.tagline")}</span>
+          <span className="block text-[12px] leading-tight text-spontaway-brown/85">{t("prerelease.tagline")}</span>
         </span>
       </div>
       <a
         href={TESTFLIGHT_URL}
         target="_blank"
         rel="noreferrer noopener"
-        className="inline-flex h-10 shrink-0 items-center justify-center rounded-full bg-spontaway-orange px-4 text-[13px] font-extrabold text-white transition-opacity hover:opacity-90 active:scale-[0.98]"
+        className="inline-flex h-10 shrink-0 items-center justify-center rounded-full bg-spontaway-orange px-3.5 text-[12.5px] font-extrabold text-white transition-opacity hover:opacity-90 active:scale-[0.98]"
       >
         {t("prerelease.cta")}
       </a>
