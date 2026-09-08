@@ -22,7 +22,8 @@ import { Reorder, useDragControls } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { API_BASE } from "@/lib/platform";
 import { CategoryIcon } from "@/components/CategoryIcon";
-import { uploadThumb } from "@/lib/imageThumbs";
+import { uploadWithThumb } from "@/lib/imageThumbs";
+import { mapWithLimit } from "@/lib/imageCompression";
 
 // Statyczna mapka pojedynczego miejsca (okladka karty planu). Tania (Maps Static + 24h CDN),
 // pomaranczowy pin, POI/transit ukryte. null gdy brak wspolrzednych.
@@ -272,15 +273,16 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false, onDelete, deleting 
     if (!user || !files || !files.length) return;
     setUploadingPin(pin.id);
     try {
-      const urls: string[] = [];
-      for (const file of Array.from(files)) {
+      // Szlo tu ZDJECIE ORYGINALNE prosto z aparatu (kilka MB, na iPhonie czesto HEIC),
+      // plik po pliku, a miniatura dekodowala je drugi raz. Teraz: zmniejszenie i miniatura
+      // z jednego dekodowania, oba wyslania rownolegle, pliki po trzy naraz (2026-09-08).
+      const results = await mapWithLimit(Array.from(files), 3, async (file) => {
         const path = `${user.id}/${pin.route_id}/pin_${pin.id}_${Math.random().toString(36).slice(2)}.jpg`;
-        const { error } = await supabase.storage.from("route-images").upload(path, file, { upsert: true, contentType: file.type || "image/jpeg" });
-        await uploadThumb("route-images", path, file);
-        if (error) { console.error("[activeTrip] photo upload failed:", error.message); continue; }
-        const { data } = supabase.storage.from("route-images").getPublicUrl(path);
-        if (data?.publicUrl) urls.push(data.publicUrl);
-      }
+        const { error } = await uploadWithThumb("route-images", path, file, { maxSide: 1600, quality: 0.8, upsert: true });
+        if (error) { console.error("[activeTrip] photo upload failed:", error.message); return null; }
+        return supabase.storage.from("route-images").getPublicUrl(path).data?.publicUrl ?? null;
+      });
+      const urls = results.filter((u): u is string => !!u);
       if (urls.length) {
         const cur = Array.isArray(pin.images) ? pin.images : [];
         const { error: updErr } = await (supabase as any).from("pins").update({ images: [...cur, ...urls] }).eq("id", pin.id);

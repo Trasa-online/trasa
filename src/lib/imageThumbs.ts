@@ -14,7 +14,7 @@
 // w [imageUrl.ts](./imageUrl.ts).
 
 import { supabase } from "@/integrations/supabase/client";
-import { prepareImageForUpload } from "@/lib/imageCompression";
+import { prepareImageForUpload, renderVariants } from "@/lib/imageCompression";
 
 /** Sufiks sciezki miniatury. BEZ rozszerzenia - format niesie naglowek content-type,
  *  a `prepareImageForUpload` oddaje WebP albo JPEG zaleznie od wsparcia przegladarki. */
@@ -54,4 +54,64 @@ export async function uploadThumb(bucket: string, path: string, source: File | B
   } catch (e) {
     console.warn("[imageThumbs]", (e as Error)?.message ?? e);
   }
+}
+
+/**
+ * Wgrywa zdjecie RAZEM z miniatura: jedno dekodowanie, dwa rownolegle wyslania (2026-09-08).
+ *
+ * Zastepuje wzorzec `upload(...)` + `uploadThumb(...)`, ktory dekodowal zdjecie dwa razy
+ * i czekal na dwa wyslania po kolei. Przy zdjeciu z aparatu to byla roznica rzedu kilkunastu
+ * sekund NA JEDNO ZDJECIE.
+ *
+ * Miniatura jest best-effort: jej blad nie przewraca wgrywania (klient spadnie na oryginal),
+ * ale blad oryginalu owszem - brak zdjecia to utrata tresci uzytkownika.
+ *
+ * @returns `{ error }` oryginalu - taki sam ksztalt, jaki oddaje `storage.upload`
+ */
+/** Zdjecie + jego miniatura z JEDNEGO dekodowania. Rozdzielone od wyslania, bo czesc
+ *  ekranow liczy sciezke z TRESCI gotowego bloba (SHA-256) i musi go miec wczesniej. */
+export async function renderForUpload(
+  file: File, maxSide = 1600, quality = 0.8,
+): Promise<{ full: Blob; thumb: Blob }> {
+  const [full, thumb] = await renderVariants(file, [
+    { maxSide, quality },
+    { maxSide: THUMB_SIDE, quality: THUMB_QUALITY },
+  ]);
+  return { full, thumb };
+}
+
+/** Wysyla oryginal i miniature ROWNOLEGLE. Miniatura jest best-effort: jej blad nie przewraca
+ *  wgrywania (klient spadnie na oryginal), blad oryginalu owszem - to utrata tresci usera. */
+export async function uploadPair(
+  bucket: string, path: string, full: Blob, thumb: Blob, upsert = false,
+): Promise<{ error: { message: string } | null }> {
+  const [mainRes, thumbRes] = await Promise.all([
+    supabase.storage.from(bucket).upload(path, full, {
+      contentType: full.type || "image/jpeg", upsert, cacheControl: "31536000",
+    }),
+    supabase.storage.from(bucket).upload(thumbPathFor(path), thumb, {
+      contentType: thumb.type || "image/jpeg", upsert: true, cacheControl: "31536000",
+    }),
+  ]);
+  if (thumbRes.error) console.warn(`[imageThumbs] miniatura ${bucket}/${path}: ${thumbRes.error.message}`);
+  return { error: mainRes.error ? { message: mainRes.error.message } : null };
+}
+
+/**
+ * Wgrywa zdjecie RAZEM z miniatura: jedno dekodowanie, dwa rownolegle wyslania (2026-09-08).
+ *
+ * Zastepuje wzorzec `upload(...)` + `uploadThumb(...)`, ktory dekodowal zdjecie dwa razy
+ * i czekal na dwa wyslania po kolei. Przy zdjeciu z aparatu (12 Mpix) to byla roznica rzedu
+ * kilkunastu sekund NA JEDNO ZDJECIE.
+ *
+ * @returns `{ error }` oryginalu - taki sam ksztalt, jaki oddaje `storage.upload`
+ */
+export async function uploadWithThumb(
+  bucket: string,
+  path: string,
+  file: File,
+  opts?: { maxSide?: number; quality?: number; upsert?: boolean },
+): Promise<{ error: { message: string } | null }> {
+  const { full, thumb } = await renderForUpload(file, opts?.maxSide ?? 1600, opts?.quality ?? 0.8);
+  return uploadPair(bucket, path, full, thumb, opts?.upsert ?? false);
 }

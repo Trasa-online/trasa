@@ -70,7 +70,8 @@
     "need_city": "Pick a city first",
     "need_title": "Add a list name",
     "need_place": "Add at least one place",
-    "need_two_places": "Add at least 2 places to create a list"
+    "need_two_places": "Add at least 2 places to create a list",
+    "title_not_allowed": "This name contains a word we don't allow. Change it to continue."
   },
   "custom_preview": {
     "title": "Add this place?",

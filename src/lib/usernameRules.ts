@@ -7,47 +7,9 @@
 // (migracja 20260907b). Tutaj jest to samo, zeby user zobaczyl blad OD RAZU przy pisaniu,
 // a nie dopiero po tapnieciu "Zapisz".
 
-/** Znaki, ktorymi podmienia sie litery, zeby ominac filtr ("n1gger", "ch@j"). */
-const LEET: Record<string, string> = {
-  "0": "o", "1": "i", "3": "e", "4": "a", "5": "s", "7": "t", "8": "b",
-  "@": "a", "$": "s", "!": "i", "|": "l", "(": "c",
-};
-const PL_DIACRITICS: Record<string, string> = {
-  "ą": "a", "ć": "c", "ę": "e", "ł": "l", "ń": "n", "ó": "o", "ś": "s", "ź": "z", "ż": "z",
-};
+import { BANNED_SUBSTRING, BANNED_EXACT, normalizeForMatch } from "@/lib/profanity";
 
-/**
- * Postacie do POROWNAN (nie do wyswietlania). Dwa warianty, bo te same znaki sluza do
- * dwoch roznych sztuczek: raz cyfra UDAJE litere ("n1gg3r"), raz ROZDZIELA litery
- * ("n1gg$er"). Podmiana lapie pierwsza, usuniecie druga - zaden wariant sam nie wystarcza.
- * Musi dawac to samo, co normalize_username_for_match w bazie (migracja 20260907b).
- */
-export function normalizeForMatch(raw: string, substitute = true): string {
-  return raw
-    .toLowerCase()
-    .split("").map((c) => PL_DIACRITICS[c] ?? (substitute ? LEET[c] ?? c : c)).join("")
-    .replace(/[^a-z0-9]/g, "");
-}
-
-// Wulgaryzmy i obelgi, ktore blokujemy GDZIEKOLWIEK w nazwie - te slowa nie wystepuja
-// przypadkiem w srodku normalnego nicku.
-const BANNED_SUBSTRING = [
-  // angielski
-  "nigger", "nigga", "faggot", "cunt", "motherfuck", "fuck", "whore", "slut",
-  "bitch", "pussy", "rapist", "pedophile", "pedofil", "porn", "hitler", "holocaust",
-  // polski
-  "kurwa", "kurwy", "jebac", "jeban", "jebie", "pierdol", "pierdal", "spierdal", "wypierdal",
-  "chuj", "chuja", "chuje", "pizda", "pizdy", "skurwysyn", "cwel", "kutas", "dupa",
-  "murzyn", "ciota", "pedal", "debil", "kretyn", "zjeb", "pojeb", "gowno", "szmata",
-];
-
-// Slowa krotkie albo takie, ktore normalnie siedza w srodku niewinnych nazw
-// ("Cassandra", "Dickinson", "Hancock", "analityk"): blokujemy tylko gdy nazwa to
-// DOKLADNIE to slowo.
-const BANNED_EXACT = [
-  "ass", "fag", "dick", "cock", "anal", "sex", "shit", "nazi", "rape", "retard",
-  "suka", "cipa", "huj", "sperma", "penis", "wagina",
-];
+export { normalizeForMatch };
 
 // Nazwy zastrzezone: konto oficjalne albo rola. Nie chodzi o wulgarnosc, tylko o to,
 // zeby nikt nie podawal sie za nas ani za obsluge.

@@ -187,6 +187,58 @@ export async function prepareImageForUpload(file: File, maxSide = 1600, quality 
   }
 }
 
+export type ImageVariant = { maxSide: number; quality: number };
+
+/**
+ * Kilka rozmiarow z JEDNEGO dekodowania (2026-09-08).
+ *
+ * Powod: dodanie zdjecia do miejsca na liscie trwalo ~35 s. Kazde zdjecie bylo dekodowane
+ * DWA razy - raz na wersje pelna, drugi raz w `uploadThumb` na miniature - a dekodowanie
+ * zdjecia z aparatu (12 Mpix) w WebView iOS to kilka sekund. Bitmapa jest ta sama, wiec
+ * wystarczy zdekodowac raz i przerysowac ja na dwa plotna.
+ *
+ * Zwraca blob per wariant, w kolejnosci wejscia. Gdy `createImageBitmap` nie jest dostepne
+ * albo padnie, kazdy wariant leci stara sciezka (`prepareImageForUpload`) - wynik jest ten
+ * sam, tylko wolniej.
+ */
+export async function renderVariants(file: File, variants: ImageVariant[]): Promise<Blob[]> {
+  try {
+    if (typeof createImageBitmap === "function") {
+      const bitmap = await createImageBitmap(file);
+      try {
+        const out: Blob[] = [];
+        for (const v of variants) {
+          const scale = Math.min(1, v.maxSide / Math.max(bitmap.width, bitmap.height));
+          const w = Math.max(1, Math.round(bitmap.width * scale));
+          const h = Math.max(1, Math.round(bitmap.height * scale));
+          const canvas = document.createElement("canvas");
+          canvas.width = w; canvas.height = h;
+          const ctx = canvas.getContext("2d");
+          if (!ctx) throw new Error("no 2d canvas context");
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = "high";
+          ctx.drawImage(bitmap, 0, 0, w, h);
+          // WebP jak w prepareImageForUpload: ~30% lzejszy, ale Safari < 16.4 go nie koduje
+          // i oddaje PNG (czyli CIEZSZY plik) - wtedy wracamy do JPEG.
+          let blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/webp", v.quality));
+          if (!blob || blob.type !== "image/webp") {
+            blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/jpeg", v.quality));
+          }
+          canvas.width = 0; canvas.height = 0;   // zwolnij pamiec od razu
+          if (!blob || blob.size === 0) throw new Error("empty canvas output");
+          out.push(blob);
+        }
+        return out;
+      } finally {
+        bitmap.close?.();
+      }
+    }
+  } catch (e) {
+    console.warn("[renderVariants] jedno dekodowanie nie wyszlo, lece po staremu:", e instanceof Error ? e.message : e);
+  }
+  return await Promise.all(variants.map((v) => prepareImageForUpload(file, v.maxSide, v.quality)));
+}
+
 /** Uruchamia zadania z ograniczona rownoleglascia (domyslnie 3) - zachowuje kolejnosc wynikow. */
 export async function mapWithLimit<T, R>(items: T[], limit: number, fn: (item: T, index: number) => Promise<R>): Promise<R[]> {
   const out = new Array<R>(items.length);

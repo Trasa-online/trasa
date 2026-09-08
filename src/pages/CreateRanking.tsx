@@ -25,6 +25,7 @@ import { placeTagsForCategory, localizeTag, tagId } from "@/lib/routeTags";
 import { pinCoverKeys, fetchPlacePhotosForKeys, pickPlaceCover } from "@/lib/placePhotoSocial";
 
 import { cacheListItemPhoto } from "@/lib/placePhotos";
+import { containsProfanity } from "@/lib/profanity";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import SavePlaceSheet, { type SavePlaceInput } from "@/components/plan-wizard/SavePlaceSheet";
 import { type MockPlace } from "@/components/plan-wizard/PlaceSwiper";
@@ -540,12 +541,18 @@ const CreateRanking = () => {
   }, [city, category]);
 
   const collectionTitle = title.trim() || t("common:fallback.list");
+  // Cenzura tytulu (zgloszenie z testow 2026-09-08): publiczna lista trafia na eksploracje,
+  // wiec "najlepsze kurwy w Krakowie" nie moze przejsc. Twarda bariera jest w bazie
+  // (wyzwalacz trg_discovery_collections_title), tutaj tylko po to, zeby user zobaczyl
+  // problem PRZY PISANIU, a nie po wypelnieniu calego formularza.
+  const titleBlocked = containsProfanity(title);
   const isRoute = isRouteCollection(category); // stare trasy (edycja) -> mozna ustawiac kolejnosc
-  const canGoNext = items.length >= 1 && title.trim().length > 0; // krok 1 -> 2 (min. 1 miejsce, miasto opcjonalne)
+  const canGoNext = items.length >= 1 && title.trim().length > 0 && !titleBlocked; // krok 1 -> 2 (min. 1 miejsce, miasto opcjonalne)
   const canPublish = canGoNext && !publishing;
   // Przejscie do kroku 2 - gdy warunki niespelnione, TOAST z powodem (guzik nie jest disabled).
   const goNext = () => {
     if (title.trim().length === 0) { toast(t("cta.need_title")); return; }
+    if (titleBlocked) { toast.error(t("cta.title_not_allowed")); return; }
     if (items.length < 1) { toast(t("cta.need_place")); return; }
     setStep(2);
   };
@@ -668,7 +675,11 @@ const CreateRanking = () => {
             <input value={title} onChange={(e) => { setTitle(e.target.value); setTitleDirty(true); }} maxLength={80}
               onFocus={() => setTitleFocused(true)} onBlur={() => setTitleFocused(false)}
               placeholder={t("name_placeholder")}
-              className="w-full rounded-2xl bg-secondary text-secondary-foreground border-0 px-4 py-3 text-base outline-none focus:ring-2 focus:ring-orange-500/40 placeholder:text-muted-foreground/50" />
+              aria-invalid={titleBlocked}
+              className={`w-full rounded-2xl bg-secondary text-secondary-foreground border-0 px-4 py-3 text-base outline-none focus:ring-2 placeholder:text-muted-foreground/50 ${titleBlocked ? "ring-2 ring-destructive focus:ring-destructive" : "focus:ring-orange-500/40"}`} />
+            {titleBlocked && (
+              <p className="mt-2 px-1 text-xs text-destructive">{t("cta.title_not_allowed")}</p>
+            )}
           </div>
 
           {/* OPCJONALNY filtr miasta wyszukiwarki (miasto NIE jest obowiazkowe - lista moze byc

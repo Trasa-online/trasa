@@ -51,7 +51,7 @@ import { pinCoverKeys, fetchPlacePhotosForKeys, pickPlaceCover } from "@/lib/pla
 import { fetchPhotoLikes, togglePhotoLike, type LikeState as PhotoLikeState } from "@/lib/placePhotoSocial";
 import PhotoPagination from "@/components/route/PhotoPagination";
 import RouteMap from "@/components/RouteMap";
-import { prepareImageForUpload, mapWithLimit, sha256Hex } from "@/lib/imageCompression";
+import { mapWithLimit, sha256Hex } from "@/lib/imageCompression";
 import { isHeic, convertHeicToJpeg } from "@/lib/heicConvert";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
@@ -72,7 +72,7 @@ import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { resolveStored } from "@/components/PlacePhoto";
 import type { MockPlace } from "@/components/plan-wizard/PlaceSwiper";
 import { CategoryIcon } from "@/components/CategoryIcon";
-import { uploadThumb } from "@/lib/imageThumbs";
+import { renderForUpload, uploadPair, uploadWithThumb } from "@/lib/imageThumbs";
 
 // Oficjalne logo Google (4-kolorowe "G") - guzik "Zobacz w Google".
 const GoogleGlyph = ({ className }: { className?: string }) => (
@@ -663,13 +663,14 @@ export default function SharedRoute() {
       const prepared = await mapWithLimit(Array.from(files), 3, async (rawFile, i) => {
         try {
           const file = isHeic(rawFile) ? await convertHeicToJpeg(rawFile) : rawFile;
-          const blob = await prepareImageForUpload(file, 1600, 0.8);
+          // Wersja pelna i miniatura z JEDNEGO dekodowania (2026-09-08) - wczesniej zdjecie
+          // bylo dekodowane dwa razy, a to na 12 Mpix z iPhone'a kilka sekund za kazdym razem.
+          const { full, thumb } = await renderForUpload(file, 1600, 0.8);
           // Nazwa z TRESCI pliku: to samo zdjecie wgrane drugi raz (tez przez inna osobe w tym
           // samym wyjezdzie) trafia pod ta sama sciezke, wiec galeria miejsca nie dostaje dubla.
-          const sha = await sha256Hex(blob);
+          const sha = await sha256Hex(full);
           const path = `${user.id}/${id}/pin_${sha ?? `${pin.id}_${i}_${Math.random().toString(36).slice(2)}`}.jpg`;
-          const { error } = await supabase.storage.from("route-images").upload(path, blob, { upsert: true, contentType: blob.type || "image/jpeg" });
-          await uploadThumb("route-images", path, blob);
+          const { error } = await uploadPair("route-images", path, full, thumb, true);
           if (error) { console.error("[SharedRoute] photo upload:", error.message); return null; }
           const { data } = supabase.storage.from("route-images").getPublicUrl(path);
           return data?.publicUrl ? { path, url: data.publicUrl } : null;
@@ -898,10 +899,9 @@ export default function SharedRoute() {
     const uploaded = await mapWithLimit(files, 3, async (rawFile, i) => {
       try {
         const file = isHeic(rawFile) ? await convertHeicToJpeg(rawFile) : rawFile;
-        const prepared = await prepareImageForUpload(file, 1600, 0.8);
         const path = `${user.id}/${route.id}/gal_${Date.now()}_${i}_${Math.floor(Math.random() * 1e6)}.jpg`;
-        const { error } = await (supabase as any).storage.from("route-images").upload(path, prepared, { contentType: prepared.type || "image/jpeg", upsert: false });
-        await uploadThumb("route-images", path, prepared);
+        // Jedno dekodowanie na zdjecie zamiast dwoch, oryginal i miniatura w sieci rownolegle.
+        const { error } = await uploadWithThumb("route-images", path, file, { maxSide: 1600, quality: 0.8 });
         if (error) { console.error("[SharedRoute] photo upload failed:", error.message); return null; }
         return `${SUPABASE_URL}/storage/v1/object/public/route-images/${path}`;
       } catch (e: any) { console.error("[SharedRoute] photo processing failed:", e?.message ?? e); return null; }

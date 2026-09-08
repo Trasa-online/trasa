@@ -9,7 +9,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { MapPin, ArrowLeft, Bookmark, Building2, Trash2, Share2, Plus, Camera, Loader2, X } from "lucide-react";
-import { compressImage } from "@/lib/imageCompression";
+import { mapWithLimit } from "@/lib/imageCompression";
 import AddPlaceSheet from "@/components/route/AddPlaceSheet";
 import { addPlaceToList, type PlaceForList } from "@/lib/placeLists";
 import { useShare } from "@/hooks/useShare";
@@ -37,7 +37,7 @@ import { ShareCardList } from "@/components/share/ShareCard";
 import { resolvePlaceDbId } from "@/lib/placeLists";
 import { fetchEnrichedPlace } from "@/components/plan-wizard/PlaceSwiper";
 import { inferCategoryFromName } from "@/lib/placeCategoryIcon";
-import { uploadThumb } from "@/lib/imageThumbs";
+import { uploadWithThumb } from "@/lib/imageThumbs";
 
 // Widok LISTY miejsc (polecajki) - UI/UX 1:1 z widokiem trasy (SharedRoute), ale zasilany z
 // discovery_collections/discovery_items. Lista NIE jest trasa (brak kolejnosci-planu), ale
@@ -96,22 +96,25 @@ export default function SharedList() {
     setUploadingItem(item.id);
     try {
       const urls: string[] = [...(Array.isArray(item.images) ? item.images : [])];
-      for (const file of Array.from(files)) {
-        const compressed = await compressImage(file, 1200, 1200, 0.8);
+      // Dodanie zdjecia trwalo ~35 s (zgloszenie Nat 2026-09-08). Skladaly sie na to trzy
+      // rzeczy naraz: zdjecie bylo dekodowane DWA razy (raz na wersje pelna, raz na
+      // miniature), wersja pelna i miniatura szly do sieci PO KOLEI, a przy kilku plikach
+      // caly ten ciag powtarzal sie sekwencyjnie. Teraz: jedno dekodowanie na plik
+      // (uploadWithThumb), oba wyslania rownolegle, a pliki po trzy naraz.
+      const added = await mapWithLimit(Array.from(files), 3, async (file) => {
         const path = `${user.id}/list_${id}/item_${item.id}_${Math.random().toString(36).slice(2)}.jpg`;
-        const { error } = await supabase.storage.from("route-images").upload(path, compressed, { contentType: "image/jpeg", upsert: false });
-        await uploadThumb("route-images", path, compressed);
-        if (error) { console.error("[SharedList] photo upload:", error.message); continue; }
-        const { data } = supabase.storage.from("route-images").getPublicUrl(path);
-        if (data?.publicUrl) urls.push(data.publicUrl);
-      }
+        const { error } = await uploadWithThumb("route-images", path, file, { maxSide: 1200, quality: 0.8 });
+        if (error) { console.error("[SharedList] photo upload:", error.message); return null; }
+        return supabase.storage.from("route-images").getPublicUrl(path).data?.publicUrl ?? null;
+      });
+      urls.push(...added.filter((u): u is string => !!u));
       const { error: upErr } = await (supabase as any).from("discovery_items").update({ images: urls }).eq("id", item.id);
       if (upErr) { toast.error(t("toast.photo_add_failed")); return; }
       // Zdjecie zyje tez w galerii MIEJSCA (place_photos) - inaczej widac je tylko na tej liscie,
       // a wizytowka miejsca i okladki w innych widokach o nim nie wiedza (zgloszenie Nat 2026-08-28).
       const placeKey = placeKeyOf({ googlePlaceId: item.google_place_id ?? null, placeName: item.place_name });
-      const added = urls.filter((u) => !(Array.isArray(item.images) ? item.images : []).includes(u));
-      await Promise.all(added.map((photoUrl) => linkPhotoToPlace({
+      const fresh = added.filter((u): u is string => !!u);
+      await Promise.all(fresh.map((photoUrl) => linkPhotoToPlace({
         userId: user.id, placeKey, placeName: item.place_name, city: item.city ?? col?.city ?? null, photoUrl,
       })));
       queryClient.invalidateQueries({ queryKey: ["shared-list-items", id] });
