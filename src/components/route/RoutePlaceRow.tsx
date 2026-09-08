@@ -85,26 +85,6 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
           od zapisu/kosza. Guzik Google = samo logo w BIALYM kolku z delikatnym cieniem (bez podpisu)
           - cien niesie afordancje "to sie klika", spojnie z kartami i arkuszem dodawania miejsca. */}
       <div className="mt-3 flex items-center justify-end gap-2">
-        <button
-          onClick={(e) => { e.stopPropagation(); onGoogle(); }}
-          aria-label={t("row.open_in_maps")}
-          className="h-9 w-9 rounded-full bg-white border border-black/[0.04] shadow-[0_1px_5px_rgba(0,0,0,0.12)] flex items-center justify-center shrink-0 active:scale-90 transition-transform"
-        >
-          <GoogleGlyph className="h-[18px] w-[18px]" />
-        </button>
-        {/* Zapis miejsca dostepny ZAWSZE gdy podany onSave - takze dla wlasciciela obok kosza
-            (wczesniej kosz go wypieral, wiec we wlasnym wyjezdzie nie dalo sie zapisac miejsca
-            do swoich list - zgloszenie Nat 2026-08-29). */}
-        {onToggleTop && (
-          <button
-            onClick={(e) => { e.stopPropagation(); onToggleTop(); }}
-            aria-label={isTop ? t("row.unset_top") : t("row.set_top")}
-            aria-pressed={!!isTop}
-            className="h-9 w-9 rounded-full flex items-center justify-center active:scale-90 transition-transform"
-          >
-            <Star className={`h-5 w-5 ${isTop ? "text-primary fill-primary" : "text-foreground/70"}`} strokeWidth={2} />
-          </button>
-        )}
         {onToggleVisited && (
           /* Po zaznaczeniu guzik ZWIJA sie do samego znaczka (jak polubienie na YouTube):
              tekst tlumaczy AKCJE, a nie powtarza stanu. Kolor schodzi na peachy - odwiedzone
@@ -129,6 +109,26 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
             >
               {t("row.visited")}
             </span>
+          </button>
+        )}
+        <button
+          onClick={(e) => { e.stopPropagation(); onGoogle(); }}
+          aria-label={t("row.open_in_maps")}
+          className="h-9 w-9 rounded-full bg-white border border-black/[0.04] shadow-[0_1px_5px_rgba(0,0,0,0.12)] flex items-center justify-center shrink-0 active:scale-90 transition-transform"
+        >
+          <GoogleGlyph className="h-[18px] w-[18px]" />
+        </button>
+        {/* Zapis miejsca dostepny ZAWSZE gdy podany onSave - takze dla wlasciciela obok kosza
+            (wczesniej kosz go wypieral, wiec we wlasnym wyjezdzie nie dalo sie zapisac miejsca
+            do swoich list - zgloszenie Nat 2026-08-29). */}
+        {onToggleTop && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onToggleTop(); }}
+            aria-label={isTop ? t("row.unset_top") : t("row.set_top")}
+            aria-pressed={!!isTop}
+            className="h-9 w-9 rounded-full flex items-center justify-center active:scale-90 transition-transform"
+          >
+            <Star className={`h-5 w-5 ${isTop ? "text-primary fill-primary" : "text-foreground/70"}`} strokeWidth={2} />
           </button>
         )}
         {onSave && (
