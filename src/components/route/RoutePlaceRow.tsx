@@ -218,10 +218,12 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
                 <>
                   <motion.span
                     aria-hidden
-                    className="pointer-events-none absolute inset-0 rounded-full border-2 border-primary"
-                    initial={{ scale: 0.6, opacity: 0.9 }}
-                    animate={{ scale: 2.1, opacity: 0 }}
-                    transition={{ duration: 0.5, ease: "easeOut" }}
+                    // Cienka obwodka i nizsze krycie - fala ma byc sugestia, nie ramka
+                    // (prosba Nat 2026-09-08). Mniejszy zasieg tez uspokaja calosc.
+                    className="pointer-events-none absolute inset-0 rounded-full border border-primary/70"
+                    initial={{ scale: 0.7, opacity: 0.55 }}
+                    animate={{ scale: 1.75, opacity: 0 }}
+                    transition={{ duration: 0.46, ease: "easeOut" }}
                   />
                   {/* Obrot musi siedziec na OPAKOWANIU, a przesuniecie na kresce. Gdy oba sa
                       na jednym elemencie, `rotate` obraca go wokol wlasnego srodka JUZ PO
@@ -235,9 +237,9 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
                       style={{ transform: `rotate(${deg}deg)` }}
                     >
                       <motion.span
-                        className="block h-[3px] w-[8px] -mt-[1.5px] rounded-full bg-primary"
+                        className="block h-[2px] w-[6px] -mt-[1px] rounded-full bg-primary/80"
                         initial={{ x: 2, opacity: 0, scaleX: 0.4 }}
-                        animate={{ x: [2, 17, 24], opacity: [0, 1, 0], scaleX: [0.4, 1, 0.5] }}
+                        animate={{ x: [2, 14, 19], opacity: [0, 0.85, 0], scaleX: [0.4, 1, 0.5] }}
                         transition={{ duration: 0.46, times: [0, 0.45, 1], ease: "easeOut", delay: 0.04 }}
                       />
                     </span>

@@ -1496,13 +1496,19 @@ export default function SharedRoute() {
             najmocniejszego ("Musisz odwiedzic!" -> "Warto wpasc" -> ...), na koncu miejsca bez
             werdyktu i jawne "nie warto". W obrebie tego samego stopnia zostaje kolejnosc trasy,
             wiec sortowanie niczego nie miesza tam, gdzie nikt nic nie oznaczyl. */}
-        {[...list]
-          .map((pin: any, i: number) => ({ pin, i }))
-          .sort((a, b) =>
-            (b.pin.is_top ? 1 : 0) - (a.pin.is_top ? 1 : 0)
-            || verdictRank(a.pin.tags) - verdictRank(b.pin.tags)
-            || a.i - b.i)
-          .map(({ pin }, i: number) => (
+        {(dayCount > 1
+          ? [...list]
+              .map((pin: any, i: number) => ({ pin, i }))
+              .sort((a, b) =>
+                (b.pin.is_top ? 1 : 0) - (a.pin.is_top ? 1 : 0)
+                || verdictRank(a.pin.tags) - verdictRank(b.pin.tags)
+                || a.i - b.i)
+              .map((e) => e.pin)
+          // Wyjazd JEDNODNIOWY: "Wszystkie" to jedyny widok i zarazem uklad tego dnia, ktory
+          // user sam poukladal. Gradacja przestawialaby mu miejsca pod rekami (prosba Nat
+          // 2026-09-08) - sortujemy tylko tam, gdzie lista scala kilka dni.
+          : list
+        ).map((pin: any, i: number) => (
           <RoutePlaceRow
             key={pin.id} pin={rowPinFor(pin)} index={i}
             categoryLabel={categoryLabel(pin.category || "other")}
@@ -1956,12 +1962,7 @@ export default function SharedRoute() {
                 )}
               </div>
             )}
-            {canAddPhotos && (
-              <>
-                <input ref={photoInputRef} type="file" accept="image/*,.heic,.heif" multiple className="hidden"
-                  onChange={(e) => { const files = Array.from(e.target.files ?? []); e.currentTarget.value = ""; if (files.length) void handleAddPhotos(files); }} />
-              </>
-            )}
+
           </div>
         )}
         </div>
@@ -2060,10 +2061,23 @@ export default function SharedRoute() {
       {/* t("add_place") jako plywajacy guzik BEZPOSREDNIO POD czatem (prosba Nat 2026-08-30).
           Dostepny takze w trybie zmiany kolejnosci (prosba Nat 2026-08-30) - chowamy tylko przy
           pisaniu notki i przy wyborze miejsc. */}
+      {/* "+" znaczy "dodaj to, na co patrzysz" (prosba Nat 2026-09-08): w Miejscach dodaje
+          miejsce, w Galerii otwiera wybor zdjec. Jeden guzik, dwa konteksty - inaczej w Galerii
+          prowadzil do arkusza miejsc, czyli nie tam, gdzie user wlasnie jest. */}
+      {/* Wejscie do plikow trzymamy POZA zakladka galerii - plywajacy "+" korzysta z niego
+          takze wtedy, gdy galeria nie jest jeszcze otwarta ani pusta. */}
+      {canAddPhotos && (
+        <input ref={photoInputRef} type="file" accept="image/*,.heic,.heif" multiple className="hidden"
+          onChange={(e) => { const files = Array.from(e.target.files ?? []); e.currentTarget.value = ""; if (files.length) void handleAddPhotos(files); }} />
+      )}
       {canEdit && !choosing && !noteEditing && (
         <button
-          onClick={() => { haptics.light(); setAddPlaceOpen(true); }}
-          aria-label={t("add_place")}
+          onClick={() => {
+            haptics.light();
+            if (planTab === "galeria" && canAddPhotos) photoInputRef.current?.click();
+            else setAddPlaceOpen(true);
+          }}
+          aria-label={planTab === "galeria" && canAddPhotos ? t("add_photo_cta") : t("add_place")}
           className="fixed right-4 z-40 h-14 w-14 rounded-full bg-primary shadow-lg shadow-black/15 flex items-center justify-center active:scale-90 transition-transform"
           style={{ bottom: "calc(84px + env(safe-area-inset-bottom, 0px))" }}
         >

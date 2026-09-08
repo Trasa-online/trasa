@@ -506,9 +506,11 @@ function SplashController() {
   // Splash to afordancja ZIMNEGO STARTU APLIKACJI NATYWNEJ. Na webie nie ma czego
   // przykrywac: aplikacja konsumencka jest tam zablokowana, wiec zostaja strony
   // marketingowe i legal - a na nich ten ekran tylko zaslania tresc. Na landingu bylo to
-  // szczegolnie kosztowne: przy kolejnym wejsciu tego samego dnia splash rysuje pelnoekranowy
-  // ScreenSkeleton na z-[9999], wiec przykrywal prerenderowana strone i to WLASNIE jego
-  // widac bylo jako "miganie szkieletu", mimo ze HTML przychodzil juz z trescia.
+  // szczegolnie kosztowne: przy kolejnym wejsciu tego samego dnia splash rysowal pelnoekranowy
+  // szkielet na z-[9999], wiec przykrywal prerenderowana strone i to WLASNIE jego widac bylo
+  // jako "miganie szkieletu", mimo ze HTML przychodzil juz z trescia. (Ten szkielet zostal
+  // usuniety 2026-09-08 - patrz nizej - ale reguly `skipSplash` nie ruszamy: na webie splash
+  // i tak nie ma czego przykrywac.)
   const skipSplash =
     isWeb ||
     location.pathname.startsWith("/biznes") ||
@@ -609,15 +611,15 @@ function SplashController() {
   // chowamy splash od razu (zgloszenie Nat 2026-09-04: "przed widokiem logowania pokazuje
   // sie szkielet"). Dopoki `loading` trwa, jeszcze nie wiemy - wtedy splash zostaje.
   if (!loading && !user && !forceBranded) return null;
-  // Kolejny start tego samego dnia: zamiast znaku od razu szkielet ekranu docelowego, wiec uklad
-  // nie skacze po zaladowaniu (podglad admina zawsze pokazuje wersje ze znakiem).
-  if (!branded && !forceBranded) {
-    return (
-      <div className="fixed inset-0 z-[9999] bg-background">
-        <ScreenSkeleton variant={variantForPath(window.location.hash)} />
-      </div>
-    );
-  }
+  // Kolejny start tego samego dnia: BEZ wlasnego szkieletu (zgloszenie Nat 2026-09-08:
+  // "na eksploracji sa dwa szkielety"). Byly rzeczywiscie dwa, jeden po drugim: najpierw ten
+  // splashowy na z-[9999], a po jego zniknieciu szkielet z Suspense, ktory czeka na paczke
+  // ekranu. Ten pierwszy niczego nie wnosil - drugi i tak musi tam byc, bo kod ekranu laduje
+  // sie leniwie. Oddajemy wiec sterowanie od razu jemu.
+  //
+  // Natywny splash jest juz schowany (efekt wyzej, niezalezny od tej galezi), a komponent
+  // dalej sie montuje i wykonuje logike startowa - `return null` pomija tylko rysowanie.
+  if (!branded && !forceBranded) return null;
   // key: przy ponownym odpaleniu (podglad admina) komponent montuje sie od zera, wiec animacja
   // rysowania startuje od poczatku zamiast zostac na koncowej klatce.
   return <SplashDraw key={replayKey} done={done} onHidden={() => setVisible(false)} />;

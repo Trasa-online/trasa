@@ -50,7 +50,10 @@
     "list_saved": "Zapisano listę",
     "photos_rejected_one": "Jedno zdjęcie nie przeszło moderacji",
     "photos_rejected_few": "{{count}} zdjęcia nie przeszły moderacji",
-    "photos_rejected_many": "{{count}} zdjęć nie przeszło moderacji"
+    "photos_rejected_many": "{{count}} zdjęć nie przeszło moderacji",
+    "name_saved": "Nazwa zmieniona",
+    "name_failed": "Nie udało się zmienić nazwy",
+    "name_not_allowed": "Ta nazwa zawiera niedozwolone słowo"
   },
   "cta": {
     "add_place": "Dodaj nowe miejsce",
@@ -59,7 +62,8 @@
   "aria": {
     "delete_photo": "Usuń zdjęcie",
     "share": "Udostępnij",
-    "delete_list": "Usuń listę"
+    "delete_list": "Usuń listę",
+    "rename_list": "Zmień nazwę listy"
   },
   "fallback_title": "Lista miejsc",
   "photo": "Zdjęcie",

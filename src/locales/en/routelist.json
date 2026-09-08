@@ -48,7 +48,10 @@
     "list_deleted": "List deleted.",
     "list_saved": "List saved",
     "photos_rejected_one": "One photo did not pass moderation",
-    "photos_rejected_other": "{{count}} photos did not pass moderation"
+    "photos_rejected_other": "{{count}} photos did not pass moderation",
+    "name_saved": "Name changed",
+    "name_failed": "Could not change the name",
+    "name_not_allowed": "This name contains a word we don't allow"
   },
   "cta": {
     "add_place": "Add new place",
@@ -57,7 +60,8 @@
   "aria": {
     "delete_photo": "Delete photo",
     "share": "Share",
-    "delete_list": "Delete list"
+    "delete_list": "Delete list",
+    "rename_list": "Rename list"
   },
   "fallback_title": "Place list",
   "photo": "Photo",

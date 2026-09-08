@@ -8,7 +8,7 @@ import { useScreenshot } from "@/hooks/useScreenshot";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { MapPin, ArrowLeft, Bookmark, Building2, Trash2, Share2, Plus, Camera, Loader2, X } from "lucide-react";
+import { MapPin, ArrowLeft, Bookmark, Building2, Trash2, Share2, Plus, Camera, Loader2, X, Pencil } from "lucide-react";
 import { mapWithLimit } from "@/lib/imageCompression";
 import AddPlaceSheet from "@/components/route/AddPlaceSheet";
 import { addPlaceToList, type PlaceForList } from "@/lib/placeLists";
@@ -83,6 +83,29 @@ export default function SharedList() {
   // Postawiony nizej dawal React error #310 - przy pierwszym renderze hookow bylo mniej niz przy
   // kolejnym i lista przestawala sie otwierac (zgloszenie Nat 2026-09-01).
   const [shareCardOpen, setShareCardOpen] = useState(false);
+  // Zmiana nazwy listy (prosba Nat 2026-09-08). Edycja NA MIEJSCU, tak jak nazwa wyjazdu -
+  // osobny arkusz do jednego pola tylko mnozylby kroki.
+  const [editingName, setEditingName] = useState(false);
+  const [nameVal, setNameVal] = useState("");
+  const [savingName, setSavingName] = useState(false);
+  const saveListName = async () => {
+    if (!id) return;
+    const trimmed = nameVal.trim();
+    if (!trimmed) { setEditingName(false); return; }
+    setSavingName(true);
+    // Cenzura jest w bazie (wyzwalacz trg_discovery_collections_title), ale komunikat musi byc
+    // czytelny - inaczej user widzi tylko, ze "nie zapisalo sie".
+    const { error } = await (supabase as any).from("discovery_collections").update({ title: trimmed }).eq("id", id);
+    setSavingName(false);
+    if (error) {
+      toast.error(/title_not_allowed/.test(error.message) ? t("toast.name_not_allowed") : t("toast.name_failed"));
+      return;
+    }
+    setEditingName(false);
+    queryClient.setQueryData(["shared-list", id], (old: any) => (old ? { ...old, title: trimmed } : old));
+    queryClient.invalidateQueries({ queryKey: ["profile-list-feed"] });
+    toast.success(t("toast.name_saved"));
+  };
   // Zrzut ekranu = intencja "chce to pokazac". Zamiast szukac guzika, user dostaje gotowy
   // kadr od razu po zrzucie (logika jak na Pintereście). iOS nie pozwala podmienic juz
   // zrobionego zdjecia, wiec karta pojawia sie PO nim i user robi drugi zrzut - z karta.
@@ -586,7 +609,20 @@ export default function SharedList() {
         {/* Naglowek: tytul + opis, spacing 35px pod TopBarem */}
         <div className="px-5 pt-[35px]">
           <div className="flex items-start gap-3">
-            <h1 className="flex-1 text-2xl font-black text-foreground leading-tight">{col.title || cityLabel}</h1>
+            {editingName ? (
+              <input
+                autoFocus
+                value={nameVal}
+                onChange={(e) => setNameVal(e.target.value)}
+                onBlur={() => void saveListName()}
+                onKeyDown={(e) => { if (e.key === "Enter") void saveListName(); if (e.key === "Escape") setEditingName(false); }}
+                maxLength={80}
+                aria-label={t("aria.rename_list")}
+                className="flex-1 min-w-0 text-2xl font-black text-foreground leading-tight bg-transparent border-b-2 border-primary outline-none"
+              />
+            ) : (
+              <h1 className="flex-1 text-2xl font-black text-foreground leading-tight">{col.title || cityLabel}</h1>
+            )}
             {/* a) Ikony jak na wyjazdach: udostepnij / usun. Olowek usuniety (prosba Nat 2026-09-01,
                 tak samo jak wczesniej na wyjezdzie) - ten widok JEST edycja: miejsca, notki i
                 zdjecia zmienia sie na miejscu, wiec osobne wejscie w stepper mnozylo sciezki.
@@ -597,6 +633,14 @@ export default function SharedList() {
               <button onClick={handleShare} onContextMenu={(e) => { e.preventDefault(); handleShareLink(); }} aria-label={t("aria.share")} className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center active:scale-90 transition-transform"><Share2 className="h-4 w-4 text-foreground" /></button>
               {isOwner && (
                 <>
+                  <button
+                    onClick={() => { setNameVal(col.title || ""); setEditingName(true); }}
+                    aria-label={t("aria.rename_list")}
+                    disabled={savingName}
+                    className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center active:scale-90 transition-transform disabled:opacity-50"
+                  >
+                    <Pencil className="h-4 w-4 text-foreground" />
+                  </button>
                   <button onClick={() => setAskDelete(true)} aria-label={t("aria.delete_list")} className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center active:scale-90 transition-transform"><Trash2 className="h-4 w-4 text-destructive" /></button>
                 </>
               )}
