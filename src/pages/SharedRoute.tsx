@@ -357,69 +357,63 @@ export default function SharedRoute() {
     void (supabase as any).rpc("increment_route_views", { route_id: route.id });
   }, [route?.id]);
 
-  // Zapisz cudza trase do swojego dziennika (kopia pinow). Domyka petle
-  // discovery -> moja sesja (re-discovery). Wymaga konta.
+  // Zapis cudzego wyjazdu do ZAPISANYCH na profilu (zgloszenie Nat 2026-09-08).
+  //
+  // Wczesniej to samo CTA robilo cos zupelnie innego niz zapis tej samej trasy z karty
+  // w eksploracji: KOPIOWALO cala trase z pinami do wlasnych roboczych i przerzucalo usera
+  // na stary ekran podsumowania (/review-summary). Czyli dwa rozne zachowania pod jedna
+  // nazwa "Zapisz trase", a w Zapisanych i tak nic sie nie pojawialo tak, jak user oczekiwal.
+  //
+  // Teraz: jeden wiersz w saved_routes (dokladnie jak bookmark na karcie) + opcjonalna data,
+  // ktora nalezy do ZAPISUJACEGO, nie do trasy. Zadnej kopii i zadnej zmiany ekranu -
+  // zapis ma byc odczuwalny jak zakladka, nie jak przejscie gdzie indziej.
   const saveToMine = async (tripDate?: Date) => {
     if (!user) { navigate("/auth"); return; }
-    if (!route || !pins.length || saving) return;
+    if (!route || saving) return;
     setSaving(true);
     setShowDateSheet(false);
-    const dateStr = tripDate ? format(tripDate, "yyyy-MM-dd") : null;
     try {
-      const { data: newRoute, error } = await (supabase as any)
-        .from("routes")
-        .insert({
-          user_id: user.id,
-          title: route.title || route.city,
-          city: route.city,
-          status: "draft",
-          trip_type: "planning",
-          day_number: 1,
-          start_date: dateStr,
-          end_date: dateStr,
-          is_shared: false,
-          new_for_users: [user.id],
-        })
-        .select("id")
-        .single();
-      if (error || !newRoute) throw error;
-      await (supabase as any).from("pins").insert(
-        pins.map((p: any, idx: number) => ({
-          route_id: newRoute.id,
-          place_name: p.place_name,
-          address: p.address ?? null,
-          description: p.description ?? null,
-          category: p.category ?? "other",
-          latitude: p.latitude ?? null,
-          longitude: p.longitude ?? null,
-          place_id: p.place_id ?? null,
-          photo_url: p.photo_url ?? null,
-          suggested_time: p.suggested_time ?? null,
-          pin_order: idx,
-          original_creator_id: user.id,
-        }))
+      const { error } = await (supabase as any).from("saved_routes").upsert(
+        { user_id: user.id, route_id: id, planned_date: tripDate ? format(tripDate, "yyyy-MM-dd") : null },
+        { onConflict: "user_id,route_id" },
       );
-      notify.success(t("toast_saved"));
-      // Powiadom autora oryginalnej trasy, ze ktos jej uzyl (best-effort; SECURITY DEFINER RPC -
+      if (error) throw error;
+      queryClient.setQueryData(["route-is-saved", user.id, id], true);
+      toast.success(t("toast_saved"), { action: { label: t("go_to_saved"), onClick: () => navigate("/moj-profil?tab=wyjazdy") } });
+      // Powiadom autora, ze ktos zapisal jego trase (best-effort; SECURITY DEFINER RPC -
       // klient nie moze insertowac notyfikacji dla innego usera). Push leci triggerem notify_push.
       if (route.user_id && route.user_id !== user.id) {
-        // Zapisz "wykorzystanie" oryginalnej trasy (feeduje statystyki autora: my_route_stats
-        // liczy saved_routes -> "osób wykorzystało Twoje trasy" + "Zapisania"). PK(user_id, route_id)
-        // -> upsert idempotentny, ponowne uzycie tej samej trasy nie duplikuje.
-        void (supabase as any)
-          .from("saved_routes")
-          .upsert({ user_id: user.id, route_id: id }, { onConflict: "user_id,route_id", ignoreDuplicates: true });
         void (supabase as any).rpc("notify_route_used", { p_route_id: id });
-        // Push Z KLIENTA (trigger DB dostaje z send-push 401). Odbiorca = autor oryginalnej trasy.
         const me = await getCurrentUserName();
         void sendClientPush({ userId: route.user_id, title: t("push_used_title"), body: route.city ? t("push_used_body_city", { name: me, city: route.city }) : t("push_used_body", { name: me }), url: "/moj-profil?tab=wyjazdy" });
       }
-      navigate(`/review-summary?route=${newRoute.id}`);
     } catch (e: any) {
       console.error("[SharedRoute] save failed:", e?.message ?? e);
       notify.error(t("toast_save_error"));
     }
     setSaving(false);
+  };
+
+  // Czy mam juz te trase w Zapisanych - CTA ma pokazywac STAN, nie tylko akcje.
+  const { data: isRouteSaved = false } = useQuery({
+    queryKey: ["route-is-saved", user?.id, id],
+    // Bez isOwner - ta zmienna powstaje dopiero po early-returnach, a hook musi byc nad nimi.
+    enabled: !!user?.id && !!id && (route as any)?.user_id !== user?.id,
+    queryFn: async () => {
+      const { data } = await (supabase as any)
+        .from("saved_routes").select("route_id").eq("user_id", user!.id).eq("route_id", id).maybeSingle();
+      return !!data;
+    },
+  });
+
+  const unsaveFromMine = async () => {
+    if (!user || !id || saving) return;
+    setSaving(true);
+    try {
+      await (supabase as any).from("saved_routes").delete().eq("user_id", user.id).eq("route_id", id);
+      queryClient.setQueryData(["route-is-saved", user.id, id], false);
+      notify.success(t("toast_unsaved"));
+    } finally { setSaving(false); }
   };
 
   const { data: pins = [] } = useQuery({
@@ -2103,12 +2097,23 @@ export default function SharedRoute() {
             )
           ) : (
             <>
+              {/* CTA pokazuje STAN zakladki, nie tylko akcje: zapisane = szary guzik z wypelnionym
+                  bookmarkiem i ponowne tapniecie zdejmuje zapis (jak na karcie w eksploracji). */}
               <button
-                onClick={() => { if (!user) { navigate("/auth"); return; } setShowDateSheet(true); }}
+                onClick={() => {
+                  if (!user) { navigate("/auth"); return; }
+                  if (isRouteSaved) { void unsaveFromMine(); return; }
+                  setShowDateSheet(true);
+                }}
                 disabled={saving}
-                className="w-full py-3 rounded-full bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform shadow-lg shadow-primary/25 disabled:opacity-50"
+                className={`w-full py-3 rounded-full font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-50 ${
+                  isRouteSaved
+                    ? "bg-secondary text-secondary-foreground"
+                    : "bg-primary text-white shadow-lg shadow-primary/25"
+                }`}
               >
-                <Bookmark className="h-4 w-4" />{saving ? t("saving") : t("save_trip")}
+                <Bookmark className={`h-4 w-4 ${isRouteSaved ? "fill-current" : ""}`} />
+                {saving ? t("saving") : isRouteSaved ? t("saved_trip") : t("save_trip")}
               </button>
               <button
                 onClick={() => navigate(`/plan?city=${encodeURIComponent(cityLabel)}`)}

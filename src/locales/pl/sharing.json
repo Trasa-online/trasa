@@ -231,5 +231,8 @@
     "places": "Miejsca",
     "gallery": "Galeria",
     "map": "Mapa"
-  }
+  },
+  "saved_trip": "Zapisane",
+  "toast_unsaved": "Usunięto z zapisanych",
+  "go_to_saved": "Zobacz"
 }

@@ -224,5 +224,8 @@
     "places": "Places",
     "gallery": "Gallery",
     "map": "Map"
-  }
+  },
+  "saved_trip": "Saved",
+  "toast_unsaved": "Removed from saved",
+  "go_to_saved": "View"
 }

@@ -10,7 +10,7 @@ import { fetchBlockedIds } from "@/lib/blockedUsers";
 import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import { haptics } from "@/hooks/useHaptics";
 import { supabase } from "@/integrations/supabase/client";
-import { MapPin, X, Globe, Sparkles, Pencil, Trash2, ChevronRight, ArrowRight, Eye, List, GalleryHorizontalEnd, Search, SlidersHorizontal, Plus, ArrowLeft, Images, Bookmark, Building2, Users, Navigation, Loader2 } from "lucide-react";
+import { MapPin, X, Globe, Sparkles, Pencil, Trash2, ChevronRight, ArrowRight, Eye, List, GalleryHorizontalEnd, Search, SlidersHorizontal, Plus, ArrowLeft, Images, Bookmark, Building2, Users, Navigation, Loader2, Calendar as CalendarIcon } from "lucide-react";
 import { API_BASE } from "@/lib/platform";
 import { useDebounce } from "@/hooks/useDebounce";
 import { expandCity } from "@/lib/cities";
@@ -1242,9 +1242,12 @@ const SHOW_SEARCH_SHORTCUTS = false;
 
 // Kompaktowy kafelek zapisanej trasy/zestawienia (spojny ze stylem kart Wyjazdow):
 // miniatura + mini-mapka w rogu, tytul, miasto, liczba miejsc, bookmark = usun z zapisanych.
-function SavedTile({ id, photo, title, city, placeCount, pins, onOpen, onUnsave }: {
+function SavedTile({ id, photo, title, city, placeCount, pins, onOpen, onUnsave, plannedDate }: {
   id: string; photo: string | null; title: string; city?: string | null;
   placeCount: number; pins: LatLng[]; onOpen: () => void; onUnsave: () => void;
+  // Data, na kiedy user planuje te trase (saved_routes.planned_date). Wybiera ja przy zapisie,
+  // wiec musi ja tu zobaczyc - inaczej ten wybor nie ma zadnego skutku.
+  plannedDate?: string | null;
 }) {
   const { t } = useTranslation("homefeed");
   const cover = photo ?? getRandomPinPlaceholder(id);
@@ -1279,6 +1282,12 @@ function SavedTile({ id, photo, title, city, placeCount, pins, onOpen, onUnsave 
           </button>
         </div>
         {city && <p className="mt-1 text-sm text-muted-foreground truncate">{city}</p>}
+        {plannedDate && (
+          <p className="mt-1 inline-flex items-center gap-1.5 text-sm font-semibold text-foreground">
+            <CalendarIcon className="h-3.5 w-3.5 text-muted-foreground" />
+            {new Date(plannedDate).toLocaleDateString(i18n.language === "en" ? "en-GB" : "pl-PL", { day: "numeric", month: "long" })}
+          </p>
+        )}
         {countLabel && (
           <div className="mt-auto pt-2">
             <span className="text-sm font-medium text-muted-foreground">{countLabel}</span>
@@ -1305,24 +1314,29 @@ export function SavedRoutes({ city, hideEmptyState }: { city?: string; hideEmpty
     enabled: !!user,
     queryFn: async () => {
       const { data: saved } = await (supabase as any)
-        .from("saved_routes").select("route_id, created_at")
+        .from("saved_routes").select("route_id, created_at, planned_date")
         .eq("user_id", user!.id).order("created_at", { ascending: false });
-      const rows0 = (saved ?? []) as { route_id: string; created_at: string | null }[];
+      const rows0 = (saved ?? []) as { route_id: string; created_at: string | null; planned_date: string | null }[];
       const ids = rows0.map((r) => r.route_id);
       const dates: Record<string, string> = {};
-      rows0.forEach((r) => { if (r.created_at) dates[r.route_id] = r.created_at; });
-      if (!ids.length) return { list: [] as PolecaneRoute[], dates };
+      const planned: Record<string, string> = {};
+      rows0.forEach((r) => {
+        if (r.created_at) dates[r.route_id] = r.created_at;
+        if (r.planned_date) planned[r.route_id] = r.planned_date;
+      });
+      if (!ids.length) return { list: [] as PolecaneRoute[], dates, planned };
       const { data: rows } = await (supabase as any)
         .from("routes")
         .select("id, title, city, ai_highlight, ai_summary, user_id, created_at, published_at, views, share_anonymous, cover_url, list_cover_url, review_photos, group_session_id, tags")
         .in("id", ids);
       const list = await enrichRouteRows(rows ?? []);
-      return { list, dates };
+      return { list, dates, planned };
     },
     staleTime: 30_000,
   });
   const routes = routeData?.list ?? [];
   const routeDates = routeData?.dates ?? {};
+  const plannedDates = routeData?.planned ?? {};
 
   const unsaveRoute = async (id: string) => {
     if (!user) return;
@@ -1342,6 +1356,7 @@ export function SavedRoutes({ city, hideEmptyState }: { city?: string; hideEmpty
       el: (
         <SavedTile key={`route-${r.id}`} id={r.id} photo={r.photo} title={r.title} city={r.city}
           placeCount={r.placeCount ?? 0} pins={r.pins ?? []}
+          plannedDate={plannedDates[r.id] ?? null}
           onOpen={() => navigate(`/route/${r.id}`)} onUnsave={() => unsaveRoute(r.id)} />
       ),
     });
