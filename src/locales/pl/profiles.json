@@ -153,5 +153,10 @@
   "tabs": {
     "my_lists": "Moje listy",
     "general": "Ogólne"
+  },
+  "trip_tabs": {
+    "drafts": "Robocze",
+    "published": "Opublikowane",
+    "saved": "Zapisane"
   }
 }

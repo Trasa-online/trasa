@@ -34,9 +34,14 @@ export default async function handler(req: Request): Promise<Response> {
   // w jeden wpis w CDN. Przy okazji: zoom bez ograniczen szedl do Google jak leci.
   const roundCoords = (v: string) =>
     v.replace(/-?\d+\.\d{5,}/g, (n) => Number(n).toFixed(4));
+  // UWAGA: `markers` wystepuje WIELOKROTNIE (jeden parametr na pin). `get()` zwraca tylko
+  // pierwszy, a `set()` kasuje cala reszte - przez to mini-mapka pokazywala JEDEN pin zamiast
+  // wszystkich (zgloszenie Nat 2026-09-09; regresja z zaokraglania wspolrzednych 2026-09-08).
   for (const k of ["center", "markers", "path", "visible"]) {
-    const v = params.get(k);
-    if (v) params.set(k, roundCoords(v));
+    const all = params.getAll(k);
+    if (!all.length) continue;
+    params.delete(k);
+    for (const v of all) params.append(k, roundCoords(v));
   }
   const zoom = params.get("zoom");
   if (zoom !== null) {

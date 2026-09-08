@@ -151,5 +151,10 @@
   "tabs": {
     "my_lists": "My lists",
     "general": "General"
+  },
+  "trip_tabs": {
+    "drafts": "Drafts",
+    "published": "Published",
+    "saved": "Saved"
   }
 }

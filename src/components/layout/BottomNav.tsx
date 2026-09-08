@@ -100,6 +100,11 @@ const BottomNav = () => {
   }, []);
   // Zawsze pokaz nav przy zmianie ekranu (bezpiecznik).
   useEffect(() => { setNavHidden(false); }, [location.pathname]);
+  // Ekrany, na ktorych nawigacji NIE MA w ogole: ustawienia (i zmiana imienia/nazwy usera,
+  // ktora tam mieszka) to sciezka "wszedlem cos ustawic i wracam", a nie zakladka - pasek
+  // tylko kusil do wyjscia w polowie edycji (prosba Nat 2026-09-09).
+  const NAV_FREE = ["/settings"];
+  const navFreeRoute = NAV_FREE.some((r) => location.pathname === r || location.pathname.startsWith(r + "/"));
 
   // Publikuj wysokosc paska jako CSS var, zeby toasty (Sonner) siadaly tuz nad nawigacja
   // gdy jest widoczna, a przy samym dole gdy ukryta (np. przegladanie). Cleanup -> 0 gdy
@@ -108,9 +113,9 @@ const BottomNav = () => {
     const root = document.documentElement;
     // Nav widoczny: 5rem + bezpieczna strefa. Ukryty: sama bezpieczna strefa (toast i tak
     // ma zostac nad home-indicatorem, nie pod nim). Toast dokłada tylko +10px odstepu.
-    root.style.setProperty("--trasa-nav-offset", navHidden ? "env(safe-area-inset-bottom, 0px)" : "calc(5rem + env(safe-area-inset-bottom, 0px))");
+    root.style.setProperty("--trasa-nav-offset", navHidden || navFreeRoute ? "env(safe-area-inset-bottom, 0px)" : "calc(5rem + env(safe-area-inset-bottom, 0px))");
     return () => { root.style.setProperty("--trasa-nav-offset", "env(safe-area-inset-bottom, 0px)"); };
-  }, [navHidden]);
+  }, [navHidden, navFreeRoute]);
 
   const handleSoloPlan = () => {
     setShowMenu(false);
@@ -262,7 +267,7 @@ const BottomNav = () => {
       {/* Floating nav: biala karta odklejona od krawedzi + lekki cien (natywny feel).
           Outer = transparentny kontener (pointer-events-none) z marginesem + safe-area;
           inner = bialy pill z cieniem (pointer-events-auto). */}
-      {!navHidden && (
+      {!navHidden && !navFreeRoute && (
       <nav className="fixed bottom-0 left-0 right-0 z-50 flex justify-center px-4 pb-[max(20px,env(safe-area-inset-bottom,0px))] pointer-events-none">
         {/* IA 2026-08-20: 3 pozycje. Native: Eksploruj · + · Profil. Web: Wyjazdy(/home) · + · Profil.
             Pill HUG (nie full-width) i wyśrodkowany - węższy pasek. Fat-thumb: każdy target w-16 (64px)

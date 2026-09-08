@@ -938,7 +938,7 @@ const TravelerProfile = () => {
                 dotLabel={t("profile.new_content_aria")}
                 value={wyjazdyTab}
                 onChange={(v) => { subChosen.current = true; setWyjazdyTab(v as "robocze" | "wspomnienia" | "zapisane"); goSub(v); }}
-                options={[{ id: "robocze", label: "Robocze" }, { id: "wspomnienia", label: "Wspomnienia" }, { id: "zapisane", label: "Zapisane" }]}
+                options={[{ id: "robocze", label: t("trip_tabs.drafts") }, { id: "wspomnienia", label: t("trip_tabs.published") }, { id: "zapisane", label: t("trip_tabs.saved") }]}
               />
               {wyjazdyTab === "zapisane" ? (
                 // Zapisane wyjazdy od innych - ten sam UI co Wspomnienia (ProfileFeedCard).

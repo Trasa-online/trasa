@@ -137,17 +137,16 @@ function ShareSheet({ children, onClose, onShare, shareUrl, shareTitle, strip, s
             dokladnie to, co zobaczy odbiorca, a nie osobny plakat. Dlatego renderujemy ja
             w naturalnym rozmiarze, bez pomniejszania calego ekranu. */}
         {plainPreview ? (
-          // Karta nachodzila na divider "Dzień 1" i pasek miejsc (zgloszenie Nat 2026-09-08):
-          // przy sztywnych 520 px nie miescila sie w slocie i wylewala na to, co pod nia.
-          // Teraz wysokosc idzie od EKRANU, a szerokosc od proporcji karty - dzieki temu kadr
-          // z eksploracji zostaje ten sam, tylko mniejszy, i mniejszy telefon nie psuje ukladu.
-          <div className="flex justify-center pb-3">
-        {/* Szerokosc dobrana pod WIERSZ AUTORA: przy 250 px "@berd · Gdańsk · 5 miejsc"
-                sciskalo sie do "@ · G · 5 miejsc" (zlapane na zrzucie). Wysokosc idzie od
-                ekranu, zeby na mniejszym telefonie karta nie wchodzila na pasek miejsc.
-                Podglad byl za maly wobec makiety (zgloszenie Nat 2026-09-09) - karta byla
-                niemal kwadratowa (304 x 338 na iPhonie), a w Figmie stoi wysoka. */}
-            <div className="w-[min(82vw,330px)]">{children}</div>
+          // Karta nachodzila na divider "Dzień 1" i pasek miejsc - dwa razy, za kazdym razem
+          // dlatego, ze jej wysokosc byla UŁAMKIEM EKRANU (520 px, potem 58dvh). Ulamek nie wie
+          // nic o bezpiecznych strefach iPhone'a: te same 58dvh, ktore mieszcily sie w oknie
+          // przegladarki, na urzadzeniu wchodzily na pasek miejsc (zgloszenia Nat 2026-09-08
+          // i 2026-09-09). Teraz wysokosc bierze sie z DOSTEPNEGO MIEJSCA - slot to flex-1,
+          // wiec karta dostaje dokladnie to, co zostalo, i nie ma jak z niego wyjsc.
+          <div className="w-full h-full flex justify-center items-center pb-3">
+            {/* Szerokosc dobrana pod WIERSZ AUTORA: przy 250 px "@berd · Gdańsk · 5 miejsc"
+                sciskalo sie do "@ · G · 5 miejsc" (zlapane na zrzucie). */}
+            <div className="w-[min(82vw,330px)] h-full max-h-[520px]">{children}</div>
           </div>
         ) : scale > 0 && (
           <button onClick={() => setFull(true)} aria-label={t("share.open_fullscreen")}
@@ -321,7 +320,7 @@ export function ShareCardTrip({ title, city, pins, cover, onClose, onShare, shar
         authorAvatar={authorAvatar}
         participants={participants ?? []}
         snap={false}
-        heightClass="h-[min(58dvh,500px)]"
+        heightClass="h-full"
         minHeightClass=""
       />
     </ShareSheet>
