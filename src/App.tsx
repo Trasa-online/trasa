@@ -97,7 +97,12 @@ function WebWaitlistGate({ children }: { children: React.ReactNode }) {
     p === "/terms" || p === "/privacy" ||
     // B2B: auth biznesowy, ustawianie hasla, dashboard, landing dla firm, claim lokalu
     p === "/auth" || p.startsWith("/set-password") || p.startsWith("/biznes") ||
-    p.startsWith("/dla-firm") || p.startsWith("/lokal/");
+    p.startsWith("/dla-firm") || p.startsWith("/lokal/") ||
+    // Udostepniony wyjazd / lista - to jedyna tresc B2C, ktora MA dzialac na webie: odbiorca
+    // linku zwykle nie ma jeszcze aplikacji. Dotad ladowal na landingu i nie widzial tego, co
+    // mu wyslano (znalezione 2026-09-08). RLS wypuszcza tylko trasy is_shared=true i listy
+    // publiczne, wiec prywatne robocze nadal nie wyciekaja.
+    p.startsWith("/route/") || p.startsWith("/lista/");
   if (!allowed && !hasAuthParams) return <Navigate to="/" replace />;
   return <>{children}</>;
 }
@@ -611,7 +616,8 @@ function SplashController() {
   // chowamy splash od razu (zgloszenie Nat 2026-09-04: "przed widokiem logowania pokazuje
   // sie szkielet"). Dopoki `loading` trwa, jeszcze nie wiemy - wtedy splash zostaje.
   if (!loading && !user && !forceBranded) return null;
-  // Kolejny start tego samego dnia: BEZ wlasnego szkieletu (zgloszenie Nat 2026-09-08:
+  // Kolejny start w ciagu 12 h: BEZ szkieletu, ale i BEZ pustki - lekki splash ze znakiem
+  // i pulsem (SplashPulse). Historia: (zgloszenie Nat 2026-09-08:
   // "na eksploracji sa dwa szkielety"). Byly rzeczywiscie dwa, jeden po drugim: najpierw ten
   // splashowy na z-[9999], a po jego zniknieciu szkielet z Suspense, ktory czeka na paczke
   // ekranu. Ten pierwszy niczego nie wnosil - drugi i tak musi tam byc, bo kod ekranu laduje
@@ -619,7 +625,7 @@ function SplashController() {
   //
   // Natywny splash jest juz schowany (efekt wyzej, niezalezny od tej galezi), a komponent
   // dalej sie montuje i wykonuje logike startowa - `return null` pomija tylko rysowanie.
-  if (!branded && !forceBranded) return null;
+  if (!branded && !forceBranded) return <SplashPulse />;
   // key: przy ponownym odpaleniu (podglad admina) komponent montuje sie od zera, wiec animacja
   // rysowania startuje od poczatku zamiast zostac na koncowej klatce.
   return <SplashDraw key={replayKey} done={done} onHidden={() => setVisible(false)} />;
@@ -681,6 +687,7 @@ function BusinessGuard() {
 }
 import CookieBanner from "./components/CookieBanner";
 import ScreenSkeleton, { variantForPath } from "./components/layout/ScreenSkeleton";
+import SplashPulse from "./components/layout/SplashPulse";
 import SplashDraw from "./components/layout/SplashDraw";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { isHardcodedAdmin } from "@/lib/admins";

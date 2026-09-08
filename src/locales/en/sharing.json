@@ -192,7 +192,9 @@
     "open_fullscreen": "Open full screen",
     "share": "Share",
     "and_more_one": "…and 1 more place",
-    "and_more_other": "…and {{count}} more places"
+    "and_more_other": "…and {{count}} more places",
+    "link_heading": "Share the trip link",
+    "first_day": "Day 1"
   },
   "target": {
     "more_apps": "More apps",
@@ -238,5 +240,9 @@
     "banner_desc": "Join to add places, notes and photos with everyone else.",
     "accept": "Join",
     "decline": "Not now"
+  },
+  "prerelease": {
+    "tagline": "Discover, plan, share!",
+    "cta": "Join the early access"
   }
 }

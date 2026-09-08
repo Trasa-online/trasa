@@ -6,6 +6,9 @@ import { PlaceTile } from "@/components/profile/PlaceTile";
 import { avatarSrc } from "@/lib/avatar";
 import { resolveStored } from "@/components/PlacePhoto";
 import { thumbUrl } from "@/lib/imageUrl";
+import { categoryIconSrc } from "@/lib/placeCategoryIcon";
+import { localizeTag, verdictOf } from "@/lib/routeTags";
+import { subcategoryLabelLocalized } from "@/lib/categories";
 import { buildShareTargets, ShareTargetButton } from "@/components/share/shareTargets";
 
 // UDOSTEPNIANIE LISTY / WYJAZDU - arkusz z podgladem i kanalami (wzor: Pinterest, prosba Nat
@@ -60,12 +63,17 @@ function Footer({ avatars, label, sub, tone }: {
 // Arkusz: naglowek + podglad + kanaly. Karta (children) jest zaprojektowana na CALY ekran, wiec
 // w podgladzie skalujemy ja transformem - dzieki temu miniatura jest co do piksela tym samym, co
 // user zobaczy po rozwinieciu, bez drugiego zestawu rozmiarow do utrzymania.
-function ShareSheet({ children, onClose, onShare, shareUrl, shareTitle }: {
+type StripItem = { name: string; photo?: string | null; icon: string; verdict?: string | null; category?: string | null };
+
+function ShareSheet({ children, onClose, onShare, shareUrl, shareTitle, strip, stripLabel }: {
   children: React.ReactNode;
   onClose: () => void;
   onShare?: () => void;
   shareUrl?: string;
   shareTitle: string;
+  /** Miejsca pokazywane pod podgladem (na razie tylko wyjazd - listy sa w projektowaniu). */
+  strip?: StripItem[];
+  stripLabel?: string;
 }) {
   const { t } = useTranslation("sharing");
   const slotRef = useRef<HTMLDivElement>(null);
@@ -108,16 +116,19 @@ function ShareSheet({ children, onClose, onShare, shareUrl, shareTitle }: {
     : [];
 
   return (
-    <div className="fixed inset-0 z-[95] bg-background flex flex-col animate-in fade-in duration-200">
-      <div className="flex items-center gap-2 px-4 pt-[max(12px,env(safe-area-inset-top))] pb-2">
+    // Zolte tlo + naglowek Sigmar wg makiety Nat (Figma "[NEW] Ekrany" -> "Udostępnianie
+    // wyjazdów oraz list" -> "Akcja: Udostępnij - Wyjazdy", 2026-09-08). Ekran ma wygladac jak
+    // czesc marki, a nie jak systemowy arkusz - to on ma zachecac do wyslania.
+    <div className="fixed inset-0 z-[95] bg-spontaway-yellow flex flex-col animate-in fade-in duration-200 overflow-y-auto">
+      <div className="shrink-0 flex items-center gap-2 px-4 pt-[max(12px,env(safe-area-inset-top))] pb-1">
         <button onClick={onClose} aria-label={t("common:buttons.close")}
           className="h-9 w-9 rounded-full flex items-center justify-center active:scale-90 transition-transform">
-          <X className="h-5 w-5 text-foreground" />
+          <X className="h-5 w-5 text-spontaway-brown" />
         </button>
-        <p className="flex-1 text-center text-[15px] font-bold text-foreground pr-9">{t("share.share")}</p>
+        <p className="flex-1 text-center font-brand text-[26px] leading-none text-spontaway-orange pr-9">{t("share.share")}</p>
       </div>
 
-      <div ref={slotRef} className="flex-1 min-h-0 flex items-center justify-center px-8 py-2">
+      <div ref={slotRef} className="flex-1 min-h-[280px] flex items-center justify-center px-8 py-3">
         {scale > 0 && (
           <button onClick={() => setFull(true)} aria-label={t("share.open_fullscreen")}
             className="relative rounded-3xl overflow-hidden shadow-xl ring-1 ring-black/5 active:scale-[0.98] transition-transform"
@@ -133,10 +144,47 @@ function ShareSheet({ children, onClose, onShare, shareUrl, shareTitle }: {
         )}
       </div>
 
+      {/* Pasek miejsc z wyjazdu - to on tlumaczy, CO wysylasz. Przewijany w poziomie, bo
+          wazniejsze jest pokazanie pierwszych przystankow niz zmieszczenie wszystkich. */}
+      {strip && strip.length > 0 && (
+        <div className="shrink-0 pb-1">
+          <div className="flex items-center gap-2 px-5 pb-2">
+            <span className="h-4 w-[3px] rounded-full bg-spontaway-orange" />
+            <p className="font-brand text-[15px] leading-none text-spontaway-orange">{stripLabel}</p>
+          </div>
+          <div className="flex gap-3 overflow-x-auto px-5 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {strip.map((it, i) => (
+              <div key={`${it.name}-${i}`} className="flex w-[264px] shrink-0 items-center gap-3 rounded-3xl bg-white px-3 py-3">
+                <div className="relative h-[80px] w-[54px] shrink-0 overflow-hidden rounded-xl bg-[#fcede3]">
+                  {it.photo
+                    ? <img src={it.photo} alt="" className="h-full w-full object-cover" />
+                    : <img src={it.icon} alt="" className="absolute left-1/2 top-1/2 h-7 w-7 -translate-x-1/2 -translate-y-1/2" />}
+                  <span className="absolute left-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-[10px] bg-spontaway-orange px-1 text-[10px] font-black leading-none text-white">{i + 1}</span>
+                </div>
+                <div className="flex h-[80px] min-w-0 flex-1 flex-col justify-between py-0.5">
+                  <p className="line-clamp-2 text-[14px] font-bold leading-[1.19] text-black">{it.name}</p>
+                  <div className="flex items-center justify-between gap-2">
+                    {it.verdict
+                      ? <span className="truncate rounded-full bg-spontaway-yellow px-2.5 py-1 text-[11px] font-medium text-spontaway-brown">{it.verdict}</span>
+                      : <span />}
+                    {it.category && <span className="shrink-0 text-[11px] font-medium text-[#666]">{it.category}</span>}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {targets.length > 0 && (
-        <div className="px-5 pt-3 pb-[max(20px,env(safe-area-inset-bottom))] border-t border-border/40">
-          <div className="grid grid-cols-4 gap-x-2 gap-y-4">
-            {targets.map((tg) => <ShareTargetButton key={tg.key} target={tg} />)}
+        <div className="shrink-0 px-5 pt-2 pb-[max(20px,env(safe-area-inset-bottom))]">
+          <p className="font-brand text-[18px] leading-none text-spontaway-orange pb-3">{t("share.link_heading")}</p>
+          {/* Rzad przewijany w poziomie zamiast siatki 4-kolumnowej: kanalow przybywa, a siatka
+              lamalaby sie na kolejne rzedy i spychala podglad karty poza ekran. */}
+          <div className="flex gap-4 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {targets.map((tg) => (
+              <div key={tg.key} className="w-[76px] shrink-0"><ShareTargetButton target={tg} /></div>
+            ))}
           </div>
         </div>
       )}
@@ -213,8 +261,23 @@ export function ShareCardTrip({ title, city, dateLabel, pins, author, avatars, c
   const word = pins.length === 1 ? "miejsce" : pins.length < 5 ? "miejsca" : "miejsc";
   const coverFull = resolveStored(cover ?? null);
   const coverUrl = thumbUrl(coverFull, 360);
+  // Pasek miejsc pod podgladem: pierwsze przystanki z werdyktem i kategoria. Werdykt bierzemy
+  // przez localizeTag, wiec stare polskie etykiety z bazy tez sie tlumacza.
+  const strip = pins.slice(0, 8).map((p: any) => ({
+    name: p.place_name ?? "",
+    photo: thumbUrl(resolveStored(p.photo_url ?? p.image_url ?? (Array.isArray(p.images) ? p.images[0] : null)), 160),
+    icon: categoryIconSrc(p.category ?? null),
+    verdict: (Array.isArray(p.tags) ? p.tags : []).map((tg: string) => verdictOf(tg)).find(Boolean)
+      ? localizeTag((Array.isArray(p.tags) ? p.tags : []).find((tg: string) => verdictOf(tg))!)
+      : null,
+    // Etykieta kategorii, nie surowa wartosc z bazy - inaczej na karcie widac
+    // "clothing_store" zamiast "Sklep" (zlapane na zrzucie).
+    category: p.category ? subcategoryLabelLocalized(p.category) : null,
+  }));
+
   return (
-    <ShareSheet onClose={onClose} onShare={onShare} shareUrl={shareUrl} shareTitle={title}>
+    <ShareSheet onClose={onClose} onShare={onShare} shareUrl={shareUrl} shareTitle={title}
+      strip={strip} stripLabel={t("share.first_day")}>
           <div className="relative h-full w-full overflow-hidden bg-[#FEFEFE]">
             {/* Okladka. Bez zdjecia (wyjazd roboczy) - peachowe tlo ze znakiem, jak karta na profilu. */}
             <div className="relative h-[52%] bg-[#fcede3]">

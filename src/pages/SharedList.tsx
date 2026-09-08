@@ -36,6 +36,7 @@ import { subcategoryLabelLocalized } from "@/lib/categories";
 import { ShareCardList } from "@/components/share/ShareCard";
 import { resolvePlaceDbId } from "@/lib/placeLists";
 import { fetchEnrichedPlace } from "@/components/plan-wizard/PlaceSwiper";
+import PreReleaseBanner from "@/components/share/PreReleaseBanner";
 import { inferCategoryFromName } from "@/lib/placeCategoryIcon";
 import { uploadWithThumb } from "@/lib/imageThumbs";
 import { fetchVisitedKeys, toggleVisited } from "@/lib/placeVisits";
@@ -578,6 +579,9 @@ export default function SharedList() {
   // Galeria zdjec miejsc z listy (kafelki 4:3, 2 kolumny). Tap -> wizytowka miejsca.
   return (
     <div className="h-[100dvh] bg-background flex flex-col max-w-lg mx-auto">
+      {/* Odbiorca linku na webie: skrot do wersji przedpremierowej (Figma 2026-09-08).
+          Na natywce komponent sam sie nie renderuje. */}
+      <PreReleaseBanner />
       {/* Staly TopBar (naglowek nad obszarem scrolla): wstecz + autor + miasto + liczba miejsc + serce */}
       <div className="shrink-0 bg-background px-5 pb-2.5 border-b border-border/40" style={{ paddingTop: "max(12px, env(safe-area-inset-top, 12px))" }}>
         <div className="flex items-center gap-2 text-sm">

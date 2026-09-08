@@ -198,7 +198,9 @@
     "share": "Udostępnij",
     "and_more_few": "…i {{count}} miejsca więcej",
     "and_more_many": "…i {{count}} miejsc więcej",
-    "and_more_one": "…i jeszcze jedno miejsce"
+    "and_more_one": "…i jeszcze jedno miejsce",
+    "link_heading": "Udostępnij link do wyjazdu",
+    "first_day": "Dzień 1"
   },
   "target": {
     "more_apps": "Więcej aplikacji",
@@ -245,5 +247,9 @@
     "banner_desc": "Dołącz, żeby dodawać miejsca, notki i zdjęcia razem z resztą.",
     "accept": "Dołączam",
     "decline": "Nie teraz"
+  },
+  "prerelease": {
+    "tagline": "Odkrywaj, planuj, dziel się!",
+    "cta": "Dołącz przedpremierowo"
   }
 }

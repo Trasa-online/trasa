@@ -72,6 +72,7 @@ import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { resolveStored } from "@/components/PlacePhoto";
 import type { MockPlace } from "@/components/plan-wizard/PlaceSwiper";
 import { CategoryIcon } from "@/components/CategoryIcon";
+import PreReleaseBanner from "@/components/share/PreReleaseBanner";
 import { renderForUpload, uploadPair, uploadWithThumb } from "@/lib/imageThumbs";
 import { TOP_LIMIT } from "@/lib/topPlaces";
 
@@ -1561,6 +1562,9 @@ export default function SharedRoute() {
 
   return (
     <div className="h-[100dvh] bg-background flex flex-col max-w-lg mx-auto">
+      {/* Odbiorca linku na webie: skrot do wersji przedpremierowej (Figma 2026-09-08).
+          Na natywce komponent sam sie nie renderuje. */}
+      <PreReleaseBanner />
 
       {/* Czekajace zaproszenie (2026-09-08): decyzja NAD trescia, a nie w powiadomieniach -
           zgode wydaje sie widzac, na co konkretnie. Do potwierdzenia wyjazd nie pojawia sie

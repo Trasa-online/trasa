@@ -202,3 +202,16 @@ input, textarea, [contenteditable="true"], [contenteditable=""] {
   from { transform: scaleX(0); }
   to   { transform: scaleX(1); }
 }
+
+/* Oddech znaku na ekranie startowym (SplashPulse). Wolno i plytko - ma sygnalizowac prace,
+   a nie przyciagac wzrok. Krzywa ease-in-out po obu stronach, zeby nie bylo "tetnienia". */
+@keyframes splash-pulse {
+  0%, 100% { transform: scale(1);     opacity: 0.72; }
+  50%      { transform: scale(1.075); opacity: 1; }
+}
+.animate-splash-pulse { animation: splash-pulse 1.6s ease-in-out infinite; }
+
+/* Szacunek dla ustawienia "ogranicz ruch" - zostaje sam znak, bez pulsowania. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-splash-pulse { animation: none; opacity: 1; }
+}
