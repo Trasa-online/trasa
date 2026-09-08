@@ -141,10 +141,12 @@ function ShareSheet({ children, onClose, onShare, shareUrl, shareTitle, strip, s
           // Teraz wysokosc idzie od EKRANU, a szerokosc od proporcji karty - dzieki temu kadr
           // z eksploracji zostaje ten sam, tylko mniejszy, i mniejszy telefon nie psuje ukladu.
           <div className="flex justify-center pb-3">
-            {/* Szerokosc dobrana pod WIERSZ AUTORA: przy 250 px "@berd · Gdańsk · 5 miejsc"
+        {/* Szerokosc dobrana pod WIERSZ AUTORA: przy 250 px "@berd · Gdańsk · 5 miejsc"
                 sciskalo sie do "@ · G · 5 miejsc" (zlapane na zrzucie). Wysokosc idzie od
-                ekranu, zeby na mniejszym telefonie karta nie wchodzila na pasek miejsc. */}
-            <div className="w-[min(78vw,310px)]">{children}</div>
+                ekranu, zeby na mniejszym telefonie karta nie wchodzila na pasek miejsc.
+                Podglad byl za maly wobec makiety (zgloszenie Nat 2026-09-09) - karta byla
+                niemal kwadratowa (304 x 338 na iPhonie), a w Figmie stoi wysoka. */}
+            <div className="w-[min(82vw,330px)]">{children}</div>
           </div>
         ) : scale > 0 && (
           <button onClick={() => setFull(true)} aria-label={t("share.open_fullscreen")}
@@ -169,7 +171,7 @@ function ShareSheet({ children, onClose, onShare, shareUrl, shareTitle, strip, s
             <span className="h-4 w-[3px] rounded-full bg-spontaway-orange" />
             <p className="font-brand text-[15px] leading-none text-spontaway-orange">{stripLabel}</p>
           </div>
-          <div className="flex gap-3 overflow-x-auto px-5 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="flex gap-3 overflow-x-auto pl-5 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {strip.map((it, i) => (
               <div key={`${it.name}-${i}`} className="flex w-[264px] shrink-0 items-center gap-3 rounded-3xl bg-white px-3 py-3">
                 <div className="relative h-[80px] w-[54px] shrink-0 overflow-hidden rounded-xl bg-[#fcede3]">
@@ -295,6 +297,9 @@ export function ShareCardTrip({ title, city, pins, cover, onClose, onShare, shar
     // zobaczyc dokladnie to, co zobaczy odbiorca - okladka w calosci, awatary, tagi i licznik.
     <ShareSheet onClose={onClose} onShare={onShare} shareUrl={shareUrl} shareTitle={title}
       strip={strip} stripLabel={t("share.first_day")} plainPreview>
+      {/* Bez miniaturki mapy: na podgladzie zjadala rog okladki, a to okladka jest tu trescia
+          (makieta "Majówka 2025", prosba Nat 2026-09-09). W eksploracji mapka zostaje - tam
+          sluzy do orientacji, nie do pokazania, co wysylasz. */}
       <TrasaBigCard
         id={routeId}
         photo={resolveStored(cover ?? null) ?? null}
@@ -303,12 +308,13 @@ export function ShareCardTrip({ title, city, pins, cover, onClose, onShare, shar
         title={title}
         tags={tags ?? []}
         pins={mapPins ?? []}
+        showMap={false}
         onOpen={() => {}}
         authorName={authorName}
         authorAvatar={authorAvatar}
         participants={participants ?? []}
         snap={false}
-        heightClass="h-[min(40dvh,370px)]"
+        heightClass="h-[min(58dvh,500px)]"
         minHeightClass=""
       />
     </ShareSheet>

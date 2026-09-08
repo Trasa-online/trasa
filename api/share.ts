@@ -211,7 +211,10 @@ body.trip{background:#FDF184}
 .day{display:flex;align-items:center;gap:8px;width:100%;margin:28px 0 8px}
 .day i{width:3px;height:16px;border-radius:2px;background:#EE5307;flex:none}
 .day p{margin:0;font-family:Sigmar,Inter,sans-serif;font-size:15px;line-height:1;color:#EE5307}
-.strip{display:flex;gap:12px;width:100%;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}
+/* Pasek wychodzi poza padding strony w prawo, zeby kafelki dojezdzaly do krawedzi ekranu
+   zamiast zatrzymywac sie 20 px przed nia (prosba Nat 2026-09-09). Z lewej padding zostaje -
+   pierwszy kafelek ma sie rownac z naglowkiem "Dzień 1" i karta wyjazdu. */
+.strip{display:flex;gap:12px;width:calc(100% + 20px);margin-right:-20px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}
 .strip::-webkit-scrollbar{display:none}
 .pl{display:flex;align-items:center;gap:12px;width:264px;flex:none;background:#fff;border-radius:24px;padding:12px}
 .pl .pic{position:relative;width:54px;height:80px;flex:none;border-radius:12px;overflow:hidden;background:#fcede3}
@@ -220,7 +223,12 @@ body.trip{background:#FDF184}
 .pl .pic .ic img{width:26px;height:26px;opacity:.9}
 .pl .pic i{position:absolute;left:4px;top:4px;min-width:16px;height:16px;padding:0 3px;border-radius:10px;background:#EE5307;color:#fff;font-size:10px;font-weight:900;font-style:normal;display:flex;align-items:center;justify-content:center}
 .pl .d{display:flex;flex-direction:column;justify-content:space-between;height:80px;min-width:0;flex:1;padding:2px 0}
-.pl .n{font-size:14px;font-weight:700;line-height:1.19;color:#000;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+/* Nazwa ma STALE dwa wiersze. Sam -webkit-line-clamp tu nie wystarcza: element jest
+   dzieckiem kontenera flex, a przegladarka blokifikuje wtedy display:-webkit-box i clamp
+   przestaje dzialac - tekst ucinal sie w polowie drugiej linii (zgloszenie Nat 2026-09-09).
+   Wysokosc podana w "em" jest odporna na to samo: 2 x line-height, ciecie zawsze na granicy
+   wiersza. flex:none pilnuje, zeby kontener jej nie sciskal. */
+.pl .n{font-size:14px;font-weight:700;line-height:1.19;color:#000;flex:none;height:2.38em;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;line-clamp:2;-webkit-box-orient:vertical}
 .pl .b{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .pl .v{background:#FDF184;color:#5B2C06;border-radius:999px;padding:4px 10px;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pl .c{font-size:11px;color:#666;flex:none}
