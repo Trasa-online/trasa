@@ -78,6 +78,7 @@ import { renderForUpload, uploadPair, uploadWithThumb } from "@/lib/imageThumbs"
 import { TOP_LIMIT } from "@/lib/topPlaces";
 import { isWeb } from "@/lib/platform";
 import { thumbUrl } from "@/lib/imageUrl";
+import { rowOwnPhotos, mergeRowPhotosIntoDetail } from "@/lib/placeUserPhotos";
 
 // Oficjalne logo Google (4-kolorowe "G") - guzik "Zobacz w Google".
 const GoogleGlyph = ({ className }: { className?: string }) => (
@@ -1260,10 +1261,15 @@ export default function SharedRoute() {
     // innego niz wiersz, w ktory user wlasnie tapnal (zgloszenie Nat 2026-09-08). Z wzbogacenia
     // bierzemy dane (zdjecia, godziny, profil biznesu), ale nie podmieniamy tego, co user widzi
     // na liscie i sam tam wpisal.
-    if (full) setDetailPin((cur) => (cur && cur.place_name === pin.place_name ? { ...full, place_name: pin.place_name } : cur));
+    if (full) setDetailPin((cur) => (cur && cur.place_name === pin.place_name
+      ? mergeRowPhotosIntoDetail({ ...full, place_name: pin.place_name }, rowOwnPhotos(pin))
+      : cur));
   };
 
-  const openDetail = (pin: any) => { void upgradeDetail(pin); return setDetailPin({
+  // Wizytowka dostaje TE SAME zdjecia, ktore pokazuje wiersz - patrz ten sam komentarz
+  // w SharedList. `google_place_id` idzie dalej, zeby galeria miejsca byla odpytana oboma
+  // kluczami (gpid: oraz nm:), nie tylko po nazwie.
+  const openDetail = (pin: any) => { void upgradeDetail(pin); const own = rowOwnPhotos(pin); return setDetailPin({
     id: pin.place_id || pin.id || pin.place_name,
     place_name: pin.place_name,
     category: (pin.category || "other") as any,
@@ -1272,7 +1278,9 @@ export default function SharedRoute() {
     latitude: pin.latitude ?? 0,
     longitude: pin.longitude ?? 0,
     rating: 0,
-    photo_url: resolveStored(pin.photo_url || pin.image_url || (Array.isArray(pin.images) ? pin.images[0] : null)) ?? "",
+    google_place_id: pin.google_place_id ?? null,
+    galleryPhotos: own.slice(1),
+    photo_url: own[0] ?? coverFor(pin) ?? "",
     vibe_tags: metaFor(pin).tags,
     // Zrodlo prawdy = opis miejsca z bazy (places.description, jak w swiperze).
     // pin.description (generowany AI per-trasa) tylko jako fallback dla custom pinow.

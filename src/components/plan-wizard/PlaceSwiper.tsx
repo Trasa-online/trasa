@@ -59,6 +59,10 @@ export interface MockPlace {
   businessWebsite?: string | null;
   businessInstagram?: string | null;
   businessFacebook?: string | null;
+  /** Tozsamosc miejsca u Google. Wizytowka odpytuje nia galerie miejsca (place_photos)
+   *  drugim kluczem - "gpid:<id>" obok "nm:<nazwa>". Wczesniej pole bylo czytane przez rzutowanie
+   *  i call-site'y o nim zapominaly, wiec polowa zdjec nie dociagala sie do wizytowki. */
+  google_place_id?: string | null;
   galleryPhotos?: string[]; // extra photos shown in carousel (swipe card + detail)
   businessSubcategories?: string[]; // subcategories from business_profiles (for custom filtering)
   businessTags?: string[]; // custom tags z business_profiles.tags - prio nad vibe_tags w UI

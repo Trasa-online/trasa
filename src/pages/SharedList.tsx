@@ -42,6 +42,7 @@ import { uploadWithThumb } from "@/lib/imageThumbs";
 import { fetchVisitedKeys, toggleVisited } from "@/lib/placeVisits";
 import { haptics } from "@/hooks/useHaptics";
 import { moderateImageUrl, MODERATION_REJECTED_MESSAGE } from "@/lib/imageModeration";
+import { rowOwnPhotos, mergeRowPhotosIntoDetail } from "@/lib/placeUserPhotos";
 
 // Widok LISTY miejsc (polecajki) - UI/UX 1:1 z widokiem trasy (SharedRoute), ale zasilany z
 // discovery_collections/discovery_items. Lista NIE jest trasa (brak kolejnosci-planu), ale
@@ -352,22 +353,35 @@ export default function SharedList() {
     const full = await fetchEnrichedPlace(dbId);
     // Nazwa zostaje TA Z LISTY - patrz ten sam komentarz w SharedRoute. Dopasowanie po nazwie
     // bywa nietrafione i wizytowka pokazywala inna nazwe niz wiersz, w ktory user tapnal.
-    if (full) setDetailPin((cur) => (cur && cur.place_name === pin.place_name ? { ...full, place_name: pin.place_name } : cur));
+    if (full) setDetailPin((cur) => (cur && cur.place_name === pin.place_name
+      ? mergeRowPhotosIntoDetail({ ...full, place_name: pin.place_name }, rowOwnPhotos(pin))
+      : cur));
   };
 
-  const openDetail = (pin: any) => { void upgradeDetail(pin); setDetailRaw(pin); setDetailPin({
-    id: pin.place_id || pin.id || pin.place_name,
-    place_name: pin.place_name,
-    category: (catOf(pin) || "other") as any,
-    city: col?.city ?? "",
-    address: pin.address || "",
-    latitude: pin.latitude ?? 0,
-    longitude: pin.longitude ?? 0,
-    rating: pin.rating ?? 0,
-    photo_url: resolveStored(pin.photo_url) ?? "",
-    // Notka autora listy NIE jest opisem miejsca - ma wlasna sekcje "Od użytkowników".
-    description: "",
-  }); };
+  const openDetail = (pin: any) => {
+    void upgradeDetail(pin);
+    setDetailRaw(pin);
+    // Wizytowka dostaje TE SAME zdjecia, ktore pokazuje wiersz (zgloszenie Nat 2026-09-09:
+    // "zdjecia widac w liscie, ale po kliknieciu w miejsce ich nie ma"). Wczesniej szlo tu samo
+    // `photo_url`, wiec zdjecia z `images` zostawaly w wierszu. `google_place_id` jest tu po to,
+    // zeby galeria miejsca (place_photos) byla odpytana OBOMA kluczami, nie tylko po nazwie.
+    const own = rowOwnPhotos(pin);
+    setDetailPin({
+      id: pin.place_id || pin.id || pin.place_name,
+      place_name: pin.place_name,
+      category: (catOf(pin) || "other") as any,
+      city: col?.city ?? "",
+      address: pin.address || "",
+      latitude: pin.latitude ?? 0,
+      longitude: pin.longitude ?? 0,
+      rating: pin.rating ?? 0,
+      google_place_id: pin.google_place_id ?? null,
+      photo_url: own[0] ?? pinCover(pin) ?? "",
+      galleryPhotos: own.slice(1),
+      // Notka autora listy NIE jest opisem miejsca - ma wlasna sekcje "Od użytkowników".
+      description: "",
+    });
+  };
 
   // Zapisz liste (bookmark) - localStorage, 1:1 z toggleSaveCollection (feed/Zapisane).
   const toggleSave = () => {

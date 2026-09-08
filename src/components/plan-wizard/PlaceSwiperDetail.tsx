@@ -142,17 +142,24 @@ const PlaceSwiperDetail = ({
 
       // 2. Business with own photos → use their photos (don't override with Google),
       //    ale NADAL fetchujemy Google detail dla reviews, formatted_address, rating.
+      // Wlasne zdjecia miejsca (cover + galeria) pokazujemy od razu, bez czekania na siec.
       const hasBizPhotos = cur.businessHasOwnPhoto || skipGoogleFetch;
       if (hasBizPhotos) {
         setPhotos([cur.photo_url, ...(cur.galleryPhotos ?? [])].filter(Boolean) as string[]);
       }
+      // Zdjecia SPOLECZNOSCI blokuje wylacznie LOKAL z wlasnymi zdjeciami - on odpowiada za swoj
+      // wizerunek. `skipGoogleFetch` mowi tylko "nie pytaj Google" i nie ma z tym nic wspolnego,
+      // a przez sklejenie obu warunkow wylaczal cala sciezke zdjec userow. Bolalo to dokladnie
+      // miejsca "zero" (call-site'y ustawiaja skip = !pin.place_id), czyli te, ktore poza
+      // zdjeciami userow nie maja zadnych (zgloszenie Nat 2026-09-09).
+      const blockCommunityPhotos = cur.businessHasOwnPhoto === true;
 
       // ZERO Google (2026-07-29): NIE wołamy Place Details ani cache-place-photo (oba
       // biją Google). detail zostaje null (recenzje/godziny i tak ukryte). Zdjęcia miejsca
       // biznesu = jego własne; zwykłego miejsca = zdjęcia userów z tras (pins.user_photo_urls).
       // Brak zdjęć -> displayPhotos puste -> hero pokazuje placeholder/ikonę.
       const placesPromise = GOOGLE_PLACE_DETAILS_DISABLED
-        ? (hasBizPhotos
+        ? (blockCommunityPhotos
             ? Promise.resolve()
             : fetchPlaceUserPhotos({
                 placeDbId: cur.id,
@@ -160,7 +167,9 @@ const PlaceSwiperDetail = ({
                 placeName: cur.place_name,
                 city: city ?? cur.city,
               })
-                .then((urls) => { if (urls.length > 0) setPhotos(urls); })
+                // DOKLADAMY do tego, co juz jest - podmiana kasowala wlasne zdjecia miejsca
+                // ustawione wyzej. Duplikaty i tak odsiewa dedup po tozsamosci pliku.
+                .then((urls) => { if (urls.length > 0) setPhotos((prev) => Array.from(new Set([...prev, ...urls]))); })
                 .catch(() => {}))
         : supabase.functions
         .invoke("google-places-proxy", {
