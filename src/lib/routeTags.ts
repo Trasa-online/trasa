@@ -116,6 +116,25 @@ const LEGACY_VERDICTS: Record<string, VerdictTag> = {
 };
 // i18n-ignore-end
 
+/**
+ * Gradacja miejsc na liscie "Wszystkie" (prosba Nat 2026-09-08): najpierw gwiazdka topki,
+ * potem werdykty od najmocniejszego. Nizsza liczba = wyzej.
+ *
+ * Kolejnosc NIE jest ta sama, co kolejnosc pigulek w interfejsie: tam "Przy okazji" stoi przed
+ * "Warto wpasc", bo tak zdecydowala Nat przy projektowaniu wyboru. Sila rekomendacji jest
+ * odwrotna - "warto wpasc" to zachęta, "przy okazji" to raczej "jak bedziesz w poblizu".
+ */
+const VERDICT_ORDER = ["must_visit", "stop_by", "worth_visiting", "worth_seeing"];
+
+/** Pozycja miejsca w gradacji. Brak werdyktu ląduje przed jawnym "nie warto". */
+export function verdictRank(tags?: string[] | null): number {
+  if (!Array.isArray(tags)) return VERDICT_ORDER.length;
+  const ids = tags.map((t) => verdictOf(t)?.id).filter(Boolean) as string[];
+  if (ids.includes("not_worth")) return VERDICT_ORDER.length + 1;
+  const hit = VERDICT_ORDER.findIndex((v) => ids.includes(v));
+  return hit === -1 ? VERDICT_ORDER.length : hit;
+}
+
 const VERDICT_BY_ID: Record<string, VerdictTag> = Object.fromEntries(
   [...PLACE_VERDICT_TAGS, ...Object.values(LEGACY_VERDICTS)].map((v) => [v.id, v]),
 );

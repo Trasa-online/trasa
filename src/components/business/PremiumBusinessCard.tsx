@@ -512,7 +512,13 @@ function AddressSection({ data }: SectionProps) {
 }
 
 function DescriptionSection({ data, lineClamp }: SectionProps & { lineClamp?: number }) {
-  if (!data.description) return null;
+  // Opis pokazujemy WYLACZNIE dla lokali z kontem biznesowym - to tekst, ktory wlasciciel
+  // napisal o sobie. Wizytowka "zero" (miejsce bez konta) nie ma opisu i miec nie powinna:
+  // to, co tam siedzialo, bylo tekstem wygenerowanym maszynowo o cudzym lokalu, ktorego nikt
+  // nie autoryzowal (decyzja Nat 2026-09-08). Biznes rozpoznajemy po `businessPlan`, ktore
+  // enrichWithBusinessProfile ustawia tylko przy istniejacym profilu.
+  const isBusiness = !!(data as any).businessPlan;
+  if (!isBusiness || !data.description) return null;
   return (
     <p
       className="text-sm text-foreground/85 leading-relaxed"

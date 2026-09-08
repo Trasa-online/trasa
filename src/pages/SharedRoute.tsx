@@ -13,7 +13,7 @@ import { format } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
 import { MapPin, ArrowLeft, Sparkles, ChevronDown, Bookmark, Calendar as CalendarIcon, Image as ImageIcon, Maximize2, X, Building2, Pencil, Trash2, Heart, Share2, Plus, Map as MapIcon, Loader2, GripVertical, Check, Flag, Camera, ThumbsUp, MessageCircle, UserPlus } from "lucide-react";
 import { MAIN_CATEGORIES, subcategoryPluralLabel } from "@/lib/categories";
-import { PLACE_VERDICT_TAGS, verdictOf, localizeTag } from "@/lib/routeTags";
+import { PLACE_VERDICT_TAGS, verdictOf, localizeTag, verdictRank } from "@/lib/routeTags";
 import { publishTrip } from "@/lib/publishTrip";
 import { haptics } from "@/hooks/useHaptics";
 import { track } from "@/lib/analytics";
@@ -73,7 +73,7 @@ import { resolveStored } from "@/components/PlacePhoto";
 import type { MockPlace } from "@/components/plan-wizard/PlaceSwiper";
 import { CategoryIcon } from "@/components/CategoryIcon";
 import { renderForUpload, uploadPair, uploadWithThumb } from "@/lib/imageThumbs";
-import { topLimit } from "@/lib/topPlaces";
+import { TOP_LIMIT } from "@/lib/topPlaces";
 
 // Oficjalne logo Google (4-kolorowe "G") - guzik "Zobacz w Google".
 const GoogleGlyph = ({ className }: { className?: string }) => (
@@ -258,20 +258,18 @@ export default function SharedRoute() {
   // z dlugoscia trasy - trzy gwiazdki przy trzech miejscach nie wyrozniaja niczego.
   const toggleTopPin = async (pin: any) => {
     const list = pins as any[];
-    const limit = topLimit(list.length);
-    const already = list.filter((p) => p.is_top).length;
-    if (!pin.is_top && already >= limit) {
-      toast(t("row.top_limit", { ns: "route", count: limit }));
-      return;
-    }
     const next = !pin.is_top;
     haptics.light();
-    // Podglad od razu - gwiazdka ma dzialac jak przelacznik, nie jak zapis formularza.
+    // Limit 1: zaznaczenie innego miejsca PRZENOSI wyroznienie zamiast odmawiac. Przy jednej
+    // gwiazdce kazdy kolejny wybor to zmiana zdania, a nie blad (decyzja Nat 2026-09-08).
+    const toClear = next ? list.filter((p) => p.is_top && p.id !== pin.id).slice(0, TOP_LIMIT + 4) : [];
     queryClient.setQueryData(["shared-route-pins", id], (old: any[] | undefined) =>
-      (old ?? []).map((p) => (p.id === pin.id ? { ...p, is_top: next } : p)));
-    const { error } = await (supabase as any).from("pins").update({ is_top: next }).eq("id", pin.id);
-    if (error) {
-      console.error("[SharedRoute] top toggle:", error.message);
+      (old ?? []).map((p) => (p.id === pin.id ? { ...p, is_top: next } : toClear.some((c) => c.id === p.id) ? { ...p, is_top: false } : p)));
+    const ops: Promise<any>[] = [(supabase as any).from("pins").update({ is_top: next }).eq("id", pin.id)];
+    if (toClear.length) ops.push((supabase as any).from("pins").update({ is_top: false }).in("id", toClear.map((p) => p.id)));
+    const res = await Promise.all(ops);
+    if (res.some((r: any) => r?.error)) {
+      console.error("[SharedRoute] top toggle:", res.map((r: any) => r?.error?.message).filter(Boolean).join(" | "));
       queryClient.invalidateQueries({ queryKey: ["shared-route-pins", id] });
     }
   };
@@ -1191,15 +1189,6 @@ export default function SharedRoute() {
   };
   // Dzien domyslny: ten, ktory trwa DZIS (gdy wyjazd wlasnie sie dzieje), inaczej pierwszy.
   // Liczony z samych dat (bez godzin), zeby strefa czasowa nie przesuwala doby.
-  // Poza zakresem wyjazdu (przyszly albo dawno miniony) otwieramy DZIEN 1 - tam domyslnie leza
-  // wszystkie nieprzypisane miejsca. Wczesniej wartosc byla clampowana do ostatniego dnia, wiec
-  // wyjazd z przeszlosci otwieral sie na pustym dniu i wygladalo to, jakby miejsca zniknely.
-  const dayOfToday = (() => {
-    if (!tripStart) return 1;
-    const midnight = (d: Date) => Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
-    const diff = Math.round((midnight(new Date()) - midnight(tripStart)) / 86400000) + 1;
-    return diff >= 1 && diff <= dayCount ? diff : 1;
-  })();
   // Dopoki user sam nie tknal przelacznika, pokazujemy dzien domyslny. Po tknieciu rzadzi jego
   // wybor - w tym "Wszystkie" (null), ktorego nie da sie odroznic od "jeszcze nie wybral".
   // Przelacznik dni pokazujemy na KAZDYM etapie (propozycje, w trakcie, wspomnienie), gdy tylko
@@ -1208,7 +1197,10 @@ export default function SharedRoute() {
   // domyslnie do dnia 1, a przypisac je do wlasciwego dnia mozna w kazdej chwili - w wersji
   // roboczej, w trakcie wyjazdu i po nim (gdyby cos poszlo nie tak).
   const daysUsable = hasDays && (pins as any[]).length > 0;
-  const activeDay: number | null = daysUsable ? (dayTouched ? selectedDay : dayOfToday) : null;
+  // Domyslnie "Wszystkie" (null), nie dzien dzisiejszy (prosba Nat 2026-09-08): wchodzac
+  // w wyjazd chce sie najpierw zobaczyc CALOSC, a dopiero potem zawezic do dnia. Dzien
+  // dzisiejszy zostaje jednym tapnieciem w chip.
+  const activeDay: number | null = daysUsable && dayTouched ? selectedDay : null;
   // Miejsca widoczne na ekranie = te z wybranego dnia. Filtrujemy RAZ, przed grupowaniem po
   // kategoriach - inaczej puste kategorie zostawialyby po sobie same naglowki.
   const visiblePins: any[] = activeDay === null ? (pins as any[]) : (pins as any[]).filter((p) => pinDay(p) === activeDay);
@@ -1242,7 +1234,12 @@ export default function SharedRoute() {
       : await resolvePlaceDbId(pin.google_place_id, pin.place_name, route.city);
     if (!dbId) return;
     const full = await fetchEnrichedPlace(dbId);
-    if (full) setDetailPin((cur) => (cur && cur.place_name === pin.place_name ? full : cur));
+    // Nazwa zostaje TA Z WYJAZDU. resolvePlaceDbId dopasowuje miejsce po nazwie i wspolrzednych,
+    // wiec potrafi trafic w wiersz zapisany pod inna nazwa - i wtedy wizytowka pokazywala co
+    // innego niz wiersz, w ktory user wlasnie tapnal (zgloszenie Nat 2026-09-08). Z wzbogacenia
+    // bierzemy dane (zdjecia, godziny, profil biznesu), ale nie podmieniamy tego, co user widzi
+    // na liscie i sam tam wpisal.
+    if (full) setDetailPin((cur) => (cur && cur.place_name === pin.place_name ? { ...full, place_name: pin.place_name } : cur));
   };
 
   const openDetail = (pin: any) => { void upgradeDetail(pin); return setDetailPin({
@@ -1481,7 +1478,7 @@ export default function SharedRoute() {
                 onOpen={() => openDetail(pin)} onGoogle={() => openGooglePlace(pin)}
                 onDelete={canEdit ? () => handleDeletePin(pin) : undefined}
                 onSave={user ? () => toggleSaveBookmark(pin) : undefined} saved={isSaved(pin.place_name)}
-            isTop={!!pin.is_top} onToggleTop={isOwner ? () => void toggleTopPin(pin) : undefined}
+            isTop={!!pin.is_top} onToggleTop={canEdit ? () => void toggleTopPin(pin) : undefined}
                 note={buildNote(pin)} cornerAvatar={addedByAvatar(pin)}
               />
             ))}
@@ -1495,14 +1492,24 @@ export default function SharedRoute() {
       // Przypisywanie do dni odbywa sie w trybie t("reorder"), ktory naglowki dni ma.
 
       <div>
-        {list.map((pin: any, i: number) => (
+        {/* Gradacja (prosba Nat 2026-09-08): najpierw gwiazdka topki, potem werdykty od
+            najmocniejszego ("Musisz odwiedzic!" -> "Warto wpasc" -> ...), na koncu miejsca bez
+            werdyktu i jawne "nie warto". W obrebie tego samego stopnia zostaje kolejnosc trasy,
+            wiec sortowanie niczego nie miesza tam, gdzie nikt nic nie oznaczyl. */}
+        {[...list]
+          .map((pin: any, i: number) => ({ pin, i }))
+          .sort((a, b) =>
+            (b.pin.is_top ? 1 : 0) - (a.pin.is_top ? 1 : 0)
+            || verdictRank(a.pin.tags) - verdictRank(b.pin.tags)
+            || a.i - b.i)
+          .map(({ pin }, i: number) => (
           <RoutePlaceRow
             key={pin.id} pin={rowPinFor(pin)} index={i}
             categoryLabel={categoryLabel(pin.category || "other")}
             onOpen={() => openDetail(pin)} onGoogle={() => openGooglePlace(pin)}
             onDelete={canEdit ? () => handleDeletePin(pin) : undefined}
             onSave={user ? () => toggleSaveBookmark(pin) : undefined} saved={isSaved(pin.place_name)}
-            isTop={!!pin.is_top} onToggleTop={isOwner ? () => void toggleTopPin(pin) : undefined}
+            isTop={!!pin.is_top} onToggleTop={canEdit ? () => void toggleTopPin(pin) : undefined}
             note={buildNote(pin)} cornerAvatar={addedByAvatar(pin)}
           />
         ))}

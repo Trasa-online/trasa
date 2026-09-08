@@ -326,7 +326,9 @@ export default function SharedList() {
       : await resolvePlaceDbId(pin.google_place_id, pin.place_name, col?.city);
     if (!dbId) return;
     const full = await fetchEnrichedPlace(dbId);
-    if (full) setDetailPin((cur) => (cur && cur.place_name === pin.place_name ? full : cur));
+    // Nazwa zostaje TA Z LISTY - patrz ten sam komentarz w SharedRoute. Dopasowanie po nazwie
+    // bywa nietrafione i wizytowka pokazywala inna nazwe niz wiersz, w ktory user tapnal.
+    if (full) setDetailPin((cur) => (cur && cur.place_name === pin.place_name ? { ...full, place_name: pin.place_name } : cur));
   };
 
   const openDetail = (pin: any) => { void upgradeDetail(pin); setDetailRaw(pin); setDetailPin({
