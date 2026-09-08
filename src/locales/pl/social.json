@@ -125,7 +125,10 @@
     "finish_trip": "Dokończ wyjazd →",
     "see_details": "Zobacz szczegóły →",
     "see_lists": "Zobacz listy →",
-    "profile_of": "Profil {{username}}"
+    "profile_of": "Profil {{username}}",
+    "route_hidden_one": "Twojego wyjazdu nie widać w eksploracji - dodaj zdjęcie",
+    "route_hidden_few": "{{count}} Twoich wyjazdów nie widać w eksploracji - dodaj zdjęcia",
+    "route_hidden_many": "{{count}} Twoich wyjazdów nie widać w eksploracji - dodaj zdjęcia"
   },
   "live": {
     "friend_request": "Nowe zaproszenie do znajomych 👋",

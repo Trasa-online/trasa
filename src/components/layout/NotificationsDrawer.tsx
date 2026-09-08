@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
-import { X, Bell, UserPlus, UserCheck, MapPin, Route, Bookmark, CheckCircle2, XCircle, MessageCircle, Heart, Camera } from "lucide-react";
+import { X, Bell, UserPlus, UserCheck, MapPin, Route, Bookmark, CheckCircle2, XCircle, MessageCircle, Heart, Camera, EyeOff } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
 import { avatarSrc } from "@/lib/avatar";
@@ -47,6 +47,9 @@ const TYPE_CONFIG: Record<string, { icon: React.ElementType; color: string; labe
   group_route_ready:  { icon: Route, color: "text-primary bg-orange-100",  label: (t, u, m) => t(m?.city ? "notif.group_route_ready_city" : "notif.group_route_ready", { user: u, city: m?.city }) },
   collection_approved: { icon: CheckCircle2, color: "text-emerald-500 bg-emerald-100", label: (t, _u, m) => t("notif.collection_approved", { title: m?.title ?? t("notif.list_fallback") }) },
   collection_rejected: { icon: XCircle,      color: "text-destructive bg-destructive/10", label: (t, _u, m) => t(m?.moderation_note ? "notif.collection_rejected_reason" : "notif.collection_rejected", { title: m?.title ?? t("notif.list_fallback"), reason: m?.moderation_note }) },
+  // Opublikowany wyjazd bez okladki nie przechodzi bramki eksploracji. Ikona przekreslonego
+  // oka, bo problem brzmi "nikt tego nie widzi", a nie "cos poszlo nie tak".
+  route_hidden:   { icon: EyeOff,   color: "text-amber-600 bg-amber-100",    label: (t, _u, m) => t("notif.route_hidden", { count: Number(m?.count ?? 1) }) },
   route_liked:    { icon: Heart,    color: "text-red-500 bg-red-100",        label: (t, u, m) => t(m?.city ? "notif.route_liked_city" : "notif.route_liked", { user: u, city: m?.city }) },
   list_liked:     { icon: Heart,    color: "text-red-500 bg-red-100",        label: (t, u, m) => t(m?.title ? "notif.list_liked_title" : "notif.list_liked", { user: u, title: m?.title }) },
   list_saved:     { icon: Bookmark, color: "text-primary bg-orange-100",  label: (t, u, m) => t(m?.title ? "notif.list_saved_title" : "notif.list_saved", { user: u, title: m?.title }) },

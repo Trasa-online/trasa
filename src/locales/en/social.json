@@ -121,7 +121,9 @@
     "finish_trip": "Finish trip →",
     "see_details": "See details →",
     "see_lists": "See lists →",
-    "profile_of": "{{username}}'s profile"
+    "profile_of": "{{username}}'s profile",
+    "route_hidden_one": "Your trip is not visible in Explore - add a photo",
+    "route_hidden_other": "{{count}} of your trips are not visible in Explore - add photos"
   },
   "live": {
     "friend_request": "New friend request 👋",
