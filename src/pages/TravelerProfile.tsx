@@ -430,6 +430,11 @@ const TravelerProfile = () => {
         tags: Array.isArray(rep.tags) ? rep.tags : [],
         // Okladka karty: MOJA okladka (jesli wybralem) > miniatura eksploracji > okladka wyjazdu.
         cover: myCovers.get(rep.id) ?? rep.list_cover_url ?? rep.cover_url ?? null,
+        // Czy wyjazd przechodzi bramke eksploracji. MUSI byc policzone TUTAJ: karta dostaje juz
+        // tylko zwiniete `cover`, wiec sprawdzanie `list_cover_url` po stronie karty widzialo
+        // undefined i plakietka zapalala sie na KAZDYM opublikowanym wyjezdzie, takze takim ze
+        // zdjeciem (zgloszenie Nat 2026-09-08). Tylko wlasne trasy - cudzej okladki nie ustawie.
+        hiddenFromExplore: rep.is_own !== false && rep.status === "published" && !rep.list_cover_url,
         tiles: days.flatMap((d) => pinsByRoute[d.id] ?? []),
         saves: Number(rep.saves_count ?? 0),
         likes: Number(rep.likes_count ?? 0),
@@ -615,7 +620,7 @@ const TravelerProfile = () => {
         isDraft={isRoboczy}
         // Opublikowany bez okladki listy = nie przechodzi bramki eksploracji, czyli nikt go
         // nie znajdzie. Autor dowiadywal sie o tym tylko ze znikajacego toastu przy publikacji.
-        hiddenFromExplore={!isRoboczy && !tr.list_cover_url}
+        hiddenFromExplore={!!tr.hiddenFromExplore}
         showMap={false}
         snap={false}
         heightClass="aspect-[3/4]"

@@ -51,14 +51,7 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
         {/* Peachy kafelek ikony/zdjecia - PIONOWY prostokat 2:3 (redesign 2026-08-25, spojne z okladkami
             miniaturek/kart). self-start: przyklejony do gory wiersza. */}
         <button onClick={onOpen} className="relative w-16 h-24 shrink-0 self-start rounded-2xl overflow-hidden bg-[#fcede3] active:opacity-90">
-          <PlacePhoto pin={pin} width={80} className={`w-full h-full object-cover ${visited ? "opacity-55" : ""}`} />
-          {/* Odwiedzone widac NA MINIATURCE, nie tylko w guziku: przy przewijaniu listy wzrok
-              szuka roznicy w kolumnie zdjec, a nie w rzedzie ikon pod spodem. */}
-          {visited && (
-            <span className="absolute top-1 left-1 h-6 w-6 rounded-full bg-primary border-2 border-white shadow-sm flex items-center justify-center">
-              <Check className="h-3.5 w-3.5 text-white" strokeWidth={3} />
-            </span>
-          )}
+          <PlacePhoto pin={pin} width={80} className="w-full h-full object-cover" />
           {cornerAvatar !== undefined && (
             <img src={avatarSrc(cornerAvatar)} alt="" className="absolute bottom-1 right-1 h-7 w-7 rounded-full object-cover border-2 border-white shadow-sm bg-secondary" />
           )}
@@ -113,16 +106,29 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
           </button>
         )}
         {onToggleVisited && (
+          /* Po zaznaczeniu guzik ZWIJA sie do samego znaczka (jak polubienie na YouTube):
+             tekst tlumaczy AKCJE, a nie powtarza stanu. Kolor schodzi na peachy - odwiedzone
+             miejsce ma byc zaznaczone, nie krzyczec mocniej niz przycisk primary. Tekst
+             #BC4206 to primary sciemniony do L=38% - na peachy daje 4,68:1, czyli przechodzi
+             prog 4,5:1 dla malego pogrubionego tekstu (sam primary mial tam 3,13:1). Wyszarzanie
+             zdjecia i znaczek na miniaturce usuniete (prosba Nat 2026-09-08). */
           <button
             onClick={(e) => { e.stopPropagation(); onToggleVisited(); }}
             aria-label={visited ? t("row.mark_not_visited") : t("row.mark_visited")}
             aria-pressed={!!visited}
-            className={`h-9 rounded-full flex items-center gap-1.5 px-3 text-[12px] font-bold shrink-0 active:scale-95 transition-transform ${
-              visited ? "bg-primary text-white" : "bg-secondary text-secondary-foreground"
+            className={`h-9 rounded-full flex items-center justify-center shrink-0 overflow-hidden active:scale-95 transition-[background-color,color,padding] duration-300 ${
+              visited ? "bg-[#fcede3] text-[#BC4206] px-2.5" : "bg-secondary text-secondary-foreground px-3"
             }`}
           >
-            <Check className="h-4 w-4" strokeWidth={3} />
-            {visited ? t("row.visited") : t("row.not_visited")}
+            <Check className="h-4 w-4 shrink-0" strokeWidth={3} />
+            {/* max-width + opacity zamiast display:none - inaczej tekst znikalby skokowo. */}
+            <span
+              className={`overflow-hidden whitespace-nowrap text-[12px] font-bold transition-[max-width,opacity,margin] duration-300 ease-out ${
+                visited ? "max-w-0 opacity-0 ml-0" : "max-w-[140px] opacity-100 ml-1.5"
+              }`}
+            >
+              {t("row.visited")}
+            </span>
           </button>
         )}
         {onSave && (
