@@ -1082,22 +1082,28 @@ export default function SharedRoute() {
   };
 
   // #3: usun zdjecie z galerii wyjazdu (review_photos). Toast + "Cofnij".
+  //
+  // Przez RPC, nie zwyklym UPDATE: polityka RLS na `routes` przepuszcza tylko wlasciciela,
+  // a uczestnik wspolnego wyjazdu MOGL dodac zdjecie (append_route_photos) i nie mogl go cofnac
+  // (zgloszenie Nat 2026-09-09). Kto jest autorem zdjecia, rozstrzyga sciezka w Storage -
+  // patrz migracja 20260909b. Plik w Storage zostaje, zeby "Cofnij" mialo co przywrocic.
   const handleDeletePhoto = async (url: string) => {
-    const before = ((route.review_photos ?? []) as string[]);
-    const merged = before.filter((u) => u !== url);
-    const { error } = await (supabase as any).from("routes").update({ review_photos: merged }).eq("id", route.id);
+    const { error } = await (supabase as any).rpc("remove_route_photo", { p_route_id: route.id, p_url: url });
     if (error) { toast.error(t("toast.photo_delete_failed")); return; }
     queryClient.invalidateQueries({ queryKey: ["shared-route", id] });
     toast.success(t("toast.photo_deleted"), {
       action: {
         label: "Cofnij",
         onClick: async () => {
-          await (supabase as any).from("routes").update({ review_photos: before }).eq("id", route.id);
+          await (supabase as any).rpc("restore_route_photo", { p_route_id: route.id, p_url: url });
           queryClient.invalidateQueries({ queryKey: ["shared-route", id] });
         },
       },
     });
   };
+
+  /** Czy TO zdjecie wgral zalogowany user - "<user_id>/<route_id>/" w sciezce pliku. */
+  const isMyGalleryPhoto = (url: string) => !!user?.id && url.includes(`/${user.id}/${route.id}/`);
 
   // #c: ustaw zdjecie jako OKLADKE EKSPLORACJI (list_cover_url). Tylko wlasne zdjecia (galeria) -
   // zgodne z regula "okladka listy/trasy nigdy z Google".
@@ -2120,6 +2126,7 @@ export default function SharedRoute() {
           pins={pins as any[]}
           tags={cardTags}
           mapPins={cardMapPins}
+          photoFor={coverFor}
           authorName={author?.username ? `@${author.username}` : authorName}
           authorAvatar={(author as any)?.avatar_url ?? null}
           participants={(groupParticipants as any[]).map((p) => p.avatar_url ?? null)}
@@ -2251,8 +2258,10 @@ export default function SharedRoute() {
             <X className="h-5 w-5 text-white" />
           </button>
           {/* Usuwanie zdjecia zeszlo z kafelka do podgladu - siatka ma byc czysta (bez podpisow
-              i dodatkowych ikon), zostaje na niej tylko wybor okladki. */}
-          {isOwner && (
+              i dodatkowych ikon), zostaje na niej tylko wybor okladki.
+              Kosz widzi wlasciciel wyjazdu (odpowiada za cala galerie) ORAZ uczestnik przy
+              WLASNYM zdjeciu - skoro moze je dodac, musi tez moc je zabrac. */}
+          {(isOwner || (isGroupMember && isMyGalleryPhoto(galleryPhotos[viewerIndex]))) && (
             <button onClick={(e) => { e.stopPropagation(); void handleDeletePhoto(galleryPhotos[viewerIndex]); setViewerIndex(null); }}
               aria-label={t("aria.delete_photo")}
               className="absolute left-3 z-10 h-10 w-10 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center active:scale-90 transition-transform"

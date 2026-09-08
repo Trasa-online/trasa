@@ -221,7 +221,11 @@ export default function TrasaBigCard({
             </span>
           )}
           <span className="flex items-center gap-1.5 min-w-0 whitespace-nowrap">
-            {authorName && <span className="truncate max-w-[7.5rem]">{authorName}</span>}
+            {/* Nazwa uzytkownika NIE sciska sie razem z miastem: przy waskiej karcie (podglad
+                udostepniania) wychodzilo z tego "@be... · Trójmias...", czyli nieczytelne oba
+                pola. Skraca sie samo miasto, autor zostaje w calosci - max-w chroni tylko przed
+                skrajnie dlugim nickiem. */}
+            {authorName && <span className="shrink-0 truncate max-w-[7.5rem]">{authorName}</span>}
             {city && (<><span className="opacity-50 shrink-0">·</span><span className="truncate">{city}</span></>)}
             {countLabel && (<><span className="opacity-50 shrink-0">·</span><span className="shrink-0">{countLabel}</span></>)}
           </span>

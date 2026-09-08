@@ -156,6 +156,8 @@ const TravelerProfile = () => {
   const [searchCat, setSearchCat] = useState<SearchCat>("all");
   const searchInputRef = useRef<HTMLInputElement>(null);
   const closeSearch = () => { setSearchOpen(false); setSearchQuery(""); setSearchCat("all"); searchInputRef.current?.blur(); };
+  // Pole montuje sie dopiero z nakladka, wiec focus musi poczekac na render (jak w Eksploracji).
+  const openSearch = () => { setSearchOpen(true); window.setTimeout(() => searchInputRef.current?.focus(), 60); };
   const foldersVisible = searchOpen && searchQuery.trim().length === 0;
   // Wyniki na pelny ekran - dolny pasek chowamy tak samo jak w Eksploracji.
   useEffect(() => {
@@ -712,6 +714,12 @@ const TravelerProfile = () => {
         title={t("profile.your_profile")}
         right={
           <>
+            {/* Szukanie ZWINIETE do lupki - pole zajmowalo caly osobny wiersz pod naglowkiem
+                i zjadalo pion na ekranie, ktory i tak jest gesty (prosba Nat 2026-09-09).
+                Po tapnieciu rozwija sie na cala belke (prop `overlay` nizej). */}
+            <button onClick={openSearch} className="h-9 w-9 flex items-center justify-center rounded-full bg-muted text-foreground active:scale-90 transition-transform" aria-label={t("common:buttons.search")}>
+              <Search className="h-5 w-5" />
+            </button>
             <button onClick={handleShareProfile} className="h-9 w-9 flex items-center justify-center rounded-full bg-muted text-foreground active:scale-90 transition-transform" aria-label={t("profile.share_profile_aria")}>
               <Share2 className="h-5 w-5" />
             </button>
@@ -726,17 +734,15 @@ const TravelerProfile = () => {
             </button>
           </>
         }
-        below={
+        overlay={searchOpen ? (
           <>
-            {searchOpen && (
-              <button
-                onClick={closeSearch}
-                aria-label={t("search.close_aria")}
-                className="shrink-0 -ml-1 h-9 w-9 flex items-center justify-center text-foreground active:scale-90 transition-transform"
-              >
-                <ChevronLeft className="h-6 w-6" strokeWidth={2.2} />
-              </button>
-            )}
+            <button
+              onClick={closeSearch}
+              aria-label={t("search.close_aria")}
+              className="shrink-0 -ml-1 h-9 w-9 flex items-center justify-center text-foreground active:scale-90 transition-transform"
+            >
+              <ChevronLeft className="h-6 w-6" strokeWidth={2.2} />
+            </button>
             <PinnedSearchField
               ref={searchInputRef}
               value={searchQuery}
@@ -745,7 +751,7 @@ const TravelerProfile = () => {
               placeholder={t("search.pinned_placeholder")}
             />
           </>
-        }
+        ) : undefined}
       />
 
       {/* Foldery kategorii - jak w Eksploracji: widoczne dopoki fraza jest pusta. */}
@@ -832,7 +838,10 @@ const TravelerProfile = () => {
             <p className="text-xl font-bold text-foreground mt-0.5 tabular-nums">{followCounts.following}</p>
           </button>
           <div className="flex-1" />
-          <button onClick={() => navigate("/search")} className="h-9 w-9 rounded-full bg-muted flex items-center justify-center text-foreground active:scale-90 transition-transform" aria-label={t("profile.find_users_aria")}>
+          {/* Szukanie osob otwiera TE SAMA wyszukiwarke, co lupka w naglowku - tylko z wybrana
+              kategoria "Ludzie". Wczesniej prowadzilo na osobny ekran /search, czyli DRUGI widok
+              wyszukiwania obok tego z Eksploracji (prosba Nat 2026-09-09: jedno zrodlo prawdy). */}
+          <button onClick={() => { setSearchCat("people"); openSearch(); }} className="h-9 w-9 rounded-full bg-muted flex items-center justify-center text-foreground active:scale-90 transition-transform" aria-label={t("profile.find_users_aria")}>
             <Search className="h-4 w-4" />
           </button>
         </div>
@@ -995,7 +1004,7 @@ const TravelerProfile = () => {
                   {followSheet === "following" ? t("profile.no_following", t("profile.no_following")) : t("profile.no_followers")}
                 </p>
                 <InviteFriendsBanner />
-                <button onClick={() => { setFollowSheet(null); navigate("/search"); }} className="w-full py-3 rounded-full bg-secondary text-secondary-foreground font-bold text-sm active:scale-[0.97] transition-transform">
+                <button onClick={() => { setFollowSheet(null); setSearchCat("people"); openSearch(); }} className="w-full py-3 rounded-full bg-secondary text-secondary-foreground font-bold text-sm active:scale-[0.97] transition-transform">
                   {t("profile.find_friends")}
                 </button>
               </div>

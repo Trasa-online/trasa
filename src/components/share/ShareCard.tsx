@@ -11,6 +11,7 @@ import { localizeTag, verdictOf } from "@/lib/routeTags";
 import { subcategoryLabelLocalized } from "@/lib/categories";
 import TrasaBigCard from "@/components/home/TrasaBigCard";
 import { buildShareTargets, ShareTargetButton } from "@/components/share/shareTargets";
+import { rowOwnPhotos } from "@/lib/placeUserPhotos";
 
 // UDOSTEPNIANIE LISTY / WYJAZDU - arkusz z podgladem i kanalami (wzor: Pinterest, prosba Nat
 // 2026-09-01). Otwiera sie z guzika udostepniania ORAZ automatycznie po zrzucie ekranu.
@@ -262,7 +263,7 @@ export function ShareCardList({ title, city, items, author, avatar, onClose, onS
 }
 
 /** Karta WYJAZDU: okladka + ponumerowane przystanki + uczestnicy. */
-export function ShareCardTrip({ title, city, pins, cover, onClose, onShare, shareUrl, routeId, authorName, authorAvatar, participants, tags, mapPins }: {
+export function ShareCardTrip({ title, city, pins, cover, onClose, onShare, shareUrl, routeId, authorName, authorAvatar, participants, tags, mapPins, photoFor }: {
   title: string;
   city?: string | null;
   pins: any[];
@@ -277,12 +278,18 @@ export function ShareCardTrip({ title, city, pins, cover, onClose, onShare, shar
   participants?: (string | null)[];
   tags?: string[];
   mapPins?: { latitude: number; longitude: number }[];
+  /** Okladka miejsca z galerii wspoldzielonej (place_photos) - gdy pin nie ma wlasnego zdjecia. */
+  photoFor?: (pin: any) => string | null;
 }) {
   const { t } = useTranslation("sharing");
   // Pasek miejsc pod podgladem: pierwsze przystanki z werdyktem i kategoria.
   const strip = pins.slice(0, 8).map((p: any) => ({
     name: p.place_name ?? "",
-    photo: thumbUrl(resolveStored(p.photo_url ?? p.image_url ?? (Array.isArray(p.images) ? p.images[0] : null)), 160),
+    // Ta sama regula co w wierszu wyjazdu: najpierw wlasne zdjecia pinu, a gdy ich nie ma -
+    // okladka z galerii miejsca (place_photos), ktora podaje rodzic. Bez tego kafelek pokazywal
+    // ikone kategorii, choc to samo miejsce mialo zdjecie na stronie linku (zlapane na zrzucie
+    // 2026-09-09): liczyl sie tylko `photo_url`/`images`, bez `user_photo_urls` i bez galerii.
+    photo: thumbUrl(rowOwnPhotos(p)[0] ?? photoFor?.(p) ?? null, 160),
     icon: categoryIconSrc(p.category ?? null),
     verdict: (Array.isArray(p.tags) ? p.tags : []).find((tg: string) => verdictOf(tg))
       ? localizeTag((Array.isArray(p.tags) ? p.tags : []).find((tg: string) => verdictOf(tg))!)
