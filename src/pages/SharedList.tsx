@@ -38,6 +38,8 @@ import { resolvePlaceDbId } from "@/lib/placeLists";
 import { fetchEnrichedPlace } from "@/components/plan-wizard/PlaceSwiper";
 import { inferCategoryFromName } from "@/lib/placeCategoryIcon";
 import { uploadWithThumb } from "@/lib/imageThumbs";
+import { fetchVisitedKeys, toggleVisited } from "@/lib/placeVisits";
+import { haptics } from "@/hooks/useHaptics";
 
 // Widok LISTY miejsc (polecajki) - UI/UX 1:1 z widokiem trasy (SharedRoute), ale zasilany z
 // discovery_collections/discovery_items. Lista NIE jest trasa (brak kolejnosci-planu), ale
@@ -179,6 +181,30 @@ export default function SharedList() {
       return (data ?? []) as any[];
     },
   });
+
+  // "Gdzie juz bylem" (zgloszenie z testow 2026-09-08). Stan nalezy do OGLADAJACEGO, nie do
+  // listy - odhaczenie na CUDZEJ zapisanej liscie nie moze jej zmieniac wszystkim. Klucz to
+  // miejsce, nie pozycja listy, wiec jedno odhaczenie widac na kazdej liscie z tym miejscem.
+  const visitKeyOf = (it: any) => placeKeyOf({ googlePlaceId: it.google_place_id ?? null, placeName: it.place_name });
+  const { data: visitedKeys = new Set<string>() } = useQuery({
+    queryKey: ["place-visits", user?.id, id],
+    enabled: !!user?.id && items.length > 0,
+    queryFn: () => fetchVisitedKeys(user!.id, (items as any[]).map(visitKeyOf)),
+  });
+  const handleToggleVisited = async (it: any) => {
+    if (!user) return;
+    const key = visitKeyOf(it);
+    const was = visitedKeys.has(key);
+    // Podglad natychmiast - odhaczanie ma byc odczuwalne jak przelacznik, nie jak zapis.
+    queryClient.setQueryData(["place-visits", user.id, id], (old: Set<string> | undefined) => {
+      const next = new Set(old ?? visitedKeys);
+      if (was) next.delete(key); else next.add(key);
+      return next;
+    });
+    haptics.light();
+    const now = await toggleVisited(user.id, was, { placeKey: key, placeName: it.place_name, city: it.city ?? (col as any)?.city ?? null });
+    if (now === was) queryClient.invalidateQueries({ queryKey: ["place-visits", user.id, id] });
+  };
 
   // #2/#3: zdjecia userow dodane do miejsc tej listy w wizytowkach (place_photos). Sluza jako
   // okladki miejsc (gdy discovery_items nie ma photo_url) ORAZ zasilaja Galerie listy.
@@ -468,6 +494,8 @@ export default function SharedList() {
             onSave={!isOwner ? () => toggleSaveBookmark(pin) : undefined}
             saved={isSaved(pin.place_name)}
             onDelete={isOwner ? () => handleDeleteItem(pin) : undefined}
+            visited={visitedKeys.has(visitKeyOf(pin))}
+            onToggleVisited={user ? () => handleToggleVisited(pin) : undefined}
             note={isNew ? (
               <div className="space-y-2">
                 {/* Awatar autora listy + samo "nowe miejsce" (decyzja Nat 2026-09-01). Imie bylo

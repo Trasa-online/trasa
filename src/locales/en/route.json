@@ -147,7 +147,11 @@
     "saved_in_list": "Place saved in a list",
     "open_in_maps": "Open in Google Maps",
     "remove": "Remove the place from the trip",
-    "save_to_list": "Save place to a list"
+    "save_to_list": "Save place to a list",
+    "visited": "Visited",
+    "not_visited": "Been here",
+    "mark_visited": "Mark as visited",
+    "mark_not_visited": "Remove visited mark"
   },
   "note": {
     "placeholder": "Add a note about this place...",

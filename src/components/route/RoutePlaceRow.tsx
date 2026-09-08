@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { localizeTag } from "@/lib/routeTags";
-import { Bookmark, Trash2 } from "lucide-react";
+import { Bookmark, Check, Trash2 } from "lucide-react";
 import { PlacePhoto } from "@/components/PlacePhoto";
 import { avatarSrc } from "@/lib/avatar";
 
@@ -20,7 +20,7 @@ const GoogleGlyph = ({ className }: { className?: string }) => (
 // a pod spodem akcje po prawej: Google (biale kolko z cieniem) + zapis/kosz.
 // dragHandle (opcjonalny) = uchwyt przeciagania po lewej (tryb wlasciciela). note = dodatkowa
 // tresc pod wierszem (np. notka autora).
-export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onSave, saved, onDelete, dragHandle, note, cornerAvatar }: {
+export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onSave, saved, onDelete, dragHandle, note, cornerAvatar, visited, onToggleVisited }: {
   pin: any;
   index: number;
   categoryLabel: ReactNode;
@@ -33,6 +33,10 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
   note?: ReactNode;
   // Awatar uczestnika, ktory DODAL to miejsce (rog miniaturki). undefined = nie pokazuj (brak added_by).
   cornerAvatar?: string | null;
+  // "Bylem tu" (2026-09-08). Stan nalezy do OGLADAJACEGO, nie do listy - patrz src/lib/placeVisits.ts.
+  // Oba propy sa opcjonalne, wiec ekrany, ktore ich nie podaja (wyjazdy), wygladaja jak dotad.
+  visited?: boolean;
+  onToggleVisited?: () => void;
 }) {
   const { t } = useTranslation("route");
   return (
@@ -43,7 +47,14 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
         {/* Peachy kafelek ikony/zdjecia - PIONOWY prostokat 2:3 (redesign 2026-08-25, spojne z okladkami
             miniaturek/kart). self-start: przyklejony do gory wiersza. */}
         <button onClick={onOpen} className="relative w-16 h-24 shrink-0 self-start rounded-2xl overflow-hidden bg-[#fcede3] active:opacity-90">
-          <PlacePhoto pin={pin} width={80} className="w-full h-full object-cover" />
+          <PlacePhoto pin={pin} width={80} className={`w-full h-full object-cover ${visited ? "opacity-55" : ""}`} />
+          {/* Odwiedzone widac NA MINIATURCE, nie tylko w guziku: przy przewijaniu listy wzrok
+              szuka roznicy w kolumnie zdjec, a nie w rzedzie ikon pod spodem. */}
+          {visited && (
+            <span className="absolute top-1 left-1 h-6 w-6 rounded-full bg-orange-600 border-2 border-white shadow-sm flex items-center justify-center">
+              <Check className="h-3.5 w-3.5 text-white" strokeWidth={3} />
+            </span>
+          )}
           {cornerAvatar !== undefined && (
             <img src={avatarSrc(cornerAvatar)} alt="" className="absolute bottom-1 right-1 h-7 w-7 rounded-full object-cover border-2 border-white shadow-sm bg-secondary" />
           )}
@@ -82,6 +93,19 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
         {/* Zapis miejsca dostepny ZAWSZE gdy podany onSave - takze dla wlasciciela obok kosza
             (wczesniej kosz go wypieral, wiec we wlasnym wyjezdzie nie dalo sie zapisac miejsca
             do swoich list - zgloszenie Nat 2026-08-29). */}
+        {onToggleVisited && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onToggleVisited(); }}
+            aria-label={visited ? t("row.mark_not_visited") : t("row.mark_visited")}
+            aria-pressed={!!visited}
+            className={`h-9 rounded-full flex items-center gap-1.5 px-3 text-[12px] font-bold shrink-0 active:scale-95 transition-transform ${
+              visited ? "bg-orange-600 text-white" : "bg-secondary text-secondary-foreground"
+            }`}
+          >
+            <Check className="h-4 w-4" strokeWidth={3} />
+            {visited ? t("row.visited") : t("row.not_visited")}
+          </button>
+        )}
         {onSave && (
           <button
             onClick={(e) => { e.stopPropagation(); onSave(); }}

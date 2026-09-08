@@ -151,7 +151,11 @@
     "saved_in_list": "Miejsce zapisane w liście",
     "open_in_maps": "Otwórz w Google Maps",
     "remove": "Usuń miejsce z trasy",
-    "save_to_list": "Zapisz miejsce do listy"
+    "save_to_list": "Zapisz miejsce do listy",
+    "visited": "Odwiedzone",
+    "not_visited": "Byłem tu",
+    "mark_visited": "Oznacz jako odwiedzone",
+    "mark_not_visited": "Usuń oznaczenie odwiedzenia"
   },
   "note": {
     "placeholder": "Dodaj notkę o tym miejscu...",
