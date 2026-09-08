@@ -196,7 +196,7 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
     queryFn: async () => {
       if (!userId) return [];
       const { data: members } = await (supabase as any)
-        .from("group_session_members").select("session_id").eq("user_id", userId);
+        .from("group_session_members").select("session_id").eq("user_id", userId).eq("status", "accepted");
       if (!members?.length) return [];
       const ids = members.map((m: any) => m.session_id);
       const { data } = await (supabase as any)
@@ -219,7 +219,7 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
     queryFn: async () => {
       if (!groupIds.length) return {} as Record<string, { avatar_url: string | null; name: string }[]>;
       const { data: members } = await (supabase as any)
-        .from("group_session_members").select("session_id, user_id").in("session_id", groupIds);
+        .from("group_session_members").select("session_id, user_id").in("session_id", groupIds).eq("status", "accepted");
       if (!members?.length) return {};
       const uids = [...new Set(members.map((m: any) => m.user_id))];
       const { data: profiles } = await (supabase as any)
@@ -245,7 +245,7 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
     enabled: soloGroupSessionIds.length > 0,
     queryFn: async () => {
       const { data: members } = await (supabase as any)
-        .from("group_session_members").select("session_id, user_id").in("session_id", soloGroupSessionIds);
+        .from("group_session_members").select("session_id, user_id").in("session_id", soloGroupSessionIds).eq("status", "accepted");
       if (!members?.length) return {} as Record<string, { avatar_url: string | null; name: string }[]>;
       const uids = [...new Set(members.map((m: any) => m.user_id))];
       const { data: profs } = await (supabase as any)

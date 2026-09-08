@@ -234,5 +234,16 @@
   },
   "saved_trip": "Zapisane",
   "toast_unsaved": "Usunięto z zapisanych",
-  "go_to_saved": "Zobacz"
+  "go_to_saved": "Zobacz",
+  "invite": {
+    "accepted": "Dołączyłaś do wyjazdu",
+    "declined": "Zaproszenie odrzucone",
+    "response_failed": "Nie udało się zapisać odpowiedzi",
+    "removed": "Usunięto z wyjazdu",
+    "remove_failed": "Nie udało się usunąć uczestnika",
+    "banner_title": "Zaproszenie do wspólnego wyjazdu",
+    "banner_desc": "Dołącz, żeby dodawać miejsca, notki i zdjęcia razem z resztą.",
+    "accept": "Dołączam",
+    "decline": "Nie teraz"
+  }
 }

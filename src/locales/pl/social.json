@@ -14,7 +14,17 @@
     "sent_one": "Zaproszono {{count}} osobę",
     "sent_few": "Zaproszono {{count}} osoby",
     "sent_many": "Zaproszono {{count}} osób",
-    "cta_count": "Zaproś ({{count}})"
+    "cta_count": "Zaproś ({{count}})",
+    "sending_one": "Wysyłanie zaproszenia...",
+    "sending_few": "Wysyłanie {{count}} zaproszeń...",
+    "sending_many": "Wysyłanie {{count}} zaproszeń...",
+    "undo": "Cofnij",
+    "undone": "Anulowano zaproszenie",
+    "current": "W tym wyjeździe",
+    "awaiting": "Czeka na potwierdzenie",
+    "remove_person": "Usuń z wyjazdu",
+    "following_friends": "Obserwowani i znajomi",
+    "added": "Dodano"
   },
   "friend": {
     "error_generic": "Coś poszło nie tak",

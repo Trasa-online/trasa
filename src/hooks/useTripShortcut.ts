@@ -24,7 +24,7 @@ export function useTripShortcut(userId: string | null | undefined) {
       const [ownRes, memberRes] = await Promise.all([
         (supabase as any).from("routes").select(SEL).eq("user_id", userId)
           .order("updated_at", { ascending: false }).limit(20),
-        (supabase as any).from("group_session_members").select("session_id").eq("user_id", userId),
+        (supabase as any).from("group_session_members").select("session_id").eq("user_id", userId).eq("status", "accepted"),
       ]);
       const sessionIds = ((memberRes.data ?? []) as any[]).map((m) => m.session_id).filter(Boolean);
       let groupRows: any[] = [];

@@ -73,6 +73,7 @@ import { resolveStored } from "@/components/PlacePhoto";
 import type { MockPlace } from "@/components/plan-wizard/PlaceSwiper";
 import { CategoryIcon } from "@/components/CategoryIcon";
 import { renderForUpload, uploadPair, uploadWithThumb } from "@/lib/imageThumbs";
+import { topLimit } from "@/lib/topPlaces";
 
 // Oficjalne logo Google (4-kolorowe "G") - guzik "Zobacz w Google".
 const GoogleGlyph = ({ className }: { className?: string }) => (
@@ -253,6 +254,28 @@ export default function SharedRoute() {
   const share = useShare();
   const unsave = useUnsavePlace();
   // Tap bookmarka: zapisane -> odzapisz (toast+cofnij); niezapisane -> otworz drawer zapisu.
+  // "Topka" wyjazdu (2026-09-08): autor wyroznia miejsca warte polecenia. Limit rosnie
+  // z dlugoscia trasy - trzy gwiazdki przy trzech miejscach nie wyrozniaja niczego.
+  const toggleTopPin = async (pin: any) => {
+    const list = pins as any[];
+    const limit = topLimit(list.length);
+    const already = list.filter((p) => p.is_top).length;
+    if (!pin.is_top && already >= limit) {
+      toast(t("row.top_limit", { ns: "route", count: limit }));
+      return;
+    }
+    const next = !pin.is_top;
+    haptics.light();
+    // Podglad od razu - gwiazdka ma dzialac jak przelacznik, nie jak zapis formularza.
+    queryClient.setQueryData(["shared-route-pins", id], (old: any[] | undefined) =>
+      (old ?? []).map((p) => (p.id === pin.id ? { ...p, is_top: next } : p)));
+    const { error } = await (supabase as any).from("pins").update({ is_top: next }).eq("id", pin.id);
+    if (error) {
+      console.error("[SharedRoute] top toggle:", error.message);
+      queryClient.invalidateQueries({ queryKey: ["shared-route-pins", id] });
+    }
+  };
+
   const toggleSaveBookmark = (pin: any) => { if (isSaved(pin.place_name)) void unsave(pinToSave(pin)); else setSavePlace(pinToSave(pin)); };
 
   // Otworz miejsce w Google Maps (WIZYTOWKA / place page, NIE nawigacja). query_place_id gdy
@@ -303,7 +326,7 @@ export default function SharedRoute() {
     enabled: !!(route as any)?.group_session_id,
     queryFn: async () => {
       const { data: members } = await (supabase as any)
-        .from("group_session_members").select("user_id").eq("session_id", (route as any).group_session_id);
+        .from("group_session_members").select("user_id").eq("session_id", (route as any).group_session_id).eq("status", "accepted");
       const ids = (members ?? []).map((m: any) => m.user_id).filter((id: string) => id !== route!.user_id);
       if (!ids.length) return [] as { id: string; username: string | null; avatar_url: string | null }[];
       const { data: profs } = await (supabase as any).from("profiles").select("id, username, avatar_url").in("id", ids);
@@ -322,10 +345,79 @@ export default function SharedRoute() {
     queryFn: async () => {
       const { data } = await (supabase as any)
         .from("group_session_members").select("user_id")
-        .eq("session_id", (route as any).group_session_id).eq("user_id", user!.id).maybeSingle();
+        .eq("session_id", (route as any).group_session_id).eq("user_id", user!.id).eq("status", "accepted").maybeSingle();
       return !!data;
     },
   });
+
+  // Pelen sklad wyjazdu WIDZIANY PRZEZ HOSTA - razem z osobami, ktore jeszcze nie
+  // potwierdzily. Osobne zapytanie od groupParticipants (tamto celowo pokazuje tylko
+  // potwierdzonych, bo to publiczna lista uczestnikow wyjazdu).
+  const { data: sessionMembers = [] } = useQuery({
+    queryKey: ["shared-route-members-admin", (route as any)?.group_session_id],
+    enabled: !!(route as any)?.group_session_id && !!user?.id && (route as any)?.user_id === user?.id,
+    queryFn: async () => {
+      const { data: rows } = await (supabase as any)
+        .from("group_session_members").select("user_id, status")
+        .eq("session_id", (route as any).group_session_id);
+      const others = ((rows ?? []) as any[]).filter((m) => m.user_id !== (route as any).user_id);
+      if (!others.length) return [] as { id: string; username: string | null; avatar_url: string | null; status: string }[];
+      const { data: profs } = await (supabase as any)
+        .from("profiles").select("id, username, avatar_url").in("id", others.map((m) => m.user_id));
+      const byId = new Map(((profs ?? []) as any[]).map((p) => [p.id, p]));
+      return others.map((m) => ({
+        id: m.user_id,
+        username: byId.get(m.user_id)?.username ?? null,
+        avatar_url: byId.get(m.user_id)?.avatar_url ?? null,
+        status: m.status ?? "accepted",
+      }));
+    },
+  });
+
+  // Czekajace zaproszenie (2026-09-08): host dodal mnie do wyjazdu, ale jeszcze tego nie
+  // potwierdzilem. Do czasu zgody wyjazd NIE pojawia sie w moich Wyjazdach - tutaj dostaje
+  // pasek z decyzja, bo to jedyny ekran, na ktorym widac, na co sie zgadzam.
+  const { data: pendingInvite = false } = useQuery({
+    queryKey: ["shared-route-invite", (route as any)?.group_session_id, user?.id],
+    enabled: !!(route as any)?.group_session_id && !!user?.id,
+    queryFn: async () => {
+      const { data } = await (supabase as any)
+        .from("group_session_members").select("user_id")
+        .eq("session_id", (route as any).group_session_id).eq("user_id", user!.id)
+        .eq("status", "pending").maybeSingle();
+      return !!data;
+    },
+  });
+
+  const respondToInvite = async (accept: boolean) => {
+    const sid = (route as any)?.group_session_id;
+    if (!sid || !user) return;
+    haptics.light();
+    const { error } = await (supabase as any).rpc("respond_to_route_invite", { p_session_id: sid, p_accept: accept });
+    if (error) { notify.error(t("invite.response_failed")); return; }
+    queryClient.invalidateQueries({ queryKey: ["shared-route-invite", sid, user.id] });
+    queryClient.invalidateQueries({ queryKey: ["shared-route-membership", sid, user.id] });
+    queryClient.invalidateQueries({ queryKey: ["profile-trip-feed"] });
+    if (accept) {
+      notify.success(t("invite.accepted"));
+    } else {
+      notify.success(t("invite.declined"));
+      goBackOr(navigate, "/eksploruj");
+    }
+  };
+
+  // Host usuwa uczestnika - pomylka przy zapraszaniu (klikniecie w zla osobe z listy) musi
+  // byc odwracalna. Polityka DELETE "Session creator can remove members" juz to dopuszcza.
+  const removeParticipant = async (participantId: string) => {
+    const sid = (route as any)?.group_session_id;
+    if (!sid) return;
+    haptics.light();
+    const { error } = await (supabase as any)
+      .from("group_session_members").delete().eq("session_id", sid).eq("user_id", participantId);
+    if (error) { notify.error(t("invite.remove_failed")); return; }
+    queryClient.invalidateQueries({ queryKey: ["shared-route-participants", sid] });
+    notify.success(t("invite.removed"));
+  };
 
   // Podpis autora + oznaczeni czlonkowie (#11). Best-effort (kolumny z migracji
   // 20260705) - gdy jeszcze nie zaaplikowana, po prostu brak wartosci.
@@ -421,7 +513,7 @@ export default function SharedRoute() {
     queryFn: async () => {
       const { data } = await (supabase as any)
         .from("pins")
-        .select("id, route_id, place_name, address, category, suggested_time, images, image_url, user_photo_urls, photo_url, place_id, latitude, longitude, pin_order, day_index, description, tags, added_by")
+        .select("id, route_id, place_name, address, category, suggested_time, images, image_url, user_photo_urls, photo_url, place_id, latitude, longitude, pin_order, day_index, description, tags, added_by, is_top")
         .eq("route_id", id!)
         .order("pin_order");
       return (data ?? []) as any[];
@@ -1389,6 +1481,7 @@ export default function SharedRoute() {
                 onOpen={() => openDetail(pin)} onGoogle={() => openGooglePlace(pin)}
                 onDelete={canEdit ? () => handleDeletePin(pin) : undefined}
                 onSave={user ? () => toggleSaveBookmark(pin) : undefined} saved={isSaved(pin.place_name)}
+            isTop={!!pin.is_top} onToggleTop={isOwner ? () => void toggleTopPin(pin) : undefined}
                 note={buildNote(pin)} cornerAvatar={addedByAvatar(pin)}
               />
             ))}
@@ -1409,6 +1502,7 @@ export default function SharedRoute() {
             onOpen={() => openDetail(pin)} onGoogle={() => openGooglePlace(pin)}
             onDelete={canEdit ? () => handleDeletePin(pin) : undefined}
             onSave={user ? () => toggleSaveBookmark(pin) : undefined} saved={isSaved(pin.place_name)}
+            isTop={!!pin.is_top} onToggleTop={isOwner ? () => void toggleTopPin(pin) : undefined}
             note={buildNote(pin)} cornerAvatar={addedByAvatar(pin)}
           />
         ))}
@@ -1455,8 +1549,28 @@ export default function SharedRoute() {
   return (
     <div className="h-[100dvh] bg-background flex flex-col max-w-lg mx-auto">
 
+      {/* Czekajace zaproszenie (2026-09-08): decyzja NAD trescia, a nie w powiadomieniach -
+          zgode wydaje sie widzac, na co konkretnie. Do potwierdzenia wyjazd nie pojawia sie
+          w moich Wyjazdach, wiec ten pasek jest jedynym miejscem, gdzie mozna go przyjac. */}
+      {pendingInvite && (
+        <div className="shrink-0 bg-[#fcede3] px-5 py-3" style={{ paddingTop: "max(12px, env(safe-area-inset-top, 12px))" }}>
+          <p className="text-[15px] font-bold text-foreground">{t("invite.banner_title")}</p>
+          <p className="text-[13px] text-foreground/70 mt-0.5 leading-snug">{t("invite.banner_desc")}</p>
+          <div className="flex gap-2 mt-2.5">
+            <button onClick={() => void respondToInvite(true)}
+              className="flex-1 py-2.5 rounded-2xl bg-orange-600 text-white font-bold text-sm active:scale-[0.98] transition-transform">
+              {t("invite.accept")}
+            </button>
+            <button onClick={() => void respondToInvite(false)}
+              className="px-4 py-2.5 rounded-2xl bg-white/70 text-foreground font-bold text-sm active:scale-[0.98] transition-transform">
+              {t("invite.decline")}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Staly TopBar (naglowek nad obszarem scrolla): wstecz + autor + uczestnicy + miasto + liczba miejsc + serce */}
-      <div className="shrink-0 bg-background" style={{ paddingTop: "max(12px, env(safe-area-inset-top, 12px))" }}>
+      <div className="shrink-0 bg-background" style={pendingInvite ? { paddingTop: 12 } : { paddingTop: "max(12px, env(safe-area-inset-top, 12px))" }}>
         <div className="flex items-center gap-2 text-sm px-5 pb-2.5">
             <button onClick={() => goBackOr(navigate, "/eksploruj")} aria-label={t("back")}
               className="h-9 w-9 -ml-2 shrink-0 rounded-full flex items-center justify-center active:scale-90 transition-transform">
@@ -1907,7 +2021,12 @@ export default function SharedRoute() {
           open={inviteOpen}
           onOpenChange={setInviteOpen}
           route={{ id: route.id, city: route.city ?? null, title: route.title ?? null, group_session_id: (route as any).group_session_id ?? null }}
-          existingMemberIds={(groupParticipants as any[]).map((p) => p.id)}
+          existingMemberIds={(sessionMembers as any[]).map((p) => p.id)}
+          participants={sessionMembers as any[]}
+          onRemove={async (uid) => {
+            await removeParticipant(uid);
+            void queryClient.invalidateQueries({ queryKey: ["shared-route-members-admin", (route as any).group_session_id] });
+          }}
           onInvited={() => {
             void queryClient.invalidateQueries({ queryKey: ["shared-route-participants"] });
             void queryClient.invalidateQueries({ queryKey: ["shared-route", id] });

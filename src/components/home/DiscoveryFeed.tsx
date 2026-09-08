@@ -937,7 +937,7 @@ async function enrichRouteRows(routes: any[]): Promise<PolecaneRoute[]> {
   const membersBySession = new Map<string, string[]>();
   if (sessionIds.length) {
     const { data: members } = await (supabase as any)
-      .from("group_session_members").select("session_id, user_id").in("session_id", sessionIds);
+      .from("group_session_members").select("session_id, user_id").in("session_id", sessionIds).eq("status", "accepted");
     const memberIds = new Set<string>();
     for (const m of members ?? []) {
       if (!membersBySession.has(m.session_id)) membersBySession.set(m.session_id, []);

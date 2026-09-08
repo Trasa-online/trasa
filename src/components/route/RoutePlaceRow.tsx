@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { localizeTag } from "@/lib/routeTags";
-import { Bookmark, Check, Trash2 } from "lucide-react";
+import { Bookmark, Check, Star, Trash2 } from "lucide-react";
 import { PlacePhoto } from "@/components/PlacePhoto";
 import { avatarSrc } from "@/lib/avatar";
 
@@ -20,7 +20,7 @@ const GoogleGlyph = ({ className }: { className?: string }) => (
 // a pod spodem akcje po prawej: Google (biale kolko z cieniem) + zapis/kosz.
 // dragHandle (opcjonalny) = uchwyt przeciagania po lewej (tryb wlasciciela). note = dodatkowa
 // tresc pod wierszem (np. notka autora).
-export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onSave, saved, onDelete, dragHandle, note, cornerAvatar, visited, onToggleVisited }: {
+export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onSave, saved, onDelete, dragHandle, note, cornerAvatar, visited, onToggleVisited, isTop, onToggleTop }: {
   pin: any;
   index: number;
   categoryLabel: ReactNode;
@@ -37,6 +37,10 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
   // Oba propy sa opcjonalne, wiec ekrany, ktore ich nie podaja (wyjazdy), wygladaja jak dotad.
   visited?: boolean;
   onToggleVisited?: () => void;
+  // "Topka" wyjazdu (2026-09-08): autor wyroznia 1-3 miejsca warte polecenia.
+  // onToggleTop podaje tylko autor - dla ogladajacych gwiazdka jest sama informacja.
+  isTop?: boolean;
+  onToggleTop?: () => void;
 }) {
   const { t } = useTranslation("route");
   return (
@@ -63,7 +67,12 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
           {/* Nazwa + badge kategorii (peachy pill po prawej) */}
           <div className="flex items-start justify-between gap-2">
             <button onClick={onOpen} className="text-left min-w-0 flex-1">
-              <p className="text-[16px] font-bold leading-snug line-clamp-2">{pin.place_name}</p>
+              <p className="text-[16px] font-bold leading-snug line-clamp-2">
+                {/* Gwiazdka PRZED nazwa, w jednym ciagu tekstu - inaczej przy nazwie lamiacej
+                    sie na dwie linie odjezdzalaby od niej i wygladala jak osobna kontrolka. */}
+                {isTop && <Star className="inline-block h-4 w-4 -mt-0.5 mr-1 text-orange-600 fill-orange-600" aria-label={t("row.top_place")} />}
+                {pin.place_name}
+              </p>
             </button>
             <span className="shrink-0 mt-0.5 inline-flex items-center px-2.5 py-1 rounded-full bg-[#fcede3] text-[12px] font-semibold text-foreground">{categoryLabel}</span>
           </div>
@@ -93,6 +102,16 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
         {/* Zapis miejsca dostepny ZAWSZE gdy podany onSave - takze dla wlasciciela obok kosza
             (wczesniej kosz go wypieral, wiec we wlasnym wyjezdzie nie dalo sie zapisac miejsca
             do swoich list - zgloszenie Nat 2026-08-29). */}
+        {onToggleTop && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onToggleTop(); }}
+            aria-label={isTop ? t("row.unset_top") : t("row.set_top")}
+            aria-pressed={!!isTop}
+            className="h-9 w-9 rounded-full flex items-center justify-center active:scale-90 transition-transform"
+          >
+            <Star className={`h-5 w-5 ${isTop ? "text-orange-600 fill-orange-600" : "text-foreground/70"}`} strokeWidth={2} />
+          </button>
+        )}
         {onToggleVisited && (
           <button
             onClick={(e) => { e.stopPropagation(); onToggleVisited(); }}

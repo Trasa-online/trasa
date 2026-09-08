@@ -7,7 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useFriends } from "@/hooks/useFriends";
 import { useFollowList } from "@/hooks/useFollow";
 import { avatarSrc } from "@/lib/avatar";
-import { Search, Check, X, Loader2, UserPlus } from "lucide-react";
+import { Search, Check, X, Loader2, UserPlus, Clock, UserMinus } from "lucide-react";
 import { toast } from "sonner";
 import { inviteUsersToRoute, type InviteRoute } from "@/lib/groupInvite";
 import { cn } from "@/lib/utils";
@@ -16,12 +16,16 @@ interface Profile { id: string; username: string | null; first_name: string | nu
 
 // Reużywalny sheet t("invite.title"): szukanie po username + multi-select + zaproszenie.
 // Dziala na istniejacej trasie (podpina do sesji grupowej jesli trzeba) - patrz inviteUsersToRoute.
-export default function InviteFriendsSheet({ open, onOpenChange, route, onInvited, existingMemberIds = [] }: {
+export default function InviteFriendsSheet({ open, onOpenChange, route, onInvited, existingMemberIds = [], participants = [], onRemove }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   route: InviteRoute;
   onInvited?: (sessionId: string | undefined, invited: { id: string; avatar_url: string | null }[]) => void;
   existingMemberIds?: string[];
+  // Sklad wyjazdu widziany przez HOSTA (2026-09-08): razem z osobami, ktore jeszcze nie
+  // potwierdzily. Bez tego pomylka przy zapraszaniu byla nieodwracalna.
+  participants?: { id: string; username: string | null; avatar_url: string | null; status: string }[];
+  onRemove?: (userId: string) => void | Promise<void>;
 }) {
   const { t } = useTranslation("social");
   const { user } = useAuth();
@@ -87,15 +91,34 @@ export default function InviteFriendsSheet({ open, onOpenChange, route, onInvite
   const searching = q.trim().length >= 2;
   const displayed = searching ? results : myPeople;   // puste pole -> znajomi/obserwowani
 
-  const confirm = async () => {
+  // Wyslanie z 5-sekundowym oknem na "Cofnij" (wzorzec z komunikatorow, prosba Nat 2026-09-08).
+  //
+  // Dlaczego opoznienie, a nie cofanie po fakcie: zaproszenie wysyla powiadomienie i push.
+  // Wycofanie PO wyslaniu nie odwoła tego, co druga osoba juz zobaczyla na ekranie blokady -
+  // a najczestsza pomylka (tapniecie w sasiednia osobe na liscie) wychodzi w pierwszych
+  // sekundach. Zamykamy arkusz od razu, zeby czekanie nie blokowalo ekranu.
+  const confirm = () => {
     if (!user || !selectedList.length || sending) return;
-    setSending(true);
-    const res = await inviteUsersToRoute(route, selectedList.map((p) => p.id), user.id);
-    setSending(false);
-    if (!res.ok) { toast.error(t("invite.failed")); return; }
-    toast.success(selectedList.length === 1 ? "Zaproszono" : t("invite.sent", { count: selectedList.length }));
-    onInvited?.(res.sessionId, selectedList.map((p) => ({ id: p.id, avatar_url: p.avatar_url })));
+    const people = selectedList;
+    const ids = people.map((p) => p.id);
     onOpenChange(false);
+    setSelected({});
+
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      if (cancelled) return;
+      const res = await inviteUsersToRoute(route, ids, user.id);
+      if (!res.ok) { toast.error(t("invite.failed")); return; }
+      onInvited?.(res.sessionId, people.map((p) => ({ id: p.id, avatar_url: p.avatar_url })));
+    }, 5000);
+
+    toast(t("invite.sending", { count: people.length }), {
+      duration: 5000,
+      action: {
+        label: t("invite.undo"),
+        onClick: () => { cancelled = true; clearTimeout(timer); toast(t("invite.undone")); },
+      },
+    });
   };
 
   return (
@@ -124,6 +147,35 @@ export default function InviteFriendsSheet({ open, onOpenChange, route, onInvite
         </div>
 
         <div className="flex-1 min-h-0 overflow-y-auto px-5 py-3">
+          {/* Sklad wyjazdu - z mozliwoscia usuniecia. "Czeka" = osoba jeszcze nie potwierdzila
+              zaproszenia i do tego czasu NIE ma wyjazdu u siebie w Wyjazdach. */}
+          {onRemove && participants.length > 0 && !searching && (
+            <div className="mb-4">
+              <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground px-2 pb-1">{t("invite.current")}</p>
+              <div className="flex flex-col gap-1">
+                {participants.map((p) => (
+                  <div key={p.id} className="flex items-center gap-3 px-2 py-2 rounded-2xl">
+                    <img src={avatarSrc(p.avatar_url)} alt="" className="h-10 w-10 rounded-full object-cover shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold truncate">@{p.username ?? "..."}</p>
+                      {p.status === "pending" && (
+                        <p className="text-xs text-muted-foreground truncate inline-flex items-center gap-1">
+                          <Clock className="h-3 w-3" /> {t("invite.awaiting")}
+                        </p>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => void onRemove(p.id)}
+                      aria-label={t("invite.remove_person")}
+                      className="shrink-0 h-9 w-9 rounded-full flex items-center justify-center text-destructive active:scale-90 transition-transform"
+                    >
+                      <UserMinus className="h-[18px] w-[18px]" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
           {displayed.length === 0 && !loading ? (
             <p className="text-sm text-muted-foreground text-center py-8">
               {searching ? t("invite.no_results") : t("invite.empty")}
@@ -131,7 +183,7 @@ export default function InviteFriendsSheet({ open, onOpenChange, route, onInvite
           ) : (
             <div className="flex flex-col gap-1">
               {!searching && displayed.length > 0 && (
-                <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground px-2 pb-1">Obserwowani i znajomi</p>
+                <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground px-2 pb-1">{t("invite.following_friends")}</p>
               )}
               {displayed.map((p) => {
                 const already = existing.has(p.id);
@@ -145,7 +197,7 @@ export default function InviteFriendsSheet({ open, onOpenChange, route, onInvite
                     </div>
                     {already ? (
                       <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-secondary px-2.5 py-1 text-[11px] font-bold text-muted-foreground">
-                        <Check className="h-3.5 w-3.5" strokeWidth={3} /> Dodano
+                        <Check className="h-3.5 w-3.5" strokeWidth={3} /> {t("invite.added")}
                       </span>
                     ) : (
                       <span className={cn("h-6 w-6 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors", on ? "bg-orange-600 border-orange-600" : "border-muted-foreground/30")}>

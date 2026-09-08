@@ -227,5 +227,16 @@
   },
   "saved_trip": "Saved",
   "toast_unsaved": "Removed from saved",
-  "go_to_saved": "View"
+  "go_to_saved": "View",
+  "invite": {
+    "accepted": "You joined the trip",
+    "declined": "Invite declined",
+    "response_failed": "Could not save your answer",
+    "removed": "Removed from trip",
+    "remove_failed": "Could not remove that person",
+    "banner_title": "Invitation to a shared trip",
+    "banner_desc": "Join to add places, notes and photos with everyone else.",
+    "accept": "Join",
+    "decline": "Not now"
+  }
 }

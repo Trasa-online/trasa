@@ -64,7 +64,9 @@ const JournalTab = ({ userId, city: cityFilter, draftsOnly = false }: JournalTab
       const { data: memberRows } = await (supabase as any)
         .from("group_session_members")
         .select("session_id")
-        .eq("user_id", userId);
+        .eq("user_id", userId)
+        // Tylko potwierdzone: zaproszenie bez zgody nie moze samo wskoczyc do Wyjazdow.
+        .eq("status", "accepted");
 
       let groupRoutes: any[] = [];
       if (memberRows?.length) {
@@ -133,7 +135,7 @@ const JournalTab = ({ userId, city: cityFilter, draftsOnly = false }: JournalTab
     queryFn: async () => {
       if (!groupIds.length) return {} as Record<string, { avatar_url: string | null; name: string }[]>;
       const { data: members } = await (supabase as any)
-        .from("group_session_members").select("session_id, user_id").in("session_id", groupIds);
+        .from("group_session_members").select("session_id, user_id").in("session_id", groupIds).eq("status", "accepted");
       if (!members?.length) return {};
       const uids = [...new Set(members.map((m: any) => m.user_id))];
       const { data: profiles } = await (supabase as any)

@@ -135,6 +135,45 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ results }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    // Miejsca WOKOL punktu - "dodaj miejsce z mapy" (2026-09-08). User przesuwa mape, a my
+    // pokazujemy, co jest pod pinezka. Wpisywanie nazwy odpada, gdy user wie GDZIE cos bylo,
+    // ale nie pamieta JAK sie nazywalo.
+    if (body.action === "nearby") {
+      const { latitude, longitude } = body;
+      if (typeof latitude !== "number" || typeof longitude !== "number") {
+        return new Response(JSON.stringify({ results: [] }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      // Klucz cache zaokraglony do ~11 m: przesuwanie mapy o metr nie moze generowac nowego
+      // platnego zapytania (ta sama zasada, co w proxy statycznych map).
+      const nkey = `nearby|${latitude.toFixed(4)}|${longitude.toFixed(4)}`;
+      const nhit = textsearchCache.get(nkey);
+      if (nhit && Date.now() - nhit.ts < CITYSEARCH_TTL_MS) {
+        return new Response(JSON.stringify({ results: nhit.results }), { headers: { ...corsHeaders, "Content-Type": "application/json", "X-Cache": "HIT" } });
+      }
+      if (!(await consumeGoogleQuota(sb, 1))) {
+        return new Response(JSON.stringify({ results: [], quota_exceeded: true }), { headers: { ...corsHeaders, "Content-Type": "application/json", "X-Quota": "EXCEEDED" } });
+      }
+      const res = await fetch(`${BASE}/place/nearbysearch/json?location=${latitude},${longitude}&radius=150&key=${apiKey}&language=pl`, { headers: { Referer: REFERER } });
+      const data = await res.json();
+      const results = ((data.results ?? []) as any[])
+        // Bez wyników "administracyjnych" (dzielnice, drogi, kody pocztowe) - to nie sa miejsca,
+        // ktore ktos dodaje do wyjazdu.
+        .filter((r: any) => !(r.types ?? []).some((tp: string) => ["locality", "political", "route", "postal_code", "administrative_area_level_1", "administrative_area_level_2"].includes(tp)))
+        .slice(0, 12)
+        .map((r: any) => ({
+          name: r.name ?? "",
+          address: r.vicinity ?? r.formatted_address ?? "",
+          place_id: r.place_id ?? null,
+          types: r.types ?? [],
+          rating: r.rating ?? null,
+          latitude: r.geometry?.location?.lat ?? null,
+          longitude: r.geometry?.location?.lng ?? null,
+          photo_reference: r.photos?.[0]?.photo_reference ?? null,
+        }));
+      textsearchCache.set(nkey, { results, ts: Date.now() });
+      return new Response(JSON.stringify({ results }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     if (body.action === "textsearch") {
       const cacheHit = textsearchCache.get(body.query);
       if (cacheHit && Date.now() - cacheHit.ts < TEXTSEARCH_TTL_MS) {

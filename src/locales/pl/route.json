@@ -155,12 +155,25 @@
     "visited": "Odwiedzone",
     "not_visited": "Byłem tu",
     "mark_visited": "Oznacz jako odwiedzone",
-    "mark_not_visited": "Usuń oznaczenie odwiedzenia"
+    "mark_not_visited": "Usuń oznaczenie odwiedzenia",
+    "top_place": "Miejsce z topki",
+    "set_top": "Dodaj do topki",
+    "unset_top": "Usuń z topki",
+    "top_limit_one": "Możesz wyróżnić maksymalnie {{count}} miejsce z tego wyjazdu",
+    "top_limit_few": "Możesz wyróżnić maksymalnie {{count}} miejsca z tego wyjazdu",
+    "top_limit_many": "Możesz wyróżnić maksymalnie {{count}} miejsc z tego wyjazdu"
   },
   "note": {
     "placeholder": "Dodaj notkę o tym miejscu...",
     "edit": "Edytuj notkę",
     "add": "Dodaj notkę"
   },
-  "day_label": "{{city}} - Dzień {{day}}"
+  "day_label": "{{city}} - Dzień {{day}}",
+  "map_picker": {
+    "title": "Wybierz z mapy",
+    "hint": "Przesuń mapę, żeby wskazać miejsce",
+    "nearby": "W tym miejscu",
+    "empty": "Nic tu nie znaleźliśmy. Przesuń mapę kawałek dalej.",
+    "locate": "Moja lokalizacja"
+  }
 }

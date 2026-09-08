@@ -151,12 +151,24 @@
     "visited": "Visited",
     "not_visited": "Been here",
     "mark_visited": "Mark as visited",
-    "mark_not_visited": "Remove visited mark"
+    "mark_not_visited": "Remove visited mark",
+    "top_place": "Top pick",
+    "set_top": "Add to top picks",
+    "unset_top": "Remove from top picks",
+    "top_limit_one": "You can highlight up to {{count}} place from this trip",
+    "top_limit_other": "You can highlight up to {{count}} places from this trip"
   },
   "note": {
     "placeholder": "Add a note about this place...",
     "edit": "Edit note",
     "add": "Add note"
   },
-  "day_label": "{{city}} - Day {{day}}"
+  "day_label": "{{city}} - Day {{day}}",
+  "map_picker": {
+    "title": "Pick from map",
+    "hint": "Move the map to point at a place",
+    "nearby": "At this spot",
+    "empty": "Nothing found here. Move the map a little.",
+    "locate": "My location"
+  }
 }

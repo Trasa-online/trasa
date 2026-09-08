@@ -518,7 +518,8 @@ const ReviewSummary = () => {
       const { data: members } = await (supabase as any)
         .from("group_session_members")
         .select("user_id")
-        .eq("session_id", route.group_session_id);
+        .eq("session_id", route.group_session_id)
+        .eq("status", "accepted");
       if (!members?.length) return [];
       const userIds = members.map((m: any) => m.user_id);
       const { data: profiles } = await supabase
@@ -564,7 +565,7 @@ const ReviewSummary = () => {
     enabled: !!route?.group_session_id && !!user && route?.user_id !== user?.id,
     queryFn: async () => {
       const { data } = await (supabase as any).from("group_session_members")
-        .select("user_id").eq("session_id", route!.group_session_id).eq("user_id", user!.id).maybeSingle();
+        .select("user_id").eq("session_id", route!.group_session_id).eq("user_id", user!.id).eq("status", "accepted").maybeSingle();
       return !!data;
     },
   });

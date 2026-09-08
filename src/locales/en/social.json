@@ -13,7 +13,16 @@
     "cta": "Invite",
     "sent_one": "{{count}} person invited",
     "sent_other": "{{count}} people invited",
-    "cta_count": "Invite ({{count}})"
+    "cta_count": "Invite ({{count}})",
+    "sending_one": "Sending invite...",
+    "sending_other": "Sending {{count}} invites...",
+    "undo": "Undo",
+    "undone": "Invite cancelled",
+    "current": "On this trip",
+    "awaiting": "Awaiting confirmation",
+    "remove_person": "Remove from trip",
+    "following_friends": "Following and friends",
+    "added": "Added"
   },
   "friend": {
     "error_generic": "Something went wrong",

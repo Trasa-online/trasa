@@ -369,7 +369,7 @@ const TravelerProfile = () => {
       // jestem zaproszony (member, is_shared=true). Koniec osobnego widoku /utworz/robocze (IA 2026-08-22).
       const [ownRes, memberRes] = await Promise.all([
         (supabase as any).from("routes").select(sel).eq("user_id", user!.id).order("created_at", { ascending: false }),
-        (supabase as any).from("group_session_members").select("session_id").eq("user_id", user!.id),
+        (supabase as any).from("group_session_members").select("session_id").eq("user_id", user!.id).eq("status", "accepted"),
       ]);
       const sessionIds = (memberRes.data ?? []).map((m: any) => m.session_id);
       let groupRows: any[] = [];

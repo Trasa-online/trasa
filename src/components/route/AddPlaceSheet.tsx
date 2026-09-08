@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
-import { X, Plus, Check, ChevronRight, ChevronDown, Search, Loader2 } from "lucide-react";
+import { X, Plus, Check, ChevronRight, ChevronDown, Search, Loader2, Map as MapIcon } from "lucide-react";
 import { toast } from "sonner";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useAuth } from "@/hooks/useAuth";
@@ -13,6 +13,7 @@ import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import SavePlaceSheet, { type SavePlaceInput } from "@/components/plan-wizard/SavePlaceSheet";
 import { GoogleGlyph } from "@/components/icons/GoogleGlyph";
 import { openExternal } from "@/lib/openExternal";
+import PlaceMapPicker from "@/components/route/PlaceMapPicker";
 
 const NBSP = " ";
 const SCOPE_KM = 20; // wyniki wyszukiwarki tylko w obrebie ~20km od srodka trasy/miasta
@@ -57,6 +58,7 @@ export default function AddPlaceSheet({ open, onClose, city, existingPlaces, onA
   const [adding, setAdding] = useState(false);
   const [detailPlace, setDetailPlace] = useState<any | null>(null);   // wizytowka miejsca (PlaceSwiperDetail)
   const [savePlace, setSavePlace] = useState<SavePlaceInput | null>(null); // zapis miejsca do wlasnych list
+  const [mapOpen, setMapOpen] = useState(false);   // wybor miejsca Z MAPY (2026-09-08)
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Srodek do sortowania "najblizej najpierw": centroida miejsc JUZ w trasie, a gdy brak (nowa
@@ -267,7 +269,8 @@ export default function AddPlaceSheet({ open, onClose, city, existingPlaces, onA
 
         {/* Wyszukiwarka */}
         <div className="px-5 pt-1 pb-2 shrink-0">
-          <div className="relative">
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1 min-w-0">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <input ref={inputRef} value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t("add_place.placeholder")}
               className="w-full h-12 rounded-xl bg-secondary/60 border border-border/60 pl-10 pr-11 text-base text-foreground placeholder:text-muted-foreground/70 outline-none focus:ring-2 focus:ring-orange-500/30" />
@@ -276,6 +279,17 @@ export default function AddPlaceSheet({ open, onClose, city, existingPlaces, onA
                 <X className="h-3.5 w-3.5 text-muted-foreground" />
               </button>
             )}
+            </div>
+            {/* Wybor z MAPY obok wyszukiwarki (2026-09-08). Dwa sposoby na to samo, bo
+                odpowiadaja na dwa rozne stany pamieci: wyszukiwarka gdy pamietasz NAZWE,
+                mapa gdy pamietasz tylko MIEJSCE. */}
+            <button
+              onClick={() => { haptics.light(); setMapOpen(true); }}
+              aria-label={t("map_picker.title")}
+              className="h-12 w-12 shrink-0 rounded-xl bg-secondary/60 border border-border/60 flex items-center justify-center active:scale-90 transition-transform"
+            >
+              <MapIcon className="h-5 w-5 text-foreground" />
+            </button>
           </div>
         </div>
 
@@ -371,6 +385,10 @@ export default function AddPlaceSheet({ open, onClose, city, existingPlaces, onA
         </div>
       </SheetContent>
     </Sheet>
+
+    {/* Miejsce wybrane z mapy wpada w te sama sciezke, co wynik wyszukiwarki (pickGoogle),
+        wiec od razu jest zaznaczone i odblokowuje "Dodaj". */}
+    <PlaceMapPicker open={mapOpen} onClose={() => setMapOpen(false)} city={city} onPick={(p) => pickGoogle(p)} />
     {/* Wizytowka miejsca (klik w wiersz). Vaul-drawer nakłada się na arkusz dodawania. */}
     <PlaceSwiperDetail
       open={!!detailPlace} onOpenChange={(o) => { if (!o) setDetailPlace(null); }} place={detailPlace}
