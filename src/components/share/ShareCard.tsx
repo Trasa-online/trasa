@@ -9,6 +9,7 @@ import { thumbUrl } from "@/lib/imageUrl";
 import { categoryIconSrc } from "@/lib/placeCategoryIcon";
 import { localizeTag, verdictOf } from "@/lib/routeTags";
 import { subcategoryLabelLocalized } from "@/lib/categories";
+import TrasaBigCard from "@/components/home/TrasaBigCard";
 import { buildShareTargets, ShareTargetButton } from "@/components/share/shareTargets";
 
 // UDOSTEPNIANIE LISTY / WYJAZDU - arkusz z podgladem i kanalami (wzor: Pinterest, prosba Nat
@@ -65,7 +66,7 @@ function Footer({ avatars, label, sub, tone }: {
 // user zobaczy po rozwinieciu, bez drugiego zestawu rozmiarow do utrzymania.
 type StripItem = { name: string; photo?: string | null; icon: string; verdict?: string | null; category?: string | null };
 
-function ShareSheet({ children, onClose, onShare, shareUrl, shareTitle, strip, stripLabel }: {
+function ShareSheet({ children, onClose, onShare, shareUrl, shareTitle, strip, stripLabel, plainPreview }: {
   children: React.ReactNode;
   onClose: () => void;
   onShare?: () => void;
@@ -74,6 +75,8 @@ function ShareSheet({ children, onClose, onShare, shareUrl, shareTitle, strip, s
   /** Miejsca pokazywane pod podgladem (na razie tylko wyjazd - listy sa w projektowaniu). */
   strip?: StripItem[];
   stripLabel?: string;
+  /** Podglad renderowany 1:1 (karta z eksploracji), a nie jako pomniejszony plakat 9:16. */
+  plainPreview?: boolean;
 }) {
   const { t } = useTranslation("sharing");
   const slotRef = useRef<HTMLDivElement>(null);
@@ -128,8 +131,13 @@ function ShareSheet({ children, onClose, onShare, shareUrl, shareTitle, strip, s
         <p className="flex-1 text-center font-brand text-[26px] leading-none text-spontaway-orange pr-9">{t("share.share")}</p>
       </div>
 
-      <div ref={slotRef} className="flex-1 min-h-[280px] flex items-center justify-center px-8 py-3">
-        {scale > 0 && (
+      <div ref={slotRef} className="flex-1 min-h-[280px] flex items-center justify-center px-6 py-3">
+        {/* Podglad to TA SAMA karta, co w eksploracji (prosba Nat 2026-09-08) - user ma zobaczyc
+            dokladnie to, co zobaczy odbiorca, a nie osobny plakat. Dlatego renderujemy ja
+            w naturalnym rozmiarze, bez pomniejszania calego ekranu. */}
+        {plainPreview ? (
+          <div className="w-full max-w-[340px] pb-3">{children}</div>
+        ) : scale > 0 && (
           <button onClick={() => setFull(true)} aria-label={t("share.open_fullscreen")}
             className="relative rounded-3xl overflow-hidden shadow-xl ring-1 ring-black/5 active:scale-[0.98] transition-transform"
             style={{ width: window.innerWidth * scale, height: window.innerHeight * scale }}>
@@ -243,79 +251,56 @@ export function ShareCardList({ title, city, items, author, avatar, onClose, onS
 }
 
 /** Karta WYJAZDU: okladka + ponumerowane przystanki + uczestnicy. */
-export function ShareCardTrip({ title, city, dateLabel, pins, author, avatars, cover, onClose, onShare, shareUrl }: {
+export function ShareCardTrip({ title, city, pins, cover, onClose, onShare, shareUrl, routeId, authorName, authorAvatar, participants, tags, mapPins }: {
   title: string;
   city?: string | null;
-  dateLabel?: string | null;
   pins: any[];
-  author: string;
-  avatars: (string | null)[];
   cover?: string | null;
   onClose: () => void;
   onShare?: () => void;
   shareUrl?: string;
+  /** Dane, zeby podglad pokazywal DOKLADNIE te karte, ktora widac w eksploracji. */
+  routeId: string;
+  authorName?: string | null;
+  authorAvatar?: string | null;
+  participants?: (string | null)[];
+  tags?: string[];
+  mapPins?: { latitude: number; longitude: number }[];
 }) {
   const { t } = useTranslation("sharing");
-  const stops = pins.slice(0, 4);
-  const rest = Math.max(0, pins.length - stops.length);
-  const word = pins.length === 1 ? "miejsce" : pins.length < 5 ? "miejsca" : "miejsc";
-  const coverFull = resolveStored(cover ?? null);
-  const coverUrl = thumbUrl(coverFull, 360);
-  // Pasek miejsc pod podgladem: pierwsze przystanki z werdyktem i kategoria. Werdykt bierzemy
-  // przez localizeTag, wiec stare polskie etykiety z bazy tez sie tlumacza.
+  // Pasek miejsc pod podgladem: pierwsze przystanki z werdyktem i kategoria.
   const strip = pins.slice(0, 8).map((p: any) => ({
     name: p.place_name ?? "",
     photo: thumbUrl(resolveStored(p.photo_url ?? p.image_url ?? (Array.isArray(p.images) ? p.images[0] : null)), 160),
     icon: categoryIconSrc(p.category ?? null),
-    verdict: (Array.isArray(p.tags) ? p.tags : []).map((tg: string) => verdictOf(tg)).find(Boolean)
+    verdict: (Array.isArray(p.tags) ? p.tags : []).find((tg: string) => verdictOf(tg))
       ? localizeTag((Array.isArray(p.tags) ? p.tags : []).find((tg: string) => verdictOf(tg))!)
       : null,
-    // Etykieta kategorii, nie surowa wartosc z bazy - inaczej na karcie widac
-    // "clothing_store" zamiast "Sklep" (zlapane na zrzucie).
-    category: p.category ? subcategoryLabelLocalized(p.category) : null,
+    // "other" to wartosc techniczna z bazy, nie etykieta - bez tego na karcie widac
+    // dosłownie "other" (zlapane na zrzucie).
+    category: p.category && p.category !== "other" ? subcategoryLabelLocalized(p.category) : null,
   }));
 
   return (
+    // Podglad = karta z EKSPLORACJI, nie osobny plakat (prosba Nat 2026-09-08). Autor ma
+    // zobaczyc dokladnie to, co zobaczy odbiorca - okladka w calosci, awatary, tagi i licznik.
     <ShareSheet onClose={onClose} onShare={onShare} shareUrl={shareUrl} shareTitle={title}
-      strip={strip} stripLabel={t("share.first_day")}>
-          <div className="relative h-full w-full overflow-hidden bg-[#FEFEFE]">
-            {/* Okladka. Bez zdjecia (wyjazd roboczy) - peachowe tlo ze znakiem, jak karta na profilu. */}
-            <div className="relative h-[52%] bg-[#fcede3]">
-              {coverUrl ? (
-                <img src={coverUrl} alt="" className="absolute inset-0 h-full w-full object-cover"
-                     onError={(e) => { const img = e.currentTarget; if (img.src !== coverFull!) img.src = coverFull!; }} />
-              ) : (
-                <span aria-hidden className="absolute left-1/2 top-1/2 h-16 w-16 -translate-x-1/2 -translate-y-1/2 block" style={{
-                  backgroundColor: "#EF9D78",
-                  WebkitMaskImage: "url(/Ikona_Trasy.svg)", maskImage: "url(/Ikona_Trasy.svg)",
-                  WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat",
-                  WebkitMaskSize: "contain", maskSize: "contain",
-                  WebkitMaskPosition: "center", maskPosition: "center",
-                }} />
-              )}
-              <div className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-black/70 to-transparent" />
-              <div className="absolute left-5 right-5 bottom-4">
-                <p className="text-[12px] font-bold tracking-wide text-white/90">
-                  {[t("card.trip_label"), dateLabel?.toUpperCase()].filter(Boolean).join(" · ")}
-                </p>
-                <p className="text-[34px] font-black leading-[1.06] text-white mt-1.5 line-clamp-2">{title}</p>
-                <p className="text-[15px] font-semibold text-white/90 mt-1.5">
-                  {[city, `${pins.length} ${word}`].filter(Boolean).join(" · ")}
-                </p>
-              </div>
-            </div>
-            {/* Ponumerowane przystanki = dowod, ze to TRASA, a nie luzny zbior. */}
-            <div className="px-6 pt-6 space-y-4">
-              {stops.map((p, i) => (
-                <div key={p.id ?? i} className="flex items-center gap-2.5">
-                  <span className="h-8 w-8 shrink-0 rounded-full bg-primary text-white text-[13px] font-bold flex items-center justify-center">{i + 1}</span>
-                  <p className="text-[16px] font-semibold text-foreground truncate">{p.place_name}</p>
-                </div>
-              ))}
-              {rest > 0 && <p className="text-[13px] text-muted-foreground pl-[42px]">{t("share.and_more", { count: rest })}</p>}
-            </div>
-            <Footer avatars={avatars.length ? avatars : [null]} label={author} tone="peach" />
-          </div>
+      strip={strip} stripLabel={t("share.first_day")} plainPreview>
+      <TrasaBigCard
+        id={routeId}
+        photo={resolveStored(cover ?? null) ?? null}
+        city={city}
+        placeCount={pins.length}
+        title={title}
+        tags={tags ?? []}
+        pins={mapPins ?? []}
+        onOpen={() => {}}
+        authorName={authorName}
+        authorAvatar={authorAvatar}
+        participants={participants ?? []}
+        snap={false}
+        heightClass="h-[520px]"
+      />
     </ShareSheet>
   );
 }

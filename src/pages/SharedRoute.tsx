@@ -73,6 +73,7 @@ import { resolveStored } from "@/components/PlacePhoto";
 import type { MockPlace } from "@/components/plan-wizard/PlaceSwiper";
 import { CategoryIcon } from "@/components/CategoryIcon";
 import PreReleaseBanner from "@/components/share/PreReleaseBanner";
+import TrasaBigCard from "@/components/home/TrasaBigCard";
 import { renderForUpload, uploadPair, uploadWithThumb } from "@/lib/imageThumbs";
 import { TOP_LIMIT } from "@/lib/topPlaces";
 import { isWeb } from "@/lib/platform";
@@ -1224,6 +1225,13 @@ export default function SharedRoute() {
         : format(tripStart, "d MMMM yyyy", { locale: dateLocale() }))
     : "";
   const cityLabel = route.city || t("trip_default");
+  // Karta z eksploracji potrzebuje tagow (kategorie miejsc) i wspolrzednych (mini mapka).
+  // Liczymy raz - uzywa ich podglad udostepniania I zapowiedz dla odbiorcy linku.
+  const cardTags = [...new Set((pins as any[]).map((p) => p.category).filter(Boolean))]
+    .slice(0, 3).map((c) => categoryLabel(c as string));
+  const cardMapPins = (pins as any[])
+    .filter((p) => p.latitude != null && p.longitude != null)
+    .map((p) => ({ latitude: p.latitude, longitude: p.longitude }));
   // Tryb anonimowy: autor ukryty (bez profilu/awatara/lokalsa).
   const isAnon = shareMeta?.share_anonymous === true;
   // "lokals poleca!" - autor pochodzi z miasta tej trasy.
@@ -1576,36 +1584,30 @@ export default function SharedRoute() {
       <div className="min-h-[100dvh] bg-spontaway-yellow flex flex-col max-w-lg mx-auto">
         <PreReleaseBanner />
         <div className="flex-1 flex flex-col items-center px-5 pt-6 pb-8">
-          {/* Karta wyjazdu - ten sam kadr 9:16 co na karcie udostepniania. */}
-          <div className="relative w-full max-w-[330px] aspect-[9/16] overflow-hidden rounded-[28px] bg-[#fcede3] shadow-[0_4px_14px_rgba(0,0,0,0.15)]">
-            {cover ? (
-              <img src={thumbUrl(cover, 660) ?? cover} alt="" className="absolute inset-0 h-full w-full object-cover" />
-            ) : (
-              <span aria-hidden className="absolute left-1/2 top-1/2 h-16 w-16 -translate-x-1/2 -translate-y-1/2 block" style={{
-                backgroundColor: "#EF9D78",
-                WebkitMaskImage: "url(/Ikona_Trasy.svg)", maskImage: "url(/Ikona_Trasy.svg)",
-                WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat",
-                WebkitMaskSize: "contain", maskSize: "contain",
-                WebkitMaskPosition: "center", maskPosition: "center",
-              }} />
-            )}
-            <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-black/75 to-transparent" />
-            <div className="absolute inset-x-4 bottom-4">
-              <div className="flex items-center gap-2 text-[12px] font-semibold text-white/90">
-                {!isAnon && <img src={avatarSrc(author?.avatar_url)} alt="" className="h-6 w-6 rounded-full object-cover bg-orange-100" />}
-                <span className="truncate">{author?.username ? `@${author.username}` : authorName}</span>
-                <span aria-hidden>·</span>
-                <span className="truncate">{cityLabel}</span>
-                <span aria-hidden>·</span>
-                <span className="shrink-0">{`${(pins as any[]).length} ${placeWord((pins as any[]).length)}`}</span>
-              </div>
-              <p className="mt-1.5 text-[26px] font-black leading-tight text-white line-clamp-2">{route.title || cityLabel}</p>
-            </div>
+          {/* DOKLADNIE ta sama karta, co w eksploracji i w podgladzie udostepniania - autor
+              wysylajac widzi to, co zobaczy odbiorca. Wczesniej byla tu osobna, uproszczona
+              wersja: inna okladka, bez tagow i awatarow (prosba Nat 2026-09-08). */}
+          <div className="w-full max-w-[340px]">
+            <TrasaBigCard
+              id={route.id}
+              photo={cover}
+              city={route.city}
+              placeCount={(pins as any[]).length}
+              title={route.title || cityLabel}
+              tags={cardTags}
+              pins={cardMapPins}
+              onOpen={() => setPreviewOpened(true)}
+              authorName={author?.username ? `@${author.username}` : authorName}
+              authorAvatar={(author as any)?.avatar_url ?? null}
+              participants={(groupParticipants as any[]).map((p) => p.avatar_url ?? null)}
+              snap={false}
+              heightClass="h-[520px]"
+            />
           </div>
 
           {/* Pierwsze przystanki - to one mowia, co jest w srodku. */}
           {strip.length > 0 && (
-            <div className="mt-6 w-full">
+            <div className="mt-7 w-full">
               <div className="flex items-center gap-2 pb-2">
                 <span className="h-4 w-[3px] rounded-full bg-spontaway-orange" />
                 <p className="font-brand text-[15px] leading-none text-spontaway-orange">{t("share.first_day")}</p>
@@ -1624,7 +1626,9 @@ export default function SharedRoute() {
                           const v = (Array.isArray(pin.tags) ? pin.tags : []).find((tg: string) => verdictOf(tg));
                           return v ? <span className="truncate rounded-full bg-spontaway-yellow px-2.5 py-1 text-[11px] font-medium text-spontaway-brown">{localizeTag(v)}</span> : <span />;
                         })()}
-                        <span className="shrink-0 text-[11px] font-medium text-[#666]">{categoryLabel(pin.category || "other")}</span>
+                        {pin.category && pin.category !== "other" && (
+                          <span className="shrink-0 text-[11px] font-medium text-[#666]">{categoryLabel(pin.category)}</span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -2097,12 +2101,15 @@ export default function SharedRoute() {
 
       {shareCardOpen && (
         <ShareCardTrip
+          routeId={route.id}
           title={route.title || cityLabel}
           city={route.city}
-          dateLabel={dateLabel || null}
           pins={pins as any[]}
-          author={author?.username ? `@${author.username}` : "spontaway"}
-          avatars={[(author as any)?.avatar_url ?? null, ...(groupParticipants as any[]).map((p) => p.avatar_url ?? null)]}
+          tags={cardTags}
+          mapPins={cardMapPins}
+          authorName={author?.username ? `@${author.username}` : authorName}
+          authorAvatar={(author as any)?.avatar_url ?? null}
+          participants={(groupParticipants as any[]).map((p) => p.avatar_url ?? null)}
           cover={(route as any).list_cover_url ?? heroPhoto}
           onClose={() => setShareCardOpen(false)}
           onShare={handleShareLink}
