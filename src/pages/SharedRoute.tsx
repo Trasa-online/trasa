@@ -184,8 +184,9 @@ export default function SharedRoute() {
   // -> "Widok wyświetlania wyjazdu"). Zamiast pelnego ekranu wyjazdu - zapowiedz: okladka,
   // pierwsze przystanki i jedno wyjscie dalej. Osoba, ktora dostala link, zwykle nie ma jeszcze
   // aplikacji, wiec pelny ekran roboczy (zakladki, edycja, czat) jest dla niej szumem.
-  // `?full=1` = odbiorca widzial juz zapowiedz na stronie publicznej (api/share.ts) i wlasnie
-  // z niej tu wszedl. Druga taka sama zapowiedz byłaby dreptaniem w miejscu.
+  // `?full=1` = pomin zapowiedz i pokaz od razu pelny wyjazd. Dla kogos, kto widzial juz
+  // zapowiedz na stronie publicznej (api/share.ts) - druga taka sama byłaby dreptaniem
+  // w miejscu.
   const [previewOpened, setPreviewOpened] = useState(
     () => new URLSearchParams(window.location.hash.split("?")[1] ?? "").get("full") === "1",
   );

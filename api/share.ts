@@ -226,6 +226,31 @@ body.trip{background:#FDF184}
 .pl .c{font-size:11px;color:#666;flex:none}
 .go{margin-top:32px;width:100%;max-width:420px;border-radius:999px;background:#EE5307;color:#fff;font-size:17px;font-weight:800;text-align:center;padding:16px 0;text-decoration:none;display:block}
 .page .tail{margin:16px 0 0;text-align:center;font-size:12.5px;line-height:1.4;color:rgba(91,44,6,.8)}
+/* Arkusz wyboru po "Zobacz wyjazd". Aplikacji nie ma jeszcze w App Store, wiec guzik nie ma
+   dokad prowadzic - zamiast tego pyta, ktora droga do dostepu odbiorca wybiera: testy
+   przedpremierowe (dziala od razu) czy powiadomienie o premierze (prosba Nat 2026-09-09).
+   Wchodzi od dolu, jak arkusze w aplikacji. */
+.ov{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.45);display:none;align-items:flex-end;justify-content:center}
+.ov.on{display:flex}
+.md{width:100%;max-width:440px;background:#FEFEFE;border-radius:24px 24px 0 0;padding:10px 20px calc(24px + env(safe-area-inset-bottom,0px))}
+.md .grab{width:36px;height:4px;border-radius:2px;background:#E4E4E4;margin:0 auto 16px}
+.md h2{margin:0;font-size:20px;font-weight:900;letter-spacing:-.01em}
+.md .sub{margin:6px 0 18px;font-size:14px;line-height:1.4;color:#7A7A7A}
+.opt{display:block;width:100%;border:0;text-align:left;text-decoration:none;border-radius:20px;padding:14px 16px;margin-bottom:10px;font:inherit;cursor:pointer}
+.opt .t{display:block;font-size:15px;font-weight:800}
+.opt .u{display:block;font-size:12.5px;margin-top:2px;opacity:.85}
+.opt.hot{background:#EE5307;color:#fff}
+.opt.cool{background:#F3F3F3;color:#0E0E0E}
+.md form{display:none;margin:2px 0 10px}
+.md form .lbl{display:block;font-size:15px;font-weight:800;margin:2px 0 8px}
+.md form.on{display:block}
+.md input{width:100%;height:48px;border:1px solid #E4E4E4;border-radius:16px;padding:0 14px;font:16px Inter,sans-serif;background:#fff;color:#0E0E0E}
+.md input:focus{outline:0;border-color:#EE5307}
+.md .send{width:100%;height:48px;margin-top:10px;border:0;border-radius:16px;background:#EE5307;color:#fff;font:800 15px Inter,sans-serif;cursor:pointer}
+.md .send[disabled]{opacity:.55}
+.md .msg{margin:10px 0 0;font-size:13px;line-height:1.4;color:#7A7A7A}
+.md .msg.bad{color:#C0392B}
+.md .close{display:block;width:100%;margin-top:6px;padding:12px 0;border:0;background:0;font:600 14px Inter,sans-serif;color:#979797;cursor:pointer}
 `;
 
 // Pasek instalacji nad trescia wyjazdu. Odbiorca linku najczesciej nie ma jeszcze aplikacji,
@@ -235,6 +260,60 @@ const installBar = () => `<div class="ins"><div class="l">
 <span class="tile"><img src="${SYMBOL_IMG}" alt=""></span>
 <span><b>Spontaway</b><span class="s">Odkrywaj, planuj, dziel się!</span></span></div>
 <a href="${TESTFLIGHT_URL}" target="_blank" rel="noreferrer noopener">Dołącz przedpremierowo</a></div>`;
+
+// Arkusz wyboru po "Zobacz wyjazd" (prosba Nat 2026-09-09). Aplikacji nie ma jeszcze
+// w App Store, wiec guzik nie ma dokad prowadzic - zamiast udawac, ze prowadzi, pyta wprost
+// o droge do dostepu: testy przedpremierowe (dziala od razu) albo powiadomienie o premierze.
+//
+// Zapis na premiere idzie PROSTO do tabeli `waitlist` (polityka "Anyone can join"), tym samym
+// kluczem anonimowym, ktory i tak siedzi w aplikacji - bez wlasnego endpointu do utrzymania.
+// Zrodlo `share_trip` odroznia te zapisy od landingu, wiec widac, ile daja same linki.
+//
+// Bez JavaScriptu guzik zostaje zwyklym linkiem na TestFlight - odbiorca nie zostaje z niczym.
+const choiceSheet = () => `<div class="ov" id="ov"><div class="md">
+<div class="grab"></div>
+<h2>Wyjazd czeka w aplikacji</h2>
+<p class="sub">spontaway nie jest jeszcze w App Store. Wybierz, jak chcesz dostać dostęp:</p>
+<a class="opt hot" href="${TESTFLIGHT_URL}" target="_blank" rel="noreferrer noopener" id="tf">
+<span class="t">Dołącz przedpremierowo</span><span class="u">Dostęp od razu, przez TestFlight</span></a>
+<button class="opt cool" id="pick" type="button">
+<span class="t">Zapisz się na premierę</span><span class="u">Damy znać mailem, gdy aplikacja będzie w App Store</span></button>
+<form id="wl"><span class="lbl">Zapisz się na premierę</span><input id="em" type="email" inputmode="email" autocomplete="email" placeholder="twoj@email.pl" required>
+<button class="send" id="sd" type="submit">Zapisz się</button></form>
+<p class="msg" id="mg"></p>
+<button class="close" id="cl" type="button">Nie teraz</button>
+</div></div>
+<script>
+(function(){
+  var SUPA=${JSON.stringify(SUPA)}, ANON=${JSON.stringify(ANON)};
+  var ov=document.getElementById("ov"), go=document.getElementById("go");
+  var pick=document.getElementById("pick"), form=document.getElementById("wl");
+  var inp=document.getElementById("em"), send=document.getElementById("sd"), msg=document.getElementById("mg");
+  function hide(){ ov.classList.remove("on"); }
+  go.addEventListener("click", function(e){ e.preventDefault(); ov.classList.add("on"); });
+  document.getElementById("cl").addEventListener("click", hide);
+  ov.addEventListener("click", function(e){ if(e.target===ov) hide(); });
+  pick.addEventListener("click", function(){ form.classList.add("on"); pick.style.display="none"; inp.focus(); });
+  form.addEventListener("submit", function(e){
+    e.preventDefault();
+    var v=(inp.value||"").trim().toLowerCase();
+    if(v.length<5 || v.indexOf("@")<1 || v.lastIndexOf(".")<v.indexOf("@")+2){
+      msg.className="msg bad"; msg.textContent="Podaj poprawny adres e-mail."; return;
+    }
+    send.disabled=true; msg.className="msg"; msg.textContent="Zapisujemy...";
+    var h={apikey:ANON, Authorization:"Bearer "+ANON, "Content-Type":"application/json"};
+    fetch(SUPA+"/rest/v1/waitlist",{method:"POST",headers:h,body:JSON.stringify({email:v,source:"share_trip",language:"pl"})})
+      .then(function(r){
+        // 409 = ten adres juz jest na liscie. Dla czlowieka to sukces, nie blad.
+        if(!r.ok && r.status!==409) throw 0;
+        fetch(SUPA+"/functions/v1/send-waitlist-email",{method:"POST",headers:h,body:JSON.stringify({email:v,lang:"pl"})}).catch(function(){});
+        form.classList.remove("on");
+        msg.className="msg"; msg.textContent="Gotowe. Damy znać mailem, gdy aplikacja pojawi się w App Store.";
+      })
+      .catch(function(){ send.disabled=false; msg.className="msg bad"; msg.textContent="Nie udało się zapisać. Spróbuj jeszcze raz."; });
+  });
+})();
+</script>`;
 
 function shell(o: { title: string; desc: string; image: string; url: string; body: string; noun?: string; variant?: "trip" }) {
   return `<!doctype html><html lang="pl"><head><meta charset="utf-8">
@@ -344,9 +423,10 @@ ${cover ? `<img class="bg" src="${esc(cover)}" alt="">` : ""}
 ${chips.length ? `<div class="chips">${chips.map((c) => `<span>${esc(c)}</span>`).join("")}</div>` : ""}
 </div></div>
 ${strip ? `<div class="day"><i></i><p>Dzień 1</p></div><div class="strip">${strip}</div>` : ""}
-<a class="go" href="${SITE}/#/route/${esc(id)}?full=1">Zobacz wyjazd</a>
+<a class="go" id="go" href="${TESTFLIGHT_URL}">Zobacz wyjazd</a>
 <p class="tail">Ten wyjazd powstał w spontaway - aplikacji do odkrywania miejsc i planowania wyjazdów ze znajomymi.</p>
-</div>`;
+</div>
+${choiceSheet()}`;
   return new Response(shell({ title, desc, image: cover ?? BRAND_IMG, url, body, noun: "route", variant: "trip" }), {
     headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "public, s-maxage=60, stale-while-revalidate=600" },
   });
