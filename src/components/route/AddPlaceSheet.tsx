@@ -388,7 +388,7 @@ export default function AddPlaceSheet({ open, onClose, city, existingPlaces, onA
 
     {/* Miejsce wybrane z mapy wpada w te sama sciezke, co wynik wyszukiwarki (pickGoogle),
         wiec od razu jest zaznaczone i odblokowuje "Dodaj". */}
-    <PlaceMapPicker open={mapOpen} onClose={() => setMapOpen(false)} city={city} onPick={(p) => pickGoogle(p)} />
+    <PlaceMapPicker open={mapOpen} onClose={() => setMapOpen(false)} city={city} center={center} onPick={(p) => pickGoogle(p)} />
     {/* Wizytowka miejsca (klik w wiersz). Vaul-drawer nakłada się na arkusz dodawania. */}
     <PlaceSwiperDetail
       open={!!detailPlace} onOpenChange={(o) => { if (!o) setDetailPlace(null); }} place={detailPlace}

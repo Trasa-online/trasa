@@ -63,8 +63,9 @@ function ZoomControls() {
   );
 }
 
-function PickerBody({ city, onPick, onClose }: {
+function PickerBody({ city, center, onPick, onClose }: {
   city?: string | null;
+  center?: LatLng | null;
   onPick: (place: PlaceForList) => void;
   onClose: () => void;
 }) {
@@ -136,7 +137,7 @@ function PickerBody({ city, onPick, onClose }: {
               z kontekstu, ktory zaklada dopiero sama mapa. */}
           <CenterWatcher onSettle={fetchNearby} />
           <ZoomControls />
-          <InitialCenter city={city} />
+          <InitialCenter city={city} center={center} />
         </Map>
 
         {/* Pinezka celownika: NIE jest znacznikiem na mapie, tylko stalym punktem ekranu -
@@ -191,8 +192,16 @@ function PickerBody({ city, onPick, onClose }: {
   );
 }
 
-/** Centruje mape na miescie/GPS PO zaladowaniu - defaultCenter dziala tylko przy montazu. */
-function InitialCenter({ city }: { city?: string | null }) {
+/**
+ * Centruje mape PO zaladowaniu - defaultCenter dziala tylko przy montazu.
+ *
+ * Kolejnosc zrodel jest istotna (blad znaleziony na zrzucie 2026-09-08: wyjazd do Sofii
+ * otwieral mape w WARSZAWIE). Najpierw wspolrzedne miejsc JUZ w tej trasie/liscie - to
+ * jedyne zrodlo, ktore dziala dla KAZDEGO miasta na swiecie. Dopiero potem slownik miast,
+ * ktory zawiera wylacznie miasta polskie, a na koncu GPS. Bez `center` wyjazd zagraniczny
+ * zawsze ladowal na fallbacku.
+ */
+function InitialCenter({ city, center }: { city?: string | null; center?: LatLng | null }) {
   const map = useMap();
   const done = useRef(false);
   useEffect(() => {
@@ -200,18 +209,18 @@ function InitialCenter({ city }: { city?: string | null }) {
     done.current = true;
     const cached = getCachedCoords();
     const cityCenter = city ? getCityCenter(city) : null;
-    // GPS ma pierwszenstwo tylko wtedy, gdy nie znamy miasta wyjazdu - inaczej user planujacy
-    // Krakow z domu w Warszawie dostalby mape Warszawy.
-    const target = cityCenter ?? (cached ? { lat: cached.lat, lng: cached.lng } : null);
+    const target = center ?? cityCenter ?? (cached ? { lat: cached.lat, lng: cached.lng } : null);
     if (target) { map.setCenter(target); map.setZoom(16); }
-  }, [map, city]);
+  }, [map, city, center]);
   return null;
 }
 
-export default function PlaceMapPicker({ open, onClose, city, onPick }: {
+export default function PlaceMapPicker({ open, onClose, city, center, onPick }: {
   open: boolean;
   onClose: () => void;
   city?: string | null;
+  /** Srodek z miejsc juz obecnych w trasie/liscie - dziala dla miast spoza slownika. */
+  center?: LatLng | null;
   onPick: (place: PlaceForList) => void;
 }) {
   const { t } = useTranslation("route");
@@ -240,7 +249,7 @@ export default function PlaceMapPicker({ open, onClose, city, onPick }: {
             przelaczac zakladek (regula gestow z CLAUDE.md). */}
         <div data-no-drag data-no-swipe className="flex-1 min-h-0 flex flex-col">
           <APIProvider apiKey={GOOGLE_MAPS_API_KEY}>
-            <PickerBody city={city} onPick={onPick} onClose={onClose} />
+            <PickerBody city={city} center={center} onPick={onPick} onClose={onClose} />
           </APIProvider>
         </div>
       </SheetContent>
