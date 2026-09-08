@@ -19,9 +19,10 @@
     "poc:dishes": "npx tsx scripts/poc-popular-dishes.ts",
     "i18n:check": "node scripts/i18n-check.mjs",
     "hooks:check": "node scripts/check-hooks.mjs",
-    "check:both": "npm run i18n:check && npm run hooks:check && npm run build && npx cap sync ios",
-    "check:native": "npm run i18n:check && npm run build && npx cap sync ios && npx cap sync android",
-    "prerender:snapshot": "node scripts/prerender-landing.mjs"
+    "check:both": "npm run i18n:check && npm run hooks:check && npm run build && npx cap sync ios && npm run native:shell",
+    "check:native": "npm run i18n:check && npm run build && npx cap sync ios && npx cap sync android && npm run native:shell",
+    "prerender:snapshot": "node scripts/prerender-landing.mjs",
+    "native:shell": "node scripts/native-shell.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.3.1",

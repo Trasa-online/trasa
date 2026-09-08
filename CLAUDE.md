@@ -388,6 +388,22 @@ if (isWeb) { /* ten kod wykonuje się tylko w przeglądarce */ }
 
 Vite tree-shaking nie eliminuje tych branchy statycznie (`isNative` to runtime stała), ale runtime guard wystarcza i jest jasny dla developera.
 
+### ⚠️ Natywka startuje z `app.html`, NIE z `index.html`
+
+Build **celowo zamienia pliki miejscami** (`scripts/inject-landing-snapshot.mjs`): landing
+z wklejoną treścią ląduje w `dist/index.html` (Vercel serwuje z niego `/`), a powłoka
+aplikacji przenosi się do `dist/app.html`. Capacitor o tym nie wie - WebView zawsze otwiera
+`index.html`, więc natywka dostawała **landing z gotową treścią** i pokazywała go przez
+ułamek sekundy, zanim React się zamontował (zgłoszenie Nat 2026-09-08).
+
+`npm run native:shell` (`scripts/native-shell.mjs`) podmienia `index.html` w projektach
+natywnych na powłokę. Leci **PO `cap sync`**, bo sync nadpisuje `public/` świeżym `dist/`.
+Jest już wpięty w `check:both` i `check:native`.
+
+⛔ **Po ręcznym `npx cap sync ios` ZAWSZE odpal `npm run native:shell`** - inaczej landing
+wraca do natywki po cichu. Skrypt sam sprawdza, czy `app.html` ma pusty `<div id="root">`
+i przerywa, gdyby build przestał ją opróżniać.
+
 ### Workflow przed git push
 
 1. `npm run check:both` — buduje dist + robi `cap sync ios`. Musi przejść bez błędów.
