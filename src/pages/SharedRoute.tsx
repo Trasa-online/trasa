@@ -1558,7 +1558,7 @@ export default function SharedRoute() {
           <p className="text-[13px] text-foreground/70 mt-0.5 leading-snug">{t("invite.banner_desc")}</p>
           <div className="flex gap-2 mt-2.5">
             <button onClick={() => void respondToInvite(true)}
-              className="flex-1 py-2.5 rounded-2xl bg-orange-600 text-white font-bold text-sm active:scale-[0.98] transition-transform">
+              className="flex-1 py-2.5 rounded-2xl bg-primary text-white font-bold text-sm active:scale-[0.98] transition-transform">
               {t("invite.accept")}
             </button>
             <button onClick={() => void respondToInvite(false)}

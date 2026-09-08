@@ -208,7 +208,7 @@ const CATEGORY_LABEL: Record<string, string> = {
 };
 
 const CATEGORY_BG: Record<string, string> = {
-  restaurant: "bg-orange-100 text-orange-600",
+  restaurant: "bg-orange-100 text-primary",
   cafe: "bg-amber-100 text-amber-700",
   museum: "bg-purple-100 text-purple-600",
   park: "bg-green-100 text-green-600",
@@ -1273,7 +1273,7 @@ window.addEventListener('message',function(e){
                 <h2 className="font-semibold flex-1">{t("map.title")}</h2>
                 {mapsAppUrl && (
                   <a href={mapsAppUrl} target="_blank" rel="noopener noreferrer"
-                    className="text-xs text-orange-600 font-medium flex items-center gap-1">
+                    className="text-xs text-primary font-medium flex items-center gap-1">
                     {t("map.open")} <ExternalLink className="h-3 w-3" />
                   </a>
                 )}
@@ -1546,14 +1546,14 @@ window.addEventListener('message',function(e){
                       onClick={() => setReasoningOpen(true)}
                       className="flex items-center gap-2 px-4 py-2 border-b border-border/40 flex-shrink-0 w-full text-left active:bg-muted/50 transition-colors"
                     >
-                      <Sparkles className="h-3.5 w-3.5 text-orange-600 shrink-0" />
+                      <Sparkles className="h-3.5 w-3.5 text-primary shrink-0" />
                       <span className="text-[12px] font-semibold text-foreground">{t("reasoning_title")}</span>
                       <ChevronRight className="h-3.5 w-3.5 text-muted-foreground ml-auto shrink-0" />
                     </button>
                   )}
                   {preparingPlan && plan && (
                     <div className="flex items-center gap-2 px-4 py-2 border-b border-border/40 flex-shrink-0">
-                      <Loader2 className="h-3.5 w-3.5 text-orange-600 animate-spin shrink-0" />
+                      <Loader2 className="h-3.5 w-3.5 text-primary animate-spin shrink-0" />
                       <span className="text-[12px] text-muted-foreground">{t("adding_places")}</span>
                     </div>
                   )}
@@ -1602,7 +1602,7 @@ window.addEventListener('message',function(e){
                                 className="flex-shrink-0 w-[80vw] h-full rounded-2xl border-2 border-dashed border-border/50 bg-muted/20 flex flex-col items-center justify-center gap-3 text-muted-foreground snap-center px-6 active:scale-[0.98] transition-transform"
                               >
                                 <div className="h-12 w-12 rounded-full bg-orange-100 flex items-center justify-center">
-                                  <Plus className="h-6 w-6 text-orange-600" />
+                                  <Plus className="h-6 w-6 text-primary" />
                                 </div>
                                 <p className="text-sm font-bold text-foreground">{t("empty_day.title")}</p>
                                 <p className="text-xs text-center leading-relaxed max-w-[260px]">
@@ -1734,7 +1734,7 @@ window.addEventListener('message',function(e){
         <SheetContent side="bottom" className="rounded-t-3xl bg-background pb-safe-6">
           <SheetHeader className="text-left">
             <SheetTitle className="flex items-center gap-2 font-display font-extrabold text-lg">
-              <Sparkles className="h-5 w-5 text-orange-600 shrink-0" />
+              <Sparkles className="h-5 w-5 text-primary shrink-0" />
               Dlaczego taka trasa?
             </SheetTitle>
           </SheetHeader>

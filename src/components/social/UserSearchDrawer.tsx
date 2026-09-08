@@ -124,7 +124,7 @@ export default function UserSearchDrawer({ open, onClose }: Props) {
                       <button onClick={() => handleProfileTap(profile.username)}>
                         <Avatar className="h-11 w-11">
                           <AvatarImage src={avatarSrc(profile.avatar_url)} className="object-cover bg-orange-100" />
-                          <AvatarFallback className="bg-orange-100 text-orange-600 font-bold">
+                          <AvatarFallback className="bg-orange-100 text-primary font-bold">
                             {displayName?.charAt(0).toUpperCase() || "?"}
                           </AvatarFallback>
                         </Avatar>

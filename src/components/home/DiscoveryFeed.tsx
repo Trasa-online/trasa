@@ -851,7 +851,7 @@ function PolecaneRow({
                       {t("route")}
                     </span>
                   ) : (
-                    <span className="flex items-center gap-1 text-[10px] text-orange-600 font-semibold shrink-0">
+                    <span className="flex items-center gap-1 text-[10px] text-primary font-semibold shrink-0">
                       <Sparkles className="h-3 w-3" />
                       {t("creator")}
                     </span>
@@ -1403,7 +1403,7 @@ function SavedCollectionCard({ col, savedAt, onOpen, onDelete }: { col: Discover
           <img src={cover} alt="" className="h-16 w-16 rounded-2xl object-cover shrink-0" loading="lazy" />
         ) : (
           <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-amber-100 to-orange-200 flex items-center justify-center shrink-0">
-            <Bookmark className="h-6 w-6 text-orange-600" />
+            <Bookmark className="h-6 w-6 text-primary" />
           </div>
         )}
         <div className="flex-1 min-w-0">
@@ -2160,14 +2160,14 @@ export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityCh
         <div className="rounded-2xl bg-secondary border border-border/40 overflow-hidden divide-y divide-border/40 mb-4">
           <button onClick={handleNearby} disabled={nearbyLoading} className="w-full flex items-center gap-3 px-3.5 py-3 text-left active:bg-muted/50 transition-colors disabled:opacity-60">
             <div className="h-10 w-10 rounded-xl bg-orange-50 flex items-center justify-center shrink-0">
-              {nearbyLoading ? <Loader2 className="h-[18px] w-[18px] text-orange-600 animate-spin" /> : <Navigation className="h-[18px] w-[18px] text-orange-600" />}
+              {nearbyLoading ? <Loader2 className="h-[18px] w-[18px] text-primary animate-spin" /> : <Navigation className="h-[18px] w-[18px] text-primary" />}
             </div>
             <span className="flex-1 text-sm font-semibold">{t("current_location")}</span>
             <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
           </button>
           <button onClick={() => navigate("/moj-profil?tab=zapisane")} className="w-full flex items-center gap-3 px-3.5 py-3 text-left active:bg-muted/50 transition-colors">
             <div className="h-10 w-10 rounded-xl bg-orange-50 flex items-center justify-center shrink-0">
-              <Bookmark className="h-[18px] w-[18px] text-orange-600" />
+              <Bookmark className="h-[18px] w-[18px] text-primary" />
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold leading-tight">{t("saved_places", t("saved_places"))}</p>
@@ -2202,7 +2202,7 @@ export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityCh
                         <button onClick={() => navigate(`/profil/${pr.username}`)} className="shrink-0 active:scale-95 transition-transform" aria-label={`@${pr.username}`}>
                           <Avatar className="h-11 w-11">
                             <AvatarImage src={avatarSrc(pr.avatar_url)} className="object-cover bg-orange-100" />
-                            <AvatarFallback className="bg-orange-100 text-orange-600 font-bold text-sm">
+                            <AvatarFallback className="bg-orange-100 text-primary font-bold text-sm">
                               {name?.charAt(0)?.toUpperCase() || "?"}
                             </AvatarFallback>
                           </Avatar>

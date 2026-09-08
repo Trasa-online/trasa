@@ -592,7 +592,7 @@ export const MyCollections = ({ showCreate = true }: { showCreate?: boolean } = 
       ) : collections.length === 0 ? (
         <div className="rounded-3xl border border-dashed border-border/60 bg-orange-50/40 flex flex-col items-center text-center gap-3 px-6 py-10">
           <div className="h-12 w-12 rounded-2xl bg-white shadow-sm flex items-center justify-center">
-            <ListChecks className="h-6 w-6 text-orange-600" />
+            <ListChecks className="h-6 w-6 text-primary" />
           </div>
           <div className="space-y-1">
             <p className="text-base font-black">{t("collections.empty_title")}</p>
@@ -618,7 +618,7 @@ export const MyCollections = ({ showCreate = true }: { showCreate?: boolean } = 
                 <div className="flex items-center gap-2.5 pr-8">
                   <Avatar className="h-9 w-9 shrink-0">
                     <AvatarImage src={avatarSrc(col.author_avatar)} className="object-cover bg-orange-100" />
-                    <AvatarFallback className="bg-orange-100 text-orange-600 font-bold text-xs">{initial}</AvatarFallback>
+                    <AvatarFallback className="bg-orange-100 text-primary font-bold text-xs">{initial}</AvatarFallback>
                   </Avatar>
                   <div className="min-w-0">
                     <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground truncate">{eyebrow}</p>

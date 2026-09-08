@@ -224,7 +224,7 @@ const BottomNav = () => {
           >
             <div className="flex items-start gap-3">
               <div className="h-11 w-11 rounded-full bg-orange-50 border border-orange-100 flex items-center justify-center shrink-0">
-                <Heart className="h-5 w-5 text-orange-600" />
+                <Heart className="h-5 w-5 text-primary" />
               </div>
               <div className="flex-1">
                 <p className="text-base font-black leading-snug">

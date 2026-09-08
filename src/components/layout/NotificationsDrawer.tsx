@@ -33,27 +33,27 @@ const TYPE_CONFIG: Record<string, { icon: React.ElementType; color: string; labe
   follower:       { icon: UserPlus,      color: "text-violet-500 bg-violet-100",  label: (t, u) => t("notif.follower", { user: u }) },
   new_route:      { icon: Route,         color: "text-emerald-500 bg-emerald-100",label: (t, u) => t("notif.new_route", { user: u }) },
   route_updated:  { icon: Route,         color: "text-amber-500 bg-amber-100",    label: (t, u) => t("notif.route_updated", { user: u }) },
-  route_used:     { icon: Bookmark,      color: "text-orange-600 bg-orange-100",  label: (t, u, m) => t(m?.city ? "notif.route_used_city" : "notif.route_used", { user: u, city: m?.city }) },
+  route_used:     { icon: Bookmark,      color: "text-primary bg-orange-100",  label: (t, u, m) => t(m?.city ? "notif.route_used_city" : "notif.route_used", { user: u, city: m?.city }) },
   pin_visit:      { icon: MapPin,        color: "text-teal-500 bg-teal-100",      label: (t, u) => t("notif.pin_visit", { user: u }) },
   friend_request: { icon: UserPlus,      color: "text-violet-500 bg-violet-100",  label: (t, u) => t("notif.friend_request", { user: u }) },
   friend_accept:  { icon: UserCheck,     color: "text-emerald-500 bg-emerald-100",label: (t, u) => t("notif.friend_accept", { user: u }) },
   visit_comment:  { icon: MessageCircle, color: "text-sky-500 bg-sky-100",        label: (t, u, m) => t(m?.place_name ? "notif.visit_comment_place" : "notif.visit_comment", { user: u, place: m?.place_name }) },
-  photo_like:     { icon: Heart,         color: "text-orange-600 bg-orange-100",  label: (t, u, m) => t(m?.place_name ? "notif.photo_like_place" : "notif.photo_like", { user: u, place: m?.place_name }) },
-  discovery_used: { icon: Bookmark,      color: "text-orange-600 bg-orange-100",  label: (t, u, m) => t(m?.city ? "notif.discovery_used_city" : "notif.discovery_used", { user: u, city: m?.city }) },
-  group_invite:       { icon: Route,  color: "text-orange-600 bg-orange-100",  label: (t, u, m) => t(m?.city ? "notif.group_invite_city" : "notif.group_invite", { user: u, city: m?.city }) },
-  route_invite:       { icon: Route,  color: "text-orange-600 bg-orange-100",  label: (t, u, m) => t(m?.city ? "notif.route_invite_city" : "notif.route_invite", { user: u, city: m?.city }) },
-  trip_places_reminder: { icon: MapPin, color: "text-orange-600 bg-orange-100", label: (t, u, m) => t(m?.city ? "notif.trip_places_reminder_city" : "notif.trip_places_reminder", { user: u, city: m?.city }) },
+  photo_like:     { icon: Heart,         color: "text-primary bg-orange-100",  label: (t, u, m) => t(m?.place_name ? "notif.photo_like_place" : "notif.photo_like", { user: u, place: m?.place_name }) },
+  discovery_used: { icon: Bookmark,      color: "text-primary bg-orange-100",  label: (t, u, m) => t(m?.city ? "notif.discovery_used_city" : "notif.discovery_used", { user: u, city: m?.city }) },
+  group_invite:       { icon: Route,  color: "text-primary bg-orange-100",  label: (t, u, m) => t(m?.city ? "notif.group_invite_city" : "notif.group_invite", { user: u, city: m?.city }) },
+  route_invite:       { icon: Route,  color: "text-primary bg-orange-100",  label: (t, u, m) => t(m?.city ? "notif.route_invite_city" : "notif.route_invite", { user: u, city: m?.city }) },
+  trip_places_reminder: { icon: MapPin, color: "text-primary bg-orange-100", label: (t, u, m) => t(m?.city ? "notif.trip_places_reminder_city" : "notif.trip_places_reminder", { user: u, city: m?.city }) },
   trip_message:       { icon: MessageCircle, color: "text-sky-500 bg-sky-100", label: (t, u, m) => t(m?.title ? "notif.trip_message_title" : m?.city ? "notif.trip_message_city" : "notif.trip_message", { user: u, title: m?.title, city: m?.city }) },
-  group_route_ready:  { icon: Route, color: "text-orange-600 bg-orange-100",  label: (t, u, m) => t(m?.city ? "notif.group_route_ready_city" : "notif.group_route_ready", { user: u, city: m?.city }) },
+  group_route_ready:  { icon: Route, color: "text-primary bg-orange-100",  label: (t, u, m) => t(m?.city ? "notif.group_route_ready_city" : "notif.group_route_ready", { user: u, city: m?.city }) },
   collection_approved: { icon: CheckCircle2, color: "text-emerald-500 bg-emerald-100", label: (t, _u, m) => t("notif.collection_approved", { title: m?.title ?? t("notif.list_fallback") }) },
   collection_rejected: { icon: XCircle,      color: "text-destructive bg-destructive/10", label: (t, _u, m) => t(m?.moderation_note ? "notif.collection_rejected_reason" : "notif.collection_rejected", { title: m?.title ?? t("notif.list_fallback"), reason: m?.moderation_note }) },
   route_liked:    { icon: Heart,    color: "text-red-500 bg-red-100",        label: (t, u, m) => t(m?.city ? "notif.route_liked_city" : "notif.route_liked", { user: u, city: m?.city }) },
   list_liked:     { icon: Heart,    color: "text-red-500 bg-red-100",        label: (t, u, m) => t(m?.title ? "notif.list_liked_title" : "notif.list_liked", { user: u, title: m?.title }) },
-  list_saved:     { icon: Bookmark, color: "text-orange-600 bg-orange-100",  label: (t, u, m) => t(m?.title ? "notif.list_saved_title" : "notif.list_saved", { user: u, title: m?.title }) },
-  list_updated:   { icon: MapPin,   color: "text-orange-600 bg-orange-100",  label: (t, u, m) => t(m?.title ? "notif.list_updated_title" : "notif.list_updated", { user: u, title: m?.title }) },
+  list_saved:     { icon: Bookmark, color: "text-primary bg-orange-100",  label: (t, u, m) => t(m?.title ? "notif.list_saved_title" : "notif.list_saved", { user: u, title: m?.title }) },
+  list_updated:   { icon: MapPin,   color: "text-primary bg-orange-100",  label: (t, u, m) => t(m?.title ? "notif.list_updated_title" : "notif.list_updated", { user: u, title: m?.title }) },
   // Tresc liczona z metadanych kompletnosci (enqueue_trip_reminders): ZDJECIA maja priorytet,
   // potem notki, a na koncu zacheta do publikacji.
-  trip_reminder:  { icon: Camera,   color: "text-orange-600 bg-orange-100",  label: (t, _u, m) => {
+  trip_reminder:  { icon: Camera,   color: "text-primary bg-orange-100",  label: (t, _u, m) => {
     const city = m?.city ? t("notif.city_suffix", { city: m.city }) : "";
     const photos = Number(m?.missing_photos ?? 0);
     const notes = Number(m?.missing_notes ?? 0);

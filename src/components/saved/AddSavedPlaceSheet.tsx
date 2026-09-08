@@ -110,7 +110,7 @@ export default function AddSavedPlaceSheet({ open, onOpenChange, onAdded }: {
             <MapPin className="h-4 w-4 text-muted-foreground shrink-0" />
             <span className="flex-1 min-w-0 truncate text-base font-semibold text-foreground">{city}</span>
             <span className="text-xs font-semibold text-muted-foreground shrink-0">{country}</span>
-            <span className="text-xs font-bold text-orange-600 shrink-0">{pickerOpen ? t("common:buttons.done") : t("add_saved.change")}</span>
+            <span className="text-xs font-bold text-primary shrink-0">{pickerOpen ? t("common:buttons.done") : t("add_saved.change")}</span>
           </button>
           {pickerOpen && (
             <div className="pt-3">

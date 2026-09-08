@@ -84,7 +84,7 @@ function EmptySection({ icon, title, sub, cta, onCta, cta2, onCta2, variant }: {
             <button onClick={onCta} className="px-5 py-3 rounded-full bg-primary text-white text-sm font-bold active:scale-[0.97] transition-transform shadow-md shadow-orange-500/20">{cta}</button>
           )}
           {cta2 && onCta2 && (
-            <button onClick={onCta2} className="px-5 py-2.5 rounded-full bg-white border border-orange-200 text-orange-600 text-sm font-bold active:scale-[0.97] transition-transform">{cta2}</button>
+            <button onClick={onCta2} className="px-5 py-2.5 rounded-full bg-white border border-orange-200 text-primary text-sm font-bold active:scale-[0.97] transition-transform">{cta2}</button>
           )}
         </div>
       )}
@@ -340,7 +340,7 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
         ) : groupSessions.length === 0 ? (
           <EmptySection
             variant="solo"
-            icon={<MapPin className="h-6 w-6 text-orange-600" />}
+            icon={<MapPin className="h-6 w-6 text-primary" />}
             title={t("dashboard.empty_title")}
             sub={t("dashboard.empty_sub")}
             cta={t("dashboard.empty_cta")}
@@ -395,9 +395,9 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
                     return (
                       <div className="flex items-center gap-2.5">
                         <div className="h-10 w-10 rounded-2xl bg-orange-50 border border-orange-100 flex items-center justify-center shrink-0">
-                          <Users className="h-5 w-5 text-orange-600" />
+                          <Users className="h-5 w-5 text-primary" />
                         </div>
-                        <span className="text-xs text-orange-600 font-semibold">{t("dashboard.picking_caps")}</span>
+                        <span className="text-xs text-primary font-semibold">{t("dashboard.picking_caps")}</span>
                       </div>
                     );
                   }
@@ -419,7 +419,7 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
                           </div>
                         )}
                       </div>
-                      <span className="text-xs text-muted-foreground">{n} {label} · <span className="text-orange-600 font-semibold">{t("dashboard.picking")}</span></span>
+                      <span className="text-xs text-muted-foreground">{n} {label} · <span className="text-primary font-semibold">{t("dashboard.picking")}</span></span>
                     </div>
                   );
                 })()}
@@ -451,7 +451,7 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
                     </div>
                   ) : (
                     <div className="h-10 w-10 rounded-xl bg-orange-100 flex items-center justify-center shrink-0">
-                      <Compass className="h-5 w-5 text-orange-600" />
+                      <Compass className="h-5 w-5 text-primary" />
                     </div>
                   )}
                   <div className="min-w-0 flex-1">
@@ -466,7 +466,7 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
                   >
                     <Trash2 className="h-4 w-4" />
                   </span>
-                  <ChevronRight className="h-5 w-5 text-orange-600/50 shrink-0" />
+                  <ChevronRight className="h-5 w-5 text-primary/50 shrink-0" />
                 </button>
               );
             })}
@@ -487,7 +487,7 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
               onClick={() => { setPlanChoiceOpen(false); navigate("/plan"); }}
               className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl border border-border/60 bg-card active:scale-[0.98] transition-transform text-left"
             >
-              <div className="h-10 w-10 rounded-xl bg-orange-50 flex items-center justify-center shrink-0"><MapPin className="h-5 w-5 text-orange-600" /></div>
+              <div className="h-10 w-10 rounded-xl bg-orange-50 flex items-center justify-center shrink-0"><MapPin className="h-5 w-5 text-primary" /></div>
               <div className="min-w-0">
                 <p className="font-bold text-sm">{t("dashboard.plan_solo_title")}</p>
                 <p className="text-xs text-muted-foreground">{t("dashboard.plan_solo_desc")}</p>
@@ -497,7 +497,7 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
               onClick={() => { setPlanChoiceOpen(false); navigate("/plan"); }}
               className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl border border-border/60 bg-card active:scale-[0.98] transition-transform text-left"
             >
-              <div className="h-10 w-10 rounded-xl bg-orange-50 flex items-center justify-center shrink-0"><Users className="h-5 w-5 text-orange-600" /></div>
+              <div className="h-10 w-10 rounded-xl bg-orange-50 flex items-center justify-center shrink-0"><Users className="h-5 w-5 text-primary" /></div>
               <div className="min-w-0">
                 <p className="font-bold text-sm">{t("dashboard.plan_group_title")}</p>
                 <p className="text-xs text-muted-foreground">{t("dashboard.plan_group_desc")}</p>
@@ -507,7 +507,7 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
               onClick={() => { setPlanChoiceOpen(false); navigate("/plan", { state: { exploreMode: true } }); }}
               className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl border border-border/60 bg-card active:scale-[0.98] transition-transform text-left"
             >
-              <div className="h-10 w-10 rounded-xl bg-orange-50 flex items-center justify-center shrink-0"><Compass className="h-5 w-5 text-orange-600" /></div>
+              <div className="h-10 w-10 rounded-xl bg-orange-50 flex items-center justify-center shrink-0"><Compass className="h-5 w-5 text-primary" /></div>
               <div className="min-w-0">
                 <p className="font-bold text-sm">{t("dashboard.plan_browse_title")}</p>
                 <p className="text-xs text-muted-foreground">{t("dashboard.plan_browse_desc")}</p>

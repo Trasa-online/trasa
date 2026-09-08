@@ -200,7 +200,7 @@ export default function InviteFriendsSheet({ open, onOpenChange, route, onInvite
                         <Check className="h-3.5 w-3.5" strokeWidth={3} /> {t("invite.added")}
                       </span>
                     ) : (
-                      <span className={cn("h-6 w-6 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors", on ? "bg-orange-600 border-orange-600" : "border-muted-foreground/30")}>
+                      <span className={cn("h-6 w-6 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors", on ? "bg-primary border-primary" : "border-muted-foreground/30")}>
                         {on && <Check className="h-4 w-4 text-white" strokeWidth={3} />}
                       </span>
                     )}
@@ -215,7 +215,7 @@ export default function InviteFriendsSheet({ open, onOpenChange, route, onInvite
           <button
             onClick={confirm}
             disabled={!selectedList.length || sending}
-            className="w-full py-3.5 rounded-2xl bg-orange-600 text-white font-bold text-sm active:scale-[0.98] transition-transform disabled:opacity-50 flex items-center justify-center gap-2"
+            className="w-full py-3.5 rounded-2xl bg-primary text-white font-bold text-sm active:scale-[0.98] transition-transform disabled:opacity-50 flex items-center justify-center gap-2"
           >
             {sending ? <Loader2 className="h-5 w-5 animate-spin" /> : <><UserPlus className="h-4 w-4" /> {selectedList.length ? t("invite.cta_count", { count: selectedList.length }) : t("invite.cta")}</>}
           </button>

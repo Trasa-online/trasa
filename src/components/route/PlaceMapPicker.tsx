@@ -145,8 +145,8 @@ function PickerBody({ city, center, onPick, onClose }: {
             precyzyjnego tapniecia w maly obiekt. */}
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
           <div className="-mt-5 flex flex-col items-center">
-            <div className="h-8 w-8 rounded-full bg-orange-600 border-[3px] border-white shadow-lg" />
-            <div className="h-3 w-[3px] bg-orange-600/70 -mt-0.5 rounded-full" />
+            <div className="h-8 w-8 rounded-full bg-primary border-[3px] border-white shadow-lg" />
+            <div className="h-3 w-[3px] bg-primary/70 -mt-0.5 rounded-full" />
           </div>
         </div>
 

@@ -36,7 +36,7 @@ export default function CountrySelect() {
               {soon ? (
                 <span className="flex items-center gap-1 text-[10px] font-semibold text-muted-foreground"><Lock className="h-3 w-3" />{t("country.soon")}</span>
               ) : c.code === active.code ? (
-                <Check className="h-4 w-4 text-orange-600 shrink-0" />
+                <Check className="h-4 w-4 text-primary shrink-0" />
               ) : null}
             </DropdownMenuItem>
           );

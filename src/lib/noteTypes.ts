@@ -44,12 +44,12 @@ export const NOTE_TYPES = {
     icon: AlertTriangle,
     bgColor: 'bg-orange-50 dark:bg-orange-950/30',
     borderColor: 'border-orange-200 dark:border-orange-800',
-    iconColor: 'text-orange-600',
-    labelColor: 'text-orange-600 dark:text-orange-400',
+    iconColor: 'text-primary',
+    labelColor: 'text-primary dark:text-orange-400',
     hoverBg: 'hover:bg-orange-50 dark:hover:bg-orange-950/30',
     hoverBorder: 'hover:border-orange-300 dark:hover:border-orange-700',
     activeBg: 'bg-orange-100 dark:bg-orange-900/50',
-    activeBorder: 'border-orange-400 dark:border-orange-600',
+    activeBorder: 'border-orange-400 dark:border-primary',
   },
 } as const;
 

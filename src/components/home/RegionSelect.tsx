@@ -30,7 +30,7 @@ export default function RegionSelect({
           aria-label={t("region.pick_city")}
         >
           {/* Globus przy "Wszystkie" usuniety (2026-08-04) - ikona pinezki tylko dla konkretnego miasta. */}
-          {!isAll && <MapPin className="h-3.5 w-3.5 text-orange-600 shrink-0" />}
+          {!isAll && <MapPin className="h-3.5 w-3.5 text-primary shrink-0" />}
           <span className="text-sm font-bold text-foreground truncate">{isAll ? t("region.all") : cur}</span>
           <ChevronDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
         </button>
@@ -41,7 +41,7 @@ export default function RegionSelect({
           className="gap-2 rounded-xl cursor-pointer pl-3"
         >
           <span className={cn("flex-1", isAll && "font-bold")}>{t("region.all")}</span>
-          {isAll && <Check className="h-4 w-4 text-orange-600 shrink-0" />}
+          {isAll && <Check className="h-4 w-4 text-primary shrink-0" />}
         </DropdownMenuItem>
 
         {cities.length > 0 && <DropdownMenuSeparator />}
@@ -55,7 +55,7 @@ export default function RegionSelect({
               className="gap-2 rounded-xl cursor-pointer pl-3"
             >
               <span className={cn("flex-1", selected && "font-bold")}>{c}</span>
-              {selected && <Check className="h-4 w-4 text-orange-600 shrink-0" />}
+              {selected && <Check className="h-4 w-4 text-primary shrink-0" />}
             </DropdownMenuItem>
           );
         })}

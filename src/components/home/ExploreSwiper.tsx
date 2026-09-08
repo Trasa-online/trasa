@@ -176,7 +176,7 @@ export default function ExploreSwiper({ city, cities = [], onCityChange, active,
                           )}
                         >
                           <span>{sub.label}</span>
-                          {on ? <Check className="h-3.5 w-3.5 ml-0.5 text-orange-600" /> : <Plus className="h-3.5 w-3.5 ml-0.5 text-muted-foreground/50" />}
+                          {on ? <Check className="h-3.5 w-3.5 ml-0.5 text-primary" /> : <Plus className="h-3.5 w-3.5 ml-0.5 text-muted-foreground/50" />}
                         </button>
                       );
                     })}

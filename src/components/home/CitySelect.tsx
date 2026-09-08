@@ -38,13 +38,13 @@ export default function CitySelect({
         {allowAll && (
           <DropdownMenuItem onClick={() => onCityChange(ALL_CITIES)} className="gap-2 rounded-xl cursor-pointer">
             <span className={cn("flex-1", cur === ALL_CITIES && "font-bold")}>{allLabel}</span>
-            {cur === ALL_CITIES && <Check className="h-4 w-4 text-orange-600 shrink-0" />}
+            {cur === ALL_CITIES && <Check className="h-4 w-4 text-primary shrink-0" />}
           </DropdownMenuItem>
         )}
         {UNLOCKED_CITIES.map((c) => (
           <DropdownMenuItem key={c} onClick={() => onCityChange(c)} className="gap-2 rounded-xl cursor-pointer">
             <span className={cn("flex-1", c === cur && "font-bold")}>{c}</span>
-            {c === cur && <Check className="h-4 w-4 text-orange-600 shrink-0" />}
+            {c === cur && <Check className="h-4 w-4 text-primary shrink-0" />}
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>

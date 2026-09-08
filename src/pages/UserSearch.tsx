@@ -105,7 +105,7 @@ export default function UserSearch() {
                   <button onClick={() => navigate(`/profil/${profile.username}`)}>
                     <Avatar className="h-11 w-11">
                       <AvatarImage src={avatarSrc(profile.avatar_url)} className="object-cover bg-orange-100" />
-                      <AvatarFallback className="bg-orange-100 text-orange-600 font-bold text-sm">
+                      <AvatarFallback className="bg-orange-100 text-primary font-bold text-sm">
                         {displayName?.charAt(0).toUpperCase() || "?"}
                       </AvatarFallback>
                     </Avatar>

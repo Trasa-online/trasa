@@ -273,7 +273,7 @@ const MapWithSearch = ({ city, onConfirm, onSkip }: StartingLocationPickerProps)
           className="absolute bottom-4 left-3 z-10 h-11 pl-3 pr-4 bg-white rounded-full shadow-md flex items-center gap-2 text-sm font-semibold text-foreground active:scale-95 transition-transform disabled:opacity-60"
           aria-label={t("start.use_my_location")}
         >
-          {locating ? <Loader2 className="h-4 w-4 animate-spin text-orange-600" /> : <LocateFixed className="h-4 w-4 text-orange-600" />}
+          {locating ? <Loader2 className="h-4 w-4 animate-spin text-primary" /> : <LocateFixed className="h-4 w-4 text-primary" />}
           Moja lokalizacja
         </button>
 

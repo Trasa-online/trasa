@@ -75,7 +75,7 @@ const HomeHeaderActions = ({
         {isGuest ? (
           <button
             onClick={() => openAuthDrawer({ mode: "login" })}
-            className="text-xs font-semibold text-orange-600 px-3 py-2 rounded-full hover:bg-orange-50 active:scale-[0.97] transition-all"
+            className="text-xs font-semibold text-primary px-3 py-2 rounded-full hover:bg-orange-50 active:scale-[0.97] transition-all"
           >
             {t("header.login")}
           </button>

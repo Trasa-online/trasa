@@ -50,7 +50,7 @@ export default function SuggestedUsers({ currentUserId, onProfileTap }: Suggeste
               <button onClick={() => onProfileTap(user.username)}>
                 <Avatar className="h-10 w-10">
                   <AvatarImage src={avatarSrc(user.avatar_url)} className="object-cover bg-orange-100" />
-                  <AvatarFallback className="bg-orange-100 text-orange-600 text-sm font-bold">
+                  <AvatarFallback className="bg-orange-100 text-primary text-sm font-bold">
                     {displayName?.charAt(0).toUpperCase() || "?"}
                   </AvatarFallback>
                 </Avatar>

@@ -1760,7 +1760,7 @@ const BusinessDashboard = () => {
           <p className="text-xs font-semibold leading-snug">{t("preview_mode.banner")}</p>
           <button
             onClick={() => navigate("/set-password-biznes")}
-            className="shrink-0 bg-white text-orange-600 font-bold text-xs px-3 py-1.5 rounded-full whitespace-nowrap active:scale-95 transition-transform"
+            className="shrink-0 bg-white text-primary font-bold text-xs px-3 py-1.5 rounded-full whitespace-nowrap active:scale-95 transition-transform"
           >
             {t("preview_mode.claim")}
           </button>
@@ -2291,7 +2291,7 @@ const BusinessDashboard = () => {
                   </div>
                   <div>
                     <p className="text-sm font-medium">{businessName || t("business_name_fallback")}</p>
-                    <button onClick={() => logoInputRef.current?.click()} className="mt-1 text-xs text-orange-600 font-medium active:opacity-70">
+                    <button onClick={() => logoInputRef.current?.click()} className="mt-1 text-xs text-primary font-medium active:opacity-70">
                       {logoUrl ? t('profile.change_logo') : t('profile.add_logo')}
                     </button>
                     <p className="text-xs text-muted-foreground mt-0.5">{t("profile.logo_hint")}</p>
@@ -2472,7 +2472,7 @@ const BusinessDashboard = () => {
                       return (
                         <button key={tag} type="button" disabled={disabled}
                           onClick={() => { setTags(prev => active ? prev.filter(t => t !== tag) : [...prev, tag]); setIsDirty(true); }}
-                          className={`px-3 py-1 rounded-full text-xs font-semibold border transition-colors disabled:opacity-40 ${active ? 'bg-primary border-orange-600 text-white' : 'bg-background border-border text-muted-foreground hover:border-orange-400 hover:text-foreground'}`}>
+                          className={`px-3 py-1 rounded-full text-xs font-semibold border transition-colors disabled:opacity-40 ${active ? 'bg-primary border-primary text-white' : 'bg-background border-border text-muted-foreground hover:border-orange-400 hover:text-foreground'}`}>
                           #{tag}
                         </button>
                       );
@@ -2884,7 +2884,7 @@ const BusinessDashboard = () => {
                             day_range_start: "rounded-l-full rounded-r-none bg-foreground text-background",
                             day_range_end: "rounded-r-full rounded-l-none bg-foreground text-background",
                             day_range_middle: "rounded-none bg-slate-100 text-foreground",
-                            day_today: "font-bold text-orange-600",
+                            day_today: "font-bold text-primary",
                             day_outside: "opacity-30",
                             day_disabled: "opacity-20 cursor-not-allowed",
                           }}
@@ -2908,7 +2908,7 @@ const BusinessDashboard = () => {
                   {isDraft && (
                     <div className="bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-100 rounded-2xl px-5 py-4">
                       <p className="text-sm font-bold text-orange-900">{t("analytics.draft_title")}</p>
-                      <p className="text-xs text-orange-600 mt-0.5">{t("analytics.draft_desc")}</p>
+                      <p className="text-xs text-primary mt-0.5">{t("analytics.draft_desc")}</p>
                     </div>
                   )}
                   {/* Stat cards */}
@@ -3012,7 +3012,7 @@ const BusinessDashboard = () => {
                         <div className="flex items-center justify-between mb-1">
                           <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{t("analytics.hourly_title")}</p>
                           {hasData && !analyticsLoading && (
-                            <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-orange-50 text-orange-600 border border-orange-100">
+                            <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-orange-50 text-primary border border-orange-100">
                               {t("analytics.peak", { from: `${peakHour.hour}:00`, to: `${peakHour.hour + 1}:00` })}
                             </span>
                           )}

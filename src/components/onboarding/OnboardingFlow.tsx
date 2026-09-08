@@ -320,7 +320,7 @@ const OnboardingFlow = ({ onDone }: Props) => {
         <div className="flex-1 flex gap-1.5">
           {STEPS.map((_, i) => (
             <div key={i} className="h-1.5 flex-1 rounded-full bg-muted overflow-hidden">
-              <div className="h-full bg-orange-600 rounded-full transition-all duration-300" style={{ width: i <= step ? "100%" : "0%" }} />
+              <div className="h-full bg-primary rounded-full transition-all duration-300" style={{ width: i <= step ? "100%" : "0%" }} />
             </div>
           ))}
         </div>
@@ -342,7 +342,7 @@ const OnboardingFlow = ({ onDone }: Props) => {
               onClick={() => setTermsAccepted((v) => !v)}
               className="mt-8 flex items-start gap-3 text-left max-w-xs active:opacity-70 transition-opacity"
             >
-              <span className={`mt-0.5 h-5 w-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors ${termsAccepted ? "bg-orange-600 border-orange-600" : "border-border bg-background"}`}>
+              <span className={`mt-0.5 h-5 w-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors ${termsAccepted ? "bg-primary border-primary" : "border-border bg-background"}`}>
                 {termsAccepted && <Check className="h-3.5 w-3.5 text-white" strokeWidth={3} />}
               </span>
               <span className="text-[13px] text-muted-foreground leading-relaxed">
@@ -382,7 +382,7 @@ const OnboardingFlow = ({ onDone }: Props) => {
                         placeholder={t("source.other_placeholder")}
                         className="flex-1 bg-transparent text-[15px] font-semibold outline-none placeholder:font-normal placeholder:text-muted-foreground/50"
                       />
-                      <span className="h-6 w-6 rounded-full bg-orange-600 flex items-center justify-center shrink-0"><Check className="h-4 w-4 text-white" strokeWidth={3} /></span>
+                      <span className="h-6 w-6 rounded-full bg-primary flex items-center justify-center shrink-0"><Check className="h-4 w-4 text-white" strokeWidth={3} /></span>
                     </div>
                   );
                 }
@@ -393,7 +393,7 @@ const OnboardingFlow = ({ onDone }: Props) => {
                     className="w-full text-left px-4 py-3.5 rounded-2xl border border-border bg-white text-foreground text-[15px] font-semibold flex items-center justify-between active:scale-[0.99] transition-transform"
                   >
                     <span>{t(o.labelKey)}</span>
-                    <span className={cn("h-6 w-6 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors", active ? "bg-orange-600 border-orange-600" : "border-muted-foreground/30")}>
+                    <span className={cn("h-6 w-6 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors", active ? "bg-primary border-primary" : "border-muted-foreground/30")}>
                       {active && <Check className="h-4 w-4 text-white" strokeWidth={3} />}
                     </span>
                   </button>
@@ -423,7 +423,7 @@ const OnboardingFlow = ({ onDone }: Props) => {
                         placeholder={t("goals.other_placeholder")}
                         className="flex-1 bg-transparent text-[15px] font-semibold outline-none placeholder:font-normal placeholder:text-muted-foreground/50"
                       />
-                      <button onClick={() => toggleGoal(o.id)} aria-label="Odznacz" className="h-6 w-6 rounded-md bg-orange-600 flex items-center justify-center shrink-0"><Check className="h-4 w-4 text-white" strokeWidth={3} /></button>
+                      <button onClick={() => toggleGoal(o.id)} aria-label="Odznacz" className="h-6 w-6 rounded-md bg-primary flex items-center justify-center shrink-0"><Check className="h-4 w-4 text-white" strokeWidth={3} /></button>
                     </div>
                   );
                 }
@@ -434,7 +434,7 @@ const OnboardingFlow = ({ onDone }: Props) => {
                     className="w-full text-left px-4 py-3.5 rounded-2xl border border-border bg-white text-foreground text-[15px] font-semibold flex items-center justify-between active:scale-[0.99] transition-transform"
                   >
                     <span>{t(o.labelKey)}</span>
-                    <span className={cn("h-6 w-6 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors", active ? "bg-orange-600 border-orange-600" : "border-muted-foreground/30")}>
+                    <span className={cn("h-6 w-6 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors", active ? "bg-primary border-primary" : "border-muted-foreground/30")}>
                       {active && <Check className="h-4 w-4 text-white" strokeWidth={3} />}
                     </span>
                   </button>
@@ -508,7 +508,7 @@ const OnboardingFlow = ({ onDone }: Props) => {
                 <div className="h-40 w-40 rounded-full overflow-hidden flex items-center justify-center bg-orange-100">
                   <img src={avatarSrc(avatarUrl)} alt="" className="h-full w-full object-cover" />
                 </div>
-                <div className="absolute bottom-1 right-1 h-12 w-12 rounded-full bg-orange-600 border-4 border-[#FEFEFE] flex items-center justify-center shadow-md">
+                <div className="absolute bottom-1 right-1 h-12 w-12 rounded-full bg-primary border-4 border-[#FEFEFE] flex items-center justify-center shadow-md">
                   {uploading ? <Loader2 className="h-5 w-5 text-white animate-spin" /> : <Plus className="h-6 w-6 text-white" strokeWidth={2.5} />}
                 </div>
               </button>
@@ -638,7 +638,7 @@ const OnboardingFlow = ({ onDone }: Props) => {
         <button
           onClick={onPrimary}
           disabled={!canNext || permBusy || (stepName === "tracking" && finishing)}
-          className="w-full py-4 rounded-2xl bg-orange-600 text-white font-bold text-base shadow-lg active:scale-[0.98] transition-transform disabled:opacity-50"
+          className="w-full py-4 rounded-2xl bg-primary text-white font-bold text-base shadow-lg active:scale-[0.98] transition-transform disabled:opacity-50"
         >
           {(savingU || permBusy || (stepName === "tracking" && finishing))
             ? <Loader2 className="h-5 w-5 animate-spin mx-auto" />

@@ -250,7 +250,7 @@ const ProfileSetup = ({ onDone }: ProfileSetupProps) => {
         <div className="flex-1 flex gap-1.5">
           {STEPS.map((_, i) => (
             <div key={i} className="h-1.5 flex-1 rounded-full bg-muted overflow-hidden">
-              <div className="h-full bg-orange-600 rounded-full transition-all duration-300" style={{ width: i <= step ? "100%" : "0%" }} />
+              <div className="h-full bg-primary rounded-full transition-all duration-300" style={{ width: i <= step ? "100%" : "0%" }} />
             </div>
           ))}
         </div>
@@ -321,7 +321,7 @@ const ProfileSetup = ({ onDone }: ProfileSetupProps) => {
                 <div className="h-40 w-40 rounded-full overflow-hidden flex items-center justify-center bg-orange-100">
                   <img src={avatarSrc(avatarUrl)} alt="" className="h-full w-full object-cover" />
                 </div>
-                <div className="absolute bottom-1 right-1 h-12 w-12 rounded-full bg-orange-600 border-4 border-[#FEFEFE] flex items-center justify-center shadow-md">
+                <div className="absolute bottom-1 right-1 h-12 w-12 rounded-full bg-primary border-4 border-[#FEFEFE] flex items-center justify-center shadow-md">
                   {uploading ? <Loader2 className="h-5 w-5 text-white animate-spin" /> : <Plus className="h-6 w-6 text-white" strokeWidth={2.5} />}
                 </div>
               </button>

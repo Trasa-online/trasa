@@ -131,7 +131,7 @@ const QuickPlanReview = () => {
       <div className="flex h-screen items-center justify-center flex-col gap-4 px-8 text-center">
         <p className="text-4xl">🗺️</p>
         <p className="font-bold">{t("quick_review.no_data")}</p>
-        <button onClick={() => navigate("/")} className="text-sm text-orange-600 font-semibold underline">
+        <button onClick={() => navigate("/")} className="text-sm text-primary font-semibold underline">
           {t("quick_review.back_home")}
         </button>
       </div>

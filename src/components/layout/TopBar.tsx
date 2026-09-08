@@ -106,7 +106,7 @@ const TopBar = (_props: { onOrbClick?: () => void }) => {
         >
           <Avatar className="h-8 w-8">
             <AvatarImage src={avatarSrc(profile?.avatar_url)} className="object-cover bg-orange-100" />
-            <AvatarFallback className="bg-orange-100 text-orange-600 text-sm font-bold">
+            <AvatarFallback className="bg-orange-100 text-primary text-sm font-bold">
               {profile?.first_name ? profile.first_name.charAt(0).toUpperCase() : "?"}
             </AvatarFallback>
           </Avatar>

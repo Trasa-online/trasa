@@ -750,7 +750,7 @@ const CreateRanking = () => {
                     className="w-full flex items-center gap-3 p-2.5 active:bg-background/50 text-left">
                     {r.photo_url ? <img src={r.photo_url} alt="" className="h-11 w-11 rounded-xl object-cover shrink-0" /> : <div className="h-11 w-11 rounded-xl bg-[#fcede3] flex items-center justify-center shrink-0"><CategoryIcon category={r.category} className="w-1/2" /></div>}
                     <div className="flex-1 min-w-0"><p className="text-sm font-semibold truncate">{r.place_name}</p>{r.address && <p className="text-[11px] text-muted-foreground truncate">{r.address}</p>}</div>
-                    <Plus className="h-4 w-4 text-orange-600 shrink-0" />
+                    <Plus className="h-4 w-4 text-primary shrink-0" />
                   </button>
                 ))}
                 {/* Nowe miejsca spoza bazy (Google) - dopelnienie wynikow z DB. */}
@@ -770,7 +770,7 @@ const CreateRanking = () => {
                       </div>
                       {g.full_address && <p className="text-[11px] text-muted-foreground truncate">{g.full_address}</p>}
                     </div>
-                    {addingGoogleName === g.name ? <Loader2 className="h-4 w-4 animate-spin text-orange-600 shrink-0" /> : <Plus className="h-4 w-4 text-orange-600 shrink-0" />}
+                    {addingGoogleName === g.name ? <Loader2 className="h-4 w-4 animate-spin text-primary shrink-0" /> : <Plus className="h-4 w-4 text-primary shrink-0" />}
                   </button>
                 ))}
                 {/* Stan pusty - brak dopasowan w miescie (najczesciej literowka). */}
@@ -785,7 +785,7 @@ const CreateRanking = () => {
                 {!searchLoading && !googleLoading && (
                   <button onClick={() => previewCustomByName(search)} disabled={addingCustom}
                     className="w-full flex items-center gap-2 p-3 text-left active:bg-background/50 disabled:opacity-50">
-                    {addingCustom ? <Loader2 className="h-4 w-4 animate-spin text-orange-600 shrink-0" /> : <Search className="h-4 w-4 text-orange-600 shrink-0" />}
+                    {addingCustom ? <Loader2 className="h-4 w-4 animate-spin text-primary shrink-0" /> : <Search className="h-4 w-4 text-primary shrink-0" />}
                     <span className="text-sm font-semibold">{t("search.preview_cta", { query: search.trim() })}</span>
                   </button>
                 )}
@@ -824,7 +824,7 @@ const CreateRanking = () => {
                   onClick={() => searchInputRef.current?.focus()}
                   className="mt-2.5 w-full rounded-2xl border-2 border-dashed border-border/70 bg-secondary/40 flex flex-col items-center justify-center gap-2 py-5 text-muted-foreground active:scale-[0.99] transition-transform"
                 >
-                  <span className="h-11 w-11 rounded-full bg-secondary flex items-center justify-center"><Plus className="h-5 w-5 text-orange-600" /></span>
+                  <span className="h-11 w-11 rounded-full bg-secondary flex items-center justify-center"><Plus className="h-5 w-5 text-primary" /></span>
                   <span className="text-sm font-bold text-foreground">{t("places.add")}</span>
                   <span className="text-[12px] text-center">{t("places.add_hint")}</span>
                 </button>
@@ -884,7 +884,7 @@ const CreateRanking = () => {
                   onClick={() => searchInputRef.current?.focus()}
                   className="rounded-2xl border-2 border-dashed border-border/70 bg-secondary/40 flex flex-col items-center justify-center gap-2 shrink-0 w-[80%] snap-start self-stretch min-h-[240px] px-4 text-muted-foreground active:scale-[0.99] transition-transform"
                 >
-                  <span className="h-11 w-11 rounded-full bg-secondary flex items-center justify-center"><Plus className="h-5 w-5 text-orange-600" /></span>
+                  <span className="h-11 w-11 rounded-full bg-secondary flex items-center justify-center"><Plus className="h-5 w-5 text-primary" /></span>
                   <span className="text-sm font-bold text-foreground">{t("places.add")}</span>
                   <span className="text-[12px] text-center">{t("places.add_hint")}</span>
                 </button>

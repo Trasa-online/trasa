@@ -383,7 +383,7 @@ const PlanWizard = () => {
               onClick={() => setCategoryDrawerOpen(true)}
               className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-card border border-border/60 active:scale-[0.97] transition-transform max-w-[140px]"
             >
-              <Filter className="h-3.5 w-3.5 text-orange-600 shrink-0" />
+              <Filter className="h-3.5 w-3.5 text-primary shrink-0" />
               <span className="text-sm font-semibold text-foreground truncate">{categoryLabel}</span>
             </button>
           </>
@@ -463,7 +463,7 @@ const PlanWizard = () => {
                   onClick={() => setStep4Tab("swipe")}
                   className={cn(
                     "flex-1 py-2.5 text-sm font-semibold transition-colors",
-                    step4Tab === "swipe" ? "text-orange-600 border-b-2 border-orange-600" : "text-muted-foreground"
+                    step4Tab === "swipe" ? "text-primary border-b-2 border-primary" : "text-muted-foreground"
                   )}
                 >
                   {t("tab_explore")}
@@ -472,7 +472,7 @@ const PlanWizard = () => {
                   onClick={() => setStep4Tab("matches")}
                   className={cn(
                     "flex-1 py-2.5 text-sm font-semibold transition-colors flex items-center justify-center gap-1.5",
-                    step4Tab === "matches" ? "text-orange-600 border-b-2 border-orange-600" : "text-muted-foreground"
+                    step4Tab === "matches" ? "text-primary border-b-2 border-primary" : "text-muted-foreground"
                   )}
                 >
                   {t("tab_saved")}
@@ -579,7 +579,7 @@ const PlanWizard = () => {
                                           onClick={(e) => { e.stopPropagation(); toggleMatchSelection(place.place_name); }}
                                           className={cn(
                                             "h-6 w-6 rounded-full border-2 flex items-center justify-center transition-colors shrink-0",
-                                            isSelected ? "bg-primary border-orange-600" : "border-border/60 bg-background"
+                                            isSelected ? "bg-primary border-primary" : "border-border/60 bg-background"
                                           )}
                                         >
                                           {isSelected && <Check className="h-3.5 w-3.5 text-white" />}
@@ -761,7 +761,7 @@ const PlanWizard = () => {
                           <CategoryIcon category={sub.id} className="h-4 w-4 shrink-0" />
                           <span>{sub.label}</span>
                           {active
-                            ? <Check className="h-3.5 w-3.5 ml-0.5 text-orange-600" />
+                            ? <Check className="h-3.5 w-3.5 ml-0.5 text-primary" />
                             : <Plus className="h-3.5 w-3.5 ml-0.5 text-muted-foreground/50" />}
                         </button>
                       );
@@ -813,7 +813,7 @@ const PlanWizard = () => {
           >
             <div className="flex items-start gap-3">
               <div className="h-11 w-11 rounded-full bg-orange-50 border border-orange-100 flex items-center justify-center shrink-0">
-                <MapPin className="h-5 w-5 text-orange-600" />
+                <MapPin className="h-5 w-5 text-primary" />
               </div>
               <div className="flex-1">
                 <p className="text-base font-black leading-snug">{t("dup_title", { city: dupTrip.city })}</p>

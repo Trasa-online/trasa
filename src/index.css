@@ -19,7 +19,7 @@ All colors MUST be HSL.
     --popover-foreground: 0 0% 8%;
 
     /* ── Primary — orange (#D45113) ── */
-    --primary: 19 83% 45%;
+    --primary: 19.7 94.3% 48%;
     --primary-foreground: 0 0% 100%;
 
     /* ── Secondary — light gray ── */
@@ -40,7 +40,7 @@ All colors MUST be HSL.
 
     --border: 0 0% 85%;
     --input: 0 0% 91%;
-    --ring: 19 83% 45%;
+    --ring: 19.7 94.3% 48%;
 
     /* ── Tertiary — amber/gold ── */
     --star: 45 100% 51%;

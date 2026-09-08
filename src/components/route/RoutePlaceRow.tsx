@@ -55,7 +55,7 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
           {/* Odwiedzone widac NA MINIATURCE, nie tylko w guziku: przy przewijaniu listy wzrok
               szuka roznicy w kolumnie zdjec, a nie w rzedzie ikon pod spodem. */}
           {visited && (
-            <span className="absolute top-1 left-1 h-6 w-6 rounded-full bg-orange-600 border-2 border-white shadow-sm flex items-center justify-center">
+            <span className="absolute top-1 left-1 h-6 w-6 rounded-full bg-primary border-2 border-white shadow-sm flex items-center justify-center">
               <Check className="h-3.5 w-3.5 text-white" strokeWidth={3} />
             </span>
           )}
@@ -70,7 +70,7 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
               <p className="text-[16px] font-bold leading-snug line-clamp-2">
                 {/* Gwiazdka PRZED nazwa, w jednym ciagu tekstu - inaczej przy nazwie lamiacej
                     sie na dwie linie odjezdzalaby od niej i wygladala jak osobna kontrolka. */}
-                {isTop && <Star className="inline-block h-4 w-4 -mt-0.5 mr-1 text-orange-600 fill-orange-600" aria-label={t("row.top_place")} />}
+                {isTop && <Star className="inline-block h-4 w-4 -mt-0.5 mr-1 text-primary fill-primary" aria-label={t("row.top_place")} />}
                 {pin.place_name}
               </p>
             </button>
@@ -109,7 +109,7 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
             aria-pressed={!!isTop}
             className="h-9 w-9 rounded-full flex items-center justify-center active:scale-90 transition-transform"
           >
-            <Star className={`h-5 w-5 ${isTop ? "text-orange-600 fill-orange-600" : "text-foreground/70"}`} strokeWidth={2} />
+            <Star className={`h-5 w-5 ${isTop ? "text-primary fill-primary" : "text-foreground/70"}`} strokeWidth={2} />
           </button>
         )}
         {onToggleVisited && (
@@ -118,7 +118,7 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
             aria-label={visited ? t("row.mark_not_visited") : t("row.mark_visited")}
             aria-pressed={!!visited}
             className={`h-9 rounded-full flex items-center gap-1.5 px-3 text-[12px] font-bold shrink-0 active:scale-95 transition-transform ${
-              visited ? "bg-orange-600 text-white" : "bg-secondary text-secondary-foreground"
+              visited ? "bg-primary text-white" : "bg-secondary text-secondary-foreground"
             }`}
           >
             <Check className="h-4 w-4" strokeWidth={3} />

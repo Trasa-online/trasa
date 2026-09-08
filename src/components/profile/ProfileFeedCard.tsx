@@ -90,7 +90,7 @@ export function ProfileFeedCard({
         <div className="flex items-start gap-3">
           <Avatar className="h-10 w-10 shrink-0">
             <AvatarImage src={avatarSrc(avatarUrl)} className="object-cover bg-orange-100" />
-            <AvatarFallback className="bg-orange-100 text-orange-600 font-bold text-sm">
+            <AvatarFallback className="bg-orange-100 text-primary font-bold text-sm">
               {(fallback || "?").charAt(0).toUpperCase()}
             </AvatarFallback>
           </Avatar>
@@ -178,7 +178,7 @@ export function ProfileFeedCard({
           <>
             {onSave ? (
               <button onClick={onSave} aria-label={saved ? t("card.remove_saved") : t("common:buttons.save")} className="flex items-center gap-1.5 text-sm tabular-nums active:scale-90 transition-transform">
-                <Bookmark className={`h-[18px] w-[18px] ${saved ? "fill-orange-600 text-orange-600" : ""}`} /> {counts.saves}
+                <Bookmark className={`h-[18px] w-[18px] ${saved ? "fill-primary text-primary" : ""}`} /> {counts.saves}
               </button>
             ) : (
               <span className="flex items-center gap-1.5 text-sm tabular-nums">

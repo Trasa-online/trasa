@@ -35,7 +35,7 @@ const RoutePlanTimeline = ({ days, totalDays, onMovePin }: RoutePlanTimelineProp
             // 2026-06-02 dla "Wieczorny spacer po Pradze-Polnoc" itp).
             <div className="rounded-2xl border border-dashed border-border bg-muted/30 px-4 py-6 flex flex-col items-center gap-2 text-center">
               <div className="h-10 w-10 rounded-full bg-orange-100 flex items-center justify-center">
-                <Plus className="h-5 w-5 text-orange-600" />
+                <Plus className="h-5 w-5 text-primary" />
               </div>
               <p className="text-sm font-semibold text-foreground">{t("empty_day_title")}</p>
               <p className="text-xs text-muted-foreground leading-relaxed max-w-[280px]">

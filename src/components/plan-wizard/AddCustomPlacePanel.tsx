@@ -289,7 +289,7 @@ const Inner = ({ city, onAdd, onCancel }: AddCustomPlacePanelProps) => {
           <div className="rounded-2xl border border-border bg-card p-4 space-y-1">
             <div className="flex items-start gap-3">
               <div className="w-10 h-10 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0">
-                <MapPin className="h-5 w-5 text-orange-600" />
+                <MapPin className="h-5 w-5 text-primary" />
               </div>
               <div className="min-w-0">
                 <p className="font-semibold text-base leading-tight">{preview.place_name}</p>

@@ -48,7 +48,7 @@ function GuestProfile() {
   return (
     <div className="flex-1 flex flex-col items-center justify-center gap-6 px-6 pb-[20vh] text-center">
       <div className="h-20 w-20 rounded-full bg-orange-50 border border-orange-100 flex items-center justify-center">
-        <UserCircle2 className="h-10 w-10 text-orange-600" />
+        <UserCircle2 className="h-10 w-10 text-primary" />
       </div>
       <div className="space-y-2 max-w-[320px]">
         <p className="text-2xl font-black tracking-tight leading-tight">{t("guest.title")}</p>
@@ -759,7 +759,7 @@ const TravelerProfile = () => {
           <div className="relative shrink-0 self-center">
             <Avatar className="h-[76px] w-[76px]">
               <AvatarImage src={avatarSrc(profile?.avatar_url)} className="object-cover bg-orange-100" />
-              <AvatarFallback className="bg-orange-100 text-orange-600 text-3xl font-black">
+              <AvatarFallback className="bg-orange-100 text-primary text-3xl font-black">
                 {displayName.charAt(0).toUpperCase() || "U"}
               </AvatarFallback>
             </Avatar>
@@ -978,7 +978,7 @@ const TravelerProfile = () => {
               <div className="space-y-1">
                 {(followList.data ?? []).map((p) => (
                   <button key={p.id} onClick={() => { setFollowSheet(null); navigate(`/profil/${p.username}`); }} className="w-full flex items-center gap-3 px-1 py-2 active:bg-muted/40 rounded-xl transition-colors text-left">
-                    <Avatar className="h-10 w-10"><AvatarImage src={avatarSrc(p.avatar_url)} className="object-cover bg-orange-100" /><AvatarFallback className="bg-orange-100 text-orange-600 font-bold text-sm">{(p.first_name || p.username || "?").charAt(0).toUpperCase()}</AvatarFallback></Avatar>
+                    <Avatar className="h-10 w-10"><AvatarImage src={avatarSrc(p.avatar_url)} className="object-cover bg-orange-100" /><AvatarFallback className="bg-orange-100 text-primary font-bold text-sm">{(p.first_name || p.username || "?").charAt(0).toUpperCase()}</AvatarFallback></Avatar>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold truncate">{p.first_name || p.username}</p>
                       {p.username && <p className="text-xs text-muted-foreground">@{p.username}</p>}

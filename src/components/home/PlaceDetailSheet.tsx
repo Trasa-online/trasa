@@ -313,7 +313,7 @@ const PlaceDetailSheet = ({ pin, open, onOpenChange }: PlaceDetailSheetProps) =>
             {businessProfile?.owner_user_id === user.id ? (
               <button
                 onClick={() => navigate(`/biznes/${pin.place_id}`)}
-                className="w-full text-sm text-center text-orange-600 font-semibold py-2.5 rounded-2xl border border-orange-200 bg-orange-50 hover:bg-orange-100 transition-colors"
+                className="w-full text-sm text-center text-primary font-semibold py-2.5 rounded-2xl border border-orange-200 bg-orange-50 hover:bg-orange-100 transition-colors"
               >
                 {t("place.manage_listing")}
               </button>

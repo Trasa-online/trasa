@@ -34,7 +34,7 @@ Typografia tertiary:  #CFCFCF (niedostępne/placeholder)
 **Akcenty żółte (rebrand ikony 2026-08-12):** `#FDF184` i `#FDCD84` to kolory AKCENTOWE (z nowej ikony aplikacji, gradient żółty→złoty). **Pomarańczowy zostaje PRIMARY** - żółte to tylko akcenty (tła, wyróżnienia, dekoracje), NIE zastępują pomarańczu na guzikach primary. W Tailwind: `bg-trasa-yellow` (DEFAULT #FDF184) / `bg-trasa-gold` (#FDCD84), `text-trasa-yellow-ink` / `text-trasa-gold-ink`, gradient `bg-trasa-yellow` (util backgroundImage) lub `bg-gradient-to-r from-[#FDF184] to-[#FDCD84]`. Zakaz gradientu na guzikach dotyczy też żółtego.
 
 W Tailwind odpowiedniki klas:
-- Primary fill = `bg-orange-600` lub `bg-gradient-to-r from-[#F4A259] to-[#F9662B]`
+- Primary fill = **`bg-primary`** (= `#EE5307`). ⛔ NIE `bg-orange-600` - patrz reguła jednego pomarańczu niżej.
 - Secondary (guziki akcji) = **szary fill** `bg-secondary text-secondary-foreground` (styl YouTube), NIE biały+pomarańczowy stroke
 - Tekst główny = `text-foreground` (mapuje na #0E0E0E)
 - Tekst secondary = `text-muted-foreground`
@@ -75,6 +75,24 @@ zwykłego tekstu; treść na żółtym pisz brązowym (10:1).
 
 **Pomarańczowy (gradient `#F4A259 → #F9662B`) jest zarezerwowany WYŁĄCZNIE dla B2C** (użytkownicy końcowi: solo + grupowo). Wyjątek: samo **logo Trasy** zawsze pomarańczowe (w białym kółku), nawet w kontekście B2B. Poza logo nie mieszaj brandingu - akcent biznesowy = niebieski.
 
+### JEDEN pomarańcz primary: `#EE5307` (decyzja Nat 2026-09-08)
+
+Do 8 września w aplikacji żyły **trzy różne pomarańcze**, wszystkie podając się za primary:
+`--primary` = `#D25014` (171 użyć `bg-primary`), Tailwind `orange-600` = `#EA580C`
+(150 użyć) i `spontaway.orange` = `#EE5307` (landing). Ta strona traktowała pierwsze dwa
+jak synonimy, a różnica `--primary` wobec docelowego to **ΔE 13,2** - widać ją od razu,
+bez porównywania obok siebie.
+
+Teraz jedna wartość: **`#EE5307`** = `--primary` (`hsl(19.7 94.3% 48%)`, round-trip co do
+bajtu) = `spontaway.orange`.
+
+- ✅ Używaj **`bg-primary` / `text-primary` / `border-primary` / `fill-primary`**.
+- ⛔ **NIE używaj `*-orange-600`** jako primary - te 150 użyć zostało przepiętych na token.
+- Reszta skali `orange-*` (50-500, 700-900) zostaje jako **paleta dekoracyjna** (tła, obwódki,
+  gradienty) i NIE udaje primary.
+- Wyjątki, które zostały świadomie: `from-orange-600/20`, `to-orange-600`, `shadow-orange-600/30`
+  - tam kolor jest częścią efektu przy niskiej przezroczystości, nie wypełnieniem guzika.
+
 ### Claim / tagline
 
 Oficjalny tagline aplikacji: **"speed dating z miastem"** (wszystkie litery małe, bez kropek na końcu). Używaj go w headerach stron marketingowych. Nie zastępuj innymi sformułowaniami bez wyraźnej prośby.
@@ -90,7 +108,7 @@ Oficjalny tagline aplikacji: **"speed dating z miastem"** (wszystkie litery mał
 
 ### Przyciski
 
-- **Primary:** **SOLIDNY pomarańczowy fill** (`bg-orange-600` / `bg-primary`), zaokrąglenie **16px** (`rounded-2xl`). ⛔ **ZAKAZ gradientu na guzikach** (`linear-gradient(#F4A259 → #F9662B)` itp.) - domyślny guzik MUSI być jednolicie pomarańczowy. Gradientowy guzik tylko gdy Nat wyraźnie napisze, żeby go wprowadzić (decyzja 2026-08-04). Gradient zostaje wyłącznie dla logo/orba/akcentów tła, NIE dla guzików.
+- **Primary:** **SOLIDNY pomarańczowy fill** (`bg-primary`, jedyny poprawny token), zaokrąglenie **16px** (`rounded-2xl`). ⛔ **ZAKAZ gradientu na guzikach** (`linear-gradient(#F4A259 → #F9662B)` itp.) - domyślny guzik MUSI być jednolicie pomarańczowy. Gradientowy guzik tylko gdy Nat wyraźnie napisze, żeby go wprowadzić (decyzja 2026-08-04). Gradient zostaje wyłącznie dla logo/orba/akcentów tła, NIE dla guzików.
 - **Secondary:** **szary fill** `bg-secondary text-secondary-foreground` (styl YouTube - jasny szary, ciemny tekst). NIE biały+pomarańczowy stroke. Dotyczy wszystkich guzików akcji secondary oraz komponentów "paper" (karty sugerujące klik, np. karty miejsc we wpisie dziennika = `bg-secondary`).
 - **Destrukcyjne:** `bg-destructive` (czerwony), tylko dla nieodwracalnych akcji
 - Wszystkie przyciski obłe, `rounded-2xl` minimum

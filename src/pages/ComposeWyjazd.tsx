@@ -829,7 +829,7 @@ export default function ComposeWyjazd() {
             /* Pusty stan = kafelek "Dodaj miejsce" (klik = fokus wyszukiwarki), ujednolicony z lista. */
             <button type="button" onClick={() => searchRef.current?.focus()}
               className="w-full rounded-2xl border-2 border-dashed border-border/70 bg-secondary/40 flex flex-col items-center justify-center gap-2 py-8 text-muted-foreground active:scale-[0.99] transition-transform">
-              <span className="h-11 w-11 rounded-full bg-secondary flex items-center justify-center"><Plus className="h-5 w-5 text-orange-600" /></span>
+              <span className="h-11 w-11 rounded-full bg-secondary flex items-center justify-center"><Plus className="h-5 w-5 text-primary" /></span>
               <span className="text-sm font-bold text-foreground">{t("compose.add_place_tile")}</span>
               <span className="text-[12px] text-center">{t("search.hint")}</span>
             </button>
@@ -885,7 +885,7 @@ export default function ComposeWyjazd() {
           {items.length > 0 && (
             <button type="button" onClick={() => searchRef.current?.focus()}
               className="mt-2.5 w-full rounded-2xl border-2 border-dashed border-border/70 bg-secondary/40 flex items-center justify-center gap-2 py-3.5 text-muted-foreground active:scale-[0.99] transition-transform">
-              <Plus className="h-4 w-4 text-orange-600" /><span className="text-sm font-bold text-foreground">{t("compose.add_place_tile")}</span>
+              <Plus className="h-4 w-4 text-primary" /><span className="text-sm font-bold text-foreground">{t("compose.add_place_tile")}</span>
             </button>
           )}
         </div>

@@ -457,7 +457,7 @@ const AddPlaceToTripInner = () => {
             {likedForCity.length === 0 ? (
               <div className="flex flex-col items-center gap-4 py-14 px-6 text-center">
                 <div className="h-14 w-14 rounded-full bg-orange-100 flex items-center justify-center">
-                  <Heart className="h-6 w-6 text-orange-600" />
+                  <Heart className="h-6 w-6 text-primary" />
                 </div>
                 <div className="space-y-1.5">
                   <p className="text-sm font-semibold text-foreground">{t("add_place.liked_empty_title")}</p>

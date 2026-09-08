@@ -381,8 +381,8 @@ export default function TrialModal({ open, onClose }: TrialModalProps) {
                   </p>
                 </div>
                 {liked.length > 0 && (
-                  <span className="flex items-center gap-1 text-xs font-bold text-orange-600 bg-orange-50 px-2.5 py-1 rounded-full">
-                    <Heart className="h-3 w-3 fill-orange-600" /> {liked.length}
+                  <span className="flex items-center gap-1 text-xs font-bold text-primary bg-orange-50 px-2.5 py-1 rounded-full">
+                    <Heart className="h-3 w-3 fill-primary" /> {liked.length}
                   </span>
                 )}
               </div>
@@ -427,7 +427,7 @@ export default function TrialModal({ open, onClose }: TrialModalProps) {
             <div className="flex-1 overflow-y-auto px-5 space-y-2 pb-2">
               {liked.map((place, i) => (
                 <div key={place.id} className="flex items-center gap-3 p-3 rounded-2xl bg-slate-50 border border-slate-100">
-                  <div className="h-6 w-6 rounded-full bg-orange-100 flex items-center justify-center shrink-0 text-xs font-black text-orange-600">{i + 1}</div>
+                  <div className="h-6 w-6 rounded-full bg-orange-100 flex items-center justify-center shrink-0 text-xs font-black text-primary">{i + 1}</div>
                   <img src={place.photo_url} alt="" className="h-10 w-10 rounded-xl object-cover shrink-0" />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-bold truncate">{place.place_name}</p>

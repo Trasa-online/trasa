@@ -751,7 +751,7 @@ const EmptyState = ({
     return (
       <div className="flex-1 flex flex-col items-center justify-center px-8 text-center gap-5">
         <div className="h-16 w-16 rounded-full bg-orange-50 border border-orange-100 flex items-center justify-center">
-          <CheckCircle2 className="h-8 w-8 text-orange-600" strokeWidth={2.2} />
+          <CheckCircle2 className="h-8 w-8 text-primary" strokeWidth={2.2} />
         </div>
         <div className="space-y-1.5">
           <p className="text-2xl font-black text-foreground leading-tight">{reviewedTitle}</p>
@@ -813,7 +813,7 @@ const EmptyState = ({
             {/* Matched place pills */}
             <div className="flex flex-wrap gap-1.5">
               {route.matchedNames.map(name => (
-                <span key={name} className="text-xs bg-primary/10 text-orange-600 px-2.5 py-1 rounded-full font-medium">
+                <span key={name} className="text-xs bg-primary/10 text-primary px-2.5 py-1 rounded-full font-medium">
                   {name}
                 </span>
               ))}
@@ -1962,7 +1962,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
               {onSuggestPlace && (
                 <button
                   onClick={onSuggestPlace}
-                  className="text-sm font-semibold text-orange-600 underline underline-offset-2"
+                  className="text-sm font-semibold text-primary underline underline-offset-2"
                 >
                   {t("suggest_add_place")}
                 </button>

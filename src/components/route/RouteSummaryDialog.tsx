@@ -300,7 +300,7 @@ const RouteSummaryDialog = ({
         {/* Header */}
         <div className="flex-shrink-0 flex items-start justify-between px-5 pb-4">
           <div>
-            <p className="text-xs font-medium text-orange-600 uppercase tracking-wide mb-0.5">{t("summary.eyebrow")}</p>
+            <p className="text-xs font-medium text-primary uppercase tracking-wide mb-0.5">{t("summary.eyebrow")}</p>
             <h2 className="text-2xl font-black leading-tight">{plan.city}</h2>
             <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
               {dateLabel && <span>{dateLabel}</span>}

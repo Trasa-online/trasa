@@ -147,7 +147,7 @@ function Faq({ items }: { items: { q: string; a: string }[] }) {
             <div className="rounded-[1.4rem] bg-white">
               <button onClick={() => setOpen(isOpen ? null : i)} className="w-full flex items-center justify-between gap-4 px-6 py-5 text-left">
                 <span className="font-display font-extrabold text-base text-foreground">{it.q}</span>
-                <span className={`shrink-0 h-8 w-8 rounded-full flex items-center justify-center transition-all duration-500 ${isOpen ? "bg-gradient-to-br from-[#F4A259] to-[#F9662B] text-white rotate-45" : "bg-orange-50 text-orange-600"}`} style={{ transitionTimingFunction: EASE }}>
+                <span className={`shrink-0 h-8 w-8 rounded-full flex items-center justify-center transition-all duration-500 ${isOpen ? "bg-gradient-to-br from-[#F4A259] to-[#F9662B] text-white rotate-45" : "bg-orange-50 text-primary"}`} style={{ transitionTimingFunction: EASE }}>
                   <span className="text-lg leading-none">+</span>
                 </span>
               </button>
@@ -365,7 +365,7 @@ const LandingV2 = () => {
                   style={{ background: "linear-gradient(160deg, #FFF3E9 0%, #FFEFD8 45%, #FEFEFE 100%)" }}>
                   <div className="absolute -top-10 -right-10 h-40 w-40 rounded-full opacity-60" style={{ background: "radial-gradient(circle, rgba(249,102,43,0.25), transparent 70%)" }} />
                   <div className="relative flex h-14 w-14 items-center justify-center rounded-2xl bg-white shadow-sm ring-1 ring-orange-100">
-                    <Compass className="h-7 w-7 text-orange-600" strokeWidth={1.6} />
+                    <Compass className="h-7 w-7 text-primary" strokeWidth={1.6} />
                   </div>
                   <div className="relative mt-8">
                     <h3 className="font-display font-extrabold text-2xl text-foreground">Solo odkrywanie</h3>
@@ -431,7 +431,7 @@ const LandingV2 = () => {
                 <div className="absolute top-0 left-1/2 -translate-x-1/2 h-64 w-64 rounded-full opacity-70" style={{ background: "radial-gradient(circle, rgba(249,102,43,0.28), transparent 70%)", filter: "blur(30px)" }} />
                 <div className="relative flex flex-col items-center">
                   <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-white shadow-lg shadow-orange-200/60 ring-1 ring-orange-100">
-                    <MapPin className="h-8 w-8 text-orange-600" strokeWidth={1.6} />
+                    <MapPin className="h-8 w-8 text-primary" strokeWidth={1.6} />
                   </div>
                   <h2 className="font-display font-extrabold text-foreground text-[clamp(2rem,5vw,3.25rem)] tracking-[-0.02em] leading-tight max-w-[16ch]">Zacznij odkrywać swoje miasto</h2>
                   <p className="mt-4 text-base text-muted-foreground max-w-[40ch]">Pobierz Trasę i&nbsp;zaplanuj pierwszą trasę już dziś.</p>

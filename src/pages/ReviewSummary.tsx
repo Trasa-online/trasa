@@ -1441,7 +1441,7 @@ const ReviewSummary = () => {
   if (routeLoading) {
     return (
       <div className="min-h-[100dvh] bg-background flex items-center justify-center">
-        <div className="h-8 w-8 rounded-full border-2 border-orange-200 border-t-orange-600 animate-spin" />
+        <div className="h-8 w-8 rounded-full border-2 border-orange-200 border-t-primary animate-spin" />
       </div>
     );
   }
@@ -2046,7 +2046,7 @@ const ReviewSummary = () => {
 
   const renderStepInfo = () => (
     <div className="mb-3 flex items-start gap-2 rounded-xl bg-orange-50 border border-orange-100 px-3 py-2.5">
-      <Info className="h-4 w-4 text-orange-600 shrink-0 mt-0.5" />
+      <Info className="h-4 w-4 text-primary shrink-0 mt-0.5" />
       <p className="text-xs text-orange-800 leading-relaxed">{t(`step_info.${step}`)}</p>
     </div>
   );
@@ -2157,7 +2157,7 @@ const ReviewSummary = () => {
                 style={{ fontSize: "16px" }}
               />
               <button onClick={saveName} disabled={savingName} aria-label={t("a11y.save_name")}
-                className="h-9 w-9 shrink-0 rounded-lg bg-white/90 text-orange-600 flex items-center justify-center active:scale-95 transition-transform disabled:opacity-50">
+                className="h-9 w-9 shrink-0 rounded-lg bg-white/90 text-primary flex items-center justify-center active:scale-95 transition-transform disabled:opacity-50">
                 <Check className="h-4 w-4" strokeWidth={3} />
               </button>
             </div>
@@ -2436,7 +2436,7 @@ const ReviewSummary = () => {
           >
             <div className="flex items-start gap-3">
               <div className="h-11 w-11 rounded-full bg-orange-50 border border-orange-100 flex items-center justify-center shrink-0">
-                <Globe className="h-5 w-5 text-orange-600" />
+                <Globe className="h-5 w-5 text-primary" />
               </div>
               <div className="flex-1">
                 <p className="text-base font-black leading-snug">{t("prompt.title")}</p>

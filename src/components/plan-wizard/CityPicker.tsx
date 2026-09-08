@@ -200,7 +200,7 @@ const CityPicker = ({ onConfirm }: CityPickerProps) => {
                   >
                     <span className="text-lg leading-none">{country.flag}</span>
                     <span className="flex-1">{countryLabel(country.name)}</span>
-                    {country.code === countryCode && <Check className="h-4 w-4 text-orange-600" />}
+                    {country.code === countryCode && <Check className="h-4 w-4 text-primary" />}
                   </button>
                 ) : (
                   <div
