@@ -136,7 +136,16 @@ function ShareSheet({ children, onClose, onShare, shareUrl, shareTitle, strip, s
             dokladnie to, co zobaczy odbiorca, a nie osobny plakat. Dlatego renderujemy ja
             w naturalnym rozmiarze, bez pomniejszania calego ekranu. */}
         {plainPreview ? (
-          <div className="w-full max-w-[340px] pb-3">{children}</div>
+          // Karta nachodzila na divider "Dzień 1" i pasek miejsc (zgloszenie Nat 2026-09-08):
+          // przy sztywnych 520 px nie miescila sie w slocie i wylewala na to, co pod nia.
+          // Teraz wysokosc idzie od EKRANU, a szerokosc od proporcji karty - dzieki temu kadr
+          // z eksploracji zostaje ten sam, tylko mniejszy, i mniejszy telefon nie psuje ukladu.
+          <div className="flex justify-center pb-3">
+            {/* Szerokosc dobrana pod WIERSZ AUTORA: przy 250 px "@berd · Gdańsk · 5 miejsc"
+                sciskalo sie do "@ · G · 5 miejsc" (zlapane na zrzucie). Wysokosc idzie od
+                ekranu, zeby na mniejszym telefonie karta nie wchodzila na pasek miejsc. */}
+            <div className="w-[min(78vw,310px)]">{children}</div>
+          </div>
         ) : scale > 0 && (
           <button onClick={() => setFull(true)} aria-label={t("share.open_fullscreen")}
             className="relative rounded-3xl overflow-hidden shadow-xl ring-1 ring-black/5 active:scale-[0.98] transition-transform"
@@ -299,7 +308,8 @@ export function ShareCardTrip({ title, city, pins, cover, onClose, onShare, shar
         authorAvatar={authorAvatar}
         participants={participants ?? []}
         snap={false}
-        heightClass="h-[520px]"
+        heightClass="h-[min(40dvh,370px)]"
+        minHeightClass=""
       />
     </ShareSheet>
   );

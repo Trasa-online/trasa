@@ -34,7 +34,7 @@ export const TRASA_CARD_H = "h-[calc(100dvh-150px-env(safe-area-inset-top,0px)-m
 export default function TrasaBigCard({
   id, photo, city, placeCount = 0, title, description, tags = [], pins = [],
   saved, onToggleSave, onOpen, authorName, authorAvatar, participants = [],
-  showMap = true, heightClass = TRASA_CARD_H, snap = true, isDraft = false, hiddenFromExplore = false, onEdit, onDelete,
+  showMap = true, heightClass = TRASA_CARD_H, minHeightClass = "min-h-[420px]", snap = true, isDraft = false, hiddenFromExplore = false, onEdit, onDelete,
   onLike, liked,
 }: {
   id: string;
@@ -55,6 +55,10 @@ export default function TrasaBigCard({
   showMap?: boolean;
   /** Wysokosc kafla. Eksploracja = pelny ekran; profil = kafel 3:4 w liscie. */
   heightClass?: string;
+  /** Minimalna wysokosc. Domyslne 420 px chroni kafel w feedzie przed splaszczeniem, ale
+   *  w PODGLADZIE udostepniania musi dac sie zejsc nizej - inaczej karta wylewa sie na
+   *  divider i pasek miejsc (zgloszenie Nat 2026-09-08). Pusty ciag = bez minimum. */
+  minHeightClass?: string;
   /** snap scroll - tylko w immersyjnym feedzie eksploracji. */
   snap?: boolean;
   /** Roboczy (nieopublikowany) wyjazd - plakietka na okladce. */
@@ -77,7 +81,7 @@ export default function TrasaBigCard({
     ? t("card.places_count", { count: placeCount })
     : null;
   return (
-    <div className={`relative w-full shrink-0 rounded-3xl overflow-hidden bg-muted shadow-sm min-h-[420px] ${snap ? "snap-start snap-always" : ""} ${heightClass}`}>
+    <div className={`relative w-full shrink-0 rounded-3xl overflow-hidden bg-muted shadow-sm ${minHeightClass} ${snap ? "snap-start snap-always" : ""} ${heightClass}`}>
       {photo ? (
         <img
           src={photo}
