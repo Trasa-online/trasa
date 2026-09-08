@@ -36,6 +36,45 @@ async function consumeTextsearchMonthly(sb: ReturnType<typeof createClient>, n: 
   }
 }
 
+// ── Limit na WOLAJACEGO (audyt M5, 2026-09-08) ───────────────────────────────
+// Kwoty wyzej to bezpiecznik KOSZTOWY (globalny). Ten jest bezpiecznikiem DOSTEPNOSCI:
+// bez niego jeden skrypt wypala dzienny budzet w kilka minut i wyszukiwarka pada
+// WSZYSTKIM. Limit per wolajacy zamienia awarie calej apki na odciecie jednego naduzywajacego.
+const PER_CALLER_HOURLY_LIMIT = Number(Deno.env.get("GOOGLE_PROXY_HOURLY_PER_CALLER") ?? "250");
+
+/**
+ * Kubelek wolajacego: id usera z tokenu, a gdy go nie ma - adres IP.
+ * Uwaga: `sub` czytamy z tokenu BEZ weryfikacji podpisu. To swiadome - tu nie podejmujemy
+ * decyzji o dostepie, tylko rozdzielamy ruch na kubelki, a sprawdzanie podpisu kosztowaloby
+ * dodatkowe zapytanie przy KAZDYM wywolaniu proxy. Sufit kosztu i tak trzyma globalna kwota.
+ */
+function callerBucket(req: Request): string {
+  const token = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "");
+  const parts = token.split(".");
+  if (parts.length === 3) {
+    try {
+      const sub = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")))?.sub;
+      if (sub) return `gplaces:u:${sub}`;
+    } catch { /* nie JWT - lecimy po IP */ }
+  }
+  const ip = (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim();
+  return `gplaces:ip:${ip || "unknown"}`;
+}
+
+// Fail-open: gdy RPC padnie, przepuszczamy. To limit uczciwosci, nie brama bezpieczenstwa -
+// zablokowanie legalnego ruchu przez chwilowy blad bazy byloby gorsze niz brak limitu.
+async function callerWithinLimit(sb: ReturnType<typeof createClient>, req: Request): Promise<boolean> {
+  try {
+    const { data, error } = await sb.rpc("try_consume_rate_limit", {
+      p_bucket: callerBucket(req), p_limit: PER_CALLER_HOURLY_LIMIT, p_window_minutes: 60,
+    });
+    if (error) return true;
+    return data !== false;
+  } catch {
+    return true;
+  }
+}
+
 // In-memory caches (live for the duration of the function instance)
 const citysearchCache = new Map<string, { results: any[]; ts: number }>();
 const textsearchCache = new Map<string, { results: any[]; ts: number }>();
@@ -69,6 +108,12 @@ Deno.serve(async (req) => {
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const sb = createClient(supabaseUrl, serviceRoleKey);
+
+  if (!(await callerWithinLimit(sb, req))) {
+    return new Response(JSON.stringify({ error: "rate_limited", results: [], result: null }), {
+      status: 429, headers: { ...corsHeaders, "Content-Type": "application/json", "Retry-After": "600" },
+    });
+  }
 
   try {
     const body = await req.json();

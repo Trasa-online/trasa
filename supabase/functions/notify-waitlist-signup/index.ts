@@ -1,3 +1,5 @@
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -16,13 +18,24 @@ function escapeHtml(s: string): string {
     .replace(/'/g, "&#39;");
 }
 
-const ipHits = new Map<string, number[]>();
-function rateLimited(ip: string, max = 10, windowMs = 60_000): boolean {
-  const now = Date.now();
-  const arr = (ipHits.get(ip) ?? []).filter((t) => now - t < windowMs);
-  if (arr.length >= max) { ipHits.set(ip, arr); return true; }
-  arr.push(now); ipHits.set(ip, arr);
-  return false;
+/**
+ * [sec] audyt M6 (2026-09-08): limit przeniesiony z PAMIECI do bazy.
+ * Licznik w Mapie resetowal sie przy kazdym zimnym starcie, a funkcje brzegowe chodza
+ * w wielu instancjach naraz - w praktyce nie ograniczal niczego. Wersja trwala liczy
+ * wszystkie instancje razem.
+ * Fail-open: blad bazy nie moze wyciszyc prawdziwego zapisu na liste.
+ */
+async function rateLimited(ip: string, max = 10): Promise<boolean> {
+  try {
+    const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    const { data, error } = await sb.rpc("try_consume_rate_limit", {
+      p_bucket: `waitlist:${ip}`, p_limit: max, p_window_minutes: 60,
+    });
+    if (error) return false;
+    return data === false;
+  } catch {
+    return false;
+  }
 }
 
 Deno.serve(async (req) => {
@@ -32,7 +45,7 @@ Deno.serve(async (req) => {
 
   try {
     const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || req.headers.get("x-real-ip") || "unknown";
-    if (rateLimited(ip)) {
+    if (await rateLimited(ip)) {
       return new Response(JSON.stringify({ error: "rate_limited" }), {
         status: 429,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -41,7 +54,7 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const rawEmail: string | undefined = body.email ?? body.record?.email;
     const createdAt: string | undefined = body.created_at ?? body.record?.created_at;
-    const count: number | undefined = body.count;
+    const count: number | undefined = Number.isFinite(body.count) ? Number(body.count) : undefined;
 
     if (!rawEmail || typeof rawEmail !== "string") throw new Error("email required");
     const email = rawEmail.trim().slice(0, 254);

@@ -38,7 +38,7 @@ export default function InviteFriendsSheet({ open, onOpenChange, route, onInvite
     queryKey: ["business-owner-ids"],
     enabled: open,
     staleTime: 5 * 60 * 1000,
-    queryFn: async () => new Set<string>((((await (supabase as any).from("business_profiles").select("owner_user_id")).data ?? []) as any[]).map((b) => b.owner_user_id).filter(Boolean)),
+    queryFn: async () => new Set<string>((((await (supabase as any).from("business_profiles_public").select("owner_user_id")).data ?? []) as any[]).map((b) => b.owner_user_id).filter(Boolean)),
   });
 
   // Domyslna lista (puste pole): znajomi + obserwowani (dedup, bez siebie i biznesow) - zeby nie bylo

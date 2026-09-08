@@ -34,6 +34,40 @@ async function consumeGoogleQuota(sb: ReturnType<typeof createClient>, n: number
   }
 }
 
+// ── Limit na WOLAJACEGO (audyt M5, 2026-09-08) ───────────────────────────────
+// Ta funkcja pobiera zdjecie z Google i zapisuje je do storage, wiec naduzycie kosztuje
+// podwojnie: wywolania Google i miejsce w buckecie. Globalna kwota chroni rachunek,
+// ten limit chroni dostepnosc - zeby jeden skrypt nie wyczerpal jej wszystkim.
+const PER_CALLER_HOURLY_LIMIT = Number(Deno.env.get("PHOTO_CACHE_HOURLY_PER_CALLER") ?? "120");
+
+/** Kubelek wolajacego: id usera z tokenu (bez weryfikacji podpisu - to tylko podzial
+ *  ruchu, nie decyzja o dostepie), a gdy go nie ma - adres IP. */
+function callerBucket(req: Request): string {
+  const token = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "");
+  const parts = token.split(".");
+  if (parts.length === 3) {
+    try {
+      const sub = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")))?.sub;
+      if (sub) return `photocache:u:${sub}`;
+    } catch { /* nie JWT - lecimy po IP */ }
+  }
+  const ip = (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim();
+  return `photocache:ip:${ip || "unknown"}`;
+}
+
+// Fail-open: chwilowy blad bazy nie moze wygasic legalnego ruchu.
+async function callerWithinLimit(sb: ReturnType<typeof createClient>, req: Request): Promise<boolean> {
+  try {
+    const { data, error } = await sb.rpc("try_consume_rate_limit", {
+      p_bucket: callerBucket(req), p_limit: PER_CALLER_HOURLY_LIMIT, p_window_minutes: 60,
+    });
+    if (error) return true;
+    return data !== false;
+  } catch {
+    return true;
+  }
+}
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
@@ -69,6 +103,10 @@ Deno.serve(async (req) => {
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const sb = createClient(supabaseUrl, serviceRoleKey);
+
+  if (!(await callerWithinLimit(sb, req))) {
+    return jsonResponse({ photo_url: null, cached: false, reason: "rate_limited" });
+  }
 
   try {
     const body = await req.json();
