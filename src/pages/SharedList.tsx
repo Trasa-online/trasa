@@ -211,6 +211,20 @@ export default function SharedList() {
     enabled: !!user?.id && items.length > 0,
     queryFn: () => fetchVisitedKeys(user!.id, (items as any[]).map(visitKeyOf)),
   });
+  // Cudza lista: ktore miejsca odhaczyl u siebie AUTOR. Odwiedziny sa prywatne (RLS pozwala
+  // czytac tylko swoje), wiec idzie to przez waska funkcje list_author_visits - zwraca slad
+  // autora WYLACZNIE dla miejsc z tej jednej, publicznej listy (migracja 20260908i).
+  const { data: authorVisitedKeys = new Set<string>() } = useQuery({
+    queryKey: ["list-author-visits", id],
+    // Bez `isOwner` - ta zmienna powstaje ponizej, po early-returnach, a hook musi byc nad nimi.
+    enabled: !!id && !!(col as any)?.user_id && (col as any)?.user_id !== user?.id,
+    queryFn: async () => {
+      const { data, error } = await (supabase as any).rpc("list_author_visits", { p_collection_id: id });
+      if (error) { console.warn("[SharedList] author visits:", error.message); return new Set<string>(); }
+      return new Set<string>(((data ?? []) as { place_key: string }[]).map((r) => r.place_key));
+    },
+  });
+
   const handleToggleVisited = async (it: any) => {
     if (!user) return;
     const key = visitKeyOf(it);
@@ -517,7 +531,8 @@ export default function SharedList() {
             saved={isSaved(pin.place_name)}
             onDelete={isOwner ? () => handleDeleteItem(pin) : undefined}
             onToggleVisited={isOwner && user ? () => handleToggleVisited(pin) : undefined}
-            visited={isOwner ? visitedKeys.has(visitKeyOf(pin)) : false}
+            visited={isOwner ? visitedKeys.has(visitKeyOf(pin)) : authorVisitedKeys.has(visitKeyOf(pin))}
+            visitedAvatar={isOwner ? undefined : (author?.avatar_url ?? col.author_avatar ?? null)}
             note={isNew ? (
               <div className="space-y-2">
                 {/* Awatar autora listy + samo "nowe miejsce" (decyzja Nat 2026-09-01). Imie bylo

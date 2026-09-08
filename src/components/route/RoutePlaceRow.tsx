@@ -21,7 +21,7 @@ const GoogleGlyph = ({ className }: { className?: string }) => (
 // a pod spodem akcje po prawej: Google (biale kolko z cieniem) + zapis/kosz.
 // dragHandle (opcjonalny) = uchwyt przeciagania po lewej (tryb wlasciciela). note = dodatkowa
 // tresc pod wierszem (np. notka autora).
-export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onSave, saved, onDelete, dragHandle, note, cornerAvatar, visited, onToggleVisited, isTop, onToggleTop }: {
+export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onSave, saved, onDelete, dragHandle, note, cornerAvatar, visited, onToggleVisited, isTop, onToggleTop, visitedAvatar }: {
   pin: any;
   index: number;
   categoryLabel: ReactNode;
@@ -42,6 +42,9 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
   // onToggleTop podaje tylko autor - dla ogladajacych gwiazdka jest sama informacja.
   isTop?: boolean;
   onToggleTop?: () => void;
+  /** Awatar osoby, ktorej dotyczy `visited`, gdy NIE jest to ogladajacy (cudza lista).
+   *  Obecny = wiersz pokazuje stan PASYWNY: informacje, nie przelacznik. */
+  visitedAvatar?: string | null;
 }) {
   const { t } = useTranslation("route");
   // Gwiazdka LECI z guzika na miejsce przy nazwie (prosba Nat 2026-09-08). Animacja gra tylko
@@ -122,6 +125,18 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
           od zapisu/kosza. Guzik Google = samo logo w BIALYM kolku z delikatnym cieniem (bez podpisu)
           - cien niesie afordancje "to sie klika", spojnie z kartami i arkuszem dodawania miejsca. */}
       <div className="mt-3 flex items-center justify-end gap-2">
+        {/* Cudza lista: autor odhaczyl to miejsce u siebie. Pokazujemy to jako INFORMACJE,
+            nie przelacznik - to nie jest moj stan i nie mam go jak zmienic. Awatar mowi CZYJ
+            to slad, slowo mowi jaki. */}
+        {!onToggleVisited && visited && (
+          <span className="h-9 rounded-full flex items-center gap-1.5 px-2.5 shrink-0 bg-[#fcede3] text-[#BC4206]">
+            {visitedAvatar !== undefined && (
+              <img src={avatarSrc(visitedAvatar)} alt="" className="h-5 w-5 rounded-full object-cover bg-white/60" />
+            )}
+            <Check className="h-4 w-4 shrink-0" strokeWidth={3} />
+            <span className="text-[12px] font-bold whitespace-nowrap">{t("row.visited")}</span>
+          </span>
+        )}
         {onToggleVisited && (
           /* Po zaznaczeniu guzik ZWIJA sie do samego znaczka (jak polubienie na YouTube):
              tekst tlumaczy AKCJE, a nie powtarza stanu. Kolor schodzi na peachy - odwiedzone
