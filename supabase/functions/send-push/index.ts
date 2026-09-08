@@ -318,7 +318,12 @@ async function sendApnsToHost(
   const apnsBody = JSON.stringify({
     aps: {
       alert: { title: payload.title, body: payload.body },
-      sound: "default",
+      // Wlasny dzwiek marki (marimba, dwa tony w gore, 0,62 s). Plik jest WKOMPILOWANY
+      // w aplikacje (ios/App/App/spontaway.caf, zrodlo w assets/sound + generator
+      // scripts/gen_notification_sound.py), wiec APNs dostaje tylko jego nazwe.
+      // Gdy wersja aplikacji go nie ma (starsze buildy), iOS sam zagra dzwiek domyslny -
+      // wiec ta zmiana jest bezpieczna do wdrozenia przed wypuszczeniem nowego builda.
+      sound: "spontaway.caf",
     },
     url: payload.url ?? "/",
   });
