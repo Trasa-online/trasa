@@ -538,10 +538,12 @@ function BusinessStrip({ c }: { c: Copy }) {
   return (
     <section className="mx-auto max-w-[1440px] px-4 pb-4 pt-12 lg:px-[50px] lg:pt-[88px]">
       {/* Niebieski kafelek, bo caly kontekst B2B ma w marce wlasna identyfikacje (CLAUDE.md) -
-          pomarancz zostaje dla konsumenta. Granat sluzy za kolor tekstu i guzikow: na tym
-          niebieskim daje kontrast 8:1, wiec czyta sie tez przy slabym swietle. */}
+          pomarancz zostaje dla konsumenta. Granat sluzy za kolor CALEGO tekstu i guzikow.
+          Naglowek byl bialy i mial na tym niebieskim kontrast 2,65:1 - ponizej progu 3:1
+          nawet dla duzego tekstu (zmierzone 2026-09-08). Granat na tym samym tle daje 5,44:1,
+          wiec czyta sie tez przy slabym swietle i na sloncu. */}
       <div className="mx-auto flex max-w-[1340px] flex-col items-center rounded-[28px] bg-[#7B9CF5] px-6 py-12 text-center lg:rounded-[36px] lg:px-[70px] lg:py-[64px]">
-        <h2 className="max-w-[16ch] font-brand text-[28px] leading-[1.15] text-white sm:text-[32px] lg:text-[40px]">
+        <h2 className="max-w-[16ch] font-brand text-[28px] leading-[1.15] text-[#1B2559] sm:text-[32px] lg:text-[40px]">
           {nb(c.business.title)}
         </h2>
         <p className="mt-5 max-w-[42ch] text-[15px] leading-[1.5] text-[#1B2559] lg:text-[17px]">
