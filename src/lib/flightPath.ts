@@ -1,9 +1,12 @@
-// Tor "lotu" - wspolny jezyk ruchu aplikacji (2026-09-08).
+// Tor "lotu" (2026-09-08).
 //
-// Obie animacje potwierdzenia (dodanie do topki, odhaczenie odwiedzin) uzywaja tego samego
-// ksztaltu: element nie leci po prostej, tylko zatacza luk i po drodze DOTYKA zdjecia miejsca.
-// Dzieki temu ruch mowi, CZEGO dotyczy akcja, zamiast byc ozdobnikiem - i dwie rozne akcje
-// czyta sie jako jedna rodzine, a nie dwie osobne sztuczki.
+// Uzywa go animacja TOPKI: gwiazdka nie leci po prostej, tylko zatacza luk, po drodze wchodzi
+// na zdjecie miejsca i konczy przy nazwie. Ruch mowi wtedy, CZEGO dotyczy akcja, i zostawia
+// slad tam, gdzie wyroznienie faktycznie zyje.
+//
+// Odhaczenie odwiedzin NIE uzywa toru (decyzja Nat 2026-09-08): tam liczy sie sila przybicia
+// pieczatki, a nie droga, wiec animacja gra w miejscu. Modul zostaje wydzielony, bo lot jest
+// wielokrotnego uzytku, a jego geometria (Catmull-Rom) latwo psuje sie przy przepisywaniu.
 //
 // Dlaczego przez PUNKTY, a nie krzywa z punktami sterujacymi: bezier tylko ZBLIZA sie do
 // punktow sterujacych, wiec przy pierwszej wersji gwiazdka ocierala sie o krawedz miniaturki

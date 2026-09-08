@@ -67,10 +67,12 @@ const COPY = {
     business: {
       navLink: "Dla firm",
       title: "Prowadzisz lokal?",
-      body: "Dodaj swoją wizytówkę i pokaż się podróżującym, którzy właśnie planują, gdzie i co odwiedzić!",
-      free: "Założenie konta nic nie kosztuje.",
+      // **gwiazdki** = pogrubienie (patrz `boldParts`). Tak jest w makiecie: wyroznione sa
+      // trzy powody, dla ktorych ktos siega po aplikacje, a nie cale zdanie.
+      body: "Nie pozwól by Ci, którzy **szukają gdzie zjeść**, **co zobaczyć** i **jak spędzić czas** go przegapili",
       cta: "Załóż konto",
-      login: "Zaloguj się do panelu",
+      more: "Dowiedz się więcej",
+      mockupAlt: "Wizytówka lokalu w aplikacji: zdjęcia, menu, godziny otwarcia i wydarzenie",
     },
     footerCta: { title: "Odkrywaj, planuj, dziel się!", sub: "Pobierz Spontaway i zacznij zabawę", note: "Za darmo na iOS... i wkrótce na Android!" },
     footer: { rights: "© 2026 Spontaway · Stworzone z", inPoland: "w Polsce", terms: "Regulamin", privacy: "Prywatność" },
@@ -115,10 +117,10 @@ const COPY = {
     business: {
       navLink: "For business",
       title: "Running a place?",
-      body: "Add your listing and show up for travellers who are deciding right now where to go and what to see!",
-      free: "Creating an account is free.",
+      body: "Don't let the people **looking for a bite**, **something to see** and **a way to spend the day** walk past you",
       cta: "Create an account",
-      login: "Log in to the panel",
+      more: "Learn more",
+      mockupAlt: "A place listing in the app: photos, menu, opening hours and an event",
     },
     footerCta: { title: "Discover, plan, share!", sub: "Get Spontaway and start the fun", note: "Free on iOS... and soon on Android!" },
     footer: { rights: "© 2026 Spontaway · Made with", inPoland: "in Poland", terms: "Terms", privacy: "Privacy" },
@@ -527,47 +529,61 @@ function Stats({ c }: { c: Copy }) {
   );
 }
 
-// ─── Dla firm (wersja robocza) ────────────────────────────────────────────────
-// Wejscie dla lokali. Akcent NIEBIESKI, bo caly kontekst B2B ma w marce wlasna
-// identyfikacje (CLAUDE.md) - pomarancz zostaje dla konsumenta. Tresc jest tymczasowa,
-// docelowo zastapi ja pelna sekcja marketingowa.
+// ─── Dla firm ────────────────────────────────────────────────────────────────
+// Sekcja wg makiety Nat (Figma "Landing (web)", ramka 1263:284 + wersja mobilna 1926:38)
+// i pliku public/B2B_mockup.png.
+//
+// UWAGA na regule z CLAUDE.md "B2B = niebieski": ona dotyczy EKRANOW dla firm (panel,
+// logowanie, onboarding). Tutaj jestesmy na landingu KONSUMENCKIM - to zaproszenie dla
+// lokali, nie ich panel - i makieta trzyma palete spontaway (brazowy tekst, pomaranczowy
+// guzik). Poprzednia wersja miala niebieski kafelek z bialym naglowkiem o kontrascie 2,65:1.
+
+/** `**pogrubienie**` w tekscie copy - zamiast trzymac zdanie pocięte na osiem kluczy. */
+function boldParts(text: string) {
+  return text.split("**").map((part, i) =>
+    i % 2 === 1 ? <strong key={i} className="font-bold">{part}</strong> : <span key={i}>{part}</span>,
+  );
+}
 
 function BusinessStrip({ c }: { c: Copy }) {
   const nb = useNb();
   const track = (placement: string) => posthog.capture("landing_business_click", { placement });
   return (
-    <section className="mx-auto max-w-[1440px] px-4 pb-4 pt-12 lg:px-[50px] lg:pt-[88px]">
-      {/* Niebieski kafelek, bo caly kontekst B2B ma w marce wlasna identyfikacje (CLAUDE.md) -
-          pomarancz zostaje dla konsumenta. Granat sluzy za kolor CALEGO tekstu i guzikow.
-          Naglowek byl bialy i mial na tym niebieskim kontrast 2,65:1 - ponizej progu 3:1
-          nawet dla duzego tekstu (zmierzone 2026-09-08). Granat na tym samym tle daje 5,44:1,
-          wiec czyta sie tez przy slabym swietle i na sloncu. */}
-      <div className="mx-auto flex max-w-[1340px] flex-col items-center rounded-[28px] bg-[#7B9CF5] px-6 py-12 text-center lg:rounded-[36px] lg:px-[70px] lg:py-[64px]">
-        <h2 className="max-w-[16ch] font-brand text-[28px] leading-[1.15] text-[#1B2559] sm:text-[32px] lg:text-[40px]">
-          {nb(c.business.title)}
-        </h2>
-        <p className="mt-5 max-w-[42ch] text-[15px] leading-[1.5] text-[#1B2559] lg:text-[17px]">
-          {nb(c.business.body)}
-        </p>
-        <p className="mt-4 max-w-[42ch] text-[15px] font-semibold leading-[1.5] text-[#1B2559] lg:text-[17px]">
-          {nb(c.business.free)}
-        </p>
+    <section className="mx-auto max-w-[1440px] px-4 py-12 lg:px-[50px] lg:py-[88px]">
+      <div className="mx-auto flex max-w-[1340px] flex-col items-center gap-8 lg:flex-row lg:justify-center lg:gap-[80px]">
+        {/* Kolaz wizytowki - jeden eksport z Figmy zamiast skladania dziesieciu warstw w kodzie.
+            Na mobile idzie NAD tekstem (kolejnosc DOM), na desktopie po lewej. */}
+        <img
+          src="/B2B_mockup.png"
+          alt={c.business.mockupAlt}
+          className="w-full max-w-[320px] shrink-0 sm:max-w-[380px] lg:max-w-[520px]"
+          loading="lazy"
+        />
 
-        <div className="mt-8 flex w-full flex-col items-center gap-3 sm:flex-row sm:justify-center">
-          <Link
-            to="/biznes/start"
-            onClick={() => track("section_cta")}
-            className="inline-flex h-[48px] w-full max-w-[300px] items-center justify-center rounded-full bg-[#1B2559] px-6 text-[15px] font-extrabold text-white transition-opacity hover:opacity-90 active:scale-[0.98] sm:w-auto sm:min-w-[220px]"
-          >
-            {c.business.cta}
-          </Link>
-          <Link
-            to="/auth?business=true"
-            onClick={() => track("section_login")}
-            className="inline-flex h-[48px] w-full max-w-[300px] items-center justify-center rounded-full border-2 border-[#1B2559] px-6 text-[15px] font-extrabold text-[#1B2559] transition-colors hover:bg-[#1B2559]/10 active:scale-[0.98] sm:w-auto sm:min-w-[220px]"
-          >
-            {c.business.login}
-          </Link>
+        <div className="flex w-full max-w-[440px] flex-col items-center text-center lg:items-start lg:text-left">
+          <h2 className="font-brand text-[30px] leading-[1.2] text-spontaway-brown lg:text-[36px]">
+            {nb(c.business.title)}
+          </h2>
+          <p className="mt-4 text-[15px] leading-[1.35] text-spontaway-brown lg:mt-5 lg:text-[16px]">
+            {boldParts(nb(c.business.body))}
+          </p>
+
+          <div className="mt-7 flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
+            <Link
+              to="/biznes/start"
+              onClick={() => track("section_cta")}
+              className="inline-flex h-[48px] items-center justify-center rounded-full bg-spontaway-orange px-6 text-[15px] font-extrabold text-white transition-opacity hover:opacity-90 active:scale-[0.98] sm:min-w-[160px]"
+            >
+              {c.business.cta}
+            </Link>
+            <Link
+              to="/dla-firm"
+              onClick={() => track("section_more")}
+              className="inline-flex h-[48px] items-center justify-center rounded-full border border-spontaway-brown px-6 text-[15px] font-extrabold text-spontaway-brown transition-colors hover:bg-spontaway-brown/[0.06] active:scale-[0.98] sm:min-w-[160px]"
+            >
+              {c.business.more}
+            </Link>
+          </div>
         </div>
       </div>
     </section>

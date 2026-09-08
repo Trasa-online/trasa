@@ -8,6 +8,9 @@ import { PlacePhoto } from "@/components/PlacePhoto";
 import { avatarSrc } from "@/lib/avatar";
 
 // Oficjalne logo Google (4-kolorowe "G") - guzik "otworz miejsce w Google Maps".
+// Rozprysk pieczatki: 8 kresek dookola. Osobna stala, zeby nie liczyc jej przy kazdym renderze.
+const STAMP_RAYS = [0, 45, 90, 135, 180, 225, 270, 315];
+
 const GoogleGlyph = ({ className }: { className?: string }) => (
   <svg viewBox="0 0 48 48" className={className} aria-hidden="true">
     <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
@@ -54,9 +57,7 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
   const titleRef = useRef<HTMLParagraphElement>(null);
   const thumbRef = useRef<HTMLButtonElement>(null);
   const starBtnRef = useRef<HTMLButtonElement>(null);
-  const visitBtnRef = useRef<HTMLButtonElement>(null);
   const [flight, setFlight] = useState<{ x: number[]; y: number[] } | null>(null);
-  const [visitFlight, setVisitFlight] = useState<{ x: number[]; y: number[] } | null>(null);
   // Zdjecie "przyjmuje" pieczatke - krotkie odbicie w momencie ladowania znaczka.
   const [stamped, setStamped] = useState(false);
   // Animujemy TYLKO po tapnieciu w TYM wierszu. Bez tego kazde asynchroniczne dojscie danych
@@ -105,36 +106,21 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
     wasTop.current = !!isTop;
   }, [isTop]);
 
-  // Odhaczenie odwiedzin: TEN SAM jezyk ruchu co topka (wspolny modul flightPath), ale inny
-  // sens, wiec inny cel. Gwiazdka ZOSTAJE przy nazwie, bo wyroznienie jest trwale i publiczne.
-  // Znaczek "byłem tu" leci na ZDJECIE, stempluje je i gasnie - to prywatny slad, ktory nie
-  // ma prawa zostac na karcie (Nat 2026-09-08: zadnego znaczka na miniaturce w stanie spoczynku).
+  // Odhaczenie odwiedzin = PIECZATKA w miejscu (decyzja Nat 2026-09-08). Wedrowka na
+  // miniature zostala wycofana: dla akcji "bylem tu" liczy sie sila przybicia, a nie droga.
+  // Lot zostaje wylacznie przy topce, gdzie ma sens - tam gwiazdka MUSI dolecec do nazwy,
+  // bo tam zostaje.
   const wasVisited = useRef(!!visited);
   useEffect(() => {
     if (visited && !wasVisited.current && tappedVisit.current) {
       wasVisited.current = true;
       tappedVisit.current = false;
-      const row = rowRef.current?.getBoundingClientRect();
-      const btn = visitBtnRef.current?.getBoundingClientRect();
-      const thumb = thumbRef.current?.getBoundingClientRect();
-      if (!row || !btn || !thumb) return;
-      const b = relRect(row, btn), th = relRect(row, thumb);
-      const way = [
-        { x: b.cx, y: b.cy },
-        // dolem w lewo, pod zdjecie - lustro luku topki, wiec ruch czyta sie jako ta sama rodzina
-        { x: th.x + th.w + 26, y: Math.max(b.cy, th.y + th.h) + 16 },
-        // Wejscie na zdjecie od dolu-lewej. Zmierzone: przy th.x - 6 tor wychodzil poza
-        // lewa krawedz wiersza (x = -7), wiec punkt jest ciut do srodka.
-        { x: th.x + 5, y: th.y + th.h * 0.80 },
-        { x: th.cx, y: th.cy },
-      ];
-      setVisitFlight(arcThrough(way));
-      const land = setTimeout(() => setStamped(true), FLIGHT_MS - 190);
-      const off = setTimeout(() => { setVisitFlight(null); setStamped(false); }, FLIGHT_MS + 220);
-      return () => { clearTimeout(land); clearTimeout(off); };
+      setStamped(true);
+      const off = setTimeout(() => setStamped(false), 620);
+      return () => clearTimeout(off);
     }
     wasVisited.current = !!visited;
-  }, [visited, onToggleVisited]);
+  }, [visited]);
   return (
     <div ref={rowRef} className="relative bg-background py-4 border-b border-border/70 last:border-b-0">
       {/* Zdjecie + tresc (nazwa, notki, tagi) */}
@@ -142,18 +128,12 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
         {dragHandle}
         {/* Peachy kafelek ikony/zdjecia - PIONOWY prostokat 2:3 (redesign 2026-08-25, spojne z okladkami
             miniaturek/kart). self-start: przyklejony do gory wiersza. */}
-        <motion.button
-          ref={thumbRef}
-          onClick={onOpen}
-          className="relative w-16 h-24 shrink-0 self-start rounded-2xl overflow-hidden bg-[#fcede3] active:opacity-90"
-          animate={stamped ? { scale: [1, 0.93, 1.04, 1] } : { scale: 1 }}
-          transition={stamped ? { duration: 0.42, ease: "easeOut" } : { duration: 0.2 }}
-        >
+        <button ref={thumbRef} onClick={onOpen} className="relative w-16 h-24 shrink-0 self-start rounded-2xl overflow-hidden bg-[#fcede3] active:opacity-90">
           <PlacePhoto pin={pin} width={80} className="w-full h-full object-cover" />
           {cornerAvatar !== undefined && (
             <img src={avatarSrc(cornerAvatar)} alt="" className="absolute bottom-1 right-1 h-7 w-7 rounded-full object-cover border-2 border-white shadow-sm bg-secondary" />
           )}
-        </motion.button>
+        </button>
         <div className="flex-1 min-w-0">
           {/* Nazwa + badge kategorii (peachy pill po prawej) */}
           <div className="flex items-start justify-between gap-2">
@@ -215,15 +195,56 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
              #BC4206 to primary sciemniony do L=38% - na peachy daje 4,68:1, czyli przechodzi
              prog 4,5:1 dla malego pogrubionego tekstu (sam primary mial tam 3,13:1). Wyszarzanie
              zdjecia i znaczek na miniaturce usuniete (prosba Nat 2026-09-08). */
-          <button
-            ref={visitBtnRef}
+          <motion.button
             onClick={(e) => { e.stopPropagation(); tappedVisit.current = true; onToggleVisited(); }}
             aria-label={visited ? t("row.mark_not_visited") : t("row.mark_visited")}
             aria-pressed={!!visited}
-            className={`h-9 rounded-full flex items-center justify-center shrink-0 overflow-hidden active:scale-95 transition-[background-color,color,padding] duration-300 ${
+            // PIECZATKA: mocne dobicie w dol, odbicie i powrot. Krotko i twardo - stempel
+            // ma "uderzyc", a nie plynnie dojechac, wiec czas jest krotszy niz przy locie
+            // gwiazdki, a przeskalowanie glebsze.
+            animate={stamped ? { scale: [1, 0.82, 1.12, 0.98, 1] } : { scale: 1 }}
+            transition={stamped
+              ? { duration: 0.44, times: [0, 0.16, 0.4, 0.7, 1], ease: "easeOut" }
+              : { duration: 0.2 }}
+            className={`relative h-9 rounded-full flex items-center justify-center shrink-0 active:scale-95 transition-[background-color,color,padding] duration-300 ${
               visited ? "bg-[#fcede3] text-[#BC4206] px-2.5" : "bg-secondary text-secondary-foreground px-3"
             }`}
           >
+            {/* Elementy WOKOL ikony - bez nich "pieczatka" jest samym skokiem skali.
+                Pierscien to fala uderzeniowa, kreski to rozprysk. Oba pointer-events-none
+                i poza obiegiem ukladu (absolute), wiec nie ruszaja szerokosci guzika. */}
+            <AnimatePresence>
+              {stamped && (
+                <>
+                  <motion.span
+                    aria-hidden
+                    className="pointer-events-none absolute inset-0 rounded-full border-2 border-primary"
+                    initial={{ scale: 0.6, opacity: 0.9 }}
+                    animate={{ scale: 2.1, opacity: 0 }}
+                    transition={{ duration: 0.5, ease: "easeOut" }}
+                  />
+                  {/* Obrot musi siedziec na OPAKOWANIU, a przesuniecie na kresce. Gdy oba sa
+                      na jednym elemencie, `rotate` obraca go wokol wlasnego srodka JUZ PO
+                      przesunieciu - osiem kresek ladowalo w tym samym punkcie zamiast
+                      rozchodzic sie na boki (zlapane na klatce). */}
+                  {STAMP_RAYS.map((deg) => (
+                    <span
+                      key={deg}
+                      aria-hidden
+                      className="pointer-events-none absolute left-1/2 top-1/2 h-0 w-0"
+                      style={{ transform: `rotate(${deg}deg)` }}
+                    >
+                      <motion.span
+                        className="block h-[3px] w-[8px] -mt-[1.5px] rounded-full bg-primary"
+                        initial={{ x: 2, opacity: 0, scaleX: 0.4 }}
+                        animate={{ x: [2, 17, 24], opacity: [0, 1, 0], scaleX: [0.4, 1, 0.5] }}
+                        transition={{ duration: 0.46, times: [0, 0.45, 1], ease: "easeOut", delay: 0.04 }}
+                      />
+                    </span>
+                  ))}
+                </>
+              )}
+            </AnimatePresence>
             <Check className="h-4 w-4 shrink-0" strokeWidth={3} />
             {/* max-width + opacity zamiast display:none - inaczej tekst znikalby skokowo. */}
             <span
@@ -233,7 +254,7 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
             >
               {t("row.visited")}
             </span>
-          </button>
+          </motion.button>
         )}
         <button
           onClick={(e) => { e.stopPropagation(); onGoogle(); }}
@@ -305,34 +326,7 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
         )}
       </AnimatePresence>
 
-      {/* Znaczek odhaczenia: ten sam luk co gwiazdka, ale konczy sie PIECZATKA na zdjeciu
-          i gasnie. Nie zostawia sladu na miniaturce - stan spoczynku niesie sam guzik. */}
-      <AnimatePresence>
-        {visitFlight && (
-          <motion.span
-            aria-hidden
-            className="pointer-events-none absolute z-20 flex items-center justify-center rounded-full bg-primary shadow-md"
-            initial={{ x: visitFlight.x[0], y: visitFlight.y[0], scale: 0.6, rotate: 0, opacity: 0 }}
-            animate={{
-              x: visitFlight.x,
-              y: visitFlight.y,
-              scale: [0.6, 1.15, 1.15, 1.55, 0.9],
-              rotate: [0, -160, -300, -360, -360],
-              opacity: [0, 1, 1, 1, 0],
-            }}
-            transition={{
-              x: { duration: FLIGHT_MS / 1000, ease: "easeInOut" },
-              y: { duration: FLIGHT_MS / 1000, ease: "easeInOut" },
-              scale: { duration: FLIGHT_MS / 1000, times: [0, 0.3, 0.78, 0.88, 1], ease: "easeOut" },
-              rotate: { duration: FLIGHT_MS / 1000, ease: "easeInOut" },
-              opacity: { duration: FLIGHT_MS / 1000, times: [0, 0.08, 0.8, 0.9, 1] },
-            }}
-            style={{ left: -14, top: -14, width: 28, height: 28 }}
-          >
-            <Check className="h-4 w-4 text-white" strokeWidth={3.5} />
-          </motion.span>
-        )}
-      </AnimatePresence>
+
     </div>
   );
 }
