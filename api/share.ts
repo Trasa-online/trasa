@@ -39,6 +39,11 @@ const CTA_LABEL = "Pobierz w App Store";
 // polprzezroczysta) i nieklikalna, z dopiskiem "wkrotce"; po wpisaniu APP_STORE_URL wraca do
 // pelnego koloru i staje sie linkiem, czyli do postaci zgodnej z wytycznymi.
 const BADGE = `${SITE}/Pobierz-z-App-Store.png`;
+// Zapisy na testy przedpremierowe. Ten sam adres, co w pasku instalacji w aplikacji
+// (src/components/share/PreReleaseBanner.tsx) - jedno miejsce prawdy dla obu.
+const TESTFLIGHT_URL = "https://testflight.apple.com/join/a9rtGFuq";
+// Symbol marki (samo pomaranczowe "S" na przezroczystym tle) - do kafelka w pasku instalacji.
+const SYMBOL_IMG = `${SITE}/spontaway-symbol.png`;
 const ctaTop = () => CTA_READY
   ? `<a class="badge" href="${esc(APP_STORE_URL!)}"><img src="${BADGE}" alt="${CTA_LABEL}"></a>`
   : `<span class="badge off" title="Dostępne wkrótce"><img src="${BADGE}" alt="${CTA_LABEL}"></span>`;
@@ -120,6 +125,21 @@ const CATEGORY_PL: Record<string, string> = {
 const catLabel = (c: string | null | undefined) =>
   !c ? "" : CATEGORY_PL[c.toLowerCase()] ?? c.charAt(0).toUpperCase() + c.slice(1);
 
+// Werdykt miejsca (pigułka na kafelku przystanku) - 1:1 z src/lib/routeTags.ts. Trzymamy tu
+// wlasna, mala kopie zamiast importu: to funkcja brzegowa Vercela, poza drzewem aplikacji.
+// W bazie leza ID (nowe wpisy) albo polskie napisy (sprzed 2026-09-01) - obsluguja oba klucze.
+const VERDICT_PL: Record<string, string> = {
+  must_visit: "Musisz odwiedzić!", worth_seeing: "Przy okazji", stop_by: "Warto wpaść",
+  worth_visiting: "Warto odwiedzić", not_worth: "Nie warto odwiedzać",
+  "Musisz odwiedzić!": "Musisz odwiedzić!", "Przy okazji": "Przy okazji", "Warto wpaść": "Warto wpaść",
+  "Warto odwiedzić": "Warto odwiedzić", "Nie warto odwiedzać": "Nie warto odwiedzać",
+};
+const verdictLabel = (tags: any): string | null => {
+  if (!Array.isArray(tags)) return null;
+  for (const t of tags) if (typeof t === "string" && VERDICT_PL[t]) return VERDICT_PL[t];
+  return null;
+};
+
 const CSS = `
 :root{color-scheme:light}
 *{box-sizing:border-box}
@@ -162,9 +182,61 @@ li:last-child{border-bottom:0}
 .foot .soon{margin:10px 0 0;font-size:13px;color:#9A8578}
 .empty{padding:80px 0;text-align:center}
 .empty .mark{width:76px;height:76px;border-radius:18px;margin:0 auto 18px}
+
+/* ── WIDOK WYJAZDU (Figma "[NEW] Ekrany" -> "Udostepnianie wyjazdow oraz list" ->
+   "Widok wyswietlania wyjazdu"). Ta sama kompozycja, co zapowiedz w aplikacji
+   (src/pages/SharedRoute.tsx, galaz isWeb && !previewOpened): zolte tlo, pasek instalacji,
+   karta z eksploracji, pasek pierwszych przystankow, jedno wyjscie dalej. Dzieki temu autor,
+   wysylajac link, widzi u siebie dokladnie to, co zobaczy odbiorca - a odbiorca dostaje ten
+   sam widok niezaleznie od tego, czy komunikator otworzyl adres krotki (/r/<id>), czy pelny.
+   LISTA zostaje na starym, dokumentowym ukladzie - jej wyglad jest jeszcze projektowany. */
+body.trip{background:#FDF184}
+.ins{display:flex;align-items:center;justify-content:space-between;gap:12px;background:#F9F9F9;border-bottom:1px solid #FDF184;padding:12px 16px}
+.ins .l{display:flex;align-items:center;gap:12px;min-width:0}
+.ins .tile{width:44px;height:44px;flex:none;border-radius:14px;background:#FDF184;display:flex;align-items:center;justify-content:center}
+.ins .tile img{width:26px;height:26px;display:block}
+.ins b{display:block;font-size:15px;font-weight:700;color:#5B2C06;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ins .s{display:block;font-size:12px;line-height:1.25;color:rgba(91,44,6,.85)}
+.ins a{flex:none;display:inline-flex;align-items:center;height:40px;padding:0 14px;border-radius:999px;background:#EE5307;color:#fff;font-size:12.5px;font-weight:800;text-decoration:none}
+.page{max-width:420px;margin:0 auto;padding:24px 20px 36px;display:flex;flex-direction:column;align-items:center}
+.tc{position:relative;width:100%;max-width:340px;height:520px;border-radius:24px;overflow:hidden;background:#fcede3;display:block;text-decoration:none}
+.tc .bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+.tc .veil{position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.8) 0%,rgba(0,0,0,.1) 55%,rgba(0,0,0,.25) 100%)}
+.tc .txt{position:absolute;left:0;right:0;bottom:24px;padding:0 20px;color:#fff}
+.tc .who{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;margin-bottom:6px;text-shadow:0 1px 3px rgba(0,0,0,.45)}
+.tc .who img{width:24px;height:24px;border-radius:50%;object-fit:cover;background:#fcede3;box-shadow:0 0 0 2px rgba(0,0,0,.25)}
+.tc h1{font-size:24px;font-weight:900;line-height:1.15;text-shadow:0 2px 6px rgba(0,0,0,.45)}
+.tc .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.tc .chips span{background:rgba(255,255,255,.15);border-radius:999px;padding:4px 10px;font-size:11px;color:rgba(255,255,255,.85)}
+.day{display:flex;align-items:center;gap:8px;width:100%;margin:28px 0 8px}
+.day i{width:3px;height:16px;border-radius:2px;background:#EE5307;flex:none}
+.day p{margin:0;font-family:Sigmar,Inter,sans-serif;font-size:15px;line-height:1;color:#EE5307}
+.strip{display:flex;gap:12px;width:100%;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}
+.strip::-webkit-scrollbar{display:none}
+.pl{display:flex;align-items:center;gap:12px;width:264px;flex:none;background:#fff;border-radius:24px;padding:12px}
+.pl .pic{position:relative;width:54px;height:80px;flex:none;border-radius:12px;overflow:hidden;background:#fcede3}
+.pl .pic .p{width:100%;height:100%;object-fit:cover;display:block}
+.pl .pic .ic{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
+.pl .pic .ic img{width:26px;height:26px;opacity:.9}
+.pl .pic i{position:absolute;left:4px;top:4px;min-width:16px;height:16px;padding:0 3px;border-radius:10px;background:#EE5307;color:#fff;font-size:10px;font-weight:900;font-style:normal;display:flex;align-items:center;justify-content:center}
+.pl .d{display:flex;flex-direction:column;justify-content:space-between;height:80px;min-width:0;flex:1;padding:2px 0}
+.pl .n{font-size:14px;font-weight:700;line-height:1.19;color:#000;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.pl .b{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.pl .v{background:#FDF184;color:#5B2C06;border-radius:999px;padding:4px 10px;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pl .c{font-size:11px;color:#666;flex:none}
+.go{margin-top:32px;width:100%;max-width:420px;border-radius:999px;background:#EE5307;color:#fff;font-size:17px;font-weight:800;text-align:center;padding:16px 0;text-decoration:none;display:block}
+.page .tail{margin:16px 0 0;text-align:center;font-size:12.5px;line-height:1.4;color:rgba(91,44,6,.8)}
 `;
 
-function shell(o: { title: string; desc: string; image: string; url: string; body: string; noun?: string }) {
+// Pasek instalacji nad trescia wyjazdu. Odbiorca linku najczesciej nie ma jeszcze aplikacji,
+// a wyjazd jest jedynym powodem, dla ktorego moglby jej chciec - wiec sciezke dostaje od razu.
+// Do premiery prowadzi na zapisy przedpremierowe (TestFlight); potem wystarczy podmienic adres.
+const installBar = () => `<div class="ins"><div class="l">
+<span class="tile"><img src="${SYMBOL_IMG}" alt=""></span>
+<span><b>Spontaway</b><span class="s">Odkrywaj, planuj, dziel się!</span></span></div>
+<a href="${TESTFLIGHT_URL}" target="_blank" rel="noreferrer noopener">Dołącz przedpremierowo</a></div>`;
+
+function shell(o: { title: string; desc: string; image: string; url: string; body: string; noun?: string; variant?: "trip" }) {
   return `<!doctype html><html lang="pl"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>${esc(o.title)} · spontaway</title>
@@ -177,13 +249,15 @@ function shell(o: { title: string; desc: string; image: string; url: string; bod
 <meta name="twitter:title" content="${esc(o.title)}"><meta name="twitter:description" content="${esc(o.desc)}">
 <meta name="twitter:image" content="${esc(o.image)}">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
-<style>${CSS}</style></head><body>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=Sigmar&display=swap" rel="stylesheet">
+<style>${CSS}</style></head>${o.variant === "trip" ? `<body class="trip">
+${installBar()}
+${o.body}` : `<body>
 <div class="bar"><div class="in"><img class="mark" src="${BRAND_IMG}" alt=""><span class="brand">spontaway</span>
 ${ctaTop()}</div></div>
 <div class="wrap">${o.body}
-<div class="foot"><p>${o.noun === "route" ? "Ten wyjazd powstał w spontaway" : o.noun === "list" ? "Ta lista powstała w spontaway" : "spontaway to aplikacja"} - do odkrywania miejsc i planowania wyjazdów ze znajomymi.</p>
-${ctaBig()}</div></div>
+<div class="foot"><p>${o.noun === "route" ? "Ten wyjazd powstał w spontaway" : o.noun === "list" ? "Ta lista powstała w spontaway" : "spontaway to aplikacja"} - do odkrywania miejsc i planowania wyjazdów ze znajomymi.</p>
+${ctaBig()}</div></div>`}
 </body></html>`;
 }
 
@@ -233,22 +307,47 @@ ${col.description ? `<p class="desc">${esc(col.description)}</p>` : ""}
 
   const [route] = await rest(`routes?id=eq.${id}&select=title,city,description,cover_url,list_cover_url,user_id&limit=1`);
   if (!route) return missing();
-  const pins = await rest(`pins?route_id=eq.${id}&select=place_name,category,images,user_photo_urls,image_url,photo_url,pin_order,place_id&order=pin_order.asc&limit=80`);
+  const pins = await rest(`pins?route_id=eq.${id}&select=place_name,category,tags,images,user_photo_urls,image_url,photo_url,pin_order,place_id&order=pin_order.asc&limit=80`);
   const pinPhotos = await communityPhotos(pins.map((p) => placeKey(null, p.place_name)));
   const [author] = route.user_id ? await rest(`profiles?id=eq.${route.user_id}&select=username,avatar_url&limit=1`) : [];
   const title = route.title || (route.city ? `Wyjazd do ${route.city}` : "Wyjazd");
-  const desc = route.description || [route.city, pins.length ? `${pins.length} ${plural(pins.length)}` : null].filter(Boolean).join(" · ");
+  const count = `${pins.length} ${plural(pins.length)}`;
+  const desc = route.description || [route.city, pins.length ? count : null].filter(Boolean).join(" · ");
   const cover = img(route.list_cover_url || route.cover_url, 1200, 630);
-  const body = `<p class="eyebrow">WYJAZD</p><h1>${esc(title)}</h1>
-<p class="meta">${esc([route.city, `${pins.length} ${plural(pins.length)}`].filter(Boolean).join(" · "))}</p>
-${author?.username ? `<div class="author"><img src="${esc(img(author.avatar_url, 64, 64) ?? "")}" alt=""><span>@${esc(author.username)}</span></div>` : ""}
-${cover ? `<img class="cover" src="${esc(cover)}" alt="" loading="lazy">` : ""}
-${route.description ? `<p class="desc">${esc(route.description)}</p>` : ""}
-<ul>${pins.map((p, i) => row({
-    photo: img(p.image_url || first(p.images) || first(p.user_photo_urls) || p.photo_url || pinPhotos.get(placeKey(null, p.place_name)), 160, 160),
-    icon: iconFor(p.category), name: p.place_name || "", cat: catLabel(p.category), num: i + 1,
-  })).join("")}</ul>`;
-  return new Response(shell({ title, desc, image: cover ?? BRAND_IMG, url, body, noun: "route" }), {
+  const avatar = img(author?.avatar_url, 64, 64);
+
+  // Kafle na karcie = kategorie miejsc (tak samo jak karta w eksploracji, `cardTags`).
+  const chips = [...new Set(pins.filter((p) => p.category && p.category !== "other").map((p) => catLabel(p.category)).filter(Boolean))].slice(0, 3);
+
+  // Pierwsze przystanki - to one mowia, co jest w srodku. Osiem, jak w zapowiedzi w aplikacji.
+  const strip = pins.slice(0, 8).map((p, i) => {
+    const photo = img(p.image_url || first(p.images) || first(p.user_photo_urls) || p.photo_url || pinPhotos.get(placeKey(null, p.place_name)), 160, 160);
+    const icon = iconFor(p.category);
+    const verdict = verdictLabel(p.tags);
+    const cat = catLabel(p.category);
+    return `<div class="pl"><div class="pic">
+${photo ? `<img class="p" src="${esc(photo)}" alt="" loading="lazy">` : icon ? `<span class="ic"><img src="${esc(icon)}" alt="" loading="lazy"></span>` : ""}
+<i>${i + 1}</i></div>
+<div class="d"><p class="n">${esc(p.place_name || "")}</p>
+<div class="b">${verdict ? `<span class="v">${esc(verdict)}</span>` : "<span></span>"}${cat && p.category !== "other" ? `<span class="c">${esc(cat)}</span>` : ""}</div></div></div>`;
+  }).join("");
+
+  // Wejscie w aplikacje z pominieciem zapowiedzi (`?full=1`) - odbiorca widzial ja juz tutaj,
+  // wiec druga taka sama strona po kliknieciu bylaby dreptaniem w miejscu.
+  const body = `<div class="page">
+<div class="tc">
+${cover ? `<img class="bg" src="${esc(cover)}" alt="">` : ""}
+<div class="veil"></div>
+<div class="txt">
+<div class="who">${avatar ? `<img src="${esc(avatar)}" alt="">` : ""}<span>${[author?.username ? `@${esc(author.username)}` : null, route.city ? esc(route.city) : null, pins.length ? count : null].filter(Boolean).join(" · ")}</span></div>
+<h1>${esc(title)}</h1>
+${chips.length ? `<div class="chips">${chips.map((c) => `<span>${esc(c)}</span>`).join("")}</div>` : ""}
+</div></div>
+${strip ? `<div class="day"><i></i><p>Dzień 1</p></div><div class="strip">${strip}</div>` : ""}
+<a class="go" href="${SITE}/#/route/${esc(id)}?full=1">Zobacz wyjazd</a>
+<p class="tail">Ten wyjazd powstał w spontaway - aplikacji do odkrywania miejsc i planowania wyjazdów ze znajomymi.</p>
+</div>`;
+  return new Response(shell({ title, desc, image: cover ?? BRAND_IMG, url, body, noun: "route", variant: "trip" }), {
     headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "public, s-maxage=60, stale-while-revalidate=600" },
   });
 }
