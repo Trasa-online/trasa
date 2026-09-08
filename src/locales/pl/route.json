@@ -165,7 +165,9 @@
   "note": {
     "placeholder": "Dodaj notkę o tym miejscu...",
     "edit": "Edytuj notkę",
-    "add": "Dodaj notkę"
+    "add": "Dodaj notkę",
+    "add_description": "Dodaj opis",
+    "edit_description": "Edytuj opis"
   },
   "day_label": "{{city}} - Dzień {{day}}",
   "map_picker": {

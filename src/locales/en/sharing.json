@@ -88,7 +88,8 @@
     "empty": "This day is still empty. Move places here in Reorder, or add new ones.",
     "no_places": "No places this day",
     "label": "Day {{day}}",
-    "label_with_date": "Day {{day}} · {{date}}"
+    "label_with_date": "Day {{day}} · {{date}}",
+    "moved": "Moved to {{day}}"
   },
   "toast": {
     "pick_cover_desc": "In the Gallery tab, pick the photo that should represent this trip in Explore.",

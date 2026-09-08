@@ -88,7 +88,8 @@
     "empty": "Ten dzień jest jeszcze pusty. Przenieś tu miejsca w „Zmień kolejność” albo dodaj nowe.",
     "no_places": "Brak miejsc tego dnia",
     "label": "Dzień {{day}}",
-    "label_with_date": "Dzień {{day}} · {{date}}"
+    "label_with_date": "Dzień {{day}} · {{date}}",
+    "moved": "Przeniesiono do: {{day}}"
   },
   "toast": {
     "pick_cover_desc": "W zakładce Galeria zaznacz zdjęcie, które ma reprezentować wyjazd w eksploracji.",

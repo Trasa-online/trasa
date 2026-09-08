@@ -92,15 +92,31 @@ const GoogleGlyph = ({ className }: { className?: string }) => (
 
 // Wiersz miejsca z uchwytem przeciagania (framer-motion Reorder) - tryb edycji wspoldzielonej
 // trasy (wlasciciel + uczestnik). Wzor 1:1 z SortablePlanRow w ReviewSummary.
+// Znaczniki dni w trybie zmiany kolejnosci. Trzymamy je w cache POZA komponentem, bo Reorder.Group
+// rozpoznaje elementy PO REFERENCJI: marker tworzony na nowo przy kazdym renderze nie dawal sie
+// dopasowac do listy wartosci i miejsca nie przechodzily pod naglowek innego dnia (zgloszenie Nat
+// 2026-09-09). Cache, a nie useMemo - to miejsce jest juz za wczesnymi returnami komponentu.
+const DAY_MARKERS = new Map<number, { id: string; __day: number }>();
+const dayMarkerFor = (d: number) => {
+  let m = DAY_MARKERS.get(d);
+  if (!m) { m = { id: `__day_${d}`, __day: d }; DAY_MARKERS.set(d, m); }
+  return m;
+};
+
 // Wiersz w TRYBIE ZMIANY KOLEJNOSCI: sam uchwyt + miniaturka + nazwa. Bez notek, zdjec i akcji -
 // krotki wiersz mniej skacze pod palcem i widac kilka miejsc naraz (prosba Nat 2026-08-30).
-function CompactSortableRow({ value, rowPin, index, categoryLabel }: {
+function CompactSortableRow({ value, rowPin, index, categoryLabel, dayBadge }: {
   value: any; rowPin: any; index: number; categoryLabel: ReactNode;
+  /** Wyjazd wielodniowy: pigulka z dniem, tapniecie przenosi miejsce do nastepnego dnia. */
+  dayBadge?: { label: string; onCycle: () => void };
 }) {
   const { t } = useTranslation("sharing");
   const controls = useDragControls();
   return (
-    <Reorder.Item as="div" value={value} dragListener={false} dragControls={controls} transition={{ duration: 0 }}>
+    // Haptyka na chwycenie i na puszczenie wiersza - bez niej przeciaganie nie ma zadnego
+    // potwierdzenia w dloni i nie wiadomo, czy uchwyt "zlapal" (zgloszenie Nat 2026-09-09).
+    <Reorder.Item as="div" value={value} dragListener={false} dragControls={controls} transition={{ duration: 0 }}
+      onDragStart={() => haptics.selection()} onDragEnd={() => haptics.light()}>
       <div className="flex items-center gap-3 py-2 border-b border-border/50 last:border-b-0 bg-background">
         <span
           onPointerDown={(e) => controls.start(e)}
@@ -117,6 +133,16 @@ function CompactSortableRow({ value, rowPin, index, categoryLabel }: {
           <span className="block text-[15px] font-semibold text-foreground truncate">{rowPin.place_name}</span>
           <span className="block text-[12px] text-muted-foreground truncate">{categoryLabel}</span>
         </span>
+        {/* Przeniesienie do innego dnia BEZ przeciagania. Samo przeciaganie pod naglowek dnia
+            zostaje, ale przy kilkunastu miejscach dzien docelowy jest daleko poza ekranem,
+            a lista nie przewija sie w trakcie ciagniecia - w praktyce nie dalo sie tego zrobic
+            (zgloszenie Nat 2026-09-09). Tapniecie przerzuca do kolejnego dnia. */}
+        {dayBadge && (
+          <button
+            onClick={(e) => { e.stopPropagation(); dayBadge.onCycle(); }}
+            className="shrink-0 rounded-full bg-secondary px-2.5 py-1 text-[11px] font-bold text-foreground active:scale-95 transition-transform"
+          >{dayBadge.label}</button>
+        )}
       </div>
     </Reorder.Item>
   );
@@ -929,6 +955,21 @@ export default function SharedRoute() {
     }));
     queryClient.invalidateQueries({ queryKey: ["shared-route-pins", id] });
   };
+  /** Przenosi miejsce do NASTEPNEGO dnia (z zawijaniem). Kolejnosc w obrebie dnia: na koniec. */
+  const movePinToNextDay = (pin: any) => {
+    const next = (pinDay(pin) % dayCount) + 1;
+    const rest = (pins as any[]).filter((p) => p.id !== pin.id);
+    const moved = { ...pin, day_index: next };
+    const ordered: any[] = [];
+    for (let d = 1; d <= dayCount; d++) {
+      ordered.push(...rest.filter((p) => pinDay(p) === d));
+      if (d === next) ordered.push(moved);
+    }
+    haptics.success();
+    handleReorderPins(ordered);
+    toast.success(t("day.moved", { day: t("days.nth", { n: next }) }));
+  };
+
   const handleReorderPins = (newOrder: any[]) => {
     reorderTick(newOrder, (pins as any[]) ?? []);
     queryClient.setQueryData(["shared-route-pins", id], newOrder);
@@ -1450,10 +1491,15 @@ export default function SharedRoute() {
   // Wyjazd wielodniowy: naglowki "Dzien N" sa CZESCIA listy przeciagania (jako nieprzesuwalne
   // znaczniki), wiec miejsce przeciagniete pod inny naglowek zmienia dzien. Po kazdym reorderze
   // przeliczamy day_index z pozycji wzgledem naglowkow.
+  // Znaczniki dni to STALE obiekty. Reorder.Group rozpoznaje elementy PO REFERENCJI, wiec gdy
+  // marker powstawal na nowo przy kazdym renderze (a do tego osobno dla `values` i dla `map`),
+  // biblioteka nie potrafila znalezc go w liscie wartosci - i miejsca nie dawaly sie przeciagnac
+  // pod naglowek innego dnia (zgloszenie Nat 2026-09-09: "nie jestem w stanie przeniesc miejsca
+  // do nowego dnia").
   const withDayMarkers = (list: any[]) => {
     const out: any[] = [];
     for (let d = 1; d <= dayCount; d++) {
-      out.push({ id: `__day_${d}`, __day: d });
+      out.push(dayMarkerFor(d));
       out.push(...list.filter((p) => pinDay(p) === d));
     }
     return out;
@@ -1461,18 +1507,27 @@ export default function SharedRoute() {
   const onReorderWithDays = (next: any[], persist: (pins: any[]) => void) => {
     let current = 1;
     const pinsOnly: any[] = [];
+    let dayChanged = false;
     for (const item of next) {
       if (item.__day) { current = item.__day; continue; }
+      if (pinDay(item) !== current) dayChanged = true;
       pinsOnly.push({ ...item, day_index: current });
     }
+    // Przeniesienie do INNEGO DNIA to zmiana wieksza niz zwykla zamiana kolejnosci, wiec
+    // dostaje mocniejsze potwierdzenie (prosba Nat 2026-09-09).
+    if (dayChanged) haptics.success(); else haptics.selection();
     persist(pinsOnly);
   };
 
-  const renderRows = (list: any[], onReorder: (next: any[]) => void) => (
+  const renderRows = (list: any[], onReorder: (next: any[]) => void) => {
+    // JEDNA instancja listy z markerami - `values` i renderowane dzieci musza dostac te same
+    // obiekty, inaczej Reorder.Group nie dopasuje elementu do wartosci.
+    const decorated = hasDays ? withDayMarkers(list) : list;
+    return (
     canEdit && reorderMode ? (
       hasDays ? (
-        <Reorder.Group axis="y" values={withDayMarkers(list)} onReorder={(next: any[]) => onReorderWithDays(next, onReorder)} as="div">
-          {withDayMarkers(list).map((item: any, i: number) =>
+        <Reorder.Group axis="y" values={decorated} onReorder={(next: any[]) => onReorderWithDays(next, onReorder)} as="div">
+          {decorated.map((item: any, i: number) =>
             item.__day ? (
               <Reorder.Item as="div" key={item.id} value={item} dragListener={false} drag={false} transition={{ duration: 0 }}>
                 <div className="pt-4 pb-2 flex items-center gap-2">
@@ -1484,6 +1539,7 @@ export default function SharedRoute() {
               <CompactSortableRow
                 key={item.id} value={item} rowPin={rowPinFor(item)} index={i}
                 categoryLabel={categoryLabel(item.category || "other")}
+                dayBadge={hasDays && canEdit ? { label: t("days.nth", { n: pinDay(item) }), onCycle: () => movePinToNextDay(item) } : undefined}
               />
             )
           )}
@@ -1556,7 +1612,8 @@ export default function SharedRoute() {
         ))}
       </div>
     )
-  );
+    );
+  };
 
   const renderList = () => {
     // Pusty DZIEN: miejsca w wyjezdzie sa, tylko nie w tym dniu. Jeden komunikat na cala liste
@@ -1754,7 +1811,10 @@ export default function SharedRoute() {
       </div>
 
       {/* Obszar scrolla - #1: BEZ okladki tla trasy (okladka TYLKO w eksploracji). */}
-      <div className="flex-1 min-h-0 overflow-y-auto pb-44">
+      {/* Zapas na dole = ponad plywajace guziki (czat stoi 152px + 56px wysokosci = 208px),
+          inaczej ostatni wiersz konczyl sie POD nimi i kosza nie dalo sie tapnac (zgloszenie
+          Nat 2026-09-09). Bylo pb-44 = 176px, czyli mniej niz sam czat. */}
+      <div className="flex-1 min-h-0 overflow-y-auto pb-[calc(14rem+env(safe-area-inset-bottom,0px))]">
         {/* Naglowek: tytul + opis, spacing 35px pod TopBarem */}
         <div className="px-5 pt-[35px]">
           <div className="flex items-start gap-3">
@@ -1825,6 +1885,41 @@ export default function SharedRoute() {
           )}
         </div>
 
+        {/* MOJ OPIS WYJAZDU - stoi PRZY opisie glownym, nie pod zakladkami (prosba Nat
+            2026-09-09): guzik edytowal tresc, ktora byla kilka sekcji wyzej, wiec zwiazek
+            miedzy nimi nie byl widoczny. Kazdy uczestnik ma swoj, u siebie na gorze
+            (prosba Nat 2026-09-01). Notki pozostalych ida pod nia, tym samym szarym dymkiem z awatarem
+            co notki przy miejscach. Nie mylic z t("trip_description") - tamten pisze host i idzie
+            z wyjazdem do eksploracji. */}
+        {/* Na etapie PROPOZYCJI notki nie ma - wyjazd dopiero powstaje, nie ma jeszcze o czym
+            pisac (prosba Nat 2026-09-01). Wchodzi od "w trakcie". */}
+        {stage !== "planning" && (canEdit || (memberNotes as any[]).length > 0) && !choosing && (
+          <div className="mb-5 px-5">
+            {canEdit && (
+              <PlaceNoteEditor
+                note={myTripNote}
+                showAvatar
+                avatarUrl={myAvatar}
+                placeholder={t("note.placeholder")}
+                addLabel={t("route:note.add_description")}
+                editLabel={t("route:note.edit_description")}
+                onSave={saveMyTripNote}
+                onEditingChange={setNoteEditing}
+              />
+            )}
+            {(memberNotes as any[]).filter((n) => n.user_id !== user?.id).length > 0 && (
+              <div className="space-y-3 mt-3">
+                {(memberNotes as any[]).filter((n) => n.user_id !== user?.id).map((n) => (
+                  <div key={n.user_id} className="relative bg-muted/50 rounded-2xl px-3.5 py-2.5">
+                    <p className="text-[13.5px] text-foreground/85 leading-snug whitespace-pre-wrap break-words">{n.note}</p>
+                    <img src={avatarSrc(n.avatar_url)} alt={n.username ?? ""} title={n.username ?? undefined}
+                      className="absolute -bottom-1.5 -right-1.5 h-6 w-6 rounded-full object-cover border-2 border-white shadow-sm bg-secondary" />
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
         {/* Zakladki wracaja POD opis wyjazdu - dzialaja tam jak divider miedzy naglowkiem
             a trescia (prosba Nat 2026-09-01). Zeby nie uciekaly przy przewijaniu, sa sticky
             do gornej krawedzi obszaru scrolla. Chipy dni przyklejaja sie tuz pod nimi. */}
@@ -1853,37 +1948,6 @@ export default function SharedRoute() {
         <div {...swipeTabs}>
         {planTab === "miejsca" ? (
           <div className="px-5 pt-4">
-            {/* MOJA NOTKA O WYJEZDZIE - kazdy uczestnik ma swoja, u siebie na gorze (prosba Nat
-                2026-09-01). Notki pozostalych ida pod nia, tym samym szarym dymkiem z awatarem
-                co notki przy miejscach. Nie mylic z t("trip_description") - tamten pisze host i idzie
-                z wyjazdem do eksploracji. */}
-            {/* Na etapie PROPOZYCJI notki nie ma - wyjazd dopiero powstaje, nie ma jeszcze o czym
-                pisac (prosba Nat 2026-09-01). Wchodzi od "w trakcie". */}
-            {stage !== "planning" && (canEdit || (memberNotes as any[]).length > 0) && !choosing && (
-              <div className="mb-5">
-                {canEdit && (
-                  <PlaceNoteEditor
-                    note={myTripNote}
-                    showAvatar
-                    avatarUrl={myAvatar}
-                    placeholder={t("note.placeholder")}
-                    onSave={saveMyTripNote}
-                    onEditingChange={setNoteEditing}
-                  />
-                )}
-                {(memberNotes as any[]).filter((n) => n.user_id !== user?.id).length > 0 && (
-                  <div className="space-y-3 mt-3">
-                    {(memberNotes as any[]).filter((n) => n.user_id !== user?.id).map((n) => (
-                      <div key={n.user_id} className="relative bg-muted/50 rounded-2xl px-3.5 py-2.5">
-                        <p className="text-[13.5px] text-foreground/85 leading-snug whitespace-pre-wrap break-words">{n.note}</p>
-                        <img src={avatarSrc(n.avatar_url)} alt={n.username ?? ""} title={n.username ?? undefined}
-                          className="absolute -bottom-1.5 -right-1.5 h-6 w-6 rounded-full object-cover border-2 border-white shadow-sm bg-secondary" />
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
             {/* PRZELACZNIK DNI (wariant A z Figmy, sekcja "Wyjazd wielodniowy" 2026-09-01).
                 Przypiety pasek chipow: jeden dzien naraz zamiast wszystkich dni w jednym,
                 niekonczacym sie scrollu. Chip "Wszystkie" wraca do pelnej listy z naglowkami dni -
@@ -1891,8 +1955,11 @@ export default function SharedRoute() {
                 otwierania kalendarza; pasek przewija sie w bok, wiec skaluje sie do kilkunastu dni. */}
             {/* W trybie t("reorder") chipow NIE ma: tam widac caly wyjazd, bo o to chodzi -
                 przeciagniecie miejsca pod naglowek innego dnia zmienia mu dzien. */}
+            {/* top-65px = dokladna wysokosc paska zakladek wyzej (pt-5 = 20 + guzik py-3 z ikona
+                h-5 = 44 + kreska 1). Bylo 45px, wiec chipy wjezdzaly POD zakladki i ucinaly sie
+                od gory przy przewijaniu (zgloszenie Nat 2026-09-09). */}
             {daysUsable && !choosing && !reorderMode && (
-              <div className="sticky top-[45px] z-20 -mx-5 bg-background border-b border-border/50">
+              <div className="sticky top-[65px] z-20 -mx-5 bg-background border-b border-border/50">
                 <div className="flex gap-2 overflow-x-auto px-5 py-3 no-scrollbar">
                   {[null, ...Array.from({ length: dayCount }, (_, i) => i + 1)].map((d) => {
                     const on = activeDay === d;
@@ -1911,22 +1978,6 @@ export default function SharedRoute() {
                     );
                   })}
                 </div>
-                {activeDay !== null && (
-                  <div className="flex items-center gap-3 px-5 pb-2.5">
-                    <p className="flex-1 min-w-0 text-[13px] text-muted-foreground">
-                      {(() => {
-                        const n = (pins as any[]).filter((p) => pinDay(p) === activeDay).length;
-                        return `${n} ${placeWord(n)} w tym dniu`;
-                      })()}
-                    </p>
-                    {canEdit && pins.length > 1 && (
-                      <button
-                        onClick={() => { haptics.light(); pickDay(null); setReorderMode(true); }}
-                        className="shrink-0 text-[13px] font-semibold text-primary active:opacity-60 transition-opacity"
-                      >{t("reorder")}</button>
-                    )}
-                  </div>
-                )}
               </div>
             )}
             {/* OPIS + TAGI CALEJ TRASY - przeniesione tu ze steppera "podsumowania" (prosba Nat

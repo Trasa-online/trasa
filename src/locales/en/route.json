@@ -160,7 +160,9 @@
   "note": {
     "placeholder": "Add a note about this place...",
     "edit": "Edit note",
-    "add": "Add note"
+    "add": "Add note",
+    "add_description": "Add description",
+    "edit_description": "Edit description"
   },
   "day_label": "{{city}} - Day {{day}}",
   "map_picker": {

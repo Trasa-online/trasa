@@ -18,6 +18,8 @@ export default function PlaceNoteEditor({
   avatarUrl,
   photoSlot,
   placeholder,
+  addLabel,
+  editLabel,
   onEditingChange,
 }: {
   note: string;
@@ -27,6 +29,10 @@ export default function PlaceNoteEditor({
   avatarUrl?: string | null;
   photoSlot?: React.ReactNode;
   placeholder?: string;
+  /** Napis na guziku, gdy notki jeszcze nie ma / gdy juz jest. Domyslnie "Dodaj notkę" /
+   *  "Edytuj notkę". Opis CALEGO wyjazdu uzywa tu slowa "opis" - to nie jest notka o miejscu. */
+  addLabel?: string;
+  editLabel?: string;
   /** Informuje rodzica, ze user WLASNIE pisze notke - ekran chowa wtedy czat i dolne CTA. */
   onEditingChange?: (editing: boolean) => void;
 }) {
@@ -110,7 +116,7 @@ export default function PlaceNoteEditor({
             className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-3 py-1.5 text-xs font-bold text-foreground active:scale-95 transition-transform"
           >
             {noteText ? <Pencil className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
-            {noteText ? t("note.edit") : t("note.add")}
+            {noteText ? (editLabel ?? t("note.edit")) : (addLabel ?? t("note.add"))}
           </button>
           {photoSlot}
         </div>
