@@ -7,6 +7,7 @@ import { X, Heart, ThumbsDown, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CategoryIcon } from "@/components/CategoryIcon";
 import SheetSkeleton from "@/components/layout/SheetSkeleton";
+import { deferDelete } from "@/lib/deferDelete";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -169,14 +170,19 @@ export default function LikesDrawer({ open, onClose, userId }: LikesDrawerProps)
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["place-reactions", userId] }),
   });
 
+  // Kasowalo BEZ SLOWA. Commit odroczony o okno "Cofnij" - wiersz zostaje nietkniety, wiec
+  // cofniecie oddaje dokladnie ten sam stan (zgloszenie Nat 2026-09-09).
   const removeMutation = useMutation({
     mutationFn: async (id: string) => {
-      await (supabase as any)
-        .from("user_place_reactions")
-        .delete()
-        .eq("id", id);
+      const refresh = () => queryClient.invalidateQueries({ queryKey: ["place-reactions", userId] });
+      queryClient.setQueryData(["place-reactions", userId], (prev: any) =>
+        Array.isArray(prev) ? prev.filter((r: any) => r.id !== id) : prev);
+      deferDelete({
+        message: t("likes.removed"),
+        commit: async () => { await (supabase as any).from("user_place_reactions").delete().eq("id", id); refresh(); },
+        onUndo: refresh,
+      });
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["place-reactions", userId] }),
   });
 
   const filtered = reactions.filter(r => r.reaction === tab);

@@ -291,7 +291,8 @@ export default function PublicProfile() {
     setSaveOverride((m) => ({ ...m, ["t:" + tr.id]: !cur }));
     if (cur) {
       await (supabase as any).from("saved_routes").delete().eq("user_id", user.id).eq("route_id", tr.id);
-      toast(t("public.removed_saved"));
+      // Cofalne - "Cofnij" po prostu wykonuje te sama akcje jeszcze raz (zapisuje z powrotem).
+      toast(t("public.removed_saved"), { action: { label: t("common:buttons.undo"), onClick: () => void onTripSave(tr) } });
     } else {
       await (supabase as any).from("saved_routes").upsert({ user_id: user.id, route_id: tr.id }, { onConflict: "user_id,route_id", ignoreDuplicates: true });
       void (supabase as any).rpc("notify_route_used", { p_route_id: tr.id });
@@ -304,7 +305,10 @@ export default function PublicProfile() {
     const cur = isListSaved(l.id);
     const next = new Set(savedListIds);
     const dates = (() => { try { return JSON.parse(localStorage.getItem("trasa_saved_collections_dates") || "{}"); } catch { return {}; } })();
-    if (cur) { next.delete(l.id); delete dates[l.id]; toast(t("public.removed_saved")); void unsaveCollectionDb(user.id, l.id); }
+    if (cur) {
+      next.delete(l.id); delete dates[l.id]; void unsaveCollectionDb(user.id, l.id);
+      toast(t("public.removed_saved"), { action: { label: t("common:buttons.undo"), onClick: () => onListSave(l) } });
+    }
     else {
       next.add(l.id); dates[l.id] = new Date().toISOString(); toast.success(t("public.list_saved"));
       void (supabase as any).rpc("notify_collection_saved", { p_collection_id: l.id });

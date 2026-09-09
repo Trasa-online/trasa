@@ -10,6 +10,7 @@ import { resolveStored } from "@/components/PlacePhoto";
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { haptics } from "@/hooks/useHaptics";
 import { toast } from "sonner";
+import { deferDelete } from "@/lib/deferDelete";
 
 // Ekran po kliknieciu "+": wybor bazy nowego wyjazdu. Robocze (wlasne trasy usera) lub
 // Zapisane (trasy zapisane od innych) jako punkt startu, albo "Zacznij od nowa" (pusty
@@ -137,13 +138,20 @@ export default function StartWyjazd() {
     navigate("/wyjazd/nowy", { state: { city: route.city, title: route.title, places, draftId: route.own ? route.id : undefined } });
   };
 
+  // Okno "Cofnij" ZAMIAST natywnego confirm(): pytanie przed akcja zatrzymuje kazdego, takze
+  // tego, kto wie co robi, a i tak nie daje odwrotu, gdy sie pomyli. Odroczony commit daje
+  // jedno i drugie (zgloszenie Nat 2026-09-09).
   const deleteDraft = async (id: string) => {
-    if (!confirm(t("drafts.confirm_delete"))) return;
     haptics.warning();
-    await (supabase as any).from("pins").delete().eq("route_id", id);
-    await (supabase as any).from("routes").delete().eq("id", id);
-    queryClient.invalidateQueries({ queryKey: ["start-robocze"] });
-    toast.success(t("drafts.deleted"));
+    deferDelete({
+      message: t("drafts.deleted"),
+      commit: async () => {
+        await (supabase as any).from("pins").delete().eq("route_id", id);
+        await (supabase as any).from("routes").delete().eq("id", id);
+        queryClient.invalidateQueries({ queryKey: ["start-robocze"] });
+      },
+      onUndo: () => queryClient.invalidateQueries({ queryKey: ["start-robocze"] }),
+    });
   };
 
   return (

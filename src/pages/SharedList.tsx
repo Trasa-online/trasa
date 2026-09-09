@@ -43,6 +43,7 @@ import { fetchVisitedKeys, toggleVisited } from "@/lib/placeVisits";
 import { haptics } from "@/hooks/useHaptics";
 import { moderateImageUrl, MODERATION_REJECTED_MESSAGE } from "@/lib/imageModeration";
 import { rowOwnPhotos, mergeRowPhotosIntoDetail } from "@/lib/placeUserPhotos";
+import { deferDelete } from "@/lib/deferDelete";
 
 // Widok LISTY miejsc (polecajki) - UI/UX 1:1 z widokiem trasy (SharedRoute), ale zasilany z
 // discovery_collections/discovery_items. Lista NIE jest trasa (brak kolejnosci-planu), ale
@@ -168,32 +169,56 @@ export default function SharedList() {
     } finally { setUploadingItem(null); }
   };
 
+  // Kasowalo BEZ SLOWA - ani toasta, ani drogi powrotu (zgloszenie Nat 2026-09-09). Plik
+  // w Storage zostaje, zmieniamy tylko tablice `images` i wiersz galerii miejsca, wiec
+  // "Cofnij" przywraca komplet.
   const removeItemPhoto = async (item: any, url: string) => {
-    const urls = (Array.isArray(item.images) ? item.images : []).filter((u: string) => u !== url);
+    const before: string[] = Array.isArray(item.images) ? item.images : [];
+    const urls = before.filter((u: string) => u !== url);
     const { error } = await (supabase as any).from("discovery_items").update({ images: urls }).eq("id", item.id);
     if (error) { toast.error(t("toast.photo_delete_failed")); return; }
+    const placeKey = placeKeyOf({ googlePlaceId: item.google_place_id ?? null, placeName: item.place_name });
     // Zdejmij tez z galerii miejsca (tylko wlasny wiersz - cudze zdjecia miejsca zostaja).
-    if (user) {
-      await unlinkPhotoFromPlace({
-        userId: user.id, placeKey: placeKeyOf({ googlePlaceId: item.google_place_id ?? null, placeName: item.place_name }), photoUrl: url,
-      });
-    }
+    if (user) await unlinkPhotoFromPlace({ userId: user.id, placeKey, photoUrl: url });
     queryClient.invalidateQueries({ queryKey: ["shared-list-items", id] });
+    toast.success(t("toast.photo_deleted"), {
+      action: {
+        label: t("common:buttons.undo"),
+        onClick: () => {
+          void (async () => {
+            await (supabase as any).from("discovery_items").update({ images: before }).eq("id", item.id);
+            if (user) await linkPhotoToPlace({ userId: user.id, placeKey, placeName: item.place_name, city: item.city ?? col?.city ?? null, photoUrl: url });
+            queryClient.invalidateQueries({ queryKey: ["shared-list-items", id] });
+            queryClient.invalidateQueries({ queryKey: ["place-photos"] });
+          })();
+        },
+      },
+    });
   };
 
   const handleDelete = async () => {
     if (!user || !id) return;
     setDeleting(true);
     try {
-      await (supabase as any).from("discovery_items").delete().eq("collection_id", id);
-      const { error } = await (supabase as any).from("discovery_collections").delete().eq("id", id).eq("user_id", user.id);
-      if (error) throw new Error(error.message);
-      // Odswiez listy w drawerze zapisu + na profilu (inaczej usunieta lista wisi w cache).
-      queryClient.invalidateQueries({ queryKey: ["save-sheet-lists", user.id] });
-      queryClient.invalidateQueries({ queryKey: ["profile-list-feed", user.id] });
-      toast.success(t("toast.list_deleted"));
+      // Commit ODROCZONY o okno "Cofnij" - kasujemy kolekcje RAZEM z pozycjami, wiec po fakcie
+      // nie da sie tego zlozyc z powrotem; jedyne uczciwe cofniecie to nie wykonac usuniecia.
+      // Ten sam wzorzec, co przy usuwaniu listy z profilu (TravelerProfile).
+      const refresh = () => {
+        queryClient.invalidateQueries({ queryKey: ["save-sheet-lists", user.id] });
+        queryClient.invalidateQueries({ queryKey: ["profile-list-feed", user.id] });
+      };
       setAskDelete(false);
       goBackOr(navigate, "/moj-profil");
+      deferDelete({
+        message: t("toast.list_deleted"),
+        commit: async () => {
+          await (supabase as any).from("discovery_items").delete().eq("collection_id", id);
+          const { error } = await (supabase as any).from("discovery_collections").delete().eq("id", id).eq("user_id", user.id);
+          if (error) { toast.error(t("toast.list_delete_failed")); return; }
+          refresh();
+        },
+        onUndo: refresh,
+      });
     } catch (e: any) {
       toast.error(t("toast.list_delete_failed"));
       console.error("[SharedList] delete failed:", e?.message ?? e);
@@ -389,7 +414,13 @@ export default function SharedList() {
     try {
       const set = new Set<string>(JSON.parse(localStorage.getItem("trasa_saved_collections") || "[]"));
       const dates: Record<string, string> = (() => { try { return JSON.parse(localStorage.getItem("trasa_saved_collections_dates") || "{}"); } catch { return {}; } })();
-      if (set.has(id)) { set.delete(id); delete dates[id]; setSaved(false); toast(t("toast.removed_saved")); if (user) void unsaveCollectionDb(user.id, id); }
+      // Odpiecie listy jest cofalne (localStorage + wiersz saved_collections), wiec toast
+      // daje "Cofnij" - tak samo jak na profilu (TravelerProfile).
+      if (set.has(id)) {
+        set.delete(id); delete dates[id]; setSaved(false);
+        if (user) void unsaveCollectionDb(user.id, id);
+        toast(t("toast.removed_saved"), { action: { label: t("common:buttons.undo"), onClick: () => toggleSave() } });
+      }
       else { set.add(id); dates[id] = new Date().toISOString(); setSaved(true); toast.success(t("toast.list_saved")); void (supabase as any).rpc("notify_collection_saved", { p_collection_id: id }); if (user) void saveCollectionDb(user.id, id, items.length); }
       localStorage.setItem("trasa_saved_collections", JSON.stringify([...set]));
       localStorage.setItem("trasa_saved_collections_dates", JSON.stringify(dates));

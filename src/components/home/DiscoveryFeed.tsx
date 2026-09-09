@@ -43,6 +43,7 @@ import { PLANNING_DISABLED } from "@/lib/appMode";
 import { createWyjazdFromPlaces } from "@/lib/createWyjazd";
 import { setGpsReference } from "@/lib/distanceReference";
 import { track } from "@/lib/analytics";
+import { deferDelete } from "@/lib/deferDelete";
 
 type DiscoveryItem = {
   id: string;
@@ -261,13 +262,23 @@ export function CollectionDetail({ col, onClose, onAdopt }: { col: DiscoveryColl
     } as MockPlace);
   };
 
+  // Okno "Cofnij" zamiast natywnego confirm() - jak przy usuwaniu tej samej encji z profilu
+  // i z eksploracji. Przy okazji kasujemy TAKZE pozycje listy: dotad ginela sama kolekcja,
+  // a wiersze discovery_items zostawaly osierocone (zlapane przy audycie toastow 2026-09-09).
   const handleDelete = async () => {
     if (!isOwner || deleting) return;
-    if (!confirm(t("confirm.delete_collection"))) return;
     setDeleting(true);
-    await (supabase as any).from("discovery_collections").delete().eq("id", col.id);
-    queryClient.invalidateQueries({ queryKey: ["explore-rankings"] });
+    const refresh = () => queryClient.invalidateQueries({ queryKey: ["explore-rankings"] });
     onClose();
+    deferDelete({
+      message: t("toast.collection_deleted"),
+      commit: async () => {
+        await (supabase as any).from("discovery_items").delete().eq("collection_id", col.id);
+        await (supabase as any).from("discovery_collections").delete().eq("id", col.id);
+        refresh();
+      },
+      onUndo: () => { setDeleting(false); refresh(); },
+    });
   };
 
   // Piny do mapy-podgladu (RouteMap = Google, dziala natywnie; leaflet w iframe srcDoc
@@ -1342,7 +1353,17 @@ export function SavedRoutes({ city, hideEmptyState }: { city?: string; hideEmpty
     if (!user) return;
     await (supabase as any).from("saved_routes").delete().eq("user_id", user.id).eq("route_id", id);
     queryClient.invalidateQueries({ queryKey: ["saved-routes"] });
-    toast(i18n.t("toast.removed_saved", { ns: "homefeed" }));
+    // Odpiecie zapisanego wyjazdu jest cofalne (wiersz to sama para user+route), wiec toast
+    // daje "Cofnij" - jak `toggleSaveRoute` nizej w tym samym pliku.
+    toast(i18n.t("toast.removed_saved", { ns: "homefeed" }), {
+      action: {
+        label: i18n.t("buttons.undo", { ns: "common" }),
+        onClick: async () => {
+          await (supabase as any).from("saved_routes").insert({ user_id: user.id, route_id: id });
+          queryClient.invalidateQueries({ queryKey: ["saved-routes"] });
+        },
+      },
+    });
   };
 
 

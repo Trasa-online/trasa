@@ -2,7 +2,8 @@
   "toast": {
     "saved": "Zapisano",
     "removed_saved": "Usunięto z zapisanych",
-    "location_failed": "Nie udało się pobrać lokalizacji"
+    "location_failed": "Nie udało się pobrać lokalizacji",
+    "collection_deleted": "Usunięto listę"
   },
   "confirm": {
     "delete_collection": "Usunąć tę trasę?",

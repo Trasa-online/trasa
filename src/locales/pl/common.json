@@ -21,7 +21,8 @@
     "start_recording": "Nagraj głos",
     "stop_recording": "Zatrzymaj nagrywanie",
     "done": "Gotowe",
-    "search": "Szukaj"
+    "search": "Szukaj",
+    "undo": "Cofnij"
   },
   "errors": {
     "generic": "Coś poszło nie tak"

@@ -21,7 +21,8 @@
     "start_recording": "Record voice",
     "stop_recording": "Stop recording",
     "done": "Done",
-    "search": "Search"
+    "search": "Search",
+    "undo": "Undo"
   },
   "errors": {
     "generic": "Something went wrong"

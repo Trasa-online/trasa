@@ -510,12 +510,22 @@ export const MyCollections = ({ showCreate = true }: { showCreate?: boolean } = 
     if (!confirmDelete || !user) return;
     setDeleting(true);
     try {
-      await (supabase as any).from("discovery_items").delete().eq("collection_id", confirmDelete.id);
-      const { error } = await (supabase as any).from("discovery_collections").delete().eq("id", confirmDelete.id).eq("user_id", user.id);
-      if (error) throw new Error(error.message);
-      toast.success(t("collections.toast_deleted"));
+      // Odroczony commit + "Cofnij" - ta sama encja usuwana z profilu (TravelerProfile) juz
+      // tak dziala, wiec tutaj byla po prostu niespojnosc (zgloszenie Nat 2026-09-09).
+      const target = confirmDelete;
+      const refresh = () => queryClient.invalidateQueries({ queryKey: ["my-collections", user.id] });
       setConfirmDelete(null);
-      queryClient.invalidateQueries({ queryKey: ["my-collections", user.id] });
+      refresh();
+      deferDelete({
+        message: t("collections.toast_deleted"),
+        commit: async () => {
+          await (supabase as any).from("discovery_items").delete().eq("collection_id", target.id);
+          const { error } = await (supabase as any).from("discovery_collections").delete().eq("id", target.id).eq("user_id", user.id);
+          if (error) toast.error(t("collections.toast_delete_error", { error: error.message }));
+          refresh();
+        },
+        onUndo: refresh,
+      });
     } catch (e: any) {
       toast.error(t("collections.toast_delete_error", { error: e?.message ?? t("collections.error_fallback") }));
     } finally {

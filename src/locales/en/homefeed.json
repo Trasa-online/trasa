@@ -2,7 +2,8 @@
   "toast": {
     "saved": "Saved",
     "removed_saved": "Removed from saved",
-    "location_failed": "We could not get your location"
+    "location_failed": "We could not get your location",
+    "collection_deleted": "List deleted"
   },
   "confirm": {
     "delete_collection": "Delete this collection?",

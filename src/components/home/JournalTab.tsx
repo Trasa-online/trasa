@@ -16,6 +16,7 @@ import { avatarSrc } from "@/lib/avatar";
 import { haptics } from "@/hooks/useHaptics";
 import { cn } from "@/lib/utils";
 import SheetSkeleton from "@/components/layout/SheetSkeleton";
+import { deferDelete } from "@/lib/deferDelete";
 
 interface JournalTabProps {
   userId: string;
@@ -248,31 +249,39 @@ const JournalTab = ({ userId, city: cityFilter, draftsOnly = false }: JournalTab
       (old ?? []).filter((x: any) => x.id !== entry.id)
     );
     queryClient.invalidateQueries({ queryKey: ["journal-badge"] });
-    try {
-      if (entry.is_own) {
-        await supabase.from("pins").delete().eq("route_id", entry.id);
-        await (supabase as any).from("chat_sessions").delete().eq("route_id", entry.id);
-        const { error } = await supabase.from("routes").delete().eq("id", entry.id);
-        if (error) throw error;
-        toast.success(t("journal.toast_deleted"));
-      } else {
-        if (!entry.group_session_id) throw new Error("missing group_session_id");
-        // count: 'exact' zeby wykryc silent RLS fail (migracja 20260604_gsm_delete_policy.sql).
-        const { error, count } = await (supabase as any)
-          .from("group_session_members")
-          .delete({ count: "exact" })
-          .eq("session_id", entry.group_session_id)
-          .eq("user_id", userId);
-        if (error) throw error;
-        if (count === 0) throw new Error(t("journal.leave_no_permission"));
-        toast.success(t("journal.toast_left"));
-      }
-      restoreEntries();
-    } catch (err: any) {
-      console.error("[JournalTab] delete/leave failed:", err);
-      toast.error(t("journal.toast_fail"), { description: err?.message ?? t("journal.unknown_error") });
-      restoreEntries(); // fail -> wpis wraca na liste
-    }
+    // Commit ODROCZONY o okno "Cofnij". Wpis znika z listy od razu (optymistycznie), a faktyczne
+    // usuniecie / opuszczenie leci dopiero po 5 s - dzieki temu cofniecie nie musi niczego
+    // odtwarzac, tylko anuluje operacje (zgloszenie Nat 2026-09-09). Przy opuszczaniu cudzego
+    // wyjazdu to jedyna uczciwa droga: re-insert do group_session_members polegly na RLS.
+    deferDelete({
+      message: entry.is_own ? t("journal.toast_deleted") : t("journal.toast_left"),
+      onUndo: restoreEntries,
+      commit: async () => {
+        try {
+          if (entry.is_own) {
+            await supabase.from("pins").delete().eq("route_id", entry.id);
+            await (supabase as any).from("chat_sessions").delete().eq("route_id", entry.id);
+            const { error } = await supabase.from("routes").delete().eq("id", entry.id);
+            if (error) throw error;
+          } else {
+            if (!entry.group_session_id) throw new Error("missing group_session_id");
+            // count: 'exact' zeby wykryc silent RLS fail (migracja 20260604_gsm_delete_policy.sql).
+            const { error, count } = await (supabase as any)
+              .from("group_session_members")
+              .delete({ count: "exact" })
+              .eq("session_id", entry.group_session_id)
+              .eq("user_id", userId);
+            if (error) throw error;
+            if (count === 0) throw new Error(t("journal.leave_no_permission"));
+          }
+          restoreEntries();
+        } catch (err: any) {
+          console.error("[JournalTab] delete/leave failed:", err);
+          toast.error(t("journal.toast_fail"), { description: err?.message ?? t("journal.unknown_error") });
+          restoreEntries(); // fail -> wpis wraca na liste
+        }
+      },
+    });
   };
 
   // Modal potwierdzenia usuniecia/opuszczenia wyjazdu (nieodwracalne, copy jak systemowy alert).

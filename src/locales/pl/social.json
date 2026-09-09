@@ -181,5 +181,9 @@
     "desc": "Dodaj osoby, żeby tworzyć wyjazdy razem z nimi.",
     "user_fallback": "Użytkownik"
   },
-  "someone": "Ktoś"
+  "someone": "Ktoś",
+  "notifications": {
+    "deleted": "Usunięto powiadomienie",
+    "cleared": "Wyczyszczono powiadomienia"
+  }
 }

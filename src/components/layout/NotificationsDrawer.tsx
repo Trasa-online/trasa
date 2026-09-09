@@ -10,6 +10,7 @@ import { dateLocale } from "@/lib/dateLocale";
 import { avatarSrc } from "@/lib/avatar";
 import SheetSkeleton from "@/components/layout/SheetSkeleton";
 import { track } from "@/lib/analytics";
+import { deferDelete } from "@/lib/deferDelete";
 
 interface Notification {
   id: string;
@@ -132,23 +133,35 @@ export default function NotificationsDrawer({ open, onClose, userId }: Props) {
     return () => { supabase.removeChannel(channel); };
   }, [userId, open]);
 
+  const refreshNotifs = () => {
+    queryClient.invalidateQueries({ queryKey: ["notifications", userId] });
+    queryClient.invalidateQueries({ queryKey: ["notifications-unread", userId] });
+  };
+
+  // Kasowanie powiadomien szlo BEZ SLOWA i bez odwrotu - a "wyczysc wszystkie" to operacja
+  // masowa. Commit jest ODROCZONY o okno "Cofnij": wiersze powiadomien wstawia SECURITY DEFINER
+  // (user nie ma polityki INSERT), wiec przywrocenie po fakcie bylo by niemozliwe - jedyna
+  // uczciwa droga to nie wykonac usuniecia (zgloszenie Nat 2026-09-09).
   const deleteOneMutation = useMutation({
     mutationFn: async (id: string) => {
-      await supabase.from("notifications").delete().eq("id", id);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["notifications", userId] });
-      queryClient.invalidateQueries({ queryKey: ["notifications-unread", userId] });
+      queryClient.setQueryData(["notifications", userId], (prev: any) =>
+        Array.isArray(prev) ? prev.filter((n: any) => n.id !== id) : prev);
+      deferDelete({
+        message: t("notifications.deleted"),
+        commit: async () => { await supabase.from("notifications").delete().eq("id", id); refreshNotifs(); },
+        onUndo: refreshNotifs,
+      });
     },
   });
 
   const clearAllMutation = useMutation({
     mutationFn: async () => {
-      await supabase.from("notifications").delete().eq("user_id", userId);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["notifications", userId] });
-      queryClient.invalidateQueries({ queryKey: ["notifications-unread", userId] });
+      queryClient.setQueryData(["notifications", userId], []);
+      deferDelete({
+        message: t("notifications.cleared"),
+        commit: async () => { await supabase.from("notifications").delete().eq("user_id", userId); refreshNotifs(); },
+        onUndo: refreshNotifs,
+      });
     },
   });
 

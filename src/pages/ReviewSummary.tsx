@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { avatarSrc } from "@/lib/avatar";
 import { placeTagsForCategory, localizeTag, tagId } from "@/lib/routeTags";
 import { fetchRouteNotesWithAuthors, notesByPlace, placeNoteKey } from "@/lib/placeNotes";
-import { fetchPinPhotos, deletePinPhoto, photosByPlace, pinPhotoKey } from "@/lib/pinPhotos";
+import { fetchPinPhotos, deletePinPhotoReturning, restorePinPhotos, photosByPlace, pinPhotoKey } from "@/lib/pinPhotos";
 import PlaceNotes from "@/components/route/PlaceNotes";
 import { haptics } from "@/hooks/useHaptics";
 import { useSwipeNav } from "@/hooks/useSwipeNav";
@@ -872,18 +872,29 @@ const ReviewSummary = () => {
     setPinUploadingId(null);
   };
 
+  // Kasowalo BEZ SLOWA, w obu kanalach (zgloszenie Nat 2026-09-09). Plik w Storage zostaje,
+  // wiec "Cofnij" przywraca dokladnie to, co bylo: wiersz pin_photos albo poprzednia tablice.
   const removePinPhoto = async (pin: any, url: string) => {
     haptics.light();
+    const undoToast = (undo: () => void) =>
+      notify.success(t("toast.photo_deleted"), undefined, { action: { label: t("common:buttons.undo"), onClick: undo } });
     // Zdjecie moze pochodzic z dwoch kanalow: pin_photos (dodane W TRAKCIE, z autorem) albo
     // pins.images (starszy kanal). Kasujemy z tego, w ktorym faktycznie jest.
     const live = (livePhotosByPlace.get(pinPhotoKey(pin.place_name)) ?? []).find((ph: any) => ph.url === url);
     if (live?.id) {
-      await deletePinPhoto(live.id);
+      const row = await deletePinPhotoReturning(live.id);
       queryClient.invalidateQueries({ queryKey: ["review-live-pin-photos", idsKey] });
+      if (row) undoToast(() => {
+        void (async () => {
+          await restorePinPhotos([row]);
+          queryClient.invalidateQueries({ queryKey: ["review-live-pin-photos", idsKey] });
+        })();
+      });
       return;
     }
     const cur = Array.isArray(pin.images) ? pin.images : [];
     await commitPinImages(pin, cur.filter((u: string) => u !== url));
+    undoToast(() => { void commitPinImages(pin, cur); });
   };
 
   // Przypisanie/odpiecie zdjecia z galerii wyjazdu do miejsca (toggle).
@@ -1532,6 +1543,19 @@ const ReviewSummary = () => {
     setViewerUrl(null);
     await (supabase as any).from("group_trip_photos").delete().eq("session_id", sid).eq("url", url).eq("user_id", user.id);
     queryClient.invalidateQueries({ queryKey: ["review-summary-group-photos", sid] });
+    // Kasowalo BEZ SLOWA. Klucz wiersza znamy w calosci, plik w Storage zostaje, wiec
+    // przywrocenie to jeden insert (zgloszenie Nat 2026-09-09).
+    notify.success(t("toast.photo_deleted"), undefined, {
+      action: {
+        label: t("common:buttons.undo"),
+        onClick: () => {
+          void (async () => {
+            await (supabase as any).from("group_trip_photos").insert({ session_id: sid, url, user_id: user.id });
+            queryClient.invalidateQueries({ queryKey: ["review-summary-group-photos", sid] });
+          })();
+        },
+      },
+    });
   };
 
   // Podglad wizytowki miejsca - ta sama wizytowka co na swiperze (PlaceSwiperDetail).

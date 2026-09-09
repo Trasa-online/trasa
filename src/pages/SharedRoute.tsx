@@ -29,7 +29,7 @@ import { fetchRouteNotesWithAuthors, notesByPlace, placeNoteKey } from "@/lib/pl
 import { detachPlacePhotos, restorePlacePhotos } from "@/lib/placePhotoSocial";
 import StoredImage from "@/components/StoredImage";
 import InviteFriendsSheet from "@/components/route/InviteFriendsSheet";
-import { fetchPinPhotos, addPinPhoto, deletePinPhoto, deletePinPhotosForPlace, restorePinPhotos, photosByPlace, pinPhotoKey, type PinPhoto } from "@/lib/pinPhotos";
+import { fetchPinPhotos, addPinPhoto, deletePinPhotoReturning, deletePinPhotosForPlace, restorePinPhotos, photosByPlace, pinPhotoKey, type PinPhoto } from "@/lib/pinPhotos";
 import { fetchPlaceVotes, toggleVote, placeVoteKey } from "@/lib/placeVotes";
 import { fetchUnreadChatCount } from "@/lib/chatReads";
 import PlaceNotes from "@/components/route/PlaceNotes";
@@ -78,6 +78,7 @@ import { TOP_LIMIT } from "@/lib/topPlaces";
 import { isWeb } from "@/lib/platform";
 import { thumbUrl } from "@/lib/imageUrl";
 import { rowOwnPhotos, mergeRowPhotosIntoDetail } from "@/lib/placeUserPhotos";
+import { deferDelete } from "@/lib/deferDelete";
 
 // Oficjalne logo Google (4-kolorowe "G") - guzik "Zobacz w Google".
 const GoogleGlyph = ({ className }: { className?: string }) => (
@@ -450,11 +451,23 @@ export default function SharedRoute() {
     const sid = (route as any)?.group_session_id;
     if (!sid) return;
     haptics.light();
-    const { error } = await (supabase as any)
-      .from("group_session_members").delete().eq("session_id", sid).eq("user_id", participantId);
-    if (error) { notify.error(t("invite.remove_failed")); return; }
-    queryClient.invalidateQueries({ queryKey: ["shared-route-participants", sid] });
-    notify.success(t("invite.removed"));
+    // ODROCZONY commit zamiast natychmiastowego delete'a. Host nie ma polityki INSERT na
+    // group_session_members (jest tylko "Host can add self"), wiec przywrocenie wiersza po
+    // fakcie musialoby isc przez add_member_to_session - a to wpisaloby osobe od nowa, jako
+    // zaproszona do potwierdzenia. Nie wykonujac delete'a przez 5 s zachowujemy stan DOKLADNIE
+    // taki, jaki byl, razem ze statusem (zgloszenie Nat 2026-09-09).
+    queryClient.setQueryData(["shared-route-participants", sid], (prev: any) =>
+      Array.isArray(prev) ? prev.filter((m: any) => m.id !== participantId) : prev);
+    deferDelete({
+      message: t("invite.removed"),
+      commit: async () => {
+        const { error } = await (supabase as any)
+          .from("group_session_members").delete().eq("session_id", sid).eq("user_id", participantId);
+        if (error) notify.error(t("invite.remove_failed"));
+        queryClient.invalidateQueries({ queryKey: ["shared-route-participants", sid] });
+      },
+      onUndo: () => queryClient.invalidateQueries({ queryKey: ["shared-route-participants", sid] }),
+    });
   };
 
   // Podpis autora + oznaczeni czlonkowie (#11). Best-effort (kolumny z migracji
@@ -542,7 +555,18 @@ export default function SharedRoute() {
     try {
       await (supabase as any).from("saved_routes").delete().eq("user_id", user.id).eq("route_id", id);
       queryClient.setQueryData(["route-is-saved", user.id, id], false);
-      notify.success(t("toast_unsaved"));
+      // Cofalne: wiersz to sama para user+route, wiec przywrocenie to jeden insert.
+      notify.success(t("toast_unsaved"), undefined, {
+        action: {
+          label: t("common:buttons.undo"),
+          onClick: () => {
+            void (async () => {
+              await (supabase as any).from("saved_routes").insert({ user_id: user.id, route_id: id });
+              queryClient.setQueryData(["route-is-saved", user.id, id], true);
+            })();
+          },
+        },
+      });
     } finally { setSaving(false); }
   };
 
@@ -815,9 +839,23 @@ export default function SharedRoute() {
       queryClient.invalidateQueries({ queryKey: ["shared-route-pin-photos", id] });
     } finally { setUploadingPin(null); }
   };
+  // Kasowalo BEZ SLOWA - zadnego toasta, wiec i zadnej drogi powrotu (zgloszenie Nat
+  // 2026-09-09). Plik w Storage zostaje, kasujemy sam wiersz, wiec "Cofnij" jest uczciwe.
   const removePlacePhoto = async (photoId: string) => {
-    await deletePinPhoto(photoId);
+    const row = await deletePinPhotoReturning(photoId);
     queryClient.invalidateQueries({ queryKey: ["shared-route-pin-photos", id] });
+    if (!row) return;
+    toast.success(t("toast.photo_deleted"), {
+      action: {
+        label: t("common:buttons.undo"),
+        onClick: () => {
+          void (async () => {
+            await restorePinPhotos([row]);
+            queryClient.invalidateQueries({ queryKey: ["shared-route-pin-photos", id] });
+          })();
+        },
+      },
+    });
   };
 
   // Opis + tagi z tabeli places (wizytowka miejsca). Piny nie maja vibe_tags.
@@ -1170,13 +1208,22 @@ export default function SharedRoute() {
           .from("routes").select("id").eq("folder_id", (route as any).folder_id).eq("user_id", user.id);
         if (days?.length) ids = days.map((d: any) => d.id);
       }
-      await supabase.from("pins").delete().in("route_id", ids);
-      await (supabase as any).from("chat_sessions").delete().in("route_id", ids);
-      const { error } = await supabase.from("routes").delete().in("id", ids).eq("user_id", user.id);
-      if (error) throw new Error(error.message);
-      toast.success(t("toast.trip_deleted"));
+      // Commit ODROCZONY o okno "Cofnij" - tak samo, jak przy usuwaniu wyjazdu z profilu
+      // (TravelerProfile). Kasujemy piny, czat i trase, wiec nie da sie tego zlozyc z powrotem
+      // po fakcie; jedyne uczciwe cofniecie to nie wykonac usuniecia (zgloszenie Nat 2026-09-09).
       setAskDelete(false);
       goBackOr(navigate, "/moj-profil");
+      deferDelete({
+        message: t("toast.trip_deleted"),
+        commit: async () => {
+          await supabase.from("pins").delete().in("route_id", ids);
+          await (supabase as any).from("chat_sessions").delete().in("route_id", ids);
+          const { error } = await supabase.from("routes").delete().in("id", ids).eq("user_id", user.id);
+          if (error) { toast.error(t("toast.trip_delete_failed")); return; }
+          queryClient.invalidateQueries({ queryKey: ["profile-trip-feed"] });
+        },
+        onUndo: () => queryClient.invalidateQueries({ queryKey: ["profile-trip-feed"] }),
+      });
     } catch (e: any) {
       toast.error(t("toast.trip_delete_failed"));
       console.error("[SharedRoute] delete failed:", e?.message ?? e);

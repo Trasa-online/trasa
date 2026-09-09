@@ -51,7 +51,8 @@
     "photos_rejected_other": "{{count}} photos did not pass moderation",
     "name_saved": "Name changed",
     "name_failed": "Could not change the name",
-    "name_not_allowed": "This name contains a word we don't allow"
+    "name_not_allowed": "This name contains a word we don't allow",
+    "photo_deleted": "Photo deleted"
   },
   "cta": {
     "add_place": "Add new place",

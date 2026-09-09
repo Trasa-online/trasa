@@ -75,7 +75,8 @@
       "viewpoint": "Widok",
       "shopping": "Zakupy",
       "experience": "Rozrywka"
-    }
+    },
+    "removed": "Usunięto z polubionych"
   },
   "journal": {
     "loading": "Ładowanie...",

@@ -53,7 +53,8 @@
     "photos_rejected_many": "{{count}} zdjęć nie przeszło moderacji",
     "name_saved": "Nazwa zmieniona",
     "name_failed": "Nie udało się zmienić nazwy",
-    "name_not_allowed": "Ta nazwa zawiera niedozwolone słowo"
+    "name_not_allowed": "Ta nazwa zawiera niedozwolone słowo",
+    "photo_deleted": "Usunięto zdjęcie"
   },
   "cta": {
     "add_place": "Dodaj nowe miejsce",

@@ -75,7 +75,8 @@
       "viewpoint": "Viewpoint",
       "shopping": "Shopping",
       "experience": "Entertainment"
-    }
+    },
+    "removed": "Removed from likes"
   },
   "journal": {
     "loading": "Loading...",

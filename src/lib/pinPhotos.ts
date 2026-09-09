@@ -41,6 +41,15 @@ export async function addPinPhoto(routeId: string, placeName: string, userId: st
   return true;
 }
 
+/** Kasuje zdjecie miejsca ODDAJAC skasowany wiersz - zeby "Cofnij" mialo co przywrocic
+ *  (przez `restorePinPhotos`). Plik w Storage zostaje nietkniety, wiec adres nadal dziala. */
+export async function deletePinPhotoReturning(id: string): Promise<any | null> {
+  const { data } = await (supabase as any).from("pin_photos").select("*").eq("id", id).maybeSingle();
+  const { error } = await (supabase as any).from("pin_photos").delete().eq("id", id);
+  if (error) { console.error("[pinPhotos] delete:", error.message); return null; }
+  return data ?? null;
+}
+
 export async function deletePinPhoto(id: string): Promise<boolean> {
   const { error } = await (supabase as any).from("pin_photos").delete().eq("id", id);
   if (error) { console.error("[pinPhotos] delete:", error.message); return false; }

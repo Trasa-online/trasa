@@ -176,5 +176,9 @@
     "desc": "Add people to build trips together.",
     "user_fallback": "User"
   },
-  "someone": "Someone"
+  "someone": "Someone",
+  "notifications": {
+    "deleted": "Notification deleted",
+    "cleared": "Notifications cleared"
+  }
 }
