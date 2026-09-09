@@ -255,5 +255,6 @@
   },
   "preview": {
     "open_trip": "Zobacz wyjazd"
-  }
+  },
+  "photo_progress": "{{done}} z {{total}}"
 }

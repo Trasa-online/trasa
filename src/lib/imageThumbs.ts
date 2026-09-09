@@ -70,8 +70,17 @@ export async function uploadThumb(bucket: string, path: string, source: File | B
  */
 /** Zdjecie + jego miniatura z JEDNEGO dekodowania. Rozdzielone od wyslania, bo czesc
  *  ekranow liczy sciezke z TRESCI gotowego bloba (SHA-256) i musi go miec wczesniej. */
+/** Dluzszy bok i jakosc WGRYWANEGO zdjecia.
+ *
+ *  1600/0,8 dawalo srednio 494 kB na zdjecie (pomiar na tym, co realnie lezy w Storage), a to
+ *  wprost przeklada sie na czas wysylania - najwiekszy skladnik czekania przy dodawaniu zdjec.
+ *  1400 px starcza na podglad pelnoekranowy na telefonie z zapasem (najszerszy iPhone to ~1290
+ *  px fizycznych), a jakosc 0,72 zdejmuje kolejne ~25% wagi bez widocznej roznicy na ekranie. */
+const UPLOAD_SIDE = 1400;
+const UPLOAD_QUALITY = 0.72;
+
 export async function renderForUpload(
-  file: File, maxSide = 1600, quality = 0.8,
+  file: File, maxSide = UPLOAD_SIDE, quality = UPLOAD_QUALITY,
 ): Promise<{ full: Blob; thumb: Blob }> {
   const [full, thumb] = await renderVariants(file, [
     { maxSide, quality },
@@ -112,6 +121,6 @@ export async function uploadWithThumb(
   file: File,
   opts?: { maxSide?: number; quality?: number; upsert?: boolean },
 ): Promise<{ error: { message: string } | null }> {
-  const { full, thumb } = await renderForUpload(file, opts?.maxSide ?? 1600, opts?.quality ?? 0.8);
+  const { full, thumb } = await renderForUpload(file, opts?.maxSide ?? UPLOAD_SIDE, opts?.quality ?? UPLOAD_QUALITY);
   return uploadPair(bucket, path, full, thumb, opts?.upsert ?? false);
 }

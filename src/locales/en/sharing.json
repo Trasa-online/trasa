@@ -248,5 +248,6 @@
   },
   "preview": {
     "open_trip": "See the trip"
-  }
+  },
+  "photo_progress": "{{done}} of {{total}}"
 }

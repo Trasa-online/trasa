@@ -35,8 +35,6 @@ import { RoutePlaceRow } from "@/components/route/RoutePlaceRow";
 import SavePlaceSheet, { type SavePlaceInput } from "@/components/plan-wizard/SavePlaceSheet";
 import { useSavedPlaces } from "@/hooks/useSavedPlaces";
 import TripProposalsSheet from "@/components/route/TripProposalsSheet";
-import { compressImage } from "@/lib/imageCompression";
-import { isHeic, convertHeicToJpeg } from "@/lib/heicConvert";
 import { format, addDays } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
 import { isNative } from "@/lib/platform";
@@ -44,7 +42,7 @@ import { Camera as CapCamera } from "@capacitor/camera";
 import { notify } from "@/lib/notify";
 import { deferDelete } from "@/lib/deferDelete";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { uploadThumb } from "@/lib/imageThumbs";
+import { renderForUpload, uploadPair } from "@/lib/imageThumbs";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 
@@ -737,16 +735,13 @@ const ReviewSummary = () => {
     let failed = 0;
     for (const rawFile of files.slice(0, MAX_PHOTOS - photos.length)) {
       try {
-        // iPhone robi zdjecia w HEIC/HEIF - canvas/Image w WebView tego nie zdekoduje, wiec
-        // compressImage rzucalo, a blad byl polykany (zdjecie nie dodawalo sie, bez komunikatu).
-        // Konwertujemy HEIC->JPEG przed kompresja (jak w dashboardzie biznesu).
-        const file = isHeic(rawFile) ? await convertHeicToJpeg(rawFile) : rawFile;
-        const compressed = await compressImage(file, 1200, 1200, 0.8);
+        // Zdjecie i miniatura z JEDNEGO dekodowania, oba wyslania rownolegle. Wczesniej byl tu
+        // `compressImage` (dekodowanie przez <img> i pelny canvas) ORAZ osobny `uploadThumb`,
+        // ktory dekodowal to samo zdjecie DRUGI raz i szedl dopiero po wyslaniu oryginalu.
+        // HEIC z iPhone'a dekoduje sie po drodze natywnie - patrz renderVariants.
+        const { full: compressed, thumb } = await renderForUpload(rawFile);
         const path = `${user.id}/${routeId}/review_${Date.now()}_${Math.floor(Math.random() * 10000)}.jpg`;
-        const { error } = await supabase.storage
-          .from("route-images")
-          .upload(path, compressed, { contentType: "image/jpeg", upsert: false });
-        await uploadThumb("route-images", path, compressed);
+        const { error } = await uploadPair("route-images", path, compressed, thumb);
         if (error) { failed++; console.error("[ReviewSummary] photo upload failed:", error.message); continue; }
         const uploadedUrl = `${SUPABASE_URL}/storage/v1/object/public/route-images/${path}`;
         newUrls.push(uploadedUrl);
@@ -826,11 +821,10 @@ const ReviewSummary = () => {
     let failed = 0;
     for (const rawFile of files) {
       try {
-        const file = isHeic(rawFile) ? await convertHeicToJpeg(rawFile) : rawFile;
-        const compressed = await compressImage(file, 1200, 1200, 0.8);
+        // Jak wyzej: jedno dekodowanie, miniatura z tej samej bitmapy, oba wyslania rownolegle.
+        const { full: compressed, thumb } = await renderForUpload(rawFile);
         const path = `${user.id}/${routeId}/pin_${Date.now()}_${Math.floor(Math.random() * 10000)}.jpg`;
-        const { error } = await supabase.storage.from("route-images").upload(path, compressed, { contentType: "image/jpeg", upsert: false });
-        await uploadThumb("route-images", path, compressed);
+        const { error } = await uploadPair("route-images", path, compressed, thumb);
         if (error) { failed++; console.error("[ReviewSummary] pin photo upload failed:", error.message); continue; }
         const uploadedUrl = `${SUPABASE_URL}/storage/v1/object/public/route-images/${path}`;
         urls.push(uploadedUrl);

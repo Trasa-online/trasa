@@ -52,7 +52,6 @@ import { fetchPhotoLikes, togglePhotoLike, type LikeState as PhotoLikeState } fr
 import PhotoPagination from "@/components/route/PhotoPagination";
 import RouteMap from "@/components/RouteMap";
 import { mapWithLimit, sha256Hex } from "@/lib/imageCompression";
-import { isHeic, convertHeicToJpeg } from "@/lib/heicConvert";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 
@@ -261,6 +260,9 @@ export default function SharedRoute() {
   // Etap W TRAKCIE: zdjecia per-miejsce (wszyscy uczestnicy). Wlasna notka -> PlaceNoteEditor
   // (sam trzyma draft + debounce), zapis przez saveMyNote.
   const [uploadingPin, setUploadingPin] = useState<string | null>(null);
+  // Postep wgrywania zdjec galerii ("3 z 8"). Przy paczce z iPhone'a czekanie liczy sie
+  // w dziesiatkach sekund i bez licznika wyglada jak zawieszenie (zgloszenie Nat 2026-09-09).
+  const [photoProgress, setPhotoProgress] = useState<{ done: number; total: number } | null>(null);
   const [chatOpen, setChatOpen] = useState(false);
   // User pisze notke -> chowamy czat i dolne CTA (zaslanialy pole i klawiature).
   const [noteEditing, setNoteEditing] = useState(false);
@@ -787,10 +789,9 @@ export default function SharedRoute() {
       // urzadzeniach nie-Apple takie zdjecie i tak sie nie wyswietlalo.
       const prepared = await mapWithLimit(Array.from(files), 3, async (rawFile, i) => {
         try {
-          const file = isHeic(rawFile) ? await convertHeicToJpeg(rawFile) : rawFile;
           // Wersja pelna i miniatura z JEDNEGO dekodowania (2026-09-08) - wczesniej zdjecie
           // bylo dekodowane dwa razy, a to na 12 Mpix z iPhone'a kilka sekund za kazdym razem.
-          const { full, thumb } = await renderForUpload(file, 1600, 0.8);
+          const { full, thumb } = await renderForUpload(rawFile);
           // Nazwa z TRESCI pliku: to samo zdjecie wgrane drugi raz (tez przez inna osobe w tym
           // samym wyjezdzie) trafia pod ta sama sciezke, wiec galeria miejsca nie dostaje dubla.
           const sha = await sha256Hex(full);
@@ -1036,30 +1037,30 @@ export default function SharedRoute() {
     // Przygotowanie + wgranie RÓWNOLEGLE, po 3 naraz. Seryjna petla przy paczce zdjec z iPhone'a
     // (12 Mpx kazde) potrafila trwac minute, a gdy ktores zdjecie sie nie przetworzylo, znikalo
     // bez sladu w UI - stad "trwa wieki i finalnie nic sie nie dodaje" (zgloszenie Nat 2026-09-01).
-    const uploaded = await mapWithLimit(files, 3, async (rawFile, i) => {
+    // Moderacja idzie ZARAZ PO wgraniu KAZDEGO zdjecia, a nie osobna faza po calej paczce.
+    // Wczesniej przebieg byl scisle etapowy: [wszystkie wysylki] -> [wszystkie moderacje] -> zapis,
+    // wiec 1-3 s na zdjecie (zmierzone) doklejalo sie do konca czekania zamiast chowac sie
+    // w cieniu kolejnych wysylek.
+    setPhotoProgress({ done: 0, total: files.length });
+    const processed = await mapWithLimit(files, 3, async (rawFile, i) => {
       try {
-        const file = isHeic(rawFile) ? await convertHeicToJpeg(rawFile) : rawFile;
         const path = `${user.id}/${route.id}/gal_${Date.now()}_${i}_${Math.floor(Math.random() * 1e6)}.jpg`;
         // Jedno dekodowanie na zdjecie zamiast dwoch, oryginal i miniatura w sieci rownolegle.
-        const { error } = await uploadWithThumb("route-images", path, file, { maxSide: 1600, quality: 0.8 });
+        const { error } = await uploadWithThumb("route-images", path, rawFile);
         if (error) { console.error("[SharedRoute] photo upload failed:", error.message); return null; }
-        return `${SUPABASE_URL}/storage/v1/object/public/route-images/${path}`;
+        const url = `${SUPABASE_URL}/storage/v1/object/public/route-images/${path}`;
+        const verdict = await moderateImageUrl(url, "trip_gallery", { route_id: route.id });
+        setPhotoProgress((p) => (p ? { ...p, done: p.done + 1 } : p));
+        if (verdict === "rejected") {
+          await (supabase as any).storage.from("route-images").remove([path, `${path}.thumb`]);
+          return "rejected" as const;
+        }
+        return url;
       } catch (e: any) { console.error("[SharedRoute] photo processing failed:", e?.message ?? e); return null; }
     });
-    let urls: string[] = uploaded.filter((u): u is string => !!u);
-    const failed = files.length - urls.length;
-    // SafeSearch (Vision) RÓWNOLEGLE dla calej paczki - seryjnie kazde zdjecie kosztowaloby
-    // ~2-4s. Odrzucone kasujemy ze Storage i nie dodajemy do galerii.
-    if (urls.length) {
-      const verdicts = await Promise.all(urls.map((u) => moderateImageUrl(u, "trip_gallery", { route_id: route.id })));
-      const bad = urls.filter((_, i) => verdicts[i] === "rejected");
-      rejected = bad.length;
-      if (bad.length) {
-        const prefix = `${SUPABASE_URL}/storage/v1/object/public/route-images/`;
-        await (supabase as any).storage.from("route-images").remove(bad.map((u) => u.replace(prefix, "")));
-      }
-      urls = urls.filter((_, i) => verdicts[i] !== "rejected");
-    }
+    let urls: string[] = processed.filter((u): u is string => !!u && u !== "rejected");
+    rejected = processed.filter((u) => u === "rejected").length;
+    const failed = processed.filter((u) => u === null).length;
     if (urls.length) {
       // RPC (SECURITY DEFINER) - dziala dla wlasciciela ORAZ uczestnika wspolnego wyjazdu
       // (routes UPDATE RLS = tylko owner; czlonek dopisuje zdjecia przez append_route_photos).
@@ -1070,6 +1071,7 @@ export default function SharedRoute() {
     if (rejected) toast.error(rejected === 1 ? MODERATION_REJECTED_MESSAGE : t("toast.photos_rejected", { count: rejected }));
     // Zdjecia zgubione po drodze mowia o tym wprost - wczesniej znikaly po cichu.
     if (failed) toast.error(t("toast.photos_failed", { count: failed }));
+    setPhotoProgress(null);
     setUploadingPhotos(false);
   };
 
@@ -2067,7 +2069,16 @@ export default function SharedRoute() {
                 {canAddPhotos && (
                   <button onClick={() => photoInputRef.current?.click()} disabled={uploadingPhotos}
                     className="flex w-full break-inside-avoid aspect-[4/3] rounded-2xl border-2 border-dashed border-border flex-col items-center justify-center gap-1.5 text-muted-foreground active:scale-[0.98] transition-transform disabled:opacity-60">
-                    {uploadingPhotos ? <Loader2 className="h-6 w-6 animate-spin" /> : <><Plus className="h-6 w-6" /><span className="text-xs font-semibold">{t("add_photo")}</span></>}
+                    {uploadingPhotos ? (
+                      <>
+                        <Loader2 className="h-6 w-6 animate-spin" />
+                        {/* Licznik zamiast samego kolka: przy paczce z iPhone'a czekanie
+                            liczy sie w dziesiatkach sekund i bez niego wyglada jak zawieszenie. */}
+                        {photoProgress && photoProgress.total > 1 && (
+                          <span className="text-xs font-semibold tabular-nums">{t("photo_progress", { done: photoProgress.done, total: photoProgress.total })}</span>
+                        )}
+                      </>
+                    ) : <><Plus className="h-6 w-6" /><span className="text-xs font-semibold">{t("add_photo")}</span></>}
                   </button>
                 )}
                 {galleryPhotos.map((url, i) => {
@@ -2119,7 +2130,10 @@ export default function SharedRoute() {
                 {canAddPhotos && (
                   <button onClick={() => photoInputRef.current?.click()} disabled={uploadingPhotos}
                     className="mt-1 px-4 py-2.5 rounded-full border border-border text-foreground font-bold text-sm flex items-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-60">
-                    {uploadingPhotos ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />} {t("add_photo_cta")}
+                    {uploadingPhotos ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}{" "}
+                    {uploadingPhotos && photoProgress && photoProgress.total > 1
+                      ? t("photo_progress", { done: photoProgress.done, total: photoProgress.total })
+                      : t("add_photo_cta")}
                   </button>
                 )}
               </div>

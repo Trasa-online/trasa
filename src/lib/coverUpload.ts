@@ -1,22 +1,21 @@
 // Upload okladki (hero / miniatura) do bucketu route-images. Wspolny helper dla tras
 // (ReviewSummary ma wlasny inline) i list miejsc (CreateRanking). Bucket route-images:
 // public read, INSERT dla authenticated. Sciezka user-scoped: ${userId}/collections/...
-import { compressImage } from "@/lib/imageCompression";
-import { isHeic, convertHeicToJpeg } from "@/lib/heicConvert";
 import { supabase } from "@/integrations/supabase/client";
 import { Camera as CapCamera } from "@capacitor/camera";
-import { uploadThumb } from "@/lib/imageThumbs";
+import { renderForUpload, uploadPair } from "@/lib/imageThumbs";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 
 // Upload jednego pliku -> public URL (albo null przy bledzie). folder = podkatalog per typ.
 export async function uploadCoverImage(rawFile: File, userId: string, folder = "collections"): Promise<string | null> {
   try {
-    const file = isHeic(rawFile) ? await convertHeicToJpeg(rawFile) : rawFile;
-    const compressed = await compressImage(file, 1200, 1200, 0.8);
+    // Jedno dekodowanie na okladke + miniatura z tej samej bitmapy, oba wyslania rownolegle.
+    // Wczesniej bylo tu `compressImage` (dekodowanie przez <img> i pelny canvas) ORAZ osobny
+    // `uploadThumb`, ktory dekodowal zdjecie DRUGI raz i szedl po wyslaniu oryginalu.
     const path = `${userId}/${folder}/cover_${Date.now()}_${Math.floor(Math.random() * 10000)}.jpg`;
-    const { error } = await supabase.storage.from("route-images").upload(path, compressed, { contentType: "image/jpeg", upsert: false });
-    await uploadThumb("route-images", path, compressed);
+    const { full, thumb } = await renderForUpload(rawFile);
+    const { error } = await uploadPair("route-images", path, full, thumb);
     if (error) { console.error("[coverUpload] upload failed:", error.message); return null; }
     return `${SUPABASE_URL}/storage/v1/object/public/route-images/${path}`;
   } catch (err: any) {

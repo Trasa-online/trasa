@@ -201,10 +201,49 @@ export type ImageVariant = { maxSide: number; quality: number };
  * albo padnie, kazdy wariant leci stara sciezka (`prepareImageForUpload`) - wynik jest ten
  * sam, tylko wolniej.
  */
+/** Czy przegladarka UMIE zakodowac WebP z canvasa. Sprawdzane RAZ, nie przy kazdym zdjeciu.
+ *
+ *  Po co: `canvas.toBlob(..., "image/webp")` przy braku wsparcia nie zwraca bledu - specyfikacja
+ *  kaze wtedy oddac PNG. Kod probowal WebP i dopiero po sprawdzeniu typu kodowal JPEG, czyli
+ *  na KAZDYM wariancie kazdego zdjecia powstawal i ladowal do kosza pelnowymiarowy PNG.
+ *  WebKit (silnik iOS) wlasnie tak sie zachowuje - zmierzone: `toBlob("image/webp")` oddaje
+ *  `image/png`. Stad w Storage nie ma ani jednego WebP, same JPEG-i (zgloszenie Nat 2026-09-09
+ *  o dlugim wgrywaniu). */
+let webpSupport: Promise<boolean> | null = null;
+export function canEncodeWebp(): Promise<boolean> {
+  if (!webpSupport) {
+    webpSupport = (async () => {
+      try {
+        const c = document.createElement("canvas");
+        c.width = 1; c.height = 1;
+        const b = await new Promise<Blob | null>((r) => c.toBlob(r, "image/webp", 0.8));
+        return !!b && b.type === "image/webp";
+      } catch { return false; }
+    })();
+  }
+  return webpSupport;
+}
+
+/** Dekoduje plik do bitmapy. HEIC z iPhone'a WebKit czyta natywnie, wiec NIE konwertujemy go
+ *  wczesniej do pelnowymiarowego JPEG-a - to byl objazd, ktory kosztowal dodatkowe dekodowanie,
+ *  pelnowymiarowe kodowanie i posredni plik rzedu 2 MB na kazde zdjecie (zmierzone w WebKit:
+ *  140 ms zamiast 18 ms po dekodowaniu, i to na desktopie). Dopiero gdy dekodowanie NIE wyjdzie
+ *  - a tak jest w Chrome i Firefoksie, ktore HEIC nie znaja - siegamy po konwersje w JS. */
+async function decodeToBitmap(file: File): Promise<ImageBitmap> {
+  try {
+    return await createImageBitmap(file);
+  } catch (e) {
+    const { isHeic, convertHeicToJpeg } = await import("@/lib/heicConvert");
+    if (!isHeic(file)) throw e;
+    return await createImageBitmap(await convertHeicToJpeg(file));
+  }
+}
+
 export async function renderVariants(file: File, variants: ImageVariant[]): Promise<Blob[]> {
   try {
     if (typeof createImageBitmap === "function") {
-      const bitmap = await createImageBitmap(file);
+      const webp = await canEncodeWebp();
+      const bitmap = await decodeToBitmap(file);
       try {
         const out: Blob[] = [];
         for (const v of variants) {
@@ -218,10 +257,11 @@ export async function renderVariants(file: File, variants: ImageVariant[]): Prom
           ctx.imageSmoothingEnabled = true;
           ctx.imageSmoothingQuality = "high";
           ctx.drawImage(bitmap, 0, 0, w, h);
-          // WebP jak w prepareImageForUpload: ~30% lzejszy, ale Safari < 16.4 go nie koduje
-          // i oddaje PNG (czyli CIEZSZY plik) - wtedy wracamy do JPEG.
-          let blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/webp", v.quality));
-          if (!blob || blob.type !== "image/webp") {
+          // Format wybrany Z GORY (patrz canEncodeWebp) - bez proby "a nuz sie uda", ktora
+          // na iOS produkowala pelnowymiarowy PNG do wyrzucenia.
+          const type = webp ? "image/webp" : "image/jpeg";
+          let blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, type, v.quality));
+          if (!blob || (webp && blob.type !== "image/webp")) {
             blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/jpeg", v.quality));
           }
           canvas.width = 0; canvas.height = 0;   // zwolnij pamiec od razu
