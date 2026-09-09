@@ -201,7 +201,8 @@
     "and_more_many": "…i {{count}} miejsc więcej",
     "and_more_one": "…i jeszcze jedno miejsce",
     "link_heading": "Udostępnij link do wyjazdu",
-    "first_day": "Dzień 1"
+    "first_day": "Dzień 1",
+    "link_heading_list": "Udostępnij link do listy"
   },
   "target": {
     "more_apps": "Więcej aplikacji",

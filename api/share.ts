@@ -232,6 +232,26 @@ body.trip{background:#FDF184}
 .pl .b{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .pl .v{background:#FDF184;color:#5B2C06;border-radius:999px;padding:4px 10px;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pl .c{font-size:11px;color:#666;flex:none}
+/* KARTA LISTY - makieta Nat "Udostępnianie list" (2026-09-09). Biala karta na zoltym tle,
+   nad siatka autor + tytul + kreska, w siatce 3x3 kafelki miejsc; ostatnie pole zamienia sie
+   w licznik "+N", gdy miejsc jest wiecej niz dziewiec. */
+.lc{width:100%;max-width:360px;background:#fff;border-radius:24px;padding:16px 16px 20px;box-shadow:0 1px 6px rgba(0,0,0,.06)}
+.lc .hd{display:flex;align-items:center;gap:12px}
+.lc .hd img{width:48px;height:48px;flex:none;border-radius:50%;object-fit:cover;background:#fcede3}
+.lc .hd b{display:block;font-size:19px;font-weight:900;line-height:1.2;color:#0E0E0E;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lc .hd span{display:block;font-size:13px;color:#979797;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lc hr{border:0;height:1px;background:rgba(238,83,7,.7);margin:12px 0}
+.lc .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.tl{position:relative;aspect-ratio:3/4;border-radius:16px;overflow:hidden;background:#fcede3}
+.tl img.ph{width:100%;height:100%;object-fit:cover;display:block}
+.tl .veil{position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.55) 0%,transparent 55%)}
+.tl .ic{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:40%;max-width:46px;opacity:.9}
+.tl .cat{position:absolute;right:6px;top:6px;max-width:80%;border-radius:999px;background:rgba(91,44,6,.9);color:#fff;font-size:9.5px;font-weight:700;padding:2px 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tl .nm2{position:absolute;left:8px;right:8px;bottom:6px;font-size:11px;font-weight:700;line-height:1.2;height:2.4em;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;line-clamp:2;-webkit-box-orient:vertical}
+.tl.has .nm2{color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.45)}
+.tl.none .nm2{color:rgba(14,14,14,.75)}
+.tl.more{display:flex;align-items:center;justify-content:center;background:#FDF184}
+.tl.more span{font-family:Sigmar,Inter,sans-serif;font-size:26px;line-height:1;color:#EE5307}
 .go{margin-top:32px;width:100%;max-width:420px;border-radius:999px;background:#EE5307;color:#fff;font-size:17px;font-weight:800;text-align:center;padding:16px 0;text-decoration:none;display:block}
 .page .tail{margin:16px 0 0;text-align:center;font-size:12.5px;line-height:1.4;color:rgba(91,44,6,.8)}
 /* Arkusz po "Zobacz wyjazd" - w stylu modala z landingu (zolty panel, znak marki, naglowek
@@ -386,17 +406,37 @@ export default async function handler(req: Request): Promise<Response> {
     const photos = await communityPhotos(items.map((it) => placeKey(it.google_place_id, it.place_name)));
     const [author] = col.user_id ? await rest(`profiles?id=eq.${col.user_id}&select=username,avatar_url&limit=1`) : [];
     const title = col.title || "Lista miejsc";
-    const desc = col.description || [col.city, items.length ? `${items.length} ${plural(items.length)}` : null].filter(Boolean).join(" · ");
-    const body = `<p class="eyebrow">LISTA MIEJSC</p><h1>${esc(title)}</h1>
-<p class="meta">${esc([col.city, `${items.length} ${plural(items.length)}`].filter(Boolean).join(" · "))}</p>
-${author?.username ? `<div class="author"><img src="${esc(img(author.avatar_url, 64, 64) ?? "")}" alt=""><span>@${esc(author.username)}</span></div>` : ""}
-${col.description ? `<p class="desc">${esc(col.description)}</p>` : ""}
-<ul>${items.map((it) => row({
-      photo: img(it.photo_url || first(it.images) || photos.get(placeKey(it.google_place_id, it.place_name)), 160, 160),
-      icon: iconFor(it.category), name: it.place_name || "", cat: catLabel(it.category), note: it.short_desc,
-    })).join("")}</ul>`;
+    const count = `${items.length} ${plural(items.length)}`;
+    const desc = col.description || [col.city, items.length ? count : null].filter(Boolean).join(" · ");
+
+    // Siatka 3x3. Gdy miejsc jest wiecej niz dziewiec, ostatnie pole to licznik "+N" - lepiej
+    // pokazac osiem miejsc i uczciwa reszte niz urwac dziewiate bez slowa.
+    const CELLS = 9;
+    const shown = items.length > CELLS ? items.slice(0, CELLS - 1) : items.slice(0, CELLS);
+    const restN = items.length - shown.length;
+    const tiles = shown.map((it) => {
+      const photo = img(it.photo_url || first(it.images) || photos.get(placeKey(it.google_place_id, it.place_name)), 160, 160);
+      const icon = iconFor(it.category);
+      const cat = catLabel(it.category);
+      return `<div class="tl ${photo ? "has" : "none"}">
+${photo ? `<img class="ph" src="${esc(photo)}" alt="" loading="lazy"><div class="veil"></div>` : icon ? `<img class="ic" src="${esc(icon)}" alt="" loading="lazy">` : ""}
+${cat && it.category !== "other" ? `<span class="cat">${esc(cat)}</span>` : ""}
+<p class="nm2">${esc(it.place_name || "")}</p></div>`;
+    }).join("");
+
+    const body = `<div class="page">
+<div class="lc">
+<div class="hd"><img src="${esc(img(author?.avatar_url, 64, 64) ?? BRAND_IMG)}" alt="">
+<span style="min-width:0"><b>${esc(title)}</b><span>${esc([col.city, count].filter(Boolean).join(" - "))}</span></span></div>
+<hr>
+<div class="grid">${tiles}${restN > 0 ? `<div class="tl more"><span>+${restN}</span></div>` : ""}</div>
+</div>
+<a class="go" id="go" href="${TESTFLIGHT_URL}">Zobacz listę</a>
+<p class="tail">Ta lista powstała w spontaway - aplikacji do odkrywania miejsc i planowania wyjazdów ze znajomymi.</p>
+</div>
+${choiceSheet()}`;
     // Obrazek podgladu dla LISTY zostaje markowy - patrz decyzja przy udostepnianiu.
-    return new Response(shell({ title, desc, image: BRAND_IMG, url, body, noun: "list" }), {
+    return new Response(shell({ title, desc, image: BRAND_IMG, url, body, noun: "list", variant: "trip" }), {
       headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "public, s-maxage=60, stale-while-revalidate=600" },
     });
   }

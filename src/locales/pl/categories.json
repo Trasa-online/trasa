@@ -28,7 +28,13 @@
     "live_music": "Live music",
     "cinema": "Kino",
     "nightclub": "Klub nocny",
-    "store": "Sklep"
+    "store": "Sklep",
+    "landmark": "Zabytek",
+    "bakery": "Piekarnia",
+    "church": "Kościół",
+    "clothing_store": "Sklep odzieżowy",
+    "book_store": "Księgarnia",
+    "shop": "Sklep"
   },
   "other": "Miejsce",
   "plural": {

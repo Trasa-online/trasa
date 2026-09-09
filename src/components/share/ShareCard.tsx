@@ -2,7 +2,6 @@ import { useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Maximize2, X } from "lucide-react";
 import { toast } from "sonner";
-import { PlaceTile } from "@/components/profile/PlaceTile";
 import { avatarSrc } from "@/lib/avatar";
 import { resolveStored } from "@/components/PlacePhoto";
 import { thumbUrl } from "@/lib/imageUrl";
@@ -67,7 +66,7 @@ function Footer({ avatars, label, sub, tone }: {
 // user zobaczy po rozwinieciu, bez drugiego zestawu rozmiarow do utrzymania.
 type StripItem = { name: string; photo?: string | null; icon: string; verdict?: string | null; category?: string | null };
 
-function ShareSheet({ children, onClose, onShare, shareUrl, shareTitle, strip, stripLabel, plainPreview }: {
+function ShareSheet({ children, onClose, onShare, shareUrl, shareTitle, strip, stripLabel, plainPreview, linkHeading }: {
   children: React.ReactNode;
   onClose: () => void;
   onShare?: () => void;
@@ -76,6 +75,8 @@ function ShareSheet({ children, onClose, onShare, shareUrl, shareTitle, strip, s
   /** Miejsca pokazywane pod podgladem (na razie tylko wyjazd - listy sa w projektowaniu). */
   strip?: StripItem[];
   stripLabel?: string;
+  /** Naglowek nad kanalami. Domyslnie o wyjezdzie - lista podaje swoj. */
+  linkHeading?: string;
   /** Podglad renderowany 1:1 (karta z eksploracji), a nie jako pomniejszony plakat 9:16. */
   plainPreview?: boolean;
 }) {
@@ -197,7 +198,7 @@ function ShareSheet({ children, onClose, onShare, shareUrl, shareTitle, strip, s
 
       {targets.length > 0 && (
         <div className="shrink-0 px-5 pt-2 pb-[max(20px,env(safe-area-inset-bottom))]">
-          <p className="font-brand text-[18px] leading-none text-spontaway-orange pb-3">{t("share.link_heading")}</p>
+          <p className="font-brand text-[18px] leading-none text-spontaway-orange pb-3">{linkHeading ?? t("share.link_heading")}</p>
           {/* Rzad przewijany w poziomie zamiast siatki 4-kolumnowej: kanalow przybywa, a siatka
               lamalaby sie na kolejne rzedy i spychala podglad karty poza ekran. */}
           <div className="flex gap-4 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -223,41 +224,63 @@ export function ShareCardList({ title, city, items, author, avatar, onClose, onS
   shareUrl?: string;
 }) {
   const { t } = useTranslation("sharing");
-  const shown = items.slice(0, 5);
-  const rest = Math.max(0, items.length - shown.length);
-  const word = items.length === 1 ? "miejsce" : items.length < 5 ? "miejsca" : "miejsc";
+  // Dziewiec kafelkow = pelna siatka 3x3; gdy miejsc jest wiecej, ostatnie pole zamienia sie
+  // w licznik "+N" (makieta Nat "Udostępnianie list", 2026-09-09).
+  const CELLS = 9;
+  const shown = items.length > CELLS ? items.slice(0, CELLS - 1) : items.slice(0, CELLS);
+  const rest = items.length - shown.length;
+  const word = items.length === 1 ? "miejsce" : items.length % 10 >= 2 && items.length % 10 <= 4 && (items.length % 100 < 12 || items.length % 100 > 14) ? "miejsca" : "miejsc";
   return (
-    <ShareSheet onClose={onClose} onShare={onShare} shareUrl={shareUrl} shareTitle={title}>
-          <div className="relative h-full w-full overflow-hidden bg-[#FCEDE3]">
-            <div className="px-6" style={{ paddingTop: "max(64px, calc(env(safe-area-inset-top) + 44px))" }}>
-              <p className="text-[12px] font-bold tracking-wide text-[#C58A66]">{t("card.list_label")}</p>
-              <p className="text-[34px] font-black leading-[1.06] text-foreground mt-2 line-clamp-3">{title}</p>
-              <p className="text-[15px] font-semibold text-[#8A6A57] mt-2.5">
-                {[city, `${items.length} ${word}`].filter(Boolean).join(" · ")}
-              </p>
-            </div>
-            {/* Kafelki = dowod, ze lista ma tresc. Nazwa pod kazdym, zeby dalo sie ja czytac
-                takze bez zdjec (miejsce bez zdjecia dostaje ikone kategorii na peachy tle). */}
-            <div className="grid grid-cols-3 gap-2.5 px-6 mt-7">
-              {shown.map((it, i) => (
-                <div key={it.id ?? i}>
-                  <div className="rounded-xl overflow-hidden bg-white">
-                    {/* tone="contrast": kafelek bez zdjecia lezy tu na peachowym tle karty, wiec
-                        domyslny peachy zlewalby sie z nim w jedna plame. */}
-                    <PlaceTile tile={it} aspect="aspect-square" tone="contrast" />
-                  </div>
-                  <p className="text-[11.5px] font-semibold text-[#5C4136] mt-1.5 leading-tight line-clamp-1">{it.place_name}</p>
-                </div>
-              ))}
-              {rest > 0 && (
-                <div className="aspect-square rounded-xl bg-[#F6D9C6] flex items-center justify-center">
-                  <span className="text-[28px] text-[#F75708]" style={{ fontFamily: "Sigmar, system-ui, sans-serif" }}>+{rest}</span>
-                </div>
-              )}
-            </div>
-            <Footer avatars={[avatar ?? null]} label={author} sub={t("share.save_in_app")} tone="light" />
+    <ShareSheet onClose={onClose} onShare={onShare} shareUrl={shareUrl} shareTitle={title}
+      plainPreview linkHeading={t("share.link_heading_list")}>
+      {/* Biala karta na zoltym tle arkusza - tak samo, jak wyjazd pokazuje karte z eksploracji:
+          odbiorca ma zobaczyc DOKLADNIE to, co dostanie pod linkiem. */}
+      <div className="w-full rounded-3xl bg-white px-4 pt-4 pb-5 shadow-sm">
+        <div className="flex items-center gap-3">
+          <img src={avatarSrc(avatar ?? null)} alt="" className="h-12 w-12 shrink-0 rounded-full object-cover bg-[#fcede3]" />
+          <div className="min-w-0">
+            <p className="truncate text-[19px] font-black leading-tight text-foreground">{title}</p>
+            <p className="truncate text-[13px] text-muted-foreground">{[city, `${items.length} ${word}`].filter(Boolean).join(" - ")}</p>
           </div>
+        </div>
+        <div className="mt-3 h-px bg-spontaway-orange/70" />
+        <div className="mt-3 grid grid-cols-3 gap-2">
+          {shown.map((it, i) => <ListShareTile key={it.id ?? i} item={it} />)}
+          {rest > 0 && (
+            <div className="flex aspect-[3/4] items-center justify-center rounded-2xl bg-spontaway-yellow">
+              <span className="font-brand text-[26px] leading-none text-spontaway-orange">+{rest}</span>
+            </div>
+          )}
+        </div>
+      </div>
     </ShareSheet>
+  );
+}
+
+/** Kafelek miejsca na karcie listy: zdjecie albo ikona kategorii, plakietka kategorii w rogu
+ *  i nazwa u dolu. Osobny od [PlaceTile] z profilu, bo tam nie ma plakietki ani znacznika
+ *  odwiedzenia, a ten kafelek jest tresciowo bogatszy (makieta Nat 2026-09-09). */
+function ListShareTile({ item }: { item: any }) {
+  const photo = thumbUrl(rowOwnPhotos(item)[0] ?? resolveStored(item._cover ?? null), 160);
+  const cat = item.category && item.category !== "other" ? subcategoryLabelLocalized(item.category) : null;
+  return (
+    <div className="relative aspect-[3/4] overflow-hidden rounded-2xl bg-[#fcede3]">
+      {photo ? (
+        <>
+          <img src={photo} alt="" loading="lazy" className="h-full w-full object-cover" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-transparent" />
+        </>
+      ) : (
+        <img src={categoryIconSrc(item.category)} alt="" draggable={false}
+          className="absolute left-1/2 top-1/2 w-2/5 max-w-[46px] -translate-x-1/2 -translate-y-1/2 opacity-90" />
+      )}
+      {cat && (
+        <span className="absolute right-1.5 top-1.5 max-w-[80%] truncate rounded-full bg-spontaway-brown/90 px-2 py-0.5 text-[9.5px] font-bold text-white">{cat}</span>
+      )}
+      <p className={`absolute bottom-1.5 left-2 right-2 line-clamp-2 text-[11px] font-bold leading-tight ${photo ? "text-white [text-shadow:_0_1px_2px_rgb(0_0_0_/_45%)]" : "text-foreground/75"}`}>
+        {item.place_name}
+      </p>
+    </div>
   );
 }
 
