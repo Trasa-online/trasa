@@ -44,12 +44,60 @@ const BADGE = `${SITE}/Pobierz-z-App-Store.png`;
 const TESTFLIGHT_URL = "https://testflight.apple.com/join/a9rtGFuq";
 // Symbol marki (samo pomaranczowe "S" na przezroczystym tle) - do kafelka w pasku instalacji.
 const SYMBOL_IMG = `${SITE}/spontaway-symbol.png`;
+// Obrazek podgladu linku dla LISTY (i dla wyjazdu bez okladki): baner marki 1800x945, czyli
+// dokladnie proporcja, ktorej oczekuja komunikatory (~1,91:1). Kwadratowa ikona aplikacji
+// pokazywala sie tam jako maly kafelek z boku, a nie jako karta - stad "brakuje miniaturek"
+// przy listach (zgloszenie Nat 2026-09-09).
+const OG_BANNER = { url: `${SITE}/baner-ios.png`, w: 1800, h: 945 };
 const ctaTop = () => CTA_READY
   ? `<a class="badge" href="${esc(APP_STORE_URL!)}"><img src="${BADGE}" alt="${CTA_LABEL}"></a>`
   : `<span class="badge off" title="Dostępne wkrótce"><img src="${BADGE}" alt="${CTA_LABEL}"></span>`;
 const ctaBig = () => CTA_READY
   ? `<a class="badge big" href="${esc(APP_STORE_URL!)}"><img src="${BADGE}" alt="${CTA_LABEL}"></a>`
   : `<span class="badge big off"><img src="${BADGE}" alt="${CTA_LABEL}"></span><p class="soon">Dostępne wkrótce</p>`;
+
+/**
+ * Wymiary obrazka odczytane z NAGLOWKA pliku (JPEG SOF / PNG IHDR), bez pobierania calosci.
+ *
+ * Po co: Facebook i Messenger pokazuja obrazek przy PIERWSZYM udostepnieniu tylko wtedy, gdy
+ * strona podaje `og:image:width` i `og:image:height`. Bez nich musza najpierw sciagnac plik,
+ * a do tego czasu link idzie BEZ miniaturki - i tak zostaje w ich cache. Dokladnie to sie stalo,
+ * gdy Nat zmienila okladke wyjazdu: nowy adres obrazka, ktorego robot nigdy nie widzial
+ * (zgloszenie 2026-09-09).
+ *
+ * Pobieramy tylko pierwsze 64 kB (naglowek `Range`), wiec koszt jest znikomy - a i tak placimy
+ * go WYLACZNIE dla robotow (patrz `isCrawler`), nie dla ludzi.
+ */
+async function imageSize(url: string): Promise<{ w: number; h: number } | null> {
+  try {
+    const r = await fetch(url, { headers: { Range: "bytes=0-65535" } });
+    if (!r.ok) return null;
+    const b = new Uint8Array(await r.arrayBuffer());
+    // PNG: 8 bajtow sygnatury + naglowek IHDR (szerokosc i wysokosc jako big-endian uint32).
+    if (b[0] === 0x89 && b[1] === 0x50) {
+      const dv = new DataView(b.buffer, b.byteOffset);
+      return { w: dv.getUint32(16), h: dv.getUint32(20) };
+    }
+    // JPEG: przechodzimy po segmentach do ramki SOF (0xC0-0xCF, bez 0xC4/0xC8/0xCC).
+    if (b[0] === 0xff && b[1] === 0xd8) {
+      let i = 2;
+      while (i + 9 < b.length) {
+        if (b[i] !== 0xff) { i++; continue; }
+        const m = b[i + 1];
+        if (m >= 0xc0 && m <= 0xcf && m !== 0xc4 && m !== 0xc8 && m !== 0xcc) {
+          return { h: (b[i + 5] << 8) | b[i + 6], w: (b[i + 7] << 8) | b[i + 8] };
+        }
+        i += 2 + ((b[i + 2] << 8) | b[i + 3]);
+      }
+    }
+    return null;
+  } catch { return null; }
+}
+
+/** Czy to robot budujacy podglad linku (Messenger, WhatsApp, Slack, Telegram, Discord, X). */
+const isCrawler = (req: Request) =>
+  /facebookexternalhit|facebookcatalog|Twitterbot|WhatsApp|Slackbot|TelegramBot|Discordbot|LinkedInBot|Pinterest|SkypeUriPreview|redditbot|Googlebot|bingbot/i
+    .test(req.headers.get("user-agent") ?? "");
 
 const esc = (s: string) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
@@ -267,12 +315,13 @@ body.trip{background:#FDF184}
 .md .hero img.mark{width:52px;height:auto;margin:0 auto;display:block}
 .md h2{margin:16px 0 0;font-family:Sigmar,Inter,sans-serif;font-size:26px;line-height:1.15;font-weight:400;color:#EE5307}
 .md .sub{margin:8px 0 0;font-size:14px;line-height:1.45;color:#5B2C06}
-/* Pole i guzik w JEDNYM wierszu, jak na landingu. Na waskim ekranie guzik schodzi pod pole. */
-.md form{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0 0}
-.md input{flex:1 1 160px;min-width:0;height:48px;border:0;border-radius:999px;padding:0 18px;font:16px Inter,sans-serif;background:#fff;color:#5B2C06}
+/* Pole na PELNA szerokosc, guzik POD nim (prosba Nat 2026-09-09) - wiersz obok siebie zwezal
+   pole na tyle, ze dluzszy adres nie miescil sie w widoku podczas pisania. */
+.md form{display:flex;flex-direction:column;gap:10px;margin:16px 0 0}
+.md input{width:100%;height:52px;border:0;border-radius:999px;padding:0 20px;font:16px Inter,sans-serif;background:#fff;color:#5B2C06}
 .md input::placeholder{color:rgba(91,44,6,.45)}
 .md input:focus{outline:2px solid #EE5307;outline-offset:-2px}
-.md .send{flex:0 0 auto;height:48px;padding:0 22px;border:0;border-radius:999px;background:#EE5307;color:#fff;font:800 15px Inter,sans-serif;cursor:pointer}
+.md .send{width:100%;height:52px;border:0;border-radius:999px;background:#EE5307;color:#fff;font:800 16px Inter,sans-serif;cursor:pointer}
 .md .send[disabled]{opacity:.55}
 .md .consent{margin:12px 0 0;font-size:12px;line-height:1.45;color:rgba(91,44,6,.8)}
 .md .consent a{color:inherit}
@@ -352,7 +401,7 @@ const choiceSheet = () => `<div class="ov" id="ov"><div class="md">
 })();
 </script>`;
 
-function shell(o: { title: string; desc: string; image: string; url: string; body: string; noun?: string; variant?: "trip" }) {
+function shell(o: { title: string; desc: string; image: string; url: string; body: string; noun?: string; variant?: "trip"; imageW?: number; imageH?: number }) {
   return `<!doctype html><html lang="pl"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>${esc(o.title)} · spontaway</title>
@@ -360,7 +409,11 @@ function shell(o: { title: string; desc: string; image: string; url: string; bod
 <meta name="robots" content="noindex">
 <meta property="og:site_name" content="spontaway"><meta property="og:type" content="article">
 <meta property="og:title" content="${esc(o.title)}"><meta property="og:description" content="${esc(o.desc)}">
-<meta property="og:image" content="${esc(o.image)}"><meta property="og:url" content="${esc(o.url)}">
+<meta property="og:image" content="${esc(o.image)}">
+<meta property="og:image:secure_url" content="${esc(o.image)}">
+<meta property="og:image:alt" content="${esc(o.title)}">
+${o.imageW && o.imageH ? `<meta property="og:image:width" content="${o.imageW}"><meta property="og:image:height" content="${o.imageH}">` : ""}
+<meta property="og:url" content="${esc(o.url)}">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="${esc(o.title)}"><meta name="twitter:description" content="${esc(o.desc)}">
 <meta name="twitter:image" content="${esc(o.image)}">
@@ -435,8 +488,10 @@ ${cat && it.category !== "other" ? `<span class="cat">${esc(cat)}</span>` : ""}
 <p class="tail">Ta lista powstała w spontaway - aplikacji do odkrywania miejsc i planowania wyjazdów ze znajomymi.</p>
 </div>
 ${choiceSheet()}`;
-    // Obrazek podgladu dla LISTY zostaje markowy - patrz decyzja przy udostepnianiu.
-    return new Response(shell({ title, desc, image: BRAND_IMG, url, body, noun: "list", variant: "trip" }), {
+    // Obrazek podgladu dla LISTY zostaje markowy (lista nie ma jednej okladki), ale jako BANER
+    // 1800x945, nie kwadratowa ikona - inaczej komunikator rysuje maly kafelek zamiast karty
+    // (prosba Nat 2026-09-09).
+    return new Response(shell({ title, desc, image: OG_BANNER.url, imageW: OG_BANNER.w, imageH: OG_BANNER.h, url, body, noun: "list", variant: "trip" }), {
       headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "public, s-maxage=60, stale-while-revalidate=600" },
     });
   }
@@ -484,7 +539,15 @@ ${strip ? `<div class="day"><i></i><p>Dzień 1</p></div><div class="strip">${str
 <p class="tail">Ten wyjazd powstał w spontaway - aplikacji do odkrywania miejsc i planowania wyjazdów ze znajomymi.</p>
 </div>
 ${choiceSheet()}`;
-  return new Response(shell({ title, desc, image: cover ?? BRAND_IMG, url, body, noun: "route", variant: "trip" }), {
+  // Wymiary okladki liczymy TYLKO dla robota budujacego podglad - czlowiek nie czeka na nic
+  // ekstra. Bez okladki lecimy banerem marki, ktory ma wymiary znane z gory.
+  const ogSize = cover && isCrawler(req) ? await imageSize(cover) : null;
+  return new Response(shell({
+    title, desc, url, body, noun: "route", variant: "trip",
+    image: cover ?? OG_BANNER.url,
+    imageW: cover ? ogSize?.w : OG_BANNER.w,
+    imageH: cover ? ogSize?.h : OG_BANNER.h,
+  }), {
     headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "public, s-maxage=60, stale-while-revalidate=600" },
   });
 }
