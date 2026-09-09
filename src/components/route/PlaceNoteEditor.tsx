@@ -20,6 +20,7 @@ export default function PlaceNoteEditor({
   placeholder,
   addLabel,
   editLabel,
+  hideText = false,
   onEditingChange,
 }: {
   note: string;
@@ -33,6 +34,9 @@ export default function PlaceNoteEditor({
    *  "Edytuj notkę". Opis CALEGO wyjazdu uzywa tu slowa "opis" - to nie jest notka o miejscu. */
   addLabel?: string;
   editLabel?: string;
+  /** Nie renderuj samej tresci, zostaw sam guzik. Dla opisu CALEGO wyjazdu: tresc jest juz
+   *  wyswietlona w naglowku, wiec edytor pokazywalby ja drugi raz. */
+  hideText?: boolean;
   /** Informuje rodzica, ze user WLASNIE pisze notke - ekran chowa wtedy czat i dolne CTA. */
   onEditingChange?: (editing: boolean) => void;
 }) {
@@ -95,7 +99,7 @@ export default function PlaceNoteEditor({
           notki innych uczestnikow ([PlaceNotes]): szary dymek + awatar w prawym-dolnym rogu.
           Wczesniej wlasna notka byla "goly" tekst z awatarem po lewej i lamala spojnosc watku
           (zgloszenie Nat 2026-08-29). */}
-      {noteText && (
+      {noteText && !hideText && (
         showAvatar ? (
           <div className="relative bg-muted/50 rounded-2xl px-3.5 py-2.5 mb-1.5">
             <p className="text-[13.5px] text-foreground/85 leading-snug whitespace-pre-wrap break-words">{noteText}</p>

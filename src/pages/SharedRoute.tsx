@@ -269,9 +269,6 @@ export default function SharedRoute() {
   // Etap W TRAKCIE = miejsce, w ktorym powstaje CALE wspomnienie: opis wyjazdu i tagi
   // miejsc. Stepper "podsumowania" zostal usuniety z flow (prosba Nat 2026-08-30) - publikacja to
   // jeden guzik "Opublikuj" na dole.
-  const [tripDesc, setTripDesc] = useState("");
-  const [descSaved, setDescSaved] = useState(false);
-  const descTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [pinTags, setPinTags] = useState<Record<string, string[]>>({});
   const [publishing, setPublishing] = useState(false);
   // Tryb "Zmień kolejność miejsc" - dopiero on pokazuje uchwyty drag&drop i skraca wiersze
@@ -667,13 +664,6 @@ export default function SharedRoute() {
   };
 
 
-  // Init opisu/tagow z trasy (po zaladowaniu). Nie nadpisujemy, gdy user wlasnie pisze.
-  useEffect(() => {
-    if (!route) return;
-    setTripDesc((prev) => (prev ? prev : ((route as any).review_narrative ?? "")));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [route?.id]);
-
   // Tagi miejsc (pins.tags) - lokalny stan do optymistycznego przelaczania werdyktow.
   useEffect(() => {
     const map: Record<string, string[]> = {};
@@ -681,16 +671,14 @@ export default function SharedRoute() {
     setPinTags(map);
   }, [pins]);
 
-  // Opis wyjazdu (routes.review_narrative) - autosave z debounce, jak notki.
-  const saveTripDesc = (v: string) => {
-    setTripDesc(v);
-    if (descTimer.current) clearTimeout(descTimer.current);
-    descTimer.current = setTimeout(async () => {
-      if (!id) return;
-      await (supabase as any).from("routes").update({ review_narrative: v.trim() || null }).eq("id", id);
-      setDescSaved(true);
-      setTimeout(() => setDescSaved(false), 1500);
-    }, 700);
+  // Opis CALEGO wyjazdu (routes.review_narrative) - pisze go wlasciciel i to on jedzie
+  // z wyjazdem do eksploracji. Edytowany tym samym guzikiem, ktory stoi POD wyswietlonym
+  // opisem, wiec guzik i tresc to jedno i to samo pole (zgloszenie Nat 2026-09-09: guzik mowil
+  // "Dodaj opis", chociaz opis byl - bo siedzial na innym polu niz to widoczne wyzej).
+  const saveTripDescription = async (value: string) => {
+    if (!id) return;
+    await (supabase as any).from("routes").update({ review_narrative: value.trim() || null }).eq("id", id);
+    queryClient.invalidateQueries({ queryKey: ["shared-route", id] });
   };
 
 
@@ -1896,19 +1884,30 @@ export default function SharedRoute() {
         {/* Na etapie PROPOZYCJI notki nie ma - wyjazd dopiero powstaje, nie ma jeszcze o czym
             pisac (prosba Nat 2026-09-01). Wchodzi od "w trakcie". */}
         {stage !== "planning" && (canEdit || (memberNotes as any[]).length > 0) && !choosing && (
-          <div className="mb-5 px-5">
-            {canEdit && (
+          <div className="mt-3 mb-5 px-5">
+            {/* WLASCICIEL edytuje tu OPIS WYJAZDU - dokladnie te tresc, ktora widac nad guzikiem.
+                UCZESTNIK nie ma prawa zapisu do `routes`, wiec u niego zostaje jego WLASNA notka
+                (i copy mowi "notka", bo to co innego niz opis calego wyjazdu). */}
+            {isOwner ? (
+              <PlaceNoteEditor
+                note={routeDescription}
+                hideText
+                placeholder={t("desc.placeholder")}
+                addLabel={t("route:note.add_description")}
+                editLabel={t("route:note.edit_description")}
+                onSave={saveTripDescription}
+                onEditingChange={setNoteEditing}
+              />
+            ) : canEdit ? (
               <PlaceNoteEditor
                 note={myTripNote}
                 showAvatar
                 avatarUrl={myAvatar}
                 placeholder={t("note.placeholder")}
-                addLabel={t("route:note.add_description")}
-                editLabel={t("route:note.edit_description")}
                 onSave={saveMyTripNote}
                 onEditingChange={setNoteEditing}
               />
-            )}
+            ) : null}
             {(memberNotes as any[]).filter((n) => n.user_id !== user?.id).length > 0 && (
               <div className="space-y-3 mt-3">
                 {(memberNotes as any[]).filter((n) => n.user_id !== user?.id).map((n) => (
@@ -1979,27 +1978,6 @@ export default function SharedRoute() {
                       </button>
                     );
                   })}
-                </div>
-              </div>
-            )}
-            {/* OPIS + TAGI CALEJ TRASY - przeniesione tu ze steppera "podsumowania" (prosba Nat
-                2026-08-30): wspomnienie powstaje w trakcie wyjazdu, a publikacja to jeden guzik. */}
-            {canEdit && stage === "ongoing" && !choosing && (
-              <div className="mb-5 space-y-4">
-                <div>
-                  <p className="text-[13px] font-bold text-foreground mb-1.5">{t("trip_description")}</p>
-                  <div className="relative">
-                    <textarea
-                      value={tripDesc}
-                      onChange={(e) => saveTripDesc(e.target.value)}
-                      onFocus={() => setNoteEditing(true)}
-                      onBlur={() => setNoteEditing(false)}
-                      placeholder={t("desc.placeholder")}
-                      rows={3}
-                      className="w-full bg-muted/50 rounded-2xl px-3.5 py-3 text-sm text-foreground resize-none focus:outline-none border border-border/40 focus:border-orange-400/60 placeholder:text-muted-foreground/55"
-                    />
-                    {descSaved && <span className="absolute bottom-2.5 right-3 text-[10px] font-medium text-green-600">Zapisano</span>}
-                  </div>
                 </div>
               </div>
             )}

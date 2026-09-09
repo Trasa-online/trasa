@@ -7,7 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useFriends } from "@/hooks/useFriends";
 import { useFollowList } from "@/hooks/useFollow";
 import { avatarSrc } from "@/lib/avatar";
-import { Search, Check, X, Loader2, UserPlus, Clock, UserMinus } from "lucide-react";
+import { Search, Check, X, Loader2, UserPlus, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { inviteUsersToRoute, type InviteRoute } from "@/lib/groupInvite";
 import { cn } from "@/lib/utils";
@@ -164,12 +164,14 @@ export default function InviteFriendsSheet({ open, onOpenChange, route, onInvite
                         </p>
                       )}
                     </div>
+                    {/* Napis zamiast samej ikony ludzika z minusem: przy nieodwracalnej akcji
+                        (osoba wypada z wyjazdu) ikona kazala sie domyslac, co zrobi
+                        (prosba Nat 2026-09-09). */}
                     <button
                       onClick={() => void onRemove(p.id)}
-                      aria-label={t("invite.remove_person")}
-                      className="shrink-0 h-9 w-9 rounded-full flex items-center justify-center text-destructive active:scale-90 transition-transform"
+                      className="shrink-0 rounded-full px-3 py-1.5 text-[13px] font-bold text-destructive active:scale-95 transition-transform"
                     >
-                      <UserMinus className="h-[18px] w-[18px]" />
+                      {t("common:buttons.delete")}
                     </button>
                   </div>
                 ))}
