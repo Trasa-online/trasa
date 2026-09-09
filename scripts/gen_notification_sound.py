@@ -2,6 +2,11 @@ import math, struct, wave, random
 
 SR = 44100
 
+# Ziarno losowosci NA STALE. Stuk palki (mallet_click) to krotki szum, wiec bez ziarna kazde
+# uruchomienie dawalo INNY plik - "odtworz dzwiek ze zrodla" nie znaczylo wtedy nic, bo wychodzil
+# podobny, ale nie ten sam. Z ziarnem skrypt odtwarza dokladnie plik, ktory siedzi w aplikacji.
+random.seed(20260909)
+
 def marimba_note(freq, dur, amp=1.0):
     """Ton marimby: fundament + charakterystyczny 4. alikwot (~3.9x) + jasny 10.5x.
     Szybki atak (2 ms), wykladniczy zanik - tak zachowuje sie uderzone drewno."""
