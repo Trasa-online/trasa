@@ -18,7 +18,12 @@ export function buildMiniMapUrl(pins: LatLng[], size = "150x150"): string | null
   const markers = pts
     .map((p) => `markers=size:tiny%7Ccolor:0xf9662b%7C${p.latitude},${p.longitude}`)
     .join("&");
-  return `${API_BASE}/api/static-map?size=${size}&scale=2&maptype=roadmap&${markers}&style=feature:poi%7Cvisibility:off&style=feature:transit%7Cvisibility:off`;
+  // `v` = numer wersji ADRESU, nie danych. Proxy oddaje mapki z `max-age=86400`, wiec telefon
+  // trzyma je u siebie DOBE. Po poprawce w proxy (2026-09-09: `params.set("markers", ...)`
+  // kasowalo wszystkie znaczniki poza pierwszym) serwer oddawal juz poprawna mape, ale aplikacja
+  // nadal rysowala obrazek z wlasnego cache - i dalej byl na nim jeden punkt. Podbicie `v`
+  // zmienia adres, wiec cache nie ma czego dopasowac i mapka odswieza sie od razu.
+  return `${API_BASE}/api/static-map?v=2&size=${size}&scale=2&maptype=roadmap&${markers}&style=feature:poi%7Cvisibility:off&style=feature:transit%7Cvisibility:off`;
 }
 
 // Wysokosc karty na EKSPLORACJI tak, by dol karty konczyl sie 16px NAD plywajacym BottomNavem.

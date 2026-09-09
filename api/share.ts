@@ -234,31 +234,36 @@ body.trip{background:#FDF184}
 .pl .c{font-size:11px;color:#666;flex:none}
 .go{margin-top:32px;width:100%;max-width:420px;border-radius:999px;background:#EE5307;color:#fff;font-size:17px;font-weight:800;text-align:center;padding:16px 0;text-decoration:none;display:block}
 .page .tail{margin:16px 0 0;text-align:center;font-size:12.5px;line-height:1.4;color:rgba(91,44,6,.8)}
-/* Arkusz wyboru po "Zobacz wyjazd". Aplikacji nie ma jeszcze w App Store, wiec guzik nie ma
-   dokad prowadzic - zamiast tego pyta, ktora droga do dostepu odbiorca wybiera: testy
-   przedpremierowe (dziala od razu) czy powiadomienie o premierze (prosba Nat 2026-09-09).
-   Wchodzi od dolu, jak arkusze w aplikacji. */
+/* Arkusz po "Zobacz wyjazd" - w stylu modala z landingu (zolty panel, znak marki, naglowek
+   Sigmarem, brazowa tresc, zapis na premiere w jednym wierszu). Aplikacji nie ma jeszcze
+   w App Store, wiec guzik nie ma dokad prowadzic; zamiast tego daje dwie drogi do dostepu.
+   max-height + wlasne przewijanie: na niskim ekranie ma sie skurczyc, a nie wypchnac CTA
+   poza widok (prosba Nat 2026-09-09). */
 .ov{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.45);display:none;align-items:flex-end;justify-content:center}
 .ov.on{display:flex}
-.md{width:100%;max-width:440px;background:#FEFEFE;border-radius:24px 24px 0 0;padding:10px 20px calc(24px + env(safe-area-inset-bottom,0px))}
-.md .grab{width:36px;height:4px;border-radius:2px;background:#E4E4E4;margin:0 auto 16px}
-.md h2{margin:0;font-size:20px;font-weight:900;letter-spacing:-.01em}
-.md .sub{margin:6px 0 18px;font-size:14px;line-height:1.4;color:#7A7A7A}
-.opt{display:block;width:100%;border:0;text-align:left;text-decoration:none;border-radius:20px;padding:14px 16px;margin-bottom:10px;font:inherit;cursor:pointer}
-.opt .t{display:block;font-size:15px;font-weight:800}
-.opt .u{display:block;font-size:12.5px;margin-top:2px;opacity:.85}
-.opt.hot{background:#EE5307;color:#fff}
-.opt.cool{background:#F3F3F3;color:#0E0E0E}
-.md form{display:none;margin:2px 0 10px}
-.md form .lbl{display:block;font-size:15px;font-weight:800;margin:2px 0 8px}
-.md form.on{display:block}
-.md input{width:100%;height:48px;border:1px solid #E4E4E4;border-radius:16px;padding:0 14px;font:16px Inter,sans-serif;background:#fff;color:#0E0E0E}
-.md input:focus{outline:0;border-color:#EE5307}
-.md .send{width:100%;height:48px;margin-top:10px;border:0;border-radius:16px;background:#EE5307;color:#fff;font:800 15px Inter,sans-serif;cursor:pointer}
+.md{position:relative;width:100%;max-width:440px;max-height:92dvh;overflow-y:auto;background:#FEFEFE;border-radius:24px 24px 0 0}
+.md .x{position:absolute;right:14px;top:14px;z-index:2;width:32px;height:32px;border:0;border-radius:999px;background:rgba(0,0,0,.06);color:#5B2C06;font-size:17px;line-height:1;cursor:pointer}
+.md .hero{background:#FDF184;padding:34px 24px 26px;text-align:center;border-radius:24px 24px 0 0}
+.md .hero img.mark{width:52px;height:auto;margin:0 auto;display:block}
+.md h2{margin:16px 0 0;font-family:Sigmar,Inter,sans-serif;font-size:26px;line-height:1.15;font-weight:400;color:#EE5307}
+.md .sub{margin:8px 0 0;font-size:14px;line-height:1.45;color:#5B2C06}
+/* Pole i guzik w JEDNYM wierszu, jak na landingu. Na waskim ekranie guzik schodzi pod pole. */
+.md form{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0 0}
+.md input{flex:1 1 160px;min-width:0;height:48px;border:0;border-radius:999px;padding:0 18px;font:16px Inter,sans-serif;background:#fff;color:#5B2C06}
+.md input::placeholder{color:rgba(91,44,6,.45)}
+.md input:focus{outline:2px solid #EE5307;outline-offset:-2px}
+.md .send{flex:0 0 auto;height:48px;padding:0 22px;border:0;border-radius:999px;background:#EE5307;color:#fff;font:800 15px Inter,sans-serif;cursor:pointer}
 .md .send[disabled]{opacity:.55}
-.md .msg{margin:10px 0 0;font-size:13px;line-height:1.4;color:#7A7A7A}
+.md .consent{margin:12px 0 0;font-size:12px;line-height:1.45;color:rgba(91,44,6,.8)}
+.md .consent a{color:inherit}
+.md .msg{margin:12px 0 0;font-size:13px;line-height:1.4;color:#5B2C06;font-weight:600}
 .md .msg.bad{color:#C0392B}
-.md .close{display:block;width:100%;margin-top:6px;padding:12px 0;border:0;background:0;font:600 14px Inter,sans-serif;color:#979797;cursor:pointer}
+/* Dolna czesc: droga "chce juz teraz". Guzik WYSRODKOWANY (prosba Nat 2026-09-09). */
+.md .foot2{padding:24px;text-align:center}
+.md .tf{display:inline-flex;flex-direction:column;align-items:center;gap:2px;text-decoration:none;background:#EE5307;color:#fff;border-radius:999px;padding:12px 26px}
+.md .tf b{font-size:15px;font-weight:800}
+.md .tf span{font-size:12.5px;opacity:.9}
+.md .later{display:block;width:100%;margin-top:14px;padding:10px 0;border:0;background:0;font:600 14px Inter,sans-serif;color:#979797;cursor:pointer}
 `;
 
 // Pasek instalacji nad trescia wyjazdu. Odbiorca linku najczesciej nie ma jeszcze aplikacji,
@@ -279,29 +284,33 @@ const installBar = () => `<div class="ins"><div class="l">
 //
 // Bez JavaScriptu guzik zostaje zwyklym linkiem na TestFlight - odbiorca nie zostaje z niczym.
 const choiceSheet = () => `<div class="ov" id="ov"><div class="md">
-<div class="grab"></div>
-<h2>Wyjazd czeka w aplikacji</h2>
-<p class="sub">spontaway nie jest jeszcze w App Store. Wybierz, jak chcesz dostać dostęp:</p>
-<a class="opt hot" href="${TESTFLIGHT_URL}" target="_blank" rel="noreferrer noopener" id="tf">
-<span class="t">Dołącz przedpremierowo</span><span class="u">Dostęp od razu, przez TestFlight</span></a>
-<button class="opt cool" id="pick" type="button">
-<span class="t">Zapisz się na premierę</span><span class="u">Damy znać mailem, gdy aplikacja będzie w App Store</span></button>
-<form id="wl"><span class="lbl">Zapisz się na premierę</span><input id="em" type="email" inputmode="email" autocomplete="email" placeholder="twoj@email.pl" required>
-<button class="send" id="sd" type="submit">Zapisz się</button></form>
+<button class="x" id="cl" type="button" aria-label="Zamknij">&times;</button>
+<div class="hero">
+<img class="mark" src="${SYMBOL_IMG}" alt="">
+<h2>Premiera już wkrótce</h2>
+<p class="sub">Spontaway pojawi się w App Store lada moment. Zostaw swojego maila, a powiadomimy Cię o starcie:</p>
+<form id="wl"><input id="em" type="email" inputmode="email" autocomplete="email" placeholder="twoj@email.pl" required>
+<button class="send" id="sd" type="submit">Powiadom mnie</button></form>
+<p class="consent">Zapisując się, zgadzasz się na przetwarzanie adresu e-mail w celu powiadomienia o premierze. Szczegóły w <a href="${SITE}/#/privacy">polityce prywatności</a>.</p>
 <p class="msg" id="mg"></p>
-<button class="close" id="cl" type="button">Nie teraz</button>
+</div>
+<div class="foot2">
+<a class="tf" href="${TESTFLIGHT_URL}" target="_blank" rel="noreferrer noopener">
+<b>Dołącz przedpremierowo</b><span>Dostęp od razu, przez TestFlight</span></a>
+<button class="later" id="lt" type="button">Nie teraz</button>
+</div>
 </div></div>
 <script>
 (function(){
   var SUPA=${JSON.stringify(SUPA)}, ANON=${JSON.stringify(ANON)};
   var ov=document.getElementById("ov"), go=document.getElementById("go");
-  var pick=document.getElementById("pick"), form=document.getElementById("wl");
-  var inp=document.getElementById("em"), send=document.getElementById("sd"), msg=document.getElementById("mg");
+  var form=document.getElementById("wl"), inp=document.getElementById("em");
+  var send=document.getElementById("sd"), msg=document.getElementById("mg");
   function hide(){ ov.classList.remove("on"); }
   go.addEventListener("click", function(e){ e.preventDefault(); ov.classList.add("on"); });
   document.getElementById("cl").addEventListener("click", hide);
+  document.getElementById("lt").addEventListener("click", hide);
   ov.addEventListener("click", function(e){ if(e.target===ov) hide(); });
-  pick.addEventListener("click", function(){ form.classList.add("on"); pick.style.display="none"; inp.focus(); });
   form.addEventListener("submit", function(e){
     e.preventDefault();
     var v=(inp.value||"").trim().toLowerCase();
@@ -315,8 +324,8 @@ const choiceSheet = () => `<div class="ov" id="ov"><div class="md">
         // 409 = ten adres juz jest na liscie. Dla czlowieka to sukces, nie blad.
         if(!r.ok && r.status!==409) throw 0;
         fetch(SUPA+"/functions/v1/send-waitlist-email",{method:"POST",headers:h,body:JSON.stringify({email:v,lang:"pl"})}).catch(function(){});
-        form.classList.remove("on");
-        msg.className="msg"; msg.textContent="Gotowe. Damy znać mailem, gdy aplikacja pojawi się w App Store.";
+        form.style.display="none";
+        msg.className="msg"; msg.textContent="Gotowe. Damy znać mailem, gdy aplikacja pojawi się w App Store.";
       })
       .catch(function(){ send.disabled=false; msg.className="msg bad"; msg.textContent="Nie udało się zapisać. Spróbuj jeszcze raz."; });
   });
