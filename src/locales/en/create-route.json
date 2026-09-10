@@ -73,5 +73,24 @@
   "kind": {
     "list": "List",
     "trip": "Trip"
-  }
+  },
+  "country": {
+    "title": "Where are you going?",
+    "title_list": "Where are these places?",
+    "hint": "Pick one country or several. This sets the reach of the place search.",
+    "hint_list": "Pick one country or several. You can change this later.",
+    "search": "Search for a country",
+    "no_results": "No country by that name",
+    "skip": "Skip",
+    "region": {
+      "poland": "Poland",
+      "europe": "Europe",
+      "asia": "Asia",
+      "north_america": "North America",
+      "south_america": "South America",
+      "africa": "Africa",
+      "oceania": "Oceania"
+    }
+  },
+  "trip_name_default": "New trip"
 }

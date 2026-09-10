@@ -73,5 +73,24 @@
   "kind": {
     "list": "Lista",
     "trip": "Wyjazd"
-  }
+  },
+  "country": {
+    "title": "Dokąd jedziecie?",
+    "title_list": "Skąd są te miejsca?",
+    "hint": "Wybierz kraj lub kilka krajów. To ustawia zasięg wyszukiwarki miejsc.",
+    "hint_list": "Wybierz kraj lub kilka. Możesz to zmienić później.",
+    "search": "Szukaj kraju",
+    "no_results": "Brak kraju o tej nazwie",
+    "skip": "Pomiń",
+    "region": {
+      "poland": "Polska",
+      "europe": "Europa",
+      "asia": "Azja",
+      "north_america": "Ameryka Północna",
+      "south_america": "Ameryka Południowa",
+      "africa": "Afryka",
+      "oceania": "Oceania"
+    }
+  },
+  "trip_name_default": "Nowy wyjazd"
 }

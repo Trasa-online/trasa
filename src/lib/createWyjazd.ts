@@ -70,7 +70,7 @@ export async function createEmptyWyjazd(
   // tripType: "planning" = wyjazd przyszly (etap propozycji), "completed" = przeszly
   // (wspomnienie). Jedno i drugie powstaje jako PUSTY szkic - miejsca dodaje sie juz
   // w widoku wyjazdu, nie w kreatorze (decyzja Nat 2026-09-05).
-  opts?: { groupSessionId?: string | null; startDate?: string | null; endDate?: string | null; tripType?: "planning" | "completed" },
+  opts?: { groupSessionId?: string | null; startDate?: string | null; endDate?: string | null; countries?: string[]; tripType?: "planning" | "completed" },
 ): Promise<string | null> {
   const { data: route, error } = await (supabase as any)
     .from("routes")
@@ -78,6 +78,9 @@ export async function createEmptyWyjazd(
       user_id: userId,
       title: title || city || i18n.t("fallback.trip", { ns: "common" }),
       city: city || null,
+      // Zasieg wyjazdu = KRAJE (2026-09-10). `city` zostaje puste dla nowych wyjazdow -
+      // czytaja je jeszcze stare wiersze i podpisy, patrz src/lib/tripScope.ts.
+      countries: opts?.countries ?? [],
       trip_type: opts?.tripType ?? "planning",
       status: "draft",
       day_number: 1,
@@ -105,7 +108,7 @@ export async function createWyjazdFromPlaces(
   title: string,
   places: WyjazdPlaceInput[],
   dates?: { start_date?: string | null; end_date?: string | null },
-  opts?: { groupSessionId?: string | null; newForUsers?: string[]; tripType?: "planning" | "completed" },
+  opts?: { groupSessionId?: string | null; newForUsers?: string[]; countries?: string[]; tripType?: "planning" | "completed" },
 ): Promise<string | null> {
   places = dedupePlaces(places);
   // Odrzuc miejsca bez nazwy - place_name jest NOT NULL w pins, a jeden bledny rekord
@@ -130,6 +133,7 @@ export async function createWyjazdFromPlaces(
       user_id: userId,
       title: title || city || i18n.t("fallback.trip", { ns: "common" }),
       city: city || null,
+      countries: opts?.countries ?? [],
       // "past" wyjazd = wspomnienie (trip_type='completed' -> ReviewSummary pokazuje tryb wspomnienia:
       // notki/oceny/zdjecia). "future"/domyslnie = 'planning' (roboczy, do zaplanowania).
       trip_type: opts?.tripType ?? "planning",

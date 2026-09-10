@@ -25,6 +25,7 @@ import { toast } from "sonner";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { PlacePhoto } from "@/components/PlacePhoto";
 import { RoutePlaceRow } from "@/components/route/RoutePlaceRow";
+import { scopeCountries, scopeLabel } from "@/lib/tripScope";
 import { fetchRouteNotesWithAuthors, notesByPlace, placeNoteKey } from "@/lib/placeNotes";
 import { detachPlacePhotos, restorePlacePhotos } from "@/lib/placePhotoSocial";
 import StoredImage from "@/components/StoredImage";
@@ -279,6 +280,11 @@ export default function SharedRoute() {
   // 2026-09-01). Kazdy uczestnik ma swoja - u pozostalych nic sie nie zmienia.
   const [inviteOpen, setInviteOpen] = useState(false);
   const [shareCardOpen, setShareCardOpen] = useState(false);
+  // Zmiana nazwy wyjazdu - stan trzymany PRZED wczesnymi returnami (regula hookow; ten plik
+  // juz raz wywrocil sie na hooku postawionym nizej, React #310).
+  const [editingName, setEditingName] = useState(false);
+  const [nameVal, setNameVal] = useState("");
+  const [savingName, setSavingName] = useState(false);
   // Zrzut ekranu = intencja "chce to pokazac". Zamiast szukac guzika, user dostaje gotowy
   // kadr od razu po zrzucie (logika jak na Pintereście). iOS nie pozwala podmienic juz
   // zrobionego zdjecia, wiec karta pojawia sie PO nim i user robi drugi zrzut - z karta.
@@ -336,7 +342,7 @@ export default function SharedRoute() {
         // trip_type/status = etap cyklu zycia (planning=Propozycje, ongoing=W Trakcie). Bez filtra
         // is_shared - RLS i tak wpuszcza tylko wlasciciela (wlasne robocze) lub is_shared/published.
         // Dzieki temu SharedRoute jest WIDOKIEM WYJAZDU dla wszystkich etapow (Nat 2026-08-25).
-        .select("id, title, city, user_id, day_number, folder_id, start_date, end_date, ai_summary, ai_highlight, review_photos, review_narrative, group_session_id, tags, list_cover_url, trip_type, status")
+        .select("id, title, city, countries, user_id, day_number, folder_id, start_date, end_date, ai_summary, ai_highlight, review_photos, review_narrative, group_session_id, tags, list_cover_url, trip_type, status")
         .eq("id", id as string)
         .single();
       if (error) return null;
@@ -1028,6 +1034,30 @@ export default function SharedRoute() {
   const handleShare = () => setShareCardOpen(true);
   const handleShareLink = () => { void share({ title: route.title || cityLabel || t("common:fallback.trip"), url: buildShareUrl(`/route/${route.id}`) }); };
 
+  // Zmiana nazwy wyjazdu (prosba Nat 2026-09-10). Nazwa nie powstaje juz w kreatorze - domyslnie
+  // jest to lista krajow - wiec musi dac sie zmienic tam, gdzie jest o czym decydowac.
+  // Edycja NA MIEJSCU, tak samo jak nazwa listy (SharedList) - osobny arkusz do jednego pola
+  // tylko mnozylby kroki.
+  const saveRouteName = async () => {
+    if (!id) return;
+    const trimmed = nameVal.trim();
+    if (!trimmed || trimmed === (route?.title ?? "")) { setEditingName(false); return; }
+    setSavingName(true);
+    const { error } = await (supabase as any).from("routes").update({ title: trimmed }).eq("id", id);
+    setSavingName(false);
+    if (error) {
+      // Cenzura siedzi w bazie (wyzwalacz na tytule) - bez osobnego komunikatu user widzi
+      // tylko, ze "nie zapisalo sie".
+      toast.error(/title_not_allowed/.test(error.message) ? t("toast.name_not_allowed") : t("toast.name_failed"));
+      return;
+    }
+    setEditingName(false);
+    queryClient.setQueryData(["shared-route", id], (old: any) => (old ? { ...old, title: trimmed } : old));
+    queryClient.invalidateQueries({ queryKey: ["profile-trip-feed"] });
+    haptics.success();
+    toast.success(t("toast.name_saved"));
+  };
+
   // Wlasciciel dodaje miejsca do ISTNIEJACEJ trasy: append do pins (jak AddPlaceToTrip), potem refetch.
   const handleAddPlaces = async (places: PlaceForList[]) => {
     if (!user) return;
@@ -1314,7 +1344,8 @@ export default function SharedRoute() {
         ? `${format(tripStart, "d MMM", { locale: dateLocale() })} - ${format(tripEnd, "d MMMM yyyy", { locale: dateLocale() })}`
         : format(tripStart, "d MMMM yyyy", { locale: dateLocale() }))
     : "";
-  const cityLabel = route.city || t("trip_default");
+  // Podpis zasiegu: kraje wyjazdu, a dla starych wyjazdow - miasto (patrz src/lib/tripScope.ts).
+  const cityLabel = scopeLabel(route) || t("trip_default");
   // Karta z eksploracji potrzebuje tagow (kategorie miejsc) i wspolrzednych (mini mapka).
   // Liczymy raz - uzywa ich podglad udostepniania I zapowiedz dla odbiorcy linku.
   const cardTags = [...new Set((pins as any[]).map((p) => p.category).filter(Boolean))]
@@ -1855,7 +1886,20 @@ export default function SharedRoute() {
         {/* Naglowek: tytul + opis, spacing 35px pod TopBarem */}
         <div className="px-5 pt-[35px]">
           <div className="flex items-start gap-3">
-            <h1 className="flex-1 text-2xl font-black text-foreground leading-tight">{route.title || cityLabel}</h1>
+            {editingName ? (
+              <input
+                autoFocus
+                value={nameVal}
+                onChange={(e) => setNameVal(e.target.value)}
+                onBlur={() => void saveRouteName()}
+                onKeyDown={(e) => { if (e.key === "Enter") void saveRouteName(); if (e.key === "Escape") setEditingName(false); }}
+                maxLength={80}
+                aria-label={t("aria.rename_trip")}
+                className="flex-1 min-w-0 text-2xl font-black text-foreground leading-tight bg-transparent border-b-2 border-primary outline-none"
+              />
+            ) : (
+              <h1 className="flex-1 text-2xl font-black text-foreground leading-tight">{route.title || cityLabel}</h1>
+            )}
             {/* Grupa ikon. Udostepnianie widzi KAZDY (spojnie z listami, prosba Nat 2026-09-01) -
                 gosc ogladajacy cudzy wyjazd tez ma go czym poslac dalej. Reszta zostaje przy
                 wlascicielu / uczestniku. */}
@@ -1876,6 +1920,18 @@ export default function SharedRoute() {
                 {/* Olowek usuniety (prosba Nat 2026-09-01) - ten widok JEST edycja: miejsca, notki,
                     zdjecia, opis i tagi zmienia sie na miejscu, wiec osobne wejscie w stepper
                     tylko mnozylo sciezki. */}
+                {/* Olowek = zmiana NAZWY (2026-09-10), a nie wejscie w stepper edycji - ten widok
+                    dalej JEST edycja reszty (miejsca, notki, zdjecia, opis, tagi). */}
+                {canEdit && (
+                  <button
+                    onClick={() => { haptics.light(); setNameVal(route.title || ""); setEditingName(true); }}
+                    aria-label={t("aria.rename_trip")}
+                    disabled={savingName}
+                    className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center active:scale-90 transition-transform disabled:opacity-50"
+                  >
+                    <Pencil className="h-4 w-4 text-foreground" />
+                  </button>
+                )}
                 {isOwner && <button onClick={() => setAskDelete(true)} aria-label={t("aria.delete_trip")} className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center active:scale-90 transition-transform"><Trash2 className="h-4 w-4 text-destructive" /></button>}
             </div>
           </div>
@@ -2199,6 +2255,7 @@ export default function SharedRoute() {
           open={addPlaceOpen}
           onClose={() => setAddPlaceOpen(false)}
           city={route.city ?? null}
+          countries={scopeCountries(route)}
           existingPlaces={pins.map((p: any) => ({
             place_name: p.place_name, category: p.category ?? null, address: p.address ?? null, description: p.description ?? null,
             latitude: p.latitude ?? null, longitude: p.longitude ?? null, photo_url: p.photo_url ?? null, place_id: p.place_id ?? null,

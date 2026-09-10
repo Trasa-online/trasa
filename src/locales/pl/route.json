@@ -175,7 +175,10 @@
     "hint": "Przesuń mapę, żeby wskazać miejsce",
     "nearby": "W tym miejscu",
     "empty": "Nic tu nie znaleźliśmy. Przesuń mapę kawałek dalej.",
-    "locate": "Moja lokalizacja"
+    "locate": "Moja lokalizacja",
+    "search_placeholder": "Wpisz nazwę miejsca",
+    "reading": "Sprawdzam, co tu jest…",
+    "add": "Dodaj miejsce {{place}}"
   },
   "map": {
     "day": "Dzień {{number}}"

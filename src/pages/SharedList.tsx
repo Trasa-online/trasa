@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import { MapPin, ArrowLeft, Bookmark, Building2, Trash2, Share2, Plus, Camera, Loader2, X, Pencil } from "lucide-react";
 import { mapWithLimit } from "@/lib/imageCompression";
 import AddPlaceSheet from "@/components/route/AddPlaceSheet";
+import { scopeCountries } from "@/lib/tripScope";
 import { addPlaceToList, type PlaceForList } from "@/lib/placeLists";
 import { useShare } from "@/hooks/useShare";
 import { useUnsavePlace } from "@/hooks/useUnsavePlace";
@@ -232,7 +233,7 @@ export default function SharedList() {
     queryFn: async () => {
       const { data } = await (supabase as any)
         .from("discovery_collections")
-        .select("id, title, city, description, user_id, author_name, author_avatar, cover_url, tags, is_public, list_status")
+        .select("id, title, city, countries, description, user_id, author_name, author_avatar, cover_url, tags, is_public, list_status")
         .eq("id", id as string)
         .maybeSingle();
       return data as any;
@@ -769,6 +770,7 @@ export default function SharedList() {
           open={addPlaceOpen}
           onClose={() => setAddPlaceOpen(false)}
           city={col.city ?? null}
+          countries={scopeCountries(col)}
           existingPlaces={items.map((it: any) => ({
             place_name: it.place_name, category: it.category ?? null, address: it.address ?? null,
             city: it.city ?? col.city ?? null,

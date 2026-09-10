@@ -133,7 +133,10 @@
     "photos_added_one": "Dodano zdjęcie",
     "photos_added_few": "Dodano {{count}} zdjęcia",
     "photos_added_many": "Dodano {{count}} zdjęć",
-    "dates_saved_multi": "Wyjazd na {{count}} dni - miejsca możesz rozłożyć na dni"
+    "dates_saved_multi": "Wyjazd na {{count}} dni - miejsca możesz rozłożyć na dni",
+    "name_saved": "Nazwa zapisana",
+    "name_failed": "Nie udało się zapisać nazwy",
+    "name_not_allowed": "Ta nazwa zawiera niedozwolone słowa"
   },
   "pick_date_desc": "Wybierz jeden dzień albo zakres - przy kilku dniach rozłożysz miejsca na dni",
   "confirm": {
@@ -169,7 +172,8 @@
     "invite_people": "Zaproś do wyjazdu",
     "expand_map": "Rozwiń mapę",
     "is_my_cover": "To jest Twoja okładka wyjazdu",
-    "set_my_cover": "Ustaw jako swoją okładkę wyjazdu"
+    "set_my_cover": "Ustaw jako swoją okładkę wyjazdu",
+    "rename_trip": "Zmień nazwę wyjazdu"
   },
   "send_reminder": "Wyślij przypomnienie",
   "publish_trip": "Opublikuj wyjazd",

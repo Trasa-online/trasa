@@ -130,7 +130,10 @@
     "photos_rejected_other": "{{count}} photos did not pass moderation",
     "photos_added_one": "Photo added",
     "photos_added_other": "{{count}} photos added",
-    "dates_saved_multi": "A {{count}}-day trip - you can spread the places across the days"
+    "dates_saved_multi": "A {{count}}-day trip - you can spread the places across the days",
+    "name_saved": "Name saved",
+    "name_failed": "Couldn't save the name",
+    "name_not_allowed": "That name contains words we do not allow"
   },
   "pick_date_desc": "Pick a single day or a range - with several days you can spread places across them",
   "confirm": {
@@ -164,7 +167,8 @@
     "invite_people": "Invite people to this trip",
     "expand_map": "Expand map",
     "is_my_cover": "This is your trip cover",
-    "set_my_cover": "Set as your trip cover"
+    "set_my_cover": "Set as your trip cover",
+    "rename_trip": "Rename trip"
   },
   "send_reminder": "Send reminder",
   "publish_trip": "Publish trip",

@@ -170,7 +170,10 @@
     "hint": "Move the map to point at a place",
     "nearby": "At this spot",
     "empty": "Nothing found here. Move the map a little.",
-    "locate": "My location"
+    "locate": "My location",
+    "search_placeholder": "Type a place name",
+    "reading": "Checking what's here…",
+    "add": "Add place {{place}}"
   },
   "map": {
     "day": "Day {{number}}"

@@ -311,7 +311,7 @@ export async function createListWithPlace(
 // Oba warianty to list_status='visited' (kuratorska lista, nie wishlista to_visit).
 export async function createListFromSavedPlaces(
   userId: string,
-  opts: { title: string; isPublic: boolean; places: PlaceForList[]; author?: ListAuthor; city?: string | null },
+  opts: { title: string; isPublic: boolean; places: PlaceForList[]; author?: ListAuthor; city?: string | null; countries?: string[] },
 ): Promise<string | null> {
   const { title, isPublic, places, author, city } = opts;
   const { data: col, error } = await (supabase as any)
@@ -320,6 +320,8 @@ export async function createListFromSavedPlaces(
       user_id: userId,
       title: title.trim() || i18n.t("save.new_list", { ns: "plan" }),
       city: city ?? null,
+      // Zasieg listy = KRAJE (2026-09-10). `city` zostaje dla starych list i podpisow.
+      countries: opts.countries ?? [],
       kind: "ranking",
       list_status: "visited",
       is_public: isPublic,

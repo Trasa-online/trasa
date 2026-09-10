@@ -24,13 +24,20 @@ const distKm = (a: { lat: number; lng: number }, b: { lat: number; lng: number }
 };
 
 // Wspoldzielona wyszukiwarka Google Places (textsearch przez proxy, debounce 350ms, >=2 znaki).
-// Opcjonalny `center` + `scopeKm` zawezaja wyniki (trasa/miasto); bez nich - globalnie (np. listy
-// multi-miasto). Zwraca top 6. Uzywane w [AddPlaceSheet] i [CreateFlowSheet].
+//
+// Zasieg (2026-09-10): `countries` to nowe zrodlo prawdy - wyjazd opisuja kraje, nie miasto.
+// Kazdy kraj to OSOBNE zapytanie ("ramen Japonia", "ramen Korea Poludniowa"), bo Google nie
+// rozumie listy krajow w jednej frazie - zwrocilby smiec albo nic. Limit trzech krajow trzyma
+// koszt w ryzach; przy wiecej i tak liczy sie to, co user wpisal, a nie pelna lista.
+// `city` zostaje dla starych wyjazdow (bez krajow), `center` + `scopeKm` dla zawezenia miejskiego.
 export function usePlaceSearch(
   query: string,
-  opts?: { city?: string | null; center?: { lat: number; lng: number } | null; scopeKm?: number; enabled?: boolean },
+  opts?: { city?: string | null; countries?: string[] | null; center?: { lat: number; lng: number } | null; scopeKm?: number; enabled?: boolean },
 ) {
   const city = opts?.city ?? null;
+  // Stabilny klucz zaleznosci - tablica z propsa ma nowa referencje przy kazdym renderze,
+  // a bez tego efekt strzelalby do Google w kolko.
+  const countriesKey = (opts?.countries ?? []).join("|");
   const center = opts?.center ?? null;
   const scopeKm = opts?.scopeKm ?? 20;
   const enabled = opts?.enabled ?? true;
@@ -45,13 +52,27 @@ export function usePlaceSearch(
     setSearching(true);
     const t = setTimeout(async () => {
       try {
-        const { data } = await supabase.functions.invoke("google-places-proxy", {
-          body: { action: "textsearch", query: `${query} ${city ?? ""}`.trim() },
-        });
+        const countries = countriesKey ? countriesKey.split("|").slice(0, 3) : [];
+        const scopes = countries.length ? countries : [city ?? ""];
+        const responses = await Promise.all(scopes.map((scope) =>
+          supabase.functions.invoke("google-places-proxy", {
+            body: { action: "textsearch", query: `${query} ${scope}`.trim() },
+          })));
         if (!alive) return;
-        setBlocked(!!(data as any)?.quota_exceeded);
-        const all = ((data as any)?.results ?? []) as any[];
-        const scoped = center
+        setBlocked(responses.some((r) => !!(r.data as any)?.quota_exceeded));
+        // Scalanie wynikow z kilku krajow: dedup po nazwie+adresie, kolejnosc zapytan
+        // (czyli kolejnosc krajow wybranych przez usera) rozstrzyga remisy.
+        const seen = new Set<string>();
+        const all = responses.flatMap((r) => ((r.data as any)?.results ?? []) as any[])
+          .filter((r) => {
+            const k = `${String(r.name ?? "").toLowerCase()}|${String(r.full_address ?? "").toLowerCase()}`;
+            if (seen.has(k)) return false;
+            seen.add(k);
+            return true;
+          });
+        // Filtr promieniem ma sens tylko przy zasiegu MIEJSKIM. Przy krajach centroida
+        // trasy lezy gdzies w polowie drogi i wycinalaby poprawne wyniki.
+        const scoped = center && !countries.length
           ? all.filter((r) => r.latitude == null || r.longitude == null || distKm(center, { lat: r.latitude, lng: r.longitude }) <= scopeKm)
           : all;
         setResults(scoped.slice(0, 6).map((r) => ({
@@ -62,7 +83,7 @@ export function usePlaceSearch(
       finally { if (alive) setSearching(false); }
     }, 350);
     return () => { alive = false; clearTimeout(t); };
-  }, [query, searchMode, city, center, scopeKm, enabled]);
+  }, [query, searchMode, city, countriesKey, center, scopeKm, enabled]);
 
   return { results, searching, blocked, searchMode };
 }

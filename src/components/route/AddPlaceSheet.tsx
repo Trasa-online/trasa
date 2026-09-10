@@ -37,7 +37,8 @@ const placeSubtitle = (p: { city?: string | null; address?: string | null }) => 
 interface Props {
   open: boolean;
   onClose: () => void;
-  city?: string | null;                 // kontekst miasta do wyszukiwarki Google
+  city?: string | null;                 // kontekst miasta do wyszukiwarki Google (stare wyjazdy)
+  countries?: string[] | null;          // zasieg krajowy wyjazdu/listy (2026-09-10) - ma pierwszenstwo
   existingPlaces?: PlaceForList[];      // miejsca JUŻ w tej trasie/liście - pokazane u góry (info)
   onAdd: (places: PlaceForList[]) => Promise<void> | void;   // zapis (pins.insert / addPlaceToList)
 }
@@ -46,7 +47,7 @@ interface Props {
 // Domyslnie: siatka Twoich zapisanych + kafelek "Dodaj nowe miejsce" (fokus na wyszukiwarke).
 // Wpisanie frazy (>=2 znaki) -> Google Places (proxy) -> klik wyniku = nowy zaznaczony kafelek +
 // odblokowanie "Dalej". "Dalej" zapisuje wybrane miejsca (onAdd).
-export default function AddPlaceSheet({ open, onClose, city, existingPlaces, onAdd }: Props) {
+export default function AddPlaceSheet({ open, onClose, city, countries, existingPlaces, onAdd }: Props) {
   const { t } = useTranslation("route");
   const { user } = useAuth();
   const [selected, setSelected] = useState<PlaceForList[]>([]);
@@ -92,6 +93,10 @@ export default function AddPlaceSheet({ open, onClose, city, existingPlaces, onA
     },
   });
   const center = existingCentroid ?? geoCenter;
+  // Zasieg KRAJOWY (2026-09-10). Gdy wyjazd ma kraje, wyszukiwarka pyta o kazdy z osobna,
+  // a promien 20 km wokol srodka przestaje obowiazywac - przy kraju nie ma "srodka".
+  const scopeCountries = (countries ?? []).filter(Boolean);
+  const countriesKey = scopeCountries.join("|");
 
   useEffect(() => {
     if (open) { setSelected([]); setManual([]); setQuery(""); setResults([]); setBlocked(false); setAdding(false); setDetailPlace(null); setOpenLists(new Set()); }
@@ -123,16 +128,26 @@ export default function AddPlaceSheet({ open, onClose, city, existingPlaces, onA
     setSearching(true);
     const t = setTimeout(async () => {
       try {
-        const { data } = await supabase.functions.invoke("google-places-proxy", { body: { action: "textsearch", query: `${query} ${city ?? ""}`.trim() } });
+        // Kazdy kraj to osobne zapytanie - Google nie rozumie listy krajow w jednej frazie.
+        // Limit trzech trzyma koszt w ryzach.
+        const scopes = countriesKey ? countriesKey.split("|").slice(0, 3) : [city ?? ""];
+        const responses = await Promise.all(scopes.map((scope) =>
+          supabase.functions.invoke("google-places-proxy", { body: { action: "textsearch", query: `${query} ${scope}`.trim() } })));
         if (!alive) return;
-        setBlocked(!!(data as any)?.quota_exceeded);
-        const all = ((data as any)?.results ?? []) as any[];
+        setBlocked(responses.some((r) => !!(r.data as any)?.quota_exceeded));
+        const seenKeys = new Set<string>();
+        const all = responses.flatMap((r) => ((r.data as any)?.results ?? []) as any[]).filter((r) => {
+          const k = `${String(r.name ?? "").toLowerCase()}|${String(r.full_address ?? "").toLowerCase()}`;
+          if (seenKeys.has(k)) return false;
+          seenKeys.add(k);
+          return true;
+        });
         // "W obrebie miasta" (~20km od srodka) = KOLEJNOSC, nie odsiew. Wczesniej bylo twarde
         // `.filter()` i kazdy przypadek, w ktorym srodek byl zly albo nieznany, konczyl sie pusta
         // lista - user widzial "brak wynikow" dla miejsca, ktore Google normalnie zwraca.
         // Teraz bliskie ida na gore, dalekie na dol: ranking dalej chroni przed "Loving Hut" z
         // drugiego konca swiata, ale wyszukiwarka NIGDY nie oddaje pustki, gdy Google cos znalazl.
-        const near = (r: any) => !center || r.latitude == null || r.longitude == null
+        const near = (r: any) => !center || countriesKey || r.latitude == null || r.longitude == null
           || distKm(center, { lat: r.latitude, lng: r.longitude }) <= SCOPE_KM;
         const ordered = [...all.filter(near), ...all.filter((r) => !near(r))];
         setResults(ordered.slice(0, 6).map((r) => ({
@@ -146,7 +161,7 @@ export default function AddPlaceSheet({ open, onClose, city, existingPlaces, onA
       finally { if (alive) setSearching(false); }
     }, 350);
     return () => { alive = false; clearTimeout(t); };
-  }, [query, searchMode, city, center]);
+  }, [query, searchMode, city, countriesKey, center]);
 
   const isSel = (p: PlaceForList) => selected.some((s) => keyOf(s) === keyOf(p));
   const toggle = (p: PlaceForList) => setSelected((prev) => prev.some((s) => keyOf(s) === keyOf(p)) ? prev.filter((s) => keyOf(s) !== keyOf(p)) : [...prev, p]);
@@ -388,7 +403,7 @@ export default function AddPlaceSheet({ open, onClose, city, existingPlaces, onA
 
     {/* Miejsce wybrane z mapy wpada w te sama sciezke, co wynik wyszukiwarki (pickGoogle),
         wiec od razu jest zaznaczone i odblokowuje "Dodaj". */}
-    <PlaceMapPicker open={mapOpen} onClose={() => setMapOpen(false)} city={city} center={center} onPick={(p) => pickGoogle(p)} />
+    <PlaceMapPicker open={mapOpen} onClose={() => setMapOpen(false)} city={city} countries={scopeCountries} center={center} onPick={(p) => pickGoogle(p)} />
     {/* Wizytowka miejsca (klik w wiersz). Vaul-drawer nakłada się na arkusz dodawania. */}
     <PlaceSwiperDetail
       open={!!detailPlace} onOpenChange={(o) => { if (!o) setDetailPlace(null); }} place={detailPlace}
