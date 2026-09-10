@@ -174,7 +174,8 @@
     "locate": "My location",
     "search_placeholder": "Type a place name",
     "reading": "Checking what's here…",
-    "add": "Add place {{place}}"
+    "add": "Add place {{place}}",
+    "name_placeholder": "What do you call this place?"
   },
   "map": {
     "day": "Day {{number}}"

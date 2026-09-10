@@ -464,7 +464,7 @@ Poniższe elementy wyglądają na pozostałości po poprzednich pivotach:
   - ⚠️ Uwaga: `SwipeCard.tsx` w `discover/` vs `plan-wizard/PlaceSwiper.tsx` — sprawdź co jest aktualnie używane
 
 **Zależności NPM (nieużywane):**
-- `qrcode.react` — 0 użyć w kodzie
+- ~~`qrcode.react`~~ — UŻYWANE od 2026-09-10 (kod QR do TestFlight w [ReferralCard](src/components/profile/ReferralCard.tsx)), NIE usuwać
 - `canvas-confetti` — 0 użyć w kodzie
 - `recharts` (poza ikonką z lucide) — komponent chart.tsx istnieje ale nikt go nie importuje
 - `embla-carousel-react` — carousel.tsx istnieje ale nie jest używany na stronach

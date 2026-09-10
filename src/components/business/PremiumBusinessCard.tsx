@@ -359,7 +359,7 @@ function HeroPhotoCarousel({ photos, placeName, category, onExpand, onClose, loa
 
   return (
     <div
-      className="relative shrink-0 bg-[#fcede3] overflow-hidden w-full aspect-[4/3] rounded-t-3xl"
+      className="relative shrink-0 bg-[#FEFEFE] overflow-hidden w-full aspect-[4/3] rounded-t-3xl"
       {...swipePhotos}
     >
       <div className="absolute top-0 left-0 right-0 h-7 flex items-center justify-center z-30 pointer-events-none">

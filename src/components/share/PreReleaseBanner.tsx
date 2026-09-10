@@ -13,8 +13,7 @@ import { isWeb } from "@/lib/platform";
 import { TrasaLogo } from "@/components/TrasaLogo";
 import { useTranslation } from "react-i18next";
 
-/** Zapisy do testow przedpremierowych (TestFlight). Do premiery zastapi to link do App Store. */
-const TESTFLIGHT_URL = "https://testflight.apple.com/join/a9rtGFuq";
+import { TESTFLIGHT_URL } from "@/lib/testflight";
 
 export default function PreReleaseBanner() {
   const { t } = useTranslation("sharing");

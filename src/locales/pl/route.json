@@ -179,7 +179,8 @@
     "locate": "Moja lokalizacja",
     "search_placeholder": "Wpisz nazwę miejsca",
     "reading": "Sprawdzam, co tu jest…",
-    "add": "Dodaj miejsce {{place}}"
+    "add": "Dodaj miejsce {{place}}",
+    "name_placeholder": "Jak nazwiesz to miejsce?"
   },
   "map": {
     "day": "Dzień {{number}}"
