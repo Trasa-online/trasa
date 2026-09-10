@@ -90,7 +90,7 @@ const GuestWelcomeSheet = () => {
           <div className="flex flex-col gap-2 mt-1">
             <button
               onClick={handleSignUp}
-              className="w-full py-3 rounded-full bg-primary text-white font-bold text-sm shadow-md shadow-orange-500/20 active:scale-[0.97] transition-transform"
+              className="w-full py-3 rounded-full bg-primary text-white font-bold text-sm active:scale-[0.97] transition-transform"
             >{t("guest.create")}</button>
             <button
               onClick={handleClose}

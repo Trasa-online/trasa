@@ -2467,7 +2467,7 @@ const ReviewSummary = () => {
             <div className="flex flex-col gap-2">
               <button
                 onClick={() => { togglePublic(true); setShowSharePrompt(false); notify.success(t("toast.route_public")); }}
-                className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-sm active:scale-[0.97] transition-transform shadow-md shadow-orange-500/20"
+                className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-sm active:scale-[0.97] transition-transform"
               >
                 {t("prompt.confirm")}
               </button>

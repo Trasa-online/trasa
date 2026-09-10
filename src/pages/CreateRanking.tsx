@@ -999,12 +999,12 @@ const CreateRanking = () => {
             // Guzik NIE jest `disabled` - klik przy niespelnionych warunkach pokazuje toast
             // z powodem (inaczej user nie wie czemu wyszarzone). Wyszarzenie = wizualny sygnal.
             <button onClick={goNext}
-              className={`w-full py-3.5 rounded-2xl bg-primary text-white font-bold text-sm shadow-md shadow-orange-500/20 active:scale-[0.98] transition-transform flex items-center justify-center gap-2 ${canGoNext ? "" : "opacity-50"}`}>
+              className={`w-full py-3.5 rounded-2xl bg-primary text-white font-bold text-sm active:scale-[0.98] transition-transform flex items-center justify-center gap-2 ${canGoNext ? "" : "opacity-50"}`}>
               {t("cta.next")} <ChevronRight className="h-4 w-4" />
             </button>
           ) : (
             <button onClick={publish} disabled={!canPublish}
-              className="w-full py-3.5 rounded-2xl bg-primary text-white font-bold text-sm shadow-md shadow-orange-500/20 active:scale-[0.98] transition-transform disabled:opacity-50">
+              className="w-full py-3.5 rounded-2xl bg-primary text-white font-bold text-sm active:scale-[0.98] transition-transform disabled:opacity-50">
               {publishing ? <Loader2 className="h-5 w-5 animate-spin mx-auto" /> : (editId ? t("cta.save") : t("cta.publish"))}
             </button>
           )}

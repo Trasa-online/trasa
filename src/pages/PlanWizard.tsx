@@ -773,7 +773,7 @@ const PlanWizard = () => {
 
             <button
               onClick={() => setCategoryDrawerOpen(false)}
-              className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-sm active:scale-[0.97] transition-transform shadow-md shadow-orange-500/20"
+              className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-sm active:scale-[0.97] transition-transform"
             >
               {t("show_places")}
             </button>
@@ -825,7 +825,7 @@ const PlanWizard = () => {
             <div className="flex flex-col gap-2">
               <button
                 onClick={() => { setDupTrip(null); navigate("/home"); }}
-                className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-sm active:scale-[0.97] transition-transform shadow-md shadow-orange-500/20"
+                className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-sm active:scale-[0.97] transition-transform"
               >
                 {t("dup_continue")}
               </button>

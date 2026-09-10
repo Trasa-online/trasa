@@ -253,7 +253,7 @@ export default function StartWyjazd() {
       <div className="shrink-0 border-t border-border/20 px-4 pt-3 pb-[max(16px,env(safe-area-inset-bottom))] bg-background">
         <button
           onClick={() => { haptics.light(); navigate("/wyjazd/nowy"); }}
-          className="w-full h-12 rounded-2xl bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform shadow-md shadow-orange-500/20"
+          className="w-full h-12 rounded-2xl bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
         >
           <Plus className="h-4 w-4" strokeWidth={2.5} />
           {t("start.start_fresh")}

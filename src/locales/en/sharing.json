@@ -268,7 +268,11 @@
     "open_trip": "Open",
     "sheet_title_one": "Add {{count}} place to a trip",
     "sheet_title_other": "Add {{count}} places to a trip",
-    "no_drafts": "You have no draft trip yet. Use “Create a trip” and the places will go into a new one."
+    "no_drafts": "You have no draft trip yet. Tap to start one from the selected places.",
+    "new_trip": "New trip",
+    "hide_new": "Hide new trip",
+    "new_trip_name": "Trip name",
+    "create_trip_aria": "Create a trip from the selected places"
   },
   "fabs": {
     "expand": "Show trip actions",

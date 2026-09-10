@@ -245,7 +245,7 @@ const BottomNav = () => {
             <div className="flex flex-col gap-2">
               <button
                 onClick={handleReuseAccept}
-                className="w-full py-3 rounded-full bg-primary text-white font-bold text-sm active:scale-[0.97] transition-transform shadow-md shadow-orange-500/20"
+                className="w-full py-3 rounded-full bg-primary text-white font-bold text-sm active:scale-[0.97] transition-transform"
               >
                 {t("reuse_accept")}
               </button>

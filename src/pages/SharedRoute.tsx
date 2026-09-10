@@ -285,12 +285,20 @@ export default function SharedRoute() {
   const [editingName, setEditingName] = useState(false);
   const [nameVal, setNameVal] = useState("");
   const [savingName, setSavingName] = useState(false);
+  // Czy wlasnie edytowany jest OPIS CALEGO wyjazdu. Osobno od `noteEditing` (ten dotyczy takze
+  // notek przy miejscach), bo sluzy do jednej rzeczy: schowania statycznego opisu w naglowku,
+  // zeby pole edycji nie stalo tuz pod tym samym tekstem (zgloszenie Nat 2026-09-10).
+  const [descEditing, setDescEditing] = useState(false);
   // Wybieranie MIEJSC z cudzego wyjazdu (2026-09-10). Zastapilo zapisywanie calej cudzej
   // trasy: ludzie i tak nie chcieli cudzego planu w calosci, tylko dwoch-trzech miejsc z niego.
   const [pickMode, setPickMode] = useState(false);
   const [pickedIds, setPickedIds] = useState<Set<string>>(new Set());
   const [pickTargetOpen, setPickTargetOpen] = useState(false);   // arkusz "do ktorego wyjazdu"
   const [pickBusy, setPickBusy] = useState(false);
+  // Zakladanie NOWEGO wyjazdu wprost z arkusza "Dodaj do wyjazdu" (prosba Nat 2026-09-10) -
+  // ten sam wzorzec co "nowa lista" w arkuszu zapisu miejsca: "+" w naglowku odslania pole nazwy.
+  const [showNewTrip, setShowNewTrip] = useState(false);
+  const [newTripName, setNewTripName] = useState("");
   // Wlasne wyjazdy ROBOCZE - cel dla "Dodaj do wyjazdu". Opublikowane wspomnienie to zamknieta
   // historia, wiec doklejanie do niego cudzych miejsc nie ma sensu.
   const { data: myDraftTrips = [] } = useQuery({
@@ -870,7 +878,7 @@ export default function SharedRoute() {
   // kafelka, bo w spoczynku widok ma byc do czytania, a nie obwieszony checkboxami.
   const canPick = !!user && !canEdit;
   const pickedPins = (pins as any[]).filter((p) => pickedIds.has(p.id));
-  const exitPick = () => { setPickMode(false); setPickedIds(new Set()); };
+  const exitPick = () => { setPickMode(false); setPickedIds(new Set()); setShowNewTrip(false); setNewTripName(""); };
   const togglePicked = (pinId: string) => {
     haptics.light();
     setPickedIds((prev) => { const n = new Set(prev); n.has(pinId) ? n.delete(pinId) : n.add(pinId); return n; });
@@ -894,12 +902,12 @@ export default function SharedRoute() {
   }));
 
   /** "Utwórz wyjazd do {kraj}" - nowy szkic z zaznaczonych miejsc, od razu w nim ladujemy. */
-  const createTripFromPicked = async () => {
+  const createTripFromPicked = async (customTitle?: string) => {
     if (!user || !pickedPins.length) return;
     setPickBusy(true);
     const countries = scopeCountries(route);
     const newId = await createWyjazdFromPlaces(
-      user.id, route.city ?? null, cityLabel, pickedAsPlaces(), undefined,
+      user.id, route.city ?? null, customTitle?.trim() || cityLabel, pickedAsPlaces(), undefined,
       { countries, tripType: "planning" },
     );
     setPickBusy(false);
@@ -2008,7 +2016,7 @@ export default function SharedRoute() {
           {route.ai_highlight && (
             <p className="text-[17px] font-bold leading-snug text-foreground mt-3">„{route.ai_highlight}"</p>
           )}
-          {routeDescription && (
+          {routeDescription && !descEditing && (
             <p className="text-sm text-muted-foreground leading-relaxed mt-3">{routeDescription}</p>
           )}
           {/* Tagi CALEJ TRASY usuniete (prosba Nat 2026-08-31) - widok wyjazdu ma byc czysty.
@@ -2044,7 +2052,7 @@ export default function SharedRoute() {
                 addLabel={t("route:note.add_description")}
                 editLabel={t("route:note.edit_description")}
                 onSave={saveTripDescription}
-                onEditingChange={setNoteEditing}
+                onEditingChange={(v) => { setNoteEditing(v); setDescEditing(v); }}
               />
             ) : canEdit ? (
               <PlaceNoteEditor
@@ -2311,12 +2319,51 @@ export default function SharedRoute() {
       )}
 
       {/* "Dodaj do wyjazdu" - wybor wlasnego szkicu docelowego. */}
-      <Sheet open={pickTargetOpen} onOpenChange={(o) => { if (!o) setPickTargetOpen(false); }}>
+      <Sheet open={pickTargetOpen} onOpenChange={(o) => { if (!o) { setPickTargetOpen(false); setShowNewTrip(false); setNewTripName(""); } }}>
         <SheetContent side="bottom" className="rounded-t-3xl px-0 pt-5 pb-[max(16px,env(safe-area-inset-bottom))] max-h-[76dvh] flex flex-col">
-          <SheetTitle className="px-5 text-lg font-black">{t("pick.sheet_title", { count: pickedIds.size })}</SheetTitle>
+          <div className="flex items-center justify-between gap-3 px-5 shrink-0">
+            <SheetTitle className="text-lg font-black">{t("pick.sheet_title", { count: pickedIds.size })}</SheetTitle>
+            <button
+              type="button"
+              onClick={() => { haptics.light(); setShowNewTrip((v) => !v); }}
+              aria-label={showNewTrip ? t("pick.hide_new") : t("pick.new_trip")}
+              className="h-9 w-9 rounded-full bg-muted flex items-center justify-center text-foreground active:scale-90 transition-transform shrink-0"
+            >
+              <Plus className={`h-5 w-5 transition-transform ${showNewTrip ? "rotate-45" : ""}`} strokeWidth={2.25} />
+            </button>
+          </div>
+          {/* Nowy wyjazd: pole nazwy + "+" - dokladnie jak "nowa lista" w arkuszu zapisu miejsca. */}
+          {showNewTrip && (
+            <div className="px-5 pt-3 shrink-0">
+              <div className="flex items-center gap-1 h-12 pl-4 pr-1.5 rounded-2xl border border-border bg-background">
+                <input
+                  autoFocus
+                  value={newTripName}
+                  onChange={(e) => setNewTripName(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter" && newTripName.trim()) void createTripFromPicked(newTripName); }}
+                  placeholder={t("pick.new_trip_name")}
+                  className="flex-1 min-w-0 bg-transparent text-base text-foreground placeholder:text-muted-foreground/50 focus:outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={() => void createTripFromPicked(newTripName)}
+                  disabled={pickBusy || !newTripName.trim()}
+                  aria-label={t("pick.create_trip_aria")}
+                  className="h-9 w-9 rounded-full bg-muted flex items-center justify-center shrink-0 text-foreground active:scale-90 transition-transform disabled:opacity-40"
+                >
+                  {pickBusy ? <Loader2 className="h-5 w-5 animate-spin" /> : <Plus className="h-5 w-5" />}
+                </button>
+              </div>
+            </div>
+          )}
           <div className="flex-1 min-h-0 overflow-y-auto mt-3">
             {(myDraftTrips as any[]).length === 0 ? (
-              <p className="px-5 py-8 text-center text-sm text-muted-foreground leading-relaxed">{t("pick.no_drafts")}</p>
+              <button
+                onClick={() => { haptics.light(); setShowNewTrip(true); }}
+                className="w-full px-5 py-8 text-center active:opacity-70 transition-opacity"
+              >
+                <span className="block text-sm text-muted-foreground leading-relaxed">{t("pick.no_drafts")}</span>
+              </button>
             ) : (
               (myDraftTrips as any[]).map((tr) => (
                 <button

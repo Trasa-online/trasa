@@ -354,7 +354,7 @@ const RouteSummaryDialog = ({
                       <div key={idx} className="flex items-start gap-3.5">
                         {/* Stepper */}
                         <div className="flex flex-col items-center shrink-0 pt-0.5">
-                          <div className="h-7 w-7 rounded-full bg-primary flex items-center justify-center text-[11px] font-bold text-white shadow-sm shadow-primary/30">
+                          <div className="h-7 w-7 rounded-full bg-primary flex items-center justify-center text-[11px] font-bold text-white">
                             {idx + 1}
                           </div>
                           {!isLast && (
@@ -431,7 +431,7 @@ const RouteSummaryDialog = ({
                     setShowGuestAuth(false);
                     openAuthDrawer({ mode: "register", hint: "save_route" });
                   }}
-                  className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-base active:scale-[0.97] transition-transform shadow-lg shadow-primary/25"
+                  className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-base active:scale-[0.97] transition-transform"
                 >
                   {t("summary.guest_cta")}
                 </button>

@@ -944,7 +944,7 @@ export default function ComposeWyjazd() {
       {!searchFocused && (
         <div className="shrink-0 border-t border-border/20 px-4 pt-3 pb-[max(16px,env(safe-area-inset-bottom))] bg-background flex items-center gap-2">
           <button onClick={() => confirm(nav.mode !== "future")} disabled={creating}
-            className="flex-1 h-12 rounded-2xl bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform shadow-md shadow-orange-500/20 disabled:opacity-60">
+            className="flex-1 h-12 rounded-2xl bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-60">
             {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : (nav.mode === "future"
               ? <>{t("compose.save_trip")} <Check className="h-4 w-4" /></>
               : <>{t("go_suggestions")}<ArrowRight className="h-4 w-4" /></>)}

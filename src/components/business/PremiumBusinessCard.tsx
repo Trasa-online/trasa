@@ -533,7 +533,7 @@ function EventBannerSection({ data }: SectionProps) {
   if (!data.eventTitle) return null;
   // Badge promocji ZAWSZE pomaranczowy - nie personalizowany przez biznes.
   return (
-    <div className="rounded-full bg-gradient-to-r from-[#F4A259] to-[#F9662B] px-4 py-3 flex items-center justify-center text-white font-bold text-sm shadow-md shadow-orange-500/20 text-center leading-tight">
+    <div className="rounded-full bg-gradient-to-r from-[#F4A259] to-[#F9662B] px-4 py-3 flex items-center justify-center text-white font-bold text-sm text-center leading-tight">
       {data.eventTitle}
     </div>
   );

@@ -443,10 +443,11 @@ export default function PublicProfile() {
                   description={l.description}
                   tiles={l.tiles}
                   counts={{ saves: Math.max(0, (l.saves_count ?? 0) + delta(isListSaved(l.id), initSavedLists.has(l.id))), views: l.views_count ?? 0 }}
+                  // Sam licznik przy dacie (prosba Nat 2026-09-10). Stopka z osobna zakladka
+                  // zostawala pod karta jako samotna ikona bez liczby - druga informacja o tym
+                  // samym. Zapisanie listy zyje w jej widoku, gdzie stoi pelne CTA.
                   countsInHeader
                   onOpen={() => navigate(`/lista/${l.id}`)}
-                  onSave={canInteract ? () => onListSave(l) : undefined}
-                  saved={isListSaved(l.id)}
                 />
               ))}
               </div>

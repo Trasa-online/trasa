@@ -81,7 +81,7 @@ function EmptySection({ icon, title, sub, cta, onCta, cta2, onCta2, variant }: {
       {(cta || cta2) && (
         <div className="flex flex-col gap-2 mt-4">
           {cta && onCta && (
-            <button onClick={onCta} className="px-5 py-3 rounded-full bg-primary text-white text-sm font-bold active:scale-[0.97] transition-transform shadow-md shadow-orange-500/20">{cta}</button>
+            <button onClick={onCta} className="px-5 py-3 rounded-full bg-primary text-white text-sm font-bold active:scale-[0.97] transition-transform">{cta}</button>
           )}
           {cta2 && onCta2 && (
             <button onClick={onCta2} className="px-5 py-2.5 rounded-full bg-white border border-orange-200 text-primary text-sm font-bold active:scale-[0.97] transition-transform">{cta2}</button>

@@ -680,19 +680,22 @@ export default function SharedList() {
                 dalej cudzej listy to sedno tego widoku, a link i tak jest publiczny. Edycja i
                 usuwanie zostaja przy wlascicielu. */}
             <div className="shrink-0 flex items-center gap-2">
+              {/* Olowek (zmiana nazwy) PIERWSZY, udostepnianie za nim - ta sama kolejnosc co
+                  na wyjezdzie (prosba Nat 2026-09-10), zeby te dwa widoki nie mialy ikon
+                  poprzestawianych wzgledem siebie. */}
+              {isOwner && (
+                <button
+                  onClick={() => { setNameVal(col.title || ""); setEditingName(true); }}
+                  aria-label={t("aria.rename_list")}
+                  disabled={savingName}
+                  className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center active:scale-90 transition-transform disabled:opacity-50"
+                >
+                  <Pencil className="h-4 w-4 text-foreground" />
+                </button>
+              )}
               <button onClick={handleShare} onContextMenu={(e) => { e.preventDefault(); handleShareLink(); }} aria-label={t("aria.share")} className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center active:scale-90 transition-transform"><Share2 className="h-4 w-4 text-foreground" /></button>
               {isOwner && (
-                <>
-                  <button
-                    onClick={() => { setNameVal(col.title || ""); setEditingName(true); }}
-                    aria-label={t("aria.rename_list")}
-                    disabled={savingName}
-                    className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center active:scale-90 transition-transform disabled:opacity-50"
-                  >
-                    <Pencil className="h-4 w-4 text-foreground" />
-                  </button>
-                  <button onClick={() => setAskDelete(true)} aria-label={t("aria.delete_list")} className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center active:scale-90 transition-transform"><Trash2 className="h-4 w-4 text-destructive" /></button>
-                </>
+                <button onClick={() => setAskDelete(true)} aria-label={t("aria.delete_list")} className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center active:scale-90 transition-transform"><Trash2 className="h-4 w-4 text-destructive" /></button>
               )}
             </div>
           </div>
@@ -758,7 +761,7 @@ export default function SharedList() {
           <button onClick={() => setAddPlaceOpen(true)} className="w-full py-3 rounded-full border border-border bg-background text-foreground font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform">
             <Plus className="h-4 w-4" />{t("cta.add_place")}</button>
         ) : (
-          <button onClick={toggleSave} className="w-full py-3 rounded-full bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform shadow-lg shadow-primary/25">
+          <button onClick={toggleSave} className="w-full py-3 rounded-full bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform">
             <Bookmark className={`h-4 w-4 ${saved ? "fill-current" : ""}`} />{saved ? t("toast.list_saved") : t("cta.save_list")}
           </button>
         )}

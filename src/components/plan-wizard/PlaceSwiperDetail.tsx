@@ -413,7 +413,14 @@ const PlaceSwiperDetail = ({
         <VaulDrawer.Overlay className="fixed inset-0 z-50 bg-black/60" />
         <VaulDrawer.Content
           aria-describedby={undefined}
-          className="fixed inset-x-0 bottom-0 z-50 flex flex-col rounded-t-3xl bg-[#FEFEFE] overflow-hidden outline-none focus:outline-none"
+          /* Tlo arkusza PEACHY, nie biale (zgloszenie Nat 2026-09-10, druga proba).
+             iOS odbija wewnetrzny kontener przewijania rubber-bandem i `overscroll-behavior`
+             tego NIE wylacza w WKWebView - odbicie zostaje niezaleznie od nas. To, co widac
+             w odslonietym pasku, to tlo arkusza: bylo biale i wygladalo jak dziura nad
+             zdjeciem. Peachy to ten sam podklad, ktory stoi pod kazdym zdjeciem w aplikacji
+             (i pod samym hero, gdy zdjecia brak), wiec odbicie czyta sie jako ramka kadru,
+             a nie jako blad. Wlasciwa tresc nizej i tak maluje sie na #FEFEFE. */
+          className="fixed inset-x-0 bottom-0 z-50 flex flex-col rounded-t-3xl bg-[#fcede3] overflow-hidden outline-none focus:outline-none"
           style={{ height: "min(96dvh, calc(100dvh - env(safe-area-inset-top, 0px) - 0.5rem))" }}
         >
           <VaulDrawer.Title className="sr-only">{place.place_name}</VaulDrawer.Title>
@@ -474,7 +481,7 @@ const PlaceSwiperDetail = ({
               {onLike && (
                 <button
                   onClick={handleLike}
-                  className="flex-1 h-11 rounded-full bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 shadow-xl shadow-primary/30 active:scale-[0.97] transition-transform"
+                  className="flex-1 h-11 rounded-full bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.97] transition-transform"
                 >
                   {t("save_place")}
                   <Bookmark className="h-4 w-4" strokeWidth={2.2} />

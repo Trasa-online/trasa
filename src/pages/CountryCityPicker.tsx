@@ -108,7 +108,7 @@ export default function CountryCityPicker() {
       </div>
 
       <div className="px-4 pt-3 pb-[calc(14px+env(safe-area-inset-bottom,0px))] shrink-0">
-        <button onClick={next} className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-base active:scale-[0.98] transition-transform shadow-lg shadow-primary/25">{t("common:buttons.next")}</button>
+        <button onClick={next} className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-base active:scale-[0.98] transition-transform">{t("common:buttons.next")}</button>
       </div>
     </div>
   );

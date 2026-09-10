@@ -184,7 +184,7 @@ const MatchModal = ({ likedPlaces, onConfirm, onDismiss }: {
         <div className="w-full flex flex-col gap-2.5">
           <button
             onClick={onConfirm}
-            className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-base flex items-center justify-center gap-2 active:scale-[0.97] transition-transform shadow-lg shadow-primary/25"
+            className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-base flex items-center justify-center gap-2 active:scale-[0.97] transition-transform"
           >
             {t("match_modal.confirm")}
             <ArrowRight className="h-4 w-4" />
@@ -232,7 +232,7 @@ const GuestUpsellModal = ({ onSignUp, onDismiss }: { onSignUp: () => void; onDis
       <div className="flex flex-col gap-2.5">
         <button
           onClick={onSignUp}
-          className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-base flex items-center justify-center gap-2 active:scale-[0.97] transition-transform shadow-lg shadow-primary/25"
+          className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-base flex items-center justify-center gap-2 active:scale-[0.97] transition-transform"
         >
           {t("upsell.cta")}
           <ArrowRight className="h-4 w-4" />
@@ -617,7 +617,7 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
             }
             className={cn(
               "flex-1 py-3 rounded-full font-bold text-sm shadow-xl active:scale-[0.97] transition-transform",
-              place.businessColorButton ? "" : "bg-primary text-white shadow-primary/30"
+              place.businessColorButton ? "" : "bg-primary text-white"
             )}
           >
             {t("add")}
@@ -765,7 +765,7 @@ const EmptyState = ({
         </div>
         <button
           onClick={() => (onGoToMatches ? onGoToMatches() : onProceed())}
-          className="px-8 py-3.5 rounded-full bg-primary text-white font-bold text-sm flex items-center gap-2 active:scale-[0.97] transition-transform shadow-lg shadow-primary/25"
+          className="px-8 py-3.5 rounded-full bg-primary text-white font-bold text-sm flex items-center gap-2 active:scale-[0.97] transition-transform"
         >
           {onGoToMatches ? t("empty.go_saved_cta") : t("empty.plan_from_places", { count: likedPlaces.length })}
           <ArrowRight className="h-4 w-4" />
@@ -846,7 +846,7 @@ const EmptyState = ({
           "w-full py-3.5 rounded-full text-sm font-semibold active:scale-[0.97] transition-transform",
           matchedRoutes.length > 0
             ? "border border-border text-muted-foreground bg-card mt-1"
-            : "bg-primary text-white shadow-lg shadow-primary/25"
+            : "bg-primary text-white"
         )}
       >
         {matchedRoutes.length > 0

@@ -294,7 +294,7 @@ const CityPicker = ({ onConfirm }: CityPickerProps) => {
             "w-full rounded-full text-base font-semibold border-0 shadow-lg",
             isComingSoon
               ? "bg-muted text-muted-foreground shadow-none cursor-default"
-              : "bg-primary hover:bg-primary/90 text-white shadow-primary/20"
+              : "bg-primary hover:bg-primary/90 text-white"
           )}
         >
           {isComingSoon ? t("city_picker.coming_soon_cta") : t("city_picker.next")}

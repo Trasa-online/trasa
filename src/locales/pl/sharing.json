@@ -278,7 +278,11 @@
     "sheet_title_one": "Dodaj {{count}} miejsce do wyjazdu",
     "sheet_title_few": "Dodaj {{count}} miejsca do wyjazdu",
     "sheet_title_many": "Dodaj {{count}} miejsc do wyjazdu",
-    "no_drafts": "Nie masz jeszcze roboczego wyjazdu. Użyj „Utwórz wyjazd”, a miejsca trafią do nowego."
+    "no_drafts": "Nie masz jeszcze roboczego wyjazdu. Tapnij, żeby założyć nowy z wybranych miejsc.",
+    "new_trip": "Nowy wyjazd",
+    "hide_new": "Ukryj nowy wyjazd",
+    "new_trip_name": "Nazwa wyjazdu",
+    "create_trip_aria": "Utwórz wyjazd z wybranych miejsc"
   },
   "fabs": {
     "expand": "Pokaż akcje wyjazdu",

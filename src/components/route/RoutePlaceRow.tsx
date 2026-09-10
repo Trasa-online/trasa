@@ -122,6 +122,8 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
   // dokladnie w chwili, w ktorej user wlasnie wszedl w zaznaczanie.
   const longPress = useLongPress(selection ? selection.onEnter : undefined, !!selection && !selection.active);
   const selecting = !!selection?.active;
+  // Ile akcji miejsca jest w ogole dostepnych - decyduje, czy chowac je pod menu.
+  const actionCount = [onToggleTop, onSave, onDelete].filter(Boolean).length;
   // W trybie zaznaczania przelaczenie obsluguje CALY wiersz (onClick nizej). Guziki w srodku
   // musza wiec milczec - inaczej klik przelaczylby raz tutaj i drugi raz po dojsciu do wiersza,
   // czyli wracalby do punktu wyjscia.
@@ -317,8 +319,20 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
         {/* Gwiazdka, zapis i kosz zeszly pod TRZY KROPKI (prosba Nat 2026-09-10). Przy wierszu
             z notkami, zdjeciami i tagami cztery ikony obok siebie robily z kazdego miejsca
             panel sterowania; zostaje wiec jedno wejscie w menu. Guzik Google zostaje na
-            wierzchu - to jedyna akcja, ktora wykonuje sie w trakcie samego przegladania. */}
-        {(onToggleTop || onSave || onDelete) && (
+            wierzchu - to jedyna akcja, ktora wykonuje sie w trakcie samego przegladania.
+            WYJATEK: gdy zostaje DOKLADNIE JEDNA akcja (cudzy wyjazd = sam zapis), menu nie ma
+            czego chowac - pokazujemy ja wprost, w takim samym bialym kolku jak Google
+            (prosba Nat 2026-09-10). */}
+        {actionCount === 1 && onSave && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onSave(); }}
+            aria-label={saved ? t("row.saved_in_list") : t("row.save_to_list")}
+            className="h-9 w-9 rounded-full bg-white border border-black/[0.04] shadow-[0_1px_5px_rgba(0,0,0,0.12)] flex items-center justify-center shrink-0 active:scale-90 transition-transform"
+          >
+            <Bookmark className={`h-[18px] w-[18px] ${saved ? "text-[#F0A583] fill-[#F0A583]" : "text-foreground/70"}`} strokeWidth={2} />
+          </button>
+        )}
+        {(actionCount > 1 || (actionCount === 1 && !onSave)) && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
@@ -327,16 +341,11 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
                 aria-label={t("row.more_actions")}
                 className="h-9 w-9 rounded-full flex items-center justify-center shrink-0 active:scale-90 transition-transform"
               >
-                {/* Gwiazdka/zakladka na ikonie menu, gdy stan jest ustawiony - inaczej po
-                    schowaniu akcji nie bylo z wiersza widac, ze miejsce jest w topce
-                    albo zapisane. */}
-                {isTop ? (
-                  <Star className="h-5 w-5 text-primary fill-primary" strokeWidth={2} />
-                ) : saved ? (
-                  <Bookmark className="h-5 w-5 text-[#F0A583] fill-[#F0A583]" strokeWidth={2} />
-                ) : (
-                  <MoreHorizontal className="h-5 w-5 text-foreground/70" strokeWidth={2} />
-                )}
+                {/* ZAWSZE trzy kropki (prosba Nat 2026-09-10). Wczesniej ikona menu pokazywala
+                    stan (gwiazdka topki / wypelniona zakladka) i przez to wygladala jak guzik
+                    zapisu, choc otwierala menu. Topke widac zreszta przy samej NAZWIE miejsca,
+                    wiec nic sie nie gubi. */}
+                <MoreHorizontal className="h-5 w-5 text-foreground/70" strokeWidth={2} />
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="rounded-2xl w-56">

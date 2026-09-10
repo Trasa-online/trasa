@@ -379,7 +379,7 @@ const SetPassword = ({ forceBusiness }: { forceBusiness?: boolean } = {}) => {
           {/* Logo */}
           <div className="flex flex-col items-center mb-8">
             <div
-              className="w-14 h-14 rounded-full mb-3 shadow-lg shadow-primary/25"
+              className="w-14 h-14 rounded-full mb-3"
               style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }}
             />
             <h1 className="text-3xl font-black tracking-tight">TRASA</h1>   {/* i18n-ignore: nazwa marki */}
@@ -450,7 +450,7 @@ const SetPassword = ({ forceBusiness }: { forceBusiness?: boolean } = {}) => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3.5 rounded-full bg-primary hover:bg-primary/90 text-white font-bold text-base shadow-lg shadow-primary/20 active:scale-[0.98] transition-all disabled:opacity-60 disabled:scale-100 mt-2"
+              className="w-full py-3.5 rounded-full bg-primary hover:bg-primary/90 text-white font-bold text-base active:scale-[0.98] transition-all disabled:opacity-60 disabled:scale-100 mt-2"
             >
               {loading ? t("saving") : t("cta.set_and_enter")}
             </button>

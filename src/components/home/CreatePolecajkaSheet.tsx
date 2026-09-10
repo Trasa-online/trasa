@@ -202,7 +202,7 @@ export default function CreatePolecajkaSheet({ open, onClose, onPublished, city,
           <button
             onClick={handlePublish}
             disabled={saving || !title.trim() || selectedPins.length === 0}
-            className="w-full py-3.5 rounded-full bg-gradient-to-r from-[#F4A259] to-[#F9662B] text-white font-bold text-sm active:scale-[0.97] transition-transform disabled:opacity-40 disabled:pointer-events-none shadow-md shadow-orange-500/20"
+            className="w-full py-3.5 rounded-full bg-gradient-to-r from-[#F4A259] to-[#F9662B] text-white font-bold text-sm active:scale-[0.97] transition-transform disabled:opacity-40 disabled:pointer-events-none"
           >
             {saving ? t("polecajka.publishing") : t("polecajka.publish", { count: selectedPins.length })}
           </button>

@@ -473,7 +473,7 @@ export const LikedTab = ({ selectMode = false, onExitSelection, city: controlled
         <div className="fixed left-0 right-0 bottom-[calc(6rem+env(safe-area-inset-bottom,0px))] z-30 px-4">
           <button
             onClick={handleBuildFromSelection}
-            className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-orange-500/25 active:scale-[0.98] transition-transform"
+            className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
           >
             {t("liked.build_route")}
             <span className="opacity-80">·</span>
@@ -589,7 +589,7 @@ export const MyCollections = ({ showCreate = true }: { showCreate?: boolean } = 
       {showCreate && (
         <button
           onClick={() => { trackCollectionCreate("my_collections_header"); navigate("/zestawienie/nowe"); }}
-          className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-primary text-white text-sm font-bold active:scale-[0.98] transition-transform shadow-md shadow-orange-500/20"
+          className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-primary text-white text-sm font-bold active:scale-[0.98] transition-transform"
         >
           <Plus className="h-4 w-4" strokeWidth={2.5} /> {t("collections.create_new")}
         </button>

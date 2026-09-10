@@ -327,7 +327,7 @@ const MapWithSearch = ({ city, onConfirm, onSkip }: StartingLocationPickerProps)
           size="lg"
           disabled={!selected}
           onClick={() => selected && onConfirm({ name: selected.name, latitude: selected.lat, longitude: selected.lng })}
-          className="w-full rounded-full text-base font-semibold bg-primary hover:bg-primary/90 text-white border-0 shadow-lg shadow-primary/20 disabled:opacity-40"
+          className="w-full rounded-full text-base font-semibold bg-primary hover:bg-primary/90 text-white border-0 disabled:opacity-40"
         >{t("common:buttons.next")}</Button>
         <button
           onClick={onSkip}

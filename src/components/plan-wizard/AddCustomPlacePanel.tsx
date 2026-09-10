@@ -300,7 +300,7 @@ const Inner = ({ city, onAdd, onCancel }: AddCustomPlacePanelProps) => {
 
           <button
             onClick={() => onAdd(preview)}
-            className="w-full h-12 rounded-full bg-primary text-white text-base font-semibold shadow-lg shadow-primary/20 active:opacity-80 transition-opacity flex items-center justify-center gap-2"
+            className="w-full h-12 rounded-full bg-primary text-white text-base font-semibold active:opacity-80 transition-opacity flex items-center justify-center gap-2"
           >
             <Plus className="h-4 w-4" />
             {t("custom.add_to_route")}

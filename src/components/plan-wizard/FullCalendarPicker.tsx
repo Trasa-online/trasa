@@ -190,7 +190,7 @@ const FullCalendarPicker = ({ onConfirm, allowPast = false, onClear, maxDays = D
           onClick={handleConfirm}
           disabled={!startDate}
           size="lg"
-          className="w-full rounded-2xl text-base font-semibold bg-primary hover:bg-primary/90 text-white border-0 shadow-lg shadow-primary/20 disabled:opacity-40"
+          className="w-full rounded-2xl text-base font-semibold bg-primary hover:bg-primary/90 text-white border-0 disabled:opacity-40"
         >{t("common:buttons.next")}</Button>
 
         {/* Wyczyść daty: jesli jest zaznaczenie -> resetuje je; inaczej (onClear) usuwa daty wyjazdu. */}
