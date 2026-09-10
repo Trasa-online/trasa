@@ -82,5 +82,6 @@
   },
   "map": {
     "mark_place": "Mark a place"
-  }
+  },
+  "filters_aria": "Filters"
 }

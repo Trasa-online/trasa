@@ -1526,7 +1526,7 @@ export function SavedCollections({ hideEmptyState }: { hideEmptyState?: boolean 
 
 // searchOnly: komponent zamontowany WYLACZNIE po wyniki wyszukiwania (profil) - pasywny
 // feed eksploracji sie nie renderuje i jego zapytania nie strzelaja do bazy.
-export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityChange, active = true, searchQuery = "", searchOpen = false, searchCategory = "all", searchOnly = false }: { city?: string; cities?: string[]; onCityChange?: (city: string) => void; active?: boolean; searchQuery?: string; searchOpen?: boolean; searchCategory?: "all" | "lists" | "trips" | "places" | "people"; searchOnly?: boolean } = {}) {
+export default function DiscoveryFeed({ city = "Warszawa", active = true, searchQuery = "", searchOpen = false, searchCategory = "all", searchOnly = false }: { city?: string; active?: boolean; searchQuery?: string; searchOpen?: boolean; searchCategory?: "all" | "lists" | "trips" | "places" | "people"; searchOnly?: boolean } = {}) {
   const { t } = useTranslation("homefeed");
   const { user } = useAuth();
   // Zablokowani userzy (App Store 1.2): ich trasy i listy znikaja z feedu i wyszukiwarki.
@@ -1633,13 +1633,14 @@ export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityCh
       setSavedColIds(set);
     } catch { /* localStorage niedostepny */ }
   };
-  // Filtry wielokrotnego wyboru (mozna zaznaczyc kilka miast / motywow / kategorii).
-  const [cityFilter, setCityFilter] = useState<string[]>([]);
-  const [themeFilter, setThemeFilter] = useState<string[]>([]);
-  const [categoryFilter, setCategoryFilter] = useState<string[]>([]);
-  // Filtr typu tresci w feedzie eksploracji: wszystko / same trasy / same listy.
-  const [contentType, setContentType] = useState<"all" | "routes" | "lists">("all");
-  const [filtersOpen, setFiltersOpen] = useState(false);
+  // FILTRY EKSPLORACJI USUNIETE 2026-09-10 (decyzja Nat). Guzik filtrow i jego arkusz
+  // zniknely; eksploracja jest globalna, a zawezanie robi sie wyszukiwarka. Te
+  // trzy wartosci zostaja jako PUSTE stale, bo zapytanie wyszukiwarki nizej sklada sie z nich -
+  // wyzerowane po prostu nic nie odsiewaja. To swiadomie mniejsza zmiana niz przepisywanie
+  // calego zapytania: mniej ryzyka, ze przy okazji zepsujemy szukanie.
+  const cityFilter: string[] = [];
+  const themeFilter: string[] = [];
+  const categoryFilter: string[] = [];
   // Zakladka wynikow wyszukiwania: najlepsze (wszystko) / miejsca / zestawienia.
   // Kategoria (Wszystko|Listy|Wyjazdy|Miejsca) przychodzi z gornego chrome (Explore).
   const cat = searchCategory;
@@ -1651,25 +1652,6 @@ export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityCh
   const isSearchActive = !!q || cityFilter.length > 0 || themeFilter.length > 0 || categoryFilter.length > 0 || searchOpen;
   // Reset zakladki wynikow gdy wychodzimy z wyszukiwania.
 
-  // Miasto z gornej belki zeszlo do sheetu (parent `city`) - liczymy je do badge filtra,
-  // ale trzymamy osobno od cityFilter[] (ten zostaje dla filtra wynikow wyszukiwania).
-  const cityActive = !!city && city !== "all";
-  const activeFilterCount = cityFilter.length + themeFilter.length + categoryFilter.length + (cityActive ? 1 : 0) + (contentType !== "all" ? 1 : 0);
-  const clearFilters = () => { setCityFilter([]); setThemeFilter([]); setCategoryFilter([]); onCityChange?.("all"); setContentType("all"); };
-  // Gorna belka (ExploreTopBar w Explore) trzyma guzik filtra - otwiera sheet eventem,
-  // a DiscoveryFeed raportuje jej liczbe aktywnych filtrow (badge).
-  useEffect(() => {
-    if (!active) return;
-    const openH = () => setFiltersOpen(true);
-    window.addEventListener("trasa:explore-open-filters", openH);
-    return () => window.removeEventListener("trasa:explore-open-filters", openH);
-  }, [active]);
-  useEffect(() => {
-    if (active) window.dispatchEvent(new CustomEvent("trasa:explore-filter-count", { detail: activeFilterCount }));
-  }, [active, activeFilterCount]);
-  // Toggle wartosci w tablicy filtra (dodaj/usun).
-  const toggleFilter = (set: (updater: (prev: string[]) => string[]) => void, v: string) =>
-    set((prev) => (prev.includes(v) ? prev.filter((x) => x !== v) : [...prev, v]));
 
   // Po wyborze daty: przejdz do PlanWizard step 4 z miejscami zestawienia jako Dopasowania.
   const startPlanning = (date: Date | null, numDays: number) => {
@@ -2337,7 +2319,7 @@ export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityCh
           {(() => {
             // Wspolny feed: trasy + listy PRZEPLECIONE (trasa, lista, trasa, lista...), z filtrem typu.
             // Karta identyczna (TrasaBigCard); rozni sie tylko onOpen (trasa -> /route, lista -> /lista).
-            const routeCards = (contentType === "lists" ? [] : warszawa).filter((r) => notBlocked(r.user_id)).map((r) => (
+            const routeCards = warszawa.filter((r) => notBlocked(r.user_id)).map((r) => (
               <TrasaBigCard
                 key={`route-${r.id}`}
                 id={r.id}
@@ -2355,7 +2337,7 @@ export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityCh
                 participants={r.participants ?? []}
               />
             ));
-            const listCards = (contentType === "routes" ? [] : userPolecajki).filter((col) => notBlocked(col.user_id)).map((col) => {
+            const listCards = userPolecajki.filter((col) => notBlocked(col.user_id)).map((col) => {
               const ph = col.items.find((i) => i.photo_url)?.photo_url ?? col.gallery_urls?.[0] ?? null;
               const catTags = [...new Set(col.items.map((i) => i.category).filter(Boolean).map((c) => String(c).toLowerCase()))]
                 .map((c) => t(`cat.${c}`, { defaultValue: c }));
@@ -2468,52 +2450,6 @@ export default function DiscoveryFeed({ city = "Warszawa", cities = [], onCityCh
         </div>
       )}
 
-      {/* Sheet filtrow: miasto / motyw zestawienia / kategoria miejsc */}
-      <Sheet open={filtersOpen} onOpenChange={setFiltersOpen}>
-        <SheetContent side="bottom" className="rounded-t-2xl p-0 [&>button:last-child]:hidden flex flex-col" style={{ height: "80vh", maxHeight: "80vh" }}>
-          <div className="flex items-center justify-between px-5 pt-5 mb-2 shrink-0">
-            <p className="text-lg font-black">{t("filters_title")}</p>
-            <button onClick={() => setFiltersOpen(false)} aria-label={t("aria.close")} className="h-9 w-9 rounded-full bg-muted flex items-center justify-center active:bg-muted/70"><X className="h-4 w-4" /></button>
-          </div>
-          {/* Miasto (przeniesione z gornej belki 2026-08-05) + kategoria miejsca. */}
-          <div className="flex-1 min-h-0 overflow-y-auto px-5 pb-2">
-            {/* Typ tresci: Wszystko | Trasy | Listy - TYLKO gdy listy sa w eksploracji (SHOW_ZESTAWIENIA).
-                Wylaczone -> feed ma same trasy, segment bezuzyteczny. */}
-            {SHOW_ZESTAWIENIA && (
-              <>
-                <p className="text-sm font-bold text-foreground mb-2">{t("filters.show_label")}</p>
-                <div className="flex gap-2 mb-5">
-                  {([
-                    { id: "all", label: t("common:filters.all") },
-                    { id: "routes", label: t("common:filters.routes") },
-                    { id: "lists", label: t("common:filters.lists") },
-                  ] as { id: "all" | "routes" | "lists"; label: string }[]).map((s) => (
-                    <button
-                      key={s.id}
-                      onClick={() => setContentType(s.id)}
-                      className={`flex-1 py-2.5 rounded-2xl text-sm font-bold transition-colors active:scale-[0.98] ${contentType === s.id ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground"}`}
-                    >
-                      {s.label}
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
-            {onCityChange && <CityFilterRow city={city} cities={cities} onChange={onCityChange} />}
-            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-3">{t("filter.category")}</p>
-            <div className="flex flex-wrap gap-2.5">
-              <button onClick={() => setCategoryFilter([])} className={`px-4 py-3 rounded-2xl text-sm font-bold transition-colors ${categoryFilter.length === 0 ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground"}`}>{t("all")}</button>
-              {MAIN_CATEGORIES.flatMap((c) => c.subcategories).map((s) => (
-                <button key={s.id} onClick={() => toggleFilter(setCategoryFilter, s.id)} className={`px-4 py-3 rounded-2xl text-sm font-bold whitespace-nowrap transition-colors ${categoryFilter.includes(s.id) ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground"}`}>{s.label}</button>
-              ))}
-            </div>
-          </div>
-          <div className="flex gap-2 px-5 pt-3 pb-[max(16px,env(safe-area-inset-bottom))] shrink-0 border-t border-border/40">
-            <button onClick={clearFilters} className="flex-1 py-3 rounded-2xl bg-secondary text-secondary-foreground font-bold text-sm active:scale-[0.98] transition-transform">{t("filter.clear")}</button>
-            <button onClick={() => setFiltersOpen(false)} className="flex-1 py-3 rounded-2xl bg-primary text-white font-bold text-sm active:scale-[0.98] transition-transform">{t("filter.apply")}</button>
-          </div>
-        </SheetContent>
-      </Sheet>
     </>
   );
 }

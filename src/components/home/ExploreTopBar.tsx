@@ -39,7 +39,7 @@ export default function ExploreTopBar({
   city?: string;
   cities?: string[];
   onCityChange?: (city: string) => void;
-  onOpenFilters: () => void;
+  onOpenFilters?: () => void;
   // Wyszukiwarka PRZYPIETA w belce (2026-09-06): pole stoi na stale, focus wlacza tryb
   // wynikow. Renderujemy je tylko gdy rodzic poda `onSearchChange` (Eksploracja);
   // PlanWizard uzywa tej samej belki bez wyszukiwarki.
@@ -138,17 +138,20 @@ export default function ExploreTopBar({
         !showRegion && <div className="flex-1" />
       )}
 
-      {/* Filtry */}
-      <button
-        onClick={onOpenFilters}
-        className="relative shrink-0 h-8 w-8 flex items-center justify-center rounded-xl bg-muted active:scale-95 transition-transform"
-        aria-label="Filtry"
-      >
-        <SlidersHorizontal className="h-4 w-4 text-foreground" />
-        {activeFilterCount > 0 && (
-          <span className="absolute -top-1 -right-1 h-4 min-w-4 px-1 rounded-full bg-primary text-white text-[10px] font-bold flex items-center justify-center">{activeFilterCount}</span>
-        )}
-      </button>
+      {/* Filtry - TYLKO tam, gdzie rodzic je jeszcze obsluguje (PlanWizard). Eksploracja
+          stracila filtry 2026-09-10 (decyzja Nat) i nie podaje juz `onOpenFilters`. */}
+      {onOpenFilters && (
+        <button
+          onClick={onOpenFilters}
+          className="relative shrink-0 h-8 w-8 flex items-center justify-center rounded-xl bg-muted active:scale-95 transition-transform"
+          aria-label={t("filters_aria")}
+        >
+          <SlidersHorizontal className="h-4 w-4 text-foreground" />
+          {activeFilterCount > 0 && (
+            <span className="absolute -top-1 -right-1 h-4 min-w-4 px-1 rounded-full bg-primary text-white text-[10px] font-bold flex items-center justify-center">{activeFilterCount}</span>
+          )}
+        </button>
+      )}
 
     </>
   );
