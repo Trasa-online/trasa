@@ -601,6 +601,9 @@ const TravelerProfile = () => {
       description={l.description}
       tiles={l.tiles}
       counts={{ saves: l.saves_count ?? 0, views: l.views_count ?? 0 }}
+      // Licznik zapisow przy DACIE, jak na "Moje listy" (prosba Nat 2026-09-10) - stopka
+      // z sama zakladka pod siatka byla druga informacja o tym samym.
+      countsInHeader
       // Plakietka mowi KTO, ILE i CO dodal - sama informacja "cos doszlo" nie dawala powodu,
       // zeby wejsc (eksploracja UX w Figmie, sekcja "Zapisana lista: ktos dodal nowe miejsce").
       badge={l.isNew ? (
@@ -815,9 +818,10 @@ const TravelerProfile = () => {
                 </p>
               </div>
             ) : (
-              // space-y-10: karty list to wysokie bloki (naglowek + siatka kafelkow) i przy
-              // odstepie 16 px zlewaly sie w jedna sciane (prosba Nat 2026-09-10).
-              <div className="space-y-10">
+              // Odstep + SZARA LINIA miedzy listami (prosba Nat 2026-09-10): same 40 px
+              // odstepu nie wystarczaly, zeby oko zobaczylo, gdzie konczy sie jedna lista,
+              // a zaczyna nastepna - karty to wysokie bloki z wlasna siatka kafelkow.
+              <div className="divide-y divide-border/60 [&>*]:py-6 [&>*:first-child]:pt-0">
               {listCards.map((l: any) => (
                 <ProfileFeedCard
                   key={l.id}
@@ -852,7 +856,7 @@ const TravelerProfile = () => {
                     </p>
                   </div>
                 ) : (
-                  <div className="space-y-10 pt-1">{(savedListCards as any[]).map(renderSavedListCard)}</div>
+                  <div className="pt-1 divide-y divide-border/60 [&>*]:py-6 [&>*:first-child]:pt-0">{(savedListCards as any[]).map(renderSavedListCard)}</div>
                 )
               )}
             </div>

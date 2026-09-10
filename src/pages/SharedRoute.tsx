@@ -36,6 +36,7 @@ import { fetchUnreadChatCount } from "@/lib/chatReads";
 import PlaceNotes from "@/components/route/PlaceNotes";
 import PhotoViewer from "@/components/route/PhotoViewer";
 import PlaceNoteEditor from "@/components/route/PlaceNoteEditor";
+import PlaceNoteSheet from "@/components/route/PlaceNoteSheet";
 import { ShareCardTrip } from "@/components/share/ShareCard";
 import ScreenSkeleton from "@/components/layout/ScreenSkeleton";
 import ReportContentSheet from "@/components/moderation/ReportContentSheet";
@@ -293,7 +294,9 @@ export default function SharedRoute() {
   // Akcje "dodaj notke" / "dodaj zdjecie" przeniesione TAKZE do menu przy miejscu
   // (prosba Nat 2026-09-10). Edytor notki trzyma swoj stan u siebie, wiec otwieramy go
   // licznikiem: kazde tapniecie w menu podbija wartosc dla TEGO pinu.
-  const [noteOpenKey, setNoteOpenKey] = useState<Record<string, number>>({});
+  // Notka o miejscu edytowana w OSOBNYM oknie (prosba Nat 2026-09-10) - w wierszu pole
+  // potrafilo wyladowac poza ekranem i wygladalo, jakby akcja z menu nic nie zrobila.
+  const [notePin, setNotePin] = useState<any | null>(null);
   // To samo dla OPISU CALEGO WYJAZDU - guzik "Edytuj opis" zszedl pod trzy kropki przy nazwie
   // (prosba Nat 2026-09-10), wiec edytor otwiera sie stamtad.
   const [descOpenKey, setDescOpenKey] = useState(0);
@@ -1381,17 +1384,33 @@ export default function SharedRoute() {
   // Scalamy PRZY WYSWIETLANIU, a nie dopisujac do review_photos: gdyby zdjecie miejsca lecialo
   // do obu tabel, skasowanie go przy miejscu zostawialoby sierote w galerii. Tutaj jedno zrodlo
   // znika i zdjecie po prostu wypada z obu widokow.
+  // Dedup po SCIEZCE W BUCKECIE, nie po calym adresie: ten sam plik bywa zapisany raz przez
+  // api.spontaway.com, a raz przez <ref>.supabase.co (dwie domeny tego samego Storage), wiec
+  // porownanie samych adresow przepuszczaloby go dwa razy.
+  const storageKey = (u: string) => u.replace(/^.*\/route-images\//, "").replace(/\?.*$/, "");
   const pinPhotoByUrl = new Map<string, PinPhoto>();
+  const pinKeys = new Set<string>();
   for (const ph of pinPhotoRows as PinPhoto[]) {
     const u = resolveStored(ph.url);
-    if (u && !pinPhotoByUrl.has(u)) pinPhotoByUrl.set(u, ph);
+    if (!u) continue;
+    const k = storageKey(u);
+    if (pinKeys.has(k)) continue;
+    pinKeys.add(k);
+    pinPhotoByUrl.set(u, ph);
   }
+  const seenGallery = new Set<string>();
   const reviewPhotos: string[] = ((route.review_photos ?? []) as any[])
     .map((u) => (typeof u === "string" ? resolveStored(u) : null))
-    .filter((u): u is string => !!u);
+    .filter((u): u is string => {
+      if (!u) return false;
+      const k = storageKey(u);
+      if (seenGallery.has(k)) return false;
+      seenGallery.add(k);
+      return true;
+    });
   const galleryPhotos: string[] = [
     ...reviewPhotos,
-    ...[...pinPhotoByUrl.keys()].filter((u) => !reviewPhotos.includes(u)),
+    ...[...pinPhotoByUrl.keys()].filter((u) => !seenGallery.has(storageKey(u))),
   ];
   // Handler swipe w galerii fullscreen jest zadeklarowany wyzej (przed early returnami),
   // wiec liczbe zdjec podajemy mu przez ref.
@@ -1525,7 +1544,7 @@ export default function SharedRoute() {
         key: "note",
         label: myNote ? t("route:note.edit") : t("route:note.add"),
         icon: <Pencil className="h-4 w-4" />,
-        onClick: () => setNoteOpenKey((prev) => ({ ...prev, [pin.id]: (prev[pin.id] ?? 0) + 1 })),
+        onClick: () => setNotePin(pin),
       },
       {
         key: "photo",
@@ -1576,7 +1595,7 @@ export default function SharedRoute() {
               Awatar przy WLASNEJ notce dopiero we wspomnieniu (po publikacji) - w trakcie
               wyjazdu autor jest oczywisty, a awatar dokladal szumu przy pisaniu. */}
           {canEdit && (
-            <PlaceNoteEditor note={myNote} showAvatar avatarUrl={myAvatar} onSave={(v) => saveMyNote(pin, v)} hideActions onEditingChange={setNoteEditing} openKey={noteOpenKey[pin.id] ?? 0} />
+            <PlaceNoteEditor note={myNote} showAvatar avatarUrl={myAvatar} onSave={(v) => saveMyNote(pin, v)} hideActions onEditingChange={setNoteEditing} />
           )}
           {/* Wgrywanie zdjecia trwa - jedyny sygnal, odkad guzik "Zdjęcie" zszedl do menu. */}
           {busy && (
@@ -2039,7 +2058,7 @@ export default function SharedRoute() {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
-                  onClick={() => haptics.light()}
+                  onPointerDown={() => haptics.light()}
                   aria-label={t("aria.trip_actions")}
                   className="shrink-0 h-9 w-9 rounded-full bg-secondary flex items-center justify-center active:scale-90 transition-transform"
                 >
@@ -2418,6 +2437,15 @@ export default function SharedRoute() {
           onAdd={handleAddPlaces}
         />
       )}
+
+      {/* Notka o miejscu - osobne okno, otwierane z menu przy wierszu. */}
+      <PlaceNoteSheet
+        open={!!notePin}
+        onOpenChange={(o) => { if (!o) setNotePin(null); }}
+        placeName={notePin?.place_name ?? ""}
+        note={notePin ? ((notesMap.get(placeNoteKey(notePin.place_name)) ?? []).find((n: any) => n.user_id === user?.id)?.note ?? "") : ""}
+        onSave={async (v) => { if (notePin) await saveMyNote(notePin, v); }}
+      />
 
       {/* "Dodaj do wyjazdu" - wybor wlasnego szkicu docelowego. */}
       <Sheet open={pickTargetOpen} onOpenChange={(o) => { if (!o) { setPickTargetOpen(false); setShowNewTrip(false); setNewTripName(""); } }}>

@@ -22,6 +22,7 @@ import StoredImage from "@/components/StoredImage";
 import { RoutePlaceRow } from "@/components/route/RoutePlaceRow";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import PlaceNoteEditor from "@/components/route/PlaceNoteEditor";
+import PlaceNoteSheet from "@/components/route/PlaceNoteSheet";
 import ReportContentSheet from "@/components/moderation/ReportContentSheet";
 import ScreenSkeleton from "@/components/layout/ScreenSkeleton";
 import PhotoViewer from "@/components/route/PhotoViewer";
@@ -95,7 +96,8 @@ export default function SharedList() {
   const [savingName, setSavingName] = useState(false);
   // "Dodaj notke" / "Dodaj zdjecie" TAKZE w menu przy miejscu (prosba Nat 2026-09-10).
   // Edytor notki trzyma stan u siebie, wiec otwieramy go licznikiem per pozycja listy.
-  const [noteOpenKey, setNoteOpenKey] = useState<Record<string, number>>({});
+  // Notka o miejscu w OSOBNYM oknie - tak samo jak na wyjezdzie (prosba Nat 2026-09-10).
+  const [noteItem, setNoteItem] = useState<any | null>(null);
   const itemPhotoInputRef = useRef<HTMLInputElement>(null);
   const itemPhotoTarget = useRef<any | null>(null);
   const saveListName = async () => {
@@ -570,8 +572,7 @@ export default function SharedList() {
                 Pigulki "Edytuj notkę" i "Zdjęcie" zniknely stad razem z wyjazdami (2026-09-10) -
                 obie akcje siedza w menu przy miejscu. */}
             <PlaceNoteEditor note={noteText} editable={isOwner} showAvatar avatarUrl={author?.avatar_url ?? col.author_avatar}
-              onSave={(v) => saveItemNote(pin, v)} hideActions onEditingChange={setNoteEditing}
-              openKey={noteOpenKey[pin.id] ?? 0} />
+              onSave={(v) => saveItemNote(pin, v)} hideActions onEditingChange={setNoteEditing} />
             {/* Wgrywanie trwa - jedyny sygnal, odkad guzik "Zdjęcie" zszedl do menu. */}
             {busy && (
               <p className="flex items-center gap-1.5 text-[12px] text-muted-foreground">
@@ -616,7 +617,7 @@ export default function SharedList() {
                 key: "note",
                 label: noteText ? t("route:note.edit") : t("route:note.add"),
                 icon: <Pencil className="h-4 w-4" />,
-                onClick: () => setNoteOpenKey((prev) => ({ ...prev, [pin.id]: (prev[pin.id] ?? 0) + 1 })),
+                onClick: () => setNoteItem(pin),
               },
               {
                 key: "photo",
@@ -703,14 +704,23 @@ export default function SharedList() {
                 dalej cudzej listy to sedno tego widoku, a link i tak jest publiczny. Edycja i
                 usuwanie zostaja przy wlascicielu. */}
             <div className="shrink-0 flex items-center gap-2">
-              {/* Wszystkie akcje listy pod JEDNYM guzikiem z trzema kropkami (prosba Nat
-                  2026-09-10) - tak samo jak na wyjezdzie. Udostepnianie widzi KAZDY (polecenie
-                  dalej cudzej listy to sedno tego widoku, a link i tak jest publiczny);
-                  zmiana nazwy i usuwanie zostaja przy wlascicielu. */}
+              {/* Na CUDZEJ liscie zostaje jedna akcja - udostepnianie. Menu nie ma wtedy czego
+                  chowac, wiec pokazujemy ja wprost (prosba Nat 2026-09-10); ta sama zasada
+                  co przy wierszach miejsc. */}
+              {!isOwner && (
+                <button onClick={handleShare} onContextMenu={(e) => { e.preventDefault(); handleShareLink(); }}
+                  aria-label={t("aria.share")}
+                  className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center active:scale-90 transition-transform">
+                  <Share2 className="h-4 w-4 text-foreground" />
+                </button>
+              )}
+              {/* Wlasciciel ma trzy akcje - te chowamy pod trzema kropkami, tak samo jak
+                  na wyjezdzie. */}
+              {isOwner && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button
-                    onClick={() => haptics.light()}
+                    onPointerDown={() => haptics.light()}
                     aria-label={t("aria.list_actions")}
                     className="shrink-0 h-9 w-9 rounded-full bg-secondary flex items-center justify-center active:scale-90 transition-transform"
                   >
@@ -718,25 +728,22 @@ export default function SharedList() {
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="rounded-2xl w-56">
-                  {isOwner && (
-                    <DropdownMenuItem
-                      onSelect={() => { setNameVal(col.title || ""); setEditingName(true); }}
-                      disabled={savingName}
-                      className="gap-2.5 py-2.5"
-                    >
-                      <Pencil className="h-4 w-4" />{t("aria.rename_list")}
-                    </DropdownMenuItem>
-                  )}
+                  <DropdownMenuItem
+                    onSelect={() => { setNameVal(col.title || ""); setEditingName(true); }}
+                    disabled={savingName}
+                    className="gap-2.5 py-2.5"
+                  >
+                    <Pencil className="h-4 w-4" />{t("aria.rename_list")}
+                  </DropdownMenuItem>
                   <DropdownMenuItem onSelect={() => handleShare()} className="gap-2.5 py-2.5">
                     <Share2 className="h-4 w-4" />{t("aria.share")}
                   </DropdownMenuItem>
-                  {isOwner && (
-                    <DropdownMenuItem onSelect={() => setAskDelete(true)} className="gap-2.5 py-2.5 text-destructive focus:text-destructive">
-                      <Trash2 className="h-4 w-4" />{t("aria.delete_list")}
-                    </DropdownMenuItem>
-                  )}
+                  <DropdownMenuItem onSelect={() => setAskDelete(true)} className="gap-2.5 py-2.5 text-destructive focus:text-destructive">
+                    <Trash2 className="h-4 w-4" />{t("aria.delete_list")}
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
+              )}
             </div>
           </div>
           {/* #5: miasto + liczba miejsc bezposrednio pod tytulem (przeniesione z TopBara). */}
@@ -807,6 +814,15 @@ export default function SharedList() {
         )}
       </div>
       )}
+
+      {/* Notka o miejscu - osobne okno, otwierane z menu przy wierszu. */}
+      <PlaceNoteSheet
+        open={!!noteItem}
+        onOpenChange={(o) => { if (!o) setNoteItem(null); }}
+        placeName={noteItem?.place_name ?? ""}
+        note={(noteItem?.short_desc ?? "").trim()}
+        onSave={async (v) => { if (noteItem) await saveItemNote(noteItem, v); }}
+      />
 
       {/* Wybor zdjecia dla KONKRETNEJ pozycji listy (akcja z menu przy wierszu). Cel w refie,
           zeby nie mnozyc ukrytych inputow przy kazdym wierszu. */}

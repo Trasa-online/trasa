@@ -345,7 +345,7 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
             <DropdownMenuTrigger asChild>
               <button
                 ref={starBtnRef}
-                onClick={(e) => { e.stopPropagation(); haptics.light(); }}
+                onPointerDown={(e) => { e.stopPropagation(); haptics.light(); }}
                 aria-label={t("row.more_actions")}
                 /* Biale kolko z delikatnym szarym cieniem - dokladnie jak guzik Google obok
                    (prosba Nat 2026-09-10). Sam cien niesie afordancje "to sie klika". */

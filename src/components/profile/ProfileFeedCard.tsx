@@ -181,8 +181,10 @@ export function ProfileFeedCard({
       {/* Stopka: roboczy -> "Robocze"; prywatna -> kłódka; publiczna -> metryki. + (wlasciciel) edycja/usuniecie.
           Gdy liczniki siedza w naglowku i nie ma zadnych akcji, stopka w ogole sie nie renderuje -
           sama kreska nad pustka tylko rozrzedzala liste kart. */}
+      {/* Gdy liczniki siedza w naglowku, stopka nie rysuje wlasnej kreski: rozdzielenie kart
+          bierze na siebie divider miedzy nimi, a dwie linie w odstepie 30 px robily balagan. */}
       {!(countsInHeader && !onEdit && !onDelete && !onSave && !onLike && !isDraft && !isPrivate) && (
-      <div className="flex items-center gap-5 pt-3 mt-3 border-t border-border/40 text-muted-foreground">
+      <div className={`flex items-center gap-5 text-muted-foreground ${countsInHeader ? "pt-2" : "pt-3 mt-3 border-t border-border/40"}`}>
         {isDraft ? (
           <span className="flex items-center gap-1.5 text-sm font-medium">
             <CircleDashed className="h-[16px] w-[16px]" /> Robocze
