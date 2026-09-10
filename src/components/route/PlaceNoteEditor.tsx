@@ -21,6 +21,7 @@ export default function PlaceNoteEditor({
   addLabel,
   editLabel,
   hideText = false,
+  hideActions = false,
   openKey = 0,
   onEditingChange,
 }: {
@@ -38,6 +39,9 @@ export default function PlaceNoteEditor({
   /** Nie renderuj samej tresci, zostaw sam guzik. Dla opisu CALEGO wyjazdu: tresc jest juz
    *  wyswietlona w naglowku, wiec edytor pokazywalby ja drugi raz. */
   hideText?: boolean;
+  /** Nie renderuj pigulek "Dodaj/Edytuj notkę" ani `photoSlot` - te akcje zyja gdzie indziej
+   *  (menu przy miejscu / przy nazwie wyjazdu). Edytor nadal otwiera sie przez `openKey`. */
+  hideActions?: boolean;
   /** Licznik "otworz edycje z zewnatrz". Kazda zmiana wartosci (na wieksza od 0) wchodzi
    *  w tryb pisania - dzieki temu akcja z menu przy miejscu moze otworzyc TEN edytor,
    *  bez wynoszenia jego stanu na zewnatrz. */
@@ -136,7 +140,7 @@ export default function PlaceNoteEditor({
           <p className="text-sm text-foreground/90 leading-snug whitespace-pre-wrap break-words">{noteText}</p>
         )
       )}
-      {editable && (
+      {editable && !hideActions && (
         <div className="flex items-center gap-2">
           <button
             onClick={startEdit}

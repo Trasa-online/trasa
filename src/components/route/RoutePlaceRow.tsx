@@ -6,6 +6,7 @@ import { localizeTag } from "@/lib/routeTags";
 import { Bookmark, Check, MoreHorizontal, Star, Trash2 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useLongPress } from "@/hooks/useLongPress";
+import { haptics } from "@/hooks/useHaptics";
 import { PlacePhoto } from "@/components/PlacePhoto";
 import { avatarSrc } from "@/lib/avatar";
 
@@ -344,7 +345,7 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
             <DropdownMenuTrigger asChild>
               <button
                 ref={starBtnRef}
-                onClick={(e) => e.stopPropagation()}
+                onClick={(e) => { e.stopPropagation(); haptics.light(); }}
                 aria-label={t("row.more_actions")}
                 /* Biale kolko z delikatnym szarym cieniem - dokladnie jak guzik Google obok
                    (prosba Nat 2026-09-10). Sam cien niesie afordancje "to sie klika". */

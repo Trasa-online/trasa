@@ -78,5 +78,6 @@
   "new_since_visit": "Nowe od Twojej ostatniej wizyty · {{count}}",
   "new_place_badge": "nowe miejsce",
   "add_place_photo": "Dodaj zdjęcie do miejsca",
-  "remove_from_list": "Usuń miejsce z listy"
+  "remove_from_list": "Usuń miejsce z listy",
+  "adding": "Dodawanie…"
 }

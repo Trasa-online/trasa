@@ -563,20 +563,21 @@ export default function SharedList() {
         // Notka (auto-zapis, bez headera) + zdjecia miejsca. Widz: read-only. Slot renderowany
         // tylko gdy jest tresc lub jestem wlascicielem. Uklad wspolny z wyjazdami (PlaceNoteEditor).
         const hasContent = !!noteText || photos.length > 0 || isOwner;
-        const photoSlot = isOwner ? (
-          <label className={`inline-flex items-center gap-1.5 rounded-full bg-secondary px-3 py-1.5 text-xs font-bold text-foreground cursor-pointer active:scale-95 transition-transform ${busy ? "opacity-60 pointer-events-none" : ""}`}>
-            {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Camera className="h-3.5 w-3.5" />}
-            {busy ? "Dodawanie..." : t("photo")}
-            <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => { addItemPhotos(pin, e.target.files); e.currentTarget.value = ""; }} />
-          </label>
-        ) : null;
         const note = hasContent ? (
           <div className="space-y-2.5 mt-0.5">
             {/* Notka wyglada TAK SAMO jak na wyjezdzie: szary dymek + awatar autora w prawym-dolnym
-                rogu (prosba Nat 2026-08-30). Autor = wlasciciel listy. */}
+                rogu (prosba Nat 2026-08-30). Autor = wlasciciel listy.
+                Pigulki "Edytuj notkę" i "Zdjęcie" zniknely stad razem z wyjazdami (2026-09-10) -
+                obie akcje siedza w menu przy miejscu. */}
             <PlaceNoteEditor note={noteText} editable={isOwner} showAvatar avatarUrl={author?.avatar_url ?? col.author_avatar}
-              onSave={(v) => saveItemNote(pin, v)} photoSlot={photoSlot} onEditingChange={setNoteEditing}
+              onSave={(v) => saveItemNote(pin, v)} hideActions onEditingChange={setNoteEditing}
               openKey={noteOpenKey[pin.id] ?? 0} />
+            {/* Wgrywanie trwa - jedyny sygnal, odkad guzik "Zdjęcie" zszedl do menu. */}
+            {busy && (
+              <p className="flex items-center gap-1.5 text-[12px] text-muted-foreground">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />{t("adding")}
+              </p>
+            )}
             {/* Zdjecia miejsca (2:3) - dodane przez wlasciciela listy. */}
             {photos.length > 0 && (
               <div className="flex flex-wrap gap-2">
@@ -709,6 +710,7 @@ export default function SharedList() {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button
+                    onClick={() => haptics.light()}
                     aria-label={t("aria.list_actions")}
                     className="shrink-0 h-9 w-9 rounded-full bg-secondary flex items-center justify-center active:scale-90 transition-transform"
                   >

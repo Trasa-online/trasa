@@ -75,5 +75,6 @@
   "new_since_visit": "New since your last visit · {{count}}",
   "new_place_badge": "new place",
   "add_place_photo": "Add a photo to this place",
-  "remove_from_list": "Remove place from list"
+  "remove_from_list": "Remove place from list",
+  "adding": "Adding…"
 }

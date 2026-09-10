@@ -11,7 +11,7 @@ import { notify } from "@/lib/notify";
 import { sendClientPush, getCurrentUserName } from "@/lib/clientPush";
 import { format } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
-import { MapPin, ArrowLeft, Sparkles, ChevronDown, Bookmark, Calendar as CalendarIcon, Image as ImageIcon, Maximize2, X, Building2, Pencil, Trash2, Heart, Share2, Plus, Map as MapIcon, Loader2, GripVertical, Check, Flag, Camera, ThumbsUp, MessageCircle, UserPlus, MoreHorizontal } from "lucide-react";
+import { MapPin, ArrowLeft, Sparkles, ChevronDown, Bookmark, Calendar as CalendarIcon, Image as ImageIcon, Maximize2, X, Building2, Pencil, Trash2, Heart, Share2, Plus, Map as MapIcon, Loader2, GripVertical, Check, Flag, Camera, ThumbsUp, MessageCircle, UserPlus, MoreHorizontal, FileText } from "lucide-react";
 import { MAIN_CATEGORIES, subcategoryPluralLabel } from "@/lib/categories";
 import { PLACE_VERDICT_TAGS, verdictOf, localizeTag, verdictRank } from "@/lib/routeTags";
 import { publishTrip } from "@/lib/publishTrip";
@@ -294,6 +294,9 @@ export default function SharedRoute() {
   // (prosba Nat 2026-09-10). Edytor notki trzyma swoj stan u siebie, wiec otwieramy go
   // licznikiem: kazde tapniecie w menu podbija wartosc dla TEGO pinu.
   const [noteOpenKey, setNoteOpenKey] = useState<Record<string, number>>({});
+  // To samo dla OPISU CALEGO WYJAZDU - guzik "Edytuj opis" zszedl pod trzy kropki przy nazwie
+  // (prosba Nat 2026-09-10), wiec edytor otwiera sie stamtad.
+  const [descOpenKey, setDescOpenKey] = useState(0);
   // Wybor pliku dla konkretnego miejsca - jeden ukryty input na caly ekran, cel w refie
   // (osobny input przy kazdym wierszu to kilkanascie martwych elementow na liscie).
   const placePhotoInputRef = useRef<HTMLInputElement>(null);
@@ -1564,20 +1567,22 @@ export default function SharedRoute() {
       if (!canEdit && !list.length && !placePhotos.length) return undefined;
       const busy = uploadingPin === pin.id;
       const myNote = ((list.find((n) => n.user_id === user?.id)?.note) ?? "").trim();
-      const photoSlot = canEdit ? (
-        <label className={`inline-flex items-center gap-1.5 rounded-full bg-secondary px-3 py-1.5 text-xs font-bold text-foreground cursor-pointer active:scale-95 transition-transform ${busy ? "opacity-60 pointer-events-none" : ""}`}>
-          {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Camera className="h-3.5 w-3.5" />}
-          {busy ? t("adding") : t("photo")}
-          <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => { addPlacePhotos(pin, e.target.files); e.currentTarget.value = ""; }} />
-        </label>
-      ) : null;
       return (
         <div className="space-y-3 mt-1">
-          {/* Moja notka: kompaktowo (+ Dodaj notkę / Edytuj) + guzik zdjecia obok. Auto-zapis. */}
-          {/* Awatar przy WLASNEJ notce dopiero we wspomnieniu (po publikacji) - w trakcie wyjazdu
-              autor jest oczywisty, a awatar dokladal szumu przy pisaniu (prosba Nat 2026-08-30). */}
+          {/* Moja notka - SAMA TRESC. Pigulki "Edytuj notkę" i "Zdjęcie" zniknely stad
+              (prosba Nat 2026-09-10): obie akcje siedza w menu przy miejscu i pokazywanie
+              ich w dwoch miejscach na jednym wierszu tylko go zageszczalo. Edytor otwiera
+              sie z menu przez `openKey`.
+              Awatar przy WLASNEJ notce dopiero we wspomnieniu (po publikacji) - w trakcie
+              wyjazdu autor jest oczywisty, a awatar dokladal szumu przy pisaniu. */}
           {canEdit && (
-            <PlaceNoteEditor note={myNote} showAvatar avatarUrl={myAvatar} onSave={(v) => saveMyNote(pin, v)} photoSlot={photoSlot} onEditingChange={setNoteEditing} openKey={noteOpenKey[pin.id] ?? 0} />
+            <PlaceNoteEditor note={myNote} showAvatar avatarUrl={myAvatar} onSave={(v) => saveMyNote(pin, v)} hideActions onEditingChange={setNoteEditing} openKey={noteOpenKey[pin.id] ?? 0} />
+          )}
+          {/* Wgrywanie zdjecia trwa - jedyny sygnal, odkad guzik "Zdjęcie" zszedl do menu. */}
+          {busy && (
+            <p className="flex items-center gap-1.5 text-[12px] text-muted-foreground">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />{t("adding")}
+            </p>
           )}
           {/* Notki innych uczestnikow - awatar + tresc, BEZ headera (task 6). Widz spoza wyjazdu
               nie ma edytora, wiec jego notki nie ma czego wykluczac - pokazujemy wszystkie. */}
@@ -2034,13 +2039,27 @@ export default function SharedRoute() {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
+                  onClick={() => haptics.light()}
                   aria-label={t("aria.trip_actions")}
                   className="shrink-0 h-9 w-9 rounded-full bg-secondary flex items-center justify-center active:scale-90 transition-transform"
                 >
                   <MoreHorizontal className="h-4 w-4 text-foreground" />
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="rounded-2xl w-56">
+              <DropdownMenuContent align="end" className="rounded-2xl w-60">
+                {/* Opis CALEGO wyjazdu. Guzik stal pod samym opisem, ale odkad edycja podmienia
+                    tresc na miejscu, nie ma powodu trzymac go osobno - reszta akcji wyjazdu
+                    jest juz tutaj. Widoczne od etapu "w trakcie", bo w propozycjach opisu
+                    jeszcze nie ma czego pisac. */}
+                {isOwner && stage !== "planning" && !choosing && (
+                  <DropdownMenuItem
+                    onSelect={() => { haptics.light(); setDescOpenKey((k) => k + 1); }}
+                    className="gap-2.5 py-2.5"
+                  >
+                    <FileText className="h-4 w-4" />
+                    {routeDescription ? t("route:note.edit_description") : t("route:note.add_description")}
+                  </DropdownMenuItem>
+                )}
                 {canEdit && (
                   <DropdownMenuItem
                     onSelect={() => { haptics.light(); setNameVal(route.title || ""); setEditingName(true); }}
@@ -2131,6 +2150,8 @@ export default function SharedRoute() {
                 placeholder={t("desc.placeholder")}
                 addLabel={t("route:note.add_description")}
                 editLabel={t("route:note.edit_description")}
+                hideActions
+                openKey={descOpenKey}
                 onSave={saveTripDescription}
                 onEditingChange={(v) => { setNoteEditing(v); setDescEditing(v); }}
               />
