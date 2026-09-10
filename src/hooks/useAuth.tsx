@@ -2,6 +2,7 @@ import { useState, useEffect, useContext, createContext, ReactNode, useRef } fro
 import { User, Session } from "@supabase/supabase-js";
 import posthog from "posthog-js";
 import { supabase } from "@/integrations/supabase/client";
+import { applyPendingReferral } from "@/lib/referral";
 
 interface AuthContextValue {
   user: User | null;
@@ -46,6 +47,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       ensuredForUserId.current = session.user.id;
       supabase.rpc("ensure_current_user_profile").then(({ error }) => {
         if (error) console.warn("[useAuth] ensure_current_user_profile failed:", error.message);
+        // Zaproszenie przypisujemy PO upewnieniu sie, ze profil istnieje - attach_referral
+        // aktualizuje wiersz w profiles, wiec bez niego nie mialby czego zmienic.
+        void applyPendingReferral();
       }).catch((err) => console.warn("[useAuth] ensure_current_user_profile threw:", err));
     };
 

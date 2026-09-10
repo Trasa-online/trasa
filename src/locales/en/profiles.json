@@ -156,5 +156,19 @@
     "drafts": "Drafts",
     "published": "Published",
     "saved": "Saved"
+  },
+  "referral": {
+    "title": "Invite your friends",
+    "title_done": "Thank you! That's the full set",
+    "desc": "spontaway gets better once your people are on it. Invite {{count}} friends and you'll get new features before launch.",
+    "desc_done": "Your friends are in. You'll see new features first, before everyone else.",
+    "progress": "{{invited}} of {{goal}}",
+    "share_cta": "Send an invite",
+    "share_title": "Coming to spontaway?",
+    "share_text": "I collect places and trips here. Come in through my link and you'll see what I recommend.",
+    "copy_aria": "Copy invite link",
+    "copied": "Link copied",
+    "copy_failed": "Couldn't copy the link",
+    "code_label": "Your code:"
   }
 }

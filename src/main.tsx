@@ -7,11 +7,16 @@ import App from "./App.tsx";
 import "./index.css";
 import "./i18n";
 import { initClarityOnBoot } from "@/lib/consent";
+import { captureReferralFromUrl } from "@/lib/referral";
 
 // Clarity dla userow, ktorzy juz wczesniej wyrazili zgode. Przez initClarityOnBoot, bo
 // bezposrednie wywolanie _clarityInit() omijalo DWIE reguly: wykluczenie kont wewnetrznych
 // oraz brak nagrywania w aplikacji natywnej (bateria).
 void initClarityOnBoot();
+
+// Kod zapraszajacego (?ref=) odkladamy PRZED montazem Reacta: HashRouter potrafi przepisac
+// adres, zanim ktorykolwiek ekran zdazy sie zamontowac, i parametr po prostu przepada.
+captureReferralFromUrl();
 
 // ─── Sentry error tracking (lazy-loaded to keep main bundle slim) ─────────────
 if (import.meta.env.PROD) {

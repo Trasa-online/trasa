@@ -3,6 +3,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { QRCodeSVG } from "qrcode.react";
 import posthog from "posthog-js";
 import { supabase } from "@/integrations/supabase/client";
+import { pendingReferralCode } from "@/lib/referral";
 import { capabilities } from "@/lib/platform";
 
 /* ─────────────────────────────────────────────────────────────────────────────
@@ -230,7 +231,11 @@ function LaunchNotifyForm({ c, lang }: { c: Copy; lang: Lang }) {
     setState("sending");
     // Jezyk zapisujemy przy wierszu, nie tylko w wywolaniu maila: kolejne wysylki
     // (zaproszenie na premiere) maja isc w tym samym jezyku, w ktorym user sie zapisal.
-    const { error } = await (supabase as any).from("waitlist").insert({ email: value, source: "landing_modal", language: lang });
+    // Kod zapraszajacego (?ref=) jedzie RAZEM z zapisem, bo link laduje w przegladarce,
+    // a konto zaklada sie pozniej w natywce - localStorage tego nie przenosi. E-mail jest
+    // jedynym mostem miedzy tymi dwoma swiatami (patrz src/lib/referral.ts).
+    const ref = pendingReferralCode();
+    const { error } = await (supabase as any).from("waitlist").insert({ email: value, source: "landing_modal", language: lang, referral_code: ref });
     // Duplikat maila to dla usera sukces, nie blad - juz jest zapisany.
     if (error && !String(error.code) .startsWith("23")) {
       setState("error");

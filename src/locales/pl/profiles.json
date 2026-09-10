@@ -158,5 +158,19 @@
     "drafts": "Robocze",
     "published": "Opublikowane",
     "saved": "Zapisane"
+  },
+  "referral": {
+    "title": "Zapraszaj znajomych",
+    "title_done": "Dzięki! Masz komplet",
+    "desc": "spontaway jest ciekawsze, kiedy są w nim Twoi ludzie. Zaproś {{count}} osoby, a dostaniesz dostęp do nowości przed premierą.",
+    "desc_done": "Twoi znajomi są już w środku. Nowości zobaczysz jako pierwsza, zanim trafią do wszystkich.",
+    "progress": "{{invited}} z {{goal}}",
+    "share_cta": "Wyślij zaproszenie",
+    "share_title": "Wchodzisz w spontaway?",
+    "share_text": "Zbieram tu miejsca i wyjazdy. Wejdź z mojego linku, to zobaczysz, co polecam.",
+    "copy_aria": "Skopiuj link zapraszający",
+    "copied": "Link skopiowany",
+    "copy_failed": "Nie udało się skopiować linku",
+    "code_label": "Twój kod:"
   }
 }

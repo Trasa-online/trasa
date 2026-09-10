@@ -29,6 +29,7 @@ import NotificationsDrawer from "@/components/layout/NotificationsDrawer";
 import InviteFriendsBanner from "@/components/social/InviteFriendsBanner";
 import { Camera as CapCamera, CameraResultType, CameraSource } from "@capacitor/camera";
 import { ProfileFeedCard } from "@/components/profile/ProfileFeedCard";
+import ReferralCard from "@/components/profile/ReferralCard";
 import { SpontawayTabIcon } from "@/components/profile/SpontawayTabIcon";
 import { shortRelativeTime } from "@/lib/relativeTime";
 import { unsaveCollectionDb, migrateLocalSavedCollections } from "@/lib/savedCollections";
@@ -746,6 +747,10 @@ const TravelerProfile = () => {
             <Search className="h-4 w-4" />
           </button>
         </div>
+
+        {/* Zapraszanie znajomych (2026-09-10) - ekran zachety zamiast paywalla. Stoi NAD
+            zakladkami, bo to jedyne miejsce na profilu, ktore user widzi bez przewijania. */}
+        <div className="pb-5"><ReferralCard userId={user.id} /></div>
 
         {/* Zakladki: Listy | Wyjazdy (ikona + labelka obok, underline aktywnej). Zapisane usunięte 2026-08-24. */}
         {/* Sticky: przy przewijaniu profilu zakladki zostaja na gorze (prosba Nat 2026-09-01).
