@@ -24,6 +24,7 @@ import { API_BASE } from "@/lib/platform";
 import { CategoryIcon } from "@/components/CategoryIcon";
 import { uploadWithThumb } from "@/lib/imageThumbs";
 import { mapWithLimit } from "@/lib/imageCompression";
+import { EMPTY_ARRAY } from "@/lib/emptyRef";
 
 // Statyczna mapka pojedynczego miejsca (okladka karty planu). Tania (Maps Static + 24h CDN),
 // pomaranczowy pin, POI/transit ukryte. null gdy brak wspolrzednych.
@@ -185,7 +186,7 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false, onDelete, deleting 
   }, [routeId, dayRouteIds, selectedDayId]);
 
   const idsKey = dayRouteIds.join(",");
-  const { data: allPins = [] } = useQuery({
+  const { data: allPins = EMPTY_ARRAY } = useQuery({
     queryKey: ["active-plan-all-pins", idsKey],
     queryFn: async () => {
       if (!dayRouteIds.length) return [];
@@ -232,7 +233,7 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false, onDelete, deleting 
     (placeMeta as Record<string, any>)[String(pin?.place_name ?? "").toLowerCase()] ?? { description: null, tags: [] };
 
   // Notki (wszystkie dni naraz).
-  const { data: existingRatings = [] } = useQuery({
+  const { data: existingRatings = EMPTY_ARRAY } = useQuery({
     queryKey: ["active-plan-pin-ratings", idsKey, user?.id],
     queryFn: async () => {
       if (!dayRouteIds.length || !user) return [];

@@ -14,6 +14,12 @@ import { haptics } from "@/hooks/useHaptics";
 //
 // Haptyka na starcie zaznaczenia jest czescia komunikatu: to jedyny sygnal, ze
 // przytrzymanie w ogole cos zrobilo, zanim user zdazy podniesc palec.
+//
+// KONTROLKI WEWNATRZ obszaru z gestem musza sie wypisac atrybutem `data-no-longpress`.
+// Bez tego tapniecie w guzik otwierajacy menu konczylo sie wejsciem w tryb zaznaczania:
+// menu przejmowalo wskaznik, `pointerup` nie wracal do wiersza, odliczanie dochodzilo do
+// konca i tryb zaznaczania chowal cala belke akcji razem z wlasnie otwartym menu
+// (zlapane na tescie 2026-09-10).
 
 const MOVE_TOLERANCE = 10;   // px - powyzej tego traktujemy gest jako przewijanie
 const HOLD_MS = 420;         // krocej = przypadkowe wejscia przy zwyklym tapnieciu
@@ -31,6 +37,7 @@ export function useLongPress(onLongPress: (() => void) | undefined, enabled = tr
 
   const onPointerDown = useCallback((e: React.PointerEvent) => {
     if (!enabled || !onLongPress) return;
+    if ((e.target as HTMLElement | null)?.closest?.("[data-no-longpress]")) return;
     origin.current = { x: e.clientX, y: e.clientY };
     fired.current = false;
     timer.current = setTimeout(() => {

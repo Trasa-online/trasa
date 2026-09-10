@@ -14,6 +14,7 @@ import SavePlaceSheet, { type SavePlaceInput } from "@/components/plan-wizard/Sa
 import { GoogleGlyph } from "@/components/icons/GoogleGlyph";
 import { openExternal } from "@/lib/openExternal";
 import PlaceMapPicker from "@/components/route/PlaceMapPicker";
+import { EMPTY_ARRAY } from "@/lib/emptyRef";
 
 const NBSP = " ";
 const SCOPE_KM = 20; // wyniki wyszukiwarki tylko w obrebie ~20km od srodka trasy/miasta
@@ -102,7 +103,7 @@ export default function AddPlaceSheet({ open, onClose, city, countries, existing
     if (open) { setSelected([]); setManual([]); setQuery(""); setResults([]); setBlocked(false); setAdding(false); setDetailPlace(null); setOpenLists(new Set()); }
   }, [open]);
 
-  const { data: savedPlaces = [] } = useQuery({
+  const { data: savedPlaces = EMPTY_ARRAY } = useQuery({
     queryKey: ["saved-places", user?.id],
     enabled: !!user?.id && open,
     queryFn: () => fetchSavedPlaces(user!.id),

@@ -421,9 +421,14 @@ const PlaceSwiperDetail = ({
           {/* Scroll wrapper - vaul inicjuje drag-to-dismiss tylko gdy scroll jest na gorze,
               wiec native scroll do recenzji/galerii dziala normalnie (bez buga z iOS WebView).
               Wyjscie: drag w dol, tap w tlo (overlay), Esc, albo Hero X. */}
+          {/* overscrollBehaviorY: "contain" - bez tego iOS odbijal (rubber-band) SAM kontener
+              przewijania: hero zjezdzalo w dol, a nad nim odslanialo sie biale tlo arkusza
+              (zgloszenie Nat 2026-09-10). Z "contain" odbicia nie ma, a ciagniecie w dol na
+              gorze listy przejmuje vaul i zjezdza CALYM arkuszem razem ze zdjeciem - czyli
+              tak, jak ten gest ma wygladac. */}
           <div
             className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden"
-            style={{ WebkitOverflowScrolling: "touch" }}
+            style={{ WebkitOverflowScrolling: "touch", overscrollBehaviorY: "contain" }}
           >
           {/* Hidden input do uploadu wlasnego zdjecia miejsca (#3e). */}
           <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />

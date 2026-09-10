@@ -43,6 +43,7 @@ import { moderateImageUrl, MODERATION_REJECTED_MESSAGE } from "@/lib/imageModera
 import { EmptyPlacesState } from "@/components/route/EmptyPlacesState";
 import AddPlaceSheet from "@/components/route/AddPlaceSheet";
 import { createWyjazdFromPlaces } from "@/lib/createWyjazd";
+import TripFabStack, { type TripFab } from "@/components/route/TripFabStack";
 import TripChatSheet from "@/components/route/TripChatSheet";
 import { useShare } from "@/hooks/useShare";
 import { useUnsavePlace } from "@/hooks/useUnsavePlace";
@@ -1677,7 +1678,11 @@ export default function SharedRoute() {
                 onOpen={() => openDetail(pin)} onGoogle={() => openGooglePlace(pin)}
                 onDelete={canEdit ? () => handleDeletePin(pin) : undefined}
                 onSave={user ? () => toggleSaveBookmark(pin) : undefined} saved={isSaved(pin.place_name)}
-            isTop={!!pin.is_top} onToggleTop={canEdit ? () => void toggleTopPin(pin) : undefined}
+            isTop={!!pin.is_top}
+                /* Gwiazdka ("topka") tylko na wyjezdzie OPUBLIKOWANYM (prosba Nat 2026-09-10).
+                   To wyroznienie dla CZYTAJACYCH - wskazanie, co z tego wyjazdu jest naprawde
+                   warte odwiedzenia. Dopoki wyjazd jest roboczy, nie ma komu tego mowic. */
+                onToggleTop={canEdit && isPublished ? () => void toggleTopPin(pin) : undefined}
                 note={buildNote(pin)} cornerAvatar={addedByAvatar(pin)}
                 selection={selectionFor(pin)}
               />
@@ -1715,7 +1720,7 @@ export default function SharedRoute() {
             onOpen={() => openDetail(pin)} onGoogle={() => openGooglePlace(pin)}
             onDelete={canEdit ? () => handleDeletePin(pin) : undefined}
             onSave={user ? () => toggleSaveBookmark(pin) : undefined} saved={isSaved(pin.place_name)}
-            isTop={!!pin.is_top} onToggleTop={canEdit ? () => void toggleTopPin(pin) : undefined}
+            isTop={!!pin.is_top} onToggleTop={canEdit && isPublished ? () => void toggleTopPin(pin) : undefined}
             note={buildNote(pin)} cornerAvatar={addedByAvatar(pin)}
             selection={selectionFor(pin)}
           />
@@ -1921,10 +1926,10 @@ export default function SharedRoute() {
       </div>
 
       {/* Obszar scrolla - #1: BEZ okladki tla trasy (okladka TYLKO w eksploracji). */}
-      {/* Zapas na dole = ponad plywajace guziki (czat stoi 152px + 56px wysokosci = 208px),
-          inaczej ostatni wiersz konczyl sie POD nimi i kosza nie dalo sie tapnac (zgloszenie
-          Nat 2026-09-09). Bylo pb-44 = 176px, czyli mniej niz sam czat. */}
-      <div className="flex-1 min-h-0 overflow-y-auto pb-[calc(14rem+env(safe-area-inset-bottom,0px))]">
+      {/* Zapas na dole = ponad ZWINIETY stos akcji (84px + 56px wysokosci = 140px). Po
+          schowaniu czatu i "+" pod jeden guzik (2026-09-10) nie trzeba juz rezerwowac miejsca
+          na dwa kolka; rozwiniety stos to nakladka z tlem do zamkniecia, wiec moze zaslaniac. */}
+      <div className="flex-1 min-h-0 overflow-y-auto pb-[calc(10rem+env(safe-area-inset-bottom,0px))]">
         {/* Naglowek: tytul + opis, spacing 35px pod TopBarem */}
         <div className="px-5 pt-[35px]">
           <div className="flex items-start gap-3">
@@ -1946,24 +1951,10 @@ export default function SharedRoute() {
                 gosc ogladajacy cudzy wyjazd tez ma go czym poslac dalej. Reszta zostaje przy
                 wlascicielu / uczestniku. */}
             <div className="shrink-0 flex items-center gap-2">
-                {/* Zapraszanie uczestnikow PRZYWROCONE (prosba Nat 2026-09-06, cofa decyzje z 2026-08-30):
-                    sklad da sie uzupelnic takze PO fakcie, czyli na juz opublikowanym wyjezdzie.
-                    Guzik zajal miejsce wyboru wlasnej okladki - to byla rzadsza akcja, a wiersz ikon
-                    nie moze rosnac w nieskonczonosc. Tylko HOST: inviteUsersToRoute idzie przez
-                    host-only RPC add_member_to_session. */}
-                {isOwner && (
-                  <button onClick={() => { haptics.light(); setInviteOpen(true); }}
-                    aria-label={t("aria.invite_people")}
-                    className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center active:scale-90 transition-transform">
-                    <UserPlus className="h-4 w-4 text-foreground" />
-                  </button>
-                )}
-                <button onClick={handleShare} onContextMenu={(e) => { e.preventDefault(); handleShareLink(); }} aria-label={t("aria.share")} className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center active:scale-90 transition-transform"><Share2 className="h-4 w-4 text-foreground" /></button>
-                {/* Olowek usuniety (prosba Nat 2026-09-01) - ten widok JEST edycja: miejsca, notki,
-                    zdjecia, opis i tagi zmienia sie na miejscu, wiec osobne wejscie w stepper
-                    tylko mnozylo sciezki. */}
-                {/* Olowek = zmiana NAZWY (2026-09-10), a nie wejscie w stepper edycji - ten widok
-                    dalej JEST edycja reszty (miejsca, notki, zdjecia, opis, tagi). */}
+                {/* Olowek = zmiana NAZWY wyjazdu. Stoi PIERWSZY (prosba Nat 2026-09-10, zamiana
+                    miejscami z zaproszeniem): nazwa nie powstaje juz w kreatorze, wiec zmiana
+                    nazwy jest tu czynnoscia czestsza niz dopraszanie ludzi. Ten widok dalej JEST
+                    edycja reszty (miejsca, notki, zdjecia, opis, tagi) - stepper sie nie otwiera. */}
                 {canEdit && (
                   <button
                     onClick={() => { haptics.light(); setNameVal(route.title || ""); setEditingName(true); }}
@@ -1972,6 +1963,18 @@ export default function SharedRoute() {
                     className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center active:scale-90 transition-transform disabled:opacity-50"
                   >
                     <Pencil className="h-4 w-4 text-foreground" />
+                  </button>
+                )}
+                <button onClick={handleShare} onContextMenu={(e) => { e.preventDefault(); handleShareLink(); }} aria-label={t("aria.share")} className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center active:scale-90 transition-transform"><Share2 className="h-4 w-4 text-foreground" /></button>
+                {/* Zapraszanie uczestnikow PRZYWROCONE (prosba Nat 2026-09-06, cofa decyzje
+                    z 2026-08-30): sklad da sie uzupelnic takze PO fakcie, czyli na juz
+                    opublikowanym wyjezdzie. Tylko HOST: inviteUsersToRoute idzie przez
+                    host-only RPC add_member_to_session. */}
+                {isOwner && (
+                  <button onClick={() => { haptics.light(); setInviteOpen(true); }}
+                    aria-label={t("aria.invite_people")}
+                    className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center active:scale-90 transition-transform">
+                    <UserPlus className="h-4 w-4 text-foreground" />
                   </button>
                 )}
                 {isOwner && <button onClick={() => setAskDelete(true)} aria-label={t("aria.delete_trip")} className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center active:scale-90 transition-transform"><Trash2 className="h-4 w-4 text-destructive" /></button>}
@@ -2376,47 +2379,43 @@ export default function SharedRoute() {
         />
       )}
 
-      {/* Dymek CZATU wyjazdu (prawa strona, nad dolnym CTA) - uczestnicy (owner/czlonek) przegaduja
-          miejsca. Realtime. Ukryty w trybie wyboru miejsc. Prosba Nat 2026-08-26. */}
-      {canEdit && id && !choosing && !noteEditing && (
-        // Dymek czatu stoi w miejscu. Chowanie go swipem do krawedzi USUNIETE (prosba Nat
-        // 2026-09-07, cofa 2026-08-26): dawalo sie schowac przypadkiem przy scrollu i potem
-        // nie bylo wiadomo, gdzie sie podzial czat - a to jedyne wejscie do rozmowy.
-        <button aria-label={t("chat.title")}
-          onClick={() => setChatOpen(true)}
-          className="fixed right-4 z-40 h-14 w-14 rounded-full bg-background text-foreground border border-border shadow-lg shadow-black/10 flex items-center justify-center active:scale-90 transition-transform"
-          style={{ bottom: "calc(152px + env(safe-area-inset-bottom, 0px))" }}>
-          <MessageCircle className="h-6 w-6" strokeWidth={2.2} />
-          {unreadChat > 0 && (
-            <span className="absolute -top-1 -left-1 min-w-[20px] h-5 px-1.5 rounded-full bg-red-500 text-white text-[11px] font-bold flex items-center justify-center border-2 border-white leading-none">{unreadChat > 9 ? "9+" : unreadChat}</span>
-          )}
-        </button>
-      )}
-      {/* t("add_place") jako plywajacy guzik BEZPOSREDNIO POD czatem (prosba Nat 2026-08-30).
-          Dostepny takze w trybie zmiany kolejnosci (prosba Nat 2026-08-30) - chowamy tylko przy
-          pisaniu notki i przy wyborze miejsc. */}
-      {/* "+" znaczy "dodaj to, na co patrzysz" (prosba Nat 2026-09-08): w Miejscach dodaje
-          miejsce, w Galerii otwiera wybor zdjec. Jeden guzik, dwa konteksty - inaczej w Galerii
-          prowadzil do arkusza miejsc, czyli nie tam, gdzie user wlasnie jest. */}
       {/* Wejscie do plikow trzymamy POZA zakladka galerii - plywajacy "+" korzysta z niego
           takze wtedy, gdy galeria nie jest jeszcze otwarta ani pusta. */}
       {canAddPhotos && (
         <input ref={photoInputRef} type="file" accept="image/*,.heic,.heif" multiple className="hidden"
           onChange={(e) => { const files = Array.from(e.target.files ?? []); e.currentTarget.value = ""; if (files.length) void handleAddPhotos(files); }} />
       )}
+
+      {/* Czat i "+" schowane pod JEDNYM guzikiem z chevronem (prosba Nat 2026-09-10), na
+          KAZDYM etapie wyjazdu. Dwa kolka wiszace nad trescia zaslanialy ostatnie wiersze
+          listy - stad jeden guzik w spoczynku. Nieprzeczytane wiadomosci wedruja na niego,
+          zeby schowanie czatu nie schowalo tez sygnalu, ze ktos pisze.
+          Chowamy caly stos przy wyborze miejsc i przy pisaniu notki - tam ekran nalezy do
+          jednej czynnosci. */}
       {canEdit && !choosing && !noteEditing && (
-        <button
-          onClick={() => {
-            haptics.light();
-            if (planTab === "galeria" && canAddPhotos) photoInputRef.current?.click();
-            else setAddPlaceOpen(true);
-          }}
-          aria-label={planTab === "galeria" && canAddPhotos ? t("add_photo_cta") : t("add_place")}
-          className="fixed right-4 z-40 h-14 w-14 rounded-full bg-primary shadow-lg shadow-black/15 flex items-center justify-center active:scale-90 transition-transform"
-          style={{ bottom: "calc(84px + env(safe-area-inset-bottom, 0px))" }}
-        >
-          <Plus className="h-6 w-6 text-white" strokeWidth={2.4} />
-        </button>
+        <TripFabStack
+          actions={[
+            ...(id ? [{
+              key: "chat",
+              label: t("chat.title"),
+              icon: <MessageCircle className="h-6 w-6" strokeWidth={2.2} />,
+              badge: unreadChat,
+              onClick: () => setChatOpen(true),
+            } as TripFab] : []),
+            {
+              // "+" znaczy "dodaj to, na co patrzysz" (prosba Nat 2026-09-08): w Miejscach
+              // dodaje miejsce, w Galerii otwiera wybor zdjec.
+              key: "add",
+              label: planTab === "galeria" && canAddPhotos ? t("add_photo_cta") : t("add_place"),
+              icon: <Plus className="h-6 w-6" strokeWidth={2.4} />,
+              primary: true,
+              onClick: () => {
+                if (planTab === "galeria" && canAddPhotos) photoInputRef.current?.click();
+                else setAddPlaceOpen(true);
+              },
+            },
+          ]}
+        />
       )}
 
       {canEdit && id && (

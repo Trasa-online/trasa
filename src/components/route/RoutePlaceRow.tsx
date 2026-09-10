@@ -3,7 +3,8 @@ import { useTranslation } from "react-i18next";
 import { AnimatePresence, motion } from "framer-motion";
 import { FLIGHT_MS, arcThrough, relRect } from "@/lib/flightPath";
 import { localizeTag } from "@/lib/routeTags";
-import { Bookmark, Check, Star, Trash2 } from "lucide-react";
+import { Bookmark, Check, MoreHorizontal, Star, Trash2 } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useLongPress } from "@/hooks/useLongPress";
 import { PlacePhoto } from "@/components/PlacePhoto";
 import { avatarSrc } from "@/lib/avatar";
@@ -218,7 +219,9 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
           od zapisu/kosza. Guzik Google = samo logo w BIALYM kolku z delikatnym cieniem (bez podpisu)
           - cien niesie afordancje "to sie klika", spojnie z kartami i arkuszem dodawania miejsca. */}
       {!selecting && (
-      <div className="mt-3 flex items-center justify-end gap-2">
+      /* data-no-longpress: tapniecie w akcje NIE moze wchodzic w tryb zaznaczania -
+         patrz komentarz w useLongPress. */
+      <div data-no-longpress className="mt-3 flex items-center justify-end gap-2">
         {/* Cudza lista: autor odhaczyl to miejsce u siebie. Pokazujemy to jako INFORMACJE,
             nie przelacznik - to nie jest moj stan i nie mam go jak zmienic. Awatar mowi CZYJ
             to slad, slowo mowi jaki. */}
@@ -311,34 +314,52 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
         {/* Zapis miejsca dostepny ZAWSZE gdy podany onSave - takze dla wlasciciela obok kosza
             (wczesniej kosz go wypieral, wiec we wlasnym wyjezdzie nie dalo sie zapisac miejsca
             do swoich list - zgloszenie Nat 2026-08-29). */}
-        {onToggleTop && (
-          <button
-            ref={starBtnRef}
-            onClick={(e) => { e.stopPropagation(); tappedTop.current = true; onToggleTop(); }}
-            aria-label={isTop ? t("row.unset_top") : t("row.set_top")}
-            aria-pressed={!!isTop}
-            className="h-9 w-9 rounded-full flex items-center justify-center active:scale-90 transition-transform"
-          >
-            <Star className={`h-5 w-5 ${isTop ? "text-primary fill-primary" : "text-foreground/70"}`} strokeWidth={2} />
-          </button>
-        )}
-        {onSave && (
-          <button
-            onClick={(e) => { e.stopPropagation(); onSave(); }}
-            aria-label={saved ? t("row.saved_in_list") : t("row.save_to_list")}
-            className="h-9 w-9 rounded-full flex items-center justify-center active:scale-90 transition-transform"
-          >
-            <Bookmark className={`h-5 w-5 ${saved ? "text-[#F0A583] fill-[#F0A583]" : "text-foreground/70"}`} strokeWidth={2} />
-          </button>
-        )}
-        {onDelete && (
-          <button
-            onClick={(e) => { e.stopPropagation(); onDelete(); }}
-            aria-label={t("row.remove")}
-            className="h-9 w-9 rounded-full flex items-center justify-center text-destructive active:scale-90 transition-transform"
-          >
-            <Trash2 className="h-5 w-5" strokeWidth={2} />
-          </button>
+        {/* Gwiazdka, zapis i kosz zeszly pod TRZY KROPKI (prosba Nat 2026-09-10). Przy wierszu
+            z notkami, zdjeciami i tagami cztery ikony obok siebie robily z kazdego miejsca
+            panel sterowania; zostaje wiec jedno wejscie w menu. Guzik Google zostaje na
+            wierzchu - to jedyna akcja, ktora wykonuje sie w trakcie samego przegladania. */}
+        {(onToggleTop || onSave || onDelete) && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                ref={starBtnRef}
+                onClick={(e) => e.stopPropagation()}
+                aria-label={t("row.more_actions")}
+                className="h-9 w-9 rounded-full flex items-center justify-center shrink-0 active:scale-90 transition-transform"
+              >
+                {/* Gwiazdka/zakladka na ikonie menu, gdy stan jest ustawiony - inaczej po
+                    schowaniu akcji nie bylo z wiersza widac, ze miejsce jest w topce
+                    albo zapisane. */}
+                {isTop ? (
+                  <Star className="h-5 w-5 text-primary fill-primary" strokeWidth={2} />
+                ) : saved ? (
+                  <Bookmark className="h-5 w-5 text-[#F0A583] fill-[#F0A583]" strokeWidth={2} />
+                ) : (
+                  <MoreHorizontal className="h-5 w-5 text-foreground/70" strokeWidth={2} />
+                )}
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="rounded-2xl w-56">
+              {onToggleTop && (
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); tappedTop.current = true; onToggleTop(); }} className="gap-2.5 py-2.5">
+                  <Star className={`h-4 w-4 ${isTop ? "text-primary fill-primary" : ""}`} />
+                  {isTop ? t("row.unset_top") : t("row.set_top")}
+                </DropdownMenuItem>
+              )}
+              {onSave && (
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onSave(); }} className="gap-2.5 py-2.5">
+                  <Bookmark className={`h-4 w-4 ${saved ? "text-[#F0A583] fill-[#F0A583]" : ""}`} />
+                  {saved ? t("row.saved_in_list") : t("row.save_to_list")}
+                </DropdownMenuItem>
+              )}
+              {onDelete && (
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onDelete(); }} className="gap-2.5 py-2.5 text-destructive focus:text-destructive">
+                  <Trash2 className="h-4 w-4" />
+                  {t("row.remove")}
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
         )}
       </div>
       )}

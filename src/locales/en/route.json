@@ -155,7 +155,8 @@
     "set_top": "Add to top picks",
     "unset_top": "Remove from top picks",
     "top_limit_one": "You can highlight up to {{count}} place from this trip",
-    "top_limit_other": "You can highlight up to {{count}} places from this trip"
+    "top_limit_other": "You can highlight up to {{count}} places from this trip",
+    "more_actions": "More actions"
   },
   "note": {
     "placeholder": "Add a note about this place...",

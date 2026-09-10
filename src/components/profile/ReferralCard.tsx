@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
-import { Check, Copy, Gift, Share2 } from "lucide-react";
+import { Check, Copy, Gift, Share2, X } from "lucide-react";
 import { toast } from "sonner";
 import { useShare } from "@/hooks/useShare";
 import { haptics } from "@/hooks/useHaptics";
@@ -16,10 +16,19 @@ import { REFERRAL_GOAL, fetchReferralStats, referralLink } from "@/lib/referral"
 // prog, gdyby liczby o niego poprosily.
 //
 // Licznik pokazuje REJESTRACJE z linku, nie wyslane linki - stad bierze sie jego wiarygodnosc.
+// Zamkniecie karty trzymamy w sessionStorage, NIE w localStorage (prosba Nat 2026-09-10):
+// baner ma znikac na czas biezacego uzycia, a wracac przy kolejnym odpaleniu aplikacji.
+// W natywce kazde uruchomienie to nowy WebView, wiec sessionStorage startuje pusty -
+// dokladnie to zachowanie. localStorage schowalby go raz na zawsze.
+const DISMISS_KEY = "spontaway_referral_card_dismissed";
+
 export default function ReferralCard({ userId }: { userId: string }) {
   const { t } = useTranslation("profiles");
   const share = useShare();
   const [copied, setCopied] = useState(false);
+  const [dismissed, setDismissed] = useState(() => {
+    try { return sessionStorage.getItem(DISMISS_KEY) === "1"; } catch { return false; }
+  });
 
   const { data } = useQuery({
     queryKey: ["referral-stats", userId],
@@ -30,7 +39,7 @@ export default function ReferralCard({ userId }: { userId: string }) {
   const code = data?.code ?? null;
   const invited = data?.invited ?? 0;
   const done = invited >= REFERRAL_GOAL;
-  if (!code) return null;
+  if (!code || dismissed) return null;
   const link = referralLink(code);
 
   const onShare = async () => {
@@ -65,6 +74,17 @@ export default function ReferralCard({ userId }: { userId: string }) {
             {done ? t("referral.desc_done") : t("referral.desc", { count: REFERRAL_GOAL })}
           </p>
         </div>
+        <button
+          onClick={() => {
+            haptics.light();
+            try { sessionStorage.setItem(DISMISS_KEY, "1"); } catch { /* prywatne okno */ }
+            setDismissed(true);
+          }}
+          aria-label={t("referral.dismiss_aria")}
+          className="shrink-0 -mr-1 -mt-1 h-8 w-8 rounded-full flex items-center justify-center active:scale-90 transition-transform"
+        >
+          <X className="h-4 w-4 text-[#5B2C06]/60" />
+        </button>
       </div>
 
       {/* Postep: tyle kropek, ile brakuje do progu - liczba jest mala, wiec kropki czyta sie

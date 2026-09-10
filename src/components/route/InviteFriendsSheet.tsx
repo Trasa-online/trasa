@@ -11,11 +11,15 @@ import { Search, Check, X, Loader2, UserPlus, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { inviteUsersToRoute, type InviteRoute } from "@/lib/groupInvite";
 import { cn } from "@/lib/utils";
+import { EMPTY_ARRAY } from "@/lib/emptyRef";
 
 interface Profile { id: string; username: string | null; first_name: string | null; avatar_url: string | null; }
 
 // Reużywalny sheet t("invite.title"): szukanie po username + multi-select + zaproszenie.
 // Dziala na istniejacej trasie (podpina do sesji grupowej jesli trzeba) - patrz inviteUsersToRoute.
+// Stabilna referencja pustego zbioru - patrz komentarz przy zapytaniu o konta biznesowe.
+const EMPTY_IDS: Set<string> = new Set();
+
 export default function InviteFriendsSheet({ open, onOpenChange, route, onInvited, existingMemberIds = [], participants = [], onRemove }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
@@ -38,7 +42,14 @@ export default function InviteFriendsSheet({ open, onOpenChange, route, onInvite
   useEffect(() => { if (!open) { setQ(""); setResults([]); setSelected({}); } }, [open]);
 
   // Konta BIZNESOWE (owner_user_id) - do odfiltrowania (biznes != user apki). Jedno zapytanie.
-  const { data: bizIds = new Set<string>() } = useQuery({
+  //
+  // NIE `= new Set()` w destrukturyzacji: to NOWY obiekt przy kazdym renderze, a zapytanie
+  // jest wylaczone, dopoki arkusz jest zamkniety - czyli `data` zostaje undefined i domyslka
+  // podstawia sie w kolko. Efekt wyszukiwania ma `bizIds` w zaleznosciach, wiec odpalal sie
+  // przy kazdym renderze i przez setResults/setLoading wymuszal kolejny. Petla kręciła się
+  // BEZ KONCA, dopoki wlasciciel mial otwarty swoj wyjazd (arkusz jest zamontowany zawsze) -
+  // 657 obrotow w 7 sekund na pomiarze. Stala referencja zamyka temat.
+  const { data: bizIds = EMPTY_IDS } = useQuery({
     queryKey: ["business-owner-ids"],
     enabled: open,
     staleTime: 5 * 60 * 1000,
@@ -47,8 +58,8 @@ export default function InviteFriendsSheet({ open, onOpenChange, route, onInvite
 
   // Domyslna lista (puste pole): znajomi + obserwowani (dedup, bez siebie i biznesow) - zeby nie bylo
   // pusto (prosba Nat 2026-08-26).
-  const { data: friends = [] } = useFriends(user?.id);
-  const { data: following = [] } = useFollowList(user?.id, "following");
+  const { data: friends = EMPTY_ARRAY } = useFriends(user?.id);
+  const { data: following = EMPTY_ARRAY } = useFollowList(user?.id, "following");
   const myPeople = useMemo<Profile[]>(() => {
     const map = new Map<string, Profile>();
     for (const p of [...(friends as any[]), ...(following as any[])]) {

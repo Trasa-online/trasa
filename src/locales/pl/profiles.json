@@ -171,6 +171,12 @@
     "copy_aria": "Skopiuj link zapraszający",
     "copied": "Link skopiowany",
     "copy_failed": "Nie udało się skopiować linku",
-    "code_label": "Twój kod:"
+    "code_label": "Twój kod:",
+    "dismiss_aria": "Ukryj do następnego uruchomienia"
+  },
+  "layout": {
+    "list": "Lista",
+    "mosaic": "Mozaika",
+    "grid": "Siatka"
   }
 }

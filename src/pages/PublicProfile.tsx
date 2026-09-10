@@ -19,6 +19,8 @@ import { MoreVertical, Ban, Flag as FlagIcon } from "lucide-react";
 import { useFollowCounts, useFollowList } from "@/hooks/useFollow";
 import { useSwipeNav } from "@/hooks/useSwipeNav";
 import { ProfileFeedCard } from "@/components/profile/ProfileFeedCard";
+import { TripLayoutSwitch, TripTile, useTripLayout } from "@/components/profile/TripLayout";
+import { scopeLabel } from "@/lib/tripScope";
 // Karta wyjazdu 1:1 z eksploracja (na profilu bez mapki) - prosba Nat 2026-08-30.
 import TrasaBigCard from "@/components/home/TrasaBigCard";
 import ScreenSkeleton from "@/components/layout/ScreenSkeleton";
@@ -70,6 +72,9 @@ export default function PublicProfile() {
   // zakladki to nie krok nawigacji.
   const [searchParams, setSearchParams] = useSearchParams();
   const [tab, setTab] = useState<"listy" | "wyjazdy">(searchParams.get("tab") === "listy" ? "listy" : "wyjazdy");
+  // Uklad wyjazdow wspoldzielony z wlasnym profilem (ten sam localStorage) - wybor nalezy
+  // do ogladajacego, wiec nie ma powodu, zeby na cudzym profilu resetowal sie do listy.
+  const [tripLayout, setTripLayout] = useTripLayout();
   useEffect(() => {
     const tp = searchParams.get("tab");
     if (tp === "listy" || tp === "wyjazdy") setTab(tp);
@@ -147,7 +152,7 @@ export default function PublicProfile() {
     queryKey: ["public-trip-feed", profile?.id],
     enabled: !!profile?.id,
     queryFn: async () => {
-      const cols = "id, title, city, start_date, day_number, folder_id, views, saves_count, likes_count, created_at, user_id, tags, review_narrative, ai_summary, cover_url, list_cover_url";
+      const cols = "id, title, city, countries, start_date, day_number, folder_id, views, saves_count, likes_count, created_at, user_id, tags, review_narrative, ai_summary, cover_url, list_cover_url";
       // WLASNE wyjazdy usera...
       const { data: routes } = await (supabase as any)
         .from("routes").select(cols)
@@ -423,7 +428,11 @@ export default function PublicProfile() {
             listCards.length === 0 ? (
               <FeedEmptyRO maskSrc="/Ikona_Trasy.svg" title={t("public.no_lists")} desc={t("public.no_lists_desc")} />
             ) : (
-              listCards.map((l: any) => (
+              // Ten sam odstep i to samo rozmieszczenie licznikow co na wlasnym profilu
+              // (prosba Nat 2026-09-10) - dotad karta listy wygladala inaczej u siebie
+              // i u kogos innego, choc to ta sama tresc.
+              <div className="space-y-10">
+              {listCards.map((l: any) => (
                 <ProfileFeedCard
                   key={l.id}
                   avatarUrl={profile.avatar_url}
@@ -434,16 +443,42 @@ export default function PublicProfile() {
                   description={l.description}
                   tiles={l.tiles}
                   counts={{ saves: Math.max(0, (l.saves_count ?? 0) + delta(isListSaved(l.id), initSavedLists.has(l.id))), views: l.views_count ?? 0 }}
+                  countsInHeader
                   onOpen={() => navigate(`/lista/${l.id}`)}
                   onSave={canInteract ? () => onListSave(l) : undefined}
                   saved={isListSaved(l.id)}
                 />
-              ))
+              ))}
+              </div>
             )
           ) : tripCards.length === 0 ? (
             <FeedEmptyRO maskSrc="/Ikona_Trasy.svg" title={t("public.no_trips")} desc={t("public.no_trips_desc")} />
+          ) : tripLayout === "siatka" ? (
+            <>
+              <div className="flex justify-end"><TripLayoutSwitch value={tripLayout} onChange={setTripLayout} /></div>
+              <div className="grid grid-cols-3 gap-1.5">
+                {tripCards.map((tr: any) => (
+                  <TripTile key={tr.id} photo={tripCover(tr)} title={tr.title || t("feed.trip_fallback_generic")}
+                    meta={scopeLabel(tr) || tr.city} onOpen={() => navigate(`/route/${tr.id}`)} />
+                ))}
+              </div>
+            </>
+          ) : tripLayout === "mozaika" ? (
+            <>
+              <div className="flex justify-end"><TripLayoutSwitch value={tripLayout} onChange={setTripLayout} /></div>
+              <div className="columns-2 gap-1.5 [column-fill:_balance]">
+                {tripCards.map((tr: any) => (
+                  <div key={tr.id} className="mb-1.5 break-inside-avoid">
+                    <TripTile natural photo={tripCover(tr)} title={tr.title || t("feed.trip_fallback_generic")}
+                      meta={scopeLabel(tr) || tr.city} onOpen={() => navigate(`/route/${tr.id}`)} />
+                  </div>
+                ))}
+              </div>
+            </>
           ) : (
-            tripCards.map((tr: any) => (
+            <>
+            <div className="flex justify-end"><TripLayoutSwitch value={tripLayout} onChange={setTripLayout} /></div>
+            {tripCards.map((tr: any) => (
               <TrasaBigCard
                 key={tr.id}
                 id={tr.id}
@@ -461,7 +496,8 @@ export default function PublicProfile() {
                 onLike={canInteract ? () => onTripLike(tr) : undefined}
                 liked={isTripLiked(tr.id)}
               />
-            ))
+            ))}
+            </>
           )}
         </div>
       </div>

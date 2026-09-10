@@ -160,7 +160,8 @@
     "unset_top": "Usuń z topki",
     "top_limit_one": "Możesz wyróżnić maksymalnie {{count}} miejsce z tego wyjazdu",
     "top_limit_few": "Możesz wyróżnić maksymalnie {{count}} miejsca z tego wyjazdu",
-    "top_limit_many": "Możesz wyróżnić maksymalnie {{count}} miejsc z tego wyjazdu"
+    "top_limit_many": "Możesz wyróżnić maksymalnie {{count}} miejsc z tego wyjazdu",
+    "more_actions": "Więcej akcji"
   },
   "note": {
     "placeholder": "Dodaj notkę o tym miejscu...",

@@ -14,6 +14,7 @@ import { fetchSavedPlaces, removeSavedPlaceById, addPlaceToList, type SavedPlace
 import AddSavedPlaceSheet from "@/components/saved/AddSavedPlaceSheet";
 import { countryForCity } from "@/lib/tripCountries";
 import { pinCoverKeys, fetchPlacePhotosForKeys, pickPlaceCover } from "@/lib/placePhotoSocial";
+import { EMPTY_ARRAY } from "@/lib/emptyRef";
 
 // Segment "Miejsca" w zakładce Zapisane (profil): siatka 3-kol zapisanych miejsc usera
 // (agregat pozycji z prywatnych list "do zobaczenia"). Tap kafelka -> wizytówka.
@@ -64,7 +65,7 @@ export function SavedPlacesGrid() {
     });
   };
 
-  const { data: places = [], isLoading } = useQuery({
+  const { data: places = EMPTY_ARRAY, isLoading } = useQuery({
     queryKey: ["saved-places", user?.id],
     enabled: !!user?.id,
     queryFn: () => fetchSavedPlaces(user!.id),

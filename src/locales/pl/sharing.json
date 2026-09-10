@@ -279,5 +279,9 @@
     "sheet_title_few": "Dodaj {{count}} miejsca do wyjazdu",
     "sheet_title_many": "Dodaj {{count}} miejsc do wyjazdu",
     "no_drafts": "Nie masz jeszcze roboczego wyjazdu. Użyj „Utwórz wyjazd”, a miejsca trafią do nowego."
+  },
+  "fabs": {
+    "expand": "Pokaż akcje wyjazdu",
+    "collapse": "Schowaj akcje wyjazdu"
   }
 }

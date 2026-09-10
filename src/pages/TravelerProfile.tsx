@@ -30,6 +30,8 @@ import InviteFriendsBanner from "@/components/social/InviteFriendsBanner";
 import { Camera as CapCamera, CameraResultType, CameraSource } from "@capacitor/camera";
 import { ProfileFeedCard } from "@/components/profile/ProfileFeedCard";
 import ReferralCard from "@/components/profile/ReferralCard";
+import { TripLayoutSwitch, TripTile, useTripLayout } from "@/components/profile/TripLayout";
+import { scopeLabel } from "@/lib/tripScope";
 import { SpontawayTabIcon } from "@/components/profile/SpontawayTabIcon";
 import { shortRelativeTime } from "@/lib/relativeTime";
 import { unsaveCollectionDb, migrateLocalSavedCollections } from "@/lib/savedCollections";
@@ -40,6 +42,7 @@ import { fetchRouteCoversFor } from "@/lib/routeMemberCover";
 import { resolveStored } from "@/components/PlacePhoto";
 import { subcategoryLabelLocalized } from "@/lib/categories";
 import { uploadThumb } from "@/lib/imageThumbs";
+import { EMPTY_ARRAY } from "@/lib/emptyRef";
 
 // ── Guest empty state (same visual rytm jak Journal dla goscia) ──────────────
 
@@ -175,7 +178,10 @@ const TravelerProfile = () => {
   // Podzakładki (pigułki) w Listy / Wyjazdy. Domyślnie: Listy->Moje, Wyjazdy->Wspomnienia
   // (opublikowane trasy = flagowa treść; robocze to work-in-progress).
   const [listyTab, setListyTab] = useState<"moje" | "ogolne" | "zapisane">("moje");
-  const [wyjazdyTab, setWyjazdyTab] = useState<"robocze" | "wspomnienia">("robocze");
+  // "Opublikowane" jako pierwsze i domyslne (prosba Nat 2026-09-10) - to gotowa tresc,
+  // po ktora user tu wraca; robocze to praca w toku.
+  const [wyjazdyTab, setWyjazdyTab] = useState<"robocze" | "wspomnienia">("wspomnienia");
+  const [tripLayout, setTripLayout] = useTripLayout();
   // Podzakladka wybrana swiadomie (tap w pigulke / ?sub=) - wtedy nie podmieniamy jej automatycznie.
   const subChosen = useRef(false);
   // Synchronizacja zakladek z URL (?tab=&sub=). useState czyta URL tylko przy pierwszym mount, a
@@ -357,13 +363,13 @@ const TravelerProfile = () => {
 
   // Feed WYJAZDOW (zakladka Wyjazdy): wlasne opublikowane trasy, zwiniete po folderze,
   // kafelki z pinow + liczniki (saved_routes / likes / routes.views).
-  const { data: tripCards = [] } = useQuery({
+  const { data: tripCards = EMPTY_ARRAY } = useQuery({
     queryKey: ["profile-trip-feed", user?.id],
     enabled: !!user?.id,
     queryFn: async () => {
       // saves_count/likes_count = denormalizowane liczniki na routes (RLS na saved_routes blokuje
       // count po stronie klienta - patrz migracja 20260828). Czytamy kolumny zamiast liczyc wiersze.
-      const sel = "id, title, city, start_date, day_number, folder_id, views, saves_count, likes_count, created_at, user_id, is_shared, trip_type, status, tags, review_narrative, ai_summary, cover_url, list_cover_url";
+      const sel = "id, title, city, countries, start_date, day_number, folder_id, views, saves_count, likes_count, created_at, user_id, is_shared, trip_type, status, tags, review_narrative, ai_summary, cover_url, list_cover_url";
       // Wlasne trasy (TAKZE robocze is_shared=false - badge "Robocze") + trasy grupowe, do ktorych
       // jestem zaproszony (member, is_shared=true). Koniec osobnego widoku /utworz/robocze (IA 2026-08-22).
       const [ownRes, memberRes] = await Promise.all([
@@ -416,6 +422,7 @@ const TravelerProfile = () => {
         is_own: rep.is_own !== false, // trasa grupowa zaproszonego = false (bez edycji/usuwania)
         routeIds: days.map((d) => d.id), // wszystkie dni (folder) - do usuniecia calej podrozy
         city: rep.city,
+        countries: rep.countries ?? [],
         title: rep.title,
         start_date: rep.start_date,
         created_at: rep.created_at,
@@ -555,7 +562,11 @@ const TravelerProfile = () => {
       <TrasaBigCard
         key={tr.id}
         id={tr.id}
-        photo={tripCover(tr)}
+        // Wyjazd ROBOCZY nie pokazuje zdjecia miejsca (prosba Nat 2026-09-10): dopoki nie
+        // jest opublikowany, nie ma jeszcze wybranej okladki, a podkradanie kadru z pierwszej
+        // lepszej wizytowki sugerowalo, ze cos juz zostalo ustawione. Zamiast tego znak "S"
+        // na peachy - ten sam pusty stan, co w reszcie aplikacji.
+        photo={isRoboczy ? null : tripCover(tr)}
         city={tr.city}
         placeCount={(tr.tiles ?? []).length}
         title={tr.title || (tr.city ? t("feed.trip_fallback", { city: tr.city }) : t("feed.trip_fallback_generic"))}
@@ -802,7 +813,10 @@ const TravelerProfile = () => {
                 </p>
               </div>
             ) : (
-              listCards.map((l: any) => (
+              // space-y-10: karty list to wysokie bloki (naglowek + siatka kafelkow) i przy
+              // odstepie 16 px zlewaly sie w jedna sciane (prosba Nat 2026-09-10).
+              <div className="space-y-10">
+              {listCards.map((l: any) => (
                 <ProfileFeedCard
                   key={l.id}
                   avatarUrl={profile?.avatar_url}
@@ -819,7 +833,8 @@ const TravelerProfile = () => {
                   countsInHeader
                   onOpen={() => navigate(`/lista/${l.id}`)}
                 />
-              ))
+              ))}
+              </div>
                 )
               ) : listyTab === "ogolne" ? (
                 // t("tabs.general") - lista OGÓLNA usera (wszystkie zapisane miejsca), dostępna z dropdownu list.
@@ -835,7 +850,7 @@ const TravelerProfile = () => {
                     </p>
                   </div>
                 ) : (
-                  <div className="space-y-6 pt-1">{(savedListCards as any[]).map(renderSavedListCard)}</div>
+                  <div className="space-y-10 pt-1">{(savedListCards as any[]).map(renderSavedListCard)}</div>
                 )
               )}
             </div>
@@ -845,12 +860,19 @@ const TravelerProfile = () => {
                   "Zapisane" USUNIETE 2026-09-10 - zapisywanie CUDZEGO wyjazdu w calosci wyszlo
                   z aplikacji. W jego miejsce wchodzi wybor pojedynczych miejsc z cudzego wyjazdu
                   (przytrzymanie kafelka w widoku wyjazdu). */}
-              <TabSelect
-                dotLabel={t("profile.new_content_aria")}
-                value={wyjazdyTab}
-                onChange={(v) => { subChosen.current = true; setWyjazdyTab(v as "robocze" | "wspomnienia"); goSub(v); }}
-                options={[{ id: "robocze", label: t("trip_tabs.drafts") }, { id: "wspomnienia", label: t("trip_tabs.published") }]}
-              />
+              <div className="flex items-center justify-between gap-3">
+                <TabSelect
+                  dotLabel={t("profile.new_content_aria")}
+                  value={wyjazdyTab}
+                  onChange={(v) => { subChosen.current = true; setWyjazdyTab(v as "robocze" | "wspomnienia"); goSub(v); }}
+                  options={[{ id: "wspomnienia", label: t("trip_tabs.published") }, { id: "robocze", label: t("trip_tabs.drafts") }]}
+                />
+                {/* Przelacznik ukladu TYLKO przy opublikowanych - roboczy ma na karcie akcje
+                    wlasciciela (olowek, kosz), ktore w malym kafelku nie mialyby gdzie stanac. */}
+                {wyjazdyTab === "wspomnienia" && memoryTrips.length > 0 && (
+                  <TripLayoutSwitch value={tripLayout} onChange={setTripLayout} />
+                )}
+              </div>
               {wyjazdyTab === "robocze" ? (
                 draftTrips.length === 0 ? (
                   /* Pusty stan wg makiety Nat (2026-08-30): brandowa ikona trasy (maska #ef9d78),
@@ -874,6 +896,24 @@ const TravelerProfile = () => {
                     <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed max-w-[240px] mx-auto">
                       {t("empty.memories_desc")}
                     </p>
+                  </div>
+                ) : tripLayout === "siatka" ? (
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {memoryTrips.map((tr: any) => (
+                      <TripTile key={tr.id} photo={tripCover(tr)} title={tr.title || t("feed.trip_fallback_generic")}
+                        meta={scopeLabel(tr) || tr.city} onOpen={() => navigate(`/route/${tr.id}`)} />
+                    ))}
+                  </div>
+                ) : tripLayout === "mozaika" ? (
+                  // Kolumny CSS + break-inside: uklad ukladany przez przegladarke, bez JS
+                  // i bez mierzenia. Wysokosci biora sie z NATURALNYCH proporcji zdjec.
+                  <div className="columns-2 gap-1.5 [column-fill:_balance]">
+                    {memoryTrips.map((tr: any) => (
+                      <div key={tr.id} className="mb-1.5 break-inside-avoid">
+                        <TripTile natural photo={tripCover(tr)} title={tr.title || t("feed.trip_fallback_generic")}
+                          meta={scopeLabel(tr) || tr.city} onOpen={() => navigate(`/route/${tr.id}`)} />
+                      </div>
+                    ))}
                   </div>
                 ) : (
                   <div className="space-y-6">{memoryTrips.map(renderTripCard)}</div>

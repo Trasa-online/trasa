@@ -17,6 +17,7 @@ import { haptics } from "@/hooks/useHaptics";
 import { cn } from "@/lib/utils";
 import SheetSkeleton from "@/components/layout/SheetSkeleton";
 import { deferDelete } from "@/lib/deferDelete";
+import { EMPTY_ARRAY } from "@/lib/emptyRef";
 
 interface JournalTabProps {
   userId: string;
@@ -49,7 +50,7 @@ const JournalTab = ({ userId, city: cityFilter, draftsOnly = false }: JournalTab
   // Podzial zakladki Trasy na pigulki: Robocze (aktywne/w toku) vs Wspomnienia (minione).
   const [tripTab, setTripTab] = useState<"robocze" | "wspomnienia">("robocze");
 
-  const { data: entries = [], isLoading } = useQuery({
+  const { data: entries = EMPTY_ARRAY, isLoading } = useQuery({
     queryKey: ["journal-entries", userId],
     queryFn: async () => {
       // Own routes (all statuses)

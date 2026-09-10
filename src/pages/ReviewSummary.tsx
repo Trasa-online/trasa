@@ -43,6 +43,7 @@ import { notify } from "@/lib/notify";
 import { deferDelete } from "@/lib/deferDelete";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { renderForUpload, uploadPair } from "@/lib/imageThumbs";
+import { EMPTY_ARRAY } from "@/lib/emptyRef";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 
@@ -409,7 +410,7 @@ const ReviewSummary = () => {
 
   // Pins wszystkich dni naraz (grupowane po route_id).
   const idsKey = dayRouteIds.join(",");
-  const { data: allPins = [] } = useQuery({
+  const { data: allPins = EMPTY_ARRAY } = useQuery({
     queryKey: ["review-all-pins", idsKey],
     queryFn: async () => {
       if (!dayRouteIds.length) return [];
@@ -581,7 +582,7 @@ const ReviewSummary = () => {
   });
 
   // Notki miejsc (wszystkie dni naraz).
-  const { data: existingNotes = [] } = useQuery({
+  const { data: existingNotes = EMPTY_ARRAY } = useQuery({
     queryKey: ["pin-notes", idsKey, user?.id],
     queryFn: async () => {
       if (!dayRouteIds.length || !user) return [];

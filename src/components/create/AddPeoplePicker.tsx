@@ -5,6 +5,7 @@ import { useFriends } from "@/hooks/useFriends";
 import { useFollowList } from "@/hooks/useFollow";
 import { avatarSrc } from "@/lib/avatar";
 import SheetSkeleton from "@/components/layout/SheetSkeleton";
+import { EMPTY_ARRAY } from "@/lib/emptyRef";
 
 export interface PersonLite { id: string; username: string | null; first_name: string | null; avatar_url: string | null }
 
@@ -14,8 +15,8 @@ export default function AddPeoplePicker({
   userId, selected, onToggle,
 }: { userId: string; selected: Set<string>; onToggle: (person: PersonLite) => void }) {
   const { t } = useTranslation("social");
-  const { data: friends = [], isLoading: lf } = useFriends(userId);
-  const { data: following = [], isLoading: lg } = useFollowList(userId, "following");
+  const { data: friends = EMPTY_ARRAY, isLoading: lf } = useFriends(userId);
+  const { data: following = EMPTY_ARRAY, isLoading: lg } = useFollowList(userId, "following");
 
   const people = useMemo<PersonLite[]>(() => {
     const map = new Map<string, PersonLite>();

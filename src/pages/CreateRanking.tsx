@@ -30,6 +30,7 @@ import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import SavePlaceSheet, { type SavePlaceInput } from "@/components/plan-wizard/SavePlaceSheet";
 import { type MockPlace } from "@/components/plan-wizard/PlaceSwiper";
 import RouteMap from "@/components/RouteMap";
+import { EMPTY_ARRAY } from "@/lib/emptyRef";
 
 // Item rankingu. place_id != null = miejsce z bazy (tap -> wizytowka). null = custom (Google).
 interface RankingItem {
@@ -409,7 +410,7 @@ const CreateRanking = () => {
   // Zastapily "Propozycje z bazy". id = place_id (do addItem) lub null (custom); key osobny.
   // "Twoje zapisane miejsca" = lista OGÓLNA usera (wszystkie zapisy z drawera, bez filtra miasta -
   // decyzja 2026-08-24). Źródło = DB wishlista to_visit (fetchSavedPlaces), spójne z CreateFlowSheet.
-  const { data: savedPlaces = [] } = useQuery({
+  const { data: savedPlaces = EMPTY_ARRAY } = useQuery({
     queryKey: ["saved-places", user?.id],
     enabled: !!user?.id,
     queryFn: () => fetchSavedPlaces(user!.id),

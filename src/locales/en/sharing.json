@@ -269,5 +269,9 @@
     "sheet_title_one": "Add {{count}} place to a trip",
     "sheet_title_other": "Add {{count}} places to a trip",
     "no_drafts": "You have no draft trip yet. Use “Create a trip” and the places will go into a new one."
+  },
+  "fabs": {
+    "expand": "Show trip actions",
+    "collapse": "Hide trip actions"
   }
 }

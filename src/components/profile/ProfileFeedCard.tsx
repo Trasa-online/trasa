@@ -68,6 +68,10 @@ export function ProfileFeedCard({
   // Liczba zapisow W NAGLOWKU, na lewo od daty, zamiast w stopce (prosba Nat 2026-09-10).
   // Wlasne listy nie maja juz zadnych akcji w stopce (olowek i kosz zeszly do widoku listy),
   // wiec caly pasek pod karta zostawal pusty dla jednej liczby.
+  //
+  // Gdy karta MA akcje (zapis/polubienie na cudzym profilu), stopka zostaje, ale guziki sa
+  // wtedy SAMYMI ikonami - licznik stoi juz w naglowku i powtarzanie go obok ikony robilo
+  // dwie te same liczby na jednej karcie.
   countsInHeader?: boolean;
   // Interaktywne polubienie/zapis z karty (cudzy profil). Gdy podane -> ikona = przycisk (stan
   // liked/saved); bez nich -> statyczny licznik (wlasny profil). Wybor Nat 2026-08-23.
@@ -177,7 +181,7 @@ export function ProfileFeedCard({
       {/* Stopka: roboczy -> "Robocze"; prywatna -> kłódka; publiczna -> metryki. + (wlasciciel) edycja/usuniecie.
           Gdy liczniki siedza w naglowku i nie ma zadnych akcji, stopka w ogole sie nie renderuje -
           sama kreska nad pustka tylko rozrzedzala liste kart. */}
-      {!(countsInHeader && !onEdit && !onDelete && !isDraft && !isPrivate) && (
+      {!(countsInHeader && !onEdit && !onDelete && !onSave && !onLike && !isDraft && !isPrivate) && (
       <div className="flex items-center gap-5 pt-3 mt-3 border-t border-border/40 text-muted-foreground">
         {isDraft ? (
           <span className="flex items-center gap-1.5 text-sm font-medium">
@@ -191,9 +195,9 @@ export function ProfileFeedCard({
           <>
             {onSave ? (
               <button onClick={onSave} aria-label={saved ? t("card.remove_saved") : t("common:buttons.save")} className="flex items-center gap-1.5 text-sm tabular-nums active:scale-90 transition-transform">
-                <Bookmark className={`h-[18px] w-[18px] ${saved ? "fill-primary text-primary" : ""}`} /> {counts.saves}
+                <Bookmark className={`h-[18px] w-[18px] ${saved ? "fill-primary text-primary" : ""}`} /> {countsInHeader ? null : counts.saves}
               </button>
-            ) : (
+            ) : countsInHeader ? null : (
               <span className="flex items-center gap-1.5 text-sm tabular-nums">
                 <Bookmark className="h-[18px] w-[18px]" /> {counts.saves}
               </span>
@@ -202,9 +206,9 @@ export function ProfileFeedCard({
                 (decyzja Nat 2026-09-01) - u nich zostaje sam zapis. */}
             {counts.likes !== undefined && (onLike ? (
               <button onClick={onLike} aria-label={liked ? "Cofnij polubienie" : "Polub"} className="flex items-center gap-1.5 text-sm tabular-nums active:scale-90 transition-transform">
-                <Heart className={`h-[18px] w-[18px] ${liked ? "fill-red-500 text-red-500" : ""}`} /> {counts.likes}
+                <Heart className={`h-[18px] w-[18px] ${liked ? "fill-red-500 text-red-500" : ""}`} /> {countsInHeader ? null : counts.likes}
               </button>
-            ) : (
+            ) : countsInHeader ? null : (
               <span className="flex items-center gap-1.5 text-sm tabular-nums">
                 <Heart className="h-[18px] w-[18px]" /> {counts.likes}
               </span>

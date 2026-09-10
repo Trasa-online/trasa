@@ -435,8 +435,11 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
                 </button>
               </div>
               {/* Zapraszanie zeszlo tu z usunietego kroku nazwy - to ostatni ekran przed
-                  utworzeniem, wiec zaproszenia wychodza razem z gotowym wyjazdem. */}
-              <div className="mt-1 border-t border-border/50">
+                  utworzeniem, wiec zaproszenia wychodza razem z gotowym wyjazdem.
+                  Wlasny odstep od dolu: sam padding kontenera przewijania nie wystarczal,
+                  bo wiersz jest OSTATNIM elementem i lezal tuz przy krawedzi arkusza
+                  (zgloszenie Nat 2026-09-10). */}
+              <div className="mt-1 border-t border-border/50 pb-[max(28px,calc(env(safe-area-inset-bottom,0px)+20px))]">
                 <PeopleRow kind="wyjazdu" people={tripPeople} onClick={() => setStep("tripPeople")} />
               </div>
             </div>
