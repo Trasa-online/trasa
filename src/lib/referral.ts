@@ -69,12 +69,22 @@ export async function applyPendingReferral(): Promise<void> {
 
 export type ReferralStats = { code: string | null; invited: number };
 
-export async function fetchReferralStats(userId: string): Promise<ReferralStats> {
-  const [{ data: me }, { count }] = await Promise.all([
-    (supabase as any).from("profiles").select("referral_code").eq("id", userId).maybeSingle(),
-    (supabase as any).from("profiles").select("id", { count: "exact", head: true }).eq("referred_by", userId),
-  ]);
-  return { code: (me as any)?.referral_code ?? null, invited: count ?? 0 };
+/**
+ * Statystyki przez RPC, a NIE przez odczyt kolumn `profiles`.
+ *
+ * `profiles` ma kolumnowe grantry SELECT (whitelista) - bezposredni odczyt `referral_code`
+ * konczy sie "permission denied for table profiles". I dobrze: dopisanie `referred_by` do
+ * whitelisty zrobiloby z niej publiczna krawedz grafu spolecznego (kto kogo zaprosil).
+ * RPC oddaje wylacznie dane wolajacego.
+ */
+export async function fetchReferralStats(_userId: string): Promise<ReferralStats> {
+  const { data, error } = await (supabase as any).rpc("referral_stats");
+  if (error) {
+    console.warn("[referral] stats failed:", error.message);
+    return { code: null, invited: 0 };
+  }
+  const row = Array.isArray(data) ? data[0] : data;
+  return { code: row?.code ?? null, invited: Number(row?.invited ?? 0) };
 }
 
 /** Link prowadzi na LANDING, nie w glab apki: zapraszany jeszcze jej nie ma. */

@@ -123,3 +123,36 @@ $$;
 
 revoke all on function public.attach_referral_from_waitlist() from public, anon;
 grant execute on function public.attach_referral_from_waitlist() to authenticated;
+
+-- Statystyki zapraszania przez RPC, a NIE przez odczyt kolumn.
+--
+-- `profiles` ma kolumnowe grantry SELECT (whitelista 18 kolumn dla anon/authenticated) -
+-- nowe kolumny sa dla klienta niewidoczne i tak ma zostac. Gdybysmy dopisali je do
+-- whitelisty, `referred_by` staloby sie publiczna krawedzia grafu spolecznego: kazdy
+-- widzialby, kto kogo zaprosil. Kod zapraszajacego jest jawny z natury (jest w linku),
+-- ale "kto kogo" juz nie.
+--
+-- Funkcja oddaje WYLACZNIE dane wolajacego: swoj kod i liczbe osob, ktore weszly z jego
+-- linku. Nie da sie przez nia zapytac o cudze konto.
+create or replace function public.referral_stats()
+returns table (code text, invited integer)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_me uuid := auth.uid();
+begin
+  if v_me is null then
+    raise exception 'referral_stats requires an authenticated user';
+  end if;
+  return query
+    select p.referral_code,
+           (select count(*)::int from public.profiles r where r.referred_by = v_me)
+      from public.profiles p
+     where p.id = v_me;
+end;
+$$;
+
+revoke all on function public.referral_stats() from public, anon;
+grant execute on function public.referral_stats() to authenticated;

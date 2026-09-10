@@ -174,6 +174,9 @@ function SortableRouteRow({ value, rowPin, index, categoryLabel, onOpen, onGoogl
   );
 }
 
+// Stabilna referencja pustej listy - patrz komentarz przy zapytaniu o piny nizej.
+const EMPTY_PINS: any[] = [];
+
 export default function SharedRoute() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -521,7 +524,12 @@ export default function SharedRoute() {
     void (supabase as any).rpc("increment_route_views", { route_id: route.id });
   }, [route?.id]);
 
-  const { data: pins = [] } = useQuery({
+  // NIE `= []` w destrukturyzacji: przy KAZDYM renderze bylby to nowy pusty tablicowy
+  // literal, wiec efekt ponizej z deps [pins] odpalal sie w kolko i przez setPinTags
+  // wymuszal kolejny render. Petla krecila sie przez cale ladowanie pinow (React ucinal ja
+  // ostrzezeniem "Maximum update depth exceeded"; zmierzone 168 obrotow na jednym wejsciu
+  // w wyjazd). Stala referencja zamyka temat.
+  const { data: pins = EMPTY_PINS } = useQuery({
     queryKey: ["shared-route-pins", id],
     queryFn: async () => {
       const { data } = await (supabase as any)
