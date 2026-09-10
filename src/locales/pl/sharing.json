@@ -288,5 +288,6 @@
   "fabs": {
     "expand": "Pokaż akcje wyjazdu",
     "collapse": "Schowaj akcje wyjazdu"
-  }
+  },
+  "add_place_photo": "Dodaj zdjęcie do miejsca"
 }

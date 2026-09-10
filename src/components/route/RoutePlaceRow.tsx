@@ -27,7 +27,7 @@ const GoogleGlyph = ({ className }: { className?: string }) => (
 // a pod spodem akcje po prawej: Google (biale kolko z cieniem) + zapis/kosz.
 // dragHandle (opcjonalny) = uchwyt przeciagania po lewej (tryb wlasciciela). note = dodatkowa
 // tresc pod wierszem (np. notka autora).
-export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onSave, saved, onDelete, dragHandle, note, cornerAvatar, visited, onToggleVisited, isTop, onToggleTop, visitedAvatar, selection }: {
+export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onSave, saved, onDelete, dragHandle, note, cornerAvatar, visited, onToggleVisited, isTop, onToggleTop, visitedAvatar, selection, menuExtras, deleteLabel }: {
   pin: any;
   index: number;
   categoryLabel: ReactNode;
@@ -60,6 +60,13 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
     onToggle: () => void;
     onEnter: () => void;
   };
+  /** Dodatkowe pozycje menu przy miejscu (notka, zdjecie) - ekran wie, co znaczy "dodaj
+   *  notke" w swoim kontekscie (wyjazd: pin_ratings, lista: discovery_items.short_desc),
+   *  wiec wiersz tylko je renderuje. Ida na GORZE menu, przed topka/zapisem/koszem. */
+  menuExtras?: Array<{ key: string; label: string; icon: ReactNode; onClick: () => void }>;
+  /** Napis przy koszu. Domyslnie "Usuń miejsce z trasy" - listy podaja swoja wersje,
+   *  bo lista nie jest trasa. */
+  deleteLabel?: string;
 }) {
   const { t } = useTranslation("route");
   // Gwiazdka LECI z guzika na miejsce przy nazwie (prosba Nat 2026-09-08). Animacja gra tylko
@@ -123,7 +130,7 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
   const longPress = useLongPress(selection ? selection.onEnter : undefined, !!selection && !selection.active);
   const selecting = !!selection?.active;
   // Ile akcji miejsca jest w ogole dostepnych - decyduje, czy chowac je pod menu.
-  const actionCount = [onToggleTop, onSave, onDelete].filter(Boolean).length;
+  const actionCount = [onToggleTop, onSave, onDelete].filter(Boolean).length + (menuExtras?.length ?? 0);
   // W trybie zaznaczania przelaczenie obsluguje CALY wiersz (onClick nizej). Guziki w srodku
   // musza wiec milczec - inaczej klik przelaczylby raz tutaj i drugi raz po dojsciu do wiersza,
   // czyli wracalby do punktu wyjscia.
@@ -350,7 +357,12 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
                 <MoreHorizontal className="h-5 w-5 text-foreground/70" strokeWidth={2} />
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="rounded-2xl w-56">
+            <DropdownMenuContent align="end" className="rounded-2xl w-60">
+              {(menuExtras ?? []).map((x) => (
+                <DropdownMenuItem key={x.key} onSelect={() => x.onClick()} className="gap-2.5 py-2.5">
+                  {x.icon}{x.label}
+                </DropdownMenuItem>
+              ))}
               {onToggleTop && (
                 <DropdownMenuItem onClick={(e) => { e.stopPropagation(); tappedTop.current = true; onToggleTop(); }} className="gap-2.5 py-2.5">
                   <Star className={`h-4 w-4 ${isTop ? "text-primary fill-primary" : ""}`} />
@@ -366,7 +378,7 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
               {onDelete && (
                 <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onDelete(); }} className="gap-2.5 py-2.5 text-destructive focus:text-destructive">
                   <Trash2 className="h-4 w-4" />
-                  {t("row.remove")}
+                  {deleteLabel ?? t("row.remove")}
                 </DropdownMenuItem>
               )}
             </DropdownMenuContent>

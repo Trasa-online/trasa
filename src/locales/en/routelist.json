@@ -62,7 +62,8 @@
     "delete_photo": "Delete photo",
     "share": "Share",
     "delete_list": "Delete list",
-    "rename_list": "Rename list"
+    "rename_list": "Rename list",
+    "list_actions": "List actions"
   },
   "fallback_title": "Place list",
   "photo": "Photo",
@@ -72,5 +73,7 @@
   "places_count_one": "{{count}} place",
   "places_count_other": "{{count}} places",
   "new_since_visit": "New since your last visit · {{count}}",
-  "new_place_badge": "new place"
+  "new_place_badge": "new place",
+  "add_place_photo": "Add a photo to this place",
+  "remove_from_list": "Remove place from list"
 }

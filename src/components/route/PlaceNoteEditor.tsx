@@ -21,6 +21,7 @@ export default function PlaceNoteEditor({
   addLabel,
   editLabel,
   hideText = false,
+  openKey = 0,
   onEditingChange,
 }: {
   note: string;
@@ -37,6 +38,10 @@ export default function PlaceNoteEditor({
   /** Nie renderuj samej tresci, zostaw sam guzik. Dla opisu CALEGO wyjazdu: tresc jest juz
    *  wyswietlona w naglowku, wiec edytor pokazywalby ja drugi raz. */
   hideText?: boolean;
+  /** Licznik "otworz edycje z zewnatrz". Kazda zmiana wartosci (na wieksza od 0) wchodzi
+   *  w tryb pisania - dzieki temu akcja z menu przy miejscu moze otworzyc TEN edytor,
+   *  bez wynoszenia jego stanu na zewnatrz. */
+  openKey?: number;
   /** Informuje rodzica, ze user WLASNIE pisze notke - ekran chowa wtedy czat i dolne CTA. */
   onEditingChange?: (editing: boolean) => void;
 }) {
@@ -81,6 +86,9 @@ export default function PlaceNoteEditor({
     setEditing(false);
   };
   const startEdit = () => { setDraft(noteText); setEditing(true); };
+  // Otwarcie z zewnatrz (menu przy miejscu). Pomijamy wartosc startowa, zeby edytor nie
+  // otwieral sie sam przy pierwszym renderze.
+  useEffect(() => { if (openKey > 0) { setDraft((note ?? "").trim()); setEditing(true); } }, [openKey]);
   // Po wejsciu w edycje (i po podmianie tresci z zewnatrz) dopasuj wysokosc do tekstu.
   useEffect(() => { if (editing) autoGrow(); }, [editing, draft]);
 

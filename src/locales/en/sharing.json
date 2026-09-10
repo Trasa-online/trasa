@@ -278,5 +278,6 @@
   "fabs": {
     "expand": "Show trip actions",
     "collapse": "Hide trip actions"
-  }
+  },
+  "add_place_photo": "Add a photo to this place"
 }

@@ -64,7 +64,8 @@
     "delete_photo": "Usuń zdjęcie",
     "share": "Udostępnij",
     "delete_list": "Usuń listę",
-    "rename_list": "Zmień nazwę listy"
+    "rename_list": "Zmień nazwę listy",
+    "list_actions": "Akcje listy"
   },
   "fallback_title": "Lista miejsc",
   "photo": "Zdjęcie",
@@ -75,5 +76,7 @@
   "places_count_few": "{{count}} miejsca",
   "places_count_many": "{{count}} miejsc",
   "new_since_visit": "Nowe od Twojej ostatniej wizyty · {{count}}",
-  "new_place_badge": "nowe miejsce"
+  "new_place_badge": "nowe miejsce",
+  "add_place_photo": "Dodaj zdjęcie do miejsca",
+  "remove_from_list": "Usuń miejsce z listy"
 }

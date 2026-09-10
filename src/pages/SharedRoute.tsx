@@ -290,6 +290,14 @@ export default function SharedRoute() {
   // notek przy miejscach), bo sluzy do jednej rzeczy: schowania statycznego opisu w naglowku,
   // zeby pole edycji nie stalo tuz pod tym samym tekstem (zgloszenie Nat 2026-09-10).
   const [descEditing, setDescEditing] = useState(false);
+  // Akcje "dodaj notke" / "dodaj zdjecie" przeniesione TAKZE do menu przy miejscu
+  // (prosba Nat 2026-09-10). Edytor notki trzyma swoj stan u siebie, wiec otwieramy go
+  // licznikiem: kazde tapniecie w menu podbija wartosc dla TEGO pinu.
+  const [noteOpenKey, setNoteOpenKey] = useState<Record<string, number>>({});
+  // Wybor pliku dla konkretnego miejsca - jeden ukryty input na caly ekran, cel w refie
+  // (osobny input przy kazdym wierszu to kilkanascie martwych elementow na liscie).
+  const placePhotoInputRef = useRef<HTMLInputElement>(null);
+  const placePhotoTarget = useRef<any | null>(null);
   // Wybieranie MIEJSC z cudzego wyjazdu (2026-09-10). Zastapilo zapisywanie calej cudzej
   // trasy: ludzie i tak nie chcieli cudzego planu w calosci, tylko dwoch-trzech miejsc z niego.
   const [pickMode, setPickMode] = useState(false);
@@ -1504,6 +1512,27 @@ export default function SharedRoute() {
 
   // Plaska lista miejsc (wg Figmy: bez grupowania po kategorii) - wspoldzielony RoutePlaceRow
   // (duze zdjecie 104px, chip kategorii + guzik Google). Notki uczestnikow pod wierszem gdy sa.
+  /** Notka i zdjecie w menu przy miejscu. Te same akcje, co pigulki pod notka - menu daje
+   *  do nich dojscie bez szukania ich wzrokiem w gestym wierszu (prosba Nat 2026-09-10). */
+  const placeMenuExtras = (pin: any) => {
+    if (!canEdit || stage === "planning") return undefined;
+    const myNote = ((notesMap.get(placeNoteKey(pin.place_name)) ?? []).find((n: any) => n.user_id === user?.id)?.note ?? "").trim();
+    return [
+      {
+        key: "note",
+        label: myNote ? t("route:note.edit") : t("route:note.add"),
+        icon: <Pencil className="h-4 w-4" />,
+        onClick: () => setNoteOpenKey((prev) => ({ ...prev, [pin.id]: (prev[pin.id] ?? 0) + 1 })),
+      },
+      {
+        key: "photo",
+        label: t("add_place_photo"),
+        icon: <Camera className="h-4 w-4" />,
+        onClick: () => { placePhotoTarget.current = pin; placePhotoInputRef.current?.click(); },
+      },
+    ];
+  };
+
   const buildNote = (pin: any): ReactNode | undefined => {
     const list = notesMap.get(placeNoteKey(pin.place_name)) ?? [];
     // Etap PROPOZYCJI (planning): glosowanie na miejsce (kazdy uczestnik 1 glos; host widzi liczbe).
@@ -1548,7 +1577,7 @@ export default function SharedRoute() {
           {/* Awatar przy WLASNEJ notce dopiero we wspomnieniu (po publikacji) - w trakcie wyjazdu
               autor jest oczywisty, a awatar dokladal szumu przy pisaniu (prosba Nat 2026-08-30). */}
           {canEdit && (
-            <PlaceNoteEditor note={myNote} showAvatar avatarUrl={myAvatar} onSave={(v) => saveMyNote(pin, v)} photoSlot={photoSlot} onEditingChange={setNoteEditing} />
+            <PlaceNoteEditor note={myNote} showAvatar avatarUrl={myAvatar} onSave={(v) => saveMyNote(pin, v)} photoSlot={photoSlot} onEditingChange={setNoteEditing} openKey={noteOpenKey[pin.id] ?? 0} />
           )}
           {/* Notki innych uczestnikow - awatar + tresc, BEZ headera (task 6). Widz spoza wyjazdu
               nie ma edytora, wiec jego notki nie ma czego wykluczac - pokazujemy wszystkie. */}
@@ -1734,6 +1763,7 @@ export default function SharedRoute() {
                 onToggleTop={canEdit && isPublished ? () => void toggleTopPin(pin) : undefined}
                 note={buildNote(pin)} cornerAvatar={addedByAvatar(pin)}
                 selection={selectionFor(pin)}
+                menuExtras={placeMenuExtras(pin)}
               />
             ))}
           </div>
@@ -1772,6 +1802,7 @@ export default function SharedRoute() {
             isTop={!!pin.is_top} onToggleTop={canEdit && isPublished ? () => void toggleTopPin(pin) : undefined}
             note={buildNote(pin)} cornerAvatar={addedByAvatar(pin)}
             selection={selectionFor(pin)}
+            menuExtras={placeMenuExtras(pin)}
           />
         ))}
       </div>
@@ -2477,6 +2508,18 @@ export default function SharedRoute() {
 
       {/* Wejscie do plikow trzymamy POZA zakladka galerii - plywajacy "+" korzysta z niego
           takze wtedy, gdy galeria nie jest jeszcze otwarta ani pusta. */}
+      {/* Wybor zdjecia dla KONKRETNEGO miejsca (akcja z menu przy wierszu). Cel trzymamy
+          w refie, zeby nie mnozyc ukrytych inputow przy kazdym wierszu listy. */}
+      {canEdit && (
+        <input ref={placePhotoInputRef} type="file" accept="image/*,.heic,.heif" multiple className="hidden"
+          onChange={(e) => {
+            const files = e.target.files;
+            const pin = placePhotoTarget.current;
+            if (pin && files?.length) void addPlacePhotos(pin, files);
+            placePhotoTarget.current = null;
+            e.currentTarget.value = "";
+          }} />
+      )}
       {canAddPhotos && (
         <input ref={photoInputRef} type="file" accept="image/*,.heic,.heif" multiple className="hidden"
           onChange={(e) => { const files = Array.from(e.target.files ?? []); e.currentTarget.value = ""; if (files.length) void handleAddPhotos(files); }} />
@@ -2515,7 +2558,6 @@ export default function SharedRoute() {
               key: "reorder",
               label: t("reorder"),
               icon: <GripVertical className="h-6 w-6" strokeWidth={2.2} />,
-              primary: true,
               onClick: () => { pickDay(null); setReorderMode(true); },
             } as TripFab] : []),
           ]}

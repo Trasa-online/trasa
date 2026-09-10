@@ -18,8 +18,6 @@ export type TripFab = {
   label: string;
   icon: ReactNode;
   onClick: () => void;
-  /** Wypelnienie primary (akcja glowna) zamiast bialego kolka. */
-  primary?: boolean;
   badge?: number;
 };
 
@@ -41,7 +39,11 @@ export default function TripFabStack({ actions }: { actions: TripFab[] }) {
       <AnimatePresence>
         {open && (
           <motion.button
-            aria-label={t("fabs.collapse")}
+            /* Tlo jest wygoda dla palca, nie osobna kontrolka: bez aria-hidden czytnik
+               ekranu widzialby DWA guziki o tej samej nazwie ("Schowaj akcje wyjazdu").
+               Dla klawiatury i czytnika zostaje sam widoczny przelacznik nizej. */
+            aria-hidden
+            tabIndex={-1}
             className="fixed inset-0 z-30"
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             onClick={() => setOpen(false)}
@@ -55,11 +57,11 @@ export default function TripFabStack({ actions }: { actions: TripFab[] }) {
             key={a.key}
             aria-label={a.label}
             onClick={() => { haptics.light(); setOpen(false); a.onClick(); }}
-            className={`fixed right-4 z-40 rounded-full flex items-center justify-center shadow-lg active:scale-90 transition-transform ${
-              a.primary
-                ? "bg-primary text-white shadow-black/15"
-                : "bg-background text-foreground border border-border shadow-black/10"
-            }`}
+            /* Akcje w stosie sa DRUGOPLANOWE (biale kolko) - pomaranczowy zostaje dla
+               guzika, ktory ten stos otwiera (prosba Nat 2026-09-10). Gdyby ktoras z nich
+               byla primary, konkurowalaby z nim o uwage dokladnie w chwili, w ktorej
+               user szuka wzrokiem, czym to zamknac. */
+            className="fixed right-4 z-40 rounded-full flex items-center justify-center bg-background text-foreground border border-border shadow-lg shadow-black/10 active:scale-90 transition-transform"
             style={{ height: SIZE, width: SIZE, bottom: `calc(${BASE + (i + 1) * (SIZE + GAP)}px + env(safe-area-inset-bottom, 0px))` }}
             initial={{ opacity: 0, y: 12, scale: 0.8 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -80,7 +82,11 @@ export default function TripFabStack({ actions }: { actions: TripFab[] }) {
         aria-label={open ? t("fabs.collapse") : t("fabs.expand")}
         aria-expanded={open}
         onClick={() => { haptics.light(); setOpen((v) => !v); }}
-        className="fixed right-4 z-40 rounded-full bg-background text-foreground border border-border shadow-lg shadow-black/10 flex items-center justify-center active:scale-90 transition-transform"
+        /* Guzik otwierajacy stos jest PRIMARY (prosba Nat 2026-09-10): w spoczynku to jedyna
+           plywajaca akcja na ekranie i musi byc widoczna takze na jasnym zdjeciu - biale kolko
+           na bialej karcie gubilo sie. Kolor zostaje TAKZE po rozwinieciu, zeby bylo widac,
+           czym stos zamknac. */
+        className="fixed right-4 z-40 rounded-full bg-primary text-white shadow-lg shadow-black/15 flex items-center justify-center active:scale-90 transition-transform"
         style={{ height: SIZE, width: SIZE, bottom: `calc(${BASE}px + env(safe-area-inset-bottom, 0px))` }}
       >
         <motion.span animate={{ rotate: open ? 180 : 0 }} transition={{ type: "spring", stiffness: 400, damping: 26 }}>

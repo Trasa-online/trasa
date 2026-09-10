@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useParams, useNavigate } from "react-router-dom";
 import { goBackOr } from "@/hooks/useGoBack";
@@ -8,7 +8,7 @@ import { useScreenshot } from "@/hooks/useScreenshot";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { MapPin, ArrowLeft, Bookmark, Building2, Trash2, Share2, Plus, Camera, Loader2, X, Pencil } from "lucide-react";
+import { MapPin, ArrowLeft, Bookmark, Building2, Trash2, Share2, Plus, Camera, Loader2, X, Pencil, MoreHorizontal } from "lucide-react";
 import { mapWithLimit } from "@/lib/imageCompression";
 import AddPlaceSheet from "@/components/route/AddPlaceSheet";
 import { scopeCountries } from "@/lib/tripScope";
@@ -20,6 +20,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { PlacePhoto, resolveStored } from "@/components/PlacePhoto";
 import StoredImage from "@/components/StoredImage";
 import { RoutePlaceRow } from "@/components/route/RoutePlaceRow";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import PlaceNoteEditor from "@/components/route/PlaceNoteEditor";
 import ReportContentSheet from "@/components/moderation/ReportContentSheet";
 import ScreenSkeleton from "@/components/layout/ScreenSkeleton";
@@ -92,6 +93,11 @@ export default function SharedList() {
   const [editingName, setEditingName] = useState(false);
   const [nameVal, setNameVal] = useState("");
   const [savingName, setSavingName] = useState(false);
+  // "Dodaj notke" / "Dodaj zdjecie" TAKZE w menu przy miejscu (prosba Nat 2026-09-10).
+  // Edytor notki trzyma stan u siebie, wiec otwieramy go licznikiem per pozycja listy.
+  const [noteOpenKey, setNoteOpenKey] = useState<Record<string, number>>({});
+  const itemPhotoInputRef = useRef<HTMLInputElement>(null);
+  const itemPhotoTarget = useRef<any | null>(null);
   const saveListName = async () => {
     if (!id) return;
     const trimmed = nameVal.trim();
@@ -569,7 +575,8 @@ export default function SharedList() {
             {/* Notka wyglada TAK SAMO jak na wyjezdzie: szary dymek + awatar autora w prawym-dolnym
                 rogu (prosba Nat 2026-08-30). Autor = wlasciciel listy. */}
             <PlaceNoteEditor note={noteText} editable={isOwner} showAvatar avatarUrl={author?.avatar_url ?? col.author_avatar}
-              onSave={(v) => saveItemNote(pin, v)} photoSlot={photoSlot} onEditingChange={setNoteEditing} />
+              onSave={(v) => saveItemNote(pin, v)} photoSlot={photoSlot} onEditingChange={setNoteEditing}
+              openKey={noteOpenKey[pin.id] ?? 0} />
             {/* Zdjecia miejsca (2:3) - dodane przez wlasciciela listy. */}
             {photos.length > 0 && (
               <div className="flex flex-wrap gap-2">
@@ -602,6 +609,21 @@ export default function SharedList() {
             onSave={!isOwner ? () => toggleSaveBookmark(pin) : undefined}
             saved={isSaved(pin.place_name)}
             onDelete={isOwner ? () => handleDeleteItem(pin) : undefined}
+            deleteLabel={t("remove_from_list")}
+            menuExtras={isOwner ? [
+              {
+                key: "note",
+                label: noteText ? t("route:note.edit") : t("route:note.add"),
+                icon: <Pencil className="h-4 w-4" />,
+                onClick: () => setNoteOpenKey((prev) => ({ ...prev, [pin.id]: (prev[pin.id] ?? 0) + 1 })),
+              },
+              {
+                key: "photo",
+                label: t("add_place_photo"),
+                icon: <Camera className="h-4 w-4" />,
+                onClick: () => { itemPhotoTarget.current = pin; itemPhotoInputRef.current?.click(); },
+              },
+            ] : undefined}
             onToggleVisited={isOwner && user ? () => handleToggleVisited(pin) : undefined}
             visited={isOwner ? visitedKeys.has(visitKeyOf(pin)) : authorVisitedKeys.has(visitKeyOf(pin))}
             visitedAvatar={isOwner ? undefined : (author?.avatar_url ?? col.author_avatar ?? null)}
@@ -680,23 +702,39 @@ export default function SharedList() {
                 dalej cudzej listy to sedno tego widoku, a link i tak jest publiczny. Edycja i
                 usuwanie zostaja przy wlascicielu. */}
             <div className="shrink-0 flex items-center gap-2">
-              {/* Olowek (zmiana nazwy) PIERWSZY, udostepnianie za nim - ta sama kolejnosc co
-                  na wyjezdzie (prosba Nat 2026-09-10), zeby te dwa widoki nie mialy ikon
-                  poprzestawianych wzgledem siebie. */}
-              {isOwner && (
-                <button
-                  onClick={() => { setNameVal(col.title || ""); setEditingName(true); }}
-                  aria-label={t("aria.rename_list")}
-                  disabled={savingName}
-                  className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center active:scale-90 transition-transform disabled:opacity-50"
-                >
-                  <Pencil className="h-4 w-4 text-foreground" />
-                </button>
-              )}
-              <button onClick={handleShare} onContextMenu={(e) => { e.preventDefault(); handleShareLink(); }} aria-label={t("aria.share")} className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center active:scale-90 transition-transform"><Share2 className="h-4 w-4 text-foreground" /></button>
-              {isOwner && (
-                <button onClick={() => setAskDelete(true)} aria-label={t("aria.delete_list")} className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center active:scale-90 transition-transform"><Trash2 className="h-4 w-4 text-destructive" /></button>
-              )}
+              {/* Wszystkie akcje listy pod JEDNYM guzikiem z trzema kropkami (prosba Nat
+                  2026-09-10) - tak samo jak na wyjezdzie. Udostepnianie widzi KAZDY (polecenie
+                  dalej cudzej listy to sedno tego widoku, a link i tak jest publiczny);
+                  zmiana nazwy i usuwanie zostaja przy wlascicielu. */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    aria-label={t("aria.list_actions")}
+                    className="shrink-0 h-9 w-9 rounded-full bg-secondary flex items-center justify-center active:scale-90 transition-transform"
+                  >
+                    <MoreHorizontal className="h-4 w-4 text-foreground" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="rounded-2xl w-56">
+                  {isOwner && (
+                    <DropdownMenuItem
+                      onSelect={() => { setNameVal(col.title || ""); setEditingName(true); }}
+                      disabled={savingName}
+                      className="gap-2.5 py-2.5"
+                    >
+                      <Pencil className="h-4 w-4" />{t("aria.rename_list")}
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuItem onSelect={() => handleShare()} className="gap-2.5 py-2.5">
+                    <Share2 className="h-4 w-4" />{t("aria.share")}
+                  </DropdownMenuItem>
+                  {isOwner && (
+                    <DropdownMenuItem onSelect={() => setAskDelete(true)} className="gap-2.5 py-2.5 text-destructive focus:text-destructive">
+                      <Trash2 className="h-4 w-4" />{t("aria.delete_list")}
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
           {/* #5: miasto + liczba miejsc bezposrednio pod tytulem (przeniesione z TopBara). */}
@@ -766,6 +804,19 @@ export default function SharedList() {
           </button>
         )}
       </div>
+      )}
+
+      {/* Wybor zdjecia dla KONKRETNEJ pozycji listy (akcja z menu przy wierszu). Cel w refie,
+          zeby nie mnozyc ukrytych inputow przy kazdym wierszu. */}
+      {isOwner && (
+        <input ref={itemPhotoInputRef} type="file" accept="image/*" multiple className="hidden"
+          onChange={(e) => {
+            const files = e.target.files;
+            const pin = itemPhotoTarget.current;
+            if (pin && files?.length) void addItemPhotos(pin, files);
+            itemPhotoTarget.current = null;
+            e.currentTarget.value = "";
+          }} />
       )}
 
       {isOwner && (
