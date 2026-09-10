@@ -37,6 +37,7 @@ export function ProfileFeedCard({
   hideStats,
   mapPins,
   isDraft,
+  countsInHeader,
   onLike,
   liked,
   onSave,
@@ -64,6 +65,10 @@ export function ProfileFeedCard({
   hideStats?: boolean; // ukryj metryki zapisow/polubien (bez wskaznika)
   mapPins?: any[]; // piny z lat/lng -> mapka podgladowa pod kafelkami (tylko wyjazdy)
   isDraft?: boolean; // roboczy wyjazd - stopka pokazuje wskaznik "Robocze" (zamiast metryk)
+  // Liczba zapisow W NAGLOWKU, na lewo od daty, zamiast w stopce (prosba Nat 2026-09-10).
+  // Wlasne listy nie maja juz zadnych akcji w stopce (olowek i kosz zeszly do widoku listy),
+  // wiec caly pasek pod karta zostawal pusty dla jednej liczby.
+  countsInHeader?: boolean;
   // Interaktywne polubienie/zapis z karty (cudzy profil). Gdy podane -> ikona = przycisk (stan
   // liked/saved); bez nich -> statyczny licznik (wlasny profil). Wybor Nat 2026-08-23.
   onLike?: () => void;
@@ -108,6 +113,11 @@ export function ProfileFeedCard({
             ) : (
               <div className="flex items-start gap-2">
                 <p className="flex-1 min-w-0 text-lg font-bold leading-tight line-clamp-1 text-foreground">{title}</p>
+                {countsInHeader && (
+                  <span className="shrink-0 pt-1 flex items-center gap-1 text-[11px] tabular-nums text-muted-foreground">
+                    <Bookmark className="h-[13px] w-[13px]" />{counts.saves}
+                  </span>
+                )}
                 {timestamp && <span className="shrink-0 pt-1 text-[11px] text-muted-foreground">{timestamp}</span>}
               </div>
             )}
@@ -164,7 +174,10 @@ export function ProfileFeedCard({
         </button>
       )}
 
-      {/* Stopka: roboczy -> "Robocze"; prywatna -> kłódka; publiczna -> metryki. + (wlasciciel) edycja/usuniecie */}
+      {/* Stopka: roboczy -> "Robocze"; prywatna -> kłódka; publiczna -> metryki. + (wlasciciel) edycja/usuniecie.
+          Gdy liczniki siedza w naglowku i nie ma zadnych akcji, stopka w ogole sie nie renderuje -
+          sama kreska nad pustka tylko rozrzedzala liste kart. */}
+      {!(countsInHeader && !onEdit && !onDelete && !isDraft && !isPrivate) && (
       <div className="flex items-center gap-5 pt-3 mt-3 border-t border-border/40 text-muted-foreground">
         {isDraft ? (
           <span className="flex items-center gap-1.5 text-sm font-medium">
@@ -214,6 +227,7 @@ export function ProfileFeedCard({
           </>
         )}
       </div>
+      )}
 
       {/* Pelny ekran mapy (interaktywna) */}
       {mapOpen && mapPins && mapPins.length > 0 && (

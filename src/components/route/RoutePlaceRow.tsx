@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { FLIGHT_MS, arcThrough, relRect } from "@/lib/flightPath";
 import { localizeTag } from "@/lib/routeTags";
 import { Bookmark, Check, Star, Trash2 } from "lucide-react";
+import { useLongPress } from "@/hooks/useLongPress";
 import { PlacePhoto } from "@/components/PlacePhoto";
 import { avatarSrc } from "@/lib/avatar";
 
@@ -25,7 +26,7 @@ const GoogleGlyph = ({ className }: { className?: string }) => (
 // a pod spodem akcje po prawej: Google (biale kolko z cieniem) + zapis/kosz.
 // dragHandle (opcjonalny) = uchwyt przeciagania po lewej (tryb wlasciciela). note = dodatkowa
 // tresc pod wierszem (np. notka autora).
-export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onSave, saved, onDelete, dragHandle, note, cornerAvatar, visited, onToggleVisited, isTop, onToggleTop, visitedAvatar }: {
+export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onSave, saved, onDelete, dragHandle, note, cornerAvatar, visited, onToggleVisited, isTop, onToggleTop, visitedAvatar, selection }: {
   pin: any;
   index: number;
   categoryLabel: ReactNode;
@@ -49,6 +50,15 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
   /** Awatar osoby, ktorej dotyczy `visited`, gdy NIE jest to ogladajacy (cudza lista).
    *  Obecny = wiersz pokazuje stan PASYWNY: informacje, nie przelacznik. */
   visitedAvatar?: string | null;
+  /** Zaznaczanie miejsc w CUDZYM wyjezdzie (2026-09-10). Przytrzymanie wchodzi w tryb,
+   *  a w trybie cale tapniecie w wiersz przelacza zaznaczenie - bez celowania w checkbox.
+   *  Nieobecne = wiersz zachowuje sie jak dotad. */
+  selection?: {
+    active: boolean;
+    selected: boolean;
+    onToggle: () => void;
+    onEnter: () => void;
+  };
 }) {
   const { t } = useTranslation("route");
   // Gwiazdka LECI z guzika na miejsce przy nazwie (prosba Nat 2026-09-08). Animacja gra tylko
@@ -106,6 +116,20 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
     wasTop.current = !!isTop;
   }, [isTop]);
 
+  // Przytrzymanie wchodzi w tryb zaznaczania. Poza trybem `onOpen` dziala normalnie - stad
+  // `didFire()`: `click` przychodzi PO puszczeniu palca i bez tego otwieralby wizytowke
+  // dokladnie w chwili, w ktorej user wlasnie wszedl w zaznaczanie.
+  const longPress = useLongPress(selection ? selection.onEnter : undefined, !!selection && !selection.active);
+  const selecting = !!selection?.active;
+  // W trybie zaznaczania przelaczenie obsluguje CALY wiersz (onClick nizej). Guziki w srodku
+  // musza wiec milczec - inaczej klik przelaczylby raz tutaj i drugi raz po dojsciu do wiersza,
+  // czyli wracalby do punktu wyjscia.
+  const openOrToggle = () => {
+    if (selecting) return;
+    if (longPress.didFire()) return;
+    onOpen();
+  };
+
   // Odhaczenie odwiedzin = PIECZATKA w miejscu (decyzja Nat 2026-09-08). Wedrowka na
   // miniature zostala wycofana: dla akcji "bylem tu" liczy sie sila przybicia, a nie droga.
   // Lot zostaje wylacznie przy topce, gdzie ma sens - tam gwiazdka MUSI dolecec do nazwy,
@@ -122,22 +146,40 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
     wasVisited.current = !!visited;
   }, [visited]);
   return (
-    <div ref={rowRef} className="relative bg-background py-4 border-b border-border/70 last:border-b-0">
+    <div
+      ref={rowRef}
+      {...(selection ? longPress.handlers : {})}
+      onClick={selecting ? () => selection!.onToggle() : undefined}
+      className={`relative py-4 border-b border-border/70 last:border-b-0 transition-colors ${
+        selecting && selection!.selected ? "bg-[#fcede3]" : "bg-background"
+      }`}
+      /* Zaznaczanie musi wygrac z zaznaczaniem tekstu przez system - inaczej przytrzymanie
+         nazwy miejsca podnosi lupe iOS zamiast wejsc w tryb. */
+      style={selection ? { WebkitUserSelect: "none", userSelect: "none", WebkitTouchCallout: "none" } : undefined}
+    >
       {/* Zdjecie + tresc (nazwa, notki, tagi) */}
       <div className="flex gap-3">
         {dragHandle}
         {/* Peachy kafelek ikony/zdjecia - PIONOWY prostokat 2:3 (redesign 2026-08-25, spojne z okladkami
             miniaturek/kart). self-start: przyklejony do gory wiersza. */}
-        <button ref={thumbRef} onClick={onOpen} className="relative w-16 h-24 shrink-0 self-start rounded-2xl overflow-hidden bg-[#fcede3] active:opacity-90">
+        <button ref={thumbRef} onClick={openOrToggle} className="relative w-16 h-24 shrink-0 self-start rounded-2xl overflow-hidden bg-[#fcede3] active:opacity-90">
           <PlacePhoto pin={pin} width={80} className="w-full h-full object-cover" />
-          {cornerAvatar !== undefined && (
+          {cornerAvatar !== undefined && !selecting && (
             <img src={avatarSrc(cornerAvatar)} alt="" className="absolute bottom-1 right-1 h-7 w-7 rounded-full object-cover border-2 border-white shadow-sm bg-secondary" />
+          )}
+          {/* Znacznik wyboru na miniaturce - tam, gdzie i tak patrzy oko przy przegladaniu. */}
+          {selecting && (
+            <span className={`absolute top-1 left-1 h-6 w-6 rounded-full flex items-center justify-center border-2 ${
+              selection!.selected ? "bg-primary border-primary text-white" : "bg-white/85 border-white"
+            }`}>
+              {selection!.selected && <Check className="h-3.5 w-3.5 stroke-[3]" />}
+            </span>
           )}
         </button>
         <div className="flex-1 min-w-0">
           {/* Nazwa + badge kategorii (peachy pill po prawej) */}
           <div className="flex items-start justify-between gap-2">
-            <button onClick={onOpen} className="text-left min-w-0 flex-1">
+            <button onClick={openOrToggle} className="text-left min-w-0 flex-1">
               <p ref={titleRef} className="text-[16px] font-bold leading-snug line-clamp-2">
                 {/* Gwiazdka PRZED nazwa, w jednym ciagu tekstu - inaczej przy nazwie lamiacej
                     sie na dwie linie odjezdzalaby od niej i wygladala jak osobna kontrolka. */}
@@ -175,6 +217,7 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
       {/* Akcje miejsca - PRAWA strona wiersza (redesign 2026-08-28): Google bezposrednio po lewej
           od zapisu/kosza. Guzik Google = samo logo w BIALYM kolku z delikatnym cieniem (bez podpisu)
           - cien niesie afordancje "to sie klika", spojnie z kartami i arkuszem dodawania miejsca. */}
+      {!selecting && (
       <div className="mt-3 flex items-center justify-end gap-2">
         {/* Cudza lista: autor odhaczyl to miejsce u siebie. Pokazujemy to jako INFORMACJE,
             nie przelacznik - to nie jest moj stan i nie mam go jak zmienic. Awatar mowi CZYJ
@@ -298,6 +341,7 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
           </button>
         )}
       </div>
+      )}
 
       {/* Gwiazdka LECI z guzika do nazwy. pointer-events-none, zeby nie lapala tapniec w locie. */}
       <AnimatePresence>

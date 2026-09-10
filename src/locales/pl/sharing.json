@@ -136,7 +136,13 @@
     "dates_saved_multi": "Wyjazd na {{count}} dni - miejsca możesz rozłożyć na dni",
     "name_saved": "Nazwa zapisana",
     "name_failed": "Nie udało się zapisać nazwy",
-    "name_not_allowed": "Ta nazwa zawiera niedozwolone słowa"
+    "name_not_allowed": "Ta nazwa zawiera niedozwolone słowa",
+    "pick_trip_failed": "Nie udało się utworzyć wyjazdu",
+    "pick_add_failed": "Nie udało się dodać miejsc",
+    "pick_all_present": "Te miejsca już tam są",
+    "pick_added_one": "Dodano {{count}} miejsce do „{{trip}}”",
+    "pick_added_few": "Dodano {{count}} miejsca do „{{trip}}”",
+    "pick_added_many": "Dodano {{count}} miejsc do „{{trip}}”"
   },
   "pick_date_desc": "Wybierz jeden dzień albo zakres - przy kilku dniach rozłożysz miejsca na dni",
   "confirm": {
@@ -261,5 +267,17 @@
   "preview": {
     "open_trip": "Zobacz wyjazd"
   },
-  "photo_progress": "{{done}} z {{total}}"
+  "photo_progress": "{{done}} z {{total}}",
+  "pick": {
+    "selected_one": "Wybrano {{count}} miejsce",
+    "selected_few": "Wybrano {{count}} miejsca",
+    "selected_many": "Wybrano {{count}} miejsc",
+    "create_trip": "Utwórz wyjazd: {{place}}",
+    "add_to_trip": "Dodaj do wyjazdu",
+    "open_trip": "Otwórz",
+    "sheet_title_one": "Dodaj {{count}} miejsce do wyjazdu",
+    "sheet_title_few": "Dodaj {{count}} miejsca do wyjazdu",
+    "sheet_title_many": "Dodaj {{count}} miejsc do wyjazdu",
+    "no_drafts": "Nie masz jeszcze roboczego wyjazdu. Użyj „Utwórz wyjazd”, a miejsca trafią do nowego."
+  }
 }

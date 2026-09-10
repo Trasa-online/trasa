@@ -250,19 +250,17 @@ export default function PublicProfile() {
     queryKey: ["pp-interactions", user?.id, listIds.join(","), tripIds.join(",")],
     enabled: canInteract && (listIds.length > 0 || tripIds.length > 0),
     queryFn: async () => {
-      // Listy nie maja juz polubien (decyzja Nat 2026-09-01) - pytamy tylko o trasy.
-      const [lt, st] = await Promise.all([
+      // Listy nie maja juz polubien (decyzja Nat 2026-09-01), a wyjazdow nie da sie juz
+      // zapisac w calosci (2026-09-10) - zostaje samo polubienie trasy.
+      const [lt] = await Promise.all([
         tripIds.length ? (supabase as any).from("likes").select("route_id").eq("user_id", user!.id).in("route_id", tripIds) : Promise.resolve({ data: [] }),
-        tripIds.length ? (supabase as any).from("saved_routes").select("route_id").eq("user_id", user!.id).in("route_id", tripIds) : Promise.resolve({ data: [] }),
       ]);
       return {
         likedTrips: new Set<string>(((lt as any).data ?? []).map((r: any) => r.route_id)),
-        savedTrips: new Set<string>(((st as any).data ?? []).map((r: any) => r.route_id)),
       };
     },
   });
   const initLikedTrips = init?.likedTrips ?? new Set<string>();
-  const initSavedTrips = init?.savedTrips ?? new Set<string>();
   // Optymistyczne override + snapshot zapisanych list (localStorage, per-urzadzenie) do delty licznika.
   const [likeOverride, setLikeOverride] = useState<Record<string, boolean>>({});
   const [saveOverride, setSaveOverride] = useState<Record<string, boolean>>({});
@@ -274,7 +272,6 @@ export default function PublicProfile() {
   });
 
   const isTripLiked = (id: string) => likeOverride["t:" + id] ?? initLikedTrips.has(id);
-  const isTripSaved = (id: string) => saveOverride["t:" + id] ?? initSavedTrips.has(id);
   const isListSaved = (id: string) => savedListIds.has(id);
   // Licznik = baza (z DB) skorygowana o roznice miedzy stanem biezacym a poczatkowym.
   const delta = (now: boolean, was: boolean) => (now ? 1 : 0) - (was ? 1 : 0);
@@ -284,21 +281,6 @@ export default function PublicProfile() {
     const cur = isTripLiked(tr.id);
     setLikeOverride((m) => ({ ...m, ["t:" + tr.id]: !cur }));
     void toggleRouteLike(tr.id, user.id, cur);
-  };
-  const onTripSave = async (tr: any) => {
-    if (!user) { navigate("/auth"); return; }
-    const cur = isTripSaved(tr.id);
-    setSaveOverride((m) => ({ ...m, ["t:" + tr.id]: !cur }));
-    if (cur) {
-      await (supabase as any).from("saved_routes").delete().eq("user_id", user.id).eq("route_id", tr.id);
-      // Cofalne - "Cofnij" po prostu wykonuje te sama akcje jeszcze raz (zapisuje z powrotem).
-      toast(t("public.removed_saved"), { action: { label: t("common:buttons.undo"), onClick: () => void onTripSave(tr) } });
-    } else {
-      await (supabase as any).from("saved_routes").upsert({ user_id: user.id, route_id: tr.id }, { onConflict: "user_id,route_id", ignoreDuplicates: true });
-      void (supabase as any).rpc("notify_route_used", { p_route_id: tr.id });
-      toast.success(t("public.trip_saved"));
-    }
-    queryClient.invalidateQueries({ queryKey: ["saved-routes"] });
   };
   const onListSave = (l: any) => {
     if (!user) { navigate("/auth"); return; }
@@ -478,8 +460,6 @@ export default function PublicProfile() {
                 onOpen={() => navigate(`/route/${tr.id}`)}
                 onLike={canInteract ? () => onTripLike(tr) : undefined}
                 liked={isTripLiked(tr.id)}
-                onToggleSave={canInteract ? () => onTripSave(tr) : undefined}
-                saved={isTripSaved(tr.id)}
               />
             ))
           )}

@@ -133,7 +133,12 @@
     "dates_saved_multi": "A {{count}}-day trip - you can spread the places across the days",
     "name_saved": "Name saved",
     "name_failed": "Couldn't save the name",
-    "name_not_allowed": "That name contains words we do not allow"
+    "name_not_allowed": "That name contains words we do not allow",
+    "pick_trip_failed": "Couldn't create the trip",
+    "pick_add_failed": "Couldn't add the places",
+    "pick_all_present": "Those places are already there",
+    "pick_added_one": "Added {{count}} place to “{{trip}}”",
+    "pick_added_other": "Added {{count}} places to “{{trip}}”"
   },
   "pick_date_desc": "Pick a single day or a range - with several days you can spread places across them",
   "confirm": {
@@ -254,5 +259,15 @@
   "preview": {
     "open_trip": "See the trip"
   },
-  "photo_progress": "{{done}} of {{total}}"
+  "photo_progress": "{{done}} of {{total}}",
+  "pick": {
+    "selected_one": "{{count}} place selected",
+    "selected_other": "{{count}} places selected",
+    "create_trip": "Create a trip: {{place}}",
+    "add_to_trip": "Add to a trip",
+    "open_trip": "Open",
+    "sheet_title_one": "Add {{count}} place to a trip",
+    "sheet_title_other": "Add {{count}} places to a trip",
+    "no_drafts": "You have no draft trip yet. Use “Create a trip” and the places will go into a new one."
+  }
 }

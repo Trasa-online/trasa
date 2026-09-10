@@ -174,7 +174,7 @@ const TravelerProfile = () => {
   // Podzakładki (pigułki) w Listy / Wyjazdy. Domyślnie: Listy->Moje, Wyjazdy->Wspomnienia
   // (opublikowane trasy = flagowa treść; robocze to work-in-progress).
   const [listyTab, setListyTab] = useState<"moje" | "ogolne" | "zapisane">("moje");
-  const [wyjazdyTab, setWyjazdyTab] = useState<"robocze" | "wspomnienia" | "zapisane">("robocze");
+  const [wyjazdyTab, setWyjazdyTab] = useState<"robocze" | "wspomnienia">("robocze");
   // Podzakladka wybrana swiadomie (tap w pigulke / ?sub=) - wtedy nie podmieniamy jej automatycznie.
   const subChosen = useRef(false);
   // Synchronizacja zakladek z URL (?tab=&sub=). useState czyta URL tylko przy pierwszym mount, a
@@ -185,7 +185,7 @@ const TravelerProfile = () => {
     if (tp === "wyjazdy") setTab("wyjazdy");
     else if (tp === "listy") setTab("listy");
     const sub = searchParams.get("sub");
-    if (sub === "robocze" || sub === "wspomnienia" || sub === "zapisane") { subChosen.current = true; setWyjazdyTab(sub as any); }
+    if (sub === "robocze" || sub === "wspomnienia") { subChosen.current = true; setWyjazdyTab(sub as any); }
     if (sub === "moje" || sub === "ogolne" || sub === "zapisane") setListyTab(sub as any);
   }, [searchParams]);
 
@@ -252,30 +252,6 @@ const TravelerProfile = () => {
       },
     });
   };
-  const handleDeleteList = (l: any) => {
-    if (!user) return;
-    const key = ["profile-list-feed", user.id];
-    const prev = queryClient.getQueryData(key);
-    queryClient.setQueryData(key, (old: any) => (old ?? []).filter((x: any) => x.id !== l.id));
-    deferDelete({
-      message: t("profile.list_deleted"),
-      onUndo: () => queryClient.setQueryData(key, prev),
-      commit: async () => {
-        try {
-          await (supabase as any).from("discovery_items").delete().eq("collection_id", l.id);
-          const { error } = await (supabase as any).from("discovery_collections").delete().eq("id", l.id).eq("user_id", user.id);
-          if (error) throw new Error(error.message);
-          // Odswiez listy w drawerze zapisu miejsca (inaczej usunieta lista wisi w cache).
-          queryClient.invalidateQueries({ queryKey: ["save-sheet-lists", user.id] });
-        } catch (e: any) {
-          toast.error(t("profile.delete_error"));
-          console.error("[TravelerProfile] delete list failed:", e?.message ?? e);
-          queryClient.invalidateQueries({ queryKey: ["profile-list-feed", user.id] });
-        }
-      },
-    });
-  };
-
   const handleAvatarUpload = async (file: File) => {
     if (!user) return;
     const allowed = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" } as const;
@@ -524,44 +500,6 @@ const TravelerProfile = () => {
     if (!hasDrafts && hasMemories) setWyjazdyTab("wspomnienia");
   }, [tripCards]);
 
-  const { data: savedTripCards = [] } = useQuery({
-    queryKey: ["profile-saved-trip-feed", user?.id],
-    enabled: !!user?.id,
-    queryFn: async () => {
-      const { data: saved } = await (supabase as any).from("saved_routes")
-        .select("route_id, created_at").eq("user_id", user!.id).order("created_at", { ascending: false });
-      const ids = ((saved ?? []) as any[]).map((r) => r.route_id).filter(Boolean);
-      if (!ids.length) return [];
-      const sel = "id, title, city, start_date, views, saves_count, likes_count, created_at, user_id, is_shared, trip_type, status, tags, review_narrative, ai_summary, cover_url, list_cover_url";
-      const { data: rows } = await (supabase as any).from("routes").select(sel).in("id", ids);
-      const rowRows = (rows ?? []) as any[];
-      if (!rowRows.length) return [];
-      const pinsRes = await (supabase as any).from("pins").select("id, route_id, place_name, category, photo_url, image_url, images, user_photo_urls, pin_order, latitude, longitude").in("route_id", ids).order("pin_order", { ascending: true });
-      const allPins = (pinsRes.data ?? []) as any[];
-      const keys = Array.from(new Set(allPins.flatMap((p) => pinCoverKeys(p)))).filter(Boolean);
-      const photoMap = keys.length ? await fetchPlacePhotosForKeys(keys) : null;
-      const pinsByRoute: Record<string, any[]> = {};
-      for (const p of allPins) { const _cover = pickPlaceCover(photoMap, pinCoverKeys(p)); (pinsByRoute[p.route_id] ??= []).push({ ...p, _cover }); }
-      // Autorzy tras (awatar + imie) - zapisane sa cudze, wiec pokazujemy autora, nie siebie.
-      const authorIds = Array.from(new Set(rowRows.map((r) => r.user_id).filter(Boolean)));
-      const { data: authors } = authorIds.length
-        ? await supabase.from("profiles").select("id, username, first_name, avatar_url").in("id", authorIds)
-        : { data: [] as any[] };
-      const authorById = new Map((authors ?? []).map((a: any) => [a.id, a]));
-      return ids.map((rid) => rowRows.find((r) => r.id === rid)).filter(Boolean).map((rep: any) => {
-        const a = authorById.get(rep.user_id);
-        return {
-          id: rep.id, city: rep.city, title: rep.title, start_date: rep.start_date, created_at: rep.created_at,
-          description: (rep.review_narrative || rep.ai_summary || "").trim() || null,
-          tags: Array.isArray(rep.tags) ? rep.tags : [],
-          cover: rep.list_cover_url ?? rep.cover_url ?? null,
-          tiles: pinsByRoute[rep.id] ?? [], saves: Number(rep.saves_count ?? 0), likes: Number(rep.likes_count ?? 0), views: Number(rep.views ?? 0),
-          author_avatar: a?.avatar_url ?? null, author_name: a?.first_name || a?.username || t("profile.traveler_fallback"),
-        };
-      });
-    },
-  });
-
   // Odpiecie ZAPISANEJ listy - z oknem "Cofnij" (jak usuwanie wlasnych). Element znika od razu,
   // faktyczny delete jest odroczony o 5 s (prosba Nat 2026-08-30: undo na WSZYSTKICH zakladkach).
   const handleUnsaveList = (colId: string) => {
@@ -586,22 +524,6 @@ const TravelerProfile = () => {
       },
     });
   };
-  // Odpiecie ZAPISANEGO wyjazdu - to samo okno "Cofnij".
-  const handleUnsaveTrip = (routeId: string) => {
-    if (!user) return;
-    const key = ["profile-saved-trip-feed", user.id];
-    const prev = queryClient.getQueryData(key);
-    queryClient.setQueryData(key, (old: any) => (old ?? []).filter((x: any) => x.id !== routeId));
-    deferDelete({
-      message: t("profile.removed_saved"),
-      onUndo: () => queryClient.setQueryData(key, prev),
-      commit: async () => {
-        await (supabase as any).from("saved_routes").delete().eq("user_id", user.id).eq("route_id", routeId);
-        queryClient.invalidateQueries({ queryKey: key });
-      },
-    });
-  };
-
   if (loading) return <ScreenSkeleton variant="profile" />;
   if (!user || user.is_anonymous) return <GuestProfile />;
 
@@ -655,27 +577,6 @@ const TravelerProfile = () => {
   };
 
   // Zapisany (cudzy) wyjazd - ta sama karta co Wspomnienia, ale autor = tworca trasy, akcja = odpiecie.
-  const renderSavedTripCard = (tr: any) => (
-    <TrasaBigCard
-      key={tr.id}
-      id={tr.id}
-      photo={tripCover(tr)}
-      city={tr.city}
-      placeCount={(tr.tiles ?? []).length}
-      title={tr.title || (tr.city ? t("feed.trip_fallback", { city: tr.city }) : t("feed.trip_fallback_generic"))}
-      description={tr.description}
-      tags={tr.tags}
-      authorName={tr.author_name}
-      authorAvatar={tr.author_avatar}
-      showMap={false}
-      snap={false}
-      heightClass="aspect-[3/4]"
-      onOpen={() => navigate(`/route/${tr.id}`)}
-      onToggleSave={() => handleUnsaveTrip(tr.id)}
-      saved
-    />
-  );
-
   // Zapisana (cudza) lista - ten sam UI co wlasne listy, autor = tworca, chip "Nowe miejsce!", odpiecie.
   const renderSavedListCard = (l: any) => (
     <ProfileFeedCard
@@ -907,9 +808,11 @@ const TravelerProfile = () => {
                   description={l.description}
                   tiles={l.tiles}
                   counts={{ saves: l.saves_count ?? 0, views: l.views_count ?? 0 }}
+                  // Bez olowka i kosza (prosba Nat 2026-09-10): zmiana nazwy i usuwanie zyja
+                  // w widoku listy, gdzie widac, co sie kasuje. Liczba zapisow idzie do
+                  // naglowka, na lewo od daty - stopka tylko dla niej nie ma sensu.
+                  countsInHeader
                   onOpen={() => navigate(`/lista/${l.id}`)}
-                  onEdit={() => navigate(`/zestawienie/${l.id}/edytuj`)}
-                  onDelete={() => handleDeleteList(l)}
                 />
               ))
                 )
@@ -933,27 +836,17 @@ const TravelerProfile = () => {
             </div>
           ) : (
             <div className="space-y-4">
-              {/* Podzakładki: Robocze (niepublikowane) | Wspomnienia (opublikowane) | Zapisane (od innych). */}
+              {/* Podzakładki: Robocze (niepublikowane) | Wspomnienia (opublikowane).
+                  "Zapisane" USUNIETE 2026-09-10 - zapisywanie CUDZEGO wyjazdu w calosci wyszlo
+                  z aplikacji. W jego miejsce wchodzi wybor pojedynczych miejsc z cudzego wyjazdu
+                  (przytrzymanie kafelka w widoku wyjazdu). */}
               <TabSelect
                 dotLabel={t("profile.new_content_aria")}
                 value={wyjazdyTab}
-                onChange={(v) => { subChosen.current = true; setWyjazdyTab(v as "robocze" | "wspomnienia" | "zapisane"); goSub(v); }}
-                options={[{ id: "robocze", label: t("trip_tabs.drafts") }, { id: "wspomnienia", label: t("trip_tabs.published") }, { id: "zapisane", label: t("trip_tabs.saved") }]}
+                onChange={(v) => { subChosen.current = true; setWyjazdyTab(v as "robocze" | "wspomnienia"); goSub(v); }}
+                options={[{ id: "robocze", label: t("trip_tabs.drafts") }, { id: "wspomnienia", label: t("trip_tabs.published") }]}
               />
-              {wyjazdyTab === "zapisane" ? (
-                // Zapisane wyjazdy od innych - ten sam UI co Wspomnienia (ProfileFeedCard).
-                savedTripCards.length === 0 ? (
-                  <div className="pt-16 pb-12 text-center px-8">
-                    <span aria-hidden className="mx-auto mb-5 block h-24 w-24" style={{ backgroundColor: "#ef9d78", WebkitMaskImage: "url(/Ikona_Zapisane.svg)", maskImage: "url(/Ikona_Zapisane.svg)", WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat", WebkitMaskSize: "contain", maskSize: "contain", WebkitMaskPosition: "center", maskPosition: "center" }} />
-                    <p className="text-lg font-bold text-foreground">{t("empty.no_saved_trips")}</p>
-                    <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed max-w-[300px] mx-auto">
-                      <Trans i18nKey="empty.saved_trips_desc" ns="profiles" components={{ b: <strong className="font-semibold text-foreground/80" /> }} />
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-6 pt-1">{(savedTripCards as any[]).map(renderSavedTripCard)}</div>
-                )
-              ) : wyjazdyTab === "robocze" ? (
+              {wyjazdyTab === "robocze" ? (
                 draftTrips.length === 0 ? (
                   /* Pusty stan wg makiety Nat (2026-08-30): brandowa ikona trasy (maska #ef9d78),
                      tytul + dwie linie copy, BEZ guzika CTA - tworzenie jest pod "+" w dolnym pasku. */

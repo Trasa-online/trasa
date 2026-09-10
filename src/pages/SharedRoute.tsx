@@ -19,7 +19,6 @@ import { haptics } from "@/hooks/useHaptics";
 import { track } from "@/lib/analytics";
 import { useSwipeNav } from "@/hooks/useSwipeNav";
 import { useScreenshot } from "@/hooks/useScreenshot";
-import { useDragToDismiss } from "@/hooks/useDragToDismiss";
 import { Reorder, useDragControls, motion } from "framer-motion";
 import { toast } from "sonner";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -43,6 +42,7 @@ import { fetchRouteCoversFor, setMyRouteCover, setMyRouteNote, fetchRouteMemberN
 import { moderateImageUrl, MODERATION_REJECTED_MESSAGE } from "@/lib/imageModeration";
 import { EmptyPlacesState } from "@/components/route/EmptyPlacesState";
 import AddPlaceSheet from "@/components/route/AddPlaceSheet";
+import { createWyjazdFromPlaces } from "@/lib/createWyjazd";
 import TripChatSheet from "@/components/route/TripChatSheet";
 import { useShare } from "@/hooks/useShare";
 import { useUnsavePlace } from "@/hooks/useUnsavePlace";
@@ -219,11 +219,7 @@ export default function SharedRoute() {
     () => new URLSearchParams(window.location.hash.split("?")[1] ?? "").get("full") === "1",
   );
   const [detailPin, setDetailPin] = useState<any | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [showDateSheet, setShowDateSheet] = useState(false);
   const [datesSheetOpen, setDatesSheetOpen] = useState(false);   // wlasciciel: zakres dat wyjazdu
-  // Gest natywny: przeciagniecie panelu w dol zamyka arkusz.
-  const dateDrag = useDragToDismiss({ onDismiss: () => setShowDateSheet(false) });
   const [planMapOpen, setPlanMapOpen] = useState(false);
   const [viewerIndex, setViewerIndex] = useState<number | null>(null); // fullscreen podglad zdjecia galerii
   // Podglad zdjec DODANYCH DO MIEJSCA (klik w miniaturke w wierszu) - osobny od galerii wyjazdu.
@@ -285,6 +281,25 @@ export default function SharedRoute() {
   const [editingName, setEditingName] = useState(false);
   const [nameVal, setNameVal] = useState("");
   const [savingName, setSavingName] = useState(false);
+  // Wybieranie MIEJSC z cudzego wyjazdu (2026-09-10). Zastapilo zapisywanie calej cudzej
+  // trasy: ludzie i tak nie chcieli cudzego planu w calosci, tylko dwoch-trzech miejsc z niego.
+  const [pickMode, setPickMode] = useState(false);
+  const [pickedIds, setPickedIds] = useState<Set<string>>(new Set());
+  const [pickTargetOpen, setPickTargetOpen] = useState(false);   // arkusz "do ktorego wyjazdu"
+  const [pickBusy, setPickBusy] = useState(false);
+  // Wlasne wyjazdy ROBOCZE - cel dla "Dodaj do wyjazdu". Opublikowane wspomnienie to zamknieta
+  // historia, wiec doklejanie do niego cudzych miejsc nie ma sensu.
+  const { data: myDraftTrips = [] } = useQuery({
+    queryKey: ["pick-target-drafts", user?.id],
+    enabled: !!user?.id && pickTargetOpen,
+    queryFn: async () => {
+      const { data } = await (supabase as any).from("routes")
+        .select("id, title, city, countries, start_date, trip_type")
+        .eq("user_id", user!.id).neq("status", "published")
+        .order("created_at", { ascending: false }).limit(30);
+      return ((data ?? []) as any[]).filter((r) => r.id !== id);
+    },
+  });
   // Zrzut ekranu = intencja "chce to pokazac". Zamiast szukac guzika, user dostaje gotowy
   // kadr od razu po zrzucie (logika jak na Pintereście). iOS nie pozwala podmienic juz
   // zrobionego zdjecia, wiec karta pojawia sie PO nim i user robi drugi zrzut - z karta.
@@ -505,76 +520,6 @@ export default function SharedRoute() {
     } catch { /* brak localStorage - i tak inkrementuj raz na mount */ }
     void (supabase as any).rpc("increment_route_views", { route_id: route.id });
   }, [route?.id]);
-
-  // Zapis cudzego wyjazdu do ZAPISANYCH na profilu (zgloszenie Nat 2026-09-08).
-  //
-  // Wczesniej to samo CTA robilo cos zupelnie innego niz zapis tej samej trasy z karty
-  // w eksploracji: KOPIOWALO cala trase z pinami do wlasnych roboczych i przerzucalo usera
-  // na stary ekran podsumowania (/review-summary). Czyli dwa rozne zachowania pod jedna
-  // nazwa "Zapisz trase", a w Zapisanych i tak nic sie nie pojawialo tak, jak user oczekiwal.
-  //
-  // Teraz: jeden wiersz w saved_routes (dokladnie jak bookmark na karcie) + opcjonalna data,
-  // ktora nalezy do ZAPISUJACEGO, nie do trasy. Zadnej kopii i zadnej zmiany ekranu -
-  // zapis ma byc odczuwalny jak zakladka, nie jak przejscie gdzie indziej.
-  const saveToMine = async (tripDate?: Date) => {
-    if (!user) { navigate("/auth"); return; }
-    if (!route || saving) return;
-    setSaving(true);
-    setShowDateSheet(false);
-    try {
-      const { error } = await (supabase as any).from("saved_routes").upsert(
-        { user_id: user.id, route_id: id, planned_date: tripDate ? format(tripDate, "yyyy-MM-dd") : null },
-        { onConflict: "user_id,route_id" },
-      );
-      if (error) throw error;
-      queryClient.setQueryData(["route-is-saved", user.id, id], true);
-      toast.success(t("toast_saved"), { action: { label: t("go_to_saved"), onClick: () => navigate("/moj-profil?tab=wyjazdy") } });
-      // Powiadom autora, ze ktos zapisal jego trase (best-effort; SECURITY DEFINER RPC -
-      // klient nie moze insertowac notyfikacji dla innego usera). Push leci triggerem notify_push.
-      if (route.user_id && route.user_id !== user.id) {
-        void (supabase as any).rpc("notify_route_used", { p_route_id: id });
-        const me = await getCurrentUserName();
-        void sendClientPush({ userId: route.user_id, title: t("push_used_title"), body: route.city ? t("push_used_body_city", { name: me, city: route.city }) : t("push_used_body", { name: me }), url: "/moj-profil?tab=wyjazdy" });
-      }
-    } catch (e: any) {
-      console.error("[SharedRoute] save failed:", e?.message ?? e);
-      notify.error(t("toast_save_error"));
-    }
-    setSaving(false);
-  };
-
-  // Czy mam juz te trase w Zapisanych - CTA ma pokazywac STAN, nie tylko akcje.
-  const { data: isRouteSaved = false } = useQuery({
-    queryKey: ["route-is-saved", user?.id, id],
-    // Bez isOwner - ta zmienna powstaje dopiero po early-returnach, a hook musi byc nad nimi.
-    enabled: !!user?.id && !!id && (route as any)?.user_id !== user?.id,
-    queryFn: async () => {
-      const { data } = await (supabase as any)
-        .from("saved_routes").select("route_id").eq("user_id", user!.id).eq("route_id", id).maybeSingle();
-      return !!data;
-    },
-  });
-
-  const unsaveFromMine = async () => {
-    if (!user || !id || saving) return;
-    setSaving(true);
-    try {
-      await (supabase as any).from("saved_routes").delete().eq("user_id", user.id).eq("route_id", id);
-      queryClient.setQueryData(["route-is-saved", user.id, id], false);
-      // Cofalne: wiersz to sama para user+route, wiec przywrocenie to jeden insert.
-      notify.success(t("toast_unsaved"), undefined, {
-        action: {
-          label: t("common:buttons.undo"),
-          onClick: () => {
-            void (async () => {
-              await (supabase as any).from("saved_routes").insert({ user_id: user.id, route_id: id });
-              queryClient.setQueryData(["route-is-saved", user.id, id], true);
-            })();
-          },
-        },
-      });
-    } finally { setSaving(false); }
-  };
 
   const { data: pins = [] } = useQuery({
     queryKey: ["shared-route-pins", id],
@@ -909,6 +854,93 @@ export default function SharedRoute() {
   // Edycja miejsc (dodaj/usun/kolejnosc): wlasciciel LUB uczestnik wspolnego wyjazdu (RLS: polityki
   // "Group members can ... pins of shared route"). Nazwa/publikacja/usuniecie trasy zostaja owner-only.
   const canEdit = isOwner || isGroupMember;
+
+  // ── Wybor MIEJSC z cudzego wyjazdu (2026-09-10) ───────────────────────────────
+  // Zastapilo "Zapisz tą trasę". Cudzy plan rzadko pasuje w calosci; to, co realnie
+  // zabiera sie z cudzego wyjazdu, to dwa-trzy miejsca. Wejscie przez przytrzymanie
+  // kafelka, bo w spoczynku widok ma byc do czytania, a nie obwieszony checkboxami.
+  const canPick = !!user && !canEdit;
+  const pickedPins = (pins as any[]).filter((p) => pickedIds.has(p.id));
+  const exitPick = () => { setPickMode(false); setPickedIds(new Set()); };
+  const togglePicked = (pinId: string) => {
+    haptics.light();
+    setPickedIds((prev) => { const n = new Set(prev); n.has(pinId) ? n.delete(pinId) : n.add(pinId); return n; });
+  };
+  const enterPick = (pinId: string) => { setPickMode(true); setPickedIds(new Set([pinId])); };
+  /** Wiersz dostaje zaznaczanie tylko na CUDZYM wyjezdzie - u siebie ma edycje. */
+  const selectionFor = (pin: any) => (canPick ? {
+    active: pickMode,
+    selected: pickedIds.has(pin.id),
+    onToggle: () => togglePicked(pin.id),
+    onEnter: () => enterPick(pin.id),
+  } : undefined);
+
+  const pickedAsPlaces = () => pickedPins.map((p: any) => ({
+    place_name: p.place_name, category: p.category ?? null, address: p.address ?? null,
+    latitude: p.latitude ?? null, longitude: p.longitude ?? null,
+    // Zdjecie NIE jedzie z miejscem: nalezy do autora tamtego wyjazdu (zdjecia userow zyja
+    // w place_photos i tak sie doczytaja), a przenoszenie go tutaj zrobiloby z cudzej pracy
+    // okladke mojego wyjazdu.
+    photo_url: null, place_id: p.place_id ?? null, description: null,
+  }));
+
+  /** "Utwórz wyjazd do {kraj}" - nowy szkic z zaznaczonych miejsc, od razu w nim ladujemy. */
+  const createTripFromPicked = async () => {
+    if (!user || !pickedPins.length) return;
+    setPickBusy(true);
+    const countries = scopeCountries(route);
+    const newId = await createWyjazdFromPlaces(
+      user.id, route.city ?? null, cityLabel, pickedAsPlaces(), undefined,
+      { countries, tripType: "planning" },
+    );
+    setPickBusy(false);
+    if (!newId) { haptics.error(); toast.error(t("toast.pick_trip_failed")); return; }
+    haptics.success();
+    track("trip_places_forked", { from_route: id, count: pickedPins.length });
+    queryClient.invalidateQueries({ queryKey: ["profile-trip-feed", user.id] });
+    exitPick();
+    navigate(`/route/${newId}`);
+  };
+
+  /** "Dodaj do wyjazdu" - dopisanie zaznaczonych miejsc do istniejacego szkicu. */
+  const addPickedToTrip = async (targetId: string, targetTitle: string) => {
+    if (!user || !pickedPins.length) return;
+    setPickBusy(true);
+    try {
+      const { data: existing } = await (supabase as any).from("pins")
+        .select("place_name, pin_order").eq("route_id", targetId);
+      const taken = new Set(((existing ?? []) as any[]).map((p) => (p.place_name || "").trim().toLowerCase()));
+      const maxOrder = ((existing ?? []) as any[]).reduce((m, p) => Math.max(m, p.pin_order ?? -1), -1);
+      // Miejsce, ktore juz tam jest, pomijamy po cichu - duplikat w wyjezdzie to zawsze blad,
+      // a nie decyzja usera.
+      const rows = pickedAsPlaces()
+        .filter((p) => !taken.has((p.place_name || "").trim().toLowerCase()))
+        .map((p, i) => ({
+          route_id: targetId, place_name: p.place_name, address: p.address ?? "", description: null,
+          category: p.category || "other", latitude: p.latitude, longitude: p.longitude,
+          place_id: p.place_id, suggested_time: null, photo_url: null,
+          pin_order: maxOrder + 1 + i, original_creator_id: user.id, added_by: user.id,
+        }));
+      if (!rows.length) { haptics.error(); toast.info(t("toast.pick_all_present")); return; }
+      const { error } = await (supabase as any).from("pins").insert(rows);
+      if (error) throw error;
+      haptics.success();
+      track("trip_places_copied", { from_route: id, to_route: targetId, count: rows.length });
+      queryClient.invalidateQueries({ queryKey: ["shared-route-pins", targetId] });
+      queryClient.invalidateQueries({ queryKey: ["profile-trip-feed", user.id] });
+      toast.success(t("toast.pick_added", { count: rows.length, trip: targetTitle }), {
+        action: { label: t("pick.open_trip"), onClick: () => navigate(`/route/${targetId}`) },
+      });
+      setPickTargetOpen(false);
+      exitPick();
+    } catch (e: any) {
+      console.error("[SharedRoute] addPickedToTrip:", e?.message ?? e);
+      haptics.error();
+      toast.error(t("toast.pick_add_failed"));
+    } finally {
+      setPickBusy(false);
+    }
+  };
 
   // Etap cyklu zycia wyjazdu (Nat 2026-08-25): planning=Propozycje, ongoing=W Trakcie, completed=Wspomnienie.
   const stage: "planning" | "ongoing" | "completed" = ((route as any).trip_type as any) || "planning";
@@ -1639,6 +1671,7 @@ export default function SharedRoute() {
                 onSave={user ? () => toggleSaveBookmark(pin) : undefined} saved={isSaved(pin.place_name)}
             isTop={!!pin.is_top} onToggleTop={canEdit ? () => void toggleTopPin(pin) : undefined}
                 note={buildNote(pin)} cornerAvatar={addedByAvatar(pin)}
+                selection={selectionFor(pin)}
               />
             ))}
           </div>
@@ -1676,6 +1709,7 @@ export default function SharedRoute() {
             onSave={user ? () => toggleSaveBookmark(pin) : undefined} saved={isSaved(pin.place_name)}
             isTop={!!pin.is_top} onToggleTop={canEdit ? () => void toggleTopPin(pin) : undefined}
             note={buildNote(pin)} cornerAvatar={addedByAvatar(pin)}
+            selection={selectionFor(pin)}
           />
         ))}
       </div>
@@ -2265,6 +2299,36 @@ export default function SharedRoute() {
         />
       )}
 
+      {/* "Dodaj do wyjazdu" - wybor wlasnego szkicu docelowego. */}
+      <Sheet open={pickTargetOpen} onOpenChange={(o) => { if (!o) setPickTargetOpen(false); }}>
+        <SheetContent side="bottom" className="rounded-t-3xl px-0 pt-5 pb-[max(16px,env(safe-area-inset-bottom))] max-h-[76dvh] flex flex-col">
+          <SheetTitle className="px-5 text-lg font-black">{t("pick.sheet_title", { count: pickedIds.size })}</SheetTitle>
+          <div className="flex-1 min-h-0 overflow-y-auto mt-3">
+            {(myDraftTrips as any[]).length === 0 ? (
+              <p className="px-5 py-8 text-center text-sm text-muted-foreground leading-relaxed">{t("pick.no_drafts")}</p>
+            ) : (
+              (myDraftTrips as any[]).map((tr) => (
+                <button
+                  key={tr.id}
+                  onClick={() => void addPickedToTrip(tr.id, tr.title || scopeLabel(tr))}
+                  disabled={pickBusy}
+                  className="w-full flex items-center gap-3 px-5 py-3 text-left active:bg-secondary/60 transition-colors disabled:opacity-50"
+                >
+                  <span className="h-10 w-10 shrink-0 rounded-xl bg-[#fcede3] flex items-center justify-center">
+                    <MapPin className="h-5 w-5 text-[#BC4206]" />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[15px] font-semibold text-foreground truncate">{tr.title || scopeLabel(tr) || t("trip_default")}</span>
+                    {scopeLabel(tr) && <span className="block text-[12px] text-muted-foreground truncate">{scopeLabel(tr)}</span>}
+                  </span>
+                  <Plus className="h-5 w-5 shrink-0 text-muted-foreground" />
+                </button>
+              ))
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
+
       {shareCardOpen && (
         <ShareCardTrip
           routeId={route.id}
@@ -2435,9 +2499,10 @@ export default function SharedRoute() {
         </div>
       )}
 
-      {/* CTA: editor (wlasciciel LUB uczestnik wspolnego wyjazdu) = "Dodaj nowe miejsce"; gosc = zapisz + zaplanuj.
+      {/* CTA: editor (wlasciciel LUB uczestnik wspolnego wyjazdu) = akcje etapu; gosc = pasek
+          pojawia sie DOPIERO po zaznaczeniu miejsc (przytrzymanie kafelka).
           Ukryte na czas pisania notki - inaczej pasek siedzi nad klawiatura i zaslania pole. */}
-      {!noteEditing && (
+      {!noteEditing && (canEdit || pickMode) && (
       <div className="fixed bottom-0 left-0 right-0 max-w-lg mx-auto px-5 pt-2 bg-background border-t border-border/30"
         style={{ paddingBottom: "max(12px, env(safe-area-inset-bottom, 12px))" }}>
         {canEdit ? (
@@ -2500,31 +2565,36 @@ export default function SharedRoute() {
               )
             )
           ) : (
+            /* Gosc: zaznaczone miejsca -> wlasny wyjazd. "Zapisz tą trasę" i "Zaplanuj własną
+               trasę w {miasto}" usuniete (decyzja Nat 2026-09-10) - cudzy plan w calosci
+               prawie nikomu nie pasowal, a przenoszenie POJEDYNCZYCH miejsc jest tym, po co
+               ludzie tu wchodza. */
             <>
-              {/* CTA pokazuje STAN zakladki, nie tylko akcje: zapisane = szary guzik z wypelnionym
-                  bookmarkiem i ponowne tapniecie zdejmuje zapis (jak na karcie w eksploracji). */}
-              <button
-                onClick={() => {
-                  if (!user) { navigate("/auth"); return; }
-                  if (isRouteSaved) { void unsaveFromMine(); return; }
-                  setShowDateSheet(true);
-                }}
-                disabled={saving}
-                className={`w-full py-3 rounded-full font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-50 ${
-                  isRouteSaved
-                    ? "bg-secondary text-secondary-foreground"
-                    : "bg-primary text-white shadow-lg shadow-primary/25"
-                }`}
-              >
-                <Bookmark className={`h-4 w-4 ${isRouteSaved ? "fill-current" : ""}`} />
-                {saving ? t("saving") : isRouteSaved ? t("saved_trip") : t("save_trip")}
-              </button>
-              <button
-                onClick={() => navigate(`/plan?city=${encodeURIComponent(cityLabel)}`)}
-                className="w-full mt-2 py-2 text-sm font-medium text-muted-foreground active:text-foreground transition-colors"
-              >
-                {t("plan_own_route", { city: cityLabel })}
-              </button>
+              <div className="flex items-center justify-between gap-2 pb-2">
+                <p className="text-[13px] font-semibold text-foreground">
+                  {t("pick.selected", { count: pickedIds.size })}
+                </p>
+                <button onClick={exitPick} className="text-[13px] font-medium text-muted-foreground active:text-foreground transition-colors">
+                  {t("common:buttons.cancel")}
+                </button>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => void createTripFromPicked()}
+                  disabled={pickBusy || pickedIds.size === 0}
+                  className="flex-1 min-w-0 py-3 rounded-full bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-50"
+                >
+                  {pickBusy && <Loader2 className="h-4 w-4 animate-spin shrink-0" />}
+                  <span className="truncate">{t("pick.create_trip", { place: cityLabel })}</span>
+                </button>
+                <button
+                  onClick={() => { haptics.light(); setPickTargetOpen(true); }}
+                  disabled={pickBusy || pickedIds.size === 0}
+                  className="shrink-0 px-4 py-3 rounded-full bg-secondary text-secondary-foreground font-bold text-sm whitespace-nowrap active:scale-[0.98] transition-transform disabled:opacity-50"
+                >
+                  {t("pick.add_to_trip")}
+                </button>
+              </div>
             </>
           )}
         </div>
@@ -2542,34 +2612,6 @@ export default function SharedRoute() {
           <FullCalendarPicker maxDays={14} onConfirm={(d, numDays) => void saveTripDates(d, numDays)} allowPast onClear={route.start_date ? () => void clearTripDates() : undefined} />
         </SheetContent>
       </Sheet>
-
-      {showDateSheet && (
-        <div
-          className="fixed inset-0 z-[70] flex items-end justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200"
-          onClick={() => setShowDateSheet(false)}
-        >
-          <div
-            {...dateDrag.dragProps}
-            className="w-full max-w-md bg-card rounded-t-3xl flex flex-col max-h-[88dvh] shadow-2xl animate-in slide-in-from-bottom-4 duration-300"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="px-5 pt-5 pb-1 text-center shrink-0">
-              <p className="text-lg font-black leading-tight">{t("date_sheet_title")}</p>
-              <p className="text-xs text-muted-foreground mt-1">{t("date_sheet_desc")}</p>
-            </div>
-            <div className="flex-1 min-h-0 overflow-y-auto">
-              <FullCalendarPicker onConfirm={(d) => saveToMine(d)} />
-            </div>
-            <button
-              onClick={() => saveToMine()}
-              disabled={saving}
-              className="mx-5 mt-1 mb-[max(16px,env(safe-area-inset-bottom))] py-2.5 text-sm font-medium text-muted-foreground active:text-foreground transition-colors shrink-0 disabled:opacity-50"
-            >
-              {t("save_without_date")}
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Potwierdzenie usuniecia wyjazdu - nieodwracalne. */}
       {/* Potwierdzenie usuniecia MIEJSCA (od etapu "w trakcie") - pokazuje, ile tresci przepadnie. */}
