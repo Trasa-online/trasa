@@ -47,6 +47,18 @@ export default function PlaceNoteEditor({
   const [draft, setDraft] = useState(note ?? "");
   const [savedFlash, setSavedFlash] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const taRef = useRef<HTMLTextAreaElement>(null);
+
+  // Pole rosnie do CALEJ tresci (prosba Nat 2026-09-10). Dwa wiersze wystarczaly przy krotkiej
+  // notce, ale opis wyjazdu ma kilka zdan i user redagowal go przez szparke, przewijajac
+  // wlasny tekst. Wysokosc liczymy ze scrollHeight po kazdej zmianie; gorny limit to 60% ekranu,
+  // zeby przy bardzo dlugim opisie zostalo miejsce na klawiature i guzik "Gotowe".
+  const autoGrow = () => {
+    const el = taRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, Math.round(window.innerHeight * 0.6))}px`;
+  };
 
   // Gdy notka z DB sie zmieni a nie edytujemy - zsynchronizuj draft (np. po refetchu).
   useEffect(() => { if (!editing) setDraft(note ?? ""); }, [note, editing]);
@@ -69,6 +81,8 @@ export default function PlaceNoteEditor({
     setEditing(false);
   };
   const startEdit = () => { setDraft(noteText); setEditing(true); };
+  // Po wejsciu w edycje (i po podmianie tresci z zewnatrz) dopasuj wysokosc do tekstu.
+  useEffect(() => { if (editing) autoGrow(); }, [editing, draft]);
 
   if (editing) {
     return (
@@ -78,12 +92,13 @@ export default function PlaceNoteEditor({
         <div className="flex items-start gap-2">
           <div className="relative flex-1 min-w-0">
             <textarea
+              ref={taRef}
               value={draft}
-              onChange={(e) => scheduleSave(e.target.value)}
+              onChange={(e) => { scheduleSave(e.target.value); autoGrow(); }}
               placeholder={placeholderText}
               rows={2}
               autoFocus
-              className="w-full bg-muted/50 rounded-xl px-3 py-2.5 text-sm text-foreground resize-none focus:outline-none border border-border/30 placeholder:text-muted-foreground/55"
+              className="w-full bg-muted/50 rounded-xl px-3 py-2.5 text-sm text-foreground resize-none focus:outline-none border border-border/30 placeholder:text-muted-foreground/55 overflow-y-auto"
             />
             {savedFlash && <span className="absolute bottom-2 right-2.5 text-[10px] text-green-600 font-medium">Zapisano</span>}
           </div>

@@ -61,7 +61,7 @@ export default function ReferralCard({ userId }: { userId: string }) {
   };
 
   return (
-    <div className="rounded-3xl bg-gradient-to-br from-[#FDF184] to-[#FDCD84] p-5">
+    <div className="rounded-3xl bg-gradient-to-br from-[#FDF184] to-[#FDCD84] p-5 mb-5">
       <div className="flex items-start gap-3">
         <span className="h-10 w-10 shrink-0 rounded-2xl bg-white/70 flex items-center justify-center">
           <Gift className="h-5 w-5 text-[#5B2C06]" />

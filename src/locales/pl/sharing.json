@@ -179,7 +179,8 @@
     "expand_map": "Rozwiń mapę",
     "is_my_cover": "To jest Twoja okładka wyjazdu",
     "set_my_cover": "Ustaw jako swoją okładkę wyjazdu",
-    "rename_trip": "Zmień nazwę wyjazdu"
+    "rename_trip": "Zmień nazwę wyjazdu",
+    "trip_actions": "Akcje wyjazdu"
   },
   "send_reminder": "Wyślij przypomnienie",
   "publish_trip": "Opublikuj wyjazd",

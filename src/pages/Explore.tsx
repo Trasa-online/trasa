@@ -837,21 +837,6 @@ const Explore = () => {
         )}
       </TabTopBar>
 
-      {/* Foldery kategorii - pod przypieta belka. Widoczne dopoki fraza jest pusta;
-          po wpisaniu zwijaja sie animacja i zostaja same wyniki (2026-09-06). */}
-      {searchOpen && !myCollections && (
-        <div
-          className={cn(
-            "shrink-0 overflow-hidden border-b border-border/40 transition-all duration-200 ease-out",
-            foldersVisible ? "max-h-[160px] opacity-100" : "max-h-0 opacity-0 border-b-0",
-          )}
-        >
-          <p className="px-4 pt-3 text-sm font-bold text-foreground">{t("search.by_category")}</p>
-          <SearchCategoryRow value={searchCat} onChange={setSearchCat} />
-          <div className="h-3" />
-        </div>
-      )}
-
       {myCollections ? (
         <PullToRefresh onRefresh={handleRefresh} className="flex-1 min-h-0 flex flex-col pt-3 pb-[calc(5rem+env(safe-area-inset-bottom,0px))]">
           <div className="flex-1 px-4"><MyCollections showCreate={false} /></div>
@@ -884,6 +869,22 @@ const Explore = () => {
             {/* Snap tylko w trybie przegladania feedu. Przy wyszukiwaniu WYLACZAMY snap, zeby
                 skroty/wyniki na gorze byly widoczne, a wizytowki zostawaly przewijalne pod spodem. */}
             <PullToRefresh onRefresh={handleRefresh} onScroll={(top) => setFeedScrolled(top > 8)} className={cn("flex-1 min-h-0 flex flex-col pt-3 pb-[calc(6rem+env(safe-area-inset-bottom,0px))]", !searchOpen && "snap-y snap-mandatory scroll-pt-3")}>
+              {/* Foldery kategorii wyszukiwarki - WEWNATRZ obszaru przewijania (prosba Nat
+                  2026-09-10). Wczesniej staly nad nim jako staly element ukladu i przy kazdym
+                  szukaniu zabieraly gore ekranu, nawet gdy user byl juz przy dziesiatym wyniku.
+                  Teraz odjezdzaja razem z trescia. Zwijanie po wpisaniu frazy zostaje. */}
+              {searchOpen && (
+                <div
+                  className={cn(
+                    "shrink-0 overflow-hidden border-b border-border/40 transition-all duration-200 ease-out -mt-3 mb-3",
+                    foldersVisible ? "max-h-[160px] opacity-100" : "max-h-0 opacity-0 border-b-0 mb-0",
+                  )}
+                >
+                  <p className="px-4 pt-3 text-sm font-bold text-foreground">{t("search.by_category")}</p>
+                  <SearchCategoryRow value={searchCat} onChange={setSearchCat} />
+                  <div className="h-3" />
+                </div>
+              )}
               <div className="flex-1 px-4"><DiscoveryFeed city={exploreCity} active={view === "feed"} searchQuery={feedSearch} searchOpen={searchOpen} searchCategory={searchCat} /></div>
             </PullToRefresh>
           </div>

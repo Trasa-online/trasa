@@ -339,7 +339,9 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
                 ref={starBtnRef}
                 onClick={(e) => e.stopPropagation()}
                 aria-label={t("row.more_actions")}
-                className="h-9 w-9 rounded-full flex items-center justify-center shrink-0 active:scale-90 transition-transform"
+                /* Biale kolko z delikatnym szarym cieniem - dokladnie jak guzik Google obok
+                   (prosba Nat 2026-09-10). Sam cien niesie afordancje "to sie klika". */
+                className="h-9 w-9 rounded-full bg-white border border-black/[0.04] shadow-[0_1px_5px_rgba(0,0,0,0.12)] flex items-center justify-center shrink-0 active:scale-90 transition-transform"
               >
                 {/* ZAWSZE trzy kropki (prosba Nat 2026-09-10). Wczesniej ikona menu pokazywala
                     stan (gwiazdka topki / wypelniona zakladka) i przez to wygladala jak guzik

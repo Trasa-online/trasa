@@ -760,8 +760,10 @@ const TravelerProfile = () => {
         </div>
 
         {/* Zapraszanie znajomych (2026-09-10) - ekran zachety zamiast paywalla. Stoi NAD
-            zakladkami, bo to jedyne miejsce na profilu, ktore user widzi bez przewijania. */}
-        <div className="pb-5"><ReferralCard userId={user.id} /></div>
+            zakladkami, bo to jedyne miejsce na profilu, ktore user widzi bez przewijania.
+            BEZ opakowania z paddingiem: odstep niesie sama karta, wiec po jej zamknieciu
+            nie zostaje pusty pas (zgloszenie Nat 2026-09-10). */}
+        <ReferralCard userId={user.id} />
 
         {/* Zakladki: Listy | Wyjazdy (ikona + labelka obok, underline aktywnej). Zapisane usunięte 2026-08-24. */}
         {/* Sticky: przy przewijaniu profilu zakladki zostaja na gorze (prosba Nat 2026-09-01).

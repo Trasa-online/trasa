@@ -70,7 +70,6 @@ function MaintenanceGate({ children }: { children: React.ReactNode }) {
   const isPublicRoute =
     location.pathname === "/auth" ||
     location.pathname === "/" ||
-    location.pathname === "/landing-v2" ||
     location.pathname.startsWith("/set-password") ||
     location.pathname.startsWith("/biznes/") ||
     location.pathname.startsWith("/dla-firm/");
@@ -93,7 +92,7 @@ function WebWaitlistGate({ children }: { children: React.ReactNode }) {
   const p = location.pathname;
   const allowed =
     // Marketing / legal (B2C web presence)
-    p === "/" || p === "/landing-v2" ||
+    p === "/" ||
     p === "/terms" || p === "/privacy" ||
     // B2B: auth biznesowy, ustawianie hasla, dashboard, landing dla firm, claim lokalu
     p === "/auth" || p.startsWith("/set-password") || p.startsWith("/biznes") ||
@@ -715,7 +714,6 @@ function lazy(factory: Parameters<typeof reactLazy>[0]) {
 }
 
 // Lazy-loaded public pages - one chunk each, fetched on demand
-const LandingV2 = lazy(() => import("./pages/LandingV2"));
 import ForBusinessPage from "./pages/ForBusinessPage";
 import Auth from "./pages/Auth";
 import Terms from "./pages/Terms";
@@ -833,7 +831,6 @@ const App = () => (
           <Route path="/auth" element={<Auth />} />
           {/* Landing B2C (spontaway) stoi pod "/" (patrz WebRoot). /landing i /waitlist
               ubite 2026-09-02 - stare linki lapie WebWaitlistGate i odsyla na root. */}
-          <Route path="/landing-v2" element={<LandingV2 />} />
           <Route path="/terms" element={<Terms />} />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/" element={<WebRoot />} />

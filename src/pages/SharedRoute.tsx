@@ -11,7 +11,7 @@ import { notify } from "@/lib/notify";
 import { sendClientPush, getCurrentUserName } from "@/lib/clientPush";
 import { format } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
-import { MapPin, ArrowLeft, Sparkles, ChevronDown, Bookmark, Calendar as CalendarIcon, Image as ImageIcon, Maximize2, X, Building2, Pencil, Trash2, Heart, Share2, Plus, Map as MapIcon, Loader2, GripVertical, Check, Flag, Camera, ThumbsUp, MessageCircle, UserPlus } from "lucide-react";
+import { MapPin, ArrowLeft, Sparkles, ChevronDown, Bookmark, Calendar as CalendarIcon, Image as ImageIcon, Maximize2, X, Building2, Pencil, Trash2, Heart, Share2, Plus, Map as MapIcon, Loader2, GripVertical, Check, Flag, Camera, ThumbsUp, MessageCircle, UserPlus, MoreHorizontal } from "lucide-react";
 import { MAIN_CATEGORIES, subcategoryPluralLabel } from "@/lib/categories";
 import { PLACE_VERDICT_TAGS, verdictOf, localizeTag, verdictRank } from "@/lib/routeTags";
 import { publishTrip } from "@/lib/publishTrip";
@@ -24,6 +24,7 @@ import { toast } from "sonner";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { PlacePhoto } from "@/components/PlacePhoto";
 import { RoutePlaceRow } from "@/components/route/RoutePlaceRow";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { scopeCountries, scopeLabel } from "@/lib/tripScope";
 import { fetchRouteNotesWithAuthors, notesByPlace, placeNoteKey } from "@/lib/placeNotes";
 import { detachPlacePhotos, restorePlacePhotos } from "@/lib/placePhotoSocial";
@@ -1236,6 +1237,23 @@ export default function SharedRoute() {
   // (zgloszenie Nat 2026-09-09). Kto jest autorem zdjecia, rozstrzyga sciezka w Storage -
   // patrz migracja 20260909b. Plik w Storage zostaje, zeby "Cofnij" mialo co przywrocic.
   const handleDeletePhoto = async (url: string) => {
+    // Zdjecie MIEJSCA kasujemy w jego wlasnej tabeli - RPC od galerii nie ma czego z niej zdjac.
+    const pinPhoto = pinPhotoByUrl.get(url);
+    if (pinPhoto) {
+      const removed = await deletePinPhotoReturning(pinPhoto.id);
+      if (!removed) { toast.error(t("toast.photo_delete_failed")); return; }
+      queryClient.invalidateQueries({ queryKey: ["shared-route-pin-photos", id] });
+      toast.success(t("toast.photo_deleted"), {
+        action: {
+          label: t("common:buttons.undo"),
+          onClick: async () => {
+            await restorePinPhotos([removed]);
+            queryClient.invalidateQueries({ queryKey: ["shared-route-pin-photos", id] });
+          },
+        },
+      });
+      return;
+    }
     const { error } = await (supabase as any).rpc("remove_route_photo", { p_route_id: route.id, p_url: url });
     if (error) { toast.error(t("toast.photo_delete_failed")); return; }
     queryClient.invalidateQueries({ queryKey: ["shared-route", id] });
@@ -1250,8 +1268,14 @@ export default function SharedRoute() {
     });
   };
 
-  /** Czy TO zdjecie wgral zalogowany user - "<user_id>/<route_id>/" w sciezce pliku. */
-  const isMyGalleryPhoto = (url: string) => !!user?.id && url.includes(`/${user.id}/${route.id}/`);
+  /** Czy TO zdjecie wgral zalogowany user. Dla zdjec galerii poznajemy to po sciezce pliku
+   *  ("<user_id>/<route_id>/"), dla zdjec MIEJSCA - wprost z wiersza pin_photos.user_id. */
+  const isMyGalleryPhoto = (url: string) => {
+    if (!user?.id) return false;
+    const pinPhoto = pinPhotoByUrl.get(url);
+    if (pinPhoto) return pinPhoto.user_id === user.id;
+    return url.includes(`/${user.id}/${route.id}/`);
+  };
 
   // #c: ustaw zdjecie jako OKLADKE EKSPLORACJI (list_cover_url). Tylko wlasne zdjecia (galeria) -
   // zgodne z regula "okladka listy/trasy nigdy z Google".
@@ -1338,9 +1362,26 @@ export default function SharedRoute() {
   // Opis trasy: preferuj reczny opis autora (review_narrative), potem AI/podpis udostepnienia.
   const routeDescription: string = (route as any).review_narrative || route.ai_summary || shareMeta?.share_caption || "";
   // Galeria = wszystkie zdjecia wyjazdu autora (review_photos), z rozwiazanym URL-em.
-  const galleryPhotos: string[] = ((route.review_photos ?? []) as any[])
+  // GALERIA = zdjecia wgrane wprost do galerii (routes.review_photos) ORAZ zdjecia dodane do
+  // KONKRETNYCH MIEJSC w zakladce Miejsca (pin_photos) - prosba Nat 2026-09-10. Wczesniej te
+  // drugie zylo wylacznie przy swoim miejscu i galeria wygladala na pusta, chociaz user wrzucil
+  // do wyjazdu kilkanascie zdjec.
+  //
+  // Scalamy PRZY WYSWIETLANIU, a nie dopisujac do review_photos: gdyby zdjecie miejsca lecialo
+  // do obu tabel, skasowanie go przy miejscu zostawialoby sierote w galerii. Tutaj jedno zrodlo
+  // znika i zdjecie po prostu wypada z obu widokow.
+  const pinPhotoByUrl = new Map<string, PinPhoto>();
+  for (const ph of pinPhotoRows as PinPhoto[]) {
+    const u = resolveStored(ph.url);
+    if (u && !pinPhotoByUrl.has(u)) pinPhotoByUrl.set(u, ph);
+  }
+  const reviewPhotos: string[] = ((route.review_photos ?? []) as any[])
     .map((u) => (typeof u === "string" ? resolveStored(u) : null))
     .filter((u): u is string => !!u);
+  const galleryPhotos: string[] = [
+    ...reviewPhotos,
+    ...[...pinPhotoByUrl.keys()].filter((u) => !reviewPhotos.includes(u)),
+  ];
   // Handler swipe w galerii fullscreen jest zadeklarowany wyzej (przed early returnami),
   // wiec liczbe zdjec podajemy mu przez ref.
   galleryPhotosCount.current = galleryPhotos.length;
@@ -1955,38 +1996,46 @@ export default function SharedRoute() {
             ) : (
               <h1 className="flex-1 text-2xl font-black text-foreground leading-tight">{route.title || cityLabel}</h1>
             )}
-            {/* Grupa ikon. Udostepnianie widzi KAZDY (spojnie z listami, prosba Nat 2026-09-01) -
-                gosc ogladajacy cudzy wyjazd tez ma go czym poslac dalej. Reszta zostaje przy
-                wlascicielu / uczestniku. */}
-            <div className="shrink-0 flex items-center gap-2">
-                {/* Olowek = zmiana NAZWY wyjazdu. Stoi PIERWSZY (prosba Nat 2026-09-10, zamiana
-                    miejscami z zaproszeniem): nazwa nie powstaje juz w kreatorze, wiec zmiana
-                    nazwy jest tu czynnoscia czestsza niz dopraszanie ludzi. Ten widok dalej JEST
-                    edycja reszty (miejsca, notki, zdjecia, opis, tagi) - stepper sie nie otwiera. */}
+            {/* Wszystkie akcje wyjazdu pod JEDNYM guzikiem z trzema kropkami (prosba Nat
+                2026-09-10). Cztery kolka obok tytulu konkurowaly z nim wzrokowo, a trzy z nich
+                to akcje rzadkie - nazwe zmienia sie raz, usuwa sie raz. Udostepnianie widzi
+                KAZDY (spojnie z listami), reszta zostaje przy wlascicielu / uczestniku. */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  aria-label={t("aria.trip_actions")}
+                  className="shrink-0 h-9 w-9 rounded-full bg-secondary flex items-center justify-center active:scale-90 transition-transform"
+                >
+                  <MoreHorizontal className="h-4 w-4 text-foreground" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="rounded-2xl w-56">
                 {canEdit && (
-                  <button
-                    onClick={() => { haptics.light(); setNameVal(route.title || ""); setEditingName(true); }}
-                    aria-label={t("aria.rename_trip")}
+                  <DropdownMenuItem
+                    onSelect={() => { haptics.light(); setNameVal(route.title || ""); setEditingName(true); }}
                     disabled={savingName}
-                    className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center active:scale-90 transition-transform disabled:opacity-50"
+                    className="gap-2.5 py-2.5"
                   >
-                    <Pencil className="h-4 w-4 text-foreground" />
-                  </button>
+                    <Pencil className="h-4 w-4" />{t("aria.rename_trip")}
+                  </DropdownMenuItem>
                 )}
-                <button onClick={handleShare} onContextMenu={(e) => { e.preventDefault(); handleShareLink(); }} aria-label={t("aria.share")} className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center active:scale-90 transition-transform"><Share2 className="h-4 w-4 text-foreground" /></button>
-                {/* Zapraszanie uczestnikow PRZYWROCONE (prosba Nat 2026-09-06, cofa decyzje
-                    z 2026-08-30): sklad da sie uzupelnic takze PO fakcie, czyli na juz
-                    opublikowanym wyjezdzie. Tylko HOST: inviteUsersToRoute idzie przez
-                    host-only RPC add_member_to_session. */}
+                <DropdownMenuItem onSelect={() => handleShare()} className="gap-2.5 py-2.5">
+                  <Share2 className="h-4 w-4" />{t("aria.share")}
+                </DropdownMenuItem>
+                {/* Zapraszanie tylko HOST: inviteUsersToRoute idzie przez host-only RPC
+                    add_member_to_session. */}
                 {isOwner && (
-                  <button onClick={() => { haptics.light(); setInviteOpen(true); }}
-                    aria-label={t("aria.invite_people")}
-                    className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center active:scale-90 transition-transform">
-                    <UserPlus className="h-4 w-4 text-foreground" />
-                  </button>
+                  <DropdownMenuItem onSelect={() => { haptics.light(); setInviteOpen(true); }} className="gap-2.5 py-2.5">
+                    <UserPlus className="h-4 w-4" />{t("aria.invite_people")}
+                  </DropdownMenuItem>
                 )}
-                {isOwner && <button onClick={() => setAskDelete(true)} aria-label={t("aria.delete_trip")} className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center active:scale-90 transition-transform"><Trash2 className="h-4 w-4 text-destructive" /></button>}
-            </div>
+                {isOwner && (
+                  <DropdownMenuItem onSelect={() => setAskDelete(true)} className="gap-2.5 py-2.5 text-destructive focus:text-destructive">
+                    <Trash2 className="h-4 w-4" />{t("aria.delete_trip")}
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
           {/* #5: miasto + liczba miejsc bezposrednio pod tytulem (przeniesione z TopBara). */}
           <div className="flex items-center gap-4 mt-2.5 text-sm text-muted-foreground">
@@ -2439,7 +2488,7 @@ export default function SharedRoute() {
           zeby schowanie czatu nie schowalo tez sygnalu, ze ktos pisze.
           Chowamy caly stos przy wyborze miejsc i przy pisaniu notki - tam ekran nalezy do
           jednej czynnosci. */}
-      {canEdit && !choosing && !noteEditing && (
+      {canEdit && !choosing && !noteEditing && !reorderMode && (
         <TripFabStack
           actions={[
             ...(id ? [{
@@ -2455,12 +2504,20 @@ export default function SharedRoute() {
               key: "add",
               label: planTab === "galeria" && canAddPhotos ? t("add_photo_cta") : t("add_place"),
               icon: <Plus className="h-6 w-6" strokeWidth={2.4} />,
-              primary: true,
               onClick: () => {
                 if (planTab === "galeria" && canAddPhotos) photoInputRef.current?.click();
                 else setAddPlaceOpen(true);
               },
             },
+            // Zmiana kolejnosci zeszla tu z dolnego paska (prosba Nat 2026-09-10) i jest
+            // w stosie akcja PRIMARY - to jedyna z trzech, ktora zmienia sam uklad wyjazdu.
+            ...(pins.length > 1 ? [{
+              key: "reorder",
+              label: t("reorder"),
+              icon: <GripVertical className="h-6 w-6" strokeWidth={2.2} />,
+              primary: true,
+              onClick: () => { pickDay(null); setReorderMode(true); },
+            } as TripFab] : []),
           ]}
         />
       )}
@@ -2556,7 +2613,10 @@ export default function SharedRoute() {
       {/* CTA: editor (wlasciciel LUB uczestnik wspolnego wyjazdu) = akcje etapu; gosc = pasek
           pojawia sie DOPIERO po zaznaczeniu miejsc (przytrzymanie kafelka).
           Ukryte na czas pisania notki - inaczej pasek siedzi nad klawiatura i zaslania pole. */}
-      {!noteEditing && (canEdit || pickMode) && (
+      {/* Po przeniesieniu zmiany kolejnosci do stosu FAB dolny pasek bywa PUSTY (wyjazd
+          w trakcie, jeszcze bez publikacji) - wtedy zostawal sam bialy pasek z kreska.
+          Renderujemy go dopiero, gdy jest w nim jakakolwiek akcja. */}
+      {!noteEditing && ((canEdit && (choosing || reorderMode || (isOwner && stage === "planning" && pins.length > 0) || canPublish)) || pickMode) && (
       <div className="fixed bottom-0 left-0 right-0 max-w-lg mx-auto px-5 pt-2 bg-background border-t border-border/30"
         style={{ paddingBottom: "max(12px, env(safe-area-inset-bottom, 12px))" }}>
         {canEdit ? (
@@ -2578,24 +2638,9 @@ export default function SharedRoute() {
                   <Check className="h-4 w-4 stroke-[3]" />{t("common:buttons.done")}</button>
               ) : (
               <div className="flex items-center gap-2">
-                {/* t("add_place") przeniesione do plywajacego guzika pod czatem (prosba Nat
-                    2026-08-30) - dolny pasek zostaje dla akcji etapu. */}
-                {/* Obok publikacji zmiana kolejnosci jest akcja drugoplanowa (szary fill wg
-                    CLAUDE.md), ale MUSI byc widoczna: samo #EDEDED na bialym pasku znikalo
-                    i user zglosil, ze guzik "sie zgubil" - stad obwodka.
-                    Szerokosc: zmiana kolejnosci sciesnia sie do tresci (shrink-0), a cala
-                    reszte paska zabiera publikacja. Dwa guziki na flex-1 z nielamanym tekstem
-                    nie mialy sie jak zmiescic na wezszych telefonach. */}
-                {pins.length > 1 && (
-                  <button onClick={() => { haptics.light(); pickDay(null); setReorderMode(true); }}
-                    className={`px-4 py-3 rounded-full font-bold text-sm flex items-center justify-center gap-2 whitespace-nowrap active:scale-[0.98] transition-transform ${
-                      canPublish
-                        ? "min-w-0 bg-secondary text-secondary-foreground border border-border"
-                        : "flex-1 bg-primary text-white"}`}>
-                    <GripVertical className="h-4 w-4 shrink-0" />
-                    <span className="truncate">{t("reorder")}</span>
-                  </button>
-                )}
+                {/* Dolny pasek zostaje dla akcji ETAPU (wybor miejsc / publikacja). "Dodaj
+                    miejsce", czat i zmiana kolejnosci mieszkaja w stosie plywajacych guzikow
+                    pod chevronem (prosba Nat 2026-08-30 i 2026-09-10). */}
                 {/* Etap PROPOZYCJI (host): wybierz miejsca -> w trakcie. */}
                 {isOwner && stage === "planning" && pins.length > 0 && (
                   <button onClick={startChoosing}

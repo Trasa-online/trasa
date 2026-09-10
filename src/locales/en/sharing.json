@@ -173,7 +173,8 @@
     "expand_map": "Expand map",
     "is_my_cover": "This is your trip cover",
     "set_my_cover": "Set as your trip cover",
-    "rename_trip": "Rename trip"
+    "rename_trip": "Rename trip",
+    "trip_actions": "Trip actions"
   },
   "send_reminder": "Send reminder",
   "publish_trip": "Publish trip",

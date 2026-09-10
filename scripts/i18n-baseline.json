@@ -33,7 +33,6 @@
     "src/pages/BusinessOnePager.tsx",
     "src/pages/CreateRoute.tsx",
     "src/pages/ForBusinessPage.tsx",
-    "src/pages/LandingV2.tsx",
     "src/pages/Privacy.tsx",
     "src/pages/Terms.tsx"
   ]
