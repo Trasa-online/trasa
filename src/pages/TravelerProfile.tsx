@@ -5,7 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import { Settings, Camera, UserCircle2, ArrowRight, Bell, Share2, Search, ChevronLeft } from "lucide-react";
+import { Settings, UserCircle2, ArrowRight, Bell, Share2, Search, ChevronLeft } from "lucide-react";
 import { BrandIcon, LIST_ICON } from "@/components/BrandIcon";
 import { SavedPlacesGrid } from "@/components/saved/SavedPlacesGrid";
 import TabHeader from "@/components/layout/TabHeader";
@@ -25,11 +25,9 @@ import { deferDelete } from "@/lib/deferDelete";
 import { PullToRefresh } from "@/components/PullToRefresh";
 import { SHARE_BASE_URL } from "@/lib/shareUrl";
 import { useShare } from "@/hooks/useShare";
-import { isNative } from "@/lib/platform";
 import { useFollowCounts, useFollowList } from "@/hooks/useFollow";
 import NotificationsDrawer from "@/components/layout/NotificationsDrawer";
 import InviteFriendsBanner from "@/components/social/InviteFriendsBanner";
-import { Camera as CapCamera, CameraResultType, CameraSource } from "@capacitor/camera";
 import { ProfileFeedCard } from "@/components/profile/ProfileFeedCard";
 import ReferralCard from "@/components/profile/ReferralCard";
 import { TripLayoutSwitch, TripTile, mosaicColumns, useTripLayout } from "@/components/profile/TripLayout";
@@ -47,7 +45,6 @@ import TrasaBigCard from "@/components/home/TrasaBigCard";
 import { fetchRouteCoversFor } from "@/lib/routeMemberCover";
 import { resolveStored } from "@/components/PlacePhoto";
 import { subcategoryLabelLocalized } from "@/lib/categories";
-import { uploadThumb } from "@/lib/imageThumbs";
 import { EMPTY_ARRAY } from "@/lib/emptyRef";
 
 // ── Guest empty state (same visual rytm jak Journal dla goscia) ──────────────
@@ -275,43 +272,6 @@ const TravelerProfile = () => {
       },
     });
   };
-  const handleAvatarUpload = async (file: File) => {
-    if (!user) return;
-    const allowed = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" } as const;
-    const ext = allowed[file.type as keyof typeof allowed];
-    if (!ext) { toast.error(t("profile.avatar_type_error")); return; }
-    if (file.size > 5 * 1024 * 1024) { toast.error(t("profile.avatar_size_error")); return; }
-    const fileName = `${user.id}/avatar.${ext}`;
-    const { error: uploadError } = await supabase.storage.from("avatars").upload(fileName, file, { upsert: true, contentType: file.type });
-    await uploadThumb("avatars", fileName, file);
-    if (uploadError) { toast.error(t("profile.avatar_upload_error")); return; }
-    const { data: { publicUrl } } = supabase.storage.from("avatars").getPublicUrl(fileName);
-    const bustedUrl = `${publicUrl}?v=${Date.now()}`;
-    const { error: updateError } = await supabase.from("profiles").update({ avatar_url: bustedUrl } as any).eq("id", user.id);
-    if (updateError) { toast.error(t("profile.avatar_save_error")); return; }
-    queryClient.invalidateQueries({ queryKey: ["profile-full", user.id] });
-    toast.success(t("profile.avatar_updated"));
-  };
-
-  const handleNativePhotoPick = async () => {
-    try {
-      const photo = await CapCamera.getPhoto({ resultType: CameraResultType.Base64, source: CameraSource.Photos, quality: 90, width: 800, height: 800 });
-      if (!photo.base64String) { toast.error(t("profile.photo_read_error")); return; }
-      const format2 = photo.format || "jpeg";
-      const mime = format2 === "png" ? "image/png" : format2 === "webp" ? "image/webp" : "image/jpeg";
-      const binary = atob(photo.base64String);
-      const bytes = new Uint8Array(binary.length);
-      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-      const file = new File([bytes], `avatar.${format2}`, { type: mime });
-      await handleAvatarUpload(file);
-    } catch (err: any) {
-      const msg = String(err?.message ?? err);
-      if (msg.toLowerCase().includes("cancel") || msg.toLowerCase().includes("denied")) return;
-      console.error("[TravelerProfile] native photo pick failed:", msg);
-      toast.error(t("profile.photo_pick_error"));
-    }
-  };
-
   const { data: profile } = useQuery({
     queryKey: ["profile-full", user?.id],
     queryFn: async () => {
@@ -601,6 +561,7 @@ const TravelerProfile = () => {
           cover: rep.list_cover_url ?? rep.cover_url ?? null,
           tiles: pinsByRoute[rep.id] ?? [], saves: Number(rep.saves_count ?? 0), likes: Number(rep.likes_count ?? 0), views: Number(rep.views ?? 0),
           author_avatar: a?.avatar_url ?? null, author_name: a?.first_name || a?.username || t("profile.traveler_fallback"),
+          author_id: rep.user_id ?? null,
         };
       });
     },
@@ -686,6 +647,7 @@ const TravelerProfile = () => {
         description={tr.description}
         authorName={displayName}
         authorAvatar={profile?.avatar_url}
+        authorId={user.id}
         isDraft={isRoboczy}
         // Opublikowany bez okladki listy = nie przechodzi bramki eksploracji, czyli nikt go
         // nie znajdzie. Autor dowiadywal sie o tym tylko ze znikajacego toastu przy publikacji.
@@ -713,6 +675,7 @@ const TravelerProfile = () => {
       description={tr.description}
       authorName={tr.author_name}
       authorAvatar={tr.author_avatar}
+      authorId={tr.author_id}
       showMap={false}
       snap={false}
       heightClass="aspect-[3/4]"
@@ -727,6 +690,7 @@ const TravelerProfile = () => {
     <ProfileFeedCard
       key={l.id}
       avatarUrl={l.author_avatar}
+      authorId={l.user_id}
       fallback={l.author_name || "?"}
       eyebrow=""
       timestamp={shortRelativeTime(l.updated_at)}
@@ -816,8 +780,15 @@ const TravelerProfile = () => {
 
         {/* Avatar + nazwa + bio (Figma: nazwa | separator | bio) */}
         <div className="flex items-stretch gap-3">
-          <div className="relative shrink-0 self-center">
-            {/* Ramka awatara wybrana w Ustawieniach -> "Customizuj mój profil" (profiles.avatar_frame). */}
+          {/* Bez plakietki aparatu na awatarze (prosba Nat 2026-09-11): zaslaniala nakladke.
+              Zmiana zdjecia i nakladki zyja w Ustawieniach - tapniecie w awatar prowadzi tam. */}
+          <button
+            type="button"
+            onClick={() => navigate("/settings")}
+            aria-label={t("profile.avatar_tap_aria")}
+            className="relative shrink-0 self-center rounded-full active:scale-95 transition-transform"
+          >
+            {/* Ramka awatara wybrana w Ustawieniach -> "Customizuj" (profiles.avatar_frame). */}
             <AvatarFrame kind={isAvatarFrame(profile?.avatar_frame) ? profile.avatar_frame : null} color={profile?.avatar_frame_color} size={76} />
             <Avatar className="h-[76px] w-[76px]">
               <AvatarImage src={avatarSrc(profile?.avatar_url)} className="object-cover bg-orange-100" />
@@ -825,17 +796,7 @@ const TravelerProfile = () => {
                 {displayName.charAt(0).toUpperCase() || "U"}
               </AvatarFallback>
             </Avatar>
-            {isNative ? (
-              <button type="button" onClick={handleNativePhotoPick} className="absolute bottom-0 right-0 h-7 w-7 bg-foreground text-background rounded-full flex items-center justify-center cursor-pointer shadow-md ring-2 ring-background" aria-label={t("profile.change_photo_aria")}>
-                <Camera className="h-3.5 w-3.5" />
-              </button>
-            ) : (
-              <label className="absolute bottom-0 right-0 h-7 w-7 bg-foreground text-background rounded-full flex items-center justify-center cursor-pointer shadow-md ring-2 ring-background">
-                <Camera className="h-3.5 w-3.5" />
-                <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleAvatarUpload(f); }} />
-              </label>
-            )}
-          </div>
+          </button>
           <div className="min-w-0 max-w-[46%] self-center">
             <h2 className="text-xl font-display font-extrabold leading-tight truncate">
               {profile?.first_name || profile?.username || t("profile.user_fallback")}
@@ -942,6 +903,7 @@ const TravelerProfile = () => {
                 <ProfileFeedCard
                   key={l.id}
                   avatarUrl={profile?.avatar_url}
+                  authorId={user.id}
                   fallback={displayName}
                   eyebrow=""
                   timestamp={shortRelativeTime(l.updated_at)}

@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { avatarSrc } from "@/lib/avatar";
+import { UserFrameRing } from "@/components/profile/FramedAvatar";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -121,7 +122,8 @@ export default function UserSearchDrawer({ open, onClose }: Props) {
                   const displayName = profile.first_name || profile.username;
                   return (
                     <div key={profile.id} className="flex items-center gap-3 py-2.5">
-                      <button onClick={() => handleProfileTap(profile.username)}>
+                      <button onClick={() => handleProfileTap(profile.username)} className="relative shrink-0">
+                        <UserFrameRing userId={profile.id} size={44} />
                         <Avatar className="h-11 w-11">
                           <AvatarImage src={avatarSrc(profile.avatar_url)} className="object-cover bg-orange-100" />
                           <AvatarFallback className="bg-orange-100 text-primary font-bold">

@@ -777,7 +777,10 @@ export default function SharedList() {
           city={col.city}
           items={(items as any[]).map((it) => ({ ...it, photo_url: pinCover(it) ?? it.photo_url }))}
           author={col.author_name ? `@${col.author_name}` : "spontaway"}
-          avatar={col.author_avatar ?? null}
+          avatar={author?.avatar_url ?? col.author_avatar ?? null}
+          authorId={col.user_id}
+          authorFrame={author?.avatar_frame}
+          authorFrameColor={author?.avatar_frame_color}
           onClose={() => setShareCardOpen(false)}
           onShare={handleShareLink}
           shareUrl={buildShareUrl(`/lista/${col.id}`)}

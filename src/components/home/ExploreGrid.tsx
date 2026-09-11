@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 import { haptics } from "@/hooks/useHaptics";
 import { BrandIcon, LIST_ICON } from "@/components/BrandIcon";
+import { FramedAvatar } from "@/components/profile/FramedAvatar";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -40,10 +41,15 @@ type GridItem = {
   authorName: string;
   authorAvatar: string | null;
   authorId: string | null;
+  /** Ramka awatara autora (profiles.avatar_frame / _color) - do znaczka w rogu okladki. */
+  authorFrame: string | null;
+  authorFrameColor: string | null;
+  /** false = wyjazd udostepniony anonimowo: bez awatara w rogu. */
+  showAuthor: boolean;
   at: number;                 // sort: najnowsze na gorze
 };
 
-const ROUTE_SEL = "id, title, city, countries, user_id, published_at, created_at, list_cover_url, cover_url, review_photos";
+const ROUTE_SEL = "id, title, city, countries, user_id, share_anonymous, published_at, created_at, list_cover_url, cover_url, review_photos";
 const MAX_TILE_PHOTOS = 6;
 const LIST_SEL = "id, title, city, countries, user_id, author_name, author_avatar, updated_at, created_at";
 
@@ -64,11 +70,12 @@ async function fetchGrid(): Promise<GridItem[]> {
   const routes = (routesRes.data ?? []) as any[];
   const lists = (listsRes.data ?? []) as any[];
 
-  // Autorzy wyjazdow (listy maja autora zdenormalizowanego).
-  const userIds = [...new Set(routes.map((r) => r.user_id).filter(Boolean))];
+  // Autorzy wyjazdow I list (lista ma autora zdenormalizowanego, ale ramke awatara i aktualne
+  // zdjecie bierzemy z profilu - znaczek autora w rogu okladki, prosba Nat 2026-09-11).
+  const userIds = [...new Set([...routes.map((r) => r.user_id), ...lists.map((l) => l.user_id)].filter(Boolean))];
   const profileMap = new Map<string, any>();
   if (userIds.length) {
-    const { data: profs } = await (supabase as any).from("profiles").select("id, username, first_name, avatar_url").in("id", userIds);
+    const { data: profs } = await (supabase as any).from("profiles").select("id, username, first_name, avatar_url, avatar_frame, avatar_frame_color").in("id", userIds);
     for (const p of profs ?? []) profileMap.set(p.id, p);
   }
   // Okladka listy = pierwsze zdjecie miejsca (okladki list nie ma - decyzja 2026-08-26).
@@ -111,17 +118,24 @@ async function fetchGrid(): Promise<GridItem[]> {
       meta: scopeLabel(r),
       authorName: p?.username ? `@${p.username}` : (p?.first_name ?? ""),
       authorAvatar: p?.avatar_url ?? null, authorId: r.user_id ?? null,
+      authorFrame: p?.avatar_frame ?? null, authorFrameColor: p?.avatar_frame_color ?? null,
+      showAuthor: r.share_anonymous !== true && !!p,
       at: new Date(r.published_at ?? r.created_at ?? 0).getTime(),
     };
   });
-  const listItems: GridItem[] = lists.map((l) => ({
-    kind: "list", id: l.id, title: l.title,
-    cover: resolveStored(firstPhoto.get(l.id) ?? null) ?? null,
-    photos: [resolveStored(firstPhoto.get(l.id) ?? null)].filter((u): u is string => !!u),
-    meta: scopeLabel(l),
-    authorName: l.author_name ?? "", authorAvatar: l.author_avatar ?? null, authorId: l.user_id ?? null,
-    at: new Date(l.updated_at ?? l.created_at ?? 0).getTime(),
-  }));
+  const listItems: GridItem[] = lists.map((l) => {
+    const p = l.user_id ? profileMap.get(l.user_id) : null;
+    return {
+      kind: "list", id: l.id, title: l.title,
+      cover: resolveStored(firstPhoto.get(l.id) ?? null) ?? null,
+      photos: [resolveStored(firstPhoto.get(l.id) ?? null)].filter((u): u is string => !!u),
+      meta: scopeLabel(l),
+      authorName: l.author_name ?? "", authorAvatar: p?.avatar_url ?? l.author_avatar ?? null, authorId: l.user_id ?? null,
+      authorFrame: p?.avatar_frame ?? null, authorFrameColor: p?.avatar_frame_color ?? null,
+      showAuthor: !!(p?.avatar_url ?? l.author_avatar),
+      at: new Date(l.updated_at ?? l.created_at ?? 0).getTime(),
+    };
+  });
   return [...tripItems, ...listItems].sort((a, b) => b.at - a.at);
 }
 
@@ -225,6 +239,15 @@ function GridTile({ it, onOpen }: { it: GridItem; onOpen: () => void }) {
       >
         <div className="relative w-full overflow-hidden rounded-2xl bg-[#fcede3]">
           {it.photos.length > 1 ? <TileCarousel photos={it.photos} swipedRef={swipedRef} /> : <GridCover url={it.cover} />}
+          {/* Awatar autora Z RAMKA w prawym gornym rogu okladki (prosba Nat 2026-09-11): kafelek
+              ma byc rozpoznawalny po osobie, a ramka - powodem, zeby projektowac okladki pod nia.
+              Nakladka, nie przycisk: pointer-events-none, karuzela pod spodem dziala jak dotad. */}
+          {it.showAuthor && (
+            <div className="pointer-events-none absolute right-2 top-2 z-[2]">
+              <FramedAvatar src={it.authorAvatar} frame={it.authorFrame} color={it.authorFrameColor} size={28}
+                imgClassName="ring-2 ring-white/90 shadow-[0_1px_4px_rgba(0,0,0,0.35)]" />
+            </div>
+          )}
         </div>
         {/* Nazwa z lewej, typ (wyjazd / lista) jako mala, wyciszona ikona ZAWSZE przy prawej
             krawedzi okladki (prosba Nat 2026-09-11) - w rogu samej okladki odbierala jej uroku,

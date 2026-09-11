@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Bookmark, ChevronUp, Pencil, Trash2, CircleDashed, Heart, Minimize2, EyeOff } from "lucide-react";
 import { API_BASE } from "@/lib/platform";
 import { avatarSrc } from "@/lib/avatar";
+import { UserAvatar } from "@/components/profile/FramedAvatar";
 import { haptics } from "@/hooks/useHaptics";
 import RouteMap from "@/components/RouteMap";
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
@@ -38,7 +39,7 @@ export const TRASA_CARD_H = "h-[calc(100dvh-150px-env(safe-area-inset-top,0px)-m
 // (showMap=false), nizsza (heightClass) i z akcjami wlasciciela (onEdit/onDelete) w prawym stacku.
 export default function TrasaBigCard({
   id, photo, city, placeCount = 0, title, description, tags = [], pins = [],
-  saved, onToggleSave, onOpen, authorName, authorAvatar, participants = [],
+  saved, onToggleSave, onOpen, authorName, authorAvatar, authorId, participants = [],
   showMap = true, heightClass = TRASA_CARD_H, minHeightClass = "min-h-[420px]", snap = true, isDraft = false, hiddenFromExplore = false, onEdit, onDelete,
   onLike, liked,
 }: {
@@ -55,6 +56,8 @@ export default function TrasaBigCard({
   onOpen: () => void;
   authorName?: string | null;
   authorAvatar?: string | null;
+  /** Id autora - ramka awatara (profiles.avatar_frame) dociagana loaderem po id. */
+  authorId?: string | null;
   participants?: (string | null)[];   // awatary uczestnikow trasy grupowej (obok hosta)
   /** Mini mapka na okladce - na profilu wylaczona (prosba Nat 2026-08-30). */
   showMap?: boolean;
@@ -215,7 +218,8 @@ export default function TrasaBigCard({
           {(authorName || participants.length > 0) && (
             <span className="flex items-center -space-x-2 shrink-0">
               {authorName && (
-                <img src={avatarSrc(authorAvatar ?? null)} alt="" className="h-6 w-6 rounded-full object-cover bg-orange-100 ring-2 ring-black/25" />
+                // Awatar hosta z jego ramka (nakladka widoczna na kartach - prosba Nat 2026-09-11).
+                <UserAvatar userId={authorId} src={authorAvatar} size={24} imgClassName="ring-2 ring-black/25" />
               )}
               {participants.slice(0, 3).map((a, i) => (
                 <img key={i} src={avatarSrc(a ?? null)} alt="" className="h-6 w-6 rounded-full object-cover bg-orange-100 ring-2 ring-black/25" />

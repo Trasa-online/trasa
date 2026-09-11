@@ -3,6 +3,7 @@ import { useDragToDismiss } from "@/hooks/useDragToDismiss";
 import { useTranslation } from "react-i18next";
 import i18n from "@/i18n";
 import { avatarSrc } from "@/lib/avatar";
+import { UserAvatar, UserFrameRing } from "@/components/profile/FramedAvatar";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -92,6 +93,7 @@ type PolecaneRoute = {
   routeTags?: string[];                // tagi CALEJ trasy (routes.tags) - priorytet nad kategoriami na karcie
   author_name: string;
   author_avatar: string | null;
+  author_id?: string | null;           // id autora do ramki awatara (null = trasa anonimowa)
   author_username?: string | null;     // @handle - do etykiety autora na karcie eksploracji
   placeCount?: number;
   avgRating?: number;                  // srednia ocena Google z pinow (0 = brak)
@@ -151,7 +153,7 @@ function avgRatingOf(ratings: (number | null | undefined)[]): number {
 
 // ── Sub-components ─────────────────────────────────────────────────────────────
 
-function AuthorChip({ name, avatar }: { name: string; avatar: string | null }) {
+function AuthorChip({ name, avatar, userId }: { name: string; avatar: string | null; userId?: string | null }) {
   // Trasy oficjalne - realne logo marki zamiast placeholdera awatara. Stare nazwy
   // zostaja, bo takie wartosci siedza juz w bazie.
   const isTrasa = ["spontaway", "spontaway.com", "@spontaway", "trasa", "trasa.travel", "@trasa"].includes(name.trim().toLowerCase());
@@ -160,7 +162,8 @@ function AuthorChip({ name, avatar }: { name: string; avatar: string | null }) {
       {isTrasa ? (
         <TrasaLogo size={20} />
       ) : (
-        <img src={avatarSrc(avatar)} alt={name} className="h-5 w-5 rounded-full object-cover bg-orange-100" />
+        // Ramka awatara autora dociagana po id (prosba Nat 2026-09-11: nakladka widoczna na kartach).
+        <UserAvatar userId={userId} src={avatar} size={20} />
       )}
       <span className="text-xs text-muted-foreground">{name}</span>
     </div>
@@ -490,7 +493,7 @@ export function CollectionDetail({ col, onClose, onAdopt }: { col: DiscoveryColl
           {/* Meta: miasto + autor + licznik */}
           <div className="flex items-center gap-2 flex-wrap">
             {col.city && <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">{col.city}</span>}
-            <AuthorChip name={col.author_name} avatar={col.author_avatar} />
+            <AuthorChip name={col.author_name} avatar={col.author_avatar} userId={col.user_id} />
             {isLocal && <span className="text-[9px] font-bold text-orange-700 bg-orange-100 rounded-full px-1.5 py-0.5">{t("local_recommends")}</span>}
             {(col.views_count ?? 0) > 0 && (
               <span className="flex items-center gap-1 text-[10px] text-muted-foreground"><Users className="h-3 w-3" />{col.views_count}</span>
@@ -796,7 +799,7 @@ function UserPolecajkiRow({
                   )}
                 </div>
                 <div className="flex items-center gap-1.5 flex-wrap">
-                  <AuthorChip name={col.author_name} avatar={col.author_avatar} />
+                  <AuthorChip name={col.author_name} avatar={col.author_avatar} userId={col.user_id} />
                   {isLocal && <span className="text-[9px] font-bold text-orange-700 bg-orange-100 rounded-full px-1.5 py-0.5">{t("local_recommends")}</span>}
                 </div>
               </div>
@@ -869,7 +872,7 @@ function PolecaneRow({
                   )}
                 </div>
                 {entry.kind === "route" ? (
-                  <AuthorChip name={entry.author_name} avatar={entry.author_avatar} />
+                  <AuthorChip name={entry.author_name} avatar={entry.author_avatar} userId={entry.author_id} />
                 ) : (
                   <AuthorChip name={`@${entry.creator_handle}`} avatar={entry.creator_avatar_url} />
                 )}
@@ -992,6 +995,7 @@ async function enrichRouteRows(routes: any[]): Promise<PolecaneRoute[]> {
       routeTags: Array.isArray(r.tags) ? r.tags : [],
       author_name: anon ? i18n.t("author_anon", { ns: "homefeed" }) : (prof?.first_name || prof?.username || i18n.t("author_default", { ns: "homefeed" })),
       author_avatar: anon ? null : (prof?.avatar_url ?? null),
+      author_id: anon ? null : (r.user_id ?? null),
       author_username: anon ? null : (prof?.username ?? null),
       placeCount: countMap.get(r.id) ?? 0,
       avgRating: avgRatingOf(ratingMap.get(r.id) ?? []),
@@ -1022,7 +1026,7 @@ function RouteCardH({ route, onClick }: { route: PolecaneRoute; onClick: () => v
           </p>
         </div>
       </div>
-      <div className="mt-2 px-0.5"><AuthorChip name={route.author_name} avatar={route.author_avatar} /></div>
+      <div className="mt-2 px-0.5"><AuthorChip name={route.author_name} avatar={route.author_avatar} userId={route.author_id} /></div>
     </button>
   );
 }
@@ -1057,7 +1061,7 @@ function RouteCardV({ route, onClick }: { route: PolecaneRoute; onClick: () => v
             ))}
           </div>
         )}
-        <div className="mt-2.5"><AuthorChip name={route.author_name} avatar={route.author_avatar} /></div>
+        <div className="mt-2.5"><AuthorChip name={route.author_name} avatar={route.author_avatar} userId={route.author_id} /></div>
       </div>
     </button>
   );
@@ -1070,7 +1074,7 @@ function RouteCardV({ route, onClick }: { route: PolecaneRoute; onClick: () => v
 // Reuzywana przez zestawienia i trasy (adaptery ponizej).
 function BigCard({
   id, photo, categoryKey, categoryLabel, categoryClass, city,
-  placeCount = 0, title, pins = [], note, authorName, authorAvatar, localBadge = false, onClick,
+  placeCount = 0, title, pins = [], note, authorName, authorAvatar, authorId, localBadge = false, onClick,
 }: {
   id: string;
   photo: string | null;
@@ -1085,6 +1089,7 @@ function BigCard({
   note?: string | null;
   authorName: string;
   authorAvatar: string | null;
+  authorId?: string | null;
   localBadge?: boolean;
   onClick: () => void;
 }) {
@@ -1141,7 +1146,7 @@ function BigCard({
       {/* Autor + toggle notki ("+") */}
       <div className="mt-2 flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5 min-w-0">
-          <AuthorChip name={authorName} avatar={authorAvatar} />
+          <AuthorChip name={authorName} avatar={authorAvatar} userId={authorId} />
           {localBadge && <span className="text-[9px] font-bold text-orange-700 bg-orange-100 rounded-full px-1.5 py-0.5 shrink-0">{t("local_recommends")}</span>}
         </div>
         {note && (
@@ -1178,6 +1183,7 @@ function CollectionBigCard({ col, onOpen }: { col: DiscoveryCollection; onOpen: 
       note={col.description}
       authorName={col.author_name}
       authorAvatar={col.author_avatar}
+      authorId={col.user_id}
       localBadge={isLocal}
       onClick={() => onOpen(col)}
     />
@@ -1202,6 +1208,7 @@ function RouteBigCard({ route, onClick }: { route: PolecaneRoute; onClick: () =>
       note={route.summary || route.ai_highlight}
       authorName={route.author_name}
       authorAvatar={route.author_avatar}
+      authorId={route.author_id}
       onClick={onClick}
     />
   );
@@ -2232,7 +2239,8 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
                     const name = pr.first_name || pr.username;
                     return (
                       <div key={pr.id} className="flex items-center gap-3 px-3.5 py-3">
-                        <button onClick={() => navigate(`/profil/${pr.username}`)} className="shrink-0 active:scale-95 transition-transform" aria-label={`@${pr.username}`}>
+                        <button onClick={() => navigate(`/profil/${pr.username}`)} className="relative shrink-0 active:scale-95 transition-transform" aria-label={`@${pr.username}`}>
+                          <UserFrameRing userId={pr.id} size={44} />
                           <Avatar className="h-11 w-11">
                             <AvatarImage src={avatarSrc(pr.avatar_url)} className="object-cover bg-orange-100" />
                             <AvatarFallback className="bg-orange-100 text-primary font-bold text-sm">
@@ -2272,6 +2280,7 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
                       onOpen={() => navigate(`/route/${r.id}`)}
                       authorName={r.author_username ? `@${r.author_username}` : r.author_name}
                       authorAvatar={r.author_avatar}
+                      authorId={r.author_id}
                       participants={r.participants ?? []}
                       snap={false}
                       heightClass="aspect-[3/4]"
@@ -2289,6 +2298,7 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
                     <ProfileFeedCard
                       key={col.id}
                       avatarUrl={col.author_avatar}
+                      authorId={col.user_id}
                       fallback={col.author_name}
                       eyebrow=""
                       timestamp={col.updated_at ? shortRelativeTime(col.updated_at) : undefined}
@@ -2397,6 +2407,7 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
                 onOpen={() => navigate(`/route/${r.id}`)}
                 authorName={r.author_username ? `@${r.author_username}` : r.author_name}
                 authorAvatar={r.author_avatar}
+                authorId={r.author_id}
                 participants={r.participants ?? []}
               />
             ));
@@ -2420,6 +2431,7 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
                   onOpen={() => navigate(`/lista/${col.id}`)}
                   authorName={col.author_name}
                   authorAvatar={col.author_avatar}
+                  authorId={col.user_id}
                 />
               );
             });

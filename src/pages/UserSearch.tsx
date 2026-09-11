@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { avatarSrc } from "@/lib/avatar";
+import { UserFrameRing } from "@/components/profile/FramedAvatar";
 import { useNavigate } from "react-router-dom";
 import { goBackOr } from "@/hooks/useGoBack";
 import { useQuery } from "@tanstack/react-query";
@@ -102,7 +103,8 @@ export default function UserSearch() {
               const displayName = profile.username || profile.first_name;
               return (
                 <div key={profile.id} className="flex items-center gap-3 px-4 py-3">
-                  <button onClick={() => navigate(`/profil/${profile.username}`)}>
+                  <button onClick={() => navigate(`/profil/${profile.username}`)} className="relative shrink-0">
+                    <UserFrameRing userId={profile.id} size={44} />
                     <Avatar className="h-11 w-11">
                       <AvatarImage src={avatarSrc(profile.avatar_url)} className="object-cover bg-orange-100" />
                       <AvatarFallback className="bg-orange-100 text-primary font-bold text-sm">

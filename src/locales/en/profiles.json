@@ -52,6 +52,7 @@
     "header_fallback": "profile",
     "settings_aria": "Settings",
     "change_photo_aria": "Change profile photo",
+    "avatar_tap_aria": "Change your photo or avatar frame",
     "user_fallback": "User",
     "complete_profile": "Complete your profile ({{pct}}%)",
     "friends_count": "Friends: {{count}}",

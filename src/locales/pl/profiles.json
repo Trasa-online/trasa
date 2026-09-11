@@ -53,6 +53,7 @@
     "header_fallback": "profil",
     "settings_aria": "Ustawienia",
     "change_photo_aria": "Zmień zdjęcie profilowe",
+    "avatar_tap_aria": "Zmień zdjęcie lub nakładkę awatara",
     "user_fallback": "Użytkownik",
     "complete_profile": "Uzupełnij profil ({{pct}}%)",
     "friends_count": "Znajomi: {{count}}",

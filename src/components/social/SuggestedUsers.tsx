@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { avatarSrc } from "@/lib/avatar";
+import { UserFrameRing } from "@/components/profile/FramedAvatar";
 import { supabase } from "@/integrations/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import FollowButton from "./FollowButton";
@@ -47,7 +48,8 @@ export default function SuggestedUsers({ currentUserId, onProfileTap }: Suggeste
           const displayName = user.first_name || user.username;
           return (
             <div key={user.id} className="flex items-center gap-3 py-2">
-              <button onClick={() => onProfileTap(user.username)}>
+              <button onClick={() => onProfileTap(user.username)} className="relative shrink-0">
+                <UserFrameRing userId={user.id} size={40} />
                 <Avatar className="h-10 w-10">
                   <AvatarImage src={avatarSrc(user.avatar_url)} className="object-cover bg-orange-100" />
                   <AvatarFallback className="bg-orange-100 text-primary text-sm font-bold">

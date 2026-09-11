@@ -3,6 +3,9 @@ import { useTranslation } from "react-i18next";
 import { Bookmark, Heart, Pencil, Trash2, Lock, CircleDashed, Maximize2, X } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { avatarSrc } from "@/lib/avatar";
+import { isAvatarFrame } from "@/lib/avatarFrames";
+import { useAvatarFrame } from "@/lib/avatarFrameLoader";
+import AvatarFrame from "@/components/profile/AvatarFrame";
 import { PlaceTile } from "@/components/profile/PlaceTile";
 import { buildTripStaticMapUrl } from "@/lib/staticMap";
 import RouteMap from "@/components/RouteMap";
@@ -24,6 +27,7 @@ export interface FeedCounts {
 // - onEdit/onDelete: akcje wlasciciela (olowek + kosz). TYLKO na wlasnym profilu.
 export function ProfileFeedCard({
   avatarUrl,
+  authorId,
   fallback,
   eyebrow,
   timestamp,
@@ -47,6 +51,8 @@ export function ProfileFeedCard({
   badge,
 }: {
   avatarUrl?: string | null;
+  /** Id autora - do ramki awatara (profiles.avatar_frame, dociagana loaderem po id). */
+  authorId?: string | null;
   fallback?: string;
   eyebrow?: string;
   timestamp?: string;
@@ -82,6 +88,7 @@ export function ProfileFeedCard({
   badge?: React.ReactNode; // chip przy tytule (np. "Nowe miejsce!" na zapisanej liscie)
 }) {
   const { t } = useTranslation("homeprofile");
+  const frameInfo = useAvatarFrame(authorId);
   const [mapOpen, setMapOpen] = useState(false);
   const mapUrl = mapPins && mapPins.length ? buildTripStaticMapUrl(mapPins) : null;
   // Siatka max 6 kafli. Gdy wiecej: 5 kafli + ostatni "przygaszony +N" (reszta miejsc).
@@ -97,12 +104,17 @@ export function ProfileFeedCard({
       <button onClick={onOpen} className="w-full text-left block active:opacity-95 transition-opacity">
         {/* Naglowek: avatar + (eyebrow + czas) + tytul */}
         <div className="flex items-start gap-3">
-          <Avatar className="h-10 w-10 shrink-0">
-            <AvatarImage src={avatarSrc(avatarUrl)} className="object-cover bg-orange-100" />
-            <AvatarFallback className="bg-orange-100 text-primary font-bold text-sm">
-              {(fallback || "?").charAt(0).toUpperCase()}
-            </AvatarFallback>
-          </Avatar>
+          {/* Ramka awatara autora (prosba Nat 2026-09-11: nakladka widoczna takze na kartach
+              list i zapisanych, nie tylko na duzym awatarze profilu). */}
+          <span className="relative h-10 w-10 shrink-0">
+            <AvatarFrame kind={isAvatarFrame(frameInfo?.frame) ? frameInfo!.frame : null} color={frameInfo?.color} size={40} />
+            <Avatar className="h-10 w-10">
+              <AvatarImage src={avatarSrc(avatarUrl)} className="object-cover bg-orange-100" />
+              <AvatarFallback className="bg-orange-100 text-primary font-bold text-sm">
+                {(fallback || "?").charAt(0).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+          </span>
           <div className="min-w-0 flex-1 pt-0.5">
             {eyebrow ? (
               <>

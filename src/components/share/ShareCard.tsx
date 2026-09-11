@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Maximize2, X } from "lucide-react";
 import { toast } from "sonner";
 import { avatarSrc } from "@/lib/avatar";
+import { UserAvatar } from "@/components/profile/FramedAvatar";
 import { resolveStored } from "@/components/PlacePhoto";
 import { thumbUrl } from "@/lib/imageUrl";
 import { categoryIconSrc } from "@/lib/placeCategoryIcon";
@@ -67,8 +68,12 @@ function Footer({ avatars, label, sub, tone }: {
 // user zobaczy po rozwinieciu, bez drugiego zestawu rozmiarow do utrzymania.
 type StripItem = { name: string; photo?: string | null; icon: string; verdict?: string | null; category?: string | null };
 
-function ShareSheet({ children, onClose, onShare, shareUrl, shareTitle, strip, stripLabel, plainPreview, linkHeading }: {
+/** Autor udostepnianej tresci - awatar z ramka w belce arkusza, po prawej od "udostępnij". */
+type SheetAuthor = { userId?: string | null; avatar?: string | null; frame?: string | null; color?: string | null };
+
+function ShareSheet({ children, onClose, onShare, shareUrl, shareTitle, strip, stripLabel, plainPreview, linkHeading, author }: {
   children: React.ReactNode;
+  author?: SheetAuthor | null;
   onClose: () => void;
   onShare?: () => void;
   shareUrl?: string;
@@ -131,7 +136,15 @@ function ShareSheet({ children, onClose, onShare, shareUrl, shareTitle, strip, s
           className="h-9 w-9 rounded-full flex items-center justify-center active:scale-90 transition-transform">
           <X className="h-5 w-5 text-spontaway-brown" />
         </button>
-        <p className="flex-1 text-center font-brand text-[26px] leading-none text-spontaway-orange pr-9">{t("share.share")}</p>
+        <p className="flex-1 text-center font-brand text-[26px] leading-none text-spontaway-orange">{t("share.share")}</p>
+        {/* Awatar autora z jego nakladka po prawej od naglowka (prosba Nat 2026-09-11) - ta sama
+            szerokosc co krzyzyk po lewej, wiec naglowek zostaje na srodku. Bez autora (miejsce)
+            zostaje pusty odstep. */}
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center">
+          {author && (
+            <UserAvatar userId={author.userId} src={author.avatar} frame={author.frame} color={author.color} size={32} imgClassName="ring-2 ring-white" />
+          )}
+        </span>
       </div>
 
       <div ref={slotRef} className="flex-1 min-h-[280px] flex items-center justify-center px-6 py-3">
@@ -243,12 +256,16 @@ export function ShareCardPlace({ place, city, onClose, onShare, shareUrl }: {
 }
 
 /** Karta LISTY: siatka miejsc + licznik "ile jeszcze". */
-export function ShareCardList({ title, city, items, author, avatar, onClose, onShare, shareUrl }: {
+export function ShareCardList({ title, city, items, author, avatar, authorId, authorFrame, authorFrameColor, onClose, onShare, shareUrl }: {
   title: string;
   city?: string | null;
   items: any[];
   author: string;
   avatar?: string | null;
+  /** Autor listy - do awatara z ramka w belce arkusza (ramka po id, gdy rodzic jej nie ma). */
+  authorId?: string | null;
+  authorFrame?: string | null;
+  authorFrameColor?: string | null;
   onClose: () => void;
   onShare?: () => void;
   shareUrl?: string;
@@ -262,12 +279,13 @@ export function ShareCardList({ title, city, items, author, avatar, onClose, onS
   const word = items.length === 1 ? "miejsce" : items.length % 10 >= 2 && items.length % 10 <= 4 && (items.length % 100 < 12 || items.length % 100 > 14) ? "miejsca" : "miejsc";
   return (
     <ShareSheet onClose={onClose} onShare={onShare} shareUrl={shareUrl} shareTitle={title}
-      plainPreview linkHeading={t("share.link_heading_list")}>
+      plainPreview linkHeading={t("share.link_heading_list")}
+      author={{ userId: authorId, avatar, frame: authorFrame, color: authorFrameColor }}>
       {/* Biala karta na zoltym tle arkusza - tak samo, jak wyjazd pokazuje karte z eksploracji:
           odbiorca ma zobaczyc DOKLADNIE to, co dostanie pod linkiem. */}
       <div className="w-full rounded-3xl bg-white px-4 pt-4 pb-5 shadow-sm">
         <div className="flex items-center gap-3">
-          <img src={avatarSrc(avatar ?? null)} alt="" className="h-12 w-12 shrink-0 rounded-full object-cover bg-[#fcede3]" />
+          <UserAvatar userId={authorId} src={avatar} frame={authorFrame} color={authorFrameColor} size={48} imgClassName="!bg-[#fcede3]" />
           <div className="min-w-0">
             <p className="truncate text-[19px] font-black leading-tight text-foreground">{title}</p>
             <p className="truncate text-[13px] text-muted-foreground">{[city, `${items.length} ${word}`].filter(Boolean).join(" - ")}</p>
@@ -315,7 +333,7 @@ function ListShareTile({ item }: { item: any }) {
 }
 
 /** Karta WYJAZDU: okladka + ponumerowane przystanki + uczestnicy. */
-export function ShareCardTrip({ title, city, pins, cover, onClose, onShare, shareUrl, routeId, authorName, authorAvatar, participants, tags, mapPins, photoFor }: {
+export function ShareCardTrip({ title, city, pins, cover, onClose, onShare, shareUrl, routeId, authorName, authorAvatar, authorId, authorFrame, authorFrameColor, participants, tags, mapPins, photoFor }: {
   title: string;
   city?: string | null;
   pins: any[];
@@ -327,6 +345,10 @@ export function ShareCardTrip({ title, city, pins, cover, onClose, onShare, shar
   routeId: string;
   authorName?: string | null;
   authorAvatar?: string | null;
+  /** Autor wyjazdu - awatar z ramka w belce arkusza i na karcie (ramka po id, gdy rodzic jej nie ma). */
+  authorId?: string | null;
+  authorFrame?: string | null;
+  authorFrameColor?: string | null;
   participants?: (string | null)[];
   tags?: string[];
   mapPins?: { latitude: number; longitude: number }[];
@@ -355,7 +377,8 @@ export function ShareCardTrip({ title, city, pins, cover, onClose, onShare, shar
     // Podglad = karta z EKSPLORACJI, nie osobny plakat (prosba Nat 2026-09-08). Autor ma
     // zobaczyc dokladnie to, co zobaczy odbiorca - okladka w calosci, awatary, tagi i licznik.
     <ShareSheet onClose={onClose} onShare={onShare} shareUrl={shareUrl} shareTitle={title}
-      strip={strip} stripLabel={t("share.first_day")} plainPreview>
+      strip={strip} stripLabel={t("share.first_day")} plainPreview
+      author={{ userId: authorId, avatar: authorAvatar, frame: authorFrame, color: authorFrameColor }}>
       {/* Bez miniaturki mapy: na podgladzie zjadala rog okladki, a to okladka jest tu trescia
           (makieta "Majówka 2025", prosba Nat 2026-09-09). W eksploracji mapka zostaje - tam
           sluzy do orientacji, nie do pokazania, co wysylasz. */}
@@ -371,6 +394,7 @@ export function ShareCardTrip({ title, city, pins, cover, onClose, onShare, shar
         onOpen={() => {}}
         authorName={authorName}
         authorAvatar={authorAvatar}
+        authorId={authorId}
         participants={participants ?? []}
         snap={false}
         heightClass="h-full"

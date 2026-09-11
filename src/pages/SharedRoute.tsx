@@ -1975,6 +1975,7 @@ export default function SharedRoute() {
               onOpen={() => setPreviewOpened(true)}
               authorName={author?.username ? `@${author.username}` : authorName}
               authorAvatar={(author as any)?.avatar_url ?? null}
+              authorId={(route as any).user_id ?? null}
               participants={(groupParticipants as any[]).map((p) => p.avatar_url ?? null)}
               snap={false}
               heightClass="h-[520px]"
@@ -2608,6 +2609,9 @@ export default function SharedRoute() {
           photoFor={coverFor}
           authorName={author?.username ? `@${author.username}` : authorName}
           authorAvatar={(author as any)?.avatar_url ?? null}
+          authorId={(route as any).user_id ?? null}
+          authorFrame={author?.avatar_frame}
+          authorFrameColor={author?.avatar_frame_color}
           participants={(groupParticipants as any[]).map((p) => p.avatar_url ?? null)}
           cover={(route as any).list_cover_url ?? heroPhoto}
           onClose={() => setShareCardOpen(false)}

@@ -11,6 +11,7 @@ import { avatarSrc } from "@/lib/avatar";
 import { haptics } from "@/hooks/useHaptics";
 import { AVATAR_FRAMES, DEFAULT_FRAME_COLOR, FRAME_SWATCHES, isAvatarFrame, isFrameColor, type AvatarFrameId } from "@/lib/avatarFrames";
 import AvatarFrame from "@/components/profile/AvatarFrame";
+import { avatarFrameKey } from "@/lib/avatarFrameLoader";
 
 // "Customizuj mój profil" (prosba Nat 2026-09-11): arkusz z ramkami awatara i ich kolorem.
 // Kazdy wiersz = podglad NA WLASNYM zdjeciu (user widzi dokladnie to, co zobacza inni),
@@ -57,6 +58,7 @@ export default function AvatarFrameSheet({ open, onOpenChange, userId }: { open:
     queryClient.invalidateQueries({ queryKey: ["profile-full", userId] });
     queryClient.invalidateQueries({ queryKey: ["profile", userId] });
     queryClient.invalidateQueries({ queryKey: ["public-profile"] });
+    queryClient.invalidateQueries({ queryKey: avatarFrameKey(userId) }); // karty, kafelki, arkusz udostepniania
   };
   const chooseFrame = async (frame: AvatarFrameId | null) => {
     if (isLocked(frame)) {

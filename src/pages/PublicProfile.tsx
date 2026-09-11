@@ -224,6 +224,7 @@ export default function PublicProfile() {
         tags: Array.isArray(rep.tags) ? rep.tags : [],
         cover: rep.list_cover_url ?? rep.cover_url ?? null,
         is_host: rep.user_id === profile!.id,
+        host_id: rep.user_id ?? null,
         host_name: rep.user_id === profile!.id ? null : (hostById.get(rep.user_id)?.first_name || hostById.get(rep.user_id)?.username || null),
         host_avatar: rep.user_id === profile!.id ? null : (hostById.get(rep.user_id)?.avatar_url ?? null),
         tiles: days.flatMap((d) => pinsByRoute[d.id] ?? []),
@@ -479,6 +480,7 @@ export default function PublicProfile() {
                 <ProfileFeedCard
                   key={l.id}
                   avatarUrl={profile.avatar_url}
+                  authorId={profile.id}
                   fallback={displayName}
                   eyebrow=""
                   timestamp={shortRelativeTime(l.updated_at)}
@@ -536,6 +538,7 @@ export default function PublicProfile() {
                 description={tr.description}
                 authorName={tr.is_host ? displayName : (tr.host_name ?? displayName)}
                 authorAvatar={tr.is_host ? profile.avatar_url : (tr.host_avatar ?? profile.avatar_url)}
+                authorId={tr.is_host ? profile.id : (tr.host_id ?? profile.id)}
                 showMap={false}
                 snap={false}
                 heightClass="aspect-[3/4]"
