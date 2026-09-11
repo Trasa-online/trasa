@@ -168,14 +168,18 @@
   "day_label": "{{city}} - Day {{day}}",
   "map_picker": {
     "title": "Pick from map",
-    "hint": "Move the map to point at a place",
+    "hint": "Stop the pin on a place or tap its name on the map",
     "nearby": "At this spot",
     "empty": "Nothing found here. Move the map a little.",
     "locate": "My location",
     "search_placeholder": "Type a place name",
-    "reading": "Checking what's here…",
+    "reading": "Checking what is here…",
     "add": "Add place {{place}}",
-    "name_placeholder": "What do you call this place?"
+    "name_placeholder": "What do you call this place?",
+    "nothing_here": "Google does not know this spot. Type a name above and we will add it as your own place.",
+    "zoom_in": "Zoom in to recognise the place",
+    "did_you_mean": "Did you mean:",
+    "add_manual": "Add “{{place}}” as your own place"
   },
   "map": {
     "day": "Day {{number}}"

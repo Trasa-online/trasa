@@ -143,9 +143,13 @@ Deno.serve(async (req) => {
       if (typeof latitude !== "number" || typeof longitude !== "number") {
         return new Response(JSON.stringify({ results: [] }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
+      // Promien z klienta (mapa z pinezka pyta "co jest DOKLADNIE tutaj" = 30 m; stary domyslny
+      // 150 m zostaje dla pozostalych wywolan). Zakres 20-150, zeby nikt nie zrobil z tego
+      // skanera okolicy.
+      const radius = Math.max(20, Math.min(150, Math.round(Number(body.radius) || 150)));
       // Klucz cache zaokraglony do ~11 m: przesuwanie mapy o metr nie moze generowac nowego
       // platnego zapytania (ta sama zasada, co w proxy statycznych map).
-      const nkey = `nearby|${latitude.toFixed(4)}|${longitude.toFixed(4)}`;
+      const nkey = `nearby|${latitude.toFixed(4)}|${longitude.toFixed(4)}|${radius}`;
       const nhit = textsearchCache.get(nkey);
       if (nhit && Date.now() - nhit.ts < CITYSEARCH_TTL_MS) {
         return new Response(JSON.stringify({ results: nhit.results }), { headers: { ...corsHeaders, "Content-Type": "application/json", "X-Cache": "HIT" } });
@@ -153,7 +157,7 @@ Deno.serve(async (req) => {
       if (!(await consumeGoogleQuota(sb, 1))) {
         return new Response(JSON.stringify({ results: [], quota_exceeded: true }), { headers: { ...corsHeaders, "Content-Type": "application/json", "X-Quota": "EXCEEDED" } });
       }
-      const res = await fetch(`${BASE}/place/nearbysearch/json?location=${latitude},${longitude}&radius=150&key=${apiKey}&language=pl`, { headers: { Referer: REFERER } });
+      const res = await fetch(`${BASE}/place/nearbysearch/json?location=${latitude},${longitude}&radius=${radius}&key=${apiKey}&language=pl`, { headers: { Referer: REFERER } });
       const data = await res.json();
       const results = ((data.results ?? []) as any[])
         // Bez wyników "administracyjnych" (dzielnice, drogi, kody pocztowe) - to nie sa miejsca,
@@ -175,7 +179,12 @@ Deno.serve(async (req) => {
     }
 
     if (body.action === "textsearch") {
-      const cacheHit = textsearchCache.get(body.query);
+      // Opcjonalne nakierowanie na punkt (mapa z pinezka): Google szuka nazwy NAJPIERW w poblizu,
+      // wiec "Yacht Beach Bar" trafia w ten we Vlorze, a nie w pierwszy lepszy na swiecie.
+      // Klucz cache z siatka ~110 m - ta sama fraza z tego samego miejsca = zero kosztu.
+      const biased = typeof body.latitude === "number" && typeof body.longitude === "number";
+      const tkey = biased ? `${body.query}|${body.latitude.toFixed(3)}|${body.longitude.toFixed(3)}` : body.query;
+      const cacheHit = textsearchCache.get(tkey);
       if (cacheHit && Date.now() - cacheHit.ts < TEXTSEARCH_TTL_MS) {
         return new Response(JSON.stringify({ results: cacheHit.results }), { headers: { ...corsHeaders, "Content-Type": "application/json", "X-Cache": "HIT" } });
       }
@@ -187,7 +196,8 @@ Deno.serve(async (req) => {
       if (!(await consumeGoogleQuota(sb, 1))) {
         return new Response(JSON.stringify({ results: [], quota_exceeded: true, period: "day" }), { headers: { ...corsHeaders, "Content-Type": "application/json", "X-Quota": "EXCEEDED" } });
       }
-      const res = await fetch(`${BASE}/place/textsearch/json?query=${encodeURIComponent(body.query)}&key=${apiKey}&language=pl`, { headers: { Referer: REFERER } });
+      const bias = biased ? `&location=${body.latitude},${body.longitude}&radius=3000` : "";
+      const res = await fetch(`${BASE}/place/textsearch/json?query=${encodeURIComponent(body.query)}${bias}&key=${apiKey}&language=pl`, { headers: { Referer: REFERER } });
       const data = await res.json();
       const results = ((data.results ?? []) as any[]).slice(0, 6).map((r: any) => ({
         name: r.name ?? "",
@@ -200,7 +210,7 @@ Deno.serve(async (req) => {
         // (zgloszenie Nat 2026-09-01: Wanderlust). Klucz, nie zdjecie: nic nie kosztuje.
         place_id: r.place_id ?? null,
       }));
-      textsearchCache.set(body.query, { results, ts: Date.now() });
+      textsearchCache.set(tkey, { results, ts: Date.now() });
       return new Response(JSON.stringify({ results }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 

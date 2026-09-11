@@ -173,14 +173,18 @@
   "day_label": "{{city}} - Dzień {{day}}",
   "map_picker": {
     "title": "Wybierz z mapy",
-    "hint": "Przesuń mapę, żeby wskazać miejsce",
+    "hint": "Zatrzymaj pinezkę na miejscu albo tapnij w jego nazwę na mapie",
     "nearby": "W tym miejscu",
     "empty": "Nic tu nie znaleźliśmy. Przesuń mapę kawałek dalej.",
     "locate": "Moja lokalizacja",
     "search_placeholder": "Wpisz nazwę miejsca",
     "reading": "Sprawdzam, co tu jest…",
     "add": "Dodaj miejsce {{place}}",
-    "name_placeholder": "Jak nazwiesz to miejsce?"
+    "name_placeholder": "Jak nazwiesz to miejsce?",
+    "nothing_here": "Google nie zna tego punktu. Wpisz nazwę u góry, a dodamy je jako Twoje miejsce.",
+    "zoom_in": "Przybliż mapę, żeby rozpoznać miejsce",
+    "did_you_mean": "Czy chodzi o:",
+    "add_manual": "Dodaj „{{place}}” jako własne miejsce"
   },
   "map": {
     "day": "Dzień {{number}}"

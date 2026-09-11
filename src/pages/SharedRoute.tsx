@@ -1210,7 +1210,9 @@ export default function SharedRoute() {
       p.place_id ? Promise.resolve(p.place_id) : resolvePlaceDbId(p.google_place_id, p.place_name, route.city)));
     const rows = places.map((p, i) => ({
       // description = notka pina: pusta, notke pisze kazdy uczestnik sam (PlaceNotes).
-      route_id: route.id, place_name: p.place_name, address: p.address ?? null, description: null,
+      // address: pins.address jest NOT NULL - miejsce bez adresu (reczne, z mapy) dostaje pusty
+      // napis. Z null padal caly insert i user widzial "Nie udało się dodać miejsca" (testy 2026-09-11).
+      route_id: route.id, place_name: p.place_name, address: p.address ?? "", description: null,
       category: p.category ?? "other", latitude: p.latitude ?? null, longitude: p.longitude ?? null,
       place_id: dbIds[i] ?? p.place_id ?? null, suggested_time: null, photo_url: p.photo_url ?? null,
       pin_order: maxOrder + 1 + i, original_creator_id: user.id, added_by: user.id,

@@ -165,7 +165,7 @@ export async function createWyjazdFromPlaces(
   const rows = places.map((p, idx) => ({
     route_id: route.id,
     place_name: p.place_name,
-    address: p.address ?? null,
+    address: p.address ?? "",   // pins.address NOT NULL - reczne miejsce z mapy nie ma adresu
     description: p.description ?? null,
     category: p.category || "other",
     latitude: p.latitude ?? null,
