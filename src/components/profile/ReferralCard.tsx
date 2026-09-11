@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import { QRCodeSVG } from "qrcode.react";
-import { QrCode, Share2, UserPlus, X } from "lucide-react";
+import { QrCode, Share2, UserPlus } from "lucide-react";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { useShare } from "@/hooks/useShare";
 import { haptics } from "@/hooks/useHaptics";
@@ -60,66 +60,61 @@ export default function ReferralCard({ userId }: { userId: string }) {
 
   return (
     <>
-      {/* Plaski zolty akcent zamiast gradientu (prosba Nat 2026-09-10): gradient byl
-          najglosniejszym elementem profilu i przykrywal to, co karta ma powiedziec.
-          Brazowy #5B2C06 na zoltym daje 10:1, wiec tresc czyta sie bez wysilku. */}
-      <div className="rounded-3xl bg-[#FDF184] p-5 mb-5">
+      {/* Karta jak "Get credits" w FYI (prosba Nat 2026-09-11): SAM szary obrys (kreskowany),
+          ostre krawedzie, mala pomaranczowa ikona nad naglowkiem, pelnej szerokosci guzik
+          primary z kodem QR obok i "Nie teraz" pod spodem. Wczesniej: plaska zolta karta.
+          Ostre rogi sa tu SWIADOMYM wyjatkiem od zaokraglen z CLAUDE.md - karta ma wygladac
+          jak wsuwka/kupon, nie jak kolejny kafelek tresci. */}
+      <div className="mb-5 border border-dashed border-border px-4 pt-4 pb-3">
         <div className="flex items-start gap-3">
-          <span className="h-10 w-10 shrink-0 rounded-2xl bg-white/70 flex items-center justify-center">
-            <UserPlus className="h-5 w-5 text-[#5B2C06]" />
+          <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10">
+            <UserPlus className="h-4 w-4 text-primary" />
           </span>
           <div className="min-w-0 flex-1">
-            <p className="text-[17px] font-bold text-[#5B2C06] leading-tight">
-              {done ? t("referral.title_done") : t("referral.title")}
+            <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+              {done ? t("referral.eyebrow_done") : t("referral.eyebrow")}
             </p>
-            <p className="text-[13px] text-[#5B2C06]/80 leading-snug mt-1">
-              {done ? t("referral.desc_done") : t("referral.desc", { count: REFERRAL_GOAL })}
+            <p className="mt-0.5 text-[16px] font-bold leading-snug text-foreground">
+              {done ? t("referral.title_done") : t("referral.desc", { count: REFERRAL_GOAL })}
             </p>
+            {!done && (
+              <p className="mt-1.5 flex items-center gap-2 text-[12.5px] text-muted-foreground tabular-nums">
+                <span className="flex gap-1">
+                  {Array.from({ length: REFERRAL_GOAL }, (_, i) => (
+                    <span key={i} className={`h-2 w-2 rounded-full ${i < invited ? "bg-primary" : "bg-border"}`} />
+                  ))}
+                </span>
+                {t("referral.progress", { invited, goal: REFERRAL_GOAL })}
+              </p>
+            )}
           </div>
-          <button
-            onClick={() => {
-              haptics.light();
-              try { sessionStorage.setItem(DISMISS_KEY, "1"); } catch { /* prywatne okno */ }
-              setDismissed(true);
-            }}
-            aria-label={t("referral.dismiss_aria")}
-            className="shrink-0 -mr-1 -mt-1 h-8 w-8 rounded-full flex items-center justify-center active:scale-90 transition-transform"
-          >
-            <X className="h-4 w-4 text-[#5B2C06]/60" />
-          </button>
         </div>
 
-        {/* Postep: tyle kropek, ile brakuje do progu - liczba jest mala, wiec kropki czyta sie
-            szybciej niz pasek i od razu widac, ile jeszcze. */}
-        <div className="flex items-center gap-2 mt-4">
-          <div className="flex gap-1.5">
-            {Array.from({ length: REFERRAL_GOAL }, (_, i) => (
-              <span
-                key={i}
-                className={`h-2.5 w-2.5 rounded-full ${i < invited ? "bg-[#5B2C06]" : "bg-[#5B2C06]/20"}`}
-              />
-            ))}
-          </div>
-          <p className="text-[13px] font-bold text-[#5B2C06] tabular-nums">
-            {t("referral.progress", { invited, goal: REFERRAL_GOAL })}
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2 mt-4">
+        <div className="mt-4 flex items-center gap-2">
           <button
             onClick={onShare}
-            className="flex-1 h-11 rounded-2xl bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
+            className="flex-1 h-11 bg-primary text-white font-bold text-[13px] uppercase tracking-wide flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
           >
             <Share2 className="h-4 w-4" />{t("referral.share_cta")}
           </button>
           <button
             onClick={() => { haptics.light(); setQrOpen(true); }}
             aria-label={t("referral.qr_aria")}
-            className="shrink-0 h-11 w-11 rounded-2xl bg-white/70 flex items-center justify-center active:scale-90 transition-transform"
+            className="shrink-0 h-11 w-11 border border-border bg-background flex items-center justify-center active:scale-90 transition-transform"
           >
-            <QrCode className="h-5 w-5 text-[#5B2C06]" />
+            <QrCode className="h-5 w-5 text-foreground" />
           </button>
         </div>
+        <button
+          onClick={() => {
+            haptics.light();
+            try { sessionStorage.setItem(DISMISS_KEY, "1"); } catch { /* prywatne okno */ }
+            setDismissed(true);
+          }}
+          className="mt-1 w-full py-2 text-center text-[13px] font-medium text-muted-foreground active:text-foreground transition-colors"
+        >
+          {t("referral.not_now")}
+        </button>
       </div>
 
       {/* Kod QR na pelnym arkuszu: ma byc na tyle duzy, zeby dalo sie go zeskanowac

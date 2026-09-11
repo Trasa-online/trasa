@@ -209,7 +209,7 @@ export default function LikesDrawer({ open, onClose, userId }: LikesDrawerProps)
       {/* Panel (gest: przeciagnij w dol, zeby zamknac) */}
       <div
         {...dragProps}
-        className="relative mt-auto w-full bg-background rounded-t-3xl flex flex-col overflow-hidden"
+        className="relative mt-auto mx-2 mb-2 bg-background rounded-3xl flex flex-col overflow-hidden"
         style={{ ...dragProps.style, height: "88dvh" }}
       >
         {/* Drag handle */}

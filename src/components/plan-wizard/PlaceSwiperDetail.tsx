@@ -418,7 +418,7 @@ const PlaceSwiperDetail = ({
              ten pasek zawsze na chwile widac. Peachy probowalismy 2026-09-10 rano - Nat woli
              biel (decyzja z tego samego dnia), wiec wracamy do zlamanej bieli #FEFEFE, tej
              samej co tresc arkusza nizej. */
-          className="fixed inset-x-0 bottom-0 z-50 flex flex-col rounded-t-3xl bg-[#FEFEFE] overflow-hidden outline-none focus:outline-none"
+          className="fixed inset-x-2 bottom-2 z-50 flex flex-col rounded-3xl bg-[#FEFEFE] overflow-hidden outline-none focus:outline-none"
           style={{ height: "min(96dvh, calc(100dvh - env(safe-area-inset-top, 0px) - 0.5rem))" }}
         >
           <VaulDrawer.Title className="sr-only">{place.place_name}</VaulDrawer.Title>

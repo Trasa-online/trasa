@@ -71,7 +71,12 @@
   "search": {
     "placeholder_all": "Search trips, places, people...",
     "by_category": "Search by category",
-    "close": "Close search"
+    "close": "Close search",
+    "categories_title": "What are you looking for?",
+    "cat_sub_lists": "Place recommendations from travellers",
+    "cat_sub_trips": "Ready-made plans you can save",
+    "cat_sub_places": "Cafes, bars, museums, viewpoints",
+    "cat_sub_people": "Friends and travellers to follow"
   },
   "city": {
     "change": "Change city"

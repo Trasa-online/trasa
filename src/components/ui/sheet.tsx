@@ -35,8 +35,11 @@ const sheetVariants = cva(
     variants: {
       side: {
         top: "inset-x-0 top-0 border-b data-[state=closed]:slide-out-to-top data-[state=open]:slide-in-from-top",
+        // Arkusz PLYWAJACY (prosba Nat 2026-09-11, wzor: FYI): 8 px odstepu z lewej, prawej i od
+        // dolu, zaokraglony z KAZDEJ strony. Callery nadal podaja `rounded-t-3xl` - to tylko
+        // gorne rogi, dolne biora 3xl stad, wiec nic nie trzeba w nich zmieniac.
         bottom:
-          "inset-x-0 bottom-0 border-t data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom",
+          "inset-x-2 bottom-2 rounded-3xl border-0 overflow-hidden data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom",
         left: "inset-y-0 left-0 h-full w-3/4 border-r data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left sm:max-w-sm",
         right:
           "inset-y-0 right-0 h-full w-3/4  border-l data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right sm:max-w-sm",

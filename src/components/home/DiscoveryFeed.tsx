@@ -2513,7 +2513,7 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
         >
           <div
             {...planPromptDrag.dragProps}
-            className="w-full max-w-md bg-card rounded-t-3xl flex flex-col max-h-[88dvh] shadow-2xl animate-in slide-in-from-bottom-4 duration-300"
+            className="w-[calc(100%-16px)] mx-2 mb-2 max-w-md bg-card rounded-3xl flex flex-col max-h-[88dvh] shadow-2xl animate-in slide-in-from-bottom-4 duration-300"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="px-5 pt-5 pb-1 text-center shrink-0">

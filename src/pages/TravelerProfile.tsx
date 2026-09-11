@@ -9,7 +9,8 @@ import { Settings, Camera, UserCircle2, ArrowRight, Bell, Share2, Search, Layout
 import { SavedPlacesGrid } from "@/components/saved/SavedPlacesGrid";
 import TabHeader from "@/components/layout/TabHeader";
 import PinnedSearchField from "@/components/layout/PinnedSearchField";
-import SearchCategoryRow, { type SearchCat } from "@/components/home/SearchCategoryRow";
+import { type SearchCat } from "@/components/home/SearchCategoryRow";
+import { SearchPane } from "@/components/home/TabSearch";
 import DiscoveryFeed from "@/components/home/DiscoveryFeed";
 import ScreenSkeleton from "@/components/layout/ScreenSkeleton";
 import { cn } from "@/lib/utils";
@@ -31,6 +32,7 @@ import { Camera as CapCamera, CameraResultType, CameraSource } from "@capacitor/
 import { ProfileFeedCard } from "@/components/profile/ProfileFeedCard";
 import ReferralCard from "@/components/profile/ReferralCard";
 import { TripLayoutSwitch, TripTile, useTripLayout } from "@/components/profile/TripLayout";
+import AvatarStarFrame from "@/components/profile/AvatarStarFrame";
 import { scopeLabel } from "@/lib/tripScope";
 import { SpontawayTabIcon } from "@/components/profile/SpontawayTabIcon";
 import { shortRelativeTime } from "@/lib/relativeTime";
@@ -169,9 +171,10 @@ const TravelerProfile = () => {
   const [searchCat, setSearchCat] = useState<SearchCat>("all");
   const searchInputRef = useRef<HTMLInputElement>(null);
   const closeSearch = () => { setSearchOpen(false); setSearchQuery(""); setSearchCat("all"); searchInputRef.current?.blur(); };
+  // Strzalka: z wnetrza kategorii wraca do listy kategorii, z listy - zamyka szukanie.
+  const backSearch = () => { if (searchCat !== "all") { setSearchCat("all"); setSearchQuery(""); } else closeSearch(); };
   // Pole montuje sie dopiero z nakladka, wiec focus musi poczekac na render (jak w Eksploracji).
   const openSearch = () => { setSearchOpen(true); window.setTimeout(() => searchInputRef.current?.focus(), 60); };
-  const foldersVisible = searchOpen && searchQuery.trim().length === 0;
   // Wyniki na pelny ekran - dolny pasek chowamy tak samo jak w Eksploracji.
   useEffect(() => {
     window.dispatchEvent(new CustomEvent("trasa:hide-bottomnav", { detail: searchOpen }));
@@ -738,7 +741,7 @@ const TravelerProfile = () => {
         overlay={searchOpen ? (
           <>
             <button
-              onClick={closeSearch}
+              onClick={backSearch}
               aria-label={t("search.close_aria")}
               className="shrink-0 -ml-1 h-9 w-9 flex items-center justify-center text-foreground active:scale-90 transition-transform"
             >
@@ -755,31 +758,11 @@ const TravelerProfile = () => {
         ) : undefined}
       />
 
-      {/* Wyniki zamiast tresci profilu - ten sam komponent co w Eksploracji. Foldery kategorii
-          sa WEWNATRZ obszaru przewijania (prosba Nat 2026-09-11, tak jak w Eksploracji od
-          2026-09-10): przyklejone nad wynikami zabieraly gore ekranu, ktorego tu jest malo. */}
+      {/* Wyniki zamiast tresci profilu - ten sam panel co w Eksploracji, Feedzie i Miejscach
+          (lista kategorii jedna pod druga, potem wyniki z kategorii). */}
       {searchOpen && (
         <div className="flex-1 min-h-0 overflow-y-auto pb-[calc(7rem+env(safe-area-inset-bottom,0px))]" style={{ WebkitOverflowScrolling: "touch" }}>
-          <div
-            className={cn(
-              "overflow-hidden border-b border-border/40 transition-all duration-200 ease-out",
-              foldersVisible ? "max-h-[160px] opacity-100 mb-4" : "max-h-0 opacity-0 border-b-0",
-            )}
-          >
-            <p className="px-4 pt-3 text-sm font-bold text-foreground">{t("search.by_category")}</p>
-            <SearchCategoryRow value={searchCat} onChange={setSearchCat} />
-            <div className="h-3" />
-          </div>
-          <div className="px-4">
-          <DiscoveryFeed
-            searchOnly
-            active={false}
-            city="all"
-            searchOpen
-            searchQuery={searchQuery}
-            searchCategory={searchCat}
-          />
-          </div>
+          <SearchPane query={searchQuery} cat={searchCat} onCat={setSearchCat} />
         </div>
       )}
 
@@ -789,6 +772,8 @@ const TravelerProfile = () => {
         {/* Avatar + nazwa + bio (Figma: nazwa | separator | bio) */}
         <div className="flex items-stretch gap-3">
           <div className="relative shrink-0 self-center">
+            {/* PROBA ramki awatara (2026-09-11): cztery brandowe gwiazdki krazace wokol zdjecia. */}
+            <AvatarStarFrame size={76} />
             <Avatar className="h-[76px] w-[76px]">
               <AvatarImage src={avatarSrc(profile?.avatar_url)} className="object-cover bg-orange-100" />
               <AvatarFallback className="bg-orange-100 text-primary text-3xl font-black">

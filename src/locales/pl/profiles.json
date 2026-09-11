@@ -171,7 +171,10 @@
     "qr_aria": "Pokaż kod QR do testów",
     "qr_title": "Zeskanuj i dołącz do testów",
     "qr_desc": "Kod prowadzi prosto do TestFlight. Pokaż go osobie, którą chcesz zaprosić.",
-    "dismiss_aria": "Ukryj do następnego uruchomienia"
+    "dismiss_aria": "Ukryj do następnego uruchomienia",
+    "eyebrow": "Zaproś znajomych",
+    "eyebrow_done": "Zaproszenia wysłane",
+    "not_now": "Nie teraz"
   },
   "layout": {
     "list": "Lista",

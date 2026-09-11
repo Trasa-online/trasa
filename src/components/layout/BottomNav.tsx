@@ -177,7 +177,7 @@ const BottomNav = () => {
         >
           <div
             {...menuDrag.dragProps}
-            className="w-full max-w-sm bg-card rounded-t-3xl px-6 pt-5 pb-[max(28px,env(safe-area-inset-bottom))] flex flex-col gap-6 shadow-2xl animate-sheet-up"
+            className="w-[calc(100%-16px)] mx-2 mb-2 max-w-sm bg-card rounded-3xl px-6 pt-5 pb-[max(28px,env(safe-area-inset-bottom))] flex flex-col gap-6 shadow-2xl animate-sheet-up"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header: X (lub Wroc) po lewej, tytul wysrodkowany, spacer po prawej */}
@@ -227,7 +227,7 @@ const BottomNav = () => {
         >
           <div
             {...reuseDrag.dragProps}
-            className="w-full max-w-sm bg-card rounded-t-3xl px-6 pt-7 pb-[max(24px,env(safe-area-inset-bottom))] flex flex-col gap-5 shadow-2xl animate-in slide-in-from-bottom-4 duration-300"
+            className="w-[calc(100%-16px)] mx-2 mb-2 max-w-sm bg-card rounded-3xl px-6 pt-7 pb-[max(24px,env(safe-area-inset-bottom))] flex flex-col gap-5 shadow-2xl animate-in slide-in-from-bottom-4 duration-300"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start gap-3">
@@ -284,7 +284,8 @@ const BottomNav = () => {
 
           {/* IA 2026-09-11 (makieta Nat): Eksploruj · Feed · + · Miejsca · Profil. Eksploruj jako
               PIERWSZA i startowa (decyzja Nat tego samego dnia): nowy user nie moze zaczynac
-              od pustego Feedu, bo nikogo jeszcze nie obserwuje. Tylko native
+              od pustego Feedu, bo nikogo jeszcze nie obserwuje. Ikony: Eksploruj = dom (to ekran
+              startowy), Feed = kompas (prosba Nat 2026-09-11). Tylko native
               (web/PWA ma B2C za waitlista). Ikony z BRANDOWEGO zestawu SVG (public/Ikona_*.svg,
               CSS mask + currentColor): Nat dorysowala dom i pinezke tego samego dnia, wiec caly
               pasek jest w jednym jezyku. replace: zakladki NIE odkladaja historii (tab bar). */}
@@ -293,7 +294,7 @@ const BottomNav = () => {
               <NavLink to="/eksploruj" replace end={false} data-ob="nav-eksploruj" className={`${NAV_ITEM} ${NAV_ITEM_IDLE}`} activeClassName={NAV_ITEM_ACTIVE}>
                 {() => (
                   <>
-                    <NavIcon src="/Ikona_Eksploracja.svg" />
+                    <NavIcon src="/Ikona_Home.svg" />
                     <span className="text-[9px] font-semibold leading-tight mt-0.5">{t("tabs.explore")}</span>
                   </>
                 )}
@@ -301,7 +302,7 @@ const BottomNav = () => {
               <NavLink to="/feed" replace end={false} data-ob="nav-feed" className={`${NAV_ITEM} ${NAV_ITEM_IDLE}`} activeClassName={NAV_ITEM_ACTIVE}>
                 {() => (
                   <>
-                    <NavIcon src="/Ikona_Home.svg" />
+                    <NavIcon src="/Ikona_Eksploracja.svg" />
                     <span className="text-[9px] font-semibold leading-tight mt-0.5">{t("tabs.feed")}</span>
                   </>
                 )}

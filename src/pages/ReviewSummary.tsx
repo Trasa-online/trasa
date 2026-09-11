@@ -1189,7 +1189,7 @@ const ReviewSummary = () => {
     if (!confirmFinishOpen) return null;
     return (
       <div className="fixed inset-0 z-[96] flex items-end justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => { if (!finishing) setConfirmFinishOpen(false); }}>
-        <div {...finishDrag.dragProps} onClick={(e) => e.stopPropagation()} className="w-full max-w-lg bg-card rounded-t-3xl px-5 pt-5 pb-[max(20px,env(safe-area-inset-bottom))] shadow-2xl animate-in slide-in-from-bottom-4 duration-300">
+        <div {...finishDrag.dragProps} onClick={(e) => e.stopPropagation()} className="w-[calc(100%-16px)] mx-2 mb-2 max-w-lg bg-card rounded-3xl px-5 pt-5 pb-[max(20px,env(safe-area-inset-bottom))] shadow-2xl animate-in slide-in-from-bottom-4 duration-300">
           <p className="text-lg font-black text-foreground">{t("confirm.finish_title")}</p>
           <p className="text-sm text-muted-foreground leading-relaxed mt-1.5">
             {t("confirm.finish_desc")}
@@ -1784,7 +1784,7 @@ const ReviewSummary = () => {
     const assigned: string[] = Array.isArray(pickerPin.images) ? pickerPin.images : [];
     return (
       <div className="fixed inset-0 z-[95] flex items-end justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setPinPickerId(null)}>
-        <div {...pinPickerDrag.dragProps} onClick={(e) => e.stopPropagation()} className="relative w-full max-w-lg bg-card rounded-t-3xl px-4 pt-3 pb-[max(16px,env(safe-area-inset-bottom))] shadow-2xl animate-in slide-in-from-bottom-4 duration-300 flex flex-col" style={{ ...pinPickerDrag.dragProps.style, maxHeight: "82dvh" }}>
+        <div {...pinPickerDrag.dragProps} onClick={(e) => e.stopPropagation()} className="relative w-[calc(100%-16px)] mx-2 mb-2 max-w-lg bg-card rounded-3xl px-4 pt-3 pb-[max(16px,env(safe-area-inset-bottom))] shadow-2xl animate-in slide-in-from-bottom-4 duration-300 flex flex-col" style={{ ...pinPickerDrag.dragProps.style, maxHeight: "82dvh" }}>
           <div className="mx-auto h-1 w-10 rounded-full bg-muted-foreground/25 mb-3 shrink-0" />
           <p className="font-display text-lg font-bold text-foreground px-1 shrink-0">{t("photo.for_place")}</p>
           <p className="text-[13px] text-muted-foreground px-1 mt-0.5 mb-3 shrink-0 truncate">{pickerPin.place_name}</p>
@@ -2450,7 +2450,7 @@ const ReviewSummary = () => {
         >
           <div
             {...sharePromptDrag.dragProps}
-            className="w-full max-w-md bg-card rounded-t-3xl px-6 pt-7 pb-[max(24px,env(safe-area-inset-bottom))] flex flex-col gap-5 shadow-2xl animate-in slide-in-from-bottom-4 duration-300"
+            className="w-[calc(100%-16px)] mx-2 mb-2 max-w-md bg-card rounded-3xl px-6 pt-7 pb-[max(24px,env(safe-area-inset-bottom))] flex flex-col gap-5 shadow-2xl animate-in slide-in-from-bottom-4 duration-300"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start gap-3">
@@ -2485,7 +2485,7 @@ const ReviewSummary = () => {
       {/* ── Arkusz udostepniania (skrot obok edycji): widocznosc + podpis + osoby ── */}
       {shareSheetOpen && (
         <div className="fixed inset-0 z-[80] flex flex-col justify-end bg-black/40" onClick={() => setShareSheetOpen(false)}>
-          <div {...shareSheetDrag.dragProps} className="bg-background rounded-t-3xl max-h-[88dvh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+          <div {...shareSheetDrag.dragProps} className="mx-2 mb-2 bg-background rounded-3xl max-h-[88dvh] flex flex-col" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between px-5 pt-4 pb-2 shrink-0">
               <p className="text-lg font-black">{t("share_sheet.title")}</p>
               <button onClick={() => setShareSheetOpen(false)} aria-label={t("a11y.close")} className="h-9 w-9 rounded-full bg-muted flex items-center justify-center active:bg-muted/70"><X className="h-4 w-4" /></button>

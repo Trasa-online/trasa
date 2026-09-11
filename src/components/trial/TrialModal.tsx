@@ -287,7 +287,7 @@ export default function TrialModal({ open, onClose }: TrialModalProps) {
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
 
       {/* Gest natywny: przeciagniecie panelu w dol zamyka arkusz (na mobile). */}
-      <div {...dragProps} className="relative bg-white w-full sm:max-w-sm sm:rounded-3xl rounded-t-3xl overflow-hidden shadow-2xl flex flex-col" style={{ ...dragProps.style, maxHeight: "90dvh" }}>
+      <div {...dragProps} className="relative bg-white w-[calc(100%-16px)] mx-2 mb-2 sm:max-w-sm rounded-3xl overflow-hidden shadow-2xl flex flex-col" style={{ ...dragProps.style, maxHeight: "90dvh" }}>
 
         {/* Header */}
         <div className="flex items-center justify-between px-5 pt-5 pb-3 shrink-0">

@@ -169,7 +169,10 @@
     "qr_aria": "Show the QR code for testing",
     "qr_title": "Scan and join the tests",
     "qr_desc": "The code goes straight to TestFlight. Show it to whoever you want to invite.",
-    "dismiss_aria": "Hide until next launch"
+    "dismiss_aria": "Hide until next launch",
+    "eyebrow": "Invite friends",
+    "eyebrow_done": "Invites sent",
+    "not_now": "Not now"
   },
   "layout": {
     "list": "List",

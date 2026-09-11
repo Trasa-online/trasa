@@ -73,7 +73,12 @@
   "search": {
     "placeholder_all": "Szukaj tras, miejsc, osób...",
     "by_category": "Szukaj według kategorii",
-    "close": "Zamknij wyszukiwanie"
+    "close": "Zamknij wyszukiwanie",
+    "categories_title": "Czego szukasz?",
+    "cat_sub_lists": "Polecajki miejsc od podróżnych",
+    "cat_sub_trips": "Gotowe plany, które możesz zapisać",
+    "cat_sub_places": "Kawiarnie, bary, muzea, widoki",
+    "cat_sub_people": "Znajomi i podróżni do obserwowania"
   },
   "city": {
     "change": "Zmień miasto"

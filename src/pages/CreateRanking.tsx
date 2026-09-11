@@ -1027,7 +1027,7 @@ const CreateRanking = () => {
       {/* Podglad miejsca spoza bazy - TYLKO okladka (bez godzin/recenzji, min. kosztow Google) */}
       {customPreview && (
         <div className="fixed inset-0 z-[80] flex flex-col justify-end bg-black/40" onClick={() => setCustomPreview(null)}>
-          <div {...previewDrag.dragProps} className="bg-background rounded-t-3xl max-h-[88dvh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+          <div {...previewDrag.dragProps} className="mx-2 mb-2 bg-background rounded-3xl max-h-[88dvh] flex flex-col" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between px-5 pt-4 pb-2 shrink-0">
               <p className="text-lg font-black">{t("custom_preview.title")}</p>
               <button onClick={() => setCustomPreview(null)} aria-label={t("custom_preview.close")} className="h-9 w-9 rounded-full bg-muted flex items-center justify-center active:bg-muted/70"><X className="h-4 w-4" /></button>

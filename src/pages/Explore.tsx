@@ -18,14 +18,14 @@ import { avatarSrc } from "@/lib/avatar";
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { parseISO, isValid, format, isToday, isYesterday } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
-import DiscoveryFeed from "@/components/home/DiscoveryFeed";
 import HomeHeaderActions from "@/components/home/HomeHeaderActions";
 import ExploreTopBar from "@/components/home/ExploreTopBar";
 import TabTopBar from "@/components/layout/TabTopBar";
 import NotificationsBell from "@/components/layout/NotificationsBell";
 import ActiveTripBanner from "@/components/home/ActiveTripBanner";
-import SearchCategoryRow, { type SearchCat } from "@/components/home/SearchCategoryRow";
+import { type SearchCat } from "@/components/home/SearchCategoryRow";
 import ExploreGrid from "@/components/home/ExploreGrid";
+import { SearchPane } from "@/components/home/TabSearch";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { UNLOCKED_CITIES } from "@/components/plan-wizard/CityPicker";
 import { getHistoryByCity, removeLikeFromCity, addLike, clearCity, updateLikePhoto, type ExploreCityGroup } from "@/lib/exploreLikes";
@@ -683,7 +683,7 @@ export const MyCollections = ({ showCreate = true }: { showCreate?: boolean } = 
         >
           <div
             {...confirmDrag.dragProps}
-            className="w-full max-w-sm bg-card rounded-t-3xl px-6 pt-6 pb-[max(24px,env(safe-area-inset-bottom))] flex flex-col gap-4 shadow-2xl animate-in slide-in-from-bottom-4 duration-300"
+            className="w-[calc(100%-16px)] mx-2 mb-2 max-w-sm bg-card rounded-3xl px-6 pt-6 pb-[max(24px,env(safe-area-inset-bottom))] flex flex-col gap-4 shadow-2xl animate-in slide-in-from-bottom-4 duration-300"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start gap-3">
@@ -764,6 +764,8 @@ const Explore = () => {
   });
   const openSearch = () => setSearchOpen(true);
   const closeSearch = () => { setSearchOpen(false); setFeedSearch(""); setSearchCat("all"); searchInputRef.current?.blur(); };
+  // Strzalka w belce: z wnetrza kategorii wraca do listy kategorii, z listy - zamyka szukanie.
+  const backSearch = () => { if (searchCat !== "all") { setSearchCat("all"); setFeedSearch(""); } else closeSearch(); };
   // Wejscie z profilu (przypiete pole w naglowku profilu) - ustaw kursor w polu od razu.
   useEffect(() => {
     if ((location.state as any)?.openSearch !== true) return;
@@ -772,7 +774,6 @@ const Explore = () => {
   }, []);   // eslint-disable-line react-hooks/exhaustive-deps
   // Foldery kategorii chowaja sie po wpisaniu frazy (prosba Nat 2026-09-06 po testach):
   // pusta fraza = przegladanie po kategoriach, wpisana = same wyniki.
-  const foldersVisible = searchOpen && !myCollections && feedSearch.trim().length === 0;
   // Lejek eksploracji - wejscie na ekran (raz na mount).
   useEffect(() => { track("explore_opened", { city: exploreCity, mode: "grid" }); }, []);   // eslint-disable-line react-hooks/exhaustive-deps
   // "Biezace polozenie" (DiscoveryFeed) -> zakladka Miejsca posortowana od najblizszego.
@@ -826,7 +827,7 @@ const Explore = () => {
             mode="explore"
             hideModeToggle
             onOpenSearch={openSearch}
-            onCloseSearch={closeSearch}
+            onCloseSearch={backSearch}
             searchOpen={searchOpen}
             searchValue={feedSearch}
             onSearchChange={setFeedSearch}
@@ -872,28 +873,13 @@ const Explore = () => {
             {/* Siatka NIE ma snapu (skanuje sie ja wzrokiem, nie karta po karcie) - snap zostal
                 w Feedzie. Przy wyszukiwaniu ten sam scroller pokazuje wyniki zamiast siatki. */}
             <PullToRefresh onRefresh={handleRefresh} onScroll={(top) => setFeedScrolled(top > 8)} className="flex-1 min-h-0 flex flex-col pt-3 pb-[calc(6rem+env(safe-area-inset-bottom,0px))]">
-              {/* Foldery kategorii wyszukiwarki - WEWNATRZ obszaru przewijania (prosba Nat
-                  2026-09-10). Wczesniej staly nad nim jako staly element ukladu i przy kazdym
-                  szukaniu zabieraly gore ekranu, nawet gdy user byl juz przy dziesiatym wyniku.
-                  Teraz odjezdzaja razem z trescia. Zwijanie po wpisaniu frazy zostaje. */}
-              {searchOpen && (
-                <div
-                  className={cn(
-                    "shrink-0 overflow-hidden border-b border-border/40 transition-all duration-200 ease-out -mt-3 mb-3",
-                    foldersVisible ? "max-h-[160px] opacity-100" : "max-h-0 opacity-0 border-b-0 mb-0",
-                  )}
-                >
-                  <p className="px-4 pt-3 text-sm font-bold text-foreground">{t("search.by_category")}</p>
-                  <SearchCategoryRow value={searchCat} onChange={setSearchCat} />
-                  <div className="h-3" />
-                </div>
+              {/* Wyszukiwarka: lista kategorii jedna pod druga / wyniki (wspolny SearchPane -
+                  ten sam co w Feedzie, Miejscach i na profilu). Poza szukaniem - siatka. */}
+              {searchOpen ? (
+                <SearchPane query={feedSearch} cat={searchCat} onCat={setSearchCat} city={exploreCity} />
+              ) : (
+                <div className="flex-1 px-4"><ExploreGrid /></div>
               )}
-              <div className="flex-1 px-4">
-                {/* Wyszukiwarka (wyniki + foldery) zyje w DiscoveryFeed; `searchOnly` wylacza
-                    tam feed kart, ktory zastapila siatka ponizej. */}
-                <DiscoveryFeed city={exploreCity} searchOnly searchQuery={feedSearch} searchOpen={searchOpen} searchCategory={searchCat} />
-                {!searchOpen && <ExploreGrid />}
-              </div>
             </PullToRefresh>
           </div>
         </>
