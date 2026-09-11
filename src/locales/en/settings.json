@@ -87,7 +87,7 @@
     "reserved": "That name is reserved"
   },
   "customize": {
-    "title": "Customise my profile",
+    "title": "Customise",
     "desc": "Avatar frames and overlays"
   },
   "frames": {
@@ -99,6 +99,10 @@
     "clouds": "Clouds",
     "saved": "Frame set",
     "removed": "Frame removed",
-    "save_failed": "Couldn't save the frame"
+    "save_failed": "Couldn't save the frame",
+    "color": "Colour",
+    "color_desc": "Orange by default. The picker opens the full palette - choose any colour you like.",
+    "color_default": "Orange (default)",
+    "color_custom": "Any colour"
   }
 }

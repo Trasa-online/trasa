@@ -323,7 +323,7 @@ export default function SharedList() {
     enabled: !!col?.user_id,
     queryFn: async () => {
       const { data } = await (supabase as any)
-        .from("profiles").select("username, first_name, avatar_url, avatar_frame").eq("id", col!.user_id).maybeSingle();
+        .from("profiles").select("username, first_name, avatar_url, avatar_frame, avatar_frame_color").eq("id", col!.user_id).maybeSingle();
       return data as any;
     },
   });
@@ -667,7 +667,7 @@ export default function SharedList() {
             <div className="flex-1 min-w-0 flex justify-center">
               {author?.username ? (
                 <button onClick={() => navigate(`/profil/${author.username}`)} className="flex items-center gap-1.5 font-semibold text-foreground active:opacity-60 transition-opacity min-w-0">
-                  <FramedAvatar src={author?.avatar_url ?? col.author_avatar} frame={author?.avatar_frame} />
+                  <FramedAvatar src={author?.avatar_url ?? col.author_avatar} frame={author?.avatar_frame} color={author?.avatar_frame_color} />
                   <span className="truncate">@{author.username}</span>
                 </button>
               ) : (

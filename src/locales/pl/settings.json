@@ -87,7 +87,7 @@
     "reserved": "Ta nazwa jest zarezerwowana"
   },
   "customize": {
-    "title": "Customizuj mój profil",
+    "title": "Customizuj",
     "desc": "Ramki i nakładki na awatar"
   },
   "frames": {
@@ -99,6 +99,10 @@
     "clouds": "Chmurki",
     "saved": "Ramka ustawiona",
     "removed": "Ramka zdjęta",
-    "save_failed": "Nie udało się zapisać ramki"
+    "save_failed": "Nie udało się zapisać ramki",
+    "color": "Kolor",
+    "color_desc": "Domyślnie pomarańcz. Pipeta otwiera pełną paletę - wybierz, jaki chcesz.",
+    "color_default": "Pomarańcz (domyślny)",
+    "color_custom": "Dowolny kolor"
   }
 }

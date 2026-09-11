@@ -403,7 +403,7 @@ export default function SharedRoute() {
     queryFn: async () => {
       const { data } = await (supabase as any)
         .from("profiles")
-        .select("username, first_name, avatar_url, home_city, avatar_frame")
+        .select("username, first_name, avatar_url, home_city, avatar_frame, avatar_frame_color")
         .eq("id", route!.user_id)
         .maybeSingle();
       return data as any;
@@ -419,11 +419,11 @@ export default function SharedRoute() {
         .from("group_session_members").select("user_id").eq("session_id", (route as any).group_session_id).eq("status", "accepted");
       const ids = (members ?? []).map((m: any) => m.user_id).filter((id: string) => id !== route!.user_id);
       if (!ids.length) return [] as { id: string; username: string | null; avatar_url: string | null; avatar_frame?: string | null }[];
-      const { data: profs } = await (supabase as any).from("profiles").select("id, username, avatar_url, avatar_frame").in("id", ids);
+      const { data: profs } = await (supabase as any).from("profiles").select("id, username, avatar_url, avatar_frame, avatar_frame_color").in("id", ids);
       // Zachowaj kolejnosc czlonkow sesji (pierwsi uczestnicy = pelna nazwa w TopBarze).
       const byId = new Map((profs ?? []).map((p: any) => [p.id, p]));
       return ids.map((id: string) => byId.get(id)).filter(Boolean)
-        .map((p: any) => ({ id: p.id, username: p.username ?? null, avatar_url: p.avatar_url ?? null, avatar_frame: p.avatar_frame ?? null }));
+        .map((p: any) => ({ id: p.id, username: p.username ?? null, avatar_url: p.avatar_url ?? null, avatar_frame: p.avatar_frame ?? null, avatar_frame_color: p.avatar_frame_color ?? null }));
     },
   });
 
@@ -2066,12 +2066,12 @@ export default function SharedRoute() {
                   onClick={() => navigate(`/profil/${author.username}`)}
                   className="flex items-center gap-1.5 font-semibold text-foreground active:opacity-60 transition-opacity min-w-0 shrink"
                 >
-                  <FramedAvatar src={author?.avatar_url} frame={author?.avatar_frame} />
+                  <FramedAvatar src={author?.avatar_url} frame={author?.avatar_frame} color={author?.avatar_frame_color} />
                   <span className="truncate">@{author.username}</span>
                 </button>
               ) : (
                 <span className="flex items-center gap-1.5 font-semibold text-foreground min-w-0 shrink">
-                  {!isAnon && <FramedAvatar src={author?.avatar_url} frame={author?.avatar_frame} />}
+                  {!isAnon && <FramedAvatar src={author?.avatar_url} frame={author?.avatar_frame} color={author?.avatar_frame_color} />}
                   <span className="truncate">{authorName}</span>
                 </span>
               )}
@@ -2079,11 +2079,11 @@ export default function SharedRoute() {
               {groupParticipants.slice(0, 2).map((p) => (
                 p.username ? (
                   <button key={p.id} onClick={() => navigate(`/profil/${p.username}`)} className="flex items-center gap-1.5 font-semibold text-foreground active:opacity-60 transition-opacity min-w-0 shrink">
-                    <FramedAvatar src={p.avatar_url} frame={(p as any).avatar_frame} />
+                    <FramedAvatar src={p.avatar_url} frame={(p as any).avatar_frame} color={(p as any).avatar_frame_color} />
                     <span className="truncate">@{p.username}</span>
                   </button>
                 ) : (
-                  <FramedAvatar key={p.id} src={p.avatar_url} frame={(p as any).avatar_frame} />
+                  <FramedAvatar key={p.id} src={p.avatar_url} frame={(p as any).avatar_frame} color={(p as any).avatar_frame_color} />
                 )
               ))}
               {/* Pozostali uczestnicy (4+) = same awatary (nachodzacy stack) + "+N". */}

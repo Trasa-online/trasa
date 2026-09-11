@@ -102,12 +102,12 @@ export default function PublicProfile() {
       // znakow wieloznacznych; escapeLike chroni przed "%" i "_" wpisanym w nazwe.
       const { data } = await supabase
         .from("profiles")
-        .select("id, username, first_name, avatar_url, bio, avatar_frame")
+        .select("id, username, first_name, avatar_url, bio, avatar_frame, avatar_frame_color")
         .ilike("username", escapeLike((username ?? "").trim()))
         .maybeSingle();
       // `as unknown`: wygenerowane typy Supabase nie znaja jeszcze avatar_frame (types.ts
       // regenerowany osobno - CLAUDE.md), a kolumna w bazie jest (migracja 20260911f).
-      return data as unknown as { id: string; username: string; first_name: string | null; avatar_url: string | null; bio: string | null; avatar_frame: string | null } | null;
+      return data as unknown as { id: string; username: string; first_name: string | null; avatar_url: string | null; bio: string | null; avatar_frame: string | null; avatar_frame_color: string | null } | null;
     },
     enabled: !!username,
   });
@@ -361,7 +361,7 @@ export default function PublicProfile() {
         {/* Avatar + nazwa + bio (Figma: nazwa | separator | bio) */}
         <div className="flex items-start gap-4">
           <span className="relative h-[76px] w-[76px] shrink-0">
-          <AvatarFrame kind={isAvatarFrame(profile.avatar_frame) ? profile.avatar_frame : null} size={76} />
+          <AvatarFrame kind={isAvatarFrame(profile.avatar_frame) ? profile.avatar_frame : null} color={profile.avatar_frame_color} size={76} />
           <Avatar className="h-[76px] w-[76px] shrink-0">
             <AvatarImage src={avatarSrc(profile.avatar_url)} className="object-cover bg-orange-100" />
             <AvatarFallback className="bg-orange-100 text-primary text-3xl font-black">

@@ -10,8 +10,10 @@ import { getConsent, grantConsent, denyConsent } from "@/lib/consent";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Camera, Shield, Bell, LogOut, ChevronRight, Cookie, FileText, Trash2, KeyRound, AlertCircle, X, ArrowLeft, Link as LinkIcon, Mail, Languages, RotateCcw, Instagram, MessagesSquare, Sparkles } from "lucide-react";
-import AvatarFrameSheet from "@/components/profile/AvatarFrameSheet";
+import { Camera, Shield, Bell, LogOut, ChevronRight, Cookie, FileText, Trash2, KeyRound, AlertCircle, X, ArrowLeft, Link as LinkIcon, Mail, Languages, RotateCcw, Instagram, MessagesSquare } from "lucide-react";
+import AvatarFrameSheet, { useMyAvatarFrame } from "@/components/profile/AvatarFrameSheet";
+import AvatarFrame from "@/components/profile/AvatarFrame";
+import { isAvatarFrame } from "@/lib/avatarFrames";
 import { Browser } from "@capacitor/browser";
 import { isHardcodedAdmin } from "@/lib/admins";
 import { useOnboarding } from "@/components/OnboardingGuide";
@@ -551,8 +553,9 @@ const Settings = () => {
   const [username, setUsername] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
   const [bio, setBio] = useState("");
-  // "Customizuj mój profil" - arkusz z ramkami awatara (prosba Nat 2026-09-11).
+  // "Customizuj" - arkusz z ramkami awatara i kolorem (prosba Nat 2026-09-11).
   const [framesOpen, setFramesOpen] = useState(false);
+  const { data: myFrame } = useMyAvatarFrame(user?.id);
 
   useEffect(() => {
     if (!loading && !user) navigate("/auth");
@@ -707,9 +710,12 @@ const Settings = () => {
 
       <div className="p-4 space-y-3 max-w-lg mx-auto">
 
-        {/* Avatar */}
+        {/* Avatar + ramka + "Customizuj" (prosba Nat 2026-09-11: customizacja bezposrednio pod
+            awatarem i zmiana zdjecia w jednym miejscu). Ikona wejscia = ZYWA miniatura nakladki
+            (obecnej albo gwiazdek), nie statyczny sparkle. */}
         <div className="flex flex-col items-center gap-3 py-4">
           <div className="relative">
+            <AvatarFrame kind={isAvatarFrame(myFrame?.avatar_frame) ? myFrame!.avatar_frame : null} color={myFrame?.avatar_frame_color} size={80} />
             <Avatar className="h-20 w-20">
               <AvatarImage src={avatarSrc(avatarUrl)} className="object-cover bg-orange-100" />
               <AvatarFallback className="bg-orange-100 text-primary text-2xl font-bold">
@@ -738,6 +744,21 @@ const Settings = () => {
             )}
           </div>
           {displayName && <p className="text-base font-bold">{displayName}</p>}
+          <button
+            onClick={() => setFramesOpen(true)}
+            className="flex items-center gap-2.5 rounded-full bg-secondary pl-1.5 pr-4 py-1.5 text-sm font-semibold text-foreground active:scale-[0.97] transition-transform"
+          >
+            <span className="relative h-8 w-8 shrink-0">
+              <AvatarFrame kind={isAvatarFrame(myFrame?.avatar_frame) ? myFrame!.avatar_frame : "stars"} color={myFrame?.avatar_frame_color} size={32} />
+              <Avatar className="h-8 w-8">
+                <AvatarImage src={avatarSrc(avatarUrl)} className="object-cover bg-orange-100" />
+                <AvatarFallback className="bg-orange-100 text-primary text-xs font-bold">{displayName.charAt(0).toUpperCase() || "U"}</AvatarFallback>
+              </Avatar>
+            </span>
+            {t("customize.title")}
+            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+          </button>
+          {user && <AvatarFrameSheet open={framesOpen} onOpenChange={setFramesOpen} userId={user.id} />}
         </div>
 
         {/* Profile fields */}
@@ -793,20 +814,6 @@ const Settings = () => {
             {updateProfileMutation.isPending ? t("saving") : t("save_changes")}
           </button>
         </div>
-
-        {/* Customizuj moj profil - ramki awatara (pod sekcja "O mnie"). */}
-        <button
-          onClick={() => setFramesOpen(true)}
-          className="w-full flex items-center gap-3 rounded-2xl bg-card border border-border/40 px-4 py-3.5 text-left active:bg-muted/40 transition-colors"
-        >
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10"><Sparkles className="h-5 w-5 text-primary" /></span>
-          <span className="min-w-0 flex-1">
-            <span className="block text-sm font-semibold text-foreground">{t("customize.title")}</span>
-            <span className="block text-xs text-muted-foreground">{t("customize.desc")}</span>
-          </span>
-          <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
-        </button>
-        {user && <AvatarFrameSheet open={framesOpen} onOpenChange={setFramesOpen} userId={user.id} />}
 
         {/* Linked accounts */}
         <LinkedAccountsSection />

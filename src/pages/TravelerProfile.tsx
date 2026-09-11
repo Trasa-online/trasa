@@ -312,7 +312,7 @@ const TravelerProfile = () => {
   const { data: profile } = useQuery({
     queryKey: ["profile-full", user?.id],
     queryFn: async () => {
-      const { data } = await supabase.from("profiles").select("username, avatar_url, first_name, bio, avatar_frame").eq("id", user!.id).single();
+      const { data } = await supabase.from("profiles").select("username, avatar_url, first_name, bio, avatar_frame, avatar_frame_color").eq("id", user!.id).single();
       return data as any;
     },
     enabled: !!user,
@@ -774,7 +774,7 @@ const TravelerProfile = () => {
         <div className="flex items-stretch gap-3">
           <div className="relative shrink-0 self-center">
             {/* Ramka awatara wybrana w Ustawieniach -> "Customizuj mój profil" (profiles.avatar_frame). */}
-            <AvatarFrame kind={isAvatarFrame(profile?.avatar_frame) ? profile.avatar_frame : null} size={76} />
+            <AvatarFrame kind={isAvatarFrame(profile?.avatar_frame) ? profile.avatar_frame : null} color={profile?.avatar_frame_color} size={76} />
             <Avatar className="h-[76px] w-[76px]">
               <AvatarImage src={avatarSrc(profile?.avatar_url)} className="object-cover bg-orange-100" />
               <AvatarFallback className="bg-orange-100 text-primary text-3xl font-black">
