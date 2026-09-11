@@ -134,9 +134,6 @@
   "saved": {
     "empty_lists_routes": "Brak zapisanych list i tras"
   },
-  "feed": {
-    "title": "Feed"
-  },
   "grid": {
     "trip": "Wyjazd",
     "list": "Lista"

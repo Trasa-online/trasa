@@ -282,25 +282,27 @@ const BottomNav = () => {
         <div className="pointer-events-auto bg-white/45 backdrop-blur-sm backdrop-saturate-150 rounded-[26px] border border-black/[0.06] ring-1 ring-inset ring-white/40 shadow-[0_12px_34px_-8px_rgba(0,0,0,0.30),0_2px_6px_-2px_rgba(0,0,0,0.10)] px-3">
           <div className="flex items-center gap-1.5 h-14">
 
-          {/* IA 2026-09-11 (makieta Nat): Feed · Eksploruj · + · Miejsca · Profil. Tylko native
+          {/* IA 2026-09-11 (makieta Nat): Eksploruj · Feed · + · Miejsca · Profil. Eksploruj jako
+              PIERWSZA i startowa (decyzja Nat tego samego dnia): nowy user nie moze zaczynac
+              od pustego Feedu, bo nikogo jeszcze nie obserwuje. Tylko native
               (web/PWA ma B2C za waitlista). Ikony z BRANDOWEGO zestawu SVG (public/Ikona_*.svg,
               CSS mask + currentColor): Nat dorysowala dom i pinezke tego samego dnia, wiec caly
               pasek jest w jednym jezyku. replace: zakladki NIE odkladaja historii (tab bar). */}
           {isNative && (
             <>
-              <NavLink to="/feed" replace end={false} data-ob="nav-feed" className={`${NAV_ITEM} ${NAV_ITEM_IDLE}`} activeClassName={NAV_ITEM_ACTIVE}>
-                {() => (
-                  <>
-                    <NavIcon src="/Ikona_Home.svg" />
-                    <span className="text-[9px] font-semibold leading-tight mt-0.5">{t("tabs.feed")}</span>
-                  </>
-                )}
-              </NavLink>
               <NavLink to="/eksploruj" replace end={false} data-ob="nav-eksploruj" className={`${NAV_ITEM} ${NAV_ITEM_IDLE}`} activeClassName={NAV_ITEM_ACTIVE}>
                 {() => (
                   <>
                     <NavIcon src="/Ikona_Eksploracja.svg" />
                     <span className="text-[9px] font-semibold leading-tight mt-0.5">{t("tabs.explore")}</span>
+                  </>
+                )}
+              </NavLink>
+              <NavLink to="/feed" replace end={false} data-ob="nav-feed" className={`${NAV_ITEM} ${NAV_ITEM_IDLE}`} activeClassName={NAV_ITEM_ACTIVE}>
+                {() => (
+                  <>
+                    <NavIcon src="/Ikona_Home.svg" />
+                    <span className="text-[9px] font-semibold leading-tight mt-0.5">{t("tabs.feed")}</span>
                   </>
                 )}
               </NavLink>

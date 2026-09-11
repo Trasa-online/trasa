@@ -131,9 +131,6 @@
   "saved": {
     "empty_lists_routes": "No saved lists or routes yet"
   },
-  "feed": {
-    "title": "Feed"
-  },
   "grid": {
     "trip": "Trip",
     "list": "List"

@@ -257,8 +257,9 @@ function GlobalAuthCallback() {
         // zapisalismy docelowa sciezke (np. /sesja/KOD - dolaczanie do sesji grupowej),
         // wracamy do niej zamiast na /eksploruj (= waitlista na web).
         // Priorytet: ?next= z URL (odporny na in-app browser) > sessionStorage > ekran startowy.
-        // Ekran startowy natywki = Feed (IA 2026-09-11); web zostaje na /eksploruj (waitlista).
-        let dest = isNative ? "/feed" : "/eksploruj";
+        // Ekran startowy = Eksploruj (IA 2026-09-11: nowy user nie moze zaczynac od pustego
+        // Feedu - nikogo jeszcze nie obserwuje). Na webie to i tak bramka waitlisty.
+        let dest = "/eksploruj";
         try {
           const stored = sessionStorage.getItem("trasa_post_login_redirect");
           if (stored) { dest = stored; sessionStorage.removeItem("trasa_post_login_redirect"); }
@@ -467,8 +468,8 @@ function RootPage() {
     );
   }
   // Onboarding v3 = coach-overlay na realnych ekranach (OnboardingProvider), nie osobny route.
-  // Ekran startowy natywki = Feed (IA 2026-09-11); web zostaje na /eksploruj (waitlista).
-  return <Navigate to={isNative ? "/feed" : "/eksploruj"} replace />;
+  // Ekran startowy = Eksploruj (IA 2026-09-11) - Feed obserwowanych u nowego usera jest pusty.
+  return <Navigate to="/eksploruj" replace />;
 }
 
 function RouteTracker() {
