@@ -177,7 +177,7 @@ const BottomNav = () => {
         >
           <div
             {...menuDrag.dragProps}
-            className="w-[calc(100%-16px)] mx-2 mb-2 max-w-sm bg-card rounded-3xl px-6 pt-5 pb-[max(28px,env(safe-area-inset-bottom))] flex flex-col gap-6 shadow-2xl animate-sheet-up"
+            className="w-[calc(100%-16px)] mx-2 mb-2 max-w-sm bg-card rounded-[40px] px-6 pt-5 pb-[max(28px,env(safe-area-inset-bottom))] flex flex-col gap-6 shadow-2xl animate-sheet-up"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header: X (lub Wroc) po lewej, tytul wysrodkowany, spacer po prawej */}
@@ -227,7 +227,7 @@ const BottomNav = () => {
         >
           <div
             {...reuseDrag.dragProps}
-            className="w-[calc(100%-16px)] mx-2 mb-2 max-w-sm bg-card rounded-3xl px-6 pt-7 pb-[max(24px,env(safe-area-inset-bottom))] flex flex-col gap-5 shadow-2xl animate-in slide-in-from-bottom-4 duration-300"
+            className="w-[calc(100%-16px)] mx-2 mb-2 max-w-sm bg-card rounded-[40px] px-6 pt-7 pb-[max(24px,env(safe-area-inset-bottom))] flex flex-col gap-5 shadow-2xl animate-in slide-in-from-bottom-4 duration-300"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start gap-3">

@@ -627,7 +627,7 @@ export default function SharedRoute() {
     } finally { setSaving(false); }
   };
 
-  const { data: pins = EMPTY_PINS } = useQuery({
+  const { data: pins = EMPTY_PINS, isFetched: pinsLoaded } = useQuery({
     queryKey: ["shared-route-pins", id],
     queryFn: async () => {
       const { data } = await (supabase as any)
@@ -2663,6 +2663,9 @@ export default function SharedRoute() {
           jednej czynnosci. */}
       {canEdit && !choosing && !noteEditing && !reorderMode && (
         <TripFabStack
+          // Pusty wyjazd (dopiero utworzony): stos od razu rozwiniety, zeby "+" bylo widac
+          // bez szukania - pusty stan i tak mowi "dodaj pierwsze miejsce guzikiem +".
+          startOpen={pinsLoaded && (pins as any[]).length === 0}
           actions={[
             ...(id ? [{
               key: "chat",

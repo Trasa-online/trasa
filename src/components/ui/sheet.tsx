@@ -39,7 +39,7 @@ const sheetVariants = cva(
         // dolu, zaokraglony z KAZDEJ strony. Callery nadal podaja `rounded-t-3xl` - to tylko
         // gorne rogi, dolne biora 3xl stad, wiec nic nie trzeba w nich zmieniac.
         bottom:
-          "inset-x-2 bottom-2 rounded-3xl border-0 overflow-hidden data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom",
+          "inset-x-2 bottom-2 border-0 overflow-hidden data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom",
         left: "inset-y-0 left-0 h-full w-3/4 border-r data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left sm:max-w-sm",
         right:
           "inset-y-0 right-0 h-full w-3/4  border-l data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right sm:max-w-sm",
@@ -75,7 +75,12 @@ const SheetContent = React.forwardRef<React.ElementRef<typeof SheetPrimitive.Con
         <SheetOverlay />
         <SheetPrimitive.Content
           ref={ref}
-          className={cn(sheetVariants({ side }), className)}
+          // Promien 40 px dla arkusza dolnego DOPISANY NA KONCU: callery podaja `rounded-t-3xl`
+          // (24 px) i przy 8 px odstepu od krawedzi taki rog "wchodzil" w zaokraglony rog ekranu
+          // (zgloszenie Nat 2026-09-11). 40 px jest w przyblizeniu koncentryczne z rogiem
+          // iPhone'a (~55 pt) odsunietym o 8 pt. twMerge: `rounded-*` na koncu wygrywa z
+          // `rounded-t-*` z callera, wiec 39 arkuszy nie trzeba ruszac.
+          className={cn(sheetVariants({ side }), className, side === "bottom" && "rounded-[40px]")}
           style={{ ...style, ...(dragHandlers?.style ?? {}) }}
           onTouchStart={dragHandlers?.onTouchStart}
           onTouchMove={dragHandlers?.onTouchMove}

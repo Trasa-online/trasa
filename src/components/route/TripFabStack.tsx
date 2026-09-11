@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronUp } from "lucide-react";
@@ -25,9 +25,15 @@ const SIZE = 56;      // 14 * 4 px - ten sam rozmiar co dotychczasowe kolka
 const GAP = 12;
 const BASE = 84;      // px nad dolna krawedzia (ponad dolnym paskiem CTA)
 
-export default function TripFabStack({ actions }: { actions: TripFab[] }) {
+export default function TripFabStack({ actions, startOpen = false }: { actions: TripFab[];
+  /** Rozwiniety od razu (np. pusty, swiezo utworzony wyjazd - "+" jest tam najwazniejszy;
+   *  prosba Nat 2026-09-11). Zmiana false->true po zaladowaniu danych tez rozwija; zwiniecie
+   *  przez usera jest ostateczne, dopoki znow nie tapnie. */
+  startOpen?: boolean;
+}) {
   const { t } = useTranslation("sharing");
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(startOpen);
+  useEffect(() => { if (startOpen) setOpen(true); }, [startOpen]);
   if (!actions.length) return null;
 
   const totalBadge = actions.reduce((n, a) => n + (a.badge ?? 0), 0);

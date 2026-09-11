@@ -74,7 +74,7 @@ export default function UserSearchDrawer({ open, onClose }: Props) {
     <div className="fixed inset-0 z-50 flex flex-col">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
 
-      <div {...dragProps} className="relative mt-auto mx-2 mb-2 bg-background rounded-3xl flex flex-col overflow-hidden" style={{ ...dragProps.style, height: "88dvh" }}>
+      <div {...dragProps} className="relative mt-auto mx-2 mb-2 bg-background rounded-[40px] flex flex-col overflow-hidden" style={{ ...dragProps.style, height: "88dvh" }}>
         {/* Handle */}
         <div className="flex justify-center pt-3 pb-1">
           <div className="h-1 w-10 rounded-full bg-border" />

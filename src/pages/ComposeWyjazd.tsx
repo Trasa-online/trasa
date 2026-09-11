@@ -963,7 +963,7 @@ export default function ComposeWyjazd() {
       {leftover && (
         <div className="fixed inset-0 z-[75] flex items-end justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200"
           onClick={() => { if (!leftoverBusy) finishNavigation(leftover.openEditor, leftover.routeId, leftover.tripPlaces); }}>
-          <div {...leftoverDrag.dragProps} className="w-[calc(100%-16px)] mx-2 mb-2 max-w-md bg-card rounded-3xl px-5 pt-6 pb-[max(20px,env(safe-area-inset-bottom))] shadow-2xl animate-in slide-in-from-bottom-4 duration-300"
+          <div {...leftoverDrag.dragProps} className="w-[calc(100%-16px)] mx-2 mb-2 max-w-md bg-card rounded-[40px] px-5 pt-6 pb-[max(20px,env(safe-area-inset-bottom))] shadow-2xl animate-in slide-in-from-bottom-4 duration-300"
             onClick={(e) => e.stopPropagation()}>
             <p className="text-lg font-black leading-tight">{t("compose.keep", { count: leftover.savePlaces.length })}</p>
             <p className="text-sm text-muted-foreground leading-snug mt-1.5">{t("save_aside")}</p>
@@ -1018,7 +1018,7 @@ export default function ComposeWyjazd() {
         >
           <div
             {...removeDrag.dragProps}
-            className="w-[calc(100%-16px)] mx-2 mb-2 max-w-md bg-card rounded-3xl px-5 pt-6 pb-[max(20px,env(safe-area-inset-bottom))] shadow-2xl animate-in slide-in-from-bottom-4 duration-300"
+            className="w-[calc(100%-16px)] mx-2 mb-2 max-w-md bg-card rounded-[40px] px-5 pt-6 pb-[max(20px,env(safe-area-inset-bottom))] shadow-2xl animate-in slide-in-from-bottom-4 duration-300"
             onClick={(e) => e.stopPropagation()}
           >
             <p className="text-lg font-black leading-tight">{t("confirm.remove_place_title")}</p>
@@ -1047,7 +1047,7 @@ export default function ComposeWyjazd() {
         >
           <div
             {...backDrag.dragProps}
-            className="w-[calc(100%-16px)] mx-2 mb-2 max-w-md bg-card rounded-3xl px-5 pt-6 pb-[max(20px,env(safe-area-inset-bottom))] shadow-2xl animate-in slide-in-from-bottom-4 duration-300"
+            className="w-[calc(100%-16px)] mx-2 mb-2 max-w-md bg-card rounded-[40px] px-5 pt-6 pb-[max(20px,env(safe-area-inset-bottom))] shadow-2xl animate-in slide-in-from-bottom-4 duration-300"
             onClick={(e) => e.stopPropagation()}
           >
             <p className="text-lg font-black leading-tight">{draftId ? t("confirm.save_title") : t("confirm.draft_title")}</p>

@@ -683,7 +683,7 @@ export const MyCollections = ({ showCreate = true }: { showCreate?: boolean } = 
         >
           <div
             {...confirmDrag.dragProps}
-            className="w-[calc(100%-16px)] mx-2 mb-2 max-w-sm bg-card rounded-3xl px-6 pt-6 pb-[max(24px,env(safe-area-inset-bottom))] flex flex-col gap-4 shadow-2xl animate-in slide-in-from-bottom-4 duration-300"
+            className="w-[calc(100%-16px)] mx-2 mb-2 max-w-sm bg-card rounded-[40px] px-6 pt-6 pb-[max(24px,env(safe-area-inset-bottom))] flex flex-col gap-4 shadow-2xl animate-in slide-in-from-bottom-4 duration-300"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start gap-3">

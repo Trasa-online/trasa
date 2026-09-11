@@ -808,7 +808,7 @@ const PlanWizard = () => {
         >
           <div
             {...dupDrag.dragProps}
-            className="w-[calc(100%-16px)] mx-2 mb-2 max-w-md bg-card rounded-3xl px-6 pt-7 pb-[max(24px,env(safe-area-inset-bottom))] flex flex-col gap-5 shadow-2xl animate-in slide-in-from-bottom-4 duration-300"
+            className="w-[calc(100%-16px)] mx-2 mb-2 max-w-md bg-card rounded-[40px] px-6 pt-7 pb-[max(24px,env(safe-area-inset-bottom))] flex flex-col gap-5 shadow-2xl animate-in slide-in-from-bottom-4 duration-300"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start gap-3">

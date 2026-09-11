@@ -408,7 +408,7 @@ const RouteSummaryDialog = ({
         {/* Guest auth upsell */}
         {showGuestAuth && (
           <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm">
-            <div {...guestDrag.dragProps} className="w-[calc(100%-16px)] mx-2 mb-2 max-w-sm bg-card rounded-3xl px-6 pt-8 pb-[max(24px,env(safe-area-inset-bottom))] flex flex-col gap-5 shadow-2xl animate-in slide-in-from-bottom-4 duration-300">
+            <div {...guestDrag.dragProps} className="w-[calc(100%-16px)] mx-2 mb-2 max-w-sm bg-card rounded-[40px] px-6 pt-8 pb-[max(24px,env(safe-area-inset-bottom))] flex flex-col gap-5 shadow-2xl animate-in slide-in-from-bottom-4 duration-300">
               <div className="text-center space-y-1">
                 <p className="text-2xl font-black">{t("summary.guest_title")}</p>
                 <p className="text-sm text-muted-foreground">{t("summary.guest_desc")}</p>
