@@ -256,6 +256,17 @@ body.trip{background:#FDF184}
 .tc h1{font-size:24px;font-weight:900;line-height:1.15;text-shadow:0 2px 6px rgba(0,0,0,.45)}
 .tc .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
 .tc .chips span{background:rgba(255,255,255,.15);border-radius:999px;padding:4px 10px;font-size:11px;color:rgba(255,255,255,.85)}
+/* Karta MIEJSCA (Figma "Udostępnianie wyjazdów oraz list" -> miejsce, 2026-09-11): ta sama
+   karta 9:16, co w zakladce Miejsca - kategoria w lewym gornym rogu, logo lokalu, nazwa,
+   adres z pinezka, plakietka wydarzenia i tagi. */
+.tc.place{height:auto;aspect-ratio:9/16;max-height:600px}
+.tc .catchip{position:absolute;left:14px;top:14px;background:#D6332B;color:#fff;font-size:13px;font-weight:700;border-radius:999px;padding:7px 12px}
+.tc .logo{width:56px;height:56px;border-radius:50%;object-fit:cover;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.25);margin-bottom:10px;display:block}
+.tc .addr{display:flex;align-items:center;gap:5px;font-size:14px;color:rgba(255,255,255,.85);margin-top:6px;text-shadow:0 1px 3px rgba(0,0,0,.45)}
+.tc .addr svg{width:14px;height:14px;flex:none}
+.tc .promo{display:inline-block;margin-top:8px;background:#F7941D;color:#fff;font-size:12px;font-weight:800;border-radius:999px;padding:4px 10px}
+.tc .ph0{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
+.tc .ph0 img{width:38%;opacity:.95}
 .day{display:flex;align-items:center;gap:8px;width:100%;margin:28px 0 8px}
 .day i{width:3px;height:16px;border-radius:2px;background:#EE5307;flex:none}
 .day p{margin:0;font-family:Sigmar,Inter,sans-serif;font-size:15px;line-height:1;color:#EE5307}
@@ -441,8 +452,9 @@ ${o.note ? `<p class="note">${esc(o.note)}</p>` : ""}</div></li>`;
 export default async function handler(req: Request): Promise<Response> {
   const { searchParams } = new URL(req.url);
   const isList = searchParams.get("t") === "list";
+  const isPlace = searchParams.get("t") === "place";
   const id = searchParams.get("id") ?? "";
-  const url = `${SITE}/${isList ? "l" : "r"}/${id}`;
+  const url = `${SITE}/${isPlace ? "p" : isList ? "l" : "r"}/${id}`;
 
   const missing = () => new Response(shell({
     title: "Treść niedostępna", desc: "Ta treść mogła zostać usunięta lub jest prywatna.", image: BRAND_IMG, url,
@@ -451,6 +463,54 @@ export default async function handler(req: Request): Promise<Response> {
   }), { status: 404, headers: { "Content-Type": "text/html; charset=utf-8" } });
 
   if (!UUID.test(id)) return missing();
+
+  // MIEJSCE (wizytowka) - link z "Udostępnij to miejsce" (Figma, 2026-09-11). Widoczne to, co
+  // przepuszcza RLS dla klucza anonimowego: aktywne miejsce + aktywny profil biznesowy.
+  if (isPlace) {
+    const [pl] = await rest(`places?id=eq.${id}&select=place_name,address,city,category,photo_url,gallery_urls,google_place_id,business_profiles(cover_image_url,logo_url,event_title,tags,gallery_urls)&limit=1`);
+    if (!pl) return missing();
+    const bp = Array.isArray(pl.business_profiles) ? pl.business_profiles[0] : pl.business_profiles;
+    const bizGallery: string[] = Array.isArray(bp?.gallery_urls) ? bp.gallery_urls.filter(Boolean) : [];
+    // Kolejnosc jak w aplikacji (enrichWithBusinessProfile): wlasne zdjecie lokalu > skurowana
+    // okladka > zdjecie spolecznosci. Bez Google.
+    const curated = typeof pl.photo_url === "string" && (pl.photo_url.includes("/place-photos-cache/manual/") || pl.photo_url.includes("/api/place-photo")) ? pl.photo_url : null;
+    const community = await communityPhotos([placeKey(pl.google_place_id, pl.place_name)]);
+    const rawPhoto = bp?.cover_image_url || bizGallery[0] || curated || first(pl.gallery_urls) || community.get(placeKey(pl.google_place_id, pl.place_name)) || null;
+    const cover = img(rawPhoto, 1200, 630);
+    const logo = img(bp?.logo_url, 112, 112);
+    const icon = iconFor(pl.category);
+    const cat = catLabel(pl.category);
+    const tags: string[] = (Array.isArray(bp?.tags) ? bp.tags : []).filter(Boolean).slice(0, 3);
+    const title = pl.place_name || "Miejsce";
+    const desc = [pl.address, cat && pl.category !== "other" ? cat : null, pl.city].filter(Boolean).join(" · ") || "Miejsce w spontaway";
+    const pin = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>`;
+
+    const body = `<div class="page">
+<div class="tc place">
+${cover ? `<img class="bg" src="${esc(cover)}" alt="">` : icon ? `<div class="ph0"><img src="${esc(icon)}" alt=""></div>` : ""}
+<div class="veil"></div>
+${cat && pl.category !== "other" ? `<span class="catchip">${esc(cat)}</span>` : ""}
+<div class="txt">
+${logo ? `<img class="logo" src="${esc(logo)}" alt="">` : ""}
+<h1>${esc(title)}</h1>
+${pl.address ? `<div class="addr">${pin}<span>${esc(pl.address)}</span></div>` : ""}
+${bp?.event_title ? `<span class="promo">${esc(bp.event_title)}</span>` : ""}
+${tags.length ? `<div class="chips">${tags.map((c: string) => `<span>${esc(c)}</span>`).join("")}</div>` : ""}
+</div></div>
+<a class="go" id="go" href="${TESTFLIGHT_URL}">Zobacz miejsce</a>
+<p class="tail">To miejsce znajdziesz w spontaway - aplikacji do odkrywania miejsc i planowania wyjazdów ze znajomymi.</p>
+</div>
+${choiceSheet()}`;
+    const ogSize = cover && isCrawler(req) ? await imageSize(cover) : null;
+    return new Response(shell({
+      title, desc, url, body, noun: "place", variant: "trip",
+      image: cover ?? OG_BANNER.url,
+      imageW: cover ? ogSize?.w : OG_BANNER.w,
+      imageH: cover ? ogSize?.h : OG_BANNER.h,
+    }), {
+      headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "public, s-maxage=60, stale-while-revalidate=600" },
+    });
+  }
 
   if (isList) {
     const [col] = await rest(`discovery_collections?id=eq.${id}&select=title,city,description,user_id&limit=1`);

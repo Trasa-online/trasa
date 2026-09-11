@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -13,6 +13,13 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { resolveStored } from "@/components/PlacePhoto";
 import { fetchUserLists, addPlaceToList, removePlaceFromList, createListWithPlace, quickSavePlace, listHasPlace, type UserList } from "@/lib/placeLists";
+import { buildShareUrl } from "@/lib/shareUrl";
+import type { MockPlace } from "@/components/plan-wizard/PlaceSwiper";
+
+// Arkusz udostepniania miejsca ladowany leniwie: ShareCard importuje SwipeCard z PlaceSwiper,
+// a PlaceSwiper importuje TEN plik - statyczny import zamknalby cykl modulow.
+const ShareCardPlace = lazy(() => import("@/components/share/ShareCard").then((m) => ({ default: m.ShareCardPlace })));
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // "Miejsce zapisane! · dodaj do wyjazdu" - drawer zapisu miejsca (redesign 2026-08-20).
 // Nagłówek + lista LIST usera (awatar + nazwa + "+"), prywatne z eyebrow "Prywatne".
@@ -159,14 +166,36 @@ export default function SavePlaceSheet({
     } finally { setBusyId(null); }
   };
 
-  const onShare = async () => {
+  // "Udostępnij to miejsce" (makieta Nat 2026-09-11, Figma "Udostępnianie wyjazdów oraz list"):
+  // wizytowka z bazy dostaje wlasny arkusz z karta i link spontaway.com/p/<id> (strona
+  // z podgladem w komunikatorach). Miejsce spoza bazy (surowy wynik Google) nie ma strony,
+  // wiec dla niego zostaje dotychczasowy link do Google Maps.
+  const [sharePlace, setSharePlace] = useState<MockPlace | null>(null);
+  const [shareLoading, setShareLoading] = useState(false);
+  const shareUrl = place?.place_id && UUID_RE.test(place.place_id) ? buildShareUrl(`/miejsce/${place.place_id}`) : null;
+  const systemShare = async (url: string) => {
     if (!place) return;
-    const url =
-      place.latitude && place.longitude
-        ? `https://www.google.com/maps/search/?api=1&query=${place.latitude},${place.longitude}`
-        : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([place.place_name, place.address, city].filter(Boolean).join(" "))}`;
     const res = await share({ title: place.place_name, text: place.place_name, url });
     if (res.ok) toast.success(res.method === "clipboard" ? t("save_sheet.link_copied") : t("save_sheet.shared"));
+  };
+  const onShare = async () => {
+    if (!place) return;
+    if (shareUrl && place.place_id) {
+      setShareLoading(true);
+      try {
+        // Import dynamiczny z tego samego powodu, co lazy() wyzej (cykl PlaceSwiper -> ten plik).
+        const { fetchEnrichedPlace } = await import("@/components/plan-wizard/PlaceSwiper");
+        const enriched = await fetchEnrichedPlace(place.place_id);
+        if (enriched) { setSharePlace(enriched); return; }
+      } catch (e) {
+        console.warn("[SavePlaceSheet] place share preview failed:", e instanceof Error ? e.message : e);
+      } finally { setShareLoading(false); }
+    }
+    const url = shareUrl ?? (
+      place.latitude && place.longitude
+        ? `https://www.google.com/maps/search/?api=1&query=${place.latitude},${place.longitude}`
+        : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([place.place_name, place.address, city].filter(Boolean).join(" "))}`);
+    await systemShare(url);
   };
 
   // Miniatura listy prowadzi do samej listy - arkusz zamykamy, zeby po powrocie nie wisial
@@ -274,9 +303,22 @@ export default function SavePlaceSheet({
 
         {/* Stopka: Udostępnij to miejsce */}
         <div className="shrink-0 px-5 pt-2 pb-safe-4">
-          <button type="button" onClick={onShare} className="w-full h-12 rounded-2xl bg-orange-100 text-foreground font-semibold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform">
-            <Share2 className="h-4 w-4" />{t("save_sheet.share")}</button>
+          <button type="button" onClick={onShare} disabled={shareLoading} className="w-full h-12 rounded-2xl bg-orange-100 text-foreground font-semibold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-70">
+            {shareLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Share2 className="h-4 w-4" />}{t("save_sheet.share")}</button>
         </div>
+
+        {/* Arkusz udostepniania z karta miejsca (nad tym arkuszem - z-95). */}
+        {sharePlace && shareUrl && (
+          <Suspense fallback={null}>
+            <ShareCardPlace
+              place={sharePlace}
+              city={sharePlace.city ?? city}
+              shareUrl={shareUrl}
+              onShare={() => void systemShare(shareUrl)}
+              onClose={() => setSharePlace(null)}
+            />
+          </Suspense>
+        )}
       </SheetContent>
     </Sheet>
   );

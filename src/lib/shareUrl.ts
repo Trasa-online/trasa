@@ -6,7 +6,11 @@ export const buildShareUrl = (path: string): string => {
   // api/share.ts. Tylko dzieki temu link ma wlasny podglad w komunikatorach: adres z hashem
   // (/#/route/<id>) nigdy nie dociera do serwera, wiec robot Facebooka widzial dla kazdego
   // linku ten sam ogolny baner marki. Reszta sciezek zostaje na hashu.
-  const m = /^\/(route|lista)\/([0-9a-f-]{36})$/i.exec(cleanPath);
-  if (m) return `${SHARE_BASE_URL}/${m[1].toLowerCase() === "route" ? "r" : "l"}/${m[2]}`;
+  // /miejsce/<id> (wizytowka) -> /p/<id> (2026-09-11).
+  const m = /^\/(route|lista|miejsce)\/([0-9a-f-]{36})$/i.exec(cleanPath);
+  if (m) {
+    const kind = m[1].toLowerCase();
+    return `${SHARE_BASE_URL}/${kind === "route" ? "r" : kind === "lista" ? "l" : "p"}/${m[2]}`;
+  }
   return `${SHARE_BASE_URL}/#${cleanPath}`;
 };

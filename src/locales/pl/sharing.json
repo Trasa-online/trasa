@@ -213,7 +213,8 @@
     "and_more_one": "…i jeszcze jedno miejsce",
     "link_heading": "Udostępnij link do wyjazdu",
     "first_day": "Dzień 1",
-    "link_heading_list": "Udostępnij link do listy"
+    "link_heading_list": "Udostępnij link do listy",
+    "link_heading_place": "Udostępnij link do miejsca"
   },
   "target": {
     "more_apps": "Więcej aplikacji",

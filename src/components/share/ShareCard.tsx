@@ -10,6 +10,7 @@ import { localizeTag, verdictOf } from "@/lib/routeTags";
 import { subcategoryLabelLocalized } from "@/lib/categories";
 import TrasaBigCard from "@/components/home/TrasaBigCard";
 import { buildShareTargets, ShareTargetButton } from "@/components/share/shareTargets";
+import { SwipeCard, type MockPlace } from "@/components/plan-wizard/PlaceSwiper";
 import { rowOwnPhotos } from "@/lib/placeUserPhotos";
 
 // UDOSTEPNIANIE LISTY / WYJAZDU - arkusz z podgladem i kanalami (wzor: Pinterest, prosba Nat
@@ -209,6 +210,35 @@ function ShareSheet({ children, onClose, onShare, shareUrl, shareTitle, strip, s
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * Karta MIEJSCA (Figma "Udostępnianie wyjazdów oraz list" -> miejsce, makieta Nat 2026-09-11):
+ * DOKLADNIE ta sama karta 9:16, ktora user widzi w zakladce Miejsca (SwipeCard w trybie
+ * statycznym) - odbiorca linku dostaje pod nim te sama wizytowke. Zolte tlo, "udostępnij",
+ * "udostępnij link do miejsca" i rzad kanalow daje wspolny ShareSheet.
+ */
+export function ShareCardPlace({ place, city, onClose, onShare, shareUrl }: {
+  place: MockPlace;
+  city: string;
+  onClose: () => void;
+  onShare?: () => void;
+  shareUrl?: string;
+}) {
+  const { t } = useTranslation("sharing");
+  const noop = () => {};
+  return (
+    <ShareSheet onClose={onClose} onShare={onShare} shareUrl={shareUrl} shareTitle={place.place_name}
+      plainPreview linkHeading={t("share.link_heading_place")}>
+      <div className="flex h-full w-full items-center justify-center">
+        {/* SwipeCard jest `absolute inset-0` - potrzebuje pudelka 9:16 o znanej wysokosci. */}
+        <div className="relative h-full max-w-full" style={{ aspectRatio: "9 / 16" }}>
+          <SwipeCard place={place} city={city} scrollMode isTop offset={0} skipGoogleFetch
+            onLike={noop} onSkip={noop} onTap={noop} />
+        </div>
+      </div>
+    </ShareSheet>
   );
 }
 

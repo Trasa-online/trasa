@@ -755,23 +755,22 @@ const TravelerProfile = () => {
         ) : undefined}
       />
 
-      {/* Foldery kategorii - jak w Eksploracji: widoczne dopoki fraza jest pusta. */}
+      {/* Wyniki zamiast tresci profilu - ten sam komponent co w Eksploracji. Foldery kategorii
+          sa WEWNATRZ obszaru przewijania (prosba Nat 2026-09-11, tak jak w Eksploracji od
+          2026-09-10): przyklejone nad wynikami zabieraly gore ekranu, ktorego tu jest malo. */}
       {searchOpen && (
-        <div
-          className={cn(
-            "shrink-0 overflow-hidden border-b border-border/40 transition-all duration-200 ease-out",
-            foldersVisible ? "max-h-[160px] opacity-100" : "max-h-0 opacity-0 border-b-0",
-          )}
-        >
-          <p className="px-4 pt-3 text-sm font-bold text-foreground">{t("search.by_category")}</p>
-          <SearchCategoryRow value={searchCat} onChange={setSearchCat} />
-          <div className="h-3" />
-        </div>
-      )}
-
-      {/* Wyniki zamiast tresci profilu - ten sam komponent co w Eksploracji. */}
-      {searchOpen && (
-        <div className="flex-1 min-h-0 overflow-y-auto px-4 pt-4 pb-[calc(7rem+env(safe-area-inset-bottom,0px))]" style={{ WebkitOverflowScrolling: "touch" }}>
+        <div className="flex-1 min-h-0 overflow-y-auto pb-[calc(7rem+env(safe-area-inset-bottom,0px))]" style={{ WebkitOverflowScrolling: "touch" }}>
+          <div
+            className={cn(
+              "overflow-hidden border-b border-border/40 transition-all duration-200 ease-out",
+              foldersVisible ? "max-h-[160px] opacity-100 mb-4" : "max-h-0 opacity-0 border-b-0",
+            )}
+          >
+            <p className="px-4 pt-3 text-sm font-bold text-foreground">{t("search.by_category")}</p>
+            <SearchCategoryRow value={searchCat} onChange={setSearchCat} />
+            <div className="h-3" />
+          </div>
+          <div className="px-4">
           <DiscoveryFeed
             searchOnly
             active={false}
@@ -780,6 +779,7 @@ const TravelerProfile = () => {
             searchQuery={searchQuery}
             searchCategory={searchCat}
           />
+          </div>
         </div>
       )}
 

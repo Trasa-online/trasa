@@ -178,6 +178,43 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ results }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    // Miejsce po IDENTYFIKATORZE z podkladu mapy (tapniecie w etykiete lokalu w Maps JS daje
+    // placeId za darmo). Tylko pola podstawowe (Basic Data = najtansza pula), bez zdjec i opinii.
+    // Cache w place_details_cache pod kluczem pid:<id> przez 7 dni - ten sam lokal tapniety przez
+    // kogokolwiek drugi raz nic nie kosztuje.
+    if (body.action === "placeid") {
+      const pid = typeof body.place_id === "string" ? body.place_id.trim() : "";
+      if (!pid || pid.length > 300) {
+        return new Response(JSON.stringify({ result: null }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      const pkey = `pid:${pid}`;
+      const { data: hit } = await sb.from("place_details_cache").select("data, cached_at").eq("cache_key", pkey).maybeSingle();
+      if (hit && (Date.now() - new Date(hit.cached_at).getTime()) / 3_600_000 < CACHE_TTL_HOURS) {
+        return new Response(JSON.stringify(hit.data), { headers: { ...corsHeaders, "Content-Type": "application/json", "X-Cache": "HIT" } });
+      }
+      if (!(await consumeGoogleQuota(sb, 1))) {
+        return new Response(JSON.stringify({ result: null, quota_exceeded: true }), { headers: { ...corsHeaders, "Content-Type": "application/json", "X-Quota": "EXCEEDED" } });
+      }
+      const res = await fetch(`${BASE}/place/details/json?place_id=${encodeURIComponent(pid)}&fields=place_id,name,formatted_address,geometry,types&key=${apiKey}&language=pl`, { headers: { Referer: REFERER } });
+      const data = await res.json();
+      const r = data?.result;
+      const payload = {
+        result: r ? {
+          name: r.name ?? "",
+          full_address: r.formatted_address ?? "",
+          latitude: r.geometry?.location?.lat ?? null,
+          longitude: r.geometry?.location?.lng ?? null,
+          types: r.types ?? [],
+          place_id: r.place_id ?? pid,
+        } : null,
+      };
+      if (payload.result) {
+        sb.from("place_details_cache").upsert({ cache_key: pkey, data: payload, cached_at: new Date().toISOString() }, { onConflict: "cache_key" })
+          .then(() => {}, (e: Error) => console.error("placeid cache write:", e.message));
+      }
+      return new Response(JSON.stringify(payload), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     if (body.action === "textsearch") {
       // Opcjonalne nakierowanie na punkt (mapa z pinezka): Google szuka nazwy NAJPIERW w poblizu,
       // wiec "Yacht Beach Bar" trafia w ten we Vlorze, a nie w pierwszy lepszy na swiecie.
