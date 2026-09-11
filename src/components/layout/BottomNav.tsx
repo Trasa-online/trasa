@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { useNavigate, useLocation } from "react-router-dom";
 import { NavLink } from "@/components/NavLink";
 import CreateFlowSheet from "@/components/create/CreateFlowSheet";
-import { X, MapPin, Heart, ArrowLeft, Layers, Home, Search, User } from "lucide-react";
+import { X, MapPin, Heart, ArrowLeft, Layers } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { getTodayLikes, type ExploreLike } from "@/lib/exploreLikes";
@@ -283,15 +283,15 @@ const BottomNav = () => {
           <div className="flex items-center gap-1.5 h-14">
 
           {/* IA 2026-09-11 (makieta Nat): Feed · Eksploruj · + · Miejsca · Profil. Tylko native
-              (web/PWA ma B2C za waitlista). Ikony liniowe jak w makiecie - w brandowym zestawie
-              SVG nie ma domu ani miejsc, a mieszanie wypelnionych z liniowymi w jednym pasku
-              rozjezdza sie wizualnie. replace: zakladki NIE odkladaja historii (tab bar). */}
+              (web/PWA ma B2C za waitlista). Ikony z BRANDOWEGO zestawu SVG (public/Ikona_*.svg,
+              CSS mask + currentColor): Nat dorysowala dom i pinezke tego samego dnia, wiec caly
+              pasek jest w jednym jezyku. replace: zakladki NIE odkladaja historii (tab bar). */}
           {isNative && (
             <>
               <NavLink to="/feed" replace end={false} data-ob="nav-feed" className={`${NAV_ITEM} ${NAV_ITEM_IDLE}`} activeClassName={NAV_ITEM_ACTIVE}>
                 {() => (
                   <>
-                    <Home className="h-5 w-5" strokeWidth={2.1} />
+                    <NavIcon src="/Ikona_Home.svg" />
                     <span className="text-[9px] font-semibold leading-tight mt-0.5">{t("tabs.feed")}</span>
                   </>
                 )}
@@ -299,7 +299,7 @@ const BottomNav = () => {
               <NavLink to="/eksploruj" replace end={false} data-ob="nav-eksploruj" className={`${NAV_ITEM} ${NAV_ITEM_IDLE}`} activeClassName={NAV_ITEM_ACTIVE}>
                 {() => (
                   <>
-                    <Search className="h-5 w-5" strokeWidth={2.1} />
+                    <NavIcon src="/Ikona_Eksploracja.svg" />
                     <span className="text-[9px] font-semibold leading-tight mt-0.5">{t("tabs.explore")}</span>
                   </>
                 )}
@@ -357,7 +357,7 @@ const BottomNav = () => {
             <NavLink to="/miejsca" replace end={false} data-ob="nav-miejsca" className={`${NAV_ITEM} ${NAV_ITEM_IDLE}`} activeClassName={NAV_ITEM_ACTIVE}>
               {() => (
                 <>
-                  <MapPin className="h-5 w-5" strokeWidth={2.1} />
+                  <NavIcon src="/Ikona_Miejsca.svg" />
                   <span className="text-[9px] font-semibold leading-tight mt-0.5">{t("tabs.places")}</span>
                 </>
               )}
@@ -374,7 +374,7 @@ const BottomNav = () => {
           >
             {() => (
               <>
-                {isNative ? <User className="h-5 w-5" strokeWidth={2.1} /> : <NavIcon src="/Ikona_Profil.svg" />}
+                <NavIcon src="/Ikona_Profil.svg" />
                 <span className="text-[9px] font-semibold leading-tight mt-0.5">{t("common:nav.profile")}</span>
               </>
             )}
