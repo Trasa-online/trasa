@@ -1,5 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 import { FileText } from "lucide-react";
+import { haptics } from "@/hooks/useHaptics";
+import { BrandIcon } from "@/components/BrandIcon";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -153,20 +155,29 @@ function GridCover({ url, fill, onRatio }: { url: string | null; fill?: boolean;
 
 // Karuzela zdjec wyjazdu w kafelku. Pudelko ma proporcje OKLADKI (mierzone po jej zaladowaniu;
 // do tego czasu 3:4), kolejne zdjecia sa kadrowane do niego (object-cover) - jak na Pintereście.
-// data-no-swipe: przewijanie w bok nie moze cofac ekranu ani przelaczac zakladek (CLAUDE.md).
-function TileCarousel({ photos }: { photos: string[] }) {
+//
+// Przewijanie jest NATYWNE (overflow-x + snap), ale z dwoma zabezpieczeniami, bez ktorych
+// swipe na telefonie otwieral wyjazd zamiast przewinac zdjecia (zgloszenie Nat 2026-09-11):
+//  1. Zadnej zmiany DOM w chwili dotkniecia. Wczesniej pointerdown dogrywal zdjecia slajdow,
+//     czyli przebudowywal scroller W TRAKCIE rozpoznawania gestu - WebKit przerywal wtedy
+//     przewijanie i dostarczal click. Teraz na starcie sa dwa slajdy (okladka + nastepny),
+//     a reszta dogrywa sie dopiero po pierwszym zdarzeniu scroll, gdy gest juz trwa.
+//  2. Ruch palca w poziomie > 8 px gasi click na kafelku (onClickCapture) - nawet gdyby
+//     przegladarka mimo wszystko go wygenerowala.
+// Zmiana zdjecia = delikatny tick haptyczny. data-no-swipe: przewijanie w bok nie moze cofac
+// ekranu ani przelaczac zakladek (CLAUDE.md).
+function TileCarousel({ photos, swipedRef }: { photos: string[]; swipedRef: React.MutableRefObject<boolean> }) {
   const [ratio, setRatio] = useState<number | null>(null);
   const [idx, setIdx] = useState(0);
-  // Kolejne zdjecia dociagamy dopiero, gdy user DOTKNIE karuzeli. Osiem kafelkow x szesc
-  // zdjec = 48 pobran na wejsciu w Eksploruj - siatka ladowala sie wyraznie dluzej,
-  // a wiekszosci tych zdjec nikt by nie przewinal.
   const [engaged, setEngaged] = useState(false);
   const trackRef = useRef<HTMLDivElement>(null);
+  const touchStart = useRef<{ x: number; y: number } | null>(null);
   const onScroll = () => {
     const el = trackRef.current;
     if (!el || !el.clientWidth) return;
-    const i = Math.round(el.scrollLeft / el.clientWidth);
-    if (i !== idx) setIdx(Math.max(0, Math.min(photos.length - 1, i)));
+    if (!engaged) setEngaged(true);
+    const i = Math.max(0, Math.min(photos.length - 1, Math.round(el.scrollLeft / el.clientWidth)));
+    if (i !== idx) { setIdx(i); haptics.selection(); }
   };
   return (
     <div className="relative w-full bg-[#fcede3]" style={{ aspectRatio: ratio ? String(ratio) : "3 / 4" }}>
@@ -174,14 +185,17 @@ function TileCarousel({ photos }: { photos: string[] }) {
         ref={trackRef}
         data-no-swipe
         onScroll={onScroll}
-        onPointerDown={() => setEngaged(true)}
-        onTouchStart={() => setEngaged(true)}
+        onTouchStart={(e) => { swipedRef.current = false; touchStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }; }}
+        onTouchMove={(e) => {
+          const st = touchStart.current; if (!st) return;
+          if (Math.abs(e.touches[0].clientX - st.x) > 8) swipedRef.current = true;
+        }}
         className="absolute inset-0 flex overflow-x-auto snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-        style={{ overscrollBehaviorX: "contain", WebkitOverflowScrolling: "touch" }}
+        style={{ overscrollBehaviorX: "contain", WebkitOverflowScrolling: "touch", touchAction: "pan-x pan-y" }}
       >
         {photos.map((u, i) => (
           <div key={`${u}-${i}`} className="relative h-full w-full shrink-0 snap-center">
-            {(i === 0 || engaged) && <GridCover url={u} fill onRatio={i === 0 ? setRatio : undefined} />}
+            {(i <= 1 || engaged) && <GridCover url={u} fill onRatio={i === 0 ? setRatio : undefined} />}
           </div>
         ))}
       </div>
@@ -190,6 +204,37 @@ function TileCarousel({ photos }: { photos: string[] }) {
         {photos.map((_, i) => (
           <span key={i} className={`h-1.5 rounded-full transition-all ${i === idx ? "w-3.5 bg-white" : "w-1.5 bg-white/60"}`} />
         ))}
+      </div>
+    </div>
+  );
+}
+
+// Kafelek: osobny komponent, bo kazdy potrzebuje wlasnej flagi "byl swipe" dla karuzeli.
+function GridTile({ it, onOpen }: { it: GridItem; onOpen: () => void }) {
+  const { t } = useTranslation("homefeed");
+  const swipedRef = useRef(false);
+  return (
+    <div className="w-full">
+      {/* div + role, nie <button>: w srodku jest przewijana karuzela, a Safari nie lubi
+          przewijania wewnatrz przycisku. Tap (bez przewiniecia) otwiera wyjazd / liste. */}
+      <div
+        role="button" tabIndex={0}
+        onClickCapture={(e) => { if (swipedRef.current) { e.preventDefault(); e.stopPropagation(); swipedRef.current = false; } }}
+        onClick={onOpen}
+        onKeyDown={(e) => { if (e.key === "Enter") onOpen(); }}
+        className="group block w-full text-left active:opacity-90 transition-opacity"
+      >
+        <div className="relative w-full overflow-hidden rounded-2xl bg-[#fcede3]">
+          {it.photos.length > 1 ? <TileCarousel photos={it.photos} swipedRef={swipedRef} /> : <GridCover url={it.cover} />}
+        </div>
+        {/* Typ (wyjazd / lista) jako mala, wyciszona ikona PRZED nazwa - w rogu okladki
+            odbierala jej uroku (prosba Nat 2026-09-11). */}
+        <p className="mt-1.5 flex items-start gap-1.5 px-0.5 text-[13px] font-semibold leading-snug text-foreground">
+          {it.kind === "trip"
+            ? <BrandIcon src="/Ikona_Trasy.svg" className="mt-[3px] h-3 w-3 text-muted-foreground" label={t("grid.trip")} />
+            : <FileText className="mt-[2px] h-3.5 w-3.5 shrink-0 text-muted-foreground" strokeWidth={2.2} aria-label={t("grid.list")} />}
+          <span className="line-clamp-2">{it.title}</span>
+        </p>
       </div>
     </div>
   );
@@ -249,31 +294,11 @@ export default function ExploreGrid() {
   return (
     <div className="grid grid-cols-2 items-start gap-2">
       {columns.map((col, ci) => (
-      <div key={ci} className="flex min-w-0 flex-col gap-4">
-      {col.map((it) => {
-        const open = () => navigate(it.kind === "trip" ? `/route/${it.id}` : `/lista/${it.id}`);
-        return (
-          <div key={`${it.kind}-${it.id}`} className="w-full">
-            {/* div + role, nie <button>: w srodku jest przewijana karuzela, a Safari nie lubi
-                przewijania wewnatrz przycisku. Tap (bez przewiniecia) otwiera wyjazd / liste. */}
-            <div role="button" tabIndex={0} onClick={open} onKeyDown={(e) => { if (e.key === "Enter") open(); }}
-              className="group block w-full text-left active:opacity-90 transition-opacity">
-              <div className="relative w-full overflow-hidden rounded-2xl bg-[#fcede3]">
-                {it.photos.length > 1 ? <TileCarousel photos={it.photos} /> : <GridCover url={it.cover} />}
-                {/* Ikona typu w rogu - to samo, co w kategoriach wyszukiwarki (znak "S" = wyjazd,
-                    kartka = lista). Bez napisu: ikona wystarczy, a nie zaslania okladki. */}
-                <span className="absolute left-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-white/95 shadow-sm" aria-label={it.kind === "trip" ? t("grid.trip") : t("grid.list")}>
-                  {it.kind === "trip"
-                    ? <img src="/spontaway-symbol.png" alt="" className="h-4 w-[18px] object-contain" draggable={false} />
-                    : <FileText className="h-4 w-4 text-foreground" strokeWidth={2.2} />}
-                </span>
-              </div>
-              <p className="mt-1.5 px-0.5 text-[13px] font-semibold leading-snug text-foreground line-clamp-2">{it.title}</p>
-            </div>
-          </div>
-        );
-      })}
-      </div>
+        <div key={ci} className="flex min-w-0 flex-col gap-4">
+          {col.map((it) => (
+            <GridTile key={`${it.kind}-${it.id}`} it={it} onOpen={() => navigate(it.kind === "trip" ? `/route/${it.id}` : `/lista/${it.id}`)} />
+          ))}
+        </div>
       ))}
     </div>
   );
