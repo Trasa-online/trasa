@@ -103,6 +103,13 @@
     "color": "Kolor",
     "color_desc": "Domyślnie pomarańcz. Pipeta otwiera pełną paletę - wybierz, jaki chcesz.",
     "color_default": "Pomarańcz (domyślny)",
-    "color_custom": "Dowolny kolor"
+    "color_custom": "Dowolny kolor",
+    "rainbow": "Tęcza",
+    "reward": "Nagroda",
+    "locked_hint": "Zaproś {{goal}} osoby, żeby odblokować ({{invited}} z {{goal}})",
+    "unlocked_hint": "Odblokowana - dzięki za zaproszenia!",
+    "locked_toast": "Ta nakładka czeka na Ciebie po zaproszeniu jeszcze {{left}} osób",
+    "locked_cta": "Zaproś",
+    "locked_error": "Ta nakładka jest jeszcze zablokowana"
   }
 }

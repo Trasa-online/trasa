@@ -1,7 +1,8 @@
 import { useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Check, Pipette } from "lucide-react";
+import { Check, Lock, Pipette } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -33,7 +34,20 @@ export default function AvatarFrameSheet({ open, onOpenChange, userId }: { open:
   const { t } = useTranslation("settings");
   const queryClient = useQueryClient();
   const { data: me } = useMyAvatarFrame(userId, open);
+  const navigate = useNavigate();
   const colorInput = useRef<HTMLInputElement>(null);
+  // Ktore nakladki sa odblokowane (nagroda za zaproszenia) - liczy baza, UI tylko pokazuje.
+  const { data: unlocks } = useQuery({
+    queryKey: ["frame-unlocks", userId],
+    enabled: open && !!userId,
+    queryFn: async () => {
+      const { data, error } = await (supabase as any).rpc("my_frame_unlocks");
+      if (error) throw error;
+      return (data ?? []) as { frame: string; unlocked: boolean; invited: number; goal: number }[];
+    },
+  });
+  const unlockOf = (id: AvatarFrameId | null) => (id ? unlocks?.find((u) => u.frame === id) : undefined);
+  const isLocked = (id: AvatarFrameId | null) => !!id && unlocks !== undefined && unlockOf(id)?.unlocked === false;
   const current: AvatarFrameId | null = isAvatarFrame(me?.avatar_frame) ? me!.avatar_frame : null;
   const color = isFrameColor(me?.avatar_frame_color) ? me!.avatar_frame_color! : DEFAULT_FRAME_COLOR;
   const customColor = !FRAME_SWATCHES.includes(color);
@@ -45,10 +59,24 @@ export default function AvatarFrameSheet({ open, onOpenChange, userId }: { open:
     queryClient.invalidateQueries({ queryKey: ["public-profile"] });
   };
   const chooseFrame = async (frame: AvatarFrameId | null) => {
+    if (isLocked(frame)) {
+      // Zablokowana nagroda: powiedz, ile brakuje, i zaprowadz do zaproszen (karta na profilu).
+      haptics.error();
+      const u = unlockOf(frame);
+      toast(t("frames.locked_toast", { left: Math.max(0, (u?.goal ?? 3) - (u?.invited ?? 0)) }), {
+        action: { label: t("frames.locked_cta"), onClick: () => { onOpenChange(false); navigate("/moj-profil"); } },
+      });
+      return;
+    }
     haptics.selection();
     queryClient.setQueryData(["avatar-frame-sheet", userId], (old: any) => ({ ...(old ?? {}), avatar_frame: frame }));
     const { error } = await (supabase as any).from("profiles").update({ avatar_frame: frame }).eq("id", userId);
-    if (error) { toast.error(t("frames.save_failed")); return; }
+    if (error) {
+      // Baza odrzuca zablokowana nakladke (trigger) - nawet gdyby UI sie pomylil.
+      queryClient.invalidateQueries({ queryKey: ["avatar-frame-sheet", userId] });
+      toast.error(String(error.message).includes("frame_locked") ? t("frames.locked_error") : t("frames.save_failed"));
+      return;
+    }
     invalidateAll();
     toast.success(frame ? t("frames.saved") : t("frames.removed"));
   };
@@ -63,9 +91,9 @@ export default function AvatarFrameSheet({ open, onOpenChange, userId }: { open:
     invalidateAll();
   };
 
-  const options: { id: AvatarFrameId | null; label: string }[] = [
+  const options: { id: AvatarFrameId | null; label: string; reward?: boolean }[] = [
     { id: null, label: t("frames.none") },
-    ...AVATAR_FRAMES.map((f) => ({ id: f.id as AvatarFrameId | null, label: t(f.labelKey) })),
+    ...AVATAR_FRAMES.map((f) => ({ id: f.id as AvatarFrameId | null, label: t(f.labelKey), reward: f.reward })),
   ];
 
   return (
@@ -77,19 +105,35 @@ export default function AvatarFrameSheet({ open, onOpenChange, userId }: { open:
         <div className="mt-4 divide-y divide-border/40">
           {options.map((o) => {
             const active = current === o.id;
+            const locked = isLocked(o.id);
+            const u = unlockOf(o.id);
             return (
-              <button key={o.id ?? "none"} onClick={() => void chooseFrame(o.id)} className="flex w-full items-center gap-4 py-3 text-left active:bg-muted/40 transition-colors">
-                <span className="relative h-14 w-14 shrink-0">
+              <button key={o.id ?? "none"} onClick={() => void chooseFrame(o.id)} aria-disabled={locked} className="flex w-full items-center gap-4 py-3 text-left active:bg-muted/40 transition-colors">
+                <span className={`relative h-14 w-14 shrink-0 ${locked ? "opacity-60 grayscale-[0.3]" : ""}`}>
                   <AvatarFrame kind={o.id} color={color} size={56} />
                   <Avatar className="h-14 w-14">
                     <AvatarImage src={avatarSrc(me?.avatar_url)} className="object-cover bg-orange-100" />
                     <AvatarFallback className="bg-orange-100 text-primary text-xl font-black">{(me?.first_name ?? "?").charAt(0).toUpperCase()}</AvatarFallback>
                   </Avatar>
                 </span>
-                <span className="min-w-0 flex-1 text-[15px] font-semibold text-foreground">{o.label}</span>
-                <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border ${active ? "border-primary bg-primary text-white" : "border-border"}`}>
-                  {active && <Check className="h-3.5 w-3.5" strokeWidth={3} />}
+                <span className="min-w-0 flex-1">
+                  <span className="flex items-center gap-2 text-[15px] font-semibold text-foreground">
+                    {o.label}
+                    {o.reward && <span className="rounded-full bg-[#FDF184] px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-[#5B2C06]">{t("frames.reward")}</span>}
+                  </span>
+                  {o.reward && u && (
+                    <span className="block text-[12px] text-muted-foreground">
+                      {locked ? t("frames.locked_hint", { invited: u.invited, goal: u.goal }) : t("frames.unlocked_hint")}
+                    </span>
+                  )}
                 </span>
+                {locked ? (
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-secondary"><Lock className="h-3.5 w-3.5 text-muted-foreground" /></span>
+                ) : (
+                  <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border ${active ? "border-primary bg-primary text-white" : "border-border"}`}>
+                    {active && <Check className="h-3.5 w-3.5" strokeWidth={3} />}
+                  </span>
+                )}
               </button>
             );
           })}

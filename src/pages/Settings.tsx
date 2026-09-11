@@ -746,6 +746,7 @@ const Settings = () => {
           {displayName && <p className="text-base font-bold">{displayName}</p>}
           <button
             onClick={() => setFramesOpen(true)}
+            aria-label={t("customize.title")}
             className="flex items-center gap-2.5 rounded-full bg-secondary pl-1.5 pr-4 py-1.5 text-sm font-semibold text-foreground active:scale-[0.97] transition-transform"
           >
             <span className="relative h-8 w-8 shrink-0">

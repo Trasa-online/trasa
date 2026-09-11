@@ -162,8 +162,8 @@
   "referral": {
     "title": "Zapraszaj znajomych",
     "title_done": "Dzięki! Masz komplet",
-    "desc": "Spontaway jest lepsze z Twoimi ludźmi! Zaproś {{count}} osoby, a dostaniecie dostęp do nowości przed premierą aplikacji.",
-    "desc_done": "Twoi znajomi są już w środku. Nowości zobaczycie jako pierwsi, zanim trafią do wszystkich.",
+    "desc": "Spontaway jest lepsze z Twoimi ludźmi! Zaproś {{count}} osoby i odblokuj unikalną nakładkę na Twój awatar!",
+    "desc_done": "Twoi znajomi są już w środku, a Twoja nakładka czeka w Ustawieniach → Customizuj.",
     "progress": "{{invited}} z {{goal}}",
     "share_cta": "Wyślij zaproszenie",
     "share_title": "Wchodzisz w spontaway?",

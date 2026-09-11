@@ -160,8 +160,8 @@
   "referral": {
     "title": "Invite your friends",
     "title_done": "Thank you! That's the full set",
-    "desc": "Spontaway is better with your people! Invite {{count}} friends and you'll all get new features before the app launches.",
-    "desc_done": "Your friends are in. You'll all see new features first, before everyone else.",
+    "desc": "Spontaway is better with your people! Invite {{count}} friends and unlock a unique overlay for your avatar!",
+    "desc_done": "Your friends are in, and your overlay is waiting in Settings → Customise.",
     "progress": "{{invited}} of {{goal}}",
     "share_cta": "Send an invite",
     "share_title": "Coming to spontaway?",

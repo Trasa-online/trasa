@@ -103,6 +103,13 @@
     "color": "Colour",
     "color_desc": "Orange by default. The picker opens the full palette - choose any colour you like.",
     "color_default": "Orange (default)",
-    "color_custom": "Any colour"
+    "color_custom": "Any colour",
+    "rainbow": "Rainbow",
+    "reward": "Reward",
+    "locked_hint": "Invite {{goal}} people to unlock ({{invited}} of {{goal}})",
+    "unlocked_hint": "Unlocked - thanks for the invites!",
+    "locked_toast": "This overlay unlocks after you invite {{left}} more people",
+    "locked_cta": "Invite",
+    "locked_error": "This overlay is still locked"
   }
 }
