@@ -449,6 +449,9 @@ export default function SharedList() {
     longitude: pin.longitude ?? null,
     photo_url: pin.photo_url ?? null,
     place_id: pin.place_id ?? null,
+    // Identyfikator Google jedzie z miejscem: udostepnienie (migawka) i galeria miejsca
+    // rozpoznaja po nim to samo miejsce w innych listach i wyjazdach.
+    google_place_id: pin.google_place_id ?? null,
   });
   const openSavePlace = (pin: any) => setSavePlace(itemToPlace(pin));
   // Tap bookmarka: zapisane -> odzapisz (toast+cofnij); niezapisane -> otworz drawer zapisu.

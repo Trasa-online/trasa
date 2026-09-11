@@ -167,35 +167,59 @@ export default function SavePlaceSheet({
   };
 
   // "Udostępnij to miejsce" (makieta Nat 2026-09-11, Figma "Udostępnianie wyjazdów oraz list"):
-  // wizytowka z bazy dostaje wlasny arkusz z karta i link spontaway.com/p/<id> (strona
-  // z podgladem w komunikatorach). Miejsce spoza bazy (surowy wynik Google) nie ma strony,
-  // wiec dla niego zostaje dotychczasowy link do Google Maps.
-  const [sharePlace, setSharePlace] = useState<MockPlace | null>(null);
+  // KAZDE miejsce dostaje wlasny arkusz z karta i link spontaway.com/p/<id> (strona z podgladem
+  // w komunikatorach). Wizytowka z bazy -> id z `places` i pelne dane (logo, promocja, tagi).
+  // Miejsce spoza bazy (z listy, wyjazdu, wyniku Google) -> MIGAWKA w `shared_places`
+  // (jedna na usera i miejsce, wiec ponowne udostepnienie oddaje ten sam link). Pierwsza
+  // wersja obslugiwala tylko wizytowki - z listy otwieral sie systemowy arkusz z linkiem do
+  // Google Maps (zgloszenie Nat 2026-09-11).
+  const [shareState, setShareState] = useState<{ place: MockPlace; url: string } | null>(null);
   const [shareLoading, setShareLoading] = useState(false);
-  const shareUrl = place?.place_id && UUID_RE.test(place.place_id) ? buildShareUrl(`/miejsce/${place.place_id}`) : null;
   const systemShare = async (url: string) => {
     if (!place) return;
     const res = await share({ title: place.place_name, text: place.place_name, url });
     if (res.ok) toast.success(res.method === "clipboard" ? t("save_sheet.link_copied") : t("save_sheet.shared"));
   };
   const onShare = async () => {
-    if (!place) return;
-    if (shareUrl && place.place_id) {
-      setShareLoading(true);
-      try {
+    if (!place || !user) return;
+    setShareLoading(true);
+    try {
+      const dbId = place.place_id && UUID_RE.test(place.place_id) ? place.place_id : null;
+      // Identyfikator Google: jawny (listy niosa google_place_id) albo place_id pinu, ktory nie
+      // jest UUID-em naszej bazy (piny trzymaja tam id z Google).
+      const gpid: string | null = (place as any).google_place_id ?? (place.place_id && !dbId ? place.place_id : null);
+      if (dbId) {
         // Import dynamiczny z tego samego powodu, co lazy() wyzej (cykl PlaceSwiper -> ten plik).
         const { fetchEnrichedPlace } = await import("@/components/plan-wizard/PlaceSwiper");
-        const enriched = await fetchEnrichedPlace(place.place_id);
-        if (enriched) { setSharePlace(enriched); return; }
-      } catch (e) {
-        console.warn("[SavePlaceSheet] place share preview failed:", e instanceof Error ? e.message : e);
-      } finally { setShareLoading(false); }
-    }
-    const url = shareUrl ?? (
-      place.latitude && place.longitude
+        const enriched = await fetchEnrichedPlace(dbId);
+        if (enriched) { setShareState({ place: enriched, url: buildShareUrl(`/miejsce/${dbId}`) }); return; }
+      }
+      const { data, error } = await (supabase as any)
+        .from("shared_places")
+        .upsert({
+          shared_by: user.id, place_id: dbId, google_place_id: gpid,
+          place_name: place.place_name, address: place.address ?? null, city: place.city ?? city ?? null,
+          category: place.category ?? null, latitude: place.latitude ?? null, longitude: place.longitude ?? null,
+          photo_url: place.photo_url ?? null,
+        }, { onConflict: "shared_by,place_key" })
+        .select("id").single();
+      if (error || !data?.id) throw error ?? new Error("no id");
+      // Karta w arkuszu = ta sama, co w Miejscach; dane prosto z tego, co user widzi na liscie.
+      const preview: MockPlace = {
+        id: data.id, place_name: place.place_name, category: (place.category ?? "other") as MockPlace["category"],
+        city: place.city ?? city ?? "", address: place.address ?? "", latitude: place.latitude ?? 0, longitude: place.longitude ?? 0,
+        rating: 0, photo_url: place.photo_url ?? "", vibe_tags: [], description: "",
+        google_place_id: gpid,
+      };
+      setShareState({ place: preview, url: buildShareUrl(`/miejsce/${data.id}`) });
+    } catch (e) {
+      console.warn("[SavePlaceSheet] place share failed:", e instanceof Error ? e.message : e);
+      // Ostatnia deska: systemowy arkusz z linkiem do Google Maps - lepsze niz nic.
+      const url = place.latitude && place.longitude
         ? `https://www.google.com/maps/search/?api=1&query=${place.latitude},${place.longitude}`
-        : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([place.place_name, place.address, city].filter(Boolean).join(" "))}`);
-    await systemShare(url);
+        : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([place.place_name, place.address, city].filter(Boolean).join(" "))}`;
+      await systemShare(url);
+    } finally { setShareLoading(false); }
   };
 
   // Miniatura listy prowadzi do samej listy - arkusz zamykamy, zeby po powrocie nie wisial
@@ -308,14 +332,14 @@ export default function SavePlaceSheet({
         </div>
 
         {/* Arkusz udostepniania z karta miejsca (nad tym arkuszem - z-95). */}
-        {sharePlace && shareUrl && (
+        {shareState && (
           <Suspense fallback={null}>
             <ShareCardPlace
-              place={sharePlace}
-              city={sharePlace.city ?? city}
-              shareUrl={shareUrl}
-              onShare={() => void systemShare(shareUrl)}
-              onClose={() => setSharePlace(null)}
+              place={shareState.place}
+              city={shareState.place.city || city}
+              shareUrl={shareState.url}
+              onShare={() => void systemShare(shareState.url)}
+              onClose={() => setShareState(null)}
             />
           </Suspense>
         )}

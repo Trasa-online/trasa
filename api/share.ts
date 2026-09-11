@@ -467,13 +467,25 @@ export default async function handler(req: Request): Promise<Response> {
   // MIEJSCE (wizytowka) - link z "Udostępnij to miejsce" (Figma, 2026-09-11). Widoczne to, co
   // przepuszcza RLS dla klucza anonimowego: aktywne miejsce + aktywny profil biznesowy.
   if (isPlace) {
-    const [pl] = await rest(`places?id=eq.${id}&select=place_name,address,city,category,photo_url,gallery_urls,google_place_id,business_profiles(cover_image_url,logo_url,event_title,tags,gallery_urls)&limit=1`);
-    if (!pl) return missing();
+    const PLACE_SEL = "place_name,address,city,category,photo_url,gallery_urls,google_place_id,business_profiles(cover_image_url,logo_url,event_title,tags,gallery_urls)";
+    // <id> to albo wizytowka (`places`), albo MIGAWKA miejsca spoza bazy (`shared_places`,
+    // migracja 20260911e) - miejsca z list i wyjazdow czesto nie maja rekordu w `places`.
+    // Migawka wskazujaca na wizytowke (place_id) dostaje jej pelne dane (logo, promocja, tagi).
+    let [pl] = await rest(`places?id=eq.${id}&select=${PLACE_SEL}&limit=1`);
+    let fromSnap = false;
+    if (!pl) {
+      const [snap] = await rest(`shared_places?id=eq.${id}&select=place_id,google_place_id,place_name,address,city,category,latitude,longitude,photo_url&limit=1`);
+      if (!snap) return missing();
+      if (snap.place_id) [pl] = await rest(`places?id=eq.${snap.place_id}&select=${PLACE_SEL}&limit=1`);
+      if (!pl) { fromSnap = true; pl = { place_name: snap.place_name, address: snap.address, city: snap.city, category: snap.category, photo_url: snap.photo_url, gallery_urls: null, google_place_id: snap.google_place_id, business_profiles: null }; }
+    }
     const bp = Array.isArray(pl.business_profiles) ? pl.business_profiles[0] : pl.business_profiles;
     const bizGallery: string[] = Array.isArray(bp?.gallery_urls) ? bp.gallery_urls.filter(Boolean) : [];
     // Kolejnosc jak w aplikacji (enrichWithBusinessProfile): wlasne zdjecie lokalu > skurowana
     // okladka > zdjecie spolecznosci. Bez Google.
-    const curated = typeof pl.photo_url === "string" && (pl.photo_url.includes("/place-photos-cache/manual/") || pl.photo_url.includes("/api/place-photo")) ? pl.photo_url : null;
+    // Wizytowka: z `places.photo_url` bierzemy tylko okladke skurowana (reszta to stare
+    // proxy Google). Migawka: photo_url to zdjecie usera z listy/wyjazdu - pelnoprawna okladka.
+    const curated = typeof pl.photo_url === "string" && (fromSnap || pl.photo_url.includes("/place-photos-cache/manual/") || pl.photo_url.includes("/api/place-photo")) ? pl.photo_url : null;
     const community = await communityPhotos([placeKey(pl.google_place_id, pl.place_name)]);
     const rawPhoto = bp?.cover_image_url || bizGallery[0] || curated || first(pl.gallery_urls) || community.get(placeKey(pl.google_place_id, pl.place_name)) || null;
     const cover = img(rawPhoto, 1200, 630);
