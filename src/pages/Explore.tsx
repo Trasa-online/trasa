@@ -22,6 +22,7 @@ import DiscoveryFeed from "@/components/home/DiscoveryFeed";
 import HomeHeaderActions from "@/components/home/HomeHeaderActions";
 import ExploreTopBar from "@/components/home/ExploreTopBar";
 import TabTopBar from "@/components/layout/TabTopBar";
+import NotificationsBell from "@/components/layout/NotificationsBell";
 import ActiveTripBanner from "@/components/home/ActiveTripBanner";
 import SearchCategoryRow, { type SearchCat } from "@/components/home/SearchCategoryRow";
 import ExploreSwiper from "@/components/home/ExploreSwiper";
@@ -724,6 +725,7 @@ export const MyCollections = ({ showCreate = true }: { showCreate?: boolean } = 
 
 const Explore = () => {
   const { t } = useTranslation("explore");
+  const { user: bellUser } = useAuth();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const location = useLocation();
@@ -834,6 +836,12 @@ const Explore = () => {
             onSearchChange={setFeedSearch}
             searchInputRef={searchInputRef}
           />
+        )}
+        {/* Powiadomienia po PRAWEJ stronie belki (prosba Nat 2026-09-11). Eksploracja jest
+            ekranem startowym, wiec dzwonek na profilu bywal zauwazany dopiero po fakcie.
+            W trybie wynikow chowamy go razem z toggle'em - pole ma wtedy cala belke. */}
+        {!myCollections && !searchOpen && bellUser && !(bellUser as any).is_anonymous && (
+          <NotificationsBell userId={bellUser.id} />
         )}
       </TabTopBar>
 

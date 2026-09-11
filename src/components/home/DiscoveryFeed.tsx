@@ -1309,6 +1309,10 @@ function SavedTile({ id, photo, title, city, placeCount, pins, onOpen, onUnsave,
   );
 }
 
+// Stabilna referencja pustego zbioru - ta sama zasada co EMPTY_ARRAY w lib/emptyRef:
+// `new Set()` przy kazdym renderze to nowa referencja, a na niej potrafi sie zapetlic efekt.
+const EMPTY_ID_SET: Set<string> = new Set();
+
 // ── SavedRoutes ─────────────────────────────────────────────────────────────────
 // Trasy ZAPISANE przez usera (saved_routes + zapisane zestawienia z localStorage),
 // pokazywane jako KAFELKI. Zakladka "Zapisane" (bottom nav). Tap otwiera trase
@@ -1603,9 +1607,43 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
     while (el && !(el.scrollHeight > el.clientHeight + 20 && getComputedStyle(el).overflowY === "auto")) el = el.parentElement;
     el?.scrollTo({ top: 0, behavior: "auto" });
   }, [searchOpen, debouncedQuery]);
-  // Zapisywanie CUDZEGO wyjazdu w calosci USUNIETE 2026-09-10 (decyzja Nat): cudzy plan
-  // rzadko pasowal w calosci, a zakladka "Zapisane" w wyjazdach stala pusta. W jego miejsce
-  // wchodzi wybor POJEDYNCZYCH miejsc z cudzego wyjazdu (przytrzymanie kafelka w SharedRoute).
+  // Zapis CUDZEJ trasy bookmarkiem na karcie feedu -> tabela saved_routes (per user, w bazie).
+  // Zakladka "Zapisane" w Wyjazdach czyta te trasy. Wymaga zalogowania (guest -> auth drawer).
+  //
+  // Historia: zdjete 2026-09-10 na rzecz wybierania POJEDYNCZYCH miejsc z cudzego wyjazdu,
+  // przywrocone 2026-09-11 (decyzja Nat) - obie drogi zyja teraz obok siebie: bookmark bierze
+  // caly wyjazd na pozniej, przytrzymanie kafelka wyjmuje z niego dwa-trzy miejsca.
+  const [savedRouteIds, setSavedRouteIds] = useState<Set<string>>(EMPTY_ID_SET);
+  useEffect(() => {
+    if (!user) { setSavedRouteIds(EMPTY_ID_SET); return; }
+    let cancelled = false;
+    (supabase as any).from("saved_routes").select("route_id").eq("user_id", user.id)
+      .then(({ data }: { data: { route_id: string }[] | null }) => {
+        if (!cancelled) setSavedRouteIds(new Set((data ?? []).map((s) => s.route_id)));
+      });
+    return () => { cancelled = true; };
+  }, [user]);
+  const toggleSaveRoute = async (routeId: string) => {
+    if (!user) { openAuthDrawer({ mode: "register", hint: "save" }); return; }
+    const has = savedRouteIds.has(routeId);
+    const next = new Set(savedRouteIds);
+    has ? next.delete(routeId) : next.add(routeId);
+    setSavedRouteIds(next);
+    haptics.light();
+    if (has) {
+      await (supabase as any).from("saved_routes").delete().eq("user_id", user.id).eq("route_id", routeId);
+      toast(t("toast.removed_saved"), {
+        action: { label: t("undo"), onClick: () => toggleSaveRoute(routeId) },
+      });
+    } else {
+      await (supabase as any).from("saved_routes").insert({ user_id: user.id, route_id: routeId });
+      // Powiadom wlasciciela trasy o zapisie (SECURITY DEFINER, pomija self-save).
+      void (supabase as any).rpc("notify_route_used", { p_route_id: routeId });
+      toast.success(t("toast.saved"));
+    }
+    queryClient.invalidateQueries({ queryKey: ["saved-routes"] });
+    queryClient.invalidateQueries({ queryKey: ["profile-saved-trip-feed"] });
+  };
   // Zapis zestawienia bookmarkiem na karcie feedu Tras - localStorage (jak CollectionDetail/Zapisane).
   const [savedColIds, setSavedColIds] = useState<Set<string>>(() => {
     try { return new Set<string>(JSON.parse(localStorage.getItem("trasa_saved_collections") || "[]")); } catch { return new Set(); }
@@ -2208,6 +2246,8 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
                       description={r.summary || r.ai_highlight}
                       tags={(r.categories ?? []).map((c) => t(`cat.${c}`, { defaultValue: c }))}
                       pins={r.pins ?? []}
+                      saved={savedRouteIds.has(r.id)}
+                      onToggleSave={() => toggleSaveRoute(r.id)}
                       onOpen={() => navigate(`/route/${r.id}`)}
                       authorName={r.author_username ? `@${r.author_username}` : r.author_name}
                       authorAvatar={r.author_avatar}
@@ -2331,6 +2371,8 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
                 // Tagi CALEJ TRASY wycofane (prosba Nat 2026-08-31) - chipy to kategorie miejsc.
                 tags={(r.categories ?? []).map((c) => t(`cat.${c}`, { defaultValue: c }))}
                 pins={r.pins ?? []}
+                saved={savedRouteIds.has(r.id)}
+                onToggleSave={() => toggleSaveRoute(r.id)}
                 onOpen={() => navigate(`/route/${r.id}`)}
                 authorName={r.author_username ? `@${r.author_username}` : r.author_name}
                 authorAvatar={r.author_avatar}

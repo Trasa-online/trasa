@@ -225,6 +225,8 @@ export default function SharedRoute() {
     () => new URLSearchParams(window.location.hash.split("?")[1] ?? "").get("full") === "1",
   );
   const [detailPin, setDetailPin] = useState<any | null>(null);
+  const [saving, setSaving] = useState(false);                   // gosc: zapis CALEGO wyjazdu
+  const [showDateSheet, setShowDateSheet] = useState(false);
   const [datesSheetOpen, setDatesSheetOpen] = useState(false);   // wlasciciel: zakres dat wyjazdu
   const [planMapOpen, setPlanMapOpen] = useState(false);
   const [viewerIndex, setViewerIndex] = useState<number | null>(null); // fullscreen podglad zdjecia galerii
@@ -553,6 +555,77 @@ export default function SharedRoute() {
   // wymuszal kolejny render. Petla krecila sie przez cale ladowanie pinow (React ucinal ja
   // ostrzezeniem "Maximum update depth exceeded"; zmierzone 168 obrotow na jednym wejsciu
   // w wyjazd). Stala referencja zamyka temat.
+  // Zapis CUDZEGO wyjazdu w calosci do "Zapisane" na profilu. Zdjete 2026-09-10, przywrocone
+  // 2026-09-11 na prosbe Nat - okazalo sie potrzebne obok wybierania pojedynczych miejsc:
+  // bookmark odklada CALY cudzy plan na pozniej, przytrzymanie kafelka wyjmuje z niego dwa-trzy
+  // miejsca do wlasnego wyjazdu. To dwie rozne intencje, wiec dwie osobne akcje.
+  //
+  // Zapis = JEDEN wiersz w saved_routes (dokladnie to samo, co bookmark na karcie w eksploracji)
+  // plus opcjonalna data, ktora nalezy do ZAPISUJACEGO, nie do trasy. Zadnej kopii pinow i zadnej
+  // zmiany ekranu - ma byc odczuwalne jak zakladka, nie jak przejscie gdzie indziej.
+  const saveToMine = async (tripDate?: Date) => {
+    if (!user) { navigate("/auth"); return; }
+    if (!route || saving) return;
+    setSaving(true);
+    setShowDateSheet(false);
+    try {
+      const { error } = await (supabase as any).from("saved_routes").upsert(
+        { user_id: user.id, route_id: id, planned_date: tripDate ? format(tripDate, "yyyy-MM-dd") : null },
+        { onConflict: "user_id,route_id" },
+      );
+      if (error) throw error;
+      queryClient.setQueryData(["route-is-saved", user.id, id], true);
+      queryClient.invalidateQueries({ queryKey: ["profile-saved-trip-feed"] });
+      toast.success(t("toast_saved"), { action: { label: t("go_to_saved"), onClick: () => navigate("/moj-profil?tab=wyjazdy&sub=zapisane") } });
+      // Powiadom autora, ze ktos zapisal jego trase (best-effort; SECURITY DEFINER RPC -
+      // klient nie moze insertowac notyfikacji dla innego usera). Push leci triggerem notify_push.
+      if (route.user_id && route.user_id !== user.id) {
+        void (supabase as any).rpc("notify_route_used", { p_route_id: id });
+        const me = await getCurrentUserName();
+        void sendClientPush({ userId: route.user_id, title: t("push_used_title"), body: route.city ? t("push_used_body_city", { name: me, city: route.city }) : t("push_used_body", { name: me }), url: "/moj-profil?tab=wyjazdy&sub=zapisane" });
+      }
+    } catch (e: any) {
+      console.error("[SharedRoute] save failed:", e?.message ?? e);
+      notify.error(t("toast_save_error"));
+    }
+    setSaving(false);
+  };
+
+  // Czy mam juz ten wyjazd w Zapisanych - CTA ma pokazywac STAN, nie tylko akcje.
+  const { data: isRouteSaved = false } = useQuery({
+    queryKey: ["route-is-saved", user?.id, id],
+    // Bez isOwner - ta zmienna powstaje dopiero po early-returnach, a hook musi byc nad nimi.
+    enabled: !!user?.id && !!id && (route as any)?.user_id !== user?.id,
+    queryFn: async () => {
+      const { data } = await (supabase as any)
+        .from("saved_routes").select("route_id").eq("user_id", user!.id).eq("route_id", id).maybeSingle();
+      return !!data;
+    },
+  });
+
+  const unsaveFromMine = async () => {
+    if (!user || !id || saving) return;
+    setSaving(true);
+    try {
+      await (supabase as any).from("saved_routes").delete().eq("user_id", user.id).eq("route_id", id);
+      queryClient.setQueryData(["route-is-saved", user.id, id], false);
+      queryClient.invalidateQueries({ queryKey: ["profile-saved-trip-feed"] });
+      // Cofalne: wiersz to sama para user+route, wiec przywrocenie to jeden insert.
+      notify.success(t("toast_unsaved"), undefined, {
+        action: {
+          label: t("common:buttons.undo"),
+          onClick: () => {
+            void (async () => {
+              await (supabase as any).from("saved_routes").insert({ user_id: user.id, route_id: id });
+              queryClient.setQueryData(["route-is-saved", user.id, id], true);
+              queryClient.invalidateQueries({ queryKey: ["profile-saved-trip-feed"] });
+            })();
+          },
+        },
+      });
+    } finally { setSaving(false); }
+  };
+
   const { data: pins = EMPTY_PINS } = useQuery({
     queryKey: ["shared-route-pins", id],
     queryFn: async () => {
@@ -775,14 +848,19 @@ export default function SharedRoute() {
   // Zdjecia per-miejsce (pins.images) - wszyscy uczestnicy widza wszystkie, kazdy dodaje/usuwa (member RLS).
   // Upload zdjecia -> bucket route-images -> pin_photos (route_id, place_name, user_id, url). Kazdy
   // uczestnik dodaje; przy zdjeciu awatar autora. (pins.images zostaje zrodlem okladek osobno.)
-  const addPlacePhotos = async (pin: any, files: FileList | null) => {
-    if (!user || !files || !files.length || !id) return;
+  const addPlacePhotos = async (pin: any, fileList: FileList | null) => {
+    if (!user || !fileList || !fileList.length || !id) return;
+    // Kopia listy ZARAZ na wejsciu. `input.files` to ZYWY FileList, a handler zeruje
+    // `input.value` tuz po wywolaniu tej funkcji - czyli jeszcze zanim skonczy sie pierwszy
+    // `await`. Liczenie z niego PO wgraniu dawalo roznice ujemna ("-2 zdjęć nie udało się
+    // wgrać") przy zdjeciach, ktore wgraly sie poprawnie (zgloszenie Nat 2026-09-11).
+    const files = Array.from(fileList);
     setUploadingPin(pin.id);
     try {
       // Jak w galerii: HEIC -> JPEG, zmniejszenie i wgrywanie po 3 naraz. Wczesniej szedl tu
       // ORYGINALNY plik z iPhone'a (kilka MB, czasem HEIC) - stad dlugie czekanie, a na
       // urzadzeniach nie-Apple takie zdjecie i tak sie nie wyswietlalo.
-      const prepared = await mapWithLimit(Array.from(files), 3, async (rawFile, i) => {
+      const prepared = await mapWithLimit(files, 3, async (rawFile, i) => {
         try {
           // Wersja pelna i miniatura z JEDNEGO dekodowania (2026-09-08) - wczesniej zdjecie
           // bylo dekodowane dwa razy, a to na 12 Mpix z iPhone'a kilka sekund za kazdym razem.
@@ -798,7 +876,7 @@ export default function SharedRoute() {
         } catch (e: any) { console.error("[SharedRoute] photo processing failed:", e?.message ?? e); return null; }
       });
       const uploaded = prepared.filter((u): u is { path: string; url: string } => !!u);
-      const failedPin = Array.from(files).length - uploaded.length;
+      const failedPin = files.length - uploaded.length;
       if (failedPin) toast.error(t("toast.photos_failed", { count: failedPin }));
       // SafeSearch (Vision) RÓWNOLEGLE - jedno zdjecie to ~2-4s, wiec seryjnie 5 zdjec
       // kazalo czekac ponad minute. Odrzucone znika ze Storage i nie trafia do galerii.
@@ -2707,7 +2785,7 @@ export default function SharedRoute() {
       {/* Po przeniesieniu zmiany kolejnosci do stosu FAB dolny pasek bywa PUSTY (wyjazd
           w trakcie, jeszcze bez publikacji) - wtedy zostawal sam bialy pasek z kreska.
           Renderujemy go dopiero, gdy jest w nim jakakolwiek akcja. */}
-      {!noteEditing && ((canEdit && (choosing || reorderMode || (isOwner && stage === "planning" && pins.length > 0) || canPublish)) || pickMode) && (
+      {!noteEditing && ((canEdit && (choosing || reorderMode || (isOwner && stage === "planning" && pins.length > 0) || canPublish)) || !canEdit) && (
       <div className="fixed bottom-0 left-0 right-0 max-w-lg mx-auto px-5 pt-2 bg-background border-t border-border/30"
         style={{ paddingBottom: "max(12px, env(safe-area-inset-bottom, 12px))" }}>
         {canEdit ? (
@@ -2755,10 +2833,32 @@ export default function SharedRoute() {
               )
             )
           ) : (
-            /* Gosc: zaznaczone miejsca -> wlasny wyjazd. "Zapisz tą trasę" i "Zaplanuj własną
-               trasę w {miasto}" usuniete (decyzja Nat 2026-09-10) - cudzy plan w calosci
-               prawie nikomu nie pasowal, a przenoszenie POJEDYNCZYCH miejsc jest tym, po co
-               ludzie tu wchodza. */
+            /* Gosc ma DWIE drogi i obie sa tutaj:
+               - domyslnie: "Zapisz tą trasę" - caly cudzy wyjazd laduje w Zapisanych (bookmark,
+                 ten sam wiersz saved_routes co na karcie w eksploracji);
+               - po przytrzymaniu kafelka: pasek wyboru MIEJSC - dwa-trzy przystanki trafiaja
+                 do wlasnego, nowego albo istniejacego wyjazdu.
+               Zapis calosci byl zdjety 2026-09-10 i wrocil 2026-09-11 na prosbe Nat. */
+            !pickMode ? (
+              <>
+                {/* CTA pokazuje STAN zakladki, nie tylko akcje: zapisane = szary guzik
+                    z wypelnionym bookmarkiem, a ponowne tapniecie zdejmuje zapis. */}
+                <button
+                  onClick={() => {
+                    if (!user) { navigate("/auth"); return; }
+                    if (isRouteSaved) { void unsaveFromMine(); return; }
+                    setShowDateSheet(true);
+                  }}
+                  disabled={saving}
+                  className={`w-full py-3 rounded-full font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-50 ${
+                    isRouteSaved ? "bg-secondary text-secondary-foreground" : "bg-primary text-white"
+                  }`}
+                >
+                  <Bookmark className={`h-4 w-4 ${isRouteSaved ? "fill-current" : ""}`} />
+                  {saving ? t("saving") : isRouteSaved ? t("saved_trip") : t("save_trip")}
+                </button>
+              </>
+            ) : (
             <>
               <div className="flex items-center justify-between gap-2 pb-2">
                 <p className="text-[13px] font-semibold text-foreground">
@@ -2786,11 +2886,31 @@ export default function SharedRoute() {
                 </button>
               </div>
             </>
+            )
           )}
         </div>
       )}
 
-      {/* Sheet wyboru daty wyjazdu przy zapisie cudzej trasy do dziennika */}
+      {/* Gosc: kiedy planuje ten wyjazd. Data nalezy do ZAPISUJACEGO, nie do trasy, i jest
+          opcjonalna ("Zapisz bez daty"). Arkusz na `Sheet`, wiec gest "w dol" ma z pudelka. */}
+      <Sheet open={showDateSheet} onOpenChange={setShowDateSheet}>
+        <SheetContent side="bottom" className="rounded-t-3xl px-0 pb-[max(16px,env(safe-area-inset-bottom))] pt-5 max-h-[88dvh] overflow-y-auto">
+          <SheetTitle className="sr-only">{t("date_sheet_title")}</SheetTitle>
+          <div className="px-5 pb-1 text-center">
+            <p className="text-lg font-black leading-tight">{t("date_sheet_title")}</p>
+            <p className="text-xs text-muted-foreground mt-1">{t("date_sheet_desc")}</p>
+          </div>
+          <FullCalendarPicker onConfirm={(d) => void saveToMine(d)} />
+          <button
+            onClick={() => void saveToMine()}
+            disabled={saving}
+            className="mx-5 mt-1 w-[calc(100%-2.5rem)] py-2.5 text-sm font-medium text-muted-foreground active:text-foreground transition-colors disabled:opacity-50"
+          >
+            {t("save_without_date")}
+          </button>
+        </SheetContent>
+      </Sheet>
+
       {/* Wlasciciel: zakres dat wyjazdu. Zakres wielodniowy wlacza podzial miejsc na dni. */}
       <Sheet open={datesSheetOpen} onOpenChange={setDatesSheetOpen}>
         <SheetContent side="bottom" className="rounded-t-3xl px-0 pb-[max(16px,env(safe-area-inset-bottom))] pt-5 max-h-[88dvh] overflow-y-auto">
