@@ -54,6 +54,21 @@ export function TripLayoutSwitch({ value, onChange }: { value: TripLayout; onCha
 }
 
 /**
+ * Mozaika = DWIE jawne kolumny flex, kafelki naprzemiennie (parzyste w lewej, nieparzyste
+ * w prawej), NIE CSS multicol (`columns-2`). WebKit przy multicol gubi malowanie i trafianie
+ * palcem w drugiej kolumnie, gdy w poblizu pojawia sie warstwa kompozytowana (duch
+ * przeciaganego kafelka, animacja FLIP) - zlapane najpierw w ExploreGrid, potem przy
+ * "przytrzymaj i przestaw" na profilu (2026-09-11). Ten sam podzial na wlasnym i publicznym
+ * profilu, zeby uklad ustawiony przez usera wygladal u innych identycznie.
+ */
+export function mosaicColumns<T>(items: readonly T[]): [T[], T[]] {
+  const left: T[] = [];
+  const right: T[] = [];
+  items.forEach((it, i) => (i % 2 === 0 ? left : right).push(it));
+  return [left, right];
+}
+
+/**
  * Kafelek wyjazdu do ukladow siatki i mozaiki.
  *
  * Mozaika (Pinterest) NIE udaje roznych wysokosci losowaniem - zdjecie idzie w naturalnych
@@ -80,7 +95,10 @@ export function TripTile({ photo, title, meta, onOpen, natural }: {
           src={photo}
           alt=""
           loading="lazy"
-          className={natural ? "w-full h-auto block" : "absolute inset-0 w-full h-full object-cover"}
+          // Bez natywnego "podnoszenia" obrazka przez WKWebView: to ono udawalo przestawianie
+          // kafelkow (zgloszenie Nat 2026-09-11) - prawdziwy gest robi useLongPressReorder.
+          draggable={false}
+          className={`${natural ? "w-full h-auto block" : "absolute inset-0 w-full h-full object-cover"} [-webkit-user-drag:none] select-none`}
         />
       ) : (
         <span

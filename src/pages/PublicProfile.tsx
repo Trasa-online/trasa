@@ -11,7 +11,9 @@ import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { toggleRouteLike } from "@/lib/likes";
 import { saveCollectionDb, unsaveCollectionDb } from "@/lib/savedCollections";
-import { ArrowLeft, LayoutGrid } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
+import { BrandIcon, LIST_ICON } from "@/components/BrandIcon";
+import { applyTripOrder, fetchTripOrder, tripOrderKey } from "@/lib/tripOrder";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import FollowButton from "@/components/social/FollowButton";
@@ -21,7 +23,7 @@ import { MoreVertical, Ban, Flag as FlagIcon } from "lucide-react";
 import { useFollowCounts, useFollowList } from "@/hooks/useFollow";
 import { useSwipeNav } from "@/hooks/useSwipeNav";
 import { ProfileFeedCard } from "@/components/profile/ProfileFeedCard";
-import { TripLayoutSwitch, TripTile, useTripLayout } from "@/components/profile/TripLayout";
+import { TripLayoutSwitch, TripTile, mosaicColumns, useTripLayout } from "@/components/profile/TripLayout";
 import { scopeLabel } from "@/lib/tripScope";
 // Karta wyjazdu 1:1 z eksploracja (na profilu bez mapki) - prosba Nat 2026-08-30.
 import TrasaBigCard from "@/components/home/TrasaBigCard";
@@ -30,6 +32,9 @@ import { resolveStored } from "@/components/PlacePhoto";
 import { SpontawayTabIcon } from "@/components/profile/SpontawayTabIcon";
 import { shortRelativeTime } from "@/lib/relativeTime";
 import { pinCoverKeys, fetchPlacePhotosForKeys, pickPlaceCover } from "@/lib/placePhotoSocial";
+
+// Stala pusta referencja - inaczej useMemo nizej liczylby sie na nowo w kazdym renderze.
+const EMPTY_TRIPS: any[] = [];
 
 // ── Empty state feedu (cudzy profil, read-only - bez CTA tworzenia) ─────────────
 // Spojne wizualnie z "mój profil": peachy znak (maska SVG) LUB ikona w peachy kwadracie + opis.
@@ -152,7 +157,7 @@ export default function PublicProfile() {
 
   // Feed WYJAZDOW (zakladka Wyjazdy): publiczne trasy usera, zwiniete po folderze,
   // kafelki z pinow + liczniki (saved_routes / likes / routes.views).
-  const { data: tripCards = [] } = useQuery({
+  const { data: tripCardsRaw = EMPTY_TRIPS } = useQuery({
     queryKey: ["public-trip-feed", profile?.id],
     enabled: !!profile?.id,
     queryFn: async () => {
@@ -228,6 +233,16 @@ export default function PublicProfile() {
       }));
     },
   });
+
+  // Uklad okladek ustawiony przez wlasciciela profilu (przytrzymaj i przestaw na wlasnym
+  // profilu, tabela profile_trip_order) - tu tylko go odtwarzamy, bez edycji.
+  const { data: tripOrder } = useQuery({
+    queryKey: tripOrderKey(profile?.id),
+    enabled: !!profile?.id,
+    queryFn: () => fetchTripOrder(profile!.id),
+    staleTime: 60_000,
+  });
+  const tripCards = useMemo(() => applyTripOrder(tripCardsRaw as any[], tripOrder), [tripCardsRaw, tripOrder]);
 
   // ── Interaktywne polubienie/zapis z kart (cudzy profil, wybor Nat 2026-08-23) ──
   // Serce/bookmark na karcie = przycisk. Wlasny publiczny profil -> licznik (nie polubisz swojego).
@@ -430,7 +445,7 @@ export default function PublicProfile() {
             return (
               <button key={tk} onClick={() => goTab(tk)} className="relative flex-1 flex items-center justify-center gap-2 py-2.5" aria-label={label}>
                 {tk === "listy"
-                  ? <LayoutGrid className="h-5 w-5" style={{ color: active ? "#0E0E0E" : "#CFCFCF" }} />
+                  ? <span className="flex h-5 w-5 items-center justify-center" style={{ color: active ? "#0E0E0E" : "#CFCFCF" }}><BrandIcon src={LIST_ICON} className="h-[18px] w-[18px]" /></span>
                   : <SpontawayTabIcon active={active} />}
                 <span className="text-sm font-semibold" style={{ color: active ? "#0E0E0E" : "#CFCFCF" }}>{label}</span>
                 {active && <span className="absolute -bottom-px left-0 right-0 h-0.5 bg-foreground rounded-full" />}
@@ -495,11 +510,14 @@ export default function PublicProfile() {
           ) : tripLayout === "mozaika" ? (
             <>
               <div className="flex justify-end"><TripLayoutSwitch value={tripLayout} onChange={setTripLayout} /></div>
-              <div className="columns-2 gap-1.5 [column-fill:_balance]">
-                {tripCards.map((tr: any) => (
-                  <div key={tr.id} className="mb-1.5 break-inside-avoid">
-                    <TripTile natural photo={tripCover(tr)} title={tr.title || t("feed.trip_fallback_generic")}
-                      meta={scopeLabel(tr) || tr.city} onOpen={() => navigate(`/route/${tr.id}`)} />
+              {/* Dwie kolumny flex (naprzemiennie), NIE CSS multicol - patrz mosaicColumns. */}
+              <div className="flex items-start gap-1.5">
+                {mosaicColumns(tripCards).map((col, ci) => (
+                  <div key={ci} className="flex min-w-0 flex-1 flex-col gap-1.5">
+                    {col.map((tr: any) => (
+                      <TripTile key={tr.id} natural photo={tripCover(tr)} title={tr.title || t("feed.trip_fallback_generic")}
+                        meta={scopeLabel(tr) || tr.city} onOpen={() => navigate(`/route/${tr.id}`)} />
+                    ))}
                   </div>
                 ))}
               </div>

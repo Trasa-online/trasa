@@ -179,13 +179,16 @@
   "layout": {
     "list": "Lista",
     "mosaic": "Mozaika",
-    "grid": "Siatka"
+    "grid": "Siatka",
+    "reorder_failed": "Nie udało się zapisać układu. Spróbuj ponownie."
   },
   "tab_hints": {
     "lists_moje": "Twoje publiczne polecajki miejsc. Każdy może je zapisać u siebie.",
     "lists_ogolne": "Prywatna lista wszystkiego, co zapisujesz jednym tapnięciem. Widzisz ją tylko Ty.",
     "lists_zapisane": "Listy innych podróżnych, które masz u siebie zapisane.",
     "trips_wspomnienia": "Opublikowane wyjazdy. Widać je w eksploracji i na Twoim profilu.",
+
+    "trips_wspomnienia_reorder": "Opublikowane wyjazdy. Przytrzymaj okładkę i przeciągnij, żeby ułożyć je po swojemu.",
     "trips_robocze": "Wyjazdy w przygotowaniu. Widzisz je tylko Ty, dopóki ich nie opublikujesz.",
     "trips_zapisane": "Wyjazdy innych podróżnych, które masz u siebie zapisane."
   }

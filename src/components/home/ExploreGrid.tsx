@@ -1,7 +1,6 @@
 import { useMemo, useRef, useState } from "react";
-import { FileText } from "lucide-react";
 import { haptics } from "@/hooks/useHaptics";
-import { BrandIcon } from "@/components/BrandIcon";
+import { BrandIcon, LIST_ICON } from "@/components/BrandIcon";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -227,13 +226,14 @@ function GridTile({ it, onOpen }: { it: GridItem; onOpen: () => void }) {
         <div className="relative w-full overflow-hidden rounded-2xl bg-[#fcede3]">
           {it.photos.length > 1 ? <TileCarousel photos={it.photos} swipedRef={swipedRef} /> : <GridCover url={it.cover} />}
         </div>
-        {/* Typ (wyjazd / lista) jako mala, wyciszona ikona PRZED nazwa - w rogu okladki
-            odbierala jej uroku (prosba Nat 2026-09-11). */}
-        <p className="mt-1.5 flex items-start gap-1.5 px-0.5 text-[13px] font-semibold leading-snug text-foreground">
+        {/* Nazwa z lewej, typ (wyjazd / lista) jako mala, wyciszona ikona ZAWSZE przy prawej
+            krawedzi okladki (prosba Nat 2026-09-11) - w rogu samej okladki odbierala jej uroku,
+            a przed nazwa rozjezdzala lewy margines tytulow miedzy kafelkami. */}
+        <p className="mt-1.5 flex items-start justify-between gap-2 px-0.5 text-[13px] font-semibold leading-snug text-foreground">
+          <span className="line-clamp-2 min-w-0">{it.title}</span>
           {it.kind === "trip"
-            ? <BrandIcon src="/Ikona_Trasy.svg" className="mt-[3px] h-3 w-3 text-muted-foreground" label={t("grid.trip")} />
-            : <FileText className="mt-[2px] h-3.5 w-3.5 shrink-0 text-muted-foreground" strokeWidth={2.2} aria-label={t("grid.list")} />}
-          <span className="line-clamp-2">{it.title}</span>
+            ? <BrandIcon src="/Ikona_Trasy.svg" className="mt-[3px] h-3 w-3 shrink-0 text-muted-foreground" label={t("grid.trip")} />
+            : <BrandIcon src={LIST_ICON} className="mt-[2.5px] h-3.5 w-3.5 shrink-0 text-muted-foreground" label={t("grid.list")} />}
         </p>
       </div>
     </div>

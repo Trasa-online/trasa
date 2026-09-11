@@ -21,3 +21,7 @@ export function BrandIcon({ src, className = "h-4 w-4", label }: { src: string; 
 
 /** Gwiazdka „topki" (Ikona_Gwiazdka.svg od Nat, 2026-09-11) - zamiast gwiazdki lucide. */
 export const STAR_ICON = "/Ikona_Gwiazdka.svg";
+
+/** Wypelniona ikona list (Ikona_Listy_Listy.svg od Nat, 2026-09-11) - zakladka Listy na profilu,
+ *  kafelki list w eksploracji i kategoria „Listy" w wyszukiwarce. Zastapila lucide FileText/LayoutGrid. */
+export const LIST_ICON = "/Ikona_Listy_Listy.svg";

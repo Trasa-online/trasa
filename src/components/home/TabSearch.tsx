@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronLeft, ChevronRight, FileText, MapPin, Search, Users } from "lucide-react";
+import { ChevronLeft, ChevronRight, MapPin, Search, Users } from "lucide-react";
+import { BrandIcon, LIST_ICON } from "@/components/BrandIcon";
 import PinnedSearchField from "@/components/layout/PinnedSearchField";
 import { type SearchCat } from "@/components/home/SearchCategoryRow";
 import DiscoveryFeed from "@/components/home/DiscoveryFeed";
@@ -85,7 +86,7 @@ const CATS: { id: Exclude<SearchCat, "all">; labelKey: string; subKey: string }[
 ];
 function CatIcon({ id }: { id: SearchCat }) {
   if (id === "trips") return <img src="/spontaway-symbol.png" alt="" className="h-5 w-[22px] object-contain" />;
-  if (id === "lists") return <FileText className="h-5 w-5 text-foreground" strokeWidth={2} />;
+  if (id === "lists") return <BrandIcon src={LIST_ICON} className="h-5 w-5 text-foreground" />;
   if (id === "places") return <MapPin className="h-5 w-5 text-foreground" strokeWidth={2} />;
   return <Users className="h-5 w-5 text-foreground" strokeWidth={2} />;
 }

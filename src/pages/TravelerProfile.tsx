@@ -1,11 +1,12 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useTranslation, Trans } from "react-i18next";
 import { avatarSrc } from "@/lib/avatar";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import { Settings, Camera, UserCircle2, ArrowRight, Bell, Share2, Search, LayoutGrid, ChevronLeft } from "lucide-react";
+import { Settings, Camera, UserCircle2, ArrowRight, Bell, Share2, Search, ChevronLeft } from "lucide-react";
+import { BrandIcon, LIST_ICON } from "@/components/BrandIcon";
 import { SavedPlacesGrid } from "@/components/saved/SavedPlacesGrid";
 import TabHeader from "@/components/layout/TabHeader";
 import PinnedSearchField from "@/components/layout/PinnedSearchField";
@@ -15,7 +16,7 @@ import DiscoveryFeed from "@/components/home/DiscoveryFeed";
 import ScreenSkeleton from "@/components/layout/ScreenSkeleton";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -31,7 +32,9 @@ import InviteFriendsBanner from "@/components/social/InviteFriendsBanner";
 import { Camera as CapCamera, CameraResultType, CameraSource } from "@capacitor/camera";
 import { ProfileFeedCard } from "@/components/profile/ProfileFeedCard";
 import ReferralCard from "@/components/profile/ReferralCard";
-import { TripLayoutSwitch, TripTile, useTripLayout } from "@/components/profile/TripLayout";
+import { TripLayoutSwitch, TripTile, mosaicColumns, useTripLayout } from "@/components/profile/TripLayout";
+import { REORDER_ITEM_CLASS, useLongPressReorder } from "@/hooks/useLongPressReorder";
+import { applyTripOrder, fetchTripOrder, saveTripOrder, tripOrderKey } from "@/lib/tripOrder";
 import AvatarFrame from "@/components/profile/AvatarFrame";
 import { isAvatarFrame } from "@/lib/avatarFrames";
 import { scopeLabel } from "@/lib/tripScope";
@@ -521,6 +524,48 @@ const TravelerProfile = () => {
     if (!hasDrafts && hasMemories) setWyjazdyTab("wspomnienia");
   }, [tripCards]);
 
+  // WLASNY UKLAD okladek Wspomnien (prosba Nat 2026-09-11): przytrzymanie kafelka na siatce
+  // albo mozaice i przeciagniecie go w inne miejsce. Kolejnosc idzie do bazy
+  // (profile_trip_order), bo widza ja tez inni - profil publiczny uklada karty tak samo.
+  // Lista (pelne karty) tylko POKAZUJE ten uklad; przestawia sie na kafelkach.
+  const { data: tripOrder } = useQuery({
+    queryKey: tripOrderKey(user?.id),
+    enabled: !!user?.id,
+    queryFn: () => fetchTripOrder(user!.id),
+    staleTime: 60_000,
+  });
+  const publishedTrips = useMemo(
+    () => applyTripOrder((tripCards as any[]).filter((tr) => tr.status === "published"), tripOrder),
+    [tripCards, tripOrder],
+  );
+  const publishedIds = useMemo(() => publishedTrips.map((tr: any) => tr.id as string), [publishedTrips]);
+  const saveOrder = useMutation({
+    mutationFn: (ids: string[]) => saveTripOrder(user!.id, ids),
+    onMutate: async (ids) => {
+      const key = tripOrderKey(user?.id);
+      await queryClient.cancelQueries({ queryKey: key });
+      const prev = queryClient.getQueryData<string[]>(key);
+      queryClient.setQueryData(key, ids);
+      return { prev };
+    },
+    onError: (_e, _ids, ctx) => {
+      queryClient.setQueryData(tripOrderKey(user?.id), ctx?.prev ?? []);
+      toast.error(t("layout.reorder_failed"));
+    },
+    onSettled: () => { queryClient.invalidateQueries({ queryKey: tripOrderKey(user?.id) }); },
+  });
+  const reorder = useLongPressReorder<string>({
+    ids: publishedIds,
+    enabled: tab === "wyjazdy" && wyjazdyTab === "wspomnienia" && tripLayout !== "lista",
+    onReorder: (ids) => saveOrder.mutate(ids),
+  });
+  // W trakcie gestu kolejnosc dyktuje hook (kafelki rozsuwaja sie pod palcem).
+  const memoryTrips = useMemo(() => {
+    const byId = new Map(publishedTrips.map((tr: any) => [tr.id as string, tr]));
+    const live = reorder.order.map((id) => byId.get(id)).filter(Boolean) as any[];
+    return live.length === publishedTrips.length ? live : publishedTrips;
+  }, [publishedTrips, reorder.order]);
+
   // Wyjazdy ZAPISANE od innych (saved_routes -> routes). Zdjete 2026-09-10, przywrocone
   // 2026-09-11 na prosbe Nat: bookmark calego wyjazdu i wybor pojedynczych miejsc z cudzego
   // wyjazdu odpowiadaja na dwie rozne potrzeby i zyja obok siebie.
@@ -609,7 +654,6 @@ const TravelerProfile = () => {
 
   // Podział wyjazdów: Robocze (niepublikowane) vs Wspomnienia (status='published').
   const draftTrips = (tripCards as any[]).filter((tr) => tr.status !== "published");
-  const memoryTrips = (tripCards as any[]).filter((tr) => tr.status === "published");
 
   // Okladka karty wyjazdu: wybrana miniatura > pierwsze zdjecie miejsca z wyjazdu.
   const tripCover = (tr: any): string | null => {
@@ -851,7 +895,7 @@ const TravelerProfile = () => {
             return (
               <button key={tk} onClick={() => goTab(tk)} className="relative flex-1 flex items-center justify-center gap-2 py-2.5" aria-label={label}>
                 {tk === "listy"
-                  ? <LayoutGrid className="h-5 w-5" style={{ color: active ? "#0E0E0E" : "#CFCFCF" }} />
+                  ? <span className="flex h-5 w-5 items-center justify-center" style={{ color: active ? "#0E0E0E" : "#CFCFCF" }}><BrandIcon src={LIST_ICON} className="h-[18px] w-[18px]" /></span>
                   : <SpontawayTabIcon active={active} />}
                 <span className="text-sm font-semibold" style={{ color: active ? "#0E0E0E" : "#CFCFCF" }}>{label}</span>
                 {active && <span className="absolute -bottom-px left-0 right-0 h-0.5 bg-foreground rounded-full" />}
@@ -951,7 +995,9 @@ const TravelerProfile = () => {
                   <TripLayoutSwitch value={tripLayout} onChange={setTripLayout} />
                 )}
               </div>
-              <TabHint text={t(`tab_hints.trips_${wyjazdyTab}`)} />
+              <TabHint text={wyjazdyTab === "wspomnienia" && tripLayout !== "lista" && memoryTrips.length > 1
+                ? t("tab_hints.trips_wspomnienia_reorder")
+                : t(`tab_hints.trips_${wyjazdyTab}`)} />
               {wyjazdyTab === "zapisane" ? (
                 // Wyjazdy zapisane od innych - ta sama karta co Wspomnienia, autor = tworca trasy.
                 savedTripCards.length === 0 ? (
@@ -990,23 +1036,37 @@ const TravelerProfile = () => {
                     </p>
                   </div>
                 ) : tripLayout === "siatka" ? (
-                  <div className="grid grid-cols-3 gap-1.5">
-                    {memoryTrips.map((tr: any) => (
-                      <TripTile key={tr.id} photo={tripCover(tr)} title={tr.title || t("feed.trip_fallback_generic")}
-                        meta={scopeLabel(tr) || tr.city} onOpen={() => navigate(`/route/${tr.id}`)} />
-                    ))}
-                  </div>
+                  // Opakowanie kafelka niesie gest "przytrzymaj i przestaw" (useLongPressReorder);
+                  // duch przeciaganego kafelka renderuje sie w portalu obok siatki.
+                  <>
+                    <div className="grid grid-cols-3 gap-1.5" {...reorder.containerProps}>
+                      {memoryTrips.map((tr: any) => (
+                        <div key={tr.id} className={REORDER_ITEM_CLASS} {...reorder.itemProps(tr.id)}>
+                          <TripTile photo={tripCover(tr)} title={tr.title || t("feed.trip_fallback_generic")}
+                            meta={scopeLabel(tr) || tr.city} onOpen={() => navigate(`/route/${tr.id}`)} />
+                        </div>
+                      ))}
+                    </div>
+                    {reorder.ghost}
+                  </>
                 ) : tripLayout === "mozaika" ? (
-                  // Kolumny CSS + break-inside: uklad ukladany przez przegladarke, bez JS
-                  // i bez mierzenia. Wysokosci biora sie z NATURALNYCH proporcji zdjec.
-                  <div className="columns-2 gap-1.5 [column-fill:_balance]">
-                    {memoryTrips.map((tr: any) => (
-                      <div key={tr.id} className="mb-1.5 break-inside-avoid">
-                        <TripTile natural photo={tripCover(tr)} title={tr.title || t("feed.trip_fallback_generic")}
-                          meta={scopeLabel(tr) || tr.city} onOpen={() => navigate(`/route/${tr.id}`)} />
-                      </div>
-                    ))}
-                  </div>
+                  // Dwie kolumny flex (naprzemiennie), NIE CSS multicol - patrz mosaicColumns.
+                  // Wysokosci biora sie z NATURALNYCH proporcji zdjec.
+                  <>
+                    <div className="flex items-start gap-1.5" {...reorder.containerProps}>
+                      {mosaicColumns(memoryTrips).map((col, ci) => (
+                        <div key={ci} className="flex min-w-0 flex-1 flex-col gap-1.5">
+                          {col.map((tr: any) => (
+                            <div key={tr.id} className={REORDER_ITEM_CLASS} {...reorder.itemProps(tr.id)}>
+                              <TripTile natural photo={tripCover(tr)} title={tr.title || t("feed.trip_fallback_generic")}
+                                meta={scopeLabel(tr) || tr.city} onOpen={() => navigate(`/route/${tr.id}`)} />
+                            </div>
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                    {reorder.ghost}
+                  </>
                 ) : (
                   <div className="space-y-6">{memoryTrips.map(renderTripCard)}</div>
                 )

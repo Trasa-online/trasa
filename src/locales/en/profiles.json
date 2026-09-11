@@ -177,13 +177,16 @@
   "layout": {
     "list": "List",
     "mosaic": "Mosaic",
-    "grid": "Grid"
+    "grid": "Grid",
+    "reorder_failed": "Could not save the layout. Try again."
   },
   "tab_hints": {
     "lists_moje": "Your public place recommendations. Anyone can save them.",
     "lists_ogolne": "A private list of everything you save with one tap. Only you can see it.",
     "lists_zapisane": "Lists from other travellers that you saved.",
     "trips_wspomnienia": "Published trips. They show up in Explore and on your profile.",
+
+    "trips_wspomnienia_reorder": "Published trips. Press and hold a cover, then drag to arrange them your way.",
     "trips_robocze": "Trips in progress. Only you can see them until you publish.",
     "trips_zapisane": "Trips from other travellers that you saved."
   }
