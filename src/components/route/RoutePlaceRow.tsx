@@ -3,7 +3,8 @@ import { useTranslation } from "react-i18next";
 import { AnimatePresence, motion } from "framer-motion";
 import { FLIGHT_MS, arcThrough, relRect } from "@/lib/flightPath";
 import { localizeTag } from "@/lib/routeTags";
-import { Bookmark, Check, MoreHorizontal, Star, Trash2 } from "lucide-react";
+import { Bookmark, Check, MoreHorizontal, Trash2 } from "lucide-react";
+import { BrandIcon, STAR_ICON } from "@/components/BrandIcon";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useLongPress } from "@/hooks/useLongPress";
 import { haptics } from "@/hooks/useHaptics";
@@ -205,7 +206,7 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
                     animate={{ scale: flying ? 0 : 1, rotate: flying ? -140 : 0 }}
                     transition={flying ? { duration: 0 } : { type: "spring", stiffness: 520, damping: 17 }}
                   >
-                    <Star className="inline-block h-4 w-4 -mt-0.5 mr-1 text-primary fill-primary" aria-label={t("row.top_place")} />
+                    <BrandIcon src={STAR_ICON} className="h-4 w-4 -mt-0.5 mr-1 align-middle text-primary" label={t("row.top_place")} />
                   </motion.span>
                 )}
                 {pin.place_name}
@@ -366,7 +367,8 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
               ))}
               {onToggleTop && (
                 <DropdownMenuItem onClick={(e) => { e.stopPropagation(); tappedTop.current = true; onToggleTop(); }} className="gap-2.5 py-2.5">
-                  <Star className={`h-4 w-4 ${isTop ? "text-primary fill-primary" : ""}`} />
+                  {/* Brandowa gwiazdka jest zawsze wypelniona - stan "jeszcze nie w topce" niesie kolor. */}
+                  <BrandIcon src={STAR_ICON} className={`h-4 w-4 ${isTop ? "text-primary" : "text-muted-foreground"}`} />
                   {isTop ? t("row.unset_top") : t("row.set_top")}
                 </DropdownMenuItem>
               )}
@@ -412,7 +414,7 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
             }}
             style={{ left: -11, top: -11 }}
           >
-            <Star className="h-[22px] w-[22px] text-primary fill-primary drop-shadow-md" />
+            <BrandIcon src={STAR_ICON} className="h-[22px] w-[22px] text-primary drop-shadow-md" />
           </motion.span>
         )}
       </AnimatePresence>
