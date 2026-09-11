@@ -149,16 +149,18 @@
   },
   "guide": {
     "create_desc": "Guzikiem „+” tworzysz własną trasę z ulubionych miejsc. Twoja trasa trafia do eksploracji, żeby inni mogli się nią zainspirować.",
-    "places_desc": "Tu przeglądasz pojedyncze miejsca w Twoim mieście, jedno po drugim: kawiarnie, restauracje, bary, miejsca kultury i natury.",
-    "trips_desc": "Tu przeglądasz gotowe trasy stworzone przez innych. Wejdź w trasę, żeby zobaczyć miejsca i zainspirować się do własnej.",
+    "places_desc": "Tu przeglądasz pojedyncze miejsca, jedno po drugim: kawiarnie, restauracje, bary, miejsca kultury i natury.",
+    "trips_desc": "Tu przeglądasz wyjazdy i listy miejsc od podróżnych z całego świata. Wejdź w dowolny kafelek, żeby zobaczyć miejsca i zainspirować się do własnego.",
     "save_desc": "Miejsca i trasy, które Ci się podobają, zapisujesz jednym tapnięciem. Wracasz do nich w zakładce Zapisane.",
     "create_title": "Twórz własne trasy",
     "places_title": "Zakładka Miejsca",
-    "trips_title": "Zakładka Trasy",
+    "trips_title": "Zakładka Eksploruj",
     "create_eyebrow": "TWÓRZ",
     "skip": "Pomiń",
     "save_title": "Zapisuj ulubione",
     "next": "Dalej",
-    "done": "Gotowe"
+    "done": "Gotowe",
+    "feed_title": "Zakładka Feed",
+    "feed_desc": "Tu widzisz wyjazdy i listy osób, które obserwujesz - jedno po drugim, jak w rolce."
   }
 }

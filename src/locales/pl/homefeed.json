@@ -133,5 +133,20 @@
   },
   "saved": {
     "empty_lists_routes": "Brak zapisanych list i tras"
+  },
+  "feed": {
+    "title": "Feed"
+  },
+  "grid": {
+    "trip": "Wyjazd",
+    "list": "Lista"
+  },
+  "feed_empty": {
+    "nobody_title": "Tu pojawią się wyjazdy i listy osób, które obserwujesz",
+    "nobody_hint": "Na razie nikogo nie obserwujesz. Znajdź znajomych albo podróżnych, których gust Ci odpowiada.",
+    "nobody_cta": "Znajdź osoby do obserwowania",
+    "quiet_title": "Na razie cisza",
+    "quiet_hint": "Osoby, które obserwujesz, jeszcze nic nie opublikowały. Zajrzyj, co publikują inni.",
+    "quiet_cta": "Przejdź do eksploracji"
   }
 }

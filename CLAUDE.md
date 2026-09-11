@@ -165,13 +165,18 @@ Oficjalny tagline aplikacji: **"speed dating z miastem"** (wszystkie litery mał
 
 ---
 
-## Nawigacja i architektura informacji (IA) — aktualne (2026-08-20)
+## Nawigacja i architektura informacji (IA) — aktualne (2026-09-11)
 
-**BottomNav (native) = 3 pozycje:** `Eksploruj` · `+` (środkowy FAB) · `Profil`. Pasek to wąski, wyśrodkowany „pill" (HUG, nie full-width) z `px-4`; każdy target `w-16` (64px) × `h-14` — reguła „fat thumb". Plik: [src/components/layout/BottomNav.tsx](src/components/layout/BottomNav.tsx).
-- **Eksploruj** → `/eksploruj` (tylko native; web/PWA to ukrywa, B2C za waitlistą).
-- **`+` (FAB)** → na native `navigate("/utworz")` (drum-scroll kraj+miasto → forma tworzenia). Na web (stary flow) otwiera menu wyboru.
-- **Profil** → `/moj-profil`.
-- Web/PWA (stary flow, `!PLANNING_DISABLED`): slot 2 to `Wyjazdy` (`/home`) zamiast Eksploruj.
+**BottomNav (native) = 5 pozycji (makieta Nat 2026-09-11):** `Feed` · `Eksploruj` · `+` (środkowy FAB) · `Miejsca` · `Profil`. Pasek to wąski, wyśrodkowany „pill" (HUG); target `w-[54px]` × `h-[46px]` (5 pozycji musi się zmieścić na iPhone SE: cały pill ~330 px), FAB `w-16`. Ikony **liniowe lucide** (`Home`, `Search`, `MapPin`, `User`) — w brandowym zestawie SVG nie ma domu ani miejsc, a mieszanie wypełnionych z liniowymi w jednym pasku się rozjeżdża. Plik: [src/components/layout/BottomNav.tsx](src/components/layout/BottomNav.tsx). **Zasada „jedno zadanie na widok":**
+- **Feed** → `/feed` ([Feed.tsx](src/pages/Feed.tsx)) = **ekran startowy** (zimny start, po logowaniu). Treści **od osób, które obserwujesz** (wyjazdy + listy), jedno wydarzenie na ekranie (pełnoekranowe karty ze snapem = dawny układ eksploracji). Lista i zapytania żyją w `DiscoveryFeed` z propem `followingOnly` (filtr po `followers`). Pusty stan rozróżnia „nikogo nie obserwujesz" (CTA → szukanie ludzi) od „obserwowani nic nie opublikowali" (CTA → Eksploruj).
+- **Eksploruj** → `/eksploruj` ([Explore.tsx](src/pages/Explore.tsx)) = **siatka** treści od całego świata: **wyjazdy ORAZ listy** w jednej mozaice 2-kolumnowej ([ExploreGrid.tsx](src/components/home/ExploreGrid.tsx), kolumny CSS, naturalne proporcje okładek, plakietka typu na każdym kafelku). Przypięta wyszukiwarka zostaje tu (wyniki nadal renderuje `DiscoveryFeed` w trybie `searchOnly`). **Przełącznik Trasy|Miejsca w belce USUNIĘTY** (`hideModeToggle`). Flaga `SHOW_ZESTAWIENIA` = `true` od 2026-09-11 (listy wróciły do eksploracji i wyszukiwarki).
+- **`+` (FAB)** → `CreateFlowSheet` [Lista|Wyjazd] (bez zmian).
+- **Miejsca** → `/miejsca` ([Miejsca.tsx](src/pages/Miejsca.tsx)) = wizytówki miejsc (`ExploreSwiper`, dawny widok „browse" spod przełącznika). W belce segment `Wizytówki | Wydarzenia (wkrótce)` — wydarzenia od klientów biznesowych nie mają jeszcze widoku. ⛔ Nad swiperem NIE może stanąć nic poza `TabTopBar` (zamrożony sizing karty 9:16 liczy się ze stałego chrome).
+- **Profil** → `/moj-profil` (bez zmian).
+- Stare wejścia: `/plan` z `exploreMode` i `/eksploruj` ze `state.view === "browse"` przekierowują na `/miejsca`; event `trasa:explore-nearby` nawiguje na `/miejsca` ze `state.nearby`. Coach-marki onboardingu ([OnboardingGuide](src/components/OnboardingGuide.tsx)) celują w `data-ob="nav-feed|nav-eksploruj|nav-miejsca|nav-fab"` i nawigują między zakładkami (`route`), nie przełączają już widoku eksploracji.
+- Web/PWA (stary flow, `!PLANNING_DISABLED`): bez Feed/Eksploruj/Miejsca; slot 2 to `Wyjazdy` (`/home`), start = `/eksploruj` (waitlista).
+
+**Historia:** 2026-08-20 → 2026-09-11 pasek miał 3 pozycje (`Eksploruj` · `+` · `Profil`), a wizytówki miejsc siedziały pod przełącznikiem Trasy|Miejsca w eksploracji.
 
 **Profil (`/moj-profil`, [TravelerProfile.tsx](src/pages/TravelerProfile.tsx)) = hub z 2 zakładkami** (`?tab=listy|wyjazdy`). **Kolejność pigułek: Wyjazdy | Listy**, domyślnie otwiera się **Wyjazdy** (zmiana 2026-08-30) - tak samo na profilu publicznym. **Zakładka „Zapisane" USUNIĘTA 2026-08-24** - zapisane miejsca żyją w LIŚCIE OGÓLNEJ (wishlista `to_visit`, patrz niżej), niewidocznej jako tab; pojawiają się przy tworzeniu listy/wyjazdu. Wewnątrz Listy i Wyjazdy są **podzakładki** (dropdown w stylu iOS, komponent lokalny `TabSelect`):
 1. **Listy** — pigułki `[Moje listy | Zapisane]` (domyślnie **Moje listy**):

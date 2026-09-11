@@ -85,5 +85,11 @@
   "map": {
     "mark_place": "Zaznacz miejsce"
   },
-  "filters_aria": "Filtry"
+  "filters_aria": "Filtry",
+  "places": {
+    "tab_cards": "Wizytówki",
+    "tab_events": "Wydarzenia",
+    "soon": "wkrótce",
+    "events_soon_toast": "Wydarzenia od lokali pojawią się wkrótce"
+  }
 }

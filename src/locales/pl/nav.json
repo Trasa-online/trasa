@@ -24,5 +24,10 @@
   "fab_aria": "Dodaj trasę",
   "my_profile": "Mój profil",
   "create_trip": "Stwórz wyjazd",
-  "new_trip": "Nowy wyjazd"
+  "new_trip": "Nowy wyjazd",
+  "tabs": {
+    "feed": "Feed",
+    "explore": "Eksploruj",
+    "places": "Miejsca"
+  }
 }

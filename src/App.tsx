@@ -19,6 +19,7 @@ import AuthDrawer from "@/components/auth/AuthDrawer";
 import { businessPanelPath } from "@/lib/businessRedirect";
 import { TrasaLogo } from "@/components/TrasaLogo";
 import { OnboardingProvider } from "@/components/OnboardingGuide";
+import UpdateGate from "@/components/UpdateGate";
 import { supabase } from "@/integrations/supabase/client";
 import { isNative, isWeb } from "@/lib/platform";
 import { PLANNING_DISABLED } from "@/lib/appMode";
@@ -255,8 +256,9 @@ function GlobalAuthCallback() {
         // Web OAuth wraca na origin/ i tracimy kontekst route. Jesli przed logowaniem
         // zapisalismy docelowa sciezke (np. /sesja/KOD - dolaczanie do sesji grupowej),
         // wracamy do niej zamiast na /eksploruj (= waitlista na web).
-        // Priorytet: ?next= z URL (odporny na in-app browser) > sessionStorage > /eksploruj.
-        let dest = "/eksploruj";
+        // Priorytet: ?next= z URL (odporny na in-app browser) > sessionStorage > ekran startowy.
+        // Ekran startowy natywki = Feed (IA 2026-09-11); web zostaje na /eksploruj (waitlista).
+        let dest = isNative ? "/feed" : "/eksploruj";
         try {
           const stored = sessionStorage.getItem("trasa_post_login_redirect");
           if (stored) { dest = stored; sessionStorage.removeItem("trasa_post_login_redirect"); }
@@ -465,7 +467,8 @@ function RootPage() {
     );
   }
   // Onboarding v3 = coach-overlay na realnych ekranach (OnboardingProvider), nie osobny route.
-  return <Navigate to="/eksploruj" replace />;
+  // Ekran startowy natywki = Feed (IA 2026-09-11); web zostaje na /eksploruj (waitlista).
+  return <Navigate to={isNative ? "/feed" : "/eksploruj"} replace />;
 }
 
 function RouteTracker() {
@@ -723,6 +726,8 @@ import NotFound from "./pages/NotFound";
 const AppLayout        = lazy(() => import("./components/layout/AppLayout"));
 const HomeSwipe        = lazy(() => import("./pages/HomeSwipe"));
 const Explore          = lazy(() => import("./pages/Explore"));
+const Feed             = lazy(() => import("./pages/Feed"));
+const Miejsca          = lazy(() => import("./pages/Miejsca"));
 const CreateRanking    = lazy(() => import("./pages/CreateRanking"));
 const ComposeWyjazd    = lazy(() => import("./pages/ComposeWyjazd"));
 const CountryCityPicker = lazy(() => import("./pages/CountryCityPicker"));
@@ -761,7 +766,7 @@ function PlanRoute() {
   // wyjazdMode ("Stworz wyjazd" - miasto+daty+swiper -> wyjazd, bez kulminacji w planie AI).
   // exploreMode ("Przegladaj") wchloniete przez /eksploruj (lokalny toggle feed<->swiper,
   // seamless). Stare wejscia do /plan exploreMode przekierowujemy na /eksploruj (widok swipera).
-  if (st?.exploreMode) return <Navigate to="/eksploruj" state={{ view: "browse", city: st?.city }} replace />;
+  if (st?.exploreMode) return <Navigate to="/miejsca" state={{ city: st?.city }} replace />;
   const allowed = !!st?.wyjazdMode;
   if (PLANNING_DISABLED && !allowed) return <Navigate to="/eksploruj" replace />;
   return <PlanWizard />;
@@ -819,6 +824,9 @@ const App = () => (
         <BusinessGuard />
         <CookieBanner />
         <AuthDrawer />
+        {/* Zdalna brama minimalnej wersji (native) - patrz UpdateGate. Renderuje sie NAD
+            wszystkim (z-200), tylko gdy build jest ponizej progu z app_config. */}
+        {isNative && <UpdateGate />}
         <OnboardingProvider>
         <MaintenanceGate>
         <WebWaitlistGate>
@@ -836,7 +844,11 @@ const App = () => (
           <Route path="/" element={<WebRoot />} />
           {/* Tryb uproszczony (PLANNING_DISABLED): "Twoje trasy" scalone w Wyjazdy (Dziennik). */}
           <Route path="/home" element={PLANNING_DISABLED ? <Navigate to="/moj-profil?tab=wyjazdy" replace /> : <AppLayout hideTopBar><HomeSwipe /></AppLayout>} />
+          {/* IA 2026-09-11 (makieta Nat): Feed (start, tresci od obserwowanych) · Eksploruj
+              (siatka: wyjazdy + listy od wszystkich) · Miejsca (wizytowki lokali) · Profil. */}
+          <Route path="/feed" element={<AppLayout hideTopBar><Feed /></AppLayout>} />
           <Route path="/eksploruj" element={<AppLayout hideTopBar><Explore /></AppLayout>} />
+          <Route path="/miejsca" element={<AppLayout hideTopBar><Miejsca /></AppLayout>} />
           {/* /polubione (Zapisane) przeniesione do zakładki profilu (IA 2026-08-20). Redirect dla starych linków/pushy. */}
           <Route path="/polubione" element={<Navigate to="/moj-profil" replace />} />
           <Route path="/zestawienie/nowe" element={<RequireAuth><CreateRanking /></RequireAuth>} />

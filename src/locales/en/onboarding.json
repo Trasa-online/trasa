@@ -149,16 +149,18 @@
   },
   "guide": {
     "create_desc": "The + button builds your own trip from favourite places. It goes to Explore so others can take inspiration from it.",
-    "places_desc": "Here you browse single places in your city, one at a time: cafes, restaurants, bars, culture and nature.",
-    "trips_desc": "Here you browse ready-made trips created by other people. Open one to see the places and get ideas for your own.",
+    "places_desc": "Browse single places one at a time: cafes, restaurants, bars, culture and nature.",
+    "trips_desc": "Browse trips and place lists from travellers around the world. Open any tile to see the places and get ideas for your own.",
     "save_desc": "Save the places and trips you like with one tap. You come back to them in the Saved tab.",
     "create_title": "Build your own trips",
     "places_title": "The Places tab",
-    "trips_title": "The Trips tab",
+    "trips_title": "The Explore tab",
     "create_eyebrow": "CREATE",
     "skip": "Skip",
     "save_title": "Save your favourites",
     "next": "Next",
-    "done": "Done"
+    "done": "Done",
+    "feed_title": "The Feed tab",
+    "feed_desc": "Trips and lists from people you follow, one after another, like a reel."
   }
 }

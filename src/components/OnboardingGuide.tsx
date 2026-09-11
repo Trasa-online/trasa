@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useEffect, useCallback, useRef } f
 import { useTranslation } from "react-i18next";
 import type { ReactNode, CSSProperties } from "react";
 import { useNavigate } from "react-router-dom";
-import { Compass, Layers, Bookmark, Plus } from "lucide-react";
+import { Home, Search, MapPin, Bookmark, Plus } from "lucide-react";
 import { isNative } from "@/lib/platform";
 import { COACH_PENDING_KEY } from "@/components/onboarding/OnboardingFlow";
 
@@ -69,23 +69,32 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
 // ─── Spotlight-tour ──────────────────────────────────────────────────────────
 
 interface StepCfg {
-  icon: typeof Compass;
+  icon: typeof Home;
   titleKey: string;
   bodyKey: string;
   target: string | null;   // selektor data-ob elementu do podswietlenia
   ctaKey: string;
-  view?: "feed" | "browse"; // przelacz widok eksploracji, zeby user widzial zmiane zakladki pod spodem
+  route?: string;          // ekran, ktory ma byc pod spodem, gdy krok jest aktywny
 }
 
+// Kroki ida po zakladkach dolnego paska (IA 2026-09-11): Feed -> Eksploruj -> Miejsca ->
+// zapis -> "+". Wczesniej podswietlaly przelacznik Trasy|Miejsca w belce eksploracji,
+// ktorego juz nie ma - kazda z tych rzeczy jest teraz osobna zakladka.
 const STEPS: StepCfg[] = [
   {
-    icon: Compass, target: '[data-ob="toggle-trasy"]', view: "feed",
+    icon: Home, target: '[data-ob="nav-feed"]', route: "/feed",
+    titleKey: "guide.feed_title",
+    bodyKey: "guide.feed_desc",
+    ctaKey: "guide.next",
+  },
+  {
+    icon: Search, target: '[data-ob="nav-eksploruj"]', route: "/eksploruj",
     titleKey: "guide.trips_title",
     bodyKey: "guide.trips_desc",
     ctaKey: "guide.next",
   },
   {
-    icon: Layers, target: '[data-ob="toggle-miejsca"]', view: "browse",
+    icon: MapPin, target: '[data-ob="nav-miejsca"]', route: "/miejsca",
     titleKey: "guide.places_title",
     bodyKey: "guide.places_desc",
     ctaKey: "guide.next",
@@ -115,17 +124,13 @@ function OnboardingCoach({ finish }: { finish: () => void }) {
   const cfg = STEPS[idx];
   const isLast = idx === STEPS.length - 1;
 
-  // Tour dzieje sie na /eksploruj (tam jest toggle i BottomNav) - wejdz tam na start.
+  // Kazdy krok pokazuje POD spodem ekran, o ktorym mowi (Feed / Eksploruj / Miejsca) -
+  // user widzi realna zakladke, nie tylko podswietlona ikone. Kroki bez `route` zostaja tam,
+  // gdzie byl poprzedni.
   useEffect(() => {
-    navigate("/eksploruj", { replace: true });
-  }, [navigate]);
-
-  // Przelacz widok eksploracji POD spodem, zeby user widzial zmiane zakladki (Trasy -> feed,
-  // Miejsca -> swiper). Explore.tsx nasluchuje "trasa:explore-set-view".
-  useEffect(() => {
-    const v = STEPS[idx].view;
-    if (v) window.dispatchEvent(new CustomEvent("trasa:explore-set-view", { detail: v }));
-  }, [idx]);
+    const r = STEPS[idx].route;
+    if (r) navigate(r, { replace: true });
+  }, [idx, navigate]);
 
   // Pomiar pozycji podswietlanego elementu (rAF - nadaza za layoutem).
   useEffect(() => {

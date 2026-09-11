@@ -1241,11 +1241,11 @@ async function hydrateCollections(cols: any[]): Promise<DiscoveryCollection[]> {
   }));
 }
 
-// Listy miejsc (dawne "zestawienia") w EKSPLORACJI WYLACZONE (2026-08-09, decyzja Nat):
-// opublikowane listy widoczne TYLKO na profilu usera ("Moje listy"), NIE w feedzie/wyszukiwarce
-// eksploracji. Flaga = master switch: gatuje feed (userPolecajki), wyszukiwarke (collections)
-// i segment typu (Wszystko|Trasy|Listy). Ustaw true, by wrocic listy do eksploracji.
-const SHOW_ZESTAWIENIA = false;
+// Listy miejsc w eksploracji: WLACZONE ponownie 2026-09-11 (nowa IA, makieta Nat: Eksploruj =
+// "wyjazdy ORAZ listy", Feed = tresci od obserwowanych). Wylaczone byly od 2026-08-09, gdy listy
+// mialy zyc tylko na profilu. Flaga zostaje jako master switch: gatuje feed (userPolecajki),
+// wyszukiwarke (collections) i segment typu (Wszystko|Trasy|Listy).
+const SHOW_ZESTAWIENIA = true;
 
 // Szybkie skroty w wyszukiwarce ("Biezace polozenie" + t("saved_places")) - WYLACZONE
 // (2026-07-27): dopoki scroller nie ma miejsc, nie maja sensu. Ustaw true, by przywrocic.
@@ -1530,7 +1530,10 @@ export function SavedCollections({ hideEmptyState }: { hideEmptyState?: boolean 
 
 // searchOnly: komponent zamontowany WYLACZNIE po wyniki wyszukiwania (profil) - pasywny
 // feed eksploracji sie nie renderuje i jego zapytania nie strzelaja do bazy.
-export default function DiscoveryFeed({ city = "Warszawa", active = true, searchQuery = "", searchOpen = false, searchCategory = "all", searchOnly = false }: { city?: string; active?: boolean; searchQuery?: string; searchOpen?: boolean; searchCategory?: "all" | "lists" | "trips" | "places" | "people"; searchOnly?: boolean } = {}) {
+// followingOnly: FEED (ekran startowy, IA 2026-09-11) - tylko tresci od osob, ktore user
+// obserwuje. Bez tej flagi komponent pokazuje tresci od wszystkich (dzis uzywane juz tylko
+// przez wyszukiwarke, bo siatka Eksploruj ma wlasny komponent ExploreGrid).
+export default function DiscoveryFeed({ city = "Warszawa", active = true, searchQuery = "", searchOpen = false, searchCategory = "all", searchOnly = false, followingOnly = false }: { city?: string; active?: boolean; searchQuery?: string; searchOpen?: boolean; searchCategory?: "all" | "lists" | "trips" | "places" | "people"; searchOnly?: boolean; followingOnly?: boolean } = {}) {
   const { t } = useTranslation("homefeed");
   const { user } = useAuth();
   // Zablokowani userzy (App Store 1.2): ich trasy i listy znikaja z feedu i wyszukiwarki.
@@ -1541,6 +1544,19 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
     staleTime: 5 * 60 * 1000,
   });
   const notBlocked = (uid?: string | null) => !uid || !blockedIds?.has(uid);
+  // Kogo obserwuje - zakres Feedu. `undefined` = jeszcze nie wiemy (zapytania tresci czekaja),
+  // pusta lista = nikogo (pusty stan z zacheta do obserwowania).
+  const { data: followedIds } = useQuery({
+    queryKey: ["following-ids", user?.id],
+    enabled: followingOnly && !!user?.id,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { data } = await (supabase as any).from("followers").select("following_id").eq("follower_id", user!.id);
+      return ((data ?? []) as any[]).map((r) => r.following_id as string);
+    },
+  });
+  const followScope: string[] | null = followingOnly ? (followedIds ?? null) : null;
+  const scopeReady = !followingOnly || (!!user?.id && followedIds !== undefined);
   const { open: openAuthDrawer } = useAuthDrawer();
   const queryClient = useQueryClient();
   // Liczba zapisanych miejsc (do wiersza t("saved_places") pod wyszukiwarka).
@@ -1712,9 +1728,10 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
   // Najnowsze udostepnione trasy (poziomy scroll).
   // Trasy w Warszawie (lista pionowa).
   const { data: warszawa = [], isLoading: wawaLoading } = useQuery({
-    queryKey: ["discovery-city-routes", city],
-    enabled: !searchOnly,
+    queryKey: ["discovery-city-routes", city, followScope ? followScope.join(",") : "all"],
+    enabled: !searchOnly && scopeReady,
     queryFn: async () => {
+      if (followScope && followScope.length === 0) return [] as PolecaneRoute[];
       // city === "all" (ALL_CITIES) -> feed agreguje Trasy ze wszystkich miast (bez filtra).
       let q = (supabase as any)
         .from("routes")
@@ -1724,6 +1741,7 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
         // przeciek roboczych tras grupowych (is_shared=true, status='draft') z auto-okladka.
         .eq("is_shared", true).eq("status", "published").eq("hidden_by_admin", false).not("title", "is", null).not("list_cover_url", "is", null);
       if (city && city !== "all") q = q.ilike("city", `${city}%`);
+      if (followScope) q = q.in("user_id", followScope);
       const { data } = await q
         // Najnowsze trasy na gorze feedu wg daty PUBLIKACJI (published_at), nie zalozenia trasy.
         // created_at to moment rozpoczecia planowania - wyjazd planowany od tygodnia i opublikowany
@@ -1899,17 +1917,20 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
   // (feature jeszcze nie w MVP - na TODO). Flaga ponizej -> latwy powrot. Kod + query
   // zostaja w gotowosci. enabled=SHOW_ZESTAWIENIA zeby nie strzelac niepotrzebnie do DB.
   const { data: userPolecajki = [] } = useQuery({
-    queryKey: ["explore-rankings"],
-    enabled: SHOW_ZESTAWIENIA,
+    queryKey: ["explore-rankings", followScope ? followScope.join(",") : "all"],
+    enabled: SHOW_ZESTAWIENIA && !searchOnly && scopeReady,
     queryFn: async () => {
-      const { data: cols, error } = await (supabase as any)
+      if (followScope && followScope.length === 0) return [] as DiscoveryCollection[];
+      let lq = (supabase as any)
         .from("discovery_collections")
         .select("id, title, city, description, category, author_name, author_avatar, user_id, views_count, saves_count, plan_adds_count, cover_url, list_cover_url")
         .eq("is_public", true)
         .eq("kind", "ranking")
         .eq("list_status", "visited") // tylko polecajki; prywatne wishlisty to_visit nigdy w feedzie
         .eq("hidden_by_admin", false)
-        .neq("moderation_status", "rejected") // soft-moderacja: pending + approved widoczne od razu
+        .neq("moderation_status", "rejected"); // soft-moderacja: pending + approved widoczne od razu
+      if (followScope) lq = lq.in("user_id", followScope);
+      const { data: cols, error } = await lq
         .order("updated_at", { ascending: false })
         .limit(20);
       if (error || !cols?.length) return [] as DiscoveryCollection[];
@@ -2402,6 +2423,26 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
                 />
               );
             });
+            if (routeCards.length === 0 && listCards.length === 0 && followingOnly) {
+              // Feed bez tresci: rozrozniamy "nikogo nie obserwujesz" od "obserwowani jeszcze nic
+              // nie opublikowali" - to dwie rozne rady. Guzik prowadzi tam, gdzie da sie to zmienic.
+              const nobody = !followScope || followScope.length === 0;
+              return (
+                <div className="py-16 text-center px-8">
+                  <div className="mx-auto mb-3 h-16 w-16 rounded-full bg-[#fcede3] flex items-center justify-center">
+                    <img src="/Ikona_Profil.svg" alt="" className="h-8 w-8" draggable={false} />
+                  </div>
+                  <p className="text-base font-bold">{nobody ? t("feed_empty.nobody_title") : t("feed_empty.quiet_title")}</p>
+                  <p className="text-sm text-muted-foreground mt-1 leading-relaxed max-w-[280px] mx-auto">{nobody ? t("feed_empty.nobody_hint") : t("feed_empty.quiet_hint")}</p>
+                  <button
+                    onClick={() => navigate("/eksploruj", nobody ? { state: { openSearch: true, searchCat: "people" } } : undefined)}
+                    className="mt-5 inline-flex items-center justify-center rounded-full bg-primary px-5 py-2.5 text-sm font-bold text-white active:scale-[0.97] transition-transform"
+                  >
+                    {nobody ? t("feed_empty.nobody_cta") : t("feed_empty.quiet_cta")}
+                  </button>
+                </div>
+              );
+            }
             if (routeCards.length === 0 && listCards.length === 0) {
               return (
                 <div className="py-16 text-center px-8">

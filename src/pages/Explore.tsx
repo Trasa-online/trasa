@@ -25,7 +25,7 @@ import TabTopBar from "@/components/layout/TabTopBar";
 import NotificationsBell from "@/components/layout/NotificationsBell";
 import ActiveTripBanner from "@/components/home/ActiveTripBanner";
 import SearchCategoryRow, { type SearchCat } from "@/components/home/SearchCategoryRow";
-import ExploreSwiper from "@/components/home/ExploreSwiper";
+import ExploreGrid from "@/components/home/ExploreGrid";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { UNLOCKED_CITIES } from "@/components/plan-wizard/CityPicker";
 import { getHistoryByCity, removeLikeFromCity, addLike, clearCity, updateLikePhoto, type ExploreCityGroup } from "@/lib/exploreLikes";
@@ -739,11 +739,13 @@ const Explore = () => {
   // Listy miast (selektor w arkuszu Filtry) usuniete razem z filtrami 2026-09-10 - dwa
   // zapytania po WSZYSTKIE miasta tras i miejsc odpalaly sie przy kazdym wejsciu w
   // eksploracje, a jedynym ich odbiorca byl znikniety arkusz.
-  // Toggle feed<->swiper LOKALNY (seamless). "browse" = swiper (dawne /plan exploreMode).
-  const [view, setView] = useState<"feed" | "browse">((location.state as any)?.view === "browse" ? "browse" : "feed");
-  // Swiper montujemy po pierwszym przejsciu i zostaje (kolejne przelaczenia natychmiastowe).
-  const [hasBrowsed, setHasBrowsed] = useState(view === "browse");
-  useEffect(() => { if (view === "browse") setHasBrowsed(true); }, [view]);
+  // IA 2026-09-11 (makieta Nat): Eksploruj = SIATKA tresci od calego swiata (wyjazdy + listy),
+  // bez przelacznika Trasy|Miejsca. Wizytowki miejsc maja wlasna zakladke (/miejsca), tresci od
+  // obserwowanych - Feed (/feed). Stare wejscia z `state.view === "browse"` (np. deep-linki
+  // i skroty sprzed zmiany) odsylamy tam, gdzie swiper teraz mieszka.
+  useEffect(() => {
+    if ((location.state as any)?.view === "browse") navigate("/miejsca", { replace: true, state: { city: (location.state as any)?.city } });
+  }, []);   // eslint-disable-line react-hooks/exhaustive-deps
   // Wyszukiwarka w gornej belce: domyslnie zwinieta (lupa). Klik lupy -> pelna szerokosc.
   // Klik "x" -> powrot do domyslnej belki + wyczyszczenie zapytania. Stan trzymamy tu
   // (o poziom wyzej niz DiscoveryFeed), bo input renderuje sie w belce a wyniki w feedzie.
@@ -755,8 +757,12 @@ const Explore = () => {
   // Kategoria wyszukiwania (redesign 2026-08-31, Figma "NEW - Eksploracja — wyszukiwarka"):
   // Wszystko | Listy | Wyjazdy | Miejsca. Wybor kategorii dziala tez BEZ frazy - wtedy
   // pokazujemy zawartosc tej kategorii (tryb przegladania, decyzja Nat).
-  const [searchCat, setSearchCat] = useState<SearchCat>("all");
-  const openSearch = () => { setView("feed"); setSearchOpen(true); };
+  // Kategoria startowa moze przyjsc z innego ekranu (Feed: "obserwuj ludzi" -> od razu Ludzie).
+  const [searchCat, setSearchCat] = useState<SearchCat>(() => {
+    const c = (location.state as any)?.searchCat;
+    return c === "lists" || c === "trips" || c === "places" || c === "people" ? c : "all";
+  });
+  const openSearch = () => setSearchOpen(true);
   const closeSearch = () => { setSearchOpen(false); setFeedSearch(""); setSearchCat("all"); searchInputRef.current?.blur(); };
   // Wejscie z profilu (przypiete pole w naglowku profilu) - ustaw kursor w polu od razu.
   useEffect(() => {
@@ -767,28 +773,18 @@ const Explore = () => {
   // Foldery kategorii chowaja sie po wpisaniu frazy (prosba Nat 2026-09-06 po testach):
   // pusta fraza = przegladanie po kategoriach, wpisana = same wyniki.
   const foldersVisible = searchOpen && !myCollections && feedSearch.trim().length === 0;
-  // "Biezace polozenie" (DiscoveryFeed) -> przejdz na widok Miejsc posortowany od najblizszego.
-  // Nonce rosnie z kazdym klikiem, zeby ExploreSwiper reagowal takze na ponowne klikniecie.
-  const [nearbyNonce, setNearbyNonce] = useState(0);
   // Lejek eksploracji - wejscie na ekran (raz na mount).
-  useEffect(() => { track("explore_opened", { city: exploreCity, mode: view }); }, []);   // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { track("explore_opened", { city: exploreCity, mode: "grid" }); }, []);   // eslint-disable-line react-hooks/exhaustive-deps
+  // "Biezace polozenie" (DiscoveryFeed) -> zakladka Miejsca posortowana od najblizszego.
   useEffect(() => {
-    const h = () => { setSearchOpen(false); setFeedSearch(""); setView("browse"); setNearbyNonce((n) => n + 1); };
+    const h = () => { setSearchOpen(false); setFeedSearch(""); navigate("/miejsca", { state: { nearby: true } }); };
     window.addEventListener("trasa:explore-nearby", h);
     return () => window.removeEventListener("trasa:explore-nearby", h);
-  }, []);
-  // Coach-marki (onboarding) przelaczaja widok, zeby user widzial zmiane zakladki pod banerem.
-  useEffect(() => {
-    const h = (e: any) => { const v = e?.detail; if (v === "browse" || v === "feed") setView(v); };
-    window.addEventListener("trasa:explore-set-view", h);
-    return () => window.removeEventListener("trasa:explore-set-view", h);
-  }, []);
-  // BottomNav (glassmorficzny) widoczny w OBU widokach - Miejsca (swiper) i Trasy (feed) -
-  // dla spojnosci wg redesignu 2026-07-24. Ukrywamy tylko gdy szukamy (pelny ekran wynikow).
-  // Karta swipera w exploreMode ma pb chroniace przed BottomNavem (patrz CLAUDE.md PlaceSwiper).
+  }, [navigate]);
+  // BottomNav ukrywamy tylko gdy szukamy (pelny ekran wynikow).
   useEffect(() => {
     window.dispatchEvent(new CustomEvent("trasa:hide-bottomnav", { detail: searchOpen }));
-  }, [view, searchOpen]);
+  }, [searchOpen]);
   // Przy wyjsciu z Eksploracji zawsze przywroc BottomNav.
   useEffect(() => () => { window.dispatchEvent(new CustomEvent("trasa:hide-bottomnav", { detail: false })); }, []);
 
@@ -827,8 +823,8 @@ const Explore = () => {
           </>
         ) : (
           <ExploreTopBar
-            mode={view === "browse" ? "browse" : "explore"}
-            onModeChange={(m) => setView(m === "browse" ? "browse" : "feed")}
+            mode="explore"
+            hideModeToggle
             onOpenSearch={openSearch}
             onCloseSearch={closeSearch}
             searchOpen={searchOpen}
@@ -854,8 +850,7 @@ const Explore = () => {
           {/* Skrot do wyjazdu "w trakcie" / roboczego - TYLKO w widoku feedu. W trybie kart miejsc
               (swiper) NIE renderujemy go: wysokosc karty 9:16 jest wyliczana ze stalego chrome i
               dolozenie paska rozjechaloby zamrozony layout (CLAUDE.md - PlaceSwiper sizing). */}
-          {/* Feed - zawsze zamontowany; ukryty gdy swiper (seamless toggle). */}
-          <div className={cn("relative flex-1 min-h-0 flex flex-col", view !== "feed" && "hidden")}>
+          <div className="relative flex-1 min-h-0 flex flex-col">
             {/* Skrot do wyjazdu "w trakcie" / roboczego - NAKLADKA przyklejona pod gorna belka.
                 Chowa sie po scrollu w dol, wraca na samej gorze (prosba Nat 2026-09-01).
                 Dlaczego nakladka, a nie element ukladu - dwa poprzednie podejscia sie wylozyly:
@@ -874,9 +869,9 @@ const Explore = () => {
               feedScrolled || searchOpen ? "-translate-y-[130%] opacity-0 pointer-events-none" : "translate-y-0 opacity-100")}>
               <ActiveTripBanner floating />
             </div>
-            {/* Snap tylko w trybie przegladania feedu. Przy wyszukiwaniu WYLACZAMY snap, zeby
-                skroty/wyniki na gorze byly widoczne, a wizytowki zostawaly przewijalne pod spodem. */}
-            <PullToRefresh onRefresh={handleRefresh} onScroll={(top) => setFeedScrolled(top > 8)} className={cn("flex-1 min-h-0 flex flex-col pt-3 pb-[calc(6rem+env(safe-area-inset-bottom,0px))]", !searchOpen && "snap-y snap-mandatory scroll-pt-3")}>
+            {/* Siatka NIE ma snapu (skanuje sie ja wzrokiem, nie karta po karcie) - snap zostal
+                w Feedzie. Przy wyszukiwaniu ten sam scroller pokazuje wyniki zamiast siatki. */}
+            <PullToRefresh onRefresh={handleRefresh} onScroll={(top) => setFeedScrolled(top > 8)} className="flex-1 min-h-0 flex flex-col pt-3 pb-[calc(6rem+env(safe-area-inset-bottom,0px))]">
               {/* Foldery kategorii wyszukiwarki - WEWNATRZ obszaru przewijania (prosba Nat
                   2026-09-10). Wczesniej staly nad nim jako staly element ukladu i przy kazdym
                   szukaniu zabieraly gore ekranu, nawet gdy user byl juz przy dziesiatym wyniku.
@@ -893,15 +888,14 @@ const Explore = () => {
                   <div className="h-3" />
                 </div>
               )}
-              <div className="flex-1 px-4"><DiscoveryFeed city={exploreCity} active={view === "feed"} searchQuery={feedSearch} searchOpen={searchOpen} searchCategory={searchCat} /></div>
+              <div className="flex-1 px-4">
+                {/* Wyszukiwarka (wyniki + foldery) zyje w DiscoveryFeed; `searchOnly` wylacza
+                    tam feed kart, ktory zastapila siatka ponizej. */}
+                <DiscoveryFeed city={exploreCity} searchOnly searchQuery={feedSearch} searchOpen={searchOpen} searchCategory={searchCat} />
+                {!searchOpen && <ExploreGrid />}
+              </div>
             </PullToRefresh>
           </div>
-          {/* Swiper - montowany po pierwszym przejsciu, potem zostaje (natychmiastowy toggle). */}
-          {hasBrowsed && (
-            <div className={cn("flex-1 min-h-0 flex flex-col", view !== "browse" && "hidden")}>
-              <ExploreSwiper city={exploreCity} active={view === "browse"} sortNearestNonce={nearbyNonce} />
-            </div>
-          )}
         </>
       )}
     </div>

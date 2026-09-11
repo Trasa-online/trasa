@@ -105,5 +105,11 @@
     "route": "Route",
     "place": "Place",
     "unknown_place": "Unknown place"
+  },
+  "update": {
+    "title": "Update the app",
+    "body": "This version of spontaway is out of date. Update the app so everything works as it should.",
+    "cta": "Update",
+    "later": "Later"
   }
 }

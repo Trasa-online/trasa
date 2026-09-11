@@ -83,5 +83,11 @@
   "map": {
     "mark_place": "Mark a place"
   },
-  "filters_aria": "Filters"
+  "filters_aria": "Filters",
+  "places": {
+    "tab_cards": "Places",
+    "tab_events": "Events",
+    "soon": "soon",
+    "events_soon_toast": "Events from venues are coming soon"
+  }
 }

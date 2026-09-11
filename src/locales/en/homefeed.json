@@ -130,5 +130,20 @@
   },
   "saved": {
     "empty_lists_routes": "No saved lists or routes yet"
+  },
+  "feed": {
+    "title": "Feed"
+  },
+  "grid": {
+    "trip": "Trip",
+    "list": "List"
+  },
+  "feed_empty": {
+    "nobody_title": "Trips and lists from people you follow will show up here",
+    "nobody_hint": "You are not following anyone yet. Find friends or travellers whose taste you like.",
+    "nobody_cta": "Find people to follow",
+    "quiet_title": "Quiet for now",
+    "quiet_hint": "The people you follow have not published anything yet. See what others are sharing.",
+    "quiet_cta": "Go to Explore"
   }
 }

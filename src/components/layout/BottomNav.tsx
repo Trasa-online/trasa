@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { useNavigate, useLocation } from "react-router-dom";
 import { NavLink } from "@/components/NavLink";
 import CreateFlowSheet from "@/components/create/CreateFlowSheet";
-import { X, MapPin, Heart, ArrowLeft, Layers } from "lucide-react";
+import { X, MapPin, Heart, ArrowLeft, Layers, Home, Search, User } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { getTodayLikes, type ExploreLike } from "@/lib/exploreLikes";
@@ -59,7 +59,10 @@ function getActiveHomeCity(): string {
 // Zaznaczenie AKTYWNEJ zakladki (prosba Nat 2026-09-06): delikatny fill z przyciemnieniem
 // pod ikona + pelna czern napisu; nieaktywna wyciszona. Wczesniej obie zakladki wygladaly
 // identycznie, wiec z paska nie dalo sie odczytac, gdzie sie jest.
-const NAV_ITEM = "w-16 h-[46px] rounded-2xl flex flex-col items-center justify-center gap-1 transition-colors";
+// IA 2026-09-11: 5 pozycji (Feed · Eksploruj · + · Miejsca · Profil). Target 54 px zamiast 64,
+// zeby caly pill zmiescil sie na iPhone SE (375 px) z marginesami: 4x54 + 64 (FAB) + odstepy
+// + padding = ~328 px. 54 px to nadal wiecej niz minimum Apple (44 pt).
+const NAV_ITEM = "w-[54px] h-[46px] rounded-2xl flex flex-col items-center justify-center gap-1 transition-colors";
 const NAV_ITEM_IDLE = "text-foreground/40";
 const NAV_ITEM_ACTIVE = "bg-black/[0.07] text-foreground";
 
@@ -276,29 +279,32 @@ const BottomNav = () => {
         {/* Szklo z wypelnieniem (kompromis: przezroczyste + czytelne). bg-white/45 daje jasna baze
             pod ikonami (czytelne bez halo), blur-sm zostawia tresc pod spodem widoczna. Ksztalt na
             bialym tle: subtelna hairline + cien + jasny ring-inset (szklany refleks). */}
-        <div className="pointer-events-auto bg-white/45 backdrop-blur-sm backdrop-saturate-150 rounded-[26px] border border-black/[0.06] ring-1 ring-inset ring-white/40 shadow-[0_12px_34px_-8px_rgba(0,0,0,0.30),0_2px_6px_-2px_rgba(0,0,0,0.10)] px-4">
-          <div className="flex items-center gap-3 h-14">
+        <div className="pointer-events-auto bg-white/45 backdrop-blur-sm backdrop-saturate-150 rounded-[26px] border border-black/[0.06] ring-1 ring-inset ring-white/40 shadow-[0_12px_34px_-8px_rgba(0,0,0,0.30),0_2px_6px_-2px_rgba(0,0,0,0.10)] px-3">
+          <div className="flex items-center gap-1.5 h-14">
 
-          {/* Eksploruj - landing (skrajnie z lewej). Tylko w native iOS/Android.
-              Web/PWA ukrywa (na web B2C jest za waitlista). */}
+          {/* IA 2026-09-11 (makieta Nat): Feed · Eksploruj · + · Miejsca · Profil. Tylko native
+              (web/PWA ma B2C za waitlista). Ikony liniowe jak w makiecie - w brandowym zestawie
+              SVG nie ma domu ani miejsc, a mieszanie wypelnionych z liniowymi w jednym pasku
+              rozjezdza sie wizualnie. replace: zakladki NIE odkladaja historii (tab bar). */}
           {isNative && (
-            <NavLink
-              to="/eksploruj"
-            // replace: zakladki dolnego paska NIE odkladaja historii (zachowanie jak w natywnym
-            // tab barze). Bez tego kazde przelaczenie Eksploruj/Profil dokladalo wpis i "wstecz"
-            // krecil sie po zakladkach zamiast wracac do poprzedniego ekranu (zgloszenie Nat).
-            replace
-              end={false}
-              className={`${NAV_ITEM} ${NAV_ITEM_IDLE}`}
-              activeClassName={NAV_ITEM_ACTIVE}
-            >
-              {({ isActive }) => (
-                <>
-                  <NavIcon src="/Ikona_Eksploracja.svg" />
-                  <span className="text-[9px] font-semibold leading-tight mt-0.5">Eksploruj</span>
-                </>
-              )}
-            </NavLink>
+            <>
+              <NavLink to="/feed" replace end={false} data-ob="nav-feed" className={`${NAV_ITEM} ${NAV_ITEM_IDLE}`} activeClassName={NAV_ITEM_ACTIVE}>
+                {() => (
+                  <>
+                    <Home className="h-5 w-5" strokeWidth={2.1} />
+                    <span className="text-[9px] font-semibold leading-tight mt-0.5">{t("tabs.feed")}</span>
+                  </>
+                )}
+              </NavLink>
+              <NavLink to="/eksploruj" replace end={false} data-ob="nav-eksploruj" className={`${NAV_ITEM} ${NAV_ITEM_IDLE}`} activeClassName={NAV_ITEM_ACTIVE}>
+                {() => (
+                  <>
+                    <Search className="h-5 w-5" strokeWidth={2.1} />
+                    <span className="text-[9px] font-semibold leading-tight mt-0.5">{t("tabs.explore")}</span>
+                  </>
+                )}
+              </NavLink>
+            </>
           )}
 
           {/* Slot 2: TYLKO web (stary flow) -> Wyjazdy (/home). Native: brak - Wyjazdy to teraz
@@ -346,22 +352,29 @@ const BottomNav = () => {
             </span>
           </button>
 
-          {/* Slot 4 (Zapisane/Dziennik) USUNIĘTY - Zapisane to teraz zakładka profilu (IA 2026-08-20). */}
+          {/* Miejsca - wizytowki lokali (dawniej pod przelacznikiem w eksploracji). Native. */}
+          {isNative && (
+            <NavLink to="/miejsca" replace end={false} data-ob="nav-miejsca" className={`${NAV_ITEM} ${NAV_ITEM_IDLE}`} activeClassName={NAV_ITEM_ACTIVE}>
+              {() => (
+                <>
+                  <MapPin className="h-5 w-5" strokeWidth={2.1} />
+                  <span className="text-[9px] font-semibold leading-tight mt-0.5">{t("tabs.places")}</span>
+                </>
+              )}
+            </NavLink>
+          )}
 
           {/* Profil */}
           <NavLink
             to="/moj-profil"
-          // replace: zakladki dolnego paska NIE odkladaja historii (zachowanie jak w natywnym
-          // tab barze). Bez tego kazde przelaczenie Eksploruj/Profil dokladalo wpis i "wstecz"
-          // krecil sie po zakladkach zamiast wracac do poprzedniego ekranu (zgloszenie Nat).
-          replace
+            replace
             end={false}
             className={`${NAV_ITEM} ${NAV_ITEM_IDLE}`}
             activeClassName={NAV_ITEM_ACTIVE}
           >
-            {({ isActive }) => (
+            {() => (
               <>
-                <NavIcon src="/Ikona_Profil.svg" />
+                {isNative ? <User className="h-5 w-5" strokeWidth={2.1} /> : <NavIcon src="/Ikona_Profil.svg" />}
                 <span className="text-[9px] font-semibold leading-tight mt-0.5">{t("common:nav.profile")}</span>
               </>
             )}

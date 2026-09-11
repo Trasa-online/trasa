@@ -105,5 +105,11 @@
     "route": "Trasa",
     "place": "Miejsce",
     "unknown_place": "Nieznane miejsce"
+  },
+  "update": {
+    "title": "Zaktualizuj aplikację",
+    "body": "Ta wersja spontaway jest już nieaktualna. Zaktualizuj aplikację, żeby wszystko działało jak należy.",
+    "cta": "Zaktualizuj",
+    "later": "Później"
   }
 }

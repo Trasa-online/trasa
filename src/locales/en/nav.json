@@ -23,5 +23,10 @@
   "reuse_place_other": "liked places",
   "my_profile": "My profile",
   "create_trip": "Create a trip",
-  "new_trip": "New trip"
+  "new_trip": "New trip",
+  "tabs": {
+    "feed": "Feed",
+    "explore": "Explore",
+    "places": "Places"
+  }
 }
