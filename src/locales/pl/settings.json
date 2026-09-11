@@ -85,5 +85,20 @@
     "chars": "Dozwolone są litery, cyfry oraz . _ -   (bez spacji)",
     "banned": "Ta nazwa jest niedozwolona",
     "reserved": "Ta nazwa jest zarezerwowana"
+  },
+  "customize": {
+    "title": "Customizuj mój profil",
+    "desc": "Ramki i nakładki na awatar"
+  },
+  "frames": {
+    "title": "Ramka awatara",
+    "desc": "Wybrana ramka jest widoczna przy Twoim zdjęciu na profilu, w wyjazdach i na listach.",
+    "none": "Bez ramki",
+    "stars": "Gwiazdki",
+    "hearts": "Serduszka",
+    "clouds": "Chmurki",
+    "saved": "Ramka ustawiona",
+    "removed": "Ramka zdjęta",
+    "save_failed": "Nie udało się zapisać ramki"
   }
 }

@@ -30,6 +30,7 @@ import { saveCollectionDb, unsaveCollectionDb, markCollectionSeenDb } from "@/li
 import { EmptyPlacesState } from "@/components/route/EmptyPlacesState";
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { avatarSrc } from "@/lib/avatar";
+import { FramedAvatar } from "@/components/profile/FramedAvatar";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import SavePlaceSheet, { type SavePlaceInput } from "@/components/plan-wizard/SavePlaceSheet";
 import { placeKeyOf, fetchPlacePhotosForKeys, pickPlaceCover, linkPhotoToPlace, unlinkPhotoFromPlace, detachPlacePhotos, restorePlacePhotos } from "@/lib/placePhotoSocial";
@@ -322,7 +323,7 @@ export default function SharedList() {
     enabled: !!col?.user_id,
     queryFn: async () => {
       const { data } = await (supabase as any)
-        .from("profiles").select("username, first_name, avatar_url").eq("id", col!.user_id).maybeSingle();
+        .from("profiles").select("username, first_name, avatar_url, avatar_frame").eq("id", col!.user_id).maybeSingle();
       return data as any;
     },
   });
@@ -666,7 +667,7 @@ export default function SharedList() {
             <div className="flex-1 min-w-0 flex justify-center">
               {author?.username ? (
                 <button onClick={() => navigate(`/profil/${author.username}`)} className="flex items-center gap-1.5 font-semibold text-foreground active:opacity-60 transition-opacity min-w-0">
-                  <img src={avatarSrc(author?.avatar_url ?? col.author_avatar)} alt="" className="h-6 w-6 rounded-full object-cover bg-orange-100 shrink-0" />
+                  <FramedAvatar src={author?.avatar_url ?? col.author_avatar} frame={author?.avatar_frame} />
                   <span className="truncate">@{author.username}</span>
                 </button>
               ) : (

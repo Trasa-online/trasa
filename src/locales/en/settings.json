@@ -85,5 +85,20 @@
     "chars": "Letters, digits and . _ - only (no spaces)",
     "banned": "That name is not allowed",
     "reserved": "That name is reserved"
+  },
+  "customize": {
+    "title": "Customise my profile",
+    "desc": "Avatar frames and overlays"
+  },
+  "frames": {
+    "title": "Avatar frame",
+    "desc": "Your frame shows next to your photo on your profile, in trips and on lists.",
+    "none": "No frame",
+    "stars": "Stars",
+    "hearts": "Hearts",
+    "clouds": "Clouds",
+    "saved": "Frame set",
+    "removed": "Frame removed",
+    "save_failed": "Couldn't save the frame"
   }
 }

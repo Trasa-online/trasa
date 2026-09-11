@@ -32,7 +32,8 @@ import { Camera as CapCamera, CameraResultType, CameraSource } from "@capacitor/
 import { ProfileFeedCard } from "@/components/profile/ProfileFeedCard";
 import ReferralCard from "@/components/profile/ReferralCard";
 import { TripLayoutSwitch, TripTile, useTripLayout } from "@/components/profile/TripLayout";
-import AvatarStarFrame from "@/components/profile/AvatarStarFrame";
+import AvatarFrame from "@/components/profile/AvatarFrame";
+import { isAvatarFrame } from "@/lib/avatarFrames";
 import { scopeLabel } from "@/lib/tripScope";
 import { SpontawayTabIcon } from "@/components/profile/SpontawayTabIcon";
 import { shortRelativeTime } from "@/lib/relativeTime";
@@ -311,7 +312,7 @@ const TravelerProfile = () => {
   const { data: profile } = useQuery({
     queryKey: ["profile-full", user?.id],
     queryFn: async () => {
-      const { data } = await supabase.from("profiles").select("username, avatar_url, first_name, bio").eq("id", user!.id).single();
+      const { data } = await supabase.from("profiles").select("username, avatar_url, first_name, bio, avatar_frame").eq("id", user!.id).single();
       return data as any;
     },
     enabled: !!user,
@@ -772,8 +773,8 @@ const TravelerProfile = () => {
         {/* Avatar + nazwa + bio (Figma: nazwa | separator | bio) */}
         <div className="flex items-stretch gap-3">
           <div className="relative shrink-0 self-center">
-            {/* PROBA ramki awatara (2026-09-11): cztery brandowe gwiazdki krazace wokol zdjecia. */}
-            <AvatarStarFrame size={76} />
+            {/* Ramka awatara wybrana w Ustawieniach -> "Customizuj mój profil" (profiles.avatar_frame). */}
+            <AvatarFrame kind={isAvatarFrame(profile?.avatar_frame) ? profile.avatar_frame : null} size={76} />
             <Avatar className="h-[76px] w-[76px]">
               <AvatarImage src={avatarSrc(profile?.avatar_url)} className="object-cover bg-orange-100" />
               <AvatarFallback className="bg-orange-100 text-primary text-3xl font-black">

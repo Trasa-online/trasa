@@ -10,7 +10,8 @@ import { getConsent, grantConsent, denyConsent } from "@/lib/consent";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Camera, Shield, Bell, LogOut, ChevronRight, Cookie, FileText, Trash2, KeyRound, AlertCircle, X, ArrowLeft, Link as LinkIcon, Mail, Languages, RotateCcw, Instagram, MessagesSquare } from "lucide-react";
+import { Camera, Shield, Bell, LogOut, ChevronRight, Cookie, FileText, Trash2, KeyRound, AlertCircle, X, ArrowLeft, Link as LinkIcon, Mail, Languages, RotateCcw, Instagram, MessagesSquare, Sparkles } from "lucide-react";
+import AvatarFrameSheet from "@/components/profile/AvatarFrameSheet";
 import { Browser } from "@capacitor/browser";
 import { isHardcodedAdmin } from "@/lib/admins";
 import { useOnboarding } from "@/components/OnboardingGuide";
@@ -550,6 +551,8 @@ const Settings = () => {
   const [username, setUsername] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
   const [bio, setBio] = useState("");
+  // "Customizuj mój profil" - arkusz z ramkami awatara (prosba Nat 2026-09-11).
+  const [framesOpen, setFramesOpen] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) navigate("/auth");
@@ -790,6 +793,20 @@ const Settings = () => {
             {updateProfileMutation.isPending ? t("saving") : t("save_changes")}
           </button>
         </div>
+
+        {/* Customizuj moj profil - ramki awatara (pod sekcja "O mnie"). */}
+        <button
+          onClick={() => setFramesOpen(true)}
+          className="w-full flex items-center gap-3 rounded-2xl bg-card border border-border/40 px-4 py-3.5 text-left active:bg-muted/40 transition-colors"
+        >
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10"><Sparkles className="h-5 w-5 text-primary" /></span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-semibold text-foreground">{t("customize.title")}</span>
+            <span className="block text-xs text-muted-foreground">{t("customize.desc")}</span>
+          </span>
+          <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+        </button>
+        {user && <AvatarFrameSheet open={framesOpen} onOpenChange={setFramesOpen} userId={user.id} />}
 
         {/* Linked accounts */}
         <LinkedAccountsSection />

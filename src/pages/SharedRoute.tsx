@@ -65,6 +65,7 @@ const SUBCAT_ORDER: string[] = MAIN_CATEGORIES.flatMap((c) => c.subcategories.ma
 
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { avatarSrc } from "@/lib/avatar";
+import { FramedAvatar } from "@/components/profile/FramedAvatar";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import SavePlaceSheet, { type SavePlaceInput } from "@/components/plan-wizard/SavePlaceSheet";
 import { resolvePlaceDbId } from "@/lib/placeLists";
@@ -402,7 +403,7 @@ export default function SharedRoute() {
     queryFn: async () => {
       const { data } = await (supabase as any)
         .from("profiles")
-        .select("username, first_name, avatar_url, home_city")
+        .select("username, first_name, avatar_url, home_city, avatar_frame")
         .eq("id", route!.user_id)
         .maybeSingle();
       return data as any;
@@ -417,12 +418,12 @@ export default function SharedRoute() {
       const { data: members } = await (supabase as any)
         .from("group_session_members").select("user_id").eq("session_id", (route as any).group_session_id).eq("status", "accepted");
       const ids = (members ?? []).map((m: any) => m.user_id).filter((id: string) => id !== route!.user_id);
-      if (!ids.length) return [] as { id: string; username: string | null; avatar_url: string | null }[];
-      const { data: profs } = await (supabase as any).from("profiles").select("id, username, avatar_url").in("id", ids);
+      if (!ids.length) return [] as { id: string; username: string | null; avatar_url: string | null; avatar_frame?: string | null }[];
+      const { data: profs } = await (supabase as any).from("profiles").select("id, username, avatar_url, avatar_frame").in("id", ids);
       // Zachowaj kolejnosc czlonkow sesji (pierwsi uczestnicy = pelna nazwa w TopBarze).
       const byId = new Map((profs ?? []).map((p: any) => [p.id, p]));
       return ids.map((id: string) => byId.get(id)).filter(Boolean)
-        .map((p: any) => ({ id: p.id, username: p.username ?? null, avatar_url: p.avatar_url ?? null }));
+        .map((p: any) => ({ id: p.id, username: p.username ?? null, avatar_url: p.avatar_url ?? null, avatar_frame: p.avatar_frame ?? null }));
     },
   });
 
@@ -2065,12 +2066,12 @@ export default function SharedRoute() {
                   onClick={() => navigate(`/profil/${author.username}`)}
                   className="flex items-center gap-1.5 font-semibold text-foreground active:opacity-60 transition-opacity min-w-0 shrink"
                 >
-                  <img src={avatarSrc(author?.avatar_url)} alt="" className="h-6 w-6 rounded-full object-cover bg-orange-100 shrink-0" />
+                  <FramedAvatar src={author?.avatar_url} frame={author?.avatar_frame} />
                   <span className="truncate">@{author.username}</span>
                 </button>
               ) : (
                 <span className="flex items-center gap-1.5 font-semibold text-foreground min-w-0 shrink">
-                  {!isAnon && <img src={avatarSrc(author?.avatar_url)} alt="" className="h-6 w-6 rounded-full object-cover bg-orange-100 shrink-0" />}
+                  {!isAnon && <FramedAvatar src={author?.avatar_url} frame={author?.avatar_frame} />}
                   <span className="truncate">{authorName}</span>
                 </span>
               )}
@@ -2078,11 +2079,11 @@ export default function SharedRoute() {
               {groupParticipants.slice(0, 2).map((p) => (
                 p.username ? (
                   <button key={p.id} onClick={() => navigate(`/profil/${p.username}`)} className="flex items-center gap-1.5 font-semibold text-foreground active:opacity-60 transition-opacity min-w-0 shrink">
-                    <img src={avatarSrc(p.avatar_url)} alt="" className="h-6 w-6 rounded-full object-cover bg-orange-100 shrink-0" />
+                    <FramedAvatar src={p.avatar_url} frame={(p as any).avatar_frame} />
                     <span className="truncate">@{p.username}</span>
                   </button>
                 ) : (
-                  <img key={p.id} src={avatarSrc(p.avatar_url)} alt="" className="h-6 w-6 rounded-full object-cover bg-orange-100 shrink-0" />
+                  <FramedAvatar key={p.id} src={p.avatar_url} frame={(p as any).avatar_frame} />
                 )
               ))}
               {/* Pozostali uczestnicy (4+) = same awatary (nachodzacy stack) + "+N". */}

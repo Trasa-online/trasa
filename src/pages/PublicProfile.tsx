@@ -3,6 +3,8 @@ import { useTranslation } from "react-i18next";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { goBackOr } from "@/hooks/useGoBack";
 import { avatarSrc } from "@/lib/avatar";
+import AvatarFrame from "@/components/profile/AvatarFrame";
+import { isAvatarFrame } from "@/lib/avatarFrames";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -100,10 +102,12 @@ export default function PublicProfile() {
       // znakow wieloznacznych; escapeLike chroni przed "%" i "_" wpisanym w nazwe.
       const { data } = await supabase
         .from("profiles")
-        .select("id, username, first_name, avatar_url, bio")
+        .select("id, username, first_name, avatar_url, bio, avatar_frame")
         .ilike("username", escapeLike((username ?? "").trim()))
         .maybeSingle();
-      return data as { id: string; username: string; first_name: string | null; avatar_url: string | null; bio: string | null } | null;
+      // `as unknown`: wygenerowane typy Supabase nie znaja jeszcze avatar_frame (types.ts
+      // regenerowany osobno - CLAUDE.md), a kolumna w bazie jest (migracja 20260911f).
+      return data as unknown as { id: string; username: string; first_name: string | null; avatar_url: string | null; bio: string | null; avatar_frame: string | null } | null;
     },
     enabled: !!username,
   });
@@ -356,12 +360,15 @@ export default function PublicProfile() {
 
         {/* Avatar + nazwa + bio (Figma: nazwa | separator | bio) */}
         <div className="flex items-start gap-4">
+          <span className="relative h-[76px] w-[76px] shrink-0">
+          <AvatarFrame kind={isAvatarFrame(profile.avatar_frame) ? profile.avatar_frame : null} size={76} />
           <Avatar className="h-[76px] w-[76px] shrink-0">
             <AvatarImage src={avatarSrc(profile.avatar_url)} className="object-cover bg-orange-100" />
             <AvatarFallback className="bg-orange-100 text-primary text-3xl font-black">
               {displayName.charAt(0).toUpperCase() || "?"}
             </AvatarFallback>
           </Avatar>
+          </span>
           <div className="min-w-0 shrink-0 pt-1">
             <h2 className="text-xl font-display font-extrabold leading-tight truncate">{displayName}</h2>
             {/* @username osobno TYLKO gdy jest imię (inaczej byłby podwójny username). */}
