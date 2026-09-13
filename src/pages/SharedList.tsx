@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 import { MapPin, ArrowLeft, Bookmark, Building2, Trash2, Share2, Plus, Camera, Loader2, X, Pencil, MoreHorizontal, Palette, ChevronLeft, Flag } from "lucide-react";
 import { mapWithLimit } from "@/lib/imageCompression";
 import AddPlaceSheet from "@/components/route/AddPlaceSheet";
-import { scopeCountries } from "@/lib/tripScope";
+import { scopeCountries, scopeLabel } from "@/lib/tripScope";
 import { addPlaceToList, type PlaceForList } from "@/lib/placeLists";
 import { useShare } from "@/hooks/useShare";
 import { useUnsavePlace } from "@/hooks/useUnsavePlace";
@@ -49,6 +49,7 @@ import { moderateImageUrl, MODERATION_REJECTED_MESSAGE } from "@/lib/imageModera
 import { rowOwnPhotos, mergeRowPhotosIntoDetail } from "@/lib/placeUserPhotos";
 import { deferDelete } from "@/lib/deferDelete";
 import ListThemeSheet from "@/components/lists/ListThemeSheet";
+import ListScopeSheet from "@/components/lists/ListScopeSheet";
 import { AuthorPill, HighlightChips } from "@/components/route/TripHeaderChips";
 import { BrandIcon, SAVE_ICON } from "@/components/BrandIcon";
 
@@ -95,6 +96,8 @@ export default function SharedList() {
   const [shareCardOpen, setShareCardOpen] = useState(false);
   // Tlo listy na siatce Glownej (paleta marki) - wybor wlasciciela z menu "...".
   const [themeOpen, setThemeOpen] = useState(false);
+  // Kraj / miasto kolekcji - zmiana przez autora z menu "..." (prosba Nat 2026-09-14).
+  const [scopeOpen, setScopeOpen] = useState(false);
   // Zmiana nazwy listy (prosba Nat 2026-09-08). Edycja NA MIEJSCU, tak jak nazwa wyjazdu -
   // osobny arkusz do jednego pola tylko mnozylby kroki.
   const [editingName, setEditingName] = useState(false);
@@ -515,7 +518,8 @@ export default function SharedList() {
   const cover = resolveStored(col.cover_url) ?? resolveStored(items.find((i: any) => i.photo_url)?.photo_url) ?? null;
   const hasRealPhoto = !!cover;
   const heroPhoto = cover ?? getRandomPinPlaceholder(col.id);
-  const cityLabel = col.city || "";
+  // Chip pod nazwa: miasto, a gdy go nie ma - kraje (jak w wyjezdzie).
+  const cityLabel = col.city || scopeLabel(col) || "";
   const authorName = author?.first_name || author?.username || col.author_name || t("someone");
   const isOwner = !!user && col.user_id === user.id;
   const placesCountLabel = t("places_count", { count: items.length });
@@ -755,6 +759,9 @@ export default function SharedList() {
                   >
                     <Pencil className="h-4 w-4" />{t("aria.rename_list")}
                   </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => setScopeOpen(true)} className="gap-2.5 py-2.5">
+                    <MapPin className="h-4 w-4" />{t("aria.list_scope")}
+                  </DropdownMenuItem>
                   <DropdownMenuItem onSelect={() => setThemeOpen(true)} className="gap-2.5 py-2.5">
                     <Palette className="h-4 w-4" />{t("aria.list_theme")}
                   </DropdownMenuItem>
@@ -822,7 +829,10 @@ export default function SharedList() {
             )}
           </div>
         {isOwner && (
-          <ListThemeSheet open={themeOpen} onOpenChange={setThemeOpen} listId={col.id} current={col.theme} title={col.title || t("fallback_title")} />
+          <>
+            <ListThemeSheet open={themeOpen} onOpenChange={setThemeOpen} listId={col.id} current={col.theme} title={col.title || t("fallback_title")} />
+            <ListScopeSheet open={scopeOpen} onOpenChange={setScopeOpen} listId={col.id} current={col} />
+          </>
         )}
         {shareCardOpen && (
         <ShareCardList

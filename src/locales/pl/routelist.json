@@ -67,7 +67,8 @@
     "delete_list": "Usuń kolekcję",
     "rename_list": "Zmień nazwę kolekcji",
     "list_actions": "Akcje kolekcji",
-    "list_theme": "Tło kolekcji"
+    "list_theme": "Tło kolekcji",
+    "list_scope": "Kraj i miasto"
   },
   "fallback_title": "Kolekcja miejsc",
   "photo": "Zdjęcie",
@@ -97,5 +98,15 @@
     "gold": "Złoty",
     "orange": "Pomarańcz",
     "brown": "Brąz"
+  },
+  "scope": {
+    "title": "Kraj i miasto",
+    "desc": "Kraje zawężają wyszukiwarkę miejsc w tej kolekcji, miasto pokazuje się przy jej nazwie.",
+    "city_label": "Miasto (opcjonalnie)",
+    "city_placeholder": "Wpisz miasto",
+    "no_city": "Bez miasta",
+    "save": "Zapisz",
+    "saved": "Zapisano kraj i miasto",
+    "save_failed": "Nie udało się zapisać kraju i miasta"
   }
 }

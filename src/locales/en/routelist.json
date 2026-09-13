@@ -65,7 +65,8 @@
     "delete_list": "Delete collection",
     "rename_list": "Rename collection",
     "list_actions": "Collection actions",
-    "list_theme": "Collection background"
+    "list_theme": "Collection background",
+    "list_scope": "Country and city"
   },
   "fallback_title": "Collection of places",
   "photo": "Photo",
@@ -94,5 +95,15 @@
     "gold": "Gold",
     "orange": "Orange",
     "brown": "Brown"
+  },
+  "scope": {
+    "title": "Country and city",
+    "desc": "Countries narrow the place search in this collection; the city shows next to its name.",
+    "city_label": "City (optional)",
+    "city_placeholder": "Type a city",
+    "no_city": "No city",
+    "save": "Save",
+    "saved": "Country and city saved",
+    "save_failed": "We could not save the country and city"
   }
 }
