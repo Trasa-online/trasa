@@ -52,7 +52,8 @@
     "name_saved": "Name changed",
     "name_failed": "Could not change the name",
     "name_not_allowed": "This name contains a word we don't allow",
-    "photo_deleted": "Photo deleted"
+    "photo_deleted": "Photo deleted",
+    "auto_visited": "Marked as visited"
   },
   "cta": {
     "add_place": "Add new place",

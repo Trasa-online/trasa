@@ -54,7 +54,8 @@
     "name_saved": "Nazwa zmieniona",
     "name_failed": "Nie udało się zmienić nazwy",
     "name_not_allowed": "Ta nazwa zawiera niedozwolone słowo",
-    "photo_deleted": "Usunięto zdjęcie"
+    "photo_deleted": "Usunięto zdjęcie",
+    "auto_visited": "Odhaczono jako odwiedzone"
   },
   "cta": {
     "add_place": "Dodaj nowe miejsce",

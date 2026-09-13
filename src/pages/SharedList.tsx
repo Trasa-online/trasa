@@ -133,6 +133,23 @@ export default function SharedList() {
     const { error } = await (supabase as any).from("discovery_items").update({ short_desc: value || null }).eq("id", item.id);
     if (error) { toast.error(t("toast.note_failed")); return; }
     queryClient.invalidateQueries({ queryKey: ["shared-list-items", id] });
+    if (value.trim()) void markVisitedAuto(item);
+  };
+
+  // Notka albo zdjecie przy miejscu = user tam BYL (prosba Nat 2026-09-14): odhaczamy odwiedziny
+  // automatycznie, zeby nie robil tego recznie. Tylko wlasciciel, tylko gdy jeszcze nie odhaczone;
+  // toast z "Cofnij" na wypadek, gdyby notka byla planem, a nie wspomnieniem.
+  const markVisitedAuto = async (it: any) => {
+    if (!user || !isOwner) return;
+    const key = visitKeyOf(it);
+    if (visitedKeys.has(key)) return;
+    queryClient.setQueryData(["place-visits", user.id, id], (old: Set<string> | undefined) => new Set([...(old ?? visitedKeys), key]));
+    const now = await toggleVisited(user.id, false, { placeKey: key, placeName: it.place_name, city: it.city ?? (col as any)?.city ?? null });
+    if (!now) { queryClient.invalidateQueries({ queryKey: ["place-visits", user.id, id] }); return; }
+    queryClient.invalidateQueries({ queryKey: ["profile-list-feed"] });
+    toast(t("toast.auto_visited"), {
+      action: { label: t("common:buttons.undo"), onClick: () => void handleToggleVisited(it) },
+    });
   };
 
   const addItemPhotos = async (item: any, files: FileList | null) => {
@@ -181,6 +198,8 @@ export default function SharedList() {
         userId: user.id, placeKey, placeName: item.place_name, city: item.city ?? col?.city ?? null, photoUrl,
       })));
       queryClient.invalidateQueries({ queryKey: ["shared-list-items", id] });
+      // Zdjecie z miejsca = bylem tam - odhaczamy automatycznie (patrz markVisitedAuto).
+      if (fresh.length) void markVisitedAuto(item);
     } finally { setUploadingItem(null); }
   };
 
