@@ -1,13 +1,9 @@
-// "Topka" WYJAZDU - JEDNO miejsce wyroznione przez uczestnikow (2026-09-08).
-// Listy miejsc maja wlasna topke BEZ LIMITU (discovery_items.is_top, SharedList.toggleTopItem,
-// decyzja Nat 2026-09-13) - ten limit dotyczy wylacznie wyjazdow.
+// Gwiazdka przy miejscu ("topka") - BEZ LIMITU w wyjazdach i kolekcjach (decyzja Nat 2026-09-14).
 //
-// Wybor jest RECZNY (decyzja Nat): wskazujemy to, co warto polecic, zamiast liczyc sredniej
-// z ocen. Poczatkowo limit rosl z dlugoscia trasy (1-3 gwiazdki), ale Nat zdecydowala, ze
-// wyroznienie ma byc JEDNO na caly wyjazd - trzy "najlepsze" miejsca to juz nie wyroznienie,
-// tylko druga lista.
+// Historia: 2026-09-08 jedna gwiazdka na caly wyjazd (kolejny wybor PRZENOSIL wyroznienie),
+// 2026-09-13 kolekcje bez limitu, 2026-09-14 wyjazdy tez bez limitu - user wyroznia tyle miejsc,
+// ile chce. Wybor pozostaje RECZNY (nie liczymy sredniej z ocen).
 //
-// Konsekwencja dla interfejsu: tapniecie w gwiazdke przy innym miejscu PRZENOSI wyroznienie,
-// zamiast odmawiac z komunikatem "masz juz komplet". Przy limicie 1 kazdy inny wybor to
-// zmiana zdania, a nie blad - wiec nie ma czego blokowac.
-export const TOP_LIMIT = 1;
+// Plik zostaje jako jedno miejsce na te decyzje; stala TOP_LIMIT nie istnieje - toggle w
+// SharedRoute (pins.is_top) i SharedList (discovery_items.is_top) to zwykle przelaczniki.
+export {};

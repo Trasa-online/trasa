@@ -28,14 +28,13 @@ export function AuthorPill({ src, frame, color, name, onClick, className = "" }:
 
 // Chip = SAM OBRYS (bez wypelnienia; makieta Nat 2026-09-13, druga iteracja): jeden szary
 // obrys #D9D9D9 dla wszystkich chipow (trzecia iteracja, wieczor 2026-09-13 - kolorowe obrysy
-// odrzucone), brazowy tekst i IKONA WYCHODZACA poza pigulke (pinezka i gwiazdka sa wieksze niz
-// sam chip i "siedza" na jego lewej krawedzi). Ikona jest absolutna, wiec nie rozpycha wysokosci
-// chipa; tekst dostaje lewy padding na jej szerokosc.
+// odrzucone), brazowy tekst i ikona W SRODKU pigulki (18 px, w linii z tekstem; wariant
+// z ikona wychodzaca poza obrys odrzucony 2026-09-14).
 const CHIP_STROKE = "#D9D9D9";
 function Chip({ icon, children }: { icon?: ReactNode; children: ReactNode }) {
   return (
-    <span className={`relative inline-flex h-8 items-center rounded-full border-[1.5px] bg-background text-[14px] font-bold leading-none text-[#5B2C06] ${icon ? "pl-10 pr-3.5" : "px-3.5"}`} style={{ borderColor: CHIP_STROKE }}>
-      {icon && <span aria-hidden className="pointer-events-none absolute left-1 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center">{icon}</span>}
+    <span className={`inline-flex h-8 items-center gap-1.5 rounded-full border-[1.5px] bg-background text-[14px] font-bold leading-none text-[#5B2C06] ${icon ? "pl-2.5 pr-3.5" : "px-3.5"}`} style={{ borderColor: CHIP_STROKE }}>
+      {icon && <span aria-hidden className="flex h-[18px] w-[18px] shrink-0 items-center justify-center">{icon}</span>}
       {children}
     </span>
   );
@@ -43,7 +42,7 @@ function Chip({ icon, children }: { icon?: ReactNode; children: ReactNode }) {
 
 /** Miasto · liczba miejsc (brandowa pinezka w brazie; "15 Miejsc" z polska odmiana, a w kolekcji
  *  "7 / 15 Miejsc" = odwiedzone / wszystkie) · wyroznione (brandowa gwiazdka w pomaranczu; chip
- *  tylko gdy > 0). Wszystkie chipy z tym samym szarym obrysem. */
+ *  tylko gdy > 0). Wszystkie chipy z tym samym szarym obrysem, ikony w srodku pigulki. */
 export function HighlightChips({ city, placesCount, visitedCount, starredCount = 0, className = "" }: {
   city?: string | null; placesCount: number;
   /** Lista: ile z miejsc odwiedzono (moje na wlasnej liscie, autora na cudzej). Brak = sam licznik. */
@@ -57,11 +56,11 @@ export function HighlightChips({ city, placesCount, visitedCount, starredCount =
     <div className={`flex flex-wrap items-center gap-2 ${className}`}>
       {city && <Chip>{city}</Chip>}
       {/* Pinezka w brazie marki, gwiazdka w pomaranczu (prosba Nat, wieczor 2026-09-13). */}
-      <Chip icon={<BrandIcon src="/Ikona_Miejsca.svg" className="h-9 w-9 text-[#5B2C06]" />}>
+      <Chip icon={<BrandIcon src="/Ikona_Miejsca.svg" className="h-[18px] w-[18px] text-[#5B2C06]" />}>
         {visitedCount != null ? `${visitedCount} / ${places}` : places}
       </Chip>
       {starredCount > 0 && (
-        <Chip icon={<BrandIcon src={STAR_ICON} className="h-9 w-9 text-primary" />}>
+        <Chip icon={<BrandIcon src={STAR_ICON} className="h-[18px] w-[18px] text-primary" />}>
           {starredCount}
         </Chip>
       )}

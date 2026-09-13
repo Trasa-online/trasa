@@ -198,7 +198,7 @@
     "title": "Wyróżnione miejsca",
     "desc": "Miejsca, które wyróżniasz gwiazdką w swoich wyjazdach i kolekcjach.",
     "empty_title": "Jeszcze nic nie wyróżniasz",
-    "empty_desc": "Gwiazdkę dodasz przy miejscu w wyjeździe albo w kolekcji - jedną na wyjazd, w kolekcji ile chcesz.",
+    "empty_desc": "Gwiazdkę dodasz przy miejscu w wyjeździe albo w kolekcji - wyróżnij tyle miejsc, ile chcesz.",
     "trip_fallback": "Wyjazd",
     "list_fallback": "Kolekcja",
     "desc_theirs": "Miejsca wyróżnione gwiazdką w wyjazdach i kolekcjach tej osoby.",

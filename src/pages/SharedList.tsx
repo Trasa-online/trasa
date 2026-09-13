@@ -267,9 +267,8 @@ export default function SharedList() {
     },
   });
 
-  // Gwiazdka listy (discovery_items.is_top, migracja 20260913b). Inaczej niz na wyjezdzie
-  // (TOP_LIMIT = 1, gwiazdka sie PRZENOSI): na liscie gwiazdek jest BEZ LIMITU (decyzja Nat
-  // 2026-09-13) - lista to kuratorska polecajka, wiec "topka" moze byc kilka miejsc, a nie jedno.
+  // Gwiazdka kolekcji (discovery_items.is_top, migracja 20260913b) - BEZ LIMITU (decyzja Nat
+  // 2026-09-13; od 2026-09-14 wyjazdy tak samo, patrz src/lib/topPlaces.ts).
   const toggleTopItem = async (item: any) => {
     const next = !item.is_top;
     haptics.light();

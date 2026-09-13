@@ -83,7 +83,6 @@ import { CategoryIcon } from "@/components/CategoryIcon";
 import PreReleaseBanner from "@/components/share/PreReleaseBanner";
 import TrasaBigCard from "@/components/home/TrasaBigCard";
 import { renderForUpload, uploadPair, uploadWithThumb } from "@/lib/imageThumbs";
-import { TOP_LIMIT } from "@/lib/topPlaces";
 import { isWeb } from "@/lib/platform";
 import { thumbUrl } from "@/lib/imageUrl";
 import { rowOwnPhotos, mergeRowPhotosIntoDetail } from "@/lib/placeUserPhotos";
@@ -349,22 +348,17 @@ export default function SharedRoute() {
   const share = useShare();
   const unsave = useUnsavePlace();
   // Tap bookmarka: zapisane -> odzapisz (toast+cofnij); niezapisane -> otworz drawer zapisu.
-  // "Topka" wyjazdu (2026-09-08): autor wyroznia miejsca warte polecenia. Limit rosnie
-  // z dlugoscia trasy - trzy gwiazdki przy trzech miejscach nie wyrozniaja niczego.
+  // Gwiazdka przy miejscu (2026-09-08): autor wyroznia miejsca warte polecenia. BEZ LIMITU
+  // (decyzja Nat 2026-09-14; wczesniej jedna na wyjazd i gwiazdka sie przenosila) - tak samo,
+  // jak w kolekcjach. Zwykly toggle na pinie.
   const toggleTopPin = async (pin: any) => {
-    const list = pins as any[];
     const next = !pin.is_top;
     haptics.light();
-    // Limit 1: zaznaczenie innego miejsca PRZENOSI wyroznienie zamiast odmawiac. Przy jednej
-    // gwiazdce kazdy kolejny wybor to zmiana zdania, a nie blad (decyzja Nat 2026-09-08).
-    const toClear = next ? list.filter((p) => p.is_top && p.id !== pin.id).slice(0, TOP_LIMIT + 4) : [];
     queryClient.setQueryData(["shared-route-pins", id], (old: any[] | undefined) =>
-      (old ?? []).map((p) => (p.id === pin.id ? { ...p, is_top: next } : toClear.some((c) => c.id === p.id) ? { ...p, is_top: false } : p)));
-    const ops: Promise<any>[] = [(supabase as any).from("pins").update({ is_top: next }).eq("id", pin.id)];
-    if (toClear.length) ops.push((supabase as any).from("pins").update({ is_top: false }).in("id", toClear.map((p) => p.id)));
-    const res = await Promise.all(ops);
-    if (res.some((r: any) => r?.error)) {
-      console.error("[SharedRoute] top toggle:", res.map((r: any) => r?.error?.message).filter(Boolean).join(" | "));
+      (old ?? []).map((p) => (p.id === pin.id ? { ...p, is_top: next } : p)));
+    const { error } = await (supabase as any).from("pins").update({ is_top: next }).eq("id", pin.id);
+    if (error) {
+      console.error("[SharedRoute] top toggle:", error.message);
       queryClient.invalidateQueries({ queryKey: ["shared-route-pins", id] });
     }
     // Licznik wyroznionych miejsc na profilu (StarredPlacesSheet).

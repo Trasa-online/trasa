@@ -89,7 +89,5 @@
     "mark_place": "Mark a place"
   },
   "filters_aria": "Filters",
-  "places": {
-    "tab_cards": "Places"
-  }
+  "places": {}
 }

@@ -196,7 +196,7 @@
     "title": "Starred places",
     "desc": "Places you starred in your trips and collections.",
     "empty_title": "Nothing starred yet",
-    "empty_desc": "Star a place in a trip or a collection - one per trip, as many as you like per collection.",
+    "empty_desc": "Star a place in a trip or a collection - highlight as many places as you like.",
     "trip_fallback": "Trip",
     "list_fallback": "Collection",
     "desc_theirs": "Places this person starred in their trips and collections.",

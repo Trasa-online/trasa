@@ -91,7 +91,5 @@
     "mark_place": "Zaznacz miejsce"
   },
   "filters_aria": "Filtry",
-  "places": {
-    "tab_cards": "Wizytówki"
-  }
+  "places": {}
 }
