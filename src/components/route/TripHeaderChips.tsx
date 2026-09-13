@@ -26,22 +26,24 @@ export function AuthorPill({ src, frame, color, name, onClick, className = "" }:
     : <span className={cls}>{inner}</span>;
 }
 
-// Chip = SAM OBRYS (bez wypelnienia; makieta Nat 2026-09-13, druga iteracja) z brazowym tekstem
-// i IKONA WYCHODZACA poza pigulke (pinezka i gwiazdka sa wieksze niz sam chip i "siedza" na jego
-// lewej krawedzi). Ikona jest absolutna, wiec nie rozpycha wysokosci chipa; tekst dostaje lewy
-// padding na jej szerokosc.
-function Chip({ stroke, icon, children }: { stroke: string; icon?: ReactNode; children: ReactNode }) {
+// Chip = SAM OBRYS (bez wypelnienia; makieta Nat 2026-09-13, druga iteracja): jeden szary
+// obrys #D9D9D9 dla wszystkich chipow (trzecia iteracja, wieczor 2026-09-13 - kolorowe obrysy
+// odrzucone), brazowy tekst i IKONA WYCHODZACA poza pigulke (pinezka i gwiazdka sa wieksze niz
+// sam chip i "siedza" na jego lewej krawedzi). Ikona jest absolutna, wiec nie rozpycha wysokosci
+// chipa; tekst dostaje lewy padding na jej szerokosc.
+const CHIP_STROKE = "#D9D9D9";
+function Chip({ icon, children }: { icon?: ReactNode; children: ReactNode }) {
   return (
-    <span className={`relative inline-flex h-8 items-center rounded-full border-[1.5px] bg-background text-[14px] font-bold leading-none text-[#5B2C06] ${icon ? "pl-10 pr-3.5" : "px-3.5"}`} style={{ borderColor: stroke }}>
+    <span className={`relative inline-flex h-8 items-center rounded-full border-[1.5px] bg-background text-[14px] font-bold leading-none text-[#5B2C06] ${icon ? "pl-10 pr-3.5" : "px-3.5"}`} style={{ borderColor: CHIP_STROKE }}>
       {icon && <span aria-hidden className="pointer-events-none absolute left-1 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center">{icon}</span>}
       {children}
     </span>
   );
 }
 
-/** Miasto (brazowy obrys) · liczba miejsc (lososiowy obrys, brandowa pinezka; "15 Miejsc" z polska
- *  odmiana, a na liscie "7 / 15 Miejsc" = odwiedzone / wszystkie) · wyroznione (zolty obrys,
- *  brandowa gwiazdka; chip tylko gdy > 0). */
+/** Miasto · liczba miejsc (brandowa pinezka w brazie; "15 Miejsc" z polska odmiana, a w kolekcji
+ *  "7 / 15 Miejsc" = odwiedzone / wszystkie) · wyroznione (brandowa gwiazdka w pomaranczu; chip
+ *  tylko gdy > 0). Wszystkie chipy z tym samym szarym obrysem. */
 export function HighlightChips({ city, placesCount, visitedCount, starredCount = 0, className = "" }: {
   city?: string | null; placesCount: number;
   /** Lista: ile z miejsc odwiedzono (moje na wlasnej liscie, autora na cudzej). Brak = sam licznik. */
@@ -53,13 +55,13 @@ export function HighlightChips({ city, placesCount, visitedCount, starredCount =
   const places = raw.replace(/(\d+\s*)(\S)/, (_m, num: string, ch: string) => num + ch.toUpperCase());
   return (
     <div className={`flex flex-wrap items-center gap-2 ${className}`}>
-      {city && <Chip stroke="#5B2C06">{city}</Chip>}
-      {/* Pinezka w kolorze #CC3434 (prosba Nat 2026-09-13). */}
-      <Chip stroke="#F0A583" icon={<BrandIcon src="/Ikona_Miejsca.svg" className="h-9 w-9 text-[#CC3434]" />}>
+      {city && <Chip>{city}</Chip>}
+      {/* Pinezka w brazie marki, gwiazdka w pomaranczu (prosba Nat, wieczor 2026-09-13). */}
+      <Chip icon={<BrandIcon src="/Ikona_Miejsca.svg" className="h-9 w-9 text-[#5B2C06]" />}>
         {visitedCount != null ? `${visitedCount} / ${places}` : places}
       </Chip>
       {starredCount > 0 && (
-        <Chip stroke="#FDF184" icon={<BrandIcon src={STAR_ICON} className="h-9 w-9 text-primary" />}>
+        <Chip icon={<BrandIcon src={STAR_ICON} className="h-9 w-9 text-primary" />}>
           {starredCount}
         </Chip>
       )}
