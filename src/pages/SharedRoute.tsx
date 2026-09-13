@@ -15,7 +15,6 @@ import { format } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
 import { MapPin, ArrowLeft, Sparkles, ChevronDown, Bookmark, Calendar as CalendarIcon, Image as ImageIcon, Maximize2, X, Building2, Pencil, Trash2, Heart, Share2, Plus, Map as MapIcon, Loader2, GripVertical, Check, Flag, Camera, ThumbsUp, MessageCircle, UserPlus, MoreHorizontal, FileText, ChevronLeft } from "lucide-react";
 import { MAIN_CATEGORIES, subcategoryPluralLabel } from "@/lib/categories";
-import { PLACE_VERDICT_TAGS, verdictOf, localizeTag, verdictRank } from "@/lib/routeTags";
 import { publishTrip } from "@/lib/publishTrip";
 import { haptics } from "@/hooks/useHaptics";
 import { track } from "@/lib/analytics";
@@ -278,10 +277,9 @@ export default function SharedRoute() {
   const [chatOpen, setChatOpen] = useState(false);
   // User pisze notke -> chowamy czat i dolne CTA (zaslanialy pole i klawiature).
   const [noteEditing, setNoteEditing] = useState(false);
-  // Etap W TRAKCIE = miejsce, w ktorym powstaje CALE wspomnienie: opis wyjazdu i tagi
+  // Etap W TRAKCIE = miejsce, w ktorym powstaje CALE wspomnienie: opis wyjazdu i notki
   // miejsc. Stepper "podsumowania" zostal usuniety z flow (prosba Nat 2026-08-30) - publikacja to
   // jeden guzik "Opublikuj" na dole.
-  const [pinTags, setPinTags] = useState<Record<string, string[]>>({});
   const [publishing, setPublishing] = useState(false);
   // Tryb "Zmień kolejność miejsc" - dopiero on pokazuje uchwyty drag&drop i skraca wiersze
   // do miniaturek (prosba Nat 2026-08-30).
@@ -752,12 +750,6 @@ export default function SharedRoute() {
   };
 
 
-  // Tagi miejsc (pins.tags) - lokalny stan do optymistycznego przelaczania werdyktow.
-  useEffect(() => {
-    const map: Record<string, string[]> = {};
-    for (const p of (pins as any[])) map[p.id] = Array.isArray(p.tags) ? p.tags : [];
-    setPinTags(map);
-  }, [pins]);
 
   // Opis CALEGO wyjazdu (routes.review_narrative) - pisze go wlasciciel i to on jedzie
   // z wyjazdem do eksploracji. Edytowany tym samym guzikiem, ktory stoi POD wyswietlonym
@@ -770,17 +762,6 @@ export default function SharedRoute() {
   };
 
 
-  // Werdykt o miejscu (pins.tags) - jeden tap pod notkami.
-  const togglePinTag = async (pinId: string, tagId: string) => {
-    haptics.selection();
-    const cur = pinTags[pinId] ?? [];
-    // Odznaczanie po ID: usuwamy zarowno nowe id, jak i stara polska etykiete tego samego werdyktu
-    // (inaczej tag zapisany poprzednim buildem zostawalby na miejscu mimo odklikniecia).
-    const isSame = (t: string) => t === tagId || verdictOf(t)?.id === tagId;
-    const next = cur.some(isSame) ? cur.filter((t) => !isSame(t)) : [...cur, tagId];
-    setPinTags((prev) => ({ ...prev, [pinId]: next }));
-    await (supabase as any).from("pins").update({ tags: next }).eq("id", pinId);
-  };
 
   // PUBLIKACJA wyjazdu - jeden guzik zamiast steppera "podsumowania" (prosba Nat 2026-08-30).
   // status='published' + trip_type='completed' => wspomnienie w profilu i wpis w eksploracji.
@@ -839,17 +820,6 @@ export default function SharedRoute() {
   const saveMyNote = async (pin: any, value: string) => {
     if (!user) return;
     await (supabase as any).from("pin_ratings").upsert({ route_id: pin.route_id, user_id: user.id, place_name: pin.place_name, note: value || null }, { onConflict: "route_id,user_id,place_name" });
-    queryClient.invalidateQueries({ queryKey: ["shared-route-notes", id] });
-  };
-  // Werdykt o miejscu jest WLASNY dla kazdego uczestnika (pin_ratings.verdict, obok jego notki).
-  // Wczesniej siedzial w pins.tags - czyli w jednej tablicy na pinie, gdzie kazdy nadpisywal
-  // opinie pozostalych. Wybor jest pojedynczy: tapniecie aktywnego chipa zdejmuje werdykt.
-  const saveMyVerdict = async (pin: any, verdictId: string | null) => {
-    if (!user) return;
-    haptics.selection();
-    await (supabase as any).from("pin_ratings").upsert(
-      { route_id: pin.route_id, user_id: user.id, place_name: pin.place_name, verdict: verdictId },
-      { onConflict: "route_id,user_id,place_name" });
     queryClient.invalidateQueries({ queryKey: ["shared-route-notes", id] });
   };
 
@@ -1672,7 +1642,6 @@ export default function SharedRoute() {
     // pin_ratings/pin_photos tego nie blokuje (warunkiem jest czlonkostwo, nie status trasy).
     if (stage === "ongoing" || stage === "completed") {
       const placePhotos = photosMap.get(pinPhotoKey(pin.place_name)) ?? [];
-      const myVerdict = (list.find((n) => n.user_id === user?.id)?.verdict ?? null) as string | null;
       // Widz spoza wyjazdu przy pustym miejscu: nic nie renderujemy (bez pustego odstepu pod wierszem).
       if (!canEdit && !list.length && !placePhotos.length) return undefined;
       const busy = uploadingPin === pin.id;
@@ -1697,24 +1666,6 @@ export default function SharedRoute() {
           {/* Notki innych uczestnikow - awatar + tresc, BEZ headera (task 6). Widz spoza wyjazdu
               nie ma edytora, wiec jego notki nie ma czego wykluczac - pokazujemy wszystkie. */}
           <PlaceNotes notes={list} excludeUserId={canEdit ? user?.id : undefined} />
-          {/* Werdykt o miejscu - jeden tap zamiast pisania (prosba Nat 2026-08-30). pins.tags,
-              wiec trafia tez do wspomnienia i eksploracji. */}
-          {canEdit && (
-            <div className="flex flex-wrap gap-1.5">
-              {PLACE_VERDICT_TAGS.map((v) => {
-                // MOJ werdykt (pin_ratings.verdict). Legacy: werdykt zapisany starym buildem siedzi
-                // w pins.tags jako polska etykieta - podswietlamy go, dopoki user nie wybierze na nowo.
-                const on = myVerdict ? myVerdict === v.id
-                  : (pinTags[pin.id] ?? []).some((t) => verdictOf(t)?.id === v.id);
-                return (
-                  <button key={v.id} type="button" onClick={() => saveMyVerdict(pin, on ? null : v.id)}
-                    className={`px-2.5 py-1.5 rounded-full text-[12.5px] font-semibold border transition-colors active:scale-[0.97] ${on ? "bg-[#FDF184] border-[#FDCD84] text-foreground" : "bg-white text-foreground border-border/60"}`}>
-                    {localizeTag(v.id, i18n.language)}
-                  </button>
-                );
-              })}
-            </div>
-          )}
           {/* Zdjecia miejsca (2:3) - awatar autora (dol-lewo) + usun (autor lub wlasciciel). */}
           {placePhotos.length > 0 && (
             <div className="flex flex-wrap gap-2">
@@ -1891,16 +1842,14 @@ export default function SharedRoute() {
       // Przypisywanie do dni odbywa sie w trybie t("reorder"), ktory naglowki dni ma.
 
       <div>
-        {/* Gradacja (prosba Nat 2026-09-08): najpierw gwiazdka topki, potem werdykty od
-            najmocniejszego ("Musisz odwiedzic!" -> "Warto wpasc" -> ...), na koncu miejsca bez
-            werdyktu i jawne "nie warto". W obrebie tego samego stopnia zostaje kolejnosc trasy,
-            wiec sortowanie niczego nie miesza tam, gdzie nikt nic nie oznaczyl. */}
+        {/* Gradacja (prosba Nat 2026-09-08): najpierw gwiazdka topki, dalej kolejnosc trasy.
+            Werdykty ("Musisz odwiedzic!" itd.) zniknely z apki 2026-09-13 - jedynym wyroznieniem
+            jest gwiazdka, wiec sortowanie niczego nie miesza tam, gdzie nikt nic nie oznaczyl. */}
         {(dayCount > 1
           ? [...list]
               .map((pin: any, i: number) => ({ pin, i }))
               .sort((a, b) =>
                 (b.pin.is_top ? 1 : 0) - (a.pin.is_top ? 1 : 0)
-                || verdictRank(a.pin.tags) - verdictRank(b.pin.tags)
                 || a.i - b.i)
               .map((e) => e.pin)
           // Wyjazd JEDNODNIOWY: "Wszystkie" to jedyny widok i zarazem uklad tego dnia, ktory
@@ -2009,10 +1958,7 @@ export default function SharedRoute() {
                     <div className="flex h-[80px] min-w-0 flex-1 flex-col justify-between py-0.5">
                       <p className="line-clamp-2 text-[14px] font-bold leading-[1.19] text-black">{pin.place_name}</p>
                       <div className="flex items-center justify-between gap-2">
-                        {(() => {
-                          const v = (Array.isArray(pin.tags) ? pin.tags : []).find((tg: string) => verdictOf(tg));
-                          return v ? <span className="truncate rounded-full bg-spontaway-yellow px-2.5 py-1 text-[11px] font-medium text-spontaway-brown">{localizeTag(v)}</span> : <span />;
-                        })()}
+                        <span />
                         {pin.category && pin.category !== "other" && (
                           <span className="shrink-0 text-[11px] font-medium text-[#666]">{categoryLabel(pin.category)}</span>
                         )}
@@ -2674,7 +2620,7 @@ export default function SharedRoute() {
           actions={[
             ...(id ? [{
               key: "chat",
-              label: t("chat.title"),
+              label: t("fabs.chat"),
               icon: <MessageCircle className="h-6 w-6" strokeWidth={2.2} />,
               badge: unreadChat,
               onClick: () => setChatOpen(true),

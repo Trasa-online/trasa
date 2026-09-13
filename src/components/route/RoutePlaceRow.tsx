@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { AnimatePresence, motion } from "framer-motion";
 import { FLIGHT_MS, arcThrough, relRect } from "@/lib/flightPath";
-import { localizeTag } from "@/lib/routeTags";
+import { localizeTag, verdictOf } from "@/lib/routeTags";
 import { Check, CheckCheck, MoreHorizontal, Plus, Trash2 } from "lucide-react";
 import { BrandIcon, CAMERA_ICON, SAVE_ICON, STAR_ICON } from "@/components/BrandIcon";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -14,6 +14,18 @@ import { avatarSrc } from "@/lib/avatar";
 // Oficjalne logo Google (4-kolorowe "G") - guzik "otworz miejsce w Google Maps".
 // Rozprysk pieczatki: 8 kresek dookola. Osobna stala, zeby nie liczyc jej przy kazdym renderze.
 const STAMP_RAYS = [0, 45, 90, 135, 180, 225, 270, 315];
+
+// "Ladowanie" gwiazdki przytrzymaniem (prosba Nat 2026-09-13): pierscien wokol kolka wypelnia
+// sie przez CHARGE_MS, haptyka NARASTA w progach (lekkie tyknięcia, potem srednie, na koncu
+// mocne + sukces), a pelne naladowanie PRZYPIECZETOWUJE gwiazdke. Pierscien pojawia sie
+// dopiero po CHARGE_DELAY_MS - krotsze przytrzymanie to zwykly tap (z lotem gwiazdki).
+const CHARGE_MS = 1000;
+const CHARGE_DELAY_MS = 180;
+const CHARGE_TICKS: Array<{ at: number; kind: "light" | "medium" }> = [
+  { at: 0.2, kind: "light" }, { at: 0.4, kind: "light" }, { at: 0.6, kind: "medium" }, { at: 0.8, kind: "medium" },
+];
+const RING_R = 22;
+const RING_C = 2 * Math.PI * RING_R;
 
 const GoogleGlyph = ({ className }: { className?: string }) => (
   <svg viewBox="0 0 48 48" className={className} aria-hidden="true">
@@ -89,6 +101,81 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
   const flying = !!flight;
   const wasTop = useRef(!!isTop);
 
+  // Przytrzymanie gwiazdki = ladowanie. Postep zyje w refach i idzie prosto w style (bez
+  // setState co klatke); stan React trzyma tylko "czy widac pierscien" i "pieczatka gra".
+  const [charging, setCharging] = useState(false);
+  const [sealed, setSealed] = useState(false);
+  const ringRef = useRef<SVGCircleElement>(null);
+  const starGlyphRef = useRef<HTMLSpanElement>(null);
+  const press = useRef<{ t0: number; raf: number; timer: number; ticked: number; done: boolean; active: boolean } | null>(null);
+
+  const paintCharge = (p: number) => {
+    if (ringRef.current) ringRef.current.style.strokeDashoffset = String(RING_C * (1 - p));
+    if (starGlyphRef.current) starGlyphRef.current.style.transform = `scale(${1 + 0.3 * p})`;
+  };
+  const stopCharge = () => {
+    const pr = press.current;
+    if (!pr) return;
+    cancelAnimationFrame(pr.raf);
+    clearTimeout(pr.timer);
+    press.current = null;
+    setCharging(false);
+    paintCharge(0);
+  };
+  const startPress = () => {
+    if (!onToggleTop) return;
+    stopCharge();
+    const pr = { t0: performance.now(), raf: 0, timer: 0, ticked: 0, done: false, active: !isTop };
+    press.current = pr;
+    // Gwiazdka juz przypieta: przytrzymanie nic nie laduje (tap ja zdejmuje).
+    if (!pr.active) return;
+    pr.timer = window.setTimeout(() => {
+      if (press.current !== pr) return;
+      setCharging(true);
+      const start = performance.now();
+      const step = (now: number) => {
+        if (press.current !== pr) return;
+        const p = Math.min(1, (now - start) / CHARGE_MS);
+        paintCharge(p);
+        while (pr.ticked < CHARGE_TICKS.length && p >= CHARGE_TICKS[pr.ticked].at) {
+          haptics[CHARGE_TICKS[pr.ticked].kind]();
+          pr.ticked += 1;
+        }
+        if (p >= 1) {
+          // PRZYPIECZETOWANIE: mocne uderzenie + sukces, pieczatka na kolku, gwiazdka przy nazwie
+          // wskakuje sprezyna (bez lotu - lot jest dla zwyklego tapniecia).
+          pr.done = true;
+          haptics.heavy();
+          haptics.success();
+          press.current = null;
+          setCharging(false);
+          paintCharge(0);
+          setSealed(true);
+          window.setTimeout(() => setSealed(false), 650);
+          wasTop.current = true;
+          onToggleTop();
+          return;
+        }
+        pr.raf = requestAnimationFrame(step);
+      };
+      pr.raf = requestAnimationFrame(step);
+    }, CHARGE_DELAY_MS);
+  };
+  const endPress = (cancelled: boolean) => {
+    const pr = press.current;
+    if (!pr) return;
+    const held = performance.now() - pr.t0;
+    stopCharge();
+    if (cancelled || pr.done) return;
+    // Krotkie przytrzymanie (zanim pierscien sie pokazal) = zwykly tap: przelacz z lotem.
+    if (held < CHARGE_DELAY_MS + 40) {
+      haptics.light();
+      tappedTop.current = true;
+      onToggleTop?.();
+    }
+  };
+  useEffect(() => () => { if (press.current) { cancelAnimationFrame(press.current.raf); clearTimeout(press.current.timer); } }, []);
+
   useEffect(() => {
     if (isTop && !wasTop.current && tappedTop.current) {
       wasTop.current = true;
@@ -140,7 +227,8 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
   const menuRest = (menuExtras ?? []).filter((x) => x.key !== "photo");
   // Ile akcji miejsca zostaje pod menu - decyduje, czy w ogole je pokazywac. Odhaczanie
   // "bylem tu" tez siedzi w menu (prosba Nat 2026-09-13; wczesniej osobne kolko na wierszu).
-  const actionCount = [onToggleTop, onSave, onDelete, onToggleVisited].filter(Boolean).length + menuRest.length;
+  // Gwiazdka topki NIE liczy sie do menu - od 2026-09-13 stoi na wierzchu jako pierwsze kolko.
+  const actionCount = [onSave, onDelete, onToggleVisited].filter(Boolean).length + menuRest.length;
   // W trybie zaznaczania przelaczenie obsluguje CALY wiersz (onClick nizej). Guziki w srodku
   // musza wiec milczec - inaczej klik przelaczylby raz tutaj i drugi raz po dojsciu do wiersza,
   // czyli wracalby do punktu wyjscia.
@@ -274,10 +362,11 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
           </div>
           {/* Notka autora + tresc (pod nazwa) */}
           {note && <div className="mt-2">{note}</div>}
-          {/* Tagi miejsca (pins.tags) */}
-          {Array.isArray(pin.tags) && pin.tags.length > 0 && (
+          {/* Tagi miejsca (pins.tags). Werdykty ("Musisz odwiedzic!" itd.) zniknely z apki
+              2026-09-13 - stare wartosci w pins.tags pomijamy, jedynym wyroznieniem jest gwiazdka. */}
+          {Array.isArray(pin.tags) && pin.tags.some((tg: string) => !verdictOf(tg)) && (
             <div className="flex flex-wrap gap-1.5 mt-2">
-              {pin.tags.map((tg: string) => (
+              {pin.tags.filter((tg: string) => !verdictOf(tg)).map((tg: string) => (
                 <span key={tg} className="inline-flex items-center px-2.5 py-1 rounded-full bg-secondary text-foreground text-[12px] font-semibold">{localizeTag(tg)}</span>
               ))}
             </div>
@@ -289,6 +378,62 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
           /* data-no-longpress: tapniecie w akcje NIE moze wchodzic w tryb zaznaczania -
              patrz komentarz w useLongPress. */
           <div data-no-longpress className="mt-auto pt-3 flex items-center justify-end gap-2">
+            {/* Gwiazdka topki na WIERZCHU, jako pierwsze kolko od lewej (prosba Nat 2026-09-13;
+                wczesniej w menu "..."). Tap = przelacz z lotem gwiazdki do nazwy. PRZYTRZYMANIE =
+                ladowanie: pierscien + narastajaca haptyka, pelne naladowanie przypieczetowuje. */}
+            {onToggleTop && (
+              <motion.button
+                ref={starBtnRef}
+                type="button"
+                aria-label={isTop ? t("row.unset_top") : t("row.set_top")}
+                aria-pressed={!!isTop}
+                onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId); startPress(); }}
+                onPointerUp={(e) => { e.stopPropagation(); endPress(false); }}
+                onPointerCancel={() => endPress(true)}
+                onLostPointerCapture={() => { if (press.current && !press.current.done) endPress(true); }}
+                onClick={(e) => { e.stopPropagation(); e.preventDefault(); }}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); tappedTop.current = true; onToggleTop(); } }}
+                onContextMenu={(e) => e.preventDefault()}
+                animate={sealed ? { scale: [1, 0.82, 1.18, 0.96, 1] } : { scale: 1 }}
+                transition={sealed ? { duration: 0.5, times: [0, 0.15, 0.45, 0.75, 1], ease: "easeOut" } : { duration: 0.15 }}
+                style={{ WebkitTouchCallout: "none", WebkitUserSelect: "none", userSelect: "none", touchAction: "manipulation" }}
+                className={`relative h-10 w-10 rounded-full border border-black/[0.04] shadow-[0_1px_5px_rgba(0,0,0,0.12)] flex items-center justify-center shrink-0 transition-colors ${isTop ? "bg-[#FDF184]" : "bg-white"}`}
+              >
+                {/* Pierscien ladowania - poza obrysem kolka, rysowany od gory zgodnie z ruchem wskazowek. */}
+                <svg aria-hidden viewBox="0 0 52 52" className={`pointer-events-none absolute -inset-1.5 h-[52px] w-[52px] -rotate-90 transition-opacity duration-150 ${charging ? "opacity-100" : "opacity-0"}`}>
+                  <circle cx="26" cy="26" r={RING_R} fill="none" stroke="#FDF184" strokeWidth="3" />
+                  <circle ref={ringRef} cx="26" cy="26" r={RING_R} fill="none" stroke="#EE5307" strokeWidth="3" strokeLinecap="round"
+                    strokeDasharray={RING_C} strokeDashoffset={RING_C} />
+                </svg>
+                <span ref={starGlyphRef} className="flex will-change-transform">
+                  <BrandIcon src={STAR_ICON} className={`h-[18px] w-[18px] ${isTop ? "text-primary" : "text-foreground/45"}`} />
+                </span>
+                {/* Pieczatka po pelnym naladowaniu: fala + rozprysk (ta sama choreografia, co "bylem tu"). */}
+                <AnimatePresence>
+                  {sealed && (
+                    <>
+                      <motion.span
+                        aria-hidden
+                        className="pointer-events-none absolute inset-0 rounded-full border-2 border-primary/70"
+                        initial={{ scale: 0.8, opacity: 0.7 }}
+                        animate={{ scale: 2.1, opacity: 0 }}
+                        transition={{ duration: 0.55, ease: "easeOut" }}
+                      />
+                      {STAMP_RAYS.map((deg) => (
+                        <span key={deg} aria-hidden className="pointer-events-none absolute left-1/2 top-1/2 h-0 w-0" style={{ transform: `rotate(${deg}deg)` }}>
+                          <motion.span
+                            className="block h-[2px] w-[7px] -mt-[1px] rounded-full bg-primary/80"
+                            initial={{ x: 6, opacity: 0, scaleX: 0.4 }}
+                            animate={{ x: [6, 20, 27], opacity: [0, 0.9, 0], scaleX: [0.4, 1, 0.5] }}
+                            transition={{ duration: 0.5, times: [0, 0.45, 1], ease: "easeOut", delay: 0.03 }}
+                          />
+                        </span>
+                      ))}
+                    </>
+                  )}
+                </AnimatePresence>
+              </motion.button>
+            )}
             <button
               onClick={(e) => { e.stopPropagation(); onGoogle(); }}
               aria-label={t("row.open_in_maps")}
@@ -312,7 +457,8 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
             {/* Zapis miejsca dostepny ZAWSZE gdy podany onSave - takze dla wlasciciela obok kosza
                 (wczesniej kosz go wypieral, wiec we wlasnym wyjezdzie nie dalo sie zapisac miejsca
                 do swoich list - zgloszenie Nat 2026-08-29). */}
-            {/* Gwiazdka, zapis i kosz zeszly pod TRZY KROPKI (prosba Nat 2026-09-10). Przy wierszu
+            {/* Zapis i kosz zeszly pod TRZY KROPKI (prosba Nat 2026-09-10; gwiazdka wrocila na
+                wierzch 2026-09-13 - patrz wyzej). Przy wierszu
                 z notkami, zdjeciami i tagami cztery ikony obok siebie robily z kazdego miejsca
                 panel sterowania; zostaje wiec jedno wejscie w menu. Guzik Google zostaje na
                 wierzchu - to jedyna akcja, ktora wykonuje sie w trakcie samego przegladania.
@@ -333,7 +479,6 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button
-                    ref={starBtnRef}
                     onPointerDown={(e) => { e.stopPropagation(); haptics.light(); }}
                     aria-label={t("row.more_actions")}
                     /* Biale kolko z delikatnym szarym cieniem - dokladnie jak guzik Google obok
@@ -359,13 +504,6 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
                       {x.icon}{x.label}
                     </DropdownMenuItem>
                   ))}
-                  {onToggleTop && (
-                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); tappedTop.current = true; onToggleTop(); }} className="gap-2.5 py-2.5">
-                      {/* Brandowa gwiazdka jest zawsze wypelniona - stan "jeszcze nie w topce" niesie kolor. */}
-                      <BrandIcon src={STAR_ICON} className={`h-4 w-4 ${isTop ? "text-primary" : "text-muted-foreground"}`} />
-                      {isTop ? t("row.unset_top") : t("row.set_top")}
-                    </DropdownMenuItem>
-                  )}
                   {onSave && (
                     <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onSave(); }} className="gap-2.5 py-2.5">
                       <BrandIcon src={SAVE_ICON} className={`h-4 w-4 ${saved ? "text-[#F0A583]" : "text-foreground/70"}`} />
