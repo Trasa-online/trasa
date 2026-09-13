@@ -36,16 +36,20 @@ const FullCalendarPicker = ({ onConfirm, allowPast = false, onClear, maxDays = D
     const days = from ? (r?.to ? differenceInCalendarDays(r.to, from) + 1 : 1) : 0;
     onRangeChange?.(from, days);
   };
+  // Zakres przycięty do limitu - pokazujemy dlaczego, zamiast po cichu skracać zaznaczenie.
+  const [clamped, setClamped] = useState(false);
   const handleSelect = (newRange: DateRange | undefined) => {
     if (newRange?.from && newRange?.to) {
       const days = differenceInCalendarDays(newRange.to, newRange.from) + 1;
       if (days > maxDays) {
-        const clamped = { from: newRange.from, to: addDays(newRange.from, maxDays - 1) };
-        setRange(clamped);
-        report(clamped);
+        const clampedRange = { from: newRange.from, to: addDays(newRange.from, maxDays - 1) };
+        setRange(clampedRange);
+        setClamped(true);
+        report(clampedRange);
         return;
       }
     }
+    setClamped(false);
     setRange(newRange);
     report(newRange);
   };
@@ -170,6 +174,7 @@ const FullCalendarPicker = ({ onConfirm, allowPast = false, onClear, maxDays = D
                 <p className="text-sm text-muted-foreground mt-0.5">
                   {numDays} dni · {nights} {nights === 1 ? "noc" : nights < 5 ? "noce" : "nocy"}
                 </p>
+                {clamped && <p className="text-xs text-primary mt-1">{t("calendar.max_range", { count: maxDays })}</p>}
               </>
             ) : (
               <>
@@ -182,7 +187,9 @@ const FullCalendarPicker = ({ onConfirm, allowPast = false, onClear, maxDays = D
           </div>
         ) : (
           <div className="mb-3 text-center">
-            <p className="text-sm text-muted-foreground">{t("calendar.pick_day", { count: maxDays })}</p>
+            {/* Przy dlugim limicie (wyjazd do ~3 miesiecy) "max. 92 dni" nic userowi nie mowi -
+                zostaje sama zacheta do zaznaczenia dnia albo zakresu. */}
+            <p className="text-sm text-muted-foreground">{maxDays >= 30 ? t("calendar.pick_day_long") : t("calendar.pick_day", { count: maxDays })}</p>
           </div>
         )}
 

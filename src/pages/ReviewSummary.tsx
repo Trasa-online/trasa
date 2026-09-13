@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from "react";
+import { isPortraitCover } from "@/lib/coverFormat";
+import { pickPortraitCover } from "@/lib/ensureListCover";
 import { useTranslation } from "react-i18next";
 import { avatarSrc } from "@/lib/avatar";
 import { placeTagsForCategory, localizeTag, tagId } from "@/lib/routeTags";
@@ -1020,6 +1022,8 @@ const ReviewSummary = () => {
   // Reczny wybor zdjecia (galeria / miejsca trasy). Zapis do routes.list_cover_url.
   const setPlanListCover = async (url: string) => {
     if (!routeId) return;
+    // Miniatura eksploracji tylko z pionowego zdjecia (3:4 / 9:16) - patrz lib/coverFormat.
+    if (!(await isPortraitCover(url))) { notify.error(t("toast.cover_portrait_only")); return; }
     setListCoverPickerOpen(false);
     const { error } = await (supabase as any).from("routes").update({ list_cover_url: url }).eq("id", routeId);
     if (error) { notify.error(t("toast.cover_set_error")); return; }
@@ -1061,7 +1065,8 @@ const ReviewSummary = () => {
     if (pool.length === 0) return;
     const r: any = queryClient.getQueryData(["review-summary-route", rid]);
     if (r?.list_cover_url) return;
-    const pick = pool[Math.floor(Math.random() * pool.length)];
+    // Najpierw pionowe zdjecia (regula okladek 3:4 / 9:16) - patrz lib/ensureListCover.
+    const pick = await pickPortraitCover(pool);
     await (supabase as any).from("routes").update({ list_cover_url: pick }).eq("id", rid);
     queryClient.setQueryData(["review-summary-route", rid], (old: any) => old ? { ...old, list_cover_url: pick } : old);
     queryClient.invalidateQueries({ queryKey: ["discovery-city-routes"] });
