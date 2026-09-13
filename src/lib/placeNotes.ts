@@ -25,8 +25,8 @@ export async function fetchRouteNotesWithAuthors(routeIds: string[]): Promise<Pl
   const { data, error } = await (supabase as any)
     .from("pin_ratings").select("route_id, user_id, place_name, note, verdict").in("route_id", ids);
   if (error) { console.error("[placeNotes] fetch failed:", error.message); return []; }
-  // Wiersz liczy sie, gdy niesie notke ALBO werdykt - samo klikniecie chipa tez jest wypowiedzia.
-  const rows = ((data ?? []) as any[]).filter((r) => (r.note && String(r.note).trim()) || r.verdict);
+  // Liczy sie tylko wiersz z TRESCIA notki - werdykty zniknely z apki 2026-09-13.
+  const rows = ((data ?? []) as any[]).filter((r) => r.note && String(r.note).trim());
   const uids = Array.from(new Set(rows.map((r) => r.user_id).filter(Boolean)));
   const byId = new Map<string, { username: string | null; avatar_url: string | null }>();
   if (uids.length) {
@@ -55,10 +55,15 @@ export { nkey as placeNoteKey };
 // ─── Notki o MIEJSCU (wizytowka, sekcja "Od użytkowników") ────────────────────
 // Zbiera notki userow o danym miejscu z DWOCH publicznych zrodel:
 //   1) pin_ratings.note z tras OPUBLIKOWANYCH (status='published'),
-//   2) discovery_items.short_desc z list PUBLICZNYCH i zaakceptowanych (moderation).
-// Prywatne wyjazdy (robocze, grupowe przed publikacja) i prywatna lista "Ogolne" NIE trafiaja
-// tutaj - notka staje sie widoczna dopiero, gdy user swiadomie opublikuje trase/liste.
+//   2) discovery_items.short_desc z kolekcji PUBLICZNYCH i zaakceptowanych (moderation).
+// Prywatne wyjazdy (robocze, grupowe przed publikacja) i prywatna kolekcja "Ogolne" NIE trafiaja
+// tutaj - notka staje sie widoczna dopiero, gdy user swiadomie opublikuje trase/kolekcje.
 // Dopasowanie po NAZWIE miejsca (tak samo jak notesByPlace) - place_name jest w obu tabelach.
+// JEDNA notka na OSOBE (decyzja Nat 2026-09-13): notka usera o miejscu jest wspolna dla
+// wszystkich jego kolekcji i wyjazdow (migracja 20260913f synchronizuje ja triggerami), wiec
+// tutaj dedupujemy po user_id, a nazwe i awatar bierzemy z profilu - to samo zrodlo dla obu
+// tabel (wczesniej kolekcja podawala author_name "Natalia", trasa username "nyszje" i ta sama
+// osoba wygladala na dwie).
 export interface PlaceUserNote {
   key: string;
   note: string;
@@ -95,35 +100,35 @@ export async function fetchPlaceNotes(placeName: string): Promise<PlaceUserNote[
       .then(({ data, error }: any) => { if (error) { console.warn("[placeNotes] lists:", error.message); return []; } return (data ?? []) as any[]; }),
   ]);
 
-  // Autorzy notek z tras - profil (username/avatar) doczytany jednym zapytaniem.
-  const uids = Array.from(new Set(trips.map((r: any) => r.user_id).filter(Boolean)));
+  // Jedna notka na osobe: pierwszy napotkany wiersz usera wygrywa (po synchronizacji wszystkie
+  // jego wiersze niosa te sama tresc; wyjazd przed kolekcja tylko dla stalej kolejnosci).
+  type Row = { user_id: string; note: string; source: "trip" | "list"; author_name?: string | null; author_avatar?: string | null };
+  const rows: Row[] = [
+    ...(trips as any[]).map((r) => ({ user_id: String(r.user_id ?? ""), note: String(r.note ?? ""), source: "trip" as const })),
+    ...(lists as any[]).map((r) => {
+      const c = r.discovery_collections ?? {};
+      return { user_id: String(c.user_id ?? ""), note: String(r.short_desc ?? ""), source: "list" as const, author_name: c.author_name, author_avatar: c.author_avatar };
+    }),
+  ].filter((r) => r.note.trim());
+  const byUser = new Map<string, Row>();
+  for (const r of rows) if (!byUser.has(r.user_id || r.note)) byUser.set(r.user_id || r.note, r);
+
+  // Profil (username/avatar) jednym zapytaniem dla WSZYSTKICH autorow - kolekcja i trasa maja
+  // wtedy te sama nazwe przy tej samej osobie; author_name/author_avatar z kolekcji to zapas.
+  const uids = Array.from(byUser.keys()).filter((u) => UUID_RE.test(u));
   const byId = new Map<string, { username: string | null; avatar_url: string | null }>();
   if (uids.length) {
     const { data: profs } = await (supabase as any).from("profiles").select("id, username, avatar_url").in("id", uids);
     for (const p of (profs ?? []) as any[]) byId.set(p.id, { username: p.username, avatar_url: p.avatar_url });
   }
 
-  const out: PlaceUserNote[] = [];
-  const seen = new Set<string>();
-  const push = (n: PlaceUserNote) => {
-    const dedup = `${n.username ?? ""}|${n.note.trim().toLowerCase()}`;
-    if (!n.note.trim() || seen.has(dedup)) return;
-    seen.add(dedup);
-    out.push(n);
-  };
-  for (const r of trips as any[]) {
-    push({
-      key: `t-${r.user_id}-${out.length}`, note: String(r.note),
-      username: byId.get(r.user_id)?.username ?? null, avatar_url: byId.get(r.user_id)?.avatar_url ?? null,
-      source: "trip",
-    });
-  }
-  for (const r of lists as any[]) {
-    const c = r.discovery_collections ?? {};
-    push({
-      key: `l-${c.user_id ?? "x"}-${out.length}`, note: String(r.short_desc),
-      username: c.author_name ?? null, avatar_url: c.author_avatar ?? null, source: "list",
-    });
-  }
-  return out.slice(0, 12);
+  return Array.from(byUser.values()).slice(0, 12).map((r, i) => ({
+    key: `${r.source[0]}-${r.user_id || "x"}-${i}`,
+    note: r.note,
+    username: byId.get(r.user_id)?.username ?? r.author_name ?? null,
+    avatar_url: byId.get(r.user_id)?.avatar_url ?? r.author_avatar ?? null,
+    source: r.source,
+  }));
 }
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
