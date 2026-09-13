@@ -25,3 +25,14 @@ export const STAR_ICON = "/Ikona_Gwiazdka.svg";
 /** Wypelniona ikona list (Ikona_Listy_Listy.svg od Nat, 2026-09-11) - zakladka Listy na profilu,
  *  kafelki list w eksploracji i kategoria „Listy" w wyszukiwarce. Zastapila lucide FileText/LayoutGrid. */
 export const LIST_ICON = "/Ikona_Listy_Listy.svg";
+
+/** Brandowa zakladka „zapisz" (Ikona_Zapisane.svg) - guziki zapisu miejsca/wyjazdu/listy,
+ *  zamiast lucide `Bookmark` (prosba Nat 2026-09-13). */
+export const SAVE_ICON = "/Ikona_Zapisane.svg";
+
+/** Brandowy aparat (public/aparat.svg od Nat, 2026-09-13) - "dodaj zdjecie do miejsca". */
+export const CAMERA_ICON = "/aparat.svg";
+
+/** Brandowe serce (public/Ikona_serce.svg od Nat, 2026-09-13) - pelne, przez maske; wariant
+ *  z konturem (przelacznik polubienia) = `BrandHeart` w BrandHeart.tsx. */
+export const HEART_ICON = "/Ikona_serce.svg";

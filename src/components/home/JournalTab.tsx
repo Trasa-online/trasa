@@ -288,7 +288,7 @@ const JournalTab = ({ userId, city: cityFilter, draftsOnly = false }: JournalTab
   // Modal potwierdzenia usuniecia/opuszczenia wyjazdu (nieodwracalne, copy jak systemowy alert).
   const deleteModal = (
     <AlertDialog open={!!pendingDelete} onOpenChange={(o) => { if (!o) setPendingDelete(null); }}>
-      <AlertDialogContent className="rounded-3xl max-w-[340px]">
+      <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>
             {pendingDelete?.is_own ? t("confirm.delete_trip_title") : t("confirm.leave_trip_title")}

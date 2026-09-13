@@ -28,9 +28,16 @@ export const haptics = {
     Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => {});
   },
   selection: () => {
-    // Lekki "tick" przy przelaczaniu (toggle/segment). Na iOS = selectionChanged.
+    // Lekki "tick" przy przelaczaniu (toggle/segment). Na iOS = UISelectionFeedbackGenerator.
+    // UWAGA: samo `selectionChanged()` jest NO-OPem - plugin tworzy generator dopiero
+    // w `selectionStart()` (Haptics.swift: `if let generator = ...`), wiec do 2026-09-13 ten
+    // tick nigdzie nie dzialal (Nat: brak haptyki przy zmianie okladki w udostepnianiu).
+    // Pelna sekwencja start -> changed -> end = jeden delikatny tick.
     if (!isNative) return;
-    Haptics.selectionChanged().catch(() => {});
+    Haptics.selectionStart()
+      .then(() => Haptics.selectionChanged())
+      .then(() => Haptics.selectionEnd())
+      .catch(() => {});
   },
   success: () => {
     if (!isNative) return;

@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef, type ReactNode } from "react";
+import { MAX_TRIP_DAYS } from "@/lib/tripDays";
+import { isPortraitCover } from "@/lib/coverFormat";
 import { useTranslation } from "react-i18next";
 import { useParams, useNavigate } from "react-router-dom";
 import { goBackOr } from "@/hooks/useGoBack";
@@ -11,7 +13,7 @@ import { notify } from "@/lib/notify";
 import { sendClientPush, getCurrentUserName } from "@/lib/clientPush";
 import { format } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
-import { MapPin, ArrowLeft, Sparkles, ChevronDown, Bookmark, Calendar as CalendarIcon, Image as ImageIcon, Maximize2, X, Building2, Pencil, Trash2, Heart, Share2, Plus, Map as MapIcon, Loader2, GripVertical, Check, Flag, Camera, ThumbsUp, MessageCircle, UserPlus, MoreHorizontal, FileText } from "lucide-react";
+import { MapPin, ArrowLeft, Sparkles, ChevronDown, Bookmark, Calendar as CalendarIcon, Image as ImageIcon, Maximize2, X, Building2, Pencil, Trash2, Heart, Share2, Plus, Map as MapIcon, Loader2, GripVertical, Check, Flag, Camera, ThumbsUp, MessageCircle, UserPlus, MoreHorizontal, FileText, ChevronLeft } from "lucide-react";
 import { MAIN_CATEGORIES, subcategoryPluralLabel } from "@/lib/categories";
 import { PLACE_VERDICT_TAGS, verdictOf, localizeTag, verdictRank } from "@/lib/routeTags";
 import { publishTrip } from "@/lib/publishTrip";
@@ -66,6 +68,9 @@ const SUBCAT_ORDER: string[] = MAIN_CATEGORIES.flatMap((c) => c.subcategories.ma
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { avatarSrc } from "@/lib/avatar";
 import { FramedAvatar } from "@/components/profile/FramedAvatar";
+import { AuthorPill, HighlightChips } from "@/components/route/TripHeaderChips";
+import { BrandIcon, SAVE_ICON } from "@/components/BrandIcon";
+import { BrandHeart } from "@/components/BrandHeart";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import SavePlaceSheet, { type SavePlaceInput } from "@/components/plan-wizard/SavePlaceSheet";
 import { resolvePlaceDbId } from "@/lib/placeLists";
@@ -364,6 +369,8 @@ export default function SharedRoute() {
       console.error("[SharedRoute] top toggle:", res.map((r: any) => r?.error?.message).filter(Boolean).join(" | "));
       queryClient.invalidateQueries({ queryKey: ["shared-route-pins", id] });
     }
+    // Licznik wyroznionych miejsc na profilu (StarredPlacesSheet).
+    queryClient.invalidateQueries({ queryKey: ["starred-places"] });
   };
 
   const toggleSaveBookmark = (pin: any) => { if (isSaved(pin.place_name)) void unsave(pinToSave(pin)); else setSavePlace(pinToSave(pin)); };
@@ -1380,6 +1387,8 @@ export default function SharedRoute() {
   // a bramka publikacji wymaga tej kolumny (patrz reference_content_ops_scripts).
   const setCoverFromGallery = async (url: string) => {
     if (!user?.id || !id) return;
+    // Tylko pionowe zdjecia (3:4 / 9:16) - patrz lib/coverFormat.
+    if (!(await isPortraitCover(url))) { haptics.error(); toast.error(t("toast.cover_portrait_only")); return; }
     const ok = await setMyRouteCover(id, user.id, url);
     if (!ok) { toast.error(t("toast.cover_failed")); return; }
     queryClient.invalidateQueries({ queryKey: ["route-member-cover", id, user.id] });
@@ -1389,6 +1398,7 @@ export default function SharedRoute() {
   };
 
   const handleSetCover = async (url: string, silent = false) => {
+    if (!(await isPortraitCover(url))) { haptics.error(); toast.error(t("toast.cover_portrait_only")); return; }
     const { error } = await (supabase as any).from("routes").update({ list_cover_url: url }).eq("id", route.id);
     if (error) { toast.error(t("toast.cover_failed")); return; }
     queryClient.invalidateQueries({ queryKey: ["shared-route", id] });
@@ -2055,21 +2065,16 @@ export default function SharedRoute() {
       <div className="shrink-0 bg-background" style={pendingInvite ? { paddingTop: 12 } : { paddingTop: "max(12px, env(safe-area-inset-top, 12px))" }}>
         <div className="flex items-center gap-2 text-sm px-5 pb-2.5">
             <button onClick={() => goBackOr(navigate, "/eksploruj")} aria-label={t("back")}
-              className="h-9 w-9 -ml-2 shrink-0 rounded-full flex items-center justify-center active:scale-90 transition-transform">
-              <ArrowLeft className="h-5 w-5 text-foreground" />
+              className="h-9 w-9 shrink-0 rounded-full bg-white border border-border flex items-center justify-center active:scale-90 transition-transform">
+              <ChevronLeft className="h-5 w-5 text-foreground" strokeWidth={2.4} />
             </button>
             {/* Awatar + username WYSRODKOWANE (#5). Wspolny wyjazd: host + pierwsi 2 uczestnicy z
                 PELNA nazwa (awatar + @username, truncate = "jesli sie zmiesci"); reszta = same awatary. */}
             <div className="flex-1 min-w-0 flex justify-center items-center gap-2.5">
-              {/* Uzytkownik 1 = host */}
+              {/* Uzytkownik 1 = host, jako pigulka (redesign 2026-09-13, TripHeaderChips). */}
               {!isAnon && author?.username ? (
-                <button
-                  onClick={() => navigate(`/profil/${author.username}`)}
-                  className="flex items-center gap-1.5 font-semibold text-foreground active:opacity-60 transition-opacity min-w-0 shrink"
-                >
-                  <FramedAvatar src={author?.avatar_url} frame={author?.avatar_frame} color={author?.avatar_frame_color} />
-                  <span className="truncate">@{author.username}</span>
-                </button>
+                <AuthorPill src={author?.avatar_url} frame={author?.avatar_frame} color={author?.avatar_frame_color} name={`@${author.username}`}
+                  onClick={() => navigate(`/profil/${author.username}`)} className="shrink" />
               ) : (
                 <span className="flex items-center gap-1.5 font-semibold text-foreground min-w-0 shrink">
                   {!isAnon && <FramedAvatar src={author?.avatar_url} frame={author?.avatar_frame} color={author?.avatar_frame_color} />}
@@ -2099,14 +2104,66 @@ export default function SharedRoute() {
                 </span>
               )}
             </div>
-            {/* Serce polubienia wyjazdu (prawy skraj) - TYLKO gosc. Wlasciciel: spacer dla symetrii. */}
-            {!isOwner ? (
-              <button onClick={toggleLike} aria-label={t("aria.like_trip")} className="shrink-0 flex items-center gap-1 active:scale-90 transition-transform">
-                <Heart className={cn("h-5 w-5", routeLike.liked ? "fill-red-500 text-red-500" : "text-foreground/70")} />
-                <span className="text-xs font-semibold tabular-nums text-muted-foreground">{routeLike.count}</span>
-              </button>
+            {/* Polubienie wyjazdu (prawy skraj) - TYLKO gosc. Od 2026-09-13 (makieta Nat) to
+                pomaranczowa GWIAZDKA: pusta = nie polubione, wypelniona = polubione; licznik
+                obok tylko gdy > 0. Wlasciciel: spacer dla symetrii. */}
+            {/* Belka po prawej (prosba Nat 2026-09-13): u goscia flaga zgloszenia (App Store 1.2;
+                wczesniej link "Zglos" pod lista), u wlasciciela/uczestnika ZOLTE kolko udostepniania
+                (gosc ma je przy "Zapisz ten wyjazd" na dole). Polubienie stoi przy TYTULE. */}
+            {!canEdit ? (
+              <ReportContentSheet targetType="route" targetId={route.id} trigger={(open) => (
+                <button onClick={open} aria-label={t("social:submit")} className="h-9 w-9 shrink-0 rounded-full flex items-center justify-center text-foreground/60 active:scale-90 transition-transform">
+                  <Flag className="h-5 w-5" strokeWidth={2} />
+                </button>
+              )} />
             ) : (
-              <div className="w-7 shrink-0" />
+              <div className="shrink-0 flex items-center gap-1.5">
+                <button onClick={() => handleShare()} aria-label={t("aria.share")}
+                  className="h-9 w-9 shrink-0 rounded-full bg-[#FDF184] flex items-center justify-center active:scale-90 transition-transform">
+                  <Share2 className="h-[18px] w-[18px] text-[#5B2C06]" strokeWidth={2.2} />
+                </button>
+                {/* Akcje wyjazdu (opis, nazwa, zaproszenia, usuniecie) pod "..." w BELCE (prosba Nat
+                    2026-09-13; wczesniej przy tytule). Biale kolko z delikatnym cieniem. */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      onPointerDown={() => haptics.light()}
+                      aria-label={t("aria.trip_actions")}
+                      className="shrink-0 h-9 w-9 rounded-full bg-white border border-black/[0.04] shadow-[0_1px_5px_rgba(0,0,0,0.12)] flex items-center justify-center active:scale-90 transition-transform"
+                    >
+                      <MoreHorizontal className="h-4 w-4 text-foreground/70" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="rounded-2xl w-60">
+                    {isOwner && stage !== "planning" && !choosing && (
+                      <DropdownMenuItem onSelect={() => { haptics.light(); setDescOpenKey((k) => k + 1); }} className="gap-2.5 py-2.5">
+                        <FileText className="h-4 w-4" />
+                        {routeDescription ? t("route:note.edit_description") : t("route:note.add_description")}
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuItem onSelect={() => { haptics.light(); setNameVal(route.title || ""); setEditingName(true); }} disabled={savingName} className="gap-2.5 py-2.5">
+                      <Pencil className="h-4 w-4" />{t("aria.rename_trip")}
+                    </DropdownMenuItem>
+                    {/* Daty wyjazdu (zakres = podzial na dni) - tylko wlasciciel, jak dotad. */}
+                    {isOwner && (
+                      <DropdownMenuItem onSelect={() => { haptics.light(); setDatesSheetOpen(true); }} className="gap-2.5 py-2.5">
+                        <CalendarIcon className="h-4 w-4" />{route.start_date ? t("aria.change_dates") : t("aria.add_dates")}
+                      </DropdownMenuItem>
+                    )}
+                    {/* Zapraszanie tylko HOST: inviteUsersToRoute idzie przez host-only RPC add_member_to_session. */}
+                    {isOwner && (
+                      <DropdownMenuItem onSelect={() => { haptics.light(); setInviteOpen(true); }} className="gap-2.5 py-2.5">
+                        <UserPlus className="h-4 w-4" />{t("aria.invite_people")}
+                      </DropdownMenuItem>
+                    )}
+                    {isOwner && (
+                      <DropdownMenuItem onSelect={() => setAskDelete(true)} className="gap-2.5 py-2.5 text-destructive focus:text-destructive">
+                        <Trash2 className="h-4 w-4" />{t("aria.delete_trip")}
+                      </DropdownMenuItem>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             )}
           </div>
       </div>
@@ -2137,87 +2194,34 @@ export default function SharedRoute() {
                 2026-09-10). Cztery kolka obok tytulu konkurowaly z nim wzrokowo, a trzy z nich
                 to akcje rzadkie - nazwe zmienia sie raz, usuwa sie raz. Udostepnianie widzi
                 KAZDY (spojnie z listami), reszta zostaje przy wlascicielu / uczestniku. */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button
-                  onPointerDown={() => haptics.light()}
-                  aria-label={t("aria.trip_actions")}
-                  className="shrink-0 h-9 w-9 rounded-full bg-secondary flex items-center justify-center active:scale-90 transition-transform"
-                >
-                  <MoreHorizontal className="h-4 w-4 text-foreground" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="rounded-2xl w-60">
-                {/* Opis CALEGO wyjazdu. Guzik stal pod samym opisem, ale odkad edycja podmienia
-                    tresc na miejscu, nie ma powodu trzymac go osobno - reszta akcji wyjazdu
-                    jest juz tutaj. Widoczne od etapu "w trakcie", bo w propozycjach opisu
-                    jeszcze nie ma czego pisac. */}
-                {isOwner && stage !== "planning" && !choosing && (
-                  <DropdownMenuItem
-                    onSelect={() => { haptics.light(); setDescOpenKey((k) => k + 1); }}
-                    className="gap-2.5 py-2.5"
-                  >
-                    <FileText className="h-4 w-4" />
-                    {routeDescription ? t("route:note.edit_description") : t("route:note.add_description")}
-                  </DropdownMenuItem>
-                )}
-                {canEdit && (
-                  <DropdownMenuItem
-                    onSelect={() => { haptics.light(); setNameVal(route.title || ""); setEditingName(true); }}
-                    disabled={savingName}
-                    className="gap-2.5 py-2.5"
-                  >
-                    <Pencil className="h-4 w-4" />{t("aria.rename_trip")}
-                  </DropdownMenuItem>
-                )}
-                <DropdownMenuItem onSelect={() => handleShare()} className="gap-2.5 py-2.5">
-                  <Share2 className="h-4 w-4" />{t("aria.share")}
-                </DropdownMenuItem>
-                {/* Zapraszanie tylko HOST: inviteUsersToRoute idzie przez host-only RPC
-                    add_member_to_session. */}
-                {isOwner && (
-                  <DropdownMenuItem onSelect={() => { haptics.light(); setInviteOpen(true); }} className="gap-2.5 py-2.5">
-                    <UserPlus className="h-4 w-4" />{t("aria.invite_people")}
-                  </DropdownMenuItem>
-                )}
-                {isOwner && (
-                  <DropdownMenuItem onSelect={() => setAskDelete(true)} className="gap-2.5 py-2.5 text-destructive focus:text-destructive">
-                    <Trash2 className="h-4 w-4" />{t("aria.delete_trip")}
-                  </DropdownMenuItem>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-          {/* #5: miasto + liczba miejsc bezposrednio pod tytulem (przeniesione z TopBara). */}
-          <div className="flex items-center gap-4 mt-2.5 text-sm text-muted-foreground">
-            {cityLabel && <span className="flex items-center gap-1.5"><Building2 className="h-4 w-4 shrink-0" />{cityLabel}</span>}
-            <span className="flex items-center gap-1.5"><MapPin className="h-4 w-4 shrink-0" />{pins.length} {pins.length === 1 ? "miejsce" : pins.length < 5 ? "miejsca" : "miejsc"}</span>
-          </div>
-          {/* Daty wyjazdu: wlasciciel moze je ustawic/zmienic (zakres wlacza podzial na dni). */}
-          {dateLabel ? (
-            isOwner ? (
-              <button onClick={() => setDatesSheetOpen(true)} className="flex items-center gap-1.5 mt-2.5 text-foreground active:opacity-60 transition-opacity">
-                <CalendarIcon className="h-5 w-5 shrink-0" />
-                <span className="text-base">{dateLabel}</span>
-                <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+            {/* Polubienie = BRANDOWE SERCE na wysokosci tytulu (prosba Nat 2026-09-13; gwiazdka
+                zostaje dla "topki"): kontur = nie polubione, pelne = polubione, licznik obok gdy > 0.
+                Tylko gosc. */}
+            {!isOwner && (
+              <button onClick={toggleLike} aria-label={t("aria.like_trip")} aria-pressed={routeLike.liked} className="shrink-0 h-9 flex items-center gap-1 px-1 active:scale-90 transition-transform">
+                <BrandHeart filled={routeLike.liked} className="h-7 w-7 text-primary" />
+                {routeLike.count > 0 && <span className="text-sm font-bold tabular-nums text-primary">{routeLike.count}</span>}
               </button>
-            ) : (
-              <div className="flex items-center gap-1.5 mt-2.5 text-foreground">
-                <CalendarIcon className="h-5 w-5 shrink-0" />
-                <span className="text-base">{dateLabel}</span>
-              </div>
-            )
-          ) : isOwner ? (
-            <button onClick={() => setDatesSheetOpen(true)} className="flex items-center gap-1.5 mt-2.5 text-muted-foreground active:opacity-60 transition-opacity">
+            )}
+          </div>
+          {/* Miasto · liczba miejsc · wyroznione jako KOLOROWE CHIPY (redesign Nat 2026-09-13,
+              TripHeaderChips) - wczesniej szara linia z ikonami. */}
+          {/* Chip miejsca = MIASTO (jak w makiecie: "Łódź"), kraje tylko gdy wyjazd miasta nie ma. */}
+          <HighlightChips className="mt-3" city={route.city || scopeLabel(route) || null} placesCount={pins.length} starredCount={(pins as any[]).filter((p) => p.is_top).length} />
+          {/* Daty wyjazdu = sama informacja. Ustawianie/zmiana zakresu (wlacza podzial na dni)
+              zyje w menu "..." w belce (prosba Nat 2026-09-13; wczesniej olowek przy dacie
+              i osobny wiersz "Dodaj daty" pod tytulem). */}
+          {dateLabel && (
+            <div className="flex items-center gap-1.5 mt-2.5 text-foreground">
               <CalendarIcon className="h-5 w-5 shrink-0" />
-              <span className="text-base">{t("aria.add_dates")}</span>
-            </button>
-          ) : null}
+              <span className="text-base">{dateLabel}</span>
+            </div>
+          )}
           {route.ai_highlight && (
             <p className="text-[17px] font-bold leading-snug text-foreground mt-3">„{route.ai_highlight}"</p>
           )}
           {routeDescription && !descEditing && (
-            <p className="text-sm text-muted-foreground leading-relaxed mt-3">{routeDescription}</p>
+            <p className="text-[15px] text-foreground/80 leading-relaxed mt-3">{routeDescription}</p>
           )}
           {/* Tagi CALEJ TRASY usuniete (prosba Nat 2026-08-31) - widok wyjazdu ma byc czysty.
               Zostaja tylko werdykty przy KONKRETNYCH miejscach (pins.tags). */}
@@ -2327,10 +2331,12 @@ export default function SharedRoute() {
                       <button
                         key={d ?? "all"}
                         onClick={() => pickDay(d)}
-                        className={`shrink-0 rounded-full px-3.5 py-2 flex flex-col items-center leading-tight transition-colors active:scale-95 ${on ? "bg-primary text-white" : "bg-secondary text-foreground"}`}
+                        /* Zaznaczony dzien = peachy z brazowym tekstem (prosba Nat 2026-09-13; zolty
+                           z pierwszej wersji odrzucony), nie pomarancz - ten zostaje dla akcji primary. */
+                        className={`shrink-0 rounded-full px-3.5 py-2 flex flex-col items-center leading-tight transition-colors active:scale-95 ${on ? "bg-[#FCEDE3] text-[#5B2C06]" : "bg-secondary text-foreground"}`}
                       >
                         <span className="text-sm font-semibold">{d === null ? t("days.all") : t("days.nth", { n: d })}</span>
-                        <span className={`text-[11px] ${on ? "text-white/85" : "text-muted-foreground"}`}>
+                        <span className={`text-[11px] ${on ? "text-[#5B2C06]/75" : "text-muted-foreground"}`}>
                           {d === null ? `${count} ${placeWord(count)}` : dayChipDate(d)}
                         </span>
                       </button>
@@ -2479,12 +2485,7 @@ export default function SharedRoute() {
         )}
         </div>
 
-        {/* Zgloszenie tresci - wymog App Store (Guideline 1.2). Autor/uczestnik nie zglasza siebie. */}
-        {!canEdit && (
-          <div className="px-5 pt-6 pb-2 flex justify-center">
-            <ReportContentSheet targetType="route" targetId={route.id} />
-          </div>
-        )}
+        {/* Zgloszenie tresci (App Store 1.2) zyje w belce, obok udostepniania - patrz TopBar. */}
       </div>
 
       {/* Podglad wizytowki miejsca */}
@@ -2853,20 +2854,28 @@ export default function SharedRoute() {
               <>
                 {/* CTA pokazuje STAN zakladki, nie tylko akcje: zapisane = szary guzik
                     z wypelnionym bookmarkiem, a ponowne tapniecie zdejmuje zapis. */}
-                <button
-                  onClick={() => {
-                    if (!user) { navigate("/auth"); return; }
-                    if (isRouteSaved) { void unsaveFromMine(); return; }
-                    setShowDateSheet(true);
-                  }}
-                  disabled={saving}
-                  className={`w-full py-3 rounded-full font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-50 ${
-                    isRouteSaved ? "bg-secondary text-secondary-foreground" : "bg-primary text-white"
-                  }`}
-                >
-                  <Bookmark className={`h-4 w-4 ${isRouteSaved ? "fill-current" : ""}`} />
-                  {saving ? t("saving") : isRouteSaved ? t("saved_trip") : t("save_trip")}
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      if (!user) { navigate("/auth"); return; }
+                      if (isRouteSaved) { void unsaveFromMine(); return; }
+                      setShowDateSheet(true);
+                    }}
+                    disabled={saving}
+                    className={`flex-1 min-w-0 py-3 rounded-full font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-50 ${
+                      isRouteSaved ? "bg-secondary text-secondary-foreground" : "bg-primary text-white"
+                    }`}
+                  >
+                    <BrandIcon src={SAVE_ICON} className="h-4 w-4" />
+                    {saving ? t("saving") : isRouteSaved ? t("saved_trip") : t("save_trip")}
+                  </button>
+                  {/* Udostepnianie = zolte kolko z brazowa ikona bezposrednio na prawo od zapisu
+                      (prosba Nat 2026-09-13). */}
+                  <button onClick={() => handleShare()} aria-label={t("aria.share")}
+                    className="h-11 w-11 shrink-0 rounded-full bg-[#FDF184] flex items-center justify-center active:scale-90 transition-transform">
+                    <Share2 className="h-5 w-5 text-[#5B2C06]" strokeWidth={2.2} />
+                  </button>
+                </div>
               </>
             ) : (
             <>
@@ -2929,14 +2938,14 @@ export default function SharedRoute() {
             <p className="text-lg font-black leading-tight">{t("pick_date")}</p>
             <p className="text-xs text-muted-foreground mt-1">{t("pick_date_desc")}</p>
           </div>
-          <FullCalendarPicker maxDays={14} onConfirm={(d, numDays) => void saveTripDates(d, numDays)} allowPast onClear={route.start_date ? () => void clearTripDates() : undefined} />
+          <FullCalendarPicker maxDays={MAX_TRIP_DAYS} onConfirm={(d, numDays) => void saveTripDates(d, numDays)} allowPast onClear={route.start_date ? () => void clearTripDates() : undefined} />
         </SheetContent>
       </Sheet>
 
       {/* Potwierdzenie usuniecia wyjazdu - nieodwracalne. */}
       {/* Potwierdzenie usuniecia MIEJSCA (od etapu "w trakcie") - pokazuje, ile tresci przepadnie. */}
       <AlertDialog open={!!confirmDeletePin} onOpenChange={(o) => { if (!o) setConfirmDeletePin(null); }}>
-        <AlertDialogContent className="rounded-3xl">
+        <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{t("confirm.delete_place_title", { place: confirmDeletePin?.place_name ?? t("confirm.this_place") })}</AlertDialogTitle>
             <AlertDialogDescription>
@@ -2963,7 +2972,7 @@ export default function SharedRoute() {
       </AlertDialog>
 
       <AlertDialog open={askDelete} onOpenChange={(o) => { if (!o && !deleting) setAskDelete(false); }}>
-        <AlertDialogContent className="rounded-3xl">
+        <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{t("confirm.delete_trip")}</AlertDialogTitle>
             <AlertDialogDescription>

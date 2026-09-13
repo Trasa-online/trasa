@@ -8,7 +8,7 @@ import { useScreenshot } from "@/hooks/useScreenshot";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { MapPin, ArrowLeft, Bookmark, Building2, Trash2, Share2, Plus, Camera, Loader2, X, Pencil, MoreHorizontal } from "lucide-react";
+import { MapPin, ArrowLeft, Bookmark, Building2, Trash2, Share2, Plus, Camera, Loader2, X, Pencil, MoreHorizontal, Palette, ChevronLeft, Flag } from "lucide-react";
 import { mapWithLimit } from "@/lib/imageCompression";
 import AddPlaceSheet from "@/components/route/AddPlaceSheet";
 import { scopeCountries } from "@/lib/tripScope";
@@ -48,6 +48,9 @@ import { haptics } from "@/hooks/useHaptics";
 import { moderateImageUrl, MODERATION_REJECTED_MESSAGE } from "@/lib/imageModeration";
 import { rowOwnPhotos, mergeRowPhotosIntoDetail } from "@/lib/placeUserPhotos";
 import { deferDelete } from "@/lib/deferDelete";
+import ListThemeSheet from "@/components/lists/ListThemeSheet";
+import { AuthorPill, HighlightChips } from "@/components/route/TripHeaderChips";
+import { BrandIcon, SAVE_ICON } from "@/components/BrandIcon";
 
 // Widok LISTY miejsc (polecajki) - UI/UX 1:1 z widokiem trasy (SharedRoute), ale zasilany z
 // discovery_collections/discovery_items. Lista NIE jest trasa (brak kolejnosci-planu), ale
@@ -90,6 +93,8 @@ export default function SharedList() {
   // Postawiony nizej dawal React error #310 - przy pierwszym renderze hookow bylo mniej niz przy
   // kolejnym i lista przestawala sie otwierac (zgloszenie Nat 2026-09-01).
   const [shareCardOpen, setShareCardOpen] = useState(false);
+  // Tlo listy na siatce Glownej (paleta marki) - wybor wlasciciela z menu "...".
+  const [themeOpen, setThemeOpen] = useState(false);
   // Zmiana nazwy listy (prosba Nat 2026-09-08). Edycja NA MIEJSCU, tak jak nazwa wyjazdu -
   // osobny arkusz do jednego pola tylko mnozylby kroki.
   const [editingName, setEditingName] = useState(false);
@@ -242,7 +247,7 @@ export default function SharedList() {
     queryFn: async () => {
       const { data } = await (supabase as any)
         .from("discovery_collections")
-        .select("id, title, city, countries, description, user_id, author_name, author_avatar, cover_url, tags, is_public, list_status")
+        .select("id, title, city, countries, description, user_id, author_name, author_avatar, cover_url, tags, is_public, list_status, theme")
         .eq("id", id as string)
         .maybeSingle();
       return data as any;
@@ -255,12 +260,29 @@ export default function SharedList() {
     queryFn: async () => {
       const { data } = await (supabase as any)
         .from("discovery_items")
-        .select("id, place_id, place_name, category, address, city, latitude, longitude, rating, google_place_id, photo_url, short_desc, images, added_by, tags, order_index")
+        .select("id, place_id, place_name, category, address, city, latitude, longitude, rating, google_place_id, photo_url, short_desc, images, added_by, tags, order_index, is_top")
         .eq("collection_id", id as string)
         .order("order_index", { ascending: true });
       return (data ?? []) as any[];
     },
   });
+
+  // Gwiazdka listy (discovery_items.is_top, migracja 20260913b). Inaczej niz na wyjezdzie
+  // (TOP_LIMIT = 1, gwiazdka sie PRZENOSI): na liscie gwiazdek jest BEZ LIMITU (decyzja Nat
+  // 2026-09-13) - lista to kuratorska polecajka, wiec "topka" moze byc kilka miejsc, a nie jedno.
+  const toggleTopItem = async (item: any) => {
+    const next = !item.is_top;
+    haptics.light();
+    queryClient.setQueryData(["shared-list-items", id], (old: any[] | undefined) =>
+      (old ?? []).map((p) => (p.id === item.id ? { ...p, is_top: next } : p)));
+    const { error } = await (supabase as any).from("discovery_items").update({ is_top: next }).eq("id", item.id);
+    if (error) {
+      console.error("[SharedList] top toggle:", error.message);
+      queryClient.invalidateQueries({ queryKey: ["shared-list-items", id] });
+    }
+    queryClient.invalidateQueries({ queryKey: ["starred-places"] });
+  };
+
 
   // "Gdzie juz bylem" (zgloszenie z testow 2026-09-08). Stan nalezy do OGLADAJACEGO, nie do
   // listy - odhaczenie na CUDZEJ zapisanej liscie nie moze jej zmieniac wszystkim. Klucz to
@@ -616,6 +638,10 @@ export default function SharedList() {
             saved={isSaved(pin.place_name)}
             onDelete={isOwner ? () => handleDeleteItem(pin) : undefined}
             deleteLabel={t("remove_from_list")}
+            // Gwiazdka "topki" takze na liscie (prosba Nat 2026-09-13) - ten sam wiersz i ta
+            // sama logika, co na wyjezdzie: jedna gwiazdka, kolejny wybor ja PRZENOSI.
+            isTop={!!pin.is_top}
+            onToggleTop={isOwner ? () => void toggleTopItem(pin) : undefined}
             menuExtras={isOwner ? [
               {
                 key: "note",
@@ -632,7 +658,9 @@ export default function SharedList() {
             ] : undefined}
             onToggleVisited={isOwner && user ? () => handleToggleVisited(pin) : undefined}
             visited={isOwner ? visitedKeys.has(visitKeyOf(pin)) : authorVisitedKeys.has(visitKeyOf(pin))}
-            visitedAvatar={isOwner ? undefined : (author?.avatar_url ?? col.author_avatar ?? null)}
+            // Awatar w pigulce "odwiedzone" ZAWSZE: na cudzej liscie autora, na wlasnej moj
+            // (autor listy = ja) - makieta Nat 2026-09-13.
+            visitedAvatar={author?.avatar_url ?? col.author_avatar ?? null}
             note={isNew ? (
               <div className="space-y-2">
                 {/* Awatar autora listy + samo "nowe miejsce" (decyzja Nat 2026-09-01). Imie bylo
@@ -660,16 +688,15 @@ export default function SharedList() {
       <div className="shrink-0 bg-background px-5 pb-2.5 border-b border-border/40" style={{ paddingTop: "max(12px, env(safe-area-inset-top, 12px))" }}>
         <div className="flex items-center gap-2 text-sm">
             <button onClick={() => goBackOr(navigate, "/eksploruj")} aria-label={t("back")}
-              className="h-9 w-9 -ml-2 shrink-0 rounded-full flex items-center justify-center active:scale-90 transition-transform">
-              <ArrowLeft className="h-5 w-5 text-foreground" />
+              className="h-9 w-9 shrink-0 rounded-full bg-white border border-border flex items-center justify-center active:scale-90 transition-transform">
+              <ChevronLeft className="h-5 w-5 text-foreground" strokeWidth={2.4} />
             </button>
             {/* Awatar + username WYSRODKOWANE (#5 - przeniesione ze skraju). Miasto/liczba miejsc -> pod tytul. */}
             <div className="flex-1 min-w-0 flex justify-center">
+              {/* Autor jako pigulka (redesign 2026-09-13, TripHeaderChips) - awatar z ramka zostaje. */}
               {author?.username ? (
-                <button onClick={() => navigate(`/profil/${author.username}`)} className="flex items-center gap-1.5 font-semibold text-foreground active:opacity-60 transition-opacity min-w-0">
-                  <FramedAvatar src={author?.avatar_url ?? col.author_avatar} frame={author?.avatar_frame} color={author?.avatar_frame_color} />
-                  <span className="truncate">@{author.username}</span>
-                </button>
+                <AuthorPill src={author?.avatar_url ?? col.author_avatar} frame={author?.avatar_frame} color={author?.avatar_frame_color} name={`@${author.username}`}
+                  onClick={() => navigate(`/profil/${author.username}`)} />
               ) : (
                 <span className="flex items-center gap-1.5 font-semibold text-foreground min-w-0">
                   <img src={avatarSrc(col.author_avatar ?? null)} alt="" className="h-6 w-6 rounded-full object-cover bg-orange-100 shrink-0" />
@@ -678,7 +705,47 @@ export default function SharedList() {
               )}
             </div>
             {/* Polubien list NIE MA (decyzja Nat 2026-09-01) - zostaje sam zapis listy, ktory
-                niesie realna intencje i buduje powiadomienia o nowych miejscach. */}
+                niesie realna intencje i buduje powiadomienia o nowych miejscach. Udostepnianie
+                w belce po prawej, dla kazdego (prosba Nat 2026-09-13; wczesniej przy tytule /
+                w menu wlasciciela). */}
+            {/* Zgloszenie (App Store 1.2) w belce po prawej (prosba Nat 2026-09-13). Udostepnianie
+                zeszlo do dolnego paska, obok glownego guzika. Wlasciciel: spacer dla symetrii. */}
+            {!isOwner ? (
+              <ReportContentSheet targetType="collection" targetId={col.id} trigger={(open) => (
+                <button onClick={open} aria-label={t("social:submit")} className="h-9 w-9 shrink-0 rounded-full flex items-center justify-center text-foreground/60 active:scale-90 transition-transform">
+                  <Flag className="h-5 w-5" strokeWidth={2} />
+                </button>
+              )} />
+            ) : (
+              /* Akcje listy (nazwa, tlo, usuniecie) pod "..." w BELCE (prosba Nat 2026-09-13;
+                 wczesniej przy tytule). Biale kolko z delikatnym cieniem. */
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    onPointerDown={() => haptics.light()}
+                    aria-label={t("aria.list_actions")}
+                    className="shrink-0 h-9 w-9 rounded-full bg-white border border-black/[0.04] shadow-[0_1px_5px_rgba(0,0,0,0.12)] flex items-center justify-center active:scale-90 transition-transform"
+                  >
+                    <MoreHorizontal className="h-4 w-4 text-foreground/70" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="rounded-2xl w-56">
+                  <DropdownMenuItem
+                    onSelect={() => { setNameVal(col.title || ""); setEditingName(true); }}
+                    disabled={savingName}
+                    className="gap-2.5 py-2.5"
+                  >
+                    <Pencil className="h-4 w-4" />{t("aria.rename_list")}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => setThemeOpen(true)} className="gap-2.5 py-2.5">
+                    <Palette className="h-4 w-4" />{t("aria.list_theme")}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => setAskDelete(true)} className="gap-2.5 py-2.5 text-destructive focus:text-destructive">
+                    <Trash2 className="h-4 w-4" />{t("aria.delete_list")}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
           </div>
       </div>
 
@@ -711,51 +778,16 @@ export default function SharedList() {
               {/* Na CUDZEJ liscie zostaje jedna akcja - udostepnianie. Menu nie ma wtedy czego
                   chowac, wiec pokazujemy ja wprost (prosba Nat 2026-09-10); ta sama zasada
                   co przy wierszach miejsc. */}
-              {!isOwner && (
-                <button onClick={handleShare} onContextMenu={(e) => { e.preventDefault(); handleShareLink(); }}
-                  aria-label={t("aria.share")}
-                  className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center active:scale-90 transition-transform">
-                  <Share2 className="h-4 w-4 text-foreground" />
-                </button>
-              )}
-              {/* Wlasciciel ma trzy akcje - te chowamy pod trzema kropkami, tak samo jak
-                  na wyjezdzie. */}
-              {isOwner && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button
-                    onPointerDown={() => haptics.light()}
-                    aria-label={t("aria.list_actions")}
-                    className="shrink-0 h-9 w-9 rounded-full bg-secondary flex items-center justify-center active:scale-90 transition-transform"
-                  >
-                    <MoreHorizontal className="h-4 w-4 text-foreground" />
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="rounded-2xl w-56">
-                  <DropdownMenuItem
-                    onSelect={() => { setNameVal(col.title || ""); setEditingName(true); }}
-                    disabled={savingName}
-                    className="gap-2.5 py-2.5"
-                  >
-                    <Pencil className="h-4 w-4" />{t("aria.rename_list")}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onSelect={() => handleShare()} className="gap-2.5 py-2.5">
-                    <Share2 className="h-4 w-4" />{t("aria.share")}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onSelect={() => setAskDelete(true)} className="gap-2.5 py-2.5 text-destructive focus:text-destructive">
-                    <Trash2 className="h-4 w-4" />{t("aria.delete_list")}
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-              )}
+
             </div>
           </div>
-          {/* #5: miasto + liczba miejsc bezposrednio pod tytulem (przeniesione z TopBara). */}
-          <div className="flex items-center gap-4 mt-2.5 text-sm text-muted-foreground">
-            {cityLabel && <span className="flex items-center gap-1.5"><Building2 className="h-4 w-4 shrink-0" />{cityLabel}</span>}
-            <span className="flex items-center gap-1.5"><MapPin className="h-4 w-4 shrink-0" />{placesCountLabel}</span>
-          </div>
-          {col.description && <p className="text-sm text-muted-foreground leading-relaxed mt-3">{col.description}</p>}
+          {/* Miasto · liczba miejsc · wyroznione jako KOLOROWE CHIPY (redesign Nat 2026-09-13,
+              TripHeaderChips) - wczesniej szara linia z ikonami. */}
+          {/* "7 / 15 miejsc": odwiedzone przez OGLADAJACEGO na wlasnej liscie, przez AUTORA na cudzej. */}
+          <HighlightChips className="mt-3" city={cityLabel} placesCount={items.length}
+            visitedCount={(items as any[]).filter((it) => (isOwner ? visitedKeys : authorVisitedKeys).has(visitKeyOf(it))).length}
+            starredCount={(items as any[]).filter((it) => it.is_top).length} />
+          {col.description && <p className="text-[15px] text-foreground/80 leading-relaxed mt-3">{col.description}</p>}
         </div>
 
         {/* Jeden widok: miejsca. Zakladka Galeria usunieta (decyzja Nat 2026-09-01). */}
@@ -771,6 +803,9 @@ export default function SharedList() {
               />
             )}
           </div>
+        {isOwner && (
+          <ListThemeSheet open={themeOpen} onOpenChange={setThemeOpen} listId={col.id} current={col.theme} title={col.title || t("fallback_title")} />
+        )}
         {shareCardOpen && (
         <ShareCardList
           title={col.title || t("fallback_title")}
@@ -787,12 +822,7 @@ export default function SharedList() {
         />
       )}
 
-      {/* Zgloszenie tresci - wymog App Store (Guideline 1.2). Autor nie zglasza siebie. */}
-        {!isOwner && (
-          <div className="px-5 pt-6 pb-2 flex justify-center">
-            <ReportContentSheet targetType="collection" targetId={col.id} />
-          </div>
-        )}
+      {/* Zgloszenie tresci (App Store 1.2) zyje w belce, obok udostepniania. */}
         </div>
       </div>
 
@@ -811,14 +841,22 @@ export default function SharedList() {
       {/* b) Dolny CTA: wlasciciel = t("cta.add_place") (drawer jak w wyjazdach); gosc = zapisz liste. */}
       {!noteEditing && (
       <div className="fixed bottom-0 left-0 right-0 max-w-lg mx-auto px-5 pt-2 bg-background border-t border-border/30" style={{ paddingBottom: "max(12px, env(safe-area-inset-bottom, 12px))" }}>
-        {isOwner ? (
-          <button onClick={() => setAddPlaceOpen(true)} className="w-full py-3 rounded-full border border-border bg-background text-foreground font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform">
-            <Plus className="h-4 w-4" />{t("cta.add_place")}</button>
-        ) : (
-          <button onClick={toggleSave} className="w-full py-3 rounded-full bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform">
-            <Bookmark className={`h-4 w-4 ${saved ? "fill-current" : ""}`} />{saved ? t("toast.list_saved") : t("cta.save_list")}
+        {/* Udostepnianie = zolte kolko z brazowa ikona, bezposrednio na prawo od glownego guzika
+            (prosba Nat 2026-09-13) - u wlasciciela obok "Dodaj nowe miejsce", u goscia obok zapisu. */}
+        <div className="flex items-center gap-2">
+          {isOwner ? (
+            <button onClick={() => setAddPlaceOpen(true)} className="flex-1 min-w-0 py-3 rounded-full border border-border bg-background text-foreground font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform">
+              <Plus className="h-4 w-4" />{t("cta.add_place")}</button>
+          ) : (
+            <button onClick={toggleSave} className="flex-1 min-w-0 py-3 rounded-full bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform">
+              <BrandIcon src={SAVE_ICON} className="h-4 w-4" />{saved ? t("toast.list_saved") : t("cta.save_list")}
+            </button>
+          )}
+          <button onClick={handleShare} onContextMenu={(e) => { e.preventDefault(); handleShareLink(); }} aria-label={t("aria.share")}
+            className="h-11 w-11 shrink-0 rounded-full bg-[#FDF184] flex items-center justify-center active:scale-90 transition-transform">
+            <Share2 className="h-5 w-5 text-[#5B2C06]" strokeWidth={2.2} />
           </button>
-        )}
+        </div>
       </div>
       )}
 
@@ -864,7 +902,7 @@ export default function SharedList() {
 
       {/* Potwierdzenie usuniecia listy - nieodwracalne. */}
       <AlertDialog open={askDelete} onOpenChange={(o) => { if (!o && !deleting) setAskDelete(false); }}>
-        <AlertDialogContent className="rounded-3xl">
+        <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{t("confirm.delete_title")}</AlertDialogTitle>
             <AlertDialogDescription>

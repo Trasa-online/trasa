@@ -3,8 +3,8 @@ import { useTranslation } from "react-i18next";
 import { AnimatePresence, motion } from "framer-motion";
 import { FLIGHT_MS, arcThrough, relRect } from "@/lib/flightPath";
 import { localizeTag } from "@/lib/routeTags";
-import { Bookmark, Check, MoreHorizontal, Trash2 } from "lucide-react";
-import { BrandIcon, STAR_ICON } from "@/components/BrandIcon";
+import { Check, CheckCheck, MoreHorizontal, Plus, Trash2 } from "lucide-react";
+import { BrandIcon, CAMERA_ICON, SAVE_ICON, STAR_ICON } from "@/components/BrandIcon";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useLongPress } from "@/hooks/useLongPress";
 import { haptics } from "@/hooks/useHaptics";
@@ -131,8 +131,16 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
   // dokladnie w chwili, w ktorej user wlasnie wszedl w zaznaczanie.
   const longPress = useLongPress(selection ? selection.onEnter : undefined, !!selection && !selection.active);
   const selecting = !!selection?.active;
-  // Ile akcji miejsca jest w ogole dostepnych - decyduje, czy chowac je pod menu.
-  const actionCount = [onToggleTop, onSave, onDelete].filter(Boolean).length + (menuExtras?.length ?? 0);
+  // Redesign Nat 2026-09-13 ("najbardziej zaleza mi na guzikach"): "dodaj zdjecie" WYCHODZI
+  // z menu na wierzch jako pomaranczowe kolko (glowna akcja przy miejscu). Notka zostaje w
+  // menu (drugie podejscie tego dnia: osobne kolko notki za bardzo zageszczalo wiersz). Ekran
+  // podaje obie jako menuExtras (klucze "photo" / "note" - tak nazywaja je SharedRoute
+  // i SharedList), wiec nic nie zmienia sie w callerach.
+  const photoAction = menuExtras?.find((x) => x.key === "photo");
+  const menuRest = (menuExtras ?? []).filter((x) => x.key !== "photo");
+  // Ile akcji miejsca zostaje pod menu - decyduje, czy w ogole je pokazywac. Odhaczanie
+  // "bylem tu" tez siedzi w menu (prosba Nat 2026-09-13; wczesniej osobne kolko na wierszu).
+  const actionCount = [onToggleTop, onSave, onDelete, onToggleVisited].filter(Boolean).length + menuRest.length;
   // W trybie zaznaczania przelaczenie obsluguje CALY wiersz (onClick nizej). Guziki w srodku
   // musza wiec milczec - inaczej klik przelaczylby raz tutaj i drugi raz po dojsciu do wiersza,
   // czyli wracalby do punktu wyjscia.
@@ -174,21 +182,71 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
         {dragHandle}
         {/* Peachy kafelek ikony/zdjecia - PIONOWY prostokat 2:3 (redesign 2026-08-25, spojne z okladkami
             miniaturek/kart). self-start: przyklejony do gory wiersza. */}
-        <button ref={thumbRef} onClick={openOrToggle} className="relative w-16 h-24 shrink-0 self-start rounded-2xl overflow-hidden bg-[#fcede3] active:opacity-90">
-          <PlacePhoto pin={pin} width={80} className="w-full h-full object-cover" />
-          {cornerAvatar !== undefined && !selecting && (
-            <img src={avatarSrc(cornerAvatar)} alt="" className="absolute bottom-1 right-1 h-7 w-7 rounded-full object-cover border-2 border-white shadow-sm bg-secondary" />
+        <div className="flex flex-col items-center gap-2 shrink-0 self-start">
+          <button ref={thumbRef} onClick={openOrToggle} className="relative w-16 h-24 shrink-0 rounded-2xl overflow-hidden bg-[#fcede3] active:opacity-90">
+            <PlacePhoto pin={pin} width={80} className="w-full h-full object-cover" />
+            {cornerAvatar !== undefined && !selecting && (
+              <img src={avatarSrc(cornerAvatar)} alt="" className="absolute bottom-1 right-1 h-7 w-7 rounded-full object-cover border-2 border-white shadow-sm bg-secondary" />
+            )}
+            {/* Znacznik wyboru na miniaturce - tam, gdzie i tak patrzy oko przy przegladaniu. */}
+            {selecting && (
+              <span className={`absolute top-1 left-1 h-6 w-6 rounded-full flex items-center justify-center border-2 ${
+                selection!.selected ? "bg-primary border-primary text-white" : "bg-white/85 border-white"
+              }`}>
+                {selection!.selected && <Check className="h-3.5 w-3.5 stroke-[3]" />}
+              </span>
+            )}
+          </button>
+          {/* "Odwiedzone" = ZOLTA pigulka POD miniaturka: awatar + podwojny ptaszek, bez napisu
+              (makieta Nat 2026-09-13). Na cudzej liscie awatar autora (jego slad), na wlasnej moj.
+              Przelacznik "bylem tu" zyje w menu "..."; pieczatka (odbicie + fala + rozprysk) gra
+              na pigulce w chwili odhaczenia. */}
+          {visited && !selecting && (
+            <motion.span
+              aria-label={t("row.visited")}
+              animate={stamped ? { scale: [1, 0.82, 1.12, 0.98, 1] } : { scale: 1 }}
+              transition={stamped
+                ? { duration: 0.44, times: [0, 0.16, 0.4, 0.7, 1], ease: "easeOut" }
+                : { duration: 0.2 }}
+              className="relative h-8 w-16 rounded-full flex items-center justify-center gap-1 bg-[#FDF184] text-[#0E0E0E]"
+            >
+              <AnimatePresence>
+                {stamped && (
+                  <>
+                    <motion.span
+                      aria-hidden
+                      className="pointer-events-none absolute inset-0 rounded-full border border-primary/70"
+                      initial={{ scale: 0.7, opacity: 0.55 }}
+                      animate={{ scale: 1.75, opacity: 0 }}
+                      transition={{ duration: 0.46, ease: "easeOut" }}
+                    />
+                    {/* Obrot na OPAKOWANIU, przesuniecie na kresce - inaczej osiem kresek laduje
+                        w jednym punkcie (zlapane na klatce). */}
+                    {STAMP_RAYS.map((deg) => (
+                      <span key={deg} aria-hidden className="pointer-events-none absolute left-1/2 top-1/2 h-0 w-0" style={{ transform: `rotate(${deg}deg)` }}>
+                        <motion.span
+                          className="block h-[2px] w-[6px] -mt-[1px] rounded-full bg-primary/80"
+                          initial={{ x: 2, opacity: 0, scaleX: 0.4 }}
+                          animate={{ x: [2, 14, 19], opacity: [0, 0.85, 0], scaleX: [0.4, 1, 0.5] }}
+                          transition={{ duration: 0.46, times: [0, 0.45, 1], ease: "easeOut", delay: 0.04 }}
+                        />
+                      </span>
+                    ))}
+                  </>
+                )}
+              </AnimatePresence>
+              {visitedAvatar !== undefined && (
+                <img src={avatarSrc(visitedAvatar)} alt="" className="h-6 w-6 rounded-full object-cover bg-white/60 shrink-0" />
+              )}
+              <CheckCheck className="h-4 w-4 shrink-0" strokeWidth={3} />
+            </motion.span>
           )}
-          {/* Znacznik wyboru na miniaturce - tam, gdzie i tak patrzy oko przy przegladaniu. */}
-          {selecting && (
-            <span className={`absolute top-1 left-1 h-6 w-6 rounded-full flex items-center justify-center border-2 ${
-              selection!.selected ? "bg-primary border-primary text-white" : "bg-white/85 border-white"
-            }`}>
-              {selection!.selected && <Check className="h-3.5 w-3.5 stroke-[3]" />}
-            </span>
-          )}
-        </button>
-        <div className="flex-1 min-w-0">
+        </div>
+        {/* Kolumna tresci ma MINIMUM wysokosc miniatury (h-24) i sklada akcje na swoim dole
+            (mt-auto): miejsce bez notki i zdjec (stan zero) jest przez to zwartym wierszem -
+            nazwa u gory, kolka akcji na wysokosci dolnej krawedzi miniatury (makieta Nat
+            2026-09-13). Wiersz z notkami/zdjeciami rosnie normalnie, akcje ida pod tresc. */}
+        <div className="flex-1 min-w-0 flex flex-col min-h-24">
           {/* Nazwa + badge kategorii (peachy pill po prawej) */}
           <div className="flex items-start justify-between gap-2">
             <button onClick={openOrToggle} className="text-left min-w-0 flex-1">
@@ -212,7 +270,7 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
                 {pin.place_name}
               </p>
             </button>
-            <span className="shrink-0 mt-0.5 inline-flex items-center px-2.5 py-1 rounded-full bg-[#fcede3] text-[12px] font-semibold text-foreground">{categoryLabel}</span>
+            <span className="shrink-0 mt-0.5 inline-flex items-center px-2.5 py-1 rounded-full bg-[#fcede3] text-[12px] font-semibold text-[#5B2C06]">{categoryLabel}</span>
           </div>
           {/* Notka autora + tresc (pod nazwa) */}
           {note && <div className="mt-2">{note}</div>}
@@ -224,172 +282,109 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
               ))}
             </div>
           )}
+          {/* Akcje miejsca - PRAWA strona wiersza (redesign 2026-08-28): Google bezposrednio po lewej
+              od zapisu/kosza. Guzik Google = samo logo w BIALYM kolku z delikatnym cieniem (bez podpisu)
+              - cien niesie afordancje "to sie klika", spojnie z kartami i arkuszem dodawania miejsca. */}
+          {!selecting && (
+          /* data-no-longpress: tapniecie w akcje NIE moze wchodzic w tryb zaznaczania -
+             patrz komentarz w useLongPress. */
+          <div data-no-longpress className="mt-auto pt-3 flex items-center justify-end gap-2">
+            <button
+              onClick={(e) => { e.stopPropagation(); onGoogle(); }}
+              aria-label={t("row.open_in_maps")}
+              className="h-10 w-10 rounded-full bg-white border border-black/[0.04] shadow-[0_1px_5px_rgba(0,0,0,0.12)] flex items-center justify-center shrink-0 active:scale-90 transition-transform"
+            >
+              <GoogleGlyph className="h-[18px] w-[18px]" />
+            </button>
+            {/* Dodaj zdjecie (pomaranczowe kolko) i notke (biale) - wprost na wierszu. */}
+            {photoAction && (
+              /* Brandowy aparat (public/aparat.svg od Nat, 2026-09-13) w zoltym na pomaranczowym
+                 kolku + maly plus w rogu - jak w zalaczniku. */
+              <button
+                onClick={(e) => { e.stopPropagation(); haptics.light(); photoAction.onClick(); }}
+                aria-label={photoAction.label}
+                className="relative h-10 w-10 rounded-full bg-primary shadow-[0_1px_5px_rgba(0,0,0,0.12)] flex items-center justify-center shrink-0 active:scale-90 transition-transform"
+              >
+                <BrandIcon src={CAMERA_ICON} className="h-[18px] w-[20px] text-[#FDF184]" />
+                <Plus className="absolute right-[7px] top-[7px] h-[9px] w-[9px] text-[#FDF184]" strokeWidth={4} />
+              </button>
+            )}
+            {/* Zapis miejsca dostepny ZAWSZE gdy podany onSave - takze dla wlasciciela obok kosza
+                (wczesniej kosz go wypieral, wiec we wlasnym wyjezdzie nie dalo sie zapisac miejsca
+                do swoich list - zgloszenie Nat 2026-08-29). */}
+            {/* Gwiazdka, zapis i kosz zeszly pod TRZY KROPKI (prosba Nat 2026-09-10). Przy wierszu
+                z notkami, zdjeciami i tagami cztery ikony obok siebie robily z kazdego miejsca
+                panel sterowania; zostaje wiec jedno wejscie w menu. Guzik Google zostaje na
+                wierzchu - to jedyna akcja, ktora wykonuje sie w trakcie samego przegladania.
+                WYJATEK: gdy zostaje DOKLADNIE JEDNA akcja (cudzy wyjazd = sam zapis), menu nie ma
+                czego chowac - pokazujemy ja wprost, w takim samym bialym kolku jak Google
+                (prosba Nat 2026-09-10). */}
+            {actionCount === 1 && onSave && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onSave(); }}
+                aria-label={saved ? t("row.saved_in_list") : t("row.save_to_list")}
+                className="h-10 w-10 rounded-full bg-white border border-black/[0.04] shadow-[0_1px_5px_rgba(0,0,0,0.12)] flex items-center justify-center shrink-0 active:scale-90 transition-transform"
+              >
+                {/* Brandowa zakladka (Ikona_Zapisane.svg) zamiast lucide (prosba Nat 2026-09-13). */}
+                <BrandIcon src={SAVE_ICON} className={`h-[18px] w-[18px] ${saved ? "text-[#F0A583]" : "text-foreground/60"}`} />
+              </button>
+            )}
+            {(actionCount > 1 || (actionCount === 1 && !onSave)) && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    ref={starBtnRef}
+                    onPointerDown={(e) => { e.stopPropagation(); haptics.light(); }}
+                    aria-label={t("row.more_actions")}
+                    /* Biale kolko z delikatnym szarym cieniem - dokladnie jak guzik Google obok
+                       (prosba Nat 2026-09-10). Sam cien niesie afordancje "to sie klika". */
+                    className="h-10 w-10 rounded-full bg-white border border-black/[0.04] shadow-[0_1px_5px_rgba(0,0,0,0.12)] flex items-center justify-center shrink-0 active:scale-90 transition-transform"
+                  >
+                    {/* ZAWSZE trzy kropki (prosba Nat 2026-09-10). Wczesniej ikona menu pokazywala
+                        stan (gwiazdka topki / wypelniona zakladka) i przez to wygladala jak guzik
+                        zapisu, choc otwierala menu. Topke widac zreszta przy samej NAZWIE miejsca,
+                        wiec nic sie nie gubi. */}
+                    <MoreHorizontal className="h-5 w-5 text-foreground/70" strokeWidth={2} />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="rounded-2xl w-60">
+                  {onToggleVisited && (
+                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); tappedVisit.current = true; onToggleVisited(); }} className="gap-2.5 py-2.5">
+                      <Check className={`h-4 w-4 ${visited ? "text-primary" : "text-muted-foreground"}`} strokeWidth={3} />
+                      {visited ? t("row.mark_not_visited") : t("row.mark_visited")}
+                    </DropdownMenuItem>
+                  )}
+                  {menuRest.map((x) => (
+                    <DropdownMenuItem key={x.key} onSelect={() => x.onClick()} className="gap-2.5 py-2.5">
+                      {x.icon}{x.label}
+                    </DropdownMenuItem>
+                  ))}
+                  {onToggleTop && (
+                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); tappedTop.current = true; onToggleTop(); }} className="gap-2.5 py-2.5">
+                      {/* Brandowa gwiazdka jest zawsze wypelniona - stan "jeszcze nie w topce" niesie kolor. */}
+                      <BrandIcon src={STAR_ICON} className={`h-4 w-4 ${isTop ? "text-primary" : "text-muted-foreground"}`} />
+                      {isTop ? t("row.unset_top") : t("row.set_top")}
+                    </DropdownMenuItem>
+                  )}
+                  {onSave && (
+                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onSave(); }} className="gap-2.5 py-2.5">
+                      <BrandIcon src={SAVE_ICON} className={`h-4 w-4 ${saved ? "text-[#F0A583]" : "text-foreground/70"}`} />
+                      {saved ? t("row.saved_in_list") : t("row.save_to_list")}
+                    </DropdownMenuItem>
+                  )}
+                  {onDelete && (
+                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onDelete(); }} className="gap-2.5 py-2.5 text-destructive focus:text-destructive">
+                      <Trash2 className="h-4 w-4" />
+                      {deleteLabel ?? t("row.remove")}
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </div>
+          )}
         </div>
       </div>
-      {/* Akcje miejsca - PRAWA strona wiersza (redesign 2026-08-28): Google bezposrednio po lewej
-          od zapisu/kosza. Guzik Google = samo logo w BIALYM kolku z delikatnym cieniem (bez podpisu)
-          - cien niesie afordancje "to sie klika", spojnie z kartami i arkuszem dodawania miejsca. */}
-      {!selecting && (
-      /* data-no-longpress: tapniecie w akcje NIE moze wchodzic w tryb zaznaczania -
-         patrz komentarz w useLongPress. */
-      <div data-no-longpress className="mt-3 flex items-center justify-end gap-2">
-        {/* Cudza lista: autor odhaczyl to miejsce u siebie. Pokazujemy to jako INFORMACJE,
-            nie przelacznik - to nie jest moj stan i nie mam go jak zmienic. Awatar mowi CZYJ
-            to slad, slowo mowi jaki. */}
-        {!onToggleVisited && visited && (
-          <span className="h-9 rounded-full flex items-center gap-1.5 px-2.5 shrink-0 bg-[#fcede3] text-[#BC4206]">
-            {visitedAvatar !== undefined && (
-              <img src={avatarSrc(visitedAvatar)} alt="" className="h-5 w-5 rounded-full object-cover bg-white/60" />
-            )}
-            <Check className="h-4 w-4 shrink-0" strokeWidth={3} />
-            <span className="text-[12px] font-bold whitespace-nowrap">{t("row.visited")}</span>
-          </span>
-        )}
-        {onToggleVisited && (
-          /* Po zaznaczeniu guzik ZWIJA sie do samego znaczka (jak polubienie na YouTube):
-             tekst tlumaczy AKCJE, a nie powtarza stanu. Kolor schodzi na peachy - odwiedzone
-             miejsce ma byc zaznaczone, nie krzyczec mocniej niz przycisk primary. Tekst
-             #BC4206 to primary sciemniony do L=38% - na peachy daje 4,68:1, czyli przechodzi
-             prog 4,5:1 dla malego pogrubionego tekstu (sam primary mial tam 3,13:1). Wyszarzanie
-             zdjecia i znaczek na miniaturce usuniete (prosba Nat 2026-09-08). */
-          <motion.button
-            onClick={(e) => { e.stopPropagation(); tappedVisit.current = true; onToggleVisited(); }}
-            aria-label={visited ? t("row.mark_not_visited") : t("row.mark_visited")}
-            aria-pressed={!!visited}
-            // PIECZATKA: mocne dobicie w dol, odbicie i powrot. Krotko i twardo - stempel
-            // ma "uderzyc", a nie plynnie dojechac, wiec czas jest krotszy niz przy locie
-            // gwiazdki, a przeskalowanie glebsze.
-            animate={stamped ? { scale: [1, 0.82, 1.12, 0.98, 1] } : { scale: 1 }}
-            transition={stamped
-              ? { duration: 0.44, times: [0, 0.16, 0.4, 0.7, 1], ease: "easeOut" }
-              : { duration: 0.2 }}
-            className={`relative h-9 rounded-full flex items-center justify-center shrink-0 active:scale-95 transition-[background-color,color,padding] duration-300 ${
-              visited ? "bg-[#fcede3] text-[#BC4206] px-2.5" : "bg-secondary text-secondary-foreground px-3"
-            }`}
-          >
-            {/* Elementy WOKOL ikony - bez nich "pieczatka" jest samym skokiem skali.
-                Pierscien to fala uderzeniowa, kreski to rozprysk. Oba pointer-events-none
-                i poza obiegiem ukladu (absolute), wiec nie ruszaja szerokosci guzika. */}
-            <AnimatePresence>
-              {stamped && (
-                <>
-                  <motion.span
-                    aria-hidden
-                    // Cienka obwodka i nizsze krycie - fala ma byc sugestia, nie ramka
-                    // (prosba Nat 2026-09-08). Mniejszy zasieg tez uspokaja calosc.
-                    className="pointer-events-none absolute inset-0 rounded-full border border-primary/70"
-                    initial={{ scale: 0.7, opacity: 0.55 }}
-                    animate={{ scale: 1.75, opacity: 0 }}
-                    transition={{ duration: 0.46, ease: "easeOut" }}
-                  />
-                  {/* Obrot musi siedziec na OPAKOWANIU, a przesuniecie na kresce. Gdy oba sa
-                      na jednym elemencie, `rotate` obraca go wokol wlasnego srodka JUZ PO
-                      przesunieciu - osiem kresek ladowalo w tym samym punkcie zamiast
-                      rozchodzic sie na boki (zlapane na klatce). */}
-                  {STAMP_RAYS.map((deg) => (
-                    <span
-                      key={deg}
-                      aria-hidden
-                      className="pointer-events-none absolute left-1/2 top-1/2 h-0 w-0"
-                      style={{ transform: `rotate(${deg}deg)` }}
-                    >
-                      <motion.span
-                        className="block h-[2px] w-[6px] -mt-[1px] rounded-full bg-primary/80"
-                        initial={{ x: 2, opacity: 0, scaleX: 0.4 }}
-                        animate={{ x: [2, 14, 19], opacity: [0, 0.85, 0], scaleX: [0.4, 1, 0.5] }}
-                        transition={{ duration: 0.46, times: [0, 0.45, 1], ease: "easeOut", delay: 0.04 }}
-                      />
-                    </span>
-                  ))}
-                </>
-              )}
-            </AnimatePresence>
-            <Check className="h-4 w-4 shrink-0" strokeWidth={3} />
-            {/* max-width + opacity zamiast display:none - inaczej tekst znikalby skokowo. */}
-            <span
-              className={`overflow-hidden whitespace-nowrap text-[12px] font-bold transition-[max-width,opacity,margin] duration-300 ease-out ${
-                visited ? "max-w-0 opacity-0 ml-0" : "max-w-[140px] opacity-100 ml-1.5"
-              }`}
-            >
-              {t("row.visited")}
-            </span>
-          </motion.button>
-        )}
-        <button
-          onClick={(e) => { e.stopPropagation(); onGoogle(); }}
-          aria-label={t("row.open_in_maps")}
-          className="h-9 w-9 rounded-full bg-white border border-black/[0.04] shadow-[0_1px_5px_rgba(0,0,0,0.12)] flex items-center justify-center shrink-0 active:scale-90 transition-transform"
-        >
-          <GoogleGlyph className="h-[18px] w-[18px]" />
-        </button>
-        {/* Zapis miejsca dostepny ZAWSZE gdy podany onSave - takze dla wlasciciela obok kosza
-            (wczesniej kosz go wypieral, wiec we wlasnym wyjezdzie nie dalo sie zapisac miejsca
-            do swoich list - zgloszenie Nat 2026-08-29). */}
-        {/* Gwiazdka, zapis i kosz zeszly pod TRZY KROPKI (prosba Nat 2026-09-10). Przy wierszu
-            z notkami, zdjeciami i tagami cztery ikony obok siebie robily z kazdego miejsca
-            panel sterowania; zostaje wiec jedno wejscie w menu. Guzik Google zostaje na
-            wierzchu - to jedyna akcja, ktora wykonuje sie w trakcie samego przegladania.
-            WYJATEK: gdy zostaje DOKLADNIE JEDNA akcja (cudzy wyjazd = sam zapis), menu nie ma
-            czego chowac - pokazujemy ja wprost, w takim samym bialym kolku jak Google
-            (prosba Nat 2026-09-10). */}
-        {actionCount === 1 && onSave && (
-          <button
-            onClick={(e) => { e.stopPropagation(); onSave(); }}
-            aria-label={saved ? t("row.saved_in_list") : t("row.save_to_list")}
-            className="h-9 w-9 rounded-full bg-white border border-black/[0.04] shadow-[0_1px_5px_rgba(0,0,0,0.12)] flex items-center justify-center shrink-0 active:scale-90 transition-transform"
-          >
-            <Bookmark className={`h-[18px] w-[18px] ${saved ? "text-[#F0A583] fill-[#F0A583]" : "text-foreground/70"}`} strokeWidth={2} />
-          </button>
-        )}
-        {(actionCount > 1 || (actionCount === 1 && !onSave)) && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                ref={starBtnRef}
-                onPointerDown={(e) => { e.stopPropagation(); haptics.light(); }}
-                aria-label={t("row.more_actions")}
-                /* Biale kolko z delikatnym szarym cieniem - dokladnie jak guzik Google obok
-                   (prosba Nat 2026-09-10). Sam cien niesie afordancje "to sie klika". */
-                className="h-9 w-9 rounded-full bg-white border border-black/[0.04] shadow-[0_1px_5px_rgba(0,0,0,0.12)] flex items-center justify-center shrink-0 active:scale-90 transition-transform"
-              >
-                {/* ZAWSZE trzy kropki (prosba Nat 2026-09-10). Wczesniej ikona menu pokazywala
-                    stan (gwiazdka topki / wypelniona zakladka) i przez to wygladala jak guzik
-                    zapisu, choc otwierala menu. Topke widac zreszta przy samej NAZWIE miejsca,
-                    wiec nic sie nie gubi. */}
-                <MoreHorizontal className="h-5 w-5 text-foreground/70" strokeWidth={2} />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="rounded-2xl w-60">
-              {(menuExtras ?? []).map((x) => (
-                <DropdownMenuItem key={x.key} onSelect={() => x.onClick()} className="gap-2.5 py-2.5">
-                  {x.icon}{x.label}
-                </DropdownMenuItem>
-              ))}
-              {onToggleTop && (
-                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); tappedTop.current = true; onToggleTop(); }} className="gap-2.5 py-2.5">
-                  {/* Brandowa gwiazdka jest zawsze wypelniona - stan "jeszcze nie w topce" niesie kolor. */}
-                  <BrandIcon src={STAR_ICON} className={`h-4 w-4 ${isTop ? "text-primary" : "text-muted-foreground"}`} />
-                  {isTop ? t("row.unset_top") : t("row.set_top")}
-                </DropdownMenuItem>
-              )}
-              {onSave && (
-                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onSave(); }} className="gap-2.5 py-2.5">
-                  <Bookmark className={`h-4 w-4 ${saved ? "text-[#F0A583] fill-[#F0A583]" : ""}`} />
-                  {saved ? t("row.saved_in_list") : t("row.save_to_list")}
-                </DropdownMenuItem>
-              )}
-              {onDelete && (
-                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onDelete(); }} className="gap-2.5 py-2.5 text-destructive focus:text-destructive">
-                  <Trash2 className="h-4 w-4" />
-                  {deleteLabel ?? t("row.remove")}
-                </DropdownMenuItem>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
-      </div>
-      )}
-
       {/* Gwiazdka LECI z guzika do nazwy. pointer-events-none, zeby nie lapala tapniec w locie. */}
       <AnimatePresence>
         {flight && (
