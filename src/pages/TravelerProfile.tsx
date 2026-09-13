@@ -132,7 +132,8 @@ function TabSelect({ options, value, onChange, dotLabel }: {
   onChange: (id: string) => void;
 }) {
   // Chipy kategorii (styl Spotify/Messenger) zamiast dropdownu (prosba Nat 2026-08-26): poziomy,
-  // przewijalny rzad pigulek. Aktywna = pomaranczowa, reszta = szara.
+  // przewijalny rzad pigulek. Aktywna = ZOLTA marki z brazowym tekstem (prosba Nat 2026-09-14;
+  // wczesniej pomaranczowa z bialym), reszta = szara.
   return (
     <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-0.5">
       {options.map((o) => {
@@ -141,14 +142,14 @@ function TabSelect({ options, value, onChange, dotLabel }: {
           <button
             key={o.id}
             onClick={() => onChange(o.id)}
-            className={`relative shrink-0 rounded-full py-2 text-sm font-bold whitespace-nowrap active:scale-95 transition-all ${o.dot ? "pl-4 pr-6" : "px-4"} ${active ? "bg-primary text-white" : "bg-secondary text-foreground"}`}
+            className={`relative shrink-0 rounded-full py-2 text-sm font-bold whitespace-nowrap active:scale-95 transition-all ${o.dot ? "pl-4 pr-6" : "px-4"} ${active ? "bg-[#FDF184] text-[#5B2C06]" : "bg-secondary text-foreground"}`}
           >
             {o.label}
             {o.dot && (
               /* Kropka WEWNATRZ chipa: pasek ma overflow-x-auto, wiec cokolwiek wystaje poza
                  obrys (ujemne offsety) zostaje ucinane przy przewijaniu (zgloszenie Nat
                  2026-09-01: "kropka ucina sie w polowie"). */
-              <span aria-label={dotLabel} className={`absolute top-1.5 right-1.5 h-2 w-2 rounded-full ${active ? "bg-white" : "bg-primary"}`} />
+              <span aria-label={dotLabel} className={`absolute top-1.5 right-1.5 h-2 w-2 rounded-full ${active ? "bg-[#5B2C06]" : "bg-primary"}`} />
             )}
           </button>
         );
@@ -203,13 +204,19 @@ const TravelerProfile = () => {
   // Synchronizacja zakladek z URL (?tab=&sub=). useState czyta URL tylko przy pierwszym mount, a
   // wejscie z "+" gdy juz jestesmy na /moj-profil to nawigacja na TEN SAM route (bez remountu) - bez
   // tego efektu nowo utworzona robocza trasa lądowała na Wspomnieniach (user jej nie widzial).
+  // Wejscie BEZ parametrow (zakladka Profil w dolnym pasku, powrot) = ZAWSZE Wyjazdy ->
+  // Opublikowane (prosba Nat 2026-09-14). Wczesniej brak parametru zostawial poprzednia
+  // podzakladke (np. Robocze po utworzeniu wyjazdu z "+"), bo efekt ustawial stan tylko wtedy,
+  // gdy parametr BYL. Deep-linki z ?tab=&sub= (powiadomienia, "+") dzialaja jak dotad.
   useEffect(() => {
     const tp = searchParams.get("tab");
-    if (tp === "wyjazdy") setTab("wyjazdy");
-    else if (tp === "listy") setTab("listy");
+    if (tp === "listy") setTab("listy");
+    else setTab("wyjazdy");
     const sub = searchParams.get("sub");
     if (sub === "robocze" || sub === "wspomnienia" || sub === "zapisane") { subChosen.current = true; setWyjazdyTab(sub as any); }
+    else if (!sub) { subChosen.current = false; setWyjazdyTab("wspomnienia"); }
     if (sub === "moje" || sub === "ogolne" || sub === "zapisane") setListyTab(sub as any);
+    else if (!sub) setListyTab("moje");
   }, [searchParams]);
 
   // Zakladka MUSI siedziec w adresie, nie tylko w stanie (zgloszenie Nat 2026-09-08:
@@ -218,7 +225,7 @@ const TravelerProfile = () => {
   // jest krok nawigacji, wiec nie moze zasmiecac historii ani wymagac drugiego cofniecia.
   const goTab = (t: "listy" | "wyjazdy", sub?: string) => {
     setTab(t);
-    if (t === "wyjazdy" && !sub) { setWyjazdyTab("robocze"); sub = "robocze"; }
+    if (t === "wyjazdy" && !sub) { setWyjazdyTab("wspomnienia"); sub = "wspomnienia"; }
     const next = new URLSearchParams(searchParams);
     next.set("tab", t);
     if (sub) next.set("sub", sub); else next.delete("sub");
@@ -475,18 +482,6 @@ const TravelerProfile = () => {
   });
 
   // Feed ZAPISANYCH WYJAZDOW (od innych) - ten sam UI co Wspomnienia (ProfileFeedCard), z autorem trasy.
-  // Wyjazdy otwieraja sie na "Robocze", ale uczestnik cudzego wyjazdu ma u siebie TYLKO
-  // opublikowane wspomnienie - zakladka wygladala u niego na pusta (zgloszenie Nat 2026-08-30).
-  // Gdy nie ma zadnego roboczego, a sa wspomnienia, przelaczamy sie na nie (chyba ze user
-  // wybral podzakladke sam).
-  useEffect(() => {
-    if (subChosen.current) return;
-    const rows = tripCards as any[];
-    if (!rows.length) return;
-    const hasDrafts = rows.some((tr) => tr.status !== "published");
-    const hasMemories = rows.some((tr) => tr.status === "published");
-    if (!hasDrafts && hasMemories) setWyjazdyTab("wspomnienia");
-  }, [tripCards]);
 
   // WLASNY UKLAD okladek Wspomnien (prosba Nat 2026-09-11): przytrzymanie kafelka na siatce
   // albo mozaice i przeciagniecie go w inne miejsce. Kolejnosc idzie do bazy
