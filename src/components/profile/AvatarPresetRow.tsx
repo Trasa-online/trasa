@@ -6,7 +6,8 @@ import { AVATAR_PRESET_IDS, presetAvatarUrl } from "@/lib/avatarPresets";
 // Rzad awatarow brandowych do wyboru (onboarding, ustawienia): kolka przewijane w poziomie,
 // zaznaczony ma obrys i znacznik. Wybor zapisuje rodzic (profiles.avatar_url = pelny URL).
 export default function AvatarPresetRow({ value, onPick, disabled, title, desc, flush }: { value: string | null; onPick: (url: string) => void; disabled?: boolean;
-  /** Tytul i podpis - onboarding mowi o zdjeciu "pozniej w ustawieniach", arkusz "Customizuj" nie. */
+  /** Tytul i podpis - onboarding mowi o zdjeciu "pozniej w ustawieniach", arkusz "Customizuj" nie.
+   *  `desc=""` chowa podpis (zwarty ekran profilu w onboardingu). */
   title?: string; desc?: string;
   /** Arkusz "Customizuj" (px-5, naglowki bez wciecia) - onboarding ma px-4 i naglowki z px-1. */
   flush?: boolean }) {
@@ -15,7 +16,7 @@ export default function AvatarPresetRow({ value, onPick, disabled, title, desc, 
   return (
     <div>
       <p className={`${flush ? "" : "px-1 "}text-sm font-bold text-foreground`}>{title ?? t("photo.presets_title")}</p>
-      <p className={`${flush ? "" : "px-1 "}text-xs text-muted-foreground`}>{desc ?? t("photo.presets_desc")}</p>
+      {desc !== "" && <p className={`${flush ? "" : "px-1 "}text-xs text-muted-foreground`}>{desc ?? t("photo.presets_desc")}</p>}
       <div data-no-swipe data-no-drag className={`${flush ? "-mx-5 px-5" : "-mx-4 px-4"} mt-2.5 flex gap-2.5 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden`}>
         {AVATAR_PRESET_IDS.map((id) => {
           const url = presetAvatarUrl(id);

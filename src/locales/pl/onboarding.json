@@ -58,30 +58,10 @@
       "luxury": "Luksusowo"
     }
   },
-  "notify": {
-    "desc": "Włącz powiadomienia, żeby wiedzieć o nowych trasach i ważnych aktualizacjach. Zawsze możesz to wyłączyć w ustawieniach.",
-    "title": "Bądź na bieżąco"
-  },
-  "location": {
-    "desc": "Pozwól na dostęp do lokalizacji, żeby sortować miejsca według odległości od Ciebie. Nieobowiązkowe.",
-    "title": "Miejsca blisko Ciebie"
-  },
-  "city": {
-    "desc": "Podaj swoje miasto - pomoże nam podpowiadać trasy blisko Ciebie.",
-    "title": "Gdzie mieszkasz?",
-    "country_label": "Kraj",
-    "city_label": "Miasto",
-    "country_placeholder": "Wybierz kraj",
-    "city_hint": "Wybierz kraj, żeby zobaczyć miasta",
-    "city_manual_placeholder": "Wpisz miasto",
-    "not_listed": "Innego miasta nie ma na liście? Wpisz je poniżej."
-  },
   "photo": {
-    "desc": "Nieobowiązkowe - ale trasy z awatarem budzą więcej zaufania.",
-    "title": "Dodaj swoje zdjęcie",
     "pick": "Wybierz zdjęcie",
     "presets_title": "Albo wybierz awatar spontaway",
-    "presets_desc": "Znak marki w kolorze, który do Ciebie pasuje. Zdjęcie dodasz później w ustawieniach.",
+    "presets_desc": "Kolor marki, który do Ciebie pasuje. Zdjęcie dodasz później w ustawieniach.",
     "preset_aria": "Awatar {{id}}"
   },
   "source": {
@@ -90,9 +70,7 @@
     "title": "Skąd znasz spontaway?"
   },
   "name": {
-    "desc": "Nazwa użytkownika będzie widoczna przy Twoich trasach.",
     "username_taken": "Ta nazwa jest już zajęta",
-    "title": "Jak się nazywasz?",
     "username_label": "Nazwa użytkownika",
     "username_free": "Nazwa dostępna",
     "first_placeholder": "Twoje imię",
@@ -121,19 +99,18 @@
     "with_friends": "Podróżować ze znajomymi",
     "desc": "Możesz zaznaczyć kilka.",
     "other_placeholder": "Wpisz swój cel",
-    "other": "Inne"
+    "other": "Inne",
+    "dont_know": "Jeszcze nie wiem"
   },
   "tracking": {
-    "title": "Pomóż nam ulepszać spontaway"
+    "title": "Pomóż nam ulepszać spontaway",
+    "desc": "Zbieramy anonimowe dane o tym, jak korzystasz z aplikacji (np. które ekrany odwiedzasz), żeby ją rozwijać. Zgodę zmienisz w każdej chwili w ustawieniach."
   },
   "cta": {
-    "enable_notifications": "Włącz powiadomienia",
-    "enable_location": "Włącz lokalizację",
     "agree": "Zgadzam się",
     "start": "Zaczynamy",
     "not_now": "Nie teraz",
-    "next": "Dalej",
-    "skip": "Pomiń"
+    "next": "Dalej"
   },
   "welcome": {
     "title": "Cześć! Tu spontaway",
@@ -154,14 +131,25 @@
     "create_desc": "Guzikiem „+” tworzysz własną trasę z ulubionych miejsc. Twoja trasa trafia do Eksploracji, żeby inni mogli się nią zainspirować.",
     "places_desc": "Tu przeglądasz pojedyncze miejsca, jedno po drugim: kawiarnie, restauracje, bary, miejsca kultury i natury.",
     "trips_desc": "Tu przeglądasz wyjazdy i kolekcje miejsc od podróżnych z całego świata. Wejdź w dowolny kafelek, żeby zobaczyć miejsca i zainspirować się do własnego.",
-    "save_desc": "Miejsca i trasy, które Ci się podobają, zapisujesz jednym tapnięciem. Wracasz do nich w zakładce Zapisane.",
     "create_title": "Twórz własne trasy",
     "places_title": "Zakładka Miejsca",
     "trips_title": "Zakładka Eksploracja",
     "create_eyebrow": "TWÓRZ",
     "skip": "Pomiń",
-    "save_title": "Zapisuj ulubione",
     "next": "Dalej",
-    "done": "Gotowe"
+    "done": "Gotowe",
+    "profile_title": "Zakładka Profil",
+    "profile_desc": "Tu są Twoje wyjazdy i kolekcje, zapisane od innych, wyróżnione miejsca i ustawienia. Stąd też zaprosisz znajomych."
+  },
+  "profile": {
+    "title": "Twój profil w spontaway",
+    "desc": "Dodaj zdjęcie, imię i nazwę użytkownika - tak zobaczą Cię inni podróżni.",
+    "gender": {
+      "label": "Płeć",
+      "female": "Kobieta",
+      "male": "Mężczyzna",
+      "nonbinary": "Inna",
+      "undisclosed": "Wolę nie podawać"
+    }
   }
 }

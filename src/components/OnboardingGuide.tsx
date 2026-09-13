@@ -2,15 +2,16 @@ import { createContext, useContext, useState, useEffect, useCallback, useRef } f
 import { useTranslation } from "react-i18next";
 import type { ReactNode, CSSProperties } from "react";
 import { useNavigate } from "react-router-dom";
-import { Home, Search, MapPin, Bookmark, Plus } from "lucide-react";
+import { Home, Search, MapPin, User, Plus } from "lucide-react";
 import { isNative } from "@/lib/platform";
 import { COACH_PENDING_KEY } from "@/components/onboarding/OnboardingFlow";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Onboarding Czesc B - coach-marki (spotlight-tour). Odpalane PO Czesci A
-// (welcome+ankieta+profil) sygnalem localStorage COACH_PENDING_KEY + eventem
-// "spontaway:start-coach". Prowadzi "Dalej" przez 4 elementy: toggle Trasy,
-// toggle Miejsca, akcja Zapis, guzik "+". Login-only (bez logiki anon/cleanup).
+// (5 krokow) sygnalem localStorage COACH_PENDING_KEY + eventem "spontaway:start-coach".
+// User laduje w Eksploracji i "Dalej" prowadzi go po KAZDEJ zakladce dolnego paska:
+// Eksploracja -> Miejsca -> Profil -> "+" (prosba Nat 2026-09-13: wyjasnienie, co robi sie
+// na kazdym widoku). Login-only (bez logiki anon/cleanup).
 // ─────────────────────────────────────────────────────────────────────────────
 
 const DONE_KEY = "spontaway_coach_done";
@@ -77,9 +78,10 @@ interface StepCfg {
   route?: string;          // ekran, ktory ma byc pod spodem, gdy krok jest aktywny
 }
 
-// Kroki ida po zakladkach dolnego paska (IA 2026-09-13): Eksploracja -> Miejsca -> zapis -> "+"
-// (w tej kolejnosci stoja w pasku; Eksploracja jest ekranem startowym). Osobny krok "Feed"
-// zniknal razem z zakladka obserwowanych (2026-09-13).
+// Jeden krok na ZAKLADKE dolnego paska (IA 2026-09-13): Eksploracja -> Miejsca -> Profil -> "+"
+// (w tej kolejnosci stoja w pasku; Eksploracja jest ekranem startowym). Kazdy krok pokazuje
+// pod spodem realny ekran zakladki. Osobny krok "zapis" (bez celu) zniknal 2026-09-13 - zapis
+// jest opisany przy Eksploracji i Miejscach, a Profil dostal wlasny krok.
 const STEPS: StepCfg[] = [
   {
     icon: Search, target: '[data-ob="nav-eksploruj"]', route: "/eksploruj",
@@ -94,14 +96,14 @@ const STEPS: StepCfg[] = [
     ctaKey: "guide.next",
   },
   {
-    icon: Bookmark, target: null,
-    titleKey: "guide.save_title",
-    bodyKey: "guide.save_desc",
+    icon: User, target: '[data-ob="nav-profil"]', route: "/moj-profil",
+    titleKey: "guide.profile_title",
+    bodyKey: "guide.profile_desc",
     ctaKey: "guide.next",
   },
   {
     icon: Plus,
-    target: '[data-ob="nav-fab"]',
+    target: '[data-ob="nav-fab"]', route: "/eksploruj",
     titleKey: "guide.create_title",
     bodyKey: "guide.create_desc",
     ctaKey: "guide.done",

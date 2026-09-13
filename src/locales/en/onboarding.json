@@ -58,30 +58,10 @@
       "luxury": "Luxury"
     }
   },
-  "notify": {
-    "desc": "Turn on notifications to hear about new trips and important updates. You can always turn them off in settings.",
-    "title": "Stay in the loop"
-  },
-  "location": {
-    "desc": "Allow location access to sort places by distance from you. Optional.",
-    "title": "Places near you"
-  },
-  "city": {
-    "desc": "Tell us your city - we will suggest trips close to you.",
-    "title": "Where do you live?",
-    "country_label": "Country",
-    "city_label": "City",
-    "country_placeholder": "Pick a country",
-    "city_hint": "Pick a country to see its cities",
-    "city_manual_placeholder": "Type a city",
-    "not_listed": "City not on the list? Type it below."
-  },
   "photo": {
-    "desc": "Optional - but trips with a photo feel more trustworthy.",
-    "title": "Add your photo",
     "pick": "Choose a photo",
     "presets_title": "Or pick a spontaway avatar",
-    "presets_desc": "The brand mark in a colour that suits you. You can add a photo later in settings.",
+    "presets_desc": "A brand colour that suits you. You can add a photo later in settings.",
     "preset_aria": "Avatar {{id}}"
   },
   "source": {
@@ -90,9 +70,7 @@
     "title": "How did you hear about spontaway?"
   },
   "name": {
-    "desc": "Your username will show next to your trips.",
     "username_taken": "That username is taken",
-    "title": "What is your name?",
     "username_label": "Username",
     "username_free": "Username available",
     "first_placeholder": "Your first name",
@@ -121,19 +99,18 @@
     "with_friends": "Travel with friends",
     "desc": "You can pick several.",
     "other_placeholder": "Tell us your goal",
-    "other": "Other"
+    "other": "Other",
+    "dont_know": "I don't know yet"
   },
   "tracking": {
-    "title": "Help us make spontaway better"
+    "title": "Help us make spontaway better",
+    "desc": "We collect anonymous data about how you use the app (for example which screens you visit) to keep improving it. You can change this any time in settings."
   },
   "cta": {
-    "enable_notifications": "Turn on notifications",
-    "enable_location": "Turn on location",
     "agree": "I agree",
     "start": "Let us go",
     "not_now": "Not now",
-    "next": "Next",
-    "skip": "Skip"
+    "next": "Next"
   },
   "welcome": {
     "title": "Hi! This is spontaway",
@@ -154,14 +131,25 @@
     "create_desc": "The + button builds your own trip from favourite places. It goes to Explore so others can take inspiration from it.",
     "places_desc": "Browse single places one at a time: cafes, restaurants, bars, culture and nature.",
     "trips_desc": "Browse trips and collections of places from travellers around the world. Open any tile to see the places and get ideas for your own.",
-    "save_desc": "Save the places and trips you like with one tap. You come back to them in the Saved tab.",
     "create_title": "Build your own trips",
     "places_title": "The Places tab",
     "trips_title": "The Explore tab",
     "create_eyebrow": "CREATE",
     "skip": "Skip",
-    "save_title": "Save your favourites",
     "next": "Next",
-    "done": "Done"
+    "done": "Done",
+    "profile_title": "The Profile tab",
+    "profile_desc": "Your trips and collections, the ones you saved from others, starred places and settings. Invite friends from here too."
+  },
+  "profile": {
+    "title": "Your spontaway profile",
+    "desc": "Add a photo, your name and a username - this is how other travellers will see you.",
+    "gender": {
+      "label": "Gender",
+      "female": "Woman",
+      "male": "Man",
+      "nonbinary": "Other",
+      "undisclosed": "Prefer not to say"
+    }
   }
 }
