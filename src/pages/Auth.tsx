@@ -10,6 +10,7 @@ import { useTranslation, Trans } from "react-i18next";
 import { usePostHog } from "@posthog/react";
 import { isHardcodedAdmin } from "@/lib/admins";
 import { isNative } from "@/lib/platform";
+import WelcomeDeck from "@/components/auth/WelcomeDeck";
 import { Browser } from "@capacitor/browser";
 import { useAuth } from "@/hooks/useAuth";
 import { TrasaLogo } from "@/components/TrasaLogo";
@@ -38,8 +39,8 @@ function AuthUspCarousel() {
   const cur = AUTH_USP[i];
   return (
     <div key={i} className="animate-auth-fade w-full max-w-sm mx-auto text-center px-2">
-      <p className="font-display text-2xl font-extrabold leading-tight text-foreground">{t(cur.titleKey)}</p>
-      <p className="mt-2.5 text-sm leading-relaxed text-muted-foreground max-w-[300px] mx-auto">{t(cur.descKey)}</p>
+      <p className="font-display text-2xl font-extrabold leading-tight text-[#5B2C06]">{t(cur.titleKey)}</p>
+      <p className="mt-2.5 text-sm leading-relaxed text-[#5B2C06]/75 max-w-[300px] mx-auto">{t(cur.descKey)}</p>
     </div>
   );
 }
@@ -615,39 +616,34 @@ const Auth = () => {
     );
   }
 
-  // B2C: jasny ekran powitalny (light-mode). Miekkie, wolno dryfujace pomaranczowe
-  // gradienty w tle, logo + naglowek + tagline u gory, auto-rotujaca karuzela USP
-  // w srodku, guziki OAuth przypiete na dole. B2B ma osobny early-return powyzej.
+  // B2C: ekran powitalny w barwach marki (propozycja Nat 2026-09-14): ZOLTE tlo #FDF184,
+  // brazowy tekst #5B2C06, u gory tasujaca sie talia okladek miejsc ze zdjeciami userow
+  // (WelcomeDeck), nizej naglowek Sigmar + tagline, auto-rotujaca karuzela USP i guziki OAuth
+  // przypiete na dole. B2B ma osobny early-return powyzej. Poprzednia wersja (biel + dryfujace
+  // pomaranczowe plamy) zastapiona 2026-09-14.
   return (
-    <div className="relative min-h-screen flex flex-col overflow-hidden bg-[#FEFEFE]">
-      {/* Tlo: delikatny, wolno dryfujacy pomaranczowy ambient (light-mode). Kolor TYLKO
-          w tle - reszta ekranu neutralna. Niska krycie + duzy blur = subtelnie, nie krzykliwie. */}
-      <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -top-20 -left-16 h-72 w-72 rounded-full bg-gradient-to-br from-[#F9662B]/30 to-[#F4A259]/[0.05] blur-3xl animate-auth-blob" />
-        <div className="absolute top-1/3 -right-20 h-80 w-80 rounded-full bg-gradient-to-br from-[#F4A259]/28 to-[#F9662B]/[0.05] blur-3xl animate-auth-blob-2" />
-        <div className="absolute bottom-4 -left-10 h-72 w-72 rounded-full bg-gradient-to-tr from-[#FDBA74]/30 to-[#F9662B]/[0.05] blur-3xl animate-auth-blob-3" />
-      </div>
-
+    <div className="relative min-h-screen flex flex-col overflow-hidden bg-[#FDF184] text-[#5B2C06]">
       {/* Tresc */}
-      <div className="relative z-10 flex flex-1 flex-col px-6 pt-[max(3.5rem,env(safe-area-inset-top,0px))] pb-[max(1.5rem,env(safe-area-inset-bottom,0px))]">
-        {/* Gora: naglowek + tagline (logo usuniete wg feedbacku) */}
-        <div className="flex flex-col items-center text-center pt-6">
-          <h1 className="font-display text-[2rem] font-extrabold leading-[1.1] tracking-tight text-foreground">
-            Odkrywaj i&nbsp;zwiedzaj
+      <div className="relative z-10 flex flex-1 flex-col px-6 pt-[max(2.5rem,env(safe-area-inset-top,0px))] pb-[max(1.5rem,env(safe-area-inset-bottom,0px))]">
+        {/* Gora: talia okladek + naglowek + tagline */}
+        <WelcomeDeck className="mt-2" />
+        <div className="flex flex-col items-center text-center pt-3">
+          <h1 className="font-brand text-[2rem] leading-[1.1] tracking-tight text-[#5B2C06]">
+            {t("welcome.headline")}
           </h1>
-          <p className="mt-2.5 text-sm font-semibold text-muted-foreground">speed dating z&nbsp;miastem</p>
+          <p className="mt-2 text-sm font-semibold text-[#5B2C06]/75">{t("welcome.tagline")}</p>
         </div>
 
         {/* Srodek: karuzela USP */}
-        <div className="flex flex-1 items-center justify-center py-8">
+        <div className="flex flex-1 items-center justify-center py-6">
           <AuthUspCarousel />
         </div>
 
         {/* Dol: OAuth + stopka */}
         <div className="w-full max-w-sm mx-auto">
           {hintMessage && (
-            <div className="mb-5 px-4 py-3 rounded-2xl bg-secondary border border-black/[0.06]">
-              <p className="text-sm text-foreground leading-snug">{hintMessage}</p>
+            <div className="mb-5 px-4 py-3 rounded-2xl bg-white/70 border border-[#5B2C06]/10">
+              <p className="text-sm text-[#5B2C06] leading-snug">{hintMessage}</p>
             </div>
           )}
 
@@ -658,19 +654,19 @@ const Auth = () => {
               onClick={() => handleOAuth("apple")}
               disabled={loading}
               className="w-full flex items-center justify-center gap-2 rounded-2xl py-3.5 bg-black text-white font-semibold text-sm shadow-lg shadow-black/10 active:scale-[0.98] transition-transform disabled:opacity-60"
-              aria-label="Kontynuuj z Apple"
+              aria-label={t("welcome.apple")}
             >
               <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                 <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z" />
               </svg>
-              Kontynuuj z&nbsp;Apple
+              {t("welcome.apple")}
             </button>
             <button
               type="button"
               onClick={() => handleOAuth("google")}
               disabled={loading}
-              className="w-full flex items-center justify-center gap-2 rounded-2xl py-3.5 bg-white border border-slate-200 text-foreground font-semibold text-sm shadow-sm active:scale-[0.98] transition-transform disabled:opacity-60"
-              aria-label="Kontynuuj z Google"
+              className="w-full flex items-center justify-center gap-2 rounded-2xl py-3.5 bg-white border border-[#5B2C06]/10 text-foreground font-semibold text-sm shadow-sm active:scale-[0.98] transition-transform disabled:opacity-60"
+              aria-label={t("welcome.google")}
             >
               <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true">
                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -678,22 +674,22 @@ const Auth = () => {
                 <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
                 <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
               </svg>
-              Kontynuuj z&nbsp;Google
+              {t("welcome.google")}
             </button>
           </div>
 
           {/* Business link - tylko web (na natywnej apce panel biznesowy nie ma sensu) */}
           {!isNative && (
-            <p className="text-xs text-muted-foreground text-center mt-4">
+            <p className="text-xs text-[#5B2C06]/75 text-center mt-4">
               {t("biz.are_you_owner")}{" "}
               <button
                 onClick={() => setBusinessMode(true)}
-                className="underline text-foreground font-medium"
+                className="underline text-[#5B2C06] font-medium"
               >{t("biz.signin_title")}</button>
             </p>
           )}
 
-          <p className="text-center text-xs text-muted-foreground mt-4">
+          <p className="text-center text-xs text-[#5B2C06]/75 mt-4">
             <Link to="/terms" className="underline">{t("terms")}</Link>
           </p>
         </div>
