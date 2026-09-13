@@ -628,10 +628,10 @@ const Auth = () => {
         {/* Gora: talia okladek + naglowek + tagline */}
         <WelcomeDeck className="mt-2" />
         <div className="flex flex-col items-center text-center pt-3">
+          {/* Sam naglowek - claim "speed dating z miastem" zdjety z tego ekranu (prosba Nat 2026-09-14). */}
           <h1 className="font-brand text-[2rem] leading-[1.1] tracking-tight text-[#5B2C06]">
             {t("welcome.headline")}
           </h1>
-          <p className="mt-2 text-sm font-semibold text-[#5B2C06]/75">{t("welcome.tagline")}</p>
         </div>
 
         {/* Srodek: karuzela USP */}
