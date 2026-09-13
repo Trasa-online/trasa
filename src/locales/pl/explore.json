@@ -92,9 +92,6 @@
   },
   "filters_aria": "Filtry",
   "places": {
-    "tab_cards": "Wizytówki",
-    "tab_events": "Wydarzenia",
-    "soon": "wkrótce",
-    "events_soon_toast": "Wydarzenia od lokali pojawią się wkrótce"
+    "tab_cards": "Wizytówki"
   }
 }

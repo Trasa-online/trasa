@@ -63,7 +63,10 @@ function getActiveHomeCity(): string {
 // 2026-09-06: z paska ma sie dac odczytac, gdzie sie jest). Target 56 x 52 px (> 44 pt Apple).
 // Pill zostaje JASNY (szklo, jak dotad) - wzor jest ciemny, ale u nas ciemne tla sa poza
 // marka (CLAUDE.md); przejscie na ciemny to zmiana dwoch klas nizej (NAV_PILL / NAV_FAB).
-const NAV_ITEM = "w-14 h-[52px] rounded-full flex items-center justify-center transition-colors";
+// Ikona + PODPIS pod nia (prosba Nat, wieczor 2026-09-13; same ikony byly za malo czytelne).
+// Target 68 x 52 px: ikona 22 px + napis 10 px mieszcza sie w tej samej wysokosci pilla.
+const NAV_ITEM = "w-[68px] h-[52px] rounded-full flex flex-col items-center justify-center gap-[3px] transition-colors";
+const NAV_LABEL = "text-[10px] font-semibold leading-none tracking-[0.01em]";
 const NAV_ITEM_IDLE = "text-foreground/40";
 const NAV_ITEM_ACTIVE = "bg-black/[0.07] text-foreground";
 const NAV_PILL = "pointer-events-auto h-16 px-1.5 flex items-center gap-0.5 bg-white/45 backdrop-blur-sm backdrop-saturate-150 rounded-full border border-black/[0.06] ring-1 ring-inset ring-white/40 shadow-[0_12px_34px_-8px_rgba(0,0,0,0.30),0_2px_6px_-2px_rgba(0,0,0,0.10)]";
@@ -282,21 +285,21 @@ const BottomNav = () => {
         <div className={NAV_PILL}>
           {isNative && (
             <NavLink to="/eksploruj" replace end={false} data-ob="nav-eksploruj" aria-label={t("tabs.explore")} className={`${NAV_ITEM} ${NAV_ITEM_IDLE}`} activeClassName={NAV_ITEM_ACTIVE}>
-              {() => <NavIcon src="/Ikona_Eksploracja.svg" className="h-6 w-6" />}
+              {() => <><NavIcon src="/Ikona_Eksploracja.svg" className="h-[22px] w-[22px]" /><span className={NAV_LABEL}>{t("tabs.explore")}</span></>}
             </NavLink>
           )}
           {!PLANNING_DISABLED && (
             <NavLink to="/home" replace end aria-label={t("common:filters.trips")} className={`${NAV_ITEM} ${NAV_ITEM_IDLE}`} activeClassName={NAV_ITEM_ACTIVE}>
-              {() => <NavIcon src="/Ikona_Trasy.svg" className="h-6 w-6" />}
+              {() => <><NavIcon src="/Ikona_Trasy.svg" className="h-[22px] w-[22px]" /><span className={NAV_LABEL}>{t("common:filters.trips")}</span></>}
             </NavLink>
           )}
           {isNative && (
             <NavLink to="/miejsca" replace end={false} data-ob="nav-miejsca" aria-label={t("tabs.places")} className={`${NAV_ITEM} ${NAV_ITEM_IDLE}`} activeClassName={NAV_ITEM_ACTIVE}>
-              {() => <NavIcon src="/Ikona_Miejsca.svg" className="h-6 w-6" />}
+              {() => <><NavIcon src="/Ikona_Miejsca.svg" className="h-[22px] w-[22px]" /><span className={NAV_LABEL}>{t("tabs.places")}</span></>}
             </NavLink>
           )}
-          <NavLink to="/moj-profil" replace end={false} aria-label={t("common:nav.profile")} className={`${NAV_ITEM} ${NAV_ITEM_IDLE}`} activeClassName={NAV_ITEM_ACTIVE}>
-            {() => <NavIcon src="/Ikona_Profil.svg" className="h-6 w-6" />}
+          <NavLink to="/moj-profil" replace end={false} data-ob="nav-profil" aria-label={t("common:nav.profile")} className={`${NAV_ITEM} ${NAV_ITEM_IDLE}`} activeClassName={NAV_ITEM_ACTIVE}>
+            {() => <><NavIcon src="/Ikona_Profil.svg" className="h-[22px] w-[22px]" /><span className={NAV_LABEL}>{t("common:nav.profile")}</span></>}
           </NavLink>
         </div>
 

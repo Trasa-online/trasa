@@ -90,9 +90,6 @@
   },
   "filters_aria": "Filters",
   "places": {
-    "tab_cards": "Places",
-    "tab_events": "Events",
-    "soon": "soon",
-    "events_soon_toast": "Events from venues are coming soon"
+    "tab_cards": "Places"
   }
 }
