@@ -10,7 +10,7 @@ export function BrandStar({ filled = true, className = "", strokeWidth = 30 }: {
   /** Grubosc konturu w jednostkach viewBoxa (468 x 424): 30 = ~1,8 px przy 28 px. */
   strokeWidth?: number }) {
   return (
-    <svg viewBox={STAR_VIEWBOX} className={className} aria-hidden>
+    <svg viewBox={STAR_VIEWBOX} className={className} aria-hidden style={{ overflow: "visible" }}>
       <path d={STAR_PATH} fill={filled ? "currentColor" : "none"} stroke={filled ? "none" : "currentColor"} strokeWidth={filled ? 0 : strokeWidth} strokeLinejoin="round" />
     </svg>
   );

@@ -290,6 +290,16 @@ export default function SharedRoute() {
   // Zmiana nazwy wyjazdu - stan trzymany PRZED wczesnymi returnami (regula hookow; ten plik
   // juz raz wywrocil sie na hooku postawionym nizej, React #310).
   const [editingName, setEditingName] = useState(false);
+  // Klawiatura ma sie pokazac OD RAZU po "Zmien nazwe" (prosba Nat 2026-09-14). Samo autoFocus
+  // nie wystarczalo: menu Radix po zamknieciu ODDAJE fokus swojemu guzikowi (onCloseAutoFocus)
+  // i pole traci go, zanim iOS zdazy podniesc klawiature - stad blokada tego zachowania na
+  // menu (onCloseAutoFocus preventDefault) + fokus z efektu klatke pozniej.
+  const nameInputRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (!editingName) return;
+    const id = requestAnimationFrame(() => { nameInputRef.current?.focus(); nameInputRef.current?.select(); });
+    return () => cancelAnimationFrame(id);
+  }, [editingName]);
   const [nameVal, setNameVal] = useState("");
   const [savingName, setSavingName] = useState(false);
   // Czy wlasnie edytowany jest OPIS CALEGO wyjazdu. Osobno od `noteEditing` (ten dotyczy takze
@@ -1429,7 +1439,12 @@ export default function SharedRoute() {
   const heroPhoto = cover ?? getRandomPinPlaceholder(route.id);
   // Opis trasy (pod tytulem) = podsumowanie AI albo podpis autora.
   // Opis trasy: preferuj reczny opis autora (review_narrative), potem AI/podpis udostepnienia.
-  const routeDescription: string = (route as any).review_narrative || route.ai_summary || shareMeta?.share_caption || "";
+  // Notka WLASCICIELA o calym wyjezdzie (route_member_covers) to ten sam glos, co opis - gdy opisu
+  // nie ma, staje sie opisem (czysty tekst pod tytulem), a NIGDY nie jest dymkiem pod spodem
+  // (zgloszenie Nat 2026-09-14; dane przeniesione migracja 20260914).
+  const ownerTripNote: string = ((memberNotes as any[]).find((n) => n.user_id === route.user_id)?.note ?? "").trim();
+  const routeDescription: string = (route as any).review_narrative || ownerTripNote || route.ai_summary || shareMeta?.share_caption || "";
+  const otherMemberNotes = (memberNotes as any[]).filter((n) => n.user_id !== user?.id && n.user_id !== route.user_id && (n.note ?? "").trim());
   // Galeria = wszystkie zdjecia wyjazdu autora (review_photos), z rozwiazanym URL-em.
   // GALERIA = zdjecia wgrane wprost do galerii (routes.review_photos) ORAZ zdjecia dodane do
   // KONKRETNYCH MIEJSC w zakladce Miejsca (pin_photos) - prosba Nat 2026-09-10. Wczesniej te
@@ -1908,7 +1923,12 @@ export default function SharedRoute() {
   // wypycha do sklepu, bo tresc, po ktora przyszedl, jest tuz obok. Do sklepu prowadzi pasek
   // na gorze i to jest jego jedyne zadanie.
   if (isWeb && !previewOpened) {
-    const strip = (pins as any[]).slice(0, 8);
+    // Miejsca po DNIACH: pierwsze dwa dni w calosci, reszta dopiero w aplikacji (prosba Nat
+    // 2026-09-14; wczesniej osiem pierwszych pod jednym "Dzien 1").
+    const dayOf = (p: any) => Math.max(1, Number(p.day_index) || 1);
+    const previewDays = Array.from(new Set((pins as any[]).map(dayOf))).sort((a, b) => a - b).slice(0, 2);
+    const previewStrips = previewDays.map((d) => ({ day: d, items: (pins as any[]).filter((p) => dayOf(p) === d) }));
+    const previewHidden = (pins as any[]).filter((p) => !previewDays.includes(dayOf(p))).length;
     return (
       <div className="min-h-[100dvh] bg-spontaway-yellow flex flex-col max-w-lg mx-auto">
         <PreReleaseBanner />
@@ -1936,14 +1956,14 @@ export default function SharedRoute() {
           </div>
 
           {/* Pierwsze przystanki - to one mowia, co jest w srodku. */}
-          {strip.length > 0 && (
-            <div className="mt-7 w-full">
+          {previewStrips.map((d) => d.items.length > 0 && (
+            <div key={d.day} className="mt-7 w-full">
               <div className="flex items-center gap-2 pb-2">
                 <span className="h-4 w-[3px] rounded-full bg-spontaway-orange" />
-                <p className="font-brand text-[15px] leading-none text-spontaway-orange">{t("share.first_day")}</p>
+                <p className="font-brand text-[15px] leading-none text-spontaway-orange">{t("share.day_n", { n: d.day })}</p>
               </div>
               <div className="flex gap-3 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                {strip.map((pin: any, i: number) => (
+                {d.items.map((pin: any, i: number) => (
                   <div key={pin.id} className="flex w-[264px] shrink-0 items-center gap-3 rounded-3xl bg-white px-3 py-3">
                     <div className="relative h-[80px] w-[54px] shrink-0 overflow-hidden rounded-xl bg-[#fcede3]">
                       <PlacePhoto pin={rowPinFor(pin)} width={110} className="h-full w-full object-cover" />
@@ -1962,6 +1982,9 @@ export default function SharedRoute() {
                 ))}
               </div>
             </div>
+          ))}
+          {previewHidden > 0 && (
+            <p className="mt-3 w-full text-[13px] font-semibold text-spontaway-brown/80">{t("share.more_in_app", { count: previewHidden })}</p>
           )}
 
           <button
@@ -2074,7 +2097,7 @@ export default function SharedRoute() {
                       <MoreHorizontal className="h-4 w-4 text-foreground/70" />
                     </button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="rounded-2xl w-60">
+                  <DropdownMenuContent align="end" className="rounded-2xl w-60" onCloseAutoFocus={(e) => e.preventDefault()}>
                     {isOwner && stage !== "planning" && !choosing && (
                       <DropdownMenuItem onSelect={() => { haptics.light(); setDescOpenKey((k) => k + 1); }} className="gap-2.5 py-2.5">
                         <FileText className="h-4 w-4" />
@@ -2118,6 +2141,7 @@ export default function SharedRoute() {
           <div className="flex items-start gap-3">
             {editingName ? (
               <input
+                ref={nameInputRef}
                 autoFocus
                 value={nameVal}
                 onChange={(e) => setNameVal(e.target.value)}
@@ -2180,7 +2204,7 @@ export default function SharedRoute() {
             z wyjazdem do eksploracji. */}
         {/* Na etapie PROPOZYCJI notki nie ma - wyjazd dopiero powstaje, nie ma jeszcze o czym
             pisac (prosba Nat 2026-09-01). Wchodzi od "w trakcie". */}
-        {stage !== "planning" && (canEdit || (memberNotes as any[]).length > 0) && !choosing && (
+        {stage !== "planning" && (canEdit || otherMemberNotes.length > 0) && !choosing && (
           <div className="mt-3 mb-5 px-5">
             {/* WLASCICIEL edytuje tu OPIS WYJAZDU - dokladnie te tresc, ktora widac nad guzikiem.
                 UCZESTNIK nie ma prawa zapisu do `routes`, wiec u niego zostaje jego WLASNA notka
@@ -2207,9 +2231,9 @@ export default function SharedRoute() {
                 onEditingChange={setNoteEditing}
               />
             ) : null}
-            {(memberNotes as any[]).filter((n) => n.user_id !== user?.id).length > 0 && (
+            {otherMemberNotes.length > 0 && (
               <div className="space-y-3 mt-3">
-                {(memberNotes as any[]).filter((n) => n.user_id !== user?.id).map((n) => (
+                {otherMemberNotes.map((n) => (
                   <div key={n.user_id} className="relative bg-muted/50 rounded-2xl px-3.5 py-2.5">
                     <p className="text-[13.5px] text-foreground/85 leading-snug whitespace-pre-wrap break-words">{n.note}</p>
                     <img src={avatarSrc(n.avatar_url)} alt={n.username ?? ""} title={n.username ?? undefined}
@@ -2603,7 +2627,7 @@ export default function SharedRoute() {
           zeby schowanie czatu nie schowalo tez sygnalu, ze ktos pisze.
           Chowamy caly stos przy wyborze miejsc i przy pisaniu notki - tam ekran nalezy do
           jednej czynnosci. */}
-      {canEdit && !choosing && !noteEditing && !reorderMode && (
+      {canEdit && !choosing && !noteEditing && !editingName && !reorderMode && (
         <TripFabStack
           // Pusty wyjazd (dopiero utworzony): stos od razu rozwiniety, zeby "+" bylo widac
           // bez szukania - pusty stan i tak mowi "dodaj pierwsze miejsce guzikiem +".
@@ -2733,7 +2757,7 @@ export default function SharedRoute() {
       {/* Po przeniesieniu zmiany kolejnosci do stosu FAB dolny pasek bywa PUSTY (wyjazd
           w trakcie, jeszcze bez publikacji) - wtedy zostawal sam bialy pasek z kreska.
           Renderujemy go dopiero, gdy jest w nim jakakolwiek akcja. */}
-      {!noteEditing && ((canEdit && (choosing || reorderMode || (isOwner && stage === "planning" && pins.length > 0) || canPublish)) || !canEdit) && (
+      {!noteEditing && !editingName && ((canEdit && (choosing || reorderMode || (isOwner && stage === "planning" && pins.length > 0) || canPublish)) || !canEdit) && (
       <div className="fixed bottom-0 left-0 right-0 max-w-lg mx-auto px-5 pt-2 bg-background border-t border-border/30"
         style={{ paddingBottom: "max(12px, env(safe-area-inset-bottom, 12px))" }}>
         {canEdit ? (

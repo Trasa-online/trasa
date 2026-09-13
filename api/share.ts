@@ -173,21 +173,6 @@ const CATEGORY_PL: Record<string, string> = {
 const catLabel = (c: string | null | undefined) =>
   !c ? "" : CATEGORY_PL[c.toLowerCase()] ?? c.charAt(0).toUpperCase() + c.slice(1);
 
-// Werdykt miejsca (pigułka na kafelku przystanku) - 1:1 z src/lib/routeTags.ts. Trzymamy tu
-// wlasna, mala kopie zamiast importu: to funkcja brzegowa Vercela, poza drzewem aplikacji.
-// W bazie leza ID (nowe wpisy) albo polskie napisy (sprzed 2026-09-01) - obsluguja oba klucze.
-const VERDICT_PL: Record<string, string> = {
-  must_visit: "Musisz odwiedzić!", worth_seeing: "Przy okazji", stop_by: "Warto wpaść",
-  worth_visiting: "Warto odwiedzić", not_worth: "Nie warto odwiedzać",
-  "Musisz odwiedzić!": "Musisz odwiedzić!", "Przy okazji": "Przy okazji", "Warto wpaść": "Warto wpaść",
-  "Warto odwiedzić": "Warto odwiedzić", "Nie warto odwiedzać": "Nie warto odwiedzać",
-};
-const verdictLabel = (tags: any): string | null => {
-  if (!Array.isArray(tags)) return null;
-  for (const t of tags) if (typeof t === "string" && VERDICT_PL[t]) return VERDICT_PL[t];
-  return null;
-};
-
 const CSS = `
 :root{color-scheme:light}
 *{box-sizing:border-box}
@@ -270,6 +255,7 @@ body.trip{background:#FDF184}
 .day{display:flex;align-items:center;gap:8px;width:100%;margin:28px 0 8px}
 .day i{width:3px;height:16px;border-radius:2px;background:#EE5307;flex:none}
 .day p{margin:0;font-family:Sigmar,Inter,sans-serif;font-size:15px;line-height:1;color:#EE5307}
+.more{margin:14px 0 0;width:100%;font-size:13px;font-weight:600;color:rgba(91,44,6,.8)}
 /* Pasek wychodzi poza padding strony w prawo, zeby kafelki dojezdzaly do krawedzi ekranu
    zamiast zatrzymywac sie 20 px przed nia (prosba Nat 2026-09-09). Z lewej padding zostaje -
    pierwszy kafelek ma sie rownac z naglowkiem "Dzień 1" i karta wyjazdu. */
@@ -582,7 +568,7 @@ ${choiceSheet()}`;
 
   const [route] = await rest(`routes?id=eq.${id}&select=title,city,description,cover_url,list_cover_url,user_id&limit=1`);
   if (!route) return missing();
-  const pins = await rest(`pins?route_id=eq.${id}&select=place_name,category,tags,images,user_photo_urls,image_url,photo_url,pin_order,place_id&order=pin_order.asc&limit=80`);
+  const pins = await rest(`pins?route_id=eq.${id}&select=place_name,category,tags,images,user_photo_urls,image_url,photo_url,pin_order,place_id,day_index&order=pin_order.asc&limit=120`);
   const pinPhotos = await communityPhotos(pins.map((p) => placeKey(null, p.place_name)));
   const [author] = route.user_id ? await rest(`profiles?id=eq.${route.user_id}&select=username,avatar_url&limit=1`) : [];
   const title = route.title || (route.city ? `Wyjazd do ${route.city}` : "Wyjazd");
@@ -594,18 +580,28 @@ ${choiceSheet()}`;
   // Kafle na karcie = kategorie miejsc (tak samo jak karta w eksploracji, `cardTags`).
   const chips = [...new Set(pins.filter((p) => p.category && p.category !== "other").map((p) => catLabel(p.category)).filter(Boolean))].slice(0, 3);
 
-  // Pierwsze przystanki - to one mowia, co jest w srodku. Osiem, jak w zapowiedzi w aplikacji.
-  const strip = pins.slice(0, 8).map((p, i) => {
+  // Miejsca po DNIACH: pierwsze DWA dni w calosci, reszta dopiero w aplikacji (prosba Nat
+  // 2026-09-14; wczesniej osiem pierwszych pod jednym "Dzien 1"). Bez werdyktow - zniknely
+  // z apki 2026-09-13.
+  const dayOf = (p: any) => Math.max(1, Number(p.day_index) || 1);
+  const days = [...new Set(pins.map(dayOf))].sort((a, b) => a - b);
+  const shownDays = days.slice(0, 2);
+  const hidden = pins.filter((p) => !shownDays.includes(dayOf(p))).length;
+  const tile = (p: any, i: number) => {
     const photo = img(p.image_url || first(p.images) || first(p.user_photo_urls) || p.photo_url || pinPhotos.get(placeKey(null, p.place_name)), 160, 160);
     const icon = iconFor(p.category);
-    const verdict = verdictLabel(p.tags);
     const cat = catLabel(p.category);
     return `<div class="pl"><div class="pic">
 ${photo ? `<img class="p" src="${esc(photo)}" alt="" loading="lazy">` : icon ? `<span class="ic"><img src="${esc(icon)}" alt="" loading="lazy"></span>` : ""}
 <i>${i + 1}</i></div>
 <div class="d"><p class="n">${esc(p.place_name || "")}</p>
-<div class="b">${verdict ? `<span class="v">${esc(verdict)}</span>` : "<span></span>"}${cat && p.category !== "other" ? `<span class="c">${esc(cat)}</span>` : ""}</div></div></div>`;
+<div class="b"><span></span>${cat && p.category !== "other" ? `<span class="c">${esc(cat)}</span>` : ""}</div></div></div>`;
+  };
+  const strips = shownDays.map((d) => {
+    const items = pins.filter((p) => dayOf(p) === d);
+    return items.length ? `<div class="day"><i></i><p>Dzień ${d}</p></div><div class="strip">${items.map(tile).join("")}</div>` : "";
   }).join("");
+  const more = hidden > 0 ? `<p class="more">Jeszcze ${hidden} ${plural(hidden)} zobaczysz w aplikacji</p>` : "";
 
   // Wejscie w aplikacje z pominieciem zapowiedzi (`?full=1`) - odbiorca widzial ja juz tutaj,
   // wiec druga taka sama strona po kliknieciu bylaby dreptaniem w miejscu.
@@ -618,7 +614,7 @@ ${cover ? `<img class="bg" src="${esc(cover)}" alt="">` : ""}
 <h1>${esc(title)}</h1>
 ${chips.length ? `<div class="chips">${chips.map((c) => `<span>${esc(c)}</span>`).join("")}</div>` : ""}
 </div></div>
-${strip ? `<div class="day"><i></i><p>Dzień 1</p></div><div class="strip">${strip}</div>` : ""}
+${strips}${more}
 <a class="go" id="go" href="${TESTFLIGHT_URL}">Zobacz wyjazd</a>
 <p class="tail">Ten wyjazd powstał w spontaway - aplikacji do odkrywania miejsc i planowania wyjazdów ze znajomymi.</p>
 </div>

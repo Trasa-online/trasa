@@ -10,8 +10,9 @@
 
 import { useState, useEffect, useRef, type ChangeEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { MapPin, Navigation, Bookmark, Check, Plus, Share2, Loader2 } from "lucide-react";
+import { MapPin, Navigation, Check, Share2, Loader2 } from "lucide-react";
 import { usePlaceShare } from "@/hooks/usePlaceShare";
+import { BrandIcon, PLUS_ICON, SAVE_ICON } from "@/components/BrandIcon";
 import { haptics } from "@/hooks/useHaptics";
 import { useDistanceReference } from "@/lib/distanceReference";
 import { haversineKm, formatDistance } from "@/lib/distance";
@@ -501,13 +502,15 @@ const PlaceSwiperDetail = ({
               )}
               {onLike && (
                 /* Z guzikiem "Dodaj" obok zapis schodzi na drugi plan (szary fill) - w dodawaniu
-                   miejsc do wyjazdu/listy glowna akcja to dodanie, nie zapis do wlasnych list. */
+                   miejsc do wyjazdu/listy glowna akcja to dodanie, nie zapis do wlasnych list.
+                   W tym trybie KROTKIE napisy ("Zapisz" / "Dodaj") i brandowe ikony (zakladka,
+                   plus) - trzy guziki w rzedzie nie miescily pelnych zdan (prosba Nat 2026-09-14). */
                 <button
                   onClick={handleLike}
                   className={`flex-1 h-11 rounded-full font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.97] transition-transform ${onAdd ? "bg-secondary text-secondary-foreground shadow-sm" : "bg-primary text-white"}`}
                 >
-                  {t("save_place")}
-                  <Bookmark className="h-4 w-4" strokeWidth={2.2} />
+                  {onAdd ? t("save_short") : t("save_place")}
+                  <BrandIcon src={SAVE_ICON} className="h-[18px] w-[18px]" />
                 </button>
               )}
               {onAdd && (
@@ -517,8 +520,8 @@ const PlaceSwiperDetail = ({
                   aria-disabled={added}
                   className={`flex-1 h-11 rounded-full font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.97] transition-transform ${added ? "bg-secondary text-secondary-foreground shadow-sm" : "bg-primary text-white"}`}
                 >
-                  {added ? t("added_place") : t("add_place")}
-                  {added ? <Check className="h-4 w-4" strokeWidth={2.6} /> : <Plus className="h-4 w-4" strokeWidth={2.6} />}
+                  {added ? t("added_place") : t("add_short")}
+                  {added ? <Check className="h-4 w-4" strokeWidth={2.6} /> : <BrandIcon src={PLUS_ICON} className="h-[18px] w-[18px]" />}
                 </button>
               )}
               {/* Udostepnij = zolte kolko z brazowa ikona (jak przy "Zapisz ten wyjazd"). Tylko zalogowani -

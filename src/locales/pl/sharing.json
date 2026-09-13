@@ -214,9 +214,12 @@
     "and_more_many": "…i {{count}} miejsc więcej",
     "and_more_one": "…i jeszcze jedno miejsce",
     "link_heading": "Udostępnij link do wyjazdu",
-    "first_day": "Dzień 1",
     "link_heading_list": "Udostępnij link do kolekcji",
-    "link_heading_place": "Udostępnij link do miejsca"
+    "link_heading_place": "Udostępnij link do miejsca",
+    "day_n": "Dzień {{n}}",
+    "more_in_app_one": "Jeszcze {{count}} miejsce zobaczysz w aplikacji",
+    "more_in_app_few": "Jeszcze {{count}} miejsca zobaczysz w aplikacji",
+    "more_in_app_many": "Jeszcze {{count}} miejsc zobaczysz w aplikacji"
   },
   "target": {
     "more_apps": "Więcej aplikacji",

@@ -207,9 +207,11 @@
     "and_more_one": "…and 1 more place",
     "and_more_other": "…and {{count}} more places",
     "link_heading": "Share the trip link",
-    "first_day": "Day 1",
     "link_heading_list": "Share a link to this collection",
-    "link_heading_place": "Share a link to this place"
+    "link_heading_place": "Share a link to this place",
+    "day_n": "Day {{n}}",
+    "more_in_app_one": "{{count}} more place in the app",
+    "more_in_app_other": "{{count}} more places in the app"
   },
   "target": {
     "more_apps": "More apps",

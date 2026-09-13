@@ -75,5 +75,7 @@
   },
   "add_place": "Add this place",
   "added_place": "Added",
-  "share_place": "Share this place"
+  "share_place": "Share this place",
+  "save_short": "Save",
+  "add_short": "Add"
 }

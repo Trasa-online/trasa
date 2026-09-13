@@ -101,6 +101,16 @@ export default function SharedList() {
   // Zmiana nazwy listy (prosba Nat 2026-09-08). Edycja NA MIEJSCU, tak jak nazwa wyjazdu -
   // osobny arkusz do jednego pola tylko mnozylby kroki.
   const [editingName, setEditingName] = useState(false);
+  // Klawiatura ma sie pokazac OD RAZU po "Zmien nazwe" (prosba Nat 2026-09-14). Samo autoFocus
+  // nie wystarczalo: menu Radix po zamknieciu ODDAJE fokus swojemu guzikowi (onCloseAutoFocus)
+  // i pole traci go, zanim iOS zdazy podniesc klawiature - stad blokada tego zachowania na
+  // menu (onCloseAutoFocus preventDefault) + fokus z efektu klatke pozniej.
+  const nameInputRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (!editingName) return;
+    const id = requestAnimationFrame(() => { nameInputRef.current?.focus(); nameInputRef.current?.select(); });
+    return () => cancelAnimationFrame(id);
+  }, [editingName]);
   const [nameVal, setNameVal] = useState("");
   const [savingName, setSavingName] = useState(false);
   // "Dodaj notke" / "Dodaj zdjecie" TAKZE w menu przy miejscu (prosba Nat 2026-09-10).
@@ -751,7 +761,7 @@ export default function SharedList() {
                     <MoreHorizontal className="h-4 w-4 text-foreground/70" />
                   </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="rounded-2xl w-56">
+                <DropdownMenuContent align="end" className="rounded-2xl w-56" onCloseAutoFocus={(e) => e.preventDefault()}>
                   <DropdownMenuItem
                     onSelect={() => { setNameVal(col.title || ""); setEditingName(true); }}
                     disabled={savingName}
@@ -781,6 +791,7 @@ export default function SharedList() {
           <div className="flex items-start gap-3">
             {editingName ? (
               <input
+                ref={nameInputRef}
                 autoFocus
                 value={nameVal}
                 onChange={(e) => setNameVal(e.target.value)}
@@ -867,7 +878,7 @@ export default function SharedList() {
       {/* CTA - zapis CAŁEJ listy (driver engagementu). TYLKO cudza lista - nie zapisujesz wlasnej (#4).
           Zapis pojedynczych miejsc = bookmark przy każdym miejscu (SavePlaceSheet). */}
       {/* b) Dolny CTA: wlasciciel = t("cta.add_place") (drawer jak w wyjazdach); gosc = zapisz liste. */}
-      {!noteEditing && (
+      {!noteEditing && !editingName && (
       <div className="fixed bottom-0 left-0 right-0 max-w-lg mx-auto px-5 pt-2 bg-background border-t border-border/30" style={{ paddingBottom: "max(12px, env(safe-area-inset-bottom, 12px))" }}>
         {/* Udostepnianie = zolte kolko z brazowa ikona, bezposrednio na prawo od glownego guzika
             (prosba Nat 2026-09-13) - u wlasciciela obok "Dodaj nowe miejsce", u goscia obok zapisu. */}

@@ -70,16 +70,17 @@ type StripItem = { name: string; photo?: string | null; icon: string; category?:
 /** Autor udostepnianej tresci - awatar z ramka w belce arkusza, po prawej od "udostępnij". */
 type SheetAuthor = { userId?: string | null; avatar?: string | null; frame?: string | null; color?: string | null };
 
-function ShareSheet({ children, onClose, onShare, shareUrl, shareTitle, strip, stripLabel, plainPreview, linkHeading, author }: {
+function ShareSheet({ children, onClose, onShare, shareUrl, shareTitle, strips, stripMore, plainPreview, linkHeading, author }: {
   children: React.ReactNode;
   author?: SheetAuthor | null;
   onClose: () => void;
   onShare?: () => void;
   shareUrl?: string;
   shareTitle: string;
-  /** Miejsca pokazywane pod podgladem (na razie tylko wyjazd - listy sa w projektowaniu). */
-  strip?: StripItem[];
-  stripLabel?: string;
+  /** Miejsca pod podgladem, pogrupowane po DNIACH (tylko wyjazd): pierwsze dwa dni w calosci,
+   *  reszta dopiero w aplikacji (prosba Nat 2026-09-14) - `stripMore` to zapowiedz tej reszty. */
+  strips?: { label: string; items: StripItem[] }[];
+  stripMore?: string | null;
   /** Naglowek nad kanalami. Domyslnie o wyjezdzie - lista podaje swoj. */
   linkHeading?: string;
   /** Podglad renderowany 1:1 (karta z eksploracji), a nie jako pomniejszony plakat 9:16. */
@@ -181,33 +182,39 @@ function ShareSheet({ children, onClose, onShare, shareUrl, shareTitle, strip, s
         )}
       </div>
 
-      {/* Pasek miejsc z wyjazdu - to on tlumaczy, CO wysylasz. Przewijany w poziomie, bo
-          wazniejsze jest pokazanie pierwszych przystankow niz zmieszczenie wszystkich. */}
-      {strip && strip.length > 0 && (
+      {/* Paski miejsc z wyjazdu, po dniach - to one tlumacza, CO wysylasz. Przewijane w poziomie,
+          bo wazniejsze jest pokazanie przystankow niz zmieszczenie wszystkich. Pierwsze DWA dni
+          w calosci, reszta tylko w aplikacji (zapowiedz pod spodem). */}
+      {strips && strips.some((d) => d.items.length > 0) && (
         <div className="shrink-0 pb-1">
-          <div className="flex items-center gap-2 px-5 pb-2">
-            <span className="h-4 w-[3px] rounded-full bg-spontaway-orange" />
-            <p className="font-brand text-[15px] leading-none text-spontaway-orange">{stripLabel}</p>
-          </div>
-          <div className="flex gap-3 overflow-x-auto pl-5 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {strip.map((it, i) => (
-              <div key={`${it.name}-${i}`} className="flex w-[264px] shrink-0 items-center gap-3 rounded-3xl bg-white px-3 py-3">
-                <div className="relative h-[80px] w-[54px] shrink-0 overflow-hidden rounded-xl bg-[#fcede3]">
-                  {it.photo
-                    ? <img src={it.photo} alt="" className="h-full w-full object-cover" />
-                    : <img src={it.icon} alt="" className="absolute left-1/2 top-1/2 h-7 w-7 -translate-x-1/2 -translate-y-1/2" />}
-                  <span className="absolute left-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-[10px] bg-spontaway-orange px-1 text-[10px] font-black leading-none text-white">{i + 1}</span>
-                </div>
-                <div className="flex h-[80px] min-w-0 flex-1 flex-col justify-between py-0.5">
-                  <p className="line-clamp-2 text-[14px] font-bold leading-[1.19] text-black">{it.name}</p>
-                  <div className="flex items-center justify-between gap-2">
-                    <span />
-                    {it.category && <span className="shrink-0 text-[11px] font-medium text-[#666]">{it.category}</span>}
-                  </div>
-                </div>
+          {strips.filter((d) => d.items.length > 0).map((d) => (
+            <div key={d.label}>
+              <div className="flex items-center gap-2 px-5 pb-2">
+                <span className="h-4 w-[3px] rounded-full bg-spontaway-orange" />
+                <p className="font-brand text-[15px] leading-none text-spontaway-orange">{d.label}</p>
               </div>
-            ))}
-          </div>
+              <div className="flex gap-3 overflow-x-auto pl-5 pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                {d.items.map((it, i) => (
+                  <div key={`${it.name}-${i}`} className="flex w-[264px] shrink-0 items-center gap-3 rounded-3xl bg-white px-3 py-3">
+                    <div className="relative h-[80px] w-[54px] shrink-0 overflow-hidden rounded-xl bg-[#fcede3]">
+                      {it.photo
+                        ? <img src={it.photo} alt="" className="h-full w-full object-cover" />
+                        : <img src={it.icon} alt="" className="absolute left-1/2 top-1/2 h-7 w-7 -translate-x-1/2 -translate-y-1/2" />}
+                      <span className="absolute left-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-[10px] bg-spontaway-orange px-1 text-[10px] font-black leading-none text-white">{i + 1}</span>
+                    </div>
+                    <div className="flex h-[80px] min-w-0 flex-1 flex-col justify-between py-0.5">
+                      <p className="line-clamp-2 text-[14px] font-bold leading-[1.19] text-black">{it.name}</p>
+                      <div className="flex items-center justify-between gap-2">
+                        <span />
+                        {it.category && <span className="shrink-0 text-[11px] font-medium text-[#666]">{it.category}</span>}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+          {stripMore && <p className="px-5 pb-1 text-[13px] font-semibold text-spontaway-brown/80">{stripMore}</p>}
         </div>
       )}
 
@@ -368,8 +375,9 @@ export function ShareCardTrip({ title, city, pins, cover, onClose, onShare, shar
   photoFor?: (pin: any) => string | null;
 }) {
   const { t } = useTranslation("sharing");
-  // Pasek miejsc pod podgladem: pierwsze przystanki z kategoria.
-  const strip = pins.slice(0, 8).map((p: any) => ({
+  // Paski miejsc pod podgladem, po DNIACH: pierwsze dwa dni W CALOSCI, reszta tylko w aplikacji
+  // (prosba Nat 2026-09-14; wczesniej osiem pierwszych miejsc pod jednym "Dzien 1").
+  const toItem = (p: any): StripItem => ({
     name: p.place_name ?? "",
     // Ta sama regula co w wierszu wyjazdu: najpierw wlasne zdjecia pinu, a gdy ich nie ma -
     // okladka z galerii miejsca (place_photos), ktora podaje rodzic. Bez tego kafelek pokazywal
@@ -380,13 +388,19 @@ export function ShareCardTrip({ title, city, pins, cover, onClose, onShare, shar
     // "other" to wartosc techniczna z bazy, nie etykieta - bez tego na karcie widac
     // dosłownie "other" (zlapane na zrzucie).
     category: p.category && p.category !== "other" ? subcategoryLabelLocalized(p.category) : null,
-  }));
+  });
+  const dayOf = (p: any) => Math.max(1, Number(p.day_index) || 1);
+  const dayNumbers = Array.from(new Set(pins.map(dayOf))).sort((a, b) => a - b);
+  const shownDays = dayNumbers.slice(0, 2);
+  const strips = shownDays.map((d) => ({ label: t("share.day_n", { n: d }), items: pins.filter((p: any) => dayOf(p) === d).map(toItem) }));
+  const hiddenCount = pins.filter((p: any) => !shownDays.includes(dayOf(p))).length;
+  const stripMore = hiddenCount > 0 ? t("share.more_in_app", { count: hiddenCount }) : null;
 
   return (
     // Podglad = karta z EKSPLORACJI, nie osobny plakat (prosba Nat 2026-09-08). Autor ma
     // zobaczyc dokladnie to, co zobaczy odbiorca - okladka w calosci, awatary, tagi i licznik.
     <ShareSheet onClose={onClose} onShare={onShare} shareUrl={shareUrl} shareTitle={title}
-      strip={strip} stripLabel={t("share.first_day")} plainPreview
+      strips={strips} stripMore={stripMore} plainPreview
       author={{ userId: authorId, avatar: authorAvatar, frame: authorFrame, color: authorFrameColor }}>
       {/* Bez miniaturki mapy: na podgladzie zjadala rog okladki, a to okladka jest tu trescia
           (makieta "Majówka 2025", prosba Nat 2026-09-09). W eksploracji mapka zostaje - tam

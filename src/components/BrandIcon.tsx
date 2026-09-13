@@ -36,3 +36,6 @@ export const CAMERA_ICON = "/aparat.svg";
 /** Brandowe serce (public/Ikona_serce.svg od Nat, 2026-09-13) - pelne, przez maske; wariant
  *  z konturem (przelacznik polubienia) = `BrandHeart` w BrandHeart.tsx. */
 export const HEART_ICON = "/Ikona_serce.svg";
+
+/** Brandowy PLUS (dwie kreski z Ikona_Dodaj.svg, bez kolka) - guziki "Dodaj" (2026-09-14). */
+export const PLUS_ICON = "/Ikona_Plus.svg";
