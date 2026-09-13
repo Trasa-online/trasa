@@ -66,21 +66,23 @@ function Footer({ avatars, label, sub, tone }: {
 // w podgladzie skalujemy ja transformem - dzieki temu miniatura jest co do piksela tym samym, co
 // user zobaczy po rozwinieciu, bez drugiego zestawu rozmiarow do utrzymania.
 type StripItem = { name: string; photo?: string | null; icon: string; category?: string | null };
+/** Wpis paska: kafelek miejsca, pionowy divider z nazwa dnia albo kafelek "jeszcze N w aplikacji". */
+type StripEntry = { kind: "place"; item: StripItem; no: number } | { kind: "divider"; label: string } | { kind: "more"; label: string };
 
 /** Autor udostepnianej tresci - awatar z ramka w belce arkusza, po prawej od "udostępnij". */
 type SheetAuthor = { userId?: string | null; avatar?: string | null; frame?: string | null; color?: string | null };
 
-function ShareSheet({ children, onClose, onShare, shareUrl, shareTitle, strips, stripMore, plainPreview, linkHeading, author }: {
+function ShareSheet({ children, onClose, onShare, shareUrl, shareTitle, strip, stripLabel, plainPreview, linkHeading, author }: {
   children: React.ReactNode;
   author?: SheetAuthor | null;
   onClose: () => void;
   onShare?: () => void;
   shareUrl?: string;
   shareTitle: string;
-  /** Miejsca pod podgladem, pogrupowane po DNIACH (tylko wyjazd): pierwsze dwa dni w calosci,
-   *  reszta dopiero w aplikacji (prosba Nat 2026-09-14) - `stripMore` to zapowiedz tej reszty. */
-  strips?: { label: string; items: StripItem[] }[];
-  stripMore?: string | null;
+  /** Miejsca pod podgladem (tylko wyjazd) w JEDNYM przewijanym rzedzie: dzien 1, pionowy
+   *  divider "Dzien 2", dzien 2, na koncu kafelek "jeszcze N w aplikacji" (prosba Nat 2026-09-14). */
+  strip?: StripEntry[];
+  stripLabel?: string;
   /** Naglowek nad kanalami. Domyslnie o wyjezdzie - lista podaje swoj. */
   linkHeading?: string;
   /** Podglad renderowany 1:1 (karta z eksploracji), a nie jako pomniejszony plakat 9:16. */
@@ -182,39 +184,43 @@ function ShareSheet({ children, onClose, onShare, shareUrl, shareTitle, strips, 
         )}
       </div>
 
-      {/* Paski miejsc z wyjazdu, po dniach - to one tlumacza, CO wysylasz. Przewijane w poziomie,
-          bo wazniejsze jest pokazanie przystankow niz zmieszczenie wszystkich. Pierwsze DWA dni
-          w calosci, reszta tylko w aplikacji (zapowiedz pod spodem). */}
-      {strips && strips.some((d) => d.items.length > 0) && (
+      {/* Pasek miejsc z wyjazdu - to on tlumaczy, CO wysylasz. JEDEN rzad przewijany w poziomie:
+          miejsca dnia 1, pionowy divider "Dzien 2", miejsca dnia 2, a na koncu kafelek "jeszcze N
+          w aplikacji" (prosba Nat 2026-09-14 - osobne rzedy na dzien odrzucone). */}
+      {strip && strip.length > 0 && (
         <div className="shrink-0 pb-1">
-          {strips.filter((d) => d.items.length > 0).map((d) => (
-            <div key={d.label}>
-              <div className="flex items-center gap-2 px-5 pb-2">
-                <span className="h-4 w-[3px] rounded-full bg-spontaway-orange" />
-                <p className="font-brand text-[15px] leading-none text-spontaway-orange">{d.label}</p>
+          <div className="flex items-center gap-2 px-5 pb-2">
+            <span className="h-4 w-[3px] rounded-full bg-spontaway-orange" />
+            <p className="font-brand text-[15px] leading-none text-spontaway-orange">{stripLabel}</p>
+          </div>
+          <div className="flex items-stretch gap-3 overflow-x-auto pl-5 pr-5 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {strip.map((e, i) => e.kind === "divider" ? (
+              <div key={`d-${i}`} className="flex shrink-0 items-center gap-2 pl-1">
+                <span className="h-[80px] w-[3px] rounded-full bg-spontaway-orange" />
+                <p className="font-brand text-[15px] leading-none text-spontaway-orange [writing-mode:vertical-rl] rotate-180">{e.label}</p>
               </div>
-              <div className="flex gap-3 overflow-x-auto pl-5 pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                {d.items.map((it, i) => (
-                  <div key={`${it.name}-${i}`} className="flex w-[264px] shrink-0 items-center gap-3 rounded-3xl bg-white px-3 py-3">
-                    <div className="relative h-[80px] w-[54px] shrink-0 overflow-hidden rounded-xl bg-[#fcede3]">
-                      {it.photo
-                        ? <img src={it.photo} alt="" className="h-full w-full object-cover" />
-                        : <img src={it.icon} alt="" className="absolute left-1/2 top-1/2 h-7 w-7 -translate-x-1/2 -translate-y-1/2" />}
-                      <span className="absolute left-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-[10px] bg-spontaway-orange px-1 text-[10px] font-black leading-none text-white">{i + 1}</span>
-                    </div>
-                    <div className="flex h-[80px] min-w-0 flex-1 flex-col justify-between py-0.5">
-                      <p className="line-clamp-2 text-[14px] font-bold leading-[1.19] text-black">{it.name}</p>
-                      <div className="flex items-center justify-between gap-2">
-                        <span />
-                        {it.category && <span className="shrink-0 text-[11px] font-medium text-[#666]">{it.category}</span>}
-                      </div>
-                    </div>
+            ) : e.kind === "more" ? (
+              <div key={`m-${i}`} className="flex w-[150px] shrink-0 items-center justify-center rounded-3xl border-2 border-dashed border-spontaway-orange/50 px-4 text-center">
+                <p className="text-[13px] font-bold leading-snug text-spontaway-brown">{e.label}</p>
+              </div>
+            ) : (
+              <div key={`${e.item.name}-${i}`} className="flex w-[264px] shrink-0 items-center gap-3 rounded-3xl bg-white px-3 py-3">
+                <div className="relative h-[80px] w-[54px] shrink-0 overflow-hidden rounded-xl bg-[#fcede3]">
+                  {e.item.photo
+                    ? <img src={e.item.photo} alt="" className="h-full w-full object-cover" />
+                    : <img src={e.item.icon} alt="" className="absolute left-1/2 top-1/2 h-7 w-7 -translate-x-1/2 -translate-y-1/2" />}
+                  <span className="absolute left-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-[10px] bg-spontaway-orange px-1 text-[10px] font-black leading-none text-white">{e.no}</span>
+                </div>
+                <div className="flex h-[80px] min-w-0 flex-1 flex-col justify-between py-0.5">
+                  <p className="line-clamp-2 text-[14px] font-bold leading-[1.19] text-black">{e.item.name}</p>
+                  <div className="flex items-center justify-between gap-2">
+                    <span />
+                    {e.item.category && <span className="shrink-0 text-[11px] font-medium text-[#666]">{e.item.category}</span>}
                   </div>
-                ))}
+                </div>
               </div>
-            </div>
-          ))}
-          {stripMore && <p className="px-5 pb-1 text-[13px] font-semibold text-spontaway-brown/80">{stripMore}</p>}
+            ))}
+          </div>
         </div>
       )}
 
@@ -392,15 +398,21 @@ export function ShareCardTrip({ title, city, pins, cover, onClose, onShare, shar
   const dayOf = (p: any) => Math.max(1, Number(p.day_index) || 1);
   const dayNumbers = Array.from(new Set(pins.map(dayOf))).sort((a, b) => a - b);
   const shownDays = dayNumbers.slice(0, 2);
-  const strips = shownDays.map((d) => ({ label: t("share.day_n", { n: d }), items: pins.filter((p: any) => dayOf(p) === d).map(toItem) }));
+  const strip: StripEntry[] = [];
+  shownDays.forEach((d, di) => {
+    const items = pins.filter((p: any) => dayOf(p) === d);
+    if (!items.length) return;
+    if (di > 0) strip.push({ kind: "divider", label: t("share.day_n", { n: d }) });
+    items.forEach((p: any, i: number) => strip.push({ kind: "place", item: toItem(p), no: i + 1 }));
+  });
   const hiddenCount = pins.filter((p: any) => !shownDays.includes(dayOf(p))).length;
-  const stripMore = hiddenCount > 0 ? t("share.more_in_app", { count: hiddenCount }) : null;
+  if (hiddenCount > 0) strip.push({ kind: "more", label: t("share.more_in_app", { count: hiddenCount }) });
 
   return (
     // Podglad = karta z EKSPLORACJI, nie osobny plakat (prosba Nat 2026-09-08). Autor ma
     // zobaczyc dokladnie to, co zobaczy odbiorca - okladka w calosci, awatary, tagi i licznik.
     <ShareSheet onClose={onClose} onShare={onShare} shareUrl={shareUrl} shareTitle={title}
-      strips={strips} stripMore={stripMore} plainPreview
+      strip={strip} stripLabel={t("share.day_n", { n: shownDays[0] ?? 1 })} plainPreview
       author={{ userId: authorId, avatar: authorAvatar, frame: authorFrame, color: authorFrameColor }}>
       {/* Bez miniaturki mapy: na podgladzie zjadala rog okladki, a to okladka jest tu trescia
           (makieta "Majówka 2025", prosba Nat 2026-09-09). W eksploracji mapka zostaje - tam

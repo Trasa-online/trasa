@@ -255,11 +255,15 @@ body.trip{background:#FDF184}
 .day{display:flex;align-items:center;gap:8px;width:100%;margin:28px 0 8px}
 .day i{width:3px;height:16px;border-radius:2px;background:#EE5307;flex:none}
 .day p{margin:0;font-family:Sigmar,Inter,sans-serif;font-size:15px;line-height:1;color:#EE5307}
-.more{margin:14px 0 0;width:100%;font-size:13px;font-weight:600;color:rgba(91,44,6,.8)}
+.dv{display:flex;align-items:center;gap:8px;flex:none;padding-left:4px}
+.dv i{width:3px;height:80px;border-radius:2px;background:#EE5307;flex:none}
+.dv p{margin:0;font-family:Sigmar,Inter,sans-serif;font-size:15px;line-height:1;color:#EE5307;writing-mode:vertical-rl;transform:rotate(180deg)}
+.more{display:flex;align-items:center;justify-content:center;flex:none;width:150px;padding:0 16px;border:2px dashed rgba(238,83,7,.5);border-radius:24px;text-align:center}
+.more p{margin:0;font-size:13px;font-weight:700;line-height:1.3;color:#5B2C06}
 /* Pasek wychodzi poza padding strony w prawo, zeby kafelki dojezdzaly do krawedzi ekranu
    zamiast zatrzymywac sie 20 px przed nia (prosba Nat 2026-09-09). Z lewej padding zostaje -
    pierwszy kafelek ma sie rownac z naglowkiem "Dzień 1" i karta wyjazdu. */
-.strip{display:flex;gap:12px;width:calc(100% + 20px);margin-right:-20px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}
+.strip{display:flex;align-items:stretch;gap:12px;width:calc(100% + 20px);margin-right:-20px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}
 .strip::-webkit-scrollbar{display:none}
 .pl{display:flex;align-items:center;gap:12px;width:264px;flex:none;background:#fff;border-radius:24px;padding:12px}
 .pl .pic{position:relative;width:54px;height:80px;flex:none;border-radius:12px;overflow:hidden;background:#fcede3}
@@ -597,11 +601,17 @@ ${photo ? `<img class="p" src="${esc(photo)}" alt="" loading="lazy">` : icon ? `
 <div class="d"><p class="n">${esc(p.place_name || "")}</p>
 <div class="b"><span></span>${cat && p.category !== "other" ? `<span class="c">${esc(cat)}</span>` : ""}</div></div></div>`;
   };
-  const strips = shownDays.map((d) => {
+  // JEDEN przewijany rzad: dzien 1, pionowy divider "Dzien 2", dzien 2, kafelek "jeszcze N".
+  const entries: string[] = [];
+  shownDays.forEach((d, di) => {
     const items = pins.filter((p) => dayOf(p) === d);
-    return items.length ? `<div class="day"><i></i><p>Dzień ${d}</p></div><div class="strip">${items.map(tile).join("")}</div>` : "";
-  }).join("");
-  const more = hidden > 0 ? `<p class="more">Jeszcze ${hidden} ${plural(hidden)} zobaczysz w aplikacji</p>` : "";
+    if (!items.length) return;
+    if (di > 0) entries.push(`<div class="dv"><i></i><p>Dzień ${d}</p></div>`);
+    items.forEach((p, i) => entries.push(tile(p, i)));
+  });
+  if (hidden > 0) entries.push(`<div class="more"><p>Jeszcze ${hidden} ${plural(hidden)} zobaczysz w aplikacji</p></div>`);
+  const strips = entries.length ? `<div class="day"><i></i><p>Dzień ${shownDays[0] ?? 1}</p></div><div class="strip">${entries.join("")}</div>` : "";
+  const more = "";
 
   // Wejscie w aplikacje z pominieciem zapowiedzi (`?full=1`) - odbiorca widzial ja juz tutaj,
   // wiec druga taka sama strona po kliknieciu bylaby dreptaniem w miejscu.

@@ -1923,12 +1923,20 @@ export default function SharedRoute() {
   // wypycha do sklepu, bo tresc, po ktora przyszedl, jest tuz obok. Do sklepu prowadzi pasek
   // na gorze i to jest jego jedyne zadanie.
   if (isWeb && !previewOpened) {
-    // Miejsca po DNIACH: pierwsze dwa dni w calosci, reszta dopiero w aplikacji (prosba Nat
-    // 2026-09-14; wczesniej osiem pierwszych pod jednym "Dzien 1").
+    // Miejsca po DNIACH w JEDNYM przewijanym rzedzie: dzien 1, pionowy divider "Dzien 2", dzien 2,
+    // na koncu kafelek "jeszcze N w aplikacji" (prosba Nat 2026-09-14; wczesniej osiem pierwszych
+    // pod jednym "Dzien 1").
     const dayOf = (p: any) => Math.max(1, Number(p.day_index) || 1);
     const previewDays = Array.from(new Set((pins as any[]).map(dayOf))).sort((a, b) => a - b).slice(0, 2);
-    const previewStrips = previewDays.map((d) => ({ day: d, items: (pins as any[]).filter((p) => dayOf(p) === d) }));
+    const previewEntries: Array<{ kind: "place"; pin: any; no: number } | { kind: "divider"; label: string } | { kind: "more"; label: string }> = [];
+    previewDays.forEach((d, di) => {
+      const items = (pins as any[]).filter((p) => dayOf(p) === d);
+      if (!items.length) return;
+      if (di > 0) previewEntries.push({ kind: "divider", label: t("share.day_n", { n: d }) });
+      items.forEach((pin, i) => previewEntries.push({ kind: "place", pin, no: i + 1 }));
+    });
     const previewHidden = (pins as any[]).filter((p) => !previewDays.includes(dayOf(p))).length;
+    if (previewHidden > 0) previewEntries.push({ kind: "more", label: t("share.more_in_app", { count: previewHidden }) });
     return (
       <div className="min-h-[100dvh] bg-spontaway-yellow flex flex-col max-w-lg mx-auto">
         <PreReleaseBanner />
@@ -1956,25 +1964,34 @@ export default function SharedRoute() {
           </div>
 
           {/* Pierwsze przystanki - to one mowia, co jest w srodku. */}
-          {previewStrips.map((d) => d.items.length > 0 && (
-            <div key={d.day} className="mt-7 w-full">
+          {previewEntries.length > 0 && (
+            <div className="mt-7 w-full">
               <div className="flex items-center gap-2 pb-2">
                 <span className="h-4 w-[3px] rounded-full bg-spontaway-orange" />
-                <p className="font-brand text-[15px] leading-none text-spontaway-orange">{t("share.day_n", { n: d.day })}</p>
+                <p className="font-brand text-[15px] leading-none text-spontaway-orange">{t("share.day_n", { n: previewDays[0] ?? 1 })}</p>
               </div>
-              <div className="flex gap-3 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                {d.items.map((pin: any, i: number) => (
-                  <div key={pin.id} className="flex w-[264px] shrink-0 items-center gap-3 rounded-3xl bg-white px-3 py-3">
+              <div className="flex items-stretch gap-3 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                {previewEntries.map((e, i) => e.kind === "divider" ? (
+                  <div key={`d-${i}`} className="flex shrink-0 items-center gap-2 pl-1">
+                    <span className="h-[80px] w-[3px] rounded-full bg-spontaway-orange" />
+                    <p className="font-brand text-[15px] leading-none text-spontaway-orange [writing-mode:vertical-rl] rotate-180">{e.label}</p>
+                  </div>
+                ) : e.kind === "more" ? (
+                  <div key={`m-${i}`} className="flex w-[150px] shrink-0 items-center justify-center rounded-3xl border-2 border-dashed border-spontaway-orange/50 px-4 text-center">
+                    <p className="text-[13px] font-bold leading-snug text-spontaway-brown">{e.label}</p>
+                  </div>
+                ) : (
+                  <div key={e.pin.id} className="flex w-[264px] shrink-0 items-center gap-3 rounded-3xl bg-white px-3 py-3">
                     <div className="relative h-[80px] w-[54px] shrink-0 overflow-hidden rounded-xl bg-[#fcede3]">
-                      <PlacePhoto pin={rowPinFor(pin)} width={110} className="h-full w-full object-cover" />
-                      <span className="absolute left-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-[10px] bg-spontaway-orange px-1 text-[10px] font-black leading-none text-white">{i + 1}</span>
+                      <PlacePhoto pin={rowPinFor(e.pin)} width={110} className="h-full w-full object-cover" />
+                      <span className="absolute left-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-[10px] bg-spontaway-orange px-1 text-[10px] font-black leading-none text-white">{e.no}</span>
                     </div>
                     <div className="flex h-[80px] min-w-0 flex-1 flex-col justify-between py-0.5">
-                      <p className="line-clamp-2 text-[14px] font-bold leading-[1.19] text-black">{pin.place_name}</p>
+                      <p className="line-clamp-2 text-[14px] font-bold leading-[1.19] text-black">{e.pin.place_name}</p>
                       <div className="flex items-center justify-between gap-2">
                         <span />
-                        {pin.category && pin.category !== "other" && (
-                          <span className="shrink-0 text-[11px] font-medium text-[#666]">{categoryLabel(pin.category)}</span>
+                        {e.pin.category && e.pin.category !== "other" && (
+                          <span className="shrink-0 text-[11px] font-medium text-[#666]">{categoryLabel(e.pin.category)}</span>
                         )}
                       </div>
                     </div>
@@ -1982,9 +1999,6 @@ export default function SharedRoute() {
                 ))}
               </div>
             </div>
-          ))}
-          {previewHidden > 0 && (
-            <p className="mt-3 w-full text-[13px] font-semibold text-spontaway-brown/80">{t("share.more_in_app", { count: previewHidden })}</p>
           )}
 
           <button
