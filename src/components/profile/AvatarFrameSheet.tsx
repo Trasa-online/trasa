@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Check, Lock, Pipette } from "lucide-react";
@@ -11,6 +11,7 @@ import { avatarSrc } from "@/lib/avatar";
 import { haptics } from "@/hooks/useHaptics";
 import { AVATAR_FRAMES, DEFAULT_FRAME_COLOR, FRAME_SWATCHES, isAvatarFrame, isFrameColor, type AvatarFrameId } from "@/lib/avatarFrames";
 import AvatarFrame from "@/components/profile/AvatarFrame";
+import AvatarPresetRow from "@/components/profile/AvatarPresetRow";
 import { avatarFrameKey } from "@/lib/avatarFrameLoader";
 
 // "Customizuj mój profil" (prosba Nat 2026-09-11): arkusz z ramkami awatara i ich kolorem.
@@ -50,8 +51,15 @@ export default function AvatarFrameSheet({ open, onOpenChange, userId }: { open:
   const unlockOf = (id: AvatarFrameId | null) => (id ? unlocks?.find((u) => u.frame === id) : undefined);
   const isLocked = (id: AvatarFrameId | null) => !!id && unlocks !== undefined && unlockOf(id)?.unlocked === false;
   const current: AvatarFrameId | null = isAvatarFrame(me?.avatar_frame) ? me!.avatar_frame : null;
-  const color = isFrameColor(me?.avatar_frame_color) ? me!.avatar_frame_color! : DEFAULT_FRAME_COLOR;
-  const customColor = !FRAME_SWATCHES.includes(color);
+  const savedColor = isFrameColor(me?.avatar_frame_color) ? me!.avatar_frame_color! : DEFAULT_FRAME_COLOR;
+  // Kolor z pipety w trakcie wybierania: podglad na zywo, zapis dopiero po chwili spokoju.
+  // iOS strzela zdarzeniem `input` przy KAZDYM ruchu palca po palecie - wczesniej kazde
+  // z nich szlo do bazy osobno (dziesiatki zapisow w losowej kolejnosci; ostatni, ktory
+  // dotarl, wygrywal - niekoniecznie ten wybrany), a przy okazji wibrowalo (zgloszenie Nat
+  // 2026-09-13: "wlasny kolor nie dziala").
+  const [draft, setDraft] = useState<string | null>(null);
+  const color = draft ?? savedColor;
+  const customColor = !FRAME_SWATCHES.includes(color.toUpperCase());
 
   const invalidateAll = () => {
     // Wszystkie miejsca, ktore czytaja profil, maja zobaczyc zmiane od razu.
@@ -82,9 +90,19 @@ export default function AvatarFrameSheet({ open, onOpenChange, userId }: { open:
     invalidateAll();
     toast.success(frame ? t("frames.saved") : t("frames.removed"));
   };
-  const chooseColor = async (hex: string) => {
+  // Awatar bazowy w samym kolorze (presety, prosba Nat 2026-09-13 - wybor "zamiast normalnego
+  // awatara" zyje TUTAJ, pod nakladkami, jak "lub wybierz domyslny awatar" w zalaczniku).
+  // Zapis od razu do profiles.avatar_url - jak zdjecie, tylko bez uploadu.
+  const choosePreset = async (url: string) => {
+    queryClient.setQueryData(["avatar-frame-sheet", userId], (old: any) => ({ ...(old ?? {}), avatar_url: url }));
+    const { error } = await (supabase as any).from("profiles").update({ avatar_url: url }).eq("id", userId);
+    if (error) { toast.error(t("frames.save_failed")); queryClient.invalidateQueries({ queryKey: ["avatar-frame-sheet", userId] }); return; }
+    invalidateAll();
+    toast.success(t("frames.avatar_saved"));
+  };
+  const chooseColor = async (hex: string, opts: { silent?: boolean } = {}) => {
     if (!isFrameColor(hex)) return;
-    haptics.selection();
+    if (!opts.silent) haptics.selection();
     // Pomarancz marki = brak nadpisania (null), zeby "domyslny" znaczyl to samo dla wszystkich.
     const value = hex.toUpperCase() === DEFAULT_FRAME_COLOR ? null : hex.toUpperCase();
     queryClient.setQueryData(["avatar-frame-sheet", userId], (old: any) => ({ ...(old ?? {}), avatar_frame_color: value }));
@@ -92,6 +110,29 @@ export default function AvatarFrameSheet({ open, onOpenChange, userId }: { open:
     if (error) { toast.error(t("frames.save_failed")); return; }
     invalidateAll();
   };
+  // Pipeta: `input` (kazdy ruch) -> tylko podglad + odlozony zapis; `change` (zamkniecie
+  // palety) -> zapis od razu. Nasluch natywny, bo React-owe onChange to w praktyce `input`.
+  const persistTimer = useRef<number | null>(null);
+  const persistDraft = (hex: string) => {
+    if (persistTimer.current) window.clearTimeout(persistTimer.current);
+    persistTimer.current = null;
+    setDraft(null);
+    void chooseColor(hex, { silent: true });
+  };
+  const onColorInput = (hex: string) => {
+    if (!isFrameColor(hex)) return;
+    setDraft(hex);
+    if (persistTimer.current) window.clearTimeout(persistTimer.current);
+    persistTimer.current = window.setTimeout(() => persistDraft(hex), 600);
+  };
+  useEffect(() => {
+    const el = colorInput.current;
+    if (!el) return;
+    const onChange = () => persistDraft(el.value);
+    el.addEventListener("change", onChange);
+    return () => { el.removeEventListener("change", onChange); if (persistTimer.current) window.clearTimeout(persistTimer.current); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   const options: { id: AvatarFrameId | null; label: string; reward?: boolean }[] = [
     { id: null, label: t("frames.none") },
@@ -160,18 +201,31 @@ export default function AvatarFrameSheet({ open, onOpenChange, userId }: { open:
               </button>
             );
           })}
-          <button
-            onClick={() => colorInput.current?.click()}
-            aria-label={t("frames.color_custom")}
+          {/* Pipeta = SAM natywny <input type="color"> (iOS pokazuje systemowa palete) rozciagniety
+              na cala kropke. Zadnego guzika pod spodem: wczesniej tap trafial w input (paleta sie
+              otwierala), zdarzenie bablowalo do guzika, a ten wolal input.click() drugi raz -
+              WebKit traktowal to jak ponowne otwarcie i paleta znikala. */}
+          <span
             aria-pressed={customColor}
             className={`relative flex h-9 w-9 items-center justify-center rounded-full border-2 ${customColor ? "border-foreground" : "border-border"} bg-[conic-gradient(from_0deg,#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00)] active:scale-90 transition-transform`}
           >
-            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/90">
+            <span className="pointer-events-none flex h-6 w-6 items-center justify-center rounded-full bg-white/90">
               <Pipette className="h-3.5 w-3.5 text-foreground" />
             </span>
-            {/* Natywny selektor koloru (iOS pokazuje systemowa palete) - ukryty, odpalany guzikiem. */}
-            <input ref={colorInput} type="color" value={color} onChange={(e) => void chooseColor(e.target.value)} className="absolute inset-0 h-full w-full cursor-pointer opacity-0" aria-hidden tabIndex={-1} />
-          </button>
+            <input
+              ref={colorInput}
+              type="color"
+              value={color.toLowerCase()}
+              onChange={(e) => onColorInput(e.target.value)}
+              aria-label={t("frames.color_custom")}
+              className="absolute inset-0 h-full w-full cursor-pointer rounded-full opacity-0"
+            />
+          </span>
+        </div>
+
+        {/* Awatar bazowy z palety - NA DOLE, pod nakladkami i kolorem. */}
+        <div className="mt-6">
+          <AvatarPresetRow flush value={me?.avatar_url ?? null} onPick={(url) => void choosePreset(url)} title={t("frames.presets_title")} desc={t("frames.presets_desc")} />
         </div>
       </SheetContent>
     </Sheet>

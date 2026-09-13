@@ -1,4 +1,6 @@
-// "Topka" wyjazdu - JEDNO miejsce wyroznione przez uczestnikow (2026-09-08).
+// "Topka" WYJAZDU - JEDNO miejsce wyroznione przez uczestnikow (2026-09-08).
+// Listy miejsc maja wlasna topke BEZ LIMITU (discovery_items.is_top, SharedList.toggleTopItem,
+// decyzja Nat 2026-09-13) - ten limit dotyczy wylacznie wyjazdow.
 //
 // Wybor jest RECZNY (decyzja Nat): wskazujemy to, co warto polecic, zamiast liczyc sredniej
 // z ocen. Poczatkowo limit rosl z dlugoscia trasy (1-3 gwiazdki), ale Nat zdecydowala, ze

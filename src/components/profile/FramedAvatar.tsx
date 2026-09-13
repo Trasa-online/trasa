@@ -13,7 +13,7 @@ export function FramedAvatar({ src, frame, color, size = 24, className = "", img
 }) {
   const kind = isAvatarFrame(frame) ? frame : null;
   return (
-    <span className={`relative inline-block shrink-0 ${className}`} style={{ width: size, height: size }}>
+    <span className={`relative inline-block align-top shrink-0 ${className}`} style={{ width: size, height: size }}>
       <AvatarFrame kind={kind} color={color} size={size} />
       <img src={avatarSrc(src ?? null)} alt="" className={`h-full w-full rounded-full object-cover bg-orange-100 ${imgClassName}`} />
     </span>

@@ -6,7 +6,7 @@ import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { Settings, UserCircle2, ArrowRight, Bell, Share2, Search, ChevronLeft } from "lucide-react";
-import { BrandIcon, LIST_ICON } from "@/components/BrandIcon";
+import { BrandIcon, LIST_ICON, STAR_ICON } from "@/components/BrandIcon";
 import { SavedPlacesGrid } from "@/components/saved/SavedPlacesGrid";
 import TabHeader from "@/components/layout/TabHeader";
 import PinnedSearchField from "@/components/layout/PinnedSearchField";
@@ -30,6 +30,8 @@ import NotificationsDrawer from "@/components/layout/NotificationsDrawer";
 import InviteFriendsBanner from "@/components/social/InviteFriendsBanner";
 import { ProfileFeedCard } from "@/components/profile/ProfileFeedCard";
 import ReferralCard from "@/components/profile/ReferralCard";
+import { haptics } from "@/hooks/useHaptics";
+import StarredPlacesSheet, { useStarredPlaces } from "@/components/profile/StarredPlacesSheet";
 import { TripLayoutSwitch, TripTile, mosaicColumns, useTripLayout } from "@/components/profile/TripLayout";
 import { REORDER_ITEM_CLASS, useLongPressReorder } from "@/hooks/useLongPressReorder";
 import { applyTripOrder, fetchTripOrder, saveTripOrder, tripOrderKey } from "@/lib/tripOrder";
@@ -38,7 +40,7 @@ import { isAvatarFrame } from "@/lib/avatarFrames";
 import { scopeLabel } from "@/lib/tripScope";
 import { SpontawayTabIcon } from "@/components/profile/SpontawayTabIcon";
 import { shortRelativeTime } from "@/lib/relativeTime";
-import { unsaveCollectionDb, migrateLocalSavedCollections } from "@/lib/savedCollections";
+import { migrateLocalSavedCollections } from "@/lib/savedCollections";
 import { pinCoverKeys, fetchPlacePhotosForKeys, pickPlaceCover } from "@/lib/placePhotoSocial";
 // Karta wyjazdu = ta sama co na eksploracji (okladka + zapis), na profilu BEZ mapki.
 import TrasaBigCard from "@/components/home/TrasaBigCard";
@@ -164,6 +166,7 @@ const TravelerProfile = () => {
   const queryClient = useQueryClient();
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [followSheet, setFollowSheet] = useState<"followers" | "following" | null>(null);
+  const [starredOpen, setStarredOpen] = useState(false);
   // Wyszukiwarka przypieta w naglowku - dziala W MIEJSCU, dokladnie jak w Eksploracji
   // (prosba Nat 2026-09-06): foldery kategorii chowaja sie po wpisaniu frazy, a wyniki
   // renderuje wspoldzielony DiscoveryFeed w trybie searchOnly (jedna logika wynikow).
@@ -243,6 +246,7 @@ const TravelerProfile = () => {
   });
 
   const { data: followCounts = { followers: 0, following: 0 } } = useFollowCounts(user?.id);
+  const { data: starred = [] } = useStarredPlaces(user?.id);
   const followList = useFollowList(user?.id, followSheet === "following" ? "following" : "followers");
 
   // Usuwanie z oknem "Cofnij" (deferDelete): element znika od razu z listy (optymistycznie),
@@ -583,30 +587,6 @@ const TravelerProfile = () => {
     });
   };
 
-  // Odpiecie ZAPISANEJ listy - z oknem "Cofnij" (jak usuwanie wlasnych). Element znika od razu,
-  // faktyczny delete jest odroczony o 5 s (prosba Nat 2026-08-30: undo na WSZYSTKICH zakladkach).
-  const handleUnsaveList = (colId: string) => {
-    if (!user) return;
-    const key = ["profile-saved-list-feed", user.id];
-    const prev = queryClient.getQueryData(key);
-    queryClient.setQueryData(key, (old: any) => (old ?? []).filter((x: any) => x.id !== colId));
-    const setLocal = (has: boolean) => {
-      try {
-        const set = new Set<string>(JSON.parse(localStorage.getItem("trasa_saved_collections") || "[]"));
-        if (has) set.add(colId); else set.delete(colId);
-        localStorage.setItem("trasa_saved_collections", JSON.stringify([...set]));
-      } catch { /* brak localStorage */ }
-    };
-    setLocal(false);
-    deferDelete({
-      message: t("profile.removed_saved"),
-      onUndo: () => { setLocal(true); queryClient.setQueryData(key, prev); },
-      commit: async () => {
-        await unsaveCollectionDb(user.id, colId);
-        queryClient.invalidateQueries({ queryKey: key });
-      },
-    });
-  };
   if (loading) return <ScreenSkeleton variant="profile" />;
   if (!user || user.is_anonymous) return <GuestProfile />;
 
@@ -715,8 +695,9 @@ const TravelerProfile = () => {
         </div>
       ) : undefined}
       onOpen={() => navigate(`/lista/${l.id}`)}
-      onSave={() => handleUnsaveList(l.id)}
-      saved
+      // Bez zakladki w stopce (prosba Nat 2026-09-13): licznik zapisow stoi juz w naglowku
+      // przy dacie, a druga ikona pod siatka dublowala te sama informacje. Odpiecie listy
+      // zyje w jej widoku (bookmark w /lista/:id).
     />
   );
 
@@ -819,8 +800,11 @@ const TravelerProfile = () => {
           )}
         </div>
 
-        {/* Statystyki inline: Obserwujacy / Obserwowani / Miasta + szukanie osob */}
-        <div className="flex items-end gap-7">
+        {/* Statystyki inline: Obserwujacy / Obserwowani / Wyroznione + szukanie osob.
+            gap-5 (nie gap-7) i shrink-0 na lupce: przy trzech statystykach rzad przestawal
+            sie miescic na 393 px i flex SCISKAL guzik lupki do 28 px - z kolka robil sie
+            zaokraglony prostokat (zgloszenie Nat 2026-09-13). */}
+        <div className="flex items-end gap-5">
           <button onClick={() => setFollowSheet("followers")} className="text-left active:opacity-70 transition-opacity">
             <p className="text-xs font-medium text-muted-foreground">{t("profile.followers")}</p>
             <p className="text-xl font-bold text-foreground mt-0.5 tabular-nums">{followCounts.followers}</p>
@@ -829,11 +813,19 @@ const TravelerProfile = () => {
             <p className="text-xs font-medium text-muted-foreground">{t("profile.following")}</p>
             <p className="text-xl font-bold text-foreground mt-0.5 tabular-nums">{followCounts.following}</p>
           </button>
+          {/* Wyroznione miejsca (prosba Nat 2026-09-13): gwiazdka "topki" z licznikiem - ile miejsc
+              user wyroznil w swoich wyjazdach i listach. Tap otwiera arkusz z tymi miejscami. */}
+          <button onClick={() => { haptics.light(); setStarredOpen(true); }} aria-label={t("profile.starred_aria")} className="text-left active:opacity-70 transition-opacity">
+            <p className="text-xs font-medium text-muted-foreground">{t("profile.starred")}</p>
+            <p className="mt-0.5 flex items-center gap-1 text-xl font-bold text-foreground tabular-nums">
+              <BrandIcon src={STAR_ICON} className="h-[18px] w-[18px] text-primary" />{starred.length}
+            </p>
+          </button>
           <div className="flex-1" />
           {/* Szukanie osob otwiera TE SAMA wyszukiwarke, co lupka w naglowku - tylko z wybrana
               kategoria "Ludzie". Wczesniej prowadzilo na osobny ekran /search, czyli DRUGI widok
               wyszukiwania obok tego z Eksploracji (prosba Nat 2026-09-09: jedno zrodlo prawdy). */}
-          <button onClick={() => { setSearchCat("people"); openSearch(); }} className="h-9 w-9 rounded-full bg-muted flex items-center justify-center text-foreground active:scale-90 transition-transform" aria-label={t("profile.find_users_aria")}>
+          <button onClick={() => { setSearchCat("people"); openSearch(); }} className="h-9 w-9 shrink-0 rounded-full bg-muted flex items-center justify-center text-foreground active:scale-90 transition-transform" aria-label={t("profile.find_users_aria")}>
             <Search className="h-4 w-4" />
           </button>
         </div>
@@ -843,6 +835,7 @@ const TravelerProfile = () => {
             BEZ opakowania z paddingiem: odstep niesie sama karta, wiec po jej zamknieciu
             nie zostaje pusty pas (zgloszenie Nat 2026-09-10). */}
         <ReferralCard userId={user.id} />
+        <StarredPlacesSheet open={starredOpen} onOpenChange={setStarredOpen} userId={user.id} />
 
         {/* Zakladki: Listy | Wyjazdy (ikona + labelka obok, underline aktywnej). Zapisane usunięte 2026-08-24. */}
         {/* Sticky: przy przewijaniu profilu zakladki zostaja na gorze (prosba Nat 2026-09-01).

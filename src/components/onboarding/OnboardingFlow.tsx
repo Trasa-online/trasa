@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { checkUsername, cleanUsername, escapeLike, type UsernameProblem } from "@/lib/usernameRules";
 import { avatarSrc } from "@/lib/avatar";
+import AvatarPresetRow from "@/components/profile/AvatarPresetRow";
 import { ArrowLeft, Check, Plus, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useTranslation, Trans } from "react-i18next";
@@ -185,6 +186,14 @@ const OnboardingFlow = ({ onDone }: Props) => {
       await supabase.from("profiles").update({ avatar_url: busted } as any).eq("id", user.id);
       setAvatarUrl(busted);
     } finally { setUploading(false); }
+  };
+
+  // Awatar brandowy: sam adres pliku z bucketu (bez uploadu) - zapis jak przy zdjeciu.
+  const pickPresetAvatar = async (url: string) => {
+    if (!user || uploading) return;
+    setAvatarUrl(url);
+    const { error } = await supabase.from("profiles").update({ avatar_url: url } as any).eq("id", user.id);
+    if (error) toast.error(t("toast.photo_failed"));
   };
 
   const pickAvatar = async () => {
@@ -503,7 +512,7 @@ const OnboardingFlow = ({ onDone }: Props) => {
               <h2 className="text-2xl font-black mb-2 leading-tight">{nbsp(t("photo.title"))}</h2>
               <p className="text-[15px] text-muted-foreground leading-relaxed">{nbsp(t("photo.desc"))}</p>
             </div>
-            <div className="flex-1 flex items-center justify-center">
+            <div className="flex-1 flex flex-col items-center justify-center gap-7">
               <button onClick={pickAvatar} className="relative active:scale-[0.98] transition-transform" aria-label={t("photo.pick")}>
                 <div className="h-40 w-40 rounded-full overflow-hidden flex items-center justify-center bg-orange-100">
                   <img src={avatarSrc(avatarUrl)} alt="" className="h-full w-full object-cover" />
@@ -512,6 +521,11 @@ const OnboardingFlow = ({ onDone }: Props) => {
                   {uploading ? <Loader2 className="h-5 w-5 text-white animate-spin" /> : <Plus className="h-6 w-6 text-white" strokeWidth={2.5} />}
                 </div>
               </button>
+              {/* Awatary bazowe (prosba Nat 2026-09-13): kto nie chce wrzucac zdjecia, wybiera
+                  kolko w kolorze marki (bez znaku) - i nie wchodzi do apki z pustym kolkiem. */}
+              <div className="w-full">
+                <AvatarPresetRow value={avatarUrl} disabled={uploading} onPick={(url) => void pickPresetAvatar(url)} />
+              </div>
             </div>
             <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onFile} />
           </>

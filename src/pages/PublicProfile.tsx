@@ -12,7 +12,9 @@ import { useAuth } from "@/hooks/useAuth";
 import { toggleRouteLike } from "@/lib/likes";
 import { saveCollectionDb, unsaveCollectionDb } from "@/lib/savedCollections";
 import { ArrowLeft } from "lucide-react";
-import { BrandIcon, LIST_ICON } from "@/components/BrandIcon";
+import { BrandIcon, LIST_ICON, STAR_ICON } from "@/components/BrandIcon";
+import StarredPlacesSheet, { useStarredPlaces } from "@/components/profile/StarredPlacesSheet";
+import { haptics } from "@/hooks/useHaptics";
 import { applyTripOrder, fetchTripOrder, tripOrderKey } from "@/lib/tripOrder";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -119,6 +121,8 @@ export default function PublicProfile() {
 
   // Liczniki follow (asymetryczny model, publiczny SELECT).
   const { data: followCounts = { followers: 0, following: 0 } } = useFollowCounts(profile?.id);
+  const { data: starred = [] } = useStarredPlaces(profile?.id);
+  const [starredOpen, setStarredOpen] = useState(false);
   const followList = useFollowList(profile?.id, followSheet === "following" ? "following" : "followers");
 
   // Feed LIST (zakladka Listy): publiczne + zatwierdzone listy usera + kafelki miejsc + liczniki.
@@ -368,7 +372,38 @@ export default function PublicProfile() {
           <ArrowLeft className="h-5 w-5" />
         </button>
         <h1 className="flex-1 text-base font-bold text-center truncate">@{profile.username}</h1>
-        <div className="w-9" />
+        {/* Zgloszenie profilu (App Store 1.2) jako sama flaga w belce (prosba Nat 2026-09-13);
+            wczesniej w menu "⋮" przy statystykach, gdzie zostaje juz tylko blokada. */}
+        {canInteract ? (
+          <div className="flex items-center gap-1">
+            <ReportContentSheet targetType="user" targetId={profile.id} trigger={(open) => (
+              <button onClick={open} aria-label={t("public.report")} className="h-9 w-9 flex items-center justify-center rounded-full text-foreground/60 active:scale-90 transition-transform">
+                <FlagIcon className="h-5 w-5" strokeWidth={2} />
+              </button>
+            )} />
+            {/* Blokada pod "⋮" - tez w belce: w rzedzie statystyk (trzy liczniki + obserwacja)
+                nie mieścil sie na 393 px i wystawal poza ekran. */}
+              {canInteract && (
+                <div className="relative">
+                  <button onClick={() => setMenuOpen((o) => !o)} aria-label={t("public.more")} className="h-9 w-9 shrink-0 flex items-center justify-center rounded-full active:bg-muted transition-colors">
+                    <MoreVertical className="h-5 w-5 text-foreground" />
+                  </button>
+                  {menuOpen && (
+                    <>
+                      <div className="fixed inset-0 z-30" onClick={() => setMenuOpen(false)} />
+                      <div className="absolute right-0 top-11 z-40 w-56 rounded-2xl bg-card border border-border/50 shadow-xl overflow-hidden py-1">
+                        <button onClick={toggleBlock} className="w-full px-4 py-3 text-left text-sm font-medium text-destructive flex items-center gap-2.5 active:bg-muted">
+                          <Ban className="h-4 w-4 shrink-0" /> {blocked ? t("public.unblock") : t("public.block")}
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+          </div>
+        ) : (
+          <div className="w-9" />
+        )}
       </div>
 
       <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
@@ -398,8 +433,9 @@ export default function PublicProfile() {
           )}
         </div>
 
-        {/* Statystyki inline: Obserwujacy / Obserwowani (klik -> lista) + akcja Obserwuj */}
-        <div className="flex items-end gap-7">
+        {/* Statystyki inline: Obserwujacy / Obserwowani / Wyroznione (klik -> lista/arkusz) + akcja
+            Obserwuj. gap-5 + shrink-0 na kolkach - patrz TravelerProfile (flex sciskal guziki). */}
+        <div className="flex items-end gap-5">
           <button onClick={() => setFollowSheet("followers")} className="text-left active:opacity-70 transition-opacity">
             <p className="text-xs font-medium text-muted-foreground">{t("profile.followers")}</p>
             <p className="text-xl font-bold text-foreground mt-0.5 tabular-nums">{followCounts.followers}</p>
@@ -408,33 +444,17 @@ export default function PublicProfile() {
             <p className="text-xs font-medium text-muted-foreground">{t("profile.following")}</p>
             <p className="text-xl font-bold text-foreground mt-0.5 tabular-nums">{followCounts.following}</p>
           </button>
+          {/* Wyroznione miejsca tej osoby (prosba Nat 2026-09-13) - jak na wlasnym profilu. */}
+          <button onClick={() => { haptics.light(); setStarredOpen(true); }} aria-label={t("profile.starred_aria")} className="text-left active:opacity-70 transition-opacity">
+            <p className="text-xs font-medium text-muted-foreground">{t("profile.starred")}</p>
+            <p className="mt-0.5 flex items-center gap-1 text-xl font-bold text-foreground tabular-nums">
+              <BrandIcon src={STAR_ICON} className="h-[18px] w-[18px] text-primary" />{starred.length}
+            </p>
+          </button>
           <div className="flex-1" />
-          <FollowButton targetUserId={profile.id} className="h-9 px-4 text-sm" />
-          {canInteract && (
-            <div className="relative">
-              <button onClick={() => setMenuOpen((o) => !o)} aria-label={t("public.more")} className="h-9 w-9 flex items-center justify-center rounded-full active:bg-muted transition-colors">
-                <MoreVertical className="h-5 w-5 text-foreground" />
-              </button>
-              {menuOpen && (
-                <>
-                  <div className="fixed inset-0 z-30" onClick={() => setMenuOpen(false)} />
-                  <div className="absolute right-0 top-11 z-40 w-56 rounded-2xl bg-card border border-border/50 shadow-xl overflow-hidden py-1">
-                    <ReportContentSheet
-                      targetType="user"
-                      targetId={profile.id}
-                      trigger={(open) => (
-                        <button onClick={() => { setMenuOpen(false); open(); }} className="w-full px-4 py-3 text-left text-sm font-medium text-foreground flex items-center gap-2.5 active:bg-muted">
-                          <FlagIcon className="h-4 w-4 shrink-0" />{t("public.report")}</button>
-                      )}
-                    />
-                    <button onClick={toggleBlock} className="w-full px-4 py-3 text-left text-sm font-medium text-destructive flex items-center gap-2.5 active:bg-muted border-t border-border/40">
-                      <Ban className="h-4 w-4 shrink-0" /> {blocked ? t("public.unblock") : t("public.block")}
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
-          )}
+          {/* Sama ikona zamiast napisu "Obserwuj" (prosba Nat 2026-09-13) - trzy statystyki
+              w rzedzie nie zostawialy miejsca na pigulke z tekstem. */}
+          <FollowButton targetUserId={profile.id} iconOnly className="shrink-0" />
         </div>
 
         {/* Zakladki: Listy | Wyjazdy (ikona + labelka obok, underline aktywnej) */}
@@ -556,6 +576,7 @@ export default function PublicProfile() {
       </div>
 
       {/* Obserwujacy / Obserwowani - lista (klik -> profil danej osoby) */}
+      <StarredPlacesSheet open={starredOpen} onOpenChange={setStarredOpen} userId={profile.id} own={false} />
       <Sheet open={followSheet !== null} onOpenChange={(v) => { if (!v) setFollowSheet(null); }}>
         <SheetContent side="bottom" className="h-[72dvh] flex flex-col rounded-t-2xl">
           {/* Uchwyt: sygnal, ze arkusz zamyka sie przeciagnieciem w dol. */}
