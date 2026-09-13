@@ -69,7 +69,7 @@ import { avatarSrc } from "@/lib/avatar";
 import { FramedAvatar } from "@/components/profile/FramedAvatar";
 import { AuthorPill, HighlightChips } from "@/components/route/TripHeaderChips";
 import { BrandIcon, SAVE_ICON } from "@/components/BrandIcon";
-import { BrandHeart } from "@/components/BrandHeart";
+import TripLikeButton from "@/components/route/TripLikeButton";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import SavePlaceSheet, { type SavePlaceInput } from "@/components/plan-wizard/SavePlaceSheet";
 import { resolvePlaceDbId } from "@/lib/placeLists";
@@ -2138,10 +2138,7 @@ export default function SharedRoute() {
                 zostaje dla "topki"): kontur = nie polubione, pelne = polubione, licznik obok gdy > 0.
                 Tylko gosc. */}
             {!isOwner && (
-              <button onClick={toggleLike} aria-label={t("aria.like_trip")} aria-pressed={routeLike.liked} className="shrink-0 h-9 flex items-center gap-1 px-1 active:scale-90 transition-transform">
-                <BrandHeart filled={routeLike.liked} className="h-7 w-7 text-primary" />
-                {routeLike.count > 0 && <span className="text-sm font-bold tabular-nums text-primary">{routeLike.count}</span>}
-              </button>
+              <TripLikeButton liked={routeLike.liked} count={routeLike.count} onToggle={() => void toggleLike()} label={t("aria.like_trip")} />
             )}
           </div>
           {/* Miasto · liczba miejsc · wyroznione jako KOLOROWE CHIPY (redesign Nat 2026-09-13,
