@@ -85,7 +85,8 @@ const tintBg = (ink: string) => (ink === "#FFFFFF" ? "rgba(255,255,255,0.22)" : 
 
 /** Chip na kafelku: polprzezroczysta pigulka z ikona i/lub tekstem. */
 function Chip({ children, ink, dark, size }: { children: React.ReactNode; ink?: string; dark?: boolean; size: TileSize }) {
-  const dims = size === "feed" ? "h-[26px] px-2.5 text-[12px]" : "h-[22px] px-2 text-[11px]";
+  // Feed: rozmiary z makiety Nat 2026-09-13 ("Majówka 2025"): chip ~28 px z tekstem 14 px.
+  const dims = size === "feed" ? "h-[30px] px-3 text-[14px]" : "h-[22px] px-2 text-[11px]";
   return (
     <span
       className={`inline-flex items-center gap-1 rounded-full font-semibold leading-none ${dims} ${dark ? "bg-black/40 text-white backdrop-blur-sm" : ""}`}
@@ -168,7 +169,7 @@ export function TripTile({ it, size = "feed" }: { it: GridItem; size?: TileSize 
       </div>
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[58%] bg-gradient-to-t from-black/75 via-black/30 to-transparent" />
       {it.showAuthor && !mapExpanded && (
-        <div className={`pointer-events-none absolute z-[2] ${feed ? "left-3 top-3 max-w-[calc(100%-100px)]" : "left-2 top-2 max-w-[calc(100%-76px)]"}`}>
+        <div className={`pointer-events-none absolute z-[2] ${feed ? "left-3 top-3 max-w-[calc(100%-136px)]" : "left-2 top-2 max-w-[calc(100%-76px)]"}`}>
           <AuthorPill it={it} tone="brand" size={size} />
         </div>
       )}
@@ -177,7 +178,7 @@ export function TripTile({ it, size = "feed" }: { it: GridItem; size?: TileSize 
           data-no-swipe
           onClick={stop}
           className={`absolute z-[3] overflow-hidden rounded-xl border-2 border-white bg-muted shadow-md transition-all duration-300 ease-out ${
-            mapExpanded ? "left-3 right-3 top-3 h-[62%]" : feed ? "right-3 top-3 h-[72px] w-[72px]" : "right-2 top-2 h-14 w-14"
+            mapExpanded ? "left-3 right-3 top-3 h-[62%]" : feed ? "right-3 top-3 h-[108px] w-[108px] rounded-2xl" : "right-2 top-2 h-14 w-14"
           }`}
         >
           {mapExpanded ? (
@@ -201,9 +202,10 @@ export function TripTile({ it, size = "feed" }: { it: GridItem; size?: TileSize 
         </div>
       )}
       <div className={`pointer-events-none absolute inset-x-0 bottom-0 z-[1] ${feed ? "p-4 pb-5" : "p-3 pb-[18px]"}`}>
-        <p className={`line-clamp-2 font-bold leading-[1.1] text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.35)] ${feed ? "text-[24px]" : "text-[19px]"}`}>{it.title}</p>
-        <div className={`flex flex-wrap ${feed ? "mt-2.5 gap-1.5" : "mt-2 gap-1"}`}>
-          <Chip dark size={size}><MapPin className={feed ? "h-3.5 w-3.5" : "h-3 w-3"} strokeWidth={2.4} />{it.placesCount}</Chip>
+        {/* Feed: tytul 36 px i chipy 30 px (makieta Nat 2026-09-13 - wczesniej 24 / 26 px). */}
+        <p className={`line-clamp-2 font-bold leading-[1.05] text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.35)] ${feed ? "text-[36px] tracking-[-0.01em]" : "text-[19px]"}`}>{it.title}</p>
+        <div className={`flex flex-wrap ${feed ? "mt-3.5 gap-2" : "mt-2 gap-1"}`}>
+          <Chip dark size={size}><MapPin className={feed ? "h-4 w-4" : "h-3 w-3"} strokeWidth={2.4} />{it.placesCount}</Chip>
           {it.where && <Chip dark size={size}>{it.where}</Chip>}
           {it.days != null && <Chip dark size={size}>{t("grid.days", { count: it.days })}</Chip>}
         </div>
