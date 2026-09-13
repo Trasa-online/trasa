@@ -7,7 +7,6 @@ import { UserAvatar } from "@/components/profile/FramedAvatar";
 import { resolveStored } from "@/components/PlacePhoto";
 import { thumbUrl } from "@/lib/imageUrl";
 import { categoryIconSrc } from "@/lib/placeCategoryIcon";
-import { localizeTag, verdictOf } from "@/lib/routeTags";
 import { subcategoryLabelLocalized } from "@/lib/categories";
 import TrasaBigCard from "@/components/home/TrasaBigCard";
 import { buildShareTargets, ShareTargetButton } from "@/components/share/shareTargets";
@@ -66,7 +65,7 @@ function Footer({ avatars, label, sub, tone }: {
 // Arkusz: naglowek + podglad + kanaly. Karta (children) jest zaprojektowana na CALY ekran, wiec
 // w podgladzie skalujemy ja transformem - dzieki temu miniatura jest co do piksela tym samym, co
 // user zobaczy po rozwinieciu, bez drugiego zestawu rozmiarow do utrzymania.
-type StripItem = { name: string; photo?: string | null; icon: string; verdict?: string | null; category?: string | null };
+type StripItem = { name: string; photo?: string | null; icon: string; category?: string | null };
 
 /** Autor udostepnianej tresci - awatar z ramka w belce arkusza, po prawej od "udostępnij". */
 type SheetAuthor = { userId?: string | null; avatar?: string | null; frame?: string | null; color?: string | null };
@@ -104,9 +103,13 @@ function ShareSheet({ children, onClose, onShare, shareUrl, shareTitle, strip, s
   }, []);
 
   // Pelny ekran = sama karta, bez zadnego chrome poza krzyzykiem. To jest kadr do zrzutu.
+  // data-vaul-no-drag / data-no-drag: arkusz udostepniania renderuje sie WEWNATRZ wizytowki
+  // (drawer vaul) albo arkusza zapisu (Sheet z gestem w dol). Bez tych atrybutow przeciagniecie
+  // w dol po zoltym arkuszu zamykalo GOSPODARZA razem z nim (zgloszenie Nat 2026-09-13: po
+  // udostepnieniu nie dalo sie otworzyc kolejnej wizytowki - stary arkusz wracal w nowej).
   if (full) {
     return (
-      <div className="fixed inset-0 z-[96] animate-in fade-in duration-200">
+      <div data-vaul-no-drag data-no-drag className="fixed inset-0 z-[96] animate-in fade-in duration-200">
         {children}
         <button onClick={() => setFull(false)} aria-label={t("common:buttons.close")}
           className="absolute right-3 h-9 w-9 rounded-full bg-black/25 backdrop-blur-sm flex items-center justify-center active:scale-90 transition-transform"
@@ -130,7 +133,7 @@ function ShareSheet({ children, onClose, onShare, shareUrl, shareTitle, strip, s
     // Zolte tlo + naglowek Sigmar wg makiety Nat (Figma "[NEW] Ekrany" -> "Udostępnianie
     // wyjazdów oraz list" -> "Akcja: Udostępnij - Wyjazdy", 2026-09-08). Ekran ma wygladac jak
     // czesc marki, a nie jak systemowy arkusz - to on ma zachecac do wyslania.
-    <div className="fixed inset-0 z-[95] bg-spontaway-yellow flex flex-col animate-in fade-in duration-200 overflow-y-auto">
+    <div data-vaul-no-drag data-no-drag className="fixed inset-0 z-[95] bg-spontaway-yellow flex flex-col animate-in fade-in duration-200 overflow-y-auto">
       <div className="shrink-0 flex items-center gap-2 px-4 pt-[max(12px,env(safe-area-inset-top))] pb-1">
         <button onClick={onClose} aria-label={t("common:buttons.close")}
           className="h-9 w-9 rounded-full flex items-center justify-center active:scale-90 transition-transform">
@@ -198,9 +201,7 @@ function ShareSheet({ children, onClose, onShare, shareUrl, shareTitle, strip, s
                 <div className="flex h-[80px] min-w-0 flex-1 flex-col justify-between py-0.5">
                   <p className="line-clamp-2 text-[14px] font-bold leading-[1.19] text-black">{it.name}</p>
                   <div className="flex items-center justify-between gap-2">
-                    {it.verdict
-                      ? <span className="truncate rounded-full bg-spontaway-yellow px-2.5 py-1 text-[11px] font-medium text-spontaway-brown">{it.verdict}</span>
-                      : <span />}
+                    <span />
                     {it.category && <span className="shrink-0 text-[11px] font-medium text-[#666]">{it.category}</span>}
                   </div>
                 </div>
@@ -367,7 +368,7 @@ export function ShareCardTrip({ title, city, pins, cover, onClose, onShare, shar
   photoFor?: (pin: any) => string | null;
 }) {
   const { t } = useTranslation("sharing");
-  // Pasek miejsc pod podgladem: pierwsze przystanki z werdyktem i kategoria.
+  // Pasek miejsc pod podgladem: pierwsze przystanki z kategoria.
   const strip = pins.slice(0, 8).map((p: any) => ({
     name: p.place_name ?? "",
     // Ta sama regula co w wierszu wyjazdu: najpierw wlasne zdjecia pinu, a gdy ich nie ma -
@@ -376,9 +377,6 @@ export function ShareCardTrip({ title, city, pins, cover, onClose, onShare, shar
     // 2026-09-09): liczyl sie tylko `photo_url`/`images`, bez `user_photo_urls` i bez galerii.
     photo: thumbUrl(rowOwnPhotos(p)[0] ?? photoFor?.(p) ?? null, 160),
     icon: categoryIconSrc(p.category ?? null),
-    verdict: (Array.isArray(p.tags) ? p.tags : []).find((tg: string) => verdictOf(tg))
-      ? localizeTag((Array.isArray(p.tags) ? p.tags : []).find((tg: string) => verdictOf(tg))!)
-      : null,
     // "other" to wartosc techniczna z bazy, nie etykieta - bez tego na karcie widac
     // dosłownie "other" (zlapane na zrzucie).
     category: p.category && p.category !== "other" ? subcategoryLabelLocalized(p.category) : null,

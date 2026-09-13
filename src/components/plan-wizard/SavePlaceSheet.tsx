@@ -161,7 +161,7 @@ export default function SavePlaceSheet({
 
   // "Udostępnij to miejsce" - cala logika (zdjecia, migawka, link, arkusz) w usePlaceShare,
   // wspolnym z wizytowka (PlaceSwiperDetail).
-  const placeShare = usePlaceShare(city);
+  const placeShare = usePlaceShare(city, { hostOpen: open });
   const onShare = () => { if (place) void placeShare.start(place as SharePlaceInput); };
 
   // Miniatura listy prowadzi do samej listy - arkusz zamykamy, zeby po powrocie nie wisial

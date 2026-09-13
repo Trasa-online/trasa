@@ -257,7 +257,7 @@ const PlaceSwiperDetail = ({
   const handleAdd = () => { if (added) return; haptics.light(); onAdd?.(); onOpenChange(false); };
   // Udostepnianie miejsca prosto z wizytowki (zolte kolko obok "Zapisz to miejsce", prosba Nat
   // 2026-09-13) - ta sama logika, co w arkuszu zapisu (usePlaceShare).
-  const placeShare = usePlaceShare(city ?? ep?.city ?? null);
+  const placeShare = usePlaceShare(city ?? ep?.city ?? null, { hostOpen: open });
   const handleShare = () => {
     if (!ep) return;
     haptics.light();

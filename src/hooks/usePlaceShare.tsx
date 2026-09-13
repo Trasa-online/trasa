@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -50,13 +50,22 @@ type ShareState = { place: MockPlace; url: string; photos: string[]; snapId: str
 const usable = (u: unknown): u is string => typeof u === "string" && /^(https?:|\/api\/)/.test(u) && !u.includes("picsum");
 const list = (v: unknown): string[] => (Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : []);
 
-export function usePlaceShare(contextCity?: string | null) {
+export function usePlaceShare(contextCity?: string | null, opts?: {
+  /** Czy gospodarz (wizytowka / arkusz zapisu) jest otwarty. `false` ZAMYKA arkusz udostepniania:
+   *  bez tego stan hooka przezywal zamkniecie gospodarza i przy nastepnym otwarciu (inne miejsce)
+   *  stary arkusz wracal na wierzch - "nie moge wejsc w wizytowke" (zgloszenie Nat 2026-09-13). */
+  hostOpen?: boolean;
+}) {
   const { t } = useTranslation("plan");
   const { user } = useAuth();
   const share = useShare();
   const [state, setState] = useState<ShareState | null>(null);
   const [loading, setLoading] = useState(false);
   const [source, setSource] = useState<SharePlaceInput | null>(null);
+  const hostOpen = opts?.hostOpen;
+  useEffect(() => {
+    if (hostOpen === false) { setState(null); setSource(null); }
+  }, [hostOpen]);
 
   const systemShare = async (place: SharePlaceInput, url: string) => {
     const res = await share({ title: place.place_name, text: place.place_name, url });
@@ -169,5 +178,5 @@ export function usePlaceShare(contextCity?: string | null) {
     </Suspense>
   ) : null;
 
-  return { start, loading, sheet, open: !!state, canShare: !!user };
+  return { start, loading, sheet, open: !!state, canShare: !!user, close };
 }
