@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { checkUsername, cleanUsername, escapeLike, usernameKey, type UsernameProblem } from "@/lib/usernameRules";
+import { checkUsername, cleanUsername, escapeLike, usernameKey, type UsernameProblem, checkFirstName, FIRST_NAME_MAX, type FirstNameProblem } from "@/lib/usernameRules";
 import { avatarSrc } from "@/lib/avatar";
 import { useNavigate, Link } from "react-router-dom";
 import { goBackOr } from "@/hooks/useGoBack";
@@ -620,6 +620,8 @@ const Settings = () => {
     return () => clearTimeout(tmr);
   }, [username, originalUsername, user?.id]);
   const usernameBlocked = uStatus !== "idle" && uStatus !== "ok";
+  // Imie: te same reguly, co nazwa (limit 30, litery, wulgaryzmy) - patrz checkFirstName.
+  const firstNameProblem: FirstNameProblem | null = firstName.trim() ? checkFirstName(firstName) : null;
 
   const updateProfileMutation = useMutation({
     mutationFn: async () => {
@@ -627,7 +629,7 @@ const Settings = () => {
         .from("profiles")
         // trim OBOWIAZKOWY: bez niego "dagusiia " wchodzilo do bazy razem ze spacja, a profil
         // publiczny (szukany po dokladnym username z adresu) przestawal sie otwierac.
-        .update({ first_name: firstName.trim(), username: cleanUsername(username), avatar_url: avatarUrl, bio: bio.trim() || null } as any)
+        .update({ first_name: cleanUsername(firstName), username: cleanUsername(username), avatar_url: avatarUrl, bio: bio.trim() || null } as any)
         .eq("id", user?.id);
       if (error) throw error;
     },
@@ -640,6 +642,7 @@ const Settings = () => {
     onError: (err: any) => {
       if (err?.code === "23505") { setUStatus("taken"); toast.error(t("username_taken")); return; }
       if (String(err?.message ?? "").includes("username_not_allowed")) { setUStatus("banned"); toast.error(t("username_banned")); return; }
+      if (String(err?.message ?? "").includes("first_name_not_allowed")) { toast.error(t("first_name_status.banned")); return; }
       toast.error(t("toast_save_error"));
     },
   });
@@ -765,14 +768,23 @@ const Settings = () => {
         {/* Profile fields */}
         <div className="bg-card border border-border/40 rounded-2xl p-4 space-y-4">
           <div className="space-y-1.5">
-            <Label htmlFor="first_name">{t("first_name")}</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="first_name">{t("first_name")}</Label>
+              <span className="text-xs text-muted-foreground/70 tabular-nums">{firstName.length}/{FIRST_NAME_MAX}</span>
+            </div>
             <Input
               id="first_name"
               value={firstName}
-              onChange={(e) => setFirstName(e.target.value)}
+              onChange={(e) => setFirstName(e.target.value.slice(0, FIRST_NAME_MAX))}
+              maxLength={FIRST_NAME_MAX}
+              autoCapitalize="words"
+              autoCorrect="off"
               placeholder={t("first_name_placeholder")}
               className="bg-background"
             />
+            {firstNameProblem && (
+              <p className="text-xs leading-snug text-destructive">{t(`first_name_status.${firstNameProblem}`)}</p>
+            )}
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="username">{t("username")}</Label>
@@ -809,7 +821,7 @@ const Settings = () => {
           </div>
           <button
             onClick={() => updateProfileMutation.mutate()}
-            disabled={updateProfileMutation.isPending || usernameBlocked}
+            disabled={updateProfileMutation.isPending || usernameBlocked || !!firstNameProblem}
             className="w-full py-3 rounded-2xl bg-primary hover:bg-primary/90 text-white font-semibold text-sm transition-colors disabled:opacity-50"
           >
             {updateProfileMutation.isPending ? t("saving") : t("save_changes")}

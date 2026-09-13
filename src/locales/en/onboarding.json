@@ -84,6 +84,13 @@
       "chars": "Letters, digits and . _ - only (no spaces)",
       "banned": "That name is not allowed",
       "reserved": "That name is reserved"
+    },
+    "first_status": {
+      "empty": "Enter your first name",
+      "short": "At least 2 characters",
+      "long": "The name can have at most 30 characters",
+      "chars": "Letters only (a hyphen or apostrophe is fine)",
+      "banned": "That name is not allowed"
     }
   },
   "toast": {

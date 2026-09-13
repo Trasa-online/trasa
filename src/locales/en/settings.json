@@ -114,5 +114,12 @@
     "presets_title": "Or pick a base avatar",
     "presets_desc": "A plain colour instead of a photo - in one of the brand shades.",
     "avatar_saved": "Avatar set"
+  },
+  "first_name_status": {
+    "empty": "Enter your first name",
+    "short": "At least 2 characters",
+    "long": "The name can have at most 30 characters",
+    "chars": "Letters only (a hyphen or apostrophe is fine)",
+    "banned": "That name is not allowed"
   }
 }

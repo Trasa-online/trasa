@@ -7,7 +7,7 @@
 // (migracja 20260907b). Tutaj jest to samo, zeby user zobaczyl blad OD RAZU przy pisaniu,
 // a nie dopiero po tapnieciu "Zapisz".
 
-import { BANNED_SUBSTRING, BANNED_EXACT, normalizeForMatch } from "@/lib/profanity";
+import { BANNED_SUBSTRING, BANNED_EXACT, normalizeForMatch, containsProfanity } from "@/lib/profanity";
 
 export { normalizeForMatch };
 
@@ -65,3 +65,23 @@ export const usernameKey = (raw: string) => cleanUsername(raw).toLowerCase();
 
 /** "%" i "_" maja w LIKE znaczenie specjalne, a w nazwie uzytkownika to zwykle znaki. */
 export const escapeLike = (v: string) => v.replace(/[%_\\]/g, "\\$&");
+
+// ── Imie ──────────────────────────────────────────────────────────────────────
+// Imie NIE bylo sprawdzane w ogole (2026-09-14: "Cipa" przeszlo w onboardingu). Ta sama
+// lista wulgaryzmow co przy nazwie i tytulach (profanity.ts + wyzwalacz reject_banned_first_name
+// w bazie, migracja 20260914b), do tego limit i dozwolone znaki: litery, spacja, myslnik,
+// apostrof ("Anna-Maria", "O'Neil") - bez cyfr i emoji.
+export const FIRST_NAME_MIN = 2;
+export const FIRST_NAME_MAX = 30;
+
+export type FirstNameProblem = "empty" | "short" | "long" | "chars" | "banned";
+
+export function checkFirstName(raw: string): FirstNameProblem | null {
+  const value = cleanUsername(raw);
+  if (!value) return "empty";
+  if (value.length < FIRST_NAME_MIN) return "short";
+  if (value.length > FIRST_NAME_MAX) return "long";
+  if (!/^[\p{L}][\p{L}'’-]*( [\p{L}][\p{L}'’-]*)*$/u.test(value)) return "chars";
+  if (containsProfanity(value)) return "banned";
+  return null;
+}

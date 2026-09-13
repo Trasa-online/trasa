@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { checkUsername, cleanUsername, escapeLike, type UsernameProblem } from "@/lib/usernameRules";
+import { checkUsername, cleanUsername, escapeLike, checkFirstName, FIRST_NAME_MAX, type UsernameProblem } from "@/lib/usernameRules";
 import { avatarSrc } from "@/lib/avatar";
 import AvatarPresetRow from "@/components/profile/AvatarPresetRow";
 import { ArrowLeft, Check, Plus, Loader2 } from "lucide-react";
@@ -150,11 +150,14 @@ const OnboardingFlow = ({ onDone }: Props) => {
     if (!user || uStatus !== "ok" || savingU) return;
     setSavingU(true);
     const { error } = await supabase.from("profiles")
-      .update({ username: cleanUsername(username), first_name: firstName.trim() || null } as any)
+      .update({ username: cleanUsername(username), first_name: cleanUsername(firstName) || null } as any)
       .eq("id", user.id);
     setSavingU(false);
     if (error) {
       if ((error as any).code === "23505") { setUStatus("taken"); return; }
+      // Baza ma te same reguly (wyzwalacze) - jej odmowa to komunikat, nie cisza.
+      if (String((error as any).message ?? "").includes("first_name_not_allowed")) { toast.error(t("name.first_status.banned")); return; }
+      if (String((error as any).message ?? "").includes("username_not_allowed")) { setUStatus("banned"); return; }
       toast.error(t("toast.name_failed"));
       return;
     }
@@ -254,12 +257,14 @@ const OnboardingFlow = ({ onDone }: Props) => {
   const [termsAccepted, setTermsAccepted] = useState(false);
 
   // CTA per krok
-  // Profil: zdjecie/awatar jest opcjonalne, reszta (imie, nazwa, plec) wymagana.
+  // Profil: zdjecie/awatar jest opcjonalne, reszta (imie, nazwa, plec) wymagana. Imie przechodzi
+  // przez te same reguly, co nazwa (limit, znaki, wulgaryzmy) - patrz checkFirstName.
+  const firstNameProblem = checkFirstName(firstName);
   const canNext =
     stepName === "welcome" ? termsAccepted :
     stepName === "source" ? (!!source && (source !== "other" || sourceOther.trim().length > 0)) :
     stepName === "goals" ? (goals.length > 0 && (!goals.includes("other") || goalsOther.trim().length > 0)) :
-    stepName === "profile" ? (uStatus === "ok" && firstName.trim().length >= 2 && !!gender && !savingU) :
+    stepName === "profile" ? (uStatus === "ok" && !firstNameProblem && !!gender && !savingU) :
     true;
 
   const onPrimary = () => {
@@ -441,17 +446,27 @@ const OnboardingFlow = ({ onDone }: Props) => {
             </div>
             <div className="mt-4 space-y-4 pb-4">
               <div>
-                <label className="block text-sm font-semibold mb-2 px-1">{t("name.first_label")}</label>
+                <div className="flex items-center justify-between mb-2 px-1">
+                  <label className="block text-sm font-semibold">{t("name.first_label")}</label>
+                  <span className="text-xs text-muted-foreground">{firstName.length}/{FIRST_NAME_MAX}</span>
+                </div>
                 <div className="rounded-2xl border border-border bg-white px-4 focus-within:ring-2 focus-within:ring-orange-500/60 transition-shadow">
                   <input
                     value={firstName}
                     {...focusProps}
-                    onChange={(e) => setFirstName(e.target.value.slice(0, 40))}
+                    onChange={(e) => setFirstName(e.target.value.slice(0, FIRST_NAME_MAX))}
                     autoCapitalize="words"
                     autoCorrect="off"
+                    maxLength={FIRST_NAME_MAX}
                     placeholder={t("name.first_placeholder")}
                     className="w-full bg-transparent py-3.5 px-1 text-lg outline-none text-foreground placeholder:text-muted-foreground/50"
                   />
+                </div>
+                {/* Komunikat dopiero, gdy user cos wpisal - puste pole to nie blad, tylko poczatek. */}
+                <div className="h-5 mt-1.5 px-1 text-sm">
+                  {firstName.trim() && firstNameProblem && firstNameProblem !== "empty" && (
+                    <span className="text-red-600">{t(`name.first_status.${firstNameProblem}`)}</span>
+                  )}
                 </div>
               </div>
               <div>

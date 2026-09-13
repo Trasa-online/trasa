@@ -84,6 +84,13 @@
       "chars": "Dozwolone są litery, cyfry oraz . _ -   (bez spacji)",
       "banned": "Ta nazwa jest niedozwolona",
       "reserved": "Ta nazwa jest zarezerwowana"
+    },
+    "first_status": {
+      "empty": "Wpisz imię",
+      "short": "Imię musi mieć co najmniej 2 znaki",
+      "long": "Imię może mieć najwyżej 30 znaków",
+      "chars": "Imię to same litery (może być myślnik lub apostrof)",
+      "banned": "To imię jest niedozwolone"
     }
   },
   "toast": {
