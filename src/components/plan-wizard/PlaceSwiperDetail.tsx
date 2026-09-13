@@ -10,7 +10,9 @@
 
 import { useState, useEffect, useRef, type ChangeEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { MapPin, Navigation, Bookmark } from "lucide-react";
+import { MapPin, Navigation, Bookmark, Check, Plus, Share2, Loader2 } from "lucide-react";
+import { usePlaceShare } from "@/hooks/usePlaceShare";
+import { haptics } from "@/hooks/useHaptics";
 import { useDistanceReference } from "@/lib/distanceReference";
 import { haversineKm, formatDistance } from "@/lib/distance";
 import { Drawer as VaulDrawer } from "vaul";
@@ -60,6 +62,12 @@ interface PlaceSwiperDetailProps {
   onSkip?: (() => void) | undefined;
   /** Czy miejsce jest juz zapisane - stan zakladki na hero. */
   saved?: boolean;
+  /** "Dodaj to miejsce" (prosba Nat 2026-09-13): wizytowka otwarta z dodawania miejsc do wyjazdu
+   *  albo listy dostaje drugi guzik obok "Zapisz to miejsce" - dodaje do TEJ trasy/listy i zamyka
+   *  wizytowke. `added` = juz zaznaczone/juz w wyjezdzie: guzik pokazuje "Dodano" i nie reaguje
+   *  (zdjecie zaznaczenia zostaje na wierszu). */
+  onAdd?: (() => void) | undefined;
+  added?: boolean;
   skipGoogleFetch?: boolean;
   /** Data wyjazdu (YYYY-MM-DD) - agenda wydarzen pokazuje najblizsze TEJ dacie. Domyslnie dzis. */
   referenceDate?: string;
@@ -80,6 +88,8 @@ const PlaceSwiperDetail = ({
   onLike,
   onSkip,
   saved,
+  onAdd,
+  added = false,
   skipGoogleFetch = false,
   referenceDate,
   onPhotoAdded,
@@ -244,6 +254,19 @@ const PlaceSwiperDetail = ({
   }, [open, place, city, skipGoogleFetch, referenceDate]);
 
   const handleLike = () => { onLike?.(); onOpenChange(false); };
+  const handleAdd = () => { if (added) return; haptics.light(); onAdd?.(); onOpenChange(false); };
+  // Udostepnianie miejsca prosto z wizytowki (zolte kolko obok "Zapisz to miejsce", prosba Nat
+  // 2026-09-13) - ta sama logika, co w arkuszu zapisu (usePlaceShare).
+  const placeShare = usePlaceShare(city ?? ep?.city ?? null);
+  const handleShare = () => {
+    if (!ep) return;
+    haptics.light();
+    void placeShare.start({
+      place_name: ep.place_name, category: ep.category ?? null, address: ep.address ?? null, city: ep.city ?? city ?? null,
+      latitude: ep.latitude ?? null, longitude: ep.longitude ?? null, photo_url: ep.photo_url ?? null,
+      place_id: ep.id ?? null, google_place_id: (ep as any).google_place_id ?? null,
+    });
+  };
   const savedEffective = saved ?? (ep?.place_name ? isSaved(ep.place_name) : false);
   const handleSkip = () => { onSkip?.(); onOpenChange(false); };
   // Zapis z zakladki na hero - zapisuje BEZ zamykania wizytowki (stan zakladki sie aktualizuje).
@@ -465,9 +488,9 @@ const PlaceSwiperDetail = ({
         </div>
 
         {/* Zapisz / Odrzuc CTA - fixed bottom. Guzik 44px (h-11), pt 12px, pb 16px do krawedzi. */}
-        {(onLike || onSkip) && (
+        {(onLike || onSkip || onAdd) && (
           <div className="shrink-0 px-4 pt-3 pb-[max(16px,env(safe-area-inset-bottom,0px))] border-t border-black/5 bg-[#FEFEFE]">
-            <div className="flex gap-3">
+            <div className="flex gap-2.5">
               {onSkip && (
                 <button
                   onClick={handleSkip}
@@ -477,17 +500,39 @@ const PlaceSwiperDetail = ({
                 </button>
               )}
               {onLike && (
+                /* Z guzikiem "Dodaj" obok zapis schodzi na drugi plan (szary fill) - w dodawaniu
+                   miejsc do wyjazdu/listy glowna akcja to dodanie, nie zapis do wlasnych list. */
                 <button
                   onClick={handleLike}
-                  className="flex-1 h-11 rounded-full bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.97] transition-transform"
+                  className={`flex-1 h-11 rounded-full font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.97] transition-transform ${onAdd ? "bg-secondary text-secondary-foreground shadow-sm" : "bg-primary text-white"}`}
                 >
                   {t("save_place")}
                   <Bookmark className="h-4 w-4" strokeWidth={2.2} />
                 </button>
               )}
+              {onAdd && (
+                <button
+                  onClick={handleAdd}
+                  disabled={added}
+                  aria-disabled={added}
+                  className={`flex-1 h-11 rounded-full font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.97] transition-transform ${added ? "bg-secondary text-secondary-foreground shadow-sm" : "bg-primary text-white"}`}
+                >
+                  {added ? t("added_place") : t("add_place")}
+                  {added ? <Check className="h-4 w-4" strokeWidth={2.6} /> : <Plus className="h-4 w-4" strokeWidth={2.6} />}
+                </button>
+              )}
+              {/* Udostepnij = zolte kolko z brazowa ikona (jak przy "Zapisz ten wyjazd"). Tylko zalogowani -
+                  migawka miejsca wymaga autora. */}
+              {onLike && placeShare.canShare && ep && (
+                <button onClick={handleShare} disabled={placeShare.loading} aria-label={t("share_place")}
+                  className="h-11 w-11 shrink-0 rounded-full bg-[#FDF184] flex items-center justify-center active:scale-90 transition-transform disabled:opacity-70">
+                  {placeShare.loading ? <Loader2 className="h-5 w-5 animate-spin text-[#5B2C06]" /> : <Share2 className="h-5 w-5 text-[#5B2C06]" strokeWidth={2.2} />}
+                </button>
+              )}
             </div>
           </div>
         )}
+        {placeShare.sheet}
         </VaulDrawer.Content>
       </VaulDrawer.Portal>
     </VaulDrawer.Root>

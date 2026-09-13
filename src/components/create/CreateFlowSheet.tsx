@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { MAX_TRIP_DAYS } from "@/lib/tripDays";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -59,6 +60,8 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
   const [listQuery, setListQuery] = useState("");
   const [manualPlaces, setManualPlaces] = useState<PlaceForList[]>([]);
   const [detailPlace, setDetailPlace] = useState<any | null>(null);   // wizytowka miejsca (PlaceSwiperDetail)
+  // "Dodaj to miejsce" w wizytowce = toggle z wiersza, z ktorego ja otwarto (prosba Nat 2026-09-13).
+  const [detailCtx, setDetailCtx] = useState<{ onToggle: () => void; added: boolean } | null>(null);
   const [savePlace, setSavePlace] = useState<SavePlaceInput | null>(null);   // "Zapisz to miejsce" -> SavePlaceSheet
   const listSearchRef = useRef<HTMLInputElement>(null);
   const pickActive = open && step === "listPick";
@@ -115,7 +118,7 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
   const removeManual = (p: PlaceForList) => setManualPlaces((prev) => prev.filter((m) => keyOfPlace(m) !== keyOfPlace(p)));
 
   // Wizytowka miejsca (PlaceSwiperDetail) - mapowanie zapisanego/googlowego miejsca na MockPlace.
-  const openDetail = (p: any) => { haptics.light(); setDetailPlace({
+  const openDetail = (p: any, ctx?: { onToggle: () => void; selected: boolean }) => { haptics.light(); setDetailCtx(ctx ? { onToggle: ctx.onToggle, added: ctx.selected } : null); setDetailPlace({
     id: p.place_id || p.id || p.place_name,
     place_name: p.place_name,
     category: (p.category || "other"),
@@ -148,7 +151,7 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
   // kolko po prawej = dodaj/usun z listy. Wiecej pozycji sie miesci niz w siatce.
   const renderListRow = (opts: { rowKey: string; place: any; subtitle?: string | null; onToggle: () => void; selected: boolean }) => (
     <div key={opts.rowKey} className="w-full flex items-center gap-2 rounded-2xl bg-secondary/60 pl-3 pr-2.5 py-2.5">
-      <button onClick={() => openDetail(opts.place)} className="flex items-center gap-3 flex-1 min-w-0 text-left active:opacity-80 transition-opacity">
+      <button onClick={() => openDetail(opts.place, { onToggle: opts.onToggle, selected: opts.selected })} className="flex items-center gap-3 flex-1 min-w-0 text-left active:opacity-80 transition-opacity">
         <span className="h-11 w-11 rounded-xl bg-[#fcede3] flex items-center justify-center shrink-0">
           <img src={categoryIconSrc(opts.place.category)} alt="" className="w-1/2 opacity-90" draggable={false} />
         </span>
@@ -419,7 +422,7 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
                 {t("pick_date_desc")}
               </p>
               <FullCalendarPicker
-                maxDays={14}
+                maxDays={MAX_TRIP_DAYS}
                 allowPast={tripMode === "past"}
                 onRangeChange={(d, numDays) => { setTripStart(d); setTripDays(Math.max(1, numDays)); }}
                 onConfirm={(d, numDays) => { setTripStart(d); setTripDays(numDays); afterDates(d, numDays); }}
@@ -462,7 +465,9 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
       </SheetContent>
     </Sheet>
     {/* Wizytowka miejsca (klik w wiersz). Vaul-drawer nakłada się na arkusz tworzenia. */}
-    <PlaceSwiperDetail open={!!detailPlace} onOpenChange={(o) => { if (!o) setDetailPlace(null); }} place={detailPlace} city={detailPlace?.city || listCountries[0] || ""}
+    <PlaceSwiperDetail open={!!detailPlace} onOpenChange={(o) => { if (!o) { setDetailPlace(null); setDetailCtx(null); } }} place={detailPlace} city={detailPlace?.city || listCountries[0] || ""}
+      onAdd={detailCtx ? () => detailCtx.onToggle() : undefined}
+      added={!!detailCtx?.added}
       onLike={user && detailPlace ? () => setSavePlace({
         place_name: detailPlace.place_name, category: detailPlace.category ?? null, address: detailPlace.address || null,
         city: detailPlace.city ?? null,

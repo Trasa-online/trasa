@@ -268,10 +268,14 @@ interface SwipeCardProps {
   // akcje (cofnij/zapisz/rozwin) jako pionowa kolumna po prawej (kciuk). scroll = nastepna karta.
   scrollMode?: boolean;
   saved?: boolean; // scrollMode: czy miejsce juz zapisane (+ pokazuje stan zapisane)
+  // Karta w arkuszu UDOSTEPNIANIA miejsca (prosba Nat 2026-09-13): samo zdjecie, kategoria,
+  // nazwa i adres - bez chipa dystansu, cen, tagow i kolumny zapisz/rozwin (odbiorca linku
+  // i tak ich nie dostaje, a na podgladzie tylko zaslanialy zdjecie).
+  shareMode?: boolean;
 }
 
 
-export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo, onPhotoFetched, isTop, offset, skipGoogleFetch = false, onEnableDistance, scrollMode = false, saved = false }: SwipeCardProps) => {
+export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo, onPhotoFetched, isTop, offset, skipGoogleFetch = false, onEnableDistance, scrollMode = false, saved = false, shareMode = false }: SwipeCardProps) => {
   const { t } = useTranslation("plan");
   const [imgFailed, setImgFailed] = useState(false);
   const [videoFailed, setVideoFailed] = useState(false);
@@ -508,13 +512,13 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
       })()}
 
       {/* Chip dystansu - prawy gorny rog, nad paginacja */}
-      {isTop && distanceLabel && (
+      {isTop && !shareMode && distanceLabel && (
         <div className="absolute top-4 right-4 z-10 flex items-center gap-1 bg-black/45 backdrop-blur-sm rounded-full px-2.5 py-1 shadow-sm">
           <Navigation className="h-3 w-3 text-white/90" />
           <span className="text-white text-[11px] font-semibold">{distanceLabel}</span>
         </div>
       )}
-      {isTop && !distanceLabel && showEnableDistance && onEnableDistance && (
+      {isTop && !shareMode && !distanceLabel && showEnableDistance && onEnableDistance && (
         <button
           onPointerDown={(e) => e.stopPropagation()}
           onClick={(e) => { e.stopPropagation(); onEnableDistance(); }}
@@ -526,7 +530,7 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
       )}
 
       {/* Content */}
-      <div className={cn("absolute bottom-0 left-0 right-0 px-5 pt-5 space-y-2", scrollMode ? "pb-7 pr-[72px]" : "pb-[76px]")}>
+      <div className={cn("absolute bottom-0 left-0 right-0 px-5 pt-5 space-y-2", scrollMode ? (shareMode ? "pb-7" : "pb-7 pr-[72px]") : "pb-[76px]")}>
 
         {/* Business logo - 1:1 z BusinessCardPreview (10x10, bez handle, jako osobny element nad nazwa) */}
         {place.businessLogoUrl !== undefined && place.businessLogoUrl && (
@@ -540,7 +544,7 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
 
         {/* Meta row */}
         <div className="flex items-center gap-3">
-          {place.price_level && (
+          {place.price_level && !shareMode && (
             <span className="text-white/60 text-sm">{PRICE_DOTS(place.price_level)}</span>
           )}
           {displayAddress && (
@@ -563,7 +567,7 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
         {/* Vibe tags + info button row */}
         <div className="flex items-center justify-between gap-2 pt-0.5">
           <div className="flex gap-1.5 flex-wrap">
-            {displayTags.map((tag) => (
+            {!shareMode && displayTags.map((tag) => (
               <span key={tag} className="text-[11px] font-medium text-white/80 bg-white/15 backdrop-blur-sm px-2.5 py-1 rounded-full">
                 {tag}
               </span>
@@ -627,7 +631,7 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
 
       {/* Kolumna akcji po prawej (scrollMode, wg Figmy): zapisz (zakladka) / rozwin (^).
           W obszarze kciuka. scroll = nastepna karta (bez skip/add/cofnij - cofasz scrollem w gore). */}
-      {scrollMode && (
+      {scrollMode && !shareMode && (
         // Ujednolicone z karta Tras (TrasaBigCard): biale kolka, ikona foreground, fill przy zapisie.
         <div className="absolute right-3 bottom-4 z-20 flex flex-col gap-3">
           <button

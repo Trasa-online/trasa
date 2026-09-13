@@ -25,11 +25,16 @@ const distKm = (a: { lat: number; lng: number }, b: { lat: number; lng: number }
 
 // Wspoldzielona wyszukiwarka Google Places (textsearch przez proxy, debounce 350ms, >=2 znaki).
 //
-// Zasieg (2026-09-10): `countries` to nowe zrodlo prawdy - wyjazd opisuja kraje, nie miasto.
-// Kazdy kraj to OSOBNE zapytanie ("ramen Japonia", "ramen Korea Poludniowa"), bo Google nie
-// rozumie listy krajow w jednej frazie - zwrocilby smiec albo nic. Limit trzech krajow trzyma
-// koszt w ryzach; przy wiecej i tak liczy sie to, co user wpisal, a nie pelna lista.
-// `city` zostaje dla starych wyjazdow (bez krajow), `center` + `scopeKm` dla zawezenia miejskiego.
+// Kolejnosc zrodel (przebudowa 2026-09-13 - ta sama, co w route/AddPlaceSheet; zgloszenie Nat:
+// "BADI cafe" w liscie z Warszawy dawal cukiernie z Kudowy-Zdroju):
+//  1. MIASTO najpierw: "<fraza> <miasto>" + nakierowanie na `center` (Google szuka nazwy
+//     w poblizu). Wczesniej zasieg krajowy WYPIERAL miasto ("BADI cafe Polska") i Google
+//     oddawal przypadkowe lokale z calego kraju.
+//  2. KRAJE tylko gdy sa potrzebne: brak miasta, wyjazd po kilku krajach albo miasto oddalo
+//     mniej niz dwa wyniki. Kazdy kraj to OSOBNE, platne zapytanie (Google nie rozumie listy
+//     krajow w jednej frazie), wiec nie dokladamy ich "na wszelki wypadek". Limit dwoch.
+//  3. Bliskie `center` (scopeKm) ida na gore, dalekie na dol - KOLEJNOSC, nie odsiew: twardy
+//     filtr konczyl sie pusta lista, gdy srodek byl zly albo nieznany.
 export function usePlaceSearch(
   query: string,
   opts?: { city?: string | null; countries?: string[] | null; center?: { lat: number; lng: number } | null; scopeKm?: number; enabled?: boolean },
@@ -52,16 +57,29 @@ export function usePlaceSearch(
     setSearching(true);
     const t = setTimeout(async () => {
       try {
-        const countries = countriesKey ? countriesKey.split("|").slice(0, 3) : [];
-        const scopes = countries.length ? countries : [city ?? ""];
-        const responses = await Promise.all(scopes.map((scope) =>
+        const q = query.trim();
+        const ask = (scope: string, bias?: { lat: number; lng: number } | null) =>
           supabase.functions.invoke("google-places-proxy", {
-            body: { action: "textsearch", query: `${query} ${scope}`.trim() },
-          })));
+            body: { action: "textsearch", query: `${q} ${scope}`.trim(), ...(bias ? { latitude: bias.lat, longitude: bias.lng } : {}) },
+          });
+        const responses: any[] = [];
+        let cityHits = 0;
+        if (city) {
+          const r = await ask(city, center);
+          responses.push(r);
+          cityHits = (((r.data as any)?.results ?? []) as any[]).length;
+        }
+        if (!alive) return;
+        const countries = countriesKey ? countriesKey.split("|").slice(0, 2) : [];
+        if (countries.length && (!city || countries.length > 1 || cityHits < 2)) {
+          responses.push(...(await Promise.all(countries.map((scope) => ask(scope)))));
+        } else if (!city && !countries.length) {
+          responses.push(await ask("", center));
+        }
         if (!alive) return;
         setBlocked(responses.some((r) => !!(r.data as any)?.quota_exceeded));
-        // Scalanie wynikow z kilku krajow: dedup po nazwie+adresie, kolejnosc zapytan
-        // (czyli kolejnosc krajow wybranych przez usera) rozstrzyga remisy.
+        // Scalanie wynikow: dedup po nazwie+adresie, kolejnosc zapytan (miasto, potem kraje
+        // w kolejnosci wybranej przez usera) rozstrzyga remisy.
         const seen = new Set<string>();
         const all = responses.flatMap((r) => ((r.data as any)?.results ?? []) as any[])
           .filter((r) => {
@@ -70,14 +88,15 @@ export function usePlaceSearch(
             seen.add(k);
             return true;
           });
-        // Filtr promieniem ma sens tylko przy zasiegu MIEJSKIM. Przy krajach centroida
-        // trasy lezy gdzies w polowie drogi i wycinalaby poprawne wyniki.
-        const scoped = center && !countries.length
-          ? all.filter((r) => r.latitude == null || r.longitude == null || distKm(center, { lat: r.latitude, lng: r.longitude }) <= scopeKm)
-          : all;
-        setResults(scoped.slice(0, 6).map((r) => ({
+        const near = (r: any) => !center || r.latitude == null || r.longitude == null
+          || distKm(center, { lat: r.latitude, lng: r.longitude }) <= scopeKm;
+        const ordered = [...all.filter(near), ...all.filter((r) => !near(r))];
+        setResults(ordered.slice(0, 6).map((r) => ({
           place_name: r.name, address: r.full_address ?? null, latitude: r.latitude ?? null, longitude: r.longitude ?? null,
-          category: categoryFromGoogleTypes(r.types), photo_url: null, place_id: null, google_place_id: null, rating: null,
+          category: categoryFromGoogleTypes(r.types), photo_url: null, place_id: null,
+          // Identyfikator Google jedzie dalej - po nim zapis laczy miejsce z rekordem `places`
+          // i wizytowka biznesowa (tak samo, jak w route/AddPlaceSheet).
+          google_place_id: r.place_id ?? null, rating: null,
         })));
       } catch { if (alive) setResults([]); }
       finally { if (alive) setSearching(false); }

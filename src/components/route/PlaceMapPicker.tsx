@@ -20,8 +20,10 @@
 //  1. Tapniecie w ETYKIETE lokalu na podkladzie: Maps JS daje placeId za darmo, my dociagamy
 //     tylko nazwe/adres/wspolrzedne (Place Details, pola podstawowe, cache 7 dni w proxy)
 //     i pokazujemy ten JEDEN lokal do potwierdzenia. Zero dwuznacznosci co do promienia.
-//  2. "+" z wpisana nazwa: JEDNO Text Search nakierowane na pinezke (bias 3 km), kandydaci
-//     posortowani od najblizszych pinezce, a na koncu zawsze "dodaj jako wlasne miejsce".
+//  2. "+" z wpisana nazwa ALBO adresem: JEDNO Text Search nakierowane na pinezke (bias 3 km),
+//     kandydaci posortowani od najblizszych pinezce, mapa jedzie na pierwszy z nich, a na
+//     koncu zawsze "dodaj jako wlasne miejsce". Adres Google zwraca jako zwykly wynik
+//     (types street_address/premise) - dla usera to "punkt na mapie", ktory moze nazwac.
 // Przesuwanie i przyblizanie mapy nie kosztuje nic. Pinezka na srodku zostaje: to ona
 // nakierowuje wyszukiwanie po nazwie i daje wspolrzedne miejscu recznemu (adres = "", nie null).
 
@@ -182,16 +184,27 @@ function PickerBody({ city, center, onPick, onClose }: {
         })
         .slice(0, 3);
       if (!hits.length) { addManual(); return; }
+      // Mapa jedzie na pierwszy wynik (prosba Nat 2026-09-13: szukanie po ADRESIE): user od
+      // razu widzi, gdzie to jest, a pinezka laduje na wyszukanym punkcie - wiec "dodaj jako
+      // wlasne miejsce" dostaje wspolrzedne adresu, nawet gdy zaden kandydat nie pasuje.
+      const top = hits[0];
+      if (map && top.latitude != null && top.longitude != null) map.panTo({ lat: top.latitude, lng: top.longitude });
       setCandidates(hits.map((h) => toPlace(h, city)));
     } catch { addManual(); }
     finally { setMatching(false); }
   };
 
+  // "Moja lokalizacja": ZAWSZE swiezy odczyt GPS. Wczesniej guzik bral najpierw cache
+  // (getCachedCoords) - a ten zyje w localStorage miedzy sesjami, wiec mapa jechala tam,
+  // gdzie user byl OSTATNIO, nie gdzie jest (zgloszenie Nat 2026-09-13). Cache zostaje tylko
+  // jako awaria, gdy swiezy odczyt sie nie uda (brak zgody, timeout).
   const locateMe = useCallback(async () => {
     setLocating(true);
-    const coords = getCachedCoords() ?? (await requestLocation(true));
+    const fresh = await requestLocation(true, { highAccuracy: true });
+    const coords = fresh ?? getCachedCoords();
     setLocating(false);
-    if (!coords || !map) return;
+    if (!coords || !map) { if (!coords) haptics.error(); return; }
+    haptics.light();
     map.panTo({ lat: coords.lat, lng: coords.lng });
     map.setZoom(17);
   }, [map]);

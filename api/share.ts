@@ -473,9 +473,14 @@ export default async function handler(req: Request): Promise<Response> {
     // Migawka wskazujaca na wizytowke (place_id) dostaje jej pelne dane (logo, promocja, tagi).
     let [pl] = await rest(`places?id=eq.${id}&select=${PLACE_SEL}&limit=1`);
     let fromSnap = false;
+    // Zdjecie WYBRANE przez udostepniajacego (migawka, 2026-09-13): w aplikacji tapniecie w karte
+    // pozwala wskazac okladke sposrod wszystkich zdjec miejsca - strona linku ma pokazac to samo,
+    // takze gdy migawka wskazuje na wizytowke z bazy.
+    let chosenPhoto: string | null = null;
     if (!pl) {
       const [snap] = await rest(`shared_places?id=eq.${id}&select=place_id,google_place_id,place_name,address,city,category,latitude,longitude,photo_url&limit=1`);
       if (!snap) return missing();
+      chosenPhoto = typeof snap.photo_url === "string" && snap.photo_url ? snap.photo_url : null;
       if (snap.place_id) [pl] = await rest(`places?id=eq.${snap.place_id}&select=${PLACE_SEL}&limit=1`);
       if (!pl) { fromSnap = true; pl = { place_name: snap.place_name, address: snap.address, city: snap.city, category: snap.category, photo_url: snap.photo_url, gallery_urls: null, google_place_id: snap.google_place_id, business_profiles: null }; }
     }
@@ -487,7 +492,14 @@ export default async function handler(req: Request): Promise<Response> {
     // proxy Google). Migawka: photo_url to zdjecie usera z listy/wyjazdu - pelnoprawna okladka.
     const curated = typeof pl.photo_url === "string" && (fromSnap || pl.photo_url.includes("/place-photos-cache/manual/") || pl.photo_url.includes("/api/place-photo")) ? pl.photo_url : null;
     const community = await communityPhotos([placeKey(pl.google_place_id, pl.place_name)]);
-    const rawPhoto = bp?.cover_image_url || bizGallery[0] || curated || first(pl.gallery_urls) || community.get(placeKey(pl.google_place_id, pl.place_name)) || null;
+    let rawPhoto = chosenPhoto || bp?.cover_image_url || bizGallery[0] || curated || first(pl.gallery_urls) || community.get(placeKey(pl.google_place_id, pl.place_name)) || null;
+    if (!rawPhoto && pl.place_name) {
+      // Ostatnie zrodlo - zdjecia userow z OPUBLIKOWANYCH wyjazdow (pins.images / user_photo_urls),
+      // to samo, po ktore siega karta miejsca w aplikacji (fetchPlaceUserPhotos).
+      const q = `"${String(pl.place_name).replace(/["\\]/g, "")}"`;
+      const pins = await rest(`pins?place_name=eq.${encodeURIComponent(q)}&select=images,user_photo_urls,routes!inner(status)&routes.status=eq.published&limit=20`);
+      for (const p of pins) { rawPhoto = first(p.images) || first(p.user_photo_urls); if (rawPhoto) break; }
+    }
     const cover = img(rawPhoto, 1200, 630);
     const logo = img(bp?.logo_url, 112, 112);
     const icon = iconFor(pl.category);

@@ -231,24 +231,35 @@ function ShareSheet({ children, onClose, onShare, shareUrl, shareTitle, strip, s
  * DOKLADNIE ta sama karta 9:16, ktora user widzi w zakladce Miejsca (SwipeCard w trybie
  * statycznym) - odbiorca linku dostaje pod nim te sama wizytowke. Zolte tlo, "udostępnij",
  * "udostępnij link do miejsca" i rzad kanalow daje wspolny ShareSheet.
+ *
+ * Okladka do wyboru: tapniecie w karte PRZELACZA na kolejne zdjecie miejsca (`onNextPhoto`,
+ * w kolko, z delikatna haptyka) - bez osobnego arkusza wyboru i bez pigulki "zmien zdjecie"
+ * (prosba Nat 2026-09-13: zbedny krok, zbedny napis). Przy jednym zdjeciu (albo zadnym) tap
+ * nic nie robi. Karta w trybie `shareMode`: bez dystansu, cen, tagow i kolumny zapisz/rozwin.
  */
-export function ShareCardPlace({ place, city, onClose, onShare, shareUrl }: {
+export function ShareCardPlace({ place, city, photos = [], onNextPhoto, onClose, onShare, shareUrl }: {
   place: MockPlace;
   city: string;
+  /** Wszystkie zdjecia miejsca - kandydaci na okladke. */
+  photos?: string[];
+  onNextPhoto?: () => void;
   onClose: () => void;
   onShare?: () => void;
   shareUrl?: string;
 }) {
   const { t } = useTranslation("sharing");
   const noop = () => {};
+  const canPick = !!onNextPhoto && photos.length > 1;
   return (
     <ShareSheet onClose={onClose} onShare={onShare} shareUrl={shareUrl} shareTitle={place.place_name}
       plainPreview linkHeading={t("share.link_heading_place")}>
       <div className="flex h-full w-full items-center justify-center">
-        {/* SwipeCard jest `absolute inset-0` - potrzebuje pudelka 9:16 o znanej wysokosci. */}
+        {/* SwipeCard jest `absolute inset-0` - potrzebuje pudelka 9:16 o znanej wysokosci.
+            `key` = okladka: SwipeCard trzyma zdjecie w stanie z pierwszego renderu, wiec zmiana
+            okladki musi go zamontowac od nowa. */}
         <div className="relative h-full max-w-full" style={{ aspectRatio: "9 / 16" }}>
-          <SwipeCard place={place} city={city} scrollMode isTop offset={0} skipGoogleFetch
-            onLike={noop} onSkip={noop} onTap={noop} />
+          <SwipeCard key={place.photo_url || "none"} place={place} city={city} scrollMode shareMode isTop offset={0} skipGoogleFetch
+            onLike={noop} onSkip={noop} onTap={() => { if (canPick) onNextPhoto?.(); }} />
         </div>
       </div>
     </ShareSheet>
