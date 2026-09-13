@@ -63,7 +63,8 @@
     "share": "Share",
     "delete_list": "Delete list",
     "rename_list": "Rename list",
-    "list_actions": "List actions"
+    "list_actions": "List actions",
+    "list_theme": "List background"
   },
   "fallback_title": "Place list",
   "photo": "Photo",
@@ -76,5 +77,21 @@
   "new_place_badge": "new place",
   "add_place_photo": "Add a photo to this place",
   "remove_from_list": "Remove place from list",
-  "adding": "Adding…"
+  "adding": "Adding…",
+  "theme": {
+    "title": "List background",
+    "desc": "This is how your list looks in Explore. Pick a colour from the palette.",
+    "saved": "List background set",
+    "save_failed": "Could not save the background",
+    "default_hint": "The selected colour is the automatic default.",
+    "brick": "Brick",
+    "terracotta": "Terracotta",
+    "peach": "Peach",
+    "blush": "Blush",
+    "pink": "Pink",
+    "yellow": "Yellow",
+    "gold": "Gold",
+    "orange": "Orange",
+    "brown": "Brown"
+  }
 }

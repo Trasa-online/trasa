@@ -68,7 +68,8 @@ export function TabSearchButton({ s }: { s: TabSearchState }) {
     <button
       onClick={() => { haptics.light(); s.openSearch(); }}
       aria-label={t("buttons.search")}
-      className="relative shrink-0 h-8 w-8 flex items-center justify-center rounded-xl bg-muted text-foreground active:scale-95 transition-transform"
+      // Ten sam okragly ksztalt, co dzwonek obok (NotificationsBell) - jeden jezyk ikon w belce.
+      className="relative shrink-0 h-9 w-9 flex items-center justify-center rounded-full bg-muted/70 border border-border/50 text-foreground active:scale-95 transition-transform"
     >
       <Search className="h-4 w-4" />
     </button>

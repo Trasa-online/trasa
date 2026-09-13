@@ -110,7 +110,7 @@
   },
   "onboarding_next": "Dalej",
   "empty": {
-    "no_saved_routes_desc": "Zapisz trasę bookmarkiem w zakładce Eksploruj, żeby zobaczyć je tutaj.",
+    "no_saved_routes_desc": "Zapisz trasę bookmarkiem w Eksploracji, żeby zobaczyć je tutaj.",
     "no_saved_lists_desc": "Zapisz listę zakładką podczas przeglądania, żeby pojawiła się tutaj.",
     "no_saved_routes": "Brak zapisanych tras",
     "no_saved_lists": "Brak zapisanych list",
@@ -136,7 +136,10 @@
   },
   "grid": {
     "trip": "Wyjazd",
-    "list": "Lista"
+    "list": "Lista",
+    "days_one": "{{count}} dzień",
+    "days_few": "{{count}} dni",
+    "days_many": "{{count}} dni"
   },
   "feed_empty": {
     "nobody_title": "Tu pojawią się wyjazdy i listy osób, które obserwujesz",
@@ -144,6 +147,6 @@
     "nobody_cta": "Znajdź osoby do obserwowania",
     "quiet_title": "Na razie cisza",
     "quiet_hint": "Osoby, które obserwujesz, jeszcze nic nie opublikowały. Zajrzyj, co publikują inni.",
-    "quiet_cta": "Przejdź do eksploracji"
+    "quiet_cta": "Przejdź do Eksploracji"
   }
 }

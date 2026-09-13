@@ -25,7 +25,6 @@
   "create_trip": "Create a trip",
   "new_trip": "New trip",
   "tabs": {
-    "feed": "Feed",
     "explore": "Explore",
     "places": "Places"
   }

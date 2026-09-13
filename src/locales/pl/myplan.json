@@ -129,7 +129,7 @@
   "back": "Wróć",
   "trip_name_city": "Wyjazd do {{city}}",
   "drafts": {
-    "empty_hint": "Zapisz trasę innego użytkownika w Eksploruj, a użyjesz jej tutaj jako bazy.",
+    "empty_hint": "Zapisz trasę innego użytkownika w Eksploracji, a użyjesz jej tutaj jako bazy.",
     "empty": "Nie masz obecnie żadnych zapisanych roboczych tras.",
     "confirm_delete": "Usunąć tę roboczą trasę?",
     "delete_aria": "Usuń roboczą trasę",

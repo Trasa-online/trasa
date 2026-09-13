@@ -168,11 +168,11 @@
   "day_label": "{{city}} - Day {{day}}",
   "map_picker": {
     "title": "Pick from map",
-    "hint": "Tap a venue name on the map or type it above",
+    "hint": "Tap a venue label on the map or search by name or address",
     "locate": "My location",
     "reading": "Checking this place…",
     "add": "Add place {{place}}",
-    "name_placeholder": "What do you call this place?",
+    "name_placeholder": "Search a place by name or address",
     "did_you_mean": "Did you mean:",
     "add_manual": "Add “{{place}}” as your own place",
     "poi_failed": "We could not read this venue. Type its name above."

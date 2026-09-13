@@ -65,7 +65,8 @@
     "share": "Udostępnij",
     "delete_list": "Usuń listę",
     "rename_list": "Zmień nazwę listy",
-    "list_actions": "Akcje listy"
+    "list_actions": "Akcje listy",
+    "list_theme": "Tło listy"
   },
   "fallback_title": "Lista miejsc",
   "photo": "Zdjęcie",
@@ -79,5 +80,21 @@
   "new_place_badge": "nowe miejsce",
   "add_place_photo": "Dodaj zdjęcie do miejsca",
   "remove_from_list": "Usuń miejsce z listy",
-  "adding": "Dodawanie…"
+  "adding": "Dodawanie…",
+  "theme": {
+    "title": "Tło listy",
+    "desc": "Tak Twoja lista wygląda w Eksploracji. Wybierz kolor z palety.",
+    "saved": "Ustawiono tło listy",
+    "save_failed": "Nie udało się zapisać tła",
+    "default_hint": "Zaznaczony kolor to tło domyślne, dobrane automatycznie.",
+    "brick": "Cegła",
+    "terracotta": "Terakota",
+    "peach": "Brzoskwinia",
+    "blush": "Róż pudrowy",
+    "pink": "Róż",
+    "yellow": "Żółty",
+    "gold": "Złoty",
+    "orange": "Pomarańcz",
+    "brown": "Brąz"
+  }
 }

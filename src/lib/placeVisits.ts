@@ -49,3 +49,22 @@ export async function toggleVisited(
     return visited;
   }
 }
+
+/**
+ * Ile miejsc z KAZDEJ z podanych list odwiedzil jej AUTOR ("8/15" na kafelku listy, 2026-09-13).
+ * Jedno zapytanie na siatke (RPC list_author_visit_counts, migracja 20260913c); lista bez
+ * odwiedzin nie ma wiersza - mapa oddaje wtedy 0. Blad = same zera, kafelki i tak sie rysuja.
+ */
+export async function fetchListVisitCounts(collectionIds: string[]): Promise<Map<string, number>> {
+  const map = new Map<string, number>();
+  const ids = Array.from(new Set(collectionIds.filter(Boolean)));
+  if (!ids.length) return map;
+  try {
+    const { data, error } = await (supabase as any).rpc("list_author_visit_counts", { p_collection_ids: ids });
+    if (error) { console.warn("[placeVisits] counts:", error.message); return map; }
+    for (const r of (data ?? []) as { collection_id: string; visited: number }[]) map.set(r.collection_id, Number(r.visited) || 0);
+  } catch (e) {
+    console.warn("[placeVisits] counts exception:", e instanceof Error ? e.message : e);
+  }
+  return map;
+}

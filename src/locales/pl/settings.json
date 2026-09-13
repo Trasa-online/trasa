@@ -110,6 +110,9 @@
     "unlocked_hint": "Odblokowana - dzięki za zaproszenia!",
     "locked_toast": "Ta nakładka czeka na Ciebie po zaproszeniu jeszcze {{left}} osób",
     "locked_cta": "Zaproś",
-    "locked_error": "Ta nakładka jest jeszcze zablokowana"
+    "locked_error": "Ta nakładka jest jeszcze zablokowana",
+    "presets_title": "Albo wybierz awatar bazowy",
+    "presets_desc": "Sam kolor zamiast zdjęcia - w jednym z odcieni marki.",
+    "avatar_saved": "Ustawiono awatar"
   }
 }

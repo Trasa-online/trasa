@@ -90,7 +90,9 @@
     "removed_saved": "Usunięto z zapisanych",
     "new_content_aria": "Nowa zawartość",
     "list_fallback_title": "Lista miejsc",
-    "traveler_fallback": "Podróżnik"
+    "traveler_fallback": "Podróżnik",
+    "starred": "Wyróżnione",
+    "starred_aria": "Wyróżnione miejsca"
   },
   "guest": {
     "title": "Twój profil podróżnika",
@@ -188,9 +190,18 @@
     "lists_ogolne": "Prywatna lista wszystkiego, co zapisujesz jednym tapnięciem. Widzisz ją tylko Ty.",
     "lists_zapisane": "Listy innych podróżnych, które masz u siebie zapisane.",
     "trips_wspomnienia": "Opublikowane wyjazdy. Widać je w eksploracji i na Twoim profilu.",
-
     "trips_wspomnienia_reorder": "Opublikowane wyjazdy. Przytrzymaj okładkę i przeciągnij, żeby ułożyć je po swojemu.",
     "trips_robocze": "Wyjazdy w przygotowaniu. Widzisz je tylko Ty, dopóki ich nie opublikujesz.",
     "trips_zapisane": "Wyjazdy innych podróżnych, które masz u siebie zapisane."
+  },
+  "starred": {
+    "title": "Wyróżnione miejsca",
+    "desc": "Miejsca, które wyróżniasz gwiazdką w swoich wyjazdach i listach.",
+    "empty_title": "Jeszcze nic nie wyróżniasz",
+    "empty_desc": "Gwiazdkę dodasz w menu przy miejscu w wyjeździe albo na liście - jedną na wyjazd, na liście ile chcesz.",
+    "trip_fallback": "Wyjazd",
+    "list_fallback": "Lista",
+    "desc_theirs": "Miejsca wyróżnione gwiazdką w wyjazdach i listach tej osoby.",
+    "empty_title_theirs": "Brak wyróżnionych miejsc"
   }
 }

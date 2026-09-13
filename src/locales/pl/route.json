@@ -173,11 +173,11 @@
   "day_label": "{{city}} - Dzień {{day}}",
   "map_picker": {
     "title": "Wybierz z mapy",
-    "hint": "Tapnij nazwę lokalu na mapie albo wpisz ją u góry",
+    "hint": "Tapnij nazwę lokalu na mapie albo wyszukaj po nazwie lub adresie",
     "locate": "Moja lokalizacja",
     "reading": "Sprawdzam to miejsce…",
     "add": "Dodaj miejsce {{place}}",
-    "name_placeholder": "Jak nazwiesz to miejsce?",
+    "name_placeholder": "Wyszukaj miejsce po nazwie lub adresie",
     "did_you_mean": "Czy chodzi o:",
     "add_manual": "Dodaj „{{place}}” jako własne miejsce",
     "poi_failed": "Nie udało się odczytać tego lokalu. Wpisz jego nazwę u góry."

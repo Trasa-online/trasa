@@ -1,4 +1,10 @@
 import { useState, useEffect, useMemo, useRef } from "react";
+import { GridTile, LIST_TILES, type GridItem, type GridPlace } from "@/components/home/FeedTiles";
+import { listTheme } from "@/lib/listThemes";
+import { buildTripStaticMapUrl } from "@/lib/staticMap";
+import { fetchListVisitCounts } from "@/lib/placeVisits";
+import { scopeLabel } from "@/lib/tripScope";
+import { pinCoverKeys, fetchPlacePhotosForKeys, pickPlaceCover } from "@/lib/placePhotoSocial";
 import { useDragToDismiss } from "@/hooks/useDragToDismiss";
 import { useTranslation } from "react-i18next";
 import i18n from "@/i18n";
@@ -79,6 +85,14 @@ export type DiscoveryCollection = {
   updated_at?: string | null;         // "14m" na karcie listy w wyszukiwarce
   cover_url?: string | null;          // okladka listy (hero w /lista/:id) - reczny wybor autora
   list_cover_url?: string | null;     // miniatura na karcie w eksploracji (feed)
+  // Kafelek listy w Eksploracji (FeedTiles, 2026-09-13): tlo z palety, zasieg krajowy i autor
+  // z PROFILU (aktualne zdjecie + ramka awatara), nie z kolumn zdenormalizowanych.
+  theme?: string | null;
+  countries?: string[] | null;
+  author_username?: string | null;
+  author_frame?: string | null;
+  author_frame_color?: string | null;
+  visited_count?: number;             // ile miejsc listy odwiedzil jej autor (chip "8/15")
 };
 
 type PolecaneRoute = {
@@ -95,6 +109,11 @@ type PolecaneRoute = {
   author_avatar: string | null;
   author_id?: string | null;           // id autora do ramki awatara (null = trasa anonimowa)
   author_username?: string | null;     // @handle - do etykiety autora na karcie eksploracji
+  // Pod kafelek wyjazdu z FeedTiles (Eksploracja w stylu Glownej, 2026-09-13).
+  author_frame?: string | null;
+  author_frame_color?: string | null;
+  days?: number | null;                // start_date..end_date
+  countries?: string[] | null;
   placeCount?: number;
   avgRating?: number;                  // srednia ocena Google z pinow (0 = brak)
   pins?: LatLng[];                     // wspolrzedne pinow do mini-mapy na okladce
@@ -942,7 +961,7 @@ async function enrichRouteRows(routes: any[]): Promise<PolecaneRoute[]> {
   const profileMap = new Map<string, any>();
   if (userIds.length) {
     const { data: profiles } = await (supabase as any)
-      .from("profiles").select("id, username, first_name, avatar_url").in("id", userIds);
+      .from("profiles").select("id, username, first_name, avatar_url, avatar_frame, avatar_frame_color").in("id", userIds);
     for (const p of profiles ?? []) profileMap.set(p.id, p);
   }
 
@@ -997,6 +1016,10 @@ async function enrichRouteRows(routes: any[]): Promise<PolecaneRoute[]> {
       author_avatar: anon ? null : (prof?.avatar_url ?? null),
       author_id: anon ? null : (r.user_id ?? null),
       author_username: anon ? null : (prof?.username ?? null),
+      author_frame: anon ? null : (prof?.avatar_frame ?? null),
+      author_frame_color: anon ? null : (prof?.avatar_frame_color ?? null),
+      days: r.start_date ? Math.max(1, Math.round((new Date(r.end_date ?? r.start_date).getTime() - new Date(r.start_date).getTime()) / 86_400_000) + 1) : null,
+      countries: Array.isArray(r.countries) ? r.countries : null,
       placeCount: countMap.get(r.id) ?? 0,
       avgRating: avgRatingOf(ratingMap.get(r.id) ?? []),
       pins: pinsMap.get(r.id) ?? [],
@@ -1232,20 +1255,38 @@ async function hydrateCollections(cols: any[]): Promise<DiscoveryCollection[]> {
   const ids = cols.map((c: any) => c.id);
   const { data: items } = await (supabase as any)
     .from("discovery_items")
-    .select("id, collection_id, order_index, place_name, short_desc, photo_url, latitude, longitude, place_id, category, address, rating")
+    .select("id, collection_id, order_index, place_name, short_desc, photo_url, latitude, longitude, place_id, google_place_id, category, address, rating")
     .in("collection_id", ids)
     .order("order_index", { ascending: true });
-  const userIds = [...new Set(cols.map((c: any) => c.user_id).filter(Boolean))];
-  const homeMap = new Map<string, string | null>();
-  if (userIds.length) {
-    const { data: profs } = await (supabase as any).from("profiles").select("id, home_city").in("id", userIds);
-    for (const p of profs ?? []) homeMap.set(p.id, p.home_city ?? null);
+  const rows = (items ?? []) as any[];
+  // Zdjecia SPOLECZNOSCI (place_photos) dla pozycji bez wlasnego zdjecia - tylko tych, ktore
+  // kafelek listy pokazuje (pierwsze LIST_TILES na liste); ten sam most, co na Glownej.
+  const byCol = new Map<string, any[]>();
+  for (const it of rows) (byCol.get(it.collection_id) ?? byCol.set(it.collection_id, []).get(it.collection_id)!).push(it);
+  const bare = [...byCol.values()].flatMap((arr) => arr.slice(0, LIST_TILES)).filter((it) => !it.photo_url);
+  if (bare.length) {
+    const keys = Array.from(new Set(bare.flatMap((it) => pinCoverKeys(it)))).filter(Boolean);
+    const photoMap = keys.length ? await fetchPlacePhotosForKeys(keys) : null;
+    for (const it of bare) it._cover = pickPlaceCover(photoMap, pinCoverKeys(it));
   }
-  return cols.map((col: any): DiscoveryCollection => ({
-    ...col,
-    author_home_city: homeMap.get(col.user_id) ?? null,
-    items: (items ?? []).filter((i: any) => i.collection_id === col.id),
-  }));
+  const userIds = [...new Set(cols.map((c: any) => c.user_id).filter(Boolean))];
+  const profMap = new Map<string, any>();
+  if (userIds.length) {
+    const { data: profs } = await (supabase as any).from("profiles").select("id, home_city, username, avatar_url, avatar_frame, avatar_frame_color").in("id", userIds);
+    for (const p of profs ?? []) profMap.set(p.id, p);
+  }
+  return cols.map((col: any): DiscoveryCollection => {
+    const p = profMap.get(col.user_id);
+    return {
+      ...col,
+      author_home_city: p?.home_city ?? null,
+      author_username: p?.username ?? null,
+      author_avatar: p?.avatar_url ?? col.author_avatar ?? null,
+      author_frame: p?.avatar_frame ?? null,
+      author_frame_color: p?.avatar_frame_color ?? null,
+      items: byCol.get(col.id) ?? [],
+    };
+  });
 }
 
 // Listy miejsc w eksploracji: WLACZONE ponownie 2026-09-11 (nowa IA, makieta Nat: Eksploruj =
@@ -1253,6 +1294,11 @@ async function hydrateCollections(cols: any[]): Promise<DiscoveryCollection[]> {
 // mialy zyc tylko na profilu. Flaga zostaje jako master switch: gatuje feed (userPolecajki),
 // wyszukiwarke (collections) i segment typu (Wszystko|Trasy|Listy).
 const SHOW_ZESTAWIENIA = true;
+
+// Wyjazdy w Eksploracji jako kafelki z FeedTiles (styl Glownej: pigulka autora, mini-mapa,
+// tytul + chipy; BEZ zakladki zapisu, opisu i tagow kategorii) zamiast pelnoekranowej
+// TrasaBigCard - decyzja Nat 2026-09-13 (makieta). `false` przywraca stara karte.
+const FEED_TRIPS_AS_TILES = true;
 
 // Szybkie skroty w wyszukiwarce ("Biezace polozenie" + t("saved_places")) - WYLACZONE
 // (2026-07-27): dopoki scroller nie ma miejsc, nie maja sensu. Ustaw true, by przywrocic.
@@ -1515,7 +1561,7 @@ export function SavedCollections({ hideEmptyState }: { hideEmptyState?: boolean 
 
       {/* Modal potwierdzenia usuniecia z zapisanych */}
       <AlertDialog open={!!pendingUnsave} onOpenChange={(o) => { if (!o) setPendingUnsave(null); }}>
-        <AlertDialogContent className="rounded-3xl max-w-[340px]">
+        <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{t("confirm.unsave_title")}</AlertDialogTitle>
             <AlertDialogDescription>{t("confirm.unsave_desc")}</AlertDialogDescription>
@@ -1537,9 +1583,10 @@ export function SavedCollections({ hideEmptyState }: { hideEmptyState?: boolean 
 
 // searchOnly: komponent zamontowany WYLACZNIE po wyniki wyszukiwania (profil) - pasywny
 // feed eksploracji sie nie renderuje i jego zapytania nie strzelaja do bazy.
-// followingOnly: FEED (ekran startowy, IA 2026-09-11) - tylko tresci od osob, ktore user
-// obserwuje. Bez tej flagi komponent pokazuje tresci od wszystkich (dzis uzywane juz tylko
-// przez wyszukiwarke, bo siatka Eksploruj ma wlasny komponent ExploreGrid).
+// followingOnly: tylko tresci od osob, ktore user obserwuje (osobna zakladka Feed zyla
+// 2026-09-11 - 2026-09-13; flaga zostaje na przyszlosc, dzis nikt jej nie podaje).
+// Bez niej komponent pokazuje tresci od wszystkich - to jest EKSPLORACJA (Explore.tsx, IA
+// 2026-09-13: jedyny widok odkrywania, kafelki z FeedTiles w jednej kolumnie ze snapem).
 export default function DiscoveryFeed({ city = "Warszawa", active = true, searchQuery = "", searchOpen = false, searchCategory = "all", searchOnly = false, followingOnly = false }: { city?: string; active?: boolean; searchQuery?: string; searchOpen?: boolean; searchCategory?: "all" | "lists" | "trips" | "places" | "people"; searchOnly?: boolean; followingOnly?: boolean } = {}) {
   const { t } = useTranslation("homefeed");
   const { user } = useAuth();
@@ -1551,11 +1598,13 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
     staleTime: 5 * 60 * 1000,
   });
   const notBlocked = (uid?: string | null) => !uid || !blockedIds?.has(uid);
-  // Kogo obserwuje - zakres Feedu. `undefined` = jeszcze nie wiemy (zapytania tresci czekaja),
-  // pusta lista = nikogo (pusty stan z zacheta do obserwowania).
+  // Kogo obserwuje. Przy followingOnly to ZAKRES (undefined = zapytania tresci czekaja, pusta
+  // lista = pusty stan); w Eksploracji (bez flagi) to KOLEJNOSC - tresci obserwowanych ida na
+  // gore, reszta pod nimi (decyzja Nat 2026-09-13, po zdjeciu osobnego feedu obserwowanych).
+  // Ten sam klucz cache, co FollowButton - zaobserwowanie kogos od razu zmienia kolejnosc.
   const { data: followedIds } = useQuery({
     queryKey: ["following-ids", user?.id],
-    enabled: followingOnly && !!user?.id,
+    enabled: !!user?.id && !searchOnly,
     staleTime: 60_000,
     queryFn: async () => {
       const { data } = await (supabase as any).from("followers").select("following_id").eq("follower_id", user!.id);
@@ -1742,7 +1791,7 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
       // city === "all" (ALL_CITIES) -> feed agreguje Trasy ze wszystkich miast (bez filtra).
       let q = (supabase as any)
         .from("routes")
-        .select("id, title, city, ai_highlight, ai_summary, user_id, created_at, published_at, views, share_anonymous, cover_url, list_cover_url, review_photos, group_session_id, tags")
+        .select("id, title, city, countries, start_date, end_date, ai_highlight, ai_summary, user_id, created_at, published_at, views, share_anonymous, cover_url, list_cover_url, review_photos, group_session_id, tags")
         // Bramka "opublikowane": trasa pojawia sie w eksploracji dopiero gdy jest OPUBLIKOWANA
         // (status='published' przez "Zapisz trase") i ma miniature (list_cover_url). status blokuje
         // przeciek roboczych tras grupowych (is_shared=true, status='draft') z auto-okladka.
@@ -1930,7 +1979,7 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
       if (followScope && followScope.length === 0) return [] as DiscoveryCollection[];
       let lq = (supabase as any)
         .from("discovery_collections")
-        .select("id, title, city, description, category, author_name, author_avatar, user_id, views_count, saves_count, plan_adds_count, cover_url, list_cover_url")
+        .select("id, title, city, countries, theme, description, category, author_name, author_avatar, user_id, views_count, saves_count, plan_adds_count, cover_url, list_cover_url, updated_at")
         .eq("is_public", true)
         .eq("kind", "ranking")
         .eq("list_status", "visited") // tylko polecajki; prywatne wishlisty to_visit nigdy w feedzie
@@ -1941,7 +1990,8 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
         .order("updated_at", { ascending: false })
         .limit(20);
       if (error || !cols?.length) return [] as DiscoveryCollection[];
-      return hydrateCollections(cols);
+      const [hydrated, visitCounts] = await Promise.all([hydrateCollections(cols), fetchListVisitCounts(cols.map((c: any) => c.id))]);
+      return hydrated.map((c) => ({ ...c, visited_count: visitCounts.get(c.id) ?? 0 }));
     },
     staleTime: 5 * 60 * 1000,
   });
@@ -2389,8 +2439,29 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
         <div className="space-y-4">
           {(() => {
             // Wspolny feed: trasy + listy PRZEPLECIONE (trasa, lista, trasa, lista...), z filtrem typu.
-            // Karta identyczna (TrasaBigCard); rozni sie tylko onOpen (trasa -> /route, lista -> /lista).
-            const routeCards = warszawa.filter((r) => notBlocked(r.user_id)).map((r) => (
+            // WYJAZD: kafelek z FeedTiles (jak na Glownej: pigulka autora, mini-mapa, tytul, chipy;
+            // bez zakladki zapisu i opisu) albo pelnoekranowa TrasaBigCard - patrz FEED_TRIPS_AS_TILES.
+            const routeCards = warszawa.filter((r) => notBlocked(r.user_id)).map((r) => FEED_TRIPS_AS_TILES ? (
+              <GridTile
+                key={`route-${r.id}`}
+                size="feed"
+                className="snap-start snap-always"
+                onOpen={() => navigate(`/route/${r.id}`)}
+                it={{
+                  kind: "trip", id: r.id, title: r.title,
+                  cover: r.photo ?? null,
+                  where: r.city || scopeLabel(r),
+                  authorName: r.author_username ? `@${r.author_username}` : (r.author_name ?? ""),
+                  authorAvatar: r.author_avatar ?? null, authorId: r.author_id ?? null,
+                  authorFrame: r.author_frame ?? null, authorFrameColor: r.author_frame_color ?? null,
+                  showAuthor: !!r.author_id,
+                  at: 0, placesCount: r.placeCount ?? 0, days: r.days ?? null,
+                  mapUrl: buildTripStaticMapUrl(r.pins ?? [], "200x200"),
+                  pins: r.pins ?? [],
+                  theme: null, places: [],
+                }}
+              />
+            ) : (
               <TrasaBigCard
                 key={`route-${r.id}`}
                 id={r.id}
@@ -2411,28 +2482,29 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
                 participants={r.participants ?? []}
               />
             ));
+            // LISTA = ten sam kolorowy kafelek, co na Glownej (FeedTiles, prosba Nat 2026-09-13:
+            // jeden wyglad list w obu widokach), tylko na cala szerokosc. Bez zakladki zapisu
+            // na kafelku - jak na Glownej; lista zapisuje sie z jej widoku.
             const listCards = userPolecajki.filter((col) => notBlocked(col.user_id)).map((col) => {
-              const ph = col.items.find((i) => i.photo_url)?.photo_url ?? col.gallery_urls?.[0] ?? null;
-              const catTags = [...new Set(col.items.map((i) => i.category).filter(Boolean).map((c) => String(c).toLowerCase()))]
-                .map((c) => t(`cat.${c}`, { defaultValue: c }));
+              const places: GridPlace[] = col.items.slice(0, LIST_TILES).map((it: any) => ({
+                name: it.place_name ?? "", category: it.category ?? null,
+                photo: resolveStored(it.photo_url ?? null) ?? resolveStored(it._cover ?? null) ?? null,
+              }));
+              const item: GridItem = {
+                kind: "list", id: col.id, title: col.title,
+                cover: places.find((x) => x.photo)?.photo ?? null,
+                where: col.city || scopeLabel(col),
+                authorName: col.author_username ? `@${col.author_username}` : (col.author_name ?? ""),
+                authorAvatar: col.author_avatar ?? null, authorId: col.user_id ?? null,
+                authorFrame: col.author_frame ?? null, authorFrameColor: col.author_frame_color ?? null,
+                showAuthor: !!(col.author_username || col.author_name),
+                at: new Date(col.updated_at ?? 0).getTime(),
+                placesCount: col.items.length, days: null, mapUrl: null,
+                theme: listTheme(col.theme, col.id), places,
+                visitedCount: col.visited_count ?? 0,
+              };
               return (
-                <TrasaBigCard
-                  key={`col-${col.id}`}
-                  id={col.id}
-                  photo={ph ? resolveStored(ph) : null}
-                  city={col.city}
-                  placeCount={col.items.length}
-                  title={col.title}
-                  description={col.description}
-                  tags={catTags}
-                  pins={col.items}
-                  saved={savedColIds.has(col.id)}
-                  onToggleSave={() => toggleSaveCol(col.id)}
-                  onOpen={() => navigate(`/lista/${col.id}`)}
-                  authorName={col.author_name}
-                  authorAvatar={col.author_avatar}
-                  authorId={col.user_id}
-                />
+                <GridTile key={`col-${col.id}`} it={item} size="feed" className="snap-start snap-always" onOpen={() => navigate(`/lista/${col.id}`)} />
               );
             });
             if (routeCards.length === 0 && listCards.length === 0 && followingOnly) {
@@ -2466,13 +2538,28 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
                 </div>
               );
             }
-            const mixed: any[] = [];
-            const max = Math.max(routeCards.length, listCards.length);
-            for (let i = 0; i < max; i++) {
-              if (i < routeCards.length) mixed.push(routeCards[i]);
-              if (i < listCards.length) mixed.push(listCards[i]);
-            }
-            return mixed;
+            // Obserwowani NAJPIERW (decyzja Nat 2026-09-13): dwa koszyki - tresci od osob, ktore
+            // user obserwuje, a pod nimi reszta swiata. W kazdym koszyku przeplot wyjazd/lista
+            // jak dotad (kolejnosc wewnatrz koszyka = data publikacji z zapytan).
+            const followed = new Set(followedIds ?? []);
+            const routeRows = warszawa.filter((r) => notBlocked(r.user_id));
+            const listRows = userPolecajki.filter((col) => notBlocked(col.user_id));
+            const interleave = (routes: any[], lists: any[]) => {
+              const out: any[] = [];
+              const max = Math.max(routes.length, lists.length);
+              for (let i = 0; i < max; i++) {
+                if (i < routes.length) out.push(routes[i]);
+                if (i < lists.length) out.push(lists[i]);
+              }
+              return out;
+            };
+            const byFollow = (rows: any[], cards: any[], key: string) => ({
+              mine: cards.filter((_, i) => rows[i]?.[key] && followed.has(rows[i][key])),
+              rest: cards.filter((_, i) => !(rows[i]?.[key] && followed.has(rows[i][key]))),
+            });
+            const r = byFollow(routeRows, routeCards, "user_id");
+            const l = byFollow(listRows, listCards, "user_id");
+            return [...interleave(r.mine, l.mine), ...interleave(r.rest, l.rest)];
           })()}
         </div>
       )}

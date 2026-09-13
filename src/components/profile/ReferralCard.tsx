@@ -63,8 +63,9 @@ export default function ReferralCard({ userId }: { userId: string }) {
       {/* Karta jak "Get credits" w FYI (prosba Nat 2026-09-11): SAM szary obrys (kreskowany),
           ostre krawedzie, mala pomaranczowa ikona nad naglowkiem, pelnej szerokosci guzik
           primary z kodem QR obok i "Nie teraz" pod spodem. Wczesniej: plaska zolta karta.
-          Ostre rogi sa tu SWIADOMYM wyjatkiem od zaokraglen z CLAUDE.md - karta ma wygladac
-          jak wsuwka/kupon, nie jak kolejny kafelek tresci. */}
+          Ostre rogi KARTY sa SWIADOMYM wyjatkiem od zaokraglen z CLAUDE.md - karta ma wygladac
+          jak wsuwka/kupon, nie jak kolejny kafelek tresci. GUZIKI w srodku sa juz zaokraglone
+          jak w calej apce (prosba Nat 2026-09-13) - ostre guziki wygladaly jak obcy element. */}
       <div className="mb-5 border border-dashed border-border px-4 pt-4 pb-3">
         <div className="flex items-start gap-3">
           <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10">
@@ -93,14 +94,14 @@ export default function ReferralCard({ userId }: { userId: string }) {
         <div className="mt-4 flex items-center gap-2">
           <button
             onClick={onShare}
-            className="flex-1 h-11 bg-primary text-white font-bold text-[13px] uppercase tracking-wide flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
+            className="flex-1 h-11 rounded-2xl bg-primary text-white font-bold text-[13px] uppercase tracking-wide flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
           >
             <Share2 className="h-4 w-4" />{t("referral.share_cta")}
           </button>
           <button
             onClick={() => { haptics.light(); setQrOpen(true); }}
             aria-label={t("referral.qr_aria")}
-            className="shrink-0 h-11 w-11 border border-border bg-background flex items-center justify-center active:scale-90 transition-transform"
+            className="shrink-0 h-11 w-11 rounded-2xl border border-border bg-background flex items-center justify-center active:scale-90 transition-transform"
           >
             <QrCode className="h-5 w-5 text-foreground" />
           </button>

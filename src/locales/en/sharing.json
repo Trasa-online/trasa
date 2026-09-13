@@ -138,7 +138,8 @@
     "pick_add_failed": "Couldn't add the places",
     "pick_all_present": "Those places are already there",
     "pick_added_one": "Added {{count}} place to “{{trip}}”",
-    "pick_added_other": "Added {{count}} places to “{{trip}}”"
+    "pick_added_other": "Added {{count}} places to “{{trip}}”",
+    "cover_portrait_only": "Covers must be portrait (3:4 or 9:16). Pick another photo."
   },
   "pick_date_desc": "Pick a single day or a range - with several days you can spread places across them",
   "confirm": {
@@ -161,6 +162,7 @@
   "map_no_locations": "No place locations to show on the map.",
   "aria": {
     "add_dates": "Add trip dates",
+    "change_dates": "Change trip dates",
     "unlike_photo": "Unlike",
     "like_photo": "Like photo",
     "delete_photo": "Delete photo",

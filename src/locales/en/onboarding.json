@@ -79,7 +79,10 @@
   "photo": {
     "desc": "Optional - but trips with a photo feel more trustworthy.",
     "title": "Add your photo",
-    "pick": "Choose a photo"
+    "pick": "Choose a photo",
+    "presets_title": "Or pick a spontaway avatar",
+    "presets_desc": "The brand mark in a colour that suits you. You can add a photo later in settings.",
+    "preset_aria": "Avatar {{id}}"
   },
   "source": {
     "desc": "Pick one - it helps us reach more people.",
@@ -159,8 +162,6 @@
     "skip": "Skip",
     "save_title": "Save your favourites",
     "next": "Next",
-    "done": "Done",
-    "feed_title": "The Feed tab",
-    "feed_desc": "Trips and lists from people you follow, one after another, like a reel."
+    "done": "Done"
   }
 }

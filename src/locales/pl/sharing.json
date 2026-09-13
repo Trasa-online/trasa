@@ -142,7 +142,8 @@
     "pick_all_present": "Te miejsca już tam są",
     "pick_added_one": "Dodano {{count}} miejsce do „{{trip}}”",
     "pick_added_few": "Dodano {{count}} miejsca do „{{trip}}”",
-    "pick_added_many": "Dodano {{count}} miejsc do „{{trip}}”"
+    "pick_added_many": "Dodano {{count}} miejsc do „{{trip}}”",
+    "cover_portrait_only": "Okładka musi być pionowa (3:4 albo 9:16). Wybierz inne zdjęcie."
   },
   "pick_date_desc": "Wybierz jeden dzień albo zakres - przy kilku dniach rozłożysz miejsca na dni",
   "confirm": {
@@ -167,6 +168,7 @@
   "map_no_locations": "Brak lokalizacji miejsc na mapie.",
   "aria": {
     "add_dates": "Dodaj daty wyjazdu",
+    "change_dates": "Zmień daty wyjazdu",
     "unlike_photo": "Cofnij polubienie",
     "like_photo": "Polub zdjęcie",
     "delete_photo": "Usuń zdjęcie",

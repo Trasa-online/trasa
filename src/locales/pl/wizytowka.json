@@ -74,5 +74,8 @@
     "add_failed": "Nie udało się dodać zdjęcia",
     "added": "Dodano Twoje zdjęcie",
     "pick_image": "Wybierz plik graficzny"
-  }
+  },
+  "add_place": "Dodaj to miejsce",
+  "added_place": "Dodano",
+  "share_place": "Udostępnij to miejsce"
 }

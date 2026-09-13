@@ -24,7 +24,7 @@ import TabTopBar from "@/components/layout/TabTopBar";
 import NotificationsBell from "@/components/layout/NotificationsBell";
 import ActiveTripBanner from "@/components/home/ActiveTripBanner";
 import { type SearchCat } from "@/components/home/SearchCategoryRow";
-import ExploreGrid from "@/components/home/ExploreGrid";
+import DiscoveryFeed from "@/components/home/DiscoveryFeed";
 import { SearchPane } from "@/components/home/TabSearch";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { UNLOCKED_CITIES } from "@/components/plan-wizard/CityPicker";
@@ -870,15 +870,19 @@ const Explore = () => {
               feedScrolled || searchOpen ? "-translate-y-[130%] opacity-0 pointer-events-none" : "translate-y-0 opacity-100")}>
               <ActiveTripBanner floating />
             </div>
-            {/* Siatka NIE ma snapu (skanuje sie ja wzrokiem, nie karta po karcie) - snap zostal
-                w Feedzie. Przy wyszukiwaniu ten sam scroller pokazuje wyniki zamiast siatki. */}
-            <PullToRefresh onRefresh={handleRefresh} onScroll={(top) => setFeedScrolled(top > 8)} className="flex-1 min-h-0 flex flex-col pt-3 pb-[calc(6rem+env(safe-area-inset-bottom,0px))]">
+            {/* EKSPLORACJA (IA 2026-09-13): jedna kolumna kafelkow wyjazdow i list od WSZYSTKICH
+                (DiscoveryFeed bez followingOnly), karta po karcie ze snapem. Zakladka "Glowna"
+                (siatka 2 kolumny) i osobny feed obserwowanych (/feed) zdjete z paska tego dnia -
+                zostal jeden widok odkrywania. Snap tylko poza szukaniem: wyniki nie maja punktow
+                przyciagania. Przy wyszukiwaniu ten sam scroller pokazuje wyniki zamiast feedu. */}
+            <PullToRefresh onRefresh={handleRefresh} onScroll={(top) => setFeedScrolled(top > 8)}
+              className={cn("flex-1 min-h-0 flex flex-col pt-3 pb-[calc(6rem+env(safe-area-inset-bottom,0px))]", !searchOpen && "snap-y snap-mandatory scroll-pt-3")}>
               {/* Wyszukiwarka: lista kategorii jedna pod druga / wyniki (wspolny SearchPane -
-                  ten sam co w Feedzie, Miejscach i na profilu). Poza szukaniem - siatka. */}
+                  ten sam co w Miejscach i na profilu). Poza szukaniem - feed. */}
               {searchOpen ? (
                 <SearchPane query={feedSearch} cat={searchCat} onCat={setSearchCat} city={exploreCity} />
               ) : (
-                <div className="flex-1 px-4"><ExploreGrid /></div>
+                <div className="flex-1 px-4"><DiscoveryFeed city="all" /></div>
               )}
             </PullToRefresh>
           </div>

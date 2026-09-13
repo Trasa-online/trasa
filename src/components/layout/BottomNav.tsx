@@ -56,15 +56,17 @@ function getActiveHomeCity(): string {
   return "Warszawa";
 }
 
-// Zaznaczenie AKTYWNEJ zakladki (prosba Nat 2026-09-06): delikatny fill z przyciemnieniem
-// pod ikona + pelna czern napisu; nieaktywna wyciszona. Wczesniej obie zakladki wygladaly
-// identycznie, wiec z paska nie dalo sie odczytac, gdzie sie jest.
-// IA 2026-09-11: 5 pozycji (Feed · Eksploruj · + · Miejsca · Profil). Target 54 px zamiast 64,
-// zeby caly pill zmiescil sie na iPhone SE (375 px) z marginesami: 4x54 + 64 (FAB) + odstepy
-// + padding = ~328 px. 54 px to nadal wiecej niz minimum Apple (44 pt).
-const NAV_ITEM = "w-[54px] h-[46px] rounded-2xl flex flex-col items-center justify-center gap-1 transition-colors";
+// Pasek dolny (redesign 2026-09-13, wzor: nawigacja COSMOS z zalacznika Nat): SAME IKONY,
+// bez podpisow. Po lewej pill z trzema zakladkami (Eksploracja · Miejsca · Profil), po prawej
+// OSOBNE kolko "+" - tworzenie jest akcja, nie zakladka, wiec nie siedzi w tym samym pudelku.
+// Aktywna zakladka = pelna czern ikony na delikatnym fillu, nieaktywna wyciszona (prosba Nat
+// 2026-09-06: z paska ma sie dac odczytac, gdzie sie jest). Target 56 x 52 px (> 44 pt Apple).
+// Pill zostaje JASNY (szklo, jak dotad) - wzor jest ciemny, ale u nas ciemne tla sa poza
+// marka (CLAUDE.md); przejscie na ciemny to zmiana dwoch klas nizej (NAV_PILL / NAV_FAB).
+const NAV_ITEM = "w-14 h-[52px] rounded-full flex items-center justify-center transition-colors";
 const NAV_ITEM_IDLE = "text-foreground/40";
 const NAV_ITEM_ACTIVE = "bg-black/[0.07] text-foreground";
+const NAV_PILL = "pointer-events-auto h-16 px-1.5 flex items-center gap-0.5 bg-white/45 backdrop-blur-sm backdrop-saturate-150 rounded-full border border-black/[0.06] ring-1 ring-inset ring-white/40 shadow-[0_12px_34px_-8px_rgba(0,0,0,0.30),0_2px_6px_-2px_rgba(0,0,0,0.10)]";
 
 const BottomNav = () => {
   const { t } = useTranslation("nav");
@@ -271,120 +273,52 @@ const BottomNav = () => {
           Outer = transparentny kontener (pointer-events-none) z marginesem + safe-area;
           inner = bialy pill z cieniem (pointer-events-auto). */}
       {!navHidden && !navFreeRoute && (
-      <nav className="fixed bottom-0 left-0 right-0 z-50 flex justify-center px-4 pb-[max(20px,env(safe-area-inset-bottom,0px))] pointer-events-none">
-        {/* IA 2026-08-20: 3 pozycje. Native: Eksploruj · + · Profil. Web: Wyjazdy(/home) · + · Profil.
-            Pill HUG (nie full-width) i wyśrodkowany - węższy pasek. Fat-thumb: każdy target w-16 (64px)
-            × h-14 (56px), pill px-1.5. */}
-        {/* Ikony + nazwy zakladek pod spodem (orange active). */}
-        {/* Szklo z wypelnieniem (kompromis: przezroczyste + czytelne). bg-white/45 daje jasna baze
-            pod ikonami (czytelne bez halo), blur-sm zostawia tresc pod spodem widoczna. Ksztalt na
-            bialym tle: subtelna hairline + cien + jasny ring-inset (szklany refleks). */}
-        <div className="pointer-events-auto bg-white/45 backdrop-blur-sm backdrop-saturate-150 rounded-[26px] border border-black/[0.06] ring-1 ring-inset ring-white/40 shadow-[0_12px_34px_-8px_rgba(0,0,0,0.30),0_2px_6px_-2px_rgba(0,0,0,0.10)] px-3">
-          <div className="flex items-center gap-1.5 h-14">
-
-          {/* IA 2026-09-11 (makieta Nat): Eksploruj · Feed · + · Miejsca · Profil. Eksploruj jako
-              PIERWSZA i startowa (decyzja Nat tego samego dnia): nowy user nie moze zaczynac
-              od pustego Feedu, bo nikogo jeszcze nie obserwuje. Ikony: Eksploruj = dom (to ekran
-              startowy), Feed = kompas (prosba Nat 2026-09-11). Tylko native
-              (web/PWA ma B2C za waitlista). Ikony z BRANDOWEGO zestawu SVG (public/Ikona_*.svg,
-              CSS mask + currentColor): Nat dorysowala dom i pinezke tego samego dnia, wiec caly
-              pasek jest w jednym jezyku. replace: zakladki NIE odkladaja historii (tab bar). */}
+      <nav className="fixed bottom-0 left-0 right-0 z-50 flex justify-center items-center gap-3 px-4 pb-[max(20px,env(safe-area-inset-bottom,0px))] pointer-events-none">
+        {/* Pill zakladek. Ikony z BRANDOWEGO zestawu SVG (public/Ikona_*.svg, CSS mask +
+            currentColor). replace: zakladki NIE odkladaja historii (tab bar) - inaczej "wstecz"
+            krecil sie po zakladkach zamiast wracac do poprzedniego ekranu (zgloszenie Nat).
+            Native: Eksploracja · Miejsca · Profil. Web (stary flow, PLANNING_DISABLED=false):
+            Wyjazdy(/home) · Profil - B2C na webie jest za waitlista. */}
+        <div className={NAV_PILL}>
           {isNative && (
-            <>
-              <NavLink to="/eksploruj" replace end={false} data-ob="nav-eksploruj" className={`${NAV_ITEM} ${NAV_ITEM_IDLE}`} activeClassName={NAV_ITEM_ACTIVE}>
-                {() => (
-                  <>
-                    <NavIcon src="/Ikona_Home.svg" />
-                    <span className="text-[9px] font-semibold leading-tight mt-0.5">{t("tabs.explore")}</span>
-                  </>
-                )}
-              </NavLink>
-              <NavLink to="/feed" replace end={false} data-ob="nav-feed" className={`${NAV_ITEM} ${NAV_ITEM_IDLE}`} activeClassName={NAV_ITEM_ACTIVE}>
-                {() => (
-                  <>
-                    <NavIcon src="/Ikona_Eksploracja.svg" />
-                    <span className="text-[9px] font-semibold leading-tight mt-0.5">{t("tabs.feed")}</span>
-                  </>
-                )}
-              </NavLink>
-            </>
+            <NavLink to="/eksploruj" replace end={false} data-ob="nav-eksploruj" aria-label={t("tabs.explore")} className={`${NAV_ITEM} ${NAV_ITEM_IDLE}`} activeClassName={NAV_ITEM_ACTIVE}>
+              {() => <NavIcon src="/Ikona_Eksploracja.svg" className="h-6 w-6" />}
+            </NavLink>
           )}
-
-          {/* Slot 2: TYLKO web (stary flow) -> Wyjazdy (/home). Native: brak - Wyjazdy to teraz
-              zakładka profilu. */}
           {!PLANNING_DISABLED && (
-            <NavLink
-              to="/home"
-            // replace: zakladki dolnego paska NIE odkladaja historii (zachowanie jak w natywnym
-            // tab barze). Bez tego kazde przelaczenie Eksploruj/Profil dokladalo wpis i "wstecz"
-            // krecil sie po zakladkach zamiast wracac do poprzedniego ekranu (zgloszenie Nat).
-            replace
-              end
-              className={`${NAV_ITEM} ${NAV_ITEM_IDLE}`}
-              activeClassName={NAV_ITEM_ACTIVE}
-            >
-              {({ isActive }) => (
-                <>
-                  <NavIcon src="/Ikona_Trasy.svg" />
-                  <span className="text-[9px] font-semibold leading-tight mt-0.5">{t("common:filters.trips")}</span>
-                </>
-              )}
+            <NavLink to="/home" replace end aria-label={t("common:filters.trips")} className={`${NAV_ITEM} ${NAV_ITEM_IDLE}`} activeClassName={NAV_ITEM_ACTIVE}>
+              {() => <NavIcon src="/Ikona_Trasy.svg" className="h-6 w-6" />}
             </NavLink>
           )}
-
-          {/* Center FAB. Tryb uproszczony: "+" prowadzi PROSTO na ekran kompozycji trasy
-              (/wyjazd/nowy) - jedyna akcja tworzenia (zestawienia usuniete 2026-07-26).
-              Stary flow (web): otwiera menu wyboru (plan/zestawienie). */}
-          <button
-            data-ob="nav-fab"
-            onClick={() => {
-              haptics.light();
-              if (!PLANNING_DISABLED) { setShowMenu(!showMenu); return; }
-              setShowCreate(true);
-            }}
-            className="w-16 flex items-center justify-center"
-            aria-label={t("fab_aria")}
-          >
-            <span className={`h-11 w-11 rounded-full flex items-center justify-center active:scale-95 transition-transform ${showMenu ? "bg-primary shadow-sm" : ""}`}>
-              {showMenu ? (
-                <X className="h-6 w-6 text-white stroke-[2.5px]" />
-              ) : (
-                /* Ikona_Dodaj w brandowym pomaranczowym kole + bialy plus (wg zalacznika). */
-                <img src="/Ikona_Dodaj_orange.svg" alt="" className="h-11 w-11 object-contain" draggable={false} />
-              )}
-            </span>
-          </button>
-
-          {/* Miejsca - wizytowki lokali (dawniej pod przelacznikiem w eksploracji). Native. */}
           {isNative && (
-            <NavLink to="/miejsca" replace end={false} data-ob="nav-miejsca" className={`${NAV_ITEM} ${NAV_ITEM_IDLE}`} activeClassName={NAV_ITEM_ACTIVE}>
-              {() => (
-                <>
-                  <NavIcon src="/Ikona_Miejsca.svg" />
-                  <span className="text-[9px] font-semibold leading-tight mt-0.5">{t("tabs.places")}</span>
-                </>
-              )}
+            <NavLink to="/miejsca" replace end={false} data-ob="nav-miejsca" aria-label={t("tabs.places")} className={`${NAV_ITEM} ${NAV_ITEM_IDLE}`} activeClassName={NAV_ITEM_ACTIVE}>
+              {() => <NavIcon src="/Ikona_Miejsca.svg" className="h-6 w-6" />}
             </NavLink>
           )}
-
-          {/* Profil */}
-          <NavLink
-            to="/moj-profil"
-            replace
-            end={false}
-            className={`${NAV_ITEM} ${NAV_ITEM_IDLE}`}
-            activeClassName={NAV_ITEM_ACTIVE}
-          >
-            {() => (
-              <>
-                <NavIcon src="/Ikona_Profil.svg" />
-                <span className="text-[9px] font-semibold leading-tight mt-0.5">{t("common:nav.profile")}</span>
-              </>
-            )}
+          <NavLink to="/moj-profil" replace end={false} aria-label={t("common:nav.profile")} className={`${NAV_ITEM} ${NAV_ITEM_IDLE}`} activeClassName={NAV_ITEM_ACTIVE}>
+            {() => <NavIcon src="/Ikona_Profil.svg" className="h-6 w-6" />}
           </NavLink>
-
-          </div>
         </div>
+
+        {/* "+" - osobne kolko po prawej (ta sama wysokosc co pill). Native: arkusz tworzenia
+            [Lista|Wyjazd]. Stary flow (web): menu wyboru (plan/zestawienie). */}
+        <button
+          data-ob="nav-fab"
+          onClick={() => {
+            haptics.light();
+            if (!PLANNING_DISABLED) { setShowMenu(!showMenu); return; }
+            setShowCreate(true);
+          }}
+          className={`pointer-events-auto h-16 w-16 rounded-full flex items-center justify-center shadow-[0_12px_34px_-8px_rgba(0,0,0,0.30),0_2px_6px_-2px_rgba(0,0,0,0.10)] active:scale-95 transition-transform ${showMenu ? "bg-primary" : ""}`}
+          aria-label={t("fab_aria")}
+        >
+          {showMenu ? (
+            <X className="h-6 w-6 text-white stroke-[2.5px]" />
+          ) : (
+            /* Ikona_Dodaj = brandowe pomaranczowe kolo z bialym plusem, na cala wysokosc paska. */
+            <img src="/Ikona_Dodaj_orange.svg" alt="" className="h-16 w-16 object-contain" draggable={false} />
+          )}
+        </button>
       </nav>
       )}
 

@@ -77,8 +77,8 @@
   },
   "share": {
     "title": "Udostępnić tę trasę innym?",
-    "desc": "Trafi do zakładki Eksploruj i pomoże innym zaplanować podróż. Udostępniamy plan trasy z Twoją okładką, notkami i ocenami - bez galerii Twoich zdjęć. Jeśli nie, zostanie prywatna w Twoich Wspomnieniach. Zmienisz to w każdej chwili.",
-    "public": "Udostępnij w Eksploruj",
+    "desc": "Trafi do Eksploracji i pomoże innym zaplanować podróż. Udostępniamy plan trasy z Twoją okładką, notkami i ocenami - bez galerii Twoich zdjęć. Jeśli nie, zostanie prywatna w Twoich Wspomnieniach. Zmienisz to w każdej chwili.",
+    "public": "Udostępnij w Eksploracji",
     "private": "Zostaw prywatną"
   },
   "toast": {
@@ -89,7 +89,7 @@
     "completed_desc": "Uzupełnij wspomnienie w Dzienniku",
     "uncheck": "Cofnięto odhaczenie",
     "checked": "Odhaczone!",
-    "shared_public": "Trasa widoczna w Eksploruj",
+    "shared_public": "Trasa widoczna w Eksploracji",
     "saved_private": "Zapisano w Wspomnieniach"
   },
   "dashboard": {

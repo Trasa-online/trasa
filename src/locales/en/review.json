@@ -147,7 +147,8 @@
     "finished": "Trip finished and saved to your memories",
     "date_saved": "Date saved",
     "dates_removed": "Dates removed",
-    "place_removed": "Place removed"
+    "place_removed": "Place removed",
+    "cover_portrait_only": "Covers must be portrait (3:4 or 9:16). Pick another photo."
   },
   "share": {
     "text": "Check out my route on spontaway",

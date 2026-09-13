@@ -77,20 +77,14 @@ interface StepCfg {
   route?: string;          // ekran, ktory ma byc pod spodem, gdy krok jest aktywny
 }
 
-// Kroki ida po zakladkach dolnego paska (IA 2026-09-11): Eksploruj -> Feed -> Miejsca ->
-// zapis -> "+" (w tej kolejnosci stoja w pasku; Eksploruj jest ekranem startowym). Wczesniej podswietlaly przelacznik Trasy|Miejsca w belce eksploracji,
-// ktorego juz nie ma - kazda z tych rzeczy jest teraz osobna zakladka.
+// Kroki ida po zakladkach dolnego paska (IA 2026-09-13): Eksploracja -> Miejsca -> zapis -> "+"
+// (w tej kolejnosci stoja w pasku; Eksploracja jest ekranem startowym). Osobny krok "Feed"
+// zniknal razem z zakladka obserwowanych (2026-09-13).
 const STEPS: StepCfg[] = [
   {
     icon: Search, target: '[data-ob="nav-eksploruj"]', route: "/eksploruj",
     titleKey: "guide.trips_title",
     bodyKey: "guide.trips_desc",
-    ctaKey: "guide.next",
-  },
-  {
-    icon: Home, target: '[data-ob="nav-feed"]', route: "/feed",
-    titleKey: "guide.feed_title",
-    bodyKey: "guide.feed_desc",
     ctaKey: "guide.next",
   },
   {

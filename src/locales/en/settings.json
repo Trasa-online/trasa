@@ -110,6 +110,9 @@
     "unlocked_hint": "Unlocked - thanks for the invites!",
     "locked_toast": "This overlay unlocks after you invite {{left}} more people",
     "locked_cta": "Invite",
-    "locked_error": "This overlay is still locked"
+    "locked_error": "This overlay is still locked",
+    "presets_title": "Or pick a base avatar",
+    "presets_desc": "A plain colour instead of a photo - in one of the brand shades.",
+    "avatar_saved": "Avatar set"
   }
 }

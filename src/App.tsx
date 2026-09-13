@@ -468,7 +468,7 @@ function RootPage() {
     );
   }
   // Onboarding v3 = coach-overlay na realnych ekranach (OnboardingProvider), nie osobny route.
-  // Ekran startowy = Eksploruj (IA 2026-09-11) - Feed obserwowanych u nowego usera jest pusty.
+  // Ekran startowy = Eksploracja (/eksploruj): jedyny widok odkrywania (IA 2026-09-13).
   return <Navigate to="/eksploruj" replace />;
 }
 
@@ -727,7 +727,6 @@ import NotFound from "./pages/NotFound";
 const AppLayout        = lazy(() => import("./components/layout/AppLayout"));
 const HomeSwipe        = lazy(() => import("./pages/HomeSwipe"));
 const Explore          = lazy(() => import("./pages/Explore"));
-const Feed             = lazy(() => import("./pages/Feed"));
 const Miejsca          = lazy(() => import("./pages/Miejsca"));
 const CreateRanking    = lazy(() => import("./pages/CreateRanking"));
 const ComposeWyjazd    = lazy(() => import("./pages/ComposeWyjazd"));
@@ -845,9 +844,10 @@ const App = () => (
           <Route path="/" element={<WebRoot />} />
           {/* Tryb uproszczony (PLANNING_DISABLED): "Twoje trasy" scalone w Wyjazdy (Dziennik). */}
           <Route path="/home" element={PLANNING_DISABLED ? <Navigate to="/moj-profil?tab=wyjazdy" replace /> : <AppLayout hideTopBar><HomeSwipe /></AppLayout>} />
-          {/* IA 2026-09-11 (makieta Nat): Feed (start, tresci od obserwowanych) · Eksploruj
-              (siatka: wyjazdy + listy od wszystkich) · Miejsca (wizytowki lokali) · Profil. */}
-          <Route path="/feed" element={<AppLayout hideTopBar><Feed /></AppLayout>} />
+          {/* IA 2026-09-13: Eksploracja (start; wyjazdy + listy od wszystkich, jedna kolumna)
+              · + · Miejsca (wizytowki lokali) · Profil. Osobny feed obserwowanych (/feed) i
+              siatka "Glowna" zdjete z paska - stary link zostaje jako redirect. */}
+          <Route path="/feed" element={<Navigate to="/eksploruj" replace />} />
           <Route path="/eksploruj" element={<AppLayout hideTopBar><Explore /></AppLayout>} />
           <Route path="/miejsca" element={<AppLayout hideTopBar><Miejsca /></AppLayout>} />
           {/* /polubione (Zapisane) przeniesione do zakładki profilu (IA 2026-08-20). Redirect dla starych linków/pushy. */}

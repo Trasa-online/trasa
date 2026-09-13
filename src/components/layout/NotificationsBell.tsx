@@ -45,7 +45,9 @@ export default function NotificationsBell({ userId, className }: { userId: strin
       <button
         onClick={() => { haptics.light(); setOpen(true); }}
         aria-label={t("profile.notifications_aria")}
-        className={className ?? "relative shrink-0 h-8 w-8 flex items-center justify-center rounded-xl bg-muted text-foreground active:scale-95 transition-transform"}
+        // Okragly, tej samej wysokosci i w tym samym stylu co pole wyszukiwania obok (prosba Nat
+        // 2026-09-13: kwadratowy dzwonek przy okraglej pigulce szukania wygladal jak z innego zestawu).
+        className={className ?? "relative shrink-0 h-9 w-9 flex items-center justify-center rounded-full bg-muted/70 border border-border/50 text-foreground active:scale-95 transition-transform"}
       >
         <Bell className="h-4 w-4" />
         {unread > 0 && (

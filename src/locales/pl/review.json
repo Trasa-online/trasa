@@ -84,18 +84,18 @@
   "sharing": {
     "title": "Podziel się trasą",
     "help_others_title": "Pomóż innym w planowaniu",
-    "help_others_desc": "Trasa trafi do Eksploruj z Twoimi notkami i planem, żeby inni mogli zaplanować podobną podróż.",
-    "privacy_note": "Twoja galeria zdjęć zostaje prywatna i bezpieczna. W Eksploruj pokazujemy tylko plan trasy z Twoimi notkami.",
+    "help_others_desc": "Trasa trafi do Eksploracji z Twoimi notkami i planem, żeby inni mogli zaplanować podobną podróż.",
+    "privacy_note": "Twoja galeria zdjęć zostaje prywatna i bezpieczna. W Eksploracji pokazujemy tylko plan trasy z Twoimi notkami.",
     "anon_title": "Udostępnij anonimowo",
-    "anon_desc": "Bez Twojego profilu - trasa pojawi się w Eksploruj jako „Anonim”.",
+    "anon_desc": "Bez Twojego profilu - trasa pojawi się w Eksploracji jako „Anonim”.",
     "caption_label": "Podpis",
     "optional": "(opcjonalnie)",
     "caption_placeholder": "Napisz coś o tej podróży…"
   },
   "prompt": {
     "title": "Udostępnić tę trasę innym?",
-    "desc": "Trafi do zakładki Eksploruj i pomoże innym zaplanować podróż. Udostępniamy plan trasy z Twoją okładką, notkami - bez galerii Twoich zdjęć. Jeśli nie, zostanie prywatna w Twoich Wspomnieniach. Zmienisz to w każdej chwili.",
-    "confirm": "Udostępnij w Eksploruj",
+    "desc": "Trafi do Eksploracji i pomoże innym zaplanować podróż. Udostępniamy plan trasy z Twoją okładką, notkami - bez galerii Twoich zdjęć. Jeśli nie, zostanie prywatna w Twoich Wspomnieniach. Zmienisz to w każdej chwili.",
+    "confirm": "Udostępnij w Eksploracji",
     "keep_private": "Zostaw prywatną"
   },
   "share_sheet": {
@@ -136,8 +136,8 @@
     "place_added": "Dodano miejsce",
     "name_save_error": "Nie udało się zapisać nazwy",
     "name_saved": "Zapisano nazwę",
-    "route_public": "Trasa widoczna w Eksploruj",
-    "route_hidden": "Trasa ukryta z Eksploruj",
+    "route_public": "Trasa widoczna w Eksploracji",
+    "route_hidden": "Trasa ukryta z Eksploracji",
     "photo_upload_error": "Nie udało się dodać zdjęć. Spróbuj ponownie.",
     "photo_upload_partial": "Część zdjęć się nie dodała.",
     "cover_set_error": "Nie udało się ustawić okładki",
@@ -147,7 +147,8 @@
     "finished": "Wyjazd zakończony i zapisany we wspomnieniach",
     "date_saved": "Zapisano datę",
     "dates_removed": "Usunięto daty",
-    "place_removed": "Usunięto miejsce"
+    "place_removed": "Usunięto miejsce",
+    "cover_portrait_only": "Okładka musi być pionowa (3:4 albo 9:16). Wybierz inne zdjęcie."
   },
   "share": {
     "text": "Zobacz moją trasę w spontaway",

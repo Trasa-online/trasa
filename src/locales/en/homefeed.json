@@ -133,7 +133,9 @@
   },
   "grid": {
     "trip": "Trip",
-    "list": "List"
+    "list": "List",
+    "days_one": "{{count}} day",
+    "days_other": "{{count}} days"
   },
   "feed_empty": {
     "nobody_title": "Trips and lists from people you follow will show up here",

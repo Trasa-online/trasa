@@ -39,7 +39,7 @@
   "edit_date_title": "Zmień datę wyjazdu",
   "edit_date_aria": "Zmień datę",
   "saved_empty_title": "Brak zapisanych miejsc",
-  "saved_empty_desc": "Wróć do Eksploruj i zapisz miejsca, które chcesz mieć w trasie.",
+  "saved_empty_desc": "Wróć do Eksploracji i zapisz miejsca, które chcesz mieć w trasie.",
   "saved_empty_cta": "Eksploruj dalej",
   "saved_deselect_hint": "Odznacz miejsca, których nie chcesz w trasie",
   "saved_cta": "Zaproponuj trasę z wybranych miejsc",
@@ -234,7 +234,11 @@
     "no_dates": "Bez dat",
     "pick_day_one": "Wybierz dzień wyjazdu (max. {{count}} dzień)",
     "pick_day_few": "Wybierz dzień wyjazdu (max. {{count}} dni)",
-    "pick_day_many": "Wybierz dzień wyjazdu (max. {{count}} dni)"
+    "pick_day_many": "Wybierz dzień wyjazdu (max. {{count}} dni)",
+    "pick_day_long": "Wybierz dzień albo zakres dni wyjazdu",
+    "max_range_one": "Wyjazd może trwać maksymalnie {{count}} dzień",
+    "max_range_few": "Wyjazd może trwać maksymalnie {{count}} dni",
+    "max_range_many": "Wyjazd może trwać maksymalnie {{count}} dni"
   },
   "template": {
     "failed": "Nie udało się utworzyć trasy. Spróbuj ponownie.",
