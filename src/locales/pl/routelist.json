@@ -25,16 +25,16 @@
   "stop_few": "przystanki",
   "empty": {
     "desc_owner": "Dodaj pierwsze miejsce klikając guzik „+ Dodaj nowe miejsce”",
-    "desc_visitor": "Ta lista nie ma jeszcze żadnych miejsc.",
-    "title": "Lista jest pusta"
+    "desc_visitor": "Ta kolekcja nie ma jeszcze żadnych miejsc.",
+    "title": "Kolekcja jest pusta"
   },
   "missing": {
     "desc": "Mogła zostać usunięta lub nie jest jeszcze opublikowana.",
     "back": "Wróć do eksploracji",
-    "title": "Lista niedostępna"
+    "title": "Kolekcja niedostępna"
   },
   "confirm": {
-    "delete_title": "Na pewno chcesz usunąć tę listę?",
+    "delete_title": "Na pewno chcesz usunąć tę kolekcję?",
     "delete_desc": "„{{title}}” zniknie bezpowrotnie z Twojego profilu. Nie można tego cofnąć."
   },
   "toast": {
@@ -42,12 +42,12 @@
     "place_delete_failed": "Nie udało się usunąć miejsca",
     "note_failed": "Nie udało się zapisać notki",
     "photo_add_failed": "Nie udało się dodać zdjęcia",
-    "list_delete_failed": "Nie udało się usunąć listy.",
+    "list_delete_failed": "Nie udało się usunąć kolekcji.",
     "removed_saved": "Usunięto z zapisanych",
-    "list_updated": "Zaktualizowano listę",
+    "list_updated": "Zaktualizowano kolekcję",
     "place_deleted": "Usunięto miejsce",
-    "list_deleted": "Usunięto listę.",
-    "list_saved": "Zapisano listę",
+    "list_deleted": "Usunięto kolekcję.",
+    "list_saved": "Zapisano kolekcję",
     "photos_rejected_one": "Jedno zdjęcie nie przeszło moderacji",
     "photos_rejected_few": "{{count}} zdjęcia nie przeszły moderacji",
     "photos_rejected_many": "{{count}} zdjęć nie przeszło moderacji",
@@ -58,17 +58,17 @@
   },
   "cta": {
     "add_place": "Dodaj nowe miejsce",
-    "save_list": "Zapisz tę listę"
+    "save_list": "Zapisz tę kolekcję"
   },
   "aria": {
     "delete_photo": "Usuń zdjęcie",
     "share": "Udostępnij",
-    "delete_list": "Usuń listę",
-    "rename_list": "Zmień nazwę listy",
-    "list_actions": "Akcje listy",
-    "list_theme": "Tło listy"
+    "delete_list": "Usuń kolekcję",
+    "rename_list": "Zmień nazwę kolekcji",
+    "list_actions": "Akcje kolekcji",
+    "list_theme": "Tło kolekcji"
   },
-  "fallback_title": "Lista miejsc",
+  "fallback_title": "Kolekcja miejsc",
   "photo": "Zdjęcie",
   "someone": "Ktoś",
   "back": "Wróć",
@@ -79,12 +79,12 @@
   "new_since_visit": "Nowe od Twojej ostatniej wizyty · {{count}}",
   "new_place_badge": "nowe miejsce",
   "add_place_photo": "Dodaj zdjęcie do miejsca",
-  "remove_from_list": "Usuń miejsce z listy",
+  "remove_from_list": "Usuń miejsce z kolekcji",
   "adding": "Dodawanie…",
   "theme": {
-    "title": "Tło listy",
-    "desc": "Tak Twoja lista wygląda w Eksploracji. Wybierz kolor z palety.",
-    "saved": "Ustawiono tło listy",
+    "title": "Tło kolekcji",
+    "desc": "Tak Twoja kolekcja wygląda w Eksploracji. Wybierz kolor z palety.",
+    "saved": "Ustawiono tło kolekcji",
     "save_failed": "Nie udało się zapisać tła",
     "default_hint": "Zaznaczony kolor to tło domyślne, dobrane automatycznie.",
     "brick": "Cegła",

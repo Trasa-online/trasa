@@ -7,15 +7,15 @@
     "change_theme": "Change theme"
   },
   "form": {
-    "list": "List",
+    "list": "Collection",
     "route": "Plan",
-    "description_label": "List description",
+    "description_label": "Collection description",
     "place_tags_label": "Place tags"
   },
   "form_picker": {
     "title": "What are you creating?",
     "subtitle": "Choose the format of your collection. It determines the themes available in the next step.",
-    "list_label": "List",
+    "list_label": "Collection",
     "list_hint": "A set of recommended places with no fixed order. E.g. the best cafes in the city.",
     "route_label": "Plan",
     "route_hint": "An ordered plan with a sequence of places and a map. E.g. an idea for the whole day."
@@ -23,7 +23,7 @@
   "theme_picker": {
     "title": "What's the theme?",
     "subtitle_route": "Choose a theme for your plan. It helps others find it.",
-    "subtitle_list": "Choose a theme for your list. It helps others find it."
+    "subtitle_list": "Choose a theme for your collection. It helps others find it."
   },
   "city_label": "City",
   "name_label": "Name",
@@ -66,11 +66,11 @@
   "cta": {
     "next": "Next: notes and map",
     "save": "Save changes",
-    "publish": "Save my list",
+    "publish": "Save my collection",
     "need_city": "Pick a city first",
-    "need_title": "Add a list name",
+    "need_title": "Add a collection name",
     "need_place": "Add at least one place",
-    "need_two_places": "Add at least 2 places to create a list",
+    "need_two_places": "Add at least 2 places to create a collection",
     "title_not_allowed": "This name contains a word we don't allow. Change it to continue."
   },
   "custom_preview": {
@@ -80,35 +80,35 @@
     "add": "Add"
   },
   "toast": {
-    "already_added": "This place is already on the list",
+    "already_added": "This place is already in the collection",
     "add_failed": "Could not add the place",
     "not_found": "Place not found - check the name",
     "updated": "Collection updated!",
-    "sent": "List published and visible to others.",
+    "sent": "Collection published and visible to others.",
     "save_failed": "Could not save: {{error}}"
   },
   "error_fallback": "error",
   "tags": {
     "label": "Tags",
-    "hint": "Add tags so others can find your list more easily.",
+    "hint": "Add tags so others can find your collection more easily.",
     "more": "Show more",
     "less": "Show less",
     "custom_placeholder": "Add your own tag",
     "add": "Add"
   },
-  "intro": "A list is a set of your favourite places in no particular order - like the cafes you love in your city.",
+  "intro": "A collection is a set of your favourite places in no particular order - like the cafes you love in your city.",
   "saved": {
     "empty": "You have no saved places yet. Like places while exploring to add them here in one tap.",
     "other_cities": "Your saved places (from other cities)",
     "your_saved": "Your saved places"
   },
   "city": {
-    "optional": "The city is optional - you can put places from different cities on one list.",
+    "optional": "The city is optional - you can put places from different cities in one collection.",
     "anywhere_world": "Anywhere (worldwide)",
     "anywhere": "Anywhere"
   },
   "desc": {
-    "hint": "Say what this list is about, so others can decide faster.",
+    "hint": "Say what this collection is about, so others can decide faster.",
     "placeholder": "E.g. My favourite spots for good coffee and laptop work..."
   },
   "reorder_hint": "Drag to reorder",
@@ -159,5 +159,5 @@
     }
   },
   "default_name_city": "Places in {{city}}",
-  "default_name": "New list"
+  "default_name": "New collection"
 }

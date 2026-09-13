@@ -14,10 +14,10 @@
     "cities": "Cities",
     "cities_sub": "places visited",
     "collections": "Collections",
-    "collections_sub_public": "place collections",
-    "collections_sub_own": "Your place collections",
+    "collections_sub_public": "collections of places",
+    "collections_sub_own": "Your collections of places",
     "trips": "Trips",
-    "lists": "Lists"
+    "lists": "Collections"
   },
   "public": {
     "not_found": "User not found",
@@ -39,10 +39,10 @@
     "removed_saved": "Removed from saved",
     "unblock": "Unblock user",
     "block": "Block user",
-    "list_saved": "List saved",
+    "list_saved": "Collection saved",
     "no_trips": "No trips",
     "report": "Report profile",
-    "no_lists": "No lists",
+    "no_lists": "No collections",
     "more": "More",
     "trip_saved": "Trip saved",
     "no_following": "{{name}} does not follow anyone yet.",
@@ -83,12 +83,12 @@
     "no_followers": "No one follows you yet.",
     "trip_deleted": "Trip deleted.",
     "delete_error": "We couldn't delete it.",
-    "list_deleted": "List deleted.",
+    "list_deleted": "Collection deleted.",
     "share_no_username": "Add a username to share your profile.",
     "no_following": "You do not follow anyone yet.",
     "removed_saved": "Removed from saved",
     "new_content_aria": "New content",
-    "list_fallback_title": "Place list",
+    "list_fallback_title": "Collection of places",
     "traveler_fallback": "Traveler",
     "starred": "Starred",
     "starred_aria": "Starred places"
@@ -126,12 +126,12 @@
   "feed": {
     "visited": "Visited places",
     "to_visit": "Places to visit",
-    "list_fallback": "Place list",
+    "list_fallback": "Collection of places",
     "trip_fallback": "Trip to {{city}}",
     "trip_fallback_generic": "Trip",
-    "lists_empty_title": "No lists yet",
-    "lists_empty_desc": "Create lists of favourite places: visited or to visit.",
-    "lists_empty_cta": "New place list",
+    "lists_empty_title": "No collections yet",
+    "lists_empty_desc": "Create collections of favourite places: visited or to visit.",
+    "lists_empty_cta": "New collection of places",
     "trips_empty_title": "No trips yet",
     "trips_empty_desc": "Plan a route and share it with friends.",
     "trips_empty_cta": "Plan a trip",
@@ -140,19 +140,19 @@
     "author_fallback": "Author"
   },
   "empty": {
-    "first_list_desc": "Add your first list with the + button and pick List",
+    "first_list_desc": "Add your first collection with the + button and pick Collection",
     "drafts_desc": "Create a new trip to see it here",
     "memories_desc": "Publish a trip to see it here",
     "saved_lists_title": "No saved lists yet",
     "no_saved_trips": "No saved trips",
     "no_drafts": "Nothing in progress",
-    "no_own_lists": "No lists of your own",
+    "no_own_lists": "No collections of your own",
     "no_memories": "No memories yet",
-    "saved_lists_desc": "Bookmark someone else's list <b>to see it here</b>",
+    "saved_lists_desc": "Bookmark someone else's collection <b>to see it here</b>",
     "saved_trips_desc": "Bookmark someone else's trip <b>to see it here</b>"
   },
   "tabs": {
-    "my_lists": "My lists",
+    "my_lists": "My collections",
     "general": "General"
   },
   "trip_tabs": {
@@ -185,8 +185,8 @@
   },
   "tab_hints": {
     "lists_moje": "Your public place recommendations. Anyone can save them.",
-    "lists_ogolne": "A private list of everything you save with one tap. Only you can see it.",
-    "lists_zapisane": "Lists from other travellers that you saved.",
+    "lists_ogolne": "A private collection of everything you save with one tap. Only you can see it.",
+    "lists_zapisane": "Collections from other travellers that you saved.",
     "trips_wspomnienia": "Published trips. They show up in Explore and on your profile.",
     "trips_wspomnienia_reorder": "Published trips. Press and hold a cover, then drag to arrange them your way.",
     "trips_robocze": "Trips in progress. Only you can see them until you publish.",
@@ -194,12 +194,12 @@
   },
   "starred": {
     "title": "Starred places",
-    "desc": "Places you starred in your trips and lists.",
+    "desc": "Places you starred in your trips and collections.",
     "empty_title": "Nothing starred yet",
-    "empty_desc": "Star a place from its menu in a trip or a list - one per trip, as many as you like per list.",
+    "empty_desc": "Star a place in a trip or a collection - one per trip, as many as you like per collection.",
     "trip_fallback": "Trip",
-    "list_fallback": "List",
-    "desc_theirs": "Places this person starred in their trips and lists.",
+    "list_fallback": "Collection",
+    "desc_theirs": "Places this person starred in their trips and collections.",
     "empty_title_theirs": "No starred places yet"
   }
 }

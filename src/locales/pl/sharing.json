@@ -207,7 +207,7 @@
   "trip_fallback": "Wyjazd",
   "close": "Zamknij",
   "share": {
-    "save_in_app": "zapisz tę listę w spontaway",
+    "save_in_app": "zapisz tę kolekcję w spontaway",
     "open_fullscreen": "Otwórz na pełnym ekranie",
     "share": "Udostępnij",
     "and_more_few": "…i {{count}} miejsca więcej",
@@ -215,7 +215,7 @@
     "and_more_one": "…i jeszcze jedno miejsce",
     "link_heading": "Udostępnij link do wyjazdu",
     "first_day": "Dzień 1",
-    "link_heading_list": "Udostępnij link do listy",
+    "link_heading_list": "Udostępnij link do kolekcji",
     "link_heading_place": "Udostępnij link do miejsca"
   },
   "target": {
@@ -224,7 +224,7 @@
   },
   "card": {
     "trip_label": "WYJAZD",
-    "list_label": "LISTA MIEJSC"
+    "list_label": "KOLEKCJA MIEJSC"
   },
   "note": {
     "placeholder": "Twoja notka o tym wyjeździe..."
@@ -290,7 +290,8 @@
   },
   "fabs": {
     "expand": "Pokaż akcje wyjazdu",
-    "collapse": "Schowaj akcje wyjazdu"
+    "collapse": "Schowaj akcje wyjazdu",
+    "chat": "Czat"
   },
   "add_place_photo": "Dodaj zdjęcie do miejsca"
 }

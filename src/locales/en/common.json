@@ -93,7 +93,7 @@
   "offline": "You are offline",
   "filters": {
     "all": "All",
-    "lists": "Lists",
+    "lists": "Collections",
     "trips": "Trips",
     "places": "Places",
     "routes": "Routes",
@@ -101,7 +101,7 @@
   },
   "fallback": {
     "trip": "Trip",
-    "list": "List",
+    "list": "Collection",
     "route": "Route",
     "place": "Place",
     "unknown_place": "Unknown place"

@@ -122,7 +122,7 @@
   "today": "Today",
   "saved": {
     "empty": "Bookmark places while exploring, or add them here.",
-    "desc": "Your private list of places for later.",
+    "desc": "Your private collection of places for later.",
     "no_results": "No results. Try a different name.",
     "add_failed": "We could not add the place",
     "undo_failed": "We could not undo that",
@@ -144,11 +144,11 @@
     "none_in_country": "No saved places in {{country}}."
   },
   "add_saved": {
-    "goes_to_general": "It goes to your General list.",
+    "goes_to_general": "It goes to your General collection.",
     "failed": "We could not add the place",
     "clear": "Clear",
     "change": "Change",
-    "already": "“{{name}}” is already on the list",
+    "already": "“{{name}}” is already in the collection",
     "add_term": "Add “{{term}}”",
     "custom_in": "Your own entry in {{city}}"
   },

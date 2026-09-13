@@ -93,7 +93,7 @@
   "offline": "Jesteś offline",
   "filters": {
     "all": "Wszystko",
-    "lists": "Listy",
+    "lists": "Kolekcje",
     "trips": "Wyjazdy",
     "places": "Miejsca",
     "routes": "Trasy",
@@ -101,7 +101,7 @@
   },
   "fallback": {
     "trip": "Wyjazd",
-    "list": "Lista",
+    "list": "Kolekcja",
     "route": "Trasa",
     "place": "Miejsce",
     "unknown_place": "Nieznane miejsce"

@@ -201,14 +201,14 @@
   "trip_fallback": "Trip",
   "close": "Close",
   "share": {
-    "save_in_app": "save this list in spontaway",
+    "save_in_app": "save this collection in spontaway",
     "open_fullscreen": "Open full screen",
     "share": "Share",
     "and_more_one": "…and 1 more place",
     "and_more_other": "…and {{count}} more places",
     "link_heading": "Share the trip link",
     "first_day": "Day 1",
-    "link_heading_list": "Share a link to this list",
+    "link_heading_list": "Share a link to this collection",
     "link_heading_place": "Share a link to this place"
   },
   "target": {
@@ -217,7 +217,7 @@
   },
   "card": {
     "trip_label": "TRIP",
-    "list_label": "PLACE LIST"
+    "list_label": "COLLECTION OF PLACES"
   },
   "note": {
     "placeholder": "Your note about this trip..."
@@ -280,7 +280,8 @@
   },
   "fabs": {
     "expand": "Show trip actions",
-    "collapse": "Hide trip actions"
+    "collapse": "Hide trip actions",
+    "chat": "Chat"
   },
   "add_place_photo": "Add a photo to this place"
 }

@@ -17,18 +17,18 @@
   "search_unavailable": "Wyszukiwarka chwilowo niedostępna. Wybierz z zapisanych.",
   "toast": {
     "trip_failed": "Nie udało się utworzyć wyjazdu",
-    "list_failed": "Nie udało się utworzyć listy",
-    "list_created": "Lista utworzona"
+    "list_failed": "Nie udało się utworzyć kolekcji",
+    "list_created": "Kolekcja utworzona"
   },
   "invite": {
     "trip_desc": "Twórz wyjazdy razem z innymi",
-    "list_desc": "Twórz listy razem z innymi",
+    "list_desc": "Twórz kolekcje razem z innymi",
     "to_trip": "Dodaj osoby do wyjazdu",
-    "to_list": "Dodaj osoby do listy",
+    "to_list": "Dodaj osoby do kolekcji",
     "cta": "Dodaj osoby"
   },
   "skip_dates": "Pomiń - dodam daty później",
-  "skip_city": "Pomiń - lista bez miasta",
+  "skip_city": "Pomiń - kolekcja bez miasta",
   "your_saved_places": "Twoje zapisane miejsca",
   "trip_kind": {
     "past_desc": "Dodaj wspomnienie",
@@ -39,26 +39,26 @@
   },
   "past_trip": "Przeszły wyjazd",
   "aria": {
-    "add_to_list": "Dodaj do listy",
-    "remove_from_list": "Usuń z listy",
+    "add_to_list": "Dodaj do kolekcji",
+    "remove_from_list": "Usuń z kolekcji",
     "open_in_maps": "Otwórz {{place}} w Google Maps"
   },
   "search_place": "Szukaj miejsca",
-  "list_name_default": "Lista miejsc",
-  "list_city": "Miasto listy",
+  "list_name_default": "Kolekcja miejsc",
+  "list_city": "Miasto kolekcji",
   "pick_date": "Wybierz datę",
   "no_results": "Brak wyników",
-  "list_name_label": "Nazwa listy",
+  "list_name_label": "Nazwa kolekcji",
   "trip_name_label": "Nazwa trasy",
   "user_fallback": "Użytkownik",
-  "new_list": "Nowa lista",
+  "new_list": "Nowa kolekcja",
   "soon": "Wkrótce",
   "create": "Utwórz",
   "skip": "Pomiń",
-  "list_name_city": "Lista miejsc {{city}}",
+  "list_name_city": "Kolekcja miejsc {{city}}",
   "trip_name_city": "Wyjazd do {{city}}",
   "cover": {
-    "empty": "Dodaj miejsca do listy albo wgraj własne zdjęcie, żeby ustawić okładkę.",
+    "empty": "Dodaj miejsca do kolekcji albo wgraj własne zdjęcie, żeby ustawić okładkę.",
     "reset": "Wróć do domyślnej okładki",
     "new_photo": "Nowe zdjęcie"
   },
@@ -71,7 +71,7 @@
     "city": "Miasto"
   },
   "kind": {
-    "list": "Lista",
+    "list": "Kolekcja",
     "trip": "Wyjazd"
   },
   "country": {

@@ -123,7 +123,7 @@
     "search_unavailable": "Search is temporarily unavailable. Pick from your saved places.",
     "failed": "We could not add the place",
     "placeholder": "Add a new place…",
-    "saved_list": "Saved list ·",
+    "saved_list": "Saved collection ·",
     "remove": "Remove from the trip",
     "no_results": "No results",
     "already": "Already added",
@@ -144,10 +144,10 @@
     "participant": "Participant"
   },
   "row": {
-    "saved_in_list": "Place saved in a list",
+    "saved_in_list": "Place saved in a collection",
     "open_in_maps": "Open in Google Maps",
     "remove": "Remove the place from the trip",
-    "save_to_list": "Save place to a list",
+    "save_to_list": "Save place to a collection",
     "visited": "Visited",
     "mark_visited": "Mark as visited",
     "mark_not_visited": "Remove visited mark",

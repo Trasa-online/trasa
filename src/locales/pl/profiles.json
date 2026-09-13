@@ -13,11 +13,11 @@
     "routes_sub": "udostępnione podróże",
     "cities": "Miasta",
     "cities_sub": "odwiedzone miejsca",
-    "collections": "Listy",
+    "collections": "Kolekcje",
     "collections_sub_public": "kolekcje miejsc",
     "collections_sub_own": "Twoje kolekcje miejsc",
     "trips": "Wyjazdy",
-    "lists": "Listy"
+    "lists": "Kolekcje"
   },
   "public": {
     "not_found": "Nie znaleziono użytkownika",
@@ -40,10 +40,10 @@
     "removed_saved": "Usunięto z zapisanych",
     "unblock": "Odblokuj użytkownika",
     "block": "Zablokuj użytkownika",
-    "list_saved": "Zapisano listę",
+    "list_saved": "Zapisano kolekcję",
     "no_trips": "Brak wyjazdów",
     "report": "Zgłoś profil",
-    "no_lists": "Brak list",
+    "no_lists": "Brak kolekcji",
     "more": "Więcej",
     "trip_saved": "Zapisano wyjazd",
     "no_following": "{{name}} nikogo jeszcze nie obserwuje.",
@@ -84,12 +84,12 @@
     "no_followers": "Nikt Cię jeszcze nie obserwuje.",
     "trip_deleted": "Wyjazd usunięty.",
     "delete_error": "Nie udało się usunąć.",
-    "list_deleted": "Lista usunięta.",
+    "list_deleted": "Kolekcja usunięta.",
     "share_no_username": "Uzupełnij nazwę użytkownika, aby udostępnić profil.",
     "no_following": "Nie obserwujesz jeszcze nikogo.",
     "removed_saved": "Usunięto z zapisanych",
     "new_content_aria": "Nowa zawartość",
-    "list_fallback_title": "Lista miejsc",
+    "list_fallback_title": "Kolekcja miejsc",
     "traveler_fallback": "Podróżnik",
     "starred": "Wyróżnione",
     "starred_aria": "Wyróżnione miejsca"
@@ -127,12 +127,12 @@
   "feed": {
     "visited": "Odwiedzone miejsca",
     "to_visit": "Do odwiedzenia miejsca",
-    "list_fallback": "Lista miejsc",
+    "list_fallback": "Kolekcja miejsc",
     "trip_fallback": "Wyjazd do {{city}}",
     "trip_fallback_generic": "Wyjazd",
-    "lists_empty_title": "Nie masz jeszcze list",
-    "lists_empty_desc": "Twórz listy ulubionych miejsc: odwiedzonych albo do odwiedzenia.",
-    "lists_empty_cta": "Nowa lista miejsc",
+    "lists_empty_title": "Nie masz jeszcze kolekcji",
+    "lists_empty_desc": "Twórz kolekcje ulubionych miejsc: odwiedzonych albo do odwiedzenia.",
+    "lists_empty_cta": "Nowa kolekcja miejsc",
     "trips_empty_title": "Nie masz jeszcze wyjazdów",
     "trips_empty_desc": "Zaplanuj trasę i podziel się nią ze znajomymi.",
     "trips_empty_cta": "Zaplanuj wyjazd",
@@ -142,19 +142,19 @@
     "author_fallback": "Autor"
   },
   "empty": {
-    "first_list_desc": "Dodaj pierwszą listę klikając guzik „+\" i wybierz „Lista\"",
+    "first_list_desc": "Dodaj pierwszą kolekcję klikając guzik „+\" i wybierz „Kolekcja\"",
     "drafts_desc": "Stwórz nowy wyjazd, żeby zobaczyć go tutaj",
     "memories_desc": "Opublikuj wyjazd, żeby zobaczyć go tutaj",
-    "saved_lists_title": "Lista zapisanych miejsc jest pusta",
+    "saved_lists_title": "Nie masz jeszcze zapisanych kolekcji",
     "no_saved_trips": "Brak zapisanych wyjazdów",
     "no_drafts": "Brak roboczych wyjazdów",
-    "no_own_lists": "Brak własnych list",
+    "no_own_lists": "Brak własnych kolekcji",
     "no_memories": "Brak wspomnień",
-    "saved_lists_desc": "Zapisz cudzą listę <b>bookmarkiem</b>, żeby zobaczyć ją tutaj",
+    "saved_lists_desc": "Zapisz cudzą kolekcję <b>bookmarkiem</b>, żeby zobaczyć ją tutaj",
     "saved_trips_desc": "Zapisz cudzy wyjazd <b>bookmarkiem</b>, żeby zobaczyć go tutaj"
   },
   "tabs": {
-    "my_lists": "Moje listy",
+    "my_lists": "Moje kolekcje",
     "general": "Ogólne"
   },
   "trip_tabs": {
@@ -187,8 +187,8 @@
   },
   "tab_hints": {
     "lists_moje": "Twoje publiczne polecajki miejsc. Każdy może je zapisać u siebie.",
-    "lists_ogolne": "Prywatna lista wszystkiego, co zapisujesz jednym tapnięciem. Widzisz ją tylko Ty.",
-    "lists_zapisane": "Listy innych podróżnych, które masz u siebie zapisane.",
+    "lists_ogolne": "Prywatna kolekcja wszystkiego, co zapisujesz jednym tapnięciem. Widzisz ją tylko Ty.",
+    "lists_zapisane": "Kolekcje innych podróżnych, które masz u siebie zapisane.",
     "trips_wspomnienia": "Opublikowane wyjazdy. Widać je w eksploracji i na Twoim profilu.",
     "trips_wspomnienia_reorder": "Opublikowane wyjazdy. Przytrzymaj okładkę i przeciągnij, żeby ułożyć je po swojemu.",
     "trips_robocze": "Wyjazdy w przygotowaniu. Widzisz je tylko Ty, dopóki ich nie opublikujesz.",
@@ -196,12 +196,12 @@
   },
   "starred": {
     "title": "Wyróżnione miejsca",
-    "desc": "Miejsca, które wyróżniasz gwiazdką w swoich wyjazdach i listach.",
+    "desc": "Miejsca, które wyróżniasz gwiazdką w swoich wyjazdach i kolekcjach.",
     "empty_title": "Jeszcze nic nie wyróżniasz",
-    "empty_desc": "Gwiazdkę dodasz w menu przy miejscu w wyjeździe albo na liście - jedną na wyjazd, na liście ile chcesz.",
+    "empty_desc": "Gwiazdkę dodasz przy miejscu w wyjeździe albo w kolekcji - jedną na wyjazd, w kolekcji ile chcesz.",
     "trip_fallback": "Wyjazd",
-    "list_fallback": "Lista",
-    "desc_theirs": "Miejsca wyróżnione gwiazdką w wyjazdach i listach tej osoby.",
+    "list_fallback": "Kolekcja",
+    "desc_theirs": "Miejsca wyróżnione gwiazdką w wyjazdach i kolekcjach tej osoby.",
     "empty_title_theirs": "Brak wyróżnionych miejsc"
   }
 }

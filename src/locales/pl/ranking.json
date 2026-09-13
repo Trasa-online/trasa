@@ -1,21 +1,21 @@
 {
   "header": {
-    "new_collection": "Nowa lista",
-    "edit_collection": "Edytuj listę",
+    "new_collection": "Nowa kolekcja",
+    "edit_collection": "Edytuj kolekcję",
     "notes_and_map": "Notki i mapa",
     "back": "Wstecz",
     "change_theme": "Zmień motyw"
   },
   "form": {
-    "list": "Lista",
+    "list": "Kolekcja",
     "route": "Plan",
-    "description_label": "Opis listy",
+    "description_label": "Opis kolekcji",
     "place_tags_label": "Tagi miejsca"
   },
   "form_picker": {
     "title": "Co tworzysz?",
-    "subtitle": "Wybierz formę listy. Od tego zależą dostępne motywy w kolejnym kroku.",
-    "list_label": "Lista",
+    "subtitle": "Wybierz formę kolekcji. Od tego zależą dostępne motywy w kolejnym kroku.",
+    "list_label": "Kolekcja",
     "list_hint": "Zbiór polecanych miejsc bez ustalonej kolejności. Np. najlepsze kawiarnie w mieście.",
     "route_label": "Plan",
     "route_hint": "Uporządkowany plan z kolejnością miejsc i mapą. Np. pomysł na cały dzień."
@@ -23,11 +23,11 @@
   "theme_picker": {
     "title": "Jaki to motyw?",
     "subtitle_route": "Wybierz temat swojego planu. To pomaga innym go znaleźć.",
-    "subtitle_list": "Wybierz temat swojej listy. To pomaga innym go znaleźć."
+    "subtitle_list": "Wybierz temat swojej kolekcji. To pomaga innym go znaleźć."
   },
   "city_label": "Miasto",
   "name_label": "Nazwa",
-  "name_placeholder": "Nazwa listy",
+  "name_placeholder": "Nazwa kolekcji",
   "search": {
     "placeholder": "Szukaj miejsca w {{city}}…",
     "searching_more": "Szukam więcej miejsc…",
@@ -48,9 +48,9 @@
     "suggestions": "Propozycje w {{city}}"
   },
   "notes": {
-    "collection_label": "Notka do listy",
+    "collection_label": "Notka do kolekcji",
     "optional": "(opcjonalnie)",
-    "collection_placeholder": "Napisz kilka słów o tej liście: dla kogo, kiedy, dlaczego właśnie te miejsca…",
+    "collection_placeholder": "Napisz kilka słów o tej kolekcji: dla kogo, kiedy, dlaczego właśnie te miejsca…",
     "places_label": "Notki do miejsc",
     "place_placeholder": "Twoja notka o tym miejscu (opcjonalnie)…"
   },
@@ -66,11 +66,11 @@
   "cta": {
     "next": "Dalej: notki i mapa",
     "save": "Zapisz zmiany",
-    "publish": "Zapisz moją listę",
+    "publish": "Zapisz moją kolekcję",
     "need_city": "Najpierw wybierz miasto",
-    "need_title": "Dodaj nazwę listy",
+    "need_title": "Dodaj nazwę kolekcji",
     "need_place": "Dodaj co najmniej jedno miejsce",
-    "need_two_places": "Dodaj co najmniej 2 miejsca, żeby stworzyć listę",
+    "need_two_places": "Dodaj co najmniej 2 miejsca, żeby stworzyć kolekcję",
     "title_not_allowed": "Ta nazwa zawiera niedozwolone słowo. Zmień ją, żeby przejść dalej."
   },
   "custom_preview": {
@@ -80,35 +80,35 @@
     "add": "Dodaj"
   },
   "toast": {
-    "already_added": "To miejsce już jest na liście",
+    "already_added": "To miejsce już jest w kolekcji",
     "add_failed": "Nie udało się dodać miejsca",
     "not_found": "Nie znaleziono miejsca - sprawdź nazwę",
-    "updated": "Lista zaktualizowana!",
-    "sent": "Lista opublikowana i widoczna dla innych.",
+    "updated": "Kolekcja zaktualizowana!",
+    "sent": "Kolekcja opublikowana i widoczna dla innych.",
     "save_failed": "Nie udało się zapisać: {{error}}"
   },
   "error_fallback": "błąd",
   "tags": {
     "label": "Tagi",
-    "hint": "Dodaj tagi, żeby inni łatwiej trafili na Twoją listę.",
+    "hint": "Dodaj tagi, żeby inni łatwiej trafili na Twoją kolekcję.",
     "more": "Pokaż więcej",
     "less": "Zwiń",
     "custom_placeholder": "Dodaj własny tag",
     "add": "Dodaj"
   },
-  "intro": "Lista to zbiór Twoich ulubionych miejsc bez ustalonej kolejności - np. Twoje ukochane kawiarnie w mieście.",
+  "intro": "Kolekcja to zbiór Twoich ulubionych miejsc bez ustalonej kolejności - np. Twoje ukochane kawiarnie w mieście.",
   "saved": {
     "empty": "Nie masz jeszcze zapisanych miejsc. Polub miejsca w eksploracji, żeby dodać je tu jednym tapem.",
     "other_cities": "Twoje zapisane miejsca (z innych miast)",
     "your_saved": "Twoje zapisane miejsca"
   },
   "city": {
-    "optional": "Miasto jest opcjonalne - możesz dodać miejsca z różnych miast do tej samej listy.",
+    "optional": "Miasto jest opcjonalne - możesz dodać miejsca z różnych miast do tej samej kolekcji.",
     "anywhere_world": "Wszędzie (cały świat)",
     "anywhere": "Wszędzie"
   },
   "desc": {
-    "hint": "Napisz, o czym jest ta lista, żeby innym łatwiej było zdecydować.",
+    "hint": "Napisz, o czym jest ta kolekcja, żeby innym łatwiej było zdecydować.",
     "placeholder": "Np. Moje ulubione miejsca na dobrą kawę i pracę z laptopem..."
   },
   "reorder_hint": "Przeciągnij, by zmienić kolejność",
@@ -158,6 +158,6 @@
       "hint": "Na świeżym powietrzu"
     }
   },
-  "default_name_city": "Lista miejsc - {{city}}",
-  "default_name": "Nowa lista"
+  "default_name_city": "Kolekcja miejsc - {{city}}",
+  "default_name": "Nowa kolekcja"
 }

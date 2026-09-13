@@ -124,7 +124,7 @@
   "today": "Dziś",
   "saved": {
     "empty": "Zapisuj miejsca na później zakładką w eksploracji albo dodaj je tutaj.",
-    "desc": "Twoja prywatna lista miejsc na później.",
+    "desc": "Twoja prywatna kolekcja miejsc na później.",
     "no_results": "Brak wyników. Spróbuj innej nazwy.",
     "add_failed": "Nie udało się dodać miejsca",
     "undo_failed": "Nie udało się cofnąć",
@@ -146,11 +146,11 @@
     "none_in_country": "Brak zapisanych miejsc w kraju {{country}}."
   },
   "add_saved": {
-    "goes_to_general": "Trafi do Twojej listy Ogólne.",
+    "goes_to_general": "Trafi do Twojej kolekcji Ogólne.",
     "failed": "Nie udało się dodać miejsca",
     "clear": "Wyczyść",
     "change": "Zmień",
-    "already": "„{{name}}” już jest na liście",
+    "already": "„{{name}}” już jest w kolekcji",
     "add_term": "Dodaj „{{term}}”",
     "custom_in": "Własny wpis w {{city}}"
   },

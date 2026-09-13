@@ -24,16 +24,16 @@
   "stop_other": "stops",
   "empty": {
     "desc_owner": "Add your first place with the + Add new place button",
-    "desc_visitor": "This list has no places yet.",
-    "title": "This list is empty"
+    "desc_visitor": "This collection has no places yet.",
+    "title": "This collection is empty"
   },
   "missing": {
     "desc": "It may have been deleted, or it is not published yet.",
     "back": "Back to Explore",
-    "title": "List unavailable"
+    "title": "Collection unavailable"
   },
   "confirm": {
-    "delete_title": "Delete this list?",
+    "delete_title": "Delete this collection?",
     "delete_desc": "“{{title}}” will be gone from your profile for good. This cannot be undone."
   },
   "toast": {
@@ -41,12 +41,12 @@
     "place_delete_failed": "We could not remove the place",
     "note_failed": "We could not save the note",
     "photo_add_failed": "We could not add the photo",
-    "list_delete_failed": "We could not delete the list.",
+    "list_delete_failed": "We could not delete the collection.",
     "removed_saved": "Removed from saved",
-    "list_updated": "List updated",
+    "list_updated": "Collection updated",
     "place_deleted": "Place removed",
-    "list_deleted": "List deleted.",
-    "list_saved": "List saved",
+    "list_deleted": "Collection deleted.",
+    "list_saved": "Collection saved",
     "photos_rejected_one": "One photo did not pass moderation",
     "photos_rejected_other": "{{count}} photos did not pass moderation",
     "name_saved": "Name changed",
@@ -56,17 +56,17 @@
   },
   "cta": {
     "add_place": "Add new place",
-    "save_list": "Save this list"
+    "save_list": "Save this collection"
   },
   "aria": {
     "delete_photo": "Delete photo",
     "share": "Share",
-    "delete_list": "Delete list",
-    "rename_list": "Rename list",
-    "list_actions": "List actions",
-    "list_theme": "List background"
+    "delete_list": "Delete collection",
+    "rename_list": "Rename collection",
+    "list_actions": "Collection actions",
+    "list_theme": "Collection background"
   },
-  "fallback_title": "Place list",
+  "fallback_title": "Collection of places",
   "photo": "Photo",
   "someone": "Someone",
   "back": "Back",
@@ -76,12 +76,12 @@
   "new_since_visit": "New since your last visit · {{count}}",
   "new_place_badge": "new place",
   "add_place_photo": "Add a photo to this place",
-  "remove_from_list": "Remove place from list",
+  "remove_from_list": "Remove place from collection",
   "adding": "Adding…",
   "theme": {
-    "title": "List background",
-    "desc": "This is how your list looks in Explore. Pick a colour from the palette.",
-    "saved": "List background set",
+    "title": "Collection background",
+    "desc": "This is how your collection looks in Explore. Pick a colour from the palette.",
+    "saved": "Collection background set",
     "save_failed": "Could not save the background",
     "default_hint": "The selected colour is the automatic default.",
     "brick": "Brick",

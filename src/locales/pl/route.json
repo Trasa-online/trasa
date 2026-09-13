@@ -125,7 +125,7 @@
     "search_unavailable": "Wyszukiwarka chwilowo niedostępna. Wybierz z zapisanych.",
     "failed": "Nie udało się dodać miejsca",
     "placeholder": "Dodaj nowe miejsce…",
-    "saved_list": "Zapisana lista ·",
+    "saved_list": "Zapisana kolekcja ·",
     "remove": "Usuń z trasy",
     "no_results": "Brak wyników",
     "already": "Już dodane",
@@ -148,10 +148,10 @@
     "participant": "Uczestnik"
   },
   "row": {
-    "saved_in_list": "Miejsce zapisane w liście",
+    "saved_in_list": "Miejsce zapisane w kolekcji",
     "open_in_maps": "Otwórz w Google Maps",
     "remove": "Usuń miejsce z trasy",
-    "save_to_list": "Zapisz miejsce do listy",
+    "save_to_list": "Zapisz miejsce do kolekcji",
     "visited": "Odwiedzone",
     "mark_visited": "Oznacz jako odwiedzone",
     "mark_not_visited": "Usuń oznaczenie odwiedzenia",

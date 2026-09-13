@@ -3,7 +3,7 @@
     "saved": "Zapisano",
     "removed_saved": "Usunięto z zapisanych",
     "location_failed": "Nie udało się pobrać lokalizacji",
-    "collection_deleted": "Usunięto listę"
+    "collection_deleted": "Usunięto kolekcję"
   },
   "confirm": {
     "delete_collection": "Usunąć tę trasę?",
@@ -40,7 +40,7 @@
   "see": "Zobacz",
   "local_recommends": "lokals poleca!",
   "plan_badge": "🗺️ Plan",
-  "list_badge": "📍 Lista",
+  "list_badge": "📍 Kolekcja",
   "route_plan": "Plan trasy",
   "places": "Miejsca",
   "use_route": "Użyj tej trasy",
@@ -49,7 +49,7 @@
   "day": "dzień",
   "days": "dni",
   "popular_themes_warsaw": "Popularne motywy Warszawy",
-  "collections": "Listy",
+  "collections": "Kolekcje",
   "all": "Wszystkie",
   "places_count_one": "{{count}} miejsce",
   "places_count_few": "{{count}} miejsca",
@@ -111,10 +111,10 @@
   "onboarding_next": "Dalej",
   "empty": {
     "no_saved_routes_desc": "Zapisz trasę bookmarkiem w Eksploracji, żeby zobaczyć je tutaj.",
-    "no_saved_lists_desc": "Zapisz listę zakładką podczas przeglądania, żeby pojawiła się tutaj.",
+    "no_saved_lists_desc": "Zapisz kolekcję zakładką podczas przeglądania, żeby pojawiła się tutaj.",
     "no_saved_routes": "Brak zapisanych tras",
-    "no_saved_lists": "Brak zapisanych list",
-    "saved_any": "Zapisz listę lub trasę bookmarkiem podczas przeglądania, żeby pojawiły się tutaj."
+    "no_saved_lists": "Brak zapisanych kolekcji",
+    "saved_any": "Zapisz kolekcję lub trasę bookmarkiem podczas przeglądania, żeby pojawiły się tutaj."
   },
   "filters": {
     "show_label": "Pokaż"
@@ -132,17 +132,17 @@
     "add_cover": "Dodaj zdjęcie, żeby było widać"
   },
   "saved": {
-    "empty_lists_routes": "Brak zapisanych list i tras"
+    "empty_lists_routes": "Brak zapisanych kolekcji i tras"
   },
   "grid": {
     "trip": "Wyjazd",
-    "list": "Lista",
+    "list": "Kolekcja",
     "days_one": "{{count}} dzień",
     "days_few": "{{count}} dni",
     "days_many": "{{count}} dni"
   },
   "feed_empty": {
-    "nobody_title": "Tu pojawią się wyjazdy i listy osób, które obserwujesz",
+    "nobody_title": "Tu pojawią się wyjazdy i kolekcje osób, które obserwujesz",
     "nobody_hint": "Na razie nikogo nie obserwujesz. Znajdź znajomych albo podróżnych, których gust Ci odpowiada.",
     "nobody_cta": "Znajdź osoby do obserwowania",
     "quiet_title": "Na razie cisza",

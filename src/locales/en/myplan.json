@@ -110,9 +110,9 @@
   },
   "list": {
     "save_to_general": "Yes, save to General",
-    "create_new": "Create a new list",
+    "create_new": "Create a new collection",
     "create_and_save": "Create and save",
-    "name_placeholder": "List name (e.g. Places in {{city}})"
+    "name_placeholder": "Collection name (e.g. Places in {{city}})"
   },
   "go_suggestions": "Go to suggestions",
   "aria": {

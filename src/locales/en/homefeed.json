@@ -3,12 +3,12 @@
     "saved": "Saved",
     "removed_saved": "Removed from saved",
     "location_failed": "We could not get your location",
-    "collection_deleted": "List deleted"
+    "collection_deleted": "Collection deleted"
   },
   "confirm": {
     "delete_collection": "Delete this collection?",
-    "unsave_desc": "It will disappear from your saved lists. You can always save it again from Explore.",
-    "unsave_title": "Remove this list from saved?",
+    "unsave_desc": "It will disappear from your saved collections. You can always save it again from Explore.",
+    "unsave_title": "Remove this collection from saved?",
     "delete_action": "Delete"
   },
   "aria": {
@@ -21,7 +21,7 @@
     "clear": "Clear",
     "filters": "Filters",
     "close": "Close",
-    "save_collection": "Save list",
+    "save_collection": "Save collection",
     "remove_saved": "Remove from saved",
     "show_photo": "Show photo",
     "show_map": "Show map"
@@ -40,7 +40,7 @@
   "see": "View",
   "local_recommends": "local pick!",
   "plan_badge": "🗺️ Plan",
-  "list_badge": "📍 List",
+  "list_badge": "📍 Collection",
   "route_plan": "Route plan",
   "places": "Places",
   "use_route": "Use this route",
@@ -109,10 +109,10 @@
   "onboarding_next": "Next",
   "empty": {
     "no_saved_routes_desc": "Bookmark a trip in Explore to see it here.",
-    "no_saved_lists_desc": "Bookmark a list while browsing to see it here.",
+    "no_saved_lists_desc": "Bookmark a collection while browsing to see it here.",
     "no_saved_routes": "No saved trips",
-    "no_saved_lists": "No saved lists",
-    "saved_any": "Bookmark a list or a trip while browsing to see it here."
+    "no_saved_lists": "No saved collections",
+    "saved_any": "Bookmark a collection or a trip while browsing to see it here."
   },
   "filters": {
     "show_label": "Show"
@@ -129,16 +129,16 @@
     "add_cover": "Add a photo to be seen"
   },
   "saved": {
-    "empty_lists_routes": "No saved lists or routes yet"
+    "empty_lists_routes": "No saved collections or routes yet"
   },
   "grid": {
     "trip": "Trip",
-    "list": "List",
+    "list": "Collection",
     "days_one": "{{count}} day",
     "days_other": "{{count}} days"
   },
   "feed_empty": {
-    "nobody_title": "Trips and lists from people you follow will show up here",
+    "nobody_title": "Trips and collections from people you follow will show up here",
     "nobody_hint": "You are not following anyone yet. Find friends or travellers whose taste you like.",
     "nobody_cta": "Find people to follow",
     "quiet_title": "Quiet for now",

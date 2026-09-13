@@ -111,9 +111,9 @@
   },
   "list": {
     "save_to_general": "Tak, zapisz w Ogólne",
-    "create_new": "Stwórz nową listę",
+    "create_new": "Stwórz nową kolekcję",
     "create_and_save": "Stwórz i zapisz",
-    "name_placeholder": "Nazwa listy (np. Miejsca {{city}})"
+    "name_placeholder": "Nazwa kolekcji (np. Miejsca {{city}})"
   },
   "go_suggestions": "Przejdź do sugestii",
   "aria": {

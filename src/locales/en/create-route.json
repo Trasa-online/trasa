@@ -17,18 +17,18 @@
   "search_unavailable": "Search is temporarily unavailable. Pick from your saved places.",
   "toast": {
     "trip_failed": "We could not create the trip",
-    "list_failed": "We could not create the list",
-    "list_created": "List created"
+    "list_failed": "We could not create the collection",
+    "list_created": "Collection created"
   },
   "invite": {
     "trip_desc": "Plan trips together with others",
-    "list_desc": "Build lists together with others",
+    "list_desc": "Build collections together with others",
     "to_trip": "Add people to the trip",
-    "to_list": "Add people to the list",
+    "to_list": "Add people to the collection",
     "cta": "Add people"
   },
   "skip_dates": "Skip - I will add dates later",
-  "skip_city": "Skip - list without a city",
+  "skip_city": "Skip - collection without a city",
   "your_saved_places": "Your saved places",
   "trip_kind": {
     "past_desc": "Add a memory",
@@ -39,26 +39,26 @@
   },
   "past_trip": "Past trip",
   "aria": {
-    "add_to_list": "Add to list",
-    "remove_from_list": "Remove from list",
+    "add_to_list": "Add to collection",
+    "remove_from_list": "Remove from collection",
     "open_in_maps": "Open {{place}} in Google Maps"
   },
   "search_place": "Search for a place",
-  "list_name_default": "Place list",
-  "list_city": "List city",
+  "list_name_default": "Collection of places",
+  "list_city": "Collection city",
   "pick_date": "Pick a date",
   "no_results": "No results",
-  "list_name_label": "List name",
+  "list_name_label": "Collection name",
   "trip_name_label": "Trip name",
   "user_fallback": "User",
-  "new_list": "New list",
+  "new_list": "New collection",
   "soon": "Soon",
   "create": "Create",
   "skip": "Skip",
   "list_name_city": "Places in {{city}}",
   "trip_name_city": "Trip to {{city}}",
   "cover": {
-    "empty": "Add places to the list or upload your own photo to set a cover.",
+    "empty": "Add places to the collection or upload your own photo to set a cover.",
     "reset": "Back to the default cover",
     "new_photo": "New photo"
   },
@@ -71,7 +71,7 @@
     "city": "City"
   },
   "kind": {
-    "list": "List",
+    "list": "Collection",
     "trip": "Trip"
   },
   "country": {

@@ -436,7 +436,7 @@ ${o.body}` : `<body>
 <div class="bar"><div class="in"><img class="mark" src="${BRAND_IMG}" alt=""><span class="brand">spontaway</span>
 ${ctaTop()}</div></div>
 <div class="wrap">${o.body}
-<div class="foot"><p>${o.noun === "route" ? "Ten wyjazd powstał w spontaway" : o.noun === "list" ? "Ta lista powstała w spontaway" : "spontaway to aplikacja"} - do odkrywania miejsc i planowania wyjazdów ze znajomymi.</p>
+<div class="foot"><p>${o.noun === "route" ? "Ten wyjazd powstał w spontaway" : o.noun === "list" ? "Ta kolekcja powstała w spontaway" : "spontaway to aplikacja"} - do odkrywania miejsc i planowania wyjazdów ze znajomymi.</p>
 ${ctaBig()}</div></div>`}
 </body></html>`;
 }
@@ -542,7 +542,7 @@ ${choiceSheet()}`;
     const items = await rest(`discovery_items?collection_id=eq.${id}&select=place_name,category,short_desc,photo_url,images,google_place_id&order=order_index.asc&limit=60`);
     const photos = await communityPhotos(items.map((it) => placeKey(it.google_place_id, it.place_name)));
     const [author] = col.user_id ? await rest(`profiles?id=eq.${col.user_id}&select=username,avatar_url&limit=1`) : [];
-    const title = col.title || "Lista miejsc";
+    const title = col.title || "Kolekcja miejsc";
     const count = `${items.length} ${plural(items.length)}`;
     const desc = col.description || [col.city, items.length ? count : null].filter(Boolean).join(" · ");
 
@@ -568,8 +568,8 @@ ${cat && it.category !== "other" ? `<span class="cat">${esc(cat)}</span>` : ""}
 <hr>
 <div class="grid">${tiles}${restN > 0 ? `<div class="tl more"><span>+${restN}</span></div>` : ""}</div>
 </div>
-<a class="go" id="go" href="${TESTFLIGHT_URL}">Zobacz listę</a>
-<p class="tail">Ta lista powstała w spontaway - aplikacji do odkrywania miejsc i planowania wyjazdów ze znajomymi.</p>
+<a class="go" id="go" href="${TESTFLIGHT_URL}">Zobacz kolekcję</a>
+<p class="tail">Ta kolekcja powstała w spontaway - aplikacji do odkrywania miejsc i planowania wyjazdów ze znajomymi.</p>
 </div>
 ${choiceSheet()}`;
     // Obrazek podgladu dla LISTY zostaje markowy (lista nie ma jednej okladki), ale jako BANER
