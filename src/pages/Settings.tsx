@@ -19,6 +19,8 @@ import { isHardcodedAdmin } from "@/lib/admins";
 import { useOnboarding } from "@/components/OnboardingGuide";
 import { Switch } from "@/components/ui/switch";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
+import { askPermission, openAppSettings } from "@/lib/permissionPrompts";
+import { useSystemPermission } from "@/components/permissions/PermissionPrimerSheet";
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -164,9 +166,41 @@ function LinkedAccountsSection() {
   );
 }
 
+// Natywka: wiersz ze stanem zgody systemowej. "Wlacz" = systemowy alert (albo arkusz
+// "Otworz Ustawienia", gdy zgoda byla odrzucona); przy zgodzie iOS nie da sie jej cofnac z apki,
+// wiec tap prowadzi do Ustawien telefonu. Web/PWA ma osobny przelacznik (VAPID) ponizej.
+function NativePushRow() {
+  const { t } = useTranslation("settings");
+  const { t: tc } = useTranslation("common");
+  const [status, refresh] = useSystemPermission("push");
+  const [busy, setBusy] = useState(false);
+  if (!isNative || !status || status === "unsupported") return null;
+  const onTap = async () => {
+    if (busy) return;
+    if (status === "granted") { openAppSettings(); return; }
+    setBusy(true);
+    try { await askPermission("push", "settings", { explicit: true }); } finally { setBusy(false); refresh(); }
+  };
+  const label = status === "granted" ? tc("permissions.push.status_on") : status === "denied" ? tc("permissions.push.status_off") : tc("permissions.push.status_ask");
+  return (
+    <button
+      type="button"
+      onClick={onTap}
+      disabled={busy}
+      className="w-full flex items-center gap-3 px-4 py-3.5 bg-card rounded-2xl border border-border/40 hover:bg-muted transition-colors text-left"
+    >
+      <Bell className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+      <span className="text-sm font-medium flex-1">{t("push_notifications")}</span>
+      <span className={`text-xs font-semibold ${status === "granted" ? "text-emerald-600" : status === "denied" ? "text-muted-foreground" : "text-primary"}`}>{label}</span>
+      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+    </button>
+  );
+}
+
 function PushToggleSection() {
   const { isSupported, isSubscribed, isLoading, toggle } = usePushNotifications();
   const { t } = useTranslation("settings");
+  if (isNative) return <NativePushRow />;
   if (!isSupported) return null;
   return (
     <div className="w-full flex items-center gap-3 px-4 py-3.5 bg-card rounded-2xl border border-border/40">

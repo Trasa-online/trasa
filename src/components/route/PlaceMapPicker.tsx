@@ -35,6 +35,7 @@ import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { GOOGLE_MAPS_API_KEY } from "@/lib/googleMaps";
 import { getCityCenter } from "@/lib/cities";
 import { getCachedCoords, requestLocation } from "@/hooks/useGeolocation";
+import { askPermission } from "@/lib/permissionPrompts";
 import { haptics } from "@/hooks/useHaptics";
 import { supabase } from "@/integrations/supabase/client";
 import { categoryFromGoogleTypes, categoryIconSrc } from "@/lib/placeCategoryIcon";
@@ -200,6 +201,9 @@ function PickerBody({ city, center, onPick, onClose }: {
   // jako awaria, gdy swiezy odczyt sie nie uda (brak zgody, timeout).
   const locateMe = useCallback(async () => {
     setLocating(true);
+    // Zgoda juz odrzucona -> arkusz "Otworz Ustawienia" (lib/permissionPrompts), bez GPS.
+    const perm = await askPermission("location", "map_me", { explicit: true });
+    if (perm === "denied") { setLocating(false); return; }
     const fresh = await requestLocation(true, { highAccuracy: true });
     const coords = fresh ?? getCachedCoords();
     setLocating(false);

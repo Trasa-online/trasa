@@ -10,6 +10,7 @@ import { avatarSrc } from "@/lib/avatar";
 import { Search, Check, X, Loader2, UserPlus, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { inviteUsersToRoute, type InviteRoute } from "@/lib/groupInvite";
+import { askPermissionSoon } from "@/lib/permissionPrompts";
 import { cn } from "@/lib/utils";
 import { EMPTY_ARRAY } from "@/lib/emptyRef";
 
@@ -121,6 +122,8 @@ export default function InviteFriendsSheet({ open, onOpenChange, route, onInvite
       const res = await inviteUsersToRoute(route, ids, user.id);
       if (!res.ok) { toast.error(t("invite.failed")); return; }
       onInvited?.(res.sessionId, people.map((p) => ({ id: p.id, avatar_url: p.avatar_url })));
+      // Zaproszenia poszly - odpowiedzi znajomych przyjda pushem, jesli user pozwoli.
+      askPermissionSoon("push", "invite_sent", 600);
     }, 5000);
 
     toast(t("invite.sending", { count: people.length }), {

@@ -8,13 +8,14 @@
 // - Like/Skip CTA fixed bottom (tylko gdy props onLike/onSkip podane)
 // - Maps button w header slot
 
-import { useState, useEffect, useRef, type ChangeEvent } from "react";
+import { useState, useEffect, useRef, type ChangeEvent, type MouseEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { MapPin, Navigation, Check, Share2, Loader2 } from "lucide-react";
 import { usePlaceShare } from "@/hooks/usePlaceShare";
 import { BrandIcon, PLUS_ICON, SAVE_ICON } from "@/components/BrandIcon";
 import { haptics } from "@/hooks/useHaptics";
-import { useDistanceReference } from "@/lib/distanceReference";
+import { useDistanceReference, setGpsReference } from "@/lib/distanceReference";
+import { askPermission } from "@/lib/permissionPrompts";
 import { haversineKm, formatDistance } from "@/lib/distance";
 import { Drawer as VaulDrawer } from "vaul";
 import { supabase } from "@/integrations/supabase/client";
@@ -419,12 +420,30 @@ const PlaceSwiperDetail = ({
     : null;
 
   // Tylko chip dystansu na gorze hero (wg Figmy). "Maps" przeniesiony do sekcji "Na mapie".
+  // Bez punktu odniesienia chip zamienia sie w "Pokaz dystans" (jak na karcie w Miejscach,
+  // Nat 2026-09-14): tap = zgoda na lokalizacje w kontekscie konkretnego miejsca.
   void mapsUrl;
+  const enableDistance = async (e: MouseEvent) => {
+    e.stopPropagation();
+    const perm = await askPermission("location", "detail", { explicit: true });
+    if (perm === "denied") return;
+    const ok = await setGpsReference();
+    if (!ok) toast(t("plan:distance_denied"));
+  };
   const headerSlot = distanceLabel ? (
     <span className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-black/40 backdrop-blur-sm text-white text-xs font-semibold">
       <Navigation className="h-3.5 w-3.5" />
       {distanceLabel} {t("distance_from")}&nbsp;{distanceRef!.label}
     </span>
+  ) : (!distanceRef && placeLat != null && placeLng != null) ? (
+    <button
+      type="button"
+      onClick={enableDistance}
+      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-black/40 backdrop-blur-sm text-white text-xs font-semibold active:scale-95 transition-transform"
+    >
+      <Navigation className="h-3.5 w-3.5" />
+      {t("plan:show_distance")}
+    </button>
   ) : undefined;
 
   if (!place || !ep) return null;

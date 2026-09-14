@@ -123,7 +123,8 @@
     "see_lists": "See collections →",
     "profile_of": "{{username}}'s profile",
     "route_hidden_one": "Your trip is not visible in Explore - add a photo",
-    "route_hidden_other": "{{count}} of your trips are not visible in Explore - add photos"
+    "route_hidden_other": "{{count}} of your trips are not visible in Explore - add photos",
+    "title": "Notifications"
   },
   "live": {
     "friend_request": "New friend request 👋",

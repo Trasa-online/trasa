@@ -111,5 +111,56 @@
     "body": "This version of spontaway is out of date. Update the app so everything works as it should.",
     "cta": "Update",
     "later": "Later"
+  },
+  "permissions": {
+    "later": "Not now",
+    "open_settings": "Open Settings",
+    "push": {
+      "enable": "Turn on notifications",
+      "list_created": {
+        "title": "Collection ready",
+        "desc": "Want to know when someone likes or saves your collection? Turn on notifications - we only send the ones about reactions to your content and invites from friends."
+      },
+      "trip_created": {
+        "title": "Trip ready",
+        "desc": "We'll let you know when friends answer your invite and, once you publish, when someone likes or saves your trip. No spam, just reactions to your content."
+      },
+      "trip_published": {
+        "title": "Trip published",
+        "desc": "Want to know when someone likes or saves your trip? Turn on notifications - no spam, just reactions to your content."
+      },
+      "invite_sent": {
+        "title": "Invites sent",
+        "desc": "Turn on notifications to know when your friends answer and write in the trip chat."
+      },
+      "bell": {
+        "title": "Turn on notifications",
+        "desc": "Know right away when someone likes or saves your trip or collection, invites you to a trip or writes in the chat.",
+        "short": "Reactions to your trips and collections, invites, trip chat."
+      },
+      "settings": {
+        "title": "Turn on notifications",
+        "desc": "Know right away when someone likes or saves your trip or collection, invites you to a trip or writes in the chat."
+      },
+      "denied": {
+        "title": "Notifications are off",
+        "desc": "Turn them on in your phone settings: Settings → Spontaway → Notifications.",
+        "short": "Turned off in phone settings. Tap to turn them on."
+      },
+      "status_on": "On",
+      "status_off": "Off",
+      "status_ask": "Turn on"
+    },
+    "location": {
+      "enable": "Turn on location",
+      "browse": {
+        "title": "Are you in the city?",
+        "desc": "Turn on location and you'll see how far each place is, sorted from the nearest. Your position stays on your phone - we never store it."
+      },
+      "denied": {
+        "title": "Location is off",
+        "desc": "Turn it on in your phone settings: Settings → Spontaway → Location."
+      }
+    }
   }
 }

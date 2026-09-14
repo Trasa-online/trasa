@@ -16,6 +16,7 @@ import { dateLocale } from "@/lib/dateLocale";
 import { MapPin, ArrowLeft, Sparkles, ChevronDown, Bookmark, Calendar as CalendarIcon, Image as ImageIcon, Maximize2, X, Building2, Pencil, Trash2, Heart, Share2, Plus, Map as MapIcon, Loader2, GripVertical, Check, Flag, Camera, ThumbsUp, MessageCircle, UserPlus, MoreHorizontal, FileText, ChevronLeft } from "lucide-react";
 import { MAIN_CATEGORIES, subcategoryPluralLabel } from "@/lib/categories";
 import { publishTrip } from "@/lib/publishTrip";
+import { askPermissionSoon } from "@/lib/permissionPrompts";
 import { haptics } from "@/hooks/useHaptics";
 import { track } from "@/lib/analytics";
 import { useSwipeNav } from "@/hooks/useSwipeNav";
@@ -796,6 +797,9 @@ export default function SharedRoute() {
       const cover = (route as any)?.list_cover_url as string | null;
       track("trip_published", { route_id: id, city: route.city ?? null, place_count: (pins as any[]).length, has_cover: !!cover });
       haptics.success();
+      // Opublikowany wyjazd zbiera polubienia i zapisy - miekkie pytanie o push, gdy toast
+      // publikacji z "Cofnij" (6 s) juz zszedl (lib/permissionPrompts; raz na kontekst).
+      askPermissionSoon("push", "trip_published", 6500);
       queryClient.invalidateQueries({ queryKey: ["shared-route", id] });
       queryClient.invalidateQueries({ queryKey: ["profile-trip-feed"] });
       queryClient.invalidateQueries({ queryKey: ["discovery-city-routes"] });

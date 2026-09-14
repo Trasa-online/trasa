@@ -5,6 +5,7 @@ import AddCustomPlacePanel from "./AddCustomPlacePanel";
 import { haversineKm as haversineKmDist, formatDistance } from "@/lib/distance";
 import { pinCoverKeys, fetchPlaceKeysWithPhotos } from "@/lib/placePhotoSocial";
 import { useDistanceReference, getReference, ensureCityContext, tryResolveOnSite, setGpsReference } from "@/lib/distanceReference";
+import { askPermission } from "@/lib/permissionPrompts";
 import { cn } from "@/lib/utils";
 import posthog from "posthog-js";
 import { format } from "date-fns";
@@ -1253,10 +1254,24 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
   useEffect(() => { ensureCityContext(city); }, [city]);
 
   // Chip "Pokaz dystans" na karcie: od razu systemowa zgoda na lokalizacje (bez posrednich
-  // pytan). Gdy user odmowi - krotki komunikat, chip zostaje na kolejna probe.
+  // pytan). Gdy zgoda byla juz odrzucona, brama pokazuje arkusz "Otworz Ustawienia" (iOS nie
+  // pyta drugi raz); gdy user odmowi teraz - krotki komunikat, chip zostaje na kolejna probe.
   const enableDistance = async () => {
+    const perm = await askPermission("location", "distance", { explicit: true });
+    if (perm === "denied") return;
     const ok = await setGpsReference();
     if (!ok) toast(t("distance_denied"));
+  };
+
+  // Miekkie pytanie o lokalizacje przy TRZECIEJ wizytowce (Nat 2026-09-14): kto przewija
+  // miejsca, pewnie jest w miescie - dystans i "od najblizszego" sa wtedy najbardziej
+  // przydatne. Raz na instalacje (limity w lib/permissionPrompts); po "Wlacz" chip "od Ciebie"
+  // pojawia sie sam, bo setGpsReference ustawia punkt odniesienia.
+  const browseAskedRef = useRef(false);
+  const maybeAskLocationOnBrowse = (cardIdx: number) => {
+    if (!exploreMode || browseAskedRef.current || cardIdx < 2 || getReference()) return;
+    browseAskedRef.current = true;
+    void askPermission("location", "browse").then((res) => { if (res === "granted") void setGpsReference(); });
   };
 
   // Lokalizacja: CICHY auto-detect przez GPS (tylko gdy user juz dal zgode - tryResolveOnSite
@@ -2017,6 +2032,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
             const p = displayQueue[idx];
             if (p && p.id !== activeCardId) setActiveCardId(p.id);
             if (el.scrollTop > 24 && !hasScrolled) setHasScrolled(true);
+            maybeAskLocationOnBrowse(idx);
             // Infinite scroll: dociagaj kolejne karty gdy zblizamy sie do konca (2.5 ekranu).
             if (el.scrollHeight - el.scrollTop - el.clientHeight < el.clientHeight * 2.5) {
               setExploreVisible((v) => (v < displayQueue.length ? Math.min(displayQueue.length, v + 12) : v));

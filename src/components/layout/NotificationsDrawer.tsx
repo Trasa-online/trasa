@@ -11,6 +11,7 @@ import { avatarSrc } from "@/lib/avatar";
 import SheetSkeleton from "@/components/layout/SheetSkeleton";
 import { track } from "@/lib/analytics";
 import { deferDelete } from "@/lib/deferDelete";
+import { PushNudgeCard } from "@/components/permissions/PermissionPrimerSheet";
 
 interface Notification {
   id: string;
@@ -195,7 +196,7 @@ export default function NotificationsDrawer({ open, onClose, userId }: Props) {
         className="p-0 rounded-t-3xl border-0 bg-background flex flex-col overflow-hidden [&>button:last-child]:hidden"
         style={{ height: "85dvh" }}
       >
-        <SheetTitle className="sr-only">Powiadomienia</SheetTitle>
+        <SheetTitle className="sr-only">{t("notif.title")}</SheetTitle>
         {/* Drag handle */}
         <div className="flex justify-center pt-3 pb-1">
           <div className="h-1 w-10 rounded-full bg-border" />
@@ -204,7 +205,7 @@ export default function NotificationsDrawer({ open, onClose, userId }: Props) {
         {/* Header */}
         <div className="flex items-center px-5 pb-4 pt-1">
           <h2 className="text-lg font-bold flex-1">
-            Powiadomienia
+            {t("notif.title")}
             {unreadCount > 0 && (
               <span className="ml-2 inline-flex items-center justify-center h-5 min-w-5 rounded-full bg-primary text-white text-[10px] font-bold px-1.5">
                 {unreadCount}
@@ -230,6 +231,9 @@ export default function NotificationsDrawer({ open, onClose, userId }: Props) {
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto pb-8">
+          {/* Zgoda na push w kontekscie dzwonka: user sam tu zajrzal, wiec powiadomienia go
+              interesuja. Karta znika, gdy zgoda jest; przy odmowie prowadzi do Ustawien. */}
+          <PushNudgeCard open={open} className="mx-4 mb-3" />
           {isLoading ? (
             <SheetSkeleton variant="notifications" rows={5} className="px-4 pt-2" />
           ) : notifications.length === 0 ? (

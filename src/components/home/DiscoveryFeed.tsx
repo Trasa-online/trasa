@@ -49,6 +49,7 @@ import { toast } from "sonner";
 import { PLANNING_DISABLED } from "@/lib/appMode";
 import { createWyjazdFromPlaces } from "@/lib/createWyjazd";
 import { setGpsReference } from "@/lib/distanceReference";
+import { askPermission } from "@/lib/permissionPrompts";
 import { track } from "@/lib/analytics";
 import { deferDelete } from "@/lib/deferDelete";
 
@@ -1627,8 +1628,11 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
   const handleNearby = async () => {
     if (nearbyLoading) return;
     setNearbyLoading(true);
-    const ok = await setGpsReference();
+    // Zgoda juz odrzucona -> arkusz "Otworz Ustawienia" zamiast martwego toastu.
+    const perm = await askPermission("location", "nearby", { explicit: true });
+    const ok = perm !== "denied" && (await setGpsReference());
     setNearbyLoading(false);
+    if (perm === "denied") return;
     if (!ok) { toast.error(t("toast.location_failed")); return; }
     window.dispatchEvent(new CustomEvent("trasa:explore-nearby"));
   };

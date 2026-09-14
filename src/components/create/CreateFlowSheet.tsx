@@ -15,6 +15,7 @@ import { avatarSrc } from "@/lib/avatar";
 import CountryPicker from "@/components/create/CountryPicker";
 import AddPeoplePicker, { type PersonLite } from "@/components/create/AddPeoplePicker";
 import { fetchSavedPlaces, createListFromSavedPlaces, type SavedPlace, type PlaceForList } from "@/lib/placeLists";
+import { askPermissionSoon } from "@/lib/permissionPrompts";
 import { createWyjazdFromPlaces, createEmptyWyjazd } from "@/lib/createWyjazd";
 import { inviteUsersToRoute } from "@/lib/groupInvite";
 import { usePlaceSearch } from "@/hooks/usePlaceSearch";
@@ -192,6 +193,9 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
     queryClient.invalidateQueries({ queryKey: ["save-sheet-lists", user.id] });
     close();
     navigate(`/lista/${id}`);
+    // Pierwsza kolekcja = moment, w ktorym powiadomienia zaczynaja miec sens (reakcje innych):
+    // miekkie pytanie o zgode na push, gdy widok kolekcji juz stoi (lib/permissionPrompts).
+    askPermissionSoon("push", "list_created");
   };
 
   // Daty z kreatora -> ISO (YYYY-MM-DD). Pominiecie kroku = brak dat (wyjazd bez podzialu na dni).
@@ -230,6 +234,9 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
     // Wejscie do WIDOKU WYJAZDU (SharedRoute) - swiezy szkic, miejsca dodaje sie guzikiem "+".
     // Etap (propozycje / wspomnienie) rozstrzyga trip_type ustawiony wyzej.
     navigate(`/route/${id}`);
+    // Jak przy kolekcji: pierwszy wyjazd -> miekkie pytanie o push (odpowiedzi znajomych,
+    // reakcje po publikacji). Przy zaproszeniach kontekst "invite_sent" niesie trafniejsze copy.
+    askPermissionSoon("push", tripPeople.length ? "invite_sent" : "trip_created", 2200);
   };
 
   // ── wspolny nagłowek Anuluj / tytul / Dalej ──

@@ -16,6 +16,7 @@ import { useLanguageSync } from "@/hooks/useLanguageSync";
 import i18n from "@/i18n";
 import { useEdgeSwipeBack } from "@/hooks/useEdgeSwipeBack";
 import AuthDrawer from "@/components/auth/AuthDrawer";
+import PermissionPrimerSheet from "@/components/permissions/PermissionPrimerSheet";
 import { businessPanelPath } from "@/lib/businessRedirect";
 import { TrasaLogo } from "@/components/TrasaLogo";
 import { OnboardingProvider } from "@/components/OnboardingGuide";
@@ -824,6 +825,8 @@ const App = () => (
         <BusinessGuard />
         <CookieBanner />
         <AuthDrawer />
+        {/* Arkusz "miekkiego pytania" o zgody systemowe (push/lokalizacja) - lib/permissionPrompts. */}
+        <PermissionPrimerSheet />
         {/* Zdalna brama minimalnej wersji (native) - patrz UpdateGate. Renderuje sie NAD
             wszystkim (z-200), tylko gdy build jest ponizej progu z app_config. */}
         {isNative && <UpdateGate />}
