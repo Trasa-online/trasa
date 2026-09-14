@@ -14,6 +14,7 @@ import WelcomeDeck from "@/components/auth/WelcomeDeck";
 import { Browser } from "@capacitor/browser";
 import { useAuth } from "@/hooks/useAuth";
 import { TrasaLogo } from "@/components/TrasaLogo";
+import { BrandIcon, CAMERA_ICON } from "@/components/BrandIcon";
 import { businessPanelPath } from "@/lib/businessRedirect";
 
 type Mode = "login" | "register";
@@ -61,7 +62,11 @@ const Auth = () => {
   const [honeypot, setHoneypot] = useState("");
   const [formOpenedAt] = useState(() => Date.now());
   const [businessMode, setBusinessMode] = useState(searchParams.get("business") === "true");
-  const [bizMode, setBizMode] = useState<BizMode>("login");
+  // Domyslnie LANDING z rejestracja (wariant C2): i "zaloguj sie", i "zarejestruj sie"
+  // prowadza w to samo miejsce. Wyjatek: ?return= = odbilismy kogos z chronionego adresu
+  // panelu, czyli wracajacego wlasciciela - jemu od razu logowanie, nie oferta.
+  const [bizMode, setBizMode] = useState<BizMode>(() => (searchParams.get("return") ? "login" : "register"));
+  const [bizExpanded, setBizExpanded] = useState(false); // hero: pokazano nazwe lokalu + telefon
   // Business registration fields
   const [bizPlace, setBizPlace] = useState("");
   const [bizPhone, setBizPhone] = useState("");
@@ -494,124 +499,178 @@ const Auth = () => {
     );
   }
 
-  // ── B2B auth: jasny layout (logo lewy-gora, biala karta na srodku, toggle login/rejestracja).
-  //    B2B branding = niebieski AKCENT (guziki/toggle), tlo jasne. Osobny early-return -
-  //    B2C (ponizej) zostaje bez zmian. ──
+  // ── B2B auth = LANDING Z REJESTRACJA (wariant C2 z Figmy, wybor Nat 2026-09-14) ──
+  //    Wejscie "zaloguj sie" i "zarejestruj sie" prowadzi w TO SAMO miejsce: zolte hero
+  //    z obietnica i polem email. Logowanie chowa sie pod "Mam juz konto" (wariant C1) -
+  //    research portali partnerskich (DoorDash Merchants, Faire, Robinhood, Boords) mowi,
+  //    ze powrot do panelu ma byc szybki, a zalozenie konta dostaje przestrzen i argumenty.
+  //    Wyjatek: gdy odbilismy kogos z chronionego adresu panelu (?return=), to wracajacy
+  //    wlasciciel - jemu pokazujemy od razu logowanie, nie ofertę.
+  //    Kolory: marka (zolte hero, pomaranczowe CTA). Niebieski zszedl razem z panelem.
   if (businessMode) {
     const goBack = () => {
       setBizDone(false);
       goBackOr(navigate, "/dla-firm");
     };
-    const inputCls = "bg-white border-slate-200 text-slate-900 placeholder:text-slate-400 focus-visible:ring-blue-500";
+    const inputCls = "h-12 rounded-2xl bg-[#F4F2EF] border-[#E4DFD9] text-slate-900 placeholder:text-[#8A8079] focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:border-primary/40";
+    const showLogin = bizMode === "login";
+
+    // Krok 1 hero = sam email (jak w makiecie). Po "Załóż konto" dosypujemy nazwę lokalu
+    // i telefon - register-business potrzebuje nazwy, a trzy pola w hero zabijały lekkość.
+    const heroSubmit = (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!email.trim()) { toast.error(t("bizland.need_email")); return; }
+      if (!bizExpanded) { setBizExpanded(true); return; }
+      handleBizRegister(e);
+    };
+
     return (
-      <div
-        className="min-h-screen flex flex-col bg-[#F4F4F5]"
-        style={{ backgroundImage: "radial-gradient(rgba(15,23,42,0.06) 1px, transparent 1px)", backgroundSize: "22px 22px" }}
-      >
-        {/* Top bar: samo logo (lewy-gora) */}
-        <div className="flex items-center px-5 sm:px-8 h-16 shrink-0">
+      <div className="min-h-screen flex flex-col bg-[#FEFEFE]">
+        {/* ── Belka: znak + przejście między rejestracją a logowaniem ── */}
+        <header className="flex items-center justify-between gap-3 px-5 sm:px-8 lg:px-12 h-16 sm:h-20 shrink-0">
           <button onClick={goBack} className="flex items-center gap-2 active:opacity-70" aria-label={t("back")}>
-            <TrasaLogo size={34} />
-            <span className="text-sm font-black text-slate-800">trasa<span className="text-blue-600"> biznes</span></span>
+            <TrasaLogo size={30} />
+            <span className="text-sm font-black text-slate-900">spontaway<span className="text-primary"> biznes</span></span>
           </button>
-        </div>
+          <button
+            onClick={() => { setBizDone(false); setBizExpanded(false); setBizMode(showLogin ? "register" : "login"); }}
+            className="shrink-0 h-10 px-4 sm:px-5 rounded-full bg-primary text-white text-[13px] sm:text-sm font-bold active:scale-95 transition-transform"
+          >
+            {showLogin ? t("bizland.nav_back_to_signup") : t("bizland.nav_have_account")}
+          </button>
+        </header>
 
-        {/* Centered card */}
-        <div className="flex-1 flex items-center justify-center px-5 pb-10">
-          <div className="w-full max-w-md bg-white rounded-3xl shadow-xl shadow-slate-900/[0.06] border border-slate-100 p-7 sm:p-9">
-            <div className="text-center mb-6">
-              <h1 className="text-2xl font-black text-slate-900 leading-tight">
-                {bizMode === "login" ? t("biz.signin_title") : t("biz.signup_title")}
-              </h1>
-              <p className="text-sm text-slate-500 mt-1.5 leading-relaxed">
-                {bizMode === "login"
-                  ? t("biz.signin_desc")
-                  : t("biz.signup_desc")}
-              </p>
-            </div>
-
-            {/* Toggle */}
-            <div className="flex rounded-2xl bg-slate-100 p-1 mb-6">
-              <button
-                onClick={() => setBizMode("login")}
-                className={`flex-1 py-2 text-sm font-semibold rounded-2xl transition-all ${bizMode === "login" ? "bg-blue-600 text-white shadow-sm" : "text-slate-500 hover:text-slate-800"}`}
-              >{t("signin")}</button>
-              <button
-                onClick={() => { setBizDone(false); setBizMode("register"); }}
-                className={`flex-1 py-2 text-sm font-semibold rounded-2xl transition-all ${bizMode === "register" ? "bg-blue-600 text-white shadow-sm" : "text-slate-500 hover:text-slate-800"}`}
-              >
-                Zarejestruj lokal
-              </button>
-            </div>
-
-            {bizMode === "login" ? (
+        {showLogin ? (
+          /* ── Logowanie (C1): wąsko i cicho - to ma trwać dwie sekundy ── */
+          <div className="flex-1 flex items-start sm:items-center justify-center px-5 pb-12 pt-4 sm:pt-0">
+            <div className="w-full max-w-[420px] bg-white rounded-3xl border border-[#EFE9E2] shadow-[0_12px_30px_-14px_rgba(91,44,6,0.25)] p-7 sm:p-9">
+              <h1 className="text-[26px] font-black text-slate-900 leading-tight">{t("biz.signin_title")}</h1>
+              <p className="text-sm text-[#6E645C] mt-1.5 mb-6 leading-relaxed">{t("biz.signin_desc")}</p>
               <form onSubmit={handleLogin} className="space-y-4">
                 <div className="space-y-1.5">
-                  <Label htmlFor="biz-email" className="text-slate-700">{t("fields.email")}</Label>
+                  <Label htmlFor="biz-email" className="text-[13px] font-semibold text-[#3F3833]">{t("fields.email")}</Label>
                   <Input id="biz-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder={t("fields.email_placeholder")} className={inputCls} />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="biz-password" className="text-slate-700">{t("fields.password")}</Label>
+                  <Label htmlFor="biz-password" className="text-[13px] font-semibold text-[#3F3833]">{t("fields.password")}</Label>
                   <Input id="biz-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required placeholder={t("fields.password_placeholder")} className={inputCls} />
                 </div>
-                <button type="button" onClick={handleForgotPassword} disabled={resetLoading} className="text-xs text-blue-600 font-medium hover:underline disabled:opacity-60">
+                <button type="button" onClick={handleForgotPassword} disabled={resetLoading} className="text-[13px] text-primary font-semibold hover:underline disabled:opacity-60">
                   {resetLoading ? t("sending") : t("forgot_password")}
                 </button>
-                <Button type="submit" className="w-full rounded-2xl py-6 bg-blue-600 hover:bg-blue-700 text-white font-bold text-base border-0" disabled={loading}>
+                <Button type="submit" className="w-full h-12 rounded-full bg-primary hover:bg-primary/90 text-white font-bold text-base border-0" disabled={loading}>
                   {loading ? t("logging_in") : t("biz.signin_title")}
                 </Button>
               </form>
-            ) : bizDone ? (
-              <div className="text-center py-6 space-y-3">
-                <p className="text-4xl">📬</p>
-                <p className="text-slate-900 font-bold text-lg">{t("check_inbox")}</p>
-                <p className="text-slate-500 text-sm leading-relaxed">
-                  {/* Adres maila w srodku zdania - <Trans>, bo po angielsku stoi w innym miejscu. */}
-                  <Trans i18nKey="biz.activation_sent_full" ns="auth" values={{ email }}
-                    components={{ b: <strong className="text-slate-700" /> }} />
-                </p>
-                <p className="text-slate-400 text-xs leading-relaxed">
-                  {t("biz.activation_hint")}
-                </p>
-                <button onClick={() => { setBizDone(false); setBizMode("login"); }} className="text-sm text-blue-600 font-medium underline pt-2">{t("back_to_signin")}</button>
-              </div>
-            ) : (
-              <form onSubmit={handleBizRegister} className="space-y-3">
-                <div className="space-y-1.5">
-                  <Label htmlFor="biz-place" className="text-slate-700">Nazwa lokalu</Label>
-                  <Input id="biz-place" type="text" value={bizPlace} onChange={(e) => setBizPlace(e.target.value)} required placeholder={t("biz.venue_placeholder")} className={inputCls} />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="biz-reg-email" className="text-slate-700">{t("fields.email")}</Label>
-                  <Input id="biz-reg-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder={t("fields.email_placeholder")} className={inputCls} />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="biz-phone" className="text-slate-700">{t("biz.phone")} <span className="text-slate-400 font-normal">{t("biz.optional")}</span></Label>
-                  <Input id="biz-phone" type="tel" value={bizPhone} onChange={(e) => setBizPhone(e.target.value)} placeholder="+48 600 000 000" className={inputCls} />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="biz-message" className="text-slate-700">{t("message_label")}<span className="text-slate-400 font-normal">(opcjonalnie)</span></Label>
-                  <textarea id="biz-message" value={bizMessage} onChange={(e) => setBizMessage(e.target.value)} placeholder={t("biz.message_placeholder")} rows={2}
-                    className="w-full rounded-2xl px-3 py-2 text-sm bg-white border border-slate-200 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none" />
-                </div>
-                <Button type="submit" className="w-full rounded-2xl py-6 bg-blue-600 hover:bg-blue-700 text-white font-bold text-base border-0" disabled={loading}>
-                  {loading ? t("claim.creating") : t("biz.create_account")}
-                </Button>
-                <p className="text-xs text-slate-400 text-center leading-relaxed">
-                  {t("biz.create_desc")}
-                </p>
-              </form>
-            )}
-
-            <p className="text-center text-xs text-slate-400 mt-6">
-              {bizMode === "login" ? (
-                <>{t("biz.no_account")}{" "}<button onClick={() => setBizMode("register")} className="text-blue-600 font-semibold hover:underline">{t("biz.register_place")}</button></>
-              ) : (
-                <>{t("biz.have_account")}{" "}<button onClick={() => { setBizDone(false); setBizMode("login"); }} className="text-blue-600 font-semibold hover:underline">{t("signin")}</button></>
-              )}
-            </p>
+            </div>
           </div>
-        </div>
+        ) : (
+          /* ── Landing z rejestracją (C2) ── */
+          <>
+            <section className="bg-[#FDF184]">
+              <div className="mx-auto max-w-6xl px-5 sm:px-8 lg:px-12 py-10 sm:py-14 lg:py-16
+                              grid gap-10 lg:gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,460px)] lg:items-center">
+                {/* Treść */}
+                <div className="max-w-xl">
+                  <h1 className="font-brand text-[#5B2C06] leading-[1.08] text-[34px] sm:text-[44px] lg:text-[52px]">
+                    {t("bizland.hero_title_1")}<br />{t("bizland.hero_title_2")}
+                  </h1>
+                  <p className="mt-4 text-[15px] sm:text-[17px] leading-relaxed text-[#6B3A0F] max-w-[42ch]">
+                    {t("bizland.hero_sub")}
+                  </p>
+
+                  {bizDone ? (
+                    /* Po wysłaniu linku aktywacyjnego - w tym samym miejscu co formularz */
+                    <div className="mt-7 rounded-3xl bg-white/80 border border-[#EAD9A8] p-5 sm:p-6 max-w-[520px]">
+                      <p className="text-[17px] font-black text-[#5B2C06]">{t("check_inbox")}</p>
+                      <p className="text-sm text-[#6B3A0F] mt-2 leading-relaxed">
+                        <Trans i18nKey="biz.activation_sent_full" ns="auth" values={{ email }}
+                          components={{ b: <strong className="text-[#5B2C06]" /> }} />
+                      </p>
+                      <p className="text-xs text-[#6B3A0F]/70 mt-2 leading-relaxed">{t("biz.activation_hint")}</p>
+                      <button onClick={() => { setBizDone(false); setBizExpanded(false); setBizMode("login"); }}
+                        className="text-[13px] text-primary font-bold underline mt-3">{t("back_to_signin")}</button>
+                    </div>
+                  ) : (
+                    <form onSubmit={heroSubmit} className="mt-7 max-w-[520px]">
+                      {/* Krok 1: email + CTA obok siebie (na telefonie jeden pod drugim) */}
+                      <div className="flex flex-col sm:flex-row gap-2.5">
+                        <input
+                          type="email" value={email} onChange={(e) => setEmail(e.target.value)} required
+                          placeholder={t("bizland.hero_email_placeholder")} aria-label={t("fields.email")}
+                          className="flex-1 h-14 rounded-full bg-white border border-[#EAD9A8] px-5 text-[15px] text-slate-900
+                                     placeholder:text-[#8A8079] outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                        />
+                        <button type="submit" disabled={loading}
+                          className="h-14 shrink-0 rounded-full bg-primary hover:bg-primary/90 px-7 text-white font-bold text-[15px]
+                                     active:scale-[0.98] transition-transform disabled:opacity-60">
+                          {loading ? t("claim.creating") : (bizExpanded ? t("bizland.hero_cta") : t("bizland.hero_cta_next"))}
+                        </button>
+                      </div>
+
+                      {/* Krok 2: nazwa lokalu + telefon (register-business wymaga nazwy) */}
+                      {bizExpanded && (
+                        <div className="mt-3 rounded-3xl bg-white/80 border border-[#EAD9A8] p-4 sm:p-5 space-y-3">
+                          <p className="text-[13px] font-semibold text-[#6B3A0F]">{t("bizland.step_details")}</p>
+                          <div className="space-y-1.5">
+                            <Label htmlFor="biz-place" className="text-[13px] font-semibold text-[#3F3833]">{t("biz.venue_name")}</Label>
+                            <Input id="biz-place" type="text" value={bizPlace} onChange={(e) => setBizPlace(e.target.value)} required
+                              placeholder={t("biz.venue_placeholder")} className={inputCls} />
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label htmlFor="biz-phone" className="text-[13px] font-semibold text-[#3F3833]">
+                              {t("biz.phone")} <span className="text-[#8A8079] font-normal">{t("biz.optional")}</span>
+                            </Label>
+                            <Input id="biz-phone" type="tel" value={bizPhone} onChange={(e) => setBizPhone(e.target.value)}
+                              placeholder="+48 600 000 000" className={inputCls} />
+                          </div>
+                        </div>
+                      )}
+                    </form>
+                  )}
+
+                  {/* Dowody - w makiecie rząd pod formularzem */}
+                  <ul className="mt-5 flex flex-wrap gap-x-6 gap-y-2 text-[13px] text-[#6B3A0F]">
+                    {[t("bizland.proof_free"), t("bizland.proof_fast"), t("bizland.proof_cancel")].map((txt) => (
+                      <li key={txt} className="flex items-center gap-2">
+                        <span className="h-1.5 w-1.5 rounded-full bg-primary shrink-0" />{txt}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                {/* Grafika: karta wizytówki unosi się góra-dół (prośba Nat). Na telefonie nad
+                    treścią byłaby ścianą, więc siedzi pod nią i jest węższa. */}
+                <div className="order-last flex justify-center lg:justify-end">
+                  <img
+                    src="/B2B_mockup.png"
+                    alt={t("bizland.hero_alt")}
+                    className="animate-biz-float w-[260px] sm:w-[360px] md:w-[440px] lg:w-full lg:max-w-[460px] h-auto select-none"
+                    draggable={false}
+                  />
+                </div>
+              </div>
+            </section>
+
+            {/* Trzy korzyści pod hero */}
+            <section className="mx-auto w-full max-w-6xl px-5 sm:px-8 lg:px-12 py-10 sm:py-14">
+              <ul className="grid gap-4 sm:grid-cols-3">
+                {[
+                  { icon: "/Ikona_Miejsca.svg", txt: t("bizland.benefit_1") },
+                  { icon: "/Ikona_Trasy.svg", txt: t("bizland.benefit_2") },
+                  { icon: CAMERA_ICON, txt: t("bizland.benefit_3") },
+                ].map((b) => (
+                  <li key={b.txt} className="rounded-3xl border border-[#EFE9E2] bg-white p-5 flex flex-col gap-3">
+                    <span className="h-11 w-11 rounded-2xl bg-[#FCEDE3] text-[#5B2C06] flex items-center justify-center shrink-0">
+                      <BrandIcon src={b.icon} className="h-5 w-5" />
+                    </span>
+                    <p className="text-[14px] leading-snug text-slate-700 font-medium">{b.txt}</p>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          </>
+        )}
       </div>
     );
   }
