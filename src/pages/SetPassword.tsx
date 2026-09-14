@@ -205,8 +205,10 @@ const SetPassword = ({ forceBusiness }: { forceBusiness?: boolean } = {}) => {
           .maybeSingle();
 
         if (bp?.id) {
+          // is_draft=false dopiero TUTAJ dla istniejacych kont: register-business zaklada
+          // szkic, a link z maila (token) dowodzi, ze to wlasciciel adresu chce panelu.
           await (supabase as any).from("business_profiles")
-            .update({ activated_at: new Date().toISOString() })
+            .update({ activated_at: new Date().toISOString(), is_draft: false })
             .eq("owner_user_id", user.id);
         }
         // Twardy redirect zamiast SPA-navigate: czysci zalegajacy ?token_hash z URL i

@@ -132,7 +132,12 @@ Deno.serve(async (req) => {
 
     // ── Wizytowka: utworz jesli owner nie ma jeszcze zadnej ──
     // is_active=false: wizytowka NIE jest publicznie widoczna dopoki lokal nie uzupelni
-    // profilu (nazwa/kategoria/zdjecie) w panelu. is_draft=false: to juz realne konto.
+    // profilu (nazwa/kategoria/zdjecie) w panelu.
+    // is_draft: dla NOWEGO konta false (to juz realne konto biznesowe). Dla ISTNIEJACEGO
+    // usera TRUE - dopoki nie kliknie linku z maila (SetPassword zdejmuje szkic). Bez tego
+    // kazdy mogl wpisac cudzy mail + dowolna nazwe i przypiac wizytowke do cudzego konta,
+    // a BusinessGuard od tej chwili wpychal ofiare do panelu przy kazdej nawigacji
+    // (audyt 2026-09-14). Szkic nie wymusza redirectu.
     let bp: { id: string; place_id: string | null } | null = null;
     const existingBp = await admin
       .from("business_profiles")
@@ -150,7 +155,7 @@ Deno.serve(async (req) => {
           business_name: safeName,
           phone: phone ? phone.slice(0, 40) : null,
           email,
-          is_draft: false,
+          is_draft: isExistingUser,
           is_active: false,
           plan: "zero",
         })
