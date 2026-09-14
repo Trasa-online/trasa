@@ -1517,7 +1517,7 @@ const BusinessDashboard = () => {
       })
       .eq("id", profile.id);
     if (error) {
-      console.error("[BusinessDashboard] handleSave failed:", {
+      console.error("[BusinessDashboard] persistProfile failed:", {
         message: error.message,
         code: (error as any).code,
         details: (error as any).details,
@@ -1575,7 +1575,6 @@ const BusinessDashboard = () => {
     }
     if (silent) setSaving(false); else setSaving(false);
   };
-  const handleSave = () => persistProfile();
 
   // Sygnatura wszystkich zapisywanych pól - zmiana KTÓREGOKOLWIEK resetuje debounce, więc
   // miękki zapis leci 1,4 s po OSTATNIM naciśnięciu (a nie po pierwszym w serii).
