@@ -707,7 +707,7 @@ const TravelerProfile = () => {
       visitedCount: l.visited_count ?? 0,
     };
     return (
-      <div key={l.id} className="space-y-2">
+      <div key={l.id} className="space-y-2 snap-start snap-always">
         {l.isNew && (
           <div className="flex items-center gap-2 rounded-2xl bg-[#FCEDE3] px-2.5 py-2">
             <img src={avatarSrc(l.author_avatar_profile ?? l.author_avatar ?? null)} alt="" className="h-5 w-5 rounded-full object-cover bg-orange-100 shrink-0" />
@@ -722,6 +722,9 @@ const TravelerProfile = () => {
       </div>
     );
   };
+
+  // Snap wlaczamy tylko tam, gdzie scrolluje sie KOLEKCJE (kafelki jednakowej budowy).
+  const listSnap = tab === "listy" && (listyTab === "moje" ? listCards.length > 0 : listyTab === "zapisane" && (savedListCards as any[]).length > 0);
 
   return (
     <div className="flex flex-col flex-1 min-h-0 bg-background">
@@ -778,11 +781,20 @@ const TravelerProfile = () => {
         </div>
       )}
 
-      <PullToRefresh onRefresh={handleRefresh} className={cn("flex-1 overflow-x-hidden", searchOpen && "hidden")}>
+      {/* SNAP przy kolekcjach (prosba Nat 2026-09-14): przewijanie ma zatrzymywac sie na
+          kolejnych kafelkach, tak jak w Eksploracji - nie plynac swobodnie. Wlaczony TYLKO
+          na zakladce z kafelkami kolekcji ("Moje kolekcje" / "Zapisane"); "Ogolne" to siatka
+          miejsc, a Wyjazdy maja karty roznej wysokosci i snap by je szarpal.
+          `scroll-pt-[44px]` = wysokosc PRZYKLEJONEJ belki zakladek, zeby kafelek zatrzymywal
+          sie pod nia, a nie za nia. Naglowek profilu dostaje wlasny punkt zaczepienia nizej
+          (bez niego snap-mandatory nie pozwolilby sie przy nim zatrzymac). */}
+      <PullToRefresh onRefresh={handleRefresh} className={cn("flex-1 overflow-x-hidden", searchOpen && "hidden", listSnap && "snap-y snap-mandatory scroll-pt-[44px]")}>
       <div className="px-4 space-y-5 max-w-lg mx-auto pt-6 pb-[calc(7rem+env(safe-area-inset-bottom,0px))]">
 
         {/* Avatar + nazwa + bio (Figma: nazwa | separator | bio) */}
-        <div className="flex items-stretch gap-3">
+        {/* `snap-start` = gora profilu jest pelnoprawnym miejscem spoczynku przy wlaczonym
+            snapie kolekcji; bez tego przewijanie od razu przeskakiwaloby na pierwszy kafelek. */}
+        <div className="flex items-stretch gap-3 snap-start">
           {/* Bez plakietki aparatu na awatarze (prosba Nat 2026-09-11): zaslaniala nakladke.
               Zmiana zdjecia i nakladki zyja w Ustawieniach - tapniecie w awatar prowadzi tam. */}
           <button
@@ -934,8 +946,11 @@ const TravelerProfile = () => {
                   placesCount: (l.tiles ?? []).length, days: null, mapUrl: null,
                   theme: listTheme(l.theme, l.id), places,
                   visitedCount: l.visited_count ?? 0,
+                  // Statystyki TYLKO na wlasnych kolekcjach - to informacja zwrotna dla autora
+                  // ("ile osob to zapisalo"), nie element kafelka w eksploracji.
+                  stats: { likes: Number(l.likes_count ?? 0), saves: Number(l.saves_count ?? 0) },
                 };
-                return <GridTile key={l.id} it={item} size="feed" onOpen={() => navigate(`/lista/${l.id}`)} />;
+                return <GridTile key={l.id} it={item} size="feed" className="snap-start snap-always" onOpen={() => navigate(`/lista/${l.id}`)} />;
               })}
               </div>
                 )

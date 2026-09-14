@@ -145,5 +145,11 @@
     "quiet_hint": "The people you follow have not published anything yet. See what others are sharing.",
     "quiet_cta": "Go to Explore"
   },
-  "new_place": "New place!"
+  "new_place": "New place!",
+  "stats": {
+    "likes_aria_one": "{{count}} like",
+    "likes_aria_other": "{{count}} likes",
+    "saves_aria_one": "{{count}} save",
+    "saves_aria_other": "{{count}} saves"
+  }
 }
