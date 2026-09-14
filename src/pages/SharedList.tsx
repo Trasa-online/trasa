@@ -51,6 +51,7 @@ import { deferDelete } from "@/lib/deferDelete";
 import ListThemeSheet from "@/components/lists/ListThemeSheet";
 import ListScopeSheet from "@/components/lists/ListScopeSheet";
 import { AuthorPill, HighlightChips } from "@/components/route/TripHeaderChips";
+import { listTheme } from "@/lib/listThemes";
 import { BrandIcon, SAVE_ICON } from "@/components/BrandIcon";
 
 // Widok LISTY miejsc (polecajki) - UI/UX 1:1 z widokiem trasy (SharedRoute), ale zasilany z
@@ -717,7 +718,11 @@ export default function SharedList() {
           Na natywce komponent sam sie nie renderuje. */}
       <PreReleaseBanner />
       {/* Staly TopBar (naglowek nad obszarem scrolla): wstecz + autor + miasto + liczba miejsc + serce */}
-      <div className="shrink-0 bg-background px-5 pb-2.5 border-b border-border/40" style={{ paddingTop: "max(12px, env(safe-area-inset-top, 12px))" }}>
+      {/* Belka w KOLORZE PRZEWODNIM kolekcji (prosba Nat 2026-09-14) - ten sam kolor, ktory
+          kolekcja ma na kafelku w eksploracji, wiec wejscie z siatki nie zmienia tozsamosci.
+          Guziki zostaja biale (czytelne na kazdym z 9 kolorow palety), a pigulka autora
+          dostaje biale tlo zamiast peachy - na jasnych motywach peachy zlewalo sie z belka. */}
+      <div className="shrink-0 px-5 pb-2.5" style={{ backgroundColor: listTheme(col.theme, col.id).bg, paddingTop: "max(12px, env(safe-area-inset-top, 12px))" }}>
         <div className="flex items-center gap-2 text-sm">
             <button onClick={() => goBackOr(navigate, "/eksploruj")} aria-label={t("back")}
               className="h-9 w-9 shrink-0 rounded-full bg-white border border-border flex items-center justify-center active:scale-90 transition-transform">
@@ -728,11 +733,11 @@ export default function SharedList() {
               {/* Autor jako pigulka (redesign 2026-09-13, TripHeaderChips) - awatar z ramka zostaje. */}
               {author?.username ? (
                 <AuthorPill src={author?.avatar_url ?? col.author_avatar} frame={author?.avatar_frame} color={author?.avatar_frame_color} name={`@${author.username}`}
-                  onClick={() => navigate(`/profil/${author.username}`)} />
+                  className="!bg-white" onClick={() => navigate(`/profil/${author.username}`)} />
               ) : (
-                <span className="flex items-center gap-1.5 font-semibold text-foreground min-w-0">
+                <span className="inline-flex min-w-0 max-w-full items-center gap-2 rounded-full bg-white py-1.5 pl-1.5 pr-3.5 font-semibold text-foreground">
                   <img src={avatarSrc(col.author_avatar ?? null)} alt="" className="h-6 w-6 rounded-full object-cover bg-orange-100 shrink-0" />
-                  <span className="truncate">{authorName}</span>
+                  <span className="truncate text-[14px]">{authorName}</span>
                 </span>
               )}
             </div>
@@ -744,7 +749,7 @@ export default function SharedList() {
                 zeszlo do dolnego paska, obok glownego guzika. Wlasciciel: spacer dla symetrii. */}
             {!isOwner ? (
               <ReportContentSheet targetType="collection" targetId={col.id} trigger={(open) => (
-                <button onClick={open} aria-label={t("social:submit")} className="h-9 w-9 shrink-0 rounded-full flex items-center justify-center text-foreground/60 active:scale-90 transition-transform">
+                <button onClick={open} aria-label={t("social:submit")} className="h-9 w-9 shrink-0 rounded-full bg-white border border-black/[0.04] shadow-[0_1px_5px_rgba(0,0,0,0.12)] flex items-center justify-center text-foreground/70 active:scale-90 transition-transform">
                   <Flag className="h-5 w-5" strokeWidth={2} />
                 </button>
               )} />

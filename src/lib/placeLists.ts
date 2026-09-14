@@ -1,4 +1,5 @@
 import i18n from "@/i18n";
+import { randomListTheme } from "@/lib/listThemes";
 import { track } from "@/lib/analytics";
 import { supabase } from "@/integrations/supabase/client";
 import { photoUrlForStorage } from "@/lib/placePhotos";
@@ -328,6 +329,9 @@ export async function createListFromSavedPlaces(
       moderation_status: "approved", // bez kolejki moderacyjnej - ukrywanie reaktywne (hidden_by_admin)
       author_name: author?.name ?? "Użytkownik",   // i18n-ignore: nazwa listy ogolnej w bazie + fallback autora - DANE
       author_avatar: author?.avatar ?? null,
+      // Kazda nowa kolekcja dostaje LOSOWY kolor z palety (Nat 2026-09-14) - wczesniej theme
+      // zostawal NULL i kolor byl tylko wyliczany z id przy renderze.
+      theme: randomListTheme(),
       cover_url: null,
       list_cover_url: null,
     })

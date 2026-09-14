@@ -29,6 +29,9 @@ import { useFollowCounts, useFollowList } from "@/hooks/useFollow";
 import NotificationsDrawer from "@/components/layout/NotificationsDrawer";
 import InviteFriendsBanner from "@/components/social/InviteFriendsBanner";
 import { ProfileFeedCard } from "@/components/profile/ProfileFeedCard";
+import { GridTile, type GridItem } from "@/components/home/FeedTiles";
+import { fetchListVisitCounts } from "@/lib/placeVisits";
+import { listTheme } from "@/lib/listThemes";
 import ReferralCard from "@/components/profile/ReferralCard";
 import { haptics } from "@/hooks/useHaptics";
 import StarredPlacesSheet, { useStarredPlaces } from "@/components/profile/StarredPlacesSheet";
@@ -321,7 +324,7 @@ const TravelerProfile = () => {
     queryFn: async () => {
       const { data: cols } = await (supabase as any)
         .from("discovery_collections")
-        .select("id, title, city, list_status, description, tags, views_count, saves_count, likes_count, updated_at")
+        .select("id, title, city, countries, theme, list_status, description, tags, views_count, saves_count, likes_count, updated_at")
         .eq("user_id", user!.id).eq("kind", "ranking")
         // Zakładka Listy = moje CURATED listy (grupy). Publiczne polecajki (visited). Luźno
         // zapisane miejsca (auto-lista "Do zobaczenia", to_visit) to NIE lista - pokazują się
@@ -344,7 +347,9 @@ const TravelerProfile = () => {
         const _cover = pickPlaceCover(photoMap, pinCoverKeys(it));
         (byCol[it.collection_id] ??= []).push({ ...it, _cover });
       }
-      return rows.map((r) => ({ ...r, tiles: byCol[r.id] ?? [] }));
+      // "odwiedzone przez autora / wszystkie" - ten sam chip co na kafelku w eksploracji.
+      const visits = await fetchListVisitCounts(ids).catch(() => new Map<string, number>());
+      return rows.map((r) => ({ ...r, tiles: byCol[r.id] ?? [], visited_count: visits.get(r.id) ?? 0 }));
     },
   });
 
@@ -883,29 +888,33 @@ const TravelerProfile = () => {
                 </p>
               </div>
             ) : (
-              // Odstep + SZARA LINIA miedzy listami (prosba Nat 2026-09-10): same 40 px
-              // odstepu nie wystarczaly, zeby oko zobaczylo, gdzie konczy sie jedna lista,
-              // a zaczyna nastepna - karty to wysokie bloki z wlasna siatka kafelkow.
-              <div className="divide-y divide-border/60 [&>*]:py-6 [&>*:first-child]:pt-0">
-              {listCards.map((l: any) => (
-                <ProfileFeedCard
-                  key={l.id}
-                  avatarUrl={profile?.avatar_url}
-                  authorId={user.id}
-                  fallback={displayName}
-                  eyebrow=""
-                  timestamp={shortRelativeTime(l.updated_at)}
-                  title={l.title || t("feed.list_fallback", t("profile.list_fallback_title"))}
-                  description={l.description}
-                  tiles={l.tiles}
-                  counts={{ saves: l.saves_count ?? 0, views: l.views_count ?? 0 }}
-                  // Bez olowka i kosza (prosba Nat 2026-09-10): zmiana nazwy i usuwanie zyja
-                  // w widoku listy, gdzie widac, co sie kasuje. Liczba zapisow idzie do
-                  // naglowka, na lewo od daty - stopka tylko dla niej nie ma sensu.
-                  countsInHeader
-                  onOpen={() => navigate(`/lista/${l.id}`)}
-                />
-              ))}
+              // Kolekcje wygladaja TAK SAMO jak w eksploracji (prosba Nat 2026-09-14): ten sam
+              // GridTile - kolorowe tlo z palety, mini-siatka miejsc, pigulka autora, chipy.
+              // Wczesniej byl tu ProfileFeedCard (rzad miniatur), wiec ta sama kolekcja
+              // wygladala inaczej na profilu i w siatce.
+              <div className="space-y-4">
+              {listCards.map((l: any) => {
+                const places = (l.tiles ?? []).map((it: any) => ({
+                  name: it.place_name as string,
+                  category: (it.category ?? null) as string | null,
+                  photo: resolveStored(it.photo_url ?? null) ?? resolveStored(it._cover ?? null) ?? null,
+                }));
+                const item: GridItem = {
+                  kind: "list", id: l.id, title: l.title || t("feed.list_fallback", t("profile.list_fallback_title")),
+                  cover: places.find((x: any) => x.photo)?.photo ?? null,
+                  where: l.city || scopeLabel(l),
+                  authorName: profile?.username ? `@${profile.username}` : displayName,
+                  authorAvatar: profile?.avatar_url ?? null, authorId: user.id,
+                  authorFrame: (profile as any)?.avatar_frame ?? null,
+                  authorFrameColor: (profile as any)?.avatar_frame_color ?? null,
+                  showAuthor: true,
+                  at: new Date(l.updated_at ?? 0).getTime(),
+                  placesCount: (l.tiles ?? []).length, days: null, mapUrl: null,
+                  theme: listTheme(l.theme, l.id), places,
+                  visitedCount: l.visited_count ?? 0,
+                };
+                return <GridTile key={l.id} it={item} size="feed" onOpen={() => navigate(`/lista/${l.id}`)} />;
+              })}
               </div>
                 )
               ) : listyTab === "ogolne" ? (

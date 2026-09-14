@@ -31,6 +31,16 @@ export function isListTheme(v: unknown): v is ListThemeId {
 // siatka jest kolorowa od pierwszego dnia, a autor moze to nadpisac w widoku listy.
 const DEFAULT_POOL: ListThemeId[] = ["brick", "terracotta", "peach", "blush", "pink"];
 
+/**
+ * LOSOWY kolor dla NOWEJ kolekcji (prosba Nat 2026-09-14). Do tej pory `theme` zostawal NULL,
+ * a kolor byl tylko WYLICZANY z id przy renderze - wiec kolekcja nie miala wlasnego koloru
+ * w bazie i belka/kafelek nie mialy z czego go wziac bez powtarzania tej samej logiki.
+ * Losujemy z CALEJ palety (autor i tak moze zmienic w menu "..." -> tlo).
+ */
+export function randomListTheme(): ListThemeId {
+  return LIST_THEMES[Math.floor(Math.random() * LIST_THEMES.length)].id;
+}
+
 export function listTheme(theme: unknown, id: string): ListTheme {
   if (isListTheme(theme)) return LIST_THEMES.find((t) => t.id === theme)!;
   let h = 0;

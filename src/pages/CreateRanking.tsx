@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from "react";
+import { randomListTheme } from "@/lib/listThemes";
 import { useDragToDismiss } from "@/hooks/useDragToDismiss";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams, useSearchParams, useLocation } from "react-router-dom";
@@ -594,6 +595,7 @@ const CreateRanking = () => {
           category, city: cityToSave, description: desc, kind: "ranking", is_public: isPublic,
           cover_url: coverToSave, list_cover_url: listCoverToSave, tags: tagsToSave,
           list_status: listStatusToSave, moderation_status: moderationStatus,
+          theme: randomListTheme(),   // losowy kolor z palety (Nat 2026-09-14) - jak w arkuszu tworzenia
         }).select("id").single();
         if (error || !col) throw new Error(error?.message ?? "insert failed");
         collectionId = col.id;
