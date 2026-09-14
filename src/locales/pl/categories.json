@@ -34,7 +34,8 @@
     "church": "Kościół",
     "clothing_store": "Sklep odzieżowy",
     "book_store": "Księgarnia",
-    "shop": "Sklep"
+    "shop": "Sklep",
+    "vintage_store": "Vintage store"
   },
   "other": "Miejsce",
   "plural": {
@@ -57,6 +58,7 @@
     "theater": "Teatry",
     "live_music": "Live music",
     "cinema": "Kina",
-    "nightclub": "Kluby nocne"
+    "nightclub": "Kluby nocne",
+    "vintage_store": "Vintage store"
   }
 }

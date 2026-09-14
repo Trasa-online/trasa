@@ -454,7 +454,7 @@ const TravelerProfile = () => {
       const ids = rows0.map((r) => r.collection_id).filter(Boolean);
       if (!ids.length) return [];
       const { data: cols } = await (supabase as any).from("discovery_collections")
-        .select("id, title, city, description, tags, author_name, author_avatar, user_id, saves_count, likes_count, views_count, updated_at").in("id", ids);
+        .select("id, title, city, countries, theme, description, tags, author_name, author_avatar, user_id, saves_count, likes_count, views_count, updated_at").in("id", ids);
       const colRows = (cols ?? []) as any[];
       const { data: items } = await (supabase as any).from("discovery_items")
         .select("id, collection_id, place_name, category, google_place_id, photo_url, order_index").in("collection_id", ids).order("order_index", { ascending: true });
@@ -464,6 +464,16 @@ const TravelerProfile = () => {
       const byCol: Record<string, any[]> = {};
       for (const it of allItems) { const _cover = pickPlaceCover(photoMap, pinCoverKeys(it)); (byCol[it.collection_id] ??= []).push({ ...it, _cover }); }
       const seenMap: Record<string, number> = {}; rows0.forEach((r) => { seenMap[r.collection_id] = r.seen_item_count ?? 0; });
+      // Kafelek eksploracji pokazuje @nick i ramke awatara autora - saved_collections ich nie
+      // niesie, wiec dociagamy profile wlascicieli jednym zapytaniem (jak DiscoveryFeed).
+      const authorIds = Array.from(new Set(colRows.map((c) => c.user_id).filter(Boolean)));
+      const authorMap = new Map<string, any>();
+      if (authorIds.length) {
+        const { data: profs } = await (supabase as any).from("profiles")
+          .select("id, username, avatar_url, avatar_frame, avatar_frame_color").in("id", authorIds);
+        for (const pr of (profs ?? []) as any[]) authorMap.set(pr.id, pr);
+      }
+      const savedVisits = await fetchListVisitCounts(ids).catch(() => new Map<string, number>());
       // Zachowaj kolejnosc zapisu (najnowsze u gory).
       return ids.map((cid) => colRows.find((c) => c.id === cid)).filter(Boolean).map((c: any) => {
         const tiles = byCol[c.id] ?? [];
@@ -476,8 +486,14 @@ const TravelerProfile = () => {
         // Nowe kafelki na POCZATEK: karta pokazuje tylko 3 pierwsze, wiec inaczej nowosc
         // chowalaby sie pod "+N" i cala plakietka nie mialaby czego udowodnic.
         const ordered = newCount ? [...newTiles, ...tiles.slice(0, tiles.length - newCount)] : tiles;
+        const au = authorMap.get(c.user_id);
         return {
           ...c, tiles: ordered, isNew: newCount > 0, newCount,
+          author_username: au?.username ?? null,
+          author_frame: au?.avatar_frame ?? null,
+          author_frame_color: au?.avatar_frame_color ?? null,
+          author_avatar_profile: au?.avatar_url ?? null,
+          visited_count: savedVisits.get(c.id) ?? 0,
           newNames: newTiles.map((t: any) => t.place_name).filter(Boolean),
           newIds: newTiles.map((t: any) => t.id).filter(Boolean),
           newCats: newTiles.map((t: any) => (t.category ? subcategoryLabelLocalized(t.category) : null)).filter(Boolean),
@@ -666,40 +682,46 @@ const TravelerProfile = () => {
   );
 
   // Zapisana (cudza) lista - ten sam UI co wlasne listy, autor = tworca, chip "Nowe miejsce!", odpiecie.
-  const renderSavedListCard = (l: any) => (
-    <ProfileFeedCard
-      key={l.id}
-      avatarUrl={l.author_avatar}
-      authorId={l.user_id}
-      fallback={l.author_name || "?"}
-      eyebrow=""
-      timestamp={shortRelativeTime(l.updated_at)}
-      title={l.title || t("feed.list_fallback", t("profile.list_fallback_title"))}
-      description={l.description}
-      tiles={l.tiles}
-      counts={{ saves: l.saves_count ?? 0, views: l.views_count ?? 0 }}
-      // Licznik zapisow przy DACIE, jak na "Moje listy" (prosba Nat 2026-09-10) - stopka
-      // z sama zakladka pod siatka byla druga informacja o tym samym.
-      countsInHeader
-      // Plakietka mowi KTO, ILE i CO dodal - sama informacja "cos doszlo" nie dawala powodu,
-      // zeby wejsc (eksploracja UX w Figmie, sekcja "Zapisana lista: ktos dodal nowe miejsce").
-      badge={l.isNew ? (
-        <div className="flex items-center gap-2 rounded-2xl bg-[#FCEDE3] px-2.5 py-2">
-          <img src={avatarSrc(l.author_avatar ?? null)} alt="" className="h-5 w-5 rounded-full object-cover bg-orange-100 shrink-0" />
-          <p className="text-[12.5px] font-semibold text-foreground leading-snug">
-            {t("feed.added_place", { count: l.newCount, author: l.author_name || t("feed.author_fallback") })}
-            {l.newNames?.length ? <span className="font-normal">{`: ${l.newNames.slice(0, 2).join(", ")}${l.newNames.length > 2 ? ` i ${l.newNames.length - 2} więcej` : ""}`}</span> : null}
-            {/* Kategoria dodanego miejsca - mowi CO to jest, zanim user w ogole otworzy liste. */}
-            {l.newCount === 1 && l.newCats?.[0] ? <span className="font-normal text-[#8A6A57]">{` · ${l.newCats[0]}`}</span> : null}
-          </p>
-        </div>
-      ) : undefined}
-      onOpen={() => navigate(`/lista/${l.id}`)}
-      // Bez zakladki w stopce (prosba Nat 2026-09-13): licznik zapisow stoi juz w naglowku
-      // przy dacie, a druga ikona pod siatka dublowala te sama informacje. Odpiecie listy
-      // zyje w jej widoku (bookmark w /lista/:id).
-    />
-  );
+  // Zapisane kolekcje od innych: ten sam GridTile co "Moje kolekcje" i eksploracja
+  // (prosba Nat 2026-09-14). Plakietka "ktos dodal miejsce" ZOSTAJE - to jedyny powod,
+  // zeby tu wrocic - i siedzi NAD kafelkiem, bo kafelek nie ma na nia slotu.
+  const renderSavedListCard = (l: any) => {
+    const places = (l.tiles ?? []).map((it: any) => ({
+      name: it.place_name as string,
+      category: (it.category ?? null) as string | null,
+      photo: resolveStored(it.photo_url ?? null) ?? resolveStored(it._cover ?? null) ?? null,
+    }));
+    const item: GridItem = {
+      kind: "list", id: l.id, title: l.title || t("feed.list_fallback", t("profile.list_fallback_title")),
+      cover: places.find((x: any) => x.photo)?.photo ?? null,
+      where: l.city || scopeLabel(l),
+      authorName: l.author_username ? `@${l.author_username}` : (l.author_name ?? ""),
+      authorAvatar: l.author_avatar_profile ?? l.author_avatar ?? null,
+      authorId: l.user_id ?? null,
+      authorFrame: l.author_frame ?? null,
+      authorFrameColor: l.author_frame_color ?? null,
+      showAuthor: !!(l.author_username || l.author_name),
+      at: new Date(l.updated_at ?? 0).getTime(),
+      placesCount: (l.tiles ?? []).length, days: null, mapUrl: null,
+      theme: listTheme(l.theme, l.id), places,
+      visitedCount: l.visited_count ?? 0,
+    };
+    return (
+      <div key={l.id} className="space-y-2">
+        {l.isNew && (
+          <div className="flex items-center gap-2 rounded-2xl bg-[#FCEDE3] px-2.5 py-2">
+            <img src={avatarSrc(l.author_avatar_profile ?? l.author_avatar ?? null)} alt="" className="h-5 w-5 rounded-full object-cover bg-orange-100 shrink-0" />
+            <p className="text-[12.5px] font-semibold text-foreground leading-snug">
+              {t("feed.added_place", { count: l.newCount, author: l.author_name || t("feed.author_fallback") })}
+              {l.newNames?.length ? <span className="font-normal">{`: ${l.newNames.slice(0, 2).join(", ")}${l.newNames.length > 2 ? ` i ${l.newNames.length - 2} więcej` : ""}`}</span> : null}
+              {l.newCount === 1 && l.newCats?.[0] ? <span className="font-normal text-[#8A6A57]">{` · ${l.newCats[0]}`}</span> : null}
+            </p>
+          </div>
+        )}
+        <GridTile it={item} size="feed" onOpen={() => navigate(`/lista/${l.id}`)} />
+      </div>
+    );
+  };
 
   return (
     <div className="flex flex-col flex-1 min-h-0 bg-background">
@@ -921,7 +943,8 @@ const TravelerProfile = () => {
                 // t("tabs.general") - lista OGÓLNA usera (wszystkie zapisane miejsca), dostępna z dropdownu list.
                 <div className="pt-1"><SavedPlacesGrid /></div>
               ) : (
-                // Zapisane listy od innych - ten sam UI co wlasne listy (ProfileFeedCard) + chip "Nowe miejsce!".
+                // Zapisane kolekcje od innych - ten sam kafelek co "Moje kolekcje" i eksploracja,
+                // z plakietka "ktos dodal miejsce" nad nim.
                 savedListCards.length === 0 ? (
                   <div className="pt-16 pb-12 text-center px-8">
                     <span aria-hidden className="mx-auto mb-5 block h-24 w-24" style={{ backgroundColor: "#ef9d78", WebkitMaskImage: "url(/Ikona_Trasy.svg)", maskImage: "url(/Ikona_Trasy.svg)", WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat", WebkitMaskSize: "contain", maskSize: "contain", WebkitMaskPosition: "center", maskPosition: "center" }} />
@@ -931,7 +954,7 @@ const TravelerProfile = () => {
                     </p>
                   </div>
                 ) : (
-                  <div className="pt-1 divide-y divide-border/60 [&>*]:py-6 [&>*:first-child]:pt-0">{(savedListCards as any[]).map(renderSavedListCard)}</div>
+                  <div className="pt-1 space-y-4">{(savedListCards as any[]).map(renderSavedListCard)}</div>
                 )
               )}
             </div>

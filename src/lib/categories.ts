@@ -67,6 +67,7 @@ export const MAIN_CATEGORIES: MainCategory[] = [
       { id: 'boutique',      label: 'Butik',          emoji: '👗' },
       { id: 'concept_store', label: 'Concept store',  emoji: '🛒' },
       { id: 'wine_shop',     label: 'Sklep z winami', emoji: '🍷' },
+      { id: 'vintage_store', label: 'Vintage store',  emoji: '🕰️' },
       { id: 'bookshop',      label: 'Księgarnia',     emoji: '📚' },
     ],
   },
@@ -165,6 +166,10 @@ const SUBCATEGORY_DB_ALIASES: Record<string, string[]> = {
   concept_store: ["concept_store", "store", "shopping"],
   wine_shop: ["wine_shop", "liquor_store"],
   bookshop: ["bookshop", "book_store", "library"],
+  // Sklepy vintage i z drugiej reki. Google nie ma typu "vintage", wiec lapiemy
+  // warianty, ktore realnie wpadaja do bazy. CELOWO bez generycznego "store"/"shopping" -
+  // to by wciagnelo do filtra kazdy sklep.
+  vintage_store: ["vintage_store", "antique_store", "thrift_store", "second_hand_store"],
   theater: ["theater", "performing_arts_theater", "movie_theater"],
   live_music: ["live_music", "night_club", "concert_hall"],
   cinema: ["cinema", "movie_theater"],

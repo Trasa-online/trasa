@@ -49,17 +49,22 @@ const CATEGORY_ICON_MAP: Record<string, string> = {
   clothing_store: "/Ikona__Zakupy.svg",
   concept_store: "/Ikona__Zakupy.svg",
   wine_shop: "/Ikona__Zakupy.svg",
+  vintage_store: "/Ikona__Zakupy.svg",
+  antique_store: "/Ikona__Zakupy.svg",
+  thrift_store: "/Ikona__Zakupy.svg",
+  second_hand_store: "/Ikona__Zakupy.svg",
   liquor_store: "/Ikona__Zakupy.svg",
   bookshop: "/Ikona__Zakupy.svg",
   book_store: "/Ikona__Zakupy.svg",
   market: "/Ikona__Zakupy.svg",
 
   // Kategorie GLOWNE (MAIN_CATEGORIES z categories.ts) - reprezentatywna ikona.
+  // UWAGA: "nature" i "shopping" sa JEDNOCZESNIE typem z Google i id kategorii glownej,
+  // wiec siedza wyzej w tej mapie (przy park/walk i przy store/boutique) i nie powtarzamy
+  // ich tutaj - powtorzenie dawalo TS1117 (duplikat klucza w literale).
   food: "/Ikona__Restauracja-18.svg",
   culture: "/Ikona__Landmark.svg",
   attractions: "/Ikona__Landmark.svg",
-  nature: "/Ikona__Natura.svg",
-  shopping: "/Ikona__Zakupy.svg",
   entertainment: "/Ikona__Sztuka.svg",
 
   // Dodatkowe typy Google Places.

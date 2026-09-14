@@ -34,7 +34,8 @@
     "church": "Church",
     "clothing_store": "Clothing store",
     "book_store": "Bookshop",
-    "shop": "Shop"
+    "shop": "Shop",
+    "vintage_store": "Vintage store"
   },
   "other": "Place",
   "plural": {
@@ -57,6 +58,7 @@
     "theater": "Theatres",
     "live_music": "Live music",
     "cinema": "Cinemas",
-    "nightclub": "Night clubs"
+    "nightclub": "Night clubs",
+    "vintage_store": "Vintage stores"
   }
 }
