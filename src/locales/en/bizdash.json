@@ -2,7 +2,10 @@
   "business_name_fallback": "Business name",
   "card": {
     "add": "Add",
-    "reject": "Skip"
+    "reject": "Skip",
+    "save_place": "Save this place",
+    "share_place": "Share place",
+    "save": "Save"
   },
   "card_preview": {
     "label": "Card preview",

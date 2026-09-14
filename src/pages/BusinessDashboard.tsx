@@ -8,7 +8,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { Loader2, BarChart2, MapPin, MousePointerClick, Plus, X, LogOut, ImagePlus, Trash2, Users, LayoutDashboard, Images, Store, Megaphone, TrendingUp, MessageCircle, Expand, ZoomIn, Video, Play, Camera, Star, Heart, ChevronUp, ChevronDown, ChevronLeft, GripVertical, HelpCircle, Eye, KeyRound, Clock, Settings, FileText, BookOpen, Pencil, Check, MessageSquareQuote, Flag } from "lucide-react";
+import { BrandIcon, SAVE_ICON } from "@/components/BrandIcon";
+import { applyBusinessDefaultLanguage, markBusinessLangChoice } from "@/lib/businessLanguage";
+import { Loader2, BarChart2, MapPin, MousePointerClick, Plus, X, LogOut, ImagePlus, Trash2, Users, LayoutDashboard, Images, Store, Megaphone, TrendingUp, MessageCircle, Expand, ZoomIn, Video, Play, Camera, Star, Heart, ChevronUp, ChevronDown, ChevronLeft, GripVertical, HelpCircle, Eye, KeyRound, Clock, Settings, FileText, BookOpen, Pencil, Check, MessageSquareQuote, Flag, Bookmark, Share2 } from "lucide-react";
 
 // Pola formularza panelu = szare wypełnienie + pomarańczowy focus (prośba Nat 2026-09-14:
 // jednolitość i "zasada przynależności" - wszystkie inputy wyglądają tak samo, spokojnie).
@@ -173,14 +175,6 @@ function StarRow({ count = 5, size = "sm" }: { count?: number; size?: "xs" | "sm
   );
 }
 
-function getContrastColor(hex: string): string {
-  const r = parseInt(hex.slice(1, 3), 16);
-  const g = parseInt(hex.slice(3, 5), 16);
-  const b = parseInt(hex.slice(5, 7), 16);
-  const toLinear = (c: number) => { const s = c / 255; return s <= 0.04045 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4); };
-  const L = 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b);
-  return L > 0.179 ? '#000000' : '#ffffff';
-}
 
 function AppLikePreviewModal({
   onClose, onConvert, isDraft, convertingDraft,
@@ -246,7 +240,7 @@ function AppLikePreviewModal({
                 </div>
               )}
               {/* Info overlay */}
-              <div className="absolute left-0 right-0 px-4 space-y-1.5" style={{ bottom: '5rem' }}>
+              <div className="absolute left-0 right-0 px-4 pr-[72px] space-y-1.5" style={{ bottom: '1.25rem' }}>
                 {logoUrl && (
                   <div className="h-10 w-10 rounded-full overflow-hidden border border-white/30 shadow-md bg-white/10">
                     <img src={logoUrl} className="w-full h-full object-cover" />
@@ -266,28 +260,28 @@ function AppLikePreviewModal({
                   </div>
                 )}
                 {tags.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5 pt-0.5 pr-14">
+                  <div className="flex flex-wrap gap-1.5 pt-0.5">
                     {tags.slice(0, 4).map(t => (
                       <span key={t} className="px-2.5 py-0.5 bg-white/15 rounded-full text-xs text-white/80 font-medium">{t}</span>
                     ))}
                   </div>
                 )}
               </div>
-              {/* Expand to detail — bottom-right, above action buttons */}
-              <button
-                onClick={() => setView('detail')}
-                className="absolute right-4 h-10 w-10 bg-white rounded-full flex items-center justify-center shadow-md active:scale-90 transition-transform"
-                style={{ bottom: '5rem' }}
-              >
-                <ChevronUp className="h-5 w-5 text-slate-700" />
-              </button>
-              {/* Action buttons on the card */}
-              <div className="absolute bottom-4 left-3 right-3 flex gap-2.5">
-                <button onClick={onClose} className="flex-1 py-3.5 rounded-full bg-white text-slate-900 font-bold text-sm active:scale-95 transition-transform">
-                  {t("card.reject")}
+              {/* Kolumna akcji 1:1 z aplikacją (SwipeCard scrollMode): zapisz + rozwiń.
+                  Rząd „Odrzuć / Dodaj" usunięty - w zakładce Miejsca go nie ma. */}
+              <div className="absolute right-3 bottom-4 z-20 flex flex-col gap-3">
+                <button
+                  aria-label={t("card.save")}
+                  className="h-12 w-12 rounded-full bg-white flex items-center justify-center shadow-lg active:scale-90 transition-transform"
+                >
+                  <Bookmark className="h-5 w-5 text-foreground" strokeWidth={2} />
                 </button>
-                <button className="flex-1 py-3.5 rounded-full font-bold text-sm active:scale-95 transition-transform shadow-lg" style={{ background: colorButton, color: getContrastColor(colorButton) }}>
-                  {t("card.add")}
+                <button
+                  onClick={() => setView('detail')}
+                  aria-label={t("card_preview.open_full")}
+                  className="h-12 w-12 rounded-full bg-white flex items-center justify-center shadow-lg active:scale-90 transition-transform"
+                >
+                  <ChevronUp className="h-5 w-5 text-foreground" strokeWidth={2.5} />
                 </button>
               </div>
             </div>
@@ -308,13 +302,18 @@ function AppLikePreviewModal({
                   hideReviews
                 />
               </div>
-              {/* Odrzuc / Dodaj CTA - poza PremiumBusinessCard, 1:1 z apka */}
-              <div className="shrink-0 flex gap-3 px-4 pb-5 pt-3 border-t border-slate-100 bg-[#FEFEFE]">
-                <button onClick={() => setView('card')} className="flex-1 py-3 rounded-full bg-secondary text-secondary-foreground font-bold text-sm shadow-sm active:scale-[0.97] transition-transform">
-                  {t("card.reject")}
+              {/* CTA wizytówki 1:1 z aplikacją (PlaceSwiperDetail, tryb przeglądania):
+                  „Zapisz to miejsce" z brandową zakładką + ŻÓŁTE kółko udostępniania z brązową
+                  ikoną. Wcześniej był tu „Odrzuć / Dodaj" (tryb dodawania do wyjazdu), przez co
+                  lokal nie widział guzika zapisu ani udostępniania (zgłoszenie Nat 2026-09-14). */}
+              <div className="shrink-0 flex items-center gap-3 px-4 pb-5 pt-3 border-t border-slate-100 bg-[#FEFEFE]">
+                <button className="flex-1 h-11 rounded-full bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.97] transition-transform">
+                  {t("card.save_place")}
+                  <BrandIcon src={SAVE_ICON} className="h-[18px] w-[18px]" />
                 </button>
-                <button className="flex-1 py-3 rounded-full font-bold text-sm shadow-xl active:scale-[0.97] transition-transform" style={{ background: colorButton, color: getContrastColor(colorButton) }}>
-                  {t("card.add")}
+                <button aria-label={t("card.share_place")}
+                  className="h-11 w-11 shrink-0 rounded-full bg-[#FDF184] flex items-center justify-center active:scale-90 transition-transform">
+                  <Share2 className="h-5 w-5 text-[#5B2C06]" strokeWidth={2.2} />
                 </button>
               </div>
             </>
@@ -349,7 +348,6 @@ function BusinessCardPreview({ logoUrl, coverImageUrl, coverVideoUrl, businessNa
   const catLabel = mainCategory ? MAIN_CATEGORIES.find(c => c.id === mainCategory)?.label : null;
   const badge   = colorBadge  ?? "#D45113";
   const overlay = colorCardBg ?? "#000000";
-  const btn     = colorButton ?? "#D45113";
   return (
     <div>
       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">{t("card_preview.label")}</p>
@@ -366,7 +364,7 @@ function BusinessCardPreview({ logoUrl, coverImageUrl, coverVideoUrl, businessNa
             {catLabel}
           </div>
         )}
-        <div className="absolute left-0 right-0 px-3 space-y-1" style={{ bottom: '3.5rem' }}>
+        <div className="absolute left-0 right-0 px-3 pr-14 space-y-1" style={{ bottom: '0.85rem' }}>
           {logoUrl && (
             <div className="h-8 w-8 rounded-full overflow-hidden border border-white/30 shadow-md bg-white/10">
               <img src={logoUrl} className="w-full h-full object-cover" />
@@ -386,19 +384,24 @@ function BusinessCardPreview({ logoUrl, coverImageUrl, coverVideoUrl, businessNa
             </div>
           )}
           {tags.length > 0 && (
-            <div className="flex flex-wrap gap-1 pt-0.5 pr-10">
+            <div className="flex flex-wrap gap-1 pt-0.5">
               {tags.slice(0, 3).map(t => (
                 <span key={t} className="px-2 py-0.5 bg-white/15 rounded-full text-[9px] font-medium text-white/80">{t}</span>
               ))}
             </div>
           )}
         </div>
-        <div className="absolute right-3 h-8 w-8 bg-white rounded-full flex items-center justify-center shadow-md" style={{ bottom: '3.5rem' }}>
-          <ChevronUp className="h-4 w-4 text-slate-700" />
-        </div>
-        <div className="absolute bottom-2 left-2 right-2 flex gap-2">
-          <div className="flex-1 py-2 rounded-full bg-white text-slate-900 font-bold text-[10px] text-center">{t("card.reject")}</div>
-          <div className="flex-1 py-2 rounded-full font-bold text-[10px] text-center" style={{ background: btn, color: getContrastColor(btn) }}>{t("card.add")}</div>
+        {/* Kolumna akcji 1:1 z kartą w aplikacji (SwipeCard scrollMode, zakładka Miejsca):
+            zapisz (zakładka) + rozwiń (^) w białych kółkach. Rząd „Odrzuć / Dodaj" USUNIĘTY
+            (2026-09-14) - to był wygląd z dodawania miejsca do wyjazdu, a nie to, co widzi
+            podróżny przeglądający Miejsca. */}
+        <div className="absolute right-2.5 bottom-3 z-20 flex flex-col gap-2">
+          <div className="h-8 w-8 rounded-full bg-white flex items-center justify-center shadow-lg">
+            <Bookmark className="h-4 w-4 text-foreground" strokeWidth={2} />
+          </div>
+          <div className="h-8 w-8 rounded-full bg-white flex items-center justify-center shadow-lg">
+            <ChevronUp className="h-4 w-4 text-foreground" strokeWidth={2.5} />
+          </div>
         </div>
       </div>
       {onPreviewClick && (
@@ -541,11 +544,13 @@ const BusinessDashboard = () => {
   const [tagsExpanded, setTagsExpanded] = useState(false);
   const [customSubcategory, setCustomSubcategory] = useState("");
   const [customSubcategoryStatus, setCustomSubcategoryStatus] = useState<string | null>(null);
-  // Card color personalization
-  const [colorBadge, setColorBadge]   = useState<string>("#D45113"); // orange-500 default
-  const [colorCardBg, setColorCardBg] = useState<string>("#000000"); // black default (card overlay)
-  const [colorButton, setColorButton] = useState<string>("#D45113"); // orange default
-  const [colorPromo, setColorPromo]   = useState<string>(""); // badge promocji/aktualnosci; puste = domyslny gradient pomaranczowy
+  // Kolory wizytowki - JUZ NIE personalizowane (decyzja Nat 2026-09-14). Stale marki, zeby
+  // podglad w panelu byl 1:1 z tym, co widzi uzytkownik w aplikacji. Kolumny color_* zostaja
+  // w bazie i w zapisie (nie kasujemy historii), ale nic ich nie zmienia i nic ich nie czyta.
+  const [colorBadge] = useState<string>("#EE5307");   // pomarancz marki (badge kategorii)
+  const [colorCardBg] = useState<string>("#000000");  // overlay karty
+  const [colorButton] = useState<string>("#EE5307");  // CTA "Dodaj" - jak bg-primary w apce
+  const [colorPromo, setColorPromo]   = useState<string>(""); // puste = domyslny pomaranczowy
   const [plan, setPlan] = useState<BizPlan>('premium');
   const [previewTab, setPreviewTab] = useState<'basic' | 'premium'>('premium');
   const [showUpgradeBanner, setShowUpgradeBanner] = useState(false);
@@ -619,6 +624,9 @@ const BusinessDashboard = () => {
   const postPhotoInputRef = useRef<HTMLInputElement>(null);
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const loadedKeyRef = useRef<string | null>(null);
+
+  // Panel startuje PO POLSKU (prosba Nat 2026-09-14) - chyba ze lokal sam przelaczyl PL/EN.
+  useEffect(() => { applyBusinessDefaultLanguage(); }, []);
 
   useEffect(() => {
     if (!placeId) return;
@@ -741,10 +749,8 @@ const BusinessDashboard = () => {
     setCoverVideoUrl((profileData as any).cover_video_url ?? "");
     setGalleryUrls(profileData.gallery_urls ?? []);
     setMenuImageUrls(profileData.menu_image_urls ?? []);
-    setColorBadge((profileData as any).color_badge ?? "#D45113");
-    setColorCardBg((profileData as any).color_card_bg ?? "#000000");
-    setColorButton((profileData as any).color_button ?? "#D45113");
-    setColorPromo((profileData as any).color_promo ?? "");
+    // color_* NIE sa juz wczytywane z bazy - podglad zawsze w kolorach marki (patrz wyzej).
+    setColorPromo("");
     setOpeningHours(((profileData as any).opening_hours ?? {}) as OpeningHours);
     setEventTitle(profileData.event_title ?? "");
     setEventTitleEn((profileData as any).event_title_en ?? "");
@@ -1983,7 +1989,7 @@ const BusinessDashboard = () => {
                 return (
                   <button
                     key={code}
-                    onClick={() => { if (!active) i18n.changeLanguage(code); }}
+                    onClick={() => { if (!active) { markBusinessLangChoice(code); i18n.changeLanguage(code); } }}
                     className={`px-2.5 py-1 rounded-full text-[11px] font-bold uppercase transition-colors ${active ? "bg-white text-primary shadow-sm" : "text-slate-400 hover:text-slate-600"}`}
                   >
                     {code}
@@ -2329,28 +2335,10 @@ const BusinessDashboard = () => {
                 <input ref={galleryInputRef} type="file" accept="image/*,.heic,.heif" multiple className="hidden" onChange={handleGalleryUpload} />
               </div>
 
-              {/* ── Personalizacja kolorow ── */}
-              <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm space-y-4">
-                <div>
-                  <p className="text-sm font-bold text-foreground">{t("personalization.title")}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">{t("personalization.desc")}</p>
-                </div>
-                {/* Live preview strip NAD pickerem - zeby guzik "Dodaj" byl widoczny podczas
-                    zmiany koloru (sticky bar "Zapisz zmiany" zaslanial go, gdy byl na dole karty).
-                    Badge kategorii i promocji ZAWSZE pomaranczowe (jednolite w aplikacji). */}
-                <div className="space-y-3">
-                  {/* Personalizacja ograniczona do koloru guzika akcji - kategorie/tlo sa jednolite
-                      w calej aplikacji (badge kategorii i overlay nie sa juz personalizowane). */}
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium">{t("personalization.button_color")}</p>
-                      <p className="text-xs text-muted-foreground">{t("personalization.button_color_desc")}</p>
-                    </div>
-                    <input type="color" value={colorButton} onChange={e => { setColorButton(e.target.value); setIsDirty(true); }}
-                      className="h-9 w-14 rounded-lg cursor-pointer border border-slate-200 p-0.5" />
-                  </div>
-                </div>
-              </div>
+              {/* Personalizacja kolorów wizytówki WYCOFANA (decyzja Nat 2026-09-14): wizytówka ma
+                  wyglądać identycznie jak w aplikacji, więc kolory są jednolite (pomarańcz marki).
+                  Kolumny color_* zostają w bazie i w zapisie (stare wartości nie znikają), ale nic
+                  ich już nie zmienia i podgląd ich nie używa. Nie przywracaj bez prośby Nat. */}
 
               </div> {/* end flex-1 min-w-0 */}
 

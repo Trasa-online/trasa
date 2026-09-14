@@ -1155,10 +1155,14 @@ export function enrichWithBusinessProfile(p: any, refDate?: string): MockPlace {
     businessEventDescription: bp.event_description ?? undefined,
     businessDescription: bp.description ?? undefined,
     businessIsVerified: !!bp.is_verified,
-    businessColorBadge: bp.color_badge ?? undefined,
-    businessColorCardBg: bp.color_card_bg ?? undefined,
-    businessColorButton: bp.color_button ?? undefined,
-    businessColorPromo: bp.color_promo ?? undefined,
+    // Personalizacja kolorow wizytowki WYCOFANA (decyzja Nat 2026-09-14) - wizytowka lokalu
+    // wyglada tak samo jak kazda inna (pomarancz marki). Kolumny color_* zostaja w bazie ze
+    // starymi wartosciami, ale ich NIE czytamy; wczesniej lokal z ustawionym color_button
+    // dostawal np. fioletowy guzik "Dodaj" posrodku pomaranczowej aplikacji.
+    businessColorBadge: undefined,
+    businessColorCardBg: undefined,
+    businessColorButton: undefined,
+    businessColorPromo: undefined,
     // Pomijaj Google Photos tylko gdy biznes ma WŁASNE zdjęcia (cover/video/własna galeria).
     // places.gallery_urls (kurowane z Google) NIE liczy się jako "własne zdjęcia biznesu".
     businessHasOwnPhoto: !!(

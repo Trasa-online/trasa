@@ -2,7 +2,10 @@
   "business_name_fallback": "Nazwa lokalu",
   "card": {
     "add": "Dodaj",
-    "reject": "Odrzuć"
+    "reject": "Odrzuć",
+    "save_place": "Zapisz to miejsce",
+    "share_place": "Udostępnij miejsce",
+    "save": "Zapisz"
   },
   "card_preview": {
     "label": "Podgląd wizytówki",

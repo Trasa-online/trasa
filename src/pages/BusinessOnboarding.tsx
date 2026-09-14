@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { applyBusinessDefaultLanguage } from "@/lib/businessLanguage";
 import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
@@ -23,6 +24,9 @@ export default function BusinessOnboarding() {
   const [phase, setPhase] = useState<"choice" | "guide">("choice");
   const [step, setStep] = useState(0);
   const [ready, setReady] = useState(false);
+
+  // Onboarding lokalu tez po polsku domyslnie (jak panel) - patrz lib/businessLanguage.
+  useEffect(() => { applyBusinessDefaultLanguage(); }, []);
 
   // Musi byc zalogowany wlasciciel - inaczej na logowanie biznesowe.
   useEffect(() => {
