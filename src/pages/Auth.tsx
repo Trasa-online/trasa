@@ -526,62 +526,89 @@ const Auth = () => {
 
     return (
       <div className="min-h-screen flex flex-col bg-[#FEFEFE]">
-        {/* ── Belka: znak + przejście między rejestracją a logowaniem ── */}
-        <header className="flex items-center justify-between gap-3 px-5 sm:px-8 lg:px-12 h-16 sm:h-20 shrink-0">
+        {/* ── Belka: sam znak. Guzik „Mam już konto / Dodaj lokal" ZDJĘTY 2026-09-14 -
+               po dodaniu przełącznika w hero robił dokładnie to samo co on, tylko pod inną
+               nazwą (dwa guziki obok siebie, jedna akcja). Przełączanie żyje w hero. ── */}
+        <header className="flex items-center px-5 sm:px-8 lg:px-12 h-16 sm:h-20 shrink-0">
           <button onClick={goBack} className="flex items-center gap-2 active:opacity-70" aria-label={t("back")}>
             <TrasaLogo size={30} />
             <span className="text-sm font-black text-slate-900">spontaway<span className="text-primary"> biznes</span></span>
           </button>
-          <button
-            onClick={() => { setBizDone(false); setBizExpanded(false); setBizMode(showLogin ? "register" : "login"); }}
-            className="shrink-0 h-10 px-4 sm:px-5 rounded-full bg-primary text-white text-[13px] sm:text-sm font-bold active:scale-95 transition-transform"
-          >
-            {showLogin ? t("bizland.nav_back_to_signup") : t("bizland.nav_have_account")}
-          </button>
         </header>
 
-        {showLogin ? (
-          /* ── Logowanie (C1): wąsko i cicho - to ma trwać dwie sekundy ── */
-          <div className="flex-1 flex items-start sm:items-center justify-center px-5 pb-12 pt-4 sm:pt-0">
-            <div className="w-full max-w-[420px] bg-white rounded-3xl border border-[#EFE9E2] shadow-[0_12px_30px_-14px_rgba(91,44,6,0.25)] p-7 sm:p-9">
-              <h1 className="text-[26px] font-black text-slate-900 leading-tight">{t("biz.signin_title")}</h1>
-              <p className="text-sm text-[#6E645C] mt-1.5 mb-6 leading-relaxed">{t("biz.signin_desc")}</p>
-              <form onSubmit={handleLogin} className="space-y-4">
-                <div className="space-y-1.5">
-                  <Label htmlFor="biz-email" className="text-[13px] font-semibold text-[#3F3833]">{t("fields.email")}</Label>
-                  <Input id="biz-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder={t("fields.email_placeholder")} className={inputCls} />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="biz-password" className="text-[13px] font-semibold text-[#3F3833]">{t("fields.password")}</Label>
-                  <Input id="biz-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required placeholder={t("fields.password_placeholder")} className={inputCls} />
-                </div>
-                <button type="button" onClick={handleForgotPassword} disabled={resetLoading} className="text-[13px] text-primary font-semibold hover:underline disabled:opacity-60">
-                  {resetLoading ? t("sending") : t("forgot_password")}
-                </button>
-                <Button type="submit" className="w-full h-12 rounded-full bg-primary hover:bg-primary/90 text-white font-bold text-base border-0" disabled={loading}>
-                  {loading ? t("logging_in") : t("biz.signin_title")}
-                </Button>
-              </form>
-            </div>
-          </div>
-        ) : (
-          /* ── Landing z rejestracją (C2) ── */
-          <>
+        {/* ── JEDNA strona: hero zostaje, zmienia się tylko treść formularza.
+               Przełącznik rejestracja/logowanie siedzi nad formularzem, więc lokal nigdy
+               nie wychodzi z tego widoku (prośba Nat 2026-09-14 - wcześniej logowanie
+               wyrzucało na pustą białą stronę z samotną kartą). ── */}
+        <>
             <section className="bg-[#FDF184]">
               <div className="mx-auto max-w-6xl px-5 sm:px-8 lg:px-12 py-10 sm:py-14 lg:py-16
                               grid gap-10 lg:gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,460px)] lg:items-center">
                 {/* Treść */}
                 <div className="max-w-xl">
                   <h1 className="font-brand text-[#5B2C06] leading-[1.08] text-[34px] sm:text-[44px] lg:text-[52px]">
-                    {t("bizland.hero_title_1")}<br />{t("bizland.hero_title_2")}
+                    {showLogin
+                      ? t("bizland.login_title")
+                      : <>{t("bizland.hero_title_1")}<br />{t("bizland.hero_title_2")}</>}
                   </h1>
                   <p className="mt-4 text-[15px] sm:text-[17px] leading-relaxed text-[#6B3A0F] max-w-[42ch]">
-                    {t("bizland.hero_sub")}
+                    {showLogin ? t("biz.signin_desc") : t("bizland.hero_sub")}
                   </p>
 
-                  {bizDone ? (
+                  {/* Przełącznik: rejestracja | logowanie. Aktywny = brąz marki, żeby nie
+                      konkurował z pomarańczowym CTA tuż pod spodem. */}
+                  <div className="mt-6 inline-flex rounded-full bg-white/70 border border-[#EAD9A8] p-1">
+                    {([
+                      { id: "register", label: t("bizland.tab_register") },
+                      { id: "login", label: t("bizland.tab_login") },
+                    ] as const).map((tab) => {
+                      const active = (tab.id === "login") === showLogin;
+                      return (
+                        <button
+                          key={tab.id}
+                          type="button"
+                          onClick={() => { setBizDone(false); setBizExpanded(false); setBizMode(tab.id); }}
+                          aria-pressed={active}
+                          className={`px-4 sm:px-5 h-10 rounded-full text-[13px] sm:text-sm font-bold transition-colors ${
+                            active ? "bg-[#5B2C06] text-white" : "text-[#6B3A0F] hover:text-[#5B2C06]"
+                          }`}
+                        >
+                          {tab.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {showLogin ? (
+                    /* ── Logowanie: pola w tym samym miejscu co formularz rejestracji ── */
+                    <form onSubmit={handleLogin} className="mt-5 max-w-[520px] space-y-2.5">
+                      <input
+                        type="email" value={email} onChange={(e) => setEmail(e.target.value)} required
+                        placeholder={t("fields.email_placeholder")} aria-label={t("fields.email")}
+                        className="w-full h-14 rounded-full bg-white border border-[#EAD9A8] px-5 text-[15px] text-slate-900
+                                   placeholder:text-[#8A8079] outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                      />
+                      <input
+                        type="password" value={password} onChange={(e) => setPassword(e.target.value)} required
+                        placeholder={t("fields.password_placeholder")} aria-label={t("fields.password")}
+                        className="w-full h-14 rounded-full bg-white border border-[#EAD9A8] px-5 text-[15px] text-slate-900
+                                   placeholder:text-[#8A8079] outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                      />
+                      <div className="flex items-center justify-between gap-3 pt-1">
+                        <button type="button" onClick={handleForgotPassword} disabled={resetLoading}
+                          className="text-[13px] text-[#6B3A0F] font-semibold underline underline-offset-2 disabled:opacity-60">
+                          {resetLoading ? t("sending") : t("forgot_password")}
+                        </button>
+                      </div>
+                      <button type="submit" disabled={loading}
+                        className="w-full sm:w-auto h-14 rounded-full bg-primary hover:bg-primary/90 px-8 text-white font-bold text-[15px]
+                                   active:scale-[0.98] transition-transform disabled:opacity-60">
+                        {loading ? t("logging_in") : t("biz.signin_title")}
+                      </button>
+                    </form>
+                  ) : bizDone ? (
                     /* Po wysłaniu linku aktywacyjnego - w tym samym miejscu co formularz */
-                    <div className="mt-7 rounded-3xl bg-white/80 border border-[#EAD9A8] p-5 sm:p-6 max-w-[520px]">
+                    <div className="mt-5 rounded-3xl bg-white/80 border border-[#EAD9A8] p-5 sm:p-6 max-w-[520px]">
                       <p className="text-[17px] font-black text-[#5B2C06]">{t("check_inbox")}</p>
                       <p className="text-sm text-[#6B3A0F] mt-2 leading-relaxed">
                         <Trans i18nKey="biz.activation_sent_full" ns="auth" values={{ email }}
@@ -592,7 +619,7 @@ const Auth = () => {
                         className="text-[13px] text-primary font-bold underline mt-3">{t("back_to_signin")}</button>
                     </div>
                   ) : (
-                    <form onSubmit={heroSubmit} className="mt-7 max-w-[520px]">
+                    <form onSubmit={heroSubmit} className="mt-5 max-w-[520px]">
                       {/* Krok 1: email + CTA obok siebie (na telefonie jeden pod drugim) */}
                       <div className="flex flex-col sm:flex-row gap-2.5">
                         <input
@@ -629,14 +656,16 @@ const Auth = () => {
                     </form>
                   )}
 
-                  {/* Dowody - w makiecie rząd pod formularzem */}
-                  <ul className="mt-5 flex flex-wrap gap-x-6 gap-y-2 text-[13px] text-[#6B3A0F]">
-                    {[t("bizland.proof_free"), t("bizland.proof_fast"), t("bizland.proof_cancel")].map((txt) => (
-                      <li key={txt} className="flex items-center gap-2">
-                        <span className="h-1.5 w-1.5 rounded-full bg-primary shrink-0" />{txt}
-                      </li>
-                    ))}
-                  </ul>
+                  {/* Dowody - argumenty za założeniem konta, więc tylko przy rejestracji */}
+                  {!showLogin && (
+                    <ul className="mt-5 flex flex-wrap gap-x-6 gap-y-2 text-[13px] text-[#6B3A0F]">
+                      {[t("bizland.proof_free"), t("bizland.proof_fast"), t("bizland.proof_cancel")].map((txt) => (
+                        <li key={txt} className="flex items-center gap-2">
+                          <span className="h-1.5 w-1.5 rounded-full bg-primary shrink-0" />{txt}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
 
                 {/* Grafika: karta wizytówki unosi się góra-dół (prośba Nat). Na telefonie nad
@@ -669,8 +698,7 @@ const Auth = () => {
                 ))}
               </ul>
             </section>
-          </>
-        )}
+        </>
       </div>
     );
   }
