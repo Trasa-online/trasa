@@ -639,13 +639,18 @@ const BusinessDashboard = () => {
     setLoading(true);
     try {
 
-    // Try to find by place_id first, then fall back to business_profiles.id
-    let { data: profileData } = await (supabase as any)
-      .from("business_profiles").select("*").eq("place_id", placeId).maybeSingle();
-    if (!profileData) {
-      const { data: byId } = await (supabase as any)
-        .from("business_profiles").select("*").eq("id", placeId).maybeSingle();
-      profileData = byId;
+    // Pelny wiersz (z email / preview_token) przez RPC: od audytu 2026-09-14 tabela ma kolumnowe
+    // granty SELECT (anon widzi tylko to, co widok business_profiles_public), wiec select("*")
+    // konczylby sie "permission denied". RPC szuka po place_id, potem po id, i oddaje wiersz
+    // wlascicielowi, adminowi albo podgladowi z poprawnym ?t=<preview_token>.
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    let profileData: any = null;
+    if (UUID_RE.test(placeId)) {
+      const { data, error: rpcErr } = await (supabase as any)
+        .rpc("business_profile_for_dashboard", { p_key: placeId, p_token: previewToken ?? null })
+        .maybeSingle();
+      if (rpcErr) console.warn("[BusinessDashboard] business_profile_for_dashboard:", rpcErr.message);
+      profileData = data ?? null;
     }
 
     if (!profileData) {

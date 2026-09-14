@@ -224,6 +224,18 @@ Oficjalny tagline aplikacji: **"speed dating z miastem"** (wszystkie litery mał
 
 ## Architektura — czego NIE ruszać
 
+### Bezpieczeństwo bazy - reguły z audytów (2026-08-21, 2026-09-08, 2026-09-14)
+
+Trzy audyty i te same klasy błędów wracają, więc zasady na stałe:
+
+- **Każda funkcja SECURITY DEFINER dostaje `EXECUTE` dla `anon`/`authenticated` Z AUTOMATU** (PUBLIC). Pomocnik wyzwalacza, funkcja cronowa, licznik kwoty, wszystko z parametrem `p_user` - to jest wywoływalne z anon key przez `rpc/`, dopóki nie napiszesz `REVOKE EXECUTE ON FUNCTION ... FROM PUBLIC, anon, authenticated`. Tak wyciekły `propagate_place_note(p_user, …)` (notka jako dowolny user) i `enqueue_trip_reminders()` (push do wszystkich) - migracja `20260914c`. Wyzwalacze i pg_cron działają jako `postgres`, więc REVOKE ich nie rusza. Funkcja dla klienta = jawny `GRANT EXECUTE ... TO authenticated` (i `anon` tylko, gdy naprawdę ma działać przed logowaniem) + sprawdzenie `auth.uid()` w środku.
+- **Polityka RLS to filtr WIERSZY, nie kolumn.** Kolumny wrażliwe w tabeli z publicznym SELECT (`profiles`, `business_profiles`) chronią **kolumnowe granty**: tabelowy `REVOKE SELECT/UPDATE/INSERT`, potem `GRANT ... (lista kolumn)`. ⛔ Column-level `REVOKE` przy grancie tabelowym NIC nie robi. Konsekwencja: klient NIE może robić `select("*")` na tych tabelach (PostgREST rozwija `*` na wszystkie kolumny → `permission denied`) - własny pełny wiersz czyta przez SECDEF RPC (`get_my_profile`, `business_profile_for_dashboard`). Nowa kolumna w `profiles`/`business_profiles` = dopisz ją do grantów, inaczej klient jej nie zobaczy mimo poprawnego RLS (patrz memory `feedback_profiles_column_grants`).
+- **Kolumny, których właściciel nie ma prawa zmienić**, pilnują wyzwalacze BEFORE UPDATE `guard_route_protected_columns` / `guard_collection_protected_columns` (`hidden_by_admin`, `published_at`, liczniki `likes/saves/views`, `user_id`, `created_at`): dla ról `anon`/`authenticated` bez roli admina wartości wracają do OLD. SECDEF (`current_user = postgres`), service_role i admin przechodzą. Nowa kolumna "systemowa" w `routes`/`discovery_collections` = dopisz ją do strażnika.
+- **Polityki „obserwujący widzą…" są z czasów, gdy wszystko było publiczne** - dziś wyjazd roboczy jest prywatny do „Zapisz trasę", więc `routes` czyta wyłącznie właściciel + `is_shared` + członkowie grupy. Nie dopisuj polityk po `followers` do treści.
+- `place_photos.photo_url` ma CHECK na nasz storage (`api.spontaway.com` / `*.supabase.co`) - to publiczna galeria i talia na ekranie powitalnym, więc obcy URL (bez SafeSearch) nie może tam wejść.
+- **`business_profiles`:** anon widzi tylko kolumny widoku `business_profiles_public` (+`is_draft`, `created_at`); `authenticated` dodatkowo pola robocze (`email`, daty, `moderation_status`) - panel ops moderacji je czyta; `preview_token` i `promo_code` NIKT poza RPC. Panel lokalu (`BusinessDashboard`) ładuje wiersz przez `business_profile_for_dashboard(p_key, p_token)` (właściciel / admin / `?t=<preview_token>`). Hasło demo `trasa2026` w kliencie **już nie otwiera cudzego panelu** (bez wiersza z RPC ekran mówi „nie znaleziono") - podgląd dla lokalu = link z tokenem skopiowany przez admina.
+- Test RLS z konta zwykłego usera (nie Nat - Nat ma rolę admin, strażniki ją przepuszczają!): `set_config('request.jwt.claims', '{"sub":"<uuid>","role":"authenticated"}', false); set role authenticated; …; reset role;` przez Management API, albo `scratchpad/asuser.mjs` (GET jako Nat / anon).
+
 ### Google Places Proxy (KRYTYCZNE)
 
 Cały pipeline zdjęć i danych miejsc musi przechodzić przez proxy. NIE fetchuj Google API bezpośrednio z klienta.
