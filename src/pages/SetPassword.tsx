@@ -247,13 +247,10 @@ const SetPassword = ({ forceBusiness }: { forceBusiness?: boolean } = {}) => {
     return (
       <div className={cn(
         "min-h-screen flex items-center justify-center",
-        isBusiness ? "bg-blue-50" : "bg-background"
+        isBusiness ? "bg-[#FEFEFE]" : "bg-background"
       )}>
         <div className="flex flex-col items-center gap-3">
-          <div className={cn(
-            "h-10 w-10 rounded-full animate-pulse",
-            isBusiness ? "bg-blue-200" : "bg-orange-200"
-          )} />
+          <div className="h-10 w-10 rounded-full animate-pulse bg-orange-200" />
           <p className="text-sm text-muted-foreground">Weryfikacja linku…</p>
         </div>
       </div>
@@ -263,25 +260,25 @@ const SetPassword = ({ forceBusiness }: { forceBusiness?: boolean } = {}) => {
   // ── Business flow ──────────────────────────────────────────────────────────
   if (isBusiness) {
     return (
-      <div
-        className="min-h-screen flex flex-col bg-[#F4F4F5]"
-        style={{ backgroundImage: "radial-gradient(rgba(15,23,42,0.06) 1px, transparent 1px)", backgroundSize: "22px 22px" }}
-      >
-        {/* Top bar: logo lewy-gora */}
-        <div className="flex items-center px-5 sm:px-8 h-16 shrink-0">
+      /* Ostatni krok aktywacji konta lokalu - ta sama skora co wejscie dla lokali
+         (Auth, businessMode): bialy ekran, znak spontaway, waska karta, szare pola,
+         pomaranczowe CTA. Niebieski zszedl 2026-09-14 razem z panelem. */
+      <div className="min-h-screen flex flex-col bg-[#FEFEFE]">
+        {/* Belka: znak marki (bez akcji - user przyszedl tu z linku w mailu) */}
+        <header className="flex items-center px-5 sm:px-8 lg:px-12 h-16 sm:h-20 shrink-0">
           <div className="flex items-center gap-2">
-            <TrasaLogo size={34} />
-            <span className="text-sm font-black text-slate-800">trasa<span className="text-blue-600"> biznes</span></span>
+            <TrasaLogo size={30} />
+            <span className="text-sm font-black text-slate-900">spontaway<span className="text-primary"> biznes</span></span>
           </div>
-        </div>
+        </header>
 
-        {/* Centered card */}
-        <div className="flex-1 flex items-center justify-center px-5 pb-10">
-          <div className="w-full max-w-md bg-white rounded-3xl shadow-xl shadow-slate-900/[0.06] border border-slate-100 p-7 sm:p-9">
+        {/* Karta - te same wymiary co logowanie (C1) */}
+        <div className="flex-1 flex items-start sm:items-center justify-center px-5 pb-12 pt-4 sm:pt-0">
+          <div className="w-full max-w-[420px] bg-white rounded-3xl border border-[#EFE9E2] shadow-[0_12px_30px_-14px_rgba(91,44,6,0.25)] p-7 sm:p-9">
             {/* Heading */}
-            <div className="text-center mb-6">
-              <h1 className="text-2xl font-black text-slate-900 leading-tight">{isReset ? t("title.reset") : t("title.set")}</h1>
-              <p className="text-sm text-slate-500 mt-1.5 leading-relaxed">
+            <div className="mb-6">
+              <h1 className="text-[26px] font-black text-slate-900 leading-tight">{isReset ? t("title.reset") : t("title.set")}</h1>
+              <p className="text-sm text-[#6E645C] mt-1.5 leading-relaxed">
                 {isReset
                   ? t("desc.reset")
                   : t("desc.invite")}
@@ -291,7 +288,7 @@ const SetPassword = ({ forceBusiness }: { forceBusiness?: boolean } = {}) => {
             {/* Form */}
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-1.5">
-                <Label htmlFor="new-password" className="text-slate-700 font-semibold text-sm">{t("label.password")}</Label>
+                <Label htmlFor="new-password" className="text-[13px] font-semibold text-[#3F3833]">{t("label.password")}</Label>
                 <div className="relative">
                   <Input
                     id="new-password"
@@ -301,7 +298,7 @@ const SetPassword = ({ forceBusiness }: { forceBusiness?: boolean } = {}) => {
                     required
                     placeholder={t("placeholder.min")}
                     minLength={6}
-                    className="bg-white border-slate-200 pr-10 focus-visible:ring-blue-500"
+                    className="h-12 rounded-2xl bg-[#F4F2EF] border-[#E4DFD9] pr-10 placeholder:text-[#8A8079] focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:border-primary/40"
                   />
                   <button
                     type="button"
@@ -314,7 +311,7 @@ const SetPassword = ({ forceBusiness }: { forceBusiness?: boolean } = {}) => {
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="confirm-password" className="text-slate-700 font-semibold text-sm">{t("label.confirm")}</Label>
+                <Label htmlFor="confirm-password" className="text-[13px] font-semibold text-[#3F3833]">{t("label.confirm")}</Label>
                 <div className="relative">
                   <Input
                     id="confirm-password"
@@ -323,7 +320,7 @@ const SetPassword = ({ forceBusiness }: { forceBusiness?: boolean } = {}) => {
                     onChange={(e) => setConfirm(e.target.value)}
                     required
                     placeholder={t("placeholder.repeat")}
-                    className="bg-white border-slate-200 pr-10 focus-visible:ring-blue-500"
+                    className="h-12 rounded-2xl bg-[#F4F2EF] border-[#E4DFD9] pr-10 placeholder:text-[#8A8079] focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:border-primary/40"
                   />
                   <button
                     type="button"
@@ -342,8 +339,8 @@ const SetPassword = ({ forceBusiness }: { forceBusiness?: boolean } = {}) => {
                     <div key={i} className={cn(
                       "h-1 flex-1 rounded-full transition-colors",
                       password.length >= i * 3
-                        ? i <= 2 ? "bg-blue-400" : "bg-blue-600"
-                        : "bg-slate-200"
+                        ? i <= 2 ? "bg-[#FDCD84]" : "bg-primary"
+                        : "bg-[#EFE9E2]"
                     )} />
                   ))}
                 </div>
@@ -352,16 +349,16 @@ const SetPassword = ({ forceBusiness }: { forceBusiness?: boolean } = {}) => {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3.5 rounded-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-base shadow-lg shadow-blue-600/25 active:scale-[0.98] transition-all disabled:opacity-60 disabled:scale-100 mt-2"
+                className="w-full h-12 rounded-full bg-primary hover:bg-primary/90 text-white font-bold text-base active:scale-[0.98] transition-transform disabled:opacity-60 disabled:scale-100 mt-2"
               >
-                {loading ? t("saving") : (isReset ? t("cta.save") : "Aktywuj konto biznesowe")}
+                {loading ? t("saving") : (isReset ? t("cta.save") : t("cta.activate_business"))}
               </button>
             </form>
 
-            <p className="text-xs text-center text-slate-400 mt-6">
-              Problem z linkiem?{" "}
-              <a href="mailto:hello@spontaway.com" className="text-blue-600 font-medium underline">
-                Napisz do nas
+            <p className="text-xs text-center text-[#8A8079] mt-6">
+              {t("help.link_problem")}{" "}
+              <a href="mailto:hello@spontaway.com" className="text-primary font-semibold underline">
+                {t("help.write_us")}
               </a>
             </p>
           </div>
