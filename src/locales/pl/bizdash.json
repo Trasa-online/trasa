@@ -122,7 +122,9 @@
     "unknown": "nieznany",
     "saved_review": "Zmiany zapisane! Wizytówka trafiła do weryfikacji.",
     "saved": "Zmiany zapisane!",
-    "button": "Zapisz zmiany"
+    "button": "Zapisz zmiany",
+    "autosaving": "Zapisywanie...",
+    "autosaved": "Zapisano"
   },
   "support": {
     "error": "Nie udało się wysłać zgłoszenia.",
@@ -181,7 +183,8 @@
     "analytics": "Analityka",
     "settings": "Ustawienia",
     "soon": "wkrótce",
-    "disabled_soon": "Niedostępne - wkrótce"
+    "disabled_soon": "Niedostępne - wkrótce",
+    "community": "Od użytkowników"
   },
   "tabs": {
     "overview": "Przegląd",
@@ -190,7 +193,8 @@
     "menu": "Menu",
     "posts": "Aktualności",
     "analytics": "Analityka",
-    "settings": "Ustawienia"
+    "settings": "Ustawienia",
+    "community": "Od użytkowników"
   },
   "topbar": {
     "preview_title": "Podgląd lokalu",
@@ -199,14 +203,14 @@
     "copy_link": "Kopiuj link dla lokalu"
   },
   "welcome": {
-    "title": "Witaj w Panelu Biznesowym trasy!",
+    "title": "Witaj w Panelu Biznesowym spontaway!",
     "thanks_prefix": "Dziękujemy, że lokal",
     "body_mid": " dołączył do spontaway - od teraz budujemy razem coś wielkiego. Wypełnij wizytówkę i poczekaj na weryfikację. Masz sugestię albo widzisz błąd? Napisz do nas przez ",
     "support_quote": "„Zgłoś problem”"
   },
   "verified": {
     "title": "✓ Wizytówka zweryfikowana!",
-    "desc": "Twoja wizytówka została zatwierdzona przez zespół trasy. Teraz jest w pełni widoczna dla użytkowników aplikacji."
+    "desc": "Twoja wizytówka została zatwierdzona przez zespół spontaway. Teraz jest w pełni widoczna dla użytkowników aplikacji."
   },
   "review": {
     "pending_title": "Wizytówka oczekuje na weryfikację",
@@ -229,7 +233,7 @@
   },
   "locked": {
     "views": "Wyświetlenia",
-    "routes": "Na trasach",
+    "routes": "W wyjazdach",
     "clicks": "Kliknięcia",
     "activity": "Aktywność"
   },
@@ -245,18 +249,18 @@
     "stat_views": "Wyświetlenia",
     "views_desc": "zobaczenie wizytówki",
     "stat_unique": "Unikalni goście",
-    "unique_desc": "dodało do trasy",
+    "unique_desc": "dodało do wyjazdu",
     "stat_addplan": "Dodania do planu dnia",
     "addplan_desc": "razy w planie dnia",
     "stat_clicks": "Kliknięcia",
     "clicks_desc": "WWW: {{www}} · Tel: {{tel}}",
     "activity_over_time": "Aktywność w czasie",
     "legend_views": "Wyświetlenia",
-    "legend_route": "Trasa",
+    "legend_route": "Wyjazd",
     "legend_clicks": "Kliknięcia",
     "no_data": "Brak danych w wybranym okresie",
     "tt_views": "Wyświetlenia",
-    "tt_routes": "Dodania do trasy",
+    "tt_routes": "Dodania do wyjazdu",
     "tt_clicks": "Kliknięcia",
     "hourly_title": "Ruch według godziny",
     "peak": "Szczyt: {{from}}-{{to}}",
@@ -373,5 +377,20 @@
     "layout_landscape": "Poziome",
     "layout_portrait": "Pionowe",
     "layout_full": "Pełne"
+  },
+  "community": {
+    "title": "Od użytkowników",
+    "subtitle": "Notki i zdjęcia, które użytkownicy dodali do Twojego miejsca w aplikacji.",
+    "notes_label": "Notki ({{count}})",
+    "photos_label": "Zdjęcia ({{count}})",
+    "no_notes": "Nikt jeszcze nie dodał notki o Twoim miejscu.",
+    "no_photos": "Nikt jeszcze nie dodał zdjęcia Twojego miejsca.",
+    "empty_title": "Jeszcze nie ma treści od użytkowników",
+    "empty_desc": "Gdy podróżni zaczną dodawać Twoje miejsce do swoich wyjazdów i kolekcji, ich notki i zdjęcia pojawią się tutaj.",
+    "anon_user": "Użytkownik",
+    "report": "Zgłoś do moderacji",
+    "report_done": "Zgłoszono do moderacji. Sprawdzimy to.",
+    "report_error": "Nie udało się wysłać zgłoszenia",
+    "moderation_hint": "Widzisz treść, która narusza zasady? Zgłoś ją, a zespół spontaway ją sprawdzi. Notek i zdjęć nie usuwamy z panelu - dbamy o to, żeby opinie były autentyczne."
   }
 }
