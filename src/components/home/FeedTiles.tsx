@@ -1,4 +1,5 @@
 import { MapPin } from "lucide-react";
+import { BrandStar } from "@/components/BrandStar";
 import { useTranslation } from "react-i18next";
 import { FramedAvatar } from "@/components/profile/FramedAvatar";
 import { useImageWithFallback } from "@/hooks/useImageWithFallback";
@@ -26,7 +27,9 @@ import type { ListTheme } from "@/lib/listThemes";
 
 export type TileSize = "grid" | "feed";
 
-export type GridPlace = { name: string; category: string | null; photo: string | null };
+/** `isNew` = miejsce dodane przez autora od ostatniego obejrzenia kolekcji przez TEGO usera
+ *  (baza: saved_collections.seen_item_count). Dostaje brandowa gwiazdke na okladce. */
+export type GridPlace = { name: string; category: string | null; photo: string | null; isNew?: boolean };
 
 export type GridItem = {
   kind: "trip" | "list";
@@ -55,6 +58,8 @@ export type GridItem = {
   places: GridPlace[];
   /** Lista: ile miejsc odwiedzil jej AUTOR (chip "8/15", prosba Nat 2026-09-13). */
   visitedCount?: number;
+  /** Lista: ile miejsc doszlo od ostatniego obejrzenia (0 = brak sygnalu). */
+  newCount?: number;
 };
 
 /** Mini-siatka listy: 3 kolumny, dwa rzedy. Przy wiecej niz 6 miejscach ostatni kafelek to "+N". */
@@ -125,6 +130,9 @@ function MiniPlace({ place, size }: { place: GridPlace; size: TileSize }) {
   const hasPhoto = !!src && !failed;
   const cat = place.category ? subcategoryLabelLocalized(place.category) : null;
   return (
+    // Dwie warstwy: zewnetrzna NIE przycina (gwiazdka "nowe miejsce" wychodzi poza rog),
+    // wewnetrzna przycina zdjecie do zaokraglonego kadru.
+    <div className="relative">
     <div className={`relative aspect-[2/3] overflow-hidden bg-[#fcede3] ${feed ? "rounded-xl" : "rounded-[10px]"}`} title={cat ?? undefined}>
       {hasPhoto ? (
         <>
@@ -148,6 +156,16 @@ function MiniPlace({ place, size }: { place: GridPlace; size: TileSize }) {
       <span className={`absolute inset-x-1 bottom-1 line-clamp-2 font-semibold leading-[1.15] ${feed ? "inset-x-1.5 bottom-1.5 text-[11px]" : "text-[9px]"} ${hasPhoto ? "text-white drop-shadow-sm" : "text-[#5B2C06]"}`}>
         {place.name}
       </span>
+    </div>
+    {/* NOWE miejsce: brandowa gwiazdka NACHODZACA na rog okladki (prosba Nat 2026-09-14).
+        Uczy, ze autor cos tu dolozyl - ta sama gwiazdka co przy wyroznieniach, wiec znak
+        jest juz userowi znany. Inline svg (BrandStar), NIE maska CSS - patrz CLAUDE.md. */}
+    {place.isNew && (
+      <span aria-hidden
+        className={`absolute z-10 flex items-center justify-center rounded-full bg-white shadow-[0_2px_6px_rgba(0,0,0,0.28)] ${feed ? "-right-2 -top-2 h-7 w-7" : "-right-1.5 -top-1.5 h-5 w-5"}`}>
+        <BrandStar className={`text-primary ${feed ? "h-4 w-4" : "h-3 w-3"}`} />
+      </span>
+    )}
     </div>
   );
 }
@@ -215,6 +233,7 @@ export function TripTile({ it, size = "feed" }: { it: GridItem; size?: TileSize 
 }
 
 export function ListTile({ it, size = "feed" }: { it: GridItem; size?: TileSize }) {
+  const { t } = useTranslation("homefeed");
   const theme = it.theme!;
   const feed = size === "feed";
   const overflow = it.placesCount > LIST_TILES ? it.placesCount - (LIST_TILES - 1) : 0;
@@ -243,6 +262,15 @@ export function ListTile({ it, size = "feed" }: { it: GridItem; size?: TileSize 
           {it.visitedCount ? `${it.visitedCount}/${it.placesCount}` : it.placesCount}
         </Chip>
         {it.where && <Chip ink={theme.ink} size={size}>{it.where}</Chip>}
+        {/* "Nowe miejsce!" - w tym samym rzedzie co reszta chipow, dociagniete do PRAWEJ
+            krawedzi (prosba Nat 2026-09-14). Biale tlo, zeby odcinalo sie od kazdego z 9
+            kolorow palety - reszta chipow jest przezroczysta. */}
+        {!!it.newCount && (
+          <span className={`ml-auto inline-flex items-center gap-1.5 rounded-full bg-white font-bold leading-none text-[#5B2C06] shadow-sm ${size === "feed" ? "h-[30px] px-3 text-[14px]" : "h-[22px] px-2 text-[11px]"}`}>
+            <BrandStar className={`text-primary ${size === "feed" ? "h-[15px] w-[15px]" : "h-3 w-3"}`} />
+            {t("new_place")}
+          </span>
+        )}
       </div>
     </div>
   );

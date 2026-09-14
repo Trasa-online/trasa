@@ -144,5 +144,6 @@
     "quiet_title": "Quiet for now",
     "quiet_hint": "The people you follow have not published anything yet. See what others are sharing.",
     "quiet_cta": "Go to Explore"
-  }
+  },
+  "new_place": "New place!"
 }

@@ -1276,8 +1276,29 @@ async function hydrateCollections(cols: any[]): Promise<DiscoveryCollection[]> {
     const { data: profs } = await (supabase as any).from("profiles").select("id, home_city, username, avatar_url, avatar_frame, avatar_frame_color").in("id", userIds);
     for (const p of profs ?? []) profMap.set(p.id, p);
   }
+  // Sygnal "autor dodal nowe miejsce" (Nat 2026-09-14). Punktem odniesienia jest
+  // saved_collections.seen_item_count - ile pozycji user widzial, gdy ostatnio otwieral
+  // kolekcje. Dlatego gwiazdka pojawia sie na kolekcjach, ktore user ma ZAPISANE;
+  // discovery_items nie ma created_at, wiec dla reszty nie ma od czego liczyc "nowosci".
+  const seenMap = new Map<string, number>();
+  {
+    const { data: sess } = await (supabase as any).auth.getSession();
+    const uid = sess?.session?.user?.id ?? null;
+    if (uid) {
+      const { data: saved } = await (supabase as any).from("saved_collections")
+        .select("collection_id, seen_item_count").eq("user_id", uid).in("collection_id", ids);
+      for (const r of (saved ?? []) as any[]) seenMap.set(r.collection_id, r.seen_item_count ?? 0);
+    }
+  }
   return cols.map((col: any): DiscoveryCollection => {
     const p = profMap.get(col.user_id);
+    const all = byCol.get(col.id) ?? [];
+    // Nowe = ostatnie `newCount` pozycji (dodawanie dopisuje na koniec - discovery_items nie
+    // ma created_at). Ida na POCZATEK, bo kafelek pokazuje tylko kilka pierwszych miejsc -
+    // inaczej nowosc chowalaby sie pod "+N" i gwiazdki nikt by nie zobaczyl.
+    const newCount = seenMap.has(col.id) ? Math.max(0, all.length - (seenMap.get(col.id) ?? 0)) : 0;
+    const fresh = newCount ? all.slice(-newCount).map((it: any) => ({ ...it, _isNew: true })) : [];
+    const items = newCount ? [...fresh, ...all.slice(0, all.length - newCount)] : all;
     return {
       ...col,
       author_home_city: p?.home_city ?? null,
@@ -1285,7 +1306,8 @@ async function hydrateCollections(cols: any[]): Promise<DiscoveryCollection[]> {
       author_avatar: p?.avatar_url ?? col.author_avatar ?? null,
       author_frame: p?.avatar_frame ?? null,
       author_frame_color: p?.avatar_frame_color ?? null,
-      items: byCol.get(col.id) ?? [],
+      items,
+      new_count: newCount,
     };
   });
 }
@@ -2493,6 +2515,7 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
               const places: GridPlace[] = col.items.slice(0, LIST_TILES).map((it: any) => ({
                 name: it.place_name ?? "", category: it.category ?? null,
                 photo: resolveStored(it.photo_url ?? null) ?? resolveStored(it._cover ?? null) ?? null,
+                isNew: !!it._isNew,
               }));
               const item: GridItem = {
                 kind: "list", id: col.id, title: col.title,
@@ -2506,6 +2529,7 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
                 placesCount: col.items.length, days: null, mapUrl: null,
                 theme: listTheme(col.theme, col.id), places,
                 visitedCount: col.visited_count ?? 0,
+                newCount: (col as any).new_count ?? 0,
               };
               return (
                 <GridTile key={`col-${col.id}`} it={item} size="feed" className="snap-start snap-always" onOpen={() => navigate(`/lista/${col.id}`)} />
