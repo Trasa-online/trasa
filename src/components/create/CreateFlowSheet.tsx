@@ -16,6 +16,7 @@ import CountryPicker from "@/components/create/CountryPicker";
 import AddPeoplePicker, { type PersonLite } from "@/components/create/AddPeoplePicker";
 import { fetchSavedPlaces, createListFromSavedPlaces, type SavedPlace, type PlaceForList } from "@/lib/placeLists";
 import { askPermissionSoon } from "@/lib/permissionPrompts";
+import { collectionName, tripName, type NamingStrings } from "@/lib/placeNaming";
 import { createWyjazdFromPlaces, createEmptyWyjazd } from "@/lib/createWyjazd";
 import { inviteUsersToRoute } from "@/lib/groupInvite";
 import { usePlaceSearch } from "@/hooks/usePlaceSearch";
@@ -33,9 +34,6 @@ type TripMode = "future" | "past";
 // 2026-09-10). Krok "jak to nazwac" byl przed wyborem miejsc, czyli zanim user w ogole
 // wiedzial, co w tym bedzie - i tak wracal do zmiany. Zmiana nazwy zyje teraz w widoku
 // wyjazdu/listy, gdzie jest o czym decydowac.
-const nameFromCountries = (countries: string[], fallback: string) =>
-  countries.length ? countries.join(" · ") : fallback;
-
 const toPlaceForList = (p: SavedPlace): PlaceForList => ({
   place_name: p.place_name, category: p.category, address: p.address,
   latitude: p.latitude, longitude: p.longitude, photo_url: p.photo_url, place_id: p.place_id,
@@ -46,8 +44,18 @@ const toPlaceForList = (p: SavedPlace): PlaceForList => ({
 // Lista: nazwa + prywatnosc + wybor z zapisanych (lub "Dodaj nowe" -> pelny edytor CreateRanking).
 // Wyjazd: nazwa + kraj/miasto (drum w drawerze) + t("invite.cta") (realne zaproszenia) -> ComposeWyjazd.
 export default function CreateFlowSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { t } = useTranslation("create-route");
+  const { t, i18n } = useTranslation("create-route");
   const navigate = useNavigate();
+  // Domyslne nazwy nowej kolekcji/wyjazdu - z odmiana po polsku (patrz lib/placeNaming).
+  const naming: NamingStrings = {
+    collectionIn: t("naming.collection_in"),
+    collectionPlain: t("naming.collection_plain"),
+    tripTo: t("naming.trip_to"),
+    tripPlain: t("naming.trip_plain"),
+    collectionFallback: t("list_name_default"),
+    tripFallback: t("trip_name_default"),
+    declines: (i18n.language || "pl").toLowerCase().startsWith("pl"),
+  };
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [step, setStep] = useState<Step>("entry");
@@ -182,7 +190,7 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
     setCreating(true);
     haptics.light();
     const id = await createListFromSavedPlaces(user.id, {
-      title: nameFromCountries(listCountries, t("list_name_default")),
+      title: collectionName(null, listCountries, naming),
       city: null, countries: listCountries, isPublic: true, places, author,
     });
     setCreating(false);
@@ -219,7 +227,7 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
     if (!user) { close(); navigate("/auth"); return; }
     setCreating(true);
     haptics.light();
-    const title = nameFromCountries(tripCountries, t("trip_name_default"));
+    const title = tripName(null, tripCountries, naming);
     const id = await createEmptyWyjazd(user.id, null, title,
       { ...tripDatesForSave(startArg, daysArg), countries: tripCountries, tripType: tripMode === "past" ? "completed" : "planning" });
     if (!id) { setCreating(false); haptics.error(); toast.error(t("toast.trip_failed")); return; }
@@ -344,7 +352,7 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
         {/* ── LISTA: wyszukiwarka Google (inline) + wybor zapisanych ── */}
         {step === "listPick" && (
           <>
-            <Header title={nameFromCountries(listCountries, t("list_name_default"))} onBack={() => setStep("listCountry")}
+            <Header title={collectionName(null, listCountries, naming)} onBack={() => setStep("listCountry")}
               onNext={createList} nextLabel={creating ? "..." : ((selected.size > 0 || manualPlaces.length > 0) ? t("common:buttons.next") : t("skip"))} nextEnabled={!creating} />
             <PeopleRow kind="listy" disabled />
             {/* Wyszukiwarka Google Places INLINE - klik = wyniki tutaj (a NIE nawigacja do starego edytora). */}

@@ -92,5 +92,11 @@
       "oceania": "Oceania"
     }
   },
-  "trip_name_default": "New trip"
+  "trip_name_default": "New trip",
+  "naming": {
+    "collection_in": "Places in {{place}}",
+    "collection_plain": "Places: {{place}}",
+    "trip_to": "Trip to {{place}}",
+    "trip_plain": "Trip: {{place}}"
+  }
 }

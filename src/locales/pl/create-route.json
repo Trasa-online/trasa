@@ -92,5 +92,11 @@
       "oceania": "Oceania"
     }
   },
-  "trip_name_default": "Nowy wyjazd"
+  "trip_name_default": "Nowy wyjazd",
+  "naming": {
+    "collection_in": "Kolekcja miejsc {{place}}",
+    "collection_plain": "Kolekcja miejsc: {{place}}",
+    "trip_to": "Wyjazd {{place}}",
+    "trip_plain": "Wyjazd: {{place}}"
+  }
 }
