@@ -14,7 +14,6 @@ import WelcomeDeck from "@/components/auth/WelcomeDeck";
 import { Browser } from "@capacitor/browser";
 import { useAuth } from "@/hooks/useAuth";
 import { TrasaLogo } from "@/components/TrasaLogo";
-import { BrandIcon, CAMERA_ICON } from "@/components/BrandIcon";
 import { businessPanelPath } from "@/lib/businessRedirect";
 
 type Mode = "login" | "register";
@@ -681,21 +680,38 @@ const Auth = () => {
               </div>
             </section>
 
-            {/* Trzy korzyści pod hero */}
-            <section className="mx-auto w-full max-w-6xl px-5 sm:px-8 lg:px-12 py-10 sm:py-14">
-              <ul className="grid gap-4 sm:grid-cols-3">
-                {[
-                  { icon: "/Ikona_Miejsca.svg", txt: t("bizland.benefit_1") },
-                  { icon: "/Ikona_Trasy.svg", txt: t("bizland.benefit_2") },
-                  { icon: CAMERA_ICON, txt: t("bizland.benefit_3") },
-                ].map((b) => (
-                  <li key={b.txt} className="rounded-3xl border border-[#EFE9E2] bg-white p-5 flex flex-col gap-3">
-                    <span className="h-11 w-11 rounded-2xl bg-[#FCEDE3] text-[#5B2C06] flex items-center justify-center shrink-0">
-                      <BrandIcon src={b.icon} className="h-5 w-5" />
-                    </span>
-                    <p className="text-[14px] leading-snug text-slate-700 font-medium">{b.txt}</p>
-                  </li>
-                ))}
+            {/* ── USP w stylu landingu B2C (prośba Nat 2026-09-14): żółte karty, nagłówek
+                   w Sigmarze na pomarańczowo, pod nim krótkie zdanie w brązie. Środkowa karta
+                   ma tytuł NAD grafiką - ten sam rytm co w makiecie marketingowej.
+                   Grafiki: mockupy z landingu B2C - pokazują, co podróżny robi z lokalem. ── */}
+            <section className="mx-auto w-full max-w-6xl px-5 sm:px-8 lg:px-12 py-10 sm:py-14 lg:py-16">
+              <ul className="grid gap-4 sm:gap-5 md:grid-cols-3">
+                {([
+                  { img: "/mockup_odkrywaj.png", t: "usp1", flip: false },
+                  { img: "/mockup_listy.png", t: "usp2", flip: true },
+                  { img: "/mockup_dziel_sie.png", t: "usp3", flip: false },
+                ] as const).map((u) => {
+                  const head = (
+                    <div>
+                      <h2 className="font-brand text-primary leading-[1.15] text-[21px] lg:text-[25px] whitespace-pre-line">
+                        {t(`bizland.${u.t}_title`)}
+                      </h2>
+                      <p className="mt-2 text-[14px] leading-snug text-[#5B2C06]/85">{t(`bizland.${u.t}_body`)}</p>
+                    </div>
+                  );
+                  return (
+                    <li key={u.img} className="rounded-[32px] bg-[#FDF184] p-6 sm:p-7 flex flex-col gap-5">
+                      {u.flip && head}
+                      {/* Stała wysokość kadru - trzy mockupy mają różne proporcje i bez tego
+                          rząd kart byłby poszarpany. */}
+                      <div className="h-[168px] sm:h-[180px] flex items-center justify-center">
+                        <img src={u.img} alt={t(`bizland.${u.t}_alt`)} loading="lazy"
+                          className="max-h-full max-w-full w-auto object-contain select-none" draggable={false} />
+                      </div>
+                      {!u.flip && <div className="mt-auto">{head}</div>}
+                    </li>
+                  );
+                })}
               </ul>
             </section>
         </>
