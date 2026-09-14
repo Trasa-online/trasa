@@ -147,8 +147,6 @@
   },
   "new_place": "New place!",
   "stats": {
-    "likes_aria_one": "{{count}} like",
-    "likes_aria_other": "{{count}} likes",
     "saves_aria_one": "{{count}} save",
     "saves_aria_other": "{{count}} saves"
   }

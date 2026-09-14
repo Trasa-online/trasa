@@ -151,9 +151,6 @@
   },
   "new_place": "Nowe miejsce!",
   "stats": {
-    "likes_aria_one": "{{count}} polubienie",
-    "likes_aria_few": "{{count}} polubienia",
-    "likes_aria_many": "{{count}} polubień",
     "saves_aria_one": "{{count}} zapis",
     "saves_aria_few": "{{count}} zapisy",
     "saves_aria_many": "{{count}} zapisów"

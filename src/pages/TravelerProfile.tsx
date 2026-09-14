@@ -946,9 +946,9 @@ const TravelerProfile = () => {
                   placesCount: (l.tiles ?? []).length, days: null, mapUrl: null,
                   theme: listTheme(l.theme, l.id), places,
                   visitedCount: l.visited_count ?? 0,
-                  // Statystyki TYLKO na wlasnych kolekcjach - to informacja zwrotna dla autora
-                  // ("ile osob to zapisalo"), nie element kafelka w eksploracji.
-                  stats: { likes: Number(l.likes_count ?? 0), saves: Number(l.saves_count ?? 0) },
+                  // Licznik zapisow TYLKO na wlasnych kolekcjach - to informacja zwrotna dla
+                  // autora ("ile osob to zapisalo"), nie element kafelka w eksploracji.
+                  savesCount: Number(l.saves_count ?? 0),
                 };
                 return <GridTile key={l.id} it={item} size="feed" className="snap-start snap-always" onOpen={() => navigate(`/lista/${l.id}`)} />;
               })}

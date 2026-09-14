@@ -1,6 +1,5 @@
 import { MapPin } from "lucide-react";
 import { BrandStar } from "@/components/BrandStar";
-import { BrandHeart } from "@/components/BrandHeart";
 import { BrandBookmark } from "@/components/BrandBookmark";
 import { useTranslation } from "react-i18next";
 import { FramedAvatar } from "@/components/profile/FramedAvatar";
@@ -62,10 +61,10 @@ export type GridItem = {
   visitedCount?: number;
   /** Lista: ile miejsc doszlo od ostatniego obejrzenia (0 = brak sygnalu). */
   newCount?: number;
-  /** Lista: statystyki kolekcji (serce + zakladka w prawym dolnym rogu). Podawane TYLKO tam,
-   *  gdzie sa statystyka wlasnej tresci ("Moje kolekcje" na profilu) - w eksploracji kafelek
-   *  cudzej kolekcji ich nie pokazuje. Zerowe liczniki sie nie renderuja. */
-  stats?: { likes: number; saves: number };
+  /** Lista: ile osob zapisalo kolekcje (zakladka + liczba w prawym dolnym rogu). Podawane
+   *  TYLKO tam, gdzie jest to statystyka wlasnej tresci ("Moje kolekcje" na profilu) -
+   *  w eksploracji kafelek cudzej kolekcji jej nie pokazuje. 0 = nie renderujemy nic. */
+  savesCount?: number;
 };
 
 /** Mini-siatka listy: 3 kolumny, dwa rzedy. Przy wiecej niz 6 miejscach ostatni kafelek to "+N". */
@@ -277,25 +276,15 @@ export function ListTile({ it, size = "feed" }: { it: GridItem; size?: TileSize 
             {t("new_place")}
           </span>
         )}
-        {/* Statystyki kolekcji: brandowe serce (polubienia) + zakladka (zapisy), w tym samym
-            rzedzie co chipy, dociagniete do PRAWEJ (prosba Nat 2026-09-14). Ten sam tint co
-            reszta chipow - to informacja dla autora, nie sygnal, wiec nie krzyczy bielą.
-            Zerowy licznik sie NIE renderuje: wiekszosc kolekcji jeszcze nikt nie zapisal,
-            a rzad zer wygladalby jak zepsuty widok zamiast jak statystyka. */}
-        {!!it.stats && (it.stats.likes > 0 || it.stats.saves > 0) && (
-          <Chip ink={theme.ink} size={size} className="ml-auto gap-2">
-            {it.stats.likes > 0 && (
-              <span className="inline-flex items-center gap-1" aria-label={t("stats.likes_aria", { count: it.stats.likes })}>
-                <BrandHeart className={feed ? "h-[14px] w-[14px]" : "h-[11px] w-[11px]"} />
-                {it.stats.likes}
-              </span>
-            )}
-            {it.stats.saves > 0 && (
-              <span className="inline-flex items-center gap-1" aria-label={t("stats.saves_aria", { count: it.stats.saves })}>
-                <BrandBookmark className={feed ? "h-[13px] w-[13px]" : "h-[10px] w-[10px]"} />
-                {it.stats.saves}
-              </span>
-            )}
+        {/* Ile osob zapisalo kolekcje - w tym samym rzedzie co chipy, dociagniete do PRAWEJ
+            (prosba Nat 2026-09-14). Ten sam tint co reszta chipow: to informacja zwrotna dla
+            autora, nie sygnal, wiec nie krzyczy bielą jak "Nowe miejsce!". Zero sie NIE
+            renderuje - wiekszosci kolekcji nikt jeszcze nie zapisal, a rzad zer wygladalby
+            jak zepsuty widok zamiast jak statystyka. */}
+        {!!it.savesCount && (
+          <Chip ink={theme.ink} size={size} className="ml-auto">
+            <BrandBookmark className={feed ? "h-[13px] w-[13px]" : "h-[10px] w-[10px]"} />
+            <span aria-label={t("stats.saves_aria", { count: it.savesCount })}>{it.savesCount}</span>
           </Chip>
         )}
       </div>
