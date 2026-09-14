@@ -547,8 +547,9 @@ export default function SharedList() {
     for (const p of places) await addPlaceToList(col.id, { ...p, city: p.city ?? col.city ?? null });
     queryClient.invalidateQueries({ queryKey: ["shared-list-items", id] });
     toast.success(t("toast.list_updated"));
-    // Autor dodal miejsca -> powiadom (in-app) wszystkich, ktorzy zapisali te liste ("Nowe miejsce!").
-    if (isOwner && places.length) void (supabase as any).rpc("notify_collection_updated", { p_collection_id: col.id, p_added: places.length });
+    // Powiadomienie ("ktos dodal miejsce") leci juz z addPlaceToList - wspolnej warstwy danych,
+    // przez ktora ida WSZYSTKIE sciezki dodawania. Osobne wywolanie stad bylo tu zbedne
+    // (RPC i tak dedupuje 5 min) i falszywie sugerowalo, ze tylko ten widok powiadamia.
   };
 
   // Usun miejsce z listy (wlasciciel, kosz w wierszu). Toast + "Cofnij".

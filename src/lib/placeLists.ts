@@ -264,6 +264,13 @@ export async function addPlaceToList(listId: string, place: PlaceForList, opts?:
   if (error) throw error;
   await (supabase as any).from("discovery_collections").update({ updated_at: new Date().toISOString() }).eq("id", listId);
   track("list_place_added", { target: "list", collection_id: listId, has_note: !!opts?.note });
+  // "Ktos dodal miejsce do kolekcji" - powiadomienie dla ZAPISUJACYCH i OBSERWUJACYCH autora
+  // (RPC sam sprawdza wlasciciela, publicznosc kolekcji i dedupuje 5 min). Wolane TUTAJ, a nie
+  // w widoku kolekcji, bo przez ten widok idzie tylko czesc dodan - najczestsza sciezka to
+  // arkusz "Zapisz miejsce" i on wczesniej nie powiadamial nikogo (zgloszenie Nat 2026-09-14).
+  // Best-effort: blad powiadomienia nie moze wywrocic dodania miejsca.
+  void (supabase as any).rpc("notify_collection_updated", { p_collection_id: listId, p_added: 1 })
+    .then(({ error }: any) => { if (error) console.warn("[placeLists] notify_collection_updated:", error.message); });
   return true;
 }
 
