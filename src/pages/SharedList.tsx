@@ -422,11 +422,17 @@ export default function SharedList() {
   //
   // WSPOLTWORCY: zaproszeni moga DODAWAC miejsca, a edytowac i usuwac tylko to, co sami
   // dodali (`discovery_items.added_by`) - tak samo mowia polityki RLS w bazie.
+  // ⛔ TEN SAM klucz co w `CollectionPeopleSheet`, wiec MUSI zwracac ten sam ksztalt danych.
+  // Wczesniej stalo tu `queryFn` mapujace od razu na tablice id - i kto pierwszy wypelnil
+  // cache, ten narzucal ksztalt drugiemu: arkusz dostawal tablice stringow zamiast obiektow
+  // i kazdy wspoltworca wyswietlal sie jako "Użytkownik" bez awatara (zgloszenie Nat
+  // 2026-09-15). Przeksztalcenie robi teraz `select`, ktore NIE dotyka cache.
   const { data: memberIds = EMPTY_ARRAY } = useQuery({
     queryKey: collectionMembersKey(id),
     enabled: !!id && !!user,
     staleTime: 60_000,
-    queryFn: async () => (await fetchCollectionMembers(id!)).map((m) => m.user_id),
+    queryFn: () => fetchCollectionMembers(id!),
+    select: (rows) => rows.map((m) => m.user_id),
   });
   // Notki WSZYSTKICH uczestnikow: RLS wpuszcza kazdego, kto widzi kolekcje, wiec czytelnik
   // publicznej kolekcji tez widzi caly watek - tak samo, jak przy opublikowanym wyjezdzie.
