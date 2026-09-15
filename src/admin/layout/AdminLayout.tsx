@@ -5,20 +5,24 @@ import { useAdmin } from "../RequireAdmin";
 import { WaitlistPeek } from "./WaitlistPeek";
 import { CommandPalette } from "./CommandPalette";
 import { useAdminPending } from "../modules/home/useAdminHome";
+import { useUnreadThreads } from "../modules/messages/useMessages";
 import { cn } from "@/lib/utils";
 import {
   Inbox, Users, MapPin, ListChecks, BarChart3, DollarSign,
-  ScrollText, Settings, Menu, X, Home, Search, Store,
+  ScrollText, Settings, Menu, X, Home, Search, Store, MessageCircle,
 } from "lucide-react";
 
 // Nawigacja: 11 plaskich pozycji -> 4 grupy (decyzja z briefu, 15.09.2026).
 // Grupa niesie znaczenie: "czy to jest praca do zrobienia, czy tylko podglad".
 // Moderacja B2C, B2B, Flagi i Zgloszenia znikly jako osobne adresy - to sa teraz
 // FILTRY jednej kolejki, bo to ta sama czynnosc.
-const GROUPS: { label?: string; items: { to: string; label: string; icon: typeof Inbox; badge?: boolean }[] }[] = [
+const GROUPS: { label?: string; items: { to: string; label: string; icon: typeof Inbox; badge?: boolean; chat?: boolean }[] }[] = [
   { items: [
     { to: "/", label: "Dziś", icon: Home },
     { to: "/kolejka", label: "Kolejka", icon: Inbox, badge: true },
+    // Rozmowy z lokalami. Osobno od kolejki, bo to nie jest sprawa do rozpatrzenia,
+    // tylko ktos, kto czeka na odpowiedz.
+    { to: "/rozmowy", label: "Rozmowy", icon: MessageCircle, chat: true },
   ] },
   { label: "Dane", items: [
     { to: "/users", label: "Użytkownicy", icon: Users },
@@ -36,7 +40,7 @@ const GROUPS: { label?: string; items: { to: string; label: string; icon: typeof
   ] },
 ];
 
-function NavItems({ onNavigate, pending }: { onNavigate?: () => void; pending?: number }) {
+function NavItems({ onNavigate, pending, chatWaiting }: { onNavigate?: () => void; pending?: number; chatWaiting?: number }) {
   return (
     <>
       {GROUPS.map((g, gi) => (
@@ -66,6 +70,9 @@ function NavItems({ onNavigate, pending }: { onNavigate?: () => void; pending?: 
                     {n.badge && pending ? (
                       <span className={cn("data text-[11px]", isActive ? "text-[var(--on-accent)]" : "text-[var(--stone)]")}>{pending}</span>
                     ) : null}
+                    {n.chat && chatWaiting ? (
+                      <span className={cn("data text-[11px]", isActive ? "text-[var(--on-accent)]" : "text-[var(--accent)]")}>{chatWaiting}</span>
+                    ) : null}
                   </>
                 )}
               </NavLink>
@@ -93,6 +100,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const pending = useAdminPending();
   const total = pending.data?.total;
+  const chatWaiting = useUnreadThreads();
 
   return (
     <div className="min-h-screen bg-[var(--canvas)] text-[var(--ink)]">
@@ -146,14 +154,14 @@ export function AdminLayout({ children }: { children: ReactNode }) {
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <NavItems onNavigate={() => setMenuOpen(false)} pending={total} />
+            <NavItems onNavigate={() => setMenuOpen(false)} pending={total} chatWaiting={chatWaiting} />
           </div>
         </div>
       )}
 
       <div className="flex">
         <aside className="hidden w-60 shrink-0 flex-col gap-0.5 border-r border-[var(--line)] bg-[var(--surface)] p-3 md:flex md:min-h-[calc(100vh-3.5rem)]">
-          <NavItems pending={total} />
+          <NavItems pending={total} chatWaiting={chatWaiting} />
         </aside>
         <main className="min-w-0 flex-1">{children}</main>
       </div>

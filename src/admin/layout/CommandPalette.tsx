@@ -12,6 +12,7 @@ interface Cmd { to: string; label: string; group: string }
 const COMMANDS: Cmd[] = [
   { to: "/", label: "Dziś", group: "Panel" },
   { to: "/kolejka", label: "Kolejka", group: "Panel" },
+  { to: "/rozmowy", label: "Rozmowy z lokalami", group: "Panel" },
   { to: "/kolejka?typ=zdjecia", label: "Kolejka: zdjęcia", group: "Kolejka" },
   { to: "/kolejka?typ=zgloszenia", label: "Kolejka: zgłoszenia", group: "Kolejka" },
   { to: "/kolejka?typ=kolekcje", label: "Kolejka: kolekcje", group: "Kolejka" },

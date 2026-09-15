@@ -3,6 +3,7 @@ import { RequireAdmin } from "./RequireAdmin";
 import { AdminLayout } from "./layout/AdminLayout";
 import { HomePage } from "./modules/home/HomePage";
 import { QueuePage } from "./modules/queue/QueuePage";
+import { MessagesPage } from "./modules/messages/MessagesPage";
 import { AnalyticsPage } from "./modules/analytics/AnalyticsPage";
 import { UsersPage } from "./modules/users/UsersPage";
 import { CostsPage } from "./modules/costs/CostsPage";
@@ -23,6 +24,7 @@ export default function AdminApp() {
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/kolejka" element={<QueuePage />} />
+          <Route path="/rozmowy" element={<MessagesPage />} />
 
           <Route path="/moderacja" element={<Navigate to="/kolejka" replace />} />
           <Route path="/moderacja/b2c" element={<Navigate to="/kolejka?typ=zdjecia" replace />} />
