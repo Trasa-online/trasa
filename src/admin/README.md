@@ -147,7 +147,49 @@ stronie lokalu jeszcze nie istnieje - wiadomość nie miałaby gdzie dojść. Gd
 
 ---
 
-## 5. Czego nie ruszać
+## 5. Leady i kontakt do lokalu
+
+Zakładka Leady pokazuje miejsca, które użytkownicy dodają do kolekcji i wyjazdów, a które
+nie mają jeszcze konta w spontaway. Wejście w wiersz otwiera panel kontaktu:
+
+- **„Znajdź kontakt"** (edge `lead-contact-lookup`) pyta Google o stronę i telefon,
+  a potem wchodzi na stronę lokalu i szuka adresu e-mail w `mailto:` oraz na podstronach
+  `/kontakt`, `/contact`, `/o-nas`. Wynik ląduje w tabeli `lead_contacts`.
+- Adres można **poprawić ręcznie** (`found_by = 'manual'`) i dopisać notatkę, a lead
+  oznaczyć jako „wysłana oferta".
+
+⚠️ **Google Places NIE zwraca adresów e-mail.** Ma stronę i telefon, i tyle. Mail bierze się
+wyłącznie ze strony lokalu, więc skuteczność jest ograniczona z natury. Próba na 20
+najczęściej dodawanych leadach (15.09.2026):
+
+| co znaleziono | ile z 20 |
+|---|---|
+| telefon | 15 |
+| własna strona | 9 |
+| **adres e-mail** | **5** |
+| tylko Instagram | 3 |
+| nic | 5 |
+
+To jest normalny wynik w gastronomii, nie awaria wyszukiwania. Dlatego panel pokazuje
+telefon na równi z mailem i pozwala wpisać adres ręcznie.
+
+Dwie rzeczy zapisane na stałe:
+
+- ⛔ **Wysyłki ofert w panelu NIE MA** (decyzja Nat 15.09.2026): panel znajduje kontakt,
+  ofertę wysyła Nat ze swojej skrzynki. „Napisz maila" otwiera zwykły `mailto:`, więc nic
+  nie wychodzi bez kliknięcia w kliencie poczty. Gdyby wysyłka kiedyś weszła do panelu,
+  ma lecieć z **osobnej subdomeny** (np. `wspolpraca.spontaway.com`), żeby zgłoszenia spamu
+  nie ciągnęły w dół dostarczalności resetów haseł i maili powitalnych.
+- ⚠️ Nasz `User-Agent` NIE zawiera adresu e-mail: pierwszy testowany lokal wypisywał
+  User-Agent na stronie, więc nasz własny adres wracał jako „znaleziony kontakt lokalu".
+  Kandydaci z naszych domen są dodatkowo odfiltrowani.
+
+Każde kliknięcie „Znajdź kontakt" to **dwa płatne zapytania do Google**, dlatego działa
+pojedynczo, na żądanie, i zapisuje wynik w bazie - drugi raz ten sam lokal jest za darmo.
+
+---
+
+## 6. Czego nie ruszać
 
 - logiki `RequireAdmin.tsx`, `RequireTier.tsx`, `AdminMfaGate.tsx` (bramka roli + 2FA,
   fail-closed - warstwa wizualna jest na tokenach, logika zostaje),
@@ -161,7 +203,7 @@ widzą go tylko founderzy (decyzja Nat 2026-09-06).
 
 ---
 
-## 6. Co zostało do zrobienia
+## 7. Co zostało do zrobienia
 
 - **Wspólny strumień kolejki.** Dziś chip wybiera ŹRÓDŁO i renderuje jego panel. Jedna
   lista wszystkich typów naraz wymaga hooka łączącego siedem zapytań i wspólnego kształtu
@@ -171,3 +213,7 @@ widzą go tylko founderzy (decyzja Nat 2026-09-06).
 - **„Czas najstarszej nieroz­patrzonej sprawy"** na stronie głównej. `useAdminPending`
   zwraca same liczniki - świadomie nie podstawiam tam wartości, której nie mam.
 - **Czat z lokalem** w `BusinessPreview` - czeka na stronę biznesową (patrz sekcja 4).
+- **Zdjęcia miejsc**: 887 z 994 aktywnych miejsc nie ma `places.photo_url`. Panel pokazuje
+  wtedy zdjęcie użytkownika albo ikonę kategorii, a pojedyncze miejsce da się uzupełnić
+  guzikiem „Pobierz zdjęcie z Google". Masowego backfillu świadomie nie ma - to płatne
+  wywołanie razy 887.

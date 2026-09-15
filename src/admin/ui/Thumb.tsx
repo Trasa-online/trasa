@@ -21,7 +21,7 @@ export function Thumb({ url, category, className }: {
     );
   }
   return (
-    <span className={box} style={{ background: "#FCEDE3" }} title="Brak zdjęcia w bazie">
+    <span className={box} style={{ background: "#FCEDE3" }} title="Brak zdjęcia w bazie">
       <img src={categoryIconSrc(category)} alt="" className="h-1/2 w-1/2 object-contain" />
     </span>
   );

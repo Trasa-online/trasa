@@ -1,13 +1,22 @@
 // Leady = miejsca BEZ konta biznesowego, ktore userzy i tak dodaja do kolekcji i wyjazdow.
 // To jest lista "komu zaproponowac wizytowke", posortowana po liczbie dodan.
+import { useState } from "react";
+import { Mail, Phone, Search } from "lucide-react";
 import { adminPhotoUrl } from "../places/usePlaces";
-import { AppShell, PageHeader, Section, Metric, DataTable, Bar, Thumb, type Column } from "../../ui";
+import { AppShell, PageHeader, Section, Metric, DataTable, Bar, Thumb, StatusBadge, type Column } from "../../ui";
 import { useLeadPlaces, type LeadPlace } from "./useLeadPlaces";
+import { useLeadContacts, contactOf } from "./useLeadContacts";
+import { LeadContactPanel } from "./LeadContactPanel";
 
 export function LeadsPage() {
   const { data, isLoading, isError } = useLeadPlaces();
+  const contacts = useLeadContacts();
+  const [open, setOpen] = useState<LeadPlace | null>(null);
   const places = data?.places ?? [];
   const max = places[0]?.total ?? 1;
+
+  // Ile leadow ma juz zdobyty kontakt - to jest miara postepu tej roboty, nie liczba wierszy.
+  const withEmail = places.filter((p) => contactOf(contacts.data, p.place_name, p.city)?.email).length;
 
   const columns: Column<LeadPlace>[] = [
     {
@@ -23,8 +32,36 @@ export function LeadsPage() {
       key: "where", label: "Miasto", secondary: true, width: 200,
       render: (p) => <span>{[p.city, p.category].filter(Boolean).join(" · ") || "-"}</span>,
     },
-    { key: "lists", label: "W kolekcjach", width: 120, align: "right", render: (p) => <span className="data">{p.listCount}</span> },
-    { key: "trips", label: "W wyjazdach", width: 120, align: "right", render: (p) => <span className="data">{p.tripCount}</span> },
+    {
+      key: "kontakt", label: "Kontakt", width: 210,
+      render: (p) => {
+        const c = contactOf(contacts.data, p.place_name, p.city);
+        if (c?.email) {
+          return (
+            <span className="flex items-center gap-1.5">
+              <Mail className="h-3.5 w-3.5 shrink-0 text-[var(--ok)]" />
+              <span className="data truncate text-[12px]">{c.email}</span>
+            </span>
+          );
+        }
+        if (c?.phone) {
+          return (
+            <span className="flex items-center gap-1.5">
+              <Phone className="h-3.5 w-3.5 shrink-0 text-[var(--stone)]" />
+              <span className="data truncate text-[12px]">{c.phone}</span>
+            </span>
+          );
+        }
+        if (c) return <StatusBadge tone="warn">bez kontaktu</StatusBadge>;
+        return (
+          <span className="flex items-center gap-1.5 text-[12px] text-[var(--stone)]">
+            <Search className="h-3.5 w-3.5" />niesprawdzony
+          </span>
+        );
+      },
+    },
+    { key: "lists", label: "W kolekcjach", width: 110, align: "right", render: (p) => <span className="data">{p.listCount}</span> },
+    { key: "trips", label: "W wyjazdach", width: 110, align: "right", render: (p) => <span className="data">{p.tripCount}</span> },
     {
       key: "total", label: "Razem", width: 140, align: "right",
       render: (p) => (
@@ -49,6 +86,12 @@ export function LeadsPage() {
           <Metric label="Dodania razem" value={data?.kpis.totalAdds ?? "-"} />
           <Metric label="W kolekcjach" value={data?.kpis.listAdds ?? "-"} />
           <Metric label="W wyjazdach" value={data?.kpis.tripAdds ?? "-"} hint={data?.kpis.topCity ? `Najwięcej leadów: ${data.kpis.topCity}` : undefined} />
+          <Metric
+            label="Ze zdobytym mailem"
+            value={withEmail}
+            hint={places.length ? `z ${places.length} leadów` : undefined}
+            tone={withEmail > 0 ? "ok" : "neutral"}
+          />
         </div>
       </Section>
 
@@ -61,6 +104,7 @@ export function LeadsPage() {
             rows={places}
             keyOf={(p) => p.key}
             loading={isLoading}
+            onRowClick={(p) => setOpen(p)}
             empty={{
               fact: "Żadne miejsce bez konta nie zostało jeszcze dodane.",
               next: "Lista zapełni się, gdy użytkownicy zaczną dodawać miejsca do kolekcji i wyjazdów.",
@@ -68,6 +112,14 @@ export function LeadsPage() {
           />
         )}
       </Section>
+
+      {open ? (
+        <LeadContactPanel
+          lead={open}
+          contact={contactOf(contacts.data, open.place_name, open.city)}
+          onClose={() => setOpen(null)}
+        />
+      ) : null}
     </AppShell>
   );
 }

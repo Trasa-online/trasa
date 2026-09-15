@@ -102,8 +102,8 @@ function PlaceTraffic({ place, range, setRange, onClose }: {
         <div className="min-w-0 flex-1">
           <p className="text-[12px] text-[var(--stone)]">
             {place.photoFrom === "place" ? "Zdjęcie zapisane przy miejscu."
-              : place.photoFrom === "gallery" ? "Zdjęcie z galerii miejsca."
-              : place.photoFrom === "user" ? "Zdjęcie od użytkownika. Miejsce nie ma własnego w bazie."
+              : place.photoFrom === "gallery" ? "Zdjęcie z galerii miejsca."
+              : place.photoFrom === "user" ? "Zdjęcie od użytkownika. Miejsce nie ma własnego w bazie."
               : "Baza nie ma żadnego zdjęcia tego miejsca. W aplikacji widać ikonę kategorii."}
           </p>
           {place.photoFrom !== "place" ? (
@@ -112,11 +112,11 @@ function PlaceTraffic({ place, range, setRange, onClose }: {
               disabled={fetchPhoto.isPending}
               icon={<ImagePlus className="h-3.5 w-3.5" />}
               onClick={() => fetchPhoto.mutate(place, {
-                onSuccess: () => toast.success("Zdjęcie pobrane i zapisane przy miejscu"),
+                onSuccess: () => toast.success("Zdjęcie pobrane i zapisane przy miejscu"),
                 onError: (e: any) => toast.error(e.message || "Nie udało się pobrać zdjęcia"),
               })}
             >
-              {fetchPhoto.isPending ? "Pobieram…" : "Pobierz zdjęcie z Google"}
+              {fetchPhoto.isPending ? "Pobieram…" : "Pobierz zdjęcie z Google"}
             </Button>
           ) : null}
         </div>
