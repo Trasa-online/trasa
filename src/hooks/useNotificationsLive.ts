@@ -32,6 +32,9 @@ const TITLES: Record<string, string> = {
   photo_like: "live.photo_like",
 };
 
+/** Czat ma sie OTWORZYC, a nie tylko pokazac wyjazd - `state.openChat` czyta `SharedRoute`. */
+const stateFor = (n: any) => (n?.type === "trip_message" ? { openChat: true } : undefined);
+
 const urlFor = (n: any): string => {
   // Zawsze widok wyjazdu - tam sie uzupelnia zdjecia/notki/opis i publikuje (2026-08-30).
   if (n?.type === "trip_reminder") return `/route/${n.route_id}`;
@@ -64,7 +67,7 @@ export function useNotificationsLive() {
           // to pokazuja). Poza tym widokiem (inny ekran w apce) toast jest przydatny -> pokazujemy.
           if (n.type === "trip_message" && n.route_id && window.location.hash.includes(`/route/${n.route_id}`)) return;
           const title = t(TITLES[n.type] ?? "live.generic");
-          toast(title, { action: { label: "Zobacz", onClick: () => navigate(urlFor(n)) } });
+          toast(title, { action: { label: "Zobacz", onClick: () => navigate(urlFor(n), { state: stateFor(n) }) } });
         },
       )
       .subscribe();

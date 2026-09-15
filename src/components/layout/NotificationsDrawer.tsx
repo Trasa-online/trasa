@@ -192,6 +192,18 @@ export default function NotificationsDrawer({ open, onClose, userId }: Props) {
     }
   }, [open, notifications.length]);
 
+  // Przejscie z powiadomienia: NAJPIERW nawigacja, zamkniecie arkusza dopiero w nastepnym
+  // tiku (zgloszenie Nat 2026-09-15: "klikam Zobacz i laduje na zupelnie innym wyjezdzie,
+  // a cofniecie wraca na wlasciwy" - czyli w historii ladowaly DWA wpisy).
+  // ⚠️ `onClose()` wolane synchronicznie PRZED `navigate` zdejmuje nakladke arkusza jeszcze
+  // w trakcie obslugi tapniecia, wiec dogenerowany `click` trafia w to, co bylo POD spodem -
+  // a pod spodem jest feed Eksploracji, czyli kafelki innych wyjazdow. Stad druga nawigacja.
+  // Trzymanie nakladki do konca zdarzenia i zamykanie jej po nawigacji usuwa ten przeskok.
+  const go = (to: string, opts?: { state?: unknown }) => {
+    navigate(to, opts as any);
+    setTimeout(onClose, 0);
+  };
+
   const unreadCount = notifications.filter(n => !n.read).length;
 
   // Arkusz zamiast recznego overlaya: dostaje animacje wysuniecia z dolu (Radix data-state)
@@ -265,7 +277,7 @@ export default function NotificationsDrawer({ open, onClose, userId }: Props) {
                 // Powrot do apki z powiadomienia - domykamy petle spoleczna w analityce.
                 // Typ mowi, ktore powiadomienia realnie sprowadzaja ludzi z powrotem.
                 const openActor = actorUsername && n.type !== "business_thanks"
-                  ? () => { track("notification_opened", { type: n.type }); onClose(); navigate(`/profil/${actorUsername}`); }
+                  ? () => { track("notification_opened", { type: n.type }); go(`/profil/${actorUsername}`); }
                   : undefined;
                 const timeAgo = formatDistanceToNow(new Date(n.created_at), { addSuffix: true, locale: dateLocale() });
                 const labelText = cfg.label(t, username, n.metadata);
@@ -306,11 +318,14 @@ export default function NotificationsDrawer({ open, onClose, userId }: Props) {
                       {(n.type === "group_invite" || n.type === "group_route_ready" || n.type === "route_invite" || n.type === "trip_places_reminder" || n.type === "trip_message") && (
                         <button
                           onClick={() => {
-                            onClose();
+                            track("notification_opened", { type: n.type });
                             // Deep-link do konkretnej trasy gdy znamy route_id (kolumna lub metadata), inaczej do zakladki Wyjazdy.
                             const rid = n.route_id ?? n.metadata?.route_id;
-                            // Widok wyjazdu = SharedRoute (/route/:id) - etap propozycji/w trakcie/wspomnienie (tam dymek czatu).
-                            navigate(rid ? `/route/${rid}` : "/moj-profil?tab=wyjazdy");
+                            // Widok wyjazdu = SharedRoute (/route/:id) - etap propozycji/w trakcie/wspomnienie.
+                            // ⚠️ Przy wiadomosci guzik mowi "Otworz czat", wiec MUSI otworzyc czat, a nie
+                            // sam wyjazd (zgloszenie Nat 2026-09-15) - stad `state.openChat`.
+                            go(rid ? `/route/${rid}` : "/moj-profil?tab=wyjazdy",
+                               n.type === "trip_message" ? { state: { openChat: true } } : undefined);
                           }}
                           className="mt-2 px-3 py-1.5 rounded-full bg-primary text-white text-xs font-semibold active:scale-95 transition-transform"
                         >
@@ -320,11 +335,10 @@ export default function NotificationsDrawer({ open, onClose, userId }: Props) {
                       {n.type === "trip_reminder" && (
                         <button
                           onClick={() => {
-                            onClose();
                             // Zawsze widok wyjazdu: tam dodaje sie zdjecia, notki, opis i tagi,
                             // i stamtad publikuje sie wyjazd (stepper zniknal z flow 2026-08-30).
                             const rid = n.route_id ?? n.metadata?.route_id;
-                            navigate(rid ? `/route/${rid}` : "/moj-profil?tab=wyjazdy");
+                            go(rid ? `/route/${rid}` : "/moj-profil?tab=wyjazdy");
                           }}
                           className="mt-2 px-3 py-1.5 rounded-full bg-primary text-white text-xs font-semibold active:scale-95 transition-transform"
                         >
@@ -333,7 +347,7 @@ export default function NotificationsDrawer({ open, onClose, userId }: Props) {
                       )}
                       {(n.type === "friend_request" || n.type === "friend_accept") && (
                         <button
-                          onClick={() => { track("notification_opened", { type: n.type }); onClose(); navigate("/moj-profil"); }}
+                          onClick={() => { track("notification_opened", { type: n.type }); go("/moj-profil"); }}
                           className="mt-2 px-3 py-1.5 rounded-full bg-primary text-white text-xs font-semibold active:scale-95 transition-transform"
                         >
                           {n.type === "friend_request" ? "Zobacz zaproszenie →" : "Zobacz znajomych →"}
@@ -341,7 +355,7 @@ export default function NotificationsDrawer({ open, onClose, userId }: Props) {
                       )}
                       {(n.type === "list_updated" || n.type === "list_invite") && (
                         <button
-                          onClick={() => { track("notification_opened", { type: n.type }); onClose(); navigate(`/lista/${n.metadata?.collection_id ?? ""}`); }}
+                          onClick={() => { track("notification_opened", { type: n.type }); go(`/lista/${n.metadata?.collection_id ?? ""}`); }}
                           className="mt-2 px-3 py-1.5 rounded-full bg-primary text-white text-xs font-semibold active:scale-95 transition-transform"
                         >
                           {t("notif.see_list")}
@@ -349,7 +363,7 @@ export default function NotificationsDrawer({ open, onClose, userId }: Props) {
                       )}
                       {(n.type === "collection_approved" || n.type === "collection_rejected") && (
                         <button
-                          onClick={() => { track("notification_opened", { type: n.type }); onClose(); navigate("/moj-profil"); }}
+                          onClick={() => { track("notification_opened", { type: n.type }); go("/moj-profil"); }}
                           className="mt-2 px-3 py-1.5 rounded-full bg-primary text-white text-xs font-semibold active:scale-95 transition-transform"
                         >
                           {n.type === "collection_rejected" ? t("notif.see_details") : t("notif.see_lists")}

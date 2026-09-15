@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, type ReactNode } from "react";
 import { MAX_TRIP_DAYS } from "@/lib/tripDays";
 import { isPortraitCover } from "@/lib/coverFormat";
 import { useTranslation } from "react-i18next";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { goBackOr } from "@/hooks/useGoBack";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
@@ -275,7 +275,19 @@ export default function SharedRoute() {
   // Postep wgrywania zdjec galerii ("3 z 8"). Przy paczce z iPhone'a czekanie liczy sie
   // w dziesiatkach sekund i bez licznika wyglada jak zawieszenie (zgloszenie Nat 2026-09-09).
   const [photoProgress, setPhotoProgress] = useState<{ done: number; total: number } | null>(null);
-  const [chatOpen, setChatOpen] = useState(false);
+  // Wejscie z powiadomienia o wiadomosci ma od razu OTWORZYC czat (prosba Nat 2026-09-15) -
+  // guzik nazywa sie "Otworz czat", wiec samo pokazanie wyjazdu nie zalatwia sprawy.
+  // Stan czytamy przy montowaniu; arkusz czatu i tak czeka na `canEdit`, wiec otworzy sie,
+  // gdy dojedzie czlonkostwo.
+  const locationState = useLocation();
+  const chatFromNotification = !!(locationState.state as any)?.openChat;
+  const [chatOpen, setChatOpen] = useState(chatFromNotification);
+  // Flaga zyje w historii, wiec bez tego powrot "wstecz" na ten wyjazd otwieralby czat
+  // drugi raz. Zuzywamy ja RAZ i podmieniamy wpis historii (bez nowego).
+  useEffect(() => {
+    if (chatFromNotification) navigate(locationState.pathname + locationState.search, { replace: true, state: null });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   // User pisze notke -> chowamy czat i dolne CTA (zaslanialy pole i klawiature).
   const [noteEditing, setNoteEditing] = useState(false);
   // Etap W TRAKCIE = miejsce, w ktorym powstaje CALE wspomnienie: opis wyjazdu i notki
