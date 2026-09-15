@@ -498,7 +498,14 @@
     "stats_notes": "notatek od gości",
     "stats_photos": "zdjęcia wrzucone przez gości",
     "stats_saves": "zapisów w kolekcjach",
-    "words_title": "Co wracało w notatkach"
+    "words_title": "Co wracało w notatkach",
+    "thanks_cta": "Podziękuj",
+    "thanks_done": "Podziękowano",
+    "thanks_sent": "Podziękowanie poleciało do @{{user}}",
+    "thanks_already": "Za tę treść już podziękowaliście.",
+    "thanks_limit": "Dzienny limit podziękowań wyczerpany. Wróć jutro.",
+    "thanks_no_user": "Nie udało się znaleźć autora tej treści.",
+    "thanks_error": "Nie udało się wysłać podziękowania."
   },
   "shell": {
     "breadcrumb": "Panel",

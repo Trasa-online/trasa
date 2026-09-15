@@ -497,7 +497,14 @@
     "stats_notes": "notes from guests",
     "stats_photos": "photos added by guests",
     "stats_saves": "saves to collections",
-    "words_title": "What kept coming up in notes"
+    "words_title": "What kept coming up in notes",
+    "thanks_cta": "Say thanks",
+    "thanks_done": "Thanked",
+    "thanks_sent": "Your thanks went out to @{{user}}",
+    "thanks_already": "You have already thanked them for this.",
+    "thanks_limit": "Daily limit of thank-yous reached. Come back tomorrow.",
+    "thanks_no_user": "We could not find the author of this content.",
+    "thanks_error": "The thank-you could not be sent."
   },
   "shell": {
     "breadcrumb": "Panel",

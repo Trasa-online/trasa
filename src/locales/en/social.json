@@ -124,7 +124,10 @@
     "profile_of": "{{username}}'s profile",
     "route_hidden_one": "Your trip is not visible in Explore - add a photo",
     "route_hidden_other": "{{count}} of your trips are not visible in Explore - add photos",
-    "title": "Notifications"
+    "title": "Notifications",
+    "business_thanks": "{{business}} says thanks for your note",
+    "business_thanks_photo": "{{business}} says thanks for your photo",
+    "business_fallback": "A venue"
   },
   "live": {
     "friend_request": "New friend request 👋",

@@ -47,6 +47,7 @@ import { ProfileSection } from "@/components/business/dashboard/ProfileSection";
 import { CategoryPickerModal } from "@/components/business/dashboard/CategoryPickerModal";
 import { SettingsSection } from "@/components/business/dashboard/SettingsSection";
 import { GuestInsights } from "@/components/business/dashboard/GuestInsights";
+import { ThanksButton } from "@/components/business/dashboard/ThanksButton";
 import { uploadThumb } from "@/lib/imageThumbs";
 import { fetchPlaceNotes, type PlaceUserNote } from "@/lib/placeNotes";
 import { avatarSrc } from "@/lib/avatar";
@@ -601,6 +602,9 @@ const BusinessDashboard = () => {
   const [communityNotes, setCommunityNotes] = useState<PlaceUserNote[]>([]);
   const [communityPhotos, setCommunityPhotos] = useState<CommunityPhoto[]>([]);
   const [communityLoading, setCommunityLoading] = useState(false);
+  // Klucze tresci, za ktore lokal juz podziekowal - RPC pilnuje tego w bazie, a panel
+  // czyta liste przy wejsciu, zeby guzik nie wracal do „Podziękuj" po odswiezeniu strony.
+  const [thankedRefs, setThankedRefs] = useState<Set<string>>(new Set());
   const [reportedKeys, setReportedKeys] = useState<Set<string>>(new Set());
   const [recentEvents, setRecentEvents] = useState<Array<{event_type: string, created_at: string}>>([]);
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -1674,6 +1678,10 @@ const BusinessDashboard = () => {
       }
       if (cancelled) return;
       setCommunityNotes(notes);
+      try {
+        const { data: refs } = await (supabase as any).rpc("business_thanks_refs", { p_business_id: profile.id });
+        if (Array.isArray(refs)) setThankedRefs(new Set(refs as string[]));
+      } catch { /* brak listy = guziki po prostu zaczynaja od stanu „Podziękuj" */ }
       setCommunityPhotos(photoRes.map((p) => ({
         id: p.id, photo_url: p.photo_url, user_id: p.user_id, created_at: p.created_at,
         username: byId.get(p.user_id)?.username ?? null, avatar_url: byId.get(p.user_id)?.avatar_url ?? null,
@@ -2547,14 +2555,24 @@ const BusinessDashboard = () => {
                                 <p className="text-xs font-semibold text-slate-700">{n.username || t("community.anon_user")}</p>
                                 <p className="text-sm text-slate-600 leading-relaxed mt-0.5 break-words">{n.note}</p>
                               </div>
-                              <button
-                                onClick={() => reportCommunity('place_note', n.key, key, n.note)}
-                                disabled={reported}
-                                title={t("community.report")}
-                                className="shrink-0 text-slate-300 hover:text-primary disabled:text-emerald-500 disabled:hover:text-emerald-500 transition-colors p-1"
-                              >
-                                {reported ? <Check className="h-3.5 w-3.5" /> : <Flag className="h-3.5 w-3.5" />}
-                              </button>
+                              <div className="flex shrink-0 items-center gap-1.5">
+                                <ThanksButton
+                                  businessId={profile.id}
+                                  username={n.username}
+                                  kind="note"
+                                  refKey={key}
+                                  alreadySent={thankedRefs.has(key)}
+                                  onSent={(r) => setThankedRefs((prev) => new Set(prev).add(r))}
+                                />
+                                <button
+                                  onClick={() => reportCommunity('place_note', n.key, key, n.note)}
+                                  disabled={reported}
+                                  title={t("community.report")}
+                                  className="text-slate-300 hover:text-primary disabled:text-emerald-500 disabled:hover:text-emerald-500 transition-colors p-1"
+                                >
+                                  {reported ? <Check className="h-3.5 w-3.5" /> : <Flag className="h-3.5 w-3.5" />}
+                                </button>
+                              </div>
                             </div>
                           );
                         })}
@@ -2587,6 +2605,29 @@ const BusinessDashboard = () => {
                               >
                                 {reported ? <Check className="h-3 w-3" /> : <Flag className="h-3 w-3" />}
                               </button>
+                              {/* Podziekowanie za zdjecie - to samo, co przy notatce, tylko ciasniej. */}
+                              {ph.username && (
+                                <button
+                                  onClick={async (e) => {
+                                    e.stopPropagation();
+                                    if (thankedRefs.has(key)) return;
+                                    const { data, error } = await (supabase as any).rpc("notify_business_thanks", {
+                                      p_business_id: profile.id, p_username: ph.username, p_kind: "photo", p_ref: key,
+                                    });
+                                    if (error) { toast.error(error.message || t("community.thanks_error")); return; }
+                                    if ((data as any)?.sent) { toast.success(t("community.thanks_sent", { user: ph.username })); setThankedRefs((prev) => new Set(prev).add(key)); return; }
+                                    if ((data as any)?.reason === "already") { toast.info(t("community.thanks_already")); setThankedRefs((prev) => new Set(prev).add(key)); return; }
+                                    if ((data as any)?.reason === "limit") { toast.info(t("community.thanks_limit")); return; }
+                                    toast.info(t("community.thanks_no_user"));
+                                  }}
+                                  title={t("community.thanks_cta")}
+                                  className={`absolute top-1 left-1 h-6 w-6 rounded-full backdrop-blur-sm flex items-center justify-center transition-colors ${
+                                    thankedRefs.has(key) ? "bg-emerald-500/85 text-white" : "bg-black/45 text-white/90 hover:bg-primary"
+                                  }`}
+                                >
+                                  {thankedRefs.has(key) ? <Check className="h-3 w-3" /> : <Heart className="h-3 w-3" />}
+                                </button>
+                              )}
                             </div>
                           );
                         })}

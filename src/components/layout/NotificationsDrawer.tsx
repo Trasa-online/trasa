@@ -56,6 +56,10 @@ const TYPE_CONFIG: Record<string, { icon: React.ElementType; color: string; labe
   list_liked:     { icon: Heart,    color: "text-red-500 bg-red-100",        label: (t, u, m) => t(m?.title ? "notif.list_liked_title" : "notif.list_liked", { user: u, title: m?.title }) },
   list_saved:     { icon: Bookmark, color: "text-primary bg-orange-100",  label: (t, u, m) => t(m?.title ? "notif.list_saved_title" : "notif.list_saved", { user: u, title: m?.title }) },
   list_updated:   { icon: MapPin,   color: "text-primary bg-orange-100",  label: (t, u, m) => t(m?.title ? "notif.list_updated_title" : "notif.list_updated", { user: u, title: m?.title }) },
+  // Podziekowanie od lokalu (2026-09-15). JEDYNY kanal lokal -> uzytkownik w aplikacji:
+  // ktos zostawil notatke albo zdjecie o miejscu, a lokal to przeczytal i odpowiedzial.
+  business_thanks: { icon: Heart, color: "text-primary bg-orange-100", label: (t, _u, m) =>
+    t(m?.kind === "photo" ? "notif.business_thanks_photo" : "notif.business_thanks", { business: m?.business_name ?? t("notif.business_fallback") }) },
   // Tresc liczona z metadanych kompletnosci (enqueue_trip_reminders): ZDJECIA maja priorytet,
   // potem notki, a na koncu zacheta do publikacji.
   trip_reminder:  { icon: Camera,   color: "text-primary bg-orange-100",  label: (t, _u, m) => {
@@ -257,7 +261,7 @@ export default function NotificationsDrawer({ open, onClose, userId }: Props) {
                 const actorUsername = n.actor?.username ?? null;
                 // Powrot do apki z powiadomienia - domykamy petle spoleczna w analityce.
                 // Typ mowi, ktore powiadomienia realnie sprowadzaja ludzi z powrotem.
-                const openActor = actorUsername
+                const openActor = actorUsername && n.type !== "business_thanks"
                   ? () => { track("notification_opened", { type: n.type }); onClose(); navigate(`/profil/${actorUsername}`); }
                   : undefined;
                 const timeAgo = formatDistanceToNow(new Date(n.created_at), { addSuffix: true, locale: dateLocale() });
@@ -276,8 +280,10 @@ export default function NotificationsDrawer({ open, onClose, userId }: Props) {
                       aria-label={openActor ? t("notif.profile_of", { username }) : undefined}
                     >
                       <img
-                        src={avatarSrc(n.actor?.avatar_url)}
-                        alt={username}
+                        src={n.type === "business_thanks" && n.metadata?.logo_url
+                          ? n.metadata.logo_url
+                          : avatarSrc(n.actor?.avatar_url)}
+                        alt={n.type === "business_thanks" ? String(n.metadata?.business_name ?? "") : username}
                         className="h-10 w-10 rounded-full object-cover bg-orange-100"
                         loading="lazy"
                       />
