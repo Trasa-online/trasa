@@ -40,7 +40,16 @@ export async function inviteUsersToRoute(
       const { data: session, error } = await (supabase as any)
         .from("group_sessions")
         .insert({
-          city: route.city ?? null,
+          // ⛔ NIE `route.city ?? null`: `group_sessions.city` jest TEXT **NOT NULL** (migracja
+          // 20260403000001 i nikt tego nie poluzowal), a od 2026-09-10 nowe wyjazdy maja
+          // `routes.city = NULL` - zasiegiem jest KRAJ, a kreator wybiera wylacznie kraje.
+          // Wstawienie NULL konczylo sie bledem 23502, funkcja zwracala `ok:false`, a user
+          // dostawal "Nie udalo sie zaprosic" - czyli od 10.09 nie dalo sie zaprosic NIKOGO
+          // do zadnego nowo utworzonego wyjazdu (zgloszenie testerki 2026-09-15).
+          // Pusty string zamiast nazwy kraju swiadomie: kolumna jest szczatkowa (czytalo ja
+          // stare parowanie grupowe, zdjete 2026-08-06), a jedyne miejsce, ktore ja jeszcze
+          // pokazuje (`ActiveTripsDashboard`), ma `s.name` z tytulem i pomija puste `city`.
+          city: route.city ?? "",
           created_by: hostUserId,
           join_code: code,
           num_days: 1,
@@ -50,7 +59,12 @@ export async function inviteUsersToRoute(
         })
         .select("id")
         .single();
-      if (error || !session) return { ok: false, error: error?.message ?? "session insert failed" };
+      if (error || !session) {
+        // Bez tego logu poprzedni blad byl niediagnozowalny: user widzial samo "Nie udalo sie
+        // zaprosic", a prawdziwy powod (naruszenie NOT NULL) nigdzie nie wychodzil.
+        console.error("[groupInvite] group_sessions insert:", error?.message ?? "no row returned");
+        return { ok: false, error: error?.message ?? "session insert failed" };
+      }
       sessionId = session.id;
       // Host do members (self-insert dozwolony) + podpiecie trasy (owner update).
       // is_shared=true: trasa grupowa MUSI byc shared (brak RLS czlonkostwa na routes -> inaczej
