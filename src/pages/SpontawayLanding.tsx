@@ -194,8 +194,11 @@ type Copy = (typeof COPY)["pl"];
 
 // ─── Znak marki ───────────────────────────────────────────────────────────────
 
+// Lockup ma teraz GWIAZDKE wystajaca ponad napis (nowe logo, 2026-09-15), wiec ramka pliku
+// urosla z 240x43 na 240x47,3. Klasy wysokosci przy kazdym uzyciu sa przeskalowane o te same
+// ~10%, zeby SAM NAPIS zostal w dotychczasowym rozmiarze.
 function Wordmark({ className }: { className?: string }) {
-  return <img src="/wordmark_spontaway.svg" alt="spontaway" className={className} width={240} height={43} />;
+  return <img src="/wordmark_spontaway.svg" alt="spontaway" className={className} width={240} height={47} />;
 }
 
 // ─── Plakietki sklepowe ───────────────────────────────────────────────────────
@@ -362,7 +365,7 @@ function DownloadModal({ c, lang, onClose }: { c: Copy; lang: Lang; onClose: () 
 
         <div className="flex flex-col items-center bg-spontaway-yellow px-6 pb-7 pt-9 text-center">
           {/* Sam znak marki, bez bialego kafelka - na zoltym tle ramka tylko dzielila kompozycje. */}
-          <img src="/logo.svg" alt="" width={37} height={33} className="w-[52px]" />
+          <img src="/logo.svg" alt="" width={618} height={636} className="w-[50px]" />
           <h2 className="mt-4 font-brand text-[26px] leading-[1.15] text-spontaway-orange">
             {APP_LIVE ? c.modal.titleLive : c.modal.titleSoon}
           </h2>
@@ -417,7 +420,7 @@ function InstallBanner({ c, onDownload }: { c: Copy; onDownload: () => void }) {
         </svg>
       </button>
       <div className="flex h-[40px] w-[40px] shrink-0 items-center justify-center rounded-[10px] bg-spontaway-yellow">
-        <img src="/logo.svg" alt="" width={37} height={33} className="w-[22px]" />
+        <img src="/logo.svg" alt="" width={618} height={636} className="w-[24px]" />
       </div>
       <div className="min-w-0 flex-1">
         <p className="text-[13px] font-bold leading-tight text-spontaway-brown">{c.banner.name}</p>
@@ -443,7 +446,7 @@ function Nav({ c, onDownload }: { c: Copy; onDownload: () => void }) {
     <header className="sticky top-0 z-30 bg-[#F9F9F9] shadow-[0_4px_25px_0_rgba(0,0,0,0.05)]">
       <InstallBanner c={c} onDownload={onDownload} />
       <div className="mx-auto flex h-[56px] max-w-[1440px] items-center justify-between px-5 lg:h-[80px] lg:px-[120px]">
-        <Wordmark className="h-[17px] w-auto shrink-0 sm:h-[19px] lg:h-[33px]" />
+        <Wordmark className="h-[19px] w-auto shrink-0 sm:h-[21px] lg:h-[36px]" />
         <div className="flex items-center gap-2 lg:gap-3">
           {/* ⛔ Wejscia "Dla firm" TU NIE MA (decyzja Nat 2026-09-15). Landingu B2B jeszcze
               nie ma, a zbieramy trakcje na samych uzytkownikach - jedyna sciezka dla lokali
@@ -724,7 +727,7 @@ function BusinessInquirySheet({ c, lang, onClose }: { c: Copy; lang: Lang; onClo
           <div className="flex flex-col items-center bg-spontaway-yellow px-6 pb-7 pt-5 text-center sm:pt-9">
             {/* Uchwyt arkusza - tylko na telefonie, gdzie panel wchodzi od dolu. */}
             <div className="mb-4 h-1 w-10 shrink-0 rounded-full bg-spontaway-brown/20 sm:hidden" />
-            <img src="/logo.svg" alt="" width={37} height={33} className="w-[46px]" />
+            <img src="/logo.svg" alt="" width={618} height={636} className="w-[44px]" />
             <h2 className="mt-3 font-brand text-[24px] leading-[1.15] text-spontaway-orange sm:text-[26px]">
               {nb(state === "done" ? c.inquiry.doneTitle : c.inquiry.title)}
             </h2>
@@ -810,7 +813,7 @@ function FooterCta({ c, onDownload }: { c: Copy; onDownload: () => void }) {
   return (
     <section className="px-4 py-12 lg:px-[50px] lg:py-[125px]">
       <div className="mx-auto flex max-w-[1340px] flex-col items-center rounded-[28px] bg-spontaway-yellow px-6 py-10 text-center lg:h-[480px] lg:justify-center lg:rounded-[36px] lg:py-0">
-        <Wordmark className="h-[32px] w-auto lg:h-[43px]" />
+        <Wordmark className="h-[35px] w-auto lg:h-[47px]" />
         <h2 className="mt-6 font-brand text-[30px] leading-[1.14] text-spontaway-orange lg:mt-[43px] lg:text-[52px]">
           {nb(c.footerCta.title)}
         </h2>

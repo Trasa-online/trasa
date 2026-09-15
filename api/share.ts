@@ -48,7 +48,7 @@ const SYMBOL_IMG = `${SITE}/spontaway-symbol.png`;
 // dokladnie proporcja, ktorej oczekuja komunikatory (~1,91:1). Kwadratowa ikona aplikacji
 // pokazywala sie tam jako maly kafelek z boku, a nie jako karta - stad "brakuje miniaturek"
 // przy listach (zgloszenie Nat 2026-09-09).
-const OG_BANNER = { url: `${SITE}/baner-ios.png`, w: 1800, h: 945 };
+const OG_BANNER = { url: `${SITE}/baner-ios.png?v=2`, w: 1800, h: 945 };
 const ctaTop = () => CTA_READY
   ? `<a class="badge" href="${esc(APP_STORE_URL!)}"><img src="${BADGE}" alt="${CTA_LABEL}"></a>`
   : `<span class="badge off" title="Dostępne wkrótce"><img src="${BADGE}" alt="${CTA_LABEL}"></span>`;
