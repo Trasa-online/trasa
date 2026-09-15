@@ -366,6 +366,19 @@ Sign in with Apple psuje sie samo, bo **sekret klienta wygasa maksymalnie po 6 m
 
 **NIE edytuj tego pliku.** Strona `/dla-firm` jest zachowana do późniejszego wykorzystania. Nie przepisuj, nie refaktoruj, nie usuwaj. Nowy one-pager dla firm to osobny plik `src/pages/BusinessLanding.tsx` pod routem `/dla-firm/landing`.
 
+**⛔ Landing B2C NIE prowadzi już do niczego B2B (decyzja Nat 2026-09-15).** Landingu dla
+firm jeszcze nie ma, a trakcję zbieramy na samych użytkownikach, więc ze `SpontawayLanding`
+zniknął link „Dla firm" w belce oraz guziki „Załóż konto" (`/biznes/start`) i „Dowiedz się
+więcej" (`/dla-firm`). Została **jedna ścieżka**: guzik **„Skontaktuj się"** w sekcji
+„Prowadzisz lokal?" otwiera formularz zapytania o ofertę - **modal na desktopie, arkusz dołem
+na telefonie** (`BusinessInquirySheet` w tym samym pliku, `z-[70]`, bo pasek cookies stoi na
+`z-[60]`). Zapytanie idzie przez funkcję brzegową **`business-inquiry`** (walidacja, limit
+5/h na IP, mail do założycieli przez Resend z `reply_to` lokalu) do tabeli
+**`business_inquiries`** - tabela NIE ma polityki INSERT dla anon, więc nie da się do niej
+pisać z klienta. To co innego niż `lead_contacts` (tam lokale, które MY zaczepiamy).
+Routy `/dla-firm` i `/biznes/start` żyją dalej - są tylko odlinkowane. Nie przywracaj wejść
+B2B na landing, dopóki nie powstanie landing dla firm.
+
 ---
 
 ### ⛔ BusinessDashboard — główny dashboard firm ZAMROŻONY (src/pages/BusinessDashboard.tsx)

@@ -66,14 +66,37 @@ const COPY = {
     ],
     stats: { heading: "SPONTAWAY TO", countries: "Krajów", cities: "Miast", possibilities: "Możliwości" },
     business: {
-      navLink: "Dla firm",
       title: "Prowadzisz lokal?",
       // **gwiazdki** = pogrubienie (patrz `boldParts`). Tak jest w makiecie: wyroznione sa
       // trzy powody, dla ktorych ktos siega po aplikacje, a nie cale zdanie.
       body: "Nie pozwól by Ci, którzy **szukają gdzie zjeść**, **co zobaczyć** i **jak spędzić czas** go przegapili",
-      cta: "Załóż konto",
-      more: "Dowiedz się więcej",
+      cta: "Skontaktuj się",
       mockupAlt: "Wizytówka lokalu w aplikacji: zdjęcia, menu, godziny otwarcia i wydarzenie",
+    },
+    inquiry: {
+      title: "Zapytaj o ofertę",
+      body: "Zostaw kontakt, a odezwiemy się z ofertą dopasowaną do Twojego lokalu.",
+      venue: "Nazwa lokalu",
+      venuePlaceholder: "np. Kawiarnia Poranek",
+      city: "Miasto",
+      cityPlaceholder: "np. Łódź",
+      person: "Osoba do kontaktu",
+      personPlaceholder: "Imię i nazwisko",
+      email: "E-mail",
+      emailPlaceholder: "kontakt@twojlokal.pl",
+      phone: "Telefon",
+      phonePlaceholder: "opcjonalnie",
+      message: "Czego potrzebujesz?",
+      messagePlaceholder: "Napisz kilka słów o lokalu i o tym, co chcesz osiągnąć (opcjonalnie)",
+      optional: "opcjonalne",
+      submit: "Wyślij zapytanie",
+      sending: "Wysyłam...",
+      doneTitle: "Zapytanie poszło!",
+      done: "Odezwiemy się na podany adres w ciągu dwóch dni roboczych.",
+      error: "Nie udało się wysłać. Spróbuj jeszcze raz.",
+      close: "Zamknij",
+      consentPre: "Wysyłając zapytanie, zgadzasz się na kontakt w sprawie oferty. Szczegóły w ",
+      consentLink: "polityce prywatności",
     },
     footerCta: { title: "Odkrywaj, planuj, dziel się!", sub: "Pobierz Spontaway i zacznij zabawę", note: "Za darmo na iOS... i wkrótce na Android!" },
     footer: { rights: "© 2026 Spontaway · Stworzone z", inPoland: "w Polsce", terms: "Regulamin", privacy: "Prywatność" },
@@ -116,12 +139,35 @@ const COPY = {
     ],
     stats: { heading: "SPONTAWAY IS", countries: "Countries", cities: "Cities", possibilities: "Possibilities" },
     business: {
-      navLink: "For business",
       title: "Running a place?",
       body: "Don't let the people **looking for a bite**, **something to see** and **a way to spend the day** walk past you",
-      cta: "Create an account",
-      more: "Learn more",
+      cta: "Get in touch",
       mockupAlt: "A place listing in the app: photos, menu, opening hours and an event",
+    },
+    inquiry: {
+      title: "Ask about our offer",
+      body: "Leave your details and we will come back with an offer made for your place.",
+      venue: "Name of the place",
+      venuePlaceholder: "e.g. Poranek Coffee",
+      city: "City",
+      cityPlaceholder: "e.g. Lodz",
+      person: "Contact person",
+      personPlaceholder: "First and last name",
+      email: "Email",
+      emailPlaceholder: "hello@yourplace.com",
+      phone: "Phone",
+      phonePlaceholder: "optional",
+      message: "What do you need?",
+      messagePlaceholder: "Tell us a bit about your place and what you want to achieve (optional)",
+      optional: "optional",
+      submit: "Send the enquiry",
+      sending: "Sending...",
+      doneTitle: "Enquiry sent!",
+      done: "We will get back to you at that address within two working days.",
+      error: "Could not send that. Please try again.",
+      close: "Close",
+      consentPre: "By sending this form you agree to be contacted about our offer. Details in the ",
+      consentLink: "privacy policy",
     },
     footerCta: { title: "Discover, plan, share!", sub: "Get Spontaway and start the fun", note: "Free on iOS... and soon on Android!" },
     footer: { rights: "© 2026 Spontaway · Made with", inPoland: "in Poland", terms: "Terms", privacy: "Privacy" },
@@ -399,16 +445,10 @@ function Nav({ c, onDownload }: { c: Copy; onDownload: () => void }) {
       <div className="mx-auto flex h-[56px] max-w-[1440px] items-center justify-between px-5 lg:h-[80px] lg:px-[120px]">
         <Wordmark className="h-[17px] w-auto shrink-0 sm:h-[19px] lg:h-[33px]" />
         <div className="flex items-center gap-2 lg:gap-3">
-          {/* Wejscie dla lokali. Tekstowy link, nie guzik - to sciezka poboczna wobec
-              glownego CTA konsumenckiego, a kolor marki B2B (niebieski) zostaje w samej
-              sekcji nizej, zeby nie rozbijac pomaranczowego naglowka. */}
-          <Link
-            to="/dla-firm"
-            onClick={() => posthog.capture("landing_business_click", { placement: "nav" })}
-            className="whitespace-nowrap px-1 text-[10px] font-semibold text-spontaway-brown underline-offset-2 hover:underline sm:text-[11px] lg:px-2 lg:text-[15px]"
-          >
-            {c.business.navLink}
-          </Link>
+          {/* ⛔ Wejscia "Dla firm" TU NIE MA (decyzja Nat 2026-09-15). Landingu B2B jeszcze
+              nie ma, a zbieramy trakcje na samych uzytkownikach - jedyna sciezka dla lokali
+              to guzik "Skontaktuj sie" w sekcji nizej, ktory otwiera formularz zapytania.
+              Nie przywracaj linku do /dla-firm, dopoki nie powstanie landing dla firm. */}
           <Pill tone="brown" onClick={onDownload} className="hidden h-[47px] text-[15px] lg:inline-flex">
             {c.nav.login}
           </Pill>
@@ -550,9 +590,8 @@ function boldParts(text: string) {
   );
 }
 
-function BusinessStrip({ c }: { c: Copy }) {
+function BusinessStrip({ c, onContact }: { c: Copy; onContact: () => void }) {
   const nb = useNb();
-  const track = (placement: string) => posthog.capture("landing_business_click", { placement });
   return (
     <section className="mx-auto max-w-[1440px] px-4 py-12 lg:px-[50px] lg:py-[88px]">
       <div className="mx-auto flex max-w-[1340px] flex-col items-center gap-8 lg:flex-row lg:justify-center lg:gap-[80px]">
@@ -573,25 +612,194 @@ function BusinessStrip({ c }: { c: Copy }) {
             {boldParts(nb(c.business.body))}
           </p>
 
-          <div className="mt-7 flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
-            <Link
-              to="/biznes/start"
-              onClick={() => track("section_cta")}
-              className="inline-flex h-[48px] items-center justify-center rounded-full bg-spontaway-orange px-6 text-[15px] font-extrabold text-white transition-opacity hover:opacity-90 active:scale-[0.98] sm:min-w-[160px]"
+          {/* JEDEN guzik (decyzja Nat 2026-09-15): "Zaloz konto" prowadzilo lokal do panelu
+              bez zadnej rozmowy, a "Dowiedz sie wiecej" na strone, ktorej nie ma. Teraz
+              jedna sciezka: formularz z zapytaniem o oferte (modal na desktopie, arkusz
+              na telefonie) - zadnej nawigacji poza landing. */}
+          <div className="mt-7 flex w-full sm:w-auto">
+            <button
+              type="button"
+              onClick={onContact}
+              className="inline-flex h-[48px] w-full items-center justify-center rounded-full bg-spontaway-orange px-7 text-[15px] font-extrabold text-white transition-opacity hover:opacity-90 active:scale-[0.98] sm:w-auto sm:min-w-[200px]"
             >
               {c.business.cta}
-            </Link>
-            <Link
-              to="/dla-firm"
-              onClick={() => track("section_more")}
-              className="inline-flex h-[48px] items-center justify-center rounded-full border border-spontaway-brown px-6 text-[15px] font-extrabold text-spontaway-brown transition-colors hover:bg-spontaway-brown/[0.06] active:scale-[0.98] sm:min-w-[160px]"
-            >
-              {c.business.more}
-            </Link>
+            </button>
           </div>
         </div>
       </div>
     </section>
+  );
+}
+
+// ─── Zapytanie o oferte (lokal) ──────────────────────────────────────────────
+// Jedyna sciezka dla lokali na tym landingu. Na desktopie modal na srodku, na telefonie
+// arkusz dolem - to ta sama komponenta, roznica siedzi w klasach (`items-end` -> `sm:items-center`),
+// zeby copy i logika nie rozjechaly sie miedzy dwiema wersjami.
+//
+// Zapisu NIE robimy z klienta: `business_inquiries` nie ma polityki INSERT dla anon,
+// wszystko idzie przez funkcje brzegowa `business-inquiry` (walidacja, limit, mail do nas).
+
+const INQ_FIELD =
+  "h-[46px] w-full rounded-2xl border border-black/10 bg-white px-4 text-[14px] text-spontaway-brown outline-none placeholder:text-black/30 focus:border-spontaway-orange";
+
+function InquiryField({
+  label, hint, children,
+}: { label: string; hint?: string; children: React.ReactNode }) {
+  return (
+    <label className="flex flex-col gap-1.5">
+      <span className="px-1 text-[12px] font-semibold text-spontaway-brown">
+        {label}
+        {hint ? <span className="ml-1 font-normal text-spontaway-brown/50">({hint})</span> : null}
+      </span>
+      {children}
+    </label>
+  );
+}
+
+function BusinessInquirySheet({ c, lang, onClose }: { c: Copy; lang: Lang; onClose: () => void }) {
+  const nb = useNb();
+  const [state, setState] = useState<"idle" | "sending" | "done" | "error">("idle");
+  const [form, setForm] = useState({ venue: "", city: "", person: "", email: "", phone: "", message: "" });
+  const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+    setForm((f) => ({ ...f, [k]: e.target.value }));
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.removeEventListener("keydown", onKey); document.body.style.overflow = prev; };
+  }, [onClose]);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (state === "sending") return;
+    setState("sending");
+    const { error } = await supabase.functions.invoke("business-inquiry", {
+      body: {
+        venue_name: form.venue.trim(),
+        city: form.city.trim(),
+        contact_name: form.person.trim(),
+        email: form.email.trim().toLowerCase(),
+        phone: form.phone.trim(),
+        message: form.message.trim(),
+        language: lang,
+        source: "landing_b2c",
+      },
+    });
+    if (error) {
+      setState("error");
+      return;
+    }
+    posthog.capture("landing_business_inquiry_sent", { lang, has_phone: !!form.phone.trim() });
+    setState("done");
+  };
+
+  return (
+    // z-[70], bo pasek zgody na ciasteczka stoi na z-[60] i na telefonie zaslanial guzik
+    // "Wyslij zapytanie" - formularz musi stac nad nim.
+    <div
+      className="fixed inset-0 z-[70] flex items-end justify-center bg-black/55 sm:items-center sm:px-5 sm:py-8"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label={c.inquiry.title}
+    >
+      <div
+        className="relative flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-[28px] bg-white shadow-2xl duration-200 animate-in slide-in-from-bottom-6 sm:max-h-[88dvh] sm:max-w-[460px] sm:rounded-[28px] sm:slide-in-from-bottom-0 sm:fade-in"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label={c.inquiry.close}
+          className="absolute right-4 top-4 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-black/5 text-spontaway-brown transition-colors hover:bg-black/10"
+        >
+          <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+            <path d="M1 1l10 10M11 1L1 11" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+          </svg>
+        </button>
+
+        <div className="overflow-y-auto overscroll-contain">
+          <div className="flex flex-col items-center bg-spontaway-yellow px-6 pb-7 pt-5 text-center sm:pt-9">
+            {/* Uchwyt arkusza - tylko na telefonie, gdzie panel wchodzi od dolu. */}
+            <div className="mb-4 h-1 w-10 shrink-0 rounded-full bg-spontaway-brown/20 sm:hidden" />
+            <img src="/logo.svg" alt="" width={37} height={33} className="w-[46px]" />
+            <h2 className="mt-3 font-brand text-[24px] leading-[1.15] text-spontaway-orange sm:text-[26px]">
+              {nb(state === "done" ? c.inquiry.doneTitle : c.inquiry.title)}
+            </h2>
+            <p className="mt-2 text-[14px] leading-[1.45] text-spontaway-brown">
+              {nb(state === "done" ? c.inquiry.done : c.inquiry.body)}
+            </p>
+          </div>
+
+          {state !== "done" && (
+            <form
+              onSubmit={submit}
+              className="flex flex-col gap-3 px-6 pb-[max(24px,env(safe-area-inset-bottom))] pt-6 sm:pb-7"
+            >
+              <InquiryField label={c.inquiry.venue}>
+                <input required value={form.venue} onChange={set("venue")} placeholder={c.inquiry.venuePlaceholder} className={INQ_FIELD} />
+              </InquiryField>
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <div className="flex-1">
+                  <InquiryField label={c.inquiry.city} hint={c.inquiry.optional}>
+                    <input value={form.city} onChange={set("city")} placeholder={c.inquiry.cityPlaceholder} className={INQ_FIELD} />
+                  </InquiryField>
+                </div>
+                <div className="flex-1">
+                  <InquiryField label={c.inquiry.person} hint={c.inquiry.optional}>
+                    <input value={form.person} onChange={set("person")} placeholder={c.inquiry.personPlaceholder} className={INQ_FIELD} />
+                  </InquiryField>
+                </div>
+              </div>
+              <InquiryField label={c.inquiry.email}>
+                <input required type="email" inputMode="email" autoComplete="email" value={form.email} onChange={set("email")} placeholder={c.inquiry.emailPlaceholder} className={INQ_FIELD} />
+              </InquiryField>
+              <InquiryField label={c.inquiry.phone} hint={c.inquiry.optional}>
+                <input type="tel" inputMode="tel" autoComplete="tel" value={form.phone} onChange={set("phone")} placeholder={c.inquiry.phonePlaceholder} className={INQ_FIELD} />
+              </InquiryField>
+              <InquiryField label={c.inquiry.message} hint={c.inquiry.optional}>
+                <textarea
+                  rows={3}
+                  value={form.message}
+                  onChange={set("message")}
+                  placeholder={c.inquiry.messagePlaceholder}
+                  className="w-full resize-none rounded-2xl border border-black/10 bg-white px-4 py-3 text-[14px] leading-[1.4] text-spontaway-brown outline-none placeholder:text-black/30 focus:border-spontaway-orange"
+                />
+              </InquiryField>
+
+              <button
+                type="submit"
+                disabled={state === "sending"}
+                className="mt-1 h-[48px] w-full rounded-full bg-spontaway-orange text-[15px] font-extrabold text-white transition-colors hover:bg-[#d94a05] active:scale-[0.98] disabled:opacity-60"
+              >
+                {state === "sending" ? c.inquiry.sending : c.inquiry.submit}
+              </button>
+              {state === "error" && (
+                <p className="text-center text-[12px] font-semibold text-red-600">{nb(c.inquiry.error)}</p>
+              )}
+              <p className="px-1 text-center text-[11px] leading-snug text-spontaway-brown/70">
+                {nb(c.inquiry.consentPre)}
+                <Link to="/privacy" className="underline">{c.inquiry.consentLink}</Link>.
+              </p>
+            </form>
+          )}
+
+          {state === "done" && (
+            <div className="px-6 pb-[max(24px,env(safe-area-inset-bottom))] pt-6 sm:pb-7">
+              <button
+                type="button"
+                onClick={onClose}
+                className="h-[48px] w-full rounded-full bg-spontaway-orange text-[15px] font-extrabold text-white transition-colors hover:bg-[#d94a05] active:scale-[0.98]"
+              >
+                {c.inquiry.close}
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -704,6 +912,12 @@ export default function SpontawayLanding() {
     posthog.capture("landing_language_switched", { lang: next });
   }, []);
   const [modalOpen, setModalOpen] = useState(false);
+  const [inquiryOpen, setInquiryOpen] = useState(false);
+
+  const openInquiry = useCallback(() => {
+    posthog.capture("landing_business_inquiry_open", { placement: "section" });
+    setInquiryOpen(true);
+  }, []);
 
   const openDownload = useCallback((placement: string) => {
     posthog.capture("landing_download_modal_open", { placement, app_live: APP_LIVE });
@@ -745,11 +959,12 @@ export default function SpontawayLanding() {
           />
         ))}
         <Stats c={c} />
-        <BusinessStrip c={c} />
+        <BusinessStrip c={c} onContact={openInquiry} />
         <FooterCta c={c} onDownload={() => openDownload("footer_cta")} />
       </main>
       <FooterBar c={c} lang={lang} onSwitchLang={switchLang} />
       {modalOpen && <DownloadModal c={c} lang={lang} onClose={() => setModalOpen(false)} />}
+      {inquiryOpen && <BusinessInquirySheet c={c} lang={lang} onClose={() => setInquiryOpen(false)} />}
     </div>
     </NbContext.Provider>
   );

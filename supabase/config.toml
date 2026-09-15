@@ -56,3 +56,8 @@ verify_jwt = false
 # Mail o premierze do waitlisty: admin-only (gate w funkcji), JWT wymagany.
 [functions.send-launch-email]
 verify_jwt = true
+
+# Zapytanie o oferte od lokalu z landingu B2C: formularz stoi na otwartej stronie,
+# wiec bez JWT (walidacja + limit czestotliwosci w srodku funkcji).
+[functions.business-inquiry]
+verify_jwt = false
