@@ -39,7 +39,7 @@
   "edit_date_title": "Zmień datę wyjazdu",
   "edit_date_aria": "Zmień datę",
   "saved_empty_title": "Brak zapisanych miejsc",
-  "saved_empty_desc": "Wróć do Eksploruj i zapisz miejsca, które chcesz mieć w trasie.",
+  "saved_empty_desc": "Wróć do Eksploracji i zapisz miejsca, które chcesz mieć w trasie.",
   "saved_empty_cta": "Eksploruj dalej",
   "saved_deselect_hint": "Odznacz miejsca, których nie chcesz w trasie",
   "saved_cta": "Zaproponuj trasę z wybranych miejsc",
@@ -163,14 +163,12 @@
   "distance_start": "startu",
   "city_picker": {
     "not_your_city": "Nie widzisz swojego miasta?",
-    "city_placeholder": "Wpisz nazwę miasta",
     "send": "Wyślij",
     "notify_hint": "Damy Ci znać, gdy Twoje miasto pojawi się w aplikacji.",
-    "send_error": "Nie udało się wysłać zgłoszenia",
-    "notify_success": "Dzięki! Gdy {{city}} będzie dostępne, damy Ci znać.",
     "next": "Dalej",
     "coming_soon_cta": "Wkrótce dostępne 🔒",
-    "coming_soon_badge": "Wkrótce"
+    "coming_soon_badge": "Wkrótce",
+    "search_placeholder": "Szukaj miasta..."
   },
   "save_sheet": {
     "title": "Miejsce zapisane!",
@@ -178,7 +176,7 @@
     "create_aria": "Utwórz wyjazd",
     "add_aria": "Dodaj do wyjazdu",
     "empty_hint": "Nie masz jeszcze wyjazdów - nazwij nowy powyżej.",
-    "share": "Udostępnij",
+    "share": "Udostępnij to miejsce",
     "done": "Gotowe",
     "added_to": "Dodano do: {{name}}",
     "created": "Utworzono wyjazd: {{name}}",
@@ -187,8 +185,83 @@
     "shared": "Udostępniono",
     "link_copied": "Skopiowano link",
     "loading": "Ładuję wyjazdy...",
-    "removed_from": "Usunięto z: {{name}}",
+    "removed_from": "Usunięto z „{{title}}”",
     "remove_error": "Nie udało się usunąć miejsca",
-    "remove_aria": "Usuń z wyjazdu"
+    "remove_aria": "Usuń z wyjazdu",
+    "desc": "Zapis trafia do Twojej ogólnej kolekcji miejsc. Możesz dodać je do innej kolekcji (opcjonalnie).",
+    "save_failed": "Nie udało się zapisać zmiany",
+    "list_failed": "Nie udało się utworzyć kolekcji",
+    "create_list": "Utwórz kolekcję",
+    "user_fallback": "Użytkownik",
+    "general": "Ogólne",
+    "list_created": "Utworzono kolekcję „{{name}}”",
+    "open_list": "Otwórz kolekcję {{title}}",
+    "private": "Prywatne"
+  },
+  "cta_plan_route_few": "Zaplanuj trasę · {{count}} miejsca",
+  "distance_denied": "Włącz lokalizację w ustawieniach, żeby zobaczyć dystans",
+  "custom": {
+    "link_failed": "Nie udało się odczytać miejsca z tego linku. Spróbuj wpisać nazwę ręcznie.",
+    "maps_link_failed": "Nie udało się odczytać miejsca z tego linku Google Maps.",
+    "link_no_match": "Nie udało się dopasować miejsca z tego linku.",
+    "error": "Wystąpił błąd. Spróbuj wpisać nazwę ręcznie.",
+    "hint": "Wpisz nazwę miejsca, hotelu lub ulicy",
+    "not_found": "Nie udało się znaleźć tego miejsca.",
+    "placeholder": "Nazwa miejsca lub wklej link…",
+    "bad_link": "Nieprawidłowy link.",
+    "reading_link": "Analizuję link…",
+    "searching": "Szukam miejsca…",
+    "found_not_located": "Znalazłam nazwę „{{name}}”, ale nie udało się jej zlokalizować. Popraw nazwę ręcznie.",
+    "title": "Dodaj swoje miejsce",
+    "add_to_route": "Dodaj do trasy",
+    "search_another": "Szukaj innego miejsca"
+  },
+  "start": {
+    "location_failed": "Nie udało się pobrać Twojej lokalizacji.",
+    "use_my_location": "Użyj mojej lokalizacji",
+    "title": "Skąd chcesz zacząć?",
+    "skip": "Pomiń",
+    "outside_pick": "To miejsce jest poza {{city}}. Wybierz coś w obrębie miasta.",
+    "outside_mark": "To miejsce jest poza {{city}}. Zaznacz punkt w obrębie miasta.",
+    "you_outside": "Jesteś poza {{city}}. Wskaż punkt startu w obrębie miasta.",
+    "your_location": "Twoja lokalizacja"
+  },
+  "calendar": {
+    "hint_range": "Kliknij drugi dzień, żeby wybrać zakres",
+    "clear": "Wyczyść zaznaczenie",
+    "prev": "Poprzedni miesiąc",
+    "next": "Następny miesiąc",
+    "no_dates": "Bez dat",
+    "pick_day_one": "Wybierz dzień wyjazdu (max. {{count}} dzień)",
+    "pick_day_few": "Wybierz dzień wyjazdu (max. {{count}} dni)",
+    "pick_day_many": "Wybierz dzień wyjazdu (max. {{count}} dni)",
+    "pick_day_long": "Wybierz dzień albo zakres dni wyjazdu",
+    "max_range_one": "Wyjazd może trwać maksymalnie {{count}} dzień",
+    "max_range_few": "Wyjazd może trwać maksymalnie {{count}} dni",
+    "max_range_many": "Wyjazd może trwać maksymalnie {{count}} dni"
+  },
+  "template": {
+    "failed": "Nie udało się utworzyć trasy. Spróbuj ponownie.",
+    "from_scratch": "Zaplanuj trasę od zera",
+    "map_alt": "Mapa trasy"
+  },
+  "create_trip": "Stwórz wyjazd",
+  "map": {
+    "new_place": "Nowe miejsce",
+    "add_pin": "Dodaj pin"
+  },
+  "save": {
+    "hide": "Ukryj",
+    "new_list": "Nowa kolekcja",
+    "new_list_name": "Nazwa nowej kolekcji",
+    "all_saved_hint": "Wszystkie Twoje zapisane miejsca",
+    "saved_title": "Miejsce zapisane!"
+  },
+  "list": {
+    "default_visited": "Odwiedzone miejsca",
+    "default_to_visit": "Do zobaczenia"
+  },
+  "templates": {
+    "none_for_city": "Brak gotowych plannerów dla {{city}} - pracujemy nad tym!"
   }
 }

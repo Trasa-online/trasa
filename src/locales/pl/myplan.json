@@ -38,7 +38,8 @@
     "added_one": "Dodano miejsce",
     "added_many": "Dodano {{count}} miejsc",
     "add_error": "Nie udało się dodać miejsc",
-    "place_fallback": "Miejsce"
+    "place_fallback": "Miejsce",
+    "added_few": "Dodano {{count}} miejsca"
   },
   "liked": {
     "back": "Wstecz",
@@ -78,5 +79,89 @@
     "nightlife": "Nocne życie",
     "church": "Kościół",
     "place": "Miejsce"
+  },
+  "empty": {
+    "saved": "Nie masz jeszcze zapisanych miejsc. Polub miejsca w eksploracji, żeby dodać je tu jednym tapem."
+  },
+  "intro": "Trasa to Twój plan wyjazdu: miejsca w kolejności, które zostały odwiedzone.",
+  "save_aside": "Miejsca poza trasą możesz zapisać, żeby wrócić do nich później.",
+  "search": {
+    "unavailable": "Wyszukiwarka miejsc jest chwilowo niedostępna. Spróbuj później.",
+    "hint": "Wyszukaj lub wybierz z zapisanych poniżej",
+    "no_results": "Brak wyników dla tej frazy."
+  },
+  "confirm": {
+    "draft_desc": "Masz niezapisane zmiany w tej roboczej trasie. Zapisać je?",
+    "draft_title": "Zapisać trasę do roboczych?",
+    "remove_place_title": "Usunąć miejsce z trasy?",
+    "save_draft": "Zapisz jako roboczą",
+    "discard": "Nie zapisuj, wyjdź",
+    "save_title": "Zapisać zmiany?",
+    "skip": "Nie, pomiń",
+    "remove_place_desc": "„{{name}}” zniknie z tej trasy.",
+    "remove_place_generic": "To miejsce zniknie z tej trasy."
+  },
+  "reorder_hint": "Przeciągnij, by zmienić kolejność",
+  "toast": {
+    "trip_failed": "Nie udało się utworzyć wyjazdu",
+    "route_failed": "Nie udało się utworzyć trasy",
+    "places_failed": "Nie udało się zapisać miejsc",
+    "save_failed": "Nie udało się zapisać zmian",
+    "saved_draft": "Zapisano jako roboczą"
+  },
+  "list": {
+    "save_to_general": "Tak, zapisz w Ogólne",
+    "create_new": "Stwórz nową kolekcję",
+    "create_and_save": "Stwórz i zapisz",
+    "name_placeholder": "Nazwa kolekcji (np. Miejsca {{city}})"
+  },
+  "go_suggestions": "Przejdź do sugestii",
+  "aria": {
+    "exclude": "Wyłącz z trasy",
+    "delete_place": "Usuń miejsce",
+    "add_to_route": "Dodaj do trasy"
+  },
+  "map": {
+    "close": "Zamknij mapę",
+    "expand": "Rozwiń mapę"
+  },
+  "clear": "Wyczyść",
+  "back": "Wróć",
+  "trip_name_city": "Wyjazd do {{city}}",
+  "drafts": {
+    "empty_hint": "Zapisz trasę innego użytkownika w Eksploracji, a użyjesz jej tutaj jako bazy.",
+    "empty": "Nie masz obecnie żadnych zapisanych roboczych tras.",
+    "confirm_delete": "Usunąć tę roboczą trasę?",
+    "delete_aria": "Usuń roboczą trasę",
+    "deleted": "Usunięto"
+  },
+  "places_count_one": "{{count}} miejsce",
+  "places_count_few": "{{count}} miejsca",
+  "places_count_many": "{{count}} miejsc",
+  "start": {
+    "empty_drafts": "Robocze trasy",
+    "empty_saved": "Brak zapisanych tras",
+    "new_trip": "Nowy wyjazd",
+    "start_fresh": "Zacznij od nowa"
+  },
+  "compose": {
+    "empty_first": "Najpierw dodaj miejsca do trasy",
+    "saved_one": "Zapisano miejsce",
+    "name_placeholder": "Twoja nazwa",
+    "add_place": "Dodaj miejsce",
+    "list_view": "Widok listy",
+    "map_alt": "Mapa miejsc",
+    "keep_one": "Nie zgub tego miejsca",
+    "save_changes": "Zapisz zmiany",
+    "save_trip": "Zapisz wyjazd",
+    "pick_dates": "Wybierz daty dla trasy",
+    "pick_min": "Zaznacz przynajmniej jedno miejsce do trasy",
+    "saved_few": "Zapisano {{count}} miejsca",
+    "saved_many": "Zapisano {{count}} miejsc",
+    "keep_few": "Nie zgub {{count}} miejsc",
+    "keep_many": "Nie zgub {{count}} miejsc",
+    "new_trip": "Nowy wyjazd",
+    "add_place_tile": "Dodaj miejsce",
+    "your_saved": "Twoje zapisane miejsca"
   }
 }

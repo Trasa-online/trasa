@@ -2,9 +2,12 @@ import { useState, useRef, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useDragToDismiss } from "@/hooks/useDragToDismiss";
 import { X, Heart, ThumbsDown, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CategoryIcon } from "@/components/CategoryIcon";
+import SheetSkeleton from "@/components/layout/SheetSkeleton";
+import { deferDelete } from "@/lib/deferDelete";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -167,14 +170,19 @@ export default function LikesDrawer({ open, onClose, userId }: LikesDrawerProps)
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["place-reactions", userId] }),
   });
 
+  // Kasowalo BEZ SLOWA. Commit odroczony o okno "Cofnij" - wiersz zostaje nietkniety, wiec
+  // cofniecie oddaje dokladnie ten sam stan (zgloszenie Nat 2026-09-09).
   const removeMutation = useMutation({
     mutationFn: async (id: string) => {
-      await (supabase as any)
-        .from("user_place_reactions")
-        .delete()
-        .eq("id", id);
+      const refresh = () => queryClient.invalidateQueries({ queryKey: ["place-reactions", userId] });
+      queryClient.setQueryData(["place-reactions", userId], (prev: any) =>
+        Array.isArray(prev) ? prev.filter((r: any) => r.id !== id) : prev);
+      deferDelete({
+        message: t("likes.removed"),
+        commit: async () => { await (supabase as any).from("user_place_reactions").delete().eq("id", id); refresh(); },
+        onUndo: refresh,
+      });
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["place-reactions", userId] }),
   });
 
   const filtered = reactions.filter(r => r.reaction === tab);
@@ -188,6 +196,9 @@ export default function LikesDrawer({ open, onClose, userId }: LikesDrawerProps)
   const likedCount = reactions.filter(r => r.reaction === "liked").length;
   const skippedCount = reactions.filter(r => r.reaction === "skipped").length;
 
+  // Gest natywny: przeciagniecie panelu w dol zamyka arkusz.
+  const { dragProps } = useDragToDismiss({ onDismiss: onClose });
+
   if (!open) return null;
 
   return (
@@ -195,10 +206,11 @@ export default function LikesDrawer({ open, onClose, userId }: LikesDrawerProps)
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
 
-      {/* Panel */}
+      {/* Panel (gest: przeciagnij w dol, zeby zamknac) */}
       <div
-        className="relative mt-auto w-full bg-background rounded-t-3xl flex flex-col overflow-hidden"
-        style={{ height: "88dvh" }}
+        {...dragProps}
+        className="relative mt-auto mx-2 mb-2 bg-background rounded-[40px] flex flex-col overflow-hidden"
+        style={{ ...dragProps.style, height: "88dvh" }}
       >
         {/* Drag handle */}
         <div className="flex justify-center pt-3 pb-1">
@@ -259,9 +271,7 @@ export default function LikesDrawer({ open, onClose, userId }: LikesDrawerProps)
         {/* Content */}
         <div className="flex-1 overflow-y-auto pb-8">
           {isLoading ? (
-            <div className="flex items-center justify-center py-16 text-muted-foreground text-sm">
-              {t("likes.loading")}
-            </div>
+            <SheetSkeleton variant="people" rows={5} className="px-4 pt-2" />
           ) : filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 px-6 text-center gap-2">
               {tab === "liked" ? (

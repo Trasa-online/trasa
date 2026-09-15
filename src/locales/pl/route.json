@@ -84,5 +84,105 @@
     "drag_reorder": "Przeciągnij, aby zmienić kolejność",
     "heading_multi": "Dzień {{day}} z {{total}}",
     "heading_single": "Plan dnia"
+  },
+  "empty": {
+    "participant": "Brak propozycji. Dorzuć miejsca, które chcesz zwiedzić - host wybierze, co wejdzie do trasy.",
+    "host": "Brak propozycji. Dorzuć miejsca wyszukiwarką lub poczekaj, aż uczestnicy dodadzą swoje."
+  },
+  "search": {
+    "unavailable": "Wyszukiwarka chwilowo niedostępna. Dodaj z zapisanych poniżej.",
+    "no_results": "Brak wyników."
+  },
+  "toast": {
+    "already": "To miejsce jest już w propozycjach",
+    "remove_failed": "Nie udało się usunąć propozycji",
+    "add_failed": "Nie udało się dodać propozycji",
+    "accept_failed": "Nie udało się dodać do trasy"
+  },
+  "already_badge": "Już w propozycjach",
+  "aria": {
+    "withdraw": "Wycofaj propozycję",
+    "refresh": "Odśwież propozycje",
+    "reject": "Odrzuć propozycję",
+    "open_in_maps": "Otwórz {{place}} w Google Maps"
+  },
+  "clear": "Wyczyść",
+  "back": "Wróć",
+  "proposals": {
+    "added": "Dodano „{{place}}” do trasy",
+    "title": "Propozycje miejsc",
+    "title_count": "Propozycje uczestników ({{count}})",
+    "add": "Dodaj do propozycji",
+    "search": "Szukaj miejsca",
+    "empty_first": "Najpierw dodaj miejsca do propozycji",
+    "in_route": "Miejsca w trasie",
+    "your_saved": "Twoje zapisane miejsca",
+    "pick_min": "Zaznacz co najmniej jedno miejsce",
+    "choose": "Wybierz miejsca",
+    "to_route": "Do trasy"
+  },
+  "add_place": {
+    "search_unavailable": "Wyszukiwarka chwilowo niedostępna. Wybierz z zapisanych.",
+    "failed": "Nie udało się dodać miejsca",
+    "placeholder": "Dodaj nowe miejsce…",
+    "saved_list": "Zapisana kolekcja ·",
+    "remove": "Usuń z trasy",
+    "no_results": "Brak wyników",
+    "already": "Już dodane",
+    "open_in_maps": "Otwórz {{place}} w Google Maps",
+    "places_count_one": "{{count}} miejsce",
+    "places_count_few": "{{count}} miejsca",
+    "places_count_many": "{{count}} miejsc",
+    "added_one": "Dodano miejsce",
+    "add_to_route": "Dodaj do trasy",
+    "added_few": "Dodano {{count}} miejsca",
+    "added_many": "Dodano {{count}} miejsc",
+    "title": "Dodaj nowe miejsce"
+  },
+  "chat": {
+    "empty": "Brak wiadomości. Napisz pierwszą, żeby omówić miejsca z uczestnikami.",
+    "placeholder": "Napisz wiadomość...",
+    "send": "Wyślij",
+    "title": "Czat wyjazdu",
+    "title_named": "Czat: {{title}}",
+    "participant": "Uczestnik"
+  },
+  "row": {
+    "saved_in_list": "Miejsce zapisane w kolekcji",
+    "open_in_maps": "Otwórz w Google Maps",
+    "remove": "Usuń miejsce z trasy",
+    "save_to_list": "Zapisz miejsce do kolekcji",
+    "visited": "Odwiedzone",
+    "mark_visited": "Oznacz jako odwiedzone",
+    "mark_not_visited": "Usuń oznaczenie odwiedzenia",
+    "top_place": "Miejsce z topki",
+    "set_top": "Dodaj do topki",
+    "unset_top": "Usuń z topki",
+    "top_limit_one": "Możesz wyróżnić maksymalnie {{count}} miejsce z tego wyjazdu",
+    "top_limit_few": "Możesz wyróżnić maksymalnie {{count}} miejsca z tego wyjazdu",
+    "top_limit_many": "Możesz wyróżnić maksymalnie {{count}} miejsc z tego wyjazdu",
+    "more_actions": "Więcej akcji"
+  },
+  "note": {
+    "placeholder": "Dodaj notkę o tym miejscu...",
+    "edit": "Edytuj notkę",
+    "add": "Dodaj notkę",
+    "add_description": "Dodaj opis",
+    "edit_description": "Edytuj opis"
+  },
+  "day_label": "{{city}} - Dzień {{day}}",
+  "map_picker": {
+    "title": "Wybierz z mapy",
+    "hint": "Tapnij nazwę lokalu na mapie albo wyszukaj po nazwie lub adresie",
+    "locate": "Moja lokalizacja",
+    "reading": "Sprawdzam to miejsce…",
+    "add": "Dodaj miejsce {{place}}",
+    "name_placeholder": "Wyszukaj miejsce po nazwie lub adresie",
+    "did_you_mean": "Czy chodzi o:",
+    "add_manual": "Dodaj „{{place}}” jako własne miejsce",
+    "poi_failed": "Nie udało się odczytać tego lokalu. Wpisz jego nazwę u góry."
+  },
+  "map": {
+    "day": "Dzień {{number}}"
   }
 }

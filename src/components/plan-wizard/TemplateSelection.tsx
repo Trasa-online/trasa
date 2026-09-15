@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -83,6 +84,7 @@ const Avatar = ({ color, initials }: { color: string; initials: string }) => (
 );
 
 const MapCell = ({ url }: { url: string | null }) => {
+  const { t } = useTranslation("plan");
   const [failed, setFailed] = useState(false);
   if (!url || failed)
     return (
@@ -90,7 +92,7 @@ const MapCell = ({ url }: { url: string | null }) => {
         <Map className="h-8 w-8 text-muted-foreground/30" />
       </div>
     );
-  return <img src={url} alt="Mapa trasy" className="w-full h-full object-cover" onError={() => setFailed(true)} />;
+  return <img src={url} alt={t("template.map_alt")} className="w-full h-full object-cover" onError={() => setFailed(true)} />;
 };
 
 const Photo = ({ src, index }: { src: string; index: number }) => {
@@ -113,6 +115,7 @@ interface TemplateSelectionProps {
 }
 
 const TemplateSelection = ({ city, date }: TemplateSelectionProps) => {
+  const { t } = useTranslation("plan");
   const { user } = useAuth();
   const navigate = useNavigate();
   const [templates, setTemplates] = useState<RouteTemplate[]>([]);
@@ -173,7 +176,7 @@ const TemplateSelection = ({ city, date }: TemplateSelectionProps) => {
       });
     } catch (err) {
       console.error("Fork error:", err);
-      toast.error("Nie udało się utworzyć trasy. Spróbuj ponownie.");
+      toast.error(t("template.failed"));
       setForking(false);
     }
   };
@@ -190,7 +193,7 @@ const TemplateSelection = ({ city, date }: TemplateSelectionProps) => {
     return (
       <div className="flex flex-col flex-1 items-center justify-center px-6 gap-4 text-center">
         <p className="text-muted-foreground text-sm">
-          Brak gotowych plannerów dla {city} - pracujemy nad tym!
+          {t("templates.none_for_city", { city })}
         </p>
         <Button
           variant="outline"
@@ -274,16 +277,14 @@ const TemplateSelection = ({ city, date }: TemplateSelectionProps) => {
           onClick={handleConfirm}
           disabled={!selected || forking}
           size="lg"
-          className="w-full rounded-full text-base font-semibold bg-primary hover:bg-primary/90 text-white border-0 shadow-lg shadow-primary/20 disabled:opacity-40"
+          className="w-full rounded-full text-base font-semibold bg-primary hover:bg-primary/90 text-white border-0 disabled:opacity-40"
         >
-          {forking ? <Loader2 className="h-5 w-5 animate-spin" /> : "Dalej"}
+          {forking ? <Loader2 className="h-5 w-5 animate-spin" /> : t("common:buttons.next")}
         </Button>
         <button
           onClick={() => navigate("/create", { state: { city, date: date.toISOString() } })}
           className="w-full flex items-center justify-center gap-1 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-        >
-          Zaplanuj trasę od zera
-          <ArrowRight className="h-3.5 w-3.5" />
+        >{t("template.from_scratch")}<ArrowRight className="h-3.5 w-3.5" />
         </button>
       </div>
     </div>

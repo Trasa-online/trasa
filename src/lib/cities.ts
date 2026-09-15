@@ -1,17 +1,18 @@
 import type { LatLng } from "@/lib/distance";
 
 // "Trójmiasto" to meta-miasto: po normalizacji danych (migracja 20260620_trojmiasto_subcities)
-// miejsca maja realne city = Gdańsk / Gdynia / Sopot. Gdy user wybierze "Trójmiasto",
+// miejsca maja realne city = Gdansk / Gdynia / Sopot. Gdy user wybierze meta-miasto,
 // rozwijamy je na trzy sub-miasta do filtra `.in("city", expandCity(city))`.
-export const TROJMIASTO_SUBCITIES = ["Gdańsk", "Gdynia", "Sopot"] as const;
+export const TROJMIASTO_SUBCITIES = ["Gdańsk", "Gdynia", "Sopot"] as const;   // i18n-ignore: wartosci dopasowywane do places.city w bazie
 
 export function expandCity(city: string): string[] {
-  return city === "Trójmiasto" ? [...TROJMIASTO_SUBCITIES] : [city];
+  return city === "Trójmiasto" ? [...TROJMIASTO_SUBCITIES] : [city];   // i18n-ignore: porownanie z wartoscia z bazy
 }
 
 // Centra miast - do centrowania mapy (punkt startowy) ORAZ walidacji on-site (czy GPS usera
 // jest w pobliżu miasta docelowego). MUSI zawierac kazde miasto z pickera, w tym sub-miasta
 // Trojmiasta (inaczej mapa/limit leciał na zły fallback).
+// i18n-ignore-start: klucze = nazwy miast dopasowywane do places.city w bazie, nie copy
 export const CITY_CENTERS: Record<string, LatLng> = {
   "Kraków":    { lat: 50.0617, lng: 19.9373 },
   "Warszawa":  { lat: 52.2297, lng: 21.0122 },
@@ -26,6 +27,7 @@ export const CITY_CENTERS: Record<string, LatLng> = {
   "Budapeszt": { lat: 47.4979, lng: 19.0402 },
   "Valletta":  { lat: 35.8997, lng: 14.5147 },
 };
+// i18n-ignore-end
 
 // Centrum miasta (lub pierwszego sub-miasta) - null gdy nieznane.
 export function getCityCenter(city: string): LatLng | null {
@@ -35,6 +37,8 @@ export function getCityCenter(city: string): LatLng | null {
 
 // Dopelniacz nazwy miasta ("Wyjazd do <tu>") - do ladnych, odmienionych nazw tras.
 // Mapa recznie dla znanych miast; heurystyka dla nieznanych (zenskie -a -> -y), inaczej mianownik.
+// i18n-ignore-start: odmiana polskich nazw miast (dopelniacz) - POLSKA gramatyka,
+// uzywana wylacznie w polskiej galezi; angielski nie odmienia nazw miast.
 const CITY_GENITIVE: Record<string, string> = {
   "Warszawa": "Warszawy",
   "Kraków": "Krakowa",
@@ -68,6 +72,7 @@ const CITY_GENITIVE: Record<string, string> = {
   "Madryt": "Madrytu",
   "Mediolan": "Mediolanu",
 };
+// i18n-ignore-end
 
 export function cityGenitive(city: string | null | undefined): string {
   const c = (city ?? "").trim();

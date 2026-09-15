@@ -1,9 +1,15 @@
 {
   "toast": {
-    "saved": "Zapisano"
+    "saved": "Zapisano",
+    "removed_saved": "Usunięto z zapisanych",
+    "location_failed": "Nie udało się pobrać lokalizacji",
+    "collection_deleted": "Usunięto kolekcję"
   },
   "confirm": {
-    "delete_collection": "Usunąć tę trasę?"
+    "delete_collection": "Usunąć tę trasę?",
+    "unsave_desc": "Zniknie ono z Twoich zapisanych zestawień. Zawsze możesz zapisać je ponownie z eksploracji.",
+    "unsave_title": "Na pewno chcesz usunąć to zestawienie z zapisanych?",
+    "delete_action": "Usuń"
   },
   "aria": {
     "already_saved": "Już zapisane",
@@ -15,7 +21,10 @@
     "clear": "Wyczyść",
     "filters": "Filtry",
     "close": "Zamknij",
-    "save_collection": "Zapisz trasę"
+    "save_collection": "Zapisz zestawienie",
+    "remove_saved": "Usuń z zapisanych",
+    "show_photo": "Pokaż zdjęcie",
+    "show_map": "Pokaż mapę"
   },
   "nearby_heading": "Najbliżej Ciebie",
   "nearby_empty": "Brak miejsc w pobliżu.",
@@ -27,11 +36,11 @@
   "gallery_empty_desc": "Autor nie dodał jeszcze zdjęć do tej trasy.",
   "map_heading": "Mapa",
   "use_collection": "Użyj tej trasy",
-  "not_in_trasa": "jeszcze nie ma w Trasie",
+  "not_in_trasa": "jeszcze nie ma w spontaway",
   "see": "Zobacz",
   "local_recommends": "lokals poleca!",
   "plan_badge": "🗺️ Plan",
-  "list_badge": "📍 Lista",
+  "list_badge": "📍 Kolekcja",
   "route_plan": "Plan trasy",
   "places": "Miejsca",
   "use_route": "Użyj tej trasy",
@@ -40,7 +49,7 @@
   "day": "dzień",
   "days": "dni",
   "popular_themes_warsaw": "Popularne motywy Warszawy",
-  "collections": "Listy",
+  "collections": "Kolekcje",
   "all": "Wszystkie",
   "places_count_one": "{{count}} miejsce",
   "places_count_few": "{{count}} miejsca",
@@ -52,8 +61,9 @@
   "author_anon": "Anonim",
   "author_default": "Użytkownik",
   "search_placeholder": "Szukaj tras, autorów…",
-  "routes_heading": "Trasy",
+  "routes_heading": "Wyjazdy",
   "places_heading": "Miejsca",
+  "people_heading": "Ludzie",
   "in_city": "w {{city}}",
   "no_results": "Brak wyników",
   "no_results_hint": "Spróbuj innego słowa lub zmień filtry.",
@@ -98,5 +108,51 @@
     "soon_title": "Już niedługo!",
     "soon_desc": "Pracujemy nad funkcją odkrywania miejsc polecanych przez twórców. Będzie dostępna w jednej z najbliższych aktualizacji - stay tuned! 🚀"
   },
-  "onboarding_next": "Dalej"
+  "onboarding_next": "Dalej",
+  "empty": {
+    "no_saved_routes_desc": "Zapisz trasę bookmarkiem w Eksploracji, żeby zobaczyć je tutaj.",
+    "no_saved_lists_desc": "Zapisz kolekcję zakładką podczas przeglądania, żeby pojawiła się tutaj.",
+    "no_saved_routes": "Brak zapisanych tras",
+    "no_saved_lists": "Brak zapisanych kolekcji",
+    "saved_any": "Zapisz kolekcję lub trasę bookmarkiem podczas przeglądania, żeby pojawiły się tutaj."
+  },
+  "filters": {
+    "show_label": "Pokaż"
+  },
+  "undo": "Cofnij",
+  "card": {
+    "show_map": "Pokaż mapę trasy",
+    "collapse_map": "Zwiń mapę",
+    "expand": "Rozwiń",
+    "delete": "Usuń",
+    "places_count_one": "{{count}} miejsce",
+    "places_count_few": "{{count}} miejsca",
+    "places_count_many": "{{count}} miejsc",
+    "draft": "Robocze",
+    "add_cover": "Dodaj zdjęcie, żeby było widać"
+  },
+  "saved": {
+    "empty_lists_routes": "Brak zapisanych kolekcji i tras"
+  },
+  "grid": {
+    "trip": "Wyjazd",
+    "list": "Kolekcja",
+    "days_one": "{{count}} dzień",
+    "days_few": "{{count}} dni",
+    "days_many": "{{count}} dni"
+  },
+  "feed_empty": {
+    "nobody_title": "Tu pojawią się wyjazdy i kolekcje osób, które obserwujesz",
+    "nobody_hint": "Na razie nikogo nie obserwujesz. Znajdź znajomych albo podróżnych, których gust Ci odpowiada.",
+    "nobody_cta": "Znajdź osoby do obserwowania",
+    "quiet_title": "Na razie cisza",
+    "quiet_hint": "Osoby, które obserwujesz, jeszcze nic nie opublikowały. Zajrzyj, co publikują inni.",
+    "quiet_cta": "Przejdź do Eksploracji"
+  },
+  "new_place": "Nowe miejsce!",
+  "stats": {
+    "saves_aria_one": "{{count}} zapis",
+    "saves_aria_few": "{{count}} zapisy",
+    "saves_aria_many": "{{count}} zapisów"
+  }
 }

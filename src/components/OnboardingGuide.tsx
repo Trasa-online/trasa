@@ -1,15 +1,17 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import type { ReactNode, CSSProperties } from "react";
 import { useNavigate } from "react-router-dom";
-import { Compass, Layers, Bookmark, Plus } from "lucide-react";
+import { Home, Search, MapPin, User, Plus } from "lucide-react";
 import { isNative } from "@/lib/platform";
 import { COACH_PENDING_KEY } from "@/components/onboarding/OnboardingFlow";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Onboarding Czesc B - coach-marki (spotlight-tour). Odpalane PO Czesci A
-// (welcome+ankieta+profil) sygnalem localStorage COACH_PENDING_KEY + eventem
-// "spontaway:start-coach". Prowadzi "Dalej" przez 4 elementy: toggle Trasy,
-// toggle Miejsca, akcja Zapis, guzik "+". Login-only (bez logiki anon/cleanup).
+// (5 krokow) sygnalem localStorage COACH_PENDING_KEY + eventem "spontaway:start-coach".
+// User laduje w Eksploracji i "Dalej" prowadzi go po KAZDEJ zakladce dolnego paska:
+// Eksploracja -> Miejsca -> Profil -> "+" (prosba Nat 2026-09-13: wyjasnienie, co robi sie
+// na kazdym widoku). Login-only (bez logiki anon/cleanup).
 // ─────────────────────────────────────────────────────────────────────────────
 
 const DONE_KEY = "spontaway_coach_done";
@@ -68,43 +70,48 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
 // ─── Spotlight-tour ──────────────────────────────────────────────────────────
 
 interface StepCfg {
-  icon: typeof Compass;
-  label: string;
-  title: string;
-  body: string;
+  icon: typeof Home;
+  titleKey: string;
+  bodyKey: string;
   target: string | null;   // selektor data-ob elementu do podswietlenia
-  cta: string;
-  view?: "feed" | "browse"; // przelacz widok eksploracji, zeby user widzial zmiane zakladki pod spodem
+  ctaKey: string;
+  route?: string;          // ekran, ktory ma byc pod spodem, gdy krok jest aktywny
 }
 
+// Jeden krok na ZAKLADKE dolnego paska (IA 2026-09-13): Eksploracja -> Miejsca -> Profil -> "+"
+// (w tej kolejnosci stoja w pasku; Eksploracja jest ekranem startowym). Kazdy krok pokazuje
+// pod spodem realny ekran zakladki. Osobny krok "zapis" (bez celu) zniknal 2026-09-13 - zapis
+// jest opisany przy Eksploracji i Miejscach, a Profil dostal wlasny krok.
 const STEPS: StepCfg[] = [
   {
-    icon: Compass, label: "TRASY", target: '[data-ob="toggle-trasy"]', view: "feed",
-    title: "Zakładka Trasy",
-    body: "Tu przeglądasz gotowe trasy stworzone przez innych. Wejdź w trasę, żeby zobaczyć miejsca i zainspirować się do własnej.",
-    cta: "Dalej",
+    icon: Search, target: '[data-ob="nav-eksploruj"]', route: "/eksploruj",
+    titleKey: "guide.trips_title",
+    bodyKey: "guide.trips_desc",
+    ctaKey: "guide.next",
   },
   {
-    icon: Layers, label: "MIEJSCA", target: '[data-ob="toggle-miejsca"]', view: "browse",
-    title: "Zakładka Miejsca",
-    body: "Tu przeglądasz pojedyncze miejsca w Twoim mieście, jedno po drugim: kawiarnie, restauracje, bary, miejsca kultury i natury.",
-    cta: "Dalej",
+    icon: MapPin, target: '[data-ob="nav-miejsca"]', route: "/miejsca",
+    titleKey: "guide.places_title",
+    bodyKey: "guide.places_desc",
+    ctaKey: "guide.next",
   },
   {
-    icon: Bookmark, label: "ZAPISYWANIE", target: null,
-    title: "Zapisuj ulubione",
-    body: "Miejsca i trasy, które Ci się podobają, zapisujesz jednym tapnięciem. Wracasz do nich w zakładce Zapisane.",
-    cta: "Dalej",
+    icon: User, target: '[data-ob="nav-profil"]', route: "/moj-profil",
+    titleKey: "guide.profile_title",
+    bodyKey: "guide.profile_desc",
+    ctaKey: "guide.next",
   },
   {
-    icon: Plus, label: "TWÓRZ", target: '[data-ob="nav-fab"]',
-    title: "Twórz własne trasy",
-    body: "Guzikiem „+” tworzysz własną trasę z ulubionych miejsc. Twoja trasa trafia do eksploracji, żeby inni mogli się nią zainspirować.",
-    cta: "Gotowe",
+    icon: Plus,
+    target: '[data-ob="nav-fab"]', route: "/eksploruj",
+    titleKey: "guide.create_title",
+    bodyKey: "guide.create_desc",
+    ctaKey: "guide.done",
   },
 ];
 
 function OnboardingCoach({ finish }: { finish: () => void }) {
+  const { t } = useTranslation("onboarding");
   const navigate = useNavigate();
   const [idx, setIdx] = useState(0);
   const [rect, setRect] = useState<DOMRect | null>(null);
@@ -113,17 +120,13 @@ function OnboardingCoach({ finish }: { finish: () => void }) {
   const cfg = STEPS[idx];
   const isLast = idx === STEPS.length - 1;
 
-  // Tour dzieje sie na /eksploruj (tam jest toggle i BottomNav) - wejdz tam na start.
+  // Kazdy krok pokazuje POD spodem ekran, o ktorym mowi (Feed / Eksploruj / Miejsca) -
+  // user widzi realna zakladke, nie tylko podswietlona ikone. Kroki bez `route` zostaja tam,
+  // gdzie byl poprzedni.
   useEffect(() => {
-    navigate("/eksploruj", { replace: true });
-  }, [navigate]);
-
-  // Przelacz widok eksploracji POD spodem, zeby user widzial zmiane zakladki (Trasy -> feed,
-  // Miejsca -> swiper). Explore.tsx nasluchuje "trasa:explore-set-view".
-  useEffect(() => {
-    const v = STEPS[idx].view;
-    if (v) window.dispatchEvent(new CustomEvent("trasa:explore-set-view", { detail: v }));
-  }, [idx]);
+    const r = STEPS[idx].route;
+    if (r) navigate(r, { replace: true });
+  }, [idx, navigate]);
 
   // Pomiar pozycji podswietlanego elementu (rAF - nadaza za layoutem).
   useEffect(() => {
@@ -174,8 +177,8 @@ function OnboardingCoach({ finish }: { finish: () => void }) {
       {/* Baner: czarny naglowek + body, stepper na dole nad guzikiem (16px radius). Bez ikon. */}
       <div style={{ position: "fixed", left: 0, right: 0, top: bannerTop, zIndex: 57 } as CSSProperties} className="px-4">
         <div className="max-w-md mx-auto rounded-3xl bg-card border border-border/60 shadow-xl shadow-black/20 p-5">
-          <p className="text-lg font-black leading-tight text-foreground">{cfg.title}</p>
-          <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed">{cfg.body}</p>
+          <p className="text-lg font-black leading-tight text-foreground">{t(cfg.titleKey)}</p>
+          <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed">{t(cfg.bodyKey)}</p>
 
           <div className="flex items-center justify-center gap-1.5 mt-4">
             {STEPS.map((_, i) => (
@@ -187,12 +190,10 @@ function OnboardingCoach({ finish }: { finish: () => void }) {
             onClick={next}
             className="w-full mt-4 py-3.5 rounded-2xl bg-primary text-white font-bold text-sm active:scale-[0.98] transition-transform"
           >
-            {cfg.cta}
+            {t(cfg.ctaKey)}
           </button>
           {!isLast && (
-            <button onClick={finish} className="w-full py-2.5 mt-1 text-xs font-semibold text-muted-foreground active:opacity-60">
-              Pomiń
-            </button>
+            <button onClick={finish} className="w-full py-2.5 mt-1 text-xs font-semibold text-muted-foreground active:opacity-60">{t("guide.skip")}</button>
           )}
         </div>
       </div>

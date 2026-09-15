@@ -318,7 +318,12 @@ async function sendApnsToHost(
   const apnsBody = JSON.stringify({
     aps: {
       alert: { title: payload.title, body: payload.body },
-      sound: "default",
+      // Wlasny dzwiek marki (marimba, dwa tony w gore, 0,62 s). Plik jest WKOMPILOWANY
+      // w aplikacje (ios/App/App/spontaway.caf, zrodlo w assets/sound + generator
+      // scripts/gen_notification_sound.py), wiec APNs dostaje tylko jego nazwe.
+      // Gdy wersja aplikacji go nie ma (starsze buildy), iOS sam zagra dzwiek domyslny -
+      // wiec ta zmiana jest bezpieczna do wdrozenia przed wypuszczeniem nowego builda.
+      sound: "spontaway.caf",
     },
     url: payload.url ?? "/",
   });
@@ -393,7 +398,11 @@ Deno.serve(async (req) => {
     // KTOKOLWIEK moglby wyslac dowolny push (z dowolnym deep-link url) do dowolnego
     // usera. Dozwolone: wywolanie service-role (push-scheduler) ALBO zalogowany user.
     const authToken = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "");
-    const isService = !!authToken && authToken === serviceRoleKey;
+    // Trigger wewnetrzny notify_push (pg_net) uwierzytelnia sie sekretem x-trigger-secret z Vault
+    // - klucz service_role bywa rotowany i nie zawsze zgodny z env funkcji, wiec osobny wspolny sekret.
+    const triggerSecret = Deno.env.get("PUSH_TRIGGER_SECRET") ?? "";
+    const isTrigger = triggerSecret.length > 0 && req.headers.get("x-trigger-secret") === triggerSecret;
+    const isService = isTrigger || (!!authToken && authToken === serviceRoleKey);
     let authorized = isService;
     let senderId: string | null = null;
     if (!authorized && authToken) {
@@ -432,6 +441,21 @@ Deno.serve(async (req) => {
     const vapidSubject = Deno.env.get("VAPID_SUBJECT") ?? "mailto:admin@trasa.app";
 
     const supabase = createClient(supabaseUrl, serviceRoleKey);
+
+    // [H5] Cross-user push dozwolony TYLKO dla: service_role (trigger notify_push - glowny kanal),
+    // admina (moderacja) albo do samego siebie. Zwykly user NIE moze slac dowolnej tresci do
+    // dowolnej ofiary. Legalne powiadomienia cross-user (friend_request/accept, route_used, like,
+    // save...) ida przez trigger notify_push (service_role) na tabeli notifications.
+    if (!isService && senderId && user_id !== senderId) {
+      const { data: adminRow } = await supabase
+        .from("user_roles").select("role").eq("user_id", senderId).eq("role", "admin").maybeSingle();
+      if (!adminRow) {
+        return new Response(
+          JSON.stringify({ error: "forbidden" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
 
     // [H4] Rate-limit nadawcy (best-effort; nie dotyczy service_role/push-scheduler).
     // Chroni przed masowym spamem push przez pojedyncze konto. Wymaga tabeli

@@ -1,10 +1,13 @@
 import { Share } from "@capacitor/share";
 import { isNative, capabilities } from "@/lib/platform";
+import { track } from "@/lib/analytics";
 
 export type ShareOpts = {
   title?: string;
   text?: string;
   url: string;
+  /** Co udostepniamy - trafia do analityki jako `content_shared.kind`. */
+  kind?: "route" | "list" | "profile" | "place";
 };
 
 export type ShareResult =
@@ -23,6 +26,8 @@ export type ShareResult =
  */
 export const useShare = () => {
   return async (opts: ShareOpts): Promise<ShareResult> => {
+    // Jeden punkt dla calej aplikacji - `kind` przekazuja wolajacy (trasa, lista, profil).
+    track("content_shared", { kind: opts.kind ?? "unknown", url: opts.url });
     if (isNative) {
       try {
         await Share.share({ title: opts.title, text: opts.text, url: opts.url });

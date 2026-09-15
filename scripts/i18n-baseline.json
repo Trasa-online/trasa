@@ -1,0 +1,39 @@
+{
+  "_comment": [
+    "Pliki z polskim tekstem na sztywno - dlug sprzed bramki dwujezycznosci (2026-09-06).",
+    "Lista moze tylko MALEC. Nowy plik tutaj = blad: nowy widok ma powstawac od razu w dwoch jezykach.",
+    "Kiedy plik przejdzie na t(), usun go stad - bramka sama przypomni, ze jest juz czysty."
+  ],
+  "files": [
+    "src/admin/RequireAdmin.tsx",
+    "src/admin/layout/AdminLayout.tsx",
+    "src/admin/layout/WaitlistPeek.tsx",
+    "src/admin/modules/analytics/AnalyticsPage.tsx",
+    "src/admin/modules/audit/AuditPage.tsx",
+    "src/admin/modules/costs/CostsPage.tsx",
+    "src/admin/modules/flags/PlaceFlagsPage.tsx",
+    "src/admin/modules/flags/usePlaceFlags.ts",
+    "src/admin/modules/moderation/AllBusinesses.tsx",
+    "src/admin/modules/moderation/ModerationPage.tsx",
+    "src/admin/modules/moderation/ModerationQueue.tsx",
+    "src/admin/modules/ops/OpsPage.tsx",
+    "src/admin/modules/places/PlacesPage.tsx",
+    "src/admin/modules/rankings/RankingsPage.tsx",
+    "src/admin/modules/rankings/useRankings.ts",
+    "src/admin/modules/settings/SettingsPage.tsx",
+    "src/admin/modules/users/UsersPage.tsx",
+    "src/components/business/BusinessSocialLinks.tsx",
+    "src/components/business/PremiumBusinessCard.tsx",
+    "src/components/business/mockBusinessData.ts",
+    "src/components/route/PlanChatExperience.tsx",
+    "src/components/trial/TrialModal.tsx",
+    "src/lib/locations.ts",
+    "src/lib/tripCountries.ts",
+    "src/pages/BusinessDashboard.tsx",
+    "src/pages/BusinessOnePager.tsx",
+    "src/pages/CreateRoute.tsx",
+    "src/pages/ForBusinessPage.tsx",
+    "src/pages/Privacy.tsx",
+    "src/pages/Terms.tsx"
+  ]
+}

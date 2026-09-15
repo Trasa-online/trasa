@@ -3,16 +3,21 @@
     "placeholder": "Search @username...",
     "suggested": "People you may know",
     "loading": "Loading...",
-    "no_results": "No results"
+    "no_results": "No results",
+    "pinned_placeholder": "Search trips, places, people...",
+    "by_category": "Search by category",
+    "close_aria": "Close search"
   },
   "sections": {
-    "routes": "Plans",
-    "routes_sub": "completed trips",
+    "routes": "Routes",
+    "routes_sub": "shared trips",
     "cities": "Cities",
     "cities_sub": "places visited",
     "collections": "Collections",
-    "collections_sub_public": "place collections",
-    "collections_sub_own": "Your place collections"
+    "collections_sub_public": "collections of places",
+    "collections_sub_own": "Your collections of places",
+    "trips": "Trips",
+    "lists": "Collections"
   },
   "public": {
     "not_found": "User not found",
@@ -25,12 +30,29 @@
     "trip_fallback": "Trip",
     "days_count": "{{n}} days",
     "places_count_one": "{{count}} place",
-    "places_count_other": "{{count}} places"
+    "places_count_other": "{{count}} places",
+    "blocked_desc": "You will not see this person in Explore or in search. You can undo it from the menu.",
+    "blocked_toast": "Blocked - you will not see this person's content",
+    "no_lists_desc": "This person's recommendations will show up here.",
+    "no_trips_desc": "This person's trips will show up here.",
+    "blocked_title": "This profile is blocked",
+    "removed_saved": "Removed from saved",
+    "unblock": "Unblock user",
+    "block": "Block user",
+    "list_saved": "Collection saved",
+    "no_trips": "No trips",
+    "report": "Report profile",
+    "no_lists": "No collections",
+    "more": "More",
+    "trip_saved": "Trip saved",
+    "no_following": "{{name}} does not follow anyone yet.",
+    "no_followers": "No one follows {{name}} yet."
   },
   "profile": {
     "header_fallback": "profile",
     "settings_aria": "Settings",
     "change_photo_aria": "Change profile photo",
+    "avatar_tap_aria": "Change your photo or avatar frame",
     "user_fallback": "User",
     "complete_profile": "Complete your profile ({{pct}}%)",
     "friends_count": "Friends: {{count}}",
@@ -56,7 +78,20 @@
     "your_profile": "Your Profile",
     "find_users_aria": "Find people",
     "notifications_aria": "Notifications",
-    "share_profile_aria": "Share profile"
+    "share_profile_aria": "Share profile",
+    "add_bio": "Add a short bio about yourself",
+    "no_followers": "No one follows you yet.",
+    "trip_deleted": "Trip deleted.",
+    "delete_error": "We couldn't delete it.",
+    "list_deleted": "Collection deleted.",
+    "share_no_username": "Add a username to share your profile.",
+    "no_following": "You do not follow anyone yet.",
+    "removed_saved": "Removed from saved",
+    "new_content_aria": "New content",
+    "list_fallback_title": "Collection of places",
+    "traveler_fallback": "Traveler",
+    "starred": "Starred",
+    "starred_aria": "Starred places"
   },
   "guest": {
     "title": "Your traveler profile",
@@ -65,7 +100,7 @@
     "login": "Log in"
   },
   "invite": {
-    "share_title": "Invitation to Trasa",
+    "share_title": "Invitation to spontaway",
     "link_copied": "Link copied",
     "shared": "Shared",
     "slot_label": "Invitation {{slot}}",
@@ -87,5 +122,84 @@
     "home": "Home",
     "error_title": "Link invalid or expired",
     "error_desc": "Ask your friend for a new invite link."
+  },
+  "feed": {
+    "visited": "Visited places",
+    "to_visit": "Places to visit",
+    "list_fallback": "Collection of places",
+    "trip_fallback": "Trip to {{city}}",
+    "trip_fallback_generic": "Trip",
+    "lists_empty_title": "No collections yet",
+    "lists_empty_desc": "Create collections of favourite places: visited or to visit.",
+    "lists_empty_cta": "New collection of places",
+    "trips_empty_title": "No trips yet",
+    "trips_empty_desc": "Plan a route and share it with friends.",
+    "trips_empty_cta": "Plan a trip",
+    "added_place_one": "{{author}} added a place",
+    "added_place_other": "{{author}} added {{count}} places",
+    "author_fallback": "Author"
+  },
+  "empty": {
+    "first_list_desc": "Add your first collection with the + button and pick Collection",
+    "drafts_desc": "Create a new trip to see it here",
+    "memories_desc": "Publish a trip to see it here",
+    "saved_lists_title": "No saved lists yet",
+    "no_saved_trips": "No saved trips",
+    "no_drafts": "Nothing in progress",
+    "no_own_lists": "No collections of your own",
+    "no_memories": "No memories yet",
+    "saved_lists_desc": "Bookmark someone else's collection <b>to see it here</b>",
+    "saved_trips_desc": "Bookmark someone else's trip <b>to see it here</b>"
+  },
+  "tabs": {
+    "my_lists": "My collections",
+    "general": "General"
+  },
+  "trip_tabs": {
+    "drafts": "Drafts",
+    "published": "Published",
+    "saved": "Saved"
+  },
+  "referral": {
+    "title": "Invite your friends",
+    "title_done": "Thank you! That's the full set",
+    "desc": "Spontaway is better with your people! Invite {{count}} friends and unlock a unique overlay for your avatar!",
+    "desc_done": "Your friends are in, and your overlay is waiting in Settings → Customise.",
+    "progress": "{{invited}} of {{goal}}",
+    "share_cta": "Send an invite",
+    "share_title": "Coming to spontaway?",
+    "share_text": "I collect places and trips here. Come in through my link and you'll see what I recommend.",
+    "qr_aria": "Show the QR code for testing",
+    "qr_title": "Scan and join the tests",
+    "qr_desc": "The code goes straight to TestFlight. Show it to whoever you want to invite.",
+    "dismiss_aria": "Hide until next launch",
+    "eyebrow": "Invite friends",
+    "eyebrow_done": "Invites sent",
+    "not_now": "Not now"
+  },
+  "layout": {
+    "list": "List",
+    "mosaic": "Mosaic",
+    "grid": "Grid",
+    "reorder_failed": "Could not save the layout. Try again."
+  },
+  "tab_hints": {
+    "lists_moje": "Your public place recommendations. Anyone can save them.",
+    "lists_ogolne": "A private collection of everything you save with one tap. Only you can see it.",
+    "lists_zapisane": "Collections from other travellers that you saved.",
+    "trips_wspomnienia": "Published trips. They show up in Explore and on your profile.",
+    "trips_wspomnienia_reorder": "Published trips. Press and hold a cover, then drag to arrange them your way.",
+    "trips_robocze": "Trips in progress. Only you can see them until you publish.",
+    "trips_zapisane": "Trips from other travellers that you saved."
+  },
+  "starred": {
+    "title": "Starred places",
+    "desc": "Places you starred in your trips and collections.",
+    "empty_title": "Nothing starred yet",
+    "empty_desc": "Star a place in a trip or a collection - highlight as many places as you like.",
+    "trip_fallback": "Trip",
+    "list_fallback": "Collection",
+    "desc_theirs": "Places this person starred in their trips and collections.",
+    "empty_title_theirs": "No starred places yet"
   }
 }

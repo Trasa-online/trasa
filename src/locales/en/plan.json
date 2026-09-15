@@ -20,8 +20,6 @@
   "filters": "Filters",
   "filters_selected": "Selected",
   "filters_count_one": "{{count}} filter",
-  "filters_count_few": "{{count}} filters",
-  "filters_count_many": "{{count}} filters",
   "filters_subtitle": "By default we show all places. You can narrow the selection.",
   "filters_clear_all": "Clear all",
   "categories_label": "Categories",
@@ -48,7 +46,6 @@
   "dup_continue": "Continue existing",
   "dup_create": "Create separate",
   "cta_plan_route_one": "Plan route · {{count}} place",
-  "cta_plan_route_many": "Plan route · {{count}} places",
   "go_to_matches": "Go to saved",
   "selected_count": "{{count}} selected",
   "round_progress": "Place {{current}}/{{total}}",
@@ -163,14 +160,12 @@
   "distance_start": "the start",
   "city_picker": {
     "not_your_city": "Don't see your city?",
-    "city_placeholder": "Enter a city name",
     "send": "Send",
     "notify_hint": "We'll let you know when your city is available in the app.",
-    "send_error": "Failed to send request",
-    "notify_success": "Thanks! We'll let you know when {{city}} is available.",
     "next": "Next",
     "coming_soon_cta": "Coming soon 🔒",
-    "coming_soon_badge": "Soon"
+    "coming_soon_badge": "Soon",
+    "search_placeholder": "Search for a city..."
   },
   "save_sheet": {
     "title": "Place saved!",
@@ -178,7 +173,7 @@
     "create_aria": "Create trip",
     "add_aria": "Add to trip",
     "empty_hint": "You have no trips yet - name a new one above.",
-    "share": "Share",
+    "share": "Share this place",
     "done": "Done",
     "added_to": "Added to: {{name}}",
     "created": "Trip created: {{name}}",
@@ -187,8 +182,82 @@
     "shared": "Shared",
     "link_copied": "Link copied",
     "loading": "Loading trips...",
-    "removed_from": "Removed from: {{name}}",
+    "removed_from": "Removed from “{{title}}”",
     "remove_error": "Couldn't remove the place",
-    "remove_aria": "Remove from trip"
+    "remove_aria": "Remove from trip",
+    "desc": "It goes to your general collection of places. You can also add it to another collection (optional).",
+    "save_failed": "We could not save the change",
+    "list_failed": "We could not create the collection",
+    "create_list": "Create collection",
+    "user_fallback": "User",
+    "general": "General",
+    "list_created": "Collection “{{name}}” created",
+    "open_list": "Open collection {{title}}",
+    "private": "Private"
+  },
+  "filters_count_other": "{{count}} filters",
+  "cta_plan_route_other": "Plan route · {{count}} places",
+  "distance_denied": "Turn on location in settings to see the distance",
+  "custom": {
+    "link_failed": "We could not read a place from that link. Try typing the name instead.",
+    "maps_link_failed": "We could not read a place from that Google Maps link.",
+    "link_no_match": "We could not match a place from that link.",
+    "error": "Something went wrong. Try typing the name instead.",
+    "hint": "Type the name of a place, hotel or street",
+    "not_found": "We could not find that place.",
+    "placeholder": "Place name, or paste a link…",
+    "bad_link": "That link is not valid.",
+    "reading_link": "Reading the link…",
+    "searching": "Looking for the place…",
+    "found_not_located": "I found the name “{{name}}” but could not locate it. Please correct the name.",
+    "title": "Add your own place",
+    "add_to_route": "Add to route",
+    "search_another": "Search for another place"
+  },
+  "start": {
+    "location_failed": "We could not get your location.",
+    "use_my_location": "Use my location",
+    "title": "Where do you want to start?",
+    "skip": "Skip",
+    "outside_pick": "That place is outside {{city}}. Pick something within the city.",
+    "outside_mark": "That place is outside {{city}}. Mark a point within the city.",
+    "you_outside": "You are outside {{city}}. Pick a starting point within the city.",
+    "your_location": "Your location"
+  },
+  "calendar": {
+    "hint_range": "Tap a second day to pick a range",
+    "clear": "Clear selection",
+    "prev": "Previous month",
+    "next": "Next month",
+    "no_dates": "No dates",
+    "pick_day_one": "Pick your trip day (max {{count}} day)",
+    "pick_day_other": "Pick your trip day (max {{count}} days)",
+    "pick_day_long": "Pick a day or a range of days for your trip",
+    "max_range_one": "A trip can last up to {{count}} day",
+    "max_range_other": "A trip can last up to {{count}} days"
+  },
+  "template": {
+    "failed": "We could not create the trip. Try again.",
+    "from_scratch": "Plan a trip from scratch",
+    "map_alt": "Route map"
+  },
+  "create_trip": "Create a trip",
+  "map": {
+    "new_place": "New place",
+    "add_pin": "Add pin"
+  },
+  "save": {
+    "hide": "Hide",
+    "new_list": "New collection",
+    "new_list_name": "New collection name",
+    "all_saved_hint": "All your saved places",
+    "saved_title": "Place saved!"
+  },
+  "list": {
+    "default_visited": "Places visited",
+    "default_to_visit": "To visit"
+  },
+  "templates": {
+    "none_for_city": "No ready-made planners for {{city}} yet - we are working on it!"
   }
 }

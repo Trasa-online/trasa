@@ -1,14 +1,27 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
+import { isPortraitCover } from "@/lib/coverFormat";
+import { pickPortraitCover } from "@/lib/ensureListCover";
 import { useTranslation } from "react-i18next";
 import { avatarSrc } from "@/lib/avatar";
+import { placeTagsForCategory, localizeTag, tagId } from "@/lib/routeTags";
+import { fetchRouteNotesWithAuthors, notesByPlace, placeNoteKey } from "@/lib/placeNotes";
+import { fetchPinPhotos, deletePinPhotoReturning, restorePinPhotos, photosByPlace, pinPhotoKey } from "@/lib/pinPhotos";
+import PlaceNotes from "@/components/route/PlaceNotes";
 import { haptics } from "@/hooks/useHaptics";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useSwipeNav } from "@/hooks/useSwipeNav";
+import { useDragToDismiss } from "@/hooks/useDragToDismiss";
+import { useNavigate, useSearchParams, Navigate } from "react-router-dom";
+import { goBackOr } from "@/hooks/useGoBack";
 import { useAuth } from "@/hooks/useAuth";
+import { placeKeyOf, fetchPlacePhotosForKeys, pickPlaceCover, fetchPhotoHashes, sha256OfFile, upsertPhotoHash } from "@/lib/placePhotoSocial";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Camera, X, Globe, Lock, Pencil, Check, Image as ImageIcon, Map as MapIcon, MapPin, ChevronUp, ChevronDown, ChevronRight, ChevronLeft, Trash2, Plus, Share, Share2, List, GalleryHorizontalEnd, Info, MoreVertical, Navigation, Maximize2, Users, Calendar as CalendarIcon, Loader2, GripVertical, Building2 } from "lucide-react";
+import { ArrowLeft, Camera, X, Globe, Lock, Pencil, Check, Image as ImageIcon, Map as MapIcon, ChevronUp, ChevronDown, ChevronRight, ChevronLeft, Trash2, Plus, Share, Share2, Info, MoreVertical, Loader2, GripVertical, Flag } from "lucide-react";
 import { Reorder, useDragControls } from "framer-motion";
 import RouteMap from "@/components/RouteMap";
+import { buildTripStaticMapUrl } from "@/lib/staticMap";
+import { buildShareUrl } from "@/lib/shareUrl";
+import { publishTrip } from "@/lib/publishTrip";
 import SwipeToDeleteRow from "@/components/SwipeToDeleteRow";
 import { useShare } from "@/hooks/useShare";
 import { Switch } from "@/components/ui/switch";
@@ -16,27 +29,33 @@ import AddPinSheet from "@/components/route/AddPinSheet";
 import FullCalendarPicker from "@/components/plan-wizard/FullCalendarPicker";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import type { MockPlace } from "@/components/plan-wizard/PlaceSwiper";
-import { QRCodeSVG } from "qrcode.react";
+
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { PlacePhoto, resolveStored } from "@/components/PlacePhoto";
+import StoredImage from "@/components/StoredImage";
 import { RoutePlaceRow } from "@/components/route/RoutePlaceRow";
-import InviteFriendsSheet from "@/components/route/InviteFriendsSheet";
-import { compressImage } from "@/lib/imageCompression";
-import { isHeic, convertHeicToJpeg } from "@/lib/heicConvert";
-import { format, parseISO, isValid, addDays } from "date-fns";
+import SavePlaceSheet, { type SavePlaceInput } from "@/components/plan-wizard/SavePlaceSheet";
+import { useSavedPlaces } from "@/hooks/useSavedPlaces";
+import TripProposalsSheet from "@/components/route/TripProposalsSheet";
+import { format, addDays } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
-import { isNative, API_BASE } from "@/lib/platform";
+import { isNative } from "@/lib/platform";
 import { Camera as CapCamera } from "@capacitor/camera";
 import { notify } from "@/lib/notify";
-import { requestLocation } from "@/hooks/useGeolocation";
-import { haversineKm } from "@/lib/distance";
 import { deferDelete } from "@/lib/deferDelete";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { renderForUpload, uploadPair } from "@/lib/imageThumbs";
+import { EMPTY_ARRAY } from "@/lib/emptyRef";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 
 // Limit zdjec dodawanych do galerii wpisu.
 const MAX_PHOTOS = 20;
+
+// #2: domyslne tlo trasy = gradient zolto-zloty (#FDF184 -> #FDCD84) jako data-URI SVG. Zapisywane
+// w routes.cover_url, renderuje sie jak zwykle zdjecie (resolveStored przepuszcza data:), a trasa
+// z ta okladka liczy sie jako "gotowa" (Wspomnienie, nie robocza).
+const GRADIENT_COVER = "data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='16'%20height='16'%20preserveAspectRatio='none'%3E%3Cdefs%3E%3ClinearGradient%20id='g'%20x1='0'%20y1='0'%20x2='1'%20y2='1'%3E%3Cstop%20offset='0'%20stop-color='%23FDF184'/%3E%3Cstop%20offset='1'%20stop-color='%23FDCD84'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect%20width='16'%20height='16'%20fill='url(%23g)'/%3E%3C/svg%3E";
 
 // Oficjalne logo Google (4-kolorowe "G") - guzik nawigacji do miejsca w Google Maps.
 const GoogleGlyph = ({ className }: { className?: string }) => (
@@ -50,25 +69,29 @@ const GoogleGlyph = ({ className }: { className?: string }) => (
 
 // Wiersz listy miejsc z DRAG & DROP (framer-motion Reorder) na ekranie "Sugestie do trasy".
 // Przeciaganie uchwytem (GripVertical) - reszta wiersza nadal tapowalna (otwiera wizytowke).
-function SortableReviewRow({ pin, idx, categoryLabel, visited, onOpen, onRemove, noteValue, noteOpen, onToggleNote, onNoteChange, noteSaved, onNoteFocusChange }: {
-  pin: any; idx: number; categoryLabel: React.ReactNode; visited: boolean; onOpen: () => void; onRemove: () => void;
+function SortableReviewRow({ pin, idx, categoryLabel, onOpen, onRemove, noteValue, noteOpen, onToggleNote, onNoteChange, noteSaved, onNoteFocusChange, tags, onToggleTag }: {
+  pin: any; idx: number; categoryLabel: React.ReactNode; onOpen: () => void; onRemove: () => void;
   noteValue: string; noteOpen: boolean; onToggleNote: () => void; onNoteChange: (v: string) => void; noteSaved: boolean;
   onNoteFocusChange?: (focused: boolean) => void;
+  tags: string[]; onToggleTag: (tag: string) => void;
 }) {
+  const { t } = useTranslation("review");
   const controls = useDragControls();
+  // Pole na WLASNY tag miejsca (pula nie pokrywa wszystkiego).
+  const [customTag, setCustomTag] = useState("");
   return (
     <Reorder.Item
       value={pin}
       dragListener={false}
       dragControls={controls}
       transition={{ duration: 0 }}
-      className={`flex flex-col rounded-2xl bg-secondary border border-border/40 shadow-sm p-2.5 select-none ${visited ? "opacity-60" : ""}`}
+      className="flex flex-col rounded-2xl bg-secondary border border-border/40 shadow-sm p-2.5 select-none"
     >
       <div className="flex items-center gap-2.5">
         {/* Uchwyt przeciagania - z LEWEJ, obok okladki (daleko od kosza po prawej). */}
         <span
           onPointerDown={(e) => { haptics.light(); controls.start(e); }}
-          aria-label="Przeciągnij, by zmienić kolejność"
+          aria-label={t("reorder_hint")}
           className="shrink-0 h-9 w-6 flex items-center justify-center text-muted-foreground/50 cursor-grab active:cursor-grabbing touch-none"
         >
           <GripVertical className="h-5 w-5" />
@@ -78,10 +101,10 @@ function SortableReviewRow({ pin, idx, categoryLabel, visited, onOpen, onRemove,
           <span className="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-black/55 backdrop-blur text-white text-[10px] font-bold flex items-center justify-center">{idx + 1}</span>
         </button>
         <button onClick={onOpen} className="min-w-0 flex-1 text-left">
-          <p className={`text-sm font-bold leading-tight truncate ${visited ? "line-through" : ""}`}>{pin.place_name}</p>
+          <p className="text-sm font-bold leading-tight truncate">{pin.place_name}</p>
           <span className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white text-[11px] font-semibold text-foreground">{categoryLabel}</span>
         </button>
-        <button onClick={onRemove} aria-label="Usuń miejsce" className="h-9 w-9 rounded-full flex items-center justify-center text-muted-foreground/60 active:scale-90 shrink-0"><Trash2 className="h-4 w-4" /></button>
+        <button onClick={onRemove} aria-label={t("aria.delete_place")} className="h-9 w-9 rounded-full flex items-center justify-center text-muted-foreground/60 active:scale-90 shrink-0"><Trash2 className="h-4 w-4" /></button>
       </div>
 
       {/* "+ Podziel sie wrazeniami" - zwijana notka usera o tym miejscu (opt-in, domyslnie zwinieta). */}
@@ -92,19 +115,54 @@ function SortableReviewRow({ pin, idx, categoryLabel, visited, onOpen, onRemove,
             onChange={(e) => onNoteChange(e.target.value)}
             onFocus={() => onNoteFocusChange?.(true)}
             onBlur={() => onNoteFocusChange?.(false)}
-            placeholder="Podziel się wrażeniami o tym miejscu..."
+            placeholder={t("note.placeholder")}
             rows={3}
             className="w-full bg-white rounded-xl px-3.5 py-3 text-sm text-foreground resize-none focus:outline-none border border-border/50 focus:border-orange-400/60 placeholder:text-muted-foreground/55"
           />
+          {/* Tagi miejsca (predefiniowana pula) - alternatywa dla pisania notki. Klik = dodaj. */}
+          <div className="mt-3">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">{t("tags.place_title")}<span className="normal-case font-medium text-muted-foreground/50">{t("tags.instead_of_note")}</span></p>
+            <div className="flex flex-wrap gap-1.5">
+              {/* #5: tagi zalezne od kategorii miejsca (zabytek != kawiarnia). #6: wybrany = zolty fill.
+                  Tagi spoza puli (wpisane recznie) doklejamy na koncu, zeby user je widzial i mogl zdjac. */}
+              {[...placeTagsForCategory(pin.category), ...tags.filter((t) => !placeTagsForCategory(pin.category).includes(tagId(t)))].map((tg) => {
+                // Porownanie po id, nie po napisie: wyjazd sprzed migracji ma w pins.tags polska
+                // etykiete, a pula podaje juz id - inaczej ten sam tag pokazalby sie dwa razy.
+                const on = tags.some((x) => tagId(x) === tagId(tg));
+                return (
+                  <button key={tg} type="button" onClick={() => onToggleTag(tg)}
+                    className={`flex items-center gap-1 px-2.5 py-1.5 rounded-full text-[13px] font-semibold transition-colors active:scale-[0.97] border ${on ? "bg-[#FDF184] border-[#FDCD84] text-foreground" : "bg-white text-foreground border-border/60"}`}>
+                    {localizeTag(tg)}{on ? <Check className="h-3 w-3 text-foreground" /> : <Plus className="h-3 w-3 text-muted-foreground/50" />}
+                  </button>
+                );
+              })}
+            </div>
+            {/* WLASNY tag - pula nie pokryje wszystkiego (prosba Nat 2026-08-30). Enter dodaje. */}
+            <form
+              onSubmit={(e) => { e.preventDefault(); const v = customTag.trim(); if (!v) return; onToggleTag(v); setCustomTag(""); }}
+              className="mt-2 flex items-center gap-2"
+            >
+              <input
+                value={customTag}
+                onChange={(e) => setCustomTag(e.target.value.slice(0, 24))}
+                onFocus={() => onNoteFocusChange?.(true)}
+                onBlur={() => onNoteFocusChange?.(false)}
+                placeholder={t("tags.custom_placeholder")}
+                className="flex-1 min-w-0 h-9 rounded-full bg-white border border-border/60 px-3.5 text-[13px] text-foreground outline-none focus:border-orange-400/60 placeholder:text-muted-foreground/55"
+              />
+              <button type="submit" disabled={!customTag.trim()}
+                className="h-9 px-3.5 rounded-full bg-secondary text-secondary-foreground text-[13px] font-bold active:scale-95 transition-transform disabled:opacity-40">{t("common:buttons.add")}</button>
+            </form>
+          </div>
           <div className="flex items-center justify-between mt-2">
-            <button onClick={onToggleNote} className="px-4 py-2 rounded-full bg-muted text-sm font-semibold text-foreground active:scale-95 transition-transform">Zwiń</button>
+            <button onClick={onToggleNote} className="px-4 py-2 rounded-full bg-muted text-sm font-semibold text-foreground active:scale-95 transition-transform">{t("collapse")}</button>
             {noteSaved && <span className="text-xs text-green-600 font-medium">Zapisano</span>}
           </div>
         </div>
       ) : (
         <button onClick={onToggleNote} className="mt-4 mb-1 ml-8 self-start inline-flex items-center gap-2 py-1.5 text-sm font-bold text-foreground active:opacity-60">
           <span className="h-6 w-6 rounded-full bg-muted flex items-center justify-center"><Plus className="h-4 w-4" strokeWidth={2.6} /></span>
-          {noteValue.trim() ? "Twoje wrażenia" : "Podziel się wrażeniami"}
+          {noteValue.trim() ? t("note.your_title") : t("note.share_cta")}
         </button>
       )}
     </Reorder.Item>
@@ -113,15 +171,16 @@ function SortableReviewRow({ pin, idx, categoryLabel, visited, onOpen, onRemove,
 
 // Wiersz planu (widok "Plan wyjazdu" wlasciciela) - wspoldzielony RoutePlaceRow z uchwytem
 // DRAG (Reorder) po lewej + swipe-to-delete + opcjonalna notka. Ujednolicony z eksploracja.
-function SortablePlanRow({ pin, index, categoryLabel, visited, onOpen, onGoogle, onDelete, note }: {
-  pin: any; index: number; categoryLabel: React.ReactNode; visited: boolean;
-  onOpen: () => void; onGoogle: () => void; onDelete: () => void; note?: React.ReactNode;
+function SortablePlanRow({ pin, index, categoryLabel, onOpen, onGoogle, onDelete, onSave, saved, note }: {
+  pin: any; index: number; categoryLabel: React.ReactNode;
+  onOpen: () => void; onGoogle: () => void; onDelete: () => void; onSave?: () => void; saved?: boolean; note?: React.ReactNode;
 }) {
+  const { t } = useTranslation("review");
   const controls = useDragControls();
   const grip = (
     <span
       onPointerDown={(e) => { haptics.light(); controls.start(e); }}
-      aria-label="Przeciągnij, by zmienić kolejność"
+      aria-label={t("reorder_hint")}
       className="shrink-0 w-6 flex items-center justify-center text-muted-foreground/45 cursor-grab active:cursor-grabbing touch-none"
     >
       <GripVertical className="h-5 w-5" />
@@ -130,18 +189,12 @@ function SortablePlanRow({ pin, index, categoryLabel, visited, onOpen, onGoogle,
   return (
     <Reorder.Item value={pin} dragListener={false} dragControls={controls} transition={{ duration: 0 }}>
       <SwipeToDeleteRow onDelete={onDelete}>
-        <RoutePlaceRow pin={pin} index={index} categoryLabel={categoryLabel} visited={visited} onOpen={onOpen} onGoogle={onGoogle} dragHandle={grip} note={note} />
+        <RoutePlaceRow pin={pin} index={index} categoryLabel={categoryLabel} onOpen={onOpen} onGoogle={onGoogle} onSave={onSave} saved={saved} dragHandle={grip} note={note} />
       </SwipeToDeleteRow>
     </Reorder.Item>
   );
 }
 
-const CATEGORY_LABEL: Record<string, string> = {
-  restaurant: "Restauracja", cafe: "Kawiarnia", museum: "Muzeum", park: "Park",
-  bar: "Bar", club: "Klub", monument: "Zabytek", gallery: "Galeria",
-  market: "Targ", viewpoint: "Punkt widokowy", shopping: "Zakupy", experience: "Atrakcja",
-  walk: "Spacer", other: "Miejsce",
-};
 
 // Klucz kompozytowy ocena/notka per miejsce w danym dniu (route_id + place_name),
 // zeby to samo miejsce w roznych dniach trasy wielodniowej bylo niezalezne.
@@ -149,21 +202,10 @@ const rkey = (routeId: string, placeName: string) => `${routeId}::${placeName}`;
 
 // Statyczna mapka planu (proxy /api/static-map) - pomaranczowe markery miejsc, POI/transit
 // ukryte, auto-fit. null gdy brak wspolrzednych.
-function buildTripStaticMapUrl(pins: any[], size = "560x260"): string | null {
-  const pts = pins.filter((p) => p.latitude != null && p.longitude != null).slice(0, 20);
-  if (!pts.length) return null;
-  // Numerowane peachy piny (label 1-9; Google static przyjmuje 1 znak - dla 10+ bez numeru).
-  const markers = pts.map((p, i) => {
-    const label = i + 1 <= 9 ? `label:${i + 1}%7C` : "";
-    return `markers=color:0xf0a583%7C${label}${p.latitude},${p.longitude}`;
-  }).join("&");
-  return `${API_BASE}/api/static-map?size=${size}&scale=2&maptype=roadmap&${markers}&style=feature:poi%7Cvisibility:off&style=feature:transit%7Cvisibility:off`;
-}
-
 const ReviewSummary = () => {
   const { t } = useTranslation("review");
   const catLabel = (cat: string) =>
-    t(`categories.${cat}`, { defaultValue: CATEGORY_LABEL[cat] ?? CATEGORY_LABEL.other });
+    t(`categories.${cat}`, { defaultValue: t("categories.other") });
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -177,14 +219,12 @@ const ReviewSummary = () => {
   const [editingName, setEditingName] = useState(false);
   const [nameVal, setNameVal] = useState("");
   const [savingName, setSavingName] = useState(false);
-  const [planView, setPlanView] = useState<"list" | "cards">("list");
   const [planMapOpen, setPlanMapOpen] = useState(false);
   // Okladka planu wyjazdu: zdjecie (false) lub mapka (true) - toggle klikiem w miniaturke.
   const [heroShowMap, setHeroShowMap] = useState(false);
   // Czy plan wyjazdu jest przewiniety (okladka zjechala) -> sticky pasek back+X dostaje tlo.
   const [planScrolled, setPlanScrolled] = useState(false);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
-  const [coverPickerOpen, setCoverPickerOpen] = useState(false);
   // Miniatura eksploracji = OSOBNA okladka (routes.list_cover_url), niezalezna od okladki trasy.
   const [listCoverPickerOpen, setListCoverPickerOpen] = useState(false);
   // Podglad "jak okladka wyglada w eksploracji" (fullscreen mock karty trasy).
@@ -206,8 +246,15 @@ const ReviewSummary = () => {
   const [summaryTab, setSummaryTab] = useState<"plan" | "galeria">("plan");
   // Widok "Plan wyjazdu" (aktywny): top-toggle Miejsca | Galeria (komplet: plan+mapa albo zdjęcia).
   const [planTab, setPlanTab] = useState<"miejsca" | "galeria" | "mapa">("miejsca");
+  // Gest natywny: swipe w bok przelacza zakladki planu (kolejnosc jak pigulki nad trescia).
+  const goPlanTab = (dir: 1 | -1) => {
+    const tabs: Array<"miejsca" | "galeria" | "mapa"> = ["miejsca", "galeria", "mapa"];
+    const next = tabs[tabs.indexOf(planTab) + dir];
+    if (next) setPlanTab(next);
+  };
+  const swipePlanTabs = useSwipeNav({ onLeft: () => goPlanTab(1), onRight: () => goPlanTab(-1) });
   const [editingStepper, setEditingStepper] = useState(false);
-  const [inviteOpen, setInviteOpen] = useState(false);
+  const [proposalsOpen, setProposalsOpen] = useState(false);
   // Fokus w polu notki -> chowamy dolny pasek CTA (klawiatura zabiera miejsce, guziki przeszkadzaja).
   const [noteFocused, setNoteFocused] = useState(false);
   const [localReviewed, setLocalReviewed] = useState(false);
@@ -215,6 +262,21 @@ const ReviewSummary = () => {
   const [selectedDayId, setSelectedDayId] = useState<string | null>(null);
   // Fullscreen podglad zdjecia z galerii.
   const [viewerUrl, setViewerUrl] = useState<string | null>(null);
+  // Galeria fullscreen: swipe w bok = poprzednie/nastepne zdjecie. Lista zdjec liczy sie
+  // ponizej (po wczesnych returnach), wiec handler dostaje ja przez ref.
+  const galleryUrlsRef = useRef<string[]>([]);
+  const stepPhoto = (dir: 1 | -1) => {
+    const urls = galleryUrlsRef.current;
+    if (urls.length < 2) return;
+    setViewerUrl((cur) => {
+      if (!cur) return cur;
+      const i = urls.indexOf(cur);
+      if (i === -1) return cur;
+      setViewerMenuOpen(false);
+      return urls[(i + dir + urls.length) % urls.length];
+    });
+  };
+  const swipeViewer = useSwipeNav({ onLeft: () => stepPhoto(1), onRight: () => stepPhoto(-1) });
   const [viewerMenuOpen, setViewerMenuOpen] = useState(false);
   // Podglad wizytowki miejsca po kliknieciu w pin.
   const [detailPin, setDetailPin] = useState<any | null>(null);
@@ -239,8 +301,6 @@ const ReviewSummary = () => {
   const [photos, setPhotos] = useState<string[]>([]);
   const [isPublic, setIsPublic] = useState(true);
   const [shareAnonymous, setShareAnonymous] = useState(false);
-  const [shareFriends, setShareFriends] = useState(false);
-  const [privacyOpen, setPrivacyOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [notes, setNotes] = useState<Record<string, string>>({});
@@ -258,6 +318,13 @@ const ReviewSummary = () => {
   const [openNotes, setOpenNotes] = useState<Set<string>>(new Set());
   // Arkusz "Dodaj zdjęcia do miejsca": wybór ze zdjęć galerii wyjazdu (przypisanie) albo nowe. Trzyma pin.id.
   const [pinPickerId, setPinPickerId] = useState<string | null>(null);
+  // Gest natywny: przeciagniecie panelu w dol zamyka arkusz (wszystkie arkusze tego widoku).
+  const pinPickerDrag = useDragToDismiss({ onDismiss: () => setPinPickerId(null) });
+  const listCoverDrag = useDragToDismiss({ onDismiss: () => setListCoverPickerOpen(false) });
+  const dateDrag = useDragToDismiss({ onDismiss: () => setDatePickerOpen(false) });
+  const qrDrag = useDragToDismiss({ onDismiss: () => setQrShareOpen(false) });
+  const shareSheetDrag = useDragToDismiss({ onDismiss: () => setShareSheetOpen(false) });
+  const sharePromptDrag = useDragToDismiss({ onDismiss: () => setShowSharePrompt(false) });
   // "Twoja sugestia dla innych podroznych" (poziom trasy) - review_narrative. Autosave debounce.
   const [suggestion, setSuggestion] = useState("");
   const [suggestionSaved, setSuggestionSaved] = useState(false);
@@ -272,7 +339,7 @@ const ReviewSummary = () => {
       if (!routeId || !user) return null;
       const { data } = await (supabase as any)
         .from("routes")
-        .select("id, title, user_id, city, day_number, start_date, end_date, folder_id, plan_finalized, trip_type, ai_summary, ai_highlight, review_photos, cover_url, list_cover_url, is_shared, share_friends, group_session_id, overall_rating, review_narrative")
+        .select("id, title, user_id, city, day_number, start_date, end_date, folder_id, status, plan_finalized, trip_type, ai_summary, ai_highlight, review_photos, cover_url, list_cover_url, is_shared, share_friends, group_session_id, overall_rating, review_narrative, tags")
         .eq("id", routeId)
         .single();
       return data as any;
@@ -345,22 +412,52 @@ const ReviewSummary = () => {
 
   // Pins wszystkich dni naraz (grupowane po route_id).
   const idsKey = dayRouteIds.join(",");
-  const { data: allPins = [] } = useQuery({
+  const { data: allPins = EMPTY_ARRAY } = useQuery({
     queryKey: ["review-all-pins", idsKey],
     queryFn: async () => {
       if (!dayRouteIds.length) return [];
       const { data } = await (supabase as any)
         .from("pins")
-        .select("id, route_id, place_name, address, category, suggested_time, description, image_url, images, user_photo_urls, latitude, longitude, place_id, photo_url, pin_order, visited_at")
+        .select("id, route_id, place_name, address, category, suggested_time, description, image_url, images, user_photo_urls, latitude, longitude, place_id, photo_url, pin_order, visited_at, tags")
         .in("route_id", dayRouteIds)
         .order("pin_order", { ascending: true });
       return data ?? [];
     },
     enabled: dayRouteIds.length > 0,
   });
-  const currentPins = useMemo(
+  const rawCurrentPins = useMemo(
     () => allPins.filter((p: any) => p.route_id === activeRouteId),
     [allPins, activeRouteId],
+  );
+
+  // #1: okladki miejsc ze zdjec dodanych przez userow w wizytowkach (place_photos) - gdy pin nie
+  // ma zadnego wlasnego zdjecia. place_photos to wlasne zdjecia (Storage), wiec bezpieczne jako cover.
+  // Sprawdzamy DWA klucze (gpid: oraz nc:nazwa|miasto) - wizytowka z ComposeWyjazd zapisuje pod
+  // nc: (MockPlace bez google_place_id), a pin w DB moze miec google_place_id -> inny klucz.
+  const routeCity = (route as any)?.city ?? null;
+  const pinCoverKeys = (p: any): string[] => {
+    const nc = placeKeyOf({ googlePlaceId: null, placeName: p.place_name, city: routeCity });
+    const gp = p.google_place_id ? placeKeyOf({ googlePlaceId: p.google_place_id, placeName: p.place_name, city: routeCity }) : null;
+    return gp ? [gp, nc] : [nc];
+  };
+  const routePinKeys = useMemo(
+    () => Array.from(new Set((rawCurrentPins as any[]).flatMap(pinCoverKeys))).filter(Boolean),
+    [rawCurrentPins, routeCity],
+  );
+  const { data: placePhotoCoverMap } = useQuery({
+    queryKey: ["route-place-photo-cover", routePinKeys.join("|")],
+    enabled: routePinKeys.length > 0,
+    queryFn: () => fetchPlacePhotosForKeys(routePinKeys),
+  });
+  const pinHasOwnPhoto = (p: any) =>
+    !!(p.photo_url || (Array.isArray(p.images) && p.images[0]) || (Array.isArray(p.user_photo_urls) && p.user_photo_urls[0]));
+  const currentPins = useMemo(
+    () => (rawCurrentPins as any[]).map((p) => {
+      if (pinHasOwnPhoto(p) || !placePhotoCoverMap) return p;
+      const cover = pickPlaceCover(placePhotoCoverMap, pinCoverKeys(p));
+      return cover ? { ...p, photo_url: cover } : p;
+    }),
+    [rawCurrentPins, placePhotoCoverMap, routeCity],
   );
 
   // Mapa: url zdjęcia -> nazwa miejsca, do którego zostało przypisane (pins.images). Badge w galerii.
@@ -422,7 +519,8 @@ const ReviewSummary = () => {
       const { data: members } = await (supabase as any)
         .from("group_session_members")
         .select("user_id")
-        .eq("session_id", route.group_session_id);
+        .eq("session_id", route.group_session_id)
+        .eq("status", "accepted");
       if (!members?.length) return [];
       const userIds = members.map((m: any) => m.user_id);
       const { data: profiles } = await supabase
@@ -456,24 +554,37 @@ const ReviewSummary = () => {
         url: r.url,
         userId: r.user_id,
         username: profileMap[r.user_id]?.first_name || profileMap[r.user_id]?.username || t("labels.participant"),
+        avatar: profileMap[r.user_id]?.avatar_url ?? null,
       }));
     },
     enabled: !!route?.group_session_id,
   });
 
   // Czy zalogowany user jest CZLONKIEM (nie-hostem) sesji grupowej - zeby mogl dodac wspolne zdjecia.
-  const { data: isGroupMember = false } = useQuery({
+  const { data: isGroupMember = false, isLoading: isGroupMemberLoading } = useQuery({
     queryKey: ["review-is-group-member", route?.group_session_id, user?.id],
     enabled: !!route?.group_session_id && !!user && route?.user_id !== user?.id,
     queryFn: async () => {
       const { data } = await (supabase as any).from("group_session_members")
-        .select("user_id").eq("session_id", route!.group_session_id).eq("user_id", user!.id).maybeSingle();
+        .select("user_id").eq("session_id", route!.group_session_id).eq("user_id", user!.id).eq("status", "accepted").maybeSingle();
       return !!data;
     },
   });
 
+  // Liczba propozycji miejsc w puli wyjazdu (route_proposals) - badge na guziku hosta. Odswiezane
+  // przy otwarciu/zamknieciu arkusza propozycji (proposalsOpen w queryKey).
+  const { data: proposalsCount = 0 } = useQuery({
+    queryKey: ["route-proposals-count", routeId, proposalsOpen],
+    enabled: !!routeId && !!(route as any)?.group_session_id,
+    queryFn: async () => {
+      const { count } = await (supabase as any).from("route_proposals")
+        .select("id", { count: "exact", head: true }).eq("route_id", routeId);
+      return count ?? 0;
+    },
+  });
+
   // Notki miejsc (wszystkie dni naraz).
-  const { data: existingNotes = [] } = useQuery({
+  const { data: existingNotes = EMPTY_ARRAY } = useQuery({
     queryKey: ["pin-notes", idsKey, user?.id],
     queryFn: async () => {
       if (!dayRouteIds.length || !user) return [];
@@ -487,11 +598,58 @@ const ReviewSummary = () => {
     enabled: dayRouteIds.length > 0 && !!user,
   });
 
+  // NOTKI MULTI-USER: notki WSZYSTKICH uczestnikow (nie tylko wlasne) + profil autora (awatar).
+  // Pokazywane pod miejscem obok wlasnej. RLS pin_ratings czyta wszystkie gdy routes.is_shared.
+  const { data: allPlaceNotes = [] } = useQuery({
+    queryKey: ["pin-notes-all", idsKey],
+    queryFn: () => fetchRouteNotesWithAuthors(dayRouteIds),
+    enabled: dayRouteIds.length > 0,
+  });
+  const notesMap = useMemo(() => notesByPlace(allPlaceNotes), [allPlaceNotes]);
+
   useEffect(() => {
     if (route?.review_photos?.length) setPhotos(route.review_photos);
     if (route?.is_shared != null) setIsPublic(route.is_shared);
-    if (typeof (route as any)?.share_friends === "boolean") setShareFriends((route as any).share_friends);
-  }, [route?.review_photos, route?.is_shared, (route as any)?.share_friends]);
+  }, [route?.review_photos, route?.is_shared]);
+
+
+  // Zapis miejsca do listy (odwiedzone / do odwiedzenia) - bookmark przy wierszu miejsca.
+  const { isSaved } = useSavedPlaces();
+  const [savePlace, setSavePlace] = useState<SavePlaceInput | null>(null);
+  const pinToSave = (pin: any): SavePlaceInput => ({
+    place_name: pin.place_name, category: pin.category ?? null, address: pin.address ?? null,
+    city: pin.city ?? (route as any)?.city ?? null,
+    latitude: pin.latitude ?? null, longitude: pin.longitude ?? null,
+    photo_url: pin.photo_url ?? null, place_id: pin.place_id ?? null,
+  });
+
+  // Tagi PER MIEJSCE (pins.tags) - alternatywa dla notki. Zapis natychmiast do pina.
+  const [pinTags, setPinTags] = useState<Record<string, string[]>>({});
+  useEffect(() => {
+    const m: Record<string, string[]> = {};
+    for (const p of allPins) if (Array.isArray((p as any).tags)) m[p.id] = (p as any).tags;
+    setPinTags(m);
+  }, [allPins]);
+  // Zdjecia dodane do miejsc W TRAKCIE wyjazdu (tabela pin_photos, z autorem). W podsumowaniu
+  // maja byc JUZ WIDOCZNE - user uzupelnia tylko opis i tagi, nie wgrywa zdjec drugi raz
+  // (zgloszenie Nat 2026-08-30).
+  const { data: livePinPhotos = [] } = useQuery({
+    queryKey: ["review-live-pin-photos", idsKey],
+    enabled: dayRouteIds.length > 0,
+    queryFn: async () => {
+      const all = await Promise.all(dayRouteIds.filter(Boolean).map((rid: string) => fetchPinPhotos(rid)));
+      return all.flat();
+    },
+  });
+  const livePhotosByPlace = photosByPlace(livePinPhotos as any[]);
+
+  const togglePinTag = async (pinId: string, tag: string) => {
+    const cur = pinTags[pinId] ?? [];
+    // Zdejmujemy po id, zeby tag zapisany kiedys po polsku dalo sie odkliknac nowym chipem.
+    const next = cur.some((x) => tagId(x) === tagId(tag)) ? cur.filter((x) => tagId(x) !== tagId(tag)) : [...cur, tag];
+    setPinTags((prev) => ({ ...prev, [pinId]: next }));
+    await (supabase as any).from("pins").update({ tags: next }).eq("id", pinId);
+  };
 
   // Podpis + oznaczeni czlonkowie: osobny best-effort load (kolumny z migracji
   // 20260705). Gdy migracja jeszcze nie zaaplikowana -> po prostu brak wartosci,
@@ -541,10 +699,10 @@ const ReviewSummary = () => {
   }, [existingNotes, allPins]);
 
   // Udostepnij link do publicznej trasy (/#/route/:id). HashRouter => link z #.
-  const shareUrl = routeId ? `https://trasa.travel/#/route/${routeId}` : "";
+  const shareUrl = routeId ? buildShareUrl(`/route/${routeId}`) : "";
   const shareLink = async () => {
     if (!routeId) return;
-    const res = await share({ title: route?.title || route?.city || "Trasa", text: t("share.text"), url: shareUrl });
+    const res = await share({ title: route?.title || route?.city || t("common:fallback.route"), text: t("share.text"), url: shareUrl });
     if (res.ok && res.method === "clipboard") notify.success(t("toast.link_copied"));
   };
   // Kopiowanie linku do schowka (arkusz QR).
@@ -573,22 +731,6 @@ const ReviewSummary = () => {
   // Kompat: showSharePrompt uzywa togglePublic(true/false).
   const togglePublic = (val: boolean) => setVisibility(val ? "profile" : "private");
 
-  // 3-poziomowa widocznosc (Ustawienia prywatnosci): Tylko ja / Bliscy znajomi / Wszyscy.
-  const privacyMode: "public" | "friends" | "private" = isPublic ? "public" : shareFriends ? "friends" : "private";
-  const setPrivacy = async (mode: "public" | "friends" | "private") => {
-    const pub = mode === "public";
-    const fri = mode === "friends";
-    setIsPublic(pub); setShareFriends(fri);
-    if (!pub) setShareAnonymous(false);
-    if (!routeId) return;
-    await supabase.from("routes").update({ is_shared: pub, share_friends: fri, ...(pub ? {} : { share_anonymous: false }) } as any).eq("id", routeId);
-    queryClient.invalidateQueries({ queryKey: ["review-summary-route", routeId] });
-    queryClient.invalidateQueries({ queryKey: ["journal-entries"] });
-    queryClient.invalidateQueries({ queryKey: ["discovery-city-routes"] });
-    queryClient.invalidateQueries({ queryKey: ["discovery-polecane"] });
-    queryClient.invalidateQueries({ queryKey: ["shared-route-meta", routeId] });
-  };
-
   const processFiles = async (files: File[]) => {
     if (!files.length || !routeId || !user) return;
     setUploading(true);
@@ -596,17 +738,18 @@ const ReviewSummary = () => {
     let failed = 0;
     for (const rawFile of files.slice(0, MAX_PHOTOS - photos.length)) {
       try {
-        // iPhone robi zdjecia w HEIC/HEIF - canvas/Image w WebView tego nie zdekoduje, wiec
-        // compressImage rzucalo, a blad byl polykany (zdjecie nie dodawalo sie, bez komunikatu).
-        // Konwertujemy HEIC->JPEG przed kompresja (jak w dashboardzie biznesu).
-        const file = isHeic(rawFile) ? await convertHeicToJpeg(rawFile) : rawFile;
-        const compressed = await compressImage(file, 1200, 1200, 0.8);
+        // Zdjecie i miniatura z JEDNEGO dekodowania, oba wyslania rownolegle. Wczesniej byl tu
+        // `compressImage` (dekodowanie przez <img> i pelny canvas) ORAZ osobny `uploadThumb`,
+        // ktory dekodowal to samo zdjecie DRUGI raz i szedl dopiero po wyslaniu oryginalu.
+        // HEIC z iPhone'a dekoduje sie po drodze natywnie - patrz renderVariants.
+        const { full: compressed, thumb } = await renderForUpload(rawFile);
         const path = `${user.id}/${routeId}/review_${Date.now()}_${Math.floor(Math.random() * 10000)}.jpg`;
-        const { error } = await supabase.storage
-          .from("route-images")
-          .upload(path, compressed, { contentType: "image/jpeg", upsert: false });
+        const { error } = await uploadPair("route-images", path, compressed, thumb);
         if (error) { failed++; console.error("[ReviewSummary] photo upload failed:", error.message); continue; }
-        newUrls.push(`${SUPABASE_URL}/storage/v1/object/public/route-images/${path}`);
+        const uploadedUrl = `${SUPABASE_URL}/storage/v1/object/public/route-images/${path}`;
+        newUrls.push(uploadedUrl);
+        // #3: hash tresci -> dedup galerii po tresci (rozny URL, ta sama zawartosc = jeden kafelek).
+        void sha256OfFile(compressed).then((h) => upsertPhotoHash(uploadedUrl, h)).catch(() => {});
       } catch (err: any) {
         failed++;
         console.error("[ReviewSummary] photo processing failed:", err?.message ?? err);
@@ -681,12 +824,15 @@ const ReviewSummary = () => {
     let failed = 0;
     for (const rawFile of files) {
       try {
-        const file = isHeic(rawFile) ? await convertHeicToJpeg(rawFile) : rawFile;
-        const compressed = await compressImage(file, 1200, 1200, 0.8);
+        // Jak wyzej: jedno dekodowanie, miniatura z tej samej bitmapy, oba wyslania rownolegle.
+        const { full: compressed, thumb } = await renderForUpload(rawFile);
         const path = `${user.id}/${routeId}/pin_${Date.now()}_${Math.floor(Math.random() * 10000)}.jpg`;
-        const { error } = await supabase.storage.from("route-images").upload(path, compressed, { contentType: "image/jpeg", upsert: false });
+        const { error } = await uploadPair("route-images", path, compressed, thumb);
         if (error) { failed++; console.error("[ReviewSummary] pin photo upload failed:", error.message); continue; }
-        urls.push(`${SUPABASE_URL}/storage/v1/object/public/route-images/${path}`);
+        const uploadedUrl = `${SUPABASE_URL}/storage/v1/object/public/route-images/${path}`;
+        urls.push(uploadedUrl);
+        // #3: hash tresci -> dedup galerii (ten sam plik wgrany dwoma kanalami = jeden kafelek).
+        void sha256OfFile(compressed).then((h) => upsertPhotoHash(uploadedUrl, h)).catch(() => {});
       } catch (err: any) { failed++; console.error("[ReviewSummary] pin photo processing failed:", err?.message ?? err); }
     }
     if (failed > 0) notify.error(urls.length === 0 ? t("toast.photo_upload_error") : t("toast.photo_upload_partial"));
@@ -729,10 +875,29 @@ const ReviewSummary = () => {
     setPinUploadingId(null);
   };
 
+  // Kasowalo BEZ SLOWA, w obu kanalach (zgloszenie Nat 2026-09-09). Plik w Storage zostaje,
+  // wiec "Cofnij" przywraca dokladnie to, co bylo: wiersz pin_photos albo poprzednia tablice.
   const removePinPhoto = async (pin: any, url: string) => {
     haptics.light();
+    const undoToast = (undo: () => void) =>
+      notify.success(t("toast.photo_deleted"), undefined, { action: { label: t("common:buttons.undo"), onClick: undo } });
+    // Zdjecie moze pochodzic z dwoch kanalow: pin_photos (dodane W TRAKCIE, z autorem) albo
+    // pins.images (starszy kanal). Kasujemy z tego, w ktorym faktycznie jest.
+    const live = (livePhotosByPlace.get(pinPhotoKey(pin.place_name)) ?? []).find((ph: any) => ph.url === url);
+    if (live?.id) {
+      const row = await deletePinPhotoReturning(live.id);
+      queryClient.invalidateQueries({ queryKey: ["review-live-pin-photos", idsKey] });
+      if (row) undoToast(() => {
+        void (async () => {
+          await restorePinPhotos([row]);
+          queryClient.invalidateQueries({ queryKey: ["review-live-pin-photos", idsKey] });
+        })();
+      });
+      return;
+    }
     const cur = Array.isArray(pin.images) ? pin.images : [];
     await commitPinImages(pin, cur.filter((u: string) => u !== url));
+    undoToast(() => { void commitPinImages(pin, cur); });
   };
 
   // Przypisanie/odpiecie zdjecia z galerii wyjazdu do miejsca (toggle).
@@ -781,10 +946,24 @@ const ReviewSummary = () => {
     return out;
   }, [photos, sortedDays, routeId]);
 
+  // #3: hashe zdjec galerii (do dedupu po TRESCI). Liczymy klucze PRZED early-returnem (hook).
+  const galleryUrls = useMemo(
+    () => Array.from(new Set([
+      ...myPhotos.map((p) => resolveStored(p.url) ?? p.url),
+      ...(groupPhotos as any[]).map((p) => resolveStored(p.url) ?? p.url),
+    ].filter(Boolean))),
+    [myPhotos, groupPhotos],
+  );
+  const { data: photoHashMap } = useQuery({
+    queryKey: ["photo-hashes", galleryUrls.join("|")],
+    enabled: galleryUrls.length > 0,
+    queryFn: () => fetchPhotoHashes(galleryUrls),
+  });
+
   // Opcje okladki wyjazdu: NAJPIERW Twoje zdjecia z galerii (z etykieta miejsca gdy przypisane),
   // potem zdjecia miejsc trasy (bez duplikatow). Uzywane w arkuszu wyboru okladki.
   const coverPickerOptions = useMemo(() => {
-    const gallery = myPhotos.map(({ url }) => ({ id: `g:${url}`, name: photoPlaceLabel.get(url) ?? "Twoje zdjęcie", url: resolveStored(url) ?? url }));
+    const gallery = myPhotos.map(({ url }) => ({ id: `g:${url}`, name: photoPlaceLabel.get(url) ?? t("photo.yours"), url: resolveStored(url) ?? url }));
     const seen = new Set(gallery.map((o) => o.url));
     const places = coverOptions.filter((o) => !seen.has(o.url));
     return [...gallery, ...places];
@@ -815,7 +994,7 @@ const ReviewSummary = () => {
     setUploading(true);
     const urls = await uploadImages(files.slice(0, 1));
     setUploading(false);
-    if (urls[0]) { setCoverPickerOpen(false); await setCover(urls[0]); }
+    if (urls[0]) { await setCover(urls[0]); }
   };
   const triggerCoverPhotoPick = async () => {
     if (uploading) return;
@@ -830,10 +1009,9 @@ const ReviewSummary = () => {
   // Recznie wybrana okladka wyjazdu = zdjecie jednego z miejsc trasy. Zapis do routes.cover_url.
   const setPlanCover = async (url: string) => {
     if (!routeId) return;
-    setCoverPickerOpen(false);
     // Okladka wyjazdu (tlo hero) = OSOBNA od miniatury eksploracji (list_cover_url) - patrz setCover.
     const { error } = await (supabase as any).from("routes").update({ cover_url: url }).eq("id", routeId);
-    if (error) { notify.error(t("toast.cover_set_error", { defaultValue: "Nie udało się ustawić okładki" })); return; }
+    if (error) { notify.error(t("toast.cover_set_error")); return; }
     queryClient.setQueryData(["review-summary-route", routeId], (old: any) => old ? { ...old, cover_url: url } : old);
     queryClient.invalidateQueries({ queryKey: ["review-trip-days", folderId, routeId] });
     if (user) queryClient.invalidateQueries({ queryKey: ["journal-entries", user.id] });
@@ -844,9 +1022,11 @@ const ReviewSummary = () => {
   // Reczny wybor zdjecia (galeria / miejsca trasy). Zapis do routes.list_cover_url.
   const setPlanListCover = async (url: string) => {
     if (!routeId) return;
+    // Miniatura eksploracji tylko z pionowego zdjecia (3:4 / 9:16) - patrz lib/coverFormat.
+    if (!(await isPortraitCover(url))) { notify.error(t("toast.cover_portrait_only")); return; }
     setListCoverPickerOpen(false);
     const { error } = await (supabase as any).from("routes").update({ list_cover_url: url }).eq("id", routeId);
-    if (error) { notify.error(t("toast.cover_set_error", { defaultValue: "Nie udało się ustawić okładki" })); return; }
+    if (error) { notify.error(t("toast.cover_set_error")); return; }
     queryClient.setQueryData(["review-summary-route", routeId], (old: any) => old ? { ...old, list_cover_url: url } : old);
     queryClient.invalidateQueries({ queryKey: ["discovery-city-routes"] });
     queryClient.invalidateQueries({ queryKey: ["discovery-polecane"] });
@@ -885,7 +1065,8 @@ const ReviewSummary = () => {
     if (pool.length === 0) return;
     const r: any = queryClient.getQueryData(["review-summary-route", rid]);
     if (r?.list_cover_url) return;
-    const pick = pool[Math.floor(Math.random() * pool.length)];
+    // Najpierw pionowe zdjecia (regula okladek 3:4 / 9:16) - patrz lib/ensureListCover.
+    const pick = await pickPortraitCover(pool);
     await (supabase as any).from("routes").update({ list_cover_url: pick }).eq("id", rid);
     queryClient.setQueryData(["review-summary-route", rid], (old: any) => old ? { ...old, list_cover_url: pick } : old);
     queryClient.invalidateQueries({ queryKey: ["discovery-city-routes"] });
@@ -931,32 +1112,112 @@ const ReviewSummary = () => {
   // Wyjscie z trybu edycji (stepper) do read-only PODSUMOWANIA - ta sama logika co "Gotowe",
   // ale dostepna na kazdym kroku. Zapisuje draft planu, oznacza wpis jako zrecenzowany
   // (plan_finalized) i pokazuje podsumowanie zamiast steppera.
+  // "Zapisz" (koniec kreatora / stepper dokumentowania) = ZAPIS ROBOCZEJ, NIE publikacja.
+  // Trasa zostaje status='draft'. Do Wspomnien + eksploracji trafia dopiero przez SWIADOME
+  // "Zakoncz wyjazd" (handleFinishTrip -> publishTrip). Edycja/notki/zdjecia NIGDY nie publikuja.
+  // plan_finalized=true = "zrecenzowano" -> pokazuj PODSUMOWANIE zamiast steppera (to NIE wspomnienie
+  // - wspomnienie robi wylacznie status='published').
   const finishEditing = async () => {
     haptics.success();
     if (draft && draft.dayId === activeRouteId) await savePlan(false);
-    // "Zapisz trase" = trasa STWORZONA: status draft->published. Dopiero teraz zdjecia z pinow
-    // (pins.images) zasilaja okladki miejsc w wyszukiwarce/eksploracji - fetchPlaceUserPhotos
-    // pomija piny tras 'draft'. Podczas tworzenia (draft) zdjecia sa tylko lokalnie na wpisie.
-    try {
-      await (supabase as any).from("routes").update({ status: "published" })
-        .in("id", dayRouteIds.length ? dayRouteIds : [activeRouteId]);
-    } catch (e: any) { console.error("[ReviewSummary] publish status failed:", e?.message ?? e); }
-    // Aktywny wyjazd (przyszla data, isMemory=false): NIE finalizujemy. Wpis staje sie
-    // zakonczony (pocztowka) dopiero PO minieciu daty. Wyjscie z edycji zapisuje i wraca do dziennika.
-    if (!isMemory) {
-      queryClient.invalidateQueries({ queryKey: ["journal-entries"] });
-      navigate("/dziennik");
+    // Nie "koncz" pustej trasy (0 miejsc) - autorytatywny count z DB.
+    const finRids = (dayRouteIds.length ? dayRouteIds : [activeRouteId]).filter(Boolean);
+    const { count: finPinCount } = await (supabase as any).from("pins")
+      .select("id", { count: "exact", head: true }).in("route_id", finRids);
+    if (!finPinCount) {
+      notify.error(t("toast.route_needs_place"));
       return;
     }
     try {
-      await (supabase as any).from("routes").update({ plan_finalized: true }).in("id", dayRouteIds.length ? dayRouteIds : [activeRouteId]);
-    } catch (e: any) { console.error("[ReviewSummary] finishEditing failed:", e?.message ?? e); }
-    // Auto-miniatura eksploracji przy finalizacji (task 3) - jesli trasa ma zdjecia a brak miniatury.
-    await ensureListCover(routeId);
+      await (supabase as any).from("routes").update({ plan_finalized: true }).in("id", finRids);
+    } catch (e: any) { console.error("[ReviewSummary] save draft failed:", e?.message ?? e); }
     setLocalReviewed(true); setEditingStepper(false); setSummaryTab("plan");
     queryClient.invalidateQueries({ queryKey: ["review-summary-route", routeId] });
     queryClient.invalidateQueries({ queryKey: ["review-trip-days", folderId, routeId] });
     queryClient.invalidateQueries({ queryKey: ["journal-entries"] });
+    // Koniec steppera = koniec dokumentowania. Wyjazd JUZ opublikowany (edycja wspomnienia) ->
+    // wracamy do jego docelowego widoku. Roboczy -> pytamy o publikacje i to ona konczy flow;
+    // nie ma juz posredniego "podsumowania z okladka" (zgloszenie Nat 2026-08-30).
+    // Publikacja mieszka teraz w widoku wyjazdu ("Opublikuj" w /route/:id) - stepper tylko
+    // zapisuje i tam odsyla (2026-08-30).
+    navigate(`/route/${routeId}`, { replace: true });
+  };
+
+  // "Zakoncz wyjazd" = SWIADOMA PUBLIKACJA (jedyne miejsce ustawiajace status='published').
+  // Trasa staje sie WSPOMNIENIEM: trafia do profilu (Wspomnienia) + eksploracji, jej zdjecia
+  // zasilaja baze zdjec miejsc (fetchPlaceUserPhotos pomija piny tras != 'published'). is_shared=true
+  // + trip_type='completed' (opuszcza dashboard aktywnych). Wymaga >=1 miejsca; okladke domyka
+  // ensureListCover (gdy brak zdjec -> komunikat).
+  const [confirmFinishOpen, setConfirmFinishOpen] = useState(false);
+  // Potwierdzenie zakonczenia wyjazdu: gest w dol = anulowanie (blokada w trakcie zapisu).
+  const [finishing, setFinishing] = useState(false);
+  const finishDrag = useDragToDismiss({ onDismiss: () => setConfirmFinishOpen(false), enabled: !finishing });
+  const handleFinishTrip = async () => {
+    if (!activeRouteId) return;
+    const finRids = (dayRouteIds.length ? dayRouteIds : [activeRouteId]).filter(Boolean);
+    const { count: finPinCount } = await (supabase as any).from("pins")
+      .select("id", { count: "exact", head: true }).in("route_id", finRids);
+    if (!finPinCount) {
+      notify.error(t("toast.route_needs_place"));
+      return;
+    }
+    setFinishing(true);
+    haptics.success();
+    try {
+      await publishTrip(finRids);
+      await ensureListCover(routeId);
+      const { data: covRow } = await (supabase as any).from("routes").select("list_cover_url").eq("id", routeId).maybeSingle();
+      if (!covRow?.list_cover_url) {
+        notify.error(t("toast.finished_no_cover"));
+      } else {
+        notify.success(t("toast.finished"));
+      }
+      queryClient.invalidateQueries({ queryKey: ["review-summary-route", routeId] });
+      queryClient.invalidateQueries({ queryKey: ["review-trip-days", folderId, routeId] });
+      queryClient.invalidateQueries({ queryKey: ["journal-entries"] });
+      queryClient.invalidateQueries({ queryKey: ["profile-trip-feed"] });
+      queryClient.invalidateQueries({ queryKey: ["discovery-city-routes"] });
+      queryClient.invalidateQueries({ queryKey: ["discovery-polecane"] });
+      setConfirmFinishOpen(false);
+      navigate(`/route/${routeId}`, { replace: true });
+    } catch (e: any) {
+      console.error("[ReviewSummary] handleFinishTrip failed:", e?.message ?? e);
+      notify.error(t("toast.generic_error"));
+    } finally {
+      setFinishing(false);
+    }
+  };
+
+  // Potwierdzenie publikacji ("Zakoncz wyjazd") - fixed overlay, renderowane w OBU widokach
+  // (compact early-return + klasyczny). Publikacja jest swiadoma i jednokierunkowa (draft -> wspomnienie).
+  const renderFinishConfirm = () => {
+    if (!confirmFinishOpen) return null;
+    return (
+      <div className="fixed inset-0 z-[96] flex items-end justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => { if (!finishing) setConfirmFinishOpen(false); }}>
+        <div {...finishDrag.dragProps} onClick={(e) => e.stopPropagation()} className="w-[calc(100%-16px)] mx-2 mb-2 max-w-lg bg-card rounded-[40px] px-5 pt-5 pb-[max(20px,env(safe-area-inset-bottom))] shadow-2xl animate-in slide-in-from-bottom-4 duration-300">
+          <p className="text-lg font-black text-foreground">{t("confirm.finish_title")}</p>
+          <p className="text-sm text-muted-foreground leading-relaxed mt-1.5">
+            {t("confirm.finish_desc")}
+          </p>
+          <div className="flex gap-2 mt-5">
+            <button
+              onClick={() => setConfirmFinishOpen(false)}
+              disabled={finishing}
+              className="flex-1 py-3.5 rounded-2xl bg-secondary text-secondary-foreground font-bold text-sm active:scale-[0.98] transition-transform disabled:opacity-40"
+            >
+              {t("cta.cancel")}
+            </button>
+            <button
+              onClick={handleFinishTrip}
+              disabled={finishing}
+              className="flex-1 py-3.5 rounded-2xl bg-primary text-white font-bold text-sm active:scale-[0.98] transition-transform disabled:opacity-40"
+            >
+              {finishing ? t("status.saving") : t("cta.finish_trip")}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   const handleNoteChange = (placeName: string, value: string) => {
@@ -980,94 +1241,26 @@ const ReviewSummary = () => {
   // ── Edycja planu dnia (#4/#5) ──
   const workingPins = draft && draft.dayId === activeRouteId ? draft.pins : currentPins;
 
-  // ── Odwiedzone (checklist "Bylem tu") - reczne oznaczanie, backed by pins.visited_at.
-  // "Dni z dat": visited_at to timestamp, wiec wspomnienie moze grupowac po dacie odwiedzenia.
-  // (Auto check-in GPS = Stage 2). visitedOverrides = optymistyczny stan przed refetchem.
-  const [visitedOverrides, setVisitedOverrides] = useState<Record<string, boolean>>({});
-  const isVisited = (pin: any) =>
-    visitedOverrides[pin.id] ?? !!(allPins.find((p: any) => p.id === pin.id)?.visited_at);
-  const visitedCount = currentPins.filter((p: any) => isVisited(p)).length;
-  const toggleVisited = async (pin: any) => {
-    const next = !isVisited(pin);
-    setVisitedOverrides((o) => ({ ...o, [pin.id]: next }));
-    try {
-      await (supabase as any).from("pins")
-        .update({ visited_at: next ? new Date().toISOString() : null })
-        .eq("id", pin.id);
-      queryClient.invalidateQueries({ queryKey: ["review-all-pins"] });
-    } catch (e: any) {
-      console.error("[ReviewSummary] toggleVisited failed:", e?.message ?? e);
-      setVisitedOverrides((o) => ({ ...o, [pin.id]: !next })); // revert
-    }
-  };
+  // #3e: zdjecia ktore user dodal do miejsc tej trasy w wizytowkach (place_photos). Pokazujemy je
+  // read-only na widoku Galerii, zeby user od razu widzial co juz dodal (potwierdzenie).
+  // Uzywamy routePinKeys (oba klucze gpid:/nc:) - spojnie z okladkami (#1).
+  const { data: myPlacePhotos = [] } = useQuery({
+    queryKey: ["route-my-place-photos", user?.id, routePinKeys.join("|")],
+    enabled: !!user && routePinKeys.length > 0,
+    queryFn: async () => {
+      const { data } = await (supabase as any)
+        .from("place_photos")
+        .select("photo_url")
+        .eq("user_id", user!.id)
+        .in("place_key", routePinKeys)
+        .order("created_at", { ascending: false });
+      return (data ?? []).map((r: any) => r.photo_url as string);
+    },
+  });
 
-  // GPS check-in (on-demand, one-shot): "Jestem tutaj" -> pobierz pozycje i oznacz pobliskie
-  // (do 150 m) niezaliczone miejsca jako odwiedzone. Bez sledzenia w tle (prosto + prywatnie).
-  const [checkingIn, setCheckingIn] = useState(false);
-  const handleCheckIn = async () => {
-    setCheckingIn(true);
-    try {
-      const coords = await requestLocation(true);
-      if (!coords) { notify.error("Nie udało się pobrać lokalizacji"); return; }
-      const nearby = currentPins.filter((p: any) =>
-        !isVisited(p) && typeof p.latitude === "number" && typeof p.longitude === "number" &&
-        haversineKm(coords, { lat: p.latitude, lng: p.longitude }) < 0.15,
-      );
-      if (nearby.length === 0) { notify.error("Brak zapisanych miejsc w pobliżu (150 m)"); return; }
-      for (const p of nearby) await toggleVisited(p);
-      notify.success(nearby.length === 1
-        ? `Oznaczono „${nearby[0].place_name}" jako odwiedzone`
-        : `Oznaczono ${nearby.length} miejsca w pobliżu`);
-    } catch (e: any) {
-      console.error("[ReviewSummary] check-in failed:", e?.message ?? e);
-      notify.error("Nie udało się sprawdzić lokalizacji");
-    } finally {
-      setCheckingIn(false);
-    }
-  };
-
-  // Pasek postepu "X/Y odwiedzone" + (aktywny wyjazd) przycisk GPS "Jestem tutaj".
-  const renderVisitedProgress = () => {
-    if (!activeChecklist || currentPins.length === 0) return null;
-    const pct = Math.round((visitedCount / currentPins.length) * 100);
-    return (
-      <div className="mb-3">
-        <div className="flex items-center justify-between mb-1">
-          <span className="text-xs font-semibold text-muted-foreground">Odwiedzone</span>
-          <span className="text-xs font-bold text-foreground">{visitedCount}/{currentPins.length}</span>
-        </div>
-        <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-          <div className="h-full bg-green-500 rounded-full transition-all" style={{ width: `${pct}%` }} />
-        </div>
-        {!isMemory && visitedCount < currentPins.length && (
-          <button
-            onClick={handleCheckIn}
-            disabled={checkingIn}
-            className="mt-2.5 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-secondary text-secondary-foreground text-xs font-semibold active:scale-[0.98] transition-transform disabled:opacity-50"
-          >
-            <MapPin className="h-3.5 w-3.5" />
-            {checkingIn ? "Sprawdzam..." : "Jestem tutaj - oznacz pobliskie"}
-          </button>
-        )}
-      </div>
-    );
-  };
-
-  // Przycisk toggle "Bylem tu" na miejscu (zielony ptaszek gdy odwiedzone). Tylko w aktywnej checkliscie.
-  const renderVisitedToggle = (pin: any) => {
-    if (!activeChecklist) return null;
-    return (
-      <button
-        onClick={(e) => { e.stopPropagation(); toggleVisited(pin); }}
-        aria-label={isVisited(pin) ? "Odznacz odwiedzone" : "Byłem tu"}
-        className={`h-9 w-9 rounded-full flex items-center justify-center shrink-0 transition-colors ${
-          isVisited(pin) ? "bg-green-500 text-white" : "bg-white border border-border text-muted-foreground active:bg-muted"
-        }`}
-      >
-        <Check className="h-4 w-4" strokeWidth={2.6} />
-      </button>
-    );
-  };
+  // (Odhaczanie miejsc / checklista "Bylem tu" USUNIETE 2026-08-24 - niepotrzebne i nieaktualne.
+  // Wspomnienie = status='published' (Zakoncz wyjazd), nie odhaczanie. pins.visited_at zostaje w DB
+  // jako martwa kolumna, nigdzie nieuzywana w UI.)
 
   const setWorking = (next: any[]) => { if (activeRouteId) setDraft({ dayId: activeRouteId, pins: next }); };
   const movePin = (from: number, to: number) => {
@@ -1089,6 +1282,12 @@ const ReviewSummary = () => {
   // ocene/notki/share. finalize=false (aktywny wpis): tylko persystuje zmiany.
   const savePlan = async (finalize: boolean) => {
     if (!activeRouteId) return;
+    // SAFETY: nie pozwol wykasowac WSZYSTKICH miejsc do zera (race/blad stanu prowadzil do
+    // pustej opublikowanej trasy, bug 2026-08-10). Trasa musi miec >=1 miejsce.
+    if (workingPins.length === 0 && currentPins.length > 0) {
+      notify.error(t("toast.route_needs_place"));
+      return;
+    }
     setSavingPlan(true);
     try {
       const removed = currentPins.filter((p: any) => !workingPins.some((w: any) => w.id === p.id));
@@ -1202,7 +1401,7 @@ const ReviewSummary = () => {
     queryClient.setQueryData(["review-summary-route", routeId], (old: any) => old ? { ...old, start_date: startStr, end_date: endStr } : old);
     queryClient.invalidateQueries({ queryKey: ["review-trip-days", folderId, routeId] });
     if (user) queryClient.invalidateQueries({ queryKey: ["journal-entries", user.id] });
-    notify.success("Zapisano datę");
+    notify.success(t("toast.date_saved"));
   };
 
   // Wyczyść daty wyjazdu (usun start/end).
@@ -1214,7 +1413,7 @@ const ReviewSummary = () => {
     queryClient.setQueryData(["review-summary-route", routeId], (old: any) => old ? { ...old, start_date: null, end_date: null } : old);
     queryClient.invalidateQueries({ queryKey: ["review-trip-days", folderId, routeId] });
     if (user) queryClient.invalidateQueries({ queryKey: ["journal-entries", user.id] });
-    notify.success("Usunięto daty");
+    notify.success(t("toast.dates_removed"));
   };
 
   // Zakres dat: trasa wielodniowa => "12 - 14 maja 2026", jednodniowa => "12 maja 2026".
@@ -1236,37 +1435,14 @@ const ReviewSummary = () => {
     return format(fd, "d MMMM yyyy", { locale: dateLocale() });
   }, [sortedDays, isMultiDay, route?.end_date, route?.start_date]);
 
-  // Aktywny wpis vs wspomnienie: wspomnienie gdy trasa UKOŃCZONA (trip_type=completed - user
-  // odhaczył wszystkie miejsca / zatwierdził) LUB zrecenzowana (plan_finalized) LUB minął OSTATNI
-  // dzień. trip_type ustawiane od razu przy ukończeniu, plan_finalized dopiero po stepperze.
-  const isMemory = useMemo(() => {
-    if (sortedDays.some((d: any) => d?.trip_type === "completed" || d?.plan_finalized)) return true;
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    let lastTs = -Infinity;
-    for (const d of sortedDays) {
-      const ds = d.end_date ?? d.start_date;
-      if (ds) lastTs = Math.max(lastTs, new Date(ds).getTime());
-    }
-    return Number.isFinite(lastTs) && lastTs < today.getTime();
-  }, [sortedDays]);
+  // WSPOMNIENIE = trasa OPUBLIKOWANA (status='published'). JEDYNE zrodlo prawdy - to samo co profil
+  // (Wspomnienia) i Dziennik. Publikacja wylacznie przez "Zakoncz wyjazd" (handleFinishTrip). NIE
+  // trip_type/plan_finalized/data: edycja/notki/zdjecia zostawiaja trase robocza i edytowalna.
+  const isMemory = route?.status === "published";
 
-  // Wpis zrecenzowany = user skończył stepper (plan_finalized). Wtedy pokazujemy PODSUMOWANIE
-  // zamiast steppera. localReviewed = optymistyczne po "Gotowe" (przed refetchem route).
+  // Wpis zrecenzowany = user przeszedl stepper (plan_finalized). Wtedy PODSUMOWANIE zamiast steppera.
+  // localReviewed = optymistyczne po "Zapisz" (przed refetchem route). To NIE publikacja (patrz isMemory).
   const reviewed = localReviewed || sortedDays.some((d: any) => d?.plan_finalized);
-
-  // Odhaczanie miejsc dostepne dopiero gdy wyjazd SIE ZACZAL (start_date <= dzis). Wyjazd
-  // zaplanowany na przyszlosc = checklista ukryta. Brak daty = traktuj jako dostepne.
-  const tripStarted = (() => {
-    const s = route?.start_date ? parseISO(route.start_date) : null;
-    if (!s || !isValid(s)) return true;
-    const today = new Date(); today.setHours(0, 0, 0, 0);
-    return s.getTime() <= today.getTime();
-  })();
-  // Interaktywna checklista (toggle + wyszarzanie + postep + GPS) TYLKO w AKTYWNYM, rozpoczetym
-  // wyjezdzie. Wspomnienie grupuje po dniach, ale BEZ odhaczania/wyszarzania (#2). Przyszly wyjazd
-  // nie ma checklisty wcale (#1).
-  const activeChecklist = tripStarted && !isMemory;
 
   if (authLoading) return null;
   if (!user) { navigate("/auth"); return null; }
@@ -1276,7 +1452,7 @@ const ReviewSummary = () => {
   if (routeLoading) {
     return (
       <div className="min-h-[100dvh] bg-background flex items-center justify-center">
-        <div className="h-8 w-8 rounded-full border-2 border-orange-200 border-t-orange-600 animate-spin" />
+        <div className="h-8 w-8 rounded-full border-2 border-orange-200 border-t-primary animate-spin" />
       </div>
     );
   }
@@ -1311,10 +1487,82 @@ const ReviewSummary = () => {
   const heroPhoto = planCover ?? userCover ?? placeCover ?? getRandomPinPlaceholder(routeId ?? undefined);
   // Miniatura eksploracji = OSOBNA okladka (list_cover_url). Gdy nieustawiona -> fallback do hero.
   const listCoverPhoto = resolveStored((route as any)?.list_cover_url) ?? heroPhoto;
-  const galleryPhotos = [
-    ...myPhotos.map((p) => ({ ...p, mine: true, username: t("labels.you") })),
-    ...groupPhotos.map((p: any) => ({ url: p.url, owner: "", mine: false, username: p.username })),
-  ];
+  // Galeria = zdjecia wlasciciela (review_photos = myPhotos) + wspolne grupowe (group_trip_photos).
+  // KRYTYCZNE: pokazujemy OBIE pule. Wczesniej trasa grupowa czytala TYLKO group_trip_photos, wiec
+  // po zaproszeniu kogos do STAREJ trasy jej zdjecia (w review_photos) znikaly z widoku (nie byly
+  // kasowane - tylko ukryte). Dedup po URL scala te same zdjecia; rozne pliki (ta sama scena wgrana
+  // dwoma kanalami) zostaja osobno - to mniejszy problem niz znikajace zdjecia.
+  // UWAGA: zwykla stala (NIE useMemo) - kod jest PO wczesnym returnie (authLoading), hook lamalby
+  // kolejnosc hookow (React #310). Dedup po URL jest tani.
+  const galleryPhotos = (() => {
+    const map = new Map<string, { url: string; owner: string; mine: boolean; isGroup: boolean; username: string; avatar: string | null; placeLabel: string | null }>();
+    const push = (rawUrl: string, meta: { owner: string; mine: boolean; isGroup: boolean; username: string; avatar: string | null }) => {
+      const url = resolveStored(rawUrl) ?? rawUrl;
+      const placeLabel = photoPlaceLabel.get(rawUrl) ?? null;
+      const ex = map.get(url);
+      if (ex) {
+        map.set(url, {
+          ...ex,
+          mine: ex.mine || meta.mine,
+          username: (!ex.mine ? ex.username : meta.username) || ex.username,
+          avatar: ex.avatar ?? meta.avatar,
+          placeLabel: ex.placeLabel ?? placeLabel,
+        });
+      } else {
+        map.set(url, { url, owner: meta.owner, mine: meta.mine, isGroup: meta.isGroup, username: meta.username, avatar: meta.avatar, placeLabel });
+      }
+    };
+    // Zdjecia wlasciciela (review_photos) - pierwsze, wiec przy tym samym URL wygrywa isGroup=false
+    // (usuwanie przez removePhoto z review_photos). Potem wspolne grupowe.
+    myPhotos.forEach((p) => push(p.url, { owner: p.owner, mine: true, isGroup: false, username: t("labels.you"), avatar: null }));
+    (groupPhotos as any[]).forEach((p) => push(p.url, { owner: "", mine: p.userId === user?.id, isGroup: true, username: p.userId === user?.id ? t("labels.you") : p.username, avatar: p.avatar ?? null }));
+    const byUrl = Array.from(map.values());
+    // #3: drugi dedup - po TRESCI (sha256). Ten sam plik wgrany dwoma kanalami (rozny URL, ta sama
+    // zawartosc) -> jeden kafelek. Zdjecia BEZ hasha (jeszcze nie policzony) zostaja unikalne -
+    // NIGDY nie ukrywamy zdjecia, tylko scalamy pewne duplikaty.
+    if (!photoHashMap || photoHashMap.size === 0) return byUrl;
+    const byHash = new Map<string, typeof byUrl[number]>();
+    const result: typeof byUrl = [];
+    for (const item of byUrl) {
+      const h = photoHashMap.get(item.url);
+      if (!h) { result.push(item); continue; }
+      const ex = byHash.get(h);
+      if (ex) {
+        ex.mine = ex.mine || item.mine;
+        ex.placeLabel = ex.placeLabel ?? item.placeLabel;
+        if (!ex.mine) ex.username = ex.username || item.username;
+        ex.avatar = ex.avatar ?? item.avatar;
+        continue;
+      }
+      byHash.set(h, item);
+      result.push(item);
+    }
+    return result;
+  })();
+  // Kolejnosc zdjec dla gestu w podgladzie fullscreen (handler zadeklarowany przed early returnami).
+  galleryUrlsRef.current = galleryPhotos.map((g) => g.url);
+
+  // Usuwanie wspolnego zdjecia grupowego (wlasne - RLS gtp_delete_own).
+  const removeGroupPhoto = async (url: string) => {
+    const sid = (route as any)?.group_session_id;
+    if (!sid || !user) return;
+    setViewerUrl(null);
+    await (supabase as any).from("group_trip_photos").delete().eq("session_id", sid).eq("url", url).eq("user_id", user.id);
+    queryClient.invalidateQueries({ queryKey: ["review-summary-group-photos", sid] });
+    // Kasowalo BEZ SLOWA. Klucz wiersza znamy w calosci, plik w Storage zostaje, wiec
+    // przywrocenie to jeden insert (zgloszenie Nat 2026-09-09).
+    notify.success(t("toast.photo_deleted"), undefined, {
+      action: {
+        label: t("common:buttons.undo"),
+        onClick: () => {
+          void (async () => {
+            await (supabase as any).from("group_trip_photos").insert({ session_id: sid, url, user_id: user.id });
+            queryClient.invalidateQueries({ queryKey: ["review-summary-group-photos", sid] });
+          })();
+        },
+      },
+    });
+  };
 
   // Podglad wizytowki miejsca - ta sama wizytowka co na swiperze (PlaceSwiperDetail).
   // Mapujemy pin na MockPlace (jak w FeedActivityCard).
@@ -1329,7 +1577,9 @@ const ReviewSummary = () => {
     rating: 0,
     photo_url: resolveStored(pin.photo_url || pin.image_url || (Array.isArray(pin.images) ? pin.images[0] : null)) ?? "",
     vibe_tags: metaFor(pin).tags,
-    description: pin.description || metaFor(pin).description || "",
+    // Kolejnosc jak w SharedRoute: zrodlem prawdy jest opis MIEJSCA z bazy, opis pina
+    // (generowany per-trasa) tylko jako fallback dla custom pinow.
+    description: metaFor(pin).description || pin.description || "",
   } satisfies MockPlace);
 
   // Otworz miejsce w Google Maps (WIZYTOWKA / place page, NIE nawigacja/directions).
@@ -1352,13 +1602,21 @@ const ReviewSummary = () => {
   const renderRatingNote = (placeName: string, centered = false, readOnly = false) => {
     const k = rkey(activeRouteId!, placeName);
     const val = notes[k] ?? "";
-    // Read-only (podsumowanie): pokaz notke jako tekst; ukryj gdy pusta.
+    // Notki INNYCH uczestnikow (multi-user) - pokazywane obok wlasnej w obu trybach.
+    const others = notesMap.get(placeNoteKey(placeName)) ?? [];
+    const hasOthers = others.some((n) => n.user_id !== user?.id);
+    // Read-only (podsumowanie): pokaz notke jako tekst; ukryj gdy nic (wlasnej ani cudzych).
     if (readOnly) {
-      if (!val.trim()) return null;
+      if (!val.trim() && !hasOthers) return null;
       return (
         <div className={`mt-2 ${centered ? "text-center" : ""}`}>
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">{t("note.label")}</p>
-          <p className="text-sm text-foreground/80 leading-relaxed whitespace-pre-wrap">{val}</p>
+          {val.trim() && (
+            <>
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">{t("note.label")}</p>
+              <p className="text-sm text-foreground/80 leading-relaxed whitespace-pre-wrap">{val}</p>
+            </>
+          )}
+          {hasOthers && <div className={`text-left ${val.trim() ? "mt-2.5" : ""}`}><PlaceNotes notes={others} excludeUserId={user?.id} /></div>}
         </div>
       );
     }
@@ -1379,14 +1637,20 @@ const ReviewSummary = () => {
             <span className="absolute bottom-2 right-2.5 text-[10px] text-green-600 font-medium">{t("note.saved")}</span>
           )}
         </div>
+        {hasOthers && (
+          <div className="mt-2.5 text-left">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">{t("notes.participants")}</p>
+            <PlaceNotes notes={others} excludeUserId={user?.id} />
+          </div>
+        )}
       </div>
     );
   };
 
   // ── Lista (read-only): miejsca grupowane po kategorii. Klik => wizytowka. ──
   // Wspolna karta miejsca (karuzela + pionowa lista). fullWidth -> pelna szerokosc (stacked).
-  const renderPlanCard = (pin: any, i: number, fullWidth: boolean, editable: boolean, withRating: boolean, checklist: boolean = activeChecklist) => (
-    <div key={pin.id} className={`${fullWidth ? "w-full" : "snap-center shrink-0 w-[80vw] max-w-[320px]"} rounded-2xl bg-secondary border border-border/40 overflow-hidden shadow-sm flex flex-col transition-opacity ${checklist && isVisited(pin) ? "opacity-60" : ""}`}>
+  const renderPlanCard = (pin: any, i: number, fullWidth: boolean, editable: boolean, withRating: boolean) => (
+    <div key={pin.id} className={`${fullWidth ? "w-full" : "snap-center shrink-0 w-[80vw] max-w-[320px]"} rounded-2xl bg-secondary border border-border/40 overflow-hidden shadow-sm flex flex-col`}>
       <button onClick={() => openDetail(pin)} className="block w-full text-left active:opacity-90 transition-opacity">
         <div className="relative w-full aspect-[4/3] bg-muted">
           <PlacePhoto pin={pin} className="w-full h-full object-cover" emojiClass="text-4xl" />
@@ -1424,19 +1688,6 @@ const ReviewSummary = () => {
           })()}
         </div>
       </button>
-      {/* Toggle "Bylem tu" (karta) - tylko w aktywnej checkliscie; poza przyciskiem openDetail.
-          W KREATORZE (step 2 "Sugestie do trasy") checklist=false -> guzik ukryty. */}
-      {checklist && (
-        <div className="px-4 pt-2 pb-1">
-          <button
-            onClick={() => toggleVisited(pin)}
-            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${isVisited(pin) ? "bg-green-500 text-white" : "bg-white border border-border text-muted-foreground active:bg-muted"}`}
-          >
-            <Check className="h-3.5 w-3.5" strokeWidth={2.6} />
-            {isVisited(pin) ? "Odwiedzone" : "Byłem tu"}
-          </button>
-        </div>
-      )}
       {editable && (
         <div className="flex items-center justify-between px-4 py-3 mt-auto border-t border-border/30">
           <button onClick={() => movePin(i, i - 1)} disabled={i === 0} className="flex items-center gap-1 text-xs font-semibold text-muted-foreground disabled:opacity-25 active:scale-95">
@@ -1452,14 +1703,14 @@ const ReviewSummary = () => {
   );
 
   // ── Kompaktowy wiersz listy: miniaturka + nazwa + chip kategorii (+ reorder/usuń gdy edycja). ──
-  const renderPlanRow = (pin: any, i: number, editable: boolean, checklist: boolean = activeChecklist) => (
-    <div key={pin.id} className={`flex items-center gap-3 rounded-2xl bg-secondary border border-border/40 shadow-sm p-2.5 transition-opacity ${checklist && isVisited(pin) ? "opacity-60" : ""}`}>
+  const renderPlanRow = (pin: any, i: number, editable: boolean) => (
+    <div key={pin.id} className="flex items-center gap-3 rounded-2xl bg-secondary border border-border/40 shadow-sm p-2.5">
       <button onClick={() => openDetail(pin)} className="relative h-14 w-14 shrink-0 rounded-xl overflow-hidden bg-muted active:opacity-90">
         <PlacePhoto pin={pin} className="w-full h-full object-cover" emojiClass="text-2xl" />
         <span className="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-black/55 backdrop-blur text-white text-[10px] font-bold flex items-center justify-center">{i + 1}</span>
       </button>
       <button onClick={() => openDetail(pin)} className="min-w-0 flex-1 text-left">
-        <p className={`text-sm font-bold leading-tight truncate ${checklist && isVisited(pin) ? "line-through" : ""}`}>{pin.place_name}</p>
+        <p className="text-sm font-bold leading-tight truncate">{pin.place_name}</p>
         <span className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white text-[11px] font-semibold text-foreground">
           {catLabel(pin.category)}
         </span>
@@ -1479,7 +1730,7 @@ const ReviewSummary = () => {
   // Lista (read-only / podsumowanie): każde miejsce = biała sekcja (miniatura + nazwa + chip
   // + notka) na białym tle z delikatnym cieniem 1px. Tap -> wizytówka.
   const renderReadPin = (pin: any, i: number, withRating: boolean) => (
-    <div key={pin.id} className={`rounded-2xl bg-secondary border border-black/5 shadow-sm p-3 transition-opacity ${activeChecklist && isVisited(pin) ? "opacity-60" : ""}`}>
+    <div key={pin.id} className="rounded-2xl bg-secondary border border-black/5 shadow-sm p-3">
       <div className="flex items-center gap-3">
         <button onClick={() => openDetail(pin)} className="flex items-center gap-3 flex-1 min-w-0 text-left active:opacity-90">
           <div className="relative h-14 w-14 shrink-0 rounded-xl overflow-hidden bg-muted">
@@ -1487,94 +1738,33 @@ const ReviewSummary = () => {
             <span className="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-black/55 backdrop-blur text-white text-[10px] font-bold flex items-center justify-center">{i + 1}</span>
           </div>
           <div className="min-w-0 flex-1">
-            <p className={`text-sm font-bold leading-tight truncate ${activeChecklist && isVisited(pin) ? "line-through" : ""}`}>{pin.place_name}</p>
+            <p className="text-sm font-bold leading-tight truncate">{pin.place_name}</p>
             <span className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white text-[11px] font-semibold text-foreground">
               {catLabel(pin.category)}
             </span>
           </div>
         </button>
-        {renderVisitedToggle(pin)}
       </div>
-      {withRating && renderRatingNote(pin.place_name, false, true)}
+      {/* Notki ZAWSZE (own + uczestnikow) - multi-user; renderRatingNote zwraca null gdy brak. */}
+      {renderRatingNote(pin.place_name, false, true)}
     </div>
   );
 
   const placeWord = (n: number) => n === 1 ? "miejsce" : (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20)) ? "miejsca" : "miejsc";
 
-  const renderListReadonly = (withRating: boolean) => {
-    // We WSPOMNIENIU grupujemy odwiedzone po DNIU odwiedzenia (visited_at). Dni wynikaja same
-    // z tego kiedy user odhaczal - bez planowania z gory. Aktywny widok zostaje plaska checklista.
-    const anyVisited = currentPins.some((p: any) => isVisited(p));
-    if (isMemory && anyVisited) {
-      const byDay = new Map<string, any[]>();
-      const notVisited: any[] = [];
-      currentPins.forEach((pin: any) => {
-        if (isVisited(pin)) {
-          const key = pin.visited_at ? String(pin.visited_at).slice(0, 10) : "brak";
-          if (!byDay.has(key)) byDay.set(key, []);
-          byDay.get(key)!.push(pin);
-        } else notVisited.push(pin);
-      });
-      const days = [...byDay.keys()].filter((k) => k !== "brak").sort();
-      if (byDay.has("brak")) days.push("brak");
-      const dayLabel = (k: string) => {
-        if (k === "brak") return "Odwiedzone";
-        const d = parseISO(k);
-        return isValid(d) ? format(d, "d MMMM yyyy", { locale: dateLocale() }) : k;
-      };
-      let idx = 0;
-      return (
-        <div className="space-y-5">
-          {days.map((day) => {
-            const items = byDay.get(day)!;
-            return (
-              <div key={day}>
-                <div className="flex items-center gap-2 mb-2.5">
-                  <span className="text-sm font-black text-foreground">{dayLabel(day)}</span>
-                  <span className="text-xs font-semibold text-muted-foreground">{items.length} {placeWord(items.length)}</span>
-                  <div className="flex-1 h-px bg-border/50" />
-                </div>
-                <div className="space-y-2.5">
-                  {items.map((pin: any) => renderReadPin(pin, idx++, withRating))}
-                </div>
-              </div>
-            );
-          })}
-          {notVisited.length > 0 && (
-            <div>
-              <div className="flex items-center gap-2 mb-2.5">
-                <span className="text-sm font-black text-muted-foreground">Nieodwiedzone</span>
-                <div className="flex-1 h-px bg-border/50" />
-              </div>
-              <div className="space-y-2.5">
-                {notVisited.map((pin: any) => renderReadPin(pin, idx++, withRating))}
-              </div>
-            </div>
-          )}
-        </div>
-      );
-    }
-    return (
-      <div className="space-y-2.5">
-        {renderVisitedProgress()}
-        {currentPins.map((pin: any, i: number) => renderReadPin(pin, i, withRating))}
-      </div>
-    );
-  };
+  const renderListReadonly = (withRating: boolean) => (
+    <div className="space-y-2.5">
+      {currentPins.map((pin: any, i: number) => renderReadPin(pin, i, withRating))}
+    </div>
+  );
 
   // ── Szczegoly: poziomy swiper kart (jak kreator trasy). editable => move/usun,
   // withRating => Ocena + Notka pod karta. Klik w karte => wizytowka. ──
   // Szczegoly: poziomy swiper kart.
-  const renderSwiper = (editable: boolean, withRating: boolean, checklist: boolean = activeChecklist) => (
-    <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory scrollbar-none -mx-5 px-5 pb-2">
-      {workingPins.map((pin: any, i: number) => renderPlanCard(pin, i, false, editable, withRating, checklist))}
-    </div>
-  );
 
   // Lista (edytowalna): kompaktowe wiersze (miniatura + nazwa + chip + reorder/usuń).
   const renderEditablePlan = (_withRating: boolean) => (
     <div className="space-y-2">
-      {renderVisitedProgress()}
       {workingPins.map((pin: any, i: number) => renderPlanRow(pin, i, true))}
     </div>
   );
@@ -1591,7 +1781,7 @@ const ReviewSummary = () => {
   );
 
   // ── Galeria zdjęć (grid 3-kol, jak instagram). editable -> przycisk dodawania. ──
-  // ── Arkusz "Zdjęcia do miejsca" (przypisanie z galerii / nowe) - reużywany w widoku planu i kroku Galeria. ──
+  // ── Arkusz t("photo.for_place") (przypisanie z galerii / nowe) - reużywany w widoku planu i kroku Galeria. ──
   const renderPinPickerSheet = () => {
     if (!pinPickerId) return null;
     const pickerPin = currentPins.find((p: any) => p.id === pinPickerId);
@@ -1599,20 +1789,19 @@ const ReviewSummary = () => {
     const assigned: string[] = Array.isArray(pickerPin.images) ? pickerPin.images : [];
     return (
       <div className="fixed inset-0 z-[95] flex items-end justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setPinPickerId(null)}>
-        <div onClick={(e) => e.stopPropagation()} className="relative w-full max-w-lg bg-card rounded-t-3xl px-4 pt-3 pb-[max(16px,env(safe-area-inset-bottom))] shadow-2xl animate-in slide-in-from-bottom-4 duration-300 flex flex-col" style={{ maxHeight: "82dvh" }}>
+        <div {...pinPickerDrag.dragProps} onClick={(e) => e.stopPropagation()} className="relative w-[calc(100%-16px)] mx-2 mb-2 max-w-lg bg-card rounded-[40px] px-4 pt-3 pb-[max(16px,env(safe-area-inset-bottom))] shadow-2xl animate-in slide-in-from-bottom-4 duration-300 flex flex-col" style={{ ...pinPickerDrag.dragProps.style, maxHeight: "82dvh" }}>
           <div className="mx-auto h-1 w-10 rounded-full bg-muted-foreground/25 mb-3 shrink-0" />
-          <p className="font-display text-lg font-bold text-foreground px-1 shrink-0">Zdjęcia do miejsca</p>
+          <p className="font-display text-lg font-bold text-foreground px-1 shrink-0">{t("photo.for_place")}</p>
           <p className="text-[13px] text-muted-foreground px-1 mt-0.5 mb-3 shrink-0 truncate">{pickerPin.place_name}</p>
           <button
             onClick={() => { const p = pickerPin; setPinPickerId(null); triggerPinPhotoPick(p); }}
             className="shrink-0 w-full flex items-center justify-center gap-2 rounded-2xl bg-secondary text-secondary-foreground py-3 mb-3 text-sm font-semibold active:scale-[0.98] transition-transform"
           >
-            <Camera className="h-4 w-4" /> Dodaj nowe zdjęcie
-          </button>
-          <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide px-1 mb-2 shrink-0">Z galerii wyjazdu</p>
+            <Camera className="h-4 w-4" />{t("photo.add_new")}</button>
+          <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide px-1 mb-2 shrink-0">{t("photo.from_gallery")}</p>
           <div className="overflow-y-auto min-h-0 flex-1">
             {myPhotos.length === 0 ? (
-              <p className="text-center text-sm text-muted-foreground py-10 px-6">Brak zdjęć w galerii wyjazdu. Dodaj je najpierw w sekcji „Zdjęcia z wyjazdu" albo dodaj nowe powyżej.</p>
+              <p className="text-center text-sm text-muted-foreground py-10 px-6">{t("gallery.empty")}</p>
             ) : (
               <div className="grid grid-cols-3 gap-1.5 pb-1">
                 {myPhotos.map(({ url }) => {
@@ -1620,7 +1809,7 @@ const ReviewSummary = () => {
                   const isOn = assigned.includes(url);
                   return (
                     <button key={url} onClick={() => toggleAssignPinPhoto(pickerPin, url)} className="relative aspect-square rounded-xl overflow-hidden bg-muted active:opacity-90">
-                      <img src={src} alt="" className="w-full h-full object-cover" />
+                      <StoredImage url={src} size={110} className="w-full h-full object-cover" />
                       {isOn && (
                         <span className="absolute inset-0 bg-primary/40 flex items-center justify-center">
                           <span className="h-7 w-7 rounded-full bg-primary text-white flex items-center justify-center"><Check className="h-4 w-4" strokeWidth={3} /></span>
@@ -1632,7 +1821,7 @@ const ReviewSummary = () => {
               </div>
             )}
           </div>
-          <button onClick={() => setPinPickerId(null)} className="shrink-0 w-full py-3 rounded-2xl bg-primary text-white font-bold text-sm mt-3 active:scale-[0.98] transition-transform">Gotowe</button>
+          <button onClick={() => setPinPickerId(null)} className="shrink-0 w-full py-3 rounded-2xl bg-primary text-white font-bold text-sm mt-3 active:scale-[0.98] transition-transform">{t("common:buttons.done")}</button>
         </div>
       </div>
     );
@@ -1642,8 +1831,21 @@ const ReviewSummary = () => {
   const renderPhotoViewer = () => {
     if (!viewerUrl) return null;
     return (
-      <div className="fixed inset-0 z-[90] bg-black flex items-center justify-center" onClick={() => { setViewerUrl(null); setViewerMenuOpen(false); }}>
+      <div {...swipeViewer} className="fixed inset-0 z-[90] bg-black flex items-center justify-center" onClick={() => { setViewerUrl(null); setViewerMenuOpen(false); }}>
         <img src={viewerUrl} alt="" className="max-w-full max-h-full object-contain" />
+        {/* Strzalki jako alternatywa dla gestu (i licznik) - tylko gdy jest wiecej niz jedno zdjecie. */}
+        {galleryUrlsRef.current.length > 1 && (
+          <>
+            <button onClick={(e) => { e.stopPropagation(); stepPhoto(-1); }} aria-label={t("a11y.prev")}
+              className="absolute left-2 top-1/2 -translate-y-1/2 h-11 w-11 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center active:scale-90 transition-transform">
+              <ChevronLeft className="h-6 w-6 text-white" />
+            </button>
+            <button onClick={(e) => { e.stopPropagation(); stepPhoto(1); }} aria-label={t("a11y.next")}
+              className="absolute right-2 top-1/2 -translate-y-1/2 h-11 w-11 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center active:scale-90 transition-transform">
+              <ChevronRight className="h-6 w-6 text-white" />
+            </button>
+          </>
+        )}
         <div className="absolute flex items-center gap-2" style={{ top: "max(16px, env(safe-area-inset-top, 16px))", right: "16px" }} onClick={(e) => e.stopPropagation()}>
           <div className="relative">
             <button onClick={() => setViewerMenuOpen((o) => !o)} aria-label={t("a11y.more_options")} className="h-10 w-10 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center active:scale-95 transition-transform">
@@ -1656,8 +1858,8 @@ const ReviewSummary = () => {
                   {viewerUrl === heroPhoto ? t("viewer.is_cover") : t("viewer.set_cover")}
                   {viewerUrl === heroPhoto && <Check className="h-4 w-4 text-green-600 ml-auto" />}
                 </button>
-                {myPhotos.some((p) => p.url === viewerUrl) && (
-                  <button onClick={() => { const owner = myPhotos.find((p) => p.url === viewerUrl)?.owner ?? routeId!; removePhoto(viewerUrl, owner); setViewerMenuOpen(false); }} className="w-full px-4 py-3 text-left text-sm font-medium text-red-600 flex items-center gap-2.5 active:bg-muted border-t border-border/40">
+                {galleryPhotos.find((g) => g.url === viewerUrl)?.mine && (
+                  <button onClick={() => { const gi = galleryPhotos.find((g) => g.url === viewerUrl); if (gi?.isGroup) removeGroupPhoto(viewerUrl); else removePhoto(viewerUrl, gi?.owner ?? routeId!); setViewerMenuOpen(false); }} className="w-full px-4 py-3 text-left text-sm font-medium text-red-600 flex items-center gap-2.5 active:bg-muted border-t border-border/40">
                     <Trash2 className="h-4 w-4 shrink-0" /> {t("viewer.remove_photo")}
                   </button>
                 )}
@@ -1674,30 +1876,50 @@ const ReviewSummary = () => {
 
   const renderGallery = (editable: boolean) => (
     <div className="px-1 pt-1">
-      <div className="grid grid-cols-3 gap-0.5">
+      {/* #3e: zdjecia dodane w wizytowkach miejsc (place_photos) - read-only strip, potwierdzenie. */}
+      {myPlacePhotos.length > 0 && (
+        <div className="mb-3 px-1">
+          <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2">{t("photo.your_place_photos")}</p>
+          <div className="flex gap-2 overflow-x-auto scrollbar-none pb-1">
+            {myPlacePhotos.map((url: string, i: number) => (
+              <button key={`${url}-${i}`} onClick={() => { setViewerUrl(url); setViewerMenuOpen(false); }}
+                className="shrink-0 h-20 w-20 rounded-xl overflow-hidden bg-muted active:opacity-90">
+                <StoredImage url={url} size={80} className="w-full h-full object-cover" />
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+      {/* Kafelki galerii 4:3 (spojnie z galeria wyjazdu) - prosba Nat 2026-08-30. */}
+      <div className="grid grid-cols-2 gap-1.5">
         {editable && photos.length < MAX_PHOTOS && (
           <button onClick={triggerPhotoPick} disabled={uploading}
-            className="aspect-square flex flex-col items-center justify-center gap-1 bg-muted/40 text-muted-foreground active:bg-muted/60 transition-colors">
+            className="aspect-[4/3] rounded-xl flex flex-col items-center justify-center gap-1 bg-muted/40 text-muted-foreground active:bg-muted/60 transition-colors">
             <Camera className="h-6 w-6" />
             <span className="text-[10px] font-medium">{uploading ? "…" : t("gallery.add")}</span>
           </button>
         )}
         {galleryPhotos.map((item, idx) => (
           <button key={`${item.url}-${idx}`} onClick={() => { setViewerUrl(item.url); setViewerMenuOpen(false); }}
-            className="relative aspect-square overflow-hidden bg-muted active:opacity-90">
-            <img src={item.url} alt="" className="w-full h-full object-cover" />
-            {/* Badge: nazwa miejsca, do którego zdjęcie zostało przypisane (pins.images). */}
-            {photoPlaceLabel.get(item.url) && (
-              <span className="absolute bottom-1 left-1 right-1 bg-black/60 backdrop-blur-sm rounded px-1.5 py-0.5 text-[9px] font-medium text-white truncate">{photoPlaceLabel.get(item.url)}</span>
-            )}
-            {!item.mine && !photoPlaceLabel.get(item.url) && (
-              <span className="absolute bottom-1 left-1 bg-black/55 backdrop-blur-sm rounded px-1.5 py-0.5 text-[9px] font-medium text-white max-w-[90%] truncate">{item.username}</span>
-            )}
+            className="relative aspect-[4/3] rounded-xl overflow-hidden bg-muted active:opacity-90">
+            <StoredImage url={item.url} size={180} className="w-full h-full object-cover" />
+            {/* #1: nazwa miejsca (gdy przypisane) + awatar/username uploadera (gdy nie moje) - oba naraz. */}
+            <div className="absolute inset-x-1 bottom-1 flex flex-col items-start gap-1">
+              {item.placeLabel && (
+                <span className="max-w-full bg-black/60 backdrop-blur-sm rounded px-1.5 py-0.5 text-[9px] font-medium text-white truncate">{item.placeLabel}</span>
+              )}
+              {!item.mine && item.username && (
+                <span className="max-w-full flex items-center gap-1 bg-black/55 backdrop-blur-sm rounded-full pl-0.5 pr-1.5 py-0.5 text-[9px] font-medium text-white">
+                  <img src={avatarSrc(item.avatar)} alt="" className="h-3.5 w-3.5 rounded-full object-cover bg-orange-100 shrink-0" />
+                  <span className="truncate">{item.username}</span>
+                </span>
+              )}
+            </div>
             {editable && item.mine && (
               <span
                 role="button"
                 aria-label={t("a11y.remove_photo")}
-                onClick={(e) => { e.stopPropagation(); removePhoto(item.url, item.owner); }}
+                onClick={(e) => { e.stopPropagation(); item.isGroup ? removeGroupPhoto(item.url) : removePhoto(item.url, item.owner); }}
                 className="absolute top-1 right-1 h-7 w-7 rounded-full bg-black/55 backdrop-blur-sm text-white flex items-center justify-center active:scale-90"
               >
                 <X className="h-4 w-4" />
@@ -1720,11 +1942,16 @@ const ReviewSummary = () => {
     if (!workingPins.length) return null;
     return (
       <div className="px-5 pt-7">
-        <p className="font-display text-xl font-bold text-foreground tracking-tight">Zdjęcia do miejsc</p>
-        <p className="text-[13px] text-muted-foreground mt-1 mb-4 leading-relaxed">Dołącz zdjęcia do konkretnych punktów trasy.</p>
+        <p className="font-display text-xl font-bold text-foreground tracking-tight">{t("photo.for_places")}</p>
+        <p className="text-[13px] text-muted-foreground mt-1 mb-4 leading-relaxed">{t("gallery.already_here")}</p>
         <div className="space-y-3">
           {workingPins.map((pin: any, i: number) => {
-            const imgs: string[] = Array.isArray(pin.images) ? pin.images : [];
+            // Zdjecia miejsca = te z etapu "w trakcie" (pin_photos) + starsze z pins.images.
+            const liveUrls = (livePhotosByPlace.get(pinPhotoKey(pin.place_name)) ?? []).map((ph: any) => ph.url);
+            const imgs: string[] = Array.from(new Set([
+              ...liveUrls,
+              ...(Array.isArray(pin.images) ? pin.images : []),
+            ]));
             // Pasek zarzadzania zdjeciami (Dodaj + dodane) - renderowany POD wizytowka miejsca.
             const photosRow = (
               <div className="flex gap-2 overflow-x-auto pb-1 -mx-0.5 px-0.5">
@@ -1733,7 +1960,7 @@ const ReviewSummary = () => {
                   disabled={pinUploadingId === pin.id}
                   className="shrink-0 h-20 w-20 rounded-xl bg-muted/50 border border-dashed border-border flex flex-col items-center justify-center gap-1 text-muted-foreground active:bg-muted/70 transition-colors"
                 >
-                  {pinUploadingId === pin.id ? <Loader2 className="h-5 w-5 animate-spin" /> : <><Camera className="h-5 w-5" /><span className="text-[10px] font-medium">Dodaj</span></>}
+                  {pinUploadingId === pin.id ? <Loader2 className="h-5 w-5 animate-spin" /> : <><Camera className="h-5 w-5" /><span className="text-[10px] font-medium">{t("common:buttons.add")}</span></>}
                 </button>
                 {imgs.map((url, idx) => {
                   const src = resolveStored(url) ?? url;
@@ -1743,7 +1970,7 @@ const ReviewSummary = () => {
                       onClick={() => { setViewerUrl(src); setViewerMenuOpen(false); }}
                       className="relative shrink-0 h-20 w-20 rounded-xl overflow-hidden bg-muted active:opacity-90"
                     >
-                      <img src={src} alt="" className="w-full h-full object-cover" />
+                      <StoredImage url={src} size={80} className="w-full h-full object-cover" />
                       <span
                         role="button"
                         aria-label={t("a11y.remove_photo")}
@@ -1771,6 +1998,8 @@ const ReviewSummary = () => {
                 categoryLabel={catLabel(pin.category)}
                 onOpen={() => openDetail(pin)}
                 onGoogle={() => openGooglePlace(pin)}
+                onSave={user ? () => setSavePlace(pinToSave(pin)) : undefined}
+                saved={isSaved(pin.place_name)}
                 note={photosRow}
               />
             );
@@ -1841,7 +2070,7 @@ const ReviewSummary = () => {
 
   const renderStepInfo = () => (
     <div className="mb-3 flex items-start gap-2 rounded-xl bg-orange-50 border border-orange-100 px-3 py-2.5">
-      <Info className="h-4 w-4 text-orange-600 shrink-0 mt-0.5" />
+      <Info className="h-4 w-4 text-primary shrink-0 mt-0.5" />
       <p className="text-xs text-orange-800 leading-relaxed">{t(`step_info.${step}`)}</p>
     </div>
   );
@@ -1851,16 +2080,6 @@ const ReviewSummary = () => {
     <>
       <div className="flex items-center justify-between mb-3">
         <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t("plan.your_plan")}</p>
-        {showViewToggle && (
-          <div className="flex rounded-full bg-muted p-0.5">
-            <button onClick={() => setPlanView("list")} aria-label={t("a11y.list_view")} className={`px-2.5 py-1.5 rounded-full transition-colors ${planView === "list" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
-              <List className="h-4 w-4" />
-            </button>
-            <button onClick={() => setPlanView("cards")} aria-label={t("a11y.cards_view")} className={`px-2.5 py-1.5 rounded-full transition-colors ${planView === "cards" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
-              <GalleryHorizontalEnd className="h-4 w-4" />
-            </button>
-          </div>
-        )}
       </div>
       {isMultiDay && (
         <div className="flex gap-2 overflow-x-auto scrollbar-none mb-3 -mx-1 px-1">
@@ -1878,519 +2097,18 @@ const ReviewSummary = () => {
     </>
   );
 
-  // ── Widok "Plan wyjazdu" (aktywny / najblizszy wyjazd wlasciciela) wg Figmy ──
-  // Hero + info (avatar/nazwa/data) + widocznosc + lista miejsc (numer/kategoria/odhaczanie/
-  // reorder) + statyczna mapa (rozwijalna) + footer "Nawiguj do...". Wspomnienia (isMemory)
-  // i gosc ida dalej do klasycznego podsumowania/steppera.
-  // forceEdit (?edit=1, np. "Przejdz do sugestii" z ComposeWyjazd) MUSI pominac ten widok i
-  // trafic do steppera (Trasa -> Sugestie -> Galeria) - inaczej user laduje w widoku planu
-  // z nawigacja do Dziennika zamiast na kroku sugestii.
-  if (isOwner && !editingStepper && !forceEdit && sortedDays.length <= 1) {
-    const heroMapThumb = buildTripStaticMapUrl(currentPins, "160x160");
-    const bigMapUrl = buildTripStaticMapUrl(currentPins, "560x300");
-    const heroMapCover = buildTripStaticMapUrl(currentPins, "560x350"); // 16:10, pod okladke hero
-    const nextPlace = currentPins.find((p: any) => !isVisited(p)) ?? currentPins[0];
-    // Ukonczony wyjazd = wszystkie miejsca odhaczone ALBO minieta data (isMemory). Wtedy w
-    // sekcji miejsc pokazujemy Notki/Galerie (notatki + zdjecia = wspomnienie).
-    const tripCompleted = isMemory || (currentPins.length > 0 && visitedCount === currentPins.length);
-    // Usuniecie miejsca z planu (swipe/kosz) z oknem "Cofnij". Zmiana draftu; autosave
-    // (on unmount) utrwala usuniecie w DB. Cofniecie przywraca poprzednia liste.
-    const removePlaceFromPlan = (pin: any) => {
-      const prev = workingPins;
-      setWorking(workingPins.filter((p: any) => p.id !== pin.id));
-      deferDelete({ message: "Usunięto miejsce", onUndo: () => setWorking(prev), commit: () => { /* DB przez autosave */ } });
-    };
-    const navMapPins = currentPins
-      .filter((p: any) => p.latitude != null && p.longitude != null)
-      .map((p: any) => ({ latitude: p.latitude, longitude: p.longitude, place_name: p.place_name }));
-    const navigateTo = (p: any) => {
-      if (!p) return;
-      const dest = (typeof p.latitude === "number" && typeof p.longitude === "number")
-        ? `${p.latitude},${p.longitude}`
-        : encodeURIComponent([p.place_name, p.address, route?.city].filter(Boolean).join(" "));
-      window.open(`https://www.google.com/maps/dir/?api=1&destination=${dest}`, "_blank", "noopener,noreferrer");
-    };
-    const sectionHeadingCls = "font-display text-xl font-bold text-foreground tracking-tight";
-
-    return (
-      <div className="relative h-[100dvh] bg-background flex flex-col max-w-lg mx-auto">
-        {/* Sticky pasek back + X - NAD scrollem. Przezroczysty nad okladka, tlo gdy przewiniete.
-            Okladka (zdjecie) NIE jest sticky - przewija sie razem z trescia (wg Figmy). */}
-        <div
-          className={`absolute top-0 left-0 right-0 z-30 flex items-center justify-between px-4 pb-3 transition-colors duration-200 ${planScrolled ? "bg-[#FEFEFE]/95 backdrop-blur-md border-b border-black/[0.06]" : ""}`}
-          style={{ paddingTop: "max(12px, env(safe-area-inset-top, 12px))" }}
-        >
-          <button onClick={() => navigate("/dziennik")} aria-label={t("a11y.back_to_journal")} className={`h-8 w-8 rounded-full flex items-center justify-center active:scale-90 transition-transform ${planScrolled ? "bg-secondary text-foreground" : "bg-black/35 backdrop-blur-sm text-white"}`}>
-            <ChevronLeft className="h-5 w-5" />
-          </button>
-          <button onClick={() => navigate("/dziennik")} aria-label={t("a11y.back_to_journal")} className={`h-8 w-8 rounded-full flex items-center justify-center active:scale-90 transition-transform ${planScrolled ? "bg-secondary text-foreground" : "bg-white/25 backdrop-blur-sm text-white"}`}>
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-
-        <div onScroll={(e) => setPlanScrolled(e.currentTarget.scrollTop > 170)} className="flex-1 min-h-0 overflow-y-auto pb-5">
-          {/* Okladka - w scrollu, przewija sie (NIE sticky), bez zaokraglen na dole */}
-          <div className="relative w-full aspect-[16/10] overflow-hidden bg-gradient-to-br from-orange-400 via-rose-400 to-purple-500">
-            <img src={heroPhoto} alt="" className="absolute inset-0 w-full h-full object-cover" />
-            <div className="absolute inset-0 bg-gradient-to-b from-black/15 via-transparent to-black/55" />
-            {/* Ikona galerii = ZMIANA zdjecia okladkowego (dodaj nowe / wybierz z galerii / z miejsc).
-                Lewy-dolny rog. Osobna funkcja od podgladu na eksploracji (prawy-dolny). */}
-            <button
-              onClick={() => setCoverPickerOpen(true)}
-              aria-label="Zmień okładkę wyjazdu"
-              className="absolute bottom-3 left-3 z-20 h-10 w-10 rounded-full bg-black/45 backdrop-blur-sm text-white flex items-center justify-center active:scale-90 transition-transform"
-            >
-              <ImageIcon className="h-[18px] w-[18px]" />
-            </button>
-            {/* Miniatura eksploracji - OSOBNA okladka (list_cover_url), klik = zmiana zdjecia
-                (dodaj nowe / wybierz z galerii/miejsc trasy). Prawy-dolny rog. Ikona = edytowalna. */}
-            <button
-              onClick={() => setListCoverPickerOpen(true)}
-              aria-label="Zmień miniaturę w eksploracji"
-              className="absolute bottom-3 right-3 z-20 w-20 rounded-2xl overflow-hidden border-[3px] border-white shadow-xl bg-muted active:scale-95 transition-transform"
-            >
-              <div className="relative w-full aspect-[9/16]">
-                <img src={listCoverPhoto} alt="" className="w-full h-full object-cover" />
-                <span className="absolute top-1 right-1 h-5 w-5 rounded-full bg-black/45 backdrop-blur-sm text-white flex items-center justify-center">
-                  <ImageIcon className="h-3 w-3" />
-                </span>
-              </div>
-            </button>
-          </div>
-
-          {/* Tresc planu */}
-          <div className="px-4 pt-5">
-          {/* Badge "Plan wyjazdu" + nazwa (edytowalna) + data (edytowalna) + widocznosc */}
-          <div className="flex flex-col gap-4">
-            {/* Autor trasy (awatar + @username) + miasto + liczba miejsc - zamiast badge "Plan wyjazdu". */}
-            <div className="flex items-center gap-2.5 flex-wrap text-sm">
-              <span className="flex items-center gap-1.5 font-semibold text-foreground">
-                <img src={avatarSrc(routeAuthor?.avatar_url)} alt="" className="h-6 w-6 rounded-full object-cover bg-orange-100" />
-                {routeAuthor?.username ? `@${routeAuthor.username}` : (routeAuthor?.first_name || t("labels.you", { defaultValue: "Ty" }))}
-              </span>
-              {cityLabel && <span className="flex items-center gap-1 text-muted-foreground"><Building2 className="h-4 w-4" />{cityLabel}</span>}
-              <span className="flex items-center gap-1 text-muted-foreground"><MapPin className="h-4 w-4" />{currentPins.length} {currentPins.length === 1 ? "miejsce" : currentPins.length < 5 ? "miejsca" : "miejsc"}</span>
-            </div>
-            {/* Nazwa wyjazdu - edytowalna inline; olowek dosuniety do prawej (justify-between) */}
-            {editingName ? (
-              <div className="flex items-center gap-2">
-                <input
-                  value={nameVal}
-                  onChange={(e) => setNameVal(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter") saveName(); if (e.key === "Escape") setEditingName(false); }}
-                  autoFocus maxLength={60} placeholder={t("entry.name_placeholder")}
-                  className="flex-1 min-w-0 rounded-xl border border-border bg-background px-3 py-2 text-lg font-bold text-foreground outline-none focus:ring-2 focus:ring-orange-500/40"
-                  style={{ fontSize: "16px" }}
-                />
-                <button onClick={saveName} disabled={savingName} aria-label={t("a11y.save_name")} className="h-9 w-9 shrink-0 rounded-xl bg-primary text-white flex items-center justify-center active:scale-95 transition-transform disabled:opacity-50">
-                  <Check className="h-4 w-4" strokeWidth={3} />
-                </button>
-              </div>
-            ) : (
-              <button onClick={() => { setNameVal(customName); setEditingName(true); }} aria-label={t("a11y.edit_name", { defaultValue: "Edytuj nazwę" })} className="flex items-center justify-between gap-2 text-left active:opacity-70">
-                <p className="flex-1 min-w-0 text-2xl font-black text-foreground leading-tight truncate">{displayName || cityLabel}</p>
-                <ChevronRight className="h-5 w-5 text-muted-foreground shrink-0" />
-              </button>
-            )}
-            {/* Data - wiersz (ikona + zakres, chevron po prawej); klik otwiera kalendarz */}
-            <button onClick={() => setDatePickerOpen(true)} className="flex items-center justify-between gap-2 active:opacity-70">
-              <span className="flex items-center gap-1.5 min-w-0">
-                <CalendarIcon className="h-5 w-5 text-foreground shrink-0" />
-                <span className="text-base text-foreground truncate">{dateLabel || "Dodaj datę"}</span>
-              </span>
-              <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
-            </button>
-            {/* Opis ogolny trasy - READ-ONLY tutaj (review_narrative). Edycja tylko pod guzikiem
-                "Edytuj trase" (tryb edycji). Fallback: ai_summary. */}
-            {(suggestion?.trim() || route?.ai_summary) && (
-              <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">{suggestion?.trim() || route?.ai_summary}</p>
-            )}
-            {/* "Edytuj trase" -> edytor ComposeWyjazd (ten sam co przy tworzeniu): wyszukiwarka
-                miejsc + dodaj/usun/kolejnosc + nazwa. Zaladowany ta trasa (draftId), wiec zapis
-                AKTUALIZUJE ja (bez duplikatu). Opis + notki edytuje sie dalej w "Przejdz do sugestii". */}
-            {isOwner && (
-              <button
-                onClick={() => {
-                  haptics.light();
-                  navigate("/wyjazd/nowy", {
-                    state: {
-                      draftId: routeId,
-                      city: route?.city ?? null,
-                      title: displayName || (route as any)?.title || null,
-                      places: currentPins.map((p: any) => ({
-                        place_id: p.place_id ?? null,
-                        place_name: p.place_name,
-                        category: p.category,
-                        address: p.address,
-                        latitude: p.latitude,
-                        longitude: p.longitude,
-                        photo_url: p.photo_url,
-                      })),
-                    },
-                  });
-                }}
-                className="w-full mt-1 py-3 rounded-2xl bg-secondary text-secondary-foreground font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
-              >
-                <Pencil className="h-4 w-4" /> Edytuj trasę
-              </button>
-            )}
-            {/* Zapros znajomych (solo -> grupowy): podpina trase do sesji + dodaje uczestnikow po username. */}
-            {isOwner && (
-              <button
-                onClick={() => { haptics.light(); setInviteOpen(true); }}
-                className="w-full mt-1 py-3 rounded-2xl bg-secondary text-secondary-foreground font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
-              >
-                <Users className="h-4 w-4" /> Zaproś znajomych
-              </button>
-            )}
-            {isOwner && routeId && (
-              <InviteFriendsSheet
-                open={inviteOpen}
-                onOpenChange={setInviteOpen}
-                route={{ id: routeId, city: route?.city ?? null, title: (route as any)?.title ?? null, group_session_id: (route as any)?.group_session_id ?? null }}
-                onInvited={() => { queryClient.invalidateQueries({ queryKey: ["review-summary-route", routeId] }); }}
-              />
-            )}
-            {/* Wiersz "Widoczność" usuniety (2026-07-30): wszystkie trasy sa publiczne by default. */}
-          </div>
-
-          {/* Top-toggle Miejsca | Galeria | Mapa */}
-          <div className="flex rounded-full bg-muted p-0.5 mt-8 mb-4 text-sm font-bold">
-            <button onClick={() => { haptics.selection(); setPlanTab("miejsca"); }} className={`flex-1 py-2 rounded-full transition-colors ${planTab === "miejsca" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>Miejsca</button>
-            <button onClick={() => { haptics.selection(); setPlanTab("galeria"); }} className={`flex-1 py-2 rounded-full transition-colors ${planTab === "galeria" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>Galeria</button>
-            <button onClick={() => { haptics.selection(); setPlanTab("mapa"); }} className={`flex-1 py-2 rounded-full transition-colors ${planTab === "mapa" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>Mapa</button>
-          </div>
-
-          {/* Galeria / Mapa / Miejsca (mapa przeniesiona do wlasnej zakladki obok Galeria). */}
-          {planTab === "galeria" ? renderGallery(true) : planTab === "mapa" ? (
-            <div className="pt-1">
-              {bigMapUrl ? (
-                <button onClick={() => setPlanMapOpen(true)} className="relative block w-full h-64 rounded-2xl overflow-hidden border border-border/40 bg-muted active:opacity-95 transition-opacity">
-                  <img src={bigMapUrl} alt="Mapa planu" className="w-full h-full object-cover" />
-                  <span className="absolute bottom-3 right-3 h-10 w-10 rounded-full bg-card shadow-md flex items-center justify-center">
-                    <Maximize2 className="h-[18px] w-[18px] text-foreground" strokeWidth={2.2} />
-                  </span>
-                </button>
-              ) : (
-                <p className="text-center text-sm text-muted-foreground py-10">Brak lokalizacji miejsc na mapie.</p>
-              )}
-            </div>
-          ) : (
-          <>
-          {/* Sub-toggle podglądu miejsc (Lista/Karty) - tylko dla aktywnego (nieukończonego) wyjazdu. */}
-          {!tripCompleted && (
-            <div className="flex items-center justify-end pb-3">
-              <div className="flex rounded-full bg-muted p-0.5">
-                <button onClick={() => setPlanView("list")} aria-label={t("a11y.list_view")} className={`px-2.5 py-1.5 rounded-full transition-colors ${planView === "list" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
-                  <List className="h-4 w-4" />
-                </button>
-                <button onClick={() => setPlanView("cards")} aria-label={t("a11y.cards_view")} className={`px-2.5 py-1.5 rounded-full transition-colors ${planView === "cards" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
-                  <GalleryHorizontalEnd className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-          )}
-
-          {tripCompleted ? (
-            /* Ukonczony + Notki -> kazde miejsce z polem notatki usera. */
-            <div className="flex flex-col gap-3">
-              {workingPins.map((pin: any, i: number) => (
-                <div key={pin.id} className="rounded-2xl bg-secondary border border-border/40 p-2.5">
-                  <button onClick={() => openDetail(pin)} className="w-full flex items-center gap-3 text-left active:opacity-90 transition-opacity">
-                    <div className="relative h-14 w-14 rounded-xl overflow-hidden shrink-0 bg-muted">
-                      <PlacePhoto pin={pin} className="h-full w-full object-cover" emojiClass="text-2xl" />
-                      <span className="absolute top-1 left-1 h-4 w-4 rounded-full bg-[#9a9a9a] text-white text-[8px] font-bold flex items-center justify-center">{i + 1}</span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold leading-tight truncate">{pin.place_name}</p>
-                      {pin.category && <span className="inline-flex items-center mt-1 px-2 py-0.5 rounded-full bg-card text-[11px] font-semibold text-foreground">{catLabel(pin.category)}</span>}
-                    </div>
-                  </button>
-                  <div className="pt-2">{renderRatingNote(pin.place_name)}</div>
-                </div>
-              ))}
-            </div>
-          ) : planView === "cards" ? (
-            /* Aktywny + Karty -> poziome karty z koszem. */
-            <div className="flex gap-3 overflow-x-auto scrollbar-none snap-x snap-mandatory -mr-4 pr-4 pb-1">
-              {workingPins.map((pin: any, i: number) => {
-                const visited = isVisited(pin);
-                return (
-                  <button key={pin.id} onClick={() => openDetail(pin)} className="shrink-0 w-[210px] snap-start rounded-2xl bg-secondary border border-border/40 overflow-hidden shadow-sm text-left active:opacity-90 transition-opacity">
-                    <div className="relative aspect-[4/3] bg-muted">
-                      <PlacePhoto pin={pin} className="w-full h-full object-cover" emojiClass="text-3xl" />
-                      <span className="absolute top-2 left-2 h-5 w-5 rounded-full bg-black/50 text-white text-[10px] font-bold flex items-center justify-center">{i + 1}</span>
-                      <span role="button" tabIndex={0} onClick={(e) => { e.stopPropagation(); removePlaceFromPlan(pin); }} aria-label={t("a11y.remove_place")}
-                        className="absolute top-2 right-2 h-8 w-8 rounded-full bg-black/45 backdrop-blur text-white flex items-center justify-center active:scale-90 transition-transform">
-                        <Trash2 className="h-4 w-4" />
-                      </span>
-                      <span role="button" tabIndex={0} onClick={(e) => { e.stopPropagation(); openGooglePlace(pin); }} aria-label={`Otwórz ${pin.place_name} w Google Maps`}
-                        className="absolute bottom-2 right-2 h-9 w-9 rounded-full bg-white flex items-center justify-center active:scale-90 transition-transform shadow-md">
-                        <GoogleGlyph className="h-[18px] w-[18px]" />
-                      </span>
-                    </div>
-                    <div className="px-3 py-2.5">
-                      {pin.category && <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-card text-[11px] font-semibold text-foreground mb-1">{catLabel(pin.category)}</span>}
-                      <p className={`text-sm font-black leading-tight line-clamp-1 ${visited ? "line-through opacity-60" : ""}`}>{pin.place_name}</p>
-                    </div>
-                  </button>
-                );
-              })}
-              {/* "Dodaj miejsce" usuniete z widoku wyswietlania (2026-08-04) - dodawanie miejsc
-                  jest w edytorze pod guzikiem "Edytuj trase". */}
-            </div>
-          ) : (
-            /* Aktywny + Lista -> duze wiersze (RoutePlaceRow) z uchwytem DRAG + swipe-to-delete. */
-            <div className="flex flex-col gap-2.5">
-              <Reorder.Group axis="y" values={workingPins} onReorder={setWorking} className="flex flex-col gap-2.5">
-                {workingPins.map((pin: any, i: number) => {
-                  const noteText = (notes[rkey(activeRouteId!, pin.place_name)] ?? "").trim();
-                  const note = noteText ? (
-                    <div>
-                      <p className="text-sm font-semibold text-foreground">Twoja Notka</p>
-                      <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap mt-0.5">{noteText}</p>
-                    </div>
-                  ) : undefined;
-                  return (
-                    <SortablePlanRow
-                      key={pin.id}
-                      pin={pin}
-                      index={i}
-                      categoryLabel={catLabel(pin.category)}
-                      visited={isVisited(pin)}
-                      onOpen={() => openDetail(pin)}
-                      onGoogle={() => openGooglePlace(pin)}
-                      onDelete={() => removePlaceFromPlan(pin)}
-                      note={note}
-                    />
-                  );
-                })}
-              </Reorder.Group>
-              {/* "Dodaj miejsce" usuniete z widoku wyswietlania - dodawanie w edytorze ("Edytuj trase"). */}
-            </div>
-          )}
-          {/* MAPA przeniesiona do wlasnej zakladki "Mapa" (obok Galeria) - patrz wyzej. */}
-          </>
-          )}
-          </div>
-        </div>
-
-        {/* Footer "Nawiguj do..." usuniety - nawigacja jest per-miejsce (guziki Google w wierszach). */}
-
-        {/* Wizytowka miejsca */}
-        <PlaceSwiperDetail open={!!detailPin} onOpenChange={(o) => !o && setDetailPin(null)} place={detailPin} city={route?.city} />
-
-        {/* Fullscreen podgląd zdjęcia (tap w galerię) - ustawienie okładki / usuniecie. */}
-        {renderPhotoViewer()}
-
-        {/* Dodawanie miejsca */}
-        {addingPlace && (
-          <AddPinSheet open={addingPlace} onOpenChange={(o) => !o && setAddingPlace(false)} onPinAdd={handleAddPin} cityContext={route?.city ?? ""} existingPinNames={currentPins.map((p: any) => p.place_name)} />
-        )}
-
-        {/* Arkusz wyboru okladki wyjazdu (zdjecia miejsc trasy) */}
-        {coverPickerOpen && (
-          <div className="fixed inset-0 z-[95] flex items-end justify-center" onClick={() => setCoverPickerOpen(false)}>
-            <div className="absolute inset-0 bg-black/50 animate-in fade-in duration-200" />
-            <div onClick={(e) => e.stopPropagation()} className="relative w-full max-w-lg bg-card rounded-t-3xl px-5 pt-3 pb-[max(20px,env(safe-area-inset-bottom))] shadow-2xl animate-in slide-in-from-bottom-4 duration-300" style={{ maxHeight: "82dvh" }}>
-              <div className="mx-auto h-1 w-10 rounded-full bg-muted-foreground/25 mb-4" />
-              <button onClick={() => setCoverPickerOpen(false)} aria-label={t("close", { defaultValue: "Zamknij" })} className="absolute right-4 top-4 h-8 w-8 rounded-full bg-muted flex items-center justify-center active:scale-90 transition-transform">
-                <X className="h-4 w-4" />
-              </button>
-              <p className="text-lg font-bold pr-8">Okładka wyjazdu</p>
-              <p className="text-sm text-muted-foreground mt-1 mb-4">Wybierz zdjęcie na okładkę - dodaj nowe, z galerii albo z miejsc trasy.</p>
-              <div className="overflow-y-auto -mx-1 px-1" style={{ maxHeight: "62dvh" }}>
-                <div className="grid grid-cols-3 gap-2 pb-1">
-                  {/* Nowe zdjecie z telefonu -> od razu okladka (jak przy dodawaniu zdjec do miejsc). */}
-                  <button
-                    onClick={triggerCoverPhotoPick}
-                    disabled={uploading}
-                    className="relative aspect-square rounded-2xl border-2 border-dashed border-border/70 flex flex-col items-center justify-center gap-1.5 text-muted-foreground active:scale-95 transition-transform disabled:opacity-50"
-                  >
-                    {uploading ? <Loader2 className="h-6 w-6 animate-spin" /> : <Plus className="h-6 w-6" />}
-                    <span className="text-[11px] font-semibold leading-tight text-center px-1">Nowe zdjęcie</span>
-                  </button>
-                  {coverPickerOptions.map((opt) => {
-                    const isCurrent = heroPhoto === opt.url;
-                    return (
-                      <button
-                        key={opt.id}
-                        onClick={() => setPlanCover(opt.url)}
-                        className={`relative aspect-square rounded-2xl overflow-hidden bg-muted active:scale-95 transition-transform ${isCurrent ? "ring-2 ring-primary ring-offset-2 ring-offset-card" : ""}`}
-                      >
-                        <img src={opt.url} alt={opt.name} loading="lazy" className="w-full h-full object-cover" />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-transparent to-transparent" />
-                        <span className="absolute bottom-1.5 left-1.5 right-1.5 text-[10px] font-semibold text-white leading-tight line-clamp-2 [text-shadow:_0_1px_2px_rgb(0_0_0/60%)]">{opt.name}</span>
-                        {isCurrent && (
-                          <span className="absolute top-1.5 right-1.5 h-5 w-5 rounded-full bg-primary text-white flex items-center justify-center shadow-md">
-                            <Check className="h-3 w-3" strokeWidth={3} />
-                          </span>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Arkusz wyboru MINIATURY w eksploracji (list_cover_url) - osobny od okladki wyjazdu. */}
-        {listCoverPickerOpen && (
-          <div className="fixed inset-0 z-[95] flex items-end justify-center" onClick={() => setListCoverPickerOpen(false)}>
-            <div className="absolute inset-0 bg-black/50 animate-in fade-in duration-200" />
-            <div onClick={(e) => e.stopPropagation()} className="relative w-full max-w-lg bg-card rounded-t-3xl px-5 pt-3 pb-[max(20px,env(safe-area-inset-bottom))] shadow-2xl animate-in slide-in-from-bottom-4 duration-300" style={{ maxHeight: "82dvh" }}>
-              <div className="mx-auto h-1 w-10 rounded-full bg-muted-foreground/25 mb-4" />
-              <button onClick={() => setListCoverPickerOpen(false)} aria-label={t("close", { defaultValue: "Zamknij" })} className="absolute right-4 top-4 h-8 w-8 rounded-full bg-muted flex items-center justify-center active:scale-90 transition-transform">
-                <X className="h-4 w-4" />
-              </button>
-              <p className="text-lg font-bold pr-8">Miniatura w eksploracji</p>
-              <p className="text-sm text-muted-foreground mt-1 mb-4">Zdjęcie widoczne na karcie trasy w eksploracji - dodaj nowe albo wybierz z galerii lub miejsc trasy.</p>
-              <div className="overflow-y-auto -mx-1 px-1" style={{ maxHeight: "62dvh" }}>
-                <div className="grid grid-cols-3 gap-2 pb-1">
-                  <button
-                    onClick={triggerListCoverPhotoPick}
-                    disabled={uploading}
-                    className="relative aspect-square rounded-2xl border-2 border-dashed border-border/70 flex flex-col items-center justify-center gap-1.5 text-muted-foreground active:scale-95 transition-transform disabled:opacity-50"
-                  >
-                    {uploading ? <Loader2 className="h-6 w-6 animate-spin" /> : <Plus className="h-6 w-6" />}
-                    <span className="text-[11px] font-semibold leading-tight text-center px-1">Nowe zdjęcie</span>
-                  </button>
-                  {coverPickerOptions.map((opt) => {
-                    const isCurrent = listCoverPhoto === opt.url;
-                    return (
-                      <button
-                        key={opt.id}
-                        onClick={() => setPlanListCover(opt.url)}
-                        className={`relative aspect-square rounded-2xl overflow-hidden bg-muted active:scale-95 transition-transform ${isCurrent ? "ring-2 ring-primary ring-offset-2 ring-offset-card" : ""}`}
-                      >
-                        <img src={opt.url} alt={opt.name} loading="lazy" className="w-full h-full object-cover" />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-transparent to-transparent" />
-                        <span className="absolute bottom-1.5 left-1.5 right-1.5 text-[10px] font-semibold text-white leading-tight line-clamp-2 [text-shadow:_0_1px_2px_rgb(0_0_0/60%)]">{opt.name}</span>
-                        {isCurrent && (
-                          <span className="absolute top-1.5 right-1.5 h-5 w-5 rounded-full bg-primary text-white flex items-center justify-center shadow-md">
-                            <Check className="h-3 w-3" strokeWidth={3} />
-                          </span>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Arkusz edycji daty wyjazdu (kalendarz) */}
-        {datePickerOpen && (
-          <div className="fixed inset-0 z-[95] flex items-end justify-center" onClick={() => setDatePickerOpen(false)}>
-            <div className="absolute inset-0 bg-black/50 animate-in fade-in duration-200" />
-            <div onClick={(e) => e.stopPropagation()} className="relative w-full max-w-lg bg-card rounded-t-3xl px-2 pt-3 pb-[max(12px,env(safe-area-inset-bottom))] shadow-2xl animate-in slide-in-from-bottom-4 duration-300" style={{ maxHeight: "88dvh" }}>
-              <div className="mx-auto h-1 w-10 rounded-full bg-muted-foreground/25 mb-3" />
-              <div className="px-3 pb-1 text-center">
-                <p className="text-base font-bold leading-tight">Wybierz daty dla trasy <span className="font-normal text-muted-foreground">(opcjonalnie)</span></p>
-              </div>
-              <FullCalendarPicker onConfirm={saveDate} allowPast onClear={clearDate} />
-            </div>
-          </div>
-        )}
-
-        {/* Input zdjec (galeria na web; native uzywa CapCamera) */}
-        <input ref={fileInputRef} type="file" accept="image/*,.heic,.heif" multiple className="hidden" onChange={handlePhotoUpload} />
-        <input ref={pinFileInputRef} type="file" accept="image/*,.heic,.heif" multiple className="hidden" onChange={handlePinFileInput} />
-        <input ref={coverFileInputRef} type="file" accept="image/*,.heic,.heif" className="hidden" onChange={handleCoverFileInput} />
-        <input ref={listCoverFileInputRef} type="file" accept="image/*,.heic,.heif" className="hidden" onChange={handleListCoverFileInput} />
-
-        {/* Rozwinięta interaktywna mapa (zoom) */}
-        {planMapOpen && (
-          <div className="fixed inset-0 z-[90] bg-background flex flex-col animate-in fade-in duration-200">
-            <div className="relative flex-1 min-h-0">
-              <RouteMap pins={navMapPins as any} className="w-full h-full" showRoute={false} />
-              <button onClick={() => setPlanMapOpen(false)} aria-label={t("close", { defaultValue: "Zamknij" })} className="absolute right-3 z-10 h-10 w-10 rounded-full bg-card shadow-md flex items-center justify-center active:scale-90 transition-transform" style={{ top: "max(0.75rem, env(safe-area-inset-top))" }}>
-                <X className="h-5 w-5 text-foreground" />
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Ustawienia prywatnosci (pelnoekranowo, wg zalacznika - jasny motyw, copy pod Trase) */}
-        {privacyOpen && (
-          <div className="fixed inset-0 z-[85] bg-background flex flex-col max-w-lg mx-auto animate-in slide-in-from-right duration-200">
-            <div className="flex items-center gap-3 px-4 pt-safe-4 pb-3 border-b border-border/20 shrink-0">
-              <button onClick={() => setPrivacyOpen(false)} aria-label={t("a11y.back_to_journal", { defaultValue: "Wróć" })} className="h-9 w-9 flex items-center justify-center -ml-1 rounded-full text-foreground active:scale-90 transition-transform">
-                <ArrowLeft className="h-5 w-5" />
-              </button>
-              <p className="text-lg font-bold">Ustawienia prywatności</p>
-            </div>
-            <div className="flex-1 min-h-0 overflow-y-auto px-4 py-5 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))]">
-              <p className="text-2xl font-black leading-tight mb-5">Kto może zobaczyć ten wyjazd?</p>
-              <div className="flex flex-col gap-3">
-                {([
-                  { mode: "private" as const, Icon: Lock, title: "Tylko ja", desc: "Maksymalna prywatność. Widzisz ten wyjazd tylko Ty oraz osoby, które zaprosisz lub oznaczysz. Nie pojawia się nigdzie w Trasie." },
-                  { mode: "friends" as const, Icon: Users, title: "Bliscy znajomi", desc: "Ten wyjazd widzą tylko Twoi znajomi oraz osoby zaproszone lub oznaczone." },
-                  { mode: "public" as const, Icon: Globe, title: "Wszyscy", desc: "Wyjazd jest widoczny publicznie - pojawia się w eksploracji i każdy może go zobaczyć." },
-                ]).map((opt) => {
-                  const selected = privacyMode === opt.mode;
-                  return (
-                    <button key={opt.mode} onClick={() => setPrivacy(opt.mode)} className={`w-full text-left rounded-2xl p-4 border-2 transition-colors active:scale-[0.99] ${selected ? "border-primary bg-primary/5" : "border-border/50 bg-secondary/40"}`}>
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <opt.Icon className="h-5 w-5 text-foreground shrink-0" />
-                          <p className="text-base font-bold text-foreground truncate">{opt.title}</p>
-                        </div>
-                        <span className={`h-6 w-6 rounded-full border-2 flex items-center justify-center shrink-0 ${selected ? "border-primary" : "border-border"}`}>
-                          {selected && <span className="h-3 w-3 rounded-full bg-primary" />}
-                        </span>
-                      </div>
-                      <p className="text-sm text-muted-foreground mt-2 leading-relaxed">{opt.desc}</p>
-                    </button>
-                  );
-                })}
-              </div>
-
-              <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mt-8 mb-3">Dostęp ogólny</p>
-              <button onClick={() => setQrShareOpen(true)} className="w-full flex items-center gap-2.5 rounded-2xl bg-secondary p-4 active:scale-[0.99] transition-transform">
-                <Share className="h-5 w-5 text-foreground shrink-0" />
-                <span className="text-base font-semibold text-foreground">Udostępnij ten wyjazd</span>
-              </button>
-              <p className="text-xs text-muted-foreground mt-2 leading-relaxed">Udostępniaj linki do swoich wyjazdów niezależnie od ustawień prywatności.</p>
-            </div>
-          </div>
-        )}
-
-        {/* Arkusz QR: udostepnij wyjazd kodem QR + link. */}
-        {qrShareOpen && (
-          <div className="fixed inset-0 z-[95] flex items-end justify-center" onClick={() => setQrShareOpen(false)}>
-            <div className="absolute inset-0 bg-black/50 animate-in fade-in duration-200" />
-            <div onClick={(e) => e.stopPropagation()} className="relative w-full max-w-lg bg-card rounded-t-3xl px-5 pt-3 pb-[max(20px,env(safe-area-inset-bottom))] shadow-2xl animate-in slide-in-from-bottom-4 duration-300">
-              <div className="mx-auto h-1 w-10 rounded-full bg-muted-foreground/25 mb-4" />
-              <button onClick={() => setQrShareOpen(false)} aria-label="Zamknij" className="absolute right-4 top-4 h-8 w-8 rounded-full bg-muted flex items-center justify-center active:scale-90 transition-transform">
-                <X className="h-4 w-4" />
-              </button>
-              <p className="text-lg font-bold mb-4 pr-8">Udostępnij wyjazd kodem QR</p>
-              <div className="flex items-center gap-4 pb-4 border-b border-border/30">
-                <div className="shrink-0 rounded-2xl bg-white p-2.5 border border-border/40">
-                  <QRCodeSVG value={shareUrl} size={104} bgColor="#ffffff" fgColor="#0E0E0E" level="M" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-base font-bold leading-tight truncate">{displayName || cityLabel}</p>
-                  {dateLabel && <p className="text-sm text-muted-foreground mt-1"><span className="font-semibold text-foreground">Data:</span> {dateLabel}</p>}
-                  <div className="mt-3 flex items-center justify-between gap-2">
-                    <button onClick={copyShareLink} className="text-sm font-semibold text-foreground active:opacity-70">Skopiuj link</button>
-                    <button onClick={shareLink} aria-label="Udostępnij link" className="h-9 w-9 rounded-full bg-muted flex items-center justify-center active:scale-90 transition-transform">
-                      <Share2 className="h-4 w-4 text-foreground" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-              <button onClick={shareLink} className="w-full h-12 rounded-2xl bg-orange-100 text-foreground font-semibold text-sm mt-4 active:scale-[0.98] transition-transform">
-                Zaproś znajomych do trasy
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-    );
+  // WIDOK WYJAZDU zyje WYLACZNIE w SharedRoute (/route/:id) - "Wyjazd do Pragi"
+  // (pivot 2026-08-25). ReviewSummary zostaje juz tylko jako STEPPER dokumentowania (?edit=1).
+  //
+  // Dlaczego stary ekran mimo to wracal (zgloszenie Nat 2026-09-08 "tego widoku nie ma juz
+  // nigdzie"): byly DWA przekierowania i zadne nie obejmowalo tego przypadku. Jedno siedzialo
+  // w useEffect i dotyczylo tylko tras OPUBLIKOWANYCH - a przy okazji odpalalo sie dopiero PO
+  // renderze, wiec stary widok i tak zdazyl mrugnac. Drugie stalo NIZEJ niz galaz "Plan wyjazdu",
+  // ktora zwracala wczesniej dla kazdego wyjazdu jednodniowego - czyli bylo nieosiagalne.
+  // Cala ta galaz (~440 linii) jest tu usunieta, a bramka stoi przed renderem i obejmuje
+  // KAZDE wejscie bez ?edit=1, niezaleznie od statusu i liczby dni.
+  if (!forceEdit && !editingStepper && routeId) {
+    return <Navigate to={`/route/${routeId}`} replace />;
   }
 
   return (
@@ -2405,7 +2123,7 @@ const ReviewSummary = () => {
               haptics.light();
               if (step === 3) { setStep(2); return; }
               if (editingStepper) { setEditingStepper(false); setSummaryTab("plan"); return; }
-              navigate(-1);
+              goBackOr(navigate, "/moj-profil?tab=wyjazdy");
             }}
             aria-label={t("cta.back")}
             className="h-10 w-10 rounded-2xl bg-secondary flex items-center justify-center active:scale-95 transition-transform"
@@ -2430,7 +2148,7 @@ const ReviewSummary = () => {
               <ArrowLeft className="h-5 w-5 text-white" />
             </button>
           ) : !(isMemory && isOwner && !reviewed) ? (
-            <button onClick={() => navigate("/dziennik")} aria-label={t("a11y.back_to_journal")} className="h-10 w-10 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center">
+            <button onClick={() => navigate("/moj-profil?tab=wyjazdy")} aria-label={t("a11y.back_to_journal")} className="h-10 w-10 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center">
               <ArrowLeft className="h-5 w-5 text-white" />
             </button>
           ) : <span />}
@@ -2463,7 +2181,7 @@ const ReviewSummary = () => {
                 style={{ fontSize: "16px" }}
               />
               <button onClick={saveName} disabled={savingName} aria-label={t("a11y.save_name")}
-                className="h-9 w-9 shrink-0 rounded-lg bg-white/90 text-orange-600 flex items-center justify-center active:scale-95 transition-transform disabled:opacity-50">
+                className="h-9 w-9 shrink-0 rounded-lg bg-white/90 text-primary flex items-center justify-center active:scale-95 transition-transform disabled:opacity-50">
                 <Check className="h-4 w-4" strokeWidth={3} />
               </button>
             </div>
@@ -2511,15 +2229,15 @@ const ReviewSummary = () => {
                 <div className="px-5 pb-5">
                   {/* Opis ogolny trasy (review_narrative, autosave) */}
                   <div className="pb-6">
-                    <h2 className="font-display text-xl font-bold text-foreground tracking-tight mb-1">Opis trasy</h2>
-                    <p className="text-[13px] text-muted-foreground mb-3">Ogólny opis Twojej trasy: dla kogo, na jaką okazję, co ją wyróżnia</p>
+                    <h2 className="font-display text-xl font-bold text-foreground tracking-tight mb-1">{t("description.title")}</h2>
+                    <p className="text-[13px] text-muted-foreground mb-3">{t("description.hint")}</p>
                     <div className="relative">
                       <textarea
                         value={suggestion}
                         onChange={(e) => { setSuggestion(e.target.value); saveSuggestion(e.target.value); }}
                         onFocus={() => setNoteFocused(true)}
                         onBlur={() => setNoteFocused(false)}
-                        placeholder="Opisz swoją trasę: dla kogo, na jaką okazję, co warto zobaczyć..."
+                        placeholder={t("description.placeholder")}
                         rows={5}
                         className="w-full bg-secondary/60 rounded-2xl px-4 py-3 text-sm text-foreground resize-none focus:outline-none border border-border/30 placeholder:text-muted-foreground/55"
                       />
@@ -2529,16 +2247,12 @@ const ReviewSummary = () => {
 
                   {/* Miejsca + toggle Lista/Karty */}
                   <div className="flex items-center justify-between mb-3">
-                    <p className="font-display text-xl font-bold text-foreground tracking-tight">Miejsca</p>
-                    <div className="flex rounded-full bg-muted p-0.5">
-                      <button onClick={() => setPlanView("list")} aria-label={t("a11y.list_view")} className={`px-2.5 py-1.5 rounded-full transition-colors ${planView === "list" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}><List className="h-4 w-4" /></button>
-                      <button onClick={() => setPlanView("cards")} aria-label={t("a11y.cards_view")} className={`px-2.5 py-1.5 rounded-full transition-colors ${planView === "cards" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}><GalleryHorizontalEnd className="h-4 w-4" /></button>
-                    </div>
+                    <p className="font-display text-xl font-bold text-foreground tracking-tight">{t("common:filters.places")}</p>
                   </div>
 
                   {currentPins.length === 0 ? (
                     <p className="text-center text-sm text-muted-foreground py-8">{t("empty.no_places_note")}</p>
-                  ) : planView === "list" ? (
+                  ) : (
                     /* Notki per-miejsce usuniete (2026-07-29): obnizamy friction, skupiamy sie na
                        zdjeciach do miejsc. Zostaje tylko ogolna sugestia do calej trasy (wyzej).
                        Kolejnosc miejsc = DRAG & DROP (uchwyt z lewej) + kosz z potwierdzeniem. */
@@ -2551,7 +2265,6 @@ const ReviewSummary = () => {
                             pin={pin}
                             idx={i}
                             categoryLabel={catLabel(pin.category)}
-                            visited={isVisited(pin)}
                             onOpen={() => openDetail(pin)}
                             onRemove={() => removeWorkingPin(pin.id)}
                             noteValue={notes[nk] ?? ""}
@@ -2560,20 +2273,20 @@ const ReviewSummary = () => {
                             onNoteChange={(v) => handleNoteChange(pin.place_name, v)}
                             noteSaved={!!noteSaved[nk]}
                             onNoteFocusChange={setNoteFocused}
+                            tags={pinTags[pin.id] ?? (Array.isArray(pin.tags) ? pin.tags : [])}
+                            onToggleTag={(tg) => togglePinTag(pin.id, tg)}
                           />
                         );
                       })}
                     </Reorder.Group>
-                  ) : (
-                    renderSwiper(true, true, false)
                   )}
                 </div>
               )}
 
               {step === 3 && (
                 <div className="pb-5">
-                  <p className="px-5 font-display text-xl font-bold text-foreground tracking-tight mb-1">Zdjęcia z wyjazdu</p>
-                  <p className="px-5 text-[13px] text-muted-foreground mb-3 leading-relaxed">Dodaj zdjęcia z całej podróży</p>
+                  <p className="px-5 font-display text-xl font-bold text-foreground tracking-tight mb-1">{t("gallery.title")}</p>
+                  <p className="px-5 text-[13px] text-muted-foreground mb-3 leading-relaxed">{t("gallery.hint")}</p>
                   {renderGallery(true)}
                   {renderPinPhotoSection()}
                   {/* Sekcja "Podziel sie trasa" usunieta (2026-07-29): trasy sa domyslnie publiczne,
@@ -2617,18 +2330,17 @@ const ReviewSummary = () => {
                           onClick={() => { setEditingStepper(true); setStep(2); }}
                           className="w-full mb-4 py-3 rounded-2xl bg-secondary text-secondary-foreground font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
                         >
-                          <Pencil className="h-4 w-4" /> Edytuj trasę
-                        </button>
+                          <Pencil className="h-4 w-4" />{t("cta.edit_trip")}</button>
                       )}
                       {/* Opis trasy (read) */}
                       {suggestion?.trim() && (
                         <div className="mb-5">
-                          <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">Opis trasy</p>
+                          <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">{t("description.title")}</p>
                           <p className="text-sm text-foreground/80 leading-relaxed whitespace-pre-wrap">{suggestion}</p>
                         </div>
                       )}
                       {renderPlanHeader(true)}
-                      {planView === "list" ? renderListReadonly(true) : renderSwiper(false, true)}
+                      {renderListReadonly(true)}
                     </>
                   )}
                 </div>
@@ -2638,10 +2350,39 @@ const ReviewSummary = () => {
             </>
             )
           ) : (
-            /* ══ WSPOMNIENIE (gość): read-only galeria + plan ══ */
+            /* ══ Trasa grupowa (uczestnik) / wspomnienie gościa: SPÓJNY widok read-only jak u hosta,
+               bez edycji i bez dodawania miejsca. Plan z toggle Lista/Karty + mapa + wspólna galeria
+               (uczestnik-członek dodaje własne zdjęcia). ══ */
             <div className="pt-2 pb-5">
-              {renderGallery(isGroupMember)}
-              {currentPins.length > 0 && <div className="px-5 mt-5">{renderListReadonly(false)}</div>}
+              {/* Plan miejsc z toggle Lista/Karty (read-only) */}
+              {currentPins.length > 0 && (
+                <div className="px-5 pt-2">
+                  {renderPlanHeader(true)}
+                  {renderListReadonly(true)}
+                </div>
+              )}
+              {/* Mapa trasy (statyczna) - tap otwiera Google Maps z trasą */}
+              {(() => {
+                const mapUrl = buildTripStaticMapUrl(currentPins, "560x300");
+                if (!mapUrl) return null;
+                const openMap = () => {
+                  const pts = currentPins.filter((p: any) => p.latitude != null && p.longitude != null);
+                  if (!pts.length) return;
+                  const dest = `${pts[pts.length - 1].latitude},${pts[pts.length - 1].longitude}`;
+                  const waypoints = pts.slice(0, -1).map((p: any) => `${p.latitude},${p.longitude}`).join("|");
+                  window.open(`https://www.google.com/maps/dir/?api=1&destination=${dest}${waypoints ? `&waypoints=${encodeURIComponent(waypoints)}` : ""}`, "_blank", "noopener,noreferrer");
+                };
+                return (
+                  <div className="px-5 mt-6">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">{t("plan.map")}</p>
+                    <button onClick={openMap} className="block w-full rounded-2xl overflow-hidden border border-border/30 bg-muted active:opacity-95 transition-opacity">
+                      <img src={mapUrl} alt="" className="w-full aspect-[16/9] object-cover" />
+                    </button>
+                  </div>
+                );
+              })()}
+              {/* Wspólna galeria wyjazdu - uczestnik-członek sesji może dodać własne zdjęcia */}
+              <div className="mt-6">{renderGallery(isGroupMember)}</div>
             </div>
           )
         ) : (
@@ -2650,7 +2391,10 @@ const ReviewSummary = () => {
             {currentPins.length > 0 && (
               <div className="px-5 pt-5 pb-5 border-b border-border/30">
                 {renderPlanHeader(true)}
-                {planView === "list" ? renderEditablePlan(false) : renderSwiper(true, false)}
+                {/* Wlasciciel: edytowalny plan (reorder/kosz). Uczestnik: read-only podglad. */}
+                {isOwner
+                  ? renderEditablePlan(false)
+                  : renderListReadonly(false)}
               </div>
             )}
 
@@ -2681,6 +2425,15 @@ const ReviewSummary = () => {
         onOpenChange={(o) => !o && setDetailPin(null)}
         place={detailPin}
         city={route?.city}
+        onLike={user && detailPin ? () => setSavePlace(pinToSave(detailPin)) : undefined}
+      />
+
+      {/* Zapis miejsca do listy (odwiedzone / do odwiedzenia) - bookmark przy wierszu miejsca */}
+      <SavePlaceSheet
+        open={!!savePlace}
+        onOpenChange={(o) => { if (!o) setSavePlace(null); }}
+        place={savePlace}
+        city={route?.city ?? ""}
       />
 
       {/* ── Dodawanie miejsca do planu dnia ──────────────────────────────── */}
@@ -2701,12 +2454,13 @@ const ReviewSummary = () => {
           onClick={() => setShowSharePrompt(false)}
         >
           <div
-            className="w-full max-w-md bg-card rounded-t-3xl px-6 pt-7 pb-[max(24px,env(safe-area-inset-bottom))] flex flex-col gap-5 shadow-2xl animate-in slide-in-from-bottom-4 duration-300"
+            {...sharePromptDrag.dragProps}
+            className="w-[calc(100%-16px)] mx-2 mb-2 max-w-md bg-card rounded-[40px] px-6 pt-7 pb-[max(24px,env(safe-area-inset-bottom))] flex flex-col gap-5 shadow-2xl animate-in slide-in-from-bottom-4 duration-300"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start gap-3">
               <div className="h-11 w-11 rounded-full bg-orange-50 border border-orange-100 flex items-center justify-center shrink-0">
-                <Globe className="h-5 w-5 text-orange-600" />
+                <Globe className="h-5 w-5 text-primary" />
               </div>
               <div className="flex-1">
                 <p className="text-base font-black leading-snug">{t("prompt.title")}</p>
@@ -2718,7 +2472,7 @@ const ReviewSummary = () => {
             <div className="flex flex-col gap-2">
               <button
                 onClick={() => { togglePublic(true); setShowSharePrompt(false); notify.success(t("toast.route_public")); }}
-                className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-sm active:scale-[0.97] transition-transform shadow-md shadow-orange-500/20"
+                className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-sm active:scale-[0.97] transition-transform"
               >
                 {t("prompt.confirm")}
               </button>
@@ -2736,7 +2490,7 @@ const ReviewSummary = () => {
       {/* ── Arkusz udostepniania (skrot obok edycji): widocznosc + podpis + osoby ── */}
       {shareSheetOpen && (
         <div className="fixed inset-0 z-[80] flex flex-col justify-end bg-black/40" onClick={() => setShareSheetOpen(false)}>
-          <div className="bg-background rounded-t-3xl max-h-[88dvh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+          <div {...shareSheetDrag.dragProps} className="mx-2 mb-2 bg-background rounded-[40px] max-h-[88dvh] flex flex-col" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between px-5 pt-4 pb-2 shrink-0">
               <p className="text-lg font-black">{t("share_sheet.title")}</p>
               <button onClick={() => setShareSheetOpen(false)} aria-label={t("a11y.close")} className="h-9 w-9 rounded-full bg-muted flex items-center justify-center active:bg-muted/70"><X className="h-4 w-4" /></button>
@@ -2765,13 +2519,19 @@ const ReviewSummary = () => {
         </div>
       )}
 
-      {/* Arkusz "Zdjęcia do miejsca" + fullscreen viewer (wspólne dla widoku planu i kroku Galeria). */}
+      {/* Arkusz t("photo.for_place") + fullscreen viewer (wspólne dla widoku planu i kroku Galeria). */}
       {renderPinPickerSheet()}
       {renderPhotoViewer()}
+      {renderFinishConfirm()}
 
       {/* ── Fixed bottom CTA ────────────────────────────────────────────── */}
-      {/* W PODSUMOWANIU (wpis zrecenzowany) nie ma dolnego CTA - wyjscie przez strzalke cofania. */}
-      {!noteFocused && !((isMemory || forceEdit) && isOwner && reviewed && !editingStepper) && (
+      {/* W PODSUMOWANIU (wpis zrecenzowany) nie ma dolnego CTA - wyjscie przez strzalke cofania.
+          Uczestnik (non-owner) nie ma zadnego CTA edycji/Gotowe - wychodzi strzalka w hero. */}
+      {/* Dolny pasek CTA. Ukrywamy go TYLKO dla opublikowanego wspomnienia w trybie odczytu.
+          Wczesniej warunek lapal tez `forceEdit` (?edit=1) - po zakonczeniu steppera roboczy
+          wyjazd zostawal BEZ guzika publikacji i nie dalo sie go opublikowac (zgloszenie Nat
+          2026-08-30: "wyjazd sie nie publikuje"). */}
+      {isOwner && !noteFocused && !(isMemory && isOwner && reviewed && !editingStepper) && (
       <div className="fixed bottom-0 left-0 right-0 px-5 pt-3 bg-background/80 backdrop-blur-md border-t border-border/30"
         style={{ paddingBottom: "max(20px, env(safe-area-inset-bottom, 20px))" }}>
         {(isMemory || forceEdit) && isOwner && (!reviewed || editingStepper) ? (
@@ -2785,7 +2545,7 @@ const ReviewSummary = () => {
                 haptics.light();
                 if (step === 3) { setStep(2); return; }
                 if (editingStepper) { setEditingStepper(false); setSummaryTab("plan"); return; }
-                navigate(-1);
+                goBackOr(navigate, "/moj-profil?tab=wyjazdy");
               }}
               className="px-5 py-3.5 rounded-2xl border border-border text-sm font-semibold text-foreground active:scale-[0.98] transition-transform shrink-0"
             >
@@ -2795,16 +2555,14 @@ const ReviewSummary = () => {
               <button
                 onClick={() => { haptics.light(); setStep(3); }}
                 className="flex-1 py-3.5 rounded-2xl bg-primary text-white font-bold text-base active:scale-[0.98] transition-transform"
-              >
-                Przejdź do Galerii
-              </button>
+              >{t("gallery.go")}</button>
             ) : (
               <button
                 onClick={finishEditing}
                 disabled={savingPlan}
                 className="flex-1 py-3.5 rounded-2xl bg-primary text-white font-bold text-base active:scale-[0.98] transition-transform disabled:opacity-40"
               >
-                {savingPlan ? t("status.saving") : "Zapisz trasę"}
+                {savingPlan ? t("status.saving") : t("common:buttons.save")}
               </button>
             )}
           </div>
@@ -2816,8 +2574,12 @@ const ReviewSummary = () => {
           >
             {savingPlan ? t("status.saving") : t("cta.save_changes")}
           </button>
+        ) : !isMemory ? (
+          /* Robocza trasa (podsumowanie) -> SWIADOMA publikacja t("cta.finish_trip"). */
+          <button onClick={() => { haptics.light(); setConfirmFinishOpen(true); }} disabled={finishing} className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-base flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-40">
+            <Flag className="h-4 w-4" />{t("cta.finish_trip")}</button>
         ) : (
-          <button onClick={() => navigate("/dziennik")} className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-base active:scale-[0.98] transition-transform">
+          <button onClick={() => navigate("/moj-profil?tab=wyjazdy")} className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-base active:scale-[0.98] transition-transform">
             {t("cta.done")}
           </button>
         )}

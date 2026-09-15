@@ -26,6 +26,30 @@ export default async function handler(req: Request): Promise<Response> {
   if (scale && scale !== "1" && scale !== "2") params.delete("scale");
   const maptype = params.get("maptype");
   if (maptype && !["roadmap", "satellite", "terrain", "hybrid"].includes(maptype)) params.delete("maptype");
+
+  // [sec] audyt 2026-09-08. Odpowiedz siedzi w CDN na dobe, wiec powtorzone zapytanie nic
+  // nie kosztuje - place Google tylko za ROZNE adresy. Bez tego wystarczy krecic czwarta
+  // cyfra po przecinku, zeby generowac nieskonczenie wiele "nowych" map z jednego widoku.
+  // Zaokraglenie do 4 miejsc (~11 m, na statycznej mapie niewidoczne) skleja te zapytania
+  // w jeden wpis w CDN. Przy okazji: zoom bez ograniczen szedl do Google jak leci.
+  const roundCoords = (v: string) =>
+    v.replace(/-?\d+\.\d{5,}/g, (n) => Number(n).toFixed(4));
+  // UWAGA: `markers` wystepuje WIELOKROTNIE (jeden parametr na pin). `get()` zwraca tylko
+  // pierwszy, a `set()` kasuje cala reszte - przez to mini-mapka pokazywala JEDEN pin zamiast
+  // wszystkich (zgloszenie Nat 2026-09-09; regresja z zaokraglania wspolrzednych 2026-09-08).
+  for (const k of ["center", "markers", "path", "visible"]) {
+    const all = params.getAll(k);
+    if (!all.length) continue;
+    params.delete(k);
+    for (const v of all) params.append(k, roundCoords(v));
+  }
+  const zoom = params.get("zoom");
+  if (zoom !== null) {
+    const z = parseInt(zoom, 10);
+    if (Number.isNaN(z)) params.delete("zoom");
+    else params.set("zoom", String(Math.min(Math.max(z, 0), 20)));
+  }
+
   params.set("key", apiKey);
 
   const googleUrl = `https://maps.googleapis.com/maps/api/staticmap?${params.toString()}`;

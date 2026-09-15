@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { avatarSrc } from "@/lib/avatar";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -10,6 +11,7 @@ import NotificationsDrawer from "./NotificationsDrawer";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const TopBar = (_props: { onOrbClick?: () => void }) => {
+  const { t } = useTranslation("nav");
   const navigate = useNavigate();
   const { user } = useAuth();
   const [notifOpen, setNotifOpen] = useState(false);
@@ -28,7 +30,10 @@ const TopBar = (_props: { onOrbClick?: () => void }) => {
       return count ?? 0;
     },
     enabled: !!user,
-    refetchInterval: 30_000,
+    // BATERIA: licznik odswieza realtime (kanal ponizej) + resume aplikacji. Poll co 30s byl
+    // czystym marnotrawstwem radia (2 komponenty x 120 zapytan/h); zostaje rzadki fallback
+    // na wypadek zerwanej subskrypcji realtime.
+    refetchInterval: 300_000,
   });
 
   // Realtime: instant badge update on new notification
@@ -97,11 +102,11 @@ const TopBar = (_props: { onOrbClick?: () => void }) => {
         <button
           onClick={() => navigate("/moj-profil")}
           className="flex items-center justify-center"
-          aria-label="Mój profil"
+          aria-label={t("my_profile")}
         >
           <Avatar className="h-8 w-8">
             <AvatarImage src={avatarSrc(profile?.avatar_url)} className="object-cover bg-orange-100" />
-            <AvatarFallback className="bg-orange-100 text-orange-600 text-sm font-bold">
+            <AvatarFallback className="bg-orange-100 text-primary text-sm font-bold">
               {profile?.first_name ? profile.first_name.charAt(0).toUpperCase() : "?"}
             </AvatarFallback>
           </Avatar>

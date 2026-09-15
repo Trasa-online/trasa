@@ -120,7 +120,8 @@ export default function RouteMapSheet({ city, pins, open, onOpenChange }: RouteM
         </SheetHeader>
 
         {/* Map */}
-        <div className="flex-1 overflow-hidden">
+        {/* data-no-drag: przesuwanie mapy palcem nie moze zamykac arkusza (gest w dol). */}
+        <div data-no-drag className="flex-1 overflow-hidden">
           {sortedPins.length === 0 ? (
             <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
               {t("map.no_locations")}

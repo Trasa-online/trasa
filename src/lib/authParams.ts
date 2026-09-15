@@ -2,8 +2,8 @@
 // z OBU miejsc: query stringa URL-a ORAZ query-fragmentu w hashu.
 //
 // Powod: aplikacja uzywa HashRouter, a Supabase/GoTrue dokleja `?code=...` na koniec
-// redirectTo. Dla `https://trasa.travel/#/set-password-biznes` wynik to
-// `https://trasa.travel/#/set-password-biznes?code=...` - czyli kod ląduje w hashu,
+// redirectTo. Dla `https://spontaway.com/#/set-password-biznes` wynik to
+// `https://spontaway.com/#/set-password-biznes?code=...` - czyli kod ląduje w hashu,
 // gdzie `window.location.search` jest PUSTY. Czytanie tylko `search` gubi kod i cały
 // flow (reset hasla / invite) sie zawiesza. Ten helper zbiera parametry z:
 //  1. window.location.search              (np. "?code=..#/set-password-biznes")

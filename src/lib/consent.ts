@@ -1,6 +1,7 @@
 // ─── Cookie Consent (RODO / GDPR) ────────────────────────────────────────────
 
 import { supabase } from "@/integrations/supabase/client";
+import { isNative } from "@/lib/platform";
 
 const CONSENT_KEY = "trasa_cookie_consent_v2";
 
@@ -38,9 +39,25 @@ function applyGtagConsent(status: "granted" | "denied") {
 
 function applyClarityConsent(status: "granted" | "denied", email?: string | null) {
   if (status !== "granted") return;
+  // BATERIA: Clarity to nagrywarka sesji WEBOWYCH - w natywce (WebView) chodzi non-stop przez
+  // caly czas uzywania appki (obserwacja DOM + cykliczny upload), a produktowo i tak mierzymy
+  // wszystko PostHogiem. Na native NIE uruchamiamy jej wcale.
+  if (isNative) return;
   if (email && CLARITY_EXCLUDED_EMAILS.has(email.toLowerCase())) return;
   if (typeof window !== "undefined" && typeof window._clarityInit === "function") {
     window._clarityInit();
+  }
+}
+
+/** Start Clarity przy bootcie appki (gdy zgoda juz byla) - z pelnym zestawem regul:
+ *  nie na native i nie dla kont wewnetrznych. Bez tego boot omijal obie blokady. */
+export async function initClarityOnBoot(): Promise<void> {
+  if (isNative || getConsent() !== "granted") return;
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    applyClarityConsent("granted", user?.email);
+  } catch {
+    /* brak sesji - nie ryzykujemy nagrywania konta wewnetrznego, pomijamy */
   }
 }
 

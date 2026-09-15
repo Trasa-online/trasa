@@ -2,9 +2,9 @@
   "loading": "Loading...",
   "route_unavailable_title": "Route unavailable",
   "route_unavailable_desc": "This link may have expired or the route is not public.",
-  "back_to_trasa": "Back to Trasa",
-  "toast_saved": "Route saved to your journal",
-  "toast_save_error": "Couldn't save the route",
+  "back_to_trasa": "Back to spontaway",
+  "toast_saved": "Trip saved to your profile",
+  "toast_save_error": "Couldn't save the trip",
   "push_used_title": "Someone is using your route 🧭",
   "push_used_body": "{{name}} saved your route",
   "push_used_body_city": "{{name}} saved your route to {{city}}",
@@ -22,8 +22,8 @@
   "saving": "Saving…",
   "use_route": "Use this route",
   "plan_own_route": "Plan your own route in {{city}}",
-  "date_sheet_title": "When are you planning this route?",
-  "date_sheet_desc": "Pick a date so the route lands in your journal.",
+  "date_sheet_title": "When are you planning this trip?",
+  "date_sheet_desc": "The date is just for you. You can save the trip without one.",
   "save_without_date": "Save without a date",
   "categories": {
     "restaurant": "Restaurant",
@@ -71,11 +71,219 @@
     "privacy_policy": "Privacy policy"
   },
   "index": {
-    "title": "Welcome to Trasa.travel",
+    "title": "Welcome to spontaway.travel",
     "subtitle": "Start planning your trip!"
   },
   "not_found": {
     "title": "Oops! Page not found",
     "home_link": "Return to home"
-  }
+  },
+  "gallery_empty": "No photos in this trip",
+  "own_cover": {
+    "desc": "Only you see it - on your trip card and here. Nothing changes for anyone else.",
+    "reset": "Back to the trip cover",
+    "title": "Your trip cover"
+  },
+  "day": {
+    "empty": "This day is still empty. Move places here in Reorder, or add new ones.",
+    "no_places": "No places this day",
+    "label": "Day {{day}}",
+    "label_with_date": "Day {{day}} · {{date}}",
+    "moved": "Moved to {{day}}"
+  },
+  "toast": {
+    "pick_cover_desc": "In the Gallery tab, pick the photo that should represent this trip in Explore.",
+    "published_no_cover": "Trip published. Add a photo so it shows up in Explore",
+    "published_with_cover": "Trip published - it is now in Explore",
+    "need_place": "A trip needs at least one place",
+    "own_cover_failed": "We could not set your cover",
+    "own_cover_set_trip": "Your cover for this trip is set",
+    "one_photo_failed": "One photo could not be uploaded",
+    "places_chosen": "Places chosen - the trip is on!",
+    "login_to_like": "Sign in to like a photo",
+    "publish_failed": "We could not publish the trip",
+    "select_one_place": "Select at least one place",
+    "cover_failed": "We could not set the cover",
+    "explore_cover_set": "Explore cover set",
+    "trip_delete_failed": "We could not delete the trip.",
+    "place_delete_failed": "We could not remove the place",
+    "photo_delete_failed": "We could not delete the photo",
+    "next_failed": "We could not continue",
+    "photos_save_failed": "We could not save the photos",
+    "dates_failed": "We could not save the dates",
+    "photos_add_failed": "We could not add the photos",
+    "trip_cover_set": "Trip cover set",
+    "cover_restored": "The trip cover is back",
+    "pick_cover": "Pick a trip cover",
+    "own_cover_set": "Your cover is set",
+    "reminder_sent": "Reminder sent",
+    "reminders_sent": "Reminders sent",
+    "date_saved": "Trip date saved",
+    "removed_from_proposals": "Removed from proposals",
+    "removed_from_trip": "Removed from the trip",
+    "photo_deleted": "Photo deleted",
+    "trip_deleted": "Trip deleted.",
+    "photo_added": "Photo added",
+    "photos_failed_one": "One photo could not be uploaded",
+    "photos_failed_other": "{{count}} photos could not be uploaded",
+    "photos_rejected_one": "One photo did not pass moderation",
+    "photos_rejected_other": "{{count}} photos did not pass moderation",
+    "photos_added_one": "Photo added",
+    "photos_added_other": "{{count}} photos added",
+    "dates_saved_multi": "A {{count}}-day trip - you can spread the places across the days",
+    "name_saved": "Name saved",
+    "name_failed": "Couldn't save the name",
+    "name_not_allowed": "That name contains words we do not allow",
+    "pick_trip_failed": "Couldn't create the trip",
+    "pick_add_failed": "Couldn't add the places",
+    "pick_all_present": "Those places are already there",
+    "pick_added_one": "Added {{count}} place to “{{trip}}”",
+    "pick_added_other": "Added {{count}} places to “{{trip}}”",
+    "cover_portrait_only": "Covers must be portrait (3:4 or 9:16). Pick another photo."
+  },
+  "pick_date_desc": "Pick a single day or a range - with several days you can spread places across them",
+  "confirm": {
+    "place_gone_all": "The place will disappear from the trip for everyone.",
+    "delete_trip": "Delete this trip?",
+    "not_everyone": "Not everyone added places",
+    "choose_anyway": "Choose anyway",
+    "delete_place_title": "Remove “{{place}}” from the trip?",
+    "this_place": "this place",
+    "notes_one": "{{count}} note",
+    "notes_other": "{{count}} notes",
+    "photos_one": "{{count}} photo",
+    "photos_other": "{{count}} photos",
+    "place_gone_with": "Along with the place, {{parts}} added by participants will disappear. This cannot be undone.",
+    "and": " and ",
+    "delete_trip_desc": "“{{title}}” will be gone from your profile for good. This cannot be undone."
+  },
+  "choose_places_desc": "Select the places that make it into the trip.",
+  "reorder_hint": "Drag to reorder",
+  "map_no_locations": "No place locations to show on the map.",
+  "aria": {
+    "add_dates": "Add trip dates",
+    "change_dates": "Change trip dates",
+    "unlike_photo": "Unlike",
+    "like_photo": "Like photo",
+    "delete_photo": "Delete photo",
+    "delete_place": "Delete place",
+    "like_trip": "Like trip",
+    "delete_trip": "Delete trip",
+    "show_chat": "Show chat",
+    "share": "Share",
+    "invite_people": "Invite people to this trip",
+    "expand_map": "Expand map",
+    "is_my_cover": "This is your trip cover",
+    "set_my_cover": "Set as your trip cover",
+    "rename_trip": "Rename trip",
+    "trip_actions": "Trip actions"
+  },
+  "send_reminder": "Send reminder",
+  "publish_trip": "Publish trip",
+  "save_trip": "Save this trip",
+  "reorder": "Reorder",
+  "choose_places": "Choose places",
+  "add_place": "Add place",
+  "add_photo": "Add photo",
+  "chat": {
+    "title": "Trip chat"
+  },
+  "publishing": "Publishing...",
+  "pick_date": "Pick a date",
+  "trip_description": "Trip description",
+  "trip_dates": "Trip dates",
+  "sending": "Sending...",
+  "photo": "Photo",
+  "adding": "Adding...",
+  "back": "Back",
+  "delete": "Delete",
+  "deleting": "Deleting…",
+  "trip_fallback": "Trip",
+  "close": "Close",
+  "share": {
+    "save_in_app": "save this collection in spontaway",
+    "open_fullscreen": "Open full screen",
+    "share": "Share",
+    "and_more_one": "…and 1 more place",
+    "and_more_other": "…and {{count}} more places",
+    "link_heading": "Share the trip link",
+    "link_heading_list": "Share a link to this collection",
+    "link_heading_place": "Share a link to this place",
+    "day_n": "Day {{n}}",
+    "more_in_app_one": "{{count}} more place in the app",
+    "more_in_app_other": "{{count}} more places in the app"
+  },
+  "target": {
+    "more_apps": "More apps",
+    "messages": "Messages"
+  },
+  "card": {
+    "trip_label": "TRIP",
+    "list_label": "COLLECTION OF PLACES"
+  },
+  "note": {
+    "placeholder": "Your note about this trip..."
+  },
+  "days": {
+    "all": "All",
+    "nth": "Day {{n}}"
+  },
+  "desc": {
+    "placeholder": "Who is this trip for, what occasion, what is worth seeing..."
+  },
+  "votes_one": "{{count}} vote",
+  "votes_other": "{{count}} votes",
+  "empty": {
+    "title": "This route is empty",
+    "hint_owner": "Add the first place with the “+” button on the right",
+    "hint_guest": "This route has no places yet."
+  },
+  "add_photo_cta": "Add photo",
+  "tabs": {
+    "places": "Places",
+    "gallery": "Gallery",
+    "map": "Map"
+  },
+  "saved_trip": "Saved",
+  "toast_unsaved": "Removed from saved",
+  "go_to_saved": "View",
+  "invite": {
+    "accepted": "You joined the trip",
+    "declined": "Invite declined",
+    "response_failed": "Could not save your answer",
+    "removed": "Removed from trip",
+    "remove_failed": "Could not remove that person",
+    "banner_title": "Invitation to a shared trip",
+    "banner_desc": "Join to add places, notes and photos with everyone else.",
+    "accept": "Join",
+    "decline": "Not now"
+  },
+  "prerelease": {
+    "tagline": "Discover, plan, share!",
+    "cta": "Join the early access"
+  },
+  "preview": {
+    "open_trip": "See the trip"
+  },
+  "photo_progress": "{{done}} of {{total}}",
+  "pick": {
+    "selected_one": "{{count}} place selected",
+    "selected_other": "{{count}} places selected",
+    "create_trip": "Create a trip: {{place}}",
+    "add_to_trip": "Add to a trip",
+    "open_trip": "Open",
+    "sheet_title_one": "Add {{count}} place to a trip",
+    "sheet_title_other": "Add {{count}} places to a trip",
+    "no_drafts": "You have no draft trip yet. Tap to start one from the selected places.",
+    "new_trip": "New trip",
+    "hide_new": "Hide new trip",
+    "new_trip_name": "Trip name",
+    "create_trip_aria": "Create a trip from the selected places"
+  },
+  "fabs": {
+    "expand": "Show trip actions",
+    "collapse": "Hide trip actions",
+    "chat": "Chat"
+  },
+  "add_place_photo": "Add a photo to this place"
 }

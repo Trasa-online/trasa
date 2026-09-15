@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { supabase } from "@/integrations/supabase/client";
 import { isNative } from "@/lib/platform";
@@ -15,6 +16,7 @@ import { X } from "lucide-react";
 // nie byl wywolywany z UI od kilku tygodni. JSX renderuje tylko 2 OAuth buttons + gosc.
 
 const AuthDrawer = () => {
+  const { t } = useTranslation("auth");
   const { isOpen, hint, close } = useAuthDrawer();
   const { isAnonymous, user } = useAuth();
   const posthog = usePostHog();
@@ -63,7 +65,7 @@ const AuthDrawer = () => {
       } catch { /* sessionStorage unavailable */ }
       // Zawsze signInWithOAuth (jak Auth.tsx). Wczesniej dla anonimowych uzywalismy
       // linkIdentity zeby zachowac anon data (sesje grupowe, polubione miejsca),
-      // ale to silently failuje gdy Google email juz ma konto w Trasie - user wraca
+      // ale to silently failuje gdy Google email juz ma konto w spontaway - user wraca
       // jako gosc bez widocznego bledu. Tradeoff: anon data nie przenosi sie przy
       // OAuth, ale flow dziala niezawodnie dla wszystkich przypadkow.
       // Cel powrotu doklejamy TEZ jako ?next= - przezywa round-trip OAuth gdy
@@ -85,20 +87,20 @@ const AuthDrawer = () => {
       if (msg.includes("provider is not enabled") || msg.includes("unsupported")) {
         toast.error(`Logowanie przez ${provider === "apple" ? "Apple" : "Google"} nie jest jeszcze skonfigurowane.`);
       } else {
-        toast.error(err.message || "Błąd logowania");
+        toast.error(err.message || t("drawer.signin_error"));
       }
       setLoading(false);
     }
   };
 
   const hintMessage = hint === "journal"
-    ? "Załóż konto, żeby mieć dziennik podróży i zapisywać wspomnienia."
+    ? t("drawer.hint_journal")
     : hint === "save_route"
-      ? "Załóż konto, żeby zapisać swoją trasę."
+      ? t("drawer.hint_save_route")
       : hint === "join_session"
-        ? "Załóż konto, żeby dołączyć do sesji grupowej."
+        ? t("drawer.hint_session")
         : hint === "settings"
-          ? "Zaloguj się, żeby zmieniać ustawienia konta."
+          ? t("drawer.hint_settings")
           : null;
 
   return (
@@ -123,7 +125,7 @@ const AuthDrawer = () => {
           <button
             onClick={close}
             className="h-9 w-9 -mr-1 flex items-center justify-center text-muted-foreground active:text-foreground"
-            aria-label="Zamknij"
+            aria-label={t("common:buttons.close")}
           >
             <X className="h-5 w-5" />
           </button>
@@ -133,11 +135,9 @@ const AuthDrawer = () => {
         <div className="flex-1 min-h-0 overflow-y-auto px-5 pt-2 pb-[max(20px,env(safe-area-inset-bottom))]">
           <div className="space-y-1 mb-5">
             <p className="text-xl font-black leading-tight">
-              Zaloguj się lub dołącz do&nbsp;Trasy
+              {t("drawer.title")}
             </p>
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              Zapisuj trasy, prowadź dziennik, planuj grupowo.
-            </p>
+            <p className="text-sm text-muted-foreground leading-relaxed">{t("drawer.subtitle")}</p>
           </div>
 
           {hintMessage && (

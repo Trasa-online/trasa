@@ -1,4 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
+// Powiadomienia buduje hook poza drzewem Reacta, wiec siegamy po i18n bezposrednio.
+import i18n from "@/i18n";
 import { supabase } from "@/integrations/supabase/client";
 import { buildShareUrl } from "@/lib/shareUrl";
 import { sendClientPush, getCurrentUserName } from "@/lib/clientPush";
@@ -101,10 +103,10 @@ export const sendFriendRequest = async (addresseeId: string) => {
   if (!res?.error && (status === "requested" || status === "accepted")) {
     const me = await getCurrentUserName();
     if (status === "requested") {
-      void sendClientPush({ userId: addresseeId, title: "Nowe zaproszenie do znajomych 👋", body: `${me} chce dodać Cię do znajomych`, url: "/moj-profil" });
+      void sendClientPush({ userId: addresseeId, title: i18n.t("friends.request_title", { ns: "social" }), body: i18n.t("friends.request_body", { ns: "social", name: me }), url: "/moj-profil" });
     } else {
       // Byl juz rewers - RPC od razu zaakceptowal -> powiadom druga strone o nowym znajomym.
-      void sendClientPush({ userId: addresseeId, title: "Masz nowego znajomego 🎉", body: `${me} przyjął(a) Twoje zaproszenie`, url: "/moj-profil" });
+      void sendClientPush({ userId: addresseeId, title: i18n.t("friends.accept_title", { ns: "social" }), body: i18n.t("friends.accept_body", { ns: "social", name: me }), url: "/moj-profil" });
     }
   }
   return res;
@@ -113,7 +115,7 @@ export const acceptFriendRequest = async (requesterId: string) => {
   const res = await (supabase as any).rpc("accept_friend_request", { p_requester: requesterId });
   if (!res?.error && res?.data === true) {
     const me = await getCurrentUserName();
-    void sendClientPush({ userId: requesterId, title: "Masz nowego znajomego 🎉", body: `${me} przyjął(a) Twoje zaproszenie`, url: "/moj-profil" });
+    void sendClientPush({ userId: requesterId, title: i18n.t("friends.accept_title", { ns: "social" }), body: i18n.t("friends.accept_body", { ns: "social", name: me }), url: "/moj-profil" });
   }
   return res;
 };
@@ -124,7 +126,7 @@ export const befriendViaInvite = async (code: string) => {
   const data = res?.data as { ok?: boolean; inviter?: string; already?: boolean } | undefined;
   if (!res?.error && data?.ok && data.inviter && !data.already) {
     const me = await getCurrentUserName();
-    void sendClientPush({ userId: data.inviter, title: "Masz nowego znajomego 🎉", body: `${me} dołączył(a) do Ciebie przez link`, url: "/moj-profil" });
+    void sendClientPush({ userId: data.inviter, title: i18n.t("friends.accept_title", { ns: "social" }), body: i18n.t("friends.link_body", { ns: "social", name: me }), url: "/moj-profil" });
   }
   return res;
 };

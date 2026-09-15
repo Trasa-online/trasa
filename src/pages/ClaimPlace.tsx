@@ -116,7 +116,7 @@ const ClaimPlace = () => {
           <h1 className="text-xl font-black text-[#0E0E0E] mb-2">{t("claim.not_found_title")}</h1>
           <p className="text-sm text-[#979797]">{t("claim.not_found_desc")}</p>
         </div>
-        <Link to="/dla-firm/landing" className="text-sm text-orange-600 font-semibold hover:underline">
+        <Link to="/dla-firm/landing" className="text-sm text-primary font-semibold hover:underline">
           {t("claim.back_business_page")}
         </Link>
       </div>
@@ -131,7 +131,7 @@ const ClaimPlace = () => {
           <h1 className="text-xl font-black text-[#0E0E0E] mb-2">{t("claim.claimed_title", { name: place.place_name })}</h1>
           <p className="text-sm text-[#979797]">{t("claim.claimed_desc")}</p>
         </div>
-        <Link to="/auth?business=true" className="text-sm text-orange-600 font-semibold hover:underline">
+        <Link to="/auth?business=true" className="text-sm text-primary font-semibold hover:underline">
           {t("claim.login_to_panel")}
         </Link>
       </div>
@@ -184,7 +184,7 @@ const ClaimPlace = () => {
 
         {/* Intro */}
         <div className="mb-7 text-center">
-          <p className="text-xs font-bold text-orange-600 uppercase tracking-widest mb-2">{t("claim.intro_eyebrow")}</p>
+          <p className="text-xs font-bold text-primary uppercase tracking-widest mb-2">{t("claim.intro_eyebrow")}</p>
           <h1 className="text-3xl lg:text-4xl font-black text-[#0E0E0E] leading-tight">{place.place_name}</h1>
           <p className="text-sm text-[#979797] flex items-center justify-center gap-1.5 mt-2">
             <MapPin className="h-3.5 w-3.5" />

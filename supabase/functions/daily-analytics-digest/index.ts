@@ -1,7 +1,7 @@
 // =====================================================================
 // daily-analytics-digest — Edge Function
 // =====================================================================
-// Codziennie wysyła jeden zbiorczy raport na nat.maz98@gmail.com:
+// Codziennie wysyła jeden zbiorczy raport do zespołu (lista ALERT_EMAILS):
 //   - Konta: nowe (24h) + łącznie (Supabase = źródło prawdy)
 //   - Trasy: nowe (24h, w tym ukończone) + łącznie + aktywacja (% userów z ≥1 trasą)
 //   - Zaangażowanie/retencja: DAU / WAU / MAU (PostHog, distinct person_id)
@@ -14,7 +14,14 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
-const ALERT_EMAIL = "nat.maz98@gmail.com";
+// Odbiorcy raportu dziennego. Jedna lista - dopisanie kogos to jedna linijka i redeploy funkcji.
+// hello@ trzymamy jako adres firmowy (archiwum raportow poza prywatnymi skrzynkami).
+const ALERT_EMAILS = [
+  "nat.maz98@gmail.com",
+  "hello@spontaway.com",
+  "tomalab97@gmail.com",
+  "maciej.meszynski123@gmail.com",
+];
 const POSTHOG_HOST = "https://eu.posthog.com";
 const PRIVATE_KEY = Deno.env.get("POSTHOG_PRIVATE_KEY") ?? "";
 const PROJECT_ID = Deno.env.get("POSTHOG_PROJECT_ID") ?? "";
@@ -61,8 +68,8 @@ async function sendEmail(args: { resendKey: string; subject: string; html: strin
     method: "POST",
     headers: { Authorization: `Bearer ${args.resendKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      from: "Trasa <noreply@trasa.travel>",
-      to: [ALERT_EMAIL],
+      from: "spontaway <noreply@spontaway.com>",
+      to: ALERT_EMAILS,
       subject: args.subject,
       html: args.html,
     }),
@@ -106,9 +113,14 @@ const EVENT_PL: Record<string, string> = {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
-  // Guard: tylko service_role (cron). verify_jwt=false -> sprawdzamy sami.
+  // Guard: cron (x-trigger-secret z Vault, jak send-push/push-scheduler) LUB service_role.
+  // verify_jwt=false -> sprawdzamy sami. Sam service_role nie wystarcza: klucz bywa rotowany i
+  // nie zawsze zgadza sie z env funkcji, a cron budowal naglowek z pustego ustawienia bazy
+  // (`app.settings.service_role_key`) -> lecialo "Bearer null" i 401 (naprawione 2026-09-01).
+  const triggerSecret = Deno.env.get("PUSH_TRIGGER_SECRET") ?? "";
+  const isTrigger = triggerSecret.length > 0 && req.headers.get("x-trigger-secret") === triggerSecret;
   const _auth = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "");
-  if (_auth !== Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")) return jsonResponse({ error: "unauthorized" }, 401);
+  if (!isTrigger && _auth !== Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")) return jsonResponse({ error: "unauthorized" }, 401);
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -151,7 +163,7 @@ Deno.serve(async (req) => {
     ]);
 
     const dateLabel = new Date(now).toLocaleDateString("pl-PL", { day: "2-digit", month: "2-digit", timeZone: "Europe/Warsaw" });
-    const subject = `Trasa - raport ${dateLabel}: +${newAccounts} kont, +${newRoutes} tras`;
+    const subject = `spontaway - raport ${dateLabel}: +${newAccounts} kont, +${newRoutes} tras`;
 
     const ACCENT = "#F9662B";
     const card = (label: string, value: string, sub = "") => `
@@ -176,7 +188,7 @@ Deno.serve(async (req) => {
 
     const html = `
       <div style="font-family:system-ui,-apple-system,sans-serif;max-width:600px;margin:0 auto;background:#FEFEFE;padding:8px;">
-        <h1 style="font-size:20px;color:${ACCENT};margin:8px 4px 2px;">Trasa - dzienny raport</h1>
+        <h1 style="font-size:20px;color:${ACCENT};margin:8px 4px 2px;">spontaway - dzienny raport</h1>
         <p style="font-size:13px;color:#979797;margin:0 4px 16px;">Dane z ostatnich 24h. Wygenerowano ${new Date(now).toLocaleString("pl-PL", { timeZone: "Europe/Warsaw" })} (Europe/Warsaw).</p>
 
         <h2 style="font-size:14px;color:#0E0E0E;margin:18px 4px 8px;">Konta</h2>
@@ -212,7 +224,7 @@ Deno.serve(async (req) => {
 
     return jsonResponse({
       sent: true,
-      to: ALERT_EMAIL,
+      to: ALERT_EMAILS,
       summary: { newAccounts, totalAccounts, newRoutes, totalRoutes, newCompleted, activationPct, dau, wau, mau, topEvents: (topEvents ?? []).length },
     });
   } catch (err) {

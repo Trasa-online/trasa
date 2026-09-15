@@ -3,16 +3,21 @@
     "placeholder": "Szukaj @username...",
     "suggested": "Osoby, które możesz znać",
     "loading": "Ładowanie...",
-    "no_results": "Brak wyników"
+    "no_results": "Brak wyników",
+    "pinned_placeholder": "Szukaj tras, miejsc, osób...",
+    "by_category": "Szukaj według kategorii",
+    "close_aria": "Zamknij wyszukiwanie"
   },
   "sections": {
-    "routes": "Plany",
-    "routes_sub": "ukończone podróże",
+    "routes": "Trasy",
+    "routes_sub": "udostępnione podróże",
     "cities": "Miasta",
     "cities_sub": "odwiedzone miejsca",
-    "collections": "Listy",
+    "collections": "Kolekcje",
     "collections_sub_public": "kolekcje miejsc",
-    "collections_sub_own": "Twoje kolekcje miejsc"
+    "collections_sub_own": "Twoje kolekcje miejsc",
+    "trips": "Wyjazdy",
+    "lists": "Kolekcje"
   },
   "public": {
     "not_found": "Nie znaleziono użytkownika",
@@ -26,12 +31,29 @@
     "days_count": "{{n}} dni",
     "places_count_one": "{{count}} miejsce",
     "places_count_few": "{{count}} miejsca",
-    "places_count_many": "{{count}} miejsc"
+    "places_count_many": "{{count}} miejsc",
+    "blocked_desc": "Nie widzisz treści tej osoby w eksploracji ani w wyszukiwarce. Możesz to cofnąć w menu obok.",
+    "blocked_toast": "Zablokowano - nie zobaczysz już treści tej osoby",
+    "no_lists_desc": "Tu pojawią się polecajki tego użytkownika.",
+    "no_trips_desc": "Tu pojawią się wyjazdy tego użytkownika.",
+    "blocked_title": "Ten profil jest zablokowany",
+    "removed_saved": "Usunięto z zapisanych",
+    "unblock": "Odblokuj użytkownika",
+    "block": "Zablokuj użytkownika",
+    "list_saved": "Zapisano kolekcję",
+    "no_trips": "Brak wyjazdów",
+    "report": "Zgłoś profil",
+    "no_lists": "Brak kolekcji",
+    "more": "Więcej",
+    "trip_saved": "Zapisano wyjazd",
+    "no_following": "{{name}} nikogo jeszcze nie obserwuje.",
+    "no_followers": "Nikt jeszcze nie obserwuje {{name}}."
   },
   "profile": {
     "header_fallback": "profil",
     "settings_aria": "Ustawienia",
     "change_photo_aria": "Zmień zdjęcie profilowe",
+    "avatar_tap_aria": "Zmień zdjęcie lub nakładkę awatara",
     "user_fallback": "Użytkownik",
     "complete_profile": "Uzupełnij profil ({{pct}}%)",
     "friends_count": "Znajomi: {{count}}",
@@ -57,7 +79,20 @@
     "your_profile": "Twój Profil",
     "find_users_aria": "Szukaj osób",
     "notifications_aria": "Powiadomienia",
-    "share_profile_aria": "Udostępnij profil"
+    "share_profile_aria": "Udostępnij profil",
+    "add_bio": "Dodaj krótki opis o sobie",
+    "no_followers": "Nikt Cię jeszcze nie obserwuje.",
+    "trip_deleted": "Wyjazd usunięty.",
+    "delete_error": "Nie udało się usunąć.",
+    "list_deleted": "Kolekcja usunięta.",
+    "share_no_username": "Uzupełnij nazwę użytkownika, aby udostępnić profil.",
+    "no_following": "Nie obserwujesz jeszcze nikogo.",
+    "removed_saved": "Usunięto z zapisanych",
+    "new_content_aria": "Nowa zawartość",
+    "list_fallback_title": "Kolekcja miejsc",
+    "traveler_fallback": "Podróżnik",
+    "starred": "Wyróżnione",
+    "starred_aria": "Wyróżnione miejsca"
   },
   "guest": {
     "title": "Twój profil podróżnika",
@@ -66,7 +101,7 @@
     "login": "Zaloguj się"
   },
   "invite": {
-    "share_title": "Zaproszenie do Trasy",
+    "share_title": "Zaproszenie do spontaway",
     "link_copied": "Link skopiowany",
     "shared": "Udostępniono",
     "slot_label": "Zaproszenie {{slot}}",
@@ -88,5 +123,85 @@
     "home": "Strona główna",
     "error_title": "Link nieprawidłowy lub wygasł",
     "error_desc": "Poproś znajomego o nowy link zaproszeniowy."
+  },
+  "feed": {
+    "visited": "Odwiedzone miejsca",
+    "to_visit": "Do odwiedzenia miejsca",
+    "list_fallback": "Kolekcja miejsc",
+    "trip_fallback": "Wyjazd do {{city}}",
+    "trip_fallback_generic": "Wyjazd",
+    "lists_empty_title": "Nie masz jeszcze kolekcji",
+    "lists_empty_desc": "Twórz kolekcje ulubionych miejsc: odwiedzonych albo do odwiedzenia.",
+    "lists_empty_cta": "Nowa kolekcja miejsc",
+    "trips_empty_title": "Nie masz jeszcze wyjazdów",
+    "trips_empty_desc": "Zaplanuj trasę i podziel się nią ze znajomymi.",
+    "trips_empty_cta": "Zaplanuj wyjazd",
+    "added_place_one": "{{author}} dodał(a) miejsce",
+    "added_place_few": "{{author}} dodał(a) {{count}} miejsca",
+    "added_place_many": "{{author}} dodał(a) {{count}} miejsc",
+    "author_fallback": "Autor"
+  },
+  "empty": {
+    "first_list_desc": "Dodaj pierwszą kolekcję klikając guzik „+\" i wybierz „Kolekcja\"",
+    "drafts_desc": "Stwórz nowy wyjazd, żeby zobaczyć go tutaj",
+    "memories_desc": "Opublikuj wyjazd, żeby zobaczyć go tutaj",
+    "saved_lists_title": "Nie masz jeszcze zapisanych kolekcji",
+    "no_saved_trips": "Brak zapisanych wyjazdów",
+    "no_drafts": "Brak roboczych wyjazdów",
+    "no_own_lists": "Brak własnych kolekcji",
+    "no_memories": "Brak wspomnień",
+    "saved_lists_desc": "Zapisz cudzą kolekcję <b>bookmarkiem</b>, żeby zobaczyć ją tutaj",
+    "saved_trips_desc": "Zapisz cudzy wyjazd <b>bookmarkiem</b>, żeby zobaczyć go tutaj"
+  },
+  "tabs": {
+    "my_lists": "Moje kolekcje",
+    "general": "Ogólne"
+  },
+  "trip_tabs": {
+    "drafts": "Robocze",
+    "published": "Opublikowane",
+    "saved": "Zapisane"
+  },
+  "referral": {
+    "title": "Zapraszaj znajomych",
+    "title_done": "Dzięki! Masz komplet",
+    "desc": "Spontaway jest lepsze z Twoimi ludźmi! Zaproś {{count}} osoby i odblokuj unikalną nakładkę na Twój awatar!",
+    "desc_done": "Twoi znajomi są już w środku, a Twoja nakładka czeka w Ustawieniach → Customizuj.",
+    "progress": "{{invited}} z {{goal}}",
+    "share_cta": "Wyślij zaproszenie",
+    "share_title": "Wchodzisz w spontaway?",
+    "share_text": "Zbieram tu miejsca i wyjazdy. Wejdź z mojego linku, to zobaczysz, co polecam.",
+    "qr_aria": "Pokaż kod QR do testów",
+    "qr_title": "Zeskanuj i dołącz do testów",
+    "qr_desc": "Kod prowadzi prosto do TestFlight. Pokaż go osobie, którą chcesz zaprosić.",
+    "dismiss_aria": "Ukryj do następnego uruchomienia",
+    "eyebrow": "Zaproś znajomych",
+    "eyebrow_done": "Zaproszenia wysłane",
+    "not_now": "Nie teraz"
+  },
+  "layout": {
+    "list": "Lista",
+    "mosaic": "Mozaika",
+    "grid": "Siatka",
+    "reorder_failed": "Nie udało się zapisać układu. Spróbuj ponownie."
+  },
+  "tab_hints": {
+    "lists_moje": "Twoje publiczne polecajki miejsc. Każdy może je zapisać u siebie.",
+    "lists_ogolne": "Prywatna kolekcja wszystkiego, co zapisujesz jednym tapnięciem. Widzisz ją tylko Ty.",
+    "lists_zapisane": "Kolekcje innych podróżnych, które masz u siebie zapisane.",
+    "trips_wspomnienia": "Opublikowane wyjazdy. Widać je w eksploracji i na Twoim profilu.",
+    "trips_wspomnienia_reorder": "Opublikowane wyjazdy. Przytrzymaj okładkę i przeciągnij, żeby ułożyć je po swojemu.",
+    "trips_robocze": "Wyjazdy w przygotowaniu. Widzisz je tylko Ty, dopóki ich nie opublikujesz.",
+    "trips_zapisane": "Wyjazdy innych podróżnych, które masz u siebie zapisane."
+  },
+  "starred": {
+    "title": "Wyróżnione miejsca",
+    "desc": "Miejsca, które wyróżniasz gwiazdką w swoich wyjazdach i kolekcjach.",
+    "empty_title": "Jeszcze nic nie wyróżniasz",
+    "empty_desc": "Gwiazdkę dodasz przy miejscu w wyjeździe albo w kolekcji - wyróżnij tyle miejsc, ile chcesz.",
+    "trip_fallback": "Wyjazd",
+    "list_fallback": "Kolekcja",
+    "desc_theirs": "Miejsca wyróżnione gwiazdką w wyjazdach i kolekcjach tej osoby.",
+    "empty_title_theirs": "Brak wyróżnionych miejsc"
   }
 }

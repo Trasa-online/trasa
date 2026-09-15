@@ -3,13 +3,15 @@ import { useNavigate } from "react-router-dom";
 import { MapPin, ArrowRight, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, RotateCcw, CheckCircle2, Navigation, X, CalendarDays, Plus, Check, Bookmark } from "lucide-react";
 import AddCustomPlacePanel from "./AddCustomPlacePanel";
 import { haversineKm as haversineKmDist, formatDistance } from "@/lib/distance";
-import { useDistanceReference, getReference, ensureCityContext, wasAskedForCity, markAskedForCity, tryResolveOnSite } from "@/lib/distanceReference";
-import LocationPrimer from "@/components/LocationPrimer";
+import { pinCoverKeys, fetchPlaceKeysWithPhotos } from "@/lib/placePhotoSocial";
+import { useDistanceReference, getReference, ensureCityContext, tryResolveOnSite, setGpsReference } from "@/lib/distanceReference";
+import { askPermission } from "@/lib/permissionPrompts";
 import { cn } from "@/lib/utils";
 import posthog from "posthog-js";
 import { format } from "date-fns";
 import PlaceSwiperDetail from "./PlaceSwiperDetail";
 import SavePlaceSheet, { type SavePlaceInput } from "./SavePlaceSheet";
+import { useUnsavePlace } from "@/hooks/useUnsavePlace";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchPlaceUserPhotos, pickRandom } from "@/lib/placeUserPhotos";
 import { categoryIconSrc } from "@/lib/placeCategoryIcon";
@@ -18,6 +20,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import { useOnboarding } from "@/components/OnboardingGuide";
 import { useHaptics } from "@/hooks/useHaptics";
+import { useDragToDismiss } from "@/hooks/useDragToDismiss";
+import { useSavedPlaces } from "@/hooks/useSavedPlaces";
 import { getSubcategoryIds, getMainCategoryFor, getDbCategoriesFor, MAIN_CATEGORIES, mainCategoryLabel } from "@/lib/categories";
 import { addLike as saveExploreLike, clearGroup as clearExploreGroup, removeLikeFromCity } from "@/lib/exploreLikes";
 import { expandCity } from "@/lib/cities";
@@ -45,12 +49,21 @@ export interface MockPlace {
   opening_hours?: { weekday_text?: string[] | null; periods?: unknown[] | null } | null;
   // Business profile fields (optional)
   businessPlan?: 'zero' | 'basic' | 'premium';
+  /** business_profiles.is_premium - flaga funkcji premium, WYLICZANA AUTOMATYCZNIE przez
+   *  trigger w bazie (migracja 20260831d): zywe konto biznesowe = owner_user_id + is_active
+   *  + nie szkic. Zaden przelacznik do klikania. Gdy wejdzie billing, zmienia sie TYLKO
+   *  warunek w triggerze ("ma aktywna subskrypcje") - front zostaje bez zmian. */
+  businessIsPremium?: boolean;
   businessLogoUrl?: string;
   businessEventTitle?: string;
   businessPhone?: string | null;
   businessWebsite?: string | null;
   businessInstagram?: string | null;
   businessFacebook?: string | null;
+  /** Tozsamosc miejsca u Google. Wizytowka odpytuje nia galerie miejsca (place_photos)
+   *  drugim kluczem - "gpid:<id>" obok "nm:<nazwa>". Wczesniej pole bylo czytane przez rzutowanie
+   *  i call-site'y o nim zapominaly, wiec polowa zdjec nie dociagala sie do wizytowki. */
+  google_place_id?: string | null;
   galleryPhotos?: string[]; // extra photos shown in carousel (swipe card + detail)
   businessSubcategories?: string[]; // subcategories from business_profiles (for custom filtering)
   businessTags?: string[]; // custom tags z business_profiles.tags - prio nad vibe_tags w UI
@@ -90,7 +103,7 @@ const CATEGORY_LABELS: Record<PlaceCategory, string> = {
   museum:     "Muzeum",
   monument:   "Zabytek",
   gallery:    "Galeria",
-  experience: "Doświadczenie",
+  experience: "Doświadczenie",   // i18n-ignore: etykieta kategorii z bazy (categories ns tlumaczy osobno)
   market:     "Targ",
   shopping:   "Sklep",
   park:       "Park",
@@ -140,9 +153,11 @@ const MatchModal = ({ likedPlaces, onConfirm, onDismiss }: {
   const { t } = useTranslation("plan");
   const orbs = likedPlaces.slice(0, 3);
   const extra = likedPlaces.length - 3;
+  // Gest natywny: przeciagniecie panelu w dol zamyka arkusz.
+  const { dragProps } = useDragToDismiss({ onDismiss });
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="w-full max-w-sm bg-card rounded-t-3xl px-6 pt-8 pb-safe-6 pb-6 flex flex-col items-center gap-6 shadow-2xl animate-in slide-in-from-bottom-4 duration-300">
+      <div {...dragProps} className="w-[calc(100%-16px)] mx-2 mb-2 max-w-sm bg-card rounded-[40px] px-6 pt-8 pb-safe-6 pb-6 flex flex-col items-center gap-6 shadow-2xl animate-in slide-in-from-bottom-4 duration-300">
         <div className="flex items-center justify-center gap-3">
           {orbs.map((p) => (
             <div key={p.id} className="flex flex-col items-center gap-2">
@@ -170,7 +185,7 @@ const MatchModal = ({ likedPlaces, onConfirm, onDismiss }: {
         <div className="w-full flex flex-col gap-2.5">
           <button
             onClick={onConfirm}
-            className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-base flex items-center justify-center gap-2 active:scale-[0.97] transition-transform shadow-lg shadow-primary/25"
+            className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-base flex items-center justify-center gap-2 active:scale-[0.97] transition-transform"
           >
             {t("match_modal.confirm")}
             <ArrowRight className="h-4 w-4" />
@@ -198,9 +213,11 @@ const UPSELL_BENEFITS = [
 
 const GuestUpsellModal = ({ onSignUp, onDismiss }: { onSignUp: () => void; onDismiss: () => void }) => {
   const { t } = useTranslation("plan");
+  // Gest natywny: przeciagniecie panelu w dol zamyka arkusz.
+  const { dragProps } = useDragToDismiss({ onDismiss });
   return (
   <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-    <div className="w-full max-w-sm bg-card rounded-t-3xl px-6 pt-8 pb-[max(24px,env(safe-area-inset-bottom))] flex flex-col gap-6 shadow-2xl animate-in slide-in-from-bottom-4 duration-300">
+    <div {...dragProps} className="w-[calc(100%-16px)] mx-2 mb-2 max-w-sm bg-card rounded-[40px] px-6 pt-8 pb-[max(24px,env(safe-area-inset-bottom))] flex flex-col gap-6 shadow-2xl animate-in slide-in-from-bottom-4 duration-300">
       <div className="text-center space-y-1">
         <p className="text-2xl font-black text-foreground">{t("upsell.title")}</p>
         <p className="text-sm text-muted-foreground">{t("upsell.subtitle")}</p>
@@ -216,7 +233,7 @@ const GuestUpsellModal = ({ onSignUp, onDismiss }: { onSignUp: () => void; onDis
       <div className="flex flex-col gap-2.5">
         <button
           onClick={onSignUp}
-          className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-base flex items-center justify-center gap-2 active:scale-[0.97] transition-transform shadow-lg shadow-primary/25"
+          className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-base flex items-center justify-center gap-2 active:scale-[0.97] transition-transform"
         >
           {t("upsell.cta")}
           <ArrowRight className="h-4 w-4" />
@@ -252,10 +269,14 @@ interface SwipeCardProps {
   // akcje (cofnij/zapisz/rozwin) jako pionowa kolumna po prawej (kciuk). scroll = nastepna karta.
   scrollMode?: boolean;
   saved?: boolean; // scrollMode: czy miejsce juz zapisane (+ pokazuje stan zapisane)
+  // Karta w arkuszu UDOSTEPNIANIA miejsca (prosba Nat 2026-09-13): samo zdjecie, kategoria,
+  // nazwa i adres - bez chipa dystansu, cen, tagow i kolumny zapisz/rozwin (odbiorca linku
+  // i tak ich nie dostaje, a na podgladzie tylko zaslanialy zdjecie).
+  shareMode?: boolean;
 }
 
 
-export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo, onPhotoFetched, isTop, offset, skipGoogleFetch = false, onEnableDistance, scrollMode = false, saved = false }: SwipeCardProps) => {
+export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo, onPhotoFetched, isTop, offset, skipGoogleFetch = false, onEnableDistance, scrollMode = false, saved = false, shareMode = false }: SwipeCardProps) => {
   const { t } = useTranslation("plan");
   const [imgFailed, setImgFailed] = useState(false);
   const [videoFailed, setVideoFailed] = useState(false);
@@ -307,9 +328,13 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
   // jestes na miejscu, albo punkt startowy "od startu" gdy planujesz). Gdy brak ref a
   // miejsce MA wspolrzedne - maly przycisk "Pokaz dystans" otwiera wybor (Jestes juz w meiscie?).
   const distanceRef = useDistanceReference();
-  const placeHasCoords = !!(place.latitude && place.longitude);
+  // Odporne na koordy jako string / 0 / NaN - inaczej chip dystansu znikal "czasami"
+  // (np. gdy latitude przyszlo jako "52.2" albo 0,0 -> falsy/NaN i chip sie nie renderowal).
+  const placeLat = Number(place.latitude);
+  const placeLng = Number(place.longitude);
+  const placeHasCoords = Number.isFinite(placeLat) && Number.isFinite(placeLng) && (placeLat !== 0 || placeLng !== 0);
   const distanceLabel = distanceRef && placeHasCoords
-    ? formatDistance(haversineKmDist(distanceRef.coords, { lat: place.latitude, lng: place.longitude }))
+    ? formatDistance(haversineKmDist(distanceRef.coords, { lat: placeLat, lng: placeLng }))
     : null;
   const showEnableDistance = !distanceRef && placeHasCoords;
   // Priorytet: tagi z business_profiles.tags (ustawione przez wlasciciela) > vibe_tags z bazy.
@@ -368,6 +393,10 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
       onPointerMove={scrollMode ? undefined : handlePointerMove}
       onPointerUp={scrollMode ? undefined : handlePointerUp}
       onPointerCancel={scrollMode ? undefined : handlePointerUp}
+      // scrollMode (Eksploracja pionowa): tap w CALA karte otwiera wizytowke. onClick fire'uje
+      // tylko na tap (nie na scroll), a wszystkie interaktywne dzieci (strzalki zdjec, zapisz,
+      // rozwin) robia stopPropagation. Bez tego wizytowke otwieral tylko maly guzik ^.
+      onClick={scrollMode ? () => onTap() : undefined}
       style={scrollMode ? { zIndex: 1 } : {
         transform: isTop
           ? `translateX(${dragX}px) rotate(${rotation}deg)`
@@ -378,7 +407,7 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
       }}
       className={cn(
         "absolute inset-0 rounded-3xl overflow-hidden shadow-md select-none",
-        scrollMode ? "" : (isTop ? "cursor-grab active:cursor-grabbing" : "pointer-events-none")
+        scrollMode ? "cursor-pointer" : (isTop ? "cursor-grab active:cursor-grabbing" : "pointer-events-none")
       )}
     >
       {/* Photo / Video / Ikona kategorii (empty-state) */}
@@ -484,13 +513,13 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
       })()}
 
       {/* Chip dystansu - prawy gorny rog, nad paginacja */}
-      {isTop && distanceLabel && (
+      {isTop && !shareMode && distanceLabel && (
         <div className="absolute top-4 right-4 z-10 flex items-center gap-1 bg-black/45 backdrop-blur-sm rounded-full px-2.5 py-1 shadow-sm">
           <Navigation className="h-3 w-3 text-white/90" />
           <span className="text-white text-[11px] font-semibold">{distanceLabel}</span>
         </div>
       )}
-      {isTop && !distanceLabel && showEnableDistance && onEnableDistance && (
+      {isTop && !shareMode && !distanceLabel && showEnableDistance && onEnableDistance && (
         <button
           onPointerDown={(e) => e.stopPropagation()}
           onClick={(e) => { e.stopPropagation(); onEnableDistance(); }}
@@ -502,7 +531,7 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
       )}
 
       {/* Content */}
-      <div className={cn("absolute bottom-0 left-0 right-0 px-5 pt-5 space-y-2", scrollMode ? "pb-7 pr-[72px]" : "pb-[76px]")}>
+      <div className={cn("absolute bottom-0 left-0 right-0 px-5 pt-5 space-y-2", scrollMode ? (shareMode ? "pb-7" : "pb-7 pr-[72px]") : "pb-[76px]")}>
 
         {/* Business logo - 1:1 z BusinessCardPreview (10x10, bez handle, jako osobny element nad nazwa) */}
         {place.businessLogoUrl !== undefined && place.businessLogoUrl && (
@@ -516,7 +545,7 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
 
         {/* Meta row */}
         <div className="flex items-center gap-3">
-          {place.price_level && (
+          {place.price_level && !shareMode && (
             <span className="text-white/60 text-sm">{PRICE_DOTS(place.price_level)}</span>
           )}
           {displayAddress && (
@@ -539,7 +568,7 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
         {/* Vibe tags + info button row */}
         <div className="flex items-center justify-between gap-2 pt-0.5">
           <div className="flex gap-1.5 flex-wrap">
-            {displayTags.map((tag) => (
+            {!shareMode && displayTags.map((tag) => (
               <span key={tag} className="text-[11px] font-medium text-white/80 bg-white/15 backdrop-blur-sm px-2.5 py-1 rounded-full">
                 {tag}
               </span>
@@ -593,7 +622,7 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
             }
             className={cn(
               "flex-1 py-3 rounded-full font-bold text-sm shadow-xl active:scale-[0.97] transition-transform",
-              place.businessColorButton ? "" : "bg-primary text-white shadow-primary/30"
+              place.businessColorButton ? "" : "bg-primary text-white"
             )}
           >
             {t("add")}
@@ -603,7 +632,7 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
 
       {/* Kolumna akcji po prawej (scrollMode, wg Figmy): zapisz (zakladka) / rozwin (^).
           W obszarze kciuka. scroll = nastepna karta (bez skip/add/cofnij - cofasz scrollem w gore). */}
-      {scrollMode && (
+      {scrollMode && !shareMode && (
         // Ujednolicone z karta Tras (TrasaBigCard): biale kolka, ikona foreground, fill przy zapisie.
         <div className="absolute right-3 bottom-4 z-20 flex flex-col gap-3">
           <button
@@ -731,7 +760,7 @@ const EmptyState = ({
     return (
       <div className="flex-1 flex flex-col items-center justify-center px-8 text-center gap-5">
         <div className="h-16 w-16 rounded-full bg-orange-50 border border-orange-100 flex items-center justify-center">
-          <CheckCircle2 className="h-8 w-8 text-orange-600" strokeWidth={2.2} />
+          <CheckCircle2 className="h-8 w-8 text-primary" strokeWidth={2.2} />
         </div>
         <div className="space-y-1.5">
           <p className="text-2xl font-black text-foreground leading-tight">{reviewedTitle}</p>
@@ -741,7 +770,7 @@ const EmptyState = ({
         </div>
         <button
           onClick={() => (onGoToMatches ? onGoToMatches() : onProceed())}
-          className="px-8 py-3.5 rounded-full bg-primary text-white font-bold text-sm flex items-center gap-2 active:scale-[0.97] transition-transform shadow-lg shadow-primary/25"
+          className="px-8 py-3.5 rounded-full bg-primary text-white font-bold text-sm flex items-center gap-2 active:scale-[0.97] transition-transform"
         >
           {onGoToMatches ? t("empty.go_saved_cta") : t("empty.plan_from_places", { count: likedPlaces.length })}
           <ArrowRight className="h-4 w-4" />
@@ -793,7 +822,7 @@ const EmptyState = ({
             {/* Matched place pills */}
             <div className="flex flex-wrap gap-1.5">
               {route.matchedNames.map(name => (
-                <span key={name} className="text-xs bg-primary/10 text-orange-600 px-2.5 py-1 rounded-full font-medium">
+                <span key={name} className="text-xs bg-primary/10 text-primary px-2.5 py-1 rounded-full font-medium">
                   {name}
                 </span>
               ))}
@@ -822,7 +851,7 @@ const EmptyState = ({
           "w-full py-3.5 rounded-full text-sm font-semibold active:scale-[0.97] transition-transform",
           matchedRoutes.length > 0
             ? "border border-border text-muted-foreground bg-card mt-1"
-            : "bg-primary text-white shadow-lg shadow-primary/25"
+            : "bg-primary text-white"
         )}
       >
         {matchedRoutes.length > 0
@@ -897,10 +926,12 @@ function haversineKm(a: { lat: number; lng: number }, b: { lat: number; lng: num
 // Slowa kluczowe dla filtrow diety - sprawdzane w vibe_tags (places) i business_profiles.tags.
 // Case-insensitive substring match - lapie '"wegańska kuchnia"', '"vegan"', '"weganskie dania"' itp.
 const DIET_KEYWORDS: Record<string, string[]> = {
-  vegan: ["vegan", "wegan", "wegań", "wegańsk", "weganski", "weganskie"],
-  vegetarian: ["vegetarian", "wegetar", "weget", "jarski", "jarskie", "jarska", "wegetarianskie", "wegetariańsk"],
+  vegan: ["vegan", "wegan", "wegań", "wegańsk", "weganski", "weganskie"],   // i18n-ignore: slowa kluczowe dopasowania, nie copy
+  vegetarian: ["vegetarian", "wegetar", "weget", "jarski", "jarskie", "jarska", "wegetarianskie", "wegetariańsk"],   // i18n-ignore: slowa kluczowe dopasowania
+  // i18n-ignore-start: slowa kluczowe dopasowywane do OPISU miejsca (oba jezyki naraz), nie copy
   gluten_free: ["gluten free", "gluten-free", "bez glutenu", "bezglutenowe", "glutenfree", "gluten_free"],
   lactose_free: ["lactose free", "lactose-free", "bez laktozy", "bezlaktozowe", "laktozy", "lactose_free"],
+  // i18n-ignore-end
 };
 
 function matchesDiet(place: MockPlace, diets: string[]): boolean {
@@ -959,27 +990,45 @@ function interleaveByCategory(places: MockPlace[], prevCat: string | null = null
   return result;
 }
 
-// Biznesy z wizytowka (business_profiles) zawsze pierwsze w kolejce swipera (priorytet B2B),
-// a w obrebie KAZDEJ grupy (biznesy / reszta) przeplot kategorii + ranking wazony zamiast
-// czystego shuffle. Wykrywanie po `businessPlan` ktore enrichWithBusinessProfile ustawia
-// tylko gdy nested bp istnieje.
-function partitionBusinessFirst(places: MockPlace[]): MockPlace[] {
-  const biz: MockPlace[] = [];
-  const restPhoto: MockPlace[] = [];
-  const restNoPhoto: MockPlace[] = [];
-  // Priorytet kolejki: 1) biznesy (wizytowka), 2) zwykle miejsca ZE zdjeciem (skurowana
-  // okladka - eksploracja nie wyglada wtedy pusto/ikonowo), 3) reszta (ikona kategorii).
-  // W obrebie kazdego tieru przeplot kategorii. `hasCover` = curated cover z enrich.
+// Czy karta miejsca ma czym sie pokazac BEZ doczytywania (okladka biznesu / skurowana
+// okladka / pierwsze zdjecie galerii / wideo okladkowe). Zdjecia userow (place_photos)
+// swiper dociaga dopiero dla wierzchniej karty, wiec tu ich nie widzimy.
+function hasOwnCover(p: MockPlace): boolean {
+  return !!(p.photo_url || (p.galleryPhotos ?? [])[0] || (p as any).coverVideoUrl);
+}
+
+// Kolejnosc kart w swiperze (schemat Nat 2026-09-06):
+//   1) WIZYTOWKI BIZNESOWE (w srodku: najpierw te z wlasnym zdjeciem),
+//   2) miejsca ZE ZDJECIAMI OD USEROW - wizytowki "zero", czyli bez konta biznesowego,
+//   3) miejsca BEZ zadnego zdjecia - karta z ikona kategorii na peachy tle.
+// Sedno zmiany: tier 2 rozpoznajemy TAKZE po zdjeciach userow (place_photos), a nie tylko po
+// okladce zapisanej w `places`. Miejsce zalozone zdjeciem usera ma `photo_url` NULL, wiec
+// wczesniej ladowalo na samym koncu kolejki mimo posiadanego zdjecia.
+// W obrebie KAZDEGO tieru przeplot kategorii + ranking wazony zamiast czystego shuffle.
+// Biznes rozpoznajemy po `businessPlan`, ktore enrichWithBusinessProfile ustawia tylko gdy
+// nested business_profiles istnieje.
+function partitionBusinessFirst(places: MockPlace[], keysWithUserPhotos?: Set<string>): MockPlace[] {
+  const bizPhoto: MockPlace[] = [];
+  const bizNoPhoto: MockPlace[] = [];
+  const withPhoto: MockPlace[] = [];
+  const noPhoto: MockPlace[] = [];
+  const hasUserPhoto = (p: MockPlace) =>
+    !!keysWithUserPhotos?.size && pinCoverKeys(p as any).some((k) => keysWithUserPhotos.has(k));
   for (const p of places) {
-    if ((p as any).businessPlan) biz.push(p);
-    else if (p.photo_url || (p.galleryPhotos ?? [])[0]) restPhoto.push(p);
-    else restNoPhoto.push(p);
+    if ((p as any).businessPlan) { (hasOwnCover(p) ? bizPhoto : bizNoPhoto).push(p); continue; }
+    (hasOwnCover(p) || hasUserPhoto(p) ? withPhoto : noPhoto).push(p);
   }
   const lastCat = (arr: MockPlace[], prev: string | null) => (arr.length ? (arr[arr.length - 1].category || "_") : prev);
-  const bizOrdered = interleaveByCategory(biz);
-  const photoOrdered = interleaveByCategory(restPhoto, lastCat(bizOrdered, null));
-  const noPhotoOrdered = interleaveByCategory(restNoPhoto, lastCat(photoOrdered, lastCat(bizOrdered, null)));
-  return [...bizOrdered, ...photoOrdered, ...noPhotoOrdered];
+  // Przeplot liczymy kaskadowo, zeby kategoria nie powtorzyla sie na styku dwoch tierow.
+  const tiers = [bizPhoto, bizNoPhoto, withPhoto, noPhoto];
+  const out: MockPlace[] = [];
+  let prevCat: string | null = null;
+  for (const tier of tiers) {
+    const ordered = interleaveByCategory(tier, prevCat);
+    prevCat = lastCat(ordered, prevCat);
+    out.push(...ordered);
+  }
+  return out;
 }
 
 // Wybor pill wydarzenia dla wizytowki wg priorytetu (wzgledem daty wyjazdu `refDate`,
@@ -1011,7 +1060,7 @@ function pickEventPillTitle(bp: any, refDate?: string): string | undefined {
 // Select `places` + zagniezdzony business_profiles (+ business_events) - jedno zrodlo prawdy
 // dla wizytowki (swiper i "Zapisane"). Zmiana tu propaguje do wszystkich call sites.
 export const PLACE_BUSINESS_SELECT =
-  "*, business_profiles(plan, logo_url, cover_image_url, cover_video_url, event_title, event_title_en, event_description, gallery_urls, phone, website, social_links, main_category, secondary_category, subcategories, tags, description, is_verified, color_badge, color_card_bg, color_button, color_promo, menu_image_urls, opening_hours, latitude, longitude, street, postal_code, address, business_events(id, title, title_en, starts_at, ends_at, start_time, end_time, description, is_draft))";
+  "*, business_profiles(plan, is_premium, logo_url, cover_image_url, cover_video_url, event_title, event_title_en, event_description, gallery_urls, phone, website, social_links, main_category, secondary_category, subcategories, tags, description, is_verified, color_badge, color_card_bg, color_button, color_promo, menu_image_urls, opening_hours, latitude, longitude, street, postal_code, address, business_events(id, title, title_en, starts_at, ends_at, start_time, end_time, description, is_draft))";
 
 // Doczytuje pojedyncze miejsce po places.id (UUID) i wzbogaca profilem biznesowym -
 // uzywane przez "Zapisane" zeby tap w kafelek otwieral pelna wizytowke (jak w swiperze).
@@ -1034,19 +1083,22 @@ export function enrichWithBusinessProfile(p: any, refDate?: string): MockPlace {
 
   const bp = Array.isArray(p.business_profiles) ? p.business_profiles[0] : p.business_profiles;
   if (!bp) {
-    // Zwykle miejsce (bez profilu biznesu). ZERO Google (2026-07-29): NIE uzywamy Google
-    // backfillu (stare places.photo_url z prefiksem gpid_). ALE recznie skurowana okladka
-    // (upload przez scripts/upload-place-covers.ts do storage /manual/) to NASZ content -
-    // zachowujemy ja jako cover. Brak -> okladka z losowego zdjecia usera (SwipeCard) / ikona.
-    const curated = typeof p.photo_url === "string" && p.photo_url.includes("/place-photos-cache/manual/")
+    // Zwykle miejsce (bez profilu biznesu). ZERO Google (2026-07-29): NIE uzywamy starego Google
+    // backfillu (places.photo_url z prefiksem gpid_/cache). Zachowujemy: (a) recznie skurowana
+    // okladka (upload /manual/) = NASZ content, (b) proxy Google na zywo (/api/place-photo) - swiadomy
+    // backfill zdjec dla ODBLOKOWANYCH miejsc zakladki "Miejsca" (proxy = pobranie live, bez cache
+    // bajtow, zgodnie z ToS Google). Brak -> okladka z losowego zdjecia usera (SwipeCard) / ikona.
+    const curated = typeof p.photo_url === "string"
+      && (p.photo_url.includes("/place-photos-cache/manual/") || p.photo_url.includes("/api/place-photo"))
       ? p.photo_url
       : undefined;
     return { ...p, photo_url: curated, galleryPhotos: curated ? [curated] : [] } as MockPlace;
   }
-  // Per decyzja produktowa (CLAUDE.md): wszystkie aktywne biznesy traktujemy jak
-  // premium - logo, eventy, cover image, dane kontaktowe widoczne dla kazdego
-  // powiazanego biz profile. DB column `plan` jest legacy z czasow planow zero/basic/premium
-  // i jest ignorowane na froncie. Wszystkim wyswietlamy pelna premium wizytowke.
+  // Per decyzja produktowa (CLAUDE.md): WYGLAD wizytowki (logo, eventy, cover, kontakt) jest
+  // premium dla kazdego aktywnego biznesu - kolumna `plan` (legacy zero/basic/premium) jest tu
+  // ignorowana, bo przy rejestracji zawsze ustawia sie 'zero'.
+  // UWAGA: to NIE znaczy "kazdy jest platny". Realny status konta = business_profiles.is_premium
+  // (businessIsPremium ponizej) i to o niego pytaja funkcje premium-only.
   const plan: 'zero' | 'basic' | 'premium' = 'premium';
   const bizGallery: string[] = Array.isArray(bp.gallery_urls) ? bp.gallery_urls.filter(Boolean) : [];
   // Logika galerii: jesli biznes wgral wlasne zdjecia (cover_image, cover_video, gallery_urls)
@@ -1068,6 +1120,8 @@ export function enrichWithBusinessProfile(p: any, refDate?: string): MockPlace {
   return {
     ...p,
     businessPlan: plan,
+    // Realny status platnego konta - zrodlo prawdy dla funkcji premium-only (2026-08-31).
+    businessIsPremium: bp.is_premium === true,
     // Override pozycji pinu geokodowanym adresem biznesu (gdy ustawiony) - inaczej pin
     // na mapie trasy bralby stare/NULL places.latitude/longitude i ladowal w zlym miejscu.
     latitude: bp.latitude ?? p.latitude,
@@ -1101,10 +1155,14 @@ export function enrichWithBusinessProfile(p: any, refDate?: string): MockPlace {
     businessEventDescription: bp.event_description ?? undefined,
     businessDescription: bp.description ?? undefined,
     businessIsVerified: !!bp.is_verified,
-    businessColorBadge: bp.color_badge ?? undefined,
-    businessColorCardBg: bp.color_card_bg ?? undefined,
-    businessColorButton: bp.color_button ?? undefined,
-    businessColorPromo: bp.color_promo ?? undefined,
+    // Personalizacja kolorow wizytowki WYCOFANA (decyzja Nat 2026-09-14) - wizytowka lokalu
+    // wyglada tak samo jak kazda inna (pomarancz marki). Kolumny color_* zostaja w bazie ze
+    // starymi wartosciami, ale ich NIE czytamy; wczesniej lokal z ustawionym color_button
+    // dostawal np. fioletowy guzik "Dodaj" posrodku pomaranczowej aplikacji.
+    businessColorBadge: undefined,
+    businessColorCardBg: undefined,
+    businessColorButton: undefined,
+    businessColorPromo: undefined,
     // Pomijaj Google Photos tylko gdy biznes ma WŁASNE zdjęcia (cover/video/własna galeria).
     // places.gallery_urls (kurowane z Google) NIE liczy się jako "własne zdjęcia biznesu".
     businessHasOwnPhoto: !!(
@@ -1139,6 +1197,9 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
   const { open: openAuthDrawer } = useAuthDrawer();
   const { active: onboardingActive } = useOnboarding();
   const haptics = useHaptics();
+  // Stan "zapisane" wg czlonkostwa w listach usera (bookmark wypelniony gdy miejsce juz w liscie).
+  const { isSaved: isSavedInList } = useSavedPlaces();
+  const unsave = useUnsavePlace();
 
   const [allPlaces, setAllPlaces] = useState<MockPlace[]>([]);
   const [queue, setQueue] = useState<MockPlace[]>([]);
@@ -1186,29 +1247,46 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
   const [bannerDismissCount, setBannerDismissCount] = useState(0);
   // Track consecutive likes per category group
   const [recentLikedGroups, setRecentLikedGroups] = useState<(Set<string> | null)[]>([]);
-  // Wybor punktu odniesienia ("Jestes juz w miescie?") - pokazany raz na miasto po
-  // zaladowaniu miejsc, jesli nie pytalismy i nie ma jeszcze punktu odniesienia.
+  // Punkt odniesienia dystansu. NIE pytamy o niego zadnym arkuszem (usuniete 2026-08-28,
+  // pytanie "Jestes juz w X?" bylo niezrozumiale, a przy city="all" wrecz bledne). Ustawia sie
+  // sam z GPS gdy user ma juz zgode, albo recznie chipem "Pokaz dystans" na karcie.
   const distanceRef = useDistanceReference();
-  const [locationPrimerOpen, setLocationPrimerOpen] = useState(false);
-  const [onSiteConfirm, setOnSiteConfirm] = useState(false); // baner "Jestes w X · Zmien"
   const showAddPlace = showAddPlaceProp;
   const setShowAddPlace = (v: boolean) => { if (!v) onAddPlaceClose?.(); };
 
   // Inne miasto = inny punkt odniesienia: czysci ref przy zmianie miasta.
   useEffect(() => { ensureCityContext(city); }, [city]);
 
-  // Lokalizacja: po zaladowaniu miejsc, raz na miasto, jesli brak ref. Najpierw auto-detect
-  // przez GPS (gdy mamy zgode): on-site -> "od Ciebie" + baner potwierdzenia; inaczej jawny
-  // sheet "Jestes juz w miescie?".
+  // Chip "Pokaz dystans" na karcie: od razu systemowa zgoda na lokalizacje (bez posrednich
+  // pytan). Gdy zgoda byla juz odrzucona, brama pokazuje arkusz "Otworz Ustawienia" (iOS nie
+  // pyta drugi raz); gdy user odmowi teraz - krotki komunikat, chip zostaje na kolejna probe.
+  const enableDistance = async () => {
+    const perm = await askPermission("location", "distance", { explicit: true });
+    if (perm === "denied") return;
+    const ok = await setGpsReference();
+    if (!ok) toast(t("distance_denied"));
+  };
+
+  // Miekkie pytanie o lokalizacje przy TRZECIEJ wizytowce (Nat 2026-09-14): kto przewija
+  // miejsca, pewnie jest w miescie - dystans i "od najblizszego" sa wtedy najbardziej
+  // przydatne. Raz na instalacje (limity w lib/permissionPrompts); po "Wlacz" chip "od Ciebie"
+  // pojawia sie sam, bo setGpsReference ustawia punkt odniesienia.
+  const browseAskedRef = useRef(false);
+  const maybeAskLocationOnBrowse = (cardIdx: number) => {
+    if (!exploreMode || browseAskedRef.current || cardIdx < 2 || getReference()) return;
+    browseAskedRef.current = true;
+    void askPermission("location", "browse").then((res) => { if (res === "granted") void setGpsReference(); });
+  };
+
+  // Lokalizacja: CICHY auto-detect przez GPS (tylko gdy user juz dal zgode - tryResolveOnSite
+  // nie promptuje). Jestes w miescie -> chip "od Ciebie" pojawia sie sam. Nie ma zadnego
+  // pytania do usera; gdy nie wyjdzie, na karcie zostaje chip "Pokaz dystans".
   useEffect(() => {
-    if (loading || distanceRef || wasAskedForCity(city)) return;
+    if (loading || distanceRef) return;
     let cancelled = false;
     (async () => {
-      const res = await tryResolveOnSite(city);
+      await tryResolveOnSite(city);
       if (cancelled) return;
-      markAskedForCity(city);
-      if (res === "onsite") setOnSiteConfirm(true);
-      else setLocationPrimerOpen(true);
     })();
     return () => { cancelled = true; };
   }, [loading, distanceRef, city]);
@@ -1290,6 +1368,12 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
         });
       };
 
+      // Ktore miejsca maja juz zdjecia od userow - decyduje o tierze 2 kolejki (patrz
+      // partitionBusinessFirst). Best-effort: blad = kolejka jak dawniej, bez wywalania ekranu.
+      const photoKeys = await fetchPlaceKeysWithPhotos(
+        remaining.flatMap((p) => pinCoverKeys(p as any)),
+      ).catch(() => new Set<string>());
+
       setAllPlaces(enriched);
       if (liked.length) setLikedPlaces(liked);
       if (skipped.length) setSkippedPlaces(skipped);
@@ -1323,11 +1407,11 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
           return false;
         });
         // Feed Miejsc = CALA baza (renderowanie ograniczone infinite-scrollem, nie tu).
-        const pool = applyNearestSort(partitionBusinessFirst(filtered));
+        const pool = applyNearestSort(partitionBusinessFirst(filtered, photoKeys));
         console.log("[PlaceSwiper] batch pool:", { categoryFilters, standardSubIds: [...standardSubIds], dbCategorySet: [...dbCategorySet], customSubIds: [...customSubIds], poolSize: pool.length, remainingTotal: remaining.length });
         setQueue(pool);
       } else {
-        setQueue(applyNearestSort(partitionBusinessFirst(remaining)));
+        setQueue(applyNearestSort(partitionBusinessFirst(remaining, photoKeys)));
       }
       setLoading(false);
       } catch (err) {
@@ -1475,33 +1559,37 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
   const handleSaveInPlace = (place: MockPlace, opts?: { openSheet?: boolean }) => {
     if ((!user || isAnonymous) && !onboardingActive) { openAuthDrawer({ mode: "register", hint: "save_route" }); return; }
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(place.id);
+    // Ponowny tap na zapisanym = ODZAPISZ (toast+cofnij), bez otwierania drawera. Poza onboardingiem.
+    if (!onboardingActive && (savedIds.has(place.id) || isSavedInList(place.place_name))) {
+      haptics.medium();
+      setSavedIds((prev) => { const n = new Set(prev); n.delete(place.id); return n; });
+      void unsave({
+        place_name: place.place_name, category: place.category ?? null, address: place.address ?? null,
+        latitude: place.latitude ?? null, longitude: place.longitude ?? null,
+        photo_url: photoUrlOverrides.current[place.id] ?? place.photo_url ?? null, place_id: isUuid ? place.id : null,
+      });
+      return;
+    }
     const alreadySaved = savedIds.has(place.id);
     if (!alreadySaved) {
       haptics.medium();
       setSavedIds(prev => new Set(prev).add(place.id));
       saveReaction(place, "liked");
-      saveExploreLike(city, {
-        place_name: place.place_name,
-        category: place.category,
-        place_id: isUuid ? place.id : null,
-        latitude: place.latitude,
-        longitude: place.longitude,
-        photo_url: photoUrlOverrides.current[place.id] ?? place.photo_url ?? null,
-        address: place.address ?? null,
-        rating: place.rating ?? null,
-        description: place.description ?? null,
-      });
+      // NIE zapisujemy juz do starego "zapisane" (exploreLikes) - realny zapis to wybor listy
+      // w SavePlaceSheet (odwiedzone / do odwiedzenia). Zostaje tylko reakcja (pamiec kolejki swipera).
       if (isUuid) posthog.capture("place_added_to_route", { place_id: place.id });
       if (onboardingActive) { try { window.dispatchEvent(new CustomEvent("trasa:ob-saved")); } catch { /* noop */ } }
     }
-    // Etap 2: drawer "Miejsce zapisane!" (dodaj do wyjazdu). Tylko eksploracja z realnym
-    // kontem - nie w onboardingu.
+    // Sheet "Gdzie chcesz zapisac to miejsce?" - wybor listy (odwiedzone/do odwiedzenia).
+    // Tylko eksploracja z realnym kontem - nie w onboardingu.
     if (opts?.openSheet && exploreMode && !onboardingActive && user && !isAnonymous) {
       setSaveSheetPlace({
         place_name: place.place_name,
         category: place.category ?? null,
         address: place.address ?? null,
-        description: place.description ?? null,
+        // Miasto SAMEGO miejsca (nie kontekstu przegladania) - inaczej zapis stempluje je
+        // miastem, po ktorym akurat sie rozgladasz.
+        city: place.city ?? null,
         latitude: place.latitude ?? null,
         longitude: place.longitude ?? null,
         photo_url: photoUrlOverrides.current[place.id] ?? place.photo_url ?? null,
@@ -1813,27 +1901,6 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
     // env(safe-area) + chrome height jawnie.
     <div className="flex flex-col flex-1 min-h-0 relative">
 
-      {/* Zgoda na lokalizacje "w kontekscie" (chip dystansu) */}
-      <LocationPrimer open={locationPrimerOpen} city={city} onClose={() => setLocationPrimerOpen(false)} />
-
-      {/* Baner potwierdzenia on-site (auto-detect GPS): dystans liczymy od Ciebie, "Zmien"
-          pozwala wskazac punkt startu (gdy planujesz mimo ze jestes w miescie). */}
-      {onSiteConfirm && (
-        <div className="absolute top-2 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 max-w-[92%] bg-foreground text-background rounded-full pl-3.5 pr-2 py-1.5 shadow-lg animate-in fade-in slide-in-from-top-2 duration-300">
-          <Navigation className="h-3.5 w-3.5 shrink-0" />
-          <span className="text-xs font-medium truncate">{t("onsite_banner")}</span>
-          <button
-            onClick={() => { setOnSiteConfirm(false); setLocationPrimerOpen(true); }}
-            className="shrink-0 text-xs font-bold px-2 py-0.5 rounded-full bg-background/15 active:scale-95 transition-transform"
-          >
-            {t("change")}
-          </button>
-          <button onClick={() => setOnSiteConfirm(false)} aria-label={t("close")} className="shrink-0 h-5 w-5 flex items-center justify-center rounded-full active:bg-background/15">
-            <X className="h-3.5 w-3.5" />
-          </button>
-        </div>
-      )}
-
       {/* Bingo banner */}
       {showBanner && (
         <MatchModal
@@ -1922,7 +1989,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
               {onSuggestPlace && (
                 <button
                   onClick={onSuggestPlace}
-                  className="text-sm font-semibold text-orange-600 underline underline-offset-2"
+                  className="text-sm font-semibold text-primary underline underline-offset-2"
                 >
                   {t("suggest_add_place")}
                 </button>
@@ -1969,6 +2036,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
             const p = displayQueue[idx];
             if (p && p.id !== activeCardId) setActiveCardId(p.id);
             if (el.scrollTop > 24 && !hasScrolled) setHasScrolled(true);
+            maybeAskLocationOnBrowse(idx);
             // Infinite scroll: dociagaj kolejne karty gdy zblizamy sie do konca (2.5 ekranu).
             if (el.scrollHeight - el.scrollTop - el.clientHeight < el.clientHeight * 2.5) {
               setExploreVisible((v) => (v < displayQueue.length ? Math.min(displayQueue.length, v + 12) : v));
@@ -1988,7 +2056,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
                   place={place}
                   city={city}
                   scrollMode
-                  saved={savedIds.has(place.id)}
+                  saved={savedIds.has(place.id) || isSavedInList(place.place_name)}
                   onLike={() => handleSaveInPlace(place, { openSheet: true })}
                   onSkip={() => {}}
                   onTap={() => handleTap(place)}
@@ -1997,7 +2065,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
                   onPhotoFetched={(id, url) => { photoUrlOverrides.current[id] = url; }}
                   isTop={isActive}
                   offset={0}
-                  onEnableDistance={() => setLocationPrimerOpen(true)}
+                  onEnableDistance={enableDistance}
                 />
               </div>
             </div>
@@ -2050,7 +2118,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
                       onPhotoFetched={(id, url) => { photoUrlOverrides.current[id] = url; }}
                       isTop={offset === 0}
                       offset={offset}
-                      onEnableDistance={() => setLocationPrimerOpen(true)}
+                      onEnableDistance={enableDistance}
                     />
                   );
                 });
@@ -2085,11 +2153,11 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
         onOpenChange={setDetailOpen}
         place={detailPlace}
         referenceDate={date.toISOString().slice(0, 10)}
-        saved={detailPlace ? savedIds.has(detailPlace.id) : false}
+        saved={detailPlace ? (savedIds.has(detailPlace.id) || isSavedInList(detailPlace.place_name)) : false}
         onLike={() => {
           // scrollMode (Eksploracja): "+"/Dodaj na wizytowce zapisuje BEZ zdejmowania z
           // kolejki (jak "+" na karcie). Klasyczny swipe: handleLike (dequeue).
-          if (exploreMode) { if (detailPlace) handleSaveInPlace(detailPlace); }
+          if (exploreMode) { if (detailPlace) handleSaveInPlace(detailPlace, { openSheet: true }); }
           else { handleLike(undefined, detailPlace ?? undefined); }
         }}
         onSkip={exploreMode ? undefined : () => { handleSkip(); }}

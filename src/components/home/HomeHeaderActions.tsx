@@ -49,7 +49,10 @@ const HomeHeaderActions = ({
       return count ?? 0;
     },
     enabled: !!user && !isAnonymous,
-    refetchInterval: 30_000,
+    // BATERIA: licznik odswieza realtime (kanal ponizej) + resume aplikacji. Poll co 30s byl
+    // czystym marnotrawstwem radia (2 komponenty x 120 zapytan/h); zostaje rzadki fallback
+    // na wypadek zerwanej subskrypcji realtime.
+    refetchInterval: 300_000,
   });
 
   // Realtime: instant badge update on new notification.
@@ -72,7 +75,7 @@ const HomeHeaderActions = ({
         {isGuest ? (
           <button
             onClick={() => openAuthDrawer({ mode: "login" })}
-            className="text-xs font-semibold text-orange-600 px-3 py-2 rounded-full hover:bg-orange-50 active:scale-[0.97] transition-all"
+            className="text-xs font-semibold text-primary px-3 py-2 rounded-full hover:bg-orange-50 active:scale-[0.97] transition-all"
           >
             {t("header.login")}
           </button>
@@ -104,7 +107,7 @@ const HomeHeaderActions = ({
         )}
         {!isGuest && showSaved && (
           <button
-            onClick={() => navigate("/polubione")}
+            onClick={() => navigate("/moj-profil?tab=zapisane")}
             className="h-9 w-9 flex items-center justify-center rounded-full bg-muted text-foreground active:scale-90 transition-transform"
             aria-label={t("header.saved_places")}
             title={t("header.saved")}

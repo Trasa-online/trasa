@@ -1,5 +1,7 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
+import { goBackOr } from "@/hooks/useGoBack";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -8,6 +10,7 @@ import { resolveStored } from "@/components/PlacePhoto";
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { haptics } from "@/hooks/useHaptics";
 import { toast } from "sonner";
+import { deferDelete } from "@/lib/deferDelete";
 
 // Ekran po kliknieciu "+": wybor bazy nowego wyjazdu. Robocze (wlasne trasy usera) lub
 // Zapisane (trasy zapisane od innych) jako punkt startu, albo "Zacznij od nowa" (pusty
@@ -22,7 +25,6 @@ type ChooserRoute = {
   own: boolean;
 };
 
-const placesLabel = (n: number) => `${n} ${n === 1 ? "miejsce" : n < 5 ? "miejsca" : "miejsc"}`;
 
 // Wspolne: dociagnij okladke (pierwsze zdjecie pinu) + liczbe miejsc dla listy tras.
 async function enrichRoutes(rows: any[]): Promise<ChooserRoute[]> {
@@ -53,6 +55,9 @@ async function enrichRoutes(rows: any[]): Promise<ChooserRoute[]> {
 }
 
 export default function StartWyjazd() {
+  const { t } = useTranslation("myplan");
+  // Helper musi siedziec W komponencie - poza nim nie ma dostepu do hooka t().
+  const placesLabel = (n: number) => t("places_count", { count: n });
   const navigate = useNavigate();
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -109,7 +114,7 @@ export default function StartWyjazd() {
     : list;
 
   // Wybor bazy: dociagnij miejsca tej trasy -> ComposeWyjazd z prefill.
-  const useAsBase = async (route: ChooserRoute) => {
+  const startFromRoute = async (route: ChooserRoute) => {
     if (loadingId) return;
     haptics.light();
     setLoadingId(route.id);
@@ -133,23 +138,30 @@ export default function StartWyjazd() {
     navigate("/wyjazd/nowy", { state: { city: route.city, title: route.title, places, draftId: route.own ? route.id : undefined } });
   };
 
+  // Okno "Cofnij" ZAMIAST natywnego confirm(): pytanie przed akcja zatrzymuje kazdego, takze
+  // tego, kto wie co robi, a i tak nie daje odwrotu, gdy sie pomyli. Odroczony commit daje
+  // jedno i drugie (zgloszenie Nat 2026-09-09).
   const deleteDraft = async (id: string) => {
-    if (!confirm("Usunąć tę roboczą trasę?")) return;
     haptics.warning();
-    await (supabase as any).from("pins").delete().eq("route_id", id);
-    await (supabase as any).from("routes").delete().eq("id", id);
-    queryClient.invalidateQueries({ queryKey: ["start-robocze"] });
-    toast.success("Usunięto");
+    deferDelete({
+      message: t("drafts.deleted"),
+      commit: async () => {
+        await (supabase as any).from("pins").delete().eq("route_id", id);
+        await (supabase as any).from("routes").delete().eq("id", id);
+        queryClient.invalidateQueries({ queryKey: ["start-robocze"] });
+      },
+      onUndo: () => queryClient.invalidateQueries({ queryKey: ["start-robocze"] }),
+    });
   };
 
   return (
     <div className="flex flex-col h-[100dvh] bg-background max-w-lg mx-auto">
       {/* Header */}
       <div className="flex items-center gap-2 px-4 pt-safe-4 pb-3 shrink-0">
-        <button onClick={() => navigate(-1)} aria-label="Wróć" className="h-9 w-9 flex items-center justify-center -ml-1 shrink-0 text-foreground active:scale-90 transition-transform">
+        <button onClick={() => goBackOr(navigate, "/eksploruj")} aria-label={t("back")} className="h-9 w-9 flex items-center justify-center -ml-1 shrink-0 text-foreground active:scale-90 transition-transform">
           <ArrowLeft className="h-5 w-5" />
         </button>
-        <span className="flex-1 font-bold text-base">Nowy wyjazd</span>
+        <span className="flex-1 font-bold text-base">{t("start.new_trip")}</span>
       </div>
 
       {/* Toggle Robocze | Zapisane - cala szerokosc */}
@@ -181,7 +193,7 @@ export default function StartWyjazd() {
             className="w-full rounded-full bg-secondary text-secondary-foreground border border-border/40 pl-10 pr-9 py-3 text-base outline-none focus:ring-2 focus:ring-orange-500/40 placeholder:text-muted-foreground/60"
           />
           {query && (
-            <button onClick={() => setQuery("")} aria-label="Wyczyść" className="absolute right-3 top-1/2 -translate-y-1/2 h-6 w-6 flex items-center justify-center rounded-full text-muted-foreground active:bg-muted">
+            <button onClick={() => setQuery("")} aria-label={t("clear")} className="absolute right-3 top-1/2 -translate-y-1/2 h-6 w-6 flex items-center justify-center rounded-full text-muted-foreground active:bg-muted">
               <X className="h-4 w-4" />
             </button>
           )}
@@ -195,15 +207,15 @@ export default function StartWyjazd() {
         ) : shown.length === 0 ? (
           <div className="py-14 text-center px-8">
             <span aria-hidden className="mx-auto mb-4 h-20 w-20" style={{ display: "block", backgroundColor: "#ef9d78", WebkitMaskImage: tab === "robocze" ? "url(/Ikona_Trasy.svg)" : "url(/Ikona_Zapisane.svg)", maskImage: tab === "robocze" ? "url(/Ikona_Trasy.svg)" : "url(/Ikona_Zapisane.svg)", WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat", WebkitMaskSize: "contain", maskSize: "contain", WebkitMaskPosition: "center", maskPosition: "center" }} />
-            <p className="text-base font-bold">{tab === "robocze" ? "Robocze trasy" : "Brak zapisanych tras"}</p>
+            <p className="text-base font-bold">{tab === "robocze" ? t("start.empty_drafts") : t("start.empty_saved")}</p>
             <p className="text-sm text-muted-foreground mt-1 leading-relaxed max-w-[260px] mx-auto">
-              {tab === "robocze" ? "Nie masz obecnie żadnych zapisanych roboczych tras." : "Zapisz trasę innego użytkownika w Eksploruj, a użyjesz jej tutaj jako bazy."}
+              {tab === "robocze" ? t("drafts.empty") : t("drafts.empty_hint")}
             </p>
           </div>
         ) : (
           shown.map((r) => (
             <div key={r.id} className="relative w-full flex gap-3.5 p-2.5 rounded-3xl bg-card border border-border/50">
-              <button onClick={() => useAsBase(r)} className="flex gap-3.5 flex-1 min-w-0 text-left active:opacity-90 transition-opacity">
+              <button onClick={() => startFromRoute(r)} className="flex gap-3.5 flex-1 min-w-0 text-left active:opacity-90 transition-opacity">
                 <div className="relative w-[104px] aspect-[9/16] shrink-0 rounded-2xl overflow-hidden bg-muted">
                   <img
                     src={r.cover ?? getRandomPinPlaceholder(r.id)}
@@ -216,7 +228,7 @@ export default function StartWyjazd() {
                   )}
                 </div>
                 <div className="flex-1 min-w-0 flex flex-col py-0.5">
-                  <p className="text-lg font-bold leading-tight line-clamp-2 text-foreground">{r.title || r.city || "Trasa"}</p>
+                  <p className="text-lg font-bold leading-tight line-clamp-2 text-foreground">{r.title || r.city || t("common:fallback.route")}</p>
                   <div className="mt-auto flex items-center gap-2 pt-2">
                     {r.city && <span className="inline-flex items-center rounded-full bg-secondary px-2.5 py-1 text-[11px] font-medium text-muted-foreground">{r.city}</span>}
                     <span className="text-sm text-muted-foreground">{placesLabel(r.count)}</span>
@@ -226,7 +238,7 @@ export default function StartWyjazd() {
               {r.own && (
                 <button
                   onClick={() => deleteDraft(r.id)}
-                  aria-label="Usuń roboczą trasę"
+                  aria-label={t("drafts.delete_aria")}
                   className="absolute top-3 right-3 h-7 w-7 flex items-center justify-center rounded-full text-muted-foreground/50 hover:text-destructive active:scale-90 transition-colors"
                 >
                   <Trash2 className="h-4 w-4" />
@@ -241,10 +253,10 @@ export default function StartWyjazd() {
       <div className="shrink-0 border-t border-border/20 px-4 pt-3 pb-[max(16px,env(safe-area-inset-bottom))] bg-background">
         <button
           onClick={() => { haptics.light(); navigate("/wyjazd/nowy"); }}
-          className="w-full h-12 rounded-2xl bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform shadow-md shadow-orange-500/20"
+          className="w-full h-12 rounded-2xl bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
         >
           <Plus className="h-4 w-4" strokeWidth={2.5} />
-          Zacznij od nowa
+          {t("start.start_fresh")}
           <ArrowRight className="h-4 w-4" />
         </button>
       </div>

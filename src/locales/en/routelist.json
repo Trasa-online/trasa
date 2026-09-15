@@ -1,6 +1,5 @@
 {
   "stop_one": "stop",
-  "stop_many": "stops",
   "collapse": "Collapse",
   "show_more_count": "Show +{{count}} more",
   "show_more": "Show more",
@@ -21,5 +20,90 @@
     "must_see": "Must-see",
     "nice_addition": "Nice addition",
     "skippable": "Skippable"
+  },
+  "stop_other": "stops",
+  "empty": {
+    "desc_owner": "Add your first place with the + Add new place button",
+    "desc_visitor": "This collection has no places yet.",
+    "title": "This collection is empty"
+  },
+  "missing": {
+    "desc": "It may have been deleted, or it is not published yet.",
+    "back": "Back to Explore",
+    "title": "Collection unavailable"
+  },
+  "confirm": {
+    "delete_title": "Delete this collection?",
+    "delete_desc": "“{{title}}” will be gone from your profile for good. This cannot be undone."
+  },
+  "toast": {
+    "photo_delete_failed": "We could not delete the photo",
+    "place_delete_failed": "We could not remove the place",
+    "note_failed": "We could not save the note",
+    "photo_add_failed": "We could not add the photo",
+    "list_delete_failed": "We could not delete the collection.",
+    "removed_saved": "Removed from saved",
+    "list_updated": "Collection updated",
+    "place_deleted": "Place removed",
+    "list_deleted": "Collection deleted.",
+    "list_saved": "Collection saved",
+    "photos_rejected_one": "One photo did not pass moderation",
+    "photos_rejected_other": "{{count}} photos did not pass moderation",
+    "name_saved": "Name changed",
+    "name_failed": "Could not change the name",
+    "name_not_allowed": "This name contains a word we don't allow",
+    "photo_deleted": "Photo deleted",
+    "auto_visited": "Marked as visited"
+  },
+  "cta": {
+    "add_place": "Add new place",
+    "save_list": "Save this collection"
+  },
+  "aria": {
+    "delete_photo": "Delete photo",
+    "share": "Share",
+    "delete_list": "Delete collection",
+    "rename_list": "Rename collection",
+    "list_actions": "Collection actions",
+    "list_theme": "Collection background",
+    "list_scope": "Country and city"
+  },
+  "fallback_title": "Collection of places",
+  "photo": "Photo",
+  "someone": "Someone",
+  "back": "Back",
+  "delete": "Delete",
+  "places_count_one": "{{count}} place",
+  "places_count_other": "{{count}} places",
+  "new_since_visit": "New since your last visit · {{count}}",
+  "new_place_badge": "new place",
+  "add_place_photo": "Add a photo to this place",
+  "remove_from_list": "Remove place from collection",
+  "adding": "Adding…",
+  "theme": {
+    "title": "Collection background",
+    "desc": "This is how your collection looks in Explore. Pick a colour from the palette.",
+    "saved": "Collection background set",
+    "save_failed": "Could not save the background",
+    "default_hint": "The selected colour is the automatic default.",
+    "brick": "Brick",
+    "terracotta": "Terracotta",
+    "peach": "Peach",
+    "blush": "Blush",
+    "pink": "Pink",
+    "yellow": "Yellow",
+    "gold": "Gold",
+    "orange": "Orange",
+    "brown": "Brown"
+  },
+  "scope": {
+    "title": "Country and city",
+    "desc": "Countries narrow the place search in this collection; the city shows next to its name.",
+    "city_label": "City (optional)",
+    "city_placeholder": "Type a city",
+    "no_city": "No city",
+    "save": "Save",
+    "saved": "Country and city saved",
+    "save_failed": "We could not save the country and city"
   }
 }

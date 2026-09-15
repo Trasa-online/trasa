@@ -75,7 +75,8 @@
       "viewpoint": "Widok",
       "shopping": "Zakupy",
       "experience": "Rozrywka"
-    }
+    },
+    "removed": "Usunięto z polubionych"
   },
   "journal": {
     "loading": "Ładowanie...",
@@ -103,5 +104,78 @@
     "places_one": "{{num}} miejsce",
     "places_few": "{{num}} miejsca",
     "places_many": "{{num}} miejsc"
+  },
+  "confirm": {
+    "leave_trip_desc": "Przestaniesz być uczestnikiem tego wyjazdu i zniknie on z Twojego profilu. Nie można tego cofnąć.",
+    "delete_trip_desc": "Jeżeli usuniesz ten wyjazd, zniknie on bezpowrotnie z Twojego profilu. Nie można tego cofnąć.",
+    "leave_trip_title": "Na pewno chcesz opuścić ten wyjazd?",
+    "delete_trip_title": "Na pewno chcesz usunąć ten wyjazd?",
+    "leave_action": "Opuść",
+    "delete_action": "Usuń"
+  },
+  "empty": {
+    "no_drafts_desc": "Trasy w toku - te które tworzysz i planujesz - pojawią się tutaj.",
+    "no_trips_desc": "Stwórz wyjazd klikając guzik „+”, aby zobaczyć je tutaj.",
+    "no_memories_desc": "Minione wyjazdy wylądują tutaj jako wspomnienia.",
+    "no_drafts": "Brak roboczych tras",
+    "no_memories": "Brak wspomnień",
+    "no_trips": "Twoje wyjazdy"
+  },
+  "today": "Dziś",
+  "saved": {
+    "empty": "Zapisuj miejsca na później zakładką w eksploracji albo dodaj je tutaj.",
+    "desc": "Twoja prywatna kolekcja miejsc na później.",
+    "no_results": "Brak wyników. Spróbuj innej nazwy.",
+    "add_failed": "Nie udało się dodać miejsca",
+    "undo_failed": "Nie udało się cofnąć",
+    "delete_failed": "Nie udało się usunąć",
+    "delete_place": "Usuń miejsce",
+    "removed": "Usunięto „{{name}}”",
+    "already": "„{{name}}” już jest zapisane",
+    "removed_toast": "Usunięto z zapisanych",
+    "search_place": "Szukaj miejsca",
+    "empty_places": "Brak zapisanych miejsc",
+    "empty_short": "Brak zapisanych",
+    "add_new_place": "Dodaj nowe miejsce",
+    "add_place": "Dodaj miejsce",
+    "no_city": "Bez miasta",
+    "empty_hint": "Zapisz miejsce bookmarkiem w zakładce <b>{{tab}}</b> lub u <b>{{other}}</b>",
+    "tab_explore": "Eksploruj",
+    "none": "Brak zapisanych miejsc.",
+    "none_in_city": "Brak zapisanych miejsc w {{city}}.",
+    "none_in_country": "Brak zapisanych miejsc w kraju {{country}}."
+  },
+  "add_saved": {
+    "goes_to_general": "Trafi do Twojej kolekcji Ogólne.",
+    "failed": "Nie udało się dodać miejsca",
+    "clear": "Wyczyść",
+    "change": "Zmień",
+    "already": "„{{name}}” już jest w kolekcji",
+    "add_term": "Dodaj „{{term}}”",
+    "custom_in": "Własny wpis w {{city}}"
+  },
+  "stats": {
+    "desc": "Zobacz, jak inni korzystają z tras, które stworzyłaś.",
+    "total_all": "łącznie wszystkich tras",
+    "views": "Wyświetlenia",
+    "back": "Wróć",
+    "saves": "Zapisania",
+    "of_your_routes": "Twoich tras"
+  },
+  "grid": {
+    "removed": "Usunięto z zapisanych",
+    "other_user": "innego użytkownika",
+    "remove": "Usuń z zapisanych",
+    "clear": "Wyczyść"
+  },
+  "card": {
+    "show_trip_map": "Pokaż mapę wyjazdu",
+    "remove_saved": "Usuń z zapisanych",
+    "close_map": "Zamknij mapę",
+    "delete": "Usuń",
+    "map_alt": "Mapa wyjazdu"
+  },
+  "add_place": {
+    "search_hint": "Wpisz nazwę miejsca, żeby poszukać go w {{city}}. Jeśli go nie znajdziesz, dopiszesz je ręcznie."
   }
 }

@@ -1,7 +1,7 @@
 /// <reference lib="webworker" />
 import { precacheAndRoute } from "workbox-precaching";
-import { registerRoute } from "workbox-routing";
-import { CacheFirst } from "workbox-strategies";
+import { NavigationRoute, registerRoute } from "workbox-routing";
+import { CacheFirst, NetworkFirst } from "workbox-strategies";
 import { ExpirationPlugin } from "workbox-expiration";
 
 declare const self: ServiceWorkerGlobalScope;
@@ -16,7 +16,17 @@ self.addEventListener("activate", (event) => {
   event.waitUntil(self.clients.claim());
 });
 
-// Precache all build assets (injected by vite-plugin-pwa)
+// NAWIGACJE: SIEC NAJPIERW (2026-09-08). Domyslnie precache oddaje powloke aplikacji
+// z pamieci urzadzenia, wiec ktos, kto odwiedzil strone kilka miesiecy temu, dostawal przy
+// kolejnej wizycie STARA aplikacje - zadanie w ogole nie szlo do serwera. Na trasa.travel
+// znaczylo to takze, ze przekierowanie na spontaway.com sie nie wykonywalo, bo to serwer je
+// robi. Widzielismy to w nagraniu: wejscie na "/" i stary kreator tras pod #/home i #/plan.
+// Ta trasa musi stac PRZED precacheAndRoute - workbox dopasowuje reguly w kolejnosci rejestracji.
+// Cache zostaje jako zapas na brak sieci.
+registerRoute(new NavigationRoute(new NetworkFirst({ cacheName: "app-shell", networkTimeoutSeconds: 5 })));
+
+// Precache all build assets (injected by vite-plugin-pwa). Pliki maja skrot w nazwie, wiec
+// dla NICH cache-first jest poprawny - zmiana tresci zmienia adres.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 precacheAndRoute((self as any).__WB_MANIFEST);
 
@@ -41,7 +51,7 @@ self.addEventListener("push", (event: PushEvent) => {
     // ignore parse errors
   }
 
-  const title = data.title ?? "📍 TRASA";
+  const title = data.title ?? "📍 TRASA";   // i18n-ignore: tresc powiadomienia w service workerze (poza drzewem apki, brak i18n)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const options: any = {
     body: data.body ?? "",
@@ -49,7 +59,7 @@ self.addEventListener("push", (event: PushEvent) => {
     badge: "/icon-192.png",
     vibrate: [100, 50, 100],
     data: { url: data.url ?? "/" },
-    actions: [{ action: "open", title: "Otwórz" }],
+    actions: [{ action: "open", title: "Otwórz" }],   // i18n-ignore: tresc powiadomienia w service workerze (poza drzewem apki, brak i18n)
   };
 
   event.waitUntil(self.registration.showNotification(title, options));

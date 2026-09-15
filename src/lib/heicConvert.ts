@@ -1,3 +1,4 @@
+import i18n from "@/i18n";
 // iPhone domyslnie robi zdjecia w HEIC/HEIF. Wiekszosc przegladarek (poza Safari/WebKit)
 // nie potrafi zdekodowac HEIC ani wyswietlic go w <img>, wiec MUSIMY skonwertowac do JPEG
 // przed uploadem - inaczej wizytowka pokaze puste miejsce zamiast zdjecia na nie-Apple
@@ -51,6 +52,6 @@ export async function convertHeicToJpeg(file: File): Promise<File> {
     return new File([blob], outName, { type: "image/jpeg", lastModified: Date.now() });
   } catch (err) {
     console.error("[heicConvert] konwersja HEIC nie powiodla sie:", err);
-    throw new Error("Nie udało się przetworzyć zdjęcia HEIC. Spróbuj wgrać JPG lub PNG.");
+    throw new Error(i18n.t("heic.failed", { ns: "common" }));
   }
 }

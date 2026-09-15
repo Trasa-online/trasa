@@ -1,5 +1,7 @@
 import { useRef, useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate, useLocation } from "react-router-dom";
+import { goBackOr } from "@/hooks/useGoBack";
 import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import CreateHeader from "@/components/create/CreateHeader";
@@ -53,15 +55,16 @@ function Drum({ items, index, setIndex }: { items: string[]; index: number; setI
 }
 
 export default function CountryCityPicker() {
+  const { t } = useTranslation("create-route");
   const navigate = useNavigate();
   const location = useLocation();
   const initCity = (location.state as any)?.city as string | undefined;
   const [country, setCountry] = useState<string>(() => countryForCity(initCity));
   const cities = citiesForCountry(country);
-  // Domyslne miasto na srodku drumu: wybrane (initCity) -> "Gdańsk" (aktualny focus contentu) ->
-  // pierwsze. Dla innych krajow "Gdańsk" nie istnieje -> pierwsze miasto.
+  // Domyslne miasto na srodku drumu: wybrane (initCity) -> "Gdańsk" (aktualny focus contentu) ->   // i18n-ignore: nazwa wlasna miasta
+  // pierwsze. Dla innych krajow "Gdańsk" nie istnieje -> pierwsze miasto.   // i18n-ignore: nazwa wlasna miasta
   const defaultCityIndex = (cs: string[]) => {
-    const g = cs.indexOf("Gdańsk");
+    const g = cs.indexOf("Gdańsk");   // i18n-ignore: nazwa wlasna miasta
     return g >= 0 ? g : 0;
   };
   const [cyi, setCyi] = useState(() => (initCity ? Math.max(0, cities.indexOf(initCity)) : defaultCityIndex(cities)));
@@ -70,9 +73,11 @@ export default function CountryCityPicker() {
   const onCountry = (c: string) => { setCountry(c); setCyi(defaultCityIndex(citiesForCountry(c))); };
   const city = cities[cyi] ?? cities[0];
 
-  const back = () => { if (window.history.length > 1) navigate(-1); else navigate("/eksploruj"); };
-  // Toggle Trasy|Listy dopiero na formie - picker zawsze prowadzi na forme trasy (default).
-  const next = () => navigate("/wyjazd/nowy", { state: { city }, replace: true });
+  const back = () => goBackOr(navigate, "/eksploruj");
+  // Tryb docelowy: domyslnie trasa (toggle Trasy|Listy na formie). Gdy wejscie z guzika
+  // "Nowa lista" (profil) -> state.mode="listy" -> picker prowadzi wprost na forme listy.
+  const mode = (location.state as any)?.mode === "listy" ? "listy" : "trasy";
+  const next = () => navigate(mode === "listy" ? "/zestawienie/nowe" : "/wyjazd/nowy", { state: { city }, replace: true });
 
   return (
     <div className="flex flex-col h-[100dvh] bg-background max-w-lg mx-auto">
@@ -80,7 +85,7 @@ export default function CountryCityPicker() {
 
       {/* Kraj - SELEKTOR (dropdown), grupowany po regionie */}
       <div className="px-4 pt-4 shrink-0">
-        <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-1.5">Kraj</p>
+        <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-1.5">{t("picker.country")}</p>
         <div className="relative">
           <select value={country} onChange={(e) => onCountry(e.target.value)}
             className="w-full appearance-none rounded-2xl bg-secondary text-secondary-foreground border-0 px-4 py-3 text-base outline-none focus:ring-2 focus:ring-orange-500/40">
@@ -98,14 +103,12 @@ export default function CountryCityPicker() {
 
       {/* Miasto - DRUM-SCROLL, wypelnia reszte, wysrodkowany */}
       <div className="flex-1 min-h-0 flex flex-col justify-center px-0">
-        <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-1.5 text-center">Miasto</p>
+        <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-1.5 text-center">{t("picker.city")}</p>
         <Drum key={country} items={cities} index={cyi} setIndex={setCyi} />
       </div>
 
       <div className="px-4 pt-3 pb-[calc(14px+env(safe-area-inset-bottom,0px))] shrink-0">
-        <button onClick={next} className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-base active:scale-[0.98] transition-transform shadow-lg shadow-primary/25">
-          Dalej
-        </button>
+        <button onClick={next} className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-base active:scale-[0.98] transition-transform">{t("common:buttons.next")}</button>
       </div>
     </div>
   );

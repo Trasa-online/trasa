@@ -16,7 +16,7 @@ import { Image } from "https://deno.land/x/imagescript@1.2.17/mod.ts";
 
 const GOOGLE_BASE = "https://maps.googleapis.com/maps/api";
 const GOOGLE_NEW_API = "https://places.googleapis.com/v1";
-const REFERER = "https://trasa.travel/";
+const REFERER = "https://spontaway.com/";
 const BUCKET = "place-photos-cache";
 
 // Dzienny limit wywolan platnego Google API (bezpiecznik kosztowy). Env-configurable.
@@ -27,6 +27,40 @@ const GOOGLE_DAILY_CALL_LIMIT = Number(Deno.env.get("GOOGLE_DAILY_CALL_LIMIT") ?
 async function consumeGoogleQuota(sb: ReturnType<typeof createClient>, n: number): Promise<boolean> {
   try {
     const { data, error } = await sb.rpc("try_consume_google_quota", { p_n: n, p_limit: GOOGLE_DAILY_CALL_LIMIT });
+    if (error) return true;
+    return data !== false;
+  } catch {
+    return true;
+  }
+}
+
+// ── Limit na WOLAJACEGO (audyt M5, 2026-09-08) ───────────────────────────────
+// Ta funkcja pobiera zdjecie z Google i zapisuje je do storage, wiec naduzycie kosztuje
+// podwojnie: wywolania Google i miejsce w buckecie. Globalna kwota chroni rachunek,
+// ten limit chroni dostepnosc - zeby jeden skrypt nie wyczerpal jej wszystkim.
+const PER_CALLER_HOURLY_LIMIT = Number(Deno.env.get("PHOTO_CACHE_HOURLY_PER_CALLER") ?? "120");
+
+/** Kubelek wolajacego: id usera z tokenu (bez weryfikacji podpisu - to tylko podzial
+ *  ruchu, nie decyzja o dostepie), a gdy go nie ma - adres IP. */
+function callerBucket(req: Request): string {
+  const token = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "");
+  const parts = token.split(".");
+  if (parts.length === 3) {
+    try {
+      const sub = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")))?.sub;
+      if (sub) return `photocache:u:${sub}`;
+    } catch { /* nie JWT - lecimy po IP */ }
+  }
+  const ip = (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim();
+  return `photocache:ip:${ip || "unknown"}`;
+}
+
+// Fail-open: chwilowy blad bazy nie moze wygasic legalnego ruchu.
+async function callerWithinLimit(sb: ReturnType<typeof createClient>, req: Request): Promise<boolean> {
+  try {
+    const { data, error } = await sb.rpc("try_consume_rate_limit", {
+      p_bucket: callerBucket(req), p_limit: PER_CALLER_HOURLY_LIMIT, p_window_minutes: 60,
+    });
     if (error) return true;
     return data !== false;
   } catch {
@@ -70,6 +104,10 @@ Deno.serve(async (req) => {
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const sb = createClient(supabaseUrl, serviceRoleKey);
 
+  if (!(await callerWithinLimit(sb, req))) {
+    return jsonResponse({ photo_url: null, cached: false, reason: "rate_limited" });
+  }
+
   try {
     const body = await req.json();
     const {
@@ -78,42 +116,47 @@ Deno.serve(async (req) => {
       latitude,
       longitude,
       place_id, // Google place_id (opcjonalne)
-      target_table, // 'pins' | 'places'
-      target_id, // UUID
+      target_table, // 'pins' | 'places' | 'discovery_items' (opcjonalne)
+      target_id, // UUID (opcjonalne - gdy brak, tylko cache do Storage + zwrot URL)
     } = body as {
       place_name?: string;
       city?: string;
       latitude?: number;
       longitude?: number;
       place_id?: string;
-      target_table?: "pins" | "places";
+      target_table?: "pins" | "places" | "discovery_items";
       target_id?: string;
     };
 
-    if (!place_name || !target_table || !target_id) {
-      return jsonResponse(
-        { error: "Missing required fields: place_name, target_table, target_id" },
-        400,
-      );
+    // target_table/target_id sa OPCJONALNE. Gdy podane -> aktualizujemy wiersz (persist,
+    // idempotencja). Gdy brak (np. cache przy dodawaniu miejsca do listy PRZED zapisem) ->
+    // tylko cache do Storage + zwrot URL; klient sam zapisze URL przy publikacji.
+    const ALLOWED_TABLES = ["pins", "places", "discovery_items"];
+    const hasTarget = !!target_table && !!target_id;
+    if (!place_name) {
+      return jsonResponse({ error: "Missing required field: place_name" }, 400);
     }
-    if (target_table !== "pins" && target_table !== "places") {
-      return jsonResponse({ error: "target_table must be 'pins' or 'places'" }, 400);
+    if (target_table && !ALLOWED_TABLES.includes(target_table)) {
+      return jsonResponse({ error: "target_table must be 'pins', 'places' or 'discovery_items'" }, 400);
     }
-
-    // 1. Already cached? (idempotency)
-    const { data: record } = await sb
-      .from(target_table)
-      .select("photo_url, photo_cached_at")
-      .eq("id", target_id)
-      .single();
 
     const STORAGE_MARKER = "/storage/v1/object/public/place-photos-cache/";
-    if (record?.photo_url && record.photo_url.includes(STORAGE_MARKER)) {
-      return jsonResponse({
-        photo_url: record.photo_url,
-        cached: true,
-        skipped: true,
-      });
+
+    // 1. Already cached? (idempotency) - tylko gdy mamy target do sprawdzenia.
+    if (hasTarget) {
+      const { data: record } = await sb
+        .from(target_table!)
+        .select("photo_url, photo_cached_at")
+        .eq("id", target_id!)
+        .single();
+
+      if (record?.photo_url && record.photo_url.includes(STORAGE_MARKER)) {
+        return jsonResponse({
+          photo_url: record.photo_url,
+          cached: true,
+          skipped: true,
+        });
+      }
     }
 
     // 2. Stabilny klucz pliku
@@ -131,13 +174,15 @@ Deno.serve(async (req) => {
     const has400 = existingFiles?.some((f) => f.name === fileKey400);
 
     if (has800 && has400) {
-      // Pliki istnieją — tylko zaktualizuj DB i zwróć URL bez wywołań Google
+      // Pliki istnieją — tylko zaktualizuj DB (gdy target) i zwróć URL bez wywołań Google
       const { data: publicData } = sb.storage.from(BUCKET).getPublicUrl(fileKey800);
       const photoUrl = publicData.publicUrl;
-      await sb
-        .from(target_table)
-        .update({ photo_url: photoUrl, photo_cached_at: new Date().toISOString() })
-        .eq("id", target_id);
+      if (hasTarget) {
+        await sb
+          .from(target_table!)
+          .update({ photo_url: photoUrl, photo_cached_at: new Date().toISOString() })
+          .eq("id", target_id!);
+      }
       return jsonResponse({
         photo_url: photoUrl,
         photo_url_small: photoUrl.replace("_800.jpg", "_400.jpg"),
@@ -249,20 +294,23 @@ Deno.serve(async (req) => {
     const { data: publicData } = sb.storage.from(BUCKET).getPublicUrl(fileKey800);
     const photoUrl = publicData.publicUrl;
 
-    // 8. UPDATE target_table z stałym URL
-    const { error: updateError } = await sb
-      .from(target_table)
-      .update({
-        photo_url: photoUrl,
-        photo_cached_at: new Date().toISOString(),
-      })
-      .eq("id", target_id);
+    // 8. UPDATE target_table z stałym URL (tylko gdy podano target - inaczej klient
+    //    zapisze URL sam, np. discovery_items przy publikacji listy).
+    if (hasTarget) {
+      const { error: updateError } = await sb
+        .from(target_table!)
+        .update({
+          photo_url: photoUrl,
+          photo_cached_at: new Date().toISOString(),
+        })
+        .eq("id", target_id!);
 
-    if (updateError) {
-      return jsonResponse(
-        { error: "DB update failed", details: updateError.message },
-        500,
-      );
+      if (updateError) {
+        return jsonResponse(
+          { error: "DB update failed", details: updateError.message },
+          500,
+        );
+      }
     }
 
     return jsonResponse({

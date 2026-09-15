@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback } from "react";
 import { useTranslation } from "react-i18next";
+import { localizeTag, verdictOf } from "@/lib/routeTags";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -550,20 +551,26 @@ const DraggablePinList = ({
                     <p className="text-[11px] text-muted-foreground truncate">{pin.address}</p>
                   )}
                   
-                  {pin.tags && pin.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1">
-                      {pin.tags.slice(0, compact ? 3 : 4).map((tag, i) => (
-                        <Badge key={i} variant="secondary" className="text-[9px] px-1 py-0 h-4">
-                          {tag}
-                        </Badge>
-                      ))}
-                      {pin.tags.length > (compact ? 3 : 4) && (
-                        <Badge variant="secondary" className="text-[9px] px-1 py-0 h-4">
-                          +{pin.tags.length - (compact ? 3 : 4)}
-                        </Badge>
-                      )}
-                    </div>
-                  )}
+                  {/* Werdykty ("Musisz odwiedzic!" itd.) zniknely z apki 2026-09-13 - stare wartosci
+                      w pins.tags pomijamy. */}
+                  {(() => {
+                    const shownTags = (pin.tags ?? []).filter((tg: string) => !verdictOf(tg));
+                    const max = compact ? 3 : 4;
+                    return shownTags.length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {shownTags.slice(0, max).map((tag, i) => (
+                          <Badge key={i} variant="secondary" className="text-[9px] px-1 py-0 h-4">
+                            {localizeTag(tag)}
+                          </Badge>
+                        ))}
+                        {shownTags.length > max && (
+                          <Badge variant="secondary" className="text-[9px] px-1 py-0 h-4">
+                            +{shownTags.length - max}
+                          </Badge>
+                        )}
+                      </div>
+                    ) : null;
+                  })()}
 
                   {/* Show notes count indicator when NOT in editor mode */}
                   {!showNotesEditor && pin.notes && pin.notes.length > 0 && (

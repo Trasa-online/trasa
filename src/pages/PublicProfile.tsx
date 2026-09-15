@@ -1,247 +1,614 @@
-import { useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import { goBackOr } from "@/hooks/useGoBack";
 import { avatarSrc } from "@/lib/avatar";
-import { useQuery } from "@tanstack/react-query";
+import AvatarFrame from "@/components/profile/AvatarFrame";
+import { isAvatarFrame } from "@/lib/avatarFrames";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
-import { parseISO, isValid, format } from "date-fns";
-import { dateLocale } from "@/lib/dateLocale";
-import { ArrowLeft, Map as MapIcon, Building2, CalendarDays } from "lucide-react";
+import { toggleRouteLike } from "@/lib/likes";
+import { saveCollectionDb, unsaveCollectionDb } from "@/lib/savedCollections";
+import { ArrowLeft } from "lucide-react";
+import { BrandIcon, LIST_ICON, STAR_ICON } from "@/components/BrandIcon";
+import StarredPlacesSheet, { useStarredPlaces } from "@/components/profile/StarredPlacesSheet";
+import { haptics } from "@/hooks/useHaptics";
+import { applyTripOrder, fetchTripOrder, tripOrderKey } from "@/lib/tripOrder";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
-import { resolveStored } from "@/components/PlacePhoto";
 import FollowButton from "@/components/social/FollowButton";
-import { useFollowCounts } from "@/hooks/useFollow";
-import StatCard from "@/components/profile/StatCard";
+import ReportContentSheet from "@/components/moderation/ReportContentSheet";
+import { blockUser, unblockUser, isUserBlocked } from "@/lib/blockedUsers";
+import { MoreVertical, Ban, Flag as FlagIcon } from "lucide-react";
+import { useFollowCounts, useFollowList } from "@/hooks/useFollow";
+import { useSwipeNav } from "@/hooks/useSwipeNav";
+import { ProfileFeedCard } from "@/components/profile/ProfileFeedCard";
+import { TripLayoutSwitch, TripTile, mosaicColumns, useTripLayout } from "@/components/profile/TripLayout";
+import { scopeLabel } from "@/lib/tripScope";
+// Karta wyjazdu 1:1 z eksploracja (na profilu bez mapki) - prosba Nat 2026-08-30.
+import TrasaBigCard from "@/components/home/TrasaBigCard";
+import ScreenSkeleton from "@/components/layout/ScreenSkeleton";
+import { resolveStored } from "@/components/PlacePhoto";
+import { SpontawayTabIcon } from "@/components/profile/SpontawayTabIcon";
+import { shortRelativeTime } from "@/lib/relativeTime";
+import { pinCoverKeys, fetchPlacePhotosForKeys, pickPlaceCover } from "@/lib/placePhotoSocial";
+
+// Stala pusta referencja - inaczej useMemo nizej liczylby sie na nowo w kazdym renderze.
+const EMPTY_TRIPS: any[] = [];
+
+// ── Empty state feedu (cudzy profil, read-only - bez CTA tworzenia) ─────────────
+// Spojne wizualnie z "mój profil": peachy znak (maska SVG) LUB ikona w peachy kwadracie + opis.
+function FeedEmptyRO({ icon, maskSrc, title, desc }: { icon?: React.ReactNode; maskSrc?: string; title: string; desc?: string }) {
+  return (
+    <div className="pt-14 pb-12 text-center px-8 flex flex-col items-center">
+      {maskSrc ? (
+        <span aria-hidden className="mb-4 block h-20 w-20" style={{ backgroundColor: "#ef9d78", WebkitMaskImage: `url(${maskSrc})`, maskImage: `url(${maskSrc})`, WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat", WebkitMaskSize: "contain", maskSize: "contain", WebkitMaskPosition: "center", maskPosition: "center" }} />
+      ) : (
+        <div className="mb-3 h-14 w-14 rounded-2xl bg-[#fcede3] flex items-center justify-center text-orange-500">{icon}</div>
+      )}
+      <p className="text-base font-bold text-foreground">{title}</p>
+      {desc && <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed max-w-[280px]">{desc}</p>}
+    </div>
+  );
+}
+
+// Okladka karty wyjazdu: wybrana miniatura eksploracji > okladka wyjazdu > pierwsze zdjecie miejsca.
+const tripCover = (tr: any): string | null => {
+  const own = resolveStored(tr.cover);
+  if (own) return own;
+  for (const tile of (tr.tiles ?? []) as any[]) {
+    const first = (v: any) => (Array.isArray(v) ? v.find((x: any) => typeof x === "string" && x) : null);
+    const url = resolveStored(tile.image_url || first(tile.images) || first(tile.user_photo_urls) || tile.photo_url) ?? resolveStored(tile._cover);
+    if (url) return url;
+  }
+  return null;
+};
+
+// "%" i "_" maja w LIKE znaczenie specjalne - w nazwie uzytkownika to zwykle znaki.
+const escapeLike = (v: string) => v.replace(/[%_\\]/g, "\\$&");
 
 export default function PublicProfile() {
   const { t } = useTranslation("profiles");
   const { username } = useParams<{ username: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [routesOpen, setRoutesOpen] = useState(false);
+  const queryClient = useQueryClient();
+  // Kolejnosc i domyslna zakladka 1:1 z wlasnym profilem: Wyjazdy | Listy (2026-08-30).
+  // Zakladka w ADRESIE, nie tylko w stanie - inaczej powrot z listy remontuje profil
+  // i laduje na domyslnych Wyjazdach (zgloszenie Nat 2026-09-08). `replace`, bo przelaczenie
+  // zakladki to nie krok nawigacji.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [tab, setTab] = useState<"listy" | "wyjazdy">(searchParams.get("tab") === "listy" ? "listy" : "wyjazdy");
+  // Uklad wyjazdow wspoldzielony z wlasnym profilem (ten sam localStorage) - wybor nalezy
+  // do ogladajacego, wiec nie ma powodu, zeby na cudzym profilu resetowal sie do listy.
+  const [tripLayout, setTripLayout] = useTripLayout();
+  useEffect(() => {
+    const tp = searchParams.get("tab");
+    if (tp === "listy" || tp === "wyjazdy") setTab(tp);
+  }, [searchParams]);
+  const goTab = (t: "listy" | "wyjazdy") => {
+    setTab(t);
+    const next = new URLSearchParams(searchParams);
+    next.set("tab", t);
+    setSearchParams(next, { replace: true });
+  };
+  // Gest natywny: swipe w LEWO idzie Wyjazdy -> Listy (zgodnie z kolejnoscia pigulek).
+  const swipeTabs = useSwipeNav({
+    onLeft: () => goTab("listy"),
+    onRight: () => goTab("wyjazdy"),
+  });
+  const [followSheet, setFollowSheet] = useState<"followers" | "following" | null>(null);
 
   const { data: profile, isLoading } = useQuery({
     queryKey: ["public-profile", username],
     queryFn: async () => {
+      // ilike zamiast eq: nazwy w bazie potrafia miec inna wielkosc liter albo (historycznie)
+      // spacje na brzegach - a link jest jeden. Dokladne dopasowanie zostaje, bo w ilike nie ma
+      // znakow wieloznacznych; escapeLike chroni przed "%" i "_" wpisanym w nazwe.
       const { data } = await supabase
         .from("profiles")
-        .select("id, username, first_name, avatar_url")
-        .eq("username", username!)
+        .select("id, username, first_name, avatar_url, bio, avatar_frame, avatar_frame_color")
+        .ilike("username", escapeLike((username ?? "").trim()))
         .maybeSingle();
-      return data as { id: string; username: string; first_name: string | null; avatar_url: string | null } | null;
+      // `as unknown`: wygenerowane typy Supabase nie znaja jeszcze avatar_frame (types.ts
+      // regenerowany osobno - CLAUDE.md), a kolumna w bazie jest (migracja 20260911f).
+      return data as unknown as { id: string; username: string; first_name: string | null; avatar_url: string | null; bio: string | null; avatar_frame: string | null; avatar_frame_color: string | null } | null;
     },
     enabled: !!username,
   });
 
-  const { data: stats } = useQuery({
-    queryKey: ["public-profile-stats", profile?.id],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("routes")
-        .select("city")
-        .eq("user_id", profile!.id);
-      const all = data ?? [];
-      const cities = new Set(all.map(r => r.city).filter(Boolean)).size;
-      return { trips: all.length, cities };
-    },
+  // Liczniki follow (asymetryczny model, publiczny SELECT).
+  const { data: followCounts = { followers: 0, following: 0 } } = useFollowCounts(profile?.id);
+  const { data: starred = [] } = useStarredPlaces(profile?.id);
+  const [starredOpen, setStarredOpen] = useState(false);
+  const followList = useFollowList(profile?.id, followSheet === "following" ? "following" : "followers");
+
+  // Feed LIST (zakladka Listy): publiczne + zatwierdzone listy usera + kafelki miejsc + liczniki.
+  const { data: listCards = [] } = useQuery({
+    queryKey: ["public-list-feed", profile?.id],
     enabled: !!profile?.id,
+    queryFn: async () => {
+      const { data: cols } = await (supabase as any)
+        .from("discovery_collections")
+        .select("id, title, city, list_status, description, tags, views_count, saves_count, likes_count, updated_at")
+        .eq("user_id", profile!.id).eq("kind", "ranking")
+        // TYLKO publiczne polecajki (visited). Prywatne wishlisty "Do zobaczenia" (to_visit) NIGDY
+        // na cudzym profilu - guard nawet gdyby jakaś została jako public+approved.
+        .eq("list_status", "visited")
+        // Soft-moderacja: publiczne widoczne od razu (pending + approved), tylko rejected/hidden ukryte.
+        .eq("is_public", true).eq("hidden_by_admin", false).neq("moderation_status", "rejected")
+        .order("updated_at", { ascending: false });
+      const rows = (cols ?? []) as any[];
+      if (!rows.length) return [];
+      const ids = rows.map((r) => r.id);
+      const { data: items } = await (supabase as any)
+        .from("discovery_items")
+        .select("id, collection_id, place_name, category, google_place_id, photo_url, order_index")
+        .in("collection_id", ids).order("order_index", { ascending: true });
+      const allItems = (items ?? []) as any[];
+      const keys = Array.from(new Set(allItems.flatMap((it) => pinCoverKeys(it)))).filter(Boolean);
+      const photoMap = keys.length ? await fetchPlacePhotosForKeys(keys) : null;
+      const byCol: Record<string, any[]> = {};
+      for (const it of allItems) {
+        const _cover = pickPlaceCover(photoMap, pinCoverKeys(it));
+        (byCol[it.collection_id] ??= []).push({ ...it, _cover });
+      }
+      return rows.map((r) => ({ ...r, tiles: byCol[r.id] ?? [] }));
+    },
   });
 
-  // Liczniki follow (asymetryczny model). followers SELECT jest publiczny -> dziala dla cudzego profilu.
-  const { data: followCounts = { followers: 0, following: 0 } } = useFollowCounts(profile?.id);
-
-
-
-  // Dziennik usera (read-only): pocztowki jak we wlasnym Dzienniku. Trasy wielodniowe
-  // zwiniete po folderze (dzien 1 = reprezentant), okladka z review_photos lub pierwszego
-  // pina ze zdjeciem. RLS zwraca trasy widoczne dla ogladajacego (udostepnione).
-  const { data: postcards = [], isLoading: postcardsLoading } = useQuery({
-    queryKey: ["public-journal", profile?.id],
-    enabled: !!profile?.id && routesOpen,
+  // Feed WYJAZDOW (zakladka Wyjazdy): publiczne trasy usera, zwiniete po folderze,
+  // kafelki z pinow + liczniki (saved_routes / likes / routes.views).
+  const { data: tripCardsRaw = EMPTY_TRIPS } = useQuery({
+    queryKey: ["public-trip-feed", profile?.id],
+    enabled: !!profile?.id,
     queryFn: async () => {
-      const { data: routes } = await supabase
-        .from("routes")
-        .select("id, city, title, day_number, start_date, end_date, folder_id, ai_summary, review_photos")
-        .eq("user_id", profile!.id)
+      const cols = "id, title, city, countries, start_date, day_number, folder_id, views, saves_count, likes_count, created_at, user_id, tags, review_narrative, ai_summary, cover_url, list_cover_url";
+      // WLASNE wyjazdy usera...
+      const { data: routes } = await (supabase as any)
+        .from("routes").select(cols)
+        .eq("user_id", profile!.id).eq("is_shared", true).eq("hidden_by_admin", false)
         .order("created_at", { ascending: false });
-      const rows = (routes ?? []) as any[];
-      // Okladki: pierwszy pin ze zdjeciem (wg pin_order) per trasa.
+      // ...ORAZ wyjazdy GRUPOWE, w ktorych bral udzial (nie jest hostem) - przez RPC.
+      //
+      // NIE pytaj o to klientem. Poprzednia wersja szukala sesji usera w group_session_members,
+      // ale polityka SELECT na tej tabeli przepuszcza tylko sesje, w ktorych TY jestes czlonkiem.
+      // Widz spoza grupy dostawal wiec pusta liste - bez bledu, po cichu - i wspolny wyjazd
+      // znikal z profilu uczestnika, choc na profilu hosta byl widoczny (zgloszenia Nat
+      // 2026-08-31 i 2026-09-05). Funkcja oddaje wylacznie wyjazdy juz publiczne, wiec nic
+      // nowego nie ujawnia: migracja 20260905_public_group_routes_for_user.sql.
+      const { data: groupData } = await (supabase as any)
+        .rpc("public_group_routes_for_user", { p_user: profile!.id });
+      const groupRows = (groupData ?? []) as any[];
+      const seenRoute = new Set<string>();
+      const rows = [...((routes ?? []) as any[]), ...groupRows]
+        .filter((r) => { if (seenRoute.has(r.id)) return false; seenRoute.add(r.id); return true; });
+      if (!rows.length) return [];
       const ids = rows.map((r) => r.id);
-      const coverMap: Record<string, string> = {};
-      if (ids.length) {
-        const { data: pins } = await (supabase as any)
-          .from("pins").select("route_id, photo_url, image_url, images, user_photo_urls, pin_order")
-          .in("route_id", ids).order("pin_order", { ascending: true });
-        for (const p of pins ?? []) {
-          if (coverMap[p.route_id]) continue;
-          const u = resolveStored((Array.isArray(p.images) && p.images[0]) || (Array.isArray(p.user_photo_urls) && p.user_photo_urls[0]) || p.photo_url || p.image_url);
-          if (u) coverMap[p.route_id] = u;
-        }
+      // saves_count/likes_count = kolumny na routes (denormalizacja - RLS na saved_routes blokuje
+      // count po stronie klienta). Patrz migracja 20260828.
+      const pinsRes = await (supabase as any).from("pins").select("id, route_id, place_name, category, photo_url, image_url, images, user_photo_urls, pin_order, latitude, longitude").in("route_id", ids).order("pin_order", { ascending: true });
+      const allPins = (pinsRes.data ?? []) as any[];
+      const keys = Array.from(new Set(allPins.flatMap((p) => pinCoverKeys(p)))).filter(Boolean);
+      const photoMap = keys.length ? await fetchPlacePhotosForKeys(keys) : null;
+      const pinsByRoute: Record<string, any[]> = {};
+      for (const p of allPins) {
+        const _cover = pickPlaceCover(photoMap, pinCoverKeys(p));
+        (pinsByRoute[p.route_id] ??= []).push({ ...p, _cover });
       }
-      // Zwin trasy wielodniowe (folder_id) w jedna pocztowke.
       const folderMap = new Map<string, any[]>();
-      const out: any[] = [];
-      for (const e of rows) {
-        if (e.folder_id) {
-          if (!folderMap.has(e.folder_id)) folderMap.set(e.folder_id, []);
-          folderMap.get(e.folder_id)!.push(e);
-        } else {
-          out.push({ ...e, _numDays: 1, _cover: coverMap[e.id] });
-        }
+      const grouped: { rep: any; days: any[] }[] = [];
+      for (const r of rows) {
+        if (r.folder_id) {
+          if (!folderMap.has(r.folder_id)) folderMap.set(r.folder_id, []);
+          folderMap.get(r.folder_id)!.push(r);
+        } else grouped.push({ rep: r, days: [r] });
       }
       for (const days of folderMap.values()) {
         const sorted = [...days].sort((a, b) => (a.day_number ?? 0) - (b.day_number ?? 0));
-        const rep = sorted[0];
-        out.push({
-          ...rep,
-          title: sorted.length > 1 ? null : rep.title,
-          _numDays: sorted.length,
-          review_photos: sorted.flatMap((d) => d.review_photos ?? []),
-          _cover: sorted.map((d) => coverMap[d.id]).find(Boolean),
-        });
+        grouped.push({ rep: sorted[0], days: sorted });
       }
-      out.sort((a, b) => {
-        const ad = a.start_date ? parseISO(a.start_date).getTime() : 0;
-        const bd = b.start_date ? parseISO(b.start_date).getTime() : 0;
-        return bd - ad;
-      });
-      return out;
+      grouped.sort((a, b) => new Date(b.rep.created_at ?? 0).getTime() - new Date(a.rep.created_at ?? 0).getTime());
+      // Hostowie wyjazdow grupowych - na karcie ma byc autor wyjazdu, nie wlasciciel profilu.
+      const hostIds = [...new Set(grouped.map(({ rep }) => rep.user_id).filter((u) => u && u !== profile!.id))];
+      const hostById = new Map<string, { username: string | null; first_name: string | null; avatar_url: string | null }>();
+      if (hostIds.length) {
+        const { data: hosts } = await (supabase as any).from("profiles").select("id, username, first_name, avatar_url").in("id", hostIds);
+        for (const h of hosts ?? []) hostById.set(h.id, h);
+      }
+      return grouped.map(({ rep, days }) => ({
+        id: rep.id,
+        city: rep.city,
+        title: rep.title,
+        start_date: rep.start_date,
+        created_at: rep.created_at,
+        description: (rep.review_narrative || rep.ai_summary || "").trim() || null,
+        tags: Array.isArray(rep.tags) ? rep.tags : [],
+        cover: rep.list_cover_url ?? rep.cover_url ?? null,
+        is_host: rep.user_id === profile!.id,
+        host_id: rep.user_id ?? null,
+        host_name: rep.user_id === profile!.id ? null : (hostById.get(rep.user_id)?.first_name || hostById.get(rep.user_id)?.username || null),
+        host_avatar: rep.user_id === profile!.id ? null : (hostById.get(rep.user_id)?.avatar_url ?? null),
+        tiles: days.flatMap((d) => pinsByRoute[d.id] ?? []),
+        saves: Number(rep.saves_count ?? 0),
+        likes: Number(rep.likes_count ?? 0),
+        views: Number(rep.views ?? 0),
+      }));
     },
   });
 
-  if (isLoading) return null;
+  // Uklad okladek ustawiony przez wlasciciela profilu (przytrzymaj i przestaw na wlasnym
+  // profilu, tabela profile_trip_order) - tu tylko go odtwarzamy, bez edycji.
+  const { data: tripOrder } = useQuery({
+    queryKey: tripOrderKey(profile?.id),
+    enabled: !!profile?.id,
+    queryFn: () => fetchTripOrder(profile!.id),
+    staleTime: 60_000,
+  });
+  const tripCards = useMemo(() => applyTripOrder(tripCardsRaw as any[], tripOrder), [tripCardsRaw, tripOrder]);
+
+  // ── Interaktywne polubienie/zapis z kart (cudzy profil, wybor Nat 2026-08-23) ──
+  // Serce/bookmark na karcie = przycisk. Wlasny publiczny profil -> licznik (nie polubisz swojego).
+  const canInteract = !!user && !!profile?.id && user.id !== profile.id;
+  // Moderacja (wymog App Store 1.2): menu "..." z blokowaniem i zgloszeniem profilu.
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [blocked, setBlocked] = useState(false);
+  useEffect(() => {
+    if (!user?.id || !profile?.id || user.id === profile.id) return;
+    isUserBlocked(user.id, profile.id).then(setBlocked).catch(() => {});
+  }, [user?.id, profile?.id]);
+  const toggleBlock = async () => {
+    if (!user?.id || !profile?.id) return;
+    setMenuOpen(false);
+    if (blocked) {
+      if (await unblockUser(user.id, profile.id)) { setBlocked(false); toast.success("Odblokowano"); }
+      return;
+    }
+    if (await blockUser(user.id, profile.id)) {
+      setBlocked(true);
+      toast.success(t("public.blocked_toast"));
+      queryClient.invalidateQueries();
+    }
+  };
+  const listIds = useMemo(() => (listCards as any[]).map((l) => l.id), [listCards]);
+  const tripIds = useMemo(() => (tripCards as any[]).map((tr) => tr.id), [tripCards]);
+
+  const { data: init } = useQuery({
+    queryKey: ["pp-interactions", user?.id, listIds.join(","), tripIds.join(",")],
+    enabled: canInteract && (listIds.length > 0 || tripIds.length > 0),
+    queryFn: async () => {
+      // Listy nie maja juz polubien (decyzja Nat 2026-09-01) - pytamy tylko o trasy.
+      // Zapis CALEGO wyjazdu wrocil 2026-09-11 (po krotkim zdjeciu 2026-09-10), wiec
+      // znow potrzebujemy stanu bookmarka na karcie cudzego profilu.
+      const [lt, st] = await Promise.all([
+        tripIds.length ? (supabase as any).from("likes").select("route_id").eq("user_id", user!.id).in("route_id", tripIds) : Promise.resolve({ data: [] }),
+        tripIds.length ? (supabase as any).from("saved_routes").select("route_id").eq("user_id", user!.id).in("route_id", tripIds) : Promise.resolve({ data: [] }),
+      ]);
+      return {
+        likedTrips: new Set<string>(((lt as any).data ?? []).map((r: any) => r.route_id)),
+        savedTrips: new Set<string>(((st as any).data ?? []).map((r: any) => r.route_id)),
+      };
+    },
+  });
+  const initLikedTrips = init?.likedTrips ?? new Set<string>();
+  const initSavedTrips = init?.savedTrips ?? new Set<string>();
+  // Optymistyczne override + snapshot zapisanych list (localStorage, per-urzadzenie) do delty licznika.
+  const [likeOverride, setLikeOverride] = useState<Record<string, boolean>>({});
+  const [saveOverride, setSaveOverride] = useState<Record<string, boolean>>({});
+  const [savedListIds, setSavedListIds] = useState<Set<string>>(() => {
+    try { return new Set<string>(JSON.parse(localStorage.getItem("trasa_saved_collections") || "[]")); } catch { return new Set(); }
+  });
+  const [initSavedLists] = useState<Set<string>>(() => {
+    try { return new Set<string>(JSON.parse(localStorage.getItem("trasa_saved_collections") || "[]")); } catch { return new Set(); }
+  });
+
+  const isTripLiked = (id: string) => likeOverride["t:" + id] ?? initLikedTrips.has(id);
+  const isTripSaved = (id: string) => saveOverride["t:" + id] ?? initSavedTrips.has(id);
+  const isListSaved = (id: string) => savedListIds.has(id);
+  // Licznik = baza (z DB) skorygowana o roznice miedzy stanem biezacym a poczatkowym.
+  const delta = (now: boolean, was: boolean) => (now ? 1 : 0) - (was ? 1 : 0);
+
+  const onTripLike = (tr: any) => {
+    if (!user) { navigate("/auth"); return; }
+    const cur = isTripLiked(tr.id);
+    setLikeOverride((m) => ({ ...m, ["t:" + tr.id]: !cur }));
+    void toggleRouteLike(tr.id, user.id, cur);
+  };
+  const onTripSave = async (tr: any) => {
+    if (!user) { navigate("/auth"); return; }
+    const cur = isTripSaved(tr.id);
+    setSaveOverride((m) => ({ ...m, ["t:" + tr.id]: !cur }));
+    if (cur) {
+      await (supabase as any).from("saved_routes").delete().eq("user_id", user.id).eq("route_id", tr.id);
+      // Cofalne - "Cofnij" po prostu wykonuje te sama akcje jeszcze raz (zapisuje z powrotem).
+      toast(t("public.removed_saved"), { action: { label: t("common:buttons.undo"), onClick: () => void onTripSave(tr) } });
+    } else {
+      await (supabase as any).from("saved_routes").upsert({ user_id: user.id, route_id: tr.id }, { onConflict: "user_id,route_id", ignoreDuplicates: true });
+      void (supabase as any).rpc("notify_route_used", { p_route_id: tr.id });
+      toast.success(t("public.trip_saved"));
+    }
+    queryClient.invalidateQueries({ queryKey: ["saved-routes"] });
+    queryClient.invalidateQueries({ queryKey: ["profile-saved-trip-feed"] });
+  };
+  const onListSave = (l: any) => {
+    if (!user) { navigate("/auth"); return; }
+    const cur = isListSaved(l.id);
+    const next = new Set(savedListIds);
+    const dates = (() => { try { return JSON.parse(localStorage.getItem("trasa_saved_collections_dates") || "{}"); } catch { return {}; } })();
+    if (cur) {
+      next.delete(l.id); delete dates[l.id]; void unsaveCollectionDb(user.id, l.id);
+      toast(t("public.removed_saved"), { action: { label: t("common:buttons.undo"), onClick: () => onListSave(l) } });
+    }
+    else {
+      next.add(l.id); dates[l.id] = new Date().toISOString(); toast.success(t("public.list_saved"));
+      void (supabase as any).rpc("notify_collection_saved", { p_collection_id: l.id });
+      void saveCollectionDb(user.id, l.id);
+    }
+    try {
+      localStorage.setItem("trasa_saved_collections", JSON.stringify([...next]));
+      localStorage.setItem("trasa_saved_collections_dates", JSON.stringify(dates));
+    } catch { /* localStorage niedostepny */ }
+    setSavedListIds(next);
+  };
+
+  if (isLoading) return <ScreenSkeleton variant="profile" />;
   if (!profile) return (
-    <div className="flex flex-col items-center justify-center min-h-screen gap-3">
+    <div className="flex flex-col items-center justify-center h-[100dvh] gap-3">
       <p className="text-muted-foreground">{t("public.not_found")}</p>
-      <button onClick={() => window.history.state?.idx > 0 ? navigate(-1) : navigate("/")} className="text-orange-600 font-semibold text-sm">{t("public.back")}</button>
+      <button onClick={() => goBackOr(navigate, "/eksploruj")} className="text-primary font-semibold text-sm">{t("public.back")}</button>
     </div>
   );
 
-  const displayName = profile.username || profile.first_name;
+  // Imię (first_name) = nazwa wyświetlana; username = osobny @handle (nie username jako oba).
+  const displayName = profile.first_name || profile.username || "";
 
   return (
-    <div className="min-h-screen bg-background pb-8">
-      {/* Header */}
+    <div className="flex flex-col h-[100dvh] bg-background">
+      {/* Header: powrot + @username */}
       <div className="flex items-center gap-3 px-4 pt-safe-4 pb-3 border-b border-border/40">
-        <button onClick={() => window.history.state?.idx > 0 ? navigate(-1) : navigate("/")} className="h-9 w-9 flex items-center justify-center text-foreground">
+        <button onClick={() => goBackOr(navigate, "/eksploruj")} className="h-9 w-9 flex items-center justify-center text-foreground active:scale-90 transition-transform">
           <ArrowLeft className="h-5 w-5" />
         </button>
-        <h1 className="flex-1 text-base font-bold text-center">@{profile.username}</h1>
-        <div className="w-9" />
+        <h1 className="flex-1 text-base font-bold text-center truncate">@{profile.username}</h1>
+        {/* Zgloszenie profilu (App Store 1.2) jako sama flaga w belce (prosba Nat 2026-09-13);
+            wczesniej w menu "⋮" przy statystykach, gdzie zostaje juz tylko blokada. */}
+        {canInteract ? (
+          <div className="flex items-center gap-1">
+            <ReportContentSheet targetType="user" targetId={profile.id} trigger={(open) => (
+              <button onClick={open} aria-label={t("public.report")} className="h-9 w-9 flex items-center justify-center rounded-full text-foreground/60 active:scale-90 transition-transform">
+                <FlagIcon className="h-5 w-5" strokeWidth={2} />
+              </button>
+            )} />
+            {/* Blokada pod "⋮" - tez w belce: w rzedzie statystyk (trzy liczniki + obserwacja)
+                nie mieścil sie na 393 px i wystawal poza ekran. */}
+              {canInteract && (
+                <div className="relative">
+                  <button onClick={() => setMenuOpen((o) => !o)} aria-label={t("public.more")} className="h-9 w-9 shrink-0 flex items-center justify-center rounded-full active:bg-muted transition-colors">
+                    <MoreVertical className="h-5 w-5 text-foreground" />
+                  </button>
+                  {menuOpen && (
+                    <>
+                      <div className="fixed inset-0 z-30" onClick={() => setMenuOpen(false)} />
+                      <div className="absolute right-0 top-11 z-40 w-56 rounded-2xl bg-card border border-border/50 shadow-xl overflow-hidden py-1">
+                        <button onClick={toggleBlock} className="w-full px-4 py-3 text-left text-sm font-medium text-destructive flex items-center gap-2.5 active:bg-muted">
+                          <Ban className="h-4 w-4 shrink-0" /> {blocked ? t("public.unblock") : t("public.block")}
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+          </div>
+        ) : (
+          <div className="w-9" />
+        )}
       </div>
 
-      <div className="px-4 max-w-lg mx-auto space-y-6 pt-6">
-        {/* Avatar + nazwa - wyrownane do lewej (spojne z wlasnym profilem) */}
-        <div className="flex items-center gap-4">
+      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
+      <div className="px-4 space-y-5 max-w-lg mx-auto pt-6 pb-[calc(2rem+env(safe-area-inset-bottom,0px))]">
+
+        {/* Avatar + nazwa + bio (Figma: nazwa | separator | bio) */}
+        <div className="flex items-start gap-4">
+          <span className="relative h-[76px] w-[76px] shrink-0">
+          <AvatarFrame kind={isAvatarFrame(profile.avatar_frame) ? profile.avatar_frame : null} color={profile.avatar_frame_color} size={76} />
           <Avatar className="h-[76px] w-[76px] shrink-0">
             <AvatarImage src={avatarSrc(profile.avatar_url)} className="object-cover bg-orange-100" />
-            <AvatarFallback className="bg-orange-100 text-orange-600 text-3xl font-black">
-              {displayName?.charAt(0).toUpperCase() || "?"}
+            <AvatarFallback className="bg-orange-100 text-primary text-3xl font-black">
+              {displayName.charAt(0).toUpperCase() || "?"}
             </AvatarFallback>
           </Avatar>
-          <div className="min-w-0 flex-1">
-            <h2 className="text-2xl font-display font-extrabold leading-tight truncate">{displayName}</h2>
-            <p className="text-sm text-muted-foreground mt-0.5 truncate">@{profile.username}</p>
+          </span>
+          <div className="min-w-0 shrink-0 pt-1">
+            <h2 className="text-xl font-display font-extrabold leading-tight truncate">{displayName}</h2>
+            {/* @username osobno TYLKO gdy jest imię (inaczej byłby podwójny username). */}
+            {profile.username && profile.first_name && <p className="text-sm text-muted-foreground mt-0.5 truncate">@{profile.username}</p>}
           </div>
+          {profile.bio && (
+            <>
+              <div className="w-px h-9 bg-border/60 self-center" />
+              <p className="flex-1 min-w-0 self-center text-[13px] text-muted-foreground leading-snug line-clamp-3">{profile.bio}</p>
+            </>
+          )}
         </div>
 
-        {/* Obserwujacy / Obserwowani (asymetryczny follow) + akcja Obserwuj */}
-        <div className="flex items-end gap-8">
-          <div>
+        {/* Statystyki inline: Obserwujacy / Obserwowani / Wyroznione (klik -> lista/arkusz) + akcja
+            Obserwuj. gap-5 + shrink-0 na kolkach - patrz TravelerProfile (flex sciskal guziki). */}
+        <div className="flex items-end gap-5">
+          <button onClick={() => setFollowSheet("followers")} className="text-left active:opacity-70 transition-opacity">
             <p className="text-xs font-medium text-muted-foreground">{t("profile.followers")}</p>
             <p className="text-xl font-bold text-foreground mt-0.5 tabular-nums">{followCounts.followers}</p>
-          </div>
-          <div>
+          </button>
+          <button onClick={() => setFollowSheet("following")} className="text-left active:opacity-70 transition-opacity">
             <p className="text-xs font-medium text-muted-foreground">{t("profile.following")}</p>
             <p className="text-xl font-bold text-foreground mt-0.5 tabular-nums">{followCounts.following}</p>
-          </div>
+          </button>
+          {/* Wyroznione miejsca tej osoby (prosba Nat 2026-09-13) - jak na wlasnym profilu. */}
+          <button onClick={() => { haptics.light(); setStarredOpen(true); }} aria-label={t("profile.starred_aria")} className="text-left active:opacity-70 transition-opacity">
+            <p className="text-xs font-medium text-muted-foreground">{t("profile.starred")}</p>
+            <p className="mt-0.5 flex items-center gap-1 text-xl font-bold text-foreground tabular-nums">
+              <BrandIcon src={STAR_ICON} className="h-[18px] w-[18px] text-primary" />{starred.length}
+            </p>
+          </button>
           <div className="flex-1" />
-          <FollowButton targetUserId={profile.id} className="h-9 px-4 text-sm" />
+          {/* Sama ikona zamiast napisu "Obserwuj" (prosba Nat 2026-09-13) - trzy statystyki
+              w rzedzie nie zostawialy miejsca na pigulke z tekstem. */}
+          <FollowButton targetUserId={profile.id} iconOnly className="shrink-0" />
         </div>
 
-        {/* Statystyki - TEN SAM uklad co wlasny profil (Plany + Miasta, 2 kolumny). */}
-        <div className="grid grid-cols-2 gap-3">
-          <StatCard
-            value={stats?.trips ?? 0}
-            title={t("sections.routes")}
-            subtitle={t("sections.routes_sub")}
-            icon={<MapIcon className="h-6 w-6" />}
-            className="bg-secondary text-secondary-foreground"
-            onClick={() => setRoutesOpen(true)}
-          />
-          <StatCard
-            value={stats?.cities ?? 0}
-            title={t("sections.cities")}
-            subtitle={t("sections.cities_sub")}
-            icon={<Building2 className="h-6 w-6" />}
-            className="bg-trasa-cream text-trasa-cream-ink"
-          />
+        {/* Zakladki: Listy | Wyjazdy (ikona + labelka obok, underline aktywnej) */}
+        <div className="flex border-b border-border/40 -mx-1">
+          {/* Kolejnosc: Wyjazdy | Listy - ta sama co na wlasnym profilu. */}
+          {(["wyjazdy", "listy"] as const).map((tk) => {
+            const active = tab === tk;
+            const label = tk === "listy" ? t("sections.lists") : t("sections.trips");
+            return (
+              <button key={tk} onClick={() => goTab(tk)} className="relative flex-1 flex items-center justify-center gap-2 py-2.5" aria-label={label}>
+                {tk === "listy"
+                  ? <span className="flex h-5 w-5 items-center justify-center" style={{ color: active ? "#0E0E0E" : "#CFCFCF" }}><BrandIcon src={LIST_ICON} className="h-[18px] w-[18px]" /></span>
+                  : <SpontawayTabIcon active={active} />}
+                <span className="text-sm font-semibold" style={{ color: active ? "#0E0E0E" : "#CFCFCF" }}>{label}</span>
+                {active && <span className="absolute -bottom-px left-0 right-0 h-0.5 bg-foreground rounded-full" />}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Feed zakladki (gest: swipe w bok = zmiana zakladki) */}
+        <div className="space-y-6 pt-1" {...swipeTabs}>
+          {/* Po zablokowaniu nie pokazujemy tresci tej osoby (App Store 1.2). */}
+          {blocked ? (
+            <div className="pt-14 pb-12 text-center px-8 flex flex-col items-center">
+              <div className="mb-4 h-14 w-14 rounded-2xl bg-[#fcede3] flex items-center justify-center">
+                <Ban className="h-6 w-6 text-[#ef9d78]" />
+              </div>
+              <p className="text-base font-bold text-foreground">{t("public.blocked_title")}</p>
+              <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed max-w-[280px]">
+                {t("public.blocked_desc")}
+              </p>
+            </div>
+          ) : tab === "listy" ? (
+            listCards.length === 0 ? (
+              <FeedEmptyRO maskSrc="/Ikona_Trasy.svg" title={t("public.no_lists")} desc={t("public.no_lists_desc")} />
+            ) : (
+              // Ten sam odstep i to samo rozmieszczenie licznikow co na wlasnym profilu
+              // (prosba Nat 2026-09-10) - dotad karta listy wygladala inaczej u siebie
+              // i u kogos innego, choc to ta sama tresc.
+              <div className="space-y-10">
+              {listCards.map((l: any) => (
+                <ProfileFeedCard
+                  key={l.id}
+                  avatarUrl={profile.avatar_url}
+                  authorId={profile.id}
+                  fallback={displayName}
+                  eyebrow=""
+                  timestamp={shortRelativeTime(l.updated_at)}
+                  title={l.title || t("feed.list_fallback")}
+                  description={l.description}
+                  tiles={l.tiles}
+                  counts={{ saves: Math.max(0, (l.saves_count ?? 0) + delta(isListSaved(l.id), initSavedLists.has(l.id))), views: l.views_count ?? 0 }}
+                  // Sam licznik przy dacie (prosba Nat 2026-09-10). Stopka z osobna zakladka
+                  // zostawala pod karta jako samotna ikona bez liczby - druga informacja o tym
+                  // samym. Zapisanie listy zyje w jej widoku, gdzie stoi pelne CTA.
+                  countsInHeader
+                  onOpen={() => navigate(`/lista/${l.id}`)}
+                />
+              ))}
+              </div>
+            )
+          ) : tripCards.length === 0 ? (
+            <FeedEmptyRO maskSrc="/Ikona_Trasy.svg" title={t("public.no_trips")} desc={t("public.no_trips_desc")} />
+          ) : tripLayout === "siatka" ? (
+            <>
+              <div className="flex justify-end"><TripLayoutSwitch value={tripLayout} onChange={setTripLayout} /></div>
+              <div className="grid grid-cols-3 gap-1.5">
+                {tripCards.map((tr: any) => (
+                  <TripTile key={tr.id} photo={tripCover(tr)} title={tr.title || t("feed.trip_fallback_generic")}
+                    meta={scopeLabel(tr) || tr.city} onOpen={() => navigate(`/route/${tr.id}`)} />
+                ))}
+              </div>
+            </>
+          ) : tripLayout === "mozaika" ? (
+            <>
+              <div className="flex justify-end"><TripLayoutSwitch value={tripLayout} onChange={setTripLayout} /></div>
+              {/* Dwie kolumny flex (naprzemiennie), NIE CSS multicol - patrz mosaicColumns. */}
+              <div className="flex items-start gap-1.5">
+                {mosaicColumns(tripCards).map((col, ci) => (
+                  <div key={ci} className="flex min-w-0 flex-1 flex-col gap-1.5">
+                    {col.map((tr: any) => (
+                      <TripTile key={tr.id} natural photo={tripCover(tr)} title={tr.title || t("feed.trip_fallback_generic")}
+                        meta={scopeLabel(tr) || tr.city} onOpen={() => navigate(`/route/${tr.id}`)} />
+                    ))}
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : (
+            <>
+            <div className="flex justify-end"><TripLayoutSwitch value={tripLayout} onChange={setTripLayout} /></div>
+            {tripCards.map((tr: any) => (
+              <TrasaBigCard
+                key={tr.id}
+                id={tr.id}
+                photo={tripCover(tr)}
+                city={tr.city}
+                placeCount={(tr.tiles ?? []).length}
+                title={tr.title || (tr.city ? t("feed.trip_fallback", { city: tr.city }) : t("feed.trip_fallback_generic"))}
+                description={tr.description}
+                authorName={tr.is_host ? displayName : (tr.host_name ?? displayName)}
+                authorAvatar={tr.is_host ? profile.avatar_url : (tr.host_avatar ?? profile.avatar_url)}
+                authorId={tr.is_host ? profile.id : (tr.host_id ?? profile.id)}
+                showMap={false}
+                snap={false}
+                heightClass="aspect-[3/4]"
+                onOpen={() => navigate(`/route/${tr.id}`)}
+                onLike={canInteract ? () => onTripLike(tr) : undefined}
+                liked={isTripLiked(tr.id)}
+                onToggleSave={canInteract ? () => onTripSave(tr) : undefined}
+                saved={isTripSaved(tr.id)}
+              />
+            ))}
+            </>
+          )}
         </div>
       </div>
+      </div>
 
-      {/* Sheet: dziennik usera (pocztowki, read-only). Tap karty -> szczegoly trasy. */}
-      <Sheet open={routesOpen} onOpenChange={setRoutesOpen}>
-        <SheetContent side="bottom" className="rounded-t-3xl p-0" style={{ maxHeight: "85dvh", height: "85dvh" }}>
-          <SheetHeader className="px-5 pt-5 pb-3 text-left">
-            <SheetTitle>{t("public.journal_title", { name: displayName })}</SheetTitle>
+      {/* Obserwujacy / Obserwowani - lista (klik -> profil danej osoby) */}
+      <StarredPlacesSheet open={starredOpen} onOpenChange={setStarredOpen} userId={profile.id} own={false} />
+      <Sheet open={followSheet !== null} onOpenChange={(v) => { if (!v) setFollowSheet(null); }}>
+        <SheetContent side="bottom" className="h-[72dvh] flex flex-col rounded-t-2xl">
+          {/* Uchwyt: sygnal, ze arkusz zamyka sie przeciagnieciem w dol. */}
+          <div className="mx-auto h-1 w-10 rounded-full bg-muted-foreground/25 -mt-2 mb-1 shrink-0" />
+          <SheetHeader className="pb-3 border-b border-border/20">
+            <SheetTitle>{followSheet === "following" ? t("profile.following") : t("profile.followers")}</SheetTitle>
           </SheetHeader>
-          <div className="flex-1 overflow-y-auto px-5 pb-8 space-y-4">
-            {postcardsLoading ? (
-              <p className="text-sm text-muted-foreground text-center py-12">{t("public.loading")}</p>
-            ) : postcards.length === 0 ? (
-              <div className="py-16 text-center">
-                <div className="text-4xl mb-3">🗺️</div>
-                <p className="text-sm font-bold">{t("public.no_routes_title")}</p>
-                <p className="text-xs text-muted-foreground mt-1 max-w-[260px] mx-auto leading-relaxed">
-                  {t("public.no_routes_desc")}
-                </p>
-              </div>
+          <div className="flex-1 overflow-y-auto py-3">
+            {followList.isLoading ? (
+              <p className="text-sm text-muted-foreground text-center py-8">…</p>
+            ) : (followList.data ?? []).length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center pt-6">
+                {followSheet === "following"
+                  ? t("public.no_following", { name: displayName })
+                  : t("public.no_followers", { name: displayName })}
+              </p>
             ) : (
-              postcards.map((e: any) => {
-                const validPhotos = (e.review_photos ?? []).filter((u: any) => !!u && typeof u === "string" && u.trim() !== "");
-                const thumb = validPhotos[0] ?? e._cover ?? getRandomPinPlaceholder(e.id);
-                const d = e.start_date ? parseISO(e.start_date) : null;
-                const dateLabel = d && isValid(d) ? format(d, "d MMMM yyyy", { locale: dateLocale() }) : "";
-                return (
-                  <button
-                    key={e.id}
-                    onClick={() => { setRoutesOpen(false); navigate(`/route/${e.id}`); }}
-                    className="w-full rounded-3xl bg-card border border-border/50 overflow-hidden text-left active:scale-[0.98] transition-transform"
-                  >
-                    <div className="relative w-full aspect-[16/9] overflow-hidden bg-muted">
-                      <img
-                        src={thumb}
-                        alt=""
-                        className="w-full h-full object-cover"
-                        onError={(ev) => { (ev.target as HTMLImageElement).src = getRandomPinPlaceholder(e.id + "_fb"); }}
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-                      <div className="absolute bottom-0 left-0 right-0 px-4 pb-3">
-                        <p className="text-white font-bold text-lg leading-tight drop-shadow-sm">{e.title || e.city || t("public.trip_fallback")}</p>
-                        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                          {dateLabel && <p className="text-white/70 text-xs">{dateLabel}</p>}
-                          {e._numDays > 1 && (
-                            <span className="flex items-center gap-1 bg-white/20 backdrop-blur-sm rounded-full px-1.5 py-0.5 text-[10px] font-semibold text-white">
-                              <CalendarDays className="h-2.5 w-2.5" />{t("public.days_count", { n: e._numDays })}
-                            </span>
-                          )}
-                        </div>
-                      </div>
+              <div className="space-y-1">
+                {(followList.data ?? []).map((p) => (
+                  <button key={p.id} onClick={() => { setFollowSheet(null); navigate(`/profil/${p.username}`); }} className="w-full flex items-center gap-3 px-1 py-2 active:bg-muted/40 rounded-xl transition-colors text-left">
+                    <Avatar className="h-10 w-10"><AvatarImage src={avatarSrc(p.avatar_url)} className="object-cover bg-orange-100" /><AvatarFallback className="bg-orange-100 text-primary font-bold text-sm">{(p.first_name || p.username || "?").charAt(0).toUpperCase()}</AvatarFallback></Avatar>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold truncate">{p.first_name || p.username}</p>
+                      {p.username && <p className="text-xs text-muted-foreground">@{p.username}</p>}
                     </div>
-                    {e.ai_summary && (
-                      <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed px-4 py-3">{e.ai_summary}</p>
-                    )}
                   </button>
-                );
-              })
+                ))}
+              </div>
             )}
           </div>
         </SheetContent>
       </Sheet>
-
     </div>
   );
 }

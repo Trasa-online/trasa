@@ -49,7 +49,7 @@ export default function AddFriend() {
     <div className="flex h-[100dvh] flex-col items-center justify-center px-8 gap-5 bg-background text-center max-w-sm mx-auto">
       {state === "working" ? (
         <>
-          <Loader2 className="h-8 w-8 animate-spin text-orange-600" />
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
           <p className="text-sm text-muted-foreground">{t("add_friend.adding")}</p>
         </>
       ) : state === "ok" || state === "already" ? (

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { getConsent, grantConsent, denyConsent, syncConsentFromProfile } from "@/lib/consent";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -7,6 +8,7 @@ import { X } from "lucide-react";
 import posthog from "posthog-js";
 
 const CookieBanner = () => {
+  const { t } = useTranslation("common");
   const { user, loading } = useAuth();
   const [visible, setVisible] = useState(false);
 
@@ -54,30 +56,24 @@ const CookieBanner = () => {
       <div className="relative bg-[#0E0E0E] rounded-2xl shadow-2xl px-4 py-3 flex flex-col gap-3 max-w-md w-full">
         <button
           onClick={handleDismiss}
-          aria-label="Zamknij"
+          aria-label={t("common:buttons.close")}
           className="absolute top-2 right-2 h-7 w-7 flex items-center justify-center text-white/60 hover:text-white transition-colors"
         >
           <X className="h-4 w-4" />
         </button>
         <p className="text-xs text-white/85 leading-relaxed pr-7">
-          Używamy plików cookie do analityki i personalizacji.{" "}
-          <Link to="/terms" className="text-white underline hover:text-white/80 transition-colors">
-            Więcej
-          </Link>
+          {t("cookies.intro")}{" "}
+          <Link to="/terms" className="text-white underline hover:text-white/80 transition-colors">{t("cookies.more")}</Link>
         </p>
         <div className="flex gap-2">
           <button
             onClick={handleDeny}
             className="flex-1 rounded-xl bg-white/10 text-white text-sm font-semibold px-3 py-2.5 hover:bg-white/15 transition-colors"
-          >
-            Tylko niezbędne
-          </button>
+          >{t("cookies.essential")}</button>
           <button
             onClick={handleGrant}
             className="flex-1 rounded-xl bg-white text-[#0E0E0E] text-sm font-semibold px-3 py-2.5 hover:bg-white/90 transition-colors"
-          >
-            Akceptuję
-          </button>
+          >{t("cookies.accept")}</button>
         </div>
       </div>
     </div>

@@ -65,11 +65,10 @@ async function attachListeners(PushNotifications: any) {
 }
 
 /**
- * Jawne zadanie zgody na powiadomienia + rejestracja. Wywolywane z ekranu
- * powiadomien w onboardingu (ProfileSetup), zeby to przycisk "Pozwol na
- * powiadomienia" sterowal systemowym promptem - a nie auto-prompt zaraz po
- * zalogowaniu. Listenery sa juz podpiete przez useNativePush() (albo podpina
- * je tutaj), wiec token trafi do push_subscriptions.
+ * Jawne zadanie zgody na powiadomienia + rejestracja. Wolane WYLACZNIE z bramy zgod
+ * w kontekscie (lib/permissionPrompts: pierwsza kolekcja/wyjazd, dzwonek, Ustawienia) -
+ * to user, nie start apki, decyduje, kiedy pojawia sie systemowy alert. Listenery sa juz
+ * podpiete przez useNativePush() (albo podpina je tutaj), wiec token trafi do push_subscriptions.
  * Zwraca status zgody. Na web/PWA zwraca "unsupported" (osobny usePushNotifications).
  */
 export async function requestAndRegisterNativePush(
@@ -95,6 +94,31 @@ export async function requestAndRegisterNativePush(
   } catch (err: any) {
     console.error("[NativePush] explicit request failed:", err?.message ?? err);
     return "denied";
+  }
+}
+
+/**
+ * Rejestracja BEZ pytania: gdy zgoda juz jest (user dal ja wczesniej), upewnij sie, ze token
+ * APNs jest zapisany. Nigdy nie pokazuje systemowego alertu.
+ */
+export async function registerNativePushIfGranted(): Promise<boolean> {
+  if (!isNative) return false;
+  try {
+    const { PushNotifications } = await import("@capacitor/push-notifications");
+    await attachListeners(PushNotifications);
+    const status = await PushNotifications.checkPermissions();
+    if (status.receive !== "granted") return false;
+    if (!currentUserId) {
+      const { data } = await supabase.auth.getSession();
+      currentUserId = data.session?.user?.id ?? null;
+    }
+    if (!currentUserId) return false;
+    registeredForUser = currentUserId;
+    await PushNotifications.register();
+    return true;
+  } catch (err: any) {
+    console.warn("[NativePush] register-if-granted failed:", err?.message ?? err);
+    return false;
   }
 }
 
@@ -138,42 +162,17 @@ export function useNativePush() {
         console.log("[NativePush] current permission status:", status.receive);
 
         if (status.receive === "granted") {
-          // Zgoda juz jest (istniejacy user) - rejestruj normalnie.
+          // Zgoda juz jest - rejestruj (odswieza token po reinstalacji / nowym buildzie).
           console.log("[NativePush] already granted - calling register()...");
           await PushNotifications.register();
           return;
         }
-        if (status.receive === "denied") {
-          console.log("[NativePush] permission denied by user - cant register");
-          registeredForUser = null;
-          return;
-        }
-
-        // Zgoda jeszcze nieustalona. NIE pokazuj systemowego promptu od razu po
-        // zalogowaniu - poczekaj az ekran powiadomien w onboardingu (ProfileSetup)
-        // wywola requestAndRegisterNativePush(). Wyjatek: onboarding juz ukonczony
-        // (starsze konto / build bez pushy) -> mozemy poprosic od razu.
-        const { data: prof } = await supabase
-          .from("profiles")
-          .select("onboarding_completed")
-          .eq("id", user.id)
-          .maybeSingle();
-        const onboardingDone = (prof as any)?.onboarding_completed === true;
-        if (!onboardingDone) {
-          console.log("[NativePush] onboarding not done - defer prompt to ProfileSetup");
-          registeredForUser = null; // pozwol ponowic przy nastepnym mouncie
-          return;
-        }
-
-        console.log("[NativePush] onboarding done, requesting permission...");
-        const req = await PushNotifications.requestPermissions();
-        if (req.receive !== "granted") {
-          console.log("[NativePush] permission not granted - cant register");
-          registeredForUser = null;
-          return;
-        }
-        await PushNotifications.register();
-        console.log("[NativePush] register() returned - waiting for 'registration' event...");
+        // Zgody nie ma (prompt/denied): NIC nie pokazujemy przy starcie. Systemowy alert
+        // odpala wylacznie brama zgod w kontekscie (lib/permissionPrompts) - po pierwszej
+        // kolekcji/wyjezdzie, przy dzwonku albo w Ustawieniach (decyzja Nat 2026-09-14; do tego
+        // dnia po ukonczonym onboardingu alert wyskakiwal od razu po zalogowaniu).
+        console.log("[NativePush] no permission yet - waiting for an in-context ask");
+        registeredForUser = null; // pozwol ponowic rejestracje, gdy zgoda przyjdzie pozniej
       } catch (err: any) {
         console.error("[NativePush] init failed:", err?.message ?? err, JSON.stringify(err));
         registeredForUser = null;

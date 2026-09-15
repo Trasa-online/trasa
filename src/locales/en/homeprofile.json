@@ -75,7 +75,8 @@
       "viewpoint": "Viewpoint",
       "shopping": "Shopping",
       "experience": "Entertainment"
-    }
+    },
+    "removed": "Removed from likes"
   },
   "journal": {
     "loading": "Loading...",
@@ -98,10 +99,81 @@
     "unknown_error": "Unknown error",
     "toast_fail": "Something went wrong",
     "views_one": "1 person viewed the route",
-    "views_few": "{{num}} people viewed the route",
-    "views_many": "{{num}} people viewed the route",
     "places_one": "{{num}} place",
-    "places_few": "{{num}} places",
-    "places_many": "{{num}} places"
+    "views_other": "{{num}} people viewed the route",
+    "places_other": "{{num}} places"
+  },
+  "confirm": {
+    "leave_trip_desc": "You will stop being a participant and the trip will disappear from your profile. This cannot be undone.",
+    "delete_trip_desc": "This trip will be gone from your profile for good. This cannot be undone.",
+    "leave_trip_title": "Leave this trip?",
+    "delete_trip_title": "Delete this trip?",
+    "leave_action": "Leave",
+    "delete_action": "Delete"
+  },
+  "empty": {
+    "no_drafts_desc": "Trips you are creating and planning will show up here.",
+    "no_trips_desc": "Create a trip with the + button to see it here.",
+    "no_memories_desc": "Past trips will land here as memories.",
+    "no_drafts": "Nothing in progress",
+    "no_memories": "No memories yet",
+    "no_trips": "Your trips"
+  },
+  "today": "Today",
+  "saved": {
+    "empty": "Bookmark places while exploring, or add them here.",
+    "desc": "Your private collection of places for later.",
+    "no_results": "No results. Try a different name.",
+    "add_failed": "We could not add the place",
+    "undo_failed": "We could not undo that",
+    "delete_failed": "We could not delete it",
+    "delete_place": "Delete place",
+    "removed": "Removed “{{name}}”",
+    "already": "“{{name}}” is already saved",
+    "removed_toast": "Removed from saved",
+    "search_place": "Search for a place",
+    "empty_places": "No saved places yet",
+    "empty_short": "Nothing saved yet",
+    "add_new_place": "Add a new place",
+    "add_place": "Add place",
+    "no_city": "No city",
+    "empty_hint": "Save a place with the bookmark in the <b>{{tab}}</b> tab or on <b>{{other}}</b>",
+    "tab_explore": "Explore",
+    "none": "No saved places.",
+    "none_in_city": "No saved places in {{city}}.",
+    "none_in_country": "No saved places in {{country}}."
+  },
+  "add_saved": {
+    "goes_to_general": "It goes to your General collection.",
+    "failed": "We could not add the place",
+    "clear": "Clear",
+    "change": "Change",
+    "already": "“{{name}}” is already in the collection",
+    "add_term": "Add “{{term}}”",
+    "custom_in": "Your own entry in {{city}}"
+  },
+  "stats": {
+    "desc": "See how other people use the trips you created.",
+    "total_all": "across all your trips",
+    "views": "Views",
+    "back": "Back",
+    "saves": "Saves",
+    "of_your_routes": "of your routes"
+  },
+  "grid": {
+    "removed": "Removed from saved",
+    "other_user": "another user",
+    "remove": "Remove from saved",
+    "clear": "Clear"
+  },
+  "card": {
+    "show_trip_map": "Show the trip map",
+    "remove_saved": "Remove from saved",
+    "close_map": "Close map",
+    "delete": "Delete",
+    "map_alt": "Trip map"
+  },
+  "add_place": {
+    "search_hint": "Type a place name to look for it in {{city}}. If you cannot find it, you can add it by hand."
   }
 }

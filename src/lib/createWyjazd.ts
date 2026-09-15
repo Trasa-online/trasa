@@ -1,4 +1,6 @@
+import i18n from "@/i18n";
 import { supabase } from "@/integrations/supabase/client";
+import { photoUrlForStorage } from "@/lib/placePhotos";
 
 // Dedup miejsc po znormalizowanym kluczu (place_id albo place_name). Zabezpiecza przed
 // duplikatami pinow w trasie niezaleznie od tego, ile razy user wraca do etapu dodawania.
@@ -27,32 +29,125 @@ export interface WyjazdPlaceInput {
   place_id?: string | null;
 }
 
+// Czy URL zdjecia jest ZE ZRODLA WLASNEGO (nie Google). Legalne okladki: zdjecia userow
+// (bucket route-images) i wlasne zdjecia B2B (business-photos). ZAKAZ Google Places jako
+// okladka - odrzucamy cache Google (place-photos-cache), proxy zdjec (/api/place-photo)
+// i bezposrednie hosty Google.
+function isOwnPhoto(url: string | null | undefined): boolean {
+  if (!url) return false;
+  return !/place-photos-cache|\/api\/place-photo|maps\.googleapis|places\.googleapis|googleusercontent/i.test(url);
+}
+
+// Wybor okladki miniatury (list_cover_url) WYLACZNIE ze zdjec wlasnych/userow (bez Google).
+// Priorytet: zdjecie wlasne przekazane wprost z pinu. Fallback: zdjecie tego samego miejsca
+// z innego pinu (np. inny user wgral zdjecie z trasy / lokal B2B). Gdy nie ma zadnego wlasnego
+// zdjecia -> null; trasa dostanie okladke dopiero po wgraniu zdjec usera w ReviewSummary
+// (ensureListCover). Google Places NIE jest zrodlem okladek (reguła "ZERO Google").
+async function pickCoverPhoto(places: WyjazdPlaceInput[]): Promise<string | null> {
+  const direct = places.find((p) => isOwnPhoto(p.photo_url))?.photo_url;
+  if (direct) return direct;
+  const names = [...new Set(places.map((p) => p.place_name).filter(Boolean))];
+  if (!names.length) return null;
+  try {
+    // Zdjecia tych samych miejsc z innych pinow - bierzemy tylko wlasne/userow (isOwnPhoto).
+    const { data: pinRows } = await (supabase as any).from("pins").select("photo_url")
+      .in("place_name", names).not("photo_url", "is", null).limit(30);
+    const own = (pinRows ?? []).map((r: any) => r.photo_url).find((u: string) => isOwnPhoto(u));
+    if (own) return own as string;
+  } catch (e) {
+    console.warn("[createWyjazd] pickCoverPhoto failed:", (e as any)?.message ?? e);
+  }
+  return null;
+}
+
+// PUSTY wyjazd (etap PROPOZYCJI, redesign 2026-08-25): bez pinow. Draft/planning; grupowy gdy
+// groupSessionId. Miejsca dodaje sie potem jako propozycje (route_proposals) w widoku wyjazdu, a
+// "Wybierz miejsca" promuje wybrane do pins + trip_type='ongoing'. Zwraca id albo null.
+export async function createEmptyWyjazd(
+  userId: string,
+  city: string | null,
+  title: string,
+  // tripType: "planning" = wyjazd przyszly (etap propozycji), "completed" = przeszly
+  // (wspomnienie). Jedno i drugie powstaje jako PUSTY szkic - miejsca dodaje sie juz
+  // w widoku wyjazdu, nie w kreatorze (decyzja Nat 2026-09-05).
+  opts?: { groupSessionId?: string | null; startDate?: string | null; endDate?: string | null; countries?: string[]; tripType?: "planning" | "completed" },
+): Promise<string | null> {
+  const { data: route, error } = await (supabase as any)
+    .from("routes")
+    .insert({
+      user_id: userId,
+      title: title || city || i18n.t("fallback.trip", { ns: "common" }),
+      city: city || null,
+      // Zasieg wyjazdu = KRAJE (2026-09-10). `city` zostaje puste dla nowych wyjazdow -
+      // czytaja je jeszcze stare wiersze i podpisy, patrz src/lib/tripScope.ts.
+      countries: opts?.countries ?? [],
+      trip_type: opts?.tripType ?? "planning",
+      status: "draft",
+      day_number: 1,
+      // Daty z kreatora (krok "Kiedy jedziecie?"); zakres wielodniowy wlacza podzial na dni
+      // w widoku wyjazdu (pins.day_index).
+      start_date: opts?.startDate ?? null,
+      end_date: opts?.endDate ?? null,
+      // Grupowy zostaje is_shared=true (RLS czlonkostwa); solo pusty draft = prywatny.
+      is_shared: !!opts?.groupSessionId,
+      list_cover_url: null,
+      group_session_id: opts?.groupSessionId ?? null,
+    })
+    .select("id")
+    .single();
+  if (error || !route) {
+    console.error("[createWyjazd] empty route insert failed:", error?.message ?? error);
+    return null;
+  }
+  return route.id as string;
+}
+
 export async function createWyjazdFromPlaces(
   userId: string,
   city: string | null,
   title: string,
   places: WyjazdPlaceInput[],
   dates?: { start_date?: string | null; end_date?: string | null },
-  opts?: { groupSessionId?: string | null; newForUsers?: string[] },
+  opts?: { groupSessionId?: string | null; newForUsers?: string[]; countries?: string[]; tripType?: "planning" | "completed" },
 ): Promise<string | null> {
   places = dedupePlaces(places);
+  // Odrzuc miejsca bez nazwy - place_name jest NOT NULL w pins, a jeden bledny rekord
+  // wywalal CALY batch insert (0 pinow, cicha PUSTA trasa mimo "sukcesu"). Lepiej pominac
+  // zly rekord niz stworzyc pusta trase.
+  places = places.filter((p) => p.place_name && String(p.place_name).trim());
+  if (!places.length) {
+    console.error("[createWyjazd] brak poprawnych miejsc (place_name) - nie tworze pustej trasy");   // i18n-ignore: log deweloperski
+    return null;
+  }
   // list_cover_url = miniatura w eksploracji. Feed (DiscoveryFeed) wymaga
   // list_cover_url NOT NULL, inaczej trasa jest niewidoczna. Zasilamy ja od razu
   // pierwszym dostepnym zdjeciem miejsca, zeby swiezo utworzona trasa trafila do
   // eksploracji bez koniecznosci recznego ustawiania okladki w ReviewSummary.
-  // (Gdy zaden pin nie ma zdjecia -> null; ensureListCover/manualny pick uzupelni pozniej.)
-  const firstPhoto = places.find((p) => p.photo_url)?.photo_url ?? null;
+  // WYJATEK: wyjazd PRZYSZLY (planning) = ROBOCZY - NIE ustawiamy okladki eksploracji, zeby nie
+  // wpadal do feedu (nawet grupowy z is_shared=true). Okladka pojawi sie dopiero gdy stanie sie
+  // wspomnieniem (user przejdzie przez edytor - ensureListCover / reczny wybor).
+  const firstPhoto = opts?.tripType === "planning" ? null : await pickCoverPhoto(places);
   const { data: route, error } = await (supabase as any)
     .from("routes")
     .insert({
       user_id: userId,
-      title: title || city || "Wyjazd",
+      title: title || city || i18n.t("fallback.trip", { ns: "common" }),
       city: city || null,
-      trip_type: "planning",
+      countries: opts?.countries ?? [],
+      // "past" wyjazd = wspomnienie (trip_type='completed' -> ReviewSummary pokazuje tryb wspomnienia:
+      // notki/oceny/zdjecia). "future"/domyslnie = 'planning' (roboczy, do zaplanowania).
+      trip_type: opts?.tripType ?? "planning",
       status: "draft",
       day_number: 1,
-      // Wszystkie nowe trasy sa PUBLICZNE by default (2026-07-30) - trafiaja do eksploracji.
-      is_shared: true,
+      // Trasa SOLO powstaje jako PRYWATNY draft (is_shared=false). Publikacja do eksploracji =
+      // swiadomy krok "Zapisz trase" w ReviewSummary (finishEditing ustawia is_shared=true).
+      // Dzieki temu praca w toku NIE jest publiczna zanim user ja skonczy (2026-08-10).
+      // Zgodne z RLS (wlasciciel czyta swoje niezaleznie od is_shared), StartWyjazd "Robocze"
+      // (pyta o is_shared=false) i DEFAULT kolumny (false).
+      // WYJATEK: trasa GRUPOWA zostaje is_shared=true - inaczej zaproszeni czlonkowie (nie-wlasciciele)
+      // nie przeczytaja jej przez RLS (routes SELECT = status='published' OR user_id OR is_shared;
+      // brak polityki czlonkostwa grupy). Docelowo: polityka group_session_members -> wtedy tez false.
+      is_shared: !!opts?.groupSessionId,
       list_cover_url: firstPhoto,
       start_date: dates?.start_date ?? null,
       end_date: dates?.end_date ?? null,
@@ -70,20 +165,27 @@ export async function createWyjazdFromPlaces(
   const rows = places.map((p, idx) => ({
     route_id: route.id,
     place_name: p.place_name,
-    address: p.address ?? null,
+    address: p.address ?? "",   // pins.address NOT NULL - reczne miejsce z mapy nie ma adresu
     description: p.description ?? null,
     category: p.category || "other",
     latitude: p.latitude ?? null,
     longitude: p.longitude ?? null,
     place_id: p.place_id ?? null,
     suggested_time: null,
-    photo_url: p.photo_url ?? null,
+    photo_url: photoUrlForStorage(p.photo_url),
     pin_order: idx,
     original_creator_id: userId,
   }));
   if (rows.length) {
     const { error: pinsErr } = await (supabase as any).from("pins").insert(rows);
-    if (pinsErr) console.warn("[createWyjazd] pins insert failed:", pinsErr.message);
+    if (pinsErr) {
+      // KRYTYCZNE: piny sie nie wstawily -> trasa bylaby PUSTA a mimo to publiczna (is_shared).
+      // Usun osierocona trase i zglos blad (confirm() pokaze toast), zamiast zostawic pusta
+      // trase w feedzie. (bug 2026-08-10: pusta trasa opublikowana w eksploracji)
+      console.error("[createWyjazd] pins insert failed - usuwam osierocona pusta trase:", pinsErr.message);
+      await (supabase as any).from("routes").delete().eq("id", route.id);
+      return null;
+    }
   }
   return route.id as string;
 }
@@ -97,11 +199,24 @@ export async function updateWyjazdPlaces(
   places: WyjazdPlaceInput[],
   dates?: { start_date?: string | null; end_date?: string | null },
 ): Promise<string | null> {
-  places = dedupePlaces(places);
+  places = dedupePlaces(places).filter((p) => p.place_name && String(p.place_name).trim());
+  // SAFETY: pusta lista miejsc = prawie zawsze race/blad stanu (np. draft nie doladowal sie).
+  // NIE kasuj wszystkich pinow do zera (delete+reinsert ponizej) - to prowadzilo do pustej
+  // trasy. Aktualizuj tylko meta i zwroc bez ruszania pinow.
+  if (!places.length) {
+    console.warn("[updateWyjazd] pusta lista miejsc - pomijam podmiane pinow (ochrona przed pusta trasa)");   // i18n-ignore: log deweloperski
+    await (supabase as any).from("routes").update({
+      title: title || city || i18n.t("fallback.trip", { ns: "common" }),
+      city: city || null,
+      start_date: dates?.start_date ?? null,
+      end_date: dates?.end_date ?? null,
+    }).eq("id", routeId);
+    return routeId;
+  }
   const { error: updErr } = await (supabase as any)
     .from("routes")
     .update({
-      title: title || city || "Wyjazd",
+      title: title || city || i18n.t("fallback.trip", { ns: "common" }),
       city: city || null,
       start_date: dates?.start_date ?? null,
       end_date: dates?.end_date ?? null,
@@ -127,8 +242,9 @@ export async function updateWyjazdPlaces(
       if (!photoByKey.has(nk)) photoByKey.set(nk, ep);
     }
   };
+  // Pelne piny PRZED delete - do zachowania zdjec ORAZ do ROLLBACKU gdy reinsert padnie.
   const { data: existingPins } = await (supabase as any)
-    .from("pins").select("place_id, place_name, images, user_photo_urls, image_url, photo_url, photo_cached_at")
+    .from("pins").select("route_id, place_name, address, description, category, latitude, longitude, place_id, suggested_time, pin_order, photo_url, images, user_photo_urls, image_url, photo_cached_at, original_creator_id")
     .eq("route_id", routeId);
   rememberPhotos(existingPins);
   const { data: backupPins } = await (supabase as any)
@@ -138,19 +254,15 @@ export async function updateWyjazdPlaces(
   const photosFor = (p: WyjazdPlaceInput) =>
     (p.place_id && photoByKey.get(`id:${p.place_id}`)) || photoByKey.get(`nm:${normKey(p.place_name)}`) || null;
 
-  // Podmiana pinow: usun stare, wstaw nowe w aktualnej kolejnosci.
-  // KRYTYCZNE: gdy delete zawiedzie (RLS/blad), NIE wstawiaj - inaczej piny sie DUBLUJA.
-  const { error: delErr } = await (supabase as any).from("pins").delete().eq("route_id", routeId);
-  if (delErr) {
-    console.error("[updateWyjazd] pins delete failed (abort, zeby nie dublowac):", delErr.message);
-    return null;
-  }
+  // Podmiana pinow z zachowaniem zdjec usera. Wiersze buduje JS (merge zdjec ze starych/backupu),
+  // a ATOMOWA podmiana (delete+insert) idzie przez RPC replace_route_pins - jedna transakcja.
+  // Gdy insert padnie (np. constraint), CALA operacja sie wycofuje -> stare piny nietkniete.
+  // (prewencja krytycznego buga 2026-08-13: delete przechodzil, reinsert padal -> UTRATA miejsc)
   const rows = places.map((p, idx) => {
     const old = photosFor(p);
     return {
-      route_id: routeId,
       place_name: p.place_name,
-      address: p.address ?? null,
+      address: p.address ?? "",                 // NOT NULL
       description: p.description ?? null,
       category: p.category || "other",
       latitude: p.latitude ?? null,
@@ -158,17 +270,20 @@ export async function updateWyjazdPlaces(
       place_id: p.place_id ?? null,
       suggested_time: null,
       pin_order: idx,
-      // Zdjecia usera zachowane z istniejacego pinu / backupu tego samego miejsca.
-      photo_url: p.photo_url ?? old?.photo_url ?? null,
-      images: old?.images ?? null,
-      user_photo_urls: old?.user_photo_urls ?? null,
+      photo_url: photoUrlForStorage(p.photo_url) ?? old?.photo_url ?? null,
+      images: old?.images ?? [],                // NOT NULL (default [])
+      user_photo_urls: old?.user_photo_urls ?? [], // NOT NULL (default [])
       image_url: old?.image_url ?? null,
       photo_cached_at: old?.photo_cached_at ?? null,
+      original_creator_id: (old as any)?.original_creator_id ?? null,
     };
   });
-  if (rows.length) {
-    const { error: pinsErr } = await (supabase as any).from("pins").insert(rows);
-    if (pinsErr) console.warn("[updateWyjazd] pins insert failed:", pinsErr.message);
+  const { error: rpcErr } = await (supabase as any).rpc("replace_route_pins", { p_route_id: routeId, p_pins: rows });
+  if (rpcErr) {
+    // Transakcja RPC wycofana - piny sprzed edycji ZOSTAJA nietkniete. Sygnal bledu -> confirm()
+    // pokaze toast "Nie udalo sie zapisac zmian".
+    console.error("[updateWyjazd] replace_route_pins failed (piny nietkniete):", rpcErr.message);
+    return null;
   }
   return routeId;
 }

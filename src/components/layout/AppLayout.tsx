@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import TopBar from "./TopBar";
 import BottomNav from "./BottomNav";
 import OrbOverlay from "./OrbOverlay";
+import OfflineBanner from "./OfflineBanner";
 import GuestWelcomeSheet from "@/components/auth/GuestWelcomeSheet";
 import OnboardingFlow, { useOnboardingGate } from "@/components/onboarding/OnboardingFlow";
 import { useAuth } from "@/hooks/useAuth";
@@ -112,6 +113,7 @@ const AppLayout = ({ children, hideTopBar }: AppLayoutProps) => {
       <main className={`flex-1 flex flex-col min-h-0 max-w-lg mx-auto w-full${hideTopBar ? " pt-safe" : ""}`}>
         {children}
       </main>
+      <OfflineBanner />
       <BottomNav />
       <GuestWelcomeSheet />
       {onboarding.show && <OnboardingFlow onDone={onboarding.hide} />}

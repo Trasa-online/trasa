@@ -11,14 +11,12 @@
   },
   "notes": {
     "on_route_one": "{{count}} note on the route",
-    "on_route_few": "{{count}} notes on the route",
-    "on_route_many": "{{count}} notes on the route",
     "collapse": "Collapse notes",
     "add_fact": "Add a note ({{count}}/{{max}})",
     "add_on_route": "Add a note on the route",
     "count_one": "{{count}} note",
-    "count_few": "{{count}} notes",
-    "count_many": "{{count}} notes"
+    "on_route_other": "{{count}} notes on the route",
+    "count_other": "{{count}} notes"
   },
   "add_pin": {
     "title": "Add point",
@@ -84,5 +82,102 @@
     "drag_reorder": "Drag to reorder",
     "heading_multi": "Day {{day}} of {{total}}",
     "heading_single": "Day plan"
+  },
+  "empty": {
+    "participant": "No proposals yet. Add the places you want to see - the host picks what makes it into the trip.",
+    "host": "No proposals yet. Add places with the search, or wait for participants to add theirs."
+  },
+  "search": {
+    "unavailable": "Search is temporarily unavailable. Add from your saved places below.",
+    "no_results": "No results."
+  },
+  "toast": {
+    "already": "That place is already in the proposals",
+    "remove_failed": "We could not remove the proposal",
+    "add_failed": "We could not add the proposal",
+    "accept_failed": "We could not add it to the trip"
+  },
+  "already_badge": "Already proposed",
+  "aria": {
+    "withdraw": "Withdraw proposal",
+    "refresh": "Refresh proposals",
+    "reject": "Reject proposal",
+    "open_in_maps": "Open {{place}} in Google Maps"
+  },
+  "clear": "Clear",
+  "back": "Back",
+  "proposals": {
+    "added": "“{{place}}” added to the trip",
+    "title": "Place suggestions",
+    "title_count": "Proposals from participants ({{count}})",
+    "add": "Add to suggestions",
+    "search": "Search for a place",
+    "empty_first": "Add some places to the suggestions first",
+    "in_route": "Places in the route",
+    "your_saved": "Your saved places",
+    "pick_min": "Select at least one place",
+    "choose": "Choose places",
+    "to_route": "To route"
+  },
+  "add_place": {
+    "search_unavailable": "Search is temporarily unavailable. Pick from your saved places.",
+    "failed": "We could not add the place",
+    "placeholder": "Add a new place…",
+    "saved_list": "Saved collection ·",
+    "remove": "Remove from the trip",
+    "no_results": "No results",
+    "already": "Already added",
+    "open_in_maps": "Open {{place}} in Google Maps",
+    "places_count_one": "{{count}} place",
+    "places_count_other": "{{count}} places",
+    "added_one": "Place added",
+    "add_to_route": "Add to route",
+    "added_other": "{{count}} places added",
+    "title": "Add a new place"
+  },
+  "chat": {
+    "empty": "No messages yet. Write the first one to discuss places with the others.",
+    "placeholder": "Write a message...",
+    "send": "Send",
+    "title": "Trip chat",
+    "title_named": "Chat: {{title}}",
+    "participant": "Participant"
+  },
+  "row": {
+    "saved_in_list": "Place saved in a collection",
+    "open_in_maps": "Open in Google Maps",
+    "remove": "Remove the place from the trip",
+    "save_to_list": "Save place to a collection",
+    "visited": "Visited",
+    "mark_visited": "Mark as visited",
+    "mark_not_visited": "Remove visited mark",
+    "top_place": "Top pick",
+    "set_top": "Add to top picks",
+    "unset_top": "Remove from top picks",
+    "top_limit_one": "You can highlight up to {{count}} place from this trip",
+    "top_limit_other": "You can highlight up to {{count}} places from this trip",
+    "more_actions": "More actions"
+  },
+  "note": {
+    "placeholder": "Add a note about this place...",
+    "edit": "Edit note",
+    "add": "Add note",
+    "add_description": "Add description",
+    "edit_description": "Edit description"
+  },
+  "day_label": "{{city}} - Day {{day}}",
+  "map_picker": {
+    "title": "Pick from map",
+    "hint": "Tap a venue label on the map or search by name or address",
+    "locate": "My location",
+    "reading": "Checking this place…",
+    "add": "Add place {{place}}",
+    "name_placeholder": "Search a place by name or address",
+    "did_you_mean": "Did you mean:",
+    "add_manual": "Add “{{place}}” as your own place",
+    "poi_failed": "We could not read this venue. Type its name above."
+  },
+  "map": {
+    "day": "Day {{number}}"
   }
 }

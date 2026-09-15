@@ -132,3 +132,184 @@ export const compressDataUrl = async (
     img.src = dataUrl;
   });
 };
+
+/**
+ * Przygotowanie zdjecia do wgrania: zmniejszenie do maxSide + JPEG.
+ *
+ * Dlaczego osobno od compressImage (2026-09-01): tamta wersja dekoduje przez `new Image()` +
+ * object URL, czyli na glownym watku i ZAWSZE w pelnej rozdzielczosci. Przy paczce zdjec z
+ * iPhone'a (12 Mpx kazde) WKWebView potrafi sie tym zadlawic - `canvas.toBlob` oddaje wtedy
+ * null, compressImage rzuca, a wolajacy po cichu POMIJAL zdjecie. Objaw: "wgrywanie trwa
+ * wieki i finalnie nic sie nie dodaje".
+ *
+ * Kolejnosc prob:
+ *  1. createImageBitmap - dekoduje poza glownym watkiem, wiec UI nie zamarza,
+ *  2. compressImage - stara sciezka przez <img> (gdy bitmap niedostepny),
+ *  3. ORYGINALNY plik - lepiej wgrac ciezsze zdjecie niz zgubic je po cichu.
+ */
+export async function prepareImageForUpload(file: File, maxSide = 1600, quality = 0.8): Promise<Blob> {
+  try {
+    if (typeof createImageBitmap === "function") {
+      const bitmap = await createImageBitmap(file);
+      const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height));
+      const w = Math.max(1, Math.round(bitmap.width * scale));
+      const h = Math.max(1, Math.round(bitmap.height * scale));
+      const canvas = document.createElement("canvas");
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = "high";
+        ctx.drawImage(bitmap, 0, 0, w, h);
+        bitmap.close?.();
+        // WebP: przy tej samej jakosci ~30% lzejszy od JPEG. Safari umie go kodowac dopiero od
+        // 16.4 - starsze zwracaja PNG (czyli CIEZSZY plik), wiec sprawdzamy typ wyniku i przy
+        // braku wsparcia wracamy do JPEG.
+        let blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/webp", quality));
+        if (!blob || blob.type !== "image/webp") {
+          blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/jpeg", quality));
+        }
+        // Zwolnij pamiec od razu - przy paczce zdjec to roznica miedzy plynnie a zabiciem WebView.
+        canvas.width = 0; canvas.height = 0;
+        if (blob && blob.size > 0) return blob;
+      } else {
+        bitmap.close?.();
+      }
+    }
+  } catch (e) {
+    console.warn("[prepareImageForUpload] createImageBitmap:", e instanceof Error ? e.message : e);
+  }
+  try {
+    return await compressImage(file, maxSide, maxSide, quality);
+  } catch (e) {
+    console.warn("[prepareImageForUpload] compressImage padl, wgrywam oryginal:", e instanceof Error ? e.message : e);
+    return file;
+  }
+}
+
+export type ImageVariant = { maxSide: number; quality: number };
+
+/**
+ * Kilka rozmiarow z JEDNEGO dekodowania (2026-09-08).
+ *
+ * Powod: dodanie zdjecia do miejsca na liscie trwalo ~35 s. Kazde zdjecie bylo dekodowane
+ * DWA razy - raz na wersje pelna, drugi raz w `uploadThumb` na miniature - a dekodowanie
+ * zdjecia z aparatu (12 Mpix) w WebView iOS to kilka sekund. Bitmapa jest ta sama, wiec
+ * wystarczy zdekodowac raz i przerysowac ja na dwa plotna.
+ *
+ * Zwraca blob per wariant, w kolejnosci wejscia. Gdy `createImageBitmap` nie jest dostepne
+ * albo padnie, kazdy wariant leci stara sciezka (`prepareImageForUpload`) - wynik jest ten
+ * sam, tylko wolniej.
+ */
+/** Czy przegladarka UMIE zakodowac WebP z canvasa. Sprawdzane RAZ, nie przy kazdym zdjeciu.
+ *
+ *  Po co: `canvas.toBlob(..., "image/webp")` przy braku wsparcia nie zwraca bledu - specyfikacja
+ *  kaze wtedy oddac PNG. Kod probowal WebP i dopiero po sprawdzeniu typu kodowal JPEG, czyli
+ *  na KAZDYM wariancie kazdego zdjecia powstawal i ladowal do kosza pelnowymiarowy PNG.
+ *  WebKit (silnik iOS) wlasnie tak sie zachowuje - zmierzone: `toBlob("image/webp")` oddaje
+ *  `image/png`. Stad w Storage nie ma ani jednego WebP, same JPEG-i (zgloszenie Nat 2026-09-09
+ *  o dlugim wgrywaniu). */
+let webpSupport: Promise<boolean> | null = null;
+export function canEncodeWebp(): Promise<boolean> {
+  if (!webpSupport) {
+    webpSupport = (async () => {
+      try {
+        const c = document.createElement("canvas");
+        c.width = 1; c.height = 1;
+        const b = await new Promise<Blob | null>((r) => c.toBlob(r, "image/webp", 0.8));
+        return !!b && b.type === "image/webp";
+      } catch { return false; }
+    })();
+  }
+  return webpSupport;
+}
+
+/** Dekoduje plik do bitmapy. HEIC z iPhone'a WebKit czyta natywnie, wiec NIE konwertujemy go
+ *  wczesniej do pelnowymiarowego JPEG-a - to byl objazd, ktory kosztowal dodatkowe dekodowanie,
+ *  pelnowymiarowe kodowanie i posredni plik rzedu 2 MB na kazde zdjecie (zmierzone w WebKit:
+ *  140 ms zamiast 18 ms po dekodowaniu, i to na desktopie). Dopiero gdy dekodowanie NIE wyjdzie
+ *  - a tak jest w Chrome i Firefoksie, ktore HEIC nie znaja - siegamy po konwersje w JS. */
+async function decodeToBitmap(file: File): Promise<ImageBitmap> {
+  try {
+    return await createImageBitmap(file);
+  } catch (e) {
+    const { isHeic, convertHeicToJpeg } = await import("@/lib/heicConvert");
+    if (!isHeic(file)) throw e;
+    return await createImageBitmap(await convertHeicToJpeg(file));
+  }
+}
+
+export async function renderVariants(file: File, variants: ImageVariant[]): Promise<Blob[]> {
+  try {
+    if (typeof createImageBitmap === "function") {
+      const webp = await canEncodeWebp();
+      const bitmap = await decodeToBitmap(file);
+      try {
+        const out: Blob[] = [];
+        for (const v of variants) {
+          const scale = Math.min(1, v.maxSide / Math.max(bitmap.width, bitmap.height));
+          const w = Math.max(1, Math.round(bitmap.width * scale));
+          const h = Math.max(1, Math.round(bitmap.height * scale));
+          const canvas = document.createElement("canvas");
+          canvas.width = w; canvas.height = h;
+          const ctx = canvas.getContext("2d");
+          if (!ctx) throw new Error("no 2d canvas context");
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = "high";
+          ctx.drawImage(bitmap, 0, 0, w, h);
+          // Format wybrany Z GORY (patrz canEncodeWebp) - bez proby "a nuz sie uda", ktora
+          // na iOS produkowala pelnowymiarowy PNG do wyrzucenia.
+          const type = webp ? "image/webp" : "image/jpeg";
+          let blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, type, v.quality));
+          if (!blob || (webp && blob.type !== "image/webp")) {
+            blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/jpeg", v.quality));
+          }
+          canvas.width = 0; canvas.height = 0;   // zwolnij pamiec od razu
+          if (!blob || blob.size === 0) throw new Error("empty canvas output");
+          out.push(blob);
+        }
+        return out;
+      } finally {
+        bitmap.close?.();
+      }
+    }
+  } catch (e) {
+    console.warn("[renderVariants] jedno dekodowanie nie wyszlo, lece po staremu:", e instanceof Error ? e.message : e);
+  }
+  return await Promise.all(variants.map((v) => prepareImageForUpload(file, v.maxSide, v.quality)));
+}
+
+/** Uruchamia zadania z ograniczona rownoleglascia (domyslnie 3) - zachowuje kolejnosc wynikow. */
+export async function mapWithLimit<T, R>(items: T[], limit: number, fn: (item: T, index: number) => Promise<R>): Promise<R[]> {
+  const out = new Array<R>(items.length);
+  let next = 0;
+  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (true) {
+      const i = next++;
+      if (i >= items.length) return;
+      out[i] = await fn(items[i], i);
+    }
+  });
+  await Promise.all(workers);
+  return out;
+}
+
+
+// Odcisk TRESCI pliku (SHA-256, hex). Uzywany do dwoch rzeczy naraz:
+//  1. nazwa obiektu w Storage - identyczne bajty daja identyczna sciezke, wiec i identyczny URL;
+//  2. kolumna place_photos.photo_hash - baza nie wpusci drugiego takiego samego zdjecia do tego
+//     samego miejsca, nawet gdy wgrywaja je dwie rozne osoby (kazda ma wlasny folder w Storage,
+//     wiec same URL-e by sie roznily).
+// crypto.subtle jest dostepne w WebView iOS i w przegladarce po HTTPS. Gdyby go zabraklo,
+// zwracamy null i wracamy do starego zachowania (losowa nazwa) - dedup zostaje wtedy na URL-u.
+export async function sha256Hex(blob: Blob): Promise<string | null> {
+  try {
+    if (!crypto?.subtle) return null;
+    const buf = await blob.arrayBuffer();
+    const digest = await crypto.subtle.digest("SHA-256", buf);
+    return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, "0")).join("");
+  } catch (e) {
+    console.warn("[imageCompression] sha256Hex:", (e as Error)?.message ?? e);
+    return null;
+  }
+}

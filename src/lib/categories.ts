@@ -12,6 +12,7 @@ export interface MainCategory {
   subcategories: Subcategory[];
 }
 
+// i18n-ignore-start: kanoniczne etykiety PL to FALLBACK dla i18n - patrz mainCategoryLabel / subcategoryLabelLocalized
 export const MAIN_CATEGORIES: MainCategory[] = [
   {
     id: 'food',
@@ -66,6 +67,7 @@ export const MAIN_CATEGORIES: MainCategory[] = [
       { id: 'boutique',      label: 'Butik',          emoji: '👗' },
       { id: 'concept_store', label: 'Concept store',  emoji: '🛒' },
       { id: 'wine_shop',     label: 'Sklep z winami', emoji: '🍷' },
+      { id: 'vintage_store', label: 'Vintage store',  emoji: '🕰️' },
       { id: 'bookshop',      label: 'Księgarnia',     emoji: '📚' },
     ],
   },
@@ -81,6 +83,7 @@ export const MAIN_CATEGORIES: MainCategory[] = [
       { id: 'nightclub',  label: 'Klub nocny', emoji: '🪩' },
     ],
   },
+// i18n-ignore-end
 ];
 
 export const getSubcategoryIds = (mainCategoryId: string): string[] => {
@@ -131,6 +134,13 @@ export const subcategoryLabelLocalized = (subcategoryId: string): string => {
   return i18n.t(`sub.${subcategoryId}`, { ns: "categories", defaultValue: raw });
 };
 
+// Liczba mnoga podkategorii - naglowki grup na widoku wyjazdu ("Restauracje", "Kawiarnie").
+// Do 2026-09-06 byly zaszyte po polsku z komentarzem "UI jest polskie". UI juz polskie nie jest,
+// wiec formy mieszkaja w plikach tlumaczen (ns `categories`, klucz `plural.<id>`), a fallbackiem
+// zostaje etykieta pojedyncza.
+export const subcategoryPluralLabel = (subcategoryId: string): string =>
+  i18n.t(`plural.${subcategoryId}`, { ns: "categories", defaultValue: subcategoryLabelLocalized(subcategoryId) });
+
 // DB ma historycznie kilka wartosci `places.category` dla tego samego konceptu
 // (np. "club" z AddCustomPlacePanel vs "nightlife" z AI generation). Mapowanie
 // 1:N - subcategory ID z UI -> wszystkie wartosci DB ktore znacza to samo.
@@ -156,6 +166,10 @@ const SUBCATEGORY_DB_ALIASES: Record<string, string[]> = {
   concept_store: ["concept_store", "store", "shopping"],
   wine_shop: ["wine_shop", "liquor_store"],
   bookshop: ["bookshop", "book_store", "library"],
+  // Sklepy vintage i z drugiej reki. Google nie ma typu "vintage", wiec lapiemy
+  // warianty, ktore realnie wpadaja do bazy. CELOWO bez generycznego "store"/"shopping" -
+  // to by wciagnelo do filtra kazdy sklep.
+  vintage_store: ["vintage_store", "antique_store", "thrift_store", "second_hand_store"],
   theater: ["theater", "performing_arts_theater", "movie_theater"],
   live_music: ["live_music", "night_club", "concert_hall"],
   cinema: ["cinema", "movie_theater"],

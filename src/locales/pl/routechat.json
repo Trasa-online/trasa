@@ -66,5 +66,6 @@
   "back_to_matches": "Cofnij do dopasowań",
   "map_button": "Mapa",
   "confirm_readonly": "Wracam na główną",
-  "confirm_plan": "Wybieram ten plan!"
+  "confirm_plan": "Wybieram ten plan!",
+  "days_few": "{{count}} dni"
 }

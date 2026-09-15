@@ -1,17 +1,19 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { checkUsername, cleanUsername, escapeLike, checkFirstName, FIRST_NAME_MAX, type UsernameProblem } from "@/lib/usernameRules";
 import { avatarSrc } from "@/lib/avatar";
+import AvatarPresetRow from "@/components/profile/AvatarPresetRow";
 import { ArrowLeft, Check, Plus, Loader2 } from "lucide-react";
+import { Link } from "react-router-dom";
+import { useTranslation, Trans } from "react-i18next";
 import { Camera as CapCamera, CameraResultType, CameraSource } from "@capacitor/camera";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { isNative } from "@/lib/platform";
-import { requestAndRegisterNativePush } from "@/hooks/useNativePush";
-import { requestLocation } from "@/hooks/useGeolocation";
 import { grantConsent, denyConsent } from "@/lib/consent";
 import TrasaLogo from "@/components/TrasaLogo";
-import { CategoryIcon } from "@/components/CategoryIcon";
 import { cn } from "@/lib/utils";
+import { uploadThumb } from "@/lib/imageThumbs";
 
 // Limit slow (np. dla pola "Inne").
 const capWords = (v: string, n = 10) => {
@@ -19,54 +21,62 @@ const capWords = (v: string, n = 10) => {
   return parts.length > n ? parts.slice(0, n).join(" ") : v;
 };
 
-// Przykladowe miejsca (ilustracja na ekranie lokalizacji - UI listy miejsc z aplikacji).
-// Realne warszawskie lokale (z bazy places) - dla autentycznosci podgladu.
-const SAMPLE_NEARBY = [
-  { name: "Prodiż Warszawski", cat: "restaurant", catLabel: "Restauracja", dist: "0,4 km" },
-  { name: "5 ciastek", cat: "cafe", catLabel: "Kawiarnia", dist: "0,8 km" },
-  { name: "Same Krafty", cat: "bar", catLabel: "Bar", dist: "1,2 km" },
-];
-
-// Onboarding Czesc A (po pierwszym logowaniu, real user): welcome -> 2 pytania ankietowe
-// (opcje + "inne") -> profil (nazwa uzytkownika max 20 znakow + zdjecie). Po ukonczeniu
-// ustawia profiles.onboarding_completed = true i odpala coach-marki (Czesc B) flaga localStorage.
-// Wzorzec pelnoekranowy 1:1 z ProfileSetup (tlo #FEFEFE, gradient CTA, pasek postepu).
+// Onboarding Czesc A (po pierwszym logowaniu, real user) = DOKLADNIE 5 krokow (decyzja Nat
+// 2026-09-13): welcome (regulamin) -> "skad znasz" -> "w jakim celu" -> PROFIL (zdjecie/awatar
+// + imie + nazwa uzytkownika + plec, jeden ekran) -> zgoda na analityke. Po ukonczeniu ustawia
+// profiles.onboarding_completed = true i odpala coach-marki (Czesc B) flaga localStorage - user
+// laduje w Eksploracji z wyjasnieniem, co robi na kazdej zakladce.
+// Kroki "miasto zamieszkania", "powiadomienia" i "lokalizacja" USUNIETE 2026-09-13 - o zgody
+// systemowe pytamy w chwili, gdy sa potrzebne, nie na powitaniu.
+// Wzorzec pelnoekranowy 1:1 z ProfileSetup (tlo #FEFEFE, solidny CTA, pasek postepu).
 
 // Polskie sieroty: po pojedynczych literach twarda spacja.
 const nbsp = (s: string) => s.replace(/ ([aiouwzAIOUWZ]) /g, (_m, l) => " " + l + String.fromCharCode(160));
 
 const USERNAME_MAX = 20;
 const sanitizeUsername = (v: string) => v.toLowerCase().replace(/[^a-z0-9._]/g, "").slice(0, USERNAME_MAX);
-const escapeLike = (v: string) => v.replace(/[%_\\]/g, "\\$&");
 
 // Sygnal dla Czesci B (coach-marki): OnboardingProvider startuje tour gdy widzi ten klucz.
 export const COACH_PENDING_KEY = "spontaway_coach_pending";
 
+// Etykiety trzymamy jako KLUCZE, nie gotowy tekst - te stale zyja poza komponentem,
+// wiec nie ma tu hooka t(); tlumaczenie dokleja sie przy renderze.
 const SOURCE_OPTS = [
-  { id: "instagram", label: "Instagram" },
-  { id: "tiktok", label: "TikTok" },
-  { id: "znajomi", label: "Od znajomych" },
-  { id: "newonce", label: "newonce (radio/podcast)" },
-  { id: "appstore", label: "App Store" },
-  { id: "other", label: "Inne" },
+  { id: "instagram", labelKey: "sources.instagram" },
+  { id: "tiktok", labelKey: "sources.tiktok" },
+  { id: "znajomi", labelKey: "sources.friends" },
+  { id: "newonce", labelKey: "sources.newonce" },
+  { id: "appstore", labelKey: "sources.appstore" },
+  { id: "other", labelKey: "sources.other" },
 ];
 
 const GOAL_OPTS = [
-  { id: "odkrywanie", label: "Odkrywać nowe miejsca w mieście" },
-  { id: "wyjazdy", label: "Planować wyjazdy i weekendy" },
-  { id: "inspiracja", label: "Szukać inspiracji na wyjścia" },
-  { id: "znajomi", label: "Podróżować ze znajomymi" },
-  { id: "zapisywanie", label: "Zapisywać ulubione miejsca" },
-  { id: "other", label: "Inne" },
+  { id: "odkrywanie", labelKey: "goals.discover" },
+  { id: "wyjazdy", labelKey: "goals.plan_trips" },
+  { id: "inspiracja", labelKey: "goals.inspiration" },
+  { id: "znajomi", labelKey: "goals.with_friends" },
+  { id: "zapisywanie", labelKey: "goals.save_places" },
+  { id: "niewiem", labelKey: "goals.dont_know" },
+  { id: "other", labelKey: "goals.other" },
 ];
 
-const STEPS = ["welcome", "source", "goals", "username", "avatar", "home", "notify", "location", "tracking"] as const;
+// Plec (ankieta, onboarding_responses.gender - NIE profil publiczny). "Wole nie podawac" jest
+// pelnoprawna odpowiedzia, zeby wybor byl swiadomy, a nie wymuszony.
+const GENDER_OPTS = [
+  { id: "female", labelKey: "profile.gender.female" },
+  { id: "male", labelKey: "profile.gender.male" },
+  { id: "other", labelKey: "profile.gender.nonbinary" },
+  { id: "undisclosed", labelKey: "profile.gender.undisclosed" },
+];
+
+const STEPS = ["welcome", "source", "goals", "profile", "tracking"] as const;
 type Step = typeof STEPS[number];
-type UStatus = "idle" | "short" | "checking" | "ok" | "taken";
+type UStatus = "idle" | "checking" | "ok" | "taken" | UsernameProblem;
 
 interface Props { onDone: () => void; }
 
 const OnboardingFlow = ({ onDone }: Props) => {
+  const { t } = useTranslation("onboarding");
   const { user } = useAuth();
   const [step, setStep] = useState(0);
   const stepName: Step = STEPS[step];
@@ -79,16 +89,18 @@ const OnboardingFlow = ({ onDone }: Props) => {
 
   // Profil
   const [firstName, setFirstName] = useState("");
-  const [homeCity, setHomeCity] = useState("");
   const [username, setUsername] = useState("");
+  const [gender, setGender] = useState<string | null>(null);
   const [uStatus, setUStatus] = useState<UStatus>("idle");
   const [savingU, setSavingU] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [finishing, setFinishing] = useState(false);
-  const [permBusy, setPermBusy] = useState(false);
-  // Gdy pole "Inne" (input) jest w fokusie -> chowamy guzik "Dalej" (nie zaslania klawiatury).
-  const [otherFocused, setOtherFocused] = useState(false);
+  // Gdy pole "Inne" (input) jest w fokusie -> chowamy guzik t("cta.next") (nie zaslania klawiatury).
+  // Guzik CTA chowamy, gdy kursor stoi w JAKIMKOLWIEK polu tekstowym - klawiatura podnosi
+  // uklad i guzik ladowal na polu, ktore user wlasnie wypelnia (zgloszenie Nat 2026-09-06).
+  const [inputFocused, setInputFocused] = useState(false);
+  const focusProps = { onFocus: () => setInputFocused(true), onBlur: () => setInputFocused(false) };
   const fileRef = useRef<HTMLInputElement>(null);
 
   // Prefill z profilu (OAuth nadaje wstepny username/avatar/first_name).
@@ -98,23 +110,23 @@ const OnboardingFlow = ({ onDone }: Props) => {
     supabase.from("profiles").select("username, avatar_url, first_name").eq("id", user.id).maybeSingle()
       .then(({ data }) => {
         if (cancelled || !data) return;
-        if ((data as any).username) setUsername(sanitizeUsername((data as any).username));
+        // Nazwy uzytkownika CELOWO nie podstawiamy z profilu (prosba Nat 2026-09-06):
+        // OAuth wstawia tam automat typu "user_3f2a1b" albo adres maila, a user i tak
+        // musi ja swiadomie wybrac - pole ma byc puste, nie do wyczyszczenia.
         if ((data as any).avatar_url) setAvatarUrl((data as any).avatar_url);
         if ((data as any).first_name) setFirstName((data as any).first_name);
       });
-    // home_city osobno (best-effort - kolumna moze wymagac migracji, nie psuj prefilla).
-    (supabase as any).from("profiles").select("home_city").eq("id", user.id).maybeSingle()
-      .then(({ data }: any) => { if (!cancelled && data?.home_city) setHomeCity(data.home_city); })
-      .catch(() => {});
     return () => { cancelled = true; };
   }, [user]);
 
   // Dostepnosc username (debounce). Wlasny username nie liczy sie jako zajety.
   useEffect(() => {
-    if (stepName !== "username") return;
-    const v = username.trim();
+    if (stepName !== "profile") return;
+    const v = cleanUsername(username);
     if (v.length === 0) { setUStatus("idle"); return; }
-    if (v.length < 2) { setUStatus("short"); return; }
+    // Format, wulgaryzmy i nazwy zastrzezone - wspolne reguly z Ustawieniami (usernameRules).
+    const problem = checkUsername(v);
+    if (problem) { setUStatus(problem); return; }
     setUStatus("checking");
     const tmr = setTimeout(async () => {
       try {
@@ -138,12 +150,15 @@ const OnboardingFlow = ({ onDone }: Props) => {
     if (!user || uStatus !== "ok" || savingU) return;
     setSavingU(true);
     const { error } = await supabase.from("profiles")
-      .update({ username: username.trim(), first_name: firstName.trim() || null } as any)
+      .update({ username: cleanUsername(username), first_name: cleanUsername(firstName) || null } as any)
       .eq("id", user.id);
     setSavingU(false);
     if (error) {
       if ((error as any).code === "23505") { setUStatus("taken"); return; }
-      toast.error("Nie udało się zapisać nazwy. Spróbuj ponownie.");
+      // Baza ma te same reguly (wyzwalacze) - jej odmowa to komunikat, nie cisza.
+      if (String((error as any).message ?? "").includes("first_name_not_allowed")) { toast.error(t("name.first_status.banned")); return; }
+      if (String((error as any).message ?? "").includes("username_not_allowed")) { setUStatus("banned"); return; }
+      toast.error(t("toast.name_failed"));
       return;
     }
     goNext();
@@ -156,12 +171,21 @@ const OnboardingFlow = ({ onDone }: Props) => {
     try {
       const fileName = `${user.id}/avatar.${ext}`;
       const { error: upErr } = await supabase.storage.from("avatars").upload(fileName, blob, { upsert: true, contentType });
-      if (upErr) { toast.error("Nie udało się wgrać zdjęcia."); return; }
+      await uploadThumb("avatars", fileName, blob);
+      if (upErr) { toast.error(t("toast.photo_failed")); return; }
       const { data: { publicUrl } } = supabase.storage.from("avatars").getPublicUrl(fileName);
       const busted = `${publicUrl}?t=${Date.now()}`;
       await supabase.from("profiles").update({ avatar_url: busted } as any).eq("id", user.id);
       setAvatarUrl(busted);
     } finally { setUploading(false); }
+  };
+
+  // Awatar brandowy: sam adres pliku z bucketu (bez uploadu) - zapis jak przy zdjeciu.
+  const pickPresetAvatar = async (url: string) => {
+    if (!user || uploading) return;
+    setAvatarUrl(url);
+    const { error } = await supabase.from("profiles").update({ avatar_url: url } as any).eq("id", user.id);
+    if (error) toast.error(t("toast.photo_failed"));
   };
 
   const pickAvatar = async () => {
@@ -199,37 +223,22 @@ const OnboardingFlow = ({ onDone }: Props) => {
         referral_other: source === "other" ? (sourceOther.trim() || null) : null,
         goals,
         goals_other: goals.includes("other") ? (goalsOther.trim() || null) : null,
+        gender,
         updated_at: new Date().toISOString(),
       }, { onConflict: "user_id" });
     } catch (e) { console.warn("[onboarding] zapis ankiety nieudany (uruchom migracje?):", e); }
     // PostHog (dziala tylko po opt-in zgody cookie).
     try {
       (window as any).posthog?.capture?.("onboarding_completed", {
-        source, goals,
+        source, goals, gender,
       });
     } catch { /* ignore */ }
-    await supabase.from("profiles").update({ onboarding_completed: true } as any).eq("id", user.id);
+    await supabase.from("profiles").update({ onboarding_completed: true, terms_accepted_at: new Date().toISOString() } as any).eq("id", user.id);
     // Sygnal dla Czesci B (coach-marki): flaga + event, ktory OnboardingProvider lapie.
     try { localStorage.setItem(COACH_PENDING_KEY, "1"); } catch { /* unavailable */ }
     onDone();
     try { window.dispatchEvent(new CustomEvent("spontaway:start-coach")); } catch { /* ignore */ }
-  }, [user, finishing, source, sourceOther, goals, goalsOther, onDone]);
-
-  // ── Zgody / uprawnienia ──
-  const allowNotifications = async () => {
-    if (permBusy) return;
-    setPermBusy(true);
-    try {
-      if (isNative) await requestAndRegisterNativePush(user?.id ?? null);
-      else if ("Notification" in window) { try { await Notification.requestPermission(); } catch { /* ignore */ } }
-    } finally { setPermBusy(false); goNext(); }
-  };
-
-  const allowLocation = async () => {
-    if (permBusy) return;
-    setPermBusy(true);
-    try { await requestLocation(); } catch { /* odmowa/blad - nie blokuj */ } finally { setPermBusy(false); goNext(); }
-  };
+  }, [user, finishing, source, sourceOther, goals, goalsOther, gender, onDone]);
 
   // Zgoda na analityke: opt-in/opt-out PostHog (+ zapis do profilu przez consent.ts).
   const acceptTracking = async () => {
@@ -243,38 +252,31 @@ const OnboardingFlow = ({ onDone }: Props) => {
     finish();
   };
 
+  // Akceptacja regulaminu (EULA) - wymog App Store dla aplikacji z trescia od uzytkownikow.
+  // Bez zaznaczenia nie da sie przejsc dalej; date zapisujemy w profiles.terms_accepted_at.
+  const [termsAccepted, setTermsAccepted] = useState(false);
+
   // CTA per krok
+  // Profil: zdjecie/awatar jest opcjonalne, reszta (imie, nazwa, plec) wymagana. Imie przechodzi
+  // przez te same reguly, co nazwa (limit, znaki, wulgaryzmy) - patrz checkFirstName.
+  const firstNameProblem = checkFirstName(firstName);
   const canNext =
-    stepName === "welcome" ? true :
+    stepName === "welcome" ? termsAccepted :
     stepName === "source" ? (!!source && (source !== "other" || sourceOther.trim().length > 0)) :
     stepName === "goals" ? (goals.length > 0 && (!goals.includes("other") || goalsOther.trim().length > 0)) :
-    stepName === "username" ? (uStatus === "ok" && firstName.trim().length >= 2 && !savingU) :
-    true; // avatar - opcjonalny
-
-  // Zapis miasta zamieszkania (best-effort - kolumna home_city moze wymagac migracji).
-  const saveHomeCity = async () => {
-    if (user && homeCity.trim()) {
-      try { await (supabase as any).from("profiles").update({ home_city: homeCity.trim() }).eq("id", user.id); }
-      catch { /* migracja jeszcze niewklejona - nie blokuj */ }
-    }
-    goNext();
-  };
+    stepName === "profile" ? (uStatus === "ok" && !firstNameProblem && !!gender && !savingU) :
+    true;
 
   const onPrimary = () => {
-    if (stepName === "welcome" || stepName === "source" || stepName === "goals" || stepName === "avatar") goNext();
-    else if (stepName === "username") saveUsername();
-    else if (stepName === "home") saveHomeCity();
-    else if (stepName === "notify") allowNotifications();
-    else if (stepName === "location") allowLocation();
+    if (stepName === "welcome" || stepName === "source" || stepName === "goals") goNext();
+    else if (stepName === "profile") saveUsername();
     else if (stepName === "tracking") acceptTracking();
   };
 
   const primaryLabel =
-    stepName === "welcome" ? "Zaczynamy" :
-    stepName === "notify" ? "Włącz powiadomienia" :
-    stepName === "location" ? "Włącz lokalizację" :
-    stepName === "tracking" ? "Zgadzam się" :
-    "Dalej";
+    stepName === "welcome" ? t("cta.start") :
+    stepName === "tracking" ? t("cta.agree") :
+    t("cta.next");
 
   return (
     <div className="fixed inset-0 z-[71] bg-[#FEFEFE] flex flex-col">
@@ -293,7 +295,7 @@ const OnboardingFlow = ({ onDone }: Props) => {
         <div className="flex-1 flex gap-1.5">
           {STEPS.map((_, i) => (
             <div key={i} className="h-1.5 flex-1 rounded-full bg-muted overflow-hidden">
-              <div className="h-full bg-orange-600 rounded-full transition-all duration-300" style={{ width: i <= step ? "100%" : "0%" }} />
+              <div className="h-full bg-primary rounded-full transition-all duration-300" style={{ width: i <= step ? "100%" : "0%" }} />
             </div>
           ))}
         </div>
@@ -305,18 +307,41 @@ const OnboardingFlow = ({ onDone }: Props) => {
         {stepName === "welcome" && (
           <div className="flex-1 flex flex-col items-center justify-center text-center">
             <TrasaLogo size={84} className="mb-6" />
-            <h2 className="text-2xl font-black mb-3 leading-tight">{nbsp("Cześć! Tu spontaway")}</h2>
+            <h2 className="text-2xl font-black mb-3 leading-tight">{nbsp(t("welcome.title"))}</h2>
             <p className="text-[15px] text-muted-foreground leading-relaxed max-w-xs">
-              {nbsp("speed dating z miastem. Odkrywaj trasy po mieście stworzone przez innych, zapisuj te które Cię inspirują i twórz własne. Pokażemy Ci to w kilka sekund.")}
+              {nbsp(t("welcome.body"))}
             </p>
+            {/* Akceptacja regulaminu - wymog App Store (Guideline 1.2) przy tresciach userow. */}
+            <button
+              type="button"
+              onClick={() => setTermsAccepted((v) => !v)}
+              className="mt-8 flex items-start gap-3 text-left max-w-xs active:opacity-70 transition-opacity"
+            >
+              <span className={`mt-0.5 h-5 w-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors ${termsAccepted ? "bg-primary border-primary" : "border-border bg-background"}`}>
+                {termsAccepted && <Check className="h-3.5 w-3.5 text-white" strokeWidth={3} />}
+              </span>
+              <span className="text-[13px] text-muted-foreground leading-relaxed">
+                {/* Zdanie z DWOMA linkami w srodku - <Trans>, bo szyk zdania i miejsce linkow
+                    rozni sie miedzy jezykami; sklejanie kawalkow po polsku dawaloby po
+                    angielsku bezsens. */}
+                <Trans
+                  i18nKey="terms.consent"
+                  ns="onboarding"
+                  components={{
+                    terms: <Link to="/terms" onClick={(e) => e.stopPropagation()} className="font-semibold text-foreground underline" />,
+                    privacy: <Link to="/privacy" onClick={(e) => e.stopPropagation()} className="font-semibold text-foreground underline" />,
+                  }}
+                />
+              </span>
+            </button>
           </div>
         )}
 
         {stepName === "source" && (
           <>
             <div className="pt-6">
-              <h2 className="text-2xl font-black mb-2 leading-tight">{nbsp("Skąd znasz spontaway?")}</h2>
-              <p className="text-[15px] text-muted-foreground leading-relaxed">{nbsp("Wybierz jedno - pomoże nam docierać do kolejnych osób.")}</p>
+              <h2 className="text-2xl font-black mb-2 leading-tight">{nbsp(t("source.title"))}</h2>
+              <p className="text-[15px] text-muted-foreground leading-relaxed">{nbsp(t("source.desc"))}</p>
             </div>
             <div className="mt-6 flex flex-col gap-2.5">
               {SOURCE_OPTS.map((o) => {
@@ -328,12 +353,11 @@ const OnboardingFlow = ({ onDone }: Props) => {
                         autoFocus
                         value={sourceOther}
                         onChange={(e) => setSourceOther(capWords(e.target.value, 10))}
-                        onFocus={() => setOtherFocused(true)}
-                        onBlur={() => setOtherFocused(false)}
-                        placeholder="Wpisz, skąd znasz spontaway"
+                        {...focusProps}
+                        placeholder={t("source.other_placeholder")}
                         className="flex-1 bg-transparent text-[15px] font-semibold outline-none placeholder:font-normal placeholder:text-muted-foreground/50"
                       />
-                      <span className="h-6 w-6 rounded-full bg-orange-600 flex items-center justify-center shrink-0"><Check className="h-4 w-4 text-white" strokeWidth={3} /></span>
+                      <span className="h-6 w-6 rounded-full bg-primary flex items-center justify-center shrink-0"><Check className="h-4 w-4 text-white" strokeWidth={3} /></span>
                     </div>
                   );
                 }
@@ -343,8 +367,8 @@ const OnboardingFlow = ({ onDone }: Props) => {
                     onClick={() => setSource(o.id)}
                     className="w-full text-left px-4 py-3.5 rounded-2xl border border-border bg-white text-foreground text-[15px] font-semibold flex items-center justify-between active:scale-[0.99] transition-transform"
                   >
-                    <span>{o.label}</span>
-                    <span className={cn("h-6 w-6 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors", active ? "bg-orange-600 border-orange-600" : "border-muted-foreground/30")}>
+                    <span>{t(o.labelKey)}</span>
+                    <span className={cn("h-6 w-6 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors", active ? "bg-primary border-primary" : "border-muted-foreground/30")}>
                       {active && <Check className="h-4 w-4 text-white" strokeWidth={3} />}
                     </span>
                   </button>
@@ -357,8 +381,8 @@ const OnboardingFlow = ({ onDone }: Props) => {
         {stepName === "goals" && (
           <>
             <div className="pt-6">
-              <h2 className="text-2xl font-black mb-2 leading-tight">{nbsp("W jakim celu chcesz używać spontaway?")}</h2>
-              <p className="text-[15px] text-muted-foreground leading-relaxed">{nbsp("Możesz zaznaczyć kilka.")}</p>
+              <h2 className="text-2xl font-black mb-2 leading-tight">{nbsp(t("goals.title"))}</h2>
+              <p className="text-[15px] text-muted-foreground leading-relaxed">{nbsp(t("goals.desc"))}</p>
             </div>
             <div className="mt-6 flex flex-col gap-2.5">
               {GOAL_OPTS.map((o) => {
@@ -370,12 +394,11 @@ const OnboardingFlow = ({ onDone }: Props) => {
                         autoFocus
                         value={goalsOther}
                         onChange={(e) => setGoalsOther(capWords(e.target.value, 10))}
-                        onFocus={() => setOtherFocused(true)}
-                        onBlur={() => setOtherFocused(false)}
-                        placeholder="Wpisz swój cel"
+                        {...focusProps}
+                        placeholder={t("goals.other_placeholder")}
                         className="flex-1 bg-transparent text-[15px] font-semibold outline-none placeholder:font-normal placeholder:text-muted-foreground/50"
                       />
-                      <button onClick={() => toggleGoal(o.id)} aria-label="Odznacz" className="h-6 w-6 rounded-md bg-orange-600 flex items-center justify-center shrink-0"><Check className="h-4 w-4 text-white" strokeWidth={3} /></button>
+                      <button onClick={() => toggleGoal(o.id)} aria-label="Odznacz" className="h-6 w-6 rounded-md bg-primary flex items-center justify-center shrink-0"><Check className="h-4 w-4 text-white" strokeWidth={3} /></button>
                     </div>
                   );
                 }
@@ -385,8 +408,8 @@ const OnboardingFlow = ({ onDone }: Props) => {
                     onClick={() => toggleGoal(o.id)}
                     className="w-full text-left px-4 py-3.5 rounded-2xl border border-border bg-white text-foreground text-[15px] font-semibold flex items-center justify-between active:scale-[0.99] transition-transform"
                   >
-                    <span>{o.label}</span>
-                    <span className={cn("h-6 w-6 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors", active ? "bg-orange-600 border-orange-600" : "border-muted-foreground/30")}>
+                    <span>{t(o.labelKey)}</span>
+                    <span className={cn("h-6 w-6 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors", active ? "bg-primary border-primary" : "border-muted-foreground/30")}>
                       {active && <Check className="h-4 w-4 text-white" strokeWidth={3} />}
                     </span>
                   </button>
@@ -396,35 +419,66 @@ const OnboardingFlow = ({ onDone }: Props) => {
           </>
         )}
 
-        {stepName === "username" && (
+        {stepName === "profile" && (
           <>
-            <div className="pt-6 text-center">
-              <h2 className="text-2xl font-black mb-2 leading-tight">{nbsp("Jak się nazywasz?")}</h2>
-              <p className="text-[15px] text-muted-foreground leading-relaxed">{nbsp("Nazwa użytkownika będzie widoczna przy Twoich trasach.")}</p>
+            {/* JEDEN ekran profilu (prosba Nat 2026-09-13): zdjecie/awatar + imie + nazwa + plec.
+                Wczesniej "Jak sie nazywasz?" i "Dodaj swoje zdjecie" byly osobnymi krokami. */}
+            <div className="pt-3 text-center">
+              <h2 className="text-2xl font-black mb-2 leading-tight">{nbsp(t("profile.title"))}</h2>
+              <p className="text-[15px] text-muted-foreground leading-relaxed">{nbsp(t("profile.desc"))}</p>
             </div>
-            <div className="mt-8 space-y-5">
+            {/* Zwarte: zdjecie 88 px + rzad awatarow (bez podpisu), zeby imie, nazwa i plec
+                zmiescily sie nad guzikiem bez przewijania na mniejszych ekranach. */}
+            <div className="mt-5 flex flex-col items-center gap-3">
+              <button onClick={pickAvatar} className="relative active:scale-[0.98] transition-transform" aria-label={t("photo.pick")}>
+                <div className="rounded-full overflow-hidden flex items-center justify-center bg-orange-100" style={{ height: 88, width: 88 }}>
+                  <img src={avatarSrc(avatarUrl)} alt="" className="h-full w-full object-cover" />
+                </div>
+                <div className="absolute -bottom-0.5 -right-0.5 h-9 w-9 rounded-full bg-primary border-[3px] border-[#FEFEFE] flex items-center justify-center shadow-md">
+                  {uploading ? <Loader2 className="h-4 w-4 text-white animate-spin" /> : <Plus className="h-4 w-4 text-white" strokeWidth={2.5} />}
+                </div>
+              </button>
+              {/* Awatary bazowe (prosba Nat 2026-09-13): kto nie chce wrzucac zdjecia, wybiera
+                  kolko w kolorze marki (bez znaku) - i nie wchodzi do apki z pustym kolkiem. */}
+              <div className="w-full">
+                <AvatarPresetRow value={avatarUrl} disabled={uploading} onPick={(url) => void pickPresetAvatar(url)} desc="" />
+              </div>
+            </div>
+            <div className="mt-4 space-y-4 pb-4">
               <div>
-                <label className="block text-sm font-semibold mb-2 px-1">Imię</label>
+                <div className="flex items-center justify-between mb-2 px-1">
+                  <label className="block text-sm font-semibold">{t("name.first_label")}</label>
+                  <span className="text-xs text-muted-foreground">{firstName.length}/{FIRST_NAME_MAX}</span>
+                </div>
                 <div className="rounded-2xl border border-border bg-white px-4 focus-within:ring-2 focus-within:ring-orange-500/60 transition-shadow">
                   <input
                     value={firstName}
-                    onChange={(e) => setFirstName(e.target.value.slice(0, 40))}
+                    {...focusProps}
+                    onChange={(e) => setFirstName(e.target.value.slice(0, FIRST_NAME_MAX))}
                     autoCapitalize="words"
                     autoCorrect="off"
-                    placeholder="Twoje imię"
+                    maxLength={FIRST_NAME_MAX}
+                    placeholder={t("name.first_placeholder")}
                     className="w-full bg-transparent py-3.5 px-1 text-lg outline-none text-foreground placeholder:text-muted-foreground/50"
                   />
+                </div>
+                {/* Komunikat dopiero, gdy user cos wpisal - puste pole to nie blad, tylko poczatek. */}
+                <div className="h-5 mt-1.5 px-1 text-sm">
+                  {firstName.trim() && firstNameProblem && firstNameProblem !== "empty" && (
+                    <span className="text-red-600">{t(`name.first_status.${firstNameProblem}`)}</span>
+                  )}
                 </div>
               </div>
               <div>
                 <div className="flex items-center justify-between mb-2 px-1">
-                  <label className="block text-sm font-semibold">Nazwa użytkownika</label>
+                  <label className="block text-sm font-semibold">{t("name.username_label")}</label>
                   <span className="text-xs text-muted-foreground">{username.length}/{USERNAME_MAX}</span>
                 </div>
                 <div className="flex items-center rounded-2xl border border-border bg-white px-4 focus-within:ring-2 focus-within:ring-orange-500/60 transition-shadow">
                   <span className="text-muted-foreground text-lg select-none">@</span>
                   <input
                     value={username}
+                    {...focusProps}
                     onChange={(e) => setUsername(sanitizeUsername(e.target.value))}
                     autoCapitalize="none"
                     autoCorrect="off"
@@ -437,94 +491,43 @@ const OnboardingFlow = ({ onDone }: Props) => {
                   {uStatus === "ok" && <Check className="h-5 w-5 text-green-600" />}
                 </div>
                 <div className="h-6 mt-2 px-1 text-sm">
-                  {uStatus === "ok" && <span className="text-green-600 font-medium">Nazwa dostępna</span>}
-                  {uStatus === "taken" && <span className="text-red-600 font-medium">Ta nazwa jest już zajęta</span>}
-                  {uStatus === "short" && <span className="text-muted-foreground">Minimum 2 znaki</span>}
+                  {uStatus === "ok" && <span className="text-green-600 font-medium">{t("name.username_free")}</span>}
+                  {uStatus !== "ok" && uStatus !== "idle" && uStatus !== "checking" && (
+                    <span className={uStatus === "taken" ? "text-red-600 font-medium" : "text-red-600"}>{t(`name.username_status.${uStatus}`)}</span>
+                  )}
                 </div>
               </div>
-            </div>
-          </>
-        )}
-
-        {stepName === "avatar" && (
-          <>
-            <div className="pt-6 text-center">
-              <h2 className="text-2xl font-black mb-2 leading-tight">{nbsp("Dodaj swoje zdjęcie")}</h2>
-              <p className="text-[15px] text-muted-foreground leading-relaxed">{nbsp("Nieobowiązkowe - ale trasy z awatarem budzą więcej zaufania.")}</p>
-            </div>
-            <div className="flex-1 flex items-center justify-center">
-              <button onClick={pickAvatar} className="relative active:scale-[0.98] transition-transform" aria-label="Wybierz zdjęcie">
-                <div className="h-40 w-40 rounded-full overflow-hidden flex items-center justify-center bg-orange-100">
-                  <img src={avatarSrc(avatarUrl)} alt="" className="h-full w-full object-cover" />
+              {/* Plec - pigulki, jeden wybor. */}
+              <div>
+                <label className="block text-sm font-semibold mb-2 px-1">{t("profile.gender.label")}</label>
+                <div className="flex flex-wrap gap-2">
+                  {GENDER_OPTS.map((o) => {
+                    const on = gender === o.id;
+                    return (
+                      <button
+                        key={o.id}
+                        type="button"
+                        onClick={() => setGender(o.id)}
+                        aria-pressed={on}
+                        className={cn("px-4 py-2.5 rounded-full text-sm font-semibold border transition-colors active:scale-[0.97]",
+                          on ? "bg-primary border-primary text-white" : "bg-white text-foreground border-border")}
+                      >
+                        {t(o.labelKey)}
+                      </button>
+                    );
+                  })}
                 </div>
-                <div className="absolute bottom-1 right-1 h-12 w-12 rounded-full bg-orange-600 border-4 border-[#FEFEFE] flex items-center justify-center shadow-md">
-                  {uploading ? <Loader2 className="h-5 w-5 text-white animate-spin" /> : <Plus className="h-6 w-6 text-white" strokeWidth={2.5} />}
-                </div>
-              </button>
+              </div>
             </div>
             <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onFile} />
-          </>
-        )}
-
-        {stepName === "home" && (
-          <>
-            <div className="pt-6 text-center">
-              <h2 className="text-2xl font-black mb-2 leading-tight">{nbsp("Gdzie mieszkasz?")}</h2>
-              <p className="text-[15px] text-muted-foreground leading-relaxed">{nbsp("Podaj swoje miasto - pomoże nam podpowiadać trasy blisko Ciebie.")}</p>
-            </div>
-            <div className="mt-8">
-              <label className="block text-sm font-semibold mb-2 px-1">Miasto</label>
-              <div className="rounded-2xl border border-border bg-white px-4 focus-within:ring-2 focus-within:ring-orange-500/60 transition-shadow">
-                <input
-                  value={homeCity}
-                  onChange={(e) => setHomeCity(e.target.value.slice(0, 60))}
-                  autoCapitalize="words"
-                  autoCorrect="off"
-                  placeholder="np. Warszawa"
-                  className="w-full bg-transparent py-3.5 px-1 text-lg outline-none text-foreground placeholder:text-muted-foreground/50"
-                />
-              </div>
-            </div>
-          </>
-        )}
-
-        {stepName === "notify" && (
-          <div className="flex-1 flex flex-col items-center justify-center text-center">
-            <h2 className="text-2xl font-black mb-3 leading-tight">{nbsp("Bądź na bieżąco")}</h2>
-            <p className="text-[15px] text-muted-foreground leading-relaxed max-w-xs">{nbsp("Włącz powiadomienia, żeby wiedzieć o nowych trasach i ważnych aktualizacjach. Zawsze możesz to wyłączyć w ustawieniach.")}</p>
-          </div>
-        )}
-
-        {stepName === "location" && (
-          <>
-            <div className="pt-6 text-center">
-              <h2 className="text-2xl font-black mb-2 leading-tight">{nbsp("Miejsca blisko Ciebie")}</h2>
-              <p className="text-[15px] text-muted-foreground leading-relaxed">{nbsp("Pozwól na dostęp do lokalizacji, żeby sortować miejsca według odległości od Ciebie. Nieobowiązkowe.")}</p>
-            </div>
-            {/* Podglad listy miejsc (UI listy z aplikacji) - ilustracja "posortowane po odleglosci". */}
-            <div className="mt-6 flex flex-col gap-2.5">
-              {SAMPLE_NEARBY.map((p) => (
-                <div key={p.name} className="flex items-center gap-3 rounded-2xl bg-secondary px-3 py-2.5">
-                  <div className="h-12 w-12 rounded-xl bg-[#fcede3] flex items-center justify-center shrink-0">
-                    <CategoryIcon category={p.cat} className="h-6 w-6" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-foreground truncate">{p.name}</p>
-                    <p className="text-xs text-muted-foreground">{p.catLabel}</p>
-                  </div>
-                  <span className="text-xs font-semibold text-muted-foreground shrink-0">{p.dist}</span>
-                </div>
-              ))}
-            </div>
-            <div className="flex-1" />
           </>
         )}
 
         {stepName === "tracking" && (
           <>
             <div className="pt-6 text-center">
-              <h2 className="text-2xl font-black mb-2 leading-tight">{nbsp("Pomóż nam ulepszać spontaway")}</h2>
-              <p className="text-[15px] text-muted-foreground leading-relaxed">{nbsp("Zbieramy anonimowe dane o tym, jak korzystasz z aplikacji (np. które ekrany odwiedzasz), żeby ją rozwijać. Nie sprzedajemy Twoich danych. Zgodę zmienisz w każdej chwili w ustawieniach.")}</p>
+              <h2 className="text-2xl font-black mb-2 leading-tight">{nbsp(t("tracking.title"))}</h2>
+              <p className="text-[15px] text-muted-foreground leading-relaxed">{nbsp(t("tracking.desc"))}</p>
             </div>
             {/* Placeholder ikony - nat doda custom ikone do tego widoku. */}
             <div className="flex-1 flex items-center justify-center">
@@ -537,25 +540,19 @@ const OnboardingFlow = ({ onDone }: Props) => {
       </div>
 
       {/* CTA - solidny pomaranczowy guzik (bez gradientu). Chowany gdy input "Inne" w fokusie. */}
-      {!otherFocused && (
+      {!inputFocused && (
       <div className="px-6 pt-4" style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 1.5rem)" }}>
         <button
           onClick={onPrimary}
-          disabled={!canNext || permBusy || (stepName === "tracking" && finishing)}
-          className="w-full py-4 rounded-2xl bg-orange-600 text-white font-bold text-base shadow-lg active:scale-[0.98] transition-transform disabled:opacity-50"
+          disabled={!canNext || (stepName === "tracking" && finishing)}
+          className="w-full py-4 rounded-2xl bg-primary text-white font-bold text-base shadow-lg active:scale-[0.98] transition-transform disabled:opacity-50"
         >
-          {(savingU || permBusy || (stepName === "tracking" && finishing))
+          {(savingU || (stepName === "tracking" && finishing))
             ? <Loader2 className="h-5 w-5 animate-spin mx-auto" />
             : primaryLabel}
         </button>
-        {stepName === "avatar" && (
-          <button onClick={goNext} className="w-full py-3 mt-1 text-sm font-medium text-muted-foreground">Pomiń</button>
-        )}
-        {(stepName === "notify" || stepName === "location") && (
-          <button onClick={goNext} disabled={permBusy} className="w-full py-3 mt-1 text-sm font-medium text-muted-foreground">Nie teraz</button>
-        )}
         {stepName === "tracking" && (
-          <button onClick={declineTracking} disabled={finishing} className="w-full py-3 mt-1 text-sm font-medium text-muted-foreground">Nie teraz</button>
+          <button onClick={declineTracking} disabled={finishing} className="w-full py-3 mt-1 text-sm font-medium text-muted-foreground">{t("cta.not_now")}</button>
         )}
       </div>
       )}

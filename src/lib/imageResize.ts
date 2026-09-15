@@ -49,19 +49,28 @@ export async function resizeImage(file: File): Promise<File> {
     ctx.drawImage(bitmap, 0, 0, dstW, dstH);
     bitmap.close?.();
 
-    // Zwroc jako JPEG (najlepszy stosunek jakosc/rozmiar dla zdjec).
-    // PNG zachowujemy gdy ma alfa channel (logo z transparencja).
+    // Zdjecia zapisujemy jako WebP (~30% lzejszy od JPEG przy tej samej jakosci). Safari umie go
+    // kodowac dopiero od 16.4, a starsze po cichu oddaja PNG - czyli plik CIEZSZY niz JPEG.
+    // Dlatego sprawdzamy typ wyniku i przy braku wsparcia wracamy do JPEG.
+    // PNG zachowujemy gdy plik zrodlowy jest PNG (logo z przezroczystoscia).
     const isPng = file.type === "image/png";
-    const outputType = isPng ? "image/png" : "image/jpeg";
-    const blob = await new Promise<Blob | null>((resolve) => {
+    let outputType = isPng ? "image/png" : "image/webp";
+    let blob = await new Promise<Blob | null>((resolve) => {
       canvas.toBlob(resolve, outputType, QUALITY);
     });
+    if (!isPng && (!blob || blob.type !== "image/webp")) {
+      outputType = "image/jpeg";
+      blob = await new Promise<Blob | null>((resolve) => {
+        canvas.toBlob(resolve, outputType, QUALITY);
+      });
+    }
     if (!blob) return file;
 
     // Skip jesli "skompresowane" jest wieksze niz oryginal (rzadkie, np. juz mocno skompresowane male JPG)
     if (blob.size >= file.size) return file;
 
-    const newName = file.name.replace(/\.(heic|heif|webp|gif)$/i, isPng ? ".png" : ".jpg");
+    const ext = outputType === "image/png" ? ".png" : outputType === "image/webp" ? ".webp" : ".jpg";
+    const newName = file.name.replace(/\.(heic|heif|webp|gif|jpe?g|png)$/i, ext);
     return new File([blob], newName, { type: outputType, lastModified: Date.now() });
   } catch (err) {
     console.warn("[imageResize] resize failed, using original file:", err);

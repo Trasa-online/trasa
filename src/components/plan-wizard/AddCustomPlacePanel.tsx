@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { X, Search, Link, MapPin, Loader2, Plus } from "lucide-react";
 import { APIProvider, useMapsLibrary } from "@vis.gl/react-google-maps";
 import { GOOGLE_MAPS_API_KEY } from "@/lib/googleMaps";
@@ -46,6 +47,7 @@ const detectCategory = (types: string[]): PlaceCategory => {
 // ─── Inner (needs Maps context) ───────────────────────────────────────────────
 
 const Inner = ({ city, onAdd, onCancel }: AddCustomPlacePanelProps) => {
+  const { t } = useTranslation("plan");
   const [query, setQuery] = useState("");
   const [mode, setMode] = useState<"text" | "googlemaps" | "social">("text");
   const [status, setStatus] = useState<"idle" | "loading" | "preview" | "error">("idle");
@@ -88,7 +90,7 @@ const Inner = ({ city, onAdd, onCancel }: AddCustomPlacePanelProps) => {
     setStatus("loading");
     setShowSuggestions(false);
     geocoderRef.current.geocode({ placeId, language: "pl" }, (results: any[], s: string) => {
-      if (s !== "OK" || !results?.[0]) { setStatus("error"); setErrorMsg("Nie udało się znaleźć tego miejsca."); return; }
+      if (s !== "OK" || !results?.[0]) { setStatus("error"); setErrorMsg(t("custom.not_found")); return; }
       const r = results[0];
       const loc = r.geometry.location;
       const types: string[] = r.types ?? [];
@@ -147,17 +149,17 @@ const Inner = ({ city, onAdd, onCancel }: AddCustomPlacePanelProps) => {
                 resolveByPlaceId(p.place_id, p.structured_formatting?.main_text);
               } else {
                 setStatus("error");
-                setErrorMsg("Nie udało się dopasować miejsca z tego linku.");
+                setErrorMsg(t("custom.link_no_match"));
               }
             }
           );
         } else {
           setStatus("error");
-          setErrorMsg("Nie udało się odczytać miejsca z tego linku Google Maps.");
+          setErrorMsg(t("custom.maps_link_failed"));
         }
       } catch {
         setStatus("error");
-        setErrorMsg("Nieprawidłowy link.");
+        setErrorMsg(t("custom.bad_link"));
       }
       return;
     }
@@ -169,7 +171,7 @@ const Inner = ({ city, onAdd, onCancel }: AddCustomPlacePanelProps) => {
         });
         if (error || !data?.places?.length) {
           setStatus("error");
-          setErrorMsg("Nie udało się odczytać miejsca z tego linku. Spróbuj wpisać nazwę ręcznie.");
+          setErrorMsg(t("custom.link_failed"));
           return;
         }
         const extracted = data.places[0] as { place_name: string };
@@ -186,14 +188,14 @@ const Inner = ({ city, onAdd, onCancel }: AddCustomPlacePanelProps) => {
                 setShowSuggestions(true);
               } else {
                 setStatus("error");
-                setErrorMsg(`Znalazłam nazwę „${extracted.place_name}", ale nie udało się jej zlokalizować. Popraw nazwę ręcznie.`);
+                setErrorMsg(t("custom.found_not_located", { name: extracted.place_name }));
               }
             }
           );
         }
       } catch {
         setStatus("error");
-        setErrorMsg("Wystąpił błąd. Spróbuj wpisać nazwę ręcznie.");
+        setErrorMsg(t("custom.error"));
       }
     }
   };
@@ -209,7 +211,7 @@ const Inner = ({ city, onAdd, onCancel }: AddCustomPlacePanelProps) => {
   return (
     <div className="flex flex-col h-full px-4 py-4 gap-4">
       <div className="flex items-center justify-between">
-        <p className="text-base font-semibold">Dodaj swoje miejsce</p>
+        <p className="text-base font-semibold">{t("custom.title")}</p>
         <button onClick={onCancel} className="h-8 w-8 flex items-center justify-center rounded-full bg-muted text-muted-foreground active:opacity-60">
           <X className="h-4 w-4" />
         </button>
@@ -225,7 +227,7 @@ const Inner = ({ city, onAdd, onCancel }: AddCustomPlacePanelProps) => {
             type="text"
             value={query}
             onChange={handleTextChange}
-            placeholder="Nazwa miejsca lub wklej link…"
+            placeholder={t("custom.placeholder")}
             className="flex-1 text-base bg-transparent outline-none placeholder:text-muted-foreground"
             style={{ fontSize: "16px" }}
           />
@@ -270,7 +272,7 @@ const Inner = ({ city, onAdd, onCancel }: AddCustomPlacePanelProps) => {
       {status === "loading" && (
         <div className="flex-1 flex flex-col items-center justify-center gap-3 text-muted-foreground">
           <Loader2 className="h-6 w-6 animate-spin" />
-          <p className="text-sm">{mode === "social" ? "Analizuję link…" : "Szukam miejsca…"}</p>
+          <p className="text-sm">{mode === "social" ? t("custom.reading_link") : t("custom.searching")}</p>
         </div>
       )}
 
@@ -287,7 +289,7 @@ const Inner = ({ city, onAdd, onCancel }: AddCustomPlacePanelProps) => {
           <div className="rounded-2xl border border-border bg-card p-4 space-y-1">
             <div className="flex items-start gap-3">
               <div className="w-10 h-10 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0">
-                <MapPin className="h-5 w-5 text-orange-600" />
+                <MapPin className="h-5 w-5 text-primary" />
               </div>
               <div className="min-w-0">
                 <p className="font-semibold text-base leading-tight">{preview.place_name}</p>
@@ -298,17 +300,17 @@ const Inner = ({ city, onAdd, onCancel }: AddCustomPlacePanelProps) => {
 
           <button
             onClick={() => onAdd(preview)}
-            className="w-full h-12 rounded-full bg-primary text-white text-base font-semibold shadow-lg shadow-primary/20 active:opacity-80 transition-opacity flex items-center justify-center gap-2"
+            className="w-full h-12 rounded-full bg-primary text-white text-base font-semibold active:opacity-80 transition-opacity flex items-center justify-center gap-2"
           >
             <Plus className="h-4 w-4" />
-            Dodaj do trasy
+            {t("custom.add_to_route")}
           </button>
 
           <button
             onClick={() => { setPreview(null); setStatus("idle"); setQuery(""); setMode("text"); }}
             className="text-sm text-muted-foreground text-center active:opacity-60"
           >
-            Szukaj innego miejsca
+            {t("custom.search_another")}
           </button>
         </div>
       )}
@@ -317,7 +319,7 @@ const Inner = ({ city, onAdd, onCancel }: AddCustomPlacePanelProps) => {
       {status === "idle" && !query && (
         <div className="flex-1 flex flex-col justify-center gap-3">
           {[
-            { icon: "🔍", text: "Wpisz nazwę miejsca, hotelu lub ulicy" },
+            { icon: "🔍", text: t("custom.hint") },
             { icon: "📍", text: "Wklej link Google Maps" },
             { icon: "📱", text: "Wklej link z Instagrama lub TikToka" },
           ].map(({ icon, text }) => (

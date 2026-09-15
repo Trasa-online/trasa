@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState, lazy as reactLazy, Suspense } from "react";
+import { useTranslation } from "react-i18next";
+import SpontawayLanding from "./pages/SpontawayLanding";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -9,12 +11,18 @@ import { AuthDrawerProvider } from "@/hooks/useAuthDrawer";
 import { useNativePush } from "@/hooks/useNativePush";
 import { useNetworkReconnect } from "@/hooks/useNetworkReconnect";
 import { useAppResume } from "@/hooks/useAppResume";
+import { useNotificationsLive } from "@/hooks/useNotificationsLive";
+import { useLanguageSync } from "@/hooks/useLanguageSync";
+import i18n from "@/i18n";
+import { useEdgeSwipeBack } from "@/hooks/useEdgeSwipeBack";
 import AuthDrawer from "@/components/auth/AuthDrawer";
+import PermissionPrimerSheet from "@/components/permissions/PermissionPrimerSheet";
 import { businessPanelPath } from "@/lib/businessRedirect";
 import { TrasaLogo } from "@/components/TrasaLogo";
 import { OnboardingProvider } from "@/components/OnboardingGuide";
+import UpdateGate from "@/components/UpdateGate";
 import { supabase } from "@/integrations/supabase/client";
-import { isNative } from "@/lib/platform";
+import { isNative, isWeb } from "@/lib/platform";
 import { PLANNING_DISABLED } from "@/lib/appMode";
 import { App as CapApp } from "@capacitor/app";
 import { Browser } from "@capacitor/browser";
@@ -23,6 +31,7 @@ import { toast } from "sonner";
 const MAINTENANCE_MODE = false;
 
 function MaintenanceScreen({ onUnlock }: { onUnlock: () => void }) {
+  const { t } = useTranslation("common");
   const [pwd, setPwd] = useState("");
   const [err, setErr] = useState(false);
   const submit = () => {
@@ -33,23 +42,21 @@ function MaintenanceScreen({ onUnlock }: { onUnlock: () => void }) {
     <div style={{ minHeight: "100dvh", background: "#FEFEFE", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 20, fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", padding: 24 }}>
       <div style={{ width: 64, height: 64, borderRadius: "50%", background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
       <h1 style={{ fontSize: "2rem", fontWeight: 900, color: "#0E0E0E", letterSpacing: "-0.02em", margin: 0 }}>trasa</h1>
-      <p style={{ fontSize: "1rem", color: "#979797", textAlign: "center", maxWidth: "28ch", lineHeight: 1.5, margin: 0 }}>Pracujemy nad czymś fajnym. Wróć wkrótce.</p>
+      <p style={{ fontSize: "1rem", color: "#979797", textAlign: "center", maxWidth: "28ch", lineHeight: 1.5, margin: 0 }}>{t("maintenance.desc")}</p>
       <div style={{ display: "flex", flexDirection: "column", gap: 8, width: "100%", maxWidth: 280, marginTop: 8 }}>
         <input
           type="password"
           value={pwd}
           onChange={e => { setPwd(e.target.value); setErr(false); }}
           onKeyDown={e => e.key === "Enter" && submit()}
-          placeholder="Hasło dostępu"
+          placeholder={t("maintenance.password")}
           style={{ width: "100%", padding: "12px 14px", borderRadius: 14, border: "1px solid #e2e8f0", background: "#fff", fontSize: 16, outline: "none", textAlign: "center" }}
         />
-        {err && <p style={{ fontSize: 12, color: "#ef4444", textAlign: "center", margin: 0 }}>Nieprawidłowe hasło</p>}
+        {err && <p style={{ fontSize: 12, color: "#ef4444", textAlign: "center", margin: 0 }}>{t("maintenance.wrong")}</p>}
         <button
           onClick={submit}
           style={{ width: "100%", padding: "12px 14px", borderRadius: 14, border: "none", background: "linear-gradient(90deg,#F4A259,#F9662B)", color: "#fff", fontWeight: 700, fontSize: 16, cursor: "pointer" }}
-        >
-          Wejdź
-        </button>
+        >{t("maintenance.enter")}</button>
       </div>
     </div>
   );
@@ -64,9 +71,7 @@ function MaintenanceGate({ children }: { children: React.ReactNode }) {
   if (unlocked) return <>{children}</>;
   const isPublicRoute =
     location.pathname === "/auth" ||
-    location.pathname === "/waitlist" ||
-    location.pathname === "/landing" ||
-    location.pathname === "/landing-v2" ||
+    location.pathname === "/" ||
     location.pathname.startsWith("/set-password") ||
     location.pathname.startsWith("/biznes/") ||
     location.pathname.startsWith("/dla-firm/");
@@ -78,9 +83,9 @@ function MaintenanceGate({ children }: { children: React.ReactNode }) {
 // do: marketingu (landing / waitlist / legal), B2B (auth biznesowy, set-password, dashboard
 // /biznes, /dla-firm, claim lokalu /lokal) + callbackow auth (?code=/?token_hash=).
 // Native (iOS/Capacitor) = pelna apka, bez redirectu. Cala reszta (rdzen B2C: eksploruj,
-// wyjazdy, trasy, sesje grupowe, planer, linki share /route//profil, /demo) -> /waitlist.
+// wyjazdy, trasy, sesje grupowe, planer, linki share /route//profil, /demo) -> "/".
 //
-// Pre-launch: docelowo /waitlist (lapie odwiedzajacego). Po wejsciu do App Store podmienic
+// Pre-launch: docelowo "/" = landing spontaway (lapie odwiedzajacego). Po wejsciu do App Store podmienic
 // redirect na dedykowany ekran "Pobierz z App Store" (komponent NativeGate).
 function WebWaitlistGate({ children }: { children: React.ReactNode }) {
   const location = useLocation();
@@ -89,12 +94,17 @@ function WebWaitlistGate({ children }: { children: React.ReactNode }) {
   const p = location.pathname;
   const allowed =
     // Marketing / legal (B2C web presence)
-    p === "/waitlist" || p === "/landing" || p === "/landing-v2" ||
+    p === "/" ||
     p === "/terms" || p === "/privacy" ||
     // B2B: auth biznesowy, ustawianie hasla, dashboard, landing dla firm, claim lokalu
     p === "/auth" || p.startsWith("/set-password") || p.startsWith("/biznes") ||
-    p.startsWith("/dla-firm") || p.startsWith("/lokal/");
-  if (!allowed && !hasAuthParams) return <Navigate to="/waitlist" replace />;
+    p.startsWith("/dla-firm") || p.startsWith("/lokal/") ||
+    // Udostepniony wyjazd / lista - to jedyna tresc B2C, ktora MA dzialac na webie: odbiorca
+    // linku zwykle nie ma jeszcze aplikacji. Dotad ladowal na landingu i nie widzial tego, co
+    // mu wyslano (znalezione 2026-09-08). RLS wypuszcza tylko trasy is_shared=true i listy
+    // publiczne, wiec prywatne robocze nadal nie wyciekaja.
+    p.startsWith("/route/") || p.startsWith("/lista/");
+  if (!allowed && !hasAuthParams) return <Navigate to="/" replace />;
   return <>{children}</>;
 }
 
@@ -230,18 +240,26 @@ function GlobalAuthCallback() {
             if (ageMs < 60_000 && user.email) {
               console.log("[GlobalAuthCallback] new OAuth user detected, sending welcome");
               supabase.functions.invoke("send-b2c-welcome", {
-                body: { email: user.email, first_name: profile.first_name ?? user.user_metadata?.full_name?.split(" ")[0] ?? "" },
+                body: {
+                  email: user.email,
+                  first_name: profile.first_name ?? user.user_metadata?.full_name?.split(" ")[0] ?? "",
+                  // Konto ma sekunde, wiec profiles.language jeszcze nie zdazylo sie zapisac -
+                  // bierzemy jezyk wprost z interfejsu.
+                  lang: (i18n.language || "").toLowerCase().startsWith("en") ? "en" : "pl",
+                },
               }).catch((err) => console.warn("[send-b2c-welcome] failed:", err));
             }
           }
         } catch (e) {
           console.warn("[GlobalAuthCallback] welcome mail check failed:", e);
         }
-        toast.success("Witamy w Trasie 🧡");
+        toast.success("Witamy w spontaway 🧡");
         // Web OAuth wraca na origin/ i tracimy kontekst route. Jesli przed logowaniem
         // zapisalismy docelowa sciezke (np. /sesja/KOD - dolaczanie do sesji grupowej),
         // wracamy do niej zamiast na /eksploruj (= waitlista na web).
-        // Priorytet: ?next= z URL (odporny na in-app browser) > sessionStorage > /eksploruj.
+        // Priorytet: ?next= z URL (odporny na in-app browser) > sessionStorage > ekran startowy.
+        // Ekran startowy = Eksploruj (IA 2026-09-11: nowy user nie moze zaczynac od pustego
+        // Feedu - nikogo jeszcze nie obserwuje). Na webie to i tak bramka waitlisty.
         let dest = "/eksploruj";
         try {
           const stored = sessionStorage.getItem("trasa_post_login_redirect");
@@ -316,12 +334,21 @@ function NativeDeepLinkHandler() {
   return null;
 }
 
+// Root strony. Na webie spontaway.com ma pokazywac landing B2C, ale Supabase wraca
+// z linkow aktywacyjnych/OAuth wlasnie na root (?code=, ?token_hash=, #access_token=),
+// wiec przy takim URL-u nadal musi zadzialac RootPage z wymiana kodu na sesje.
+function WebRoot() {
+  const hasAuthParams = /[?&#](code|token_hash|error|access_token)=/.test(window.location.href);
+  if (isNative || hasAuthParams) return <RootPage />;
+  return <SpontawayLanding />;
+}
+
 function RootPage() {
   const { loading } = useAuth();
   const [exchangingCode, setExchangingCode] = useState(false);
   const [codeChecked, setCodeChecked] = useState(false);
 
-  // Po kliknieciu linka aktywacyjnego Supabase redirectuje na trasa.travel z
+  // Po kliknieciu linka aktywacyjnego Supabase redirectuje na spontaway.com z
   // jednym z kilku formatow:
   // - PKCE flow: ?code=XYZ
   // - Token hash flow: ?token_hash=XYZ&type=signup (nowsze Supabase)
@@ -442,6 +469,7 @@ function RootPage() {
     );
   }
   // Onboarding v3 = coach-overlay na realnych ekranach (OnboardingProvider), nie osobny route.
+  // Ekran startowy = Eksploracja (/eksploruj): jedyny widok odkrywania (IA 2026-09-13).
   return <Navigate to="/eksploruj" replace />;
 }
 
@@ -463,31 +491,10 @@ function RouteTracker() {
 // OUTSIDE the WebView — we only need to call SplashScreen.hide() when ready.
 // This React component is the web/PWA fallback (no native splash there).
 
-// Animowany splash (logo "mryga" - pulsuje). Renderowany w WebView na natywnym i
-// web; natywny statyczny splash chowamy zaraz po starcie (oba tla #FEFEFE).
-function SplashScreen({ done }: { done: boolean }) {
-  const [hidden, setHidden] = useState(false);
-
-  useEffect(() => {
-    if (!done) return;
-    const t = setTimeout(() => setHidden(true), 450);
-    return () => clearTimeout(t);
-  }, [done]);
-
-  if (hidden) return null;
-
-  return (
-    <div
-      className="fixed inset-0 z-[9999] bg-background flex items-center justify-center"
-      style={{ transition: "opacity 0.4s", opacity: done ? 0 : 1 }}
-    >
-      {/* Loading = POMARAŃCZOWY symbol spontaway na białym tle (#FEFEFE), 1:1 z natywnym
-          splashem, żeby przejście native->React było bezszwowe (bez skoku koloru).
-          Rozmiar ~22% szerokości ekranu jak symbol na natywnym splashu. */}
-      <TrasaLogo size={88} />
-    </div>
-  );
-}
+// Ekran startowy przeniesiony do SplashDraw (znak rysuje sie od lewej). Renderujemy go
+// TAKZE na natywnym: natywny splash jest teraz JEDNOLITYM tlem #FEFEFE bez znaku, wiec nie
+// ma juz problemu "dwoch log" - to React rysuje znak, a natywny ekran tylko trzyma kolor,
+// zanim WebView zdazy odmalowac pierwsza klatke.
 
 // Czy aktualny URL to flow resetu hasla (recovery)? Wtedy guardy biznesowe NIE moga
 // redirectowac usera do panelu - SetPassword ma pokazac formularz nowego hasla.
@@ -505,13 +512,42 @@ function SplashController() {
   const location = useLocation();
   const booted = useRef(false);
 
+  // Splash to afordancja ZIMNEGO STARTU APLIKACJI NATYWNEJ. Na webie nie ma czego
+  // przykrywac: aplikacja konsumencka jest tam zablokowana, wiec zostaja strony
+  // marketingowe i legal - a na nich ten ekran tylko zaslania tresc. Na landingu bylo to
+  // szczegolnie kosztowne: przy kolejnym wejsciu tego samego dnia splash rysowal pelnoekranowy
+  // szkielet na z-[9999], wiec przykrywal prerenderowana strone i to WLASNIE jego widac bylo
+  // jako "miganie szkieletu", mimo ze HTML przychodzil juz z trescia. (Ten szkielet zostal
+  // usuniety 2026-09-08 - patrz nizej - ale reguly `skipSplash` nie ruszamy: na webie splash
+  // i tak nie ma czego przykrywac.)
   const skipSplash =
+    isWeb ||
     location.pathname.startsWith("/biznes") ||
     location.pathname.startsWith("/dla-firm") ||
     location.pathname === "/auth" ||
     location.pathname.startsWith("/set-password");
 
   const [visible, setVisible] = useState(!skipSplash);
+  const [replayKey, setReplayKey] = useState(0);
+  // Wariant C z eksploracji: znak rysuje sie przy PIERWSZYM zimnym starcie w ciagu doby, a przy
+  // kolejnych od razu widac szkielet ekranu, na ktory user wchodzi. Marka dostaje swoja chwile
+  // raz dziennie; poza tym liczy sie najkrotszy odbierany czas, a nie kolejna animacja.
+  const [branded] = useState(() => {
+    try {
+      const last = Number(localStorage.getItem("spontaway_splash_seen") || 0);
+      const fresh = Date.now() - last > 12 * 60 * 60 * 1000;
+      if (fresh) localStorage.setItem("spontaway_splash_seen", String(Date.now()));
+      return fresh;
+    } catch { return true; }   // brak localStorage (prywatne okno) - pokaz znak
+  });
+  const [forceBranded, setForceBranded] = useState(false);
+  // Podglad dla testera (Ustawienia -> "Pokaż ekran startowy", admin): odtwarza animacje bez
+  // ubijania aplikacji. Zwykly user trafia na ten ekran wylacznie przy zimnym starcie.
+  useEffect(() => {
+    const replay = () => { setForceBranded(true); setReplayKey((k) => k + 1); setVisible(true); setBootDone(true); setMinElapsed(true); };
+    window.addEventListener("spontaway:replay-splash", replay);
+    return () => window.removeEventListener("spontaway:replay-splash", replay);
+  }, []);
   const [bootDone, setBootDone] = useState(false);
   const [minElapsed, setMinElapsed] = useState(false);
   // Splash znika gdy boot gotowy ORAZ minal krotki min. czas (zeby statyczny
@@ -528,15 +564,18 @@ function SplashController() {
   // zeby nie bylo DWOCH log: wczesniejsze wczesne hide + React splash dawalo natywne logo
   // (scaleAspectFill ~185pt) NALOZONE na React (88pt) = dwa koncentryczne loga trasy.
   // Na trasach skipSplash (biznes/auth/...) chowamy od razu (te ekrany maja wlasne UI).
+  // Natywny splash chowamy OD RAZU po zamontowaniu Reacta - to on ma zaraz narysowac znak.
+  // Wczesniej czekalismy na koniec bootu, bo natywny splash niosl logo i React nie mogl
+  // pokazac drugiego. Teraz natywny ekran to samo tlo #FEFEFE (identyczne z SplashDraw),
+  // wiec podmiana jest niewidoczna, a animacja startuje natychmiast.
   useEffect(() => {
     if (!isNative) return;
-    if (!skipSplash && !done) return;
     let cancelled = false;
     import("@capacitor/splash-screen").then(({ SplashScreen: NativeSplash }) => {
-      if (!cancelled) NativeSplash.hide({ fadeOutDuration: skipSplash ? 0 : 300 }).catch(() => {});
+      if (!cancelled) NativeSplash.hide({ fadeOutDuration: 0 }).catch(() => {});
     });
     return () => { cancelled = true; };
-  }, [done, skipSplash]);
+  }, []);
 
   useEffect(() => {
     if (!visible || loading || booted.current) return;
@@ -576,10 +615,24 @@ function SplashController() {
   }, [done]);
 
   if (!visible) return null;
-  // Native: natywny splash (poza WebView) jest jedynym splashem - React nie renderuje
-  // drugiego loga. Web/PWA: React SplashScreen z logo (tam nie ma natywnego splasha).
-  if (isNative) return null;
-  return <SplashScreen done={done} />;
+  // Uzytkownik NIEZALOGOWANY idzie na ekran logowania, a nie do ukladu aplikacji - szkielet
+  // listy czy profilu obiecywalby mu wtedy cos, czego zaraz nie zobaczy. Gdy sesji nie ma,
+  // chowamy splash od razu (zgloszenie Nat 2026-09-04: "przed widokiem logowania pokazuje
+  // sie szkielet"). Dopoki `loading` trwa, jeszcze nie wiemy - wtedy splash zostaje.
+  if (!loading && !user && !forceBranded) return null;
+  // Kolejny start w ciagu 12 h: BEZ szkieletu, ale i BEZ pustki - lekki splash ze znakiem
+  // i pulsem (SplashPulse). Historia: (zgloszenie Nat 2026-09-08:
+  // "na eksploracji sa dwa szkielety"). Byly rzeczywiscie dwa, jeden po drugim: najpierw ten
+  // splashowy na z-[9999], a po jego zniknieciu szkielet z Suspense, ktory czeka na paczke
+  // ekranu. Ten pierwszy niczego nie wnosil - drugi i tak musi tam byc, bo kod ekranu laduje
+  // sie leniwie. Oddajemy wiec sterowanie od razu jemu.
+  //
+  // Natywny splash jest juz schowany (efekt wyzej, niezalezny od tej galezi), a komponent
+  // dalej sie montuje i wykonuje logike startowa - `return null` pomija tylko rysowanie.
+  if (!branded && !forceBranded) return <SplashPulse />;
+  // key: przy ponownym odpaleniu (podglad admina) komponent montuje sie od zera, wiec animacja
+  // rysowania startuje od poczatku zamiast zostac na koncowej klatce.
+  return <SplashDraw key={replayKey} done={done} onHidden={() => setVisible(false)} />;
 }
 
 // Blocks unauthenticated access to app routes - redirects to /auth with optional hint.
@@ -637,6 +690,9 @@ function BusinessGuard() {
   return null;
 }
 import CookieBanner from "./components/CookieBanner";
+import ScreenSkeleton, { variantForPath } from "./components/layout/ScreenSkeleton";
+import SplashPulse from "./components/layout/SplashPulse";
+import SplashDraw from "./components/layout/SplashDraw";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { isHardcodedAdmin } from "@/lib/admins";
 
@@ -663,9 +719,6 @@ function lazy(factory: Parameters<typeof reactLazy>[0]) {
 }
 
 // Lazy-loaded public pages - one chunk each, fetched on demand
-const WaitlistPage = lazy(() => import("./pages/WaitlistPage"));
-const LandingPage = lazy(() => import("./pages/LandingPage"));
-const LandingV2 = lazy(() => import("./pages/LandingV2"));
 import ForBusinessPage from "./pages/ForBusinessPage";
 import Auth from "./pages/Auth";
 import Terms from "./pages/Terms";
@@ -675,12 +728,10 @@ import NotFound from "./pages/NotFound";
 const AppLayout        = lazy(() => import("./components/layout/AppLayout"));
 const HomeSwipe        = lazy(() => import("./pages/HomeSwipe"));
 const Explore          = lazy(() => import("./pages/Explore"));
-const LikedPlaces      = lazy(() => import("./pages/LikedPlaces"));
+const Miejsca          = lazy(() => import("./pages/Miejsca"));
 const CreateRanking    = lazy(() => import("./pages/CreateRanking"));
 const ComposeWyjazd    = lazy(() => import("./pages/ComposeWyjazd"));
 const CountryCityPicker = lazy(() => import("./pages/CountryCityPicker"));
-const CreateDrafts     = lazy(() => import("./pages/CreateDrafts"));
-const CreateSaved      = lazy(() => import("./pages/CreateSaved"));
 const StartWyjazd      = lazy(() => import("./pages/StartWyjazd"));
 const CreateRoute      = lazy(() => import("./pages/CreateRoute"));
 const Settings         = lazy(() => import("./pages/Settings"));
@@ -689,10 +740,8 @@ const DayReview        = lazy(() => import("./pages/DayReview"));
 const SetPassword      = lazy(() => import("./pages/SetPassword"));
 const TravelerProfile  = lazy(() => import("./pages/TravelerProfile"));
 const MyTrips          = lazy(() => import("./pages/MyTrips"));
-const Journal          = lazy(() => import("./pages/Journal"));
 const EditPlan         = lazy(() => import("./pages/EditPlan"));
 const ReviewSummary    = lazy(() => import("./pages/ReviewSummary"));
-const ActiveTrip       = lazy(() => import("./pages/ActiveTrip"));
 const AddPlaceToTrip   = lazy(() => import("./pages/AddPlaceToTrip"));
 const PlanWizard       = lazy(() => import("./pages/PlanWizard"));
 const AddFriend        = lazy(() => import("./pages/AddFriend"));
@@ -718,7 +767,7 @@ function PlanRoute() {
   // wyjazdMode ("Stworz wyjazd" - miasto+daty+swiper -> wyjazd, bez kulminacji w planie AI).
   // exploreMode ("Przegladaj") wchloniete przez /eksploruj (lokalny toggle feed<->swiper,
   // seamless). Stare wejscia do /plan exploreMode przekierowujemy na /eksploruj (widok swipera).
-  if (st?.exploreMode) return <Navigate to="/eksploruj" state={{ view: "browse", city: st?.city }} replace />;
+  if (st?.exploreMode) return <Navigate to="/miejsca" state={{ city: st?.city }} replace />;
   const allowed = !!st?.wyjazdMode;
   if (PLANNING_DISABLED && !allowed) return <Navigate to="/eksploruj" replace />;
   return <PlanWizard />;
@@ -742,11 +791,18 @@ function AuthDrawerProviderWrapper({ children }: { children: React.ReactNode }) 
   // Native iOS APNs registration - tylko gdy user logged in + isNative.
   // Web/PWA uzywa osobnego usePushNotifications (Service Worker + VAPID).
   useNativePush();
+  // GLOBALNE powiadomienia in-app (toast + badge) na wszystkich ekranach - dziala gdy user w apce
+  // (nawet tam gdzie nie ma TopBara, np. /moj-profil, /route). Realtime na tabeli notifications.
+  useNotificationsLive();
+  // Jezyk interfejsu -> profiles.language: bez tego pushe (budowane w bazie) ida po polsku.
+  useLanguageSync();
   // Native network reconnect detection - invalidateQueries gdy connection wraca.
   // No-op na webie (refetchOnReconnect: "always" w queryClient zalatwia sprawe).
   useNetworkReconnect();
   // Odswiezenie danych po powrocie appki na wierzch (m.in. swieze profile biznesow po edycji).
   useAppResume();
+  // Gest natywny: przeciagniecie od lewej krawedzi = cofniecie (WKWebView nie ma systemowego).
+  useEdgeSwipeBack();
   return (
     <AuthDrawerProvider user={user} loading={loading}>
       {children}
@@ -769,23 +825,36 @@ const App = () => (
         <BusinessGuard />
         <CookieBanner />
         <AuthDrawer />
+        {/* Arkusz "miekkiego pytania" o zgody systemowe (push/lokalizacja) - lib/permissionPrompts. */}
+        <PermissionPrimerSheet />
+        {/* Zdalna brama minimalnej wersji (native) - patrz UpdateGate. Renderuje sie NAD
+            wszystkim (z-200), tylko gdy build jest ponizej progu z app_config. */}
+        {isNative && <UpdateGate />}
         <OnboardingProvider>
         <MaintenanceGate>
         <WebWaitlistGate>
         <AuthGate>
-        <Suspense fallback={<div className="h-screen flex items-center justify-center"><div className="h-8 w-8 rounded-full border-2 border-orange-500 border-t-transparent animate-spin" /></div>}>
+        {/* Przejscie miedzy ekranami: szkielet ukladu docelowego zamiast pustego ekranu ze
+            spinnerem (prosba Nat 2026-08-31). Wariant zgadujemy z adresu - w tym momencie
+            komponent ekranu jeszcze sie nie zaladowal. */}
+        <Suspense fallback={<ScreenSkeleton variant={variantForPath(window.location.hash)} />}>
         <Routes>
           <Route path="/auth" element={<Auth />} />
-          <Route path="/waitlist" element={<WaitlistPage />} />
-          <Route path="/landing" element={<LandingPage />} />
-          <Route path="/landing-v2" element={<LandingV2 />} />
+          {/* Landing B2C (spontaway) stoi pod "/" (patrz WebRoot). /landing i /waitlist
+              ubite 2026-09-02 - stare linki lapie WebWaitlistGate i odsyla na root. */}
           <Route path="/terms" element={<Terms />} />
           <Route path="/privacy" element={<Privacy />} />
-          <Route path="/" element={<RootPage />} />
+          <Route path="/" element={<WebRoot />} />
           {/* Tryb uproszczony (PLANNING_DISABLED): "Twoje trasy" scalone w Wyjazdy (Dziennik). */}
-          <Route path="/home" element={PLANNING_DISABLED ? <Navigate to="/dziennik" replace /> : <AppLayout hideTopBar><HomeSwipe /></AppLayout>} />
+          <Route path="/home" element={PLANNING_DISABLED ? <Navigate to="/moj-profil?tab=wyjazdy" replace /> : <AppLayout hideTopBar><HomeSwipe /></AppLayout>} />
+          {/* IA 2026-09-13: Eksploracja (start; wyjazdy + listy od wszystkich, jedna kolumna)
+              · + · Miejsca (wizytowki lokali) · Profil. Osobny feed obserwowanych (/feed) i
+              siatka "Glowna" zdjete z paska - stary link zostaje jako redirect. */}
+          <Route path="/feed" element={<Navigate to="/eksploruj" replace />} />
           <Route path="/eksploruj" element={<AppLayout hideTopBar><Explore /></AppLayout>} />
-          <Route path="/polubione" element={<AppLayout hideTopBar><LikedPlaces /></AppLayout>} />
+          <Route path="/miejsca" element={<AppLayout hideTopBar><Miejsca /></AppLayout>} />
+          {/* /polubione (Zapisane) przeniesione do zakładki profilu (IA 2026-08-20). Redirect dla starych linków/pushy. */}
+          <Route path="/polubione" element={<Navigate to="/moj-profil" replace />} />
           <Route path="/zestawienie/nowe" element={<RequireAuth><CreateRanking /></RequireAuth>} />
           <Route path="/zestawienie/:id/edytuj" element={<RequireAuth><CreateRanking /></RequireAuth>} />
           {/* /create (generowanie planu przez AI) - wylaczone w trybie uproszczonym na native.
@@ -796,22 +865,26 @@ const App = () => (
           <Route path="/day-review" element={<DayReview />} />
           <Route path="/set-password" element={<SetPassword />} />
           <Route path="/set-password-biznes" element={<SetPassword forceBusiness />} />
-          {/* Panel admina przeniesiony na admin.trasa.travel (usuniety z aplikacji). */}
-          <Route path="/moje-trasy" element={PLANNING_DISABLED ? <Navigate to="/dziennik" replace /> : <AppLayout><MyTrips /></AppLayout>} />
-          <Route path="/dziennik" element={<AppLayout hideTopBar><Journal /></AppLayout>} />
+          {/* Panel admina przeniesiony na admin.spontaway.com (usuniety z aplikacji). */}
+          <Route path="/moje-trasy" element={PLANNING_DISABLED ? <Navigate to="/moj-profil?tab=wyjazdy" replace /> : <AppLayout><MyTrips /></AppLayout>} />
+          {/* /dziennik (Wyjazdy/Journal) przeniesione do zakładki profilu (IA 2026-08-20). Redirect dla starych linków/pushy. */}
+          <Route path="/dziennik" element={<Navigate to="/moj-profil?tab=wyjazdy" replace />} />
           <Route path="/moj-profil" element={<AppLayout hideTopBar><TravelerProfile /></AppLayout>} />
           <Route path="/edit-plan" element={PLANNING_DISABLED ? <Navigate to="/eksploruj" replace /> : <EditPlan />} />
           <Route path="/review-summary" element={<ReviewSummary />} />
           <Route path="/trasa/:id/dodaj" element={<AddPlaceToTrip />} />
-          <Route path="/trasa/:id" element={<ActiveTrip />} />
+          {/* /trasa/:id (stara strona odhaczania ActiveTrip) USUNIETA 2026-08-24 - redirect na profil. */}
+          <Route path="/trasa/:id" element={<Navigate to="/moj-profil?tab=wyjazdy" replace />} />
           {/* Wyjazd (tryb uproszczony) laduje w edytorze wpisu = /review-summary (ReviewSummary). */}
           {/* Kompozycja wyjazdu z zestawienia ("Uzyj tego zestawienia") - nazwa+daty+miejsca */}
           <Route path="/wyjazd/start" element={<StartWyjazd />} />
           <Route path="/wyjazd/nowy" element={<ComposeWyjazd />} />
           <Route path="/utworz" element={<CountryCityPicker />} />
-          <Route path="/utworz/robocze" element={<CreateDrafts />} />
-          <Route path="/utworz/zapisane" element={<CreateSaved />} />
-          <Route path="/wyjazd/:id" element={<Navigate to="/dziennik" replace />} />
+          {/* Widok huba Robocze/Zapisane USUNIETY (IA 2026-08-22) - robocze wyjazdy sa w profilu
+              "Wyjazdy" (badge Robocze), zapisane w profilu "Zapisane". Stare linki -> redirect. */}
+          <Route path="/utworz/robocze" element={<Navigate to="/moj-profil?tab=wyjazdy" replace />} />
+          <Route path="/utworz/zapisane" element={<Navigate to="/moj-profil" replace />} />
+          <Route path="/wyjazd/:id" element={<Navigate to="/moj-profil?tab=wyjazdy" replace />} />
           {/* Planowanie tras (kreator + sesje grupowe) - wylaczone w trybie uproszczonym na native.
               Wyjatek: exploreMode ("Przegladaj") zostaje wlaczony - patrz PlanRoute. */}
           <Route path="/plan" element={<PlanRoute />} />

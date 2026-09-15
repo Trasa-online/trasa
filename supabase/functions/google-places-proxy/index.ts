@@ -1,7 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
 const BASE = "https://maps.googleapis.com/maps/api";
-const REFERER = "https://trasa.travel/";
+const REFERER = "https://spontaway.com/";
 const CACHE_TTL_HOURS = 168; // 7 days
 
 // Dzienny limit wywolan platnego Google API (bezpiecznik kosztowy). Env-configurable.
@@ -33,6 +33,45 @@ async function consumeTextsearchMonthly(sb: ReturnType<typeof createClient>, n: 
   } catch (e) {
     console.error("textsearch monthly quota exception:", (e as Error).message);
     return false;
+  }
+}
+
+// ── Limit na WOLAJACEGO (audyt M5, 2026-09-08) ───────────────────────────────
+// Kwoty wyzej to bezpiecznik KOSZTOWY (globalny). Ten jest bezpiecznikiem DOSTEPNOSCI:
+// bez niego jeden skrypt wypala dzienny budzet w kilka minut i wyszukiwarka pada
+// WSZYSTKIM. Limit per wolajacy zamienia awarie calej apki na odciecie jednego naduzywajacego.
+const PER_CALLER_HOURLY_LIMIT = Number(Deno.env.get("GOOGLE_PROXY_HOURLY_PER_CALLER") ?? "250");
+
+/**
+ * Kubelek wolajacego: id usera z tokenu, a gdy go nie ma - adres IP.
+ * Uwaga: `sub` czytamy z tokenu BEZ weryfikacji podpisu. To swiadome - tu nie podejmujemy
+ * decyzji o dostepie, tylko rozdzielamy ruch na kubelki, a sprawdzanie podpisu kosztowaloby
+ * dodatkowe zapytanie przy KAZDYM wywolaniu proxy. Sufit kosztu i tak trzyma globalna kwota.
+ */
+function callerBucket(req: Request): string {
+  const token = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "");
+  const parts = token.split(".");
+  if (parts.length === 3) {
+    try {
+      const sub = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")))?.sub;
+      if (sub) return `gplaces:u:${sub}`;
+    } catch { /* nie JWT - lecimy po IP */ }
+  }
+  const ip = (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim();
+  return `gplaces:ip:${ip || "unknown"}`;
+}
+
+// Fail-open: gdy RPC padnie, przepuszczamy. To limit uczciwosci, nie brama bezpieczenstwa -
+// zablokowanie legalnego ruchu przez chwilowy blad bazy byloby gorsze niz brak limitu.
+async function callerWithinLimit(sb: ReturnType<typeof createClient>, req: Request): Promise<boolean> {
+  try {
+    const { data, error } = await sb.rpc("try_consume_rate_limit", {
+      p_bucket: callerBucket(req), p_limit: PER_CALLER_HOURLY_LIMIT, p_window_minutes: 60,
+    });
+    if (error) return true;
+    return data !== false;
+  } catch {
+    return true;
   }
 }
 
@@ -70,6 +109,12 @@ Deno.serve(async (req) => {
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const sb = createClient(supabaseUrl, serviceRoleKey);
 
+  if (!(await callerWithinLimit(sb, req))) {
+    return new Response(JSON.stringify({ error: "rate_limited", results: [], result: null }), {
+      status: 429, headers: { ...corsHeaders, "Content-Type": "application/json", "Retry-After": "600" },
+    });
+  }
+
   try {
     const body = await req.json();
 
@@ -90,8 +135,93 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ results }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    // Miejsca WOKOL punktu - "dodaj miejsce z mapy" (2026-09-08). User przesuwa mape, a my
+    // pokazujemy, co jest pod pinezka. Wpisywanie nazwy odpada, gdy user wie GDZIE cos bylo,
+    // ale nie pamieta JAK sie nazywalo.
+    if (body.action === "nearby") {
+      const { latitude, longitude } = body;
+      if (typeof latitude !== "number" || typeof longitude !== "number") {
+        return new Response(JSON.stringify({ results: [] }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      // Promien z klienta (mapa z pinezka pyta "co jest DOKLADNIE tutaj" = 30 m; stary domyslny
+      // 150 m zostaje dla pozostalych wywolan). Zakres 20-150, zeby nikt nie zrobil z tego
+      // skanera okolicy.
+      const radius = Math.max(20, Math.min(150, Math.round(Number(body.radius) || 150)));
+      // Klucz cache zaokraglony do ~11 m: przesuwanie mapy o metr nie moze generowac nowego
+      // platnego zapytania (ta sama zasada, co w proxy statycznych map).
+      const nkey = `nearby|${latitude.toFixed(4)}|${longitude.toFixed(4)}|${radius}`;
+      const nhit = textsearchCache.get(nkey);
+      if (nhit && Date.now() - nhit.ts < CITYSEARCH_TTL_MS) {
+        return new Response(JSON.stringify({ results: nhit.results }), { headers: { ...corsHeaders, "Content-Type": "application/json", "X-Cache": "HIT" } });
+      }
+      if (!(await consumeGoogleQuota(sb, 1))) {
+        return new Response(JSON.stringify({ results: [], quota_exceeded: true }), { headers: { ...corsHeaders, "Content-Type": "application/json", "X-Quota": "EXCEEDED" } });
+      }
+      const res = await fetch(`${BASE}/place/nearbysearch/json?location=${latitude},${longitude}&radius=${radius}&key=${apiKey}&language=pl`, { headers: { Referer: REFERER } });
+      const data = await res.json();
+      const results = ((data.results ?? []) as any[])
+        // Bez wyników "administracyjnych" (dzielnice, drogi, kody pocztowe) - to nie sa miejsca,
+        // ktore ktos dodaje do wyjazdu.
+        .filter((r: any) => !(r.types ?? []).some((tp: string) => ["locality", "political", "route", "postal_code", "administrative_area_level_1", "administrative_area_level_2"].includes(tp)))
+        .slice(0, 12)
+        .map((r: any) => ({
+          name: r.name ?? "",
+          address: r.vicinity ?? r.formatted_address ?? "",
+          place_id: r.place_id ?? null,
+          types: r.types ?? [],
+          rating: r.rating ?? null,
+          latitude: r.geometry?.location?.lat ?? null,
+          longitude: r.geometry?.location?.lng ?? null,
+          photo_reference: r.photos?.[0]?.photo_reference ?? null,
+        }));
+      textsearchCache.set(nkey, { results, ts: Date.now() });
+      return new Response(JSON.stringify({ results }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    // Miejsce po IDENTYFIKATORZE z podkladu mapy (tapniecie w etykiete lokalu w Maps JS daje
+    // placeId za darmo). Tylko pola podstawowe (Basic Data = najtansza pula), bez zdjec i opinii.
+    // Cache w place_details_cache pod kluczem pid:<id> przez 7 dni - ten sam lokal tapniety przez
+    // kogokolwiek drugi raz nic nie kosztuje.
+    if (body.action === "placeid") {
+      const pid = typeof body.place_id === "string" ? body.place_id.trim() : "";
+      if (!pid || pid.length > 300) {
+        return new Response(JSON.stringify({ result: null }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      const pkey = `pid:${pid}`;
+      const { data: hit } = await sb.from("place_details_cache").select("data, cached_at").eq("cache_key", pkey).maybeSingle();
+      if (hit && (Date.now() - new Date(hit.cached_at).getTime()) / 3_600_000 < CACHE_TTL_HOURS) {
+        return new Response(JSON.stringify(hit.data), { headers: { ...corsHeaders, "Content-Type": "application/json", "X-Cache": "HIT" } });
+      }
+      if (!(await consumeGoogleQuota(sb, 1))) {
+        return new Response(JSON.stringify({ result: null, quota_exceeded: true }), { headers: { ...corsHeaders, "Content-Type": "application/json", "X-Quota": "EXCEEDED" } });
+      }
+      const res = await fetch(`${BASE}/place/details/json?place_id=${encodeURIComponent(pid)}&fields=place_id,name,formatted_address,geometry,types&key=${apiKey}&language=pl`, { headers: { Referer: REFERER } });
+      const data = await res.json();
+      const r = data?.result;
+      const payload = {
+        result: r ? {
+          name: r.name ?? "",
+          full_address: r.formatted_address ?? "",
+          latitude: r.geometry?.location?.lat ?? null,
+          longitude: r.geometry?.location?.lng ?? null,
+          types: r.types ?? [],
+          place_id: r.place_id ?? pid,
+        } : null,
+      };
+      if (payload.result) {
+        sb.from("place_details_cache").upsert({ cache_key: pkey, data: payload, cached_at: new Date().toISOString() }, { onConflict: "cache_key" })
+          .then(() => {}, (e: Error) => console.error("placeid cache write:", e.message));
+      }
+      return new Response(JSON.stringify(payload), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     if (body.action === "textsearch") {
-      const cacheHit = textsearchCache.get(body.query);
+      // Opcjonalne nakierowanie na punkt (mapa z pinezka): Google szuka nazwy NAJPIERW w poblizu,
+      // wiec "Yacht Beach Bar" trafia w ten we Vlorze, a nie w pierwszy lepszy na swiecie.
+      // Klucz cache z siatka ~110 m - ta sama fraza z tego samego miejsca = zero kosztu.
+      const biased = typeof body.latitude === "number" && typeof body.longitude === "number";
+      const tkey = biased ? `${body.query}|${body.latitude.toFixed(3)}|${body.longitude.toFixed(3)}` : body.query;
+      const cacheHit = textsearchCache.get(tkey);
       if (cacheHit && Date.now() - cacheHit.ts < TEXTSEARCH_TTL_MS) {
         return new Response(JSON.stringify({ results: cacheHit.results }), { headers: { ...corsHeaders, "Content-Type": "application/json", "X-Cache": "HIT" } });
       }
@@ -103,7 +233,8 @@ Deno.serve(async (req) => {
       if (!(await consumeGoogleQuota(sb, 1))) {
         return new Response(JSON.stringify({ results: [], quota_exceeded: true, period: "day" }), { headers: { ...corsHeaders, "Content-Type": "application/json", "X-Quota": "EXCEEDED" } });
       }
-      const res = await fetch(`${BASE}/place/textsearch/json?query=${encodeURIComponent(body.query)}&key=${apiKey}&language=pl`, { headers: { Referer: REFERER } });
+      const bias = biased ? `&location=${body.latitude},${body.longitude}&radius=3000` : "";
+      const res = await fetch(`${BASE}/place/textsearch/json?query=${encodeURIComponent(body.query)}${bias}&key=${apiKey}&language=pl`, { headers: { Referer: REFERER } });
       const data = await res.json();
       const results = ((data.results ?? []) as any[]).slice(0, 6).map((r: any) => ({
         name: r.name ?? "",
@@ -111,8 +242,12 @@ Deno.serve(async (req) => {
         latitude: r.geometry?.location?.lat,
         longitude: r.geometry?.location?.lng,
         types: r.types ?? [],
+        // Identyfikator Google. Bez niego dodane miejsce nie da sie polaczyc z naszym rekordem
+        // w `places` ani z wizytowka biznesowa - lokal z kontem dostawal wizytowke "zero"
+        // (zgloszenie Nat 2026-09-01: Wanderlust). Klucz, nie zdjecie: nic nie kosztuje.
+        place_id: r.place_id ?? null,
       }));
-      textsearchCache.set(body.query, { results, ts: Date.now() });
+      textsearchCache.set(tkey, { results, ts: Date.now() });
       return new Response(JSON.stringify({ results }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 

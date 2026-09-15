@@ -39,7 +39,9 @@ const CATEGORY_ICON_MAP: Record<string, string> = {
   garden: "/Ikona__Natura.svg",
   nature: "/Ikona__Natura.svg",
 
-  viewpoint: "/Ikona__Punkt%20widokowy.svg",
+  viewpoint: "/Ikona__Punkt_widokowy.svg",
+
+  experience: "/Ikona__Sztuka.svg",
 
   store: "/Ikona__Zakupy.svg",
   boutique: "/Ikona__Zakupy.svg",
@@ -47,17 +49,22 @@ const CATEGORY_ICON_MAP: Record<string, string> = {
   clothing_store: "/Ikona__Zakupy.svg",
   concept_store: "/Ikona__Zakupy.svg",
   wine_shop: "/Ikona__Zakupy.svg",
+  vintage_store: "/Ikona__Zakupy.svg",
+  antique_store: "/Ikona__Zakupy.svg",
+  thrift_store: "/Ikona__Zakupy.svg",
+  second_hand_store: "/Ikona__Zakupy.svg",
   liquor_store: "/Ikona__Zakupy.svg",
   bookshop: "/Ikona__Zakupy.svg",
   book_store: "/Ikona__Zakupy.svg",
   market: "/Ikona__Zakupy.svg",
 
   // Kategorie GLOWNE (MAIN_CATEGORIES z categories.ts) - reprezentatywna ikona.
+  // UWAGA: "nature" i "shopping" sa JEDNOCZESNIE typem z Google i id kategorii glownej,
+  // wiec siedza wyzej w tej mapie (przy park/walk i przy store/boutique) i nie powtarzamy
+  // ich tutaj - powtorzenie dawalo TS1117 (duplikat klucza w literale).
   food: "/Ikona__Restauracja-18.svg",
   culture: "/Ikona__Landmark.svg",
   attractions: "/Ikona__Landmark.svg",
-  nature: "/Ikona__Natura.svg",
-  shopping: "/Ikona__Zakupy.svg",
   entertainment: "/Ikona__Sztuka.svg",
 
   // Dodatkowe typy Google Places.
@@ -67,14 +74,14 @@ const CATEGORY_ICON_MAP: Record<string, string> = {
   // Polskie ETYKIETY kategorii (uzywane m.in. w GroupSession, danych z labelami PL).
   kawiarnia: "/Ikona__Kawiarnia.svg",
   restauracja: "/Ikona__Restauracja-18.svg",
-  "śniadania": "/Ikona__Kawiarnia.svg",
+  "śniadania": "/Ikona__Kawiarnia.svg",   // i18n-ignore: klucz dopasowania kategorii, nie copy
   muzeum: "/Ikona__Landmark.svg",
   zabytek: "/Ikona__Landmark.svg",
   galeria: "/Ikona__Sztuka.svg",
   rozrywka: "/Ikona__Sztuka.svg",
   zakupy: "/Ikona__Zakupy.svg",
   natura: "/Ikona__Natura.svg",
-  "punkt widokowy": "/Ikona__Punkt%20widokowy.svg",
+  "punkt widokowy": "/Ikona__Punkt_widokowy.svg",
   piekarnia: "/Ikona__Piekarnia.svg",
   cukiernia: "/Ikona__Cukiernia.svg",
   sztuka: "/Ikona__Sztuka.svg",
@@ -114,5 +121,29 @@ export function categoryFromGoogleTypes(types?: string[] | null): string | null 
     const key = GOOGLE_TYPE_TO_CATEGORY[String(t).toLowerCase().trim()];
     if (key) return key;
   }
+  return null;
+}
+
+// Heurystyka: zgadnij kategorie z NAZWY miejsca (klucz z CATEGORY_ICON_MAP) - fallback dla
+// miejsc bez zapisanej kategorii (dodane z Google przed backfillem -> inaczej ikona/chip
+// leca na Landmark/"Miejsce"). Best-effort; brak dopasowania = null (zostaje generyczny stan).
+const NAME_CATEGORY_HINTS: [RegExp, string][] = [
+  [/ramen|sushi|udon|ramenown|restaurac|restaurant|bistro|kuchni|burger|pizz|tapas|grill|kebab|thai|wietnam|indyj|makaron|noodle|jad[łl]odajni|obiad|street\s?food/i, "restaurant"],
+  [/kaw(a|ia|ka)|coffee|caf[eé]|espresso|roaster|roastery|latte/i, "cafe"],
+  [/\bbar\b|\bpub\b|drink|koktajl|cocktail|winiar|\bwine\b|piwn|browar|nalewa|whisky/i, "bar"],
+  [/klub\b|\bclub\b|nightclub|disco/i, "club"],
+  [/piekarni|bakery|bu[łl]eczk|chleb/i, "bakery"],
+  [/cukierni|p[ąa]czk|deser|\blody\b|ice\s?cream|gelat|s[łl]odko|donut|pastry/i, "pastry"],
+  [/muzeum|museum/i, "museum"],
+  [/galeri|gallery|sztuk|\bart\b/i, "gallery"],
+  [/\bkino\b|cinema|teatr|theat/i, "theater"],
+  [/\bpark\b|ogr[óo]d|garden|plaż|beach|\blas\b|skwer|bulwar|natur/i, "park"],
+  [/pa[łl]ac|zamek|katedr|ko[śs]ci[óo][łl]|bazylik|pomnik|monument|ratusz|kamienic|zabytek/i, "monument"],
+  [/sklep|store|shop|butik|boutique|market|\btarg\b|zakupy|concept/i, "store"],
+  [/punkt\s?widokow|viewpoint|taras\s?widokow/i, "viewpoint"],
+];
+export function inferCategoryFromName(name?: string | null): string | null {
+  if (!name) return null;
+  for (const [re, cat] of NAME_CATEGORY_HINTS) if (re.test(name)) return cat;
   return null;
 }

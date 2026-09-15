@@ -18,7 +18,7 @@ function rateLimited(ip: string, max = 5, windowMs = 60_000): boolean {
   return false;
 }
 
-const REDIRECT_TO = "https://trasa.travel/#/set-password-biznes";
+const REDIRECT_TO = "https://spontaway.com/#/set-password-biznes";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -132,7 +132,12 @@ Deno.serve(async (req) => {
 
     // ── Wizytowka: utworz jesli owner nie ma jeszcze zadnej ──
     // is_active=false: wizytowka NIE jest publicznie widoczna dopoki lokal nie uzupelni
-    // profilu (nazwa/kategoria/zdjecie) w panelu. is_draft=false: to juz realne konto.
+    // profilu (nazwa/kategoria/zdjecie) w panelu.
+    // is_draft: dla NOWEGO konta false (to juz realne konto biznesowe). Dla ISTNIEJACEGO
+    // usera TRUE - dopoki nie kliknie linku z maila (SetPassword zdejmuje szkic). Bez tego
+    // kazdy mogl wpisac cudzy mail + dowolna nazwe i przypiac wizytowke do cudzego konta,
+    // a BusinessGuard od tej chwili wpychal ofiare do panelu przy kazdej nawigacji
+    // (audyt 2026-09-14). Szkic nie wymusza redirectu.
     let bp: { id: string; place_id: string | null } | null = null;
     const existingBp = await admin
       .from("business_profiles")
@@ -150,7 +155,7 @@ Deno.serve(async (req) => {
           business_name: safeName,
           phone: phone ? phone.slice(0, 40) : null,
           email,
-          is_draft: false,
+          is_draft: isExistingUser,
           is_active: false,
           plan: "zero",
         })
@@ -163,7 +168,7 @@ Deno.serve(async (req) => {
     // ── Link aktywacyjny do appki ──
     // token_hash w realnym query (przed #) zeby SetPassword odczytal z window.location.search,
     // hash route po # zeby HashRouter trafil na /set-password-biznes.
-    const activationUrl = `https://trasa.travel/?token_hash=${hashedToken}&type=${linkType}#/set-password-biznes`;
+    const activationUrl = `https://spontaway.com/?token_hash=${hashedToken}&type=${linkType}#/set-password-biznes`;
 
     // ── Wyslij branded mail przez Resend ──
     const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
@@ -176,9 +181,9 @@ Deno.serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: "Trasa <hello@trasa.travel>",
+        from: "spontaway <hello@spontaway.com>",
         to: [email],
-        subject: "Aktywuj konto biznesowe na Trasie",
+        subject: "Aktywuj konto biznesowe w spontaway",
         html: buildActivationHtml({ businessName: safeName, activationUrl }),
         text: buildActivationText({ businessName: safeName, activationUrl }),
       }),

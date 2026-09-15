@@ -133,7 +133,7 @@ const UpcomingTripCard = ({ trip, onDelete, onPinTap, onEdit }: UpcomingTripCard
         {/* Top row: countdown + delete */}
         <div className="absolute top-3 left-3 right-3 flex items-center justify-between">
           {countdownLabel && (
-            <span className="bg-primary text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-sm shadow-primary/30">
+            <span className="bg-primary text-white text-xs font-bold px-3 py-1.5 rounded-full">
               {countdownLabel}
             </span>
           )}
@@ -156,7 +156,7 @@ const UpcomingTripCard = ({ trip, onDelete, onPinTap, onEdit }: UpcomingTripCard
             <div className="flex items-center gap-1">
               <MapPin className="h-3 w-3 text-white/50" />
               <span className="text-white/70 text-sm">
-                {allPins.length} {allPins.length === 1 ? t("places_one") : allPins.length < 5 ? t("places_few") : t("places_many")}
+                {allPins.length} {t("places", { count: allPins.length })}
               </span>
             </div>
             {isMultiDay && (
@@ -190,7 +190,7 @@ const UpcomingTripCard = ({ trip, onDelete, onPinTap, onEdit }: UpcomingTripCard
                 <span className="text-xs text-muted-foreground">{dayDate}</span>
               )}
               <span className="text-xs text-muted-foreground">
-                · {dayPins.length} {dayPins.length === 1 ? t("places_one") : dayPins.length < 5 ? t("places_few") : t("places_many")}
+                · {dayPins.length} {t("places", { count: dayPins.length })}
               </span>
             </div>
             {/* Photo strip */}

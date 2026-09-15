@@ -28,6 +28,9 @@ export function useRankings() {
         .from("discovery_collections")
         .select("id, title, city, user_id, is_public, hidden_by_admin, moderation_status, updated_at")
         .eq("kind", "ranking")
+        // Tylko PUBLICZNE polecajki (visited) do moderacji. Prywatne wishlisty "Do zobaczenia"
+        // (to_visit, is_public=false) nigdy nie trafiają do kolejki.
+        .eq("list_status", "visited")
         .not("user_id", "is", null)
         .order("updated_at", { ascending: false });
       if (error) throw error;
@@ -77,11 +80,11 @@ export function useModerateRanking() {
       if (error) throw error;
       // Powiadomienie autora (in-app przez trigger DB przy zmianie statusu + push). Best-effort.
       if (col.user_id) {
-        const title = col.title || "Twoje zestawienie";
+        const title = col.title || "Twoja lista";
         await sendClientPush(
           status === "approved"
-            ? { userId: col.user_id, title: "Zestawienie zaakceptowane 🎉", body: `„${title}" jest już widoczne dla innych`, url: "/eksploruj" }
-            : { userId: col.user_id, title: "Zestawienie odrzucone", body: note?.trim() ? `Powód: ${note.trim()}` : `„${title}" nie przeszło moderacji`, url: "/moj-profil" },
+            ? { userId: col.user_id, title: "Lista zaakceptowana 🎉", body: `„${title}" jest już widoczna dla innych`, url: "/eksploruj" }
+            : { userId: col.user_id, title: "Lista odrzucona", body: note?.trim() ? `Powód: ${note.trim()}` : `„${title}" nie przeszła moderacji`, url: "/moj-profil" },
         );
       }
     },

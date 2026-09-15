@@ -51,7 +51,7 @@ const CATEGORY_LABELS: Record<string, string> = {
   park: "Park", bar: "Bar", club: "Klub", monument: "Zabytek",
   gallery: "Galeria", market: "Targ", viewpoint: "Widok",
   shopping: "Zakupy", experience: "Rozrywka", walk: "Spacer",
-  nightlife: "Nocne życie", church: "Kościół",
+  nightlife: "Nocne życie", church: "Kościół",   // i18n-ignore: etykiety kategorii z bazy (tlumaczy je ns categories)
 };
 
 const MANUAL_CATEGORIES = [
@@ -254,7 +254,7 @@ const AddPinSheet = ({ open, onOpenChange, onPinAdd, cityContext, likedPlaces = 
               {availableLiked.length === 0 ? (
                 <div className="flex flex-col items-center gap-4 py-10 px-6 text-center">
                   <div className="h-14 w-14 rounded-full bg-orange-100 flex items-center justify-center">
-                    <Heart className="h-6 w-6 text-orange-600" />
+                    <Heart className="h-6 w-6 text-primary" />
                   </div>
                   <div className="space-y-1.5">
                     <p className="text-sm font-semibold text-foreground">

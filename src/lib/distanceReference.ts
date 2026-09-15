@@ -5,7 +5,7 @@ import { getCityCenter } from "@/lib/cities";
 import i18n from "@/i18n";
 
 // Label "Ciebie"/"you" dla punktu GPS - wg aktywnego jezyka (chip "X od Ciebie" / "X from you").
-const youLabel = () => i18n.t("distance_you", { ns: "plan", defaultValue: "Ciebie" });
+const youLabel = () => i18n.t("distance_you", { ns: "plan" });
 
 // Prog "jestes na miejscu": GPS w promieniu od centrum miasta docelowego.
 const ONSITE_THRESHOLD_KM = 35;
@@ -69,7 +69,7 @@ export function getReference(): DistanceRef {
 
 // Ustaw punkt startowy (z mapy miasta docelowego) jako odniesienie.
 export function setStartReference(coords: LatLng) {
-  currentRef = { coords, label: i18n.t("distance_start", { ns: "plan", defaultValue: "startu" }), source: "start" };
+  currentRef = { coords, label: i18n.t("distance_start", { ns: "plan" }), source: "start" };
   notifyAll();
 }
 

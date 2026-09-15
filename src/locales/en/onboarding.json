@@ -2,8 +2,8 @@
   "intro": {
     "step0": {
       "title": "Hello!",
-      "subtitle": "I'm Trasa, your personal guide for exploring Polish cities.",
-      "speech": "Hello! I'm Trasa, your personal guide for exploring Polish cities."
+      "subtitle": "I'm spontaway, your personal guide for exploring Polish cities.",
+      "speech": "Hello! I'm spontaway, your personal guide for exploring Polish cities."
     },
     "step1": {
       "title": "Discover what excites you",
@@ -11,7 +11,7 @@
       "speech": "Browse places and like what catches your eye. AI will build your route from it."
     },
     "step2": {
-      "title": "Trasa plans and remembers",
+      "title": "spontaway plans and remembers",
       "subtitle": "AI builds your plan in seconds. After every day we debrief, and recommendations get sharper every trip.",
       "speech": "AI builds your plan, and after each trip it learns your taste. Recommendations get sharper every time."
     }
@@ -56,6 +56,107 @@
       "romantic": "Romantic",
       "budget": "Budget",
       "luxury": "Luxury"
+    }
+  },
+  "photo": {
+    "pick": "Choose a photo",
+    "presets_title": "Or pick a spontaway avatar",
+    "presets_desc": "A brand colour that suits you. You can add a photo later in settings.",
+    "preset_aria": "Avatar {{id}}"
+  },
+  "source": {
+    "desc": "Pick one - it helps us reach more people.",
+    "other_placeholder": "Tell us how you found spontaway",
+    "title": "How did you hear about spontaway?"
+  },
+  "name": {
+    "username_taken": "That username is taken",
+    "username_label": "Username",
+    "username_free": "Username available",
+    "first_placeholder": "Your first name",
+    "first_label": "First name",
+    "username_status": {
+      "checking": "Checking availability...",
+      "taken": "That name is already taken",
+      "empty": "Enter a username",
+      "short": "At least 2 characters",
+      "long": "The name can have at most 20 characters",
+      "chars": "Letters, digits and . _ - only (no spaces)",
+      "banned": "That name is not allowed",
+      "reserved": "That name is reserved"
+    },
+    "first_status": {
+      "empty": "Enter your first name",
+      "short": "At least 2 characters",
+      "long": "The name can have at most 30 characters",
+      "chars": "Letters only (a hyphen or apostrophe is fine)",
+      "banned": "That name is not allowed"
+    }
+  },
+  "toast": {
+    "name_failed": "We could not save your name. Try again.",
+    "photo_failed": "We could not upload the photo."
+  },
+  "goals": {
+    "title": "What do you want to use spontaway for?",
+    "discover": "Discover new places in the city",
+    "inspiration": "Find inspiration for going out",
+    "plan_trips": "Plan trips and weekends",
+    "save_places": "Save favourite places",
+    "with_friends": "Travel with friends",
+    "desc": "You can pick several.",
+    "other_placeholder": "Tell us your goal",
+    "other": "Other",
+    "dont_know": "I don't know yet"
+  },
+  "tracking": {
+    "title": "Help us make spontaway better",
+    "desc": "We collect anonymous data about how you use the app (for example which screens you visit) to keep improving it. You can change this any time in settings."
+  },
+  "cta": {
+    "agree": "I agree",
+    "start": "Let us go",
+    "not_now": "Not now",
+    "next": "Next"
+  },
+  "welcome": {
+    "title": "Hi! This is spontaway",
+    "body": "The best memories start with a recommendation. Discover trips created by other people, save the ones that inspire you and build your own. We will show you around in a few seconds."
+  },
+  "terms": {
+    "consent": "I accept the <terms>terms of service</terms> and the <privacy>privacy policy</privacy>. I will not post content that is abusive or violates other people's rights."
+  },
+  "sources": {
+    "instagram": "Instagram",
+    "tiktok": "TikTok",
+    "friends": "From friends",
+    "newonce": "newonce (radio/podcast)",
+    "appstore": "App Store",
+    "other": "Other"
+  },
+  "guide": {
+    "create_desc": "The + button builds your own trip from favourite places. It goes to Explore so others can take inspiration from it.",
+    "places_desc": "Browse single places one at a time: cafes, restaurants, bars, culture and nature.",
+    "trips_desc": "Browse trips and collections of places from travellers around the world. Open any tile to see the places and get ideas for your own.",
+    "create_title": "Build your own trips",
+    "places_title": "The Places tab",
+    "trips_title": "The Explore tab",
+    "create_eyebrow": "CREATE",
+    "skip": "Skip",
+    "next": "Next",
+    "done": "Done",
+    "profile_title": "The Profile tab",
+    "profile_desc": "Your trips and collections, the ones you saved from others, starred places and settings. Invite friends from here too."
+  },
+  "profile": {
+    "title": "Your spontaway profile",
+    "desc": "Add a photo, your name and a username - this is how other travellers will see you.",
+    "gender": {
+      "label": "Gender",
+      "female": "Woman",
+      "male": "Man",
+      "nonbinary": "Other",
+      "undisclosed": "Prefer not to say"
     }
   }
 }

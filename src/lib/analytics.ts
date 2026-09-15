@@ -1,3 +1,5 @@
+import posthog from "posthog-js";
+
 // ─── Google Analytics 4 ───────────────────────────────────────────────────────
 
 declare global {
@@ -46,3 +48,26 @@ export const analytics = {
   pinDetailOpened: (placeName: string) =>
     trackEvent("pin_detail_opened", { place_name: placeName }),
 };
+
+// ─── PostHog: lejek produktowy (2026-08-31) ───────────────────────────────────
+// Trzy sciezki, ktore realnie mierzymy: EKSPLORACJA, TWORZENIE WYJAZDU, TWORZENIE LISTY.
+// Nazwy zdarzen sa stabilnym kontraktem dla panelu/edge - NIE zmieniaj ich bez aktualizacji lejka:
+//   explore_opened -> place_viewed -> place_saved
+//   trip_create_opened -> trip_place_added -> trip_published
+//   list_create_opened -> list_place_added -> list_published
+// Druga polowa tezy produktu: czy TRESC JEDNEGO uzytkownika napedza dzialanie DRUGIEGO.
+// Bez tych zdarzen widac tylko tworzenie, a nie obieg:
+//   route_saved / list_saved  - ktos zapisal cudzy wyjazd albo liste
+//   route_liked / list_liked  - polubienie cudzej tresci
+//   user_followed             - obserwowanie autora
+//   content_shared            - wyniesienie linku poza aplikacje
+//   notification_opened       - powrot do apki z powiadomienia
+// Zgoda: posthog jest opt-out do czasu akceptacji cookies (patrz lib/consent.ts), wiec capture
+// przed zgoda jest po prostu odrzucany po stronie SDK - nie trzeba tego sprawdzac tutaj.
+export function track(event: string, props?: Record<string, unknown>) {
+  try {
+    posthog.capture(event, props);
+  } catch (e) {
+    console.warn("[analytics] capture failed:", e instanceof Error ? e.message : e);
+  }
+}

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -81,10 +81,10 @@ function EmptySection({ icon, title, sub, cta, onCta, cta2, onCta2, variant }: {
       {(cta || cta2) && (
         <div className="flex flex-col gap-2 mt-4">
           {cta && onCta && (
-            <button onClick={onCta} className="px-5 py-3 rounded-full bg-primary text-white text-sm font-bold active:scale-[0.97] transition-transform shadow-md shadow-orange-500/20">{cta}</button>
+            <button onClick={onCta} className="px-5 py-3 rounded-full bg-primary text-white text-sm font-bold active:scale-[0.97] transition-transform">{cta}</button>
           )}
           {cta2 && onCta2 && (
-            <button onClick={onCta2} className="px-5 py-2.5 rounded-full bg-white border border-orange-200 text-orange-600 text-sm font-bold active:scale-[0.97] transition-transform">{cta2}</button>
+            <button onClick={onCta2} className="px-5 py-2.5 rounded-full bg-white border border-orange-200 text-primary text-sm font-bold active:scale-[0.97] transition-transform">{cta2}</button>
           )}
         </div>
       )}
@@ -184,31 +184,11 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
   // Aktywne trasy SOLO (wlasne, planning/ongoing, bez grupy).
   const { data: soloRoutes = [], isLoading: soloLoading } = useActiveSoloTrips(userId);
 
-  // Auto-archiwizacja: trasy ktorych OSTATNI dzien juz minal (data < dzis) nie sa "aktywne".
-  // Przenosimy je do Dziennika (trip_type=completed) - znikaja z "Aktywne trasy", laduja jako
-  // wspomnienia. Inaczej stara niedokonczona trasa (np. minionym 'ongoing') wisi w aktywnych.
-  const archivingPast = useRef(false);
-  useEffect(() => {
-    if (!userId || archivingPast.current || !soloRoutes.length) return;
-    const t = new Date();
-    const todayStr = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`;
-    const past = (soloRoutes as any[]).filter((r) => r._dateMax && r._dateMax < todayStr);
-    if (!past.length) return;
-    archivingPast.current = true;
-    void (async () => {
-      try {
-        for (const r of past) {
-          const upd = (supabase as any).from("routes").update({ trip_type: "completed", plan_finalized: true });
-          await (r.folder_id ? upd.eq("folder_id", r.folder_id) : upd.eq("id", r.id));
-        }
-        queryClient.removeQueries({ queryKey: ["home-active-solo", userId] });
-        queryClient.invalidateQueries({ queryKey: ["journal-entries"] });
-        queryClient.invalidateQueries({ queryKey: ["journal-badge"] });
-      } finally {
-        archivingPast.current = false;
-      }
-    })();
-  }, [soloRoutes, userId, queryClient]);
+  // (Usunieto auto-archiwizacje po dacie 2026-08-23: trasa NIE staje sie wspomnieniem gdy minie jej
+  // data. "Przeszly" = OPUBLIKOWANY ("Zapisz trase" -> status='published'), nie miniety. Inaczej
+  // wyjazd bez okladki/zdjec "znikal" jako wspomnienie, nie trafiajac do eksploracji ani nie budujac
+  // bazy zdjec miejsc. Roboczy wyjazd po dacie zostaje edytowalny; przypomnienia (trip_reminder cron)
+  // nudza usera zeby go dokonczyl.)
 
   // Aktywne trasy GRUPOWE (sesje, w ktorych user jest czlonkiem; nie zakonczone, data nie minela).
   const { data: groupSessions = [] } = useQuery({
@@ -216,7 +196,7 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
     queryFn: async () => {
       if (!userId) return [];
       const { data: members } = await (supabase as any)
-        .from("group_session_members").select("session_id").eq("user_id", userId);
+        .from("group_session_members").select("session_id").eq("user_id", userId).eq("status", "accepted");
       if (!members?.length) return [];
       const ids = members.map((m: any) => m.session_id);
       const { data } = await (supabase as any)
@@ -239,7 +219,7 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
     queryFn: async () => {
       if (!groupIds.length) return {} as Record<string, { avatar_url: string | null; name: string }[]>;
       const { data: members } = await (supabase as any)
-        .from("group_session_members").select("session_id, user_id").in("session_id", groupIds);
+        .from("group_session_members").select("session_id, user_id").in("session_id", groupIds).eq("status", "accepted");
       if (!members?.length) return {};
       const uids = [...new Set(members.map((m: any) => m.user_id))];
       const { data: profiles } = await (supabase as any)
@@ -265,7 +245,7 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
     enabled: soloGroupSessionIds.length > 0,
     queryFn: async () => {
       const { data: members } = await (supabase as any)
-        .from("group_session_members").select("session_id, user_id").in("session_id", soloGroupSessionIds);
+        .from("group_session_members").select("session_id, user_id").in("session_id", soloGroupSessionIds).eq("status", "accepted");
       if (!members?.length) return {} as Record<string, { avatar_url: string | null; name: string }[]>;
       const uids = [...new Set(members.map((m: any) => m.user_id))];
       const { data: profs } = await (supabase as any)
@@ -360,7 +340,7 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
         ) : groupSessions.length === 0 ? (
           <EmptySection
             variant="solo"
-            icon={<MapPin className="h-6 w-6 text-orange-600" />}
+            icon={<MapPin className="h-6 w-6 text-primary" />}
             title={t("dashboard.empty_title")}
             sub={t("dashboard.empty_sub")}
             cta={t("dashboard.empty_cta")}
@@ -383,7 +363,7 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
             {groupOpen && visibleGroupSessions.map((s) => (
               <button
                 key={s.id}
-                onClick={() => navigate("/dziennik")}
+                onClick={() => navigate("/moj-profil?tab=wyjazdy")}
                 className="w-full text-left active:scale-[0.98] transition-transform"
               >
                 {/* Karta sesji grupowej (secondary) - spojna z pozostalymi kartami. */}
@@ -415,16 +395,16 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
                     return (
                       <div className="flex items-center gap-2.5">
                         <div className="h-10 w-10 rounded-2xl bg-orange-50 border border-orange-100 flex items-center justify-center shrink-0">
-                          <Users className="h-5 w-5 text-orange-600" />
+                          <Users className="h-5 w-5 text-primary" />
                         </div>
-                        <span className="text-xs text-orange-600 font-semibold">{t("dashboard.picking_caps")}</span>
+                        <span className="text-xs text-primary font-semibold">{t("dashboard.picking_caps")}</span>
                       </div>
                     );
                   }
                   const shown = avs.slice(0, 3);
                   const extra = avs.length - shown.length;
                   const n = avs.length;
-                  const label = n === 1 ? t("people_one") : n < 5 ? t("people_few") : t("people_many");
+                  const label = t("people", { count: n });
                   return (
                     <div className="flex items-center gap-2.5">
                       <div className="flex -space-x-2.5 shrink-0">
@@ -439,7 +419,7 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
                           </div>
                         )}
                       </div>
-                      <span className="text-xs text-muted-foreground">{n} {label} · <span className="text-orange-600 font-semibold">{t("dashboard.picking")}</span></span>
+                      <span className="text-xs text-muted-foreground">{n} {label} · <span className="text-primary font-semibold">{t("dashboard.picking")}</span></span>
                     </div>
                   );
                 })()}
@@ -458,7 +438,7 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
             {drafts.map((d) => {
               const dateLabel = d.date && isValid(parseISO(d.date)) ? format(parseISO(d.date), "d MMM", { locale: dateLocale() }) : null;
               const n = d.likedPlaceNames.length;
-              const placesLabel = `${n} ${n === 1 ? t("places_one") : n < 5 ? t("places_few") : t("places_many")}`;
+              const placesLabel = `${n} ${t("places", { count: n })}`;
               return (
                 <button
                   key={d.city}
@@ -471,7 +451,7 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
                     </div>
                   ) : (
                     <div className="h-10 w-10 rounded-xl bg-orange-100 flex items-center justify-center shrink-0">
-                      <Compass className="h-5 w-5 text-orange-600" />
+                      <Compass className="h-5 w-5 text-primary" />
                     </div>
                   )}
                   <div className="min-w-0 flex-1">
@@ -486,7 +466,7 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
                   >
                     <Trash2 className="h-4 w-4" />
                   </span>
-                  <ChevronRight className="h-5 w-5 text-orange-600/50 shrink-0" />
+                  <ChevronRight className="h-5 w-5 text-primary/50 shrink-0" />
                 </button>
               );
             })}
@@ -507,7 +487,7 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
               onClick={() => { setPlanChoiceOpen(false); navigate("/plan"); }}
               className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl border border-border/60 bg-card active:scale-[0.98] transition-transform text-left"
             >
-              <div className="h-10 w-10 rounded-xl bg-orange-50 flex items-center justify-center shrink-0"><MapPin className="h-5 w-5 text-orange-600" /></div>
+              <div className="h-10 w-10 rounded-xl bg-orange-50 flex items-center justify-center shrink-0"><MapPin className="h-5 w-5 text-primary" /></div>
               <div className="min-w-0">
                 <p className="font-bold text-sm">{t("dashboard.plan_solo_title")}</p>
                 <p className="text-xs text-muted-foreground">{t("dashboard.plan_solo_desc")}</p>
@@ -517,7 +497,7 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
               onClick={() => { setPlanChoiceOpen(false); navigate("/plan"); }}
               className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl border border-border/60 bg-card active:scale-[0.98] transition-transform text-left"
             >
-              <div className="h-10 w-10 rounded-xl bg-orange-50 flex items-center justify-center shrink-0"><Users className="h-5 w-5 text-orange-600" /></div>
+              <div className="h-10 w-10 rounded-xl bg-orange-50 flex items-center justify-center shrink-0"><Users className="h-5 w-5 text-primary" /></div>
               <div className="min-w-0">
                 <p className="font-bold text-sm">{t("dashboard.plan_group_title")}</p>
                 <p className="text-xs text-muted-foreground">{t("dashboard.plan_group_desc")}</p>
@@ -527,7 +507,7 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
               onClick={() => { setPlanChoiceOpen(false); navigate("/plan", { state: { exploreMode: true } }); }}
               className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl border border-border/60 bg-card active:scale-[0.98] transition-transform text-left"
             >
-              <div className="h-10 w-10 rounded-xl bg-orange-50 flex items-center justify-center shrink-0"><Compass className="h-5 w-5 text-orange-600" /></div>
+              <div className="h-10 w-10 rounded-xl bg-orange-50 flex items-center justify-center shrink-0"><Compass className="h-5 w-5 text-primary" /></div>
               <div className="min-w-0">
                 <p className="font-bold text-sm">{t("dashboard.plan_browse_title")}</p>
                 <p className="text-xs text-muted-foreground">{t("dashboard.plan_browse_desc")}</p>

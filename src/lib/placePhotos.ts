@@ -66,6 +66,52 @@ export function getCachedPhotoVariant(
  *
  * @returns URL 800px (lub null jeśli nie ma zdjęcia w Google)
  */
+/**
+ * #5: Cache okładki Google dla miejsca w LIŚCIE (discovery_items).
+ *
+ * - Bez `targetId` (np. przy DODAWANIU miejsca do listy, zanim item istnieje w DB):
+ *   cache do Storage + zwrot trwałego URL. Klient zapisze go w item.photo_url,
+ *   a przy publikacji trafi do discovery_items.photo_url.
+ * - Z `targetId`: dodatkowo persistuje URL do wiersza discovery_items (backfill).
+ *
+ * Jeden fetch Google na miejsce (potem Storage = $0, plik współdzielony po nazwie/place_id).
+ * Guard kosztowy (dzienny limit) jest po stronie edge function.
+ *
+ * @returns URL 800px lub null (gdy brak zdjęcia w Google / limit / błąd)
+ */
+export async function cacheListItemPhoto(
+  place: {
+    place_name: string;
+    city?: string | null;
+    latitude?: number | null;
+    longitude?: number | null;
+    google_place_id?: string | null;
+  },
+  targetId?: string | null,
+): Promise<string | null> {
+  if (!place.place_name?.trim()) return null;
+  try {
+    const { data, error } = await supabase.functions.invoke("cache-place-photo", {
+      body: {
+        place_name: place.place_name,
+        city: place.city ?? undefined,
+        latitude: place.latitude ?? undefined,
+        longitude: place.longitude ?? undefined,
+        place_id: place.google_place_id ?? undefined,
+        ...(targetId ? { target_table: "discovery_items", target_id: targetId } : {}),
+      },
+    });
+    if (error) {
+      console.warn("[cacheListItemPhoto] edge function error:", error.message);
+      return null;
+    }
+    return (data as any)?.photo_url ?? null;
+  } catch (err) {
+    console.warn("[cacheListItemPhoto] exception:", err);
+    return null;
+  }
+}
+
 export async function ensurePhotoCached(
   target: {
     table: "pins" | "places";
@@ -101,4 +147,20 @@ export async function ensurePhotoCached(
     console.warn("[ensurePhotoCached] exception:", err);
     return currentPhotoUrl ?? null;
   }
+}
+
+// Czy ten adres nadaje sie do ZAPISANIA w bazie.
+//
+// Zdjecia z Google chodza przez proxy `/api/place-photo?ref=...`, a referencja w tym adresie
+// WYGASA - zmierzone 2026-09-04: z 74 zapisanych adresow 25 juz nie dzialalo, w tym WSZYSTKIE
+// 23 pozycje na listach. Zapisany adres jest wiec z definicji tymczasowy: po jakims czasie
+// zostawia po sobie nieudane zadanie do Google przy kazdym renderze i dopiero potem ikone.
+//
+// Nie cache'ujemy zdjec Google (decyzja Nat: nieprzewidywalne koszty), wiec nie ma czego
+// utrwalac - takie adresy po prostu nie ida do bazy. Miejsce bez zdjecia uzytkownika pokazuje
+// ikone kategorii na peachowym tle, czyli nasz docelowy fallback. Zdjecie Google nadal
+// wyswietla sie NA ZYWO tam, gdzie mamy swieza referencje z biezacej odpowiedzi wyszukiwarki.
+export function photoUrlForStorage(url: string | null | undefined): string | null {
+  if (!url) return null;
+  return url.includes("/api/place-photo") ? null : url;
 }

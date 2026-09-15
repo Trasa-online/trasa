@@ -7,7 +7,18 @@ import posthog from "posthog-js";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Loader2, BarChart2, MapPin, MousePointerClick, Plus, X, LogOut, ImagePlus, Trash2, Users, LayoutDashboard, Images, Store, Megaphone, TrendingUp, MessageCircle, Expand, ZoomIn, Video, Play, Camera, Star, Heart, ChevronUp, ChevronDown, ChevronLeft, GripVertical, HelpCircle, Eye, KeyRound, Clock, Settings, FileText, BookOpen, Pencil, Check } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { BrandIcon, SAVE_ICON } from "@/components/BrandIcon";
+import { applyBusinessDefaultLanguage, markBusinessLangChoice } from "@/lib/businessLanguage";
+import { Loader2, BarChart2, MapPin, MousePointerClick, Plus, X, LogOut, ImagePlus, Trash2, Users, LayoutDashboard, Images, Store, Megaphone, TrendingUp, MessageCircle, Expand, ZoomIn, Video, Play, Camera, Star, Heart, ChevronUp, ChevronDown, ChevronLeft, GripVertical, HelpCircle, Eye, KeyRound, Clock, Settings, FileText, BookOpen, Pencil, Check, MessageSquareQuote, Flag, Bookmark, Share2 } from "lucide-react";
+
+// Pola formularza panelu = szare wypełnienie + pomarańczowy focus (prośba Nat 2026-09-14:
+// jednolitość i "zasada przynależności" - wszystkie inputy wyglądają tak samo, spokojnie).
+// BizInput owija shadcn <Input>, żeby nie trzeba było dopisywać klasy przy każdym polu.
+const BIZ_FIELD = "bg-slate-50 border-slate-200/80 focus-visible:bg-white focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:ring-offset-0 focus-visible:border-primary/40";
+function BizInput({ className, ...props }: React.ComponentProps<typeof Input>) {
+  return <Input className={cn(BIZ_FIELD, className)} {...props} />;
+}
 
 // Menu moze byc obrazem (JPG/PNG/WEBP) albo PDF - rozpoznajemy po rozszerzeniu URL.
 const isPdfUrl = (u: string): boolean => u.split("?")[0].toLowerCase().endsWith(".pdf");
@@ -29,6 +40,9 @@ import PremiumBusinessCard from "@/components/business/PremiumBusinessCard";
 import { fromDashboardState } from "@/components/business/premiumBusinessAdapters";
 import { ImageCropModal } from "@/components/business/ImageCropModal";
 import { TrasaLogo } from "@/components/TrasaLogo";
+import { uploadThumb } from "@/lib/imageThumbs";
+import { fetchPlaceNotes, type PlaceUserNote } from "@/lib/placeNotes";
+import { avatarSrc } from "@/lib/avatar";
 
 interface BusinessPost {
   id: string;
@@ -55,7 +69,7 @@ const PLAN_LABELS: Record<BizPlan, string> = {
 };
 const PLAN_COLORS: Record<BizPlan, string> = {
   zero: 'bg-muted text-muted-foreground',
-  basic: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+  basic: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
   premium: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
 };
 
@@ -139,7 +153,7 @@ function DashboardLoadingScreen() {
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-5">
       <TrasaLogo size={64} className="shadow-lg" />
-      <p className="font-black text-xl tracking-tight text-foreground">trasa</p>
+      <p className="font-black text-xl tracking-tight text-foreground">spontaway</p>
       <div className="flex flex-col items-center gap-1.5 w-44">
         <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
           <div className="h-full rounded-full bg-primary" style={{ width: `${progress}%`, transition: "width 0.3s ease-out" }} />
@@ -161,14 +175,6 @@ function StarRow({ count = 5, size = "sm" }: { count?: number; size?: "xs" | "sm
   );
 }
 
-function getContrastColor(hex: string): string {
-  const r = parseInt(hex.slice(1, 3), 16);
-  const g = parseInt(hex.slice(3, 5), 16);
-  const b = parseInt(hex.slice(5, 7), 16);
-  const toLinear = (c: number) => { const s = c / 255; return s <= 0.04045 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4); };
-  const L = 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b);
-  return L > 0.179 ? '#000000' : '#ffffff';
-}
 
 function AppLikePreviewModal({
   onClose, onConvert, isDraft, convertingDraft,
@@ -202,7 +208,7 @@ function AppLikePreviewModal({
           50% { background-position: 100% 50%; }
         }
         .animated-gradient-btn {
-          background: linear-gradient(90deg, #3b82f6, #6366f1, #3b82f6);
+          background: linear-gradient(90deg, #F9662B, #EE5307, #F9662B);
           background-size: 200% 100%;
           animation: gradientPulse 2s ease-in-out infinite;
         }
@@ -234,7 +240,7 @@ function AppLikePreviewModal({
                 </div>
               )}
               {/* Info overlay */}
-              <div className="absolute left-0 right-0 px-4 space-y-1.5" style={{ bottom: '5rem' }}>
+              <div className="absolute left-0 right-0 px-4 pr-[72px] space-y-1.5" style={{ bottom: '1.25rem' }}>
                 {logoUrl && (
                   <div className="h-10 w-10 rounded-full overflow-hidden border border-white/30 shadow-md bg-white/10">
                     <img src={logoUrl} className="w-full h-full object-cover" />
@@ -249,33 +255,33 @@ function AppLikePreviewModal({
                 {description && <p className="text-white/70 text-sm line-clamp-2 leading-snug">{description}</p>}
                 {eventTitle && (
                   <div className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 font-semibold text-xs"
-                    style={{ background: "linear-gradient(to right,#F4A259,#F9662B)", color: "#ffffff" }}>
+                    style={{ background: "#EE5307", color: "#ffffff" }}>
                     {eventTitle}
                   </div>
                 )}
                 {tags.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5 pt-0.5 pr-14">
+                  <div className="flex flex-wrap gap-1.5 pt-0.5">
                     {tags.slice(0, 4).map(t => (
                       <span key={t} className="px-2.5 py-0.5 bg-white/15 rounded-full text-xs text-white/80 font-medium">{t}</span>
                     ))}
                   </div>
                 )}
               </div>
-              {/* Expand to detail — bottom-right, above action buttons */}
-              <button
-                onClick={() => setView('detail')}
-                className="absolute right-4 h-10 w-10 bg-white rounded-full flex items-center justify-center shadow-md active:scale-90 transition-transform"
-                style={{ bottom: '5rem' }}
-              >
-                <ChevronUp className="h-5 w-5 text-slate-700" />
-              </button>
-              {/* Action buttons on the card */}
-              <div className="absolute bottom-4 left-3 right-3 flex gap-2.5">
-                <button onClick={onClose} className="flex-1 py-3.5 rounded-full bg-white text-slate-900 font-bold text-sm active:scale-95 transition-transform">
-                  {t("card.reject")}
+              {/* Kolumna akcji 1:1 z aplikacją (SwipeCard scrollMode): zapisz + rozwiń.
+                  Rząd „Odrzuć / Dodaj" usunięty - w zakładce Miejsca go nie ma. */}
+              <div className="absolute right-3 bottom-4 z-20 flex flex-col gap-3">
+                <button
+                  aria-label={t("card.save")}
+                  className="h-12 w-12 rounded-full bg-white flex items-center justify-center shadow-lg active:scale-90 transition-transform"
+                >
+                  <Bookmark className="h-5 w-5 text-foreground" strokeWidth={2} />
                 </button>
-                <button className="flex-1 py-3.5 rounded-full font-bold text-sm active:scale-95 transition-transform shadow-lg" style={{ background: colorButton, color: getContrastColor(colorButton) }}>
-                  {t("card.add")}
+                <button
+                  onClick={() => setView('detail')}
+                  aria-label={t("card_preview.open_full")}
+                  className="h-12 w-12 rounded-full bg-white flex items-center justify-center shadow-lg active:scale-90 transition-transform"
+                >
+                  <ChevronUp className="h-5 w-5 text-foreground" strokeWidth={2.5} />
                 </button>
               </div>
             </div>
@@ -296,13 +302,18 @@ function AppLikePreviewModal({
                   hideReviews
                 />
               </div>
-              {/* Odrzuc / Dodaj CTA - poza PremiumBusinessCard, 1:1 z apka */}
-              <div className="shrink-0 flex gap-3 px-4 pb-5 pt-3 border-t border-slate-100 bg-[#FEFEFE]">
-                <button onClick={() => setView('card')} className="flex-1 py-3 rounded-full bg-secondary text-secondary-foreground font-bold text-sm shadow-sm active:scale-[0.97] transition-transform">
-                  {t("card.reject")}
+              {/* CTA wizytówki 1:1 z aplikacją (PlaceSwiperDetail, tryb przeglądania):
+                  „Zapisz to miejsce" z brandową zakładką + ŻÓŁTE kółko udostępniania z brązową
+                  ikoną. Wcześniej był tu „Odrzuć / Dodaj" (tryb dodawania do wyjazdu), przez co
+                  lokal nie widział guzika zapisu ani udostępniania (zgłoszenie Nat 2026-09-14). */}
+              <div className="shrink-0 flex items-center gap-3 px-4 pb-5 pt-3 border-t border-slate-100 bg-[#FEFEFE]">
+                <button className="flex-1 h-11 rounded-full bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.97] transition-transform">
+                  {t("card.save_place")}
+                  <BrandIcon src={SAVE_ICON} className="h-[18px] w-[18px]" />
                 </button>
-                <button className="flex-1 py-3 rounded-full font-bold text-sm shadow-xl active:scale-[0.97] transition-transform" style={{ background: colorButton, color: getContrastColor(colorButton) }}>
-                  {t("card.add")}
+                <button aria-label={t("card.share_place")}
+                  className="h-11 w-11 shrink-0 rounded-full bg-[#FDF184] flex items-center justify-center active:scale-90 transition-transform">
+                  <Share2 className="h-5 w-5 text-[#5B2C06]" strokeWidth={2.2} />
                 </button>
               </div>
             </>
@@ -337,7 +348,6 @@ function BusinessCardPreview({ logoUrl, coverImageUrl, coverVideoUrl, businessNa
   const catLabel = mainCategory ? MAIN_CATEGORIES.find(c => c.id === mainCategory)?.label : null;
   const badge   = colorBadge  ?? "#D45113";
   const overlay = colorCardBg ?? "#000000";
-  const btn     = colorButton ?? "#D45113";
   return (
     <div>
       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">{t("card_preview.label")}</p>
@@ -354,7 +364,7 @@ function BusinessCardPreview({ logoUrl, coverImageUrl, coverVideoUrl, businessNa
             {catLabel}
           </div>
         )}
-        <div className="absolute left-0 right-0 px-3 space-y-1" style={{ bottom: '3.5rem' }}>
+        <div className="absolute left-0 right-0 px-3 pr-14 space-y-1" style={{ bottom: '0.85rem' }}>
           {logoUrl && (
             <div className="h-8 w-8 rounded-full overflow-hidden border border-white/30 shadow-md bg-white/10">
               <img src={logoUrl} className="w-full h-full object-cover" />
@@ -369,24 +379,29 @@ function BusinessCardPreview({ logoUrl, coverImageUrl, coverVideoUrl, businessNa
           {description && <p className="text-white/70 text-[10px] line-clamp-2 leading-snug">{description}</p>}
           {eventTitle && (
             <div className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-semibold text-[9px]"
-              style={{ background: "linear-gradient(to right,#F4A259,#F9662B)", color: "#ffffff" }}>
+              style={{ background: "#EE5307", color: "#ffffff" }}>
               {eventTitle}
             </div>
           )}
           {tags.length > 0 && (
-            <div className="flex flex-wrap gap-1 pt-0.5 pr-10">
+            <div className="flex flex-wrap gap-1 pt-0.5">
               {tags.slice(0, 3).map(t => (
                 <span key={t} className="px-2 py-0.5 bg-white/15 rounded-full text-[9px] font-medium text-white/80">{t}</span>
               ))}
             </div>
           )}
         </div>
-        <div className="absolute right-3 h-8 w-8 bg-white rounded-full flex items-center justify-center shadow-md" style={{ bottom: '3.5rem' }}>
-          <ChevronUp className="h-4 w-4 text-slate-700" />
-        </div>
-        <div className="absolute bottom-2 left-2 right-2 flex gap-2">
-          <div className="flex-1 py-2 rounded-full bg-white text-slate-900 font-bold text-[10px] text-center">{t("card.reject")}</div>
-          <div className="flex-1 py-2 rounded-full font-bold text-[10px] text-center" style={{ background: btn, color: getContrastColor(btn) }}>{t("card.add")}</div>
+        {/* Kolumna akcji 1:1 z kartą w aplikacji (SwipeCard scrollMode, zakładka Miejsca):
+            zapisz (zakładka) + rozwiń (^) w białych kółkach. Rząd „Odrzuć / Dodaj" USUNIĘTY
+            (2026-09-14) - to był wygląd z dodawania miejsca do wyjazdu, a nie to, co widzi
+            podróżny przeglądający Miejsca. */}
+        <div className="absolute right-2.5 bottom-3 z-20 flex flex-col gap-2">
+          <div className="h-8 w-8 rounded-full bg-white flex items-center justify-center shadow-lg">
+            <Bookmark className="h-4 w-4 text-foreground" strokeWidth={2} />
+          </div>
+          <div className="h-8 w-8 rounded-full bg-white flex items-center justify-center shadow-lg">
+            <ChevronUp className="h-4 w-4 text-foreground" strokeWidth={2.5} />
+          </div>
         </div>
       </div>
       {onPreviewClick && (
@@ -529,11 +544,13 @@ const BusinessDashboard = () => {
   const [tagsExpanded, setTagsExpanded] = useState(false);
   const [customSubcategory, setCustomSubcategory] = useState("");
   const [customSubcategoryStatus, setCustomSubcategoryStatus] = useState<string | null>(null);
-  // Card color personalization
-  const [colorBadge, setColorBadge]   = useState<string>("#D45113"); // orange-500 default
-  const [colorCardBg, setColorCardBg] = useState<string>("#000000"); // black default (card overlay)
-  const [colorButton, setColorButton] = useState<string>("#D45113"); // orange default
-  const [colorPromo, setColorPromo]   = useState<string>(""); // badge promocji/aktualnosci; puste = domyslny gradient pomaranczowy
+  // Kolory wizytowki - JUZ NIE personalizowane (decyzja Nat 2026-09-14). Stale marki, zeby
+  // podglad w panelu byl 1:1 z tym, co widzi uzytkownik w aplikacji. Kolumny color_* zostaja
+  // w bazie i w zapisie (nie kasujemy historii), ale nic ich nie zmienia i nic ich nie czyta.
+  const [colorBadge] = useState<string>("#EE5307");   // pomarancz marki (badge kategorii)
+  const [colorCardBg] = useState<string>("#000000");  // overlay karty
+  const [colorButton] = useState<string>("#EE5307");  // CTA "Dodaj" - jak bg-primary w apce
+  const [colorPromo, setColorPromo]   = useState<string>(""); // puste = domyslny pomaranczowy
   const [plan, setPlan] = useState<BizPlan>('premium');
   const [previewTab, setPreviewTab] = useState<'basic' | 'premium'>('premium');
   const [showUpgradeBanner, setShowUpgradeBanner] = useState(false);
@@ -543,8 +560,19 @@ const BusinessDashboard = () => {
 
   const [uploading, setUploading] = useState<string | null>(null); // which slot is uploading
   const [isDirty, setIsDirty] = useState(false);
+  // Miekki zapis (prosba Nat 2026-09-14): lokal NIE klika "Zapisz zmiany" - zmiany lecą same
+  // po ~1,4 s bezczynności. Status w belce: "Zapisywanie..." / "Zapisano". idle = brak zmian.
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const lastGeoAddrRef = useRef<string | null>(null); // ostatnio geokodowany adres - bez powtórnych płatnych zapytań
 
-  const [activeSection, setActiveSection] = useState<'overview' | 'gallery' | 'profile' | 'menu' | 'posts' | 'analytics' | 'settings'>('profile');
+  const [activeSection, setActiveSection] = useState<'overview' | 'gallery' | 'profile' | 'menu' | 'posts' | 'community' | 'analytics' | 'settings'>('profile');
+  // Sekcja "Od użytkowników" (Nat 2026-09-14): notki i zdjęcia userów o TYM miejscu (te same,
+  // które widać na wizytówce). Read + zgłoszenie do moderacji (biznes nie kasuje UGC sam).
+  type CommunityPhoto = { id: string; photo_url: string; user_id: string | null; created_at: string; username: string | null; avatar_url: string | null };
+  const [communityNotes, setCommunityNotes] = useState<PlaceUserNote[]>([]);
+  const [communityPhotos, setCommunityPhotos] = useState<CommunityPhoto[]>([]);
+  const [communityLoading, setCommunityLoading] = useState(false);
+  const [reportedKeys, setReportedKeys] = useState<Set<string>>(new Set());
   const [recentEvents, setRecentEvents] = useState<Array<{event_type: string, created_at: string}>>([]);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showSupportModal, setShowSupportModal] = useState(false);
@@ -597,6 +625,9 @@ const BusinessDashboard = () => {
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const loadedKeyRef = useRef<string | null>(null);
 
+  // Panel startuje PO POLSKU (prosba Nat 2026-09-14) - chyba ze lokal sam przelaczyl PL/EN.
+  useEffect(() => { applyBusinessDefaultLanguage(); }, []);
+
   useEffect(() => {
     if (!placeId) return;
     if (authLoading) return; // wait for Supabase session to resolve before deciding what to show
@@ -638,13 +669,18 @@ const BusinessDashboard = () => {
     setLoading(true);
     try {
 
-    // Try to find by place_id first, then fall back to business_profiles.id
-    let { data: profileData } = await (supabase as any)
-      .from("business_profiles").select("*").eq("place_id", placeId).maybeSingle();
-    if (!profileData) {
-      const { data: byId } = await (supabase as any)
-        .from("business_profiles").select("*").eq("id", placeId).maybeSingle();
-      profileData = byId;
+    // Pelny wiersz (z email / preview_token) przez RPC: od audytu 2026-09-14 tabela ma kolumnowe
+    // granty SELECT (anon widzi tylko to, co widok business_profiles_public), wiec select("*")
+    // konczylby sie "permission denied". RPC szuka po place_id, potem po id, i oddaje wiersz
+    // wlascicielowi, adminowi albo podgladowi z poprawnym ?t=<preview_token>.
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    let profileData: any = null;
+    if (UUID_RE.test(placeId)) {
+      const { data, error: rpcErr } = await (supabase as any)
+        .rpc("business_profile_for_dashboard", { p_key: placeId, p_token: previewToken ?? null })
+        .maybeSingle();
+      if (rpcErr) console.warn("[BusinessDashboard] business_profile_for_dashboard:", rpcErr.message);
+      profileData = data ?? null;
     }
 
     if (!profileData) {
@@ -713,10 +749,8 @@ const BusinessDashboard = () => {
     setCoverVideoUrl((profileData as any).cover_video_url ?? "");
     setGalleryUrls(profileData.gallery_urls ?? []);
     setMenuImageUrls(profileData.menu_image_urls ?? []);
-    setColorBadge((profileData as any).color_badge ?? "#D45113");
-    setColorCardBg((profileData as any).color_card_bg ?? "#000000");
-    setColorButton((profileData as any).color_button ?? "#D45113");
-    setColorPromo((profileData as any).color_promo ?? "");
+    // color_* NIE sa juz wczytywane z bazy - podglad zawsze w kolorach marki (patrz wyzej).
+    setColorPromo("");
     setOpeningHours(((profileData as any).opening_hours ?? {}) as OpeningHours);
     setEventTitle(profileData.event_title ?? "");
     setEventTitleEn((profileData as any).event_title_en ?? "");
@@ -925,6 +959,9 @@ const BusinessDashboard = () => {
     const path = `${folder_key}/${folder}/${Date.now()}.${ext}`;
     const { data, error } = await supabase.storage.from("business-photos").upload(path, body, { upsert: true, contentType: isPdf ? "application/pdf" : undefined });
     if (error) throw new Error(error.message);
+    // Miniatura obok pliku - kafelki w apce ciagnely wczesniej oryginal (w tym buckecie
+    // srednio 3 MB). PDF-y menu pomijamy, nie ma z czego zrobic podgladu.
+    if (!isPdf) await uploadThumb("business-photos", path, body);
     return supabase.storage.from("business-photos").getPublicUrl(data.path).data.publicUrl;
   };
 
@@ -1397,13 +1434,15 @@ const BusinessDashboard = () => {
     toast.success(t("posts.events_updated"));
   };
 
-  const handleSave = async () => {
+  // Explicit "Zapisz" (fallback) i miekki auto-zapis dziela jeden zapis do bazy. silent=true:
+  // bez toastów i bez spinnera guzika - tylko status "Zapisywanie/Zapisano" w belce.
+  const persistProfile = async ({ silent = false }: { silent?: boolean } = {}) => {
     if (!profile) return;
     if (eventStartsAt && eventEndsAt && eventEndsAt < eventStartsAt) {
-      toast.error(t("save.event_date_error"));
+      if (!silent) toast.error(t("save.event_date_error"));
       return;
     }
-    setSaving(true);
+    if (silent) setSaveStatus('saving'); else setSaving(true);
 
     // Auto-tlumaczenie EN tytulu wydarzenia gdy lokal go nie nadpisal recznie i tytul
     // sie zmienil od ostatniego tlumaczenia. Pusty tytul -> pusty EN.
@@ -1432,10 +1471,11 @@ const BusinessDashboard = () => {
     // na mapie (enrichWithBusinessProfile), bo places nie ma innego zrodla wspolrzednych
     // i biznes nie ma RLS do edycji places. Geokodujemy tylko gdy adres sie zmienil albo
     // brak wspolrzednych - zeby nie wolac Google przy kazdym zapisie.
-    const prevAddr = `${(profile as any).street ?? ""}|${(profile as any).city ?? ""}|${(profile as any).postal_code ?? ""}`;
+    const prevAddr = lastGeoAddrRef.current ?? `${(profile as any).street ?? ""}|${(profile as any).city ?? ""}|${(profile as any).postal_code ?? ""}`;
     const curAddr = `${street}|${city}|${postalCode}`;
     let geoCoords: { latitude: number; longitude: number } | null = null;
     if (street.trim() && (curAddr !== prevAddr || (profile as any).latitude == null)) {
+      lastGeoAddrRef.current = curAddr; // zapamiętaj, żeby miękki auto-zapis nie geokodował w kółko
       try {
         const r = await forwardGeocode(`${street}, ${city || "Polska"}`);
         if (r[0]?.coordinates) geoCoords = r[0].coordinates;
@@ -1483,7 +1523,7 @@ const BusinessDashboard = () => {
       })
       .eq("id", profile.id);
     if (error) {
-      console.error("[BusinessDashboard] handleSave failed:", {
+      console.error("[BusinessDashboard] persistProfile failed:", {
         message: error.message,
         code: (error as any).code,
         details: (error as any).details,
@@ -1493,11 +1533,14 @@ const BusinessDashboard = () => {
         owner_user_id: (profile as any).owner_user_id,
       });
       const msg = error.message?.toLowerCase() ?? "";
+      // Błąd zapisu pokazujemy ZAWSZE (też przy miękkim zapisie) - inaczej lokal myśli, że
+      // zapisał, a zmiany przepadły. isDirty zostaje, więc kolejna zmiana ponawia próbę.
       if (msg.includes("row-level security") || msg.includes("rls") || msg.includes("policy")) {
         toast.error(t("save.rls_error"));
       } else {
         toast.error(t("save.error", { msg: error.message ?? t("save.unknown") }));
       }
+      if (silent) setSaveStatus('idle');
     } else {
       // Zapisz geokodowane wspolrzedne OSOBNYM update'em (best-effort). Gdyby kolumn
       // latitude/longitude jeszcze nie bylo (przed uruchomieniem migracji), blad NIE
@@ -1529,13 +1572,89 @@ const BusinessDashboard = () => {
       }
       if (isComplete && !reviewRequestedAt) {
         setReviewRequestedAt(nowIso);
-        toast.success(t("save.saved_review"));
-      } else {
+        if (!silent) toast.success(t("save.saved_review"));
+      } else if (!silent) {
         toast.success(t("save.saved"));
       }
       setIsDirty(false);
+      if (silent) { setSaveStatus('saved'); }
     }
-    setSaving(false);
+    if (silent) setSaving(false); else setSaving(false);
+  };
+
+  // Sygnatura wszystkich zapisywanych pól - zmiana KTÓREGOKOLWIEK resetuje debounce, więc
+  // miękki zapis leci 1,4 s po OSTATNIM naciśnięciu (a nie po pierwszym w serii).
+  const fieldSig = JSON.stringify([
+    businessName, phone, email, website, instagram, facebook, street, city, postalCode,
+    tags, mainCategory, bizSubcategories, customSubcategory, secondaryCategory, description,
+    colorBadge, colorCardBg, colorButton, colorPromo, eventTitle, eventTitleEn, eventStartsAt,
+    eventEndsAt, openingHours, galleryUrls, menuImageUrls, logoUrl, coverImageUrl, coverVideoUrl,
+  ]);
+  // Miękki auto-zapis dla LIVE (nie szkic, nie podgląd): po 1,4 s od ostatniej zmiany leci
+  // cichy persistProfile. "Zapisano" gaśnie po 2 s. Szkice mają lżejszy autoSaveDraft niżej.
+  useEffect(() => {
+    if (isDraft || previewMode || !isDirty || !profile || saving) return;
+    const id = setTimeout(() => { void persistProfile({ silent: true }); }, 1400);
+    return () => clearTimeout(id);
+    // fieldSig w deps: każda edycja resetuje timer. persistProfile czyta świeży stan z domknięcia.
+  }, [fieldSig, isDirty, isDraft, previewMode, profile, saving]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (saveStatus !== 'saved') return;
+    const id = setTimeout(() => setSaveStatus('idle'), 2000);
+    return () => clearTimeout(id);
+  }, [saveStatus]);
+
+  // "Od użytkowników": notki (fetchPlaceNotes po nazwie) + zdjęcia (place_photos po kluczu nazwy)
+  // dla tego miejsca. Ładujemy dopiero po wejściu w zakładkę (nie obciąża startu panelu).
+  useEffect(() => {
+    if (activeSection !== 'community' || !profile || !businessName.trim()) return;
+    let cancelled = false;
+    setCommunityLoading(true);
+    (async () => {
+      const nameKey = `nm:${businessName.trim().toLowerCase()}`;
+      const [notes, photoRes] = await Promise.all([
+        fetchPlaceNotes(businessName.trim()).catch(() => [] as PlaceUserNote[]),
+        (supabase as any).from("place_photos")
+          .select("id, photo_url, user_id, created_at")
+          .eq("place_key", nameKey)
+          .order("created_at", { ascending: false })
+          .limit(60)
+          .then(({ data }: any) => (data ?? []) as any[])
+          .catch(() => [] as any[]),
+      ]);
+      if (cancelled) return;
+      // Profil (nazwa/awatar) autorów zdjęć jednym zapytaniem.
+      const uids = Array.from(new Set(photoRes.map((p) => p.user_id).filter(Boolean)));
+      const byId = new Map<string, { username: string | null; avatar_url: string | null }>();
+      if (uids.length) {
+        const { data: profs } = await (supabase as any).from("profiles").select("id, username, avatar_url").in("id", uids);
+        for (const pr of (profs ?? []) as any[]) byId.set(pr.id, { username: pr.username, avatar_url: pr.avatar_url });
+      }
+      if (cancelled) return;
+      setCommunityNotes(notes);
+      setCommunityPhotos(photoRes.map((p) => ({
+        id: p.id, photo_url: p.photo_url, user_id: p.user_id, created_at: p.created_at,
+        username: byId.get(p.user_id)?.username ?? null, avatar_url: byId.get(p.user_id)?.avatar_url ?? null,
+      })));
+      setCommunityLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, [activeSection, profile, businessName]);
+
+  // Zgłoszenie treści użytkownika do moderacji (biznes nie kasuje UGC sam - to robi zespół).
+  const reportCommunity = async (targetType: 'place_photo' | 'place_note', targetId: string, key: string, note: string) => {
+    if (reportedKeys.has(key)) return;
+    setReportedKeys((prev) => new Set(prev).add(key));
+    const { error } = await (supabase as any).from("content_reports").insert({
+      target_type: targetType, target_id: targetId, reporter_id: user?.id ?? null,
+      reason: "business_flag", note: `[${businessName}] ${note}`.slice(0, 500), status: "open",
+    });
+    if (error) {
+      setReportedKeys((prev) => { const n = new Set(prev); n.delete(key); return n; });
+      toast.error(t("community.report_error"));
+    } else {
+      toast.success(t("community.report_done"));
+    }
   };
 
   // Silent auto-save for draft mode — called on tab switch and after media uploads
@@ -1705,7 +1824,7 @@ const BusinessDashboard = () => {
                 setPasswordError(true);
               }
             }}
-            className="w-full py-3 rounded-2xl bg-gradient-to-r from-[#F4A259] to-[#F9662B] text-white font-bold text-sm active:scale-[0.98] transition-transform"
+            className="w-full py-3 rounded-2xl bg-primary hover:bg-primary/90 text-white font-bold text-sm active:scale-[0.98] transition-transform"
           >
             {t("access.open")}
           </button>
@@ -1756,7 +1875,7 @@ const BusinessDashboard = () => {
           <p className="text-xs font-semibold leading-snug">{t("preview_mode.banner")}</p>
           <button
             onClick={() => navigate("/set-password-biznes")}
-            className="shrink-0 bg-white text-orange-600 font-bold text-xs px-3 py-1.5 rounded-full whitespace-nowrap active:scale-95 transition-transform"
+            className="shrink-0 bg-white text-primary font-bold text-xs px-3 py-1.5 rounded-full whitespace-nowrap active:scale-95 transition-transform"
           >
             {t("preview_mode.claim")}
           </button>
@@ -1769,7 +1888,7 @@ const BusinessDashboard = () => {
         <div className="mb-6">
           <div className={`flex items-center gap-2 px-2 mb-2 ${!sidebarOpen && 'justify-center'}`}>
             <TrasaLogo size={28} />
-            {sidebarOpen && <span className="font-black text-sm">trasa.biznes</span>}
+            {sidebarOpen && <span className="font-black text-sm">spontaway</span>}
           </div>
           <button
             onClick={() => setSidebarOpen(v => !v)}
@@ -1788,6 +1907,7 @@ const BusinessDashboard = () => {
           { id: 'profile',    label: t('nav.profile'),   icon: Store,          disabled: false, hidden: false },
           { id: 'menu',       label: t('nav.menu'),      icon: BookOpen,       disabled: false, hidden: false },
           { id: 'posts',      label: t('nav.posts'),     icon: Megaphone,      disabled: false, hidden: false },
+          { id: 'community',  label: t('nav.community'), icon: MessageSquareQuote, disabled: false, hidden: false },
           { id: 'gallery',    label: t('nav.appearance'), icon: Images,        disabled: false, hidden: false },
           { id: 'analytics',  label: t('nav.analytics'), icon: TrendingUp,     disabled: true,  hidden: false },
           { id: 'settings',   label: t('nav.settings'),  icon: Settings,       disabled: false, hidden: false },
@@ -1795,10 +1915,10 @@ const BusinessDashboard = () => {
           <button
             key={item.id}
             id={`tour-${item.id}`}
-            onClick={async () => { if (item.disabled) return; if (isDirty) await autoSaveDraft(); setActiveSection(item.id); }}
+            onClick={async () => { if (item.disabled) return; if (isDirty) { if (isDraft) await autoSaveDraft(); else await persistProfile({ silent: true }); } setActiveSection(item.id); }}
             disabled={item.disabled}
             title={item.disabled ? t('nav.disabled_soon') : (!sidebarOpen ? item.label : undefined)}
-            className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold transition-colors mb-0.5 ${sidebarOpen ? 'text-left' : 'justify-center'} ${item.disabled ? 'text-slate-300 cursor-not-allowed' : activeSection === item.id ? 'bg-blue-50 text-blue-700' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'}`}
+            className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold transition-colors mb-0.5 ${sidebarOpen ? 'text-left' : 'justify-center'} ${item.disabled ? 'text-slate-300 cursor-not-allowed' : activeSection === item.id ? 'bg-primary/10 text-primary' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'}`}
           >
             <item.icon className="h-4 w-4 shrink-0" />
             {sidebarOpen && (
@@ -1852,6 +1972,14 @@ const BusinessDashboard = () => {
           <div id="tour-business-name" className="flex-1 flex items-center gap-2 min-w-0">
             <h1 className="text-sm font-bold text-slate-800 truncate">{businessName || t("business_name_fallback")}</h1>
             <span className={`hidden md:inline text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${PLAN_COLORS[plan]}`}>{PLAN_LABELS[plan]}</span>
+            {/* Status miękkiego zapisu (tylko live) - lokal widzi, że zmiany lecą same. */}
+            {!isDraft && !previewMode && saveStatus !== 'idle' && (
+              <span className="hidden sm:inline-flex items-center gap-1.5 text-[11px] font-semibold text-slate-400 shrink-0">
+                {saveStatus === 'saving'
+                  ? <><Loader2 className="h-3 w-3 animate-spin" />{t("save.autosaving")}</>
+                  : <><Check className="h-3 w-3 text-emerald-500" />{t("save.autosaved")}</>}
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-2 ml-auto">
             {/* Przelacznik jezyka PL/EN (changeLanguage zapisuje wybor do localStorage) */}
@@ -1861,8 +1989,8 @@ const BusinessDashboard = () => {
                 return (
                   <button
                     key={code}
-                    onClick={() => { if (!active) i18n.changeLanguage(code); }}
-                    className={`px-2.5 py-1 rounded-full text-[11px] font-bold uppercase transition-colors ${active ? "bg-white text-blue-600 shadow-sm" : "text-slate-400 hover:text-slate-600"}`}
+                    onClick={() => { if (!active) { markBusinessLangChoice(code); i18n.changeLanguage(code); } }}
+                    className={`px-2.5 py-1 rounded-full text-[11px] font-bold uppercase transition-colors ${active ? "bg-white text-primary shadow-sm" : "text-slate-400 hover:text-slate-600"}`}
                   >
                     {code}
                   </button>
@@ -1878,7 +2006,7 @@ const BusinessDashboard = () => {
                   if (!result.ok) return;
                   toast.success(result.method === "clipboard" ? t("topbar.link_copied") : t("topbar.shared"));
                 }}
-                className="hidden md:flex items-center gap-1.5 text-xs font-semibold text-blue-600 px-3 py-1.5 rounded-full bg-blue-50 hover:bg-blue-100 transition-colors"
+                className="hidden md:flex items-center gap-1.5 text-xs font-semibold text-primary px-3 py-1.5 rounded-full bg-primary/10 hover:bg-primary/15 transition-colors"
               >
                 {t("topbar.copy_link")}
               </button>
@@ -1898,6 +2026,7 @@ const BusinessDashboard = () => {
             { id: 'profile', label: t('tabs.profile'), disabled: false, hidden: false },
             { id: 'menu', label: t('tabs.menu'), disabled: false, hidden: false },
             { id: 'posts', label: t('tabs.posts'), disabled: false, hidden: false },
+            { id: 'community', label: t('tabs.community'), disabled: false, hidden: false },
             { id: 'gallery', label: t('tabs.appearance'), disabled: false, hidden: false },
             { id: 'analytics', label: t('tabs.analytics'), disabled: true,  hidden: false },
             { id: 'settings', label: t('tabs.settings'), disabled: false, hidden: false },
@@ -1905,9 +2034,9 @@ const BusinessDashboard = () => {
             <button
               key={item.id}
               id={`tour-mobile-${item.id}`}
-              onClick={async () => { if (item.disabled) return; if (isDirty) await autoSaveDraft(); setActiveSection(item.id); }}
+              onClick={async () => { if (item.disabled) return; if (isDirty) { if (isDraft) await autoSaveDraft(); else await persistProfile({ silent: true }); } setActiveSection(item.id); }}
               disabled={item.disabled}
-              className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors whitespace-nowrap ${item.disabled ? 'text-slate-300 cursor-not-allowed' : activeSection === item.id ? 'bg-blue-50 text-blue-700' : 'text-slate-500'}`}
+              className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors whitespace-nowrap ${item.disabled ? 'text-slate-300 cursor-not-allowed' : activeSection === item.id ? 'bg-primary/10 text-primary' : 'text-slate-500'}`}
             >
               {item.label}{item.disabled && ` · ${t('nav.soon')}`}
             </button>
@@ -1917,20 +2046,20 @@ const BusinessDashboard = () => {
         {/* ── Content ── */}
         {/* pb-40 gdy isDirty: sticky save bar (button h-12 + pt-3 + pb-6 + pb-safe-6) zajmuje
             ~110-130 px zaleznie od safe-area. pb-40 (160px) daje margines bez ucinania ostatniej sekcji. */}
-        <div className={`flex-1 p-4 md:p-6 max-w-4xl w-full ${isDirty ? 'pb-[calc(env(safe-area-inset-bottom,0px)+9rem)] md:pb-40' : 'pb-[calc(env(safe-area-inset-bottom,0px)+6rem)] md:pb-10'}`}>
+        <div className="flex-1 p-4 md:p-6 max-w-4xl w-full pb-[calc(env(safe-area-inset-bottom,0px)+6rem)] md:pb-10">
 
           {/* Banners (always visible) */}
           <div className="space-y-3 mb-4">
             {showWelcomeBanner && (
-              <div className="bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl p-4 text-white shadow-lg shadow-blue-600/20">
+              <div className="bg-gradient-to-br from-[#FDF184] to-[#FDCD84] rounded-2xl p-4 text-[#5B2C06] shadow-lg shadow-[#FDCD84]/30">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1">
                     <p className="font-black text-base leading-tight">{t("welcome.title")}</p>
-                    <p className="text-sm text-blue-100 mt-1.5 leading-relaxed">
-                      {t("welcome.thanks_prefix")}{businessName?.trim() ? <> <strong className="text-white">{businessName.trim()}</strong></> : null}{t("welcome.body_mid")}<strong className="text-white">{t("welcome.support_quote")}</strong>.
+                    <p className="text-sm text-[#5B2C06]/85 mt-1.5 leading-relaxed">
+                      {t("welcome.thanks_prefix")}{businessName?.trim() ? <> <strong className="text-[#5B2C06]">{businessName.trim()}</strong></> : null}{t("welcome.body_mid")}<strong className="text-[#5B2C06]">{t("welcome.support_quote")}</strong>.
                     </p>
                   </div>
-                  <button onClick={() => { setShowWelcomeBanner(false); localStorage.setItem(`welcome_seen_${profile!.id}`, "1"); }} className="mt-0.5 text-blue-200 active:opacity-60 flex-shrink-0">
+                  <button onClick={() => { setShowWelcomeBanner(false); localStorage.setItem(`welcome_seen_${profile!.id}`, "1"); }} className="mt-0.5 text-[#5B2C06]/60 active:opacity-60 flex-shrink-0">
                     <X className="h-4 w-4" />
                   </button>
                 </div>
@@ -1949,11 +2078,11 @@ const BusinessDashboard = () => {
               </div>
             )}
             {reviewRequestedAt && !profile.is_verified && (
-              <div className="bg-blue-50 border border-blue-100 rounded-2xl px-4 py-3 flex items-center gap-3">
-                <div className="h-2 w-2 rounded-full bg-blue-400 animate-pulse flex-shrink-0" />
+              <div className="bg-[#FDF184]/25 border border-[#FDCD84]/60 rounded-2xl px-4 py-3 flex items-center gap-3">
+                <div className="h-2 w-2 rounded-full bg-primary animate-pulse flex-shrink-0" />
                 <div>
-                  <p className="text-xs font-semibold text-blue-700">{t("review.pending_title")}</p>
-                  <p className="text-[11px] text-blue-500 mt-0.5">{t("review.pending_desc")}</p>
+                  <p className="text-xs font-semibold text-[#5B2C06]">{t("review.pending_title")}</p>
+                  <p className="text-[11px] text-[#5B2C06]/70 mt-0.5">{t("review.pending_desc")}</p>
                 </div>
               </div>
             )}
@@ -1983,7 +2112,7 @@ const BusinessDashboard = () => {
               {plan === 'premium' ? (
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   {[
-                    { label: t('overview.stat_views'), value: stats.views, icon: BarChart2, color: 'text-blue-500', bg: 'bg-blue-50' },
+                    { label: t('overview.stat_views'), value: stats.views, icon: BarChart2, color: 'text-primary', bg: 'bg-primary/10' },
                     { label: t('overview.stat_addplan'), value: stats.onRoutes, icon: MapPin, color: 'text-emerald-500', bg: 'bg-emerald-50' },
                     { label: t('overview.stat_clicks'), value: stats.websiteClicks + stats.phoneClicks, icon: MousePointerClick, color: 'text-violet-500', bg: 'bg-violet-50' },
                     { label: t('overview.stat_total'), value: stats.views + stats.onRoutes + stats.websiteClicks + stats.phoneClicks, icon: BarChart2, color: 'text-orange-500', bg: 'bg-orange-50' },
@@ -2020,7 +2149,7 @@ const BusinessDashboard = () => {
                   <div className="flex flex-col divide-y divide-slate-50">
                     {recentEvents.map((ev, i) => {
                       const labels: Record<string, { txt: string; dot: string }> = {
-                        view: { txt: t('activity.view'), dot: 'bg-blue-400' },
+                        view: { txt: t('activity.view'), dot: 'bg-primary' },
                         add_to_route: { txt: t('activity.add_route'), dot: 'bg-emerald-400' },
                         click_phone: { txt: t('activity.click_phone'), dot: 'bg-violet-400' },
                         click_website: { txt: t('activity.click_website'), dot: 'bg-violet-400' },
@@ -2206,28 +2335,10 @@ const BusinessDashboard = () => {
                 <input ref={galleryInputRef} type="file" accept="image/*,.heic,.heif" multiple className="hidden" onChange={handleGalleryUpload} />
               </div>
 
-              {/* ── Personalizacja kolorow ── */}
-              <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm space-y-4">
-                <div>
-                  <p className="text-sm font-bold text-foreground">{t("personalization.title")}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">{t("personalization.desc")}</p>
-                </div>
-                {/* Live preview strip NAD pickerem - zeby guzik "Dodaj" byl widoczny podczas
-                    zmiany koloru (sticky bar "Zapisz zmiany" zaslanial go, gdy byl na dole karty).
-                    Badge kategorii i promocji ZAWSZE pomaranczowe (jednolite w aplikacji). */}
-                <div className="space-y-3">
-                  {/* Personalizacja ograniczona do koloru guzika akcji - kategorie/tlo sa jednolite
-                      w calej aplikacji (badge kategorii i overlay nie sa juz personalizowane). */}
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium">{t("personalization.button_color")}</p>
-                      <p className="text-xs text-muted-foreground">{t("personalization.button_color_desc")}</p>
-                    </div>
-                    <input type="color" value={colorButton} onChange={e => { setColorButton(e.target.value); setIsDirty(true); }}
-                      className="h-9 w-14 rounded-lg cursor-pointer border border-slate-200 p-0.5" />
-                  </div>
-                </div>
-              </div>
+              {/* Personalizacja kolorów wizytówki WYCOFANA (decyzja Nat 2026-09-14): wizytówka ma
+                  wyglądać identycznie jak w aplikacji, więc kolory są jednolite (pomarańcz marki).
+                  Kolumny color_* zostają w bazie i w zapisie (stare wartości nie znikają), ale nic
+                  ich już nie zmienia i podgląd ich nie używa. Nie przywracaj bez prośby Nat. */}
 
               </div> {/* end flex-1 min-w-0 */}
 
@@ -2287,7 +2398,7 @@ const BusinessDashboard = () => {
                   </div>
                   <div>
                     <p className="text-sm font-medium">{businessName || t("business_name_fallback")}</p>
-                    <button onClick={() => logoInputRef.current?.click()} className="mt-1 text-xs text-orange-600 font-medium active:opacity-70">
+                    <button onClick={() => logoInputRef.current?.click()} className="mt-1 text-xs text-primary font-medium active:opacity-70">
                       {logoUrl ? t('profile.change_logo') : t('profile.add_logo')}
                     </button>
                     <p className="text-xs text-muted-foreground mt-0.5">{t("profile.logo_hint")}</p>
@@ -2298,40 +2409,40 @@ const BusinessDashboard = () => {
               <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm space-y-4">
                 <div className="space-y-1">
                   <Label htmlFor="street" className="text-xs flex items-center gap-1.5 flex-wrap">{t("profile.street")} <span className="text-[10px] font-normal text-muted-foreground">{t("profile.optional")}</span></Label>
-                  <Input id="street" value={street} maxLength={100} onChange={e => { setStreet(e.target.value); setIsDirty(true); }} />
+                  <BizInput id="street" value={street} maxLength={100} onChange={e => { setStreet(e.target.value); setIsDirty(true); }} />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <Label htmlFor="city" className="text-xs flex items-center gap-1.5 flex-wrap">{t("profile.city")} <span className="text-[10px] font-normal text-muted-foreground">{t("profile.optional")}</span></Label>
-                    <Input id="city" value={city} maxLength={80} onChange={e => { setCity(e.target.value); setIsDirty(true); }} />
+                    <BizInput id="city" value={city} maxLength={80} onChange={e => { setCity(e.target.value); setIsDirty(true); }} />
                   </div>
                   <div className="space-y-1">
                     <Label htmlFor="postal_code" className="text-xs flex items-center gap-1.5 flex-wrap">{t("profile.postal")} <span className="text-[10px] font-normal text-muted-foreground">{t("profile.optional")}</span></Label>
-                    <Input id="postal_code" value={postalCode} maxLength={10} onChange={e => { setPostalCode(e.target.value); setIsDirty(true); }} />
+                    <BizInput id="postal_code" value={postalCode} maxLength={10} onChange={e => { setPostalCode(e.target.value); setIsDirty(true); }} />
                   </div>
                 </div>
                 {!isDraft && (
                   <>
                     <div className="space-y-1">
                       <Label htmlFor="phone" className="text-xs flex items-center gap-1.5 flex-wrap">{t("profile.phone")} <span className="text-[10px] font-normal text-muted-foreground">{t("profile.optional")}</span></Label>
-                      <Input id="phone" value={phone} maxLength={20} onChange={e => { setPhone(e.target.value); setIsDirty(true); }} type="tel" />
+                      <BizInput id="phone" value={phone} maxLength={20} onChange={e => { setPhone(e.target.value); setIsDirty(true); }} type="tel" />
                     </div>
                     <div className="space-y-1">
                       <Label htmlFor="email" className="text-xs flex items-center gap-1.5 flex-wrap">{t("profile.email")} <span className="text-[10px] font-normal text-muted-foreground">{t("profile.optional")}</span></Label>
-                      <Input id="email" value={email} maxLength={100} onChange={e => { setEmail(e.target.value); setIsDirty(true); }} type="email" />
+                      <BizInput id="email" value={email} maxLength={100} onChange={e => { setEmail(e.target.value); setIsDirty(true); }} type="email" />
                     </div>
                     <div className="space-y-1">
                       <Label htmlFor="website" className="text-xs flex items-center gap-1.5 flex-wrap">{t("profile.website")} <span className="text-[10px] font-normal text-muted-foreground">{t("profile.optional")}</span></Label>
-                      <Input id="website" value={website} maxLength={200} onChange={e => { setWebsite(e.target.value); setIsDirty(true); }} type="url" placeholder="https://twojlokal.pl" />
+                      <BizInput id="website" value={website} maxLength={200} onChange={e => { setWebsite(e.target.value); setIsDirty(true); }} type="url" placeholder="https://twojlokal.pl" />
                     </div>
                     <div className="space-y-1">
                       <Label htmlFor="instagram" className="text-xs flex items-center gap-1.5 flex-wrap">Instagram <span className="text-[10px] font-normal text-muted-foreground">{t("profile.optional")}</span></Label>
-                      <Input id="instagram" value={instagram} maxLength={200} onChange={e => { setInstagram(e.target.value); setIsDirty(true); }} type="text" placeholder="@twojlokal" />
+                      <BizInput id="instagram" value={instagram} maxLength={200} onChange={e => { setInstagram(e.target.value); setIsDirty(true); }} type="text" placeholder="@twojlokal" />
                       <p className="text-[10px] text-muted-foreground">{t("profile.instagram_hint")}</p>
                     </div>
                     <div className="space-y-1">
                       <Label htmlFor="facebook" className="text-xs flex items-center gap-1.5 flex-wrap">Facebook <span className="text-[10px] font-normal text-muted-foreground">{t("profile.optional")}</span></Label>
-                      <Input id="facebook" value={facebook} maxLength={200} onChange={e => { setFacebook(e.target.value); setIsDirty(true); }} type="text" placeholder={t("profile.facebook_placeholder")} />
+                      <BizInput id="facebook" value={facebook} maxLength={200} onChange={e => { setFacebook(e.target.value); setIsDirty(true); }} type="text" placeholder={t("profile.facebook_placeholder")} />
                       <p className="text-[10px] text-muted-foreground">{t("profile.facebook_hint")}</p>
                     </div>
                   </>
@@ -2468,7 +2579,7 @@ const BusinessDashboard = () => {
                       return (
                         <button key={tag} type="button" disabled={disabled}
                           onClick={() => { setTags(prev => active ? prev.filter(t => t !== tag) : [...prev, tag]); setIsDirty(true); }}
-                          className={`px-3 py-1 rounded-full text-xs font-semibold border transition-colors disabled:opacity-40 ${active ? 'bg-primary border-orange-600 text-white' : 'bg-background border-border text-muted-foreground hover:border-orange-400 hover:text-foreground'}`}>
+                          className={`px-3 py-1 rounded-full text-xs font-semibold border transition-colors disabled:opacity-40 ${active ? 'bg-primary border-primary text-white' : 'bg-background border-border text-muted-foreground hover:border-orange-400 hover:text-foreground'}`}>
                           #{tag}
                         </button>
                       );
@@ -2484,7 +2595,7 @@ const BusinessDashboard = () => {
                   </div>
                   {/* Custom tag input - hashtag (#) widoczny by default; strip wiodacych # zeby nie bylo ## */}
                   <div className="flex gap-2">
-                    <div className="flex-1 flex items-center rounded-xl border border-input bg-background px-3 focus-within:ring-2 focus-within:ring-ring">
+                    <div className="flex-1 flex items-center rounded-xl border border-slate-200/80 bg-slate-50 px-3 focus-within:bg-white focus-within:ring-2 focus-within:ring-primary/25 focus-within:border-primary/40">
                       <span className="text-xs font-semibold text-muted-foreground select-none">#</span>
                       <input
                         value={customVibeTag} maxLength={20}
@@ -2517,7 +2628,7 @@ const BusinessDashboard = () => {
               <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">{t("profile.description_label")}</p>
                 <div className="space-y-1">
-                  <textarea rows={3} value={description} maxLength={500} onChange={e => { setDescription(e.target.value); setIsDirty(true); }} placeholder={t("profile.description_placeholder")} className="w-full rounded-2xl border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none" />
+                  <textarea rows={3} value={description} maxLength={500} onChange={e => { setDescription(e.target.value); setIsDirty(true); }} placeholder={t("profile.description_placeholder")} className="w-full rounded-2xl border border-slate-200/80 bg-slate-50 px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:bg-white focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:border-primary/40 resize-none" />
                   <p className="text-[11px] text-muted-foreground text-right">{description.length}/500</p>
                 </div>
               </div>
@@ -2612,7 +2723,7 @@ const BusinessDashboard = () => {
                     <p className="text-xs text-muted-foreground -mt-2">{t("posts.event_desc")}</p>
                     <div className="space-y-1">
                       <Label htmlFor="event_title">{t("posts.event_title_label")}</Label>
-                      <Input id="event_title" value={eventTitle} maxLength={40} onChange={e => { setEventTitle(e.target.value); setIsDirty(true); }} placeholder={t("posts.event_title_placeholder")} />
+                      <BizInput id="event_title" value={eventTitle} maxLength={40} onChange={e => { setEventTitle(e.target.value); setIsDirty(true); }} placeholder={t("posts.event_title_placeholder")} />
                       <p className="text-[11px] text-muted-foreground text-right">{eventTitle.length}/40</p>
                     </div>
                     {/* Wersja angielska (auto-tlumaczenie z mozliwoscia nadpisania) - widoczna dla zagranicznych podroznikow */}
@@ -2623,18 +2734,18 @@ const BusinessDashboard = () => {
                           <span className="text-[10px] font-normal text-muted-foreground">{eventTitleEnOverridden ? t("posts.event_en_edited") : t("posts.event_en_auto")}</span>
                         </Label>
                         <button type="button" onClick={handleTranslateEvent} disabled={!eventTitle.trim() || translatingEvent}
-                          className="text-[11px] font-semibold text-blue-600 disabled:opacity-40 active:opacity-70 shrink-0">
+                          className="text-[11px] font-semibold text-primary disabled:opacity-40 active:opacity-70 shrink-0">
                           {translatingEvent ? t("posts.event_en_translating") : t("posts.event_en_translate")}
                         </button>
                       </div>
-                      <Input id="event_title_en" value={eventTitleEn} maxLength={60}
+                      <BizInput id="event_title_en" value={eventTitleEn} maxLength={60}
                         onChange={e => { setEventTitleEn(e.target.value); setEventTitleEnOverridden(true); setIsDirty(true); }}
                         placeholder={t("posts.event_en_placeholder")} />
                       <p className="text-[11px] text-muted-foreground">{t("posts.event_en_hint")}</p>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div className="space-y-1 min-w-0"><Label htmlFor="event_starts_at" className="text-xs">{t("posts.from")}</Label><Input id="event_starts_at" value={eventStartsAt} onChange={e => { setEventStartsAt(e.target.value); setIsDirty(true); }} type="date" className="w-full" /></div>
-                      <div className="space-y-1 min-w-0"><Label htmlFor="event_ends_at" className="text-xs">{t("posts.to")}</Label><Input id="event_ends_at" value={eventEndsAt} onChange={e => { setEventEndsAt(e.target.value); setIsDirty(true); }} type="date" className="w-full" /></div>
+                      <div className="space-y-1 min-w-0"><Label htmlFor="event_starts_at" className="text-xs">{t("posts.from")}</Label><BizInput id="event_starts_at" value={eventStartsAt} onChange={e => { setEventStartsAt(e.target.value); setIsDirty(true); }} type="date" className="w-full" /></div>
+                      <div className="space-y-1 min-w-0"><Label htmlFor="event_ends_at" className="text-xs">{t("posts.to")}</Label><BizInput id="event_ends_at" value={eventEndsAt} onChange={e => { setEventEndsAt(e.target.value); setIsDirty(true); }} type="date" className="w-full" /></div>
                     </div>
                   </div>
                   {/* Zaplanowane wydarzenia (kolejka + historia) */}
@@ -2645,20 +2756,20 @@ const BusinessDashboard = () => {
                     <div className="space-y-3 border border-border/60 rounded-2xl p-3">
                       <div className="space-y-1">
                         <Label htmlFor="new_event_title" className="text-xs">{t("posts.events_title_label")}</Label>
-                        <Input id="new_event_title" value={newEventTitle} maxLength={40} onChange={e => setNewEventTitle(e.target.value)} placeholder={t("posts.events_title_placeholder")} />
+                        <BizInput id="new_event_title" value={newEventTitle} maxLength={40} onChange={e => setNewEventTitle(e.target.value)} placeholder={t("posts.events_title_placeholder")} />
                         <p className="text-[11px] text-muted-foreground text-right">{newEventTitle.length}/40</p>
                       </div>
                       <div className="space-y-1">
                         <Label htmlFor="new_event_description" className="text-xs">{t("posts.events_desc_label")}</Label>
-                        <textarea id="new_event_description" rows={2} value={newEventDescription} maxLength={300} onChange={e => setNewEventDescription(e.target.value)} placeholder={t("posts.events_desc_placeholder")} className="w-full rounded-2xl border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none" />
+                        <textarea id="new_event_description" rows={2} value={newEventDescription} maxLength={300} onChange={e => setNewEventDescription(e.target.value)} placeholder={t("posts.events_desc_placeholder")} className="w-full rounded-2xl border border-slate-200/80 bg-slate-50 px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:bg-white focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:border-primary/40 resize-none" />
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div className="space-y-1 min-w-0"><Label htmlFor="new_event_start" className="text-xs">{t("posts.from")}</Label><Input id="new_event_start" type="date" value={newEventStartsAt} onChange={e => setNewEventStartsAt(e.target.value)} className="w-full" /></div>
-                        <div className="space-y-1 min-w-0"><Label htmlFor="new_event_end" className="text-xs">{t("posts.events_to_optional")}</Label><Input id="new_event_end" type="date" value={newEventEndsAt} onChange={e => setNewEventEndsAt(e.target.value)} className="w-full" /></div>
+                        <div className="space-y-1 min-w-0"><Label htmlFor="new_event_start" className="text-xs">{t("posts.from")}</Label><BizInput id="new_event_start" type="date" value={newEventStartsAt} onChange={e => setNewEventStartsAt(e.target.value)} className="w-full" /></div>
+                        <div className="space-y-1 min-w-0"><Label htmlFor="new_event_end" className="text-xs">{t("posts.events_to_optional")}</Label><BizInput id="new_event_end" type="date" value={newEventEndsAt} onChange={e => setNewEventEndsAt(e.target.value)} className="w-full" /></div>
                       </div>
                       <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-1 min-w-0"><Label htmlFor="new_event_start_time" className="text-xs">{t("posts.events_start_time_optional")}</Label><Input id="new_event_start_time" type="time" value={newEventStartTime} onChange={e => setNewEventStartTime(e.target.value)} className="w-full" /></div>
-                        <div className="space-y-1 min-w-0"><Label htmlFor="new_event_end_time" className="text-xs">{t("posts.events_end_time_optional")}</Label><Input id="new_event_end_time" type="time" value={newEventEndTime} onChange={e => setNewEventEndTime(e.target.value)} className="w-full" /></div>
+                        <div className="space-y-1 min-w-0"><Label htmlFor="new_event_start_time" className="text-xs">{t("posts.events_start_time_optional")}</Label><BizInput id="new_event_start_time" type="time" value={newEventStartTime} onChange={e => setNewEventStartTime(e.target.value)} className="w-full" /></div>
+                        <div className="space-y-1 min-w-0"><Label htmlFor="new_event_end_time" className="text-xs">{t("posts.events_end_time_optional")}</Label><BizInput id="new_event_end_time" type="time" value={newEventEndTime} onChange={e => setNewEventEndTime(e.target.value)} className="w-full" /></div>
                       </div>
                       <button
                         type="button"
@@ -2699,20 +2810,20 @@ const BusinessDashboard = () => {
                                   <div key={ev.id} className="border border-border/60 rounded-2xl p-3 space-y-3">
                                     <div className="space-y-1">
                                       <Label htmlFor={`edit_event_title_${ev.id}`} className="text-xs">{t("posts.events_title_label")}</Label>
-                                      <Input id={`edit_event_title_${ev.id}`} value={editEventTitle} maxLength={40} onChange={e => setEditEventTitle(e.target.value)} placeholder={t("posts.events_title_placeholder")} />
+                                      <BizInput id={`edit_event_title_${ev.id}`} value={editEventTitle} maxLength={40} onChange={e => setEditEventTitle(e.target.value)} placeholder={t("posts.events_title_placeholder")} />
                                       <p className="text-[11px] text-muted-foreground text-right">{editEventTitle.length}/40</p>
                                     </div>
                                     <div className="space-y-1">
                                       <Label htmlFor={`edit_event_description_${ev.id}`} className="text-xs">{t("posts.events_desc_label")}</Label>
-                                      <textarea id={`edit_event_description_${ev.id}`} rows={2} value={editEventDescription} maxLength={300} onChange={e => setEditEventDescription(e.target.value)} placeholder={t("posts.events_desc_placeholder")} className="w-full rounded-2xl border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none" />
+                                      <textarea id={`edit_event_description_${ev.id}`} rows={2} value={editEventDescription} maxLength={300} onChange={e => setEditEventDescription(e.target.value)} placeholder={t("posts.events_desc_placeholder")} className="w-full rounded-2xl border border-slate-200/80 bg-slate-50 px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:bg-white focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:border-primary/40 resize-none" />
                                     </div>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                      <div className="space-y-1 min-w-0"><Label htmlFor={`edit_event_start_${ev.id}`} className="text-xs">{t("posts.from")}</Label><Input id={`edit_event_start_${ev.id}`} type="date" value={editEventStartsAt} onChange={e => setEditEventStartsAt(e.target.value)} className="w-full" /></div>
-                                      <div className="space-y-1 min-w-0"><Label htmlFor={`edit_event_end_${ev.id}`} className="text-xs">{t("posts.events_to_optional")}</Label><Input id={`edit_event_end_${ev.id}`} type="date" value={editEventEndsAt} onChange={e => setEditEventEndsAt(e.target.value)} className="w-full" /></div>
+                                      <div className="space-y-1 min-w-0"><Label htmlFor={`edit_event_start_${ev.id}`} className="text-xs">{t("posts.from")}</Label><BizInput id={`edit_event_start_${ev.id}`} type="date" value={editEventStartsAt} onChange={e => setEditEventStartsAt(e.target.value)} className="w-full" /></div>
+                                      <div className="space-y-1 min-w-0"><Label htmlFor={`edit_event_end_${ev.id}`} className="text-xs">{t("posts.events_to_optional")}</Label><BizInput id={`edit_event_end_${ev.id}`} type="date" value={editEventEndsAt} onChange={e => setEditEventEndsAt(e.target.value)} className="w-full" /></div>
                                     </div>
                                     <div className="grid grid-cols-2 gap-3">
-                                      <div className="space-y-1 min-w-0"><Label htmlFor={`edit_event_start_time_${ev.id}`} className="text-xs">{t("posts.events_start_time_optional")}</Label><Input id={`edit_event_start_time_${ev.id}`} type="time" value={editEventStartTime} onChange={e => setEditEventStartTime(e.target.value)} className="w-full" /></div>
-                                      <div className="space-y-1 min-w-0"><Label htmlFor={`edit_event_end_time_${ev.id}`} className="text-xs">{t("posts.events_end_time_optional")}</Label><Input id={`edit_event_end_time_${ev.id}`} type="time" value={editEventEndTime} onChange={e => setEditEventEndTime(e.target.value)} className="w-full" /></div>
+                                      <div className="space-y-1 min-w-0"><Label htmlFor={`edit_event_start_time_${ev.id}`} className="text-xs">{t("posts.events_start_time_optional")}</Label><BizInput id={`edit_event_start_time_${ev.id}`} type="time" value={editEventStartTime} onChange={e => setEditEventStartTime(e.target.value)} className="w-full" /></div>
+                                      <div className="space-y-1 min-w-0"><Label htmlFor={`edit_event_end_time_${ev.id}`} className="text-xs">{t("posts.events_end_time_optional")}</Label><BizInput id={`edit_event_end_time_${ev.id}`} type="time" value={editEventEndTime} onChange={e => setEditEventEndTime(e.target.value)} className="w-full" /></div>
                                     </div>
                                     <div className="flex items-center gap-2">
                                       <button onClick={() => handleUpdateEvent(ev.id)} disabled={savingEditEvent || !editEventTitle.trim() || !editEventStartsAt} className="flex-1 py-2 rounded-full bg-[#D45113] text-white font-bold text-xs active:scale-[0.98] transition-transform disabled:opacity-40 flex items-center justify-center gap-1.5"><Check className="h-3.5 w-3.5" />{t("posts.events_save")}</button>
@@ -2783,6 +2894,90 @@ const BusinessDashboard = () => {
                   />
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* ── OD UŻYTKOWNIKÓW (notki + zdjęcia userów o tym miejscu) ── */}
+          {activeSection === 'community' && (
+            <div className="space-y-5">
+              <div><h2 className="text-lg font-black">{t("community.title")}</h2><p className="text-sm text-slate-400">{t("community.subtitle")}</p></div>
+
+              {communityLoading ? (
+                <div className="flex items-center justify-center py-16"><Loader2 className="h-5 w-5 animate-spin text-slate-300" /></div>
+              ) : (communityNotes.length === 0 && communityPhotos.length === 0) ? (
+                <div className="bg-white border border-slate-100 rounded-2xl p-8 shadow-sm flex flex-col items-center text-center gap-2">
+                  <MessageSquareQuote className="h-8 w-8 text-slate-300" />
+                  <p className="text-sm font-semibold text-slate-600">{t("community.empty_title")}</p>
+                  <p className="text-xs text-slate-400 max-w-sm">{t("community.empty_desc")}</p>
+                </div>
+              ) : (
+                <div className="grid lg:grid-cols-2 gap-5 items-start">
+                  {/* Notki */}
+                  <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">{t("community.notes_label", { count: communityNotes.length })}</p>
+                    {communityNotes.length === 0 ? (
+                      <p className="text-xs text-slate-400 py-4">{t("community.no_notes")}</p>
+                    ) : (
+                      <div className="space-y-3">
+                        {communityNotes.map((n) => {
+                          const key = `note-${n.key}`;
+                          const reported = reportedKeys.has(key);
+                          return (
+                            <div key={n.key} className="flex items-start gap-3 pb-3 border-b border-slate-100 last:border-0 last:pb-0">
+                              <img src={avatarSrc(n.avatar_url)} alt="" className="h-8 w-8 rounded-full object-cover shrink-0 bg-slate-100" />
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs font-semibold text-slate-700">{n.username || t("community.anon_user")}</p>
+                                <p className="text-sm text-slate-600 leading-relaxed mt-0.5 break-words">{n.note}</p>
+                              </div>
+                              <button
+                                onClick={() => reportCommunity('place_note', n.key, key, n.note)}
+                                disabled={reported}
+                                title={t("community.report")}
+                                className="shrink-0 text-slate-300 hover:text-primary disabled:text-emerald-500 disabled:hover:text-emerald-500 transition-colors p-1"
+                              >
+                                {reported ? <Check className="h-3.5 w-3.5" /> : <Flag className="h-3.5 w-3.5" />}
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                  {/* Zdjęcia */}
+                  <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">{t("community.photos_label", { count: communityPhotos.length })}</p>
+                    {communityPhotos.length === 0 ? (
+                      <p className="text-xs text-slate-400 py-4">{t("community.no_photos")}</p>
+                    ) : (
+                      <div className="grid grid-cols-3 gap-2">
+                        {communityPhotos.map((ph) => {
+                          const key = `photo-${ph.id}`;
+                          const reported = reportedKeys.has(key);
+                          return (
+                            <div key={ph.id} className="relative group aspect-square rounded-xl overflow-hidden bg-slate-100">
+                              <img src={ph.photo_url} alt="" loading="lazy" className="w-full h-full object-cover cursor-pointer" onClick={() => setPhotoPreview({ url: ph.photo_url, label: ph.username || t("community.anon_user") })} />
+                              {ph.username && (
+                                <div className="absolute bottom-0 inset-x-0 px-1.5 py-1 bg-gradient-to-t from-black/60 to-transparent">
+                                  <p className="text-[10px] font-semibold text-white truncate">@{ph.username}</p>
+                                </div>
+                              )}
+                              <button
+                                onClick={(e) => { e.stopPropagation(); reportCommunity('place_photo', ph.id, key, ph.photo_url); }}
+                                disabled={reported}
+                                title={t("community.report")}
+                                className="absolute top-1 right-1 h-6 w-6 rounded-full bg-black/45 backdrop-blur-sm flex items-center justify-center text-white/90 hover:bg-black/65 disabled:bg-emerald-500/80 transition-colors"
+                              >
+                                {reported ? <Check className="h-3 w-3" /> : <Flag className="h-3 w-3" />}
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+              <p className="text-[11px] text-slate-400 leading-relaxed max-w-2xl">{t("community.moderation_hint")}</p>
             </div>
           )}
 
@@ -2880,7 +3075,7 @@ const BusinessDashboard = () => {
                             day_range_start: "rounded-l-full rounded-r-none bg-foreground text-background",
                             day_range_end: "rounded-r-full rounded-l-none bg-foreground text-background",
                             day_range_middle: "rounded-none bg-slate-100 text-foreground",
-                            day_today: "font-bold text-orange-600",
+                            day_today: "font-bold text-primary",
                             day_outside: "opacity-30",
                             day_disabled: "opacity-20 cursor-not-allowed",
                           }}
@@ -2904,7 +3099,7 @@ const BusinessDashboard = () => {
                   {isDraft && (
                     <div className="bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-100 rounded-2xl px-5 py-4">
                       <p className="text-sm font-bold text-orange-900">{t("analytics.draft_title")}</p>
-                      <p className="text-xs text-orange-600 mt-0.5">{t("analytics.draft_desc")}</p>
+                      <p className="text-xs text-primary mt-0.5">{t("analytics.draft_desc")}</p>
                     </div>
                   )}
                   {/* Stat cards */}
@@ -2915,7 +3110,7 @@ const BusinessDashboard = () => {
                     return (
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                     {[
-                      { label: t('analytics.stat_views'), value: s.views, desc: t('analytics.views_desc'), icon: BarChart2, color: 'text-blue-500', bg: 'bg-blue-50' },
+                      { label: t('analytics.stat_views'), value: s.views, desc: t('analytics.views_desc'), icon: BarChart2, color: 'text-primary', bg: 'bg-primary/10' },
                       { label: t('analytics.stat_unique'), value: s.uniqueChoices, desc: t('analytics.unique_desc'), icon: Users, color: 'text-rose-500', bg: 'bg-rose-50' },
                       { label: t('analytics.stat_addplan'), value: s.onRoutes, desc: t('analytics.addplan_desc'), icon: MapPin, color: 'text-emerald-500', bg: 'bg-emerald-50' },
                       { label: t('analytics.stat_clicks'), value: s.websiteClicks + s.phoneClicks, desc: t('analytics.clicks_desc', { www: s.websiteClicks, tel: s.phoneClicks }), icon: MousePointerClick, color: 'text-violet-500', bg: 'bg-violet-50' },
@@ -2939,7 +3134,7 @@ const BusinessDashboard = () => {
                       <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{t("analytics.activity_over_time")}</p>
                       <div className="flex items-center gap-3">
                         {[
-                          { key: 'views', label: t('analytics.legend_views'), color: '#3b82f6' },
+                          { key: 'views', label: t('analytics.legend_views'), color: '#EE5307' },
                           { key: 'routes', label: t('analytics.legend_route'), color: '#10b981' },
                           { key: 'clicks', label: t('analytics.legend_clicks'), color: '#8b5cf6' },
                         ].map(({ key, label, color }) => (
@@ -2990,7 +3185,7 @@ const BusinessDashboard = () => {
                               return [val, map[name] ?? name];
                             }}
                           />
-                          <Bar dataKey="views" fill="#3b82f6" radius={[3, 3, 0, 0]} stackId="a" />
+                          <Bar dataKey="views" fill="#EE5307" radius={[3, 3, 0, 0]} stackId="a" />
                           <Bar dataKey="routes" fill="#10b981" radius={[0, 0, 0, 0]} stackId="a" />
                           <Bar dataKey="clicks" fill="#8b5cf6" radius={[3, 3, 0, 0]} stackId="a" />
                         </BarChart>
@@ -3008,7 +3203,7 @@ const BusinessDashboard = () => {
                         <div className="flex items-center justify-between mb-1">
                           <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{t("analytics.hourly_title")}</p>
                           {hasData && !analyticsLoading && (
-                            <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-orange-50 text-orange-600 border border-orange-100">
+                            <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-orange-50 text-primary border border-orange-100">
                               {t("analytics.peak", { from: `${peakHour.hour}:00`, to: `${peakHour.hour + 1}:00` })}
                             </span>
                           )}
@@ -3089,7 +3284,7 @@ const BusinessDashboard = () => {
                       <div className="flex flex-col divide-y divide-slate-50">
                         {recentEvents.map((ev, i) => {
                           const labels: Record<string, { txt: string; dot: string }> = {
-                            view: { txt: t('analytics.act_view'), dot: 'bg-blue-400' },
+                            view: { txt: t('analytics.act_view'), dot: 'bg-primary' },
                             add_to_route: { txt: t('analytics.act_add'), dot: 'bg-emerald-400' },
                             click_phone: { txt: t('analytics.act_phone'), dot: 'bg-violet-400' },
                             click_website: { txt: t('analytics.act_website'), dot: 'bg-violet-400' },
@@ -3117,13 +3312,16 @@ const BusinessDashboard = () => {
 
       {/* Mobile FAB — temporarily disabled on frontend */}
 
-      {/* Sticky save bar */}
-      {isDirty && !previewMode && !isDraft && (
-        <div className="fixed bottom-0 left-0 right-0 z-30 px-4 pb-safe-6 pb-6 pt-3 bg-gradient-to-t from-background via-background to-transparent">
-          <button onClick={handleSave} disabled={saving || uploading !== null} className="w-full max-w-2xl mx-auto flex py-3.5 rounded-2xl bg-primary hover:bg-primary text-white font-semibold text-sm transition-colors disabled:opacity-50 items-center justify-center gap-2">
-            {saving && <Loader2 className="h-4 w-4 animate-spin" />}
-            {t("save.button")}
-          </button>
+      {/* Miękki zapis (Nat 2026-09-14): zmiany lecą same (debounce 1,4 s), więc nie ma już
+          paska "Zapisz zmiany". Feedback = status "Zapisywanie/Zapisano" w górnej belce. Na
+          mobile, w trakcie zapisu, pokazujemy delikatny pasek na dole (belka bywa przewinięta). */}
+      {!previewMode && !isDraft && saveStatus !== 'idle' && (
+        <div className="md:hidden fixed bottom-0 left-0 right-0 z-30 px-4 pb-safe-4 pb-4 pt-2 pointer-events-none">
+          <div className="mx-auto w-fit flex items-center gap-1.5 rounded-full bg-white/95 border border-slate-200 shadow-sm px-3.5 py-1.5 text-[11px] font-semibold text-slate-500">
+            {saveStatus === 'saving'
+              ? <><Loader2 className="h-3 w-3 animate-spin" />{t("save.autosaving")}</>
+              : <><Check className="h-3 w-3 text-emerald-500" />{t("save.autosaved")}</>}
+          </div>
         </div>
       )}
       {/* ── Kadrowanie zdjecia (logo 1:1 kolo / galeria 4:3) ── */}
@@ -3229,12 +3427,12 @@ const BusinessDashboard = () => {
               onChange={e => setSupportMessage(e.target.value)}
               placeholder={t("support.placeholder")}
               rows={5}
-              className="w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
+              className="w-full rounded-xl border border-slate-200/80 bg-slate-50 px-3 py-2.5 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:bg-white focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:border-primary/40 resize-none"
             />
             <button
               onClick={handleSupportSubmit}
               disabled={supportSubmitting || !supportMessage.trim()}
-              className="w-full py-3 rounded-2xl bg-gradient-to-r from-[#F4A259] to-[#F9662B] text-white font-semibold text-sm disabled:opacity-50 flex items-center justify-center gap-2"
+              className="w-full py-3 rounded-2xl bg-primary hover:bg-primary/90 text-white font-semibold text-sm disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {supportSubmitting ? <><Loader2 className="h-4 w-4 animate-spin" />{t("support.sending")}</> : t("support.submit")}
             </button>

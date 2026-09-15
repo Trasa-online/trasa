@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
 import { format, differenceInCalendarDays, addDays, addMonths, subMonths } from "date-fns";
@@ -8,6 +9,11 @@ import type { DateRange } from "react-day-picker";
 
 interface FullCalendarPickerProps {
   onConfirm: (date: Date, numDays: number) => void;
+  /** Maksymalna dlugosc zakresu w dniach (domyslnie 3). */
+  maxDays?: number;
+  /** Zaznaczenie na biezaco - rodzic moze miec wlasny guzik zatwierdzajacy (np. "Utwórz"
+   *  w naglowku arkusza). Bez tego taki guzik nie wiedzialby, co user kliknal w kalendarzu. */
+  onRangeChange?: (start: Date | null, numDays: number) => void;
   // allowPast: pozwala wybierac daty historyczne (np. zapis odbytego wyjazdu). Domyslnie
   // false = tylko dzis i przyszlosc (planowanie).
   allowPast?: boolean;
@@ -15,22 +21,37 @@ interface FullCalendarPickerProps {
   onClear?: () => void;
 }
 
-const MAX_DAYS = 3;
+// Limit dlugosci zakresu. Domyslne 3 dni zostaja dla starego flow planowania; kreator
+// wyjazdu i widok wyjazdu podnosza go propem (podzial miejsc na dni).
+const DEFAULT_MAX_DAYS = 3;
 
-const FullCalendarPicker = ({ onConfirm, allowPast = false, onClear }: FullCalendarPickerProps) => {
+const FullCalendarPicker = ({ onConfirm, allowPast = false, onClear, maxDays = DEFAULT_MAX_DAYS, onRangeChange }: FullCalendarPickerProps) => {
+  const { t } = useTranslation("plan");
   const [range, setRange] = useState<DateRange | undefined>();
   const [month, setMonth] = useState(new Date());
   const [showYearPicker, setShowYearPicker] = useState(false);
 
+  const report = (r: DateRange | undefined) => {
+    const from = r?.from ?? null;
+    const days = from ? (r?.to ? differenceInCalendarDays(r.to, from) + 1 : 1) : 0;
+    onRangeChange?.(from, days);
+  };
+  // Zakres przycięty do limitu - pokazujemy dlaczego, zamiast po cichu skracać zaznaczenie.
+  const [clamped, setClamped] = useState(false);
   const handleSelect = (newRange: DateRange | undefined) => {
     if (newRange?.from && newRange?.to) {
       const days = differenceInCalendarDays(newRange.to, newRange.from) + 1;
-      if (days > MAX_DAYS) {
-        setRange({ from: newRange.from, to: addDays(newRange.from, MAX_DAYS - 1) });
+      if (days > maxDays) {
+        const clampedRange = { from: newRange.from, to: addDays(newRange.from, maxDays - 1) };
+        setRange(clampedRange);
+        setClamped(true);
+        report(clampedRange);
         return;
       }
     }
+    setClamped(false);
     setRange(newRange);
+    report(newRange);
   };
 
   const today = new Date();
@@ -69,7 +90,7 @@ const FullCalendarPicker = ({ onConfirm, allowPast = false, onClear }: FullCalen
         <button
           onClick={() => { if (canGoPrev) setMonth(subMonths(month, 1)); }}
           disabled={!canGoPrev}
-          aria-label="Poprzedni miesiąc"
+          aria-label={t("calendar.prev")}
           className="h-9 w-9 flex items-center justify-center rounded-full text-foreground disabled:opacity-20 active:scale-90 transition-transform"
         >
           <ChevronLeft className="h-5 w-5" />
@@ -83,7 +104,7 @@ const FullCalendarPicker = ({ onConfirm, allowPast = false, onClear }: FullCalen
         </button>
         <button
           onClick={() => setMonth(addMonths(month, 1))}
-          aria-label="Następny miesiąc"
+          aria-label={t("calendar.next")}
           className="h-9 w-9 flex items-center justify-center rounded-full text-foreground active:scale-90 transition-transform"
         >
           <ChevronRight className="h-5 w-5" />
@@ -131,7 +152,7 @@ const FullCalendarPicker = ({ onConfirm, allowPast = false, onClear }: FullCalen
               day_range_start: "rounded-l-full rounded-r-none bg-foreground text-background",
               day_range_end: "rounded-r-full rounded-l-none bg-foreground text-background",
               day_range_middle: "rounded-none bg-foreground text-background aria-selected:bg-foreground aria-selected:text-background",
-              day_today: "font-bold text-orange-600",
+              day_today: "font-bold text-primary",
               day_outside: "opacity-30",
               day_disabled: "opacity-20 cursor-not-allowed",
             }}
@@ -153,21 +174,22 @@ const FullCalendarPicker = ({ onConfirm, allowPast = false, onClear }: FullCalen
                 <p className="text-sm text-muted-foreground mt-0.5">
                   {numDays} dni · {nights} {nights === 1 ? "noc" : nights < 5 ? "noce" : "nocy"}
                 </p>
+                {clamped && <p className="text-xs text-primary mt-1">{t("calendar.max_range", { count: maxDays })}</p>}
               </>
             ) : (
               <>
                 <p className="text-base font-semibold text-foreground">
                   {format(startDate, "d MMMM yyyy", { locale: dateLocale() })}
                 </p>
-                <p className="text-sm text-muted-foreground mt-0.5">
-                  Kliknij drugi dzień, żeby wybrać zakres
-                </p>
+                <p className="text-sm text-muted-foreground mt-0.5">{t("calendar.hint_range")}</p>
               </>
             )}
           </div>
         ) : (
           <div className="mb-3 text-center">
-            <p className="text-sm text-muted-foreground">Wybierz dzień wyjazdu (max. {MAX_DAYS} dni)</p>
+            {/* Przy dlugim limicie (wyjazd do ~3 miesiecy) "max. 92 dni" nic userowi nie mowi -
+                zostaje sama zacheta do zaznaczenia dnia albo zakresu. */}
+            <p className="text-sm text-muted-foreground">{maxDays >= 30 ? t("calendar.pick_day_long") : t("calendar.pick_day", { count: maxDays })}</p>
           </div>
         )}
 
@@ -175,10 +197,8 @@ const FullCalendarPicker = ({ onConfirm, allowPast = false, onClear }: FullCalen
           onClick={handleConfirm}
           disabled={!startDate}
           size="lg"
-          className="w-full rounded-2xl text-base font-semibold bg-primary hover:bg-primary/90 text-white border-0 shadow-lg shadow-primary/20 disabled:opacity-40"
-        >
-          Dalej
-        </Button>
+          className="w-full rounded-2xl text-base font-semibold bg-primary hover:bg-primary/90 text-white border-0 disabled:opacity-40"
+        >{t("common:buttons.next")}</Button>
 
         {/* Wyczyść daty: jesli jest zaznaczenie -> resetuje je; inaczej (onClear) usuwa daty wyjazdu. */}
         {(range?.from || onClear) && (
@@ -186,7 +206,7 @@ const FullCalendarPicker = ({ onConfirm, allowPast = false, onClear }: FullCalen
             onClick={() => { if (range?.from) setRange(undefined); else onClear?.(); }}
             className="w-full mt-2 py-2.5 text-sm font-semibold text-muted-foreground active:text-foreground transition-colors"
           >
-            {range?.from ? "Wyczyść zaznaczenie" : "Bez dat"}
+            {range?.from ? t("calendar.clear") : t("calendar.no_dates")}
           </button>
         )}
       </div>

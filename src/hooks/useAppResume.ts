@@ -14,11 +14,21 @@ import { isNative } from "@/lib/platform";
 //
 // Ten hook na resume: invalidateQueries() (refetch aktywnych React Query views) + emituje
 // window event 'trasa:app-resume', ktorego slucha PlaceSwiper zeby dociagnac swieze miejsca.
+// BATERIA: invalidateQueries() bez argumentow odswieza WSZYSTKIE aktywne zapytania. Przy
+// intensywnym przelaczaniu appki (testy, powiadomienia, powrot z Map) potrafi to odpalac
+// pelna serie zapytan co kilka sekund. Krotki throttle: powroty czesciej niz co 30s nie
+// wywoluja ponownego odswiezenia (dane sprzed chwili i tak sa swieze).
+const RESUME_THROTTLE_MS = 30_000;
+
 export function useAppResume() {
   const queryClient = useQueryClient();
 
   useEffect(() => {
+    let lastRefresh = 0;
     const refresh = () => {
+      const now = Date.now();
+      if (now - lastRefresh < RESUME_THROTTLE_MS) return;
+      lastRefresh = now;
       queryClient.invalidateQueries();
       window.dispatchEvent(new CustomEvent("trasa:app-resume"));
     };

@@ -39,3 +39,8 @@ public/IMG_0295.MOV
 
 # PoC / ad-hoc script outputs (lokalne, nie do repo)
 scripts/poc-output/
+
+# Skille agentowe instalowane lokalnie (npx skills add) - nie do repo
+.agents/
+.claude/skills/
+.kiro/

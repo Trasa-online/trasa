@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { avatarSrc } from "@/lib/avatar";
+import { UserFrameRing } from "@/components/profile/FramedAvatar";
 import { useNavigate } from "react-router-dom";
+import { goBackOr } from "@/hooks/useGoBack";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -62,7 +64,7 @@ export default function UserSearch() {
       {/* Header */}
       <div className="flex items-center gap-3 px-4 pt-safe-4 pb-3 border-b border-border/40 sticky top-0 bg-background z-10">
         <button
-          onClick={() => navigate(-1)}
+          onClick={() => goBackOr(navigate, "/moj-profil")}
           className="h-9 w-9 flex items-center justify-center rounded-2xl text-foreground"
         >
           <ArrowLeft className="h-5 w-5" />
@@ -101,10 +103,11 @@ export default function UserSearch() {
               const displayName = profile.username || profile.first_name;
               return (
                 <div key={profile.id} className="flex items-center gap-3 px-4 py-3">
-                  <button onClick={() => navigate(`/profil/${profile.username}`)}>
+                  <button onClick={() => navigate(`/profil/${profile.username}`)} className="relative shrink-0">
+                    <UserFrameRing userId={profile.id} size={44} />
                     <Avatar className="h-11 w-11">
                       <AvatarImage src={avatarSrc(profile.avatar_url)} className="object-cover bg-orange-100" />
-                      <AvatarFallback className="bg-orange-100 text-orange-600 font-bold text-sm">
+                      <AvatarFallback className="bg-orange-100 text-primary font-bold text-sm">
                         {displayName?.charAt(0).toUpperCase() || "?"}
                       </AvatarFallback>
                     </Avatar>

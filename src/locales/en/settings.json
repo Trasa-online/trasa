@@ -62,5 +62,64 @@
   "bug_upload_error": "Failed to upload photo",
   "bug_submit": "Send report",
   "bug_submitting": "Sending…",
-  "bug_error": "Error: {{message}}"
+  "bug_error": "Error: {{message}}",
+  "bio": "About me",
+  "bio_placeholder": "A short line about you, e.g. I love city breaks!",
+  "show_onboarding": "Show the onboarding again",
+  "community": {
+    "title": "Community and contact",
+    "join": "Join the server"
+  },
+  "show_splash": "Show the welcome screen",
+  "render_error": "Settings failed to render:",
+  "username_taken": "That name is already taken",
+  "username_banned": "That name is not allowed",
+  "toast_save_error": "Could not save your changes",
+  "username_status": {
+    "checking": "Checking availability...",
+    "ok": "That name is free",
+    "taken": "That name is already taken",
+    "empty": "Enter a username",
+    "short": "The name needs at least 2 characters",
+    "long": "The name can have at most 20 characters",
+    "chars": "Letters, digits and . _ - only (no spaces)",
+    "banned": "That name is not allowed",
+    "reserved": "That name is reserved"
+  },
+  "customize": {
+    "title": "Customise",
+    "desc": "Avatar frames and overlays"
+  },
+  "frames": {
+    "title": "Avatar frame",
+    "desc": "Your frame shows next to your photo on your profile, in trips and in collections.",
+    "none": "No frame",
+    "stars": "Stars",
+    "hearts": "Hearts",
+    "clouds": "Clouds",
+    "saved": "Frame set",
+    "removed": "Frame removed",
+    "save_failed": "Couldn't save the frame",
+    "color": "Colour",
+    "color_desc": "Orange by default. The picker opens the full palette - choose any colour you like.",
+    "color_default": "Orange (default)",
+    "color_custom": "Any colour",
+    "rainbow": "Rainbow",
+    "reward": "Reward",
+    "locked_hint": "Invite {{goal}} people to unlock ({{invited}} of {{goal}})",
+    "unlocked_hint": "Unlocked - thanks for the invites!",
+    "locked_toast": "This overlay unlocks after you invite {{left}} more people",
+    "locked_cta": "Invite",
+    "locked_error": "This overlay is still locked",
+    "presets_title": "Or pick a base avatar",
+    "presets_desc": "A plain colour instead of a photo - in one of the brand shades.",
+    "avatar_saved": "Avatar set"
+  },
+  "first_name_status": {
+    "empty": "Enter your first name",
+    "short": "At least 2 characters",
+    "long": "The name can have at most 30 characters",
+    "chars": "Letters only (a hyphen or apostrophe is fine)",
+    "banned": "That name is not allowed"
+  }
 }

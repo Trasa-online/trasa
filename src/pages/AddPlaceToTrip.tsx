@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { goBackOr } from "@/hooks/useGoBack";
 import { useTranslation } from "react-i18next";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Search, Compass, Heart, Loader2, Check, MapPin, ChevronLeft } from "lucide-react";
@@ -223,9 +224,9 @@ const AddPlaceToTripInner = () => {
       // Dziennik/ReviewSummary uzywa innego klucza pinow - odswiez tez jego.
       await queryClient.invalidateQueries({ queryKey: ["review-all-pins"] });
       notify.success(
-        rows.length === 1 ? t("add_place.added_one") : t("add_place.added_many", { count: rows.length }),
+        t("add_place.added", { count: rows.length }),
       );
-      navigate(-1);
+      goBackOr(navigate, "/moj-profil?tab=wyjazdy");
     } catch (e: any) {
       console.error("[AddPlaceToTrip] add selected failed:", e?.message ?? e);
       notify.error(t("add_place.add_error"));
@@ -238,7 +239,7 @@ const AddPlaceToTripInner = () => {
   const back = () => {
     if (step === "category" && subCategoryId) { setSubCategoryId(null); setMainCategoryId(null); return; }
     if (step !== "choose") { setStep("choose"); setQuery(""); setSearchResults([]); return; }
-    navigate(-1);
+    goBackOr(navigate, "/moj-profil?tab=wyjazdy");
   };
 
   // ── Sticky CTA "Dodaj wybrane (N)" ──
@@ -456,7 +457,7 @@ const AddPlaceToTripInner = () => {
             {likedForCity.length === 0 ? (
               <div className="flex flex-col items-center gap-4 py-14 px-6 text-center">
                 <div className="h-14 w-14 rounded-full bg-orange-100 flex items-center justify-center">
-                  <Heart className="h-6 w-6 text-orange-600" />
+                  <Heart className="h-6 w-6 text-primary" />
                 </div>
                 <div className="space-y-1.5">
                   <p className="text-sm font-semibold text-foreground">{t("add_place.liked_empty_title")}</p>

@@ -14,20 +14,6 @@ function ok(body: Record<string, unknown>, status = 200) {
   });
 }
 
-// Decode JWT payload (RFC 7519 base64url with proper padding for atob).
-function decodeJwtPayload(token: string): any | null {
-  try {
-    const parts = token.split(".");
-    if (parts.length !== 3) return null;
-    let b64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
-    const padLen = (4 - (b64.length % 4)) % 4;
-    b64 = b64 + "=".repeat(padLen);
-    return JSON.parse(atob(b64));
-  } catch {
-    return null;
-  }
-}
-
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -69,10 +55,7 @@ Deno.serve(async (req) => {
       auth: { persistSession: false, autoRefreshToken: false },
     });
 
-    // 3 metody weryfikacji w fallback (getUser bywa zawodne dla anon JWT w Deno):
-    // 1) supabase-js getUser(token) - external call, najnowsze API
-    // 2) JWT decode + admin.getUserById - no external call, trust Supabase signing
-    // 3) JWT decode standalone - last resort
+    // Jedyna weryfikacja: supabase-js getUser(token) - GoTrue sprawdza podpis i waznosc.
     let userId: string | null = null;
     let verifyMethod = "none";
 
@@ -91,26 +74,10 @@ Deno.serve(async (req) => {
       console.warn("[upgrade-business-account] method1 getUser threw:", e?.message ?? e);
     }
 
-    if (!userId) {
-      const payload = decodeJwtPayload(token);
-      const sub = payload?.sub;
-      if (sub && typeof sub === "string") {
-        try {
-          const { data, error } = await supabaseAdmin.auth.admin.getUserById(sub);
-          if (data?.user && !error) {
-            userId = data.user.id;
-            verifyMethod = "decode+adminGet";
-          } else if (error) {
-            console.warn("[upgrade-business-account] method2 admin getUserById failed:", error.message);
-          }
-        } catch (e: any) {
-          console.warn("[upgrade-business-account] method2 admin getUserById threw:", e?.message ?? e);
-        }
-      } else {
-        console.warn("[upgrade-business-account] method2 jwt decode: no sub claim");
-      }
-    }
-
+    // [audyt 2026-09-14] USUNIETA metoda 2 (decode `sub` z NIEPODPISANEGO tokenu +
+    // admin.getUserById): sprawdzala tylko, czy user istnieje, nie czy token jest jego -
+    // z wylaczonym verify_jwt na bramce to gotowe przejecie dowolnego konta. Zostaje
+    // wylacznie getUser (podpis weryfikuje GoTrue).
     // [C2] USUNIETO fallback "decode-trust": wczesniej, gdy obie zweryfikowane
     // sciezki zawiodly, braliśmy payload.sub z NIEPODPISANEGO (tylko base64) JWT
     // i ustawialiśmy email/haslo dla tego usera -> atakujacy forge'ujac sub mogl

@@ -56,7 +56,7 @@ const BusinessHoursEditor = ({ value, onChange }: BusinessHoursEditorProps) => {
                   <button
                     type="button"
                     onClick={() => setDay(key, { open: "09:00", close: "22:00" })}
-                    className="text-xs text-orange-600 font-medium px-2"
+                    className="text-xs text-primary font-medium px-2"
                   >
                     {t("hours.open_action")}
                   </button>

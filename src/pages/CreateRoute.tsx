@@ -207,7 +207,7 @@ const CreateRoute = () => {
                   .eq("id", wizardState.existingRouteId!);
                 navigate(`/review-summary?route=${wizardState.existingRouteId}&new=1`);
               }}
-              className="text-sm font-semibold text-orange-600 shrink-0"
+              className="text-sm font-semibold text-primary shrink-0"
             >
               Zakończ trasę
             </button>

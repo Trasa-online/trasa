@@ -20,13 +20,8 @@
     "other": "Place"
   },
   "places_one": "place",
-  "places_few": "places",
-  "places_many": "places",
   "people_one": "person",
-  "people_few": "people",
-  "people_many": "people",
   "points_one": "point",
-  "points_many": "points",
   "editor": {
     "reorder_aria": "Drag to reorder",
     "move_up": "Move up",
@@ -54,7 +49,13 @@
     "remove_this_place": "this place",
     "saving": "Saving…",
     "confirm_route": "Confirm this trip",
-    "save_changes": "Save changes"
+    "save_changes": "Save changes",
+    "photos_label": "Place photos",
+    "others_notes": "Notes from others",
+    "add_photo": "Add",
+    "open_place": "View place",
+    "photo_failed": "We could not add the photo",
+    "delete_photo": "Delete photo"
   },
   "status": {
     "day_finished_label": "Day finished",
@@ -104,7 +105,7 @@
     "draft_delete_aria": "Delete draft trip",
     "session_delete_aria": "Delete session",
     "plan_choice_title": "How do you want to plan?",
-    "plan_choice_sub": "On your own or together with friends - Trasa builds a plan from your picks.",
+    "plan_choice_sub": "On your own or together with friends - spontaway builds a plan from your picks.",
     "plan_solo_title": "Plan solo",
     "plan_solo_desc": "Browse places and build a trip on your own",
     "plan_group_title": "Plan together",
@@ -131,5 +132,12 @@
     "toast_added": "Added \"{{name}}\"",
     "empty": "No places - add your first one!",
     "tell_about_day": "Tell about the day"
+  },
+  "places_other": "places",
+  "people_other": "people",
+  "points_other": "points",
+  "shortcut": {
+    "hide": "Hide the trip shortcut",
+    "fallback": "Your trip"
   }
 }

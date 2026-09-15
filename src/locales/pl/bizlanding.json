@@ -7,14 +7,14 @@
     "waitlist": {
       "done": "Dzięki za zapis! Odezwiemy się, gdy otworzymy zapisy dla lokali.",
       "email_placeholder": "twoj@lokal.pl",
-      "consent": "Wyrażam zgodę na kontakt w sprawie premiery Trasy dla firm. Zapoznałem się z ",
+      "consent": "Wyrażam zgodę na kontakt w sprawie premiery spontaway dla firm. Zapoznałem się z ",
       "privacy_link": "polityką prywatności",
       "submit": "Zapisz się"
     },
     "hero": {
       "be_first": "Bądź pierwszy",
-      "be_first_desc": "Twój lokal w Trasie zanim aplikacja trafi do gości.",
-      "title_l1": "Dołącz do Trasy",
+      "be_first_desc": "Twój lokal w spontaway zanim aplikacja trafi do gości.",
+      "title_l1": "Dołącz do spontaway",
       "title_l2": "jako jeden",
       "title_l3": "z pierwszych",
       "body": "Budujemy aplikację do planowania city breaków. Szukamy pierwszych 100 lokali w Warszawie - wchodzisz bezpłatnie i zostajesz na mapie zanim użytkownicy tu trafią!"
@@ -36,7 +36,7 @@
     },
     "packages": {
       "eyebrow": "Pakiety",
-      "title": "Sprawdź pełne możliwości Trasy",
+      "title": "Sprawdź pełne możliwości spontaway",
       "scroll_hint": "Zgłoś swój lokal poniżej",
       "cta": "Wybieram"
     },
@@ -74,7 +74,7 @@
       "title": "Zgłoś swój lokal",
       "subtitle": "Wypełnij formularz - odezwiemy się w ciągu 24h i pomożemy uruchomić Twój profil.",
       "done_title": "Zgłoszenie przyjęte!",
-      "done_desc": "Jesteś wśród pierwszych lokali które budują Trasę. Odezwiemy się w ciągu 24h.",
+      "done_desc": "Jesteś wśród pierwszych lokali które budują spontaway. Odezwiemy się w ciągu 24h.",
       "selected_plan": "Wybrany plan:",
       "change": "zmień",
       "name_label": "Nazwa lokalu *",

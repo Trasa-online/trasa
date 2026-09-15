@@ -28,7 +28,37 @@
     "live_music": "Live music",
     "cinema": "Kino",
     "nightclub": "Klub nocny",
-    "store": "Sklep"
+    "store": "Sklep",
+    "landmark": "Zabytek",
+    "bakery": "Piekarnia",
+    "church": "Kościół",
+    "clothing_store": "Sklep odzieżowy",
+    "book_store": "Księgarnia",
+    "shop": "Sklep",
+    "vintage_store": "Vintage store"
   },
-  "other": "Miejsce"
+  "other": "Miejsce",
+  "plural": {
+    "restaurant": "Restauracje",
+    "cafe": "Kawiarnie",
+    "bar": "Bary",
+    "museum": "Muzea",
+    "monument": "Zabytki",
+    "gallery": "Galerie",
+    "experience": "Doświadczenia",
+    "market": "Targi",
+    "club": "Kluby",
+    "park": "Parki",
+    "viewpoint": "Punkty widokowe",
+    "store": "Sklepy",
+    "boutique": "Butiki",
+    "concept_store": "Concept store",
+    "wine_shop": "Sklepy z winami",
+    "bookshop": "Księgarnie",
+    "theater": "Teatry",
+    "live_music": "Live music",
+    "cinema": "Kina",
+    "nightclub": "Kluby nocne",
+    "vintage_store": "Vintage store"
+  }
 }

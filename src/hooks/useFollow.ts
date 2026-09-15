@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { track } from "@/lib/analytics";
 
 // Asymetryczny model follow (tabela followers: follower_id -> following_id). 1-klik, bez
 // akceptacji. SELECT publiczny, wiec liczniki/listy dzialaja dla dowolnego usera.
@@ -66,6 +67,7 @@ export async function followUser(targetId: string) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("not authenticated");
   const { error } = await (supabase as any).from("followers").insert({ follower_id: user.id, following_id: targetId });
+  if (!error) track("user_followed", { target_id: targetId });
   // 23505 = juz obserwuje (unikalny PK) - traktujemy jak sukces (idempotentne).
   if (error && (error as any).code !== "23505") throw error;
 }

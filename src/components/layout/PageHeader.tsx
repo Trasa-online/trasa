@@ -1,5 +1,7 @@
 import { ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
+import { goBackOr } from "@/hooks/useGoBack";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -8,6 +10,8 @@ interface PageHeaderProps {
   showBack?: boolean;
   rightAction?: ReactNode;
   onBackClick?: () => void;
+  /** Ekran zapasowy, gdy nie ma dokad wracac (wejscie z deep-linka / powiadomienia). */
+  backFallback?: string;
 }
 
 export const PageHeader = ({
@@ -15,20 +19,14 @@ export const PageHeader = ({
   showBack = false,
   rightAction,
   onBackClick,
+  backFallback = "/eksploruj",
 }: PageHeaderProps) => {
+  const { t } = useTranslation("common");
   const navigate = useNavigate();
 
   const handleBack = () => {
-    if (onBackClick) {
-      onBackClick();
-    } else {
-      const historyIdx = window.history.state?.idx;
-      if (typeof historyIdx === "number" && historyIdx > 0) {
-        navigate(-1);
-      } else {
-        navigate("/", { replace: true });
-      }
-    }
+    if (onBackClick) onBackClick();
+    else goBackOr(navigate, backFallback);
   };
 
   return (
@@ -41,14 +39,14 @@ export const PageHeader = ({
               size="icon"
               onClick={handleBack}
               className="h-9 w-9"
-              aria-label="Wróć"
+              aria-label={t("back")}
             >
               <ArrowLeft className="h-5 w-5" />
             </Button>
           )}
           <h1
-            className={`text-xl font-bold ${title === "TRASA" ? "cursor-pointer" : ""}`}
-            onClick={title === "TRASA" ? () => navigate("/") : undefined}
+            className={`text-xl font-bold ${title === "TRASA" ? "cursor-pointer" : ""}`}   // i18n-ignore: "TRASA" to nazwa marki, nie copy
+            onClick={title === "TRASA" ? () => navigate("/") : undefined}   // i18n-ignore: nazwa marki
           >
             {title}
           </h1>

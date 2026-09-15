@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Check, ChevronDown } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { goBackOr } from "@/hooks/useGoBack";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -171,7 +172,7 @@ export default function BusinessOnePager() {
 
       {/* Nav */}
       <div className="sticky top-0 z-50 bg-white/90 backdrop-blur-sm border-b border-slate-100 px-5 h-14 flex items-center justify-between gap-4">
-        <button onClick={() => navigate(-1)} className="flex items-center gap-2 shrink-0">
+        <button onClick={() => goBackOr(navigate, "/")} className="flex items-center gap-2 shrink-0">
           <div className="h-7 w-7 rounded-full shrink-0" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
           <span className="font-black text-sm text-foreground">trasa</span>
         </button>

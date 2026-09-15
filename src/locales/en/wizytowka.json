@@ -39,11 +39,43 @@
   },
   "events_title": "Upcoming events",
   "description_title": "About the place",
+  "user_notes_title": "From users",
   "events_added_to_route_one": "{{count}} traveler has this planned",
   "events_added_to_route_other": "{{count}} travelers have this planned",
   "events_prev_month": "Previous month",
   "events_next_month": "Next month",
   "events_month_empty": "No events this month",
   "events_show_all": "All ({{count}})",
-  "events_collapse": "Collapse"
+  "events_collapse": "Collapse",
+  "open_in_google_maps": "View on Google Maps",
+  "toast": {
+    "already": "You already reported this place - thanks!",
+    "failed": "We could not send the report",
+    "sent": "Thanks, we will look into it 🙌"
+  },
+  "details_placeholder": "Add details (optional)",
+  "reason": {
+    "data": "Wrong details (address, hours)",
+    "photo": "Wrong or outdated photo",
+    "closed": "Closed or does not exist",
+    "content": "Inappropriate content",
+    "category": "Wrong category",
+    "other": "Other"
+  },
+  "title": "Something wrong with this place?",
+  "submit": "Send report",
+  "report_problem": "Report a problem",
+  "report": "Report",
+  "photo": {
+    "login_like": "Sign in to like a photo",
+    "login_add": "Sign in to add a photo",
+    "add_failed": "We could not add the photo",
+    "added": "Your photo was added",
+    "pick_image": "Choose an image file"
+  },
+  "add_place": "Add this place",
+  "added_place": "Added",
+  "share_place": "Share this place",
+  "save_short": "Save",
+  "add_short": "Add"
 }

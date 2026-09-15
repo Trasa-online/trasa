@@ -7,7 +7,7 @@ import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { resolveStored } from "@/components/PlacePhoto";
 import { format, parseISO, isValid, differenceInCalendarDays } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
-import { Loader2, Trash2, Sparkles, BookOpen } from "lucide-react";
+import { Loader2, Trash2, Sparkles, BookOpen, Images } from "lucide-react";
 import { toast } from "sonner";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { PLANNING_DISABLED } from "@/lib/appMode";
@@ -15,6 +15,9 @@ import { API_BASE } from "@/lib/platform";
 import { avatarSrc } from "@/lib/avatar";
 import { haptics } from "@/hooks/useHaptics";
 import { cn } from "@/lib/utils";
+import SheetSkeleton from "@/components/layout/SheetSkeleton";
+import { deferDelete } from "@/lib/deferDelete";
+import { EMPTY_ARRAY } from "@/lib/emptyRef";
 
 interface JournalTabProps {
   userId: string;
@@ -47,13 +50,13 @@ const JournalTab = ({ userId, city: cityFilter, draftsOnly = false }: JournalTab
   // Podzial zakladki Trasy na pigulki: Robocze (aktywne/w toku) vs Wspomnienia (minione).
   const [tripTab, setTripTab] = useState<"robocze" | "wspomnienia">("robocze");
 
-  const { data: entries = [], isLoading } = useQuery({
+  const { data: entries = EMPTY_ARRAY, isLoading } = useQuery({
     queryKey: ["journal-entries", userId],
     queryFn: async () => {
       // Own routes (all statuses)
       const { data: ownRoutes } = await (supabase as any)
         .from("routes")
-        .select("id, title, city, day_number, start_date, end_date, folder_id, group_session_id, ai_summary, ai_highlight, review_photos, cover_url, list_cover_url, is_shared, overall_rating, views, new_for_users, chat_status, trip_type, plan_finalized, created_at")
+        .select("id, title, city, day_number, start_date, end_date, folder_id, group_session_id, ai_summary, ai_highlight, review_photos, cover_url, list_cover_url, is_shared, status, overall_rating, views, new_for_users, chat_status, trip_type, plan_finalized, created_at")
         .eq("user_id", userId)
         // Sortuj po created_at (stabilne) - otwarcie/edycja trasy NIE zmienia jej pozycji na
         // liscie (updated_at wypychalo edytowana trase na gore, czego user nie chce).
@@ -63,14 +66,16 @@ const JournalTab = ({ userId, city: cityFilter, draftsOnly = false }: JournalTab
       const { data: memberRows } = await (supabase as any)
         .from("group_session_members")
         .select("session_id")
-        .eq("user_id", userId);
+        .eq("user_id", userId)
+        // Tylko potwierdzone: zaproszenie bez zgody nie moze samo wskoczyc do Wyjazdow.
+        .eq("status", "accepted");
 
       let groupRoutes: any[] = [];
       if (memberRows?.length) {
         const sessionIds = memberRows.map((m: any) => m.session_id);
         const { data } = await (supabase as any)
           .from("routes")
-          .select("id, title, city, day_number, start_date, end_date, folder_id, ai_summary, ai_highlight, review_photos, cover_url, new_for_users, chat_status, group_session_id, trip_type, plan_finalized, created_at")
+          .select("id, title, city, day_number, start_date, end_date, folder_id, ai_summary, ai_highlight, review_photos, cover_url, new_for_users, chat_status, group_session_id, status, trip_type, plan_finalized, created_at")
           .in("group_session_id", sessionIds)
           .neq("user_id", userId)
           .order("created_at", { ascending: false });
@@ -132,7 +137,7 @@ const JournalTab = ({ userId, city: cityFilter, draftsOnly = false }: JournalTab
     queryFn: async () => {
       if (!groupIds.length) return {} as Record<string, { avatar_url: string | null; name: string }[]>;
       const { data: members } = await (supabase as any)
-        .from("group_session_members").select("session_id, user_id").in("session_id", groupIds);
+        .from("group_session_members").select("session_id, user_id").in("session_id", groupIds).eq("status", "accepted");
       if (!members?.length) return {};
       const uids = [...new Set(members.map((m: any) => m.user_id))];
       const { data: profiles } = await (supabase as any)
@@ -195,19 +200,13 @@ const JournalTab = ({ userId, city: cityFilter, draftsOnly = false }: JournalTab
       });
     }
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
     const active: any[] = [];
     const postcards: any[] = [];
     for (const e of collapsed) {
-      const lastDate = e._lastDate ? parseISO(e._lastDate) : null;
-      const isPast = lastDate && isValid(lastDate) && lastDate < today;
-      // Wspomnienie (pocztowka w Dzienniku) = trasa UKONCZONA (trip_type=completed /
-      // plan_finalized) ALBO miniona (data < dzis). Wczesniej liczyla sie TYLKO data ->
-      // trasa ukonczona DZIS znikala z aktywnych (trip_type!=planning), a do Dziennika
-      // nie trafiala (data nie minela) = "nie zapisala sie nigdzie". To byl bug.
-      const isDone = e.trip_type === "completed" || e.plan_finalized === true;
-      if (isPast || isDone) postcards.push(e);
+      // Wspomnienie (pocztowka) = trasa OPUBLIKOWANA (status='published'), ustawiane WYLACZNIE przez
+      // "Zakoncz wyjazd" (2026-08-24: ujednolicone ze wszystkimi ekranami - wspomnienie == published).
+      // Robocza (aktywna) = status != 'published'. NIE data/trip_type/plan_finalized/okladka.
+      if (e.status === "published") postcards.push(e);
       else active.push(e);
     }
     active.sort((a, b) => {
@@ -251,54 +250,62 @@ const JournalTab = ({ userId, city: cityFilter, draftsOnly = false }: JournalTab
       (old ?? []).filter((x: any) => x.id !== entry.id)
     );
     queryClient.invalidateQueries({ queryKey: ["journal-badge"] });
-    try {
-      if (entry.is_own) {
-        await supabase.from("pins").delete().eq("route_id", entry.id);
-        await (supabase as any).from("chat_sessions").delete().eq("route_id", entry.id);
-        const { error } = await supabase.from("routes").delete().eq("id", entry.id);
-        if (error) throw error;
-        toast.success(t("journal.toast_deleted"));
-      } else {
-        if (!entry.group_session_id) throw new Error("missing group_session_id");
-        // count: 'exact' zeby wykryc silent RLS fail (migracja 20260604_gsm_delete_policy.sql).
-        const { error, count } = await (supabase as any)
-          .from("group_session_members")
-          .delete({ count: "exact" })
-          .eq("session_id", entry.group_session_id)
-          .eq("user_id", userId);
-        if (error) throw error;
-        if (count === 0) throw new Error(t("journal.leave_no_permission"));
-        toast.success(t("journal.toast_left"));
-      }
-      restoreEntries();
-    } catch (err: any) {
-      console.error("[JournalTab] delete/leave failed:", err);
-      toast.error(t("journal.toast_fail"), { description: err?.message ?? t("journal.unknown_error") });
-      restoreEntries(); // fail -> wpis wraca na liste
-    }
+    // Commit ODROCZONY o okno "Cofnij". Wpis znika z listy od razu (optymistycznie), a faktyczne
+    // usuniecie / opuszczenie leci dopiero po 5 s - dzieki temu cofniecie nie musi niczego
+    // odtwarzac, tylko anuluje operacje (zgloszenie Nat 2026-09-09). Przy opuszczaniu cudzego
+    // wyjazdu to jedyna uczciwa droga: re-insert do group_session_members polegly na RLS.
+    deferDelete({
+      message: entry.is_own ? t("journal.toast_deleted") : t("journal.toast_left"),
+      onUndo: restoreEntries,
+      commit: async () => {
+        try {
+          if (entry.is_own) {
+            await supabase.from("pins").delete().eq("route_id", entry.id);
+            await (supabase as any).from("chat_sessions").delete().eq("route_id", entry.id);
+            const { error } = await supabase.from("routes").delete().eq("id", entry.id);
+            if (error) throw error;
+          } else {
+            if (!entry.group_session_id) throw new Error("missing group_session_id");
+            // count: 'exact' zeby wykryc silent RLS fail (migracja 20260604_gsm_delete_policy.sql).
+            const { error, count } = await (supabase as any)
+              .from("group_session_members")
+              .delete({ count: "exact" })
+              .eq("session_id", entry.group_session_id)
+              .eq("user_id", userId);
+            if (error) throw error;
+            if (count === 0) throw new Error(t("journal.leave_no_permission"));
+          }
+          restoreEntries();
+        } catch (err: any) {
+          console.error("[JournalTab] delete/leave failed:", err);
+          toast.error(t("journal.toast_fail"), { description: err?.message ?? t("journal.unknown_error") });
+          restoreEntries(); // fail -> wpis wraca na liste
+        }
+      },
+    });
   };
 
   // Modal potwierdzenia usuniecia/opuszczenia wyjazdu (nieodwracalne, copy jak systemowy alert).
   const deleteModal = (
     <AlertDialog open={!!pendingDelete} onOpenChange={(o) => { if (!o) setPendingDelete(null); }}>
-      <AlertDialogContent className="rounded-3xl max-w-[340px]">
+      <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>
-            {pendingDelete?.is_own ? "Na pewno chcesz usunąć ten wyjazd?" : "Na pewno chcesz opuścić ten wyjazd?"}
+            {pendingDelete?.is_own ? t("confirm.delete_trip_title") : t("confirm.leave_trip_title")}
           </AlertDialogTitle>
           <AlertDialogDescription>
             {pendingDelete?.is_own
-              ? "Jeżeli usuniesz ten wyjazd, zniknie on bezpowrotnie z Twojego profilu. Nie można tego cofnąć."
-              : "Przestaniesz być uczestnikiem tego wyjazdu i zniknie on z Twojego profilu. Nie można tego cofnąć."}
+              ? t("confirm.delete_trip_desc")
+              : t("confirm.leave_trip_desc")}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel className="rounded-full">Anuluj</AlertDialogCancel>
+          <AlertDialogCancel className="rounded-full">{t("common:buttons.cancel")}</AlertDialogCancel>
           <AlertDialogAction
             onClick={() => { const e = pendingDelete; setPendingDelete(null); if (e) void doDelete(e); }}
             className="rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >
-            {pendingDelete?.is_own ? "Usuń" : "Opuść"}
+            {pendingDelete?.is_own ? t("confirm.delete_action") : t("confirm.leave_action")}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
@@ -307,13 +314,9 @@ const JournalTab = ({ userId, city: cityFilter, draftsOnly = false }: JournalTab
 
   // Sheet tworzenia nowego wyjazdu (tryb uproszczony) - wspoldzielony miedzy stanami.
 
-  // Polska liczba mnoga miejsc: 1 miejsce / 2-4 miejsca / 5+ miejsc.
-  const placesCountLabel = (n: number): string => {
-    if (n === 1) return t("journal.places_one", { num: n });
-    const last = n % 10, last2 = n % 100;
-    if (last >= 2 && last <= 4 && (last2 < 10 || last2 >= 20)) return t("journal.places_few", { num: n });
-    return t("journal.places_many", { num: n });
-  };
+  // Odmiane liczy i18next (polski: one/few/many, angielski: one/other). Recznie wybierana
+  // forma dzialala TYLKO po polsku - po angielsku wolala klucz, ktorego tam nie ma.
+  const placesCountLabel = (n: number): string => t("journal.places", { count: n, num: n });
 
   // Karta wyjazdu (redesign): uklad poziomy - okladka po lewej (zamek + mini-mapa w rogach),
   // po prawej tytul, miasto + data, liczba miejsc i awatary uczestnikow (dla grup).
@@ -342,7 +345,7 @@ const JournalTab = ({ userId, city: cityFilter, draftsOnly = false }: JournalTab
     // Odliczanie "Za X dni" dla nadchodzacych wyjazdow (start w przyszlosci).
     const daysUntil = _d && isValid(_d) ? differenceInCalendarDays(_d, new Date()) : null;
     const countdown = daysUntil != null && daysUntil >= 0
-      ? (daysUntil === 0 ? "Dziś" : daysUntil === 1 ? "Jutro" : `Za ${daysUntil} dni`)
+      ? (daysUntil === 0 ? t("today") : daysUntil === 1 ? "Jutro" : `Za ${daysUntil} dni`)
       : null;
 
     return (
@@ -418,9 +421,7 @@ const JournalTab = ({ userId, city: cityFilter, draftsOnly = false }: JournalTab
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-16 text-muted-foreground text-sm">
-        {t("journal.loading")}
-      </div>
+      <SheetSkeleton variant="places" rows={3} className="px-4 pt-4" />
     );
   }
 
@@ -440,9 +441,9 @@ const JournalTab = ({ userId, city: cityFilter, draftsOnly = false }: JournalTab
             </div>
           )}
           <div className="space-y-2">
-            <p className="text-xl font-bold tracking-tight">{PLANNING_DISABLED ? "Twoje wyjazdy" : t("journal.empty_title")}</p>
+            <p className="text-xl font-bold tracking-tight">{PLANNING_DISABLED ? t("empty.no_trips") : t("journal.empty_title")}</p>
             <p className="text-sm text-muted-foreground leading-relaxed max-w-[260px] mx-auto">
-              {PLANNING_DISABLED ? "Stwórz wyjazd klikając guzik „+”, aby zobaczyć je tutaj." : t("journal.empty_desc")}
+              {PLANNING_DISABLED ? t("empty.no_trips_desc") : t("journal.empty_desc")}
             </p>
           </div>
           {!PLANNING_DISABLED && (
@@ -484,13 +485,23 @@ const JournalTab = ({ userId, city: cityFilter, draftsOnly = false }: JournalTab
 
   // Tryb uproszczony: przycisk "Nowy wyjazd" + toggle Aktywne | Wspomnienia.
   if (PLANNING_DISABLED) {
-    const emptyBox = (emoji: string, title: string, desc: string) => (
-      <div className="py-14 text-center px-8">
-        <div className="text-4xl mb-3">{emoji}</div>
+    // Ikona w brandowym peachy kolku (#fcede3, ikona #ef9d78) - ZERO emoji w UI.
+    const emptyBox = (icon: JSX.Element, title: string, desc: string) => (
+      <div className="py-14 text-center px-8 flex flex-col items-center">
+        <div className="w-16 h-16 rounded-full bg-[#fcede3] flex items-center justify-center mb-3">{icon}</div>
         <p className="text-base font-bold">{title}</p>
         <p className="text-sm text-muted-foreground mt-1 leading-relaxed max-w-[260px] mx-auto">{desc}</p>
       </div>
     );
+    // Ikona "Robocze" = znak Trasy (mask-image, peachy). "Wspomnienia" = Lucide Images.
+    const draftIcon = (
+      <span
+        aria-hidden
+        className="h-8 w-8"
+        style={{ display: "block", backgroundColor: "#ef9d78", WebkitMaskImage: "url(/Ikona_Trasy.svg)", maskImage: "url(/Ikona_Trasy.svg)", WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat", WebkitMaskSize: "contain", maskSize: "contain", WebkitMaskPosition: "center", maskPosition: "center" }}
+      />
+    );
+    const memoryIcon = <Images className="h-8 w-8 text-[#ef9d78]" strokeWidth={2} />;
     // Pigulki: Robocze (aktywne/w toku) | Wspomnienia (minione). draftsOnly -> tylko robocze.
     const effTab = draftsOnly ? "robocze" : tripTab;
     const shown = effTab === "robocze" ? active : postcards;
@@ -518,8 +529,8 @@ const JournalTab = ({ userId, city: cityFilter, draftsOnly = false }: JournalTab
 
         {shown.length === 0 ? (
           effTab === "robocze"
-            ? emptyBox("🧳", "Brak roboczych tras", "Trasy w toku - te które tworzysz i planujesz - pojawią się tutaj.")
-            : emptyBox("📸", "Brak wspomnień", "Minione wyjazdy wylądują tutaj jako wspomnienia.")
+            ? emptyBox(draftIcon, t("empty.no_drafts"), t("empty.no_drafts_desc"))
+            : emptyBox(memoryIcon, t("empty.no_memories"), t("empty.no_memories_desc"))
         ) : (
           <div className="divide-y divide-border/50">
             {/* Hub "Robocze" (draftsOnly): klik -> widok tworzenia (ComposeWyjazd z miejscami).
@@ -537,8 +548,10 @@ const JournalTab = ({ userId, city: cityFilter, draftsOnly = false }: JournalTab
       {deleteModal}
       {/* Dziennik = wspomnienia (minione podroze). Aktywne trasy/sesje sa na ekranie glownym. */}
       {visibleEntries.length === 0 && (
-        <div className="py-16 text-center px-8">
-          <div className="text-4xl mb-3">📸</div>
+        <div className="py-16 text-center px-8 flex flex-col items-center">
+          <div className="w-16 h-16 rounded-full bg-[#fcede3] flex items-center justify-center mb-3">
+            <Images className="h-8 w-8 text-[#ef9d78]" strokeWidth={2} />
+          </div>
           <p className="text-base font-bold">{t("journal.memories_empty_title")}</p>
           <p className="text-sm text-muted-foreground mt-1 leading-relaxed max-w-[260px] mx-auto">
             {t("journal.memories_empty_desc")}

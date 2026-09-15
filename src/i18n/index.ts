@@ -13,7 +13,6 @@ import pl_explore from "../locales/pl/explore.json";
 import pl_plan from "../locales/pl/plan.json";
 import pl_wizytowka from "../locales/pl/wizytowka.json";
 import pl_journal from "../locales/pl/journal.json";
-import pl_activetrip from "../locales/pl/activetrip.json";
 import pl_nav from "../locales/pl/nav.json";
 import pl_profiles from "../locales/pl/profiles.json";
 import pl_myplan from "../locales/pl/myplan.json";
@@ -43,7 +42,6 @@ import en_explore from "../locales/en/explore.json";
 import en_plan from "../locales/en/plan.json";
 import en_wizytowka from "../locales/en/wizytowka.json";
 import en_journal from "../locales/en/journal.json";
-import en_activetrip from "../locales/en/activetrip.json";
 import en_nav from "../locales/en/nav.json";
 import en_profiles from "../locales/en/profiles.json";
 import en_myplan from "../locales/en/myplan.json";
@@ -79,7 +77,6 @@ i18n
         plan: pl_plan,
         wizytowka: pl_wizytowka,
         journal: pl_journal,
-        activetrip: pl_activetrip,
         nav: pl_nav,
         profiles: pl_profiles,
         myplan: pl_myplan,
@@ -110,7 +107,6 @@ i18n
         plan: en_plan,
         wizytowka: en_wizytowka,
         journal: en_journal,
-        activetrip: en_activetrip,
         nav: en_nav,
         profiles: en_profiles,
         myplan: en_myplan,

@@ -1,323 +1,280 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, X, Check, Loader2, Share2 } from "lucide-react";
+import { Plus, Check, Loader2, Share2, Bookmark, ListChecks } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
-import { PlacePhoto } from "@/components/PlacePhoto";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useSavedPlaces } from "@/hooks/useSavedPlaces";
 import { useHaptics } from "@/hooks/useHaptics";
-import { useShare } from "@/hooks/useShare";
-import { createWyjazdFromPlaces } from "@/lib/createWyjazd";
+import { usePlaceShare, type SharePlaceInput } from "@/hooks/usePlaceShare";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { resolveStored } from "@/components/PlacePhoto";
+import { fetchUserLists, addPlaceToList, removePlaceFromList, createListWithPlace, quickSavePlace, listHasPlace, type UserList } from "@/lib/placeLists";
 
-// Etap 2 eksploracji: drawer "Miejsce zapisane!" pokazywany po zapisaniu miejsca guzikiem
-// zakladki na karcie swipera. Miejsce laduje w Zapisanych (robi to PlaceSwiper), a ten
-// sheet pozwala od razu dorzucic je do wyjazdu - nowego (input + nazwa) albo istniejacego
-// (lista z lista wyjazdow + "+"). Referencja Figma: WIDOKI / "Krok 4 - klik w guzik '+'".
 
-// Minimalny zestaw pol potrzebny do insertu pinu / utworzenia wyjazdu.
+// "Miejsce zapisane! · dodaj do wyjazdu" - drawer zapisu miejsca (redesign 2026-08-20).
+// Nagłówek + lista LIST usera (awatar + nazwa + "+"), prywatne z eyebrow "Prywatne".
+// Tap "+" dodaje miejsce do listy; przy prywatnej "Do zobaczenia" (auto-lista) tworzy ją gdy brak.
+// Awatary obok nazwy = placeholder (ikona) - docelowo user wybierze awatar listy.
+
+// Bez pola `description` - notka nie podroznuje razem z miejscem (kazdy user pisze wlasna).
 export interface SavePlaceInput {
   place_name: string;
   category: string | null;
   address: string | null;
-  description: string | null;
+  /** WLASNE miasto miejsca. Gdy brak - spada na miasto kontekstu (miasto wyjazdu/eksploracji).
+   *  Bez tego kazde zapisane miejsce dostawalo miasto wyjazdu, ktory akurat planujesz. */
+  city?: string | null;
   latitude: number | null;
   longitude: number | null;
   photo_url: string | null;
   place_id: string | null;
 }
 
-interface TripRow {
-  id: string;
-  title: string | null;
-  city: string | null;
-  pins: { place_name: string; photo_url: string | null; category: string | null; latitude: number | null; longitude: number | null; pin_order: number | null }[] | null;
-}
-
-const skey = (name: string) => name.trim().toLowerCase();
+const WISHLIST_ID = "__wishlist__";
 
 export default function SavePlaceSheet({
   open,
   onOpenChange,
   place,
   city,
-  onFullyRemoved,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   place: SavePlaceInput | null;
   city: string;
-  // Wywolane gdy miejsce zostalo usuniete z OSTATNIEGO wyjazdu (nie ma go juz w zadnym) -
-  // rodzic moze wtedy zdjac stan "zapisane" z karty.
-  onFullyRemoved?: () => void;
+  onFullyRemoved?: () => void; // legacy prop (nieużywany) - zachowany dla zgodności API
 }) {
   const { t } = useTranslation("plan");
   const { user } = useAuth();
+  const { isSaved } = useSavedPlaces();
   const queryClient = useQueryClient();
   const haptics = useHaptics();
-  const share = useShare();
+  const navigate = useNavigate();
 
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [override, setOverride] = useState<Map<string, boolean>>(new Map());
   const [newName, setNewName] = useState("");
-  const [busyId, setBusyId] = useState<string | null>(null); // route id albo "new"
-  // Optymistyczny stan przynaleznosci do wyjazdu (po dodaniu/usunieciu, zanim query sie odswiezy).
-  const [overrides, setOverrides] = useState<Map<string, boolean>>(new Map());
+  // Input nowej listy ukryty domyślnie; pokazuje się po kliknięciu "+" w nagłówku.
+  const [showNewList, setShowNewList] = useState(false);
 
-  // Reset przy kazdym otwarciu (miejsce/stan sie zmienia).
-  useEffect(() => {
-    if (open) { setOverrides(new Map()); setNewName(""); setBusyId(null); }
-  }, [open]);
+  useEffect(() => { if (open) { setBusyId(null); setOverride(new Map()); setNewName(""); setShowNewList(false); } }, [open]);
 
-  const { data: trips = [], isLoading } = useQuery({
-    queryKey: ["save-sheet-trips", user?.id],
-    queryFn: async () => {
-      if (!user) return [];
-      const { data } = await (supabase as any)
-        .from("routes")
-        .select("id, title, city, pins(place_name, photo_url, category, latitude, longitude, pin_order)")
-        .eq("user_id", user.id)
-        .in("trip_type", ["planning", "ongoing"])
-        .order("created_at", { ascending: false });
-      return (data ?? []) as TripRow[];
-    },
+  const { data: author } = useQuery({
+    queryKey: ["save-sheet-author", user?.id],
     enabled: !!user && open,
+    queryFn: async () => {
+      const { data } = await supabase.from("profiles").select("username, first_name, avatar_url").eq("id", user!.id).maybeSingle();
+      return { name: (data as any)?.first_name || (data as any)?.username || t("save_sheet.user_fallback"), avatar: (data as any)?.avatar_url ?? null };
+    },
   });
 
-  // Odswiez listy wyjazdow/pinow w reszcie appki po dodaniu miejsca.
+  const { data: lists = [] } = useQuery({
+    queryKey: ["save-sheet-lists", user?.id],
+    enabled: !!user && open,
+    queryFn: () => fetchUserLists(user!.id),
+  });
+
   const invalidate = () => {
-    queryClient.invalidateQueries({ queryKey: ["save-sheet-trips", user?.id] });
-    queryClient.invalidateQueries({ queryKey: ["active-routes"] });
-    queryClient.invalidateQueries({ queryKey: ["home-active-solo"] });
-    queryClient.invalidateQueries({ queryKey: ["review-all-pins"] });
-    queryClient.invalidateQueries({ queryKey: ["active-plan-all-pins"] });
+    queryClient.invalidateQueries({ queryKey: ["save-sheet-lists", user?.id] });
+    queryClient.invalidateQueries({ queryKey: ["saved-place-names", user?.id] });
+    queryClient.invalidateQueries({ queryKey: ["saved-places", user?.id] });
+    queryClient.invalidateQueries({ queryKey: ["profile-list-feed", user?.id] });
+    queryClient.invalidateQueries({ queryKey: ["public-profile-lists"] });
   };
 
-  const isIn = (trip: TripRow) => {
-    if (overrides.has(trip.id)) return overrides.get(trip.id)!;
-    return (trip.pins ?? []).some((p) => skey(p.place_name) === skey(place?.place_name ?? ""));
-  };
+  // Auto-zapis miejsca do "Do zobaczenia" (luźny zapis) przy otwarciu. Dzięki temu bookmark jest
+  // wypełniony WSZĘDZIE (fetchSavedPlaceNames), nawet gdy user nie wybierze żadnej listy. Dedup.
+  useEffect(() => {
+    if (!open || !place || !user) return;
+    // Auto-zapis TYLKO gdy miejsce nie jest jeszcze w ZADNEJ liscie. Inaczej otwarcie arkusza
+    // (np. by zmienic liste albo usunac) NIE re-dodawaloby usunietego miejsca (bug: un-save nieskuteczny).
+    if (isSaved(place.place_name)) return;
+    let alive = true;
+    quickSavePlace(user.id, { ...place, city: place.city ?? city ?? null }, city || null, author)
+      // Haptyka POTWIERDZENIA zapisu - user ma czuc, ze miejsce wpadlo do listy, a nie tylko
+      // czytac toast (zgloszenie Nat 2026-08-29).
+      .then(({ added }) => { if (alive && added) { haptics.success(); invalidate(); } })
+      .catch((e) => console.warn("[SavePlaceSheet] auto-save failed:", e?.message ?? e));
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, place?.place_name, user?.id]);
 
-  // Dodanie do wyjazdu: zamyka drawer i pokazuje toast "zapisano w: X" (dopiero po
-  // zamknieciu, zeby toast nie nachodzil na drawer). Toast TYLKO przy realnym zapisie
-  // do planu - samo zapisanie zakladka (bez planu) nie pokazuje zadnego toasta.
-  const addToTrip = async (trip: TripRow) => {
-    if (!place || !user || busyId || isIn(trip)) return;
-    setBusyId(trip.id);
-    haptics.medium();
-    try {
-      const maxOrder = (trip.pins ?? []).reduce((m, p) => Math.max(m, p.pin_order ?? -1), -1);
-      const { error } = await (supabase as any).from("pins").insert({
-        route_id: trip.id,
-        place_name: place.place_name,
-        address: place.address,
-        description: place.description,
-        category: place.category || "other",
-        latitude: place.latitude,
-        longitude: place.longitude,
-        place_id: place.place_id,
-        suggested_time: null,
-        photo_url: place.photo_url,
-        pin_order: maxOrder + 1,
-        original_creator_id: user.id,
-      });
-      if (error) throw error;
-      invalidate();
-      onOpenChange(false);
-      toast.success(t("save_sheet.added_to", { name: trip.title || city }));
-    } catch (e: any) {
-      console.error("[SavePlaceSheet] add to trip failed:", e?.message ?? e);
-      toast.error(t("save_sheet.add_error"));
-    } finally {
-      setBusyId(null);
-    }
-  };
+  // Prywatne (to_visit) najpierw, potem publiczne. Gdy brak prywatnej listy - wirtualny wiersz
+  // "Do zobaczenia" (utworzy się przy pierwszym zapisie przez quickSavePlace).
+  // Drawer pokazuje TYLKO kuratorskie listy usera (visited) + "dodaj nową". Wishlista "Do zobaczenia"
+  // NIE jest tu wierszem - zapis miejsca BEZ wyboru listy = auto-zapis (efekt nizej) -> trafia do
+  // Zapisane→Miejsca. Dodanie do listy jest opcjonalne.
+  const displayLists: UserList[] = lists.filter((l) => l.list_status === "visited");
 
-  // Usuniecie miejsca z wyjazdu (drawer zostaje otwarty, toast top-center zeby nie nachodzil).
-  const removeFromTrip = async (trip: TripRow) => {
-    if (!place || !user || busyId || !isIn(trip)) return;
-    setBusyId(trip.id);
-    haptics.medium();
-    try {
-      const { error } = await (supabase as any)
-        .from("pins")
-        .delete()
-        .eq("route_id", trip.id)
-        .ilike("place_name", place.place_name);
-      if (error) throw error;
-      const nextOverrides = new Map(overrides).set(trip.id, false);
-      setOverrides(nextOverrides);
-      invalidate();
-      toast.success(t("save_sheet.removed_from", { name: trip.title || city }), { position: "top-center" });
-      // Czy miejsce jest jeszcze w JAKIMKOLWIEK wyjezdzie? Jesli nie -> zglos pelne usuniecie.
-      const isInNow = (tt: TripRow) => nextOverrides.has(tt.id)
-        ? nextOverrides.get(tt.id)!
-        : (tt.pins ?? []).some((p) => skey(p.place_name) === skey(place.place_name ?? ""));
-      if (!trips.some(isInNow)) onFullyRemoved?.();
-    } catch (e: any) {
-      console.error("[SavePlaceSheet] remove from trip failed:", e?.message ?? e);
-      toast.error(t("save_sheet.remove_error"));
-    } finally {
-      setBusyId(null);
-    }
-  };
+  const isIn = (l: UserList) => (override.has(l.id) ? override.get(l.id)! : listHasPlace(l, place?.place_name ?? ""));
 
-  const createNew = async () => {
-    const name = newName.trim();
+  const toggle = async (l: UserList) => {
     if (!place || !user || busyId) return;
-    setBusyId("new");
-    haptics.medium();
+    setBusyId(l.id); haptics.medium();
     try {
-      const id = await createWyjazdFromPlaces(user.id, city || null, name || city || "Wyjazd", [
-        {
-          place_name: place.place_name,
-          category: place.category,
-          address: place.address,
-          description: place.description,
-          latitude: place.latitude,
-          longitude: place.longitude,
-          photo_url: place.photo_url,
-          place_id: place.place_id,
-        },
-      ]);
-      if (!id) throw new Error("route insert failed");
-      setNewName("");
+      if (isIn(l)) {
+        await removePlaceFromList(l.id, place.place_name);
+        setOverride((prev) => new Map(prev).set(l.id, false));
+        toast.success(t("save_sheet.removed_from", { title: l.title }), {
+          action: { label: "Cofnij", onClick: async () => {
+            await addPlaceToList(l.id, { ...place, city: place.city ?? l.city ?? city ?? null });
+            setOverride((prev) => new Map(prev).set(l.id, true));
+            invalidate();
+          } },
+        });
+      } else {
+        await addPlaceToList(l.id, { ...place, city: place.city ?? l.city ?? city ?? null });
+        setOverride((prev) => new Map(prev).set(l.id, true));
+        haptics.success();
+        toast.success(`Dodano do „${l.title}"`);
+      }
       invalidate();
-      onOpenChange(false);
-      toast.success(t("save_sheet.created", { name: name || city || "Wyjazd" }));
     } catch (e: any) {
-      console.error("[SavePlaceSheet] create trip failed:", e?.message ?? e);
-      toast.error(t("save_sheet.create_error"));
-    } finally {
-      setBusyId(null);
-    }
+      console.error("[SavePlaceSheet] toggle failed:", e?.message ?? e);
+      toast.error(t("save_sheet.save_failed"));
+    } finally { setBusyId(null); }
   };
 
-  const onShare = async () => {
-    if (!place) return;
-    const url =
-      place.latitude && place.longitude
-        ? `https://www.google.com/maps/search/?api=1&query=${place.latitude},${place.longitude}`
-        : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([place.place_name, place.address, city].filter(Boolean).join(" "))}`;
-    const res = await share({ title: place.place_name, text: place.place_name, url });
-    if (res.ok) toast.success(res.method === "clipboard" ? t("save_sheet.link_copied") : t("save_sheet.shared"));
+  // Utwórz NOWĄ listę z tym miejscem. Kuratorska lista (visited) = ZAWSZE publiczna
+  // (decyzja 2026-08-24: brak opcji "prywatna", rozwój bazy discovery).
+  const createNew = async () => {
+    if (!place || !user || busyId) return;
+    const name = newName.trim();
+    if (!name) return;
+    setBusyId("new"); haptics.medium();
+    try {
+      const id = await createListWithPlace(user.id, name, "visited", city || null, { ...place, city: place.city ?? city ?? null }, author, true);
+      if (!id) throw new Error("create failed");
+      setNewName("");
+      setShowNewList(false);
+      invalidate();
+      toast.success(t("save_sheet.list_created", { name }));
+    } catch (e: any) {
+      console.error("[SavePlaceSheet] create list failed:", e?.message ?? e);
+      toast.error(t("save_sheet.list_failed"));
+    } finally { setBusyId(null); }
+  };
+
+  // "Udostępnij to miejsce" - cala logika (zdjecia, migawka, link, arkusz) w usePlaceShare,
+  // wspolnym z wizytowka (PlaceSwiperDetail).
+  const placeShare = usePlaceShare(city, { hostOpen: open });
+  const onShare = () => { if (place) void placeShare.start(place as SharePlaceInput); };
+
+  // Miniatura listy prowadzi do samej listy - arkusz zamykamy, zeby po powrocie nie wisial
+  // nad ekranem listy.
+  const openList = (l: UserList) => {
+    haptics.light();
+    onOpenChange(false);
+    navigate(`/lista/${l.id}`);
+  };
+
+  const renderRow = (l: UserList) => {
+    const inList = isIn(l);
+    const cover = resolveStored(l.cover);
+    return (
+      /* Wiersz ma DWIE osobne akcje, wiec nie moze byc jednym guzikiem (zagniezdzone <button>
+         to nieprawidlowy HTML): miniatura OTWIERA liste, reszta wiersza dodaje/usuwa miejsce
+         (prosba Nat 2026-09-08). */
+      <div key={l.id} className="w-full flex items-center gap-3 py-2.5">
+        <button
+          type="button"
+          onClick={() => openList(l)}
+          aria-label={t("save_sheet.open_list", { title: l.title })}
+          className="h-11 w-11 rounded-full overflow-hidden shrink-0 bg-[#fcede3] flex items-center justify-center active:scale-90 transition-transform"
+        >
+          {cover ? <img src={cover} alt="" className="h-full w-full object-cover" /> : <ListChecks className="h-5 w-5 text-orange-400" />}
+        </button>
+        <button
+          type="button"
+          onClick={() => toggle(l)}
+          disabled={busyId === l.id}
+          className="flex-1 min-w-0 flex items-center gap-3 text-left active:opacity-80"
+        >
+          <span className="flex-1 min-w-0 block">
+            {l.list_status === "to_visit" && <span className="block text-xs text-muted-foreground leading-tight">{t("save_sheet.private")}</span>}
+            <span className="block text-base font-bold text-foreground truncate leading-tight">{l.title}</span>
+          </span>
+          <span className={cn("h-9 w-9 rounded-full flex items-center justify-center shrink-0", inList ? "text-orange-500" : "text-foreground")}>
+            {busyId === l.id ? <Loader2 className="h-5 w-5 animate-spin" /> : inList ? <Check className="h-5 w-5" strokeWidth={2.5} /> : <Plus className="h-6 w-6" strokeWidth={2} />}
+          </span>
+        </button>
+      </div>
+    );
   };
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        side="bottom"
-        className="rounded-t-3xl p-0 [&>button]:hidden flex flex-col"
-        style={{ maxHeight: "80vh" }}
-      >
-        {/* Uchwyt + zamknij */}
-        <div className="relative pt-3 pb-1 shrink-0">
+      <SheetContent side="bottom" onOpenAutoFocus={(e) => e.preventDefault()} className="rounded-t-3xl p-0 [&>button]:hidden flex flex-col" style={{ maxHeight: "82vh" }}>
+        {/* Uchwyt */}
+        <div className="pt-3 pb-1 shrink-0">
           <div className="mx-auto h-1 w-10 rounded-full bg-border" />
-          <button
-            type="button"
-            onClick={() => onOpenChange(false)}
-            className="absolute top-2 right-3 h-8 w-8 rounded-full bg-muted/60 flex items-center justify-center active:scale-95 transition-transform"
-            aria-label={t("close")}
-          >
-            <X className="h-4 w-4 text-foreground" />
-          </button>
         </div>
 
-        {/* Tresc (scroll) */}
-        <div className="flex-1 min-h-0 overflow-y-auto px-5 pt-1 pb-3" style={{ WebkitOverflowScrolling: "touch" }}>
-          <p className="text-xl font-semibold text-foreground">{t("save_sheet.title")}</p>
+        {/* Nagłówek: "Miejsce zapisane!" + "+" w kółku (pokazuje input nowej listy) */}
+        <div className="flex items-center justify-between px-5 pt-2 pb-0.5 shrink-0">
+          <p className="text-xl font-black text-foreground">{t("save.saved_title")}</p>
+          <button
+            type="button"
+            onClick={() => setShowNewList((v) => !v)}
+            aria-label={showNewList ? t("save.hide") : t("save.new_list")}
+            className="h-9 w-9 rounded-full bg-muted flex items-center justify-center text-foreground active:scale-90 transition-transform"
+          >
+            <Plus className={`h-5 w-5 transition-transform ${showNewList ? "rotate-45" : ""}`} strokeWidth={2.25} />
+          </button>
+        </div>
+        <p className="px-5 pb-1 text-sm text-muted-foreground shrink-0">{t("save_sheet.desc")}</p>
 
-          {/* Nowy wyjazd: nazwa + "+" */}
-          <div className="flex items-center gap-2.5 pt-3 pb-1">
-            <input
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter") createNew(); }}
-              placeholder={t("save_sheet.new_name")}
-              className="flex-1 h-12 px-3.5 rounded-xl border border-border bg-background text-base text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-foreground/40"
-            />
-            <button
-              type="button"
-              onClick={createNew}
-              disabled={busyId === "new"}
-              className="h-10 w-10 rounded-full flex items-center justify-center shrink-0 text-foreground active:scale-90 transition-transform disabled:opacity-50"
-              aria-label={t("save_sheet.create_aria")}
-            >
-              {busyId === "new" ? <Loader2 className="h-5 w-5 animate-spin" /> : <Plus className="h-6 w-6" />}
-            </button>
+        {/* Nowa lista: input + "+" - widoczne dopiero po kliknięciu "+" w nagłówku. */}
+        {showNewList && (
+          <div className="px-5 pt-2 pb-2 shrink-0">
+            <div className="flex items-center gap-1 h-12 pl-4 pr-1.5 rounded-2xl border border-border bg-background">
+              <input
+                autoFocus
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") createNew(); }}
+                placeholder={t("save.new_list_name")}
+                className="flex-1 min-w-0 bg-transparent text-base text-foreground placeholder:text-muted-foreground/50 focus:outline-none"
+              />
+              <button type="button" onClick={createNew} disabled={busyId === "new" || !newName.trim()} className="h-9 w-9 rounded-full bg-muted flex items-center justify-center shrink-0 text-foreground active:scale-90 transition-transform disabled:opacity-40" aria-label={t("save_sheet.create_list")}>
+                {busyId === "new" ? <Loader2 className="h-5 w-5 animate-spin" /> : <Plus className="h-5 w-5" />}
+              </button>
+            </div>
           </div>
+        )}
 
-          {/* Istniejace wyjazdy */}
-          {isLoading ? (
-            <div className="flex justify-center py-8">
-              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+        <div className="flex-1 min-h-0 overflow-y-auto px-5 pt-1 pb-3" style={{ WebkitOverflowScrolling: "touch" }}>
+          <div className="divide-y divide-border/40">
+            {/* t("save_sheet.general") = domyślna lista KAŻDEGO usera. ZAWSZE na górze, zawsze zaznaczona
+                (każde zapisane miejsce tam trafia). Niekliknalny wskaźnik - nie da się usunąć. */}
+            <div className="w-full flex items-center gap-3 py-2.5">
+              <div className="h-11 w-11 rounded-full overflow-hidden shrink-0 bg-[#fcede3] flex items-center justify-center">
+                <Bookmark className="h-5 w-5 text-orange-500 fill-orange-500" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-base font-bold text-foreground truncate leading-tight">{t("save_sheet.general")}</p>
+                <p className="text-xs text-muted-foreground leading-tight">{t("save.all_saved_hint")}</p>
+              </div>
+              <span className="h-9 w-9 rounded-full flex items-center justify-center shrink-0 text-orange-500">
+                <Check className="h-5 w-5" strokeWidth={2.5} />
+              </span>
             </div>
-          ) : trips.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-4">{t("save_sheet.empty_hint")}</p>
-          ) : (
-            <div className="flex flex-col divide-y divide-border/40">
-              {trips.map((trip) => {
-                const count = trip.pins?.length ?? 0;
-                const cover = trip.pins?.[0];
-                const inPlan = isIn(trip);
-                const toggle = () => (inPlan ? removeFromTrip(trip) : addToTrip(trip));
-                return (
-                  <div key={trip.id} className="flex items-center gap-3 py-2.5">
-                    <button
-                      type="button"
-                      onClick={toggle}
-                      disabled={busyId === trip.id}
-                      className="flex-1 flex items-center gap-3 min-w-0 text-left active:opacity-80"
-                    >
-                      <div className="relative h-14 w-14 rounded-xl overflow-hidden shrink-0 bg-muted">
-                        {cover ? (
-                          <PlacePhoto pin={cover} className="h-full w-full object-cover" emojiClass="text-2xl" />
-                        ) : (
-                          <div className="h-full w-full flex items-center justify-center text-2xl">🧳</div>
-                        )}
-                        {count > 0 && (
-                          <span className="absolute bottom-1 right-1 bg-black/55 text-white text-[11px] font-medium px-1.5 rounded-full">
-                            {count}
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-sm font-medium text-foreground truncate">{trip.title || city}</p>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={toggle}
-                      disabled={busyId === trip.id}
-                      className={cn(
-                        "h-9 w-9 rounded-full flex items-center justify-center shrink-0 active:scale-90 transition-transform",
-                        inPlan ? "bg-orange-100 text-orange-600" : "text-foreground",
-                      )}
-                      aria-label={inPlan ? t("save_sheet.remove_aria") : t("save_sheet.add_aria")}
-                    >
-                      {busyId === trip.id ? (
-                        <Loader2 className="h-5 w-5 animate-spin" />
-                      ) : inPlan ? (
-                        <Check className="h-5 w-5" />
-                      ) : (
-                        <Plus className="h-6 w-6" />
-                      )}
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+            {displayLists.map(renderRow)}
+          </div>
         </div>
 
-        {/* Stopka: tylko jeden guzik - Udostepnij (zamkniecie przez X u gory). */}
-        <div className="shrink-0 px-5 pt-2 pb-safe-4 border-t border-border/20">
-          <button
-            type="button"
-            onClick={onShare}
-            className="w-full h-11 rounded-2xl bg-orange-100 text-foreground font-semibold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
-          >
-            <Share2 className="h-4 w-4" /> {t("save_sheet.share")}
-          </button>
+        {/* Stopka: Udostępnij to miejsce */}
+        <div className="shrink-0 px-5 pt-2 pb-safe-4">
+          <button type="button" onClick={onShare} disabled={placeShare.loading} className="w-full h-12 rounded-2xl bg-orange-100 text-foreground font-semibold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-70">
+            {placeShare.loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Share2 className="h-4 w-4" />}{t("save_sheet.share")}</button>
         </div>
+
+        {/* Arkusz udostepniania z karta miejsca (nad tym arkuszem - z-95). */}
+        {placeShare.sheet}
       </SheetContent>
     </Sheet>
   );

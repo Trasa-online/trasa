@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
+import { useDragToDismiss } from "@/hooks/useDragToDismiss";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useLocation } from "react-router-dom";
 import { NavLink } from "@/components/NavLink";
-import { BookOpen, Compass, Map, X, MapPin, User, Heart, ArrowLeft, Layers, Bookmark } from "lucide-react";
+import CreateFlowSheet from "@/components/create/CreateFlowSheet";
+import { X, MapPin, Heart, ArrowLeft, Layers } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { getTodayLikes, type ExploreLike } from "@/lib/exploreLikes";
 import { isNative } from "@/lib/platform";
@@ -56,13 +56,33 @@ function getActiveHomeCity(): string {
   return "Warszawa";
 }
 
+// Pasek dolny (redesign 2026-09-13, wzor: nawigacja COSMOS z zalacznika Nat): SAME IKONY,
+// bez podpisow. Po lewej pill z trzema zakladkami (Eksploracja · Miejsca · Profil), po prawej
+// OSOBNE kolko "+" - tworzenie jest akcja, nie zakladka, wiec nie siedzi w tym samym pudelku.
+// Aktywna zakladka = pelna czern ikony na delikatnym fillu, nieaktywna wyciszona (prosba Nat
+// 2026-09-06: z paska ma sie dac odczytac, gdzie sie jest). Target 56 x 52 px (> 44 pt Apple).
+// Pill zostaje JASNY (szklo, jak dotad) - wzor jest ciemny, ale u nas ciemne tla sa poza
+// marka (CLAUDE.md); przejscie na ciemny to zmiana dwoch klas nizej (NAV_PILL / NAV_FAB).
+// Ikona + PODPIS pod nia (prosba Nat, wieczor 2026-09-13; same ikony byly za malo czytelne).
+// Target 68 x 52 px: ikona 22 px + napis 10 px mieszcza sie w tej samej wysokosci pilla.
+const NAV_ITEM = "w-[68px] h-[52px] rounded-full flex flex-col items-center justify-center gap-[3px] transition-colors";
+const NAV_LABEL = "text-[10px] font-semibold leading-none tracking-[0.01em]";
+const NAV_ITEM_IDLE = "text-foreground/40";
+const NAV_ITEM_ACTIVE = "bg-black/[0.07] text-foreground";
+const NAV_PILL = "pointer-events-auto h-16 px-1.5 flex items-center gap-0.5 bg-white/45 backdrop-blur-sm backdrop-saturate-150 rounded-full border border-black/[0.06] ring-1 ring-inset ring-white/40 shadow-[0_12px_34px_-8px_rgba(0,0,0,0.30),0_2px_6px_-2px_rgba(0,0,0,0.10)]";
+
 const BottomNav = () => {
   const { t } = useTranslation("nav");
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
   const [showMenu, setShowMenu] = useState(false);
+  // Nowy arkusz tworzenia (sheet-first, native). "+" -> "Co dzisiaj tworzymy?" [Lista|Wyjazd].
+  const [showCreate, setShowCreate] = useState(false);
   const [reusePrompt, setReusePrompt] = useState<{ city: string; likes: ExploreLike[] } | null>(null);
+  // Gest natywny: przeciagniecie panelu w dol zamyka arkusz (menu "+" i prompt ponownego uzycia).
+  const menuDrag = useDragToDismiss({ onDismiss: () => setShowMenu(false) });
+  const reuseDrag = useDragToDismiss({ onDismiss: () => setReusePrompt(null) });
   // Menu "+": tworzenie wyjazdu SOLO / zestawienia. Trasy grupowe powstaja jako wyjazd solo,
   // a potem zapraszasz znajomych z widoku trasy (InviteFriendsSheet) - bez osobnej "sesji".
   // planStep uzywany tylko w legacy (nie-uproszczonym) trybie planowania.
@@ -72,7 +92,8 @@ const BottomNav = () => {
   // Inne ekrany (np. baner "Zaplanuj nową trasę" w dzienniku) moga otworzyc to
   // samo menu nad orba "+" zamiast wlasnego drawera.
   useEffect(() => {
-    const open = () => setShowMenu(true);
+    // Native: to samo wejscie co "+" (nowy arkusz). Web (stary flow): menu wyboru.
+    const open = () => (PLANNING_DISABLED ? setShowCreate(true) : setShowMenu(true));
     window.addEventListener("trasa:open-plan-menu", open);
     return () => window.removeEventListener("trasa:open-plan-menu", open);
   }, []);
@@ -87,6 +108,11 @@ const BottomNav = () => {
   }, []);
   // Zawsze pokaz nav przy zmianie ekranu (bezpiecznik).
   useEffect(() => { setNavHidden(false); }, [location.pathname]);
+  // Ekrany, na ktorych nawigacji NIE MA w ogole: ustawienia (i zmiana imienia/nazwy usera,
+  // ktora tam mieszka) to sciezka "wszedlem cos ustawic i wracam", a nie zakladka - pasek
+  // tylko kusil do wyjscia w polowie edycji (prosba Nat 2026-09-09).
+  const NAV_FREE = ["/settings"];
+  const navFreeRoute = NAV_FREE.some((r) => location.pathname === r || location.pathname.startsWith(r + "/"));
 
   // Publikuj wysokosc paska jako CSS var, zeby toasty (Sonner) siadaly tuz nad nawigacja
   // gdy jest widoczna, a przy samym dole gdy ukryta (np. przegladanie). Cleanup -> 0 gdy
@@ -95,32 +121,9 @@ const BottomNav = () => {
     const root = document.documentElement;
     // Nav widoczny: 5rem + bezpieczna strefa. Ukryty: sama bezpieczna strefa (toast i tak
     // ma zostac nad home-indicatorem, nie pod nim). Toast dokłada tylko +10px odstepu.
-    root.style.setProperty("--trasa-nav-offset", navHidden ? "env(safe-area-inset-bottom, 0px)" : "calc(5rem + env(safe-area-inset-bottom, 0px))");
+    root.style.setProperty("--trasa-nav-offset", navHidden || navFreeRoute ? "env(safe-area-inset-bottom, 0px)" : "calc(5rem + env(safe-area-inset-bottom, 0px))");
     return () => { root.style.setProperty("--trasa-nav-offset", "env(safe-area-inset-bottom, 0px)"); };
-  }, [navHidden]);
-
-  // Badge kropka na ikonie Dziennik gdy uzytkownik ma niewidziane trasy
-  // (routes.new_for_users zawiera user.id). Refetch przy navigation - gdy user
-  // wraca na Home, kropka znika lub pojawia sie wedlug stanu DB. Query tylko w native
-  // bo Dziennik dla web jest ukryty.
-  const { data: hasNewJournalEntries = false, refetch: refetchJournalBadge } = useQuery({
-    queryKey: ["journal-badge", user?.id],
-    queryFn: async () => {
-      if (!user?.id) return false;
-      const { count } = await (supabase as any)
-        .from("routes")
-        .select("id", { count: "exact", head: true })
-        .contains("new_for_users", [user.id]);
-      return (count ?? 0) > 0;
-    },
-    enabled: !!user?.id && isNative,
-    staleTime: 30_000,
-  });
-
-  // Refetch przy zmianie route (np. wyjscie z /dziennik - kropka mogla zostac wyczyszczona)
-  useEffect(() => {
-    if (user?.id && isNative) refetchJournalBadge();
-  }, [location.pathname, user?.id, refetchJournalBadge]);
+  }, [navHidden, navFreeRoute]);
 
   const handleSoloPlan = () => {
     setShowMenu(false);
@@ -135,6 +138,7 @@ const BottomNav = () => {
   // takze z menu "+" na kazdym ekranie z BottomNavem.
   const handleCreateCollection = () => {
     setShowMenu(false);
+    // Lista NIE wymaga miasta (moze byc globalna) -> wprost do formy, bez drumu kraj+miasto.
     navigate("/zestawienie/nowe");
   };
 
@@ -177,7 +181,8 @@ const BottomNav = () => {
           onClick={() => setShowMenu(false)}
         >
           <div
-            className="w-full max-w-sm bg-card rounded-t-3xl px-6 pt-5 pb-[max(28px,env(safe-area-inset-bottom))] flex flex-col gap-6 shadow-2xl animate-sheet-up"
+            {...menuDrag.dragProps}
+            className="w-[calc(100%-16px)] mx-2 mb-2 max-w-sm bg-card rounded-[40px] px-6 pt-5 pb-[max(28px,env(safe-area-inset-bottom))] flex flex-col gap-6 shadow-2xl animate-sheet-up"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header: X (lub Wroc) po lewej, tytul wysrodkowany, spacer po prawej */}
@@ -190,7 +195,7 @@ const BottomNav = () => {
                 {planStep ? <ArrowLeft className="h-5 w-5" /> : <X className="h-5 w-5" />}
               </button>
               <h2 className="text-base font-black text-foreground">
-                {planStep ? (PLANNING_DISABLED ? "Nowy wyjazd" : t("menu_plan_title")) : t("menu_title")}
+                {planStep ? (PLANNING_DISABLED ? t("new_trip") : t("menu_plan_title")) : t("menu_title")}
               </h2>
               <div className="w-9" />
             </div>
@@ -201,7 +206,7 @@ const BottomNav = () => {
                 // Tryb uproszczony: [Stworz wyjazd (solo) | Stworz zestawienie]. Grupowa trasa =
                 // wyjazd solo + zaproszenie znajomych z widoku trasy (bez osobnej sesji).
                 <>
-                  <ActionTile icon={MapPin} label="Stwórz wyjazd" onClick={handleCreateWyjazd} />
+                  <ActionTile icon={MapPin} label={t("create_trip")} onClick={handleCreateWyjazd} />
                   <ActionTile icon={Layers} label={t("create_collection")} onClick={handleCreateCollection} />
                 </>
               ) : !planStep ? (
@@ -226,12 +231,13 @@ const BottomNav = () => {
           onClick={() => setReusePrompt(null)}
         >
           <div
-            className="w-full max-w-sm bg-card rounded-t-3xl px-6 pt-7 pb-[max(24px,env(safe-area-inset-bottom))] flex flex-col gap-5 shadow-2xl animate-in slide-in-from-bottom-4 duration-300"
+            {...reuseDrag.dragProps}
+            className="w-[calc(100%-16px)] mx-2 mb-2 max-w-sm bg-card rounded-[40px] px-6 pt-7 pb-[max(24px,env(safe-area-inset-bottom))] flex flex-col gap-5 shadow-2xl animate-in slide-in-from-bottom-4 duration-300"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start gap-3">
               <div className="h-11 w-11 rounded-full bg-orange-50 border border-orange-100 flex items-center justify-center shrink-0">
-                <Heart className="h-5 w-5 text-orange-600" />
+                <Heart className="h-5 w-5 text-primary" />
               </div>
               <div className="flex-1">
                 <p className="text-base font-black leading-snug">
@@ -239,7 +245,7 @@ const BottomNav = () => {
                 </p>
                 <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
                   {t("reuse_have")} <strong>{reusePrompt.likes.length}</strong>{" "}
-                  {reusePrompt.likes.length === 1 ? t("reuse_place_one") : reusePrompt.likes.length < 5 ? t("reuse_place_few") : t("reuse_place_many")}{" "}
+                  {t("reuse_place", { count: reusePrompt.likes.length })}{" "}
                   {t("reuse_from", { city: reusePrompt.city })}
                 </p>
               </div>
@@ -247,7 +253,7 @@ const BottomNav = () => {
             <div className="flex flex-col gap-2">
               <button
                 onClick={handleReuseAccept}
-                className="w-full py-3 rounded-full bg-primary text-white font-bold text-sm active:scale-[0.97] transition-transform shadow-md shadow-orange-500/20"
+                className="w-full py-3 rounded-full bg-primary text-white font-bold text-sm active:scale-[0.97] transition-transform"
               >
                 {t("reuse_accept")}
               </button>
@@ -269,144 +275,58 @@ const BottomNav = () => {
       {/* Floating nav: biala karta odklejona od krawedzi + lekki cien (natywny feel).
           Outer = transparentny kontener (pointer-events-none) z marginesem + safe-area;
           inner = bialy pill z cieniem (pointer-events-auto). */}
-      {!navHidden && (
-      <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-lg z-50 px-4 pb-[max(16px,env(safe-area-inset-bottom,0px))] pointer-events-none">
-        {/* Web: 3 kolumny (Glowna, Plus, Profil - Eksploruj i Dziennik ukryte).
-            Native: 5 kolumn (wszystko). */}
-        {/* Ikony + nazwy zakladek pod spodem (orange active). */}
-        <div className="pointer-events-auto bg-white/70 backdrop-blur-2xl rounded-[26px] border border-white/50 shadow-[0_8px_28px_-8px_rgba(0,0,0,0.12)]">
-          <div className={`grid ${isNative ? "grid-cols-5" : "grid-cols-3"} h-14`}>
-
-          {/* Eksploruj - landing (skrajnie z lewej). Tylko w native iOS/Android.
-              Web/PWA ukrywa (na web B2C jest za waitlista). */}
+      {!navHidden && !navFreeRoute && (
+      <nav className="fixed bottom-0 left-0 right-0 z-50 flex justify-center items-center gap-3 px-4 pb-[max(20px,env(safe-area-inset-bottom,0px))] pointer-events-none">
+        {/* Pill zakladek. Ikony z BRANDOWEGO zestawu SVG (public/Ikona_*.svg, CSS mask +
+            currentColor). replace: zakladki NIE odkladaja historii (tab bar) - inaczej "wstecz"
+            krecil sie po zakladkach zamiast wracac do poprzedniego ekranu (zgloszenie Nat).
+            Native: Eksploracja · Miejsca · Profil. Web (stary flow, PLANNING_DISABLED=false):
+            Wyjazdy(/home) · Profil - B2C na webie jest za waitlista. */}
+        <div className={NAV_PILL}>
           {isNative && (
-            <NavLink
-              to="/eksploruj"
-              end={false}
-              className="flex flex-col items-center justify-center gap-1 text-muted-foreground transition-colors"
-              activeClassName="text-foreground"
-            >
-              {({ isActive }) => (
-                <>
-                  <NavIcon src="/Ikona_Eksploracja.svg" />
-                  <span className="text-[9px] font-semibold leading-tight mt-0.5">Eksploruj</span>
-                </>
-              )}
+            <NavLink to="/eksploruj" replace end={false} data-ob="nav-eksploruj" aria-label={t("tabs.explore")} className={`${NAV_ITEM} ${NAV_ITEM_IDLE}`} activeClassName={NAV_ITEM_ACTIVE}>
+              {() => <><NavIcon src="/Ikona_Eksploracja.svg" className="h-[22px] w-[22px]" /><span className={NAV_LABEL}>{t("tabs.explore")}</span></>}
             </NavLink>
           )}
-
-          {/* Slot 2: Tryb uproszczony -> Wyjazdy (dawny Dziennik). Stary flow -> Twoje trasy. */}
-          {PLANNING_DISABLED ? (
-            <NavLink
-              to="/dziennik"
-              end={false}
-              className="flex flex-col items-center justify-center gap-1 text-muted-foreground transition-colors"
-              activeClassName="text-foreground"
-            >
-              {({ isActive }) => (
-                <>
-                  <div className="relative flex items-center justify-center">
-                    <NavIcon src="/Ikona_Trasy.svg" />
-                    {hasNewJournalEntries && !isActive && (
-                      <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-orange-600 ring-2 ring-background" />
-                    )}
-                  </div>
-                  <span className="text-[9px] font-semibold leading-tight mt-0.5">Trasy</span>
-                </>
-              )}
-            </NavLink>
-          ) : (
-            <NavLink
-              to="/home"
-              end
-              className="flex flex-col items-center justify-center gap-1 text-muted-foreground transition-colors"
-              activeClassName="text-foreground"
-            >
-              {({ isActive }) => (
-                <>
-                  <NavIcon src="/Ikona_Trasy.svg" />
-                  <span className="text-[9px] font-semibold leading-tight mt-0.5">Trasy</span>
-                </>
-              )}
+          {!PLANNING_DISABLED && (
+            <NavLink to="/home" replace end aria-label={t("common:filters.trips")} className={`${NAV_ITEM} ${NAV_ITEM_IDLE}`} activeClassName={NAV_ITEM_ACTIVE}>
+              {() => <><NavIcon src="/Ikona_Trasy.svg" className="h-[22px] w-[22px]" /><span className={NAV_LABEL}>{t("common:filters.trips")}</span></>}
             </NavLink>
           )}
-
-          {/* Center FAB. Tryb uproszczony: "+" prowadzi PROSTO na ekran kompozycji trasy
-              (/wyjazd/nowy) - jedyna akcja tworzenia (zestawienia usuniete 2026-07-26).
-              Stary flow (web): otwiera menu wyboru (plan/zestawienie). */}
-          <button
-            data-ob="nav-fab"
-            onClick={() => { haptics.light(); PLANNING_DISABLED ? navigate("/utworz") : setShowMenu(!showMenu); }}
-            className="flex items-center justify-center"
-            aria-label={t("fab_aria")}
-          >
-            <span className={`h-11 w-11 rounded-full flex items-center justify-center active:scale-95 transition-transform ${showMenu ? "bg-primary shadow-sm" : ""}`}>
-              {showMenu ? (
-                <X className="h-6 w-6 text-white stroke-[2.5px]" />
-              ) : (
-                /* Ikona_Dodaj w brandowym pomaranczowym kole + bialy plus (wg zalacznika). */
-                <img src="/Ikona_Dodaj_orange.svg" alt="" className="h-11 w-11 object-contain" draggable={false} />
-              )}
-            </span>
-          </button>
-
-          {/* Slot 4: Tryb uproszczony -> Zapisane (polubione miejsca). Stary flow -> Dziennik.
-              Dziennik/Zapisane tylko w native - na web/PWA ukryte. */}
-          {PLANNING_DISABLED ? (
-            <NavLink
-              to="/polubione"
-              data-ob="nav-zapisane"
-              end={false}
-              className="flex flex-col items-center justify-center gap-1 text-muted-foreground transition-colors"
-              activeClassName="text-foreground"
-            >
-              {({ isActive }) => (
-                <>
-                  <NavIcon src="/Ikona_Zapisane.svg" />
-                  <span className="text-[9px] font-semibold leading-tight mt-0.5">Zapisane</span>
-                </>
-              )}
-            </NavLink>
-          ) : isNative && (
-            <NavLink
-              to="/dziennik"
-              end={false}
-              className="flex flex-col items-center justify-center gap-1 text-muted-foreground transition-colors"
-              activeClassName="text-foreground"
-            >
-              {({ isActive }) => (
-                <>
-                  <div className="relative">
-                    <BookOpen className="h-6 w-6 stroke-2" />
-                    {hasNewJournalEntries && !isActive && (
-                      <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-orange-600 ring-2 ring-background" />
-                    )}
-                  </div>
-                  <span className="text-[9px] font-semibold leading-tight mt-0.5">Dziennik</span>
-                </>
-              )}
+          {isNative && (
+            <NavLink to="/miejsca" replace end={false} data-ob="nav-miejsca" aria-label={t("tabs.places")} className={`${NAV_ITEM} ${NAV_ITEM_IDLE}`} activeClassName={NAV_ITEM_ACTIVE}>
+              {() => <><NavIcon src="/Ikona_Miejsca.svg" className="h-[22px] w-[22px]" /><span className={NAV_LABEL}>{t("tabs.places")}</span></>}
             </NavLink>
           )}
-
-          {/* Profil */}
-          <NavLink
-            to="/moj-profil"
-            end={false}
-            className="flex flex-col items-center justify-center gap-1 text-muted-foreground transition-colors"
-            activeClassName="text-foreground"
-          >
-            {({ isActive }) => (
-              <>
-                <NavIcon src="/Ikona_Profil.svg" />
-                <span className="text-[9px] font-semibold leading-tight mt-0.5">Profil</span>
-              </>
-            )}
+          <NavLink to="/moj-profil" replace end={false} data-ob="nav-profil" aria-label={t("common:nav.profile")} className={`${NAV_ITEM} ${NAV_ITEM_IDLE}`} activeClassName={NAV_ITEM_ACTIVE}>
+            {() => <><NavIcon src="/Ikona_Profil.svg" className="h-[22px] w-[22px]" /><span className={NAV_LABEL}>{t("common:nav.profile")}</span></>}
           </NavLink>
-
-          </div>
         </div>
+
+        {/* "+" - osobne kolko po prawej (ta sama wysokosc co pill). Native: arkusz tworzenia
+            [Lista|Wyjazd]. Stary flow (web): menu wyboru (plan/zestawienie). */}
+        <button
+          data-ob="nav-fab"
+          onClick={() => {
+            haptics.light();
+            if (!PLANNING_DISABLED) { setShowMenu(!showMenu); return; }
+            setShowCreate(true);
+          }}
+          className={`pointer-events-auto h-16 w-16 rounded-full flex items-center justify-center shadow-[0_12px_34px_-8px_rgba(0,0,0,0.30),0_2px_6px_-2px_rgba(0,0,0,0.10)] active:scale-95 transition-transform ${showMenu ? "bg-primary" : ""}`}
+          aria-label={t("fab_aria")}
+        >
+          {showMenu ? (
+            <X className="h-6 w-6 text-white stroke-[2.5px]" />
+          ) : (
+            /* Ikona_Dodaj = brandowe pomaranczowe kolo z bialym plusem, na cala wysokosc paska. */
+            <img src="/Ikona_Dodaj_orange.svg" alt="" className="h-16 w-16 object-contain" draggable={false} />
+          )}
+        </button>
       </nav>
       )}
+
+      {/* Nowy arkusz tworzenia (sheet-first) - wejscie z "+" na native. */}
+      <CreateFlowSheet open={showCreate} onClose={() => setShowCreate(false)} />
     </>
   );
 };

@@ -1,4 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
+import { goBackOr } from "@/hooks/useGoBack";
 import { ArrowLeft, Shield } from "lucide-react";
 
 const Terms = () => {
@@ -7,7 +8,7 @@ const Terms = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <header className="sticky top-0 z-50 bg-background border-b border-border/40 px-4 pt-safe-4 pb-3 flex items-center gap-3">
-        <button onClick={() => navigate(-1)} className="p-1 text-foreground/70 hover:text-foreground transition-colors">
+        <button onClick={() => goBackOr(navigate, "/")} className="p-1 text-foreground/70 hover:text-foreground transition-colors">
           <ArrowLeft className="h-5 w-5" />
         </button>
         <h1 className="text-base font-bold">Regulamin</h1>
@@ -19,7 +20,7 @@ const Terms = () => {
           to="/privacy"
           className="flex items-center gap-3 p-3 rounded-2xl bg-muted/40 border border-border/30 hover:bg-muted/60 transition-colors"
         >
-          <Shield className="h-4 w-4 text-orange-600 shrink-0" />
+          <Shield className="h-4 w-4 text-primary shrink-0" />
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-foreground">Polityka Prywatności</p>
             <p className="text-xs text-muted-foreground">Jakie dane zbieramy i&nbsp;jak je chronimy</p>

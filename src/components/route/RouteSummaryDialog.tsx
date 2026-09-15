@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { useDragToDismiss } from "@/hooks/useDragToDismiss";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
@@ -66,6 +67,8 @@ const RouteSummaryDialog = ({
   const { t } = useTranslation("route");
   const [saving, setSaving] = useState(false);
   const [showGuestAuth, setShowGuestAuth] = useState(false);
+  // Gest natywny: przeciagniecie panelu w dol zamyka arkusz.
+  const guestDrag = useDragToDismiss({ onDismiss: () => setShowGuestAuth(false) });
   const { user, isAnonymous } = useAuth();
   const { open: openAuthDrawer } = useAuthDrawer();
   const navigate = useNavigate();
@@ -131,7 +134,7 @@ const RouteSummaryDialog = ({
 
         const routePayload = {
           title: days.length > 1
-            ? `${plan.city} - Dzień ${day.day_number}`
+            ? t("day_label", { city: plan.city, day: day.day_number })
             : `${plan.city}`,
           city: plan.city,
           status: "draft",
@@ -297,7 +300,7 @@ const RouteSummaryDialog = ({
         {/* Header */}
         <div className="flex-shrink-0 flex items-start justify-between px-5 pb-4">
           <div>
-            <p className="text-xs font-medium text-orange-600 uppercase tracking-wide mb-0.5">{t("summary.eyebrow")}</p>
+            <p className="text-xs font-medium text-primary uppercase tracking-wide mb-0.5">{t("summary.eyebrow")}</p>
             <h2 className="text-2xl font-black leading-tight">{plan.city}</h2>
             <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
               {dateLabel && <span>{dateLabel}</span>}
@@ -351,7 +354,7 @@ const RouteSummaryDialog = ({
                       <div key={idx} className="flex items-start gap-3.5">
                         {/* Stepper */}
                         <div className="flex flex-col items-center shrink-0 pt-0.5">
-                          <div className="h-7 w-7 rounded-full bg-primary flex items-center justify-center text-[11px] font-bold text-white shadow-sm shadow-primary/30">
+                          <div className="h-7 w-7 rounded-full bg-primary flex items-center justify-center text-[11px] font-bold text-white">
                             {idx + 1}
                           </div>
                           {!isLast && (
@@ -405,7 +408,7 @@ const RouteSummaryDialog = ({
         {/* Guest auth upsell */}
         {showGuestAuth && (
           <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm">
-            <div className="w-full max-w-sm bg-card rounded-t-3xl px-6 pt-8 pb-[max(24px,env(safe-area-inset-bottom))] flex flex-col gap-5 shadow-2xl animate-in slide-in-from-bottom-4 duration-300">
+            <div {...guestDrag.dragProps} className="w-[calc(100%-16px)] mx-2 mb-2 max-w-sm bg-card rounded-[40px] px-6 pt-8 pb-[max(24px,env(safe-area-inset-bottom))] flex flex-col gap-5 shadow-2xl animate-in slide-in-from-bottom-4 duration-300">
               <div className="text-center space-y-1">
                 <p className="text-2xl font-black">{t("summary.guest_title")}</p>
                 <p className="text-sm text-muted-foreground">{t("summary.guest_desc")}</p>
@@ -428,7 +431,7 @@ const RouteSummaryDialog = ({
                     setShowGuestAuth(false);
                     openAuthDrawer({ mode: "register", hint: "save_route" });
                   }}
-                  className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-base active:scale-[0.97] transition-transform shadow-lg shadow-primary/25"
+                  className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-base active:scale-[0.97] transition-transform"
                 >
                   {t("summary.guest_cta")}
                 </button>

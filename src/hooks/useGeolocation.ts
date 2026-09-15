@@ -6,9 +6,9 @@ import type { LatLng } from "@/lib/distance";
 // na web). Wynik trzymany w module-level cache i wspoldzielony przez wszystkie komponenty
 // (jedno zapytanie na sesje). NIC nie zapisujemy na serwer - lokalizacja zyje tylko w pamieci.
 //
-// Zgoda w kontekscie: najpierw pokazujemy LocationPrimer ("po co"), dopiero potem wolamy
-// requestLocation() ktore odpala systemowy prompt. Flaga `trasa_geo_primed_v1` zapobiega
-// ponownemu pytaniu.
+// Zgoda w kontekscie: o lokalizacje prosimy dopiero przy akcji, ktora jej potrzebuje (chip
+// "Pokaz dystans", checklist odwiedzonych) - wtedy requestLocation() odpala systemowy prompt.
+// Flaga `trasa_geo_primed_v1` zapobiega ponownemu pytaniu.
 
 export type GeoStatus = "idle" | "requesting" | "granted" | "denied" | "unavailable";
 
@@ -45,8 +45,12 @@ export const markGeoPrimed = () => {
 // Bezpieczne do wielokrotnego wolania - jak juz mamy coords, zwraca je od razu.
 // force=true pomija cache i pobiera SWIEZA pozycje (np. do trafnego on-site przy wejsciu
 // w destynacje - user mogl sie przemiescic).
-export async function requestLocation(force = false): Promise<LatLng | null> {
+// highAccuracy=true wlacza GPS zamiast pozycji z sieci: potrzebne, gdy user ma zobaczyc
+// SIEBIE na mapie (guzik "moja lokalizacja") - pozycja z sieci potrafi byc kilkaset
+// metrow obok, a cache z localStorage nawet z innego miasta.
+export async function requestLocation(force = false, opts: { highAccuracy?: boolean } = {}): Promise<LatLng | null> {
   if (!force && cachedCoords) return cachedCoords;
+  const enableHighAccuracy = !!opts.highAccuracy;
   currentStatus = "requesting"; notifyAll();
   try {
     if (isNative) {
@@ -55,7 +59,7 @@ export async function requestLocation(force = false): Promise<LatLng | null> {
       if (perm.location !== "granted" && perm.coarseLocation !== "granted") {
         currentStatus = "denied"; notifyAll(); return null;
       }
-      const pos = await Geolocation.getCurrentPosition({ enableHighAccuracy: false, timeout: 10000 });
+      const pos = await Geolocation.getCurrentPosition({ enableHighAccuracy, timeout: enableHighAccuracy ? 15000 : 10000 });
       cachedCoords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
       currentStatus = "granted"; notifyAll(); persistCoords();
       return cachedCoords;
@@ -70,7 +74,8 @@ export async function requestLocation(force = false): Promise<LatLng | null> {
           currentStatus = "granted"; notifyAll(); persistCoords(); resolve(cachedCoords);
         },
         () => { currentStatus = "denied"; notifyAll(); resolve(null); },
-        { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 },
+        // maximumAge 0 przy swiezym odczycie: przegladarka nie moze oddac pozycji sprzed kwadransa.
+        { enableHighAccuracy, timeout: enableHighAccuracy ? 15000 : 10000, maximumAge: force ? 0 : 300000 },
       );
     });
   } catch {

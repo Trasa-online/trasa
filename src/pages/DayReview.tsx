@@ -297,7 +297,7 @@ const DayReview = () => {
           <button onClick={() => navigate("/")} className="p-1 text-foreground/70">
             <ArrowLeft className="h-6 w-6" />
           </button>
-          <button onClick={() => navigate("/")} className="text-2xl font-black tracking-tight">TRASA</button>
+          <button onClick={() => navigate("/")} className="text-2xl font-black tracking-tight">TRASA</button>   {/* i18n-ignore: nazwa marki */}
           <button onClick={() => navigate("/settings")} className="p-1 text-foreground/70">
             <Settings className="h-6 w-6" />
           </button>
@@ -316,7 +316,7 @@ const DayReview = () => {
         <button onClick={() => navigate("/")} className="p-1 text-foreground/70">
           <ArrowLeft className="h-6 w-6" />
         </button>
-        <h1 className="text-2xl font-black tracking-tight">TRASA</h1>
+        <h1 className="text-2xl font-black tracking-tight">TRASA</h1>   {/* i18n-ignore: nazwa marki */}
         <button onClick={() => navigate("/settings")} className="p-1 text-foreground/70">
           <Settings className="h-6 w-6" />
         </button>

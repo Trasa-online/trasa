@@ -19,7 +19,7 @@ All colors MUST be HSL.
     --popover-foreground: 0 0% 8%;
 
     /* ── Primary — orange (#D45113) ── */
-    --primary: 19 83% 45%;
+    --primary: 19.7 94.3% 48%;
     --primary-foreground: 0 0% 100%;
 
     /* ── Secondary — light gray ── */
@@ -40,7 +40,7 @@ All colors MUST be HSL.
 
     --border: 0 0% 85%;
     --input: 0 0% 91%;
-    --ring: 19 83% 45%;
+    --ring: 19.7 94.3% 48%;
 
     /* ── Tertiary — amber/gold ── */
     --star: 45 100% 51%;
@@ -194,4 +194,44 @@ html, body {
 input, textarea, [contenteditable="true"], [contenteditable=""] {
   -webkit-user-select: text;
   user-select: text;
+}
+
+/* Ekran startowy: znak spontaway "rysuje sie" od lewej (SplashDraw). Maska przycina ten
+   pomaranczowy prostokat do ksztaltu znaku, wiec kolor wchodzi w litere jak pociagniecie. */
+@keyframes splash-draw {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+
+/* Oddech znaku na ekranie startowym (SplashPulse). Wolno i plytko - ma sygnalizowac prace,
+   a nie przyciagac wzrok. Krzywa ease-in-out po obu stronach, zeby nie bylo "tetnienia". */
+@keyframes splash-pulse {
+  0%, 100% { transform: scale(1);     opacity: 0.72; }
+  50%      { transform: scale(1.075); opacity: 1; }
+}
+.animate-splash-pulse { animation: splash-pulse 1.6s ease-in-out infinite; }
+
+/* Szacunek dla ustawienia "ogranicz ruch" - zostaje sam znak, bez pulsowania. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-splash-pulse { animation: none; opacity: 1; }
+}
+
+/* Unoszenie grafiki wizytowki na ekranie dla lokali (Auth, businessMode - wariant C2 z Figmy,
+   prosba Nat 2026-09-14). Wolno i plytko: karta ma "oddychac", a nie skakac. Osobne
+   przesuniecie zamiast scale, zeby zdjecie nie tracilo ostrosci. Na tablecie/telefonie ta sama
+   animacja, tylko mniejszy skok (patrz .biz-float--sm). */
+@keyframes biz-float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-14px); }
+}
+.animate-biz-float { animation: biz-float 6s ease-in-out infinite; will-change: transform; }
+@keyframes biz-float-sm {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-8px); }
+}
+@media (max-width: 1023px) {
+  .animate-biz-float { animation-name: biz-float-sm; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-biz-float { animation: none; }
 }

@@ -62,5 +62,64 @@
   "bug_upload_error": "Nie udało się przesłać zdjęcia",
   "bug_submit": "Wyślij zgłoszenie",
   "bug_submitting": "Wysyłam…",
-  "bug_error": "Błąd: {{message}}"
+  "bug_error": "Błąd: {{message}}",
+  "bio": "O mnie",
+  "bio_placeholder": "Krótko o sobie, np. Uwielbiam city breaki!",
+  "show_onboarding": "Pokaż onboarding ponownie",
+  "community": {
+    "title": "Społeczność i kontakt",
+    "join": "Dołącz do serwera"
+  },
+  "show_splash": "Pokaż ekran startowy",
+  "render_error": "Błąd renderowania Ustawień:",
+  "username_taken": "Ta nazwa jest już zajęta",
+  "username_banned": "Ta nazwa jest niedozwolona",
+  "toast_save_error": "Nie udało się zapisać zmian",
+  "username_status": {
+    "checking": "Sprawdzam dostępność...",
+    "ok": "Nazwa jest wolna",
+    "taken": "Ta nazwa jest już zajęta",
+    "empty": "Wpisz nazwę użytkownika",
+    "short": "Nazwa musi mieć co najmniej 2 znaki",
+    "long": "Nazwa może mieć najwyżej 20 znaków",
+    "chars": "Dozwolone są litery, cyfry oraz . _ -   (bez spacji)",
+    "banned": "Ta nazwa jest niedozwolona",
+    "reserved": "Ta nazwa jest zarezerwowana"
+  },
+  "customize": {
+    "title": "Customizuj",
+    "desc": "Ramki i nakładki na awatar"
+  },
+  "frames": {
+    "title": "Ramka awatara",
+    "desc": "Wybrana ramka jest widoczna przy Twoim zdjęciu na profilu, w wyjazdach i w kolekcjach.",
+    "none": "Bez ramki",
+    "stars": "Gwiazdki",
+    "hearts": "Serduszka",
+    "clouds": "Chmurki",
+    "saved": "Ramka ustawiona",
+    "removed": "Ramka zdjęta",
+    "save_failed": "Nie udało się zapisać ramki",
+    "color": "Kolor",
+    "color_desc": "Domyślnie pomarańcz. Pipeta otwiera pełną paletę - wybierz, jaki chcesz.",
+    "color_default": "Pomarańcz (domyślny)",
+    "color_custom": "Dowolny kolor",
+    "rainbow": "Tęcza",
+    "reward": "Nagroda",
+    "locked_hint": "Zaproś {{goal}} osoby, żeby odblokować ({{invited}} z {{goal}})",
+    "unlocked_hint": "Odblokowana - dzięki za zaproszenia!",
+    "locked_toast": "Ta nakładka czeka na Ciebie po zaproszeniu jeszcze {{left}} osób",
+    "locked_cta": "Zaproś",
+    "locked_error": "Ta nakładka jest jeszcze zablokowana",
+    "presets_title": "Albo wybierz awatar bazowy",
+    "presets_desc": "Sam kolor zamiast zdjęcia - w jednym z odcieni marki.",
+    "avatar_saved": "Ustawiono awatar"
+  },
+  "first_name_status": {
+    "empty": "Wpisz imię",
+    "short": "Imię musi mieć co najmniej 2 znaki",
+    "long": "Imię może mieć najwyżej 30 znaków",
+    "chars": "Imię to same litery (może być myślnik lub apostrof)",
+    "banned": "To imię jest niedozwolone"
+  }
 }

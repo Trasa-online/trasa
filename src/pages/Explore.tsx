@@ -1,22 +1,37 @@
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
+import { useDragToDismiss } from "@/hooks/useDragToDismiss";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useLocation } from "react-router-dom";
+import { goBackOr } from "@/hooks/useGoBack";
 import { PullToRefresh } from "@/components/PullToRefresh";
-import { MapPin, Heart, Trash2, ArrowRight, ArrowLeft, Pencil, ListChecks, ChevronDown, Check, Search, X, Layers, Compass, Bookmark } from "lucide-react";
+import { track } from "@/lib/analytics";
+import { Heart, Trash2, ArrowRight, ArrowLeft, Pencil, ListChecks, ChevronDown, ChevronRight, Check, Search, X, Layers, Compass, Bookmark, Plus } from "lucide-react";
+import { InfoTooltip } from "@/components/ui/InfoTooltip";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
+import SavePlaceSheet, { type SavePlaceInput } from "@/components/plan-wizard/SavePlaceSheet";
 import { fetchEnrichedPlace, type MockPlace } from "@/components/plan-wizard/PlaceSwiper";
+import { RoutePlaceRow } from "@/components/route/RoutePlaceRow";
+import { resolveStored } from "@/components/PlacePhoto";
+import { PlaceTile } from "@/components/profile/PlaceTile";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { avatarSrc } from "@/lib/avatar";
+import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { parseISO, isValid, format, isToday, isYesterday } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
-import DiscoveryFeed from "@/components/home/DiscoveryFeed";
 import HomeHeaderActions from "@/components/home/HomeHeaderActions";
 import ExploreTopBar from "@/components/home/ExploreTopBar";
 import TabTopBar from "@/components/layout/TabTopBar";
-import ExploreSwiper from "@/components/home/ExploreSwiper";
+import NotificationsBell from "@/components/layout/NotificationsBell";
+import ActiveTripBanner from "@/components/home/ActiveTripBanner";
+import { type SearchCat } from "@/components/home/SearchCategoryRow";
+import DiscoveryFeed from "@/components/home/DiscoveryFeed";
+import { SearchPane } from "@/components/home/TabSearch";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { UNLOCKED_CITIES } from "@/components/plan-wizard/CityPicker";
 import { getHistoryByCity, removeLikeFromCity, addLike, clearCity, updateLikePhoto, type ExploreCityGroup } from "@/lib/exploreLikes";
 import { deferDelete } from "@/lib/deferDelete";
 import { getSubcategoryLabel, subcategoryLabelLocalized } from "@/lib/categories";
+import { inferCategoryFromName } from "@/lib/placeCategoryIcon";
 import { getPhotoUrl } from "@/lib/placePhotos";
 import { categoryIconSrc } from "@/lib/placeCategoryIcon";
 import { useAuth } from "@/hooks/useAuth";
@@ -120,6 +135,7 @@ export const LikedTab = ({ selectMode = false, onExitSelection, city: controlled
   // wydarzenia. Bazowy MockPlace budujemy od razu (szybkie otwarcie), a gdy miejsce ma UUID -
   // doczytujemy pelny profil biznesu (menu/galeria/eventy) i podmieniamy.
   const [detailPlace, setDetailPlace] = useState<MockPlace | null>(null);
+  const [savePlace, setSavePlace] = useState<SavePlaceInput | null>(null);
   const todayStr = new Date().toISOString().slice(0, 10);
   const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   const openDetail = (p: any) => {
@@ -213,7 +229,7 @@ export const LikedTab = ({ selectMode = false, onExitSelection, city: controlled
     removeLikeFromCity(p.city, p.place_name);
     refresh();
     deferDelete({
-      message: t("liked.removed", { defaultValue: "Usunięto z zapisanych" }),
+      message: t("liked.removed"),
       onUndo: () => {
         addLike(p.city, {
           place_name: p.place_name, category: p.category, place_id: p.place_id ?? null,
@@ -395,7 +411,7 @@ export const LikedTab = ({ selectMode = false, onExitSelection, city: controlled
                 // dopiero tap w checkbox zaznacza (stopPropagation).
                 <button
                   onClick={(e) => { e.stopPropagation(); toggleSelect(p); }}
-                  aria-label="Zaznacz miejsce"
+                  aria-label={t("map.mark_place")}
                   className="absolute top-0 left-0 p-2.5 z-10"
                 >
                   <span className={cn(
@@ -438,21 +454,27 @@ export const LikedTab = ({ selectMode = false, onExitSelection, city: controlled
         })}
       </div>
 
-      {/* Szczegol miejsca - pelna wizytowka (jak w swiperze). Bez CTA Like/Skip (brak onLike/onSkip). */}
+      {/* Szczegol miejsca - pelna wizytowka (jak w swiperze), z zapisem miejsca do listy. */}
       <PlaceSwiperDetail
         open={!!detailPlace}
         place={detailPlace}
         city={detailPlace?.city}
         referenceDate={todayStr}
         onOpenChange={(open) => !open && setDetailPlace(null)}
+        onLike={detailPlace ? () => setSavePlace({
+          place_name: detailPlace.place_name, category: detailPlace.category ?? null, address: detailPlace.address || null,
+          city: detailPlace.city || null, latitude: detailPlace.latitude ?? null, longitude: detailPlace.longitude ?? null,
+          photo_url: detailPlace.photo_url || null, place_id: null,
+        }) : undefined}
       />
+      <SavePlaceSheet open={!!savePlace} onOpenChange={(o) => { if (!o) setSavePlace(null); }} place={savePlace} city={savePlace?.city ?? ""} />
 
       {/* Pasek akcji trybu zaznaczania - utworz trase z wybranych (jedno miasto) */}
       {selectMode && selectedNames.size > 0 && (
         <div className="fixed left-0 right-0 bottom-[calc(6rem+env(safe-area-inset-bottom,0px))] z-30 px-4">
           <button
             onClick={handleBuildFromSelection}
-            className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-orange-500/25 active:scale-[0.98] transition-transform"
+            className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
           >
             {t("liked.build_route")}
             <span className="opacity-80">·</span>
@@ -468,25 +490,43 @@ export const LikedTab = ({ selectMode = false, onExitSelection, city: controlled
 // ── MyCollections ───────────────────────────────────────────────────────────
 // Lista zestawien stworzonych przez zalogowanego usera (wejscie z karty "Zestawienia"
 // w profilu / zakladka Zapisane). Tap w pozycje -> edycja. Pusty stan -> CTA "Stworz pierwsze".
-export const MyCollections = () => {
+export const MyCollections = ({ showCreate = true }: { showCreate?: boolean } = {}) => {
   const { t } = useTranslation("explore");
   const navigate = useNavigate();
   const { user } = useAuth();
   const queryClient = useQueryClient();
   // Potwierdzenie usuniecia zestawienia (nieodwracalne -> walidacja "czy na pewno?").
   const [confirmDelete, setConfirmDelete] = useState<{ id: string; title: string } | null>(null);
+  // Gest natywny: przeciagniecie panelu w dol zamyka arkusz.
+  const confirmDrag = useDragToDismiss({ onDismiss: () => setConfirmDelete(null) });
   const [deleting, setDeleting] = useState(false);
+  // Accordion: ktora lista jest rozwinieta (podglad miejsc). Null = wszystkie zwiniete.
+  const [expanded, setExpanded] = useState<string | null>(null);
+  // Wizytowka miejsca z podgladu (tap w wiersz) - jak w SharedList.
+  const [detailPin, setDetailPin] = useState<{ place: MockPlace; city: string | null; skip: boolean } | null>(null);
+  // Zapis miejsca z wizytowki do wlasnych list (bookmark na hero + CTA na dole).
+  const [savePlace, setSavePlace] = useState<SavePlaceInput | null>(null);
 
   const handleDelete = async () => {
     if (!confirmDelete || !user) return;
     setDeleting(true);
     try {
-      await (supabase as any).from("discovery_items").delete().eq("collection_id", confirmDelete.id);
-      const { error } = await (supabase as any).from("discovery_collections").delete().eq("id", confirmDelete.id).eq("user_id", user.id);
-      if (error) throw new Error(error.message);
-      toast.success(t("collections.toast_deleted"));
+      // Odroczony commit + "Cofnij" - ta sama encja usuwana z profilu (TravelerProfile) juz
+      // tak dziala, wiec tutaj byla po prostu niespojnosc (zgloszenie Nat 2026-09-09).
+      const target = confirmDelete;
+      const refresh = () => queryClient.invalidateQueries({ queryKey: ["my-collections", user.id] });
       setConfirmDelete(null);
-      queryClient.invalidateQueries({ queryKey: ["my-collections", user.id] });
+      refresh();
+      deferDelete({
+        message: t("collections.toast_deleted"),
+        commit: async () => {
+          await (supabase as any).from("discovery_items").delete().eq("collection_id", target.id);
+          const { error } = await (supabase as any).from("discovery_collections").delete().eq("id", target.id).eq("user_id", user.id);
+          if (error) toast.error(t("collections.toast_delete_error", { error: error.message }));
+          refresh();
+        },
+        onUndo: refresh,
+      });
     } catch (e: any) {
       toast.error(t("collections.toast_delete_error", { error: e?.message ?? t("collections.error_fallback") }));
     } finally {
@@ -500,33 +540,70 @@ export const MyCollections = () => {
     queryFn: async () => {
       const { data: cols } = await (supabase as any)
         .from("discovery_collections")
-        .select("id, title, city, description, is_public, moderation_status, moderation_note")
+        .select("id, title, city, description, is_public, moderation_status, moderation_note, cover_url, list_cover_url, list_status, author_avatar, author_name")
         .eq("user_id", user!.id)
         .eq("kind", "ranking")
+        // Twoje listy = publiczne POLECAJKI (visited). Prywatne "Do zobaczenia" (to_visit) są
+        // w Zapisane→Miejsca, nie tutaj.
+        .eq("list_status", "visited")
         .order("updated_at", { ascending: false });
       if (!cols?.length) return [] as any[];
       const ids = cols.map((c: any) => c.id);
+      // Pelne itemy do podgladu (accordion w stylu widoku trasy - RoutePlaceRow).
       const { data: items } = await (supabase as any)
         .from("discovery_items")
-        .select("collection_id, photo_url")
-        .in("collection_id", ids);
+        .select("id, collection_id, place_id, place_name, category, address, latitude, longitude, rating, google_place_id, photo_url, short_desc, order_index")
+        .in("collection_id", ids)
+        .order("order_index", { ascending: true });
       return cols.map((c: any) => {
         const own = (items ?? []).filter((i: any) => i.collection_id === c.id);
-        return { ...c, count: own.length, cover: own.find((i: any) => i.photo_url)?.photo_url ?? null };
+        // Miniatura kafelka = miniatura eksploracji (list_cover_url) -> okladka listy (cover_url)
+        // -> zdjecie pierwszego miejsca.
+        const cover = c.list_cover_url ?? c.cover_url ?? own.find((i: any) => i.photo_url)?.photo_url ?? null;
+        return { ...c, items: own, count: own.length, cover };
       });
     },
   });
 
+  const openPlace = (pin: any, city: string | null) => setDetailPin({
+    skip: !pin.place_id,
+    city,
+    place: {
+      id: pin.place_id ?? pin.google_place_id ?? pin.place_name,
+      place_name: pin.place_name, category: (pin.category ?? inferCategoryFromName(pin.place_name) ?? "other") as any,
+      city: city ?? "", address: pin.address ?? "", latitude: pin.latitude ?? 0, longitude: pin.longitude ?? 0,
+      rating: pin.rating ?? 0, photo_url: resolveStored(pin.photo_url) ?? "", vibe_tags: [], description: "",
+    } as MockPlace,
+  });
+  const openGoogle = (pin: any, city: string | null) => {
+    const q = encodeURIComponent([pin.place_name, pin.address, city].filter(Boolean).join(", "));
+    const pid = typeof pin.google_place_id === "string" && pin.google_place_id.trim() ? `&query_place_id=${encodeURIComponent(pin.google_place_id.trim())}` : "";
+    window.open(`https://www.google.com/maps/search/?api=1&query=${q}${pid}`, "_blank", "noopener,noreferrer");
+  };
+
+  const countLabel = (n: number) => `${n} ${t("collections.place", { count: n })}`;
+
   return (
     <div className="space-y-3">
+      {/* Osobny guzik "Nowa lista" - wprost do tworzenia listy. Ukryty w hubie "Robocze"
+          (showCreate=false), gdzie "+" tworzenia jest juz w naglowku (zbedny duplikat). */}
+      {showCreate && (
+        <button
+          onClick={() => { trackCollectionCreate("my_collections_header"); navigate("/zestawienie/nowe"); }}
+          className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-primary text-white text-sm font-bold active:scale-[0.98] transition-transform"
+        >
+          <Plus className="h-4 w-4" strokeWidth={2.5} /> {t("collections.create_new")}
+        </button>
+      )}
+
       {isLoading ? (
         <div className="space-y-3">
-          {[0, 1, 2].map((i) => <div key={i} className="h-20 rounded-3xl bg-muted/40 animate-pulse" />)}
+          {[0, 1, 2].map((i) => <div key={i} className="h-56 rounded-3xl bg-muted/40 animate-pulse" />)}
         </div>
       ) : collections.length === 0 ? (
         <div className="rounded-3xl border border-dashed border-border/60 bg-orange-50/40 flex flex-col items-center text-center gap-3 px-6 py-10">
           <div className="h-12 w-12 rounded-2xl bg-white shadow-sm flex items-center justify-center">
-            <ListChecks className="h-6 w-6 text-orange-600" />
+            <ListChecks className="h-6 w-6 text-primary" />
           </div>
           <div className="space-y-1">
             <p className="text-base font-black">{t("collections.empty_title")}</p>
@@ -534,72 +611,69 @@ export const MyCollections = () => {
               {t("collections.empty_desc")}
             </p>
           </div>
-          <button
-            onClick={() => { trackCollectionCreate("my_collections_empty"); navigate("/zestawienie/nowe"); }}
-            className="mt-1 px-5 py-3 rounded-full bg-primary text-white text-sm font-bold active:scale-[0.97] transition-transform shadow-md shadow-orange-500/20"
-          >
-            {t("collections.create")}
-          </button>
         </div>
       ) : (
-        collections.map((col: any) => (
-          <div
-            key={col.id}
-            className="w-full flex items-center gap-3 rounded-3xl bg-card border border-border/50 p-3"
-          >
-            <button
-              onClick={() => navigate(`/zestawienie/${col.id}/edytuj`)}
-              className="flex items-center gap-3 flex-1 min-w-0 text-left active:opacity-80 transition-opacity"
-            >
-              {col.cover ? (
-                <img src={col.cover} alt={col.title} className="h-16 w-16 rounded-2xl object-cover shrink-0" loading="lazy" />
-              ) : (
-                <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-amber-100 to-orange-200 flex items-center justify-center shrink-0">
-                  <ListChecks className="h-6 w-6 text-orange-600" />
+        (() => {
+        // Blok listy (redesign 08): avatar + eyebrow statusu + tytul + siatka kafelkow miejsc.
+        // Tap w blok -> pelny widok listy (/lista/:id). Kosz (usuwanie) w rogu.
+        const renderCol = (col: any) => {
+          const title = col.title || t("collections.untitled");
+          const eyebrow = t("feed.recommend");
+          const initial = (col.author_name || title || "?").charAt(0).toUpperCase();
+          return (
+            <div key={col.id} className="relative">
+              <button
+                onClick={() => navigate(`/lista/${col.id}`)}
+                className="w-full text-left block active:opacity-95 transition-opacity"
+              >
+                <div className="flex items-center gap-2.5 pr-8">
+                  <Avatar className="h-9 w-9 shrink-0">
+                    <AvatarImage src={avatarSrc(col.author_avatar)} className="object-cover bg-orange-100" />
+                    <AvatarFallback className="bg-orange-100 text-primary font-bold text-xs">{initial}</AvatarFallback>
+                  </Avatar>
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground truncate">{eyebrow}</p>
+                    <p className="text-lg font-bold leading-tight line-clamp-1 text-foreground">{title}</p>
+                  </div>
                 </div>
-              )}
-              <div className="flex-1 min-w-0">
-                <p className="font-bold text-sm leading-tight truncate">{col.title || t("collections.untitled")}</p>
-                <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                  {[col.city, `${col.count} ${col.count === 1 ? t("collections.place_one") : col.count < 5 ? t("collections.place_few") : t("collections.place_many")}`].filter(Boolean).join(" · ")}
-                  {col.is_public === false ? ` · ${t("collections.private")}` : ""}
-                </p>
-                {col.moderation_status === "pending" && (
-                  <span className="inline-flex items-center gap-1 mt-1 text-[10px] font-bold text-amber-700 bg-amber-100 rounded-full px-2 py-0.5">
-                    ⏳ {t("collections.pending")}
-                  </span>
-                )}
-                {col.moderation_status === "rejected" && (
-                  <div className="mt-1">
-                    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-destructive bg-destructive/10 rounded-full px-2 py-0.5">
-                      {t("collections.rejected")}
-                    </span>
-                    {col.moderation_note && (
-                      <p className="text-[11px] text-muted-foreground mt-1 leading-snug whitespace-pre-wrap">{t("collections.reason", { note: col.moderation_note })}</p>
-                    )}
+                {col.items.length > 0 && (
+                  <div className="grid grid-cols-3 gap-1.5 mt-2.5">
+                    {col.items.slice(0, 6).map((it: any, i: number) => <PlaceTile key={it.id ?? i} tile={it} aspect="aspect-square" />)}
                   </div>
                 )}
-              </div>
-            </button>
-            <div className="flex items-center gap-0.5 shrink-0">
-              <button
-                onClick={() => navigate(`/zestawienie/${col.id}/edytuj`)}
-                aria-label={t("collections.edit_aria")}
-                className="h-9 w-9 flex items-center justify-center rounded-full text-muted-foreground/60 active:bg-muted transition-colors"
-              >
-                <Pencil className="h-4 w-4" />
+                {/* Status moderacji: "pending" NIE pokazywany userowi (straszy). Tylko rejected. */}
+                {col.moderation_status === "rejected" && (
+                  <span className="mt-2 inline-flex w-fit items-center text-[10px] font-bold text-destructive bg-destructive/10 rounded-full px-2 py-0.5">{t("collections.rejected")}</span>
+                )}
               </button>
               <button
-                onClick={() => setConfirmDelete({ id: col.id, title: col.title || t("collections.untitled") })}
+                onClick={() => setConfirmDelete({ id: col.id, title })}
                 aria-label={t("collections.delete_aria")}
-                className="h-9 w-9 flex items-center justify-center rounded-full text-destructive active:bg-destructive/10 transition-colors"
+                className="absolute top-0 right-0 h-7 w-7 flex items-center justify-center rounded-full text-muted-foreground/40 active:text-destructive active:scale-90 transition-colors"
               >
                 <Trash2 className="h-4 w-4" />
               </button>
             </div>
-          </div>
-        ))
+          );
+        };
+        return <div className="space-y-7">{collections.map(renderCol)}</div>;
+        })()
       )}
+
+      <PlaceSwiperDetail
+        open={!!detailPin}
+        onOpenChange={(o) => { if (!o) setDetailPin(null); }}
+        place={detailPin?.place ?? null}
+        city={detailPin?.city ?? ""}
+        skipGoogleFetch={detailPin?.skip ?? false}
+        onLike={detailPin?.place ? () => setSavePlace({
+          place_name: detailPin.place.place_name, category: detailPin.place.category ?? null,
+          address: detailPin.place.address || null, city: detailPin.city || null,
+          latitude: detailPin.place.latitude ?? null, longitude: detailPin.place.longitude ?? null,
+          photo_url: detailPin.place.photo_url || null, place_id: null,
+        }) : undefined}
+      />
+      <SavePlaceSheet open={!!savePlace} onOpenChange={(o) => { if (!o) setSavePlace(null); }} place={savePlace} city={savePlace?.city ?? ""} />
 
       {/* Potwierdzenie usuniecia (nieodwracalne) */}
       {confirmDelete && (
@@ -608,7 +682,8 @@ export const MyCollections = () => {
           onClick={() => !deleting && setConfirmDelete(null)}
         >
           <div
-            className="w-full max-w-sm bg-card rounded-t-3xl px-6 pt-6 pb-[max(24px,env(safe-area-inset-bottom))] flex flex-col gap-4 shadow-2xl animate-in slide-in-from-bottom-4 duration-300"
+            {...confirmDrag.dragProps}
+            className="w-[calc(100%-16px)] mx-2 mb-2 max-w-sm bg-card rounded-[40px] px-6 pt-6 pb-[max(24px,env(safe-area-inset-bottom))] flex flex-col gap-4 shadow-2xl animate-in slide-in-from-bottom-4 duration-300"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start gap-3">
@@ -646,8 +721,11 @@ export const MyCollections = () => {
 };
 
 // Polubione przeniesione na /home (ikona serca). Eksploruj = sam feed polecanych.
+// Wiersz kategorii wyszukiwarki mieszka w SearchCategoryRow (wspolny z profilem).
+
 const Explore = () => {
   const { t } = useTranslation("explore");
+  const { user: bellUser } = useAuth();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const location = useLocation();
@@ -658,82 +736,62 @@ const Explore = () => {
   // (bez filtra miasta). Dopiero po kliknieciu selektora user wybiera konkretne miasto.
   // Widok Miejsc pod "all" pokazuje wszystkie miejsca (PlaceSwiper pomija filtr miasta).
   const [exploreCity, setExploreCity] = useState<string>((location.state as any)?.city || "all");
-  // Miasta ktore realnie maja trasy w eksploracji (do selektora, obok "Wszystkie").
-  // Bramka jak w feedzie: is_shared + list_cover_url != null. Distinct po stronie klienta.
-  const { data: routeCities = [] } = useQuery({
-    queryKey: ["explore-route-cities"],
-    queryFn: async () => {
-      const { data } = await (supabase as any)
-        .from("routes")
-        .select("city")
-        .eq("is_shared", true)
-        .not("title", "is", null)
-        .not("list_cover_url", "is", null)
-        .not("city", "is", null);
-      const set = new Set<string>();
-      (data ?? []).forEach((r: any) => { if (r.city) set.add(r.city as string); });
-      return Array.from(set).sort((a, b) => a.localeCompare(b, "pl"));
-    },
-    staleTime: 60_000,
-  });
-  // Miasta ktore realnie maja miejsca (do wyboru miasta w sheecie Filtry, widok Miejsca).
-  // Distinct po stronie klienta z aktywnych miejsc.
-  const { data: placeCities = [] } = useQuery({
-    queryKey: ["explore-place-cities"],
-    queryFn: async () => {
-      const { data } = await (supabase as any)
-        .from("places")
-        .select("city")
-        .eq("is_active", true)
-        .not("city", "is", null);
-      const set = new Set<string>();
-      (data ?? []).forEach((r: any) => { if (r.city) set.add(r.city as string); });
-      return Array.from(set).sort((a, b) => a.localeCompare(b, "pl"));
-    },
-    staleTime: 60_000,
-  });
-  // Licznik aktywnych filtrow (badge na guziku filtra w gornej belce). DiscoveryFeed
-  // trzyma stan filtrow i raportuje liczbe przez event; belka jest o poziom wyzej.
-  const [filterCount, setFilterCount] = useState(0);
+  // Listy miast (selektor w arkuszu Filtry) usuniete razem z filtrami 2026-09-10 - dwa
+  // zapytania po WSZYSTKIE miasta tras i miejsc odpalaly sie przy kazdym wejsciu w
+  // eksploracje, a jedynym ich odbiorca byl znikniety arkusz.
+  // IA 2026-09-11 (makieta Nat): Eksploruj = SIATKA tresci od calego swiata (wyjazdy + listy),
+  // bez przelacznika Trasy|Miejsca. Wizytowki miejsc maja wlasna zakladke (/miejsca), tresci od
+  // obserwowanych - Feed (/feed). Stare wejscia z `state.view === "browse"` (np. deep-linki
+  // i skroty sprzed zmiany) odsylamy tam, gdzie swiper teraz mieszka.
   useEffect(() => {
-    const onCount = (e: any) => setFilterCount(typeof e.detail === "number" ? e.detail : 0);
-    window.addEventListener("trasa:explore-filter-count", onCount);
-    return () => window.removeEventListener("trasa:explore-filter-count", onCount);
-  }, []);
-  // Toggle feed<->swiper LOKALNY (seamless). "browse" = swiper (dawne /plan exploreMode).
-  const [view, setView] = useState<"feed" | "browse">((location.state as any)?.view === "browse" ? "browse" : "feed");
-  // Swiper montujemy po pierwszym przejsciu i zostaje (kolejne przelaczenia natychmiastowe).
-  const [hasBrowsed, setHasBrowsed] = useState(view === "browse");
-  useEffect(() => { if (view === "browse") setHasBrowsed(true); }, [view]);
+    if ((location.state as any)?.view === "browse") navigate("/miejsca", { replace: true, state: { city: (location.state as any)?.city } });
+  }, []);   // eslint-disable-line react-hooks/exhaustive-deps
   // Wyszukiwarka w gornej belce: domyslnie zwinieta (lupa). Klik lupy -> pelna szerokosc.
   // Klik "x" -> powrot do domyslnej belki + wyczyszczenie zapytania. Stan trzymamy tu
   // (o poziom wyzej niz DiscoveryFeed), bo input renderuje sie w belce a wyniki w feedzie.
-  const [searchOpen, setSearchOpen] = useState(false);
+  // Pole wyszukiwania jest PRZYPIETE w belce (2026-09-06) - `searchOpen` znaczy juz tylko
+  // "pokazuj wyniki zamiast feedu", a nie "rozwin pole".
+  const [searchOpen, setSearchOpen] = useState((location.state as any)?.openSearch === true);
   const [feedSearch, setFeedSearch] = useState("");
-  const openSearch = () => { setView("feed"); setSearchOpen(true); };
-  const closeSearch = () => { setSearchOpen(false); setFeedSearch(""); };
-  // "Biezace polozenie" (DiscoveryFeed) -> przejdz na widok Miejsc posortowany od najblizszego.
-  // Nonce rosnie z kazdym klikiem, zeby ExploreSwiper reagowal takze na ponowne klikniecie.
-  const [nearbyNonce, setNearbyNonce] = useState(0);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  // Kategoria wyszukiwania (redesign 2026-08-31, Figma "NEW - Eksploracja — wyszukiwarka"):
+  // Wszystko | Listy | Wyjazdy | Miejsca. Wybor kategorii dziala tez BEZ frazy - wtedy
+  // pokazujemy zawartosc tej kategorii (tryb przegladania, decyzja Nat).
+  // Kategoria startowa moze przyjsc z innego ekranu (Feed: "obserwuj ludzi" -> od razu Ludzie).
+  const [searchCat, setSearchCat] = useState<SearchCat>(() => {
+    const c = (location.state as any)?.searchCat;
+    return c === "lists" || c === "trips" || c === "places" || c === "people" ? c : "all";
+  });
+  const openSearch = () => setSearchOpen(true);
+  const closeSearch = () => { setSearchOpen(false); setFeedSearch(""); setSearchCat("all"); searchInputRef.current?.blur(); };
+  // Strzalka w belce: z wnetrza kategorii wraca do listy kategorii, z listy - zamyka szukanie.
+  const backSearch = () => { if (searchCat !== "all") { setSearchCat("all"); setFeedSearch(""); } else closeSearch(); };
+  // Wejscie z profilu (przypiete pole w naglowku profilu) - ustaw kursor w polu od razu.
   useEffect(() => {
-    const h = () => { setSearchOpen(false); setFeedSearch(""); setView("browse"); setNearbyNonce((n) => n + 1); };
+    if ((location.state as any)?.openSearch !== true) return;
+    const id = window.setTimeout(() => searchInputRef.current?.focus(), 120);
+    return () => window.clearTimeout(id);
+  }, []);   // eslint-disable-line react-hooks/exhaustive-deps
+  // Foldery kategorii chowaja sie po wpisaniu frazy (prosba Nat 2026-09-06 po testach):
+  // pusta fraza = przegladanie po kategoriach, wpisana = same wyniki.
+  // Lejek eksploracji - wejscie na ekran (raz na mount).
+  useEffect(() => { track("explore_opened", { city: exploreCity, mode: "grid" }); }, []);   // eslint-disable-line react-hooks/exhaustive-deps
+  // "Biezace polozenie" (DiscoveryFeed) -> zakladka Miejsca posortowana od najblizszego.
+  useEffect(() => {
+    const h = () => { setSearchOpen(false); setFeedSearch(""); navigate("/miejsca", { state: { nearby: true } }); };
     window.addEventListener("trasa:explore-nearby", h);
     return () => window.removeEventListener("trasa:explore-nearby", h);
-  }, []);
-  // Coach-marki (onboarding) przelaczaja widok, zeby user widzial zmiane zakladki pod banerem.
-  useEffect(() => {
-    const h = (e: any) => { const v = e?.detail; if (v === "browse" || v === "feed") setView(v); };
-    window.addEventListener("trasa:explore-set-view", h);
-    return () => window.removeEventListener("trasa:explore-set-view", h);
-  }, []);
-  // BottomNav (glassmorficzny) widoczny w OBU widokach - Miejsca (swiper) i Trasy (feed) -
-  // dla spojnosci wg redesignu 2026-07-24. Ukrywamy tylko gdy szukamy (pelny ekran wynikow).
-  // Karta swipera w exploreMode ma pb chroniace przed BottomNavem (patrz CLAUDE.md PlaceSwiper).
+  }, [navigate]);
+  // BottomNav ukrywamy tylko gdy szukamy (pelny ekran wynikow).
   useEffect(() => {
     window.dispatchEvent(new CustomEvent("trasa:hide-bottomnav", { detail: searchOpen }));
-  }, [view, searchOpen]);
+  }, [searchOpen]);
   // Przy wyjsciu z Eksploracji zawsze przywroc BottomNav.
   useEffect(() => () => { window.dispatchEvent(new CustomEvent("trasa:hide-bottomnav", { detail: false })); }, []);
+
+  // Czy feed jest odscrollowany od gory - od tego zalezy widocznosc banera wyjazdu.
+  // Prog 8 px, zeby baner nie migal przy mikroruchach palca.
+  const [feedScrolled, setFeedScrolled] = useState(false);
 
   const handleRefresh = async () => {
     await queryClient.invalidateQueries();
@@ -741,69 +799,93 @@ const Explore = () => {
 
   return (
     <div className="flex-1 flex flex-col min-h-0">
-      {/* Wspoldzielona belka (TabTopBar) - identyczna wysokosc 1:1 z Wyjazdy/Zapisane. */}
+      {/* Wspoldzielona belka (TabTopBar) - identyczna wysokosc 1:1 z Wyjazdy/Zapisane.
+          Wyszukiwarka jest PRZYPIETA w tej belce (2026-09-06, po testach z userami):
+          pole stoi na stale obok toggle'a, a nie chowa sie pod lupa. Belka NIE znika przy
+          szukaniu - zmienia sie tylko jej zawartosc (toggle -> strzalka powrotu), wiec
+          wysokosc chrome zostaje stala (wazne dla karty 9:16 w swiperze - CLAUDE.md). */}
       <TabTopBar>
-        {searchOpen && !myCollections ? (
-          // Rozwinieta wyszukiwarka na CALA SZEROKOSC belki (lupa + input + "x").
-          <div className="flex-1 flex items-center gap-2.5 px-4 h-10 rounded-full bg-muted/70 border border-border/50 min-w-0 focus-within:border-orange-400/60 focus-within:bg-background transition-colors">
-            <Search className="h-[18px] w-[18px] text-muted-foreground shrink-0" />
-            <input
-              autoFocus
-              value={feedSearch}
-              onChange={(e) => setFeedSearch(e.target.value)}
-              placeholder="Szukaj tras, miejsc na trasie..."
-              className="flex-1 min-w-0 bg-transparent text-[15px] outline-none placeholder:text-muted-foreground/70"
-            />
-            <button
-              onClick={closeSearch}
-              aria-label="Zamknij wyszukiwanie"
-              className="shrink-0 h-6 w-6 flex items-center justify-center rounded-full text-muted-foreground active:bg-muted active:scale-90 transition"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        ) : myCollections ? (
+        {myCollections ? (
           <>
             <button
-              onClick={() => { if (window.history.state?.idx > 0) navigate(-1); else navigate("/moj-profil"); }}
+              onClick={() => goBackOr(navigate, "/moj-profil")}
               className="h-9 w-9 -ml-1 flex items-center justify-center text-foreground shrink-0"
               aria-label={t("explore.back_aria")}
             >
               <ArrowLeft className="h-5 w-5" />
             </button>
             <h1 className="flex-1 min-w-0 text-lg font-bold truncate">{t("explore.collections_title")}</h1>
+            <button
+              onClick={() => { trackCollectionCreate("twoje_listy_header"); navigate("/zestawienie/nowe"); }}
+              className="shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-full border border-primary/70 text-primary text-sm font-bold active:scale-[0.97] transition-transform"
+            >
+              <Plus className="h-4 w-4" strokeWidth={2.5} /> {t("collections.create_new")}
+            </button>
           </>
         ) : (
           <ExploreTopBar
-            mode={view === "browse" ? "browse" : "explore"}
-            onModeChange={(m) => setView(m === "browse" ? "browse" : "feed")}
-            onOpenFilters={() => window.dispatchEvent(new CustomEvent("trasa:explore-open-filters"))}
+            mode="explore"
+            hideModeToggle
             onOpenSearch={openSearch}
-            activeFilterCount={filterCount}
+            onCloseSearch={backSearch}
+            searchOpen={searchOpen}
+            searchValue={feedSearch}
+            onSearchChange={setFeedSearch}
+            searchInputRef={searchInputRef}
           />
+        )}
+        {/* Powiadomienia po PRAWEJ stronie belki (prosba Nat 2026-09-11). Eksploracja jest
+            ekranem startowym, wiec dzwonek na profilu bywal zauwazany dopiero po fakcie.
+            W trybie wynikow chowamy go razem z toggle'em - pole ma wtedy cala belke. */}
+        {!myCollections && !searchOpen && bellUser && !(bellUser as any).is_anonymous && (
+          <NotificationsBell userId={bellUser.id} />
         )}
       </TabTopBar>
 
       {myCollections ? (
         <PullToRefresh onRefresh={handleRefresh} className="flex-1 min-h-0 flex flex-col pt-3 pb-[calc(5rem+env(safe-area-inset-bottom,0px))]">
-          <div className="flex-1 px-4"><MyCollections /></div>
+          <div className="flex-1 px-4"><MyCollections showCreate={false} /></div>
         </PullToRefresh>
       ) : (
         <>
-          {/* Feed - zawsze zamontowany; ukryty gdy swiper (seamless toggle). */}
-          <div className={cn("flex-1 min-h-0 flex flex-col", view !== "feed" && "hidden")}>
-            {/* Snap tylko w trybie przegladania feedu. Przy wyszukiwaniu WYLACZAMY snap, zeby
-                skroty/wyniki na gorze byly widoczne, a wizytowki zostawaly przewijalne pod spodem. */}
-            <PullToRefresh onRefresh={handleRefresh} className={cn("flex-1 min-h-0 flex flex-col pt-3 pb-[calc(6rem+env(safe-area-inset-bottom,0px))]", !searchOpen && "snap-y snap-mandatory scroll-pt-3")}>
-              <div className="flex-1 px-4"><DiscoveryFeed city={exploreCity} cities={routeCities} onCityChange={setExploreCity} active={view === "feed"} searchQuery={feedSearch} searchOpen={searchOpen} /></div>
+          {/* Skrot do wyjazdu "w trakcie" / roboczego - TYLKO w widoku feedu. W trybie kart miejsc
+              (swiper) NIE renderujemy go: wysokosc karty 9:16 jest wyliczana ze stalego chrome i
+              dolozenie paska rozjechaloby zamrozony layout (CLAUDE.md - PlaceSwiper sizing). */}
+          <div className="relative flex-1 min-h-0 flex flex-col">
+            {/* Skrot do wyjazdu "w trakcie" / roboczego - NAKLADKA przyklejona pod gorna belka.
+                Chowa sie po scrollu w dol, wraca na samej gorze (prosba Nat 2026-09-01).
+                Dlaczego nakladka, a nie element ukladu - dwa poprzednie podejscia sie wylozyly:
+                  1) nad scrollerem, chowany zwijaniem wysokosci -> gorna krawedz listy jechala w
+                     gore W TRAKCIE gestu i snap przeliczal sie od nowa: karty skakaly;
+                  2) w srodku scrollera -> nie skakal, ale spychal pierwsza karte o swoja wysokosc,
+                     wiec jej dol wchodzil pod plywajacy BottomNav.
+                Nakladka nie zajmuje miejsca w ukladzie, wiec karta ma pelna wysokosc i wlasciwa
+                pozycje, a pojawianie sie i znikanie banera nie rusza NICZEGO pod spodem - nie ma
+                czym skoczyc. Wezszy o mapke w prawym gornym rogu karty, zeby jej nie zaslaniac.
+                W trybie kart miejsc (swiper) banera nie ma: wysokosc karty 9:16 liczy sie ze
+                stalego chrome (CLAUDE.md - zamrozony layout PlaceSwiper). */}
+            {/* Przy otwartej wyszukiwarce baner znika razem z feedem - ekran wynikow ma byc
+                czysty (prosba Nat 2026-09-06). */}
+            <div className={cn("absolute inset-x-0 top-0 z-30 transition-all duration-200 ease-out",
+              feedScrolled || searchOpen ? "-translate-y-[130%] opacity-0 pointer-events-none" : "translate-y-0 opacity-100")}>
+              <ActiveTripBanner floating />
+            </div>
+            {/* EKSPLORACJA (IA 2026-09-13): jedna kolumna kafelkow wyjazdow i list od WSZYSTKICH
+                (DiscoveryFeed bez followingOnly), karta po karcie ze snapem. Zakladka "Glowna"
+                (siatka 2 kolumny) i osobny feed obserwowanych (/feed) zdjete z paska tego dnia -
+                zostal jeden widok odkrywania. Snap tylko poza szukaniem: wyniki nie maja punktow
+                przyciagania. Przy wyszukiwaniu ten sam scroller pokazuje wyniki zamiast feedu. */}
+            <PullToRefresh onRefresh={handleRefresh} onScroll={(top) => setFeedScrolled(top > 8)}
+              className={cn("flex-1 min-h-0 flex flex-col pt-3 pb-[calc(6rem+env(safe-area-inset-bottom,0px))]", !searchOpen && "snap-y snap-mandatory scroll-pt-3")}>
+              {/* Wyszukiwarka: lista kategorii jedna pod druga / wyniki (wspolny SearchPane -
+                  ten sam co w Miejscach i na profilu). Poza szukaniem - feed. */}
+              {searchOpen ? (
+                <SearchPane query={feedSearch} cat={searchCat} onCat={setSearchCat} city={exploreCity} />
+              ) : (
+                <div className="flex-1 px-4"><DiscoveryFeed city="all" /></div>
+              )}
             </PullToRefresh>
           </div>
-          {/* Swiper - montowany po pierwszym przejsciu, potem zostaje (natychmiastowy toggle). */}
-          {hasBrowsed && (
-            <div className={cn("flex-1 min-h-0 flex flex-col", view !== "browse" && "hidden")}>
-              <ExploreSwiper city={exploreCity} cities={placeCities} onCityChange={setExploreCity} active={view === "browse"} sortNearestNonce={nearbyNonce} />
-            </div>
-          )}
         </>
       )}
     </div>

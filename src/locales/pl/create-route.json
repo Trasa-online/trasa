@@ -1,5 +1,5 @@
 {
-  "title": "Zaplanuj podróż",
+  "title": "Co dzisiaj tworzymy?",
   "planning_title": "Planowanie trasy",
   "date_label": "Wybierz datę",
   "date_placeholder": "Wybierz datę",
@@ -8,5 +8,95 @@
   "city_placeholder": "Wpisz miasto...",
   "ideal_day_label": "Jak wygląda Twój idealny dzień?",
   "ideal_day_placeholder": "Np. zaczynam powoli, lubię kawę rano, chodzę pieszo, wolę klimatyczne miejsca niż turystyczne tłumy...",
-  "next": "Dalej"
+  "next": "Dalej",
+  "must_visit_label": "Chcę odwiedzić",
+  "must_visit_placeholder": "Szukaj miejsca...",
+  "must_visit_hint": "Np. konkretna restauracja, muzeum albo zabytek. AI uwzględni je w planie.",
+  "pick_date_desc": "Wybierz jeden dzień albo zakres. Przy kilku dniach rozłożysz miejsca na dni już w wyjeździe.",
+  "no_saved_places": "Nie masz jeszcze zapisanych miejsc. Wyszukaj miejsce powyżej albo zapisuj je w eksploracji.",
+  "search_unavailable": "Wyszukiwarka chwilowo niedostępna. Wybierz z zapisanych.",
+  "toast": {
+    "trip_failed": "Nie udało się utworzyć wyjazdu",
+    "list_failed": "Nie udało się utworzyć kolekcji",
+    "list_created": "Kolekcja utworzona"
+  },
+  "invite": {
+    "trip_desc": "Twórz wyjazdy razem z innymi",
+    "list_desc": "Twórz kolekcje razem z innymi",
+    "to_trip": "Dodaj osoby do wyjazdu",
+    "to_list": "Dodaj osoby do kolekcji",
+    "cta": "Dodaj osoby"
+  },
+  "skip_dates": "Pomiń - dodam daty później",
+  "skip_city": "Pomiń - kolekcja bez miasta",
+  "your_saved_places": "Twoje zapisane miejsca",
+  "trip_kind": {
+    "past_desc": "Dodaj wspomnienie",
+    "title": "Jaki to wyjazd?",
+    "future_desc": "Zaplanuj wyjazd",
+    "past": "Przeszły",
+    "future": "Przyszły"
+  },
+  "past_trip": "Przeszły wyjazd",
+  "aria": {
+    "add_to_list": "Dodaj do kolekcji",
+    "remove_from_list": "Usuń z kolekcji",
+    "open_in_maps": "Otwórz {{place}} w Google Maps"
+  },
+  "search_place": "Szukaj miejsca",
+  "list_name_default": "Kolekcja miejsc",
+  "list_city": "Miasto kolekcji",
+  "pick_date": "Wybierz datę",
+  "no_results": "Brak wyników",
+  "list_name_label": "Nazwa kolekcji",
+  "trip_name_label": "Nazwa trasy",
+  "user_fallback": "Użytkownik",
+  "new_list": "Nowa kolekcja",
+  "soon": "Wkrótce",
+  "create": "Utwórz",
+  "skip": "Pomiń",
+  "list_name_city": "Kolekcja miejsc {{city}}",
+  "trip_name_city": "Wyjazd do {{city}}",
+  "cover": {
+    "empty": "Dodaj miejsca do kolekcji albo wgraj własne zdjęcie, żeby ustawić okładkę.",
+    "reset": "Wróć do domyślnej okładki",
+    "new_photo": "Nowe zdjęcie"
+  },
+  "back": "Wróć",
+  "drum": {
+    "no_results": "Brak wyników - spróbuj inną nazwę."
+  },
+  "picker": {
+    "country": "Kraj",
+    "city": "Miasto"
+  },
+  "kind": {
+    "list": "Kolekcja",
+    "trip": "Wyjazd"
+  },
+  "country": {
+    "title": "Dokąd jedziecie?",
+    "title_list": "Skąd są te miejsca?",
+    "hint": "Wybierz kraj lub kilka krajów. To ustawia zasięg wyszukiwarki miejsc.",
+    "hint_list": "Wybierz kraj lub kilka. Możesz to zmienić później.",
+    "search": "Szukaj kraju",
+    "no_results": "Brak kraju o tej nazwie",
+    "skip": "Pomiń",
+    "region": {
+      "poland": "Polska",
+      "europe": "Europa",
+      "asia": "Azja",
+      "north_america": "Ameryka Północna",
+      "south_america": "Ameryka Południowa",
+      "africa": "Afryka",
+      "oceania": "Oceania"
+    }
+  },
+  "trip_name_default": "Nowy wyjazd",
+  "naming": {
+    "collection_in": "Kolekcja miejsc {{place}}",
+    "collection_plain": "Kolekcja miejsc: {{place}}",
+    "trip_to": "Wyjazd {{place}}",
+    "trip_plain": "Wyjazd: {{place}}"
+  }
 }

@@ -19,10 +19,148 @@
     "confirm": "Confirm",
     "back": "Back",
     "start_recording": "Record voice",
-    "stop_recording": "Stop recording"
+    "stop_recording": "Stop recording",
+    "done": "Done",
+    "search": "Search",
+    "undo": "Undo"
   },
   "errors": {
     "generic": "Something went wrong"
   },
-  "other": "Other..."
+  "other": "Other...",
+  "orb": {
+    "no_place_detected": "No place detected. Try a photo of a building, landmark or attraction.",
+    "prompt_parks": "Show me 3 of the nicest parks and places to walk",
+    "error": "Sorry, something went wrong. Try again.",
+    "no_route": "No active trip. Create a plan first.",
+    "identify_failed": "We could not recognise the place.",
+    "prompt_landmarks": "Show me 3 of the most interesting landmarks",
+    "prompt_museums": "Show me 3 interesting museums",
+    "add_failed": "We could not add the place.",
+    "what_interests": "What are you after?"
+  },
+  "back_arrow": "← Back",
+  "back": "Back",
+  "maintenance": {
+    "desc": "We are building something good. Check back soon.",
+    "wrong": "Wrong password",
+    "password": "Access password",
+    "enter": "Enter"
+  },
+  "error": {
+    "title": "Something went wrong",
+    "desc": "The app hit an error. Try going back to the home screen.",
+    "back_home": "Back to home",
+    "kind": {
+      "offline": "No connection",
+      "server": "Server problem",
+      "update": "New app version",
+      "technical": "Technical error"
+    },
+    "headline": {
+      "offline": "You are offline",
+      "server": "We cannot reach the server",
+      "update": "The app has been updated",
+      "technical": "Something broke on our side"
+    },
+    "body": {
+      "offline": "Your phone has no signal or Wi-Fi. Your data is safe and will be back once you reconnect.",
+      "server": "Your internet works, but our server is not responding. This usually passes in a moment.",
+      "update": "A new version shipped and this screen is from the old one. A refresh is all it takes.",
+      "technical": "This is a bug in the app, not something you did. Nothing is lost - everything you saved is still there."
+    },
+    "retry": "Try again",
+    "reload": "Reload the app",
+    "details_show": "Technical details",
+    "details_hide": "Hide details",
+    "copy": "Copy details",
+    "copied": "Copied"
+  },
+  "cookies": {
+    "essential": "Essential only",
+    "accept": "Accept",
+    "more": "More",
+    "intro": "We use cookies for analytics and personalisation."
+  },
+  "moderation": {
+    "rejected": "That photo did not pass moderation and was not added"
+  },
+  "heic": {
+    "failed": "We could not process that HEIC photo. Try a JPG or PNG."
+  },
+  "loading": "Loading",
+  "clear": "Clear",
+  "offline": "You are offline",
+  "filters": {
+    "all": "All",
+    "lists": "Collections",
+    "trips": "Trips",
+    "places": "Places",
+    "routes": "Routes",
+    "people": "People"
+  },
+  "fallback": {
+    "trip": "Trip",
+    "list": "Collection",
+    "route": "Route",
+    "place": "Place",
+    "unknown_place": "Unknown place"
+  },
+  "update": {
+    "title": "Update the app",
+    "body": "This version of spontaway is out of date. Update the app so everything works as it should.",
+    "cta": "Update",
+    "later": "Later"
+  },
+  "permissions": {
+    "later": "Not now",
+    "open_settings": "Open Settings",
+    "push": {
+      "enable": "Turn on notifications",
+      "list_created": {
+        "title": "Collection ready",
+        "desc": "Want to know when someone likes or saves your collection? Turn on notifications - we only send the ones about reactions to your content and invites from friends."
+      },
+      "trip_created": {
+        "title": "Trip ready",
+        "desc": "We'll let you know when friends answer your invite and, once you publish, when someone likes or saves your trip. No spam, just reactions to your content."
+      },
+      "trip_published": {
+        "title": "Trip published",
+        "desc": "Want to know when someone likes or saves your trip? Turn on notifications - no spam, just reactions to your content."
+      },
+      "invite_sent": {
+        "title": "Invites sent",
+        "desc": "Turn on notifications to know when your friends answer and write in the trip chat."
+      },
+      "bell": {
+        "title": "Turn on notifications",
+        "desc": "Know right away when someone likes or saves your trip or collection, invites you to a trip or writes in the chat.",
+        "short": "Reactions to your trips and collections, invites, trip chat."
+      },
+      "settings": {
+        "title": "Turn on notifications",
+        "desc": "Know right away when someone likes or saves your trip or collection, invites you to a trip or writes in the chat."
+      },
+      "denied": {
+        "title": "Notifications are off",
+        "desc": "Turn them on in your phone settings: Settings → Spontaway → Notifications.",
+        "short": "Turned off in phone settings. Tap to turn them on."
+      },
+      "status_on": "On",
+      "status_off": "Off",
+      "status_ask": "Turn on"
+    },
+    "location": {
+      "enable": "Turn on location",
+      "browse": {
+        "title": "Are you in the city?",
+        "desc": "Turn on location and you'll see how far each place is, sorted from the nearest. Your position stays on your phone - we never store it."
+      },
+      "denied": {
+        "title": "Location is off",
+        "desc": "Turn it on in your phone settings: Settings → Spontaway → Location."
+      }
+    }
+  }
 }

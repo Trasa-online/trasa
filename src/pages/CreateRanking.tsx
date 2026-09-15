@@ -1,21 +1,37 @@
 import { useState, useEffect, useRef, useMemo } from "react";
+import { randomListTheme } from "@/lib/listThemes";
+import { useDragToDismiss } from "@/hooks/useDragToDismiss";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams, useSearchParams, useLocation } from "react-router-dom";
-import { ArrowLeft, Search, Plus, X, Loader2, MapPin, ChevronRight, ChevronDown, ChevronUp, List, GalleryHorizontalEnd, Check } from "lucide-react";
+import { goBackOr } from "@/hooks/useGoBack";
+import { ArrowLeft, Search, Plus, X, Loader2, ChevronRight, ChevronDown, List, GalleryHorizontalEnd, GripVertical } from "lucide-react";
+import { Reorder, useDragControls } from "framer-motion";
+import { haptics } from "@/hooks/useHaptics";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+import { track } from "@/lib/analytics";
 import CreateHeader from "@/components/create/CreateHeader";
 import { expandCity, cityGenitive } from "@/lib/cities";
 import { TRIP_COUNTRIES, TRIP_REGIONS, citiesForCountry, countryForCity } from "@/lib/tripCountries";
 import { getHistoryByCity } from "@/lib/exploreLikes";
+import { useQuery } from "@tanstack/react-query";
+import { fetchSavedPlaces } from "@/lib/placeLists";
 import { forwardGeocode, reverseGeocode, forwardGeocodeWithTypes } from "@/lib/googleMaps";
 import { isRouteCollection } from "@/lib/collectionThemes";
-import { MAIN_CATEGORIES, getDbCategoriesFor } from "@/lib/categories";
+import { MAIN_CATEGORIES, getDbCategoriesFor, mainCategoryLabel } from "@/lib/categories";
 import { CategoryIcon } from "@/components/CategoryIcon";
+import { categoryFromGoogleTypes, inferCategoryFromName } from "@/lib/placeCategoryIcon";
+import { placeTagsForCategory, localizeTag, tagId } from "@/lib/routeTags";
+import { pinCoverKeys, fetchPlacePhotosForKeys, pickPlaceCover } from "@/lib/placePhotoSocial";
+
+import { cacheListItemPhoto } from "@/lib/placePhotos";
+import { containsProfanity } from "@/lib/profanity";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
+import SavePlaceSheet, { type SavePlaceInput } from "@/components/plan-wizard/SavePlaceSheet";
 import { type MockPlace } from "@/components/plan-wizard/PlaceSwiper";
 import RouteMap from "@/components/RouteMap";
+import { EMPTY_ARRAY } from "@/lib/emptyRef";
 
 // Item rankingu. place_id != null = miejsce z bazy (tap -> wizytowka). null = custom (Google).
 interface RankingItem {
@@ -30,6 +46,7 @@ interface RankingItem {
   google_place_id: string | null;
   photo_url: string | null;
   short_desc: string;
+  tags?: string[];
 }
 
 
@@ -96,6 +113,41 @@ async function fetchGooglePlace(opts: { name?: string; address?: string; lat?: n
   }
 }
 
+// Wiersz wybranego miejsca (widok listy) z DRAG & DROP (framer-motion Reorder) - 1:1 z
+// SortableComposeRow w tworzeniu trasy. Uchwyt GripVertical po lewej; reszta wiersza tapowalna.
+function SortableRankingRow({ it, onOpen, onRemove }: { it: RankingItem; onOpen: () => void; onRemove: () => void }) {
+  const { t } = useTranslation("ranking");
+  const controls = useDragControls();
+  const cat = categoryBadge(it.category);
+  return (
+    <Reorder.Item
+      value={it}
+      dragListener={false}
+      dragControls={controls}
+      transition={{ duration: 0 }}
+      className="w-full flex items-center gap-2 rounded-2xl bg-secondary p-2.5 select-none"
+    >
+      <span
+        onPointerDown={(e) => { haptics.light(); controls.start(e); }}
+        aria-label={t("reorder_hint")}
+        className="shrink-0 h-9 w-5 flex items-center justify-center text-muted-foreground/50 cursor-grab active:cursor-grabbing touch-none"
+      >
+        <GripVertical className="h-5 w-5" />
+      </span>
+      <button onClick={onOpen} className="flex items-center gap-2.5 flex-1 min-w-0 text-left active:opacity-80 transition-opacity">
+        {it.photo_url
+          ? <img src={it.photo_url} alt="" className="h-11 w-11 rounded-lg object-cover shrink-0" />
+          : <div className="h-11 w-11 rounded-lg bg-[#fcede3] flex items-center justify-center shrink-0"><CategoryIcon category={it.category} className="w-1/2" /></div>}
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-bold truncate">{it.place_name}</p>
+          {cat && <p className="text-[11px] text-muted-foreground truncate flex items-center gap-1 mt-0.5"><CategoryIcon category={it.category} className="h-3 w-3 shrink-0" />{cat.label}</p>}
+        </div>
+      </button>
+      <button onClick={onRemove} aria-label={t("aria.delete_place")} className="h-7 w-7 flex items-center justify-center rounded-full text-destructive active:bg-destructive/10 shrink-0"><X className="h-4 w-4" /></button>
+    </Reorder.Item>
+  );
+}
+
 const CreateRanking = () => {
   const { t } = useTranslation("ranking");
   const navigate = useNavigate();
@@ -111,18 +163,22 @@ const CreateRanking = () => {
   // KRYTYCZNE: miasto z handoffu Trasa->Lista przychodzi w location.state.city (drum-scroll),
   // NIE w query param. Bez czytania state forma spadala do "Warszawa" i "Twoje zapisane miejsca"
   // nie pasowaly do miasta wybranego przez usera (bug 2026-08).
-  const nav = (location.state ?? {}) as { city?: string | null; title?: string | null; places?: any[] };
-  const initCity = nav.city || params.get("city") || "Warszawa";
+  const nav = (location.state ?? {}) as { city?: string | null; title?: string | null; places?: any[]; listStatus?: string | null; isPublic?: boolean };
+  // "" = t("city.anywhere") (lista globalna). Miasto NIE jest obowiazkowe przy tworzeniu listy -
+  // user moze zrobic liste z miejsc z calego swiata. Selektor miasta = OPCJONALNY filtr wyszukiwarki.
+  const initCity = nav.city || params.get("city") || "";
   const [city, setCity] = useState(initCity);
   const [country, setCountry] = useState<string>(() => countryForCity(initCity));
   const cities = citiesForCountry(country);
   const onCountryChange = (c: string) => { setCountry(c); setCity(citiesForCountry(c)[0]); };
   // Nazwa listy - generyczna domyslna (jak "Wyjazd do X" w trasie); titleDirty blokuje auto-update
   // po recznej edycji, a zmiana miasta aktualizuje domyslna nazwe.
-  const defaultListName = (c: string) => `Lista miejsc - ${c}`;
+  const defaultListName = (c: string) => (c ? t("default_name_city", { city: c }) : t("default_name"));
   const [title, setTitle] = useState(() => nav.title || defaultListName(initCity));
   const [titleDirty, setTitleDirty] = useState(!!nav.title);
-  useEffect(() => { if (!titleDirty) setTitle(defaultListName(city)); }, [city, titleDirty]);
+  // Inline selektor miasta wyszukiwania (multi-miasto): pozwala zmienic miasto w trakcie
+  // dodawania i dolozyc miejsca z innego miasta (Krakow + Olsztyn w jednej liscie).
+  const [cityPickerOpen, setCityPickerOpen] = useState(false);
   // Prefill miejsc z handoffu Trasa->Lista (zachowanie wybranych miejsc przy przelaczeniu trybu).
   const [items, setItems] = useState<RankingItem[]>(() =>
     (nav.places ?? []).map((p: any, i: number) => ({
@@ -133,17 +189,39 @@ const CreateRanking = () => {
       rating: p.rating ?? null, google_place_id: p.google_place_id ?? null, short_desc: "",
     })),
   );
+  // Auto-nazwa aktualizuje sie z miastem TYLKO na pustej liscie (korekta zlego domyslnego
+  // miasta). Po dodaniu miejsc zmiana miasta = budowanie listy multi-miasto -> nie zmieniamy nazwy.
+  useEffect(() => { if (!titleDirty && items.length === 0) setTitle(defaultListName(city)); }, [city, titleDirty, items.length]);
   const [publishing, setPublishing] = useState(false);
   // Krok formularza po wyborze motywu: 1 = miasto + miejsca, 2 = notki + mapa + publikacja.
   const [step, setStep] = useState<1 | 2>(1);
   // Glowna notka do calego zestawienia (krok 2).
   const [description, setDescription] = useState("");
+  // Tagi listy (krok 2) - zastapily glowna notke. Predefiniowane + wlasne usera.
+  // Tagi list (stara pula chipow) - UI USUNIETY (prosba Nat 2026-09-01). Stan zostaje, bo przy
+  // edycji starej listy wciagamy jej tagi z bazy i zapisujemy z powrotem NIEZMIENIONE: nowego
+  // nie da sie juz dodac, a istniejacych nie kasujemy userowi po cichu przy pierwszej edycji.
+  const [tags, setTags] = useState<string[]>([]);
   // Tozsamosc autora: domyslnie z profilem; checkbox "anonimowo" na koncu (krok 2).
   const [asAnon, setAsAnon] = useState(false);
+  // Okladki listy (1:1 z modelem tras): cover_url = hero na /lista/:id, list_cover_url =
+  // miniatura na karcie w eksploracji. NULL = fallback do zdjecia pierwszego miejsca.
+  // Status listy (discovery_collections.list_status): "visited" | "to_visit".
+  // Nowa lista: user WYBIERA (toggle) czy juz odwiedzil te miejsca czy dopiero chce - domyslnie
+  // "do odwiedzenia". Edycja: ladowane z col. Listy "do odwiedzenia" maja uproszczony krok 2.
+  // CreateRanking = autor POLECAJEK (publiczna lista, list_status="visited"). Prywatne miejsca
+  // "do zobaczenia" zapisuje się bookmarkiem (SavePlaceSheet) -> Zapisane→Miejsca, nie tutaj.
+  const [listStatus, setListStatus] = useState<string | null>(editId ? null : ((nav.listStatus as string) ?? "visited"));
+  // Dane B2B (premium) wybranych miejsc - do pokazania na karcie pelnego adresu, tagow i
+  // kategorii glownej+drugiej. Klucz = place_id (UUID). Tylko miejsca z business_profiles.
+  const [bizMap, setBizMap] = useState<Record<string, any>>({});
 
   // Wyszukiwarka + propozycje miejsc (bez zargonu "baza/spoza bazy").
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [searchFocused, setSearchFocused] = useState(false);
+  // Fokus na polu NAZWY listy - chowa CTA i wylacza sticky wyszukiwarki (inaczej sticky
+  // search naježdža na pole nazwy gdy klawiatura przewija widok). Patrz krok 1.
+  const [titleFocused, setTitleFocused] = useState(false);
   const [search, setSearch] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
@@ -160,30 +238,88 @@ const CreateRanking = () => {
   const [placeView, setPlaceView] = useState<"detail" | "list">("detail");
   // Podglad miejsca spoza bazy PRZED dodaniem (TYLKO okladka - min. kosztow Google).
   const [customPreview, setCustomPreview] = useState<Omit<RankingItem, "key" | "short_desc"> | null>(null);
-  const [author, setAuthor] = useState<{ name: string; avatar: string | null }>({ name: "Użytkownik", avatar: null });
+  // Zapis miejsca z wizytowki do WLASNYCH list (niezalezne od budowanej wlasnie listy).
+  const [savePlace, setSavePlace] = useState<SavePlaceInput | null>(null);
+  // Gest natywny: przeciagniecie panelu w dol zamyka arkusz.
+  const previewDrag = useDragToDismiss({ onDismiss: () => setCustomPreview(null) });
+  const [author, setAuthor] = useState<{ name: string; avatar: string | null }>({ name: t("user_fallback"), avatar: null });
 
+
+  // Dociagnij dane B2B dla wybranych miejsc (po place_id) - pelny adres, tagi, kategorie.
+  const placeIdsKey = items.map((i) => i.place_id).filter(Boolean).join(",");
+  useEffect(() => {
+    const ids = items.map((i) => i.place_id).filter(Boolean) as string[];
+    if (!ids.length) { setBizMap({}); return; }
+    let alive = true;
+    (async () => {
+      const { data } = await (supabase as any)
+        .from("places")
+        .select("id, business_profiles(street, postal_code, address, tags, main_category, secondary_category)")
+        .in("id", ids);
+      if (!alive) return;
+      const m: Record<string, any> = {};
+      for (const p of data ?? []) {
+        const bp = Array.isArray(p.business_profiles) ? p.business_profiles[0] : p.business_profiles;
+        if (bp) m[p.id] = bp;
+      }
+      setBizMap(m);
+    })();
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [placeIdsKey]);
+
+  // #3: okladki miejsc ze zdjec dodanych przez userow w wizytowkach (place_photos) - dla miejsc bez
+  // wlasnego zdjecia. Wypelniamy item.photo_url (raz per klucz) -> pokazuje sie w kartach/liscie i
+  // zapisuje sie na discovery_items przy publikacji. Losowy (stabilny) wybor sposrod zdjec miejsca.
+  const filledCoverKeysRef = useRef<Set<string>>(new Set());
+  const missingCoverKey = items.filter((i) => !i.photo_url).map((i) => i.place_name).join("|");
+  useEffect(() => {
+    const missing = items.filter((i) => !i.photo_url);
+    const keys = Array.from(new Set(missing.flatMap((i) => pinCoverKeys({ google_place_id: i.google_place_id, place_name: i.place_name }))))
+      .filter((k) => k && !filledCoverKeysRef.current.has(k));
+    if (!keys.length) return;
+    keys.forEach((k) => filledCoverKeysRef.current.add(k));
+    let alive = true;
+    fetchPlacePhotosForKeys(keys).then((map) => {
+      if (!alive || map.size === 0) return;
+      setItems((prev) => prev.map((i) => {
+        if (i.photo_url) return i;
+        const cover = pickPlaceCover(map, pinCoverKeys({ google_place_id: i.google_place_id, place_name: i.place_name }));
+        return cover ? { ...i, photo_url: cover } : i;
+      }));
+    });
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [missingCoverKey]);
 
   // ── Author + edit/liked prefill ───────────────────────────────────────────
   useEffect(() => {
     if (!user) return;
     supabase.from("profiles").select("username, first_name, avatar_url").eq("id", user.id).maybeSingle()
-      .then(({ data }) => { if (data) setAuthor({ name: (data as any).first_name || (data as any).username || "Użytkownik", avatar: (data as any).avatar_url ?? null }); });
+      .then(({ data }) => { if (data) setAuthor({ name: (data as any).first_name || (data as any).username || t("user_fallback"), avatar: (data as any).avatar_url ?? null }); });
   }, [user]);
 
   useEffect(() => {
     if (editId) {
       (async () => {
-        const { data: col } = await (supabase as any).from("discovery_collections").select("title, city, category, description, author_name, author_avatar").eq("id", editId).maybeSingle();
+        const { data: col } = await (supabase as any).from("discovery_collections").select("title, city, category, description, author_name, author_avatar, cover_url, list_cover_url, tags, list_status, is_public").eq("id", editId).maybeSingle();
         if (col) {
           setTitle(col.title ?? ""); setTitleDirty(true); if (col.city) { setCity(col.city); setCountry(countryForCity(col.city)); } setCategory(col.category ?? null);
           setDescription(col.description ?? "");
           setAsAnon(col.author_name === "Anonim" && !col.author_avatar);
+          // Okladki sa automatyczne (pierwsze zdjecie z listy) - nie ma juz stanu recznego.
+          // UWAGA: wolanie tu nieistniejacych setCoverUrl/setListCoverUrl wywalalo CALY efekt
+          // (ReferenceError), przez co ponizsze setItems nigdy sie nie wykonywalo i edycja
+          // pokazywala "0 miejsc" (zgloszenie Nat 2026-08-28).
+          setTags(Array.isArray(col.tags) ? col.tags : []);
+          setListStatus(col.list_status ?? null);
         }
         const { data: its } = await (supabase as any).from("discovery_items").select("*").eq("collection_id", editId).order("order_index", { ascending: true });
         if (its) setItems(its.map((i: any, idx: number) => ({
-          key: `e${idx}`, place_id: i.place_id ?? null, place_name: i.place_name, category: i.category ?? null,
+          key: `e${idx}`, place_id: i.place_id ?? null, place_name: i.place_name, category: i.category ?? inferCategoryFromName(i.place_name),
           address: i.address ?? null, latitude: i.latitude ?? null, longitude: i.longitude ?? null,
           rating: i.rating ?? null, google_place_id: i.google_place_id ?? null, photo_url: i.photo_url ?? null, short_desc: i.short_desc ?? "",
+          tags: Array.isArray(i.tags) ? i.tags : [],
         })));
       })();
       return;
@@ -229,18 +365,26 @@ const CreateRanking = () => {
 
   const addItem = (it: Omit<RankingItem, "key" | "short_desc">) => {
     if (items.some((x) => x.place_name.toLowerCase() === it.place_name.toLowerCase())) { toast(t("toast.already_added")); return; }
-    setItems((prev) => [...prev, { ...it, key: `k${Date.now()}`, short_desc: "" }]);
+    const key = `k${Date.now()}`;
+    setItems((prev) => [...prev, { ...it, key, short_desc: "" }]);
+    // #5: miejsce bez okladki (dodane z Google) -> zcache'uj zdjecie ASYNCHRONICZNIE (nie blokuj
+    // dodania). 1 fetch Google/miejsce, potem $0 (guard kosztowy w edge function). Miejsca z bazy
+    // maja juz photo_url z cache - pomijamy (zero kosztu). Null z helpera -> zostaje ikona kategorii.
+    if (!it.photo_url) {
+      void cacheListItemPhoto({ place_name: it.place_name, city, latitude: it.latitude, longitude: it.longitude, google_place_id: it.google_place_id })
+        .then((url) => { if (url) setItems((prev) => prev.map((x) => x.key === key ? { ...x, photo_url: url } : x)); });
+    }
   };
   const removeItem = (key: string) => setItems((prev) => prev.filter((x) => x.key !== key));
   const setNote = (key: string, v: string) => setItems((prev) => prev.map((x) => x.key === key ? { ...x, short_desc: v } : x));
-  // Zmiana kolejnosci (tylko trasa/plan). order_index zapisuje sie z pozycji w tablicy.
-  const move = (idx: number, dir: -1 | 1) => setItems((prev) => {
-    const j = idx + dir;
-    if (j < 0 || j >= prev.length) return prev;
-    const next = [...prev];
-    [next[idx], next[j]] = [next[j], next[idx]];
-    return next;
-  });
+  // Tagi per miejsce (alternatywa dla notki, jak pins.tags przy trasach). Klik = toggle w it.tags.
+  const toggleItemTag = (key: string, tag: string) => setItems((prev) => prev.map((x) => {
+    if (x.key !== key) return x;
+    const cur = x.tags ?? [];
+    // Po id, nie po napisie - lista sprzed migracji trzyma polskie etykiety (patrz routeTags).
+    return { ...x, tags: cur.some((tg) => tagId(tg) === tagId(tag)) ? cur.filter((tg) => tagId(tg) !== tagId(tag)) : [...cur, tag] };
+  }));
+  // Kolejnosc zmienia drag & drop (Reorder) w widoku listy; order_index z pozycji w tablicy.
 
   // Otworz wizytowke miejsca. Miejsca z bazy (place_id) dociagaja galerie/recenzje
   // z Google. Miejsca spoza bazy (custom) NIE dociagaja niczego (min. kosztow) -
@@ -265,17 +409,21 @@ const CreateRanking = () => {
 
   // "Twoje zapisane miejsca" (z eksploracji, per miasto) - szybka sciaga do dodania jednym tapem.
   // Zastapily "Propozycje z bazy". id = place_id (do addItem) lub null (custom); key osobny.
+  // "Twoje zapisane miejsca" = lista OGÓLNA usera (wszystkie zapisy z drawera, bez filtra miasta -
+  // decyzja 2026-08-24). Źródło = DB wishlista to_visit (fetchSavedPlaces), spójne z CreateFlowSheet.
+  const { data: savedPlaces = EMPTY_ARRAY } = useQuery({
+    queryKey: ["saved-places", user?.id],
+    enabled: !!user?.id,
+    queryFn: () => fetchSavedPlaces(user!.id),
+  });
   const savedForCity = useMemo(() => {
-    const wanted = new Set(expandCity(city).map((c) => c.toLowerCase()));
-    return getHistoryByCity()
-      .filter((g) => wanted.has(g.city.toLowerCase()))
-      .flatMap((g) => g.places)
-      .map((p: any) => ({
-        key: p.place_id ?? p.place_name, id: p.place_id ?? null, place_name: p.place_name, category: p.category,
-        address: p.address ?? null, latitude: p.latitude ?? null, longitude: p.longitude ?? null,
-        rating: p.rating ?? null, photo_url: p.photo_url ?? null,
-      }));
-  }, [city]);
+    const places = (savedPlaces as any[]).map((p) => ({
+      key: p.place_id ?? p.place_name, id: p.place_id ?? null, place_name: p.place_name, category: p.category,
+      address: p.address ?? null, latitude: p.latitude ?? null, longitude: p.longitude ?? null,
+      rating: p.rating ?? null, photo_url: p.photo_url ?? null,
+    }));
+    return { places, fallback: false };
+  }, [savedPlaces]);
 
   // Dodaj miejsce spoza bazy (wynik Google text search). Dociagamy okladke/rating/place_id
   // przez proxy dopiero przy dodaniu (nie dla kazdego wyniku - min. kosztow Google).
@@ -285,7 +433,9 @@ const CreateRanking = () => {
     const res = await fetchGooglePlace({ name: g.name, address: g.full_address, lat: g.latitude, lng: g.longitude, city });
     setAddingGoogleName(null);
     if (!res || !res.place_name) { toast.error(t("toast.add_failed")); return; }
-    addItem(res);
+    // Kategoria z typow Google (jak w wynikach wyszukiwarki) - zeby ikona po DODANIU
+    // byla ta sama co w liscie wynikow (fetchGooglePlace zwraca category=null).
+    addItem({ ...res, category: res.category ?? categoryFromGoogleTypes(g.types) ?? inferCategoryFromName(res.place_name) });
     setGoogleResults((prev) => prev.filter((x) => x.name !== g.name));
   };
 
@@ -294,14 +444,32 @@ const CreateRanking = () => {
   const previewCustomByName = async (name: string) => {
     if (!name.trim() || addingCustom) return;
     setAddingCustom(true);
-    const res = await fetchGooglePlace({ name: name.trim(), city });
+    // Najpierw TEXTSEARCH (zwraca typy Google -> realna kategoria, bez Place Details).
+    // Preferujemy trafienie w wybranym miescie; fallback = geocode (bez typow) + inferencja.
+    let res: Omit<RankingItem, "key" | "short_desc"> | null = null;
+    try {
+      const hits = await forwardGeocodeWithTypes(`${name.trim()} ${city}`.trim());
+      const cityAliases = city ? expandCity(city).map((c) => c.toLowerCase()) : [];
+      const best = (cityAliases.length ? hits.find((h) => cityAliases.some((c) => (h.full_address ?? "").toLowerCase().includes(c))) : hits[0]) ?? hits[0];
+      if (best?.name) {
+        res = {
+          place_id: null, place_name: best.name,
+          category: categoryFromGoogleTypes(best.types) ?? inferCategoryFromName(best.name),
+          address: best.full_address ?? null, latitude: best.latitude ?? null, longitude: best.longitude ?? null,
+          rating: null, google_place_id: null, photo_url: null,
+        };
+      }
+    } catch { /* fallback ponizej */ }
+    if (!res) res = await fetchGooglePlace({ name: name.trim(), city });
     setAddingCustom(false);
     if (!res || !res.place_name) { toast.error(t("toast.not_found")); return; }
+    // Gwarancja kategorii nawet gdy fallback geocode nie mial typow.
+    if (!res.category) res = { ...res, category: inferCategoryFromName(res.place_name) };
     setCustomPreview(res);
   };
   const confirmCustom = () => {
     if (!customPreview) return;
-    addItem(customPreview);
+    addItem({ ...customPreview, category: customPreview.category ?? inferCategoryFromName(customPreview.place_name) });
     setCustomPreview(null);
     setSearch("");
     setSearchResults([]);
@@ -317,18 +485,20 @@ const CreateRanking = () => {
     setGoogleLoading(true);
     setGoogleResults([]);
     const t = setTimeout(async () => {
-      const { data } = await (supabase as any).from("places")
+      // Miasto opcjonalne: gdy wybrane -> filtr; gdy "Wszedzie" (city="") -> szukamy globalnie.
+      let dbq = (supabase as any).from("places")
         .select("id, place_name, category, address, latitude, longitude, rating, photo_url")
-        .in("city", expandCity(city)).ilike("place_name", `%${q}%`).eq("is_active", true).limit(50);
+        .ilike("place_name", `%${q}%`).eq("is_active", true).limit(50);
+      if (city) dbq = dbq.in("city", expandCity(city));
+      const { data } = await dbq;
       const dbRows = data ?? [];
       setSearchResults(dbRows); setSearchLoading(false);
       // Dopelnienie: miejsca spoza bazy z Google (max 3), z pominieciem duplikatow nazw z DB.
       try {
-        const g = await forwardGeocodeWithTypes(`${q} ${city}`);
+        const g = await forwardGeocodeWithTypes(`${q} ${city}`.trim());
         const dbNames = new Set(dbRows.map((r: any) => (r.place_name ?? "").toLowerCase().trim()));
-        // Szukamy TYLKO w wybranym miescie - odrzucamy wyniki spoza (Google potrafi zwrocic
-        // np. lokal o podobnej nazwie w innym miescie). Dopasowanie po nazwie miasta w adresie.
-        const cityAliases = expandCity(city).map((c) => c.toLowerCase());
+        // Gdy wybrane miasto -> odrzucamy wyniki spoza niego. Gdy "Wszedzie" -> akceptujemy globalnie.
+        const cityAliases = city ? expandCity(city).map((c) => c.toLowerCase()) : [];
         const seen = new Set<string>();
         const extra = g
           .filter((x) => {
@@ -337,9 +507,11 @@ const CreateRanking = () => {
             // Odrzuc czyste wyniki geograficzne (miasta, dzielnice, drogi) - chcemy lokale.
             const geoOnly = ["locality", "sublocality", "administrative_area_level_1", "administrative_area_level_2", "country", "route", "postal_code", "political"];
             if ((x.types ?? []).length > 0 && (x.types ?? []).every((t) => geoOnly.includes(t))) return false;
-            // Tylko lokale w wybranym miescie (adres zawiera nazwe miasta/dzielnicy).
-            const addr = (x.full_address ?? "").toLowerCase();
-            if (!cityAliases.some((c) => addr.includes(c))) return false;
+            // Tylko lokale w wybranym miescie (gdy miasto ustawione). "Wszedzie" -> bez filtra miasta.
+            if (cityAliases.length) {
+              const addr = (x.full_address ?? "").toLowerCase();
+              if (!cityAliases.some((c) => addr.includes(c))) return false;
+            }
             seen.add(name);
             return true;
           })
@@ -359,7 +531,8 @@ const CreateRanking = () => {
       const cats = themeDbCategories(category);
       let q = (supabase as any).from("places")
         .select("id, place_name, category, address, latitude, longitude, rating, photo_url")
-        .in("city", expandCity(city)).eq("is_active", true);
+        .eq("is_active", true);
+      if (city) q = q.in("city", expandCity(city));
       if (cats) q = q.in("category", cats);
       const { data } = await q.limit(40);
       if (!alive) return;
@@ -369,10 +542,22 @@ const CreateRanking = () => {
     return () => { alive = false; };
   }, [city, category]);
 
-  const collectionTitle = title.trim() || "Lista";
+  const collectionTitle = title.trim() || t("common:fallback.list");
+  // Cenzura tytulu (zgloszenie z testow 2026-09-08): publiczna lista trafia na eksploracje,
+  // wiec "najlepsze kurwy w Krakowie" nie moze przejsc. Twarda bariera jest w bazie
+  // (wyzwalacz trg_discovery_collections_title), tutaj tylko po to, zeby user zobaczyl
+  // problem PRZY PISANIU, a nie po wypelnieniu calego formularza.
+  const titleBlocked = containsProfanity(title);
   const isRoute = isRouteCollection(category); // stare trasy (edycja) -> mozna ustawiac kolejnosc
-  const canGoNext = !!city && items.length >= 2 && title.trim().length > 0; // krok 1 -> 2
+  const canGoNext = items.length >= 1 && title.trim().length > 0 && !titleBlocked; // krok 1 -> 2 (min. 1 miejsce, miasto opcjonalne)
   const canPublish = canGoNext && !publishing;
+  // Przejscie do kroku 2 - gdy warunki niespelnione, TOAST z powodem (guzik nie jest disabled).
+  const goNext = () => {
+    if (title.trim().length === 0) { toast(t("cta.need_title")); return; }
+    if (titleBlocked) { toast.error(t("cta.title_not_allowed")); return; }
+    if (items.length < 1) { toast(t("cta.need_place")); return; }
+    setStep(2);
+  };
 
   const publish = async () => {
     if (!user || !canPublish) return;
@@ -381,20 +566,36 @@ const CreateRanking = () => {
       let collectionId = editId;
       // Wszystkie nowe zestawienia czekaja na akceptacje admina (App Store Guideline
       // 1.2 UGC + decyzja: moderacja na starcie dla wszystkich, nie tylko anonimow).
-      const moderationStatus = "pending";
-      // Zestawienia zawsze publiczne; tozsamosc wg wyboru (profil vs anonim).
-      const isPublic = true;
+      // Widoczność z list_status: NOWA lista (default "visited") = publiczna polecajka.
+      // EDYCJA istniejącej -> zachowaj stan (prywatna to_visit zostaje prywatna, nie flip na public).
+      // null (przed doładowaniem na edycji) -> "visited" (bezpiecznie, list_status jest NOT NULL).
+      const listStatusToSave = listStatus === "to_visit" ? "to_visit" : "visited";
+      // Wszystkie kuratorskie listy (visited) sa PUBLICZNE (decyzja 2026-08-24: rozwoj bazy
+      // discovery, brak opcji "prywatna"). Prywatna zostaje tylko wishlista to_visit.
+      const isPublic = listStatusToSave === "visited";
+      // Bez bramki moderacyjnej: lista jest widoczna od razu (ukrywanie reaktywne przez admina).
+      const moderationStatus = "approved";
       const authorName = asAnon ? "Anonim" : author.name;
       const authorAvatar = asAnon ? null : author.avatar;
       const desc = description.trim() || null;
+      // Listy nie trafiaja do eksploracji -> nie maja pickera okladki (prosba Nat 2026-08-26).
+      // Okladka = AUTO: zdjecie pierwszego miejsca (hero na /lista/:id). Bez ustawiania przez usera.
+      const firstItemPhoto = items.find((it) => it.photo_url)?.photo_url ?? null;
+      const coverToSave = firstItemPhoto;
+      const listCoverToSave = firstItemPhoto;
+      const tagsToSave = tags.map((x) => x.trim()).filter(Boolean).slice(0, 20);
+      // Miasto opcjonalne: "" (Wszedzie) -> null (lista globalna, karta pokaze tylko liczbe miejsc).
+      const cityToSave = city.trim() || null;
       if (editId) {
-        await (supabase as any).from("discovery_collections").update({ title: collectionTitle, city, category, description: desc, is_public: isPublic, author_name: authorName, author_avatar: authorAvatar, updated_at: new Date().toISOString() }).eq("id", editId);
+        await (supabase as any).from("discovery_collections").update({ title: collectionTitle, city: cityToSave, category, description: desc, is_public: isPublic, author_name: authorName, author_avatar: authorAvatar, cover_url: coverToSave, list_cover_url: listCoverToSave, tags: tagsToSave, list_status: listStatusToSave, updated_at: new Date().toISOString() }).eq("id", editId);
         await (supabase as any).from("discovery_items").delete().eq("collection_id", editId);
       } else {
         const { data: col, error } = await (supabase as any).from("discovery_collections").insert({
           user_id: user.id, author_name: authorName, author_avatar: authorAvatar, title: collectionTitle,
-          category, city, description: desc, kind: "ranking", is_public: isPublic,
-          moderation_status: moderationStatus,
+          category, city: cityToSave, description: desc, kind: "ranking", is_public: isPublic,
+          cover_url: coverToSave, list_cover_url: listCoverToSave, tags: tagsToSave,
+          list_status: listStatusToSave, moderation_status: moderationStatus,
+          theme: randomListTheme(),   // losowy kolor z palety (Nat 2026-09-14) - jak w arkuszu tworzenia
         }).select("id").single();
         if (error || !col) throw new Error(error?.message ?? "insert failed");
         collectionId = col.id;
@@ -403,6 +604,7 @@ const CreateRanking = () => {
         collection_id: collectionId, order_index: idx, place_id: it.place_id, place_name: it.place_name,
         category: it.category, address: it.address, latitude: it.latitude, longitude: it.longitude,
         rating: it.rating, google_place_id: it.google_place_id, photo_url: it.photo_url, short_desc: it.short_desc.trim() || null,
+        tags: (it.tags ?? []).slice(0, 8), added_by: user.id, // atrybucja (hak pod wspoltworzenie list)
       }));
       const { error: itemsErr } = await (supabase as any).from("discovery_items").insert(rows);
       if (itemsErr) throw new Error(itemsErr.message);
@@ -412,14 +614,18 @@ const CreateRanking = () => {
           body: { type: "ranking", title: collectionTitle, city, collection_id: collectionId, author: author.name },
         }).catch((e) => console.warn("[CreateRanking] notify-admin-content failed:", e));
       }
+      track("list_published", { collection_id: collectionId ?? null, city: cityToSave, is_public: isPublic, place_count: items.length, source: "create_ranking" });
       toast.success(editId ? t("toast.updated") : t("toast.sent"));
-      navigate("/eksploruj");
+      // Listy widoczne w profilu (zakładka Listy). Kieruj na profil zamiast na pusty feed -
+      // inaczej user ma wrazenie, ze nic sie nie zapisalo. (Osobny widok "Twoje listy" usuniety, IA 2026-08-20.)
+      navigate("/moj-profil");
     } catch (e: any) {
       toast.error(t("toast.save_failed", { error: e?.message ?? t("error_fallback") }));
     } finally {
       setPublishing(false);
     }
   };
+
 
   const mapPins = items.filter((i) => i.latitude != null && i.longitude != null)
     .map((i) => ({ latitude: i.latitude!, longitude: i.longitude!, place_name: i.place_name }));
@@ -447,11 +653,11 @@ const CreateRanking = () => {
               replace: true,
             });
           }}
-          onBack={() => (window.history.length > 1 ? navigate(-1) : navigate("/eksploruj"))}
+          onBack={() => goBackOr(navigate, "/eksploruj")}
         />
       ) : (
         <div className="flex items-center gap-2 px-4 pt-safe-4 pb-3 border-b border-border/20 shrink-0">
-          <button onClick={() => (step === 2 ? setStep(1) : (window.history.length > 1 ? navigate(-1) : navigate("/eksploruj")))} aria-label={t("header.back")} className="h-9 w-9 flex items-center justify-center -ml-1 shrink-0 text-foreground">
+          <button onClick={() => (step === 2 ? setStep(1) : goBackOr(navigate, "/eksploruj"))} aria-label={t("header.back")} className="h-9 w-9 flex items-center justify-center -ml-1 shrink-0 text-foreground">
             <ArrowLeft className="h-5 w-5" />
           </button>
           <span className="flex-1 font-bold text-base truncate">{step === 2 ? t("header.notes_and_map") : editId ? t("header.edit_collection") : t("header.new_collection")}</span>
@@ -464,19 +670,69 @@ const CreateRanking = () => {
           {/* Hint: jedno zdanie czym jest lista */}
           <div className="px-4 pt-4">
             <p className="text-sm text-muted-foreground leading-snug">
-              {`Lista to zbiór Twoich ulubionych miejsc bez ustalonej kolejności - np. Twoje ukochane kawiarnie w mieście.`}
+              {t("intro")}
             </p>
           </div>
-          {/* Kraj + miasto wybrane wczesniej drum-scrollem (/utworz) - tu bez selektora. */}
           {/* Nazwa listy (generyczna domyslna, edytowalna) */}
           <div className="px-4 pt-3">
             <input value={title} onChange={(e) => { setTitle(e.target.value); setTitleDirty(true); }} maxLength={80}
-              placeholder={t("name_placeholder", "Nazwa listy")}
-              className="w-full rounded-2xl bg-secondary text-secondary-foreground border-0 px-4 py-3 text-base outline-none focus:ring-2 focus:ring-orange-500/40 placeholder:text-muted-foreground/50" />
+              onFocus={() => setTitleFocused(true)} onBlur={() => setTitleFocused(false)}
+              placeholder={t("name_placeholder")}
+              aria-invalid={titleBlocked}
+              className={`w-full rounded-2xl bg-secondary text-secondary-foreground border-0 px-4 py-3 text-base outline-none focus:ring-2 placeholder:text-muted-foreground/50 ${titleBlocked ? "ring-2 ring-destructive focus:ring-destructive" : "focus:ring-orange-500/40"}`} />
+            {titleBlocked && (
+              <p className="mt-2 px-1 text-xs text-destructive">{t("cta.title_not_allowed")}</p>
+            )}
           </div>
 
-          {/* Wyszukiwarka - STICKY na gorze (najwazniejsza) */}
-          <div className="sticky top-0 z-20 bg-background px-4 pt-3 pb-2">
+          {/* OPCJONALNY filtr miasta wyszukiwarki (miasto NIE jest obowiazkowe - lista moze byc
+              globalna). Domyslnie "Wszedzie" (city="") -> szukamy na calym swiecie. User moze zawezic
+              do miasta i dolozyc miejsca z roznych miast do JEDNEJ listy (Krakow + Olsztyn...). */}
+          <div className="px-4 pt-3">
+            <button type="button" onClick={() => setCityPickerOpen((o) => !o)}
+              className="w-full flex items-center gap-2 rounded-2xl bg-secondary text-secondary-foreground px-4 py-3 active:opacity-80 transition-opacity">
+              <span className="text-sm text-muted-foreground shrink-0">{`Szukasz w:`}</span>
+              <span className="flex-1 text-left text-sm font-bold text-foreground truncate">{city || t("city.anywhere")}</span>
+              <ChevronDown className={`h-4 w-4 text-muted-foreground shrink-0 transition-transform ${cityPickerOpen ? "rotate-180" : ""}`} />
+            </button>
+            {cityPickerOpen && (
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <div className="relative">
+                  {/* Gdy miasto = "Wszedzie" (city=""), kraj tez pokazuje "Wszedzie". Wybor realnego
+                      kraju zawezaja do jego pierwszego miasta; wybor "Wszedzie" -> globalnie (city=""). */}
+                  <select value={city ? country : ""} onChange={(e) => { const v = e.target.value; if (!v) setCity(""); else onCountryChange(v); }}
+                    className="w-full appearance-none rounded-2xl bg-secondary text-secondary-foreground border-0 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-orange-500/40">
+                    <option value="">{t("city.anywhere")}</option>
+                    {TRIP_REGIONS.map((region) => (
+                      <optgroup key={region} label={region}>
+                        {TRIP_COUNTRIES.filter((c) => c.region === region).map((c) => (
+                          <option key={c.name} value={c.name}>{c.name}</option>
+                        ))}
+                      </optgroup>
+                    ))}
+                  </select>
+                  <ChevronDown className="h-4 w-4 text-muted-foreground absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                </div>
+                <div className="relative">
+                  <select value={city} onChange={(e) => setCity(e.target.value)}
+                    className="w-full appearance-none rounded-2xl bg-secondary text-secondary-foreground border-0 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-orange-500/40">
+                    <option value="">{t("city.anywhere_world")}</option>
+                    {cities.map((c) => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                  <ChevronDown className="h-4 w-4 text-muted-foreground absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                </div>
+              </div>
+            )}
+            {items.length > 0 && (
+              <p className="text-[11px] text-muted-foreground mt-2 leading-snug">
+                {t("city.optional")}
+              </p>
+            )}
+          </div>
+
+          {/* Wyszukiwarka - sticky na gorze, ale NIE podczas edycji nazwy (inaczej naježdža
+              na pole nazwy gdy klawiatura przewija widok). */}
+          <div className={`${titleFocused ? "" : "sticky top-0 z-20"} bg-background px-4 pt-3 pb-2`}>
             <div className="relative">
               <Search className="h-4 w-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2 z-10" />
               <input ref={searchInputRef} value={search} onChange={(e) => setSearch(e.target.value)}
@@ -495,9 +751,9 @@ const CreateRanking = () => {
                 {searchResults.filter((r) => !addedNames.has(r.place_name.toLowerCase())).map((r) => (
                   <button key={r.id} onClick={() => addDbPlace(r)}
                     className="w-full flex items-center gap-3 p-2.5 active:bg-background/50 text-left">
-                    {r.photo_url ? <img src={r.photo_url} alt="" className="h-11 w-11 rounded-xl object-cover shrink-0" /> : <div className="h-11 w-11 rounded-xl bg-background flex items-center justify-center shrink-0"><MapPin className="h-4 w-4 text-muted-foreground" /></div>}
+                    {r.photo_url ? <img src={r.photo_url} alt="" className="h-11 w-11 rounded-xl object-cover shrink-0" /> : <div className="h-11 w-11 rounded-xl bg-[#fcede3] flex items-center justify-center shrink-0"><CategoryIcon category={r.category} className="w-1/2" /></div>}
                     <div className="flex-1 min-w-0"><p className="text-sm font-semibold truncate">{r.place_name}</p>{r.address && <p className="text-[11px] text-muted-foreground truncate">{r.address}</p>}</div>
-                    <Plus className="h-4 w-4 text-orange-600 shrink-0" />
+                    <Plus className="h-4 w-4 text-primary shrink-0" />
                   </button>
                 ))}
                 {/* Nowe miejsca spoza bazy (Google) - dopelnienie wynikow z DB. */}
@@ -509,7 +765,7 @@ const CreateRanking = () => {
                 {googleResults.filter((g) => !addedNames.has((g.name ?? "").toLowerCase())).map((g) => (
                   <button key={g.name + g.latitude} onClick={() => addGooglePlace(g)} disabled={!!addingGoogleName}
                     className="w-full flex items-center gap-3 p-2.5 active:bg-background/50 text-left disabled:opacity-50">
-                    <div className="h-11 w-11 rounded-xl bg-background flex items-center justify-center shrink-0"><MapPin className="h-4 w-4 text-muted-foreground" /></div>
+                    <div className="h-11 w-11 rounded-xl bg-[#fcede3] flex items-center justify-center shrink-0"><CategoryIcon category={categoryFromGoogleTypes(g.types)} className="w-1/2" /></div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5">
                         <p className="text-sm font-semibold truncate">{g.name}</p>
@@ -517,7 +773,7 @@ const CreateRanking = () => {
                       </div>
                       {g.full_address && <p className="text-[11px] text-muted-foreground truncate">{g.full_address}</p>}
                     </div>
-                    {addingGoogleName === g.name ? <Loader2 className="h-4 w-4 animate-spin text-orange-600 shrink-0" /> : <Plus className="h-4 w-4 text-orange-600 shrink-0" />}
+                    {addingGoogleName === g.name ? <Loader2 className="h-4 w-4 animate-spin text-primary shrink-0" /> : <Plus className="h-4 w-4 text-primary shrink-0" />}
                   </button>
                 ))}
                 {/* Stan pusty - brak dopasowan w miescie (najczesciej literowka). */}
@@ -532,7 +788,7 @@ const CreateRanking = () => {
                 {!searchLoading && !googleLoading && (
                   <button onClick={() => previewCustomByName(search)} disabled={addingCustom}
                     className="w-full flex items-center gap-2 p-3 text-left active:bg-background/50 disabled:opacity-50">
-                    {addingCustom ? <Loader2 className="h-4 w-4 animate-spin text-orange-600 shrink-0" /> : <Search className="h-4 w-4 text-orange-600 shrink-0" />}
+                    {addingCustom ? <Loader2 className="h-4 w-4 animate-spin text-primary shrink-0" /> : <Search className="h-4 w-4 text-primary shrink-0" />}
                     <span className="text-sm font-semibold">{t("search.preview_cta", { query: search.trim() })}</span>
                   </button>
                 )}
@@ -556,97 +812,104 @@ const CreateRanking = () => {
                 </div>
               )}
             </div>
-            <div className={placeView === "detail" ? "flex gap-3 overflow-x-auto scrollbar-none snap-x snap-mandatory -mr-4 pr-4 pb-1" : "space-y-2.5"}>
-              {items.map((it, idx) => {
-                const cat = categoryBadge(it.category);
-                // Kontrolki kolejnosci (tylko Plan): strzalki gora/dol.
-                const reorder = isRoute && (
-                  <div className="flex flex-col shrink-0">
-                    <button onClick={() => move(idx, -1)} disabled={idx === 0} aria-label={t("places.move_up")} className="h-6 w-6 flex items-center justify-center rounded-md text-muted-foreground disabled:opacity-25 active:bg-background"><ChevronUp className="h-4 w-4" /></button>
-                    <button onClick={() => move(idx, 1)} disabled={idx === items.length - 1} aria-label={t("places.move_down")} className="h-6 w-6 flex items-center justify-center rounded-md text-muted-foreground disabled:opacity-25 active:bg-background"><ChevronDown className="h-4 w-4" /></button>
-                  </div>
-                );
-                // ── Widok kompaktowy (lista) ──
-                if (placeView === "list") {
-                  const stepNo = isRoute && <span className="h-6 w-6 rounded-full bg-orange-600 text-white text-[11px] font-bold flex items-center justify-center shrink-0">{idx + 1}</span>;
+            {placeView === "list" ? (
+              // ── Widok listy z DRAG & DROP (1:1 z tworzeniem trasy). Uchwyt zmienia kolejnosc;
+              //    order_index zapisuje sie z pozycji przy publikacji. ──
+              <>
+                <Reorder.Group key={items.length} axis="y" values={items} onReorder={setItems} className="space-y-2.5">
+                  {items.map((it) => (
+                    <SortableRankingRow key={it.key} it={it} onOpen={() => openDetail(it)} onRemove={() => removeItem(it.key)} />
+                  ))}
+                </Reorder.Group>
+                {/* Dodaj miejsce - pelna szerokosc pod lista */}
+                <button
+                  type="button"
+                  onClick={() => searchInputRef.current?.focus()}
+                  className="mt-2.5 w-full rounded-2xl border-2 border-dashed border-border/70 bg-secondary/40 flex flex-col items-center justify-center gap-2 py-5 text-muted-foreground active:scale-[0.99] transition-transform"
+                >
+                  <span className="h-11 w-11 rounded-full bg-secondary flex items-center justify-center"><Plus className="h-5 w-5 text-primary" /></span>
+                  <span className="text-sm font-bold text-foreground">{t("places.add")}</span>
+                  <span className="text-[12px] text-center">{t("places.add_hint")}</span>
+                </button>
+              </>
+            ) : (
+              // ── Widok kart (karuzela 4:3) - bez dnd (kolejnosc przez widok listy). ──
+              <div className="flex gap-3 overflow-x-auto scrollbar-none snap-x snap-mandatory -mr-4 pr-4 pb-1">
+                {items.map((it, idx) => {
+                  const cat = categoryBadge(it.category);
+                  // Premium B2B: pelne dane z business_profiles (adres, kategoria glowna+druga, tagi).
+                  const bp = it.place_id ? bizMap[it.place_id] : null;
+                  const bpAddress = bp?.street
+                    ? [bp.street, [bp.postal_code, city].filter(Boolean).join(" ")].filter(Boolean).join(", ")
+                    : (bp?.address || null);
+                  const bpTags: string[] = Array.isArray(bp?.tags) ? bp.tags.filter(Boolean) : [];
                   return (
-                    <div key={it.key} className="rounded-2xl bg-secondary p-2.5 flex items-center gap-2">
-                      {stepNo}
-                      <button onClick={() => openDetail(it)} className="flex items-center gap-2.5 flex-1 min-w-0 text-left active:opacity-80 transition-opacity">
-                        {it.photo_url
-                          ? <img src={it.photo_url} alt="" className="h-11 w-11 rounded-lg object-cover shrink-0" />
-                          : <div className="h-11 w-11 rounded-lg bg-background flex items-center justify-center text-muted-foreground shrink-0"><MapPin className="h-4 w-4" /></div>}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1.5">
-                            <p className="text-sm font-bold truncate">{it.place_name}</p>
-                          </div>
-                          {cat && <p className="text-[11px] text-muted-foreground truncate flex items-center gap-1"><CategoryIcon category={it.category} className="h-3 w-3 shrink-0" />{cat.label}</p>}
+                    <div key={it.key} className="relative shrink-0 w-[80%] snap-start rounded-2xl bg-secondary border border-border/40 overflow-hidden shadow-sm">
+                      <button onClick={() => openDetail(it)} className="w-full text-left active:opacity-90 transition-opacity">
+                        <div className="relative w-full aspect-[4/3] bg-muted">
+                          {it.photo_url
+                            ? <img src={it.photo_url} alt="" className="absolute inset-0 w-full h-full object-cover" loading="lazy" />
+                            : <div className="absolute inset-0 flex items-center justify-center bg-[#fcede3]"><CategoryIcon category={it.category} className="w-1/4 max-w-[72px]" /></div>}
+                          {isRoute && <span className="absolute top-3 left-3 h-8 w-8 rounded-full bg-black/55 backdrop-blur text-white text-sm font-bold flex items-center justify-center shadow-sm">{idx + 1}</span>}
+                        </div>
+                        <div className="px-4 pt-3 pb-3.5">
+                          {/* Kategorie: premium -> glowna + druga; zwykle miejsce -> pojedynczy badge. */}
+                          {bp ? (
+                            <div className="flex flex-wrap gap-1.5 mb-1.5">
+                              {bp.main_category && <span className="inline-flex items-center rounded-full bg-background px-2.5 py-0.5 text-[11px] font-semibold">{mainCategoryLabel(bp.main_category)}</span>}
+                              {bp.secondary_category && bp.secondary_category !== bp.main_category && <span className="inline-flex items-center rounded-full bg-background/70 px-2.5 py-0.5 text-[11px] font-medium text-muted-foreground">{mainCategoryLabel(bp.secondary_category)}</span>}
+                            </div>
+                          ) : (
+                            cat && <span className="inline-flex items-center gap-1 rounded-full bg-background px-2.5 py-0.5 text-[11px] font-semibold mb-1.5"><CategoryIcon category={it.category} className="h-3 w-3 shrink-0" />{cat.label}</span>
+                          )}
+                          <p className="text-[15px] font-bold leading-snug">{it.place_name}</p>
+                          {/* Pelny adres (premium bez truncate) lub zwykly adres (truncate). */}
+                          {(bpAddress || it.address) && <p className={`text-[12px] text-muted-foreground leading-snug mt-1 ${bpAddress ? "" : "truncate"}`}>{bpAddress || it.address}</p>}
+                          {/* Tagi lokalu (premium). */}
+                          {bpTags.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-2">
+                              {bpTags.slice(0, 4).map((tg) => (
+                                <span key={tg} className="text-[10px] font-medium text-foreground/70 bg-background rounded-full px-2 py-0.5">{tg}</span>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       </button>
-                      {reorder}
-                      <button onClick={() => removeItem(it.key)} aria-label={t("places.remove")} className="h-7 w-7 flex items-center justify-center rounded-full text-destructive active:bg-destructive/10 shrink-0"><X className="h-4 w-4" /></button>
+                      <div className="absolute top-2.5 right-2.5 flex items-center gap-1.5">
+                        <button onClick={() => removeItem(it.key)} aria-label={t("places.remove")} className="h-8 w-8 flex items-center justify-center rounded-full bg-white/90 backdrop-blur-sm shadow-sm text-destructive active:scale-95 transition-transform"><X className="h-4 w-4" /></button>
+                      </div>
                     </div>
                   );
-                }
-                // ── Widok kart: duza karta 4:3 (jak w dzienniku) ──
-                return (
-                  <div key={it.key} className="relative shrink-0 w-[80%] snap-start rounded-2xl bg-secondary border border-border/40 overflow-hidden shadow-sm">
-                    <button onClick={() => openDetail(it)} className="w-full text-left active:opacity-90 transition-opacity">
-                      <div className="relative w-full aspect-[4/3] bg-muted">
-                        {it.photo_url
-                          ? <img src={it.photo_url} alt="" className="absolute inset-0 w-full h-full object-cover" loading="lazy" />
-                          : <div className="absolute inset-0 flex items-center justify-center text-muted-foreground"><MapPin className="h-8 w-8" /></div>}
-                        {/* Numer kroku (tylko Plan - kolejnosc zwiedzania) */}
-                        {isRoute && <span className="absolute top-3 left-3 h-8 w-8 rounded-full bg-black/55 backdrop-blur text-white text-sm font-bold flex items-center justify-center shadow-sm">{idx + 1}</span>}
-                      </div>
-                      <div className="px-4 pt-3 pb-3.5">
-                        {cat && <span className="inline-flex items-center gap-1 rounded-full bg-background px-2.5 py-0.5 text-[11px] font-semibold mb-1.5"><CategoryIcon category={it.category} className="h-3 w-3 shrink-0" />{cat.label}</span>}
-                        <p className="text-base font-black leading-tight">{it.place_name}</p>
-                        {it.address && <p className="text-[12px] text-muted-foreground leading-snug mt-1 truncate">{it.address}</p>}
-                      </div>
-                    </button>
-                    {/* Akcje: reorder (Plan) + usun - overlay w prawym gornym rogu nad zdjeciem */}
-                    <div className="absolute top-2.5 right-2.5 flex items-center gap-1.5">
-                      {isRoute && (
-                        <div className="flex flex-col rounded-full bg-white/90 backdrop-blur-sm shadow-sm overflow-hidden">
-                          <button onClick={() => move(idx, -1)} disabled={idx === 0} aria-label={t("places.move_up")} className="h-6 w-7 flex items-center justify-center text-foreground/70 disabled:opacity-25 active:bg-black/5"><ChevronUp className="h-4 w-4" /></button>
-                          <button onClick={() => move(idx, 1)} disabled={idx === items.length - 1} aria-label={t("places.move_down")} className="h-6 w-7 flex items-center justify-center text-foreground/70 disabled:opacity-25 active:bg-black/5"><ChevronDown className="h-4 w-4" /></button>
-                        </div>
-                      )}
-                      <button onClick={() => removeItem(it.key)} aria-label={t("places.remove")} className="h-8 w-8 flex items-center justify-center rounded-full bg-white/90 backdrop-blur-sm shadow-sm text-destructive active:scale-95 transition-transform"><X className="h-4 w-4" /></button>
-                    </div>
-                  </div>
-                );
-              })}
-
-              {/* Szkielet "Dodaj miejsce" - klik = fokus na wyszukiwarce. Zawsze widoczny:
-                  jako pusty stan (gdy 0 miejsc) i jako sposob dodania kolejnych. W trybie kart
-                  = kafel w karuzeli (obok miejsc), w trybie listy = pelna szerokosc pod spodem. */}
-              <button
-                type="button"
-                onClick={() => searchInputRef.current?.focus()}
-                className={`rounded-2xl border-2 border-dashed border-border/70 bg-secondary/40 flex flex-col items-center justify-center gap-2 text-muted-foreground active:scale-[0.99] transition-transform ${placeView === "list" ? "w-full py-5" : "shrink-0 w-[80%] snap-start self-stretch min-h-[240px] px-4"}`}
-              >
-                <span className="h-11 w-11 rounded-full bg-secondary flex items-center justify-center"><Plus className="h-5 w-5 text-orange-600" /></span>
-                <span className="text-sm font-bold text-foreground">{t("places.add")}</span>
-                <span className="text-[12px] text-center">{t("places.add_hint")}</span>
-              </button>
-            </div>
+                })}
+                {/* Dodaj miejsce - kafel w karuzeli */}
+                <button
+                  type="button"
+                  onClick={() => searchInputRef.current?.focus()}
+                  className="rounded-2xl border-2 border-dashed border-border/70 bg-secondary/40 flex flex-col items-center justify-center gap-2 shrink-0 w-[80%] snap-start self-stretch min-h-[240px] px-4 text-muted-foreground active:scale-[0.99] transition-transform"
+                >
+                  <span className="h-11 w-11 rounded-full bg-secondary flex items-center justify-center"><Plus className="h-5 w-5 text-primary" /></span>
+                  <span className="text-sm font-bold text-foreground">{t("places.add")}</span>
+                  <span className="text-[12px] text-center">{t("places.add_hint")}</span>
+                </button>
+              </div>
+            )}
           </div>
 
           {/* "Twoje zapisane miejsca" - szybka sciaga (zamiast propozycji z bazy). Ukryte podczas szukania. */}
           {search.trim().length < 2 && (() => {
-            const saved = savedForCity.filter((s) => !addedNames.has(s.place_name.toLowerCase()));
+            const saved = savedForCity.places.filter((s) => !addedNames.has(s.place_name.toLowerCase()));
             return (
               <div className="px-4 pb-4">
-                <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide mb-2">Twoje zapisane miejsca</p>
+                <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide mb-2">
+                  {savedForCity.fallback && saved.length > 0 ? t("saved.other_cities") : t("saved.your_saved")}
+                </p>
                 {saved.length > 0 ? (
                   <div className="flex gap-2.5 overflow-x-auto scrollbar-none snap-x snap-mandatory -mr-4 pr-4 pb-1">
                     {saved.map((s) => (
                       <button key={s.key} onClick={() => addDbPlace(s)}
                         className="shrink-0 w-[40%] snap-start rounded-2xl bg-secondary overflow-hidden text-left active:scale-[0.97] transition-transform">
                         <div className="relative aspect-[4/3] bg-background">
-                          {s.photo_url ? <img src={s.photo_url} alt="" className="absolute inset-0 w-full h-full object-cover" loading="lazy" /> : <div className="absolute inset-0 flex items-center justify-center text-muted-foreground"><MapPin className="h-5 w-5" /></div>}
+                          {s.photo_url ? <img src={s.photo_url} alt="" className="absolute inset-0 w-full h-full object-cover" loading="lazy" /> : <div className="absolute inset-0 flex items-center justify-center bg-[#fcede3]"><CategoryIcon category={s.category} className="w-1/3 max-w-[56px]" /></div>}
                           <div className="absolute top-1.5 right-1.5 h-6 w-6 rounded-full bg-primary text-white flex items-center justify-center shadow-sm"><Plus className="h-3.5 w-3.5" /></div>
                         </div>
                         <p className="text-xs font-bold leading-tight truncate px-2 py-2">{s.place_name}</p>
@@ -655,7 +918,7 @@ const CreateRanking = () => {
                     <div className="shrink-0 w-1" />
                   </div>
                 ) : (
-                  <p className="text-sm text-muted-foreground leading-snug">{`Nie masz jeszcze zapisanych miejsc w mieście ${city}.`}</p>
+                  <p className="text-sm text-muted-foreground leading-snug">{t("saved.empty")}</p>
                 )}
               </div>
             );
@@ -665,17 +928,27 @@ const CreateRanking = () => {
 
       {/* ══ KROK 2: glowna notka + notki do miejsc + mapa + anonimowo ══ */}
       {step === 2 && (
-        <div className="flex-1 overflow-y-auto px-4 py-5 space-y-6">
-          {/* Glowna notka do calego zestawienia */}
+        <div className="flex-1 overflow-y-auto px-4 py-5">
+          {/* Opis calej listy (discovery_collections.description) - do uzupelnienia przez autora
+              (prosba Nat 2026-08-26, zastapil picker okladki). Okladka listy auto = pierwsze zdjecie
+              miejsca (coverToSave = coverUrl ?? firstItemPhoto). */}
           <div>
-            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-1.5 block">{t("notes.collection_label")} <span className="normal-case font-medium text-muted-foreground/50">{t("notes.optional")}</span></label>
-            <textarea value={description} onChange={(e) => setDescription(e.target.value)} maxLength={280} rows={3}
-              placeholder={t("notes.collection_placeholder")}
-              className="w-full rounded-2xl bg-secondary text-secondary-foreground border-0 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-orange-500/40 placeholder:text-muted-foreground/50 resize-none" />
+            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-1.5 block">
+              {t("form.description_label")} <span className="normal-case font-medium text-muted-foreground/50">{t("notes.optional")}</span>
+            </label>
+            <p className="text-[12px] text-muted-foreground leading-snug mb-2.5">{t("desc.hint")}</p>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              maxLength={500}
+              rows={3}
+              placeholder={t("desc.placeholder")}
+              className="w-full rounded-2xl bg-secondary text-secondary-foreground border-0 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-orange-500/40 placeholder:text-muted-foreground/50 resize-none"
+            />
           </div>
 
-          {/* Notki do poszczegolnych miejsc */}
-          <div>
+          {/* Notki do poszczegolnych miejsc. */}
+          <div className="pt-6">
             <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2 block">{t("notes.places_label")}</label>
             <div className="space-y-2.5">
               {items.map((it) => (
@@ -683,12 +956,25 @@ const CreateRanking = () => {
                   <div className="flex items-center gap-2.5">
                     {it.photo_url
                       ? <img src={it.photo_url} alt="" className="h-10 w-10 rounded-lg object-cover shrink-0" />
-                      : <div className="h-10 w-10 rounded-lg bg-background flex items-center justify-center text-muted-foreground shrink-0"><MapPin className="h-4 w-4" /></div>}
+                      : <div className="h-10 w-10 rounded-lg bg-[#fcede3] flex items-center justify-center shrink-0"><CategoryIcon category={it.category} className="w-1/2" /></div>}
                     <p className="text-sm font-bold truncate flex-1 min-w-0">{it.place_name}</p>
                   </div>
                   <input value={it.short_desc} onChange={(e) => setNote(it.key, e.target.value)} maxLength={120}
                     placeholder={t("notes.place_placeholder")}
                     className="mt-2 w-full rounded-lg bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-500/40 placeholder:text-muted-foreground/50" />
+                  {/* Tagi miejsca (alternatywa dla notki) - pula zalezna od kategorii, wybrany = zolty fill */}
+                  <p className="text-[11px] text-muted-foreground mt-2 mb-1.5">{t("form.place_tags_label")}</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {placeTagsForCategory(it.category).map((tg) => {
+                      const on = (it.tags ?? []).some((x) => tagId(x) === tagId(tg));
+                      return (
+                        <button key={tg} type="button" onClick={() => toggleItemTag(it.key, tg)}
+                          className={`px-3 py-1.5 rounded-full text-xs font-semibold active:scale-95 transition-transform border ${on ? "bg-[#FDF184] border-[#FDCD84] text-foreground" : "bg-background border-transparent text-muted-foreground"}`}>
+                          {localizeTag(tg)}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               ))}
             </div>
@@ -696,7 +982,7 @@ const CreateRanking = () => {
 
           {/* Mapa z miejscami */}
           {mapPins.length > 0 && (
-            <div>
+            <div className="pt-6">
               <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2 block">{isRouteCollection(category) ? t("map.route") : t("map.list")}</label>
               <div className="relative h-52 rounded-2xl overflow-hidden border border-border/40">
                 <RouteMap pins={mapPins as any} className="w-full h-full" showRoute={isRoute} />
@@ -704,31 +990,23 @@ const CreateRanking = () => {
             </div>
           )}
 
-          {/* Anonimowo - checkbox na koncu (domyslnie z profilem) */}
-          <button type="button" onClick={() => setAsAnon((v) => !v)} className="w-full flex items-start gap-3 rounded-2xl bg-secondary p-3.5 text-left active:scale-[0.99] transition-transform">
-            <span className={`h-5 w-5 rounded-md border-2 flex items-center justify-center shrink-0 mt-0.5 transition-colors ${asAnon ? "bg-primary border-orange-600" : "border-border bg-background"}`}>
-              {asAnon && <Check className="h-3.5 w-3.5 text-white" strokeWidth={3} />}
-            </span>
-            <span className="min-w-0">
-              <span className="text-sm font-bold block">{t("anon.label")}</span>
-              <span className="text-[11px] text-muted-foreground block mt-0.5">{asAnon ? t("anon.on") : t("anon.off")}</span>
-            </span>
-          </button>
         </div>
       )}
 
-      {/* CTA - Dalej (krok 1) / Opublikuj (krok 2). Ukryte gdy fokus na wyszukiwarce
-          (krok 1) - zeby nie zaslaniac wynikow nad klawiatura. */}
-      {!(step === 1 && searchFocused) && (
+      {/* CTA - Dalej (krok 1) / Zapisz (krok 2). Ukryte gdy fokus na wyszukiwarce LUB
+          na polu nazwy (krok 1) - zeby nie zaslaniac wynikow / pola nad klawiatura. */}
+      {!(step === 1 && (searchFocused || titleFocused)) && (
         <div className="shrink-0 px-4 pt-3 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] border-t border-border/20">
           {step === 1 ? (
-            <button onClick={() => setStep(2)} disabled={!canGoNext}
-              className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-sm shadow-md shadow-orange-500/20 active:scale-[0.98] transition-transform disabled:opacity-50 flex items-center justify-center gap-2">
+            // Guzik NIE jest `disabled` - klik przy niespelnionych warunkach pokazuje toast
+            // z powodem (inaczej user nie wie czemu wyszarzone). Wyszarzenie = wizualny sygnal.
+            <button onClick={goNext}
+              className={`w-full py-3.5 rounded-2xl bg-primary text-white font-bold text-sm active:scale-[0.98] transition-transform flex items-center justify-center gap-2 ${canGoNext ? "" : "opacity-50"}`}>
               {t("cta.next")} <ChevronRight className="h-4 w-4" />
             </button>
           ) : (
             <button onClick={publish} disabled={!canPublish}
-              className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-sm shadow-md shadow-orange-500/20 active:scale-[0.98] transition-transform disabled:opacity-50">
+              className="w-full py-3.5 rounded-2xl bg-primary text-white font-bold text-sm active:scale-[0.98] transition-transform disabled:opacity-50">
               {publishing ? <Loader2 className="h-5 w-5 animate-spin mx-auto" /> : (editId ? t("cta.save") : t("cta.publish"))}
             </button>
           )}
@@ -736,12 +1014,22 @@ const CreateRanking = () => {
       )}
 
       {detailPlace && (
-        <PlaceSwiperDetail open={!!detailPlace} onOpenChange={(o) => { if (!o) setDetailPlace(null); }} place={detailPlace} city={city} skipGoogleFetch={detailSkip} />
+        <PlaceSwiperDetail
+          open={!!detailPlace} onOpenChange={(o) => { if (!o) setDetailPlace(null); }} place={detailPlace}
+          city={city} skipGoogleFetch={detailSkip}
+          onLike={() => setSavePlace({
+            place_name: detailPlace.place_name, category: detailPlace.category ?? null, address: detailPlace.address || null,
+            city: detailPlace.city || city || null, latitude: detailPlace.latitude ?? null, longitude: detailPlace.longitude ?? null,
+            photo_url: detailPlace.photo_url || null, place_id: null,
+          })}
+        />
       )}
+      <SavePlaceSheet open={!!savePlace} onOpenChange={(o) => { if (!o) setSavePlace(null); }} place={savePlace} city={city || ""} />
+
       {/* Podglad miejsca spoza bazy - TYLKO okladka (bez godzin/recenzji, min. kosztow Google) */}
       {customPreview && (
         <div className="fixed inset-0 z-[80] flex flex-col justify-end bg-black/40" onClick={() => setCustomPreview(null)}>
-          <div className="bg-background rounded-t-3xl max-h-[88dvh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+          <div {...previewDrag.dragProps} className="mx-2 mb-2 bg-background rounded-[40px] max-h-[88dvh] flex flex-col" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between px-5 pt-4 pb-2 shrink-0">
               <p className="text-lg font-black">{t("custom_preview.title")}</p>
               <button onClick={() => setCustomPreview(null)} aria-label={t("custom_preview.close")} className="h-9 w-9 rounded-full bg-muted flex items-center justify-center active:bg-muted/70"><X className="h-4 w-4" /></button>
@@ -751,7 +1039,7 @@ const CreateRanking = () => {
                 <div className="relative w-full aspect-[4/3] bg-muted">
                   {customPreview.photo_url
                     ? <img src={customPreview.photo_url} alt="" className="absolute inset-0 w-full h-full object-cover" />
-                    : <div className="absolute inset-0 flex items-center justify-center text-muted-foreground"><MapPin className="h-8 w-8" /></div>}
+                    : <div className="absolute inset-0 flex items-center justify-center bg-[#fcede3]"><CategoryIcon category={customPreview.category} className="w-1/4 max-w-[72px]" /></div>}
                 </div>
                 <div className="p-3.5">
                   <div className="flex items-center gap-2">
@@ -761,8 +1049,8 @@ const CreateRanking = () => {
                 </div>
               </div>
               <div className="flex gap-2 mt-4">
-                <button onClick={() => setCustomPreview(null)} className="flex-1 py-3 rounded-full bg-secondary text-secondary-foreground text-sm font-bold active:scale-[0.97] transition-transform">{t("custom_preview.reject")}</button>
-                <button onClick={confirmCustom} className="flex-1 py-3 rounded-full bg-primary text-white text-sm font-bold active:scale-[0.97] transition-transform">{t("custom_preview.add")}</button>
+                <button onClick={() => setCustomPreview(null)} className="flex-1 py-3 rounded-2xl bg-secondary text-secondary-foreground text-sm font-bold active:scale-[0.97] transition-transform">{t("custom_preview.reject")}</button>
+                <button onClick={confirmCustom} className="flex-1 py-3 rounded-2xl bg-primary text-white text-sm font-bold active:scale-[0.97] transition-transform">{t("custom_preview.add")}</button>
               </div>
             </div>
           </div>

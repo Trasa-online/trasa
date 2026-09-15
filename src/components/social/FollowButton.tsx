@@ -5,15 +5,19 @@ import { useAuth } from "@/hooks/useAuth";
 import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { Loader2, UserCheck, UserPlus } from "lucide-react";
 
 interface FollowButtonProps {
   targetUserId: string;
   /** Wartosc poczatkowa zanim doczyta sie realny stat (opcjonalna - komponent i tak sam pobiera). */
   initialIsFollowing?: boolean;
   className?: string;
+  /** Sama ikona w kolku (profil publiczny, prosba Nat 2026-09-13): pomaranczowa z "dodaj osobe",
+   *  gdy nie obserwujesz; szara z "ptaszkiem", gdy juz obserwujesz. Tekst zostaje w aria-label. */
+  iconOnly?: boolean;
 }
 
-export default function FollowButton({ targetUserId, initialIsFollowing = false, className }: FollowButtonProps) {
+export default function FollowButton({ targetUserId, initialIsFollowing = false, className, iconOnly = false }: FollowButtonProps) {
   const { t } = useTranslation("social");
   const { user, isAnonymous } = useAuth();
   const { open: openAuthDrawer } = useAuthDrawer();
@@ -75,6 +79,26 @@ export default function FollowButton({ targetUserId, initialIsFollowing = false,
 
   if (!user || user.id === targetUserId) return null;
 
+  if (iconOnly) {
+    const label = isFollowing ? t("follow.following") : t("follow.follow");
+    return (
+      <button
+        onClick={() => { if (isAnonymous) { openAuthDrawer({ mode: "register", hint: "follow" }); return; } mutation.mutate(!isFollowing); }}
+        disabled={mutation.isPending}
+        aria-label={label}
+        aria-pressed={isFollowing}
+        title={label}
+        className={cn(
+          "h-9 w-9 rounded-full flex items-center justify-center transition-all active:scale-90 disabled:opacity-60",
+          isFollowing ? "bg-muted text-foreground border border-border/50" : "bg-primary text-white shadow-sm",
+          className,
+        )}
+      >
+        {mutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : isFollowing ? <UserCheck className="h-4 w-4" strokeWidth={2.4} /> : <UserPlus className="h-4 w-4" strokeWidth={2.4} />}
+      </button>
+    );
+  }
+
   return (
     <button
       onClick={() => { if (isAnonymous) { openAuthDrawer({ mode: "register", hint: "follow" }); return; } mutation.mutate(!isFollowing); }}
@@ -83,7 +107,7 @@ export default function FollowButton({ targetUserId, initialIsFollowing = false,
         "px-5 py-2 rounded-full text-sm font-semibold transition-all active:scale-95 disabled:opacity-60",
         isFollowing
           ? "bg-muted text-foreground border border-border/50"
-          : "bg-primary text-white shadow-md shadow-primary/20",
+          : "bg-primary text-white",
         className
       )}
     >

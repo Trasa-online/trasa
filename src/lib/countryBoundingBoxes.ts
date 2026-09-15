@@ -1,6 +1,7 @@
 // Bounding boxes for popular tourist countries
 // Format: { minLat, maxLat, minLng, maxLng }
 
+// i18n-ignore-start: klucze wyszukiwania granic mapy (nazwy krajow lowercase) - nigdy nie wyswietlane
 export const COUNTRY_BOUNDING_BOXES: Record<string, { 
   minLat: number; 
   maxLat: number; 
@@ -93,6 +94,7 @@ export const COUNTRY_BOUNDING_BOXES: Record<string, {
   australia: { minLat: -43.6, maxLat: -10.7, minLng: 113.2, maxLng: 153.6, synonyms: ['australia'] },
   nowazelandia: { minLat: -47.3, maxLat: -34.4, minLng: 166.4, maxLng: 178.6, synonyms: ['new zealand', 'nowa zelandia'] },
   fidzi: { minLat: -20.7, maxLat: -12.5, minLng: 177.0, maxLng: -179.0, synonyms: ['fiji', 'fidżi'] },
+// i18n-ignore-end
 };
 
 // Helper function to normalize country name for lookup

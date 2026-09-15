@@ -19,10 +19,148 @@
     "confirm": "Potwierdź",
     "back": "Wróć",
     "start_recording": "Nagraj głos",
-    "stop_recording": "Zatrzymaj nagrywanie"
+    "stop_recording": "Zatrzymaj nagrywanie",
+    "done": "Gotowe",
+    "search": "Szukaj",
+    "undo": "Cofnij"
   },
   "errors": {
     "generic": "Coś poszło nie tak"
   },
-  "other": "Inne..."
+  "other": "Inne...",
+  "orb": {
+    "no_place_detected": "Nie wykryto miejsca. Spróbuj zdjęcia budynku, zabytku lub atrakcji.",
+    "prompt_parks": "Pokaż mi 3 najpiękniejsze parki i miejsca na spacer",
+    "error": "Przepraszam, coś poszło nie tak. Spróbuj ponownie.",
+    "no_route": "Brak aktywnej trasy. Stwórz plan podróży.",
+    "identify_failed": "Nie udało się rozpoznać miejsca.",
+    "prompt_landmarks": "Pokaż mi 3 najciekawsze zabytki",
+    "prompt_museums": "Pokaż mi 3 interesujące muzea",
+    "add_failed": "Nie udało się dodać miejsca.",
+    "what_interests": "Co Cię interesuje?"
+  },
+  "back_arrow": "← Wróć",
+  "back": "Wróć",
+  "maintenance": {
+    "desc": "Pracujemy nad czymś fajnym. Wróć wkrótce.",
+    "wrong": "Nieprawidłowe hasło",
+    "password": "Hasło dostępu",
+    "enter": "Wejdź"
+  },
+  "error": {
+    "title": "Coś poszło nie tak",
+    "desc": "Aplikacja napotkała błąd. Spróbuj wrócić do strony głównej.",
+    "back_home": "Wróć do głównej",
+    "kind": {
+      "offline": "Brak połączenia",
+      "server": "Problem z serwerem",
+      "update": "Nowa wersja aplikacji",
+      "technical": "Błąd techniczny"
+    },
+    "headline": {
+      "offline": "Nie ma połączenia z internetem",
+      "server": "Nie możemy się teraz połączyć",
+      "update": "Aplikacja się zaktualizowała",
+      "technical": "Coś się zacięło po naszej stronie"
+    },
+    "body": {
+      "offline": "Telefon nie ma zasięgu ani Wi-Fi. Twoje dane są bezpieczne - wrócą, gdy połączenie wróci.",
+      "server": "Internet działa, ale nasz serwer nie odpowiada. To zwykle mija po chwili.",
+      "update": "Wyszła nowa wersja, a ten ekran został z poprzedniej. Wystarczy odświeżyć.",
+      "technical": "To błąd w samej aplikacji, nie u Ciebie. Nic nie straciłaś - zapisane rzeczy zostają na miejscu."
+    },
+    "retry": "Spróbuj ponownie",
+    "reload": "Odśwież aplikację",
+    "details_show": "Szczegóły techniczne",
+    "details_hide": "Ukryj szczegóły",
+    "copy": "Skopiuj szczegóły",
+    "copied": "Skopiowano"
+  },
+  "cookies": {
+    "essential": "Tylko niezbędne",
+    "accept": "Akceptuję",
+    "more": "Więcej",
+    "intro": "Używamy plików cookie do analityki i personalizacji."
+  },
+  "moderation": {
+    "rejected": "To zdjęcie nie przeszło moderacji i nie zostało dodane"
+  },
+  "heic": {
+    "failed": "Nie udało się przetworzyć zdjęcia HEIC. Spróbuj wgrać JPG lub PNG."
+  },
+  "loading": "Ładowanie",
+  "clear": "Wyczyść",
+  "offline": "Jesteś offline",
+  "filters": {
+    "all": "Wszystko",
+    "lists": "Kolekcje",
+    "trips": "Wyjazdy",
+    "places": "Miejsca",
+    "routes": "Trasy",
+    "people": "Ludzie"
+  },
+  "fallback": {
+    "trip": "Wyjazd",
+    "list": "Kolekcja",
+    "route": "Trasa",
+    "place": "Miejsce",
+    "unknown_place": "Nieznane miejsce"
+  },
+  "update": {
+    "title": "Zaktualizuj aplikację",
+    "body": "Ta wersja spontaway jest już nieaktualna. Zaktualizuj aplikację, żeby wszystko działało jak należy.",
+    "cta": "Zaktualizuj",
+    "later": "Później"
+  },
+  "permissions": {
+    "later": "Nie teraz",
+    "open_settings": "Otwórz Ustawienia",
+    "push": {
+      "enable": "Włącz powiadomienia",
+      "list_created": {
+        "title": "Kolekcja gotowa",
+        "desc": "Chcesz wiedzieć, gdy ktoś polubi albo zapisze Twoją kolekcję? Włącz powiadomienia - wysyłamy tylko te o reakcjach na Twoje treści i zaproszeniach od znajomych."
+      },
+      "trip_created": {
+        "title": "Wyjazd gotowy",
+        "desc": "Powiadomimy Cię, gdy znajomi odpowiedzą na zaproszenie, a po publikacji - gdy ktoś polubi albo zapisze Twój wyjazd. Bez spamu, tylko reakcje na Twoje treści."
+      },
+      "trip_published": {
+        "title": "Wyjazd opublikowany",
+        "desc": "Chcesz wiedzieć, gdy ktoś polubi albo zapisze Twój wyjazd? Włącz powiadomienia - bez spamu, tylko reakcje na Twoje treści."
+      },
+      "invite_sent": {
+        "title": "Zaproszenia wysłane",
+        "desc": "Włącz powiadomienia, a dowiesz się, gdy znajomi odpowiedzą i napiszą na czacie wyjazdu."
+      },
+      "bell": {
+        "title": "Włącz powiadomienia",
+        "desc": "Dowiesz się od razu, gdy ktoś polubi albo zapisze Twój wyjazd lub kolekcję, zaprosi Cię do wyjazdu albo napisze na czacie.",
+        "short": "Reakcje na Twoje wyjazdy i kolekcje, zaproszenia, czat wyjazdu."
+      },
+      "settings": {
+        "title": "Włącz powiadomienia",
+        "desc": "Dowiesz się od razu, gdy ktoś polubi albo zapisze Twój wyjazd lub kolekcję, zaprosi Cię do wyjazdu albo napisze na czacie."
+      },
+      "denied": {
+        "title": "Powiadomienia są wyłączone",
+        "desc": "Włącz je w ustawieniach telefonu: Ustawienia → Spontaway → Powiadomienia.",
+        "short": "Wyłączone w ustawieniach telefonu. Tapnij, żeby je włączyć."
+      },
+      "status_on": "Włączone",
+      "status_off": "Wyłączone",
+      "status_ask": "Włącz"
+    },
+    "location": {
+      "enable": "Włącz lokalizację",
+      "browse": {
+        "title": "Jesteś w mieście?",
+        "desc": "Włącz lokalizację, a przy każdym miejscu zobaczysz, jak daleko je masz, i ułożymy je od najbliższego. Twoja pozycja zostaje w telefonie - nie zapisujemy jej."
+      },
+      "denied": {
+        "title": "Lokalizacja jest wyłączona",
+        "desc": "Włącz ją w ustawieniach telefonu: Ustawienia → Spontaway → Lokalizacja."
+      }
+    }
+  }
 }

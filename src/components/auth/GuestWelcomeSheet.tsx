@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthDrawer } from "@/hooks/useAuthDrawer";
@@ -8,6 +9,7 @@ import { getConsent, CONSENT_RESOLVED_EVENT } from "@/lib/consent";
 const DISMISS_KEY = "trasa_guest_welcome_dismissed_v1";
 
 const GuestWelcomeSheet = () => {
+  const { t } = useTranslation("auth");
   const { user, loading } = useAuth();
   const { open: openAuthDrawer } = useAuthDrawer();
   const [open, setOpen] = useState(false);
@@ -79,27 +81,21 @@ const GuestWelcomeSheet = () => {
             />
             <div className="flex-1">
               <p className="text-lg font-black tracking-tight leading-snug">
-                Cześć! Przeglądasz jako&nbsp;gość
+                {t("guest.title")}
               </p>
-              <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
-                Wszystko działa bez konta. Załóż konto, jeśli chcesz zapisać trasę albo prowadzić dziennik podróży. Zajmuje minutę.
-              </p>
+              <p className="text-sm text-muted-foreground mt-1 leading-relaxed">{t("guest.desc")}</p>
             </div>
           </div>
 
           <div className="flex flex-col gap-2 mt-1">
             <button
               onClick={handleSignUp}
-              className="w-full py-3 rounded-full bg-primary text-white font-bold text-sm shadow-md shadow-orange-500/20 active:scale-[0.97] transition-transform"
-            >
-              Załóż konto
-            </button>
+              className="w-full py-3 rounded-full bg-primary text-white font-bold text-sm active:scale-[0.97] transition-transform"
+            >{t("guest.create")}</button>
             <button
               onClick={handleClose}
               className="w-full py-3 rounded-full bg-white text-foreground font-bold text-sm border border-border/40 shadow-sm active:scale-[0.97] transition-transform"
-            >
-              Może później
-            </button>
+            >{t("guest.later")}</button>
           </div>
         </div>
       </SheetContent>

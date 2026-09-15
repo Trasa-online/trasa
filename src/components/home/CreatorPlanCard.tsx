@@ -155,7 +155,7 @@ export default function CreatorPlanCard({ plan, onClick }: CreatorPlanCardProps)
 
       {/* CTA footer */}
       <div className="px-4 pb-4">
-        <div className="w-full text-center text-xs font-semibold text-orange-600 py-2 rounded-xl border border-orange-600/30 bg-primary/5">
+        <div className="w-full text-center text-xs font-semibold text-primary py-2 rounded-xl border border-primary/30 bg-primary/5">
           {t("card.personalize")}
         </div>
       </div>

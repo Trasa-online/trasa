@@ -54,7 +54,13 @@
     "remove_this_place": "to miejsce",
     "saving": "Zapisywanie…",
     "confirm_route": "Zatwierdź tę trasę",
-    "save_changes": "Zapisz zmiany"
+    "save_changes": "Zapisz zmiany",
+    "photos_label": "Zdjęcia miejsca",
+    "others_notes": "Notki uczestników",
+    "add_photo": "Dodaj",
+    "open_place": "Zobacz miejsce",
+    "photo_failed": "Nie udało się dodać zdjęcia",
+    "delete_photo": "Usuń zdjęcie"
   },
   "status": {
     "day_finished_label": "Dzień zakończony",
@@ -71,8 +77,8 @@
   },
   "share": {
     "title": "Udostępnić tę trasę innym?",
-    "desc": "Trafi do zakładki Eksploruj i pomoże innym zaplanować podróż. Udostępniamy plan trasy z Twoją okładką, notkami i ocenami - bez galerii Twoich zdjęć. Jeśli nie, zostanie prywatna w Twoich Wspomnieniach. Zmienisz to w każdej chwili.",
-    "public": "Udostępnij w Eksploruj",
+    "desc": "Trafi do Eksploracji i pomoże innym zaplanować podróż. Udostępniamy plan trasy z Twoją okładką, notkami i ocenami - bez galerii Twoich zdjęć. Jeśli nie, zostanie prywatna w Twoich Wspomnieniach. Zmienisz to w każdej chwili.",
+    "public": "Udostępnij w Eksploracji",
     "private": "Zostaw prywatną"
   },
   "toast": {
@@ -83,7 +89,7 @@
     "completed_desc": "Uzupełnij wspomnienie w Dzienniku",
     "uncheck": "Cofnięto odhaczenie",
     "checked": "Odhaczone!",
-    "shared_public": "Trasa widoczna w Eksploruj",
+    "shared_public": "Trasa widoczna w Eksploracji",
     "saved_private": "Zapisano w Wspomnieniach"
   },
   "dashboard": {
@@ -104,7 +110,7 @@
     "draft_delete_aria": "Usuń trasę roboczą",
     "session_delete_aria": "Usuń sesję",
     "plan_choice_title": "Jak chcesz zaplanować?",
-    "plan_choice_sub": "Sam albo wspólnie ze znajomymi - Trasa ułoży plan z Waszych dopasowań.",
+    "plan_choice_sub": "Sam albo wspólnie ze znajomymi - spontaway ułoży plan z Waszych dopasowań.",
     "plan_solo_title": "Zaplanuj solo",
     "plan_solo_desc": "Sam przeglądasz miejsca i tworzysz trasę",
     "plan_group_title": "Zaplanuj grupowo",
@@ -131,5 +137,10 @@
     "toast_added": "Dodano „{{name}}\"",
     "empty": "Brak miejsc - dodaj pierwsze!",
     "tell_about_day": "Opowiedz o dniu"
+  },
+  "points_few": "punkty",
+  "shortcut": {
+    "hide": "Schowaj skrót do wyjazdu",
+    "fallback": "Twój wyjazd"
   }
 }

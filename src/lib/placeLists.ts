@@ -1,0 +1,446 @@
+import i18n from "@/i18n";
+import { randomListTheme } from "@/lib/listThemes";
+import { track } from "@/lib/analytics";
+import { supabase } from "@/integrations/supabase/client";
+import { photoUrlForStorage } from "@/lib/placePhotos";
+
+// Operacje na LISTACH MIEJSC usera (discovery_collections, kind='ranking').
+// Kazda lista ma kategorie list_status: 'visited' (odwiedzone) | 'to_visit' (do odwiedzenia).
+// Zapis miejsca ze swipera/trasy/wizytowki trafia do listy jednej z tych kategorii.
+
+export type ListStatus = "visited" | "to_visit";
+
+// UWAGA: BEZ pola `description`/notki. Notka o miejscu jest WLASNA dla kazdego usera i
+// powstaje dopiero w jego liscie (discovery_items.short_desc, edytor PlaceNoteEditor).
+// Zapisujac cudze miejsce NIE kopiujemy notki autora - patrz addPlaceToList nizej.
+export interface PlaceForList {
+  place_name: string;
+  category: string | null;
+  address: string | null;
+  /** Miasto miejsca (discovery_items.city). Lista "Ogolne" jest globalna (city=NULL na kolekcji),
+   *  wiec miasto trzymamy przy POZYCJI - inaczej kafelek na profilu nie wie, gdzie to miejsce jest. */
+  city?: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  photo_url: string | null;
+  place_id: string | null;
+  google_place_id?: string | null;
+  rating?: number | null;
+}
+
+export interface UserList {
+  id: string;
+  title: string;
+  city: string | null;
+  list_status: ListStatus;
+  count: number;
+  cover: string | null;
+  place_names: string[];
+}
+
+export interface ListAuthor { name: string; avatar: string | null }
+
+const skey = (s: string) => String(s ?? "").trim().toLowerCase();
+
+// Wszystkie listy usera (obie kategorie) + liczba pozycji + okladka + nazwy miejsc.
+// Kuratorskie listy usera ("Moje listy", list_status='visited') RAZEM z miejscami - zrodlo
+// wyboru przy dodawaniu miejsc do wyjazdu/listy (obok prywatnych "Ogolnych"). Puste listy pomijamy.
+export interface UserListWithPlaces {
+  id: string;
+  title: string;
+  city: string | null;
+  /** true = lista ZAPISANA od kogos innego (nie moja kuratorska). */
+  saved?: boolean;
+  places: PlaceForList[];
+}
+export async function fetchListsWithPlaces(userId: string): Promise<UserListWithPlaces[]> {
+  // Moje listy kuratorskie + listy ZAPISANE od innych (saved_collections) - oba zrodla sa
+  // rownoprawnym miejscem, z ktorego user wybiera miejsca do wyjazdu/listy.
+  const [{ data: mine }, { data: savedRows }] = await Promise.all([
+    (supabase as any)
+      .from("discovery_collections").select("id, title, city")
+      .eq("user_id", userId).eq("kind", "ranking").eq("list_status", "visited")
+      .order("updated_at", { ascending: false }),
+    (supabase as any).from("saved_collections").select("collection_id").eq("user_id", userId),
+  ]);
+  const savedIds = ((savedRows ?? []) as any[]).map((r) => r.collection_id).filter(Boolean);
+  let savedCols: any[] = [];
+  if (savedIds.length) {
+    const { data } = await (supabase as any)
+      .from("discovery_collections").select("id, title, city").in("id", savedIds);
+    savedCols = ((data ?? []) as any[]).map((c) => ({ ...c, saved: true }));
+  }
+  const rows = [...((mine ?? []) as any[]), ...savedCols];
+  if (!rows.length) return [];
+  const { data: items } = await (supabase as any)
+    .from("discovery_items")
+    .select("collection_id, place_name, category, address, city, latitude, longitude, place_id, google_place_id, rating, photo_url, order_index")
+    .in("collection_id", rows.map((r) => r.id))
+    .order("order_index", { ascending: true });
+  const byList: Record<string, PlaceForList[]> = {};
+  for (const it of (items ?? []) as any[]) {
+    (byList[it.collection_id] ??= []).push({
+      place_name: it.place_name, category: it.category, address: it.address,
+      city: it.city ?? null, latitude: it.latitude, longitude: it.longitude,
+      photo_url: it.photo_url, place_id: it.place_id, google_place_id: it.google_place_id, rating: it.rating,
+    });
+  }
+  return rows
+    .map((r) => ({
+      id: r.id, title: r.title, city: r.city ?? null, saved: !!r.saved,
+      places: (byList[r.id] ?? []).map((p) => ({ ...p, city: p.city ?? r.city ?? null })),
+    }))
+    .filter((l) => l.places.length > 0);
+}
+
+export async function fetchUserLists(userId: string): Promise<UserList[]> {
+  const { data: cols } = await (supabase as any)
+    .from("discovery_collections")
+    .select("id, title, city, list_status, list_cover_url, cover_url")
+    .eq("user_id", userId)
+    .eq("kind", "ranking")
+    .order("updated_at", { ascending: false });
+  const rows = (cols ?? []) as any[];
+  if (!rows.length) return [];
+  const ids = rows.map((r) => r.id);
+  const { data: items } = await (supabase as any)
+    .from("discovery_items")
+    .select("collection_id, place_name, photo_url, order_index")
+    .in("collection_id", ids)
+    .order("order_index", { ascending: true });
+  const byList: Record<string, any[]> = {};
+  for (const it of items ?? []) (byList[it.collection_id] ??= []).push(it);
+  return rows.map((r) => {
+    const its = byList[r.id] ?? [];
+    return {
+      id: r.id,
+      title: r.title,
+      city: r.city,
+      list_status: (r.list_status === "visited" ? "visited" : "to_visit") as ListStatus,
+      count: its.length,
+      cover: r.list_cover_url ?? r.cover_url ?? its.find((i: any) => i.photo_url)?.photo_url ?? null,
+      place_names: its.map((i: any) => i.place_name),
+    };
+  });
+}
+
+export function listHasPlace(list: UserList, placeName: string): boolean {
+  return list.place_names.some((n) => skey(n) === skey(placeName));
+}
+
+// Zbior znormalizowanych nazw WSZYSTKICH miejsc zapisanych przez usera (w dowolnej liscie).
+// Do wskazania stanu "zapisane" na ikonie bookmark (karta/wiersz trasy/wizytowka).
+export async function fetchSavedPlaceNames(userId: string): Promise<Set<string>> {
+  const { data: cols } = await (supabase as any)
+    .from("discovery_collections").select("id").eq("user_id", userId).eq("kind", "ranking");
+  const ids = (cols ?? []).map((c: any) => c.id);
+  if (!ids.length) return new Set();
+  const { data: items } = await (supabase as any)
+    .from("discovery_items").select("place_name").in("collection_id", ids);
+  return new Set((items ?? []).map((i: any) => skey(i.place_name)).filter(Boolean));
+}
+
+export const normalizePlaceName = skey;
+
+export interface SavedPlace {
+  id: string;              // discovery_items.id (do usuniecia)
+  collection_id: string;
+  place_name: string;
+  category: string | null;
+  address: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  place_id: string | null;
+  google_place_id: string | null;
+  rating: number | null;
+  photo_url: string | null;
+  short_desc: string | null;
+  city: string | null;     // z listy (per-miasto)
+}
+
+// Plaska lista PRYWATNYCH zapisanych miejsc usera - agregat pozycji ze WSZYSTKICH list to_visit.
+// Do segmentu Zapisane→Miejsca (user mysli "pojedyncze miejsca", nie listy). Dedup po nazwie.
+export async function fetchSavedPlaces(userId: string): Promise<SavedPlace[]> {
+  const { data: cols } = await (supabase as any)
+    .from("discovery_collections")
+    .select("id, city").eq("user_id", userId).eq("kind", "ranking").eq("list_status", "to_visit");
+  const rows = (cols ?? []) as any[];
+  if (!rows.length) return [];
+  const cityByList: Record<string, string | null> = {};
+  for (const c of rows) cityByList[c.id] = c.city ?? null;
+  const { data: items } = await (supabase as any)
+    .from("discovery_items")
+    .select("id, collection_id, place_name, category, address, city, latitude, longitude, place_id, google_place_id, rating, photo_url, short_desc, order_index")
+    .in("collection_id", rows.map((r) => r.id))
+    .order("order_index", { ascending: false });
+  const seen = new Set<string>();
+  const out: SavedPlace[] = [];
+  for (const it of (items ?? []) as any[]) {
+    const k = skey(it.place_name);
+    if (!k || seen.has(k)) continue;
+    seen.add(k);
+    out.push({
+      id: it.id, collection_id: it.collection_id, place_name: it.place_name, category: it.category,
+      address: it.address, latitude: it.latitude, longitude: it.longitude, place_id: it.place_id,
+      google_place_id: it.google_place_id, rating: it.rating, photo_url: it.photo_url,
+      short_desc: it.short_desc, city: it.city ?? cityByList[it.collection_id] ?? null,
+    });
+  }
+  return out;
+}
+
+// Usun zapisane miejsce po id pozycji (discovery_items.id).
+export async function removeSavedPlaceById(itemId: string): Promise<void> {
+  await (supabase as any).from("discovery_items").delete().eq("id", itemId);
+}
+
+// Miasto z adresu w formacie Google ("ulica, KOD MIASTO, Kraj") - PRZEDOSTATNI segment bez kodu
+// pocztowego. Fallback, gdy zrodlo nie poda miasta wprost (wyniki wyszukiwarki Google go nie maja),
+// zeby filtr kraj/miasto na liscie "Ogolne" mial czym filtrowac. Krotsze adresy pomijamy - przy
+// dwoch segmentach ostatnim bywa KRAJ i wpisalibysmy "Polska" jako miasto.
+export function cityFromAddress(address?: string | null): string | null {
+  const parts = String(address ?? "").split(",").map((x) => x.trim()).filter(Boolean);
+  if (parts.length < 3) return null;
+  const raw = parts[parts.length - 2];
+  const city = raw.replace(/^[0-9][0-9A-Za-z\- ]{2,9}\s+/, "").trim();
+  return city || null;
+}
+
+// Dodaj miejsce do listy (discovery_items). Dedup po nazwie. Zwraca false gdy juz bylo.
+// `opts.note` uzywaj WYLACZNIE do przywracania WLASNEGO wpisu (cofnij usuniecie) - normalny
+// zapis miejsca zawsze startuje z pusta notka.
+// Miejsce wybrane z wyszukiwarki Google nie niesie UUID-a z naszej bazy - ma tylko
+// google_place_id. A wizytowka dociaga profil biznesowy WYLACZNIE po `places.id`
+// (fetchEnrichedPlace), wiec bez tego powiazania lokal z wykupiona wizytowka wyswietlal sie
+// jako zwykle miejsce z danymi Google (zgloszenie Nat 2026-09-04: Wanderlust). Dopinamy wiec
+// UUID, jesli takie miejsce juz u nas jest.
+//
+// Dopasowanie po google_place_id jest bezpieczne: to identyfikator Google, nie nazwa, wiec
+// nie zlaczy dwoch roznych lokali. 5 z 6 aktywnych profili biznesowych ma go wypelnionego.
+async function resolveDbPlaceId(googlePlaceId?: string | null): Promise<string | null> {
+  const gp = (googlePlaceId ?? "").trim();
+  if (!gp) return null;
+  try {
+    const { data } = await (supabase as any)
+      .from("places").select("id").eq("google_place_id", gp).limit(1).maybeSingle();
+    return data?.id ?? null;
+  } catch {
+    return null;   // brak dopasowania nie moze blokowac dodania miejsca
+  }
+}
+
+export async function addPlaceToList(listId: string, place: PlaceForList, opts?: { note?: string | null }): Promise<boolean> {
+  const { data: existing } = await (supabase as any)
+    .from("discovery_items").select("order_index, place_name").eq("collection_id", listId);
+  const rows = (existing ?? []) as any[];
+  if (rows.some((r) => skey(r.place_name) === skey(place.place_name))) return false;
+  const maxOrder = rows.reduce((m: number, r: any) => Math.max(m, r.order_index ?? -1), -1);
+  // Atrybucja: kto dodal miejsce (dzis wlasciciel; hak pod wspoltworzenie list - patrz memory
+  // project_list_cocreation_architecture). getSession = lokalny odczyt, bez zapytania sieciowego.
+  const { data: sess } = await (supabase as any).auth.getSession();
+  const addedBy = sess?.session?.user?.id ?? null;
+  // Bez tego lokal z wizytowka biznesowa dodany z wyszukiwarki otwieral sie jako zwykle
+  // miejsce z danymi Google - patrz resolveDbPlaceId.
+  const dbPlaceId = place.place_id ?? (await resolveDbPlaceId(place.google_place_id));
+  const { error } = await (supabase as any).from("discovery_items").insert({
+    collection_id: listId,
+    place_name: place.place_name,
+    category: place.category,
+    address: place.address,
+    // Notka domyslnie PUSTA: kazdy user pisze wlasna w swojej liscie. Kopiowanie notki
+    // autora (z cudzej listy albo z pina cudzej trasy) bylo mylace - wygladalo jakby
+    // to byla Twoja notatka o miejscu. Wyjatek: przywracanie wlasnego wpisu (opts.note).
+    short_desc: opts?.note ?? "",
+    city: place.city ?? cityFromAddress(place.address),
+    latitude: place.latitude,
+    longitude: place.longitude,
+    place_id: dbPlaceId,
+    google_place_id: place.google_place_id ?? null,
+    rating: place.rating ?? null,
+    photo_url: photoUrlForStorage(place.photo_url),
+    added_by: addedBy,
+    order_index: maxOrder + 1,
+  });
+  if (error) throw error;
+  await (supabase as any).from("discovery_collections").update({ updated_at: new Date().toISOString() }).eq("id", listId);
+  track("list_place_added", { target: "list", collection_id: listId, has_note: !!opts?.note });
+  // "Ktos dodal miejsce do kolekcji" - powiadomienie dla ZAPISUJACYCH i OBSERWUJACYCH autora
+  // (RPC sam sprawdza wlasciciela, publicznosc kolekcji i dedupuje 5 min). Wolane TUTAJ, a nie
+  // w widoku kolekcji, bo przez ten widok idzie tylko czesc dodan - najczestsza sciezka to
+  // arkusz "Zapisz miejsce" i on wczesniej nie powiadamial nikogo (zgloszenie Nat 2026-09-14).
+  // Best-effort: blad powiadomienia nie moze wywrocic dodania miejsca.
+  void (supabase as any).rpc("notify_collection_updated", { p_collection_id: listId, p_added: 1 })
+    .then(({ error }: any) => { if (error) console.warn("[placeLists] notify_collection_updated:", error.message); });
+  return true;
+}
+
+// Usun miejsce z listy (po nazwie). Escape %/_ - inaczej nazwa typu "Cafe 100%" traktowana jako
+// wzorzec LIKE i moze skasowac WIECEJ pozycji (silent data loss).
+export async function removePlaceFromList(listId: string, placeName: string): Promise<void> {
+  const safe = String(placeName ?? "").replace(/[\\%_]/g, (m) => "\\" + m);
+  await (supabase as any).from("discovery_items").delete().eq("collection_id", listId).ilike("place_name", safe);
+}
+
+// Utworz nowa liste danej kategorii z pierwszym miejscem.
+// Widocznosc z INTENCJI: visited = publiczna polecajka (moderacja pending); to_visit = PRYWATNA
+// wishlista "Do zobaczenia" (is_public=false + approved -> poza kolejka moderacji, nigdy publiczna).
+export async function createListWithPlace(
+  userId: string, title: string, listStatus: ListStatus, city: string | null, place: PlaceForList, author?: ListAuthor,
+  isPublicOverride?: boolean,
+): Promise<string | null> {
+  const isRecommend = listStatus === "visited";
+  // Kuratorska lista (visited) jest ZAWSZE publiczna (decyzja 2026-08-24: brak opcji "prywatna",
+  // rozwoj bazy discovery). to_visit (wishlista "Do zobaczenia") zostaje prywatna; isPublicOverride
+  // respektowany tylko dla to_visit (w praktyce zawsze false).
+  const isPublic = isRecommend ? true : !!isPublicOverride;
+  const { data: col, error } = await (supabase as any)
+    .from("discovery_collections")
+    .insert({
+      user_id: userId,
+      title: title || i18n.t(isRecommend ? "list.default_visited" : "list.default_to_visit", { ns: "plan" }),
+      city: city || null,
+      kind: "ranking",
+      list_status: listStatus,
+      is_public: isPublic,
+      moderation_status: "approved", // bez kolejki moderacyjnej - ukrywanie reaktywne (hidden_by_admin)
+      author_name: author?.name ?? "Użytkownik",   // i18n-ignore: nazwa listy ogolnej w bazie + fallback autora - DANE
+      author_avatar: author?.avatar ?? null,
+    })
+    .select("id")
+    .single();
+  if (error || !col) { console.error("[placeLists] create list failed:", error?.message ?? error); return null; }
+  await addPlaceToList(col.id, { ...place, city: place.city ?? city });
+  return col.id as string;
+}
+
+// Utworz kuratorska liste (polecajke) z wybranych ZAPISANYCH miejsc jednym insertem.
+// is_public NIEZALEZNE od list_status: Publiczna = is_public true + moderacja pending;
+// Prywatna = is_public false + approved (kuratorska prywatna lista, owner-only przez RLS).
+// Oba warianty to list_status='visited' (kuratorska lista, nie wishlista to_visit).
+export async function createListFromSavedPlaces(
+  userId: string,
+  opts: { title: string; isPublic: boolean; places: PlaceForList[]; author?: ListAuthor; city?: string | null; countries?: string[] },
+): Promise<string | null> {
+  const { title, isPublic, places, author, city } = opts;
+  const { data: col, error } = await (supabase as any)
+    .from("discovery_collections")
+    .insert({
+      user_id: userId,
+      title: title.trim() || i18n.t("save.new_list", { ns: "plan" }),
+      city: city ?? null,
+      // Zasieg listy = KRAJE (2026-09-10). `city` zostaje dla starych list i podpisow.
+      countries: opts.countries ?? [],
+      kind: "ranking",
+      list_status: "visited",
+      is_public: isPublic,
+      moderation_status: "approved", // bez kolejki moderacyjnej - ukrywanie reaktywne (hidden_by_admin)
+      author_name: author?.name ?? "Użytkownik",   // i18n-ignore: nazwa listy ogolnej w bazie + fallback autora - DANE
+      author_avatar: author?.avatar ?? null,
+      // Kazda nowa kolekcja dostaje LOSOWY kolor z palety (Nat 2026-09-14) - wczesniej theme
+      // zostawal NULL i kolor byl tylko wyliczany z id przy renderze.
+      theme: randomListTheme(),
+      cover_url: null,
+      list_cover_url: null,
+    })
+    .select("id")
+    .single();
+  if (error || !col) { console.error("[placeLists] createListFromSavedPlaces failed:", error?.message ?? error); return null; }
+  const listId = col.id as string;
+  // Batch insert pozycji (dedup po nazwie, kolejnosc = kolejnosc zaznaczenia).
+  const seen = new Set<string>();
+  const rows = places
+    .filter((p) => { const k = skey(p.place_name); if (!k || seen.has(k)) return false; seen.add(k); return true; })
+    .map((p, i) => ({
+      collection_id: listId, place_name: p.place_name, category: p.category, address: p.address,
+      short_desc: "", city: p.city ?? opts.city ?? null, latitude: p.latitude, longitude: p.longitude, place_id: p.place_id,
+      google_place_id: p.google_place_id ?? null, rating: p.rating ?? null, photo_url: photoUrlForStorage(p.photo_url),
+      added_by: userId, order_index: i,
+    }));
+  if (rows.length) {
+    const { error: itemsErr } = await (supabase as any).from("discovery_items").insert(rows);
+    if (itemsErr) {
+      // Nie zostawiaj pustej (osieroconej) listy - skasuj kolekcje i zglos blad callerowi.
+      console.error("[placeLists] createListFromSavedPlaces items failed:", itemsErr.message);
+      await (supabase as any).from("discovery_collections").delete().eq("id", listId);
+      return null;
+    }
+  }
+  if (isPublic) track("list_published", { collection_id: listId, city: city ?? null, place_count: places.length, source: "create_flow" });
+  // Publiczna -> powiadom admina (best-effort, nie blokuj flow). Lista jest widoczna od razu.
+  if (isPublic) {
+    supabase.functions.invoke("notify-admin-content", {
+      body: { type: "ranking", title: title.trim(), city: null, collection_id: listId, author: author?.name ?? "Użytkownik" },   // i18n-ignore: nazwa listy ogolnej w bazie + fallback autora - DANE
+    }).catch((e) => console.warn("[placeLists] notify-admin-content failed:", e));
+  }
+  return listId;
+}
+
+// Lista OGÓLNA usera = JEDYNA prywatna lista (to_visit, is_public=false), JEDNA na usera
+// (decyzja 2026-08-24). Nie podlega moderacji (guard_discovery_moderation: is_public=false -> approved).
+// Każde zapisane miejsce tu trafia; widoczna jako "Ogólne" (drawer + profil, widok /zapisane).   // i18n-ignore: nazwa listy ogolnej w bazie + fallback autora - DANE
+// GLOBALNA (city=null, bez per-miasto). Get-or-create (dawne per-miasto skonsolidowane migracją
+// 20260824b_ogolne_general_list). `city` param zachowany dla zgodności API, IGNOROWANY.
+export async function ensureToVisitList(userId: string, _city?: string | null, author?: ListAuthor): Promise<string | null> {
+  const { data } = await (supabase as any)
+    .from("discovery_collections")
+    .select("id").eq("user_id", userId).eq("kind", "ranking").eq("list_status", "to_visit")
+    .order("created_at", { ascending: true }).limit(1).maybeSingle();
+  if (data?.id) return data.id as string;
+  const { data: col } = await (supabase as any).from("discovery_collections").insert({
+    user_id: userId, title: "Ogólne", city: null, kind: "ranking",   // i18n-ignore: nazwa listy ogolnej w bazie + fallback autora - DANE
+    list_status: "to_visit", is_public: false, moderation_status: "approved",
+    author_name: author?.name ?? "Użytkownik", author_avatar: author?.avatar ?? null,   // i18n-ignore: nazwa listy ogolnej w bazie + fallback autora - DANE
+  }).select("id").single();
+  return col?.id ?? null;
+}
+
+// Zapis 1-tap: dodaj miejsce do prywatnej "Do zobaczenia" (tworzy listę per-miasto gdy brak).
+// Dedup po nazwie w addPlaceToList. Zwraca listId + czy faktycznie dodano (false gdy już było).
+export async function quickSavePlace(
+  userId: string, place: PlaceForList, city: string | null, author?: ListAuthor,
+): Promise<{ listId: string | null; added: boolean }> {
+  const listId = await ensureToVisitList(userId, city, author);
+  if (!listId) return { listId: null, added: false };
+  // Lista "Ogolne" nie ma miasta, wiec zapisujemy je przy miejscu (kontekst zapisu).
+  const added = await addPlaceToList(listId, { ...place, city: place.city ?? city });
+  if (added) track("place_saved", {
+    place_id: place.place_id ?? (place as { google_place_id?: string }).google_place_id ?? null,
+    place_name: place.place_name,
+    city: place.city ?? city ?? null,
+  });
+  return { listId, added };
+}
+
+// (Usunięto ensureVisitedList + moveToVisited: retirowany cykl "#4" auto-move do-odwiedzenia
+// -> Odwiedzone. Po rozdzieleniu intencji visited=publiczna polecajka, prywatna wishlista NIE
+// może auto-trafiać do publicznej listy. Odwiedzenie miejsca != chęć polecenia. Polecanie =
+// świadomy bookmark "Dodaj do polecajki" w SavePlaceSheet.)
+
+/**
+ * Nasz rekord `places` dla miejsca dodanego z wyszukiwarki Google. Bez tego polaczenia lokal
+ * z kontem biznesowym dostaje wizytowke "zero" - karta budowana z samego wiersza listy nie ma
+ * skad wziac profilu (zgloszenie Nat 2026-09-01: Wanderlust Speciality Coffee).
+ * Kolejnosc prob: google_place_id (pewny klucz) -> nazwa + miasto (gdy Google nie oddalo id).
+ */
+export async function resolvePlaceDbId(
+  googlePlaceId?: string | null,
+  placeName?: string | null,
+  city?: string | null,
+): Promise<string | null> {
+  try {
+    if (googlePlaceId) {
+      const { data } = await (supabase as any)
+        .from("places").select("id").eq("google_place_id", googlePlaceId).maybeSingle();
+      if (data?.id) return data.id as string;
+    }
+    const name = String(placeName ?? "").trim();
+    if (!name) return null;
+    let q = (supabase as any).from("places").select("id, city").ilike("place_name", name);
+    const { data: rows } = await q.limit(5);
+    const list = (rows ?? []) as any[];
+    if (!list.length) return null;
+    const c = String(city ?? "").trim().toLowerCase();
+    const hit = c ? list.find((r) => String(r.city ?? "").trim().toLowerCase() === c) : null;
+    return (hit ?? list[0]).id as string;
+  } catch { return null; }
+}

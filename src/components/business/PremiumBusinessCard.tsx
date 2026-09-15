@@ -17,13 +17,17 @@
 import { type ReactNode, useRef, useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { haptics } from "@/hooks/useHaptics";
+import { useSwipeNav } from "@/hooks/useSwipeNav";
 import { createPortal } from "react-dom";
 import { mainCategoryLabel, subcategoryLabelLocalized, parentMainOfSub } from "@/lib/categories";
 import { CategoryIcon } from "@/components/CategoryIcon";
 import { cn } from "@/lib/utils";
+import type { PlaceUserNote } from "@/lib/placeNotes";
+import { GoogleGlyph } from "@/components/icons/GoogleGlyph";
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { API_BASE } from "@/lib/platform";
-import { Clock, ChevronRight, ChevronLeft, ChevronDown, X, Maximize2, Phone, Globe, FileText, Instagram, Facebook, MapPin, Bookmark } from "lucide-react";
+import { Clock, ChevronRight, ChevronLeft, ChevronDown, X, Maximize2, Phone, Globe, FileText, Instagram, Facebook, MapPin, Bookmark, Heart, ImagePlus } from "lucide-react";
+import type { LikeState } from "@/lib/placePhotoSocial";
 import { categoryIconSrc } from "@/lib/placeCategoryIcon";
 import { parseISO, isValid, formatDistanceToNow, format, startOfMonth, addMonths } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
@@ -98,11 +102,14 @@ interface FullscreenPhotosProps {
   photos: string[];
   startIndex: number;
   onClose: () => void;
+  // #6: lajki zdjec (opcjonalne). Gdy podane -> serce z licznikiem na aktywnym zdjeciu.
+  likes?: Map<string, LikeState>;
+  onToggleLike?: (ref: string) => void;
 }
 
 const MAX_ZOOM = 4;
 
-const FullscreenPhotos = ({ photos, startIndex, onClose }: FullscreenPhotosProps) => {
+const FullscreenPhotos = ({ photos, startIndex, onClose, likes, onToggleLike }: FullscreenPhotosProps) => {
   const { t } = useTranslation("wizytowka");
   const [idx, setIdx] = useState(Math.max(0, Math.min(startIndex, photos.length - 1)));
   // Zoom (pinch) + pan (przesuwanie gdy przybliżone). scale=1 => normalny widok (swipe nawiguje).
@@ -294,6 +301,25 @@ const FullscreenPhotos = ({ photos, startIndex, onClose }: FullscreenPhotosProps
           ))}
         </div>
       )}
+      {/* #6: serce (lajk) aktywnego zdjecia - dol-lewo. Pomaranczowy fill (brand), NIE czerwony. */}
+      {onToggleLike && photos[idx] && (() => {
+        const ref = photos[idx];
+        const st = likes?.get(ref);
+        return (
+          <button
+            type="button"
+            onPointerDown={(e) => e.stopPropagation()}
+            onTouchEnd={(e) => { e.stopPropagation(); e.preventDefault(); haptics.light(); onToggleLike(ref); }}
+            onClick={(e) => { e.stopPropagation(); haptics.light(); onToggleLike(ref); }}
+            className="absolute left-4 bottom-5 z-[210] h-11 pl-3 pr-4 rounded-full bg-black/60 backdrop-blur-md flex items-center gap-2 active:scale-90 transition-transform shadow-lg"
+            style={{ bottom: "max(1.25rem, env(safe-area-inset-bottom))" }}
+            aria-label={st?.liked ? "Cofnij polubienie zdjęcia" : "Polub zdjęcie"}
+          >
+            <Heart className={cn("h-5 w-5 transition-colors", st?.liked ? "text-orange-500 fill-orange-500" : "text-white")} strokeWidth={2} />
+            {!!st?.count && <span className="text-white text-sm font-semibold tabular-nums">{st.count}</span>}
+          </button>
+        );
+      })()}
     </div>,
     document.body,
   );
@@ -317,26 +343,24 @@ interface HeroPhotoCarouselProps {
 function HeroPhotoCarousel({ photos, placeName, category, onExpand, onClose, loading, topLeftSlot, bottomLeftSlot, onSave, saved }: HeroPhotoCarouselProps) {
   const { t } = useTranslation("wizytowka");
   const [activeIdx, setActiveIdx] = useState(0);
-  const swipeStartX = useRef<number | null>(null);
   const hasPhoto = photos.length > 0;
   // Zmiana zdjecia (swipe/strzalki) z delikatna haptyka - tylko gdy indeks faktycznie sie zmienia.
   const changePhoto = (idx: number) => {
     const clamped = Math.max(0, Math.min(photos.length - 1, idx));
     if (clamped !== activeIdx) { haptics.light(); setActiveIdx(clamped); }
   };
+  // Wspolny gest (odrzuca ruch pionowy = scroll wizytowki). Haptyka jest w changePhoto.
+  const swipePhotos = useSwipeNav({
+    onLeft: () => changePhoto(activeIdx + 1),
+    onRight: () => changePhoto(activeIdx - 1),
+    enabled: photos.length > 1,
+    haptic: false,
+  });
 
   return (
     <div
-      className="relative shrink-0 bg-muted overflow-hidden w-full aspect-[4/3] rounded-t-3xl"
-      onTouchStart={(e) => { swipeStartX.current = e.touches[0].clientX; }}
-      onTouchEnd={(e) => {
-        if (swipeStartX.current === null) return;
-        const dx = e.changedTouches[0].clientX - swipeStartX.current;
-        swipeStartX.current = null;
-        if (Math.abs(dx) > 40 && photos.length > 1) {
-          changePhoto(dx < 0 ? activeIdx + 1 : activeIdx - 1);
-        }
-      }}
+      className="relative shrink-0 bg-[#FEFEFE] overflow-hidden w-full aspect-[4/3] rounded-t-3xl"
+      {...swipePhotos}
     >
       <div className="absolute top-0 left-0 right-0 h-7 flex items-center justify-center z-30 pointer-events-none">
         <div className="w-10 h-[5px] rounded-full bg-white/60" />
@@ -380,32 +404,37 @@ function HeroPhotoCarousel({ photos, placeName, category, onExpand, onClose, loa
           {/* Zapis miejsca (zakladka, pomaranczowa wg Figmy) zamiast ikony powiekszenia. */}
           {onSave && (
             <button
-              onClick={(e) => { e.stopPropagation(); onSave(); }}
-              className="absolute bottom-3 right-3 z-30 h-10 w-10 rounded-full bg-gradient-to-br from-[#F4A259] to-[#F9662B] shadow-md shadow-orange-500/25 flex items-center justify-center active:scale-90 transition-transform"
+              onClick={(e) => { e.stopPropagation(); haptics.light(); onSave(); }}
+              className="absolute bottom-3 right-3 z-30 h-10 w-10 rounded-full bg-white border border-black/[0.04] shadow-[0_1px_5px_rgba(0,0,0,0.18)] flex items-center justify-center active:scale-90 transition-transform"
               aria-label={t("add")}
             >
-              <Bookmark className={cn("h-[18px] w-[18px] text-white", saved && "fill-white")} strokeWidth={2} />
+              <Bookmark className={cn("h-[19px] w-[19px] text-[#F0A583]", saved && "fill-[#F0A583]")} strokeWidth={2.2} />
             </button>
           )}
           {photos.length > 1 && (
             <>
-              {/* Chevron nawigacji - MALE guziki (nie cala polowa), zeby tap w zdjecie = powiekszenie. */}
+              {/* Chevron nawigacji - tap-zona na PELNEJ WYSOKOSCI (mniej missclickow), ale
+                  WEZSZA niz pol zdjecia, zeby srodek zostal klikalny na powiekszenie. */}
               {activeIdx > 0 && (
                 <button
                   onClick={(e) => { e.stopPropagation(); changePhoto(activeIdx - 1); }}
-                  className="absolute left-2 top-1/2 -translate-y-1/2 z-20 h-9 w-9 rounded-full bg-white/85 backdrop-blur-sm flex items-center justify-center shadow active:scale-90"
+                  className="absolute left-0 top-0 bottom-0 w-16 z-20 flex items-center justify-start pl-2"
                   aria-label={t("prev")}
                 >
-                  <ChevronLeft className="h-5 w-5 text-foreground" />
+                  <span className="h-9 w-9 rounded-full bg-white/85 backdrop-blur-sm flex items-center justify-center shadow active:scale-90">
+                    <ChevronLeft className="h-5 w-5 text-foreground" />
+                  </span>
                 </button>
               )}
               {activeIdx < photos.length - 1 && (
                 <button
                   onClick={(e) => { e.stopPropagation(); changePhoto(activeIdx + 1); }}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 z-20 h-9 w-9 rounded-full bg-white/85 backdrop-blur-sm flex items-center justify-center shadow active:scale-90"
+                  className="absolute right-0 top-0 bottom-0 w-16 z-20 flex items-center justify-end pr-2"
                   aria-label={t("next")}
                 >
-                  <ChevronRight className="h-5 w-5 text-foreground" />
+                  <span className="h-9 w-9 rounded-full bg-white/85 backdrop-blur-sm flex items-center justify-center shadow active:scale-90">
+                    <ChevronRight className="h-5 w-5 text-foreground" />
+                  </span>
                 </button>
               )}
             </>
@@ -483,7 +512,13 @@ function AddressSection({ data }: SectionProps) {
 }
 
 function DescriptionSection({ data, lineClamp }: SectionProps & { lineClamp?: number }) {
-  if (!data.description) return null;
+  // Opis pokazujemy WYLACZNIE dla lokali z kontem biznesowym - to tekst, ktory wlasciciel
+  // napisal o sobie. Wizytowka "zero" (miejsce bez konta) nie ma opisu i miec nie powinna:
+  // to, co tam siedzialo, bylo tekstem wygenerowanym maszynowo o cudzym lokalu, ktorego nikt
+  // nie autoryzowal (decyzja Nat 2026-09-08). Biznes rozpoznajemy po `businessPlan`, ktore
+  // enrichWithBusinessProfile ustawia tylko przy istniejacym profilu.
+  const isBusiness = !!(data as any).businessPlan;
+  if (!isBusiness || !data.description) return null;
   return (
     <p
       className="text-sm text-foreground/85 leading-relaxed"
@@ -498,7 +533,7 @@ function EventBannerSection({ data }: SectionProps) {
   if (!data.eventTitle) return null;
   // Badge promocji ZAWSZE pomaranczowy - nie personalizowany przez biznes.
   return (
-    <div className="rounded-full bg-gradient-to-r from-[#F4A259] to-[#F9662B] px-4 py-3 flex items-center justify-center text-white font-bold text-sm shadow-md shadow-orange-500/20 text-center leading-tight">
+    <div className="rounded-full bg-gradient-to-r from-[#F4A259] to-[#F9662B] px-4 py-3 flex items-center justify-center text-white font-bold text-sm text-center leading-tight">
       {data.eventTitle}
     </div>
   );
@@ -523,7 +558,8 @@ function EventsSection({ data, referenceDate, routeAvatars }: SectionProps & { r
   const [expanded, setExpanded] = useState(false);
   // Reset na wybrany miesiac gdy dane sie doczytaja (np. enrich profilu biznesu po otwarciu).
   useEffect(() => { setMonthDate(startOfMonth(parseISO(`${defaultKey}-01`))); setExpanded(false); }, [defaultKey]);
-  const swipeX = useRef<number | null>(null);
+  // Swipe w bok = poprzedni/nastepny miesiac wydarzen (wspolny gest, odporny na scroll pionowy).
+  const swipeMonths = useSwipeNav({ onLeft: () => go(1), onRight: () => go(-1) });
 
   if (events.length === 0) return null;
 
@@ -596,16 +632,7 @@ function EventsSection({ data, referenceDate, routeAvatars }: SectionProps & { r
       </div>
 
       {/* Wydarzenia w wybranym miesiacu (swipe w bok = zmiana miesiaca) */}
-      <div
-        className="space-y-2"
-        onTouchStart={(e) => { swipeX.current = e.touches[0].clientX; }}
-        onTouchEnd={(e) => {
-          if (swipeX.current === null) return;
-          const dx = e.changedTouches[0].clientX - swipeX.current;
-          swipeX.current = null;
-          if (Math.abs(dx) > 50) go(dx < 0 ? 1 : -1);
-        }}
-      >
+      <div className="space-y-2" {...swipeMonths}>
         {monthEvents.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-6 rounded-3xl bg-secondary">{t("events_month_empty")}</p>
         ) : (
@@ -721,7 +748,7 @@ function OpeningHoursSection({ data }: SectionProps) {
         aria-expanded={expanded}
       >
         <Clock className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-        <span>{t("opening_hours_label", "Godziny otwarcia")}</span>
+        <span>{t("opening_hours_label")}</span>
         <span className={cn("font-bold", openNow ? "text-green-600" : "text-red-500")}>
           {openNow ? t("open_now") : t("closed")}
         </span>
@@ -872,7 +899,7 @@ function MapSection({ data, startingLocation }: SectionProps & { startingLocatio
           rel="noopener noreferrer"
           className="inline-flex items-center gap-1.5 rounded-full bg-secondary text-secondary-foreground px-3 py-1.5 text-xs font-semibold active:scale-95 transition-transform shrink-0"
         >
-          <MapPin className="h-3.5 w-3.5" /> {t("open_in_google_maps", "Zobacz w Google Maps")}
+          <GoogleGlyph className="h-4 w-4" /> {t("open_in_google_maps")}
         </a>
       </div>
       {/* Statyczny punkt + ikona otwarcia mapy na pelen ekran (interaktywna mapa w overlayu). */}
@@ -894,6 +921,10 @@ function MapSection({ data, startingLocation }: SectionProps & { startingLocatio
         <div
           data-vaul-no-drag
           className="fixed inset-0 z-[120] bg-background flex flex-col animate-in fade-in duration-200"
+          // pointerEvents: drawer wizytowki (modal) ustawia `pointer-events: none` na <body>,
+          // wiec portal poza jego warstwa bylby martwy (jak arkusz zgloszenia - patrz
+          // ReportPlaceLink). Fullscreen viewer zdjec ma to samo zabezpieczenie.
+          style={{ pointerEvents: "auto" }}
           onPointerDown={(e) => e.stopPropagation()}
           onPointerMove={(e) => e.stopPropagation()}
           onTouchStart={(e) => e.stopPropagation()}
@@ -1025,6 +1056,20 @@ export interface PremiumBusinessCardProps {
   // mode='detail' - zapis miejsca (zakladka na hero). Gdy brak -> zakladka ukryta.
   onSave?: () => void;
   saved?: boolean;
+  // #6 lajki zdjec w galerii (fullscreen viewer). Gdy brak -> serce ukryte.
+  photoLikes?: Map<string, LikeState>;
+  onToggleLike?: (ref: string) => void;
+  // #3e dodawanie zdjecia do miejsca (galeria wizytowki). Gdy brak -> przycisk ukryty.
+  onAddPhoto?: () => void;
+  addingPhoto?: boolean;
+  // Notki userow o TYM miejscu (z opublikowanych tras i publicznych list) - sekcja
+  // "Od użytkowników". Notka NIGDY nie jest opisem miejsca (data.description) - to osobne tresci.
+  userNotes?: PlaceUserNote[];
+  // Zdjecia wgrane przez USEROW do tego miejsca (place_photos). Podajemy je TYLKO dla wizytowki
+  // z kontem biznesowym - wtedy nie mieszaja sie z galeria lokalu, lecz siedza jako osobny byt
+  // w sekcji "Od użytkowników" pod cennikiem/menu (prosba Nat 2026-08-31). Wizytowka "zero"
+  // (bez konta biznesowego) NIE podaje tej propsy - tam zdjecia userow sa po prostu w galerii.
+  userPhotos?: string[];
 }
 
 const PremiumBusinessCard = ({
@@ -1046,6 +1091,12 @@ const PremiumBusinessCard = ({
   referenceDate,
   onSave,
   saved,
+  photoLikes,
+  onToggleLike,
+  onAddPhoto,
+  addingPhoto = false,
+  userNotes,
+  userPhotos,
 }: PremiumBusinessCardProps) => {
   const { t } = useTranslation("wizytowka");
   const [fullscreen, setFullscreen] = useState<{ photos: string[]; idx: number } | null>(null);
@@ -1094,6 +1145,18 @@ const PremiumBusinessCard = ({
               </span>
             ) : undefined}
           />
+          {/* #3e: dodaj wlasne zdjecie do miejsca (galeria wspoldzielona). Pod hero, subtelny. */}
+          {onAddPhoto && (
+            <button
+              type="button"
+              onClick={onAddPhoto}
+              disabled={addingPhoto}
+              className="mx-4 mt-3 flex items-center justify-center gap-2 py-2.5 rounded-2xl bg-secondary text-secondary-foreground text-sm font-semibold active:scale-[0.98] transition-transform disabled:opacity-60"
+            >
+              <ImagePlus className="h-4 w-4" strokeWidth={2} />
+              {addingPhoto ? "Dodaję zdjęcie..." : "Dodaj swoje zdjęcie"}
+            </button>
+          )}
           {/* space-y-6 = duzy odstep MIEDZY sekcjami (prawo bliskosci / common region). */}
           <div className="flex-1 px-4 pt-4 pb-6 space-y-6">
 
@@ -1116,7 +1179,7 @@ const PremiumBusinessCard = ({
               <div className="space-y-3">
                 {data.description && (
                   <div className="space-y-2">
-                    <h3 className="text-lg font-semibold tracking-tight">{t("description_title", "Opis miejsca")}</h3>
+                    <h3 className="text-lg font-semibold tracking-tight">{t("description_title")}</h3>
                     <DescriptionSection data={data} />
                   </div>
                 )}
@@ -1127,6 +1190,43 @@ const PremiumBusinessCard = ({
             {/* Sekcje z naglowkami - osobne 'common regions' oddzielone duzym spacingiem */}
             {!hidePosts && <PostsSection data={data} onPhotoExpand={handleExpand} />}
             {!hideMenu && <MenuSection data={data} onPhotoExpand={handleExpand} />}
+
+            {/* "Od użytkowników" - tresci od spolecznosci, POD cennikiem/menu (prosba Nat 2026-08-31):
+                miniatury zdjec wgranych do miejsca (tylko wizytowka z kontem biznesowym - w wizytowce
+                "zero" te zdjecia sa po prostu w galerii) + notki z opublikowanych tras i publicznych list.
+                Zdjecia 4:3 jak reszta zdjec w wizytowce (regula z CLAUDE.md). */}
+            {((userPhotos?.length ?? 0) > 0 || (userNotes?.length ?? 0) > 0) && (
+              <div className="space-y-3">
+                <h3 className="text-lg font-semibold tracking-tight">{t("user_notes_title")}</h3>
+                {userPhotos && userPhotos.length > 0 && (
+                  <div className="grid grid-cols-2 gap-2">
+                    {userPhotos.map((url, idx) => (
+                      <button
+                        key={url}
+                        type="button"
+                        onClick={() => handleExpand(userPhotos, idx)}
+                        className="relative aspect-[4/3] rounded-2xl overflow-hidden bg-muted active:opacity-90 transition-opacity"
+                      >
+                        <img src={url} alt="" loading="lazy" className="w-full h-full object-cover" />
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {userNotes && userNotes.length > 0 && (
+                  <div className="space-y-3">
+                    {userNotes.map((n) => (
+                      <div key={n.key} className="bg-muted/50 rounded-2xl px-3.5 py-3">
+                        <p className="text-[13.5px] text-foreground/85 leading-snug whitespace-pre-wrap break-words">{n.note}</p>
+                        <div className="flex items-center gap-2 mt-2">
+                          <img src={avatarSrc(n.avatar_url)} alt="" className="h-5 w-5 rounded-full object-cover bg-secondary" />
+                          <span className="text-[12px] font-semibold text-muted-foreground truncate">{n.username ?? "Użytkownik"}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
             <MapSection data={data} startingLocation={startingLocation} />
             {/* Wydarzenia POD mapa (wg Figmy: "Nadchodzace Wydarzenia"). Stan zero = brak eventow. */}
             {!hideEventBanner && <EventsSection data={data} referenceDate={referenceDate} routeAvatars={routeAvatars} />}
@@ -1138,6 +1238,8 @@ const PremiumBusinessCard = ({
             photos={fullscreen.photos}
             startIndex={fullscreen.idx}
             onClose={() => setFullscreen(null)}
+            likes={photoLikes}
+            onToggleLike={onToggleLike}
           />
         )}
       </>

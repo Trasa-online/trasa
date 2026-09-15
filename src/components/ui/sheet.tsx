@@ -3,6 +3,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { X } from "lucide-react";
 import * as React from "react";
 
+import { useDragToDismiss } from "@/hooks/useDragToDismiss";
 import { cn } from "@/lib/utils";
 
 const Sheet = SheetPrimitive.Root;
@@ -34,8 +35,11 @@ const sheetVariants = cva(
     variants: {
       side: {
         top: "inset-x-0 top-0 border-b data-[state=closed]:slide-out-to-top data-[state=open]:slide-in-from-top",
+        // Arkusz PLYWAJACY (prosba Nat 2026-09-11, wzor: FYI): 8 px odstepu z lewej, prawej i od
+        // dolu, zaokraglony z KAZDEJ strony. Callery nadal podaja `rounded-t-3xl` - to tylko
+        // gorne rogi, dolne biora 3xl stad, wiec nic nie trzeba w nich zmieniac.
         bottom:
-          "inset-x-0 bottom-0 border-t data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom",
+          "inset-x-2 bottom-2 border-0 overflow-hidden data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom",
         left: "inset-y-0 left-0 h-full w-3/4 border-r data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left sm:max-w-sm",
         right:
           "inset-y-0 right-0 h-full w-3/4  border-l data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right sm:max-w-sm",
@@ -49,21 +53,53 @@ const sheetVariants = cva(
 
 interface SheetContentProps
   extends React.ComponentPropsWithoutRef<typeof SheetPrimitive.Content>,
-    VariantProps<typeof sheetVariants> {}
+    VariantProps<typeof sheetVariants> {
+  /** Wylacza gest "przeciagnij w dol, zeby zamknac" (tylko side="bottom"). */
+  disableDragToDismiss?: boolean;
+}
 
 const SheetContent = React.forwardRef<React.ElementRef<typeof SheetPrimitive.Content>, SheetContentProps>(
-  ({ side = "right", className, children, ...props }, ref) => (
-    <SheetPortal>
-      <SheetOverlay />
-      <SheetPrimitive.Content ref={ref} className={cn(sheetVariants({ side }), className)} {...props}>
-        {children}
-        <SheetPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity data-[state=open]:bg-secondary hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none">
-          <X className="h-4 w-4" />
-          <span className="sr-only">Close</span>
-        </SheetPrimitive.Close>
-      </SheetPrimitive.Content>
-    </SheetPortal>
-  ),
+  ({ side = "right", className, children, style, disableDragToDismiss, ...props }, ref) => {
+    // Gest natywny: bottom sheet zamyka sie przeciagnieciem w dol. Zamkniecie idzie przez
+    // ukryty <SheetPrimitive.Close> (Radix sam ogarnia stan open/onOpenChange kazdego arkusza),
+    // wiec zaden z ~25 arkuszy w apce nie wymaga wlasnego kodu.
+    const closeRef = React.useRef<HTMLButtonElement>(null);
+    const { dragProps } = useDragToDismiss({
+      onDismiss: () => closeRef.current?.click(),
+      enabled: side === "bottom" && !disableDragToDismiss,
+    });
+    const dragHandlers = side === "bottom" && !disableDragToDismiss ? dragProps : null;
+
+    return (
+      <SheetPortal>
+        <SheetOverlay />
+        <SheetPrimitive.Content
+          ref={ref}
+          // Promien 40 px dla arkusza dolnego DOPISANY NA KONCU: callery podaja `rounded-t-3xl`
+          // (24 px) i przy 8 px odstepu od krawedzi taki rog "wchodzil" w zaokraglony rog ekranu
+          // (zgloszenie Nat 2026-09-11). 40 px jest w przyblizeniu koncentryczne z rogiem
+          // iPhone'a (~55 pt) odsunietym o 8 pt. twMerge: `rounded-*` na koncu wygrywa z
+          // `rounded-t-*` z callera, wiec 39 arkuszy nie trzeba ruszac.
+          className={cn(sheetVariants({ side }), className, side === "bottom" && "rounded-[40px]")}
+          style={{ ...style, ...(dragHandlers?.style ?? {}) }}
+          onTouchStart={dragHandlers?.onTouchStart}
+          onTouchMove={dragHandlers?.onTouchMove}
+          onTouchEnd={dragHandlers?.onTouchEnd}
+          onTouchCancel={dragHandlers?.onTouchCancel}
+          {...props}
+        >
+          {children}
+          <SheetPrimitive.Close
+            ref={closeRef}
+            className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity data-[state=open]:bg-secondary hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none"
+          >
+            <X className="h-4 w-4" />
+            <span className="sr-only">Close</span>
+          </SheetPrimitive.Close>
+        </SheetPrimitive.Content>
+      </SheetPortal>
+    );
+  },
 );
 SheetContent.displayName = SheetPrimitive.Content.displayName;
 

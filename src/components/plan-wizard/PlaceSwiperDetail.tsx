@@ -8,15 +8,25 @@
 // - Like/Skip CTA fixed bottom (tylko gdy props onLike/onSkip podane)
 // - Maps button w header slot
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, type ChangeEvent, type MouseEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { MapPin, Navigation, Bookmark } from "lucide-react";
-import { useDistanceReference } from "@/lib/distanceReference";
+import { MapPin, Navigation, Check, Share2, Loader2 } from "lucide-react";
+import { usePlaceShare } from "@/hooks/usePlaceShare";
+import { BrandIcon, PLUS_ICON, SAVE_ICON } from "@/components/BrandIcon";
+import { haptics } from "@/hooks/useHaptics";
+import { useDistanceReference, setGpsReference } from "@/lib/distanceReference";
+import { askPermission } from "@/lib/permissionPrompts";
 import { haversineKm, formatDistance } from "@/lib/distance";
 import { Drawer as VaulDrawer } from "vaul";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
 import { getPhotoUrl, ensurePhotoCached } from "@/lib/placePhotos";
 import { fetchPlaceUserPhotos } from "@/lib/placeUserPhotos";
+import { placeKeyOf, pinCoverKeys, fetchPlacePhotosForKeys, uploadPlacePhoto, fetchPhotoLikes, togglePhotoLike, type LikeState } from "@/lib/placePhotoSocial";
+import { fetchPlaceNotes, type PlaceUserNote } from "@/lib/placeNotes";
+import { MODERATION_REJECTED_MESSAGE } from "@/lib/imageModeration";
+import { useSavedPlaces } from "@/hooks/useSavedPlaces";
 import { GOOGLE_PLACE_DETAILS_DISABLED } from "@/lib/appMode";
 import { type MockPlace, fetchEnrichedPlace } from "./PlaceSwiper";
 import posthog from "posthog-js";
@@ -54,9 +64,18 @@ interface PlaceSwiperDetailProps {
   onSkip?: (() => void) | undefined;
   /** Czy miejsce jest juz zapisane - stan zakladki na hero. */
   saved?: boolean;
+  /** "Dodaj to miejsce" (prosba Nat 2026-09-13): wizytowka otwarta z dodawania miejsc do wyjazdu
+   *  albo listy dostaje drugi guzik obok "Zapisz to miejsce" - dodaje do TEJ trasy/listy i zamyka
+   *  wizytowke. `added` = juz zaznaczone/juz w wyjezdzie: guzik pokazuje "Dodano" i nie reaguje
+   *  (zdjecie zaznaczenia zostaje na wierszu). */
+  onAdd?: (() => void) | undefined;
+  added?: boolean;
   skipGoogleFetch?: boolean;
   /** Data wyjazdu (YYYY-MM-DD) - agenda wydarzen pokazuje najblizsze TEJ dacie. Domyslnie dzis. */
   referenceDate?: string;
+  /** #3e: fires po dodaniu zdjecia usera do miejsca (place_photos). Rodzic (np. tworzenie trasy)
+   *  moze od razu odswiezyc okladke miejsca. (url = nowe zdjecie, placeKey = tozsamosc miejsca). */
+  onPhotoAdded?: (url: string, placeKey: string) => void;
 }
 
 const validUrl = (url?: string | null) =>
@@ -71,8 +90,11 @@ const PlaceSwiperDetail = ({
   onLike,
   onSkip,
   saved,
+  onAdd,
+  added = false,
   skipGoogleFetch = false,
   referenceDate,
+  onPhotoAdded,
 }: PlaceSwiperDetailProps) => {
   const [detail, setDetail] = useState<PlaceDetail | null>(null);
   const [loading, setLoading] = useState(false);
@@ -81,9 +103,23 @@ const PlaceSwiperDetail = ({
   // Swiezy profil biznesu doczytany przy otwarciu wizytowki (place ze swipera bywa starym
   // snapshotem - po edycji profilu przez lokal zdjecia/dane byly nieaktualne). ep = "effective place".
   const [freshPlace, setFreshPlace] = useState<MockPlace | null>(null);
+  // #3e: zdjecia userow dodane bezposrednio do miejsca (galeria wspoldzielona, place_photos).
+  const [userPlacePhotos, setUserPlacePhotos] = useState<string[]>([]);
+  const [addingPhoto, setAddingPhoto] = useState(false);
+  // Notki userow o miejscu (sekcja "Od użytkowników"). Osobna tresc - NIE opis miejsca.
+  const [userNotes, setUserNotes] = useState<PlaceUserNote[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  // #6: lajki zdjec w galerii (ref = URL zdjecia -> stabilny dla Storage/B2B/user).
+  const [photoLikes, setPhotoLikes] = useState<Map<string, LikeState>>(new Map());
   const distanceRef = useDistanceReference();
+  const { user } = useAuth();
+  // Stan zakladki "zapisane" na hero. Gdy rodzic nie poda `saved`, czytamy go z globalnego
+  // stanu zapisanych miejsc - dzieki temu ikona przelacza sie od razu po zapisie, niezaleznie
+  // od tego, z ktorej sciezki wizytowka zostala otwarta (zgloszenie Nat 2026-08-29).
+  const { isSaved } = useSavedPlaces();
   const { t } = useTranslation("wizytowka");
   const ep = freshPlace ?? place;
+  const placeKey = ep ? placeKeyOf({ googlePlaceId: (ep as any).google_place_id ?? null, placeName: ep.place_name, city: ep.city ?? city ?? null }) : "";
 
   useEffect(() => {
     if (!open || !place) {
@@ -91,6 +127,9 @@ const PlaceSwiperDetail = ({
       setPhotos([]);
       setBusinessPosts([]);
       setFreshPlace(null);
+      setUserPlacePhotos([]);
+      setPhotoLikes(new Map());
+      setUserNotes([]);
       return;
     }
 
@@ -115,17 +154,24 @@ const PlaceSwiperDetail = ({
 
       // 2. Business with own photos → use their photos (don't override with Google),
       //    ale NADAL fetchujemy Google detail dla reviews, formatted_address, rating.
+      // Wlasne zdjecia miejsca (cover + galeria) pokazujemy od razu, bez czekania na siec.
       const hasBizPhotos = cur.businessHasOwnPhoto || skipGoogleFetch;
       if (hasBizPhotos) {
         setPhotos([cur.photo_url, ...(cur.galleryPhotos ?? [])].filter(Boolean) as string[]);
       }
+      // Zdjecia SPOLECZNOSCI blokuje wylacznie LOKAL z wlasnymi zdjeciami - on odpowiada za swoj
+      // wizerunek. `skipGoogleFetch` mowi tylko "nie pytaj Google" i nie ma z tym nic wspolnego,
+      // a przez sklejenie obu warunkow wylaczal cala sciezke zdjec userow. Bolalo to dokladnie
+      // miejsca "zero" (call-site'y ustawiaja skip = !pin.place_id), czyli te, ktore poza
+      // zdjeciami userow nie maja zadnych (zgloszenie Nat 2026-09-09).
+      const blockCommunityPhotos = cur.businessHasOwnPhoto === true;
 
       // ZERO Google (2026-07-29): NIE wołamy Place Details ani cache-place-photo (oba
       // biją Google). detail zostaje null (recenzje/godziny i tak ukryte). Zdjęcia miejsca
       // biznesu = jego własne; zwykłego miejsca = zdjęcia userów z tras (pins.user_photo_urls).
       // Brak zdjęć -> displayPhotos puste -> hero pokazuje placeholder/ikonę.
       const placesPromise = GOOGLE_PLACE_DETAILS_DISABLED
-        ? (hasBizPhotos
+        ? (blockCommunityPhotos
             ? Promise.resolve()
             : fetchPlaceUserPhotos({
                 placeDbId: cur.id,
@@ -133,7 +179,9 @@ const PlaceSwiperDetail = ({
                 placeName: cur.place_name,
                 city: city ?? cur.city,
               })
-                .then((urls) => { if (urls.length > 0) setPhotos(urls); })
+                // DOKLADAMY do tego, co juz jest - podmiana kasowala wlasne zdjecia miejsca
+                // ustawione wyzej. Duplikaty i tak odsiewa dedup po tozsamosci pliku.
+                .then((urls) => { if (urls.length > 0) setPhotos((prev) => Array.from(new Set([...prev, ...urls]))); })
                 .catch(() => {}))
         : supabase.functions
         .invoke("google-places-proxy", {
@@ -208,6 +256,20 @@ const PlaceSwiperDetail = ({
   }, [open, place, city, skipGoogleFetch, referenceDate]);
 
   const handleLike = () => { onLike?.(); onOpenChange(false); };
+  const handleAdd = () => { if (added) return; haptics.light(); onAdd?.(); onOpenChange(false); };
+  // Udostepnianie miejsca prosto z wizytowki (zolte kolko obok "Zapisz to miejsce", prosba Nat
+  // 2026-09-13) - ta sama logika, co w arkuszu zapisu (usePlaceShare).
+  const placeShare = usePlaceShare(city ?? ep?.city ?? null, { hostOpen: open });
+  const handleShare = () => {
+    if (!ep) return;
+    haptics.light();
+    void placeShare.start({
+      place_name: ep.place_name, category: ep.category ?? null, address: ep.address ?? null, city: ep.city ?? city ?? null,
+      latitude: ep.latitude ?? null, longitude: ep.longitude ?? null, photo_url: ep.photo_url ?? null,
+      place_id: ep.id ?? null, google_place_id: (ep as any).google_place_id ?? null,
+    });
+  };
+  const savedEffective = saved ?? (ep?.place_name ? isSaved(ep.place_name) : false);
   const handleSkip = () => { onSkip?.(); onOpenChange(false); };
   // Zapis z zakladki na hero - zapisuje BEZ zamykania wizytowki (stan zakladki sie aktualizuje).
   const handleSaveFromHero = onLike ? () => { onLike(); } : undefined;
@@ -222,12 +284,127 @@ const PlaceSwiperDetail = ({
   const isBusiness = ep?.businessLogoUrl !== undefined;
   const ownCover = validUrl(ep?.photo_url) ? [ep!.photo_url!] : [];
   const ownGallery = (ep?.galleryPhotos ?? []).filter(validUrl);
-  const userPhotos = photos.filter(validUrl);
-  const displayPhotos = Array.from(new Set(
-    isBusiness
-      ? [...userPhotos, ...ownCover, ...ownGallery]
-      : [...ownCover, ...userPhotos, ...ownGallery],
-  )).slice(0, 4);
+  const fetchedPhotos = photos.filter(validUrl);
+  const contributed = userPlacePhotos.filter(validUrl); // #3e - zdjecia userow dodane do miejsca
+  // Zdjecia WGRANE PRZEZ USEROW (place_photos) w wizytowce PREMIUM (platne konto) NIE wchodza
+  // do galerii lokalu - lokal odpowiada za swoj wizerunek, a spolecznosc ma osobna sekcje
+  // "Od użytkowników" pod cennikiem/menu (prosba Nat 2026-08-31). Konto nie-premium i wizytowka
+  // "zero" (bez konta biznesowego) mieszaja je z reszta galerii jak dotad.
+  // Sekcja dla kont z funkcjami premium (business_profiles.is_premium). Flaga jest wyliczana
+  // automatycznie w bazie - dostaje ja kazdy, kto zalozyl konto biznesowe i ma aktywna
+  // wizytowke; zaseedowana wizytowka "do przejecia" (bez wlasciciela) jej nie ma.
+  const isPremiumBusiness = isBusiness && (ep as any)?.businessIsPremium === true;
+  const communityPhotos = isPremiumBusiness ? contributed : [];
+  // DEDUP PO TOZSAMOSCI PLIKU, nie po napisie URL (zgloszenie Nat 2026-09-01: "na wizytowkach
+  // zaciagaja sie podwojnie te same zdjecia"). Ten sam obraz potrafi przyjsc dwoma droramai:
+  //  - jako plik z cache: .../place-photos-cache/hash_<sha nazwy|miasta>_800.jpg (albo gpid_<id>),
+  //  - jako zdjecie Google przez proxy: /api/place-photo?ref=<REF>&w=800.
+  // To rozne napisy, wiec `new Set` ich nie sklejal i zdjecie wyswietlalo sie dwa razy. Klucz
+  // tozsamosci sprowadza oba ksztalty do wspolnego mianownika: ref dla proxy, nazwa pliku bez
+  // sufiksu rozmiaru dla cache, sciezka bez query dla reszty.
+  const photoIdentity = (u: string): string => {
+    try {
+      const ref = u.match(/[?&]ref=([^&]+)/)?.[1];
+      if (ref) return `ref:${decodeURIComponent(ref)}`;
+      const file = u.split("?")[0].split("/").pop() ?? u;
+      const cached = file.match(/^((?:gpid|hash)_[A-Za-z0-9_-]+?)_\d+\.(?:jpe?g|png|webp)$/i)?.[1];
+      return cached ? `cache:${cached}` : u.split("?")[0];
+    } catch { return u; }
+  };
+  const dedupByIdentity = (urls: string[]): string[] => {
+    const seen = new Set<string>();
+    return urls.filter((u) => { const k = photoIdentity(u); if (seen.has(k)) return false; seen.add(k); return true; });
+  };
+  // Cap podniesiony 4 -> 10, zeby zdjecia dodane przez userow (#3e) sie zmiescily.
+  const orderedPhotos = isPremiumBusiness
+    ? [...fetchedPhotos, ...ownCover, ...ownGallery]
+    : isBusiness
+      ? [...fetchedPhotos, ...contributed, ...ownCover, ...ownGallery]
+      : [...ownCover, ...fetchedPhotos, ...contributed, ...ownGallery];
+  // Zdjecie z cache to KOPIA pierwszego zdjecia Google tego miejsca (klucz cache liczony
+  // z nazwy i miasta, nie z tresci), wiec gdy mamy oba - pierwsze z Google jest tym samym
+  // kadrem i leci na smietnik. Kolejne zdjecia Google zostaja, bo cache trzyma tylko jedno.
+  const hasCached = orderedPhotos.some((u) => /\/(?:gpid|hash)_[A-Za-z0-9_-]+_\d+\./.test(u));
+  const firstProxy = hasCached ? orderedPhotos.find((u) => /[?&]ref=/.test(u)) : undefined;
+  const displayPhotos = dedupByIdentity(orderedPhotos.filter((u) => u !== firstProxy)).slice(0, 10);
+
+  // Notki userow o tym miejscu - z OPUBLIKOWANYCH tras i PUBLICZNYCH list (best-effort).
+  useEffect(() => {
+    if (!open || !ep?.place_name) { return; }
+    let alive = true;
+    fetchPlaceNotes(ep.place_name).then((rows) => { if (alive) setUserNotes(rows); }).catch(() => {});
+    return () => { alive = false; };
+  }, [open, ep?.place_name]);
+
+  // #3e: pobierz zdjecia userow przypisane do tego miejsca (galeria wspoldzielona).
+  useEffect(() => {
+    if (!open || !placeKey) { return; }
+    let alive = true;
+    // Zdjecia miejsca moga siedziec pod DWOMA kluczami: "gpid:<google_place_id>" (dodane z
+    // wizytowki miejsca z bazy) albo "nm:<nazwa>" (dodane przy miejscu w wyjezdzie - piny nie
+    // maja google_place_id). Czytamy OBA, inaczej polowa zdjec nie dociagala sie do galerii
+    // (zgloszenie Nat 2026-08-30 - "Talerzyki").
+    const keys = pinCoverKeys({ google_place_id: (ep as any)?.google_place_id ?? null, place_name: ep?.place_name });
+    fetchPlacePhotosForKeys(keys).then((map) => {
+      if (!alive) return;
+      const urls = keys.flatMap((k) => map.get(k) ?? []);
+      setUserPlacePhotos(Array.from(new Set(urls)));
+    });
+    return () => { alive = false; };
+  }, [open, placeKey]);
+
+  // #6: pobierz stan lajkow dla zdjec aktualnie w galerii.
+  const likeablePhotos = [...displayPhotos, ...communityPhotos];
+  const photoRefsKey = likeablePhotos.join("|");
+  useEffect(() => {
+    if (!open || likeablePhotos.length === 0) { return; }
+    let alive = true;
+    fetchPhotoLikes(likeablePhotos, user?.id ?? null).then((m) => { if (alive) setPhotoLikes(m); });
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, photoRefsKey, user?.id]);
+
+  // #6: przelacz lajk zdjecia (optymistycznie + persist). Wymaga logowania.
+  const handleToggleLike = (ref: string) => {
+    if (!user) { toast(t("photo.login_like")); return; }
+    const cur = photoLikes.get(ref) ?? { count: 0, liked: false };
+    const nextLiked = !cur.liked;
+    setPhotoLikes((prev) => {
+      const next = new Map(prev);
+      next.set(ref, { liked: nextLiked, count: Math.max(0, cur.count + (nextLiked ? 1 : -1)) });
+      return next;
+    });
+    void togglePhotoLike(ref, user.id, cur.liked).then((confirmed) => {
+      // Gdy DB nie potwierdzi zmiany (np. blad), cofnij optymizm.
+      if (confirmed !== nextLiked) {
+        setPhotoLikes((prev) => { const n = new Map(prev); n.set(ref, cur); return n; });
+      }
+    });
+  };
+
+  // #3e: dodaj wlasne zdjecie do miejsca - wybor pliku -> upload -> odswiez galerie.
+  const handleAddPhoto = () => {
+    if (!user) { toast(t("photo.login_add")); return; }
+    fileInputRef.current?.click();
+  };
+  const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // reset, zeby ten sam plik dalo sie wybrac ponownie
+    if (!file || !user || !ep || !placeKey) return;
+    if (!file.type.startsWith("image/")) { toast.error(t("photo.pick_image")); return; }
+    setAddingPhoto(true);
+    let row = null;
+    try {
+      row = await uploadPlacePhoto(file, { userId: user.id, placeKey, placeName: ep.place_name, city: ep.city ?? city ?? null });
+    } catch (e: any) {
+      setAddingPhoto(false);
+      toast.error(e?.message === "MODERATION_REJECTED" ? MODERATION_REJECTED_MESSAGE : t("photo.add_failed"));
+      return;
+    }
+    setAddingPhoto(false);
+    if (row) { setUserPlacePhotos((prev) => [row.photo_url, ...prev]); onPhotoAdded?.(row.photo_url, placeKey); toast.success(t("photo.added")); }
+    else toast.error(t("photo.add_failed"));
+  };
 
   // Maps button - renderowany w header slot PremiumBusinessCard (Maps button obok nazwy)
   const mapsUrl = ep
@@ -243,12 +420,30 @@ const PlaceSwiperDetail = ({
     : null;
 
   // Tylko chip dystansu na gorze hero (wg Figmy). "Maps" przeniesiony do sekcji "Na mapie".
+  // Bez punktu odniesienia chip zamienia sie w "Pokaz dystans" (jak na karcie w Miejscach,
+  // Nat 2026-09-14): tap = zgoda na lokalizacje w kontekscie konkretnego miejsca.
   void mapsUrl;
+  const enableDistance = async (e: MouseEvent) => {
+    e.stopPropagation();
+    const perm = await askPermission("location", "detail", { explicit: true });
+    if (perm === "denied") return;
+    const ok = await setGpsReference();
+    if (!ok) toast(t("plan:distance_denied"));
+  };
   const headerSlot = distanceLabel ? (
     <span className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-black/40 backdrop-blur-sm text-white text-xs font-semibold">
       <Navigation className="h-3.5 w-3.5" />
       {distanceLabel} {t("distance_from")}&nbsp;{distanceRef!.label}
     </span>
+  ) : (!distanceRef && placeLat != null && placeLng != null) ? (
+    <button
+      type="button"
+      onClick={enableDistance}
+      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-black/40 backdrop-blur-sm text-white text-xs font-semibold active:scale-95 transition-transform"
+    >
+      <Navigation className="h-3.5 w-3.5" />
+      {t("plan:show_distance")}
+    </button>
   ) : undefined;
 
   if (!place || !ep) return null;
@@ -261,7 +456,12 @@ const PlaceSwiperDetail = ({
         <VaulDrawer.Overlay className="fixed inset-0 z-50 bg-black/60" />
         <VaulDrawer.Content
           aria-describedby={undefined}
-          className="fixed inset-x-0 bottom-0 z-50 flex flex-col rounded-t-3xl bg-[#FEFEFE] overflow-hidden outline-none focus:outline-none"
+          /* Tlo arkusza. iOS odbija wewnetrzny kontener przewijania rubber-bandem
+             i `overscroll-behavior` tego NIE wylacza w WKWebView, wiec przy ciagnieciu w dol
+             ten pasek zawsze na chwile widac. Peachy probowalismy 2026-09-10 rano - Nat woli
+             biel (decyzja z tego samego dnia), wiec wracamy do zlamanej bieli #FEFEFE, tej
+             samej co tresc arkusza nizej. */
+          className="fixed inset-x-2 bottom-2 z-50 flex flex-col rounded-[40px] bg-[#FEFEFE] overflow-hidden outline-none focus:outline-none"
           style={{ height: "min(96dvh, calc(100dvh - env(safe-area-inset-top, 0px) - 0.5rem))" }}
         >
           <VaulDrawer.Title className="sr-only">{place.place_name}</VaulDrawer.Title>
@@ -269,10 +469,17 @@ const PlaceSwiperDetail = ({
           {/* Scroll wrapper - vaul inicjuje drag-to-dismiss tylko gdy scroll jest na gorze,
               wiec native scroll do recenzji/galerii dziala normalnie (bez buga z iOS WebView).
               Wyjscie: drag w dol, tap w tlo (overlay), Esc, albo Hero X. */}
+          {/* overscrollBehaviorY: "contain" - bez tego iOS odbijal (rubber-band) SAM kontener
+              przewijania: hero zjezdzalo w dol, a nad nim odslanialo sie biale tlo arkusza
+              (zgloszenie Nat 2026-09-10). Z "contain" odbicia nie ma, a ciagniecie w dol na
+              gorze listy przejmuje vaul i zjezdza CALYM arkuszem razem ze zdjeciem - czyli
+              tak, jak ten gest ma wygladac. */}
           <div
             className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden"
-            style={{ WebkitOverflowScrolling: "touch" }}
+            style={{ WebkitOverflowScrolling: "touch", overscrollBehaviorY: "contain" }}
           >
+          {/* Hidden input do uploadu wlasnego zdjecia miejsca (#3e). */}
+          <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
           <PremiumBusinessCard
             data={businessData}
             mode="detail"
@@ -282,8 +489,14 @@ const PlaceSwiperDetail = ({
             onClose={() => onOpenChange(false)}
             header={headerSlot}
             onSave={handleSaveFromHero}
-            saved={saved}
+            saved={savedEffective}
             hideReviews
+            photoLikes={photoLikes}
+            onToggleLike={handleToggleLike}
+            onAddPhoto={undefined /* #3 (Nat): usunięte "Dodaj swoje zdjęcie" z wizytówki */}
+            userNotes={userNotes}
+            userPhotos={communityPhotos.length > 0 ? communityPhotos : undefined}
+            addingPhoto={addingPhoto}
             startingLocation={distanceRef ? { name: distanceRef.label, latitude: distanceRef.coords.lat, longitude: distanceRef.coords.lng } : undefined}
           />
           {/* Zgłoś problem - tylko dla realnych miejsc z bazy (uuid), na dole tresci wizytowki. */}
@@ -295,9 +508,9 @@ const PlaceSwiperDetail = ({
         </div>
 
         {/* Zapisz / Odrzuc CTA - fixed bottom. Guzik 44px (h-11), pt 12px, pb 16px do krawedzi. */}
-        {(onLike || onSkip) && (
+        {(onLike || onSkip || onAdd) && (
           <div className="shrink-0 px-4 pt-3 pb-[max(16px,env(safe-area-inset-bottom,0px))] border-t border-black/5 bg-[#FEFEFE]">
-            <div className="flex gap-3">
+            <div className="flex gap-2.5">
               {onSkip && (
                 <button
                   onClick={handleSkip}
@@ -307,17 +520,41 @@ const PlaceSwiperDetail = ({
                 </button>
               )}
               {onLike && (
+                /* Z guzikiem "Dodaj" obok zapis schodzi na drugi plan (szary fill) - w dodawaniu
+                   miejsc do wyjazdu/listy glowna akcja to dodanie, nie zapis do wlasnych list.
+                   W tym trybie KROTKIE napisy ("Zapisz" / "Dodaj") i brandowe ikony (zakladka,
+                   plus) - trzy guziki w rzedzie nie miescily pelnych zdan (prosba Nat 2026-09-14). */
                 <button
                   onClick={handleLike}
-                  className="flex-1 h-11 rounded-full bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 shadow-xl shadow-primary/30 active:scale-[0.97] transition-transform"
+                  className={`flex-1 h-11 rounded-full font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.97] transition-transform ${onAdd ? "bg-secondary text-secondary-foreground shadow-sm" : "bg-primary text-white"}`}
                 >
-                  {t("save_place", "Zapisz to miejsce")}
-                  <Bookmark className="h-4 w-4" strokeWidth={2.2} />
+                  {onAdd ? t("save_short") : t("save_place")}
+                  <BrandIcon src={SAVE_ICON} className="h-[18px] w-[18px]" />
+                </button>
+              )}
+              {onAdd && (
+                <button
+                  onClick={handleAdd}
+                  disabled={added}
+                  aria-disabled={added}
+                  className={`flex-1 h-11 rounded-full font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.97] transition-transform ${added ? "bg-secondary text-secondary-foreground shadow-sm" : "bg-primary text-white"}`}
+                >
+                  {added ? t("added_place") : t("add_short")}
+                  {added ? <Check className="h-4 w-4" strokeWidth={2.6} /> : <BrandIcon src={PLUS_ICON} className="h-[18px] w-[18px]" />}
+                </button>
+              )}
+              {/* Udostepnij = zolte kolko z brazowa ikona (jak przy "Zapisz ten wyjazd"). Tylko zalogowani -
+                  migawka miejsca wymaga autora. */}
+              {onLike && placeShare.canShare && ep && (
+                <button onClick={handleShare} disabled={placeShare.loading} aria-label={t("share_place")}
+                  className="h-11 w-11 shrink-0 rounded-full bg-[#FDF184] flex items-center justify-center active:scale-90 transition-transform disabled:opacity-70">
+                  {placeShare.loading ? <Loader2 className="h-5 w-5 animate-spin text-[#5B2C06]" /> : <Share2 className="h-5 w-5 text-[#5B2C06]" strokeWidth={2.2} />}
                 </button>
               )}
             </div>
           </div>
         )}
+        {placeShare.sheet}
         </VaulDrawer.Content>
       </VaulDrawer.Portal>
     </VaulDrawer.Root>

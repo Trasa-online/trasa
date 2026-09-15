@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from "react";
+import { checkUsername, cleanUsername, escapeLike, usernameKey, type UsernameProblem, checkFirstName, FIRST_NAME_MAX, type FirstNameProblem } from "@/lib/usernameRules";
 import { avatarSrc } from "@/lib/avatar";
 import { useNavigate, Link } from "react-router-dom";
+import { goBackOr } from "@/hooks/useGoBack";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { getConsent, grantConsent, denyConsent } from "@/lib/consent";
@@ -8,14 +10,22 @@ import { getConsent, grantConsent, denyConsent } from "@/lib/consent";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Camera, Shield, Bell, LogOut, ChevronRight, Cookie, FileText, Trash2, KeyRound, AlertCircle, X, ArrowLeft, Link as LinkIcon, Mail, Languages, RotateCcw } from "lucide-react";
+import { Camera, Shield, Bell, LogOut, ChevronRight, Cookie, FileText, Trash2, KeyRound, AlertCircle, X, ArrowLeft, Link as LinkIcon, Mail, Languages, RotateCcw, Instagram, MessagesSquare } from "lucide-react";
+import AvatarFrameSheet, { useMyAvatarFrame } from "@/components/profile/AvatarFrameSheet";
+import AvatarFrame from "@/components/profile/AvatarFrame";
+import { isAvatarFrame } from "@/lib/avatarFrames";
+import { Browser } from "@capacitor/browser";
 import { isHardcodedAdmin } from "@/lib/admins";
 import { useOnboarding } from "@/components/OnboardingGuide";
 import { Switch } from "@/components/ui/switch";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
+import { askPermission, openAppSettings } from "@/lib/permissionPrompts";
+import { useSystemPermission } from "@/components/permissions/PermissionPrimerSheet";
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
+// ErrorBoundary to komponent KLASOWY - hooki tam nie dzialaja, wiec siegamy po i18n wprost.
+import i18n from "@/i18n";
 import { isNative } from "@/lib/platform";
 import { Camera as CapCamera, CameraResultType, CameraSource } from "@capacitor/camera";
 
@@ -156,9 +166,41 @@ function LinkedAccountsSection() {
   );
 }
 
+// Natywka: wiersz ze stanem zgody systemowej. "Wlacz" = systemowy alert (albo arkusz
+// "Otworz Ustawienia", gdy zgoda byla odrzucona); przy zgodzie iOS nie da sie jej cofnac z apki,
+// wiec tap prowadzi do Ustawien telefonu. Web/PWA ma osobny przelacznik (VAPID) ponizej.
+function NativePushRow() {
+  const { t } = useTranslation("settings");
+  const { t: tc } = useTranslation("common");
+  const [status, refresh] = useSystemPermission("push");
+  const [busy, setBusy] = useState(false);
+  if (!isNative || !status || status === "unsupported") return null;
+  const onTap = async () => {
+    if (busy) return;
+    if (status === "granted") { openAppSettings(); return; }
+    setBusy(true);
+    try { await askPermission("push", "settings", { explicit: true }); } finally { setBusy(false); refresh(); }
+  };
+  const label = status === "granted" ? tc("permissions.push.status_on") : status === "denied" ? tc("permissions.push.status_off") : tc("permissions.push.status_ask");
+  return (
+    <button
+      type="button"
+      onClick={onTap}
+      disabled={busy}
+      className="w-full flex items-center gap-3 px-4 py-3.5 bg-card rounded-2xl border border-border/40 hover:bg-muted transition-colors text-left"
+    >
+      <Bell className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+      <span className="text-sm font-medium flex-1">{t("push_notifications")}</span>
+      <span className={`text-xs font-semibold ${status === "granted" ? "text-emerald-600" : status === "denied" ? "text-muted-foreground" : "text-primary"}`}>{label}</span>
+      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+    </button>
+  );
+}
+
 function PushToggleSection() {
   const { isSupported, isSubscribed, isLoading, toggle } = usePushNotifications();
   const { t } = useTranslation("settings");
+  if (isNative) return <NativePushRow />;
   if (!isSupported) return null;
   return (
     <div className="w-full flex items-center gap-3 px-4 py-3.5 bg-card rounded-2xl border border-border/40">
@@ -351,6 +393,42 @@ function ChangePasswordSection() {
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 
+// Otworz zewnetrzny link: natywnie w in-app Safari (Browser.open), na web w nowej karcie.
+async function openExternal(url: string) {
+  if (isNative) {
+    try { await Browser.open({ url }); return; } catch { /* fallback nizej */ }
+  }
+  window.open(url, "_blank", "noopener,noreferrer");
+}
+
+function SocialContactSection() {
+  const { t } = useTranslation("settings");
+  const rows = [
+    { icon: Instagram, label: "Instagram", sub: "@spontaway", onClick: () => openExternal("https://instagram.com/spontaway") },
+    { icon: MessagesSquare, label: "Discord", sub: t("community.join"), onClick: () => openExternal("https://discord.gg/6nY6bYdYX") },
+    { icon: Mail, label: "Napisz do nas", sub: "trasa.app@gmail.com", onClick: () => { window.location.href = "mailto:trasa.app@gmail.com"; } },
+  ];
+  return (
+    <div className="space-y-2">
+      <h3 className="text-xs uppercase tracking-wide text-muted-foreground px-1 mb-1">{t("community.title")}</h3>
+      {rows.map((r) => (
+        <button
+          key={r.label}
+          onClick={r.onClick}
+          className="w-full flex items-center gap-3 px-4 py-3.5 bg-card rounded-2xl border border-border/40 hover:bg-muted transition-colors text-left"
+        >
+          <r.icon className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium leading-tight">{r.label}</p>
+            <p className="text-xs text-muted-foreground leading-tight mt-0.5 truncate">{r.sub}</p>
+          </div>
+          <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function BugReportSection({ userId }: { userId: string }) {
   const { t } = useTranslation("settings");
   const [open, setOpen] = useState(false);
@@ -508,6 +586,10 @@ const Settings = () => {
   const [firstName, setFirstName] = useState("");
   const [username, setUsername] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
+  const [bio, setBio] = useState("");
+  // "Customizuj" - arkusz z ramkami awatara i kolorem (prosba Nat 2026-09-11).
+  const [framesOpen, setFramesOpen] = useState(false);
+  const { data: myFrame } = useMyAvatarFrame(user?.id);
 
   useEffect(() => {
     if (!loading && !user) navigate("/auth");
@@ -545,20 +627,57 @@ const Settings = () => {
       setFirstName((profile as any).first_name || "");
       setUsername(profile.username || "");
       setAvatarUrl(profile.avatar_url || "");
+      setBio((profile as any).bio || "");
     }
   }, [profile]);
+
+  // Sprawdzanie nazwy NA BIEZACO. Do 2026-09-07 ten ekran nie sprawdzal niczego: zapisywal
+  // wprost do bazy, a UNIQUE porownuje bajt w bajt, wiec "berd " przechodzilo obok istniejacego
+  // "berd" i pozwalalo podszyc sie pod admina. Bledu nawet nie bylo widac, bo mutacja nie miala
+  // obslugi bledu. Twarde bariery sa w bazie (migracja 20260907b) - to jest szybka informacja
+  // zwrotna dla usera.
+  const [uStatus, setUStatus] = useState<"idle" | "checking" | "ok" | "taken" | UsernameProblem>("idle");
+  const originalUsername = (profile as any)?.username ?? "";
+  useEffect(() => {
+    const value = cleanUsername(username);
+    if (usernameKey(value) === usernameKey(originalUsername)) { setUStatus("idle"); return; }
+    const problem = checkUsername(value);
+    if (problem) { setUStatus(problem); return; }
+    setUStatus("checking");
+    const tmr = setTimeout(async () => {
+      const { data, error } = await supabase.from("profiles").select("id")
+        .ilike("username", escapeLike(value)).neq("id", user?.id ?? "").limit(1);
+      // Blad zapytania nie moze blokowac zapisu - ostatnie slowo i tak ma baza.
+      if (error) { setUStatus("ok"); return; }
+      setUStatus(data && data.length > 0 ? "taken" : "ok");
+    }, 400);
+    return () => clearTimeout(tmr);
+  }, [username, originalUsername, user?.id]);
+  const usernameBlocked = uStatus !== "idle" && uStatus !== "ok";
+  // Imie: te same reguly, co nazwa (limit 30, litery, wulgaryzmy) - patrz checkFirstName.
+  const firstNameProblem: FirstNameProblem | null = firstName.trim() ? checkFirstName(firstName) : null;
 
   const updateProfileMutation = useMutation({
     mutationFn: async () => {
       const { error } = await supabase
         .from("profiles")
-        .update({ first_name: firstName, username, avatar_url: avatarUrl } as any)
+        // trim OBOWIAZKOWY: bez niego "dagusiia " wchodzilo do bazy razem ze spacja, a profil
+        // publiczny (szukany po dokladnym username z adresu) przestawal sie otwierac.
+        .update({ first_name: cleanUsername(firstName), username: cleanUsername(username), avatar_url: avatarUrl, bio: bio.trim() || null } as any)
         .eq("id", user?.id);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["profile"] });
       toast.success(t("toast_saved"));
+    },
+    // Bez tego zapis odrzucony przez baze (zajeta nazwa, zakazane slowo) konczyl sie CISZA -
+    // user byl przekonany, ze zmiana weszla.
+    onError: (err: any) => {
+      if (err?.code === "23505") { setUStatus("taken"); toast.error(t("username_taken")); return; }
+      if (String(err?.message ?? "").includes("username_not_allowed")) { setUStatus("banned"); toast.error(t("username_banned")); return; }
+      if (String(err?.message ?? "").includes("first_name_not_allowed")) { toast.error(t("first_name_status.banned")); return; }
+      toast.error(t("toast_save_error"));
     },
   });
 
@@ -572,6 +691,7 @@ const Settings = () => {
     const { error: uploadError } = await supabase.storage
       .from("avatars")
       .upload(fileName, file, { upsert: true, contentType: file.type });
+    await uploadThumb("avatars", fileName, file);
     if (uploadError) { toast.error(t("toast_avatar_error")); return; }
     const { data: { publicUrl } } = supabase.storage.from("avatars").getPublicUrl(fileName);
     setAvatarUrl(`${publicUrl}?v=${Date.now()}`);
@@ -617,7 +737,7 @@ const Settings = () => {
     <div className="pb-[calc(3rem+env(safe-area-inset-bottom,0px))]">
       <div className="flex items-center gap-2 px-2 pt-2 pb-1">
         <button
-          onClick={() => navigate(-1)}
+          onClick={() => goBackOr(navigate, "/moj-profil")}
           className="h-9 w-9 flex items-center justify-center rounded-full text-muted-foreground active:bg-muted transition-colors"
         >
           <ArrowLeft className="h-5 w-5" />
@@ -627,12 +747,15 @@ const Settings = () => {
 
       <div className="p-4 space-y-3 max-w-lg mx-auto">
 
-        {/* Avatar */}
+        {/* Avatar + ramka + "Customizuj" (prosba Nat 2026-09-11: customizacja bezposrednio pod
+            awatarem i zmiana zdjecia w jednym miejscu). Ikona wejscia = ZYWA miniatura nakladki
+            (obecnej albo gwiazdek), nie statyczny sparkle. */}
         <div className="flex flex-col items-center gap-3 py-4">
           <div className="relative">
+            <AvatarFrame kind={isAvatarFrame(myFrame?.avatar_frame) ? myFrame!.avatar_frame : null} color={myFrame?.avatar_frame_color} size={80} />
             <Avatar className="h-20 w-20">
               <AvatarImage src={avatarSrc(avatarUrl)} className="object-cover bg-orange-100" />
-              <AvatarFallback className="bg-orange-100 text-orange-600 text-2xl font-bold">
+              <AvatarFallback className="bg-orange-100 text-primary text-2xl font-bold">
                 {displayName.charAt(0).toUpperCase() || "U"}
               </AvatarFallback>
             </Avatar>
@@ -658,19 +781,44 @@ const Settings = () => {
             )}
           </div>
           {displayName && <p className="text-base font-bold">{displayName}</p>}
+          <button
+            onClick={() => setFramesOpen(true)}
+            aria-label={t("customize.title")}
+            className="flex items-center gap-2.5 rounded-full bg-secondary pl-1.5 pr-4 py-1.5 text-sm font-semibold text-foreground active:scale-[0.97] transition-transform"
+          >
+            <span className="relative h-8 w-8 shrink-0">
+              <AvatarFrame kind={isAvatarFrame(myFrame?.avatar_frame) ? myFrame!.avatar_frame : "stars"} color={myFrame?.avatar_frame_color} size={32} />
+              <Avatar className="h-8 w-8">
+                <AvatarImage src={avatarSrc(avatarUrl)} className="object-cover bg-orange-100" />
+                <AvatarFallback className="bg-orange-100 text-primary text-xs font-bold">{displayName.charAt(0).toUpperCase() || "U"}</AvatarFallback>
+              </Avatar>
+            </span>
+            {t("customize.title")}
+            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+          </button>
+          {user && <AvatarFrameSheet open={framesOpen} onOpenChange={setFramesOpen} userId={user.id} />}
         </div>
 
         {/* Profile fields */}
         <div className="bg-card border border-border/40 rounded-2xl p-4 space-y-4">
           <div className="space-y-1.5">
-            <Label htmlFor="first_name">{t("first_name")}</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="first_name">{t("first_name")}</Label>
+              <span className="text-xs text-muted-foreground/70 tabular-nums">{firstName.length}/{FIRST_NAME_MAX}</span>
+            </div>
             <Input
               id="first_name"
               value={firstName}
-              onChange={(e) => setFirstName(e.target.value)}
+              onChange={(e) => setFirstName(e.target.value.slice(0, FIRST_NAME_MAX))}
+              maxLength={FIRST_NAME_MAX}
+              autoCapitalize="words"
+              autoCorrect="off"
               placeholder={t("first_name_placeholder")}
               className="bg-background"
             />
+            {firstNameProblem && (
+              <p className="text-xs leading-snug text-destructive">{t(`first_name_status.${firstNameProblem}`)}</p>
+            )}
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="username">{t("username")}</Label>
@@ -679,12 +827,35 @@ const Settings = () => {
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               placeholder={t("username_placeholder")}
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
               className="bg-background"
+            />
+            {uStatus !== "idle" && (
+              <p className={`text-xs leading-snug ${uStatus === "ok" ? "text-green-600" : uStatus === "checking" ? "text-muted-foreground" : "text-destructive"}`}>
+                {t(`username_status.${uStatus}`)}
+              </p>
+            )}
+          </div>
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="bio">{t("bio")}</Label>
+              <span className="text-xs text-muted-foreground/70 tabular-nums">{bio.length}/80</span>
+            </div>
+            <textarea
+              id="bio"
+              value={bio}
+              onChange={(e) => setBio(e.target.value.slice(0, 80))}
+              maxLength={80}
+              rows={2}
+              placeholder={t("bio_placeholder")}
+              className="w-full bg-background rounded-2xl px-3 py-2.5 text-sm resize-none focus:outline-none border border-border/40 placeholder:text-muted-foreground/60 leading-relaxed"
             />
           </div>
           <button
             onClick={() => updateProfileMutation.mutate()}
-            disabled={updateProfileMutation.isPending}
+            disabled={updateProfileMutation.isPending || usernameBlocked || !!firstNameProblem}
             className="w-full py-3 rounded-2xl bg-primary hover:bg-primary/90 text-white font-semibold text-sm transition-colors disabled:opacity-50"
           >
             {updateProfileMutation.isPending ? t("saving") : t("save_changes")}
@@ -713,6 +884,9 @@ const Settings = () => {
 
         </div>
 
+        {/* Spolecznosc i kontakt */}
+        <SocialContactSection />
+
         {/* Bug report */}
         <div className="space-y-2">
           <BugReportSection userId={user.id} />
@@ -733,8 +907,17 @@ const Settings = () => {
               }}
               className="w-full flex items-center gap-3 px-4 py-3.5 bg-card rounded-2xl border border-border/40 hover:bg-muted transition-colors text-left"
             >
-              <RotateCcw className="h-4 w-4 text-orange-600 flex-shrink-0" />
-              <span className="text-sm font-medium flex-1">Pokaż onboarding ponownie <span className="text-muted-foreground font-normal">(admin)</span></span>
+              <RotateCcw className="h-4 w-4 text-primary flex-shrink-0" />
+              <span className="text-sm font-medium flex-1">{t("show_onboarding")}<span className="text-muted-foreground font-normal">(admin)</span></span>
+            </button>
+            {/* Ekran startowy widac normalnie tylko przy ZIMNYM starcie, wiec zeby dalo sie go
+                obejrzec bez ubijania aplikacji - podglad na zadanie (prosba Nat 2026-09-01). */}
+            <button
+              onClick={() => window.dispatchEvent(new Event("spontaway:replay-splash"))}
+              className="w-full flex items-center gap-3 px-4 py-3.5 bg-card rounded-2xl border border-border/40 hover:bg-muted transition-colors text-left"
+            >
+              <RotateCcw className="h-4 w-4 text-primary flex-shrink-0" />
+              <span className="text-sm font-medium flex-1">{t("show_splash")}<span className="text-muted-foreground font-normal">(admin)</span></span>
             </button>
           </div>
         )}
@@ -758,6 +941,7 @@ const Settings = () => {
 };
 
 import { Component, ErrorInfo, ReactNode } from "react";
+import { uploadThumb } from "@/lib/imageThumbs";
 
 class SettingsErrorBoundary extends Component<
   { children: ReactNode },
@@ -772,7 +956,7 @@ class SettingsErrorBoundary extends Component<
     if (this.state.error) {
       return (
         <div className="p-6 text-sm text-red-600 bg-red-50 m-4 rounded-2xl border border-red-200">
-          <p className="font-bold mb-2">Błąd renderowania Settings:</p>
+          <p className="font-bold mb-2">{i18n.t("render_error", { ns: "settings" })}</p>
           <pre className="whitespace-pre-wrap text-xs">{String(this.state.error)}</pre>
         </div>
       );

@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from "react";
+import { useDragToDismiss } from "@/hooks/useDragToDismiss";
 import { createWyjazdFromPlaces } from "@/lib/createWyjazd";
 import { useNavigate, useLocation } from "react-router-dom";
 import { ArrowLeft, X, Plus, Filter, Check, MapPin, ArrowRight, ChevronDown, Layers, Compass, SlidersHorizontal } from "lucide-react";
@@ -24,7 +25,6 @@ import { MAIN_CATEGORIES, getSubcategoryLabel, subcategoryLabelLocalized } from 
 import { setStartReference, markAskedForCity, tryResolveOnSite, useDistanceReference } from "@/lib/distanceReference";
 import { getTodayLikes } from "@/lib/exploreLikes";
 import { saveDraft, removeDraft } from "@/lib/draftRoutes";
-import LocationPrimer from "@/components/LocationPrimer";
 import { CategoryIcon } from "@/components/CategoryIcon";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -77,7 +77,7 @@ const PlanWizard = () => {
   const [startingLocation, setStartingLocation] = useState<string | { name: string; latitude: number; longitude: number }>(returnState?.startingLocation ?? "");
   // Step 3: auto-detect on-site. "resolving" -> loader, "map" -> mapa punktu startu (planujesz),
   // "sheet" -> jawne pytanie "Jestes juz w miescie?" (brak zgody GPS).
-  const [step3Mode, setStep3Mode] = useState<"resolving" | "map" | "sheet">("resolving");
+  const [step3Mode, setStep3Mode] = useState<"resolving" | "map">("resolving");
 
   // Multi-select kategorii (puste = wszystkie)
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -86,8 +86,8 @@ const PlanWizard = () => {
   const [sortMode, setSortMode] = useState<"default" | "nearest">("default");
   // Punkt odniesienia do sortowania "od najbliższego". To samo źródło prawdy którego
   // używa swiper (getReference). Ustawiany przez OBIE ścieżki kroku 3: StartingLocationPicker
-  // (mapa) ORAZ LocationPrimer (sheet bez GPS). startingLocation (lokalny stan) ustawia tylko
-  // ta pierwsza, więc gate'owanie przycisku na nim psuło sort w ścieżce LocationPrimer.
+  // (mapa). startingLocation (lokalny stan) ustawia tylko ta ścieżka, więc gate'owanie
+  // przycisku na nim psuło sort, gdy punkt odniesienia przyszedł z GPS.
   const distanceRef = useDistanceReference();
   const hasStartRef = !!distanceRef;
   // Filtr diety - multi-select: vegan, vegetarian, gluten_free, lactose_free
@@ -136,6 +136,8 @@ const PlanWizard = () => {
   const [showAddPlace, setShowAddPlace] = useState(false);
   // Istniejaca aktywna trasa dla wybranego miasta+daty (hybryda: pytamy kontynuuj/nowa).
   const [dupTrip, setDupTrip] = useState<{ id: string; city: string; start_date: string } | null>(null);
+  // Gest natywny: przeciagniecie panelu w dol zamyka arkusz.
+  const dupDrag = useDragToDismiss({ onDismiss: () => setDupTrip(null) });
   // Edycja daty z poziomu swipera (klik w "miasto · DD MMM") - sheet z kalendarzem.
   const [editDateOpen, setEditDateOpen] = useState(false);
 
@@ -381,7 +383,7 @@ const PlanWizard = () => {
               onClick={() => setCategoryDrawerOpen(true)}
               className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-card border border-border/60 active:scale-[0.97] transition-transform max-w-[140px]"
             >
-              <Filter className="h-3.5 w-3.5 text-orange-600 shrink-0" />
+              <Filter className="h-3.5 w-3.5 text-primary shrink-0" />
               <span className="text-sm font-semibold text-foreground truncate">{categoryLabel}</span>
             </button>
           </>
@@ -451,9 +453,6 @@ const PlanWizard = () => {
             }}
           />
         )}
-        {step === 3 && step3Mode === "sheet" && (
-          <LocationPrimer open city={city} onClose={() => setStep(4)} />
-        )}
         {step === 4 && date && (
           <>
             {/* Tabs - tylko w solo (nie w exploreMode = HomeSwipe-like). exploreMode
@@ -464,7 +463,7 @@ const PlanWizard = () => {
                   onClick={() => setStep4Tab("swipe")}
                   className={cn(
                     "flex-1 py-2.5 text-sm font-semibold transition-colors",
-                    step4Tab === "swipe" ? "text-orange-600 border-b-2 border-orange-600" : "text-muted-foreground"
+                    step4Tab === "swipe" ? "text-primary border-b-2 border-primary" : "text-muted-foreground"
                   )}
                 >
                   {t("tab_explore")}
@@ -473,7 +472,7 @@ const PlanWizard = () => {
                   onClick={() => setStep4Tab("matches")}
                   className={cn(
                     "flex-1 py-2.5 text-sm font-semibold transition-colors flex items-center justify-center gap-1.5",
-                    step4Tab === "matches" ? "text-orange-600 border-b-2 border-orange-600" : "text-muted-foreground"
+                    step4Tab === "matches" ? "text-primary border-b-2 border-primary" : "text-muted-foreground"
                   )}
                 >
                   {t("tab_saved")}
@@ -580,7 +579,7 @@ const PlanWizard = () => {
                                           onClick={(e) => { e.stopPropagation(); toggleMatchSelection(place.place_name); }}
                                           className={cn(
                                             "h-6 w-6 rounded-full border-2 flex items-center justify-center transition-colors shrink-0",
-                                            isSelected ? "bg-primary border-orange-600" : "border-border/60 bg-background"
+                                            isSelected ? "bg-primary border-primary" : "border-border/60 bg-background"
                                           )}
                                         >
                                           {isSelected && <Check className="h-3.5 w-3.5 text-white" />}
@@ -608,7 +607,7 @@ const PlanWizard = () => {
                         onClick={handleProceedFromMatches}
                         className="flex-1 py-3 rounded-full bg-primary text-white text-sm font-semibold flex items-center justify-center gap-2 active:scale-[0.97] transition-transform"
                       >
-                        {wyjazdMode ? "Stwórz wyjazd" : t("saved_cta")}
+                        {wyjazdMode ? t("create_trip") : t("saved_cta")}
                         <ArrowRight className="h-4 w-4" />
                       </button>
                     </div>
@@ -762,7 +761,7 @@ const PlanWizard = () => {
                           <CategoryIcon category={sub.id} className="h-4 w-4 shrink-0" />
                           <span>{sub.label}</span>
                           {active
-                            ? <Check className="h-3.5 w-3.5 ml-0.5 text-orange-600" />
+                            ? <Check className="h-3.5 w-3.5 ml-0.5 text-primary" />
                             : <Plus className="h-3.5 w-3.5 ml-0.5 text-muted-foreground/50" />}
                         </button>
                       );
@@ -774,7 +773,7 @@ const PlanWizard = () => {
 
             <button
               onClick={() => setCategoryDrawerOpen(false)}
-              className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-sm active:scale-[0.97] transition-transform shadow-md shadow-orange-500/20"
+              className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-sm active:scale-[0.97] transition-transform"
             >
               {t("show_places")}
             </button>
@@ -808,12 +807,13 @@ const PlanWizard = () => {
           onClick={() => setDupTrip(null)}
         >
           <div
-            className="w-full max-w-md bg-card rounded-t-3xl px-6 pt-7 pb-[max(24px,env(safe-area-inset-bottom))] flex flex-col gap-5 shadow-2xl animate-in slide-in-from-bottom-4 duration-300"
+            {...dupDrag.dragProps}
+            className="w-[calc(100%-16px)] mx-2 mb-2 max-w-md bg-card rounded-[40px] px-6 pt-7 pb-[max(24px,env(safe-area-inset-bottom))] flex flex-col gap-5 shadow-2xl animate-in slide-in-from-bottom-4 duration-300"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start gap-3">
               <div className="h-11 w-11 rounded-full bg-orange-50 border border-orange-100 flex items-center justify-center shrink-0">
-                <MapPin className="h-5 w-5 text-orange-600" />
+                <MapPin className="h-5 w-5 text-primary" />
               </div>
               <div className="flex-1">
                 <p className="text-base font-black leading-snug">{t("dup_title", { city: dupTrip.city })}</p>
@@ -825,7 +825,7 @@ const PlanWizard = () => {
             <div className="flex flex-col gap-2">
               <button
                 onClick={() => { setDupTrip(null); navigate("/home"); }}
-                className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-sm active:scale-[0.97] transition-transform shadow-md shadow-orange-500/20"
+                className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-sm active:scale-[0.97] transition-transform"
               >
                 {t("dup_continue")}
               </button>

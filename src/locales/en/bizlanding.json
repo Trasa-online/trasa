@@ -7,14 +7,14 @@
     "waitlist": {
       "done": "Thanks for signing up! We'll reach out once we open registration for venues.",
       "email_placeholder": "you@venue.com",
-      "consent": "I agree to be contacted about the launch of Trasa for business. I have read the ",
+      "consent": "I agree to be contacted about the launch of spontaway for business. I have read the ",
       "privacy_link": "privacy policy",
       "submit": "Sign up"
     },
     "hero": {
       "be_first": "Be first",
-      "be_first_desc": "Your venue in Trasa before the app reaches guests.",
-      "title_l1": "Join Trasa",
+      "be_first_desc": "Your venue in spontaway before the app reaches guests.",
+      "title_l1": "Join spontaway",
       "title_l2": "as one of",
       "title_l3": "the first",
       "body": "We're building an app for planning city breaks. We're looking for the first 100 venues in Warsaw - join for free and stay on the map before users arrive!"
@@ -36,7 +36,7 @@
     },
     "packages": {
       "eyebrow": "Plans",
-      "title": "Discover everything Trasa offers",
+      "title": "Discover everything spontaway offers",
       "scroll_hint": "Add your venue below",
       "cta": "Choose this"
     },
@@ -74,7 +74,7 @@
       "title": "Add your venue",
       "subtitle": "Fill out the form - we'll get back to you within 24h and help launch your profile.",
       "done_title": "Submission received!",
-      "done_desc": "You're among the first venues building Trasa. We'll be in touch within 24h.",
+      "done_desc": "You're among the first venues building spontaway. We'll be in touch within 24h.",
       "selected_plan": "Selected plan:",
       "change": "change",
       "name_label": "Venue name *",

@@ -70,11 +70,16 @@ export default function CreatePolecajkaSheet({ open, onClose, onPublished, city,
           title: title.trim(),
           city: city || null,
           description: null,
+          // Polecajka = publiczna lista (visited) do moderacji. Bez kind/list_status defaultowała
+          // na to_visit+pending i bez kind='ranking' była niewidoczna w zapytaniach list.
+          kind: "ranking",
+          list_status: "visited",
           is_public: true,
+          moderation_status: "approved", // bez kolejki moderacyjnej (2026-08-31)
         })
         .select("id")
         .single();
-      if (colErr || !col) throw colErr ?? new Error("Błąd zapisu");
+      if (colErr || !col) throw colErr ?? new Error(t("save_error"));
 
       const items = selectedPins.map((pin, idx) => ({
         collection_id: col.id,
@@ -84,6 +89,7 @@ export default function CreatePolecajkaSheet({ open, onClose, onPublished, city,
         photo_url: pin.images?.[0] ?? pin.image_url ?? null,
         latitude: null,
         longitude: null,
+        added_by: userId, // atrybucja (hak pod wspoltworzenie list)
       }));
 
       const { error: itemsErr } = await (supabase as any).from("discovery_items").insert(items);
@@ -196,7 +202,7 @@ export default function CreatePolecajkaSheet({ open, onClose, onPublished, city,
           <button
             onClick={handlePublish}
             disabled={saving || !title.trim() || selectedPins.length === 0}
-            className="w-full py-3.5 rounded-full bg-gradient-to-r from-[#F4A259] to-[#F9662B] text-white font-bold text-sm active:scale-[0.97] transition-transform disabled:opacity-40 disabled:pointer-events-none shadow-md shadow-orange-500/20"
+            className="w-full py-3.5 rounded-full bg-gradient-to-r from-[#F4A259] to-[#F9662B] text-white font-bold text-sm active:scale-[0.97] transition-transform disabled:opacity-40 disabled:pointer-events-none"
           >
             {saving ? t("polecajka.publishing") : t("polecajka.publish", { count: selectedPins.length })}
           </button>
