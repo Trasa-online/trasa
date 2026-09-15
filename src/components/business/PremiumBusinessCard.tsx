@@ -22,11 +22,12 @@ import { createPortal } from "react-dom";
 import { mainCategoryLabel, subcategoryLabelLocalized, parentMainOfSub } from "@/lib/categories";
 import { CategoryIcon } from "@/components/CategoryIcon";
 import { cn } from "@/lib/utils";
+import { BrandBookmark } from "@/components/BrandBookmark";
 import type { PlaceUserNote } from "@/lib/placeNotes";
 import { GoogleGlyph } from "@/components/icons/GoogleGlyph";
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { API_BASE } from "@/lib/platform";
-import { Clock, ChevronRight, ChevronLeft, ChevronDown, X, Maximize2, Phone, Globe, FileText, Instagram, Facebook, MapPin, Bookmark, Heart, ImagePlus } from "lucide-react";
+import { Clock, ChevronRight, ChevronLeft, ChevronDown, X, Maximize2, Phone, Globe, FileText, Instagram, Facebook, MapPin, Heart, ImagePlus } from "lucide-react";
 import type { LikeState } from "@/lib/placePhotoSocial";
 import { categoryIconSrc } from "@/lib/placeCategoryIcon";
 import { parseISO, isValid, formatDistanceToNow, format, startOfMonth, addMonths } from "date-fns";
@@ -408,7 +409,10 @@ function HeroPhotoCarousel({ photos, placeName, category, onExpand, onClose, loa
               className="absolute bottom-3 right-3 z-30 h-10 w-10 rounded-full bg-white border border-black/[0.04] shadow-[0_1px_5px_rgba(0,0,0,0.18)] flex items-center justify-center active:scale-90 transition-transform"
               aria-label={t("add")}
             >
-              <Bookmark className={cn("h-[19px] w-[19px] text-[#F0A583]", saved && "fill-[#F0A583]")} strokeWidth={2.2} />
+              {/* Brandowa zakladka ze STANEM (prosba Nat 2026-09-15): pusty kontur = miejsce
+                  nigdzie nie zapisane, pelna = zapisane. Wczesniej lucide `Bookmark`, ktorego
+                  cienki kontur przy 19 px praktycznie nie roznil sie od wypelnienia. */}
+              <BrandBookmark filled={!!saved} className="h-[19px] w-[19px] text-[#F0A583]" />
             </button>
           )}
           {photos.length > 1 && (

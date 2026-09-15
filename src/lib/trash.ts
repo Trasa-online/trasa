@@ -112,11 +112,22 @@ export function invalidateContentLists(): void {
 export async function deleteWithUndo(kind: TrashKind, ids: string | string[], opts: { message: string; undoLabel?: string; failMessage?: string }): Promise<boolean> {
   const list = Array.isArray(ids) ? ids : [ids];
   let moved = 0;
+  let failed = false;
   try {
     moved = list.length === 1 ? ((await moveToTrash(kind, list[0])) ? 1 : 0) : await moveManyToTrash(kind, list);
-  } catch { moved = 0; }
-  if (moved === 0) {
+  } catch { failed = true; }
+  // RPC zwraca `false`, gdy nie ma CO przeniesc: wiersza juz nie ma, lezy w koszu albo nie
+  // nalezy do tego usera. We wszystkich trzech przypadkach tresc jest juz usunieta, wiec
+  // zamiast straszyc bledem po prostu odswiezamy listy - to samo naprawia "ducha", ktory
+  // zostal w cache po usunieciu z innego ekranu (zgloszenie Nat 2026-09-15). Blad pokazujemy
+  // WYLACZNIE wtedy, gdy zapytanie realnie sie wywalilo (siec, RLS).
+  if (failed) {
     if (opts.failMessage) toast.error(opts.failMessage);
+    invalidateContentLists();
+    return false;
+  }
+  if (moved === 0) {
+    console.warn("[trash] nic do przeniesienia - tresc juz usunieta, odswiezam listy");
     invalidateContentLists();
     return false;
   }

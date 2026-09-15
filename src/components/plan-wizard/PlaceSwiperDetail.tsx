@@ -527,10 +527,13 @@ const PlaceSwiperDetail = ({
                    plus) - trzy guziki w rzedzie nie miescily pelnych zdan (prosba Nat 2026-09-14). */
                 <button
                   onClick={handleLike}
-                  className={`flex-1 h-11 rounded-full font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.97] transition-transform ${onAdd ? "bg-secondary text-secondary-foreground shadow-sm" : "bg-primary text-white"}`}
+                  className={`flex-1 h-11 rounded-full font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.97] transition-transform ${onAdd || savedEffective ? "bg-secondary text-secondary-foreground shadow-sm" : "bg-primary text-white"}`}
                 >
-                  {onAdd ? t("save_short") : t("save_place")}
-                  {/* Pusta zakladka = jeszcze nigdzie nie zapisane, pelna = zapisane (2026-09-15). */}
+                  {/* Guzik NIESIE STAN (prosba Nat 2026-09-15): dopoki miejsce nie jest nigdzie
+                      u usera zapisane - pomaranczowe "Zapisz to miejsce" z PUSTA zakladka;
+                      po zapisie - szare "Miejsce zapisane" z PELNA. Zostaje klikalny, bo
+                      ponowne tapniecie otwiera wybor kolekcji. */}
+                  {savedEffective ? t("saved_place") : (onAdd ? t("save_short") : t("save_place"))}
                   <BrandBookmark filled={savedEffective} className="h-[18px] w-[18px]" />
                 </button>
               )}
