@@ -141,6 +141,14 @@ const PlaceSwiperDetail = ({
     const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (UUID_RE.test(place.id)) {
       posthog.capture("place_viewed", { place_id: place.id });
+      // Wydarzenie lokalu pokazuje sie razem z wizytowka, wiec jego "wyswietlenie" to ten
+      // sam moment. Osobne zdarzenie, bo panel lokalu liczy je osobno - lokal chce wiedziec,
+      // czy wydarzenie w ogole kogos dosieglo.
+      // Tytul wydarzenia siedzi na miejscu jako `businessEventTitle` (PlaceSwiper sklada go
+      // z business_profiles przez pickEventPillTitle) - adapter przemianowuje go dopiero
+      // w karcie, wiec TUTAJ czytamy oryginalna nazwe pola.
+      const evTitle = (place as { businessEventTitle?: string | null }).businessEventTitle;
+      if (evTitle) posthog.capture("place_event_viewed", { place_id: place.id, event_title: evTitle });
     }
 
     const fetchAll = async () => {

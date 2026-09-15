@@ -16,6 +16,7 @@
 
 import { type ReactNode, useRef, useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import posthog from "posthog-js";
 import { haptics } from "@/hooks/useHaptics";
 import { useSwipeNav } from "@/hooks/useSwipeNav";
 import { createPortal } from "react-dom";
@@ -467,6 +468,18 @@ function HeroPhotoCarousel({ photos, placeName, category, onExpand, onClose, loa
 
 // ─── Section renderers ────────────────────────────────────────────────────────
 
+// Zdarzenia wizytowki lokalu. Panel biznesowy pokazuje z nich liczby („klikniecia
+// w kontakt", „otwarcia menu"), wiec KAZDE musi niesc `place_id` - bez niego nie da sie
+// przypisac ruchu do lokalu i licznik stoi na zerze.
+//
+// ⚠️ Do 15.09.2026 telefon i strona byly zwyklymi <a> bez zadnego zdarzenia: afordancja
+// istniala, a panel przez 90 dni pokazywal 0 klikniec w kontakt. Dodajac tu nowa akcje
+// lokalu (rezerwacja, mapa, social), dopisz jej zdarzenie razem z nia.
+function trackPlaceEvent(placeId: string | null | undefined, event: string, props?: Record<string, unknown>) {
+  if (!placeId) return;
+  try { posthog.capture(event, { place_id: placeId, ...props }); } catch { /* analityka nie moze psuc UI */ }
+}
+
 interface SectionProps {
   data: PremiumBusinessData;
 }
@@ -819,7 +832,7 @@ function PostsSection({ data, onPhotoExpand }: SectionProps & { onPhotoExpand: (
 
 // Kafelek menu-PDF z podgladem pierwszej strony (renderowany client-side przy wyswietlaniu).
 // Fallback do ikony+"Otworz PDF" gdy render sie nie powiedzie (np. pdf.js na starszym iOS).
-function PdfMenuTile({ url, label, className }: { url: string; label: string; className: string }) {
+function PdfMenuTile({ url, label, className, onOpen }: { url: string; label: string; className: string; onOpen?: () => void }) {
   const [img, setImg] = useState<string | null>(null);
   useEffect(() => {
     let cancelled = false;
@@ -830,7 +843,7 @@ function PdfMenuTile({ url, label, className }: { url: string; label: string; cl
     return () => { cancelled = true; };
   }, [url]);
   return (
-    <a href={url} target="_blank" rel="noopener noreferrer" className={cn(className, "relative flex flex-col items-center justify-center gap-2")}>
+    <a onClick={onOpen} href={url} target="_blank" rel="noopener noreferrer" className={cn(className, "relative flex flex-col items-center justify-center gap-2")}>
       {img ? (
         <>
           <img src={img} alt="" className="absolute inset-0 w-full h-full object-cover" />
@@ -865,6 +878,7 @@ function MenuSection({ data, onPhotoExpand }: SectionProps & { onPhotoExpand: (p
               <PdfMenuTile
                 key={idx}
                 url={url}
+                onOpen={() => trackPlaceEvent(data.id, "place_menu_opened", { format: "pdf" })}
                 label={t("open_pdf", { label: sectionLabel })}
                 className="shrink-0 w-[78%] aspect-[4/3] rounded-2xl bg-muted snap-center overflow-hidden border border-border/40 active:opacity-95"
               />
@@ -873,7 +887,10 @@ function MenuSection({ data, onPhotoExpand }: SectionProps & { onPhotoExpand: (p
           return (
             <button
               key={idx}
-              onClick={() => onPhotoExpand(imageOnly, imageOnly.indexOf(url))}
+              onClick={() => {
+                trackPlaceEvent(data.id, "place_menu_opened", { format: "photo" });
+                onPhotoExpand(imageOnly, imageOnly.indexOf(url));
+              }}
               className="shrink-0 w-[78%] aspect-[4/3] rounded-2xl overflow-hidden bg-muted snap-center active:opacity-95"
               aria-label={t("expand_labeled", { label: sectionLabel.toLowerCase(), index: idx + 1 })}
             >
@@ -989,6 +1006,7 @@ function ContactButtonsSection({ data }: SectionProps) {
     <div className="flex gap-2">
       {data.phone && (
         <a
+          onClick={() => trackPlaceEvent(data.id, "place_phone_clicked")}
           href={`tel:${data.phone}`}
           className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-2xl border border-border/60 bg-card text-sm font-semibold text-foreground active:scale-[0.97] transition-transform"
         >
@@ -998,6 +1016,7 @@ function ContactButtonsSection({ data }: SectionProps) {
       )}
       {data.website && (
         <a
+          onClick={() => trackPlaceEvent(data.id, "place_website_clicked")}
           href={data.website}
           target="_blank"
           rel="noopener noreferrer"
@@ -1008,7 +1027,7 @@ function ContactButtonsSection({ data }: SectionProps) {
         </a>
       )}
       {ig && (
-        <a href={ig} target="_blank" rel="noopener noreferrer" className={iconBtn} aria-label="Instagram">
+        <a onClick={() => trackPlaceEvent(data.id, "place_social_clicked", { network: "instagram" })} href={ig} target="_blank" rel="noopener noreferrer" className={iconBtn} aria-label="Instagram">
           <Instagram className="h-4 w-4" />
         </a>
       )}

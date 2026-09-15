@@ -74,6 +74,10 @@ Deno.serve(async (req) => {
       phQuery(`SELECT count() AS c FROM events WHERE event = 'place_phone_clicked' AND properties.place_id = '${place_id}' AND toDate(timestamp) >= '${since}'`),
       phQuery(`SELECT toDate(timestamp) AS day, countIf(event = 'place_viewed') AS views, countIf(event = 'place_added_to_route') AS routes, countIf(event = 'place_website_clicked' OR event = 'place_phone_clicked') AS clicks FROM events WHERE properties.place_id = '${place_id}' AND toDate(timestamp) >= '${since}' GROUP BY day ORDER BY day ASC`),
       countIn("place_saved", since),
+      // Otwarcia menu i wyswietlenia wydarzenia - zdarzenia dodane 15.09.2026 razem
+      // z sekcjami Menu i Wydarzenia w panelu lokalu.
+      countIn("place_menu_opened", since),
+      countIn("place_event_viewed", since),
       countIn("place_viewed", prevSince, since),
       countIn("place_added_to_route", prevSince, since),
       countIn("place_website_clicked", prevSince, since),
@@ -90,7 +94,7 @@ Deno.serve(async (req) => {
     const results = await Promise.all(queries);
     const [
       viewsRes, routesRes, clicksWebRes, clicksPhoneRes, dailyRes,
-      savesRes, prevViewsRes, prevRoutesRes, prevWebRes, prevPhoneRes, prevSavesRes,
+      savesRes, menuRes, eventViewsRes, prevViewsRes, prevRoutesRes, prevWebRes, prevPhoneRes, prevSavesRes,
       recentRes,
     ] = results;
 
@@ -99,6 +103,8 @@ Deno.serve(async (req) => {
     const websiteClicks = clicksWebRes?.results?.[0]?.[0] ?? 0;
     const phoneClicks = clicksPhoneRes?.results?.[0]?.[0] ?? 0;
     const saves = savesRes?.results?.[0]?.[0] ?? 0;
+    const menuOpens = menuRes?.results?.[0]?.[0] ?? 0;
+    const eventViews = eventViewsRes?.results?.[0]?.[0] ?? 0;
 
     const previous = {
       views: prevViewsRes?.results?.[0]?.[0] ?? 0,
@@ -121,7 +127,7 @@ Deno.serve(async (req) => {
         }))
       : undefined;
 
-    return new Response(JSON.stringify({ views, onRoutes, websiteClicks, phoneClicks, saves, previous, rangeDays: safeDays, chartData, recentEvents }), {
+    return new Response(JSON.stringify({ views, onRoutes, websiteClicks, phoneClicks, saves, menuOpens, eventViews, previous, rangeDays: safeDays, chartData, recentEvents }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {

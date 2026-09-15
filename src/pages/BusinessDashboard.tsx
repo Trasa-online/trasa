@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { BrandIcon, SAVE_ICON } from "@/components/BrandIcon";
 import { applyBusinessDefaultLanguage, markBusinessLangChoice } from "@/lib/businessLanguage";
-import { Loader2, BarChart2, MapPin, MousePointerClick, Plus, X, LogOut, ImagePlus, Trash2, Users, LayoutDashboard, Images, Store, Megaphone, TrendingUp, MessageCircle, Expand, ZoomIn, Video, Play, Camera, Star, Heart, ChevronUp, ChevronDown, ChevronLeft, GripVertical, HelpCircle, Eye, KeyRound, Clock, Settings, FileText, BookOpen, Pencil, Check, MessageSquareQuote, Flag, Bookmark, Share2, Globe } from "lucide-react";
+import { Loader2, Plus, X, ImagePlus, Trash2, ZoomIn, Camera, Heart, ChevronUp, GripVertical, Eye, FileText, Check, MessageSquareQuote, Flag, Bookmark, Share2, Globe } from "lucide-react";
 
 // Pola formularza panelu = szare wypełnienie + pomarańczowy focus (prośba Nat 2026-09-14:
 // jednolitość i "zasada przynależności" - wszystkie inputy wyglądają tak samo, spokojnie).
@@ -47,6 +47,8 @@ import { ProfileSection } from "@/components/business/dashboard/ProfileSection";
 import { CategoryPickerModal } from "@/components/business/dashboard/CategoryPickerModal";
 import { SettingsSection } from "@/components/business/dashboard/SettingsSection";
 import { GuestInsights } from "@/components/business/dashboard/GuestInsights";
+import { EventsSection } from "@/components/business/dashboard/EventsSection";
+import { ListingPreviewCard } from "@/components/business/dashboard/ListingPreviewCard";
 import { ThanksButton } from "@/components/business/dashboard/ThanksButton";
 import { uploadThumb } from "@/lib/imageThumbs";
 import { fetchPlaceNotes, type PlaceUserNote } from "@/lib/placeNotes";
@@ -118,6 +120,10 @@ interface Stats {
   views: number; onRoutes: number; websiteClicks: number; phoneClicks: number; uniqueChoices: number;
   /** Zapisy miejsca do kolekcji (event place_saved). */
   saves: number;
+  /** Otwarcia menu na wizytowce (event place_menu_opened). */
+  menuOpens: number;
+  /** Wyswietlenia wydarzenia lokalu (event place_event_viewed). */
+  eventViews: number;
   /** Ten sam zakres cofniety o jego dlugosc - sluzy do "+18% wobec poprzednich 30 dni". */
   previous?: { views: number; onRoutes: number; clicks: number; saves: number };
 }
@@ -190,16 +196,6 @@ function DashboardLoadingScreen() {
   );
 }
 
-function StarRow({ count = 5, size = "sm" }: { count?: number; size?: "xs" | "sm" }) {
-  const cls = size === "xs" ? "h-3 w-3" : "h-4 w-4";
-  return (
-    <>{Array.from({ length: count }).map((_, i) => (
-      <svg key={i} className={`${cls} fill-yellow-400`} viewBox="0 0 20 20">
-        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
-      </svg>
-    ))}</>
-  );
-}
 
 
 function AppLikePreviewModal({
@@ -273,11 +269,14 @@ function AppLikePreviewModal({
                   </div>
                 )}
                 <h3 className="text-xl font-black text-white leading-tight">{businessName || t("business_name_fallback")}</h3>
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
-                  <span className="text-white/70 text-xs">4.6</span>
-                  {street && <><span className="text-white/40 text-xs">·</span><span className="text-white/70 text-xs truncate max-w-[160px]">{street}</span></>}
-                </div>
+                {/* ⛔ Bez oceny. Do 15.09.2026 stala tu gwiazdka i „4.6" na sztywno -
+                    liczba, ktorej nigdzie nie ma, na produkcie, ktory z zalozenia nie ma ocen
+                    miejsc (CLAUDE.md). Lokal widzial w podgladzie obietnice, ktorej apka nie spelnia. */}
+                {street && (
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-white/70 text-xs truncate max-w-[200px]">{street}</span>
+                  </div>
+                )}
                 {description && <p className="text-white/70 text-sm line-clamp-2 leading-snug">{description}</p>}
                 {eventTitle && (
                   <div className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 font-semibold text-xs"
@@ -364,85 +363,6 @@ function AppLikePreviewModal({
   );
 }
 
-function BusinessCardPreview({ logoUrl, coverImageUrl, coverVideoUrl, businessName, mainCategory, subcategories, tags, eventTitle, street, description, onPreviewClick, previewReady, colorBadge, colorCardBg, colorButton, colorPromo }: {
-  logoUrl: string; coverImageUrl: string; coverVideoUrl: string; businessName: string; mainCategory: string;
-  subcategories: string[]; tags: string[]; eventTitle: string; street?: string; description?: string;
-  onPreviewClick?: () => void; previewReady?: boolean;
-  colorBadge?: string; colorCardBg?: string; colorButton?: string; colorPromo?: string;
-}) {
-  const { t } = useTranslation("bizdash");
-  const catLabel = mainCategory ? MAIN_CATEGORIES.find(c => c.id === mainCategory)?.label : null;
-  const badge   = colorBadge  ?? "#D45113";
-  const overlay = colorCardBg ?? "#000000";
-  return (
-    <div>
-      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">{t("card_preview.label")}</p>
-      <div className="relative rounded-3xl overflow-hidden shadow-xl bg-slate-900" style={{ aspectRatio: '9/16' }}>
-        {coverVideoUrl
-          ? <AutoVideo src={coverVideoUrl} className="absolute inset-0 w-full h-full object-cover" />
-          : coverImageUrl
-            ? <img src={coverImageUrl} className="absolute inset-0 w-full h-full object-cover" />
-            : <div className="absolute inset-0 bg-gradient-to-br from-orange-400 to-orange-700" />
-        }
-        <div className="absolute inset-0" style={{ background: `linear-gradient(to top, ${overlay}ee, ${overlay}40, transparent)` }} />
-        {catLabel && (
-          <div className="absolute top-3 left-3 px-2.5 py-0.5 rounded-full text-[10px] font-bold shadow-sm" style={{ background: badge, color: "#fff" }}>
-            {catLabel}
-          </div>
-        )}
-        <div className="absolute left-0 right-0 px-3 pr-14 space-y-1" style={{ bottom: '0.85rem' }}>
-          {logoUrl && (
-            <div className="h-8 w-8 rounded-full overflow-hidden border border-white/30 shadow-md bg-white/10">
-              <img src={logoUrl} className="w-full h-full object-cover" />
-            </div>
-          )}
-          <h3 className="text-base font-black text-white leading-tight">{businessName || t("business_name_fallback")}</h3>
-          <div className="flex items-center gap-1 flex-wrap">
-            <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-            <span className="text-white/70 text-[10px]">4.6</span>
-            {street && <><span className="text-white/40 text-[10px]">·</span><span className="text-white/70 text-[10px] truncate max-w-[120px]">{street}</span></>}
-          </div>
-          {description && <p className="text-white/70 text-[10px] line-clamp-2 leading-snug">{description}</p>}
-          {eventTitle && (
-            <div className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-semibold text-[9px]"
-              style={{ background: "#EE5307", color: "#ffffff" }}>
-              {eventTitle}
-            </div>
-          )}
-          {tags.length > 0 && (
-            <div className="flex flex-wrap gap-1 pt-0.5">
-              {tags.slice(0, 3).map(t => (
-                <span key={t} className="px-2 py-0.5 bg-white/15 rounded-full text-[9px] font-medium text-white/80">{t}</span>
-              ))}
-            </div>
-          )}
-        </div>
-        {/* Kolumna akcji 1:1 z kartą w aplikacji (SwipeCard scrollMode, zakładka Miejsca):
-            zapisz (zakładka) + rozwiń (^) w białych kółkach. Rząd „Odrzuć / Dodaj" USUNIĘTY
-            (2026-09-14) - to był wygląd z dodawania miejsca do wyjazdu, a nie to, co widzi
-            podróżny przeglądający Miejsca. */}
-        <div className="absolute right-2.5 bottom-3 z-20 flex flex-col gap-2">
-          <div className="h-8 w-8 rounded-full bg-white flex items-center justify-center shadow-lg">
-            <Bookmark className="h-4 w-4 text-foreground" strokeWidth={2} />
-          </div>
-          <div className="h-8 w-8 rounded-full bg-white flex items-center justify-center shadow-lg">
-            <ChevronUp className="h-4 w-4 text-foreground" strokeWidth={2.5} />
-          </div>
-        </div>
-      </div>
-      {onPreviewClick && (
-        <button
-          onClick={() => previewReady && onPreviewClick()}
-          disabled={!previewReady}
-          title={!previewReady ? t("card_preview.incomplete_title") : undefined}
-          className="mt-3 w-full py-2.5 rounded-full text-xs font-bold border-2 border-[#D45113] text-[#D45113] hover:bg-[#D45113] hover:text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400 disabled:hover:bg-transparent"
-        >
-          {t("card_preview.open_full")}
-        </button>
-      )}
-    </div>
-  );
-}
 
 // Usuwanie konta biznesowego (Apple 5.1.1v). RPC delete_current_user_account kasuje
 // auth.uid() + kaskadowo profil/wizytowke. Renderowane TYLKO realnemu wlascicielowi.
@@ -522,7 +442,7 @@ const BusinessDashboard = () => {
   const [profile, setProfile] = useState<BusinessProfile | null>(null);
   const analyticsRequestId = useRef(0);
   const [placeCategory, setPlaceCategory] = useState<string | null>(null);
-  const [stats, setStats] = useState<Stats>({ views: 0, onRoutes: 0, websiteClicks: 0, phoneClicks: 0, uniqueChoices: 0, saves: 0 });
+  const [stats, setStats] = useState<Stats>({ views: 0, onRoutes: 0, websiteClicks: 0, phoneClicks: 0, uniqueChoices: 0, saves: 0, menuOpens: 0, eventViews: 0 });
   const [analyticsRange, setAnalyticsRange] = useState<AnalyticsRange>('30d');
   const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>();
   const [showCalendar, setShowCalendar] = useState(false);
@@ -638,6 +558,8 @@ const BusinessDashboard = () => {
   const [showEventHistory, setShowEventHistory] = useState(false);
   // Edycja inline istniejacego wydarzenia (tylko nadchodzace/aktywne).
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
+  const [eventsTab, setEventsTab] = useState<"upcoming" | "past">("upcoming");
+  const [addEventOpen, setAddEventOpen] = useState(false);
   const [editEventTitle, setEditEventTitle] = useState("");
   const [editEventDescription, setEditEventDescription] = useState("");
   const [editEventStartsAt, setEditEventStartsAt] = useState("");
@@ -940,6 +862,8 @@ const BusinessDashboard = () => {
         phoneClicks: phData.phoneClicks ?? 0,
         uniqueChoices: 0,
         saves: phData.saves ?? 0,
+        menuOpens: phData.menuOpens ?? 0,
+        eventViews: phData.eventViews ?? 0,
         previous: phData.previous,
       });
 
@@ -1985,6 +1909,16 @@ const BusinessDashboard = () => {
       )}
 
       <BizShell
+        actions={activeSection === 'posts' ? (
+          <button
+            type="button"
+            onClick={() => setAddEventOpen(v => !v)}
+            className="inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2.5 text-sm font-bold text-white transition-opacity hover:opacity-90"
+          >
+            <Plus className="h-4 w-4" />
+            {addEventOpen ? t("posts.close_form") : t("posts.new_event")}
+          </button>
+        ) : undefined}
         title={SECTION_META[activeSection].title(t)}
         subtitle={SECTION_META[activeSection].subtitle(t)}
         active={activeSection}
@@ -2226,14 +2160,26 @@ const BusinessDashboard = () => {
               </div> {/* end flex-1 min-w-0 */}
 
               {/* Desktop sticky card preview */}
-              <div className="hidden lg:block w-72 shrink-0 lg:sticky lg:top-20 lg:self-start">
-                <BusinessCardPreview
-                  logoUrl={logoUrl} coverImageUrl={coverImageUrl} coverVideoUrl={coverVideoUrl}
-                  businessName={businessName} mainCategory={mainCategory} subcategories={bizSubcategories} tags={tags} eventTitle={eventTitle}
-                  street={street} description={description}
-                  onPreviewClick={() => setShowAppPreview(true)} previewReady={previewReady}
-                  colorBadge={colorBadge} colorCardBg={colorCardBg} colorButton={colorButton} colorPromo={colorPromo}
-                />
+              <div className="hidden lg:block w-72 shrink-0 lg:sticky lg:top-24 lg:self-start">
+                <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">{t("profile.preview_title")}</p>
+                <button
+                  type="button"
+                  onClick={() => previewReady && setShowAppPreview(true)}
+                  disabled={!previewReady}
+                  title={previewReady ? t("fab.preview_title") : t("fab.incomplete")}
+                  className="block w-full text-left disabled:cursor-not-allowed"
+                >
+                  <ListingPreviewCard
+                    coverImageUrl={coverImageUrl}
+                    coverVideoUrl={coverVideoUrl}
+                    businessName={businessName}
+                    mainCategory={mainCategories[0] ?? mainCategory}
+                    subcategories={bizSubcategories}
+                    city={city}
+                    openingHours={openingHours as never}
+                    eventTitle={eventTitle}
+                  />
+                </button>
               </div>
               </div> {/* end flex flex-col lg:flex-row */}
             </div>
@@ -2266,14 +2212,24 @@ const BusinessDashboard = () => {
                 />
               }
               preview={
-                <BusinessCardPreview
-                  logoUrl={logoUrl} coverImageUrl={coverImageUrl} coverVideoUrl={coverVideoUrl}
-                  businessName={businessName} mainCategory={mainCategories[0] ?? mainCategory}
-                  subcategories={bizSubcategories} tags={tags} eventTitle={eventTitle}
-                  street={street} description={description}
-                  onPreviewClick={() => setShowAppPreview(true)} previewReady={previewReady}
-                  colorBadge={colorBadge} colorCardBg={colorCardBg} colorButton={colorButton} colorPromo={colorPromo}
-                />
+                <button
+                  type="button"
+                  onClick={() => previewReady && setShowAppPreview(true)}
+                  disabled={!previewReady}
+                  title={previewReady ? t("fab.preview_title") : t("fab.incomplete")}
+                  className="block w-full text-left disabled:cursor-not-allowed"
+                >
+                  <ListingPreviewCard
+                    coverImageUrl={coverImageUrl}
+                    coverVideoUrl={coverVideoUrl}
+                    businessName={businessName}
+                    mainCategory={mainCategories[0] ?? mainCategory}
+                    subcategories={bizSubcategories}
+                    city={city}
+                    openingHours={openingHours as never}
+                    eventTitle={eventTitle}
+                  />
+                </button>
               }
             />
           )}
@@ -2324,14 +2280,21 @@ const BusinessDashboard = () => {
                     <input ref={menuInputRef} type="file" accept="image/*,.heic,.heif,application/pdf,.pdf" multiple className="hidden" onChange={handleMenuUpload} />
                   </div>
                 </div>
-                <div className="hidden lg:block w-72 shrink-0 lg:sticky lg:top-20 lg:self-start">
-                  <BusinessCardPreview
-                    logoUrl={logoUrl} coverImageUrl={coverImageUrl} coverVideoUrl={coverVideoUrl}
-                    businessName={businessName} mainCategory={mainCategory} subcategories={bizSubcategories} tags={tags} eventTitle={eventTitle}
-                    street={street} description={description}
-                    onPreviewClick={() => setShowAppPreview(true)} previewReady={previewReady}
-                    colorBadge={colorBadge} colorCardBg={colorCardBg} colorButton={colorButton} colorPromo={colorPromo}
-                  />
+                {/* Prawa kolumna: ile razy gosc otworzyl menu. To jest cala odpowiedz
+                    na pytanie „czy komus chcialo sie w to kliknac" - zdarzenie
+                    `place_menu_opened` leci z wizytowki w aplikacji od 15.09.2026. */}
+                <div className="w-full shrink-0 lg:sticky lg:top-24 lg:w-72 lg:self-start">
+                  <div className="rounded-2xl bg-[#FDF184] p-5">
+                    <p className="text-[13px] font-semibold text-[#5B2C06]">
+                      {t("menu.opens_title", { days: analyticsRange === '7d' ? 7 : analyticsRange === '90d' ? 90 : 30 })}
+                    </p>
+                    <p className="mt-1 text-[34px] font-black leading-none text-[#5B2C06]">{stats.menuOpens ?? 0}</p>
+                    <p className="mt-1.5 text-[12px] leading-snug text-[#5B2C06]/80">
+                      {stats.views > 0 && (stats.menuOpens ?? 0) > 0
+                        ? t("menu.opens_share", { pct: Math.round(((stats.menuOpens ?? 0) / stats.views) * 100) })
+                        : t("menu.opens_empty")}
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -2340,46 +2303,50 @@ const BusinessDashboard = () => {
 
           {/* ── AKTUALNOŚCI ── */}
           {activeSection === 'posts' && (
-            <div className="space-y-5">
-              <div className="flex flex-col lg:flex-row gap-5 items-start">
-                {/* Form */}
-                <div className="flex-1 space-y-5">
-                  {/* Events */}
-                  <div className="rounded-2xl border border-slate-200 bg-white p-5 space-y-4">
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{t("posts.current_event")}</p>
-                    <p className="text-xs text-muted-foreground -mt-2">{t("posts.event_desc")}</p>
-                    <div className="space-y-1">
-                      <Label htmlFor="event_title">{t("posts.event_title_label")}</Label>
-                      <BizInput id="event_title" value={eventTitle} maxLength={40} onChange={e => { setEventTitle(e.target.value); setIsDirty(true); }} placeholder={t("posts.event_title_placeholder")} />
-                      <p className="text-[11px] text-muted-foreground text-right">{eventTitle.length}/40</p>
-                    </div>
-                    {/* Wersja angielska (auto-tlumaczenie z mozliwoscia nadpisania) - widoczna dla zagranicznych podroznikow */}
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between gap-2">
-                        <Label htmlFor="event_title_en" className="text-xs flex items-center gap-1.5 flex-wrap">
-                          <Globe className="h-3.5 w-3.5 text-slate-400" />{t("posts.event_en_label")}
-                          <span className="text-[10px] font-normal text-muted-foreground">{eventTitleEnOverridden ? t("posts.event_en_edited") : t("posts.event_en_auto")}</span>
-                        </Label>
-                        <button type="button" onClick={handleTranslateEvent} disabled={!eventTitle.trim() || translatingEvent}
-                          className="text-[11px] font-semibold text-primary disabled:opacity-40 active:opacity-70 shrink-0">
-                          {translatingEvent ? t("posts.event_en_translating") : t("posts.event_en_translate")}
-                        </button>
-                      </div>
-                      <BizInput id="event_title_en" value={eventTitleEn} maxLength={60}
-                        onChange={e => { setEventTitleEn(e.target.value); setEventTitleEnOverridden(true); setIsDirty(true); }}
-                        placeholder={t("posts.event_en_placeholder")} />
-                      <p className="text-[11px] text-muted-foreground">{t("posts.event_en_hint")}</p>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div className="space-y-1 min-w-0"><Label htmlFor="event_starts_at" className="text-xs">{t("posts.from")}</Label><BizInput id="event_starts_at" value={eventStartsAt} onChange={e => { setEventStartsAt(e.target.value); setIsDirty(true); }} type="date" className="w-full" /></div>
-                      <div className="space-y-1 min-w-0"><Label htmlFor="event_ends_at" className="text-xs">{t("posts.to")}</Label><BizInput id="event_ends_at" value={eventEndsAt} onChange={e => { setEventEndsAt(e.target.value); setIsDirty(true); }} type="date" className="w-full" /></div>
-                    </div>
+            <div className="flex flex-col gap-4">
+              {/* Staly baner wydarzenia (pole `event_title` na wizytowce). Zostaje obok
+                  wydarzen z datami, bo pelni inna role: "u nas zawsze w czwartki jest jam".
+                  Karta miejsca bierze najpierw wydarzenie AKTYWNE, potem ten baner. */}
+              <div className="rounded-2xl border border-slate-200 bg-white p-5 space-y-4">
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{t("posts.current_event")}</p>
+                <p className="text-xs text-muted-foreground -mt-2">{t("posts.event_desc")}</p>
+                <div className="space-y-1">
+                  <Label htmlFor="event_title">{t("posts.event_title_label")}</Label>
+                  <BizInput id="event_title" value={eventTitle} maxLength={40} onChange={e => { setEventTitle(e.target.value); setIsDirty(true); }} placeholder={t("posts.event_title_placeholder")} />
+                  <p className="text-[11px] text-muted-foreground text-right">{eventTitle.length}/40</p>
+                </div>
+                {/* Wersja angielska (auto-tlumaczenie z mozliwoscia nadpisania) - widoczna dla zagranicznych podroznikow */}
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <Label htmlFor="event_title_en" className="text-xs flex items-center gap-1.5 flex-wrap">
+                      <Globe className="h-3.5 w-3.5 text-slate-400" />{t("posts.event_en_label")}
+                      <span className="text-[10px] font-normal text-muted-foreground">{eventTitleEnOverridden ? t("posts.event_en_edited") : t("posts.event_en_auto")}</span>
+                    </Label>
+                    <button type="button" onClick={handleTranslateEvent} disabled={!eventTitle.trim() || translatingEvent}
+                      className="text-[11px] font-semibold text-primary disabled:opacity-40 active:opacity-70 shrink-0">
+                      {translatingEvent ? t("posts.event_en_translating") : t("posts.event_en_translate")}
+                    </button>
                   </div>
-                  {/* Zaplanowane wydarzenia (kolejka + historia) */}
-                  <div className="rounded-2xl border border-slate-200 bg-white p-5 space-y-4">
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{t("posts.events_label")}</p>
-                    <p className="text-xs text-muted-foreground -mt-2">{t("posts.events_desc")}</p>
-                    {/* Formularz dodania */}
+                  <BizInput id="event_title_en" value={eventTitleEn} maxLength={60}
+                    onChange={e => { setEventTitleEn(e.target.value); setEventTitleEnOverridden(true); setIsDirty(true); }}
+                    placeholder={t("posts.event_en_placeholder")} />
+                  <p className="text-[11px] text-muted-foreground">{t("posts.event_en_hint")}</p>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1 min-w-0"><Label htmlFor="event_starts_at" className="text-xs">{t("posts.from")}</Label><BizInput id="event_starts_at" value={eventStartsAt} onChange={e => { setEventStartsAt(e.target.value); setIsDirty(true); }} type="date" className="w-full" /></div>
+                  <div className="space-y-1 min-w-0"><Label htmlFor="event_ends_at" className="text-xs">{t("posts.to")}</Label><BizInput id="event_ends_at" value={eventEndsAt} onChange={e => { setEventEndsAt(e.target.value); setIsDirty(true); }} type="date" className="w-full" /></div>
+                </div>
+              </div>
+
+              <EventsSection
+                events={events}
+                formatRange={fmtEventRange}
+                tab={eventsTab}
+                onTab={setEventsTab}
+                addOpen={addEventOpen}
+                onToggleAdd={() => setAddEventOpen(v => !v)}
+                renderAddForm={() => (
+                  <div className="flex flex-col gap-3">
                     <div className="space-y-3 border border-border/60 rounded-2xl p-3">
                       <div className="space-y-1">
                         <Label htmlFor="new_event_title" className="text-xs">{t("posts.events_title_label")}</Label>
@@ -2418,113 +2385,48 @@ const BusinessDashboard = () => {
                         {addingEvent ? t("posts.events_adding") : t("posts.events_add")}
                       </button>
                     </div>
-                    {/* Lista: nadchodzace/aktywne + historia */}
-                    {(() => {
-                      const todayStr = new Date().toISOString().slice(0, 10);
-                      const upcoming = sortEventsAsc(events.filter(e => (e.ends_at ?? e.starts_at) >= todayStr));
-                      const past = [...events.filter(e => (e.ends_at ?? e.starts_at) < todayStr)]
-                        .sort((a, b) => (a.starts_at > b.starts_at ? -1 : a.starts_at < b.starts_at ? 1 : 0));
-                      if (events.length === 0) {
-                        return <p className="text-xs text-muted-foreground text-center py-4">{t("posts.events_empty")}</p>;
-                      }
-                      return (
-                        <div className="space-y-4">
-                          {upcoming.length > 0 && (
-                            <div className="space-y-2">
-                              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{t("posts.events_upcoming")}</p>
-                              {upcoming.map(ev => (
-                                editingEventId === ev.id ? (
-                                  <div key={ev.id} className="border border-border/60 rounded-2xl p-3 space-y-3">
-                                    <div className="space-y-1">
-                                      <Label htmlFor={`edit_event_title_${ev.id}`} className="text-xs">{t("posts.events_title_label")}</Label>
-                                      <BizInput id={`edit_event_title_${ev.id}`} value={editEventTitle} maxLength={40} onChange={e => setEditEventTitle(e.target.value)} placeholder={t("posts.events_title_placeholder")} />
-                                      <p className="text-[11px] text-muted-foreground text-right">{editEventTitle.length}/40</p>
-                                    </div>
-                                    <div className="space-y-1">
-                                      <Label htmlFor={`edit_event_description_${ev.id}`} className="text-xs">{t("posts.events_desc_label")}</Label>
-                                      <textarea id={`edit_event_description_${ev.id}`} rows={2} value={editEventDescription} maxLength={300} onChange={e => setEditEventDescription(e.target.value)} placeholder={t("posts.events_desc_placeholder")} className="w-full rounded-2xl border border-slate-200/80 bg-slate-50 px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:bg-white focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:border-primary/40 resize-none" />
-                                    </div>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                      <div className="space-y-1 min-w-0"><Label htmlFor={`edit_event_start_${ev.id}`} className="text-xs">{t("posts.from")}</Label><BizInput id={`edit_event_start_${ev.id}`} type="date" value={editEventStartsAt} onChange={e => setEditEventStartsAt(e.target.value)} className="w-full" /></div>
-                                      <div className="space-y-1 min-w-0"><Label htmlFor={`edit_event_end_${ev.id}`} className="text-xs">{t("posts.events_to_optional")}</Label><BizInput id={`edit_event_end_${ev.id}`} type="date" value={editEventEndsAt} onChange={e => setEditEventEndsAt(e.target.value)} className="w-full" /></div>
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-3">
-                                      <div className="space-y-1 min-w-0"><Label htmlFor={`edit_event_start_time_${ev.id}`} className="text-xs">{t("posts.events_start_time_optional")}</Label><BizInput id={`edit_event_start_time_${ev.id}`} type="time" value={editEventStartTime} onChange={e => setEditEventStartTime(e.target.value)} className="w-full" /></div>
-                                      <div className="space-y-1 min-w-0"><Label htmlFor={`edit_event_end_time_${ev.id}`} className="text-xs">{t("posts.events_end_time_optional")}</Label><BizInput id={`edit_event_end_time_${ev.id}`} type="time" value={editEventEndTime} onChange={e => setEditEventEndTime(e.target.value)} className="w-full" /></div>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                      <button onClick={() => handleUpdateEvent(ev.id)} disabled={savingEditEvent || !editEventTitle.trim() || !editEventStartsAt} className="flex-1 py-2 rounded-full bg-[#D45113] text-white font-bold text-xs active:scale-[0.98] transition-transform disabled:opacity-40 flex items-center justify-center gap-1.5"><Check className="h-3.5 w-3.5" />{t("posts.events_save")}</button>
-                                      <button onClick={() => setEditingEventId(null)} className="flex-1 py-2 rounded-full bg-secondary text-secondary-foreground font-bold text-xs active:scale-[0.98] transition-transform">{t("posts.events_cancel")}</button>
-                                    </div>
-                                  </div>
-                                ) : (
-                                  <div key={ev.id} className="border border-border/50 rounded-2xl p-3 space-y-2">
-                                    <div className="flex items-start justify-between gap-2">
-                                      <div className="min-w-0">
-                                        <div className="flex items-center gap-2 flex-wrap">
-                                          <p className="text-sm font-semibold leading-snug break-words">{ev.title}</p>
-                                          {ev.is_draft && <span className="flex-shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">{t("posts.events_draft_badge")}</span>}
-                                        </div>
-                                        <p className="text-[11px] text-muted-foreground mt-0.5">{fmtEventRange(ev)}</p>
-                                        {ev.description && <p className="text-xs text-muted-foreground mt-1 line-clamp-2 leading-snug break-words">{ev.description}</p>}
-                                      </div>
-                                      <div className="flex items-center gap-1.5 flex-shrink-0">
-                                        <button onClick={() => handleStartEditEvent(ev)} className="h-6 w-6 rounded-full bg-muted flex items-center justify-center active:opacity-60"><Pencil className="h-3.5 w-3.5 text-muted-foreground" /></button>
-                                        <button onClick={() => handleDeleteEvent(ev.id)} className="h-6 w-6 rounded-full bg-muted flex items-center justify-center active:opacity-60"><Trash2 className="h-3.5 w-3.5 text-muted-foreground" /></button>
-                                      </div>
-                                    </div>
-                                    {ev.is_draft ? (
-                                      <button onClick={() => handleTogglePublish(ev)} className="w-full py-1.5 rounded-full bg-amber-500 text-white font-bold text-xs active:scale-[0.98] transition-transform">{t("posts.events_publish")}</button>
-                                    ) : (
-                                      <button onClick={() => handleTogglePublish(ev)} className="w-full py-1.5 rounded-full bg-secondary text-secondary-foreground font-semibold text-xs active:scale-[0.98] transition-transform">{t("posts.events_unpublish")}</button>
-                                    )}
-                                  </div>
-                                )
-                              ))}
-                            </div>
-                          )}
-                          {past.length > 0 && (
-                            <div className="space-y-2">
-                              <button type="button" onClick={() => setShowEventHistory(v => !v)} className="flex items-center gap-1.5 text-xs font-bold text-slate-400 uppercase tracking-widest active:opacity-60">
-                                {t("posts.events_history")} ({past.length})
-                                {showEventHistory ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-                              </button>
-                              {showEventHistory && past.map(ev => (
-                                <div key={ev.id} className="border border-border/40 rounded-2xl p-3 opacity-60">
-                                  <p className="text-sm font-semibold leading-snug break-words">{ev.title}</p>
-                                  <p className="text-[11px] text-muted-foreground mt-0.5">{fmtEventRange(ev)}</p>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })()}
                   </div>
-                </div>
-                {/* Preview panel - right (desktop) / bottom (mobile/tablet) */}
-                <div className="hidden lg:block w-72 shrink-0 lg:sticky lg:top-20 lg:self-start">
-                  <BusinessCardPreview
-                    logoUrl={logoUrl}
-                    coverImageUrl={coverImageUrl}
-                    coverVideoUrl={coverVideoUrl}
-                    businessName={businessName}
-                    mainCategory={mainCategory}
-                    subcategories={bizSubcategories}
-                    tags={tags}
-                    eventTitle={eventTitle}
-                    street={street}
-                    description={description}
-                    onPreviewClick={() => setShowAppPreview(true)}
-                    previewReady={previewReady}
-                    colorBadge={colorBadge} colorCardBg={colorCardBg} colorButton={colorButton} colorPromo={colorPromo}
-                  />
-                </div>
-              </div>
+                )}
+                editingEventId={editingEventId}
+                renderEditForm={(ev) => (
+                  <div className="flex flex-col gap-3">
+                    <div key={ev.id} className="border border-border/60 rounded-2xl p-3 space-y-3">
+                      <div className="space-y-1">
+                        <Label htmlFor={`edit_event_title_${ev.id}`} className="text-xs">{t("posts.events_title_label")}</Label>
+                        <BizInput id={`edit_event_title_${ev.id}`} value={editEventTitle} maxLength={40} onChange={e => setEditEventTitle(e.target.value)} placeholder={t("posts.events_title_placeholder")} />
+                        <p className="text-[11px] text-muted-foreground text-right">{editEventTitle.length}/40</p>
+                      </div>
+                      <div className="space-y-1">
+                        <Label htmlFor={`edit_event_description_${ev.id}`} className="text-xs">{t("posts.events_desc_label")}</Label>
+                        <textarea id={`edit_event_description_${ev.id}`} rows={2} value={editEventDescription} maxLength={300} onChange={e => setEditEventDescription(e.target.value)} placeholder={t("posts.events_desc_placeholder")} className="w-full rounded-2xl border border-slate-200/80 bg-slate-50 px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:bg-white focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:border-primary/40 resize-none" />
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="space-y-1 min-w-0"><Label htmlFor={`edit_event_start_${ev.id}`} className="text-xs">{t("posts.from")}</Label><BizInput id={`edit_event_start_${ev.id}`} type="date" value={editEventStartsAt} onChange={e => setEditEventStartsAt(e.target.value)} className="w-full" /></div>
+                        <div className="space-y-1 min-w-0"><Label htmlFor={`edit_event_end_${ev.id}`} className="text-xs">{t("posts.events_to_optional")}</Label><BizInput id={`edit_event_end_${ev.id}`} type="date" value={editEventEndsAt} onChange={e => setEditEventEndsAt(e.target.value)} className="w-full" /></div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1 min-w-0"><Label htmlFor={`edit_event_start_time_${ev.id}`} className="text-xs">{t("posts.events_start_time_optional")}</Label><BizInput id={`edit_event_start_time_${ev.id}`} type="time" value={editEventStartTime} onChange={e => setEditEventStartTime(e.target.value)} className="w-full" /></div>
+                        <div className="space-y-1 min-w-0"><Label htmlFor={`edit_event_end_time_${ev.id}`} className="text-xs">{t("posts.events_end_time_optional")}</Label><BizInput id={`edit_event_end_time_${ev.id}`} type="time" value={editEventEndTime} onChange={e => setEditEventEndTime(e.target.value)} className="w-full" /></div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button onClick={() => handleUpdateEvent(ev.id)} disabled={savingEditEvent || !editEventTitle.trim() || !editEventStartsAt} className="flex-1 py-2 rounded-full bg-[#D45113] text-white font-bold text-xs active:scale-[0.98] transition-transform disabled:opacity-40 flex items-center justify-center gap-1.5"><Check className="h-3.5 w-3.5" />{t("posts.events_save")}</button>
+                        <button onClick={() => setEditingEventId(null)} className="flex-1 py-2 rounded-full bg-secondary text-secondary-foreground font-bold text-xs active:scale-[0.98] transition-transform">{t("posts.events_cancel")}</button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                onStartEdit={handleStartEditEvent}
+                onDelete={handleDeleteEvent}
+                onTogglePublish={handleTogglePublish}
+                eventViews={stats.eventViews ?? 0}
+                rangeDays={analyticsRange === '7d' ? 7 : analyticsRange === '90d' ? 90 : 30}
+                isPremium={plan !== 'basic'}
+                onUpgrade={() => setShowSupportModal(true)}
+              />
             </div>
           )}
 
-          {/* ── OD UŻYTKOWNIKÓW (notki + zdjęcia userów o tym miejscu) ── */}
+
           {activeSection === 'community' && (
             <div className="space-y-5">
 

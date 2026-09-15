@@ -116,7 +116,28 @@
     "events_updated": "Zaktualizowano",
     "events_update_error": "Nie udało się zaktualizować wydarzenia",
     "events_desc_label": "Opis",
-    "events_desc_placeholder": "Szczegóły wydarzenia (opcjonalnie)"
+    "events_desc_placeholder": "Szczegóły wydarzenia (opcjonalnie)",
+    "tab_upcoming": "Nadchodzące",
+    "tab_past": "Historia",
+    "status_live": "W trakcie",
+    "edit": "Edytuj",
+    "finish": "Zakończ",
+    "delete": "Usuń wydarzenie",
+    "new_event": "Nowe wydarzenie",
+    "close_form": "Zamknij formularz",
+    "empty_upcoming": "Nic nie zaplanowane",
+    "empty_upcoming_hint": "Koncert, degustacja, happy hour. Wydarzenie pojawia się na wizytówce z datą i wchodzi do planów gości na ten dzień.",
+    "empty_past": "Historia jest pusta",
+    "empty_past_hint": "Zakończone wydarzenia zostają tutaj razem z terminem.",
+    "history_title": "Historia wydarzeń",
+    "how_title": "Jak działa wydarzenie",
+    "how_1": "Pojawia się na Twojej wizytówce z datą i godzinami",
+    "how_2": "Wchodzi do planów gości, którzy układają ten dzień",
+    "how_3": "Po zakończeniu ląduje w historii razem z terminem",
+    "views_title": "Wyświetlenia wydarzeń",
+    "views_hint": "Tyle razy goście zobaczyli Twoje wydarzenie przez ostatnie {{days}} dni.",
+    "premium_title": "Wyróżnij wydarzenie",
+    "premium_copy": "W Premium wydarzenie dostaje powiadomienie do gości, którzy zapisali lokal w kolekcji."
   },
   "save": {
     "event_date_error": "Data końca wydarzenia nie może być wcześniejsza niż data początku",
@@ -405,7 +426,9 @@
     "hours_title": "Godziny otwarcia",
     "hours_hint": "Najczęściej sprawdzana informacja na wizytówce",
     "preview_title": "Tak widzą Cię goście",
-    "preview_hint": "Podgląd odświeża się po zapisaniu zmian"
+    "preview_hint": "Podgląd odświeża się po zapisaniu zmian",
+    "preview_open_until": "otwarte do {{time}}",
+    "preview_no_cover": "Lokal nie ma jeszcze zdjęcia głównego"
   },
   "menu": {
     "menu": "Menu",
@@ -414,7 +437,10 @@
     "hint_pricelist": "Zdjęcia z cennikiem (JPG, PNG) lub plik PDF. Pokażą się na wizytówce w aplikacji.",
     "max": "(max {{max}})",
     "photo_label": "{{label}} {{n}}",
-    "subtitle": "Pierwsza rzecz, której szuka gość po wejściu na wizytówkę"
+    "subtitle": "Pierwsza rzecz, której szuka gość po wejściu na wizytówkę",
+    "opens_title": "Otwarcia menu, {{days}} dni",
+    "opens_share": "To {{pct}}% wszystkich wejść na wizytówkę",
+    "opens_empty": "Nikt jeszcze nie otworzył menu w aplikacji."
   },
   "settings": {
     "title": "Ustawienia konta",

@@ -116,7 +116,28 @@
     "events_updated": "Updated",
     "events_update_error": "Could not update the event",
     "events_desc_label": "Description",
-    "events_desc_placeholder": "Event details (optional)"
+    "events_desc_placeholder": "Event details (optional)",
+    "tab_upcoming": "Upcoming",
+    "tab_past": "History",
+    "status_live": "Happening now",
+    "edit": "Edit",
+    "finish": "Finish",
+    "delete": "Delete event",
+    "new_event": "New event",
+    "close_form": "Close the form",
+    "empty_upcoming": "Nothing planned",
+    "empty_upcoming_hint": "A concert, a tasting, a happy hour. An event shows up on your listing with a date and lands in guests' plans for that day.",
+    "empty_past": "History is empty",
+    "empty_past_hint": "Finished events stay here with their dates.",
+    "history_title": "Event history",
+    "how_title": "How an event works",
+    "how_1": "It shows up on your listing with a date and hours",
+    "how_2": "It lands in the plans of guests putting that day together",
+    "how_3": "Once it is over it moves to history with its date",
+    "views_title": "Event views",
+    "views_hint": "That is how many times guests saw your event in the last {{days}} days.",
+    "premium_title": "Feature your event",
+    "premium_copy": "On Premium an event notifies the guests who saved your venue to a collection."
   },
   "save": {
     "event_date_error": "The event end date cannot be earlier than the start date",
@@ -404,7 +425,9 @@
     "hours_title": "Opening hours",
     "hours_hint": "The most checked piece of information on a listing",
     "preview_title": "What guests see",
-    "preview_hint": "The preview refreshes once you save your changes"
+    "preview_hint": "The preview refreshes once you save your changes",
+    "preview_open_until": "open until {{time}}",
+    "preview_no_cover": "This venue has no cover photo yet"
   },
   "menu": {
     "menu": "Menu",
@@ -413,7 +436,10 @@
     "hint_pricelist": "Photos of your price list (JPG, PNG) or a PDF file. They'll show on your card in the app.",
     "max": "(max {{max}})",
     "photo_label": "{{label}} {{n}}",
-    "subtitle": "The first thing a guest looks for after opening your listing"
+    "subtitle": "The first thing a guest looks for after opening your listing",
+    "opens_title": "Menu opens, {{days}} days",
+    "opens_share": "That is {{pct}}% of all listing views",
+    "opens_empty": "Nobody has opened the menu in the app yet."
   },
   "settings": {
     "title": "Account settings",
