@@ -196,11 +196,29 @@ input, textarea, [contenteditable="true"], [contenteditable=""] {
   user-select: text;
 }
 
-/* Ekran startowy: znak spontaway "rysuje sie" od lewej (SplashDraw). Maska przycina ten
-   pomaranczowy prostokat do ksztaltu znaku, wiec kolor wchodzi w litere jak pociagniecie. */
-@keyframes splash-draw {
-  from { transform: scaleX(0); }
-  to   { transform: scaleX(1); }
+/* Ekran startowy: znak spontaway "rysuje sie" od lewej (SplashDraw). Jedzie przeslona w kolorze
+   tla - zsuwa sie w prawo i odslania litere, ktora caly czas tam jest. Sam `transform`, wiec
+   animacja idzie po GPU i nie walczy z watkiem glownym w najciezszym momencie startu. */
+@keyframes splash-wipe {
+  from { transform: translateX(0); }
+  to   { transform: translateX(100%); }
+}
+
+/* Gwiazdka z nowego logo ZAPALA SIE na koncu rysowania (prosba Nat 2026-09-15). Wchodzi mala
+   i przekrecona, przestrzeliwuje skale i siada na miejscu - to ma byc blysk nagrody za
+   dojechanie "S" do konca, a nie kolejny element, ktory sie wsuwa. */
+@keyframes splash-star-pop {
+  0%   { opacity: 0; transform: scale(0.3) rotate(-40deg); }
+  60%  { opacity: 1; transform: scale(1.14) rotate(7deg); }
+  82%  { opacity: 1; transform: scale(0.96) rotate(-2deg); }
+  100% { opacity: 1; transform: scale(1) rotate(0deg); }
+}
+
+/* Po zapaleniu gwiazdka oddycha, dopoki aplikacja sie laduje - to jedyny element, ktory po
+   zlozeniu znaku nadal mowi "pracuje". Plytko i wolno, zeby nie przyciagac wzroku. */
+@keyframes splash-star-breath {
+  0%, 100% { transform: scale(1);    opacity: 1; }
+  50%      { transform: scale(1.08); opacity: 0.86; }
 }
 
 /* Oddech znaku na ekranie startowym (SplashPulse). Wolno i plytko - ma sygnalizowac prace,
@@ -211,9 +229,13 @@ input, textarea, [contenteditable="true"], [contenteditable=""] {
 }
 .animate-splash-pulse { animation: splash-pulse 1.6s ease-in-out infinite; }
 
-/* Szacunek dla ustawienia "ogranicz ruch" - zostaje sam znak, bez pulsowania. */
+/* Szacunek dla ustawienia "ogranicz ruch" - zostaje sam ZLOZONY znak, bez ruchu. `!important`
+   jest tu konieczne: SplashDraw ustawia `animation` inline (czasy licza sie w JS), a zwykla
+   deklaracja z arkusza przegralaby ze stylem inline. */
 @media (prefers-reduced-motion: reduce) {
   .animate-splash-pulse { animation: none; opacity: 1; }
+  .splash-wipe { animation: none !important; transform: translateX(100%) !important; }
+  .splash-star, .splash-star-breath { animation: none !important; opacity: 1 !important; transform: none !important; }
 }
 
 /* Unoszenie grafiki wizytowki na ekranie dla lokali (Auth, businessMode - wariant C2 z Figmy,
