@@ -41,6 +41,7 @@ import { fromDashboardState } from "@/components/business/premiumBusinessAdapter
 import { ImageCropModal } from "@/components/business/ImageCropModal";
 import { TrasaLogo } from "@/components/TrasaLogo";
 import { BizShell, type BizSection } from "@/components/business/dashboard/BizShell";
+import { OverviewSection, type CompletenessStep } from "@/components/business/dashboard/OverviewSection";
 import { uploadThumb } from "@/lib/imageThumbs";
 import { fetchPlaceNotes, type PlaceUserNote } from "@/lib/placeNotes";
 import { avatarSrc } from "@/lib/avatar";
@@ -107,7 +108,13 @@ interface BusinessProfile {
   is_draft?: boolean;
 }
 
-interface Stats { views: number; onRoutes: number; websiteClicks: number; phoneClicks: number; uniqueChoices: number; }
+interface Stats {
+  views: number; onRoutes: number; websiteClicks: number; phoneClicks: number; uniqueChoices: number;
+  /** Zapisy miejsca do kolekcji (event place_saved). */
+  saves: number;
+  /** Ten sam zakres cofniety o jego dlugosc - sluzy do "+18% wobec poprzednich 30 dni". */
+  previous?: { views: number; onRoutes: number; clicks: number; saves: number };
+}
 type AnalyticsRange = '7d' | '30d' | '90d' | 'custom';
 interface ChartDay { date: string; views: number; routes: number; clicks: number; }
 interface HourlyBucket { hour: number; label: string; total: number; }
@@ -497,7 +504,7 @@ const BusinessDashboard = () => {
   const [profile, setProfile] = useState<BusinessProfile | null>(null);
   const analyticsRequestId = useRef(0);
   const [placeCategory, setPlaceCategory] = useState<string | null>(null);
-  const [stats, setStats] = useState<Stats>({ views: 0, onRoutes: 0, websiteClicks: 0, phoneClicks: 0, uniqueChoices: 0 });
+  const [stats, setStats] = useState<Stats>({ views: 0, onRoutes: 0, websiteClicks: 0, phoneClicks: 0, uniqueChoices: 0, saves: 0 });
   const [analyticsRange, setAnalyticsRange] = useState<AnalyticsRange>('30d');
   const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>();
   const [showCalendar, setShowCalendar] = useState(false);
@@ -566,7 +573,7 @@ const BusinessDashboard = () => {
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const lastGeoAddrRef = useRef<string | null>(null); // ostatnio geokodowany adres - bez powtórnych płatnych zapytań
 
-  const [activeSection, setActiveSection] = useState<'overview' | 'gallery' | 'profile' | 'menu' | 'posts' | 'community' | 'analytics' | 'settings'>('profile');
+  const [activeSection, setActiveSection] = useState<'overview' | 'gallery' | 'profile' | 'menu' | 'posts' | 'community' | 'analytics' | 'settings'>('overview');
   // Sekcja "Od użytkowników" (Nat 2026-09-14): notki i zdjęcia userów o TYM miejscu (te same,
   // które widać na wizytówce). Read + zgłoszenie do moderacji (biznes nie kasuje UGC sam).
   type CommunityPhoto = { id: string; photo_url: string; user_id: string | null; created_at: string; username: string | null; avatar_url: string | null };
@@ -891,6 +898,8 @@ const BusinessDashboard = () => {
         websiteClicks: phData.websiteClicks ?? 0,
         phoneClicks: phData.phoneClicks ?? 0,
         uniqueChoices: 0,
+        saves: phData.saves ?? 0,
+        previous: phData.previous,
       });
 
       const numDays = rangeDays;
@@ -1834,6 +1843,18 @@ const BusinessDashboard = () => {
     </div>
   );
 
+  const completenessSteps: CompletenessStep[] = [
+    { id: "name", label: t("overview.step_name"), done: businessName.trim().length > 0, section: "profile" },
+    { id: "description", label: t("overview.step_description"), done: description.trim().length >= 20, section: "profile" },
+    { id: "category", label: t("overview.step_category"), done: !!mainCategory, section: "profile" },
+    { id: "address", label: t("overview.step_address"), done: !!(street.trim() && city.trim()), section: "profile" },
+    { id: "contact", label: t("overview.step_contact"), done: !!(phone.trim() || website.trim()), section: "profile" },
+    { id: "hours", label: t("overview.step_hours"), done: Object.keys(openingHours ?? {}).length > 0, section: "profile" },
+    { id: "cover", label: t("overview.step_cover"), done: !!(coverImageUrl || coverVideoUrl), section: "gallery" },
+    { id: "gallery", label: t("overview.step_gallery"), done: galleryUrls.length >= 3, section: "gallery" },
+    { id: "menu", label: t("overview.step_menu"), done: menuImageUrls.length > 0, section: "menu" },
+  ];
+
   const previewReady = businessName.trim().length > 0 && !!(coverImageUrl || coverVideoUrl || galleryUrls.length > 0);
 
   const previewMissingFields = (() => {
@@ -1944,89 +1965,20 @@ const BusinessDashboard = () => {
 
           {/* ── PRZEGLĄD ── */}
           {activeSection === 'overview' && (
-            <div className="space-y-5">
-              <div className="flex items-start justify-between gap-3 flex-wrap">
-                <div>
-                  <h2 className="text-lg font-black text-foreground">{t("overview.title")}</h2>
-                  <p className="text-sm text-slate-400">{t("overview.subtitle")}</p>
-                </div>
-                <div className="flex rounded-xl bg-slate-100 p-0.5 gap-0.5 shrink-0">
-                  {(['7d', '30d', '90d'] as Exclude<AnalyticsRange, 'custom'>[]).map(r => (
-                    <button
-                      key={r}
-                      onClick={() => setAnalyticsRange(r)}
-                      className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${analyticsRange === r ? 'bg-white text-foreground shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
-                    >
-                      {r === '7d' ? t("range.7d") : r === '30d' ? t("range.30d") : t("range.months3")}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              {/* Stats 4 cards */}
-              {plan === 'premium' ? (
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  {[
-                    { label: t('overview.stat_views'), value: stats.views, icon: BarChart2, color: 'text-primary', bg: 'bg-primary/10' },
-                    { label: t('overview.stat_addplan'), value: stats.onRoutes, icon: MapPin, color: 'text-emerald-500', bg: 'bg-emerald-50' },
-                    { label: t('overview.stat_clicks'), value: stats.websiteClicks + stats.phoneClicks, icon: MousePointerClick, color: 'text-violet-500', bg: 'bg-violet-50' },
-                    { label: t('overview.stat_total'), value: stats.views + stats.onRoutes + stats.websiteClicks + stats.phoneClicks, icon: BarChart2, color: 'text-orange-500', bg: 'bg-orange-50' },
-                  ].map(({ label, value, icon: Icon, color, bg }) => (
-                    <div key={label} className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
-                      <div className={`h-8 w-8 rounded-xl ${bg} flex items-center justify-center mb-3`}>
-                        <Icon className={`h-4 w-4 ${color}`} />
-                      </div>
-                      <p className="text-2xl font-black text-foreground leading-none mb-1">{analyticsLoading ? '-' : value}</p>
-                      <p className="text-xs text-slate-400 leading-snug">{label}</p>
-                      <p className="text-[10px] text-slate-300 mt-0.5">{t("overview.last_prefix")} {analyticsRange === '7d' ? t("range.7d") : analyticsRange === '30d' ? t("range.30d") : t("range.months3")}</p>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="relative rounded-2xl border border-dashed border-border/60 p-4 overflow-hidden">
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 opacity-30 pointer-events-none select-none">
-                    {[t('locked.views'), t('locked.routes'), t('locked.clicks'), t('locked.activity')].map(l => (
-                      <div key={l} className="bg-white border border-slate-100 rounded-2xl p-4"><p className="text-2xl font-black">-</p><p className="text-xs text-slate-400">{l}</p></div>
-                    ))}
-                  </div>
-                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5">
-                    <span className="text-lg">🔒</span>
-                    <p className="text-xs font-semibold">{t("analytics.locked_title")}</p>
-                  </div>
-                </div>
-              )}
-              {/* Activity feed */}
-              <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">{t("activity.title")}</p>
-                {recentEvents.length === 0 ? (
-                  <p className="text-sm text-slate-400 text-center py-4">{t("activity.empty")}</p>
-                ) : (
-                  <div className="flex flex-col divide-y divide-slate-50">
-                    {recentEvents.map((ev, i) => {
-                      const labels: Record<string, { txt: string; dot: string }> = {
-                        view: { txt: t('activity.view'), dot: 'bg-primary' },
-                        add_to_route: { txt: t('activity.add_route'), dot: 'bg-emerald-400' },
-                        click_phone: { txt: t('activity.click_phone'), dot: 'bg-violet-400' },
-                        click_website: { txt: t('activity.click_website'), dot: 'bg-violet-400' },
-                        click_booking: { txt: t('activity.click_booking'), dot: 'bg-amber-400' },
-                      };
-                      const info = labels[ev.event_type] ?? { txt: ev.event_type, dot: 'bg-slate-300' };
-                      return (
-                        <div key={i} className="flex items-center gap-3 py-2.5">
-                          <div className={`h-2 w-2 rounded-full shrink-0 ${info.dot}`} />
-                          <p className="text-sm text-slate-600 flex-1">{info.txt}</p>
-                          <p className="text-[10px] text-slate-400 shrink-0">
-                            {formatDistanceToNow(new Date(ev.created_at), { addSuffix: true, locale: dateLocale() })}
-                          </p>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            </div>
+            <OverviewSection
+              range={analyticsRange === 'custom' ? '30d' : analyticsRange}
+              onRange={setAnalyticsRange}
+              isPremium={plan !== 'basic'}
+              loading={analyticsLoading}
+              stats={stats}
+              chart={chartData.map(d => ({ date: d.date, value: d.views }))}
+              recentEvents={recentEvents}
+              steps={completenessSteps}
+              onGoTo={setActiveSection}
+              onUpgrade={() => setShowSupportModal(true)}
+            />
           )}
 
-          {/* ── GALERIA ── */}
           {activeSection === 'gallery' && (
             <div className="space-y-4">
               <div>
