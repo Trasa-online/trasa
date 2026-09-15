@@ -293,19 +293,22 @@ export function ListTile({ it, size = "feed" }: { it: GridItem; size?: TileSize 
             {t("new_place")}
           </span>
         )}
-        {/* Ile osob zapisalo kolekcje - w tym samym rzedzie co chipy, dociagniete do PRAWEJ
-            (prosba Nat 2026-09-14). Ten sam tint co reszta chipow: to informacja zwrotna dla
-            autora, nie sygnal, wiec nie krzyczy bielą jak "Nowe miejsce!". Zero sie NIE
-            renderuje - wiekszosci kolekcji nikt jeszcze nie zapisal, a rzad zer wygladalby
-            jak zepsuty widok zamiast jak statystyka. */}
+      </div>
+      {/* Tytul + licznik zapisow NA JEGO WYSOKOSCI, po prawej (prosba Nat 2026-09-15). Wczesniej
+          licznik stal w rzedzie chipow i wchodzil pod pigulki, zabierajac gore kafelka; przy
+          tytule jest miejsce, bo tytul rzadko dobija do prawej krawedzi.
+          Ile osob zapisalo kolekcje: ten sam tint co chipy, bo to informacja zwrotna dla autora,
+          nie sygnal - nie krzyczy bielą jak "Nowe miejsce!". Zero sie NIE renderuje: wiekszosci
+          kolekcji nikt jeszcze nie zapisal, a rzad zer wygladalby jak zepsuty widok. */}
+      <div className={`flex items-start gap-2 ${feed ? "mt-2.5" : "mt-1.5"}`}>
+        <p className={`min-w-0 flex-1 line-clamp-2 font-bold leading-[1.15] ${feed ? "text-[22px]" : "text-[17px]"}`}>{it.title}</p>
         {!!it.savesCount && (
-          <Chip ink={theme.ink} size={size} className="ml-auto">
+          <Chip ink={theme.ink} size={size} className="shrink-0">
             <BrandBookmark className={feed ? "h-[13px] w-[13px]" : "h-[10px] w-[10px]"} />
             <span aria-label={t("stats.saves_aria", { count: it.savesCount })}>{it.savesCount}</span>
           </Chip>
         )}
       </div>
-      <p className={`line-clamp-2 font-bold leading-[1.15] ${feed ? "mt-2.5 text-[22px]" : "mt-1.5 text-[17px]"}`}>{it.title}</p>
       <div className={`grid grid-cols-3 ${feed ? "mt-3.5 gap-2" : "mt-2.5 gap-1.5"}`}>
         {shown.map((p, i) => <MiniPlace key={`${p.name}-${i}`} place={p} size={size} />)}
         {overflow > 0 && (
