@@ -492,7 +492,12 @@
     "report": "Report to moderation",
     "report_done": "Reported to moderation. We'll take a look.",
     "report_error": "Could not send the report",
-    "moderation_hint": "See content that breaks the rules? Report it and the spontaway team will review it. We don't delete notes and photos from the panel - we keep reviews authentic."
+    "moderation_hint": "See content that breaks the rules? Report it and the spontaway team will review it. We don't delete notes and photos from the panel - we keep reviews authentic.",
+    "stats_title": "This month",
+    "stats_notes": "notes from guests",
+    "stats_photos": "photos added by guests",
+    "stats_saves": "saves to collections",
+    "words_title": "What kept coming up in notes"
   },
   "shell": {
     "breadcrumb": "Panel",

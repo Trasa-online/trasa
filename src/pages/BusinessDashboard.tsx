@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { BrandIcon, SAVE_ICON } from "@/components/BrandIcon";
 import { applyBusinessDefaultLanguage, markBusinessLangChoice } from "@/lib/businessLanguage";
-import { Loader2, BarChart2, MapPin, MousePointerClick, Plus, X, LogOut, ImagePlus, Trash2, Users, LayoutDashboard, Images, Store, Megaphone, TrendingUp, MessageCircle, Expand, ZoomIn, Video, Play, Camera, Star, Heart, ChevronUp, ChevronDown, ChevronLeft, GripVertical, HelpCircle, Eye, KeyRound, Clock, Settings, FileText, BookOpen, Pencil, Check, MessageSquareQuote, Flag, Bookmark, Share2 } from "lucide-react";
+import { Loader2, BarChart2, MapPin, MousePointerClick, Plus, X, LogOut, ImagePlus, Trash2, Users, LayoutDashboard, Images, Store, Megaphone, TrendingUp, MessageCircle, Expand, ZoomIn, Video, Play, Camera, Star, Heart, ChevronUp, ChevronDown, ChevronLeft, GripVertical, HelpCircle, Eye, KeyRound, Clock, Settings, FileText, BookOpen, Pencil, Check, MessageSquareQuote, Flag, Bookmark, Share2, Globe } from "lucide-react";
 
 // Pola formularza panelu = szare wypełnienie + pomarańczowy focus (prośba Nat 2026-09-14:
 // jednolitość i "zasada przynależności" - wszystkie inputy wyglądają tak samo, spokojnie).
@@ -46,6 +46,7 @@ import { OverviewSection, type CompletenessStep } from "@/components/business/da
 import { ProfileSection } from "@/components/business/dashboard/ProfileSection";
 import { CategoryPickerModal } from "@/components/business/dashboard/CategoryPickerModal";
 import { SettingsSection } from "@/components/business/dashboard/SettingsSection";
+import { GuestInsights } from "@/components/business/dashboard/GuestInsights";
 import { uploadThumb } from "@/lib/imageThumbs";
 import { fetchPlaceNotes, type PlaceUserNote } from "@/lib/placeNotes";
 import { avatarSrc } from "@/lib/avatar";
@@ -593,7 +594,7 @@ const BusinessDashboard = () => {
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const lastGeoAddrRef = useRef<string | null>(null); // ostatnio geokodowany adres - bez powtórnych płatnych zapytań
 
-  const [activeSection, setActiveSection] = useState<'overview' | 'gallery' | 'profile' | 'menu' | 'posts' | 'community' | 'analytics' | 'settings'>('overview');
+  const [activeSection, setActiveSection] = useState<BizSection>('overview');
   // Sekcja "Od użytkowników" (Nat 2026-09-14): notki i zdjęcia userów o TYM miejscu (te same,
   // które widać na wizytówce). Read + zgłoszenie do moderacji (biznes nie kasuje UGC sam).
   type CommunityPhoto = { id: string; photo_url: string; user_id: string | null; created_at: string; username: string | null; avatar_url: string | null };
@@ -1976,9 +1977,9 @@ const BusinessDashboard = () => {
       )}
 
       <BizShell
-        title={SECTION_META[activeSection === 'analytics' ? 'overview' : activeSection].title(t)}
-        subtitle={SECTION_META[activeSection === 'analytics' ? 'overview' : activeSection].subtitle(t)}
-        active={(activeSection === 'analytics' ? 'overview' : activeSection) as BizSection}
+        title={SECTION_META[activeSection].title(t)}
+        subtitle={SECTION_META[activeSection].subtitle(t)}
+        active={activeSection}
         onSelect={async (section) => {
           // Przejscie miedzy sekcjami dopina miekki zapis - inaczej lokal traci to,
           // co wpisal sekunde wczesniej (debounce nie zdazyl).
@@ -2348,7 +2349,7 @@ const BusinessDashboard = () => {
                     <div className="space-y-1">
                       <div className="flex items-center justify-between gap-2">
                         <Label htmlFor="event_title_en" className="text-xs flex items-center gap-1.5 flex-wrap">
-                          🌐 {t("posts.event_en_label")}
+                          <Globe className="h-3.5 w-3.5 text-slate-400" />{t("posts.event_en_label")}
                           <span className="text-[10px] font-normal text-muted-foreground">{eventTitleEnOverridden ? t("posts.event_en_edited") : t("posts.event_en_auto")}</span>
                         </Label>
                         <button type="button" onClick={handleTranslateEvent} disabled={!eventTitle.trim() || translatingEvent}
@@ -2528,7 +2529,7 @@ const BusinessDashboard = () => {
                   <p className="text-xs text-slate-400 max-w-sm">{t("community.empty_desc")}</p>
                 </div>
               ) : (
-                <div className="grid lg:grid-cols-2 gap-5 items-start">
+                <div className="grid items-start gap-5 lg:grid-cols-[1.6fr_1fr]">
                   {/* Notki */}
                   <div className="rounded-2xl border border-slate-200 bg-white p-5">
                     <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">{t("community.notes_label", { count: communityNotes.length })}</p>
@@ -2592,13 +2593,18 @@ const BusinessDashboard = () => {
                       </div>
                     )}
                   </div>
+
+                  <GuestInsights
+                    noteCount={communityNotes.length}
+                    photoCount={communityPhotos.length}
+                    notes={communityNotes.map((n) => n.note ?? "")}
+                  />
                 </div>
               )}
               <p className="text-[11px] text-slate-400 leading-relaxed max-w-2xl">{t("community.moderation_hint")}</p>
             </div>
           )}
 
-          {/* ── ANALITYKA ── */}
           {activeSection === 'settings' && (
             (!previewMode && !isDraft && user && (profile as any)?.owner_user_id === user.id) ? (
               <SettingsSection
@@ -2623,305 +2629,6 @@ const BusinessDashboard = () => {
             )
           )}
 
-          {activeSection === 'analytics' && (
-            <div className="space-y-5">
-              {/* Header + range picker */}
-              <div className="flex items-start justify-between gap-3 flex-wrap">
-                <div>
-                  <h2 className="text-lg font-black">{t("analytics.title")}</h2>
-                  <p className="text-sm text-slate-400">
-                    {analyticsRange === 'custom' && customDateRange?.from
-                      ? `${format(customDateRange.from, 'd MMM', { locale: dateLocale() })}${customDateRange.to && customDateRange.to !== customDateRange.from ? ` - ${format(customDateRange.to, 'd MMM yyyy', { locale: dateLocale() })}` : ''}`
-                      : t('analytics.subtitle')}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <div className="flex rounded-xl bg-slate-100 p-0.5 gap-0.5">
-                    {(['7d', '30d', '90d'] as Exclude<AnalyticsRange, 'custom'>[]).map(r => (
-                      <button
-                        key={r}
-                        onClick={() => setAnalyticsRange(r)}
-                        className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${analyticsRange === r ? 'bg-white text-foreground shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
-                      >
-                        {r === '7d' ? t("range.7d") : r === '30d' ? t("range.30d") : t("range.90d")}
-                      </button>
-                    ))}
-                  </div>
-                  {/* Custom date range picker */}
-                  <div className="relative" ref={calendarRef}>
-                    <button
-                      onClick={() => setShowCalendar(v => !v)}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl border transition-all ${analyticsRange === 'custom' ? 'bg-foreground text-background border-transparent' : 'bg-white border-slate-200 text-slate-500 hover:text-slate-700 hover:border-slate-300'}`}
-                    >
-                      <svg className="h-3.5 w-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
-                        <rect x="2" y="3" width="12" height="11" rx="2"/>
-                        <path d="M5 1v2M11 1v2M2 7h12"/>
-                      </svg>
-                      {t("analytics.range")}
-                    </button>
-                    {showCalendar && (
-                      <div className="absolute right-0 top-full mt-2 z-50 bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
-                        <Calendar
-                          mode="range"
-                          selected={customDateRange}
-                          onSelect={(range) => {
-                            setCustomDateRange(range);
-                            if (range?.from) {
-                              setAnalyticsRange('custom');
-                              if (range.to) setShowCalendar(false);
-                            }
-                          }}
-                          disabled={(d) => d > new Date()}
-                          locale={dateLocale()}
-                          className="p-3"
-                          classNames={{
-                            months: "flex flex-col",
-                            caption: "flex justify-center pt-1 relative items-center mb-3",
-                            caption_label: "text-sm font-bold",
-                            nav_button: "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100",
-                            nav_button_previous: "absolute left-1",
-                            nav_button_next: "absolute right-1",
-                            table: "w-full border-collapse",
-                            head_row: "flex",
-                            head_cell: "text-muted-foreground rounded-md w-9 font-normal text-[0.8rem] text-center",
-                            row: "flex w-full mt-1",
-                            cell: "w-9 text-center p-0 relative",
-                            day: "h-9 w-9 rounded-full text-sm hover:bg-muted transition-colors",
-                            day_selected: "bg-foreground text-background hover:bg-foreground hover:text-background",
-                            day_range_start: "rounded-l-full rounded-r-none bg-foreground text-background",
-                            day_range_end: "rounded-r-full rounded-l-none bg-foreground text-background",
-                            day_range_middle: "rounded-none bg-slate-100 text-foreground",
-                            day_today: "font-bold text-primary",
-                            day_outside: "opacity-30",
-                            day_disabled: "opacity-20 cursor-not-allowed",
-                          }}
-                        />
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {plan !== 'premium' ? (
-                <div className="bg-white border border-slate-100 rounded-2xl p-8 text-center shadow-sm">
-                  <span className="text-3xl">🔒</span>
-                  <p className="font-bold text-base mt-3">{t("analytics.locked_title")}</p>
-                  <p className="text-sm text-slate-400 mt-1 mb-4">{t("analytics.locked_desc")}</p>
-                  <button onClick={() => setShowUpgradeBanner(true)} className="px-5 py-2.5 rounded-2xl bg-amber-500 text-white text-sm font-bold">{t("analytics.learn_more")}</button>
-                </div>
-              ) : (
-                <>
-                  {/* Draft: mock data banner */}
-                  {isDraft && (
-                    <div className="bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-100 rounded-2xl px-5 py-4">
-                      <p className="text-sm font-bold text-orange-900">{t("analytics.draft_title")}</p>
-                      <p className="text-xs text-primary mt-0.5">{t("analytics.draft_desc")}</p>
-                    </div>
-                  )}
-                  {/* Stat cards */}
-                  {(() => {
-                    const s = isDraft
-                      ? { views: 1247, uniqueChoices: 156, onRoutes: 89, websiteClicks: 34, phoneClicks: 21 }
-                      : stats;
-                    return (
-                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                    {[
-                      { label: t('analytics.stat_views'), value: s.views, desc: t('analytics.views_desc'), icon: BarChart2, color: 'text-primary', bg: 'bg-primary/10' },
-                      { label: t('analytics.stat_unique'), value: s.uniqueChoices, desc: t('analytics.unique_desc'), icon: Users, color: 'text-rose-500', bg: 'bg-rose-50' },
-                      { label: t('analytics.stat_addplan'), value: s.onRoutes, desc: t('analytics.addplan_desc'), icon: MapPin, color: 'text-emerald-500', bg: 'bg-emerald-50' },
-                      { label: t('analytics.stat_clicks'), value: s.websiteClicks + s.phoneClicks, desc: t('analytics.clicks_desc', { www: s.websiteClicks, tel: s.phoneClicks }), icon: MousePointerClick, color: 'text-violet-500', bg: 'bg-violet-50' },
-                    ].map(({ label, value, desc, icon: Icon, color, bg }) => (
-                      <div key={label} className="rounded-2xl border border-slate-200 bg-white p-4">
-                        <div className={`h-9 w-9 rounded-xl ${bg} flex items-center justify-center mb-3`}>
-                          <Icon className={`h-4 w-4 ${color}`} />
-                        </div>
-                        <p className="text-2xl font-black text-foreground leading-none mb-1">{analyticsLoading ? '-' : value}</p>
-                        <p className="text-xs font-semibold text-foreground mb-0.5">{label}</p>
-                        <p className="text-[10px] text-slate-400 leading-snug">{desc}</p>
-                      </div>
-                    ))}
-                  </div>
-                    );
-                  })()}
-
-                  {/* Daily activity chart */}
-                  <div className="rounded-2xl border border-slate-200 bg-white p-5">
-                    <div className="flex items-center justify-between mb-4">
-                      <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{t("analytics.activity_over_time")}</p>
-                      <div className="flex items-center gap-3">
-                        {[
-                          { key: 'views', label: t('analytics.legend_views'), color: '#EE5307' },
-                          { key: 'routes', label: t('analytics.legend_route'), color: '#10b981' },
-                          { key: 'clicks', label: t('analytics.legend_clicks'), color: '#8b5cf6' },
-                        ].map(({ key, label, color }) => (
-                          <div key={key} className="flex items-center gap-1.5">
-                            <div className="h-2 w-2 rounded-full shrink-0" style={{ background: color }} />
-                            <span className="text-[10px] text-slate-400">{label}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                    {analyticsLoading ? (
-                      <div className="flex items-center justify-center h-48">
-                        <Loader2 className="h-5 w-5 animate-spin text-slate-300" />
-                      </div>
-                    ) : chartData.every(d => d.views === 0 && d.routes === 0 && d.clicks === 0) ? (
-                      <div className="flex flex-col items-center justify-center h-48 gap-2">
-                        <BarChart2 className="h-8 w-8 text-slate-200" />
-                        <p className="text-sm text-slate-400">{t("analytics.no_data")}</p>
-                      </div>
-                    ) : (
-                      <ResponsiveContainer width="100%" height={220}>
-                        <BarChart
-                          data={chartData}
-                          barSize={chartData.length <= 10 ? 18 : chartData.length <= 35 ? 8 : 4}
-                          barCategoryGap="30%"
-                          margin={{ top: 4, right: 4, left: 0, bottom: 0 }}
-                        >
-                          <XAxis
-                            dataKey="date"
-                            tick={{ fontSize: 10, fill: '#94a3b8' }}
-                            tickLine={false}
-                            axisLine={false}
-                            interval={chartData.length <= 10 ? 0 : chartData.length <= 35 ? 4 : 13}
-                          />
-                          <YAxis
-                            allowDecimals={false}
-                            tick={{ fontSize: 10, fill: '#cbd5e1' }}
-                            tickLine={false}
-                            axisLine={false}
-                            width={24}
-                          />
-                          <Tooltip
-                            cursor={{ fill: '#f8fafc' }}
-                            contentStyle={{ fontSize: 12, borderRadius: 12, border: '1px solid #e2e8f0', boxShadow: '0 8px 24px rgba(0,0,0,0.08)', padding: '10px 14px' }}
-                            labelStyle={{ fontWeight: 700, color: '#0f172a', marginBottom: 6, fontSize: 12 }}
-                            formatter={(val: number, name: string) => {
-                              const map: Record<string, string> = { views: t('analytics.tt_views'), routes: t('analytics.tt_routes'), clicks: t('analytics.tt_clicks') };
-                              return [val, map[name] ?? name];
-                            }}
-                          />
-                          <Bar dataKey="views" fill="#EE5307" radius={[3, 3, 0, 0]} stackId="a" />
-                          <Bar dataKey="routes" fill="#10b981" radius={[0, 0, 0, 0]} stackId="a" />
-                          <Bar dataKey="clicks" fill="#8b5cf6" radius={[3, 3, 0, 0]} stackId="a" />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    )}
-                  </div>
-
-                  {/* Hourly traffic chart */}
-                  {(() => {
-                    const maxVal = Math.max(...hourlyData.map(h => h.total), 1);
-                    const peakHour = hourlyData.reduce((best, h) => h.total > best.total ? h : best, hourlyData[0] ?? { hour: -1, total: 0 });
-                    const hasData = hourlyData.some(h => h.total > 0);
-                    return (
-                      <div className="rounded-2xl border border-slate-200 bg-white p-5">
-                        <div className="flex items-center justify-between mb-1">
-                          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{t("analytics.hourly_title")}</p>
-                          {hasData && !analyticsLoading && (
-                            <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-orange-50 text-primary border border-orange-100">
-                              {t("analytics.peak", { from: `${peakHour.hour}:00`, to: `${peakHour.hour + 1}:00` })}
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-[10px] text-slate-300 mb-4">{t("analytics.hourly_desc")}</p>
-                        {analyticsLoading ? (
-                          <div className="flex items-center justify-center h-36">
-                            <Loader2 className="h-5 w-5 animate-spin text-slate-300" />
-                          </div>
-                        ) : !hasData ? (
-                          <div className="flex flex-col items-center justify-center h-36 gap-2">
-                            <BarChart2 className="h-8 w-8 text-slate-200" />
-                            <p className="text-sm text-slate-400">{t("analytics.no_data")}</p>
-                          </div>
-                        ) : (
-                          <ResponsiveContainer width="100%" height={160}>
-                            <BarChart
-                              data={hourlyData}
-                              barSize={10}
-                              barCategoryGap="15%"
-                              margin={{ top: 4, right: 4, left: 0, bottom: 0 }}
-                            >
-                              <XAxis
-                                dataKey="label"
-                                tick={{ fontSize: 10, fill: '#94a3b8' }}
-                                tickLine={false}
-                                axisLine={false}
-                                interval={2}
-                              />
-                              <YAxis allowDecimals={false} hide />
-                              <Tooltip
-                                cursor={{ fill: '#f8fafc' }}
-                                contentStyle={{ fontSize: 12, borderRadius: 12, border: '1px solid #e2e8f0', boxShadow: '0 8px 24px rgba(0,0,0,0.08)', padding: '10px 14px' }}
-                                labelStyle={{ fontWeight: 700, color: '#0f172a', marginBottom: 4, fontSize: 12 }}
-                                formatter={(val: number) => [val, t('analytics.events')]}
-                                labelFormatter={(label) => t('analytics.hour', { label })}
-                              />
-                              <Bar dataKey="total" radius={[4, 4, 0, 0]}>
-                                {hourlyData.map((entry) => {
-                                  const ratio = entry.total / maxVal;
-                                  const fill = ratio >= 0.85
-                                    ? '#D45113'
-                                    : ratio >= 0.5
-                                    ? '#fb923c'
-                                    : ratio >= 0.2
-                                    ? '#93c5fd'
-                                    : '#dbeafe';
-                                  return <Cell key={entry.hour} fill={fill} />;
-                                })}
-                              </Bar>
-                            </BarChart>
-                          </ResponsiveContainer>
-                        )}
-                        {hasData && !analyticsLoading && (
-                          <div className="flex items-center gap-4 mt-3 pt-3 border-t border-slate-50">
-                            {[
-                              { color: '#D45113', label: t('analytics.peak_traffic') },
-                              { color: '#93c5fd', label: t('analytics.activity') },
-                              { color: '#dbeafe', label: t('analytics.low_traffic') },
-                            ].map(({ color, label }) => (
-                              <div key={label} className="flex items-center gap-1.5">
-                                <div className="h-2.5 w-2.5 rounded-sm shrink-0" style={{ background: color }} />
-                                <span className="text-[10px] text-slate-400">{label}</span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })()}
-
-                  {/* Activity feed */}
-                  <div className="rounded-2xl border border-slate-200 bg-white p-5">
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">{t("activity.title")}</p>
-                    {recentEvents.length === 0 ? (
-                      <p className="text-sm text-slate-400 text-center py-6">{t("activity.empty")}</p>
-                    ) : (
-                      <div className="flex flex-col divide-y divide-slate-50">
-                        {recentEvents.map((ev, i) => {
-                          const labels: Record<string, { txt: string; dot: string }> = {
-                            view: { txt: t('analytics.act_view'), dot: 'bg-primary' },
-                            add_to_route: { txt: t('analytics.act_add'), dot: 'bg-emerald-400' },
-                            click_phone: { txt: t('analytics.act_phone'), dot: 'bg-violet-400' },
-                            click_website: { txt: t('analytics.act_website'), dot: 'bg-violet-400' },
-                            click_booking: { txt: t('analytics.act_booking'), dot: 'bg-amber-400' },
-                          };
-                          const info = labels[ev.event_type] ?? { txt: ev.event_type, dot: 'bg-slate-300' };
-                          return (
-                            <div key={i} className="flex items-center gap-3 py-3">
-                              <div className={`h-2 w-2 rounded-full shrink-0 ${info.dot}`} />
-                              <p className="text-sm text-slate-600 flex-1">{info.txt}</p>
-                              <p className="text-xs text-slate-400 shrink-0">{formatDistanceToNow(new Date(ev.created_at), { addSuffix: true, locale: dateLocale() })}</p>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                </>
-              )}
-            </div>
-          )}
 
       </BizShell>
 

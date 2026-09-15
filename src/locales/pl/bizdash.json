@@ -493,7 +493,12 @@
     "report": "Zgłoś do moderacji",
     "report_done": "Zgłoszono do moderacji. Sprawdzimy to.",
     "report_error": "Nie udało się wysłać zgłoszenia",
-    "moderation_hint": "Widzisz treść, która narusza zasady? Zgłoś ją, a zespół spontaway ją sprawdzi. Notek i zdjęć nie usuwamy z panelu - dbamy o to, żeby opinie były autentyczne."
+    "moderation_hint": "Widzisz treść, która narusza zasady? Zgłoś ją, a zespół spontaway ją sprawdzi. Notek i zdjęć nie usuwamy z panelu - dbamy o to, żeby opinie były autentyczne.",
+    "stats_title": "W tym miesiącu",
+    "stats_notes": "notatek od gości",
+    "stats_photos": "zdjęcia wrzucone przez gości",
+    "stats_saves": "zapisów w kolekcjach",
+    "words_title": "Co wracało w notatkach"
   },
   "shell": {
     "breadcrumb": "Panel",
