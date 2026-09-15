@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { MapPin, ArrowRight, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, RotateCcw, CheckCircle2, Navigation, X, CalendarDays, Plus, Check, Bookmark } from "lucide-react";
+import { MapPin, ArrowRight, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, RotateCcw, CheckCircle2, Navigation, X, CalendarDays, Plus, Check } from "lucide-react";
 import AddCustomPlacePanel from "./AddCustomPlacePanel";
 import { haversineKm as haversineKmDist, formatDistance } from "@/lib/distance";
 import { pinCoverKeys, fetchPlaceKeysWithPhotos } from "@/lib/placePhotoSocial";
+import { BrandBookmark } from "@/components/BrandBookmark";
 import { useDistanceReference, getReference, ensureCityContext, tryResolveOnSite, setGpsReference } from "@/lib/distanceReference";
 import { askPermission } from "@/lib/permissionPrompts";
 import { cn } from "@/lib/utils";
@@ -324,6 +325,19 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
 
   // Adres z bazy (ocena-gwiazdki usunieta z aplikacji; Google fallbacky odciete - zero Google).
   const displayAddress = place.address;
+  // MIASTO na okladce (prosba Nat 2026-09-15). Do tej pory w wierszu meta stal sam pierwszy
+  // czlon adresu, czyli ULICA - a przy globalnej zakladce "Miejsca" (city="all") karty
+  // z Warszawy, Gdanska i Rzymu leza jedna na drugiej i po samej ulicy nie da sie poznac,
+  // gdzie sie jest. Dotyczy tak samo wizytowek premium (adres z panelu lokalu), jak i stanu
+  // zero (adres z `places`). Dedup, bo czesc adresow to sama nazwa miasta.
+  // ⛔ `city` bywa sentynelem "all" (zakladka Miejsca jest globalna) - nie wolno go wypisac
+  // jako nazwy miasta. Zrodlem prawdy jest `place.city`; prop sluzy tylko za awaryjne uzupelnienie.
+  const cardCity = (place.city || (city && city !== "all" ? city : "") || "").trim() || null;
+  const street = displayAddress ? displayAddress.split(",")[0].trim() : null;
+  const metaPlace = [street, cardCity]
+    .filter((v): v is string => !!v)
+    .filter((v, i, a) => a.findIndex((x) => x.toLowerCase() === v.toLowerCase()) === i)
+    .join(" · ");
   // Chip dystansu "X od {label}" - od wspolnego punktu odniesienia (GPS "od Ciebie" gdy
   // jestes na miejscu, albo punkt startowy "od startu" gdy planujesz). Gdy brak ref a
   // miejsce MA wspolrzedne - maly przycisk "Pokaz dystans" otwiera wybor (Jestes juz w meiscie?).
@@ -548,10 +562,10 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
           {place.price_level && !shareMode && (
             <span className="text-white/60 text-sm">{PRICE_DOTS(place.price_level)}</span>
           )}
-          {displayAddress && (
-            <div className="flex items-center gap-1">
-              <MapPin className="h-3 w-3 text-white/50" />
-              <span className="text-white/60 text-xs truncate">{displayAddress.split(",")[0]}</span>
+          {metaPlace && (
+            <div className="flex min-w-0 items-center gap-1">
+              <MapPin className="h-3 w-3 shrink-0 text-white/50" />
+              <span className="text-white/60 text-xs truncate">{metaPlace}</span>
             </div>
           )}
         </div>
@@ -641,7 +655,9 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
             aria-label={t("add")}
             className="h-12 w-12 rounded-full bg-white flex items-center justify-center shadow-lg active:scale-90 transition-transform"
           >
-            <Bookmark className={cn("h-5 w-5 text-foreground", saved && "fill-current")} strokeWidth={2} />
+            {/* Brandowa zakladka (CLAUDE.md: nie lucide `Bookmark`), PUSTA dopoki miejsce nie
+                jest nigdzie zapisane, PELNA po zapisie (prosba Nat 2026-09-15). */}
+            <BrandBookmark filled={saved} className="h-5 w-5 text-foreground" />
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); onTap(); }}

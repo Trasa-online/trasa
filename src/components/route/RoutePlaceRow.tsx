@@ -4,7 +4,8 @@ import { AnimatePresence, motion } from "framer-motion";
 import { FLIGHT_MS, arcThrough, relRect } from "@/lib/flightPath";
 import { localizeTag, verdictOf } from "@/lib/routeTags";
 import { Check, CheckCheck, MoreHorizontal, Plus, Trash2 } from "lucide-react";
-import { BrandIcon, CAMERA_ICON, SAVE_ICON, STAR_ICON } from "@/components/BrandIcon";
+import { BrandIcon, CAMERA_ICON, STAR_ICON } from "@/components/BrandIcon";
+import { BrandBookmark } from "@/components/BrandBookmark";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useLongPress } from "@/hooks/useLongPress";
 import { haptics } from "@/hooks/useHaptics";
@@ -472,7 +473,8 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
                 className="h-10 w-10 rounded-full bg-white border border-black/[0.04] shadow-[0_1px_5px_rgba(0,0,0,0.12)] flex items-center justify-center shrink-0 active:scale-90 transition-transform"
               >
                 {/* Brandowa zakladka (Ikona_Zapisane.svg) zamiast lucide (prosba Nat 2026-09-13). */}
-                <BrandIcon src={SAVE_ICON} className={`h-[18px] w-[18px] ${saved ? "text-[#F0A583]" : "text-foreground/60"}`} />
+                {/* Pusta zakladka = miejsce nigdzie nie zapisane, pelna = zapisane (2026-09-15). */}
+                <BrandBookmark filled={saved} className={`h-[18px] w-[18px] ${saved ? "text-[#F0A583]" : "text-foreground/60"}`} />
               </button>
             )}
             {(actionCount > 1 || (actionCount === 1 && !onSave)) && (
@@ -506,7 +508,7 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
                   ))}
                   {onSave && (
                     <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onSave(); }} className="gap-2.5 py-2.5">
-                      <BrandIcon src={SAVE_ICON} className={`h-4 w-4 ${saved ? "text-[#F0A583]" : "text-foreground/70"}`} />
+                      <BrandBookmark filled={saved} className={`h-4 w-4 ${saved ? "text-[#F0A583]" : "text-foreground/70"}`} />
                       {saved ? t("row.saved_in_list") : t("row.save_to_list")}
                     </DropdownMenuItem>
                   )}

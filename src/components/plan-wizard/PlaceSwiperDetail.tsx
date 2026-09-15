@@ -12,7 +12,8 @@ import { useState, useEffect, useRef, type ChangeEvent, type MouseEvent } from "
 import { useTranslation } from "react-i18next";
 import { MapPin, Navigation, Check, Share2, Loader2 } from "lucide-react";
 import { usePlaceShare } from "@/hooks/usePlaceShare";
-import { BrandIcon, PLUS_ICON, SAVE_ICON } from "@/components/BrandIcon";
+import { BrandIcon, PLUS_ICON } from "@/components/BrandIcon";
+import { BrandBookmark } from "@/components/BrandBookmark";
 import { haptics } from "@/hooks/useHaptics";
 import { useDistanceReference, setGpsReference } from "@/lib/distanceReference";
 import { askPermission } from "@/lib/permissionPrompts";
@@ -529,7 +530,8 @@ const PlaceSwiperDetail = ({
                   className={`flex-1 h-11 rounded-full font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.97] transition-transform ${onAdd ? "bg-secondary text-secondary-foreground shadow-sm" : "bg-primary text-white"}`}
                 >
                   {onAdd ? t("save_short") : t("save_place")}
-                  <BrandIcon src={SAVE_ICON} className="h-[18px] w-[18px]" />
+                  {/* Pusta zakladka = jeszcze nigdzie nie zapisane, pelna = zapisane (2026-09-15). */}
+                  <BrandBookmark filled={savedEffective} className="h-[18px] w-[18px]" />
                 </button>
               )}
               {onAdd && (

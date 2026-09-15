@@ -17,7 +17,7 @@ import { fetchBlockedIds } from "@/lib/blockedUsers";
 import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import { haptics } from "@/hooks/useHaptics";
 import { supabase } from "@/integrations/supabase/client";
-import { moveToTrash } from "@/lib/trash";
+import { deleteWithUndo } from "@/lib/trash";
 import { MapPin, X, Globe, Sparkles, Pencil, Trash2, ChevronRight, ArrowRight, Eye, List, GalleryHorizontalEnd, Search, SlidersHorizontal, Plus, ArrowLeft, Images, Bookmark, Building2, Users, Navigation, Loader2, Calendar as CalendarIcon } from "lucide-react";
 import { API_BASE } from "@/lib/platform";
 import { useDebounce } from "@/hooks/useDebounce";
@@ -52,7 +52,6 @@ import { createWyjazdFromPlaces } from "@/lib/createWyjazd";
 import { setGpsReference } from "@/lib/distanceReference";
 import { askPermission } from "@/lib/permissionPrompts";
 import { track } from "@/lib/analytics";
-import { deferDelete } from "@/lib/deferDelete";
 
 type DiscoveryItem = {
   id: string;
@@ -294,15 +293,8 @@ export function CollectionDetail({ col, onClose, onAdopt }: { col: DiscoveryColl
     setDeleting(true);
     const refresh = () => queryClient.invalidateQueries({ queryKey: ["explore-rankings"] });
     onClose();
-    deferDelete({
-      message: t("toast.collection_deleted"),
-      commit: async () => {
-        // Do KOSZA, nie DELETE (2026-09-15) - patrz src/lib/trash.ts.
-        await moveToTrash("list", col.id);
-        refresh();
-      },
-      onUndo: () => { setDeleting(false); refresh(); },
-    });
+    // Do KOSZA OD RAZU + "Cofnij" (2026-09-15).
+    void deleteWithUndo("list", col.id, { message: t("toast.collection_deleted") }).then(refresh);
   };
 
   // Piny do mapy-podgladu (RouteMap = Google, dziala natywnie; leaflet w iframe srcDoc

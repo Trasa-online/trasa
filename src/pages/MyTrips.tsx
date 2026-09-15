@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { moveToTrash, moveManyToTrash } from "@/lib/trash";
+import { moveManyToTrash, invalidateContentLists } from "@/lib/trash";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Trash2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -134,6 +134,7 @@ const MyTrips = () => {
         // Do KOSZA, nie DELETE (2026-09-15). Folder ZOSTAJE: gdyby zniknal, odzyskane trasy
         // wrocilyby z wiszacym folder_id i rozsypanym grupowaniem.
         await moveManyToTrash("trip", trip.routes.map((r: any) => r.id));
+        invalidateContentLists();
       } catch {
         queryClient.setQueryData(["active-routes", user?.id], previousRoutes);
         toast.error(t("toast_delete_error"));

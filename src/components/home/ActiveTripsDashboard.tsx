@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { moveToTrash } from "@/lib/trash";
+import { deleteWithUndo } from "@/lib/trash";
 import ActiveTripPlanEditor from "@/components/home/ActiveTripPlanEditor";
 import { MapPin, Users, ChevronRight, ChevronDown, Trash2, Loader2, X } from "lucide-react";
 import { format, parseISO, isValid } from "date-fns";
@@ -109,26 +109,11 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
   const handleDelete = (e: React.MouseEvent, r: any) => {
     e.stopPropagation();
     const name = r.city || r.title || t("trip_fallback");
-    const prev = queryClient.getQueryData(["home-active-solo", userId]);
-    queryClient.setQueryData(["home-active-solo", userId], (old: any) =>
-      (old ?? []).filter((x: any) => x.id !== r.id),
-    );
-    deferDelete({
+    // Do KOSZA OD RAZU + "Cofnij" w toascie (2026-09-15). Wczesniej commit byl odroczony
+    // o 5 s i potrafil nie dojsc, gdy user w tym czasie wyszedl z ekranu albo z apki.
+    void deleteWithUndo("trip", r.id, {
       message: t("dashboard.toast_route_deleted", { name }),
-      onUndo: () => queryClient.setQueryData(["home-active-solo", userId], prev),
-      commit: async () => {
-        try {
-          // Do KOSZA, nie DELETE (2026-09-15): piny i czat zostaja, zeby odzyskany wyjazd
-          // wrocil kompletny. Realne kasowanie robi cron po 7 dniach.
-          await moveToTrash("trip", r.id);
-          queryClient.invalidateQueries({ queryKey: ["home-active-solo"] });
-          queryClient.invalidateQueries({ queryKey: ["journal-entries"] });
-        } catch (err: any) {
-          console.error("[ActiveTripsDashboard] delete failed:", err?.message ?? err);
-          notify.error(t("dashboard.toast_route_delete_error"));
-          queryClient.invalidateQueries({ queryKey: ["home-active-solo"] });
-        }
-      },
+      failMessage: t("dashboard.toast_route_delete_error"),
     });
   };
 

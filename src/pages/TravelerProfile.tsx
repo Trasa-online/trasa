@@ -4,7 +4,7 @@ import { avatarSrc } from "@/lib/avatar";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import { supabase } from "@/integrations/supabase/client";
-import { moveToTrash, moveManyToTrash } from "@/lib/trash";
+import { deleteWithUndo } from "@/lib/trash";
 import { useQuery } from "@tanstack/react-query";
 import { Settings, UserCircle2, ArrowRight, Bell, Share2, Search, ChevronLeft } from "lucide-react";
 import { BrandIcon, LIST_ICON, STAR_ICON } from "@/components/BrandIcon";
@@ -266,24 +266,11 @@ const TravelerProfile = () => {
   const handleDeleteTrip = (tr: any) => {
     if (!user) return;
     const ids: string[] = tr.routeIds?.length ? tr.routeIds : [tr.id];
-    const key = ["profile-trip-feed", user.id];
-    const prev = queryClient.getQueryData(key);
-    queryClient.setQueryData(key, (old: any) => (old ?? []).filter((r: any) => r.id !== tr.id));
-    deferDelete({
+    // Do KOSZA OD RAZU + "Cofnij" (2026-09-15). `deleteWithUndo` samo odswieza WSZYSTKIE
+    // listy, na ktorych wyjazd moze stac - lokalne `setQueryData` nie jest juz potrzebne.
+    void deleteWithUndo("trip", ids, {
       message: t("profile.trip_deleted"),
-      onUndo: () => queryClient.setQueryData(key, prev),
-      commit: async () => {
-        try {
-          // Do KOSZA, nie DELETE (2026-09-15) - patrz src/lib/trash.ts.
-          const moved = await moveManyToTrash("trip", ids);
-          if (moved === 0) throw new Error("trash: nic nie przeniesiono");
-          queryClient.invalidateQueries({ queryKey: ["profile-trip-feed", user.id] });
-        } catch (e: any) {
-          toast.error(t("profile.delete_error"));
-          console.error("[TravelerProfile] delete trip failed:", e?.message ?? e);
-          queryClient.invalidateQueries({ queryKey: ["profile-trip-feed", user.id] });
-        }
-      },
+      failMessage: t("profile.delete_error"),
     });
   };
   const { data: profile } = useQuery({

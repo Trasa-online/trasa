@@ -3,7 +3,8 @@ import { useTranslation } from "react-i18next";
 import SpontawayLanding from "./pages/SpontawayLanding";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { queryClient } from "@/lib/queryClient";
 import { HashRouter, Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { trackPageView } from "@/lib/analytics";
 import { useAuth, AuthProvider } from "@/hooks/useAuth";
@@ -773,18 +774,7 @@ function PlanRoute() {
   return <PlanWizard />;
 }
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      // Po wlaczeniu internetu po offline - automatyczny refetch wszystkich
-      // aktywnych queries. Bez tego user widzial bialy ekran / "brak miejsc"
-      // dopoki nie zrobil page reload (test Network edge cases / airplane mode).
-      refetchOnReconnect: "always",
-      retry: 2,
-      retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 8000),
-    },
-  },
-});
+
 
 function AuthDrawerProviderWrapper({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();

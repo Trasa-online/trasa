@@ -4,14 +4,13 @@ import { useNavigate } from "react-router-dom";
 import { goBackOr } from "@/hooks/useGoBack";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { moveToTrash } from "@/lib/trash";
+import { deleteWithUndo } from "@/lib/trash";
 import { useAuth } from "@/hooks/useAuth";
 import { ArrowLeft, ArrowRight, Search, X, Trash2, Plus, Loader2 } from "lucide-react";
 import { resolveStored } from "@/components/PlacePhoto";
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { haptics } from "@/hooks/useHaptics";
 import { toast } from "sonner";
-import { deferDelete } from "@/lib/deferDelete";
 
 // Ekran po kliknieciu "+": wybor bazy nowego wyjazdu. Robocze (wlasne trasy usera) lub
 // Zapisane (trasy zapisane od innych) jako punkt startu, albo "Zacznij od nowa" (pusty
@@ -144,15 +143,8 @@ export default function StartWyjazd() {
   // jedno i drugie (zgloszenie Nat 2026-09-09).
   const deleteDraft = async (id: string) => {
     haptics.warning();
-    deferDelete({
-      message: t("drafts.deleted"),
-      commit: async () => {
-        // Do KOSZA, nie DELETE (2026-09-15) - takze roboczy wyjazd da sie odzyskac.
-        await moveToTrash("trip", id);
-        queryClient.invalidateQueries({ queryKey: ["start-robocze"] });
-      },
-      onUndo: () => queryClient.invalidateQueries({ queryKey: ["start-robocze"] }),
-    });
+    // Do KOSZA OD RAZU + "Cofnij" (2026-09-15) - takze roboczy wyjazd da sie odzyskac.
+    void deleteWithUndo("trip", id, { message: t("drafts.deleted") });
   };
 
   return (

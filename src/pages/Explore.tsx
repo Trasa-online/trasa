@@ -40,7 +40,7 @@ import { PLANNING_DISABLED, GOOGLE_PLACE_DETAILS_DISABLED } from "@/lib/appMode"
 import { createWyjazdFromPlaces } from "@/lib/createWyjazd";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
-import { moveToTrash } from "@/lib/trash";
+import { deleteWithUndo } from "@/lib/trash";
 import { toast } from "sonner";
 import posthog from "posthog-js";
 import { useTranslation } from "react-i18next";
@@ -518,16 +518,11 @@ export const MyCollections = ({ showCreate = true }: { showCreate?: boolean } = 
       const refresh = () => queryClient.invalidateQueries({ queryKey: ["my-collections", user.id] });
       setConfirmDelete(null);
       refresh();
-      deferDelete({
+      // Do KOSZA OD RAZU + "Cofnij" (2026-09-15).
+      void deleteWithUndo("list", target.id, {
         message: t("collections.toast_deleted"),
-        commit: async () => {
-          // Do KOSZA, nie DELETE (2026-09-15) - patrz src/lib/trash.ts.
-          const moved = await moveToTrash("list", target.id).catch(() => false);
-          if (!moved) toast.error(t("collections.toast_delete_error", { error: t("collections.error_fallback") }));
-          refresh();
-        },
-        onUndo: refresh,
-      });
+        failMessage: t("collections.toast_delete_error", { error: t("collections.error_fallback") }),
+      }).then(refresh);
     } catch (e: any) {
       toast.error(t("collections.toast_delete_error", { error: e?.message ?? t("collections.error_fallback") }));
     } finally {

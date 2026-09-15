@@ -13,6 +13,7 @@ import { track } from "@/lib/analytics";
 import { supabase } from "@/integrations/supabase/client";
 import { avatarSrc } from "@/lib/avatar";
 import CountryPicker from "@/components/create/CountryPicker";
+import { citiesForCountry } from "@/lib/tripCountries";
 import AddPeoplePicker, { type PersonLite } from "@/components/create/AddPeoplePicker";
 import { fetchSavedPlaces, createListFromSavedPlaces, type SavedPlace, type PlaceForList } from "@/lib/placeLists";
 import { askPermissionSoon } from "@/lib/permissionPrompts";
@@ -27,7 +28,7 @@ import { GoogleGlyph } from "@/components/icons/GoogleGlyph";
 import { openExternal } from "@/lib/openExternal";
 import SheetSkeleton from "@/components/layout/SheetSkeleton";
 
-type Step = "entry" | "listCountry" | "listPick" | "tripMode" | "tripCountry" | "tripDates" | "tripPeople";
+type Step = "entry" | "listCountry" | "listCity" | "listName" | "listPick" | "tripMode" | "tripCountry" | "tripDates" | "tripPeople";
 type TripMode = "future" | "past";
 
 // Nazwa wyjazdu/listy powstaje z WYBRANYCH KRAJOW, a nie z osobnego kroku (decyzja Nat
@@ -62,6 +63,13 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
 
   // Lista
   const [listCountries, setListCountries] = useState<string[]>([]);   // zasieg listy = kraje
+  // MIASTO i NAZWA kolekcji (prosba Nat 2026-09-15). Do tej pory kreator szedl kraj -> miejsca,
+  // a nazwa powstawala automatycznie z kraju i nie dalo sie jej tknac przed utworzeniem.
+  const [listCity, setListCity] = useState("");
+  const [listTitle, setListTitle] = useState("");
+  // Dopoki user nie tknal pola nazwy, nazwa JEDZIE ZA wyborem kraju i miasta. Po pierwszej
+  // edycji zostaje ta wpisana - inaczej cofniecie sie po miasto kasowaloby jego tekst.
+  const [titleTouched, setTitleTouched] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [creating, setCreating] = useState(false);
   // Wyszukiwarka Google Places INLINE (zamiast nawigacji do starego edytora CreateRanking).
@@ -91,7 +99,7 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
   // Reset przy kazdym otwarciu.
   useEffect(() => {
     if (open) {
-      setStep("entry"); setListCountries([]); setSelected(new Set()); setListQuery(""); setManualPlaces([]); setDetailPlace(null); setTripStart(null); setTripDays(1);
+      setStep("entry"); setListCountries([]); setListCity(""); setListTitle(""); setTitleTouched(false); setSelected(new Set()); setListQuery(""); setManualPlaces([]); setDetailPlace(null); setTripStart(null); setTripDays(1);
       setTripMode("future"); setTripCountries([]); setTripPeople([]); setCreating(false);
     }
   }, [open]);
@@ -180,6 +188,11 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
     </div>
   );
 
+  // Nazwa proponowana z zasiegu: miasto ma pierwszenstwo przed krajem ("Kolekcja miejsc
+  // w Krakowie" zamiast "... w Polsce"), bo jest konkretniejsza.
+  const suggestedTitle = collectionName(listCity.trim() || null, listCountries, naming);
+  const effectiveTitle = (titleTouched ? listTitle : suggestedTitle).trim() || suggestedTitle;
+
   const createList = async () => {
     if (!user) { close(); navigate("/auth"); return; }
     // Miejsca listy = zaznaczone zapisane + dodane z Google (manual), dedup po nazwie.
@@ -190,8 +203,8 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
     setCreating(true);
     haptics.light();
     const id = await createListFromSavedPlaces(user.id, {
-      title: collectionName(null, listCountries, naming),
-      city: null, countries: listCountries, isPublic: true, places, author,
+      title: effectiveTitle,
+      city: listCity.trim() || null, countries: listCountries, isPublic: true, places, author,
     });
     setCreating(false);
     if (!id) { haptics.error(); toast.error(t("toast.list_failed")); return; }
@@ -342,17 +355,82 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
         {step === "listCountry" && (
           <div className="flex-1 min-h-0 flex flex-col pb-[max(16px,env(safe-area-inset-bottom))]">
             <Header title={t("country.title_list")} onBack={() => setStep("entry")}
-              onNext={() => setStep("listPick")}
+              onNext={() => setStep("listCity")}
               nextLabel={listCountries.length ? t("common:buttons.next") : t("skip")} />
             <p className="px-5 -mt-1 pb-2 text-[13px] text-muted-foreground leading-relaxed">{t("country.hint_list")}</p>
             <CountryPicker selected={listCountries} onChange={setListCountries} />
           </div>
         )}
 
+        {/* ── LISTA: MIASTO (opcjonalne) - chipy miast pierwszego kraju albo wpisane ręcznie.
+            Ten sam uklad, co w ListScopeSheet (zmiana zasiegu juz istniejacej kolekcji),
+            zeby tworzenie i edycja pytaly o to samo w ten sam sposob. ── */}
+        {step === "listCity" && (
+          <div className="flex-1 min-h-0 flex flex-col pb-[max(16px,env(safe-area-inset-bottom))]">
+            <Header title={t("city.title_list")} onBack={() => setStep("listCountry")}
+              onNext={() => setStep("listName")}
+              nextLabel={listCity.trim() ? t("common:buttons.next") : t("skip")} />
+            <p className="px-5 -mt-1 pb-3 text-[13px] text-muted-foreground leading-relaxed">{t("city.hint_list")}</p>
+            <div className="flex-1 min-h-0 overflow-y-auto px-5">
+              {(() => {
+                const opts = listCountries.length ? citiesForCountry(listCountries[0]) : [];
+                const listed = opts.includes(listCity.trim());
+                return (
+                  <>
+                    {opts.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {opts.map((c) => {
+                          const on = listCity.trim() === c;
+                          return (
+                            <button key={c} type="button"
+                              onClick={() => { haptics.selection(); setListCity(on ? "" : c); }}
+                              className={`rounded-full px-3.5 py-2 text-sm font-semibold border transition-colors active:scale-[0.97] ${on ? "bg-[#FDF184] border-[#FDF184] text-[#5B2C06]" : "bg-white text-foreground border-border"}`}>
+                              {c}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                    <input
+                      value={listed ? "" : listCity}
+                      onChange={(e) => setListCity(e.target.value.slice(0, 60))}
+                      autoCapitalize="words"
+                      autoCorrect="off"
+                      placeholder={listed ? listCity : t("city.placeholder")}
+                      className="mt-3 w-full h-11 rounded-xl bg-secondary/60 border border-border/60 px-4 text-[15px] text-foreground placeholder:text-muted-foreground/70 outline-none focus:ring-2 focus:ring-orange-500/30"
+                    />
+                  </>
+                );
+              })()}
+            </div>
+          </div>
+        )}
+
+        {/* ── LISTA: NAZWA. Pole startuje z propozycja z kraju i miasta; user moze ja
+            nadpisac albo zostawic. Pusta = wraca propozycja (nie tworzymy kolekcji bez nazwy). ── */}
+        {step === "listName" && (
+          <div className="flex-1 min-h-0 flex flex-col pb-[max(16px,env(safe-area-inset-bottom))]">
+            <Header title={t("name.title_list")} onBack={() => setStep("listCity")}
+              onNext={() => setStep("listPick")} nextLabel={t("common:buttons.next")} />
+            <p className="px-5 -mt-1 pb-3 text-[13px] text-muted-foreground leading-relaxed">{t("name.hint_list")}</p>
+            <div className="px-5">
+              <input
+                value={titleTouched ? listTitle : suggestedTitle}
+                onChange={(e) => { setTitleTouched(true); setListTitle(e.target.value.slice(0, 80)); }}
+                autoCapitalize="sentences"
+                maxLength={80}
+                placeholder={suggestedTitle}
+                className="w-full h-12 rounded-xl bg-secondary/60 border border-border/60 px-4 text-[16px] font-semibold text-foreground placeholder:text-muted-foreground/70 outline-none focus:ring-2 focus:ring-orange-500/30"
+              />
+              <p className="mt-2 text-right text-[12px] text-muted-foreground tabular-nums">{(titleTouched ? listTitle : suggestedTitle).length}/80</p>
+            </div>
+          </div>
+        )}
+
         {/* ── LISTA: wyszukiwarka Google (inline) + wybor zapisanych ── */}
         {step === "listPick" && (
           <>
-            <Header title={collectionName(null, listCountries, naming)} onBack={() => setStep("listCountry")}
+            <Header title={effectiveTitle} onBack={() => setStep("listName")}
               onNext={createList} nextLabel={creating ? "..." : ((selected.size > 0 || manualPlaces.length > 0) ? t("common:buttons.next") : t("skip"))} nextEnabled={!creating} />
             <PeopleRow kind="listy" disabled />
             {/* Wyszukiwarka Google Places INLINE - klik = wyniki tutaj (a NIE nawigacja do starego edytora). */}

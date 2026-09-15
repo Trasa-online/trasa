@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { moveToTrash } from "@/lib/trash";
+import { moveToTrash, invalidateContentLists } from "@/lib/trash";
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { resolveStored } from "@/components/PlacePhoto";
 import { format, parseISO, isValid, differenceInCalendarDays } from "date-fns";
@@ -261,8 +261,11 @@ const JournalTab = ({ userId, city: cityFilter, draftsOnly = false }: JournalTab
       commit: async () => {
         try {
           if (entry.is_own) {
-            // Do KOSZA, nie DELETE (2026-09-15) - patrz src/lib/trash.ts.
+            // Do KOSZA, nie DELETE (2026-09-15) - patrz src/lib/trash.ts. Tu zostaje
+            // odroczenie, bo DRUGA galaz (opuszczenie cudzego wyjazdu) jest nieodwracalna
+            // przez RLS i jedynym uczciwym cofnieciem jest nie wykonac operacji.
             await moveToTrash("trip", entry.id);
+            invalidateContentLists();
           } else {
             if (!entry.group_session_id) throw new Error("missing group_session_id");
             // count: 'exact' zeby wykryc silent RLS fail (migracja 20260604_gsm_delete_policy.sql).

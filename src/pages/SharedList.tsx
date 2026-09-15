@@ -4,7 +4,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { goBackOr } from "@/hooks/useGoBack";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { moveToTrash } from "@/lib/trash";
+import { deleteWithUndo } from "@/lib/trash";
 import { useScreenshot } from "@/hooks/useScreenshot";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -48,12 +48,11 @@ import { fetchVisitedKeys, toggleVisited } from "@/lib/placeVisits";
 import { haptics } from "@/hooks/useHaptics";
 import { moderateImageUrl, MODERATION_REJECTED_MESSAGE } from "@/lib/imageModeration";
 import { rowOwnPhotos, mergeRowPhotosIntoDetail } from "@/lib/placeUserPhotos";
-import { deferDelete } from "@/lib/deferDelete";
 import ListThemeSheet from "@/components/lists/ListThemeSheet";
 import ListScopeSheet from "@/components/lists/ListScopeSheet";
 import { AuthorPill, HighlightChips } from "@/components/route/TripHeaderChips";
 import { listTheme } from "@/lib/listThemes";
-import { BrandIcon, SAVE_ICON } from "@/components/BrandIcon";
+import { BrandBookmark } from "@/components/BrandBookmark";
 
 // Widok LISTY miejsc (polecajki) - UI/UX 1:1 z widokiem trasy (SharedRoute), ale zasilany z
 // discovery_collections/discovery_items. Lista NIE jest trasa (brak kolejnosci-planu), ale
@@ -249,25 +248,14 @@ export default function SharedList() {
     if (!user || !id) return;
     setDeleting(true);
     try {
-      // Commit ODROCZONY o okno "Cofnij" - kasujemy kolekcje RAZEM z pozycjami, wiec po fakcie
-      // nie da sie tego zlozyc z powrotem; jedyne uczciwe cofniecie to nie wykonac usuniecia.
-      // Ten sam wzorzec, co przy usuwaniu listy z profilu (TravelerProfile).
-      const refresh = () => {
-        queryClient.invalidateQueries({ queryKey: ["save-sheet-lists", user.id] });
-        queryClient.invalidateQueries({ queryKey: ["profile-list-feed", user.id] });
-      };
+      // Do KOSZA OD RAZU + "Cofnij" w toascie (2026-09-15). Pozycje kolekcji zostaja,
+      // wiec przywrocona kolekcja wraca z miejscami. `deleteWithUndo` samo odswieza
+      // wszystkie listy - wczesniej ten ekran pamietal tylko o dwoch swoich kluczach.
       setAskDelete(false);
       goBackOr(navigate, "/moj-profil");
-      deferDelete({
+      void deleteWithUndo("list", id, {
         message: t("toast.list_deleted"),
-        commit: async () => {
-          // Do KOSZA, nie DELETE (2026-09-15): pozycje kolekcji zostaja, zeby odzyskana
-          // kolekcja wrocila z miejscami. Patrz src/lib/trash.ts.
-          const moved = await moveToTrash("list", id);
-          if (!moved) { toast.error(t("toast.list_delete_failed")); return; }
-          refresh();
-        },
-        onUndo: refresh,
+        failMessage: t("toast.list_delete_failed"),
       });
     } catch (e: any) {
       toast.error(t("toast.list_delete_failed"));
@@ -896,7 +884,9 @@ export default function SharedList() {
               <Plus className="h-4 w-4" />{t("cta.add_place")}</button>
           ) : (
             <button onClick={toggleSave} className="flex-1 min-w-0 py-3 rounded-full bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform">
-              <BrandIcon src={SAVE_ICON} className="h-4 w-4" />{saved ? t("toast.list_saved") : t("cta.save_list")}
+              {/* Zakladka PUSTA dopoki nie zapisane, PELNA po zapisie (prosba Nat 2026-09-15) -
+                  `BrandIcon` rysuje maske, wiec zawsze byla pelna i nie niosla stanu. */}
+              <BrandBookmark filled={saved} className="h-4 w-4" />{saved ? t("toast.list_saved") : t("cta.save_list")}
             </button>
           )}
           <button onClick={handleShare} onContextMenu={(e) => { e.preventDefault(); handleShareLink(); }} aria-label={t("aria.share")}

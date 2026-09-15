@@ -76,7 +76,7 @@
   },
   "country": {
     "title": "Where are you going?",
-    "title_list": "Where are these places?",
+    "title_list": "Pick a country",
     "hint": "Pick one country or several. This sets the reach of the place search.",
     "hint_list": "Pick one country or several. You can change this later.",
     "search": "Search for a country",
@@ -98,5 +98,14 @@
     "collection_plain": "Places: {{place}}",
     "trip_to": "Trip to {{place}}",
     "trip_plain": "Trip: {{place}}"
+  },
+  "city": {
+    "title_list": "Pick a city",
+    "hint_list": "You can skip this - the collection will stay at country level.",
+    "placeholder": "Type a city"
+  },
+  "name": {
+    "title_list": "Collection name",
+    "hint_list": "We suggest a name from the place you picked. You can change it."
   }
 }

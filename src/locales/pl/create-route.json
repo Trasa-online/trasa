@@ -76,7 +76,7 @@
   },
   "country": {
     "title": "Dokąd jedziecie?",
-    "title_list": "Skąd są te miejsca?",
+    "title_list": "Wybierz kraj",
     "hint": "Wybierz kraj lub kilka krajów. To ustawia zasięg wyszukiwarki miejsc.",
     "hint_list": "Wybierz kraj lub kilka. Możesz to zmienić później.",
     "search": "Szukaj kraju",
@@ -98,5 +98,14 @@
     "collection_plain": "Kolekcja miejsc: {{place}}",
     "trip_to": "Wyjazd {{place}}",
     "trip_plain": "Wyjazd: {{place}}"
+  },
+  "city": {
+    "title_list": "Wybierz miasto",
+    "hint_list": "Możesz pominąć - kolekcja zostanie przy samym kraju.",
+    "placeholder": "Wpisz miasto"
+  },
+  "name": {
+    "title_list": "Nazwa kolekcji",
+    "hint_list": "Podpowiadamy nazwę z wybranego miejsca. Możesz ją zmienić."
   }
 }

@@ -8,7 +8,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { fetchRouteLike, toggleRouteLike, type LikeState } from "@/lib/likes";
 import { supabase } from "@/integrations/supabase/client";
-import { moveToTrash, moveManyToTrash } from "@/lib/trash";
+import { deleteWithUndo } from "@/lib/trash";
 import { useAuth } from "@/hooks/useAuth";
 import { notify } from "@/lib/notify";
 import { sendClientPush, getCurrentUserName } from "@/lib/clientPush";
@@ -70,7 +70,7 @@ import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { avatarSrc } from "@/lib/avatar";
 import { FramedAvatar } from "@/components/profile/FramedAvatar";
 import { AuthorPill, HighlightChips } from "@/components/route/TripHeaderChips";
-import { BrandIcon, SAVE_ICON } from "@/components/BrandIcon";
+import { BrandBookmark } from "@/components/BrandBookmark";
 import TripLikeButton from "@/components/route/TripLikeButton";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import SavePlaceSheet, { type SavePlaceInput } from "@/components/plan-wizard/SavePlaceSheet";
@@ -1400,15 +1400,11 @@ export default function SharedRoute() {
       // po fakcie; jedyne uczciwe cofniecie to nie wykonac usuniecia (zgloszenie Nat 2026-09-09).
       setAskDelete(false);
       goBackOr(navigate, "/moj-profil");
-      deferDelete({
+      // Do KOSZA OD RAZU + "Cofnij" (2026-09-15) - odroczenie o 5 s potrafilo nie dojsc,
+      // bo ten ekran wlasnie sie odmontowuje (`goBackOr` wyzej).
+      void deleteWithUndo("trip", ids, {
         message: t("toast.trip_deleted"),
-        commit: async () => {
-          // Do KOSZA, nie DELETE (2026-09-15) - patrz src/lib/trash.ts.
-          const moved = await moveManyToTrash("trip", ids);
-          if (moved === 0) { toast.error(t("toast.trip_delete_failed")); return; }
-          queryClient.invalidateQueries({ queryKey: ["profile-trip-feed"] });
-        },
-        onUndo: () => queryClient.invalidateQueries({ queryKey: ["profile-trip-feed"] }),
+        failMessage: t("toast.trip_delete_failed"),
       });
     } catch (e: any) {
       toast.error(t("toast.trip_delete_failed"));
@@ -2843,7 +2839,8 @@ export default function SharedRoute() {
                       isRouteSaved ? "bg-secondary text-secondary-foreground" : "bg-primary text-white"
                     }`}
                   >
-                    <BrandIcon src={SAVE_ICON} className="h-4 w-4" />
+                    {/* Pusta zakladka = jeszcze nie zapisane, pelna = zapisane (2026-09-15). */}
+                    <BrandBookmark filled={isRouteSaved} className="h-4 w-4" />
                     {saving ? t("saving") : isRouteSaved ? t("saved_trip") : t("save_trip")}
                   </button>
                   {/* Udostepnianie = zolte kolko z brazowa ikona bezposrednio na prawo od zapisu
