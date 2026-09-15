@@ -1007,6 +1007,9 @@ export default function SharedList() {
           authorId={col.user_id}
           authorFrame={author?.avatar_frame}
           authorFrameColor={author?.avatar_frame_color}
+          collectionId={col.id}
+          theme={col.theme}
+          visitedCount={(items as any[]).filter((it) => (isOwner ? visitedKeys : authorVisitedKeys).has(visitKeyOf(it))).length}
           onClose={() => setShareCardOpen(false)}
           onShare={handleShareLink}
           shareUrl={buildShareUrl(`/lista/${col.id}`)}
