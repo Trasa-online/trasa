@@ -1,106 +1,154 @@
 import { useState, type ReactNode } from "react";
 import { NavLink } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { OpsLogo } from "@/admin/OpsLogo";
 import { useAdmin } from "../RequireAdmin";
 import { WaitlistPeek } from "./WaitlistPeek";
-import { ShieldCheck, Users, BarChart3, Bug, Settings, ListChecks, MapPin, ScrollText, Menu, X, Flag, DollarSign, Building2 } from "lucide-react";
 import { useAdminPending } from "../modules/home/useAdminHome";
+import { cn } from "@/lib/utils";
+import {
+  Inbox, Users, MapPin, ListChecks, BarChart3, DollarSign,
+  ScrollText, Settings, Menu, X, Home, Search,
+} from "lucide-react";
 
-const NAV = [
-  { to: "/moderacja/b2c", label: "Moderacja B2C", icon: ShieldCheck },
-  { to: "/moderacja/b2b", label: "Moderacja B2B", icon: Building2 },
-  { to: "/zestawienia", label: "Leady", icon: ListChecks },
-  { to: "/users", label: "Użytkownicy", icon: Users },
-  { to: "/analityka", label: "Analityka", icon: BarChart3 },
-  { to: "/miejsca", label: "Miejsca", icon: MapPin },
-  { to: "/flagi", label: "Flagi miejsc", icon: Flag },
-  { to: "/ops", label: "Zgłoszenia", icon: Bug },
-  { to: "/koszty", label: "Koszty API", icon: DollarSign },
-  { to: "/audyt", label: "Audyt", icon: ScrollText },
-  { to: "/ustawienia", label: "Ustawienia", icon: Settings },
+// Nawigacja: 11 plaskich pozycji -> 4 grupy (decyzja z briefu, 15.09.2026).
+// Grupa niesie znaczenie: "czy to jest praca do zrobienia, czy tylko podglad".
+// Moderacja B2C, B2B, Flagi i Zgloszenia znikly jako osobne adresy - to sa teraz
+// FILTRY jednej kolejki, bo to ta sama czynnosc.
+const GROUPS: { label?: string; items: { to: string; label: string; icon: typeof Inbox; badge?: boolean }[] }[] = [
+  { items: [
+    { to: "/", label: "Dziś", icon: Home },
+    { to: "/kolejka", label: "Kolejka", icon: Inbox, badge: true },
+  ] },
+  { label: "Dane", items: [
+    { to: "/users", label: "Użytkownicy", icon: Users },
+    { to: "/miejsca", label: "Miejsca", icon: MapPin },
+    { to: "/zestawienia", label: "Leady", icon: ListChecks },
+  ] },
+  { label: "Liczby", items: [
+    { to: "/analityka", label: "Analityka", icon: BarChart3 },
+    { to: "/koszty", label: "Koszty API", icon: DollarSign },
+  ] },
+  { label: "System", items: [
+    { to: "/audyt", label: "Audyt", icon: ScrollText },
+    { to: "/ustawienia", label: "Ustawienia", icon: Settings },
+  ] },
 ];
 
-function NavItems({ onNavigate }: { onNavigate?: () => void }) {
-  const { data: pending } = useAdminPending();
-  // Badge per route: liczba spraw czekajacych. "Dzis" pokazuje sume.
-  const badge: Record<string, number> = pending
-    ? { "/moderacja/b2c": pending.collections + pending.quarantine + pending.reports, "/moderacja/b2b": pending.business, "/flagi": pending.flags, "/ops": pending.bugs }
-    : {};
+function NavItems({ onNavigate, pending }: { onNavigate?: () => void; pending?: number }) {
   return (
     <>
-      {NAV.map((n) => {
-        const Icon = n.icon;
-        const n_ = badge[n.to] ?? 0;
-        return (
-          <NavLink
-            key={n.to}
-            to={n.to}
-            end={n.to === "/"}
-            onClick={onNavigate}
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-colors ${
-                isActive ? "bg-slate-900 text-white shadow-sm shadow-slate-900/20" : "text-slate-600 hover:bg-slate-100"
-              }`
-            }
-          >
-            <Icon className="h-4 w-4 shrink-0" />
-            <span className="flex-1">{n.label}</span>
-            {n_ > 0 && (
-              <span className="shrink-0 min-w-[20px] h-5 px-1.5 rounded-full bg-orange-500 text-white text-[11px] font-bold flex items-center justify-center">
-                {n_ > 99 ? "99+" : n_}
-              </span>
-            )}
-          </NavLink>
-        );
-      })}
+      {GROUPS.map((g, gi) => (
+        <div key={gi} className={cn(gi > 0 && "pt-4")}>
+          {g.label ? (
+            <p className="px-2.5 pb-1 text-[10px] font-semibold uppercase tracking-[0.7px] text-[var(--stone)]">{g.label}</p>
+          ) : null}
+          {g.items.map((n) => {
+            const Icon = n.icon;
+            return (
+              <NavLink
+                key={n.to}
+                to={n.to}
+                end={n.to === "/"}
+                onClick={onNavigate}
+                className={({ isActive }) => cn(
+                  "flex items-center gap-2.5 rounded-[var(--r-control)] px-2.5 py-2 text-[13px] transition-colors",
+                  isActive
+                    ? "bg-[var(--accent)] font-semibold text-[var(--on-accent)]"
+                    : "text-[var(--graphite)] hover:bg-[var(--canvas)]",
+                )}
+              >
+                {({ isActive }) => (
+                  <>
+                    <Icon className={cn("h-4 w-4 shrink-0", isActive ? "text-[var(--on-accent)]" : "text-[var(--stone)]")} />
+                    <span className="flex-1 truncate">{n.label}</span>
+                    {n.badge && pending ? (
+                      <span className={cn("data text-[11px]", isActive ? "text-[var(--on-accent)]" : "text-[var(--stone)]")}>{pending}</span>
+                    ) : null}
+                  </>
+                )}
+              </NavLink>
+            );
+          })}
+        </div>
+      ))}
     </>
+  );
+}
+
+function Mark() {
+  // Zolty znak "S" to JEDYNE miejsce w panelu, gdzie uzywamy zoltego marki.
+  return (
+    <span className="flex items-center gap-2">
+      <span className="flex h-[26px] w-[26px] items-center justify-center rounded-[var(--r-control)] bg-[var(--ink)] text-[13px] font-semibold text-[var(--brand-yellow)]">S</span>
+      <span className="text-[14px] font-semibold text-[var(--ink)]">spontaway ops</span>
+    </span>
   );
 }
 
 export function AdminLayout({ children }: { children: ReactNode }) {
   const { email } = useAdmin();
   const [menuOpen, setMenuOpen] = useState(false);
+  const pending = useAdminPending();
+  const total = pending.data?.total;
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      {/* Topbar */}
-      <header className="sticky top-0 z-30 flex items-center justify-between px-4 sm:px-5 h-14 border-b border-slate-200 bg-white/80 backdrop-blur">
+    <div className="min-h-screen bg-[var(--canvas)] text-[var(--ink)]">
+      <header className="sticky top-0 z-30 flex h-14 items-center justify-between gap-4 border-b border-[var(--line)] bg-[var(--surface)] px-4 sm:px-5">
         <div className="flex items-center gap-2">
-          <button onClick={() => setMenuOpen(true)} className="md:hidden -ml-1 p-1.5 rounded-[4px] text-slate-600 hover:bg-slate-100" aria-label="Menu">
+          <button
+            onClick={() => setMenuOpen(true)}
+            className="-ml-1 rounded-[var(--r-control)] p-1.5 text-[var(--graphite)] hover:bg-[var(--canvas)] md:hidden"
+            aria-label="Menu"
+          >
             <Menu className="h-5 w-5" />
           </button>
-          <OpsLogo tile={34} />
+          <Mark />
         </div>
+
+        <div className="hidden min-w-0 flex-1 justify-center md:flex">
+          <div className="flex h-9 w-full max-w-[360px] items-center gap-2 rounded-[var(--r-control)] border border-[var(--line)] bg-[var(--surface)] px-3 text-[var(--stone)] shadow-[var(--shadow-inset)]">
+            <Search className="h-4 w-4 shrink-0" />
+            <span className="flex-1 truncate text-[12px]">Szukaj albo skocz do modułu</span>
+            <span className="data text-[10px]">⌘K</span>
+          </div>
+        </div>
+
         <div className="flex items-center gap-2 sm:gap-3">
           <WaitlistPeek />
-          <span className="hidden sm:inline text-xs text-slate-500">{email}</span>
-          <button onClick={() => supabase.auth.signOut()} className="text-xs text-slate-500 hover:text-slate-800 font-medium">Wyloguj</button>
+          <span className="data hidden text-[11px] text-[var(--stone)] sm:inline">{email}</span>
+          <button
+            onClick={() => supabase.auth.signOut()}
+            className="text-[12px] font-medium text-[var(--stone)] hover:text-[var(--ink)]"
+          >
+            Wyloguj
+          </button>
         </div>
       </header>
 
-      {/* Mobile drawer */}
       {menuOpen && (
-        <div className="md:hidden fixed inset-0 z-40" role="dialog" aria-modal="true">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setMenuOpen(false)} />
-          <div className="absolute left-0 top-0 bottom-0 w-64 bg-white border-r border-slate-200 p-3 flex flex-col gap-1 shadow-xl">
-            <div className="flex items-center justify-between px-2 h-11 mb-1">
-              <OpsLogo tile={30} />
-              <button onClick={() => setMenuOpen(false)} className="p-1.5 rounded-[4px] text-slate-500 hover:bg-slate-100" aria-label="Zamknij"><X className="h-5 w-5" /></button>
+        <div className="fixed inset-0 z-40 md:hidden" role="dialog" aria-modal="true">
+          <div className="absolute inset-0 bg-black/45" onClick={() => setMenuOpen(false)} />
+          <div className="absolute bottom-0 left-0 top-0 flex w-72 flex-col gap-0.5 overflow-y-auto border-r border-[var(--line)] bg-[var(--surface)] p-3">
+            <div className="mb-2 flex h-11 items-center justify-between px-1.5">
+              <Mark />
+              <button
+                onClick={() => setMenuOpen(false)}
+                className="rounded-[var(--r-control)] p-1.5 text-[var(--stone)] hover:bg-[var(--canvas)]"
+                aria-label="Zamknij"
+              >
+                <X className="h-5 w-5" />
+              </button>
             </div>
-            <NavItems onNavigate={() => setMenuOpen(false)} />
+            <NavItems onNavigate={() => setMenuOpen(false)} pending={total} />
           </div>
         </div>
       )}
 
       <div className="flex">
-        {/* Desktop sidebar */}
-        <aside className="hidden md:flex flex-col w-56 shrink-0 border-r border-slate-200 min-h-[calc(100vh-3.5rem)] p-3 gap-1">
-          <NavItems />
+        <aside className="hidden w-60 shrink-0 flex-col gap-0.5 border-r border-[var(--line)] bg-[var(--surface)] p-3 md:flex md:min-h-[calc(100vh-3.5rem)]">
+          <NavItems pending={total} />
         </aside>
-
-        {/* Content */}
-        <main className="flex-1 min-w-0 p-4 sm:p-5 md:p-8">{children}</main>
+        <main className="min-w-0 flex-1">{children}</main>
       </div>
     </div>
   );

@@ -6,7 +6,9 @@ import { Toaster } from "sonner";
 import { AuthProvider } from "@/hooks/useAuth";
 import AdminApp from "./AdminApp";
 import "@/index.css";
+import "./ui/tokens.css";
 import "./admin.css";
+import { applyStoredTheme } from "./ui/theme";
 
 // Panel admina NIE ma i nie powinien miec service-workera. Jesli jakis SW zostal
 // wczesniej zarejestrowany na tej domenie (np. gdy chwilowo serwowala apke z PWA),
@@ -27,6 +29,9 @@ if (typeof navigator !== "undefined" && "serviceWorker" in navigator) {
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 30_000, refetchOnWindowFocus: false } },
 });
+
+// Motyw ustawiamy PRZED montowaniem drzewa - inaczej widac mignienie jasnego tla.
+applyStoredTheme();
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

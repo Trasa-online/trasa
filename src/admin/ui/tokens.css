@@ -1,0 +1,88 @@
+/* Tokeny panelu ops - kierunek "Karta danych" (decyzja Nat, 2026-09-15).
+   JEDYNE miejsce z wartosciami koloru, promienia i cienia w calym panelu.
+   Modul NIE definiuje wlasnych kolorow - jesli czegos brakuje, dokladasz token TUTAJ.
+
+   Tryb ciemny: te same ROLE, inne wartosci. Nazwa zmiennej nigdy nie mowi jaki to
+   kolor, tylko do czego sluzy - dlatego podmiana trybu to podmiana wartosci,
+   a nie przepisywanie komponentow. */
+
+:root {
+  --canvas: #FAFAF8;
+  --surface: #FFFFFF;
+  /* Siatka zdjec w kwarantannie. CELOWO osobny token: ocena ekspozycji zdjecia nie moze
+     zalezec od tego, czy operatorka pracuje w dzien czy w nocy, wiec w ciemnym trybie
+     ta powierzchnia jest JASNIEJSZA niz --surface, a nie ciemniejsza. */
+  --photo: #F2F2EF;
+  --ink: #141415;
+  --graphite: #454542;
+  --stone: #8C8C89;
+  --line: #E4E5E1;
+  --accent: #EE5307;
+  --on-accent: #FFFFFF;
+  --console: #2E2E2C;
+  --console-ink: #ABB2BF;
+  --ok: #3F7D53;
+  --ok-bg: #EDF3EE;
+  --warn: #A8730D;
+  --warn-bg: #FBF0E6;
+  --bad: #B4321C;
+  --bad-bg: #F8EDEB;
+  --brand-yellow: #FDF184;
+
+  --r-control: 6px;
+  --r-card: 12px;
+  --shell-width: 1160px;
+  --font-data: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  /* Jedyny dozwolony cien w kierunku B. W ciemnym znika - nie ma czego rozjasniac. */
+  --shadow-inset: rgba(228, 229, 225, 0.3) 0 1px 0 inset, rgba(110, 111, 109, 0.1) 0 -1px 0 inset;
+}
+
+/* Wybor "jak system" - stosuje sie tylko wtedy, gdy user nie wymusil jasnego. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --canvas: #121211;
+    --surface: #1A1A18;
+    --photo: #242421;
+    --ink: #F2F2EF;
+    --graphite: #C4C4BF;
+    --stone: #8A8A85;
+    --line: #2E2E2B;
+    --accent: #FF6A22;
+    --on-accent: #FFFFFF;
+    --console: #0D0D0C;
+    --console-ink: #ABB2BF;
+    --ok: #5FBF7F;
+    --ok-bg: #16231A;
+    --warn: #D6A32E;
+    --warn-bg: #2A2115;
+    --bad: #E06C5A;
+    --bad-bg: #2A1A17;
+    --shadow-inset: none;
+  }
+}
+
+/* Jawny wybor uzytkownika wygrywa z ustawieniem systemu w obie strony. */
+:root[data-theme="dark"] {
+  --canvas: #121211;
+  --surface: #1A1A18;
+  --photo: #242421;
+  --ink: #F2F2EF;
+  --graphite: #C4C4BF;
+  --stone: #8A8A85;
+  --line: #2E2E2B;
+  --accent: #FF6A22;
+  --on-accent: #FFFFFF;
+  --console: #0D0D0C;
+  --console-ink: #ABB2BF;
+  --ok: #5FBF7F;
+  --ok-bg: #16231A;
+  --warn: #D6A32E;
+  --warn-bg: #2A2115;
+  --bad: #E06C5A;
+  --bad-bg: #2A1A17;
+  --shadow-inset: none;
+}
+
+/* Dane czytamy monospace'em: liczby, kwoty, uuid, znaczniki czasu, kody statusow, JSON.
+   NIE zdania i nie etykiety interfejsu - te zostaja w Interze. */
+.data { font-family: var(--font-data); font-variant-numeric: tabular-nums; }

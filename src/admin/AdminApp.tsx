@@ -1,35 +1,38 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import { RequireAdmin } from "./RequireAdmin";
 import { AdminLayout } from "./layout/AdminLayout";
-import { ModerationB2CPage } from "./modules/moderation-b2c/ModerationB2CPage";
-import { ModerationPage } from "./modules/moderation/ModerationPage";
+import { HomePage } from "./modules/home/HomePage";
+import { QueuePage } from "./modules/queue/QueuePage";
 import { AnalyticsPage } from "./modules/analytics/AnalyticsPage";
 import { UsersPage } from "./modules/users/UsersPage";
-import { OpsPage } from "./modules/ops/OpsPage";
 import { CostsPage } from "./modules/costs/CostsPage";
 import { SettingsPage } from "./modules/settings/SettingsPage";
 import { LeadsPage } from "./modules/leads/LeadsPage";
 import { PlacesPage } from "./modules/places/PlacesPage";
-import { PlaceFlagsPage } from "./modules/flags/PlaceFlagsPage";
 import { AuditPage } from "./modules/audit/AuditPage";
 
-// Panel operacyjny - wszystkie 4 moduly MVP aktywne (moderacja, users,
-// analityka, zgloszenia+miasta).
+// Panel operacyjny. Nawigacja: Dzis, Kolejka, Dane, Liczby, System (przebudowa 15.09.2026).
+//
+// Stare adresy moderacji ZOSTAJA jako przekierowania z ustawionym filtrem - zakladki
+// w przegladarce i linki w mailach maja dalej dzialac, tylko ladowac w jednej kolejce.
 export default function AdminApp() {
   return (
     <RequireAdmin>
       <AdminLayout>
         <Routes>
-          <Route path="/" element={<Navigate to="/moderacja/b2c" replace />} />
-          <Route path="/moderacja" element={<Navigate to="/moderacja/b2c" replace />} />
-          <Route path="/moderacja/b2c" element={<ModerationB2CPage />} />
-          <Route path="/moderacja/b2b" element={<ModerationPage />} />
-          <Route path="/zestawienia" element={<LeadsPage />} />
+          <Route path="/" element={<HomePage />} />
+          <Route path="/kolejka" element={<QueuePage />} />
+
+          <Route path="/moderacja" element={<Navigate to="/kolejka" replace />} />
+          <Route path="/moderacja/b2c" element={<Navigate to="/kolejka?typ=zdjecia" replace />} />
+          <Route path="/moderacja/b2b" element={<Navigate to="/kolejka?typ=wizytowki" replace />} />
+          <Route path="/flagi" element={<Navigate to="/kolejka?typ=flagi" replace />} />
+          <Route path="/ops" element={<Navigate to="/kolejka?typ=bledy" replace />} />
+
           <Route path="/users" element={<UsersPage />} />
-          <Route path="/analityka" element={<AnalyticsPage />} />
           <Route path="/miejsca" element={<PlacesPage />} />
-          <Route path="/flagi" element={<PlaceFlagsPage />} />
-          <Route path="/ops" element={<OpsPage />} />
+          <Route path="/zestawienia" element={<LeadsPage />} />
+          <Route path="/analityka" element={<AnalyticsPage />} />
           <Route path="/koszty" element={<CostsPage />} />
           <Route path="/audyt" element={<AuditPage />} />
           <Route path="/ustawienia" element={<SettingsPage />} />
