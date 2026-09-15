@@ -177,7 +177,8 @@
     "subtitle": "Enter the access password",
     "placeholder": "Access password",
     "wrong": "Wrong password",
-    "open": "Open panel"
+    "open": "Open panel",
+    "login_prompt_short": "Log in again - your session expired."
   },
   "missing": {
     "business_name": "business name",
@@ -572,5 +573,18 @@
     "creating": "Adding…",
     "created": "“{{name}}” added. Fill in the listing so guests can see it.",
     "create_error": "The venue could not be added."
+  },
+  "chat": {
+    "title": "Chat with spontaway",
+    "subtitle": "Conversation about {{venue}}",
+    "empty_title": "Tell us what is going on",
+    "empty_hint": "A question about your listing, a problem with the menu, an idea for working together. We usually reply the same day and the conversation stays here.",
+    "placeholder": "Write a message…",
+    "send": "Send",
+    "send_error": "The message could not be sent.",
+    "hint": "Ctrl + Enter sends. This conversation is about this venue.",
+    "you": "You",
+    "us": "spontaway",
+    "badge": "Chat with spontaway"
   }
 }

@@ -177,7 +177,8 @@
     "subtitle": "Podaj hasło dostępu",
     "placeholder": "Haslo dostępu",
     "wrong": "Nieprawidlowe haslo",
-    "open": "Otwórz panel"
+    "open": "Otwórz panel",
+    "login_prompt_short": "Zaloguj się ponownie - sesja wygasła."
   },
   "missing": {
     "business_name": "nazwę lokalu",
@@ -574,5 +575,18 @@
     "creating": "Dodaję…",
     "created": "„{{name}}” dodany. Uzupełnij wizytówkę, żeby goście go zobaczyli.",
     "create_error": "Nie udało się dodać lokalu."
+  },
+  "chat": {
+    "title": "Czat ze spontaway",
+    "subtitle": "Rozmowa o lokalu {{venue}}",
+    "empty_title": "Napisz, co się dzieje",
+    "empty_hint": "Pytanie o wizytówkę, problem z menu, pomysł na współpracę. Odpisujemy zwykle tego samego dnia, a rozmowa zostaje tutaj.",
+    "placeholder": "Napisz wiadomość…",
+    "send": "Wyślij",
+    "send_error": "Nie udało się wysłać wiadomości.",
+    "hint": "Ctrl + Enter wysyła. Rozmowa dotyczy tego lokalu.",
+    "you": "Wy",
+    "us": "spontaway",
+    "badge": "Czat ze spontaway"
   }
 }

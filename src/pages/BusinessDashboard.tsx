@@ -50,6 +50,8 @@ import { GuestInsights } from "@/components/business/dashboard/GuestInsights";
 import { EventsSection } from "@/components/business/dashboard/EventsSection";
 import { ListingPreviewCard } from "@/components/business/dashboard/ListingPreviewCard";
 import { fetchMyVenues, createVenue, rememberVenue, type OwnedVenue } from "@/lib/businessVenues";
+import { ChatPanel } from "@/components/business/dashboard/ChatPanel";
+import { unreadForOwner } from "@/lib/businessChat";
 import { ThanksButton } from "@/components/business/dashboard/ThanksButton";
 import { uploadThumb } from "@/lib/imageThumbs";
 import { fetchPlaceNotes, type PlaceUserNote } from "@/lib/placeNotes";
@@ -569,6 +571,9 @@ const BusinessDashboard = () => {
   // a otwarty lokal zapamietuje, zeby nastepne logowanie wrocilo tam, gdzie skonczyl.
   const [venues, setVenues] = useState<OwnedVenue[]>([]);
   const [addVenueOpen, setAddVenueOpen] = useState(false);
+  // Czat z nami: panel + licznik nieprzeczytanych odpowiedzi (kropka przy dymku w belce).
+  const [chatOpen, setChatOpen] = useState(false);
+  const [chatUnread, setChatUnread] = useState(0);
   const [newVenueName, setNewVenueName] = useState("");
   const [newVenuePhone, setNewVenuePhone] = useState("");
   const [creatingVenue, setCreatingVenue] = useState(false);
@@ -1774,6 +1779,17 @@ const BusinessDashboard = () => {
 
   useEffect(() => { void reloadVenues(); }, [reloadVenues]);
 
+  const refreshChatUnread = useCallback(async () => {
+    if (!profile?.id || isDraft || previewMode) { setChatUnread(0); return; }
+    setChatUnread(await unreadForOwner(profile.id));
+  }, [profile?.id, isDraft, previewMode]);
+
+  useEffect(() => {
+    void refreshChatUnread();
+    const id = setInterval(() => void refreshChatUnread(), 60_000);
+    return () => clearInterval(id);
+  }, [refreshChatUnread]);
+
   // Zapamietujemy OTWARTY lokal, a nie "pierwszy z listy" - wlasciciel dwoch lokali wraca
   // po zalogowaniu tam, gdzie ostatnio pracowal.
   useEffect(() => { if (placeId) rememberVenue(placeId); }, [placeId]);
@@ -1985,8 +2001,9 @@ const BusinessDashboard = () => {
         isPremium={plan !== 'basic'}
         saveStatus={!isDraft && !previewMode ? saveStatus : 'idle'}
         onLogout={handleLogout}
-        onSupport={() => setShowSupportModal(true)}
-        onUpgrade={() => setShowSupportModal(true)}
+        onSupport={() => setChatOpen(true)}
+        onUpgrade={() => setChatOpen(true)}
+        unreadChat={chatUnread}
         venues={venues}
         currentVenueKey={placeId}
         onSwitchVenue={switchVenue}
@@ -2650,6 +2667,17 @@ const BusinessDashboard = () => {
           </div>
         </div>
       )}
+      {/* ── Czat z nami (jeden watek na lokal) ── */}
+      {profile?.id && !isDraft && !previewMode && (
+        <ChatPanel
+          businessProfileId={profile.id}
+          businessName={businessName || t("business_name_fallback")}
+          open={chatOpen}
+          onClose={() => { setChatOpen(false); void refreshChatUnread(); }}
+          onRead={() => setChatUnread(0)}
+        />
+      )}
+
       {/* ── Kolejny lokal tego samego wlasciciela ──
           Zakladamy SAMA wizytowke: konto juz istnieje i jest potwierdzone, wiec nie ma tu
           maila aktywacyjnego ani hasla. Reszte danych lokal uzupelnia w sekcji Wizytowka. */}

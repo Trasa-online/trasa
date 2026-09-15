@@ -8,7 +8,7 @@ import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import {
   LayoutDashboard, Store, BookOpen, CalendarDays, MessageSquareQuote, Images, Settings,
-  Bell, LogOut, ChevronDown, Loader2, Check, MoreHorizontal, X, Plus,
+  MessageCircle, LogOut, ChevronDown, Loader2, Check, MoreHorizontal, X, Plus,
 } from "lucide-react";
 import { TrasaLogo } from "@/components/TrasaLogo";
 import { markBusinessLangChoice } from "@/lib/businessLanguage";
@@ -50,7 +50,10 @@ export interface BizShellProps {
   /** Banery nad trescia (powitanie, weryfikacja, tryb podgladu). */
   banners?: ReactNode;
   onLogout: () => void;
+  /** Otwarcie czatu z nami (ta sama rozmowa co w karcie „Napisz do nas"). */
   onSupport: () => void;
+  /** Nieprzeczytane odpowiedzi od nas - zapalaja kropke przy dymku w belce. */
+  unreadChat?: number;
   onUpgrade: () => void;
   /** Wszystkie lokale wlasciciela. Jeden lokal = przelacznik pokazuje sama nazwe. */
   venues?: OwnedVenue[];
@@ -120,7 +123,7 @@ export function BizShell(props: BizShellProps) {
         </nav>
 
         <div className="mt-auto flex flex-col gap-3 pt-4">
-          <SupportCard onClick={props.onSupport} label={t("shell.support.title")} subtitle={t("shell.support.subtitle")} />
+          <SupportCard onClick={props.onSupport} label={t("shell.support.title")} subtitle={t("shell.support.subtitle")} unread={props.unreadChat ?? 0} />
           {!props.isPremium ? <PremiumCard planLabel={props.planLabel} onUpgrade={props.onUpgrade} /> : null}
         </div>
       </aside>
@@ -151,12 +154,21 @@ export function BizShell(props: BizShellProps) {
 
           <LangSwitch />
 
+          {/* Dzwonek nic nie robil - w jego miejscu stoi teraz CZAT z nami, bo to jedyne
+              powiadomienie, ktore panel lokalu realnie ma (prosba Nat 2026-09-15). */}
           <button
             type="button"
-            title={t("shell.notifications")}
-            className="rounded-full p-2 text-slate-400 transition-colors hover:bg-slate-50 hover:text-slate-600"
+            onClick={props.onSupport}
+            title={t("chat.badge")}
+            aria-label={t("chat.badge")}
+            className="relative rounded-full p-2 text-slate-400 transition-colors hover:bg-slate-50 hover:text-slate-600"
           >
-            <Bell className="h-[18px] w-[18px]" />
+            <MessageCircle className="h-[18px] w-[18px]" />
+            {props.unreadChat ? (
+              <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-black text-white">
+                {props.unreadChat > 9 ? "9+" : props.unreadChat}
+              </span>
+            ) : null}
           </button>
 
           <span className="hidden items-center gap-2 rounded-full border border-slate-200 py-1 pl-1 pr-3 md:inline-flex">
@@ -355,7 +367,7 @@ function VenueSwitcher({ businessName, city, avatar, venues, currentKey, onSwitc
 // ⛔ NIE pokazujemy tu adresu e-mail: w makiecie stal placeholder, a wpisanie prywatnej
 // skrzynki w panel widziany przez kazdy lokal to zaproszenie do spamu. Zamiast adresu
 // obiecujemy to, co naprawde dotrzymujemy - odpowiedz tego samego dnia.
-function SupportCard({ onClick, label, subtitle }: { onClick: () => void; label: string; subtitle: string }) {
+function SupportCard({ onClick, label, subtitle, unread }: { onClick: () => void; label: string; subtitle: string; unread: number }) {
   return (
     <button
       type="button"
@@ -367,7 +379,13 @@ function SupportCard({ onClick, label, subtitle }: { onClick: () => void; label:
         <span className="block truncate text-sm font-bold text-slate-900">{label}</span>
         <span className="block truncate text-[11px] text-slate-400">{subtitle}</span>
       </span>
-      <span className="h-2 w-2 shrink-0 rounded-full bg-emerald-500" />
+      {unread > 0 ? (
+        <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-black text-white">
+          {unread > 9 ? "9+" : unread}
+        </span>
+      ) : (
+        <span className="h-2 w-2 shrink-0 rounded-full bg-emerald-500" />
+      )}
     </button>
   );
 }
