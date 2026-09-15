@@ -66,7 +66,8 @@
     "rename_list": "Rename collection",
     "list_actions": "Collection actions",
     "list_theme": "Collection background",
-    "list_scope": "Country and city"
+    "list_scope": "Country and city",
+    "list_people": "People in the collection"
   },
   "fallback_title": "Collection of places",
   "photo": "Photo",
@@ -116,5 +117,18 @@
     "save": "Save",
     "saved": "Country and city saved",
     "save_failed": "We could not save the country and city"
+  },
+  "people": {
+    "title": "People in the collection",
+    "desc_owner": "Invited people can add places to this collection. They can only remove what they added themselves.",
+    "desc_member": "You co-create this collection. You can add places and remove the ones you added yourself.",
+    "current": "Co-creators",
+    "add": "Add people",
+    "remove": "Remove from the collection",
+    "added": "Added to the collection",
+    "removed": "Removed from the collection",
+    "add_failed": "Could not add. Try again.",
+    "remove_failed": "Could not remove. Try again.",
+    "user_fallback": "User"
   }
 }

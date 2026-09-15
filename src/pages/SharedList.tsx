@@ -9,7 +9,7 @@ import { useScreenshot } from "@/hooks/useScreenshot";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { MapPin, ArrowLeft, Bookmark, Building2, Trash2, Share2, Plus, Camera, Loader2, X, Pencil, MoreHorizontal, Palette, ChevronLeft, Flag } from "lucide-react";
+import { MapPin, ArrowLeft, Bookmark, Building2, Trash2, Share2, Plus, Camera, Loader2, X, Pencil, MoreHorizontal, Palette, ChevronLeft, Flag, Users } from "lucide-react";
 import { mapWithLimit } from "@/lib/imageCompression";
 import AddPlaceSheet from "@/components/route/AddPlaceSheet";
 import { scopeCountries, scopeLabel } from "@/lib/tripScope";
@@ -50,6 +50,9 @@ import { moderateImageUrl, MODERATION_REJECTED_MESSAGE } from "@/lib/imageModera
 import { rowOwnPhotos, mergeRowPhotosIntoDetail } from "@/lib/placeUserPhotos";
 import ListThemeSheet from "@/components/lists/ListThemeSheet";
 import ListScopeSheet from "@/components/lists/ListScopeSheet";
+import CollectionPeopleSheet from "@/components/lists/CollectionPeopleSheet";
+import { fetchCollectionMembers, collectionMembersKey } from "@/lib/collectionInvite";
+import { EMPTY_ARRAY } from "@/lib/emptyRef";
 import { AuthorPill, HighlightChips } from "@/components/route/TripHeaderChips";
 import { listTheme } from "@/lib/listThemes";
 import { BrandBookmark } from "@/components/BrandBookmark";
@@ -99,6 +102,8 @@ export default function SharedList() {
   const [themeOpen, setThemeOpen] = useState(false);
   // Kraj / miasto kolekcji - zmiana przez autora z menu "..." (prosba Nat 2026-09-14).
   const [scopeOpen, setScopeOpen] = useState(false);
+  // Wspoltworcy kolekcji - dodawanie osob JUZ PO utworzeniu (prosba Nat 2026-09-15).
+  const [peopleOpen, setPeopleOpen] = useState(false);
   // Zmiana nazwy listy (prosba Nat 2026-09-08). Edycja NA MIEJSCU, tak jak nazwa wyjazdu -
   // osobny arkusz do jednego pola tylko mnozylby kroki.
   const [editingName, setEditingName] = useState(false);
@@ -523,6 +528,19 @@ export default function SharedList() {
   const cityLabel = col.city || scopeLabel(col) || "";
   const authorName = author?.first_name || author?.username || col.author_name || t("someone");
   const isOwner = !!user && col.user_id === user.id;
+  // WSPOLTWORCY (2026-09-15): zaproszeni moga DODAWAC miejsca, a edytowac i usuwac tylko to,
+  // co sami dodali (`discovery_items.added_by`) - tak samo mowia polityki RLS w bazie, wiec
+  // UI nie obiecuje niczego, czego baza by nie przepuscila. Zmiana nazwy, tla, zasiegu
+  // i usuniecie CALEJ kolekcji zostaja przy wlascicielu.
+  const { data: memberIds = EMPTY_ARRAY } = useQuery({
+    queryKey: collectionMembersKey(col?.id),
+    enabled: !!col?.id && !!user,
+    staleTime: 60_000,
+    queryFn: async () => (await fetchCollectionMembers(col!.id)).map((m) => m.user_id),
+  });
+  const isMember = !!user && (memberIds as string[]).includes(user.id);
+  const canAddPlaces = isOwner || isMember;
+  const canEditItem = (it: any) => isOwner || (isMember && it?.added_by === user?.id);
   const placesCountLabel = t("places_count", { count: items.length });
 
 
@@ -614,14 +632,15 @@ export default function SharedList() {
         const busy = uploadingItem === pin.id;
         // Notka (auto-zapis, bez headera) + zdjecia miejsca. Widz: read-only. Slot renderowany
         // tylko gdy jest tresc lub jestem wlascicielem. Uklad wspolny z wyjazdami (PlaceNoteEditor).
-        const hasContent = !!noteText || photos.length > 0 || isOwner;
+        const mine = canEditItem(pin);
+        const hasContent = !!noteText || photos.length > 0 || mine;
         const note = hasContent ? (
           <div className="space-y-2.5 mt-0.5">
             {/* Notka wyglada TAK SAMO jak na wyjezdzie: szary dymek + awatar autora w prawym-dolnym
                 rogu (prosba Nat 2026-08-30). Autor = wlasciciel listy.
                 Pigulki "Edytuj notkę" i "Zdjęcie" zniknely stad razem z wyjazdami (2026-09-10) -
                 obie akcje siedza w menu przy miejscu. */}
-            <PlaceNoteEditor note={noteText} editable={isOwner} showAvatar avatarUrl={author?.avatar_url ?? col.author_avatar}
+            <PlaceNoteEditor note={noteText} editable={mine} showAvatar avatarUrl={author?.avatar_url ?? col.author_avatar}
               onSave={(v) => saveItemNote(pin, v)} hideActions onEditingChange={setNoteEditing} />
             {/* Wgrywanie trwa - jedyny sygnal, odkad guzik "Zdjęcie" zszedl do menu. */}
             {busy && (
@@ -641,7 +660,7 @@ export default function SharedList() {
                       onClick={() => setPhotoViewer({ urls: photos.map((u: string) => resolveStored(u) ?? u), idx: photos.indexOf(url) })}
                       className="w-full h-full object-cover active:opacity-90 transition-opacity"
                     />
-                    {isOwner && <button onClick={() => removeItemPhoto(pin, url)} aria-label={t("aria.delete_photo")} className="absolute top-1 right-1 h-5 w-5 rounded-full bg-black/55 text-white flex items-center justify-center active:scale-90"><X className="h-3 w-3" /></button>}
+                    {mine && <button onClick={() => removeItemPhoto(pin, url)} aria-label={t("aria.delete_photo")} className="absolute top-1 right-1 h-5 w-5 rounded-full bg-black/55 text-white flex items-center justify-center active:scale-90"><X className="h-3 w-3" /></button>}
                   </div>
                 ))}
               </div>
@@ -659,14 +678,15 @@ export default function SharedList() {
             onOpen={() => openDetail(pin)}
             onGoogle={() => openGoogle(pin)}
             onSave={!isOwner ? () => toggleSaveBookmark(pin) : undefined}
+            /* Usuwanie i edycja: wlasciciel wszystkiego, wspoltworca tylko swojego wkladu. */
             saved={isSaved(pin.place_name)}
-            onDelete={isOwner ? () => handleDeleteItem(pin) : undefined}
+            onDelete={mine ? () => handleDeleteItem(pin) : undefined}
             deleteLabel={t("remove_from_list")}
             // Gwiazdka "topki" takze na liscie (prosba Nat 2026-09-13) - ten sam wiersz i ta
             // sama logika, co na wyjezdzie: jedna gwiazdka, kolejny wybor ja PRZENOSI.
             isTop={!!pin.is_top}
-            onToggleTop={isOwner ? () => void toggleTopItem(pin) : undefined}
-            menuExtras={isOwner ? [
+            onToggleTop={mine ? () => void toggleTopItem(pin) : undefined}
+            menuExtras={mine ? [
               {
                 key: "note",
                 label: noteText ? t("route:note.edit") : t("route:note.add"),
@@ -765,6 +785,9 @@ export default function SharedList() {
                   >
                     <Pencil className="h-4 w-4" />{t("aria.rename_list")}
                   </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => setPeopleOpen(true)} className="gap-2.5 py-2.5">
+                    <Users className="h-4 w-4" />{t("aria.list_people")}
+                  </DropdownMenuItem>
                   <DropdownMenuItem onSelect={() => setScopeOpen(true)} className="gap-2.5 py-2.5">
                     <MapPin className="h-4 w-4" />{t("aria.list_scope")}
                   </DropdownMenuItem>
@@ -839,6 +862,7 @@ export default function SharedList() {
           <>
             <ListThemeSheet open={themeOpen} onOpenChange={setThemeOpen} listId={col.id} current={col.theme} title={col.title || t("fallback_title")} />
             <ListScopeSheet open={scopeOpen} onOpenChange={setScopeOpen} listId={col.id} current={col} />
+            {user && <CollectionPeopleSheet open={peopleOpen} onOpenChange={setPeopleOpen} collectionId={col.id} ownerId={col.user_id} currentUserId={user.id} />}
           </>
         )}
         {shareCardOpen && (
@@ -879,7 +903,7 @@ export default function SharedList() {
         {/* Udostepnianie = zolte kolko z brazowa ikona, bezposrednio na prawo od glownego guzika
             (prosba Nat 2026-09-13) - u wlasciciela obok "Dodaj nowe miejsce", u goscia obok zapisu. */}
         <div className="flex items-center gap-2">
-          {isOwner ? (
+          {canAddPlaces ? (
             <button onClick={() => setAddPlaceOpen(true)} className="flex-1 min-w-0 py-3 rounded-full border border-border bg-background text-foreground font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform">
               <Plus className="h-4 w-4" />{t("cta.add_place")}</button>
           ) : (

@@ -20,6 +20,7 @@ import { askPermissionSoon } from "@/lib/permissionPrompts";
 import { collectionName, tripName, type NamingStrings } from "@/lib/placeNaming";
 import { createWyjazdFromPlaces, createEmptyWyjazd } from "@/lib/createWyjazd";
 import { inviteUsersToRoute } from "@/lib/groupInvite";
+import { inviteUsersToCollection } from "@/lib/collectionInvite";
 import { usePlaceSearch } from "@/hooks/usePlaceSearch";
 import { categoryIconSrc } from "@/lib/placeCategoryIcon";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
@@ -28,7 +29,7 @@ import { GoogleGlyph } from "@/components/icons/GoogleGlyph";
 import { openExternal } from "@/lib/openExternal";
 import SheetSkeleton from "@/components/layout/SheetSkeleton";
 
-type Step = "entry" | "listCountry" | "listCity" | "listName" | "listPick" | "tripMode" | "tripCountry" | "tripDates" | "tripPeople";
+type Step = "entry" | "listCountry" | "listCity" | "listName" | "listPick" | "listPeople" | "tripMode" | "tripCountry" | "tripDates" | "tripPeople";
 type TripMode = "future" | "past";
 
 // Nazwa wyjazdu/listy powstaje z WYBRANYCH KRAJOW, a nie z osobnego kroku (decyzja Nat
@@ -67,6 +68,10 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
   // a nazwa powstawala automatycznie z kraju i nie dalo sie jej tknac przed utworzeniem.
   const [listCity, setListCity] = useState("");
   const [listTitle, setListTitle] = useState("");
+  // Wspoltworcy kolekcji (prosba Nat 2026-09-15) - dokladnie ten sam mechanizm, co przy
+  // wyjezdzie: wiersz na dole ostatniego kroku, osobny ekran wyboru, zaproszenia wychodza
+  // RAZEM z gotowa kolekcja (przed jej utworzeniem nie ma do czego zapraszac).
+  const [listPeople, setListPeople] = useState<PersonLite[]>([]);
   // Dopoki user nie tknal pola nazwy, nazwa JEDZIE ZA wyborem kraju i miasta. Po pierwszej
   // edycji zostaje ta wpisana - inaczej cofniecie sie po miasto kasowaloby jego tekst.
   const [titleTouched, setTitleTouched] = useState(false);
@@ -99,7 +104,7 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
   // Reset przy kazdym otwarciu.
   useEffect(() => {
     if (open) {
-      setStep("entry"); setListCountries([]); setListCity(""); setListTitle(""); setTitleTouched(false); setSelected(new Set()); setListQuery(""); setManualPlaces([]); setDetailPlace(null); setTripStart(null); setTripDays(1);
+      setStep("entry"); setListCountries([]); setListCity(""); setListTitle(""); setTitleTouched(false); setListPeople([]); setSelected(new Set()); setListQuery(""); setManualPlaces([]); setDetailPlace(null); setTripStart(null); setTripDays(1);
       setTripMode("future"); setTripCountries([]); setTripPeople([]); setCreating(false);
     }
   }, [open]);
@@ -124,6 +129,9 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
   const toggleSel = (id: string) => setSelected((prev) => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
   const togglePerson = (p: PersonLite) => setTripPeople((prev) => prev.some((x) => x.id === p.id) ? prev.filter((x) => x.id !== p.id) : [...prev, p]);
   const tripPeopleIds = new Set(tripPeople.map((p) => p.id));
+  const listPeopleIds = new Set(listPeople.map((p) => p.id));
+  const toggleListPerson = (person: PersonLite) =>
+    setListPeople((prev) => (prev.some((x) => x.id === person.id) ? prev.filter((x) => x.id !== person.id) : [...prev, person]));
 
   const keyOfPlace = (p: { place_name?: string | null }) => (p.place_name || "").trim().toLowerCase();
   // Klik wyniku Google -> dodaj do manualPlaces (dedup po nazwie) i wroc do listy (wyczysc fraze).
@@ -208,6 +216,12 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
     });
     setCreating(false);
     if (!id) { haptics.error(); toast.error(t("toast.list_failed")); return; }
+    // Zaproszenia iDA DOPIERO TERAZ, bo dopiero teraz istnieje kolekcja. Blad zaproszen nie
+    // moze wywrocic utworzenia - kolekcja juz jest, wiec najwyzej doprosi sie z jej widoku.
+    if (listPeople.length) {
+      try { await inviteUsersToCollection(id, listPeople.map((p) => p.id), user.id); }
+      catch (e: any) { console.warn("[CreateFlowSheet] zaproszenia do kolekcji:", e?.message ?? e); }
+    }
     haptics.success();
     toast.success(t("toast.list_created"));
     queryClient.invalidateQueries({ queryKey: ["profile-list-feed", user.id] });
@@ -432,7 +446,6 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
           <>
             <Header title={effectiveTitle} onBack={() => setStep("listName")}
               onNext={createList} nextLabel={creating ? "..." : ((selected.size > 0 || manualPlaces.length > 0) ? t("common:buttons.next") : t("skip"))} nextEnabled={!creating} />
-            <PeopleRow kind="listy" disabled />
             {/* Wyszukiwarka Google Places INLINE - klik = wyniki tutaj (a NIE nawigacja do starego edytora). */}
             <div className="px-5 pt-1 pb-2 shrink-0">
               <div className="relative">
@@ -480,6 +493,26 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
               {!listSearchMode && !loadingSaved && savedPlaces.length === 0 && manualPlaces.length === 0 && (
                 <p className="mt-4 px-2 text-center text-sm text-muted-foreground">{t("no_saved_places")}</p>
               )}
+              {/* Zapraszanie NA DOLE ostatniego kroku - dokladnie tak, jak przy wyjezdzie
+                  (prosba Nat 2026-09-15). Wlasny odstep od dolu, bo wiersz jest OSTATNIM
+                  elementem i inaczej lezy tuz przy krawedzi arkusza. */}
+              <div className="mt-2 border-t border-border/50 pb-[max(28px,calc(env(safe-area-inset-bottom,0px)+20px))]">
+                <PeopleRow kind="listy" people={listPeople} onClick={() => setStep("listPeople")} />
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* ── LISTA: wybor osob (blizniaczy ekran do tripPeople) ── */}
+        {step === "listPeople" && (
+          <>
+            <div className="flex items-center justify-between gap-2 px-5 pt-1 pb-3">
+              <button onClick={() => setStep("listPick")} className="h-8 w-8 -ml-1 flex items-center justify-center rounded-full active:bg-muted transition-colors"><ArrowLeft className="h-5 w-5" /></button>
+              <h2 className="text-[20px] font-semibold text-foreground">{t("invite.cta")}</h2>
+              <button onClick={() => setStep("listPick")} className="text-sm font-medium text-[#181818] rounded-full border border-black/15 bg-white px-3.5 py-1.5 active:opacity-60 shrink-0">{t("common:buttons.done")}</button>
+            </div>
+            <div className="flex-1 min-h-0 overflow-y-auto px-5 pb-[max(16px,env(safe-area-inset-bottom))]">
+              {user && <AddPeoplePicker userId={user.id} selected={listPeopleIds} onToggle={toggleListPerson} />}
             </div>
           </>
         )}

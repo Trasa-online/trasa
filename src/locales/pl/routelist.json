@@ -68,7 +68,8 @@
     "rename_list": "Zmień nazwę kolekcji",
     "list_actions": "Akcje kolekcji",
     "list_theme": "Tło kolekcji",
-    "list_scope": "Kraj i miasto"
+    "list_scope": "Kraj i miasto",
+    "list_people": "Osoby w kolekcji"
   },
   "fallback_title": "Kolekcja miejsc",
   "photo": "Zdjęcie",
@@ -119,5 +120,18 @@
     "save": "Zapisz",
     "saved": "Zapisano kraj i miasto",
     "save_failed": "Nie udało się zapisać kraju i miasta"
+  },
+  "people": {
+    "title": "Osoby w kolekcji",
+    "desc_owner": "Zaproszone osoby mogą dodawać miejsca do tej kolekcji. Usunąć mogą tylko to, co same dodały.",
+    "desc_member": "Współtworzysz tę kolekcję. Możesz dodawać miejsca i usuwać te, które sam(a) dodałeś(-aś).",
+    "current": "Współtworzą",
+    "add": "Dodaj osoby",
+    "remove": "Usuń z kolekcji",
+    "added": "Dodano do kolekcji",
+    "removed": "Usunięto z kolekcji",
+    "add_failed": "Nie udało się dodać. Spróbuj ponownie.",
+    "remove_failed": "Nie udało się usunąć. Spróbuj ponownie.",
+    "user_fallback": "Użytkownik"
   }
 }

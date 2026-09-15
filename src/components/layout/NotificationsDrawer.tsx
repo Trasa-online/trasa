@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
-import { X, Bell, UserPlus, UserCheck, MapPin, Route, Bookmark, CheckCircle2, XCircle, MessageCircle, Heart, Camera, EyeOff } from "lucide-react";
+import { X, Bell, UserPlus, UserCheck, MapPin, Route, Bookmark, CheckCircle2, XCircle, MessageCircle, Heart, Camera, EyeOff, Users } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
 import { avatarSrc } from "@/lib/avatar";
@@ -56,6 +56,9 @@ const TYPE_CONFIG: Record<string, { icon: React.ElementType; color: string; labe
   list_liked:     { icon: Heart,    color: "text-red-500 bg-red-100",        label: (t, u, m) => t(m?.title ? "notif.list_liked_title" : "notif.list_liked", { user: u, title: m?.title }) },
   list_saved:     { icon: Bookmark, color: "text-primary bg-orange-100",  label: (t, u, m) => t(m?.title ? "notif.list_saved_title" : "notif.list_saved", { user: u, title: m?.title }) },
   list_updated:   { icon: MapPin,   color: "text-primary bg-orange-100",  label: (t, u, m) => t(m?.title ? "notif.list_updated_title" : "notif.list_updated", { user: u, title: m?.title }) },
+  // Zaproszenie do WSPOLTWORZENIA kolekcji (2026-09-15) - ludzik, bo to zaproszenie do
+  // wspolnej pracy, a nie kolejna zmiana w tresci.
+  list_invite:    { icon: Users,    color: "text-primary bg-orange-100",  label: (t, u, m) => t(m?.title ? "notif.list_invite_title" : "notif.list_invite", { user: u, title: m?.title }) },
   // Tresc liczona z metadanych kompletnosci (enqueue_trip_reminders): ZDJECIA maja priorytet,
   // potem notki, a na koncu zacheta do publikacji.
   trip_reminder:  { icon: Camera,   color: "text-primary bg-orange-100",  label: (t, _u, m) => {
@@ -330,7 +333,7 @@ export default function NotificationsDrawer({ open, onClose, userId }: Props) {
                           {n.type === "friend_request" ? "Zobacz zaproszenie →" : "Zobacz znajomych →"}
                         </button>
                       )}
-                      {n.type === "list_updated" && (
+                      {(n.type === "list_updated" || n.type === "list_invite") && (
                         <button
                           onClick={() => { track("notification_opened", { type: n.type }); onClose(); navigate(`/lista/${n.metadata?.collection_id ?? ""}`); }}
                           className="mt-2 px-3 py-1.5 rounded-full bg-primary text-white text-xs font-semibold active:scale-95 transition-transform"
