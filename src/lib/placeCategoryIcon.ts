@@ -99,20 +99,51 @@ export function categoryIconSrc(category?: string | null): string {
 // KAZDE wyszukane miejsce dostaje ikone fallback (Landmark). Iterujemy po types w kolejnosci
 // (Google zwraca od najbardziej szczegolowego), pierwszy trafiony wygrywa.
 const GOOGLE_TYPE_TO_CATEGORY: Record<string, string> = {
+  // ⚠️ Wyjscie tej mapy MUSI byc identyfikatorem PODKATEGORII z MAIN_CATEGORIES
+  // (categories.ts). Dopoki tak nie bylo, filtr musial nadrabiac SUBCATEGORY_DB_ALIASES:
+  // normalizator produkowal wartosci ("shopping", "attractions", "clothing_store"),
+  // ktorych slownik filtrow nie zna. Dokladajac tu nowy typ Google, celuj w podkategorie.
+
+  // Jedzenie & Napoje
   restaurant: "restaurant", food: "restaurant", meal_takeaway: "restaurant", meal_delivery: "restaurant",
   cafe: "cafe", coffee_shop: "cafe", breakfast_restaurant: "cafe",
-  bar: "bar", pub: "bar", wine_bar: "bar", night_club: "nightclub",
-  bakery: "bakery",
+  bakery: "bakery", pastry_shop: "bakery", dessert_shop: "bakery",
+  bar: "bar", pub: "bar", wine_bar: "bar",
+
+  // Kultura & Historia
   museum: "museum",
   art_gallery: "gallery",
-  tourist_attraction: "landmark", point_of_interest: "landmark", landmark: "landmark", historical_landmark: "monument",
-  church: "church", place_of_worship: "church", hindu_temple: "church", mosque: "church", synagogue: "church",
-  park: "park", national_park: "park", garden: "park", campground: "nature", hiking_area: "nature", beach: "beach",
-  movie_theater: "movie_theater", performing_arts_theater: "theater", concert_hall: "concert_hall",
-  shopping_mall: "shopping", store: "store", clothing_store: "clothing_store", department_store: "shopping",
-  supermarket: "shopping", market: "market", book_store: "book_store", liquor_store: "liquor_store",
-  library: "library",
-  amusement_park: "attractions", zoo: "attractions", aquarium: "attractions", stadium: "attractions", spa: "attractions",
+  tourist_attraction: "monument", point_of_interest: "monument",
+  landmark: "monument", historical_landmark: "monument",
+  church: "monument", place_of_worship: "monument", hindu_temple: "monument",
+  mosque: "monument", synagogue: "monument",
+  // TODO slownik: biblioteka nie ma wlasnej podkategorii - trafia do "museum", zeby zostac
+  // w Kulturze zamiast wpasc miedzy sklepy.
+  library: "museum",
+
+  // Atrakcje
+  amusement_park: "experience", zoo: "experience", aquarium: "experience",
+  stadium: "experience", spa: "experience",
+  market: "market",
+
+  // Natura & Widoki
+  park: "park", national_park: "park", garden: "park",
+  campground: "park", hiking_area: "park",
+  // TODO slownik: plaza nie ma wlasnej podkategorii - trafia do "park" (zostaje w Naturze).
+  beach: "park",
+
+  // Zakupy
+  shopping_mall: "store", store: "store", department_store: "store", supermarket: "store",
+  clothing_store: "boutique", shoe_store: "boutique",
+  book_store: "bookshop",
+  liquor_store: "wine_shop",
+  thrift_store: "vintage_store", second_hand_store: "vintage_store", antique_store: "vintage_store",
+
+  // Rozrywka
+  movie_theater: "cinema",
+  performing_arts_theater: "theater",
+  concert_hall: "live_music",
+  night_club: "nightclub",
 };
 
 export function categoryFromGoogleTypes(types?: string[] | null): string | null {

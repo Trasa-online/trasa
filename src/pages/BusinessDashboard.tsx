@@ -24,7 +24,7 @@ function BizInput({ className, ...props }: React.ComponentProps<typeof Input>) {
 const isPdfUrl = (u: string): boolean => u.split("?")[0].toLowerCase().endsWith(".pdf");
 import 'driver.js/dist/driver.css';
 import { driver } from 'driver.js';
-import { MAIN_CATEGORIES } from "@/lib/categories";
+import { MAIN_CATEGORIES, readMainCategories, normalizeSubcategoryId, mainsFromSubs } from "@/lib/categories";
 import { resizeImage } from "@/lib/imageResize";
 import { isHeic, convertHeicToJpeg } from "@/lib/heicConvert";
 import { forwardGeocode } from "@/lib/googleMaps";
@@ -42,6 +42,8 @@ import { ImageCropModal } from "@/components/business/ImageCropModal";
 import { TrasaLogo } from "@/components/TrasaLogo";
 import { BizShell, type BizSection } from "@/components/business/dashboard/BizShell";
 import { OverviewSection, type CompletenessStep } from "@/components/business/dashboard/OverviewSection";
+import { ProfileSection } from "@/components/business/dashboard/ProfileSection";
+import { CategoryPickerModal } from "@/components/business/dashboard/CategoryPickerModal";
 import { uploadThumb } from "@/lib/imageThumbs";
 import { fetchPlaceNotes, type PlaceUserNote } from "@/lib/placeNotes";
 import { avatarSrc } from "@/lib/avatar";
@@ -527,6 +529,10 @@ const BusinessDashboard = () => {
   const [postalCode, setPostalCode] = useState("");
   const [tags, setTags] = useState<string[]>([]);
   const [mainCategory, setMainCategory] = useState("");
+  // Dwie ROWNORZEDNE kategorie glowne (model z 14.09.2026). `mainCategory` zostaje jako
+  // pierwsza z listy - czyta ja jeszcze apka i panel ops, wiec nie znika w jednym kroku.
+  const [mainCategories, setMainCategories] = useState<string[]>([]);
+  const [categoryPickerOpen, setCategoryPickerOpen] = useState(false);
   const [secondaryCategory, setSecondaryCategory] = useState("");
   const [bizSubcategories, setBizSubcategories] = useState<string[]>([]);
   const [customVibeTag, setCustomVibeTag] = useState("");
@@ -748,7 +754,15 @@ const BusinessDashboard = () => {
     setTags(profileData.tags ?? []);
     setMainCategory(profileData.main_category ?? "");
     setSecondaryCategory((profileData as any).secondary_category ?? "");
-    setBizSubcategories(profileData.subcategories ?? []);
+    {
+      // Zrodlem prawdy jest `main_categories[]`; helper ogarnia tez stare wiersze
+      // (main_category + secondary_category), zeby nikt nie stracil wyboru przy wejsciu.
+      const mains = readMainCategories(profileData as any);
+      setMainCategories(mains);
+      // Podkategorie potrafia byc zapisane jako polskie etykiety - panel pracuje na id.
+      const stored = (profileData.subcategories ?? []) as string[];
+      setBizSubcategories(stored.map(v => normalizeSubcategoryId(v) ?? v));
+    }
     setCustomSubcategory((profileData as any).custom_subcategory ?? "");
     setCustomSubcategoryStatus((profileData as any).custom_subcategory_status ?? null);
     setDescription(profileData.description ?? "");
@@ -1509,7 +1523,8 @@ const BusinessDashboard = () => {
         city: city || null,
         postal_code: postalCode || null,
         tags: tags.length > 0 ? tags : null,
-        main_category: mainCategory || null,
+        main_category: (mainCategories[0] ?? mainCategory) || null,
+        main_categories: mainCategories,
         subcategories: bizSubcategories.length > 0 ? bizSubcategories : null,
         custom_subcategory: customSubcategory.trim() || null,
         custom_subcategory_status: customSubcategoryStatus,
@@ -1571,15 +1586,9 @@ const BusinessDashboard = () => {
           .eq("id", profile.id);
         if (enErr) console.warn("[BusinessDashboard] zapis event_title_en nie powiodl sie (uruchom migracje?):", enErr.message);
       }
-      // secondary_category OSOBNYM update'em (best-effort) - kolumna moze nie istniec przed
-      // uruchomieniem migracji; blad nie wywala glownego zapisu.
-      {
-        const { error: secErr } = await (supabase as any)
-          .from("business_profiles")
-          .update({ secondary_category: secondaryCategory || null })
-          .eq("id", profile.id);
-        if (secErr) console.warn("[BusinessDashboard] zapis secondary_category nie powiodl sie (uruchom migracje?):", secErr.message);
-      }
+      // ⛔ `secondary_category` NIE jest juz zapisywana (migracja 20260915_business_main_categories):
+      // dwie rownorzedne kategorie glowne mieszkaja w `main_categories[]`. Kolumna zostaje
+      // w bazie z komentarzem DEPRECATED, dopoki wszystkie odczyty nie przejda na tablice.
       if (isComplete && !reviewRequestedAt) {
         setReviewRequestedAt(nowIso);
         if (!silent) toast.success(t("save.saved_review"));
@@ -2164,297 +2173,43 @@ const BusinessDashboard = () => {
 
           {/* ── DANE LOKALU ── */}
           {activeSection === 'profile' && (
-            <div className="space-y-5">
-              <div><h2 className="text-lg font-black">{t("profile.title")}</h2><p className="text-sm text-slate-400">{t("profile.subtitle")}</p></div>
-
-              <div className="flex flex-col lg:flex-row gap-5 items-start">
-              <div className="flex-1 min-w-0 space-y-5">
-              {/* ── Nazwa lokalu ── */}
-              <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
-                <Label htmlFor="business_name" className="text-sm font-bold text-foreground">{t("profile.name_label")}</Label>
-                <Input
-                  id="business_name"
-                  value={businessName}
-                  onChange={e => { setBusinessName(e.target.value); setIsDirty(true); }}
-                  placeholder={t("profile.name_placeholder")}
-                  maxLength={80}
-                  className="mt-2"
+            <ProfileSection
+              value={{ businessName, description, street, city, postalCode, phone, email, website, instagram, facebook }}
+              onChange={(patch) => {
+                if (patch.businessName !== undefined) setBusinessName(patch.businessName);
+                if (patch.description !== undefined) setDescription(patch.description);
+                if (patch.street !== undefined) setStreet(patch.street);
+                if (patch.city !== undefined) setCity(patch.city);
+                if (patch.postalCode !== undefined) setPostalCode(patch.postalCode);
+                if (patch.phone !== undefined) setPhone(patch.phone);
+                if (patch.email !== undefined) setEmail(patch.email);
+                if (patch.website !== undefined) setWebsite(patch.website);
+                if (patch.instagram !== undefined) setInstagram(patch.instagram);
+                if (patch.facebook !== undefined) setFacebook(patch.facebook);
+                setIsDirty(true);
+              }}
+              mains={mainCategories}
+              subs={bizSubcategories}
+              onEditCategories={() => setCategoryPickerOpen(true)}
+              hours={
+                <BusinessHoursEditor
+                  value={openingHours}
+                  onChange={(h) => { setOpeningHours(h); setIsDirty(true); }}
                 />
-              </div>
-              {/* ── Logo - avatar style ── */}
-              <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
-                <p className="text-sm font-bold text-foreground mb-4">{t("profile.logo_title")}</p>
-                <div className="flex items-center gap-5">
-                  <div className="relative shrink-0">
-                    <div className="h-20 w-20 rounded-full overflow-hidden border-[3px] border-[#D45113] bg-muted">
-                      {uploading === 'logo'
-                        ? <div className="w-full h-full flex items-center justify-center"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
-                        : logoUrl
-                          ? <img src={logoUrl} className="w-full h-full object-cover" />
-                          : <div className="w-full h-full flex items-center justify-center"><Store className="h-8 w-8 text-muted-foreground/40" /></div>
-                      }
-                    </div>
-                    <button
-                      onClick={() => logoInputRef.current?.click()}
-                      className="absolute bottom-0 right-0 h-7 w-7 rounded-full bg-foreground flex items-center justify-center shadow-md active:scale-95 transition-transform"
-                    >
-                      <Camera className="h-3.5 w-3.5 text-background" />
-                    </button>
-                    <input ref={logoInputRef} type="file" accept="image/*,.heic,.heif" className="hidden" onChange={handleLogoUpload} />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">{businessName || t("business_name_fallback")}</p>
-                    <button onClick={() => logoInputRef.current?.click()} className="mt-1 text-xs text-primary font-medium active:opacity-70">
-                      {logoUrl ? t('profile.change_logo') : t('profile.add_logo')}
-                    </button>
-                    <p className="text-xs text-muted-foreground mt-0.5">{t("profile.logo_hint")}</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm space-y-4">
-                <div className="space-y-1">
-                  <Label htmlFor="street" className="text-xs flex items-center gap-1.5 flex-wrap">{t("profile.street")} <span className="text-[10px] font-normal text-muted-foreground">{t("profile.optional")}</span></Label>
-                  <BizInput id="street" value={street} maxLength={100} onChange={e => { setStreet(e.target.value); setIsDirty(true); }} />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <Label htmlFor="city" className="text-xs flex items-center gap-1.5 flex-wrap">{t("profile.city")} <span className="text-[10px] font-normal text-muted-foreground">{t("profile.optional")}</span></Label>
-                    <BizInput id="city" value={city} maxLength={80} onChange={e => { setCity(e.target.value); setIsDirty(true); }} />
-                  </div>
-                  <div className="space-y-1">
-                    <Label htmlFor="postal_code" className="text-xs flex items-center gap-1.5 flex-wrap">{t("profile.postal")} <span className="text-[10px] font-normal text-muted-foreground">{t("profile.optional")}</span></Label>
-                    <BizInput id="postal_code" value={postalCode} maxLength={10} onChange={e => { setPostalCode(e.target.value); setIsDirty(true); }} />
-                  </div>
-                </div>
-                {!isDraft && (
-                  <>
-                    <div className="space-y-1">
-                      <Label htmlFor="phone" className="text-xs flex items-center gap-1.5 flex-wrap">{t("profile.phone")} <span className="text-[10px] font-normal text-muted-foreground">{t("profile.optional")}</span></Label>
-                      <BizInput id="phone" value={phone} maxLength={20} onChange={e => { setPhone(e.target.value); setIsDirty(true); }} type="tel" />
-                    </div>
-                    <div className="space-y-1">
-                      <Label htmlFor="email" className="text-xs flex items-center gap-1.5 flex-wrap">{t("profile.email")} <span className="text-[10px] font-normal text-muted-foreground">{t("profile.optional")}</span></Label>
-                      <BizInput id="email" value={email} maxLength={100} onChange={e => { setEmail(e.target.value); setIsDirty(true); }} type="email" />
-                    </div>
-                    <div className="space-y-1">
-                      <Label htmlFor="website" className="text-xs flex items-center gap-1.5 flex-wrap">{t("profile.website")} <span className="text-[10px] font-normal text-muted-foreground">{t("profile.optional")}</span></Label>
-                      <BizInput id="website" value={website} maxLength={200} onChange={e => { setWebsite(e.target.value); setIsDirty(true); }} type="url" placeholder="https://twojlokal.pl" />
-                    </div>
-                    <div className="space-y-1">
-                      <Label htmlFor="instagram" className="text-xs flex items-center gap-1.5 flex-wrap">Instagram <span className="text-[10px] font-normal text-muted-foreground">{t("profile.optional")}</span></Label>
-                      <BizInput id="instagram" value={instagram} maxLength={200} onChange={e => { setInstagram(e.target.value); setIsDirty(true); }} type="text" placeholder="@twojlokal" />
-                      <p className="text-[10px] text-muted-foreground">{t("profile.instagram_hint")}</p>
-                    </div>
-                    <div className="space-y-1">
-                      <Label htmlFor="facebook" className="text-xs flex items-center gap-1.5 flex-wrap">Facebook <span className="text-[10px] font-normal text-muted-foreground">{t("profile.optional")}</span></Label>
-                      <BizInput id="facebook" value={facebook} maxLength={200} onChange={e => { setFacebook(e.target.value); setIsDirty(true); }} type="text" placeholder={t("profile.facebook_placeholder")} />
-                      <p className="text-[10px] text-muted-foreground">{t("profile.facebook_hint")}</p>
-                    </div>
-                  </>
-                )}
-              </div>
-
-              {/* ── Godziny otwarcia (osobna sekcja) ── */}
-              {!isDraft && (
-                <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
-                  <BusinessHoursEditor
-                    value={openingHours}
-                    onChange={(next) => { setOpeningHours(next); setIsDirty(true); }}
-                  />
-                </div>
-              )}
-
-              {/* ── Kategoria główna + podkategorie (osobna sekcja) ── */}
-              <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm space-y-4">
-                {/* Kategoria główna */}
-                <div>
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">{t("profile.main_category")}</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    {MAIN_CATEGORIES.map(cat => {
-                      const active = mainCategory === cat.id;
-                      return (
-                        <button key={cat.id} type="button"
-                          onClick={() => { const newMain = active ? "" : cat.id; setMainCategory(newMain); setBizSubcategories([]); if (secondaryCategory === newMain) setSecondaryCategory(""); setIsDirty(true); }}
-                          className={`flex items-center gap-2.5 px-3 py-3 rounded-xl border-2 text-left transition-all ${active ? 'border-slate-400 bg-slate-100 text-slate-900' : 'border-slate-100 bg-slate-50 text-slate-600 hover:border-slate-200'}`}>
-                          <span className="text-xl shrink-0">{cat.emoji}</span>
-                          <div className="min-w-0">
-                            <p className="text-xs font-semibold leading-tight">{cat.label}</p>
-                            <p className="hidden md:block text-[10px] text-muted-foreground mt-0.5 truncate">{cat.hint}</p>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Podkategoria */}
-                {mainCategory && (
-                  <div className="pt-2 border-t border-border/40">
-                    <div className="flex items-center justify-between mb-2">
-                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t("profile.subcategory")}</p>
-                      <span className={`text-[11px] font-bold ${bizSubcategories.length >= 3 ? 'text-slate-700' : 'text-muted-foreground'}`}>{bizSubcategories.length}/3</span>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {(MAIN_CATEGORIES.find(c => c.id === mainCategory)?.subcategories ?? []).map(sub => {
-                        const active = bizSubcategories.includes(sub.label);
-                        const limitReached = bizSubcategories.length >= 3;
-                        const disabled = !active && limitReached;
-                        return (
-                          <button key={sub.id} type="button"
-                            disabled={disabled}
-                            onClick={() => { setBizSubcategories(prev => active ? prev.filter(s => s !== sub.label) : (prev.length >= 3 ? prev : [...prev, sub.label])); setIsDirty(true); }}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${active ? 'bg-slate-700 border-slate-700 text-white' : disabled ? 'bg-background border-border text-muted-foreground/40 cursor-not-allowed' : 'bg-background border-border text-muted-foreground hover:border-slate-300 hover:text-foreground'}`}>
-                            <span>{sub.emoji}</span>{sub.label}
-                          </button>
-                        );
-                      })}
-                    </div>
-                    {/* Własna podkategoria */}
-                    <div className="mt-4 p-4 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-3">
-                      <div>
-                        <p className="text-xs font-bold text-foreground leading-tight">{t("profile.custom_cat_title")}</p>
-                        <p className="text-[11px] text-muted-foreground leading-snug">{t("profile.custom_cat_desc")}</p>
-                      </div>
-                      <div className="flex gap-2 items-center">
-                        <input
-                          value={customSubcategory}
-                          onChange={e => { setCustomSubcategory(e.target.value); setCustomSubcategoryStatus(null); setIsDirty(true); }}
-                          maxLength={40}
-                          placeholder={t("profile.custom_cat_placeholder")}
-                          className="flex-1 min-w-0 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs text-foreground placeholder:text-slate-400 outline-none focus:border-orange-300 focus:ring-2 focus:ring-orange-200/60 transition-colors"
-                        />
-                        <button
-                          type="button"
-                          disabled={!customSubcategory.trim() || customSubcategoryStatus === 'pending' || customSubcategoryStatus === 'approved'}
-                          onClick={() => { if (customSubcategory.trim()) { setCustomSubcategoryStatus('pending'); setIsDirty(true); } }}
-                          className="shrink-0 px-4 py-2 rounded-xl text-xs font-bold bg-[#D45113] hover:bg-[#D45113] text-white disabled:opacity-40 disabled:hover:bg-[#D45113] transition-colors"
-                        >
-                          {t("profile.propose")}
-                        </button>
-                      </div>
-                      {customSubcategory.trim() && customSubcategoryStatus && (
-                        <p className={`text-[11px] font-medium ${
-                          customSubcategoryStatus === 'approved' ? 'text-green-600' :
-                          customSubcategoryStatus === 'rejected' ? 'text-red-500' :
-                          'text-amber-600'
-                        }`}>
-                          {customSubcategoryStatus === 'approved' ? t('profile.cat_approved') :
-                           customSubcategoryStatus === 'rejected' ? t('profile.cat_rejected') :
-                           t('profile.cat_pending')}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Kategoria dodatkowa (opcjonalnie) */}
-                {mainCategory && (
-                  <div className="pt-2 border-t border-border/40">
-                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">
-                      {t("category.secondary_label")} <span className="normal-case font-normal">{t("profile.optional")}</span>
-                    </p>
-                    <p className="text-[11px] text-muted-foreground leading-snug mb-2">{t("category.secondary_hint")}</p>
-                    <div className="grid grid-cols-2 gap-2">
-                      {MAIN_CATEGORIES.filter(cat => cat.id !== mainCategory).map(cat => {
-                        const active = secondaryCategory === cat.id;
-                        return (
-                          <button key={cat.id} type="button"
-                            onClick={() => { setSecondaryCategory(active ? "" : cat.id); setIsDirty(true); }}
-                            className={`flex items-center gap-2.5 px-3 py-3 rounded-xl border-2 text-left transition-all ${active ? 'border-slate-400 bg-slate-100 text-slate-900' : 'border-slate-100 bg-slate-50 text-slate-600 hover:border-slate-200'}`}>
-                            <span className="text-xl shrink-0">{cat.emoji}</span>
-                            <div className="min-w-0">
-                              <p className="text-xs font-semibold leading-tight">{cat.label}</p>
-                              <p className="hidden md:block text-[10px] text-muted-foreground mt-0.5 truncate">{cat.hint}</p>
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* ── Tagi wizytówki (osobna sekcja) ── */}
-              <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">{t("profile.tags_label")} <span className="normal-case font-normal">{t("profile.tags_hint")}</span></p>
-                  <div className="flex flex-wrap gap-2 mb-2">
-                    {(tagsExpanded ? VIBE_TAG_SUGGESTIONS : VIBE_TAG_SUGGESTIONS.slice(0, 4)).map(tag => {
-                      const active = tags.includes(tag);
-                      const disabled = !active && tags.length >= 3;
-                      return (
-                        <button key={tag} type="button" disabled={disabled}
-                          onClick={() => { setTags(prev => active ? prev.filter(t => t !== tag) : [...prev, tag]); setIsDirty(true); }}
-                          className={`px-3 py-1 rounded-full text-xs font-semibold border transition-colors disabled:opacity-40 ${active ? 'bg-primary border-primary text-white' : 'bg-background border-border text-muted-foreground hover:border-orange-400 hover:text-foreground'}`}>
-                          #{tag}
-                        </button>
-                      );
-                    })}
-                    <button
-                      type="button"
-                      onClick={() => setTagsExpanded(v => !v)}
-                      className="flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold border border-dashed border-border text-muted-foreground hover:border-slate-400 transition-colors"
-                    >
-                      {tagsExpanded ? t('profile.collapse') : t('profile.more', { count: VIBE_TAG_SUGGESTIONS.length - 4 })}
-                      <svg className={`h-3 w-3 transition-transform ${tagsExpanded ? 'rotate-180' : ''}`} viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 4l4 4 4-4"/></svg>
-                    </button>
-                  </div>
-                  {/* Custom tag input - hashtag (#) widoczny by default; strip wiodacych # zeby nie bylo ## */}
-                  <div className="flex gap-2">
-                    <div className="flex-1 flex items-center rounded-xl border border-slate-200/80 bg-slate-50 px-3 focus-within:bg-white focus-within:ring-2 focus-within:ring-primary/25 focus-within:border-primary/40">
-                      <span className="text-xs font-semibold text-muted-foreground select-none">#</span>
-                      <input
-                        value={customVibeTag} maxLength={20}
-                        onChange={e => setCustomVibeTag(e.target.value.replace(/^#+/, ""))}
-                        onKeyDown={e => { const v = customVibeTag.trim().replace(/^#+/, ""); if (e.key === 'Enter' && v && tags.length < 3) { setTags(prev => [...prev, v]); setCustomVibeTag(""); setIsDirty(true); } }}
-                        placeholder={t("profile.custom_tag_placeholder")}
-                        disabled={tags.length >= 3}
-                        className="flex-1 bg-transparent px-1.5 py-1.5 text-xs placeholder:text-muted-foreground focus-visible:outline-none disabled:opacity-40"
-                      />
-                    </div>
-                    <button type="button" disabled={!customVibeTag.trim() || tags.length >= 3}
-                      onClick={() => { const v = customVibeTag.trim().replace(/^#+/, ""); if (v && tags.length < 3) { setTags(prev => [...prev, v]); setCustomVibeTag(""); setIsDirty(true); } }}
-                      className="px-3 py-1.5 rounded-xl bg-primary text-white text-xs font-semibold disabled:opacity-40">
-                      {t("card.add")}
-                    </button>
-                  </div>
-                  {tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 mt-2">
-                      {tags.map(t => (
-                        <span key={t} className="flex items-center gap-1 px-2.5 py-1 bg-orange-50 border border-orange-200 rounded-full text-xs font-semibold text-orange-700">
-                          #{t}
-                          <button type="button" onClick={() => { setTags(prev => prev.filter(x => x !== t)); setIsDirty(true); }} className="text-orange-400 hover:text-orange-700 ml-0.5">×</button>
-                        </span>
-                      ))}
-                      <span className="text-[10px] text-slate-400 self-center">{tags.length}/3</span>
-                    </div>
-                  )}
-                </div>
-              {/* ── Opis (osobna sekcja) ── */}
-              <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">{t("profile.description_label")}</p>
-                <div className="space-y-1">
-                  <textarea rows={3} value={description} maxLength={500} onChange={e => { setDescription(e.target.value); setIsDirty(true); }} placeholder={t("profile.description_placeholder")} className="w-full rounded-2xl border border-slate-200/80 bg-slate-50 px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:bg-white focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:border-primary/40 resize-none" />
-                  <p className="text-[11px] text-muted-foreground text-right">{description.length}/500</p>
-                </div>
-              </div>
-              </div> {/* end flex-1 min-w-0 */}
-
-              {/* Desktop sticky card preview */}
-              <div className="hidden lg:block w-72 shrink-0 lg:sticky lg:top-20 lg:self-start">
+              }
+              preview={
                 <BusinessCardPreview
                   logoUrl={logoUrl} coverImageUrl={coverImageUrl} coverVideoUrl={coverVideoUrl}
-                  businessName={businessName} mainCategory={mainCategory} subcategories={bizSubcategories} tags={tags} eventTitle={eventTitle}
+                  businessName={businessName} mainCategory={mainCategories[0] ?? mainCategory}
+                  subcategories={bizSubcategories} tags={tags} eventTitle={eventTitle}
                   street={street} description={description}
                   onPreviewClick={() => setShowAppPreview(true)} previewReady={previewReady}
                   colorBadge={colorBadge} colorCardBg={colorCardBg} colorButton={colorButton} colorPromo={colorPromo}
                 />
-              </div>
-              </div> {/* end flex flex-col lg:flex-row */}
-            </div>
+              }
+            />
           )}
 
-          {/* ── MENU / CENNIK ── */}
           {activeSection === 'menu' && (() => {
             const menuLabel = mainCategory === 'food' ? t('menu.menu') : t('menu.pricelist');
             const hint = mainCategory === 'food'
@@ -3132,6 +2887,24 @@ const BusinessDashboard = () => {
           </div>
         </div>
       )}
+      {/* ── Kategorie w dwoch krokach (model: 2 glowne + 3 podkategorie) ── */}
+      <CategoryPickerModal
+        open={categoryPickerOpen}
+        initialMains={mainCategories}
+        initialSubs={bizSubcategories}
+        onCancel={() => setCategoryPickerOpen(false)}
+        onSave={({ mains, subs }) => {
+          setMainCategories(mains);
+          // `mainCategory` (pojedyncza) zostaje zgodna z pierwsza z listy - czytaja ja
+          // jeszcze apka, panel ops i podglad karty.
+          setMainCategory(mains[0] ?? "");
+          setSecondaryCategory("");
+          setBizSubcategories(subs);
+          setIsDirty(true);
+          setCategoryPickerOpen(false);
+        }}
+      />
+
       {/* ── Kadrowanie zdjecia (logo 1:1 kolo / galeria 4:3) ── */}
       {cropJob && cropJob.files[cropJob.index] && (
         <ImageCropModal
